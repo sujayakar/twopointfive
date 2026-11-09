@@ -1534,9 +1534,6 @@ pub struct Mods {
     pub cmd: crate::cmd::CmdMod,
     pub fireline: crate::fireline::FirelineMod,
     pub doorforce: crate::doorforce::DoorforceMod,
-    /// (where rust/sim's rows lie in this process, and counts: in no bytes)
-    #[bytes(skip)]
-    pub rustknobs: crate::rustknobs::RustknobsMod,
     pub glassbreak: crate::glassbreak::GlassbreakMod,
     pub glass: crate::glass::GlassMod,
     pub wallpen: crate::wallpen::WallpenMod,

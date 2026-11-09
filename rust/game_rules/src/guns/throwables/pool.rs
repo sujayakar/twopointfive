@@ -276,7 +276,7 @@ fn throwables_walk_there(g: &mut crate::game::Game, dt: f64, from: f64, ev: &mut
             par_put(o + 3, r[3]);
         }
     }
-    let a = sim::items::update(g.sim, g.col.mirror.slot as usize);
+    let a = sim::items::update(g.sim, g.col.mirror.slot as usize, &g.k);
     if a != sim::items::HOST && a != sim::items::DONE {
         panic!("the Rust module would not walk the thrown things from row {}", from);
     }

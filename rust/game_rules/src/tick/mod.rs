@@ -11,7 +11,6 @@ pub mod input;
 pub mod math_dice;
 pub mod math_hyp;
 pub mod out_events;
-pub mod rustknobs;
 pub mod savestate;
 pub mod seats;
 pub mod standing;

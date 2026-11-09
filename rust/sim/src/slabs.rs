@@ -21,6 +21,7 @@
 //! A RAY THAT IS NO NUMBER HAS NO ANSWER (lines.rs ray_rule). The step then writes nothing and says so (HOST) — it works on a copy of its row for
 //! that — and the host names the mistake. Nothing of play is such a ray: one of no length meets nothing, no length is too long, and a pane of glass is
 //! met or flown through here (glass.rs).
+use game_types::knobs::Knobs;
 use crate::collide;
 use crate::lines::{ray_rule, RAY_HOST};
 use crate::maths::{cos, exp, hypot2, sin};
@@ -222,10 +223,10 @@ fn reach_along(d: &Leaf, s: &Now, ex: f64, ez: f64) -> f64 {
     js_abs(ex * ux + ez * uz) * d.hu + js_abs(-ex * uz + ez * ux) * across_of(d, s.tip)
 }
 /// doorblast.ts hitAt: the nearest static, or other door's leaf, along a horizontal ray: how far, and the face's normal in plan
-fn hit_at(d: &mut Leaf, x: f64, y: f64, z: f64, ex: f64, ez: f64, tmax: f64) -> Option<(f64, f64, f64)> {
+fn hit_at(d: &mut Leaf, x: f64, y: f64, z: f64, ex: f64, ez: f64, tmax: f64, tune: &Knobs) -> Option<(f64, f64, f64)> {
     let mut out = [0.0f64; 4];
     d.rays += 1.0;
-    let k = ray_rule(d.w, x, y, z, ex, 0.0, ez, tmax, 0, d.but, d.ask, &mut out);
+    let k = ray_rule(d.w, x, y, z, ex, 0.0, ez, tmax, 0, d.but, d.ask, &mut out, tune);
     if k == RAY_HOST {
         d.host = true; // (a ray that is no number: lines.rs ray_rule)
         return None;
@@ -333,7 +334,7 @@ fn settle(d: &mut Leaf, s: &mut Now) {
     }
 }
 /// doorblast.ts pushOut: keep the slab's floor rectangle out of the statics as toppling (and its spin) lengthen it
-fn push_out(d: &mut Leaf, s: &mut Now) {
+fn push_out(d: &mut Leaf, s: &mut Now, tune: &Knobs) {
     let (ux, uz) = (cos(s.a), sin(s.a));
     let (nx, nz, hu, hn) = (-uz, ux, d.hu, across_of(d, s.tip));
     let ym = clamp(s.py, 0.4, 1.3);
@@ -344,7 +345,7 @@ fn push_out(d: &mut Leaf, s: &mut Now) {
             for f in [0.0, -0.8, 0.8] {
                 let ys: &[f64] = if f == 0.0 { &[0.2, ym] } else { &[0.2] };
                 for &y in ys {
-                    if let Some((t, _, _)) = hit_at(d, s.px + sx * hs * f, y, s.pz + sz * hs * f, ex, ez, he + 0.02) {
+                    if let Some((t, _, _)) = hit_at(d, s.px + sx * hs * f, y, s.pz + sz * hs * f, ex, ez, he + 0.02, tune) {
                         if he - t > pen {
                             pen = he - t;
                         }
@@ -366,7 +367,7 @@ fn push_out(d: &mut Leaf, s: &mut Now) {
 
 /// doorblast.ts stepSlab for the slab in row PAR[P_ROW] of the game in slot `g`, over world `w` (which stands with the game's own leaves in it).
 /// → STEPPED · HOST (nothing written) · WRONG.
-pub fn step(g: usize, w: usize) -> u32 {
+pub fn step(g: usize, w: usize, tune: &Knobs) -> u32 {
     let c = &mut state(g).slabs;
     let p = par();
     // (the row as the host wrote it, a double: a number that is no row in the air — a door with no slab is −1 — is no step, never row 0)
@@ -454,7 +455,7 @@ pub fn step(g: usize, w: usize) -> u32 {
             let he = reach_along(&d, &s, ex, ez);
             let (mut adv, mut nn): (f64, Option<(f64, f64)>) = (len, None);
             for y in [0.2, clamp(s.py, 0.4, 1.3)] {
-                if let Some((t, n0, n2)) = hit_at(&mut d, s.px, y, s.pz, ex, ez, len + he + 0.02) {
+                if let Some((t, n0, n2)) = hit_at(&mut d, s.px, y, s.pz, ex, ez, len + he + 0.02, tune) {
                     if t - he - 0.01 < adv {
                         adv = js_max(0.0, t - he - 0.01);
                         nn = Some((n0, n2));
@@ -481,7 +482,7 @@ pub fn step(g: usize, w: usize) -> u32 {
         if s.tip_v == 0.0 && s.tip == 0.0 && (hit_wall || sp < 0.4) {
             s.tip_v = k_tip; // (no room ahead: flat to the far wall first — now it comes back down)
         }
-        push_out(&mut d, &mut s);
+        push_out(&mut d, &mut s, tune);
         if d.host {
             break;
         }

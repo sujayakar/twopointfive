@@ -393,8 +393,6 @@ fn character_turn_weigh(g: &mut crate::game::Game, id: CharId, dt: f64) {
 const TURN_COLS_AT: usize = crate::anim_skeleton::LAYER_COLS_AT as usize;
 /// The bench's arguments, the rule, and his columns back; the column order is Character.turnCols. (Character.turnWeighAsk)
 fn character_turn_weigh_ask(g: &mut crate::game::Game, id: CharId, dt: f64) {
-    // LAYERS.knobs?.() is rustknobs' knobsNow: the list again, unless a tick has already handed it
-    if !g.m.rustknobs.rust_knobs.tick { crate::rustknobs::knobs_to_rust(g); }
     {
         let ch = &g.ch[id];
         let a = &mut ::sim::skeleton::bench().args;
@@ -405,7 +403,7 @@ fn character_turn_weigh_ask(g: &mut crate::game::Game, id: CharId, dt: f64) {
         if let Some(t) = ch.tn { a[o] = 1.0; a[o + 1] = t.body; a[o + 2] = t.aim; a[o + 3] = t.wb; a[o + 4] = t.wa; a[o + 5] = t.ib; a[o + 6] = t.ia; a[o + 7] = t.x; a[o + 8] = t.z; }
         a[o + 9] = ch.anim.turn_lead; a[o + 10] = ch.body_yaw; a[o + 11] = ch.aim_yaw;
     }
-    let code = ::sim::layers::turn_weigh();
+    let code = ::sim::layers::turn_weigh(&g.k);
     anim_rule_ran(g, id, code as f64);
     // Character.turnCols.put
     let mut c = [0.0f64; 12];

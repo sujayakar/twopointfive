@@ -16,6 +16,7 @@
 //! nobody (it imports nothing): for a line of fire the walk LISTS the glass the line crosses that is not open there — which pane, and where the line
 //! enters it — and goes on; the host judges the list when the walk is back.
 
+use game_types::knobs::Knobs;
 use crate::glass;
 use crate::maths::hypot3;
 use crate::world::*;
@@ -311,10 +312,10 @@ pub const ASK_PANES: u32 = 2; // a line of fire: glass in the way is listed, and
 /// list of panes is full
 #[inline]
 #[allow(clippy::too_many_arguments)]
-fn pane_in_way(o: &World, s: &mut Asking, rule: bool, panes: bool, bi: usize, t0: f64, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64) -> i32 {
+fn pane_in_way(o: &World, s: &mut Asking, rule: bool, panes: bool, bi: usize, t0: f64, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, tune: &Knobs) -> i32 {
     if rule {
         let te = js_max(0.0, t0);
-        if glass::open(o, bi, a0 + r0 * te, a1 + r1 * te, a2 + r2 * te) {
+        if glass::open(o, bi, a0 + r0 * te, a1 + r1 * te, a2 + r2 * te, tune) {
             return 0;
         }
     }
@@ -331,12 +332,12 @@ fn pane_in_way(o: &World, s: &mut Asking, rule: bool, panes: bool, bi: usize, t0
 /// collision.ts segmentBlocked, past its length (`len` = the host's own length of b − a, at least 1e-4 and finite): −1 = something solid is in the way ·
 /// n ≥ 0 = nothing solid is, and n panes of glass are (listed in pane_bi / pane_t: 0 unless it is a line of fire) · −2 = more glass than the list holds
 /// (the host asks its own walk instead)
-pub fn blocked(w: usize, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, len: f64, shrink: f64, through: u32, set: i32, ask: u32) -> i32 {
-    blocked_over(w, &Over::with(set), a0, a1, a2, b0, b1, b2, len, shrink, through, ask)
+pub fn blocked(w: usize, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, len: f64, shrink: f64, through: u32, set: i32, ask: u32, tune: &Knobs) -> i32 {
+    blocked_over(w, &Over::with(set), a0, a1, a2, b0, b1, b2, len, shrink, through, ask, tune)
 }
 /// …of the world as the question takes it: the leaves it lets through, the statics it lets through, the boxes it adds
 #[allow(clippy::too_many_arguments)]
-pub fn blocked_over(w: usize, v: &Over, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, len: f64, shrink: f64, through: u32, ask: u32) -> i32 {
+pub fn blocked_over(w: usize, v: &Over, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, len: f64, shrink: f64, through: u32, ask: u32, tune: &Knobs) -> i32 {
     let (o, s) = (world_read(w), asking(w));
     let (d0, d1, d2) = (b0 - a0, b1 - a1, b2 - a2);
     let il = 1.0 / len;
@@ -398,7 +399,7 @@ pub fn blocked_over(w: usize, v: &Over, a0: f64, a1: f64, a2: f64, b0: f64, b1: 
             }
             if t1 > shrink && t0 < len - shrink {
                 if fl & F_GLASS != 0 {
-                    match pane_in_way(o, s, rule, panes, bi, t0, a0, a1, a2, r0, r1, r2) {
+                    match pane_in_way(o, s, rule, panes, bi, t0, a0, a1, a2, r0, r1, r2, tune) {
                         0 => continue,
                         said => return said,
                     }
@@ -597,7 +598,7 @@ pub fn blocked_over(w: usize, v: &Over, a0: f64, a1: f64, a2: f64, b0: f64, b1: 
             }
             if t1 > shrink && t0 < len - shrink {
                 if fl & F_GLASS != 0 {
-                    match pane_in_way(o, s, rule, panes, bi, t0, a0, a1, a2, r0, r1, r2) {
+                    match pane_in_way(o, s, rule, panes, bi, t0, a0, a1, a2, r0, r1, r2, tune) {
                         0 => continue,
                         said => return said,
                     }
@@ -626,31 +627,31 @@ fn walked(a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64) -> Result<f64, O
 /// IS A MAN HIDDEN FROM AN EYE (fogofwar.ts lineToMan, guards.ts eyeContact): the chest first, and the head only behind a blocked chest
 #[inline]
 #[allow(clippy::too_many_arguments)]
-pub fn man_hidden(w: usize, set: i32, through: u32, e0: f64, e1: f64, e2: f64, c0: f64, c1: f64, c2: f64, h0: f64, h1: f64, h2: f64) -> Option<bool> {
-    match sight_line(w, set, through, e0, e1, e2, c0, c1, c2) {
-        Some(true) => sight_line(w, set, through, e0, e1, e2, h0, h1, h2),
+pub fn man_hidden(w: usize, set: i32, through: u32, e0: f64, e1: f64, e2: f64, c0: f64, c1: f64, c2: f64, h0: f64, h1: f64, h2: f64, tune: &Knobs) -> Option<bool> {
+    match sight_line(w, set, through, e0, e1, e2, c0, c1, c2, tune) {
+        Some(true) => sight_line(w, set, through, e0, e1, e2, h0, h1, h2, tune),
         said => said,
     }
 }
 /// collision.ts segmentBlocked(a, b, 0.02, through) for a line that PASSES glass (`through` carries the glass flag, so no pane is ever the host's to judge):
 /// the length is the game's own, worked out here. None = not a line this module walks (a length that is no length of this world's): the host asks its own.
 #[inline]
-pub fn sight_line(w: usize, set: i32, through: u32, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64) -> Option<bool> {
+pub fn sight_line(w: usize, set: i32, through: u32, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, tune: &Knobs) -> Option<bool> {
     let len = match walked(a0, a1, a2, b0, b1, b2) {
         Ok(len) => len,
         Err(said) => return said,
     };
-    Some(blocked(w, a0, a1, a2, b0, b1, b2, len, 0.02, through, set, 0) == -1)
+    Some(blocked(w, a0, a1, a2, b0, b1, b2, len, 0.02, through, set, 0, tune) == -1)
 }
 /// collision.ts solidBlocked(a, b): the same line with nothing passed. `ask` = ASK_GLASS where the game has a rule for an open pane. None = a line too
 /// long to be a line of this world: the host's to judge.
 #[inline]
-pub fn solid_line(w: usize, set: i32, ask: u32, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64) -> Option<bool> {
+pub fn solid_line(w: usize, set: i32, ask: u32, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, tune: &Knobs) -> Option<bool> {
     let len = match walked(a0, a1, a2, b0, b1, b2) {
         Ok(len) => len,
         Err(said) => return said,
     };
-    match blocked(w, a0, a1, a2, b0, b1, b2, len, 0.02, 0, set, ask) {
+    match blocked(w, a0, a1, a2, b0, b1, b2, len, 0.02, 0, set, ask, tune) {
         -1 => Some(true),
         0 => Some(false),
         _ => None,
@@ -847,19 +848,19 @@ pub const RAY_EXTRA: i32 = 2_000_000;
 /// static's index, or RAY_LEAF + the leaf's; and into `out` how far along, then the face's normal. `ask` = the game has a rule for an open pane: a pane
 /// met where it is open is passed, and the ray flies on to what stands beyond.
 #[allow(clippy::too_many_arguments)]
-pub fn ray(w: usize, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, tmax: f64, set: i32, ask: bool, out: &mut [f64]) -> i32 {
-    ray_over(w, &Over::with(set), a0, a1, a2, r0, r1, r2, tmax, ask, out)
+pub fn ray(w: usize, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, tmax: f64, set: i32, ask: bool, out: &mut [f64], tune: &Knobs) -> i32 {
+    ray_over(w, &Over::with(set), a0, a1, a2, r0, r1, r2, tmax, ask, out, tune)
 }
 /// …with ONE LEAF OF THE LIST LEFT OUT, `but` (−1: none): the ray of a thing that is itself one of the leaves (a slab off its hinges is no wall to
 /// itself: doorblast.ts withoutLeaf). The leaves keep their own indices in the answer.
 #[allow(clippy::too_many_arguments)]
-pub fn ray_but(w: usize, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, tmax: f64, set: i32, but: i32, ask: bool, out: &mut [f64]) -> i32 {
+pub fn ray_but(w: usize, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, tmax: f64, set: i32, but: i32, ask: bool, out: &mut [f64], tune: &Knobs) -> i32 {
     let one = [but as u32];
-    ray_over(w, &Over { but: if but >= 0 { &one } else { &[] }, ..Over::with(set) }, a0, a1, a2, r0, r1, r2, tmax, ask, out)
+    ray_over(w, &Over { but: if but >= 0 { &one } else { &[] }, ..Over::with(set) }, a0, a1, a2, r0, r1, r2, tmax, ask, out, tune)
 }
 /// …of the world as the question takes it. A box it adds is RAY_EXTRA + its place.
 #[allow(clippy::too_many_arguments)]
-pub fn ray_over(w: usize, v: &Over, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, tmax: f64, ask: bool, out: &mut [f64]) -> i32 {
+pub fn ray_over(w: usize, v: &Over, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, tmax: f64, ask: bool, out: &mut [f64], tune: &Knobs) -> i32 {
     let (o, q) = (world_read(w), asking(w));
     let (mut best, mut bi, mut bn) = (tmax, -1i32, (0.0, 1.0, 0.0));
     if v.set >= 0 {
@@ -930,7 +931,7 @@ pub fn ray_over(w: usize, v: &Over, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64,
                     }
                     if let Some((t, n0, n1, n2)) = ray_box_n(&o.cut, a0, a1, a2, r0, r1, r2, &o.rec[b * REC..b * REC + REC], best) {
                         if t < best {
-                            if ask && fl & F_GLASS != 0 && glass::open(o, b, a0 + r0 * t, a1 + r1 * t, a2 + r2 * t) {
+                            if ask && fl & F_GLASS != 0 && glass::open(o, b, a0 + r0 * t, a1 + r1 * t, a2 + r2 * t, tune) {
                                 continue;
                             }
                             best = t;
@@ -959,11 +960,11 @@ pub fn ray_over(w: usize, v: &Over, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64,
 /// so, and the host names the mistake). `set`, `but` and `ask` as ray_but takes them. → RAY_NONE · RAY_HOST · the static's index, or RAY_LEAF + the
 /// leaf's; `out` as ray writes it.
 #[allow(clippy::too_many_arguments)]
-pub fn ray_rule(w: usize, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, tmax: f64, set: i32, but: i32, ask: bool, out: &mut [f64]) -> i32 {
+pub fn ray_rule(w: usize, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, tmax: f64, set: i32, but: i32, ask: bool, out: &mut [f64], tune: &Knobs) -> i32 {
     if !(tmax > 0.0) {
         return RAY_NONE;
     }
-    ray_but(w, a0, a1, a2, r0, r1, r2, tmax, set, but, ask, out)
+    ray_but(w, a0, a1, a2, r0, r1, r2, tmax, set, but, ask, out, tune)
 }
 
 /// where ray_things says which part it met, after how far along and the normal

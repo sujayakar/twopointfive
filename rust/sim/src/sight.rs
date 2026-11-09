@@ -5,6 +5,7 @@
 //! The lengths and angles are the game's own (maths.rs), so this answers only where the game's own maths stand in the host's `Math` (math/exact.ts EXACT.on).
 //! A line that stops at glass may have a pane to ask the host about: an eye's line always passes glass, and the host sends no other here.
 
+use game_types::knobs::Knobs;
 use crate::lines;
 use crate::maths::{asin, cos, hypot3};
 use crate::world::{ASK_HOST, clamp, js_abs, js_max, or_one, DEG};
@@ -21,7 +22,7 @@ pub const A_IN_CONE: u32 = 2;
 
 /// eyeContact. `e` the eye, `l` the unit direction it looks along, `c` his chest, `h` his head. The distance goes to `dist`.
 #[allow(clippy::too_many_arguments)]
-pub fn contact(w: usize, set: i32, through: u32, q: u32, e: [f64; 3], l: [f64; 3], range: f64, half_deg: f64, near_m: f64, near_deg: f64, v_half_deg: f64, c: [f64; 3], h: [f64; 3], dist: &mut f64) -> u32 {
+pub fn contact(w: usize, set: i32, through: u32, q: u32, e: [f64; 3], l: [f64; 3], range: f64, half_deg: f64, near_m: f64, near_deg: f64, v_half_deg: f64, c: [f64; 3], h: [f64; 3], dist: &mut f64, tune: &Knobs) -> u32 {
     let to = [c[0] - e[0], c[1] - e[1], c[2] - e[2]];
     let d = hypot3(to[0], to[1], to[2]);
     *dist = d;
@@ -42,7 +43,7 @@ pub fn contact(w: usize, set: i32, through: u32, q: u32, e: [f64; 3], l: [f64; 3
         return A_IN_CONE;
     }
     // (segmentBlocked(eye, chest) && segmentBlocked(eye, head)) || smoked: the head is asked only behind a blocked chest, the smoke was marched before either
-    let blocked = match lines::man_hidden(w, set, through, e[0], e[1], e[2], c[0], c[1], c[2], h[0], h[1], h[2]) {
+    let blocked = match lines::man_hidden(w, set, through, e[0], e[1], e[2], c[0], c[1], c[2], h[0], h[1], h[2], tune) {
         None => return ASK_HOST,
         Some(b) => b,
     };

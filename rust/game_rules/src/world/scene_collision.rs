@@ -708,7 +708,7 @@ fn line(g: &mut Game, over: &Over, a: V3, b: V3, shrink: f64, through: f64, pane
     let ask = if thr & sim::world::F_GLASS != 0 { 0 } else { ask_of(g) };
     let w = slot(g);
     let word = ask | if panes.is_some() { sim::lines::ASK_PANES } else { 0 };
-    let r = over_lent(g, over, |_, v| sim::lines::blocked_over(w, v, a0, a1, a2, b[0], b[1], b[2], len, shrink, thr, word));
+    let r = over_lent(g, over, |g, v| sim::lines::blocked_over(w, v, a0, a1, a2, b[0], b[1], b[2], len, shrink, thr, word, &g.k));
     if r == -2 { panic!("more glass on one line than the box world lists ({})", sim::world::MAX_PANES); }
     if r > 0 {
         if let Some(out) = panes {
@@ -794,7 +794,7 @@ fn raycast_here(g: &mut Game, over: &Over, ro: V3, rd: V3, tmax: f64) -> Option<
     let ask = ask_of(g) != 0;
     let mut out = [0.0; 4];
     let w = slot(g);
-    let k = over_lent(g, over, |_, v| sim::lines::ray_over(w, v, ro[0], ro[1], ro[2], rd[0], rd[1], rd[2], tmax, ask, &mut out));
+    let k = over_lent(g, over, |g, v| sim::lines::ray_over(w, v, ro[0], ro[1], ro[2], rd[0], rd[1], rd[2], tmax, ask, &mut out, &g.k));
     if k == sim::lines::RAY_HOST {
         panic!("a ray that is no number: from {:?} along {:?} for {}: where it starts, the way it goes and how far are numbers, and how far is finite", ro, rd, tmax);
     }
@@ -862,7 +862,7 @@ pub fn sight_eye(g: &mut crate::game::Game, k: f64, pos: V3, look: V3, look_len:
 pub fn eyes_see(g: &mut crate::game::Game, order: f64, n: f64, want: f64, kind: f64, through: f64, a: V3, b: V3) -> f64 {
     eye_line(g, "fog", through);
     let set = sense(g, "fog") as i32;
-    let r = sim::fog::see(slot(g), set, js::to_u32(order), js::to_u32(n), js::to_u32(want), js::to_u32(kind), js::to_u32(through), a[0], a[1], a[2], b[0], b[1], b[2]);
+    let r = sim::fog::see(slot(g), set, js::to_u32(order), js::to_u32(n), js::to_u32(want), js::to_u32(kind), js::to_u32(through), a[0], a[1], a[2], b[0], b[1], b[2], &g.k);
     if r == ASK_HOST { panic!("{}", handed_back_words("fog", "a length that is no length of this world's, or more eyes than a question names", &a, &b)); }
     r as f64
 }
@@ -882,7 +882,7 @@ fn eye_contact_ask(g: &mut crate::game::Game, e: crate::scene_collision::EyeCont
     let set = sense(g, "sight") as i32;
     let q = (if e.v_half_deg.is_some() { sim::sight::Q_LENS } else { 0 }) | (if unseen { sim::sight::Q_UNSEEN } else { 0 }) | (if smoked { sim::sight::Q_SMOKED } else { 0 });
     let mut dist = 0.0;
-    let r = sim::sight::contact(slot(g), set, js::to_u32(through), q, e.pos, e.look, e.range, e.half_deg, e.near_m, e.near_deg, e.v_half_deg.unwrap_or(0.0), chest, head, &mut dist);
+    let r = sim::sight::contact(slot(g), set, js::to_u32(through), q, e.pos, e.look, e.range, e.half_deg, e.near_m, e.near_deg, e.v_half_deg.unwrap_or(0.0), chest, head, &mut dist, &g.k);
     if r == ASK_HOST { panic!("{}", handed_back_words("sight", "a line too long to be one, or of no number", &e.pos, &chest)); }
     g.m.scene_collision.sensed.sight += 1.0;
     EyeContactAsk { visible: r & sim::sight::A_VISIBLE != 0, dist, in_cone: r & sim::sight::A_IN_CONE != 0 }
@@ -919,9 +919,9 @@ fn lamps_part_into(g: &mut Game, last: bool, out: &mut [f64; 6]) {
     let rows = rows_for(g, q.rows);
     let r = if q.stands != 0.0 {
         let shade = sim::light::Shade { sigma: g.k.sense.smoke.sigma, g: g.sim, stamp: sim::state::stamp(g.sim) };
-        sim::light::asked(w, set, n, p, &shade, more, rows, last, out)
+        sim::light::asked(w, set, n, p, &shade, more, rows, last, out, &g.k)
     } else {
-        sim::light::asked(w, set, n, p, &sim::light::NO_SHADE, more, rows, last, out)
+        sim::light::asked(w, set, n, p, &sim::light::NO_SHADE, more, rows, last, out, &g.k)
     };
     g.col.lamp_q.parts += 1.0;
     g.col.mirror.lamp_n = 0.0;
@@ -994,7 +994,7 @@ fn grid_over(g: &mut crate::game::Game) -> Option<(bool, i32)> {
 pub fn grid_ways(g: &mut crate::game::Game) {
     let Some((mine, set)) = grid_over(g) else { return };
     let copy = crate::scene_box_mirror::box_mirror_grid_copy(g);
-    sim::bricks::ways(g.sim, sim::state::stamp(g.sim), slot(g), copy, set);
+    sim::bricks::ways(g.sim, sim::state::stamp(g.sim), slot(g), copy, set, &g.k);
     if mine { crate::scene_box_mirror::box_mirror_shut(g); }
 }
 
@@ -1050,7 +1050,7 @@ pub fn grid_step(g: &mut crate::game::Game, n: f64, k: crate::scene_collision::G
     let (w, block) = (slot(g), g.sim);
     let rows = rows_for(g, said_rows);
     let gk = if lamps >= 0 { Some(sim::glow::K { sweep, sky, lamps: lamps as usize, rows }) } else { None };
-    let r = sim::bricks::step(block, stamp, w, copy, set, js::to_u32(n), &bk, gk.as_ref());
+    let r = sim::bricks::step(block, stamp, w, copy, set, js::to_u32(n), &bk, gk.as_ref(), &g.k);
     if mine { crate::scene_box_mirror::box_mirror_shut(g); }
     r != ASK_HOST
 }
@@ -1060,7 +1060,7 @@ pub fn light_ready(g: &mut crate::game::Game) {
     let to_sun = crate::hours::sky_now(g).to_sun;
     window(g, &mut |g: &mut Game| {
         ready(g);
-        if standing(g) { sim::bricks::light_ready(slot(g), to_sun); }
+        if standing(g) { sim::bricks::light_ready(slot(g), to_sun, &g.k); }
     });
 }
 
@@ -1120,7 +1120,7 @@ fn sound_paths_propagate_ask(g: &mut crate::game::Game, src: V3, dst: V3, keep: 
 /// straight distance, walled off, and the way round is to be asked
 fn heard_straight(g: &Game, set: i32, ask: u32, src: V3, dst: V3) -> Result<(Propagation, bool), f64> {
     let mut straight = 0.0;
-    let c = sim::hear::direct(slot(g), set, ask, src, dst, &mut straight);
+    let c = sim::hear::direct(slot(g), set, ask, src, dst, &mut straight, &g.k);
     if c == ASK_HOST { panic!("{}", handed_back_words("sound", "a straight line too long to be one, or of no number", &src, &dst)); }
     if c < sim::hear::OVER {
         let mut graze = 0.0;
@@ -1140,7 +1140,7 @@ fn heard_round(g: &Game, set: i32, ask: u32, src: V3, dst: V3, straight: f64) ->
     let (nw, nh, cs) = (g.col.nav.w as usize, g.col.nav.h as usize, g.col.nav.cell);
     let seal = js::to_u32(crate::scene_boxes::box_flag().sound_seal);
     let mut out = [0.0; 4];
-    let k = sim::hear::route(slot(g), set, ask, seal, nw, nh, cs, src, dst, straight, &mut out);
+    let k = sim::hear::route(slot(g), set, ask, seal, nw, nh, cs, src, dst, straight, &mut out, &g.k);
     if k == ASK_HOST { return None; }
     if k == sim::hear::SEALED { return Some(sealed(src, straight)); }
     let (l, via) = (out[0], [out[1], out[2], out[3]]);
@@ -1167,13 +1167,13 @@ pub(super) fn line_shared(g: &Game, over: &Over, a: V3, b: V3, shrink: f64, thro
     if !(len >= 1e-4) || !(len < 1e6) { return false; }
     let thr = js::to_u32(through);
     let word = if thr & sim::world::F_GLASS != 0 { 0 } else { pane_word(g) };
-    lent(g, over, |v| sim::lines::blocked_over(slot(g), v, a[0], a[1], a[2], b[0], b[1], b[2], len, shrink, thr, word)) == -1
+    lent(g, over, |v| sim::lines::blocked_over(slot(g), v, a[0], a[1], a[2], b[0], b[1], b[2], len, shrink, thr, word, &g.k)) == -1
 }
 /// (ask::WorldAsk's ray)
 pub(super) fn ray_shared(g: &Game, over: &Over, ro: V3, rd: V3, tmax: f64) -> Option<crate::scene_collision::Raycast> {
     if !(tmax > 0.0) { return None; }
     let mut out = [0.0; 4];
-    let k = lent(g, over, |v| sim::lines::ray_over(slot(g), v, ro[0], ro[1], ro[2], rd[0], rd[1], rd[2], tmax, pane_word(g) != 0, &mut out));
+    let k = lent(g, over, |v| sim::lines::ray_over(slot(g), v, ro[0], ro[1], ro[2], rd[0], rd[1], rd[2], tmax, pane_word(g) != 0, &mut out, &g.k));
     if k < 0 { return None; }   // (a ray that is no number meets nothing here: a host asks it of a camera or a cursor, and the game is not to fall for it)
     Some(Raycast { t: out[0], index: k as f64, n: [out[1], out[2], out[3]] })
 }
@@ -1194,7 +1194,7 @@ pub(super) fn things_shared(g: &Game, ro: V3, rd: V3, tmax: f64) -> Option<(f64,
 /// (ask::WorldAsk's way: the module's plain search, on a grid written to it for the question. A place that is no number has no way, and the game is not to fall for it)
 pub(super) fn way_shared(g: &Game, a: V3, b: V3, max_iter: u32) -> Option<Vec<V3>> {
     nav_grid_there(g);
-    let n = sim::nav::find_path(slot(g), own_set(g), pane_word(g), g.col.nav.w as usize, g.col.nav.h as usize, g.col.nav.cell, a[0], a[2], b[0], b[2], max_iter);
+    let n = sim::nav::find_path(slot(g), own_set(g), pane_word(g), g.col.nav.w as usize, g.col.nav.h as usize, g.col.nav.cell, a[0], a[2], b[0], b[2], max_iter, &g.k);
     if n == sim::nav::NO_WAY || n == sim::nav::ASK_HOST { return None; }
     let at = sim::nav::way_addr();
     Some((0..n as usize).map(|i| [get_f64(at, i * 2), 0.0, get_f64(at, i * 2 + 1)]).collect())
@@ -1336,9 +1336,9 @@ fn nav_grid_find_path_ask(g: &mut crate::game::Game, a: V3, b: V3, max_iter: f64
     let mi = js::to_u32(max_iter);
     let mut n;
     if penalty.is_none() {
-        n = sim::nav::find_path(w, set, ask, nw, nh, cell, a[0], a[2], b[0], b[2], mi);
+        n = sim::nav::find_path(w, set, ask, nw, nh, cell, a[0], a[2], b[0], b[2], mi, &g.k);
     } else {
-        n = sim::nav::find_priced(w, set, ask, nw, nh, cell, a[0], a[2], b[0], b[2], mi);
+        n = sim::nav::find_priced(w, set, ask, nw, nh, cell, a[0], a[2], b[0], b[2], mi, &g.k);
         if n == sim::nav::NEED {
             g.m.scene_collision.priced.waits = true;
             while n == sim::nav::NEED {

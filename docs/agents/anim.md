@@ -33,7 +33,7 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 |---|---|
 | `rust/sim/src/layers.rs` | the layers themselves, each pose written in place |
 | `rust/sim/src/skeleton.rs`, `poses.rs`, `clips.rs` | blends and the two-bone solve; the pose pool in the game's block; the clip store |
-| `rust/sim/src/knobs.rs`, `rustknobs.rs` | the numbers and named nodes a layer reads, and who writes them there |
+| `rust/sim/src/roles.rs` | the named nodes of a rig a layer reads (its numbers are the game's own tables, by their names) |
 | `rust/game_start/src/gltf.rs` | the character files read for the game: skeleton, clips, the cast's parts and variants |
 | `rust/game_draw/src/men.rs` | what the picture is told of a man: sections `Man`, `Inst`, `Bones`, `Cap` |
 | `src/draw/men.ts`, `src/anim/characters.ts`, `src/anim/gltf.ts` | those sections handed to the GPU; the mesh's buffers; the mesh read for the page |
@@ -119,7 +119,7 @@ files for skeleton and clips; the page reads them for the mesh (`loadCharacterSe
 
 - **A number:** `knobs/character.rs` (`hold`, `moves`, `mv`, `turn`, `runarms`, `runready`, `hardbreath`, `kit`), `knobs/stealthpose.rs`, `knobs/kitanim.rs`, `knobs/condition.rs`. The panel or
   `?knob.moves.steady=0` turns one. Tables with no panel are functions in `rust/game_types/src/character/types.rs`: `stances`, `blend`, `sneak`, `creep`, `life`, `mv2`, `long_reload`.
-- **A number for a layer:** a line in `rust/sim/src/knobs.rs` and its `k[…]` line in `rustknobs.rs`.
+- **A number for a layer:** a field of its knob table, read as `tune.kit.close.drift`; one nobody turns is in a static of `character/types.rs` (`LIFE`, `CREEP`).
 - **A new layer:** a `pub fn` in `layers.rs`; an `anim_*` and `anim_*_ask` pair (copy `anim_lean_body`); a line in `anim_update_standing` where it should write over what is
   under it; its kept springs in `Anim`, with columns. Add it to the stand-down lists of what it gives way to.
 - **A one-shot:** an `anim_*` function that starts a clock in `Anim` (`sig_t`), advanced and read in the layer's place. Rules call that function, never the layer.

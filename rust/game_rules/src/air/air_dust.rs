@@ -16,13 +16,6 @@ fn air_read(g: &Game) -> &'static ::sim::air::Air {
     &::sim::weather::of_read(g.sim).air
 }
 
-/// The knobs current for a question asked of the module now. WX_KNOBS.here is set by rustknobs.ts:59 and reads the knobs; the skeleton's `here()` has no g (notes, ## Skeleton).
-fn knobs_here(g: &mut Game) {
-    if !g.m.rustknobs.rust_knobs.tick {
-        crate::rustknobs::knobs_to_rust(g);
-    }
-}
-
 /// What `ruleOpen` left on the copy: its slot, which list of leaves, which pane rule. Call after `rule_open`.
 fn rule_args(g: &Game) -> (usize, i32, u32) {
     let c = &g.col.mirror;
@@ -109,12 +102,11 @@ fn air_dust_build(g: &mut crate::game::Game) {
     g.air_dust.stats.roofed = air_read(g).n_cells;
     g.air_dust.stats.edges = air_read(g).n_edges;
     if on {
-        knobs_here(g);
         crate::scene_collision::rule(g, &mut |g: &mut Game| {
             crate::scene_collision::rule_open(g);
             let (w, set, ask) = rule_args(g);
             let stamp = ::sim::state::stamp(g.sim);
-            ::sim::air_settle(g.sim, stamp, w, set, ask);
+            ::sim::air_settle(g.sim, stamp, w, set, ask, &g.k);
             let t = said();
             air_dust_tally(g, &t);
         });
@@ -133,12 +125,11 @@ pub fn air_dust_update(g: &mut crate::game::Game, dt: f64) {
     if !air_dust_on(g) {
         return;
     }
-    knobs_here(g);
     crate::scene_collision::rule(g, &mut |g: &mut Game| {
         crate::scene_collision::rule_open(g);
         let (w, set, ask) = rule_args(g);
         let stamp = ::sim::state::stamp(g.sim);
-        ::sim::air_update(g.sim, stamp, w, set, ask, dt);
+        ::sim::air_update(g.sim, stamp, w, set, ask, dt, &g.k);
         let t = said();
         g.air_dust.drift += t[0];
         air_dust_tally(g, &t);

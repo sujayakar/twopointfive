@@ -700,7 +700,7 @@ fn step_there(g: &mut crate::game::Game, d: DoorId, r: f64, dt: f64, w: crate::d
     q[sim::slabs::P_SLIDE] = g.k.doorblast.slide;
     q[sim::slabs::P_BOUNCE] = g.k.doorblast.bounce;
     q[sim::slabs::P_TIP] = g.k.doorblast.tip;
-    let a = sim::slabs::step(g.sim, g.col.mirror.slot as usize);
+    let a = sim::slabs::step(g.sim, g.col.mirror.slot as usize, &g.k);
     let q = slab_par_read();
     let c = &mut g.m.sim_slabshome.slabs_stepped;
     c.rays += q[sim::slabs::P_RAYS];

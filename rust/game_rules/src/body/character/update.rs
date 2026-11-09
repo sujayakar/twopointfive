@@ -102,8 +102,6 @@ fn left_hand_clear(g: &Game, c: CharId, w_hd: f64, w_he: f64, w_lp: f64, w_hl: f
     a.mvs.arm_l <= 0.0 && a.mvs.ts_t < 0.0 && a.dp.w_l.x < 0.05 && !a.wk.fed && a.wk.shown < 0.05
 }
 
-/// `LAYERS.knobs?.()`: the one thing it holds is rustknobs.ts knobsNow; inside a tick the list is the tick's already.
-fn knobs_now(g: &mut Game) { if !g.m.rustknobs.rust_knobs.tick { crate::rustknobs::knobs_to_rust(g); } }
 /// `STANCES[s]`, for a stance that has a shape (not 'none').
 fn stance_shape(s: Stance) -> StanceShape { *stances().get(String::from(s.as_str())).unwrap() }
 /// `SIGNAL_DUR[k]`
@@ -155,7 +153,6 @@ fn swap_clock(sw: &mut AnimSw, want: Option<Option<AnimCarry>>, swap_lag: f64, s
 
 /// The animator's whole frame: every layer, in order, over pA; then the pose and the twists.   (character.ts updateStanding)
 fn anim_update_standing(g: &mut crate::game::Game, c: CharId, dt: f64) {
-    knobs_now(g);
     let sn = SNEAK;
     let cr = &CREEP;
     let singles = g.k.posemath.singles;   // (an open row: POSEMATH.singles stays a test)
