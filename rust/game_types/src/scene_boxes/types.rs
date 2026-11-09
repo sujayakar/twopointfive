@@ -133,9 +133,6 @@ pub struct BoxWorld {
     pub geom_serial: f64,
     /// (the picture's: in no bytes)
     #[bytes(skip)]
-    pub marking_texel: f64,
-    /// (the picture's: in no bytes)
-    #[bytes(skip)]
     pub cut_on: bool,
     /// (the picture's: in no bytes)
     #[bytes(skip)]
@@ -184,7 +181,6 @@ impl BoxWorld {
             visible: Vec::new(),
             visible_buf: crate::Opaque,
             geom_serial: 0.0,
-            marking_texel: 0.025,
             cut_on: false,
             cut_data: alloc::vec![0.0; 0],
             cut_split: 0.0,

@@ -669,8 +669,8 @@ pub extern "C" fn lights_flip(g: usize, on: u32, time: f64, strike: u32, n: usiz
 }
 /// lighting.ts updateTargets: what happened, as lights.rs EV_ bits
 #[no_mangle]
-pub extern "C" fn lights_step(g: usize, time: f64, dt: f64, near: u32, fumble: f64, es: f64) -> u32 {
-    lights::step(g, time, dt, near != 0, fumble, es)
+pub extern "C" fn lights_step(g: usize, time: f64, dt: f64, near: u32, fumble: f64) -> u32 {
+    lights::step(g, time, dt, near != 0, fumble)
 }
 /// a camera before its picture (lights.rs CAM_ bits)
 #[no_mangle]

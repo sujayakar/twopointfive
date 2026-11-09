@@ -26,7 +26,6 @@ pub fn fill(g: &mut crate::game::Game) {
     g.fog_picture.full_stats.ghosts = 0.0;
     g.fog_picture.full_stats.held = 0.0;
     let down = crate::sim_lightshome::mains_active(g);
-    let es = g.engine.settings.emissive_scale;
     let mut i = 0;
     while i < g.targets.len() {
         let t = g.targets[i];
@@ -54,7 +53,7 @@ pub fn fill(g: &mut crate::game::Game) {
                 let ghost = match g.tab.light[l].steady { Some(ref s) => s.intensity, None => crate::sim_lightshome::fixture_base_intensity(g, t) };
                 g.tab.light[l].fog_ghost = Some(ghost);
             }
-            for al in &areas { g.tab.light[al.light].fog_ghost = Some(al.base * es); }
+            for al in &areas { g.tab.light[al.light].fog_ghost = Some(al.base); }
         }
     }
     let mut i = 0;

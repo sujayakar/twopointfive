@@ -4939,4 +4939,4 @@ impl Io for crate::view::AttentionLine { fn w(&self, o: &mut W) { self.man.w(o);
 impl Poke for crate::view::AttentionLine { fn poke(&mut self, i: &mut R) { match u16::r(i) { 0xffff => self.ri(i), 0 => self.man.poke(i), 1 => self.at.poke(i), 2 => self.left.poke(i), 3 => self.mode.poke(i), 4 => self.ending.poke(i), 5 => self.worn.poke(i), 6 => self.walking.poke(i), 7 => self.hidden.poke(i), 8 => self.walks.poke(i), 9 => self.own.poke(i), k => panic!("bridge: no field {} of AttentionLine", k) } } }
 impl Io for crate::out_events::OutSmokeSystemLikeRound { fn w(&self, o: &mut W) { self.from.w(o); self.dir.w(o); self.len.w(o); } fn r(i: &mut R) -> Self { let mut s = Self::default(); s.from = Io::r(i); s.dir = Io::r(i); s.len = Io::r(i); s } fn ri(&mut self, i: &mut R) { self.from.ri(i); self.dir.ri(i); self.len.ri(i); } }
 impl Poke for crate::out_events::OutSmokeSystemLikeRound { fn poke(&mut self, i: &mut R) { match u16::r(i) { 0xffff => self.ri(i), 0 => self.from.poke(i), 1 => self.dir.poke(i), 2 => self.len.poke(i), k => panic!("bridge: no field {} of OutSmokeSystemLikeRound", k) } } }
-pub const LAYOUT: u32 = 638820953;
+pub const LAYOUT: u32 = 3184221046;

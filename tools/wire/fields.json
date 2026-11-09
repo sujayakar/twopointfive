@@ -8396,7 +8396,6 @@
 "scene_boxes::BoxWorld.item_count",
 "scene_boxes::BoxWorld.mark_rows",
 "scene_boxes::BoxWorld.mark_stats_info",
-"scene_boxes::BoxWorld.marking_texel",
 "scene_boxes::BoxWorld.mat_buf",
 "scene_boxes::BoxWorld.max_boxes",
 "scene_boxes::BoxWorld.rig",
