@@ -9,8 +9,8 @@ unhurt
 every 24 from 1    order stack door all
 every 24 from 6    order go door all
 every 24 from 12   order fallIn sam all
-every 24 from 14   order stack door red
-every 24 from 18   order bangClear door red
+every 24 from 14   order stack door blue
+every 24 from 18   order bangClear door blue
 every 48 from 20   order thresholdHold door blue
 every 48 from 22   order openClear door blue
-every 48 from 40   order shutDoor door all
+every 24 from 8    order shutDoor opendoor all
