@@ -100,7 +100,7 @@ pub fn update_fire(g: &mut Game, dt: f64) {
         let books = g.engine.host_books.get_or_insert_with(crate::host_api::HostBooks::default);
         if stale {
             books.fire = Some(FireShown {
-                n: 0.0, time: 0.0, stir: None, stir_at: None, bed: Vec::new(), smoke: Vec::new(), smokes: 0.0, beds: 0.0,
+                n: 0.0, time: 0.0, stir: None, stir_at: None, smoke: Vec::new(), smokes: 0.0,
                 ember: Vec::new(), embers: 0.0,
             });
         }
@@ -235,19 +235,6 @@ pub fn update_fire(g: &mut Game, dt: f64) {
                         ember_throw(g, &from, m::round(ember_crack * (0.4 + 0.6 * p.hard)), p.hard);
                     }
                 }
-            }
-        }
-        // the bed: asked for when the fire starts to burn and handed on every `bed_secs`. The closure of fire.ts:379 (`follow`) has no arm in PlayOpts: notes, ## Out
-        if moved {
-            let (bed_secs, bed_gain) = (g.k.fire.bed_secs, g.k.fire.bed);
-            let slot = m::floor(time / bed_secs);
-            let p = book(g);
-            let n = p.n;
-            let goes = p.bed.get(ix).copied() == Some(n - 1.0);
-            put_at(&mut p.bed, ix, n, NO_FRAME);
-            if slot != m::floor(was / bed_secs) || !goes {
-                p.beds += 1.0;
-                crate::audio_iface::game_audio_like_play(g, "fireBed", Some(mouth.pos), Some(bed_gain), None);
             }
         }
         // the smoke: a short source on the solver, filed afresh every `every` s

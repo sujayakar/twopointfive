@@ -109,6 +109,8 @@ export const DEVICE_DEFAULTS = { pitch: -0.35, fovDeg: 70, range: 14, sweepPerio
  *  `duty?` / `phase?` = slow cycling (seconds, on-fraction 0‥1, offset s; absent = steady), `mains?` (absent = true: on the breaker — a blackout stops the air),
  *  `floor?` as everywhere. The grille itself is an ordinary box (group 'ceiling.vents') like a door's frame is. */
 export interface VentData { id: string; floor?: string; pos: Vec3; dir: Vec3; speed: number; spread: number; reach: number; size?: number; period?: number; duty?: number; phase?: number; mains?: boolean; notes?: string; }
+/** What HUMS in a room (rust/game_draw Lasting; docs/level-format.md): a sound that goes on at `pos` at `level` (0‥1), dying to nothing `radius` m off; `mains?` (absent = true): it is on the breaker. */
+export interface HumData { id: string; kind: 'hum' | 'servers' | 'buzz' | 'wind'; floor?: string; pos: Vec3; level: number; radius: number; mains?: boolean; notes?: string; }
 /** The one mission thread, as objectives the fixed stage machine (rust/game_rules/src/mission) maps onto: v1 wants exactly one of each kind. */
 export type ObjectiveData =
   | { id: string; kind: 'reach'; /** the room's floor inside its walls */ area: Rect; /** DoorData.id the HUD points at for it */ door: string }
@@ -148,6 +150,8 @@ export interface LevelData {
   devices: DeviceData[];
   /** HVAC supply vents (rust/game_rules/src/wind) — optional block: absent = still air indoors */
   vents?: VentData[];
+  /** what hums in its rooms — optional block: absent = nothing does */
+  hums?: HumData[];
   /** a way between floors is in no game yet: the list is empty */
   connectors: never[];
   mission: MissionData;
@@ -169,7 +173,7 @@ export interface LevelData {
  *  game's reader's to say. Adding a field to the format = the reader's line (rust/game_start file.rs, records.rs), its interface above, this list, and both directions in levelLoad.ts. The drill plans
  *  are NOT here: they are handled generically. */
 export const KEYS = {
-  top: ['version', 'name', 'meta', 'floors', 'materials', 'surfaces', 'boxes', 'props', 'lights', 'switchables', 'doors', 'routes', 'chokepoints', 'civilians', 'volumes', 'marks', 'devices', 'vents', 'connectors', 'mission', 'breaker', 'beacons', 'sky', 'daylight', 'plans', 'scenarios'],
+  top: ['version', 'name', 'meta', 'floors', 'materials', 'surfaces', 'boxes', 'props', 'lights', 'switchables', 'doors', 'routes', 'chokepoints', 'civilians', 'volumes', 'marks', 'devices', 'vents', 'hums', 'connectors', 'mission', 'breaker', 'beacons', 'sky', 'daylight', 'plans', 'scenarios'],
   meta: ['grid', 'bounds', 'generator', 'notes', 'markTexel', 'kept'], bounds: ['min', 'max'], rect: ['x0', 'x1', 'z0', 'z1'],
   floor: ['id', 'name', 'y', 'ceiling'], material: ['albedo', 'rough', 'metal', 'stuff', 'does', 'notes'],
   surfaces: ['building', 'grassEdge', 'inside', 'outside', 'verge', 'zones'], zone: ['id', 'mat', 'x0', 'z0', 'x1', 'z1', 'notes'],
@@ -181,7 +185,7 @@ export const KEYS = {
   door: ['id', 'floor', 'hinge', 'closedDir', 'width', 'angle', 'exterior', 'closer', 'minAngle', 'maxAngle', 'locked', 'lock', 'keySide', 'steel', 'swing'],
   route: ['id', 'name', 'points', 'wait', 'weapon', 'keys'], chokepoint: ['id', 'name', 'floor', 'pos', 'yaw'], civilian: ['id', 'name', 'kind', 'floor', 'tint', 'tint2', 'points', 'wait', 'tasks', 'face', 'notes'], volume: ['id', 'kind', 'floor', 'c', 'h', 'yaw', 'notes'], mark: ['id', 'pos', 'yaw'],
   camera: ['id', 'kind', 'floor', 'pos', 'yaw', 'pitch', 'sweep', 'sweepPeriod', 'fovDeg', 'range', 'group', 'mains', 'notes'], keypad: ['id', 'kind', 'floor', 'pos', 'yaw', 'door', 'code', 'notes'], laser: ['id', 'kind', 'floor', 'from', 'to', 'group', 'mains', 'alarm', 'notes'],
-  vent: ['id', 'floor', 'pos', 'dir', 'speed', 'spread', 'reach', 'size', 'period', 'duty', 'phase', 'mains', 'notes'],
+  vent: ['id', 'floor', 'pos', 'dir', 'speed', 'spread', 'reach', 'size', 'period', 'duty', 'phase', 'mains', 'notes'], hum: ['id', 'kind', 'floor', 'pos', 'level', 'radius', 'mains', 'notes'],
   mission: ['playerSpawn', 'objectives'], reach: ['id', 'kind', 'area', 'door'], drive: ['id', 'kind', 'rackIndex', 'front', 'halfW'], exfil: ['id', 'kind', 'door', 'x', 'z', 'out'],
   breaker: ['pos', 'panel', 'led', 'fumble'], beacon: ['id', 'pos', 'box'], sky: ['zenith', 'horizon'], daylight: ['sun', 'sky', 'groupsOn', 'groupsOff', 'lightsOff', 'haze', 'exposure'],
   plans: ['roomClear', 'breach'],   // (the container only — what is INSIDE a plan is generic, see canonBlob)
@@ -192,7 +196,7 @@ export const PIECE_KEYS: readonly string[] = ['off', 'h', 'yaw', 'material', 'al
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------ floor references
 /** every record that says it is on floor `floorId` (one that says none is on the first) */
-export const floorUsers = (d: LevelData, floorId: string): { id: string }[] => [d.boxes, d.props, d.doors, d.volumes, d.chokepoints, d.devices, d.civilians ?? [], d.vents ?? []].flatMap(l => (l as { id: string; floor?: string }[]).filter(e => e.floor === floorId));
+export const floorUsers = (d: LevelData, floorId: string): { id: string }[] => [d.boxes, d.props, d.doors, d.volumes, d.chokepoints, d.devices, d.civilians ?? [], d.vents ?? [], d.hums ?? []].flatMap(l => (l as { id: string; floor?: string }[]).filter(e => e.floor === floorId));
 
 /** a level file's text (its faults are the judge's to say: judge.ts) */
 export const parseLevelData = (text: string): LevelData => JSON.parse(text) as LevelData;
@@ -248,6 +252,7 @@ export function canonicalLevelData(d: LevelData): LevelData {
     ...(d.marks?.length ? { marks: d.marks.map(m => pick(m, KEYS.mark)) } : {}),
     devices: d.devices.map(v => v.kind === 'camera' ? pick(v, KEYS.camera) : v.kind === 'keypad' ? pick(v, KEYS.keypad) : pick(v, KEYS.laser)),
     ...(d.vents ? { vents: d.vents.map(v => pick(v, KEYS.vent)) } : {}),
+    ...(d.hums ? { hums: d.hums.map(v => pick(v, KEYS.hum)) } : {}),
     connectors: [],
     mission: { ...pick(d.mission, KEYS.mission), objectives: d.mission.objectives.map(o => o.kind === 'reach' ? { ...pick(o, KEYS.reach), area: rect(o.area) } : o.kind === 'drive' ? pick(o, KEYS.drive) : pick(o, KEYS.exfil)) },
     breaker: pick(d.breaker, KEYS.breaker),

@@ -392,7 +392,7 @@ const TOYS = ['rifleSuppressed', 'magOut', 'doorBang', 'doorLatch', 'doorRattle'
 
   // 4. the replay still plays step for step, with the lanes holding every sound the tape lists
   const c = await walk(row.steps + 10);
-  const names = new Set(c.rows.map(r => r.name)), missing = Object.keys(row.sounds).filter(n => !names.has(n) && !(n === 'smokePop' && names.has('smokeHiss')));
+  const names = new Set(c.rows.map(r => r.name)), missing = Object.keys(row.sounds).filter(n => !names.has(n));
   line(c.state.ended && !c.state.drift, 'the replay plays to its end step for step', `step ${c.state.f}, drift ${c.state.drift ?? 'none'}`);
   line(!missing.length, 'every sound of the replay has a lane', missing.length ? `missing ${missing.join(' ')}` : `${names.size} lanes`);
   const reset = await page.evaluate(toy => { const L = window.__sndlanes; L.pick(toy, { take: L.takesOf(toy).game, flag: false, note: '' }); return { trim: L.takesOf(toy).trim, text: L.copyText() }; }, toy);

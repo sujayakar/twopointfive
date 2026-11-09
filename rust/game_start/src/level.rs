@@ -187,7 +187,7 @@ fn lay(g: &mut Game, f: LevelFile, dressing: bool, lived: bool) -> Loaded {
     let chokepoints: Vec<Chokepoint> = f.chokepoints.into_iter().map(|c| Chokepoint { name: c.name.unwrap_or(c.id), pos: c.pos, yaw: c.yaw }).collect();
     let mut level = Level::default();
     level.props = props; level.lights = lights; level.switchables = switchables; level.doors = doors;
-    level.devices = Some(f.devices); level.vents = f.vents; level.civilians = f.civilians; level.breach = f.plans.breach.map(|p| p.plan);
+    level.devices = Some(f.devices); level.vents = f.vents; level.hums = f.hums; level.civilians = f.civilians; level.breach = f.plans.breach.map(|p| p.plan);
     level.daylight = f.daylight.map(|d| DaylightDef {
         sun: light_of(d.sun), sky: DaylightDefSky { zenith: d.sky.zenith, horizon: d.sky.horizon }, groups_on: d.groups_on, groups_off: d.groups_off, lights_off: d.lights_off, haze: d.haze, exposure: d.exposure,
     });

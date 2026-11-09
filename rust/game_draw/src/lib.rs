@@ -121,7 +121,7 @@ sections! {
     beams: boxes::Beam = boxes.beams;
     sounds: events::Sound = events.sounds;
     footfalls: events::Footfall = events.footfalls;
-    rolls: events::Roll = events.rolls;
+    lasting: events::Lasting = events.lasting;
     heard: events::Heard = events.heard;
     rims: rims::Rim = rims;
     fires: fires::Fire = fires;

@@ -123,6 +123,8 @@ impl FromJson for game::scene_scenarios::LessonTestKind {
 json_words!(game::scene_level::CivilianDefKind { Cleaner: "cleaner", Worker: "worker" });
 json_words!(game::scene_level::CivilianTask { Bin: "bin", Stand: "stand", Wipe: "wipe", Sit: "sit", Cooler: "cooler", Printer: "printer", Shelf: "shelf" });
 json_struct!(game::scene_level::VentDef { name: "id", pos: "pos", dir: "dir", speed: "speed", spread: "spread", reach: "reach", size: "size", period: "period", duty: "duty", phase: "phase", mains: "mains" } drops { "floor": Option<String>, "notes": Option<String> });
+json_words!(game::scene_level::HumKind { Hum: "hum", Servers: "servers", Buzz: "buzz", Wind: "wind" });
+json_struct!(game::scene_level::HumDef { name: "id", kind: "kind", pos: "pos", level: "level", radius: "radius", mains: "mains" } drops { "floor": Option<String>, "notes": Option<String> });
 json_words!(game::scene_level::RoomClearPlanBreach { Kick: "kick", Open: "open" });
 json_struct!(game::scene_level::BreachPlanBounds { x0: "x0", x1: "x1", z0: "z0", z1: "z1" });
 json_struct!(game::scene_level::BreachPlanLines { stack1: "stack1", stack2: "stack2", go2: "go2", in1: "in1", side2: "side2", side1: "side1", push1: "push1", under2: "under2", nothing2: "nothing2", corner1: "corner1", empty2: "empty2", radio1: "radio1" });

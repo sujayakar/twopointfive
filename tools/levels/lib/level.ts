@@ -119,6 +119,8 @@ export interface VolumeDef { name: string; kind: 'hide' | 'utility' | 'trigger';
 /** a named mark at run time (a place + a facing) */
 export interface MarkDef { name: string; pos: Vec3; yaw?: number; }
 export interface VentDef { name: string; pos: Vec3; dir: Vec3; speed: number; spread: number; reach: number; size?: number; period?: number; duty?: number; phase?: number; mains?: boolean; }
+/** what hums in a room (levelData.ts HumData: id → name) */
+export interface HumDef { name: string; kind: 'hum' | 'servers' | 'buzz' | 'wind'; pos: Vec3; level: number; radius: number; mains?: boolean; }
 export type PropKind = 'chair' | 'cardboard' | 'bin' | 'plant';
 /** One box of a loose prop, in the prop's local frame: `off` from the prop origin (on the floor, y up), `yaw` relative to the prop's heading (frameAt / Box.yaw convention);
  *  `marks` = the markings on the part's faces (scene/markings.ts — the tape and glyphs on a carton), carried onto the box rust/game_rules/src/props makes of it. */
@@ -145,6 +147,8 @@ export interface Level {
   devices?: DeviceDef[];
   /** HVAC supply vents (rust/game_rules/src/wind): the ceiling diffusers whose jets move the particles and the smoke; optional — a level with none has still air indoors */
   vents?: VentDef[];
+  /** what hums in its rooms; optional — a level with none is silent till something is done in it */
+  hums?: HumDef[];
   /** the cleaner, the late worker (rust/game_rules/src/civilians); optional — a level with none has nobody but the shift on it */
   civilians?: CivilianDef[];
   /** authored volumes (LevelData volumes[] — the editor's V tool): the level script's onEnter triggers test them (rust/game_rules/src/director); absent = the level authors none */

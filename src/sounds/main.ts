@@ -11,7 +11,7 @@ import { altPicked, altSay, altTake, altTakes } from '../audio/sfxAlt';
 import { sfxContext, SfxBuffer, BackendVoice } from '../audio/backend';
 import { WebAudioBackend } from '../audio/webaudio';
 import { Music, WebAudioMusicBackend } from '../audio/music';
-import { AMBIENCE_DISTANCE, AMBIENCE_OFFICE, HISS, ambienceLoop } from '../audio/loops';
+import { AMBIENCE, AMBIENCE_DISTANCE, HISS, HUMS } from '../audio/loops';
 import { MAX_DIST, REF_DIST, ROLLOFF, VOLUME_DEFAULTS, cutoffOf, distanceGain, hrtfFor, occludedGain, sendOf } from '../audio/mixlaw';
 import { noiseBuffer } from '../audio/webaudio';
 import { GROUPS, PLACES, SOUNDS, Place, Use } from './catalog';
@@ -324,7 +324,6 @@ function chrome() {
 }
 
 // ---- loops: the hums, a canister's hiss, the rain, the score ----
-const HUMS = AMBIENCE_OFFICE.filter((e, i, all) => all.findIndex(x => x.kind === e.kind) === i);   // (one of each kind, at the level the mixer gives its first emitter)
 let rainOn = false;
 function stopLoops() {
   for (const off of [...loops.values()]) off();
@@ -346,7 +345,7 @@ function loopsUi() {
   const hums = new Map<string, BackendVoice>();
   for (const h of HUMS) toggle(h.what, h.kind, b => {
     let v = hums.get(h.kind);
-    if (!v) { const L = ambienceLoop(b.sfxContext, h.kind); b.loadBuffer('amb:' + h.kind, L.buffer);
+    if (!v) { const L = AMBIENCE[h.kind]; b.loadBuffer('amb:' + h.kind, L.made(b.sfxContext));
       const nv = b.play({ buffer: 'amb:' + h.kind, pos: [0.6, 1.4, -2], gain: 0, rate: 1, loop: true, bus: 'ambience', distance: AMBIENCE_DISTANCE, filter: L.filter, wobble: L.wobble });
       if (!nv) return null; v = nv; hums.set(h.kind, nv); }
     const hv = v; b.setVoice(hv, { gain: h.base }, 0.1);
