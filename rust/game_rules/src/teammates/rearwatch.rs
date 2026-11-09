@@ -33,9 +33,6 @@ fn spare_of(g: &Game, a: OrdersAssignmentId) -> bool {
 fn pos_of(g: &Game, m: GuardId) -> V3 {
     g.ch[g.gd[m].ch].pos
 }
-fn is_dead(g: &Game, m: GuardId) -> bool {
-    g.gd[m].state == crate::game::GuardState::Dead
-}
 fn pin_row(g: &Game, key: PlayerId, m: GuardId) -> Option<RearPin> {
     g.m.rearwatch.books.get(key).unwrap().pins.get(m).copied()
 }
@@ -61,7 +58,7 @@ fn carries(g: &Game, op: DoorOpId) -> bool {
     if r.thr.is_some() || !is_entry(r.kind) {
         return false;
     }
-    r.men.iter().filter(|&&m| !is_dead(g, m)).count() >= 3
+    r.men.iter().filter(|&&m| !crate::condition::down(g, g.gd[m].ch)).count() >= 3
 }
 /// does an order of the door tools work this door
 fn door_worked(g: &Game, seat: &crate::seats::SeatRef, door: DoorId) -> bool {
@@ -262,7 +259,7 @@ pub fn rear_watch_tick(g: &mut crate::game::Game) {
         return;
     }
     let grace = g.k.rearwatch.grace;
-    let squad: Vec<GuardId> = crate::orders::squad_orders_men(g, &crate::seats::here(g), None, None).into_iter().filter(|&m| !is_dead(g, m)).collect();
+    let squad: Vec<GuardId> = crate::orders::squad_orders_men(g, &crate::seats::here(g), None, None).into_iter().filter(|&m| !crate::condition::down(g, g.gd[m].ch)).collect();
     let mut groups: Vec<Group> = Vec::new();
     let mut taken: JsSet<GuardId> = JsSet::new();
     for op in g.door_tools.ops.clone() {
@@ -272,7 +269,7 @@ pub fn rear_watch_tick(g: &mut crate::game::Game) {
         }
         let mut men: Vec<GuardId> = Vec::new();
         for &m in &op_men {
-            if is_dead(g, m) {
+            if crate::condition::down(g, g.gd[m].ch) {
                 continue;
             }
             let a = of(g, m);
@@ -284,7 +281,7 @@ pub fn rear_watch_tick(g: &mut crate::game::Game) {
         // (the whole file's marks, the men already sent in included: the stack is where it stood)
         let mut marks: Vec<V3> = Vec::new();
         for &m in &op_men {
-            if is_dead(g, m) {
+            if crate::condition::down(g, g.gd[m].ch) {
                 continue;
             }
             let q = match g.tab.doortools_door_op[op].post.get(m) {
@@ -318,7 +315,7 @@ pub fn rear_watch_tick(g: &mut crate::game::Game) {
             if phase == crate::doortools::Phase::Stack && !on_word {
                 let mut formed = true;
                 for &m in &op_men {
-                    if is_dead(g, m) {
+                    if crate::condition::down(g, g.gd[m].ch) {
                         continue;
                     }
                     let q = match g.tab.doortools_door_op[op].post.get(m) {
@@ -446,7 +443,7 @@ pub fn rear_watch_tick(g: &mut crate::game::Game) {
         }
     }
     for m in g.m.rearwatch.books.get(key).unwrap().pins.keys() {
-        if next.has(m) || grouped.has(m) || taken.has(m) || is_dead(g, m) {
+        if next.has(m) || grouped.has(m) || taken.has(m) || crate::condition::down(g, g.gd[m].ch) {
             continue;
         }
         let p = pin_row(g, key, m).unwrap();
@@ -617,7 +614,7 @@ pub fn rear_watch_tick(g: &mut crate::game::Game) {
         };
         let w = w_all.iter().find(|x| x.o == p.o).copied();
         // (why, for the log: read by the checks and whoever asks why a back door went unwatched)
-        let why = if is_dead(g, m) {
+        let why = if crate::condition::down(g, g.gd[m].ch) {
             "down"
         } else if let Some(x) = gr {
             if !x.cands.contains(&m) {
@@ -713,12 +710,12 @@ fn room_keep_tick(g: &mut crate::game::Game, pl: PlayerId) {
     }
     let now = crate::doortools::door_tools_door_keepers(g, &crate::seats::here(g));
     let sam = g.player;
-    let sam_up = !g.pl[sam].down;
+    let sam_up = !crate::condition::down(g, g.pl[sam].ch);
     let sam_ch = g.pl[sam].ch;
-    let squad: Vec<GuardId> = crate::orders::squad_orders_men(g, &crate::seats::here(g), None, None).into_iter().filter(|&m| !is_dead(g, m)).collect();
+    let squad: Vec<GuardId> = crate::orders::squad_orders_men(g, &crate::seats::here(g), None, None).into_iter().filter(|&m| !crate::condition::down(g, g.gd[m].ch)).collect();
     // ---- the hand-over: he had a door last frame, the entry has let go of him since, and what he has now is 'fall in'
     for (m, door, a0) in book!(g, pl).was.clone() {
-        if book!(g, pl).keeps.has(m) || is_dead(g, m) || now.iter().any(|x| x.0 == m) {
+        if book!(g, pl).keeps.has(m) || crate::condition::down(g, g.gd[m].ch) || now.iter().any(|x| x.0 == m) {
             continue;
         }
         let a = match of(g, m) {
@@ -808,7 +805,7 @@ fn room_keep_tick(g: &mut crate::game::Game, pl: PlayerId) {
         let r = book!(g, pl).keeps.get(m).unwrap().clone();
         let p = r.pin;
         let o = p.o;
-        if is_dead(g, m) {
+        if crate::condition::down(g, g.gd[m].ch) {
             book!(g, pl).keeps.delete(m);
             continue;
         }
@@ -929,7 +926,7 @@ fn room_keep_tick(g: &mut crate::game::Game, pl: PlayerId) {
             if !behind.is_empty() && !queue {
                 let mut passed = true;
                 for &x in &behind {
-                    if !(is_dead(g, x) || !rest.contains(&x) || walk(g, &mut far, x, sam_at) < dm - 0.3) {
+                    if !(crate::condition::down(g, g.gd[x].ch) || !rest.contains(&x) || walk(g, &mut far, x, sam_at) < dm - 0.3) {
                         passed = false;
                         break;
                     }
@@ -992,7 +989,7 @@ fn held_by_other(g: &mut crate::game::Game, g_2: &crate::rearwatch::Group, o: Co
     let (od, at) = (g.tab.cover_opening[o].door, g.tab.cover_opening[o].at);
     if let Some(op) = g_2.op {
         if let Some(l) = g.tab.doortools_door_op[op].lane.as_ref() {
-            if od.is_some() && Some(l.door) == od && !is_dead(g, l.gd) {
+            if od.is_some() && Some(l.door) == od && !crate::condition::down(g, g.gd[l.gd].ch) {
                 return true;
             }
         }

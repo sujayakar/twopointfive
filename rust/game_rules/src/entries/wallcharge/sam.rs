@@ -72,34 +72,19 @@ pub fn wall_charge_hole_at(g: &mut crate::game::Game, w: &crate::wallcharge::Wal
     best
 }
 
-/// WALLSHOT: the shock with no flash (wallcharge.ts WallCharge.shock)
+/// WALLSHOT: the shock with no flash
 pub(super) fn wall_charge_shock(g: &mut crate::game::Game, gd: GuardId, secs: f64, at: V3) {
-    let now = g.time;
-    g.gd[gd].stagger_until = m::max(g.gd[gd].stagger_until, now + secs);
-    g.gd[gd].react_t = m::max(g.gd[gd].react_t, secs);
-    let fa = g.gd[gd].weapon;
+    let (c, fa) = (g.gd[gd].ch, g.gd[gd].weapon);
+    crate::condition::fold(g, c, secs);
     g.fa[fa].burst = None;
-    crate::mind::raise(g, gd, 0.6, "wallcharge");
-    if g.gd[gd].state != crate::game::GuardState::Alert { crate::belief::word(g, gd, at); }
-    crate::game::guard_set_path(g, gd, Vec::new());
-    crate::guards::guard_set_path_goal(g, gd, None);
-    g.gd[gd].speed = 0.0;
-    let c = g.gd[gd].ch;
+    crate::condition::dazed(g, gd, secs, at, 0.6, "wallcharge");
     crate::character::anim_hit(g, c);
 }
 
-/// Flash-blind (wallcharge.ts WallCharge.dazzle)
+/// Flash-blind
 pub(super) fn wall_charge_dazzle(g: &mut crate::game::Game, gd: GuardId, secs: f64, at: V3) {
-    let now = g.time;
-    g.gd[gd].dazzled_until = m::max(g.gd[gd].dazzled_until, now + secs);
-    g.gd[gd].react_t = m::max(g.gd[gd].react_t, secs);
-    crate::mind::raise(g, gd, 0.6, "wallcharge");
-    if g.gd[gd].state != crate::game::GuardState::Alert { crate::belief::word(g, gd, at); }
-    if g.ai_enabled { g.gd[gd].witness.dazzled += 1.0; }
-    crate::game::guard_set_path(g, gd, Vec::new());
-    crate::guards::guard_set_path_goal(g, gd, None);
-    g.gd[gd].speed = 0.0;
     let c = g.gd[gd].ch;
+    crate::condition::dazzled(g, gd, secs, at, None, "wallcharge");
     crate::character::anim_hit(g, c);
 }
 
@@ -287,7 +272,7 @@ pub(super) fn wall_charge_sam_tick(g: &mut crate::game::Game) {
         }
     }
     let s = match g.wall_charge.sam.clone() { Some(s) => s, None => return };
-    if g.pl[pl].down || g.pl[pl].sprinting || g.pl[pl].dragging.is_some() || g.pl[pl].holding.is_some() || g.pl[pl].takedown.is_some()
+    if crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].sprinting || g.pl[pl].dragging.is_some() || g.pl[pl].holding.is_some() || g.pl[pl].takedown.is_some()
         || v3::dist_xz(p, s.at) > g.k.wallcharge.sam_shift || (has_act && !mine) {
         wall_charge_cancel(g);
         return;
@@ -307,8 +292,6 @@ pub(super) fn wall_charge_sam_tick(g: &mut crate::game::Game) {
     if wall_charge_open_at(g, &s.wall) || wall_charge_charge_on(g, &crate::seats::here(g), &s.wall).is_some() { return; }
     let paid = wall_charge_take(g);
     if paid < 0.0 {
-        let words = wall_charge_none_words(g, &crate::seats::here(g));
-        crate::game::game_msg(g, words.strip_suffix('.').unwrap_or(&words));
         return;
     }
     let index = s.wall.index;
@@ -319,9 +302,6 @@ pub(super) fn wall_charge_sam_tick(g: &mut crate::game::Game) {
     g.wall_charge.stats.by_sam += 1.0;
     crate::audio_iface::game_audio_like_play(g, "lockPick", Some(at), Some(0.6), None);
     crate::furnblast::furniture_warm(g);
-    let f = g.k.doortools.blow_key.replacen("Key", "", 1);
-    let tail = crate::ownblow::blow_tail(false, &f, Some(". "));
-    crate::game::game_msg(g, &alloc::format!("charge set on the wall{}", tail));
     wall_charge_note(g, &alloc::format!("set by the player on wall {}", index));
 }
 
@@ -341,7 +321,6 @@ pub fn wall_charge_sam_job(g: &mut crate::game::Game) -> Option<crate::wallcharg
 pub fn wall_charge_cancel(g: &mut crate::game::Game) -> bool {
     if g.wall_charge.sam.is_none() { return false; }
     g.wall_charge.sam = None;
-    crate::game::game_msg(g, "charge not set");
     true
 }
 

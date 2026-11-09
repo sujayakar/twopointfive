@@ -175,7 +175,7 @@ pub fn silent_holds_target(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if !under_silence(g, gd) { return false; }
     let op = match crate::roomfight::room_fight_op_of(g, gd) { Some(op) => op, None => return false };
     let h = match g.tab.roomfight_op[op].tgt { Some(h) => h, None => return false };
-    g.gd[h].state != crate::game::GuardState::Dead && own_hold(g, gd, h)
+    !crate::condition::down(g, g.gd[h].ch) && own_hold(g, gd, h)
 }
 
 /// his round at `h` would have to go through standing glass to reach `to`: held   (silent.ts silentHoldsGlass)
@@ -199,7 +199,6 @@ pub fn silent_tool(g: &mut crate::game::Game, loud: bool) {
     if !loud || !squad_silent(g, &crate::seats::here(g)) { return; }
     set_silent(g, false, Some(By::Tool));
     g.stats.silent.tools += 1;
-    crate::game::game_msg(g, "squad: going loud on that order.");
 }
 
 /// is the silent squad compromised right now   (silent.ts silentCompromised)
@@ -305,14 +304,14 @@ pub fn silent_tick(g: &mut crate::game::Game) {
     }
     let mut hot = None;
     for &gd in cast.iter() {
-        if g.gd[gd].state != crate::game::GuardState::Dead && reached(g, gd) { hot = Some(gd); break; }
+        if !crate::condition::down(g, g.gd[gd].ch) && reached(g, gd) { hot = Some(gd); break; }
     }
     let s = g.m.silent.states.get(key).unwrap();
     let (was_hot, was) = (s.hot, s.was == Some(true));
     if let Some(man) = hot {
         if !was_hot {
             g.stats.silent.compromised += 1;
-            if !was { crate::game::game_say(g, man, "compromised.", None, None, None); }
+            if !was { crate::game::game_say(g, man, "compromised.", None, None); }
         }
     }
     let s = g.m.silent.states.get_mut(key).unwrap();

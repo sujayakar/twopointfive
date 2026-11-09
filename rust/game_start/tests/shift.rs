@@ -292,7 +292,7 @@ fn more_taps_part_the_squad_down() {
         p.cursor_on(on_floor(spots[2]));
         p.run(0.2);
         assert_eq!(tap(&mut p, true), None, "seed {s}: nobody is free");
-        assert!(p.log().iter().any(|l| l.contains("nobody's free")), "seed {s}: and the squad says so");
+        assert!(p.said.iter().any(|l| l.text.contains("nobody's free")), "seed {s}: and the squad says so");
     }
 }
 

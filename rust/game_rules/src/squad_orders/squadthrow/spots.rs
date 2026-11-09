@@ -359,7 +359,7 @@ fn frag_clears(g: &mut crate::game::Game, gd: GuardId, p: V3, pts: &[V3], late: 
     if pts.iter().any(|l| v3::dist_xz(p, *l) < duck_min_m) { return false; }   // (inside what it kills at nobody is asked to duck)
     let run = g.k.frag.run_speed;
     let blast = crate::teampace::team_blast_pace(g, gd, run);
-    let speed = crate::condition::condition_pace(g, gd, blast);
+    let speed = crate::condition::condition_pace(g, g.gd[gd].ch, blast);
     let l = pts[0];
     g.stats.squadthrow.ducks += 1;
     let rest: V3 = [l[0], l[1] - 0.25, l[2]];
@@ -391,8 +391,8 @@ fn frag_clears(g: &mut crate::game::Game, gd: GuardId, p: V3, pts: &[V3], late: 
     // (… and one nobody of ours stands on or is going to: two men to one corner is one man left out in it)
     let apart_m = g.k.squadthrow.duck_apart_m;
     let near = |q: V3| v3::dist_xz(q, spot) < apart_m;
-    if g.guards.iter().any(|&o| o != gd && g.gd[o].team == crate::teams::Team::Operative && g.gd[o].state != crate::game::GuardState::Dead && near(pos_of(g, o))) { return false; }
-    if !g.pl[g.player].down && near(sam_pos(g, &crate::seats::here(g))) { return false; }
+    if g.guards.iter().any(|&o| o != gd && g.gd[o].team == crate::teams::Team::Operative && !crate::condition::down(g, g.gd[o].ch) && near(pos_of(g, o))) { return false; }
+    if !crate::condition::down(g, g.pl[g.player].ch) && near(sam_pos(g, &crate::seats::here(g))) { return false; }
     if let Some(t) = taken {
         if t.iter().any(|q| near(*q)) { return false; }
         t.push(spot);
@@ -481,7 +481,7 @@ pub(super) fn walk_spot(g: &mut crate::game::Game, men: &[GuardId], at: V3, kind
     state(g);   // (the row is made here if it is not there)
     let mut who: Vec<GuardId> = Vec::new();
     for &gd in men {
-        if g.gd[gd].state != crate::game::GuardState::Dead
+        if !crate::condition::down(g, g.gd[gd].ch)
             && crate::squadsmoke::squad_hand_free(g, gd)
             && !hands_at_work(g, gd)
             && !tossing_here(g, &crate::seats::here(g), gd)
@@ -509,8 +509,8 @@ pub(super) fn walk_spot(g: &mut crate::game::Game, men: &[GuardId], at: V3, kind
         home.push(crate::cleared::cleared_rooms_room_at(g, p));
     }
     // (each with whose feet they are: `o !== gd.char.pos` was an identity test of the array)
-    let mut ours: Vec<(Option<GuardId>, V3)> = g.guards.iter().filter(|&&o| g.gd[o].team == crate::teams::Team::Operative && g.gd[o].state != crate::game::GuardState::Dead).map(|&o| (Some(o), pos_of(g, o))).collect();
-    if !g.pl[g.player].down { ours.push((None, sam_pos(g, &crate::seats::here(g)))); }
+    let mut ours: Vec<(Option<GuardId>, V3)> = g.guards.iter().filter(|&&o| g.gd[o].team == crate::teams::Team::Operative && !crate::condition::down(g, g.gd[o].ch)).map(|&o| (Some(o), pos_of(g, o))).collect();
+    if !crate::condition::down(g, g.pl[g.player].ch) { ours.push((None, sam_pos(g, &crate::seats::here(g)))); }
     g.stats.squadthrow.searches += 1;
     let roll_k = roll_of(g, kind);
     let walls: Vec<V3> = match lob.as_deref() { Some(l) => l.walls.clone(), None => Vec::new() };
@@ -552,7 +552,7 @@ pub(super) fn squad_throw_now(g: &mut crate::game::Game, men: &[GuardId], at: V3
 /// would catch one of ours, or his hands are taken.
 pub(super) fn throw_again(g: &mut crate::game::Game, was: &SquadThrower, at: V3, kind: SquadThrowKind) -> Option<SquadThrower> {
     let gd = was.gd;
-    if g.gd[gd].state == crate::game::GuardState::Dead || !crate::squadsmoke::squad_hand_free(g, gd) || hands_at_work(g, gd) { return None; }
+    if crate::condition::down(g, g.gd[gd].ch) || !crate::squadsmoke::squad_hand_free(g, gd) || hands_at_work(g, gd) { return None; }
     let seat = crate::seats::here(g);
     if tossing_here(g, &seat, gd) || walking_here(g, &seat, gd) || (was.post.is_some() && !may_walk(g, &seat, gd)) { return None; }
     let walls = crate::throwplan::throw_walls(g, at);
@@ -598,7 +598,7 @@ pub fn squad_frag_catches(g: &mut crate::game::Game, rest: V3, at: V3, moved: Op
 fn frag_catches(g: &mut crate::game::Game, rest: V3, at: V3, moved: Option<crate::squadthrow::FragCatchesMoved>, sam: bool, burst: Option<&crate::squadthrow::FragCatchesBurst>) -> Option<String> {
     let pts = frag_pts(rest, at);
     let reach = burst.map(|b| b.reach);
-    if (sam || sam_near(g, &crate::seats::here(g), &pts)) && !g.pl[g.player].down {
+    if (sam || sam_near(g, &crate::seats::here(g), &pts)) && !crate::condition::down(g, g.pl[g.player].ch) {
         let p = sam_pos(g, &crate::seats::here(g));
         if frag_in(g, &pts, p, None, reach) { return Some(String::from("you're in it.")); }
     }
@@ -607,7 +607,7 @@ fn frag_catches(g: &mut crate::game::Game, rest: V3, at: V3, moved: Option<crate
     for i in 0..g.guards.len() {
         let gd = g.guards[i];
         if g.gd[gd].team != crate::teams::Team::Operative { continue; }
-        let hit = if g.gd[gd].state != crate::game::GuardState::Dead {
+        let hit = if !crate::condition::down(g, g.gd[gd].ch) {
             // (duck: … and cannot be off its line before it bursts)
             let p = match moved { Some(q) if q.gd == gd => q.at, _ => pos_of(g, gd) };
             if !frag_in(g, &pts, p, None, reach) {
@@ -647,7 +647,7 @@ fn frag_catches(g: &mut crate::game::Game, rest: V3, at: V3, moved: Option<crate
 
 /// (fragCatches live) alive and inside it
 fn live_in(g: &mut Game, o: GuardId, pts: &[V3], reach: Option<f64>) -> bool {
-    if g.gd[o].state == crate::game::GuardState::Dead { return false; }
+    if crate::condition::down(g, g.gd[o].ch) { return false; }
     let p = pos_of(g, o);
     frag_in(g, pts, p, None, reach)
 }
@@ -657,14 +657,14 @@ pub(super) fn squad_stun_catches(g: &mut crate::game::Game, rest: V3, at: V3) ->
     if !crate::effects::flags().dazzle { return Vec::new(); }
     let pts = stun_pts(rest, at);
     let mut out: Vec<String> = Vec::new();
-    if !g.pl[g.player].down && g.puppet.is_none() {
+    if !crate::condition::down(g, g.pl[g.player].ch) && g.puppet.is_none() {
         let c = g.pl[g.player].ch;
         let eye = match g.ch[c].bones.get(crate::character::Bone::Head) { Some(h) => *h, None => v3::add(g.ch[c].pos, [0.0, 1.6, 0.0]) };
         if stun_in(g, &pts, eye, true) { out.push(String::from("you")); }
     }
     for i in 0..g.guards.len() {
         let gd = g.guards[i];
-        if g.gd[gd].team != crate::teams::Team::Operative || g.gd[gd].state == crate::game::GuardState::Dead { continue; }
+        if g.gd[gd].team != crate::teams::Team::Operative || crate::condition::down(g, g.gd[gd].ch) { continue; }
         let c = g.gd[gd].ch;
         let eye = match g.ch[c].bones.get(crate::character::Bone::Head) { Some(h) => *h, None => v3::add(g.ch[c].pos, [0.0, 1.65, 0.0]) };
         if stun_in(g, &pts, eye, false) { out.push(g.gd[gd].callsign.clone()); }
@@ -674,7 +674,7 @@ pub(super) fn squad_stun_catches(g: &mut crate::game::Game, rest: V3, at: V3) ->
 
 /// … is he inside it, where it would go off or at the spot asked for? (squadthrow.ts squadFragOnSam)
 pub(super) fn squad_frag_on_sam(g: &mut crate::game::Game, rest: V3, at: V3) -> bool {
-    if g.pl[g.player].down { return false; }
+    if crate::condition::down(g, g.pl[g.player].ch) { return false; }
     let p = sam_pos(g, &crate::seats::here(g));
     frag_in(g, &frag_pts(rest, at), p, None, None)
 }

@@ -26,8 +26,6 @@ pub fn free_held(g: &mut crate::game::Game, why: crate::player::FreeHeldWhy) {
         let hc = g.gd[h_g].ch;
         let at = v3::add(g.ch[hc].pos, [0.0, 1.3, 0.0]);
         crate::audio_iface::game_audio_like_play(g, "shove", Some(at), Some(0.3), None);
-        let text = alloc::format!("{} is loose", g.gd[h_g].callsign);
-        crate::game::game_msg(g, &text);
     }
 }
 
@@ -41,7 +39,7 @@ pub(super) fn drop_hold(g: &mut crate::game::Game) {
     }
     let gc = g.gd[gd].ch;
     g.ch[gc].anim.held_pose = None;
-    if g.gd[gd].state != crate::game::GuardState::Dead {
+    if !crate::condition::down(g, g.gd[gd].ch) {
         let talk = g.gd[gd].talk;
         g.tab.game_talk[talk].held_since = -1.0;
     }
@@ -52,11 +50,10 @@ pub(super) fn drop_hold(g: &mut crate::game::Game) {
 /// The 'pick the lock' row: drop what the hands were doing and start working the lock.   (player.ts startPicking)
 pub fn start_picking(g: &mut crate::game::Game, d: DoorId) {
     let pl = g.player;
-    if g.pl[pl].down || g.pl[pl].takedown.is_some() || g.pl[pl].kick.is_some() {
+    if crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].takedown.is_some() || g.pl[pl].kick.is_some() {
         return;
     }
     if g.dr[d].def.steel.unwrap_or(false) {
-        crate::game::game_msg(g, "the stair door has no keyhole on this side, so you can't pick it");
         return;
     }
     release_wall(g);
@@ -71,13 +68,10 @@ pub fn start_picking(g: &mut crate::game::Game, d: DoorId) {
     crate::wand::wand_drop(g, pl);
     g.pl[pl].picking = Some(d);
     g.pl[pl].crouch = true;
-    if crate::doors::door_pick(g, d) <= 0.0 {
-        crate::game::game_msg(g, "picking the lock. take a step or press Space to stop");
-    }
 }
 
 /// Hands off the tools: the progress stays on the door, he stays on his knee.   (player.ts stopPicking)
-pub(in crate::sam) fn stop_picking(g: &mut crate::game::Game, text: Option<&str>) {
+pub(in crate::sam) fn stop_picking(g: &mut crate::game::Game) {
     let pl = g.player;
     if g.pl[pl].picking.is_none() {
         return;
@@ -86,9 +80,6 @@ pub(in crate::sam) fn stop_picking(g: &mut crate::game::Game, text: Option<&str>
     g.pl[pl].picking = None;
     g.ch[c].anim.lockpick = false;
     g.pl[pl].speed_sm = 0.0;
-    if let Some(t) = text.filter(|t| !t.is_empty()) {
-        crate::game::game_msg(g, t);
-    }
 }
 
 /// Working the lock, on its own clock once begun.   (player.ts updatePicking)
@@ -98,10 +89,9 @@ pub(super) fn update_picking(g: &mut crate::game::Game, dt: f64, input: InputId)
     let d = g.pl[pl].picking.unwrap();
     let pos = g.ch[c].pos;
     if g.puppet.is_some() {
-        stop_picking(g, None);
+        stop_picking(g);
     } else if !crate::doors::doors_locked_out(g, d, pos, None) {
-        let text = if crate::doors::door_locked(g, d) { Some("someone is coming through") } else { None };
-        stop_picking(g, text);
+        stop_picking(g);
     } else {
         let spot = crate::doors::doors_work_spot(g, d, pos, None, None);
         g.ch[c].vel = [0.0, 0.0, 0.0];
@@ -123,7 +113,7 @@ pub(super) fn update_picking(g: &mut crate::game::Game, dt: f64, input: InputId)
         let who = g.ch[c].id;
         if planted && crate::doors::doors_pick(g, d, who, dt) {
             crate::chronicle::chron_door(g, crate::chronicle::ChronDoorKind::LockPicked, d);
-            stop_picking(g, Some("the lock gives — it opens like any other door now"));
+            stop_picking(g);
         }
     }
     let in_hands = crate::game::player_rifle_up(g, pl) && !g.ch[c].anim.hide_held_item;
@@ -136,23 +126,13 @@ pub(super) fn update_picking(g: &mut crate::game::Game, dt: f64, input: InputId)
 pub fn start_wand(g: &mut crate::game::Game, d: DoorId) {
     let pl = g.player;
     let c = g.pl[pl].ch;
-    if g.pl[pl].down || g.pl[pl].takedown.is_some() || g.pl[pl].kick.is_some() || g.pl[pl].holding.is_some() || g.pl[pl].wanding.is_some() {
+    if crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].takedown.is_some() || g.pl[pl].kick.is_some() || g.pl[pl].holding.is_some() || g.pl[pl].wanding.is_some() {
         return;
     }
     if g.pl[pl].coding.is_some() || g.pl[pl].door_move.is_some() || g.pl[pl].breaker_move.is_some() || g.mission.drive_t >= 0.0 || crate::handwork::sam_work(g).is_some() {
         return;
     }
     if !crate::wand::wand_offered(g, pl, d) {
-        if g.pl[pl].wand {
-            let text = if crate::wand::wand_fits(g, d) {
-                "nothing here the wand would show you"
-            } else if g.dr[d].def.steel.unwrap_or(false) {
-                "no gap under a steel fire door"
-            } else {
-                "the wand goes under a shut door"
-            };
-            crate::game::game_msg(g, text);
-        }
         return;
     }
     release_wall(g);
@@ -173,16 +153,13 @@ pub fn start_wand(g: &mut crate::game::Game, d: DoorId) {
 }
 
 /// The wand pulled out: he stays on his knee.   (player.ts stopWand)
-pub(in crate::sam) fn stop_wand(g: &mut crate::game::Game, text: Option<&str>) {
+pub(in crate::sam) fn stop_wand(g: &mut crate::game::Game) {
     let pl = g.player;
     if g.pl[pl].wanding.is_none() {
         return;
     }
     crate::wand::wand_drop(g, pl);
     g.pl[pl].speed_sm = 0.0;
-    if let Some(t) = text.filter(|t| !t.is_empty()) {
-        crate::game::game_msg(g, t);
-    }
 }
 
 /// One frame of the look: planted on his knee at the leaf; once there the lens is live and turns after the aim point.   (player.ts updateWanding)
@@ -194,11 +171,11 @@ pub(super) fn update_wanding(g: &mut crate::game::Game, dt: f64) {
     let d = w.door;
     let pos = g.ch[c].pos;
     if g.puppet.is_some() || !crate::fogofwar::fog_of_war_active(g) {
-        stop_wand(g, None);
+        stop_wand(g);
     } else if !crate::wand::wand_fits(g, d) || crate::doors::doors_side(g, d, pos) != w.side {
-        stop_wand(g, Some("the door moved — the wand is out"));
-    } else if crate::samstun::sam_staggered(g, &crate::seats::here(g), None) || g.time < g.pl[pl].dazzled_until {
-        stop_wand(g, None);
+        stop_wand(g);
+    } else if crate::samstun::sam_staggered(g, &crate::seats::here(g), None) || crate::condition::is_blind(g, g.pl[pl].ch) {
+        stop_wand(g);
     } else {
         let along = g.dr[d].def.width * 0.5;
         let spot = crate::doors::doors_work_spot(g, d, pos, Some(0.5), Some(along));
@@ -228,17 +205,16 @@ pub(super) fn update_wanding(g: &mut crate::game::Game, dt: f64) {
                 w.live = true;
                 g.stats.wand.live += 1;
                 wand_row_back(g, pl, w);
-                crate::game::game_msg(g, "the wand is through");
             }
         } else if w.live {
             wand_row_back(g, pl, w);
-            stop_wand(g, Some("shoved off it — the wand is out"));
+            stop_wand(g);
         } else if off_spot >= 0.12 && {
             w.off += dt;
             w.off >= g.k.wand.give_up_secs
         } {
             wand_row_back(g, pl, w);
-            stop_wand(g, Some("no room to kneel at that door"));
+            stop_wand(g);
         }
         wand_row_back(g, pl, w);
         if g.pl[pl].wanding.is_some() && w.live {
@@ -346,11 +322,10 @@ pub fn start_kick(g: &mut crate::game::Game, d: DoorId, run: Option<bool>, tool:
     let run = run.unwrap_or(false);
     let pl = g.player;
     let c = g.pl[pl].ch;
-    if g.pl[pl].kick.is_some() || g.pl[pl].down || g.pl[pl].takedown.is_some() || crate::character::anim_kicking(g, c) {
+    if g.pl[pl].kick.is_some() || crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].takedown.is_some() || crate::character::anim_kicking(g, c) {
         return;
     }
     if g.pl[pl].crouch && !can_stand(g) {
-        crate::game::game_msg(g, "no room to stand for a kick here");
         return;
     }
     if let Some(t) = tool {
@@ -513,7 +488,6 @@ pub(super) fn update_kick(g: &mut crate::game::Game, dt: f64) {
         let pos = g.ch[c].pos;
         crate::marks::kick_scuff(g, d, pos);
         if gave {
-            crate::game::game_msg(g, "you kicked it in, and the whole floor heard that");
             crate::chronicle::chron_door(g, crate::chronicle::ChronDoorKind::DoorKicked, d);
         }
     }
@@ -567,12 +541,6 @@ pub(super) fn throw_origin(g: &crate::game::Game, seat: &crate::seats::SeatRef) 
 pub(super) fn do_throw(g: &mut crate::game::Game, sol: &crate::throwables::ThrowSolution, kind: crate::game::ThrowKind) {
     let pl = g.player;
     if crate::game::game_throw_count(g, &crate::seats::here(g), kind) <= 0.0 {
-        let text = match kind {
-            crate::game::ThrowKind::Frag => "no frag grenades left",
-            crate::game::ThrowKind::Flash => "no flashbangs left",
-            _ => "no smoke canisters left",
-        };
-        crate::game::game_msg(g, text);
         return;
     }
     if g.pl[pl].pending_throw.is_some() {
@@ -691,7 +659,7 @@ pub fn update_aim(g: &mut crate::game::Game, input: InputId, cam: CameraId, canv
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
-        if g.gd[gd].state == crate::game::GuardState::Dead || Some(gd) == held || crate::fogofwar::fog_of_war_hidden(g, gd) || crate::friends::friend_no_snap(g, gd) {
+        if crate::condition::down(g, g.gd[gd].ch) || Some(gd) == held || crate::fogofwar::fog_of_war_hidden(g, gd) || crate::friends::friend_no_snap(g, gd) {
             continue;
         }
         let com = chest_or(g, gd, 1.2);

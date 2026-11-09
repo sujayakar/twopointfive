@@ -18,7 +18,7 @@ fn calls(g: &Game, men: &[GuardId]) -> String {
 }
 /// `men.filter(m => m.state !== 'dead')`
 fn alive(g: &Game, men: &[GuardId]) -> Vec<GuardId> {
-    men.iter().copied().filter(|&m| g.gd[m].state != crate::game::GuardState::Dead).collect()
+    men.iter().copied().filter(|&m| !crate::condition::down(g, g.gd[m].ch)).collect()
 }
 /// `[...new Set(words)].join(' + ')`: first sight's order
 fn uniq_plus(words: Vec<String>) -> String {
@@ -119,7 +119,7 @@ pub(super) fn door_tools_frag_step(g: &mut crate::game::Game, op: DoorOpId) -> b
         let o = &g.tab.doortools_door_op[op];
         let f = o.fled.as_ref().unwrap();
         let who = o.men.iter().copied().find(|&m| !f.has(m)).unwrap_or(o.lead);
-        crate::game::game_say(g, who, "hold — back on the door.", None, None, None);
+        crate::game::game_say(g, who, "hold — back on the door.", None, None);
     }
     true
 }
@@ -425,7 +425,7 @@ pub(super) fn door_tools_step_in(g: &mut crate::game::Game, op: DoorOpId) {
         let able: Vec<GuardId> = jamb
             .iter()
             .copied()
-            .filter(|&m| g.gd[m].state != crate::game::GuardState::Dead && (Some(m) != threw || m == lead) && (m == lead || !last_stack || v3::dist_xz(pos_of(g, m), fc) < reach))
+            .filter(|&m| !crate::condition::down(g, g.gd[m].ch) && (Some(m) != threw || m == lead) && (m == lead || !last_stack || v3::dist_xz(pos_of(g, m), fc) < reach))
             .collect();
         let able = crate::gunroles::gun_first(g, &able);
         let f = door_tools_seen_most(g, lead, &able, at);
@@ -445,7 +445,7 @@ pub(super) fn door_tools_step_in(g: &mut crate::game::Game, op: DoorOpId) {
     let (jamb, t_pods) = (thr.jamb.clone(), thr.pods.clone());
     let pods: Vec<crate::entrypoints::Pod> = if crate::orders::squad_orders_big(g, &crate::seats::here(g)) && men.len() <= 2 { door_tools_pods_apart(g, op, &t_pods, men.len() as f64) } else { t_pods };
     if pods.is_empty() {
-        crate::game::game_say(g, lead, "no way in.", None, None, None);
+        crate::game::game_say(g, lead, "no way in.", None, None);
         door_tools_end(g, op, "no floor inside");
         return;
     }
@@ -490,7 +490,7 @@ pub(super) fn door_tools_step_in(g: &mut crate::game::Game, op: DoorOpId) {
     let lead = o.lead;
     let what = format!("step in · {}", calls(g, &in_men));
     door_tools_beat(g, op, &what);
-    crate::game::game_say(g, lead, "stepping in.", None, None, None);
+    crate::game::game_say(g, lead, "stepping in.", None, None);
 }
 
 // ---------------------------------------------------------------- the HUD, the console

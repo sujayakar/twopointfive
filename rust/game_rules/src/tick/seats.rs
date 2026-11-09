@@ -227,16 +227,16 @@ pub fn men(g: &crate::game::Game) -> Vec<PlayerId> {
 /// the men still up (seats.ts menUp)
 pub fn men_up(g: &crate::game::Game) -> Vec<PlayerId> {
     let mut all = men(g);
-    all.retain(|p| !g.pl[*p].down);
+    all.retain(|p| !crate::condition::down(g, g.pl[*p].ch));
     all
 }
 
 /// is every player down (seats.ts allDown)
 pub fn all_down(g: &crate::game::Game) -> bool {
-    if g.seats.len() == 1 { return g.pl[g.player].down; }
+    if g.seats.len() == 1 { return crate::condition::down(g, g.pl[g.player].ch); }
     for i in 0..g.seats.len() {
         let p = crate::cmd::seat_man(g, g.seats[i]);
-        if !g.pl[p].down { return false; }
+        if !crate::condition::down(g, g.pl[p].ch) { return false; }
     }
     true
 }
@@ -244,7 +244,7 @@ pub fn all_down(g: &crate::game::Game) -> bool {
 /// the men a rule about the team goes by: those still up, or every one if none is (a game of one asks about its one man, down or up)
 pub fn men_left(g: &crate::game::Game) -> Vec<PlayerId> {
     let all = men(g);
-    let up: Vec<PlayerId> = all.iter().copied().filter(|p| !g.pl[*p].down).collect();
+    let up: Vec<PlayerId> = all.iter().copied().filter(|p| !crate::condition::down(g, g.pl[*p].ch)).collect();
     if up.is_empty() { all } else { up }
 }
 
@@ -375,7 +375,7 @@ pub fn nearest_man(g: &crate::game::Game, at: &[f64]) -> Option<PlayerId> {
     let (mut best, mut bd) = (None, f64::INFINITY);
     for i in 0..g.seats.len() {
         let p = crate::cmd::seat_man(g, g.seats[i]);
-        if g.pl[p].down { continue; }
+        if crate::condition::down(g, g.pl[p].ch) { continue; }
         let pos = g.ch[g.pl[p].ch].pos;
         let d = m::hyp2(pos[0] - at[0], pos[2] - at[2]);
         if d < bd { bd = d; best = Some(p); }
@@ -424,7 +424,7 @@ pub fn stage_men(g: &mut crate::game::Game, at: V3, yaw: f64, each: Option<&mut 
     let mut taken: Vec<V3> = vec![at];
     for i in 0..g.guards.len() {
         let gd = g.guards[i];
-        if g.gd[gd].state != crate::game::GuardState::Dead { taken.push(g.ch[g.gd[gd].ch].pos); }
+        if !crate::condition::down(g, g.gd[gd].ch) { taken.push(g.ch[g.gd[gd].ch].pos); }
     }
     for i in 0..g.seats.len() {
         let s = g.seats[i];
@@ -476,12 +476,12 @@ pub fn cut_to_men(g: &mut crate::game::Game) {
 fn faced_seat(g: &mut crate::game::Game, gd: GuardId) -> SeatId {
     let cur = seat_at(g, g.gd[gd].faces);
     let cur_man = crate::cmd::seat_man(g, cur);
-    if matches!(g.gd[gd].foe, Some(crate::game::Foe::Player)) && !g.pl[cur_man].down { return cur; }
+    if matches!(g.gd[gd].foe, Some(crate::game::Foe::Player)) && !crate::condition::down(g, g.pl[cur_man].ch) { return cur; }
     let (mut best, mut bd) = (cur, f64::INFINITY);
     for i in 0..g.seats.len() {
         let s = g.seats[i];
         let p = crate::cmd::seat_man(g, s);
-        if g.pl[p].down { continue; }
+        if crate::condition::down(g, g.pl[p].ch) { continue; }
         let keep = if s == cur { g.k.seats.keep } else { 0.0 };
         let d = v3::dist_xz(g.ch[g.pl[p].ch].pos, g.ch[g.gd[gd].ch].pos) - keep;
         if d < bd { bd = d; best = s; }
@@ -626,7 +626,7 @@ pub fn team_men(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<Guar
     let mut out = Vec::new();
     for i in 0..g.guards.len() {
         let gd = g.guards[i];
-        if on_team(g, gd) && g.gd[gd].state != crate::game::GuardState::Dead { out.push(gd); }
+        if on_team(g, gd) && !crate::condition::down(g, g.gd[gd].ch) { out.push(gd); }
     }
     out
 }

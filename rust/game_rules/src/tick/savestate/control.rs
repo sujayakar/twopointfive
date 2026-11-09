@@ -35,7 +35,7 @@ fn rank(s: MissionStage) -> u32 { match s { MissionStage::Infiltrate => 0, Missi
 pub fn run_no(g: &Game, seat: &crate::seats::SeatRef, authored: bool) -> Option<String> {
     if g.aside || g.puppet.is_some() { return Some(String::from("nobody is playing")); }
     if g.seats.len() > 1 { return Some(String::from("two players (a checkpoint holds one player today)")); }
-    if g.pl[seat.player].down { return Some(String::from("the player is down")); }
+    if crate::condition::down(g, g.pl[seat.player].ch) { return Some(String::from("the player is down")); }
     if matches!(g.mission.stage, MissionStage::Failed | MissionStage::Done) { return Some(format!("the run is over ({}) \u{2014} nothing to come back to", g.mission.stage.as_str())); }
     if crate::verdict::verdict_ended(g).is_some() { return Some(String::from("the run is over \u{2014} nothing to come back to")); }
     if authored { return None; }
@@ -49,7 +49,7 @@ fn civilian_compromise(g: &mut Game) -> Option<String> {
     use crate::civilians::{CivCause, CivState, PendKind};
     if !crate::civilians::civilians_on_floor(g) { return None; }
     for &cv in g.civilians.clone().iter() {
-        if g.gd[cv].state == GuardState::Dead || g.gd[cv].held.is_some() { continue; }
+        if crate::condition::down(g, g.gd[cv].ch) || g.gd[cv].held.is_some() { continue; }
         let Some(id) = g.gd[cv].civ else { continue };
         let c = &g.cv[id];
         match c.state {
@@ -66,7 +66,7 @@ fn civilian_compromise(g: &mut Game) -> Option<String> {
 /// With no team on the floor: what is in the air, in a man's hands or on its way down is waited out, as it was when such a save was a file.   (savestate.ts canSave)
 fn unsettled(g: &mut Game) -> Option<String> {
     if g.clearing.is_some() { return Some(String::from("the lockdown pair is clearing rooms")); }
-    if let Some(&x) = g.guards.iter().find(|&&x| g.gd[x].script.is_some() && g.gd[x].state != GuardState::Dead) { return Some(format!("{} is scripted", g.gd[x].callsign)); }
+    if let Some(&x) = g.guards.iter().find(|&&x| g.gd[x].script.is_some() && !crate::condition::down(g, g.gd[x].ch)) { return Some(format!("{} is scripted", g.gd[x].callsign)); }
     if let Some(busy) = busy(g, &crate::seats::here(g)) { return Some(format!("the player is {busy}")); }
     for it in g.items.items.clone() {
         let live = matches!(crate::throwables::item_kind(g, it), crate::throwables::ItemKind::Smoke | crate::throwables::ItemKind::Flash | crate::throwables::ItemKind::Frag) && !crate::throwables::item_fired(g, it);
@@ -184,7 +184,7 @@ pub fn tick(g: &mut Game, dt: f64) -> Option<Do> {
         return g.saves.authored.take().and_then(|label| write(g, SlotInfoSlot::Auto, &label, true));
     }
     g.saves.authored = None;
-    if crate::cmd::seat_pressed(g, "F5") && !g.pl[g.player].down { ask_save(g); }
+    if crate::cmd::seat_pressed(g, "F5") && !crate::condition::down(g, g.pl[g.player].ch) { ask_save(g); }
     let hand = if core::mem::take(&mut g.saves.hand) { write(g, SlotInfoSlot::Manual, "by hand", false) } else { None };
     let auto = turn(g, dt, hand.is_none());
     hand.or(auto)
@@ -416,9 +416,9 @@ impl Survivors {
     }
 }
 /// A step asks for the mission over (Enter once down, Shift+Enter): the step ends first, as a load in a step does
-pub fn ask_restart(g: &mut Game, said: Option<&str>) { g.saves.again = Some(String::from(said.unwrap_or(""))); }
+pub fn ask_restart(g: &mut Game) { g.saves.again = true; }
 /// THE MISSION OVER, from outside a step: the level stands again and the men are stood on it by the stand's own lines, with what an evening keeps; a new run, the view cut to the fresh man. False where the game keeps no level (it has lost its place among the stands held)
-pub fn restart(g: &mut Game, said: Option<&str>) -> bool {
+pub fn restart(g: &mut Game) -> bool {
     let (slot, of) = (g.sim, stood(g));
     let Some(first) = held(of).first.clone() else { return false };
     let was = Survivors::of(g);
@@ -429,13 +429,12 @@ pub fn restart(g: &mut Game, said: Option<&str>) -> bool {
     new.serial_next = new.serial_next.max(g.serial_next);
     core::mem::swap(g, &mut *new);
     was.write_under(g);
-    // (a mission that started once and refuses now leaves the plain floor, as a refused start does, and says so)
-    if let Some(why) = crate::standing::stand_men(g, &first.men) { crate::game::game_msg(g, &why); }
+    // (a mission that started once and refuses now leaves the plain floor, as a refused start does)
+    let _ = crate::standing::stand_men(g, &first.men);
     crate::scene_collision::light_ready(g);
     was.write_over(g);
     g.mission.serial = g.serial();
     assert!((g.host_cam, g.host_input) == host, "the men's lines made the host's rows elsewhere than the first time");
-    if let Some(s) = said { if !s.is_empty() { crate::game::game_msg(g, s); } }
     crate::game::game_cut_to_men(g);
     g.restart_cut = true;
     g.stats.cleanrestart.restarts += 1;
@@ -464,8 +463,7 @@ fn keep_start(g: &mut Game) {
 }
 /// a step's end: a restart it asked for is made
 fn restart_asked(g: &mut Game) -> bool {
-    let Some(said) = g.saves.again.take() else { return false };
-    restart(g, Some(&said))
+    core::mem::take(&mut g.saves.again) && restart(g)
 }
 /// a step's end with the controller off (a tape walked): the run's first step is kept, and a restart it asked for is made
 pub fn restart_turn(g: &mut Game) -> bool {

@@ -19,11 +19,11 @@ pub(super) fn shield_up(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> 
         Some(h) => h.g,
         None => return false,
     };
-    if g.pl[p].down {
+    if crate::condition::down(g, g.pl[p].ch) {
         return false;
     }
     let hc = g.gd[held].ch;
-    g.gd[held].state != crate::game::GuardState::Dead
+    !crate::condition::down(g, g.gd[held].ch)
         && g.ch[hc].alive
         && matches!(&g.gd[held].held, Some(h) if h.by == crate::game::GuardHeldBy::Player)
         && crate::game::game_on_floor(g, held)
@@ -269,7 +269,7 @@ fn hostage_call(g: &mut crate::game::Game, gd: GuardId, p: crate::guards::Pair) 
             format!("he's got {} — {}! hold your fire, nobody push him", name, where_)
         }
     };
-    crate::game::game_say(g, gd, &text, Some(true), None, None);
+    crate::game::game_say(g, gd, &text, Some(true), None);
     let pos = g.ch[c].pos;
     let at = bone(g, c, crate::character::Bone::Head).unwrap_or(pos);
     crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.9), None);
@@ -280,7 +280,7 @@ fn hostage_call(g: &mut crate::game::Game, gd: GuardId, p: crate::guards::Pair) 
     let team = g.gd[gd].team;
     for i in 0..g.guards.len() {
         let o = g.guards[i];
-        if o == gd || o == p.held || g.gd[o].state == crate::game::GuardState::Dead || g.gd[o].held.is_some() || g.gd[o].team != team {
+        if o == gd || o == p.held || crate::condition::down(g, g.gd[o].ch) || g.gd[o].held.is_some() || g.gd[o].team != team {
             continue;
         }
         let state = g.gd[o].state;
@@ -330,7 +330,7 @@ fn no_sight_at(g: &mut Game, x: f64, z: f64, c_2: V3) -> bool {
 fn pick_side(g: &mut crate::game::Game, gd: GuardId, p: crate::guards::Pair) -> f64 {
     for i in 0..g.guards.len() {
         let o = g.guards[i];
-        if o == gd || g.gd[o].state == crate::game::GuardState::Dead {
+        if o == gd || crate::condition::down(g, g.gd[o].ch) {
             continue;
         }
         if let Some(s) = g.gd[o].standoff {
@@ -518,13 +518,13 @@ pub(super) fn standoff_bark(g: &mut crate::game::Game, gd: GuardId, moment: crat
         g.tab.guards_standoff[s].last_bark_t = now;
     }
     g.m.guards.floor_bark_t = Some(now);
-    crate::game::game_say(g, gd, &text, None, None, None);
+    crate::game::game_say(g, gd, &text, None, None);
 }
 
 /// Side-step along the current nav path, the body not turned to it. True once the path is consumed. (guards.ts stepAlongPath)
 pub fn step_along_path(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64) -> bool {
     let c = g.gd[gd].ch;
-    let paced = crate::condition::condition_pace(g, gd, speed);
+    let paced = crate::condition::condition_pace(g, g.gd[gd].ch, speed);
     let speed = team_legs(g, &crate::seats::here(g), gd, paced);
     if unstick_first(g, gd, dt) {
         return false;
@@ -583,7 +583,7 @@ pub(super) fn orbit_goal_for(g: &mut crate::game::Game, gd: GuardId, s: GuardsSt
     let mut others: Vec<GuardId> = Vec::new();
     for i in 0..g.guards.len() {
         let o = g.guards[i];
-        if o == gd || g.gd[o].state == crate::game::GuardState::Dead {
+        if o == gd || crate::condition::down(g, g.gd[o].ch) {
             continue;
         }
         if let Some(os) = g.gd[o].standoff {

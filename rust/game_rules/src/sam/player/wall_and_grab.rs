@@ -133,7 +133,6 @@ pub(super) fn stack_up(g: &mut crate::game::Game, dt: f64, input: InputId) -> bo
         if crate::input::input_lmb_hit(g, input) && g.time - g.pl[p].wall.unwrap().say_t.unwrap_or(-10.0) > 1.5 {
             let now = g.time;
             w!(g, p).say_t = Some(now);
-            crate::game::game_msg(g, "the wall is in the way, so step out past its end or come off it");
         }
         return false;
     }
@@ -323,8 +322,8 @@ fn wall_take_back(g: &mut Game, p: PlayerId, c: CharId, firm: bool, dir: f64, ba
     let u_real = pos[0] * t[0] + pos[2] * t[2] - w0.lean_off.unwrap_or(0.0);
     let off_real = pos[0] * n[0] + pos[2] * n[2] - base;
     if u_real < u_lo - 0.25 || u_real > u_hi + 0.25 || off_real > WALL_SHOVE_OFF {
-        crate::game::game_msg(g, if w0.seated { "pushed off the wall" } else { "can't get to the wall here" });
         if w0.seated { wall_voice(g, w0, false); }
+        else { crate::interact::refuse(g, p, Some(crate::view::ThingKind::Wall), "can't get to that wall"); }
         release_wall(g);
         return false;
     }
@@ -554,7 +553,7 @@ pub fn start_takedown(g: &mut crate::game::Game, gd: GuardId, way: Option<crate:
     let lethal = lethal.unwrap_or(false);
     let loud = loud.unwrap_or(false);
     let p = g.player;
-    if g.gd[gd].state == crate::game::GuardState::Dead || g.pl[p].down { return; }
+    if crate::condition::down(g, g.gd[gd].ch) || crate::condition::down(g, g.pl[p].ch) { return; }
     let c = g.pl[p].ch;
     let gc = g.gd[gd].ch;
     let kind: Option<crate::close::CloseKind> = { Some(match way {
@@ -630,7 +629,7 @@ pub(super) fn update_takedown(g: &mut crate::game::Game, dt: f64) {
             None => crate::close::close_station(g, gd, kind, td.from.unwrap_or(0.0)).pos,
         };
         let mut td_yaw = td.yaw;
-        if g.gd[gd].state != crate::game::GuardState::Dead {
+        if !crate::condition::down(g, g.gd[gd].ch) {
             { let to = v3::lerp3(g.ch[c].pos, at, 1.0 - m::exp(-14.0 * dt)); crate::character::pos_replace(g, c, to); }
             collide_player(g, y1);
             let (a, b) = (g.ch[gc].pos, g.ch[c].pos);
@@ -639,7 +638,7 @@ pub(super) fn update_takedown(g: &mut crate::game::Game, dt: f64) {
             if let Some(t) = g.pl[p].takedown.as_mut() { t.yaw = Some(y); }
         }
         yaw = td_yaw.unwrap_or(g.ch[c].body_yaw);
-    } else if g.gd[gd].state != crate::game::GuardState::Dead {
+    } else if !crate::condition::down(g, g.gd[gd].ch) {
         let b = g.ch[gc].pos;
         let want: V3 = [b[0] - m::sin(yaw) * 0.55, 0.0, b[2] - m::cos(yaw) * 0.55];
         { let to = v3::lerp3(g.ch[c].pos, want, 1.0 - m::exp(-14.0 * dt)); crate::character::pos_replace(g, c, to); }
@@ -650,7 +649,7 @@ pub(super) fn update_takedown(g: &mut crate::game::Game, dt: f64) {
     g.ch[c].aim_pitch = v3::damp(g.ch[c].aim_pitch, 0.1, 8.0, dt);
     let t = td.t + dt;
     if let Some(row) = g.pl[p].takedown.as_mut() { row.t = t; }
-    if t >= 0.28 && g.gd[gd].state != crate::game::GuardState::Dead {
+    if t >= 0.28 && !crate::condition::down(g, g.gd[gd].ch) {
         let was_alert = g.gd[gd].state == crate::game::GuardState::Alert;
         let noise = if let Some(kind) = td.kind {
             crate::close::close_noise(g, kind, yes(td.alert))
@@ -717,12 +716,11 @@ pub fn start_grab(g: &mut crate::game::Game, gd: GuardId, way: Option<crate::clo
     let r0 = m::hyp2(a[0] - b[0], a[2] - b[2]);
     {
         let (st, pl) = (g.gd[gd].state, &g.pl[p]);
-        if st == crate::game::GuardState::Dead || st == crate::game::GuardState::Alert || g.gd[gd].held.is_some() || pl.down || pl.holding.is_some() || pl.takedown.is_some() || pl.kick.is_some() || pl.picking.is_some() || pl.wanding.is_some() {
+        if st == crate::game::GuardState::Dead || st == crate::game::GuardState::Alert || g.gd[gd].held.is_some() || g.cond[pl.ch].down || pl.holding.is_some() || pl.takedown.is_some() || pl.kick.is_some() || pl.picking.is_some() || pl.wanding.is_some() {
             return;
         }
     }
     if g.pl[p].crouch && !can_stand(g) {
-        crate::game::game_msg(g, "no room to stand up behind him here");
         return;
     }
     if crate::game::player_rifle_up(g, p) { set_holstered(g, true, Some(true)); }
@@ -745,10 +743,6 @@ pub fn start_grab(g: &mut crate::game::Game, gd: GuardId, way: Option<crate::clo
     if let Some(bub) = g.gd[gd].bubble.clone() {
         let now = g.time;
         if now - bub.t < bub.dur {
-            if now - bub.t < 0.8 {
-                let line = if g.gd[gd].unit.is_some() { alloc::format!("{}: {}", g.gd[gd].callsign, bub.text) } else { alloc::format!("guard: {}", bub.text) };
-                crate::game::game_msg(g, &line);
-            }
             g.gd[gd].bubble = None;
         }
     }
@@ -758,7 +752,7 @@ pub fn start_grab(g: &mut crate::game::Game, gd: GuardId, way: Option<crate::clo
             crate::squad::clearing_cancel(g);
             g.clearing = None;
             if let Some(o) = other {
-                if g.gd[o].state != crate::game::GuardState::Dead && g.gd[o].held.is_none() {
+                if !crate::condition::down(g, g.gd[o].ch) && g.gd[o].held.is_none() {
                     crate::mind::set_state(g, o, crate::game::GuardState::Suspicious, "player");
                     crate::mind::raise(g, o, 0.6, "player");
                     let at = g.ch[gc].pos;
@@ -864,7 +858,6 @@ pub(super) fn nv_key(g: &mut crate::game::Game, input: Option<InputId>, dt: f64)
         let on = !g.pl[p].nv;
         g.pl[p].nv = on;
         crate::audio_iface::game_audio_like_play(g, if on { "nvOn" } else { "nvOff" }, None, Some(0.7), None);
-        crate::game::game_msg(g, if on { "night vision on" } else { "night vision off" });
         crate::kitanim::kit_nv(g);
     }
     let eye = crate::kitanim::kit_nv_eye(g);

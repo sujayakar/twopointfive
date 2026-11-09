@@ -180,7 +180,7 @@ pub fn rounds_leaves(g: &crate::game::Game, gd: GuardId) -> bool { g.gd[gd].team
 
 /// leafStall: he is walking on the spot by a leaf standing open (or was, less than `leafStallPush` ago): this frame the leaf is his to push.   (doorway.ts leafStalled)
 pub fn leaf_stalled(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    if g.gd[gd].team != crate::teams::Team::Operative || g.gd[gd].state == crate::game::GuardState::Dead { return false; }
+    if g.gd[gd].team != crate::teams::Team::Operative || crate::condition::down(g, g.gd[gd].ch) { return false; }
     state_of(g, gd);
     let c = g.gd[gd].ch;
     let p = g.ch[c].pos;
@@ -246,12 +246,12 @@ fn friends(g: &mut crate::game::Game, gd: GuardId) -> Vec<crate::doorway::Friend
     let team = g.gd[gd].team;
     for i in 0..g.guards.len() {
         let o = g.guards[i];
-        if o != gd && g.gd[o].team == team && g.gd[o].state != crate::game::GuardState::Dead {
+        if o != gd && g.gd[o].team == team && !crate::condition::down(g, g.gd[o].ch) {
             let c = g.gd[o].ch;
             out.push(FriendsItem { pos: g.ch[c].pos, vel: g.ch[c].vel, gd: Some(o), id: g.ch[c].id });
         }
     }
-    if team == crate::teams::Team::Operative && !g.pl[g.player].down {
+    if team == crate::teams::Team::Operative && !crate::condition::down(g, g.pl[g.player].ch) {
         let c = g.pl[g.player].ch;
         out.push(FriendsItem { pos: g.ch[c].pos, vel: g.ch[c].vel, gd: None, id: g.ch[c].id });
     }
@@ -284,11 +284,11 @@ fn step_to(g: &mut crate::game::Game, gd: GuardId, p: V3, pace: f64, dt: f64, tu
 /// Is `p` floor nobody has, by `apart`, nor is waiting at.   (doorway.ts spotFree)
 fn spot_free(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, p: V3, apart: f64) -> bool {
     if nav_blocked(g, p[0], p[2]) { return false; }
-    if g.gd[gd].team == crate::teams::Team::Operative && !g.pl[seat.player].down && flat(g.ch[g.pl[seat.player].ch].pos, p) < apart { return false; }
+    if g.gd[gd].team == crate::teams::Team::Operative && !crate::condition::down(g, g.pl[seat.player].ch) && flat(g.ch[g.pl[seat.player].ch].pos, p) < apart { return false; }
     let t = g.time;
     for i in 0..g.guards.len() {
         let o = g.guards[i];
-        if o == gd || g.gd[o].state == crate::game::GuardState::Dead { continue; }
+        if o == gd || crate::condition::down(g, g.gd[o].ch) { continue; }
         if flat(g.ch[g.gd[o].ch].pos, p) < apart { return false; }
         let s = match g.m.doorway.states.get(o) { Some(so) if t - so.t <= 0.5 && t >= so.t => so.spot, _ => None };
         if let Some(s) = s { if flat(s, p) < apart { return false; } }
@@ -373,7 +373,7 @@ fn on_own(g: &crate::game::Game, seat: &crate::seats::SeatRef, o: Option<GuardId
 
 /// PASS: the pace `gd` walks his path at this frame; `None`: this file has his feet.   (doorway.ts doorwayGate)
 pub fn doorway_gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64) -> Option<f64> {
-    if !ours(g, gd) || g.gd[gd].state == crate::game::GuardState::Dead || !(speed > 0.0) { return Some(speed); }
+    if !ours(g, gd) || crate::condition::down(g, g.gd[gd].ch) || !(speed > 0.0) { return Some(speed); }
     state_of(g, gd);
     let c = g.gd[gd].ch;
     let c_id = g.ch[c].id;

@@ -152,7 +152,7 @@ impl GlassAsk for Play {
         game::frag::blast(&mut self.g, [at[0], 0.05, at[1]], &game::frag::BlastSpec { who, name: Some(String::from("40 mm grenade")), ..game::frag::BlastSpec::default() })
     }
     fn hit_of(&self, r: &game::frag::BlastReport, gd: GuardId) -> Option<game::frag::BlastHit> { let id = self.id_of(gd); r.hits.iter().find(|h| h.id == id).cloned() }
-    fn reeled_at(&self, gd: GuardId) -> f64 { self.g.gd[gd].stagger_until }
+    fn reeled_at(&self, gd: GuardId) -> f64 { self.g.cond[self.g.gd[gd].ch].fold_until }
     fn share_open(&mut self, from: [f64; 2], feet: [f64; 2]) -> f64 {
         let lift = self.g.k.frag.lift;
         game::frag::exposure(&mut self.g, [from[0], 0.05 + lift, from[1]], [feet[0], 0.0, feet[1]], [feet[0], 1.6, feet[1]], Some(game::frag::GlassView::Whole))
@@ -341,19 +341,19 @@ impl YardAsk for Play {
     fn parked_far(&mut self, gd: GuardId, k: usize) {
         self.man_put(gd, [37.5, 6.0 + k as f64], [0.0, 0.0]);
         let (h, t) = (&mut self.g.gd[gd], self.g.time);
-        (h.hold, h.pinned, h.dazzled_until, h.heard_up_to) = (true, true, t + 1e9, 1e12);
+        (h.hold, h.pinned, self.g.cond[h.ch].blind_until, h.heard_up_to) = (true, true, t + 1e9, 1e12);
     }
     fn posted_calm(&mut self, gd: GuardId, at: [f64; 2], face: [f64; 2]) {
         self.man_put(gd, at, face);
         let h = &mut self.g.gd[gd];
-        (h.pinned, h.dazzled_until, h.heard_up_to, h.hold) = (false, -1.0, 0.0, true);
+        (h.pinned, self.g.cond[h.ch].blind_until, h.heard_up_to, h.hold) = (false, -1.0, 0.0, true);
         (h.state, h.awareness, h.last_known, h.react_t, h.search_t, h.search_plan) = (game::game::GuardState::Patrol, 0.0, None, 0.0, 0.0, None);
         (h.script, h.task, h.body_duty) = (None, None, None);
     }
     fn searches(&mut self, gd: GuardId, at: [f64; 2], fix: [f64; 2]) {
         self.man_put(gd, at, fix);
         let h = &mut self.g.gd[gd];
-        (h.hold, h.pinned, h.dazzled_until, h.heard_up_to) = (false, false, -1.0, 1e12);
+        (h.hold, h.pinned, self.g.cond[h.ch].blind_until, h.heard_up_to) = (false, false, -1.0, 1e12);
         (h.script, h.task, h.body_duty) = (None, None, None);
         (h.state, h.search_t, h.react_t, h.awareness, h.search_plan, h.fix_ref) = (game::game::GuardState::Search, 0.0, 0.0, 0.8, None, None);
         h.last_known = Some([fix[0], 0.0, fix[1]]);
@@ -531,8 +531,8 @@ impl RescueAsk for Play {
         }
     }
     fn hostage_room_middle(&self) -> [f64; 2] { let b = game::rescue::rescue_bounds(&self.g).expect("a hostage room"); [(b.x0 + b.x1) / 2.0, (b.z0 + b.z1) / 2.0] }
-    fn hostages_up(&self) -> Vec<GuardId> { self.g.rescue.hostages.iter().copied().filter(|&m| self.g.gd[m].state != game::game::GuardState::Dead).collect() }
-    fn theirs_up(&self) -> Vec<GuardId> { self.g.rescue.hostiles.iter().copied().filter(|&m| self.g.gd[m].state != game::game::GuardState::Dead).collect() }
+    fn hostages_up(&self) -> Vec<GuardId> { self.g.rescue.hostages.iter().copied().filter(|&m| !game::condition::down(&self.g, self.g.gd[m].ch)).collect() }
+    fn theirs_up(&self) -> Vec<GuardId> { self.g.rescue.hostiles.iter().copied().filter(|&m| !game::condition::down(&self.g, self.g.gd[m].ch)).collect() }
     fn in_hostage_room(&self, at: [f64; 2]) -> bool { let b = game::rescue::rescue_bounds(&self.g).expect("a hostage room"); at[0] >= b.x0 && at[0] <= b.x1 && at[1] >= b.z0 && at[1] <= b.z1 }
     fn rescue_said(&self, starts: &str) -> Option<f64> { self.g.rescue.log.iter().find(|l| l.what.starts_with(starts)).map(|l| l.t) }
     fn rescue_lines(&self, starts: &str) -> Vec<String> { self.g.rescue.log.iter().filter(|l| l.what.starts_with(starts)).map(|l| l.what.clone()).collect() }

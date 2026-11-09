@@ -171,12 +171,12 @@ fn rescue_flow_open(g: &crate::game::Game, o: &crate::scene_scenarios::RouteOpen
 fn rescue_flow_eyes(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<V3> {
     let mut out: Vec<V3> = Vec::new();
     let pl = seat.player;
-    if !g.pl[pl].down {
+    if !crate::condition::down(g, g.pl[pl].ch) {
         let p = g.ch[g.pl[pl].ch].pos;
         out.push([p[0], EYE, p[2]]);
     }
     for &op in g.rescue.ops.iter() {
-        if g.gd[op].state != crate::game::GuardState::Dead && !crate::control::man::blind(g, op) {
+        if !crate::condition::down(g, g.gd[op].ch) && !crate::control::man::blind(g, op) {
             let p = g.ch[g.gd[op].ch].pos;
             out.push([p[0], EYE, p[2]]);
         }
@@ -253,7 +253,7 @@ fn rescue_flow_sense(g: &mut crate::game::Game) {
     while i < g.rescue.hostiles.len() {
         let h = g.rescue.hostiles[i];
         i += 1;
-        if g.gd[h].state == crate::game::GuardState::Dead {
+        if crate::condition::down(g, g.gd[h].ch) {
             for &r in all.iter() {
                 g.tab.rescueflow_region[r].hot.delete(h);
             }
@@ -288,7 +288,7 @@ fn rescue_flow_sense(g: &mut crate::game::Game) {
         let (who, pos) = (g.events[at].who, g.events[at].pos);
         let h = g.rescue.hostiles.iter().copied().find(|&x| Some(g.ch[g.gd[x].ch].id) == who);
         let Some(h) = h else { continue };
-        if g.gd[h].state == crate::game::GuardState::Dead {
+        if crate::condition::down(g, g.gd[h].ch) {
             continue;
         }
         if let Some(r) = rescue_flow_region_at(g, pos) {
@@ -381,10 +381,6 @@ fn rescue_flow_sense(g: &mut crate::game::Game) {
         if state != was {
             let note = alloc::format!("flow:state:{}:{}", g.rescue.flow.known[at].o.id, state.as_str());
             crate::rescue::rescue_note(g, &note);
-            if state == OpenState::Hot {
-                let msg = alloc::format!("contact — {}", g.rescue.flow.known[at].o.name);
-                crate::game::game_msg(g, &msg);
-            }
         }
     }
 }
@@ -395,7 +391,7 @@ fn rescue_flow_holder(g: &crate::game::Game, seat: &crate::seats::SeatRef, o: &c
     while i < g.rescue.ops.len() {
         let op = g.rescue.ops[i];
         i += 1;
-        if g.gd[op].state == crate::game::GuardState::Dead {
+        if crate::condition::down(g, g.gd[op].ch) {
             continue;
         }
         let Some(a) = crate::orders::squad_orders_of(g, seat, op) else { continue };
@@ -454,7 +450,7 @@ pub(super) fn rescue_flow_tick(g: &mut crate::game::Game) {
     let sam = g.ch[g.pl[pl].ch].pos;
     let t = g.time;
     let dynamic = crate::rescue::rescue_dynamic(g);
-    let live = dynamic && g.rescue.result.is_none() && !g.pl[pl].down;
+    let live = dynamic && g.rescue.result.is_none() && !crate::condition::down(g, g.pl[pl].ch);
     let room = g.rescue.flow.room;
     let in_corr = in_rect(sam, &f.corridor);
     let on_route = in_corr || in_rect(sam, &room);
@@ -506,7 +502,7 @@ pub(super) fn rescue_flow_tick(g: &mut crate::game::Game) {
         }
         return;
     }
-    if g.rescue.result.is_some() || g.pl[pl].down {
+    if g.rescue.result.is_some() || crate::condition::down(g, g.pl[pl].ch) {
         // (it is over: whoever was covering stays covering)
         g.rescue.flow.jobs.clear();
         g.rescue.flow.want.clear();
@@ -518,10 +514,10 @@ pub(super) fn rescue_flow_tick(g: &mut crate::game::Game) {
         let Some(j) = g.rescue.flow.jobs.get(gd) else { continue };
         let (kind, ja, t0, mut on_t, said_hot, said_wait, leap, has_chain, mark, at, look, side) = (j.kind, j.a, j.t0, j.on_t, j.said_hot, j.said_wait, j.leap, !j.chain.is_empty(), j.o.mark, j.o.at, j.o.look, j.o.side);
         let a = crate::orders::squad_orders_of(g, &crate::seats::here(g), gd);
-        if g.gd[gd].state == crate::game::GuardState::Dead || crate::rescue::rescue_owns(g, gd) {
+        if crate::condition::down(g, g.gd[gd].ch) || crate::rescue::rescue_owns(g, gd) {
             // (down on the job: what was queued behind him is wanted again)
             let gone = g.rescue.flow.jobs.delete(gd);
-            if g.gd[gd].state == crate::game::GuardState::Dead {
+            if crate::condition::down(g, g.gd[gd].ch) {
                 for o in gone.iter().flat_map(|j| j.chain.iter()) {
                     g.rescue.flow.want.set(o.id.clone(), t);
                 }
@@ -564,7 +560,7 @@ pub(super) fn rescue_flow_tick(g: &mut crate::game::Game) {
                 if !said_hot {
                     g.rescue.flow.jobs.get_mut(gd).unwrap().said_hot = true;
                     g.rescue.flow.stats.hot_holds += 1.0;
-                    crate::game::game_say(g, gd, &alloc::format!("contact {} — holding.", side.as_str()), None, None, None);
+                    crate::game::game_say(g, gd, &alloc::format!("contact {} — holding.", side.as_str()), None, None);
                     let note = alloc::format!("flow:hold:{}:{}", g.rescue.flow.jobs.get(gd).unwrap().o.id, g.gd[gd].callsign);
                     crate::rescue::rescue_note(g, &note);
                 }
@@ -578,7 +574,7 @@ pub(super) fn rescue_flow_tick(g: &mut crate::game::Game) {
         let done = if on_t.is_nan() { t - t0 > k.give_up } else { t - on_t >= look && (sam_past || t - on_t >= k.max_cover) };
         if !said_wait && has_chain && on_route && sam[0] - pos[0] > k.wait_m {
             g.rescue.flow.jobs.get_mut(gd).unwrap().said_wait = true;
-            crate::game::game_say(g, gd, "wait one.", None, None, None);
+            crate::game::game_say(g, gd, "wait one.", None, None);
             let note = alloc::format!("flow:wait:{}", g.gd[gd].callsign);
             crate::rescue::rescue_note(g, &note);
         }
@@ -662,7 +658,7 @@ pub(super) fn rescue_flow_tick(g: &mut crate::game::Game) {
             while i < g.rescue.ops.len() {
                 let op = g.rescue.ops[i];
                 i += 1;
-                if g.gd[op].state != crate::game::GuardState::Dead && !crate::rescue::rescue_owns(g, op) {
+                if !crate::condition::down(g, g.gd[op].ch) && !crate::rescue::rescue_owns(g, op) {
                     if let Some(a) = crate::orders::squad_orders_of(g, &crate::seats::here(g), op) {
                         if crate::orders::rows::is(g, a, crate::orders::Is::Follows) {
                             file += 1;
@@ -717,7 +713,7 @@ pub(super) fn rescue_flow_tick(g: &mut crate::game::Game) {
             let id = o.id.clone();
             g.rescue.flow.jobs.set(gd, Job { kind: JobKind::Corridor, o, a, t0: t, on_t: f64::NAN, chain: Vec::new(), said_hot: false, said_wait: false, leap: false });
             g.rescue.flow.stats.corridor += 1.0;
-            crate::game::game_say(g, gd, &alloc::format!("{}.", hall.strip_prefix("the ").unwrap_or(&hall)), None, None, None);
+            crate::game::game_say(g, gd, &alloc::format!("{}.", hall.strip_prefix("the ").unwrap_or(&hall)), None, None);
             let note = alloc::format!("flow:corridor:{}:{}", id, g.gd[gd].callsign);
             crate::rescue::rescue_note(g, &note);
         }
@@ -748,7 +744,7 @@ fn rescue_flow_free(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<
     while i < g.rescue.ops.len() {
         let gd = g.rescue.ops[i];
         i += 1;
-        if g.gd[gd].state == crate::game::GuardState::Dead || g.rescue.flow.jobs.has(gd) || crate::rescue::rescue_owns(g, gd) || crate::control::man::blind(g, gd) {
+        if crate::condition::down(g, g.gd[gd].ch) || g.rescue.flow.jobs.has(gd) || crate::rescue::rescue_owns(g, gd) || crate::control::man::blind(g, gd) {
             continue;
         }
         let Some(a) = crate::orders::squad_orders_of(g, seat, gd) else { continue };
@@ -790,7 +786,7 @@ fn rescue_flow_take(g: &mut crate::game::Game, gd: GuardId, o: &crate::scene_sce
     let t0 = g.time;
     g.rescue.flow.jobs.set(gd, Job { kind: JobKind::Cover, o: o.clone(), a, t0, on_t: f64::NAN, chain: chain.to_vec(), said_hot: false, said_wait, leap });
     g.rescue.flow.stats.takes += 1.0;
-    crate::game::game_say(g, gd, &o.call, None, None, None);
+    crate::game::game_say(g, gd, &o.call, None, None);
     let note = alloc::format!("flow:take:{}:{}", o.id, g.gd[gd].callsign);
     crate::rescue::rescue_note(g, &note);
 }
@@ -818,7 +814,7 @@ fn rescue_flow_rejoin(g: &mut crate::game::Game, gd: GuardId, words: Option<&str
         g.rescue.flow.mine.add(a);
     }
     if let Some(w) = words {
-        crate::game::game_say(g, gd, w, None, None, None);
+        crate::game::game_say(g, gd, w, None, None);
     }
 }
 
@@ -826,7 +822,7 @@ fn rescue_flow_rejoin(g: &mut crate::game::Game, gd: GuardId, words: Option<&str
 fn rescue_flow_drop_all(g: &mut crate::game::Game, back: bool) {
     for gd in g.rescue.flow.jobs.keys() {
         let Some(j) = g.rescue.flow.jobs.delete(gd) else { continue };
-        if back && g.gd[gd].state != crate::game::GuardState::Dead && !crate::rescue::rescue_owns(g, gd) && crate::orders::squad_orders_of(g, &crate::seats::here(g), gd) == Some(j.a) {
+        if back && !crate::condition::down(g, g.gd[gd].ch) && !crate::rescue::rescue_owns(g, gd) && crate::orders::squad_orders_of(g, &crate::seats::here(g), gd) == Some(j.a) {
             rescue_flow_rejoin(g, gd, None);
         }
     }
@@ -1016,7 +1012,9 @@ mod tests {
     #[test]
     fn sense_hears_each_event_once_by_its_serial() {
         let mut g = Game::blank();
-        g.player = g.pl.push(crate::game::Player { down: true, ..Default::default() });
+        let c = crate::character::man_new(&mut g, crate::character::Character::blank());
+        g.cond[c].down = true;
+        g.player = g.pl.push(crate::game::Player { ch: c, ..Default::default() });
         let mut e = crate::game::GameEvent::default();
         e.serial = 7;
         g.events.push(e);
@@ -1032,7 +1030,9 @@ mod tests {
     #[test]
     fn sense_puts_each_known_row_back_with_its_share() {
         let mut g = Game::blank();
-        g.player = g.pl.push(crate::game::Player { down: true, ..Default::default() });
+        let c = crate::character::man_new(&mut g, crate::character::Character::blank());
+        g.cond[c].down = true;
+        g.player = g.pl.push(crate::game::Player { ch: c, ..Default::default() });
         let r = g.tab.rescueflow_region.push(Region { seen_t: vec![0.0, -1e9], ..Default::default() });
         let mut k = opening("o", "glass", r);
         k.built_open = true;

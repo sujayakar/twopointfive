@@ -159,14 +159,12 @@ pub fn gun_deal(g: &mut crate::game::Game, men: &[crate::gunroles::DealMan]) -> 
         let short = row(g, o.gun).short.replace(' ', "-");
         said.push(alloc::format!("{} {} ({} m)", g.gd[o.gd].callsign, short, round_text(o.line)));
     }
-    let text = alloc::format!("guns ▸ {}", said.join(" · "));
-    crate::game::game_note(g, &text);
     out
 }
 
 /// A defender with the belt-fed gun keeps the post he was dealt. (gunroles.ts gunKeepsPost)
 pub fn gun_keeps_post(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    if g.gd[gd].team != crate::teams::Team::Hostile || g.gd[gd].state == crate::game::GuardState::Dead || gun_role(g, gd) != GunRole::Belt { return false; }
+    if g.gd[gd].team != crate::teams::Team::Hostile || crate::condition::down(g, g.gd[gd].ch) || gun_role(g, gd) != GunRole::Belt { return false; }
     g.stats.gunroles.posts += 1;
     true
 }

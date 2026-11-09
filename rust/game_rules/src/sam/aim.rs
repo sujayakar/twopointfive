@@ -65,7 +65,7 @@ pub fn track_guard(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     let c = g.gd[gd].ch;
     let pc = crate::teams::foe_char(g, gd);
     g.gd[gd].aim.braking = false;
-    if !g.tune.aim_model || g.gd[gd].state == crate::game::GuardState::Dead {
+    if !g.tune.aim_model || crate::condition::down(g, g.gd[gd].ch) {
         aim_state_clear(&mut g.gd[gd].aim);
         return;
     }
@@ -257,7 +257,7 @@ pub fn track_player(g: &mut crate::game::Game, dt: f64) {
     let pl = g.player;
     let p = g.k.aim.player;
     let c = g.pl[pl].ch;
-    if !g.tune.aim_model || g.pl[pl].down {
+    if !g.tune.aim_model || crate::condition::down(g, g.pl[pl].ch) {
         aim_state_clear(&mut g.pl[pl].aim);
         return;
     }
@@ -269,7 +269,7 @@ pub fn track_player(g: &mut crate::game::Game, dt: f64) {
     feed_feet(g, &mut a, speed, dt, p.feet_tau, Some(hold));
     g.pl[pl].aim = a;
     let tg = match g.aim_guard {
-        Some(x) if g.gd[x].state != crate::game::GuardState::Dead => Some(x),
+        Some(x) if !crate::condition::down(g, g.gd[x].ch) => Some(x),
         _ => None,
     };
     let lt = if tg.is_none() { g.aim_target } else { None };

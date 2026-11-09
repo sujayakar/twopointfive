@@ -73,7 +73,7 @@ pub fn kit_view(g: &Game, seat: &crate::seats::SeatRef) -> KitView {
         big: big_view(g, seat),
         hits_left: p.hits_left,
         hits_max: crate::game::PLAYER_MAX_HITS,
-        down: p.down,
+        down: g.cond[p.ch].down,
         god: g.god_mode,
         night_vision: if crate::rails::rails_locks(g, "nvg") { None } else { Some(p.nv) },
         key_tag: if p.keys.is_empty() { None } else if named.is_empty() { Some(String::from("KEY")) } else { Some(format!("KEY · {}", named.join(" · ")).to_uppercase()) },

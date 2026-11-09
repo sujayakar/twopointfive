@@ -28,7 +28,7 @@ fn flat(a: V3, b: V3) -> f64 {
 fn men_on(g: &crate::game::Game, held: GuardId) -> Vec<GuardId> {
     let mut out = Vec::new();
     for &o in &g.guards {
-        if g.gd[o].state == crate::game::GuardState::Dead {
+        if crate::condition::down(g, g.gd[o].ch) {
             continue;
         }
         if let Some(s) = g.gd[o].standoff {
@@ -335,7 +335,7 @@ fn pick_cover(g: &mut crate::game::Game, gd: GuardId, s: GuardsStandoffId, k: &m
     let mut mates: Vec<V3> = Vec::new();
     let mut rivals: Vec<V3> = Vec::new();
     for &o in &g.guards {
-        if o == gd || g.gd[o].state == crate::game::GuardState::Dead {
+        if o == gd || crate::condition::down(g, g.gd[o].ch) {
             continue;
         }
         let of = g.gd[o].standoff;
@@ -485,7 +485,7 @@ fn plan_round(g: &mut crate::game::Game, gd: GuardId, s: GuardsStandoffId, k: &m
     };
     let mut mates: Vec<V3> = Vec::new();
     for &o in &g.guards {
-        if o == gd || g.gd[o].state == crate::game::GuardState::Dead {
+        if o == gd || crate::condition::down(g, g.gd[o].ch) {
             continue;
         }
         if let Some(goal) = g.gd[o].standoff.and_then(|os| g.m.gunhold.states.get(os)).and_then(|r| r.goal) {
@@ -599,7 +599,7 @@ fn bark(g: &mut crate::game::Game, gd: GuardId, k: &mut crate::gunhold::Known, k
     let n = pool.len() as f64;
     let was = &pool[js::rem(m::floor(crate::dice::draw_of(g, "gunhold::bark#1", gd) * n), n) as usize];
     let said = now_of(was);
-    crate::game::game_say(g, gd, &said, Some(radio), None, None);
+    crate::game::game_say(g, gd, &said, Some(radio), None);
     true
 }
 

@@ -25,7 +25,7 @@ fn guard_mark(g: &Game, gd: GuardId) -> (String, HeadTone) {
     }
     // (a man of your own bent away with a forearm over his eyes says it himself)
     let posed = own && g.k.moves.on > 0.5 && g.k.moves.dazzle > 0.5;
-    if m.state != GuardState::Dead && g.time < m.dazzled_until && !posed {
+    if !g.cond[m.ch].down && crate::condition::is_blind(g, m.ch) && !posed {
         if text.is_empty() && own { tone = HeadTone::Sus; }
         text.insert(0, '✹');
     }
@@ -36,7 +36,7 @@ fn guard_mark(g: &Game, gd: GuardId) -> (String, HeadTone) {
 fn guard_debug(g: &Game, gd: GuardId) -> String {
     let m = &g.gd[gd];
     let mut s = format!("{} {}%", m.state.as_str(), js::to_i32(m.awareness * 100.0));
-    if g.time < m.dazzled_until { s += &format!(" dazzled {:.1}s", m.dazzled_until - g.time); }
+    if crate::condition::is_blind(g, m.ch) { s += &format!(" dazzled {:.1}s", g.cond[m.ch].blind_until - g.time); }
     if let Some(t) = g.m.needs.mem_of.get(gd).and_then(|r| r.trip.as_ref()) {
         use crate::needs::TripPhase as P;
         s += &format!(" {}:{}", t.kind.as_str(), t.phase.as_str());
@@ -51,7 +51,7 @@ fn civ_mark(g: &Game, gd: GuardId) -> (String, HeadTone) {
     use crate::civilians::CivState as S;
     let m = &g.gd[gd];
     let st = g.cv[m.civ.unwrap()].state;
-    if m.state == GuardState::Dead { return if crate::game::is_breathing(g, gd) { (String::from("zz"), HeadTone::Ko) } else { (String::from("✕"), HeadTone::Dead) }; }
+    if g.cond[m.ch].down { return if crate::game::is_breathing(g, gd) { (String::from("zz"), HeadTone::Ko) } else { (String::from("✕"), HeadTone::Dead) }; }
     match st {
         S::Startled => (String::from("?"), HeadTone::Sus),
         S::Cower | S::Held => (String::from("·"), HeadTone::Sus),
@@ -108,7 +108,7 @@ fn throw_view(g: &Game, seat: &crate::seats::SeatRef) -> Option<ThrowView> {
 pub(super) fn aim_view(g: &Game, seat: &crate::seats::SeatRef) -> AimView {
     let pl = seat.player;
     let p = &g.pl[pl];
-    let gun_out = crate::game::player_gun_in_hand(g, pl).is_some() && !p.down;
+    let gun_out = crate::game::player_gun_in_hand(g, pl).is_some() && !g.cond[p.ch].down;
     let steady = gun_out && !p.sprinting && p.dragging.is_none();
     let model = g.tune.aim_model && steady;
     let swing = if steady { crate::aimweight::aim_gun_point(g, seat) } else { None };

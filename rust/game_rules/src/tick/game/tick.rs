@@ -251,12 +251,12 @@ pub(super) fn game_threat_tick(g: &mut crate::game::Game) {
     let mut i = 0;
     while i < g.guards.len() {
         let gd = g.guards[i]; i += 1;
-        if g.gd[gd].state == GuardState::Dead || g.gd[gd].held.is_some() || g.gd[gd].team == crate::teams::Team::Operative || crate::fogofwar::fog_of_war_hidden(g, gd) { continue; }
+        if crate::condition::down(g, g.gd[gd].ch) || g.gd[gd].held.is_some() || g.gd[gd].team == crate::teams::Team::Operative || crate::fogofwar::fog_of_war_hidden(g, gd) { continue; }
         let d = v3::dist_xz(g.ch[g.gd[gd].ch].pos, g.ch[pc].pos);
         if d < nd { nd = d; near = Some(gd); }
     }
     if let Some(nr) = near {
-        if !g.pl[pl].down && g.gd[nr].state != GuardState::Alert {
+        if !crate::condition::down(g, g.pl[pl].ch) && g.gd[nr].state != GuardState::Alert {
             t = 1.0 - v3::smoothstep(3.0, 7.0, nd);
             if g.gd[nr].state == GuardState::Suspicious || g.gd[nr].state == GuardState::Search { t = m::max(t, 0.6 * (1.0 - v3::smoothstep(7.0, 10.0, nd))); }
             let p = g.ch[pc].pos;
@@ -267,7 +267,7 @@ pub(super) fn game_threat_tick(g: &mut crate::game::Game) {
                 let gd = g.guards[i]; i += 1;
                 if g.time - g.torch_on_t < 1.5 { break; }
                 let fl = g.gd[gd].flashlight;
-                if g.gd[gd].state == GuardState::Dead || !g.tab.light[fl].enabled || g.gd[gd].team == crate::teams::Team::Operative { continue; }
+                if crate::condition::down(g, g.gd[gd].ch) || !g.tab.light[fl].enabled || g.gd[gd].team == crate::teams::Team::Operative { continue; }
                 let (fl_pos, fl_dir) = (g.tab.light[fl].pos, g.tab.light[fl].dir);
                 let cos_o = m::cos(g.tab.light[fl].outer_deg * v3::DEG);
                 for s in spots {
@@ -307,7 +307,7 @@ pub(super) fn game_deal_weapons(g: &mut crate::game::Game, dt: Option<f64>) {
         if g.gd[gd].unit.is_none() { g.gd[gd].carbine = deal == CarbineDeal::All || (deal == CarbineDeal::Reyes && g.gd[gd].callsign == "Reyes"); }
         let route = g.gd[gd].route;
         let want = if g.gd[gd].carbine { WeaponId::Aks74u } else { g.tab.route[route].weapon.unwrap_or(WeaponId::Guard9mm) };
-        if g.gd[gd].state != GuardState::Dead && g.fa[g.gd[gd].weapon].def != want { let row = weapon_row(g, want).clone(); let w = crate::weapons::firearm_new(g, &row); g.gd[gd].weapon = w; g.gd[gd].reload_t = -1.0; }
+        if !crate::condition::down(g, g.gd[gd].ch) && g.fa[g.gd[gd].weapon].def != want { let row = weapon_row(g, want).clone(); let w = crate::weapons::firearm_new(g, &row); g.gd[gd].weapon = w; g.gd[gd].reload_t = -1.0; }
         if g.gd[gd].work_stow.is_some() { crate::workstow::mate_stow_tick(g, gd); }
         if g.gd[gd].second.is_some() { crate::gunslots::side_tick(g, gd, Some(dt)); }
         let long = crate::guards::long_rig_of(g, gd); let cb = long.is_some();
@@ -363,8 +363,7 @@ pub(super) fn game_deal_weapons(g: &mut crate::game::Game, dt: Option<f64>) {
         g.ch[c].anim.reload_back = false;
         let pellets = weapon_row(g, def).pellets.is_some();
         g.ch[c].anim.reload_mag = !pellets;
-        let (dead, now) = (g.gd[gd].state == GuardState::Dead, g.time);
-        g.ch[c].anim.clutch = if !dead && now < g.gd[gd].stagger_until && !(now < g.gd[gd].dazzled_until) { 1.0 } else { 0.0 };
+        let (dead, now) = (crate::condition::down(g, g.gd[gd].ch), g.time);
         // (MOVES.on, page 1: the block always runs)
         {
             let w = g.gd[gd].weapon;
@@ -380,14 +379,8 @@ pub(super) fn game_deal_weapons(g: &mut crate::game::Game, dt: Option<f64>) {
         let dip = g.k.moves.entry > 0.5 && cb && g.gd[gd].held.is_none() && !dead && team == Team::Operative
             && !crate::roomfight::room_fight_busy(g, gd, 1.5) && !crate::roomfight::room_fight_contact(g, gd) && crate::game::friend_before_muzzle(g, gd);
         g.ch[c].anim.dip = if dip { 1.0 } else { 0.0 };
-        if !dead && now < g.gd[gd].dazzled_until {
-            // (trap: the TypeScript's `from` may be his own position array, which follows him; here it is this moment's copy: notes.md)
-            let from = g.gd[gd].dazzled_at.or(g.gd[gd].last_known).unwrap_or(g.ch[c].pos);
-            let k = m::min(1.0, (g.gd[gd].dazzled_until - now) / 0.5);
-            let an = &mut g.ch[c].anim;
-            let dz = an.dazzle.get_or_insert(crate::character::AnimDazzle { from, k: 0.0 });
-            dz.from = from; dz.k = k;
-        } else { g.ch[c].anim.dazzle = None; }
+        let from = g.gd[gd].last_known.unwrap_or(g.ch[c].pos);
+        crate::condition::stun_pose(g, c, !dead, from);
         {
             let on = g.gd[gd].held.is_none();
             let tk = g.ch[c].anim.trained;

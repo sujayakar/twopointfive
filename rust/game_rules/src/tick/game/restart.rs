@@ -48,16 +48,11 @@ pub fn game_on_door_event(g: &mut crate::game::Game, e: crate::doors::DoorEvent)
         DoorSound::Thud => {
             // a boot at the face a shut door opens toward: the slam of it, nothing splintered
             audio_play_rate(g, "doorBash", e.pos, 1.0, 0.8);
-            if let Some(p) = crate::seats::man_by_id(g, e.who) {
-                let tool = match &g.pl[p].kick { Some(k) => k.tool.is_some(), None => false };
-                if !tool { game_msg(g, "it opens toward you, so the frame took the kick. that was loud"); }
-            }
         }
         DoorSound::Clang => {
             // a boot on the steel stair door: the ring of it, no keep to splinter
             audio_play_rate(g, "doorBash", e.pos, 1.0, 0.7);
             audio_play_rate(g, "stairDoor", e.pos, 0.55, 1.3);
-            if crate::seats::is_man_id(g, e.who) { game_msg(g, "it's a steel fire door, so it won't give. that was loud"); }
         }
     }
     // heard: a kick is its own kind, floor-wide; everything else a 'door' noise with a level, placed at the leaf
@@ -184,7 +179,7 @@ fn lend_rnd<'a>(rnd: &'a mut Option<&mut dyn FnMut(&mut Game) -> f64>) -> Option
 pub fn game_interrogate(g: &mut crate::game::Game, gd: GuardId, rnd: Option<&mut dyn FnMut(&mut crate::game::Game) -> f64>) -> Option<crate::dialogue::DialoguePick> {
     let mut rnd = rnd;
     let me = g.player;
-    if g.pl[me].down || g.gd[gd].state == crate::game::GuardState::Dead || !(g.guards.contains(&gd) || g.civilians.contains(&gd)) { return None; }
+    if crate::condition::down(g, g.pl[me].ch) || crate::condition::down(g, g.gd[gd].ch) || !(g.guards.contains(&gd) || g.civilians.contains(&gd)) { return None; }
     let held = match &g.pl[me].holding { Some(h) => Some(h.g), None => None };
     if held != Some(gd) {
         // not the man in his arm: in reach and nothing solid between, statics or a leaf
@@ -193,7 +188,7 @@ pub fn game_interrogate(g: &mut crate::game::Game, gd: GuardId, rnd: Option<&mut
     }
     let pick = if g.gd[gd].civ.is_some() { crate::civilians::civilian_answer(g, gd, lend_rnd(&mut rnd)) } else { crate::dialogue::interrogate(g, gd, lend_rnd(&mut rnd)) };
     let Some(pick) = pick else { return None };
-    crate::guards::say(g, gd, &pick.text, Some(false), Some(true), None);   // (forced: a held man's only voice is his answers)
+    crate::guards::say(g, gd, &pick.text, Some(false), Some(true));   // (forced: a held man's only voice is his answers)
     if let Some(bubble) = g.gd[gd].bubble.as_mut() {
         bubble.dur = v3::clamp(1.2 + 0.07 * pick.text.encode_utf16().count() as f64, 2.5, 6.5);   // held speech runs longer than a bark's cap
     }
@@ -329,8 +324,8 @@ fn game_clean_slate(g: &mut crate::game::Game) {
 }
 
 /// The player's restart, from outside a step: the run's first step stands again with what an evening keeps (savestate/control.rs). In a step it is asked for, and made as the step ends.
-pub fn game_restart(g: &mut crate::game::Game, said: Option<&str>) {
-    crate::savestate::control::restart(g, said);
+pub fn game_restart(g: &mut crate::game::Game) {
+    crate::savestate::control::restart(g);
 }
 
 /// Every view is cut to its fresh man, unless a spectator has the camera.
@@ -350,8 +345,6 @@ pub fn game_restart_encounter(g: &mut crate::game::Game) {
     crate::math_dice::use_dice(g);
     crate::quiet::quiet_mission_current(g);
     g.stats.cleanrestart.restarts += 1;
-    g.stats.cleanrestart.lines += g.messages.len() as i32;
-    g.messages.clear();   // (the lines of the encounter that ended go before anything below speaks)
     crate::quiet::quiet_mission_before_restart(g);   // deals this encounter's start BEFORE the fresh Player and Guards read it
     let seats = g.seats.clone();
     for &s in &seats {
@@ -380,7 +373,6 @@ pub fn game_restart_encounter(g: &mut crate::game::Game) {
     crate::dialogue::ambient_restart(g);
     crate::fogofwar::fog_of_war_reset(g);
     crate::game::game_reset_guards(g);
-    if let Some(last) = g.messages.last() { if last.text == "guards reset" { g.messages.pop(); } }
     if crate::lighting::fresh_lights(g) { g.stats.cleanrestart.relit += 1; }
     game_reset_level_state(g);
     crate::lightswitch::light_switch_reset(g);

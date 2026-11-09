@@ -107,7 +107,7 @@ fn the_mark_over_a_man_says_what_he_is() {
         assert_eq!(shown(&p, foe), ("◎!".into(), HeadTone::Alert), "seed {}: he has you lined up", seed);
         set(&mut p, mate, GuardState::Alert, 1.0); p.g.gd[mate].aim.track = 1.0;
         assert_eq!(shown(&p, mate), ("!".into(), HeadTone::Alert), "seed {}: never the '◎' of a man who has you lined up", seed);
-        p.g.gd[foe].dazzled_until = p.g.time + 5.0;
+        p.g.cond[p.g.gd[foe].ch].blind_until = p.g.time + 5.0;
         assert_eq!(shown(&p, foe).0, "✹◎!", "seed {}: a stun goes in front", seed);
         p.falls(foe, game::game::DownBy::Player);
         assert_eq!(shown(&p, foe), ("✕".into(), HeadTone::Dead), "seed {}", seed);
@@ -134,7 +134,7 @@ fn in_a_game_of_two_each_is_told_of_his_own_blindness_and_his_own_meters() {
         let second = game::seats::seat(&p.g, p.g.seats[1]).player;
         let first = game::seats::seat(&p.g, p.g.seats[0]).player;
         assert!(p.view_of(0).marks.blind == 0.0 && p.view_of(1).marks.blind == 0.0, "seed {}: CONTROL: nobody is blind", seed);
-        p.g.pl[second].dazzled_until = p.g.time + 10.0;
+        p.g.cond[p.g.pl[second].ch].blind_until = p.g.time + 10.0;
         assert_eq!((p.view_of(0).marks.blind, p.view_of(1).marks.blind), (0.0, 1.0), "seed {}: the second man is dazzled", seed);
         p.g.pl[first].visibility = 0.25; p.g.pl[second].visibility = 0.75;
         p.g.pl[first].noise = 0.5; p.g.pl[second].noise = 0.1;

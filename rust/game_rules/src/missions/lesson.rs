@@ -138,11 +138,9 @@ fn on_stack(g: &crate::game::Game, seat: &crate::seats::SeatRef, m: GuardId) -> 
     Some(g.dr[d].def.name.clone())
 }
 
-/// a man no longer on his feet: dead, or out cold (lesson.ts downed)
-fn downed(g: &crate::game::Game, x: GuardId) -> bool { g.gd[x].state == crate::game::GuardState::Dead }
 
 /// a teammate on his feet (lesson.ts:127, 269)
-fn operative_up(g: &Game, x: GuardId) -> bool { g.gd[x].unit.is_some() && g.gd[x].team == crate::teams::Team::Operative && g.gd[x].state != crate::game::GuardState::Dead }
+fn operative_up(g: &Game, x: GuardId) -> bool { g.gd[x].unit.is_some() && g.gd[x].team == crate::teams::Team::Operative && !crate::condition::down(g, g.gd[x].ch) }
 
 /// the one partner of a quiet pair: the first operative unit on his feet (lesson.ts partnerOf)
 fn partner_of(g: &crate::game::Game) -> Option<GuardId> { g.guards.iter().copied().find(|&x| operative_up(g, x)) }
@@ -237,7 +235,7 @@ fn ok_target(g: &Game, name: &str, on: bool) -> bool {
 
 fn ok_men(g: &Game, down: Option<f64>) -> bool {
     let guards = g.guards.clone();
-    let n = guards.iter().filter(|&&x| crate::teams::hostile_to(g, x, crate::teams::HostileToO::Player) && downed(g, x)).count();
+    let n = guards.iter().filter(|&&x| crate::teams::hostile_to(g, x, crate::teams::HostileToO::Player) && crate::condition::down(g, g.gd[x].ch)).count();
     n as f64 >= down.unwrap_or(1.0)
 }
 
@@ -250,7 +248,7 @@ fn ok_downed(g: &Game, how: &str, n: Option<f64>) -> bool {
 fn ok_body(g: &Game, seat: &crate::seats::SeatRef, area: crate::scene_scenarios::Rect) -> bool {
     let (guards, drag) = (g.guards.clone(), g.pl[seat.player].dragging);
     guards.iter().any(|&x| {
-        if !downed(g, x) || drag == Some(x) { return false; }
+        if !crate::condition::down(g, g.gd[x].ch) || drag == Some(x) { return false; }
         let c = g.gd[x].ch;
         inside(area, g.ch[c].bones.get(crate::character::Bone::Hips).copied().unwrap_or(g.ch[c].pos))
     })
@@ -259,7 +257,7 @@ fn ok_body(g: &Game, seat: &crate::seats::SeatRef, area: crate::scene_scenarios:
 fn ok_calm(g: &Game, route: Option<&str>) -> bool {
     let guards = g.guards.clone();
     guards.iter().all(|&x| {
-        !crate::teams::hostile_to(g, x, crate::teams::HostileToO::Player) || downed(g, x)
+        !crate::teams::hostile_to(g, x, crate::teams::HostileToO::Player) || crate::condition::down(g, g.gd[x].ch)
             || route.map_or(false, |r| g.tab.route[g.gd[x].route].name != r)
             || g.gd[x].state == crate::game::GuardState::Patrol
     })
@@ -928,7 +926,7 @@ pub fn lesson_objective(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> 
         while k < g.guards.len() {
             let x = g.guards[k];
             let route = g.gd[x].route;
-            if g.tab.route[route].name == name && !downed(g, x) {
+            if g.tab.route[route].name == name && !crate::condition::down(g, g.gd[x].ch) {
                 man = Some(x);
                 break;
             }
@@ -967,7 +965,7 @@ pub fn line_of(g: &crate::game::Game, t: &crate::scene_scenarios::LessonStep) ->
 /// The taught player is down (`who(g).down`).
 fn who_down(g: &Game, seat: &crate::seats::SeatRef) -> bool {
     let p = who(g, seat);
-    g.pl[p].down
+    crate::condition::down(g, g.pl[p].ch)
 }
 
 /// One more of a deed, by its key.   (lesson.ts Lesson.count `add`)

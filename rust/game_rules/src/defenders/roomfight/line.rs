@@ -58,7 +58,7 @@ pub fn room_fight_friend_in_line(g: &mut crate::game::Game, from: V3, to: V3, se
     let l = m::sqrt(l2);
     let t_max = 1.0 + 1.0 / l;
     for pl in crate::seats::men(g) {
-        if g.pl[pl].down { continue; }
+        if crate::condition::down(g, g.pl[pl].ch) { continue; }
         let ch = g.pl[pl].ch;
         if line_hit(g, ch, false, from, dx, dz, l2, l, t_max) { return Some(RoomFightFriendInLine::Player); }
     }
@@ -68,7 +68,7 @@ pub fn room_fight_friend_in_line(g: &mut crate::game::Game, from: V3, to: V3, se
         let o = g.guards[i];
         i += 1;
         let ch = g.gd[o].ch;
-        if o == self_ || g.gd[o].state == crate::game::GuardState::Dead || !g.ch[ch].alive { continue; }
+        if o == self_ || crate::condition::down(g, g.gd[o].ch) || !g.ch[ch].alive { continue; }
         let theirs = g.gd[o].team;
         if crate::teams::is_hostile(g, mine, theirs) { continue; }
         let mate = theirs == crate::teams::Team::Operative && g.gd[o].unit.is_some();
@@ -108,7 +108,7 @@ pub(super) fn room_fight_cover_passes(g: &crate::game::Game, seat: &crate::seats
     let mine = g.tab.roomfight_op[o].tgt == Some(h);
     for &xo in g.fight.ops.iter() {
         let x = &g.tab.roomfight_op[xo];
-        if xo != o && x.tgt == Some(h) && g.gd[x.gd].state != crate::game::GuardState::Dead && x.block_t < r.no_shot && x.line_t == 0.0 && !crate::control::man::changing_magazine(g, x.gd) && !g.gd[x.gd].muzzle_down && (!mine || g0 >= x.ready_at) { return true; }
+        if xo != o && x.tgt == Some(h) && !crate::condition::down(g, g.gd[x.gd].ch) && x.block_t < r.no_shot && x.line_t == 0.0 && !crate::control::man::changing_magazine(g, x.gd) && !g.gd[x.gd].muzzle_down && (!mine || g0 >= x.ready_at) { return true; }
     }
     false
 }

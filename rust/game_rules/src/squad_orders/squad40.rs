@@ -45,7 +45,7 @@ fn tube_up(g: &crate::game::Game, gd: GuardId) -> bool {
 fn left_in(g: &Game, s: &State) -> f64 {
     let mut n = 0.0;
     for (gd, k) in s.rounds.iter() {
-        if g.gd[gd].state != crate::game::GuardState::Dead { n += *k; }
+        if !crate::condition::down(g, g.gd[gd].ch) { n += *k; }
     }
     n
 }
@@ -93,10 +93,10 @@ pub fn squad40_stage(g: &mut crate::game::Game, carried: &[(GuardId, f64)]) {
 fn bodies(g: &mut crate::game::Game) -> crate::squad40::Bodies {
     let (mut friends, mut foes, mut mates): (Vec<CharId>, Vec<CharId>, Vec<CharId>) = (Vec::new(), Vec::new(), Vec::new());
     let hostages = g.rescue.hostages.clone();
-    if !g.pl[g.player].down { friends.push(g.pl[g.player].ch); }
+    if !crate::condition::down(g, g.pl[g.player].ch) { friends.push(g.pl[g.player].ch); }
     for gd in g.guards.clone() {
         let c = g.gd[gd].ch;
-        let up = g.gd[gd].state != crate::game::GuardState::Dead && g.ch[c].alive;
+        let up = !crate::condition::down(g, g.gd[gd].ch) && g.ch[c].alive;
         if g.gd[gd].team == crate::teams::Team::Operative {
             if up { mates.push(c); }
         } else if up && !crate::fogofwar::fog_of_war_hidden(g, gd) {
@@ -201,7 +201,7 @@ pub(super) fn plan(g: &mut crate::game::Game, men: &[GuardId], at: V3) -> crate:
     });
     for gd in order {
         let has = g.m.squad40.states.get(row).and_then(|s| s.rounds.get(gd).copied()).map_or(false, |k| k > 0.0);
-        if g.gd[gd].state == crate::game::GuardState::Dead || !has { continue; }
+        if crate::condition::down(g, g.gd[gd].ch) || !has { continue; }
         any = true;
         if !ready(g, gd) { continue; }
         if !gun_on(g, &crate::seats::here(g), gd, at) && !crate::squadthrow::may_walk(g, &crate::seats::here(g), gd) { continue; }
@@ -249,7 +249,7 @@ fn fire(g: &mut crate::game::Game, pl: PlayerId, a: &crate::squad40::Shot, at: V
     let c = g.gd[gd].ch;
     crate::he40::fire_shell(g, c, a.from, a.to);
     crate::character::anim_fire(g, c);
-    crate::game::game_say(g, gd, "forty out!", None, None, None);
+    crate::game::game_say(g, gd, "forty out!", None, None);
     let callsign = g.gd[gd].callsign.clone();
     let t = g.time;
     g.m.squad40.states.get_mut(pl).unwrap().shown = Some(StateShown { t, text: format!("{} · 40 mm out", callsign) });
@@ -264,7 +264,7 @@ fn fire(g: &mut crate::game::Game, pl: PlayerId, a: &crate::squad40::Shot, at: V
 /// `end` of turnTick: he gives up (`line`) or is done; his turn is over and he goes back
 fn end_turn(g: &mut Game, gd: GuardId, line: Option<&str>) {
     if let Some(l) = line {
-        crate::game::game_say(g, gd, l, None, None, None);
+        crate::game::game_say(g, gd, l, None, None);
         g.stats.squad40.gave_up += 1;
     }
     let key = crate::seats::view_key(g, &crate::seats::here(g));
@@ -386,7 +386,7 @@ pub fn squad40_tick(g: &mut crate::game::Game) {
     let mut at = 0;
     while let Some(gd) = g.m.squad40.states.get(key).unwrap().turns.next_key(&mut at) {
         let (wa, t0) = { let w = g.m.squad40.states.get(key).unwrap().turns.get(gd).unwrap(); (w.a, w.t0) };
-        if g.gd[gd].state == crate::game::GuardState::Dead || crate::orders::squad_orders_of(g, &crate::seats::here(g), gd) != wa {
+        if crate::condition::down(g, g.gd[gd].ch) || crate::orders::squad_orders_of(g, &crate::seats::here(g), gd) != wa {
             g.m.squad40.states.get_mut(key).unwrap().turns.delete(gd);
         } else if g.time < t0 || g.time - t0 > g.k.squad40.aim_secs + 1.0 {
             let w = g.m.squad40.states.get_mut(key).unwrap().turns.delete(gd).unwrap();

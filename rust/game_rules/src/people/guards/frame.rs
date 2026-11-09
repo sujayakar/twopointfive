@@ -183,8 +183,7 @@ fn alertness(g: &mut Game, gd: GuardId, dt: f64, c: CharId, staff: bool, saw: &S
         let now = g.time;
         let radio_recent = match &g.gd[gd].bubble { Some(b) => b.radio && now - b.t < 1.0, None => false };
         if g.gd[gd].standoff.is_none() && !radio_recent {
-            let logged = g.messages.iter().any(|m| now >= m.t && now - m.t < 1.0 && m.text.ends_with(": CONTACT!"));
-            crate::game::game_say(g, gd, "CONTACT!", Some(false), Some(false), Some(!logged));
+            crate::game::game_say(g, gd, "CONTACT!", Some(false), Some(false));
         }
         let at = head_or_pos(g, c);
         crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.8), None);
@@ -213,7 +212,7 @@ fn alertness(g: &mut Game, gd: GuardId, dt: f64, c: CharId, staff: bool, saw: &S
         } else {
             g.gd[gd].react_t = 0.9;
             if g.gd[gd].team != crate::teams::Team::Operative && !crate::attention::attention_again(g, gd) {
-                crate::game::game_say(g, gd, "huh?", None, None, None);
+                crate::game::game_say(g, gd, "huh?", None, None);
             }
             let at = head_or_pos(g, c);
             crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.45), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.15 }));
@@ -231,9 +230,9 @@ fn alertness(g: &mut Game, gd: GuardId, dt: f64, c: CharId, staff: bool, saw: &S
     let now = g.time;
     crate::game::guard_track_fix(g, gd, now);
     let dazzled = crate::control::man::blind(g, gd);
-    if dazzled { g.gd[gd].react_t = m::max(g.gd[gd].react_t, g.gd[gd].dazzled_until - g.time); }
+    if dazzled { g.gd[gd].react_t = m::max(g.gd[gd].react_t, g.cond[g.gd[gd].ch].blind_until - g.time); }
     let staggered = crate::control::man::staggered(g, gd);
-    if staggered { g.gd[gd].react_t = m::max(g.gd[gd].react_t, g.gd[gd].stagger_until - g.time); }
+    if staggered { g.gd[gd].react_t = m::max(g.gd[gd].react_t, g.cond[g.gd[gd].ch].fold_until - g.time); }
     { let st = crate::startle::startle_left(g, gd); if st > 0.0 { g.gd[gd].react_t = m::max(g.gd[gd].react_t, st); } }
     crate::aim::track_guard(g, gd, dt);
     let (p0x, p0z) = (g.ch[c].pos[0], g.ch[c].pos[2]);

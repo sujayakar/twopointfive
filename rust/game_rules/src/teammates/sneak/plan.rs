@@ -445,7 +445,7 @@ fn plan(g: &mut Game, s: &mut State, man: &mut Man, gd: GuardId, p: V3, i: i64, 
                 let hp = g.ch[hc].pos;
                 let his = g.ch[hc].bones.get(crate::character::Bone::Head).copied().unwrap_or([hp[0], 1.65, hp[2]]);
                 let sees = !crate::scene_collision::segment_blocked(g, eye, his, None, None, None);
-                if now - mm.t > k_.memory || now < mm.t || g.gd[mm.h].state == crate::game::GuardState::Dead || idx(mm.b, off) < 0 || i >= a || sees || !lit {
+                if now - mm.t > k_.memory || now < mm.t || crate::condition::down(g, g.gd[mm.h].ch) || idx(mm.b, off) < 0 || i >= a || sees || !lit {
                     man.mem = None;
                 } else {
                     mode = Mode::Wait;
@@ -794,7 +794,7 @@ fn cue(g: &mut crate::game::Game, gd: GuardId, m: &mut crate::sneak::Man, line: 
     }
     m.cue_t = g.time;
     g.stats.sneak.cues += 1;
-    crate::game::game_say(g, gd, line, None, None, None);
+    crate::game::game_say(g, gd, line, None, None);
     true
 }
 

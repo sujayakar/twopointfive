@@ -405,7 +405,7 @@ pub fn wall_charge_input(g: &mut crate::game::Game, input: InputId) {
     if !wall_charge_sync(g) || g.wall_charge.set.is_empty() { return; }
     let key = g.k.doortools.blow_key.clone();
     if !crate::input::input_hit(g, input, &key) { return; }
-    if g.pl[g.player].down {
+    if crate::condition::down(g, g.pl[g.player].ch) {
         let mut any = false;
         for c in g.wall_charge.set.clone() { if wall_charge_key_is(g, &crate::seats::here(g), c) { any = true; break; } }
         if any { g.tab.input[input].pressed.delete(key.clone()); }
@@ -462,7 +462,7 @@ fn wall_charge_step(g: &mut crate::game::Game, op: WallOpId) {
     let w = o!(g, op).wall.clone();
     let mut men = Vec::new();
     for gd in o!(g, op).men.clone() {   // (down, or given another order: not this order's any more)
-        if g.gd[gd].state != crate::game::GuardState::Dead && still_mine(g, &crate::seats::here(g), op, gd) { men.push(gd); }
+        if !crate::condition::down(g, g.gd[gd].ch) && still_mine(g, &crate::seats::here(g), op, gd) { men.push(gd); }
     }
     o!(g, op).men = men.clone();
     if men.is_empty() { wall_charge_end(g, op, "nobody left on it"); return; }
@@ -475,7 +475,7 @@ fn wall_charge_step(g: &mut crate::game::Game, op: WallOpId) {
         if o!(g, op).phase == Phase::Place {
             o!(g, op).set_t = f64::NAN;
             o!(g, op).t0 = t;
-            crate::game::game_say(g, lead, "i've got the charge.", None, None, None);
+            crate::game::game_say(g, lead, "i've got the charge.", None, None);
             let a = set_job(g, &w, spot);
             wall_charge_assign(g, op, lead, &a);
             let line = format!("setter now {}", g.gd[lead].callsign);
@@ -508,7 +508,7 @@ fn step_place(g: &mut Game, op: WallOpId, w: &WallSpot, lead: GuardId, t: f64, e
         if asg!(g, a).arrived && near {
             o!(g, op).set_t = t + crate::workstow::mate_stow_lead(g);
         } else if !wall_charge_waiting(g, op, el) {
-            crate::game::game_say(g, lead, "can't get on that wall.", None, None, None);
+            crate::game::game_say(g, lead, "can't get on that wall.", None, None);
             wall_charge_end(g, op, "never made the wall");
         }
         return;
@@ -523,7 +523,7 @@ fn step_place(g: &mut Game, op: WallOpId, w: &WallSpot, lead: GuardId, t: f64, e
     }
     if t - set_t < secs { return; }
     if wall_charge_open_at(g, w) {
-        crate::game::game_say(g, lead, "it's open.", None, None, None);
+        crate::game::game_say(g, lead, "it's open.", None, None);
         wall_charge_end(g, op, "the wall opened");
         return;
     }
@@ -531,7 +531,7 @@ fn step_place(g: &mut Game, op: WallOpId, w: &WallSpot, lead: GuardId, t: f64, e
         let paid = wall_charge_take(g);
         if paid < 0.0 {
             let none = wall_charge_none_words(g, &crate::seats::here(g));
-            crate::game::game_say(g, lead, &none, None, None, None);
+            crate::game::game_say(g, lead, &none, None, None);
             wall_charge_end(g, op, "no charges");
             return;
         }
@@ -554,7 +554,7 @@ fn step_standoff(g: &mut Game, op: WallOpId, w: &WallSpot, lead: GuardId, t: f64
     if wall_charge_charge_on(g, &crate::seats::here(g), w).is_none() { wall_charge_end(g, op, "the charge is gone"); return; }
     if o!(g, op).owes.unwrap_or(false) && v3::dist_xz(pos_of(g, lead), wall_pt(g, w, 0.0, 0.0, None)) >= g.k.wallkill.near_m {
         o!(g, op).owes = Some(false);
-        crate::game::game_say(g, lead, "charge set.", None, None, None);
+        crate::game::game_say(g, lead, "charge set.", None, None);
     }
     let men = o!(g, op).men.clone();
     let all_there = men.iter().all(|&gd| { let a = *o!(g, op).mine.get(gd).unwrap(); asg!(g, a).arrived });
@@ -564,9 +564,7 @@ fn step_standoff(g: &mut Game, op: WallOpId, w: &WallSpot, lead: GuardId, t: f64
         let p = pos_of(g, m);
         if wall_charge_blast_share(g, w, p, None, Some(false)) > 0.0 { inside = true; break; }
     }
-    crate::game::game_say(g, lead, if inside { "can't get clear of it. your call." } else { "stood off. your call." }, None, None, None);
-    let line = format!("charge set on the wall. press {} to blow it", g.k.doortools.blow_key.replacen("Key", "", 1));
-    crate::game::game_msg(g, &line);
+    crate::game::game_say(g, lead, if inside { "can't get clear of it. your call." } else { "stood off. your call." }, None, None);
     o!(g, op).phase = Phase::Armed;
     o!(g, op).t0 = t;
     wall_charge_beat(g, op, "armed");
@@ -651,7 +649,7 @@ fn wall_charge_take_hold(g: &mut crate::game::Game, op: WallOpId, gd: GuardId, l
     let keeper = o!(g, op).men.iter().any(|&x| {
         let r = &o!(g, op);
         let q = r.pod.get(x).or_else(|| r.queue.iter().find(|y| y.gd == x).map(|y| &y.pod));
-        x != gd && g.gd[x].state != crate::game::GuardState::Dead && q.map_or(false, |q| q.hold.is_none() && !q.took.unwrap_or(false) && q.watch.is_none())
+        x != gd && !crate::condition::down(g, g.gd[x].ch) && q.map_or(false, |q| q.hold.is_none() && !q.took.unwrap_or(false) && q.watch.is_none())
     });
     if !keeper { let line = format!("keeps the room · {}", g.gd[gd].callsign); wall_charge_beat(g, op, &line); return; }
     // (from where he STANDS: the line to his door is tested again from there)
@@ -679,7 +677,7 @@ fn wall_charge_take_hold(g: &mut crate::game::Game, op: WallOpId, gd: GuardId, l
 fn wall_charge_blow_wait(g: &mut crate::game::Game, op: WallOpId) -> f64 {
     let (after, now) = (g.k.wallcharge.after_blow, g.time);
     let h = match o!(g, op).hole { Some(h) => h, None => return after };
-    if o!(g, op).men.iter().any(|&m| g.gd[m].dazzled_until > now) { return after; }   // (a man the blast caught: the beat as it was)
+    if o!(g, op).men.iter().any(|&m| g.cond[g.gd[m].ch].blind_until > now) { return after; }   // (a man the blast caught: the beat as it was)
     let wall = o!(g, op).wall.clone();
     let at = wall_pt(g, &wall, h.du, 0.0, None);
     let mut near = f64::INFINITY;
@@ -726,7 +724,7 @@ fn wall_charge_enter(g: &mut crate::game::Game, op: WallOpId) {
     }
     if pods.is_empty() {
         let lead = o!(g, op).lead;
-        crate::game::game_say(g, lead, "no way in.", None, None, None);
+        crate::game::game_say(g, lead, "no way in.", None, None);
         wall_charge_end(g, op, "no floor inside");
         return;
     }
@@ -798,7 +796,7 @@ fn wall_charge_enter(g: &mut crate::game::Game, op: WallOpId) {
     o!(g, op).t0 = t;
     wall_charge_beat(g, op, "go");
     let lead = o!(g, op).lead;
-    crate::game::game_say(g, lead, "going in.", None, None, None);
+    crate::game::game_say(g, lead, "going in.", None, None);
 }
 
 /// where he crossed the wall's line; read by the checks and their words only   (wallcharge.ts WallCharge.cross)
@@ -863,8 +861,8 @@ fn wall_charge_sam_caught(g: &mut crate::game::Game, pl: PlayerId, k: f64, from:
     g.pl[pl].hit_flash = m::max(g.pl[pl].hit_flash, k);
     let (ss, sup) = (g.k.wallcharge.sam_secs, g.k.wallcharge.sam_sup);
     g.pl[pl].fire_cd = m::max(g.pl[pl].fire_cd, v3::lerp(ss[1], ss[0], k));
-    g.pl[pl].sup.v = m::max(g.pl[pl].sup.v, v3::lerp(sup, 1.0, k));
-    g.pl[pl].sup.kick = m::max(g.pl[pl].sup.kick, k);
+    g.cond[g.pl[pl].ch].sup.v = m::max(g.cond[g.pl[pl].ch].sup.v, v3::lerp(sup, 1.0, k));
+    g.cond[g.pl[pl].ch].sup.kick = m::max(g.cond[g.pl[pl].ch].sup.kick, k);
 }
 
 /// the charge's own side: blind the seconds the safety radius gives   (blowRaw's nearSecs)
@@ -881,7 +879,7 @@ fn blow_seat(g: &mut Game, w: &WallSpot, hole: bool, r: crate::wallcharge::WallC
     let tk = thick(g, w);
     let (knock_m, stun_m, ours_secs, near_m) = (g.k.doortools.knock_m, g.k.doortools.stun_m, g.k.wallshot.ours_secs, g.k.wallkill.near_m);
     let pl = g.player;
-    if wk && !g.pl[pl].down && !g.god_mode && g.puppet.is_none() {
+    if wk && !crate::condition::down(g, g.pl[pl].ch) && !g.god_mode && g.puppet.is_none() {
         let p = g.ch[g.pl[pl].ch].pos;
         let far = wall_off(g, w, p) < -tk / 2.0;
         let dist = v3::dist_xz(p, xz);
@@ -890,14 +888,14 @@ fn blow_seat(g: &mut Game, w: &WallSpot, hole: bool, r: crate::wallcharge::WallC
             crate::combat::hit_player(g, away_from(p, xz));
             g.pl[pl].hit_flash = 1.0;
             crate::chronicle::chron_hit(g, Some("the wall charge"));
-            *sam_down = *sam_down || g.pl[pl].down;
+            *sam_down = *sam_down || crate::condition::down(g, g.pl[pl].ch);
         }
     }
-    let k = if !g.pl[pl].down { near } else { 0.0 };
+    let k = if !crate::condition::down(g, g.pl[pl].ch) { near } else { 0.0 };
     if k > 0.0 { wall_charge_sam_caught(g, pl, k, xz); }
     *sam = m::max(*sam, k);
     // (samstun.ts: the blast does to the player what it does to a teammate standing there)
-    if !g.pl[pl].down && g.puppet.is_none() {
+    if !crate::condition::down(g, g.pl[pl].ch) && g.puppet.is_none() {
         let p = g.ch[g.pl[pl].ch].pos;
         let far = wall_off(g, w, p) < -tk / 2.0;
         let dist = v3::dist_xz(p, xz);
@@ -933,7 +931,7 @@ fn wall_charge_blow_raw(g: &mut crate::game::Game, c_2: Option<WallChargeId>, pr
     let mut men = g.guards.clone();
     for cv in crate::civilians::civilians_shown(g) { if !men.contains(&cv) { men.push(cv); } }   // (a civilian in the building is a man on the floor too)
     for gd in men {
-        if g.gd[gd].state == GuardState::Dead { continue; }
+        if crate::condition::down(g, g.gd[gd].ch) { continue; }
         let p = pos_of(g, gd);
         let share = wall_charge_blast_share(g, &w, p, Some(r), Some(false));
         if share > 0.0 { near.push((gd, share)); }
@@ -941,7 +939,7 @@ fn wall_charge_blow_raw(g: &mut crate::game::Game, c_2: Option<WallChargeId>, pr
     let mut seat_near: Vec<f64> = Vec::new();
     crate::seats::each_seat(g, &mut |g: &mut Game| {
         let pl = g.player;
-        let share = if g.pl[pl].down { 0.0 } else { let p = g.ch[g.pl[pl].ch].pos; wall_charge_blast_share(g, &w, p, Some(r), Some(false)) };
+        let share = if crate::condition::down(g, g.pl[pl].ch) { 0.0 } else { let p = g.ch[g.pl[pl].ch].pos; wall_charge_blast_share(g, &w, p, Some(r), Some(false)) };
         seat_near.push(share);
     });
     crate::destruction::destruction_blast(g, at, Some(crate::wallbreak::BlastOpts { who: Some(who), chaos: Some(false), breach, hung, ..Default::default() }));
@@ -957,17 +955,9 @@ fn wall_charge_blow_raw(g: &mut crate::game::Game, c_2: Option<WallChargeId>, pr
     let it = crate::throwables::throwables_spawn(g, crate::throwables::ItemKind::Flash, flash_at, [0.0, 0.0, 0.0],
         Some(crate::throwables::ThrowablesSpawnOpts { fuse: Some(99.0), who: Some(who), ..Default::default() }));
     crate::throwables::item_set_fired(g, it, true);
-    // (`m !== last`, wallcharge.ts:1078, asks whether the burst pushed a message: an identity. A message is its serial, dealt as it is pushed; the
-    //  list at its cap with the same words in the same tick would read "nothing new" by length, text and time)
-    let last = g.messages.last().map(|m| m.serial);
     let all = core::mem::take(&mut g.guards);
     crate::combat::detonate_stun(g, it, Some(true), None);
     g.guards = all;
-    let fresh = match g.messages.last() {   // ('flashbang went off': this was not one)
-        Some(m) => last != Some(m.serial) && m.text.contains("flashbang"),
-        None => false,
-    };
-    if fresh { g.messages.pop(); }
     if let Some(ii) = g.items.items.iter().position(|&x| x == it) { g.items.items.remove(ii); }
 
     let (mut knocked, mut stunned, mut backblast, mut lost) = (0.0, 0.0, 0.0, 0.0);
@@ -979,7 +969,7 @@ fn wall_charge_blow_raw(g: &mut crate::game::Game, c_2: Option<WallChargeId>, pr
     let (knock_m, stun_m, near_m) = (g.k.doortools.knock_m, g.k.doortools.stun_m, g.k.wallkill.near_m);
     let (room_m, shot_stagger, ours_secs, ss) = (g.k.wallshot.room_m, g.k.wallshot.stagger_secs, g.k.wallshot.ours_secs, g.k.wallshot.stun_secs);
     for gd in g.guards.clone() {
-        if g.gd[gd].state == GuardState::Dead || (wk && g.gd[gd].god) { continue; }
+        if crate::condition::down(g, g.gd[gd].ch) || (wk && g.gd[gd].god) { continue; }
         let p = pos_of(g, gd);
         let far = wall_off(g, &w, p) < -tk / 2.0;
         let dist = v3::dist_xz(p, xz);
@@ -1014,7 +1004,8 @@ fn wall_charge_blow_raw(g: &mut crate::game::Game, c_2: Option<WallChargeId>, pr
             if !(ours && wk) { knocked += 1.0; } else if !crate::rails::rails_is_spared(g, gd) { lost += 1.0; }
         } else {
             wall_charge_dazzle(g, gd, v3::lerp(ss[0], ss[1], v3::clamp(dist / stun_m, 0.0, 1.0)), inn);
-            g.gd[gd].stagger_until = m::max(g.gd[gd].stagger_until, g.time + shot_stagger);
+            let c = g.gd[gd].ch;
+            crate::condition::fold(g, c, shot_stagger);
             let f = g.gd[gd].weapon;
             g.fa[f].burst = None;
             stunned += 1.0;
@@ -1023,7 +1014,7 @@ fn wall_charge_blow_raw(g: &mut crate::game::Game, c_2: Option<WallChargeId>, pr
     // (a civilian in the building is a man on the floor too: at the charge, or behind the wall inside knockM, with the same line)
     if wk {
         for cv in crate::civilians::civilians_shown(g) {
-            if g.gd[cv].state == GuardState::Dead || g.gd[cv].god { continue; }
+            if crate::condition::down(g, g.gd[cv].ch) || g.gd[cv].god { continue; }
             let p = pos_of(g, cv);
             let far = wall_off(g, &w, p) < -tk / 2.0;
             let dist = v3::dist_xz(p, xz);
@@ -1051,7 +1042,6 @@ fn wall_charge_blow_raw(g: &mut crate::game::Game, c_2: Option<WallChargeId>, pr
     if lost != 0.0 { said += &format!(" · {} of yours down", lost); }
     if backblast != 0.0 { said += &format!(" · {} of yours too close", backblast); }
     if sam > 0.0 { said += " · you were too close"; }
-    crate::game::game_msg(g, &said);
     let hole_words = match hole { Some(h) => format!("hole {} m", js::to_fixed(h.half * 2.0, 2)), None => String::from("no hole") };
     let tail = if wk { format!(" lost {}{}", lost, if sam_down { " · the player down" } else { "" }) } else { String::new() };
     let note = format!("blow wall {}: {} knocked {} stunned {} backblast {}{}", w.index, hole_words, knocked, stunned, backblast, tail);
@@ -1063,8 +1053,8 @@ fn wall_charge_blow_raw(g: &mut crate::game::Game, c_2: Option<WallChargeId>, pr
             Some(h) => h,
             None => {
                 let lead = o!(g, op).lead;
-                let up = if g.gd[lead].state != GuardState::Dead { Some(lead) } else { o!(g, op).men.iter().copied().find(|&m| g.gd[m].state != GuardState::Dead) };
-                if let Some(up) = up { crate::game::game_say(g, up, "no way through.", None, None, None); }
+                let up = if !crate::condition::down(g, g.gd[lead].ch) { Some(lead) } else { o!(g, op).men.iter().copied().find(|&m| !crate::condition::down(g, g.gd[m].ch)) };
+                if let Some(up) = up { crate::game::game_say(g, up, "no way through.", None, None); }
                 wall_charge_end(g, op, "no hole");
                 continue;
             }
@@ -1073,7 +1063,7 @@ fn wall_charge_blow_raw(g: &mut crate::game::Game, c_2: Option<WallChargeId>, pr
         o!(g, op).phase = Phase::Wait;
         o!(g, op).t0 = g.time;
         for gd in o!(g, op).men.clone() {
-            if g.gd[gd].state == GuardState::Dead || !still_mine(g, &crate::seats::here(g), op, gd) { continue; }
+            if crate::condition::down(g, g.gd[gd].ch) || !still_mine(g, &crate::seats::here(g), op, gd) { continue; }
             if !crate::control::man::blind(g, gd) { let c = g.gd[gd].ch; crate::character::anim_flinch(g, c); }   // (the start at the blast; then round to the wall)
             let spare = o!(g, op).mine.get(gd).copied().map_or(false, |a| asg!(g, a).spare.unwrap_or(false));
             if !spare { wall_charge_stand_off(g, op, gd); }

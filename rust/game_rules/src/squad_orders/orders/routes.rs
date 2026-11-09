@@ -162,7 +162,7 @@ pub fn squad_orders_held_on(g: &crate::game::Game, seat: &crate::seats::SeatRef,
     let mut out = Vec::new();
     for (gd, &a) in seat.orders.asg.iter() {
         let row = &g.tab.orders_assignment[a];
-        if !men.contains(&gd) && !ignore.contains(&gd) && g.gd[gd].state != crate::game::GuardState::Dead && row.door == Some(d) {
+        if !men.contains(&gd) && !ignore.contains(&gd) && !crate::condition::down(g, g.gd[gd].ch) && row.door == Some(d) {
             if let Some(post) = row.post { out.push(post); }
         }
     }
@@ -211,7 +211,7 @@ pub(super) fn squad_orders_worked_stack(g: &mut crate::game::Game, d: DoorId, si
 pub(super) fn squad_orders_stood_on(g: &crate::game::Game, seat: &crate::seats::SeatRef, d: DoorId, men: &[GuardId], p: V3) -> bool {
     for (gd, &a) in seat.orders.asg.iter() {
         let row = &g.tab.orders_assignment[a];
-        if men.contains(&gd) && g.gd[gd].state != crate::game::GuardState::Dead && row.door == Some(d) {
+        if men.contains(&gd) && !crate::condition::down(g, g.gd[gd].ch) && row.door == Some(d) {
             if let Some(post) = row.post {
                 if flat(post, p) < 0.3 && flat(g.ch[g.gd[gd].ch].pos, post) < 0.6 { return true; }
             }
@@ -976,7 +976,7 @@ pub fn squad_orders_walk_on(g: &mut crate::game::Game, men: &[GuardId]) {
     if let Some(SquadOrdersWalkStacks::Text(words)) = &next {
         let i = js::rem(g.orders.acks, held.len() as f64) as usize;
         g.orders.acks += 1.0;
-        crate::game::game_say(g, held[i], words, None, None, None);
+        crate::game::game_say(g, held[i], words, None, None);
         for &mm in &held { walk_stop(g, mm); }
         return;
     }
@@ -988,7 +988,7 @@ pub fn squad_orders_walk_on(g: &mut crate::game::Game, men: &[GuardId]) {
         if let Some(n) = n {
             squad_orders_walk_send(g, mm, SquadOrdersWalkSendT { door: n.door, side: n.side, post: n.post }, at, &on_to_assign(&t.on));
         } else if let Some(why) = why {
-            if !said { crate::game::game_say(g, mm, &why, None, None, None); }
+            if !said { crate::game::game_say(g, mm, &why, None, None); }
             said = true;
             walk_stop(g, mm);
         } else {

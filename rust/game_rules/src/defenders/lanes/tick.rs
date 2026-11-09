@@ -30,12 +30,11 @@ fn cell_mid(cell: f64, w: f64, i: f64) -> V3 { [(js::rem(i, w) + 0.5) * cell, 0.
 /// `gd.path = []; gd.pathGoal = null`
 fn clear_path(g: &mut Game, gd: GuardId) { crate::game::guard_set_path(g, gd, Vec::new()); crate::guards::guard_set_path_goal(g, gd, None); }
 /// `g.say(gd, text, true)`
-fn say_net(g: &mut Game, gd: GuardId, text: &str) { crate::game::game_say(g, gd, text, Some(true), None, None); }
+fn say_net(g: &mut Game, gd: GuardId, text: &str) { crate::game::game_say(g, gd, text, Some(true), None); }
 fn pos_of(g: &Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }
 fn char_id_of(g: &Game, gd: GuardId) -> f64 { g.ch[g.gd[gd].ch].id }
 fn goal_of(g: &Game, gd: GuardId) -> Option<V3> { g.gd[gd].script.as_ref().and_then(|s| s.goal) }
 fn mode_of(g: &Game, d: RoomfightDefId) -> crate::roomfight::DefMode { g.tab.roomfight_def[d].mode }
-fn is_dead(g: &Game, gd: GuardId) -> bool { g.gd[gd].state == crate::game::GuardState::Dead }
 fn aim_at(g: &mut Game, gd: GuardId, at: V3) { crate::squad::order(g, gd, crate::squad::OrderPatch { aim_at: Some(Some(at)), ..Default::default() }); }
 /// `st.lanes.find(x => x.id === id)`
 fn lane_by_id(g: &mut Game, id: f64) -> Option<LanesLaneId> {
@@ -508,7 +507,7 @@ fn stun(g: &mut crate::game::Game, l: LanesLaneId, at: &[GuardId]) {
     g.tab.lanes_lane[l].stun_at = g.time + 2.0;
     let (id, l_from) = (g.tab.lanes_lane[l].id, g.tab.lanes_lane[l].from);
     for &o in g.guards.iter() {
-        if g.gd[o].team == SIDE && g.gd[o].state != crate::game::GuardState::Dead && flat(g.ch[g.gd[o].ch].pos, l_from) < 6.0 { return; }   // (one of theirs is on the guns already)
+        if g.gd[o].team == SIDE && !crate::condition::down(g, g.gd[o].ch) && flat(g.ch[g.gd[o].ch].pos, l_from) < 6.0 { return; }   // (one of theirs is on the guns already)
     }
     let mut best: Option<GuardId> = None;
     let mut bd = g.k.lanes.stun_m;
@@ -634,7 +633,7 @@ pub(super) fn guns_manned(g: &mut crate::game::Game, l: LanesLaneId, eye: V3) ->
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        if is_dead(g, o) || g.gd[o].held.is_some() { continue; }
+        if crate::condition::down(g, g.gd[o].ch) || g.gd[o].held.is_some() { continue; }
         let t = g.gd[o].team;
         if crate::teams::is_hostile(g, SIDE, t) { let c = g.gd[o].ch; if let Some(p) = manned_at(g, l, eye, c) { return Some(p); } }
     }

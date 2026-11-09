@@ -203,7 +203,7 @@ fn in_room(g: &mut crate::game::Game, t: RoomfightRoomId, p: V3) -> bool {
 fn team_stands(g: &mut crate::game::Game, r: RoomfightRoomId) -> bool {
     for i in 0..g.fight.ops.len() {
         let o = op_gd(g, i);
-        if g.gd[o].state != crate::game::GuardState::Dead && in_room(g, r, pos_of(g, o)) { return true; }
+        if !crate::condition::down(g, g.gd[o].ch) && in_room(g, r, pos_of(g, o)) { return true; }
     }
     for pl in crate::seats::men_left(g) { let p = g.ch[g.pl[pl].ch].pos; if in_room(g, r, p) { return true; } }
     false
@@ -328,7 +328,7 @@ pub(super) fn learn(g: &mut crate::game::Game) {
         let mut any = false;
         for i in 0..g.fight.ops.len() {
             let o = op_gd(g, i);
-            if g.gd[o].state != crate::game::GuardState::Dead { let p = pos_of(g, o); if bang_by(g, room, c, p) { any = true; break; } }
+            if !crate::condition::down(g, g.gd[o].ch) { let p = pos_of(g, o); if bang_by(g, room, c, p) { any = true; break; } }
         }
         if !any { for pl in crate::seats::men_left(g) { let p = g.ch[g.pl[pl].ch].pos; if bang_by(g, room, c, p) { any = true; break; } } }
         if !any { state_of(g).stats.stun_empty += 1.0; }
@@ -370,7 +370,7 @@ fn team_boots(g: &mut crate::game::Game, gd: GuardId) -> Option<V3> {
         let o = op_gd(g, i);
         let op = pos_of(g, o);
         let speed = g.gd[o].speed;
-        if g.gd[o].state == crate::game::GuardState::Dead || speed < 0.5 || v3::dist(op, here) > 9.0 { continue; }
+        if crate::condition::down(g, g.gd[o].ch) || speed < 0.5 || v3::dist(op, here) > 9.0 { continue; }
         let pr = crate::weather::hear_path(g, v3::add(op, [0.0, 1.0, 0.0]), ear, None);
         let l = crate::teampace::team_tread(g, o, speed, 0.4) * v3::clamp(1.0 - pr.path_len / 9.0, 0.0, 1.0) * pr.carry;
         if l > bl { bl = l; best = Some(pr.via); }   // where it comes to him FROM: the doorway it spills through, the man himself only with nothing between
@@ -469,7 +469,7 @@ pub(super) fn consider(g: &mut crate::game::Game, d: RoomfightDefId) {
                 if n > 0 {
                     state_of(g).stats.pairs_told += 1.0;
                     let line = crate::words::wg(g, &"they've hit the others — get ready, we go together!", &"that's the others they've hit — get ready, we go together!");
-                    crate::game::game_say(g, gd, line, Some(false), None, None);
+                    crate::game::game_say(g, gd, line, Some(false), None);
                     note(g, gd, &format!("by way: tells {} of his room where the fight is", n));
                 }
             }
@@ -617,13 +617,13 @@ pub(super) fn consider(g: &mut crate::game::Game, d: RoomfightDefId) {
     if role == ManRole::Flank {
         state_of(g).stats.flank_sent += 1.0;
         let line = crate::words::wg(g, &"going around — keep them there!", &"going round — keep them there!");
-        crate::game::game_say(g, gd, line, Some(true), None, None);
+        crate::game::game_say(g, gd, line, Some(true), None);
     } else {
         state_of(g).stats.press_men += 1.0;
         let line = if forms_now {
             if !up.is_empty() { "with you — on the door!" } else { "they've hit the others — on that door!" }
         } else if !up.is_empty() { "with you — moving!" } else { "they've hit the others — get in there!" };
-        crate::game::game_say(g, gd, line, Some(true), None, None);
+        crate::game::game_say(g, gd, line, Some(true), None);
     }
     let what = format!("press {} on room {}: {} to {} ({} m)", p_id, g.tab.roomfight_room[tt].id, role.as_str(), door_name(g, door), js::to_fixed(way.l, 1));
     note(g, gd, &what);
@@ -644,7 +644,7 @@ pub(super) fn tick_press(g: &mut crate::game::Game, p: &mut crate::pressure::Pre
     let mut team_in = false;
     for i in 0..g.fight.ops.len() {
         let o = op_gd(g, i);
-        if g.gd[o].state != crate::game::GuardState::Dead {
+        if !crate::condition::down(g, g.gd[o].ch) {
             let c = cell_of(g, pos_of(g, o));
             if in_cells(g, p.room, c) { team_in = true; break; }
         }
@@ -733,7 +733,7 @@ fn tick_man(g: &mut Game, p: &mut Press, mi: PressureManId, team_in: bool) {
                 if !contact { watch_door(g, d, door); }
                 if role == ManRole::Flank {
                     state_of(g).stats.flank_set += 1.0;
-                    if !contact { crate::game::game_say(g, gd, "in position!", Some(true), None, None); }
+                    if !contact { crate::game::game_say(g, gd, "in position!", Some(true), None); }
                 }
                 let what = format!("press {}: set at {}{}", p.id, door_name(g, door), if contact { " (in contact)" } else { "" });
                 note(g, gd, &what);
@@ -769,7 +769,7 @@ fn tick_man(g: &mut Game, p: &mut Press, mi: PressureManId, team_in: bool) {
         let now = g.time;
         let x = &mut g.tab.pressure_man[mi];
         x.moving = false; x.set = true; x.set_at = now;
-        if role == ManRole::Flank && there && !contact { state_of(g).stats.flank_set += 1.0; crate::game::game_say(g, gd, "in position — on them!", Some(true), None, None); }
+        if role == ManRole::Flank && there && !contact { state_of(g).stats.flank_set += 1.0; crate::game::game_say(g, gd, "in position — on them!", Some(true), None); }
         if there && !contact { let c = charge(g, d, door, Some(p.room)); g.tab.pressure_man[mi].charged = Some(c); }
         let to = match fc { Some(c) if contact => g.ch[c].pos, _ => p.at };
         loose(g, d, to);   // (met on the way: the mover's own whole beat, roomfight.ts tickMove's: nothing here shortens it)
@@ -839,7 +839,7 @@ fn tick_man(g: &mut Game, p: &mut Press, mi: PressureManId, team_in: bool) {
                     crate::roomfight::run(g, d, spot, Some(door), 0.3, crate::owner::by::PRESS);
                 }
                 state_of(g).stats.fb_push += 1.0;
-                crate::game::game_say(g, gd, "back — get back! hold the door!", Some(true), None, None);
+                crate::game::game_say(g, gd, "back — get back! hold the door!", Some(true), None);
                 let what = format!("press {}: the push has failed, back to {}", p.id, door_name(g, g.tab.pressure_man[mi].door));
                 note(g, gd, &what);
             }
@@ -879,7 +879,7 @@ fn tick_gather(g: &mut Game, p: &mut Press, up: &[PressureManId]) -> bool {
             p.set_at = now;
             if siege > 0.0 {
                 state_of(g).stats.press_sieges += 1.0;
-                crate::game::game_say(g, lead_gd, if hold { "back off the doors — out of their flash! let them come out to us!" } else { "hold the doors — let them come to us!" }, Some(true), None, None);
+                crate::game::game_say(g, lead_gd, if hold { "back off the doors — out of their flash! let them come out to us!" } else { "hold the doors — let them come to us!" }, Some(true), None);
                 let what = format!("press {}: set, holds the doors ({} men, {} doors)", p.id, up.len(), doors_of(g, up));
                 note(g, lead_gd, &what);
             }
@@ -890,14 +890,14 @@ fn tick_gather(g: &mut Game, p: &mut Press, up: &[PressureManId]) -> bool {
                 let x = &g.tab.pressure_man[i];
                 let o = gd_of(g, x.d);
                 let de = df(g, x.d);
-                x.set && now - g.gd[o].last_seen_t > 3.0 && now >= g.gd[o].dazzled_until && de.noise_at.is_some() && now - de.noise_t < 2.0 && de.noise_t > de.moved_at + 0.5
+                x.set && now - g.gd[o].last_seen_t > 3.0 && !crate::condition::is_blind(g, g.gd[o].ch) && de.noise_at.is_some() && now - de.noise_t < 2.0 && de.noise_t > de.moved_at + 0.5
             }).collect();
             if !go.is_empty() {
                 p.phase = PressPhase::Go; p.go_at = now; p.n0 = up.len() as f64;
                 state_of(g).stats.press_converge += 1.0;
                 let first = gd_of(g, g.tab.pressure_man[go[0]].d);
                 let line = crate::words::wg(g, &"they're coming out — get around them, go!", &"they're coming out — get round them, go!");
-                crate::game::game_say(g, first, line, Some(true), None, None);
+                crate::game::game_say(g, first, line, Some(true), None);
                 let what = format!("press {}: the trap is sprung, {} go round", p.id, go.len());
                 note(g, first, &what);
                 for &i in up {
@@ -929,7 +929,7 @@ fn tick_gather(g: &mut Game, p: &mut Press, up: &[PressureManId]) -> bool {
         if now - p.set_at < 0.6 || !(fight || (calm && (p.moving || now - p.set_at > siege))) { return false; }
         p.phase = PressPhase::Word; p.word_at = now; p.lone = false;
         state_of(g).stats.press_words += 1.0;
-        crate::game::game_say(g, lead_gd, if p.moving && !fight { "they're moving — go, go!" } else { "go — go — go!" }, Some(true), None, None);
+        crate::game::game_say(g, lead_gd, if p.moving && !fight { "they're moving — go, go!" } else { "go — go — go!" }, Some(true), None);
         let what = format!("press {}: the word{} ({} men, {} doors)", p.id, if fight { ", a fight inside" } else if p.moving { ", boots inside" } else { "" }, up.len(), doors_of(g, up));
         note(g, lead_gd, &what);
     } else if p.lone && (match p.lone_at { Some(t) => now - t > 40.0, None => waited > gs + 40.0 }) {
@@ -940,7 +940,7 @@ fn tick_gather(g: &mut Game, p: &mut Press, up: &[PressureManId]) -> bool {
         state_of(g).stats.press_lone += 1.0;
         if hold { p.lone_at = Some(now); }   // (the way out holds long: his forty seconds run from now, not from the forming up)
         let who = gd_of(g, g.tab.pressure_man[up[0]].d);
-        crate::game::game_say(g, who, "I've got this door — they're not coming out!", Some(true), None, None);
+        crate::game::game_say(g, who, "I've got this door — they're not coming out!", Some(true), None);
         let what = format!("press {}: alone, holds {} from outside", p.id, door_name(g, g.tab.pressure_man[up[0]].door));
         note(g, who, &what);
     }
@@ -976,7 +976,7 @@ pub(super) fn last_man(g: &mut crate::game::Game, d: RoomfightDefId) {
         for i in 0..g.fight.ops.len() {
             let o = op_gd(g, i);
             let (ot, oc) = (g.gd[o].team, g.gd[o].ch);
-            if g.gd[o].state == crate::game::GuardState::Dead || !crate::teams::is_hostile(g, team, ot) || flat(g.ch[oc].pos, g.ch[c_ch].pos) > 14.0 { continue; }
+            if crate::condition::down(g, g.gd[o].ch) || !crate::teams::is_hostile(g, team, ot) || flat(g.ch[oc].pos, g.ch[c_ch].pos) > 14.0 { continue; }
             let vis = crate::guards::can_see_char(g, gd, oc, false);
             if vis.visible && crate::guards::sight_gain_on(g, gd, o, vis.dist) > 0.0 { seen += 1; }
         }
@@ -1066,10 +1066,10 @@ pub(super) fn last_man(g: &mut crate::game::Game, d: RoomfightDefId) {
     state_of(g).outs.push(crate::pressure::Out { door, def: d, moving: true, plant_t: -1.0, fought: false, step_t: -100.0 });
     if why == HookedWhy::Seen {
         state_of(g).stats.fb_last += 1.0;
-        crate::game::game_say(g, gd, "too many — I'm out the back!", Some(true), None, None);
+        crate::game::game_say(g, gd, "too many — I'm out the back!", Some(true), None);
     } else {
         state_of(g).stats.fb_early += 1.0;
-        crate::game::game_say(g, gd, "they're at the door — I'm out the back!", Some(true), None, None);
+        crate::game::game_say(g, gd, "they're at the door — I'm out the back!", Some(true), None);
     }
     let through = match door { Some(x) => format!(" through {}", door_name(g, x)), None => String::new() };
     let what = format!("last man: {}, gives room {} up{}", cause, g.tab.roomfight_room[r].id, through);
@@ -1099,7 +1099,7 @@ pub(super) fn tick_out(g: &mut crate::game::Game, o: &mut crate::pressure::Out) 
         }
         if told > 0 {
             state_of(g).stats.fb_told += 1.0;
-            crate::game::game_say(g, gd, "they're right behind me — watch that door!", Some(true), None, None);
+            crate::game::game_say(g, gd, "they're right behind me — watch that door!", Some(true), None);
         }
         let beyond = match o.door { Some(x) => format!(" beyond {}", door_name(g, x)), None => String::new() };
         let tells = if told > 0 { format!(", tells {}", told) } else { String::new() };

@@ -152,7 +152,7 @@ pub fn rescue_bounds(g: &crate::game::Game) -> Option<crate::scene_scenarios::Re
 }
 
 /// The room the side door is taken from. (rescue.ts Rescue.fromBounds)
-pub(super) fn rescue_from_bounds(g: &crate::game::Game) -> Option<crate::scene_scenarios::Rect> {
+pub fn rescue_from_bounds(g: &crate::game::Game) -> Option<crate::scene_scenarios::Rect> {
     let s = rescue_data(g)?;
     let f = s.side.as_ref()?.from.as_ref()?;
     match f.bounds { Some(b) => Some(b), None => clear_plan_bounds(g, &f.door) }
@@ -246,8 +246,6 @@ fn rescue_stop(g: &mut crate::game::Game) {
         g.guards = benched;
     }
     crate::game::game_restart_encounter(g);
-    let text = if !g.level.routes.is_empty() { "hostage rescue off \u{2014} the night shift is back" } else { "hostage rescue off" };
-    crate::game::game_msg(g, text);
 }
 
 /// Stage it afresh: a restart of the encounter, which stages. (rescue.ts Rescue.restage)
@@ -262,7 +260,6 @@ pub fn rescue_on_encounter_restart(g: &mut crate::game::Game) {
         let failure = format!("the staging failed: {}", e);
         g.rescue.failure = Some(failure.clone());
         rescue_stop(g);
-        crate::game::game_msg(g, &format!("hostage rescue \u{2014} {}", failure));
     }
 }
 
@@ -554,17 +551,6 @@ fn stage_tried(g: &mut Game) -> Result<(), String> {
         let callsign = g.gd[g.rescue.hostiles[0]].callsign.clone();
         rescue_note(g, &format!("set:{}", callsign));
     }
-    let count = s.hostages.len();
-    let many = number().get(count).cloned().unwrap_or_else(|| format!("{}", count));
-    let who = format!("{} hostage{} in the {}", many, if count == 1 { "" } else { "s" }, rescue_place(g));
-    let n = g.rescue.ops.len();
-    let fall = if n > 2 { ", and the squad falls in" } else if n == 2 { ", and the pair falls in" } else if n > 0 { ", and your teammate falls in" } else { "" };
-    let text = if g.k.rescue.start == crate::knobs::RescueKStart::Hot {
-        format!("hostage rescue. you hear shots inside. {}. the clock starts when you move{}. {}", who, fall, if n > 0 { "Press F to bang and clear, or X for orders (door tools on any door)" } else { "You're alone" })
-    } else {
-        format!("hostage rescue. {}. nobody knows you're here yet. {}", who, if n > 0 { "Press F to stack up and F again to go, or X for orders" } else { "You're alone" })
-    };
-    crate::game::game_msg(g, &text);
     Ok(())
 }
 

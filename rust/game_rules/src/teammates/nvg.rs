@@ -80,7 +80,7 @@ pub(super) fn tube_sig(g: &crate::game::Game, e: f64) -> f64 {
 fn is_mate(g: &crate::game::Game, gd: GuardId) -> bool {
     g.gd[gd].team == crate::teams::Team::Operative
         && g.gd[gd].unit.is_some()
-        && g.gd[gd].state != crate::game::GuardState::Dead
+        && !crate::condition::down(g, g.gd[gd].ch)
         && crate::kit::kit_goggles(g, gd)
 }
 
@@ -142,7 +142,7 @@ fn read_place(g: &mut crate::game::Game, gd: GuardId, m: &mut crate::nvg::Man) {
     }
     if let Some(o) = crate::roomfight::room_fight_op_of(g, gd) {
         if let Some(tgt) = g.tab.roomfight_op[o].tgt {
-            if g.gd[tgt].state != crate::game::GuardState::Dead {
+            if !crate::condition::down(g, g.gd[tgt].ch) {
                 let at = g.ch[g.gd[tgt].ch].pos;
                 read_at(g, at[0], at[2], false, true, &mut dim, &mut black);
             }
@@ -212,7 +212,7 @@ pub fn nvg_tick(g: &mut crate::game::Game) {
     }
     // ---- what the team knows of its own secret
     let mut up = crate::seats::men(g);
-    up.retain(|&pl| !g.pl[pl].down);
+    up.retain(|&pl| !crate::condition::down(g, g.pl[pl].ch));
     let mut lit = false;
     for &pl in &up {
         if lead_lit(g, pl) {
@@ -302,7 +302,7 @@ pub fn nvg_tick(g: &mut crate::game::Game) {
         if team.call_due && now - team.called_t >= gap {
             team.call_due = false;
             team.called_t = now;
-            crate::game::game_say(g, who, "going dark.", None, None, None);   // (said by the first man who really is dark, the frame there is one)
+            crate::game::game_say(g, who, "going dark.", None, None);   // (said by the first man who really is dark, the frame there is one)
         }
     }
 }

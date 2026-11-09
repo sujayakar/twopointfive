@@ -24,7 +24,7 @@ fn frac(x: f64) -> f64 { x - m::floor(x) }
 /// Up, on his feet and still in the level.   (rescuecheck.ts alive)
 fn alive(g: &Game, gd: GuardId) -> bool {
     let c = g.gd[gd].ch;
-    g.gd[gd].state != crate::game::GuardState::Dead && g.ch[c].alive && !g.gd[gd].fled
+    !crate::condition::down(g, g.gd[gd].ch) && g.ch[c].alive && !g.gd[gd].fled
 }
 
 /// Alive, not held, not dazzled, not staggered: he can speak on the net.   (rescuecheck.ts fit)
@@ -53,8 +53,6 @@ fn net(g: &mut Game, gd: GuardId, text: &str, cls: Option<f64>, chron: Option<bo
     if g.gd[gd].held.is_some() { return; }
     crate::cues::cues_net(g, gd, text, cls);
     if chron { crate::chronicle::chron_radio(g, gd, text); }
-    let line = format!("{} (radio): {}", g.gd[gd].callsign, text);
-    crate::game::game_msg(g, &line);
 }
 
 /// Where in a band of seconds, by a key: the cast's ids and the check's number, no dice.   (rescuecheck.ts band)
@@ -336,7 +334,7 @@ fn tick_out(g: &mut Game, cast: &[CastItem], fight: bool) {
     let mut down = None;
     if phase != Phase::Back {
         for c in cast.iter() {
-            if !alive(g, c.gd) && g.gd[c.gd].state == crate::game::GuardState::Dead && !g.gd[c.gd].found
+            if !alive(g, c.gd) && crate::condition::down(g, g.gd[c.gd].ch) && !g.gd[c.gd].found
                 && crate::guards::body_seen(g, gd, c.gd, if phase == Phase::There && c.gd == about { Some(k.feet_m) } else { None }) {
                 down = Some(c.gd);
                 break;

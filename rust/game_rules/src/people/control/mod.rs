@@ -386,7 +386,7 @@ mod tests {
         let mut body = crate::character::Character::blank();
         body.man_kept = Some([0.0; 4]);   // (no row on the block: his numbers are kept on his body)
         let mut man = crate::game::Guard::blank();
-        man.ch = g.ch.push(body);
+        man.ch = crate::character::man_new(&mut g, body);
         let gd = g.gd.push(man);
         g.guards.push(gd);
         (g, gd)

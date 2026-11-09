@@ -20,7 +20,7 @@ pub(super) fn game_draw_men(g: &mut crate::game::Game, all: &[CharId], statured:
     if drawn.len() > 8 && (g.night_breach.active || g.rescue.active) {
         let mut down: Vec<CharId> = Vec::new();
         let mut i = 0;
-        while i < g.guards.len() { let gd = g.guards[i]; i += 1; if g.gd[gd].state == crate::game::GuardState::Dead { down.push(g.gd[gd].ch); } }
+        while i < g.guards.len() { let gd = g.guards[i]; i += 1; if crate::condition::down(g, g.gd[gd].ch) { down.push(g.gd[gd].ch); } }
         if !down.is_empty() {
             let mut re: Vec<CharId> = drawn.iter().copied().filter(|c| !down.contains(c)).collect();
             re.extend(drawn.iter().copied().filter(|c| down.contains(c)));
@@ -40,7 +40,7 @@ pub(super) fn game_light_meter(g: &mut crate::game::Game, dt: f64) {
     let mut i = 0;
     while i < g.guards.len() {
         let gd = g.guards[i]; i += 1;
-        if g.gd[gd].state == crate::game::GuardState::Dead { continue; }
+        if crate::condition::down(g, g.gd[gd].ch) { continue; }
         let pl = if one { g.player } else { let view = crate::seats::view_for(g, gd); crate::cmd::seat_man(g, view) };
         let pc = g.pl[pl].ch;
         let chest = bone_or(g, pc, Bone::Chest, 1.1);
@@ -105,7 +105,7 @@ pub(super) fn game_update_doors(g: &mut crate::game::Game, dt: f64) {
     let mut i = 0;
     while i < g.guards.len() {
         let gd = g.guards[i]; i += 1;
-        if g.gd[gd].state == GuardState::Dead { continue; }
+        if crate::condition::down(g, g.gd[gd].ch) { continue; }
         let c = g.gd[gd].ch;
         let speed = g.gd[gd].speed;
         let bash = g.gd[gd].state == GuardState::Alert && crate::kitload::load_gait(g, &crate::seats::here(g), crate::kitload::LoadGaitWho::Guard(gd), speed) > 2.2;
@@ -199,7 +199,7 @@ pub(super) fn game_update_doors(g: &mut crate::game::Game, dt: f64) {
 /// a seat's half of updateDoors, run over its view: the player's own contact on the leaves this frame (none: he is down)   (game.ts doorContact)
 fn game_door_contact(g: &mut crate::game::Game) -> Option<crate::doors::DoorContact> {
     let pl = g.player; let pc = g.pl[pl].ch;
-    if g.pl[pl].down { return None; }
+    if crate::condition::down(g, g.pl[pl].ch) { return None; }
     let run = crate::sprintdoor::sprint_door_run(g, pl);
     // (DOORWAY.solid, DOORWAY.oneWay: both true on the page)
     let solid = g.puppet.is_none();
@@ -242,7 +242,7 @@ fn holds(g: &Game, pl: PlayerId, gd: GuardId) -> bool {
 fn game_door_acts(g: &mut crate::game::Game, dt: f64, input: InputId) {
     let pl = g.player;
     let pc = g.pl[pl].ch;
-    let act: Option<Interactable> = if g.pl[pl].down { None } else { g.act.clone() };
+    let act: Option<Interactable> = if crate::condition::down(g, g.pl[pl].ch) { None } else { g.act.clone() };
     let verb: Option<Verb> = act.as_ref().and_then(|a| a.verb);
     let kind: Option<InteractableKind> = act.as_ref().map(|a| a.kind);
     let act_guard: Option<GuardId> = act.as_ref().and_then(|a| a.guard);
@@ -272,7 +272,7 @@ fn game_door_acts(g: &mut crate::game::Game, dt: f64, input: InputId) {
 
     // the grab and the takedown, with one gate
     {
-        let free = g.pl[pl].takedown.is_none() && !g.pl[pl].down && g.pl[pl].holding.is_none() && !crate::samstun::sam_staggered(g, &crate::seats::here(g), None) && g.pl[pl].breaker_move.is_none();
+        let free = g.pl[pl].takedown.is_none() && !crate::condition::down(g, g.pl[pl].ch) && g.pl[pl].holding.is_none() && !crate::samstun::sam_staggered(g, &crate::seats::here(g), None) && g.pl[pl].breaker_move.is_none();
         let in_reach: Option<Interactable> = if g.pl[pl].holstered { click_row(g, &crate::seats::here(g)) } else { None };
         let reach_guard: Option<GuardId> = in_reach.as_ref().and_then(|r| r.guard);
         let choke_on = match reach_guard {
@@ -349,16 +349,10 @@ fn game_door_acts(g: &mut crate::game::Game, dt: f64, input: InputId) {
                 if crate::doors::doors_locked_out(g, d, pos, Some(&keys)) { crate::player::start_picking(g, d); }
             }
             Some(Verb::Kick) => {
-                if crate::doors::doors_boot_holds(g, d, pos) {
-                    crate::game::game_msg(g, "it opens toward you, so a kick won't move it");
-                } else {
-                    crate::player::start_kick(g, d, None, None);
-                }
+                if !crate::doors::doors_boot_holds(g, d, pos) { crate::player::start_kick(g, d, None, None); }
             }
             Some(Verb::Rattle) => {
                 crate::doors::doors_rattle(g, d, id, None);
-                let steel = g.dr[d].def.steel.unwrap_or(false);
-                crate::game::game_msg(g, if steel { "the stair door is bolted from the landing side with no keyhole on this side, so it's not your way out tonight" } else { "it's locked. pick it (quiet, slow) or kick it in (loud)" });
             }
             Some(Verb::Code) => { crate::devices::start_coding(g, d); }
             Some(Verb::Nocode) => crate::devices::deny_pad(g, d),
@@ -373,7 +367,7 @@ fn game_door_acts(g: &mut crate::game::Game, dt: f64, input: InputId) {
         let pos = g.ch[pc].pos;
         let dp = crate::doors::door_pos(g, d);
         let in_reach = m::min(v3::dist_xz(dp, pos), v3::dist_xz(g.dr[d].frame_centre, pos)) < crate::doors::DOORS_USE_REACH + 0.25
-            && !g.pl[pl].down && g.pl[pl].holding.is_none() && g.pl[pl].takedown.is_none() && g.pl[pl].kick.is_none();
+            && !crate::condition::down(g, g.pl[pl].ch) && g.pl[pl].holding.is_none() && g.pl[pl].takedown.is_none() && g.pl[pl].kick.is_none();
         let keys = g.pl[pl].keys.clone();
         if !in_reach || crate::doors::doors_locked_out(g, d, pos, Some(&keys)) {
             g.pl[pl].easing = None;
@@ -389,7 +383,6 @@ fn game_door_acts(g: &mut crate::game::Game, dt: f64, input: InputId) {
                 g.pl[pl].ease_stall_t += dt;
                 if g.pl[pl].ease_stall_t > 0.5 {
                     g.pl[pl].easing = None;
-                    crate::game::game_msg(g, "it won't go any further");
                 }
             } else {
                 g.pl[pl].ease_stall_t = 0.0;

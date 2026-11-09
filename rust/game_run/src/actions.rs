@@ -65,8 +65,8 @@ fn shuffled<T>(mut a: Vec<T>, die: &mut game::dice::Die) -> Vec<T> {
 fn extra_spots(g: &mut Game, n: usize) -> Vec<Spot> {
     let mut die = game::math_dice::mulberry32(0x57E55 as f64);
     let mut taken: Vec<[f64; 3]> = vec![g.ch[g.pl[g.player].ch].pos];
-    taken.extend(g.guards.iter().filter(|&&x| g.gd[x].state != GuardState::Dead).map(|&x| g.ch[g.gd[x].ch].pos));
-    taken.extend(g.civilians.iter().filter(|&&x| g.gd[x].state != GuardState::Dead).map(|&x| g.ch[g.gd[x].ch].pos));
+    taken.extend(g.guards.iter().filter(|&&x| !game::condition::down(g, g.gd[x].ch)).map(|&x| g.ch[g.gd[x].ch].pos));
+    taken.extend(g.civilians.iter().filter(|&&x| !game::condition::down(g, g.gd[x].ch)).map(|&x| g.ch[g.gd[x].ch].pos));
     let mut out: Vec<Spot> = Vec::new();
     if game::roomclear::room_clear_scenario_active(g) {
         let rooms: Vec<_> = g.room_clear.rooms.iter().map(|r| r.def.clone()).collect();
@@ -112,24 +112,22 @@ fn extra_spots(g: &mut Game, n: usize) -> Vec<Spot> {
     }
     out
 }
-/// more defenders on the floor, held on their spots, and the mission's where it has them: what stops it is said. A restart takes them away.
+/// more defenders on the floor, held on their spots, and the mission's where it has them. A restart takes them away.
 fn stand_extra(g: &mut Game, n: f64) {
     let n = n.max(0.0) as usize;
     let spots = extra_spots(g, n);
-    let (mut stood, mut why) = (0, if spots.len() < n { Some(format!("free floor for {} of {n}", spots.len())) } else { None });
+    let mut stood = 0;
     let serial = g.guards.iter().filter(|&&x| g.gd[x].callsign.starts_with("Extra ")).count();
     let (light, budget) = (g.k.nightbreach.def_lights, game::guards::MAX_SKINNED - g.civilians.len() as f64);
     for s in spots {
         let name = format!("Extra {}", serial + stood + 1);
         let o = game::guards::UnitOpts { team: Team::Hostile, pos: s.pos, yaw: Some(m::atan2(s.aim_at[0] - s.pos[0], s.aim_at[2] - s.pos[2])), name: Some(name.clone()), light: Some(light), budget: Some(budget), ..game::guards::UnitOpts::default() };
-        let gd = match game::guards::spawn_unit(g, &o) { Ok(gd) => gd, Err(e) => { why = Some(String::from(e.trim_start_matches("spawnUnit: ").split(" — ").next().unwrap_or(""))); break; } };
+        let gd = match game::guards::spawn_unit(g, &o) { Ok(gd) => gd, Err(_) => break };
         g.gd[gd].hold = true; g.gd[gd].pinned = true;
         if g.night_breach.active { game::nightbreach::night_breach_adopt(g, gd, &game::nightbreach::NightBreachMark { pos: s.pos, aim_at: s.aim_at, name: Some(name.clone()), drill: Some(false) }); }
         if let Some(room) = s.room { game::roomclear::room_clear_scenario_adopt(g, gd, &game::roomclear::Placement { room, mark: s.mark, pos: s.pos, aim_at: s.aim_at, name }); }
         stood += 1;
     }
-    let line = format!("{stood} extra {}{}", if stood == 1 { "enemy stood" } else { "enemies stood" }, why.map_or(String::new(), |w| format!(": {w}")));
-    game::game::game_msg(g, &line);
 }
 
 pub static ACTIONS: &[Action] = &[

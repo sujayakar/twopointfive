@@ -39,7 +39,7 @@ pub fn attention_lines() -> Vec<String> {
 }
 
 /// `g.say(gd, text)` with the rest of its arguments left out.
-fn say(g: &mut Game, gd: GuardId, text: &str) { crate::game::game_say(g, gd, text, None, None, None); }
+fn say(g: &mut Game, gd: GuardId, text: &str) { crate::game::game_say(g, gd, text, None, None); }
 
 /// A line from a pool, never the one he used last. One die. (attention.ts line)
 fn line(g: &mut crate::game::Game, gd: GuardId, pool: &[String]) {
@@ -191,7 +191,7 @@ fn able(g: &crate::game::Game, gd: GuardId) -> bool {
         && man.body_duty.is_none()
         && man.task.is_none()
         && man.awareness < g.k.attention.calm_aw
-        && g.time >= man.dazzled_until;
+        && !crate::condition::is_blind(g, man.ch);
     if !calm { return false; }
     if crate::roomfight::fight_live(g) && !g.quiet.active { return false; }
     let team = g.gd[gd].team;
@@ -396,7 +396,7 @@ fn tell(g: &mut crate::game::Game, gd: GuardId, h: &mut crate::attention::Hold) 
     let pos = g.ch[g.gd[gd].ch].pos;
     if crate::guards::near_known_body(g, pos, Some(4.0)).is_some()
         || g.gd[gd].bubble.as_ref().map_or(false, |b| b.radio && now - b.t < 4.0)
-        || (matches!(g.gd[gd].foe, Some(crate::game::Foe::Player)) && g.pl[g.player].down)
+        || (matches!(g.gd[gd].foe, Some(crate::game::Foe::Player)) && crate::condition::down(g, g.pl[g.player].ch))
     {
         return;
     }
@@ -463,7 +463,7 @@ mod tests {
     /// A blank game with one man on it; leaked, so a test holds it as a plain reference.
     fn game() -> (&'static mut Game, GuardId) {
         let g: &'static mut Game = Box::leak(Box::new(Game::blank()));
-        let c = g.ch.push(crate::character::Character::blank());
+        let c = crate::character::man_new(g, crate::character::Character::blank());
         let mut man = crate::game::Guard::blank();
         man.ch = c;
         let gd = g.gd.push(man);
@@ -667,7 +667,7 @@ pub fn attention_view(g: &crate::game::Game) -> Vec<crate::view::AttentionLine> 
     for &gd in &g.guards {
         let m = &g.gd[gd];
         let Some(h) = attention_of(g, gd) else { continue };
-        if m.state == crate::game::GuardState::Dead { continue; }
+        if g.cond[m.ch].down { continue; }
         use crate::attention::HoldMode::*;
         let left = if h.mode == Lent { 1.0 } else { m::min(1.0, m::max(0.0, (if h.until < 0.0 { h.secs } else { h.until - g.time }) / m::max(1e-3, h.full))) };
         let (at, walking) = ([h.at[0], 0.05, h.at[2]], h.mode == Go && h.until < 0.0);

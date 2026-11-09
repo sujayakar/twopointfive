@@ -66,7 +66,7 @@ fn par_secs(g: &Game) -> f64 {
 /// teammates down now, of how many
 fn lost(g: &Game) -> (f64, f64) {
     let ops = &g.night_breach.ops;
-    (ops.iter().filter(|&&o| g.gd[o].state == crate::game::GuardState::Dead).count() as f64, ops.len() as f64)
+    (ops.iter().filter(|&&o| crate::condition::down(g, g.gd[o].ch)).count() as f64, ops.len() as f64)
 }
 
 /// rounds and throws so far this mission (the mission's own tally and the chronicle's count: both fresh with the mission)
@@ -122,8 +122,6 @@ pub fn par_tick(g: &mut Game) {
     let (lost, of) = lost(g);
     let r = par_result(&d, par_secs(g), lost, of);
     g.stats.par.finished += 1;
-    // (said once on the log: the result is filed in the same breath, and a game put back after the end holds it)
-    crate::game::game_msg(g, &r.line);
     g.par.res = Some(r);
 }
 

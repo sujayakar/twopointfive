@@ -5,7 +5,7 @@ use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use alloc::vec::Vec;
 
 // ---------------------------------------------------------------- seams: what skeleton 5 still cannot give
 
@@ -112,14 +112,7 @@ pub fn kill_guard_by(g: &mut crate::game::Game, gd: GuardId, dir: V3, quiet: Opt
     let how = how.unwrap_or(if quiet { DownKind::Struck } else { DownKind::Shot });
     let by = by.unwrap_or(DownBy::Player);
     if g.gd[gd].civ.is_some() { crate::civilians::civilian_down(g, gd, dir, quiet, how, by, line, weapon); return; }
-    if let Some(b) = g.gd[gd].bubble.clone() {
-        if g.time - b.t < 0.8 && !g.messages.iter().any(|m| m.t == b.t && m.text.ends_with(b.text.as_str())) {
-            let head = if g.gd[gd].unit.is_some() { alloc::format!("{}: ", g.gd[gd].callsign) } else { String::from("guard: ") };
-            let text = head + b.text.as_str();
-            crate::game::game_msg(g, &text);
-        }
-    }
-    if g.gd[gd].state == GuardState::Dead { return; }
+    if crate::condition::down(g, g.gd[gd].ch) { return; }
     if crate::rails::rails_spare_2(g, gd) { return; }
     g.gd[gd].script = None;
     let held = crate::guards::in_hand(g, gd);
@@ -153,23 +146,6 @@ pub fn kill_guard_by(g: &mut crate::game::Game, gd: GuardId, dir: V3, quiet: Opt
         g.gd[gd].dropped = Some(it);
     }
     crate::character::character_ragdollize(g, c, true, dir, quiet);
-    let text: String = match line {
-        Some(l) => String::from(l),
-        None => {
-            let unit = g.gd[gd].unit.is_some();
-            let team = g.gd[gd].team;
-            let cs = g.gd[gd].callsign.clone();
-            if how == DownKind::Choked { String::from("choked out \u{2014} he'll keep, breathing") }
-            else if how == DownKind::Struck { String::from("takedown \u{2014} out cold, breathing (a knockout, not a kill)") }
-            else if by == DownBy::Guard {
-                if unit { alloc::format!("{} down \u{2014} hit by his own side", cs) } else { String::from("guard down \u{2014} hit by his own side") }
-            }
-            else if unit && team == crate::teams::Team::Hostile { alloc::format!("{} down", cs) }
-            else if unit && team == crate::teams::Team::Operative { alloc::format!("{} down{}", cs, if by == DownBy::Player { " \u{2014} your round" } else { "" }) }
-            else { String::from("guard down \u{2014} dead") }
-        }
-    };
-    crate::game::game_msg(g, &text);
 }
 
 /// What a dying hand lets go of: an item at the hand, carrying the body's motion plus a nudge along the round.   (combat.ts dropFromHand)
@@ -215,14 +191,14 @@ pub fn drop_from_hand(g: &mut crate::game::Game, c_2: CharId, kind: crate::comba
 /// A round finds the player: one hit less, and at none he goes down.   (combat.ts hitPlayer)
 pub fn hit_player(g: &mut crate::game::Game, from_dir: V3) {
     let p = g.player;
-    if g.pl[p].down { return; }
+    if crate::condition::down(g, g.pl[p].ch) { return; }
     g.pl[p].hits_left = m::max(0.0, g.pl[p].hits_left - 1.0);
     if g.pl[p].hits_left == 0.0 {
         let in_hand = crate::game::player_gun_in_hand(g, p);
         if g.pl[p].dragging.is_some() { crate::game::game_toggle_drag(g, None); }
         if g.pl[p].holding.is_some() { crate::game::game_free_held(g, crate::game::GameFreeHeldWhy::Shot); }
         let c = g.pl[p].ch;
-        g.pl[p].down = true; g.pl[p].sprinting = false; g.pl[p].crouch = false;
+        g.cond[g.pl[p].ch].down = true; g.pl[p].sprinting = false; g.pl[p].crouch = false;
         g.ch[c].vel = [0.0, 0.0, 0.0];
         if g.pl[p].wall.is_some() {
             g.pl[p].wall = None;
@@ -244,13 +220,6 @@ pub fn hit_player(g: &mut crate::game::Game, from_dir: V3) {
             if gun == rifle { g.pl[p].rifle_gone = true; }
         }
         crate::character::character_ragdollize(g, c, true, from_dir, false);
-        let elapsed = g.mission.stats.elapsed;
-        let ck = crate::savestate::checkpoints_newest(g, Some(true), Some(elapsed));
-        let back = match &ck { Some(info) => crate::savestate::checkpoints_is_this_run(g, info), None => false };
-        crate::game::game_msg(g, if back { "you're down. press Enter to go back to the last checkpoint, or Shift+Enter to restart the mission" } else { "you're down. press Enter to restart the mission" });
-    } else {
-        let text = if g.pl[p].hits_left == 1.0 { "hit \u{2014} one more and you are down" } else { "you were hit" };
-        crate::game::game_msg(g, text);
     }
 }
 
@@ -294,7 +263,7 @@ fn hand_props_raw(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     }
     for cv in crate::civilians::civilians_shown(g) {
         let c = g.gd[cv].ch;
-        let tied = g.ch[c].anim.bound == 1.0 && g.ch[c].anim.mv2_shown.bound > 0.6 && g.gd[cv].state != crate::game::GuardState::Dead;
+        let tied = g.ch[c].anim.bound == 1.0 && g.ch[c].anim.mv2_shown.bound > 0.6 && !crate::condition::down(g, g.gd[cv].ch);
         if tied && !crate::fogofwar::fog_of_war_hidden(g, cv) { crate::rig_props::wrist_tie_boxes(g, c, out); }
     }
 }
@@ -309,7 +278,7 @@ fn player_props(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     let kind_sel = crate::game::player_canister_sel(g, p);
     let pistol_up = crate::game::player_pistol_up(g, p);
     let pistol_up_now = pistol_up && !busy;
-    let down = g.pl[p].down;
+    let down = crate::condition::down(g, g.pl[p].ch);
     let sprinting = g.pl[p].sprinting;
     let held_now: Option<crate::game::ThrowKind> = match kind_sel {
         Some(ks) if !(down || busy || g.pl[p].holstered || g.pl[p].dragging.is_some() || sprinting) => {
@@ -400,7 +369,7 @@ fn guard_props(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<AnyBoxId>) 
         Some(b) => b,
         None => { guard_kit(g, gd, out, stow); hung_side(g, gd, out); return; }
     };
-    let alive = g.gd[gd].state != crate::game::GuardState::Dead;
+    let alive = !crate::condition::down(g, g.gd[gd].ch);
     let side = if big == crate::bigkit::BigCarried::Hammer { hammer_side(g, c) } else { None };
     g.ch[c].anim.big_side = side.map(|s| crate::character::AnimBigSide { o: s.o, z: s.z });
     let hang = stow || (alive && g.ch[c].anim.big_tool.is_some() && g.ch[c].anim.hide_held_item);
@@ -458,7 +427,7 @@ fn guard_kit(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<AnyBoxId>, ha
     let holster_out = if has_ho { Some(ho) } else { None };
     let rk = crate::guards::rig_of(g, gd);
     let carbine = rk == RigOf::Carbine;
-    if g.gd[gd].state == crate::game::GuardState::Dead {
+    if crate::condition::down(g, g.gd[gd].ch) {
         if crate::nvg::nvg_worn(g, gd) { crate::rig_props::goggles_boxes(g, c, false, out, rig().goggles, None, None); }
         let dropped = g.gd[gd].dropped;
         let on_floor = match dropped {
@@ -567,7 +536,7 @@ pub fn hidden_props(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     }
     for cv in crate::civilians::civilians_shown(g) {
         let c = g.gd[cv].ch;
-        let tied = g.ch[c].anim.bound == 1.0 && g.ch[c].anim.mv2_shown.bound > 0.6 && g.gd[cv].state != crate::game::GuardState::Dead;
+        let tied = g.ch[c].anim.bound == 1.0 && g.ch[c].anim.mv2_shown.bound > 0.6 && !crate::condition::down(g, g.gd[cv].ch);
         if tied && crate::fogofwar::fog_of_war_hidden(g, cv) { crate::rig_props::wrist_tie_boxes(g, c, out); }
     }
     rig_keys(g, out, n0);
@@ -599,7 +568,7 @@ pub fn laser_reach(g: &mut crate::game::Game, c_2: CharId, self_: Option<GuardId
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        if Some(o) == self_ || g.gd[o].state == crate::game::GuardState::Dead || crate::fogofwar::fog_of_war_hidden(g, o) { continue; }
+        if Some(o) == self_ || crate::condition::down(g, g.gd[o].ch) || crate::fogofwar::fog_of_war_hidden(g, o) { continue; }
         let oc = g.gd[o].ch;
         let t = crate::character::character_ray_hit(g, oc, from, dir, l);
         if t >= 0.0 && t <= l { l = t; on = Some(oc); }
@@ -722,7 +691,6 @@ fn start_canister(g: &mut crate::game::Game, it: ItemId) {
     let pos = crate::throwables::item_pos(g, it);
     // (its hiss is no event: a picture hears it for as long as the can pours, off the can itself)
     crate::audio_iface::game_audio_like_play(g, "smokePop", Some(pos), Some(0.9), None);
-    crate::game::game_msg(g, "smoke deployed");
     let e = crate::game::GameEvent { kind: crate::director::EventKind::Shot, pos: v3::copy(pos), time: g.time, loud: false, serial: g.serial(), ..Default::default() };
     g.events.push(e);
 }

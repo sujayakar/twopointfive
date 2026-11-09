@@ -293,7 +293,7 @@ fn turn_secs(g: &crate::game::Game, by: CharId, sw: &crate::lightswitch::WallSwi
 fn plant_broken(g: &crate::game::Game, seat: &crate::seats::SeatRef, h: &crate::lightswitch::Hand) -> bool {
     let pl = seat.player;
     let p = &g.pl[pl];
-    if p.down || p.holding.is_some() || p.takedown.is_some() || p.dragging.is_some() || p.wall.is_some() { return true; }
+    if g.cond[p.ch].down || p.holding.is_some() || p.takedown.is_some() || p.dragging.is_some() || p.wall.is_some() { return true; }
     let c = p.ch;
     crate::samstun::sam_staggered(g, seat, None) || v3::dist_xz(h.sw.pos, g.ch[c].pos) > 1.6
 }
@@ -420,8 +420,8 @@ fn puts_back(g: &crate::game::Game, gd: GuardId) -> bool {
         && man.civ.is_none()
         && man.script.is_none()
         && man.body_duty.is_none()
-        && time >= man.dazzled_until
-        && time >= man.stagger_until;
+        && !crate::condition::is_blind(g, man.ch)
+        && !crate::condition::is_folded(g, man.ch);
     own && !crate::doze::doze_asleep(g, gd) && crate::teams::is_hostile(g, team, crate::teams::Team::Player)
 }
 
@@ -460,7 +460,7 @@ pub fn light_switch_tick(g: &mut crate::game::Game) {
                 if crate::scene_collision::solid_blocked(g, [p[0], 1.3, p[2]], v3::mad(sw.pos, sw.n, 0.05), None) { continue; }
                 flip_switch(g, sw, true, c);
                 g.stats.lightswitch.guard_on += 1;
-                crate::game::game_say(g, gd, "who turned these off?", Some(false), None, None);
+                crate::game::game_say(g, gd, "who turned these off?", Some(false), None);
                 break;
             }
         }

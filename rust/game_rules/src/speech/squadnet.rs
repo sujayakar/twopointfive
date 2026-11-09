@@ -33,6 +33,24 @@ pub fn squad_net_line(g: &mut crate::game::Game) {
     g.squad_net.click_due = true;
 }
 
+/// A line that tells the player something, by the man it is about if he can speak, else by the nearest of the seat's men who can. Whether anybody said it.
+pub fn team_says(g: &mut crate::game::Game, about: Option<GuardId>, text: &str) -> bool {
+    let can = |g: &Game, gd: GuardId| !crate::condition::down(g, g.gd[gd].ch) && g.gd[gd].held.is_none() && !crate::runner::runner_mute(g, gd);
+    let by = about.filter(|&gd| can(g, gd)).or_else(|| {
+        let at = g.ch[g.pl[g.player].ch].pos;
+        let mut best: Option<(GuardId, f64)> = None;
+        for gd in crate::orders::squad_orders_men(g, &crate::seats::here(g), None, None) {
+            if !can(g, gd) { continue; }
+            let d = v3::dist_xz(g.ch[g.gd[gd].ch].pos, at);
+            if best.map_or(true, |b| d < b.1) { best = Some((gd, d)); }
+        }
+        best.map(|b| b.0)
+    });
+    let Some(by) = by else { return false };
+    crate::game::game_say(g, by, text, None, None);
+    true
+}
+
 /// Once a frame, after everybody has moved: who went down this frame, rows past their time, the one sound owed. (squadnet.ts SquadNet.tick)
 pub fn squad_net_tick(g: &mut crate::game::Game) {
     let t = g.time;
@@ -41,12 +59,12 @@ pub fn squad_net_tick(g: &mut crate::game::Game) {
     let squad = crate::seats::team_squad(g, &crate::seats::here(g));
     if !g.squad_net.down.is_empty() {
         let kept: Vec<String> = g.squad_net.down.iter()
-            .filter(|c| squad.iter().any(|&gd| g.gd[gd].callsign == **c && g.gd[gd].state == crate::game::GuardState::Dead))
+            .filter(|c| squad.iter().any(|&gd| g.gd[gd].callsign == **c && crate::condition::down(g, g.gd[gd].ch)))
             .cloned().collect();
         g.squad_net.down = kept;
     }
     for &gd in &squad {
-        if g.gd[gd].state != crate::game::GuardState::Dead || g.squad_net.down.contains(&g.gd[gd].callsign) { continue; }
+        if !crate::condition::down(g, g.gd[gd].ch) || g.squad_net.down.contains(&g.gd[gd].callsign) { continue; }
         let callsign = g.gd[gd].callsign.clone();
         g.squad_net.down.push(callsign.clone());
         if !g.squad_net.seeded { continue; }

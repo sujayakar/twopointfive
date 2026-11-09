@@ -35,7 +35,7 @@ fn walk_in_view(g: &mut Game, seat: SeatId, cmds: &[crate::cmd::PlayerCmd], dt: 
         shoved: [0.0, 0.0],
         shoved_t: -1.0,
         shoved_from: [0.0, 0.0],
-        down: g.pl[pl].down,
+        down: crate::condition::down(g, g.pl[pl].ch),
         door_rip_until: g.pl[pl].door_rip_until,
         door_bash_at: g.pl[pl].door_bash_at,
         door_bash_lean: g.pl[pl].door_bash_lean,
@@ -91,7 +91,7 @@ fn walk_records(g: &mut Game, seat: SeatId, pl: PlayerId, ch: CharId, cmds: &[cr
         let ml = m::hyp2(mx, mz);
         if ml > 0.0 { mx /= ml; mz /= ml; }
         if has(&r.pressed, "KeyC") { crate::player::crouch_key(g, m); }
-        let want_sprint = !crate::condition::is_hurt(g, crate::condition::Man::Player(pl), Some(now))
+        let want_sprint = !crate::condition::is_hurt(g, g.pl[pl].ch, Some(now))
             && (has(&r.keys, "ShiftLeft") || has(&r.keys, "ShiftRight"))
             && ml > 0.0;
         crate::player::sprint_stance(g, m, want_sprint, false);

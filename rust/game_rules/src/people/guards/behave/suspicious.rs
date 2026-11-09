@@ -95,12 +95,12 @@ pub(in crate::people) fn suspicious(g: &mut Game, gd: GuardId, dt: f64, s: &Sens
         crate::mind::set_state(g, gd, St::Patrol, "guards");
         clear_path(g, gd);
         g.gd[gd].body_duty = None;
-        let player_down = g.pl[g.player].down;
+        let player_down = crate::condition::down(g, g.pl[g.player].ch);
         if matches!(g.gd[gd].foe, Some(crate::game::Foe::Player)) && player_down {
             if !g.stood_down {
                 g.stood_down = true;
                 let line = if g.gd[gd].unit.is_some() { "he's down — hold where you are" } else { "back to your posts" };
-                crate::game::game_say(g, gd, line, Some(true), None, None);
+                crate::game::game_say(g, gd, line, Some(true), None);
             }
         } else if let Some(b) = d {
             if !g.gd[b].body_closed && g.gd[b].body_visits > 0.0 && v3::dist_xz(g.ch[c].pos, body_pos(g, b)) < 12.0 {
@@ -110,7 +110,7 @@ pub(in crate::people) fn suspicious(g: &mut Game, gd: GuardId, dt: f64, s: &Sens
                 } else {
                     String::from("no sign of him — eyes open, he's close")
                 };
-                crate::game::game_say(g, gd, &line, None, None, None);
+                crate::game::game_say(g, gd, &line, None, None);
             }
         } else if !staff {
             // a unit calms without the staff's platitudes
@@ -121,7 +121,7 @@ pub(in crate::people) fn suspicious(g: &mut Game, gd: GuardId, dt: f64, s: &Sens
                 let radio_recent = match &g.gd[gd].bubble { Some(b) => b.radio && now - b.t < 4.0, None => false };
                 if !radio_recent && !crate::attention::attention_told(g, gd) {
                     let line = if lvl >= 1.0 { "clear here — staying on it" } else { "must have been nothing" };
-                    crate::game::game_say(g, gd, line, None, None, None);
+                    crate::game::game_say(g, gd, line, None, None);
                 }
             }
         }

@@ -27,7 +27,7 @@ fn hinge(g: &Game, d: DoorId) -> [f64; 2] { g.dr[d].def.hinge }
 fn hands_busy(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
     let pl = seat.player;
     let p = &g.pl[pl];
-    if p.down
+    if g.cond[p.ch].down
         || p.holding.is_some()
         || p.dragging.is_some()
         || p.takedown.is_some()

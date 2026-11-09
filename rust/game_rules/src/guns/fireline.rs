@@ -34,7 +34,7 @@ pub fn fire_line_tick(g: &mut crate::game::Game) {
         f.shots = shots_fired;
     }
     let (round_t, gap, live_t) = (f.round_t, f.gap, f.live_t);
-    if g.pl[pl].down || g.pl[pl].sprinting {
+    if crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].sprinting {
         return;
     }
     let since = t - round_t;
@@ -359,7 +359,7 @@ pub fn fire_line_feet(g: &mut crate::game::Game, gd: GuardId, goal: Option<V3>, 
     s.go_t = -1.0;
     if !s.said && g.time - s.since >= g.k.fireline.cue_s {
         s.said = true;
-        crate::game::game_say(g, gd, "your line — holding.", None, None, None);
+        crate::game::game_say(g, gd, "your line — holding.", None, None);
         g.stats.fireline.cues += 1;
     }
     // The ceiling: then a look for a way round, and again every `againS` (the men of a squad that stopped together do not all look on one frame).

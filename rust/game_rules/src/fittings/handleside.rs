@@ -331,7 +331,7 @@ fn gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, strafe: boo
         let mine = g.m.handleside.hands.get(d).copied();
         let pull = crate::doors::doors_pull_face(g, d, pos);
         let theirs = match mine {
-            Some(m_) if m_ != gd && g.gd[m_].state != crate::game::GuardState::Dead => g.m.handleside.states.get(m_).cloned(),
+            Some(m_) if m_ != gd && !crate::condition::down(g, g.gd[m_].ch) => g.m.handleside.states.get(m_).cloned(),
             _ => None,
         };
         if fresh(g, theirs.as_ref()) && theirs.as_ref().unwrap().door == d {   // a man of his has that leaf in hand: he keeps out of where it is coming round

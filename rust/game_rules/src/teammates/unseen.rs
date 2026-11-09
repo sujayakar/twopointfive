@@ -51,7 +51,7 @@ fn on_wall(g: &Game, pl: PlayerId) -> bool {
 
 /// Sam is sneaking: low, on a wall, or with the wheel right down, and not sprinting (unseen.ts samSneaks)
 pub fn sam_sneaks(g: &Game, pl: PlayerId) -> bool {
-    !g.pl[pl].down && !g.pl[pl].sprinting && !g.pl[pl].dash && (g.pl[pl].crouch || on_wall(g, pl) || g.pl[pl].pace <= g.k.unseen.pace_at + 1e-6)
+    !crate::condition::down(g, g.pl[pl].ch) && !g.pl[pl].sprinting && !g.pl[pl].dash && (g.pl[pl].crouch || on_wall(g, pl) || g.pl[pl].pace <= g.k.unseen.pace_at + 1e-6)
 }
 
 /// what has given the squad away (None: nothing) (unseen.ts squadFound)
@@ -91,11 +91,11 @@ fn unseen_live(g: &mut Game) -> bool {
         why = String::from("no squad under orders");
     } else {
         let mut men = crate::orders::squad_orders_squad(g, &crate::seats::here(g));
-        men.retain(|&m| g.gd[m].state != crate::game::GuardState::Dead);
+        men.retain(|&m| !crate::condition::down(g, g.gd[m].ch));
         if men.is_empty() {
             why = String::from("no squad under orders");
         } else {
-            if g.pl[pl].sprinting || g.pl[pl].down {
+            if g.pl[pl].sprinting || crate::condition::down(g, g.pl[pl].ch) {
                 state_of(g).sneak_t = -1e9;
             } else if sam_sneaks(g, pl) {
                 state_of(g).sneak_t = now;
@@ -145,7 +145,7 @@ fn cue(g: &mut Game, pl: PlayerId) {
     g.stats.unseen.cues += 1;
     let sam = lead(g);
     let low = g.pl[sam].crouch || on_wall(g, sam);
-    crate::game::game_say(g, gd, if low { "low and quiet." } else { "slow and quiet." }, None, None, None);
+    crate::game::game_say(g, gd, if low { "low and quiet." } else { "slow and quiet." }, None, None);
 }
 
 /// this teammate is unseen this frame (unseen.ts underUnseen)
@@ -360,7 +360,8 @@ mod tests {
 
     fn game_with_sam() -> (alloc::boxed::Box<Game>, PlayerId) {
         let mut g = alloc::boxed::Box::new(Game::blank());
-        let pl = g.pl.push(crate::game::Player::blank());
+        let ch = crate::character::man_new(&mut g, crate::character::Character::blank());
+        let pl = g.pl.push(crate::game::Player { ch, ..Default::default() });
         g.player = pl;
         (g, pl)
     }

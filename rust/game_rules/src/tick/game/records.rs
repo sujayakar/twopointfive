@@ -190,7 +190,7 @@ pub fn player_rifle_sel(g: &crate::game::Game, id: PlayerId) -> bool {
 
 /// The FN2000 is in both hands. (game.ts Player.rifleUp)
 pub fn player_rifle_up(g: &crate::game::Game, id: PlayerId) -> bool {
-    player_rifle_sel(g, id) && !g.pl[id].holstered && g.pl[id].dragging.is_none() && !g.pl[id].down
+    player_rifle_sel(g, id) && !g.pl[id].holstered && g.pl[id].dragging.is_none() && !crate::condition::down(g, g.pl[id].ch)
 }
 
 /// Braced on the foregrip, on his own legs this tick. (game.ts Player.braced)
@@ -221,14 +221,14 @@ pub fn friend_before_muzzle(g: &crate::game::Game, gd: GuardId) -> bool {
     let at = g.ch[c].pos;
     let team = g.gd[gd].team;
     for &o in &g.guards {
-        if o != gd && g.gd[o].state != crate::game::GuardState::Dead && g.gd[o].team == team && in_lane(g.ch[g.gd[o].ch].pos, at, y) {
+        if o != gd && !crate::condition::down(g, g.gd[o].ch) && g.gd[o].team == team && in_lane(g.ch[g.gd[o].ch].pos, at, y) {
             return true;
         }
     }
     if crate::teams::hostile_to(g, gd, crate::teams::HostileToO::Player) {
         return false;
     }
-    crate::seats::men(g).into_iter().any(|pl| !g.pl[pl].down && in_lane(g.ch[g.pl[pl].ch].pos, at, y))
+    crate::seats::men(g).into_iter().any(|pl| !crate::condition::down(g, g.pl[pl].ch) && in_lane(g.ch[g.pl[pl].ch].pos, at, y))
 }
 
 /// The `lane` closure of friendBeforeMuzzle.
@@ -238,7 +238,7 @@ fn in_lane(p: V3, at: V3, y: f64) -> bool {
 
 /// Down but breathing: put out cold, not shot. False for a living man and for a corpse. (game.ts isBreathing)
 pub fn is_breathing(g: &crate::game::Game, gd: GuardId) -> bool {
-    g.gd[gd].state == crate::game::GuardState::Dead
+    crate::condition::down(g, g.gd[gd].ch)
         && g.gd[gd].down_kind.is_some()
         && g.gd[gd].down_kind != Some(crate::game::DownKind::Shot)
 }

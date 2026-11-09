@@ -139,13 +139,13 @@ pub fn cover_eyes_free(g: &Game, gd: GuardId, a: OrdersAssignmentId) -> bool {
 
 /// Is this man free to be dealt an opening: the order he is under if so. (cover.ts free)
 fn cover_free(g: &mut Game, gd: GuardId) -> Option<OrdersAssignmentId> {
-    if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].script.is_none() || crate::control::man::blind(g, gd) || g.gd[gd].held.is_some() { return None; }
+    if crate::condition::down(g, g.gd[gd].ch) || g.gd[gd].script.is_none() || crate::control::man::blind(g, gd) || g.gd[gd].held.is_some() { return None; }
     let a = crate::seats::order_of(g, gd)?;
     if !(cover_eyes_free(g, gd, a) || cover_spare(g, gd, a)) { return None; }
     if crate::roomfight::room_fight_engaged(g, gd) { return None; }
     if let Some(op) = crate::roomfight::room_fight_op_of(g, gd) {
         for (h, mt) in g.tab.roomfight_op[op].meters.iter() {
-            if g.gd[h].state != crate::game::GuardState::Dead && g.time - mt.seen_t < g.k.cover.contact_secs { return None; }
+            if !crate::condition::down(g, g.gd[h].ch) && g.time - mt.seen_t < g.k.cover.contact_secs { return None; }
         }
     }
     Some(a)
@@ -297,7 +297,7 @@ fn onto_unknown(g: &mut Game, o: CoverOpeningId) -> bool {
 pub fn cover_watched(g: &mut Game, reach: f64) -> Vec<(CoverOpeningId, bool)> {
     let mut eyes: Vec<(V3, f64)> = Vec::new();
     for gd in crate::seats::team_men(g, &crate::seats::here(g)) {
-        if g.gd[gd].state == crate::game::GuardState::Dead { continue; }
+        if crate::condition::down(g, g.gd[gd].ch) { continue; }
         let c = g.gd[gd].ch;
         eyes.push((g.ch[c].pos, g.ch[c].aim_yaw));
     }
@@ -900,7 +900,7 @@ fn cover_prune_steps(g: &mut Game) {
     for gd in g.cover.steps.keys() {
         let sa = g.cover.steps.get(gd).unwrap().a;
         let a = crate::seats::order_of(g, gd);
-        let gone = g.gd[gd].state == crate::game::GuardState::Dead || a != Some(sa) || (g.tab.orders_assignment[sa].post.is_none() && !sam_stopped(g, gd));
+        let gone = crate::condition::down(g, g.gd[gd].ch) || a != Some(sa) || (g.tab.orders_assignment[sa].post.is_none() && !sam_stopped(g, gd));
         if gone { g.cover.steps.delete(gd); }
     }
 }
@@ -1010,7 +1010,7 @@ fn cover_drop(g: &mut Game, gd: GuardId, taken: Option<bool>) {
 
 /// What the cover wrote into his script goes with the job. (cover.ts release)
 fn cover_release(g: &mut Game, gd: GuardId, j: CoverJob) {
-    if g.gd[gd].script.is_none() || g.gd[gd].state == crate::game::GuardState::Dead { return; }
+    if g.gd[gd].script.is_none() || crate::condition::down(g, g.gd[gd].ch) { return; }
     let s = g.gd[gd].script.as_mut().unwrap();
     if j.back && yes(s.strafe) { s.strafe = Some(false); }
     if script_aim_is(g, gd, j.aim) { give_aim_back(g, gd, j.a); }
@@ -1030,7 +1030,7 @@ fn give_aim_back(g: &mut Game, gd: GuardId, a: OrdersAssignmentId) {
 /// The deal has let go of a man walking backwards on his opening: from here his feet are turnOut's. (cover.ts turnFrom)
 fn cover_turn_from(g: &mut Game, gd: GuardId, j: CoverJob) {
     let strafing = g.gd[gd].script.as_ref().map_or(false, |s| yes(s.strafe));
-    if j.back && strafing && g.gd[gd].state != crate::game::GuardState::Dead {
+    if j.back && strafing && !crate::condition::down(g, g.gd[gd].ch) {
         let t = g.time;
         g.cover.outs.set(gd, CoverOutsValue { j, aim: j.aim, t0: t, t, on: false });
     }
@@ -1078,7 +1078,7 @@ fn cover_turn_out(g: &mut Game, gd: GuardId, still: bool, pace: f64) -> Option<C
 /// Something else has him: what the turn-out wrote into his script goes. (cover.ts unturn)
 fn cover_unturn(g: &mut Game, gd: GuardId) {
     let o = match g.cover.outs.delete(gd) { Some(o) => o, None => return };
-    if g.gd[gd].script.is_none() || g.gd[gd].state == crate::game::GuardState::Dead { return; }
+    if g.gd[gd].script.is_none() || crate::condition::down(g, g.gd[gd].ch) { return; }
     let s = g.gd[gd].script.as_mut().unwrap();
     if yes(s.strafe) { s.strafe = Some(false); }
     if o.on && script_aim_is(g, gd, o.aim) { give_aim_back(g, gd, o.j.a); }
@@ -1116,7 +1116,7 @@ fn cover_kept_of(g: &mut Game, gd: GuardId) -> Option<CoverJob> {
         if ours(g.ch[g.pl[pl].ch].pos) { return None; }
     }
     for mt in crate::seats::team_men(g, &crate::seats::here(g)) {
-        if mt != gd && g.gd[mt].state != crate::game::GuardState::Dead && ours(pos_of(g, mt)) { return None; }
+        if mt != gd && !crate::condition::down(g, g.gd[mt].ch) && ours(pos_of(g, mt)) { return None; }
     }
     Some(j)
 }

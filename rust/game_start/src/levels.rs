@@ -171,7 +171,7 @@ fn second_way_of(level: &str, entries: &[game::scene_scenarios::ScenarioEntry], 
     for q in queries.iter().rev() {
         drop(p.take());
         let mut s = staged(level, q);
-        let at: Vec<[f64; 2]> = s.g.guards.iter().filter(|&&gd| s.g.gd[gd].team != game::teams::Team::Operative && s.g.gd[gd].state != GuardState::Dead).map(|&gd| s.at(gd)).collect();
+        let at: Vec<[f64; 2]> = s.g.guards.iter().filter(|&&gd| s.g.gd[gd].team != game::teams::Team::Operative && !game::condition::down(&s.g, s.g.gd[gd].ch)).map(|&gd| s.at(gd)).collect();
         let mut here: HashMap<usize, usize> = HashMap::new();
         for a in at { if let Some(r) = room_at(&mut s.g, a[0], a[1]) { *here.entry(key_of(&s.g, r)).or_default() += 1; } }
         for (k, c) in here { let m = men.entry(k).or_default(); *m = (*m).max(c); }
@@ -472,7 +472,7 @@ fn stacks(ids: &[String]) -> Verdicts {
     for e in missions().into_iter().filter(|e| ids.is_empty() || ids.contains(&e.id)) {
         let mut p = staged(&level_of(&e), &query_of(&e));
         let g: &mut Game = &mut p.g;
-        let men: Vec<GuardId> = g.guards.iter().copied().filter(|&gd| g.gd[gd].team == game::teams::Team::Operative && g.gd[gd].state != GuardState::Dead).collect();
+        let men: Vec<GuardId> = g.guards.iter().copied().filter(|&gd| g.gd[gd].team == game::teams::Team::Operative && !game::condition::down(g, g.gd[gd].ch)).collect();
         let crews: Vec<(&[GuardId], &str)> = if men.len() > 2 { vec![(&men[..], ""), (&men[..2], " pair"), (&men[..1], " one")] } else if men.is_empty() { vec![] } else { vec![(&men[..], ""), (&men[..1], " one")] };
         let (mut marks, mut faces, mut refused, mut far): (usize, usize, usize, Vec<String>) = (0, 0, 0, vec![]);
         let list_ = g.doors.list.clone();

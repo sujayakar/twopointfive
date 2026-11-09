@@ -67,7 +67,7 @@ pub(super) fn fire_shell(g: &mut crate::game::Game, shooter: CharId, target: V3,
                 g.pl[pl].hit_flash = 1.0;
             }
             Some(who) => {
-                if g.gd[who].state == crate::game::GuardState::Dead { continue; }
+                if crate::condition::down(g, g.gd[who].ch) { continue; }
                 if g.gd[who].civ.is_some() {
                     let c = g.gd[who].ch;
                     crate::character::anim_hit(g, c);
@@ -101,7 +101,6 @@ pub(super) fn fire_shell(g: &mut crate::game::Game, shooter: CharId, target: V3,
                 if !crate::doors::doors_kick_in(g, d, muzzle, id, Some(true)) { continue; }
                 g.stats.shotgun.locks += 1;
                 if is_player {
-                    crate::game::game_msg(g, "you shot the lock off, and the whole floor heard that");
                     crate::chronicle::chron_door(g, crate::chronicle::ChronDoorKind::DoorKicked, d);
                 }
             }
@@ -111,7 +110,7 @@ pub(super) fn fire_shell(g: &mut crate::game::Game, shooter: CharId, target: V3,
 
 /// He carries a gun that takes a lock, in hand or in his big slot. (shotgun.ts carriesBreacher)
 pub fn carries_breacher(g: &crate::game::Game, gd: GuardId) -> bool {
-    if g.gd[gd].state == crate::game::GuardState::Dead { return false; }
+    if crate::condition::down(g, g.gd[gd].ch) { return false; }
     let def = g.fa[g.gd[gd].weapon].def;
     let breach = match g.m.weapons.weapons.get(def).unwrap().pellets { Some(p) => p.breach.is_some(), None => false };
     breach || crate::kit::kit_big(g, gd) == crate::kit::BigKit::Shotgun

@@ -24,7 +24,7 @@ fn friends_in_fight(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
-        if g.gd[gd].state == crate::game::GuardState::Dead || !g.ch[g.gd[gd].ch].alive { continue; }
+        if crate::condition::down(g, g.gd[gd].ch) || !g.ch[g.gd[gd].ch].alive { continue; }
         if crate::teams::hostile_to(g, gd, crate::teams::HostileToO::Player) {
             let state = g.gd[gd].state;
             if state == crate::game::GuardState::Alert || state == crate::game::GuardState::Search { return true; }
@@ -62,7 +62,7 @@ fn friend_in_sams_line(g: &mut crate::game::Game, c_2: CharId) -> Option<GuardId
 /// …or the friend the CURSOR is on, only while the aim is free.   (friends.ts friendUnderCursor)
 fn friend_under_cursor(g: &mut crate::game::Game, c_2: CharId) -> Option<GuardId> {
     let o = g.aim_friend?;
-    if g.aim_snap.is_some() || g.gd[o].state == crate::game::GuardState::Dead || !g.ch[g.gd[o].ch].alive { return None; }
+    if g.aim_snap.is_some() || crate::condition::down(g, g.gd[o].ch) || !g.ch[g.gd[o].ch].alive { return None; }
     let from = bone_or(g, c_2, crate::character::Bone::UpperArmR, 1.4);
     let chest = bone_or(g, g.gd[o].ch, crate::character::Bone::Chest, 1.2);
     if m::hyp2(chest[0] - from[0], chest[2] - from[2]) <= g.k.friends.reach_m && !crate::scene_collision::segment_blocked(g, from, chest, None, None, None) { Some(o) } else { None }
@@ -110,7 +110,7 @@ struct SamsLine {
 /// The closure `ask` of friendInSamsLine: one man against the line, the nearest so far kept in `line`.   (friends.ts:52)
 fn ask(g: &mut Game, o: GuardId, line: &mut SamsLine) {
     let c = g.gd[o].ch;
-    if g.gd[o].state == crate::game::GuardState::Dead || !g.ch[c].alive { return; }
+    if crate::condition::down(g, g.gd[o].ch) || !g.ch[c].alive { return; }
     let h = match g.ch[c].bones.get(crate::character::Bone::Hips) { Some(h) => *h, None => g.ch[c].pos };
     let (rx, rz) = (h[0] - line.from[0], h[2] - line.from[2]);
     let t = rx * line.dx + rz * line.dz;
@@ -139,7 +139,7 @@ mod tests {
     /// One player, one body, no men: nothing below reaches another part's stub.
     fn lone_player() -> (Box<Game>, CharId) {
         let mut g = Box::new(Game::blank());
-        let c = g.ch.push(crate::character::Character::blank());
+        let c = crate::character::man_new(&mut g, crate::character::Character::blank());
         g.pl.push(crate::game::Player::blank());
         g.time = 100.0;
         g.pl[g.player].last_fire_t = -10.0;

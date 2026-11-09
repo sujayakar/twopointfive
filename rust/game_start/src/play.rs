@@ -375,7 +375,7 @@ impl Play {
     /// the men of the other side who are up, nearest `at` first (a room clear's defenders are dealt to their rooms' marks by the die: a test
     /// finds the man at a mark by where he stands)
     pub fn hostiles_by(&self, at: [f64; 2]) -> Vec<GuardId> {
-        let mut v: Vec<GuardId> = self.g.guards.iter().copied().filter(|&gd| self.g.gd[gd].team == game::teams::Team::Hostile && self.g.gd[gd].state != GuardState::Dead).collect();
+        let mut v: Vec<GuardId> = self.g.guards.iter().copied().filter(|&gd| self.g.gd[gd].team == game::teams::Team::Hostile && !game::condition::down(&self.g, self.g.gd[gd].ch)).collect();
         v.sort_by(|a, b| dist(self.at(*a), at).partial_cmp(&dist(self.at(*b), at)).unwrap());
         v
     }
@@ -422,8 +422,6 @@ impl Play {
     }
     /// …and what another player's HUD is told (0 = the first)
     pub fn view_of(&self, seat: usize) -> game::view::TickView { game::view::tick_view(&self.g, &game::seats::seat(&self.g, self.g.seats[seat])) }
-    /// the lines on the game's log now, oldest first (it keeps the last five)
-    pub fn log(&self) -> Vec<&str> { self.g.messages.iter().map(|m| m.text.as_str()).collect() }
     /// how the room clear ended and when, on the game's clock (None: it is on)
     pub fn room_clear_end(&self) -> Option<(game::roomclear::RoomClearEnd, f64)> { self.g.room_clear.end.map(|e| (e, self.g.room_clear.end_at)) }
     /// the men of the other side who are up
@@ -439,10 +437,10 @@ impl Play {
     /// the player of a seat takes a round's hit from the way `from_dir`, in his own seat, until he has none left (combat's `hit_player`: nobody fired it)
     pub fn seat_goes_down(&mut self, seat: usize) {
         let s = self.g.seats[seat];
-        game::seats::with_seat(&mut self.g, s, &mut |g| { while !g.pl[g.player].down { game::combat::hit_player(g, [1.0, 0.0, 0.0]); } });
+        game::seats::with_seat(&mut self.g, s, &mut |g| { while !game::condition::down(g, g.pl[g.player].ch) { game::combat::hit_player(g, [1.0, 0.0, 0.0]); } });
     }
     /// is a seat's player down
-    pub fn seat_down(&mut self, seat: usize) -> bool { let s = self.g.seats[seat]; game::seats::with_seat(&mut self.g, s, &mut |g| g.pl[g.player].down) }
+    pub fn seat_down(&mut self, seat: usize) -> bool { let s = self.g.seats[seat]; game::seats::with_seat(&mut self.g, s, &mut |g| game::condition::down(g, g.pl[g.player].ch)) }
     /// a seat's man's character id
     pub fn seat_id(&mut self, seat: usize) -> f64 { let s = self.g.seats[seat]; game::seats::with_seat(&mut self.g, s, &mut |g| g.ch[g.pl[g.player].ch].id) }
     /// a man's character id
@@ -501,7 +499,7 @@ impl Play {
     /// Sam is PUT at `at` (the sandbox's own call, `Game.teleportPlayer`): for a test whose staging is a place and not the walk to it.
     pub fn sam_put(&mut self, at: [f64; 2]) { game::game::game_teleport_player(&mut self.g, [at[0], 0.0, at[1]]); }
     /// Can Sam not see: a flash or a blast has his eyes for now.
-    pub fn sam_blind(&self) -> bool { self.g.time < self.g.pl[self.g.player].dazzled_until }
+    pub fn sam_blind(&self) -> bool { self.g.time < self.g.cond[self.g.pl[self.g.player].ch].blind_until }
     /// Every row the orders' table holds, by its id, in the table's order: on the menu or off it.
     pub fn menu_rows(&self) -> Vec<String> { self.g.tab.orders_order_def.iter().map(|(_, r)| r.id.clone()).collect() }
     /// The rows on the menu now, by id, in the menu's order.
@@ -532,7 +530,7 @@ impl Play {
     /// how fast he is moving over the floor, metres a second
     pub fn speed(&self, gd: GuardId) -> f64 { let v = self.g.ch[self.g.gd[gd].ch].vel; (v[0] * v[0] + v[2] * v[2]).sqrt() }
     /// Can he not see: a flash or a blast has his eyes for now.
-    pub fn blind(&self, gd: GuardId) -> bool { self.g.time < self.g.gd[gd].dazzled_until }
+    pub fn blind(&self, gd: GuardId) -> bool { self.g.time < self.g.cond[self.g.gd[gd].ch].blind_until }
 
     /// are his hands changing magazine, and how much of it is left, in seconds
     pub fn reloading(&self, gd: GuardId) -> Option<f64> { if game::control::man::changing_magazine(&self.g, gd) { Some(self.g.gd[gd].reload_t) } else { None } }
@@ -542,7 +540,7 @@ impl Play {
     pub fn gun_has(&mut self, gd: GuardId, rounds: f64) { let w = self.g.gd[gd].weapon; let chamber = rounds.min(1.0); self.g.fa[w].chamber = chamber; self.g.fa[w].mag = Some(rounds - chamber); }
 
     /// Staging: he cannot see for that many seconds.
-    pub fn blinded(&mut self, gd: GuardId, secs: f64) { self.g.gd[gd].dazzled_until = self.g.time + secs; }
+    pub fn blinded(&mut self, gd: GuardId, secs: f64) { self.g.cond[self.g.gd[gd].ch].blind_until = self.g.time + secs; }
     /// Staging: the gun in his hands is the only one he has.
     pub fn no_second_gun(&mut self, gd: GuardId) { self.g.gd[gd].second = None; }
     /// has he no hand for his gun: reeling, in somebody's arm, a hostage in his own, his hands on a job
@@ -567,14 +565,14 @@ impl Play {
     pub fn mark_of(&self, gd: GuardId) -> Option<[f64; 2]> { let a = game::orders::squad_orders_of(&self.g, &game::seats::here(&self.g), gd)?; self.g.tab.orders_assignment[a].post.map(|p| [p[0], p[2]]) }
 
     /// The spot the rounds past him have sent him to, while he is on his way or about to go (the suppression rule's cover spot); `None`: not sent.
-    pub fn sent_to_cover(&self, gd: GuardId) -> Option<[f64; 2]> { self.g.gd[gd].sup.cover.map(|p| [p[0], p[2]]) }
+    pub fn sent_to_cover(&self, gd: GuardId) -> Option<[f64; 2]> { self.g.cond[self.g.gd[gd].ch].sup.cover.map(|p| [p[0], p[2]]) }
 
     /// is he down low (crouched or lower: what a man does behind cover, or with a grenade near)
     pub fn low(&self, gd: GuardId) -> bool { self.g.ch[self.g.gd[gd].ch].anim.crouch_target >= 0.5 }
     /// is he in the stack's stance (set on a door)
     pub fn stacked(&self, gd: GuardId) -> bool { self.g.ch[self.g.gd[gd].ch].anim.stance == game::character::Stance::Stack }
     /// is the man on his feet (not dead, not down)
-    pub fn up(&self, gd: GuardId) -> bool { self.g.gd[gd].state != GuardState::Dead && self.g.gd[gd].down_kind.is_none() }
+    pub fn up(&self, gd: GuardId) -> bool { !game::condition::down(&self.g, self.g.gd[gd].ch) && self.g.gd[gd].down_kind.is_none() }
 }
 
 impl Drop for Play { fn drop(&mut self) { HOLDS.with(|h| h.set(false)); } }

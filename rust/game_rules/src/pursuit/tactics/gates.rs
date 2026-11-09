@@ -57,7 +57,7 @@ pub(super) fn run_gate(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::
     let inside = door_pt(g, d, w / 2.0, -1.0, g_2.side, Some(1.1));   // what a stacked man's muzzle rests on
     // a second whose lead has gone (dead, released, fighting) leads from where he is
     if g_2.role == GateRole::Second {
-        let gone = match g_2.lead { None => true, Some(l) => !s(g).gates.has(l) || g.gd[l].state == GuardState::Dead };
+        let gone = match g_2.lead { None => true, Some(l) => !s(g).gates.has(l) || crate::condition::down(g, g.gd[l].ch) };
         if gone { g_2.role = GateRole::Lead; g_2.lead = None; if g_2.phase == GatePhase::Stacked { g_2.phase = GatePhase::Wait; } }
     }
     match g_2.phase {
@@ -117,7 +117,7 @@ pub(super) fn run_gate(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::
             }
             if g_2.t >= 0.8 {
                 g_2.t = 0.0;
-                let toss_by = match (g_2.action, g_2.thrower) { (GateAction::Toss, Some(t)) if g.gd[t].state != GuardState::Dead && !crate::doors::door_is_closed(g, d) => Some(t), _ => None };
+                let toss_by = match (g_2.action, g_2.thrower) { (GateAction::Toss, Some(t)) if !crate::condition::down(g, g.gd[t].ch) && !crate::doors::door_is_closed(g, d) => Some(t), _ => None };
                 match toss_by { Some(t) => begin_toss(g, gd, g_2, t), None => begin_slice(g, gd, g_2) }
             }
             true
@@ -159,7 +159,7 @@ pub(super) fn run_gate(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::
         }
         GatePhase::Bang => {
             stand_gate(g, gd, dt, Some(g_2.face)); g_2.look = Some(inside); g_2.crouch = 0.4;
-            if now - g_2.bang_t >= GO_AFTER_BANG { crate::game::game_say(g, gd, "going in", None, None, None); begin_cross(g, gd, g_2); }
+            if now - g_2.bang_t >= GO_AFTER_BANG { crate::game::game_say(g, gd, "going in", None, None); begin_cross(g, gd, g_2); }
             true
         }
         GatePhase::Slice => {   // across the opening station by station, muzzle into the room, a quarter second on each
@@ -176,7 +176,7 @@ pub(super) fn run_gate(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::
                 let line: &str = if gate_mate(g, g_2, GateMateRole::Second, gd).is_some() {
                     crate::words::wg(g, &"clear as far as I can see — crossing, on me", &"clear as far as I see — crossing, on me")
                 } else { "crossing" };
-                crate::game::game_say(g, gd, line, None, None, None);
+                crate::game::game_say(g, gd, line, None, None);
                 begin_cross(g, gd, g_2);
             }
             true
@@ -261,7 +261,7 @@ fn begin_toss(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::tactics::
     }));
     g.tab.item[it].on_bounce = Some(crate::throwables::ItemBounce::Can);
     crate::audio_iface::game_audio_like_play(g, "throw", Some(from), Some(0.7), None);
-    crate::game::game_say(g, thrower, "bang out", None, None, None);
+    crate::game::game_say(g, thrower, "bang out", None, None);
     if thrower != gd {
         let row = s(g).gates.get(thrower).cloned();
         if let Some(row) = row {
@@ -277,7 +277,7 @@ fn begin_toss(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::tactics::
 pub(super) fn tick_gates(g: &mut crate::game::Game) {
     let men = s(g).gates.keys();
     for man in men {
-        if !g.guards.contains(&man) || g.gd[man].state == crate::game::GuardState::Dead || g.gd[man].held.is_some() {
+        if !g.guards.contains(&man) || crate::condition::down(g, g.gd[man].ch) || g.gd[man].held.is_some() {
             let row = s(g).gates.delete(man);
             if let Some(mut row) = row { loose_can(g, &mut row); }
         }

@@ -32,7 +32,7 @@ pub(super) fn flinch_round(g: &mut crate::game::Game, c_2: CharId, gd: Option<Gu
     if near < g.k.flinch.least || !hostile { return; }
     match gd {
         Some(man) => { if crate::owner::has(g, man, crate::owner::by::RUNNER) || !free(g, man) { return; } }
-        None => { if g.pl[g.player].down { return; } }
+        None => { if crate::condition::down(g, g.pl[g.player].ch) { return; } }
     }
     let share = duck_share(g.k.flinch.far, g.k.flinch.least, g.k.flinch.full, near);
     let k = share * flinch_scale(g, gd);
@@ -88,7 +88,7 @@ fn mate_by(g: &mut crate::game::Game, gd: GuardId) -> bool {
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        if o == gd || g.gd[o].state == crate::game::GuardState::Dead || !staff(g, o) || g.gd[o].team != g.gd[gd].team || g.gd[o].held.is_some() || crate::owner::has(g, o, crate::owner::by::RUNNER) { continue; }
+        if o == gd || crate::condition::down(g, g.gd[o].ch) || !staff(g, o) || g.gd[o].team != g.gd[gd].team || g.gd[o].held.is_some() || crate::owner::has(g, o, crate::owner::by::RUNNER) { continue; }
         let oc = g.gd[o].ch;
         if v3::dist_xz(g.ch[oc].pos, g.ch[c].pos) <= g.k.morale.alone_m {
             let chest = g.ch[oc].bones.get(crate::character::Bone::Chest).copied().unwrap_or_else(|| v3::add(g.ch[oc].pos, [0.0, 1.2, 0.0]));
@@ -106,7 +106,7 @@ pub fn flinch_tick(g: &mut crate::game::Game, dt: f64) {
         let gd = g.guards[i];
         i += 1;
         let Some(t) = g.m.flinch.state_of.get(gd).copied() else { continue };
-        if !on || g.gd[gd].state == crate::game::GuardState::Dead || crate::owner::has(g, gd, crate::owner::by::RUNNER) || !green(g, gd) {
+        if !on || crate::condition::down(g, g.gd[gd].ch) || crate::owner::has(g, gd, crate::owner::by::RUNNER) || !green(g, gd) {
             g.m.flinch.state_of.delete(gd);
             continue;
         }

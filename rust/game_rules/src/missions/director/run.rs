@@ -252,7 +252,7 @@ pub(in crate::missions) fn director_stop(g: &mut crate::game::Game, finished: Op
     }
     let gds: Vec<GuardId> = g.tab.director_run[r].units.values().map(|u| u.gd).collect();
     for gd in gds {
-        if g.gd[gd].script.is_some() && g.gd[gd].state != crate::game::GuardState::Dead {
+        if g.gd[gd].script.is_some() && !crate::condition::down(g, g.gd[gd].ch) {
             let st = hand_back_state(g, gd);
             crate::squad::end_guard_script(g, gd, Some(st));
         }
@@ -263,7 +263,7 @@ pub(in crate::missions) fn director_stop(g: &mut crate::game::Game, finished: Op
             continue;
         }
         if let Some(gd) = guard_by_char_id(g, id.0) {
-            if g.gd[gd].script.is_some() && g.gd[gd].state != crate::game::GuardState::Dead {
+            if g.gd[gd].script.is_some() && !crate::condition::down(g, g.gd[gd].ch) {
                 let st = hand_back_state(g, gd);
                 crate::squad::end_guard_script(g, gd, Some(st));
             }
@@ -594,7 +594,7 @@ fn director_fail_beat(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLi
             None => guard_by_char_id(g, id.0),
         };
         if let Some(gd) = gd {
-            if g.gd[gd].script.is_some() && g.gd[gd].state != crate::game::GuardState::Dead {
+            if g.gd[gd].script.is_some() && !crate::condition::down(g, g.gd[gd].ch) {
                 let st = hand_back_state(g, gd);
                 crate::squad::end_guard_script(g, gd, Some(st));
             }
@@ -659,7 +659,7 @@ fn director_tick_bursts(g: &mut crate::game::Game, r: DirectorRunId) {
         if b.left <= 0.0 {
             continue;
         }
-        let gd = unit_guard(g, r, b.u.id).filter(|&x| g.gd[x].state != crate::game::GuardState::Dead);
+        let gd = unit_guard(g, r, b.u.id).filter(|&x| !crate::condition::down(g, g.gd[x].ch));
         let Some(gd) = gd else {
             g.tab.director_run[r].bursts[k].left = 0.0;
             continue;
@@ -710,7 +710,7 @@ fn director_tick_kicks(g: &mut crate::game::Game, r: DirectorRunId) {
     let kicks = core::mem::take(&mut g.tab.director_run[r].kicks);
     let mut kept = Vec::new();
     for k in kicks {
-        if g.gd[k.gd].state == crate::game::GuardState::Dead {
+        if crate::condition::down(g, g.gd[k.gd].ch) {
             continue;
         }
         let c = g.gd[k.gd].ch;
@@ -776,8 +776,8 @@ pub(in crate::missions) fn director_inside_volume(g: &crate::game::Game, seat: &
     let g = &*g;
     let Some(v) = g.level.volumes.as_ref().and_then(|l| l.iter().find(|x| x.name == id_2)) else { return false };
     let pl = &g.pl[seat.player];
-    let alive = |gd: GuardId| g.gd[gd].state != crate::game::GuardState::Dead;
-    let sam = !pl.down && in_volume(v, g.ch[pl.ch].pos);
+    let alive = |gd: GuardId| !crate::condition::down(g, g.gd[gd].ch);
+    let sam = !g.cond[pl.ch].down && in_volume(v, g.ch[pl.ch].pos);
     let units = &g.tab.director_run[r].units;
     match who {
         DirectorInsideVolumeWho::Sam => sam,
@@ -790,7 +790,7 @@ pub(in crate::missions) fn director_inside_volume(g: &crate::game::Game, seat: &
 // The Query's methods: closures in the TypeScript (TS 845-856), with the skeleton's names: a beat calls them.
 /// (director.ts Query.alive)
 pub(in crate::missions) fn director_query_alive(g: &crate::game::Game, r: DirectorRunId, u: &crate::director::UnitRef) -> bool {
-    unit_guard(g, r, u.id).map_or(false, |gd| g.gd[gd].state != crate::game::GuardState::Dead)
+    unit_guard(g, r, u.id).map_or(false, |gd| !crate::condition::down(g, g.gd[gd].ch))
 }
 /// (director.ts Query.arrived)
 pub(in crate::missions) fn director_query_arrived(g: &crate::game::Game, r: DirectorRunId, u: &crate::director::UnitRef) -> Result<bool, String> {

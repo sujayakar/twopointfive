@@ -24,11 +24,10 @@ fn cell_key(i: f64) -> crate::Num { crate::Num(i + 0.0) }
 
 fn pos_of(g: &Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }
 fn mode_of(g: &Game, d: RoomfightDefId) -> crate::roomfight::DefMode { g.tab.roomfight_def[d].mode }
-fn is_dead(g: &Game, gd: GuardId) -> bool { g.gd[gd].state == crate::game::GuardState::Dead }
 /// `gd.path = []; gd.pathGoal = null`
 fn clear_path(g: &mut Game, gd: GuardId) { crate::game::guard_set_path(g, gd, Vec::new()); crate::guards::guard_set_path_goal(g, gd, None); }
 /// `g.say(gd, text, true)`
-fn say_net(g: &mut Game, gd: GuardId, text: &str) { crate::game::game_say(g, gd, text, Some(true), None, None); }
+fn say_net(g: &mut Game, gd: GuardId, text: &str) { crate::game::game_say(g, gd, text, Some(true), None); }
 /// `g.col.segmentBlocked(a, b)`
 fn seg_blocked(g: &mut Game, a: V3, b: V3) -> bool { crate::scene_collision::segment_blocked(g, a, b, None, None, None) }
 /// `g.col.solidBlocked(a, b)`
@@ -56,7 +55,7 @@ pub(super) fn peek_step(g: &mut crate::game::Game, gd: GuardId) {
     let ll = find_lane(g, p.lane);
     let dd = def_of(g, gd);
     let now = g.time;
-    if is_dead(g, gd) {
+    if crate::condition::down(g, g.gd[gd].ch) {
         peek_off(g, gd);
         if p.frag.is_some() {
             s(g).stats.frag_lost += 1.0;
@@ -368,7 +367,7 @@ pub(super) fn plant_short(g: &mut crate::game::Game, gd: GuardId, lane: f64, loo
     s(g).stats.held += 1.0;
     if now - s(g).said_t > 5.0 {
         s(g).said_t = now;
-        crate::game::game_say(g, gd, "holding here — I'm not walking into that!", Some(true), None, None);
+        crate::game::game_say(g, gd, "holding here — I'm not walking into that!", Some(true), None);
     }
     let p = pos_of(g, gd);
     note(g, Some(gd), &format!("lane {}: stops short of it at ({}, {})", js::num_str(lane), js::to_fixed(p[0], 1), js::to_fixed(p[2], 1)));

@@ -125,7 +125,7 @@ fn settle(g: &mut crate::game::Game, gd: GuardId, j: &mut crate::wandorder::Job,
     lens_out(g, gd, j);
     g.m.wandorder.states.get_mut(k).unwrap().jobs.delete(gd);
     if let Some(l) = line.filter(|l| !l.is_empty()) {
-        crate::game::game_say(g, gd, l, None, None, None);
+        crate::game::game_say(g, gd, l, None, None);
     }
     let to = match j.aside {
         Some(a) if moved && crate::orders::squad_orders_reach(g, gd, a.pos).is_none() => Some(a),
@@ -303,7 +303,7 @@ pub fn tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
     put_job(g, gd, j);
     if through {
         g.stats.wandorder.live += 1;
-        crate::game::game_say(g, gd, "wand's in.", None, None, None);
+        crate::game::game_say(g, gd, "wand's in.", None, None);
     }
     let what = if j.live { "looking under" } else { "feeding the wand" };
     let there = alloc::format!("{} · {}", what, crate::orders::door_words(g, d));
@@ -328,7 +328,7 @@ pub fn wand_order_key(g: &mut crate::game::Game, input: InputId) -> bool {
     let mut want = false;
     if live(g) {
         for gd in crate::orders::squad_orders_squad(g, &crate::seats::here(g)) {
-            if g.gd[gd].state != crate::game::GuardState::Dead && carries(g, gd) {
+            if !crate::condition::down(g, g.gd[gd].ch) && carries(g, gd) {
                 want = true;
                 break;
             }
@@ -357,7 +357,7 @@ pub fn wand_order_key(g: &mut crate::game::Game, input: InputId) -> bool {
         while let Some(gd) = g.m.wandorder.states.get(k).unwrap().jobs.next_key(&mut at) {
             let mut j = job(g, &crate::seats::here(g), gd).unwrap();
             let a = crate::orders::squad_orders_of(g, &crate::seats::here(g), gd);
-            if g.gd[gd].state == crate::game::GuardState::Dead || !squad.contains(&gd) || a != Some(j.a) {
+            if crate::condition::down(g, g.gd[gd].ch) || !squad.contains(&gd) || a != Some(j.a) {
                 if j.knelt {
                     let c = g.gd[gd].ch;
                     g.ch[c].anim.lockpick = false;
@@ -412,9 +412,9 @@ fn eye_in_view(g: &mut Game, gd: GuardId) -> Option<crate::fogofwar::FogEye> {
         return None;
     }
     let now = g.time;
-    if g.gd[gd].state == crate::game::GuardState::Dead
+    if crate::condition::down(g, g.gd[gd].ch)
         || now - j.last_t > 0.25
-        || now < g.gd[gd].dazzled_until
+        || crate::condition::is_blind(g, g.gd[gd].ch)
         || g.gd[gd].script.as_ref().map_or(false, |s| s.over.is_some())
         || !crate::wand::wand_fits(g, j.door)
     {
@@ -466,7 +466,7 @@ mod tests {
     #[test]
     fn lens_out_marks_a_second_feed_only_if_he_knelt() {
         let mut g = Game::blank();
-        let c = g.ch.push(crate::character::Character::blank());
+        let c = crate::character::man_new(&mut g, crate::character::Character::blank());
         let mut man = crate::game::Guard::blank();
         man.ch = c;
         let gd = g.gd.push(man);

@@ -238,7 +238,7 @@ fn breathe_each(g: &mut Game, gd: GuardId, n: &mut i32) {
     let c = g.gd[gd].ch;
     let down_kind = g.gd[gd].down_kind;
     if g.ch[c].ragdoll.is_some()
-        && g.gd[gd].state == GuardState::Dead
+        && crate::condition::down(g, g.gd[gd].ch)
         && (down_kind == Some(DownKind::Struck) || down_kind == Some(DownKind::Choked))
     {
         let k = &g.k.takedown;
@@ -308,11 +308,12 @@ mod tests {
     }
 
     fn man(g: &mut Game, state: crate::game::GuardState, down: Option<crate::game::DownKind>, flat: bool) -> (GuardId, CharId) {
-        let c = g.ch.push(crate::character::Character::blank());
+        let c = crate::character::man_new(g, crate::character::Character::blank());
         if flat { g.ch[c].ragdoll = Some(RagdollId(0)); }
         let mut row = crate::game::Guard::blank();
         row.ch = c;
         row.state = state;
+        g.cond[c].down = state == crate::game::GuardState::Dead;
         row.down_kind = down;
         (g.gd.push(row), c)
     }

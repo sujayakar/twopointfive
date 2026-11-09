@@ -96,7 +96,7 @@ fn sam_aftermath(g: &mut crate::game::Game, dt: f64) {
         }
         return;
     }
-    let (beads, wet, down, now, secs) = (g.ch[c].beads, g.ch[c].wet, g.pl[pl].down, g.time, g.k.wet.drip_secs);
+    let (beads, wet, down, now, secs) = (g.ch[c].beads, g.ch[c].wet, crate::condition::down(g, g.pl[pl].ch), g.time, g.k.wet.drip_secs);
     let last = g.m.wet.mem.get(c).unwrap().last_out_wet_t;
     if beads > 0.02 && wet > 0.3 && now - last < secs && !down {
         let mut acc = g.m.wet.mem.get(c).unwrap().drip_acc + dt * (2.0 + 10.0 * beads);

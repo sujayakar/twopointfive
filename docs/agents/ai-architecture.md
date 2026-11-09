@@ -21,7 +21,7 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | his duty's aim | `belief.rs` | `covers`, said anew each tick; `gun_point`; a report that places him (`word`) |
 | his senses | `guards/senses/`, `sense.rs`, `guards/feet.rs` | ears and eyes of one man; the game's own smoke and light; `can_see`, `look_of` |
 | his eye | `attention.rs` | what small thing holds a calm man's eye (`stealth.md`) |
-| how he is | `condition.rs` | worked out when asked (`condition_of`), never kept |
+| how he is | `Cond`, `g.cond[c]`, `condition.rs` | down, hurt, blind, folded, the fire on him: a table by body, for the player, guards and civilians |
 | whose man he is | `owner.rs`, `taskers!` in its types | one word on his row of the block (`man_owner`), a bit a tasker |
 | who has his body | `control/` | `Control`, the list of rules and the arbiter (`g.ctl`) |
 | what he belongs to | `team`, `unit`; `Squad` (`enemysquads/`); `Def`, `Op` (`roomfight/`); `Assignment` (`orders/`) | his side; his squad; his place in a room fight; his post under an order |
@@ -187,7 +187,7 @@ Agreed and not built. Assume none of it.
 - **The arbiter's care:** suspend and resume, a minimum grant, reservations of a spot or a door, every `transition` run every tick.
 - **A squad as a value:** members, a lead and a commander that is a seat or an AI, one code for both sides, so `with_seat` and `with_cast` go. `Foe`
   names a man (`Foe::Player` does not). A squad's knowledge is one record of contacts.
-- **A report step:** a rule emits events, and the log, the sounds, the chronicle and the tally apply them after.
+- **A report step:** a rule emits events, and the sounds, the chronicle and the tally apply them after.
 
 ## Not seen
 

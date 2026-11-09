@@ -36,7 +36,7 @@ fn rescue_end_left(g: &crate::game::Game) -> Vec<GuardId> {
     for h in all {
         if g.gd[h].civ.is_none()
             && crate::teams::hostile_to(g, h, crate::teams::HostileToO::Player)
-            && g.gd[h].state != crate::game::GuardState::Dead
+            && !crate::condition::down(g, g.gd[h].ch)
             && !g.gd[h].fled
         {
             left.push(h);
@@ -49,7 +49,7 @@ fn rescue_end_left(g: &crate::game::Game) -> Vec<GuardId> {
 fn rescue_end_alive(g: &crate::game::Game) -> Vec<GuardId> {
     let mut alive = Vec::new();
     for &h in g.rescue.hostages.iter() {
-        if g.gd[h].state != crate::game::GuardState::Dead { alive.push(h); }
+        if !crate::condition::down(g, g.gd[h].ch) { alive.push(h); }
     }
     alive
 }

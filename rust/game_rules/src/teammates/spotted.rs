@@ -70,8 +70,8 @@ pub fn lit_at(g: &mut crate::game::Game, q: &[f64]) -> f64 {
 /// his foe is Sam on his feet, or a live operative (spotted.ts ours)
 fn ours(g: &crate::game::Game, seat: &crate::seats::SeatRef, h: GuardId) -> bool {
     match g.gd[h].foe {
-        Some(crate::game::Foe::Player) => !g.pl[seat.player].down,
-        Some(crate::game::Foe::Guard(f)) => g.gd[f].team == crate::teams::Team::Operative && g.gd[f].state != crate::game::GuardState::Dead,
+        Some(crate::game::Foe::Player) => !crate::condition::down(g, g.pl[seat.player].ch),
+        Some(crate::game::Foe::Guard(f)) => g.gd[f].team == crate::teams::Team::Operative && !crate::condition::down(g, g.gd[f].ch),
         None => false,
     }
 }
@@ -84,7 +84,7 @@ fn has_them(g: &crate::game::Game, seat: &crate::seats::SeatRef, h: GuardId) -> 
 
 /// the switch on, under the silent posture, alive (spotted.ts live)
 fn live(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    g.k.spotted.on && crate::silent::under_silence(g, gd) && g.gd[gd].state != crate::game::GuardState::Dead
+    g.k.spotted.on && crate::silent::under_silence(g, gd) && !crate::condition::down(g, g.gd[gd].ch)
 }
 
 /// his mode this frame (spotted.ts spottedMode)
@@ -98,7 +98,7 @@ pub(super) fn spotted_word(g: &crate::game::Game, seat: &crate::seats::SeatRef) 
     if !g.k.spotted.on || !crate::silent::squad_silent(g, seat) { return None; }
     let mut wary = false;
     for gd in crate::orders::squad_orders_squad(g, seat) {
-        if g.gd[gd].state == crate::game::GuardState::Dead { continue; }
+        if crate::condition::down(g, g.gd[gd].ch) { continue; }
         match g.m.spotted.men.get(gd).map_or(crate::spotted::SpottedMode::Calm, |r| r.mode) {
             crate::spotted::SpottedMode::Caught => return Some("SILENT · contact"),
             crate::spotted::SpottedMode::Wary => wary = true,
@@ -113,7 +113,7 @@ pub fn spotted_by(g: &mut crate::game::Game, gd: GuardId) -> Option<GuardId> {
     let row = g.m.spotted.men.get(gd).map(|r| (r.mode, r.by));
     if !live(g, gd) { return None; }
     match row {
-        Some((crate::spotted::SpottedMode::Caught, Some(by))) if g.gd[by].state != crate::game::GuardState::Dead => Some(by),
+        Some((crate::spotted::SpottedMode::Caught, Some(by))) if !crate::condition::down(g, g.gd[by].ch) => Some(by),
         _ => None,
     }
 }
@@ -139,7 +139,7 @@ fn danger_now(g: &mut crate::game::Game, h: GuardId, gd: GuardId) -> bool {
     let yaw = g.ch[g.gd[h].ch].aim_yaw;
     let (fx, fz) = (m::sin(yaw), m::cos(yaw));
     let close_m = g.k.spotted.close_m;
-    let ps: [Option<V3>; 2] = [Some(pos(g, gd)), if g.pl[g.player].down { None } else { Some(sam_pos(g, &crate::seats::here(g))) }];
+    let ps: [Option<V3>; 2] = [Some(pos(g, gd)), if crate::condition::down(g, g.pl[g.player].ch) { None } else { Some(sam_pos(g, &crate::seats::here(g))) }];
     for p in ps {
         let Some(p) = p else { continue };
         let (dx, dz) = (p[0] - hp[0], p[2] - hp[2]);
@@ -178,7 +178,7 @@ pub fn spotted_feet(g: &mut crate::game::Game, gd: GuardId, follower: bool, asid
     if mode == crate::spotted::SpottedMode::Calm { return None; }
     let on = if mode == crate::spotted::SpottedMode::Caught { by } else if follower { eyes } else { None };
     let watch: Option<V3> = match on {
-        Some(o) if g.gd[o].state != crate::game::GuardState::Dead => { let c = pos(g, o); Some([c[0], 1.2, c[2]]) }
+        Some(o) if !crate::condition::down(g, g.gd[o].ch) => { let c = pos(g, o); Some([c[0], 1.2, c[2]]) }
         _ => None,
     };
     if mode == crate::spotted::SpottedMode::Caught {
@@ -218,7 +218,7 @@ fn cue(g: &mut crate::game::Game, gd: GuardId, text: &str, gap: Option<f64>) {
     if t - r.said_t < gap { return; }
     r.said_t = t;
     g.stats.spotted.cues += 1;
-    crate::game::game_say(g, gd, text, None, None, None);
+    crate::game::game_say(g, gd, text, None, None);
 }
 
 /// candidate spots round `p`, nearest first: on the floor, a straight walk from where he stands, off every doorway and off Sam (spotted.ts ring)
@@ -341,7 +341,7 @@ pub fn cover(g: &mut crate::game::Game, gd: GuardId) {
     let r = man(g, gd);
     let (by, what, spot) = (r.by, r.what, r.spot);
     let h = match by {
-        Some(h) if g.gd[h].state != crate::game::GuardState::Dead => h,
+        Some(h) if !crate::condition::down(g, g.gd[h].ch) => h,
         _ => { let r = man(g, gd); r.spot = None; r.what = None; return; }
     };
     let hp = pos(g, h);
@@ -501,7 +501,7 @@ pub fn spotted_gripped(g: &mut crate::game::Game, h: GuardId) -> bool {
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
-        if g.gd[gd].state == crate::game::GuardState::Dead || !crate::silent::under_silence(g, gd) { continue; }
+        if crate::condition::down(g, g.gd[gd].ch) || !crate::silent::under_silence(g, gd) { continue; }
         if let Some(tk) = g.m.spotted.men.get(gd).and_then(|r| r.take) {
             if tk.foe == h && tk.t0 >= 0.0 && g.time >= tk.t0 && g.time - tk.t0 < g.k.spotted.take_secs + 0.5 { return true; }
         }
@@ -517,7 +517,7 @@ fn fresh(g: &mut crate::game::Game) -> Vec<crate::spotted::FreshItem> {
     if now - d.t > 0.25 || now < d.t { d.seen = false; d.at.clear(); }
     d.t = now;
     for &h in g.guards.iter() {
-        if g.gd[h].state != crate::game::GuardState::Dead || d.down.has(h) { continue; }
+        if !g.cond[g.gd[h].ch].down || d.down.has(h) { continue; }
         d.down.add(h);
         if d.seen && g.gd[h].team != crate::teams::Team::Operative {
             let c = g.ch[g.gd[h].ch].pos;
@@ -536,7 +536,7 @@ pub fn spotted_tick(g: &mut crate::game::Game) {
     let k = g.k.spotted;
     let t = g.time;
     for gd in crate::orders::squad_orders_squad(g, &crate::seats::here(g)) {
-        if g.gd[gd].state == crate::game::GuardState::Dead || !crate::silent::under_silence(g, gd) { continue; }
+        if crate::condition::down(g, g.gd[gd].ch) || !crate::silent::under_silence(g, gd) { continue; }
         if !g.m.spotted.men.has(gd) { g.m.spotted.men.set(gd, new_man(t)); }
         let r = man(g, gd);
         if t - r.tick_t > 0.25 || t < r.tick_t { r.take = None; r.take_no = None; }
@@ -550,7 +550,7 @@ pub fn spotted_tick(g: &mut crate::game::Game) {
             let h = g.guards[i];
             i += 1;
             let (mine, his) = (g.gd[gd].team, g.gd[h].team);
-            if g.gd[h].state == crate::game::GuardState::Dead || !crate::teams::is_hostile(g, mine, his) { continue; }
+            if crate::condition::down(g, g.gd[h].ch) || !crate::teams::is_hostile(g, mine, his) { continue; }
             let d = flat(&pos(g, gd), &pos(g, h));
             if has_them(g, &crate::seats::here(g), h) {
                 if d < k.caught_m && d < bd { bd = d; by = Some(h); }
@@ -569,7 +569,7 @@ pub fn spotted_tick(g: &mut crate::game::Game) {
             r.by = Some(b);
             r.caught_t = t;
         } else if let Some(b) = old_by {
-            if g.gd[b].state == crate::game::GuardState::Dead { man(g, gd).by = None; }
+            if crate::condition::down(g, g.gd[b].ch) { man(g, gd).by = None; }
         }
         let r = man(g, gd);
         if !r.wary.is_empty() { r.wary_t = t; }
@@ -632,7 +632,7 @@ mod tests {
         (g, gd)
     }
     fn add_man(g: &mut Game) -> GuardId {
-        let c = g.ch.push(crate::character::Character::blank());
+        let c = crate::character::man_new(g, crate::character::Character::blank());
         let mut man = crate::game::Guard::blank();
         man.ch = c;
         g.gd.push(man)
@@ -666,15 +666,20 @@ mod tests {
         assert_eq!(g.m.spotted.spotted_log.len(), 101);
     }
 
+    fn falls(g: &mut Game, gd: GuardId) {
+        g.gd[gd].state = crate::game::GuardState::Dead;
+        g.cond[g.gd[gd].ch].down = true;
+    }
+
     #[test]
     fn fresh_learns_who_is_down_then_reports_new_men_until_brace_secs() {
         let (g, _) = game();
         let old = add_man(g);
-        g.gd[old].state = crate::game::GuardState::Dead;
+        falls(g, old);
         g.guards.push(old);
         assert!(fresh(g).is_empty());   // the first tick only learns
         let new = add_man(g);
-        g.gd[new].state = crate::game::GuardState::Dead;
+        falls(g, new);
         g.gd[new].team = crate::teams::Team::Hostile;
         let c = g.gd[new].ch;
         g.ch[c].pos = [3.0, 1.0, 4.0];
@@ -697,14 +702,14 @@ mod tests {
         let (g, _) = game();
         let _ = fresh(g);
         let a = add_man(g);
-        g.gd[a].state = crate::game::GuardState::Dead;
+        falls(g, a);
         g.gd[a].team = crate::teams::Team::Hostile;
         g.guards.push(a);
         g.time = 100.5;   // not asked for over a quarter second: whoever is down now is old news
         assert!(fresh(g).is_empty());
         assert_eq!(g.stats.spotted.braces, 0);
         let b = add_man(g);
-        g.gd[b].state = crate::game::GuardState::Dead;
+        falls(g, b);
         g.gd[b].team = crate::teams::Team::Hostile;
         g.guards.push(b);
         g.time = 50.0;   // the clock went back

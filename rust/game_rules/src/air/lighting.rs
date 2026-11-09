@@ -82,7 +82,7 @@ pub fn breaker_reset_near(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if !(crate::sim_lightshome::mains_active(g)
         && !crate::sim_lightshome::mains_permanent(g)
         && g.time - crate::sim_lightshome::mains_since(g) > 3.0
-        && g.gd[gd].state != crate::game::GuardState::Dead
+        && !crate::condition::down(g, g.gd[gd].ch)
         && g.gd[gd].held.is_none())
     {
         return false;
@@ -121,7 +121,7 @@ pub fn update_targets(g: &mut crate::game::Game, dt: f64) {
         crate::handwork::lever_hands(g, c, hand_t, fumble);
     }
     if ev & ::sim::lights::EV_FIXED != 0 {
-        crate::game::game_say(g, near.unwrap(), "breaker's back on", Some(true), None, None);
+        crate::game::game_say(g, near.unwrap(), "breaker's back on", Some(true), None);
         mains_back(g);
     }
     // ---- THE PICTURE, FROM THE STATE. Written though the picture is its reader: the fog's memory of a lamp's face reads the boxes' `emissive`.
@@ -156,12 +156,6 @@ pub fn set_blackout(g: &mut crate::game::Game, seconds: f64, cause: crate::light
     let bp = g.level.breaker.pos;
     crate::audio_iface::game_audio_like_play(g, "powerDown", Some(bp), Some(1.0), None);
     crate::audio_iface::game_audio_like_play(g, "powerDown", None, Some(0.35), None);
-    let said = match cause {
-        crate::lighting::SetBlackoutCause::Shot => "breaker destroyed — power gone for good",
-        crate::lighting::SetBlackoutCause::Hand => "breaker thrown — emergency lighting until someone resets it",
-        _ => "power is out — emergency lighting",
-    };
-    crate::game::game_msg(g, said);
     if cause != crate::lighting::SetBlackoutCause::Debug && crate::mission::mission_live(g) {
         g.mission.stats.blackout = true;
         crate::chronicle::chron_blackout(g, cause.as_str());
@@ -172,7 +166,7 @@ pub fn set_blackout(g: &mut crate::game::Game, seconds: f64, cause: crate::light
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
-        if g.gd[gd].state == crate::game::GuardState::Dead {
+        if crate::condition::down(g, g.gd[gd].ch) {
             continue;
         }
         if g.gd[gd].state == crate::game::GuardState::Patrol {
@@ -211,7 +205,7 @@ pub fn set_blackout(g: &mut crate::game::Game, seconds: f64, cause: crate::light
                 g.gd[best].react_t = 1.2;
                 g.gd[best].search_t = 0.0;
             }
-            crate::game::game_say(g, best, "power's out — checking the breaker", Some(true), None, None);
+            crate::game::game_say(g, best, "power's out — checking the breaker", Some(true), None);
             let p = g.ch[g.gd[best].ch].pos;
             crate::audio_iface::game_audio_like_play(g, "radio", Some(p), Some(0.6), None);
         }
@@ -233,7 +227,6 @@ fn mains_back(g: &mut crate::game::Game) {
     let bp = g.level.breaker.pos;
     crate::audio_iface::game_audio_like_play(g, "powerUp", Some(bp), Some(1.0), None);
     crate::audio_iface::game_audio_like_play(g, "powerUp", None, Some(0.3), None);
-    crate::game::game_msg(g, "power is back on");
     let mut i = 0;
     while i < g.guards.len() {
         let gd = g.guards[i];
@@ -290,7 +283,7 @@ pub fn ocpable(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
         Some(gd) => gd,
         None => return false,
     };
-    if g.gd[gd].state == crate::game::GuardState::Dead {
+    if crate::condition::down(g, g.gd[gd].ch) {
         return false;
     }
     let l = g.gd[gd].flashlight;
@@ -301,7 +294,6 @@ pub fn ocpable(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
 pub fn ocp(g: &mut crate::game::Game, t: Option<FixtureId>) {
     let p = g.player;
     if !crate::weapons::ocp_ready(&g.pl[p].ocp) {
-        crate::game::game_msg(g, "OCP recharging");
         crate::audio_iface::game_audio_like_play(g, "deny", None, Some(0.5), None);
         return;
     }
@@ -309,7 +301,7 @@ pub fn ocp(g: &mut crate::game::Game, t: Option<FixtureId>) {
         Some(t) => t,
         None => {
             if let Some(gd) = g.aim_guard {
-                if g.gd[gd].state != crate::game::GuardState::Dead {
+                if !crate::condition::down(g, g.gd[gd].ch) {
                     if !ocpable(g, &crate::seats::here(g)) {
                         return;
                     }
@@ -317,7 +309,6 @@ pub fn ocp(g: &mut crate::game::Game, t: Option<FixtureId>) {
                     let muzzle = g.ch[g.pl[p].ch].muzzle;
                     crate::audio_iface::game_audio_like_play(g, "ocp", Some(muzzle), Some(1.0), None);
                     g.gd[gd].light_dead_until = g.time + g.tune.ocp_duration * 0.7;
-                    crate::game::game_msg(g, "OCP → guard's flashlight fried");
                     let c = g.gd[gd].ch;
                     let what = alloc::format!("{}'s torch", g.gd[gd].callsign);
                     let pos = g.ch[c].pos;
@@ -353,12 +344,10 @@ pub fn ocp(g: &mut crate::game::Game, t: Option<FixtureId>) {
                 None => false,
             })
         {
-            crate::game::game_msg(g, "the OCP can't see the breaker from here");
             crate::audio_iface::game_audio_like_play(g, "deny", None, Some(0.5), None);
             return;
         }
         if crate::sim_lightshome::mains_active(g) {
-            crate::game::game_msg(g, "power is already off");
             crate::audio_iface::game_audio_like_play(g, "deny", None, Some(0.5), None);
             return;
         }
@@ -371,7 +360,6 @@ pub fn ocp(g: &mut crate::game::Game, t: Option<FixtureId>) {
     }
     let name = g.tab.sim_lightshome_fixture[t].name.clone();
     if crate::sim_lightshome::fixture_factor(g, t) <= 0.0 {
-        crate::game::game_msg(g, &alloc::format!("OCP: {} already off", name));
         return;
     }
     crate::weapons::ocp_use(&mut g.pl[p].ocp);
@@ -379,7 +367,6 @@ pub fn ocp(g: &mut crate::game::Game, t: Option<FixtureId>) {
     crate::audio_iface::game_audio_like_play(g, "ocp", Some(muzzle), Some(1.0), None);
     let until = g.time + g.tune.ocp_duration;
     light_in(g, ::sim::lights::IN_BLIND, Some(t), until, 0.0, 0.0, 0.0);
-    crate::game::game_msg(g, &alloc::format!("OCP → {} disabled", name));
     if kind != crate::sim_lightshome::FixtureKind::Device {
         crate::game::game_light_event(g, t, Some(crate::game::GameLightEventCause::Ocp), None);
     }

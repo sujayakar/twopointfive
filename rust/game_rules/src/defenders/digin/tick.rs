@@ -20,7 +20,6 @@ fn entry_at(g: &Game, room: RoomfightRoomId, i: f64) -> Option<crate::roomfight:
 fn door_name(g: &Game, d: DoorId) -> String { g.dr[d].def.name.clone() }
 fn prop_name(g: &Game, p: PropId) -> String { g.tab.props_prop[p].def.name.clone() }
 fn pos_of(g: &Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }
-fn dead(g: &Game, gd: GuardId) -> bool { g.gd[gd].state == crate::game::GuardState::Dead }
 /// `!isNaN(st.rooms.get(room)?.enteredAt ?? NaN)`
 fn entered(g: &mut Game, room: RoomfightRoomId) -> bool {
     match state_of(g).rooms.get(room) { Some(r) => !r.entered_at.is_nan(), None => false }
@@ -135,7 +134,7 @@ fn on_entry(g: &mut Game, me: RoomfightDefId, room: RoomfightRoomId, i: f64) -> 
     let mut n = 0;
     for x in g.fight.defs.clone() {
         let xg = g.tab.roomfight_def[x].gd;
-        if x == me || dead(g, xg) || g.tab.roomfight_def[x].room != Some(room) { continue; }
+        if x == me || crate::condition::down(g, g.gd[xg].ch) || g.tab.roomfight_def[x].room != Some(room) { continue; }
         if phase_of(g, xg) == Phase::Idle { continue; }
         if state_of(g).men.get(xg).unwrap().entry == i { n += 1; }
     }
@@ -180,7 +179,7 @@ fn begin(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::digin::Man
             // out of the team's earshot: the room says it on its side's net instead
             let guide = crate::words::wg(g, &"copy. we'll be ready for them.", &"heard. they'll find this room ready.");
             let line = one_of(g, crate::dice::Who::Def(d), &["we hear it. getting ready for them here.", "copy. we're digging in.", guide]);
-            crate::game::game_say(g, gd, line, Some(true), None, None);
+            crate::game::game_say(g, gd, line, Some(true), None);
             g.stats.digin.radio += 1;
             cue(g, Some(&mut r), Cue::Radio);
         }
@@ -452,7 +451,7 @@ fn haul_on(g: &mut Game, d: RoomfightDefId, m: &mut Man, rk: Option<RoomfightRoo
 /// roomfight.ts tickDef, every frame for every defender it runs   (digin.ts digInTick)
 pub(in crate::defenders) fn dig_in_tick(g: &mut crate::game::Game, def: RoomfightDefId, _dt: f64) {
     let gd = g.tab.roomfight_def[def].gd;
-    if dead(g, gd) || g.rescue.active { return; }                     // the hostage rescue has its own script for these men
+    if crate::condition::down(g, g.gd[gd].ch) || g.rescue.active { return; }                     // the hostage rescue has its own script for these men
     let now = g.time;
     if state_of(g).frame_t != now { state_of(g).frame_t = now; watch(g); }
     let mut m = *state_of(g).men.get_or_insert_with(gd, new_man);
@@ -490,7 +489,7 @@ fn tick_man(g: &mut Game, d: RoomfightDefId, m: &mut Man) {
         }
         return;
     }
-    let dazzled = now < g.gd[gd].dazzled_until;
+    let dazzled = crate::condition::is_blind(g, g.gd[gd].ch);
     let contact = now - last_seen < 3.0;
     // the word on the net: the first of a room to have eyes on them, once he is past his own start
     if !crate::enemysquads::squads_live(g) && !dazzled && !state_of(g).called.has(gd) && now - last_seen < 0.25 && g.gd[gd].react_t <= 0.0
@@ -504,7 +503,7 @@ fn tick_man(g: &mut Game, d: RoomfightDefId, m: &mut Man) {
         g.stats.digin.radio += 1;
         let pool = crate::words::w(g, &["contact! they're here. hold your rooms!", "they're on us. watch your doors!"], &["contact! they're inside. hold your rooms!", "they're in here. watch your doors!"]);
         let line = one_of(g, crate::dice::Who::Def(d), &pool);
-        crate::game::game_say(g, gd, line, Some(true), None, None);
+        crate::game::game_say(g, gd, line, Some(true), None);
         let text = format!("calls contact on the net{}", if heard { "" } else { " (out of the team's earshot)" });
         log(g, Some(gd), &text);
         cue_all(g, Cue::Radio);
@@ -698,7 +697,7 @@ fn set_tick(g: &mut Game, d: RoomfightDefId, m: &mut Man, k: RoomfightRoomId, co
         let mut taken = false;
         for x in g.fight.defs.clone() {
             let xg = g.tab.roomfight_def[x].gd;
-            if x == d || dead(g, xg) || g.tab.roomfight_def[x].room != my_room { continue; }
+            if x == d || crate::condition::down(g, g.gd[xg].ch) || g.tab.roomfight_def[x].room != my_room { continue; }
             // (`?.entry === a && ?.phase !== 'idle'`: a man with no row has no entry to match)
             if let Some(o) = state_of(g).men.get(xg) { if o.entry == a && o.phase != Phase::Idle { taken = true; break; } }
         }
@@ -742,10 +741,7 @@ fn watch(g: &mut crate::game::Game) {
         } else if let Some(who) = by.gd {
             let lines = [format!("the {} is blocked. something heavy behind it.", dn), format!("the {} is wedged from inside. they know we're here.", dn)];
             let line = one_of(g, crate::dice::Who::Man(who), &lines);
-            crate::game::game_say(g, who, &line, Some(true), None, None);
-        } else {
-            let text = format!("the {} is wedged from inside", dn);
-            crate::game::game_msg(g, &text);
+            crate::game::game_say(g, who, &line, Some(true), None);
         }
         let text = format!("tries {}: wedged", door_name(g, d));
         log(g, by.gd, &text);
@@ -757,7 +753,7 @@ fn watch(g: &mut crate::game::Game) {
         let mut home: Vec<GuardId> = Vec::new();
         for x in g.fight.defs.iter() {
             let (xg, xr) = (g.tab.roomfight_def[*x].gd, g.tab.roomfight_def[*x].room);
-            if !dead(g, xg) && xr == Some(r.room) { home.push(xg); }
+            if !crate::condition::down(g, g.gd[xg].ch) && xr == Some(r.room) { home.push(xg); }
         }
         let mut sets = 0;
         for x in home.iter() { if phase_of(g, *x) == Phase::Set { sets += 1; } }
@@ -855,7 +851,7 @@ pub(in crate::defenders) fn dig_in_refuge(g: &mut crate::game::Game, def: Roomfi
         let mut with: Option<GuardId> = None;
         for x in g.fight.defs.clone() {
             let (xg, xmode, xroom) = { let y = &g.tab.roomfight_def[x]; (y.gd, y.mode, y.room) };
-            if x == def || dead(g, xg) || xmode != crate::roomfight::DefMode::Hold || xroom != Some(r.room) || !(g.time - g.gd[xg].last_seen_t > 3.0) { continue; }
+            if x == def || crate::condition::down(g, g.gd[xg].ch) || xmode != crate::roomfight::DefMode::Hold || xroom != Some(r.room) || !(g.time - g.gd[xg].last_seen_t > 3.0) { continue; }
             if matches!(phase_of(g, xg), Phase::Idle | Phase::Think | Phase::ToRoom) { continue; }
             with = Some(xg);
             break;

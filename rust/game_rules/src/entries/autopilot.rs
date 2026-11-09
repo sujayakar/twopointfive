@@ -92,7 +92,7 @@ pub fn quick(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, men: Opt
     if p.why == AutoPickWhy::Pending { return false; }
     if p.why == AutoPickWhy::Set {
         let lines = crate::autopilot::restack_lines();
-        crate::orders::squad_orders_again(g, crate::orders::rows::stack::ORDER.id, t, to.as_deref().unwrap_or(&[]), &lines);
+        crate::orders::squad_orders_again(g, crate::orders::rows::stack::ORDER.id, to.as_deref().unwrap_or(&[]), &lines);
         g.stats.autopilot.again += 1;
         return false;
     }

@@ -45,7 +45,7 @@ pub(super) fn door_man(g: &mut Game, who: f64) -> f64 {
     if let Some(seat) = crate::seats::view_of_id(g, who) {
         // a player's man: over his own seat's view
         let (folded, until) = crate::seats::with_seat(g, seat, &mut |g: &mut Game| {
-            (crate::samstun::sam_staggered(g, &crate::seats::here(g), None), g.pl[g.player].stagger_until)
+            (crate::samstun::sam_staggered(g, &crate::seats::here(g), None), g.cond[g.pl[g.player].ch].fold_until)
         });
         let braced = if g.puppet.is_some() {
             braced_bit | held_bit
@@ -60,7 +60,7 @@ pub(super) fn door_man(g: &mut Game, who: f64) -> f64 {
         Some(gd) => gd,
         None => return 0.0,
     };
-    let until = m::max(g.gd[gd].stagger_until, g.gd[gd].dazzled_until);
+    let until = m::max(g.cond[g.gd[gd].ch].fold_until, g.cond[g.gd[gd].ch].blind_until);
     let side = if g.gd[gd].civ.is_some() { 3.0 } else { side_of(g.gd[gd].team) };
     let state = g.gd[gd].state;
     let braced = if g.gd[gd].held.is_some() {
@@ -101,7 +101,7 @@ pub fn door_throw_after(g: &mut Game, contacts: &[crate::doors::DoorContact]) {
             continue;
         }
         let gd = match man_of(g, c.who) {
-            Some(gd) if g.gd[gd].state != crate::game::GuardState::Dead => gd,
+            Some(gd) if !crate::condition::down(g, g.gd[gd].ch) => gd,
             _ => continue,
         };
         if moved {
@@ -195,7 +195,7 @@ fn throw_man(g: &mut Game, gd: GuardId, s: crate::doors::DoorStrike) {
     crate::character::anim_hit_from(g, c, Some(away));
     let heard = v3::add(g.ch[c].pos, [0.0, 1.1, 0.0]);
     crate::audio_iface::game_audio_like_play(g, "bodyHit", Some(heard), Some(if hard { 0.8 } else { 0.55 }), Some(&crate::audio_iface::PlayOpts::Rate { rate: if hard { 0.9 } else { 1.05 } }));
-    g.gd[gd].stagger_until = m::max(g.gd[gd].stagger_until, until);
+    crate::condition::fold(g, c, secs);
     count(g, s);
     if g.gd[gd].civ.is_some() {
         crate::civilians::to_alarmed(g, gd, crate::civilians::CivCause::Noise, [at[0], 0.0, at[2]], false);
@@ -210,17 +210,11 @@ fn throw_man(g: &mut Game, gd: GuardId, s: crate::doors::DoorStrike) {
         };
         crate::squad::end_guard_script(g, gd, Some(then));
     }
-    g.gd[gd].dazzled_until = m::max(g.gd[gd].dazzled_until, until);
-    g.gd[gd].dazzled_at = Some(v3::copy(at));
+    crate::condition::blind(g, c, secs, Some(at));
     g.gd[gd].react_t = m::max(g.gd[gd].react_t, secs);
     let weapon = g.gd[gd].weapon;
     g.fa[weapon].burst = None;
-    crate::game::guard_set_path(g, gd, Vec::new());
-    g.gd[gd].path_goal = None;
-    g.gd[gd].path_goal_orbit = false;
-    g.gd[gd].stall_ref = None;
-    g.gd[gd].speed = 0.0;
-    g.ch[c].vel = [0.0, 0.0, 0.0];
+    crate::condition::stopped_dead(g, gd);
     if s.floor {
         g.gd[gd].door_down_until = m::max(g.gd[gd].door_down_until, until);
     }
@@ -242,7 +236,7 @@ fn throw_sam(g: &mut Game, s: crate::doors::DoorStrike) {
     let pl = g.player;
     let hard = s.tier == crate::doors::DoorStrikeTier::Boot;
     let secs = if hard { g.k.doorthrow.kick_secs } else { g.k.doorthrow.push_secs };
-    if g.pl[pl].down || g.puppet.is_some() {
+    if crate::condition::down(g, g.pl[pl].ch) || g.puppet.is_some() {
         return;
     }
     crate::samstun::stagger_player(g, secs, [s.dir[0], 0.0, s.dir[1]]);

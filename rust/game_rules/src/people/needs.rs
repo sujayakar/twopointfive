@@ -197,7 +197,7 @@ fn interrupt_of(g: &crate::game::Game, gd: GuardId) -> Option<String> {
     if !g.tune.needs {
         return Some(key("switched off"));
     }
-    if g.gd[gd].state == GuardState::Dead {
+    if crate::condition::down(g, g.gd[gd].ch) {
         return Some(key("down"));
     }
     if !g.ai_enabled {
@@ -290,7 +290,7 @@ pub fn needs_tick(g: &mut crate::game::Game, dt: f64) {
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
-        if g.gd[gd].state == GuardState::Dead || g.gd[gd].team != Team::Guard || g.gd[gd].unit.is_some() {
+        if crate::condition::down(g, g.gd[gd].ch) || g.gd[gd].team != Team::Guard || g.gd[gd].unit.is_some() {
             continue;
         }
         if !mem(g, gd).dealt {
@@ -476,7 +476,7 @@ fn partner_for(g: &mut crate::game::Game, gd: GuardId) -> Option<GuardId> {
         let o = g.guards[i];
         i += 1;
         let x = &g.gd[o];
-        if o == gd || x.state == GuardState::Dead || x.held.is_some() || x.team != Team::Guard || x.unit.is_some() {
+        if o == gd || g.cond[x.ch].down || x.held.is_some() || x.team != Team::Guard || x.unit.is_some() {
             continue;
         }
         if v3::dist(g.ch[x.ch].pos, my_pos) > g.k.needs.partner_m + 2.0 {
@@ -508,7 +508,7 @@ fn announce(g: &mut crate::game::Game, gd: GuardId, t: &mut crate::needs::Trip) 
         let now: Vec<String> = was.iter().map(|x| lines.now.get(x.clone()).cloned().unwrap_or_else(|| x.clone())).collect();
         let pool = crate::words::wg::<Vec<String>>(g, &now, &was);
         t.line = pick_line(g, &pool, gd, "announce");
-        crate::game::game_say(g, gd, &t.line, None, None, None);
+        crate::game::game_say(g, gd, &t.line, None, None);
         let d = v3::dist_xz(g.ch[g.gd[p].ch].pos, g.ch[g.gd[gd].ch].pos);
         let pcs = g.gd[p].callsign.clone();
         log(g, gd, &format!("tells {} ({} m): \"{}\"", pcs, js::to_fixed(d, 1), t.line));
@@ -518,7 +518,7 @@ fn announce(g: &mut crate::game::Game, gd: GuardId, t: &mut crate::needs::Trip) 
         let own = if quiet { lines.short_own.get(key(kind)) } else { None };
         let short: String = own.or_else(|| lines.short.get(key(kind))).cloned().unwrap_or_else(|| key(kind));
         t.line = lines.radio.replacen("{who}", &g.gd[gd].callsign, 1).replacen("{short}", &short, 1);
-        crate::game::game_say(g, gd, &t.line, Some(true), None, None);
+        crate::game::game_say(g, gd, &t.line, Some(true), None);
         let c = g.gd[gd].ch;
         let at = match g.ch[c].bones.get(crate::character::Bone::Head) {
             Some(h) => *h,
@@ -548,7 +548,7 @@ fn partner_reply(g: &mut crate::game::Game, gd: GuardId, t: &mut crate::needs::T
         log(g, gd, &format!("{} says nothing back ({}, aw {})", pcs, state.as_str(), js::to_fixed(aw, 2)));
         return;
     }
-    let third = g.guards.iter().copied().find(|&x| x != gd && x != p && g.gd[x].team == Team::Guard && g.gd[x].unit.is_none() && g.gd[x].state != GuardState::Dead);
+    let third = g.guards.iter().copied().find(|&x| x != gd && x != p && g.gd[x].team == Team::Guard && g.gd[x].unit.is_none() && !crate::condition::down(g, g.gd[x].ch));
     let trips = mem(g, gd).trips;
     let lines = crate::dialogue::needs_lines_table();
     let pool: Vec<String> = match third {
@@ -564,7 +564,7 @@ fn partner_reply(g: &mut crate::game::Game, gd: GuardId, t: &mut crate::needs::T
     let cs = g.gd[gd].callsign.clone();
     let h = crate::math_dice::hash_str(&format!("{}|{}|{}|reply", pcs, cs, trips));
     let line = pool[js::rem(h, pool.len() as f64) as usize].clone();
-    crate::game::game_say(g, p, &line, None, None, None);
+    crate::game::game_say(g, p, &line, None, None);
     g.stats.needs.replies += 1;
     log(g, gd, &format!("{} answers: \"{}\"", pcs, line));
 }
@@ -764,7 +764,7 @@ pub(super) fn needs_patrol(g: &mut crate::game::Game, gd: GuardId, dt: f64, walk
                 let away = m::round(now - left_at);
                 let back = crate::dialogue::needs_lines_table().back;
                 let line = pick_line(g, &back, gd, "back");
-                crate::game::game_say(g, gd, &line, None, None, None);
+                crate::game::game_say(g, gd, &line, None, None);
                 let mut d = JsMap::new();
                 d.set(key("who"), text(&cs));
                 d.set(key("kind"), text(kind.as_str()));

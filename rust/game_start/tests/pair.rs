@@ -263,9 +263,9 @@ fn takedown_noises(seed: u32) -> (Play, GuardId, f64, Vec<game::game::GameEvent>
     let mut newest = p.g.events.iter().map(|e| e.serial).max().unwrap_or(0);
     let (mut down, mut noises) = (None, Vec::new());
     for _ in 0..(60 * 8) {
-        if p.g.gd[t1].state != GuardState::Dead && game::pairorders::pair_orders_job_of(&p.g, m).map_or(true, |j| j.t0 < 0.0) { pin(&mut p, t1, GuardState::Patrol, 0.0); }
+        if !game::condition::down(&p.g, p.g.gd[t1].ch) && game::pairorders::pair_orders_job_of(&p.g, m).map_or(true, |j| j.t0 < 0.0) { pin(&mut p, t1, GuardState::Patrol, 0.0); }
         p.frame();
-        if down.is_none() && p.g.gd[t1].state == GuardState::Dead { down = Some(p.time()); }
+        if down.is_none() && game::condition::down(&p.g, p.g.gd[t1].ch) { down = Some(p.time()); }
         for e in p.g.events.iter().filter(|e| e.serial > newest && e.kind == game::director::EventKind::Prop) { noises.push(*e); }
         newest = p.g.events.iter().map(|e| e.serial).max().unwrap_or(newest).max(newest);
         if down.map_or(false, |d| p.time() - d > 3.0) { break; }

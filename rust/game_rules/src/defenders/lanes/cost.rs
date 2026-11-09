@@ -39,7 +39,7 @@ pub(super) fn flat(a: V3, b: V3) -> f64 {
 /// A man the rule is for: a defender of a live room fight, on his feet.   (lanes.ts mine)
 pub(super) fn mine(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let r = &g.gd[gd];
-    r.team == SIDE && r.unit.is_some() && r.state != crate::game::GuardState::Dead && r.held.is_none()
+    r.team == SIDE && r.unit.is_some() && !g.cond[r.ch].down && r.held.is_none()
 }
 
 /// One of his who is neither dazzled nor staggering.   (lanes.ts fit)
@@ -167,7 +167,7 @@ pub fn close_fight(g: &crate::game::Game, gd: GuardId) -> bool {
 /// He is going in behind a charge; a lapsed entry is dropped as it is asked.   (lanes.ts pushing)
 pub(super) fn pushing(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let Some(t) = s(g).push.get(gd).copied() else { return false };
-    if g.time < t && g.gd[gd].state != crate::game::GuardState::Dead {
+    if g.time < t && !crate::condition::down(g, g.gd[gd].ch) {
         return true;
     }
     s(g).push.delete(gd);
@@ -190,7 +190,7 @@ pub(super) fn roused(g: &crate::game::Game, gd: GuardId, t: f64) -> bool {
     r.state == crate::game::GuardState::Alert
         || r.state == crate::game::GuardState::Search
         || r.awareness >= 0.3
-        || r.sup.src_t >= t - 1e-6
+        || g.cond[r.ch].sup.src_t >= t - 1e-6
         || r.last_seen_t >= t - 1.0
         || (r.witness.heard.last_shot_t >= 0.0 && r.witness.heard.last_shot_t >= t - 2.5)
 }
@@ -198,7 +198,7 @@ pub(super) fn roused(g: &crate::game::Game, gd: GuardId, t: f64) -> bool {
 /// He is sent round at the guns; a lapsed entry is dropped, and his errand unless he is set.   (lanes.ts flanking)
 pub(super) fn flanking(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let Some(t) = s(g).flank.get(gd).copied() else { return false };
-    if g.time < t && g.gd[gd].state != crate::game::GuardState::Dead {
+    if g.time < t && !crate::condition::down(g, g.gd[gd].ch) {
         return true;
     }
     let st = s(g);
@@ -217,7 +217,7 @@ pub(super) fn up_id(g: &crate::game::Game, id_2: f64) -> bool {
             None => false,
         };
     }
-    g.guards.iter().any(|&o| g.ch[g.gd[o].ch].id == id_2 && g.gd[o].state != crate::game::GuardState::Dead)
+    g.guards.iter().any(|&o| g.ch[g.gd[o].ch].id == id_2 && !crate::condition::down(g, g.gd[o].ch))
 }
 
 pub use crate::roomfight::def_of;
@@ -656,7 +656,7 @@ pub(super) fn become_known(g: &mut crate::game::Game, l: LanesLaneId, who: Guard
     } else {
         format!("they've got it covered — {}! stay out of their line!", place)
     };
-    crate::game::game_say(g, who, &line, Some(true), None, None);
+    crate::game::game_say(g, who, &line, Some(true), None);
     let now = g.time;
     s(g).said_t = now;
     let r = &g.tab.lanes_lane[l];
@@ -707,7 +707,7 @@ pub(super) fn read_rounds(g: &mut crate::game::Game) {
             if g.gd[gd].team != SIDE || g.gd[gd].unit.is_none() || g.gd[gd].held.is_some() {
                 continue;
             }
-            let dead = g.gd[gd].state == crate::game::GuardState::Dead;
+            let dead = crate::condition::down(g, g.gd[gd].ch);
             // (dropped by this very round — counted once, however many rounds were in the air — or standing)
             if dead && (st!(g).dropped.has(gd) || !(g.gd[gd].died_at >= time - 1e-6 && g.gd[gd].died_at <= g.time)) {
                 continue;

@@ -381,7 +381,6 @@ pub struct Game {
     pub ocp_cooldown: f64,
     #[is(-100.0)] pub last_sting_t: f64,
     pub event_seq: f64,
-    pub messages: Vec<crate::game::GameMessagesItem>,
     #[is(crate::game::Mission { t0: 0.0, stage: crate::game::MissionStage::Infiltrate, drive_t: -1.0, pulled: false, alarm_on: false, sweep_at: -1.0, spotted_t: -100.0, down_card_at: -1.0, hands_on: false, serial: 0, stats: crate::game::MissionStats { qrf_at: -1.0, ..crate::game::MissionStats::default() } })] pub mission: crate::game::Mission,
     pub chronicle: crate::chronicle::Chronicle,
     pub qrf: crate::qrf::Qrf,
@@ -480,6 +479,8 @@ pub struct Game {
     /// state.ts:136 SimState.stamp, for what is made from the block (the fog's grid, the air): a native game has one block, and whatever writes it wholesale raises this
     /// the table of these things: never shrinks
     pub ch: Tab<CharId, crate::character::Character>,
+    /// HOW EACH MAN IS, by his body: one table for the player, guards and civilians
+    pub cond: Tab<CharId, crate::condition::Cond>,
     /// the table of these things: never shrinks
     pub dr: Tab<DoorId, crate::doors::Door>,
     /// the table of these things: never shrinks
@@ -553,14 +554,6 @@ pub struct GameBeaconsItem {
 pub struct GameFxItem {
     pub box_: FrameBoxId,
     pub ttl: f64,
-}
-
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct GameMessagesItem {
-    pub text: String,
-    pub t: f64,
-    /// INVENTED by a review: see the proposals
-    pub serial: u32,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -721,22 +714,16 @@ pub struct Player {
     pub hit_flash: f64,
     /// his hands were on a man last frame (the partner's word goes as they first are)
     pub pair_hands_was: bool,
-    #[is(-1.0)] pub stagger_until: f64,
-    #[is(-1.0)] pub dazzled_until: f64,
-    pub dazzled_at: Option<V3>,
     pub stun_posed: bool,
-    #[is(-1.0)] pub hurt_at: f64,
     #[is(-10.0)] pub door_bash_at: f64,
     pub door_bash_lean: f64,
     #[is(-1.0)] pub door_rip_until: f64,
     pub door_kick_tail: bool,
     pub door_head: f64,
     #[is(-1.0)] pub door_head_t: f64,
-    pub sup: crate::suppression::Sup,
     pub aim: crate::aim::AimState,
     pub aimw: crate::aimweight::AimWeight,
     #[is(1.0)] pub hits_left: f64,
-    pub down: bool,
     #[is(FirearmId(0))] pub pistol: FirearmId,
     pub ocp: crate::weapons::Ocp,
     #[is(4.0)] pub canisters: f64,
@@ -757,7 +744,6 @@ pub struct Player {
     #[is(-1.0)] pub kit_owed: f64,
     pub kit_owed_for: Option<crate::game::PlayerKitOwedFor>,
     pub sling_rest: Option<crate::game::PlayerSlingRest>,
-    pub ocp_hinted: bool,
     #[is(true)] pub holstered: bool,
     pub keys: JsSet<String>,
     pub codes: JsSet<String>,
@@ -767,7 +753,7 @@ pub struct Player {
     pub hand_wait: f64,
     pub near_sel: i32,
     #[is(String::from(""))] pub near_key: String,
-    #[is(crate::game::PlayerSel { down_t: -1.0, open: false, moved: false, wheel_acc: 0.0, run_key: String::from(""), move_latch: 0.0, word: String::from(""), word_t: -1000000000.0, file_t: -1000000000.0, ring: None })] pub sel: crate::game::PlayerSel,
+    #[is(crate::game::PlayerSel { down_t: -1.0, open: false, moved: false, wheel_acc: 0.0, run_key: String::from(""), move_latch: 0.0, word: String::from(""), word_t: -1000000000.0, word_kind: None, ring: None })] pub sel: crate::game::PlayerSel,
     #[is(1.0)] pub pace: f64,
     pub nv: bool,
     pub nv_amount: f64,
@@ -874,7 +860,8 @@ pub struct PlayerSel {
     pub move_latch: f64,
     pub word: String,
     pub word_t: f64,
-    pub file_t: f64,
+    /// the word is why a press did nothing (`interact::refuse`), and this is what it is about. None: an empty tap's, which the view reads off what he stands beside
+    pub word_kind: Option<crate::view::ThingKind>,
     pub ring: Option<crate::game::PlayerSelRing>,
 }
 
@@ -1087,7 +1074,6 @@ pub struct Guard {
     #[is(1.0)] pub fire_cd: f64,
     #[is(-1.0)] pub reload_t: f64,
     pub carbine: bool,
-    pub sup: crate::suppression::Sup,
     pub aim: crate::aim::AimState,
     pub react_t: f64,
     pub search_t: f64,
@@ -1106,11 +1092,7 @@ pub struct Guard {
     pub big_out: Option<crate::game::GuardBigOut>,
     pub work_stow: Option<crate::game::GuardWorkStow>,
     #[is(true)] pub light_lit_at_loss: bool,
-    pub dazzled_at: Option<V3>,
-    #[is(-1.0)] pub dazzled_until: f64,
-    #[is(-1.0)] pub stagger_until: f64,
     #[is(-1.0)] pub door_down_until: f64,
-    #[is(-1.0)] pub hurt_at: f64,
     pub saw_player_this_frame: bool,
     pub last_pos: V3,
     pub stuck_t: f64,

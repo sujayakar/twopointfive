@@ -47,6 +47,8 @@ Each crate is its own cargo workspace and target folder.
 
 - **Tables by id.** `g.ch`, `g.gd`, `g.dr`, `g.pl`, `g.cv`, `g.fa`, and the rest in `g.tab`. An id comes from the `id!` list in `ids.rs`; things name
   each other by id, never by reference. `Tab` only grows, so an id never dangles (`g.tab.frame_boxes` alone deals rows again).
+- **A part of a man.** What any man has is a table by his body (`CharId`), whoever he is: `g.cond[c]` is how he is. Made with him (`man_new`), and asked by a
+  question (`condition::down(g, c)`), never by what kind of man he is (`Character.who`).
 - **A module's state.** `g.m.<module>` (a `Mods` field), or a field of `Game` where many read it. Its numbers are `g.k.<table>`.
 - **A slot.** `crate::owned::Owned` holds state one module reads, of a type declared up in the rules, so that changing it does not rebuild `game_types`:
   `g.ctl`, `g.feel`, `g.mark_set`, `g.ray_grid`.
@@ -172,7 +174,7 @@ The rules were machine-translated from TypeScript. None of these is a pattern fo
 | `f64` for counts and kinds (`box_count`) | Match it in a field others read. A new type uses `bool`, `u32`, an enum, an id. Mending one moves pins: its own commit |
 | `JsMap`, `JsSet` | Keep them: the walk's order is play. Use a `Tab` or `Vec` where ids are dense. Swap one only if the pins hold |
 | `Option<f64>` arguments, `js::truthy(x)`, `js::or(x, d)` | Match when calling. A new function takes plain arguments and compares |
-| `c_2`, `g_2`, `weather_set_wet_2`, `GameMessagesItem`, `DressModDRESS` | Rename when you are there. A part's field name is a line in the pins: `gate pin` |
+| `c_2`, `g_2`, `weather_set_wet_2`, `DressModDRESS` | Rename when you are there. A part's field name is a line in the pins: `gate pin` |
 | `&mut Game` on a function that only reads | `tools/fold/readers.sh --soften`, or by hand. A new one takes `&Game` |
 | comments that cite a deleted file, "the TypeScript", or "ON in the page" | Trust the statements. Mend a false comment when you are in the file |
 | `Opaque`, `FnField`, a `todo!()` body in `render_*/`, a module of only types | Call none: `todo!()` panics. The crates `#![allow(dead_code)]`, so use the fold tool |

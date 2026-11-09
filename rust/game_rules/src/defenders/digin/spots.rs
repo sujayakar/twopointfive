@@ -68,14 +68,14 @@ pub(super) fn log(g: &mut Game, gd: Option<GuardId>, what: &str) {
 pub(super) fn listeners(g: &mut Game) -> Vec<crate::digin::ListenersItem> {
     let mut out = Vec::new();
     for pl in crate::seats::men(g) {
-        if !g.pl[pl].down {
+        if !crate::condition::down(g, g.pl[pl].ch) {
             let c = g.pl[pl].ch;
             out.push(crate::digin::ListenersItem { gd: None, head: at(g.ch[c].pos, 1.6), vel: g.ch[c].vel });
         }
     }
     for o in g.fight.ops.iter() {
         let id = g.tab.roomfight_op[*o].gd;
-        if g.gd[id].state != crate::game::GuardState::Dead {
+        if !crate::condition::down(g, g.gd[id].ch) {
             let c = g.gd[id].ch;
             out.push(crate::digin::ListenersItem { gd: Some(id), head: at(g.ch[c].pos, 1.6), vel: g.ch[c].vel });
         }
@@ -130,7 +130,7 @@ pub(super) fn shout(g: &mut Game, gd: GuardId, text: &str, r: Option<&mut crate:
     let pos = g.ch[c].pos;
     let reach = g.k.digin.shout_m;
     if heard_by(g, pos, reach).is_some() {
-        crate::game::game_say(g, gd, text, None, None, None);
+        crate::game::game_say(g, gd, text, None, None);
         g.stats.digin.shouts += 1;
         cue(g, r, crate::digin::Cue::Shout);
         log(g, Some(gd), &alloc::format!("shouts (heard): {}", text));
@@ -373,7 +373,7 @@ pub(super) fn cover_spot(g: &mut Game, d: RoomfightDefId, m: crate::digin::Man, 
     let mut mates: Vec<Mate> = Vec::new();
     for id in g.fight.defs.clone() {
         let (x_gd, x_room, x_station) = { let x = &g.tab.roomfight_def[id]; (x.gd, x.room, x.station) };
-        if id == d || g.gd[x_gd].state == crate::game::GuardState::Dead || x_room != Some(room) { continue; }
+        if id == d || crate::condition::down(g, g.gd[x_gd].ch) || x_room != Some(room) { continue; }
         let row = state_of(g).men.get(x_gd).copied();
         let p = match row.and_then(|m| m.spot) { Some(s) => s, None => x_station };
         let entry = match row { Some(m) if m.phase != crate::digin::Phase::Idle => m.entry, _ => -1.0 };
@@ -444,7 +444,7 @@ pub(super) fn wants_deep(g: &Game, d: RoomfightDefId, r: &crate::digin::RoomSt) 
     let me = g.tab.roomfight_def[d].gd;
     let mut at_ = 0usize;
     for id in r.men.iter() {
-        if g.gd[*id].state == crate::game::GuardState::Dead { continue; }
+        if crate::condition::down(g, g.gd[*id].ch) { continue; }
         if *id == me { return at_ % 2 == 1; }
         at_ += 1;
     }
@@ -529,7 +529,7 @@ pub(super) fn scrape(g: &mut Game, gd: GuardId, m: crate::digin::Man, r: Option<
             rm.callout = true;
             g.stats.digin.callouts += 1;
             let line = one_of(g, crate::dice::Who::Man(gd), &["movement inside. they're blocking the door.", "furniture moving in there. they know we're coming."]);
-            crate::game::game_say(g, by, line, Some(true), None, None);
+            crate::game::game_say(g, by, line, Some(true), None);
             log(g, Some(by), "calls the furniture he hears");
         }
     }

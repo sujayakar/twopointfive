@@ -51,7 +51,7 @@ fn bark(g: &mut crate::game::Game, gd: GuardId, kind: crate::morale::LineKind, r
     pool.extend_from_slice((if g.gd[gd].team != crate::teams::Team::Guard { l.they } else { l.he }).unwrap_or(&[]));
     let n = pool.len() as f64;
     let i = js::rem(m::floor(crate::dice::draw_of(g, "morale::bark#1", gd) * n), n);
-    crate::game::game_say(g, gd, pool[i as usize], Some(radio), None, None);
+    crate::game::game_say(g, gd, pool[i as usize], Some(radio), None);
     g.m.morale.state_of.get_mut(gd).unwrap().bark = 0.0;
     if radio { g.stats.morale.calls += 1; } else { g.stats.morale.shouts += 1; }
     true
@@ -75,7 +75,7 @@ fn head_of(g: &crate::game::Game, c_2: CharId) -> V3 {
 /// a man this file is about at all: a living defender or a man of the night staff (morale.ts ours)
 fn ours(g: &crate::game::Game, gd: GuardId) -> bool {
     let m_ = &g.gd[gd];
-    m_.state != crate::game::GuardState::Dead && m_.civ.is_none() && (m_.team == crate::teams::Team::Hostile || m_.team == crate::teams::Team::Guard)
+    !g.cond[m_.ch].down && m_.civ.is_none() && (m_.team == crate::teams::Team::Hostile || m_.team == crate::teams::Team::Guard)
 }
 
 /// a man of the hostage rescue's cast (morale.ts rescued)
@@ -207,7 +207,7 @@ fn stand(g: &mut crate::game::Game, gd: GuardId, first: Option<bool>) {
         g.m.morale.state_of.get_mut(gd).unwrap().green = green;
     }
     let l = if g.m.morale.state_of.get(gd).unwrap().green { leader_of(g, gd) } else { None };
-    let down = match l { Some(l) => g.gd[l].state == crate::game::GuardState::Dead, None => false };
+    let down = match l { Some(l) => crate::condition::down(g, g.gd[l].ch), None => false };
     let r = g.m.morale.state_of.get_mut(gd).unwrap();
     r.leader_down = down;
     if !down { r.lost = false; }
@@ -404,7 +404,7 @@ fn seen_by(g: &mut crate::game::Game, gd: GuardId, hole: Option<V3>) -> Vec<Char
     let team = g.gd[gd].team;
     let p = crate::seats::faced_man(g, gd);   // (the player he has in mind: asked as a side)
     let pc = g.pl[p].ch;
-    if crate::teams::is_hostile(g, team, crate::teams::Team::Player) && !g.pl[p].down && !g.player_invisible {
+    if crate::teams::is_hostile(g, team, crate::teams::Team::Player) && !crate::condition::down(g, g.pl[p].ch) && !g.player_invisible {
         let v = crate::guards::can_see(g, gd);
         let (mut visible, mut dist) = (v.visible, v.dist);
         if !visible {
@@ -421,7 +421,7 @@ fn seen_by(g: &mut crate::game::Game, gd: GuardId, hole: Option<V3>) -> Vec<Char
         let o = g.guards[i];
         i += 1;
         let ot = g.gd[o].team;
-        if g.gd[o].state == crate::game::GuardState::Dead || !crate::teams::is_hostile(g, team, ot) { continue; }
+        if crate::condition::down(g, g.gd[o].ch) || !crate::teams::is_hostile(g, team, ot) { continue; }
         let oc = g.gd[o].ch;
         let v = crate::guards::can_see_char(g, gd, oc, false);
         let (mut visible, mut dist) = (v.visible, v.dist);
@@ -467,7 +467,7 @@ fn clear_run(g: &mut crate::game::Game, gd: GuardId, dx: f64, dz: f64, max: f64)
         if crate::scene_collision::solid_blocked(g, [p[0], 0.45, p[2]], [p[0] + dx * r, 0.45, p[2] + dz * r], None) || crate::scene_collision::solid_blocked(g, [p[0], 1.0, p[2]], [p[0] + dx * r, 1.0, p[2] + dz * r], None) { break; }
         let mut blocked = false;
         for &o in g.guards.iter() {
-            if o != gd && g.gd[o].state != crate::game::GuardState::Dead && flat(g.ch[g.gd[o].ch].pos, [x, 0.0, z]) < 0.6 { blocked = true; break; }
+            if o != gd && !crate::condition::down(g, g.gd[o].ch) && flat(g.ch[g.gd[o].ch].pos, [x, 0.0, z]) < 0.6 { blocked = true; break; }
         }
         if blocked { break; }
         far = s;

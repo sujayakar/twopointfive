@@ -373,8 +373,8 @@ pub fn doze_tick(g: &mut crate::game::Game, dt: f64) {
         let Some(mut d) = g.m.doze.rec.get(gd).copied() else { continue };
         if d.phase == Phase::No || d.phase == Phase::Spent { continue; }
         let c = g.gd[gd].ch;
-        if !g.guards.contains(&gd) || g.gd[gd].state == crate::game::GuardState::Dead {
-            if g.gd[gd].state != crate::game::GuardState::Dead { dark(g, gd); } else { left_lit(g, gd); }
+        if !g.guards.contains(&gd) || crate::condition::down(g, g.gd[gd].ch) {
+            if !crate::condition::down(g, g.gd[gd].ch) { dark(g, gd); } else { left_lit(g, gd); }
             if seated(d) { up(g, gd); }
             drop(g, gd);
             continue;
@@ -515,7 +515,7 @@ pub fn doze_tick(g: &mut crate::game::Game, dt: f64) {
                 let t = g.time;
                 d.say = t + span(g, crate::dice::Who::Man(gd), &every);
                 flush(g, gd, d);
-                crate::game::game_say(g, gd, &lines[k], Some(false), Some(false), Some(false));
+                crate::game::game_say(g, gd, &lines[k], Some(false), Some(false));
                 g.stats.doze.lines += 1;
             }
             continue;

@@ -332,7 +332,7 @@ pub fn fog_of_war_sighting(g: &crate::game::Game, gd: GuardId) -> Option<crate::
 pub fn fog_of_war_drawn(g: &crate::game::Game, gd: GuardId) -> bool {
     if !fog_of_war_active(g) || fog_of_war_on_team(g, gd) { return true; }
     let r = match g.fog_of_war.recs.get(gd).copied() { Some(r) => r, None => return false };
-    if r.seen || (g.gd[gd].state == crate::game::GuardState::Dead && r.body) { return true; }
+    if r.seen || (crate::condition::down(g, g.gd[gd].ch) && r.body) { return true; }
     let since = g.time - r.t;
     (since >= 0.0 && since < g.k.fog.linger) || fog_of_war_fired_on(g, gd) || r.framed == Some(true)
 }
@@ -355,7 +355,7 @@ pub fn fog_of_war_last_seen(g: &crate::game::Game) -> Vec<crate::view::SeenMark>
     let mut out = Vec::new();
     if !fog_of_war_active(g) || !(secs > 0.0 || wand) { return out; }
     for &gd in g.guards.iter() {
-        if g.gd[gd].state == crate::game::GuardState::Dead || !crate::teams::is_hostile(g, g.gd[gd].team, crate::teams::Team::Player) || !fog_of_war_hides(g, gd) { continue; }
+        if crate::condition::down(g, g.gd[gd].ch) || !crate::teams::is_hostile(g, g.gd[gd].team, crate::teams::Team::Player) || !fog_of_war_hides(g, gd) { continue; }
         let Some(r) = g.fog_of_war.recs.get(gd) else { continue };
         let Some(at) = r.at else { continue };
         let age = g.time - r.t;

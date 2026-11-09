@@ -36,7 +36,7 @@ fn blank() -> crate::startle::St {
 /// THE START, for any caller: he jolts toward `at`; for `secs` his gun stays down. False = not given.   (startle.ts giveStartle)
 pub fn give_startle(g: &mut crate::game::Game, gd: GuardId, at: V3, secs: Option<f64>, torch: Option<bool>) -> bool {
     let secs = secs.unwrap_or(g.k.startle.beat);
-    if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].held.is_some() || g.gd[gd].civ.is_some() || crate::owner::has(g, gd, crate::owner::by::RUNNER) { return false; }
+    if crate::condition::down(g, g.gd[gd].ch) || g.gd[gd].held.is_some() || g.gd[gd].civ.is_some() || crate::owner::has(g, gd, crate::owner::by::RUNNER) { return false; }
     if g.time < g.m.startle.state_of.get_or_insert_with(gd, blank).until { return false; }
     let c = g.gd[gd].ch;
     let torch = match torch { Some(t) => t, None => crate::guards::hand_carry(g, gd) == crate::guards::HandCarry::Torch };
@@ -80,7 +80,7 @@ pub(super) fn startle_sight(g: &mut crate::game::Game, gd: GuardId, prev: crate:
     if s.pre { s.torch = s.calm_torch; } else if s.until < 0.0 { s.torch = false; }
     if !unaware || state != crate::game::GuardState::Alert || !seen { return; }
     let calm_torch = s.calm_torch;
-    if now < g.gd[gd].dazzled_until || now < g.gd[gd].stagger_until { return; }
+    if crate::condition::is_blind(g, g.gd[gd].ch) || crate::condition::is_folded(g, g.gd[gd].ch) { return; }
     let at = if now - g.gd[gd].sight_t < 0.1 { g.gd[gd].sight_pos } else { g.gd[gd].last_known.unwrap_or(g.gd[gd].sight_pos) };
     let beat = g.k.startle.beat;
     if give_startle(g, gd, at, Some(beat), Some(calm_torch)) {
@@ -139,7 +139,7 @@ pub(super) fn startle_transition(g: &mut crate::game::Game, gd: GuardId) {
     let Some(run) = g.m.startle.state_of.get(gd).and_then(|s| s.run) else { return };
     let now = g.time;
     let m = &g.gd[gd];
-    if !g.ai_enabled || m.state != crate::game::GuardState::Alert || m.held.is_some() || m.script.is_some() || now < m.dazzled_until || now < m.stagger_until { stop(g, gd, false); return; }
+    if !g.ai_enabled || m.state != crate::game::GuardState::Alert || m.held.is_some() || m.script.is_some() || crate::condition::is_blind(g, m.ch) || crate::condition::is_folded(g, m.ch) { stop(g, gd, false); return; }
     let pos = g.ch[m.ch].pos;
     let (stuck_secs, stuck_m, run_secs) = (g.k.startle.stuck_secs, g.k.startle.stuck_m, g.k.startle.run_secs);
     let s = g.m.startle.state_of.get_mut(gd).unwrap();
@@ -177,7 +177,7 @@ pub(super) fn startle_propose(g: &crate::game::Game, gd: GuardId) -> Option<crat
 /// The beat is over: he draws (the fight as it was, from here) or he runs.   (startle.ts choose)
 fn choose(g: &mut crate::game::Game, gd: GuardId) {
     let now = g.time;
-    if g.gd[gd].state != crate::game::GuardState::Alert || g.gd[gd].held.is_some() || now < g.gd[gd].dazzled_until || now < g.gd[gd].stagger_until { return; }
+    if g.gd[gd].state != crate::game::GuardState::Alert || g.gd[gd].held.is_some() || crate::condition::is_blind(g, g.gd[gd].ch) || crate::condition::is_folded(g, g.gd[gd].ch) { return; }
     if runs(g, gd) {
         g.stats.startle.ran += 1;
     } else {
@@ -185,7 +185,7 @@ fn choose(g: &mut crate::game::Game, gd: GuardId) {
         let until = g.time + g.k.startle.draw;
         let row = g.m.startle.state_of.get_mut(gd).unwrap();
         row.draw_until = until;
-        if row.call { crate::game::game_say(g, gd, "CONTACT!", Some(false), Some(false), Some(false)); }
+        if row.call { crate::game::game_say(g, gd, "CONTACT!", Some(false), Some(false)); }
     }
     g.m.startle.state_of.get_mut(gd).unwrap().call = false;
 }

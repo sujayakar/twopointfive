@@ -217,7 +217,7 @@ pub(super) fn standoff_upkeep(g: &mut crate::game::Game, gd: GuardId) -> Option<
     } else if g.gd[gd].state != crate::game::GuardState::Alert {
         Some("state")
     } else if p.map_or(true, |q| q.held != pair) {
-        Some(if g.gd[pair].state == crate::game::GuardState::Dead { "dead" } else if g.pl[g.player].down { "samDown" } else { "free" })
+        Some(if crate::condition::down(g, g.gd[pair].ch) { "dead" } else if crate::condition::down(g, g.pl[g.player].ch) { "samDown" } else { "free" })
     } else if g.time - g.tab.guards_standoff[s].seen_t > STANDOFF_LOSE_SECS && !crate::gunhold::standoff_fix_kept(g, gd) {
         Some("lost")
     } else {
@@ -234,7 +234,7 @@ pub(super) fn standoff_upkeep(g: &mut crate::game::Game, gd: GuardId) -> Option<
     let watched = g.time - seen_t < 0.6;
     if why == "dead" && watched {
         let b = pair;
-        if g.gd[b].state == crate::game::GuardState::Dead {
+        if crate::condition::down(g, g.gd[b].ch) {
             if g.guards.contains(&b) {
                 if !g.gd[b].found {
                     g.gd[b].found = true;
@@ -290,9 +290,9 @@ pub fn can_see(g: &mut crate::game::Game, gd: GuardId) -> crate::guards::CanSee 
 
 /// he sees a man who is up: any player, each asked of on his own seat
 pub fn sees_a_man(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    if g.seats.len() == 1 { let p = g.player; return !g.pl[p].down && can_see(g, gd).visible; }
+    if g.seats.len() == 1 { let p = g.player; return !crate::condition::down(g, g.pl[p].ch) && can_see(g, gd).visible; }
     for s in g.seats.clone() {
-        if crate::seats::with_seat(g, s, &mut |g: &mut Game| { let p = g.player; !g.pl[p].down && { let pc = g.pl[p].ch; can_see_char(g, gd, pc, true).visible } }) { return true; }
+        if crate::seats::with_seat(g, s, &mut |g: &mut Game| { let p = g.player; !crate::condition::down(g, g.pl[p].ch) && { let pc = g.pl[p].ch; can_see_char(g, gd, pc, true).visible } }) { return true; }
     }
     false
 }
@@ -414,7 +414,7 @@ pub fn eye_contact(g: &mut crate::game::Game, e: crate::guards::Eye, pc: CharId,
     let lens = crate::scene_collision::EyeContactE { pos: e.pos, look: e.look, range: e.range, half_deg: e.half_deg, near_m: e.near_m, near_deg: e.near_deg, v_half_deg: e.v_half_deg };
     let r = crate::scene_collision::eye_contact(g, lens, tgt, tgt2, unseen, smoked, through);
     let mut visible = r.visible;
-    if visible && is_player && (g.player_invisible || crate::seats::man_of(g, Some(pc)).map_or(g.pl[g.player].down, |p| g.pl[p].down)) { visible = false; }
+    if visible && is_player && (g.player_invisible || crate::seats::man_of(g, Some(pc)).map_or(crate::condition::down(g, g.pl[g.player].ch), |p| crate::condition::down(g, g.pl[p].ch))) { visible = false; }
     crate::guards::EyeContact { visible, dist: r.dist, in_cone: r.in_cone }
 }
 
@@ -522,7 +522,7 @@ pub(super) fn unstick_begin(g: &mut crate::game::Game, gd: GuardId) -> crate::gu
     let c = g.gd[gd].ch;
     if live_leg(g, gd).is_some() { return crate::guards::UnstickBegin::Leg; }
     let pos = g.ch[c].pos;
-    if g.gd[gd].state == crate::game::GuardState::Dead
+    if crate::condition::down(g, g.gd[gd].ch)
         || g.gd[gd].held.is_some()
         || !stranded_at(g, pos[0], pos[2])
         || g.time < g.m.guards.unstick_retry_at.get(gd).copied().unwrap_or(-1.0)

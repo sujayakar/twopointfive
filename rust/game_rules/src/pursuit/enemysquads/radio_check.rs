@@ -201,7 +201,7 @@ pub(super) fn back(g: &mut crate::game::Game, q: EnemysquadsSquadId, s: GuardId,
     } else {
         format!("{}: they've left it — back on our doors!", q_name)
     };
-    crate::game::game_say(g, gd, &line, Some(true), None, None);
+    crate::game::game_say(g, gd, &line, Some(true), None);
     let (s_aim, since) = {
         let row = sent_of(g, q, s);
         (row.aim, row.set_t.unwrap_or(row.t0))
@@ -454,7 +454,7 @@ pub(super) fn look_out(g: &mut crate::game::Game) {
     let was_line = format!("{}: gone quiet — {} of us go and look!", name, n);
     let line = crate::words::wg(g, &now_line, &was_line);
     let first = def!(g, bgo[0]).gd;
-    crate::game::game_say(g, first, &line, Some(true), None, None);
+    crate::game::game_say(g, first, &line, Some(true), None);
 }
 /// not one who knows a covered lane lies that way   (enemysquads.ts lookOut's `may`)
 fn may_look(g: &mut Game, d: RoomfightDefId, at: V3) -> bool {
@@ -629,7 +629,7 @@ pub(super) fn went_silent(g: &mut crate::game::Game, q: EnemysquadsSquadId, m: G
     );
     note(g, Some(m), &text);
 }
-/// A line of the check on the squad's net: the log's row, the debrief's and the strip's, never his bubble.   (enemysquads.ts onNet)
+/// A line of the check on the squad's net: the debrief's row and the strip's, never his bubble.   (enemysquads.ts onNet)
 pub(super) fn on_net(g: &mut crate::game::Game, gd: GuardId, text: &str, cls: Option<f64>, chron: Option<bool>) {
     let cls = match cls {
         Some(c) => c,
@@ -643,8 +643,6 @@ pub(super) fn on_net(g: &mut crate::game::Game, gd: GuardId, text: &str, cls: Op
     if chron {
         let _ = crate::chronicle::chron_radio(g, gd, text);
     }
-    let line = format!("{} (radio): {}", g.gd[gd].callsign, text);
-    crate::game::game_msg(g, &line);
 }
 /// A mate at home has gunfire in his ears with a drop.   (enemysquads.ts heardFire)
 pub(super) fn heard_fire(g: &mut crate::game::Game, q: EnemysquadsSquadId, up: &[GuardId]) -> bool {
@@ -1318,13 +1316,13 @@ fn lying(g: &mut Game, q: EnemysquadsSquadId, gd: GuardId, x: Option<Enemysquads
         let men = sq!(g, x).men.clone();
         for b in men.iter() {
             let b = *b;
-            if g.gd[b].state == crate::game::GuardState::Dead && !rc!(g, q).known.has(b) && crate::guards::body_seen(g, gd, b, if around { Some(LOOK_ROUND_M) } else { None }) {
+            if crate::condition::down(g, g.gd[b].ch) && !rc!(g, q).known.has(b) && crate::guards::body_seen(g, gd, b, if around { Some(LOOK_ROUND_M) } else { None }) {
                 return Some(b);
             }
         }
         return None;
     }
-    if g.gd[who].state == crate::game::GuardState::Dead && !rc!(g, q).known.has(who) && around && crate::guards::body_seen(g, gd, who, Some(LOOK_ROUND_M)) {
+    if crate::condition::down(g, g.gd[who].ch) && !rc!(g, q).known.has(who) && around && crate::guards::body_seen(g, gd, who, Some(LOOK_ROUND_M)) {
         Some(who)
     } else {
         None

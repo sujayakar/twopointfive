@@ -174,7 +174,7 @@ pub fn update_camera(g: &mut crate::game::Game, c_2: CameraRtId, dt: f64, live: 
     let first = crate::seats::nearest_or_first(g, &d.pos);
     let (mut pc, mut seen, mut gain) = (g.pl[first].ch, false, 0.0);
     for pl in crate::seats::men(g) {
-        if g.pl[pl].down { continue; }
+        if crate::condition::down(g, g.pl[pl].ch) { continue; }
         let c = g.pl[pl].ch;
         let chest = bone_or(g, c, crate::character::Bone::Chest, [0.0, 1.1, 0.0]);
         let air = crate::sense::clear_between(g, d.pos, chest);
@@ -217,7 +217,7 @@ fn camera_alarm(g: &mut crate::game::Game, c_2: CameraRtId) {
     g.alarm.placed = true;
     for i in 0..g.guards.len() {
         let id = g.guards[i];
-        if g.gd[id].state != crate::game::GuardState::Dead && g.gd[id].held.is_none() && g.gd[id].unit.is_none() {
+        if !crate::condition::down(g, g.gd[id].ch) && g.gd[id].held.is_none() && g.gd[id].unit.is_none() {
             crate::belief::word(g, id, p);
             crate::mind::raise(g, id, 0.5, "devices");
             if g.gd[id].state == crate::game::GuardState::Patrol {
@@ -267,7 +267,7 @@ fn update_laser(g: &mut crate::game::Game, l: LaserRtId, dt: f64, live: bool) {
     let mut cut = reach;
     for pl in crate::seats::men(g) {
         if who.is_some() { break; }
-        if !g.pl[pl].down && !g.player_invisible {
+        if !crate::condition::down(g, g.pl[pl].ch) && !g.player_invisible {
             let c = g.pl[pl].ch;
             at = body_breaks(g, c, d.from, end);
             if at.is_some() { who = Some("player"); by = Some(pl); }
@@ -293,7 +293,7 @@ fn update_laser(g: &mut crate::game::Game, l: LaserRtId, dt: f64, live: bool) {
     }
     if let Some(a) = at { cut = m::min(cut, v3::dist(d.from, a)); }
     for o in g.guards.clone() {
-        if g.gd[o].state == crate::game::GuardState::Dead { continue; }
+        if crate::condition::down(g, g.gd[o].ch) { continue; }
         let c = g.gd[o].ch;
         let t = crate::character::character_ray_hit(g, c, d.from, dir, cut);
         if t >= 0.0 { cut = m::min(cut, t); }
@@ -386,7 +386,7 @@ pub fn send_to_look(g: &mut crate::game::Game, pos: V3, what: &str) -> Option<Gu
         g.gd[id].path_goal = None;
         g.gd[id].path_goal_orbit = false;
     }
-    crate::game::game_say(g, id, "copy, control — on my way", Some(true), None, None);
+    crate::game::game_say(g, id, "copy, control — on my way", Some(true), None);
     let c = g.gd[id].ch;
     let at = match g.ch[c].bones.get(crate::character::Bone::Head) { Some(p) => *p, None => g.ch[c].pos };
     crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.5), None);
@@ -394,7 +394,7 @@ pub fn send_to_look(g: &mut crate::game::Game, pos: V3, what: &str) -> Option<Gu
 }
 /// Control's voice on the net.   (devices.ts control)
 fn control(g: &mut crate::game::Game, text: &str) {
-    crate::game::game_msg(g, &format!("radio: CONTROL — {}", text));
+    crate::cues::cues_radio(g, &format!("CONTROL — {}", text));
     crate::audio_iface::game_audio_like_play(g, "radio", None, Some(0.55), None);
     g.devices.radio_count += 1.0;
     let mut row: JsMap<String, Option<crate::chronicle::ChronicleDataValue>> = JsMap::new();
@@ -436,12 +436,12 @@ pub fn learn_code(g: &mut crate::game::Game, lock_id: &str, how: crate::devices:
     let k = match g.devices.keypads.iter().find(|k| k.def.name == lock_id) { Some(k) => k.clone(), None => return false };
     g.pl[pl].codes.add(String::from(lock_id));
     let sign = callsign_of(g, from);
-    let who = match how {
-        LearnCodeHow::Told => format!("{} gave up", match &sign { Some(s) => s.as_str(), None => "he" }),
-        LearnCodeHow::Overheard => String::from("overheard"),
-    };
     let door_says = pad_door_name(g, &k);
-    crate::game::game_msg(g, &format!("{} the {} code — {}", who, door_says, spell(&k.def.code)));
+    // (not with a man in his arm: Sam's bubble holds back the next question, and the man's own answer has just said it)
+    if g.pl[pl].holding.is_none() {
+        let time = g.time;
+        crate::player::say_over_sam(g, &format!("got the {} code.", door_says), time);
+    }
     let door_name = g.dr[k.door].def.name.clone();
     let row = data(&[("door", text(&door_name)), ("how", text(how.as_str())), ("from", opt_text(&sign))]);
     let at = from.map(|f| g.ch[g.gd[f].ch].pos);
@@ -460,7 +460,7 @@ fn overhear(g: &mut crate::game::Game, speaker: GuardId, lock_id: &str) -> bool 
 /// … by the man of the seat that stands; `told`: another man has already learnt it just now, and the telling is not said again
 fn overhear_here(g: &mut crate::game::Game, speaker: GuardId, lock_id: &str, told: bool) -> bool {
     let pl = g.player;
-    if g.pl[pl].down || g.pl[pl].codes.has(String::from(lock_id)) { return g.pl[pl].codes.has(String::from(lock_id)); }
+    if crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].codes.has(String::from(lock_id)) { return g.pl[pl].codes.has(String::from(lock_id)); }
     let mouth = bone_or(g, g.gd[speaker].ch, crate::character::Bone::Head, [0.0, 1.6, 0.0]);
     let ear_up = if g.pl[pl].crouch { 1.0 } else { 1.6 };
     let ear = bone_or(g, g.pl[pl].ch, crate::character::Bone::Head, [0.0, ear_up, 0.0]);
@@ -498,7 +498,7 @@ pub fn start_coding(g: &mut crate::game::Game, d: DoorId) -> bool {
     let st = pad_state(g, &crate::seats::here(g), d, here);
     let p = &mut g.pl[pl];
     match st {
-        Some(s) if s.known && p.coding.is_none() && !p.down => {}
+        Some(s) if s.known && p.coding.is_none() && !g.cond[p.ch].down => {}
         _ => return false,
     }
     p.coding = Some(d);
@@ -516,8 +516,6 @@ pub fn deny_pad(g: &mut crate::game::Game, d: DoorId) {
     let (time, who, serial) = (g.time, g.ch[c].id, g.serial());
     g.events.push(crate::game::GameEvent { kind: crate::director::EventKind::Door, pos: [k.def.pos[0], 0.0, k.def.pos[2]], time, loud: false, level: Some(DENY_LEVEL), who: Some(who), serial, ..crate::game::GameEvent::default() });
     g.pl[pl].noise = m::max(g.pl[pl].noise, DENY_LEVEL);
-    let door_says = pad_door_name(g, &k);
-    crate::game::game_msg(g, &format!("the {} pad needs a code you don't have, but somebody on this floor knows it", door_says));
     let here = g.ch[c].pos;
     let where_ = crate::chronicle::room_of(g, here);
     devices_note(g, &DevicesNoteR {  });
@@ -538,7 +536,7 @@ fn update_coding(g: &mut crate::game::Game, dt: f64) {
     let door_at = crate::doors::door_pos(g, d);
     let in_reach = m::min(v3::dist_xz(door_at, p), v3::dist_xz(g.dr[d].frame_centre, p)) < PAD_REACH + 0.25;
     let k = match pad {
-        Some(k) if !g.pl[pl].down && in_reach && g.pl[pl].holding.is_none() && g.pl[pl].takedown.is_none() => k,
+        Some(k) if !crate::condition::down(g, g.pl[pl].ch) && in_reach && g.pl[pl].holding.is_none() && g.pl[pl].takedown.is_none() => k,
         _ => { stop_coding(g); return; }
     };
     if !crate::doors::doors_locked_out(g, d, p, None) { stop_coding(g); return; }
@@ -556,8 +554,6 @@ fn update_coding(g: &mut crate::game::Game, dt: f64) {
     keys.add(g.dr[d].lock_id.clone());
     let who = g.ch[g.pl[pl].ch].id;
     crate::doors::doors_use(g, d, p, who, Some(&keys));
-    let door_says = pad_door_name(g, &k);
-    crate::game::game_msg(g, &format!("{} — the {} takes it", spell(&k.def.code), door_says));
     let door_name = g.dr[d].def.name.clone();
     let row = data(&[("door", text(&door_name))]);
     let centre = g.dr[d].frame_centre;

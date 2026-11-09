@@ -23,10 +23,10 @@ fn state_bytes(p: &mut Play) -> usize {
 fn ten_restarts_hold_no_more_than_one() {
     let mut p = pass();
     p.run(4.0);
-    assert!(control::restart(&mut p.g, None));
+    assert!(control::restart(&mut p.g));
     p.run(4.0);
     let (one, chars) = (state_bytes(&mut p), p.g.ch.len());
-    for _ in 0..9 { assert!(control::restart(&mut p.g, None)); p.run(4.0); }
+    for _ in 0..9 { assert!(control::restart(&mut p.g)); p.run(4.0); }
     let (ten, later) = (state_bytes(&mut p), p.g.ch.len());
     assert_eq!(later, chars, "the men's rows went on growing");
     assert!(ten < one + one / 50, "the state grew from {one} to {ten} bytes over nine restarts");
@@ -43,7 +43,7 @@ fn an_evening_keeps_its_switches_and_its_die() {
     p.run(1.0);
     for _ in 0..5 { game::math_dice::sim_random(&mut p.g); }   // (the die is ahead of where the first step had it)
     let (floor, rolled, serial, restarts, run) = (p.g.tune.vis_floor, sim::state::state_read(p.g.sim).dice.n, p.g.serial_next, p.g.stats.cleanrestart.restarts, p.g.mission.serial);
-    assert!(control::restart(&mut p.g, None));
+    assert!(control::restart(&mut p.g));
     assert!(p.g.god_mode && p.g.tune.vis_floor == floor, "the switches went back with the game");
     assert!(sim::state::state_read(p.g.sim).dice.n >= rolled, "the die went back with the game");
     assert!(p.g.serial_next >= serial, "a number would be dealt twice");
@@ -68,7 +68,7 @@ fn shift_enter_starts_it_over_as_the_step_ends() {
     assert!(p.told.iter().any(|t| t.back && t.cut), "the host is told to take it whole and cut the picture");
     assert!(p.g.time < 0.1, "the clock did not start over: {}", p.g.time);
     p.run(0.5);
-    assert_eq!(p.g.saves.again, None);
+    assert_eq!(p.g.saves.again, false);
 }
 
 /// THE RULE: the key on a game's very first step starts it over once, and the game goes on from there.
@@ -85,7 +85,7 @@ fn the_key_on_the_first_step_restarts_once() {
     p.run(0.5);
     assert!(p.g.time > 0.4, "the clock did not go on: {}", p.g.time);
     p.run(2.0);
-    assert!(control::restart(&mut p.g, None));
+    assert!(control::restart(&mut p.g));
     assert_eq!((game::scenario_run::active_scenario(&p.g), p.g.ch.len()), (active, chars), "the mission did not stand again");
     assert!(p.g.time < 0.1, "the clock did not start over: {}", p.g.time);
 }
@@ -99,7 +99,7 @@ fn a_switch_set_in_a_try_does_not_stop_the_mission_coming_back() {
     let (active, guards) = (game::scenario_run::active_scenario(&p.g), p.g.guards.len());
     p.g.ai_enabled = false;
     p.g.tune.teams = false;
-    assert!(control::restart(&mut p.g, None));
+    assert!(control::restart(&mut p.g));
     assert_eq!((game::scenario_run::active_scenario(&p.g), p.g.guards.len()), (active, guards), "the mission did not stand again");
     assert!(!p.g.ai_enabled && !p.g.tune.teams, "the switches went back with the game");
 }
@@ -113,7 +113,7 @@ fn the_hour_goes_back() {
     p.run(0.5);
     assert!(game::hours::apply_hour(&mut p.g, game::hours::HourId::Midday), "the hour did not take");
     assert_ne!(game::hours::told::told(&p.g).zenith, night.zenith);
-    assert!(control::restart(&mut p.g, None));
+    assert!(control::restart(&mut p.g));
     assert_eq!(game::hours::told::told(&p.g), night);
 }
 
@@ -124,7 +124,7 @@ fn a_lever_of_the_difficulty_goes_over_whole() {
     let mut p = pass();
     let was = p.g.k.fog.cone;
     game::difficulty::set_cone_visit(&mut p.g, Some(!was));
-    assert!(control::restart(&mut p.g, None));
+    assert!(control::restart(&mut p.g));
     assert_eq!((p.g.m.difficulty.cone_visit, p.g.k.fog.cone), (Some(!was), !was));
 }
 
@@ -144,7 +144,7 @@ fn a_card_reaches_its_man_on_every_restart() {
         p.mates().into_iter().filter(|&m| game::wandorder::carries(&p.g, m)).count()
     };
     for tries in 1..=3 {
-        assert!(control::restart(&mut p.g, None));
+        assert!(control::restart(&mut p.g));
         p.run(0.5);
         assert_eq!(carried(&p), 1, "try {tries}: one man carries the wand on the card");
         // (the words of the start once more, on the mission that is up: it stands as it stands)
@@ -166,10 +166,10 @@ fn the_players_own_card_reaches_him_changed() {
         let bangs = p.g.m.kit.kit.members[0].bangs;
         assert!(game::kit::kit_set(&mut p.g, 0.0, KitField::Bangs, &KitValue::Num((bangs - 1.0).max(0.0))) && game::kit::kit_set(&mut p.g, 0.0, KitField::Wand, &KitValue::Bool(true)));
     }
-    assert!(control::restart(&mut p.g, None));
+    assert!(control::restart(&mut p.g));
     assert!(carried(&p), "his card gives him the wand and he has none");
     assert!(game::kit::kit_set(&mut p.g, 0.0, KitField::Wand, &KitValue::Bool(false)));
-    assert!(control::restart(&mut p.g, None));
+    assert!(control::restart(&mut p.g));
     assert!(!carried(&p), "his card takes the wand away and he has it still");
 }
 
@@ -185,7 +185,7 @@ fn every_kind_of_mission_starts_over_as_it_started() {
         assert!(active.is_some(), "{link}: no mission is up");
         p.run(2.0);
         for tries in 1..=2 {
-            assert!(control::restart(&mut p.g, None));
+            assert!(control::restart(&mut p.g));
             assert_eq!(game::scenario_run::active_scenario(&p.g), active, "{link}: try {tries}");
             p.run(1.0);
             assert_eq!(count(&p), first, "{link}: try {tries}: (guards, mates, civilians, characters, doors, statics, lights, cameras)");

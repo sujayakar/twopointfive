@@ -27,7 +27,7 @@ impl Reaction for Rule {
         match o {
             Outcome::Arrived => crate::suppression::end_displace(g, gd, "there"),
             Outcome::GoingNowhere => crate::suppression::end_displace(g, gd, "going nowhere"),
-            Outcome::Moving => if g.time - g.gd[gd].sup.displaced_at > g.k.suppression.displace_cap_secs { crate::suppression::end_displace(g, gd, "out of time"); },
+            Outcome::Moving => if g.time - g.cond[g.gd[gd].ch].sup.displaced_at > g.k.suppression.displace_cap_secs { crate::suppression::end_displace(g, gd, "out of time"); },
             Outcome::Down | Outcome::Script(_) | Outcome::Left => {}
         }
     }
@@ -39,11 +39,11 @@ fn asked(g: &mut Game, gd: GuardId, dt: f64) -> Option<TakeCover> {
     if matches!(now, HeadDown::None) { return None; }
     let fire_wait = g.k.suppression.head_down_delay;
     // where the rounds came from, while he still remembers
-    let threat = g.gd[gd].sup.src.filter(|_| g.time - g.gd[gd].sup.src_t < g.k.suppression.src_memory_secs);
+    let threat = g.cond[g.gd[gd].ch].sup.src.filter(|_| g.time - g.cond[g.gd[gd].ch].sup.src_t < g.k.suppression.src_memory_secs);
     if matches!(now, HeadDown::Down) { return Some(TakeCover { fire_wait, threat, ..TakeCover::down() }); }
-    let cover = g.gd[gd].sup.cover.expect("a man shifting has his cover spot");
+    let cover = g.cond[g.gd[gd].ch].sup.cover.expect("a man shifting has his cover spot");
     // (while he cannot see or is reeling he goes nowhere, so that time is no part of what the shift may take: its clock waits with him)
-    if super::man::blind(g, gd) || super::man::staggered(g, gd) { g.gd[gd].sup.displaced_at += dt; }
+    if super::man::blind(g, gd) || super::man::staggered(g, gd) { g.cond[g.gd[gd].ch].sup.displaced_at += dt; }
     let pace = g.tune.guard_investigate * g.k.suppression.displace_pace;
     Some(TakeCover { crouch: g.k.suppression.displace_crouch, fire_wait, threat, ..TakeCover::to(cover, pace) })
 }

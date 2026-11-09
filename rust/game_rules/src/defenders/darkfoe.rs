@@ -31,7 +31,7 @@ fn dark_foe_ruled(g: &crate::game::Game, gd: GuardId) -> bool {
         Some(u) if u.light => return false,
         Some(_) => {}
     }
-    if g.gd[gd].state == crate::game::GuardState::Dead { return false; }
+    if crate::condition::down(g, g.gd[gd].ch) { return false; }
     let c = g.gd[gd].ch;
     if !g.ch[c].alive { return false; }
     let team = g.gd[gd].team;
@@ -101,7 +101,7 @@ fn has_word(g: &mut crate::game::Game, gd: GuardId) -> bool {
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        if o == gd || g.gd[o].team != team || g.gd[o].state == crate::game::GuardState::Dead { continue; }
+        if o == gd || g.gd[o].team != team || crate::condition::down(g, g.gd[o].ch) { continue; }
         if !g.m.darkfoe.state_of.get(o).map_or(false, |s| s.knows) || !dark_foe_lit(g, o) { continue; }
         if !g.tab.light[g.gd[o].flashlight].enabled { continue; }
         let oc = g.gd[o].ch;
@@ -161,8 +161,8 @@ fn in_room(g: &mut crate::game::Game, d: RoomfightDefId, p: V3) -> bool {
 fn threat_of(g: &crate::game::Game, d: RoomfightDefId) -> V3 {
     let gd = g.tab.roomfight_def[d].gd;
     if g.time - g.gd[gd].sight_t < 6.0 { return g.gd[gd].sight_pos; }
-    if let Some(src) = g.gd[gd].sup.src {
-        if g.time - g.gd[gd].sup.src_t < 6.0 { return src; }
+    if let Some(src) = g.cond[g.gd[gd].ch].sup.src {
+        if g.time - g.cond[g.gd[gd].ch].sup.src_t < 6.0 { return src; }
     }
     let row = &g.tab.roomfight_def[d];
     let mut bi: Option<usize> = None;
@@ -225,7 +225,7 @@ fn free(g: &mut Game, d: RoomfightDefId, threat: V3, far: f64, p: V3) -> bool {
     }
     if !(v3::dist_xz(p, threat) >= far) { return false; }
     !g.guards.iter().any(|&o| {
-        if o == gd || g.gd[o].state == crate::game::GuardState::Dead { return false; }
+        if o == gd || crate::condition::down(g, g.gd[o].ch) { return false; }
         let sent = g.m.darkfoe.state_of.get(o).and_then(|s| s.to);
         v3::dist_xz(g.ch[g.gd[o].ch].pos, p) < 0.9 || sent.map_or(false, |t| v3::dist_xz(t, p) < 0.9)
     })
@@ -264,7 +264,7 @@ fn dark_foe_spot(g: &mut crate::game::Game, d: RoomfightDefId) -> Option<crate::
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        if o == gd || g.gd[o].team != team || g.gd[o].state == crate::game::GuardState::Dead || !dark_foe_lit(g, o) { continue; }
+        if o == gd || g.gd[o].team != team || crate::condition::down(g, g.gd[o].ch) || !dark_foe_lit(g, o) { continue; }
         if !g.tab.light[g.gd[o].flashlight].enabled { continue; }
         let oc = g.gd[o].ch;
         let op = g.ch[oc].pos;
@@ -303,7 +303,7 @@ fn dark_foe_kept(g: &mut crate::game::Game, gd: GuardId, d: Option<RoomfightDefI
     if g.gd[gd].state != crate::game::GuardState::Alert { return Some(String::from("not alert")); }
     if g.time - g.gd[gd].last_seen_t < g.k.darkfoe.quiet_secs
         || g.time - g.gd[gd].witness.heard.last_shot_t < g.k.darkfoe.calm_secs
-        || g.gd[gd].sup.v > 0.05
+        || g.cond[g.gd[gd].ch].sup.v > 0.05
     {
         return Some(String::from("in a fight"));
     }
