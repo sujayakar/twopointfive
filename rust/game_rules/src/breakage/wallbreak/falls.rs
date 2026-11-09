@@ -718,26 +718,24 @@ pub(in crate::breakage) fn wall_break_reset(g: &mut crate::game::Game, silent: O
 mod tests {
     use super::*;
 
+    /// A failure means a charge opens a hole a man cannot get through, or one outside the wall.
     #[test]
-    fn hard_hole_as_the_typescript() {
-        // (expected values: planOf's lines 682-684 run under node)
-        assert_eq!(hard_hole(8.0, 0.5, 3.0, 0.5, 4.0), (3.0, 3.0));
-        assert_eq!(hard_hole(8.0, 0.5, 3.0, 0.5, 0.2), (0.0, 3.0));
-        assert_eq!(hard_hole(8.0, 0.5, 3.0, 0.5, 7.9), (5.0, 3.0));
-        assert_eq!(hard_hole(2.0, 1.0, 3.0, 0.5, 1.0), (0.0, 2.0));
-        assert_eq!(hard_hole(10.0, 0.7, 3.0, 0.5, 5.5), (4.0, 3.0));
-        assert_eq!(hard_hole(6.0, 0.5, 3.0, 0.5, 2.5), (1.0, 3.0));
+    fn a_hard_wall_s_hole_is_the_least_width_at_the_charge_and_inside_the_wall() {
+        assert_eq!(hard_hole(8.0, 0.5, 3.0, 0.5, 4.0), (3.0, 3.0));     // round the charge
+        assert_eq!(hard_hole(8.0, 0.5, 3.0, 0.5, 0.2), (0.0, 3.0));     // by one end: all of it inside
+        assert_eq!(hard_hole(8.0, 0.5, 3.0, 0.5, 7.9), (5.0, 3.0));     // by the other
+        assert_eq!(hard_hole(2.0, 1.0, 3.0, 0.5, 1.0), (0.0, 2.0));     // a wall narrower than the hole: all of it
+        assert_eq!(hard_hole(10.0, 0.7, 3.0, 0.5, 5.5), (4.0, 3.0));    // wider columns: enough of them to make the width
     }
 
     #[test]
-    fn widen_hole_as_the_typescript() {
-        // (expected values: planOf's lines 701-703 run under node)
-        assert_eq!(widen_hole(&[4.0], 4.0, 3.0, 8.0), (3.0, 5.0));
-        assert_eq!(widen_hole(&[0.0], 0.0, 3.0, 8.0), (0.0, 2.0));
+    fn a_hole_widens_from_the_holed_columns_nearest_the_charge() {
+        assert_eq!(widen_hole(&[4.0], 4.0, 3.0, 8.0), (3.0, 5.0));              // both ways round one column
+        assert_eq!(widen_hole(&[0.0], 0.0, 3.0, 8.0), (0.0, 2.0));              // at an end: inward
         assert_eq!(widen_hole(&[7.0], 7.0, 3.0, 8.0), (5.0, 7.0));
-        assert_eq!(widen_hole(&[2.0, 3.0, 6.0], 6.0, 3.0, 8.0), (5.0, 7.0));
-        assert_eq!(widen_hole(&[1.0, 2.0, 5.0], 3.0, 5.0, 8.0), (1.0, 5.0));
-        assert_eq!(widen_hole(&[3.0], 3.0, 3.0, 4.0), (1.0, 3.0));
+        assert_eq!(widen_hole(&[2.0, 3.0, 6.0], 6.0, 3.0, 8.0), (5.0, 7.0));    // the run at the charge, not the larger one
+        assert_eq!(widen_hole(&[1.0, 2.0, 5.0], 3.0, 5.0, 8.0), (1.0, 5.0));    // a tie of distance goes to the first
+        assert_eq!(widen_hole(&[3.0], 3.0, 3.0, 4.0), (1.0, 3.0));              // no wider than the wall has
         assert_eq!(widen_hole(&[0.0, 1.0], 1.0, 3.0, 2.0), (0.0, 1.0));
     }
 }

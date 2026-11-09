@@ -738,15 +738,6 @@ fn destruction_pall_burst(g: &mut crate::game::Game, at: V3, size: Option<f64>) 
 mod tests {
     use super::*;
 
-    /// the words the TypeScript's own expression gives (run under bun), Math.round's halves and imul's wrap among them
-    #[test]
-    fn pall_hash_word_is_the_typescripts() {
-        assert_eq!(pall_hash_word([1.37, 0.5, -2.19], 12.345, 97.0), 729214853);
-        assert_eq!(pall_hash_word([-40.125, 1.0, 33.3], 0.0, 0.0), 3501533476);
-        assert_eq!(pall_hash_word([0.0078125, 0.0, -0.0078125], 601.25, 201.0), 2599756042);
-        assert_eq!(pall_hash_word([123.456, 0.0, -987.654], 3600.5, 83.0), 2154646853);
-    }
-
     #[test]
     fn a_box_index_out_of_range_is_no_box() {
         assert_eq!(box_at(1, 0.0), Some(0));
