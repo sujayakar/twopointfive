@@ -22,7 +22,7 @@ pub fn lesson_data(g: &crate::game::Game) -> Option<&crate::scene_scenarios::Les
         return None;
     }
     if g.quiet.active || crate::roomclear::room_clear_scenario_active(g) || g.night_breach.active || g.rescue.active {
-        g.level.scenarios.as_ref().and_then(|s| s.lesson.as_ref())
+        g.level.scenarios.as_ref().and_then(|s| s.lesson.as_deref())
     } else {
         None
     }
@@ -47,10 +47,9 @@ pub fn lesson_step(g: &crate::game::Game) -> Option<crate::scene_scenarios::Less
 
 /// Once a frame, after updateMission: counts the frame's deeds, asks the step's test, moves on when it is done and settled.   (lesson.ts Lesson.tick)
 pub fn lesson_tick(g: &mut crate::game::Game, dt: f64) {
-    let l = match lesson_data(g) {
-        Some(l) => l.clone(),
-        None => return,
-    };
+    // (the list is shared, so it stands beside `g` with no copy: nothing writes a level's lesson)
+    if lesson_data(g).is_none() { return; }
+    let Some(l) = g.level.scenarios.as_ref().and_then(|s| s.lesson.clone()) else { return };
     if !run_is_mission(g) {
         g.lesson.run = Some(g.mission.serial);
         g.lesson.i = 0.0;
@@ -78,7 +77,7 @@ pub fn lesson_tick(g: &mut crate::game::Game, dt: f64) {
     let i = g.lesson.i;
     let t = &l.steps[i as usize];
     if s.done_t.is_none() {
-        if passes(g, &done_test(&t.done), &mut s) {
+        if passes(g, &t.done, &mut s) {
             s.held += dt;
             let hold = t.hold.unwrap_or(0.0);
             if s.held > hold || !js::truthy(hold) {
@@ -247,7 +246,7 @@ pub fn lesson_view(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Optio
     let i = lesson_at(g);
     let (of, id, asks_view) = {
         let t = l.steps.get(i as usize);
-        (l.steps.len(), t.map(|t| t.id.clone()), t.map_or(false, |t| matches!(t.done, crate::scene_scenarios::LessonTestKind::View { .. })))
+        (l.steps.len(), t.map(|t| t.id.clone()), t.map_or(false, |t| matches!(t.done, LessonTest::View { .. })))
     };
     let frame = crate::rails::LessonAt { l, i: m::min(i, of as f64) };
     Some(crate::view::LessonView {
@@ -337,102 +336,4 @@ fn filled(o: &Option<String>) -> Option<&str> {
 /// `this.run === g.mission`: the same run, by the Mission's serial.   (lesson.ts:320, 330, 348)
 fn run_is_mission(g: &Game) -> bool {
     g.lesson.run == Some(g.mission.serial)
-}
-
-/// `T.done` as `passes` takes it (lesson.ts:342). SKELETON-GAP: a level's test and LESSON_TESTS' test are two enums of the same rows. A word no arm's type holds is Unknown, which never passes, as `p.slot === t.slot`, `orders.who === t.who` and `men(<word>)` (no man's pair) never do.
-fn done_test(t: &crate::scene_scenarios::LessonTestKind) -> crate::lesson::LessonTest {
-    use crate::lesson::LessonTest as T;
-    use crate::orders::{SquadOrdersMenSel as Sel, Who};
-    use crate::scene_scenarios::LessonTestKind as K;
-    match t {
-        K::Unknown { is } => T::Unknown {  },
-        K::In { area } => T::In { area: *area },
-        K::Near { at, r } => T::Near { at: *at, r: *r },
-        K::Flag { flag, value } => T::Flag { flag: flag.clone(), value: *value },
-        K::Slot { slot, drawn } => {
-            let slot = match slot.as_str() {
-                "pistol" => crate::game::SlotKind::Pistol,
-                "rifle" => crate::game::SlotKind::Rifle,
-                "smoke" => crate::game::SlotKind::Smoke,
-                "flash" => crate::game::SlotKind::Flash,
-                "frag" => crate::game::SlotKind::Frag,
-                _ => return T::Unknown {  },
-            };
-            T::Slot { slot, drawn: *drawn }
-        }
-        K::Pace { below, above } => T::Pace { below: *below, above: *above },
-        K::Meter { which, below, above } => T::Meter { which: which.clone(), below: *below, above: *above },
-        K::Stage { stage } => T::Stage { stage: stage.clone() },
-        K::Door { door, state } => T::Door { door: door.clone(), state: state.clone() },
-        K::Target { name, on } => T::Target { name: name.clone(), on: *on },
-        K::Men { down } => T::Men { down: *down },
-        K::Did { what, on, n } => T::Did { what: what.clone(), on: on.clone(), n: *n },
-        K::Downed { how, n } => T::Downed { how: how.clone(), n: *n },
-        K::Body { area } => T::Body { area: *area },
-        K::Calm { route } => T::Calm { route: route.clone() },
-        K::Loaded => T::Loaded,
-        K::Reload => T::Reload,
-        K::Launcher { on, fired } => T::Launcher { on: on.clone(), fired: *fired },
-        K::Burst { n } => T::Burst { n: *n },
-        K::Threw { kind, quick, area } => T::Threw { kind: kind.clone(), quick: *quick, area: *area },
-        K::OrderTo { who } => {
-            let who = match who.as_str() {
-                "all" => Who::All,
-                "red" => Who::Red,
-                "blue" => Who::Blue,
-                _ => return T::Unknown {  },
-            };
-            T::OrderTo { who }
-        }
-        K::StackOn { door, who, set } => {
-            let who = match who.as_deref() {
-                None => None,
-                Some("all") => Some(Sel::All),
-                Some("red") => Some(Sel::Red),
-                Some("blue") => Some(Sel::Blue),
-                Some(_) => return T::Unknown {  },
-            };
-            T::StackOn { door: door.clone(), who, set: *set }
-        }
-        K::PairsOn { doors } => T::PairsOn { doors: *doors },
-        K::Word { doors } => T::Word { doors: *doors },
-        K::Taken { room } => T::Taken { room: room.clone() },
-        K::Following => T::Following,
-        K::Mate { area, at, r, by, away } => T::Mate { area: *area, at: *at, r: *r, by: *by, away: *away },
-        K::Pair { what, n } => T::Pair { what: what.clone(), n: *n },
-        K::Cue { name } => T::Cue { name: name.clone() },
-        K::View { turned, zoomed } => T::View { turned: *turned, zoomed: *zoomed },
-        K::Squad { area, n } => T::Squad { area: *area, n: *n },
-        K::Stacks { doors, n, set } => T::Stacks { doors: doors.clone(), n: *n, set: *set },
-        K::Watching { at, r, n } => T::Watching { at: *at, r: *r, n: *n },
-        K::All { of } => T::All { of: of.iter().map(done_test).collect() },
-        K::Any { of } => T::Any { of: of.iter().map(done_test).collect() },
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    // The one rule of the bridge that is more than a copy: a word no arm holds never passes, and an absent `who` stays absent (`?? 'all'`).
-    #[test]
-    fn done_test_keeps_the_rows() {
-        use crate::lesson::LessonTest as T;
-        use crate::scene_scenarios::LessonTestKind as K;
-        assert!(matches!(done_test(&K::Slot { slot: String::from("frag"), drawn: Some(true) }), T::Slot { slot: crate::game::SlotKind::Frag, drawn: Some(true) }));
-        assert!(matches!(done_test(&K::Slot { slot: String::from("knife"), drawn: None }), T::Unknown { .. }));
-        assert!(matches!(done_test(&K::OrderTo { who: String::from("red") }), T::OrderTo { who: crate::orders::Who::Red }));
-        assert!(matches!(done_test(&K::OrderTo { who: String::new() }), T::Unknown { .. }));
-        assert!(matches!(done_test(&K::StackOn { door: String::from("d"), who: None, set: true }), T::StackOn { who: None, set: true, .. }));
-        assert!(matches!(done_test(&K::StackOn { door: String::from("d"), who: Some(String::from("blue")), set: false }), T::StackOn { who: Some(crate::orders::SquadOrdersMenSel::Blue), .. }));
-        assert!(matches!(done_test(&K::StackOn { door: String::from("d"), who: Some(String::from("x")), set: false }), T::Unknown { .. }));
-        assert!(matches!(done_test(&K::Pace { below: Some(1.0), above: None }), T::Pace { below: Some(_), above: None }));
-        match done_test(&K::Any { of: vec![K::Loaded, K::All { of: vec![K::Slot { slot: String::from("x"), drawn: None }] }] }) {
-            T::Any { of } => {
-                assert!(matches!(of[0], T::Loaded));
-                match &of[1] { T::All { of } => assert!(matches!(of[0], T::Unknown { .. })), _ => panic!("all") }
-            }
-            _ => panic!("any"),
-        }
-    }
 }

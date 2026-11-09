@@ -111,6 +111,7 @@ teammates. Only `office.json` has that plan. Elsewhere every teammate is the ord
   should have it".
 - **A tutorial has a level of its own.** "each tutorial level should have its own awesome level".
 - **A step moves on when the thing is done,** never on a timer, and a key isn't named before its step opens it (`rails_hushes`).
+- **A step's test is known, or the read refuses the level,** saying the level, the step and the word (`LessonTest`).
 - **A cut row stays a row.** "let's also remove "night breach" since it's unnecessary now": no list draws it, and its address and checks still stage it.
 - **A level has no rooms in code.** `check_structure`, `check_squads`, `check_rescue` and `check_quiet` hold the file's rooms and marks to the built floor.
 
@@ -122,7 +123,7 @@ teammates. Only `office.json` has that plan. Elsewhere every teammate is the ord
 - **Cut one:** `off_list` on its row. A level whose mission's own rules left stays a plain room clear, as `snatch.json` is.
 - **A new kind:** `ScenarioEntryKind` and `ScenarioSpecKind`, `kind_of`, `SCENARIO_KEYS`, `start_scenario`, `active_scenario`, an arm in `ended` and in `objective`,
   a tick line in `step_seats_on_first`, and its staging at the end of `game_restart_encounter`.
-- **A tutorial step:** the level's generator (`tools/levels/tut-road.ts` and its like), then its deed in the scripted player (`road.rs`). A new kind of test is an arm of `LessonTest` and `test_ok`.
+- **A tutorial step:** the level's generator (`tools/levels/tut-road.ts` and its like), then its deed in the scripted player (`road.rs`). A new kind of test is an arm of `LessonTest` and `passes`.
 - **A new script:** a `script_tut_*/` folder, an arm of `LevelScriptFn`, `level_script_of`, `beat_frame_new` and `beat_next`.
 
 ## What holds it

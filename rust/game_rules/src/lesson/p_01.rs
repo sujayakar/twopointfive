@@ -117,11 +117,6 @@ fn line_on_page(written: &str, wedges: f64) -> String {
 
 // ---- the tests
 
-/// one test asked: an unknown kind, or a flag no row has (which throws in the TypeScript and is caught there), is never true (lesson.ts passes)
-pub fn passes(g: &mut crate::game::Game, t: &crate::lesson::LessonTest, s: &mut crate::lesson::StepSeen) -> bool {
-    test_ok(g, t, s).unwrap_or(false)
-}
-
 /// the first row of a front-trimmed log that came after `last`, the logs' rows given by serial; 0: `last` is gone, or there was none (lesson.ts after)
 pub fn after(log: &[u32], last: Option<u32>) -> usize {
     let mut k = log.len();
@@ -177,33 +172,32 @@ fn stage_index(s: &str) -> i32 { stages().iter().position(|w| w == s).map_or(-1,
 /// a count kept in the step's map, as a test reads it
 fn seen_n(s: &StepSeen, key: String) -> f64 { s.n.get(key).copied().unwrap_or(0.0) }
 
-/// lesson.ts LESSON_TESTS, the `ok` of each kind (the `check` of each is check_of). None: the row would have thrown, or no such kind
-fn test_ok(g: &mut Game, t: &LessonTest, s: &mut StepSeen) -> Option<bool> {
+/// one test asked: lesson.ts LESSON_TESTS, the `ok` of each kind (the `check` of each is check_of)
+pub fn passes(g: &mut Game, t: &LessonTest, s: &mut StepSeen) -> bool {
     use LessonTest as T;
-    Some(match t {
-        T::Unknown { .. } => return None,
+    match t {
         T::In { area } => inside(*area, own_pos(g, &crate::seats::here(g))),
         T::Near { at, r } => { let p = own_pos(g, &crate::seats::here(g)); m::hyp2(p[0] - at[0], p[2] - at[2]) < r.unwrap_or(1.2) }
-        T::Flag { flag, value } => flag_of(g, flag)? == value.unwrap_or(true),
+        T::Flag { flag, value } => flag_of(g, *flag) == value.unwrap_or(true),
         T::Slot { slot, drawn } => { let p = who(g, &crate::seats::here(g)); g.pl[p].slot == *slot && drawn.map_or(true, |d| !g.pl[p].holstered == d) }
         T::Pace { .. } => true,   // (TWOGEARS.on: the wheel is nobody's pace and the line goes by)
-        T::Meter { which, .. } => { let p = who(g, &crate::seats::here(g)); let v = if which == "noise" { g.pl[p].noise } else { g.pl[p].visibility }; band(v, t) }
-        T::Stage { stage } => stage_index(g.mission.stage.as_str()) >= stage_index(stage) && g.mission.stage != crate::game::MissionStage::Failed,
-        T::Door { door, state } => ok_door(g, door, state),
+        T::Meter { which, .. } => { let p = who(g, &crate::seats::here(g)); let v = if *which == LessonMeter::Noise { g.pl[p].noise } else { g.pl[p].visibility }; band(v, t) }
+        T::Stage { stage } => stage_index(g.mission.stage.as_str()) >= stage_index(stage.as_str()) && g.mission.stage != crate::game::MissionStage::Failed,
+        T::Door { door, state } => ok_door(g, door, *state),
         T::Target { name, on } => ok_target(g, name, *on),
         T::Men { down } => ok_men(g, *down),
         T::Did { what, on, n } => {
             let key = match on { None => what.clone(), Some(on) => format!("{}@door:{}", what, on) };
             seen_n(s, key) >= n.unwrap_or(1.0)
         }
-        T::Downed { how, n } => ok_downed(g, how, *n),
+        T::Downed { how, n } => ok_downed(g, how.as_str(), *n),
         T::Body { area } => ok_body(g, &crate::seats::here(g), *area),
         T::Calm { route } => ok_calm(g, route.as_deref()),
         T::Loaded => ok_loaded(g, s),
         T::Reload => ok_reload(g),
-        T::Launcher { on, fired } => ok_launcher(g, on, *fired),
+        T::Launcher { on, fired } => ok_launcher(g, *on, *fired),
         T::Burst { n } => ok_burst(g, *n),
-        T::Threw { kind, quick, area } => ok_threw(g, kind.as_deref(), *quick, *area, s),
+        T::Threw { kind, quick, area } => ok_threw(g, kind.map(LessonThrown::as_str), *quick, *area, s),
         T::OrderTo { who } => ok_order_to(g, &crate::seats::here(g), *who),
         T::StackOn { door, who, set } => ok_stack_on(g, door, *who, *set),
         T::PairsOn { doors } => ok_pairs_on(g, &crate::seats::here(g), *doors),
@@ -211,7 +205,7 @@ fn test_ok(g: &mut Game, t: &LessonTest, s: &mut StepSeen) -> Option<bool> {
         T::Taken { room } => ok_taken(g, room),
         T::Following => ok_following(g, &crate::seats::here(g)),
         T::Mate { area, at, r, by, away } => ok_mate(g, &crate::seats::here(g), *area, *at, *r, *by, *away),
-        T::Pair { what, n } => ok_pair(g, what, *n, s),
+        T::Pair { what, n } => ok_pair(g, what.as_str(), *n, s),
         T::Cue { name } => crate::rails::rails_cued(g, name),
         T::View { turned, zoomed } => ok_view(g, &crate::seats::here(g), *turned, *zoomed, s),
         T::Squad { area, n } => ok_squad(g, *area, *n),
@@ -219,18 +213,19 @@ fn test_ok(g: &mut Game, t: &LessonTest, s: &mut StepSeen) -> Option<bool> {
         T::Watching { at, r, n } => ok_watching(g, &crate::seats::here(g), *at, *r, *n),
         T::All { of } => of.iter().all(|u| passes(g, u, s)),
         T::Any { of } => of.iter().any(|u| passes(g, u, s)),
-    })
+    }
 }
 
-fn ok_door(g: &Game, door: &str, state: &str) -> bool {
+fn ok_door(g: &Game, door: &str, state: LessonDoorState) -> bool {
+    use LessonDoorState as S;
     use crate::doors::{door_is_closed, door_lock_broken, door_locked, doors_by_name};
     let Some(d) = doors_by_name(g, door) else { return false };
     match state {
-        "open" => !door_is_closed(g, d),
-        "shut" => door_is_closed(g, d),
-        "unlocked" => !door_locked(g, d) || door_lock_broken(g, d),
-        "charged" => crate::doortools::door_tools_charge_on(g, &crate::seats::here(g), d).is_some(),
-        _ => door_lock_broken(g, d),
+        S::Open => !door_is_closed(g, d),
+        S::Shut => door_is_closed(g, d),
+        S::Unlocked => !door_locked(g, d) || door_lock_broken(g, d),
+        S::Charged => crate::doortools::door_tools_charge_on(g, &crate::seats::here(g), d).is_some(),
+        S::Broken => door_lock_broken(g, d),
     }
 }
 
@@ -286,11 +281,11 @@ fn ok_reload(g: &Game) -> bool {
     (crate::game::player_pistol_up(g, p) && crate::weapons::firearm_reloading(g, pistol)) || (crate::game::player_rifle_up(g, p) && crate::weapons::firearm_reloading(g, rifle))
 }
 
-fn ok_launcher(g: &Game, on: &str, fired: bool) -> bool {
+fn ok_launcher(g: &Game, on: Option<crate::weapons::RifleAttachment>, fired: bool) -> bool {
     let p = who(g, &crate::seats::here(g));
     let r = g.pl[p].rifle;
     let up = crate::weapons::rifle_attachment(g, r).map_or("none", |a| a.as_str());
-    on == up && (!fired || (crate::game::player_rifle_up(g, p) && g.fa[r].ring_cd > 0.0))
+    on.map_or("none", |a| a.as_str()) == up && (!fired || (crate::game::player_rifle_up(g, p) && g.fa[r].ring_cd > 0.0))
 }
 
 fn ok_burst(g: &mut Game, n: Option<f64>) -> bool {
@@ -427,7 +422,7 @@ pub fn band_check(t: &crate::lesson::LessonTest) -> Option<String> {
 fn kind_word(t: &LessonTest) -> &'static str {
     use LessonTest as T;
     match t {
-        T::Unknown { .. } => "", T::In { .. } => "in", T::Near { .. } => "near", T::Flag { .. } => "flag", T::Slot { .. } => "slot", T::Pace { .. } => "pace", T::Meter { .. } => "meter",
+        T::In { .. } => "in", T::Near { .. } => "near", T::Flag { .. } => "flag", T::Slot { .. } => "slot", T::Pace { .. } => "pace", T::Meter { .. } => "meter",
         T::Stage { .. } => "stage", T::Door { .. } => "door", T::Target { .. } => "target", T::Men { .. } => "men", T::Did { .. } => "did", T::Downed { .. } => "downed",
         T::Body { .. } => "body", T::Calm { .. } => "calm", T::Loaded => "loaded", T::Reload => "reload", T::Launcher { .. } => "launcher", T::Burst { .. } => "burst",
         T::Threw { .. } => "threw", T::OrderTo { .. } => "orderTo", T::StackOn { .. } => "stackOn", T::PairsOn { .. } => "pairsOn", T::Word { .. } => "word", T::Taken { .. } => "taken",
@@ -436,36 +431,36 @@ fn kind_word(t: &LessonTest) -> &'static str {
     }
 }
 
-/// lesson.ts FLAGS by the word a test names; None: no such flag
-fn flag_of(g: &mut Game, name: &str) -> Option<bool> {
-    Some(match name {
-        "crouch" => flags::crouch(g),
-        "sprint" => flags::sprint(g, &crate::seats::here(g)),
-        "wall" => flags::wall(g),
-        "peek" => flags::peek(g, &crate::seats::here(g)),
-        "lean" => flags::lean(g),
-        "nv" => flags::nv(g),
-        "light" => flags::light(g),
-        "holstered" => flags::holstered(g, &crate::seats::here(g)),
-        "gun" => flags::gun(g),
-        "ringsOut" => flags::rings_out(g, &crate::seats::here(g)),
-        "shellsOut" => flags::shells_out(g, &crate::seats::here(g)),
-        "auto" => flags::auto(g),
-        "setup" => flags::setup(g, &crate::seats::here(g)),
-        "setupShut" => flags::setup_shut(g, &crate::seats::here(g)),
-        "dragging" => flags::dragging(g),
-        "dark" => flags::dark(g),
-        "chargeSet" => flags::charge_set(g, &crate::seats::here(g)),
-        "chargeClear" => flags::charge_clear(g),
-        "wallBlown" => flags::wall_blown(g, &crate::seats::here(g)),
-        "holding" => flags::holding(g, &crate::seats::here(g)),
-        "picking" => flags::picking(g, &crate::seats::here(g)),
-        "coding" => flags::coding(g, &crate::seats::here(g)),
-        "menu" => flags::menu(g),
-        "ownRing" => flags::own_ring(g, &crate::seats::here(g)),
-        "silent" => flags::silent(g),
-        _ => return None,
-    })
+/// lesson.ts FLAGS
+fn flag_of(g: &mut Game, flag: LessonFlag) -> bool {
+    use LessonFlag as F;
+    match flag {
+        F::Crouch => flags::crouch(g),
+        F::Sprint => flags::sprint(g, &crate::seats::here(g)),
+        F::Wall => flags::wall(g),
+        F::Peek => flags::peek(g, &crate::seats::here(g)),
+        F::Lean => flags::lean(g),
+        F::Nv => flags::nv(g),
+        F::Light => flags::light(g),
+        F::Holstered => flags::holstered(g, &crate::seats::here(g)),
+        F::Gun => flags::gun(g),
+        F::RingsOut => flags::rings_out(g, &crate::seats::here(g)),
+        F::ShellsOut => flags::shells_out(g, &crate::seats::here(g)),
+        F::Auto => flags::auto(g),
+        F::Setup => flags::setup(g, &crate::seats::here(g)),
+        F::SetupShut => flags::setup_shut(g, &crate::seats::here(g)),
+        F::Dragging => flags::dragging(g),
+        F::Dark => flags::dark(g),
+        F::ChargeSet => flags::charge_set(g, &crate::seats::here(g)),
+        F::ChargeClear => flags::charge_clear(g),
+        F::WallBlown => flags::wall_blown(g, &crate::seats::here(g)),
+        F::Holding => flags::holding(g, &crate::seats::here(g)),
+        F::Picking => flags::picking(g, &crate::seats::here(g)),
+        F::Coding => flags::coding(g, &crate::seats::here(g)),
+        F::Menu => flags::menu(g),
+        F::OwnRing => flags::own_ring(g, &crate::seats::here(g)),
+        F::Silent => flags::silent(g),
+    }
 }
 
 /// the flags a `flag` test can read off the player and the team's posture, each true while it holds (lesson.ts FLAGS)
@@ -639,7 +634,7 @@ mod tests {
     }
     #[test]
     fn band_reads_the_meter_only() {
-        let meter = |below, above| LessonTest::Meter { which: String::from("noise"), below, above };
+        let meter = |below, above| LessonTest::Meter { which: LessonMeter::Noise, below, above };
         assert!(band(0.5, &meter(Some(1.0), Some(0.0))) && !band(1.0, &meter(Some(1.0), None)) && !band(0.0, &meter(None, Some(0.0))));
         assert!(band(9.0, &LessonTest::Loaded));
         assert!(band_check(&meter(None, None)).is_some() && band_check(&meter(Some(f64::NAN), None)).is_some() && band_check(&meter(Some(1.0), None)).is_none());
@@ -651,9 +646,6 @@ mod tests {
     #[test]
     fn the_skeletons_tables_say_what_the_typescript_says() {
         // (the lists in lesson.ts testFault's messages, run under bun)
-        assert_eq!(flags().keys().join(", "), "crouch, sprint, wall, peek, lean, nv, light, holstered, gun, ringsOut, shellsOut, auto, setup, setupShut, dragging, dark, chargeSet, chargeClear, wallBlown, holding, picking, coding, menu, ownRing, silent");
-        assert_eq!(hows().join(", "), "takedown, choke, whip, ring, knife");
-        assert_eq!(pair_whats().join(", "), "mark, now, set, go, go:F, go:hands, down");
         let kinds = [LessonTest::Pace { below: None, above: None }, LessonTest::Loaded, LessonTest::Following, LessonTest::Cue { name: String::new() }, LessonTest::All { of: Vec::new() }];
         for k in &kinds { assert!(lesson_tests().has(String::from(kind_word(k)))); }
         assert_eq!(stage_index("infiltrate"), 0);
