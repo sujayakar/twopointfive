@@ -19,9 +19,9 @@ fn keptAt(x: vec3f, n: vec3f) -> vec4f {
   for (var k = 0u; k < 8u; k++) {
     let o = vec3u(k & 1u, (k >> 1u) & 1u, k >> 2u); let c = vec3u(b) + o; let p = g.first + (c.z * g.n.y + c.y) * g.n.x + c.x; let a = at[p]; if (a.w < 0.5 || irr[p * WORDS + WORDS - 1u] == 0u) { continue; }
     let t = mix(1.0 - f, f, vec3f(o)); var w = max(t.x * t.y * t.z, 1e-4); let v = a.xyz - x; let l = length(v); let cs = dot(v, n) / max(l, 1e-3) * 0.5 + 0.5; w *= cs * cs + 0.05;
-    if (g.first == 0u && VIS == 1u && !joinedFar(x + n * 0.08, a.xyz)) { continue; }
+    if (g.first == 0u && VIS == 1u && !joinedFar(x + n * 0.08, a.xyz)) { w *= 0.004; }
     if (g.first == 0u && VIS == 2u) { let u = y - a.xyz; let r = length(u); let m = farAt(p, u / max(r, 1e-3)); if (r > m.x) { let s2 = max(m.y - m.x * m.x, 0.0); let e = r - m.x; let z = s2 / (s2 + e * e + 1e-6); w *= max(z * z * z, 0.0); } }
-    if (w < 0.02) { w *= w * w * 2500.0; } E += irrAt(p, n) * w; W += w;
+    if (VIS != 1u && w < 0.02) { w *= w * w * 2500.0; } E += irrAt(p, n) * w; W += w;
   }
   return vec4f(E, W);
 }

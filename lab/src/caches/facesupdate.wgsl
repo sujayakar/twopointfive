@@ -8,7 +8,7 @@ fn itsTurn(i: u32) -> bool { let b = texels[2u * i + 1u]; if (bitcast<u32>(b.w) 
 fn oneMore(i: u32) {
   var a = texels[2u * i]; let b = texels[2u * i + 1u]; let wz = bitcast<u32>(b.z); let face = (wz >> 24u) & 7u; let slot = faces[PIECES + bitcast<u32>(b.y)].x; let x0 = texelPoint(slot, face, texelUv(i)); let n = texelNormal(slot, face); let st = steady(x0); var seen = b.x;
   byReach = true; if (changes.all.y > 0.5) { a.w = min(a.w, 1.0); } if (bad4(a) || bad(seen)) { a = vec4f(0.0); seen = 0.0; } rngKey(i, 91u); leafMode = 2u; footSolid(0.32, 1.0); let bs = basis(n); let x = x0 + n * 0.012; var sun = 0.0; var E = vec3f(0.0);
-  if (DIRECT) { let j = rnd2() - 0.5; let q = askDirect(x0 + (bs[0] * j.x + bs[1] * j.y) * 0.10, n, true); E = q.xyz; sun = q.w; }
+  if (DIRECT) { let j = rnd2() - 0.5; let q = askDirect(x0 + (bs[0] * j.x + bs[1] * j.y) * 0.03, n, true); E = q.xyz; sun = q.w; }
   let ru = rnd2(); let w = wideDir(x, n, ru, rnd()); if (w.w > 0.0) { E += min(look(x, w.xyz, 1.0) * w.w, vec3f(60.0)); }
   let cap = mix(min(7.0, KEEP), KEEP, st); let m = min(a.w + 1.0, cap); let k = min(1.0, 2.0 / (m + 1.0)); let o = finite4(vec4f(mix(a.xyz, E, k), m), 1e4); fresh[i] = vec4u(pack2x16float(clamp(o.xy, vec2f(0.0), vec2f(6e4))), pack2x16float(vec2f(clamp(o.z, 0.0, 6e4), clamp(finite(mix(seen, sun, k), 1.0), 0.0, 1.0))), bitcast<u32>(o.w), 1u);
 }
