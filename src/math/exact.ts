@@ -318,10 +318,6 @@ export function onExact(fn: () => void): void { remade.push(fn); fn(); }
 /** the fourteen, and the three lengths of math/hyp.ts, as one set */
 export type Maths = typeof SYS & { hyp2(a: number, b: number): number; hyp3(a: number, b: number, c: number): number; hyp4(a: number, b: number, c: number, d: number): number };
 let other: Maths | null = null;
-/** THE SAME ARITHMETIC FROM ELSEWHERE: while the switch is on, `fns` stand in Math's place instead of the functions above (null = the ones above again). The
- *  caller's promise is that they are the same functions TO THE BIT — rust/game_rules/src/sim_sim hands in the Rust ones (its RUST.maths row), and tools/qa/rust-check.ts
- *  holds that promise. With the switch off this changes nothing: the engine's own are in place either way. */
-export function mathsFrom(fns: Maths | null): void { if (fns === other) return; other = fns; if (installed) install(true); }
 function install(on: boolean): void {
   installed = on; mathsEpoch++;
   const from: typeof SYS = on ? (other ?? OWN) : SYS, M = Math as unknown as Record<string, unknown>;

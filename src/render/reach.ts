@@ -29,7 +29,6 @@
 // ring-only 'maybe' cells, a far light pickable in one cell and known-dark in the next, which drew the server racks' green halo as arcs on
 // the break-room wall (commit 1170839); so the ring is OFF by default: a deliberate trade of a few dim far-panel slivers for no cell-edge
 // arcs. Turning it back on wants the consumer side changed first (level 1 = tail-only, never a leader, in direct.wgsl).
-import { SideMap } from '../math/side';
 import { whole } from './steps';
 import { WORLD } from '../scene/world';
 import { BoxFlag, type Box, type PlanBox } from '../scene/boxes';
@@ -77,7 +76,7 @@ export function buildWallRaster(statics: readonly PlanBox[], doors: ReachDoor[] 
 /** How many samples a sight line may step from a sub-cell without missing anything: 1 on and beside a wall or a doorway's gap, more the farther the nearest one is
  *  (the Chebyshev distance d to it in sub-cells, two chamfer passes — exact for that metric; a line advances at most 0.8 sub-cell a sample on either axis, so the
  *  next ceil(1.25 (d - 1)) - 1 samples land within d - 1 sub-cells of this one: all open ground, which a sight line reads and forgets). Kept per raster. */
-const JUMPS = new SideMap<Uint8Array, Uint8Array>('reach.JUMPS');
+const JUMPS = new WeakMap<Uint8Array, Uint8Array>();
 function jumpsOf(solid: Uint8Array): Uint8Array {
   let j = JUMPS.get(solid); if (j) return j;
   j = jumpsFor(solid); JUMPS.set(solid, j); return j;
@@ -225,7 +224,7 @@ export interface ReachOnly { prev: Uint32Array; rects: readonly (readonly [numbe
    *  masks as with `rects` alone (a line that reads no changed sub-cell answers as it did), from far fewer cells when the light stands near the hole */
   boxes?: readonly (readonly [number, number, number, number])[] }
 /** the source points every cell of a mask was decided from (reachMaskFor), where that is one set */
-const SOURCES = new SideMap<Uint32Array, string>('reach.SOURCES');
+const SOURCES = new WeakMap<Uint32Array, string>();
 /** A mask decided over several calls (reachMaskSome): cells until `budget` sight-line steps are spent each call, where it stood kept in `st` — its source points too, so a light that turns
  *  between calls is still one mask from one set. The caller drops `st` if the raster or the ReachOnly changes under it. */
 export interface ReachJob { budget: number;

@@ -15,13 +15,6 @@ export interface Rect { x0: number; x1: number; z0: number; z1: number }
 /** Where the team stands when a scenario is staged: Sam and the way he faces; the teammates' marks (the pair's two; for the four, two more — absent, the second
  *  pair is stood on the free floor a stride behind the first) and the way THEY face (absent: east, +x, as the office has them). */
 export interface TeamStart { sam: Vec3; samYaw: number; ops?: Vec3[]; opsYaw?: number }
-/** are two team starts the same start: every field, by value (a level's block is read from its file, so two readings of one row are two objects). What a
- *  scenario asks before it writes its start knobs again from the level's row: the same row leaves a knob moved by hand where it was moved to. */
-export function sameTeamStart(a: TeamStart | null | undefined, b: TeamStart | null | undefined): boolean {
-  if (!a || !b) return a === b;
-  const v = (p: readonly number[], q: readonly number[]) => p.length === q.length && p.every((x, i) => x === q[i]);
-  return v(a.sam, b.sam) && a.samYaw === b.samYaw && a.opsYaw === b.opsYaw && (a.ops?.length ?? -1) === (b.ops?.length ?? -1) && (a.ops ?? []).every((p, i) => v(p, b.ops![i]));
-}
 /** a place a man of theirs is put, and the point his gun rests on from it */
 export interface ScenarioMark { pos: Vec3; aimAt: Vec3 }
 
@@ -94,12 +87,6 @@ export interface SquadData {
 }
 /** the most defenders alive at once on a structure with `maxMen` (16 skinned characters less Sam and the four) */
 export const SQUAD_MAX_MEN = 11;
-/** a squad's barricade doors where the file names none: every door of its rooms except one shared by two of its own rooms */
-export function squadBarricade(q: SquadData, rooms: StructureRoom[]): string[] {
-  if (q.barricade) return q.barricade;
-  const mine = rooms.filter(r => q.rooms?.includes(r.id)), ids = mine.flatMap(r => r.doors.map(d => d.id));
-  return [...new Set(ids)].filter(id => ids.filter(x => x === id).length < 2);
-}
 
 /** THE HOSTAGE RESCUE's flow (rescueflow.ts): the corridor the team runs and the openings off it. AS BUILT the flow reads a corridor that runs along +x and is
  *  walked west to east (an opening is 'passed' when Sam's x goes by it; `north` says which side of the corridor it is on). A level whose route is not that shape
@@ -519,9 +506,6 @@ export interface WayHint { from: string; to: string; weight?: number }
  *  group is a KIND OF PLAY, every mission is under exactly one, and none DRAWS more than eight (tools/qa/listed.ts: a row cut from the list, `offList`, is in the table and not counted). SHOW, NOT TELL: a heading is a
  *  word or two; `line` is its tooltip, never drawn. A group with no row draws nothing. */
 export type MissionGroup = 'tutorial' | 'raids' | 'strongholds' | 'clock' | 'quiet-alone' | 'quiet-two';
-
-/** a row of the LESSON group (the tutorial's missions; the older Training group was taken out 2026-10-23): its own team size and no other, the kit as issued, no levers, no verdict kept */
-export const lessonGroup = (g: string | undefined): boolean => g === 'tutorial';
 
 /** One row of a scenario list (what a picker shows and a URL starts): which kind, how many teammates, on which level file. THE SMALLEST SHAPE — nothing reads it
  *  in the game yet; `scenarioQuery` is how a row becomes the page's query string. */

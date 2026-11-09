@@ -413,15 +413,6 @@ function resolveSlot(T: SideTable, slot: CharSlot, standIn = false): { name: Cha
   for (let hop = 0; 'as' in row && hop < 3; hop++) { name = row.as; row = T.slots[name]; }
   return { name, m: 'as' in row ? { albedo: [0.2, 0.2, 0.2], rough: 0.65, spec: 0.16, soak: 1, grime: 0.3, wear: 1 } : row };
 }
-/** THE PLACEHOLDER'S TWO COLOURS for a man of the cast (gbuffer.wgsl slotAlbedo, what `?nocharmats` draws: cloth_uniform takes the instance's FIRST colour — the webbing and
- *  the headgear mix some of it in — and cloth_plain and accent take its SECOND). cloth_uniform and cloth_plain are each handed the tint this side's TABLE reads for that slot
- *  (`src`), so a man's shirt and trousers keep the level's colours whether the tables are on or off. What the placeholder does NOT follow: `accent` always takes the second
- *  colour whatever its row reads (off, a tie is the shirt's colour and a straw hat or a tee the top's), and a row's `mix` (off, an operator's suit is his raw tint, not the
- *  tint pulled toward SUIT). An operator's uniform takes his tint and his marking his tint2, as they stand; a civilian's or an irregular's
- *  top his tint and his trousers his tint2 — the other way round (their tints mean top then trousers: scene/level.ts CivilianDef, guards.ts spawnUnit). A slot whose row reads
- *  neither tint (a pick, a fixed colour) takes the tint the other slot does not.
- *  → bits: 1 = the first colour is tint2 (else tint), 2 = the second is tint2 (else tint). TINTS_AS_IS (tint, then tint2) is the mannequin's and every operator's. */
-export const TINTS_AS_IS = 2;
 const orderOf = new Map<CharSide, { ver: number; bits: number }>();
 export function placeholderTints(side: CharSide): number {
   const ver = charMatsVersion(); const hit = orderOf.get(side); if (hit && hit.ver === ver) return hit.bits;

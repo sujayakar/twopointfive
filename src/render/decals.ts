@@ -111,14 +111,6 @@ const DEFAULTS: Record<DecalKind, { radius: number; param: number }> = {
 };
 const SCUFF_HALF_W = 0.016;
 
-/** A MARK ON A CUT OR A ROUND FACE LIES WHERE THE ROUND MET IT. A mark clamped to its box was pulled onto the face of the box's PLAIN shape. On a face a cut
- *  gave the box — a leaning pane, a rounded nose, a crowned bonnet (scene/cut.ts, scene/shapes.ts) — and round the side of a drum (scene/round.ts) that stood
- *  it centimetres off the surface, and the shader's plane test dropped it: no round ever left a mark there (a cloud NVIDIA card's still of a shot car's
- *  glass, 2026-11-04). The picture's alone: where a mark is drawn, never whether one is laid, and nothing the run's digest reads.
- *  THE SWITCH: MARKCUT.on — ON in the page (`?markcut=0` = pulled to the plain box's face, as it was), OFF in the module and on the frozen stand
- *  (FROZEN_HOLDS; TPS_MARKCUT=1 raises it there); in the registry (game/knobs.ts) and the journal. It was a field of one Decals that the page alone
- *  set, so the page's stand run headless did not have it (11-05). CHECK: tools/qa/hitstuff-check.ts lines 0, 5, 6 and 7 (MARKCUT_BREAK=1 fails 7). */
-export const MARKCUT = { on: false };
 /** MARKS THAT SIT IN THE SURFACE (decals.wgsl dkSit): a blast's scorch and its film of dust are drawn off round, broken by one field that every mark on a
  *  surface shares, coloured by what they lie on, and wet where the ground is wet. The picture's alone: it is one word of the uploaded header, nothing the
  *  game reads, so no run differs by it.
@@ -245,14 +237,6 @@ export class Decals {
     this.stats.count = drawn; this.stats.listLen = k; this.stats.maxCell = maxCell; this.stats.dropped = dropped; this.stats.buildMs = performance.now() - t0;
   }
 
-  /** harness / panel: the packed cell word for the cell holding world point (x, z) → { start, count } as the shader unpacks it (after the last build) */
-  cellAt(x: number, z: number): { start: number; count: number; indices: number[] } {
-    const cx = Math.floor((x - WORLD.min[0]) / WORLD.gridCell), cz = Math.floor((z - WORLD.min[2]) / WORLD.gridCell);
-    if (cx < 0 || cz < 0 || cx >= WORLD.gridW || cz >= WORLD.gridH) return { start: 0, count: 0, indices: [] };
-    const w = this.u32[CELL0 * 4 + cz * WORLD.gridW + cx]; const start = w & 0xffff, count = w >>> 16;
-    const indices: number[] = []; for (let j = 0; j < count; j++) indices.push(this.u32[LIST0 * 4 + start + j]);
-    return { start, count, indices };
-  }
   /** harness: a copy of the packed words (header + cells + list + records) as last built */
   words(): Uint32Array { return this.u32.slice(0); }
 }
