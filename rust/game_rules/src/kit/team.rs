@@ -1,4 +1,4 @@
-//! The team as it would go on a mission, as the screen before it shows it (src/ui/loadout.ts: paint, drawSlots, worn; kitGuide.ts GuideState), and what a screen's presses do to the
+//! The team as it would go on a mission, as the screen before it shows it (src/ui/loadout.ts: paint, drawSlots, worn), and what a screen's presses do to the
 //! cards. A read takes `&mut Game` only because the helpers do: it leaves the cards as they were.
 use super::*;
 use crate::game::Game;
@@ -221,7 +221,7 @@ fn men_of(g: &mut Game, f: Option<&TeamFor>, size: f64, clip: Option<&MemberKit>
     out
 }
 
-/// The team as it would go; the worn cards come apart (`team_worn`: a card is kept in a form only the machine's side knows). Changes nothing.   (loadout.ts paint, drawSlots; kitGuide.ts stateOf)
+/// The team as it would go; the worn cards come apart (`team_worn`: a card is kept in a form only the machine's side knows). Changes nothing.   (loadout.ts paint, drawSlots)
 pub fn team_view(g: &mut Game, f: Option<&TeamFor>, clip: Option<&MemberKit>) -> TeamView {
     let size = kit_team(g, None);
     let choices = f.map_or_else(any_size, |f| squad_choices(&f.entry));
