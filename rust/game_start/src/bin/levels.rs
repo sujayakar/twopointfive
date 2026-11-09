@@ -486,6 +486,38 @@ fn kinds(data: &Json) -> Vec<(&'static str, &'static str)> {
 }
 fn floor_of(g: &mut Game, p: V3) -> Option<V3> { game::scene_collision::nav_grid_nearest_free_point(g, p[0], p[2]) }
 fn walk_len(g: &mut Game, a: V3, b: V3) -> Option<f64> { let w = game::scene_collision::nav_grid_find_path(g, a, b, Some(20000.0), None)?; let mut n = 0.0; let mut q = a; for p in w { n += hyp(q, p); q = p; } Some(n) }
+/// a response block against its built floor: free marks apart from each other, a walk in for each man from his muster to his fan and on to the level's floor, a door of the level between the two, posts and
+/// places that can be reached, a way clear of every start
+const RESPONSE_CLEAR: f64 = 12.0;
+fn response(g: &mut Game, sc: &Json, bad: &mut Vec<String>) {
+    let r = sc.get("response");
+    if r.is_null() { return; }
+    let pts = |j: &Json| -> Vec<V3> { j.items().iter().filter_map(|p| p.v3()).collect() };
+    let free = |g: &Game, p: V3| !game::scene_collision::nav_grid_is_blocked(g, p[0], p[2]);
+    let flat = |p: V3| [p[0], 0.0, p[2]];
+    let floor = g.level.routes.first().and_then(|r| g.tab.route[*r].points.first().copied()).unwrap_or(g.level.player_spawn);
+    let mut firsts: Vec<V3> = vec![];
+    let mut fan0: Option<V3> = None;
+    for (k, y) in r.get("ways").items().iter().enumerate() {
+        let w = format!("the response's way {} '{}'", k + 1, y.get("name").str().unwrap_or("?"));
+        let (muster, entry) = (pts(y.get("muster")), pts(y.get("entry")));
+        let door = y.get("door").str().map(|n| (n, g.doors.list.iter().copied().find(|d| g.dr[*d].def.name == n)));
+        if let Some((n, None)) = door { bad.push(format!("{w}: no door '{n}' on this level")); }
+        for (what, ps) in [("muster", &muster), ("fan", &entry)] {
+            for (i, p) in ps.iter().enumerate() { if !free(g, *p) { bad.push(format!("{w}: {what} mark {} is not free floor", i + 1)); } for q in &ps[i + 1..] { if hyp(*p, *q) < 0.6 { bad.push(format!("{w}: two {what} marks are {:.2} m apart", hyp(*p, *q))); } } }
+        }
+        for (i, (p, e)) in muster.iter().zip(&entry).enumerate() { if free(g, *p) && free(g, *e) { match walk_len(g, flat(*p), flat(*e)) { Some(l) if l <= 30.0 => {} Some(l) => bad.push(format!("{w}: man {}'s walk in is {l:.1} m", i + 1)), None => bad.push(format!("{w}: man {} has no walk in", i + 1)) } } }
+        if let Some(e) = entry.first() { if free(g, *e) && walk_len(g, flat(*e), floor).is_none() { bad.push(format!("{w}: no walk from its fan to the level's floor")); } }
+        if let (Some((n, Some(d))), Some(m), Some(e)) = (door, muster.first(), entry.first()) { if game::doors::doors_pull_face(g, d, *m) == game::doors::doors_pull_face(g, d, *e) { bad.push(format!("{w}: its muster and its fan are on the same side of '{n}'")); } }
+        firsts.extend(muster.first());
+        if fan0.is_none() { fan0 = entry.first().copied(); }
+    }
+    for s in sc.get("quiet").get("starts").items() { if let Some(p) = s.get("sam").v3() { if !firsts.iter().any(|m| hyp(p, *m) >= RESPONSE_CLEAR) { bad.push("a start with every way's muster beside it".into()); } } }
+    let outside = pts(r.get("outside"));
+    for (i, p) in outside.iter().enumerate() { if !free(g, *p) { bad.push(format!("the response's outside mark {} is not free floor", i + 1)); } }
+    for (i, p) in r.get("posts").items().iter().enumerate() { let Some(q) = p.get("pos").v3() else { continue }; if !free(g, q) { bad.push(format!("the response's post {} is not free floor", i + 1)); } else if !outside.iter().any(|o| free(g, *o) && walk_len(g, *o, q).is_some()) { bad.push(format!("the response's post {} has no walk from an outside mark", i + 1)); } }
+    for (i, p) in r.get("sweep").items().iter().enumerate() { let Some(q) = p.get("pos").v3() else { continue }; if !free(g, q) { bad.push(format!("the response's place {} is not free floor", i + 1)); } else if let Some(e) = fan0 { if walk_len(g, flat(e), q).is_none() { bad.push(format!("the response's place {} has no walk from its first fan", i + 1)); } } }
+}
 fn stands(levels: &[String]) -> i32 {
     let mut v = Verdicts::default();
     let levels: Vec<String> = if levels.is_empty() { every_level() } else { levels.to_vec() };
@@ -520,6 +552,7 @@ fn stands(levels: &[String]) -> i32 {
             for (i, q) in pts.iter().enumerate() { if !free(g, *q) { if floor_of(g, *q).is_some() { said.push(format!("the route '{name}' stands its point {i} off free floor")); } else { bad.push(format!("the route '{name}' has no floor at its point {i}")); } } }
             for i in 0..pts.len() { let j = (i + 1) % pts.len(); if i == j { break; } if let (Some(a), Some(b)) = (floor_of(g, pts[i]), floor_of(g, pts[j])) { if walk_len(g, a, b).is_none() { bad.push(format!("the route '{name}' has no way from its point {i} to its point {j}")); } } }
         }
+        response(g, data.get("scenarios"), &mut bad);
         // a walkable cell of the building with no slab under it is a man walking on nothing
         let s = data.get("surfaces").get("building");
         if !s.is_null() {
@@ -709,11 +742,30 @@ fn rain(levels: &[String]) -> i32 {
     let levels: Vec<String> = if levels.is_empty() { every_level() } else { levels.to_vec() };
     let wd = game::scene_world::world();
     let ceiling = 3.0;   // (src/scene/world.ts WORLD.ceilingY)
+    let (mut walls, mut faces, mut inners) = (0, 0, 0);
     for level in &levels {
         let mut p = Play::level(&format!("{level}.json"), false, &Opts { dress: true, ..Default::default() });
         for _ in 0..3 { p.frame(); }
         let g: &mut Game = &mut p.g;
         if !g.weather.own { continue; }   // (a level whose roofs are the office's two, or a still night)
+        // rain shows in front of an outer wall's outer face and not of its inner one: the picture hides it from a point 0.2 m or more inside the roofs on every side (common.wgsl wxUnderRoof)
+        let roofs = g.weather.roof_rects.clone();
+        let under_any = |x: f64, z: f64| roofs.iter().any(|r| x >= r[0] && z >= r[1] && x <= r[2] && z <= r[3]);
+        let hidden = |x: f64, z: f64| under_any(x, z) && (breaks() || [[0.2, 0.2], [-0.2, 0.2], [0.2, -0.2], [-0.2, -0.2]].iter().all(|d| under_any(x + d[0], z + d[1])));
+        for b in &g.col.boxes {
+            let (c, h) = { let b = &g.tab.boxes[*b]; (b.c, b.h) };
+            if h[1] < 1.0 || c[1] + h[1] < ceiling - 0.01 { continue; }
+            let along = if h[0] < 0.2 && h[2] > 0.3 { 0 } else if h[2] < 0.2 && h[0] > 0.3 { 2 } else { continue };
+            for s in [-1.0, 1.0] {
+                let at = |d: f64| if along == 0 { [c[0] + s * d, c[2]] } else { [c[0], c[2] + s * d] };
+                let (t, sky, deep) = (h[along], at(h[along] + 0.5), at(-h[along] - 0.5));
+                if under_any(sky[0], sky[1]) || !under_any(deep[0], deep[1]) { continue; }
+                walls += 1;
+                let (o, i) = (at(t), at(-t));
+                if !hidden(o[0], o[1]) { faces += 1; }
+                if hidden(i[0], i[1]) { inners += 1; }
+            }
+        }
         let (mut open, mut dry, mut roofed, mut rained) = (0, 0, 0, 0);
         let under = |g: &mut Game, x: f64, z: f64| if breaks() { x > 4.0 && x < 36.0 && z > 4.0 && z < 24.0 } else { game::weather::weather_under_roof(g, x, z) };
         let blocked = |g: &mut Game, a: V3, b: V3| game::scene_collision::solid_blocked(g, a, b, None);
@@ -732,6 +784,7 @@ fn rain(levels: &[String]) -> i32 {
         }
         v.say(dry == 0 && rained as f64 <= (roofed as f64 * 0.02).ceil(), &format!("{level}: open ground is rained on, and ground under a ceiling is not"), &format!("{open} points of open ground, {dry} kept dry; {roofed} under a ceiling, {rained} rained on"));
     }
+    if levels.len() > 1 { v.say(walls >= 100 && faces as f64 >= walls as f64 * 0.85 && inners as f64 >= walls as f64 * 0.97, "rain shows in front of nearly every outer wall's face, and of next to no inner one", &format!("{walls} outer walls, {faces} faces shown, {inners} inner faces dry")); }
     v.end("rain")
 }
 
