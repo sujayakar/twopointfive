@@ -665,12 +665,12 @@ pub struct Anim {
     #[is(0.09)] pub sprint_floor_y: f64,
     pub jog_seam: Vec<crate::character::AnimJogSeamItem>,
     #[is(crate::character::AnimRunGait { jog: crate::character::AnimRunGaitJog { c: 0.117, c_l: 0.117, c_r: 0.617 }, sprint: crate::character::AnimRunGaitSprint { c: 0.153, c_l: 0.133, c_r: 0.672 } })] pub run_gait: crate::character::AnimRunGait,
-    #[is(crate::character::AnimPlantL { dev: 0.0, pz: f64::NAN })] pub plant_l: crate::character::AnimPlantL,
-    #[is(crate::character::AnimPlantR { dev: 0.0, pz: f64::NAN })] pub plant_r: crate::character::AnimPlantR,
+    #[is(crate::character::AnimPlant { dev: 0.0, pz: f64::NAN })] pub plant_l: crate::character::AnimPlant,
+    #[is(crate::character::AnimPlant { dev: 0.0, pz: f64::NAN })] pub plant_r: crate::character::AnimPlant,
     pub plant_w: f64,
     #[is(crate::character::AnimGz { pitch: 0.0, yaw_ref: 0.0, yaw_init: false, w: 0.0 })] pub gz: crate::character::AnimGz,
     #[is(crate::character::AnimLife { breath: 0.0, exert: 0.0, prev_s: 0.0, accel: 0.0, mass: crate::character::Spring::blank(), mass_v: crate::character::Spring::blank(), still_t: 0.0, shift_t: 4.0, shift_side: 1.0, shift: crate::character::Spring::blank(), yaw_prev: f64::NAN, yaw_rate: 0.0, prev_pos: [f64::NAN, 0.0, 0.0], root_v: 0.0, gate: 0.0, shift_n: 0.0 })] pub life: crate::character::AnimLife,
-    #[is(crate::character::AnimFeet { w: 0.0, gate: 0.0, l: crate::character::AnimFeetL { p: [0.0, 0.0, 0.0], yaw: 0.0, swing: -1.0, from: [0.0, 0.0, 0.0], from_yaw: 0.0 }, r: crate::character::AnimFeetR { p: [0.0, 0.0, 0.0], yaw: 0.0, swing: -1.0, from: [0.0, 0.0, 0.0], from_yaw: 0.0 }, next: 0.0 })] pub feet: crate::character::AnimFeet,
+    #[is(crate::character::AnimFeet { w: 0.0, gate: 0.0, l: crate::character::AnimFoot { p: [0.0, 0.0, 0.0], yaw: 0.0, swing: -1.0, from: [0.0, 0.0, 0.0], from_yaw: 0.0 }, r: crate::character::AnimFoot { p: [0.0, 0.0, 0.0], yaw: 0.0, swing: -1.0, from: [0.0, 0.0, 0.0], from_yaw: 0.0 }, next: 0.0 })] pub feet: crate::character::AnimFeet,
     pub body_yaw_in: f64,
     pub thr_last: Option<crate::character::AnimThrLast>,
     pub thr_carry: Option<crate::character::AnimThrCarry>,
@@ -731,38 +731,20 @@ pub struct Anim {
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct AnimWallTakeFeet {
-    pub l: crate::character::AnimWallTakeFeetL,
-    pub r: crate::character::AnimWallTakeFeetR,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct AnimWallTakeFeetL {
-    pub p: V3,
-    pub yaw: f64,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct AnimWallTakeFeetR {
-    pub p: V3,
-    pub yaw: f64,
+    pub l: crate::character::AnimFootSpot,
+    pub r: crate::character::AnimFootSpot,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct AnimWtk {
-    pub l: crate::character::AnimWtkL,
-    pub r: crate::character::AnimWtkR,
+    pub l: crate::character::AnimFootSpot,
+    pub r: crate::character::AnimFootSpot,
     pub first: f64,
     pub last: f64,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct AnimWtkL {
-    pub p: V3,
-    pub yaw: f64,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct AnimWtkR {
+pub struct AnimFootSpot {
     pub p: V3,
     pub yaw: f64,
 }
@@ -1118,13 +1100,7 @@ pub struct AnimRunGaitSprint {
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct AnimPlantL {
-    pub dev: f64,
-    pub pz: f64,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct AnimPlantR {
+pub struct AnimPlant {
     pub dev: f64,
     pub pz: f64,
 }
@@ -1161,22 +1137,13 @@ pub struct AnimLife {
 pub struct AnimFeet {
     pub w: f64,
     pub gate: f64,
-    pub l: crate::character::AnimFeetL,
-    pub r: crate::character::AnimFeetR,
+    pub l: crate::character::AnimFoot,
+    pub r: crate::character::AnimFoot,
     pub next: f64,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct AnimFeetL {
-    pub p: V3,
-    pub yaw: f64,
-    pub swing: f64,
-    pub from: V3,
-    pub from_yaw: f64,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct AnimFeetR {
+pub struct AnimFoot {
     pub p: V3,
     pub yaw: f64,
     pub swing: f64,
@@ -2480,12 +2447,6 @@ pub struct AnimTrunkFrame {
     pub fwd: V3,
 }
 
-#[derive(Clone, Debug)]
-pub enum AnimReloadArmAskOwn {
-    Arm0(crate::gunreload::FeedPathArm0),
-    Arm1(crate::gunreload::FeedPathArm1),
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct AnimStanceOf {
     pub c: f64,
@@ -2494,21 +2455,10 @@ pub struct AnimStanceOf {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct AnimLgChannelsItem {
-    pub x: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct AnimTakenLayerT {
     pub style: crate::character::TakenStyle,
     pub t: f64,
     pub delay: f64,
-    pub off: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct AnimTakenLayerAskT {
-    pub style: crate::character::TakenStyle,
     pub off: f64,
 }
 
@@ -2587,9 +2537,6 @@ pub static WORK: crate::character::Work = crate::character::Work { key_lead: 0.2
 
 /// (src/game/character.ts:87 SWAP: a table nothing writes)
 pub fn swap() -> crate::character::SWAP { crate::character::SWAP { draw: 0.6, stow: 0.8, away: 0.3, take: 0.5, lag: 0.2 } }
-
-/// (src/game/character.ts:88 NO_KEYS: a table nothing writes)
-pub fn no_keys() -> Vec<[f64; 2]> { alloc::vec![[0.0, 0.0]] }
 
 /// (src/game/character.ts:328 WHIP_THRU)
 pub const WHIP_THRU: f64 = 0.14;
@@ -2741,9 +2688,6 @@ pub const KICK_PLANT: f64 = 0.72;
 /// (src/game/character.ts:1012 SIGNAL_DUR: a table nothing writes)
 pub fn signal_dur() -> JsMap<String, f64> { { let mut t = JsMap::new(); t.set(String::from("hold"), 0.9); t.set(String::from("go"), 0.95); t.set(String::from("rally"), 1.3); t.set(String::from("squeeze"), 0.9); t.set(String::from("aside"), 1.15); t } }
 
-/// (src/game/character.ts:1014 SIGNAL_NO: a table nothing writes)
-pub fn signal_no() -> JsMap<String, f64> { { let mut t = JsMap::new(); t.set(String::from("hold"), 0.0); t.set(String::from("go"), 1.0); t.set(String::from("rally"), 2.0); t.set(String::from("squeeze"), 3.0); t.set(String::from("aside"), 4.0); t } }
-
 /// (src/game/character.ts:1016 TELL_DUR: a table nothing writes)
 pub fn tell_dur() -> JsMap<String, f64> { { let mut t = JsMap::new(); t.set(String::from("watch"), 1.05); t.set(String::from("neck"), 1.35); t } }
 
@@ -2771,12 +2715,6 @@ pub static TAKEN: crate::character::Taken = crate::character::Taken { sag: crate
 /// (src/game/character.ts:1105 KNIFE_KEYS_MAX)
 pub const KNIFE_KEYS_MAX: f64 = 4.0;
 
-/// (src/game/character.ts:1107 BLOW_NO: a table nothing writes)
-pub fn blow_no() -> JsMap<String, f64> { { let mut t = JsMap::new(); t.set(String::from("chop"), 0.0); t.set(String::from("palm"), 1.0); t.set(String::from("mouth"), 2.0); t.set(String::from("slash"), 3.0); t.set(String::from("sweep"), 4.0); t } }
-
-/// (src/game/character.ts:1109 HOLD_PH: a table nothing writes)
-pub fn hold_ph() -> JsMap<String, f64> { { let mut t = JsMap::new(); t.set(String::from("grab"), 0.0); t.set(String::from("held"), 1.0); t.set(String::from("choke"), 2.0); t.set(String::from("whip"), 3.0); t.set(String::from("kill"), 4.0); t } }
-
 /// (src/game/character.ts:1112 THROW_KEYS_MAX)
 pub const THROW_KEYS_MAX: f64 = 16.0;
 
@@ -2785,15 +2723,6 @@ pub fn throw_nums() -> [String; 11] { [String::from("chestYaw"), String::from("p
 
 /// (src/game/character.ts:1131 THROW_VECS: a table nothing writes)
 pub fn throw_vecs() -> [String; 6] { [String::from("handR"), String::from("fingR"), String::from("backR"), String::from("handL"), String::from("fingL"), String::from("backL")] }
-
-/// (src/game/character.ts:1136 WORK_NO: a table nothing writes)
-pub fn work_no() -> JsMap<String, f64> { { let mut t = JsMap::new(); t.set(String::from("keys"), 0.0); t.set(String::from("charge"), 1.0); t.set(String::from("lever"), 2.0); t.set(String::from("take"), 3.0); t } }
-
-/// (src/game/character.ts:1138 KIT_NO: a table nothing writes)
-pub fn kit_no() -> JsMap<String, f64> { { let mut t = JsMap::new(); t.set(String::from("pistol"), 1.0); t.set(String::from("rifle"), 2.0); t.set(String::from("can"), 3.0); t.set(String::from("knife"), 4.0); t } }
-
-/// (src/game/character.ts:1138 KIT_OF: a table nothing writes)
-pub fn kit_of() -> Vec<Option<crate::character::KitItem>> { alloc::vec![None, Some(crate::character::KitItem::Pistol), Some(crate::character::KitItem::Rifle), Some(crate::character::KitItem::Can), Some(crate::character::KitItem::Knife)] }
 
 /// (src/game/character.ts:1146 CREEP: a table nothing writes)
 pub static CREEP: crate::character::Creep = crate::character::Creep { in_: 6.0, out: 5.0, gait_in: 0.2, gait_out: 0.4, drop: [0.09, 0.03], back: [0.03, 0.01], lean: [14.0, 6.0], round: 10.0, look: 0.85, low: crate::character::CreepLow { rate: 8.0, up: 24.0 }, wide: crate::character::CreepWide { in_: 5.0, out: 14.0, still: 0.03, pole: [0.75, 0.1, -0.65], fing: [0.3, -0.5, 0.8], back: [0.15, 0.9, 0.35], curl: 0.1, thumb: 0.15, spread: 0.55 }, heft: crate::character::CreepHeft { stride: 0.75, lift: 0.1, run: 1.6, trunk: [11.0, 0.7], arm: [7.0, 0.55], body: [9.0, 0.75], go: [5.0, 0.5], out: 0.15, up: 0.3, breath: 1.3, breath_hz: 0.32, dt: 0.03333333333333333 }, l: crate::character::CreepHand { at: [-0.05, -0.27, 0.3], at_c: [0.0, -0.17, 0.3], pole: [0.7, -0.6, -0.5], fing: [-0.2, 0.35, 1.0], back: [0.7, 0.7, 0.0], curl: 0.32, thumb: 0.25, spread: 0.2 }, r: crate::character::CreepHand { at: [0.05, -0.33, 0.27], at_c: [0.0, -0.21, 0.28], pole: [-0.7, -0.6, -0.5], fing: [0.2, 0.3, 1.0], back: [-0.7, 0.7, 0.0], curl: 0.38, thumb: 0.3, spread: 0.15 } };
@@ -2818,9 +2747,6 @@ pub static SMOKEARM: crate::character::Smokearm = crate::character::Smokearm { a
 
 /// (src/game/character.ts:1277 RD: a table nothing writes)
 pub fn rd() -> crate::character::RD { crate::character::RD { up: 35.0 } }
-
-/// (src/game/character.ts:1277 RD_N)
-pub const RD_N: f64 = 36.0;
 
 /// (src/game/character.ts:1283 THROW_DUR)
 pub const THROW_DUR: f64 = 0.75;
