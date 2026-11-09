@@ -940,7 +940,7 @@ fn tick_sent(g: &mut Game, q: EnemysquadsSquadId, i: usize) {
         }
         let r = &mut g.tab.enemysquads_squad[q].sent[i];
         r.phase = SentPhase::Run; r.back = Some(true); r.spot = Some(s.from); r.door = None; r.way = None; r.tries = 0.0;
-        crate::pressure::run(g, d, s.from, None, Some(0.3));
+        crate::roomfight::run(g, d, s.from, None, 0.3, crate::owner::by::SQUAD_LEG);
         return;
     }
     if mode == crate::roomfight::DefMode::Hold && g.time - s.t0 > 6.0 { sent_home(g, q, i); }
@@ -957,7 +957,7 @@ fn tick_run(g: &mut Game, q: EnemysquadsSquadId, i: usize, s: Sent, d: Roomfight
         if let Some(w) = &s.way {
             if w.len() > 1 && (flat(at, w[0]) < 1.4 || flat(at, w[1]) < flat(w[0], w[1])) {
                 g.tab.enemysquads_squad[q].sent[i].way.as_mut().unwrap().remove(0);
-                crate::pressure::run(g, d, w[1], s.door, Some(0.3));
+                crate::roomfight::run(g, d, w[1], s.door, 0.3, crate::owner::by::SQUAD_LEG);
             }
         }
         return;
@@ -968,7 +968,7 @@ fn tick_run(g: &mut Game, q: EnemysquadsSquadId, i: usize, s: Sent, d: Roomfight
     if s.back == Some(true) {
         if again && fit(g, gd) {
             g.tab.enemysquads_squad[q].sent[i].tries = s.tries + 1.0;
-            crate::pressure::run(g, d, s.spot.unwrap(), None, Some(0.3));
+            crate::roomfight::run(g, d, s.spot.unwrap(), None, 0.3, crate::owner::by::SQUAD_LEG);
             return;
         }
         g.tab.enemysquads_squad[q].sent.remove(i);
@@ -977,7 +977,7 @@ fn tick_run(g: &mut Game, q: EnemysquadsSquadId, i: usize, s: Sent, d: Roomfight
     if again && fit(g, gd) {
         g.tab.enemysquads_squad[q].sent[i].tries = s.tries + 1.0;
         let next = match s.way.as_ref().and_then(|w| w.first().copied()) { Some(p) => p, None => s.spot.unwrap() };
-        crate::pressure::run(g, d, next, s.door, Some(0.3));
+        crate::roomfight::run(g, d, next, s.door, 0.3, crate::owner::by::SQUAD_LEG);
         return;
     }
     let holds = s.hold == Some(true);

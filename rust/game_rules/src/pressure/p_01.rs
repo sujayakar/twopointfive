@@ -119,7 +119,7 @@ pub fn target(g: &mut crate::game::Game, d: RoomfightDefId) -> Option<crate::pre
     while i < g.fight.defs.len() {
         let x = g.fight.defs[i];
         i += 1;
-        if x == d || g.tab.roomfight_def[x].room == d_room || g.tab.roomfight_def[x].mode == crate::roomfight::DefMode::Free {
+        if x == d || g.tab.roomfight_def[x].room == d_room || crate::roomfight::is_loose(g, x) {
             continue;
         }
         let station = g.tab.roomfight_def[x].station;

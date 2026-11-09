@@ -9,7 +9,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 fn say_radio(g: &mut Game, gd: GuardId, text: &str) { crate::game::game_say(g, gd, text, Some(true), None, None); }
 /// `alive(X) && X.mode === 'hold'`   (standTo's holds)
-fn holds(g: &mut Game, x: RoomfightDefId) -> bool { alive(g, x) && g.tab.roomfight_def[x].mode == crate::roomfight::DefMode::Hold }
+fn holds(g: &mut Game, x: RoomfightDefId) -> bool { alive(g, x) && crate::roomfight::at_post(g, x) }
 /// `F.defs.find(holds)`
 fn first_holding(g: &mut Game) -> Option<RoomfightDefId> {
     let mut i = 0;
@@ -48,7 +48,7 @@ pub fn room_for(g: &mut crate::game::Game, at: V3) -> Option<RoomfightRoomId> {
     while i < g.fight.defs.len() {
         let x = g.fight.defs[i];
         i += 1;
-        if !alive(g, x) || g.tab.roomfight_def[x].mode != crate::roomfight::DefMode::Hold { continue; }
+        if !alive(g, x) || !crate::roomfight::at_post(g, x) { continue; }
         let r = match g.tab.roomfight_def[x].room { Some(r) => r, None => continue };
         if done.has(r) || g.tab.roomfight_room[r].cells.len() as f64 > ROOM_CELLS { continue; }
         done.add(r);
@@ -191,7 +191,7 @@ pub fn stand_and_fight(g: &mut crate::game::Game) {
         let st = state_of(g);
         let m = st.of.get(d).copied();
         let k = match st.called.get(d).copied() { Some(k) => k, None => continue };
-        if g.time - k.t > CALLED_SECS || !alive(g, d) || g.gd[gd].held.is_some() || g.tab.roomfight_def[d].mode != crate::roomfight::DefMode::Free
+        if g.time - k.t > CALLED_SECS || !alive(g, d) || g.gd[gd].held.is_some() || !crate::roomfight::is_loose(g, d)
             || m.map_or(false, |m| g.tab.pressure_man[m].fell) || g.time - g.gd[gd].last_seen_t >= 0.1 || crate::control::man::blind(g, gd) || crate::control::man::staggered(g, gd) { continue; }
         let dc = crate::guards::door_cells(g);
         let sight = g.gd[gd].sight_pos;
@@ -227,7 +227,7 @@ pub fn stand_and_fight(g: &mut crate::game::Game) {
 
 /// goLook's `free`: a man at his post with nothing else on, for the word at `p`
 fn look_free(g: &mut Game, d: RoomfightDefId, p: V3) -> bool {
-    if !alive(g, d) || g.tab.roomfight_def[d].mode != crate::roomfight::DefMode::Hold || state_of(g).of.has(d) { return false; }
+    if !alive(g, d) || !crate::roomfight::at_post(g, d) || state_of(g).of.has(d) { return false; }
     let gd = g.tab.roomfight_def[d].gd;
     if crate::owner::kept(g, gd, crate::owner::by::PRESS).is_some() || state_of(g).outs.iter().any(|o| o.def == d) { return false; }
     !crate::lanes::lane_bars(g, gd, Some(p)) && !crate::lanes::lane_known_at(g, gd, Some(p))
@@ -268,7 +268,7 @@ pub fn go_look(g: &mut crate::game::Game) {
                 if alive(g, x) { by = Some(x); break; }
             }
             if let Some(by) = by { let gd = g.tab.roomfight_def[by].gd; note(g, gd, "go and look: a man of the look is down \u{2014} nobody else walks out"); }
-        } else if out.iter().all(|&d| g.tab.roomfight_def[d].mode != crate::roomfight::DefMode::Free) {
+        } else if out.iter().all(|&d| !crate::roomfight::is_loose(g, d)) {
             state_of(g).out = None;
         }
     }
@@ -307,7 +307,7 @@ pub fn go_look(g: &mut crate::game::Game) {
     while i < g.fight.defs.len() {   // (a man is out already: his look is the look)
         let x = g.fight.defs[i];
         i += 1;
-        if alive(g, x) && g.tab.roomfight_def[x].mode == crate::roomfight::DefMode::Free { return; }
+        if alive(g, x) && crate::roomfight::is_loose(g, x) { return; }
     }
     if let Some(r) = crate::roomfight::room_fight_room_at(g, w.p) {   // (a man of theirs holds the room that word is of: he is looking at it)
         let mut i = 0;
