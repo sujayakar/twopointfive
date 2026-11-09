@@ -75,7 +75,7 @@ export const enum View {
   stood = 1,
   /** u32: the shown man's id */
   man = 2,
-  /** f32 × 3: where he stands, and where the view follows (him, a man spectated, the squad from the sky) */
+  /** f32 × 3: where he stands, and where the view follows (him, or a man spectated) */
   at = 3,
   /** f32 × 3 */
   follow = 6,

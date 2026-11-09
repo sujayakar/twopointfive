@@ -337,16 +337,6 @@ pub enum KitModIssuing {
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct KitModLessonRow {
-    pub packs: Option<crate::kit::KitModLessonRowPacks>,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct KitModLessonRowPacks {
-    pub frags: Option<f64>,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct KitModKept0 {
     pub charges: Option<f64>,
     pub walls: Option<f64>,
@@ -562,21 +552,6 @@ pub struct KitPaste {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct KitPacksE {
-    pub packs: Option<crate::kit::KitModLessonRowPacks>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct KitLessonPageRow {
-    pub packs: Option<crate::kit::KitLessonPageRowPacks>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct KitLessonPageRowPacks {
-    pub frags: Option<f64>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct KeptNow {
     pub charges: Option<f64>,
     pub walls: Option<f64>,
@@ -628,8 +603,8 @@ pub struct KitMod {
     pub issued_page: bool,
     /// (src/game/kit.ts:1148 issuing)
     pub issuing: crate::kit::KitModIssuing,
-    /// (src/game/kit.ts:1180 lessonRow)
-    pub lesson_row: Option<crate::kit::KitModLessonRow>,
+    /// this page is a lesson's: its stagings wear the issue
+    pub lesson_page: bool,
     /// (src/game/kit.ts:1203 kept0)
     pub kept0: Option<crate::kit::KitModKept0>,
     /// (src/game/kit.ts:1211 keptWand)
@@ -659,7 +634,7 @@ impl KitMod {
             kit_note: alloc::vec![String::from(""); 5],
             issued_page: false,
             issuing: crate::kit::KitModIssuing::Bool(false),
-            lesson_row: None,
+            lesson_page: false,
             kept0: None,
             kept_wand: Vec::new(),
             man_of: JsMap::new(),

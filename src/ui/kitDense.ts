@@ -79,7 +79,7 @@ ${P} .kc-pop .kc-kids .kc-val, ${P} .kc-pop .kc-kids .kc-val.num { grid-column: 
 ${P} .kc-pop .kc-kids .kc-val.num { font-size: 16px; }
 ${P} .kc-pop .kc-kids .kc-line button:nth-of-type(1) { grid-column: 2; grid-row: 2; width: 16px; height: 20px; }
 ${P} .kc-pop .kc-kids .kc-line button:nth-of-type(2) { grid-column: 4; grid-row: 2; width: 16px; height: 20px; }
-${P} .kc-pop .kc-kids .kc-row.idle { grid-column: span 2; }   /* (a count with words beside it: the mission's own, or of no use here) */
+${P} .kc-pop .kc-kids .kc-row.idle { grid-column: span 2; }   /* (a count with words beside it: of no use here) */
 ${P} .kc-pop:has(.kc-row.refused) { padding-bottom: 30px; }
 ${P} .kc-gun > .kc-row > .kc-note { display: none !important; }   /* (a gun's refusal is on the card's own line, or in its open pop-up) */
 ${P} .kc-pop-note { display: none; margin: 8px 0 0 70px; font-size: 12px; line-height: 18px; color: #e8c15a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
