@@ -7,8 +7,7 @@
 "methods": [
 "denlin",
 "onelin",
-"oneleaflin",
-"denlin"
+"one25"
 ],
 "paths": 700,
 "name": "k2-store",
@@ -31,8 +30,7 @@
 "methods": [
 "denlin",
 "onelin",
-"oneleaflin",
-"denlin"
+"one25"
 ],
 "paths": 700,
 "name": "k1-street-day",
@@ -55,8 +53,7 @@
 "methods": [
 "denlin",
 "onelin",
-"oneleaflin",
-"denlin"
+"one25"
 ],
 "paths": 700,
 "name": "shelf",

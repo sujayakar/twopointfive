@@ -1,6 +1,6 @@
 // THE SECOND CORE'S RAYS: one rule. A ray is f(t) = w + s t wide; what is smaller than that is met as part of the world's block, the rest as it is. Things leave in three steps (classes), and
-// the block's level follows, so each stretch of a ray has one level: exact · cells of 0.16 m, with class 0 and the leaves gone · 0.32, class 1 gone · 0.64, class 2 gone · 1.28.
-const CELL_CODE = 0xfffffffeu; const FINEST = 0.16; const BRICK = 1.28;
+// the block's level follows, so each stretch of a ray has one level: exact · cells of 0.32 m, with class 0 and the leaves gone · 0.64, class 1 gone · 1.28 · 2.56.
+const CELL_CODE = 0xfffffffeu; const FINEST = 0.32; const BRICK = 2.56;
 var<private> footW = 0.0; var<private> footS = 0.0; var<private> leafTo = 1e9; var<private> smallTo = 1e9;       /* (the last two: for stages written for the first core) */
 var<private> lim = vec4f(1e9);               // how far classes 0, 1, 2, 3 are met as they are
 var<private> blk = vec4f(1e9);               // where levels 0, 1, 2, 3 of the block begin
@@ -9,7 +9,7 @@ var<private> leafOnly: bool = false; var<private> blkOn: bool = true; var<privat
 var<private> blkL = vec3f(0.0); var<private> blkT = 1.0;
 fn foot(w: f32, s: f32) {
   footW = w; footS = s; leafOnly = false; if (s <= 0.0) { lim = vec4f(1e9); blk = vec4f(1e9); leafTo = 1e9; return; }
-  let g = FINEST * 0.70710678 * exp2(rnd() - 0.5); let t = max((vec4f(1.0, 2.0, 4.0, 8.0) * g - w) / s, vec4f(0.0)); blk = t; lim = vec4f(t.xyz, 1e9); leafTo = t.x * LEAF_NEAR; smallTo = 1e9;
+  let g = FINEST * 0.70710678 * exp2(rnd() - 0.5); let t = max((vec4f(1.0, 2.0, 4.0, 8.0) * g - w) / s, vec4f(0.0)); blk = t; lim = vec4f(t.xy, 1e9, 1e9); leafTo = t.x * LEAF_NEAR; smallTo = 1e9;
 }
 fn footSolid(w: f32, s: f32) { foot(w, s); }
 /** for a ray whose edges are looked at (a lamp's own shadow): solids as they are all the way, and only leaves by the cells */
@@ -134,7 +134,7 @@ fn blockWalk(ro: vec3f, rd: vec3f, t0: f32, t1: f32, want: f32, lit: bool) -> Bl
     if (p == 0u || ((leafOnly || t < blk.x) && (w >> 31u) == 0u)) { let e = (BLK_LO + (vec3f(c) + ahead) * BRICK - ro) * inv; t = max(min3(e), t) + 1e-3; continue; }
     let per = 8u >> level; let h = FINEST * f32(1u << level); let q = clamp(vec3i(floor((g - vec3f(c)) * f32(per))), vec3i(0), vec3i(i32(per) - 1)); let lo = BLK_LO + vec3f(c) * BRICK + vec3f(q) * h;
     let e = (lo + ahead * h - ro) * inv; var out = max(min3(e), t); if (level < 3u && blk[level + 1u] > t) { out = min(out, blk[level + 1u]); } if (blk.x > t) { out = min(out, blk.x); }
-    if (level < 2u) { let u = vec3u(clamp(vec3i(floor((g - vec3f(c)) * 2.0)), vec3i(0), vec3i(1))); if (blkWord(BLK_BRICKS, (p - 1u) * 588u + 576u + u.x + 2u * (u.y + 2u * u.z)) == 0u) { let e2 = (BLK_LO + (vec3f(c) + 0.5 * (vec3f(u) + ahead)) * BRICK - ro) * inv; t = max(min3(e2), t) + 1e-3; continue; } }      /* (nothing in the 0.64 m round here) */
+    if (level < 2u) { let u = vec3u(clamp(vec3i(floor((g - vec3f(c)) * 2.0)), vec3i(0), vec3i(1))); if (blkWord(BLK_BRICKS, (p - 1u) * 588u + 576u + u.x + 2u * (u.y + 2u * u.z)) == 0u) { let e2 = (BLK_LO + (vec3f(c) + 0.5 * (vec3f(u) + ahead)) * BRICK - ro) * inv; t = max(min3(e2), t) + 1e-3; continue; } }      /* (nothing in the 1.28 m round here) */
     let cell = blkWord(BLK_BRICKS, (p - 1u) * 588u + array<u32, 4>(0u, 512u, 576u, 584u)[level] + u32(q.x) + per * (u32(q.y) + per * u32(q.z)));
     if (cell != 0u && cell != fromCell) {
       let r = bitcast<vec4u>(extra[BLK_CELLS + (cell - 1u) * 2u]); let B = cellBox(r, lo, h); let u = (B.lo - ro) * inv; let v = (B.hi - ro) * inv; let ta = max(t - 1e-3, max3(min(u, v))); let tb = min(min(out, te), min3(max(u, v)));

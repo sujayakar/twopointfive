@@ -7,8 +7,7 @@
 "methods": [
 "denlin",
 "onelin",
-"oneleaflin",
-"denlin"
+"one25"
 ],
 "paths": 700,
 "name": "garden",
@@ -29,8 +28,7 @@
 "methods": [
 "denlin",
 "onelin",
-"oneleaflin",
-"denlin"
+"one25"
 ],
 "paths": 700,
 "name": "tree",
@@ -52,8 +50,7 @@
 "methods": [
 "denlin",
 "onelin",
-"oneleaflin",
-"denlin"
+"one25"
 ],
 "paths": 700,
 "name": "ground day",

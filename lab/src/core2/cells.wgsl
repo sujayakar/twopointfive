@@ -9,7 +9,7 @@ fn onSide(at: vec3f, ext: vec3f, d: vec3f) -> vec3f { let m = abs(d * ext); var 
   var at = vec4f(0.0); var ext = vec4f(0.0); var tint = vec3f(0.0); var cell = NOTHING; var r = vec4u(0u); var r2 = vec4u(0u);
   if (limb) { let w = limbRow(s - many.x); let a = extra[w]; let b = extra[w + 1u]; let c = extra[w + 2u]; let hf = extra[w + 3u]; let e = (abs(a.xyz) * hf.x + abs(b.xyz) * hf.y + abs(c.xyz) * hf.z) * 2.0; go = go && any(hf.xyz > vec3f(0.0)); at = vec4f(-(a.xyz * a.w + b.xyz * b.w + c.xyz * c.w), max(max3(e), 0.16)); ext = vec4f(e, 0.0); tint = extra[w + 4u].xyz; }
   else if (go) { at = places[2u * s]; ext = places[2u * s + 1u]; cell = bitcast<u32>(ext.w); r = bitcast<vec4u>(extra[BLK_CELLS + (cell - 1u) * 2u]); r2 = bitcast<vec4u>(extra[BLK_CELLS + (cell - 1u) * 2u + 1u]); }
-  let st = steady(at.xyz); { let turn = select(7u, 31u, n > 40.0); if (!limb && n > 16.0 && st > 0.9 && (wg.x & turn) != (frame.counts.z & turn)) { go = false; } }
+  let st = steady(at.xyz); { let turn = select(3u, 15u, n > 40.0); if (!limb && n > 16.0 && st > 0.9 && (wg.x & turn) != ((frame.counts.z >> 1u) & turn)) { go = false; } }
   let leafy = (r.x >> 24u) > 127u; let S = frame.sunDir.xyz; let sun0 = max3(frame.sunE.xyz) > 0.0; let h = at.w; var out = vec3f(0.0); var way = vec3f(0.0);
   if (go) {
     rngKey(s * 8u + task, 203u); leafMode = 2u; byReach = true; let x = at.xyz + (vec3f(rnd(), rnd(), rnd()) - 0.5) * ext.xyz * select(0.0, 1.0, leafy);

@@ -17,9 +17,9 @@ export function oneRule(o: { name?: string; leafNear?: number; upscale?: Upscale
   const edit = (s: Stage): Stage => {
     if (s.name === 'foliage') {
       const lab = lab0!, many = lab.litCells.many;
-      if (s.make) return { ...s, async make() { return enc => { enc.copyBufferToBuffer(lab.graph.buffers.get('cellLight')!, 0, lab.scene.extraBuffer, lightRow(lab.scene.blocks, lab.scene.blockRow) * 16, (many + PEOPLE * LIMBS) * 48); }; } };
+      if (s.make) return { ...s, /* (looked at every other frame: what it costs is mostly waiting) */ async make() { return enc => { enc.copyBufferToBuffer(lab.graph.buffers.get('cellLight')!, 0, lab.scene.extraBuffer, lightRow(lab.scene.blocks, lab.scene.blockRow) * 16, (many + PEOPLE * LIMBS) * 48); }; } };
       const { field: _f, folAt: _a, ...bind } = s.buffers!, lib = s.code.slice(signals.length, s.code.indexOf(bounceLib));
-      s = { name: 'cells', over: { groups: () => [Math.ceil((many + PEOPLE * LIMBS) / 8), 1, 1] }, code: signals + lib + bounceLib + cells, buffers: { ...bind, ...CHANGES, field: ['cellLight', 'array<u32>', 'read_write'], places: ['cellsAt', 'array<vec4f>', 'read'], many: ['cellsMany', 'vec4u', 'uniform'] } };
+      s = { name: 'cells', when: () => lab.frameNo % 2 === 0 || lab.frameNo < 40, over: { groups: () => [Math.ceil((many + PEOPLE * LIMBS) / 8), 1, 1] }, code: signals + lib + bounceLib + cells, buffers: { ...bind, ...CHANGES, field: ['cellLight', 'array<u32>', 'read_write'], places: ['cellsAt', 'array<vec4f>', 'read'], many: ['cellsMany', 'vec4u', 'uniform'] } };
     } else if (s.name === 'mirror' || s.name === 'shine') s = { ...s, code: swap(s.code, 'select(m, q.albedo + q.through, leaf) / PI * c.E * select(0.0, 1.0, c.n > 0.0)', 'select(m / PI * c.E * select(0.0, 1.0, c.n > 0.0), folJ(q.x, d), leaf)') };
     else if (s.name === 'lamps') s = { ...s, code: swap(s.code, 'leafTo = select(0.0, 1e9, exact);', o.softLamps ? 'leafTo = select(0.0, 1e9, exact);' : 'footSharp(footW, footS); if (exact) { leafTo = 1e9; }') };
     else if (s.name === 'air light') s = { ...s, code: swap(s.code, 'L += min(B * h.thru, vec3f(12.0));', 'L += min(B * h.thru * blkT + blkL, vec3f(12.0));') };
@@ -39,4 +39,5 @@ export const oneRuleMethods: Record<string, () => Method> = {
   exactgather: also('exactgather', s => s.name === 'gather' ? code(s, 'footSolid(wide, @tune.wide);', 'footSolid(0.0, 0.004);') : s),
   exactcache: also('exactcache', s => s.name === 'cache' && s.code.includes('footSolid(CELL, 1.0);') ? code(s, 'footSolid(CELL, 1.0);', 'footSolid(0.0, 0.004);') : s),
   exactboth: also('exactboth', s => s.name === 'gather' ? code(s, 'footSolid(wide, @tune.wide);', 'footSolid(0.0, 0.004);') : s.name === 'cache' && s.code.includes('footSolid(CELL, 1.0);') ? code(s, 'footSolid(CELL, 1.0);', 'footSolid(0.0, 0.004);') : s),
+  one25: also('one25', s => s.name === 'gather' ? code(s, 'footSolid(wide, @tune.wide);', 'footSolid(wide, 0.5 * @tune.wide);') : s),
   onerule: () => oneRule(), oneleaf: () => oneRule({ name: 'oneleaf', leafNear: 1 }), onelin: () => oneRule({ name: 'onelin', upscale: bilinear }), oneleaflin: () => oneRule({ name: 'oneleaflin', leafNear: 1, upscale: bilinear }) };

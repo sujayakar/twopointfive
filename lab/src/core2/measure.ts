@@ -12,7 +12,7 @@ fn sends(s: Surf) -> vec3f { let f = coatF0(s); let r = s.rough; let a = f * (0.
 @compute @workgroup_size(64) fn main(@builtin(workgroup_id) wg: vec3u, @builtin(local_invocation_index) li: u32) {
   let cell = wg.x + wg.y * 32768u; if (cell >= most.x) { return; } let at = places[cell]; let level = u32(at.w); let h = FINEST * f32(1u << level);
   if (li < 6u) { atomicStore(&met[li], 0u); atomicStore(&red[li], 0u); atomicStore(&green[li], 0u); atomicStore(&blue[li], 0u); } if (li < 3u) { atomicStore(&low[li], 255u); atomicStore(&high[li], 0u); } if (li == 6u) { atomicStore(&leafy, 0u); } if (li == 7u) { atomicStore(&grass, 0u); } workgroupBarrier();
-  leafMode = 0u; blkOn = false; blk = vec4f(1e9); lim = vec4f(1e9, select(0.0, 1e9, level > 0u), select(0.0, 1e9, level > 1u), 0.0);   /* (only what this level holds) */
+  leafMode = 0u; blkOn = false; blk = vec4f(1e9); lim = vec4f(1e9, select(0.0, 1e9, level > 0u), 0.0, 0.0);   /* (only what this level holds) */
   if (li < RAYS) {
     rngKey(cell * 64u + li, 77u);
     for (var k = 0u; k < 6u; k++) {
@@ -41,10 +41,9 @@ export async function measureBlocks(lab: Lab, grid = 8): Promise<string> {
   const pipe = await d.createComputePipelineAsync({ label: 'cells', layout: d.createPipelineLayout({ bindGroupLayouts: [scene.layout, l1] }), compute: { module, entryPoint: 'main' } }), bg = d.createBindGroup({ layout: l1, entries: [{ binding: 0, resource: { buffer: places } }, { binding: 1, resource: { buffer: made } }, { binding: 2, resource: { buffer: most } }] });
   const e = d.createCommandEncoder(), p = e.beginComputePass(); p.setPipeline(pipe); p.setBindGroup(0, scene.group()); p.setBindGroup(1, bg); p.dispatchWorkgroups(Math.min(32768, B.many), Math.ceil(B.many / 32768)); p.end(); d.queue.submit([e.finish()]);
   const r = new Uint32Array(await readBuffer(gpu, made)); for (const b of [places, made, most]) b.destroy();
-  // who keeps light: each that has something in it, from 0.32 m up (a finer one reads the one it is in); and the empty are forgotten
+  // each that has something in it keeps light; the empty are forgotten
   const at: number[] = [], slot = new Uint32Array(B.many); let lit = 0;
-  for (let i = 0; i < B.many; i++) { const level = B.cells[i * 4 + 3]!; if (!(r[i * 8]! & 0xffffff)) { B.bricks[B.said[i]!] = 0; continue; } if (!level) continue; slot[i] = ++lit; const h = FINEST * 2 ** level, y = r[i * 8 + 1]!, lo = [y & 15, (y >> 4) & 15, (y >> 8) & 15], hi = [(y >> 12) & 15, (y >> 16) & 15, (y >> 20) & 15]; for (let k = 0; k < 3; k++) at.push(B.cells[i * 4 + k]! + h * (lo[k]! + hi[k]! + 1) / 32); at.push(h); for (let k = 0; k < 3; k++) at.push(h * (hi[k]! + 1 - lo[k]!) / 16); at.push(i + 1); }
-  for (let i = 0; i < B.many; i++) if (B.cells[i * 4 + 3] === 0) { const w = B.said[i]!, b = Math.floor(w / 588) * 588, s = w - b, up = B.bricks[b + 512 + ((s & 7) >> 1) + 4 * ((((s >> 3) & 7) >> 1) + 4 * (s >> 7))]!; slot[i] = up ? slot[up - 1]! : 0; }
+  for (let i = 0; i < B.many; i++) { const level = B.cells[i * 4 + 3]!; if (!(r[i * 8]! & 0xffffff)) { B.bricks[B.said[i]!] = 0; continue; } slot[i] = ++lit; const h = FINEST * 2 ** level, y = r[i * 8 + 1]!, lo = [y & 15, (y >> 4) & 15, (y >> 8) & 15], hi = [(y >> 12) & 15, (y >> 16) & 15, (y >> 20) & 15]; for (let k = 0; k < 3; k++) at.push(B.cells[i * 4 + k]! + h * (lo[k]! + hi[k]! + 1) / 32); at.push(h); for (let k = 0; k < 3; k++) at.push(h * (hi[k]! + 1 - lo[k]!) / 16); at.push(i + 1); }
   for (let i = 0; i < B.many; i++) r[i * 8 + 6] = slot[i]!;
   const green = new Uint8Array(B.bricks.length / 588); for (let i = 0; i < B.many; i++) if (r[i * 8]! & 0xffffff && r[i * 8]! >>> 24) green[Math.floor(B.said[i]! / 588)] = 1; for (let i = 0; i < B.page.length; i++) { const p = B.page[i]! & 0x7fffffff; B.page[i] = p ? (p | (green[p - 1] ? 0x80000000 : 0)) >>> 0 : 0; } scene.writeExtra(scene.blockRow, new Uint8Array(B.page.buffer));
   scene.writeExtra(scene.blockRow + B.page.length / 4, new Uint8Array(B.bricks.buffer)); scene.writeExtra(cellRow(B, scene.blockRow), new Uint8Array(r.buffer)); const places2 = new Float32Array(at), pu = new Uint32Array(places2.buffer); for (let i = 0; i < lit; i++) pu[i * 8 + 7] = at[i * 8 + 7]!; lab.litCells = { many: lit, at: places2 };

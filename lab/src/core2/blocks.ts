@@ -1,18 +1,18 @@
-// THE WORLD'S BLOCK: what a ray meets of things smaller than it is wide. Sparse cells of 0.16, 0.32, 0.64 and 1.28 m; a cell holds how thick its contents stand along x, y and z, a tight box
+// THE WORLD'S BLOCK: what a ray meets of things smaller than it is wide. Sparse cells of 0.32, 0.64, 1.28 and 2.56 m; a cell holds how thick its contents stand along x, y and z, a tight box
 // round them, and their color from six sides. Level h holds what is smaller than h (and every leaf). Found once, by rays through the cells' own contents (measure.ts).
 import { type V3, add, apply, mul } from '../math';
 import { type World, type Piece, boundsOf, F } from '../scene/world';
 import { PEOPLE, LIMBS, CARRY_ROWS } from './carry';
 
-export const FINEST = 0.16, LEVELS = 4, BRICK = FINEST * 8, BRICK_WORDS = 588, OFFSET = [0, 512, 576, 584], CELL_ROWS = 2, LIGHT_ROWS = 3, /** a brick of smoke each */ SMOKE_ROWS = 3072;
-/** how big a thing is to a ray: its middle extent (a wire is thin, a wall is not). 0, 1, 2: gone once a ray is 0.16, 0.32, 0.64 m wide; 3: always there */
+export const FINEST = 0.32, LEVELS = 4, BRICK = FINEST * 8, BRICK_WORDS = 588, OFFSET = [0, 512, 576, 584], CELL_ROWS = 2, LIGHT_ROWS = 3, /** a brick of smoke each */ SMOKE_ROWS = 3072;
+/** how big a thing is to a ray: its middle extent (a wire is thin, a wall is not). 0, 1: gone once a ray is 0.32, 0.64 m wide; 3: always there, for it may part one room from another */
 export function classOf(p: Piece): number {
   if (p.cls !== undefined) return p.cls;
   if (p.flags & (F.GLASS | F.WATER | F.GLOW | F.NOSHADOW | F.FAR | F.MOVES | F.BEND | F.MESH) || (p.lamp ?? -1) >= 0) return 3;
   const size = [...p.half].sort((a, b) => a - b)[1]! * 2;
-  return size < FINEST ? 0 : size < FINEST * 2 ? 1 : size < FINEST * 4 ? 2 : 3;
+  return size < FINEST ? 0 : size < FINEST * 2 ? 1 : 3;
 }
-export interface Blocks { lo: V3; n: V3; /** a brick's number + 1, or 0 */ page: Uint32Array; bricks: Uint32Array; /** each cell's corner and level */ cells: Float32Array; /** where each is told of in bricks */ said: Uint32Array; many: number; /** the most that may keep light: those from 0.32 m up */ lit: number }
+export interface Blocks { lo: V3; n: V3; /** a brick's number + 1, or 0 */ page: Uint32Array; bricks: Uint32Array; /** each cell's corner and level */ cells: Float32Array; /** where each is told of in bricks */ said: Uint32Array; many: number; /** the most that may keep light */ lit: number }
 
 /** which cells have anything in them */
 export function layBlocks(w: World): Blocks {
@@ -36,7 +36,7 @@ export function layBlocks(w: World): Blocks {
     page[b[0] - lo[0] + n[0] * (b[1] - lo[1] + n[1] * (b[2] - lo[2]))] = brick + 1;
     for (const s of has) {
       const level = s >= OFFSET[3]! ? 3 : s >= OFFSET[2]! ? 2 : s >= OFFSET[1]! ? 1 : 0, per = 8 >> level, i = s - OFFSET[level]!, h = FINEST * 2 ** level;
-      cells.push(b[0] * BRICK + (i % per) * h, b[1] * BRICK + (Math.floor(i / per) % per) * h, b[2] * BRICK + Math.floor(i / per / per) * h, level); bricks[brick * BRICK_WORDS + s] = cells.length / 4; said.push(brick * BRICK_WORDS + s); if (level) lit++;
+      cells.push(b[0] * BRICK + (i % per) * h, b[1] * BRICK + (Math.floor(i / per) % per) * h, b[2] * BRICK + Math.floor(i / per / per) * h, level); bricks[brick * BRICK_WORDS + s] = cells.length / 4; said.push(brick * BRICK_WORDS + s); lit++;
     }
     brick++;
   }
