@@ -670,7 +670,7 @@ pub struct Anim {
     pub plant_w: f64,
     #[is(crate::character::AnimGz { pitch: 0.0, yaw_ref: 0.0, yaw_init: false, w: 0.0 })] pub gz: crate::character::AnimGz,
     #[is(crate::character::AnimLife { breath: 0.0, exert: 0.0, prev_s: 0.0, accel: 0.0, mass: crate::character::Spring::blank(), mass_v: crate::character::Spring::blank(), still_t: 0.0, shift_t: 4.0, shift_side: 1.0, shift: crate::character::Spring::blank(), yaw_prev: f64::NAN, yaw_rate: 0.0, prev_pos: [f64::NAN, 0.0, 0.0], root_v: 0.0, gate: 0.0, shift_n: 0.0 })] pub life: crate::character::AnimLife,
-    #[is(crate::character::AnimFeet { w: 0.0, gate: 0.0, l: crate::character::AnimFoot { p: [0.0, 0.0, 0.0], yaw: 0.0, swing: -1.0, from: [0.0, 0.0, 0.0], from_yaw: 0.0, lock_off: [0.0, 0.0, 0.0], lock_yaw: 0.0 }, r: crate::character::AnimFoot { p: [0.0, 0.0, 0.0], yaw: 0.0, swing: -1.0, from: [0.0, 0.0, 0.0], from_yaw: 0.0, lock_off: [0.0, 0.0, 0.0], lock_yaw: 0.0 }, next: 0.0, step_l: crate::character::AnimStep { p: [0.0, 0.0, 0.0], yaw: 0.0, swing: -1.0, from: [0.0, 0.0, 0.0], from_yaw: 0.0, down: false, toe_down: false, off: [0.0, 0.0, 0.0], off_v: [0.0, 0.0, 0.0], off_yaw: 0.0, toe_was: [0.0, 0.0, 0.0], shown: [0.0, 0.0, 0.0], q_was: [0.0; 4], fresh: true }, step_r: crate::character::AnimStep { p: [0.0, 0.0, 0.0], yaw: 0.0, swing: -1.0, from: [0.0, 0.0, 0.0], from_yaw: 0.0, down: false, toe_down: false, off: [0.0, 0.0, 0.0], off_v: [0.0, 0.0, 0.0], off_yaw: 0.0, toe_was: [0.0, 0.0, 0.0], shown: [0.0, 0.0, 0.0], q_was: [0.0; 4], fresh: true }, at_was: [0.0, 0.0, 0.0], at_known: false })] pub feet: crate::character::AnimFeet,
+    #[is(crate::character::AnimFeet { w: 0.0, gate: 0.0, l: crate::character::AnimFoot { p: [0.0, 0.0, 0.0], yaw: 0.0, swing: -1.0, from: [0.0, 0.0, 0.0], from_yaw: 0.0, lock_off: [0.0, 0.0, 0.0], lock_yaw: 0.0 }, r: crate::character::AnimFoot { p: [0.0, 0.0, 0.0], yaw: 0.0, swing: -1.0, from: [0.0, 0.0, 0.0], from_yaw: 0.0, lock_off: [0.0, 0.0, 0.0], lock_yaw: 0.0 }, next: 0.0, step_l: crate::character::AnimStep { p: [0.0, 0.0, 0.0], yaw: 0.0, swing: -1.0, from: [0.0, 0.0, 0.0], from_yaw: 0.0, down: false, toe_down: false, off: [0.0, 0.0, 0.0], off_v: [0.0, 0.0, 0.0], off_yaw: 0.0, clear: 0.0, toe_was: [0.0, 0.0, 0.0], shown: [0.0, 0.0, 0.0], q_was: [0.0; 4], fresh: true }, step_r: crate::character::AnimStep { p: [0.0, 0.0, 0.0], yaw: 0.0, swing: -1.0, from: [0.0, 0.0, 0.0], from_yaw: 0.0, down: false, toe_down: false, off: [0.0, 0.0, 0.0], off_v: [0.0, 0.0, 0.0], off_yaw: 0.0, clear: 0.0, toe_was: [0.0, 0.0, 0.0], shown: [0.0, 0.0, 0.0], q_was: [0.0; 4], fresh: true }, at_was: [0.0, 0.0, 0.0], at_known: false })] pub feet: crate::character::AnimFeet,
     pub body_yaw_in: f64,
     pub thr_last: Option<crate::character::AnimThrLast>,
     pub thr_carry: Option<crate::character::AnimThrCarry>,
@@ -1174,6 +1174,8 @@ pub struct AnimStep {
     pub off: V3,
     pub off_v: V3,
     pub off_yaw: f64,
+    /// what it is lifted by, over what the cycle lifts it
+    pub clear: f64,
     /// where the pose's toe was a frame ago, in the world, and where the foot was shown
     pub toe_was: V3,
     pub shown: V3,
@@ -1555,6 +1557,9 @@ pub struct Feet {
     pub top_speed: f64,
     pub top_speed_k: f64,
     pub top_speed_most: f64,
+    /// how far over the floor a toe going forward is lifted to, and how quickly (1/s)
+    pub clear: f64,
+    pub clear_k: f64,
     /// the most a foot turns (rad/s)
     pub top_turn: f64,
     pub turn_deg: f64,
@@ -2598,7 +2603,7 @@ pub static SOFT_KNEE: crate::character::SoftKnee = crate::character::SoftKnee { 
 
 pub const WALK_PHASE: f64 = 0.22;
 
-pub static FEET: crate::character::Feet = crate::character::Feet { on: 1.0, swing: 0.22, lift: 0.045, dist: 0.11, reach: 0.45, ankle_y: 0.105, floor_off: 0.008, lifted: 0.02, going_from: 0.6, going_k: 0.6, ease: 33.0, top_speed: 4.6, top_speed_k: 0.3, top_speed_most: 6.6, top_turn: 12.0, turn_deg: 26.0, pivot: 2.2, lag_cap_deg: 55.0 };
+pub static FEET: crate::character::Feet = crate::character::Feet { on: 1.0, swing: 0.22, lift: 0.045, dist: 0.11, reach: 0.45, ankle_y: 0.105, floor_off: 0.008, lifted: 0.02, going_from: 0.6, going_k: 0.6, ease: 33.0, top_speed: 4.6, top_speed_k: 0.3, top_speed_most: 6.6, clear: 0.04, clear_k: 30.0, top_turn: 12.0, turn_deg: 26.0, pivot: 2.2, lag_cap_deg: 55.0 };
 
 pub fn n() -> crate::character::N { crate::character::N { hips: String::from("DEF-hips"), spine1: String::from("DEF-spine.001"), spine2: String::from("DEF-spine.002"), spine3: String::from("DEF-spine.003"), neck: String::from("DEF-neck"), head: String::from("DEF-head"), upper_arm_l: String::from("DEF-upper_arm.L"), forearm_l: String::from("DEF-forearm.L"), hand_l: String::from("DEF-hand.L"), upper_arm_r: String::from("DEF-upper_arm.R"), forearm_r: String::from("DEF-forearm.R"), hand_r: String::from("DEF-hand.R"), thigh_l: String::from("DEF-thigh.L"), shin_l: String::from("DEF-shin.L"), foot_l: String::from("DEF-foot.L"), toe_l: String::from("DEF-toe.L"), thigh_r: String::from("DEF-thigh.R"), shin_r: String::from("DEF-shin.R"), foot_r: String::from("DEF-foot.R"), toe_r: String::from("DEF-toe.R"), shoulder_l: String::from("DEF-shoulder.L"), shoulder_r: String::from("DEF-shoulder.R"), middle1_r: String::from("DEF-f_middle.01.R"), middle1_l: String::from("DEF-f_middle.01.L") } }
 
