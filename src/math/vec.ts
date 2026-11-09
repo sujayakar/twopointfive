@@ -1,6 +1,5 @@
 // Minimal vector / matrix / quaternion helpers. Column-major mat4 (WebGPU/glTF convention).
-import { hyp2, hyp3, hyp4 } from './hyp';
-export { hyp2, hyp3, hyp4 };   // (Math.hypot's own bits without its call: see hyp.ts)
+const hyp2 = (a: number, b: number): number => Math.sqrt(a * a + b * b), hyp3 = (a: number, b: number, c: number): number => Math.sqrt(a * a + b * b + c * c), hyp4 = (a: number, b: number, c: number, d: number): number => Math.sqrt(a * a + b * b + c * c + d * d);
 export type Vec3 = [number, number, number];
 export type Quat = [number, number, number, number]; // x y z w
 export type Mat4 = Float32Array; // 16, column-major

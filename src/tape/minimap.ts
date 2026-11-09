@@ -5,10 +5,9 @@ import type { ReplayMap } from './format';
 
 export interface MapMan { x: number; z: number; /** radians, 0 = +z */ aim: number; team: string; kind: 'player' | 'man' | 'civ'; down: boolean; name: string; ring: string | null }
 export interface MapDoor { hx: number; hz: number; /** the plan direction its leaf points from the hinge, as it stands (unit) */ ux: number; uz: number; width: number; locked: boolean; broken: boolean; off: boolean }
-export interface MapShot { x: number; z: number; to: [number, number] | null; kind: string; /** 0 = this instant → 1 = about to fade out */ age: number }
 export interface MapNote { x: number; z: number; i: number }
 export interface MapScene {
-  men: MapMan[]; doors: MapDoor[]; shots: MapShot[]; notes: MapNote[];
+  men: MapMan[]; doors: MapDoor[]; notes: MapNote[];
   /** the picture's camera: the floor point it looks at and the plan direction it looks along (unit) */
   cam: { x: number; z: number; fx: number; fz: number };
 }
@@ -64,12 +63,6 @@ export function drawScene(ctx: CanvasRenderingContext2D, dpr: number, S: MapScen
     const c = S.cam, cx = X(c.x), cy = Y(c.z), a = Math.atan2(c.fz, c.fx), L = Math.max(big ? 46 : 26, 5 * f.s), half = 0.42;
     ctx.fillStyle = 'rgba(232,131,58,0.16)'; ctx.beginPath(); ctx.moveTo(cx, cy); ctx.arc(cx, cy, L, a - half, a + half); ctx.closePath(); ctx.fill();
     ctx.strokeStyle = ACCENT; ctx.lineWidth = 1.2 * k; ctx.beginPath(); ctx.arc(cx, cy, 3.2 * k, 0, 6.2832); ctx.stroke();
-  }
-  // rounds and blasts of the last moments
-  for (const e of S.shots) {
-    const al = Math.max(0, 1 - e.age);
-    if (e.kind === 'bang' || e.kind === 'frag') { ctx.strokeStyle = `rgba(255,156,58,${al})`; ctx.lineWidth = 1.6 * k; ctx.beginPath(); ctx.arc(X(e.x), Y(e.z), (4 + 10 * e.age) * k, 0, 6.2832); ctx.stroke(); }
-    else if (e.to) { ctx.strokeStyle = e.kind === 'guardShot' ? `rgba(255,122,106,${al})` : `rgba(255,236,160,${al})`; ctx.lineWidth = 1.1 * k; ctx.beginPath(); ctx.moveTo(X(e.x), Y(e.z)); ctx.lineTo(X(e.to[0]), Y(e.to[1])); ctx.stroke(); }
   }
   // notes with a spot
   for (const n of S.notes) {
