@@ -8,6 +8,7 @@ import type { V3 } from '../math';
 import { defaults } from '../tune';
 import { type Made, PIXEL, takesOver } from './object';
 import { makeStage, LAMP, BEAM, type Stand, type Stage } from './stage';
+import { walk } from './person';
 import { rules, alive, build, bounds, count, type Found, type Count } from './rules';
 import { walkedStage } from './walked';
 import * as px from './pixels';
@@ -25,7 +26,7 @@ const HALF = (() => { const t = new Float32Array(65536); for (let h = 0; h < 655
 class Shoot {
   lab!: Lab; stage!: Stage; private made = new Map<string, Method>(); private light: Light = 'noon';
   static async open(m: Made, s: Stand): Promise<Shoot> { const q = new Shoot(); SCENES.bench = () => { q.stage = makeStage(m, s); return q.stage.building; }; q.lab = new Lab(); await q.lab.open(null, 'bench'); q.lab.graph.guard = 'kept'; exposeKnobs(q.lab, 0, true); return q; }
-  close() { this.lab.gpu.device.destroy(); }
+  close() { this.lab.gpu.device.destroy(); } get lives() { return this.stage.lives; }
   private idle() { return this.lab.gpu.device.queue.onSubmittedWorkDone(); }
   private async use(name: 'rt' | 'ref' | 'ids' | 'walked') { let m = this.made.get(name); if (!m) this.made.set(name, m = name === 'rt' ? realtime() : name === 'ref' ? pathTracer() : name === 'ids' ? ids() : walkedStage()); await this.lab.use(m); return m; }
   lit(l: Light) { this.light = l; const lab = this.lab, q = LIGHTS[l]; lab.tune.set(defaults()); lab.haze = 0; lab.steam = 0; lab.rain = lab.rainNow = lab.wet = 0; lab.snow = lab.lies = 0; lab.hour = q.hour; lab.moon = q.moon; lab.mains = true; lab.pose(); lab.scene.lampOn[LAMP] = q.lamp; lab.scene.lampOn[BEAM] = q.beam; if (!q.sun) lab.hourNow = { ...lab.hourNow, sunE: [0, 0, 0] }; }
@@ -78,6 +79,7 @@ export async function judge(m: Made, o: Opts = {}): Promise<Report> {
   if (want('alive') && m.moves.kind === 'sways') { const a = await s.swaying(Q ? 1 : 6); say('live.sways', 'in the wind its sprays go to and fro by', 100 * px.quantile(a, 0.5), 'cm', 0, `the most ${(100 * Math.max(...a)).toFixed(1)}`); tick('wind'); }
   s.close();
   if (want('look')) { s = await Shoot.open(m, { level: 0, wall: false }); for (let i = 0; i < (Q ? 2 : 8); i++) { const v = { ...near, yaw: 0.62 + i * Math.PI / 4, w: round(near.w * 0.6), h: round(near.h * 0.6), far: near.far / 0.6 }; put('turn ' + i, asShown(await s.rt(v, 'noon', Math.round(N.rt * 0.6)), exposures.noon, v.w, v.h), v.w, v.h); } s.close(); tick('all round'); }
+  if (want('look') && m.moves.kind !== 'still' && m.moves.kind !== 'loose') { walk.on = m.moves.kind === 'walks'; s = await Shoot.open(m, { level: 0, wall: false }); walk.on = false; const v = { ...near, w: round(near.w * 0.6), h: round(near.h * 0.6), far: near.far / 0.6 }; for (let i = 0; i < (Q ? 2 : 6); i++) { for (let t = 0; t < (i ? 22 : 1); t++) s.lab.step(); const a = s.lives[0]?.feet?.(), at: V3 = a ? [a.reduce((p, f) => p + f.at[0], 0) / a.length, 0, a.reduce((p, f) => p + f.at[2], 0) / a.length] : [0, 0, 0]; put('alive ' + i, asShown(await s.rt({ ...v, look: [mid[0] + at[0], mid[1], mid[2] + at[2]] }, 'noon', Math.round(N.rt * 0.6)), exposures.noon, v.w, v.h), v.w, v.h); } s.close(); tick('alive'); }
   // ---- each coarser level against it, where it takes over
   const pops: Record<number, Pic> = {}; if (fine.swap[1]?.rt) pops[1] = fine.swap[1].rt;
   for (const k of coarse) if (want('swap')) {

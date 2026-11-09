@@ -1,6 +1,6 @@
 // AN OBJECT is a small program: numbers in, levels out, no files. Each level is whole by itself (it is drawn alone) and says how far it may be from the finest, in metres: it takes over where that
 // is a pixel of the game's picture, and where a ray is that wide. What moves an object moves all its levels: coarser ones hang on fewer parts of the same rig.
-import { type V3, type Rot, add, apply, compose, rotY, ID } from '../math';
+import { type V3, type Rot, add, sub, apply, compose, rotY, ID } from '../math';
 import { World, F, taper, type Piece, type Instance } from '../scene/world';
 import type { Air } from '../scene/air';
 
@@ -12,7 +12,9 @@ export type Moves =
   /** it can be knocked about: how heavy (kg a cubic metre of what it is made of), how rough, and does it float? */
   | { kind: 'loose'; dense: number; rough?: number; floats: boolean; /** its weight is this far under its middle */ low?: number }
   | { kind: 'sways' }
-  | { kind: 'walks' };
+  | { kind: 'walks' }
+  /** parts of it move on joints (a wheel, a lid, a lamp's arm): `put` makes the joints and its `step` turns them */
+  | { kind: 'works' };
 /** what a level leaves behind where it was put: what must be stepped once a tick */
 export interface Live { step?(dt: number, t: number, air: Air): void; /** feet, for what walks: where each is and is it down? */ feet?(): { at: V3; down: boolean }[] }
 export interface Level {
@@ -32,13 +34,25 @@ export interface Made {
 }
 export interface ObjectKind { name: string; title: string; make(): Made }
 
+/** A JOINT: what hangs on it turns about a place, and may be moved; joints hang on joints. Set it, then call the put's `pose()` */
+export class Joint {
+  rot: Rot = ID; move: V3 = [0, 0, 0]; readonly parts: { piece: Piece; at: V3; rot: Rot }[] = [];
+  constructor(/** in the object's frame, at rest */ readonly at: V3, readonly parent: Joint | null) {}
+  place(x: V3): V3 { const y = add(add(this.at, this.move), apply(this.rot, sub(x, this.at))); return this.parent ? this.parent.place(y) : y; }
+  turn(r: Rot): Rot { const q = compose(this.rot, r); return this.parent ? this.parent.turn(q) : q; }
+}
 /** where a level is put, and tools that work in the object's own frame (x right, y up, z to its front). Everything put by them is of one thing */
 export class Put {
   readonly r: Rot; readonly thing: { name: string };
   constructor(readonly w: World, readonly name: string, readonly at: V3, readonly yaw: number, /** what makes this one differ from the next */ readonly seed = 1, private flags = F.CUT) { this.r = rotY(yaw); this.thing = { name }; }
+  private joints: Joint[] = []; private joined: Joint | null = null;
+  /** what `make` puts hangs on a joint at this place (and, made inside another's, on that) */
+  joint(at: V3, make: () => void): Joint { const was = this.joined, flags = this.flags, j = this.joined = new Joint(at, was); this.joints.push(j); this.flags |= F.MOVES; try { make(); } finally { this.joined = was; this.flags = flags; } return j; }
+  /** put everything on joints where its joints are */
+  pose() { for (const j of this.joints) for (const q of j.parts) { q.piece.at = this.P(...j.place(q.at)); q.piece.rot = compose(this.r, j.turn(q.rot)); } }
   P(x: number, y: number, z: number): V3 { return add(this.at, apply(this.r, [x, y, z])); }
   /** a piece, its place and turn in the object's frame */
-  add(p: Partial<Piece> & { at: V3; half: V3; mat: number }): Piece { return this.w.add({ thing: this.thing, flags: this.flags, ...p, ...(p.flags === undefined ? {} : { flags: p.flags | this.flags }), at: this.P(...p.at), rot: p.rot ? compose(this.r, p.rot) : this.r }); }
+  add(p: Partial<Piece> & { at: V3; half: V3; mat: number }): Piece { const piece = this.w.add({ thing: this.thing, flags: this.flags, ...p, ...(p.flags === undefined ? {} : { flags: p.flags | this.flags }), at: this.P(...p.at), rot: p.rot ? compose(this.r, p.rot) : this.r }); this.joined?.parts.push({ piece, at: p.at, rot: p.rot ?? ID }); return piece; }
   box(at: V3, half: V3, mat: number, tint: V3, more: Partial<Piece> = {}) { return this.add({ at, half, mat, tint, ...more }); }
   /** round, upright */
   drum(at: V3, radius: number, half: number, mat: number, tint: V3, more: Partial<Piece> = {}) { return this.add({ at, half: [radius, half, radius], mat, tint, quad: [1 / radius ** 2, 0, 1 / radius ** 2, 0], ...more }); }

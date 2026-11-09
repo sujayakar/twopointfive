@@ -19,8 +19,8 @@ export function count(b: Built): Count {
   return { pieces: w.pieces.length, moving: w.moving.length, leaves, clusters: w.instances.length, bytes: (w.pieces.length + w.moving.length) * PIECE_FLOATS * 4 + w.pieces.length * 32 * 8 + w.moving.length * 64 + rows * 16 + kinds * (32 + 32 * 8 * 0.67) + w.instances.length * (64 + 48 + 96 + 64) };
 }
 /** what hangs together with what touches the floor: the rest floats. Pieces by their boxes, round ones taken a little smaller */
-function afloat(b: Built): Piece[] {
-  const ps = b.pieces.filter(p => p.at[1] > -50), bs = ps.map(boundsOf), NEAR = 0.006, up = ps.map((_, i) => i), find = (i: number): number => { while (up[i] !== i) { up[i] = up[up[i]!]!; i = up[i]!; } return i; }, order = ps.map((_, i) => i).sort((a, c) => bs[a]!.mn[0] - bs[c]!.mn[0]);
+function afloat(b: Built, NEAR = 0.006): Piece[] {
+  const ps = b.pieces.filter(p => p.at[1] > -50), bs = ps.map(boundsOf), up = ps.map((_, i) => i), find = (i: number): number => { while (up[i] !== i) { up[i] = up[up[i]!]!; i = up[i]!; } return i; }, order = ps.map((_, i) => i).sort((a, c) => bs[a]!.mn[0] - bs[c]!.mn[0]);
   for (let x = 0; x < order.length; x++) for (let y = x + 1; y < order.length; y++) { const i = order[x]!, j = order[y]!; if (bs[j]!.mn[0] > bs[i]!.mx[0] + NEAR) break; if (find(i) === find(j)) continue; let far = false; for (let k = 1; k < 3; k++) if (bs[i]!.mn[k]! > bs[j]!.mx[k]! + NEAR || bs[j]!.mn[k]! > bs[i]!.mx[k]! + NEAR) { far = true; break; } if (!far && gap(ps[i]!, ps[j]!) < NEAR) up[find(i)] = find(j); }
   const ground = new Set<number>(); ps.forEach((_, i) => { if (bs[i]!.mn[1] < NEAR) ground.add(find(i)); }); return ps.filter((_, i) => !ground.has(find(i)));
 }
@@ -60,10 +60,19 @@ export function alive(m: Made): Found[] {
     walk.on = true; try {
       const go = () => { const b = build(m, 0), live = b.live!; let slide = 0, far = 0, under = 0, was = live.feet!(), x0 = b.pieces[0]!.at, sum = ''; for (let t = 0; t < 600; t++) { live.step!(1 / 60, t / 60, still); const now = live.feet!(); now.forEach((f, i) => { if (f.down && was[i]!.down) slide = Math.max(slide, Math.hypot(f.at[0] - was[i]!.at[0], f.at[2] - was[i]!.at[2])); under = Math.min(under, f.at[1]); }); was = now.map(f => ({ at: [...f.at] as V3, down: f.down })); far = Math.max(far, Math.hypot(b.pieces[0]!.at[0] - x0[0], b.pieces[0]!.at[2] - x0[2])); if (t % 100 === 99) sum += b.pieces.map(p => p.at.join()).join(); } return { slide, far, under, hash: fnv(sum) }; }, a = go(), b = go();
       say('live.walks', 'in ten seconds it has gone', a.far, 'm'); say('live.feet', 'a foot that is down slides at most, a tick', a.slide * 1000, 'mm'); say('live.repeats', 'the same run twice (0)', a.hash === b.hash ? 0 : 1, '');
+      held();
       // coarser levels hang on the same rig: their middles go where the finest's does
-      const mid = (k: number) => { const b = build(m, k), out: V3[] = []; for (let t = 0; t < 240; t++) { b.live!.step!(1 / 60, t / 60, still); if (t % 20 === 0) { let c: V3 = [0, 0, 0], v = 0; for (const p of b.pieces) { const q = p.half[0] * p.half[1] * p.half[2]; c = add(c, [p.at[0] * q, p.at[1] * q, p.at[2] * q]); v += q; } out.push([c[0] / v, c[1] / v, c[2] / v]); } } return out; }, fine = mid(0);
-      m.levels.forEach((l, k) => { if (!k) return; const c = mid(k), off = c.map((x, i) => Math.hypot(x[0] - fine[i]![0], x[2] - fine[i]![2])), mean = off.reduce((p, q) => p + q, 0) / off.length; found.push({ id: 'live.together', what: 'walking, how far its middle strays from the finest\'s', value: Math.max(...off.map(o => Math.abs(o - mean))) * 100, unit: 'cm', level: k }); });
+      together();
     } finally { walk.on = false; }
   }
+  if (mv.kind === 'works') {
+    const go = () => { const b = build(m, 0), live = b.live; if (!live?.step) return null; const was = b.pieces.map(p => [...p.at] as V3), r0 = b.pieces.map(p => p.rot); let most = 0, sum = ''; for (let t = 0; t < 600; t++) { live.step(1 / 60, t / 60, still); b.pieces.forEach((p, i) => { const far = Math.max(...p.half); most = Math.max(most, Math.hypot(...sub(p.at, was[i]!)), far * Math.max(...[0, 1, 2].map(a => Math.hypot(...sub(p.rot[a]!, r0[i]![a]!))))); }); if (t % 100 === 99) sum += b.pieces.map(p => p.at.join() + p.rot.join()).join(); } return { most, hash: fnv(sum) }; }, a = go(), b = go();
+    say('live.works', 'in ten seconds a part of it goes or turns by', a ? a.most * 100 : 0, 'cm'); say('live.repeats', 'the same run twice (0)', a && b && a.hash === b.hash ? 0 : 1, ''); held(); together();
+  }
   return found;
+  function held() { const b = build(m, 0); let worst = 0, when = 0; for (let t = 0; t < 600; t++) { b.live?.step?.(1 / 60, t / 60, still); if (t % 60 === 30) { const n = afloat(b, 0.02).length; if (n > worst) { worst = n; when = t / 60; } } } say('live.held', 'moving, pieces that come away from the rest', worst, '', worst ? `at ${when.toFixed(1)} s` : undefined); }
+  function together() {
+      const mid = (k: number) => { const b = build(m, k), out: V3[] = []; for (let t = 0; t < 240; t++) { b.live?.step?.(1 / 60, t / 60, still); if (t % 20 === 0) { let c: V3 = [0, 0, 0], v = 0; for (const p of b.pieces) { const q = p.half[0] * p.half[1] * p.half[2]; c = add(c, [p.at[0] * q, p.at[1] * q, p.at[2] * q]); v += q; } out.push([c[0] / v, c[1] / v, c[2] / v]); } } return out; }, fine = mid(0);
+      m.levels.forEach((l, k) => { if (!k) return; const c = mid(k), off = c.map((x, i) => Math.hypot(x[0] - fine[i]![0], x[2] - fine[i]![2])), mean = off.reduce((p, q) => p + q, 0) / off.length; found.push({ id: 'live.together', what: 'walking, how far its middle strays from the finest\'s', value: Math.max(...off.map(o => Math.abs(o - mean))) * 100, unit: 'cm', level: k }); });
+  }
 }
