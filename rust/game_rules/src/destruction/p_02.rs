@@ -410,19 +410,6 @@ pub fn destruction_impact_impulse(g: &mut crate::game::Game, hit_p: V3, dir: V3,
     }
 }
 
-/// The impulse of a `kind` event at `at` alone: only what already lies about moves.   (destruction.ts testImpulse)
-pub fn destruction_test_impulse(g: &mut crate::game::Game, at: V3, kind: Option<crate::destruction::DestructionTestImpulseKind>, dir: Option<V3>, who: Option<f64>) {
-    let kind = kind.unwrap_or(DestructionTestImpulseKind::Bang);
-    let dir = dir.unwrap_or([1.0, 0.0, 0.0]);
-    let who = who.unwrap_or(crate::consts::NOBODY_ID);
-    let chaos = chaos_of(g);
-    match kind {
-        DestructionTestImpulseKind::Bang => destruction_bang_impulse(g, at, [at[0], m::max(at[1] + 0.3, 0.95), at[2]], chaos, who),
-        DestructionTestImpulseKind::Impact => destruction_impact_impulse(g, at, v3::normalize(dir), [0.0, 1.0, 0.0], chaos, who),
-        DestructionTestImpulseKind::Thud => destruction_thud(g, at, Some(1.0), Some(who)),
-    }
-}
-
 /// A thump on the floor at `pos`: the litter within a stride twitches.   (destruction.ts thud)
 pub fn destruction_thud(g: &mut crate::game::Game, pos: V3, scale: Option<f64>, who: Option<f64>) {
     let scale = scale.unwrap_or(1.0);
@@ -616,7 +603,7 @@ pub fn destruction_dust_puff(g: &mut crate::game::Game, p: V3, n: V3, scale: f64
     let by_surf = match surf { crate::scene_materials::Surf::Drywall => 1.0, crate::scene_materials::Surf::Concrete => 0.7, crate::scene_materials::Surf::Fabric => 0.35, _ => 0.5 };
     let dens = k.density * by_surf * m::min(2.0, scale);
     let dir = v3::normalize([n[0], n[1] + 0.25, n[2]]);
-    let e = crate::smoke_types::SmokeEmitter { pos: v3::mad(p, n, 0.1), dir, speed: k.speed, radius: k.radius * m::sqrt(scale), density: dens, temperature: k.temp, ttl: k.ttl, age: 0.0, kind: crate::smoke_types::SmokeEmitterKind::Puff, push: Some(k.push), expand: Some(k.expand), attack: Some(0.03), jitter: Some(0.35), lattice: Some(crate::smoke_types::SmokeEmitterLattice::Coarse), prio: Some(0.0), min_voxels: Some(2.0), anchor: Some(v3::mad(p, n, 0.6)), tint: Some(crate::dust_look::dust_tint(surf)), ..Default::default() };
+    let e = crate::smoke_types::SmokeEmitter { pos: v3::mad(p, n, 0.1), dir, speed: k.speed, radius: k.radius * m::sqrt(scale), density: dens, temperature: k.temp, ttl: k.ttl, age: 0.0, kind: crate::smoke_types::SmokeEmitterKind::Puff, push: Some(k.push), expand: Some(k.expand), attack: Some(0.03), jitter: Some(0.35), lattice: Some(crate::smoke_types::SmokeEmitterLattice::Coarse), prio: Some(0.0), min_voxels: Some(2.0), tint: Some(crate::dust_look::dust_tint(surf)), ..Default::default() };
     crate::smoke_types::smoke_system_like_emit(g, &e);
     crate::out_events::push_smoke_system_like_emit(g, &e);
     true

@@ -22,16 +22,6 @@ pub enum IdeaHow {
     Told,
     Fix,
 }
-impl IdeaHow {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            IdeaHow::Heard => "heard",
-            IdeaHow::Seen => "seen",
-            IdeaHow::Told => "told",
-            IdeaHow::Fix => "fix",
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Idea {
@@ -82,39 +72,12 @@ pub struct Step {
     pub t0: f64,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct StepKey {
-}
-
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct State {
     pub men: JsMap<GuardId, crate::picture::Pic>,
     pub sam: crate::picture::Pic,
     pub tell_t: f64,
     pub done: JsSet<u32>,
-    pub view: Option<crate::picture::PictureView>,
-    pub view_t: f64,
-}
-
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct PictureView {
-    pub gd: GuardId,
-    pub from: V3,
-    pub ideas: Vec<crate::picture::PictureViewIdeasItem>,
-    pub unsafe_: Vec<[f64; 3]>,
-    pub cover: Vec<crate::picture::CoverSpot>,
-}
-
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct PictureViewIdeasItem {
-    pub who: String,
-    pub at: V3,
-    pub age: f64,
-    pub how: crate::picture::IdeaHow,
-    pub w: f64,
-    pub reach: f64,
-    pub lost: bool,
-    pub maybe: Vec<V3>,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -122,84 +85,26 @@ pub struct CoverSpot {
     pub at: V3,
     pub stand: f64,
     pub low: f64,
-    pub edge: bool,
     pub score: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct IdeaSnap {
-    pub who: f64,
-    pub at: V3,
-    pub age: f64,
-    pub known: f64,
-    pub how: crate::picture::IdeaHow,
-    pub by: f64,
-    pub lost: bool,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct PicSnap {
-    pub ideas: Vec<crate::picture::IdeaSnap>,
-    pub downs: Vec<[f64; 2]>,
-    pub heard: Vec<[f64; 2]>,
-    pub look: f64,
-    pub step: Option<crate::picture::PicSnapStep>,
-    pub step_bad: Option<V3>,
-    pub step_in: Option<f64>,
-    pub step_next: Option<f64>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct PicSnapStep {
-    pub mark: V3,
-    pub at: V3,
-    pub low: bool,
-    pub look: f64,
-    pub since: Option<f64>,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct PictureSnap {
-    pub men: Vec<Option<crate::picture::PicSnap>>,
-    pub sam: crate::picture::PicSnap,
-    pub tell: f64,
 }
 
 #[derive(Clone, Copy, Debug)]
 pub struct KnownPlacesItem {
     pub who: crate::picture::Who,
     pub at: V3,
-    pub age: f64,
 }
 impl Default for KnownPlacesItem {
     fn default() -> Self {
         KnownPlacesItem {
             who: crate::picture::Who::Guard(GuardId(0)),
             at: [0.0; 3],
-            age: 0.0,
         }
     }
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct SafestSetsSetsItemItem {
-    pub pos: V3,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct PictureStepKey {
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct PictureStep {
     pub at: V3,
-    pub low: bool,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct PictureStepOf {
-    pub at: V3,
-    pub mark: V3,
     pub low: bool,
 }
 

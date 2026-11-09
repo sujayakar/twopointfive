@@ -39,58 +39,6 @@ pub fn fin(p: &crate::scene_stuff::Paint) -> String {
     format!("{}{}{}", stuff, finish, does)
 }
 
-/// A second saying of one array is refused: thrown where ONE_PAINT says so; otherwise passed over, and false = the caller leaves the paint as it was. (stuff.ts refuse)
-pub fn refuse(g: &crate::game::Game, row: &[f64], was: &crate::scene_stuff::Paint, next: &crate::scene_stuff::Paint) -> bool {
-    if one_paint().refuses {
-        let mut nums = String::new();
-        for (i, n) in row.iter().enumerate() {
-            if i > 0 {
-                nums.push_str(", ");
-            }
-            nums.push_str(&js::num_str(*n));
-        }
-        let was_name = if !was.name.is_empty() { format!(" '{}'", was.name) } else { String::new() };
-        let next_name = if !next.name.is_empty() && next.name != was.name { format!(" ('{}')", next.name) } else { String::new() };
-        panic!(
-            "stuff: the paint [{}]{} is {} and cannot also be {}{}: one array is one paint. A second thing in the same colour is its own array (saidAs, or the numbers written again)",
-            nums, was_name, fin(was), fin(next), next_name
-        );
-    }
-    false
-}
-
-/// The first saying of a paint stands; the same thing said twice is nothing; a different second saying is refused. (stuff.ts keep)
-pub fn keep(g: &mut crate::game::Game, row: &[f64], next: &crate::scene_stuff::Paint) {
-    let was = match seam_paints_get(g, row) {
-        None => {
-            seam_paints_set(g, row, next.clone());
-            return;
-        }
-        Some(was) => was,
-    };
-    if was.stuff != next.stuff || was.rough != next.rough || was.metal.unwrap_or(false) != next.metal.unwrap_or(false) || was.does != next.does {
-        refuse(g, row, &was, next);
-    }
-}
-
-/// A kit's own paint, what it is made of and its finish said outright. (stuff.ts sayPaint)
-pub fn say_paint(g: &mut crate::game::Game, row: &[f64], name: &str, said: crate::scene_stuff::SayPaintSaid) {
-    let next = record(name, Some(Finish { rough: said.rough, metal: said.metal }), said.stuff, said.does);
-    keep(g, row, &next);
-}
-
-/// A colour written as numbers says its word beside it. Returns the colour. (stuff.ts madeOf)
-pub fn made_of(g: &mut crate::game::Game, stuff: crate::scene_stuff::BoxStuff, colour: [f64; 3], finish: Option<crate::scene_stuff::MadeOfFinish>) -> [f64; 3] {
-    let said = SayPaintSaid {
-        stuff: Some(stuff),
-        does: None,
-        rough: finish.map(|f| f.rough),
-        metal: finish.and_then(|f| f.metal),
-    };
-    say_paint(g, &colour, "", said);
-    colour
-}
-
 /// The paint this array is, if anybody said so. (stuff.ts paintOf)
 pub fn paint_of(g: &crate::game::Game, albedo: Option<&[f64]>) -> Option<crate::scene_stuff::Paint> {
     match albedo {
@@ -117,11 +65,6 @@ pub fn word_for(g: &crate::game::Game, albedo: Option<&[f64]>, said: Option<crat
 fn seam_paints_get(g: &Game, row: &[f64]) -> Option<Paint> {
     if row.len() < 3 { return None; }
     g.m.scene_stuff.paints.get([row[0].to_bits(), row[1].to_bits(), row[2].to_bits()]).cloned()
-}
-
-/// PAINTS.set(row, next) (stuff.ts:142): as seam_paints_get.
-fn seam_paints_set(g: &mut Game, row: &[f64], next: Paint) {
-    g.m.scene_stuff.paints.set([row[0].to_bits(), row[1].to_bits(), row[2].to_bits()], next);
 }
 
 #[cfg(test)]

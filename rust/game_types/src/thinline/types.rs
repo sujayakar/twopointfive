@@ -7,7 +7,6 @@ use alloc::{string::String, vec::Vec};
 pub struct Thin {
     pub hw0: f64,
     pub k: f64,
-    pub e: [f64; 3],
 }
 
 /// the state this module keeps at its top level

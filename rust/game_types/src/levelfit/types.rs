@@ -25,11 +25,9 @@ pub struct BreakRoom {
 
 #[derive(Clone, Debug, Default)]
 pub struct FitRow {
-    pub row: String,
     pub what: String,
     pub has: f64,
     pub cap: f64,
-    pub table: Option<String>,
     pub play: Option<bool>,
 }
 
@@ -38,8 +36,6 @@ pub struct Stood {
     pub level: crate::levelfit::StoodLevel,
     pub col: crate::levelfit::StoodCol,
     pub props: Option<crate::levelfit::StoodProps>,
-    pub engine: Option<crate::Opaque>,
-    pub beacons: Option<crate::Opaque>,
     pub player: Option<PlayerId>,
     pub guards: Option<Vec<GuardId>>,
     pub civilians: Option<Vec<GuardId>>,
@@ -51,8 +47,6 @@ impl Default for Stood {
             level: crate::levelfit::StoodLevel::default(),
             col: crate::levelfit::StoodCol::default(),
             props: None,
-            engine: None,
-            beacons: None,
             player: None,
             guards: Some(Vec::new()),
             civilians: Some(Vec::new()),

@@ -42,10 +42,6 @@ pub struct DoorwayModSTACKOWN {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct DOORMANNERSDEBUG {
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct Rel {
     pub along: f64,
     pub perp: f64,
@@ -67,7 +63,6 @@ pub struct RelF {
 pub struct DoorAhead {
     pub d: DoorId,
     pub side: f64,
-    pub at: V3,
     pub dist: f64,
 }
 
@@ -118,12 +113,6 @@ pub struct DoorwayStats {
     pub round_own: i32,
     pub leaf_stall: i32,
 }
-
-/// (src/game/doorway.ts:155 LEAFSTALL_BREAK)
-pub const LEAFSTALL_BREAK: bool = false;
-
-/// (src/game/doorway.ts:156 DOORMANNERS_DEBUG: a table nothing writes)
-pub fn doormanners_debug() -> crate::doorway::DOORMANNERSDEBUG { crate::doorway::DOORMANNERSDEBUG {  } }
 
 /// (src/game/doorway.ts:238 ROUND_PACE)
 pub const ROUND_PACE: f64 = 0.5;

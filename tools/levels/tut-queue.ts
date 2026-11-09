@@ -33,7 +33,7 @@
 //   page: ?levelFile=tut-queue.json&roomclear=1&squad4
 import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef } from './lib/level';
-import type { LessonData, LevelScenarios, Rect, StructureData } from '../../src/scene/scenarios';
+import type { LessonData, LevelScenarios, Rect, StructureData } from './lib/scenarios';
 import type { SurfacesData } from './lib/levelData';
 import { officeKit, normalize3 as norm, type GeneratorTrace } from './lib/officeGen';
 import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, GW_SHELL } from './lib/gwotKit';
@@ -142,7 +142,7 @@ export function build() {
   // the second man in the corner south of the guardroom, the way to face had no line for him there and he stood looking at a wall): a move's places are the
   // squad's own (rust/game_rules/src/roomfit: a few steps round the click, a wall at the back), so the post is where a hand that lands a metre and a half off still gets two men
   // who see the gate — clear of that corner to the west (the drums below fill it) and of the hall's front door to the east, whose picture stands over the
-  // ground north of it and takes a right click there (clicks swept with `TUTPLAN_POSTB`)
+  // ground north of it and takes a right click there
   G.jersey(24.0, 9.3, 2, 0);
   grp('yard');
   G.drums(20.7, 11.65, 2);                                          // in the corner south of the guardroom: a man put there by a move to the barrier had the guardroom between him and the back gate

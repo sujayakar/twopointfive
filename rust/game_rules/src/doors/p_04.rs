@@ -234,13 +234,10 @@ fn torn_feed(g: &mut Game, d: DoorId, who: f64, cause: crate::doors::DoorsTornCa
             crate::doors::DoorsTornCause::Fire => crate::wallbreak::LevelChangeCause::Fire,
         },
         id: g.doors.list.iter().position(|x| *x == d).map_or(-1.0, |i| i as f64),
-        name: Some(g.dr[d].def.name.clone()),
         pos: [c[0], c[1], c[2]],
         rect: [c[0] - r, c[2] - r, c[0] + r, c[2] + r],
         opened: Vec::new(),
         walkable: true,
-        sight: true,
-        dead: true,
         who,
     };
     crate::wallbreak::wall_break_note(g, &row);

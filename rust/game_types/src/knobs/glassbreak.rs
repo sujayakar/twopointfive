@@ -9,27 +9,11 @@ pub enum GlassbreakKRhoKey {
     Annealed,
     Laminated,
 }
-impl GlassbreakKRhoKey {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            GlassbreakKRhoKey::Annealed => "annealed",
-            GlassbreakKRhoKey::Laminated => "laminated",
-        }
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum GlassbreakKRadialsKey {
     Annealed,
     Laminated,
-}
-impl GlassbreakKRadialsKey {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            GlassbreakKRadialsKey::Annealed => "annealed",
-            GlassbreakKRadialsKey::Laminated => "laminated",
-        }
-    }
 }
 
 /// the knobs

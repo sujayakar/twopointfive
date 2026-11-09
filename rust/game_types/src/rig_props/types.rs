@@ -37,14 +37,6 @@ pub struct Rig {
 pub struct RigGoggles {
     pub on: crate::rig_props::RigGogglesOn,
     pub off: crate::rig_props::RigGogglesOff,
-    pub lens_side: f64,
-    pub lens_down: f64,
-    pub lens_up: f64,
-    pub lens_half: f64,
-    pub lens_thick: f64,
-    pub housing: crate::rig_props::RigGogglesHousing,
-    pub glow_on: V3,
-    pub glow_off: V3,
     pub tubes: crate::rig_props::RigGogglesTubes,
     pub on_adj: Option<crate::rig_props::Adj>,
     pub off_adj: Option<crate::rig_props::Adj>,
@@ -63,12 +55,6 @@ pub struct RigGogglesOn {
 pub struct RigGogglesOff {
     pub fwd: f64,
     pub up: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct RigGogglesHousing {
-    pub back: f64,
-    pub half: V3,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -262,13 +248,6 @@ pub struct RigM4 {
     pub gl: crate::rig_props::Seg,
 }
 
-#[derive(Clone, Debug)]
-pub enum TreeValue {
-    Num(f64),
-    Array(Vec<f64>),
-    Arm2(JsMap<String, crate::rig_props::TreeValue>),
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Frame {
     pub o: V3,
@@ -279,13 +258,6 @@ pub struct Frame {
 
 #[derive(Clone, Debug, Default)]
 pub struct RigNodeMeta {
-    pub path: String,
-    pub label: String,
-    pub depth: f64,
-    pub parent: crate::rig_props::Frame,
-    pub frame: crate::rig_props::Frame,
-    pub box_start: f64,
-    pub box_count: f64,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -325,28 +297,11 @@ pub enum RigOptsWeapon {
     Carbine,
     Sc20k,
 }
-impl RigOptsWeapon {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RigOptsWeapon::Pistol => "pistol",
-            RigOptsWeapon::Carbine => "carbine",
-            RigOptsWeapon::Sc20k => "sc20k",
-        }
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum RigOptsRifle {
     Hand,
     Slung,
-}
-impl RigOptsRifle {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RigOptsRifle::Hand => "hand",
-            RigOptsRifle::Slung => "slung",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -365,14 +320,6 @@ pub enum RigOptsBig {
     Shotgun,
     Hammer,
 }
-impl RigOptsBig {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RigOptsBig::Shotgun => "shotgun",
-            RigOptsBig::Hammer => "hammer",
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct COL {
@@ -380,7 +327,6 @@ pub struct COL {
     pub can: V3,
     pub torch: V3,
     pub lens_body: V3,
-    pub goggles_lens: V3,
     pub goggles_housing: V3,
     pub blade: V3,
     pub edge: V3,
@@ -482,20 +428,6 @@ pub struct BIGRIGClear {
     pub shotgun: f64,
 }
 
-#[derive(Clone, Debug)]
-pub enum AssignTreeDstValue {
-    Num(f64),
-    Array(Vec<f64>),
-    Arm2(JsMap<String, crate::rig_props::AssignTreeDstValue>),
-}
-
-#[derive(Clone, Debug)]
-pub enum AssignTreeSrcValue {
-    Num(f64),
-    Array(Vec<f64>),
-    Arm2(JsMap<String, crate::rig_props::AssignTreeSrcValue>),
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct PistolFrameP {
     pub adj: Option<crate::rig_props::Adj>,
@@ -519,13 +451,6 @@ pub struct LongLookOf {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct ModelGrip {
-    pub wrist: V3,
-    pub fingers: V3,
-    pub back: V3,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct HolsterBoxesParts {
     pub slide: crate::rig_props::Seg,
     pub grip: crate::rig_props::Seg,
@@ -539,22 +464,8 @@ pub struct CarbineFrame {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct CarbineGrip {
-    pub wrist: V3,
-    pub fingers: V3,
-    pub back: V3,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct LongGripOfG {
     pub off: V3,
-    pub fingers: V3,
-    pub back: V3,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct LongGripOf {
-    pub wrist: V3,
     pub fingers: V3,
     pub back: V3,
 }
@@ -579,18 +490,9 @@ pub enum Sc20kFrameWhere {
     Hand,
     Slung,
 }
-impl Sc20kFrameWhere {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Sc20kFrameWhere::Hand => "hand",
-            Sc20kFrameWhere::Slung => "slung",
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Sc20kFrame {
-    pub parent: crate::rig_props::Frame,
     pub g: crate::rig_props::Frame,
 }
 
@@ -599,34 +501,11 @@ pub enum Sc20kBoxesWhere {
     Hand,
     Slung,
 }
-impl Sc20kBoxesWhere {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Sc20kBoxesWhere::Hand => "hand",
-            Sc20kBoxesWhere::Slung => "slung",
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct Sc20kGrip {
-    pub wrist: V3,
-    pub fingers: V3,
-    pub back: V3,
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum LongHoldWeapon {
     Carbine,
     Sc20k,
-}
-impl LongHoldWeapon {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            LongHoldWeapon::Carbine => "carbine",
-            LongHoldWeapon::Sc20k => "sc20k",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -638,7 +517,6 @@ pub struct Sc20kLightPose {
 #[derive(Clone, Copy, Debug, Default)]
 pub struct CarbineLightPose {
     pub pos: V3,
-    pub dir: V3,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -653,15 +531,6 @@ pub enum RigTorchPosWeapon {
     Carbine,
     Sc20k,
 }
-impl RigTorchPosWeapon {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RigTorchPosWeapon::Pistol => "pistol",
-            RigTorchPosWeapon::Carbine => "carbine",
-            RigTorchPosWeapon::Sc20k => "sc20k",
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct TorchCarryDirLow {
@@ -674,29 +543,12 @@ pub enum BigClearOfKind {
     Shotgun,
     Hammer,
 }
-impl BigClearOfKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            BigClearOfKind::Shotgun => "shotgun",
-            BigClearOfKind::Hammer => "hammer",
-        }
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum PackSideDimsWhat {
     Rifle,
     Shotgun,
     Hammer,
-}
-impl PackSideDimsWhat {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            PackSideDimsWhat::Rifle => "rifle",
-            PackSideDimsWhat::Shotgun => "shotgun",
-            PackSideDimsWhat::Hammer => "hammer",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -715,30 +567,12 @@ pub enum PackSideBindWhat {
     Shotgun,
     Hammer,
 }
-impl PackSideBindWhat {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            PackSideBindWhat::Rifle => "rifle",
-            PackSideBindWhat::Shotgun => "shotgun",
-            PackSideBindWhat::Hammer => "hammer",
-        }
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum PackSideWhat {
     Rifle,
     Shotgun,
     Hammer,
-}
-impl PackSideWhat {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            PackSideWhat::Rifle => "rifle",
-            PackSideWhat::Shotgun => "shotgun",
-            PackSideWhat::Hammer => "hammer",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -753,27 +587,11 @@ pub enum BigBoxesKind {
     Shotgun,
     Hammer,
 }
-impl BigBoxesKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            BigBoxesKind::Shotgun => "shotgun",
-            BigBoxesKind::Hammer => "hammer",
-        }
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum HungBoxesWeapon {
     Carbine,
     Sc20k,
-}
-impl HungBoxesWeapon {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            HungBoxesWeapon::Carbine => "carbine",
-            HungBoxesWeapon::Sc20k => "sc20k",
-        }
-    }
 }
 
 /// the state this module keeps at its top level
@@ -791,10 +609,10 @@ impl RigPropsMod {
 }
 
 /// (src/game/rigProps.ts:136 RIG: a table nothing writes)
-pub fn rig() -> crate::rig_props::Rig { crate::rig_props::Rig { goggles: crate::rig_props::RigGoggles { on: crate::rig_props::RigGogglesOn { fwd: 0.105, up: 0.1 }, off: crate::rig_props::RigGogglesOff { fwd: 0.075, up: 0.185 }, lens_side: 0.03, lens_down: -0.012, lens_up: 0.026, lens_half: 0.013, lens_thick: 0.008, housing: crate::rig_props::RigGogglesHousing { back: 0.03, half: [0.055, 0.028, 0.03] }, glow_on: [1.5, 14.0, 3.0], glow_off: [0.35, 3.2, 0.7], tubes: crate::rig_props::RigGogglesTubes { side: 0.032, down: -0.012, half: 0.015, back: 0.06, front: 0.012, glass: 0.003, bridge: crate::rig_props::RigGogglesTubesBridge { at: [0.0, 0.012, -0.03], half: [0.03, 0.007, 0.012] }, arm: crate::rig_props::RigGogglesTubesArm { at: [0.0, 0.034, -0.045], half: [0.009, 0.018, 0.009] } }, on_adj: Some(crate::rig_props::Adj { off: [-0.004, 0.04, 0.02], rot: [4.761, 0.0, 1.1] }), off_adj: Some(crate::rig_props::Adj { off: [-0.006, 0.048, 0.032], rot: [-17.2, 0.0, 0.7] }), housing_adj: None, lens_adj: None, follow_pitch: 1.0 }, pistol: crate::rig_props::RigPistol { slide: crate::rig_props::Seg { l0: 0.02, l1: 0.21, thick: 0.016, tall: 0.026, adj: None }, suppressor: crate::rig_props::Seg { l0: 0.21, l1: 0.36, thick: 0.019, tall: 0.019, adj: None }, grip: crate::rig_props::Seg { l0: 0.0, l1: 0.095, thick: 0.014, tall: 0.017, adj: Some(crate::rig_props::Adj { off: [0.0, -0.024, 0.05], rot: [108.0, 0.0, 0.0] }) }, rail: crate::rig_props::RigPistolRail { l0: 0.09, l1: 0.2, thick: 0.013, tall: 0.012, adj: Some(crate::rig_props::Adj { off: [0.0, 0.0, 0.064], rot: [0.0, 0.0, 0.0] }), under: 0.034 }, lens: crate::rig_props::RigPistolLens { l0: 0.2, l1: 0.215, thick: 0.014, tall: 0.013, adj: None, glow: [14.0, 14.0, 13.0] }, light_under: 0.038, light_ahead: 0.2, adj: Some(crate::rig_props::Adj { off: [0.039, 0.08, 0.035], rot: [-1.3, 0.0, 0.0] }) }, torch: crate::rig_props::RigTorch { body: crate::rig_props::Seg { l0: -0.06, l1: 0.15, thick: 0.022, tall: 0.022, adj: None }, lens: crate::rig_props::Seg { l0: 0.15, l1: 0.18, thick: 0.026, tall: 0.026, adj: None }, lens_glow: 40.0, light_ahead: 0.18, adj: Some(crate::rig_props::Adj { off: [0.076, 0.04, 0.092], rot: [0.0, 6.7, 0.0] }) }, guard_pistol: crate::rig_props::RigGuardPistol { slide: crate::rig_props::Seg { l0: 0.02, l1: 0.2, thick: 0.016, tall: 0.026, adj: Some(crate::rig_props::Adj { off: [0.028, -0.034, 0.073], rot: [11.2, 0.0, 0.5] }) }, grip: crate::rig_props::Seg { l0: 0.0, l1: 0.095, thick: 0.014, tall: 0.017, adj: Some(crate::rig_props::Adj { off: [0.028, -0.06, 0.118], rot: [119.0, 0.0, 0.5] }) }, lens: crate::rig_props::Seg { l0: 0.2, l1: 0.23, thick: 0.015, tall: 0.015, adj: Some(crate::rig_props::Adj { off: [0.029, -0.064, 0.023], rot: [11.8, 0.0, 0.0] }) }, light_ahead: 0.25, adj: Some(crate::rig_props::Adj { off: [0.031, 0.105, -0.05], rot: [-8.6, 0.0, 0.0] }) }, knife: crate::rig_props::RigKnife { blade: crate::rig_props::Seg { l0: 0.045, l1: 0.215, thick: 0.002, tall: 0.009, adj: Some(crate::rig_props::Adj { off: [0.0, 0.003, 0.0], rot: [0.0, 0.0, 0.0] }) }, edge: crate::rig_props::Seg { l0: 0.045, l1: 0.215, thick: 0.002, tall: 0.003, adj: Some(crate::rig_props::Adj { off: [0.0, -0.009, 0.0], rot: [0.0, 0.0, 0.0] }) }, guard: crate::rig_props::Seg { l0: 0.04, l1: 0.048, thick: 0.005, tall: 0.019, adj: None }, handle: crate::rig_props::Seg { l0: -0.065, l1: 0.045, thick: 0.011, tall: 0.013, adj: None }, grip: crate::rig_props::RigKnifeGrip { fwd: 0.08, palm: 0.03, side: 0.0 }, adj: None }, sheath: crate::rig_props::RigSheath { at: [0.07, -0.085, 0.2], along: [0.26, 1.0, -0.2], out: [0.0, 0.18, 1.0], body: crate::rig_props::Seg { l0: 0.046, l1: 0.228, thick: 0.006, tall: 0.016, adj: None } }, can: crate::rig_props::RigCan { sink: -0.02, tilt: 0.35, body: crate::rig_props::Seg { l0: -0.02, l1: 0.12, thick: 0.032, tall: 0.032, adj: None }, band: crate::rig_props::Seg { l0: 0.085, l1: 0.109, thick: 0.034, tall: 0.034, adj: None }, adj: Some(crate::rig_props::Adj { off: [0.0, 0.0, 0.0], rot: [0.0, 0.0, 0.0] }) }, holster: crate::rig_props::RigHolster { down: 0.06, out: 0.115, fwd: 0.01, adj: Some(crate::rig_props::Adj { off: [0.0, 0.0, 0.0], rot: [0.0, 0.0, 0.0] }) }, carbine: crate::rig_props::RigCarbine { receiver: crate::rig_props::Seg { l0: -0.09, l1: 0.155, thick: 0.017, tall: 0.032, adj: Some(crate::rig_props::Adj { off: [0.0, -0.012, 0.0], rot: [0.0, 0.0, 0.0] }) }, handguard: crate::rig_props::Seg { l0: 0.155, l1: 0.275, thick: 0.02, tall: 0.025, adj: Some(crate::rig_props::Adj { off: [0.0, -0.008, 0.0], rot: [0.0, 0.0, 0.0] }) }, barrel: crate::rig_props::Seg { l0: 0.275, l1: 0.34, thick: 0.007, tall: 0.007, adj: None }, muzzle: crate::rig_props::Seg { l0: 0.34, l1: 0.41, thick: 0.015, tall: 0.015, adj: None }, mag: crate::rig_props::Seg { l0: 0.0, l1: 0.11, thick: 0.013, tall: 0.028, adj: Some(crate::rig_props::Adj { off: [0.0, -0.04, 0.085], rot: [78.0, 0.0, 0.0] }) }, mag2: crate::rig_props::Seg { l0: 0.0, l1: 0.1, thick: 0.013, tall: 0.027, adj: Some(crate::rig_props::Adj { off: [0.0, -0.143, 0.106], rot: [60.0, 0.0, 0.0] }) }, grip: crate::rig_props::Seg { l0: 0.0, l1: 0.09, thick: 0.013, tall: 0.016, adj: Some(crate::rig_props::Adj { off: [0.0, -0.045, -0.015], rot: [108.0, 0.0, 0.0] }) }, stock_top: crate::rig_props::Seg { l0: -0.32, l1: -0.09, thick: 0.007, tall: 0.008, adj: Some(crate::rig_props::Adj { off: [0.0, 0.005, 0.0], rot: [0.0, 0.0, 0.0] }) }, stock_low: crate::rig_props::Seg { l0: 0.0, l1: 0.235, thick: 0.007, tall: 0.008, adj: Some(crate::rig_props::Adj { off: [0.0, -0.04, -0.09], rot: [171.0, 0.0, 0.0] }) }, light: crate::rig_props::Seg { l0: 0.18, l1: 0.265, thick: 0.011, tall: 0.011, adj: Some(crate::rig_props::Adj { off: [-0.032, -0.006, 0.0], rot: [0.0, 0.0, 0.0] }) }, lens: crate::rig_props::Seg { l0: 0.265, l1: 0.28, thick: 0.012, tall: 0.012, adj: Some(crate::rig_props::Adj { off: [-0.032, -0.006, 0.0], rot: [0.0, 0.0, 0.0] }) }, lens_glow: 40.0, light_ahead: 0.285, grip_l: crate::rig_props::RigCarbineGripL { off: [0.099, -0.059, 0.149], fingers: [-0.48, -0.11, 0.19], back: [0.45, -0.85, -0.25] }, adj: Some(crate::rig_props::Adj { off: [0.06, 0.08, 0.09], rot: [0.0, 0.0, 0.0] }) }, sc20k: crate::rig_props::RigSc20k { hull: crate::rig_props::Seg { l0: -0.29, l1: 0.12, thick: 0.024, tall: 0.04, adj: Some(crate::rig_props::Adj { off: [0.0, -0.012, 0.0], rot: [0.0, 0.0, 0.0] }) }, butt: crate::rig_props::Seg { l0: -0.31, l1: -0.29, thick: 0.026, tall: 0.048, adj: Some(crate::rig_props::Adj { off: [0.0, -0.018, 0.0], rot: [0.0, 0.0, 0.0] }) }, mag: crate::rig_props::Seg { l0: 0.0, l1: 0.13, thick: 0.012, tall: 0.03, adj: Some(crate::rig_props::Adj { off: [0.0, -0.045, -0.12], rot: [84.0, 0.0, 0.0] }) }, grip: crate::rig_props::Seg { l0: 0.0, l1: 0.09, thick: 0.013, tall: 0.016, adj: Some(crate::rig_props::Adj { off: [0.0, -0.045, -0.015], rot: [108.0, 0.0, 0.0] }) }, fore: crate::rig_props::Seg { l0: 0.12, l1: 0.3, thick: 0.022, tall: 0.03, adj: Some(crate::rig_props::Adj { off: [0.0, -0.014, 0.0], rot: [0.0, 0.0, 0.0] }) }, suppressor: crate::rig_props::Seg { l0: 0.3, l1: 0.43, thick: 0.019, tall: 0.019, adj: None }, rail: crate::rig_props::Seg { l0: -0.16, l1: 0.16, thick: 0.011, tall: 0.008, adj: Some(crate::rig_props::Adj { off: [0.0, 0.036, 0.0], rot: [0.0, 0.0, 0.0] }) }, optic: crate::rig_props::Seg { l0: -0.04, l1: 0.08, thick: 0.017, tall: 0.02, adj: Some(crate::rig_props::Adj { off: [0.0, 0.062, 0.0], rot: [0.0, 0.0, 0.0] }) }, foregrip: crate::rig_props::Seg { l0: 0.0, l1: 0.085, thick: 0.012, tall: 0.012, adj: Some(crate::rig_props::Adj { off: [0.0, -0.044, 0.2], rot: [90.0, 0.0, 0.0] }) }, light: crate::rig_props::Seg { l0: 0.19, l1: 0.27, thick: 0.011, tall: 0.011, adj: Some(crate::rig_props::Adj { off: [-0.034, -0.008, 0.0], rot: [0.0, 0.0, 0.0] }) }, lens: crate::rig_props::Seg { l0: 0.27, l1: 0.285, thick: 0.012, tall: 0.012, adj: Some(crate::rig_props::Adj { off: [-0.034, -0.008, 0.0], rot: [0.0, 0.0, 0.0] }) }, lens_glow: 40.0, light_ahead: 0.29, grip_l: crate::rig_props::RigSc20kGripL { off: [0.06, -0.085, 0.145], fingers: [-0.3, 0.05, 0.95], back: [0.95, -0.15, 0.25] }, slung: crate::rig_props::RigSc20kSlung { off: [-0.02, 0.17, -0.18], bore: [0.5, -0.866, 0.2], roll: 180.0, follow: 0.5, adj: None }, adj: Some(crate::rig_props::Adj { off: [0.06, 0.08, 0.09], rot: [0.0, 0.0, 0.0] }) }, m4: crate::rig_props::RigM4 { hull: crate::rig_props::Seg { l0: -0.075, l1: 0.115, thick: 0.017, tall: 0.036, adj: Some(crate::rig_props::Adj { off: [0.0, -0.012, 0.0], rot: [0.0, 0.0, 0.0] }) }, butt: crate::rig_props::Seg { l0: -0.31, l1: -0.19, thick: 0.017, tall: 0.036, adj: Some(crate::rig_props::Adj { off: [0.0, -0.02, 0.0], rot: [0.0, 0.0, 0.0] }) }, mag: crate::rig_props::Seg { l0: 0.0, l1: 0.14, thick: 0.011, tall: 0.03, adj: Some(crate::rig_props::Adj { off: [0.0, -0.045, 0.075], rot: [80.0, 0.0, 0.0] }) }, fore: crate::rig_props::Seg { l0: 0.115, l1: 0.3, thick: 0.022, tall: 0.022, adj: Some(crate::rig_props::Adj { off: [0.0, -0.003, 0.0], rot: [0.0, 0.0, 0.0] }) }, rail: crate::rig_props::Seg { l0: -0.07, l1: 0.3, thick: 0.009, tall: 0.005, adj: Some(crate::rig_props::Adj { off: [0.0, 0.027, 0.0], rot: [0.0, 0.0, 0.0] }) }, optic: crate::rig_props::Seg { l0: 0.0, l1: 0.07, thick: 0.016, tall: 0.02, adj: Some(crate::rig_props::Adj { off: [0.0, 0.052, 0.0], rot: [0.0, 0.0, 0.0] }) }, tube: crate::rig_props::Seg { l0: -0.19, l1: -0.075, thick: 0.012, tall: 0.012, adj: Some(crate::rig_props::Adj { off: [0.0, -0.002, 0.0], rot: [0.0, 0.0, 0.0] }) }, peq: crate::rig_props::Seg { l0: 0.215, l1: 0.29, thick: 0.017, tall: 0.011, adj: Some(crate::rig_props::Adj { off: [0.0, 0.043, 0.0], rot: [0.0, 0.0, 0.0] }) }, gl: crate::rig_props::Seg { l0: 0.14, l1: 0.3, thick: 0.02, tall: 0.024, adj: Some(crate::rig_props::Adj { off: [0.0, -0.05, 0.0], rot: [0.0, 0.0, 0.0] }) } } } }
+pub fn rig() -> crate::rig_props::Rig { crate::rig_props::Rig { goggles: crate::rig_props::RigGoggles { on: crate::rig_props::RigGogglesOn { fwd: 0.105, up: 0.1 }, off: crate::rig_props::RigGogglesOff { fwd: 0.075, up: 0.185 }, tubes: crate::rig_props::RigGogglesTubes { side: 0.032, down: -0.012, half: 0.015, back: 0.06, front: 0.012, glass: 0.003, bridge: crate::rig_props::RigGogglesTubesBridge { at: [0.0, 0.012, -0.03], half: [0.03, 0.007, 0.012] }, arm: crate::rig_props::RigGogglesTubesArm { at: [0.0, 0.034, -0.045], half: [0.009, 0.018, 0.009] } }, on_adj: Some(crate::rig_props::Adj { off: [-0.004, 0.04, 0.02], rot: [4.761, 0.0, 1.1] }), off_adj: Some(crate::rig_props::Adj { off: [-0.006, 0.048, 0.032], rot: [-17.2, 0.0, 0.7] }), housing_adj: None, lens_adj: None, follow_pitch: 1.0 }, pistol: crate::rig_props::RigPistol { slide: crate::rig_props::Seg { l0: 0.02, l1: 0.21, thick: 0.016, tall: 0.026, adj: None }, suppressor: crate::rig_props::Seg { l0: 0.21, l1: 0.36, thick: 0.019, tall: 0.019, adj: None }, grip: crate::rig_props::Seg { l0: 0.0, l1: 0.095, thick: 0.014, tall: 0.017, adj: Some(crate::rig_props::Adj { off: [0.0, -0.024, 0.05], rot: [108.0, 0.0, 0.0] }) }, rail: crate::rig_props::RigPistolRail { l0: 0.09, l1: 0.2, thick: 0.013, tall: 0.012, adj: Some(crate::rig_props::Adj { off: [0.0, 0.0, 0.064], rot: [0.0, 0.0, 0.0] }), under: 0.034 }, lens: crate::rig_props::RigPistolLens { l0: 0.2, l1: 0.215, thick: 0.014, tall: 0.013, adj: None, glow: [14.0, 14.0, 13.0] }, light_under: 0.038, light_ahead: 0.2, adj: Some(crate::rig_props::Adj { off: [0.039, 0.08, 0.035], rot: [-1.3, 0.0, 0.0] }) }, torch: crate::rig_props::RigTorch { body: crate::rig_props::Seg { l0: -0.06, l1: 0.15, thick: 0.022, tall: 0.022, adj: None }, lens: crate::rig_props::Seg { l0: 0.15, l1: 0.18, thick: 0.026, tall: 0.026, adj: None }, lens_glow: 40.0, light_ahead: 0.18, adj: Some(crate::rig_props::Adj { off: [0.076, 0.04, 0.092], rot: [0.0, 6.7, 0.0] }) }, guard_pistol: crate::rig_props::RigGuardPistol { slide: crate::rig_props::Seg { l0: 0.02, l1: 0.2, thick: 0.016, tall: 0.026, adj: Some(crate::rig_props::Adj { off: [0.028, -0.034, 0.073], rot: [11.2, 0.0, 0.5] }) }, grip: crate::rig_props::Seg { l0: 0.0, l1: 0.095, thick: 0.014, tall: 0.017, adj: Some(crate::rig_props::Adj { off: [0.028, -0.06, 0.118], rot: [119.0, 0.0, 0.5] }) }, lens: crate::rig_props::Seg { l0: 0.2, l1: 0.23, thick: 0.015, tall: 0.015, adj: Some(crate::rig_props::Adj { off: [0.029, -0.064, 0.023], rot: [11.8, 0.0, 0.0] }) }, light_ahead: 0.25, adj: Some(crate::rig_props::Adj { off: [0.031, 0.105, -0.05], rot: [-8.6, 0.0, 0.0] }) }, knife: crate::rig_props::RigKnife { blade: crate::rig_props::Seg { l0: 0.045, l1: 0.215, thick: 0.002, tall: 0.009, adj: Some(crate::rig_props::Adj { off: [0.0, 0.003, 0.0], rot: [0.0, 0.0, 0.0] }) }, edge: crate::rig_props::Seg { l0: 0.045, l1: 0.215, thick: 0.002, tall: 0.003, adj: Some(crate::rig_props::Adj { off: [0.0, -0.009, 0.0], rot: [0.0, 0.0, 0.0] }) }, guard: crate::rig_props::Seg { l0: 0.04, l1: 0.048, thick: 0.005, tall: 0.019, adj: None }, handle: crate::rig_props::Seg { l0: -0.065, l1: 0.045, thick: 0.011, tall: 0.013, adj: None }, grip: crate::rig_props::RigKnifeGrip { fwd: 0.08, palm: 0.03, side: 0.0 }, adj: None }, sheath: crate::rig_props::RigSheath { at: [0.07, -0.085, 0.2], along: [0.26, 1.0, -0.2], out: [0.0, 0.18, 1.0], body: crate::rig_props::Seg { l0: 0.046, l1: 0.228, thick: 0.006, tall: 0.016, adj: None } }, can: crate::rig_props::RigCan { sink: -0.02, tilt: 0.35, body: crate::rig_props::Seg { l0: -0.02, l1: 0.12, thick: 0.032, tall: 0.032, adj: None }, band: crate::rig_props::Seg { l0: 0.085, l1: 0.109, thick: 0.034, tall: 0.034, adj: None }, adj: Some(crate::rig_props::Adj { off: [0.0, 0.0, 0.0], rot: [0.0, 0.0, 0.0] }) }, holster: crate::rig_props::RigHolster { down: 0.06, out: 0.115, fwd: 0.01, adj: Some(crate::rig_props::Adj { off: [0.0, 0.0, 0.0], rot: [0.0, 0.0, 0.0] }) }, carbine: crate::rig_props::RigCarbine { receiver: crate::rig_props::Seg { l0: -0.09, l1: 0.155, thick: 0.017, tall: 0.032, adj: Some(crate::rig_props::Adj { off: [0.0, -0.012, 0.0], rot: [0.0, 0.0, 0.0] }) }, handguard: crate::rig_props::Seg { l0: 0.155, l1: 0.275, thick: 0.02, tall: 0.025, adj: Some(crate::rig_props::Adj { off: [0.0, -0.008, 0.0], rot: [0.0, 0.0, 0.0] }) }, barrel: crate::rig_props::Seg { l0: 0.275, l1: 0.34, thick: 0.007, tall: 0.007, adj: None }, muzzle: crate::rig_props::Seg { l0: 0.34, l1: 0.41, thick: 0.015, tall: 0.015, adj: None }, mag: crate::rig_props::Seg { l0: 0.0, l1: 0.11, thick: 0.013, tall: 0.028, adj: Some(crate::rig_props::Adj { off: [0.0, -0.04, 0.085], rot: [78.0, 0.0, 0.0] }) }, mag2: crate::rig_props::Seg { l0: 0.0, l1: 0.1, thick: 0.013, tall: 0.027, adj: Some(crate::rig_props::Adj { off: [0.0, -0.143, 0.106], rot: [60.0, 0.0, 0.0] }) }, grip: crate::rig_props::Seg { l0: 0.0, l1: 0.09, thick: 0.013, tall: 0.016, adj: Some(crate::rig_props::Adj { off: [0.0, -0.045, -0.015], rot: [108.0, 0.0, 0.0] }) }, stock_top: crate::rig_props::Seg { l0: -0.32, l1: -0.09, thick: 0.007, tall: 0.008, adj: Some(crate::rig_props::Adj { off: [0.0, 0.005, 0.0], rot: [0.0, 0.0, 0.0] }) }, stock_low: crate::rig_props::Seg { l0: 0.0, l1: 0.235, thick: 0.007, tall: 0.008, adj: Some(crate::rig_props::Adj { off: [0.0, -0.04, -0.09], rot: [171.0, 0.0, 0.0] }) }, light: crate::rig_props::Seg { l0: 0.18, l1: 0.265, thick: 0.011, tall: 0.011, adj: Some(crate::rig_props::Adj { off: [-0.032, -0.006, 0.0], rot: [0.0, 0.0, 0.0] }) }, lens: crate::rig_props::Seg { l0: 0.265, l1: 0.28, thick: 0.012, tall: 0.012, adj: Some(crate::rig_props::Adj { off: [-0.032, -0.006, 0.0], rot: [0.0, 0.0, 0.0] }) }, lens_glow: 40.0, light_ahead: 0.285, grip_l: crate::rig_props::RigCarbineGripL { off: [0.099, -0.059, 0.149], fingers: [-0.48, -0.11, 0.19], back: [0.45, -0.85, -0.25] }, adj: Some(crate::rig_props::Adj { off: [0.06, 0.08, 0.09], rot: [0.0, 0.0, 0.0] }) }, sc20k: crate::rig_props::RigSc20k { hull: crate::rig_props::Seg { l0: -0.29, l1: 0.12, thick: 0.024, tall: 0.04, adj: Some(crate::rig_props::Adj { off: [0.0, -0.012, 0.0], rot: [0.0, 0.0, 0.0] }) }, butt: crate::rig_props::Seg { l0: -0.31, l1: -0.29, thick: 0.026, tall: 0.048, adj: Some(crate::rig_props::Adj { off: [0.0, -0.018, 0.0], rot: [0.0, 0.0, 0.0] }) }, mag: crate::rig_props::Seg { l0: 0.0, l1: 0.13, thick: 0.012, tall: 0.03, adj: Some(crate::rig_props::Adj { off: [0.0, -0.045, -0.12], rot: [84.0, 0.0, 0.0] }) }, grip: crate::rig_props::Seg { l0: 0.0, l1: 0.09, thick: 0.013, tall: 0.016, adj: Some(crate::rig_props::Adj { off: [0.0, -0.045, -0.015], rot: [108.0, 0.0, 0.0] }) }, fore: crate::rig_props::Seg { l0: 0.12, l1: 0.3, thick: 0.022, tall: 0.03, adj: Some(crate::rig_props::Adj { off: [0.0, -0.014, 0.0], rot: [0.0, 0.0, 0.0] }) }, suppressor: crate::rig_props::Seg { l0: 0.3, l1: 0.43, thick: 0.019, tall: 0.019, adj: None }, rail: crate::rig_props::Seg { l0: -0.16, l1: 0.16, thick: 0.011, tall: 0.008, adj: Some(crate::rig_props::Adj { off: [0.0, 0.036, 0.0], rot: [0.0, 0.0, 0.0] }) }, optic: crate::rig_props::Seg { l0: -0.04, l1: 0.08, thick: 0.017, tall: 0.02, adj: Some(crate::rig_props::Adj { off: [0.0, 0.062, 0.0], rot: [0.0, 0.0, 0.0] }) }, foregrip: crate::rig_props::Seg { l0: 0.0, l1: 0.085, thick: 0.012, tall: 0.012, adj: Some(crate::rig_props::Adj { off: [0.0, -0.044, 0.2], rot: [90.0, 0.0, 0.0] }) }, light: crate::rig_props::Seg { l0: 0.19, l1: 0.27, thick: 0.011, tall: 0.011, adj: Some(crate::rig_props::Adj { off: [-0.034, -0.008, 0.0], rot: [0.0, 0.0, 0.0] }) }, lens: crate::rig_props::Seg { l0: 0.27, l1: 0.285, thick: 0.012, tall: 0.012, adj: Some(crate::rig_props::Adj { off: [-0.034, -0.008, 0.0], rot: [0.0, 0.0, 0.0] }) }, lens_glow: 40.0, light_ahead: 0.29, grip_l: crate::rig_props::RigSc20kGripL { off: [0.06, -0.085, 0.145], fingers: [-0.3, 0.05, 0.95], back: [0.95, -0.15, 0.25] }, slung: crate::rig_props::RigSc20kSlung { off: [-0.02, 0.17, -0.18], bore: [0.5, -0.866, 0.2], roll: 180.0, follow: 0.5, adj: None }, adj: Some(crate::rig_props::Adj { off: [0.06, 0.08, 0.09], rot: [0.0, 0.0, 0.0] }) }, m4: crate::rig_props::RigM4 { hull: crate::rig_props::Seg { l0: -0.075, l1: 0.115, thick: 0.017, tall: 0.036, adj: Some(crate::rig_props::Adj { off: [0.0, -0.012, 0.0], rot: [0.0, 0.0, 0.0] }) }, butt: crate::rig_props::Seg { l0: -0.31, l1: -0.19, thick: 0.017, tall: 0.036, adj: Some(crate::rig_props::Adj { off: [0.0, -0.02, 0.0], rot: [0.0, 0.0, 0.0] }) }, mag: crate::rig_props::Seg { l0: 0.0, l1: 0.14, thick: 0.011, tall: 0.03, adj: Some(crate::rig_props::Adj { off: [0.0, -0.045, 0.075], rot: [80.0, 0.0, 0.0] }) }, fore: crate::rig_props::Seg { l0: 0.115, l1: 0.3, thick: 0.022, tall: 0.022, adj: Some(crate::rig_props::Adj { off: [0.0, -0.003, 0.0], rot: [0.0, 0.0, 0.0] }) }, rail: crate::rig_props::Seg { l0: -0.07, l1: 0.3, thick: 0.009, tall: 0.005, adj: Some(crate::rig_props::Adj { off: [0.0, 0.027, 0.0], rot: [0.0, 0.0, 0.0] }) }, optic: crate::rig_props::Seg { l0: 0.0, l1: 0.07, thick: 0.016, tall: 0.02, adj: Some(crate::rig_props::Adj { off: [0.0, 0.052, 0.0], rot: [0.0, 0.0, 0.0] }) }, tube: crate::rig_props::Seg { l0: -0.19, l1: -0.075, thick: 0.012, tall: 0.012, adj: Some(crate::rig_props::Adj { off: [0.0, -0.002, 0.0], rot: [0.0, 0.0, 0.0] }) }, peq: crate::rig_props::Seg { l0: 0.215, l1: 0.29, thick: 0.017, tall: 0.011, adj: Some(crate::rig_props::Adj { off: [0.0, 0.043, 0.0], rot: [0.0, 0.0, 0.0] }) }, gl: crate::rig_props::Seg { l0: 0.14, l1: 0.3, thick: 0.02, tall: 0.024, adj: Some(crate::rig_props::Adj { off: [0.0, -0.05, 0.0], rot: [0.0, 0.0, 0.0] }) } } } }
 
 /// (src/game/rigProps.ts:245 COL: a table nothing writes)
-pub fn col() -> crate::rig_props::COL { crate::rig_props::COL { gun: [0.05, 0.05, 0.055], can: [0.09, 0.09, 0.095], torch: [0.16, 0.16, 0.17], lens_body: [0.3, 0.3, 0.3], goggles_lens: [0.02, 0.05, 0.03], goggles_housing: [0.04, 0.045, 0.04], blade: [0.11, 0.11, 0.12], edge: [0.34, 0.34, 0.36], knife_grip: [0.02, 0.02, 0.022], sheath: [0.028, 0.03, 0.026], furniture: [0.2, 0.085, 0.05], anodised: [0.03, 0.03, 0.033], fde: [0.2, 0.155, 0.1], dark_glass: [0.015, 0.02, 0.022], haft: [0.3, 0.22, 0.07], sledge: [0.04, 0.04, 0.045], brass: [0.5, 0.36, 0.12], shell: [0.26, 0.04, 0.03], cloth: [0.11, 0.1, 0.065], polymer: [0.045, 0.05, 0.046], dark_metal: [0.026, 0.026, 0.03] } }
+pub fn col() -> crate::rig_props::COL { crate::rig_props::COL { gun: [0.05, 0.05, 0.055], can: [0.09, 0.09, 0.095], torch: [0.16, 0.16, 0.17], lens_body: [0.3, 0.3, 0.3], goggles_housing: [0.04, 0.045, 0.04], blade: [0.11, 0.11, 0.12], edge: [0.34, 0.34, 0.36], knife_grip: [0.02, 0.02, 0.022], sheath: [0.028, 0.03, 0.026], furniture: [0.2, 0.085, 0.05], anodised: [0.03, 0.03, 0.033], fde: [0.2, 0.155, 0.1], dark_glass: [0.015, 0.02, 0.022], haft: [0.3, 0.22, 0.07], sledge: [0.04, 0.04, 0.045], brass: [0.5, 0.36, 0.12], shell: [0.26, 0.04, 0.03], cloth: [0.11, 0.1, 0.065], polymer: [0.045, 0.05, 0.046], dark_metal: [0.026, 0.026, 0.03] } }
 
 /// (src/game/rigProps.ts:259 KNIFE_TAG)
 pub const KNIFE_TAG: &str = "knife";
@@ -810,9 +628,6 @@ pub const PROP_FLAGS: f64 = 8.0;
 
 /// (src/game/rigProps.ts:265 GLOW_FLAGS)
 pub const GLOW_FLAGS: f64 = 10.0;
-
-/// (src/game/rigProps.ts:282 RIG_DEFAULTS: a table nothing writes)
-pub fn rig_defaults() -> crate::rig_props::Rig { crate::rig_props::rig() }
 
 /// (src/game/rigProps.ts:349 NO_GLOW: a table nothing writes)
 pub fn no_glow() -> V3 { [0.0, 0.0, 0.0] }
@@ -849,9 +664,6 @@ pub const SLUNG_CAST_OUT: f64 = 0.03;
 
 /// (src/game/rigProps.ts:884 BARE_BARREL)
 pub const BARE_BARREL: f64 = 0.008;
-
-/// (src/game/rigProps.ts:920 M4_BOXES)
-pub const M4_BOXES: f64 = 14.0;
 
 /// (src/game/rigProps.ts:1002 TORCH_CARRY_RATE)
 pub const TORCH_CARRY_RATE: f64 = 13.0;

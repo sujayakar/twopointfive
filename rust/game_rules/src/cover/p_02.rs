@@ -983,9 +983,8 @@ pub fn cover_step_halt(g: &mut Game, gd: GuardId) {
 
 /// A change of hands, for the probes' record: the newest 400. (cover.ts note)
 pub fn cover_note(g: &mut Game, gd: GuardId, id_2: Option<&str>) {
-    let (t, who) = (g.time, g.gd[gd].callsign.clone());
     let log = &mut g.cover.log;
-    log.push(CoverLogItem { t, who, id: id_2.map(String::from) });
+    log.push(CoverLogItem {  });
     if log.len() > 400 { let extra = log.len() - 400; log.drain(0..extra); }
 }
 
@@ -1226,23 +1225,6 @@ pub fn cover_words(g: &Game, gd: GuardId) -> String {
 pub fn cover_tail(g: &Game, gd: GuardId) -> String {
     let w = cover_words(g, gd);
     if w.is_empty() { w } else { alloc::format!(" · {}", w) }
-}
-
-/// One line for the console. (cover.ts summary)
-pub fn cover_summary(g: &Game) -> String {
-    if g.cover.men.is_empty() { return alloc::format!("cover: nobody free · {} openings on the level", g.cover.openings.len()); }
-    let mut on: Vec<String> = Vec::new();
-    for gd in g.cover.men.clone() {
-        let name = match g.cover.jobs.get(gd).map(|j| j.o) { Some(o) => cover_name_of(g, o, None), None => String::from("—") };
-        on.push(alloc::format!("{} {}", g.gd[gd].callsign, name));
-    }
-    let mut open: Vec<String> = Vec::new();
-    let rows: Vec<(CoverOpeningId, bool, bool)> = g.cover.live.iter().filter(|l| l.by.is_none()).map(|l| (l.o, l.sam, l.held)).collect();
-    for (o, sam, held) in rows {
-        open.push(alloc::format!("{}{}", cover_name_of(g, o, None), if sam { " (player)" } else if held { " (posted)" } else { "" }));
-    }
-    let tail = if open.is_empty() { String::new() } else { alloc::format!(" · nobody on: {}", open.join(", ")) };
-    alloc::format!("cover: {} · {} live{} · {} takes, {} swaps", on.join(" · "), g.cover.live.len(), tail, g.cover.stats.takes, g.cover.stats.swaps)
 }
 
 #[cfg(test)]

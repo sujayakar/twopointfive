@@ -13,7 +13,7 @@ import { fitOpenings, fitDoorDef, exitThrough, JAMB_FACE, DOOR_HEAD, LEAF_H } fr
 import { fitPropFootprint } from './levelLoad';
 import { pieces } from './library';
 import { DESK_CLUSTERS, OFFICE_MARKS, OFFICE_SCENARIOS } from './officeScenarios';   // the desks' four places, the office's named marks and its missions' data (plain literals; the builder puts them on its Level and the exporter writes them into the file)
-import type { LevelScenarios } from '../../../src/scene/scenarios';
+import type { LevelScenarios } from './scenarios';
 
 /** what the exporter asks the generator to record on the side: the editor group of every box, in box order */
 export interface GeneratorTrace { groups: string[]; }

@@ -17,12 +17,6 @@ pub struct BarMet {
     pub flags: f64,
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct BarsSave {
-    pub v: f64,
-    pub s: Vec<f64>,
-}
-
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum BreakBarCause {
     Blast,
@@ -64,9 +58,6 @@ pub struct WinbarsStats {
     pub demoted: i32,
     pub spared: i32,
 }
-
-/// (src/game/winbars.ts:59 WINBARS_BREAK)
-pub const WINBARS_BREAK: bool = false;
 
 /// (src/game/winbars.ts:60 HIDE)
 pub const HIDE: f64 = 3.0;

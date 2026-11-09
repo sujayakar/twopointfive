@@ -65,50 +65,6 @@ fn callsigns(g: &Game, men: &[GuardId]) -> String {
 fn sent_of(g: &mut Game, q: EnemysquadsSquadId, s: GuardId) -> &mut crate::enemysquads::Sent {
     sq!(g, q).sent.iter_mut().find(|x| x.gd == s).unwrap()
 }
-/// A drilled garrison's man holding the other door of a lost room hears the team go in somewhere else: he and his mate go after it. `s` is his man.   (enemysquads.ts follow)
-pub fn follow(g: &mut crate::game::Game, q: EnemysquadsSquadId, s: GuardId, d: RoomfightDefId) {
-    let m = match moved_on(g, q, s, d, 8.0) {
-        Some(m) => m,
-        None => return,
-    };
-    let gd = s;
-    let (at, pair) = (m.at, m.pair);
-    for x in pair.iter() {
-        let x = *x;
-        let xd = match def_of(g, x) {
-            Some(xd) => xd,
-            None => continue,
-        };
-        if def!(g, xd).mode != crate::roomfight::DefMode::Hold {
-            continue;
-        }
-        {
-            let row = sent_of(g, q, x);
-            row.phase = SentPhase::Loose;
-            row.hold = Some(false);
-        }
-        crate::pressure::loose(g, xd, at);
-    }
-    let line = format!("{}: they've moved on — after them!", sq!(g, q).name);
-    crate::game::game_say(g, gd, &line, Some(true), None, None);
-    let (door, since) = {
-        let row = sent_of(g, q, s);
-        (row.door, row.set_t.unwrap_or(row.t0))
-    };
-    let door = match door {
-        Some(dr) => g.dr[dr].def.name.clone(),
-        None => String::from("the door"),
-    };
-    let text = format!(
-        "{} leave{} {} for the noise {} m off, {} s after setting",
-        callsigns(g, &pair),
-        if pair.len() > 1 { "" } else { "s" },
-        door,
-        js::to_fixed(flat(at, pos(g, gd)), 0),
-        js::to_fixed(g.time - since, 1)
-    );
-    event(g, q, SquadEventWhat::Follows, &text, Some(gd));
-}
 /// drillFollow's and drillBack's ears: a holding man hears the team go on somewhere else, and nobody of the pair (his mates on that door within `reach`) has one of them in sight.   (enemysquads.ts movedOn)
 pub fn moved_on(g: &mut crate::game::Game, q: EnemysquadsSquadId, s: GuardId, d: RoomfightDefId, reach: f64) -> Option<crate::enemysquads::MovedOn> {
     let gd = s;
@@ -266,7 +222,6 @@ pub fn back(g: &mut crate::game::Game, q: EnemysquadsSquadId, s: GuardId, d: Roo
     );
     event(g, q, SquadEventWhat::Back, &text, Some(gd));
 }
-
 
 /// A drilled garrison goes and looks: once a tick the word of the team is kept, and gone quiet a pair is called and sent.   (enemysquads.ts lookOut)
 pub fn look_out(g: &mut crate::game::Game) {

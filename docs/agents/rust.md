@@ -71,7 +71,7 @@ picture's, or made again from the rest. `#[bytes(parts)]` (`Game`, `Mods`, `Tabs
 ### A module's files
 
 Types in `game_types/src/doors/types.rs`, each with its `blank()`; numbers in `knobs/doors.rs`; `game_rules/src/doors/mod.rs` re-exports the types and
-the parts; `doors/base.rs` is what they share. A p_NN file means nothing today: it is a run of lines of one old file, cut to size, and its number is
+the parts; a `base.rs`, where there is one, is what they share. A p_NN file means nothing today: it is a run of lines of one old file, cut to size, and its number is
 no order. Each is `use super::*` and is re-exported, so a module's parts share one namespace. **A new file gets a real name** (`doors/paint.rs`,
 `guards/frame.rs`), never the next number.
 
@@ -170,11 +170,11 @@ The rules were machine-translated from TypeScript. None of these is a pattern fo
 | `c_2`, `g_2`, `weather_set_wet_2`, `GameMessagesItem`, `DressModDRESS` | Rename when you are there. A part's field name is a line in the pins: `gate pin` |
 | `&mut Game` on a function that only reads | `tools/fold/readers.sh --soften`, or by hand. A new one takes `&Game` |
 | comments that cite a deleted file, "the TypeScript", or "ON in the page" | Trust the statements. Mend a false comment when you are in the file |
-| `Opaque`, `FnField`, `ObjKey`, a `todo!()` body in `render_*/`, a module of only types | Call none: `todo!()` panics. The crates `#![allow(dead_code)]`, so use the fold tool |
+| `Opaque`, `FnField`, a `todo!()` body in `render_*/`, a module of only types | Call none: `todo!()` panics. The crates `#![allow(dead_code)]`, so use the fold tool |
 
 ## What holds it
 
-- `bun run tools/qa/rust-rules-check.ts`: rules, statics, powers, sides, what the module links. `bun run tools/draw/gen.ts --check`: the page's
+- `bun run tools/qa/rust-rules-check.ts`: rules, statics, sides, what the module links. `bun run tools/draw/gen.ts --check`: the page's
   offsets.
 - `gate`: the rows `again` (a second run in one process), `save` and `load` (a `Moment` put back) and `draw`. `tools/draw/play-check.ts` panics a game
   in the module and recovers it.

@@ -450,7 +450,7 @@ fn seat_row(g: &Game, id: OrdersOrderDefId) -> crate::cmdring::SeatRow {
 }
 fn flat_row(g: &Game, id: OrdersOrderDefId) -> crate::cmdring::FlatRow {
     let s = seat_row(g, id);
-    crate::cmdring::FlatRow { id: g.tab.orders_order_def[id].id.clone(), key: s.key, hot_key: s.hot_key, opens: s.opens, free: s.free, targets: s.targets, listed: s.listed }
+    crate::cmdring::FlatRow { id: g.tab.orders_order_def[id].id.clone(), hot_key: s.hot_key, opens: s.opens, free: s.free, targets: s.targets, listed: s.listed }
 }
 
 /// A tap's order on `t`: nothing where a tutorial step teaches the key held; a second tap in the same place is 'fall in'. (orders.ts tapGive)

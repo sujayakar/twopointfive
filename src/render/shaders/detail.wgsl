@@ -1,7 +1,7 @@
 // The DETAIL LAYER (renderer v3 phase 4; gbuffer.wgsl fsBox calls detailSurface while frame.matCfg.w > 0). The art rule: the blocky flat-shaded look stays —
 // no image textures, no albedo noise painted on walls; every term here is WEAR YOU CAN EXPLAIN, evaluated at the primary hit only (the g-buffer's albedo /
-// roughness / metalness), so the direct light, the bounce at the pixel, the reflections and their highlights all answer to it by themselves and no ray, cache
-// or light meter ever pays for it:
+// roughness / metalness), so the direct light, the bounce at the pixel, the reflections and their highlights all answer to it by themselves and no ray or cache
+// ever pays for it:
 //   • WORN PATHS on the polished floors — where the shift walks (the level's traffic map: patrol routes traced over the nav grid + every door's threshold,
 //     rust/game_draw/src/traffic.rs) the wax is scuffed matte and holds a little ground-in grey: roughness up, albedo a touch duller. Uneven at the half-metre scale (wear
 //     never is even), never finer.

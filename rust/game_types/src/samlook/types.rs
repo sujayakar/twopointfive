@@ -9,12 +9,6 @@ pub struct St {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct SamSlipMan {
-    pub gd: GuardId,
-    pub k: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct SlipNow {
     pub k: f64,
     pub lean: f64,

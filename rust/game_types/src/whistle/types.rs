@@ -27,10 +27,7 @@ pub struct Blower {
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Heard {
-    pub d: f64,
     pub at: V3,
-    pub direct: bool,
-    pub carry: f64,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -41,65 +38,17 @@ pub struct Resolution {
     pub t: f64,
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct WhistleSnap {
-    pub blower: crate::whistle::Blower,
-    pub men: Vec<Option<crate::whistle::WhistleMem>>,
-}
-
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct WhistleModWHISTLELOGItem {
     pub t: f64,
-    pub pos: V3,
-    pub hearers: Vec<String>,
-    pub responder: Option<String>,
     pub answered: Option<String>,
     pub search: bool,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum WhistleLinesKind {
-    All,
-    Look,
-    Twice,
-}
-impl WhistleLinesKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            WhistleLinesKind::All => "all",
-            WhistleLinesKind::Look => "look",
-            WhistleLinesKind::Twice => "twice",
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct WhistleMem2 {
-    pub responded_at: f64,
-    pub responses: f64,
-    pub searches: f64,
-    pub cues: f64,
-    pub glances: f64,
-    pub glance_until: f64,
-    pub glance_at: Option<V3>,
-    pub soft: bool,
-    pub soft_at: f64,
-    pub last_look: f64,
-    pub last_twice: f64,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum PickKey {
     LastLook,
     LastTwice,
-}
-impl PickKey {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            PickKey::LastLook => "lastLook",
-            PickKey::LastTwice => "lastTwice",
-        }
-    }
 }
 
 /// the state this module keeps at its top level
@@ -138,17 +87,8 @@ pub struct WhistleStats {
     pub unanswered: i32,
 }
 
-/// (src/game/whistle.ts:55 WHISTLE_DEFAULTS: a table nothing writes)
-pub fn whistle_defaults() -> crate::knobs::WhistleK { crate::knobs::WhistleK { level: 0.35, reach_k: 8.0, horizon: 12.0, cooldown: 2.0, twice_window: 60.0, awareness: 0.45, react_t: 0.5, walk_floor: 0.32, glance_secs: 1.5, glance_max: 1.2, gain: 0.55 } }
-
-/// (src/game/whistle.ts:60 WHISTLE_SOFT_UPPER)
-pub const WHISTLE_SOFT_UPPER: &str = "torch";
-
 /// (src/game/whistle.ts:63 LOOK_LINES: a table nothing writes)
 pub fn look_lines() -> Vec<String> { alloc::vec![String::from("hello?"), String::from("someone there?"), String::from("…what was that?"), String::from("who's that whistling?"), String::from("somebody down there?")] }
-
-/// (src/game/whistle.ts:64 TWICE_LINES: a table nothing writes)
-pub fn twice_lines() -> Vec<String> { alloc::vec![String::from("right — who's messing about?"), String::from("that's twice now. come on out."), String::from("okay. not funny. where are you?")] }
 
 /// (src/game/whistle.ts:66 TWICE_NOW: a table nothing writes)
 pub fn twice_now() -> Vec<String> { alloc::vec![String::from("all right — who's messing around?"), String::from("that's twice now. come on out."), String::from("okay. not funny. where are you?")] }
@@ -162,8 +102,3 @@ pub fn twice_foe() -> Vec<String> { alloc::vec![String::from("that's no bird. go
 /// (src/game/whistle.ts:75 NEVER)
 pub const NEVER: f64 = -1000000000.0;
 
-/// (src/game/whistle.ts:226 LS_KEY)
-pub const LS_KEY: &str = "twopointsix.whistle";
-
-/// (src/game/whistle.ts:227 KEPT: a table nothing writes)
-pub fn kept() -> Vec<String> { alloc::vec![String::from("level"), String::from("reachK"), String::from("cooldown"), String::from("twiceWindow")] }

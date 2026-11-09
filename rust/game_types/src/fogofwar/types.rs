@@ -3,15 +3,6 @@
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Debug, Default)]
-pub struct FogSnap {
-    pub doors: Option<Vec<(String, f64)>>,
-    pub lamps: Option<Vec<(String, f64, Option<Vec<Vec<f64>>>)>>,
-    pub things: Option<Vec<(f64, Vec<Vec<f64>>)>>,
-    pub out: Option<Vec<f64>>,
-    pub bodies: Option<Vec<f64>>,
-}
-
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct FogEye {
     pub id: f64,
@@ -75,7 +66,7 @@ impl FogOfWar {
             eyes: Vec::new(),
             mates: Vec::new(),
             hidden_chars: JsSet::new(),
-            stats: crate::fogofwar::FogOfWarStats { frames: 0.0, eyes: 0.0, tested: 0.0, seen: 0.0, hidden: 0.0, smoke_asks: 0.0, smoke_hid: 0.0, by_fire: 0.0 },
+            stats: crate::fogofwar::FogOfWarStats { frames: 0.0, eyes: 0.0, tested: 0.0, seen: 0.0, hidden: 0.0, smoke_hid: 0.0, by_fire: 0.0 },
             fired_n: JsMap::new(),
             fired_at: JsMap::new(),
             fire_clock: 0.0,
@@ -145,7 +136,6 @@ pub struct FogOfWarStats {
     pub tested: f64,
     pub seen: f64,
     pub hidden: f64,
-    pub smoke_asks: f64,
     pub smoke_hid: f64,
     pub by_fire: f64,
 }
@@ -185,34 +175,14 @@ pub struct FogOfWarThingStats {
     pub tests: f64,
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct FogOfWarPendingItem {
-    pub key: String,
-    pub a: V3,
-    pub b: V3,
-}
-
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct FogOfWarCallLogItem {
-    pub t: f64,
-    pub who: String,
-    pub of: String,
-    pub kind: crate::fogofwar::FogOfWarCallLogItemKind,
-    pub text: String,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum FogOfWarCallLogItemKind {
     #[default] Heard,
     Contact,
-}
-impl FogOfWarCallLogItemKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            FogOfWarCallLogItemKind::Heard => "heard",
-            FogOfWarCallLogItemKind::Contact => "contact",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -228,26 +198,10 @@ pub struct FogOfWarFullStats {
     pub held: f64,
 }
 
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct FogofwarModFOGPAGE {
-    pub desat: f64,
-    pub edge: f64,
-    pub air: bool,
-    pub kept: bool,
-}
-
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum FogOfWarCallWordsKind {
     Heard,
     Contact,
-}
-impl FogOfWarCallWordsKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            FogOfWarCallWordsKind::Heard => "heard",
-            FogOfWarCallWordsKind::Contact => "contact",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -256,26 +210,15 @@ pub struct FogOfWarSighting {
     pub age: f64,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct FogOfWarLastSeenItem {
-    pub gd: GuardId,
-    pub at: V3,
-    pub age: f64,
-    pub life: f64,
-}
-
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct FogofwarMod {
-    /// (src/game/fogofwar.ts:348 FOG_PAGE)
-    pub fog_page: crate::fogofwar::FogofwarModFOGPAGE,
     /// (src/game/fogofwar.ts:355 THING_PASS)
     pub thing_pass: JsSet<crate::Num>,
 }
 impl FogofwarMod {
     pub fn blank() -> Self {
         FogofwarMod {
-            fog_page: { let k = crate::knobs::FogK::page(); crate::fogofwar::FogofwarModFOGPAGE { desat: k.desat, edge: k.edge, air: k.air, kept: k.kept } },
             thing_pass: { let mut s = JsSet::new(); s.add(crate::Num(1.0)); s.add(crate::Num(4.0)); s.add(crate::Num(5.0)); s },
         }
     }
@@ -292,21 +235,6 @@ pub const COS_BEHIND: f64 = -0.5;
 
 /// (src/game/fogofwar.ts:325 CALL_EVERY)
 pub const CALL_EVERY: f64 = 6.0;
-
-/// (src/game/fogofwar.ts:327 FOG_FLAT_ON)
-pub const FOG_FLAT_ON: f64 = 0.12;
-
-/// (src/game/fogofwar.ts:329 FOG_LIT_ON)
-pub const FOG_LIT_ON: f64 = 1.0;
-
-/// (src/game/fogofwar.ts:331 FOG_DESAT_WAS)
-pub const FOG_DESAT_WAS: f64 = 0.75;
-
-/// (src/game/fogofwar.ts:333 FOG_EDGE_ON)
-pub const FOG_EDGE_ON: f64 = 0.5;
-
-/// (src/game/fogofwar.ts:335 FOG_EYES_ON)
-pub const FOG_EYES_ON: f64 = 7.0;
 
 /// (src/game/fogofwar.ts:335 FOG_EYES_WAS)
 pub const FOG_EYES_WAS: f64 = 5.0;
@@ -344,12 +272,6 @@ pub const THING_CAP: f64 = 768.0;
 /// (src/game/fogofwar.ts:381 PROP_SYS)
 pub const PROP_SYS: f64 = 2.0;
 
-/// (src/game/fogofwar.ts:385 BEAM_STEP)
-pub const BEAM_STEP: f64 = 0.75;
-
-/// (src/game/fogofwar.ts:385 BEAM_FINE)
-pub const BEAM_FINE: f64 = 0.1;
-
 /// (src/game/fogofwar.ts:406 EYE_STAND)
 pub const EYE_STAND: f64 = 1.55;
 
@@ -370,12 +292,6 @@ pub fn door_f() -> Vec<f64> { alloc::vec![0.95, 0.6, 0.25] }
 
 /// (src/game/fogofwar.ts:418 DOOR_Y: a table nothing writes)
 pub fn door_y() -> Vec<f64> { alloc::vec![1.0, 1.8] }
-
-/// (src/game/fogofwar.ts:420 nearEyes: a table nothing writes)
-pub fn near_eyes() -> Vec<crate::fogofwar::FogEye> { Vec::new() }
-
-/// (src/game/fogofwar.ts:420 nearD2: a table nothing writes)
-pub fn near_d2() -> Vec<f64> { alloc::vec![142.04637383110583, 142.89716734425895, 160.0359172375455, 172.68892497020053, 176.25702823037307] }
 
 /// (src/game/fogofwar.ts:422 IN_ORDER)
 pub const IN_ORDER: f64 = 106181136.0;

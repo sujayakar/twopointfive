@@ -125,7 +125,7 @@ fn stand_extra(g: &mut Game, n: f64) {
         let gd = match game::guards::spawn_unit(g, &o) { Ok(gd) => gd, Err(e) => { why = Some(String::from(e.trim_start_matches("spawnUnit: ").split(" — ").next().unwrap_or(""))); break; } };
         g.gd[gd].hold = true; g.gd[gd].pinned = true;
         if g.night_breach.active { game::nightbreach::night_breach_adopt(g, gd, &game::nightbreach::NightBreachMark { pos: s.pos, aim_at: s.aim_at, name: Some(name.clone()), drill: Some(false) }); }
-        if let Some(room) = s.room { game::roomclear::room_clear_scenario_adopt(g, gd, &game::roomclear::Placement { room, mark: s.mark, pos: s.pos, watch: s.watch, aim_at: s.aim_at, name }); }
+        if let Some(room) = s.room { game::roomclear::room_clear_scenario_adopt(g, gd, &game::roomclear::Placement { room, mark: s.mark, pos: s.pos, aim_at: s.aim_at, name }); }
         stood += 1;
     }
     let line = format!("{stood} extra {}{}", if stood == 1 { "enemy stood" } else { "enemies stood" }, why.map_or(String::new(), |w| format!(": {w}")));

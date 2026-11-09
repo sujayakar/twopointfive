@@ -32,7 +32,7 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 
 The step itself is `rust/sim/src/doors.rs` (and `rust/sim/src/props.rs`): every leaf for one tick, on flat columns. `game_update_doors` in
 `rust/game_rules/src/game/p_07.rs` gathers who is near a leaf, hands it over, and takes back where everybody ended. Sam's rows are in
-`rust/game_rules/src/player/p_07.rs`. The level file's record is `DoorData` in `src/scene/levelRows.ts`; a doorway's size is
+`rust/game_rules/src/player/p_07.rs`. The level file's record is `DoorData` in `tools/levels/lib/levelRows.ts`; a doorway's size is
 `tools/levels/lib/doorSize.ts`. A leaf is drawn as any box is; `rust/game_draw/src/doorways.rs` adds the doorways the light's reach asks for.
 
 ## How it works

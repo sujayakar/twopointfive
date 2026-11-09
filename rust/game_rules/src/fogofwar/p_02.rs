@@ -58,7 +58,6 @@ pub fn fog_of_war_show(g: &mut crate::game::Game, gd: GuardId, on: bool) {
     if on { g.fog_of_war.shown.add(gd); } else { g.fog_of_war.shown.delete(gd); }
 }
 
-
 /// `blank` is the field initialisers, and the TypeScript's constructor only keeps `g`. (FogOfWar constructor)
 pub fn fog_of_war_new(g: &crate::game::Game) -> crate::fogofwar::FogOfWar {
     crate::fogofwar::FogOfWar::blank()
@@ -116,23 +115,20 @@ pub fn fog_of_war_pass(g: &mut crate::game::Game, _dt: f64) {
     g.fog_of_war.loaded = false;
     g.fog_of_war.stats.frames += 1.0;
     g.fog_of_war.frame_no += 1.0;
-    let frame = g.fog_of_war.frame_no;
     // ---- the eyes
     let mut eyes: Vec<crate::fogofwar::FogEye> = Vec::new();
     let cap = m::min(crate::render_fogofwar::FOG_EYES, fog_eye_count(g.k.fog.eyes) + g.seats.len() as f64 - 1.0);
-    if !crate::rails::rails_sky_on(g) {
-        crate::seats::each_seat(g, &mut |g| {
-            if g.seats.len() != 1 && eyes.len() as f64 >= cap { return; }   // (v !== g: only a view differs, and a game of one lends itself)
-            let c = g.pl[g.player].ch;
-            let own = fog_of_war_eye_of(g, c);
-            let e = match crate::wand::wand_eye(g, &crate::seats::here(g)) {
-                Some(e) => e,
-                None => crate::peeksight::peek_eye(g, own).unwrap_or(own),
-            };
-            eyes.push(e);
-        });
-    }
-    if !g.k.fog.own || crate::rails::rails_sky_on(g) {
+    crate::seats::each_seat(g, &mut |g| {
+        if g.seats.len() != 1 && eyes.len() as f64 >= cap { return; }   // (v !== g: only a view differs, and a game of one lends itself)
+        let c = g.pl[g.player].ch;
+        let own = fog_of_war_eye_of(g, c);
+        let e = match crate::wand::wand_eye(g, &crate::seats::here(g)) {
+            Some(e) => e,
+            None => crate::peeksight::peek_eye(g, own).unwrap_or(own),
+        };
+        eyes.push(e);
+    });
+    if !g.k.fog.own {
         let mut i = 0;
         while i < g.guards.len() {
             let gd = g.guards[i];
@@ -164,28 +160,12 @@ pub fn fog_of_war_pass(g: &mut crate::game::Game, _dt: f64) {
     let mut pic_own: Option<Vec<crate::fogofwar::FogEye>> = None;
     let mut view: Option<Vec<crate::fogofwar::FogEye>> = None;
     {
-        let e = crate::rails::rails_eye(g);
-        let s = crate::rails::rails_step_eye(g);
-        let first = s.is_some();
-        let own = e.is_some() || s.is_some();
-        if own { pic_own = Some(eyes.clone()); view = Some(Vec::new()); }
-        let pic: &mut Vec<crate::fogofwar::FogEye> = match pic_own.as_mut() { Some(p) => p, None => &mut eyes };
-        if let (Some(s), true) = (s, first) {
+        if let Some(s) = crate::rails::rails_step_eye(g) {
+            let mut pic = eyes.clone();
             if pic.len() as f64 >= cap { pic.truncate((cap - 1.0) as usize); }
             pic.push(s);
-            if let Some(v) = view.as_mut() { v.push(s); }
-        }
-        if let Some(e) = e {
-            if (pic.len() as f64) < cap {
-                pic.push(e);
-                if let Some(v) = view.as_mut() { v.push(e); }
-            }
-        }
-        if let (Some(s), false) = (s, first) {
-            if (pic.len() as f64) < cap {
-                pic.push(s);
-                if let Some(v) = view.as_mut() { v.push(s); }
-            }
+            pic_own = Some(pic);
+            view = Some(alloc::vec![s]);
         }
     }
     let pic = match pic_own { Some(p) => p, None => eyes.clone() };
@@ -226,7 +206,6 @@ pub fn fog_of_war_pass(g: &mut crate::game::Game, _dt: f64) {
     let pl = players(g);
     let held = g.pl[pl[0]].holding.as_ref().map(|h| h.g);
     let held_too = if pl.len() > 1 { g.pl[pl[1]].holding.as_ref().map(|h| h.g) } else { None };
-    let pid = g.ch[g.pl[pl[0]].ch].id;
     // (1) lines of sight
     let mut men: Vec<GuardId> = Vec::new();
     let mut i = 0;
@@ -466,7 +445,6 @@ fn call_fresh(g: &Game, h: GuardId, now: f64) -> bool {
 /// tellCalls' `say`: one call, logged and on the air.
 fn call_say(g: &mut Game, gd: GuardId, h: GuardId, kind: crate::fogofwar::FogOfWarCallWordsKind, at: V3, now: f64) {
     let text = fog_of_war_call_words(g, kind, at);
-    let (who, of, t) = (g.gd[gd].callsign.clone(), g.gd[h].callsign.clone(), to_fixed2(g.time));
     let f = &mut g.fog_of_war;
     f.call_n += 1.0;
     f.last_call = now;
@@ -475,7 +453,7 @@ fn call_say(g: &mut Game, gd: GuardId, h: GuardId, kind: crate::fogofwar::FogOfW
         FogOfWarCallWordsKind::Contact => { f.call_stats.contact += 1.0; FogOfWarCallLogItemKind::Contact }
         FogOfWarCallWordsKind::Heard => { f.call_stats.heard += 1.0; FogOfWarCallLogItemKind::Heard }
     };
-    f.call_log.push(FogOfWarCallLogItem { t, who, of, kind: log_kind, text: text.clone() });
+    f.call_log.push(FogOfWarCallLogItem {  });
     if f.call_log.len() > 200 { f.call_log.drain(0..50); }
     crate::cues::cues_call(g, gd, &text);
 }
@@ -570,7 +548,6 @@ pub fn fog_of_war_sight_blocked(g: &mut crate::game::Game, a: V3, b: V3) -> bool
     crate::scene_collision::segment_blocked(g, a, b, Some(0.02), Some(through), None)
 }
 
-
 /// One eye on one living man, walls and leaves only, inside the eye's field. (FogOfWar.lineToMan)
 pub fn fog_of_war_line_to_man(g: &mut crate::game::Game, e: crate::fogofwar::FogEye, gd: GuardId, chest: V3) -> bool {
     let pc = g.gd[gd].ch;
@@ -616,17 +593,6 @@ pub fn fog_of_war_eye_on_body(g: &mut crate::game::Game, e: crate::fogofwar::Fog
     let hp = match g.ch[c].bones.get(crate::character::Bone::Hips) { Some(v) => *v, None => g.ch[c].pos };
     let at = [hp[0], m::max(hp[1], 0.0) + 0.3, hp[2]];
     fog_of_war_in_field(g, e, at) && !fog_of_war_sight_blocked(g, e.pos, at)
-}
-
-/// Can any eye see this point. (FogOfWar.eyeOn)
-pub fn fog_of_war_eye_on(g: &mut crate::game::Game, p: V3) -> bool {
-    let mut i = 0;
-    while i < g.fog_of_war.eyes.len() {
-        let e = g.fog_of_war.eyes[i];
-        i += 1;
-        if fog_of_war_in_field(g, e, p) && !fog_of_war_sight_blocked(g, e.pos, p) { return true; }
-    }
-    false
 }
 
 /// Does anybody on the team see this door: a line to the leaf where it stands or where the picture has it. (FogOfWar.doorSeen)

@@ -2,15 +2,13 @@
 // waits for (host/drawpage.ts awaits gbuffer.needLook beside the pipelines). Where the shaders are compiling for half a minute nobody sees it; on a machine whose
 // shaders are cached it is the last thing the start card waits for. The layers do not depend on each other, so each is made by render/lookTex.ts lookLayer on
 // a worker and handed back (its two arrays are moved, not copied). THE SAME BYTES: a worker runs the same file (lookWorkerSource.ts hands it over as text when
-// the page is bundled) on the same engine AND THE SAME MATHS (the page computes on the game's own sin and cos, math/exact.ts; a worker is told which with
-// each layer), and tools/qa/lookworkers-check.ts sets every layer made there against the one made here, on both.
+// the page is bundled) on the same engine, and tools/qa/lookworkers-check.ts sets every layer made there against the one made here.
 // WHERE THERE ARE NONE (no Worker in this place, one that will not start or does not answer, a layer a worker failed on): the caller makes the layer itself,
 // in slices, as it always did (gbuffer.ts makeLayers). So the workers are only ever a faster way to the same maps. A place where a worker itself failed is
 // said once on the console and remembered for the tab (a mission is a page load): no more are started there.
 // THE SWITCH: LOOK_WORKERS.on — ON in the page (`?lookworkers=0` = every layer on the page's own thread, as it was), OFF here, so a tool under bun makes its
 // maps as it did. Nothing of the game reads it and no recording carries it: the maps are the same either way.
 import type { LookMaps } from './lookTex';
-import { EXACT } from '../math/exact';
 
 /** `most` = workers at once at the most (a layer holds about 10 MB while it is made); one core is always left to the page. `waitMs` = how long a worker may
  *  hold a layer before it is taken for dead (a layer is under a second of work; a boot must never wait on a worker that will not answer) */
@@ -29,7 +27,7 @@ export const lookWorkersGaveUp = (): string => remembered();
 export function lookWorkersAgain(): void { gaveUp = ''; asked = false; try { tabStore()?.removeItem(GAVE_UP_KEY); } catch { /* no storage here */ } }
 function giveUp(why: string): void { if (remembered()) return; gaveUp = why; try { tabStore()?.setItem(GAVE_UP_KEY, why); } catch { /* no storage here */ } console.warn(`look maps: made on the page's own thread from here on (${why})`); }
 
-interface Job { id: number; layer: number; n: number; even: boolean; exact: boolean; res: (m: WorkerMaps) => void; rej: (why: Error) => void; timer?: ReturnType<typeof setTimeout> }
+interface Job { id: number; layer: number; n: number; even: boolean; res: (m: WorkerMaps) => void; rej: (why: Error) => void; timer?: ReturnType<typeof setTimeout> }
 interface Reply { id: number; a?: Uint8Array[]; b?: Uint8Array[]; tone?: number; hollow?: number; error?: string }
 /** a layer as a worker hands it back: its maps, and each map's smaller sizes after it (`sizes.a[0]` is `a`; then n/2, n/4 … 1, lookTex.ts lookMip of the one before) */
 export type WorkerMaps = LookMaps & { sizes: { a: Uint8Array[]; b: Uint8Array[] } };
@@ -61,9 +59,9 @@ export class LookPool {
     } catch (e) { pool.close(); giveUp(`a worker could not be started: ${String(e)}`); return null; }
     return pool;
   }
-  /** the layer's maps, made on a worker (lookTex.ts lookLayer's own arguments), on the maths this thread computes on now (math/exact.ts) */
+  /** the layer's maps, made on a worker (lookTex.ts lookLayer's own arguments) */
   make(layer: number, n: number, even: boolean): Promise<WorkerMaps> {
-    return new Promise<WorkerMaps>((res, rej) => { if (!this.all.length) { rej(new Error('no look map worker is left')); return; } this.queue.push({ id: this.ids++, layer, n, even, exact: EXACT.on, res, rej }); this.pump(); });
+    return new Promise<WorkerMaps>((res, rej) => { if (!this.all.length) { rej(new Error('no look map worker is left')); return; } this.queue.push({ id: this.ids++, layer, n, even, res, rej }); this.pump(); });
   }
   /** stop every worker; a job still out is refused */
   close(): void {
@@ -77,7 +75,7 @@ export class LookPool {
     while (this.idle.length && this.queue.length) {
       const w = this.idle.pop()!, j = this.queue.shift()!; this.at.set(w, j);
       j.timer = setTimeout(() => this.lost(w, `a worker did not answer in ${Math.round(LOOK_WORKERS.waitMs / 1000)} s`), LOOK_WORKERS.waitMs);
-      w.postMessage({ id: j.id, layer: j.layer, n: j.n, even: j.even, exact: j.exact });
+      w.postMessage({ id: j.id, layer: j.layer, n: j.n, even: j.even });
     }
   }
   private done(w: Worker, r: Reply): void {

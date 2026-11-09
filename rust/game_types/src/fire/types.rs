@@ -27,9 +27,6 @@ pub struct FireShown {
     pub beds: f64,
     pub ember: Vec<f64>,
     pub embers: f64,
-    pub soot_mix: Option<Vec<f64>>,
-    /// INVENTED by a review: see the proposals
-    pub serial: u32,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -53,7 +50,6 @@ pub struct FIRELOOKSMOKE {
     pub ember_spread: f64,
     pub ember_jit: f64,
     pub ember_speed: f64,
-    pub ember_fog: bool,
     pub snow: crate::fire::FIRELOOKSMOKESnow,
 }
 
@@ -64,23 +60,6 @@ pub struct FIRELOOKSMOKESnow {
     pub spread: f64,
     pub mouth: f64,
     pub top: f64,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct FireShown2 {
-    pub n: f64,
-    pub time: f64,
-    pub stir: Option<Vec<f64>>,
-    pub stir_at: Option<Vec<f64>>,
-    pub bed: Vec<f64>,
-    pub smoke: Vec<f64>,
-    pub smokes: f64,
-    pub beds: f64,
-    pub ember: Vec<f64>,
-    pub embers: f64,
-    pub soot_mix: Option<Vec<f64>>,
-    /// INVENTED by a review: see the proposals
-    pub serial: u32,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -118,65 +97,9 @@ impl FireMod {
     }
 }
 
-/// (src/game/fire.ts:46 FIRE_SIZE)
-pub const FIRE_SIZE: f64 = 1.1;
-
-/// (src/game/fire.ts:48 FIRE_SHIMMER)
-pub const FIRE_SHIMMER: f64 = 0.019;
-
-/// (src/game/fire.ts:48 FIRE_PLUME)
-pub const FIRE_PLUME: f64 = 1.0;
-
-/// (src/game/fire.ts:48 FIRE_EMBERS)
-pub const FIRE_EMBERS: f64 = 60.0;
-
-/// (src/game/fire.ts:51 FIRE_BRIGHT)
-pub const FIRE_BRIGHT: f64 = 1.25;
-
-/// (src/game/fire.ts:51 FIRE_REACH)
-pub const FIRE_REACH: f64 = 1.4;
-
-/// (src/game/fire.ts:51 FIRE_LIFT)
-pub const FIRE_LIFT: f64 = 0.5;
-
-/// (src/game/fire.ts:51 FIRE_LIFT_WAS)
-pub const FIRE_LIFT_WAS: f64 = 0.25;
-
-/// (src/game/fire.ts:51 FIRE_WARM: a table nothing writes)
-pub fn fire_warm() -> Vec<f64> { alloc::vec![1.0, 0.72, 0.51] }
-
-/// (src/game/fire.ts:51 FIRE_WANDER)
-pub const FIRE_WANDER: f64 = 0.14;
-
-/// (src/game/fire.ts:51 FIRE_WANDER_UP)
-pub const FIRE_WANDER_UP: f64 = 0.1;
-
-/// (src/game/fire.ts:51 FIRE_WANDER_WAS)
-pub const FIRE_WANDER_WAS: f64 = 0.06;
-
-/// (src/game/fire.ts:51 FIRE_WANDER_UP_WAS)
-pub const FIRE_WANDER_UP_WAS: f64 = 0.04;
-
-/// (src/game/fire.ts:52 FIRE_REACT)
-pub const FIRE_REACT: f64 = 1.0;
-
-/// (src/game/fire.ts:52 FIRE_LEAN)
-pub const FIRE_LEAN: f64 = 0.2;
-
-/// (src/game/fire.ts:52 FIRE_LEAN_WAS)
-pub const FIRE_LEAN_WAS: f64 = 0.07;
-
-/// (src/game/fire.ts:52 FIRE_STEPS)
-pub const FIRE_STEPS: f64 = 40.0;
-
 /// (src/game/fire.ts:167 FIRE_LOOK_SMOKE: a table nothing writes)
-pub fn fire_look_smoke() -> crate::fire::FIRELOOKSMOKE { crate::fire::FIRELOOKSMOKE { up: 0.8, radius: 0.2, density: 0.8, puff_every: 0.42, puff_secs: 0.26, puff_up: 0.95, puff_radius: 0.24, puff_off: 0.09, puff_density: 3.2, puff_temp: 30.0, puff_speed: 1.25, puff_push: 9.0, puff_expand: 2.2, soot: [0.46, 0.48, 0.53], soot_ease: 0.5, ember_up: 0.72, ember_spread: 0.2, ember_jit: 0.4, ember_speed: 1.5, ember_fog: true, snow: crate::fire::FIRELOOKSMOKESnow { speed: 2.6, reach: 2.2, spread: 0.2, mouth: 1.3, top: 4.5 } } }
+pub fn fire_look_smoke() -> crate::fire::FIRELOOKSMOKE { crate::fire::FIRELOOKSMOKE { up: 0.8, radius: 0.2, density: 0.8, puff_every: 0.42, puff_secs: 0.26, puff_up: 0.95, puff_radius: 0.24, puff_off: 0.09, puff_density: 3.2, puff_temp: 30.0, puff_speed: 1.25, puff_push: 9.0, puff_expand: 2.2, soot: [0.46, 0.48, 0.53], soot_ease: 0.5, ember_up: 0.72, ember_spread: 0.2, ember_jit: 0.4, ember_speed: 1.5, snow: crate::fire::FIRELOOKSMOKESnow { speed: 2.6, reach: 2.2, spread: 0.2, mouth: 1.3, top: 4.5 } } }
 
 /// (src/game/fire.ts:234 TAU)
 pub const TAU: f64 = 6.283185307179586;
 
-/// (src/game/fire.ts:236 BED_K)
-pub const BED_K: f64 = 0.6666666666666666;
-
-/// (src/game/fire.ts:320 NO_JETS: a table nothing writes)
-pub fn no_jets() -> Vec<crate::smoke_types::WindGpuSource> { Vec::new() }

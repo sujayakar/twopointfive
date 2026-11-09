@@ -428,8 +428,6 @@ pub fn set_daylight(g: &mut crate::game::Game, on: bool) {
         }
         let blackout = if crate::sim_lightshome::mains_active(g) && crate::sim_lightshome::mains_permanent(g) {
             Some(crate::lighting::DayStateBlackout {
-                active: true,
-                permanent: true,
                 until: crate::sim_lightshome::mains_until(g),
                 since: crate::sim_lightshome::mains_since(g),
             })

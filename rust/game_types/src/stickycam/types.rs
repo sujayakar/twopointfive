@@ -14,20 +14,6 @@ pub struct StickyCam {
 }
 
 #[derive(Clone, Debug, Default)]
-pub struct StickySnap {
-    pub p: Vec<f64>,
-    pub n: Vec<f64>,
-    pub si: f64,
-    pub id: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct CamMark {
-    pub at: V3,
-    pub sends: bool,
-}
-
-#[derive(Clone, Debug, Default)]
 pub struct StickyLivePl {
     pub cams: Vec<StickyCamId>,
 }
@@ -131,5 +117,3 @@ pub fn lens_live() -> V3 { [0.42, 0.05, 0.04] }
 /// (src/game/stickycam.ts:261 CAM_KEY)
 pub const CAM_KEY: f64 = 8388608.0;
 
-/// (src/game/stickycam.ts:277 NO_MARKS: a table nothing writes)
-pub fn no_marks() -> Vec<crate::stickycam::CamMark> { Vec::new() }

@@ -1,7 +1,6 @@
 // G-buffer targets + raster pipelines (boxes, skinned characters).
 import { makeShader, makeBuffer, renderPipelineAsync, renderPipelineOrNull, laterRenderPipelineAsync } from '../gpu/device';
 import { KEPT } from '../gpu/keep';   // (the kept page's lease: the look's maps are worked out once a visit — makeLayers)
-import { EXACT } from '../math/exact';
 import { scenePrelude, snowLookConfig, lookConfig } from './frame';
 import { decalWgslConsts } from './decals';
 import { TexturePool } from './texpool';
@@ -149,7 +148,7 @@ export class GBuffer {
       { binding: 6, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float', viewDimension: '2d' } },   // the traffic map the detail layer reads (rg8unorm over the world's XZ; a 1×1 zero until a level hands one over — setWearMap)
       { binding: 8, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, texture: { sampleType: 'float', viewDimension: '2d' } },   // the snow field (render/snowField.ts; rgba16float over the world's XZ — a 1×1 zero on every page but a snow level's) …
       { binding: 9, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },   // … and its place + the look's numbers (snow.wgsl SnowCfg; all zero = not live)
-      { binding: 10, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float', viewDimension: '2d' } },   // the prints pressed into the snow (rust/game_rules/src/snow_tracks; r8unorm over the world's XZ — a 1×1 zero until a snow level hands one over)
+      { binding: 10, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float', viewDimension: '2d' } },   // the prints pressed into the snow (src/picture/snow/tracks.ts; r8unorm over the world's XZ — a 1×1 zero until a snow level hands one over)
       // THE LOOK PROTOTYPE (look.wgsl): the two map arrays, their sampler and the panel's numbers
       { binding: 11, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float', viewDimension: '2d-array' } },
       { binding: 12, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float', viewDimension: '2d-array' } },
@@ -226,10 +225,9 @@ export class GBuffer {
     const tex = this.lookTex;
     // ON WORKERS WHERE THERE ARE ANY (render/lookWorkers.ts): every layer of the batch is asked for at once and taken here in the batch's own order, so the
     // slots, the order of lookMade and the moment a stuff is pointed at its slot are what they were. A layer no worker made is made here, in slices, as before
-    // ONCE A VISIT (gpu/keep.ts Lease.bytes): a map is the same bytes on every level — it depends on its layer, its size, the evening and whose sin and cos
-    // made it, which is what its name says — so on the kept page a layer the visit has made is handed over, every size of it, and only the others are
+    // ONCE A VISIT (gpu/keep.ts Lease.bytes): a map is the same bytes on every level — it depends on its layer, its size and the evening, which is what its name says — so on the kept page a layer the visit has made is handed over, every size of it, and only the others are
     // worked out; each of those is then kept. A page with no lease (a driven one, a whole one) makes every layer as it did.
-    const lease = KEPT.lease && KEPT.lease.alive ? KEPT.lease : null, nameOf = (l: number) => `look map ${l} ${LOOK_N} ${this.lookEven ? 1 : 0} ${EXACT.on ? 1 : 0}`;
+    const lease = KEPT.lease && KEPT.lease.alive ? KEPT.lease : null, nameOf = (l: number) => `look map ${l} ${LOOK_N} ${this.lookEven ? 1 : 0}`;
     const had = make.map(l => { const k = lease?.bytes(nameOf(l)) ?? null; return k && k.bytes.length === this.lookMips * 2 && k.nums.length === 2 ? k : null; }), toMake = had.filter(k => !k).length;
     const pool = toMake ? await LookPool.open(toMake) : null, asked: (ReturnType<LookPool['make']> | null)[] | null = pool ? make.map((l, k) => had[k] ? null : pool.make(l, LOOK_N, this.lookEven)) : null;
     asked?.forEach(p => p?.catch(() => { /* taken below, where the layer is then made here */ }));   // (null = a layer the visit had: nothing asked)
@@ -302,7 +300,7 @@ export class GBuffer {
     this.device.queue.writeTexture({ texture: this.snowTex, origin: [x0, z0] }, f.data, { offset: (z0 * f.w + x0) * 8, bytesPerRow: f.w * 8 }, [rw, rh]);
   }
   private trackTex: GPUTexture; private trackView: GPUTextureView; private trackW = 1; private trackH = 1;
-  /** the prints pressed into the snow (rust/game_rules/src/snow_tracks): `rect` = the texels changed since the last call ([x0, z0, x1, z1], inclusive; none = all of it); null = none
+  /** the prints pressed into the snow (src/picture/snow/tracks.ts): `rect` = the texels changed since the last call ([x0, z0, x1, z1], inclusive; none = all of it); null = none
    *  (a 1×1 zero). The texture is made the first time a size is seen. */
   setSnowTracks(t: { data: Uint8Array; w: number; h: number } | null, rect?: readonly [number, number, number, number]) {
     const w = t?.w ?? 1, h = t?.h ?? 1;

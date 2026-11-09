@@ -15,16 +15,6 @@ pub struct SlabMet {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct SlabSnap {
-    pub x: f64,
-    pub z: f64,
-    pub a: f64,
-    pub side: f64,
-    pub who: f64,
-    pub bits: Option<[f64; 4]>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct DoorBlastReachItem {
     pub d: DoorId,
     pub k: f64,
@@ -32,12 +22,6 @@ pub struct DoorBlastReachItem {
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct SlabThere {
-    pub but: f64,
-    pub ask: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct StepThereW {
     pub but: f64,
     pub ask: f64,
 }

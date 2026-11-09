@@ -84,7 +84,7 @@ fn clear_leg(g: &mut Game, p: V3, q: V3) -> bool {
     !crate::scene_collision::solid_blocked(g, [p[0], 0.45, p[2]], [q[0], 0.45, q[2]], None) && !crate::scene_collision::solid_blocked(g, [p[0], 1.2, p[2]], [q[0], 1.2, q[2]], None)
 }
 fn mk(aim: V3) -> OpFlow {
-    OpFlow { st: FlowSt::Wait, t0: 0.0, wps: Vec::new(), sweep: crate::squad::Sweep::blank(), aim, q: Vec::new(), on: -1, since: 0.0, n: 0.0, next: 0.0, said: false, in_at: f64::NAN, corner_at: f64::NAN, hold_at: f64::NAN }
+    OpFlow { st: FlowSt::Wait, t0: 0.0, sweep: crate::squad::Sweep::blank(), aim, q: Vec::new(), on: -1, since: 0.0, n: 0.0, next: 0.0, in_at: f64::NAN, corner_at: f64::NAN, hold_at: f64::NAN }
 }
 
 // ---------------------------------------------------------------- the drill
@@ -123,7 +123,7 @@ pub fn breach_drill_next_door(g: &mut crate::game::Game) -> Option<DoorId> {
 /// Log a beat.   (breach.ts BreachDrill.beat)
 pub fn breach_drill_beat(g: &mut crate::game::Game, what: &str) {
     let t = dr!(g).t;
-    dr!(g).beats.push(BreachDrillBeatsItem { t, what: String::from(what) });
+    dr!(g).beats.push(BreachDrillBeatsItem { what: String::from(what) });
 }
 
 /// True the first time for a key.   (breach.ts BreachDrill.once)

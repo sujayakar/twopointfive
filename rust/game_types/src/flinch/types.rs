@@ -3,11 +3,6 @@
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Debug, Default)]
-pub struct FlinchSnap {
-    pub men: Vec<Option<[f64; 2]>>,
-}
-
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct FlinchModStateOfValue {
     pub under: f64,

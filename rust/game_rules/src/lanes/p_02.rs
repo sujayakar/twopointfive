@@ -538,7 +538,7 @@ pub fn stun(g: &mut crate::game::Game, l: LanesLaneId, at: &[GuardId]) {
     let now = g.time;
     let gap = g.k.lanes.stun_gap;
     let x = &mut g.tab.lanes_lane[l];
-    x.can = Some(crate::lanes::LaneCan { who: cid, t: now, land: sol.land });
+    x.can = Some(crate::lanes::LaneCan { t: now, land: sol.land });
     x.stun_at = now + gap;
     s(g).stats.stuns += 1.0;
     say_net(g, best, "bang out — on me!");

@@ -84,15 +84,6 @@ pub fn seats_stand(g: &mut crate::game::Game, n: f64) -> Vec<SeatId> {
     seats
 }
 
-/// the Game's own field of a seat's name was asked in a game of more than one seat (seats.ts miss)
-pub fn miss(g: &mut crate::game::Game, k: &str) {
-    if g.m.seats.seat_asks.strict {
-        panic!("seats: the Game's own '{}' was asked in a game of more than one seat (a player's code is handed his seat's view; the world asks men(g) / manOf / ordersOf)", k);
-    }
-    g.m.seats.seat_asks.misses += 1.0;
-    g.m.seats.seat_asks.missed.add(String::from(k));
-}
-
 // ---------------------------------------------------------------- the men
 
 /// the character id of seat `i`'s man (seats.ts seatManId)

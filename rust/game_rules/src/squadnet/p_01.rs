@@ -90,7 +90,7 @@ pub fn why_words(g: &crate::game::Game, p: &crate::autopilot::AutoPick) -> Optio
     } else {
         return None;
     };
-    Some(crate::squadnet::WhyWords { row: String::from(row), ack: String::from(ack) })
+    Some(crate::squadnet::WhyWords { ack: String::from(ack) })
 }
 
 /// The regex `/[^s]s$/`: ends in one s, not two, with something before it ('bunks are', 'boss's').

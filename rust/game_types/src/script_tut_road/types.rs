@@ -26,8 +26,6 @@ pub struct TutRoadRoadFrame {
     pub s: Option<crate::director::UnitRef>,
     /// i: a yield separates its declaration from a use
     pub i: f64,
-    /// at: a yield separates its declaration from a use
-    pub at_2: [f64; 3],
 }
 
 /// (levels/tut-road.script.ts:81-81) the beat 'way': where it stands, and what lives across a yield
@@ -46,8 +44,6 @@ pub struct TutRoadHutFrame {
     pub u: Option<crate::director::UnitRef>,
     /// i: a yield separates its declaration from a use
     pub i: f64,
-    /// at: a yield separates its declaration from a use
-    pub at_2: [f64; 3],
 }
 
 /// (levels/tut-road.script.ts:104-123) the beat 'gun': where it stands, and what lives across a yield
@@ -65,12 +61,6 @@ pub struct TutRoadGunFrame {
     pub i: f64,
     /// mode: a yield separates its declaration from a use
     pub mode: Option<String>,
-    /// at: a yield separates its declaration from a use
-    pub at_2: [f64; 3],
-    /// pts: a yield separates its declaration from a use
-    pub pts: Vec<[f64; 3]>,
-    /// at: a yield separates its declaration from a use
-    pub at_3: [f64; 3],
 }
 
 /// (levels/tut-road.script.ts:124-124) the beat 'bags': where it stands, and what lives across a yield
@@ -96,14 +86,8 @@ pub struct TutRoadGateFrame {
     pub men: Vec<crate::script_tut_road::TutRoadGateMen>,
     /// all: a yield separates its declaration from a use
     pub all: f64,
-    /// m: a yield separates its declaration from a use
-    pub m: Option<crate::script_tut_road::TutRoadGateM>,
     /// i: a yield separates its declaration from a use
     pub i: f64,
-    /// shots: a yield separates its declaration from a use
-    pub shots: Vec<crate::director::Cond>,
-    /// m: a yield separates its declaration from a use
-    pub m_2: Option<crate::script_tut_road::TutRoadGateM>,
 }
 
 /// (levels/tut-road.script.ts:152-152) the beat 'open': where it stands, and what lives across a yield
@@ -131,13 +115,6 @@ pub struct TutRoadVars {
 /// an inline shape of the script
 #[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutRoadGateMen {
-    pub k: f64,
-    pub u: Option<crate::director::UnitRef>,
-}
-
-/// an inline shape of the script
-#[derive(Clone, Debug, Default, ToBytes)]
-pub struct TutRoadGateM {
     pub k: f64,
     pub u: Option<crate::director::UnitRef>,
 }

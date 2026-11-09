@@ -18,7 +18,8 @@
 //                client of another
 // IT ANSWERS: a WebSocket upgrade on any path (the wire: src/net/wire.ts) · GET /health → {game, build, state, tick, seats, watchers, slips, lost, lines}.
 // IT TELLS THE CONTROL PLANE: POST {game, secret, …health} every 10 s and at once on a change of state or of who is sitting; a server that is done says
-// state 'ended' whatever it was doing. An answer of 410 = the control plane has no such game any more: the server stops.
+// state 'ended' whatever it was doing. An answer of 410 = the control plane has no such game any more: the server stops. An answer's
+// `seatKeys` are the seats' keys now (a seat that became another player's has another); a hello whose key no seat has is asked about with a heartbeat first.
 // IT EXITS 0 when the core is done (idle, ended, too old, told its game is gone) after a last heartbeat; 1 when it could not stand its game; 2 on a bad environment.
 import type { NetStart } from '../../src/net/start.ts';
 import { NetServer, type Conn } from '../../src/net/server.ts';
@@ -48,21 +49,30 @@ const seatsN = stood.seats;
 const seatKeys: string[] = Array.isArray(asked.seatKeys) ? asked.seatKeys.filter((k): k is string => typeof k === 'string' && k !== '') : (E.MP_SEATKEYS ?? '').split(',').filter(Boolean);
 if (seatKeys.length !== seatsN || new Set(seatKeys).size !== seatsN) { console.error(`server.ts: the stood game has ${seatsN} seat${seatsN === 1 ? '' : 's'} and wants as many different seat keys (the record's seatKeys, or MP_SEATKEYS): got ${seatKeys.length}`); process.exit(2); }
 
-const core = new NetServer({ now: () => performance.now(), step: cmds => stood.step(cmds), word: () => stood.word(), watch: () => stood.watch(), ended: () => stood.ended() },
+const core = new NetServer({ now: () => performance.now(), step: cmds => stood.step(cmds), word: () => stood.word(), watch: () => stood.watch(), ended: () => stood.ended(), ...(E.MP_CONTROL ? { ask: () => beat() } : {}) },
   { game, build, start, seatKeys, idleS: num('MP_IDLE_S', 60), maxS: num('MP_MAX_S', 3600), graceS: num('MP_GRACE_S', 15) });
 
 // ---- the heartbeat
 const control = E.MP_CONTROL ?? '', secret = E.MP_SECRET ?? '';
-let beating: Promise<void> = Promise.resolve();
-function beat(): void {
-  if (!control) return;
+let beating: Promise<void> = Promise.resolve(), next: Promise<void> | null = null;
+/** one waits at a time: it says what is so when it goes. Settled once it is answered, or is not */
+function beat(): Promise<void> {
+  if (!control) return Promise.resolve();
+  return next ??= beating = beating.then(() => { next = null; return sendBeat(); });
+}
+async function sendBeat(): Promise<void> {
   // (to a control plane 'ended' means THIS SERVER IS DONE — it sweeps the game and its runner on the word. A mission that is over while the grace still runs is
   //  still up for its players' end screen: it reads 'playing', its outcome beside it, until the core is done. /health keeps the core's own word)
   const h = core.health(), body = JSON.stringify({ secret, ...h, state: h.done ? 'ended' : h.state === 'ended' ? 'playing' : h.state });
-  beating = beating.then(() => fetch(control, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, signal: AbortSignal.timeout(5000) }).then(r => { if (r.status === 410) core.stop('the control plane has no such game'); }, () => undefined));
+  try {
+    const r = await fetch(control, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, signal: AbortSignal.timeout(5000) });
+    if (r.status === 410) return core.stop('the control plane has no such game');
+    const seatKeys = r.ok ? (await r.json() as { seatKeys?: unknown }).seatKeys : null;
+    if (Array.isArray(seatKeys) && seatKeys.every(k => typeof k === 'string' && k)) core.rekey(seatKeys);
+  } catch { /* the control plane is away */ }
 }
 let saidState = '';
-core.onChange = () => { const h = core.health(), k = `${h.state} ${h.seats.join()} ${h.lost} ${h.done ?? ''}`; if (k !== saidState) { saidState = k; say(`${h.state} · tick ${h.tick} · seats ${h.seats.map(s => s ? 'in' : 'empty').join(', ')}${h.outcome ? ` · ${h.outcome.end} (${h.outcome.why})` : ''}${h.lost ? ` · ${h.lost} client${h.lost === 1 ? '' : 's'} parted from this game` : ''}${h.done ? ` · done: ${h.done}` : ''}`); beat(); } };
+core.onChange = () => { const h = core.health(), k = `${h.state} ${h.seats.join()} ${h.lost} ${h.done ?? ''}`; if (k !== saidState) { saidState = k; say(`${h.state} · tick ${h.tick} · seats ${h.seats.map(s => s ? 'in' : 'empty').join(', ')}${h.outcome ? ` · ${h.outcome.end} (${h.outcome.why})` : ''}${h.lost ? ` · ${h.lost} client${h.lost === 1 ? '' : 's'} parted from this game` : ''}${h.done ? ` · done: ${h.done}` : ''}`); void beat(); } };
 
 // ---- the sockets
 type WS = { send(text: string): number; close(code?: number, reason?: string): unknown; data: { conn: Conn } };
@@ -83,9 +93,9 @@ const server = Bun.serve({
   },
 });
 say(`game ${game} · build ${build || '(none)'} · ${start.file} ${start.words} · seed ${start.seed} · ${seatsN} seat${seatsN === 1 ? '' : 's'} · ws://${hostname}:${server.port} · ${NET.hz} Hz`);
-beat();
+void beat();
 
-const pulse = setInterval(beat, 10_000);
+const pulse = setInterval(() => void beat(), 10_000);
 const clock = setInterval(async () => {
   try { core.advance(); } catch (e) { say(`the game threw at tick ${core.tick}: ${(e as Error).stack ?? e}`); clearInterval(clock); clearInterval(pulse); core.stop('the game threw'); await last(); process.exit(1); }   // (its clients are told, and the control plane hears 'ended' now, not by a silence)
   if (!core.done) return;

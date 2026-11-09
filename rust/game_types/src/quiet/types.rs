@@ -3,13 +3,6 @@
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct QuietSnap {
-    pub deal: crate::quiet::QuietDeal,
-    pub pin: Option<f64>,
-    pub squad: f64,
-}
-
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct QuietDeal {
     pub start: f64,
@@ -114,7 +107,6 @@ pub struct HolderStandArea {
 #[derive(Clone, Copy, Debug, Default)]
 pub struct HolderStand {
     pub pos: Option<V3>,
-    pub ok: bool,
     pub clear: bool,
     pub inside: bool,
 }

@@ -46,5 +46,3 @@ impl TeamsMod {
     }
 }
 
-/// (src/game/teams.ts:20 TEAMS: a table nothing writes)
-pub fn teams() -> Vec<String> { alloc::vec![String::from("guard"), String::from("operative"), String::from("hostile"), String::from("player"), String::from("civilian")] }

@@ -30,7 +30,7 @@
 //   bun run tools/levels/export.ts white-roof [--check]     → levels/white-roof.json
 //   page: ?look&solo&levelFile=white-roof.json&hour=midday
 import type { Level, LevelDoorDef } from './lib/level';
-import type { LevelScenarios, Rect } from '../../src/scene/scenarios';
+import type { LevelScenarios, Rect } from './lib/scenarios';
 import type { SurfacesData } from './lib/levelData';
 import { officeKit, normalize3 as norm, type GeneratorTrace } from './lib/officeGen';
 import { gwotKit, gwotOfOffice, GWOT_MATERIALS } from './lib/gwotKit';

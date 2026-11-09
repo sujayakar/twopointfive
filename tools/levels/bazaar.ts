@@ -30,7 +30,7 @@
 // the garage's man smokes outside the generator room's door, looking up the alley as far as the water tank; on 0 and 2 the tea house's man smokes at the
 // kitchen door at the alley's other end. On set 2 the office is the camera's alone.
 //
-// WHAT THE SEED DEALS (QUIET below, rebuild/play-style-levels/quiet-missions/contract.md): one of three starts (behind the north wall at its west end · outside the
+// WHAT THE SEED DEALS (QUIET below): one of three starts (behind the north wall at its west end · outside the
 // north gate · outside the south gate), one of three places for the thing (the money changer's safe · the phone shop's display case, under its lit window ·
 // the garage's steel cabinet, which roundE walks past every lap) and one of three sets of five men: the two rounds are on every set, the other three are dealt
 // from the lorry's driver, the money changer's man, the tea house's man, the garage's man and the street's night watchman. All three gates are ways out.
@@ -40,7 +40,7 @@
 // on every deal; seen drawn once, on the software renderer.
 import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef, DeviceDef, CivilianDef, PatrolRoute } from './lib/level';
-import type { LevelScenarios, QuietData, Rect, ResponseData } from '../../src/scene/scenarios';
+import type { LevelScenarios, QuietData, Rect, ResponseData } from './lib/scenarios';
 import type { SurfacesData } from './lib/levelData';
 import { officeKit, normalize3 as norm, type GeneratorTrace } from './lib/officeGen';
 import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS } from './lib/gwotKit';
@@ -406,7 +406,7 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
     wayouts: [{ name: 'the open end of the street', pos: [2.6, 0, 19.0], face: -HALF }, { name: 'the alley\'s mouth', pos: [2.6, 0, 6.0], face: -HALF }],
   };
 
-  // ---------------- LIVED-IN ROOMS (lib/lived.ts; rebuild/play-style-levels/rooms/read-first.md): what makes each shop, the alley, the passage and the
+  // ---------------- LIVED-IN ROOMS (lib/lived.ts): what makes each shop, the alley, the passage and the
   //                  street ITS place. Everything below is in a group 'lived.<place>' or named 'lived.<place>.<thing>' and is the TAIL of every list: the
   //                  loader leaves it all out with the switch off. Additions only; nothing above is moved. No emitter: each place says its light with colour.
   //                  Solids keep 1.1 m off every door line, off the patrol legs and off every authored point; what is under 0.25 m is walked over ----------------
@@ -662,7 +662,7 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
     { name: 'bread oven', bounds: { x0: 8.6, x1: 13.4, z0: 4.12, z1: 7.88 } }, { name: 'lorry', bounds: { x0: 13.6, x1: 20.4, z0: 18.6, z1: 21.88 } },
     { name: 'alley', bounds: { x0: 4.12, x1: 32.4, z0: 4.12, z1: 7.88 } }, { name: 'street', bounds: { x0: 4.12, x1: 35.88, z0: 16.12, z1: 21.88 } },
   ] };
-  // THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest): the south gate from the lane outside it (the third start's side), the
+  // THE TEAM & KIT PICTURE (lib/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest): the south gate from the lane outside it (the third start's side), the
   // street's stalls and awnings over the wall behind the man.
   const kitView = { ways: [{ door: 'gate_s', ref: [22.4, 25.4], side: -1 }] };
   // WHO COMES WHEN THE STREET GOES LOUD (scenarios.response — rust/game_rules/src/qrf, rust/game_start/tests/response_team.rs): the town is under curfew and a patrol is never far.

@@ -79,7 +79,7 @@
 // safe, the locker and the lamps are this file's own boxes in the kit's paint. Units: metres. +X east, +Z south, +Y up.
 import type { Vec3 } from '../../src/math/vec';
 import type { DeviceDef, Level, LevelDoorDef, PatrolRoute } from './lib/level';
-import type { KitViewData, LevelScenarios, QuietData, Rect } from '../../src/scene/scenarios';
+import type { KitViewData, LevelScenarios, QuietData, Rect } from './lib/scenarios';
 import type { SurfacesData } from './lib/levelData';
 import { officeKit, normalize3 as norm, type GeneratorTrace } from './lib/officeGen';
 import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS } from './lib/gwotKit';
@@ -418,7 +418,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       { id: 'mast_pad', mat: 'stone', x0: 21.4, z0: 16.7, x1: 24.4, z1: 19.7 },
     ],
   };
-  // THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest): the west gate from the track (the first start's side), the west yard's
+  // THE TEAM & KIT PICTURE (lib/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest): the west gate from the track (the first start's side), the west yard's
   // lamp and the generator shed over the wall behind the pair.
   // FOR THE PICTURE ONLY (`add`: the mission never loads these): the yard's west lamp lights the near side of the gate and the strip behind the wall was black,
   // and what makes this a relay (the mast, the dishes) is under the tiles. So the picture gets a work bulb on a pole against the wall and A SPARE SECTION OF

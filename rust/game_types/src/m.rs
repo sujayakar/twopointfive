@@ -2,9 +2,9 @@
 //! maths.rs: the same bits on every machine, the bits the TypeScript game gets from src/math/exact.ts); √, floor and trunc are exact by the
 //! standard (rust/prim). Nothing here is the standard library's float method, and a translated file names none either.
 pub use prim::{floor, sqrt, trunc};
-pub use sim::maths::{acos, asin, atan, atan2, cos, exp, log, log10, log2, pow, sin, tan, tanh};
+pub use sim::maths::{acos, asin, atan, atan2, cos, exp, log, pow, sin, tan};
 /// `Math.hypot` of two, three and four numbers (src/math/hyp.ts hyp2, hyp3, hyp4)
-pub use sim::maths::{hypot2 as hyp2, hypot3 as hyp3, hypot4 as hyp4, hypot_n as hyp_n};
+pub use sim::maths::{hypot2 as hyp2, hypot3 as hyp3, hypot4 as hyp4};
 
 pub const PI: f64 = core::f64::consts::PI;
 pub const INF: f64 = f64::INFINITY;

@@ -189,7 +189,7 @@ fn digin_same(a: &crate::knobs::DiginK, b: &crate::knobs::DiginK) -> bool {
 
 // ---------------------------------------------------------------- the levers' words
 
-fn set_as_tables(s: DifficultyModSET) -> TablesOfSet { TablesOfSet { fog: s.fog, ai: s.ai, kit: s.kit, told: s.told } }
+fn set_as_tables(s: DifficultyModSET) -> TablesOfSet { TablesOfSet { ai: s.ai, kit: s.kit } }
 
 /// SET[key] as its word.
 fn set_word(s: &DifficultyModSET, key: LeverKey) -> Option<&'static str> {
@@ -323,7 +323,7 @@ pub fn same(a: &crate::difficulty::SameOf, b: &crate::difficulty::SameOf) -> boo
 
 /// the two tables a level and the levers over it write. (difficulty.ts tablesOf)
 pub fn tables_of(g: &crate::game::Game, level: crate::difficulty::Difficulty, set: Option<crate::difficulty::TablesOfSet>) -> crate::difficulty::TablesOf {
-    let set = set.unwrap_or(TablesOfSet { fog: None, ai: None, kit: None, told: None });
+    let set = set.unwrap_or(TablesOfSet { ai: None, kit: None });
     let mut p = crate::pressure::pressure_defaults();
     let mut d = crate::digin::digin_defaults();
     if set.ai.unwrap_or(level) == Difficulty::Hard {
@@ -472,7 +472,6 @@ pub fn write(g: &mut crate::game::Game, fog_only: Option<bool>) {
     }
 }
 
-
 /// the machine's store keeps the moved levers, with the kept rungs this visit hides unless `all`. (difficulty.ts storeLevers)
 pub fn store_levers(g: &crate::game::Game, all: Option<bool>) {
     let s = g.m.difficulty.set;
@@ -495,12 +494,6 @@ pub fn set_difficulty(g: &mut crate::game::Game, level: crate::difficulty::Diffi
         store_levers(g, Some(true));
         store_name_in(g, level);
     }
-    write(g, None);
-}
-
-/// the level under the levers, for this page only. (difficulty.ts setBase)
-pub fn set_base(g: &mut crate::game::Game, level: crate::difficulty::Difficulty) {
-    g.m.difficulty.base = level;
     write(g, None);
 }
 
@@ -607,25 +600,6 @@ pub fn cone_visit_now(g: &crate::game::Game) -> Option<bool> {
     g.m.difficulty.cone_visit
 }
 
-/// a row under the switch was moved by hand: the tables go to their own stores, the name and the AI and kit levers go. (difficulty.ts difficultyCustom)
-pub fn difficulty_custom(g: &mut crate::game::Game) {
-    if pressure_same(&g.k.pressure, &crate::pressure::pressure_defaults()) { crate::pressure::reset_pressure(g); } else { crate::pressure::save_pressure(g); }
-    if digin_same(&g.k.digin, &crate::digin::digin_defaults()) { crate::digin::reset_dig_in(g); }   // (saveDigIn, :274: not in the game)
-    crate::savestate::save_store_remove(g, LS);
-    let m = &mut g.m.difficulty;
-    if m.set.ai.is_some() || m.set.kit.is_some() || m.held.is_some() {
-        m.set.ai = None;
-        m.set.kit = None;
-        if let Some(h) = m.held.as_mut() { h.ai = None; h.kit = None; }
-        let fog = m.set.fog.or(m.held.and_then(|h| h.fog));
-        let told = m.set.told.or(m.held.and_then(|h| h.told));
-        match levers_json(&[("fog", fog.map(|r| r.as_str())), ("told", told.map(|r| r.as_str()))]) {
-            Some(line) => { crate::savestate::save_store_set(g, LS_LEVERS, &line); }
-            None => crate::savestate::save_store_remove(g, LS_LEVERS),
-        }
-    }
-}
-
 /// WHAT AN ADDRESS SAYS OF THE DIFFICULTY, and no more: None where it says nothing. `plain` (a Training lesson's address) reads no lever. Writes nothing. (difficulty.ts difficultyAsked)
 pub fn difficulty_asked(g: &crate::game::Game, q: &crate::query::Query, plain: bool) -> Option<crate::difficulty::DifficultyAsked> {
     let v = if q.has("hard") { Some(if q.get("hard") == Some("0") { "standard" } else { "hard" }) } else { q.get("difficulty") };
@@ -651,29 +625,6 @@ pub fn difficulty_lay(g: &mut crate::game::Game, a: &crate::difficulty::Difficul
     if a.digin { g.k.digin.on = true; }
     if let Some(on) = a.pressure { g.k.pressure.on = on; }
     if a.cone.is_some() { set_cone_visit(g, a.cone); }
-}
-
-/// the levers this machine keeps, only rungs the build still has. (difficulty.ts keptLevers)
-pub fn kept_levers(g: &crate::game::Game) -> crate::difficulty::KeptLevers {
-    let rows = match crate::savestate::save_store_get(g, LS_LEVERS) { Some(t) => json_rows(&t), None => Vec::new() };
-    let mut out = DifficultyModSET { fog: None, ai: None, kit: None, told: None };
-    for l in levers_now(g).iter() {
-        let word = rows.iter().rev().find(|r| r.0 == l.key.as_str()).and_then(|r| r.1.as_deref());
-        if is_rung(g, l.key, word) { if let Some(w) = word { set_put(&mut out, l.key, w); } }
-    }
-    KeptLevers { fog: out.fog, ai: out.ai, kit: out.kit, told: out.told }
-}
-
-/// the store took the levers. (difficulty.ts leversKept)
-pub fn levers_kept(g: &crate::game::Game) -> bool {
-    let k = kept_levers(g);
-    let s = g.m.difficulty.set;
-    levers_now(g).iter().all(|l| match l.key {
-        LeverKey::Fog => k.fog == s.fog,
-        LeverKey::Ai => k.ai == s.ai,
-        LeverKey::Kit => k.kit == s.kit,
-        LeverKey::Told => k.told == s.told,
-    })
 }
 
 /// the rung one lever stands moved to by hand. (difficulty.ts leversSet()[key])
@@ -704,9 +655,7 @@ pub fn squads_held(e: &crate::scene_scenarios::ScenarioEntry) -> crate::difficul
     S::Bool(e.kind == crate::scene_scenarios::ScenarioEntryKind::Roomclear)
 }
 
-/// a scenario link with the level the tables stand at on it. (difficulty.ts difficultyHref)
-pub fn difficulty_href(g: &crate::game::Game, href: &str) -> String { difficulty_href_kept(g, href, levers_kept(g)) }
-/// The same, by whoever knows whether this machine keeps the levers as they stand (no store is read on this side: `levers_kept`).
+/// The same, by whoever knows whether this machine keeps the levers as they stand.
 pub fn difficulty_href_kept(g: &crate::game::Game, href: &str, kept: bool) -> String {
     let now = difficulty_now(g);
     let (path, all) = href_parts(href);
@@ -724,8 +673,6 @@ pub fn difficulty_href_kept(g: &crate::game::Game, href: &str, kept: bool) -> St
     levers_href_kept(g, &alloc::format!("{}?{}", path, q.join("&")), kept)
 }
 
-/// a link naming its own level, with the moved levers put right on it. (difficulty.ts leversHref)
-pub fn levers_href(g: &crate::game::Game, href: &str) -> String { levers_href_kept(g, href, levers_kept(g)) }
 /// The same, by whoever knows whether this machine keeps the levers as they stand.
 pub fn levers_href_kept(g: &crate::game::Game, href: &str, kept: bool) -> String {
     if any_set(g) && !shown_whole(g) { return String::from(href); }

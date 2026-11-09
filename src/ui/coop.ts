@@ -16,12 +16,10 @@ import { buildName } from '../host/buildname';
 import { cloudFind, cloudUrl } from '../cloud/cloud';
 import { wire } from '../cloud/wire';
 import { leversSaid } from '../host/machine';
-import { seatsKind } from '../scene/seatkinds';
 import { openList } from './startpage';
 import { myName, setMyName } from '../host/myname';
 import { NET } from '../net/wire';
 import type { Mission } from './missions';
-import { ALL_MISSIONS } from '../scene/scenarioList';
 import { desk } from '../view/desk';
 
 const TAB = 'tps.coop.tab', ID = /^[a-z0-9]{24,64}$/;
@@ -72,8 +70,8 @@ async function enter(L: Lobby, code: string, told: (words: string) => void): Pro
   try { const v = await L.seat(code, s => told(waitWords(s))); location.assign(location.pathname + netSearch(location.search, v) + location.hash); return ''; } catch (e) { return String((e as Error)?.message ?? e); }
 }
 
-/** the missions two can play: a kind the game seats two in (scene/seatkinds.ts), and not a lesson (on rails, for one) or a row built for its own size only */
-export const coopCan = (m: Mission): boolean => { const e = ALL_MISSIONS.find(x => x.id === m.id); return !!e && seatsKind(e.kind) && !e.only && !m.lesson; };
+/** the missions two can play */
+export const coopCan = (m: Mission): boolean => m.two;
 /** what the page that hosts has set for the game beside its address (this machine's own settings) */
 export const HOSTED = { setup: (_scenario: string): Record<string, unknown> => ({}) };
 /** HOST: the starting page, picking a mission for two. Its block hands the mission's address here */

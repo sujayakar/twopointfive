@@ -53,24 +53,3 @@ taskers! {
     NEEDS: "a need of his own", ["off for a coffee, a smoke, some water or a stretch"];
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct OwnerModWITNESSESItem {
-    pub rule: f64,
-    pub name: String,
-    pub says: crate::FnField,
-    pub at_read: bool,
-}
-
-/// the state this module keeps at its top level
-#[derive(Clone, Debug)]
-pub struct OwnerMod {
-    /// (src/game/owner.ts:108 WITNESSES)
-    pub witnesses: Vec<crate::owner::OwnerModWITNESSESItem>,
-}
-impl OwnerMod {
-    pub fn blank() -> Self {
-        OwnerMod {
-            witnesses: Vec::new(),
-        }
-    }
-}

@@ -3,20 +3,6 @@
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum LaserBand {
-    Visible,
-    Ir,
-}
-impl LaserBand {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            LaserBand::Visible => "visible",
-            LaserBand::Ir => "ir",
-        }
-    }
-}
-
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct IrlaserMod {
@@ -33,9 +19,6 @@ impl IrlaserMod {
         }
     }
 }
-
-/// (src/game/irlaser.ts:62 BREAK)
-pub const BREAK: bool = false;
 
 /// (src/game/irlaser.ts:65 IR_TINT: a table nothing writes)
 pub fn ir_tint() -> V3 { [0.2577, 0.2577, 0.2577] }

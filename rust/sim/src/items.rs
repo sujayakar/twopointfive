@@ -184,20 +184,6 @@ pub fn addr(table: u32) -> usize {
         _ => 0,
     }
 }
-/// 0 = rows · 1 = the hand-over's length · 2 = events the list holds · 3 = doubles an event · 4 = roofs a walk is handed · 13 = the part's length in bytes · 100 + k = where
-/// column k of the part starts (COLS)
-pub fn cap(table: u32) -> usize {
-    match table {
-        0 => CAP,
-        1 => NPAR,
-        2 => MAX_EVENTS,
-        3 => EV,
-        4 => MAX_ROOFS,
-        13 => size_of::<Items>(),
-        k if k >= 100 && ((k - 100) as usize) < COLS.len() => COLS[(k - 100) as usize],
-        _ => 0,
-    }
-}
 
 // ---- throwables.ts's own numbers (tools/qa/rust-check.ts reads both sources and is red where one differs)
 const PI: f64 = core::f64::consts::PI;

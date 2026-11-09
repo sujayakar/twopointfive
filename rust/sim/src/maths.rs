@@ -1,14 +1,36 @@
-//! THE GAME'S OWN MATHS — sin, cos, tan, asin, acos, atan, atan2, exp, log, log2, log10, pow, tanh and hypot from + − × ÷ and √ alone.
+//! THE GAME'S OWN MATHS — sin, cos, tan, asin, acos, atan, atan2, exp, log, pow and hypot from + − × ÷ and √ alone.
 //!
-//! This is src/math/exact.ts (and the Kahan sums of src/math/hyp.ts), statement for statement: the same operations in the same order on the same doubles, so
-//! the same bits. The TypeScript file says why the game has maths of its own and where the algorithms come from (the Go standard library's portable math
-//! package, after Cephes and FreeBSD's msun; their notices are in that file and cover this one). tools/qa/rust-check.ts folds one stream of inputs through both
-//! and is red on a bit of difference.
+//! Those operations are exact by the standard on every machine; a library's own sine or power is not, and one unit in the last place of a facing angle is a different fight a minute
+//! later. These are within a unit or two in the last place of the true value and the same everywhere, which is all the game needs of them.
 //!
 //! Do not tidy the arithmetic: `(a - b) - c` is not `a - (b + c)`, a polynomial written by Horner's rule stays one, and a term that looks like it cancels
-//! (`n * n - 0.0`) is there because the other side has it.
+//! (`n * n - 0.0`) is there because its order is play.
+//!
+//! The algorithms and constants are those of the Go standard library's portable math package (pure Go: sin.go, tan.go, atan.go, asin.go, atan2.go, exp.go, log.go,
+//! log10.go, pow.go, tanh.go, frexp.go, ldexp.go, trig_reduce.go), rewritten here in Rust. Their notices:
+//!
+//!   Copyright 2009 The Go Authors.
+//!
+//!   Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
+//!      * Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
+//!      * Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation
+//!        and/or other materials provided with the distribution.
+//!      * Neither the name of Google LLC nor the names of its contributors may be used to endorse or promote products derived from this software without
+//!        specific prior written permission.
+//!   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+//!   WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY
+//!   DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF
+//!   USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+//!   NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+//!
+//!   sin, cos, tan, atan, asin, tanh — from the Cephes Math Library Release 2.8: June, 2000. Copyright 1984, 1987, 1989, 1992, 2000 by Stephen L. Moshier.
+//!   The readme file at http://netlib.sandia.gov/cephes/ says: Some software in this archive may be from the book _Methods and Programs for Mathematical
+//!   Functions_ (Prentice-Hall or Simon & Schuster International, 1989) or from the Cephes Mathematical Library, a commercial product. In either event, it is
+//!   copyrighted by the author. What you see here may be used freely but it comes with no support or guarantee.
+//!
+//!   exp, log — from FreeBSD's /usr/src/lib/msun/src/e_exp.c and e_log.c: Copyright (C) 2004 by Sun Microsystems, Inc. All rights reserved. Developed at SunPro, a
+//!   Sun Microsystems, Inc. business. Permission to use, copy, modify, and distribute this software is freely granted, provided that this notice is preserved.
 
-use crate::pow10::{POW10, POW10_MIN};
 use prim::{floor, sqrt, trunc};
 
 const INF: f64 = f64::INFINITY;
@@ -403,34 +425,12 @@ pub fn log(x: f64) -> f64 {
     let hfsq = 0.5 * f * f;
     k * LN2HI - ((hfsq - (s * (hfsq + r) + k * LN2LO)) - f)
 }
-const INV_LN10: f64 = 0.4342944819032518;
-const INV_LN2: f64 = 1.4426950408889634;
 /// the whole number nearest y, a half going up (the language's Math.round)
 #[inline]
 pub fn round_half_up(y: f64) -> f64 {
     let f = floor(y);
     let r = if y - f >= 0.5 { f + 1.0 } else { f };
     if r == 0.0 && y < 0.0 { -0.0 } else { r }
-}
-pub fn log10(x: f64) -> f64 {
-    let y = log(x) * INV_LN10;
-    let r = round_half_up(y);
-    // (a power of ten: its exponent, exactly — the product above may sit one place off it)
-    if y != r && (y - r).abs() < 1e-9 && r >= -323.0 && r <= 308.0 && f64::from_bits(POW10[(r as i32 - POW10_MIN) as usize]) == x {
-        return r;
-    }
-    y
-}
-pub fn log2(x: f64) -> f64 {
-    let (mut frac, mut e) = frexp(x);
-    if frac == 0.5 {
-        return (e - 1) as f64; // (a power of two: its exponent, exactly)
-    }
-    if frac < SQRT1_2 {
-        frac *= 2.0;
-        e -= 1;
-    }
-    log(frac) * INV_LN2 + e as f64
 }
 
 // ---- x^y: the whole part of y by squaring on the fraction of x, the rest through e^(y ln x)
@@ -532,30 +532,6 @@ pub fn pow(x: f64, y: f64) -> f64 {
     ldexp(a1, ae)
 }
 
-const TANHP0: f64 = -9.64399179425052238628e-1;
-const TANHP1: f64 = -9.92877231001918586564e1;
-const TANHP2: f64 = -1.61468768441708447952e3;
-const TANHQ0: f64 = 1.12811678491632931402e2;
-const TANHQ1: f64 = 2.23548839060100448583e3;
-const TANHQ2: f64 = 4.84406305325125486048e3;
-const HALF_MAXLOG: f64 = 0.5 * 8.8029691931113054295988e+01;
-pub fn tanh(x: f64) -> f64 {
-    let mut z = x.abs();
-    if z > HALF_MAXLOG {
-        return if x < 0.0 { -1.0 } else { 1.0 };
-    }
-    if z >= 0.625 {
-        let s = exp(2.0 * z);
-        z = 1.0 - 2.0 / (s + 1.0);
-        return if x < 0.0 { -z } else { z };
-    }
-    if x == 0.0 {
-        return x;
-    }
-    let s = x * x;
-    x + x * s * ((TANHP0 * s + TANHP1) * s + TANHP2) / (((s + TANHQ0) * s + TANHQ1) * s + TANHQ2)
-}
-
 // ---- lengths: |x| scaled by the largest, the squares in a compensated sum (src/math/hyp.ts kahan2 / 3 / 4 / N)
 /// one more scaled square into the running sum
 #[inline]
@@ -645,38 +621,5 @@ pub fn hypot4(a: f64, b: f64, c: f64, d: f64) -> f64 {
     kahan_step(y, max, &mut sum, &mut comp);
     kahan_step(z, max, &mut sum, &mut comp);
     kahan_step(w, max, &mut sum, &mut comp);
-    sqrt(sum) * max
-}
-/// the same sum for any number of terms
-pub fn hypot_n(v: &[f64]) -> f64 {
-    match v.len() {
-        2 => return hypot2(v[0], v[1]),
-        3 => return hypot3(v[0], v[1], v[2]),
-        4 => return hypot4(v[0], v[1], v[2], v[3]),
-        _ => {}
-    }
-    let mut max = 0.0;
-    let mut nan = false;
-    for &t in v {
-        let x = t.abs();
-        if x != x {
-            nan = true;
-        } else if x > max {
-            max = x;
-        }
-    }
-    if max == INF {
-        return INF;
-    }
-    if nan {
-        return f64::NAN;
-    }
-    if max == 0.0 {
-        return 0.0;
-    }
-    let (mut sum, mut comp) = (0.0, 0.0);
-    for &t in v {
-        kahan_step(t.abs(), max, &mut sum, &mut comp);
-    }
     sqrt(sum) * max
 }

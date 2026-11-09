@@ -13,9 +13,8 @@
 //
 // This file also computes each marking's per-entry COVERAGE FRACTIONS (the mean the shader fades to; area-averaged over the box, the albedo the secondary
 // rays see — boxes.ts upload: GI energy right at zero ray cost) and its MEAN EMISSION (an emissive marking is a LIGHT: rust/game_rules/src/game registers a one-sided
-// rectangular emitter for it exactly like an emissive fixture box, so ReSTIR shadows, the beams, the bounce and the light meter all see it).
+// rectangular emitter for it exactly like an emissive fixture box, so ReSTIR shadows, the beams and the bounce all see it).
 import type { Vec3 } from '../math/vec';
-import { onExact } from '../math/exact';
 
 /** the base world-space texel (m): a key cap, a text bar, an LED are one of these (fine = half, coarse = double) */
 export const MARKING_TEXEL = 0.025;
@@ -253,7 +252,7 @@ const arc = (cx: number, cy: number, rx: number, ry: number, a0: number, a1: num
 /** THE FIGURES AS A SIGN PAINTER DRAWS THEM: each a few strokes in a box of 0‥1 (y up), drawn at whatever size the stencil is cut (GEN.text, scale 2 and over) */
 const numeral: Record<string, readonly (readonly (readonly [number, number])[])[]> = {};
 export const NUMERAL: Readonly<Record<string, readonly (readonly (readonly [number, number])[])[]>> = numeral;
-onExact(() => { Object.assign(numeral, {   // (made in onExact, not as the module loads: an arc's cos and sin worked out at load are the engine's whatever the maths switch says — math/exact.ts)
+Object.assign(numeral, {
   0: [arc(0.5, 0.5, 0.5, 0.5, 0, 360, 20)],
   1: [[[0.12, 0.72], [0.5, 1], [0.5, 0]], [[0.12, 0], [0.88, 0]]],
   2: [[...arc(0.5, 0.7, 0.5, 0.3, 175, -35, 10), [0, 0], [1, 0]]],
@@ -264,7 +263,7 @@ onExact(() => { Object.assign(numeral, {   // (made in onExact, not as the modul
   7: [[[0, 1], [1, 1], [0.36, 0]]],
   8: [arc(0.5, 0.75, 0.42, 0.25, 0, 360, 16), arc(0.5, 0.26, 0.5, 0.26, 0, 360, 16)],
   9: [[...arc(0.5, 0.7, 0.5, 0.3, 0, 360, 16), ...arc(0.44, 0.5, 0.56, 0.5, 15, -125, 10)]],
-}); });
+});
 /** cells a stencilled text is wide at a scale (its last letter's spare column left off) */
 export const stencilWidth = (text: string, scale = 1) => Math.max(text.length * 6 - 1, 0) * scale;
 const face5 = (rows: string): readonly number[] => rows.split(' ').map(r => parseInt(r.replace(/#/g, '1').replace(/\./g, '0'), 2));

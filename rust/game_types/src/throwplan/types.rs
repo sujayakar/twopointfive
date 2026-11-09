@@ -8,7 +8,6 @@ pub struct ThrowFlight {
     pub end: V3,
     pub land: V3,
     pub points: Vec<V3>,
-    pub landed: bool,
 }
 
 #[derive(Clone, Copy, Debug, Default)]

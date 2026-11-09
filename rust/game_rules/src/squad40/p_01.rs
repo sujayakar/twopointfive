@@ -255,7 +255,7 @@ pub fn fire(g: &mut crate::game::Game, pl: PlayerId, a: &crate::squad40::Shot, a
     if turned { g.stats.squad40.turned += 1; }
     let left = squad40_left(g, &crate::seats::here(g));
     let log = &mut g.m.squad40.squad40_log;
-    log.push(Squad40ModSQUAD40LOGItem { t, who: callsign, from: a.from, at: v3::copy(at), burst: a.burst, left, turned });
+    log.push(Squad40ModSQUAD40LOGItem { burst: a.burst });
     if log.len() > 100 { log.drain(0..50); }
 }
 

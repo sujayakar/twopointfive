@@ -361,7 +361,7 @@ fn shell_row_as_beat(r: &crate::gunreload::ShellRow) -> crate::character::Reload
 /// feedPlan's answer as the weapon's events hold it (the closures of player.ts:381-384 read it; they are ReloadEvents::Rifle now)
 fn feed_for_events(f: &crate::gunreload::FeedPlan) -> crate::weapons::FeedPlan {
     let cues = f.cues.as_ref().map(|cs| cs.iter().map(|q| crate::weapons::FeedCue { t: q.t, sfx: q.sfx.clone(), gain: q.gain, rate: q.rate }).collect());
-    crate::weapons::FeedPlan { cues, times: f.times.clone(), drop: f.drop }
+    crate::weapons::FeedPlan { cues, drop: f.drop }
 }
 
 /// reload the gun in his hands, the one way a reload starts for the player: true when a reload began (player.ts reloadInHand; KITANIM.on settled)

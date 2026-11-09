@@ -8,7 +8,6 @@ pub struct Placement {
     pub room: String,
     pub mark: f64,
     pub pos: V3,
-    pub watch: String,
     pub aim_at: V3,
     pub name: String,
 }
@@ -23,24 +22,6 @@ impl RoomClearEnd {
         match self {
             RoomClearEnd::Taken => "taken",
             RoomClearEnd::Wiped => "wiped",
-        }
-    }
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum RoomClearState {
-    Off,
-    Taken,
-    Wiped,
-    Live,
-}
-impl RoomClearState {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RoomClearState::Off => "off",
-            RoomClearState::Taken => "taken",
-            RoomClearState::Wiped => "wiped",
-            RoomClearState::Live => "live",
         }
     }
 }
@@ -65,7 +46,6 @@ pub struct RoomClearScenario {
     pub attempt: f64,
     pub fresh: f64,
     pub way: f64,
-    pub log: Vec<crate::roomclear::RoomClearScenarioLogItem>,
     pub pair_said: bool,
     pub entry_said: bool,
     pub team_said: bool,
@@ -87,7 +67,6 @@ impl RoomClearScenario {
             attempt: 0.0,
             fresh: 0.0,
             way: 0.0,
-            log: Vec::new(),
             pair_said: false,
             entry_said: false,
             team_said: false,
@@ -98,12 +77,6 @@ impl RoomClearScenario {
     }
 }
 impl Default for RoomClearScenario { fn default() -> Self { Self::blank() } }
-
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct RoomClearScenarioLogItem {
-    pub t: f64,
-    pub what: String,
-}
 
 #[derive(Clone, Debug, Default)]
 pub struct PlaceDefendersS {
@@ -131,12 +104,6 @@ pub struct PropGapP {
     pub home: [f64; 3],
     pub hx: f64,
     pub hz: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct RoomClearScenarioTeam {
-    pub sam: bool,
-    pub ops: f64,
 }
 
 #[derive(Clone, Debug, Default)]

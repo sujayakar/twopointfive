@@ -39,7 +39,7 @@ struct Frame {
   rigCfg: vec4f,                            // SDF CHARACTER RIG (render/sdfrig.ts, shaders/sdfrig.wgsl): x = bits (64 = character self-shadow in the direct estimators' shadow rays (selfShadowT), 128 = mesh shadows for near receivers only (meshShadowT); the bits under 64 are free — the round-cone proxy test is unconditional); yzw free
   rigCfgB: vec4f,                           // free
   giCfg: vec4f,                             // four free words (the young-history gather rays read them until 2026-11-07)
-  weatherE: vec4f,                          // PARTICLE RAIN (experiment, rust/game_rules/src/rain_fx + shaders/particles*.wgsl): xy = centre xz of the near-field particle layer's disc, z = its radius (m), w = the share 0‥1 of the LATTICE rain volumetrics.wgsl drops inside it (rainNearKeep) — 0 = no particle layer: the lattice exactly as it was (NEGATIVE on a snow level: the metres past the level's rim the snow goes on falling, particles_common.wgsl snowPast — every lattice reader asks `> 0.0`)
+  weatherE: vec4f,                          // PARTICLE RAIN (experiment, src/picture/rain.ts + shaders/particles*.wgsl): xy = centre xz of the near-field particle layer's disc, z = its radius (m), w = the share 0‥1 of the LATTICE rain volumetrics.wgsl drops inside it (rainNearKeep) — 0 = no particle layer: the lattice exactly as it was (NEGATIVE on a snow level: the metres past the level's rim the snow goes on falling, particles_common.wgsl snowPast — every lattice reader asks `> 0.0`)
   weatherF: vec4f,                          // PARTICLE RAIN v2: the drop's PHASE the lattice's streaks share with the particles' (volumetrics.wgsl rainLight): x = isotropic floor, y = forward-lobe weight, z = its Henyey-Greenstein g, w = × gain — w 0 = the lattice's isotropic sum exactly as it was
   shadeCfg: vec4f,                          // THE LOOK PROTOTYPE, eyes adjust to shade (engine.ts lookShade writes it, zeros = the picture as it was; the one exposure model's, place_common.wgsl lookExpoFor): x = the share of its dark a place darker than the open air is brought up by (0 = off), y = the mean radiance open air holds from the sky alone (luminance), z = spare, w = the irradiance open ground gets from the sky alone (luminance)
   veilA: vec4f,                             // THE LOOK PROTOTYPE, loose snow in the air (composite.wgsl lookPowder; render/lookveil.ts lookVeilFrame, zeros = none): xy = 1 ∕ the floor plan the powder's field covers (width, depth), z = how much of it is drawn 0‥1, w = what the sun (or the moon) puts on level ground, as luminance
@@ -972,7 +972,7 @@ const RT_HI_FADE = vec2f(0.5, 0.75);
 fn rtHiFade(maxR: f32) -> vec2f { return mix(vec2f(maxR - 0.12, maxR + 0.001), RT_HI_FADE, RT_HI_REACH); }
 // AN INFRARED LIGHT (lights.ts LIGHT_IR; rust/game_rules/src/irlight: the illuminators on the goggles): a light only the intensifier tube sees by. It is in the list only on a
 // frame whose picture is the tube's, and every pass of the picture takes it as a steady light like any other (evalLight; the engine restarts the screen
-// histories the frame the tube comes off). The game's own readings never do: evalLightTrue gives nothing for it, and directIrradiance (the cascades the light meter reads its bounce from) skips it.
+// histories the frame the tube comes off). The cascades never do: directIrradiance skips it.
 const LIGHT_IR: u32 = 0x8000000u;
 // AN OPENING TO THE OUTSIDE (lights.ts LIGHT_PORTAL; engine.ts lookOpeningLights makes them): an area light (kind 3)
 // that is no lamp but a hole the outside is seen through. DAYLIGHT IS COUNTED ONCE: the sky's light that comes through an opening is THIS light's, with a
@@ -1008,7 +1008,7 @@ const LIGHT_IR: u32 = 0x8000000u;
 //                   half width along the wall, radius its half diagonal (a portal has no cone); bits 11‥20 of the kind word = how deep its hole is, mm,
 //                   and bits 21‥22 = which of its two ends the hole has a far rim at (a lamp's marking rides there, which a portal has none of).
 //   who asks what   evalLightRaw KNOWS NOTHING OF A PORTAL: to it one is an area light as bright as its open part, and that is what every pass but
-//                   the picture's direct light gets (the cache, a bounce's hit off the screen, the light meter, the beams, a mote, a man's rim):
+//                   the picture's direct light gets (the cache, a bounce's hit off the screen, the beams, a mote, a man's rim):
 //                   their ray stops short of it, so a leaf ajar dims it by the record and a wall across the yard does not. It is pasted wherever a
 //                   light is evaluated, some twenty places in the final gather, whose routine stands within a hundredth of the software adapter's
 //                   stack limit (tools/qa/kernel-stack.cjs): a line added there is a line the gather cannot have.
@@ -1349,7 +1349,7 @@ fn lightReachLevel(slot: u32, P: vec3f) -> u32 {
 fn lightReaches(slot: u32, P: vec3f) -> bool { return lightReachLevel(slot, P) != 0u; }
 
 /// evalLight as the PICTURE takes it: the light's irradiance under the fog's light classes (lightFogK — a torch nobody on the team sees the spot of gives nothing
-/// there). Every pass of the picture asks this one; the game's own readings (probe.wgsl: the light meter, the guards' eyes) ask evalLightTrue.
+/// there). Every pass of the picture asks this one.
 fn evalLight(li: Light, P: vec3f, N: vec3f) -> LightEval {
   var r = evalLightRaw(li, P, N);
   if (r.ok && (li.kind & (LIGHT_FOG_SEEN | LIGHT_FOG_UNSEEN)) != 0u) {
@@ -1369,12 +1369,6 @@ fn evalLightDirect(li: Light, P: vec3f, N: vec3f) -> LightEval {
   r.L = d / max(dist, 1e-4); r.dist = vec3f(dist, 0.0, 0.0);
   r.E = portalFlux(li, P, N) * (portalArea(li) * lightWindow(dist, li.range)); r.ok = any(r.E > vec3f(0.0));
   return r;
-}
-/// the light as it IS (the fog's classes not asked): what the game's own readings take. A light that exists only in the fog's picture (LIGHT_FOG_UNSEEN: a lamp
-/// remembered lit) is no light here.
-fn evalLightTrue(li: Light, P: vec3f, N: vec3f) -> LightEval {
-  if ((li.kind & (LIGHT_FOG_UNSEEN | LIGHT_IR)) != 0u) { var r: LightEval; r.ok = false; r.E = vec3f(0.0); return r; }   // (… and an infrared light is no light to a bare eye, a camera or the meter)
-  return evalLightRaw(li, P, N);
 }
 fn evalLightRaw(li: Light, P: vec3f, N: vec3f) -> LightEval {
   var r: LightEval; r.ok = false; r.E = vec3f(0.0);
@@ -1412,7 +1406,7 @@ fn directIrradiance(P: vec3f, N: vec3f, skipOwner: u32, minE: f32, includeTransi
   for (var i = 0u; i < frame.numLights; i++) {
     let li = lights[i];
     if (!includeTransient && lightTransient(li)) { continue; }
-    if ((li.kind & (LIGHT_FOG_UNSEEN | LIGHT_IR)) != 0u) { continue; }   // (an infrared light likewise, whatever includeTransient says)   // a lamp that is lit only in the fog's picture (lights.ts RtLight.fogGhost) gives the cascades nothing: the game's light meter reads its bounce from them, and must never read a light that is not there
+    if ((li.kind & (LIGHT_FOG_UNSEEN | LIGHT_IR)) != 0u) { continue; }   // (an infrared light likewise, whatever includeTransient says)   // a lamp that is lit only in the fog's picture (lights.ts RtLight.fogGhost) gives the cascades nothing
     if (!lightReaches(i, P)) { continue; }   // walled off from this cell (reach.ts): neither scored nor traced
     let ev = evalLight(li, P, N);
     if (!ev.ok) { continue; }

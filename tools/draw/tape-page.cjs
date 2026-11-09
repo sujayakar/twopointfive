@@ -16,7 +16,7 @@ const same = (a, b) => a.die === b.die && a.parts === b.parts, whole = (a, b) =>
   };
   const still = async (page, name) => { if (OUT) { mkdirSync(OUT, { recursive: true }); await page.evaluate(() => window.__draw.engine.device.queue.onSubmittedWorkDone()); await page.screenshot({ path: `${OUT}/${name}.png` }); } };
   // ---- the run
-  const R = await open('paused&quality=verylow&mute&seed=7&roomclear&squad4&freshstart=0');
+  const R = await open('paused&quality=verylow&mute&seed=7&roomclear&squad4');
   const run = await R.page.evaluate(async () => {
     const d = window.__draw, I = d.input, go = (n, keys) => d.run(n, keys, 'none'); go(60);
     go(90, ['KeyW']); I.pressed.add('F5'); go(2); I.mouseX = 900; I.mouseY = 300; I.buttons |= 1; I.clicked |= 1; go(30); I.buttons = 0; go(200, ['KeyD']);

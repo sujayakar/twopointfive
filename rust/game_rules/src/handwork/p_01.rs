@@ -21,9 +21,6 @@ fn owner_of(g: &Game, c: CharId) -> f64 { (js::to_i32(g.ch[c].id) & 0xff) as f64
 
 // ---------------------------------------------------------------- the switch
 
-/// Is this half of the switch on? Settled on the page: always. (handwork.ts live, handworkOn)
-pub fn live(g: &mut crate::game::Game, half: crate::handwork::LiveHalf) -> bool { true }
-
 // ---------------------------------------------------------------- the work pose
 
 /// Feed one man's work pose for this frame. (handwork.ts workAt)

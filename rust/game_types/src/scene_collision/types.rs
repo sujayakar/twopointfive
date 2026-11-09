@@ -31,7 +31,6 @@ pub enum FirePass {
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct LampRows {
-    pub st: crate::Opaque,
     pub leave: f64,
     pub steady: bool,
 }
@@ -171,42 +170,19 @@ pub struct StaticCollisionLampQ {
     pub rows: Option<crate::scene_collision::LampRows>,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct ShotPanesItem {
-    pub bi: f64,
-    pub t: f64,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct SceneCollisionModBOTH {
-    pub on: bool,
-    pub asked: f64,
-    pub differ: f64,
-    pub stale: f64,
-    pub first: String,
-    pub things: f64,
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct SceneCollisionModANYTIME {
     pub on: bool,
     pub proofs: f64,
     pub windows: f64,
-    pub who: Option<JsMap<String, f64>>,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct SceneCollisionModSENSED {
     pub sight: f64,
     pub light: f64,
-    pub smoke: f64,
     pub sound: f64,
     pub paths: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct SENSEWATCH {
-    pub see: Option<crate::FnField>,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -217,7 +193,6 @@ pub struct SceneCollisionModLAMPS {
 #[derive(Clone, Copy, Debug, Default)]
 pub struct SceneCollisionModRAYS {
     pub n: f64,
-    pub host: f64,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -229,12 +204,6 @@ pub struct SceneCollisionModPRICED {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct BothPanesItem {
-    pub bi: f64,
-    pub t: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct LineBox {
     pub t0: f64,
     pub t1: f64,
@@ -243,25 +212,6 @@ pub struct LineBox {
 
 #[derive(Clone, Debug, Default)]
 pub struct AsideOwn {
-    pub q: Option<crate::scene_collision::AsideOwnQ>,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct AsideOwnQ {
-    /// INVENTED by a review: see the proposals
-    pub stamp: Vec<i32>,
-    /// INVENTED by a review: see the proposals
-    pub id: f64,
-    /// INVENTED by a review: see the proposals
-    pub cell: Vec<i32>,
-    /// INVENTED by a review: see the proposals
-    pub seg: Vec<i32>,
-    /// INVENTED by a review: see the proposals
-    pub yaw: Vec<f64>,
-    /// INVENTED by a review: see the proposals
-    pub cos: Vec<f64>,
-    /// INVENTED by a review: see the proposals
-    pub sin: Vec<f64>,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -281,21 +231,7 @@ pub struct ThingsAsk {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct ThingsBothT {
-    pub t: f64,
-    pub n: V3,
-    pub prop: crate::Opaque,
-    pub box_: BoxId,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct SegmentBlockedPanesItem {
-    pub bi: f64,
-    pub t: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct SegmentBlockedAskPanesItem {
     pub bi: f64,
     pub t: f64,
 }
@@ -367,12 +303,6 @@ pub struct GridStepK {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct SegmentBlockedHerePanesItem {
-    pub bi: f64,
-    pub t: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct Raycast {
     pub t: f64,
     pub index: f64,
@@ -382,8 +312,6 @@ pub struct Raycast {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]
 pub struct SceneCollisionMod {
-    /// (src/scene/collision.ts:101 BOTH)
-    pub both: crate::scene_collision::SceneCollisionModBOTH,
     /// (src/scene/collision.ts:105 ANYTIME)
     pub anytime: crate::scene_collision::SceneCollisionModANYTIME,
     /// (src/scene/collision.ts:107 SENSED)
@@ -398,18 +326,14 @@ pub struct SceneCollisionMod {
 impl SceneCollisionMod {
     pub fn blank() -> Self {
         SceneCollisionMod {
-            both: crate::scene_collision::SceneCollisionModBOTH { on: false, asked: 0.0, differ: 0.0, stale: 0.0, first: String::from(""), things: 0.0 },
-            anytime: crate::scene_collision::SceneCollisionModANYTIME { on: true, proofs: 0.0, windows: 0.0, who: None },
-            sensed: crate::scene_collision::SceneCollisionModSENSED { sight: 0.0, light: 0.0, smoke: 0.0, sound: 0.0, paths: 0.0 },
+            anytime: crate::scene_collision::SceneCollisionModANYTIME { on: true, proofs: 0.0, windows: 0.0 },
+            sensed: crate::scene_collision::SceneCollisionModSENSED { sight: 0.0, light: 0.0, sound: 0.0, paths: 0.0 },
             lamps: crate::scene_collision::SceneCollisionModLAMPS { parts: 0.0 },
-            rays: crate::scene_collision::SceneCollisionModRAYS { n: 0.0, host: 0.0 },
+            rays: crate::scene_collision::SceneCollisionModRAYS { n: 0.0 },
             priced: crate::scene_collision::SceneCollisionModPRICED { n: 0.0, needs: 0.0, cells: 0.0, waits: false },
         }
     }
 }
-
-/// (src/scene/collision.ts:48 SEG_PAD)
-pub const SEG_PAD: f64 = 0.05;
 
 /// (src/scene/collision.ts:87 FEET_Y)
 pub const FEET_Y: f64 = 0.2;
@@ -417,14 +341,6 @@ pub const FEET_Y: f64 = 0.2;
 /// (src/scene/collision.ts:87 BAKE_Y)
 pub const BAKE_Y: f64 = 0.25;
 
-/// (src/scene/collision.ts:90 shotPanes: a table nothing writes)
-pub fn shot_panes() -> Vec<crate::scene_collision::ShotPanesItem> { Vec::new() }
-
-/// (src/scene/collision.ts:113 SENSE_WATCH: a table nothing writes)
-pub fn sense_watch() -> crate::scene_collision::SENSEWATCH { crate::scene_collision::SENSEWATCH { see: None } }
-
 /// (src/scene/collision.ts:132 SIGHT_EYES)
 pub const SIGHT_EYES: f64 = 7.0;
 
-/// (src/scene/collision.ts:133 bothPanes: a table nothing writes)
-pub fn both_panes() -> Vec<crate::scene_collision::BothPanesItem> { Vec::new() }

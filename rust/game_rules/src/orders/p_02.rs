@@ -144,7 +144,7 @@ pub fn squad_orders_new(g: &mut crate::game::Game, cast: Option<&crate::orders::
         s.defs.push(d);
     }
     // the night breach's drill owns the pair from Sam's 'stack up' (F) until the room is called or lost (its closures are the functions nightbreach_owns, _release, _status)
-    s.owners.push(SquadOwner { name: String::from("nightbreach") });
+    s.owners.push(SquadOwner {  });
     s
 }
 

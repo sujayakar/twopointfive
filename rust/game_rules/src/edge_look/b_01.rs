@@ -68,7 +68,7 @@ pub fn edge_look_frame(g: &crate::game::Game, b: &crate::edge_look::BreakLike) -
     let n = if along_x { b.nx } else { b.nz };
     let l = 2.0 * (if along_x { h[0] } else { h[2] });
     Frame {
-        b: b.box_, along_x, cs, sn, t: if along_x { h[2] } else { h[0] }, l, n, w: l / n,
+        b: b.box_, along_x, t: if along_x { h[2] } else { h[0] }, l, n, w: l / n,
         y0: c[1] - h[1], y_top: c[1] + h[1], y_sill: c[1] + b.yb[1],
         along: if along_x { [cs, 0.0, -sn] } else { [sn, 0.0, cs] },
         nrm: if along_x { [sn, 0.0, cs] } else { [cs, 0.0, -sn] },

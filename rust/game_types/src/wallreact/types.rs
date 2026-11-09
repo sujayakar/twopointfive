@@ -7,7 +7,6 @@ use alloc::{string::String, vec::Vec};
 pub struct Breach {
     pub key: String,
     pub wall: f64,
-    pub c0: [f64; 2],
     pub u: [f64; 2],
     pub n: [f64; 2],
     pub lo: f64,
@@ -16,7 +15,6 @@ pub struct Breach {
     pub half: f64,
     pub into: Option<WallreactBreachId>,
     pub walk: bool,
-    pub t: f64,
     pub cause: crate::wallreact::BreachCause,
     pub who: f64,
     pub blast_by: Option<f64>,
@@ -34,17 +32,6 @@ pub enum BreachCause {
     Load,
     Reset,
     Collapse,
-}
-impl BreachCause {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            BreachCause::Blast => "blast",
-            BreachCause::Fire => "fire",
-            BreachCause::Load => "load",
-            BreachCause::Reset => "reset",
-            BreachCause::Collapse => "collapse",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -115,14 +102,6 @@ impl WallReact {
 }
 impl Default for WallReact { fn default() -> Self { Self::blank() } }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct WALLREACTDEBUG {
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct WALLREACTTEST {
-}
-
 #[derive(Clone, Copy, Debug)]
 pub enum WallReactHeadGd {
     Guard(GuardId),
@@ -177,15 +156,6 @@ pub enum WallReactReconsider {
     Moved,
     Later,
 }
-impl WallReactReconsider {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            WallReactReconsider::Fine => "fine",
-            WallReactReconsider::Moved => "moved",
-            WallReactReconsider::Later => "later",
-        }
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum WallReactReconsider10 {
@@ -209,30 +179,12 @@ pub enum WallReactShift {
     Moved,
     Later,
 }
-impl WallReactShift {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            WallReactShift::Fine => "fine",
-            WallReactShift::Moved => "moved",
-            WallReactShift::Later => "later",
-        }
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum WallReactOpMove {
     Fine,
     Moved,
     Later,
-}
-impl WallReactOpMove {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            WallReactOpMove::Fine => "fine",
-            WallReactOpMove::Moved => "moved",
-            WallReactOpMove::Later => "later",
-        }
-    }
 }
 
 /// the state this module keeps at its top level
@@ -269,12 +221,6 @@ pub struct WallreactStats {
     pub replans: i32,
     pub openings: i32,
 }
-
-/// (src/game/wallreact.ts:106 WALLREACT_DEBUG: a table nothing writes)
-pub fn wallreact_debug() -> crate::wallreact::WALLREACTDEBUG { crate::wallreact::WALLREACTDEBUG {  } }
-
-/// (src/game/wallreact.ts:107 WALLREACT_TEST: a table nothing writes)
-pub fn wallreact_test() -> crate::wallreact::WALLREACTTEST { crate::wallreact::WALLREACTTEST {  } }
 
 /// (src/game/wallreact.ts:137 EYE)
 pub const EYE: f64 = 1.55;

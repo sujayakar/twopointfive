@@ -184,9 +184,6 @@ impl<I: Id, T> Tab<I, T> {
     pub fn len(&self) -> usize {
         self.rows.len()
     }
-    pub fn is_empty(&self) -> bool {
-        self.rows.is_empty()
-    }
     /// every ID, in the order made
     pub fn ids(&self) -> impl Iterator<Item = I> {
         (0..self.rows.len()).map(I::from_ix)

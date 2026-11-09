@@ -467,6 +467,3 @@ pub fn reset_pressure(g: &mut crate::game::Game) {
     g.k.pressure = pressure_defaults();
 }
 
-/// the host's stored copy of the table: nothing here   (pressure.ts savePressure)
-pub fn save_pressure(g: &crate::game::Game) {}
-

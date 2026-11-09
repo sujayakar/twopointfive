@@ -150,7 +150,7 @@ pub fn door_tools_new(g: &mut crate::game::Game) -> crate::doortools::DoorTools 
     register(g, rows::def(&rows::bangclear::ORDER, OrderDef { page: Some(String::from(TOOLS_PAGE)), targets: vec![K::Door], ack: Some(strs(&["bang and clear.", "copy, banging it."])), on_word: Some(true), ..OrderDef::default() }), None);
     register(g, rows::def(&rows::charge::ORDER, OrderDef { page: Some(String::from(TOOLS_PAGE)), targets: vec![K::Door], ack: Some(strs(&["copy.", "on it."])), ..OrderDef::default() }), None);
     let frag_key = g.k.frag.order_key.clone();
-    register(g, rows::def(&rows::fragclear::ORDER, OrderDef { page: Some(String::from(TOOLS_PAGE)), hot_key: Some(frag_key), page_only: Some(true), targets: vec![K::Door], ack: Some(strs(&["frag and clear.", "copy, fragging it."])), on_word: Some(true), ..OrderDef::default() }), None);
+    register(g, rows::def(&rows::fragclear::ORDER, OrderDef { page: Some(String::from(TOOLS_PAGE)), hot_key: Some(frag_key), targets: vec![K::Door], ack: Some(strs(&["frag and clear.", "copy, fragging it."])), on_word: Some(true), ..OrderDef::default() }), None);
     // the row that stands in for the tools' while the jambs are held (doortools.ts:846). no part registered it (CHANGES-6)
     register(g, rows::def(&rows::held::ORDER, OrderDef { targets: vec![K::Door], opens: Some(String::from(crate::doortools::HELD_PAGE)),
         stands_in: Some(crate::orders::OrderDefStandsIn { for_: String::from(TOOLS_PAGE) }), ..OrderDef::default() }), None);
@@ -212,7 +212,7 @@ pub fn door_tools_refund(g: &mut crate::game::Game, what: crate::doortools::Door
 
 /// a new cast is a fresh run; the rows that hang on the cast dealt again   (doortools.ts DoorTools.sync)
 pub fn door_tools_sync(g: &mut crate::game::Game) {
-    use crate::orders::{rows, OrderDef, TargetKind as K, WORD_HEAD};
+    use crate::orders::{rows, OrderDef, TargetKind as K};
     use crate::doortools::{BIG_KEY, BIG_ORDER, TOOLS_PAGE};
     let (mut i, mut same, mut at) = (0usize, true, 0usize);
     while at < g.guards.len() {
@@ -247,11 +247,11 @@ pub fn door_tools_sync(g: &mut crate::game::Game) {
     if small && g.door_tools.go_key != Some(Some(String::from("small"))) {
         g.door_tools.go_key = Some(Some(String::from("small")));
         let blow = g.k.doortools.blow_key.clone();
-        register(g, rows::def(&rows::go::ORDER, OrderDef { head: Some(String::from(WORD_HEAD)), hot_key: Some(blow), targets: vec![K::Floor, K::Door, K::None], listed: Some(Vec::new()), ack: Some(strs(&["going.", "moving."])), ..OrderDef::default() }), None);
+        register(g, rows::def(&rows::go::ORDER, OrderDef { hot_key: Some(blow), targets: vec![K::Floor, K::Door, K::None], listed: Some(Vec::new()), ack: Some(strs(&["going.", "moving."])), ..OrderDef::default() }), None);
     } else if !small && g.door_tools.go_key != Some(go_key.clone()) {
         g.door_tools.go_key = Some(go_key.clone());
         if let Some(key) = &go_key {
-            register(g, rows::def(&rows::go::ORDER, OrderDef { head: Some(String::from(WORD_HEAD)), hot_key: Some(key.clone()).filter(|k| !k.is_empty()), targets: vec![K::Floor, K::Door, K::None], listed: Some(vec![K::Floor, K::None]), ack: Some(strs(&["going.", "moving."])), ..OrderDef::default() }), None);
+            register(g, rows::def(&rows::go::ORDER, OrderDef { hot_key: Some(key.clone()).filter(|k| !k.is_empty()), targets: vec![K::Floor, K::Door, K::None], listed: Some(vec![K::Floor, K::None]), ack: Some(strs(&["going.", "moving."])), ..OrderDef::default() }), None);
         } else {
             crate::orders::squad_orders_unregister(g, crate::orders::rows::go::ORDER.id);
         }
@@ -285,7 +285,7 @@ pub fn door_tools_sync(g: &mut crate::game::Game) {
     let thr_key = match &go_key { None => g.k.doortools.blow_key.clone(), Some(k) => k.clone() };
     if Some(&thr_key) != g.door_tools.thr_key.as_ref() {
         g.door_tools.thr_key = Some(thr_key.clone());
-        register(g, rows::def(&rows::thrword::ORDER, OrderDef { page: Some(String::from(crate::doortools::HELD_PAGE)), head: Some(String::from(WORD_HEAD)), hot_key: Some(thr_key).filter(|k| !k.is_empty()), targets: vec![K::Door], ..OrderDef::default() }), None);
+        register(g, rows::def(&rows::thrword::ORDER, OrderDef { page: Some(String::from(crate::doortools::HELD_PAGE)), hot_key: Some(thr_key).filter(|k| !k.is_empty()), targets: vec![K::Door], ..OrderDef::default() }), None);
     }
 }
 
@@ -312,7 +312,6 @@ pub fn door_tools_reset(g: &mut crate::game::Game) {
     g.door_tools.bangs = crate::seats::seat_share(g, n);
     let n = g.k.frag.squad;
     g.door_tools.frags = crate::seats::seat_share(g, n);
-    g.door_tools.log.clear();
     g.door_tools.stats = crate::doortools::DoorToolsStats::default();
     g.door_tools.seen = None;
     g.door_tools.led = crate::doortools::DoorToolsLed { entries: 0.0, by_seen: 0.0 };
@@ -325,14 +324,6 @@ pub fn door_tools_alone(g: &mut crate::game::Game, n: f64) {
     g.door_tools.set.clear();
     g.door_tools.sam_spent = 0.0;
     g.door_tools.charges = m::max(0.0, m::floor(n));
-}
-
-/// a checkpoint's charge back on its door, as he set it   (doortools.ts DoorTools.setBack)
-pub fn door_tools_set_back(g: &mut crate::game::Game, d: DoorId, side: f64) {
-    if crate::doors::door_off(g, d) || door_tools_charge_on(g, &crate::seats::here(g), d).is_some() { return; }
-    let t = g.time;
-    let c = g.tab.doortools_set_charge.push(crate::doortools::SetCharge { door: d, side, t, by: String::from(crate::ownblow::SAM_BY) });
-    g.door_tools.set.push(c);
 }
 
 /// the charge set on this door, if any   (doortools.ts DoorTools.chargeOn)

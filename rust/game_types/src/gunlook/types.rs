@@ -110,16 +110,6 @@ pub struct GunLook {
     pub bare_side: Option<bool>,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct MODELPOINTSValue {
-    pub well: V3,
-    pub cover: Option<V3>,
-    pub box_: Option<V3>,
-    pub charge: Option<V3>,
-    pub port: Option<V3>,
-    pub saddle: Option<V3>,
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct LONGMODELS {
     pub m870: Option<crate::gunlook::LongModel>,
@@ -141,15 +131,6 @@ pub struct PISTOLMODELS {
     pub hk45: Option<crate::gunlook::PistolModel>,
     pub g18: Option<crate::gunlook::PistolModel>,
 }
-
-/// (src/game/gunlook.ts:24 SHELLS_BREAK)
-pub const SHELLS_BREAK: bool = false;
-
-/// (src/game/gunlook.ts:25 BREAK)
-pub const BREAK: bool = false;
-
-/// (src/game/gunlook.ts:42 MODEL_POINTS: a table nothing writes)
-pub fn model_points() -> JsMap<String, crate::gunlook::MODELPOINTSValue> { { let mut t = JsMap::new(); t.set(String::from("mk12"), crate::gunlook::MODELPOINTSValue { well: [0.0, -0.06, 0.08], cover: None, box_: None, charge: None, port: None, saddle: None }); t.set(String::from("mp7"), crate::gunlook::MODELPOINTSValue { well: [0.0, -0.135, -0.045], cover: None, box_: None, charge: None, port: None, saddle: None }); t.set(String::from("mk46"), crate::gunlook::MODELPOINTSValue { well: [0.02, -0.085, 0.06], cover: Some([0.0, 0.04, 0.07]), box_: Some([0.02, -0.085, 0.06]), charge: Some([-0.03, 0.0, 0.0]), port: None, saddle: None }); t.set(String::from("m1014"), crate::gunlook::MODELPOINTSValue { well: [0.0, -0.047, 0.06], cover: None, box_: None, charge: None, port: Some([-0.02, 0.005, 0.03]), saddle: Some([0.024, 0.0, 0.0]) }); t.set(String::from("m870"), crate::gunlook::MODELPOINTSValue { well: [0.0, -0.047, 0.06], cover: None, box_: None, charge: None, port: Some([-0.02, 0.005, 0.03]), saddle: None }); t.set(String::from("hk45"), crate::gunlook::MODELPOINTSValue { well: [0.0, -0.1, -0.03], cover: None, box_: None, charge: None, port: None, saddle: None }); t.set(String::from("g18"), crate::gunlook::MODELPOINTSValue { well: [0.0, -0.1, -0.03], cover: None, box_: None, charge: None, port: None, saddle: None }); t } }
 
 /// (src/game/gunlook.ts:71 GRIP: a table nothing writes)
 pub fn grip() -> crate::gunlook::Seg { crate::gunlook::Seg { l0: 0.0, l1: 0.09, thick: 0.013, tall: 0.016, adj: Some(crate::gunlook::SegAdj { off: [0.0, -0.045, -0.015], rot: [108.0, 0.0, 0.0] }) } }

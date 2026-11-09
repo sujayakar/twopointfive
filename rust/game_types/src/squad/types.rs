@@ -75,16 +75,6 @@ pub enum ClearStage {
     Muster,
     Drill,
 }
-impl ClearStage {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            ClearStage::Approach => "approach",
-            ClearStage::Done => "done",
-            ClearStage::Muster => "muster",
-            ClearStage::Drill => "drill",
-        }
-    }
-}
 
 #[derive(Clone, Debug, ToBytes)]
 pub struct RoomClear {
@@ -164,18 +154,6 @@ pub enum RoomClearPhase {
     Stack,
     Enter,
     Resolve,
-}
-impl RoomClearPhase {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RoomClearPhase::Search => "search",
-            RoomClearPhase::Kick => "kick",
-            RoomClearPhase::Breach => "breach",
-            RoomClearPhase::Stack => "stack",
-            RoomClearPhase::Enter => "enter",
-            RoomClearPhase::Resolve => "resolve",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -310,20 +288,6 @@ pub struct RoomClearNewOpts {
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum RoomClearEndState {
-    Patrol,
-    Search,
-}
-impl RoomClearEndState {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RoomClearEndState::Patrol => "patrol",
-            RoomClearEndState::Search => "search",
-        }
-    }
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum RoomClearSayKey {
     Stack1,
     Stack2,
@@ -357,41 +321,11 @@ impl RoomClearSayKey {
     }
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct RoomClearRoutePatch {
-    pub goal: Option<V3>,
-    pub speed: Option<f64>,
-    pub face: Option<f64>,
-    pub strafe: Option<bool>,
-    pub aim_at: Option<V3>,
-    pub stance: Option<crate::character::Stance>,
-    pub stack_side: Option<f64>,
-    pub crouch: Option<bool>,
-    pub lean: Option<f64>,
-    pub upper: Option<crate::character::UpperMode>,
-    pub light: Option<bool>,
-    pub arrived: Option<bool>,
-    pub hot: Option<bool>,
-    pub flinch: Option<bool>,
-    pub direct: Option<bool>,
-    pub smoke: Option<bool>,
-    pub over: Option<crate::game::GuardScriptOver>,
-}
-
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum Perceive {
     Suspicious,
     Alert,
     Body,
-}
-impl Perceive {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Perceive::Suspicious => "suspicious",
-            Perceive::Alert => "alert",
-            Perceive::Body => "body",
-        }
-    }
 }
 
 /// the state this module keeps at its top level

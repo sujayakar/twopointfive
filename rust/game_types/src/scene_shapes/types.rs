@@ -3,14 +3,6 @@
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Debug, Default)]
-pub struct ShapeForm {
-    pub round: Option<f64>,
-    pub arc: Option<crate::scene_shapes::ShapeFormArc>,
-    pub cut: Option<Vec<[f64; 4]>>,
-    pub old: Option<bool>,
-}
-
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct ShapeFormArc {
     pub axis: f64,

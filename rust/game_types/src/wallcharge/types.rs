@@ -57,9 +57,6 @@ pub struct WallCharge {
     pub carried: Option<f64>,
     pub brought: Option<f64>,
     pub free_set: bool,
-    /// (scratch, read by nobody who did not just write it: in no bytes)
-    #[bytes(skip)]
-    pub nearby: Vec<i32>,
     pub walks: Option<crate::wallcharge::WallChargeWalks>,
     pub keep: crate::wallcharge::WallChargeKeep,
     pub pressed: bool,
@@ -91,7 +88,6 @@ impl WallCharge {
             carried: None,
             brought: None,
             free_set: false,
-            nearby: alloc::vec![0; 48],
             walks: None,
             keep: crate::wallcharge::WallChargeKeep { on: true, asks: 0.0, hits: 0.0 },
             pressed: false,
@@ -104,33 +100,7 @@ impl Default for WallCharge { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct WallChargeDoneItem {
-    pub wall: crate::wallcharge::WallSpot,
-    pub men: Vec<GuardId>,
-    pub lead: GuardId,
-    pub phase: crate::wallcharge::Phase,
     pub t0: f64,
-    pub spot: V3,
-    pub set_t: f64,
-    pub stow_off_t: Option<f64>,
-    pub owes: Option<bool>,
-    pub mine: JsMap<GuardId, OrdersAssignmentId>,
-    pub post: JsMap<GuardId, V3>,
-    pub from: JsMap<GuardId, V3>,
-    pub hole: Option<crate::wallcharge::WallChargeDoneItemHole>,
-    pub queue: Vec<crate::wallcharge::WallChargeDoneItemQueueItem>,
-    pub stage: JsMap<GuardId, crate::wallcharge::WallChargeDoneItemStageValue>,
-    pub pod: JsMap<GuardId, crate::wallcharge::Pod>,
-    pub crossed: JsMap<GuardId, f64>,
-    pub last: JsMap<GuardId, Option<V3>>,
-    pub in_t: f64,
-    pub beats: Vec<crate::wallcharge::WallChargeDoneItemBeatsItem>,
-    pub close: Option<bool>,
-    pub repick_t: Option<f64>,
-    pub repick_bad: Option<JsSet<GuardId>>,
-    pub redealt: Option<JsSet<GuardId>>,
-    pub repick_n: Option<f64>,
-    pub repick_kept: Option<JsMap<String, f64>>,
-    pub ended: String,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
@@ -140,17 +110,6 @@ pub enum Phase {
     Standoff,
     Armed,
     Enter,
-}
-impl Phase {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Phase::Wait => "wait",
-            Phase::Place => "place",
-            Phase::Standoff => "standoff",
-            Phase::Armed => "armed",
-            Phase::Enter => "enter",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -188,20 +147,6 @@ pub struct PodHold {
 pub enum WallChargeDoneItemStageValue {
     Lane,
     Pod,
-}
-impl WallChargeDoneItemStageValue {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            WallChargeDoneItemStageValue::Lane => "lane",
-            WallChargeDoneItemStageValue::Pod => "pod",
-        }
-    }
-}
-
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct WallChargeDoneItemBeatsItem {
-    pub t: f64,
-    pub what: String,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -242,13 +187,10 @@ pub struct WallChargeAwayMarksValue {
 pub struct WallChargeAwayMarksValueR {
     pub standoff: f64,
     pub reach: f64,
-    pub indoors: bool,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct WallChargeLogItem {
-    pub t: f64,
-    pub what: String,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -274,11 +216,7 @@ pub struct WallChargeKeep {
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct WallChargeLastBlow {
-    pub reach: f64,
-    pub indoors: bool,
     pub sam: f64,
-    pub lost: f64,
-    pub sam_down: bool,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -311,7 +249,6 @@ pub struct WallOp {
     pub crossed: JsMap<GuardId, f64>,
     pub last: JsMap<GuardId, Option<V3>>,
     pub in_t: f64,
-    pub beats: Vec<crate::wallcharge::WallChargeDoneItemBeatsItem>,
     pub close: Option<bool>,
     pub repick_t: Option<f64>,
     pub repick_bad: Option<JsSet<GuardId>>,
@@ -324,14 +261,6 @@ pub struct WallOp {
 pub enum WallOpStageValue {
     Lane,
     Pod,
-}
-impl WallOpStageValue {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            WallOpStageValue::Lane => "lane",
-            WallOpStageValue::Pod => "pod",
-        }
-    }
 }
 
 #[derive(Clone, Debug, Default)]
@@ -425,10 +354,6 @@ pub enum WallChargeValid {
     Bool(bool),
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct WallChargeKeptWalksM {
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct WallChargeAssignA {
     pub post: Option<V3>,
@@ -497,78 +422,17 @@ pub enum WallChargeOrderWho {
 #[derive(Clone, Copy, Debug, Default)]
 pub struct WallChargeBlow {
     pub hole: bool,
-    pub knocked: f64,
-    pub stunned: f64,
-    pub backblast: f64,
-    pub lost: f64,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct WallChargeBlowRaw {
     pub hole: bool,
-    pub knocked: f64,
-    pub stunned: f64,
-    pub backblast: f64,
-    pub lost: f64,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct WallChargeHoleAt {
     pub du: f64,
     pub half: f64,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct WallChargeSamRowsRowOver {
-    pub kind: Option<crate::wallcharge::WallChargeSamRowsRowOverKind>,
-    pub pos: Option<V3>,
-    pub line1: Option<String>,
-    pub line2: Option<String>,
-    pub in_reach: Option<bool>,
-    pub off: Option<bool>,
-    pub progress: Option<f64>,
-    pub target: Option<FixtureId>,
-    pub door: Option<DoorId>,
-    pub guard: Option<GuardId>,
-    pub verb: Option<crate::game::Verb>,
-    pub running: Option<bool>,
-    pub close: Option<crate::close::CloseKind>,
-    pub past: Option<bool>,
-    pub framed: Option<bool>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum WallChargeSamRowsRowOverKind {
-    Cam,
-    Guard,
-    Breaker,
-    Door,
-    Light,
-    Body,
-    Objective,
-    Held,
-    Wall,
-    Switch,
-    Charge,
-    Cancel,
-}
-impl WallChargeSamRowsRowOverKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            WallChargeSamRowsRowOverKind::Cam => "cam",
-            WallChargeSamRowsRowOverKind::Guard => "guard",
-            WallChargeSamRowsRowOverKind::Breaker => "breaker",
-            WallChargeSamRowsRowOverKind::Door => "door",
-            WallChargeSamRowsRowOverKind::Light => "light",
-            WallChargeSamRowsRowOverKind::Body => "body",
-            WallChargeSamRowsRowOverKind::Objective => "objective",
-            WallChargeSamRowsRowOverKind::Held => "held",
-            WallChargeSamRowsRowOverKind::Wall => "wall",
-            WallChargeSamRowsRowOverKind::Switch => "switch",
-            WallChargeSamRowsRowOverKind::Charge => "charge",
-            WallChargeSamRowsRowOverKind::Cancel => "cancel",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -591,9 +455,6 @@ impl WallchargeMod {
         }
     }
 }
-
-/// (src/game/wallcharge.ts:212 WALLCHARGE_DEFAULTS: a table nothing writes)
-pub fn wallcharge_defaults() -> crate::knobs::WallchargeK { crate::knobs::WallchargeK::page() }
 
 /// (src/game/wallcharge.ts:284 FACE)
 pub const FACE: f64 = 0.06;

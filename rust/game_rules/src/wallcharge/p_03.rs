@@ -202,7 +202,7 @@ pub fn wall_charge_issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::
     let row = WallOp {
         wall: w.clone(), men: men.to_vec(), lead: p.lead, phase: Phase::Place, t0: g.time, spot: p.spot, set_t: f64::NAN, stow_off_t: None, owes: None,
         mine: JsMap::new(), post, from, hole: None, queue: Vec::new(), stage: JsMap::new(), pod: JsMap::new(), crossed: JsMap::new(), last: JsMap::new(),
-        in_t: f64::NAN, beats: Vec::new(), close: if p.close { Some(true) } else { None }, repick_t: None, repick_bad: None, redealt: None, repick_n: None, repick_kept: None,
+        in_t: f64::NAN, close: if p.close { Some(true) } else { None }, repick_t: None, repick_bad: None, redealt: None, repick_n: None, repick_kept: None,
     };
     let op = g.tab.wallcharge_wall_op.push(row);
     g.wall_charge.ops.push(op);
@@ -254,10 +254,7 @@ fn done_item(r: &WallOp, why: &str) -> WallChargeDoneItem {
     let mut stage = JsMap::new();
     for (k, v) in r.stage.iter() { stage.set(k, match *v { WallOpStageValue::Lane => WallChargeDoneItemStageValue::Lane, WallOpStageValue::Pod => WallChargeDoneItemStageValue::Pod }); }
     WallChargeDoneItem {
-        wall: r.wall.clone(), men: r.men.clone(), lead: r.lead, phase: r.phase, t0: r.t0, spot: r.spot, set_t: r.set_t, stow_off_t: r.stow_off_t, owes: r.owes,
-        mine: r.mine.clone(), post: r.post.clone(), from: r.from.clone(), hole: r.hole, queue: r.queue.clone(), stage, pod: r.pod.clone(), crossed: r.crossed.clone(),
-        last: r.last.clone(), in_t: r.in_t, beats: r.beats.clone(), close: r.close, repick_t: r.repick_t, repick_bad: r.repick_bad.clone(), redealt: r.redealt.clone(),
-        repick_n: r.repick_n, repick_kept: r.repick_kept.clone(), ended: String::from(why),
+        t0: r.t0,
     }
 }
 
@@ -855,7 +852,7 @@ pub fn wall_charge_blow(g: &mut crate::game::Game, c_2: Option<WallChargeId>, pr
     let pressed = pressed.unwrap_or(true);
     let who = g.ch[g.pl[g.player].ch].id;
     let r = crate::scene_collision::window(g, &mut |g: &mut Game| crate::fogofwar::fog_of_war_doing(g, Some(who), &mut |g: &mut Game| wall_charge_blow_raw(g, c, pressed)));
-    r.map(|x| WallChargeBlow { hole: x.hole, knocked: x.knocked, stunned: x.stunned, backblast: x.backblast, lost: x.lost })
+    r.map(|x| WallChargeBlow { hole: x.hole })
 }
 
 /// Sam inside the reach when it went: knocked along the blast, no round for a beat, his aim open. Never a hit   (wallcharge.ts WallCharge.samCaught)
@@ -1040,7 +1037,7 @@ pub fn wall_charge_blow_raw(g: &mut crate::game::Game, c_2: Option<WallChargeId>
     let mut sam = 0.0;
     let mut seat = 0;
     crate::seats::each_seat(g, &mut |g: &mut Game| { let share = seat_near[seat]; seat += 1; blow_seat(g, &w, has_hole, r, wk, xz, share, inn, &mut sam, &mut sam_down); });   // (every player's man)
-    g.wall_charge.last_blow = Some(WallChargeLastBlow { reach: r.reach, indoors: r.indoors, sam, lost, sam_down });
+    g.wall_charge.last_blow = Some(WallChargeLastBlow { sam });
     if has_hole { crate::morale::morale_blast(g, inn, Some(who)); }   // (the men past the wall it opened are shaken by it)
     let st = &mut g.wall_charge.stats;
     st.blown += 1.0;
@@ -1084,5 +1081,5 @@ pub fn wall_charge_blow_raw(g: &mut crate::game::Game, c_2: Option<WallChargeId>
         let line = format!("blow · hole {} m · {} down {} stunned", js::to_fixed(h.half * 2.0, 2), knocked, stunned);
         wall_charge_beat(g, op, &line);
     }
-    Some(WallChargeBlowRaw { hole: has_hole, knocked, stunned, backblast, lost })
+    Some(WallChargeBlowRaw { hole: has_hole })
 }

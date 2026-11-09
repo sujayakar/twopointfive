@@ -15,36 +15,12 @@ pub enum Half {
     ChokeBeats,
     Haul,
 }
-impl Half {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Half::Blow => "blow",
-            Half::Kill => "kill",
-            Half::Partner => "partner",
-            Half::Victim => "victim",
-            Half::Fall => "fall",
-            Half::Breathe => "breathe",
-            Half::Lower => "lower",
-            Half::ChokeBeats => "chokeBeats",
-            Half::Haul => "haul",
-        }
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum TakeFallHow {
     Choke,
     Whip,
     Kill,
-}
-impl TakeFallHow {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            TakeFallHow::Choke => "choke",
-            TakeFallHow::Whip => "whip",
-            TakeFallHow::Kill => "kill",
-        }
-    }
 }
 
 /// the state this module keeps at its top level

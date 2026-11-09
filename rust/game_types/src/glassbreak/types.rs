@@ -3,17 +3,8 @@
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// a burst's view of the glass for one judgment (GlassBreak.seeThrough): which panes a walk also passes
-#[derive(Clone, Debug)]
-pub enum GlassBreakAlso {
-    Blown,
-    Wary { from: V3, size: crate::glassbreak::GlassBlastOpts },
-    Counted { from: V3, size: crate::glassbreak::GlassBlastOpts },
-}
-
 #[derive(Clone, Debug, ToBytes)]
 pub struct GlassBreak {
-    pub log: Vec<String>,
     pub sheet_list: Option<Vec<f64>>,
     pub view_of: Option<crate::glassbreak::GlassBreakViewOf>,
     pub gust_dirty: bool,
@@ -23,7 +14,6 @@ impl GlassBreak {
     /// what a new one holds
     pub fn blank() -> Self {
         GlassBreak {
-            log: Vec::new(),
             sheet_list: None,
             view_of: None,
             gust_dirty: false,
@@ -46,26 +36,12 @@ pub enum GlassBreakViewOfKind {
     Wary,
     Counted,
 }
-impl GlassBreakViewOfKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            GlassBreakViewOfKind::Blown => "blown",
-            GlassBreakViewOfKind::Wary => "wary",
-            GlassBreakViewOfKind::Counted => "counted",
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct GlassBlastOpts {
     pub radius: Option<f64>,
     pub power: Option<f64>,
     pub who: Option<f64>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct GbTune {
-    pub glass_break: Option<bool>,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -83,23 +59,15 @@ pub struct GlassImpact {
 
 #[derive(Clone, Debug, Default)]
 pub struct GlassFragment {
-    pub pane: f64,
-    pub type_: crate::glasspen::PaneType,
     pub kind: crate::glassbreak::GlassFragmentKind,
     pub outline: Vec<V3>,
     pub centre: V3,
     pub normal: V3,
-    pub thickness: f64,
     pub area: f64,
     pub velocity: V3,
     pub spin: V3,
-    pub tint: V3,
     pub grain: f64,
-    pub cause: crate::glassbreak::GlassFragmentCause,
     pub who: f64,
-    pub seed: f64,
-    pub fall: Option<crate::glassbreak::GlassFragmentFall>,
-    pub landed: Option<bool>,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
@@ -108,36 +76,6 @@ pub enum GlassFragmentKind {
     Sheet,
     Dagger,
     Clump,
-}
-impl GlassFragmentKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            GlassFragmentKind::Piece => "piece",
-            GlassFragmentKind::Sheet => "sheet",
-            GlassFragmentKind::Dagger => "dagger",
-            GlassFragmentKind::Clump => "clump",
-        }
-    }
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-pub enum GlassFragmentCause {
-    #[default] Blast,
-    Hit,
-    Dice,
-    Support,
-    Rake,
-}
-impl GlassFragmentCause {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            GlassFragmentCause::Blast => "blast",
-            GlassFragmentCause::Hit => "hit",
-            GlassFragmentCause::Dice => "dice",
-            GlassFragmentCause::Support => "support",
-            GlassFragmentCause::Rake => "rake",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -149,130 +87,35 @@ pub struct GlassFragmentFall {
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Clump {
     pub k: f64,
-    pub c: f64,
-    pub r: f64,
     pub key: f64,
 }
 
 #[derive(Clone, Debug, Default)]
 pub struct Dice {
-    pub t0: f64,
-    pub clumps: Vec<crate::glassbreak::Clump>,
-    pub next: f64,
-    pub out: Vec<u8>,
-    pub u: f64,
-    pub v: f64,
-    pub cols: f64,
-    pub rows: f64,
-    pub seed: f64,
-    pub hu: f64,
-    pub hv: f64,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Pending {
-    pub fid: f64,
-    pub at: f64,
-    pub cause: crate::glassbreak::PendingCause,
-    pub from: Option<V3>,
-    pub k: f64,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-pub enum PendingCause {
-    #[default] Blast,
-    Hit,
-    Dice,
-    Support,
-    Rake,
-}
-impl PendingCause {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            PendingCause::Blast => "blast",
-            PendingCause::Hit => "hit",
-            PendingCause::Dice => "dice",
-            PendingCause::Support => "support",
-            PendingCause::Rake => "rake",
-        }
-    }
 }
 
 #[derive(Clone, Debug, Default)]
 pub struct PaneState {
-    pub bi: f64,
-    pub box_: BoxId,
-    pub key: f64,
-    pub type_: crate::glasspen::PaneType,
-    pub u_axis: f64,
-    pub hu: f64,
-    pub hv: f64,
-    pub ht: f64,
-    pub exterior: bool,
-    pub sites: Vec<crate::glass_pattern::GpSite>,
-    pub run: bool,
-    pub open: Vec<u8>,
-    pub n_open: f64,
-    pub hits: f64,
-    pub energy: f64,
-    pub damage: f64,
-    pub frags: Option<Vec<crate::glass_pattern::GpFrag>>,
-    pub pending: Vec<crate::glassbreak::Pending>,
-    pub next_think: f64,
-    pub dice: Option<crate::glassbreak::Dice>,
-    pub gone: bool,
-    pub last_dir: V3,
-    pub last_who: f64,
-    pub last_uv: [f64; 2],
-    pub sound_at: f64,
-    pub walkable: bool,
-    pub log: Vec<String>,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct PaneFrame {
     pub key: f64,
     pub u_axis: f64,
-    pub hu: f64,
-    pub hv: f64,
     pub ht: f64,
     pub box_: BoxId,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct GLASSBREAKDEFAULTS {
-    pub break_e: crate::glassbreak::GLASSBREAKDEFAULTSBreakE,
-    pub hang_area: f64,
-    pub blast_m: f64,
-    pub blast_run_k: f64,
-    pub blast_dice_k: f64,
-    pub blast_sheet_k: f64,
-    pub rake_open: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct GLASSBREAKDEFAULTSBreakE {
-    pub annealed: f64,
-    pub tempered: f64,
-}
-
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct GlassbreakModGBHOST {
-    pub panes: f64,
-    pub impacts: f64,
-    pub sites: f64,
-    pub runs: f64,
-    pub dropped: f64,
     pub shards: f64,
     pub chips: f64,
     pub refused: f64,
-    pub diced: f64,
-    pub clumps: f64,
-    pub sheets: f64,
-    pub blasts: f64,
-    pub thinks: f64,
     pub hooked: f64,
-    pub raked: f64,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -283,20 +126,16 @@ pub struct TALLYAT {
     pub sites: Option<f64>,
     pub runs: Option<f64>,
     pub shards: Option<f64>,
-    pub chips: Option<f64>,
-    pub refused: Option<f64>,
     pub diced: Option<f64>,
     pub clumps: Option<f64>,
     pub sheets: Option<f64>,
     pub blasts: Option<f64>,
     pub thinks: Option<f64>,
-    pub hooked: Option<f64>,
     pub raked: Option<f64>,
 }
 
 #[derive(Clone, Debug, Default)]
 pub struct GlassBreakLetGoF {
-    pub pane: f64,
     pub type_: crate::glasspen::PaneType,
     pub kind: crate::glassbreak::GlassBreakLetGoFKind,
     pub outline: Vec<V3>,
@@ -325,16 +164,6 @@ pub enum GlassBreakLetGoFKind {
     Dagger,
     Clump,
 }
-impl GlassBreakLetGoFKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            GlassBreakLetGoFKind::Piece => "piece",
-            GlassBreakLetGoFKind::Sheet => "sheet",
-            GlassBreakLetGoFKind::Dagger => "dagger",
-            GlassBreakLetGoFKind::Clump => "clump",
-        }
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum GlassBreakLetGoFCause {
@@ -344,17 +173,6 @@ pub enum GlassBreakLetGoFCause {
     Support,
     Rake,
 }
-impl GlassBreakLetGoFCause {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            GlassBreakLetGoFCause::Blast => "blast",
-            GlassBreakLetGoFCause::Hit => "hit",
-            GlassBreakLetGoFCause::Dice => "dice",
-            GlassBreakLetGoFCause::Support => "support",
-            GlassBreakLetGoFCause::Rake => "rake",
-        }
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum GlassBreakSeeThroughView {
@@ -362,27 +180,11 @@ pub enum GlassBreakSeeThroughView {
     Wary,
     Counted,
 }
-impl GlassBreakSeeThroughView {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            GlassBreakSeeThroughView::Blown => "blown",
-            GlassBreakSeeThroughView::Wary => "wary",
-            GlassBreakSeeThroughView::Counted => "counted",
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct GlassBreakPaneInfo {
-    pub type_: crate::glasspen::PaneType,
-    pub thickness: f64,
-    pub exterior: bool,
     pub open_fraction: f64,
-    pub walkable: bool,
     pub gone: bool,
-    pub run: bool,
-    pub sites: f64,
-    pub energy: f64,
 }
 
 /// the state this module keeps at its top level
@@ -390,72 +192,23 @@ pub struct GlassBreakPaneInfo {
 pub struct GlassbreakMod {
     /// (src/game/glassbreak.ts:193 GB_HOST)
     pub gb_host: crate::glassbreak::GlassbreakModGBHOST,
-    /// (src/game/glassbreak.ts:211 F)
-    /// (scratch, read by nobody who did not just write it: in no bytes)
-    #[bytes(skip)]
-    pub f: Option<Vec<f64>>,
 }
 impl GlassbreakMod {
     pub fn blank() -> Self {
         GlassbreakMod {
-            gb_host: crate::glassbreak::GlassbreakModGBHOST { panes: 0.0, impacts: 0.0, sites: 0.0, runs: 0.0, dropped: 0.0, shards: 0.0, chips: 0.0, refused: 0.0, diced: 0.0, clumps: 0.0, sheets: 0.0, blasts: 0.0, thinks: 0.0, hooked: 0.0, raked: 0.0 },
-            f: None,
+            gb_host: crate::glassbreak::GlassbreakModGBHOST { shards: 0.0, chips: 0.0, refused: 0.0, hooked: 0.0 },
         }
     }
 }
 
-/// the counters this module keeps for the checks
-#[derive(Clone, Debug, Default)]
-pub struct GlassbreakStats {
-    pub panes: i32,
-    pub impacts: i32,
-    pub sites: i32,
-    pub runs: i32,
-    pub dropped: i32,
-    pub shards: i32,
-    pub chips: i32,
-    pub refused: i32,
-    pub diced: i32,
-    pub clumps: i32,
-    pub sheets: i32,
-    pub blasts: i32,
-    pub thinks: i32,
-    pub hooked: i32,
-    pub raked: i32,
-}
-
-/// (src/game/glassbreak.ts:121 GLASSBREAK_DEFAULTS: a table nothing writes)
-pub fn glassbreak_defaults() -> crate::glassbreak::GLASSBREAKDEFAULTS { crate::glassbreak::GLASSBREAKDEFAULTS { break_e: crate::glassbreak::GLASSBREAKDEFAULTSBreakE { annealed: 3.0, tempered: 1.0 }, hang_area: 0.12, blast_m: 2.6, blast_run_k: 0.2, blast_dice_k: 0.45, blast_sheet_k: 0.75, rake_open: 0.5 } }
-
-/// (src/game/glassbreak.ts:123 GB_KEPT: a table nothing writes)
-pub fn gb_kept() -> [String; 4] { [String::from("blastRunK"), String::from("blastDiceK"), String::from("blastSheetK"), String::from("rakeOpen")] }
-
-/// (src/game/glassbreak.ts:124 LS_KEY)
-pub const LS_KEY: &str = "twopointsix.glassfracture.on";
-
-/// (src/game/glassbreak.ts:124 LS_KNOBS)
-pub const LS_KNOBS: &str = "twopointsix.glassfracture";
-
 /// (src/game/glassbreak.ts:195 TALLY_AT: a table nothing writes)
-pub fn tally_at() -> crate::glassbreak::TALLYAT { crate::glassbreak::TALLYAT { panes: Some(0.0), dropped: Some(4.0), impacts: Some(1.0), sites: Some(2.0), runs: Some(3.0), shards: None, chips: None, refused: None, diced: Some(5.0), clumps: Some(6.0), sheets: Some(7.0), blasts: Some(8.0), thinks: Some(9.0), hooked: None, raked: Some(10.0) } }
+pub fn tally_at() -> crate::glassbreak::TALLYAT { crate::glassbreak::TALLYAT { panes: Some(0.0), dropped: Some(4.0), impacts: Some(1.0), sites: Some(2.0), runs: Some(3.0), shards: None, diced: Some(5.0), clumps: Some(6.0), sheets: Some(7.0), blasts: Some(8.0), thinks: Some(9.0), raked: Some(10.0) } }
 
 /// (src/game/glassbreak.ts:200 GB_HEADER_ROWS)
 pub const GB_HEADER_ROWS: f64 = 4.0;
 
 /// (src/game/glassbreak.ts:200 GB_SITE_ROWS)
 pub const GB_SITE_ROWS: f64 = 4.0;
-
-/// (src/game/glassbreak.ts:200 GB_RECORD_ROWS)
-pub const GB_RECORD_ROWS: f64 = 36.0;
-
-/// (src/game/glassbreak.ts:204 TYPES: a table nothing writes)
-pub fn types() -> Vec<String> { alloc::vec![String::from("annealed"), String::from("tempered"), String::from("laminated")] }
-
-/// (src/game/glassbreak.ts:205 CAUSES: a table nothing writes)
-pub fn causes() -> Vec<String> { alloc::vec![String::from("hit"), String::from("support"), String::from("blast"), String::from("dice"), String::from("rake")] }
-
-/// (src/game/glassbreak.ts:206 KINDS: a table nothing writes)
-pub fn kinds() -> Vec<String> { alloc::vec![String::from("piece"), String::from("dagger"), String::from("clump"), String::from("sheet")] }
 
 /// (src/game/glassbreak.ts:207 NO_TYPE)
 pub const NO_TYPE: f64 = 9.0;
@@ -528,102 +281,6 @@ pub const O_FALL_X: f64 = 26.0;
 
 /// (src/game/glassbreak.ts:209 O_LANDED)
 pub const O_LANDED: f64 = 29.0;
-
-/// (src/game/glassbreak.ts:212 FIELDS)
-pub const FIELDS: f64 = 32.0;
-
-/// (src/game/glassbreak.ts:213 F_D)
-pub const F_D: f64 = 0.0;
-
-/// (src/game/glassbreak.ts:213 F_W)
-pub const F_W: f64 = 1.0;
-
-/// (src/game/glassbreak.ts:213 F_E)
-pub const F_E: f64 = 2.0;
-
-/// (src/game/glassbreak.ts:213 F_HITS)
-pub const F_HITS: f64 = 3.0;
-
-/// (src/game/glassbreak.ts:213 F_C)
-pub const F_C: f64 = 4.0;
-
-/// (src/game/glassbreak.ts:213 F_HU)
-pub const F_HU: f64 = 5.0;
-
-/// (src/game/glassbreak.ts:213 F_HV)
-pub const F_HV: f64 = 6.0;
-
-/// (src/game/glassbreak.ts:213 F_HT)
-pub const F_HT: f64 = 7.0;
-
-/// (src/game/glassbreak.ts:213 F_ENERGY)
-pub const F_ENERGY: f64 = 8.0;
-
-/// (src/game/glassbreak.ts:213 F_DAMAGE)
-pub const F_DAMAGE: f64 = 9.0;
-
-/// (src/game/glassbreak.ts:213 F_NEXT)
-pub const F_NEXT: f64 = 10.0;
-
-/// (src/game/glassbreak.ts:213 F_DIR)
-pub const F_DIR: f64 = 11.0;
-
-/// (src/game/glassbreak.ts:213 F_UV)
-pub const F_UV: f64 = 12.0;
-
-/// (src/game/glassbreak.ts:213 F_SOUND)
-pub const F_SOUND: f64 = 13.0;
-
-/// (src/game/glassbreak.ts:213 F_WHO)
-pub const F_WHO: f64 = 14.0;
-
-/// (src/game/glassbreak.ts:213 F_KEY)
-pub const F_KEY: f64 = 15.0;
-
-/// (src/game/glassbreak.ts:213 F_TY)
-pub const F_TY: f64 = 16.0;
-
-/// (src/game/glassbreak.ts:213 F_AXIS)
-pub const F_AXIS: f64 = 17.0;
-
-/// (src/game/glassbreak.ts:213 F_EXT)
-pub const F_EXT: f64 = 18.0;
-
-/// (src/game/glassbreak.ts:213 F_HITN)
-pub const F_HITN: f64 = 19.0;
-
-/// (src/game/glassbreak.ts:213 F_NOPEN)
-pub const F_NOPEN: f64 = 20.0;
-
-/// (src/game/glassbreak.ts:213 F_DNEXT)
-pub const F_DNEXT: f64 = 21.0;
-
-/// (src/game/glassbreak.ts:213 F_WALK)
-pub const F_WALK: f64 = 22.0;
-
-/// (src/game/glassbreak.ts:213 F_Q0)
-pub const F_Q0: f64 = 23.0;
-
-/// (src/game/glassbreak.ts:213 F_QN)
-pub const F_QN: f64 = 24.0;
-
-/// (src/game/glassbreak.ts:213 F_QLEN)
-pub const F_QLEN: f64 = 26.0;
-
-/// (src/game/glassbreak.ts:213 F_QAT)
-pub const F_QAT: f64 = 27.0;
-
-/// (src/game/glassbreak.ts:213 F_QFROM)
-pub const F_QFROM: f64 = 28.0;
-
-/// (src/game/glassbreak.ts:213 F_QK)
-pub const F_QK: f64 = 29.0;
-
-/// (src/game/glassbreak.ts:213 F_QFID)
-pub const F_QFID: f64 = 30.0;
-
-/// (src/game/glassbreak.ts:213 F_QCAUSE)
-pub const F_QCAUSE: f64 = 31.0;
 
 /// (src/game/glassbreak.ts:216 GW_COLS)
 pub const GW_COLS: f64 = 2.0;

@@ -8,27 +8,11 @@ pub enum RescueKStart {
     #[default] Quiet,
     Hot,
 }
-impl RescueKStart {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RescueKStart::Quiet => "quiet",
-            RescueKStart::Hot => "hot",
-        }
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum RescueKDoorMan {
     #[default] Inside,
     Corridor,
-}
-impl RescueKDoorMan {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RescueKDoorMan::Inside => "inside",
-            RescueKDoorMan::Corridor => "corridor",
-        }
-    }
 }
 
 /// The scenario's knobs (Tab ▸ Sandbox ▸ Hostage rescue, __rescue.knobs). Who stands where, the stun, the lights and the clock's dealt length are read at a staging
@@ -57,7 +41,7 @@ pub struct RescueK {
     ///  Blue One alone · 3 / 4 = the four-man squad's first three / all of it (nightbreach.ts SQUAD4: a red pair and a blue pair, in pairs for the order menu), the
     ///  men past the second stood a stride behind the pair's marks. F takes whoever is up, as ever.
     #[k(2.0)] pub squad: f64,
-    /// where the team is staged: the LEVEL's (scene/scenarios.ts RescueData.team — start() writes the team start of the level it stages on here; these are the
+    /// where the team is staged: the LEVEL's (tools/levels/lib/scenarios.ts RescueData.team — start() writes the team start of the level it stages on here; these are the
     ///  office's until it has: the lobby arch at the corridor's west end)
     #[k([7.6, 0.0, 13.4])] pub sam_at: V3,
     #[k(0.9)] pub sam_yaw: f64,

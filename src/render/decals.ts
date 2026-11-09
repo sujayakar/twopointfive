@@ -6,7 +6,7 @@
 // normal a little across a crater's bevel, and lowers the albedo target's alpha where soot should kill the polished floors' gloss. Because it is
 // the g-buffer albedo / normal that change, everything downstream — the traced direct light, the final gather's bounce AT the pixel, the gloss
 // term — responds without knowing decals exist. (What does NOT respond: the bounce OFF a marked surface onto its neighbours — secondary hits
-// shade with the box's own material — and the AI's light meter, which is irradiance, not albedo.)
+// shade with the box's own material.)
 //
 // Marks on a DYNAMIC box (a door leaf, a piece of loose furniture) are stored in that box's local frame and re-derived every frame from where
 // the box now stands (sync), restricted on the GPU to pixels of that very box; marks on statics are world-fixed and paint any surface that passes
@@ -60,7 +60,7 @@ export interface DecalOpts {
   tangent?: Vec3;
   /** kind parameter (see Decal.param); defaults per kind */
   param?: number;
-  /** laid only for the picture (rust/game_rules/src/look_decals): in a full ring it goes before any mark play laid and never pushes one out — the marks play laid are the same
+  /** laid only for the picture: in a full ring it goes before any mark play laid and never pushes one out — the marks play laid are the same
    *  marks with it and without it */
   look?: boolean;
   /** ride this (dynamic) box: pos / normal / tangent are converted into its local frame now and follow it from then on, and only ITS pixels take the mark */

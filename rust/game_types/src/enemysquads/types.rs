@@ -25,15 +25,6 @@ pub enum SquadChoice {
     Flank,
     Help,
 }
-impl SquadChoice {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SquadChoice::Barricade => "barricade",
-            SquadChoice::Flank => "flank",
-            SquadChoice::Help => "help",
-        }
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum SquadState {
@@ -72,14 +63,6 @@ pub enum FixBy {
     #[default] Ears,
     Net,
 }
-impl FixBy {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            FixBy::Ears => "ears",
-            FixBy::Net => "net",
-        }
-    }
-}
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct Sent {
@@ -110,16 +93,6 @@ pub enum SentRole {
     Help,
     Reinforce,
 }
-impl SentRole {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SentRole::Look => "look",
-            SentRole::Flank => "flank",
-            SentRole::Help => "help",
-            SentRole::Reinforce => "reinforce",
-        }
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum SentPhase {
@@ -127,22 +100,11 @@ pub enum SentPhase {
     Run,
     Loose,
 }
-impl SentPhase {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SentPhase::Set => "set",
-            SentPhase::Run => "run",
-            SentPhase::Loose => "loose",
-        }
-    }
-}
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct SquadEvent {
     pub t: f64,
     pub what: crate::enemysquads::SquadEventWhat,
-    pub n: f64,
-    pub why: String,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
@@ -243,15 +205,6 @@ pub enum CheckStage {
     #[default] Idle,
     Called,
     Asked,
-}
-impl CheckStage {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            CheckStage::Idle => "idle",
-            CheckStage::Called => "called",
-            CheckStage::Asked => "asked",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -410,15 +363,6 @@ pub enum NetCheckStage {
     Called,
     Asked,
 }
-impl NetCheckStage {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            NetCheckStage::Idle => "idle",
-            NetCheckStage::Called => "called",
-            NetCheckStage::Asked => "asked",
-        }
-    }
-}
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct NetCheckSayItem {
@@ -495,17 +439,6 @@ impl Default for RoundCtx {
     }
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct SquadReport {
-    pub id: String,
-    pub name: String,
-    pub men: f64,
-    pub up: f64,
-    pub state: String,
-    pub out: f64,
-    pub events: Vec<crate::enemysquads::SquadEvent>,
-}
-
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct EnemysquadsModBANGSValue {
     pub n: f64,
@@ -533,74 +466,6 @@ pub struct WayRound2Says {
     pub best: Option<f64>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum EventWhat {
-    Down,
-    Back,
-    Contact,
-    Lost,
-    Quiet,
-    Found,
-    Said,
-    Sweep,
-    Barricade,
-    Flank,
-    Help,
-    Reinforce,
-    InPosition,
-    Met,
-    Rally,
-    Stays,
-    Follows,
-    Check,
-    Asks,
-    Looks,
-    NoSign,
-    Glimpse,
-    Calls,
-    CutOff,
-    NetCheck,
-    NetQuery,
-    NetAsks,
-    NetLooks,
-    NetHelp,
-}
-impl EventWhat {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            EventWhat::Down => "down",
-            EventWhat::Back => "back",
-            EventWhat::Contact => "contact",
-            EventWhat::Lost => "lost",
-            EventWhat::Quiet => "quiet",
-            EventWhat::Found => "found",
-            EventWhat::Said => "said",
-            EventWhat::Sweep => "sweep",
-            EventWhat::Barricade => "barricade",
-            EventWhat::Flank => "flank",
-            EventWhat::Help => "help",
-            EventWhat::Reinforce => "reinforce",
-            EventWhat::InPosition => "in position",
-            EventWhat::Met => "met",
-            EventWhat::Rally => "rally",
-            EventWhat::Stays => "stays",
-            EventWhat::Follows => "follows",
-            EventWhat::Check => "check",
-            EventWhat::Asks => "asks",
-            EventWhat::Looks => "looks",
-            EventWhat::NoSign => "no sign",
-            EventWhat::Glimpse => "glimpse",
-            EventWhat::Calls => "calls",
-            EventWhat::CutOff => "cut off",
-            EventWhat::NetCheck => "net check",
-            EventWhat::NetQuery => "net query",
-            EventWhat::NetAsks => "net asks",
-            EventWhat::NetLooks => "net looks",
-            EventWhat::NetHelp => "net help",
-        }
-    }
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct StayKeyRoom {
     pub name: String,
@@ -625,33 +490,9 @@ pub struct RadioCheck {
 }
 
 #[derive(Clone, Debug, Default)]
-pub struct SquadCallsItem {
-    pub squad: String,
-    pub by: GuardId,
-    pub t0: f64,
-    pub end: f64,
-    pub body: Option<GuardId>,
-}
-
-#[derive(Clone, Debug, Default)]
 pub struct NetSend {
     pub q: EnemysquadsSquadId,
     pub go: Vec<RoomfightDefId>,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct SquadWaysRoundItem {
-    pub squad: String,
-    pub man: String,
-    pub from: String,
-    pub room: String,
-    pub door: String,
-    pub hold: bool,
-    pub team: bool,
-    pub way: Option<String>,
-    pub l: f64,
-    pub limit: Option<f64>,
-    pub best: Option<f64>,
 }
 
 /// the state this module keeps at its top level
@@ -676,9 +517,6 @@ impl EnemysquadsMod {
         }
     }
 }
-
-/// (src/game/enemysquads.ts:231 SQUADS_DEFAULTS: a table nothing writes)
-pub fn squads_defaults() -> crate::knobs::SquadsK { crate::knobs::SquadsK::page() }
 
 /// (src/game/enemysquads.ts:613 COUNT: a table nothing writes)
 pub fn count() -> Vec<String> { alloc::vec![String::from("nobody"), String::from("one"), String::from("two"), String::from("three"), String::from("four")] }

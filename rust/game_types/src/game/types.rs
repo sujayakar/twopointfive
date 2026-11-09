@@ -3,15 +3,6 @@
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// WHAT HIS DUTY HAS HIS GUN ON. In the TypeScript `covers` holds a vector by reference: the room fight's own D.pt, which it moves in place, or a fresh point. A copy of D.pt would go stale inside the tick, so the first case names the source instead
-#[derive(Clone, Copy, PartialEq, Debug)]
-pub enum Covers {
-    /// the point of his own Def in the room fight (roomfight.ts, enemysquads.ts, powerout.ts: cover(gd, D.pt)): read it there
-    HisPost,
-    /// a point given once (nightbreach.ts:114, rescue.ts:915)
-    At(V3),
-}
-
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum ThrowKind {
     #[default] Smoke,
@@ -189,6 +180,7 @@ pub enum SlotKind {
     Flash,
     Frag,
 }
+
 impl SlotKind {
     pub const fn as_str(self) -> &'static str {
         match self {
@@ -313,35 +305,22 @@ pub enum WitnessSawActKind {
     Choked,
     Grab,
 }
-impl WitnessSawActKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            WitnessSawActKind::Shot => "shot",
-            WitnessSawActKind::Struck => "struck",
-            WitnessSawActKind::Choked => "choked",
-            WitnessSawActKind::Grab => "grab",
-        }
-    }
-}
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct WitnessSawBody {
     pub victim: String,
-    pub t: f64,
     pub breathing: bool,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct WitnessCalledToBody {
     pub victim: String,
-    pub t: f64,
     pub breathing: bool,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct WitnessSawHeld {
     pub who: String,
-    pub t: f64,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
@@ -426,14 +405,6 @@ pub enum GameEventCause {
     Shot,
     Ocp,
 }
-impl GameEventCause {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            GameEventCause::Shot => "shot",
-            GameEventCause::Ocp => "ocp",
-        }
-    }
-}
 
 /// What a game was stood with (src/game/stood.ts): its own record, set once at the stand, and the one rules read
 #[derive(Clone, Copy, Debug, PartialEq, ToBytes)]
@@ -472,13 +443,6 @@ pub struct Game {
     #[bytes(skip)]
     pub kit_stage: Option<alloc::boxed::Box<crate::kitstage::KitStage>>,
     pub col: crate::scene_collision::StaticCollision,
-    pub snow_field: Option<crate::render_snow_field::SnowField>,
-    pub snow_tracks: Option<crate::snow_tracks::SnowTracks>,
-    pub snow_look_was: f64,
-    pub chars: crate::anim_characters::CharacterRenderer,
-    pub rig_fits: Option<JsMap<crate::Num, crate::game::GameRigFitsValue>>,
-    pub rig_fit_of: JsMap<crate::Num, Option<crate::game::GameRigFitOfValue>>,
-    pub mesh_shadows: crate::render_mesh_shadows::MeshShadows,
     pub player: PlayerId,
     pub guards: Vec<GuardId>,
     pub civilians: Vec<GuardId>,
@@ -595,7 +559,6 @@ pub struct Game {
     #[bytes(skip)]
     pub saves: crate::savestate::Checkpoints,
     pub rack_targets: Vec<FixtureId>,
-    pub mark_lights: Vec<crate::game::GameMarkLightsItem>,
     pub tune: crate::game::GameTune,
     pub engine: crate::host_api::HostApi,
     pub level: crate::scene_level::Level,
@@ -694,13 +657,6 @@ impl Game {
             solo_card: false,
             kit_stage: None,
             col: crate::scene_collision::StaticCollision::blank(),
-            snow_field: None,
-            snow_tracks: None,
-            snow_look_was: -1.0,
-            chars: crate::anim_characters::CharacterRenderer::blank(),
-            rig_fits: None,
-            rig_fit_of: JsMap::new(),
-            mesh_shadows: crate::render_mesh_shadows::MeshShadows::blank(),
             player: PlayerId(0),
             guards: Vec::new(),
             civilians: Vec::new(),
@@ -800,7 +756,6 @@ impl Game {
             door_path: crate::doorpath::DoorPath::blank(),
             saves: crate::savestate::Checkpoints::blank(),
             rack_targets: Vec::new(),
-            mark_lights: Vec::new(),
             tune: crate::game::GameTune { devices: true, lasers: true, camera_suspicion_secs: 0.8, camera_alarm_secs: 2.0, device_cones: true, guard_walk: 1.15, guard_investigate: 1.75, guard_chase: 2.7, player_walk: 1.55, player_sprint: 4.7, player_crouch: 1.3, player_light: 60.0, flash_intensity: 70.0, flash_inner: 7.0, flash_outer: 19.0, detect_rate: 1.6, ocp_duration: 9.0, ocp_notice: crate::game::GameTuneOcpNotice::Glance, vis_slope: 0.2, vis_floor: 0.03, floor_materials: true, muzzle_discipline: true, suppression: true, carbine_guards: crate::game::CarbineDeal::None, suppress_first: true, tracers: true, aim_model: true, teams: true, needs: true, tactics: true, flank_wait: 6.0, lone_wait: 8.0, door_danger: 25.0, door_wait: 6.0, chaos: 0.5, wind: 1.0, moths: true, glass_break: true, glass_shards: true, wall_break: true, debris_impulses: true, qrf: true, qrf_eta: 75.0, qrf_size: 4.0, perimeter: true, perimeter_eta: 45.0, perimeter_size: 2.0, qrf_silent: true, qrf_squad: true, civilians: true, civilian_kill_fails: false, body_light: true },
             engine: crate::host_api::HostApi::default(),
             level: crate::scene_level::Level::default(),
@@ -849,22 +804,6 @@ impl Game {
 }
 impl Default for Game { fn default() -> Self { Self::blank() } }
 
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct GameRigFitsValue {
-    pub r0: Vec<f32>,
-    pub r1: Vec<f32>,
-}
-
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct GameRigFitOfValue {
-    pub r0: Vec<f32>,
-    pub r1: Vec<f32>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct GameSmokeOwned {
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct GamePuppet {
     pub goal: Option<V3>,
@@ -904,17 +843,6 @@ pub struct GameMessagesItem {
     pub t: f64,
     /// INVENTED by a review: see the proposals
     pub serial: u32,
-}
-
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct GameMarkLightsItem {
-    pub target: String,
-    pub box_: f64,
-    pub face: String,
-    pub pos: V3,
-    pub i0: f64,
-    pub area: f64,
-    pub mean_l: V3,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -978,29 +906,12 @@ pub enum GameTuneOcpNotice {
     #[default] Glance,
     Investigate,
 }
-impl GameTuneOcpNotice {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            GameTuneOcpNotice::Glance => "glance",
-            GameTuneOcpNotice::Investigate => "investigate",
-        }
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum CarbineDeal {
     #[default] None,
     Reyes,
     All,
-}
-impl CarbineDeal {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            CarbineDeal::None => "none",
-            CarbineDeal::Reyes => "reyes",
-            CarbineDeal::All => "all",
-        }
-    }
 }
 
 #[derive(Clone, Debug)]
@@ -1086,15 +997,6 @@ pub enum MissionRating {
     Panther,
     Assault,
 }
-impl MissionRating {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            MissionRating::Ghost => "ghost",
-            MissionRating::Panther => "panther",
-            MissionRating::Assault => "assault",
-        }
-    }
-}
 
 #[derive(Clone, Debug, ToBytes)]
 pub struct Player {
@@ -1176,7 +1078,6 @@ pub struct Player {
     pub near_key: String,
     pub sel: crate::game::PlayerSel,
     pub pace: f64,
-    pub pace_shown_t: f64,
     pub nv: bool,
     pub nv_amount: f64,
     pub light: LightId,
@@ -1287,7 +1188,6 @@ impl Player {
             near_key: String::from(""),
             sel: crate::game::PlayerSel { down_t: -1.0, open: false, moved: false, wheel_acc: 0.0, run_key: String::from(""), move_latch: 0.0, word: String::from(""), word_t: -1000000000.0, file_t: -1000000000.0, ring: None },
             pace: 1.0,
-            pace_shown_t: -10.0,
             nv: false,
             nv_amount: 0.0,
             light: LightId(0),
@@ -1371,19 +1271,6 @@ pub enum PlayerKitOwedFor {
     Frag,
     Can,
     Knife,
-}
-impl PlayerKitOwedFor {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            PlayerKitOwedFor::Pistol => "pistol",
-            PlayerKitOwedFor::Rifle => "rifle",
-            PlayerKitOwedFor::Smoke => "smoke",
-            PlayerKitOwedFor::Flash => "flash",
-            PlayerKitOwedFor::Frag => "frag",
-            PlayerKitOwedFor::Can => "can",
-            PlayerKitOwedFor::Knife => "knife",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -1469,14 +1356,6 @@ pub enum PlayerKickToolKind {
     #[default] Shotgun,
     Hammer,
 }
-impl PlayerKickToolKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            PlayerKickToolKind::Shotgun => "shotgun",
-            PlayerKickToolKind::Hammer => "hammer",
-        }
-    }
-}
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct PlayerKickToolMoves {
@@ -1518,9 +1397,6 @@ pub struct Talk {
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct TalkLast {
     pub id: String,
-    pub cell: String,
-    pub stage: String,
-    pub kind: Option<String>,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes)]
@@ -1562,8 +1438,6 @@ pub struct GuardTaskCheckOn {
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct UnitInfo {
-    pub name: String,
-    pub spawned_at: f64,
     pub light: bool,
     pub pair: Option<crate::game::PairId>,
     pub seat: Option<f64>,
@@ -1870,13 +1744,6 @@ pub struct GuardHeld {
 pub enum GuardHeldBy {
     #[default] Player,
 }
-impl GuardHeldBy {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            GuardHeldBy::Player => "player",
-        }
-    }
-}
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct GuardBubble {
@@ -1908,29 +1775,12 @@ pub enum GuardBodyDutyRole {
     #[default] Finder,
     Called,
 }
-impl GuardBodyDutyRole {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            GuardBodyDutyRole::Finder => "finder",
-            GuardBodyDutyRole::Called => "called",
-        }
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum GuardBodyDutyStage {
     #[default] Fan,
     To,
     Cover,
-}
-impl GuardBodyDutyStage {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            GuardBodyDutyStage::Fan => "fan",
-            GuardBodyDutyStage::To => "to",
-            GuardBodyDutyStage::Cover => "cover",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -1976,19 +1826,6 @@ pub struct ROLLVOICE {
     pub grace: f64,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct SMOKESTIR {
-    pub body: f64,
-    pub foot: f64,
-    pub above: f64,
-    pub back: f64,
-    pub low: f64,
-    pub kick_r: f64,
-    pub kick: f64,
-    pub most: f64,
-    pub gap: f64,
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct GuardNewLook {
     pub tint2: Option<V3>,
@@ -2007,14 +1844,6 @@ pub enum GameFreeHeldWhy {
     Shot,
     Cancel,
 }
-impl GameFreeHeldWhy {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            GameFreeHeldWhy::Shot => "shot",
-            GameFreeHeldWhy::Cancel => "cancel",
-        }
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum GameSetBlackoutCause {
@@ -2023,63 +1852,11 @@ pub enum GameSetBlackoutCause {
     Debug,
     Hand,
 }
-impl GameSetBlackoutCause {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            GameSetBlackoutCause::Shot => "shot",
-            GameSetBlackoutCause::Ocp => "ocp",
-            GameSetBlackoutCause::Debug => "debug",
-            GameSetBlackoutCause::Hand => "hand",
-        }
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum GameLightEventCause {
     Shot,
     Ocp,
-}
-impl GameLightEventCause {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            GameLightEventCause::Shot => "shot",
-            GameLightEventCause::Ocp => "ocp",
-        }
-    }
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum GameSelectVerbKind {
-    Cam,
-    Guard,
-    Breaker,
-    Door,
-    Light,
-    Body,
-    Objective,
-    Held,
-    Wall,
-    Switch,
-    Charge,
-    Cancel,
-}
-impl GameSelectVerbKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            GameSelectVerbKind::Cam => "cam",
-            GameSelectVerbKind::Guard => "guard",
-            GameSelectVerbKind::Breaker => "breaker",
-            GameSelectVerbKind::Door => "door",
-            GameSelectVerbKind::Light => "light",
-            GameSelectVerbKind::Body => "body",
-            GameSelectVerbKind::Objective => "objective",
-            GameSelectVerbKind::Held => "held",
-            GameSelectVerbKind::Wall => "wall",
-            GameSelectVerbKind::Switch => "switch",
-            GameSelectVerbKind::Charge => "charge",
-            GameSelectVerbKind::Cancel => "cancel",
-        }
-    }
 }
 
 /// (src/game/game.ts:341 PLAYER_MAX_HITS)
@@ -2088,26 +1865,17 @@ pub const PLAYER_MAX_HITS: f64 = 1.0;
 /// (src/game/game.ts:42 MARK_LIGHT_MIN_I0)
 pub const MARK_LIGHT_MIN_I0: f64 = 0.05;
 
-/// (src/game/game.ts:249 KIT_ORDER: a table nothing writes)
-pub fn kit_order() -> Vec<crate::game::SlotKind> { alloc::vec![crate::game::SlotKind::Pistol, crate::game::SlotKind::Rifle, crate::game::SlotKind::Smoke, crate::game::SlotKind::Flash, crate::game::SlotKind::Frag] }
-
 /// (src/game/game.ts:296 BODY_DOOR_PARTICLES: a table nothing writes)
 pub fn body_door_particles() -> Vec<f64> { alloc::vec![0.0, 1.0, 3.0, 12.0, 13.0, 14.0, 15.0] }
 
 /// (src/game/game.ts:508 CALLSIGNS: a table nothing writes)
 pub fn callsigns() -> Vec<String> { alloc::vec![String::from("Kowalski"), String::from("Novak"), String::from("Reyes"), String::from("Okafor"), String::from("Lindqvist"), String::from("Brandt"), String::from("Marsh")] }
 
-/// (src/game/game.ts:511 CARBINE_DEALS: a table nothing writes)
-pub fn carbine_deals() -> Vec<String> { alloc::vec![String::from("none"), String::from("reyes"), String::from("all")] }
-
 /// (src/game/game.ts:516 TEMPERAMENT: a table nothing writes)
 pub fn temperament() -> &'static [(&'static str, crate::game::Temperament)] { &[("Kowalski", crate::game::Temperament::Steady), ("Novak", crate::game::Temperament::Nervy), ("Reyes", crate::game::Temperament::Hard), ("Okafor", crate::game::Temperament::Steady), ("Lindqvist", crate::game::Temperament::Nervy), ("Brandt", crate::game::Temperament::Hard), ("Marsh", crate::game::Temperament::Steady)] }
 
 /// (src/game/game.ts:778 ROLL_VOICE: a table nothing writes)
 pub fn roll_voice() -> crate::game::ROLLVOICE { crate::game::ROLLVOICE { gain: 0.5, full_v: 2.5, min_v: 0.12, grace: 0.5 } }
-
-/// (src/game/game.ts:782 SMOKE_STIR: a table nothing writes)
-pub fn smoke_stir() -> crate::game::SMOKESTIR { crate::game::SMOKESTIR { body: 0.24, foot: 0.12, above: 0.5, back: 0.3, low: 0.2, kick_r: 0.17, kick: 0.9, most: 2.2, gap: 0.35 } }
 
 impl Guard {
     /// (game.ts Guard's constructor) look_phase: simRandom() * 10, DRAWN BEFORE his Character is made, as the field initialiser runs first. foe goes None for a side not hostile to the player. His body's muzzle_ahead is the weapon's row: the caller sets it, as the constructor does
@@ -2326,9 +2094,6 @@ pub struct Mods {
     pub weather_kinds: crate::weather_kinds::WeatherKindsMod,
     pub kitload: crate::kitload::KitloadMod,
     pub holdfire: crate::holdfire::HoldfireMod,
-    /// (who wrote what, a check's own: in no bytes)
-    #[bytes(skip)]
-    pub owner: crate::owner::OwnerMod,
     pub picture: crate::picture::PictureMod,
     pub destruction_switch: crate::destruction_switch::DestructionSwitchMod,
     pub dress: crate::dress::DressMod,
@@ -2386,12 +2151,10 @@ pub struct Mods {
     pub nvg: crate::nvg::NvgMod,
     pub irlaser: crate::irlaser::IrlaserMod,
     pub gunhold: crate::gunhold::GunholdMod,
-    pub air_sim: crate::air_sim::AirSimMod,
     pub unseen: crate::unseen::UnseenMod,
     pub squadsmoke: crate::squadsmoke::SquadsmokeMod,
     pub squad40: crate::squad40::Squad40Mod,
     pub squadthrow: crate::squadthrow::SquadthrowMod,
-    pub kitanim: crate::kitanim::KitanimMod,
     pub smokebreak: crate::smokebreak::SmokebreakMod,
     pub showwhy: crate::showwhy::ShowwhyMod,
     pub cmd: crate::cmd::CmdMod,
@@ -2440,14 +2203,12 @@ pub struct Mods {
     pub dialogue: crate::dialogue::DialogueMod,
     pub civilians: crate::civilians::CiviliansMod,
     pub orders: crate::orders::OrdersMod,
-    pub seats: crate::seats::SeatsMod,
     pub wallcharge: crate::wallcharge::WallchargeMod,
     pub blast_look: crate::blast_look::BlastLookMod,
     pub particle_fx: crate::particle_fx::ParticleFxMod,
     pub shutdoor: crate::shutdoor::ShutdoorMod,
     pub fixture_break: crate::fixture_break::FixtureBreakMod,
     pub weapons: crate::weapons::WeaponsMod,
-    pub smoke_smoke_grid: crate::smoke_smoke_grid::SmokeSmokeGridMod,
     /// (the picture's: in no bytes)
     #[bytes(skip)]
     pub render_frame: crate::render_frame::RenderFrameMod,
@@ -2478,7 +2239,6 @@ impl Mods {
             weather_kinds: crate::weather_kinds::WeatherKindsMod::blank(),
             kitload: crate::kitload::KitloadMod::blank(),
             holdfire: crate::holdfire::HoldfireMod::blank(),
-            owner: crate::owner::OwnerMod::blank(),
             picture: crate::picture::PictureMod::blank(),
             destruction_switch: crate::destruction_switch::DestructionSwitchMod::blank(),
             dress: crate::dress::DressMod::blank(),
@@ -2534,12 +2294,10 @@ impl Mods {
             nvg: crate::nvg::NvgMod::blank(),
             irlaser: crate::irlaser::IrlaserMod::blank(),
             gunhold: crate::gunhold::GunholdMod::blank(),
-            air_sim: crate::air_sim::AirSimMod::blank(),
             unseen: crate::unseen::UnseenMod::blank(),
             squadsmoke: crate::squadsmoke::SquadsmokeMod::blank(),
             squad40: crate::squad40::Squad40Mod::blank(),
             squadthrow: crate::squadthrow::SquadthrowMod::blank(),
-            kitanim: crate::kitanim::KitanimMod::blank(),
             smokebreak: crate::smokebreak::SmokebreakMod::blank(),
             showwhy: crate::showwhy::ShowwhyMod::blank(),
             cmd: crate::cmd::CmdMod::blank(),
@@ -2584,14 +2342,12 @@ impl Mods {
             dialogue: crate::dialogue::DialogueMod::blank(),
             civilians: crate::civilians::CiviliansMod::blank(),
             orders: crate::orders::OrdersMod::blank(),
-            seats: crate::seats::SeatsMod::blank(),
             wallcharge: crate::wallcharge::WallchargeMod::blank(),
             blast_look: crate::blast_look::BlastLookMod::blank(),
             particle_fx: crate::particle_fx::ParticleFxMod::blank(),
             shutdoor: crate::shutdoor::ShutdoorMod::blank(),
             fixture_break: crate::fixture_break::FixtureBreakMod::blank(),
             weapons: crate::weapons::WeaponsMod::blank(),
-            smoke_smoke_grid: crate::smoke_smoke_grid::SmokeSmokeGridMod::blank(),
             render_frame: crate::render_frame::RenderFrameMod::blank(),
         }
     }
@@ -2665,7 +2421,6 @@ pub struct Stats {
     pub fireline: crate::fireline::FirelineStats,
     pub noshove: crate::noshove::NoshoveStats,
     pub doorforce: crate::doorforce::DoorforceStats,
-    pub glassbreak: crate::glassbreak::GlassbreakStats,
     pub wallpen: crate::wallpen::WallpenStats,
     pub condition: crate::condition::ConditionStats,
     pub morale: crate::morale::MoraleStats,

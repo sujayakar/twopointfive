@@ -66,7 +66,7 @@
 // In the GWOT look kit (lib/gwotKit.ts). Units: metres. +X east, +Z south, +Y up. NOT SEEN ON A GPU: laid out on paper, checked headless, one still on the software renderer.
 import type { Vec3 } from '../../src/math/vec';
 import type { DeviceDef, Level, LevelDoorDef, PatrolRoute } from './lib/level';
-import type { KitViewData, LevelScenarios, QuietData, Rect, ResponseData } from '../../src/scene/scenarios';
+import type { KitViewData, LevelScenarios, QuietData, Rect, ResponseData } from './lib/scenarios';
 import type { SurfacesData } from './lib/levelData';
 import { officeKit, normalize3 as norm, type GeneratorTrace } from './lib/officeGen';
 import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS } from './lib/gwotKit';
@@ -408,7 +408,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       { id: 'shed', mat: 'stone', x0: 30, z0: 19.5, x1: 36, z1: 24 },
     ],
   };
-  // THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest): the south gate from the lorry park, where the pair starts — the
+  // THE TEAM & KIT PICTURE (lib/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest): the south gate from the lorry park, where the pair starts — the
   // lot's pickup and the seized blue box over the wall behind them. The pallet of crates and the two tyres left outside the gate (`G.crates(11.4, 26.4 …)`,
   // `G.tyres(12.9, 25.3 …)` above) stand where the file of five forms, so they are out of the picture: by id, as the export numbers them (the kit's list is the file's, box for box).
   // FOR THE PICTURE ONLY (`add`: the mission never loads these): only `exterior` lamps stay lit in a picture and the lane's are 8 m off, so the strip behind the

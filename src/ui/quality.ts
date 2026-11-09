@@ -53,7 +53,7 @@ export const LADDER = { cutFps: 45, aimFps: 50, restoreFps: 58, starvedFps: 40, 
 export const CLIMB = { budgetFps: 60, headroom: 0.60, divisorRoom: 0.65, backoff: 0.80, backoffFps: 55, windows: 3, climbGap: 4.0, failSecs: 60 };
 /** one rung the climb has taken, newest last (undone in reverse) */
 type ClimbStep = { kind: 'scale'; from: number; to: number } | { kind: 'gather' } | { kind: 'vol' };
-/** THE LADDER'S ONE TARGET (settings.ladderAim, DEFAULT 60 since the maintainer's pick of 10-10; ?aim=asnow|60|90|120|display, ?aim=0 = asnow). 0 = 'as now': every band is the literal LADDER / CLIMB / PLAN_BUDGET_MS number
+/** THE LADDER'S ONE TARGET (settings.ladderAim, DEFAULT 60 since the maintainer's pick of 10-10). 0 = 'as now': every band is the literal LADDER / CLIMB / PLAN_BUDGET_MS number
  *  above and no line below takes another road — the ladder byte for byte as it was (aims at a 60 Hz budget, spends headroom on resolution, cuts only under 45 fps). N > 0 = HOLD N fps (never more
  *  than the display has been seen to show — Quality.displayHz; AIM_DISPLAY = that rate itself): the climb, the cut and the preset hop all work to N.
  *    · the GPU budget is U = 1000 / N − overheadMs (what a frame costs past the compute union: raster passes, CPU, present — the 1.67 ms PLAN_BUDGET_MS always implied at 60); the climb's bands
@@ -69,7 +69,7 @@ type ClimbStep = { kind: 'scale'; from: number; to: number } | { kind: 'gather' 
  *  assumes the 1.67 ms of overhead, a Mac take shows ~2.8 — the cut by rate is what corrects it at 90 / 120. */
 export const AIM_DISPLAY = 999;
 export const HOLD = { cut: 0.965, aim: 1.03, cruise: 0.975, pacedMs: 6, pacedWindows: 5, hotWindows: 2, blindWindows: 8, restore: 0.9, restoreWindows: 6, overheadMs: 1000 / CLIMB.budgetFps - PLAN_BUDGET_MS };
-/** THE PACED CHECK (as now: settings.ladderPaced; under an aim: settings.ladderHeld, the block under PACED — with it off an aim has only its own `holdBound`; default on, `?ladderpaced=0`; off = the rule as it was: 'the union over LADDER.cutGpuFrac of the
+/** THE PACED CHECK (as now: settings.ladderPaced; under an aim: settings.ladderHeld, the block under PACED — with it off an aim has only its own `holdBound`; default on; off = the rule as it was: 'the union over LADDER.cutGpuFrac of the
  *  frame = the GPU is the limit'). A page held to 30 fps by something no pixel buys off (the browser's energy saver, a power mode, a slow display) with High at its start costing 12‥14 ms of
  *  union read as GPU-bound by that rule, was cut to ×0.57 and on down for nothing, and nothing gave the pixels back (the way up wants 58 fps): the maintainer's Mac, 10-10 — 30 fps at ×0.57
  *  and ×0.50 with the union at 8.9 ms. `Quality.pacedStep`, once a window, judged on the window's mean frame without its longest one:
@@ -88,7 +88,7 @@ export const HOLD = { cut: 0.965, aim: 1.03, cruise: 0.975, pacedMs: 6, pacedWin
  *      keeps the page proven paced (so the GPU still makes the frame in half the pace: nothing lost when the pacing lifts, even on a fixed display); a step after which the frame grew by
  *      `gain` is taken off again and held off as a failed climb rung is. The rest of the way up is the plain restore's (58 fps), and the climb past the tier's start keeps its own rule. */
 export const PACED = { band: 0.06, gain: 0.05, windows: 2, upWindows: 4, trialSecs: 12, backSecs: 30, recheckSecs: 120, recheckMax: 3, probeGain: 0.15 };
-/** SHARP SHED (settings.ladderShed, default on, `?laddershed=0`; the maintainer's pick of 10-25 off his own takes: 'Auto drops it'). UNDER AUTO, where the ladder would take pixels off
+/** SHARP SHED (settings.ladderShed, default on; the maintainer's pick of 10-25 off his own takes: 'Auto drops it'). UNDER AUTO, where the ladder would take pixels off
  *  the tier's own picture — the cut by rate, the step for the back-off band, the cut taken with a load spike's rungs, an aim's judged cut, a preset starved away — and sharp direct is drawing and the tier's
  *  to place (no ?sharp / ?nosharp / ?noiq), it lets sharp direct go INSTEAD, with its two riders (the decoupled jitter, GBAA): the output-size kernels are the one part of a frame that
  *  fewer pixels do not shrink (the maintainer's Mac at High ×0.5: 4.9 of 15.5 ms, and he saw no difference in a fight with it off). Rungs the climb put ON TOP of the tier's start still come off first: they are
@@ -110,7 +110,7 @@ export const SHED = { holdSecs: 60, seenCap: 3, backSecs: 900 };
  *  calibration waits the same way and no longer (calibrateTick: past `maxSecs` it measures the picture as it is, `early`, and measures once more when the set is in). With the
  *  first-frame start off the count is never above 0 and none of this runs. */
 export const STANDS_IN = { maxSecs: 30 };
-/** THE SAME CHECK UNDER AN AIM (settings.ladderHeld, default on, `?ladderheld=0`; off = an aim as it was: `holdBound` alone decides, and every line below is skipped). An aim stepped a
+/** THE SAME CHECK UNDER AN AIM (settings.ladderHeld, default on; off = an aim as it was: `holdBound` alone decides, and every line below is skipped). An aim stepped a
  *  held page down on the union's SIZE alone (two windows over the back-off band; over its budget, by rate) and gave the pixels back only with the union priced under `restore` of that
  *  band. On a page the browser holds to 30 fps the GPU clocks down and every pass reads about half again longer (the maintainer's Mac on a low battery, 10-14: 6.7‥7.4 ms free-running,
  *  10.7‥12 ms held, same settings), so High's start read 13.9 ms, went down to 600 rows for a rate that stayed 30, and never came back. With the switch on `pacedStep` runs for an aim too:
@@ -144,11 +144,6 @@ export function ladderBands(aim: number, displayHz = 0): Bands {
   // down held 30 fps at High and cut nothing, where as-now cut. The paced rule in sample() has the same floor.)
   const u = Math.max(2, 1000 / target - HOLD.overheadMs);
   return { hold: true, target, cutFps: HOLD.cut * target, aimFps: HOLD.aim * target, restoreFps: Infinity, starvedFps: HOLD.cut * target, cruisingFps: HOLD.cruise * target, backoffFps: HOLD.cut * target, budget: u * (1000 / CLIMB.budgetFps) / PLAN_BUDGET_MS, planBudget: u, gpuFloor: 0 };
-}
-/** ?aim= / a menu's word → settings.ladderAim (null = not one of them; '0' is 'asnow' said as the setting's own number) */
-export function ladderAimOf(word: string | null | undefined): number | null {
-  const w = (word ?? '').trim().toLowerCase();
-  return w === 'asnow' || w === '0' ? 0 : w === '60' ? 60 : w === '90' ? 90 : w === '120' ? 120 : w === 'display' ? AIM_DISPLAY : null;   // (the five the card and the Tab row offer, no others: a row that cannot show the value it holds would lie)
 }
 /** the refresh rates displays come in (src/host/drawpage.ts snaps the fixed step onto the same list): a rate SEEN within 3 % of one is taken as it, anything else rounds DOWN */
 const DISPLAY_RATES = [50, 60, 72, 75, 90, 100, 120, 144, 165, 240];
@@ -249,7 +244,7 @@ export const PRESETS: Record<QualityName, Preset> = {
  *  (a defender's eye to the player, the room fight's pairs, a camera's) was the optical depth of the SOLVER's density along the
  *  line. The red/black pairs of the pressure solve decide how well the velocity field is projected each step, so how a plume rolls and spreads: with the pairs a preset row, the
  *  cloud that hides a man had a different shape at medium than at high, and the auto ladder changed it under a fight each time it stepped. A game rule that read the graphics
- *  setting, as the light meter's cache grid was (ONE CACHE GRID below). One count for every preset, high's: the cloud drawn at ultra is no longer finer than the one sight reads
+ *  setting. One count for every preset, high's: the cloud drawn at ultra is no longer finer than the one sight reads
  *  at medium. Price: one pair more (two dispatches over the live bricks) a solver step on medium, low and verylow, one fewer on ultra — the cost model does not price the solver
  *  (it lands in the measured fixed part) and nobody has timed it. How far a plume's shape moved between 3, 4 and 5 pairs was never measured either. */
 export function rbItersOf(p: Preset, one: boolean): number { return one ? PRESETS.high.rbIters : p.rbIters; }
@@ -274,12 +269,8 @@ export function fireSmokeFor(name: QualityName, shed: boolean, auto: boolean, no
   const i = AUTO_LADDER.indexOf(name);
   return !(auto && now === false && i >= 1 && !fireSmokeOf(PRESETS[AUTO_LADDER[i - 1]], shed));
 }
-/** ONE CACHE GRID (settings.oneCacheGrid, default on, `?onegrid=0`; off = low and verylow on their `rcCoarse`, as it was). The light meter the guards and teammates see by is the
- *  shadowed direct light PLUS the cache's dice (render/shaders/probe.wgsl), read trilinearly at the asked point — so the probe lattice is part of the reading. On the coarser lattice
- *  (1.25 m cells, three layers up the wall against 1 m and four) the same tight shadow read two to three times darker on low and verylow than on medium and up (a night yard's low
- *  wall: E 0.044 against 0.115, software adapter, 10-23): a game rule that read the graphics setting, and one the auto ladder moved under a mission each time it stepped between
- *  medium and low. One lattice for every preset takes the setting out of the reading, and the cache swap (a parked grid's stale field for some frames) out of that step. It does
- *  NOT make the read right: the meter still blends the cells around the man, some of them inside the wall beside him.
+/** ONE CACHE GRID (settings.oneCacheGrid, default on; off = low and verylow on their `rcCoarse`, as it was). One lattice for every preset takes the cache swap (a parked grid's stale
+ *  field for some frames) out of the auto ladder's step between medium and low. The picture only: the game's light meter is Rust's (rust/sim/src/glow.rs) and reads no cache.
  *  Price: low and verylow trace 2.1 × the probes at their own refresh periods — in the cost model their fixed part 1.9 → 2.4 and 1.4 → 1.9 model-ms. */
 export const rcGridOf = (p: Preset, one: boolean) => one || !p.rcCoarse ? p.rc : p.rcCoarse;
 /** ?nortreflect (host/engineflags.ts): the RT reflections held OFF for this visit whatever preset auto or a menu applies — the by-hand Tab row still works. Module state, so every Quality instance
@@ -458,7 +449,7 @@ export class Quality {
   private bandsOf: { aim: number; hz: number; b: Bands } = { aim: 0, hz: 0, b: AS_NOW };
   /** what the aim sees, for the Tab panel / QA */
   get aimState() { const b = this.bands; return { aim: this.aim, hold: b.hold, target: +b.target.toFixed(1), displayHz: this.displayHzPin || this.displayHz, unionBudget: +b.planBudget.toFixed(2), cutFps: +b.cutFps.toFixed(1), hot: this.hot }; }
-  /** the display's rate, watched on a rAF of the page's own while an aim is set (host/drawpage.ts starts it at boot whenever an aim is set — the default's or ?aim='s —, the first `bands` read otherwise; it stops itself back under 'as now': nothing
+  /** the display's rate, watched on a rAF of the page's own while an aim is set (host/drawpage.ts starts it at boot whenever an aim is set, the first `bands` read otherwise; it stops itself back under 'as now': nothing
    *  new runs there): every 60 intervals, displayRateOf says what the page has just reached; RAISED here whenever the frames show more, LOWERED only by sample() on HOLD.pacedWindows of
    *  frames that are slow with the GPU inside its budget (a window moved to a slower display, a browser that throttles) */
   watchDisplay() {
@@ -572,8 +563,8 @@ export class Quality {
     const K = p.caps; this.putSmoke(p);   // the smoke's rows — the march's size, lights a step, shadow refresh, step length, the beam steps (putSmoke)
     // the worst-case caps (Caps above): the volumetric march / beams …
     S.particleBirths = K.births;                                                                           // … GPU particle births a frame (engine.render hands it to Particles.prepare; the queue carries the rest) …
-    S.particleRainCount = K.rain;                                                                          // … the particle rain's drop cap (rust/game_rules/src/rain_fx; nothing runs while settings.particleRain is off) …
-    const cur = this.engine.rc.cfg, grid = rcGridOf(p, this.oneGrid());   // (ONE CACHE GRID: the same lattice under every preset, so the light meter's reading is not the setting's)
+    S.particleRainCount = K.rain;                                                                          // … the particle rain's drop cap (src/picture/rain.ts; nothing runs while settings.particleRain is off) …
+    const cur = this.engine.rc.cfg, grid = rcGridOf(p, this.oneGrid());   // (ONE CACHE GRID: the same lattice under every preset)
     if (cur.nx !== grid.nx || cur.ny !== grid.ny || cur.nz !== grid.nz || cur.cascades !== p.cascades) this.engine.rebuildRc({ ...defaultRcConfig, ...grid, cascades: p.cascades, interval0: cur.interval0 });
     this.smoke.params.rbIters = rbItersOf(p, this.oneSolve());   // (ONE SMOKE SOLVE: the same pressure pairs under every preset, so what smoke hides is not the setting's)
     S.fireSmoke = fireSmokeFor(name, this.fireShed(), this.auto, S.fireSmoke);   // (FIRE SMOKE SHED: the floor rung draws an open fire without its smoke, and auto's first rung up from it keeps that — rust/game_rules/src/fire reads it)

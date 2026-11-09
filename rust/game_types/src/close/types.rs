@@ -10,16 +10,6 @@ pub enum CloseKind {
     Front,
     Seat,
 }
-impl CloseKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            CloseKind::Behind => "behind",
-            CloseKind::Side => "side",
-            CloseKind::Front => "front",
-            CloseKind::Seat => "seat",
-        }
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum CloseId {
@@ -56,7 +46,6 @@ pub struct CloseOffer {
     pub guard: GuardId,
     pub win: Option<crate::close::CloseWindow>,
     pub dist: f64,
-    pub bearing: f64,
     pub in_reach: bool,
     pub clear: bool,
     pub grab: bool,
@@ -82,34 +71,6 @@ pub struct State {
     pub rmb_t: f64,
 }
 
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct CloseModCLOSELOGItem {
-    pub t: f64,
-    pub who: String,
-    pub what: crate::close::CloseModCLOSELOGItemWhat,
-    pub kind: Option<crate::close::CloseKind>,
-    pub bearing: f64,
-    pub dist: f64,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
-pub enum CloseModCLOSELOGItemWhat {
-    #[default] Grab,
-    Seat,
-    Take,
-    Unseat,
-}
-impl CloseModCLOSELOGItemWhat {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            CloseModCLOSELOGItemWhat::Grab => "grab",
-            CloseModCLOSELOGItemWhat::Seat => "seat",
-            CloseModCLOSELOGItemWhat::Take => "take",
-            CloseModCLOSELOGItemWhat::Unseat => "unseat",
-        }
-    }
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct SITCLIP {
     pub clip: String,
@@ -126,31 +87,12 @@ pub enum NoteWhat {
     Take,
     Unseat,
 }
-impl NoteWhat {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            NoteWhat::Grab => "grab",
-            NoteWhat::Seat => "seat",
-            NoteWhat::Take => "take",
-            NoteWhat::Unseat => "unseat",
-        }
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum CloseRmb {
     Press,
     Tap,
     Hold,
-}
-impl CloseRmb {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            CloseRmb::Press => "press",
-            CloseRmb::Tap => "tap",
-            CloseRmb::Hold => "hold",
-        }
-    }
 }
 
 #[derive(Clone, Debug, Default)]
@@ -222,7 +164,6 @@ pub struct CloseReady {
 #[derive(Clone, Copy, Debug, Default)]
 pub struct CloseStation {
     pub pos: V3,
-    pub yaw: f64,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -230,20 +171,10 @@ pub enum CloseTookWhat {
     Grab,
     Take,
 }
-impl CloseTookWhat {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            CloseTookWhat::Grab => "grab",
-            CloseTookWhat::Take => "take",
-        }
-    }
-}
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct CloseMod {
-    /// (src/game/close.ts:140 CLOSE_LOG)
-    pub close_log: Vec<crate::close::CloseModCLOSELOGItem>,
     /// (src/game/close.ts:146 STATE)
     pub state: JsMap<PlayerId, crate::close::State>,
     /// (src/game/close.ts:148 SEATED)
@@ -252,7 +183,6 @@ pub struct CloseMod {
 impl CloseMod {
     pub fn blank() -> Self {
         CloseMod {
-            close_log: Vec::new(),
             state: JsMap::new(),
             seated: None,
         }
@@ -274,9 +204,6 @@ pub struct CloseStats {
 
 /// (src/game/close.ts:40 DEGR)
 pub const DEGR: f64 = 0.017453292519943295;
-
-/// (src/game/close.ts:115 CLOSE_DEFAULTS: a table nothing writes)
-pub fn close_defaults() -> crate::knobs::CloseK { crate::knobs::CloseK::page() }
 
 /// (src/game/close.ts:117 BEHIND_COS)
 pub const BEHIND_COS: f64 = -0.25;

@@ -1,5 +1,5 @@
 // THE HOSTED PAGE'S BACKEND: what a hosted build of the game keeps on a server (the page's side is src/cloud/). No accounts: a browser is known by a random
-// id it made and keeps (`pid`), a page visit by the name its kept tape already has (`sid`, src/ui/replaykey.ts). Four things are kept:
+// id it made and keeps (`pid`), a page visit by the name its kept tape already has (`sid`, src/ui/replaykey.ts). What is kept:
 //   players     one row a browser: when it was first and last seen
 //   prefs       one row a browser: its settings as the page keeps them (the `twopointsix.*` keys of its localStorage, as one JSON text)
 //   visits      one row a page visit that was played: the kept tape's own row (src/tape/keepstore.ts KeptRow) and how many of its pieces are here
@@ -118,7 +118,7 @@ export default defineSchema({
     runner: v.string(),
     /** the setup record as the host sent it: `{ scenario, seed, knobs, seats }` (the server is handed it with `game`, `build` and `seatKeys` added) */
     setup: v.any(),
-    /** a seat proves itself to the server with its key; the server proves its heartbeats with `secret`. Neither is in any public answer but a seat's own key */
+    /** a seat's holder proves himself to the server with its key (another holder, another key); the server proves its heartbeats with `secret`. Neither is in any public answer but a seat's own key */
     seatKeys: v.array(v.string()),
     secret: v.string(),
     /** 'starting' (a server was asked for) · 'waiting' · 'playing' (the server's own words) · 'ended' · 'failed'. The first three are LIVE and count against the cap */
