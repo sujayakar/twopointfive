@@ -1,5 +1,5 @@
 fn tellOne(who: u32, x: vec3f, n: vec3f, level: u32) {
-  let e = cacheEntry(x, n, level); if (e.x == NOTHING && e.y > 1u) { return; }
+  let e = cacheEntry(x, n, level); if (e.x == NOTHING && e.y >= TRIES) { return; }
   if (e.x != NOTHING && !ROAM && any(cells[2u * e.x + 1u].xyz != vec3f(0.0))) { return; }
   hits[who] = vec4u(bitcast<vec3u>(x), octPack(n)); cacheFound(cacheKeyOf(x, n, level, e.y), who);
 }

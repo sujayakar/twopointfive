@@ -1,5 +1,5 @@
 // PATCHES IN A HASH, with everything about them a constant: SLOTS, CELL, COARSE (0: none), LEVELS (> 1: the level is picked by how wide the asking ray is, WIDEN of it), FLAT (a cell is thin along its
-// normal, however long it is), JOINS (asked whether two places are joined), SECOND (two entries may stand for a cell), ROAM (an entry's point is wherever rays last landed in it, so that it is the mean of
+// normal, however long it is), JOINS (asked whether two places are joined), TRIES (how many entries may stand for a cell), SOFT (where none of them is joined to it, the first answers after all), ROAM (an entry's point is wherever rays last landed in it, so that it is the mean of
 // its patch), SPREAD (the entries' own rays found entries too), DIRECT (the lamps' and the sun's light is kept; else it is asked at each reading).
 //   keys[slot] the key, 0 = empty · cand[slot] who founds it or moves it · cells[2s] E.rgb, samples · cells[2s+1] its point, sun seen · norms[slot] · spot[slot] where it looks from, its normal
 const REACH = 32u; const FAR_CELL = 6.0;
@@ -23,9 +23,9 @@ fn cacheFound(key: u32, who0: u32) {
   }
 }
 fn sees(a: vec3f, p: vec3f, n: vec3f) -> bool { return !JOINS || joined(a + n * 0.08, p + n * 0.08); }
-/** the entry for a place: of those that may stand for its cell, the one whose own point is joined to it (slot; or none, and which is free to found: 0, 1, 2 = neither) */
+/** the entry for a place: of those that may stand for its cell, the one whose own point is joined to it (slot; or none, and which is free to found: TRIES = none) */
 fn cacheEntry(x: vec3f, n: vec3f, level: u32) -> vec2u {
-  for (var v = 0u; v < select(1u, 2u, SECOND); v++) { let s = cacheFind(cacheKeyOf(x, n, level, v)); if (s == NOTHING) { return vec2u(NOTHING, v); } let p = cells[2u * s + 1u].xyz; if (all(p == vec3f(0.0))) { return vec2u(s, v); } if (!cacheNear(x) || sees(x, p, n)) { return vec2u(s, v); } } return vec2u(NOTHING, 2u);
+  for (var v = 0u; v < TRIES; v++) { let s = cacheFind(cacheKeyOf(x, n, level, v)); if (s == NOTHING) { return vec2u(NOTHING, v); } let p = cells[2u * s + 1u].xyz; if (all(p == vec3f(0.0))) { return vec2u(s, v); } if (!cacheNear(x) || sees(x, p, n)) { return vec2u(s, v); } } return vec2u(NOTHING, 2u);
 }
 /** the level a reader wants: as coarse as its ray is wide, by dice between two */
 var<private> askLevel: u32 = 0u;
@@ -40,6 +40,7 @@ fn held(x: vec3f, n: vec3f, j: vec2f) -> Cached {
     if (go == 0u && !sees(x, o, n)) { continue; } let s = cacheEntry(select(x, o, go == 0u), n, level).x; if (s == NOTHING) { continue; }
     c = entryLight(s, select(1.0, 3.0, go < 2u)); if (c.n > 0.0) { return c; }
   }
+  if (SOFT) { for (var v = 0u; v < TRIES; v++) { let s = cacheFind(cacheKeyOf(x, n, l0, v)); if (s == NOTHING) { break; } c = entryLight(s, 1.0); if (c.n > 0.0) { return c; } } }
   return c;
 }
 /** the same with no dice: the four fine cells round x in its plane, by nearness. For a mirror's image, where blocks or their grain would be seen */

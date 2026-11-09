@@ -11,3 +11,6 @@ fn askDirect(x: vec3f, n: vec3f, sunToo: bool) -> vec4f {
   }
   footW = k0.x; footS = k0.y; leafTo = k0.z; smallTo = k0.w; byReach = br; return r;
 }
+/** the same for what has no facing: one lamp (which way, how much), and the sun */
+fn lampsFrom(x: vec3f) -> mat2x3f { let l = drawLamp(x, vec3f(0.0)); if (l.x < 0.0) { return mat2x3f(vec3f(0.0, 1.0, 0.0), vec3f(0.0)); } let q = aimLamp(u32(l.x), x, rnd2()); let e = min(q.E * l.y, vec3f(300.0)); if (max3(e) <= 0.0) { return mat2x3f(vec3f(0.0, 1.0, 0.0), vec3f(0.0)); } return mat2x3f(q.dir, e * visible(x, q.dir, 2e-3, q.dist - 0.02)); }
+fn sunFrom(x: vec3f) -> f32 { if (max3(frame.sunE.xyz) <= 0.0) { return 0.0; } return lum(visible(x, coneDir(frame.sunDir.xyz, frame.sunDir.w, rnd2()), 2e-3, 400.0)); }
