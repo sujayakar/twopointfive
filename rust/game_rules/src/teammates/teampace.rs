@@ -194,7 +194,7 @@ fn team_run_ago(g: &crate::game::Game, gd: GuardId) -> f64 {
 /// × his card for a leg asked at `speed`: at a run a card weighs as it does on the player's sprint. None = as it was
 pub fn team_run_legs(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, speed: f64) -> Option<f64> {
     if speed < g.k.teampace.run_at || !team_slow(g, gd) { return None; }
-    let k = crate::kitload::load_pace_on(g, seat, crate::kitload::LoadPaceOnWho::Guard(gd));
+    let k = crate::kitload::load_pace_on(g, g.gd[gd].ch);
     Some(speed * (1.0 + (k - 1.0) * g.k.kitload.sprint))
 }
 
@@ -212,12 +212,12 @@ pub fn team_sprinting(g: &crate::game::Game, gd: GuardId) -> bool {
 pub fn team_tread(g: &mut crate::game::Game, gd: GuardId, speed: f64, base: f64) -> f64 {
     let level = if speed >= g.k.teampace.run_at && team_slow(g, gd) {
         g.k.teampace.step
-    } else if crate::kitload::load_gait(g, &crate::seats::here(g), crate::kitload::LoadGaitWho::Guard(gd), speed) > 2.0 {
+    } else if crate::kitload::load_gait(g, g.gd[gd].ch, speed) > 2.0 {
         0.8
     } else {
         crate::silent::silent_step(g, gd).unwrap_or(base)
     };
-    level * crate::kitload::load_heard(g, &crate::seats::here(g), crate::kitload::LoadHeardWho::Guard(gd))
+    level * crate::kitload::load_heard(g, g.gd[gd].ch)
 }
 
 /// fall in's pace for a man `d` off his place, the player doing `sam_v`. None = as it was

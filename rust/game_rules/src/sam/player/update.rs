@@ -72,7 +72,7 @@ fn free_pace(g: &crate::game::Game, seat: &crate::seats::SeatRef, m: crate::play
         else if m.dash { g.k.crouchrun.pace }
         else { (if m.crouch { crouch_pace(g) } else { g.tune.player_walk }) * m.pace };
     if let Some(walk) = g.puppet.as_ref().and_then(|p| p.walk) { if ml > 0.0 { max_speed *= walk; } }
-    crate::kitload::sam_load_pace(g, seat, max_speed, Some(m.sprinting))
+    crate::kitload::sam_load_pace(g, g.pl[seat.player].ch, max_speed, Some(m.sprinting))
 }
 
 /// His move keys as a way across the floor, in the view's basis, not yet of unit length.
@@ -833,8 +833,8 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
     let fall = footfall_due(g, dt, phase, tread_speed);
     if js::truthy(fall) {
         let base = if g.pl[pl].sprinting { 1.0 } else if g.pl[pl].dash { g.k.crouchrun.loud } else if g.pl[pl].crouch { 0.125 }
-            else if crate::kitload::load_gait(g, &crate::seats::here(g), crate::kitload::LoadGaitWho::Player, speed) > 2.0 { 0.6 } else { 0.26 };
-        let level = if g.pl[pl].sprinting { base } else { base * crate::kitload::load_heard(g, &crate::seats::here(g), crate::kitload::LoadHeardWho::Player) };
+            else if crate::kitload::load_gait(g, g.pl[g.player].ch, speed) > 2.0 { 0.6 } else { 0.26 };
+        let level = if g.pl[pl].sprinting { base } else { base * crate::kitload::load_heard(g, g.pl[g.player].ch) };
         let pos = g.ch[c].pos;
         let loud = crate::floor::tread(g, pos, level, true);
         let (time, serial) = (g.time, g.serial());

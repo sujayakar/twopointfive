@@ -481,6 +481,8 @@ pub struct Game {
     pub ch: Tab<CharId, crate::character::Character>,
     /// HOW EACH MAN IS, by his body: one table for the player, guards and civilians
     pub cond: Tab<CharId, crate::condition::Cond>,
+    /// what he carries, by what it costs him (None: nothing weighs on him)
+    pub load: Tab<CharId, Option<crate::kitload::KitWorn>>,
     /// the table of these things: never shrinks
     pub dr: Tab<DoorId, crate::doors::Door>,
     /// the table of these things: never shrinks
@@ -772,7 +774,6 @@ pub struct Player {
     pub wand: bool,
     pub wanding: Option<crate::wand::Wanding>,
     #[is(crate::kit::BigKit::None)] pub big_kit: crate::kit::BigKit,
-    pub kit_load: Option<crate::kitload::KitWorn>,
     pub cams: Vec<StickyCamId>,
     pub cam_seq: f64,
     pub charging: Option<crate::game::PlayerCharging>,
@@ -1442,7 +1443,6 @@ pub struct Mods {
     pub teams: crate::teams::TeamsMod,
     pub opening: crate::opening::OpeningMod,
     pub weather_kinds: crate::weather_kinds::WeatherKindsMod,
-    pub kitload: crate::kitload::KitloadMod,
     pub holdfire: crate::holdfire::HoldfireMod,
     pub picture: crate::picture::PictureMod,
     pub destruction_switch: crate::destruction_switch::DestructionSwitchMod,

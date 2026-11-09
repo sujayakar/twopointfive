@@ -377,9 +377,9 @@ fn frag_clears(g: &mut crate::game::Game, gd: GuardId, p: V3, pts: &[V3], late: 
     };
     // (a forecast is not a man acting on his picture: the picture's counts are put back)
     let (asks, lines, moved) = (g.stats.picture.asks, g.stats.picture.lines, g.stats.picture.moved);
-    let legs = crate::kitload::load_pace(g, &crate::seats::here(g), gd, speed);
+    let legs = crate::kitload::load_pace(g, g.gd[gd].ch, speed);
     let time_left = g.k.frag.order_fuse - g.k.squadthrow.duck_secs - late;
-    let accel = g.k.pace.accel * crate::kitload::load_pace_on(g, &crate::seats::here(g), crate::kitload::LoadPaceOnWho::Guard(gd));
+    let accel = g.k.pace.accel * crate::kitload::load_pace_on(g, g.gd[gd].ch);
     let wise = crate::frag::FleeSpotWise { path: Vec::new(), keep: None, not: None, apart: apart.map(|a| crate::frag::FleeSpotWiseApart { stay: a.stay, go: a.go }) };
     let spot = crate::frag::flee_spot(g, crate::frag::FleeSpotC { pos: p }, rest, legs, time_left, Some(accel), Some(&wise), Some(gd));
     g.stats.picture.asks = asks;

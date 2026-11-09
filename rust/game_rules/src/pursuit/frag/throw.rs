@@ -247,8 +247,8 @@ fn tick_man(g: &mut Game, i: usize, it: ItemId, at: V3, eye_at: V3, wise: &crate
     let keep_goal = keep.as_ref().and_then(|k| k.goal);
     let apart = taken_by(g, Some(i), gd, dz);
     let w_spot = crate::frag::FleeSpotWise { path: wise.path.clone(), keep: keep_goal, not, apart: Some(crate::frag::FleeSpotWiseApart { stay: apart.stay.clone(), go: apart.go.clone() }) };
-    let legs = crate::kitload::load_pace(g, &crate::seats::here(g), gd, speed);
-    let pick = acc * crate::kitload::load_pace_on(g, &crate::seats::here(g), crate::kitload::LoadPaceOnWho::Guard(gd));
+    let legs = crate::kitload::load_pace(g, g.gd[gd].ch, speed);
+    let pick = acc * crate::kitload::load_pace_on(g, g.gd[gd].ch);
     let (mut spot, mut spot_is_keep) = crate::frag::flee_spot_kept(g, crate::frag::FleeSpotC { pos }, dz, legs, fuse, Some(pick), Some(&w_spot), Some(gd));
     {
         let time = g.time;
