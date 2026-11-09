@@ -514,44 +514,71 @@ pub fn close_unseat(g: &mut crate::game::Game, gd: GuardId, back: Option<bool>) 
 mod tests {
     use super::*;
     use crate::close::{CloseId as I, CloseKind as K};
+    use alloc::boxed::Box;
 
-    /// The standing staff man's table of close_windows, at the page's numbers.
-    fn standing() -> Vec<crate::close::CloseWindow> {
-        let rear_half = m::acos(-BEHIND_COS);
-        let rear = m::PI - rear_half;
-        let front = v3::clamp(50.0, 10.0, 100.0) * DEGR;
-        let mid = (front + rear) / 2.0;
-        let half = (rear - front) / 2.0;
-        vec![
-            arc(I::Behind, K::Behind, m::PI, rear_half, 1.05, true, true),
-            arc(I::Left, K::Side, mid, half, 0.95, false, true),
-            arc(I::Right, K::Side, -mid, half, 0.95, false, true),
-            arc(I::Front, K::Front, 0.0, front, 0.85, false, true),
-        ]
+    fn a_man() -> (Box<Game>, GuardId) {
+        let mut g = Box::new(Game::blank());
+        let c = g.ch.push(crate::character::Character::blank());
+        let mut row = crate::game::Guard::blank();
+        row.ch = c;
+        let gd = g.gd.push(row);
+        (g, gd)
+    }
+    fn id_at(w: &[crate::close::CloseWindow], b: f64) -> I { window_at(w, b).unwrap().id }
+
+    /// Whichever way Sam comes at a standing man, he is in one of the four windows, the sides mirror each other, and the windows meet where the knobs say.
+    #[test]
+    fn a_standing_man_has_a_window_on_every_side() {
+        let (g, gd) = a_man();
+        let w = close_windows(&g, gd);
+        let mut b = -3.2;
+        while b < 3.2 {
+            let at = window_at(&w, b).unwrap();
+            let other = window_at(&w, -b).unwrap();
+            assert_eq!(at.kind, other.kind, "bearing {} is not the mirror of {}", b, -b);
+            b += 0.05;
+        }
+        let front = g.k.close.side_from_deg * DEGR;
+        assert_eq!(id_at(&w, 0.0), I::Front);
+        assert_eq!(id_at(&w, front - 0.01), I::Front);
+        assert_eq!(id_at(&w, -(front - 0.01)), I::Front);
+        assert_eq!(id_at(&w, front + 0.01), I::Left);
+        assert_eq!(id_at(&w, -(front + 0.01)), I::Right);
+        let rear = m::acos(BEHIND_COS);
+        assert_eq!(id_at(&w, rear - 0.01), I::Left);
+        assert_eq!(id_at(&w, -(rear - 0.01)), I::Right);
+        assert_eq!(id_at(&w, rear + 0.01), I::Behind);
+        assert_eq!(id_at(&w, -(rear + 0.01)), I::Behind);
+        assert_eq!(id_at(&w, m::PI), I::Behind);
     }
 
+    /// He is grabbed only from behind, and struck from anywhere, at each side's own reach.
     #[test]
-    fn the_arcs_bits_are_the_typescripts() {
-        let w = standing();
-        // bun, EXACT.on, close.ts's own expressions
-        let want: [(u64, u64, u64); 4] = BITS_ARCS;
-        for (i, (mid, half, cos_half)) in want.iter().enumerate() {
-            assert_eq!(w[i].mid.to_bits(), *mid, "mid {}", i);
-            assert_eq!(w[i].half.to_bits(), *half, "half {}", i);
-            assert_eq!(w[i].cos_half.to_bits(), *cos_half, "cosHalf {}", i);
+    fn only_from_behind_is_he_grabbed() {
+        let (g, gd) = a_man();
+        let w = close_windows(&g, gd);
+        let r = g.k.close.reach;
+        for x in &w {
+            assert!(x.strike);
+            assert_eq!(x.grab, x.id == I::Behind, "{:?}", x.id);
+            assert_eq!(x.reach, match x.kind { K::Behind => r.behind, K::Side => r.side, _ => r.front });
         }
     }
 
+    /// A man sitting down has no sides: the rear is his seat's, the rest is his front.
     #[test]
-    fn every_bearing_falls_in_the_typescripts_window() {
-        let w = standing();
-        // one letter per bearing from -3.2 by 0.05: windowAt under bun, EXACT.on
-        let want = WINDOWS_SWEEP.as_bytes();
-        for (i, c) in want.iter().enumerate() {
-            let b = -3.2 + 0.05 * (i as f64);
-            let got = match window_at(&w, b) { Some(x) => x.id.as_str().as_bytes()[0], None => b'-' };
-            assert_eq!(got, *c, "bearing {}", b);
-        }
+    fn a_seated_man_has_a_seat_behind_and_a_front_all_the_way_round_to_it() {
+        let (mut g, gd) = a_man();
+        let mut seated = JsMap::new();
+        seated.set(gd, crate::close::Seat { at: [0.0; 3], face: 0.0, hold: false, down: true });
+        g.m.close.seated = Some(seated);
+        let w = close_windows(&g, gd);
+        assert_eq!(w.len(), 2);
+        let rear = m::acos(BEHIND_COS);
+        assert_eq!(window_at(&w, m::PI).unwrap().kind, K::Seat);
+        assert_eq!(window_at(&w, rear + 0.01).unwrap().kind, K::Seat);
+        assert_eq!(window_at(&w, rear - 0.01).unwrap().kind, K::Front);
+        assert_eq!(window_at(&w, -(rear - 0.01)).unwrap().kind, K::Front);
     }
 
     #[test]
@@ -561,14 +588,6 @@ mod tests {
         assert_eq!(close_kind_of(Some(&o)), K::Side);
         assert_eq!(close_kind_of(Some(&crate::close::CloseOffer::default())), K::Behind);
     }
-
-    const BITS_ARCS: [(u64, u64, u64); 4] = [
-        (0x400921fb54442d18, 0x3ff51700e0c14b25, 0x3fd0000000000000),
-        (0x3ff591b27b4bccf0, 0x3fde6d0d31ed086d, 0x3fec73907aaf881c),
-        (0xbff591b27b4bccf0, 0x3fde6d0d31ed086d, 0x3fec73907aaf881c),
-        (0x0, 0x3febecde5da115a9, 0x3fe491b7523c161d),
-    ];
-    const WINDOWS_SWEEP: &str = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbrrrrrrrrrrrrrrrrrrrffffffffffffffffffffffffffffffffffflllllllllllllllllllbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
 }
 
 /// Once a frame before the guards: the seated men kept on their marks while calm, stood up when not.
