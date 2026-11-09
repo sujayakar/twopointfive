@@ -87,8 +87,8 @@ export class Simplifier {
     return false;
   }
   /** the vertices round v, into near */
-  private round(v: number, stamp: number): number {
-    const r = this.rings[v]!, T = this.T; let n = 0; void stamp;
+  private round(v: number): number {
+    const r = this.rings[v]!, T = this.T; let n = 0;
     for (let i = 0; i < this.ringN[v]!; i++) { const t = r[i]!; if (this.dead[t]) continue; for (let k = 0; k < 3; k++) { const u = T[t * 3 + k]!; if (u === v) continue; let has = false; for (let j = 0; j < n; j++) if (this.near[j] === u) { has = true; break; } if (!has) { if (n === this.near.length) { const b = new Int32Array(n * 2); b.set(this.near); this.near = b; } this.near[n++] = u; } } }
     return n;
   }
@@ -135,7 +135,7 @@ export class Simplifier {
       const key = this.heapKey[s]!, keep = locked[b] ? b : a, drop = keep === a ? b : a; if (this.cost(a, b) === Infinity) continue; const apart = this.geo;
       if (left <= third) { if (plain === Infinity) plain = worst; if (key > plain * DEAR) break; }
       // one hole more or less would be made where the two have other than two neighbors in common
-      let shared = 0, faces = 0; { const n = this.round(a, 0), mine = this.near.slice(0, n), m = this.round(b, 0); for (let i = 0; i < n; i++) for (let j = 0; j < m; j++) if (mine[i] === this.near[j]) shared++; const r = this.rings[a]!; for (let i = 0; i < this.ringN[a]!; i++) { const t = r[i]!; if (!dead[t] && (T[t * 3] === b || T[t * 3 + 1] === b || T[t * 3 + 2] === b)) faces++; } }
+      let shared = 0, faces = 0; { const n = this.round(a), mine = this.near.slice(0, n), m = this.round(b); for (let i = 0; i < n; i++) for (let j = 0; j < m; j++) if (mine[i] === this.near[j]) shared++; const r = this.rings[a]!; for (let i = 0; i < this.ringN[a]!; i++) { const t = r[i]!; if (!dead[t] && (T[t * 3] === b || T[t * 3 + 1] === b || T[t * 3 + 2] === b)) faces++; } }
       if (shared !== faces || faces > 2) continue;
       if (!locked[a] && this.turns(a, b)) continue; if (!locked[b] && this.turns(b, a)) continue;
       const [X, Y, Z] = [this.at[0]!, this.at[1]!, this.at[2]!];
@@ -148,7 +148,7 @@ export class Simplifier {
       for (let i = 0; i < n; i++) { const t = r[i]!; if (dead[t]) continue; let has = false; for (let k = 0; k < 3; k++) if (T[t * 3 + k] === keep) has = true; if (has) { dead[t] = 1; left--; continue; } for (let k = 0; k < 3; k++) if (T[t * 3 + k] === drop) T[t * 3 + k] = keep; this.addRing(keep, t); }
       { const q = this.rings[keep]!; let m = 0; for (let i = 0; i < this.ringN[keep]!; i++) if (!dead[q[i]!]) q[m++] = q[i]!; this.ringN[keep] = m; }
       ver[keep]!++; if (key > worst) worst = key; if (apart > off) off = apart;
-      const m = this.round(keep, 0), ring = this.near.slice(0, m); for (let i = 0; i < m; i++) { const c = this.cost(keep, ring[i]!); if (c < Infinity) this.push(c, keep, ring[i]!); }
+      const m = this.round(keep), ring = this.near.slice(0, m); for (let i = 0; i < m; i++) { const c = this.cost(keep, ring[i]!); if (c < Infinity) this.push(c, keep, ring[i]!); }
     }
     // what is left faces as its triangles do: their vector area is that of all they stand for, so light falls on them as it did
     for (let v = 0; v < nv; v++) { if (gone[v] || locked[v]) continue; let x = 0, y = 0, z = 0; const r = this.rings[v]!; for (let i = 0; i < this.ringN[v]!; i++) { const t = r[i]!; if (dead[t]) continue; const a = T[t * 3]! * 3, b = T[t * 3 + 1]! * 3, c = T[t * 3 + 2]! * 3, ux = V[b]! - V[a]!, uy = V[b + 1]! - V[a + 1]!, uz = V[b + 2]! - V[a + 2]!, wx = V[c]! - V[a]!, wy = V[c + 1]! - V[a + 1]!, wz = V[c + 2]! - V[a + 2]!; x += uy * wz - uz * wy; y += uz * wx - ux * wz; z += ux * wy - uy * wx; } const l = Math.hypot(x, y, z); if (l < 1e-30) continue; N[v * 3] = x / l; N[v * 3 + 1] = y / l; N[v * 3 + 2] = z / l; moved[v] = 1; }
@@ -158,12 +158,12 @@ export class Simplifier {
   }
   /** what it says that its neighbors do not: of color, and of the way it faces */
   private says(v: number): number {
-    const n = this.round(v, 0), C = this.C; if (n < 3) return 0; let c = 0; for (let k = 0; k < 3; k++) { let m = 0; for (let i = 0; i < n; i++) m += C[this.near[i]! * 4 + k]!; c = Math.max(c, Math.abs(Math.sqrt(m / n) - Math.sqrt(C[v * 4 + k]!))); }
+    const n = this.round(v), C = this.C; if (n < 3) return 0; let c = 0; for (let k = 0; k < 3; k++) { let m = 0; for (let i = 0; i < n; i++) m += C[this.near[i]! * 4 + k]!; c = Math.max(c, Math.abs(Math.sqrt(m / n) - Math.sqrt(C[v * 4 + k]!))); }
     return COLOR * c + NORMAL * Math.sqrt(2 * this.odd(v));
   }
   /** how far a vertex's normal is from what its neighbors' would make of it (1 − cos) */
   private odd(v: number): number {
-    const n = this.round(v, 0), N = this.N; let x = 0, y = 0, z = 0; for (let i = 0; i < n; i++) { const u = this.near[i]! * 3; x += N[u]!; y += N[u + 1]!; z += N[u + 2]!; }
+    const n = this.round(v), N = this.N; let x = 0, y = 0, z = 0; for (let i = 0; i < n; i++) { const u = this.near[i]! * 3; x += N[u]!; y += N[u + 1]!; z += N[u + 2]!; }
     const l = Math.hypot(x, y, z); if (l < 1e-9) return 0; return Math.max(0, 1 - (x * N[v * 3]! + y * N[v * 3 + 1]! + z * N[v * 3 + 2]!) / l);
   }
   private triOn(a: number, b: number): number { const r = this.rings[a]!, T = this.T; for (let i = 0; i < this.ringN[a]!; i++) { const t = r[i]!; if (T[t * 3] === b || T[t * 3 + 1] === b || T[t * 3 + 2] === b) return t; } return -1; }

@@ -1,6 +1,6 @@
 // MESHES, as one more kind of piece: what a ray meets of one, and what is there. Rows are those of mesh/pack.ts, from MESH_ROW on.
 //   object   n levels, bits, children's row, children · a ball round it · the width at which it is gone · then a level each: error, tree, first child, children
-//   child    three rows object → mesh (scaled) · mesh, tint, scale
+//   child    three rows object → mesh (scaled) · mesh, tint, scale, what its level of the object is off
 //   mesh     corner, levels · a step of its grid, clusters' row · triangles' row, picking row and entries, clusters · ball · then a level each: error, tree, triangles, spread
 //   cluster  vertices' row, triangles, vertices | level << 16, how far it stands off      triangle  three vertices of its cluster, a byte each
 //   vertex   x y, z and spread, normal, color               node      both children: least corner, what it is · greatest corner
@@ -21,8 +21,6 @@ fn meshWide(t: f32) -> f32 { return max(max(meshError, frame.knobs.x), (meshFoot
 var<private> meshBack = 0.0;
 /** unless told otherwise that is a few times what the level it meets is off */
 var<private> meshOwn = true;
-/** nodes and triangles looked at (nothing reads it but the panel) */
-var<private> meshSteps = 0u;
 
 fn meshVertex(row: u32, mn: vec3f, st: vec3f) -> vec3f { let v = mrowU(row); return mn + st * vec3f(f32(v.x & 0xffffu), f32(v.x >> 16u), f32(v.y & 0xffffu)); }
 /** which level of a mesh stands within `e` of its finest */
@@ -35,7 +33,6 @@ fn meetMesh(k: u32, ro: vec3f, rd: vec3f, tmin: f32, tmax: f32) -> bool {
   var stack: array<u32, 48>; var stackT: array<f32, 48>; var sp = 0; var at = mrowU(oh + 3u + li).y; var atT = max(hull.x, tmin);
   var best = tmax; var found = false; var o = oo; var d = od; var inv = safeInv(d); var child = 0xffffffffu; var recs = 0u; var tris = 0u; var mn = vec3f(0.0); var st = vec3f(1.0); var backTo = meshBack;
   loop {
-    meshSteps += 1u;
     if ((at & 0x80000000u) == 0u) {                                  // a node: the nearer child next, the farther later
       let a0 = mrow(at); let a1 = mrow(at + 1u); let b0 = mrow(at + 2u); let b1 = mrow(at + 3u); let sa = boxSpan(a0.xyz, a1.xyz, o, inv); let sb = boxSpan(b0.xyz, b1.xyz, o, inv); let ta = max(sa.x, tmin); let tb = max(sb.x, tmin); let ha = ta <= min(sa.y, best); let hb = tb <= min(sb.y, best); let ra = bitcast<u32>(a0.w); let rb = bitcast<u32>(b0.w);
       if (ha && hb) { let near = ta <= tb; if (sp < 46) { stack[sp] = select(ra, rb, near); stackT[sp] = select(ta, tb, near); sp += 1; } at = select(rb, ra, near); atT = select(tb, ta, near); continue; }
@@ -43,7 +40,7 @@ fn meetMesh(k: u32, ro: vec3f, rd: vec3f, tmin: f32, tmax: f32) -> bool {
     } else if (child == 0xffffffffu) {                               // a child (or a few): the last of them now, into its own frame
       let first = (at & 0x7fffffffu) >> 4u; let count = at & 15u; if (count > 1u && sp < 46) { stack[sp] = 0x80000000u | (first << 4u) | (count - 1u); stackT[sp] = atT; sp += 1; }
       child = first + count - 1u; let c = head.z + child * 4u; let c0 = mrow(c); let c1 = mrow(c + 1u); let c2 = mrow(c + 2u); let c3 = mrowU(c + 3u); o = vec3f(dot(c0.xyz, oo) + c0.w, dot(c1.xyz, oo) + c1.w, dot(c2.xyz, oo) + c2.w); d = vec3f(dot(c0.xyz, od), dot(c1.xyz, od), dot(c2.xyz, od)); inv = safeInv(d);
-      let a = mrow(c3.x); let b = mrow(c3.x + 1u); mn = a.xyz; st = b.xyz; recs = bitcast<u32>(b.w); tris = mrowU(c3.x + 2u).x; let k = sc * bitcast<f32>(c3.z); let l = meshPick(c3.x, bitcast<u32>(a.w), meshWide(atT) / k); let lv = mrow(c3.x + 4u + l); if (meshOwn) { backTo = max(meshBack, 3.0 * lv.x * k); }
+      let a = mrow(c3.x); let b = mrow(c3.x + 1u); mn = a.xyz; st = b.xyz; recs = bitcast<u32>(b.w); tris = mrowU(c3.x + 2u).x; let k = sc * bitcast<f32>(c3.z); let l = meshPick(c3.x, bitcast<u32>(a.w), meshWide(atT) / k); let lv = mrow(c3.x + 4u + l); if (meshOwn) { backTo = max(meshBack, 3.0 * (lv.x * k + bitcast<f32>(c3.w) * sc)); }
       stack[sp] = 0xffffffffu; stackT[sp] = 0.0; sp += 1; at = bitcast<u32>(lv.y); continue;
     } else {
       let first = (at & 0x7fffffffu) >> 4u; let vb = mrowU(recs + (first >> 7u)).x;
@@ -75,7 +72,7 @@ fn meshSurf(ro: vec3f, rd: vec3f, h: Hit, fp: f32) -> Surf {
   // (which side a light is on is asked of the smooth surface, not of the facet: else facets near the sun's edge go dark one by one)
   s.ng = s.n;
   // (and what goes on from here starts as far off as this level is wrong: its facets stand in each other's way as the stone does not)
-  s.x += s.n * (bitcast<f32>(rec.w) * bitcast<f32>(c3.z) * (*p).quad.x);
+  s.x += s.n * ((bitcast<f32>(rec.w) * bitcast<f32>(c3.z) + bitcast<f32>(c3.w)) * (*p).quad.x);
   let tp = unpackTint((*p).tint); let tc = unpackTint(c3.y); var base = m.base * tp * tp * tc * tc * col.rgb * col.rgb * (0.72 + 0.28 * col.a);
   // under what triangles hold: the stone's own grain, in three sizes, each as far as a pixel can show it
   let rough2 = m.rough * m.rough + 2.0 * spread; let q = l * cs * (*p).quad.x; var lg = vec3f(0.0); var fleck = 0.0;

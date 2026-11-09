@@ -34,9 +34,9 @@ export interface Drawn { slots: number; triangles: number; hid: number; full: nu
 
 export function meshStage(lab: Lab, g: Graph): Stage {
   return { name: 'meshes', over: 'render', code: '', async make() {
-    const d = g.g.device, w = lab.building.world.meshes!, S = GPUBufferUsage.STORAGE, C = GPUShaderStage.COMPUTE, mk = (n: string, bytes: number, usage = S) => buffer(g.g, n, bytes, usage);
+    const d = g.g.device, w = lab.building.world.meshes!, S = GPUBufferUsage.STORAGE, C = GPUShaderStage.COMPUTE, mk = (n: string, bytes: number, usage = S) => buffer(g.g, n, bytes, usage), shared = (n: string, bytes: number, more = 0) => lab.buffer(n, bytes, S | GPUBufferUsage.COPY_SRC | more);
     const floor = new Set(w.objects.filter(o => o.levels.length > 1).map(o => o.row)), all = lab.scene.standing.flatMap((p, i) => p.flags & F.MESH ? [i] : []).sort((a, b) => +floor.has(lab.scene.standing[a]!.mesh!) - +floor.has(lab.scene.standing[b]!.mesh!)), heroes = all.filter(i => !floor.has(lab.scene.standing[i]!.mesh!)).length, placed = mk('placed', Math.max(16, all.length * 4)); d.queue.writeBuffer(placed, 0, new Uint32Array(all));
-    const lists = [mk('listA', QUEUE * 8), mk('listB', QUEUE * 8)], n = mk('meshN', 128), slots = lab.buffer('meshSlots', MOST * 64), again = mk('again', MOST * 16), args = mk('meshArgs', 64, S | GPUBufferUsage.INDIRECT), indices = mk('meshIndices', INDICES * 4, S | GPUBufferUsage.INDEX); g.buffers.set('meshN', n);
+    const lists = [shared('meshListA', QUEUE * 8), shared('meshListB', QUEUE * 8)], n = shared('meshN', 128), slots = shared('meshSlots', MOST * 64), again = shared('meshAgain', MOST * 16), args = shared('meshArgs', 64, GPUBufferUsage.INDIRECT), indices = shared('meshIndices', INDICES * 4, GPUBufferUsage.INDEX);
     // ---- how far everything is, coarser and coarser: the farthest of each square
     const hzbGroups = new Map<string, GPUBindGroup>(); let hzb: GPUTexture | null = null, hzbViews: GPUTextureView[] = [], hzbSize: [number, number] = [0, 0];
     const hzbLayout = (first: boolean) => d.createBindGroupLayout({ entries: [{ binding: 0, visibility: C, texture: first ? { sampleType: 'depth' } : { sampleType: 'unfilterable-float' } }, { binding: 1, visibility: C, storageTexture: { access: 'write-only', format: 'r32float' } }] });
@@ -61,14 +61,14 @@ fn at(p: vec2i) -> f32 { let m = vec2i(textureDimensions(src)) - 1; return textu
     return enc => {
       fit(); const ts = (name: string) => g.timer.pass(name), stamp = (name: string) => { const t = ts(name); return t ? { timestampWrites: t } : {}; }, hide = RASTER.hide && !RASTER.freeze && frames++ > 0, many = RASTER.heroes ? heroes : all.length;
       for (let i = 0; i < K.length; i++) { const f = new Float32Array(12), u = new Uint32Array(f.buffer); f[0] = RASTER.tau; f[1] = RASTER.fixed; u[2] = many; u[3] = MOST; f[4] = RASTER.cone ? 1 : 0; f[5] = hide ? 1 : 0; u[6] = Math.max(0, i - 1); u[7] = QUEUE; f[8] = hzbSize[0]; f[9] = hzbSize[1]; f[10] = hzbViews.length; d.queue.writeBuffer(K[i]!, 0, f); }
-      const B = bind(), held = RASTER.freeze && frames > 2; if (!held) enc.clearBuffer(n, 0, 124);
+      const B = bind(), held = RASTER.freeze && frames > 2; /* (held: all that was picked is said again, as one) */ if (held) enc.clearBuffer(n, 108, 16); else enc.clearBuffer(n, 0, 124);
       if (!held) { const p = enc.beginComputePass({ label: 'mesh pick', ...stamp('mesh pick') }); p.setBindGroup(0, g.shared.group()); p.setPipeline(seed!); p.setBindGroup(1, B[0]!); p.dispatchWorkgroups(Math.ceil(most / 64), many); p.setPipeline(round!); for (let i = 0; i < ROUNDS; i++) { p.setBindGroup(1, B[i + 1]!); p.dispatchWorkgroups(GROUPS); } p.end(); }
-      const draw = (name: string, phase: 0 | 1, held = false) => {
-        if (!held) { const p = enc.beginComputePass({ label: name + ' indices', ...stamp(name + ' indices') }); p.setBindGroup(0, g.shared.group()); p.setBindGroup(1, shareG[phase]!); if (RASTER.share) { p.setPipeline(expand!); p.dispatchWorkgroups(1024); } p.setPipeline(say!); p.dispatchWorkgroups(1); p.end(); }
+      const draw = (name: string, phase: 0 | 1) => {
+        { const p = enc.beginComputePass({ label: name + ' indices', ...stamp(name + ' indices') }); p.setBindGroup(0, g.shared.group()); p.setBindGroup(1, shareG[phase]!); if (RASTER.share) { p.setPipeline(expand!); p.dispatchWorkgroups(1024); } p.setPipeline(say!); p.dispatchWorkgroups(1); p.end(); }
         const p = enc.beginRenderPass({ label: name, colorAttachments: [{ view: g.view('id'), loadOp: 'load', storeOp: 'store' }], depthStencilAttachment: { view: g.view('depth'), depthLoadOp: 'load', depthStoreOp: 'store' }, ...(stamp(name) as { timestampWrites?: GPURenderPassTimestampWrites }) }); p.setBindGroup(0, g.shared.group()); p.setBindGroup(1, drawG);
         if (RASTER.share) { p.setPipeline(share!); p.setIndexBuffer(indices, 'uint32'); p.drawIndexedIndirect(args, 16); } else { p.setPipeline(pull!); p.drawIndirect(args, 0); } p.end();
       };
-      draw('mesh draw', 0, held);
+      draw('mesh draw', 0);
       { const p = enc.beginComputePass({ label: 'mesh depth', ...stamp('mesh depth') }); reduce(p); if (hide) { p.setBindGroup(0, g.shared.group()); p.setPipeline(second!); p.setBindGroup(1, B[0]!); p.dispatchWorkgroups(GROUPS); } p.end(); }
       if (hide) draw('mesh second', 1);
     };

@@ -12,6 +12,8 @@ export interface ObjectLevel { error: number; children: Child[] }
 export interface PackedObject { row: number; levels: ObjectLevel[]; mn: V3; mx: V3; most: number }
 
 /** rows of an entry; how wide the picking tree is; how many levels rays get; triangles in a leaf of their trees */
+/** children an object may have: eleven bits where picks are packed (meshpick.wgsl, first hit) */
+export const CHILDREN = 2048;
 export const ENTRY_ROWS = 5, WIDE = 8, RATIOS = 11, LEAF = 8;
 
 const oct = (x: number, y: number, z: number): number => { const s = Math.abs(x) + Math.abs(y) + Math.abs(z) || 1; let a = x / s, b = z / s; if (y < 0) { const p = (1 - Math.abs(b)) * (a < 0 ? -1 : 1), q = (1 - Math.abs(a)) * (b < 0 ? -1 : 1); a = p; b = q; } const q = (v: number) => Math.round((v * 0.5 + 0.5) * 65535) & 0xffff; return (q(a) | (q(b) << 16)) >>> 0; };
@@ -120,7 +122,7 @@ export function packObject(s: Store, levels: ObjectLevel[], /** the width from w
     const n = l.children.length, boxes = new Float64Array(n * 6);
     l.children.forEach((c, i) => {
       const o = (kids + (start + i) * 4) * 4, k = 1 / c.scale; for (let a = 0; a < 3; a++) { const x = c.rot[a]!; s.f[o + a * 4] = x[0] * k; s.f[o + a * 4 + 1] = x[1] * k; s.f[o + a * 4 + 2] = x[2] * k; s.f[o + a * 4 + 3] = -(x[0] * c.at[0] + x[1] * c.at[1] + x[2] * c.at[2]) * k; }
-      const q = (x: number) => Math.max(0, Math.min(255, Math.round(x * 255))); s.u[o + 12] = c.mesh.header; s.u[o + 13] = (q(c.tint[0]) | (q(c.tint[1]) << 8) | (q(c.tint[2]) << 16)) >>> 0; s.f[o + 14] = c.scale; s.u[o + 15] = 0;
+      const q = (x: number) => Math.max(0, Math.min(255, Math.round(x * 255))); s.u[o + 12] = c.mesh.header; s.u[o + 13] = (q(c.tint[0]) | (q(c.tint[1]) << 8) | (q(c.tint[2]) << 16)) >>> 0; s.f[o + 14] = c.scale; s.f[o + 15] = l.error;
       for (let a = 0; a < 3; a++) { let lo = c.at[a]!, hi = c.at[a]!; for (let b = 0; b < 3; b++) { const m = c.rot[b]![a]! * c.scale, p = m * c.mesh.mn[b]!, r = m * c.mesh.mx[b]!; lo += Math.min(p, r); hi += Math.max(p, r); } boxes[i * 6 + a] = lo; boxes[i * 6 + 3 + a] = hi; if (lo < mn[a]!) mn[a] = lo; if (hi > mx[a]!) mx[a] = hi; }
     });
     // (leaves name children by where they lie: laid again in the tree's order)
@@ -128,5 +130,5 @@ export function packObject(s: Store, levels: ObjectLevel[], /** the width from w
     const h = (header + 3 + li) * 4; s.f[h] = l.error; s.u[h + 1] = root; s.u[h + 2] = first; s.u[h + 3] = n; start += n; most = Math.max(most, n);
   });
   const h = header * 4; s.u[h] = levels.length; s.u[h + 1] = bits; s.u[h + 2] = s.base + kids; s.u[h + 3] = total; s.f[h + 8] = gone; s.f.set([(mn[0] + mx[0]) / 2, (mn[1] + mx[1]) / 2, (mn[2] + mx[2]) / 2, Math.hypot(mx[0] - mn[0], mx[1] - mn[1], mx[2] - mn[2]) / 2], h + 4);
-  if (total > 1 << (31 - bits)) throw new Error('too many children'); return { row: s.base + header, levels, mn, mx, most };
+  if (total > CHILDREN || total > 1 << (31 - bits)) throw new Error('too many children'); return { row: s.base + header, levels, mn, mx, most };
 }

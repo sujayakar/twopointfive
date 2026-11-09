@@ -1,5 +1,5 @@
 // SHAPES WITHOUT ARTISTS: pebbles by cutting and wearing down, a broken column by a lathe, chisels and weather. All of it from a seed; nothing is loaded.
-import { rng, type V3, norm, cross } from '../math';
+import { rng, type V3, norm } from '../math';
 import { type Mesh, normalsOf, split4 } from './mesh';
 
 // ---- noise: value noise in three dimensions, fast
@@ -119,4 +119,3 @@ export function column(drum: boolean, cell = 0.011, finer = 2): Mesh {
   for (let i = 0; i < nv; i++) { const x = m.pos[i * 3]!, y = m.pos[i * 3 + 1]!, z = m.pos[i * 3 + 2]!, w = weather(drum ? x + 9 : x, y, z, n0[i * 3 + 1]!, cell / 2 ** finer); for (let k = 0; k < 3; k++) pos[i * 3 + k] = m.pos[i * 3 + k]! - n0[i * 3 + k]! * w.deep; for (let k = 0; k < 4; k++) col[i * 4 + k] = 255 * clamp01(w.col[k]!); }
   return { pos, nrm: normalsOf(pos, m.tri), col, tri: m.tri };
 }
-void cross;
