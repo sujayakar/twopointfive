@@ -69,7 +69,8 @@ npx convex run games:list            # the games, newest first, with what a runn
 ```
 
 The clocks, in seconds, each a word of the deployment's environment: `MP_START_S` (120: a server asked for must be heard from), `MP_SILENT_S`
-(45: not heard from = gone), `MP_IDLE_S` (60: nobody connected), `MP_MAX_S` (3600: a game's whole life).
+(45: not heard from = gone), `MP_IDLE_S` (60: nobody connected), `MP_MAX_S` (3600: a game's whole life), `MP_COME_S` (15: how long whoever is given a seat
+has to connect in it before it may be another's).
 
 ## Reading it back
 
