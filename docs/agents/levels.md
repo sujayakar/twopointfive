@@ -1623,8 +1623,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   keeps `stuff` only: to the rules a tone was never its paint).
   THE LEVEL TOOLS: the exporters give every box whose maker said no word the word its colour had (`tools/levels/doesWas.ts stampDoes`: the old rule,
   FROZEN, with its own copy of the palettes; nothing in `src/` reads it) before a skin repaints anything; a material row says what its NAME says,
-  else what its colour did. `tools/levels/does-bake.ts <file>` brings a file from before forward (on the old barracks it writes the export's file to
-  the byte). So a NEW paint is free: name it and say its word, and its colour is anyone's; numbers nobody names still get the tone's answer, written
+  else what its colour did. No file from before is left: the tool that brought them forward is gone, and a new file comes from its export. So a NEW paint is free: name it and say its word, and its colour is anyone's; numbers nobody names still get the tone's answer, written
   in the file where it can be read. The skin's old refusal ("would change what the simulation reads") is gone with its cause.
   CHECKS: `bun run tools/qa/does-check.ts` (probes.ts `does`, families `destruction`, `look`; both stands; `DOES_BREAK=1` takes the words off and must
   fail): the table; no old reader under `src/`, no renderer file asking what a box does but the snow field, no rule file importing the look; six
