@@ -151,6 +151,7 @@ async function main(): Promise<void> {
     // THE DESK: the cards before a game ask the module, and what a press keeps goes in this machine's store, where the next page's start reads it
     const C = new Commands(); setDesk(new Desk(face.exports as unknown as DeskFace, face.exports.memory as WebAssembly.Memory, (key, text) => { try { if (text) localStorage.setItem(key, text); else localStorage.removeItem(key); } catch { /* no store: nothing is kept */ } }));
     C.words(location.search); machineBefore(q, name, C); desk().do(C); return face; });
+  faceP.catch(() => { /* told where it is awaited, below */ });
   // (an address that may only say where to go waits for the module before anything else is fetched: a row of the short list named and nothing to play goes to that row's own page, the benchmark asked
   //  for to its first scene's, the pricing run to its first level's. A page of a pricing run under way takes its part here, before the picture boots)
   let refused: string | null = null;
