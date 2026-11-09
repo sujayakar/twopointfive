@@ -101,12 +101,12 @@ function columnField(drum: boolean) {
     return d + chip(x, y, z);
   };
 }
-/** what the weather and the years leave in the stone: how far in, at a place, and its color. The same field at any fineness */
-function weather(x: number, y: number, z: number, up: number): { deep: number; col: [number, number, number, number] } {
-  const a = fbm3(x * 14, y * 14, z * 14, 4), b = fbm3(x * 60 + 5, y * 60, z * 60, 4), c = noise3(x * 240, y * 240, z * 240), bed = noise3(x * 1.5, y * 46 + 2 * noise3(x * 3, y * 3, z * 3), z * 1.5);
-  const pits = step(0.30, 0.52, noise3(x * 85 + 2, y * 60, z * 85)) * (0.5 + 0.5 * step(-0.1, 0.4, noise3(x * 9, y * 9, z * 9 + 3))), w = noise3(x * 4.2 + 9, y * 4.2, z * 4.2), crack = Math.abs(noise3(x * 3.1 + 0.35 * noise3(x * 18, y * 18, z * 18), y * 2.2, z * 3.1 + 5)), split = (1 - step(0.004, 0.018, crack)) * step(0.0, 0.25, w);
+/** what the weather and the years leave in the stone: how far in, at a place, and its color. Nothing steeper or finer than vertices `apart` metres from each other can hold: what is finer is the material's */
+function weather(x: number, y: number, z: number, up: number, apart: number): { deep: number; col: [number, number, number, number] } {
+  const a = fbm3(x * 14, y * 14, z * 14, 4), b = fbm3(x * 60 + 5, y * 60, z * 60, 4), soft = apart * 22, c = apart < 0.0016 ? noise3(x * 240, y * 240, z * 240) : 0, bed = noise3(x * 1.5, y * 46 + 2 * noise3(x * 3, y * 3, z * 3), z * 1.5);
+  const pits = step(0.30 - soft, 0.52 + soft, noise3(x * 85 + 2, y * 60, z * 85)) * (0.5 + 0.5 * step(-0.1, 0.4, noise3(x * 9, y * 9, z * 9 + 3))), w = noise3(x * 4.2 + 9, y * 4.2, z * 4.2), crack = Math.abs(noise3(x * 3.1 + 0.35 * noise3(x * 18, y * 18, z * 18), y * 2.2, z * 3.1 + 5)), split = (1 - step(0.004, 0.018 + apart * 6, crack)) * step(0.0, 0.25, w);
   const deep = 0.0035 * a + 0.0013 * b + 0.00035 * c + 0.0012 * Math.max(0, bed) + 0.0048 * pits + 0.010 * split;
-  const moss = step(0.10, 0.34, fbm3(x * 5 + 3, y * 5, z * 5, 4) + 0.30 * up - 0.16 - 0.25 * y) * 0.9, lich = step(0.26, 0.33, noise3(x * 22 + 7, y * 22, z * 22) + 0.10 * b) * step(0.0, 0.3, noise3(x * 2.5, y * 2.5 + 4, z * 2.5)), v = 0.80 + 0.14 * a + 0.12 * b + 0.07 * c - 0.10 * Math.max(0, bed) - 0.34 * pits - 0.4 * split;
+  const moss = step(0.10, 0.34, fbm3(x * 5 + 3, y * 5, z * 5, 4) + 0.30 * up - 0.16 - 0.25 * y) * 0.9, lich = step(0.26 - soft * 0.5, 0.33 + soft * 0.5, noise3(x * 22 + 7, y * 22, z * 22) + 0.10 * b) * step(0.0, 0.3, noise3(x * 2.5, y * 2.5 + 4, z * 2.5)), v = 0.80 + 0.14 * a + 0.12 * b + 0.07 * c - 0.10 * Math.max(0, bed) - 0.34 * pits - 0.4 * split;
   let col: [number, number, number] = [v, v * 0.955, v * 0.87]; const to = (k: number, q: [number, number, number]) => { col = col.map((p, i) => p + (q[i]! - p) * k) as typeof col; }; to(lich * 0.75, [0.83, 0.74, 0.42]); to(moss * 0.85, [0.36 + 0.1 * b, 0.44 + 0.14 * b, 0.20]);
   return { deep: deep - moss * 0.0016 * (1 + 2 * c), col: [col[0], col[1], col[2], 1 - 0.55 * pits - 0.5 * split] };
 }
@@ -115,9 +115,8 @@ export function column(drum: boolean, cell = 0.011, finer = 2): Mesh {
   const f = columnField(drum); let m = nets(f, drum ? [-0.66, -0.36, -0.36] : [-0.52, -0.04, -0.52], drum ? [0.74, 0.36, 0.36] : [0.52, 1.95, 0.52], cell);
   const e = 0.0008, onto = (p: Float32Array, times: number) => { for (let i = 0; i < p.length; i += 3) for (let k = 0; k < times; k++) { const x = p[i]!, y = p[i + 1]!, z = p[i + 2]!, d = f(x, y, z); let gx = f(x + e, y, z) - d, gy = f(x, y + e, z) - d, gz = f(x, y, z + e) - d; const l = Math.hypot(gx, gy, gz); if (l < 1e-9) break; gx /= l; gy /= l; gz /= l; const s = d / Math.max(l / e, 0.4) * 0.9; p[i] = x - gx * s; p[i + 1] = y - gy * s; p[i + 2] = z - gz * s; } };
   onto(m.pos, 2); for (let k = 0; k < finer; k++) { m = split4(m); if (k < 2) onto(m.pos, 1); }
-  // the middles of long quads may have come to lie unevenly: eased once, along the surface
   const n0 = normalsOf(m.pos, m.tri), nv = m.pos.length / 3, pos = new Float32Array(m.pos.length), col = new Uint8Array(nv * 4);
-  for (let i = 0; i < nv; i++) { const x = m.pos[i * 3]!, y = m.pos[i * 3 + 1]!, z = m.pos[i * 3 + 2]!, w = weather(drum ? x + 9 : x, y, z, drum ? n0[i * 3 + 1]! : n0[i * 3 + 1]!); for (let k = 0; k < 3; k++) pos[i * 3 + k] = m.pos[i * 3 + k]! - n0[i * 3 + k]! * w.deep; for (let k = 0; k < 4; k++) col[i * 4 + k] = 255 * clamp01(w.col[k]!); }
+  for (let i = 0; i < nv; i++) { const x = m.pos[i * 3]!, y = m.pos[i * 3 + 1]!, z = m.pos[i * 3 + 2]!, w = weather(drum ? x + 9 : x, y, z, n0[i * 3 + 1]!, cell / 2 ** finer); for (let k = 0; k < 3; k++) pos[i * 3 + k] = m.pos[i * 3 + k]! - n0[i * 3 + k]! * w.deep; for (let k = 0; k < 4; k++) col[i * 4 + k] = 255 * clamp01(w.col[k]!); }
   return { pos, nrm: normalsOf(pos, m.tri), col, tri: m.tri };
 }
 void cross;

@@ -77,9 +77,10 @@ fn meshSurf(ro: vec3f, rd: vec3f, h: Hit, fp: f32) -> Surf {
   // (and what goes on from here starts as far off as this level is wrong: its facets stand in each other's way as the stone does not)
   s.x += s.n * (bitcast<f32>(rec.w) * bitcast<f32>(c3.z) * (*p).quad.x);
   let tp = unpackTint((*p).tint); let tc = unpackTint(c3.y); var base = m.base * tp * tp * tc * tc * col.rgb * col.rgb * (0.72 + 0.28 * col.a);
-  // under what triangles hold: the stone's own grain, two sizes of it
-  var rough2 = m.rough * m.rough + 2.0 * spread; let grain = 1.0 - smoothstep(0.00008, 0.0006, fp);
-  if (grain > 0.0) { let q = l * cs * (*p).quad.x; let f = 1600.0; let e = 0.5 / f; let g0 = vnoise3(q * f) + 0.5 * vnoise3(q * f * 2.7 + 5.0) * shows(f * 2.7, fp); let gx = vnoise3((q + vec3f(e, 0.0, 0.0)) * f); let gy = vnoise3((q + vec3f(0.0, e, 0.0)) * f); let gz = vnoise3((q + vec3f(0.0, 0.0, e)) * f); let lg = (vec3f(gx, gy, gz) - vnoise3(q * f)) * (0.45 * grain); s.n = normalize(s.n - normalize(toWorld(k, c0.xyz * lg.x + c1.xyz * lg.y + c2.xyz * lg.z) + s.n * 1e-6) * length(lg)); if (dot(s.n, s.ng) < 0.05) { s.n = normalize(s.n + s.ng * 0.3); } base *= 1.0 + 0.16 * grain * (g0 - 0.75); }
+  // under what triangles hold: the stone's own grain, in three sizes, each as far as a pixel can show it
+  let rough2 = m.rough * m.rough + 2.0 * spread; let q = l * cs * (*p).quad.x; var lg = vec3f(0.0); var fleck = 0.0;
+  for (var o = 0u; o < 3u; o++) { let f = array<f32, 3>(330.0, 1150.0, 4100.0)[o]; let k = shows(f, fp); if (k <= 0.0) { break; } let e = 0.35 / f; let v0 = vnoise3(q * f); lg += (vec3f(vnoise3((q + vec3f(e, 0.0, 0.0)) * f), vnoise3((q + vec3f(0.0, e, 0.0)) * f), vnoise3((q + vec3f(0.0, 0.0, e)) * f)) - v0) * (k * 0.55); fleck += k * (v0 - 0.5); }
+  if (dot(lg, lg) > 0.0) { let wg = normalize(toWorld(k, c0.xyz * lg.x + c1.xyz * lg.y + c2.xyz * lg.z)) * length(lg); let sm = s.n; s.n = normalize(s.n - (wg - s.n * dot(wg, s.n))); if (dot(s.n, sm) < 0.4) { s.n = normalize(s.n + sm * 0.5); } base *= 1.0 + 0.14 * fleck; }
   s.rough = clamp(sqrt(rough2), 0.05, 1.0); s.albedo = clamp(base, vec3f(0.0), vec3f(0.94)); s.ao = vec2f(col.a, 0.0); return s;
 }
 fn surfaceAt(ro: vec3f, rd: vec3f, h: Hit, fp: f32) -> Surf { if ((h.piece & LEAF_HIT) == 0u && (pieces[h.piece].flags & MESH) != 0u) { return meshSurf(ro, rd, h, fp); } return surfacePiece(ro, rd, h, fp); }
