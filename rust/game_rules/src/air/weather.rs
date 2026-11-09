@@ -14,11 +14,6 @@ fn wx(g: &Game) -> &'static mut ::sim::weather::Weather { ::sim::weather::of(g.s
 /// The same table, to read.
 fn wx_read(g: &Game) -> &'static ::sim::weather::Weather { ::sim::weather::of_read(g.sim) }
 
-/// `WX_KNOBS.here()`: the module's knobs as they stand, unless this tick has handed the list. rustknobs.ts:59 sets it and it needs `g`, which the skeleton's `here()` has not, so this is p_air_dust_01's line (notes, Skeleton; all the knobs, where the TypeScript writes the weather's).
-fn knobs_here(g: &mut Game) {
-    if !g.m.rustknobs.rust_knobs.tick { crate::rustknobs::knobs_to_rust(g); }
-}
-
 /// `console.warn` as the weather stands up (after-snapshot.md: a line, no refusal). The skeleton has no console, so it says nothing yet (notes, Skeleton).
 fn seam_console_warn(_line: String) {}
 
@@ -346,14 +341,12 @@ pub fn weather_under_roof(g: &mut crate::game::Game, x: f64, z: f64) -> bool {
 /// The rain bed's level at a listener (0..1). (weather.ts Weather.rainBed)
 fn weather_rain_bed(g: &mut crate::game::Game, x: f64, z: f64) -> f64 {
     weather_sync_roofs(g, None);
-    knobs_here(g);
-    ::sim::weather::rain_bed(wx_read(g), x, z)
+    ::sim::weather::rain_bed(wx_read(g), x, z, &g.k)
 }
 
 /// HEARING: the factor (>= 1) a sound's path is stretched by for a listener at `ear`. (weather.ts Weather.hearMask)
 pub fn weather_hear_mask(g: &mut crate::game::Game, ear: V3) -> f64 {
-    if g.weather.kind_now.is_some() { knobs_here(g); }   // (no kind picked reads no knob: exactly 1)
-    ::sim::weather::hear_mask(wx_read(g), g.time, ear[0], ear[2])
+    ::sim::weather::hear_mask(wx_read(g), g.time, ear[0], ear[2], &g.k)
 }
 
 /// SIGHT: the fog's transmittance along a to b; exactly 1 with no kind picked or no fog in it. (weather.ts Weather.airTrans)
@@ -447,9 +440,8 @@ pub fn weather_strike(g: &mut crate::game::Game, opts: Option<crate::weather::We
 
 /// One thunder, asked: due and gone from the list (its numbers and four dice), or None. (weather.ts Weather.thunderDue)
 fn weather_thunder_due(g: &mut crate::game::Game, i: f64) -> Option<Vec<f64>> {
-    knobs_here(g);
     let mut said = [0.0; 8];
-    if !::sim::weather::thunder_due(wx(g), i as usize, g.time, &mut said) { return None; }
+    if !::sim::weather::thunder_due(wx(g), i as usize, g.time, &mut said, &g.k) { return None; }
     Some(said.to_vec())
 }
 

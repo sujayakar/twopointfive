@@ -32,7 +32,7 @@ pub(super) fn layer_fits(what: &str, n: f64, max: f64, min: Option<f64>) {
 /// A table of names of rust/sim/src/knobs.rs, one a line.   (skeleton.ts benchNames)
 fn bench_names(x: crate::sim_sim::SimExports, table: f64) -> Vec<String> {
     let table = table as u32;
-    let (at, n) = (::sim::knobs::addr(table), ::sim::knobs::len(table));
+    let (at, n) = (::sim::roles::addr(table), ::sim::roles::len(table));
     // (knobs.rs hands its tables out by address alone, as the page reads them; these are its &'static str names)
     let b: &[u8] = unsafe { core::slice::from_raw_parts(at as *const u8, n) };
     let mut s = String::new();
@@ -72,11 +72,11 @@ pub(super) fn layer_slot(g: &mut crate::game::Game, c: CharId) -> f64 {
         let names = g.m.anim_skeleton.layers.names.clone().unwrap();
         let cast = g.ch[c].anim.cast.clone();
         let cast = &cast;
-        let w_role = ::sim::knobs::addr(2) as *mut u32;
-        let w_list = ::sim::knobs::addr(4) as *mut u32;
-        let w_len = ::sim::knobs::addr(6) as *mut u32;
-        let max = ::sim::knobs::len(4) / core::cmp::max(1, ::sim::knobs::len(6));
-        let nmax = ::sim::knobs::len(7) / core::cmp::max(1, ::sim::knobs::len(9));
+        let w_role = ::sim::roles::addr(2) as *mut u32;
+        let w_list = ::sim::roles::addr(4) as *mut u32;
+        let w_len = ::sim::roles::addr(6) as *mut u32;
+        let max = ::sim::roles::len(4) / core::cmp::max(1, ::sim::roles::len(6));
+        let nmax = ::sim::roles::len(7) / core::cmp::max(1, ::sim::roles::len(9));
         // a name the animator does not have, and a list or a table longer than the module holds, are found before a word is written
         for r in &names.roles {
             if cast_node(cast, r).is_none() {
@@ -116,8 +116,8 @@ pub(super) fn layer_slot(g: &mut crate::game::Game, c: CharId) -> f64 {
             }
             lists[i] = l.clone();
         }
-        let m_num = ::sim::knobs::addr(7) as *mut f64;
-        let w_num = ::sim::knobs::addr(9) as *mut u32;
+        let m_num = ::sim::roles::addr(7) as *mut f64;
+        let w_num = ::sim::roles::addr(9) as *mut u32;
         for i in 0..names.nums.len() {
             let t = cast_nums(cast, &names.nums[i]).unwrap();
             for k in 0..t.len() {

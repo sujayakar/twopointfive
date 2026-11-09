@@ -54,7 +54,7 @@ pub(super) fn anim_door_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64
     }
     door_cols_get(g, c);
     let (slot, at, at_b, at_rest) = (g_2 as usize, g.ch[c].anim.p_a.at as usize, g.ch[c].anim.p_b.at as usize, g.ch[c].anim.rest.at as usize);
-    anim_hands_ask(g, c, &mut |_g| ::sim::layers::door_layer(slot, at, at_b, at_rest) as f64);
+    anim_hands_ask(g, c, &mut |g| ::sim::layers::door_layer(slot, at, at_b, at_rest, &g.k) as f64);
     door_cols_put(g, c);
 }
 
@@ -147,7 +147,7 @@ fn anim_swap_pose_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, e: f64, k:
         for i in 0..4 { a[5 + i] = f[i]; }
     }
     let (slot, at, at_b, at_rest, at_sw) = (g_2 as usize, g.ch[c].anim.p_a.at as usize, g.ch[c].anim.p_b.at as usize, g.ch[c].anim.rest.at as usize, sw.at as usize);
-    anim_hands_ask(g, c, &mut |_g| ::sim::layers::swap_pose(slot, at, at_b, at_rest, at_sw) as f64);
+    anim_hands_ask(g, c, &mut |g| ::sim::layers::swap_pose(slot, at, at_b, at_rest, at_sw, &g.k) as f64);
 }
 
 /// Hands at work on a thing: the gate, and the layer when it runs. (character.ts workLayer)
@@ -197,7 +197,7 @@ fn anim_work_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, l: &crate
     }
     work_cols_get(g, c);
     let (slot, at, at_b, at_rest) = (g_2 as usize, g.ch[c].anim.p_a.at as usize, g.ch[c].anim.p_b.at as usize, g.ch[c].anim.rest.at as usize);
-    anim_hands_ask(g, c, &mut |_g| ::sim::layers::work_layer(slot, at, at_b, at_rest) as f64);
+    anim_hands_ask(g, c, &mut |g| ::sim::layers::work_layer(slot, at, at_b, at_rest, &g.k) as f64);
     work_cols_put(g, c);
 }
 
@@ -215,7 +215,7 @@ fn anim_torch_up_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, e: f6
         a[0] = e;
         for i in 0..4 { a[1 + i] = f[i]; }
     }
-    let code = ::sim::layers::torch_up(g_2 as usize, g.ch[c].anim.p_a.at as usize, g.ch[c].anim.p_b.at as usize) as f64;
+    let code = ::sim::layers::torch_up(g_2 as usize, g.ch[c].anim.p_a.at as usize, g.ch[c].anim.p_b.at as usize, &g.k) as f64;
     crate::anim_skeleton::layer_ran(g, code, c);
 }
 
@@ -248,7 +248,7 @@ fn anim_radio_pose_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, w: f64, h
         for i in 0..4 { a[2 + i] = f[i]; }
     }
     let (slot, at, at_b, at_rest) = (g_2 as usize, g.ch[c].anim.p_a.at as usize, g.ch[c].anim.p_b.at as usize, g.ch[c].anim.rest.at as usize);
-    anim_hands_ask(g, c, &mut |_g| ::sim::layers::radio_pose(slot, at, at_b, at_rest) as f64);
+    anim_hands_ask(g, c, &mut |g| ::sim::layers::radio_pose(slot, at, at_b, at_rest, &g.k) as f64);
 }
 
 // ---- holding a man, and being held
@@ -318,7 +318,7 @@ fn anim_hold_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, w: f64, d
     hold_cols_get(g, c);
     let an = &g.ch[c].anim;
     let (slot, at, at_b, at_c, at_aim, at_rest) = (g_2 as usize, an.p_a.at as usize, an.p_b.at as usize, an.p_c.at as usize, an.p_aim.at as usize, an.rest.at as usize);
-    anim_hands_ask(g, c, &mut |_g| ::sim::layers::hold_layer(slot, at, at_b, at_c, at_aim, at_rest) as f64);
+    anim_hands_ask(g, c, &mut |g| ::sim::layers::hold_layer(slot, at, at_b, at_c, at_aim, at_rest, &g.k) as f64);
     hold_cols_put(g, c);
 }
 
@@ -372,7 +372,7 @@ fn anim_held_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, w: f64, d
     held_cols_get(g, c);
     let an = &g.ch[c].anim;
     let (slot, at, at_b, at_rest) = (g_2 as usize, an.p_a.at as usize, an.p_b.at as usize, an.rest.at as usize);
-    anim_hands_ask(g, c, &mut |_g| ::sim::layers::held_layer(slot, at, at_b, at_rest) as f64);
+    anim_hands_ask(g, c, &mut |g| ::sim::layers::held_layer(slot, at, at_b, at_rest, &g.k) as f64);
     held_cols_put(g, c);
 }
 
@@ -452,7 +452,7 @@ fn anim_big_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, b: &crate:
     let an = &g.ch[c].anim;
     let at_buf = if ham { an.big_buf.unwrap().at as usize } else { 0 };
     let (slot, at, at_b, at_rest) = (g_2 as usize, an.p_a.at as usize, an.p_b.at as usize, an.rest.at as usize);
-    anim_hands_ask(g, c, &mut |_g| ::sim::layers::big_layer(slot, at, at_b, at_buf, at_rest) as f64);
+    anim_hands_ask(g, c, &mut |g| ::sim::layers::big_layer(slot, at, at_b, at_buf, at_rest, &g.k) as f64);
     big_cols_put(g, c);
 }
 
@@ -508,7 +508,7 @@ fn anim_throw_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, t: f64, 
     throw_cols_get(g, c);
     let an = &g.ch[c].anim;
     let (slot, at, at_b, at_rest) = (g_2 as usize, an.p_a.at as usize, an.p_b.at as usize, an.rest.at as usize);
-    anim_hands_ask(g, c, &mut |_g| ::sim::layers::throw_layer(slot, at, at_b, at_rest) as f64);
+    anim_hands_ask(g, c, &mut |g| ::sim::layers::throw_layer(slot, at, at_b, at_rest, &g.k) as f64);
     throw_cols_put(g, c);
 }
 

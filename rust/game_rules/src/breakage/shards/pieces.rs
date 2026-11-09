@@ -513,7 +513,7 @@ pub fn glass_shards_crossed(g: &mut crate::game::Game, x: crate::shards::PaneCro
         let d = v3::normalize(x.dir_out);
         let sp = (g.k.shards.exit_speed + 5.0 * v3::clamp(x.e_out, 0.0, 1.0)) * g.k.shards.speed;
         let amount = want * fine_size * fine_size;
-        crate::glassbreak::glass_break_asking(g, &mut |_g, _s, _w| ::sim::panes_jet(x.exit[0], x.exit[1], x.exit[2], d[0], d[1], d[2], sp, amount, who));
+        crate::glassbreak::glass_break_asking(g, &mut |g, _s, _w| ::sim::panes_jet(x.exit[0], x.exit[1], x.exit[2], d[0], d[1], d[2], sp, amount, who, &g.k));
         if n > 0.0 {
             let tint = level_box_albedo(g, x.bi);
             g.shards.serial += 1.0;

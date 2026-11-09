@@ -66,8 +66,6 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     //  arrived is in)
     crate::posehome::pose_home_tend(g);
     crate::sense::smoke_home(g);
-    crate::rustknobs::knobs_to_rust(g);
-    g.m.rustknobs.rust_knobs.tick = true;
     // a record from anyone made one an honest seat could have sent, before anything reads it
     let mut checked: Vec<crate::cmd::PlayerCmd> = Vec::with_capacity(n);
     for i in 0..n {
@@ -242,7 +240,6 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     crate::render_decals::marks_settle(g);   // (the marks' arms ask the world as the tick left it)
     g.ticking = false;
     crate::scene_collision::tick_shut(g);
-    g.m.rustknobs.rust_knobs.tick = false;   // (game.ts:1727, the finally)
 }
 
 /// threat proximity → how deliberately Sam moves   (game.ts threatTick)

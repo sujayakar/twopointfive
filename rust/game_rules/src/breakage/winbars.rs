@@ -221,7 +221,7 @@ pub(super) fn bars_blast(g: &mut crate::game::Game, ev: crate::wallbreak::BlastE
     let r = ev.radius * g.k.winbars.blast_k;
     let from: V3 = [ev.at[0], m::max(0.3, ev.at[1]), ev.at[2]];
     let took: Vec<(f64, V3)> = crate::glassbreak::glass_break_asking(g, &mut |g: &mut Game, _s: f64, _w: f64| {
-        let n = ::sim::bars_blast(from[0], from[1], from[2], r, built_boxes(g));
+        let n = ::sim::bars_blast(from[0], from[1], from[2], r, built_boxes(g), &g.k);
         let m = scratch();
         let mut out = Vec::new();
         for k in 0..n { out.push((m[4 * k], [m[4 * k + 1], m[4 * k + 2], m[4 * k + 3]])); }

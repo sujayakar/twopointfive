@@ -117,7 +117,7 @@ pub fn smoke_renew(g: &mut crate::game::Game) {
 /// THE LIGHT UNDER A ROOF at a point that is no lamp's and not the sun's own beam (None: it is under the open
 /// sky, or nothing was swept yet).
 pub fn under_roof(g: &crate::game::Game, p: V3) -> Option<sim::glow::Field> {
-    sim::bricks::under_roof(g.sim, g.sim, p)
+    sim::bricks::under_roof(g.sim, g.sim, p, &g.k)
 }
 
 /// THE LIGHT THAT STANDS ON A POINT, asked from outside a tick (src/view/worldask.ts `light`): a page's preview asks it a block of floor at a time. `owners`: whose carried

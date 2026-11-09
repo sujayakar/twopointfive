@@ -133,7 +133,7 @@ fn anim_watch_slip_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, dt: f64, 
         a[0] = dt; a[1] = free; a[2] = b01(m.is_some()); a[3] = p[0]; a[4] = p[1]; a[5] = p[2]; a[6] = an.slip_k; a[7] = an.crouch; a[8] = an.slip_lean;
     }
     watch_cols_get(g, c);
-    let code = sim::layers::watch_slip(g_2 as usize, g.ch[c].anim.p_a.at as usize) as f64;
+    let code = sim::layers::watch_slip(g_2 as usize, g.ch[c].anim.p_a.at as usize, &g.k) as f64;
     crate::anim_skeleton::layer_ran(g, code, c);
     watch_cols_put(g, c);
 }
@@ -155,7 +155,7 @@ fn anim_watch_arm_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, w_l: f64, 
         for i in 0..4 { a[7 + i] = f0[i]; a[11 + i] = f1[i]; }
     }
     let (slot, at, at_b, at_rest) = { let p = places(g, c); (g_2 as usize, p.0, p.1, p.2) };
-    anim_hands_ask(g, c, &mut |_g: &mut Game| sim::layers::watch_arm(slot, at, at_b, at_rest) as f64);
+    anim_hands_ask(g, c, &mut |g: &mut Game| sim::layers::watch_arm(slot, at, at_b, at_rest, &g.k) as f64);
 }
 
 /// The look: the chest a little, the neck, the head. (character.ts CharacterAnimator.watchLook)
@@ -174,7 +174,7 @@ fn anim_watch_look_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, dt: f64, 
         a[0] = dt; a[1] = free; a[2] = b01(m.is_some()); a[3] = p[0]; a[4] = p[1]; a[5] = p[2]; a[6] = an.watch_k; a[7] = gl[0]; a[8] = gl[1]; a[9] = gl[2];
     }
     watch_cols_get(g, c);
-    let code = sim::layers::watch_look(g_2 as usize, g.ch[c].anim.p_a.at as usize) as f64;
+    let code = sim::layers::watch_look(g_2 as usize, g.ch[c].anim.p_a.at as usize, &g.k) as f64;
     crate::anim_skeleton::layer_ran(g, code, c);
     watch_cols_put(g, c);
 }
@@ -225,7 +225,7 @@ fn anim_creep_arms_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, w: f64, w
         for i in 0..4 { a[15 + i] = w_s[i]; a[23 + i] = f0[i]; a[27 + i] = f1[i]; a[31 + i] = rc[i]; }
     }
     let (slot, at, at_b, at_rest) = { let p = places(g, c); (g_2 as usize, p.0, p.1, p.2) };
-    anim_hands_ask(g, c, &mut |_g: &mut Game| sim::layers::creep_arms(slot, at, at_b, at_rest) as f64);
+    anim_hands_ask(g, c, &mut |g: &mut Game| sim::layers::creep_arms(slot, at, at_b, at_rest, &g.k) as f64);
 }
 
 /// Its body: the pelvis and the feet, the heft, the bow and the look. Answers [the arms' share of his stride, his surge]. (character.ts CharacterAnimator.creepBody)
@@ -304,7 +304,7 @@ fn anim_stealth_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, dt: f6
     }
     stealth_cols_get(g, c);
     let (slot, at, at_b, at_rest) = { let p = places(g, c); (g_2 as usize, p.0, p.1, p.2) };
-    anim_hands_ask(g, c, &mut |_g: &mut Game| sim::layers::stealth_layer(slot, at, at_b, at_rest) as f64);
+    anim_hands_ask(g, c, &mut |g: &mut Game| sim::layers::stealth_layer(slot, at, at_b, at_rest, &g.k) as f64);
     stealth_cols_put(g, c);
 }
 
@@ -374,7 +374,7 @@ fn anim_cable_pose_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, pic: crat
     cable_cols_get(g, c);
     let (at, at_b, at_rest) = (pic.at as usize, g.ch[c].anim.p_b.at as usize, g.ch[c].anim.rest.at as usize);
     let slot = g_2 as usize;
-    anim_hands_ask(g, c, &mut |_g: &mut Game| sim::layers::cable_pose(slot, at, at_b, at_rest) as f64);
+    anim_hands_ask(g, c, &mut |g: &mut Game| sim::layers::cable_pose(slot, at, at_b, at_rest, &g.k) as f64);
     cable_cols_put(g, c);
 }
 
@@ -466,7 +466,7 @@ fn anim_kit_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, tw_y: f64,
         q[9] = h.down; q[10] = h.out; q[11] = h.fwd; q[12] = b01(h.adj.is_some()); q[19] = b01(p.is_some());
     }
     let (slot, at, at_b, at_rest) = { let p = places(g, c); (g_2 as usize, p.0, p.1, p.2) };
-    anim_hands_ask(g, c, &mut |_g: &mut Game| sim::layers::kit_layer(slot, at, at_b, at_rest) as f64);
+    anim_hands_ask(g, c, &mut |g: &mut Game| sim::layers::kit_layer(slot, at, at_b, at_rest, &g.k) as f64);
     kit_cols_put(g, c);
 }
 
@@ -570,7 +570,7 @@ fn anim_ready_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, w: f64, 
     }
     rd_cols_get(g, c);
     let (slot, at, at_b, at_rest) = { let p = places(g, c); (g_2 as usize, p.0, p.1, p.2) };
-    anim_hands_ask(g, c, &mut |_g: &mut Game| sim::layers::ready_layer(slot, at, at_b, at_rest) as f64);
+    anim_hands_ask(g, c, &mut |g: &mut Game| sim::layers::ready_layer(slot, at, at_b, at_rest, &g.k) as f64);
     rd_cols_put(g, c);
 }
 
@@ -696,7 +696,7 @@ fn anim_blow_arms_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, b: &crate:
         for i in 0..4 { a[19 + i] = f0[i]; a[23 + i] = f1[i]; }
     }
     let (slot, at, at_b, at_rest) = { let p = places(g, c); (g_2 as usize, p.0, p.1, p.2) };
-    anim_hands_ask(g, c, &mut |_g: &mut Game| sim::layers::blow_arms(slot, at, at_b, at_rest) as f64);
+    anim_hands_ask(g, c, &mut |g: &mut Game| sim::layers::blow_arms(slot, at, at_b, at_rest, &g.k) as f64);
     args_read()[COLS]
 }
 
@@ -755,7 +755,7 @@ fn anim_knife_pose_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, k: &crate
         }
     }
     let (slot, at, at_b, at_rest) = { let p = places(g, c); (g_2 as usize, p.0, p.1, p.2) };
-    anim_hands_ask(g, c, &mut |_g: &mut Game| sim::layers::knife_pose(slot, at, at_b, at_rest) as f64);
+    anim_hands_ask(g, c, &mut |g: &mut Game| sim::layers::knife_pose(slot, at, at_b, at_rest, &g.k) as f64);
 }
 
 // ---- lock work, the haul
@@ -777,7 +777,7 @@ fn anim_lockpick_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, w: f6
         for i in 0..4 { a[8 + i] = f0[i]; a[12 + i] = f1[i]; }
     }
     let (slot, at, at_b, at_rest) = { let p = places(g, c); (g_2 as usize, p.0, p.1, p.2) };
-    anim_hands_ask(g, c, &mut |_g: &mut Game| sim::layers::lockpick_layer(slot, at, at_b, at_rest) as f64);
+    anim_hands_ask(g, c, &mut |g: &mut Game| sim::layers::lockpick_layer(slot, at, at_b, at_rest, &g.k) as f64);
 }
 
 /// Both hands on a body: the trunk bows toward the grip, both arms by IK on a copy. (character.ts CharacterAnimator.haulLayer)
@@ -800,7 +800,7 @@ fn anim_haul_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, h: crate:
         for i in 0..4 { a[17 + i] = f0[i]; a[21 + i] = f1[i]; }
     }
     let (slot, at, at_b, at_rest) = { let p = places(g, c); (g_2 as usize, p.0, p.1, p.2) };
-    anim_hands_ask(g, c, &mut |_g: &mut Game| sim::layers::haul_layer(slot, at, at_b, at_rest) as f64);
+    anim_hands_ask(g, c, &mut |g: &mut Game| sim::layers::haul_layer(slot, at, at_b, at_rest, &g.k) as f64);
 }
 
 // ---- world and model

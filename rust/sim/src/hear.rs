@@ -6,6 +6,7 @@
 //! Sound does not pass glass, and passes a hole in it: where the game has a rule for an open pane (`ask`) the line judges each pane where it meets
 //! it (lines.rs over glass.rs). The lengths are the game's own, so this answers only where EXACT.on.
 
+use game_types::knobs::Knobs;
 use crate::lines;
 use crate::maths::{hypot2, hypot3};
 use crate::nav;
@@ -26,12 +27,12 @@ pub const ROUTED_DOOR: u32 = 3;
 
 /// the first half. The straight distance goes to `straight`.
 #[allow(clippy::too_many_arguments)]
-pub fn direct(w: usize, set: i32, ask: u32, s: [f64; 3], d: [f64; 3], straight: &mut f64) -> u32 {
+pub fn direct(w: usize, set: i32, ask: u32, s: [f64; 3], d: [f64; 3], straight: &mut f64, tune: &Knobs) -> u32 {
     let a = [s[0], js_max(s[1], 0.9), s[2]];
     let b = [d[0], js_max(d[1], 0.9), d[2]];
     let st = hypot3(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
     *straight = st;
-    match lines::solid_line(w, set, ask, a[0], a[1], a[2], b[0], b[1], b[2]) {
+    match lines::solid_line(w, set, ask, a[0], a[1], a[2], b[0], b[1], b[2], tune) {
         None => return ASK_HOST,
         Some(false) => {
             let mut r = DIRECT;
@@ -40,12 +41,12 @@ pub fn direct(w: usize, set: i32, ask: u32, s: [f64; 3], d: [f64; 3], straight: 
                 // v3.normalize([-d[2], 0, d[0]])
                 let l = or_one(hypot3(-dd[2], 0.0, dd[0]));
                 let side = [-dd[2] / l, 0.0 / l, dd[0] / l];
-                match lines::solid_line(w, set, ask, a[0] + side[0] * 0.5, a[1] + side[1] * 0.5, a[2] + side[2] * 0.5, b[0], b[1], b[2]) {
+                match lines::solid_line(w, set, ask, a[0] + side[0] * 0.5, a[1] + side[1] * 0.5, a[2] + side[2] * 0.5, b[0], b[1], b[2], tune) {
                     None => return ASK_HOST,
                     Some(true) => r |= GRAZE_A,
                     Some(false) => {}
                 }
-                match lines::solid_line(w, set, ask, a[0] + side[0] * -0.5, a[1] + side[1] * -0.5, a[2] + side[2] * -0.5, b[0], b[1], b[2]) {
+                match lines::solid_line(w, set, ask, a[0] + side[0] * -0.5, a[1] + side[1] * -0.5, a[2] + side[2] * -0.5, b[0], b[1], b[2], tune) {
                     None => return ASK_HOST,
                     Some(true) => r |= GRAZE_B,
                     Some(false) => {}
@@ -55,7 +56,7 @@ pub fn direct(w: usize, set: i32, ask: u32, s: [f64; 3], d: [f64; 3], straight: 
         }
         Some(true) => {}
     }
-    match lines::solid_line(w, set, ask, s[0], 2.0, s[2], d[0], 2.0, d[2]) {
+    match lines::solid_line(w, set, ask, s[0], 2.0, s[2], d[0], 2.0, d[2], tune) {
         None => return ASK_HOST,
         Some(false) => return OVER,
         Some(true) => {}
@@ -68,8 +69,8 @@ pub fn direct(w: usize, set: i32, ask: u32, s: [f64; 3], d: [f64; 3], straight: 
 
 /// the second half: the way round. `seal` = the flag of a leaf that shuts sound out. `out`: the path's length, then the point it comes through (x y z).
 #[allow(clippy::too_many_arguments)]
-pub fn route(w: usize, set: i32, ask: u32, seal: u32, gw: usize, gh: usize, cell: f64, s: [f64; 3], d: [f64; 3], straight: f64, out: &mut [f64]) -> u32 {
-    let n = nav::find_path(w, set, ask, gw, gh, cell, d[0], d[2], s[0], s[2], 6000);
+pub fn route(w: usize, set: i32, ask: u32, seal: u32, gw: usize, gh: usize, cell: f64, s: [f64; 3], d: [f64; 3], straight: f64, out: &mut [f64], tune: &Knobs) -> u32 {
+    let n = nav::find_path(w, set, ask, gw, gh, cell, d[0], d[2], s[0], s[2], 6000, tune);
     if n == nav::ASK_HOST {
         return ASK_HOST;
     }
@@ -91,7 +92,7 @@ pub fn route(w: usize, set: i32, ask: u32, seal: u32, gw: usize, gh: usize, cell
         prev2 = q2;
         let pb = [q0, 1.0, q2];
         if !lost {
-            match lines::solid_line(w, set, ask, b[0], b[1], b[2], pb[0], pb[1], pb[2]) {
+            match lines::solid_line(w, set, ask, b[0], b[1], b[2], pb[0], pb[1], pb[2], tune) {
                 None => return ASK_HOST,
                 Some(false) => via = pb,
                 Some(true) => lost = true,
