@@ -316,6 +316,11 @@ cargo run --release --bin levels -- second-way [level …]   # every room the de
 cargo run --release --bin levels -- sight [level …]        # a defender sees what he watches
 cargo run --release --bin levels -- walked [level …]       # its starts and its doors are on a way
 cargo run --release --bin levels -- stacks [mission …]     # every stack mark is by its door
+cargo run --release --bin levels -- stands [level …]       # what it names stands on its built floor and can be walked to
+cargo run --release --bin levels -- doors [level …]        # every door is a real door's size, and the walk grid goes through it
+cargo run --release --bin levels -- charges [level …]      # its places for a wall charge, held by count
+cargo run --release --bin levels -- names [level …]        # it is named by its own rooms
+cargo run --release --bin levels -- rain [level …]         # its storm rains by its own roofs
 ```
 
 Each stands the level (or every mission of it) by this crate's start and asks the game's own rules; the head of the file says what each holds and why.

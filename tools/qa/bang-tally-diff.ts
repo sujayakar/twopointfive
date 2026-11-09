@@ -11,7 +11,7 @@
 // IT DECLARES, IT DOES NOT GATE. Nobody's merge is red by it and it is in no gate's list: an author who adds or moves a solid thing that stops feet (over
 // 0.19 m) within reach of a door runs it, and says in the step's notes what it printed. A door it NAMES is the author's to explain or to mend.
 // WHY IT EXISTS (11-05, the pass): a log laid across two others by a chopping block shut a square metre of the walk grid in front of two doors. No check of
-// the dressing saw it (lived-stack-check reads where a stack STANDS, wallfurn-check where a charge goes), and the tally's rows, read by eye on a few seeds,
+// the dressing saw it (lived-stack-check reads where a stack STANDS, levels charges where a charge goes), and the tally's rows, read by eye on a few seeds,
 // blamed one door and a direction that 48 seeds did not bear out. What a thing by a door does to the fight there is only in the fight, and a fight re-rolled
 // goes either way: so the tally is read in both trees, on enough seeds, by a test that knows what chance alone does.
 // WHAT IT READS: every door of every held room (bang-tally's own list), the plain door and the bang, one entry a seed, ON THE PAGE'S STAND ONLY. An entry is

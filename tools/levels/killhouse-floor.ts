@@ -65,7 +65,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // door-head height, so once it is shot out a man steps through it — on the far side from their doors and away from both ready lines (the store's stands west of every line from a mark inside to a man on the back door's ready line): a door wedged from inside is then
   // one choice, and the walk round to the glass, against the clock, is the other. Glass and not a second door: a door into the store was measured to cost the
   // team men (below); a pane is no way out for the man inside and no way for anybody's feet until it is broken.
-  const port = (a: number) => ({ a, b: a + 1.2, y0: 0.15, y1: 1.88, glass: 'whole' as const });   // (its head under 1.9 m: tools/qa/door-size.ts reads a taller hole with no sill of 0.3 m as a doorway without a leaf)
+  const port = (a: number) => ({ a, b: a + 1.2, y0: 0.15, y1: 1.88, glass: 'whole' as const });   // (its head under 1.9 m: levels doors reads a taller hole with no sill of 0.3 m as a doorway without a leaf)
   wallX(7, 11.88, 28.12, 0.24, C.concrete, [port(14.7), port(18.8), port(24.1)]);                   // north: tyres, bunks, radio
   wallX(20, 11.88, 28.12, 0.24, C.concrete, [port(14.6), { a: 24.6, b: 25.8, y0: 0, y1: 2.2 }]);    // south: the store's window; the back door
   wallZ(12, 7, 20, 0.24, C.concrete, [{ a: 12.6, b: 13.8, y0: 0, y1: 2.2 }]);                      // west: the front door

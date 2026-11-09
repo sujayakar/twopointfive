@@ -196,7 +196,7 @@ const { COVERFIRE, coverfireReport } = await import(`${ROOT}/src/game/coverfire.
 if (process.env.PT_WALLCHARGE === '0') (await import(`${ROOT}/src/game/wallcharge.ts`)).WALLCHARGE.on = false;   // the wall charge's own switch (wallcharge.ts): PT_WALLCHARGE=0 = its rows not registered — with PT_WALLREACT=0 and PT_COVERFIRE=0 beside it, the destruction engine's own build by digest
 import { HandleWatch } from './handle-watch.ts';
 const { SCENARIOS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
-// A MAP WITH NO ROW YET: `--scn <name>.json` plays levels/<name>.json's room clear with the four exactly as its row in the table would (tools/qa/map-check.ts
+// A MAP WITH NO ROW YET: `--scn <name>.json` plays levels/<name>.json's room clear with the four exactly as its row in the table would (levels stands
 // runs a new map this way before the row is pasted in). A listed id is its row, as ever.
 export const entryOf = (id: string): any => SCENARIOS.find((e: any) => e.id === id) ?? (/^[\w-]+\.json$/.test(id) && existsSync(resolve(ROOT, 'levels', id)) ? { id, title: id, kind: 'roomclear', squad: 4, level: id, blurb: '' } : undefined);
 const NO_SCN = (id: string) => `no scenario '${id}' — ${SCENARIOS.map((e: any) => e.id).join(', ')} (or <name>.json = levels/<name>.json's room clear with the four)`;

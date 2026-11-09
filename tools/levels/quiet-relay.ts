@@ -4,7 +4,7 @@
 // THE LEVEL'S ONE IDEA: THE LONG WAY ROUND — both doors of the hut block are watched from the far side of the light. One of the two goes round to the watcher in
 // the dark; the other is already at the door when he drops. (The border crossing is two men down on one beat; this is one man down and one man through.)
 //   bun run tools/levels/export.ts quiet-relay [--check]     → levels/quiet-relay.json
-//   bun run tools/qa/quiet-check.ts quiet-relay.json         the scenarios.quiet block against the built floor, every deal
+//   levels stands quiet-relay         the scenarios.quiet block against the built floor, every deal
 //   bun run tools/qa/quiet-light.ts quiet-relay              the light a sneaking man stands in, on paper
 //   bun run tools/qa/quiet-pair.ts --level quiet-relay.json --seeds 1-48      the scripted pair beside the same run alone
 //   page: ?levelFile=quiet-relay.json&quiet&squad=1          (&quiet=N pins the deal; without &squad=1 it is played alone)
@@ -76,7 +76,7 @@
 // your way and the wicket is the short way in), three spots (the rack in the comms hut · the safe in the ops room · the locker in the bunk hut), three sets,
 // four ways out (east · west · north · the wicket), all open every run.
 //
-// NOT SEEN ON A GPU: laid out on paper and checked headless (validator, level-lint, quiet-check, quiet-light, the scripted solo night and pair), one still
+// NOT SEEN ON A GPU: laid out on paper and checked headless (validator, level-lint, levels stands, quiet-light, the scripted solo night and pair), one still
 // on the software renderer. Nobody has played it. In the GWOT kit (src/scene/gwotKit.ts): walls, ground, furniture and yard pieces are the kit's; the mast, the racks, the
 // safe, the locker and the lamps are this file's own boxes in the kit's paint. Units: metres. +X east, +Z south, +Y up.
 import type { Vec3 } from '../../src/math/vec';
@@ -429,7 +429,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // not the floor. THE BULB STANDS 1.5 m UP THE WALL FROM THE GATE, NOT BY IT: at 0.25 m from the jamb its light falls through a blown gate on Sam's place
   // (what the AI senses is what the picture shows); from here every line to a place of the pair meets the wall. (The page check's no-alarm row is red on
   // this gate's charge and wall rows WITH AND WITHOUT these pieces, at build 78cc3abb: not this block's.) THE PLINTH IS 0.64 m TALL because
-  // tools/qa/lived-check.ts walks an added box whose centre is within 0.3 m of the floor as a place a man goes. Never seen on a GPU.
+  // levels stands walks an added box whose centre is within 0.3 m of the floor as a place a man goes. Never seen on a GPU.
   const KX = 4.85, KZ = 10.45, kvMast: NonNullable<NonNullable<KitViewData['ways'][number]['add']>['boxes']> = [
     { id: 'kv_mast_plinth', group: 'kv.mast', c: [KX, 0.32, KZ], h: [0.28, 0.32, 0.28], material: 'block' },
     ...([[-1, -1], [1, -1], [1, 1], [-1, 1]] as const).map(([sx, sz], k) => ({ id: `kv_mast_leg${k}`, group: 'kv.mast', c: [KX + sx * 0.18, 2.02, KZ + sz * 0.18] as Vec3, h: [0.025, 1.38, 0.025] as Vec3, material: 'galv' })),

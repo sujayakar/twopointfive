@@ -304,7 +304,7 @@ export function build(extra: PassExtra = {}): { level: Level; scenarios: LevelSc
   G.ladder('x', 11, 21.72, 1);                                                                // a ladder leaned by the kitchen's door
   // a plank bench with a pot and a can on it, another can on its side in front: at the wall's WEST end, beside the first window, where
   // no charge could be set before (the trial stood it by the kitchen's door, on the one stretch of the kitchen's front a wall charge goes on:
-  // tools/qa/wallfurn-check.ts held the count, and the bench moved, not the count)
+  // levels charges held the count, and the bench moved, not the count)
   G.plankBench(12.56, 11.37, 0, 1.0); G.pot(12.8, 11.37, 0.41);
   add({ c: [12.3, 0.58, 11.36], h: [0.11, 0.17, 0.07], yaw: 0.35, ...M.jerryYellow }); add({ c: [12.5, 0.085, 11.78], h: [0.17, 0.075, 0.11], yaw: -0.55, ...M.olive });
   G.bricks(18.2, 11.33, 0.04, 5);                                                             // mud bricks left under the mend they were for

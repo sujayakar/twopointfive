@@ -3,7 +3,7 @@
 // north and west sides. The team starts OUTSIDE, in the dark off the south-west corner, and there is a way in on every face of the building.
 // A level generator in the scenario levels' shape (tools/levels/block.ts is what it was cut from; rebuild/scenario-levels/contract.md the how-to):
 //   bun run tools/levels/export.ts warehouse [--check]     → levels/warehouse.json, with its `scenarios.roomClear` block
-//   page: ?levelFile=warehouse.json&roomclear&squad4       · headless: bun run tools/qa/scenario-level-probes.ts levels/warehouse.json --only data,four
+//   page: ?levelFile=warehouse.json&roomclear&squad4       · headless: levels stands warehouse --only data,four
 //
 //              x 4      10        17          25      30       36
 //         z 4  +--plant_ext--------+--window---+-------+--------+

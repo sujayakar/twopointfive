@@ -16,7 +16,7 @@
 //                its two ends and its two ribs as trim (drawn only, each round about the same axis, none over 2 cm out of the box, bare metal where the
 //                drum's paint is), on two chocks that reach in under the round's flank; it carries no markings (a box that says a form cannot); and it
 //                hands back its top, along which the kit's `lay` puts a sheet that follows the round (scene/carShapes.ts layOn)
-// The files that follow from the kit are held by the levels' own checks (tools/levels/export.ts --check, tools/qa/lived-check.ts <level>). No picture is
+// The files that follow from the kit are held by the levels' own checks (tools/levels/export.ts --check, levels stands <level>). No picture is
 // judged here; the shape rule's own check (tools/qa/shapes-check.ts) holds what a round box is to a ray and a walker.
 import type { Vec3 } from '../../src/math/vec';
 import { BoxFlag, type Box } from '../../src/scene/boxes';
