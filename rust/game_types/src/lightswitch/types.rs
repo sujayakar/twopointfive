@@ -1,10 +1,10 @@
 //! The types of `lightswitch`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: WallSwitch, src/game/lightswitch.ts:75)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct WallSwitch {
     pub id: f64,
     pub pos: V3,
@@ -33,7 +33,7 @@ impl WallSwitch {
 impl Default for WallSwitch { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Hand, src/game/lightswitch.ts:88)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Hand {
     pub c: CharId,
     pub sw: crate::lightswitch::WallSwitch,
@@ -58,7 +58,7 @@ impl Hand {
 impl Default for Hand { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: St, src/game/lightswitch.ts:89)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct St {
     pub all: Vec<crate::lightswitch::WallSwitch>,
     pub list: Vec<crate::lightswitch::WallSwitch>,
@@ -199,7 +199,7 @@ impl SwitchRowsRowOverKind {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct LightswitchMod {
     /// (src/game/lightswitch.ts:90 states)
     pub states: Option<crate::lightswitch::St>,

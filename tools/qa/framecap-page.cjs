@@ -19,7 +19,7 @@ let red = 0; const check = (ok, w) => { console.log(`${ok ? '- PASS' : '- FAIL'}
   try {
     await page.goto(`http://localhost:${PORT}/?${Q}&seed=1&paused&mute&quality=high`, { waitUntil: 'commit' });
     await page.waitForFunction(() => !!window.__ready, null, { timeout: 240000 }); page.setDefaultTimeout(0);
-    await page.evaluate(async () => { window.__testVisible = true; await window.__ready; try { window.__menu.close(); } catch { } const E = window.__engine;
+    await page.evaluate(async () => { await window.__ready; try { window.__draw.run(0); } catch { } const E = window.__engine;
       window.__gpuErrs = []; E.device.addEventListener('uncapturederror', e => { window.__gpuErrs.push(String(e.error && e.error.message).slice(0, 300)); });
       window.__done = async () => { await E.device.queue.onSubmittedWorkDone(); await new Promise(res => { const ch = new MessageChannel(); ch.port1.onmessage = () => res(); ch.port2.postMessage(0); }); };
       { const real = E.render.bind(E); E.render = (c, t, dt) => real(c, t, dt, false); } });

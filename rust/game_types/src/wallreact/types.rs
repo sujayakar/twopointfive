@@ -1,10 +1,10 @@
 //! The types of `wallreact`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: Breach, src/game/wallreact.ts:110)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Breach {
     pub key: String,
     pub wall: f64,
@@ -57,7 +57,7 @@ impl Breach {
 impl Default for Breach { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum BreachCause {
     Blast,
     Fire,
@@ -78,7 +78,7 @@ impl BreachCause {
 }
 
 /// (TypeScript: inline at src/game/wallreact.ts:122 Breach.tell, src/game/wallreact.ts:122)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct BreachTellItem {
     pub by: GuardId,
     pub at: f64,
@@ -95,7 +95,7 @@ impl BreachTellItem {
 impl Default for BreachTellItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Mind, src/game/wallreact.ts:126)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Mind {
     pub ev: f64,
     pub line: bool,
@@ -116,7 +116,7 @@ impl Mind {
 impl Default for Mind { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Gone, src/game/wallreact.ts:128)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Gone {
     pub rect: [f64; 4],
     pub b: Option<WallreactBreachId>,
@@ -135,7 +135,7 @@ impl Gone {
 impl Default for Gone { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Pend, src/game/wallreact.ts:129)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Pend {
     pub gd: GuardId,
     pub also: Option<Vec<crate::wallreact::Gone>>,
@@ -162,7 +162,7 @@ impl Pend {
 impl Default for Pend { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: WallReact, src/game/wallreact.ts:152)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct WallReact {
     pub breaches: Vec<WallreactBreachId>,
     pub queue: Vec<crate::wallbreak::LevelChange>,
@@ -377,7 +377,7 @@ impl WallReactOpMove {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct WallreactMod {
     /// (src/game/wallreact.ts:102 WALLREACT_LOG)
     pub wallreact_log: Vec<String>,

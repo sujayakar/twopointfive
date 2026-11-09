@@ -1,10 +1,10 @@
 //! The types of `verdict`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: Verdict, src/game/verdict.ts:99)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Verdict {
     pub run: Option<u32>,
     pub t0: f64,
@@ -72,7 +72,7 @@ impl VerdictRun {
 impl Default for VerdictRun { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Track, src/game/verdict.ts:96)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Track {
     pub id: f64,
     pub name: String,
@@ -113,7 +113,7 @@ impl Track {
 impl Default for Track { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum ManState {
     Dead,
     Out,
@@ -130,7 +130,7 @@ impl ManState {
 }
 
 /// (TypeScript: RunVerdict, src/game/verdict.ts:76)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct RunVerdict {
     pub kind: Option<crate::verdict::RunVerdictKind>,
     pub won: bool,
@@ -171,7 +171,7 @@ impl RunVerdict {
 impl Default for RunVerdict { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum RunVerdictKind {
     Nightbreach,
     Roomclear,
@@ -190,7 +190,7 @@ impl RunVerdictKind {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum Approach {
     Doors,
     Quiet,
@@ -209,7 +209,7 @@ impl Approach {
 }
 
 /// (TypeScript: VerdictMan, src/game/verdict.ts:71)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct VerdictMan {
     pub id: f64,
     pub name: String,
@@ -244,7 +244,7 @@ impl VerdictMan {
 impl Default for VerdictMan { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/verdict.ts:88 RunVerdict.foes, src/game/verdict.ts:88)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct RunVerdictFoes {
     pub down: f64,
     pub of: f64,
@@ -263,7 +263,7 @@ impl RunVerdictFoes {
 impl Default for RunVerdictFoes { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/verdict.ts:89 RunVerdict.hostages, src/game/verdict.ts:89)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct RunVerdictHostages {
     pub alive: f64,
     pub of: f64,
@@ -280,7 +280,7 @@ impl RunVerdictHostages {
 impl Default for RunVerdictHostages { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: KeptNote, src/game/verdict.ts:94)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct KeptNote {
     pub streak: f64,
     pub fresh: bool,
@@ -303,7 +303,7 @@ impl KeptNote {
 impl Default for KeptNote { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/verdict.ts:94 KeptNote.ways, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct KeptNoteWays {
     pub doors: Option<crate::verdict::KeptNoteWaysDoors>,
     pub quiet: Option<crate::verdict::KeptNoteWaysDoors>,
@@ -324,7 +324,7 @@ impl KeptNoteWays {
 impl Default for KeptNoteWays { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at KeptNoteWays.doors, src/game/verdict.ts:94)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct KeptNoteWaysDoors {
     pub first: bool,
     pub clean: bool,

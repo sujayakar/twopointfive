@@ -1,5 +1,4 @@
-// A round through smoke is ONE LINE (src/smoke/smoke.ts `round` and `push` with `line`; smoke.wgsl emR2, emitter mode 3; game/combat.ts asks with the
-// Stirred smoke row up). It used to be a row of soft shoves 7 cm across for one step, which moved nothing anyone could see. No GPU here: the cut of a line to a lattice's smoke is
+// A round through smoke is ONE LINE (src/smoke/smoke.ts `round` and `push` with `line`; smoke.wgsl emR2, emitter mode 3). It used to be a row of soft shoves 7 cm across for one step, which moved nothing anyone could see. No GPU here: the cut of a line to a lattice's smoke is
 // run as it stands, the solver's distance is mirrored as numbers and its text is read. What the smoke then DOES is never seen here.
 //   bun run tools/qa/smokeline-check.ts   (exit 0 = all pass; SMOKELINE_BREAK=1 measures a line as a point, sends a leg uncut and wakes bricks by its middle: must fail)
 import './here';   // (first: the solver's module reads GPU enums as it loads)
@@ -10,14 +9,14 @@ import type { SmokePush } from '../../src/smoke/types';
 let red = 0; const check = (ok: boolean, w: string) => { console.log(`${ok ? '- PASS' : '- FAIL'} — ${w}`); if (!ok) red++; };
 const BREAK = process.env.SMOKELINE_BREAK === '1', ROOT = resolve(import.meta.dir, '../..');
 const read = (p: string) => readFileSync(resolve(ROOT, p), 'utf8');
-const wgsl = read('src/smoke/smoke.wgsl'), ts = read('src/smoke/smoke.ts'), combat = read('src/game/combat.ts');
+const wgsl = read('src/smoke/smoke.wgsl'), ts = read('src/smoke/smoke.ts');
 type V = [number, number, number];
 type Sent = SmokePush & { level: number };
 /** SmokeSystem.push and round as they stand, over a system that is only its lists (no device): `boxes` = the loose bounds of the smoke there is, a lattice each */
 const system = (boxes: { lo: V; hi: V; level: number }[], wake = { speed: 9, radius: 0.12, push: 4 }) => {
   const P = SmokeSystem.prototype as unknown as Record<string, (...a: unknown[]) => unknown>;
   const me = { params: { enabled: true, frozen: false }, pushes: [] as Sent[], boxes, wake, levelOf: P.levelOf, inBox: P.inBox, push: P.push, round: P.round };
-  if (BREAK) me.push = function (this: typeof me, p: unknown) { this.pushes.push({ ...(p as SmokePush), level: 0 }); };   // (the leg as combat gave it, uncut)
+  if (BREAK) me.push = function (this: typeof me, p: unknown) { this.pushes.push({ ...(p as SmokePush), level: 0 }); };   // (the leg as the caller gave it, uncut)
   return me as unknown as { pushes: Sent[]; push(p: SmokePush): void; round(from: V, dir: V, len: number): boolean };
 };
 /** smoke.wgsl emR2: how far a cell is from an emitter, in its radii, squared */
@@ -108,6 +107,5 @@ const segToBox = (e: { pos: V; dir: V; tall: number }, lo: V, hi: V) => {
   check(wgsl.includes('u += e.dir * max(e.speed * clamp(exp(-r2) * e.push, 0.0, 1.0) - dot(u, e.dir), 0.0);') && /LINE_MOST = 4 /.test(ts) && /readonly wake = \{ speed: 9, radius: 0\.12, push: 4 \};/.test(ts),
     'a line brings the air along it up to its speed once: no frame length in it, never slower, never turned');
   check(/\(e\.line \?\? 0\) > 0 \? 3 : 0;/.test(ts) && /const j = \(e\.line \?\? 0\) > 0 \? 0 : /.test(ts), 'a line is packed as mode 3 with its half length, and its direction is not jittered');
-  check(/if \(third && lookConfig\.stir > 0 && g\.smoke\.round\)/.test(combat) && /if \(third && !lined\) for \(let d = 0\.3;/.test(combat), 'combat asks the smoke for a line with its Stirred smoke row up, and sends its dots when the smoke did not take it');
 }
 console.log(red ? `smokeline-check: ${red} FAILED` : 'smokeline-check: all passed'); process.exit(red ? 1 : 0);

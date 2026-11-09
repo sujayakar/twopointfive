@@ -1,10 +1,10 @@
 //! The types of `showwhy`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum Why {
     Door,
     Stack,
@@ -25,7 +25,7 @@ impl Why {
 }
 
 /// (TypeScript: WhyNote, src/game/showwhy.ts:88)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct WhyNote {
     pub t: f64,
     pub who: String,
@@ -48,7 +48,7 @@ impl WhyNote {
 impl Default for WhyNote { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: ShowWhyStats, src/game/showwhy.ts:89)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ShowWhyStats {
     pub waves: i32,
     pub squeezes: i32,
@@ -73,7 +73,7 @@ impl ShowWhyStats {
 impl Default for ShowWhyStats { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Owed, src/game/showwhy.ts:91)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Owed {
     pub text: String,
     pub why: crate::showwhy::Why,
@@ -92,7 +92,7 @@ impl Owed {
 impl Default for Owed { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Mem, src/game/showwhy.ts:92)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Mem {
     pub t: f64,
     pub line_t0: f64,
@@ -143,7 +143,7 @@ impl Mem {
 impl Default for Mem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: OpMem, src/game/showwhy.ts:109)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct OpMem {
     pub t: f64,
     pub turns: Vec<crate::showwhy::OpMemTurnsItem>,
@@ -164,7 +164,7 @@ impl OpMem {
 impl Default for OpMem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/showwhy.ts:109 OpMem.turns, src/game/showwhy.ts:109)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct OpMemTurnsItem {
     pub gd: GuardId,
     pub at: f64,
@@ -181,7 +181,7 @@ impl OpMemTurnsItem {
 impl Default for OpMemTurnsItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: State, src/game/showwhy.ts:110)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct State {
     pub stats: crate::showwhy::ShowWhyStats,
     pub log: Vec<crate::showwhy::WhyNote>,
@@ -229,7 +229,7 @@ impl SHOWWHYLINES {
 impl Default for SHOWWHYLINES { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct ShowwhyMod {
     /// (src/game/showwhy.ts:112 mem)
     pub mem: JsMap<GuardId, crate::showwhy::Mem>,

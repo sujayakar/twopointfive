@@ -1,10 +1,10 @@
 //! The types of `doorforce`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: Belief, src/game/doorforce.ts:97)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Belief {
     pub door: DoorId,
     pub sure: f64,
@@ -27,7 +27,7 @@ impl Belief {
 impl Default for Belief { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Stand, src/game/doorforce.ts:99)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Stand {
     pub door: DoorId,
     pub t0: f64,
@@ -60,7 +60,7 @@ impl Stand {
 impl Default for Stand { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Kick, src/game/doorforce.ts:100)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Kick {
     pub door: DoorId,
     pub spot: V3,
@@ -85,7 +85,7 @@ impl Kick {
 impl Default for Kick { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum KickPhase {
     Kick,
     Set,
@@ -102,7 +102,7 @@ impl KickPhase {
 }
 
 /// (TypeScript: Man, src/game/doorforce.ts:102)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Man {
     pub beliefs: JsMap<DoorId, crate::doorforce::Belief>,
     pub saw: Option<crate::doorforce::ManSaw>,
@@ -129,7 +129,7 @@ impl Man {
 impl Default for Man { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/doorforce.ts:102 Man.saw, src/game/doorforce.ts:102)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ManSaw {
     pub at: V3,
     pub t: f64,
@@ -148,7 +148,7 @@ impl ManSaw {
 impl Default for ManSaw { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: State, src/game/doorforce.ts:104)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct State {
     pub last_t: f64,
     pub men: JsMap<GuardId, crate::doorforce::Man>,
@@ -281,7 +281,7 @@ impl DoorForceOnKick {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct DoorforceMod {
     /// (src/game/doorforce.ts:92 DOORFORCE_LOG)
     pub doorforce_log: Vec<String>,

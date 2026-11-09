@@ -1,10 +1,10 @@
 //! The types of `teampace`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum RunWhy {
     Blast,
     Cover,
@@ -23,7 +23,7 @@ impl RunWhy {
 }
 
 /// (TypeScript: Leave, src/game/teampace.ts:111)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Leave {
     pub why: crate::teampace::LeaveWhy,
     pub top: f64,
@@ -42,7 +42,7 @@ impl Leave {
 impl Default for Leave { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum LeaveWhy {
     Blast,
     Cover,
@@ -65,7 +65,7 @@ impl LeaveWhy {
 }
 
 /// (TypeScript: inline at src/game/teampace.ts:114 ran, src/game/teampace.ts:114)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct TeampaceModRanValue {
     pub t: f64,
     pub why: crate::teampace::RunWhy,
@@ -82,7 +82,7 @@ impl TeampaceModRanValue {
 impl Default for TeampaceModRanValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/teampace.ts:116 dash, src/game/teampace.ts:116)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct TeampaceModDashValue {
     pub t: f64,
     pub x: f64,
@@ -103,7 +103,7 @@ impl TeampaceModDashValue {
 impl Default for TeampaceModDashValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/teampace.ts:128 aimSeen, src/game/teampace.ts:128)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct TeampaceModAimSeenValue {
     pub t: f64,
     pub x: f64,
@@ -172,7 +172,7 @@ impl TeamLeaveWhy {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct TeampaceMod {
     /// (src/game/teampace.ts:112 leave)
     pub leave: JsMap<GuardId, crate::teampace::Leave>,

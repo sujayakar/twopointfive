@@ -19,7 +19,6 @@
 //!   face_new(state, n, block, bn) -> h        a game from a start: the bridge's bytes (`io::import`) and rust/sim's block as the start was taken, copied
 //!                                             into the first free slot. 0 where every slot is taken.
 //!   face_lesson(h, p, n)                      a tutorial mission's tests (tools/blitz lesson.json), which the bridge does not carry: once, after face_new
-//!   face_blank() -> h                         a game as its field initialisers leave it (no level): proves the module stands
 //!   face_drop(h)                              the game and its slot are free again
 //!   face_slot(h) -> slot                      which of rust/sim's slots the game stands in (`state_addr(slot)` is its block)
 //!   face_import_into(h, p, n)                 the bridge's bytes over a game that stands: what the walk does not carry stays as that game has it
@@ -150,12 +149,12 @@ fn free_slot() -> Option<usize> {
 }
 
 // ---- memory
-/// THE STATE WORDS (game::state_words): a hash of the whole game a part, with what a host hands in left out, for two machines of one networked game to compare. `face_state_n` parts, `face_state_name(i)` at face_out; `face_state_words(h)` puts the words at face_out, u32 little-endian. Its buffers stay here, so a call grows nothing once they have their size.
+/// THE STATE WORDS (game::state_words): a hash of the whole game a part, with what a host hands in left out, for two machines of one networked game to compare. `face_state_n` parts, `face_state_name(i)` at face_out; `face_state_words(h)` puts the words at face_out, u32 little-endian..
 #[no_mangle]
-pub extern "C" fn face_state_n() -> usize { game::state_words::STATE_NAMES.len() }
+pub extern "C" fn face_state_n() -> usize { STATE_NAMES.with(|n| n.len()) }
 #[no_mangle]
-pub extern "C" fn face_state_name(i: usize) { out(game::state_words::STATE_NAMES[i].as_bytes().to_vec()); }
-thread_local! { static STATE_BUF: RefCell<(game::io::W, Vec<u32>)> = RefCell::new((game::io::W::new(), Vec::new())); }
+pub extern "C" fn face_state_name(i: usize) { out(STATE_NAMES.with(|n| n[i].clone().into_bytes())); }
+thread_local! { static STATE_NAMES: Vec<String> = game::state_words::state_names(); static STATE_BUF: RefCell<(game::bytes::W, Vec<u32>)> = RefCell::new((game::bytes::W::new(), Vec::new())); }
 #[no_mangle]
 pub extern "C" fn face_state_words(h: u32) {
     let b = STATE_BUF.with(|c| { let mut c = c.borrow_mut(); let (o, w) = &mut *c; with(h, |x| game::state_words::state_words(&mut x.g, o, w)); let mut b = Vec::with_capacity(w.len() * 4); for v in w.iter() { b.extend_from_slice(&v.to_le_bytes()); } b });
@@ -189,20 +188,20 @@ pub extern "C" fn face_tally(h: u32) {
 /// stood first, as for every question of it.
 #[no_mangle]
 pub extern "C" fn face_tick_view(h: u32) {
-    use game::io::Io;
-    out(asked(h, |world| { let g = world.shared(); let mut o = game::io::W::new(); game::view::tick_view(g, &game::seats::seat(g, g.local_seat.unwrap_or(g.seat))).w(&mut o); o.b }));
+    use game::bytes::ToBytes;
+    out(asked(h, |world| { let g = world.shared(); let mut o = game::bytes::W::new(); game::view::tick_view(g, &game::seats::seat(g, g.local_seat.unwrap_or(g.seat))).w(&mut o); o.b }));
 }
 /// what the end card shows of the run (a DebriefView at face_out): asked once, as the card opens; a read, nothing kept
 #[no_mangle]
 pub extern "C" fn face_debrief_view(h: u32) {
-    use game::io::Io;
-    out(with_ref(h, |x| { let g = &x.g; let mut o = game::io::W::new(); game::view::debrief_view(g, &game::seats::seat(g, g.local_seat.unwrap_or(g.seat))).w(&mut o); o.b }))
+    use game::bytes::ToBytes;
+    out(with_ref(h, |x| { let g = &x.g; let mut o = game::bytes::W::new(); game::view::debrief_view(g, &game::seats::seat(g, g.local_seat.unwrap_or(g.seat))).w(&mut o); o.b }))
 }
 /// what a machine keeps of the run (a RunView at face_out): asked as the try begins and as the run ends; a read
 #[no_mangle]
 pub extern "C" fn face_run_view(h: u32) {
-    use game::io::Io;
-    out(with_ref(h, |x| { let mut o = game::io::W::new(); game::verdict::run_view(&x.g).w(&mut o); o.b }))
+    use game::bytes::ToBytes;
+    out(with_ref(h, |x| { let mut o = game::bytes::W::new(); game::verdict::run_view(&x.g).w(&mut o); o.b }))
 }
 // ---- the box world, asked of the game shared (game::ask::WorldAsk): the host's camera, its sound, its cursor. The copy stands from a tick's end; where a writer put it
 // down the first question stands it again, and no question proves it for itself
@@ -261,18 +260,18 @@ pub extern "C" fn face_way(h: u32, ax: f64, az: f64, bx: f64, bz: f64, max_iter:
 /// `p` names 288 bytes the host wrote into memory from face_alloc.
 #[no_mangle]
 pub unsafe extern "C" fn face_cursor_view(h: u32, seat: i32, p: *const u8) {
-    use game::io::Io;
+    use game::bytes::ToBytes;
     let b = bytes(p, 36 * 8);
     let n = |i: usize| f64::from_le_bytes(b[i * 8..i * 8 + 8].try_into().unwrap());
     let m16 = |at: usize| -> [f32; 16] { std::array::from_fn(|i| n(at + i) as f32) };
     let now = game::view::HostNow { mouse: [n(0), n(1)], client: [n(2), n(3)], view_proj: m16(4), inv_view_proj: m16(20) };
-    out(pointed(h, seat, |g, s| { let mut o = game::io::W::new(); game::view::cursor_view(g, s, &now).w(&mut o); o.b }));
+    out(pointed(h, seat, |g, s| { let mut o = game::bytes::W::new(); game::view::cursor_view(g, s, &now).w(&mut o); o.b }));
 }
 /// what a point of the world is, as an order would be about it (`orders::target_at`), for that seat: an `Under`'s bytes at face_out
 #[no_mangle]
 pub extern "C" fn face_under(h: u32, seat: i32, x: f64, y: f64, z: f64) {
-    use game::io::Io;
-    out(pointed(h, seat, |g, s| { let mut o = game::io::W::new(); game::view::under(g, &game::orders::target_at(g, s, [x, y, z], &mut Vec::new())).w(&mut o); o.b }));
+    use game::bytes::ToBytes;
+    out(pointed(h, seat, |g, s| { let mut o = game::bytes::W::new(); game::view::under(g, &game::orders::target_at(g, s, [x, y, z], &mut Vec::new())).w(&mut o); o.b }));
 }
 /// a question of a point or a cursor, for a seat, of the game shared
 fn pointed(h: u32, seat: i32, f: impl FnOnce(&Game, &game::seats::SeatRef) -> Vec<u8>) -> Vec<u8> {
@@ -330,16 +329,6 @@ pub unsafe extern "C" fn face_new(state: *const u8, n: usize, block: *const u8, 
     let Some(slot) = free_slot() else { return 0 };
     let (g, said) = game_run::start(bytes(state, n), bytes(block, bn), slot);
     out(said.join("\n").into_bytes());
-    put(Held::new(g))
-}
-#[no_mangle]
-pub extern "C" fn face_blank() -> u32 {
-    hook();
-    let Some(slot) = free_slot() else { return 0 };
-    let mut g = Box::new(Game::blank());
-    g.sim = slot;
-    // (a block with nothing in it is zeros under the layout's word: whatever game stood in the slot before is gone)
-    sim::state::put(slot, &[]);
     put(Held::new(g))
 }
 #[no_mangle]
@@ -514,11 +503,6 @@ pub unsafe extern "C" fn face_checkpoint(h: u32, p: *const u8, n: usize) {
 pub extern "C" fn face_export(h: u32) {
     let b = with(h, |x| { page::serial_seen(x.g.serial_next); game::io::export(&x.g) });
     out(b);
-}
-/// how many out events the game holds (`g.out`: what the rules of the steps since the last clear told the host)
-#[no_mangle]
-pub extern "C" fn face_out_n(h: u32) -> usize {
-    with(h, |x| x.g.out.len())
 }
 /// the host has taken (or does not want) the out events: the list is a step's output and no part of the state, so nothing else empties it
 #[no_mangle]

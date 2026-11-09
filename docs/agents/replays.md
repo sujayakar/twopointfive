@@ -81,7 +81,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   camera (`attach`, called by `update`): showcases lock real keys and pin the real camera. Between ticks `orders.hostView` / `g.viewProj` point at the host's live objects again,
   as the HUD and the tools always saw them. Read off the seat's view inside a tick (each per seat once there are two): the reticle's pixel snaps and the order menu's cursor ray,
   the walk keys' basis, on-screen-or-not for a line (`viewProj` → bubble vs log row: guards.ts say, civilians, the weather's stroke filter), the thunder's pan, the rain's near
-  field, `mPerPx`, a blast's kick. 
+  field, a blast's kick. 
 - **The rollback snapshot: any tick taken and put back, to the bit** (`src/game/rollback.ts`, `src/math/side.ts`; groundwork for server authority then rollback, nothing
   networked; when it went in nothing called it, and the 21 scripted play-throughs' digests on both stands were the ones from before it. ONE CALLER IN PLAY SINCE: a save
   kept in memory with a team on the floor, `savestate.ts` under `SAVETIMELINE`, `docs/agents/qa.md`). Beside the
@@ -405,8 +405,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   fails after another replay was opened says "The replay you were sending wasn't sent."; a file this browser would not shelve says "This browser couldn't keep this replay. Press
   Send to send it with your notes." where Send is drawn. It sends
   `replayBlob` with `cloudFile(…, 'replay', { of?, savedAt, why, scenario })` — the visit as `of`, never `session`, which the backend's side would hold to the very rule that
-  does not carry it. With the button up the note's line reads "Your notes are saved in this browser. Press Send to send them." Check: `PORT=<dev server> node
-  tools/qa/replaysend-page.cjs` (about a minute: no game is booted; a replay made headless by `tools/qa/replay-make.ts`; a stand-in for the wire in the tool itself: `?cloud=0`
+  does not carry it. With the button up the note's line reads "Your notes are saved in this browser. Press Send to send them." Check, until 2026-11-08, when the headless game that made its replay went: `tools/qa/replaysend-page.cjs`
+  (about a minute: no game is booted; a replay made headless by `tools/qa/replay-make.ts`; a stand-in for the wire in the tool itself: `?cloud=0`
   = no Send; with one = drawn, pressed, Sent, the stand-in holds one file that is the replay with the note in it, packed on the way, its row naming the visit as `of` and no
   `session`, and the reader takes it; a note with no words leaves it Sent, a newer note puts Send back; bytes refused = Not sent and it can be pressed again; `?cloudtapes=0` =
   no Send; no download event; `REPLAYSEND_BREAK=1` = the stand-in refuses from the start, exit 1). THE SAME RULE AND LABELS ARE WRITTEN TWICE, here and on the engine replay's bar
@@ -588,29 +588,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   own point, not to the man or lamp the reticle would snap to (`updateAim`'s snap writes the reticle; near a snap his predicted facing is a little off the
   game's); a shot fired inside the records does not raise his gun. THIN: `legsOwn` is a list kept by hand beside `updatePlayer`'s early returns (a beat
   added there and not to the list is walked through, and no check would say so). COST on the cloud box under load: forty six records 3 to 6 ms, eight
-  about 0.3 to 0.8 ms, beside 6 to 9 ms for one whole tick (the first cut paid 2.7 ms a call before its first record). CHECK: `bun run tools/qa/seats-check.ts` on both stands
-  (`TPS_PROFILE=shipped` in front for the page's), 17 lines: one seat is plain, two men stand apart, each walks from his own record, each orders his own
-  pair onto his own door, the fog is the team's, a two-seat game rolls back to the bit, a look ahead of forty six records from a seat marked remote (a walk, a sprint, C and a crouch walk back, Shift in the crouch, a coast; the
-  mark changes a record only where the record check is on, the page's stand), and the last twenty six again from the middle of the sprint,
-  land where the whole game puts the man TO THE BIT on both stands (his place at every tick, his speed, aim, hips and stance: the line fails on any
-  difference at all) and leaves the game's word, the seat and the records as they were, the host's seat, one down plays on and both down ends it (and a look ahead answers the downed man
-  where he lies), two playings of the same records agree, two firefights (a room clear of four and the night breach, both men walking at the enemy and
-  shooting, with every world ask of `g.player` a throw), each played AGAIN with a look ahead of the last eight records for both seats before every tick and
-  the state's word the same every second (`twin`: the line the first cut would have failed), the tables, the address word, the kinds refused. (NOT MENDED, worked round in the check: `coverfire.ts` keeps where the process-wide `WALL_STATS` tally stood when a game began INSIDE the game's
-  state, so two games with the same records have different state words wherever their processes' tallies differ; the check zeroes the tally before each
-  fight. The mend is that module's: the report's base out of the hashed state.)
-  `SEATS_BREAK=1` (world code asks the first seat's again) fails it on both stands. MEASURED: one seat against the build before, by run digest, `PT_DIGEST=1
-  tools/qa/playthrough.ts --seeds 1,2` (42 runs a stand): 42 of 42 the same on both stands. The solo page opened and walked in the same browser as before.
-  `rollback-check.ts --static`, `knobs-check`, `dice-check`, `cmd-check` green. THIN, said plainly: an enemy, a civilian and a camera keep ONE player in
-  mind at a time (the nearer or the last seen: `facedMan`), so a guard's picture of "the player" is shared; the message log, the "you" kit card and the
-  recap are one; the ear ring, the IR meter and the fire focus follow `hostMan` (the shown seat's, the first on a server); pair orders and the solo modes
-  are the first seat's; `lesson.ts` and `doorforce.ts` still say `PLAYER_ID` (tutorials take one player); the replay tape keeps the first seat's record
-  only; a seat with no record this tick steps from a still copy of the host's (`Seat.handed`: a server hands every seat its own); `viewOfBody` is a search
-  of the guards a sight test in a game of two; a table that no swept mission asks is unclassified until one does (the check goes red then). ON A PAGE, once:
-  `?roomclear&squad4&seats=2&paused` in headless Chromium on the software adapter came ready with two seats and the mission live, a pair a seat; the keys
-  walked the first man while the second stood, and with `__game.localSeat = __game.seats[1]` the same keys walked the second and the camera's follow point
-  went to him; no page error. NOBODY HAS PLAYED IT: there is no second set of keys and no second picture (a page shows and drives one seat, the first unless
-  `localSeat` is set by hand), nothing here was seen on a GPU, and no two people have sat at it.
+  about 0.3 to 0.8 ms, beside 6 to 9 ms for one whole tick (the first cut paid 2.7 ms a call before its first record). CHECK, native: `rust/game_start/tests/coop.rs`, `players.rs` (`net.md`).
 - **A run's tape plays in the game again, and holds nothing of the picture's** (2026-11-08; `game/runtape.ts`, `tape/format.ts TAPE_VERSION` 2, `tapewalk.ts`).
   The game senses for itself (`rust.md`, ONE WAY OF SENSING), so the tape's record of what it read off the GPU (`sens`, `f32`, the wrapped `Sensors.read`, the walk's
   `read` and its count of reads the tape never made) is out, and the word that kept every road on the map viewer (`GAME_PAGE.playsTapes`, `tapeMapUrl`) with it: the
@@ -656,8 +634,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   to a panic; `{k:'hands'}` lines, base64 of the tape's bytes and where in it they go), so it goes to a build's backend on the tapes' own rounds and its notes on theirs. There is no shelf
   and no trace: `?playtape=<visit>` plays it, a killed page's run plays up to its last piece, F7 says it is kept, Shift+F7 and the end card's Replay leave to watch it from the try that is on
   (`run.ts`). `bar.ts` is the bar (the line with the tries and the notes on it, the pace, the run's own view, notes), `freecam.ts` the picture's camera off the run's view, `pace.ts` the paces (the
-  old player's too). A tape of another build whose mannequin, cast or hand is another is refused in words; else it is played and the bar says the second it is not the run any more. Replays
-  (`replay.html`) lists them with the rest and opens them there. READ ONE: `tools/draw/walk.ts <tape | kept lines>` walks it with no page; `replay-dump.ts` writes a hand-over's as `<visit>.tape`.
+  old player's too). A tape of another build whose mannequin, cast or hand is another is refused in words; else it is played and the bar says the second it is not the run any more. The title lists them (`ui/replays.ts`). READ ONE: `tools/draw/walk.ts <tape | kept lines>` walks it with no page; `replay-dump.ts` writes a hand-over's as `<visit>.tape`.
   CHECKS: `tools/draw/tape-check.ts` (every mission, a hands-off player and a hand that does anything, with saves, a load and a restart, walked by a module that is asked nothing to the same
   die, parts and whole state; `TAPE_BREAK=1`), `keep-check.ts` (`KEEP_BREAK=1`), `walk-check.ts` and the page's, `tape-page.cjs`. MEASURED: 17 to 348 KB a minute packed, 500 to 2,000 ticks a
   second unseen in bun. `map.ts` is its map (`face_floor`, `face_map`), Fog (F) and NV (V) are the picture's own (`face_draw_as`). NOT THERE YET: a Send button, the sounds' lanes, the rounds and orders on the line. Never seen on a GPU, never played by a person.
+- **The map viewer's page is out** (2026-11-08: `replay.html`, `src/replay/viewer.ts`, its Send and its checks). What it did: drew any file's trace as a map with its log, what a man was doing, notes, on any
+  build. WHERE IT IS NOW: the list of kept runs is on the title (Extras, Replays: `ui/replays.ts`; a row plays it, its cross lets it go); the run itself plays on the page with its map, notes, fog and
+  night vision; what a man is at is the debugger's labels. NOT KEPT: a replay of the old kind (shelf or trace) opens nowhere, and one of another build is refused; a replay from a file on disk is
+  opened by `?playtape=<address>` alone; the log of a run by itself. The old player (`engineplay.ts`, `tapewalk.ts`, `recipestand.ts`, `shelf.ts`, `game/replaybuf.ts`, `game/runtape.ts`,
+  `ui/replaykey.ts`) goes with the old page's code.

@@ -1,9 +1,10 @@
 //! THE GAME'S DIE as a value a state can hold: the same stream as rust/sim's (it rolls rust/sim's own function), with the derives a cloned
 //! state needs. `simRandom()` in the TypeScript is `g.dice.roll()` here; a die kept on a record (`Civ.dice`) is this type too.
+use crate::bytes::ToBytes;
 use sim::dice::Dice;
 use alloc::vec::Vec;
 
-#[derive(Clone, Copy, PartialEq, Debug, Default)]
+#[derive(Clone, Copy, PartialEq, Debug, Default, ToBytes)]
 pub struct Die {
     /// draws taken off it
     pub n: f64,
@@ -30,7 +31,7 @@ impl Die {
 /// other rule or any other man drew, and a rule added tomorrow re-deals nothing but itself. (`draw` below and its forms by a man's id.)
 ///
 /// `seen` is this tick's count a (site, man): empty between ticks, so nothing of it need be saved.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, ToBytes)]
 pub struct Keyed {
     /// the clock of the tick `seen` belongs to
     pub t: f64,

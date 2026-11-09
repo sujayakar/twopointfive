@@ -336,13 +336,9 @@ export class Particles {
   clearRain() { this.rainQueue.length = 0; this.rainTail = this.rainHead; this.rainFifo.length = 0; this.rainWin[2] = this.rainTail % RAIN_RING.size; this.rainWin[3] = 0; this.rainStats.live = 0; }
   /** emits waiting for the next prepare() (QA reads it) */
   get pending(): readonly { kind: PKind; pos: Vec3; dir: Vec3; count: number; o: EmitOpts; seed: number }[] { return this.queue; }
-  /** impulses waiting for the next prepare() (QA / the panel: live records of the fixed pool — read, do not keep) */
-  get pendingImpulses(): readonly Readonly<ImpRec>[] { return this.imps.slice(0, this.impN); }
-  get pendingImpulseCount(): number { return this.impN; }
   /** slots the next frame will simulate + draw, per ring (QA / the panel) */
   get windows(): readonly [number, number, number, number][] { return this.win; }
   get liveSlots(): number { return this.liveTotal; }
-  get bornThisFrame(): number { return this.born; }
 
   // ------------------------------------------------------------------ per frame
   /** Deal this frame's emits their ring slots, retire expired tails, pack the uniform block and upload it (+ zero the pool's counters). `on` false = the setting is

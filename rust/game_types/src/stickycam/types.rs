@@ -1,10 +1,10 @@
 //! The types of `stickycam`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: StickyCam, src/game/stickycam.ts:65)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct StickyCam {
     pub pos: V3,
     pub n: V3,
@@ -160,7 +160,7 @@ impl StickyRowsRowOverKind {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct StickycamMod {
     /// (src/game/stickycam.ts:76 VISIT)
     pub visit: Option<f64>,

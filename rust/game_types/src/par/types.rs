@@ -1,10 +1,10 @@
 //! The types of `par`: a room clear run against a clock (rust/game_rules/src/par).
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (on the wire: its word in small letters)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum Medal {
     None,
     Gold,
@@ -23,7 +23,7 @@ impl Medal {
 }
 
 /// a finished run against its par
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct ParResult {
     pub secs: f64,
     pub lost: f64,
@@ -54,7 +54,7 @@ impl ParResult {
 impl Default for ParResult { fn default() -> Self { Self::zeroed() } }
 
 /// the medal above the one earned, its bar, and how many whole seconds faster it needed
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ParResultNext {
     pub medal: crate::par::Medal,
     pub bar: f64,
@@ -73,7 +73,7 @@ impl ParResultNext {
 impl Default for ParResultNext { fn default() -> Self { Self::zeroed() } }
 
 /// A seat's mark as the clock was armed: where its man stood, and the last order on its log then (by the row's serial: the log is cut from the front).
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ParMark {
     pub origin: V3,
     pub order0: Option<u32>,
@@ -90,7 +90,7 @@ impl Default for ParMark { fn default() -> Self { Self::zeroed() } }
 
 /// THE PAR CLOCK'S RECORD: the game's own, written by the tick (`par::par_tick`), and all of it on the wire: the page draws `live`, `t0` and `res`,
 /// and a game stood again from a page's copy takes the clock up where it was.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Par {
     /// the mission this clock is for, by its serial (a restart makes a new mission: the clock starts over)
     pub run: Option<u32>,

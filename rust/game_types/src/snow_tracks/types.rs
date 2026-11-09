@@ -1,10 +1,10 @@
 //! The types of `snow_tracks`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: SnowTracks, src/game/snowTracks.ts:98)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SnowTracks {
     pub data: Vec<u8>,
     pub w: f64,
@@ -49,7 +49,7 @@ impl SnowTracks {
 impl Default for SnowTracks { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Forming, src/game/snowTracks.ts:143)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Forming {
     pub x0: f64,
     pub z0: f64,
@@ -80,7 +80,7 @@ impl Forming {
 impl Default for Forming { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: SnowKick, src/game/snowTracks.ts:148)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct SnowKick {
     pub x: f64,
     pub z: f64,
@@ -111,7 +111,7 @@ impl SnowKick {
 impl Default for SnowKick { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: UnseenSquare, src/game/snowTracks.ts:131)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct UnseenSquare {
     pub x: f64,
     pub z: f64,
@@ -130,7 +130,7 @@ impl UnseenSquare {
 impl Default for UnseenSquare { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Unseen, src/game/snowTracks.ts:128)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Unseen {
     pub k: f64,
     pub a: Vec<f64>,

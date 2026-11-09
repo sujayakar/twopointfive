@@ -1,17 +1,15 @@
-// Level LINT: the design checks the schema validator (scene/levelData.ts validateLevelData) deliberately does not make — reachability, sealing,
-// budgets, overlaps, things inside other things. Pure (no GPU, no DOM): tools/qa/level-lint.ts is the CLI over it
-// (`bun run tools/qa/level-lint.ts levels/office.json`, exit 1 on errors), and map-check.ts and the level probes run the same function.
+// Level LINT: the design checks the schema validator (scene/levelData.ts validateLevelData) deliberately does not make — budgets, overlaps, things inside other things. Pure (no GPU, no DOM): tools/qa/level-lint.ts is the CLI over it
+// (`bun run tools/qa/level-lint.ts levels/office.json`, exit 1 on errors).
 //
-// It builds what the game builds from the data — loadLevel → Level, StaticCollision → NavGrid (the guards' own walkability) — and reports
+// What stands on the floor and can be walked to is asked of the game itself (rust/game_start levels: stands, doors). It loads the level and reports
 // findings as { severity, code, message, ids } where ids are the DATA ids (boxes[i] ⇄ data.boxes[i], lights / doors / routes likewise), so a
-// finding names the thing in the file. Severity: 'error' = the game will misbehave (an objective nobody can walk to, a light inside a wall,
-// a route leg through a partition), 'warn' = probably unintended (duplicate slabs, a doorway that does not seal, budgets getting tight),
+// finding names the thing in the file. Severity: 'error' = the game will misbehave (a light inside a wall),
+// 'warn' = probably unintended (duplicate slabs, budgets getting tight),
 // 'info' = worth knowing. `allow` silences a code for listed ids (or '*') with a reason — for legitimately odd authored things.
 import type { Vec3 } from '../math/vec';
 import { LevelData, validateLevelData, DEVICE_DEFAULTS, floorUsers } from './levelData';
 import { loadLevel } from './levelLoad';
-import { StaticCollision } from './collision';
-import { Box, BoxFlag } from './boxes';
+import { Box, BoxFlag, rayBox } from './boxes';
 import { WORLD } from './world';
 import type { Level } from './level';
 import { MarkingDef, MARK_TABLE_ROWS, MARK_SLOT_MAX, MAX_MARKS_PER_BOX, markRecordRows } from './markings';
@@ -34,10 +32,8 @@ function insideBox(p: Vec3, b: Box, margin = 0): boolean {
   return Math.abs(lx) < b.h[0] - margin && Math.abs(ly) < b.h[1] - margin && Math.abs(lz) < b.h[2] - margin;
 }
 /** XZ footprint containment (yawed rectangle), any height */
-function insideFootprint(x: number, z: number, b: Box): boolean {
-  const cs = Math.cos(b.yaw), sn = Math.sin(b.yaw); const dx = x - b.c[0], dz = z - b.c[2];
-  return Math.abs(cs * dx - sn * dz) <= b.h[0] && Math.abs(sn * dx + cs * dz) <= b.h[2];
-}
+/** the first solid along a ray, as a look or a beam meets one */
+function firstHit(boxes: readonly Box[], from: Vec3, dir: Vec3, max: number): { t: number } | null { let t = max, hit = false; for (const b of boxes) { if (b.flags & BoxFlag.NoShadow) continue; const h = rayBox(from, dir, b, t); if (h && h.t < t) { t = h.t; hit = true; } } return hit ? { t } : null; }
 const fmt = (p: readonly number[]) => `(${p.map(v => (+v.toFixed(2))).join(', ')})`;
 
 /** How many analytic area lights game.ts will derive from the switchables (its rule: thin ≤ 6 cm, face ≥ 0.01 m², not the rack LEDs / beacon domes). */
@@ -71,7 +67,6 @@ export function lintLevel(data: LevelData, opts: LintOpts = {}): LintReport {
   let level: Level;
   try { level = loadLevel(data, { validate: false, dressing: true, lived: true }); } catch (e) { add('error', 'load', String((e as Error).message ?? e)); return done({}); }
   const boxes = level.boxes; const boxId = (i: number) => data.boxes[i]?.id ?? `box#${i}`;
-  const col = new StaticCollision(boxes); const nav = col.nav;
 
   // 1. boxes: extents, duplicates, bounds
   { const seen = new Map<string, number>();
@@ -134,77 +129,6 @@ export function lintLevel(data: LevelData, opts: LintOpts = {}): LintReport {
     if (rows > MARK_TABLE_ROWS || lists + 1 > MARK_SLOT_MAX) add('error', 'mark-rows', `the level's ${lists} distinct marking lists need ${rows} table rows — more than the ${MARK_TABLE_ROWS} the renderer holds (MARK_TABLE_ROWS): the lists registered last are silently NOT DRAWN (biggest: ${top})`, []);
     else if (rows > MARK_TABLE_ROWS * 0.75) add('warn', 'mark-rows', `the level's ${lists} distinct marking lists take ${rows} of ${MARK_TABLE_ROWS} marking-table rows (${Math.round(100 * rows / MARK_TABLE_ROWS)} %) — little headroom for what registers at run time; past the cap lists silently stop drawing (biggest: ${top})`, []); }
 
-  // 4. navigation: spawn → objectives → exfil, the guards' own grid
-  const free = (p: Vec3) => !nav.isBlocked(p[0], p[2]);
-  const pathLen = (pts: Vec3[] | null, from: Vec3) => { if (!pts) return Infinity; let L = 0; let prev = from; for (const q of pts) { L += Math.hypot(q[0] - prev[0], q[2] - prev[2]); prev = q; } return L; };
-  { const M = data.mission; const spawn = M.playerSpawn as Vec3;
-    if (!free(spawn)) add('error', 'spawn-blocked', `playerSpawn ${fmt(spawn)} is not on walkable floor (inside or against geometry)`, ['mark:spawn']);
-    let from: Vec3 = spawn; let fromName = 'the spawn';
-    const legs: { name: string; id: string; to: Vec3 }[] = [];
-    for (const o of M.objectives) {
-      if (o.kind === 'reach') legs.push({ name: `objective '${o.id}' (the room's middle)`, id: `mark:${o.id}`, to: [(o.area.x0 + o.area.x1) / 2, 0, (o.area.z0 + o.area.z1) / 2] });
-      else if (o.kind === 'drive') legs.push({ name: `objective '${o.id}' (in front of the rack)`, id: `mark:${o.id}`, to: [o.front[0], 0, o.front[2] + 0.6] });
-      else legs.push({ name: `objective '${o.id}' (the exfil point)`, id: `mark:${o.id}`, to: [o.x, 0, o.z] });
-    }
-    for (const leg of legs) {
-      const goal = nav.nearestFreePoint(leg.to[0], leg.to[2]);
-      if (!goal || Math.hypot(goal[0] - leg.to[0], goal[2] - leg.to[2]) > 1.5) { add('error', 'nav-objective', `${leg.name} at ${fmt(leg.to)} has no walkable floor within 1.5 m`, [leg.id]); continue; }
-      const path = nav.findPath(from, goal, 20000);
-      if (!path) add('error', 'nav-objective', `no walkable route from ${fromName} ${fmt(from)} to ${leg.name} ${fmt(goal)} — the mission cannot be finished`, [leg.id]);
-      from = goal; fromName = leg.name;
-    } }
-
-  // 5. doors: both sides walkable and joined THROUGH the doorway; the gap clear of statics; the wall meeting the leaf's ends (sealing)
-  data.doors.forEach(d => {
-    const ux = Math.cos(d.closedDir), uz = Math.sin(d.closedDir); const nx = -uz, nz = ux;
-    const mid: Vec3 = [d.hinge[0] + ux * d.width / 2, 0, d.hinge[1] + uz * d.width / 2];
-    const A: Vec3 = [mid[0] + nx * 0.8, 0, mid[2] + nz * 0.8], Bp: Vec3 = [mid[0] - nx * 0.8, 0, mid[2] - nz * 0.8];
-    const a = nav.nearestFreePoint(A[0], A[2]), b = nav.nearestFreePoint(Bp[0], Bp[2]);
-    if (!a || !b || Math.hypot(a[0] - A[0], a[2] - A[2]) > 0.75 || Math.hypot(b[0] - Bp[0], b[2] - Bp[2]) > 0.75) add('error', 'door-sides', `door '${d.id}': no walkable floor on ${!a ? 'the +side' : !b ? 'the −side' : 'one side'} of the leaf (0.8 m off its middle at ${fmt(mid)})`, [`door:${d.id}`]);
-    else { const p = nav.findPath(a, b, 8000); const L = pathLen(p, a); if (!p) add('error', 'door-sides', `door '${d.id}': its two sides are not connected on the nav grid — the doorway is not walkable`, [`door:${d.id}`]); else if (L > d.width + 4) add('warn', 'door-sides', `door '${d.id}': the walk from one side to the other is ${L.toFixed(1)} m — the doorway itself is not walkable (men would go round)${d.width < 1.15 ? `; a ${d.width} m leaf's gap is narrower than the ~1.2 m the 0.5 m nav grid needs` : ''}`, [`door:${d.id}`]); }
-    // statics inside the leaf's own line (knee to head) = something stands in the gap
-    for (let s = 0.15; s < d.width - 0.1; s += 0.2) {
-      const p: Vec3 = [d.hinge[0] + ux * s, 0, d.hinge[1] + uz * s]; const q: Vec3 = [p[0], 0, p[2]];
-      if (col.collideCircle(q, 0.02, 0.4, 1.9, 1)) { add('warn', 'door-gap', `door '${d.id}': static geometry inside the doorway ${fmt(p)} — the leaf sweeps through it`, [`door:${d.id}`]); break; }
-    }
-    // sealing: solid wall just beyond both ends of the leaf at chest height (else a shut leaf leaves a slot for sight and sound)
-    for (const [end, s] of [['hinge', -0.14], ['latch', d.width + 0.14]] as const) {
-      const q: Vec3 = [d.hinge[0] + ux * s, 0, d.hinge[1] + uz * s];
-      if (!col.collideCircle([q[0], 0, q[2]], 0.06, 1.0, 1.6, 1)) add('warn', 'door-seal', `door '${d.id}': no wall meets the leaf's ${end} end at ${fmt(q)} — shut, it will not seal the doorway (sound and sight leak past it)`, [`door:${d.id}`]);
-    }
-  });
-
-  // 6. routes: waypoints on walkable floor, consecutive legs (and the loop back) walkable
-  data.routes.forEach(r => {
-    const pts = r.points as Vec3[];
-    pts.forEach((p, i) => { if (!free(p)) add(nav.nearestFreePoint(p[0], p[2]) ? 'warn' : 'error', 'route-solid', `route '${r.id}' point ${i} ${fmt(p)} is not on a free nav cell${nav.nearestFreePoint(p[0], p[2]) ? ' (the man will stand at the nearest free one)' : ' and nothing near it is free'}`, [`route:${r.id}#${i}`]); });
-    for (let i = 0; i < pts.length; i++) {
-      const j = (i + 1) % pts.length; if (j === i) break;
-      const a = nav.nearestFreePoint(pts[i][0], pts[i][2]), b = nav.nearestFreePoint(pts[j][0], pts[j][2]); if (!a || !b) continue;
-      const p = nav.findPath(a, b, 20000);
-      if (!p) add('error', 'route-unreachable', `route '${r.id}': no walkable way from point ${i} ${fmt(pts[i])} to point ${j} ${fmt(pts[j])}`, [`route:${r.id}#${i}`, `route:${r.id}#${j}`]);
-      else { const L = pathLen(p, a), D = Math.hypot(b[0] - a[0], b[2] - a[2]); if (D > 2 && L > D * 3 + 4) add('info', 'route-detour', `route '${r.id}': leg ${i}→${j} walks ${L.toFixed(1)} m for ${D.toFixed(1)} m as the crow flies (through a wall? round the building?)`, [`route:${r.id}#${i}`]); }
-    }
-    if (pts.length === 1 && (r.wait[0] ?? 0) <= 0) add('info', 'route-static', `route '${r.id}' is a single point with no wait — a man standing forever`, [`route:${r.id}`]);
-  });
-  (data.chokepoints ?? []).forEach(c => { if (!free(c.pos as Vec3)) add('warn', 'chokepoint-blocked', `chokepoint '${c.id}' ${fmt(c.pos)} is not on a free nav cell`, [`chokepoint:${c.id}`]); });
-  data.props.forEach(p => { if (nav.isBlocked(p.x, p.z) && !boxes.some(b => insideFootprint(p.x, p.z, b) && b.c[1] + b.h[1] < 0.05)) { /* a prop standing in a blocked cell is usually 'against the wall' — fine */ } });
-
-  // 7. floor coverage: every free interior nav cell has a slab under it (a hole = men walking on nothing, rays falling to the world floor)
-  let cells = 0;
-  { const S = data.surfaces?.building; const holes: string[] = [];
-    if (S) {
-      const cand = new Int32Array(64);
-      for (let z = S.z0 + 0.25; z < S.z1; z += 0.5) for (let x = S.x0 + 0.25; x < S.x1; x += 0.5) {
-        if (nav.isBlocked(x, z)) continue; cells++;
-        const n = col.gather(x - 0.01, z - 0.01, x + 0.01, z + 0.01, -1.0, 0.05, cand);
-        let ok = false; for (let k = 0; k < n && !ok; k++) { const b = boxes[cand[k]]; if (b.c[1] + b.h[1] <= 0.3 && b.c[1] + b.h[1] >= -0.6 && insideFootprint(x, z, b)) ok = true; }
-        if (!ok) for (const b of boxes) { if (b.c[1] + b.h[1] <= 0.3 && b.c[1] + b.h[1] >= -0.6 && insideFootprint(x, z, b)) { ok = true; break; } }   // (NoShadow finishes are not in the collision cells: fall back to a plain scan)
-        if (!ok && holes.length < 12) holes.push(fmt([x, 0, z]));
-        else if (!ok) holes.push('');
-      }
-      if (holes.length) add('warn', 'floor-hole', `${holes.length} walkable interior cell(s) with no floor slab under them: ${holes.filter(Boolean).join(' ')}${holes.length > 12 ? ' …' : ''}`, []);
-    } }
   // 8. devices: cameras and beam ends inside solids / outside the world, a beam through a wall, a keypad away from its door or on the wrong face, a keypad whose
   //    code nobody can give up (every questioned man — and the sticky-note pair — means the pad nearest HIM: a pad nearest to no patrol point is unobtainable but by luck)
   { const solids = boxes.map((b, i) => ({ b, i })).filter(({ b }) => !(b.flags & BoxFlag.NoShadow));
@@ -224,7 +148,7 @@ export function lintLevel(data: LevelData, opts: LintOpts = {}): LintReport {
       } else if (v.kind === 'laser') {
         for (const [end, p] of [['emitter', v.from], ['receiver', v.to]] as const) { const hit = solidAt(p as Vec3); if (hit) add('error', 'laser-in-solid', `laser '${v.id}': its ${end} ${fmt(p)} is inside ${boxId(hit.i)} — mount it on the wall's face, not in it`, [ref, boxId(hit.i)]); if (!inWorld(p)) add('warn', 'device-bounds', `laser '${v.id}': ${end} ${fmt(p)} outside the traceable world`, [ref]); }
         // the beam through solid geometry between its ends (a partition in the way = a beam nobody can ever break past the wall)
-        { const a = v.from as Vec3, b = v.to as Vec3; const L = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]); if (L > 0.2) { const dir: Vec3 = [(b[0] - a[0]) / L, (b[1] - a[1]) / L, (b[2] - a[2]) / L]; const st = col.raycast([a[0] + dir[0] * 0.06, a[1] + dir[1] * 0.06, a[2] + dir[2] * 0.06], dir, L - 0.12); if (st) add('warn', 'laser-blocked', `laser '${v.id}': solid geometry ${fmt([a[0] + dir[0] * (st.t + 0.06), a[1] + dir[1] * (st.t + 0.06), a[2] + dir[2] * (st.t + 0.06)])} stands in the beam ${st.t.toFixed(2)} m from the emitter — it will always draw cut short there and nothing beyond it can break it`, [ref]); } }
+        { const a = v.from as Vec3, b = v.to as Vec3; const L = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]); if (L > 0.2) { const dir: Vec3 = [(b[0] - a[0]) / L, (b[1] - a[1]) / L, (b[2] - a[2]) / L]; const st = firstHit(boxes, [a[0] + dir[0] * 0.06, a[1] + dir[1] * 0.06, a[2] + dir[2] * 0.06], dir, L - 0.12); if (st) add('warn', 'laser-blocked', `laser '${v.id}': solid geometry ${fmt([a[0] + dir[0] * (st.t + 0.06), a[1] + dir[1] * (st.t + 0.06), a[2] + dir[2] * (st.t + 0.06)])} stands in the beam ${st.t.toFixed(2)} m from the emitter — it will always draw cut short there and nothing beyond it can break it`, [ref]); } }
         if (v.from[1] > 0.55 && v.from[1] < 1.18) add('info', 'laser-height', `laser '${v.id}' at y ${v.from[1].toFixed(2)}: too high to be a shin beam, too low to crouch under (the crouch-walk\'s crown rides at ~1.12) — everybody breaks it, standing or not; 0.35 or ≥ 1.2 say what they mean`, [ref]);
       } else {
         const m = doorMid(v.door); const d = data.doors.find(x => x.id === v.door);
@@ -245,7 +169,7 @@ export function lintLevel(data: LevelData, opts: LintOpts = {}): LintReport {
   data.floors.forEach((f, i) => { if (i > 0 && floorUsers(data, f.id).length === 0) add('info', 'floor-empty', `floor '${f.id}'${f.name ? ` (${f.name})` : ''} at y ${f.y}: nothing is on it — delete it, or it is a wing still to be built`, [`floor:${f.id}`]); });
   // 9. mission marks against their rooms
   { const M = data.mission; for (const o of M.objectives) if (o.kind === 'reach') { const d = data.doors.find(x => x.id === o.door); if (d) { const ux = Math.cos(d.closedDir), uz = Math.sin(d.closedDir); const mx = d.hinge[0] + ux * d.width / 2, mz = d.hinge[1] + uz * d.width / 2; const A = o.area; const dist = Math.max(A.x0 - mx, mx - A.x1, A.z0 - mz, mz - A.z1); if (dist > 1.5) add('warn', 'objective-door', `objective '${o.id}': its door '${o.door}' is ${dist.toFixed(1)} m outside the area's edge — the HUD arrow will point away from the room`, [`mark:${o.id}`]); } } }
-  return done({ boxes: boxes.length, props: level.props.length, lights: level.lights.length, areaLights: derivedAreaLightCount(level).lit, doors: data.doors.length, routes: data.routes.length, devices: data.devices.length, markRows, floors: perFloor, navFree: [...nav.blocked].filter(v => !v).length, interiorCells: cells });
+  return done({ boxes: boxes.length, props: level.props.length, lights: level.lights.length, areaLights: derivedAreaLightCount(level).lit, doors: data.doors.length, routes: data.routes.length, devices: data.devices.length, markRows, floors: perFloor });
 }
 
 /** ids quoted in a validator message ('box_0012', "light 'desk_lamp'") → selectable refs, best effort */

@@ -658,8 +658,7 @@ pub fn beam_boxes(g: &mut crate::game::Game, from: V3, dir: V3, l: f64, out: &mu
     let air = air.unwrap_or(false);
     if ir && !crate::irlaser::ir_viewer(g) { return; }
     let red: V3 = if ir { crate::irlaser::ir_tint() } else { [1.0, 0.06, 0.03] };
-    let hw = m::max(0.0022, 0.45 * g.m_per_px);
-    let gain = 0.0022 / hw;
+    const HW: f64 = 0.0022;
     let up: V3 = if m::abs(dir[1]) < 0.95 { [0.0, 1.0, 0.0] } else { [1.0, 0.0, 0.0] };
     let x = v3::normalize(v3::cross(up, dir));
     let y = v3::cross(dir, x);
@@ -667,15 +666,15 @@ pub fn beam_boxes(g: &mut crate::game::Game, from: V3, dir: V3, l: f64, out: &mu
     let box_flags = flags_or(flags.no_shadow, flags.dynamic);
     let line = crate::scene_boxes::make_box_frame(g, &crate::scene_boxes::MakeBoxP {
         c: v3::mad(from, dir, l / 2.0),
-        h: [hw, hw, l / 2.0],
+        h: [HW, HW, l / 2.0],
         yaw: Some(v3::yaw_of(dir)),
         rot: Some(v3::quat::from_basis(x, y, dir)),
         albedo: Some(if ir { [0.0, 0.0, 0.0] } else { [0.02, 0.0, 0.0] }),
-        emissive: Some(v3::scale(red, 9.0 * gain)),
+        emissive: Some(v3::scale(red, 9.0)),
         flags: Some(box_flags),
         ..Default::default()
     });
-    crate::thinline::thin_note(g, line.into(), 0.0022, 0.45, red[0] * 9.0, red[1] * 9.0, red[2] * 9.0);
+    crate::thinline::thin_note(g, line.into(), HW, 0.45, red[0] * 9.0, red[1] * 9.0, red[2] * 9.0);
     let shown = if ir { crate::irlaser::ir_note(g, line.into()) } else { line.into() };
     out.push(shown);
     if dot {

@@ -1,12 +1,12 @@
 // THE CHECKS THAT STAND NO GAME OF THEIR OWN MAKING: the picture's code, the shaders' texts, the page and its cards, the sounds, the level files, the player's words.
 // Each is a file run in a process of its own. The game's rules are asked in Rust (`cargo test` in rust/), whole plays by the native missions and `hold`, the page by pages.ts.
-//   bun run tools/qa/checks.ts [group | name …] [--list]     no word: every group but 'game'    groups: picture · shaders · page · menus · sound · levels · words · build · game
+//   bun run tools/qa/checks.ts [group | name …] [--list]     no word: every group    groups: picture · shaders · page · menus · sound · levels · words · build
 //   env: CHECK_JOBS (four) at a time · CHECK_CAP (ten) minutes each, its process group stopped there
 // Exit 0 every one green · 1 one red (its exit, a FAIL line, or the cap), or a *-check.ts here that no row names · 2 an unknown name
 import { readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-type Group = 'picture' | 'shaders' | 'page' | 'menus' | 'sound' | 'levels' | 'words' | 'build' | 'game';
+type Group = 'picture' | 'shaders' | 'page' | 'menus' | 'sound' | 'levels' | 'words' | 'build';
 type Row = readonly [file: string, group: Group, ...args: string[]];
 const ROWS: readonly Row[] = [
   ['bouncewalls-check.ts', 'picture'], ['cast-probes.ts', 'picture'], ['charmats-probes.ts', 'picture'], ['floor-order-check.ts', 'picture'], ['frame-layout.ts', 'picture'],
@@ -19,24 +19,23 @@ const ROWS: readonly Row[] = [
   ['dust-look-check.ts', 'shaders'], ['levelset-check.ts', 'shaders'], ['parse-check.ts', 'shaders'], ['shaderfold-check.ts', 'shaders'], ['shaderinline-check.ts', 'shaders'], ['shaderrows-check.ts', 'shaders'], ['shadertrim-check.ts', 'shaders'],
   ['bench-check.ts', 'page'], ['framecap-check.ts', 'page'], ['gpulost-check.ts', 'page'], ['keeppage-check.ts', 'page'], ['nogpu-check.ts', 'page'], ['pace-check.ts', 'page'], ['perfrec-check.ts', 'page'], ['pipequeue-check.ts', 'page'],
   ['pricerun-check.ts', 'page'], ['savefile-check.ts', 'page'], ['settle-check.ts', 'page'], ['view-check.ts', 'page'], ['perf-sweep-logic.ts', 'page'], ['perf-sweep-selftest.ts', 'page'],
-  ['camspace-check.ts', 'menus'], ['death-summary-check.ts', 'menus'], ['hud-look-check.ts', 'menus'], ['menustills-check.ts', 'menus'], ['squadkeys-check.ts', 'menus'], ['textsize-check.ts', 'menus'],
+  ['camspace-check.ts', 'menus'], ['hud-look-check.ts', 'menus'], ['menustills-check.ts', 'menus'], ['squadkeys-check.ts', 'menus'], ['textsize-check.ts', 'menus'],
   ['gunfire-table-check.ts', 'sound'], ['sfxwarm-check.ts', 'sound'], ['sound-takes-check.ts', 'sound'],
-  ['ground-pieces-check.ts', 'levels'], ['kit-stores-check.ts', 'levels'], ['palette-check.ts', 'levels'], ['walked-check.ts', 'levels'], ['ways-check.ts', 'levels'],
+  ['ground-pieces-check.ts', 'levels'], ['kit-stores-check.ts', 'levels'], ['palette-check.ts', 'levels'],
   ['mystery-check.ts', 'words'], ['writing-check.ts', 'words'],
   ['claude-md-check.ts', 'build'],
-  ['bigslot-check.ts', 'game'], ['goals-check.ts', 'game'], ['halftwice-check.ts', 'game'], ['smokebreak-check.ts', 'game'], ['squadsmoke-probes.ts', 'game'], ['tutqueue-check.ts', 'game'],
 ];
 /** check files no row runs, each with who runs it */
 const BY_HAND: Readonly<Record<string, string>> = {
-  'cloud-check.ts': 'the backend\'s packages', 'lobby-check.ts': 'the backend\'s packages', 'mp-control-check.ts': 'the backend\'s packages', 'mpserver-check.ts': 'three processes, minutes', 'seats-check.ts': 'two players, minutes', 'teams-check.ts': 'co-op\'s',
-  'dice-check.ts': 'the gate', 'dress-check.ts': 'the gate', 'knobs-check.ts': 'the gate', 'rollback-check.ts': 'the gate', 'rust-check.ts': 'the gate', 'men-check.ts': 'the Rust build',
-  'issue-check.ts': 'the level skill', 'kitdeal-check.ts': 'the level skill', 'lesson-check.ts': 'the level skill', 'level-names-check.ts': 'the level skill', 'lived-check.ts': 'the level skill', 'map-check.ts': 'the level skill', 'marksight-check.ts': 'the level skill',
-  'ownroofs-check.ts': 'the level skill', 'quiet-check.ts': 'the level skill', 'response-check.ts': 'the level skill', 'samestart-check.ts': 'the level skill', 'second-way-check.ts': 'the level skill', 'stack-marks-check.ts': 'the level skill', 'wallfurn-check.ts': 'the level skill',
-  'wallissue-check.ts': 'the level skill', 'stuff-check.ts': 'the level files: lines red before 2026-11-08', 'wallsides-check.ts': 'minutes', 'zfight-check.ts': 'the level skill',
+  'cloud-check.ts': 'the backend\'s packages', 'lobby-check.ts': 'the backend\'s packages', 'mp-control-check.ts': 'the backend\'s packages', 'mpserver-check.ts': 'three processes, minutes',
+  'knobs-check.ts': 'the gate',
+  'lesson-check.ts': 'the level skill',
+  'samestart-check.ts': 'the level skill',
+  'stuff-check.ts': 'the level files: lines red before 2026-11-08', 'zfight-check.ts': 'the level skill',
 };
 
 const HERE = import.meta.dir, argv = process.argv.slice(2), words = argv.filter(a => !a.startsWith('--')), name = (r: Row): string => r[0].replace(/(-check|-probes)?\.ts$/, '');
-const picked = words.length ? ROWS.filter(r => words.includes(r[1]) || words.includes(name(r)) || words.includes(r[0])) : ROWS.filter(r => r[1] !== 'game');
+const picked = words.length ? ROWS.filter(r => words.includes(r[1]) || words.includes(name(r)) || words.includes(r[0])) : ROWS;
 { const strange = words.filter(w => !ROWS.some(r => r[1] === w || name(r) === w || r[0] === w)); if (strange.length) { console.error(`checks: no check or group ${strange.join(', ')}`); process.exit(2); } }
 if (argv.includes('--list')) { for (const r of picked) console.log(`${r[1].padEnd(8)} ${name(r)}`); process.exit(0); }
 

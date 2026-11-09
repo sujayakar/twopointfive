@@ -1,10 +1,10 @@
 //! The types of `wandorder`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: Job, src/game/wandorder.ts:41)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Job {
     pub door: DoorId,
     pub side: f64,
@@ -41,7 +41,7 @@ impl Job {
 impl Default for Job { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/wandorder.ts:46 Job.aside, src/game/wandorder.ts:46)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct JobAside {
     pub pos: V3,
     pub yaw: f64,
@@ -58,7 +58,7 @@ impl JobAside {
 impl Default for JobAside { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: State, src/game/wandorder.ts:57)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct State {
     pub jobs: JsMap<GuardId, crate::wandorder::Job>,
 }
@@ -146,7 +146,7 @@ impl WandOrderJobsItem {
 impl Default for WandOrderJobsItem { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct WandorderMod {
     /// (src/game/wandorder.ts:58 states)
     pub states: JsMap<PlayerId, crate::wandorder::State>,

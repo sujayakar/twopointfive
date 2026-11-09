@@ -72,17 +72,6 @@ export function suitOfQuery(q: URLSearchParams): boolean { const v = q.get('suit
 const lookRow = (v: string): boolean => v === '' || v.includes(':');
 /** its rows (`?look`, `?look=key:value`) */
 export function lookPageRows(q: URLSearchParams): string[] { return q.getAll('look').filter(lookRow); }
-// THE PICTURE IS THE LOOK'S ON EVERY PAGE, and on every other host of the engine: there is no switch (2026-11-07; the maintainer: "should we work on merging
-// the new look too?", and of the way to do it "single path when possible"). Until then it drew only with a row on the address, and for one step of the build
-// `?look=old` drew the picture as it was. THE PICTURE ONLY: nothing a step of the game reads follows it (what the look's own page added to PLAY is the lab's, below).
-/** THE LOOK LAB: the page that asks for the look BY NAME (a row on the address: `/look`, `?look`, `?look=key:value`; or the tag a one-file build
- *  carries, where the address takes no flags), which is what the look's own page was before the picture became every page's. What that page did beyond the
- *  picture stays the lab's and is on no other page: its panel opened over the game, its kit and the fog put down (`?lookkit=0`) and a snow level's
- *  broken cloud. Each of those changes what the page's game PLAYS, and a
- *  co-op server, a headless run and a check all play the level as its file has it. main.ts reads this once at boot into LOOK_LAB */
-export function lookLabOn(q: URLSearchParams): boolean { return lookPageRows(q).length > 0; }
-/** …as this page booted (main.ts pageSwitches; false on every stand without a page) */
-export const LOOK_LAB = { on: false };
 /** what this machine keeps OFF of the look and the address does not name, as the address would say it */
 export function lookTrialsKept(q: URLSearchParams): string[] {
   let cut: string | null = null; try { cut = localStorage.getItem('twopointsix.cutboxes'); } catch { /* no store: on */ }   // (the cut boxes' own switch: scene/cut.ts initCutSwitch)

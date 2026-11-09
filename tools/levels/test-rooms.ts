@@ -1,4 +1,4 @@
-// TEST-ROOMS: the tiny level the scenario probes run on (tools/qa/scenario-level-probes.ts) — NOT a level to play for its own sake. Three rooms off one short
+// TEST-ROOMS: the tiny level the scenario probes run on (levels stands) — NOT a level to play for its own sake. Three rooms off one short
 // hall and a lobby the team starts in, built from the office's own kit (src/scene/officeGen.ts officeKit: its walls, doors, furniture, lights and palette —
 // no new art), 20 × 14 m inside the 40 × 28 m world. It exists to prove that the room clear (pair and four) and the hostage rescue stage, are walked and
 // finish on a level that is not the office, with everything they need coming from this file's `scenarios` block (src/scene/scenarios.ts).

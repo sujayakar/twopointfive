@@ -5,7 +5,7 @@
 use crate::command::{Bytes, Field};
 use crate::kept;
 use game::game::Game;
-use game::io::{Io, W};
+use game::bytes::{ToBytes, W};
 use game::kit::{self, CardFor, KitPreset, MemberKit, TeamFor};
 use game::loadout::entry_of;
 use game::query::{after_mark, Query};
@@ -14,6 +14,7 @@ use game::start_list::{self, Sitting};
 use game::view::{BriefView, CardView, KeptText, Pressed, SheetView, ShortView, StartView, TeamView};
 use game_start::json::{parse, Json};
 use game_start::read::FromJson;
+use std::any::Any;
 
 pub struct Desk {
     pub g: Box<Game>,
@@ -134,19 +135,29 @@ fn issue_block(text: &str) -> Option<IssueData> {
     Some(IssueData::from_json(&j, "issue"))
 }
 
+/// what an ask is answered with: bytes to a page, and to who runs beside the desk the answer itself
+pub trait Answer: ToBytes { fn itself(self: Box<Self>) -> Box<dyn Any>; }
+impl<T: ToBytes + Any> Answer for T { fn itself(self: Box<Self>) -> Box<dyn Any> { self } }
+impl Desk {
+    /// the bytes of an ask's answer
+    pub fn ask(&mut self, b: &[u8]) -> Result<Vec<u8>, String> {
+        let mut w = W::new();
+        self.answer(b)?.w(&mut w);
+        Ok(w.b)
+    }
+}
+
 macro_rules! asks {
     ($($(#[$m:meta])* $i:literal $name:ident { $($f:ident: $t:ty),* } -> $out:ty = $do:expr;)*) => {
         impl Desk {
             /// the ask in `b`, answered; a number no ask has says so
-            pub fn ask(&mut self, b: &[u8]) -> Result<Vec<u8>, String> {
+            pub fn answer(&mut self, b: &[u8]) -> Result<Box<dyn Answer>, String> {
                 let mut r = Bytes::of(b);
                 match u32::read(&mut r) {
                     $($i => {
                         $(let $f = <$t as Field>::read(&mut r);)*
                         let f: fn(&mut Desk, $($t),*) -> $out = $do;
-                        let mut w = W::new();
-                        f(self, $($f),*).w(&mut w);
-                        Ok(w.b)
+                        Ok(Box::new(f(self, $($f),*)))
                     })*
                     n => Err(format!("no ask has the number {n}")),
                 }

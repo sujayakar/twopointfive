@@ -1,10 +1,10 @@
 //! The types of `he40`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: ShellEnd, src/game/he40.ts:42)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct ShellEnd {
     pub at: V3,
     pub flown: f64,
@@ -27,7 +27,7 @@ impl ShellEnd {
 impl Default for ShellEnd { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum ShellEndMet {
     Prop,
     Air,
@@ -48,7 +48,7 @@ impl ShellEndMet {
 }
 
 /// (TypeScript: Shell, src/game/he40.ts:48)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Shell {
     pub pos: V3,
     pub vel: V3,
@@ -115,7 +115,7 @@ impl DudMet {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct He40Mod {
     /// (src/game/he40.ts:43 HE40_LOG)
     pub he40_log: Vec<crate::he40::ShellEnd>,

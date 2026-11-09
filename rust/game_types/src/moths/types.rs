@@ -1,10 +1,10 @@
 //! The types of `moths`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: Moths, src/game/moths.ts:33)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Moths {
     pub lamps: Vec<crate::moths::MothsLampsItem>,
     pub moths: Vec<crate::moths::Moth>,
@@ -21,7 +21,7 @@ impl Moths {
 impl Default for Moths { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: inline at src/game/moths.ts:35 Moths.lamps, src/game/moths.ts:35)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct MothsLampsItem {
     pub target: FixtureId,
     pub light: LightId,
@@ -42,7 +42,7 @@ impl MothsLampsItem {
 impl Default for MothsLampsItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Moth, src/game/moths.ts:31)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Moth {
     pub lamp: f64,
     pub r: f64,

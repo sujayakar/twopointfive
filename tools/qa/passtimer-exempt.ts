@@ -11,8 +11,6 @@ export const PASS_EXEMPT: readonly PassExempt[] = [
   { at: 'render/passes.ts', label: 'rtRestart', why: 'clears the reflection histories on the one frame reflections are switched back on' },
   { at: 'render/fogofwar.ts', label: 'fogofwarQa', why: "a check's readback of the fog pass, on an encoder of its own (qaRun): no frame runs it" },
   { at: 'render/savepic.ts', label: '', why: "the saved picture's one draw, on an encoder of its own, when a picture is asked for" },
-  { at: 'render/meshShadows.ts', label: 'meshDbgWalk', why: "a tool's ray walk read back to the page (the mesh shadows' debugger), on an encoder of its own" },
   { at: 'render/placeField.ts', label: '', why: 'an empty pass on an encoder of its own that only tries the two programs under an error scope, once at boot' },
   { at: 'render/diceRing.ts', label: '', why: 'an empty pass on an encoder of its own that only tries the program under an error scope, once when the ring is made' },
-  { at: 'smoke/smoke.ts', label: '', why: "hands the caller's own descriptor on (the solver stepped alone, cut into one buffer an operation): every pass it opens is opened, and timed, where the solver encodes it" },
 ];

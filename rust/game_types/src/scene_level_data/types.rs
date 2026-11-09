@@ -1,10 +1,10 @@
 //! The types of `scene_level_data`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum PropKindName {
     Cardboard,
     Plant,
@@ -23,7 +23,7 @@ impl PropKindName {
 }
 
 /// (TypeScript: BoxData, src/scene/levelData.ts:79)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct BoxData {
     pub id: String,
     pub floor: Option<String>,
@@ -76,7 +76,7 @@ impl BoxData {
 impl Default for BoxData { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum FlagName {
     NoPrimary,
     NoShadow,
@@ -97,7 +97,7 @@ impl FlagName {
 }
 
 /// (TypeScript: ShapeData, src/scene/levelData.ts:124)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct ShapeData {
     pub with: Option<Vec<crate::scene_level_data::ShapePieceData>>,
     pub round: Option<f64>,
@@ -120,7 +120,7 @@ impl ShapeData {
 impl Default for ShapeData { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: ShapePieceData, src/scene/levelData.ts:123)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct ShapePieceData {
     pub off: V3,
     pub h: V3,
@@ -159,7 +159,7 @@ impl ShapePieceData {
 impl Default for ShapePieceData { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: LightData, src/scene/levelData.ts:131)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct LightData {
     pub id: String,
     pub kind: crate::scene_level_data::LightDataKind,
@@ -204,7 +204,7 @@ impl LightData {
 impl Default for LightData { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum LightDataKind {
     Spot,
     Dir,
@@ -221,7 +221,7 @@ impl LightDataKind {
 }
 
 /// (TypeScript: DoorData, src/scene/levelData.ts:154)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct DoorData {
     pub id: String,
     pub floor: Option<String>,
@@ -264,7 +264,7 @@ impl DoorData {
 impl Default for DoorData { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: SurfacesData, src/scene/levelData.ts:75)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SurfacesData {
     pub building: crate::scene_level_data::Rect,
     pub grass_edge: f64,
@@ -289,7 +289,7 @@ impl SurfacesData {
 impl Default for SurfacesData { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Rect, src/scene/levelData.ts:59)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Rect {
     pub x0: f64,
     pub x1: f64,
@@ -310,7 +310,7 @@ impl Rect {
 impl Default for Rect { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/scene/levelData.ts:75 SurfacesData.zones, src/scene/levelData.ts:75)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SurfacesDataZonesItem {
     pub id: String,
     pub mat: crate::floor::FloorMat,

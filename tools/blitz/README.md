@@ -260,7 +260,7 @@ Two more cases reach reads that were restored by reading (their counters are `di
 - `run.sh` the one command · `mission.ts` the TypeScript side (`seats.ts` for a game of two seats) · `host.ts` the bridge's writers for one part of a game (the host's half)
 - `diff.ts` two whole states by path, in the file's memory, tables numbered by reach (`canon.txt` names the tables) · `known.txt` the known differences (`known-dress.txt` with the dressing rows up)
 - `timeline.ts` a mission's events by tick
-- the bridge, written by the skeleton's program (`BRIDGE.md`): `export.ts`, `expose.ts`, `paths.ts`, `schema.json`, `not-carried.json`, `bridge-check.ts`,
+- the bridge, written by the skeleton's program (`BRIDGE.md`): `export.ts`, `expose.ts`, `schema.json`,
   `dump-tables.ts`
 - `rust/game_run/src/bin/mission.rs` the runner · `where_parts.rs` where two blocks differ
 

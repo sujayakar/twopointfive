@@ -13,7 +13,7 @@ export const RUN_PAGE_WORDS: readonly string[] = [BENCH_RUN_WORD, PRICE_RUN_WORD
 export const runPage = (q: URLSearchParams): boolean => RUN_PAGE_WORDS.some(w => q.has(w));
 /** A RUN KEEPS ITS OWN PAGE (host/keeppage.ts `own`): the address that asks for one and every page of it load whole, each a boot of its own — that boot is what a
  *  run measures, and a run walks from page to page by loading the next address, which a frame under a kept shell is not free to do. The same address KEEPS NO
- *  BOOKS (main.ts `offBooks`): no try, no par best, no end card, no `run` on the cloud, also where the run was refused or a reload dropped it. The word is what
+ *  BOOKS (host/drawpage.ts): no try, no par best, no end card, no `run` on the cloud, also where the run was refused or a reload dropped it. The word is what
  *  the page has to go on, and the fight on such an address was never a visitor's to file. */
 export const ownPage = (q: URLSearchParams): boolean => q.has(BENCH_WORD) || q.has(PRICE_LEVELS_WORD) || runPage(q);
 /** … and A PAGE WHOSE PICTURE IS PRICED: a level of the pricing run. Its address says the page's own words for a held picture (`quality=<preset>&adapt=0`:

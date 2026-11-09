@@ -1474,7 +1474,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   behind `tune.qrfSilent` (Tab ▸ Sandbox ▸ QRF row, kept with the QRF knobs; page ON, harness OFF, `TPS_QRFSILENT=1`): Sam's gunfire heard on the net (`loudT`) and then EVERY staff man
   off it (dead, out cold, held) → control's radio check at +6 s, the team requested at +14 s (`QrfReason 'silent'`, no escalation raised; a man back on the net cancels; savestate refuses a
   checkpoint inside the fourteen seconds); with three men down the perimeter tier is called as the door goes, as its own rule always said. (3) THE P KEY starts nothing: main.ts's handler only ends a running tour (or level-script program) to the start card. (It once started the night showcase over a live run; `src/game/showkey.ts` then ruled it, and went with the two showcases, 2026-10-17, as did `show-key-check.ts`.) Checks (standalone, exit 0 / 1, each fails on the fault): `bun run tools/qa/opening-check.ts [--off]`, `qrf-silent-check.ts
-  [--off]`, `death-summary-check.ts`; on the real page (software adapter, a dev server on PORT): `node tools/qa/opening-page.cjs`, `node tools/qa/ways-in-look.cjs <out> solo=solo`.
+  [--off]`; on the real page (software adapter, a dev server on PORT): `node tools/qa/opening-page.cjs`, `node tools/qa/ways-in-look.cjs <out> solo=solo`.
   `tools/qa/solo-night.ts` (plans walk | sneak | careful | rush | loud, `--god --linger`, `--trace seed`) stands the game as the page ships, both knobs on.
 - **A level can tell its men not to dig in, and a lesson is taught on standard (10-13).** `scenarios.roomClear.digIn: false` (`scene/scenarios.ts
   StructureData`, `docs/level-format.md`): no man of that floor braces a door, moves to cover or sets on the door he expects, at any difficulty, squads or
@@ -2958,3 +2958,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **Where these notes say the simulation reads a paint** (`paletteName`, `surfOf`, `breakClassOf`, `steelGrey`, `gwotSimOf`, a stand-in `gwotAs`
   a hair off its row): since 2026-11-05 it reads the box's word (`src/scene/materials.ts`, `Box.does`), which every level file carries, and a paint
   is any colour. `docs/agents/levels.md`, "What a box does is said in a word".
+- **The floodlit yard's night is overcast, and cutting the mains is the better plan again** (2026-11-09; `levels/floodlit.json` ← `tools/levels/floodlit-floor.ts`: level data, no rule). The light meter counts the sky and what comes round, as the picture
+  draws them; the yard was made on one that counted neither. So with the mains out any open ground there read 0.19 to a bare eye (the sky alone 0.064 W, the moon 0.014), and the red lamp on the mast, sized to give a tube something when the meter had no sky,
+  took the gate to 0.21 and the middle of the yard to 0.25, over the dark line of 0.2. The level's moon was an overcast 0.04 under a clear night's sky. THE MEND: the sky at six tenths, the mast's lamp 6 → 2 (its glass glows as it did), the four lanterns
+  6 → 4.5 (what 6 read as when only its direct light was counted). Reads now, mains out: the gate 0.12, mid yard 0.14, the west 0.11, the foot gate 0.02, the start 0.11; tubes 0.61 to 0.69; the radio room 0.75 to an eye and 0.93 to a tube (0.81 / 0.94).
+  MEASURED (`rust/game_start` `missions floodlit --seeds 1-48`, the mains out from the start by a word put in for the read; standard / hard; men up of 192): mains out 83 / 75 → 94 / 99, the floor cleared 35 / 33 → 40 / 37 of 48, the defenders' rounds
+  410 / 407 → 277 / 280; mains on 89 / 70 both, cleared 35 / 28 → 34 / 28. Recordings and saves of the level from before do not stand on it. Nobody has played it.

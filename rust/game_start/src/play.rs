@@ -159,9 +159,9 @@ impl Play {
         self.g.out.clear();
         self.frames += 1;
     }
-    /// Every part of the game's state, a word a part (`game::state_words::STATE_NAMES` names them): what two machines of one game must agree on.
+    /// Every part of the game's state, a word a part (`game::state_words::state_names` names them): what two machines of one game must agree on.
     pub fn words(&mut self) -> Vec<u32> {
-        let (mut w, mut out) = (game::io::W::new(), Vec::new());
+        let (mut w, mut out) = (game::bytes::W::new(), Vec::new());
         game::state_words::state_words(&mut self.g, &mut w, &mut out);
         out
     }
@@ -493,7 +493,7 @@ pub fn nudge(seed: u32, k: u32) -> f64 {
 /// The first frame at which two games' words differ, and the parts of the state that do.
 pub fn parting(a: &[Vec<u32>], b: &[Vec<u32>]) -> Option<(usize, String)> {
     let k = a.iter().zip(b).position(|(x, y)| x != y)?;
-    let parts: Vec<&str> = game::state_words::STATE_NAMES.iter().zip(a[k].iter().zip(&b[k])).filter(|(_, (x, y))| x != y).map(|(n, _)| *n).collect();
+    let parts: Vec<String> = game::state_words::state_names().into_iter().zip(a[k].iter().zip(&b[k])).filter(|(_, (x, y))| x != y).map(|(n, _)| n).collect();
     Some((k, parts.join(", ")))
 }
 

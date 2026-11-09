@@ -1,10 +1,10 @@
 //! The types of `squad40`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: Shot, src/game/squad40.ts:79)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Shot {
     pub gd: GuardId,
     pub from: V3,
@@ -29,7 +29,7 @@ impl Shot {
 impl Default for Shot { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Turn, src/game/squad40.ts:81)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Turn {
     pub at: V3,
     pub t0: f64,
@@ -171,7 +171,7 @@ impl TurnBack {
 impl Default for TurnBack { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: State, src/game/squad40.ts:82)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct State {
     pub rounds: JsMap<GuardId, f64>,
     pub brought: f64,
@@ -197,7 +197,7 @@ impl State {
 impl Default for State { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/squad40.ts:83 State.shown, src/game/squad40.ts:83)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct StateShown {
     pub t: f64,
     pub text: String,
@@ -214,7 +214,7 @@ impl StateShown {
 impl Default for StateShown { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/squad40.ts:90 SQUAD40_LOG, src/game/squad40.ts:90)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Squad40ModSQUAD40LOGItem {
     pub t: f64,
     pub who: String,
@@ -267,7 +267,7 @@ pub enum ShotOf {
 }
 
 /// THE SHELL AT A SPOT, and everything anybody is shown or told of it: the menu's row, its refusal, the picture, and the order given are all read off one of these.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct ShellPlan {
     pub at: V3,
     /// the men it was asked of
@@ -279,7 +279,7 @@ pub struct ShellPlan {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Squad40Mod {
     /// (src/game/squad40.ts:87 states)
     pub states: JsMap<PlayerId, crate::squad40::State>,

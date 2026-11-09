@@ -244,8 +244,6 @@ function fresh() { if (builtOn !== KEYMAP.on || builtFree !== freeNow() || built
 export function keyBuilt(id: string): boolean { const a = byId.get(id); return !a || same(keysNow(a), home(a)); }
 /** the keys of a row now: as built, its one key, or none */
 export function keysOf(id: string): string[] { const a = byId.get(id); return a && !dormant(id) ? keysNow(a) : []; }
-/** is a row one the build gives no key right now (the wall hold's, while walking in works) */
-export function keyFreed(id: string): boolean { return (freeNow() && !!FREED[id]) || setFreed(id); }
 /** the cap of a row now ('—' with no key) */
 export function capNow(id: string): string { const a = byId.get(id); if (!a) return id; const as = slotNow() ? ALIAS[id] : undefined; if (as && !keysNow(a).length) return capNow(as); const ks = keysNow(a); return same(ks, a.codes) ? a.cap : ks[0] ? keyLabel(ks[0]) : NONE; }
 /** the row a cap of the build names ('f', 'Space', '2'), if it names one */
@@ -276,8 +274,6 @@ export function keyText(s: string, all = false): string {
   T.re.lastIndex = 0; return s.replace(T.re, (m, ...r) => { const to = T.to.get(m) ?? m, at = r.find(x => typeof x === 'number') as number; if (!to.startsWith('hold ')) return to; const pre = s.slice(0, at);   // (the orders key's 'hold Q': its capital where it opens a line or a sentence, the bare cap after 'hold', 'Q held' after 'with')
     return /\bhold $/i.test(pre) ? to.slice(5) : /\bwith $/i.test(pre) ? `${to.slice(5)} held` : at === 0 || /(?:[.:!?] |\n)$/.test(pre) ? 'H' + to.slice(1) : to; });   // (the orders key's 'hold Q' opens a line with its capital)
 }
-/** is anything not as built (what Reset has to undo) */
-export function keysChanged(): boolean { return KEYMAP.on && bound.size > 0 && keyRows().some(a => !same(keysNow(a), home(a))); }
 /** who has `code` now (never `but`) */
 function holder(code: string, but: string): KeyAct | null { for (const a of keyRows()) if (a.id !== but && keysOf(a.id).includes(code)) return a; return null; }
 /** may a row be put on this key at all */
@@ -302,6 +298,4 @@ export function bindKey(id: string, code: string): { ok: boolean; why?: 'fixed' 
 export function unbindKey(id: string) { if (!byId.has(id) || !KEYMAP.on || dormant(id)) return; bound.set(id, null); tidy(); rebuild(); keep(); }
 /** every key as built */
 export function resetKeys() { if (!KEYMAP.on || !bound.size) return; bound.clear(); rebuild(); keep(); }
-/** the table as kept ({} = as built), and a table put in its place: what a check stages, and the page's `__keys` */
-export function keysKept(): Record<string, string | null> { const o: Record<string, string | null> = {}; for (const [id, k] of bound) o[id] = k; return o; }
 export function setKeys(v: Record<string, string | null>, write = false) { adopt(v); if (write) keep(); }

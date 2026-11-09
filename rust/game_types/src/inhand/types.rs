@@ -1,10 +1,10 @@
 //! The types of `inhand`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: a union)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub enum InHandWord {
     Pistol,
     Torch(crate::inhand::InHandWordTorch),
@@ -12,7 +12,7 @@ pub enum InHandWord {
 }
 
 /// (TypeScript: inline at src/game/inhand.ts:60 InHandWord, src/game/inhand.ts:60)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct InHandWordTorch {
     pub beam: V3,
     pub at: V3,
@@ -35,7 +35,7 @@ impl InHandWordTorch {
 impl Default for InHandWordTorch { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/inhand.ts:60 InHandWord, src/game/inhand.ts:60)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct InHandWordLong {
     pub by: V3,
 }

@@ -1,10 +1,10 @@
 //! The types of `render_meshbvh`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: MeshBvh, src/render/meshbvh.ts:21)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct MeshBvh {
     pub num_tris: f64,
     pub num_nodes: f64,
@@ -45,7 +45,7 @@ impl MeshBvh {
 impl Default for MeshBvh { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/render/meshbvh.ts:35 MeshBvh.stats, src/render/meshbvh.ts:35)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct MeshBvhStats {
     pub leaves: f64,
     pub avg_leaf: f64,

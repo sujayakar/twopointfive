@@ -1,10 +1,10 @@
 //! The types of `squadcast`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: SquadCast, src/game/squadcast.ts:14)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SquadCast {
     pub orders: crate::orders::SquadOrders,
     pub tools: crate::doortools::DoorTools,

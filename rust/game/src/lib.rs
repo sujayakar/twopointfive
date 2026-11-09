@@ -343,7 +343,7 @@ pub use game_rules::workstow;
 pub use game_rules::workthings;
 pub use game_rules::dice;
 pub use game_rules::mind;
-pub mod state_words;
+pub use game_rules::state_words;
 pub use game_wire::puppet;
 mod io_rules;
 /// the bridge: the wire, and what of it asks rules

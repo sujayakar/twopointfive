@@ -46,7 +46,7 @@ export class Overlay implements HudLike {
   private trajRoll: SVGPolylineElement; private trajTick: SVGCircleElement;   // (game.view.aim.throw.rest): the ring goes where the can comes to REST, a tick stays on its first touch, the floor between is dotted
   private squadThrow!: SquadThrowViz;
   private attention!: AttentionViz;
-  /** the layer and the floor's picture, where a page's own tools draw (ui/devhud.ts) */
+  /** the layer and the floor's picture, where a page's own tools draw */
   get layers(): { root: HTMLElement; floor: SVGSVGElement } { return { root: this.root, floor: this.traj }; }
   private equipKey = '';
   private equipKit: KitView | null = null;
@@ -394,7 +394,7 @@ export class Overlay implements HudLike {
       const squad: InteractRow[] = S ? [{ kind: 'objective', label: '', opts: [...men, ...(shut ? [] : S.notes), ...(quick ? [quick] : [])], inReach: true, off: false }] : [];
       const C = cornerRows(rows, I.lit, squad, V.lesson?.rails?.prompt ? '' : objectiveWords(V), V.corner.filter(o => !o.key || (!!S && !shut)), V.stage);
       return { rows: C.rows, primary: C.primary, more: 0, open: false }; }
-    return { rows, primary: I.lit, more: I.more, open: I.open, hint: `let go to do it · wheel / ↑↓ chooses · ${V.look.back} backs out` };   // (up as a ring the panel's list is the list at rest)
+    return { rows, primary: I.lit, more: I.more, open: I.open, hint: `let go to do it · wheel / ↑↓ chooses · ${{ tab: 'Tab', esc: 'Esc' }[V.look.back]} backs out` };   // (up as a ring the panel's list is the list at rest)
   }
 
 

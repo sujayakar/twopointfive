@@ -1,6 +1,6 @@
 //! The types of `sim_fallshome`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: words)
@@ -50,9 +50,11 @@ impl FallDue {
 impl Default for FallDue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: FallStore, src/sim/fallshome.ts:48)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct FallStore {
     pub base: f64,
+    /// (holds nothing: in no bytes)
+    #[bytes(skip)]
     pub home: crate::Opaque,
 }
 impl FallStore {

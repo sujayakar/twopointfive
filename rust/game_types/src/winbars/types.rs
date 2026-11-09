@@ -1,10 +1,10 @@
 //! The types of `winbars`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: BarState, src/game/winbars.ts:63)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct BarState {
     pub met: Vec<crate::winbars::BarMet>,
 }
@@ -19,7 +19,7 @@ impl BarState {
 impl Default for BarState { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: BarMet, src/game/winbars.ts:87)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct BarMet {
     pub index: f64,
     pub t: f64,
@@ -74,7 +74,7 @@ impl BreakBarCause {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct WinbarsMod {
     /// (src/game/winbars.ts:57 LOG)
     pub log: Vec<String>,

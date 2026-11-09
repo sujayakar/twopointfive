@@ -10,12 +10,11 @@
 // streak alive update() is a compare and a return. Game.tune.tracers off = fireWeapon never calls in here at all.
 import { Vec3, v3, quat } from '../math/vec';
 import { Box, BoxFlag, makeBox } from '../scene/boxes';
-import { thinNote } from './thinline';
 import type { LightSet, RtLight } from '../render/lights';
 import type { Sparks } from './sparks';
 import type { Firearm, WeaponDef } from './weapons';
 import { tracerFx } from './effects';
-import { RUST_PASS, RUST_SURFACE } from './crossing';
+import { RUST_PASS, RUST_SURFACE, goneWithTick } from './crossing';
 
 /** where an ember's sparks go: the CPU pool (game/sparks.ts Sparks satisfies this) or the game's router onto the GPU particles (particleFx.ts sparkSink) */
 export type SparkSink = Pick<Sparks, 'emitCone'>;
@@ -121,33 +120,7 @@ export class Tracers {
     this.lights?.remove(t.light); t.light = null; this.lit = Math.max(0, this.lit - 1);
   }
 
-  /** One frame: every live head advances v·dt along its segment (never past the end), the streak box is rewritten from tail to head and pushed to `out`, the light
-   *  moved onto the head; a head that reached the end last frame is retired first (it was drawn AT the wall once), one that reaches it now spawns its ember.
-   *  `mPerPx` = world size of an internal pixel at the look-at depth (Game.mPerPx; 0 = never widen): a streak thinner than ~a pixel is widened and dimmed by the same
-   *  factor so it carries the same light instead of crawling. dt 0 (a frozen still) redraws everything where it is. */
-  update(dt: number, out: Box[], mPerPx = 0) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Tracers.update', this, [dt, out, mPerPx]); if (__r !== RUST_PASS) return __r as any; } }
-    if (this.live === 0) return;
-    const P = this.params; let live = 0, lit = 0;
-    const hw = Math.max(P.thickness * 0.5, 0.6 * mPerPx); const gain = (P.thickness * 0.5) / hw * P.emissive;
-    for (const t of this.pool) {
-      if (!t.alive) continue;
-      if (t.arrived && dt > 0) { this.release(t); t.alive = false; continue; }   // shown at the wall last frame: gone
-      t.age += dt; t.s = Math.min(t.L, t.s + t.v * dt);
-      if (t.s >= t.L - 1e-6 && !t.arrived) { t.arrived = true; this.ember(t); }
-      if (t.light) { const l = t.light; l.age = 0; l.enabled = true; l.pos[0] = t.from[0] + t.dir[0] * (t.s - 0.05); l.pos[1] = t.from[1] + t.dir[1] * (t.s - 0.05); l.pos[2] = t.from[2] + t.dir[2] * (t.s - 0.05); lit++; }   // (5 cm short of the head: never inside the surface it stops at)
-      live++;
-      if (t.s <= 1e-4) continue;   // nothing has left the muzzle yet (a zero-length step on the frame it was fired)
-      const tail = Math.max(0, t.s - t.v * P.shutter); const len = Math.max(0.05, t.s - tail); const mid = t.s - len * 0.5;
-      const b = t.box;
-      b.c[0] = t.from[0] + t.dir[0] * mid; b.c[1] = t.from[1] + t.dir[1] * mid; b.c[2] = t.from[2] + t.dir[2] * mid;
-      b.h[0] = hw; b.h[1] = hw; b.h[2] = len * 0.5;
-      b.emissive[0] = t.color[0] * gain; b.emissive[1] = t.color[1] * gain; b.emissive[2] = t.color[2] * gain;
-      thinNote(b, P.thickness * 0.5, 0.6, t.color[0] * P.emissive, t.color[1] * P.emissive, t.color[2] * P.emissive);   // (thinline.ts: re-sized by a picture drawn from another view)
-      t.frames++;
-      out.push(b);
-    }
-    this.live = live; this.lit = lit;
-  }
+  update(dt: number, out: Box[]): void { return goneWithTick('Tracers.update') as any; }
   /** the splash where a tracer stops in geometry: a few sparks back off the surface (sparks.ts's own white → orange → red ramp is the tracer's colour family) and a
    *  brief glow in its colour just off it. Nothing in a man; nothing for a round that met nothing. Seeded off a private counter (never the game's fxSeed or dice). */
   private ember(t: Tracer) {

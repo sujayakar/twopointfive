@@ -1,10 +1,10 @@
 //! The types of `render_snow_field`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: SnowField, src/render/snowField.ts:45)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SnowField {
     pub data: Vec<u16>,
     pub w: f64,
@@ -55,7 +55,7 @@ impl SnowField {
 impl Default for SnowField { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/render/snowField.ts:65 SnowField.kept, src/render/snowField.ts:65)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SnowFieldKeptItem {
     pub x: f64,
     pub z: f64,
@@ -78,7 +78,7 @@ impl SnowFieldKeptItem {
 impl Default for SnowFieldKeptItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/render/snowField.ts:66 SnowField.stats, src/render/snowField.ts:66)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct SnowFieldStats {
     pub mounds: f64,
     pub lays: f64,

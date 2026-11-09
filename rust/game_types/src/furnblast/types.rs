@@ -1,10 +1,10 @@
 //! The types of `furnblast`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum BlastSource {
     Frag,
     Door,
@@ -21,7 +21,7 @@ impl BlastSource {
 }
 
 /// (TypeScript: Furniture, src/game/furnblast.ts:143)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Furniture {
     pub groups: Option<Vec<crate::furnblast::Group>>,
     pub member_at: JsMap<crate::Num, FurnblastMemberId>,
@@ -60,7 +60,7 @@ impl Furniture {
 impl Default for Furniture { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: Group, src/game/furnblast.ts:138)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Group {
     pub id: f64,
     pub members: Vec<FurnblastMemberId>,
@@ -83,7 +83,7 @@ impl Group {
 impl Default for Group { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: AABB, src/game/furnblast.ts:129)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AABB {
     pub x0: f64,
     pub x1: f64,
@@ -108,7 +108,7 @@ impl AABB {
 impl Default for AABB { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/furnblast.ts:155 Furniture.last, src/game/furnblast.ts:155)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct FurnitureLast {
     pub t: f64,
     pub at: V3,
@@ -127,7 +127,7 @@ impl FurnitureLast {
 impl Default for FurnitureLast { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/furnblast.ts:263 Furniture.rowKept, src/game/furnblast.ts:263)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct FurnitureRowKept {
     pub t: f64,
     pub first: u32,
@@ -170,7 +170,7 @@ impl BlastFirst {
 impl Default for BlastFirst { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/furnblast.ts:565 Furniture.mouthMemo, src/game/furnblast.ts:565)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct FurnitureMouthMemo {
     pub t: f64,
     pub serial: f64,
@@ -347,7 +347,7 @@ impl SteelPartOpen {
 impl Default for SteelPartOpen { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Member, src/game/furnblast.ts:137)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Member {
     pub i: f64,
     pub a: crate::furnblast::AABB,
@@ -668,7 +668,7 @@ impl FurnitureNoteResetCause {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct FurnblastMod {
     /// (src/game/furnblast.ts:117 FURN_LOG)
     pub furn_log: Vec<String>,

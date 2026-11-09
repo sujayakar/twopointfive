@@ -104,8 +104,8 @@ fn main() {
         let mut verdict_said = false;
         let mut post_file = std::env::var("BLITZ_POST").ok().map(|p| { use std::io::Write; let mut f = std::io::BufWriter::new(std::fs::File::create(&p).unwrap_or_else(|e| panic!("BLITZ_POST {}: {}", p, e))); writeln!(f, "{}", head.join(" ")).unwrap(); f });
         let clear: Option<(String, usize)> = std::env::var("BLITZ_CLEAR").ok().map(|s| { let (p, n) = s.split_once('@').expect("BLITZ_CLEAR=<part>@<tick>"); (p.to_string(), n.parse().expect("a tick")) });
-        let mut state_file = std::env::var("BLITZ_STATE").ok().map(|p| { use std::io::Write; let mut f = std::io::BufWriter::new(std::fs::File::create(&p).unwrap_or_else(|e| panic!("BLITZ_STATE {}: {}", p, e))); writeln!(f, "names {}", game::state_words::STATE_NAMES.join(" ")).unwrap(); f });
-        let (mut sw_o, mut sw) = (game::io::W::new(), Vec::<u32>::new());
+        let mut state_file = std::env::var("BLITZ_STATE").ok().map(|p| { use std::io::Write; let mut f = std::io::BufWriter::new(std::fs::File::create(&p).unwrap_or_else(|e| panic!("BLITZ_STATE {}: {}", p, e))); writeln!(f, "names {}", game::state_words::state_names().join(" ")).unwrap(); f });
+        let (mut sw_o, mut sw) = (game::bytes::W::new(), Vec::<u32>::new());
         for k in 1..=ticks {
             // THE HOST PUT A CHECKPOINT BACK in the TypeScript's run before this tick opened (`<k> chron_load`): the whole game was replaced by a saved one,
             // which no stepper can follow from its own state. The Rust game takes the TypeScript's state as this tick opens (L<k>.bin, Ls<k>.bin) as a NEW

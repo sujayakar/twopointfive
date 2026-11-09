@@ -190,7 +190,7 @@ export function priceLookWords(search: string): string[] {
   return [...(own.some(p => /^look(=|$)/.test(p)) ? [] : ['look']), ...own, ...lookTrialsKept(q)];
 }
 /** the address a step is priced on: its mission's own words on the look's page with that page's words, the die pinned, no replay filed, no sound, the preset,
- *  and its place in the run (that word makes it a run's page: the run is nobody's play, so main.ts `offBooks` keeps no try of it, as of a benchmark's scene) */
+ *  and its place in the run (that word makes it a run's page: the run is nobody's play, so the page keeps no try of it, as of a benchmark's scene) */
 export function priceSearch(level: string, i: number, quality: string, look: string[] = ['look'], keep: string[] = []): string {
   const L = priceLevels().find(l => l.level === level); if (!L) throw new Error(`no level '${level}' on the mission list`);
   // (the page's own words for a held picture: the preset pinned and the ladder off, the window giving way to nobody. `auto` leaves the ladder to the page)

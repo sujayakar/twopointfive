@@ -1,10 +1,10 @@
 //! The types of `cover`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum OpeningKind {
     Door,
     Mouth,
@@ -23,7 +23,7 @@ impl OpeningKind {
 }
 
 /// (TypeScript: Opening, src/game/cover.ts:176)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Opening {
     pub id: String,
     pub kind: crate::cover::OpeningKind,
@@ -52,7 +52,7 @@ impl Opening {
 impl Default for Opening { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: CoverJob, src/game/cover.ts:181)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct CoverJob {
     pub o: CoverOpeningId,
     pub to: V3,
@@ -89,7 +89,7 @@ impl CoverJob {
 impl Default for CoverJob { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: CoverStep, src/game/cover.ts:185)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct CoverStep {
     pub q: V3,
     pub from: V3,
@@ -116,7 +116,7 @@ impl CoverStep {
 impl Default for CoverStep { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: LiveOpening, src/game/cover.ts:187)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct LiveOpening {
     pub o: CoverOpeningId,
     pub w: f64,
@@ -147,7 +147,7 @@ impl LiveOpening {
 impl Default for LiveOpening { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Cover, src/game/cover.ts:235)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Cover {
     pub knobs: crate::knobs::CoverK,
     pub openings: Vec<CoverOpeningId>,
@@ -198,7 +198,7 @@ impl Cover {
 impl Default for Cover { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: inline at src/game/cover.ts:248 Cover.stats, src/game/cover.ts:248)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct CoverStats {
     pub deals: f64,
     pub takes: f64,
@@ -237,7 +237,7 @@ impl CoverStats {
 impl Default for CoverStats { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/cover.ts:254 Cover.log, src/game/cover.ts:254)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct CoverLogItem {
     pub t: f64,
     pub who: String,
@@ -269,7 +269,7 @@ impl CoverNav {
 impl Default for CoverNav { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/cover.ts:262 Cover.reads, src/game/cover.ts:262)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct CoverReadsValue {
     pub t: f64,
     pub at: V3,
@@ -288,7 +288,7 @@ impl CoverReadsValue {
 impl Default for CoverReadsValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/cover.ts:264 Cover.kept, src/game/cover.ts:264)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct CoverKeptValue {
     pub j: crate::cover::CoverJob,
     pub t: f64,
@@ -305,7 +305,7 @@ impl CoverKeptValue {
 impl Default for CoverKeptValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/cover.ts:266 Cover.outs, src/game/cover.ts:266)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct CoverOutsValue {
     pub j: crate::cover::CoverJob,
     pub aim: V3,

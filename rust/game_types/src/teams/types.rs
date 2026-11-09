@@ -1,10 +1,10 @@
 //! The types of `teams`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum Team {
     Guard,
     Operative,
@@ -32,7 +32,7 @@ pub enum HostileToO {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct TeamsMod {
     /// (src/game/teams.ts:23 HOSTILE)
     pub hostile: JsMap<crate::teams::Team, JsMap<crate::teams::Team, bool>>,

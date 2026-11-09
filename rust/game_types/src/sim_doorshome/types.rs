@@ -1,13 +1,15 @@
 //! The types of `sim_doorshome`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: DoorStore, src/sim/doorshome.ts:35)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct DoorStore {
     pub base: f64,
     pub stride: f64,
+    /// (holds nothing: in no bytes)
+    #[bytes(skip)]
     pub home: crate::Opaque,
     pub cap: f64,
 }

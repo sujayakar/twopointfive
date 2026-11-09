@@ -1,6 +1,6 @@
 //! The types of `gunlook`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: words)
@@ -184,7 +184,7 @@ impl PistolModel {
 impl Default for PistolModel { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: GunLook, src/game/gunlook.ts:196)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct GunLook {
     pub hand: Option<crate::weapons::GunModelId>,
     pub long: Option<crate::weapons::GunModelId>,

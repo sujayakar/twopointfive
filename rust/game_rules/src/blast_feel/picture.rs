@@ -21,6 +21,7 @@ struct Stage { at: f64, what: What }
 /// the stages to come, in the order they were asked for; the faces their blasts have, each ring's sectors stopped by a wall kept on its face; and this half's own counter
 #[derive(Clone, Debug, Default)]
 pub struct Stages { queue: Vec<Stage>, faces: Vec<Vec<Face>>, serial: f64 }
+impl crate::bytes::ToBytes for Stages { fn w(&self, _: &mut crate::bytes::W) {} }
 
 fn stages(g: &mut Game) -> &mut Stages { let s: &mut Stages = g.feel.at(); if s.serial == 0.0 { s.serial = 1.0; } s }
 fn draw(g: &mut Game) -> f64 { let s = stages(g); let n = s.serial; s.serial += 1.0; hash_u(n) / 4294967296.0 }

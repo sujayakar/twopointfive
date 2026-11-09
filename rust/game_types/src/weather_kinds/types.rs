@@ -1,10 +1,10 @@
 //! The types of `weather_kinds`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum WeatherKind {
     Clear,
     Overcast,
@@ -29,7 +29,7 @@ impl WeatherKind {
 }
 
 /// (TypeScript: FogSpec, src/game/weatherKinds.ts:21)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct FogSpec {
     pub sigma: f64,
     pub h: f64,
@@ -52,7 +52,7 @@ impl FogSpec {
 impl Default for FogSpec { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: WeatherPreset, src/game/weatherKinds.ts:27)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct WeatherPreset {
     pub title: String,
     pub words: String,
@@ -81,7 +81,7 @@ impl WeatherPreset {
 impl Default for WeatherPreset { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct WeatherKindsMod {
     /// (src/game/weatherKinds.ts:41 WEATHER_PRESETS)
     pub weather_presets: JsMap<crate::weather_kinds::WeatherKind, crate::weather_kinds::WeatherPreset>,

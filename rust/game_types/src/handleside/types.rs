@@ -1,10 +1,10 @@
 //! The types of `handleside`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: St, src/game/handleside.ts:68)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct St {
     pub door: DoorId,
     pub side: f64,
@@ -35,7 +35,7 @@ impl St {
 impl Default for St { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum StPhase {
     Go,
     Wait,
@@ -54,7 +54,7 @@ impl StPhase {
 }
 
 /// (TypeScript: Spot, src/game/handleside.ts:76)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Spot {
     pub pos: V3,
     pub yaw: f64,
@@ -75,7 +75,7 @@ impl Spot {
 impl Default for Spot { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Face, src/game/handleside.ts:77)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Face {
     pub stand: Option<crate::handleside::Spot>,
     pub via: Option<[V3; 2]>,
@@ -105,7 +105,7 @@ impl HANDLEDEBUG {
 impl Default for HANDLEDEBUG { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/handleside.ts:72 rested, src/game/handleside.ts:72)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct HandlesideModRestedValue {
     pub door: DoorId,
     pub until: f64,
@@ -122,7 +122,7 @@ impl HandlesideModRestedValue {
 impl Default for HandlesideModRestedValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/handleside.ts:73 lined, src/game/handleside.ts:73)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct HandlesideModLinedValue {
     pub door: DoorId,
     pub until: f64,
@@ -139,7 +139,7 @@ impl HandlesideModLinedValue {
 impl Default for HandlesideModLinedValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/handleside.ts:78 faces, src/game/handleside.ts:78)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct HandlesideModFacesValue {
     pub swing: f64,
     pub at: [Option<crate::handleside::Face>; 2],
@@ -220,7 +220,7 @@ pub enum NearStand {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct HandlesideMod {
     /// (src/game/handleside.ts:69 states)
     pub states: JsMap<GuardId, crate::handleside::St>,

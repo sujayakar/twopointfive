@@ -1,11 +1,11 @@
 //! The types of `character`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// THE NAMES OF A BODY'S JOINTS, in the order a real game's `bones` has them (read off a running game: `for k in b` walks this order)
 pub const BONE_ORDER: [Bone; 22] = [Bone::Hips, Bone::Spine2, Bone::Chest, Bone::Neck, Bone::Head, Bone::UpperArmL, Bone::ForearmL, Bone::HandL, Bone::UpperArmR, Bone::ForearmR, Bone::HandR, Bone::ThighL, Bone::ShinL, Bone::FootL, Bone::ToeL, Bone::ThighR, Bone::ShinR, Bone::FootR, Bone::ToeR, Bone::FingerR, Bone::FingerL, Bone::HeadTop];
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum Bone { Hips, Spine2, Chest, Neck, Head, UpperArmL, ForearmL, HandL, UpperArmR, ForearmR, HandR, ThighL, ShinL, FootL, ToeL, ThighR, ShinR, FootR, ToeR, FingerR, FingerL, HeadTop }
 impl Bone {
     pub const fn as_str(self) -> &'static str {
@@ -13,18 +13,18 @@ impl Bone {
     }
 }
 /// whose body this is
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Hash, ToBytes)]
 pub enum Who { Guard(GuardId), Player(PlayerId) }
 
 /// THE BLOW'S HANDS FOLLOW HIS MEN (takedown.ts: `live: () => marks(by, vic, style)`): the only closure ever given to it
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct BlowLive { pub by: CharId, pub vic: CharId, pub style: BlowStyle }
 
 /// THE TRUNK'S PATH IN A GUIDED FALL (character.ts `led`): the pelvis led over [p0, p1], the turn over [n0, n1]
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Led { pub pv: V3, pub p_t: V3, pub v_t: V3, pub p0: f64, pub p1: f64, pub n0: f64, pub n1: f64, pub v0n: V3 }
 /// `frame` of a guided fall, by the fall's kind (the closures of character.ts's guided fall, with what they captured)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub enum FallFrame {
     /// 'fold' and 'sink': onto his knees, then laid on his front
     Fold { kneel: Led, t_a: f64, lay: f64, k62: V3, flat: V3, roll: f64, sd: V3, f: V3, room: f64, l_a: f64, v0n: V3 },
@@ -36,7 +36,7 @@ pub enum FallFrame {
     Plain(Led),
 }
 /// `nod` of a guided fall: the head's nod, by the fall's kind
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub enum FallNod {
     Fold { slow: bool, t_a: f64, lay: f64 },
     Cut { beat: f64, dur: f64, end: f64 },
@@ -45,7 +45,7 @@ pub enum FallNod {
     Plain,
 }
 /// `at` of a pin of a guided fall: where the pin wants the particle at time t. All but Lead read the guide's `frame`
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub enum GuidePinAt {
     /// `rigid`: carried with the trunk
     Rigid { r: V3 },
@@ -59,7 +59,7 @@ pub enum GuidePinAt {
     Heel { a: V3, r: V3, ty: f64, tw: f64, dur: f64 },
 }
 /// `release` of a guided fall ('fold' and 'sink' have none)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub enum FallRelease {
     Cut { away: V3, room: f64 },
     Topple { away: V3, room: f64, j: f64, k: V3, w: f64 },
@@ -77,7 +77,7 @@ pub enum Untwist {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum KitItem {
     Pistol,
     Rifle,
@@ -96,7 +96,7 @@ impl KitItem {
 }
 
 /// (TypeScript: character.ts N: the index of each named node of the rig)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AnimNodes {
     pub hips: usize,
     pub spine1: usize,
@@ -157,7 +157,7 @@ impl AnimNodes {
 impl Default for AnimNodes { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum UpperMode {
     None,
     Torch,
@@ -176,7 +176,7 @@ impl UpperMode {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum Stance {
     None,
     Wall,
@@ -197,7 +197,7 @@ impl Stance {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum LongStance {
     PatrolLong,
     LowLong,
@@ -216,7 +216,7 @@ impl LongStance {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum SignalKind {
     Hold,
     Go,
@@ -237,7 +237,7 @@ impl SignalKind {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum TellKind {
     Watch,
     Neck,
@@ -252,7 +252,7 @@ impl TellKind {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum StrikeKind {
     Cross,
     Jab,
@@ -267,7 +267,7 @@ impl StrikeKind {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum BlowStyle {
     Mouth,
     Sweep,
@@ -288,7 +288,7 @@ impl BlowStyle {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum FallStyle {
     Fold,
     Topple,
@@ -309,7 +309,7 @@ impl FallStyle {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum TakenStyle {
     Arch,
     Hunch,
@@ -326,7 +326,7 @@ impl TakenStyle {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum ReadyKind {
     Grab,
     Seat,
@@ -345,7 +345,7 @@ impl ReadyKind {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum HoldPhase {
     Held,
     Grab,
@@ -366,7 +366,7 @@ impl HoldPhase {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum HoldVariant {
     Gun,
     Arm,
@@ -381,7 +381,7 @@ impl HoldVariant {
 }
 
 /// (TypeScript: HoldPose, src/game/character.ts:60)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct HoldPose {
     pub yank: Option<f64>,
     pub step: Option<f64>,
@@ -422,7 +422,7 @@ impl HoldPose {
 impl Default for HoldPose { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: StripPose, src/game/character.ts:61)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct StripPose {
     pub t: f64,
     pub at: Option<V3>,
@@ -439,7 +439,7 @@ impl StripPose {
 impl Default for StripPose { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: HeldPose, src/game/character.ts:65)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct HeldPose {
     pub yank: Option<f64>,
     pub pull: Option<f64>,
@@ -480,7 +480,7 @@ impl HeldPose {
 impl Default for HeldPose { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: DoorPush, src/game/character.ts:70)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct DoorPush {
     pub p: V3,
     pub n: V3,
@@ -505,7 +505,7 @@ impl DoorPush {
 impl Default for DoorPush { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum WorkKind {
     Keys,
     Charge,
@@ -524,7 +524,7 @@ impl WorkKind {
 }
 
 /// (TypeScript: WorkPose, src/game/character.ts:78)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct WorkPose {
     pub kind: crate::character::WorkKind,
     pub p: V3,
@@ -553,7 +553,7 @@ impl WorkPose {
 impl Default for WorkPose { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum CarryKind2 {
     Torch,
     Weapon,
@@ -568,7 +568,7 @@ impl CarryKind2 {
 }
 
 /// (TypeScript: HaulPose, src/game/character.ts:91)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct HaulPose {
     pub l: V3,
     pub r: V3,
@@ -595,7 +595,7 @@ impl HaulPose {
 impl Default for HaulPose { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: AnimParams, src/game/character.ts:353)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AnimParams {
     pub walk_speed: f64,
     pub jog_speed: f64,
@@ -616,7 +616,7 @@ impl AnimParams {
 impl Default for AnimParams { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Spring, src/game/character.ts:458)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Spring {
     pub v: f64,
     pub x: f64,
@@ -713,7 +713,7 @@ impl LongShape {
 impl Default for LongShape { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: ReloadBeat, src/game/character.ts:815)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ReloadBeat {
     pub dur: f64,
     pub out: Option<f64>,
@@ -740,7 +740,7 @@ impl ReloadBeat {
 impl Default for ReloadBeat { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: MvGait, src/game/character.ts:911)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct MvGait {
     pub live: bool,
     pub g: f64,
@@ -884,7 +884,7 @@ impl BlowKey {
 impl Default for BlowKey { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: BlowRun, src/game/character.ts:1140)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct BlowRun {
     pub style: crate::character::BlowStyle,
     pub t: f64,
@@ -938,7 +938,7 @@ impl BlowOpts {
 impl Default for BlowOpts { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: CharacterAnimator, src/game/character.ts:1427)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Anim {
     pub pose: crate::anim_skeleton::Pose,
     pub p_a: crate::anim_skeleton::Pose,
@@ -1558,7 +1558,7 @@ impl Anim {
 impl Default for Anim { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: inline at src/game/character.ts:1475 CharacterAnimator.wallTakeFeet, src/game/character.ts:1475)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AnimWallTakeFeet {
     pub l: crate::character::AnimWallTakeFeetL,
     pub r: crate::character::AnimWallTakeFeetR,
@@ -1575,7 +1575,7 @@ impl AnimWallTakeFeet {
 impl Default for AnimWallTakeFeet { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1475 AnimWallTakeFeet.L, src/game/character.ts:1475)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AnimWallTakeFeetL {
     pub p: V3,
     pub yaw: f64,
@@ -1592,7 +1592,7 @@ impl AnimWallTakeFeetL {
 impl Default for AnimWallTakeFeetL { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1475 AnimWallTakeFeet.R, src/game/character.ts:1475)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AnimWallTakeFeetR {
     pub p: V3,
     pub yaw: f64,
@@ -1609,7 +1609,7 @@ impl AnimWallTakeFeetR {
 impl Default for AnimWallTakeFeetR { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1476 CharacterAnimator.wtk, src/game/character.ts:1476)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AnimWtk {
     pub l: crate::character::AnimWtkL,
     pub r: crate::character::AnimWtkR,
@@ -1630,7 +1630,7 @@ impl AnimWtk {
 impl Default for AnimWtk { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1476 AnimWtk.L, src/game/character.ts:1476)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AnimWtkL {
     pub p: V3,
     pub yaw: f64,
@@ -1647,7 +1647,7 @@ impl AnimWtkL {
 impl Default for AnimWtkL { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1476 AnimWtk.R, src/game/character.ts:1476)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AnimWtkR {
     pub p: V3,
     pub yaw: f64,
@@ -1664,7 +1664,7 @@ impl AnimWtkR {
 impl Default for AnimWtkR { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1492 CharacterAnimator.watchShown, src/game/character.ts:1492)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AnimWatchShown {
     pub w: f64,
     pub yaw: f64,
@@ -1685,7 +1685,7 @@ impl AnimWatchShown {
 impl Default for AnimWatchShown { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum AnimCarry {
     Torch,
     Weapon,
@@ -1700,7 +1700,7 @@ impl AnimCarry {
 }
 
 /// (TypeScript: inline at src/game/character.ts:1538 CharacterAnimator.longGrip, src/game/character.ts:1538)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AnimLongGrip {
     pub wrist: V3,
     pub fingers: V3,
@@ -1719,7 +1719,7 @@ impl AnimLongGrip {
 impl Default for AnimLongGrip { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1558 CharacterAnimator.bigTool, src/game/character.ts:1558)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct AnimBigTool {
     pub kind: crate::character::AnimBigToolKind,
     pub t: f64,
@@ -1750,7 +1750,7 @@ impl AnimBigTool {
 impl Default for AnimBigTool { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum AnimBigToolKind {
     Shotgun,
     Hammer,
@@ -1765,7 +1765,7 @@ impl AnimBigToolKind {
 }
 
 /// (TypeScript: inline at src/game/character.ts:1567 CharacterAnimator.bigSide, src/game/character.ts:1567)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AnimBigSide {
     pub o: V3,
     pub z: V3,
@@ -1782,7 +1782,7 @@ impl AnimBigSide {
 impl Default for AnimBigSide { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1577 CharacterAnimator.rawClip, src/game/character.ts:1577)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AnimRawClip {
     pub clip: ClipId,
     pub time: f64,
@@ -1803,7 +1803,7 @@ impl AnimRawClip {
 impl Default for AnimRawClip { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1583 CharacterAnimator.act, src/game/character.ts:1583)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct AnimAct {
     pub clip: String,
     pub loop_: Option<bool>,
@@ -1826,7 +1826,7 @@ impl AnimAct {
 impl Default for AnimAct { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1605 CharacterAnimator.upperW, src/game/character.ts:1605)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AnimUpperW {
     pub relaxed: f64,
     pub aim: f64,
@@ -1845,7 +1845,7 @@ impl AnimUpperW {
 impl Default for AnimUpperW { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1615 CharacterAnimator.dazzle, src/game/character.ts:1615)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AnimDazzle {
     pub from: V3,
     pub k: f64,
@@ -1862,7 +1862,7 @@ impl AnimDazzle {
 impl Default for AnimDazzle { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1617 CharacterAnimator.mvs, src/game/character.ts:1617)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AnimMvs {
     pub back: f64,
     pub climb: f64,
@@ -1937,7 +1937,7 @@ impl AnimMvs {
 impl Default for AnimMvs { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1643 CharacterAnimator.rlB, src/game/character.ts:1643)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AnimRlB {
     pub dur: f64,
     pub out: f64,
@@ -1966,7 +1966,7 @@ impl AnimRlB {
 impl Default for AnimRlB { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1646 CharacterAnimator.rlc, src/game/character.ts:1646)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct AnimRlc {
     pub k: f64,
     pub h: f64,
@@ -1989,7 +1989,7 @@ impl AnimRlc {
 impl Default for AnimRlc { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1646 AnimRlc.ch, src/game/character.ts:1646)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AnimRlcChItem {
     pub x: f64,
 }
@@ -2004,7 +2004,7 @@ impl AnimRlcChItem {
 impl Default for AnimRlcChItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1648 CharacterAnimator.rlShown, src/game/character.ts:1648)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AnimRlShown {
     pub carry: f64,
     pub head: f64,
@@ -2021,7 +2021,7 @@ impl AnimRlShown {
 impl Default for AnimRlShown { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1650 CharacterAnimator.kit, src/game/character.ts:1650)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AnimKit {
     pub t: f64,
     pub from: Option<crate::character::KitItem>,
@@ -2056,7 +2056,7 @@ impl AnimKit {
 impl Default for AnimKit { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1650 AnimKit.cap, src/game/character.ts:1650)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AnimKitCap {
     pub r: V3,
     pub rq: Quat,
@@ -2085,7 +2085,7 @@ impl AnimKitCap {
 impl Default for AnimKitCap { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1664 CharacterAnimator.mv2, src/game/character.ts:1664)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AnimMv2 {
     pub bd: crate::character::Spring,
     pub bd_k: f64,
@@ -2110,7 +2110,7 @@ impl AnimMv2 {
 impl Default for AnimMv2 { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1666 CharacterAnimator.mv2Shown, src/game/character.ts:1666)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AnimMv2Shown {
     pub reload: f64,
     pub bound: f64,
@@ -2131,7 +2131,7 @@ impl AnimMv2Shown {
 impl Default for AnimMv2Shown { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1698 CharacterAnimator.hf, src/game/character.ts:1698)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AnimHf {
     pub s: f64,
     pub sv: f64,
@@ -2162,7 +2162,7 @@ impl AnimHf {
 impl Default for AnimHf { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1715 CharacterAnimator.tk, src/game/character.ts:1715)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AnimTk {
     pub style: crate::character::TakenStyle,
     pub t: f64,
@@ -2183,7 +2183,7 @@ impl AnimTk {
 impl Default for AnimTk { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1719 CharacterAnimator.hdFix, src/game/character.ts:1719)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AnimHdFix {
     pub tgt: V3,
     pub pole: V3,
@@ -2208,7 +2208,7 @@ impl AnimHdFix {
 impl Default for AnimHdFix { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1722 CharacterAnimator.st, src/game/character.ts:1722)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AnimSt {
     pub w: crate::character::Spring,
     pub fwd: crate::character::Spring,
@@ -2243,7 +2243,7 @@ impl AnimSt {
 impl Default for AnimSt { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1726 CharacterAnimator.wst, src/game/character.ts:1726)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AnimWst {
     pub wl: crate::character::Spring,
     pub side: crate::character::Spring,
@@ -2264,7 +2264,7 @@ impl AnimWst {
 impl Default for AnimWst { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1731 CharacterAnimator.lg, src/game/character.ts:1731)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct AnimLg {
     pub w: crate::character::Spring,
     pub seen: Option<crate::character::LongStance>,
@@ -2291,7 +2291,7 @@ impl AnimLg {
 impl Default for AnimLg { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1743 CharacterAnimator.dp, src/game/character.ts:1743)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AnimDp {
     pub w_l: crate::character::Spring,
     pub w_r: crate::character::Spring,
@@ -2316,7 +2316,7 @@ impl AnimDp {
 impl Default for AnimDp { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1747 CharacterAnimator.wk, src/game/character.ts:1747)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct AnimWk {
     pub last: Option<crate::character::WorkPose>,
     pub fed: bool,
@@ -2351,7 +2351,7 @@ impl AnimWk {
 impl Default for AnimWk { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1748 CharacterAnimator.sw, src/game/character.ts:1748)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AnimSw {
     pub cur: Option<Option<crate::character::AnimCarry>>,
     pub from: Option<crate::character::AnimCarry>,
@@ -2425,7 +2425,7 @@ impl AnimSwTo {
 }
 
 /// (TypeScript: inline at src/game/character.ts:1755 CharacterAnimator.rx, src/game/character.ts:1755)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AnimRx {
     pub left: f64,
     pub w: crate::character::Spring,
@@ -2442,7 +2442,7 @@ impl AnimRx {
 impl Default for AnimRx { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1758 CharacterAnimator.sp, src/game/character.ts:1758)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AnimSp {
     pub w_a: f64,
     pub t: f64,
@@ -2479,7 +2479,7 @@ impl AnimSp {
 impl Default for AnimSp { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1761 CharacterAnimator.gait, src/game/character.ts:1761)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AnimGait {
     pub mid: f64,
     pub linger: f64,
@@ -2496,7 +2496,7 @@ impl AnimGait {
 impl Default for AnimGait { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1763 CharacterAnimator.wt, src/game/character.ts:1763)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AnimWt {
     pub w: f64,
     pub yaw: f64,
@@ -2525,7 +2525,7 @@ impl AnimWt {
 impl Default for AnimWt { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1769 CharacterAnimator.jogSeam, src/game/character.ts:1769)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AnimJogSeamItem {
     pub node: f64,
     pub d: Option<V3>,
@@ -2546,7 +2546,7 @@ impl AnimJogSeamItem {
 impl Default for AnimJogSeamItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1772 CharacterAnimator.runGait, src/game/character.ts:1772)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AnimRunGait {
     pub jog: crate::character::AnimRunGaitJog,
     pub sprint: crate::character::AnimRunGaitSprint,
@@ -2563,7 +2563,7 @@ impl AnimRunGait {
 impl Default for AnimRunGait { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1772 AnimRunGait.jog, src/game/character.ts:1772)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AnimRunGaitJog {
     pub c: f64,
     pub c_l: f64,
@@ -2582,7 +2582,7 @@ impl AnimRunGaitJog {
 impl Default for AnimRunGaitJog { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1772 AnimRunGait.sprint, src/game/character.ts:1772)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AnimRunGaitSprint {
     pub c: f64,
     pub c_l: f64,
@@ -2601,7 +2601,7 @@ impl AnimRunGaitSprint {
 impl Default for AnimRunGaitSprint { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1776 CharacterAnimator.plantL, src/game/character.ts:1776)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AnimPlantL {
     pub dev: f64,
     pub pz: f64,
@@ -2618,7 +2618,7 @@ impl AnimPlantL {
 impl Default for AnimPlantL { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1776 CharacterAnimator.plantR, src/game/character.ts:1776)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AnimPlantR {
     pub dev: f64,
     pub pz: f64,
@@ -2635,7 +2635,7 @@ impl AnimPlantR {
 impl Default for AnimPlantR { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1777 CharacterAnimator.gz, src/game/character.ts:1777)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AnimGz {
     pub pitch: f64,
     pub yaw_ref: f64,
@@ -2656,7 +2656,7 @@ impl AnimGz {
 impl Default for AnimGz { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1778 CharacterAnimator.life, src/game/character.ts:1778)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AnimLife {
     pub breath: f64,
     pub exert: f64,
@@ -2701,7 +2701,7 @@ impl AnimLife {
 impl Default for AnimLife { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1781 CharacterAnimator.feet, src/game/character.ts:1781)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AnimFeet {
     pub w: f64,
     pub gate: f64,
@@ -2724,7 +2724,7 @@ impl AnimFeet {
 impl Default for AnimFeet { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1781 AnimFeet.L, src/game/character.ts:1781)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AnimFeetL {
     pub p: V3,
     pub yaw: f64,
@@ -2747,7 +2747,7 @@ impl AnimFeetL {
 impl Default for AnimFeetL { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1781 AnimFeet.R, src/game/character.ts:1781)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AnimFeetR {
     pub p: V3,
     pub yaw: f64,
@@ -2770,7 +2770,7 @@ impl AnimFeetR {
 impl Default for AnimFeetR { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1786 CharacterAnimator.thrLast, src/game/character.ts:1786)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AnimThrLast {
     pub r: V3,
     pub l: V3,
@@ -2787,7 +2787,7 @@ impl AnimThrLast {
 impl Default for AnimThrLast { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1786 CharacterAnimator.thrCarry, src/game/character.ts:1786)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AnimThrCarry {
     pub r: V3,
     pub l: V3,
@@ -2804,7 +2804,7 @@ impl AnimThrCarry {
 impl Default for AnimThrCarry { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1793 CharacterAnimator.idleFeet, src/game/character.ts:1793)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AnimIdleFeet {
     pub l: V3,
     pub r: V3,
@@ -2825,7 +2825,7 @@ impl AnimIdleFeet {
 impl Default for AnimIdleFeet { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1795 CharacterAnimator.kickFrom, src/game/character.ts:1795)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AnimKickFrom {
     pub l: V3,
     pub r_l: Quat,
@@ -2846,7 +2846,7 @@ impl AnimKickFrom {
 impl Default for AnimKickFrom { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum AnimKickLeg {
     Left,
     Right,
@@ -2861,7 +2861,7 @@ impl AnimKickLeg {
 }
 
 /// (TypeScript: inline at src/game/character.ts:1823 CharacterAnimator.hn, src/game/character.ts:1823)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct AnimHn {
     pub nodes: Vec<Vec<i32>>,
     pub fist: Vec<Vec<f32>>,
@@ -2963,7 +2963,7 @@ impl AnimNodesKey {
 }
 
 /// (TypeScript: inline at src/game/character.ts:2056 CharacterAnimator.nv, src/game/character.ts:2056)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AnimNv {
     pub t: f64,
     pub hand: bool,
@@ -2986,7 +2986,7 @@ impl AnimNv {
 impl Default for AnimNv { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:2868 CharacterAnimator.mvPo, src/game/character.ts:2868)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AnimMvPo {
     pub stw: f64,
     pub stn: f64,
@@ -3011,7 +3011,7 @@ impl AnimMvPo {
 impl Default for AnimMvPo { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:4176 CharacterAnimator.hdIdle, src/game/character.ts:4176)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AnimHdIdle {
     pub upper: crate::character::UpperMode,
     pub long: bool,
@@ -3047,7 +3047,7 @@ impl AnimHdIdleCarry {
 }
 
 /// (TypeScript: RagDrive, src/game/character.ts:4270)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct RagDrive {
     pub pose: crate::anim_skeleton::Pose,
     pub ov: Vec<Option<crate::anim_skeleton::NodeOverride>>,
@@ -3078,7 +3078,7 @@ impl RagDrive {
 impl Default for RagDrive { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: GuidePin, src/game/character.ts:4274)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct GuidePin {
     pub i: f64,
     pub t0: f64,
@@ -3099,7 +3099,7 @@ impl GuidePin {
 impl Default for GuidePin { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: FallGuide, src/game/character.ts:4275)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct FallGuide {
     pub t: f64,
     pub end: f64,
@@ -3126,7 +3126,7 @@ impl FallGuide {
 impl Default for FallGuide { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Breath, src/game/character.ts:4277)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Breath {
     pub t: f64,
     pub due: f64,
@@ -3180,7 +3180,7 @@ impl CharacterDesc {
 impl Default for CharacterDesc { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Character, src/game/character.ts:4294)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Character {
     pub id: f64,
     pub tint: V3,
@@ -3314,7 +3314,7 @@ impl Character {
 impl Default for Character { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: inline at src/game/character.ts:4349 Character.breathe, src/game/character.ts:4349)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct CharacterBreathe {
     pub breath_hz: f64,
     pub breath_rise: f64,
@@ -3333,7 +3333,7 @@ impl CharacterBreathe {
 impl Default for CharacterBreathe { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:4352 Character.turn, src/game/character.ts:4352)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct CharacterTurn {
     pub on: bool,
     pub h: f64,
@@ -3352,7 +3352,7 @@ impl CharacterTurn {
 impl Default for CharacterTurn { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:4353 Character.tn, src/game/character.ts:4353)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct CharacterTn {
     pub body: f64,
     pub aim: f64,
@@ -3497,7 +3497,7 @@ impl HOLDPOLISHDOWN {
 impl Default for HOLDPOLISHDOWN { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:342 HOLD_SHOW, src/game/character.ts:342)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct CharacterModHOLDSHOW {
     pub kill: bool,
     pub beats: bool,
@@ -3959,7 +3959,7 @@ impl STEALTHCable {
 impl Default for STEALTHCable { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:478 AT0, src/game/character.ts:478)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct CharacterModAT0Value {
     pub rows: f64,
     pub at: Vec<i32>,
@@ -4444,7 +4444,7 @@ impl WALLTUCKPistol {
 impl Default for WALLTUCKPistol { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:719 LONG_STEADY, src/game/character.ts:719)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct CharacterModLONGSTEADY {
     pub tau: f64,
     pub run_yaw: f64,
@@ -6690,7 +6690,7 @@ impl CharacterCapsules {
 impl Default for CharacterCapsules { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct CharacterMod {
     /// (src/game/character.ts:342 HOLD_SHOW)
     pub hold_show: crate::character::CharacterModHOLDSHOW,

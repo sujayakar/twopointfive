@@ -1,10 +1,10 @@
 //! The types of `lighting`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: DayState, src/game/lighting.ts:177)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct DayState {
     pub hour: crate::hours::HourId,
     pub hour_sun_k: f64,
@@ -31,7 +31,7 @@ impl DayState {
 impl Default for DayState { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/lighting.ts:177 DayState.blackout, src/game/lighting.ts:177)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct DayStateBlackout {
     pub active: bool,
     pub permanent: bool,
@@ -86,7 +86,7 @@ impl LightEventCause {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct LightingMod {
     /// (src/game/lighting.ts:33 LENS_FROM)
     pub lens_from: JsMap<LightId, V3>,

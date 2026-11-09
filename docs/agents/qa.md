@@ -78,8 +78,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `bun run build`, all exit 0; (3) DETERMINISM, SHORT: `bun run tools/blitz/thrice.ts` (three games of one process, one digest at the start and at each of
   40 seconds); (4) ONE QUICK MISSION: `PT_DIGEST=1 bun run tools/qa/playthrough.ts --scn night-breach --seeds 1 --json out.json` ends with no error or
   panic and its end, second and men up are the named head's, or the sender names the move. ONLY a change to what the page does at boot (the host, the
-  loader, `src/main.ts`) adds, up to a ceiling of fifteen minutes, one mission stood and played 45 s under real keys in headless Chromium
-  (`PORT=<port> node tools/blitz/page-walk.cjs`). A red is placed by one run on the named head: the same red there is old, a new one goes back to its
+  loader) adds, up to a ceiling of fifteen minutes, one mission stood and played under real keys in headless Chromium (tools/qa/pages.ts). A red is placed by one run on the named head: the same red there is old, a new one goes back to its
   sender. A read with a memory kill beside it, a time cap or a lost browser is spoiled and is read again, not called. EVERYTHING ELSE IS ASYNC, after the
   name, and its reds are fixed forward by their owners and told, never hidden: the page as it opens and the other page checks, the read trap over a few missions (`tools/qa/readtrap-page.cjs`: a field the page reads that is neither on its list nor in `tools/wire/fields.json` `unsent`), its twin (`tools/qa/writetrap-page.cjs`: a word of the block or a field the page writes outside a call of the module, with no reason in `pageWrites`; `--seats2` the page in a two-player game), the 84 mission tallies
   (seeds 1 to 4) against the named head, the check families read as a list of reds by kind (not a bar), tour, soak, the two-seat run and the co-op
@@ -1132,11 +1131,11 @@ but synthetic writes still work.
   running read only at the newest running file's second (a row keeps its own file's, `ranTo`), keeps a level's newest running read on its line when a
   later run took held pictures only, and prints the run's own reasons where it set one apart. The report prints no "running adds" where the g-buffer's stamp holds the display's wait
   (`waitsOn`), and a wait for the GPU's queue in the play and the run-up has the run's own limit (`capS`).
-- **THE LEVEL TOOLS (2026-11-04; files only, no GPU, no page of the game's changed).** `bun run tools/qa/level-audit.ts [level …]` counts every level the mission
+- **THE LEVEL TOOLS (2026-11-04; files only, no GPU, no page of the game's changed).** `tools/qa/level-audit.ts` (gone 2026-11-08 with the old game it stood) counted every level the mission
   list draws as the look page draws it (boxes, cut planes, round things, lamps burning at its hour, how much of the picture is each material and how much
   has none: a box is made of what it says, `Box.stuff`, read as the renderer reads it), about a second a level; `--check <level>` holds the engine's caps and the PROPOSED bars of `level-count.ts` (`LEVELAUDIT_BREAK=1` must fail),
   `--counts` gives a level's row for its dressing file, `--write-base` the baseline (`fixtures/level-audit-base.json`: the levels before they were
-  dressed). `node tools/qa/level-cost-page.cjs <level>` is one boot of the look page on the software adapter: what it compiled, layers off against on, a
+  dressed). `tools/qa/level-cost-page.cjs <level>` (gone with it) was one boot of the look page on the software adapter: what it compiled, layers off against on, a
   still; a relative read, and the GPU's particles are never stepped in it, so a snow or rain level is read without what is in its air.
   `bun run tools/qa/level-table.ts --dir <folder>` makes one page of every level from those files, a GPU's price file and each dressing row (the folder's `notice.txt` is printed first and marks a level whose price no longer stands; `cloud/before/` holds the run the newest one takes the place of, printed beside it). It reads a row's layers off and on; rows merge within one version of the file; a Mac file older than version 7 is shown as an older build with no verdicts, because a 6's were read against a second page no run opens now. "Which levels
   the list draws" is one answer (`scene/scenarioList.ts listedLevels`) and the render passes are one list (`gpu/timer.ts RENDER_PASSES`): both tools ask those.
@@ -1403,9 +1402,8 @@ but synthetic writes still work.
   fresh run would move them (seats.ts drives its first seat through the host's own Input and camera) and the kept run never recorded them. A grown
   run holds for as long as no rule of the tick reads the host's own rows on a host that steps by records; the day one does, it parts from a fresh
   run and is kept anew. `hold.sh` calls the grower only when the end-grown rule fails, and says so on the run's line. The snapshot's list of
-  what is the host's (`src/game/rollback.ts HOST_FIELDS`) has the two fields too: it is a second list beside the wire's (`tools/wire/wire.ts
-  HOSTS_OWN`), in the TypeScript's names and with another rule (what a snapshot leaves alone, against what no state word reads), and the two are
-  not made one here.
+  what is the host's (`src/game/rollback.ts HOST_FIELDS`) has the two fields too: it is a second list beside the types' own (`#[bytes(skip)]`),
+  in the TypeScript's names and with another rule (what a snapshot leaves alone, against what no state word reads), and the two are not made one here.
 - **A mission's address is read in two places, and a host that starts a game from one reads it in both** (2026-11-07; `src/host/standup.ts`
   `addressBeforeGame(q)` and `startAtAddress(game, q)` / `soloOfAddress`; in Rust `scenario_run::address_before_game` and `start_at_address`, called
   by `rust/game_start stand.rs`). BEFORE THE GAME IS MADE: the mission row's own hour and weather onto the words, the weather the game is BORN in
@@ -1440,7 +1438,7 @@ but synthetic writes still work.
   (`plain`) and does read a level. WHAT WRITES WHAT: in the TypeScript the knob tables and the difficulty module's own state are the PROCESS'S, so an address that names a level leaves the tables
   on it, as a tool's own `setDifficulty` does, and one that names none leaves them as they stand; such a call names no game, so it runs the TypeScript's body and does not cross to a Rust game an older
   stand left alive, which takes it by the scan if it is stepped again ((6): `surface.ts hostOf`, `scan.ts SETTING`). In Rust they are the game's own. A host's tables win: `standUp`'s new `tables` is laid right after the
-  address's reading (a page's tape in `rerun.ts`, as a page lays `recipeTables`), and a Rust start HANDED knob tables (`stand_handed`, part 6) does not read the
+  address's reading (a co-op machine's `tools/mp/stand.ts`, a page's tape in `rerun.ts`, as a page lays `recipeTables`), and a Rust start HANDED commands (`stand_handed`) does not read the
   address's difficulty at all (`StartOpts.difficulty`), because that host already has.
   THE CHECKS: `bun run tools/blitz/start-levels.ts` and `--seats 2` hold the Rust start to this one mission by mission; `--again` holds a second
   start in one process to the first; `--words '&hard'` holds every mission's hard start, the knob tables and the difficulty module's record with it; `tests/hard.rs` and the probe `levers-address` (`LEVERS_ADDRESS_BREAK=1` must fail) hold the reading; `tools/qa/rowset-check.ts` reads the order of the address's reader off its source (`ROWSET_ORDER_BREAK=1`

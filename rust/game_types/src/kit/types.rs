@@ -1,6 +1,6 @@
 //! The types of `kit`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// KitRow.get and .set: a row that is not one field of the card reads and writes it itself. The arm says which
@@ -14,7 +14,7 @@ pub enum KitRowGet {
 }
 
 /// (TypeScript: SlotTable, src/game/kit.ts:248)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SlotTable {
     pub v: f64,
     pub pouches: Vec<f64>,
@@ -41,7 +41,7 @@ impl SlotTable {
 impl Default for SlotTable { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: SlotItem, src/game/kit.ts:242)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SlotItem {
     pub id: String,
     pub pouches: f64,
@@ -66,7 +66,7 @@ impl SlotItem {
 impl Default for SlotItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: SlotLoadout, src/game/kit.ts:245)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SlotLoadout {
     pub id: String,
     pub name: String,
@@ -89,7 +89,7 @@ impl SlotLoadout {
 impl Default for SlotLoadout { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum KitWeapon {
     Pistol,
     Rifle,
@@ -106,7 +106,7 @@ impl KitWeapon {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum BigKit {
     Shotgun,
     None,
@@ -142,7 +142,7 @@ impl BigPick {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum SuitId {
     Issued,
     Black,
@@ -169,7 +169,7 @@ impl SuitId {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum TrimId {
     Red,
     Blue,
@@ -213,7 +213,7 @@ impl CanMix {
 }
 
 /// (TypeScript: MemberKit, src/game/kit.ts:87)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct MemberKit {
     pub weapon: crate::kit::KitWeapon,
     pub suppressed: bool,
@@ -266,7 +266,7 @@ impl MemberKit {
 impl Default for MemberKit { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: KitHand, src/game/kit.ts:170)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct KitHand {
     pub rings: f64,
     pub cams: f64,
@@ -285,7 +285,7 @@ impl KitHand {
 impl Default for KitHand { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum KitField {
     Smoke,
     Light,
@@ -338,7 +338,7 @@ impl KitField {
 }
 
 /// (TypeScript: a union)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub enum KitValue {
     Text(String),
     Num(f64),
@@ -346,13 +346,15 @@ pub enum KitValue {
 }
 
 /// (TypeScript: KitRow, src/game/kit.ts:744)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct KitRow {
     pub field: crate::kit::KitField,
     pub label: String,
     pub values: Vec<crate::kit::KitValue>,
     pub item: Option<String>,
     /// kit.ts:767: a row that reads the card itself
+    /// (code: in no bytes)
+    #[bytes(skip)]
     pub get: Option<crate::kit::KitRowGet>,
 }
 impl KitRow {
@@ -421,7 +423,7 @@ impl BUILT {
 impl Default for BUILT { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/kit.ts:175 KIT, src/game/kit.ts:175)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct KitModKIT {
     pub on: bool,
     pub members: Vec<crate::kit::MemberKit>,
@@ -529,14 +531,14 @@ impl KITPRESETSItem {
 impl Default for KITPRESETSItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: a union)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub enum KitModIssuing {
     Bool(bool),
     Own,
 }
 
 /// (TypeScript: inline at src/game/kit.ts:1180 lessonRow, src/game/kit.ts:1180)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct KitModLessonRow {
     pub packs: Option<crate::kit::KitModLessonRowPacks>,
 }
@@ -551,7 +553,7 @@ impl KitModLessonRow {
 impl Default for KitModLessonRow { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/kit.ts:1180 KitModLessonRow.packs, src/game/kit.ts:1180)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct KitModLessonRowPacks {
     pub frags: Option<f64>,
 }
@@ -566,7 +568,7 @@ impl KitModLessonRowPacks {
 impl Default for KitModLessonRowPacks { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/kit.ts:1203 kept0, src/game/kit.ts:1203)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct KitModKept0 {
     pub charges: Option<f64>,
     pub walls: Option<f64>,
@@ -583,7 +585,7 @@ impl KitModKept0 {
 impl Default for KitModKept0 { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/kit.ts:1222 manOf, src/game/kit.ts:1222)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct KitModManOfValue {
     pub i: f64,
     pub kit: crate::kit::MemberKit,
@@ -603,7 +605,7 @@ impl KitModManOfValue {
 impl Default for KitModManOfValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/kit.ts:1225 KIT_STAGED, src/game/kit.ts:1225)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct KitModKITSTAGED {
     pub n: f64,
     pub ops: Vec<GuardId>,
@@ -620,7 +622,7 @@ impl KitModKITSTAGED {
 impl Default for KitModKITSTAGED { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/kit.ts:1239 issuedPlayer, src/game/kit.ts:1239)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct KitModIssuedPlayerValue {
     pub rifle: bool,
     pub gun: FirearmId,
@@ -661,7 +663,7 @@ impl KitModIssuedPlayerValue {
 impl Default for KitModIssuedPlayerValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/kit.ts:1242 youBare, src/game/kit.ts:1242)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct KitModYouBareValue {
     pub light: bool,
     pub nvg: bool,
@@ -1155,7 +1157,7 @@ impl KitPool {
 impl Default for KitPool { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct KitMod {
     /// (src/game/kit.ts:171 hand)
     pub hand: Option<crate::kit::KitHand>,

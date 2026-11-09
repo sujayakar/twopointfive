@@ -1,10 +1,10 @@
 //! The types of `scene_level`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// which level's script this is, by the level file's name (scene/levelScripts.ts LEVEL_SCRIPTS); the body is levels/<name>.script.ts, its define pass called by a match
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub enum LevelScriptFn {
     Unset,
     TutTeam,
@@ -16,7 +16,7 @@ pub enum LevelScriptFn {
 }
 
 /// (TypeScript: PropDef, src/scene/level.ts:149)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct PropDef {
     pub kind: crate::scene_level_data::PropKindName,
     pub name: String,
@@ -47,7 +47,7 @@ impl PropDef {
 impl Default for PropDef { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: PropPart, src/scene/level.ts:146)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct PropPart {
     pub off: V3,
     pub h: V3,
@@ -74,7 +74,7 @@ impl PropPart {
 impl Default for PropPart { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: VentDef, src/scene/level.ts:142)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct VentDef {
     pub name: String,
     pub pos: V3,
@@ -109,7 +109,7 @@ impl VentDef {
 impl Default for VentDef { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: BreachPlan, src/scene/level.ts:78)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct BreachPlan {
     pub inward: Option<[f64; 2]>,
     pub hostiles: Vec<crate::scene_level::BreachPlanHostilesItem>,
@@ -186,7 +186,7 @@ impl BreachPlan {
 impl Default for BreachPlan { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/scene/level.ts:83 BreachPlan.hostiles, src/scene/level.ts:83)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct BreachPlanHostilesItem {
     pub pos: V3,
     pub yaw: f64,
@@ -207,7 +207,7 @@ impl BreachPlanHostilesItem {
 impl Default for BreachPlanHostilesItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/scene/level.ts:85 BreachPlan.retreat, src/scene/level.ts:85)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct BreachPlanRetreat {
     pub mark: V3,
     pub face: f64,
@@ -224,7 +224,7 @@ impl BreachPlanRetreat {
 impl Default for BreachPlanRetreat { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/scene/level.ts:88 BreachPlan.toss, src/scene/level.ts:88)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct BreachPlanToss {
     pub mark: V3,
     pub face: f64,
@@ -243,7 +243,7 @@ impl BreachPlanToss {
 impl Default for BreachPlanToss { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: BreachFlow, src/scene/level.ts:105)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct BreachFlow {
     pub into: Vec<V3>,
     pub centre: [V3; 2],
@@ -268,7 +268,7 @@ impl BreachFlow {
 impl Default for BreachFlow { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/scene/level.ts:92 BreachPlan.targets, src/scene/level.ts:92)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct BreachPlanTargets0 {
     pub centre: Vec<f64>,
     pub corner: Vec<f64>,
@@ -285,7 +285,7 @@ impl BreachPlanTargets0 {
 impl Default for BreachPlanTargets0 { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/scene/level.ts:92 BreachPlan.targets, src/scene/level.ts:92)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct BreachPlanTargets1 {
     pub centre: Vec<f64>,
     pub corner: Vec<f64>,
@@ -302,7 +302,7 @@ impl BreachPlanTargets1 {
 impl Default for BreachPlanTargets1 { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/scene/level.ts:96 BreachPlan.next, src/scene/level.ts:96)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct BreachPlanNext {
     pub door: String,
     pub stack: [V3; 2],
@@ -327,7 +327,7 @@ impl BreachPlanNext {
 impl Default for BreachPlanNext { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/scene/level.ts:99 BreachPlan.breachLines, src/scene/level.ts:99)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct BreachPlanBreachLines {
     pub breach1: String,
     pub bang2: String,
@@ -356,7 +356,7 @@ impl BreachPlanBreachLines {
 impl Default for BreachPlanBreachLines { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum BreachPlanBreach {
     Kick,
     Open,
@@ -371,7 +371,7 @@ impl BreachPlanBreach {
 }
 
 /// (TypeScript: inline at src/scene/level.ts:60 BreachPlan.bounds, src/scene/level.ts:60)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct BreachPlanBounds {
     pub x0: f64,
     pub x1: f64,
@@ -392,7 +392,7 @@ impl BreachPlanBounds {
 impl Default for BreachPlanBounds { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/scene/level.ts:68 BreachPlan.lines, src/scene/level.ts:68)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct BreachPlanLines {
     pub stack1: String,
     pub stack2: String,
@@ -429,7 +429,7 @@ impl BreachPlanLines {
 impl Default for BreachPlanLines { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: RoomClearPlan, src/scene/level.ts:56)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct RoomClearPlan {
     pub door: String,
     pub room: Option<String>,
@@ -490,7 +490,7 @@ impl RoomClearPlan {
 impl Default for RoomClearPlan { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum RoomClearPlanBreach {
     Kick,
     Open,
@@ -505,7 +505,7 @@ impl RoomClearPlanBreach {
 }
 
 /// (TypeScript: Level, src/scene/level.ts:150)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Level {
     pub props: Vec<crate::scene_level::PropDef>,
     pub lights: Vec<crate::scene_level::LightDef>,
@@ -566,7 +566,7 @@ impl Level {
 impl Default for Level { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: LightDef, src/scene/level.ts:18)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct LightDef {
     pub kind: crate::scene_level::LightDefKind,
     pub pos: V3,
@@ -611,7 +611,7 @@ impl LightDef {
 impl Default for LightDef { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum LightDefKind {
     Spot,
     Dir,
@@ -628,7 +628,7 @@ impl LightDefKind {
 }
 
 /// (TypeScript: inline at src/scene/level.ts:157 Level.switchables, src/scene/level.ts:157)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct LevelSwitchablesItem {
     pub name: String,
     pub boxes: Vec<f64>,
@@ -655,7 +655,7 @@ impl LevelSwitchablesItem {
 impl Default for LevelSwitchablesItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Chokepoint, src/scene/level.ts:41)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Chokepoint {
     pub name: String,
     pub pos: V3,
@@ -674,7 +674,7 @@ impl Chokepoint {
 impl Default for Chokepoint { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: LevelDoorDef, src/scene/level.ts:125)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct LevelDoorDef {
     pub name: String,
     pub hinge: [f64; 2],
@@ -715,7 +715,7 @@ impl LevelDoorDef {
 impl Default for LevelDoorDef { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: a union)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub enum DeviceDef {
     Camera(crate::devices::CameraDef2),
     Keypad(crate::devices::KeypadDef2),
@@ -723,7 +723,7 @@ pub enum DeviceDef {
 }
 
 /// (TypeScript: CivilianDef, src/scene/level.ts:50)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct CivilianDef {
     pub name: String,
     pub kind: crate::scene_level::CivilianDefKind,
@@ -752,7 +752,7 @@ impl CivilianDef {
 impl Default for CivilianDef { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum CivilianDefKind {
     Cleaner,
     Worker,
@@ -767,7 +767,7 @@ impl CivilianDefKind {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum CivilianTask {
     Bin,
     Stand,
@@ -792,7 +792,7 @@ impl CivilianTask {
 }
 
 /// (TypeScript: VolumeDef, src/scene/level.ts:139)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct VolumeDef {
     pub name: String,
     pub kind: crate::scene_level::VolumeDefKind,
@@ -815,7 +815,7 @@ impl VolumeDef {
 impl Default for VolumeDef { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum VolumeDefKind {
     Trigger,
     Hide,
@@ -832,7 +832,7 @@ impl VolumeDefKind {
 }
 
 /// (TypeScript: MarkDef, src/scene/level.ts:141)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct MarkDef {
     pub name: String,
     pub pos: V3,
@@ -851,7 +851,7 @@ impl MarkDef {
 impl Default for MarkDef { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/scene/level.ts:184 Level.breaker, src/scene/level.ts:184)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct LevelBreaker {
     pub pos: V3,
     pub boxes: Vec<f64>,
@@ -870,7 +870,7 @@ impl LevelBreaker {
 impl Default for LevelBreaker { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/scene/level.ts:185 Level.beacons, src/scene/level.ts:185)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct LevelBeaconsItem {
     pub pos: V3,
     pub box_: f64,
@@ -887,7 +887,7 @@ impl LevelBeaconsItem {
 impl Default for LevelBeaconsItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/scene/level.ts:186 Level.sky, src/scene/level.ts:186)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct LevelSky {
     pub zenith: V3,
     pub horizon: V3,
@@ -904,7 +904,7 @@ impl LevelSky {
 impl Default for LevelSky { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: DaylightDef, src/scene/level.ts:109)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct DaylightDef {
     pub sun: crate::scene_level::LightDef,
     pub sky: crate::scene_level::DaylightDefSky,
@@ -931,7 +931,7 @@ impl DaylightDef {
 impl Default for DaylightDef { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/scene/level.ts:111 DaylightDef.sky, src/scene/level.ts:111)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct DaylightDefSky {
     pub zenith: V3,
     pub horizon: V3,
@@ -948,7 +948,7 @@ impl DaylightDefSky {
 impl Default for DaylightDefSky { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: PatrolRoute, src/scene/level.ts:39)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct PatrolRoute {
     pub name: String,
     pub points: Vec<V3>,

@@ -1,6 +1,0 @@
-# 11-05, three kit pieces no longer flicker: a handcart's shafts end at its bed, a van's bumper and step begin at its body, a wash line's cloths do not lap; no box added or removed, and no solid thing is anywhere it was not; before it: 11-05, the kit's drums: a drum is steel to a round in any paint (an olive one was dark wood), and a drum on its side is one box that says its round; before it: the vehicles say what they are made of: car paint on their bodies, glass and rubber on their windows and tyres; no box, colour or number moved
-# every box says what it does (the does key, src/scene/materials.ts): the words are what its colours said, and nothing else moved
-# the look's stand-ins wear their rows' own numbers: colours only, at most 0.0024 a channel
-# version 2: a round thing is one box, the file converted by tools/levels/round-convert.ts: no box moved
-# 2026-11-08: the yard's steps take the wheel for a part (the frame's ringPart), and each ends on the gate it names: a spot is covered from the wheel
-06859396678625971364ab2926f07289fe73300c

@@ -1,10 +1,10 @@
 //! The types of `squad`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: Sweep, src/game/squad.ts:154)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Sweep {
     pub pts: Vec<V3>,
     pub t0: f64,
@@ -25,7 +25,7 @@ impl Sweep {
 impl Default for Sweep { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: Clearing, src/game/squad.ts:490)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Clearing {
     pub stage: crate::squad::ClearStage,
     pub room_i: usize,
@@ -71,7 +71,7 @@ impl Clearing {
 impl Default for Clearing { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum ClearStage {
     Approach,
     Done,
@@ -90,7 +90,7 @@ impl ClearStage {
 }
 
 /// (TypeScript: RoomClear, src/game/squad.ts:184)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct RoomClear {
     pub phase: crate::squad::RoomClearPhase,
     pub t_kick: f64,
@@ -161,7 +161,7 @@ impl RoomClear {
 impl Default for RoomClear { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum RoomClearPhase {
     Search,
     Kick,
@@ -184,7 +184,7 @@ impl RoomClearPhase {
 }
 
 /// (TypeScript: inline at src/game/squad.ts:39 settleWatch, src/game/squad.ts:39)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct SquadModSettleWatchValue {
     pub goal: V3,
     pub best: f64,
@@ -203,7 +203,7 @@ impl SquadModSettleWatchValue {
 impl Default for SquadModSettleWatchValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/squad.ts:42 walkWatch, src/game/squad.ts:42)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct SquadModWalkWatchValue {
     pub x: f64,
     pub z: f64,
@@ -587,7 +587,7 @@ impl Perceive {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SquadMod {
     /// (src/game/squad.ts:39 settleWatch)
     pub settle_watch: JsMap<GuardId, crate::squad::SquadModSettleWatchValue>,

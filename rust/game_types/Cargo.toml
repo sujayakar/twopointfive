@@ -13,6 +13,7 @@ crate-type = ["rlib"]
 [dependencies]
 sim = { path = "../sim" }
 prim = { path = "../prim" }
+game_derive = { path = "../game_derive" }
 
 [profile.dev]
 opt-level = 0
