@@ -570,7 +570,7 @@ pub fn edge_look_scorch(g: &mut crate::game::Game, b: &crate::edge_look::BreakLi
     let (uc, half) = ((ua + ub) / 2.0, (ub - ua) / 2.0);
     let s = g.m.edge_look.edge.scorch;
     match g.destr.edge_look.blasted.get_mut(crate::Num(b.id)) { Some(bl) => bl.push([uc, half]), None => { g.destr.edge_look.blasted.set(crate::Num(b.id), vec![[uc, half]]); } }
-    let dir = match dir { Some(d) if g.m.edge_look.edge.scorch_decals && g.decals.enabled => d, _ => return };
+    let dir = match dir { Some(d) if g.m.edge_look.edge.scorch_decals => d, _ => return };
     let far = if v3::dot(dir, f.nrm) >= 0.0 { 1.0 } else { -1.0 };
     let floor = m::max(0.0, f.y0);
     let yc = floor + m::min(1.05, (f.y_top - floor) * 0.45);

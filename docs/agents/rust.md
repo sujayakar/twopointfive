@@ -129,7 +129,7 @@ and neither side may link the other. Inside the rules:
 - **Dress rows.** `g.m.dress.dress` is up by the start's flag on the page and the server, and down in a native test unless asked (`Opts.dress`).
   `wind`, `moths`, `stature`, `fx`, `blast_feel`, `fixtures`, `net` and `cues` guard steps in `game/p_06.rs`. Those steps write state, so hosts of one
   game must agree.
-- **The picture's own.** A field a host may lack or fill differently is `#[bytes(skip)]`, as `decals`, `fog_picture`, `mark_set` and `feel` are.
+- **The picture's own.** A field a host may lack or fill differently is `#[bytes(skip)]`, as `fog_picture`, `mark_set` and `feel` are.
 
 ## Rules that hold
 

@@ -32,20 +32,6 @@ pub struct DecalOpts {
     pub pane: Option<f64>,
 }
 
-#[derive(Clone, Debug)]
-pub struct Decals {
-    pub enabled: bool,
-}
-impl Decals {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        Decals {
-            enabled: true,
-        }
-    }
-}
-impl Default for Decals { fn default() -> Self { Self::blank() } }
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct WEARMARK {
     pub look: f64,
