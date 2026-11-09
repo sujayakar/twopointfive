@@ -1,6 +1,5 @@
-//! THE ADDRESS'S WORDS FOR THE GAME'S NUMBERS. A word here turns a knob as the game is made, over what the machine keeps. `?knob.<name>=<number>` turns any number of the
+//! THE ADDRESS'S WORDS FOR THE GAME'S NUMBERS. A word here turns a knob as the game is made, over what the machine keeps (`host::lay`). `?knob.<name>=<number>` turns any number of the
 //! tables by its name (game_types `knobs`), and these are the short words people already use. `?training=` and `?nerve=` pick as the panel's rows do (actions.rs).
-use alloc::string::String;
 use game::game::Game;
 use game::query::Query;
 
@@ -47,11 +46,6 @@ pub static WORDS: &[Word] = &[
 ];
 
 /// the words of an address laid on a game before it is made
-/// what a start does with what its host hands it: the words first, so that the commands' kit stands under `?nobigslot` and its like, then the commands
-pub fn at_start(g: &mut Game, words: &str, commands: &[u8]) -> Result<(), String> {
-    apply(g, words);
-    super::command::apply(g, commands)
-}
 pub fn apply(g: &mut Game, words: &str) {
     let q = Query::parse(words);
     for w in WORDS {

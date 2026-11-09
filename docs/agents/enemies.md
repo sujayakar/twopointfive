@@ -161,7 +161,7 @@ Native tests in `rust/game_start/tests/`:
 | `attention.rs`, `night_men.rs`, `men_at_rest.rs`, `smoke_break.rs` | calm men: a far glimpse, a missed man, sleep, trips, smoke |
 | `darkness.rs`, `dark_rooms.rs` | the search; the dark door, lamps, the breaker |
 | `men_under_fire.rs`, `blind.rs`, `cover.rs`, `net_quiet.rs`, `last_men.rs` | nerve, cover, the quiet net, the last few |
-| `squads.rs`, `squads_radio.rs`, `hard.rs`, `hard_handed.rs`, `owner.rs` | squads, Hard by address, the tasker list |
+| `squads.rs`, `squads_radio.rs`, `hard.rs`, `kept.rs`, `owner.rs` | squads, Hard by address, the tasker list |
 | `pursuit.rs`, `held_doorforce.rs`, `held_fragtheirs.rs`, `standoff_held.rs` | two on a fix, a shut door, grenades, a man in Sam's arm |
 | `response_team.rs`, `civilians_held.rs` | what calls the team and its one wave; a civilian |
 

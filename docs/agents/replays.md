@@ -55,7 +55,7 @@ function of the seed, the site's name, the man it is about, the tick and the cou
 again. Each still steps the die, and its count (`face_die_n`) witnesses how many draws a run made.
 
 **The tape** is the bytes of what the module was handed, in order. `TapeStart` holds the level file itself, the address's words, the seed, the seats,
-the commands given before the start, and the length and hash of each character file. Then rows: a step (`dt`, the hand, the keys), an order
+what the machine kept (`Kept`'s text), and the length and hash of each character file. Then rows: a step (`dt`, the hand, the keys), an order
 (commands), hands (a hands-off player's plan), a mark, figures, a try, an end. A step writes only the numbers that moved, four bytes where four hold
 them. Nothing of the picture is on it.
 

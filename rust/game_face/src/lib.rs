@@ -161,7 +161,7 @@ pub unsafe extern "C" fn face_start(p: *const u8, n: usize, slot: i32, seed: u32
     let slot = if slot < 0 { match free_slot() { Some(s) => s, None => return 0 } } else { slot as usize };
     if slot >= sim::state::GAMES { return 0; }
     let o = game_start::stand::StartOpts { seed, seats, slot, dress: flags & 1 != 0, ..Default::default() };
-    let stood = game_start::handed::stand_handed(bytes(p, n), &o, &mut |g, words, b| if let Err(why) = game_start::host::words::at_start(g, words, b) { panic!("face_start: {why}") });
+    let stood = game_start::handed::stand_handed(bytes(p, n), &o);
     put(Held::new(stood.game))
 }
 #[no_mangle]

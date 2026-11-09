@@ -40,16 +40,16 @@ replays are `replays.md`, co-op is `net.md`, how text is worded is `writing.md`.
 | `src/view/`, `rust/game_rules/src/view/` | the view as the page reads it (`read.ts` is written from `rust/game_types/src/view/`); `tick_view`, `debrief_view` |
 | `src/host/debugger.ts`, `src/ui/panel.ts`, `graphicspanel.ts`, `lookpanel.ts`, `netrows.ts` | the debugger: its rows, the panel, its other pages |
 | `rust/game_start/src/host/shown.rs`, `actions.rs`, `knobs.rs` | its rows of numbers, its buttons, every knob by name |
-| `src/host/sandbox.ts`, `src/host/machine.ts` | what this machine keeps of the cheats and how it plays, as the commands a game is handed |
+| `src/host/sandbox.ts`, `src/host/machine.ts` | what this machine keeps of the cheats and how it plays: the record a start is handed (`Kept`, `host/kept.rs`) |
 | `src/ui/textsize.ts`, `src/ui/theme.ts` | the text size; the one look (`--m-accent`, `--m-head`) |
 | `src/ui/readout.ts`, `src/host/measure.ts`, `capture.ts`, `src/ui/bench.ts` | the frame-rate readout (`?hud`), F8 and F9, F6, the benchmark |
 | `index.html` | the styles of `#menu`, `#missions` and the HUD. Other screens inject their own |
 
 ## How it works
 
-**No game behind a card.** A card holds no rule. `Desk` is one blank game in the module, done the same commands a start is done, so a man is staged with what his card shows.
+**No game behind a card.** A card holds no rule. `Desk` is one blank game in the module, laid what a start is laid (`host::lay`), so a man is staged with what his card shows.
 The page asks by the `asks!` list (`src/draw/asks.ts` is made from it). A press answers `Pressed`; where it changed what the machine keeps, `kept` carries the text to
-localStorage, and the next page's `machineBefore` gives it back as commands. A mission row is a link (`StartRow.link`), and Deploy loads the address `deploy_link` made, so a
+localStorage, and the next page's `machineKept` gives it back as the record. A mission row is a link (`StartRow.link`), and Deploy loads the address `deploy_link` made, so a
 pasted address starts the same run.
 
 **The kit picture is a second page.** `kitView.ts` opens an iframe of this page on Deploy's address plus `kitview`. The module stages the team at the way in, and the man whose

@@ -42,7 +42,7 @@ that would share a plane (`layLevelFloor`), words any box without a `does` (`sta
 refuses unless the text loads back to the generator's `Level`, field for field. Then it asks `levels second-way` and `levels sight` (`LEVELASK=0` in
 front skips them for a level in the making).
 
-**File to game.** `stand_with` is the order: `level::load`, `populate_host` (`thin_level`, `bar_level`, `shape_level`, boxes into the world, lamps),
+**File to game.** `stand` is the order: `level::load`, `populate_host` (`thin_level`, `bar_level`, `shape_level`, boxes into the world, lamps),
 `game_new`. Box i of the file is static box i. Every wrong value, and every member nobody
 asked for (`json.rs`), is said by its place, and `load` panics with the list. `faults.rs` is asked of a file, not at a start.
 `level_over` and `stood_over` panic on a level over its room.
