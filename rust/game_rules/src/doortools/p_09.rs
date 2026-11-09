@@ -144,7 +144,7 @@ pub fn door_tools_blow_raw(g: &mut crate::game::Game, c_2: Option<ChargeId>) -> 
 /// the seat's man and the blast: true where it dazzled him   (the closure handed to eachSeat in blowRaw)
 fn blow_seat(g: &mut Game, others: &crate::ask::Over, d: DoorId, side: f64, fc: V3, inn: V3, out: V3) -> bool {
     let pl = g.player;
-    if g.pl[pl].down || g.puppet.is_some() || g.touring { return false; }
+    if g.pl[pl].down || g.puppet.is_some() { return false; }
     let p = g.ch[g.pl[pl].ch].pos;
     let far = super::off_of(g, d, p, side) < 0.0;
     let dist = v3::dist_xz(p, fc);

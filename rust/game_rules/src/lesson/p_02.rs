@@ -18,7 +18,7 @@ pub fn lesson_data(g: &crate::game::Game) -> Option<&crate::scene_scenarios::Les
         Some(l) if !l.steps.is_empty() => l.rails.is_some(),
         _ => return None,
     };
-    if g.touring || g.quiet_utility || g.puppet.is_some() {
+    if g.puppet.is_some() {
         return None;
     }
     if g.quiet.active || crate::roomclear::room_clear_scenario_active(g) || g.night_breach.active || g.rescue.active {

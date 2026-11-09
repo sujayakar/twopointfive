@@ -109,7 +109,7 @@ pub fn game_hands_on_doors(g: &mut crate::game::Game, before: &[f64]) {
         let mut rec: Option<crate::game::GameDoorHandRecsValue> = g.door_hand_recs.get(c).copied();
         if can {
             let mut hit: Option<DoorId> = None;
-            let (mut crack, mut hold_only, mut move_) = (false, false, false);
+            let (mut crack, mut move_) = (false, false);
             let speed = m::hyp2(cvel[0], cvel[2]);
             if let Some(p) = pl {
                 if let Some(dd) = g.pl[p].door_move.as_ref().map(|dm| dm.d) {
@@ -139,9 +139,8 @@ pub fn game_hands_on_doors(g: &mut crate::game::Game, before: &[f64]) {
                 let sgn = if perp >= 0.0 { -1.0 } else { 1.0 };
                 let angle = crate::doors::door_angle(g, d);
                 let da = angle - was_at(before, Some(k));
-                let holding = touching && crate::doors::doors_has_closer(g, d) && m::abs(angle) > 0.1 && m::sign(angle) == sgn && speed < 0.4;
                 let pushing = touching && da * sgn > 1e-4;
-                if pushing || holding { hit = Some(d); hold_only = !pushing; break; }
+                if pushing { hit = Some(d); break; }
                 let swing = crate::doors::door_swing(g, d);
                 let mine = sgn * swing < 0.0 && angle * swing < 1.35;
                 if mine && crate::doors::door_pull_t(g, d) > 0.0 && crate::doors::door_last_who(g, d) == cid && dist < 0.9 { hit = Some(d); break; }
@@ -173,11 +172,10 @@ pub fn game_hands_on_doors(g: &mut crate::game::Game, before: &[f64]) {
                         r.door = h;
                         r.t = now;
                         r.crack = crack;
-                        r.hold_only = Some(hold_only);
                         r.move_ = Some(move_);
                         r
                     }
-                    None => crate::game::GameDoorHandRecsValue { door: h, t: now, t0: now, crack, hand: -1.0, hold_only: Some(hold_only), move_: Some(move_) },
+                    None => crate::game::GameDoorHandRecsValue { door: h, t: now, t0: now, crack, hand: -1.0, move_: Some(move_) },
                 };
                 g.door_hand_recs.set(c, r);
                 rec = Some(r);
@@ -275,7 +273,6 @@ pub fn game_hands_on_doors(g: &mut crate::game::Game, before: &[f64]) {
             n: [nx, 0.0, nz],
             w: if now - r.t <= FOLLOW { 1.0 } else { 0.0 },
             hand: if r.hand == -1.0 { -1.0 } else if right { 1.0 } else { 0.0 },
-            hold_only: r.hold_only,
             reach: r.move_,
         });
     }

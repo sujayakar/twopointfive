@@ -175,7 +175,7 @@ A box with `rot` says no shape. A box with `markings` or the Glass flag may say 
 - `hinge` two numbers x, z. `closedDir` number: shut, the leaf runs from the hinge along cos, sin of this in x, z. `width` over 0. A doorway is `DOOR_SIZE`.
 - `angle` number; default 0. How far open it starts.
 - `exterior` true or false; default false. An outer door: its paint, its place in the wear map, and how doors deal their swing.
-- `closer` true or false; default true. False has no closer (`doors_has_closer`, which is false for all while `doors_stay`).
+- `closer` true or false; default true. No door shuts by itself; false also tells men not to pull it shut behind them (`lockdown_doors`, the response team).
 - `minAngle`, `maxAngle` numbers; default −1.92 and 1.92. Its stops. A `swing` must leave its side an opening.
 - `locked` true or false; default false.
 - `lock` text; default `FLOOR_KEY`. The key that turns it. A keypad's door must say the keypad's id here.

@@ -19,7 +19,7 @@ fn asking_the_view_writes_nothing() {
             for s in 0..12 {
                 if s == 2 { p.order("fallIn", at, Who::All); }
                 if s == 5 { if let Some(&h) = p.hostiles().first() { p.falls(h, game::game::DownBy::Player); } }
-                for _ in 0..60 { p.frame(); if ask { let v = p.view(); assert!(v.mission.is_some()); } }
+                for _ in 0..60 { p.frame(); if ask { let v = p.view(); assert!(!v.mission.text.is_empty()); } }
                 out.push(p.words());
             }
             out
@@ -39,19 +39,19 @@ fn the_missions_line_is_the_one_that_is_up_and_as_things_stand() {
     for seed in SEEDS {
         let mut p = Play::level("kit-yard.json", true, &Opts { seed, ..Default::default() });
         p.frame();
-        let v = p.view().mission.expect("a mission is up");
+        let v = p.view().mission;
         assert_eq!(v.of, MissionOf::Roomclear, "seed {}", seed);
         assert!(v.text.starts_with("objective ▸ clear the structure: ") && !v.text.contains('✓') && v.pos.is_some(), "seed {}: {:?}", seed, v);
         for h in p.hostiles() { p.falls(h, game::game::DownBy::Player); }
         p.until(20.0, |p| p.room_clear_end().is_some()).unwrap_or_else(|| panic!("seed {}: every defender is down and the room clear never ended", seed));
         assert_eq!(p.room_clear_end().map(|e| e.0), Some(RoomClearEnd::Taken));
-        let v = p.view().mission.unwrap();
+        let v = p.view().mission;
         assert!(v.text.starts_with("structure taken") && v.pos.is_none(), "seed {}: {:?}", seed, v);
         drop(p);
         // CONTROL: the same level with no room clear on it words the stealth mission's own first stage
         let mut q = Play::level("kit-yard.json", false, &Opts { seed, ..Default::default() });
         q.frame();
-        let v = q.view().mission.expect("the stealth mission stands");
+        let v = q.view().mission;
         assert!(v.of == MissionOf::Stages && v.text == "objective ▸ reach the server room", "seed {}: {:?}", seed, v);
     }
 }
@@ -82,7 +82,7 @@ fn in_a_game_of_two_each_hud_is_told_about_its_own_man() {
         // the mission's line is his too: a room clear wiped with the second man down tells him one key and the first another
         p.seat_goes_down(1);
         p.g.room_clear.end = Some(game::roomclear::RoomClearEnd::Wiped);
-        let line = |v: game::view::TickView| v.mission.expect("a mission is up").text;
+        let line = |v: game::view::TickView| v.mission.text;
         let (first, second) = (line(p.view_of(0)), line(p.view_of(1)));
         assert!(first.contains("shift+enter"), "seed {}: the first, still up: {}", seed, first);
         assert!(second.contains("enter") && !second.contains("shift+enter"), "seed {}: the second, down: {}", seed, second);

@@ -41,8 +41,8 @@ fn pieces_up(g: &Game) -> f64 { g.col.boxes.len() as f64 - g.destr.walls.authore
 fn budget_of(chunks: f64) -> crate::break_table::ShedBudget { crate::break_table::ShedBudget { chunks, heap: None, from: None, per: None } }
 
 // ------------------------------------------------------------------ the switch and the plain boxes
-/// Is the engine on: tune.wallBreak not put off, outside the showcases. DESTRUCTION.on is settled on. (wallbreak.ts wallBreakOn)
-pub fn wall_break_on(g: &crate::game::Game) -> bool { g.tune.wall_break && g.destr.show_chaos.is_none() }
+/// Is the engine on: tune.wallBreak not put off. DESTRUCTION.on is settled on. (wallbreak.ts wallBreakOn)
+pub fn wall_break_on(g: &crate::game::Game) -> bool { g.tune.wall_break }
 
 /// A box's world bounds. (wallbreak.ts aabbOf)
 pub fn aabb_of(g: &crate::game::Game, b: &crate::scene_boxes::Box) -> crate::wallbreak::AABB {

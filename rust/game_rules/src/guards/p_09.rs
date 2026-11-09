@@ -155,9 +155,9 @@ pub fn reset_guards(g: &mut crate::game::Game) {
 
 // ---- alarm escalation
 
-/// The alarm level the guards act on: the game's, except under the showcase tour.   (guards.ts escalationOf)
+/// The alarm level the guards act on: none while nobody plays.
 pub fn escalation_of(g: &crate::game::Game) -> f64 {
-    if g.quiet_utility { 0.0 } else { g.escalation }
+    if g.aside { 0.0 } else { g.escalation }
 }
 /// The alarm's stage as a HUD is told it (None: calm)
 pub fn alarm_view(g: &crate::game::Game) -> Option<crate::view::AlarmView> {
@@ -343,7 +343,7 @@ pub fn check_on_tick(g: &mut crate::game::Game, gd: GuardId) {
     let who = k.who;
     if g.gd[who].found || !off_net(g, who) || !g.guards.contains(&who) {
         g.gd[gd].task = None;
-        if g.gd[who].found && g.gd[who].state == GuardState::Dead && g.guards.contains(&who) && g.gd[gd].body_duty.is_none() && !g.quiet_utility {
+        if g.gd[who].found && g.gd[who].state == GuardState::Dead && g.guards.contains(&who) && g.gd[gd].body_duty.is_none() {
             let t0 = g.time;
             g.gd[gd].body_duty = Some(GuardBodyDuty { body: who, role: GuardBodyDutyRole::Called, stage: GuardBodyDutyStage::To, t: 0.0, t0, spot: None });
             let body = body_pos(g, who);
@@ -429,7 +429,7 @@ fn rollcall_idle(g: &mut Game) {
 }
 /// Once a frame: the radio check's clock and its short exchange.   (guards.ts updateRollcall)
 pub fn update_rollcall(g: &mut crate::game::Game, dt: f64) {
-    if g.quiet_utility || !g.ai_enabled {
+    if g.aside || !g.ai_enabled {
         let r = rollcall_state(g);
         r.stage = RollcallStage::Idle;
         r.next_at = -1.0;
@@ -659,7 +659,7 @@ struct RoomRow {
 pub fn plan_clears(g: &mut crate::game::Game, force: Option<bool>, cause: Option<crate::guards::PlanClearsCause>) -> bool {
     let force = force.unwrap_or(false);
     let cause = cause.unwrap_or(PlanClearsCause::Search);
-    if g.quiet_utility || !g.ai_enabled || escalation_of(g) < 2.0 { return false; }
+    if !g.ai_enabled || escalation_of(g) < 2.0 { return false; }
     if g.clearing.is_some() {
         if !force && cause != PlanClearsCause::Body { return false; }
         crate::squad::clearing_cancel(g);
@@ -722,7 +722,6 @@ fn room_label(v: &[crate::scene_level::RoomClearPlan]) -> String {
 }
 /// Panel: 'clear nearest room now': the fix where the player stands, the floor locked down if it was not.   (guards.ts forceClear)
 pub fn force_clear(g: &mut crate::game::Game) {
-    if g.quiet_utility { crate::game::game_msg(g, "no clear under the tour"); return; }
     let p = g.ch[g.pl[g.player].ch].pos;
     g.alarm.pos[0] = p[0];
     g.alarm.pos[1] = 0.0;
@@ -765,7 +764,6 @@ pub fn update_escalation(g: &mut crate::game::Game, dt: f64) {
     update_rollcall(g, dt);
     crate::dialogue::update_ambient(g, dt);
     tick_engagement(g);
-    if g.quiet_utility { return; }
     let (mut any_alert, mut hunting, mut living) = (false, false, 0.0_f64);
     let mut i = 0;
     while i < g.guards.len() {

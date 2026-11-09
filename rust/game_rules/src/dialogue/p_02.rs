@@ -373,7 +373,7 @@ pub fn gather(g: &mut crate::game::Game, gd: GuardId) -> crate::dialogue::Dialog
     let blackout = crate::sim_lightshome::mains_active(g);
     let saw_kind = w.saw_act.as_ref().map(|x| x.kind);
     let facts = DialogueCtxFacts {
-        floor_up: Some(lvl >= 1.0), lockdown: Some(lvl >= 2.0), episode: Some(g.alarm.episode && !g.quiet_utility),
+        floor_up: Some(lvl >= 1.0), lockdown: Some(lvl >= 2.0), episode: Some(g.alarm.episode),
         heard_small: Some(h.small > 0.0 && h.small_where.is_some()), heard_shots: Some(h.shots > 0.0), heard_bang: Some(h.kick + h.bang > 0.0),
         body_found: Some(w.saw_body.is_some()), body_called: Some(w.called_to_body.is_some() && w.saw_body.is_none()), body_known: Some(w.saw_body.is_some() || w.called_to_body.is_some()),
         missing_known: Some(missing_man.is_some()), blackout: Some(blackout), held_long: Some(held >= HELD_LONG_SECS),
@@ -396,7 +396,7 @@ pub fn gather(g: &mut crate::game::Game, gd: GuardId) -> crate::dialogue::Dialog
     intel.push(IntelItem { kind: IntelKind::Door, text: intel_text(g, IntelKind::Door, t, k), live: door_live, known: true });
     let code_live = match pad.as_ref() { Some(p) => !g.pl[g.player].codes.has(p.def.name.clone()), None => false };
     intel.push(IntelItem { kind: IntelKind::Code, text: intel_text(g, IntelKind::Code, t, k), live: code_live, known: true });
-    intel.push(IntelItem { kind: IntelKind::Rollcall, text: intel_text(g, IntelKind::Rollcall, t, k), live: !g.quiet_utility && g.ai_enabled && partner.is_some(), known: true });
+    intel.push(IntelItem { kind: IntelKind::Rollcall, text: intel_text(g, IntelKind::Rollcall, t, k), live: g.ai_enabled && partner.is_some(), known: true });
     intel.push(IntelItem { kind: IntelKind::LockdownPosts, text: intel_text(g, IntelKind::LockdownPosts, t, k), live: lvl >= 2.0 && post_man.is_some(), known: heard_on_net(hs, raised_at) || post_man == Some(gd) });
     intel.push(IntelItem { kind: IntelKind::Routes, text: intel_text(g, IntelKind::Routes, t, k), live: partner.is_some(), known: true });
     intel.push(IntelItem { kind: IntelKind::Missing, text: intel_text(g, IntelKind::Missing, t, k), live: missing_man.is_some() && lvl < 2.0, known: missing_man.is_some() });

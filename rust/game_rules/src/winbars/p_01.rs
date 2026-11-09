@@ -45,9 +45,6 @@ fn scratch() -> &'static [f64] {
 /// The game's row, made if it is not there.   (winbars.ts stateOf)
 pub fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::winbars::BarState { g.m.winbars.state.get_or_insert_with(|| BarState { met: Vec::new() }) }
 
-/// The one gate: no showcase running.   (winbars.ts barsLive)
-pub fn bars_live(g: &crate::game::Game) -> bool { !g.touring }
-
 /// Is static `index` a window's bar that still stands?   (winbars.ts barAt)
 pub fn bar_at(g: &mut crate::game::Game, index: f64) -> bool {
     let Some(b) = box_of(g, index) else { return false };
@@ -220,7 +217,7 @@ pub fn changed(g: &mut crate::game::Game) {
 
 /// The blasts' list: every standing bar with a point of its length inside the radius and nothing solid between goes, thrown out from the blast.   (winbars.ts barsBlast)
 pub fn bars_blast(g: &mut crate::game::Game, ev: crate::wallbreak::BlastEvent) {
-    if !bars_live(g) || g.k.winbars.blast_k <= 0.0 { return; }
+    if g.k.winbars.blast_k <= 0.0 { return; }
     let r = ev.radius * g.k.winbars.blast_k;
     let from: V3 = [ev.at[0], m::max(0.3, ev.at[1]), ev.at[2]];
     let took: Vec<(f64, V3)> = crate::glassbreak::glass_break_asking(g, &mut |g: &mut Game, _s: f64, _w: f64| {

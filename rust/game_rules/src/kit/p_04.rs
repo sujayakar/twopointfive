@@ -324,10 +324,10 @@ pub fn kit_solo_stand(g: &mut crate::game::Game, plain: Option<bool>) {
 
 /// Every fresh Player of the plain night, while the solo night is up.   (kit.ts kitFresh)
 pub fn kit_fresh(g: &mut crate::game::Game) {
-    if g.solo_card && !g.touring && !crate::director::director_showing(g) { kit_player(g); }
+    if g.solo_card { kit_player(g); }
 }
 
-/// A showcase is about to start on this Player: his card comes off.   (kit.ts kitShow)
+/// The kit picture is about to be staged on this Player: his card comes off.   (kit.ts kitShow)
 pub fn kit_show(g: &mut crate::game::Game) {
     let pl = g.player;
     let Some(was) = g.m.kit.issued_player.get(pl).copied() else { return; };

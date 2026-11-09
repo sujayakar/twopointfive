@@ -38,7 +38,7 @@ pub struct GuardEyeK {
     #[k(0.1)] pub far_k: f64,
 }
 
-/// HOW THE TEAM CARRIES ITSELF. A teammate (an operative unit, while the room fight is live — a scenario, never a showcase's cast) is a man with a rifle and a
+/// HOW THE TEAM CARRIES ITSELF. A teammate (an operative unit, while the room fight is live) is a man with a rifle and a
 ///  plate carrier: `max` is the most his legs are ever asked for, whoever asks (an order's leg, a drill's flow, the fight AI's chase, a step off a doorway) — a
 ///  purposeful walk with some jog in it, none of the sprint clip (character.ts BLEND: the walk carries to 1.6 m/s, the sprint starts past 2.7) — and he LEANS INTO a
 ///  move: his speed rises by no more than `accel` m/s² (he stops as crisply as ever: a man arriving on a mark is on it). And his GUN TRAVELS: the runner

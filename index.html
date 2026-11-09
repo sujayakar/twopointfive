@@ -537,9 +537,7 @@
     #veil { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; z-index: 6; }
     body.blinded #bubbles, body.blinded .bubble, body.blinded .marker { visibility: hidden; }   /* blind: no word over a head and no mark gives a man's place away on the white */
     #blind { position: absolute; inset: 0; background: #f4f6f2; opacity: 0; pointer-events: none; z-index: 4; }   /* a stun canister in the player's eyes (game/samstun.ts, overlay.ts): the picture whites out and clears */
-    .bar { position: absolute; left: 0; right: 0; height: 0; background: #000; z-index: 5; pointer-events: none; transition: height .6s ease; }
-    .bar.top { top: 0; } .bar.bot { bottom: 0; }
-    #meters, #equip, #log { z-index: 7; }   /* game HUD stays above the fades */
+    #meters, #equip, #log { z-index: 7; }   /* the HUD stays above the fades */
     /* ?kitview (host/kitguard.ts): the page as a picture in the kit screen's frame — the canvas and nothing else */
     body.kitview > :not(#app), body.kitview #app > :not(#view):not(#fatal) { display: none !important; }
     /* the orders ring at the cursor (ui/cmdring.ts — a prototype, ?cmd): a wedge a digit, the lit one filled, a row that cannot be given greyed */
@@ -652,7 +650,7 @@
     <div id="tabcard"></div>
     <div id="alarm"></div>
     <div id="checkpoint"><b></b>CHECKPOINT</div>
-    <div class="bar top"></div><div class="bar bot"></div><div id="blind"></div><div id="veil"></div>
+    <div id="blind"></div><div id="veil"></div>
     <div id="panel" class="hidden"></div>
     <div id="loading">loading…</div>
     <div id="menu"></div>

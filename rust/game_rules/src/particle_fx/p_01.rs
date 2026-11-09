@@ -379,7 +379,7 @@ pub fn update_particle_fx(g: &mut crate::game::Game) {
     }
 }
 
-/// Encounter restart, the tour's cuts: nothing in the air, nothing on the floor, nothing waiting to be heard. (particleFx.ts clearParticleFx)
+/// Encounter restart: nothing in the air, nothing on the floor, nothing waiting to be heard. (particleFx.ts clearParticleFx)
 pub fn clear_particle_fx(g: &mut crate::game::Game) {
     if let Some(st) = g.m.particle_fx.state.as_mut() { st.tinks.clear(); }
     crate::render_particles::particles_clear(g);

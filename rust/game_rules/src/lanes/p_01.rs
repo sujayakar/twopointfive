@@ -47,9 +47,9 @@ pub fn fit(g: &mut crate::game::Game, gd: GuardId) -> bool {
     mine(g, gd) && !crate::control::man::blind(g, gd) && !crate::control::man::staggered(g, gd)
 }
 
-/// The rule runs: a room fight is live, the AI on, no tour. (LANES.on settled on.)   (lanes.ts live)
+/// The rule runs: a room fight is live, the AI on. (LANES.on settled on.)   (lanes.ts live)
 pub fn live(g: &mut crate::game::Game) -> bool {
-    crate::roomfight::fight_live(g) && g.ai_enabled && !g.touring
+    crate::roomfight::fight_live(g) && g.ai_enabled
 }
 
 /// WHO THE LANES HAVE: the lane a man held short of it or out for a look round its corner is on, while that lane stands.   (lanes.ts laneOf)

@@ -69,7 +69,7 @@ pub fn lane_of(g: &mut crate::game::Game) -> Option<crate::fireline::Lane> {
     let half = g.k.friendlyfire.body_m + g.k.fireline.clear_m;
     let def = g.fa[gun].def;
     let energy = crate::glasspen::shot_energy(g, c, Some(def));
-    let thin = if crate::wallpen::wall_pen_live(g) { crate::glasspen::round_energy(g, def) } else { -1.0 };
+    let thin = crate::glasspen::round_energy(g, def);
     Some(Lane { m: muzzle, dx, dz, back, k, half, energy, thin })
 }
 

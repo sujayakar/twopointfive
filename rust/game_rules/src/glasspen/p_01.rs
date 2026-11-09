@@ -39,10 +39,6 @@ fn pane_type_word(i: f64) -> PaneType {
 fn scratch() -> &'static [f64] {
     unsafe { core::slice::from_raw_parts(::sim::sim_scratch() as *const f64, ::sim::sim_scratch_len()) }
 }
-/// what `pen_path` came to (`h = x.pen_path_head() / 8` is 0 here): legs, crossings, length, the stop, each crossing's `into`
-fn path_head() -> &'static [f64] {
-    unsafe { core::slice::from_raw_parts(::sim::pen_path_head() as *const f64, 8 + MAX_CROSS as usize) }
-}
 /// the shell rule on one pane's marks, five numbers each: x, y, z, went-through, filed-a-mark (glasspen.ts shellMark)
 fn mark_on(mk: &mut Vec<f64>, at: V3, through: bool, r2: f64) -> ShellMark {
     let (mut marks, mut join) = (0, false);
@@ -76,9 +72,6 @@ pub fn load_glass_pen(g: &crate::game::Game) {}
 
 // ---------------------------------------------------------------- the switch, a round's energy
 
-/// the one gate: no showcase running (glasspen.ts glassPenLive)
-pub fn glass_pen_live(g: &crate::game::Game) -> bool { !g.touring }
-
 /// a round's energy as it leaves this row's muzzle (glasspen.ts roundEnergy)
 pub fn round_energy(g: &crate::game::Game, def: crate::weapons::WeaponId) -> f64 {
     let cls = g.m.weapons.weapons.get(def).map(|d| d.cls);
@@ -104,7 +97,6 @@ pub fn round_energy_of(g: &mut crate::game::Game, c_2: CharId) -> f64 {
 
 /// the energy a line-of-fire question about THIS man's gun is asked with (glasspen.ts shotEnergy)
 pub fn shot_energy(g: &mut crate::game::Game, c_2: CharId, def: Option<crate::weapons::WeaponId>) -> Option<f64> {
-    if !glass_pen_live(g) { return None; }
     Some(match def { Some(d) => round_energy(g, d), None => round_energy_of(g, c_2) })
 }
 
@@ -159,32 +151,6 @@ pub fn pane_crossing(g: &mut crate::game::Game, bi: f64, o: V3, d: V3, t: f64, e
 }
 
 // ---------------------------------------------------------------- the round's flight
-
-/// the flight of a round over statics and leaves, or None: it crosses no pane. `first` None = cast here, Some(None) = the caller cast and hit nothing (glasspen.ts roundPath)
-pub fn round_path(g: &mut crate::game::Game, from: V3, dir: V3, range: f64, energy: f64, first: Option<Option<crate::glasspen::RoundPathSt>>, nth0: Option<f64>) -> Option<crate::glasspen::RoundPath> {
-    let nth0 = nth0.unwrap_or(0.0);
-    let hit = match first { Some(h) => h, None => cast(g, from, dir, range) };
-    let hit = hit?;
-    if hit.index >= 1e6 { return None; }
-    let b = level_box(g, hit.index);
-    if !crate::glass::is_sheet(g, b) { return None; }
-    crate::glassbreak::glass_break_asking(g, &mut |_g: &mut Game, _s: f64, _w: f64| -> Option<RoundPath> {
-        if ::sim::pen_path(from[0], from[1], from[2], dir[0], dir[1], dir[2], range, energy, nth0 as usize, hit.t, js::to_i32(hit.index), hit.n[0], hit.n[1], hit.n[2]) == 0 { return None; }
-        let (m, h) = (scratch(), path_head());
-        let (mut segs, mut cross): (Vec<RoundSeg>, Vec<PaneCross>) = (Vec::new(), Vec::new());
-        let leg = LEG as usize;
-        for i in 0..h[0] as usize {
-            let o = i * leg;
-            segs.push(RoundSeg { o: [m[o], m[o + 1], m[o + 2]], d: [m[o + 3], m[o + 4], m[o + 5]], t0: m[o + 6], len: m[o + 7], e: m[o + 8] });
-        }
-        let c0 = (MAX_CROSS + 1.0) * LEG;
-        for i in 0..h[1] as usize {
-            cross.push(cross_at(m, c0 + i as f64 * CROSS, h[8 + i]));
-        }
-        let st = if h[3] < 0.0 { None } else { Some(RoundPathSt { t: h[4], index: h[3], n: [h[5], h[6], h[7]] }) };
-        Some(RoundPath { segs, cross, st, len: h[2] })
-    })
-}
 
 /// the leg holding path distance `t` (glasspen.ts segAt)
 pub fn seg_at(p: &crate::glasspen::RoundPath, t: f64) -> crate::glasspen::RoundSeg {
@@ -263,7 +229,6 @@ pub fn spent_in_pane(g: &mut crate::game::Game, bi: f64, at: V3, dir: V3, energy
 
 /// the muzzle already past the glass: what the panes across the arm left the round, filed at the arm's crossing; None: the old rule stands (glasspen.ts armThroughGlass)
 pub fn arm_through_glass(g: &mut crate::game::Game, c_2: CharId, dir: V3, energy: f64, shell: Option<&mut crate::glasspen::ShellGlass>) -> Option<crate::glasspen::ArmThroughGlass> {
-    if !glass_pen_live(g) { return None; }
     let from = match g.ch[c_2].bones.get(crate::character::Bone::UpperArmR) { Some(&p) => p, None => v3::add(g.ch[c_2].pos, [0.0, 1.4, 0.0]) };
     let mz = g.ch[c_2].muzzle;
     let l = v3::len(v3::sub(mz, from));
@@ -302,7 +267,6 @@ pub fn shot_passes(g: &mut crate::game::Game, a: V3, rd: V3, panes: &[crate::sce
 /// glass is not cover: how many of `eyes` have a line of fire to `p` through glass, no door leaf in the way (glasspen.ts shotThroughGlass)
 pub fn shot_through_glass(g: &mut crate::game::Game, eyes: &[V3], p: V3, energy: Option<f64>) -> f64 {
     let energy = energy.unwrap_or(g.k.glasspen.stack_energy);
-    if !glass_pen_live(g) { return 0.0; }
     let panes = crate::glass::glass_panes(g);
     let walls = crate::ask::Over::statics();
     let mut n = 0.0;
@@ -325,7 +289,6 @@ pub fn shot_through_glass(g: &mut crate::game::Game, eyes: &[V3], p: V3, energy:
 
 /// is there standing glass on this line of fire (glasspen.ts glassOnLine)
 pub fn glass_on_line(g: &mut crate::game::Game, a: V3, b: V3) -> bool {
-    if !glass_pen_live(g) { return false; }
     let mut panes: Vec<crate::scene_collision::SegmentBlockedPanesItem> = Vec::new();
     crate::scene_collision::segment_blocked(g, a, b, Some(0.02), Some(0.0), Some(&mut panes));
     !panes.is_empty()
@@ -377,7 +340,6 @@ mod tests {
     #[test]
     fn a_crossing_reads_as_the_module_writes_it() {
         assert_eq!(CROSS, ::sim::pen::CROSS as f64);
-        assert_eq!(LEG, ::sim::pen::LEG as f64);
         assert_eq!(MAX_CROSS, ::sim::pen::MAX_CROSS as f64);
         let x = ::sim::pen::Crossing {
             t: ::sim::pen::Toll { ty: ::sim::panes::LAMINATED, n: [1.0, 2.0, 3.0], cos: 4.0, take: 5.0, e_out: 6.0, hole: true },

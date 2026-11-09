@@ -57,11 +57,6 @@ pub fn disarm_pose(s: crate::disarm::Strip) -> crate::character::StripPose {
     crate::character::StripPose { t: s.t, at: Some(s.at) }
 }
 
-/// Sam's right fist is the gun's, not yet the knife's (combat.ts handProps). (disarm.ts disarmHand)
-pub fn disarm_hand(g: &crate::game::Game, h: &crate::player::Hold) -> bool {
-    match h.strip { Some(s) => s.t < g.k.hold.strip.knife, None => false }
-}
-
 /// Once a frame, after everybody has been posed (game.ts): the move's clock, the take, the gun carried, the gun let go. (disarm.ts disarmTick)
 pub fn disarm_tick(g: &mut crate::game::Game, dt: f64) {
     let pl = g.player;

@@ -393,7 +393,7 @@ pub fn squad_orders_stack_posts_as_were(g: &mut crate::game::Game, d: DoorId, si
 pub fn squad_orders_stack_posts_leaf_in(g: &mut crate::game::Game, over: &Over, d: DoorId, side: f64, men: &[GuardId], ignore: Option<&[GuardId]>) -> Option<Vec<crate::orders::StackPost>> {
     let ignore: &[GuardId] = ignore.unwrap_or(&[]);
     let mut as_ = None;
-    if crate::glasspen::glass_pen_live(g) && g.k.glasspen.stack_eyes > 0.0 {
+    if g.k.glasspen.stack_eyes > 0.0 {
         as_ = squad_orders_stack_posts_on(g, over, d, side, men, ignore, true, None);
         if as_.is_none() { as_ = squad_orders_stack_least_glass(g, over, d, side, men, ignore); }
     }
@@ -421,7 +421,7 @@ fn glass_key(index: i64, side: f64, pos: V3) -> String {
 /// how many of the lattice's points beyond the door have a line through glass onto a man at `pos` (orders.ts glassEyes)
 pub fn squad_orders_glass_eyes(g: &mut crate::game::Game, d: DoorId, side: f64, pos: V3, kept: Option<bool>) -> f64 {
     let kept = kept.unwrap_or(true);
-    if !crate::glasspen::glass_pen_live(g) || g.k.glasspen.stack_eyes <= 0.0 { return 0.0; }
+    if g.k.glasspen.stack_eyes <= 0.0 { return 0.0; }
     let sig = crate::glasspen::glass_toll_sig(g);
     if sig != g.orders.glass_sig {
         g.orders.glass_at.clear();

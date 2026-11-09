@@ -114,7 +114,7 @@ pub fn tut_road_define(m: &mut crate::director::Manifest) -> Result<crate::scrip
             crate::director::program_beat(p, beat, &s, None)?;
         }
         Ok(())
-    }, None)?;
+    })?;
 
     Ok(TutRoadVars {
         hut_door: Some(hut_door),

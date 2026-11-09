@@ -14,11 +14,6 @@ type Ray = crate::scene_collision::Raycast;
 fn seam_level_box(g: &Game, i: usize) -> (V3, V3, f64) { let x = &g.tab.boxes[g.col.boxes[i]]; (x.c, x.h, x.flags) }
 
 // ---------------------------------------------------------------- finding them
-/// Is the rule running: nothing under a show. (lightswitch.ts switchesLive)
-pub fn switches_live(g: &crate::game::Game) -> bool {
-    !g.touring && !crate::director::director_showing(g)
-}
-
 /// Is this fixture one a wall switch works: on the mains and a light of the room. (lightswitch.ts roomLight)
 pub fn room_light(g: &crate::game::Game, t: FixtureId) -> bool {
     let f = &g.tab.sim_lightshome_fixture[t];
@@ -352,7 +347,6 @@ pub fn hands_free(g: &crate::game::Game, pl: PlayerId) -> bool {
 
 /// The plate nearest `pl`'s feet within `r` m that he has a clear line to from his chest. (lightswitch.ts switchNear)
 pub fn switch_near(g: &mut crate::game::Game, pl: PlayerId, r: f64) -> Option<crate::lightswitch::WallSwitch> {
-    if !switches_live(g) { return None; }
     let p = g.ch[g.pl[pl].ch].pos;
     let eye: V3 = [p[0], if g.pl[pl].crouch { 0.9 } else { 1.3 }, p[2]];
     let mut best: Option<WallSwitch> = None;
@@ -433,7 +427,6 @@ pub fn puts_back(g: &crate::game::Game, gd: GuardId) -> bool {
 
 /// Once a frame: a plate goes with its wall, a calm defender at the switch puts the room back, a hand stays at the plate a moment. (lightswitch.ts lightSwitchTick)
 pub fn light_switch_tick(g: &mut crate::game::Game) {
-    if !switches_live(g) { return; }
     let mut l = wall_switches(g);
     // a plate goes with its wall and is back with it: asked after only when the level's geometry has moved
     let serial = geom_serial(g);

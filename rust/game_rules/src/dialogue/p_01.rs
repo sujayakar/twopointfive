@@ -56,7 +56,7 @@ pub fn agitation_terms(g: &mut crate::game::Game, gd: GuardId) -> crate::dialogu
     let mut a = 0.0;
     let esc = crate::guards::escalation_of(g);
     add(&mut a, &mut why, 0.22 * esc, "floor");
-    if g.alarm.episode && !g.quiet_utility { add(&mut a, &mut why, 0.15, "episode"); }
+    if g.alarm.episode { add(&mut a, &mut why, 0.15, "episode"); }
     let state = g.gd[gd].state;
     let alert_t = g.gd[gd].witness.alert_t;
     if state == GuardState::Alert || (alert_t >= 0.0 && g.time - alert_t < 60.0) {

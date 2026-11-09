@@ -75,7 +75,7 @@ pub fn wall_react_new(g: &mut Game) -> WallReact {
 
 /// (wallreact.ts WallReact.live)
 pub fn wall_react_live(g: &Game) -> bool {
-    g.m.wallreact.wall_react.unsub && g.ai_enabled && !g.quiet_utility && !g.touring
+    g.m.wallreact.wall_react.unsub && g.ai_enabled
 }
 
 /// a restart: nothing known, nobody owed a move   (wallreact.ts WallReact.reset)

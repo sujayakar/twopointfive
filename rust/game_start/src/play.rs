@@ -406,7 +406,7 @@ impl Play {
     /// a place of the floor `off` metres out from the first wall charge's face, on the side it was set from
     pub fn off_the_wall_charge(&self, off: f64) -> [f64; 2] { let w = self.g.tab.wallcharge_set_wall_charge[self.g.wall_charge.set[0]].wall.clone(); let at = game::wallcharge::wall_pt(&self.g, &w, 0.0, off, None); [at[0], at[2]] }
     /// the objective row, as a HUD is given it
-    pub fn objective(&self) -> String { self.view().mission.map_or(String::new(), |m| m.text) }
+    pub fn objective(&self) -> String { self.view().mission.text }
     /// WHAT A HUD IS TOLD of the game as it stands (`view::tick_view`: the record the page draws, asked of the game and never kept by it)
     pub fn view(&self) -> game::view::TickView { self.view_of(0) }
     /// WHAT A HUD IS TOLD OF ITS CURSOR with the cursor on a point of the world, through the host's camera as it stands (None: the point is not in the picture)

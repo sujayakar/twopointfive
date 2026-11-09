@@ -303,7 +303,6 @@ pub fn game_deal_weapons(g: &mut crate::game::Game, dt: Option<f64>) {
     let deal = g.tune.carbine_guards;
     let mut grip: Option<AnimLongGrip> = None; let mut grip20k: Option<AnimLongGrip> = None;
     let mut grip_own: Vec<(GunModelId, Option<AnimLongGrip>, Option<f64>)> = Vec::new();
-    let show = g.touring || crate::director::director_showing(g);
     let mut i = 0;
     while i < g.guards.len() {
         let gd = g.guards[i]; i += 1;
@@ -381,7 +380,7 @@ pub fn game_deal_weapons(g: &mut crate::game::Game, dt: Option<f64>) {
             an.reload_at = at;
         }
         // (MOVES.on, page 1)
-        let dip = g.k.moves.entry > 0.5 && cb && !show && g.gd[gd].held.is_none() && !dead && team == Team::Operative
+        let dip = g.k.moves.entry > 0.5 && cb && g.gd[gd].held.is_none() && !dead && team == Team::Operative
             && !crate::roomfight::room_fight_busy(g, gd, 1.5) && !crate::roomfight::room_fight_contact(g, gd) && crate::game::friend_before_muzzle(g, gd);
         g.ch[c].anim.dip = if dip { 1.0 } else { 0.0 };
         if !dead && now < g.gd[gd].dazzled_until {
@@ -393,7 +392,7 @@ pub fn game_deal_weapons(g: &mut crate::game::Game, dt: Option<f64>) {
             dz.from = from; dz.k = k;
         } else { g.ch[c].anim.dazzle = None; }
         {
-            let on = !show && g.gd[gd].held.is_none();
+            let on = g.gd[gd].held.is_none();
             let tk = g.ch[c].anim.trained;
             let h = crate::weapons::handling_of(weapon_row(g, def));
             let tw = &mut g.ch[c].turn;

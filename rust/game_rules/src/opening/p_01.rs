@@ -104,8 +104,6 @@ pub fn opening_start(g: &mut crate::game::Game) -> f64 {
     if !g.m.opening.url_read {
         read_url(g);
     }
-    // a show's own encounter (its men start from their marks), not one it has handed to the player
-    let show = g.quiet_utility || (g.touring && !crate::director::director_handed_over(g));
     let mut moved = 0.0;
     let mut i = 0;
     while i < g.guards.len() {
@@ -117,9 +115,6 @@ pub fn opening_start(g: &mut crate::game::Game) -> f64 {
         if !g.m.opening.born.has(gd) {
             let now = g.time;
             g.m.opening.born.set(gd, now);
-        }
-        if show {
-            continue;
         }
         g.m.opening.seen.add(gd);
         let c = g.gd[gd].ch;

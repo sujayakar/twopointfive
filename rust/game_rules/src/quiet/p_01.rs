@@ -91,7 +91,7 @@ pub fn quiet_mission_can_start(g: &crate::game::Game, squad: Option<f64>) -> Opt
     if let Some(r) = g.director.run {
         if !g.tab.director_run[r].ended { return Some(format!("the level script's program '{}' is running", g.tab.director_run[r].name)); }
     }
-    if g.touring || g.quiet_utility || g.puppet.is_some() { return Some(String::from("a show is running")); }
+    if g.puppet.is_some() { return Some(String::from("nobody is playing")); }
     if g.night_breach.active || g.rescue.active { return Some(String::from("another scenario is staged")); }
     if g.guards.iter().any(|&x| g.gd[x].unit.is_some()) { return Some(String::from("a spawned unit is already on the floor")); }
     None

@@ -265,7 +265,7 @@ export class Overlay implements HudLike {
     { // the checkpoint tag: up for a couple of seconds after a save / load, keyed so the DOM is touched only on change
       const key = src.page.saved;
       if (key !== this.ckKey && this.ckEl) { this.ckKey = key; this.ckEl.className = key ? 'on' : ''; if (key) this.ckEl.innerHTML = `<b></b>${key}`; } }
-    const op = V.mission?.pos ?? null;
+    const op = V.mission.pos;
     const far = op ? v3.distXZ(op, src.at(V.me) ?? op) : 0, od = op ? (frame?.arrow ? 99 : far) : 0;   // (…nor near a step's arrow: it is drawn for the last pace, where the diamond would have faded out)
     const floor = V.stage === 'drive' && hv?.kind !== 'objective' ? 0.35 : 0;   // the rack has no marker of its own: keep a faint diamond on it until the cursor finds it (doors have their own dot / reticle)
     const alpha = op ? Math.max(floor, Math.min(0.9, (od - 1.6) / 1.5)) : 0;

@@ -98,7 +98,7 @@ spared on one knee (`rails_spare`). While steps remain, a room clear ends only b
 checks it against the level, and a bad one isn't armed. `rails_start_program` starts the program named `tutorial` at each run; `director_tick` resumes its beats. A beat is a step function over a plain
 frame (`BeatFrame`, `beat_next`), yielding a `Cond`, so it saves whole. A `cue` reaches a beat as the signal `lesson:<cue>`, and a beat says it has played out as `done:<name>` (`rails_cued`).
 
-**The breach drill** (`breach_drill_tick`): wait, approach, stack, breach, kick, bang, enter, clear, restack. `stage_checked` starts one where the level has `plans.breach` and there are two
+**The breach drill** (`breach_drill_tick`): wait, approach, stack, breach, kick, bang, enter, clear. `stage_checked` starts one where the level has `plans.breach` and there are two
 teammates. Only `office.json` has that plan. Elsewhere every teammate is the order menu's from the start.
 
 ## Rules that hold
@@ -149,6 +149,6 @@ Native tests in `rust/game_start/tests/` (`rust/game_run/tests/` if marked):
 ## Not seen
 
 - **The other ways in** have stood only natively: nobody has played one on a GPU.
-- **Left over:** `fresh_seed_of` and `g.room_clear.fresh` decide nothing. `rails.sky` is on no level. The Director's show path (`director_enter_show`) has no script. `set_daylight` is
+- **Left over:** `fresh_seed_of` and `g.room_clear.fresh` decide nothing. `rails.sky` is on no level. `set_daylight` is
   only ever called to turn daylight off, so `level.daylight` is never seen.
 - Most rows carry `untuned`. The tutorials are checked mostly by the scripted player, not by hand on a GPU.

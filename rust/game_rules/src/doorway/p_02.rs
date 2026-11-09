@@ -15,7 +15,7 @@ const BRUSH_M: f64 = 0.6;
 
 /// FIGHT: a man planted in an open doorway `funnel` seconds steps off the opening. True = this file moved his feet this frame. (doorway.ts offThreshold)
 pub fn off_threshold(g: &mut crate::game::Game, gd: GuardId, aim_at: Option<V3>, dt: f64, need_shot: bool) -> bool {
-    if !ours(g, gd) || g.gd[gd].script.is_some() || g.touring { return false; }
+    if !ours(g, gd) || g.gd[gd].script.is_some() { return false; }
     let aim_at = match aim_at { Some(a) => a, None => return false };
     let _ = state_of(g, gd);   // makes the row if it is new; every read and write below goes through the table
     let c = g.gd[gd].ch;

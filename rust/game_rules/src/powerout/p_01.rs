@@ -87,9 +87,6 @@ pub use crate::roomfight::def_of;
 
 /// the rule's men: the room fight's defenders on the other side from the player, in live play. (powerout.ts ruled)
 pub fn ruled(g: &crate::game::Game) -> Vec<RoomfightDefId> {
-    if g.touring || crate::director::director_showing(g) || g.quiet_utility {
-        return Vec::new();
-    }
     let mut out = Vec::new();
     let mut i = 0;
     while i < g.fight.defs.len() {

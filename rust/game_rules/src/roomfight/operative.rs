@@ -139,12 +139,10 @@ fn under_the_fight_ai(g: &mut Game, o: RoomfightOpId) {
 
 /// how his feet move his aim, let go of slowly
 fn feet(g: &mut Game, o: RoomfightOpId, speed: f64, dt: f64) {
-    if !g.touring {
-        let since = match g.tab.roomfight_op[o].feet_t { None => dt, Some(t) => m::max(dt, g.time - t) };
-        let prev = g.tab.roomfight_op[o].feet_sm.unwrap_or(0.0);
-        g.tab.roomfight_op[o].feet_sm = Some(crate::aimcost::feet_hold(g, prev, speed, since));
-        g.tab.roomfight_op[o].feet_t = Some(g.time);
-    }
+    let since = match g.tab.roomfight_op[o].feet_t { None => dt, Some(t) => m::max(dt, g.time - t) };
+    let prev = g.tab.roomfight_op[o].feet_sm.unwrap_or(0.0);
+    g.tab.roomfight_op[o].feet_sm = Some(crate::aimcost::feet_hold(g, prev, speed, since));
+    g.tab.roomfight_op[o].feet_t = Some(g.time);
 }
 
 /// HIS EYES: every living hostile through the game's sight test, at the game's rate; whom his muzzle should be on, of those he has made out
@@ -409,7 +407,7 @@ fn fires(g: &mut Game, o: RoomfightOpId, h: GuardId, to: V3, dt: f64, speed: f64
     let sup_k = if g.tune.suppression && crate::condition::condition_sup(g, crate::condition::Man::Guard(gd), sup_v) >= g.k.suppression.flinch { 1.6 } else { 1.0 };
     let string = crate::gunroles::gun_string(g, gd); // a belt-fed gun's string, the Mk 12's single aimed round; 0: the controlled pair
     let grow = if string > 1.0 { crate::gunroles::gun_string_grow(g, gd, js::rem(g.tab.roomfight_op[o].n, string)) } else { 0.0 };
-    let feet = if !g.touring { m::max(speed, g.tab.roomfight_op[o].feet_sm.unwrap_or(0.0)) * g.k.aimcost.move_k } else { speed };
+    let feet = m::max(speed, g.tab.roomfight_op[o].feet_sm.unwrap_or(0.0)) * g.k.aimcost.move_k;
     let wide = hands * v3::lerp(p.unsettled_k, 1.0, v3::clamp(g.tab.roomfight_op[o].track, 0.0, 1.0)) * sup_k + grow + feet * p.shooter_move_k * 0.5; // how wide this round would be thrown
     let muzzle = g.ch[c].muzzle;
     let mut in_line = room_fight_friend_in_line(g, muzzle, to, gd);

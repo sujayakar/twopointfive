@@ -10,7 +10,7 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 /// Live: a run is on and it really is the player playing. (mission.ts missionLive)
 pub fn mission_live(g: &crate::game::Game) -> bool {
     let s = g.mission.stage;
-    !g.quiet_utility && g.puppet.is_none() && s != crate::game::MissionStage::Done && s != crate::game::MissionStage::Failed
+    !g.aside && g.puppet.is_none() && s != crate::game::MissionStage::Done && s != crate::game::MissionStage::Failed
 }
 
 /// One more of a counted thing on the run's card, if the run is live. (mission.ts tally)
@@ -68,7 +68,7 @@ fn out_plain(exfil_x: f64, exfil_z: f64, exfil_out: Option<[f64; 2]>, p: V3) -> 
 /// The mission's stage machine: infiltrate, drive, exfil, and the run's counts. (mission.ts updateMission)
 pub fn update_mission(g: &mut crate::game::Game, dt: f64, input: InputId) {
     use crate::game::{GuardState, InteractableKind, MissionStage, Verb};
-    if (g.quiet_utility || g.puppet.is_some()) && !g.mission_in_tour {
+    if g.aside || g.puppet.is_some() {
         g.mission.drive_t = -1.0;
         return;
     }
@@ -96,16 +96,14 @@ pub fn update_mission(g: &mut crate::game::Game, dt: f64, input: InputId) {
     if crate::seats::all_down(g) {
         g.mission.stage = MissionStage::Failed;
         g.mission.drive_t = -1.0;
-        g.mission.down_card_at = if g.mission_in_tour { -1.0 } else { g.time + DOWN_CARD_SECS };
+        g.mission.down_card_at = g.time + DOWN_CARD_SECS;
         return;
     }
     g.mission.stats.elapsed += dt;
     if g.god_mode || g.player_invisible || !g.ai_enabled {
         g.mission.stats.sandbox = true;
     }
-    if !g.mission_in_tour {
-        crate::chronicle::tick_chronicle(g);
-    }
+    crate::chronicle::tick_chronicle(g);
     let any_alert = g.guards.iter().any(|&gd| g.gd[gd].state == GuardState::Alert);
     if any_alert && !g.mission.alarm_on {
         g.mission.stats.alerts += 1.0;
@@ -323,11 +321,11 @@ pub fn send_rack_check(g: &mut crate::game::Game) {
 
 /// THE MISSION'S ONE LINE AND ITS PLACE, as they stand now, and whose they are: a level's program while it runs, a lesson's step over its own scenario,
 /// the room clear, the rescue, the night breach by itself, and else the stealth mission's own stages.
-/// None while a show runs. A read: the HUD's view of it is `view::MissionView`, and nothing of it is kept.
-pub fn objective(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<crate::view::MissionView> {
+/// Empty while nobody plays. A read: the HUD's view of it is `view::MissionView`, and nothing of it is kept.
+pub fn objective(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> crate::view::MissionView {
     use crate::view::{MissionOf, MissionView};
-    if (g.quiet_utility || g.touring) && !g.mission_in_tour { return None; }
-    let of = |of: MissionOf, text: String, pos: Option<V3>| Some(MissionView { of, text, pos });
+    if g.aside { return MissionView::default(); }
+    let of = |of: MissionOf, text: String, pos: Option<V3>| MissionView { of, text, pos };
     if let Some(o) = crate::director::director_objective(g) { return of(MissionOf::Script, format!("objective ▸ {}", o.text), o.pos); }
     if let Some(o) = crate::lesson::lesson_objective(g, seat) { return of(MissionOf::Lesson, o.text, o.pos); }
     if let Some(o) = crate::roomclear::room_clear_scenario_objective(g, seat) { return of(MissionOf::Roomclear, crate::par::par_objective(g, &o.text), o.pos); }
@@ -436,17 +434,17 @@ mod tests {
         tally(&mut g, TallyK::Shots);
         assert_eq!(g.mission.stats.shots, 1.0);
         g.mission.stage = MissionStage::Infiltrate;
-        g.quiet_utility = true;
+        g.aside = true;
         tally(&mut g, TallyK::Shots);
         assert_eq!(g.mission.stats.shots, 1.0);
     }
 
     #[test]
-    fn the_tour_lets_go_of_a_pull_and_nothing_else_moves() {
+    fn with_nobody_playing_a_pull_is_let_go_of_and_nothing_else_moves() {
         let mut g = game();
         g.mission.stage = MissionStage::Drive;
         g.mission.drive_t = 1.0;
-        g.quiet_utility = true;
+        g.aside = true;
         update_mission(&mut g, 0.1, InputId(0));
         assert_eq!(g.mission.drive_t, -1.0);
         assert!(g.mission.stage == MissionStage::Drive);
@@ -459,12 +457,5 @@ mod tests {
         assert_eq!(drive_percent(0.0), "0");
         assert_eq!(drive_percent(crate::consts::DRIVE_SECS / 2.0), "50");
         assert_eq!(drive_percent(crate::consts::DRIVE_SECS * 0.9999), "99");
-    }
-
-    #[test]
-    fn the_tour_has_no_objective() {
-        let mut g = game();
-        g.touring = true;
-        assert!(objective(&g, &crate::seats::here(&g)).is_none());
     }
 }

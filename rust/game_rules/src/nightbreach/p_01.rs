@@ -372,7 +372,7 @@ pub fn night_breach_can_start(g: &mut crate::game::Game, layout: Option<&crate::
         let run = &g.tab.director_run[r];
         if !run.ended { return Some(format!("the level script's program '{}' is running", run.name)); }
     }
-    if g.touring || g.quiet_utility || g.puppet.is_some() { return Some(String::from("a show is running")); }
+    if g.puppet.is_some() { return Some(String::from("nobody is playing")); }
     if g.guards.iter().any(|x| g.gd[*x].unit.is_some()) { return Some(String::from("a spawned unit is already on the floor")); }
     None
 }

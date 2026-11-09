@@ -64,7 +64,7 @@ fn rides(g: &Game, it: &Interactable) -> (Option<f64>, f64) {
 }
 
 /// the list for `seat`. With the ring standing for the list the corner shows one line, what the key would do now (the highlighted row, or a running verb's own; none while the
-/// ring's lit wedge is the whistle), and under it the first line no key gives; a tour's puppet keeps the whole list
+/// ring's lit wedge is the whistle), and under it the first line no key gives; a puppet keeps the whole list
 pub fn interact_view(g: &Game, seat: &SeatRef) -> InteractView {
     let pl = &g.pl[seat.player];
     let (near, p) = (seat.nearby, g.ch[pl.ch].pos);

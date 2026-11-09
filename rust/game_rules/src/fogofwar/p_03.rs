@@ -334,7 +334,7 @@ pub fn fog_of_war_drawn(g: &crate::game::Game, gd: GuardId) -> bool {
     let r = match g.fog_of_war.recs.get(gd).copied() { Some(r) => r, None => return false };
     if r.seen || (g.gd[gd].state == crate::game::GuardState::Dead && r.body) { return true; }
     let since = g.time - r.t;
-    (since >= 0.0 && since < g.k.fog.linger) || fog_of_war_fired_on(g, gd) || g.fog_of_war.shown.has(gd) || r.framed == Some(true)
+    (since >= 0.0 && since < g.k.fog.linger) || fog_of_war_fired_on(g, gd) || r.framed == Some(true)
 }
 
 /// Is the squad shooting at him: a teammate's aimed round went at him inside FOG.squadFireSecs.   (fogofwar.ts FogOfWar.firedOn)

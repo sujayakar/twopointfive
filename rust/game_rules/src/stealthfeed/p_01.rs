@@ -7,11 +7,11 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// One frame's word to Sam's animator, before any state poses him; under a show or a puppet, or down: nothing fed.   (stealthfeed.ts stealthFeed)
+/// One frame's word to Sam's animator, before any state poses him; under a puppet, or down: nothing fed.   (stealthfeed.ts stealthFeed)
 pub fn stealth_feed(g: &mut crate::game::Game) {
     let pl = g.player;
     let c = g.pl[pl].ch;
-    if g.touring || g.puppet.is_some() || g.pl[pl].down {
+    if g.puppet.is_some() || g.pl[pl].down {
         g.ch[c].anim.stealth = None;
         return;
     }

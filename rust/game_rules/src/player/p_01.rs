@@ -305,12 +305,11 @@ pub fn arm_rifle(g: &mut crate::game::Game, in_hands: bool, carriage: Option<cra
     let look = crate::gunlook::gun_look_of(g, into, Some(&held), Some(&other), None);
     g.ch[c].gun_look = look;
     let own = if in_hands { g.ch[c].gun_look.and_then(|l| l.hand) } else { None };
-    let fit = !g.touring;
     if in_hands {
-        let model = match own { Some(id) => crate::rig_props::model_grip(g, id, Some(fit), None), None => None };
+        let model = match own { Some(id) => crate::rig_props::model_grip(g, id, Some(true), None), None => None };
         let (wrist, fingers, back) = match model {
             Some(h) => (h.wrist, h.fingers, h.back),
-            None => { let h = crate::rig_props::sc20k_grip(None, Some(fit)); (h.wrist, h.fingers, h.back) }
+            None => { let h = crate::rig_props::sc20k_grip(None, Some(true)); (h.wrist, h.fingers, h.back) }
         };
         g.ch[c].anim.long_grip = crate::character::AnimLongGrip { wrist, fingers, back };
         let ahead = match own { Some(id) => crate::rig_props::model_muzzle_ahead(g, id, None), None => None };

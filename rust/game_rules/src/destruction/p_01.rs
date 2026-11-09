@@ -21,14 +21,8 @@ fn does_of_box(g: &mut Game, b: BoxId) -> crate::scene_materials::Does {
     crate::scene_materials::does_of(g, word)
 }
 
-/// The knob as the systems read it: a showcase program's own, 0 under the tour, else tune.chaos clamped.   (destruction.ts chaosOf)
+/// The knob as the systems read it: tune.chaos, from 0 to 1.
 pub fn chaos_of(g: &crate::game::Game) -> f64 {
-    if let Some(s) = g.destr.show_chaos {
-        return m::max(0.0, m::min(1.0, s));
-    }
-    if g.touring {
-        return 0.0;
-    }
     let c = g.tune.chaos;
     m::max(0.0, m::min(1.0, c))
 }
@@ -436,15 +430,13 @@ fn foot_knobs(g: &Game) -> crate::debris::FootKnobs {
 
 /// Per frame: rubble at men's feet, the pools, the heat's decay, the queued dust.   (destruction.ts Destruction.update)
 pub fn destruction_update(g: &mut crate::game::Game, dt: f64) {
-    if !g.touring || g.destr.show_chaos.is_some() {
-        let mut men: Vec<crate::debris::FootMan> = destruction_on_foot(g).into_iter().map(|c| crate::debris::FootMan { pos: g.ch[c].pos, vel: g.ch[c].vel, body: false }).collect();
-        if !g.destr.debris.list.is_empty() || !g.destr.edge_look.rubble.is_empty() { destruction_bodies(g, &mut men); }
-        let knobs = foot_knobs(g);
-        if !g.destr.debris.list.is_empty() {
-            crate::debris::debris_feet(g, &men, knobs, None, None);
-        }
-        crate::edge_look::edge_look_feet(g, &men, knobs, dt);
+    let mut men: Vec<crate::debris::FootMan> = destruction_on_foot(g).into_iter().map(|c| crate::debris::FootMan { pos: g.ch[c].pos, vel: g.ch[c].vel, body: false }).collect();
+    if !g.destr.debris.list.is_empty() || !g.destr.edge_look.rubble.is_empty() { destruction_bodies(g, &mut men); }
+    let knobs = foot_knobs(g);
+    if !g.destr.debris.list.is_empty() {
+        crate::debris::debris_feet(g, &men, knobs, None, None);
     }
+    crate::edge_look::edge_look_feet(g, &men, knobs, dt);
     if js::truthy(crate::sim_fallshome::fall_store_waiting_in(g, crate::sim_fallshome::FALL_PIECES)) {
         crate::debris::debris_landings(g);
     }
@@ -576,7 +568,7 @@ pub fn destruction_reset(g: &mut crate::game::Game) {
     crate::furnblast::furniture_reset(g);
 }
 
-/// The tour's cuts: nothing tumbling carries over; hidden statics stay hidden.   (destruction.ts Destruction.clearMoving)
+/// Nothing tumbling carries over; hidden statics stay hidden.   (destruction.ts Destruction.clearMoving)
 pub fn destruction_clear_moving(g: &mut crate::game::Game) {
     crate::debris::debris_clear(g);
     g.destr.dust_queue.clear();

@@ -62,7 +62,7 @@ pub fn spoken(g: &crate::game::Game, gd: GuardId) -> bool {
 
 /// may the sequence start on him this frame   (runner.ts reacts)
 pub fn reacts(g: &crate::game::Game, gd: GuardId) -> bool {
-    if !g.ai_enabled || g.touring || g.quiet_utility || g.gd[gd].held.is_some() { return false; }
+    if !g.ai_enabled || g.gd[gd].held.is_some() { return false; }
     g.gd[gd].script.is_none() || g.fight.defs.iter().any(|d| g.tab.roomfight_def[*d].gd == gd)
 }
 
@@ -98,12 +98,8 @@ pub fn foes(g: &crate::game::Game, gd: GuardId) -> Vec<crate::runner::Foe> {
     out
 }
 
-/// is a run planned from the man's own picture: a show keeps no pictures   (runner.ts byPicture)
-pub fn by_picture(g: &crate::game::Game) -> bool { !g.touring }
-
 /// the enemies a run is planned round: the men he knows of, each where he believes him to be   (runner.ts known)
 pub fn known(g: &mut crate::game::Game, gd: GuardId) -> Vec<crate::runner::Foe> {
-    if !by_picture(g) { return foes(g, gd); }
     let mut out = Vec::new();
     let (forget, eye_h) = (g.k.picture.forget_secs, g.k.picture.eye_h);
     for i in crate::picture::ideas_of(g, gd) {
@@ -323,11 +319,9 @@ pub fn route(g: &mut crate::game::Game, gd: GuardId, goal: V3, e: &[crate::runne
     let shy = g.k.runner.shy_m;
     let cs = g.col.nav.cell;
     let pos = g.ch[g.gd[gd].ch].pos;
-    if by_picture(g) {
-        g.stats.picture.ran += 1;
-        let t = foes(g, gd);
-        if t.len() != e.len() || t.iter().any(|t| !e.iter().any(|x| flat(x.pos, t.pos) < 1.0)) { g.stats.picture.ran_off += 1; }
-    }
+    g.stats.picture.ran += 1;
+    let t = foes(g, gd);
+    if t.len() != e.len() || t.iter().any(|t| !e.iter().any(|x| flat(x.pos, t.pos) < 1.0)) { g.stats.picture.ran_off += 1; }
     let mut pen = |_g: &mut Game, ix: f64, iz: f64| -> f64 {
         let (x, z) = ((ix + 0.5) * cs, (iz + 0.5) * cs);
         for f in e {
@@ -704,12 +698,8 @@ pub fn step(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
         run!(g, gd).is_out = is_out;
         if is_out {
             // (the world's rule, not his: he leaves the floor when no TRUE enemy has a line to him)
-            let eyes: Option<Vec<Foe>> = if by_picture(g) {
-                let t = foes(g, gd);
-                Some(t.into_iter().filter(|f| line_to(g, *f, pos)).collect())
-            } else {
-                None
-            };
+            let eyes: Option<Vec<Foe>> = { let t = foes(g, gd);
+                Some(t.into_iter().filter(|f| line_to(g, *f, pos)).collect()) };
             let seen = match &eyes {
                 Some(v) => !v.is_empty(),
                 None => e.iter().any(|f| line_to(g, *f, pos)),

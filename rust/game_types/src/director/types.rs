@@ -124,13 +124,9 @@ pub struct Director {
     pub log: Vec<crate::director::LogRow>,
     pub run: Option<DirectorRunId>,
     pub last_run: Option<crate::director::DirectorLastRun>,
-    pub frame: Option<crate::director::DirectorFrame>,
     pub serial: f64,
     pub seen: JsSet<u32>,
     pub exiting: bool,
-    pub due_keys: JsSet<String>,
-    pub due_clicks: f64,
-    pub shown: JsSet<GuardId>,
 }
 impl Director {
     /// what a new one holds
@@ -142,13 +138,9 @@ impl Director {
             log: Vec::new(),
             run: None,
             last_run: None,
-            frame: None,
             serial: 0.0,
             seen: JsSet::new(),
             exiting: false,
-            due_keys: JsSet::new(),
-            due_clicks: 0.0,
-            shown: JsSet::new(),
         }
     }
 }
@@ -192,23 +184,13 @@ pub struct LoadoutSpec {
     pub tint2: Option<V3>,
     pub light: Option<bool>,
     pub trained: Option<bool>,
-    pub god: Option<bool>,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct ProgramDef {
     pub name: String,
-    pub opts: crate::director::ProgramOpts,
     pub beats: JsMap<String, crate::director::ProgramDefBeatsValue>,
     pub triggers: Vec<crate::director::TriggerDef>,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct ProgramOpts {
-    pub showcase: Option<bool>,
-    pub end_veil: Option<f64>,
-    pub end_hold: Option<f64>,
-    pub fresh_encounter: Option<bool>,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -305,10 +287,6 @@ pub enum Json {
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct DirectorLastRun {
-}
-
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct DirectorFrame {
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -529,35 +507,6 @@ pub enum BeatState {
     Cancelled,
 }
 
-#[derive(Clone, Debug, ToBytes)]
-pub struct CameraShotSpec {
-    pub look_y: Option<f64>,
-    pub track: Option<f64>,
-    pub yaw: f64,
-    pub yaw_to: Option<f64>,
-    pub pitch: f64,
-    pub dist: f64,
-    pub dist_to: Option<f64>,
-    pub dur: f64,
-    /// INVENTED by a review: see the proposals
-    pub look: crate::director::Place,
-}
-impl Default for CameraShotSpec {
-    fn default() -> Self {
-        CameraShotSpec {
-            look_y: None,
-            track: None,
-            yaw: 0.0,
-            yaw_to: None,
-            pitch: 0.0,
-            dist: 0.0,
-            dist_to: None,
-            dur: 0.0,
-            look: crate::director::Place::List([0.0; 3]),
-        }
-    }
-}
-
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct LiveBeat {
     pub name: String,
@@ -568,7 +517,6 @@ pub struct LiveBeat {
     pub step: f64,
     pub state: crate::director::BeatState,
     pub touched: JsSet<crate::Num>,
-    pub pinned_camera: bool,
     pub flow: crate::director::LiveBeatFlow,
 }
 
@@ -580,57 +528,6 @@ pub struct LiveBeatFlow {
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct UnitRec {
     pub gd: GuardId,
-}
-
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct Shot {
-    pub spec: crate::director::CameraShotSpec,
-    pub t: f64,
-}
-
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct ShowState {
-    pub saved: crate::director::ShowStateSaved,
-    pub look: V3,
-    pub shot: Option<crate::director::Shot>,
-    pub fade: f64,
-    pub fade_to: f64,
-    pub fade_rate: f64,
-    pub ending: Option<crate::director::ShowStateEnding>,
-    pub benched: Option<Vec<GuardId>>,
-    pub variant_on: bool,
-    pub puppet: bool,
-    pub weather_saved: Option<crate::director::ShowStateWeatherSaved>,
-    pub handed_over: bool,
-    pub chaos_set: bool,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct ShowStateSaved {
-    pub ai: bool,
-    pub god: bool,
-    pub invisible: bool,
-    pub quiet: bool,
-    pub touring: bool,
-    pub cam: Option<crate::director::ShowStateSavedCam>,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct ShowStateSavedCam {
-    pub yaw: f64,
-    pub pitch: f64,
-    pub dist: f64,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct ShowStateEnding {
-    pub t: f64,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct ShowStateWeatherSaved {
-    pub storm: f64,
-    pub rain: f64,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -650,12 +547,10 @@ pub struct Run {
     pub units: JsMap<crate::Num, crate::director::UnitRec>,
     pub bursts: Vec<crate::director::RunBurstsItem>,
     pub kicks: Vec<crate::director::RunKicksItem>,
-    pub show: Option<crate::director::ShowState>,
     pub objective: Option<crate::director::RunObjective>,
     pub systems_saved: Option<JsMap<&'static str, bool>>,
     pub ended: bool,
     pub finishing: bool,
-    pub failed_show: bool,
     /// INVENTED: the manifest's, for a beat's step to read
     pub vars: crate::director::ScriptVars,
 }

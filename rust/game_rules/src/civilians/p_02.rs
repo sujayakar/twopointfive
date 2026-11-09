@@ -52,7 +52,7 @@ pub fn hostage_say(g: &mut crate::game::Game, gd: GuardId, moment: crate::dialog
 
 /// Are the civilians on the floor at all right now.   (civilians.ts civiliansOnFloor)
 pub fn civilians_on_floor(g: &crate::game::Game) -> bool {
-    !g.civilians.is_empty() && !g.quiet_utility && !g.touring && !crate::lighting::is_daylight(g)
+    !g.civilians.is_empty() && !g.aside && !crate::lighting::is_daylight(g)
 }
 
 /// The ones to draw and collide with this frame.   (civilians.ts civiliansShown)
@@ -135,7 +135,7 @@ pub fn run_pending(g: &mut crate::game::Game, p: &crate::civilians::Pending) {
             let oc = g.gd[o].ch;
             let at = match g.ch[oc].bones.get(crate::character::Bone::Head) { Some(h) => *h, None => g.ch[oc].pos };
             crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.7), None);
-            if p.armed.unwrap_or(false) && !g.quiet_utility {
+            if p.armed.unwrap_or(false) {
                 let pos = p.pos.or(g.cv[civ].cause_pos).unwrap_or(g.ch[g.gd[cv].ch].pos);
                 g.alarm.pos[0] = pos[0]; g.alarm.pos[1] = 0.0; g.alarm.pos[2] = pos[2]; g.alarm.placed = true;
                 later(g, 1.2, &LaterP { kind: PendKind::Escalate, cv, o: Some(o), ..Default::default() });

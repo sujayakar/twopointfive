@@ -140,7 +140,7 @@ pub fn detonate_stun_raw(g: &mut crate::game::Game, it: ItemId, borrowed: bool, 
             Some(h) => *h,
             None => v3::add(g.ch[c].pos, [0.0, 1.6, 0.0]),
         };
-        if !borrowed && crate::effects::flags().dazzle && !g.pl[g.player].down && g.puppet.is_none() && !g.touring {
+        if !borrowed && crate::effects::flags().dazzle && !g.pl[g.player].down && g.puppet.is_none() {
             let d = v3::dist(eye, at);
             if d <= b.dazzle_radius {
                 let u = v3::clamp(d / b.dazzle_radius, 0.0, 1.0);

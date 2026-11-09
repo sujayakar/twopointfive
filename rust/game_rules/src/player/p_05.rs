@@ -221,18 +221,11 @@ pub fn update_hold(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Came
         };
         use crate::game::Verb;
         // ---- the two buttons with him in the arm (CLOSE.heldClicks): both in one frame choose nothing
-        let (mut clk_kill, mut clk_choke) = (false, false);
-        if hold!(g, p).phase == Ph::Held && !gun && !swapping && hold!(g, p).wind_t < 0.0 && g.gd[gd].civ.is_none() && !g.touring {
-            if crate::input::input_lmb_hit(g, input) && !crate::close::close_bare(g) {
-                if !crate::input::input_rmb_hit(g, input) {
-                    clk_kill = true;
-                }
-            } else if crate::input::input_rmb_hit(g, input) {
+        let mut clk_choke = false;
+        if hold!(g, p).phase == Ph::Held && !gun && !swapping && hold!(g, p).wind_t < 0.0 && g.gd[gd].civ.is_none() {
+            if crate::input::input_rmb_hit(g, input) {
                 clk_choke = true;
             }
-        }
-        if clk_kill {
-            start_kill(g);
         }
         if hold!(g, p).phase == Ph::Held {
             if act == Some(Verb::Comply) && g.gd[gd].civ.is_some() && !swapping {
@@ -275,7 +268,7 @@ pub fn update_hold(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Came
             let rmb_t = hold!(g, p).rmb_t.unwrap_or(0.0) + dt;
             hold!(g, p).rmb_t = Some(rmb_t);
             if hold!(g, p).rmb_choke == Some(1.0) {
-                if hold!(g, p).phase == Ph::Held && !gun && !swapping && g.gd[gd].civ.is_none() && !g.touring {
+                if hold!(g, p).phase == Ph::Held && !gun && !swapping && g.gd[gd].civ.is_none() {
                     hold!(g, p).wind_t = -1.0;
                     start_choke(g);
                     let h = hold!(g, p);
@@ -520,10 +513,10 @@ pub fn hold_tail(g: &mut crate::game::Game, dt: f64, speed: f64, own: Option<f64
         an.look_yaw_extra = 0.0;
     }
     let has = g.pl[p].holding.is_some();
-    let low = if has { crate::takedown::take_lower(g) } else { 0.0 };
-    let kill = if has { crate::takedown::take_kill(g) } else { false };
-    let beats = if has { crate::takedown::take_beats(g) } else { false };
-    let haul = if has { crate::takedown::take_haul(g) } else { false };
+    let low = if has { 1.0 } else { 0.0 };
+    let kill = has;
+    let beats = has;
+    let haul = has;
     let h = g.pl[p].holding.clone();
     let strip = match h.as_ref().and_then(|h| h.strip) {
         Some(s) => Some(crate::disarm::disarm_pose(s)),
@@ -578,7 +571,7 @@ pub fn hold_tail(g: &mut crate::game::Game, dt: f64, speed: f64, own: Option<f64
         an.deliberate = 0.0;
     }
     let agitation = crate::dialogue::agitation_of(g, gd);
-    let bare = if crate::close::close_bare(g) { Some(true) } else { None };
+    let bare = Some(true);
     let shot = if h.shot_t >= 0.0 { time - h.shot_t } else { -1.0 };
     let armed = crate::guards::in_hand(g, gd) == Some(crate::guards::InHand::Weapon);
     g.ch[hc].anim.held_pose = Some(crate::character::HeldPose {
@@ -745,11 +738,7 @@ pub fn swap_hold(g: &mut crate::game::Game) {
         crate::game::game_msg(g, &format!("the pistol is at {callsign}'s head. click to fire past him, press Space to pistol-whip him, or E to holster it and question him"));
     } else {
         set_holstered(g, true, Some(true));
-        let text = if crate::close::close_bare(g) {
-            format!("holstered, with both hands on {callsign} again. press Space to question him, or hold Space for the choke")
-        } else {
-            format!("holstered, with the knife back at {callsign}'s throat. press Space to question him, or hold Space for the choke")
-        };
+        let text = format!("holstered, with both hands on {callsign} again. press Space to question him, or hold Space for the choke");
         crate::game::game_msg(g, &text);
     }
     crate::audio_iface::game_audio_like_play(g, "equip", None, Some(0.45), None);
@@ -794,16 +783,6 @@ pub fn kill_cut(g: &crate::game::Game) -> f64 {
 /// The knife is going in on the man in his arm: a commit nothing eases off.   (player.ts holdKilling)
 pub fn hold_killing(h: &crate::player::Hold) -> bool {
     h.phase == crate::character::HoldPhase::Kill
-}
-
-/// The left click with a man in the arm: the knife, committed from this frame; he is dead when its clock runs out.   (player.ts startKill)
-pub fn start_kill(g: &mut crate::game::Game) {
-    let p = g.player;
-    let Some(gd) = g.pl[p].holding.as_ref().map(|h| h.g) else { return };
-    let hc = g.gd[gd].ch;
-    set_phase(g, crate::character::HoldPhase::Kill);
-    let at = v3::add(g.ch[hc].pos, [0.0, 1.3, 0.0]);
-    crate::audio_iface::game_audio_like_play(g, "bodyHit", Some(at), Some(0.55), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.8 }));
 }
 
 /// The man rigid in front, HOLD.dist ahead on Sam's facing, kept out of the statics; what the walls take off his station Sam gives up too.   (player.ts placeHeld)

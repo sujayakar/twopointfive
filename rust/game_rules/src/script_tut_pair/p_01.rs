@@ -26,7 +26,7 @@ pub fn tut_pair_define(m: &mut crate::director::Manifest) -> Result<crate::scrip
         program_on_signal(p, "lesson:yard", "yard");
         program_beat(p, "yard", &script, None)?;
         Ok(())
-    }, None)?;
+    })?;
     Ok(crate::script_tut_pair::TutPairVars::default())
 }
 
