@@ -668,3 +668,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **A replay of an older version says so** (2026-11-09; `src/tape/module.ts`). A kept run says the module it was played on (the module file's ETag, `host/face.ts`; the dev server gives one). Played on another,
   the same hands may go another way: the title's list greys it with the reason, and the bar says it from the first frame, then from when the run is no longer what happened. A run kept before it said so is
   older too. A replay that cannot be played at all (another hand, other characters, gone) is a plain card with its words and a way back (`refused.ts`): no stack, no fatal card, no report.
+  WHERE IT PARTS (`host/drawplay.ts`, `handtape.ts figuresPart`): a tape has, once a second, the state's hashes and FIGURES: who stands where, who is down, the rounds the player has fired. On the
+  module that played it any of them is the run's end. On another (and for a file, which says no module) the hashes are of another layout and say nothing: only the rolls of the die and the figures,
+  a man a hand's breadth (0.1 m) off his place at most. A tape from before it had figures is held to its die. MEASURED: a run of the module before this one, recorded with figures (compound and block, 77 s, two
+  pairs), is the run to its end with its hashes off from the first second; a mark costs 0.11 ms more a second of play, a tape 1 % more. `walk.ts` asks the play alone and says where the hashes part.

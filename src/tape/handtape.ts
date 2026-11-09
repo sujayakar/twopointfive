@@ -2,14 +2,14 @@
 // goes and is fed one back). Nothing of the picture is on it, and nothing here knows the game: a tape is the bytes of five calls.
 //
 //   START what the game was started from · STEP one tick's hand · ORDER commands, at the next step or between two · HANDS a hands-off player's plan, or none ·
-//   MARK what the game came to by a tick, to hold a walk to · TRY the mission began again · END why the tape stopped
+//   MARK what the game came to by a tick, to hold a walk to · FIGURES who stood where by it · TRY the mission began again · END why the tape stopped
 //
 // A hand is kept as it was handed (src/draw/hand.ts), its matrices too, and never made again from a camera: a walk is exact in any browser. A step carries only
 // the numbers that moved since the step before, each as four bytes where four hold it.
 
 /** `version`: a tape of another one is refused */
 export const HANDTAPE = { magic: 0x31485054, version: 1 };
-const START = 1, STEP = 2, ORDER = 3, HANDS = 4, MARK = 5, END = 6, TRY = 7;
+const START = 1, STEP = 2, ORDER = 3, HANDS = 4, MARK = 5, END = 6, TRY = 7, FIGURES = 8;
 const DT = 1, KEYS = 2, WIDE = 4;
 
 /** a part of a start that is the build's own: what it should be, for a walk to hand over its own and be held to it */
@@ -18,10 +18,24 @@ export interface PartOf { name: string; length: number; hash: number }
 export interface TapeStart { build: string; levelName: string; level: Uint8Array; words: string; parts: PartOf[]; seed: number; seats: number; flags: number; commands: Uint8Array }
 /** what the game came to by a tick: rolls made of its die, the hash of its parts' hashes, and the hash of its whole state where that was asked (the dearer one) */
 export interface TapeMark { tick: number; die: number; parts: number; state: number | null }
+/** WHO STANDS WHERE by a tick, and the rounds the player has fired: what came of the play, whatever the module that played it keeps its state in (a mark's hashes are of one module's own layout) */
+export interface TapeFigures { tick: number; shots: number; men: { id: number; x: number; z: number; down: boolean }[] }
+/** metres a man may stand from where he stood, and it is the same play */
+const HAND_BREADTH = 0.1;
+/** the first thing in which two tellings of who stands where are not the same play, in words; null: they are */
+export function figuresPart(a: TapeFigures, b: TapeFigures): string | null {
+  if (a.shots !== b.shots) return `${b.shots} rounds fired, ${a.shots} on the tape`;
+  const men = new Map(b.men.map(m => [m.id, m]));
+  for (const m of a.men) { const n = men.get(m.id); if (!n) return `man ${m.id} is not there`; men.delete(m.id);
+    if (n.down !== m.down) return `man ${m.id} is ${n.down ? 'down' : 'up'}, ${m.down ? 'down' : 'up'} on the tape`;
+    if (Math.hypot(n.x - m.x, n.z - m.z) > HAND_BREADTH) return `man ${m.id} stands at ${n.x} ${n.z}, at ${m.x} ${m.z} on the tape`; }
+  for (const id of men.keys()) return `man ${id} is not on the tape`;
+  return null;
+}
 /** ticks between two marks, and between two that have the whole state */
 export const MARKS = { every: 60, whole: 600 };
 export type TapeRow = { kind: 'step'; tick: number; dt: number; hand: Float64Array; keys: string } | { kind: 'order'; tick: number; bytes: Uint8Array }
-  | { kind: 'hands'; tick: number; plan: Uint8Array } | { kind: 'mark'; mark: TapeMark } | { kind: 'try'; tick: number } | { kind: 'end'; tick: number; why: string };
+  | { kind: 'hands'; tick: number; plan: Uint8Array } | { kind: 'mark'; mark: TapeMark } | { kind: 'figures'; figures: TapeFigures } | { kind: 'try'; tick: number } | { kind: 'end'; tick: number; why: string };
 
 /** FNV-1a over bytes (a part's hash) */
 export function hashOf(b: Uint8Array): number { let h = 0x811c9dc5; for (let i = 0; i < b.length; i++) h = Math.imul(h ^ b[i], 0x01000193); return h >>> 0; }
@@ -70,6 +84,10 @@ export class HandTape {
   /** a hands-off player took the seat, or with no plan gave it back */
   hands(plan: Uint8Array): void { if (!this.over) { this.u8(HANDS); this.bytes(plan); } }
   mark(m: TapeMark): void { if (this.over) return; this.u8(MARK); this.u32(m.tick); this.f64(m.die); this.u32(m.parts); this.u8(m.state === null ? 0 : 1); if (m.state !== null) this.u32(m.state); }
+  figures(f: TapeFigures): void {
+    if (this.over) return; this.u8(FIGURES); this.u32(f.tick); this.u32(f.shots); this.u32(f.men.length); this.room(f.men.length * 13);
+    for (const m of f.men) { this.d.setUint32(this.n, m.id, true); this.d.setFloat32(this.n + 4, m.x, true); this.d.setFloat32(this.n + 8, m.z, true); this.b[this.n + 12] = m.down ? 1 : 0; this.n += 13; }
+  }
   /** the mission began again, the tape goes on */
   again(): void { if (!this.over) { this.u8(TRY); this.began = this.ticks; } }
   /** nothing after this is on the tape */
@@ -119,6 +137,7 @@ export class HandWalk {
 
   private u8(): number { return this.d.getUint8(this.at++); }
   private u32(): number { const v = this.d.getUint32(this.at, true); this.at += 4; return v; }
+  private f32(): number { const v = this.d.getFloat32(this.at, true); this.at += 4; return v; }
   private f64(): number { const v = this.d.getFloat64(this.at, true); this.at += 8; return v; }
   private bytes(): Uint8Array { const n = this.u32(); if (this.at + n > this.b.length) throw new RangeError(); this.at += n; return this.b.slice(this.at - n, this.at); }
   private text(): string { return this.dec.decode(this.bytes()); }
@@ -133,6 +152,7 @@ export class HandWalk {
     if (kind === ORDER) return { kind: 'order', tick, bytes: this.bytes() };
     if (kind === HANDS) return { kind: 'hands', tick, plan: this.bytes() };
     if (kind === MARK) { const at = this.u32(), die = this.f64(), parts = this.u32(); return { kind: 'mark', mark: { tick: at, die, parts, state: this.u8() ? this.u32() : null } }; }
+    if (kind === FIGURES) { const f: TapeFigures = { tick: this.u32(), shots: this.u32(), men: [] }; for (let n = this.u32(); n > 0; n--) f.men.push({ id: this.u32(), x: this.f32(), z: this.f32(), down: this.u8() === 1 }); return { kind: 'figures', figures: f }; }
     if (kind === TRY) return { kind: 'try', tick };
     if (kind === END) return { kind: 'end', tick, why: this.text() };
     if (kind !== STEP) throw new TapeRefused(`this tape has a row of no kind (${kind}) at tick ${tick}`);
@@ -140,7 +160,7 @@ export class HandWalk {
     if (says & DT) this.dt = this.f64();
     if (says & KEYS) this.keys = this.text();
     for (let i = 0; i < hand.length; i++) { const bit = 1 << (i & 31); if (!((i < 32 ? moved0 : moved1) & bit)) continue;
-      if ((i < 32 ? wide0 : wide1) & bit) hand[i] = this.f64(); else { hand[i] = this.d.getFloat32(this.at, true); this.at += 4; } }
+      if ((i < 32 ? wide0 : wide1) & bit) hand[i] = this.f64(); else hand[i] = this.f32(); }
     this.ticks++;
     return { kind: 'step', tick, dt: this.dt, hand, keys: this.keys };
   }
