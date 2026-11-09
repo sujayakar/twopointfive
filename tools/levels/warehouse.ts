@@ -51,7 +51,7 @@
 // floor and the dock, truck bays outside the shutters, the staff's parking by their door). No rugs, no dados, no earth indoors.
 import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef } from './lib/level';
-import type { KitViewData, LevelScenarios, Rect } from '../../src/scene/scenarios';
+import type { KitViewData, LevelScenarios, Rect } from './lib/scenarios';
 import type { SurfacesData } from './lib/levelData';
 import { officeKit, normalize3, OFFICE_PALETTE, type GeneratorTrace } from './lib/officeGen';
 import * as MD from './lib/markingDefaults';
@@ -729,7 +729,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       { id: 'shipping', mat: 'carpet', x0: 30, z0: 4, x1: 36, z1: 8 },
     ],
   };
-  // THE FLOOR NOBODY HOLDS, BY NAME (scene/scenarios.ts PlacesData — words only, nothing in the simulation reads it): what a line on their net, a cue or
+  // THE FLOOR NOBODY HOLDS, BY NAME (lib/scenarios.ts PlacesData — words only, nothing in the simulation reads it): what a line on their net, a cue or
   // the debrief calls a spot that is no room of the structure
   scenarios.places = { areas: [{ name: 'plant room', bounds: { ...R.plant } }, { name: 'locker room', bounds: { ...R.lockers } }, { name: 'break room', bounds: { ...R.brk } }, { name: 'service corridor', bounds: { ...R.ncorr } }, { name: 'staff corridor', bounds: { ...R.wcorr } }] };
   scenarios.kitView = WAREHOUSE_KITVIEW;

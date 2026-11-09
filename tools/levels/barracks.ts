@@ -41,7 +41,7 @@
 // the rooms' numbers as tally bars on the gallery floors. The square stays dark and bare of anything large and pale: a man crossing it must stand out.
 import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef } from './lib/level';
-import type { KitViewData, LevelScenarios, PlacesData, Rect, StructureData } from '../../src/scene/scenarios';
+import type { KitViewData, LevelScenarios, PlacesData, Rect, StructureData } from './lib/scenarios';
 import type { SurfacesData } from './lib/levelData';
 import { officeKit, normalize3, OFFICE_PALETTE, type GeneratorTrace } from './lib/officeGen';
 import * as MD from './lib/markingDefaults';
@@ -745,7 +745,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       // (the galleries and the bunk rooms: the building's lino)
     ],
   };
-  // THE FLOOR NOBODY HOLDS, BY NAME (scene/scenarios.ts PlacesData — words only, nothing in the simulation reads it): what a line on their net, a cue or
+  // THE FLOOR NOBODY HOLDS, BY NAME (lib/scenarios.ts PlacesData — words only, nothing in the simulation reads it): what a line on their net, a cue or
   // the debrief calls a spot that is no room of the structure
   const places: PlacesData = { areas: [{ name: 'duty office', bounds: { ...R.duty } }, { name: 'bunks 1', bounds: { ...R.bunks1 } }, { name: 'bunks 2', bounds: { ...R.bunks2 } }, { name: 'armoury', bounds: { ...R.arms } }, { name: 'bunks 4', bounds: { ...R.bunks4 } }, { name: 'wash room', bounds: { ...R.wash } }, { name: 'armoury gallery', bounds: { ...R.ngal } }, { name: 'wash room gallery', bounds: { ...R.sgal } }, { name: 'yard', bounds: { ...R.yard } }] };
   return { level, scenarios: { roomClear, places, kitView: BARRACKS_KITVIEW, doorNames: DOOR_NAMES }, groups: trace.groups, surfaces };

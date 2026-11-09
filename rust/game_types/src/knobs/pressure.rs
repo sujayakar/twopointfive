@@ -111,7 +111,7 @@ pub struct PressureK {
     /// s between the word and the move: the cue's own length
     #[k(0.9)] pub word_secs: f64,
     /// THE WAY OUT (off: every level as it was; ON under hard — difficulty.ts HARD.wayOut; record rebuild/hard-everywhere/round2-records-pair.md).
-    ///  Only on a floor whose structure asks for it (scene/scenarios.ts StructureData.wayOut — levels/records.json: a pair's building, one man in the first room,
+    ///  Only on a floor whose structure asks for it (tools/levels/lib/scenarios.ts StructureData.wayOut — levels/records.json: a pair's building, one man in the first room,
     ///  every hunter's way in through the one door two rifles are already on). There the men a lost room draws do not walk into it one at a time: they FORM UP
     ///  on ONE door of it — the nearest to the first of them (the `gather` road above, whatever that row says) — and hold it from back off it: `wayOutM` past
     ///  the reach of the can that comes out of a door first (effects.ts bang.dazzleRadius round where it goes off), each with a line to the door, none in

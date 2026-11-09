@@ -17,7 +17,7 @@
 // Built from the 2010s kit (lib/gwotKit.ts): flat colours, boxes only. Regenerate: bun run tools/levels/export.ts snatch
 import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef } from './lib/level';
-import type { LevelScenarios, Rect } from '../../src/scene/scenarios';
+import type { LevelScenarios, Rect } from './lib/scenarios';
 import type { SurfacesData } from './lib/levelData';
 import { officeKit, type GeneratorTrace } from './lib/officeGen';
 import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, GW_PART } from './lib/gwotKit';
@@ -260,7 +260,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       { id: 'hut', mat: 'stone', x0: 29, z0: 6.6, x1: 31.76, z1: 10.4 },
     ],
   };
-  // THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest): the team starts at the level's own south gate, whose two
+  // THE TEAM & KIT PICTURE (lib/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest): the team starts at the level's own south gate, whose two
   // blue leaves stand folded open. A picture anchored on that opening had nothing for the kit that works a leaf (the hammer, the shotgun, a door charge, the
   // wand, a bang or a frag on order all stood idle), so the way is the door the gate leads to: the house's front door across the courtyard. What stands in
   // the camera's way is worked out and sunk by the plan.

@@ -5,7 +5,7 @@ import type { LightDef } from '../../../src/render/lights';
 import type { Box } from '../../../src/scene/boxes';
 import type { MarkingDef } from '../../../src/scene/markings';
 import type { SurfacesData } from './levelData';
-import type { LevelScenarios } from '../../../src/scene/scenarios';
+import type { LevelScenarios } from './scenarios';
 
 export type { LightDef };
 /** a gun by its word, as a level file's routes hand one out */
@@ -151,7 +151,7 @@ export interface Level {
   volumes?: VolumeDef[];
   /** named marks (LevelData v2 marks[], M3 of docs/design/level-scripting.md — nothing authors them yet: a script declares its own with literals until then) */
   marks?: MarkDef[];
-  /** what the playtest SCENARIOS take from this level (scene/scenarios.ts: the room clear's rooms, the rescue's hostage room and marks, where the team starts) —
+  /** what the playtest SCENARIOS take from this level (lib/scenarios.ts: the room clear's rooms, the rescue's hostage room and marks, where the team starts) —
    *  the level file's own `scenarios` block. Absent = no scenario can be staged on this level */
   scenarios?: LevelScenarios;
   /** what is underfoot (rust/game_rules/src/floor: which footstep, how far it carries) — the level file's own `surfaces` block, attached by loadLevel NON-ENUMERABLY (it is

@@ -1,14 +1,13 @@
 // What a SCENARIO needs from the level it is played on, as data (Level.scenarios — the level file's own `scenarios` block, docs/level-format.md 'Scenarios'; for the
 // office included: its block is written into levels/office.json from tools/levels/lib/officeScenarios.ts by its generator). The three playtest scenarios — the night breach (rust/game_rules/src/nightbreach), the room clear (rust/game_rules/src/roomclear,
 // with the pair or the four) and the hostage rescue (rust/game_rules/src/rescue + rust/game_rules/src/rescueflow) — read their rooms, doors, marks and team start from here and from nowhere
-// else, so a level that carries a block is a level they run on. Types, and one pure function (scenarioQuery): nothing here imports the game.
+// else, so a level that carries a block is a level they run on. Types: nothing here imports the game.
 //
 // Door names are the level's own door ids (Doors.byName); light groups are its switchable groups (Game.setGroup); every point is world metres on the floor (y 0)
 // unless it is something a gun rests on (y ≈ 1.1). What the data must satisfy against the floor is checked in the game, headless: rust/game_rules/src/roomclear check_structure,
 // rust/game_rules/src/rescue check_rescue, rescueflow RescueFlow.check — levels stands runs all three on a level file.
-import type { Vec3 } from '../math/vec';
+import type { Vec3 } from '../../../src/math/vec';
 import type { BoxData, DoorData, LightData } from './levelRows';   // (types only, erased: a kit view SET is written in the level format's own records)
-import type { HourId, WeatherKind } from './words';
 
 export interface Rect { x0: number; x1: number; z0: number; z1: number }
 
@@ -500,69 +499,3 @@ export interface LevelScenarios { nightBreach?: NightBreachData; roomClear?: Str
   walked?: WayHint[] }
 /** a way the author adds: from a named thing to a named thing; `weight` = how many ways it counts as (absent: one) */
 export interface WayHint { from: string; to: string; weight?: number }
-
-/** THE MISSION LIST'S GROUPS (ui/missions.ts draws a heading per group — the maintainer, 10-10: 'we can build out a few levels in groups. a tutorial group
- *  for all the gameplay systems could be good too'; 10-11: 'can we also reorganize the missions into nicer groups?'), in the order the list shows them. A
- *  group is a KIND OF PLAY, every mission is under exactly one, and none DRAWS more than eight (a row cut from the list, `offList`, is in the table and not counted). SHOW, NOT TELL: a heading is a
- *  word or two; `line` is its tooltip, never drawn. A group with no row draws nothing. */
-export type MissionGroup = 'tutorial' | 'raids' | 'strongholds' | 'clock' | 'quiet-alone' | 'quiet-two';
-
-/** One row of a scenario list (what a picker shows and a URL starts): which kind, how many teammates, on which level file. THE SMALLEST SHAPE — nothing reads it
- *  in the game yet; `scenarioQuery` is how a row becomes the page's query string. */
-export interface ScenarioEntry {
-  id: string; title: string;
-  kind: 'nightbreach' | 'roomclear' | 'rescue' | 'quiet';
-  /** teammates: the pair or the four (the rescue is the pair's as built); a quiet mission's is nobody or one partner */
-  squad: 0 | 1 | 2 | 4;
-  /** which heading of the mission list it sits under (MISSION_GROUPS; absent = by what it is — ui/missions.ts groupOf: quiet by its team, a rescue 'clock', else 'raids') */
-  group?: MissionGroup;
-  /** this row deploys at ITS OWN SIZE and no other, as a Training row does: the line every other size shows greyed on the loadout screen (rust/game_rules/src/loadout
-   *  squadChoices). A design call, not an inability: the level still stages any size from a URL */
-  only?: string;
-  /** a lesson THE PLAYER PACKS FOR (rust/game_rules/src/kit ISSUE.picked): its Team & kit step shows the cards and its page stages what this machine keeps, not the plain issue
-   *  every other lesson is played with. `frags` = the least of them he carries there whatever
-   *  he packs (rust/game_rules/src/kit kit_lesson_page: a step of that mission asks for one of his own) */
-  packs?: { frags?: number };
-  /** a file under levels/ (absent = the bundled office) */
-  level?: string;
-  /** THE ROW'S OWN HOUR AND WEATHER (rust/game_rules/src/rowset, ROWSET.on): what a visit to this row is always started in — a tutorial mission's level is built for one
-   *  hour and one sky (a fuel halt at dusk in dust, a plan laid by day). They win over the link's `hour=` / `weather=`, and the mission sheet draws no Hour
-   *  or Weather row for such a row. Absent (every row but those): the visitor's pick, else the level's own night and weather, as ever. A weather a level can
-   *  be STARTED in: never 'snow' (a level built for snow keeps its own and names none). Types only: nothing here imports the game */
-  hour?: HourId; weather?: Exclude<WeatherKind, 'snow'>;
-  /** the room clear's placement seed · a quiet mission's deal, pinned (absent: dealt from the page's die on every start) */
-  seed?: number;
-  /** the picker's one line under the title: what the scenario is for (scene/scenarioList.ts; absent = the title alone) */
-  blurb?: string;
-  /** A TUTORIAL MISSION'S OPENING CARD (ui/loadbrief.ts; display only): where we are and why, in a sentence or two · what this mission teaches, one short
-   *  line a thing, five at most — the things, not their keys (the keys are each step's own line) */
-  scene?: string; teaches?: string[];
-  /** the picker tags the row 'untuned': it runs, nobody has balanced it */
-  untuned?: boolean;
-  /** CUT FROM THE MISSION LIST (the maintainer's tap, 2026-10-13: 'Three' — the four-man office room clear and both yard rows, then the block's three-squads row): the row stays in this table,
-   *  so its id, its own address, its level file and every check that names it hold as they were; no list draws it (ui/missions.ts listedMissions;
-   *  `?offlist=0` draws it again). Two of the tutorial's rows since 2026-10-26 (plan mode's mission and the tactics mission): a cut lesson is nobody's next
-   *  lesson either (ui/verdictNext.ts) */
-  offList?: boolean;
-  /** DISPLAY ONLY — the mission list's sheet (ui/missions.ts); nothing in the game reads these three. Where it is, in a few words */
-  place?: string;
-  /** which way the run leans: sneaking, shooting, or the player's choice */
-  lean?: 'quiet' | 'loud' | 'either';
-  /** how many men hold the floor against the team as the row stages it (tools/qa missions probe boots each row and counts) */
-  defenders?: number;
-  /** DISPLAY ONLY — THE WAYS IN, named for the mission sheet's 'Way in' row (ui/missions.ts): the level's own team start first, then each of its
-   *  `scenarios.roomClear.starts` in the file's order. Absent = one way in, no choice. */
-  ways?: readonly string[];
-  /** DISPLAY ONLY — the level's file names defender SQUADS (`scenarios.roomClear.squads`): the mission sheet and the short list then word Hard as the squads' own
-   *  there, never the one pool's (rust/game_rules/src/difficulty `squadsOf`). Absent = one pool. */
-  squads?: boolean;
-}
-/** the query string that boots an entry: `?levelFile=<file>&roomclear=<seed>&squad4` */
-export function scenarioQuery(e: ScenarioEntry): string {
-  const q: string[] = [];
-  if (e.level) q.push(`levelFile=${encodeURIComponent(e.level)}`);
-  q.push((e.kind === 'roomclear' || e.kind === 'quiet') && e.seed !== undefined ? `${e.kind}=${e.seed}` : e.kind);
-  if (e.kind === 'quiet') { if (e.squad === 1) q.push('squad=1'); }   // (alone is the kind's own size: no key)
-  else if (e.squad === 4) q.push(e.kind === 'rescue' ? 'squad=4' : 'squad4');   // (the rescue reads the loadout's count, never the room clear's flag)
-  return '?' + q.join('&');
-}

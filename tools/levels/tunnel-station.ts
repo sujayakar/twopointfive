@@ -44,7 +44,7 @@
 import type { Vec3 } from '../../src/math/vec';
 import { pickupLens, coated } from './lib/carShapes';
 import type { Level, LevelDoorDef } from './lib/level';
-import type { LessonData, LevelScenarios, Rect, StructureData } from '../../src/scene/scenarios';
+import type { LessonData, LevelScenarios, Rect, StructureData } from './lib/scenarios';
 import type { SurfacesData } from './lib/levelData';
 import { officeKit, normalize3 as norm, type GeneratorTrace } from './lib/officeGen';
 import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, type GwotOpening } from './lib/gwotKit';

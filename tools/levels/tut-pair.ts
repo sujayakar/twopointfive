@@ -60,7 +60,7 @@
 //   · THE WORLD is 40 × 28 m (scene/world.ts): the yard is as big as that leaves a road on either side of it.
 import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef, DeviceDef } from './lib/level';
-import type { LevelScenarios, LessonData, QuietData, Rect } from '../../src/scene/scenarios';
+import type { LevelScenarios, LessonData, QuietData, Rect } from './lib/scenarios';
 import type { SurfacesData } from './lib/levelData';
 import { officeKit, normalize3 as norm, type GeneratorTrace } from './lib/officeGen';
 import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, GW_SHELL } from './lib/gwotKit';

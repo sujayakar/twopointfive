@@ -40,7 +40,7 @@
 // on every deal; seen drawn once, on the software renderer.
 import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef, DeviceDef, CivilianDef, PatrolRoute } from './lib/level';
-import type { LevelScenarios, QuietData, Rect, ResponseData } from '../../src/scene/scenarios';
+import type { LevelScenarios, QuietData, Rect, ResponseData } from './lib/scenarios';
 import type { SurfacesData } from './lib/levelData';
 import { officeKit, normalize3 as norm, type GeneratorTrace } from './lib/officeGen';
 import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS } from './lib/gwotKit';
@@ -662,7 +662,7 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
     { name: 'bread oven', bounds: { x0: 8.6, x1: 13.4, z0: 4.12, z1: 7.88 } }, { name: 'lorry', bounds: { x0: 13.6, x1: 20.4, z0: 18.6, z1: 21.88 } },
     { name: 'alley', bounds: { x0: 4.12, x1: 32.4, z0: 4.12, z1: 7.88 } }, { name: 'street', bounds: { x0: 4.12, x1: 35.88, z0: 16.12, z1: 21.88 } },
   ] };
-  // THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest): the south gate from the lane outside it (the third start's side), the
+  // THE TEAM & KIT PICTURE (lib/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest): the south gate from the lane outside it (the third start's side), the
   // street's stalls and awnings over the wall behind the man.
   const kitView = { ways: [{ door: 'gate_s', ref: [22.4, 25.4], side: -1 }] };
   // WHO COMES WHEN THE STREET GOES LOUD (scenarios.response — rust/game_rules/src/qrf, rust/game_start/tests/response_team.rs): the town is under curfew and a patrol is never far.
