@@ -1,5 +1,5 @@
 // THE BENCHMARK (ui/bench.ts; title ▸ Extras ▸ Benchmark, or ?bench on the address), on a page that draws a game it does not hold: a page a scene, each a real mission taken by the module's
-// hands-off player (rust/game_run hands_off.rs).
+// hands-off player (rust/game_start hands_off.rs).
 import type { Engine } from '../engine';
 import type { Gpu } from '../gpu/device';
 import type { Input } from './input';
