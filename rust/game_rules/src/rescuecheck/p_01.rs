@@ -44,14 +44,7 @@ pub fn loud_heard(g: &Game, gd: GuardId) -> f64 {
     h.shots + h.kick + h.bang
 }
 
-/// His row on the room fight's roster.   (rescuecheck.ts defOf)
-pub fn def_of(g: &Game, gd: GuardId) -> Option<RoomfightDefId> {
-    for i in 0..g.fight.defs.len() {
-        let d = g.fight.defs[i];
-        if g.tab.roomfight_def[d].gd == gd { return Some(d); }
-    }
-    None
-}
+pub use crate::roomfight::def_of;
 
 /// A line on their net: its class on the team's strip, a row of the debrief unless it is the routine check.   (rescuecheck.ts net)
 pub fn net(g: &mut Game, gd: GuardId, text: &str, cls: Option<f64>, chron: Option<bool>) {
@@ -362,23 +355,15 @@ pub fn tick_out(g: &mut Game, cast: &[CastItem], fight: bool) {
         let victim = g.gd[down].callsign.clone();
         let breathing = crate::game::is_breathing(g, down);
         g.gd[gd].witness.saw_body = Some(crate::game::WitnessSawBody { victim, breathing });
-        if g.gd[gd].script.is_some() { crate::squad::end_guard_script(g, gd, Some(crate::squad::EndGuardScriptState::Alert)); }
+        crate::roomfight::loose(g, gd, "rescuecheck");
         {
             crate::mind::set_state(g, gd, crate::game::GuardState::Alert, "rescuecheck");
             crate::mind::set(g, gd, 1.0, "rescuecheck");
             g.gd[gd].react_t = 0.0;
         }
-        crate::control::set_hold(g, gd, false, "rescuecheck"); crate::control::set_pinned(g, gd, false, "rescuecheck");
         crate::belief::word(g, gd, [body[0], 0.0, body[2]]);
         crate::guards::reset_chase(g, gd);
         // (the way the rescue lets a roamer go: he stays on the room fight's roster and holds again where he ends up)
-        let now = g.time;
-        {
-            let def = &mut g.tab.roomfight_def[d];
-            def.mode = crate::roomfight::DefMode::Free;
-            def.free_at = now;
-            def.rally_at = f64::NAN;
-        }
         net(g, gd, &format!("man down, {} — they're inside!", place), Some(1.0), None);
         let why = format!("{} on the floor in his eye, {} m off: roused, and his own from here", g.gd[down].callsign, js::to_fixed(flat(g.ch[g.gd[gd].ch].pos, body), 1));
         event(g, RescueCheckEventWhat::Found, Some(gd), &why);

@@ -78,11 +78,6 @@ pub fn wall_react_live(g: &Game) -> bool {
     g.m.wallreact.wall_react.unsub && g.ai_enabled && !g.quiet_utility && !g.touring
 }
 
-/// (wallreact.ts WallReact.defOf)
-pub fn wall_react_def_of(g: &Game, gd: GuardId) -> Option<RoomfightDefId> {
-    g.fight.defs.iter().copied().find(|d| g.tab.roomfight_def[*d].gd == gd)
-}
-
 /// a restart: nothing known, nobody owed a move   (wallreact.ts WallReact.reset)
 pub fn wall_react_reset(g: &mut Game) {
     let s = &mut g.m.wallreact.wall_react;
@@ -255,7 +250,7 @@ pub fn wall_react_sweep(g: &mut Game) {
     for b in breaches_of(g) {
         for gd in g.tab.wallreact_breach[b].men.keys() {
             if is_dead(g, gd) { continue; }
-            if let Some(d) = wall_react_def_of(g, gd) {
+            if let Some(d) = crate::roomfight::def_of(g, gd) {
                 let row = &g.tab.roomfight_def[d];
                 if row.mode == crate::roomfight::DefMode::Hold && g.time - row.moved_at > retry {
                     let at = pos_of(g, gd);
@@ -790,7 +785,7 @@ pub fn wall_react_through(g: &Game, b: WallreactBreachId, p: V3, q: V3) -> bool 
 /// roomfight.ts applyWatch: a breach he knows, has a line to and has more against than the door `pt` is on, takes it   (wallreact.ts WallReact.look)
 pub fn wall_react_look(g: &mut Game, gd: GuardId, pt: &mut V3) {
     match g.m.wallreact.wall_react.minds.get(gd) { Some(mind) if !mind.is_empty() => {} _ => return }
-    let d = match wall_react_def_of(g, gd) {
+    let d = match crate::roomfight::def_of(g, gd) {
         Some(d) if g.tab.roomfight_def[d].mode == crate::roomfight::DefMode::Hold => d,
         _ => { g.m.wallreact.wall_react.watching.delete(gd); return; }
     };
@@ -1146,7 +1141,7 @@ pub fn wall_react_reconsider1(g: &mut Game, p: &mut Pend) -> (WallReactReconside
     };
     let (threat, pb) = (q.threat, q.x.b);
     let others: Vec<V3> = g.guards.iter().copied().filter(|o| *o != gd && !is_dead(g, *o)).map(|o| pos_of(g, o)).collect();
-    if let Some(d) = wall_react_def_of(g, gd) {
+    if let Some(d) = crate::roomfight::def_of(g, gd) {
         let mode = g.tab.roomfight_def[d].mode;
         if mode != DefMode::Hold {
             let r = if mode == DefMode::Move { R::Fine } else { shift_word(wall_react_shift(g, gd, threat, pb, &others)) };
@@ -1169,22 +1164,10 @@ pub fn wall_react_reconsider1(g: &mut Game, p: &mut Pend) -> (WallReactReconside
             }
         };
         let now = g.time;
-        let row = &mut g.tab.roomfight_def[d];
-        row.mode = DefMode::Move;
-        row.move_kind = crate::roomfight::DefMoveKind::Cover;
-        row.came_by = None;
-        row.move_t = 0.0;
-        row.stall_at = v3::copy(c);
-        row.stall_t = 0.0;
-        row.moved_at = now;
-        crate::control::set_pinned(g, gd, false, "wallreact");
+        g.tab.roomfight_def[d].moved_at = now;
         g.m.wallreact.wall_react.watching.delete(gd);
-        let patch = crate::squad::OrderPatch {
-            goal: Some(Some(to)), speed: Some(Some(g.tune.guard_chase)), face: Some(None), strafe: Some(Some(false)), aim_at: Some(None),
-            upper: Some(Some(crate::character::UpperMode::Aim)), stance: Some(Some(crate::character::Stance::None)), crouch: Some(Some(true)),
-            ..Default::default()
-        };
-        crate::squad::order(g, gd, patch);
+        let pace = g.tune.guard_chase;
+        crate::roomfight::send(g, d, crate::roomfight::Leg { cover: true, ..crate::roomfight::Leg::to(to, pace) }, "wallreact");
         g.fight.stats.took_cover += 1.0;
         let who = g.gd[gd].callsign.clone();
         g.fight.log.push(crate::roomfight::FightNote { t: now, who, what: String::from("his cover is gone: takes cover") });

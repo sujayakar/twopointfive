@@ -949,31 +949,8 @@ fn tick_man(g: &mut Game, gd: GuardId, dt: f64) {
             n.whip_at = None;
             g.stats.netquiet.backs += 1;
             // the room fight's own scripted leg, walked backwards, his gun on the doors
-            let here = pos_of(g, gd);
-            let def = &mut g.tab.roomfight_def[d];
-            def.mode = crate::roomfight::DefMode::Move;
-            def.move_kind = crate::roomfight::DefMoveKind::Fallback;
-            def.came_by = None;
-            def.move_t = 0.0;
-            def.stall_at = v3::copy(here);
-            def.stall_t = 0.0;
-            def.rally_at = f64::NAN;
-            crate::control::set_pinned(g, gd, false, "netquiet");
-            crate::squad::order(
-                g,
-                gd,
-                crate::squad::OrderPatch {
-                    goal: Some(Some(v3::copy(to))),
-                    speed: Some(Some(k.back_speed)),
-                    face: Some(Some(a.yaw)),
-                    strafe: Some(Some(true)),
-                    aim_at: Some(Some([to[0] + m::sin(a.yaw) * 6.0, 1.1, to[2] + m::cos(a.yaw) * 6.0])),
-                    upper: Some(Some(crate::character::UpperMode::Aim)),
-                    stance: Some(Some(crate::character::Stance::None)),
-                    crouch: Some(Some(false)),
-                    ..Default::default()
-                },
-            );
+            let aim = [to[0] + m::sin(a.yaw) * 6.0, 1.1, to[2] + m::cos(a.yaw) * 6.0];
+            crate::roomfight::send(g, d, crate::roomfight::Leg { face: Some(a.yaw), aim: Some(aim), ..crate::roomfight::Leg::to(to, k.back_speed) }, "netquiet");
         } else {
             settle(g, gd, d);
         }

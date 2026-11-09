@@ -139,7 +139,7 @@ pub fn rescue_clock(g: &mut crate::game::Game, dt: f64) {
             if !(flat(pa, cp) <= flat(pb, cp)) { v = b; }
         }
         let at = chest_of(g, v);
-        let def = g.fight.defs.iter().copied().find(|&d| g.tab.roomfight_def[d].gd == cap);
+        let def = crate::roomfight::def_of(g, cap);
         if let Some(d) = def { g.fight.defs.retain(|&x| x != d); }
         let held = g.gd[cap].hold;
         crate::control::set_hold(g, cap, false, "rescue");

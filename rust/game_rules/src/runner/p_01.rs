@@ -562,7 +562,7 @@ pub fn tell(g: &mut crate::game::Game, gd: GuardId) {
         let o = g.guards[i];
         i += 1;
         if !mate_of(g, gd, o) || flat(g.ch[g.gd[o].ch].pos, g.ch[g.gd[gd].ch].pos) > told_m { continue; }
-        let d = g.fight.defs.iter().copied().find(|x| g.tab.roomfight_def[*x].gd == o);
+        let d = crate::roomfight::def_of(g, o);
         let on_post = match d { Some(_) => crate::roomfight::room_fight_told(g, o, from), None => false };
         if on_post {
             crate::digin::dig_in_order(g, d.unwrap(), from, tell_beat);
