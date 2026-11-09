@@ -1,8 +1,7 @@
-//! WHAT THE GAME TELLS A PICTURE of its sky, its air and how the scene is taken (hours/told.rs), for each hour under each weather and for the show's day, against the
+//! WHAT THE GAME TELLS A PICTURE of its sky, its air and how the scene is taken (hours/told.rs) for each hour under each weather, against the
 //! numbers a picture's settings held on the last build whose rules wrote them (told_numbers.json: the zenith, the horizon, the haze, the exposure, the gloss as 0 or 1).
 //! A FAILURE MEANS: a picture is shown another sky at that hour than it was.
 use game::hours::{apply_hour, told::told, HourId};
-use game::lighting::set_daylight;
 use game_start::play::{Opts, Play};
 
 fn said(p: &Play) -> Vec<f64> {
@@ -34,17 +33,11 @@ fn a_picture_is_told_the_sky_each_hour_had() {
                 apply_hour(&mut p.g, HourId::Night);
                 p.frame();
                 got.push(("midday, then the night".into(), said(&p)));
-                set_daylight(&mut p.g, true);
-                p.frame();
-                got.push(("the show's day".into(), said(&p)));
-                set_daylight(&mut p.g, false);
-                p.frame();
-                got.push(("the show's day, then the night".into(), said(&p)));
             }
         }
     }
     let want = wanted();
-    assert_eq!(want.len(), 23, "the table's stands");
+    assert_eq!(want.len(), 21, "the table's stands");
     let mut off = vec![];
     for (k, v) in &want {
         let g = &got.iter().find(|x| &x.0 == k).unwrap_or_else(|| panic!("no stand {k}")).1;
@@ -60,22 +53,6 @@ fn a_level_with_a_sky_of_its_own_is_told_it() {
     let t = told(&p.g);
     assert_eq!((t.zenith, t.horizon), ([0.007, 0.012, 0.024], [0.018, 0.024, 0.039]));
     assert_eq!(t.haze, game::hours::NIGHT_HAZE);
-}
-
-/// The show's day over an hour is the day's; taken off, the hour's stands again.
-#[test]
-fn the_show_s_day_over_an_hour_is_the_day_s() {
-    let mut p = stood("office.json", "&hour=dusk");
-    p.run(0.5);
-    let dusk = said(&p);
-    let day = p.g.level.daylight.as_ref().expect("the office has a day").clone();
-    set_daylight(&mut p.g, true);
-    p.frame();
-    let t = told(&p.g);
-    assert_eq!((t.zenith, t.horizon, t.haze, t.exposure), (day.sky.zenith, day.sky.horizon, day.haze, day.exposure));
-    set_daylight(&mut p.g, false);
-    p.frame();
-    assert_eq!(said(&p), dusk, "the day taken off leaves the hour");
 }
 
 /// A kit stage's own sky is what its picture is told, and it comes off the world's own.

@@ -82,22 +82,6 @@ export interface BreachPlan extends RoomClearPlan {
  *  middle (from → to, ~0.3 s), `corner` = waypoints on to his point of domination (last), `podFace` = the body yaw held there, `cornerAim` = the sweep that
  *  clears HIS corner on the way (sector edge → … → into the corner itself), `hold` = where the muzzle rests once he owns his sector (for #2: the next door). */
 export interface BreachFlow { into: Vec3[]; centre: [Vec3, Vec3]; corner: Vec3[]; podFace: number; cornerAim: Vec3[]; hold: Vec3 }
-/** The daytime lighting variant the breach showcase swaps in (rust/game_rules/src/lighting set_daylight): one directional SUN raking in through the south and lobby glazing, a
- *  lifted blue-white sky, every interior fixture group lit (it is ten in the morning: the fluorescents are all on), the street lighting and the moon out, a touch
- *  more haze so the window shafts read. Reversible by construction: setDaylight(false) puts every switch, light and sky value back as it found them. */
-export interface DaylightDef {
-  sun: LightDef;
-  sky: { zenith: Vec3; horizon: Vec3 };
-  /** light-target groups switched fully on / fully off for the day (rust/game_rules/src/game LightTarget.group) */
-  groupsOn: string[]; groupsOff: string[];
-  /** individual analytic lights disabled outright (the moon: it is a level light with no target of its own) */
-  lightsOff: string[];
-  /** engine.settings.hazeDensity while it is day (the night's is 0.035) */
-  haze: number;
-  /** engine.settings.exposure while it is day — the operator opens up for an interior lit to office levels and lets the sun patches run hot, as a camera indoors
-   *  by day does (the night's 2.0 comes back with the rest) */
-  exposure: number;
-}
 
 /** locked: a keyed lever set, cylinder on the corridor face (rust/game_rules/src/doors DoorDef.locked — guards carry keys; the player picks it or kicks it in, or takes a key off a man he
  *  questions; the room side always opens). lock: which key turns it (rust/game_rules/src/doors DoorDef.lock) — absent = the floor key; every keyed door here takes that one. */
@@ -165,12 +149,7 @@ export interface Level {
   breaker: { pos: Vec3; boxes: number[]; fumble?: number };
   beacons: { pos: Vec3; box: number }[];
   sky: { zenith: Vec3; horizon: Vec3 };
-<<<<<<< HEAD
-  /** the daytime variant (optional: the viewer's stage has none) and the breach drill's plan (rust/game_rules/src/breach BreachDrill) */
-  daylight?: DaylightDef;
-=======
   /** the breach drill's plan (optional; rust/game_rules/src/breach BreachDrill) */
->>>>>>> 54ba3b739 (squash! The show nothing starts leaves the rules, the level scripts and the page)
   breach?: BreachPlan;
   /** the base texel (m) the level's marking bitmaps were generated for (scene/markings.ts; absent = MARKING_TEXEL 0.025) — host/drawpage.ts hands it to the engine */
   markTexel?: number;

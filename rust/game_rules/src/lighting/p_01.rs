@@ -126,8 +126,7 @@ pub fn update_targets(g: &mut crate::game::Game, dt: f64) {
         crate::game::game_say(g, near.unwrap(), "breaker's back on", Some(true), None, None);
         mains_back(g);
     }
-    // ---- THE PICTURE, FROM THE STATE (lighting.ts:85-92). Kept though the picture is its reader: set_daylight reads a row lamp's `enabled` (lighting.ts:199),
-    // and the fog's memory of a lamp's face reads the boxes' `emissive` (fogofwar.ts:829), so both are written as the TypeScript writes them.
+    // ---- THE PICTURE, FROM THE STATE. Written though the picture is its reader: the fog's memory of a lamp's face reads the boxes' `emissive`.
     crate::sim_lightshome::light_home_paint(g);
     let mut k = 0;
     while k < g.targets.len() {
@@ -401,114 +400,6 @@ pub fn set_group(g: &mut crate::game::Game, group: &str, on: bool) {
             light_in(g, ::sim::lights::IN_ON, Some(t), if on { 1.0 } else { 0.0 }, 0.0, 0.0, 0.0);
         }
         i += 1;
-    }
-}
-
-/// Is the daytime variant in (setDaylight)?   (lighting.ts isDaylight)
-pub fn is_daylight(g: &crate::game::Game) -> bool {
-    g.m.lighting.day_states.is_some()
-}
-
-/// Swap the level's daytime variant in (on) or back out (off). Off restores exactly what On recorded.   (lighting.ts setDaylight)
-pub fn set_daylight(g: &mut crate::game::Game, on: bool) {
-    if on {
-        if g.m.lighting.day_states.is_some() {
-            return;
-        }
-        let d = match g.level.daylight.clone() {
-            Some(d) => d,
-            None => return,
-        };
-        let hour = crate::hours::hour_of(g);
-        let hour_sun_k = crate::hours::sun_strength(g);
-        let hour_sun_given = crate::hours::sun_given(g);
-        if hour != crate::hours::HourId::Night {
-            crate::hours::apply_hour(g, crate::hours::HourId::Night);
-        }
-        let blackout = if crate::sim_lightshome::mains_active(g) && crate::sim_lightshome::mains_permanent(g) {
-            Some(crate::lighting::DayStateBlackout {
-                until: crate::sim_lightshome::mains_until(g),
-                since: crate::sim_lightshome::mains_since(g),
-            })
-        } else {
-            None
-        };
-        if crate::sim_lightshome::mains_active(g) {
-            crate::game::game_end_blackout(g);
-            // (`bo` is a live view in the TypeScript: until and since are read AFTER the mains came back)
-            let until = crate::sim_lightshome::mains_until(g);
-            let since = crate::sim_lightshome::mains_since(g);
-            light_in(g, ::sim::lights::IN_MAINS, None, 0.0, until, since, -100.0);
-            let mut i = 0;
-            while i < g.targets.len() {
-                let t = g.targets[i];
-                light_in(g, ::sim::lights::IN_BLIND, Some(t), -1.0, 0.0, 0.0, 0.0);
-                i += 1;
-            }
-        }
-        let sun = crate::render_lights::light_from_def(g, &d.sun);
-        let sun = crate::render_lights::light_set_add(g, sun);
-        let mut st = crate::lighting::DayState {
-            hour,
-            hour_sun_k,
-            hour_sun_given,
-            targets: JsMap::new(),
-            lights_off: Vec::new(),
-            sun,
-            blackout,
-        };
-        let mut i = 0;
-        while i < g.targets.len() {
-            let t = g.targets[i];
-            let was = crate::sim_lightshome::fixture_on(g, t);
-            st.targets.set(t, was);
-            i += 1;
-        }
-        for grp in d.groups_on.iter() {
-            set_group(g, grp, true);
-        }
-        for grp in d.groups_off.iter() {
-            set_group(g, grp, false);
-        }
-        let mut i = 0;
-        while i < g.engine.lights.lights.len() {
-            let l = g.engine.lights.lights[i];
-            if d.lights_off.contains(&g.tab.light[l].name) && g.tab.light[l].enabled {
-                g.tab.light[l].enabled = false;
-                crate::sim_lightshome::light_home_feed(g, l);
-                st.lights_off.push(l);
-            }
-            i += 1;
-        }
-        g.m.lighting.day_states = Some(st);
-        crate::host_api::host_api_invalidate_world_cache(g);
-    } else {
-        let cur = match g.m.lighting.day_states.clone() {
-            Some(cur) => cur,
-            None => return,
-        };
-        for (t, was) in cur.targets.iter() {
-            light_in(g, ::sim::lights::IN_ON, Some(t), if *was { 1.0 } else { 0.0 }, 0.0, 0.0, 0.0);
-        }
-        for &l in cur.lights_off.iter() {
-            g.tab.light[l].enabled = true;
-            crate::sim_lightshome::light_home_feed(g, l);
-        }
-        crate::render_lights::light_set_remove(g, cur.sun);
-        if let Some(b) = cur.blackout {
-            if !crate::sim_lightshome::mains_active(g) {
-                let restored = crate::sim_lightshome::mains_restored_at(g);
-                let word = (::sim::lights::M_ACTIVE | ::sim::lights::M_PERMANENT) as f64;
-                light_in(g, ::sim::lights::IN_MAINS, None, word, b.until, b.since, restored);
-                light_in(g, ::sim::lights::IN_FIX, None, 0.0, 0.0, 0.0, 0.0);
-            }
-        }
-        g.m.lighting.day_states = None;
-        if cur.hour != crate::hours::HourId::Night {
-            crate::hours::apply_hour(g, cur.hour);
-            crate::hours::set_sun_strength(g, cur.hour_sun_k, Some(cur.hour_sun_given));
-        }
-        crate::host_api::host_api_invalidate_world_cache(g);
     }
 }
 

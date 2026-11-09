@@ -430,15 +430,6 @@ impl<'a> Rules<'a> {
             self.a_box(&w, &b.box_);
             if self.boxes.contains(b.box_.as_str()) && !self.switched.contains_key(b.box_.as_str()) { self.say(w, format!("'{}' is no switchable's box (the beam goes with that fixture)", b.box_)); }
         }
-        if let Some(d) = &f.daylight {
-            self.lamp("daylight.sun", &d.sun, &BTreeSet::new());
-            if d.sun.kind != LightDataKind::Dir { self.say("daylight.sun.kind", "dir"); }
-            self.text("daylight.sun.id", &d.sun.id);
-            for (k, l) in [("groupsOn", &d.groups_on), ("groupsOff", &d.groups_off)] { for w in l { self.text(format!("daylight.{k}"), w); } }
-            for id in &d.lights_off { if !self.lights.contains(id.as_str()) { self.say("daylight.lightsOff", format!("no light of the level is called '{id}'")); } }
-            if d.haze < 0.0 { self.say("daylight.haze", "0 or more"); }
-            if d.exposure <= 0.0 { self.say("daylight.exposure", "over 0"); }
-        }
     }
 
     // ---- the drills' plans

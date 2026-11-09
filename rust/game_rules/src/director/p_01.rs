@@ -200,10 +200,6 @@ fn lint_with_routes(m: &Manifest, level: &LintManifestLevel, route_names: &[Stri
             err(&mut out, format!("light group '{}' is not in the level (groups: {})", id, names.join(", ")));
         }
     }
-    for id in m.variants.iter() {
-        if id != "daylight" { err(&mut out, format!("variant '{}' unknown", id)); }
-        else if level.daylight.is_none() { err(&mut out, String::from("variant 'daylight': the level has no daylight block")); }
-    }
     for (pn, p) in m.programs.iter() {
         if p.beats.is_empty() { warn(&mut out, format!("program '{}' declares no beats", pn)); }
         if !p.triggers.iter().any(|t| t.kind == TriggerDefKind::Start) && p.triggers.is_empty() {
@@ -254,7 +250,6 @@ mod tests {
     fn d_device(manifest: &mut Manifest, id: &str) { manifest.devices.add(id.into()); }
     fn d_plan(manifest: &mut Manifest, id: &str) { manifest.plans.set(id.into(), if id == "breach" { PlanKind::Breach } else { PlanKind::RoomClear }); }
     fn d_light_group(manifest: &mut Manifest, id: &str) { manifest.groups.add(id.into()); }
-    fn d_variant(manifest: &mut Manifest, id: VariantRefId) { manifest.variants.add(id.as_str().into()); }
     fn d_expect_order(manifest: &mut Manifest, program: &str, beats: &[String]) {
         manifest.expects.push(ManifestExpectsItem { kind: ManifestExpectsItemKind::Order, program: Some(program.into()), ..ManifestExpectsItem::default() });
     }
@@ -345,7 +340,6 @@ mod tests {
         manifest_loadout(&mut manifest, "l1", LoadoutSpec { team: crate::teams::Team::Player, tint: Some([2.0, 0.0, 0.0]), tint2: Some([0.0, 0.0, 0.0]), ..LoadoutSpec::default() });
         manifest_loadout(&mut manifest, "l2", LoadoutSpec { team: crate::teams::Team::Guard, ..LoadoutSpec::default() });
         for id in ["ceil", "security", "gone"] { d_light_group(&mut manifest, id); }
-        d_variant(&mut manifest, VariantRefId::Daylight);
         manifest.programs.set("empty".into(), ProgramDef { name: "empty".into(), ..ProgramDef::default() });
         let mut p = ProgramDef { name: "p".into(), ..ProgramDef::default() };
         program_on_start(&mut p, "x");
@@ -391,7 +385,6 @@ mod tests {
             (LintProblemLevel::Error, "loadout 'l1': team 'player' cannot be spawned (guard / operative / hostile)"),
             (LintProblemLevel::Error, "loadout 'l1': tint out of range"),
             (LintProblemLevel::Error, "light group 'gone' is not in the level (groups: ceil, desk, security, yard)"),
-            (LintProblemLevel::Error, "variant 'daylight': the level has no daylight block"),
             (LintProblemLevel::Warn, "program 'empty' declares no beats"),
             (LintProblemLevel::Warn, "program 'empty' has no trigger — nothing will ever start a beat"),
             (LintProblemLevel::Error, "program 'p': after(-1) is not a finite delay"),

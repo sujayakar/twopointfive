@@ -65,7 +65,6 @@ fn civilian_compromise(g: &mut Game) -> Option<String> {
 
 /// With no team on the floor: what is in the air, in a man's hands or on its way down is waited out, as it was when such a save was a file.   (savestate.ts canSave)
 fn unsettled(g: &mut Game) -> Option<String> {
-    if crate::lighting::is_daylight(g) { return Some(String::from("daylight is in")); }
     if g.clearing.is_some() { return Some(String::from("the lockdown pair is clearing rooms")); }
     if let Some(&x) = g.guards.iter().find(|&&x| g.gd[x].script.is_some() && g.gd[x].state != GuardState::Dead) { return Some(format!("{} is scripted", g.gd[x].callsign)); }
     if let Some(busy) = busy(g, &crate::seats::here(g)) { return Some(format!("the player is {busy}")); }

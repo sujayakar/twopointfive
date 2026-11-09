@@ -487,8 +487,8 @@ export class Engine {
       const inst = new RadianceCascades(this.device, this.sceneLayout, { ...cfg }); inst.invalidateWorld(); this.rcPark.set(key, inst);
     }
   }
-  /** Something changed the WORLD wholesale (level geometry reloaded, the light rig swapped — rust/game_rules/src/lighting set_daylight): re-prime the radiance cache in place (rc.invalidateWorld —
-   *  P0-A) AND every parked grid, which would otherwise come back on a later hop holding the field from before the change (a night grid parked through the daytime show, a
+  /** Something changed the WORLD wholesale (level geometry reloaded, an hour laid over it): re-prime the radiance cache in place (rc.invalidateWorld —
+   *  P0-A) AND every parked grid, which would otherwise come back on a later hop holding the field from before the change (a night grid parked through a day, a
    *  day grid swapped in at night: seven frames of the wrong bounce and the wrong light-meter reading — review R10.1). Not for screen events — resize / scale / checkerboard /
    *  divisor flips leave the world cache valid and must not call this. */
   invalidateWorldCache() { this.rc.invalidateWorld(); for (const parked of this.rcPark.values()) parked.invalidateWorld(); }
@@ -906,7 +906,7 @@ function lookSkyLum(zen: ArrayLike<number>, hor: ArrayLike<number>, a: number): 
 
 /** THE LOOK PROTOTYPE's real light values (render/photometry.ts; lights.ts LightSet.dayExp): the exposure of the hour that is up, against the night's.
  *  `said` = the page's word (host/drawpage.ts: the game's hour through photometry.ts hourExposure; null = a night, or nobody says). Where nobody says, a level lit as a
- *  day by its OWN sky (the breach's daylight variant) is taken for a clear midday by how bright that sky is, read WITHOUT the Sky light row: its mean
+ *  day by its OWN sky is taken for a clear midday by how bright that sky is, read WITHOUT the Sky light row: its mean
  *  radiance from 0.08 to 0.35 runs the exposure from the night's 1 to midday's 1/5,000. A night is 1 exactly: nothing of it is touched. Never a guess from a
  *  light's strength, since most levels' own moons are 0.9 and one is 2.6. */
 function lookExposure(said: number | null, zen: ArrayLike<number>, hor: ArrayLike<number>): number {

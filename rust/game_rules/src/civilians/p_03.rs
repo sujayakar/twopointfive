@@ -817,7 +817,6 @@ pub fn civ_panic(g: &mut crate::game::Game, gd: Option<GuardId>, what: Option<cr
     let what = what.unwrap_or(CivPanicWhat::Panic);
     let Some(gd) = gd else { return String::from("no such civilian"); };
     let Some(cid) = g.gd[gd].civ else { return String::from("no such civilian"); };
-    if !civilians_on_floor(g) { return String::from("not now (daylight)"); }
     let name = g.cv[cid].name.clone();
     if g.gd[gd].state == GuardState::Dead { return format!("{} is down", name); }
     if g.gd[gd].held.is_some() { return format!("{} is in your arm", name); }
