@@ -152,7 +152,7 @@ fn wetFilm(s0: Surf, fp: f32) -> Surf {
   return s;
 }
 /** the same for a ray that only wants the mean: no patterns, no paint */
-fn surfaceMean(ro: vec3f, rd: vec3f, h: Hit) -> Surf { var s = surfaceAt(ro, rd, h, 1.0); if (frame.weather.x > 0.0 && openAir(s.x + s.ng * 0.02)) { s.albedo *= mix(1.0, 0.62, frame.weather.x); } return s; }
+fn surfaceMean(ro: vec3f, rd: vec3f, h: Hit) -> Surf { var s = surfaceAt(ro, rd, h, 1.0); if (frame.weather.x > 0.0 && s.metal < 0.5 && openAir(s.x + s.ng * 0.02)) { let soaks = select(0.35, 1.0, matteRough(s.kind) > 0.0 || s.kind == 6u); s.albedo = mix(s.albedo, mix(s.albedo * 0.85, 0.98 * s.albedo * 0.52 / (1.0 - 0.48 * s.albedo), soaks), frame.weather.x * (0.35 + 0.5 * sat(s.ng.y))); } return s; }
 
 // ================================================================ lamps
 struct Aim { dir: vec3f, dist: f32, E: vec3f };       // toward a point of a lamp: what it would send a surface facing it, per unit of 1 / pdf
@@ -204,6 +204,8 @@ fn aimCoat(i: u32, s: Surf, V: vec3f, u: vec2f) -> vec4f {
 /** a lamp seen in a coat: by the point of it nearest the mirror direction */
 fn lampCoat(i: u32, s: Surf, V: vec3f) -> vec3f {
   let l = &lamps[i]; if ((*l).on <= 0.0) { return vec3f(0.0); } let d0 = (*l).at - s.x; let dist = length(d0); if (dist > (*l).reach) { return vec3f(0.0); } let R = reflect(-V, s.n); let a = max(s.rough * s.rough, 0.002);
+  // a lamp well out of the lobe shows nothing worth asking for
+  { let far = select(length((*l).u) + length((*l).v), (*l).area, (*l).kind != 0u) / max(dist, 0.05); let lobe = 3.2 * a + far; if (lobe < 1.35 && dot(R, d0) < dist * cos(lobe * 1.1 + 0.03)) { return vec3f(0.0); } }
   if ((*l).kind == 0u) {                                             // a rectangle: the coat's lobe as a bent cosine (learn/ltc.py), and that is exact for its edges
     if (dot(d0, (*l).n) >= 0.0) { return vec3f(0.0); } let nv = clamp(dot(s.n, V), 1e-3, 1.0); let x = sqrt(1.0 - nv) * 15.0; let y = clamp(s.rough, 0.06, 1.0) * 15.0; let x0 = min(u32(x), 14u); let y0 = min(u32(y), 14u); let fx = x - f32(x0); let fy = y - f32(y0); let at = u32(frame.misc2.y) + 2048u + 2u * (y0 * 16u + x0);
     let m = mix(mix(extra[at], extra[at + 2u], fx), mix(extra[at + 32u], extra[at + 34u], fx), fy); let g = mix(mix(extra[at + 1u], extra[at + 3u], fx), mix(extra[at + 33u], extra[at + 35u], fx), fy).xy;
