@@ -92,7 +92,7 @@ pub fn read(g: &Game) -> Vec<(String, String)> {
         if let Some((_, p)) = m.player {
             let q = &g.pl[p];
             out.push((format!("{} up", who), format!("{} {}", g.cond[q.ch].down, q.hits_left)));
-            out.push((format!("{} light", who), bits(q.visibility)));
+            out.push((format!("{} light", who), bits(g.shown[q.ch].visibility)));
             out.push((format!("{} holds", who), format!("{} {} {}", q.slot.as_str(), q.holstered, q.rifle_gone)));
             out.push((format!("{} rounds", who), format!("{} {}", rounds(g, q.pistol), rounds(g, q.rifle))));
         }

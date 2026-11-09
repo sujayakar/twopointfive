@@ -465,6 +465,7 @@ impl Play {
         let h = &mut self.g.gd[gd];
         (h.hold, h.pinned, h.state, h.awareness, h.path_goal) = (true, true, state, aware, None);
         h.path.clear();
+        self.g.cond[c].down = state == GuardState::Dead;
     }
     /// Every man of the other side but these is down.
     pub fn drop_all_but(&mut self, keep: &[GuardId]) {
@@ -526,7 +527,7 @@ impl Play {
     /// where he believes his enemy is
     pub fn fix(&self, gd: GuardId) -> Option<[f64; 2]> { self.g.gd[gd].last_known.map(|p| [p[0], p[2]]) }
     /// how lit Sam is, as the light meter has it (0 dark to 1)
-    pub fn sam_light(&self) -> f64 { self.g.pl[self.g.player].visibility }
+    pub fn sam_light(&self) -> f64 { self.g.shown[self.g.pl[self.g.player].ch].visibility }
     /// how fast he is moving over the floor, metres a second
     pub fn speed(&self, gd: GuardId) -> f64 { let v = self.g.ch[self.g.gd[gd].ch].vel; (v[0] * v[0] + v[2] * v[2]).sqrt() }
     /// Can he not see: a flash or a blast has his eyes for now.

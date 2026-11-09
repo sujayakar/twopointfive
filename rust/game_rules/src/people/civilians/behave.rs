@@ -590,8 +590,8 @@ pub(super) fn civ_visibility(g: &mut crate::game::Game, gd: GuardId, dt: f64) ->
     let [stands, e] = crate::guards::light_on(g, c);
     let seen = crate::game::game_visibility_of(g, e);
     g.cv[cv].vis = v3::damp(g.cv[cv].vis, seen, 6.0, dt);
-    g.gd[gd].visibility = g.cv[cv].vis;
-    g.gd[gd].irradiance = stands;
+    g.shown[g.gd[gd].ch].visibility = g.cv[cv].vis;
+    g.shown[g.gd[gd].ch].irradiance = stands;
     g.cv[cv].vis
 }
 

@@ -70,7 +70,7 @@ fn pair_in_view(g: &mut crate::game::Game, gd: GuardId, p: &crate::guards::Pair)
     let pl = g.player;
     let pc = g.pl[pl].ch;
     let hc = g.gd[p.held].ch;
-    let seen = g.pl[pl].visibility;
+    let seen = g.shown[g.pl[pl].ch].visibility;
     let lit = m::max(seen, held_visibility(g, p));
     let reach = eye_reach(g, lit);
     let view_m = m::max(STANDOFF_VIEW_M, reach);
@@ -100,7 +100,7 @@ fn pair_in_view(g: &mut crate::game::Game, gd: GuardId, p: &crate::guards::Pair)
 /// What a watching man's eye gets off the pair. (guards.ts pairSightRate)
 fn pair_sight_rate(g: &mut crate::game::Game, gd: GuardId, p: &crate::guards::Pair, dist: f64) -> f64 {
     let pl = g.player;
-    let seen = g.pl[pl].visibility;
+    let seen = g.shown[g.pl[pl].ch].visibility;
     let light = m::max(seen, held_visibility(g, p));
     let dist_f = dist_term(g, dist);
     let detect = g.tune.detect_rate;
@@ -152,7 +152,7 @@ fn held_visibility(g: &mut crate::game::Game, p: &crate::guards::Pair) -> f64 {
     let vis = v3::damp(from, to, 6.0, dt);
     let at = v3::copy(g.ch[hc].pos);
     g.m.guards.held_meters.set(p.key, crate::guards::GuardsModHeldMetersValue { vis, t: now, at });
-    g.gd[hd].visibility = vis;
+    g.shown[g.gd[hd].ch].visibility = vis;
     vis
 }
 

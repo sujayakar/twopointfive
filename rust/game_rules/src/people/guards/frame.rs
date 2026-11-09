@@ -74,7 +74,7 @@ pub fn update_guard(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
         unstick_begin(g, gd);
     }
     let staff = g.gd[gd].team == crate::teams::Team::Guard;
-    if !staff { unit_light_meter(g, gd, dt); }
+    if !staff { let c = g.gd[gd].ch; light_meter(g, c, dt); }
     let sense = crate::guards::senses::sense(g, gd, dt, staff);
     hands(g, gd, dt);
     if lent(g, gd, dt) {

@@ -483,6 +483,8 @@ pub struct Game {
     pub cond: Tab<CharId, crate::condition::Cond>,
     /// what he carries, by what it costs him (None: nothing weighs on him)
     pub load: Tab<CharId, Option<crate::kitload::KitWorn>>,
+    /// the light on him: what he gives away of himself
+    pub shown: Tab<CharId, crate::guards::Shown>,
     /// the table of these things: never shrinks
     pub dr: Tab<DoorId, crate::doors::Door>,
     /// the table of these things: never shrinks
@@ -711,8 +713,6 @@ pub struct Player {
     pub catch_due: Option<f64>,
     pub bubble: Option<crate::game::PlayerBubble>,
     pub speed_sm: f64,
-    pub visibility: f64,
-    pub irradiance: f64,
     pub hit_flash: f64,
     /// his hands were on a man last frame (the partner's word goes as they first are)
     pub pair_hands_was: bool,
@@ -1014,8 +1014,6 @@ pub struct Guard {
     pub civ: Option<CivId>,
     pub trained: bool,
     pub skill: Option<crate::game::GuardSkill>,
-    pub visibility: f64,
-    pub irradiance: f64,
     pub route_i: i32,
     pub wp: usize,
     pub wait: f64,

@@ -426,7 +426,7 @@ fn a_camera_sees_any_player_in_its_cone() {
             p.frame();
             let pc = p.g.pl[m].ch;
             let spot = p.g.ch[pc].pos;
-            p.g.pl[m].visibility = 1.0;
+            p.g.shown[p.g.pl[m].ch].visibility = 1.0;
             let dd = game::scene_level_data::device_defaults();
             let half = def.fov_deg.unwrap_or(dd.fov_deg) / 2.0;
             let yaw = game::sim_lightshome::camera_machine_yaw(&p.g, c);
