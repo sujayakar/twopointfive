@@ -82,7 +82,7 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     crate::sense::smoke_step(g, dt);
     for i in 0..n { crate::cmd::seat_load(g, seats[i], &checked[i]); }
     let (input, cam) = (g.tab.cmd_seat[seats[0]].input, g.tab.cmd_seat[seats[0]].cam);   // (what a ONE-PLAYER part of the tick reads is the first seat's)
-    crate::rails::rails_gate(g, input, cam, dt);
+    crate::rails::rails_gate(g, input);
     crate::opening::opening_start(g);
     if n > 1 { crate::seats::deal_seats(g); }
     for &s in &seats {
@@ -240,7 +240,6 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     crate::teamtally::team_tally_tick(g);
     crate::deathrecap::recap_tick(g);   // (last: it reads the frame as it ended, and moves nothing a rule reads)
     crate::render_decals::marks_settle(g);   // (the marks' arms ask the world as the tick left it)
-    crate::rails::rails_ease_mid(g);
     g.ticking = false;
     crate::scene_collision::tick_shut(g);
     g.m.rustknobs.rust_knobs.tick = false;   // (game.ts:1727, the finally)
