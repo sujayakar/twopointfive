@@ -12,12 +12,16 @@ export function catalogue(): Product[] {
   for (const [kind, n] of plan) for (let i = 0; i < n; i++) { const [c, d] = inks(art), s = 0.88 + 0.26 * q(), ax = 0.85 + 0.3 * q(), ay = 0.85 + 0.32 * q(), [w, dp, hg] = SIZE[kind]; out.push({ kind, art: art++ % PRINTS, col: c, alt: d, s, ax, ay, wide: w * s * ax, deep: dp * s * (kind === 'box' || kind === 'flat' || kind === 'bag' || kind === 'puff' || kind === 'six' ? 1 : ax), high: hg * s * ay }); }
   return out;
 }
+/** kilograms a cubic metre, as it is packed */
+const HEFT: Record<string, number> = { bag: 70, puff: 45, pouch: 300, box: 320, flat: 350, can: 1000, bottle: 1000, jar: 1050, carton: 1000, cup: 160, bowl: 180, tube: 350, yogurt: 1000, card: 300 };
 export class Shelver {
   count = 0; readonly items = catalogue(); private last = new Map<string, number[]>(); private q = rng(77);
   constructor(private w: World) {}
   private at(p: V3, yaw: number) { const r = rotY(yaw); return { P: (x: number, y: number, z: number): V3 => add(p, apply(r, [x, y, z])), r }; }
+  /** while this is set, what is put on a shelf can be knocked off it: the things so made */
+  loose: { pieces: Piece[]; at: V3; rot: Rot; dense: number }[] | null = null;
   one(p: Product, o: V3, yaw: number) {
-    const from = this.w.pieces.length; this.make(p, o, yaw); for (let i = from; i < this.w.pieces.length; i++) this.w.pieces[i]!.rig = 'stock:' + this.count;
+    const from = this.w.pieces.length; this.make(p, o, yaw); if (this.loose) { const ps = this.w.pieces.splice(from); for (const q of ps) { q.flags |= F.MOVES; q.rig = 'loose'; this.w.moving.push(q); } if (ps.length) this.loose.push({ pieces: ps, at: o, rot: rotY(yaw), dense: HEFT[p.kind] ?? 300 }); return; } for (let i = from; i < this.w.pieces.length; i++) this.w.pieces[i]!.rig = 'stock:' + this.count;
   }
   private make(p: Product, o: V3, yaw: number) {
     this.count++; const w = this.w, { P, r } = this.at(o, yaw), cut = { flags: F.CUT }, X = p.wide / 2, Y = p.high / 2, Z = p.deep / 2, col = p.col, art = 'p' + p.art, lab = (wd: number, hg: number, face = 5, y = 0, x = 0): Mark => ({ face, at: [x, y], size: [wd, hg], art, color: [1, 1, 1] }), white: V3 = [0.95, 0.95, 0.94];

@@ -1,0 +1,127 @@
+[
+ {
+  "w": 1280,
+  "h": 720,
+  "method": "realtime",
+  "scale": 0.8,
+  "name": "s-shelf-0",
+  "dist": 7.5,
+  "hour": 21,
+  "look": [
+   -2.0,
+   0.8,
+   -2.6
+  ],
+  "cut": 2.5,
+  "yaw": 0.35,
+  "pitch": 0.6,
+  "samples": 60,
+  "tick": 200,
+  "run": true
+ },
+ {
+  "w": 1280,
+  "h": 720,
+  "method": "realtime",
+  "scale": 0.8,
+  "name": "s-shelf-1",
+  "go": true,
+  "dist": 7.5,
+  "hour": 21,
+  "look": [
+   -2.0,
+   0.8,
+   -2.6
+  ],
+  "cut": 2.5,
+  "yaw": 0.35,
+  "pitch": 0.6,
+  "samples": 36,
+  "run": true,
+  "toss": [
+   [
+    2.0,
+    1.0,
+    4.0,
+    0,
+    0,
+    0
+   ],
+   [
+    -2.4,
+    1.15,
+    -1.7,
+    0.3,
+    1.2,
+    -7.5
+   ]
+  ]
+ },
+ {
+  "w": 1280,
+  "h": 720,
+  "method": "realtime",
+  "scale": 0.8,
+  "name": "s-shelf-2",
+  "go": true,
+  "dist": 7.5,
+  "hour": 21,
+  "look": [
+   -2.0,
+   0.8,
+   -2.6
+  ],
+  "cut": 2.5,
+  "yaw": 0.35,
+  "pitch": 0.6,
+  "samples": 160,
+  "run": true
+ },
+ {
+  "w": 1280,
+  "h": 720,
+  "method": "realtime",
+  "scale": 0.8,
+  "name": "s-fruit",
+  "go": true,
+  "dist": 6,
+  "hour": 21,
+  "look": [
+   -4.2,
+   0.5,
+   -0.4
+  ],
+  "yaw": 0.35,
+  "pitch": 0.5,
+  "samples": 150,
+  "run": true,
+  "toss": [
+   [
+    -4.2,
+    1.6,
+    0.9,
+    0,
+    0.5,
+    -5
+   ],
+   [
+    0,
+    -50,
+    0
+   ],
+   [
+    0,
+    -50,
+    0
+   ],
+   [
+    -4.6,
+    1.5,
+    0.9,
+    0,
+    0.5,
+    -6
+   ]
+  ]
+ }
+]
