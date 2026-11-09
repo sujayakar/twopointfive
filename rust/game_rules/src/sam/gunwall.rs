@@ -353,11 +353,6 @@ pub(super) fn gun_wall_stance(g: &mut crate::game::Game, c_2: CharId, set: bool)
     }
 }
 
-/// A restart: the fight the floor remembered was the last try's. (gunwall.ts gunWallFresh)
-pub fn gun_wall_fresh(g: &mut crate::game::Game) {
-    g.m.gunwall.fight = None;
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

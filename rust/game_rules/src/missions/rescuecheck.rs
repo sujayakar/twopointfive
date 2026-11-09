@@ -94,9 +94,6 @@ pub(super) fn rescue_check_say(g: &mut Game) {
     }
 }
 
-/// A staging, a restart.   (rescuecheck.ts rescueCheckReset)
-pub fn rescue_check_reset(g: &mut Game) { g.m.rescuecheck.states = None; }
-
 /// Who goes: a roamer on his own post first, then the door man or a guard posted outside the hostage room, the nearest by the straight line;
 /// a man any other rule has is not free.   (rescuecheck.ts goer)
 fn goer(g: &mut Game, cast: &[CastItem], about: GuardId, post: V3) -> Option<Goer> {

@@ -50,11 +50,6 @@ fn shared_of(g: &mut crate::game::Game) -> &mut crate::seenwalk::Shared {
     g.m.seenwalk.shared.as_mut().unwrap()
 }
 
-/// Nothing kept: a restart, a checkpoint loaded.   (seenwalk.ts seenReset)
-pub fn seen_reset(g: &mut crate::game::Game) {
-    g.m.seenwalk.shared = None;
-}
-
 /// The price of the floor to a walk from `from` by `base`: `dear` on lit floor in view of an uncleared room, 1 elsewhere; None when no uncleared room is within an eye's reach of that walk.   (seenwalk.ts seenPrice)
 pub(super) fn seen_price(g: &mut crate::game::Game, from: V3, base: &[V3]) -> Option<crate::seenwalk::SeenPrice> {
     let all = shared_of(g).eyes.clone();

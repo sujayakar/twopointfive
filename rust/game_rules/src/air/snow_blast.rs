@@ -2,9 +2,6 @@
 #![allow(unused_variables)]
 use crate::game::Game;
 
-/// (src/game/snowBlast.ts:122 clearSnowBlast)
-pub fn clear_snow_blast(g: &mut crate::game::Game) { g.out.push(crate::out_events::OutEvent::ClearSnowBlast); }
-
 /// A blast over the snow is told to the picture: the crater, the dig, the throw and the shove are its own (src/picture/snow). Nothing of the game reads it.   (snowBlast.ts:142 snowBlastAt)
 pub fn snow_blast_at(g: &mut crate::game::Game, at: &[f64], radius: f64) -> bool {
     let name = crate::scene_level_load::level_name_of(g);

@@ -926,11 +926,6 @@ pub(super) fn coverfire_on(g: &crate::game::Game, gd: GuardId) -> Option<crate::
     Some(CoverfireOn { kind: cw.kind.clone(), fired: cw.fired })
 }
 
-/// a restart or a checkpoint load: forget everything about this game (coverfire.ts coverfireReset)
-pub fn coverfire_reset(g: &mut crate::game::Game) {
-    g.m.coverfire.states = None;
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

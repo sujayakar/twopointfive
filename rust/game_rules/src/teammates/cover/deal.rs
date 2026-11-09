@@ -51,25 +51,6 @@ pub fn cover_new(g: &mut Game) -> Cover {
     c
 }
 
-/// Nothing dealt, nothing known: a restart. (cover.ts reset)
-pub fn cover_reset(g: &mut Game) {
-    let c = &mut g.cover;
-    c.jobs.clear();
-    c.steps.clear();
-    c.stood = JsMap::new();
-    c.no_step = JsMap::new();
-    c.door_try = JsMap::new();
-    c.rears.clear();
-    c.reads = JsMap::new();
-    c.kept.clear();
-    c.outs.clear();
-    c.live = Vec::new();
-    c.men = Vec::new();
-    c.deal_at = 0.0;
-    c.stats = CoverStats::default();
-    c.log.clear();
-}
-
 /// What he was dealt. (cover.ts of)
 pub(in crate::teammates) fn cover_of(g: &Game, gd: GuardId) -> Option<CoverJob> { g.cover.jobs.get(gd).copied() }
 
