@@ -256,3 +256,18 @@ fn a_way_with_pieces_lays_them_and_a_way_on_a_set_is_the_set() {
     let boxes = data.get("scenarios").get("kitView").get("sets").get(name).get("boxes").items().len();
     assert!(on_set.g.col.boxes.len() >= boxes && on_set.g.col.boxes.len() < data.get("boxes").items().len(), "{} boxes for a set of {}", on_set.g.col.boxes.len(), boxes);
 }
+
+/// THE RULE: the picture staged again is the same picture: its sky is not scaled twice and its men stand where they stood.
+/// A FAILURE MEANS: the picture grows brighter with every change of a card, or a man's place moves with the die.
+#[test]
+fn a_picture_staged_again_is_the_same_picture() {
+    for (level, words) in [("records.json", "roomclear&squad4"), ("bazaar.json", "quiet&squad=1")] {
+        let mut p = stood(level, words);
+        let seen = |p: &Play| (p.g.engine.settings.sky_zenith, p.g.engine.settings.sky_horizon, p.g.tab.camera.len(), p.g.guards.iter().map(|&x| p.g.ch[p.g.gd[x].ch].pos).collect::<Vec<_>>());
+        let first = seen(&p);
+        for tries in 1..=3 {
+            kitstage::restage(&mut p.g);
+            assert_eq!(seen(&p), first, "{level}: staged again {tries} times");
+        }
+    }
+}
