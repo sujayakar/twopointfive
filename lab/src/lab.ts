@@ -10,6 +10,8 @@ import type { Piece } from './scene/world';
 import { makeStreet } from './scene/street';
 import { makeForest } from './scene/forest';
 import { makePass } from './scene/pass';
+import { makeMeshes } from './scene/meshes';
+import { meshed } from './mesh/code';
 import { strain, type Strain } from './scene/strain';
 import { placeCode } from './scene/place';
 import { Sway } from './sway';
@@ -30,7 +32,7 @@ import { mapLamps, lampMapCode } from './lampmap';
 import { mapJoins, joinCode } from './joins';
 
 export const TICK = 1 / 60;
-export const SCENES: Record<string, () => Building> = { rooftop: makeBuilding, street: makeStreet, forest: makeForest, pass: makePass };
+export const SCENES: Record<string, () => Building> = { rooftop: makeBuilding, street: makeStreet, forest: makeForest, pass: makePass, meshes: makeMeshes };
 export interface Method { name: string; signals(g: Graph, lab: Lab): void; stages(lab: Lab): Stage[]; frame?(lab: Lab): void; result: string; reset?(lab: Lab): void; prepare?(lab: Lab): Promise<void> }
 
 export class Lab {
@@ -42,7 +44,7 @@ export class Lab {
   async open(canvas: HTMLCanvasElement | null, scene = 'rooftop', load: Strain | null = null) {
     this.gpu = await openGpu(canvas); this.building = (SCENES[scene] ?? SCENES.rooftop!)(); if (load) strain(this.building, load); for (let i = 0; i < 3; i++) this.building.world.lamps.push({ kind: 'sphere', at: [0, -60, 0], u: [0.2, 0, 0], v: [0, 0, 0], radiance: [330, 125, 27], name: 'fire', on: 0 }); this.building.world.lamps.push({ kind: 'sphere', at: [0, -60, 0], u: [0.05, 0, 0], v: [0, 0, 0], radiance: [16000, 11000, 5600], name: 'flash', on: 0 }); this.air = new Air(this.building.place, this.building.world, this.building.doors); this.near = new Near(this.building.world.pieces); this.leaves = this.building.doors.flatMap(d => d.leaf); this.sky = new Sky(this.gpu); await this.sky.init();
     this.ripples = new Ripples(this.building.pool, this.building.poolTop); this.building.bodies.ripples = this.ripples; this.water = new Water(this.gpu, this.ripples); await this.water.init(); this.scene = new SceneGpu(this.gpu, this.building.world, this.sky.tex, this.water.tex, airRows(this.air.cells), skyMap(this.building.solid, this.building.world.moving), rippleRows(this.ripples));
-    this.graph = new Graph(this.gpu, () => math + '\n' + placeCode(this.building.place) + airCode(this.air) + sceneCode + foliageCode(this.scene.foliage, this.scene.folRow, this.scene.folSlots) + skyCode(this.scene.skyRow, this.scene.trodRow) + rippleCode(this.ripples, `extra[${this.scene.ripRow}u + (i >> 2u)][i & 3u]`, 'frame.more.w') + '\n' + wavesCode + '\n' + lampMapCode + joinCode + '\n' + surfaceCode + '\n', { layout: this.scene.layout, group: this.scene.group });
+    this.graph = new Graph(this.gpu, () => math + '\n' + placeCode(this.building.place) + airCode(this.air) + (this.building.world.meshes ? meshed.scene(sceneCode, this.scene.meshRow) : sceneCode) + foliageCode(this.scene.foliage, this.scene.folRow, this.scene.folSlots) + skyCode(this.scene.skyRow, this.scene.trodRow) + rippleCode(this.ripples, `extra[${this.scene.ripRow}u + (i >> 2u)][i & 3u]`, 'frame.more.w') + '\n' + wavesCode + '\n' + lampMapCode + joinCode + '\n' + (this.building.world.meshes ? meshed.surface(surfaceCode) : surfaceCode) + '\n', { layout: this.scene.layout, group: this.scene.group });
     this.graph.buffers.set('pastLeaves', this.scene.pastLeaves); this.scene.openFloor = this.building.place.openFloor; { const t = this.building.player.body.torch; if (t >= 0) { this.building.world.lamps[t]!.at = [0, -60, 0]; this.scene.lampOn[t] = 0; } } this.pose(); for (const p of this.building.world.moving) this.prevAt.set(p, { at: p.at, rot: p.rot });
   }
   /** in the page: what moves is drawn between its last two ticks (alpha), and the camera goes by the clock, so that motion is even at any frame rate. A run leaves this off */
@@ -115,6 +117,7 @@ export class Lab {
     u.set([Math.min(64, b.world.lamps.length), Math.min(32, b.world.openings.length), this.frameNo, this.seed], o); o += 4; u.set(this.scene.per, o); o += 4; u.set(this.scene.node0, o); o += 4; u.set(this.scene.stepOf, o); o += 4; u.set(this.scene.piece0, o); o += 4; f.set(b.pool, o); o += 4; f.set([b.poolTop, b.poolDeep, this.gone, this.scene.airRow], o); o += 4; f.set([this.wet, this.rainNow, this.mains ? 1 : 0, Math.atan2(this.air.way[2], this.air.way[0])], o); o += 4; f.set([this.smoke.on ? 1 : 0, this.scene.noiseAt, this.dense, this.air.strength], o); o += 4; { const me = b.player.body.pos; this.tune.set(this.playing ? [me[0], me[1] + 1.0, me[2]] : [0, -999, 0], 25); } f.set(this.look(), o); f.set([this.snow, this.snowNow, Math.max(0, Math.min(0.1, this.time - this.drawnAt)), this.ripples.live ? 1 : 0], o + 32); u.set(this.scene.fine, o + 36); this.drawnAt = this.time;
     this.gpu.device.queue.writeBuffer(this.scene.frame, 0, f); this.prev = c; this.prevJitter = this.jitter;
   }
+  /** this frame's numbers, for a study that runs its stages itself */ sendFrame() { this.send(); this.frameNo++; }
   /** the knobs as they are now: the level's look at this hour, on what is turned */ look(): Float32Array { const f = this.looked; f.set(this.tune); graded(this.building.place.grade, this.hour, f); return f; } private looked = new Float32Array(32);
   /** how many torches have a picture of their own this frame */ torches = 0;
   sendMs = 0; private drawnAt = 0;
