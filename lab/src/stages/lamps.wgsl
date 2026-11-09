@@ -4,7 +4,7 @@
 fn leafSun(x: vec3f, n: vec3f, r: vec2f) -> f32 {
   /* (the surface's own plane is known: what lies in it is not over it, at any tilt, and what is a finger's breadth over it is) */
   let S = frame.sunDir.xyz; let q = sunMap(x); if (any(q.xy < vec2f(0.002)) || any(q.xy > vec2f(0.998))) { return 1.0; } let d = vec2f(textureDimensions(sunLeaves)); let bs = basis(S); let ns = dot(n, S); let tilt = select(-1.0, 1.0, ns >= 0.0) / max(abs(ns), 0.12); var s = 0.0; let a = r.x * 6.2832; let m = mat2x2f(cos(a), sin(a), -sin(a), cos(a));
-  for (var k = 0u; k < 4u; k++) { let off = m * (array<vec2f, 4>(vec2f(0.3, 0.1), vec2f(-0.2, 0.55), vec2f(-0.75, -0.3), vec2f(0.45, -0.8))[k]); let p = vec2i(vec2f(q.x, 1.0 - q.y) * d + off); let e = ((vec2f(p) + 0.5) / d - vec2f(q.x, 1.0 - q.y)) * SUN_WIDE; let h = -dot(bs[0] * e.x - bs[1] * e.y, n) * tilt; let over = (textureLoad(sunLeaves, p, 0) - q.z) * 80.0 - h; s += select(0.11 * exp(-5.0 * over) + 0.008, 1.0, over < 0.014); } /* the first leaf over it, metres up: the farther, the more of them between */ return s * 0.25;
+  for (var k = 0u; k < 4u; k++) { let off = m * (array<vec2f, 4>(vec2f(0.3, 0.1), vec2f(-0.2, 0.55), vec2f(-0.75, -0.3), vec2f(0.45, -0.8))[k]); let p = vec2i(vec2f(q.x, 1.0 - q.y) * d + off); let e = ((vec2f(p) + 0.5) / d - vec2f(q.x, 1.0 - q.y)) * SUN_WIDE; let h = -dot(bs[0] * e.x - bs[1] * e.y, n) * tilt; let over = (textureLoad(sunLeaves, p, 0) - q.z) * 80.0 - h; s += select(0.07 * exp(-7.0 * over) + 0.005, 1.0, over < 0.014); } /* the first leaf over it, metres up: the farther, the more of them between */ return s * 0.25;
 }
 @compute @workgroup_size(8, 8) fn main(@builtin(global_invocation_id) id: vec3u) {
   let dim = vec2u(frame.size.xy); if (id.x >= dim.x || id.y >= dim.y) { return; }
