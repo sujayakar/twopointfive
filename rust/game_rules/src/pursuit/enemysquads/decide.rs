@@ -62,7 +62,7 @@ mod tests {
 use crate::ask::Over;
 
 /// the room's identity: rooms are copied here, the TypeScript compares the one object
-fn same_room(a: &Option<crate::scene_scenarios::StructureRoom>, b: &Option<crate::scene_scenarios::StructureRoom>) -> bool {
+pub(super) fn same_room(a: &Option<crate::scene_scenarios::StructureRoom>, b: &Option<crate::scene_scenarios::StructureRoom>) -> bool {
     match (a, b) { (Some(x), Some(y)) => x.id == y.id, (None, None) => true, _ => false }
 }
 fn pos_of(g: &Game, gd: GuardId) -> V3 { let c = g.gd[gd].ch; g.ch[c].pos }
@@ -937,17 +937,27 @@ pub fn contact(g: &mut crate::game::Game, q: EnemysquadsSquadId, at: V3, room: O
     } else if caller.is_none() && fresh { note(g, None, &format!("{} is in contact and has nobody able to call it", q_name)); }
     let Some(room) = room else { return };
     let reinforce = g.k.squads.reinforce;
+    let mut new: Vec<(usize, f64)> = Vec::new();   // (each man sent now, and how long his way there takes him)
     for d in home(g, q) {
         let gd = g.tab.roomfight_def[d].gd;
         let p = pos_of(g, gd);
         let his = room_of(g, q, p, None);   // (a man who gave ground out of it is the room fight's: not sent back in)
         if his.is_none() || same_room(&his, &Some(room.clone())) || g.tab.enemysquads_squad[q].due.iter().any(|x| x.gd == gd) { continue; }
         let key = stay_key(g, gd, &StayKeyRoom { name: room.name.clone() });
-        if g.tab.enemysquads_squad[q].stayed.as_ref().map_or(false, |s| s.has(key.clone())) && squad_drill(g).map_or(false, |k| k.drill_own) { continue; }   // (drillOwn: he was told that room is gone)
+        if g.tab.enemysquads_squad[q].stayed.as_ref().map_or(false, |s| s.has(key.clone())) { continue; }   // (he was told that room is gone)
         let t = g.time + pick(g, crate::dice::Who::Man(gd), reinforce) * own_k(g);
+        let way = crate::scene_collision::nav_grid_find_path(g, p, at, None, None).map_or(flat(p, at), |w| path_len(p, &w));
+        new.push((g.tab.enemysquads_squad[q].due.len(), way / g.tune.guard_chase));
         g.tab.enemysquads_squad[q].due.push(SquadDueItem { gd, at: v3::copy(at), t, room: Some(room.clone()) });
     }
+    // they come together: the near man leaves when he will be there with the far one, if that is soon
+    let due = &mut g.tab.enemysquads_squad[q].due;
+    let last = new.iter().map(|&(i, walk)| due[i].t + walk).fold(0.0, m::max);
+    for &(i, walk) in &new { due[i].t += m::min(m::max(0.0, last - walk - due[i].t), TOGETHER_SECS); }
 }
+
+/// the longest a man waits to be at a fight with his mates and not before them
+pub(super) const TOGETHER_SECS: f64 = 5.0;
 
 #[cfg(test)]
 mod tests_2 {
