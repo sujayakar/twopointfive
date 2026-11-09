@@ -73,7 +73,7 @@ a `word` is that need.
 - **Flats do not fight.** Decals that cross are ordered by the export (`layLevelFloor`), and decals start at the floor. Check:
   `bun run tools/qa/floor-order-check.ts <name>.json`.
 - **No two faces drawn in one plane.** A wall ends at the near face of the wall it meets, and a post stops at a wall or stands a centimeter off. A lamp on a pole is
-  the kit's `yardLamp` or `floodLight`. Check: `bun run tools/qa/zfight-check.ts <name>`, by hand. Many levels already show some, so show no more than before.
+  the kit's `yardLamp` or `floodLight`. Check: `bun run tools/qa/zfight-check.ts <name>` (a patch under 100 cm2 is a speck, and passes).
 - **`roof`: a roof is the kit's ceiling** (`ceiling` in `levelKit.ts`, flagged `NoPrimary`), no more than `MAX_ROOFS`. Check: the need, and `levels rain <name>`.
 - **A wall a charge may hole has floor behind it.** Check: `levels charges <name>`, one number in `tools/levels/counts/charges/`; fewer and more are both red.
 - **No door has an always-safe spot to command it from.** If one pocket near a door sees it and is out of every defender's line on every deal, every entry will be

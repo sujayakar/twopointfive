@@ -22,14 +22,13 @@ const ROWS: readonly Row[] = [
   ['pricerun-check.ts', 'page'], ['savefile-check.ts', 'page'], ['settle-check.ts', 'page'], ['view-check.ts', 'page'], ['perf-sweep-logic.ts', 'page'], ['perf-sweep-selftest.ts', 'page'],
   ['camspace-check.ts', 'menus'], ['hud-look-check.ts', 'menus'], ['menustills-check.ts', 'menus'], ['squadkeys-check.ts', 'menus'], ['textsize-check.ts', 'menus'],
   ['gunfire-table-check.ts', 'sound'], ['sfxwarm-check.ts', 'sound'], ['sound-takes-check.ts', 'sound'],
-  ['exports-check.ts', 'levels'], ['level-lint.ts', 'levels', '--quiet'], ['ground-pieces-check.ts', 'levels'], ['kit-stores-check.ts', 'levels'], ['palette-check.ts', 'levels'], ['stuff-check.ts', 'levels'],
+  ['exports-check.ts', 'levels'], ['level-lint.ts', 'levels', '--quiet'], ['zfight-check.ts', 'levels', '--quiet'], ['ground-pieces-check.ts', 'levels'], ['kit-stores-check.ts', 'levels'], ['palette-check.ts', 'levels'], ['stuff-check.ts', 'levels'],
   ['mystery-check.ts', 'words'], ['writing-check.ts', 'words'],
   ['docs-check.ts', 'build'], ['rust-rules-check.ts', 'build'], ['../draw/gen.ts', 'build', '--check'],
 ];
 /** check files no row runs, each with who runs it */
 const BY_HAND: Readonly<Record<string, string>> = {
   'cloud-check.ts': 'the backend\'s packages', 'lobby-check.ts': 'the backend\'s packages', 'mp-control-check.ts': 'the backend\'s packages', 'mpserver-check.ts': 'three processes, minutes',
-  'zfight-check.ts': 'the level skill',
   '../draw/hands-check.ts': 'the module', '../draw/keep-check.ts': 'the module', '../draw/net-check.ts': 'the module', '../draw/play-check.ts': 'the module, minutes', '../draw/tape-check.ts': 'the module, minutes', '../draw/walk-check.ts': 'the module',
 };
 
