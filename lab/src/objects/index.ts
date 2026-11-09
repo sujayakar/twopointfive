@@ -7,6 +7,9 @@ import { car } from './car';
 import { gravel } from './gravel';
 import { bollards } from './bollards';
 import { fruitcrate } from './fruitcrate';
+import { moped } from './moped';
 import { officechair } from './officechair';
+import { parasol } from './parasol';
+import { radiator } from './radiator';
 /** every object there is, by name */
-export const OBJECTS: Record<string, ObjectKind> = Object.fromEntries([chair, ficus, person, shelf, car, gravel, bollards, fruitcrate, officechair].map(o => [o.name, o]));
+export const OBJECTS: Record<string, ObjectKind> = Object.fromEntries([chair, ficus, person, shelf, car, gravel, bollards, fruitcrate, moped, officechair, parasol, radiator].map(o => [o.name, o]));
