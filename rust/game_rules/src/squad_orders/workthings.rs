@@ -147,7 +147,6 @@ pub fn work_things_things(g: &crate::game::Game, seat: &crate::seats::SeatRef) -
 pub fn work_things_keep(g: &mut crate::game::Game) {
     let (active, permanent) = mains(g);
     let drive = g.mission.stage == crate::game::MissionStage::Drive && g.puppet.is_none();
-    let dealt = drive && g.staged.facts.unseen;
     let live = !(active && permanent);
     let bp = g.level.breaker.pos;
     let rf = g.level.errand.front;
@@ -172,15 +171,15 @@ pub fn work_things_keep(g: &mut crate::game::Game) {
         let y = m::min(1.35, m::max(0.9, js::or(rf[1], 1.1)));
         let sr = &g.level.errand.area;
         let (x0, x1, z0, z1) = (sr.x0, sr.x1, sr.z0, sr.z1);
-        let mut stand = if dealt { stand_for(g, rf, None, Some(Area { x0, x1, z0, z1 })) } else { stand_for(g, rf, Some([0.0, 0.0, 1.0]), None) };
-        if stand.is_none() && dealt {
+        let mut stand = stand_for(g, rf, None, Some(Area { x0, x1, z0, z1 }));
+        if stand.is_none() {
             let h = crate::quiet::holder_stand(g, rf, Some(crate::quiet::HolderStandArea { x0, x1, z0, z1 }));
             if let (Some(p), true) = (h.pos, h.clear) {
                 if crate::mission::rack_dist(g, p) < crate::consts::DRIVE_REACH { stand = Some(p); }
             }
         }
         let mut n: V3 = [0.0, 0.0, 1.0];
-        if let (Some(st), true) = (stand, dealt) {
+        if let Some(st) = stand {
             let d = js::or(flat(st, rf), 1.0);
             n = [(st[0] - rf[0]) / d, 0.0, (st[2] - rf[2]) / d];
         }

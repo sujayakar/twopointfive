@@ -29,22 +29,14 @@ pub fn tally(g: &mut crate::game::Game, k: crate::mission::TallyK) {
     }
 }
 
-/// Planar distance from a floor point to the mission rack's face. (mission.ts rackDist)
+/// How far a floor point is from the face the errand's thing is taken from, across its width; never, with something solid between.
 pub fn rack_dist(g: &mut crate::game::Game, p: V3) -> f64 {
     let (front, half_w) = (g.level.errand.front, g.level.errand.half_w);
-    if g.staged.facts.unseen {
-        let d = m::hyp2(p[0] - front[0], p[2] - front[2]);
-        if d > 0.3 && crate::scene_collision::solid_blocked(g, [p[0], 1.0, p[2]], [front[0] + (p[0] - front[0]) / d * 0.2, 1.0, front[2] + (p[2] - front[2]) / d * 0.2], None) {
-            return m::INF;
-        }
-        return m::max(0.0, d - half_w);
+    let d = m::hyp2(p[0] - front[0], p[2] - front[2]);
+    if d > 0.3 && crate::scene_collision::solid_blocked(g, [p[0], 1.0, p[2]], [front[0] + (p[0] - front[0]) / d * 0.2, 1.0, front[2] + (p[2] - front[2]) / d * 0.2], None) {
+        return m::INF;
     }
-    rack_dist_plain(front, half_w, p)
-}
-
-/// rackDist's arm for a rack on the plain night: anywhere across its width counts. (mission.ts:50)
-fn rack_dist_plain(front: V3, half_w: f64, p: V3) -> f64 {
-    m::hyp2(m::max(0.0, m::abs(p[0] - front[0]) - half_w), p[2] - front[2])
+    m::max(0.0, d - half_w)
 }
 
 /// the way out he went by: the nearest whose line he is past
@@ -225,18 +217,8 @@ pub fn send_rack_check(g: &mut crate::game::Game) {
         return;
     }
     let front = g.level.errand.front;
-    let goal: V3 = if g.staged.facts.unseen {
-        let area = {
-            let r = &g.level.errand.area;
-            crate::quiet::HolderStandArea { x0: r.x0, x1: r.x1, z0: r.z0, z1: r.z1 }
-        };
-        match crate::quiet::holder_stand(g, front, Some(area)).pos {
-            Some(pos) => pos,
-            None => [front[0], 0.0, front[2]],
-        }
-    } else {
-        [front[0], 0.0, front[2] + 1.1]
-    };
+    let area = { let r = &g.level.errand.area; crate::quiet::HolderStandArea { x0: r.x0, x1: r.x1, z0: r.z0, z1: r.z1 } };
+    let goal: V3 = crate::quiet::holder_stand(g, front, Some(area)).pos.unwrap_or([front[0], 0.0, front[2]]);
     let mut best: Option<GuardId> = None;
     let mut bd = 1e9;
     for &gd in g.guards.iter() {
@@ -382,14 +364,6 @@ mod tests {
     fn game() -> Game {
         let g = Game::blank();
         g
-    }
-
-    /// rackDist's plain arm against mission.ts's arithmetic run under bun with EXACT on.
-    #[test]
-    fn rack_dist_plain_has_the_typescripts_bits() {
-        let (front, half_w) = ([3.7, 0.0, -2.3], 0.45);
-        assert_eq!(rack_dist_plain(front, half_w, [5.1, 0.0, -1.9]).to_bits(), 0x3ff07e0f66afed04);
-        assert_eq!(rack_dist_plain(front, half_w, [3.8, 0.0, 4.4]).to_bits(), 0x401acccccccccccd);
     }
 
     #[test]
