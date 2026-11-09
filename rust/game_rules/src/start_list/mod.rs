@@ -349,7 +349,6 @@ impl Sitting {
             team_tag: String::from(loadout::size_tag(m.squad)),
             unplayed: unplayed(m),
             off_list: e.is_some_and(|e| e.off_list == Some(true)),
-            packs: false,
             as_issued: loadout.as_ref().is_some_and(kit_as_issued),
             lesson: m.lesson(),
             ways: m.ways().map_or(Vec::new(), |w| w.to_vec()),

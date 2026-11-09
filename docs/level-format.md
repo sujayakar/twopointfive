@@ -402,8 +402,7 @@ On a level with `rails` only:
 `rails`:
 
 - `allow` list of actions (`rails/`). Every other key is dropped. `respawn` seconds at least 0; default he goes down: a teammate spends so long on a knee instead. `fog` true or false.
-- `waits` record of `low`; default they fall in at once. The squad holds where the mission stood it until a step allows the order key; `low` is on a knee. Not with `sky`.
-- `sky` record: `park` V3 (where the player is parked), `reach` number (how far the walk keys shift the view; default `k.rails.pan_reach`), `eye` as a step's, `low`. Nobody on the floor is the player.
+- `waits` record of `low`; default they fall in at once. The squad holds where the mission stood it until a step allows the order key; `low` is on a knee.
 - `lasers` false: no teammate shows an aiming laser. `flatRing` true: the squad's ring is one flat ring.
 - `orders` list of order ids; default all: what the squad's menu lists. `rows` list of verbs; default all: what Space offers.
 
@@ -437,7 +436,7 @@ A test is a record whose `is` says its kind, and `passes` runs it. Where it says
 | mate | `area`, `at`, `r` (default 1.5), `by`, `away` | the partner is there, and within `by` or past `away` of Sam |
 | pair | `what`, `n` | the pair's log has so many rows that start so |
 | cue | `name` | the script has cued it |
-| view | `turned`, `zoomed`, `panned` | the view has turned, zoomed or panned so far |
+| view | `turned`, `zoomed` | the view has turned or zoomed so far |
 | squad | `area`, `n` (default all) | so many of the squad are there |
 | stacks | `doors`, `n`, `set` | so many stand on each of those doors |
 | watching | `at`, `r` (default 3), `n` | so many teammates watch that point |

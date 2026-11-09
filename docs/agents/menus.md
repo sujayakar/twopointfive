@@ -25,7 +25,7 @@ replays are `replays.md`, co-op is `net.md`, how text is worded is `writing.md`.
 | `src/ui/title.ts`, `src/host/reel.ts` | the title, Extras, the boot card (the same screen); the reel |
 | `src/ui/startpage.ts`, `missions.ts`, `planArt.ts`, `menuStills.ts` | the one start page: the rail and two steps; the rows, the sheet and its keys; the map; the pictures |
 | `src/ui/loadout.ts`, `kitCard.ts`, `kitDense.ts`, `kitIcons.ts` | the kit step: team, squad kit, chips, Deploy; a man's card, its lay-out, its drawings |
-| `kitBrief.ts`, `kitGuide.ts` | the job and map kept in sight over the kit; the walkthrough engine |
+| `kitBrief.ts` | the job and map kept in sight over the kit |
 | `kitView.ts`, `src/host/kitpage.ts`, `kitguard.ts` | the team at the door: the kit screen's half, the window's half, the window's read-only stores |
 | `rust/game_run/src/desk.rs`, `src/view/desk.ts` | the desk: what the cards before a game ask and press |
 | `start_list/`, `kit/`, `loadout/`, `kitstage/` (rules) | the list and its settings, the cards, a mission's link and size, the staged picture |
@@ -129,7 +129,7 @@ keys step `steps`. Inside a layer a viewport unit is written over `var(--tz, 1)`
 - **Something the HUD says:** its struct in `rust/game_types/src/view/types.rs`, filled by its rule's own module, its line in `tick_view`, `bun run tools/draw/gen.ts`, the read in
   `overlay.ts`. After Rust, `bun run tools/blitz/face-build.ts`.
 - **A debugger row:** a `Row` in `shown.rs` or an `Action` in `actions.rs`. A knob needs nothing: it is on the search by its name.
-- **Other words a screen reads**: `?kitbrief=0`, `?kitguide=1`, `?stillkit`, `?kitloud`, `?loadbrief=0`, `?settle=0`, `?textsize=0`, `?cards=0`, `?reel`, `?loadout=`.
+- **Other words a screen reads**: `?kitbrief=0`, `?stillkit`, `?kitloud`, `?loadbrief=0`, `?settle=0`, `?textsize=0`, `?cards=0`, `?reel`, `?loadout=`.
 
 ## What holds it
 
@@ -145,7 +145,7 @@ keys step `steps`. Inside a layer a viewport unit is written over `var(--tz, 1)`
 Checks: `bun run tools/qa/checks.ts menus` runs `squadkeys-check.ts`, `camspace-check.ts`, `hud-look-check.ts`, `menustills-check.ts`, `textsize-check.ts`. Beside them
 `view-check.ts` (nothing under the HUD imports the game), `settle-check.ts`, `writing-check.ts`.
 
-Page scripts, on the software adapter: `bun run tools/qa/pages.ts menus` runs `startpage-look.cjs`, `cards-page.ts`, `kitdense-page.cjs`, `kitguide-page.cjs`, `kitpaste-page.cjs`,
+Page scripts, on the software adapter: `bun run tools/qa/pages.ts menus` runs `startpage-look.cjs`, `cards-page.ts`, `kitdense-page.cjs`, `kitbrief-page.cjs`, `kitpaste-page.cjs`,
 `keybinds-page.cjs`, `textsize-page.cjs`. Beside them `loadbrief-page.cjs`, `panel-keys.cjs`, `savetimeline-page.cjs`.
 
 ## Not seen
