@@ -71,7 +71,7 @@ pub(super) fn keep_off_guards(g: &mut crate::game::Game, dt: f64, y1: f64, m: Op
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
-        if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].held.is_some() { continue; }
+        if crate::condition::down(g, g.gd[gd].ch) || g.gd[gd].held.is_some() { continue; }
         let p = legs_pos(g, &crate::seats::here(g), &m);
         let gc = g.gd[gd].ch;
         let (gp, gv) = (g.ch[gc].pos, g.ch[gc].vel);
@@ -306,7 +306,7 @@ pub(super) fn wall_snap(g: &mut crate::game::Game, cam: CameraId, why: Option<&m
     let c = g.pl[pl].ch;
     {
         let p = &g.pl[pl];
-        if p.wall.is_some() || p.down || p.dragging.is_some() || p.takedown.is_some() || p.holding.is_some() || p.kick.is_some() || p.picking.is_some() || p.wanding.is_some() { return false; }
+        if p.wall.is_some() || g.cond[p.ch].down || p.dragging.is_some() || p.takedown.is_some() || p.holding.is_some() || p.kick.is_some() || p.picking.is_some() || p.wanding.is_some() { return false; }
     }
     // one object in the TypeScript, two shapes in the skeleton: findWall's flag comes back to the caller's, whatever it found
     let mut fw = why.as_deref().map(|w| FindWallWhy { blocked: w.blocked });
@@ -390,7 +390,7 @@ pub(super) fn release_wall(g: &mut crate::game::Game) {
     g.ch[c].anim.stance_in = 0.0;
     // WallHold.cam is a bool: the camera it remembers is his seat's, the only one updatePlayer is ever handed (game.ts:1749)
     if w.cam { let seat = crate::seats::seat_of_man(g, pl); let cam = g.tab.cmd_seat[seat].cam; g.tab.camera[cam].peek_offset = None; }
-    if w.drawn && !g.pl[pl].down { set_holstered(g, false, None); }
+    if w.drawn && !crate::condition::down(g, g.pl[pl].ch) { set_holstered(g, false, None); }
 }
 
 /// The player's own ways off the wall: releaseWall, and with the switch on his momentum kept. (player.ts wallStepOff)
@@ -399,7 +399,7 @@ pub(super) fn wall_step_off(g: &mut crate::game::Game, mx: f64, mz: f64, ml: f64
     let w = g.pl[pl].wall;
     release_wall(g);
     let Some(w) = w else { return };
-    if !g.k.wallsnap.on || g.pl[pl].down { return; }
+    if !g.k.wallsnap.on || crate::condition::down(g, g.pl[pl].ch) { return; }
     let c = g.pl[pl].ch;
     g.ch[c].anim.stance_out = g.k.wallsnap.slow_out;
     wall_voice(g, w, false);

@@ -47,7 +47,7 @@ fn off_places(p: &Play) -> f64 {
     for &x in &s.order { d = d.max(flat(p.g.ch[p.g.gd[x].ch].pos, walk::home_of(&p.g, s, x).0)); }
     d
 }
-fn team_up(p: &Play) -> bool { st(p).order.iter().all(|&x| p.g.gd[x].state != GuardState::Dead) && !p.g.pl[p.g.player].down }
+fn team_up(p: &Play) -> bool { st(p).order.iter().all(|&x| !game::condition::down(&p.g, p.g.gd[x].ch)) && !game::condition::down(&p.g, p.g.pl[p.g.player].ch) }
 
 /// a wall way and a gap way on a small set of a level's own
 fn with_way(level: &str, way: &str, set: &str) -> String {

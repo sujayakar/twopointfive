@@ -4,7 +4,7 @@ use crate::game::{Game, GuardState};
 use crate::ids::*;
 
 /// He is dead. (A man down and bleeding, or one who has fled the level, is not: `down_kind`, `fled`.)
-pub fn dead(g: &Game, gd: GuardId) -> bool { g.gd[gd].state == GuardState::Dead }
+pub fn dead(g: &Game, gd: GuardId) -> bool { crate::condition::down(g, g.gd[gd].ch) }
 
 /// He cannot see. It does not say WHAT took his eyes: a flash, a wall charge, a door thrown in his face and the door tools all write it.
 pub fn blind(g: &Game, gd: GuardId) -> bool { crate::condition::is_blind(g, g.gd[gd].ch) }

@@ -60,7 +60,7 @@ fn side(g: &mut crate::game::Game, gd: GuardId) -> bool {
 
 /// …and alive (netquiet.ts ours)
 fn ours(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    g.gd[gd].state != crate::game::GuardState::Dead && side(g, gd)
+    !crate::condition::down(g, g.gd[gd].ch) && side(g, gd)
 }
 
 /// …on the net: alive, not in Sam's arm, not a man who has run (netquiet.ts onNet)
@@ -70,7 +70,7 @@ fn on_net(g: &mut crate::game::Game, gd: GuardId) -> bool {
 
 /// gone to his mates, whether or not they know it yet (netquiet.ts lostTo)
 fn lost_to(g: &crate::game::Game, m: GuardId) -> bool {
-    g.gd[m].state == crate::game::GuardState::Dead
+    crate::condition::down(g, g.gd[m].ch)
         || g.gd[m].held.is_some()
         || crate::owner::has(g, m, crate::owner::by::RUNNER)
         || !g.guards.contains(&m)
@@ -271,7 +271,7 @@ fn body_of(g: &mut crate::game::Game, finder: GuardId, men: &[GuardId]) -> Optio
     let mut best: Option<GuardId> = None;
     let mut bs = m::INF;
     for &o in men {
-        if o == finder || g.gd[o].state != crate::game::GuardState::Dead || g.gd[o].team != team || !side(g, o) {
+        if o == finder || !crate::condition::down(g, g.gd[o].ch) || g.gd[o].team != team || !side(g, o) {
             continue;
         }
         let c = g.gd[o].ch;
@@ -363,7 +363,7 @@ fn foe_in_view(g: &mut crate::game::Game, gd: GuardId) -> bool {
         let o = g.guards[i];
         i += 1;
         let (o_team, o_ch) = (g.gd[o].team, g.gd[o].ch);
-        if o != gd && g.gd[o].state != crate::game::GuardState::Dead && crate::teams::is_hostile(g, team, o_team) && crate::guards::can_see_char(g, gd, o_ch, false).visible {
+        if o != gd && !crate::condition::down(g, g.gd[o].ch) && crate::teams::is_hostile(g, team, o_team) && crate::guards::can_see_char(g, gd, o_ch, false).visible {
             return true;
         }
     }

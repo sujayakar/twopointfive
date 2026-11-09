@@ -143,7 +143,7 @@ pub fn wedged(r: &crate::game::Interactable) -> bool {
 /// the whistle has a wedge of the ring this frame (interact.ts whistleWedge)
 pub fn whistle_wedge(g: &Game, seat: &crate::seats::SeatRef) -> bool {
     let pl = seat.player;
-    if !ring_stays(g) || g.pl[pl].down || g.pl[pl].takedown.is_some() || crate::rails::rails_locks(g, "whistle") { return false; }
+    if !ring_stays(g) || crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].takedown.is_some() || crate::rails::rails_locks(g, "whistle") { return false; }
     let mut n = 0.0;
     for r in seat.nearby { if r.kind != crate::game::InteractableKind::Cancel { n += 1.0; } }
     n < g.k.cmdring.wedges
@@ -328,7 +328,7 @@ pub fn update_interact(g: &mut Game, dt: f64, input: InputId, view: Option<crate
     }
     g.pl[pl].sel.run_key = String::new();
     g.pl[pl].sel.move_latch = 0.0;
-    if g.pl[pl].down {
+    if crate::condition::down(g, g.pl[pl].ch) {
         close_selector(g, false);
         if wheeled && !down { crate::player::wheel_pace(g, wheel); }
         return;

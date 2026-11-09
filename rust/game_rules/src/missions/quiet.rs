@@ -244,7 +244,7 @@ pub fn quiet_mission_tick(g: &mut crate::game::Game, cam: Option<CameraId>) {
     }
     if !g.quiet.fall_in { return; }
     let m = match g.quiet.ops.first().copied() { Some(m) => m, None => return };
-    if g.gd[m].state == crate::game::GuardState::Dead || !crate::orders::squad_orders_active(g, &crate::seats::here(g)) { return; }
+    if crate::condition::down(g, g.gd[m].ch) || !crate::orders::squad_orders_active(g, &crate::seats::here(g)) { return; }
     g.quiet.fall_in = false;
     let at = g.ch[g.pl[g.player].ch].pos;
     let target = crate::orders::squad_orders_target_at(g, at);
@@ -280,7 +280,7 @@ fn quiet_mission_summary(g: &crate::game::Game) -> String {
     let who = if patrol.is_empty() { "nobody" } else { patrol.as_str() };
     let plural = if q.exits.len() == 1 { "" } else { "s" };
     let partner = if js::truthy(g.quiet.squad) {
-        let down = g.quiet.ops.first().map_or(false, |&o| g.gd[o].state == crate::game::GuardState::Dead);
+        let down = g.quiet.ops.first().map_or(false, |&o| crate::condition::down(g, g.gd[o].ch));
         format!("partner {}", if down { "down" } else { "up" })
     } else {
         String::from("alone")

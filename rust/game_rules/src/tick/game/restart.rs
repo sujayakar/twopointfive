@@ -179,7 +179,7 @@ fn lend_rnd<'a>(rnd: &'a mut Option<&mut dyn FnMut(&mut Game) -> f64>) -> Option
 pub fn game_interrogate(g: &mut crate::game::Game, gd: GuardId, rnd: Option<&mut dyn FnMut(&mut crate::game::Game) -> f64>) -> Option<crate::dialogue::DialoguePick> {
     let mut rnd = rnd;
     let me = g.player;
-    if g.pl[me].down || g.gd[gd].state == crate::game::GuardState::Dead || !(g.guards.contains(&gd) || g.civilians.contains(&gd)) { return None; }
+    if crate::condition::down(g, g.pl[me].ch) || crate::condition::down(g, g.gd[gd].ch) || !(g.guards.contains(&gd) || g.civilians.contains(&gd)) { return None; }
     let held = match &g.pl[me].holding { Some(h) => Some(h.g), None => None };
     if held != Some(gd) {
         // not the man in his arm: in reach and nothing solid between, statics or a leaf

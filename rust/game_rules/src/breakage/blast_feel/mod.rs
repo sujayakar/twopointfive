@@ -163,5 +163,5 @@ fn report(g: &mut crate::game::Game, pl: PlayerId, at: V3) {
     crate::audio_iface::game_audio_like_play(g, "wallCrack", Some(at), Some(k.crack * (0.25 + 0.75 * dull) * carry), None);
     crate::audio_iface::game_audio_like_play(g, "wallThump", Some(at), Some(k.thump * carry), Some(&crate::audio_iface::PlayOpts::Rate { rate: r2 }));
     crate::audio_iface::game_audio_like_play(g, "wallDebris", Some(at), Some(k.debris * (0.4 + 0.6 * dull) * carry), Some(&crate::audio_iface::PlayOpts::Rate { rate: r3 }));
-    if !g.pl[pl].down && d < k.ring_m { crate::audio_iface::game_audio_like_play(g, "earRing", None, Some(k.ring * (1.0 - d / k.ring_m)), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.9 })); }
+    if !crate::condition::down(g, g.pl[pl].ch) && d < k.ring_m { crate::audio_iface::game_audio_like_play(g, "earRing", None, Some(k.ring * (1.0 - d / k.ring_m)), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.9 })); }
 }

@@ -44,7 +44,7 @@ pub(super) fn assign_lockdown(g: &mut crate::game::Game, redeal: bool, except: O
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
-        if g.gd[gd].state == crate::game::GuardState::Dead { continue; }
+        if crate::condition::down(g, g.gd[gd].ch) { continue; }
         if let Some(l) = g.gd[gd].leader { old_follow = Some(gd); old_lead = Some(l); }
         if g.gd[gd].post.is_some() { old_post = g.gd[gd].post.clone(); old_post_man = Some(gd); }
     }
@@ -53,7 +53,7 @@ pub(super) fn assign_lockdown(g: &mut crate::game::Game, redeal: bool, except: O
     let mut alive: Vec<GuardId> = Vec::new();
     for &x in g.guards.iter() {
         let m_ = &g.gd[x];
-        if m_.state != crate::game::GuardState::Dead && m_.held.is_none() && m_.team == crate::teams::Team::Guard && m_.unit.is_none() { alive.push(x); }
+        if !g.cond[m_.ch].down && m_.held.is_none() && m_.team == crate::teams::Team::Guard && m_.unit.is_none() { alive.push(x); }
     }
     if alive.len() < 2 { return; }
     let (mut a, mut b, mut bd) = (alive[0], alive[1], m::INF);
@@ -270,7 +270,7 @@ pub(super) fn lockdown_doors(g: &mut crate::game::Game, gd: GuardId, calm: Optio
         }
         let mut busy = false;
         for &o in g.guards.iter() {
-            if o == gd || g.gd[o].state == crate::game::GuardState::Dead { continue; }
+            if o == gd || crate::condition::down(g, g.gd[o].ch) { continue; }
             let oc = g.gd[o].ch;
             let op = g.ch[oc].pos;
             if m::hyp2(op[0] - fc[0], op[2] - fc[2]) < 2.0 { busy = true; break; }
@@ -417,7 +417,7 @@ fn name_of_id(g: &crate::game::Game, id_2: f64) -> String {
 fn living_count(g: &Game, xs: &[GuardId]) -> f64 {
     let mut n = 0.0;
     for &x in xs {
-        if g.gd[x].state != crate::game::GuardState::Dead && g.guards.contains(&x) && !g.gd[x].fled { n += 1.0; }
+        if !crate::condition::down(g, g.gd[x].ch) && g.guards.contains(&x) && !g.gd[x].fled { n += 1.0; }
     }
     n
 }
@@ -442,7 +442,7 @@ pub(super) fn end_engagement(g: &mut crate::game::Game, outcome: crate::guards::
 /// Is anybody of this list still in the fight?   (guards.ts tickEngagement living)
 fn living_any(g: &Game, xs: &[GuardId]) -> bool {
     for &x in xs {
-        if g.gd[x].state != crate::game::GuardState::Dead && g.guards.contains(&x) && !g.gd[x].fled { return true; }
+        if !crate::condition::down(g, g.gd[x].ch) && g.guards.contains(&x) && !g.gd[x].fled { return true; }
     }
     false
 }
@@ -470,7 +470,7 @@ pub(super) fn tick_engagement(g: &mut crate::game::Game) {
             if let Some(e) = g.m.guards.engagements.as_mut() { e.alive.delete(x); }
             continue;
         }
-        if g.gd[x].state == crate::game::GuardState::Dead {
+        if crate::condition::down(g, g.gd[x].ch) {
             if let Some(e) = g.m.guards.engagements.as_mut() { e.alive.delete(x); }
             let (victim, team, killer, down_by) = { let m_ = &g.gd[x]; (m_.callsign.clone(), m_.team, m_.killer_id, m_.down_by) };
             let by = if killer >= 0.0 {

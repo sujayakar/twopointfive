@@ -56,7 +56,7 @@ pub fn note_round(g: &mut crate::game::Game, shooter: CharId, from: V3, to: V3, 
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
-        if g.gd[gd].state != crate::game::GuardState::Dead {
+        if !crate::condition::down(g, g.gd[gd].ch) {
             let (c, held, team) = (g.gd[gd].ch, g.gd[gd].held.is_some(), g.gd[gd].team);
             note_one(g, &round, c, Some(gd), held, team);
         }
@@ -243,7 +243,7 @@ fn suppression_lines(moment: Option<crate::suppression::SupMoment>) -> Vec<Strin
 
 /// May this man's behaviour react at all this frame.   (suppression.ts reacts)
 fn reacts(g: &crate::game::Game, gd: GuardId) -> bool {
-    g.tune.suppression && g.ai_enabled && g.gd[gd].state != crate::game::GuardState::Dead && g.gd[gd].held.is_none() && g.gd[gd].script.is_none()
+    g.tune.suppression && g.ai_enabled && !crate::condition::down(g, g.gd[gd].ch) && g.gd[gd].held.is_none() && g.gd[gd].script.is_none()
 }
 
 /// Once a frame's decay of one man's scalar and pulse.   (suppression.ts updateSuppression's `decay`)
@@ -278,7 +278,7 @@ pub fn update_suppression(g: &mut crate::game::Game, dt: f64) {
     let k = m::pow(2.0, -dt / g.k.suppression.half_life);
     let kk = m::exp(-g.k.suppression.kick_decay * dt);
     for pl in crate::seats::men(g) {
-        let down = g.pl[pl].down;
+        let down = crate::condition::down(g, g.pl[pl].ch);
         let p = &mut g.cond[g.pl[pl].ch].sup;
         if down { p.v = 0.0; p.kick = 0.0; } else { decay(p, k, kk); }
     }
@@ -286,7 +286,7 @@ pub fn update_suppression(g: &mut crate::game::Game, dt: f64) {
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
-        if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].held.is_some() {
+        if crate::condition::down(g, g.gd[gd].ch) || g.gd[gd].held.is_some() {
             let sup = &mut g.cond[g.gd[gd].ch].sup;
             sup.v = 0.0;
             sup.kick = 0.0;
@@ -330,7 +330,7 @@ pub fn update_suppression(g: &mut crate::game::Game, dt: f64) {
                     let o = g.guards[o_i];
                     o_i += 1;
                     if o != gd
-                        && g.gd[o].state != crate::game::GuardState::Dead
+                        && !crate::condition::down(g, g.gd[o].ch)
                         && g.time - g.cond[g.gd[o].ch].sup.pinned_at < g.k.suppression.pair_secs
                         && g.gd[o].team == g.gd[gd].team
                         && !crate::runner::runner_mute(g, o)
@@ -521,7 +521,7 @@ pub fn cover_from(g: &mut crate::game::Game, gd: GuardId, threat: V3) -> Option<
             if open && (kept_open.is_some() || (as_was.is_some() && !(kept_thin.is_some() && plans < 8))) { continue; }
             let mut taken = false;
             for &o in &g.guards {
-                if o != gd && g.gd[o].state != crate::game::GuardState::Dead
+                if o != gd && !crate::condition::down(g, g.gd[o].ch)
                     && (v3::dist_xz(g.ch[g.gd[o].ch].pos, p) < 0.9
                         || match g.cond[g.gd[o].ch].sup.cover { Some(cover) => v3::dist_xz(cover, p) < 1.2, None => false })
                 {

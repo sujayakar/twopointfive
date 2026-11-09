@@ -26,7 +26,7 @@ pub fn throws_view(g: &Game, seat: &crate::seats::SeatRef) -> Vec<ThrowLine> {
         if let Some(s) = g.m.squadthrow.states.get(key) {
             for gd in s.walks.keys() {
                 let w = s.walks.get(gd).unwrap();
-                if w.thrown_t >= 0.0 || g.gd[w.gd].state == GuardState::Dead || crate::orders::squad_orders_of(g, seat, w.gd) != w.a || !g.guards.contains(&w.gd) { continue; }
+                if w.thrown_t >= 0.0 || crate::condition::down(g, g.gd[w.gd].ch) || crate::orders::squad_orders_of(g, seat, w.gd) != w.a || !g.guards.contains(&w.gd) { continue; }
                 let p = g.ch[g.gd[w.gd].ch].pos;
                 let (mut bi, mut bd) = (0usize, f64::INFINITY);
                 for (i, &q) in w.line.iter().enumerate() { let d = v3::dist_xz(q, p); if d < bd { bd = d; bi = i; } }
@@ -51,7 +51,7 @@ pub fn throws_view(g: &Game, seat: &crate::seats::SeatRef) -> Vec<ThrowLine> {
     if let Some(s) = g.m.squad40.states.get(key) {
         for k in s.turns.keys() {
             let w = s.turns.get(k).unwrap();
-            if w.fired_t < 0.0 && g.gd[w.gd].state != GuardState::Dead && crate::orders::squad_orders_of(g, seat, w.gd) == w.a { out.push(shell(g, &w.shot, false)); }
+            if w.fired_t < 0.0 && !crate::condition::down(g, g.gd[w.gd].ch) && crate::orders::squad_orders_of(g, seat, w.gd) == w.a { out.push(shell(g, &w.shot, false)); }
         }
         if let (Some((men, at)), Some(p)) = (crate::squad40::lit(g, seat), s.plan.as_ref()) {
             if let (Some(a), None, true) = (&p.shot, &p.no, p.at == at && p.men == men) { out.push(shell(g, a, true)); }

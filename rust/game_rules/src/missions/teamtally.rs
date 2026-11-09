@@ -6,7 +6,7 @@ use alloc::string::String;
 /// Is this man's down one the card counts as the partner's: the tick's test, asked of him later.   (teamtally.ts teamTallied)
 pub fn team_tallied(g: &crate::game::Game, gd: GuardId) -> bool {
     if !g.quiet.active
-        || g.gd[gd].state != crate::game::GuardState::Dead
+        || !crate::condition::down(g, g.gd[gd].ch)
         || g.gd[gd].down_by != Some(crate::game::DownBy::Guard)
         || g.gd[gd].civ.is_some()
         || g.gd[gd].team == crate::teams::Team::Operative
@@ -36,7 +36,7 @@ pub fn team_tally_tick(g: &mut crate::game::Game) {
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
-        if g.gd[gd].state != crate::game::GuardState::Dead
+        if !crate::condition::down(g, g.gd[gd].ch)
             || g.gd[gd].died_at != g.time
             || g.gd[gd].down_by != Some(crate::game::DownBy::Guard)
             || g.gd[gd].civ.is_some()

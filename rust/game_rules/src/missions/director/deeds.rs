@@ -142,7 +142,7 @@ pub(in crate::missions) fn director_beat_unit(g: &crate::game::Game, r: Director
 pub(in crate::missions) fn director_beat_rout(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, u: &crate::director::UnitRef) -> Result<bool, String> {
     if g.tab.director_run[r].units.has(crate::Num(u.id)) { return Ok(false); }
     let gd = director_guard_of(g, r, u)?;
-    if g.gd[gd].state == crate::game::GuardState::Dead { return Ok(false); }
+    if crate::condition::down(g, g.gd[gd].ch) { return Ok(false); }
     if crate::owner::has(g, gd, crate::owner::by::RUNNER) { return Ok(true); }
     if !crate::runner::runner_break(g, gd) { return Ok(false); } // (asked while he is still in this beat's hand: refused, he is exactly as he was)
     if g.gd[gd].script.is_some() { crate::squad::end_guard_script(g, gd, Some(crate::squad::EndGuardScriptState::Alert)); }
@@ -167,7 +167,7 @@ pub(in crate::missions) fn director_beat_release(g: &mut crate::game::Game, r: D
 pub(in crate::missions) fn director_beat_say(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, u: &crate::director::UnitRef, line: &str, radio: Option<bool>) -> Result<(), String> {
     let radio = radio.unwrap_or(false);
     let gd = director_guard_of(g, r, u)?;
-    if !line.is_empty() && g.gd[gd].state != crate::game::GuardState::Dead {
+    if !line.is_empty() && !crate::condition::down(g, g.gd[gd].ch) {
         crate::guards::say(g, gd, line, Some(radio), Some(true)); // (forced: a scripted line is deliberate)
         let what = format!("{}{}: {}", g.gd[gd].callsign, if radio { "" } else { " (says)" }, line);
         push(g, b, DirectorPushRowKind::Radio, what, None);
@@ -176,7 +176,7 @@ pub(in crate::missions) fn director_beat_say(g: &mut crate::game::Game, r: Direc
 }
 /// c.radio: a line on the net under a name, said by that man if he stands in the world, else by the voice alone (director.ts:971)
 pub(in crate::missions) fn director_beat_radio(g: &mut crate::game::Game, b: DirectorLiveBeatId, callsign: &str, line: &str) {
-    let gd = g.guards.iter().copied().find(|x| g.gd[*x].callsign == callsign && g.gd[*x].state != crate::game::GuardState::Dead);
+    let gd = g.guards.iter().copied().find(|x| g.gd[*x].callsign == callsign && !crate::condition::down(g, g.gd[*x].ch));
     if let Some(x) = gd {
         let dur = crate::guards::bubble_secs(line);
         g.gd[x].bubble = Some(crate::game::GuardBubble { text: String::from(line), t: g.time, dur, radio: true });

@@ -83,7 +83,7 @@ fn sweep_rest(g: &mut Game, id: RoomClearId, second: bool, t: f64) {
 }
 
 fn on_his_script(g: &Game, gd: GuardId) -> bool {
-    g.guards.contains(&gd) && g.gd[gd].script.is_some() && g.gd[gd].state != crate::game::GuardState::Dead
+    g.guards.contains(&gd) && g.gd[gd].script.is_some() && !crate::condition::down(g, g.gd[gd].ch)
 }
 
 // ---- the runner
@@ -241,7 +241,7 @@ pub fn run_guard_script(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     live(g, gd, &mut s);
     for i in 0..g.guards.len() {
         let o = g.guards[i];
-        if o == gd || g.gd[o].state == crate::game::GuardState::Dead { continue; }
+        if o == gd || crate::condition::down(g, g.gd[o].ch) { continue; }
         let oc = g.gd[o].ch;
         let mut d = v3::sub(g.ch[c].pos, g.ch[oc].pos);
         d[1] = 0.0;
@@ -292,7 +292,7 @@ pub fn run_guard_script(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
 pub fn end_guard_script(g: &mut crate::game::Game, gd: GuardId, state: Option<crate::squad::EndGuardScriptState>) {
     let state = state.unwrap_or(EndGuardScriptState::Patrol);
     g.gd[gd].script = None;
-    if g.gd[gd].state == crate::game::GuardState::Dead { return; }
+    if crate::condition::down(g, g.gd[gd].ch) { return; }
     let c = g.gd[gd].ch;
     g.ch[c].anim.stance = crate::character::Stance::None;
     g.gd[gd].muzzle_down = false;
@@ -816,7 +816,7 @@ fn next_door_of(g: &crate::game::Game, p: &crate::scene_level::RoomClearPlan) ->
 /// Break a scripted man off into the AI with something on his mind: patrol for exactly one frame carrying this awareness and fix. (squad.ts breakOff)
 pub(super) fn break_off(g: &mut crate::game::Game, gd: GuardId, awareness: f64, last_known: Option<V3>) {
     end_guard_script(g, gd, Some(EndGuardScriptState::Suspicious));
-    if g.gd[gd].state == crate::game::GuardState::Dead { return; }
+    if crate::condition::down(g, g.gd[gd].ch) { return; }
     crate::mind::set_state(g, gd, crate::game::GuardState::Patrol, "squad");
     crate::mind::raise(g, gd, awareness, "squad");
     if let Some(k) = last_known { crate::mind::fix_keep(g, gd, Some(v3::copy(k)), "squad"); }

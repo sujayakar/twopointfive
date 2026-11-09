@@ -328,7 +328,7 @@ pub fn wand_order_key(g: &mut crate::game::Game, input: InputId) -> bool {
     let mut want = false;
     if live(g) {
         for gd in crate::orders::squad_orders_squad(g, &crate::seats::here(g)) {
-            if g.gd[gd].state != crate::game::GuardState::Dead && carries(g, gd) {
+            if !crate::condition::down(g, g.gd[gd].ch) && carries(g, gd) {
                 want = true;
                 break;
             }
@@ -357,7 +357,7 @@ pub fn wand_order_key(g: &mut crate::game::Game, input: InputId) -> bool {
         while let Some(gd) = g.m.wandorder.states.get(k).unwrap().jobs.next_key(&mut at) {
             let mut j = job(g, &crate::seats::here(g), gd).unwrap();
             let a = crate::orders::squad_orders_of(g, &crate::seats::here(g), gd);
-            if g.gd[gd].state == crate::game::GuardState::Dead || !squad.contains(&gd) || a != Some(j.a) {
+            if crate::condition::down(g, g.gd[gd].ch) || !squad.contains(&gd) || a != Some(j.a) {
                 if j.knelt {
                     let c = g.gd[gd].ch;
                     g.ch[c].anim.lockpick = false;
@@ -412,7 +412,7 @@ fn eye_in_view(g: &mut Game, gd: GuardId) -> Option<crate::fogofwar::FogEye> {
         return None;
     }
     let now = g.time;
-    if g.gd[gd].state == crate::game::GuardState::Dead
+    if crate::condition::down(g, g.gd[gd].ch)
         || now - j.last_t > 0.25
         || crate::condition::is_blind(g, g.gd[gd].ch)
         || g.gd[gd].script.as_ref().map_or(false, |s| s.over.is_some())

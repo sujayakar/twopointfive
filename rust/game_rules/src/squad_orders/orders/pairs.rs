@@ -273,7 +273,7 @@ pub fn squad_orders_pair(g: &mut crate::game::Game, men: &[GuardId], spots: &[V3
 
 /// What one man is doing, in a few words.   (orders.ts SquadOrders.statusOf)
 pub fn squad_orders_status_of(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> String {
-    if g.gd[gd].state == crate::game::GuardState::Dead {
+    if crate::condition::down(g, g.gd[gd].ch) {
         return String::from("down");
     }
     if let Some(a) = seat.orders.asg.get(gd).copied() {

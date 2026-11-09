@@ -112,7 +112,7 @@ pub fn arc_solve(g: &mut crate::game::Game, from: V3, target: V3, r: crate::laun
 pub fn ring_aim_point(g: &crate::game::Game, seat: &crate::seats::SeatRef, from: V3) -> V3 {
     let puppet = g.puppet.as_ref().and_then(|p| p.target);
     let gd = match puppet {
-        Some(t) if g.gd[t].state != crate::game::GuardState::Dead => Some(t),
+        Some(t) if !crate::condition::down(g, g.gd[t].ch) => Some(t),
         _ => seat.aim_guard,
     };
     if let Some(gd) = gd {
@@ -181,7 +181,7 @@ pub fn update_rings(g: &mut crate::game::Game, dt: f64) {
             while j < g.guards.len() {
                 let gd = g.guards[j];
                 j += 1;
-                if g.gd[gd].state != crate::game::GuardState::Dead && g.gd[gd].team != crate::teams::Team::Operative {
+                if !crate::condition::down(g, g.gd[gd].ch) && g.gd[gd].team != crate::teams::Team::Operative {
                     let c = g.gd[gd].ch;
                     try_char(g, &r, radius, dir, reach, c, Some(gd), &mut best, &mut hit_c, &mut hit_g);
                 }
@@ -191,7 +191,7 @@ pub fn update_rings(g: &mut crate::game::Game, dt: f64) {
                 try_char(g, &r, radius, dir, reach, c, Some(cv), &mut best, &mut hit_c, &mut hit_g);
             }
             for pl in crate::seats::men(g) {
-                if !g.pl[pl].down {
+                if !crate::condition::down(g, g.pl[pl].ch) {
                     let c = g.pl[pl].ch;
                     try_char(g, &r, radius, dir, reach, c, None, &mut best, &mut hit_c, &mut hit_g);
                 }
@@ -326,7 +326,7 @@ fn ring_hits_character(g: &mut crate::game::Game, r: crate::launcher::Ring, c_2:
 /// A ring in the body: he doubles over, rooted, gun down, alert, with a fix back up the ring's line; a yelp and a noise at him. A man held only flinches. (launcher.ts staggerGuard)
 pub fn stagger_guard(g: &mut crate::game::Game, gd: GuardId, dir: V3, shooter: CharId) {
     use crate::game::GuardState;
-    if g.gd[gd].state == GuardState::Dead { return; }
+    if crate::condition::down(g, g.gd[gd].ch) { return; }
     let c = g.gd[gd].ch;
     crate::character::anim_hit(g, c);
     let thump = v3::add(g.ch[c].pos, [0.0, 1.1, 0.0]);

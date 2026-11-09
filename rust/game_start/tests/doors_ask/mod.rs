@@ -776,7 +776,7 @@ impl DoorsAsk for Play {
         game::game::game_restart(&mut self.g);
     }
     fn round_from(&mut self, m: GuardId, at: [f64; 3]) { let c = self.g.gd[m].ch; let q = self.g.ch[c].pos; self.g.ch[c].muzzle = [q[0], 1.35, q[2]]; let o = game::combat::FireOpts { spread: Some(0.0), weapon: None, steady: Some(true), blind: None }; game::combat::fire_weapon(&mut self.g, c, at, false, Some(&o)); }
-    fn sam_down_hits(&self) -> (bool, f64) { let p = &self.g.pl[self.g.player]; (p.down, p.hits_left) }
+    fn sam_down_hits(&self) -> (bool, f64) { let p = &self.g.pl[self.g.player]; (self.g.cond[p.ch].down, p.hits_left) }
     fn down_how(&self, m: GuardId) -> Option<(game::game::DownKind, game::game::DownBy)> { let h = &self.g.gd[m]; Some((h.down_kind?, h.down_by?)) }
     fn rescue_free(&self) -> bool { game::rescue::rescue_mode(&self.g) == game::rescue::RescueMode::Free }
     fn rescue_jobs(&self) -> usize { self.g.rescue.flow.jobs.len() }

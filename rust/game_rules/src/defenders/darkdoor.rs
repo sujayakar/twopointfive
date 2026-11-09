@@ -76,7 +76,7 @@ fn head_of(g: &crate::game::Game, c_2: CharId) -> V3 {
 /// a man this file is about at all: a living defender or a man of the night staff.   (darkdoor.ts ours)
 fn ours(g: &crate::game::Game, gd: GuardId) -> bool {
     let x = &g.gd[gd];
-    x.state != crate::game::GuardState::Dead && x.civ.is_none() && x.held.is_none() && (x.team == crate::teams::Team::Hostile || x.team == crate::teams::Team::Guard)
+    !g.cond[x.ch].down && x.civ.is_none() && x.held.is_none() && (x.team == crate::teams::Team::Hostile || x.team == crate::teams::Team::Guard)
 }
 
 /// one of the hostage rescue's cast.   (darkdoor.ts rescued)
@@ -301,7 +301,7 @@ fn stand_spot(g: &mut crate::game::Game, gd: GuardId, d: DoorId, side: f64) -> O
             while i < g.guards.len() {
                 let o = g.guards[i];
                 i += 1;
-                if o != gd && g.gd[o].state != crate::game::GuardState::Dead && flat(pos_of(g, o), [x, 0.0, z]) < 0.6 { taken = true; break; }
+                if o != gd && !crate::condition::down(g, g.gd[o].ch) && flat(pos_of(g, o), [x, 0.0, z]) < 0.6 { taken = true; break; }
             }
             if taken { continue; }
             return Some([x, 0.0, z]);

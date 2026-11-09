@@ -267,7 +267,7 @@ pub fn door_tools_sync(g: &mut crate::game::Game) {
         while k < g.door_tools.roster.len() {
             let m = g.door_tools.roster[k];
             k += 1;
-            if crate::bigkit::carries_hammer(g, m) || (g.gd[m].state != crate::game::GuardState::Dead && crate::kit::kit_big(g, m) == crate::kit::BigKit::Shotgun) {
+            if crate::bigkit::carries_hammer(g, m) || (!crate::condition::down(g, g.gd[m].ch) && crate::kit::kit_big(g, m) == crate::kit::BigKit::Shotgun) {
                 big = true;
                 break;
             }

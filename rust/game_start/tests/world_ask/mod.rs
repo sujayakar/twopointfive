@@ -531,8 +531,8 @@ impl RescueAsk for Play {
         }
     }
     fn hostage_room_middle(&self) -> [f64; 2] { let b = game::rescue::rescue_bounds(&self.g).expect("a hostage room"); [(b.x0 + b.x1) / 2.0, (b.z0 + b.z1) / 2.0] }
-    fn hostages_up(&self) -> Vec<GuardId> { self.g.rescue.hostages.iter().copied().filter(|&m| self.g.gd[m].state != game::game::GuardState::Dead).collect() }
-    fn theirs_up(&self) -> Vec<GuardId> { self.g.rescue.hostiles.iter().copied().filter(|&m| self.g.gd[m].state != game::game::GuardState::Dead).collect() }
+    fn hostages_up(&self) -> Vec<GuardId> { self.g.rescue.hostages.iter().copied().filter(|&m| !game::condition::down(&self.g, self.g.gd[m].ch)).collect() }
+    fn theirs_up(&self) -> Vec<GuardId> { self.g.rescue.hostiles.iter().copied().filter(|&m| !game::condition::down(&self.g, self.g.gd[m].ch)).collect() }
     fn in_hostage_room(&self, at: [f64; 2]) -> bool { let b = game::rescue::rescue_bounds(&self.g).expect("a hostage room"); at[0] >= b.x0 && at[0] <= b.x1 && at[1] >= b.z0 && at[1] <= b.z1 }
     fn rescue_said(&self, starts: &str) -> Option<f64> { self.g.rescue.log.iter().find(|l| l.what.starts_with(starts)).map(|l| l.t) }
     fn rescue_lines(&self, starts: &str) -> Vec<String> { self.g.rescue.log.iter().filter(|l| l.what.starts_with(starts)).map(|l| l.what.clone()).collect() }

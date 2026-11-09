@@ -197,7 +197,7 @@ fn interrupt_of(g: &crate::game::Game, gd: GuardId) -> Option<String> {
     if !g.tune.needs {
         return Some(key("switched off"));
     }
-    if g.gd[gd].state == GuardState::Dead {
+    if crate::condition::down(g, g.gd[gd].ch) {
         return Some(key("down"));
     }
     if !g.ai_enabled {
@@ -290,7 +290,7 @@ pub fn needs_tick(g: &mut crate::game::Game, dt: f64) {
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
-        if g.gd[gd].state == GuardState::Dead || g.gd[gd].team != Team::Guard || g.gd[gd].unit.is_some() {
+        if crate::condition::down(g, g.gd[gd].ch) || g.gd[gd].team != Team::Guard || g.gd[gd].unit.is_some() {
             continue;
         }
         if !mem(g, gd).dealt {
@@ -476,7 +476,7 @@ fn partner_for(g: &mut crate::game::Game, gd: GuardId) -> Option<GuardId> {
         let o = g.guards[i];
         i += 1;
         let x = &g.gd[o];
-        if o == gd || x.state == GuardState::Dead || x.held.is_some() || x.team != Team::Guard || x.unit.is_some() {
+        if o == gd || g.cond[x.ch].down || x.held.is_some() || x.team != Team::Guard || x.unit.is_some() {
             continue;
         }
         if v3::dist(g.ch[x.ch].pos, my_pos) > g.k.needs.partner_m + 2.0 {
@@ -548,7 +548,7 @@ fn partner_reply(g: &mut crate::game::Game, gd: GuardId, t: &mut crate::needs::T
         log(g, gd, &format!("{} says nothing back ({}, aw {})", pcs, state.as_str(), js::to_fixed(aw, 2)));
         return;
     }
-    let third = g.guards.iter().copied().find(|&x| x != gd && x != p && g.gd[x].team == Team::Guard && g.gd[x].unit.is_none() && g.gd[x].state != GuardState::Dead);
+    let third = g.guards.iter().copied().find(|&x| x != gd && x != p && g.gd[x].team == Team::Guard && g.gd[x].unit.is_none() && !crate::condition::down(g, g.gd[x].ch));
     let trips = mem(g, gd).trips;
     let lines = crate::dialogue::needs_lines_table();
     let pool: Vec<String> = match third {

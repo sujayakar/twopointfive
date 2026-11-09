@@ -177,7 +177,7 @@ fn room_fight_choose_watch(g: &mut crate::game::Game, d: RoomfightDefId) {
         if ev_at(g, d, i) <= 0.02 { continue; }
         let view = if seg_blocked(g, eye, [e.at[0] - e.out[0] * 0.5, 1.2, e.at[2] - e.out[1] * 0.5]) { 0.6 } else { 1.0 };
         let mut mates = 0.0;
-        for &x in &g.fight.defs { let X = &g.tab.roomfight_def[x]; if x != d && !is_dead(g, X.gd) && X.room == room && X.mode == DefMode::Hold && X.watch == n { mates += 1.0; } }
+        for &x in &g.fight.defs { let X = &g.tab.roomfight_def[x]; if x != d && !crate::condition::down(g, g.gd[X.gd].ch) && X.room == room && X.mode == DefMode::Hold && X.watch == n { mates += 1.0; } }
         let sc = ev_at(g, d, i) * view - g.k.roomfight.crowd * mates + (if n == g.tab.roomfight_def[d].watch { g.k.roomfight.sticky } else { 0.0 });
         if sc > bs { bs = sc; best = n; }
     }
@@ -312,7 +312,7 @@ pub fn room_fight_room_lost(g: &mut crate::game::Game, d: RoomfightDefId) -> boo
     for x in g.fight.defs.clone() {
         let (xr, xg, xm) = { let X = &g.tab.roomfight_def[x]; (X.room, X.gd, X.mode) };
         if xr != room { continue; }
-        if !is_dead(g, xg) { if xm != DefMode::Free { up += 1.0; } continue; }
+        if !crate::condition::down(g, g.gd[xg].ch) { if xm != DefMode::Free { up += 1.0; } continue; }
         let xc = g.gd[xg].ch;
         let b = g.ch[xc].bones.get(crate::character::Bone::Hips).copied().unwrap_or(g.ch[xc].pos);
         if seg_blocked(g, eye, [b[0], 0.3, b[2]]) { continue; }
@@ -339,7 +339,7 @@ fn room_fight_threat_of(g: &crate::game::Game, d: RoomfightDefId) -> V3 {
 /// a man on a post caught unaware and alone goes as a man whose nerve has gone. None = no post of this file's.   (roomfight.ts bolt)
 pub fn room_fight_bolt(g: &mut crate::game::Game, gd: GuardId, clear_secs: f64) -> Option<bool> {
     let d = def_of(g, gd)?;
-    if !crate::roomfight::at_post(g, d) || is_dead(g, gd) || g.gd[gd].held.is_some() { return Some(false); }
+    if !crate::roomfight::at_post(g, d) || crate::condition::down(g, g.gd[gd].ch) || g.gd[gd].held.is_some() { return Some(false); }
     let (moved, out, pic) = (g.tab.roomfight_def[d].moved_at, g.fight.stats.fall_back_out, g.stats.picture.moved);
     let Some(way) = break_off_way(g, d) else {
         g.tab.roomfight_def[d].moved_at = moved; g.fight.stats.fall_back_out = out; g.stats.picture.moved = pic;   // (nowhere to go: not a try)
@@ -413,7 +413,7 @@ pub fn break_off_way(g: &mut crate::game::Game, d: RoomfightDefId) -> Option<Way
             let p: V3 = [e.at[0] + e.out[0] * depth + f.ux * lat * (1.0 + f.w / 3.2), 0.0, e.at[2] + e.out[1] * depth + f.uz * lat * (1.0 + f.w / 3.2)];
             if crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) || room_fight_in_room(g, room, p) { continue; }
             if room_fight_out_of_building(g, p) { if spot.is_none() { g.fight.stats.fall_back_out += 1.0; } continue; }
-            if g.fight.defs.iter().any(|&x| x != d && { let xg = g.tab.roomfight_def[x].gd; !is_dead(g, xg) && flat(pos_of(g, xg), p) < 0.9 }) { continue; }
+            if g.fight.defs.iter().any(|&x| x != d && { let xg = g.tab.roomfight_def[x].gd; !crate::condition::down(g, g.gd[xg].ch) && flat(pos_of(g, xg), p) < 0.9 }) { continue; }
             if spot.is_none() { spot = Some(p); }
             let a = match &mut asker { Some(a) => a, None => break };
             if crate::picture::exposure_ask(g, a, p) <= 0.0 { safe = Some(p); break; }
@@ -506,7 +506,7 @@ pub(in crate::defenders) fn room_fight_stand_on(g: &mut crate::game::Game, d: Ro
 /// a man whose way lies down a covered lane stops short of it, his gun on `look`.   (roomfight.ts laneStop)
 pub(in crate::defenders) fn room_fight_lane_stop(g: &mut crate::game::Game, gd: GuardId, look: V3) -> bool {
     let d = match def_of(g, gd) { Some(d) => d, None => return false };
-    if is_dead(g, gd) || g.gd[gd].held.is_some() { return false; }
+    if crate::condition::down(g, g.gd[gd].ch) || g.gd[gd].held.is_some() { return false; }
     { let D = &mut g.tab.roomfight_def[d]; D.move_kind = DefMoveKind::Fallback; D.came_by = None; D.rally_at = f64::NAN; }
     room_fight_plant(g, d, "a covered lane ahead");
     if let Some(r) = g.tab.roomfight_def[d].room { let n = g.tab.roomfight_room[r].entries.len(); g.tab.roomfight_def[d].ev = vec![0.0; n]; }

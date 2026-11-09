@@ -34,9 +34,6 @@ pub(crate) fn on(b: Option<bool>) -> bool {
 fn word(s: &Option<String>) -> bool {
     s.as_ref().map_or(false, |x| !x.is_empty())
 }
-fn alive(g: &Game, gd: GuardId) -> bool {
-    g.gd[gd].state != crate::game::GuardState::Dead
-}
 fn player_ch(g: &Game, seat: &crate::seats::SeatRef) -> CharId {
     g.pl[seat.player].ch
 }
@@ -133,7 +130,7 @@ pub(super) fn target_under_of(g: &Game, seat: &crate::seats::SeatRef, now: &crat
     let mut man: Option<GuardId> = None;
     let mut best = match &hit { Some(h) => h.t + 0.3, None => 200.0 };
     for gd in squad_orders_squad(g, seat) {
-        if !alive(g, gd) { continue; }
+        if crate::condition::down(g, g.gd[gd].ch) { continue; }
         let c = g.gd[gd].ch;
         let t = crate::character::character_ray_hit(g, c, ro, rd, best);
         if t >= 0.0 && t < best { best = t; man = Some(gd); }
@@ -349,7 +346,7 @@ pub fn squad_orders_give(g: &mut crate::game::Game, id_2: &str, t: Option<&crate
     let mut asked: Vec<GuardId> = match opts.and_then(|o| o.men.as_ref()) {
         Some(list) => {
             let mut a = Vec::with_capacity(list.len());
-            for &gd in list { if alive(g, gd) && squad_orders_mine(g, &crate::seats::here(g), gd) { a.push(gd); } }
+            for &gd in list { if !crate::condition::down(g, g.gd[gd].ch) && squad_orders_mine(g, &crate::seats::here(g), gd) { a.push(gd); } }
             a
         }
         None => squad_orders_recipients(g, &crate::seats::here(g), Some(&t), who),
@@ -539,7 +536,7 @@ fn post_dist(g: &Game, seat: &crate::seats::SeatRef, gd: GuardId, centre: V3) ->
 
 /// Rear security at a door: the last of the file have their eyes spare (orders.ts SquadOrders.spareRear)
 pub fn squad_orders_spare_rear(g: &mut crate::game::Game, men: &[GuardId], door: DoorId, lead: Option<GuardId>, from: Option<&JsMap<GuardId, V3>>) -> Vec<GuardId> {
-    let live: Vec<GuardId> = men.iter().copied().filter(|&gd| alive(g, gd) && g.orders.asg.get(gd).map_or(false, |&a| g.tab.orders_assignment[a].post.is_some())).collect();
+    let live: Vec<GuardId> = men.iter().copied().filter(|&gd| !crate::condition::down(g, g.gd[gd].ch) && g.orders.asg.get(gd).map_or(false, |&a| g.tab.orders_assignment[a].post.is_some())).collect();
     for &gd in &live {
         let a = *g.orders.asg.get(gd).unwrap();
         g.tab.orders_assignment[a].spare = Some(false);
@@ -597,7 +594,7 @@ pub fn squad_orders_escape(g: &mut crate::game::Game) -> bool {
 pub fn squad_orders_open(g: &mut crate::game::Game, target: Option<&crate::orders::OrderTarget>, flat: Option<bool>, part: Option<&[GuardId]>) -> bool {
     let target: OrderTarget = match target { Some(x) => x.clone(), None => { let a = g.aim_point; squad_orders_target_at(g, a) } };
     let flat = flat.unwrap_or(false);
-    if !squad_orders_active(g, &crate::seats::here(g)) || g.pl[g.player].down { return false; }
+    if !squad_orders_active(g, &crate::seats::here(g)) || crate::condition::down(g, g.pl[g.player].ch) { return false; }
     let rows = if flat { squad_orders_flat_rows(g, &crate::seats::here(g), &target, part) } else { squad_orders_rows_for(g, &crate::seats::here(g), &target, None, part) };
     let word_row = squad_orders_word_row_of(g, &target, &rows);
     // (THE MENU'S OWN TARGET IS KNOWN BY IDENTITY: wallcharge.ts keptFor asks `M.target === t` before it keeps a walk for the open menu. A floor target
@@ -723,7 +720,7 @@ fn squad_orders_reread(g: &mut crate::game::Game) -> bool {
     let Some(t) = g.orders.menu.as_ref().map(|m| m.target.clone()) else { return false };
     if let OrderTarget::None(x) = &t {
         if let Some(man) = x.man {
-            if !alive(g, man) { g.orders.menu = None; return false; }
+            if crate::condition::down(g, g.gd[man].ch) { g.orders.menu = None; return false; }
         }
     }
     let mut t = t;
@@ -734,7 +731,7 @@ fn squad_orders_reread(g: &mut crate::game::Game) -> bool {
     }
     if let Some(part) = g.orders.menu.as_ref().and_then(|m| m.part.clone()) {
         let mut men = Vec::with_capacity(part.len());
-        for gd in part { if alive(g, gd) && squad_orders_mine(g, &crate::seats::here(g), gd) { men.push(gd); } }
+        for gd in part { if !crate::condition::down(g, g.gd[gd].ch) && squad_orders_mine(g, &crate::seats::here(g), gd) { men.push(gd); } }
         let none = men.is_empty();
         if let Some(m) = g.orders.menu.as_mut() { m.men = men; }
         if none { g.orders.menu = None; return false; }
@@ -827,7 +824,7 @@ fn squad_orders_who_after_t(g: &mut crate::game::Game, point: Option<&crate::ord
     let dir = dir.unwrap_or(1.0);
     let s = squad_orders_squad(g, &crate::seats::here(g));
     let man = match point { Some(OrderTarget::None(x)) => x.man, _ => None };
-    let k: Option<usize> = match man { Some(gd) if alive(g, gd) => s.iter().position(|&x| x == gd), _ => None };
+    let k: Option<usize> = match man { Some(gd) if !crate::condition::down(g, g.gd[gd].ch) => s.iter().position(|&x| x == gd), _ => None };
     let menu_man = match g.orders.menu.as_ref().map(|m| &m.target) { Some(OrderTarget::None(x)) => x.man, _ => None };
     if let Some(k) = k {
         let same = matches!(g.orders.who, Who::Num(n) if n == k as f64);
@@ -859,7 +856,7 @@ pub fn squad_orders_host_view(g: &mut crate::game::Game, input: InputId, cam: Ca
 pub fn squad_orders_input(g: &mut crate::game::Game, _dt: f64, input: InputId, cam: CameraId, canvas: crate::host_hud::View) {
     squad_orders_sync(g);
     if g.orders.esc_used { g.orders.esc_used = false; press_delete(g, input, "Escape"); }
-    if !squad_orders_active(g, &crate::seats::here(g)) || g.pl[g.player].down {
+    if !squad_orders_active(g, &crate::seats::here(g)) || crate::condition::down(g, g.pl[g.player].ch) {
         g.orders.menu = None;
         g.orders.cmd_ring = None;
         g.orders.cmd_press = None;

@@ -101,7 +101,7 @@ pub fn door_throw_after(g: &mut Game, contacts: &[crate::doors::DoorContact]) {
             continue;
         }
         let gd = match man_of(g, c.who) {
-            Some(gd) if g.gd[gd].state != crate::game::GuardState::Dead => gd,
+            Some(gd) if !crate::condition::down(g, g.gd[gd].ch) => gd,
             _ => continue,
         };
         if moved {
@@ -236,7 +236,7 @@ fn throw_sam(g: &mut Game, s: crate::doors::DoorStrike) {
     let pl = g.player;
     let hard = s.tier == crate::doors::DoorStrikeTier::Boot;
     let secs = if hard { g.k.doorthrow.kick_secs } else { g.k.doorthrow.push_secs };
-    if g.pl[pl].down || g.puppet.is_some() {
+    if crate::condition::down(g, g.pl[pl].ch) || g.puppet.is_some() {
         return;
     }
     crate::samstun::stagger_player(g, secs, [s.dir[0], 0.0, s.dir[1]]);

@@ -1622,7 +1622,7 @@ pub(in crate::outfit) fn before_step(g: &mut Game, st: &mut KitStage, cmd: &crat
     if st.veil_asked.is_none() {
         let pl = g.player;
         let ended = super::stage::staged_ended(g, st.asks_none);
-        if g.pl[pl].down || st.order.iter().any(|&x| g.gd[x].state == GuardState::Dead) || ended {
+        if crate::condition::down(g, g.pl[pl].ch) || st.order.iter().any(|&x| crate::condition::down(g, g.gd[x].ch)) || ended {
             if let Some(b) = st.a.beat.take() { finish(g, st, b, "down"); }
             ask_veil(g, st);
         } else { direct(g, st); }

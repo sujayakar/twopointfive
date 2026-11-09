@@ -36,7 +36,7 @@ fn with_duty(g: &mut Game, gd: GuardId, f: impl FnOnce(&mut crate::game::GuardBo
 }
 /// is this man out of the reckoning for a colleague's line: gd himself, the dead, the fallen, an enemy (the walks of 700, 716, 798, 801)
 fn no_colleague(g: &Game, gd: GuardId, p: GuardId) -> bool {
-    if p == gd || g.gd[p].state == crate::game::GuardState::Dead { return true; }
+    if p == gd || crate::condition::down(g, g.gd[p].ch) { return true; }
     let c = g.gd[p].ch;
     if !g.ch[c].alive { return true; }
     let (a, b) = (g.gd[gd].team, g.gd[p].team);
@@ -89,7 +89,7 @@ pub fn witness_kill(g: &mut crate::game::Game, victim: GuardId, how: crate::game
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        if o == victim || g.gd[o].state == crate::game::GuardState::Dead || crate::control::man::blind(g, o) || crate::doze::doze_asleep(g, o) { continue; }
+        if o == victim || crate::condition::down(g, g.gd[o].ch) || crate::control::man::blind(g, o) || crate::doze::doze_asleep(g, o) { continue; }
         if (!g.player_invisible && point_in_view(g, o, at, None, None)) || g.gd[o].saw_player_this_frame {
             let kind = match how {
                 crate::game::DownKind::Shot => crate::game::WitnessSawActKind::Shot,
@@ -125,7 +125,7 @@ pub fn near_known_body(g: &crate::game::Game, p: V3, r: Option<f64>) -> Option<G
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        if g.gd[o].state == crate::game::GuardState::Dead && g.gd[o].found && v3::dist_xz(body_pos(g, o), p) < r { return Some(o); }
+        if crate::condition::down(g, g.gd[o].ch) && g.gd[o].found && v3::dist_xz(body_pos(g, o), p) < r { return Some(o); }
     }
     None
 }
@@ -156,7 +156,7 @@ fn cover_spot(g: &mut crate::game::Game, gd: GuardId, bp: V3, stand: f64) -> V3 
             while i < g.guards.len() {
                 let o = g.guards[i];
                 i += 1;
-                if o == gd || g.gd[o].state == crate::game::GuardState::Dead { continue; }
+                if o == gd || crate::condition::down(g, g.gd[o].ch) { continue; }
                 if let Some(s) = g.gd[o].body_duty.and_then(|d| d.spot) {
                     if v3::dist_xz(s, p) < 0.9 { taken = true; break; }
                 }
@@ -185,7 +185,7 @@ fn fan_spot(g: &mut crate::game::Game, gd: GuardId, b: GuardId, bp: V3) -> Optio
             while i < g.guards.len() {
                 let o = g.guards[i];
                 i += 1;
-                if o == gd || g.gd[o].state == crate::game::GuardState::Dead { continue; }
+                if o == gd || crate::condition::down(g, g.gd[o].ch) { continue; }
                 if let Some(d) = g.gd[o].body_duty {
                     if d.stage == crate::game::GuardBodyDutyStage::Fan {
                         if let Some(s) = d.spot {
@@ -259,7 +259,7 @@ pub(super) fn body_aftermath(g: &mut crate::game::Game, gd: GuardId, dt: f64) ->
     let (b, role, stage, c) = (d0.body, d0.role, d0.stage, g.gd[gd].ch);
     let mut spot = d0.spot;
     let errand = g.gd[gd].task.is_some() && !(role == Role::Finder && stage != Stage::Fan);
-    if g.gd[gd].hold || errand || !g.ai_enabled || g.gd[b].state != crate::game::GuardState::Dead || !g.guards.contains(&b) || g.time - d0.t0 > BODY_DUTY_CAP {
+    if g.gd[gd].hold || errand || !g.ai_enabled || !crate::condition::down(g, g.gd[b].ch) || !g.guards.contains(&b) || g.time - d0.t0 > BODY_DUTY_CAP {
         g.gd[gd].body_duty = None;
         return None;
     }

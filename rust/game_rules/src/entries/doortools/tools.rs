@@ -114,7 +114,7 @@ pub(super) fn door_tools_lane_in(g: &mut crate::game::Game, op: DoorOpId) {
     let l = g.tab.doortools_door_op[op].lane.take();
     let l = match l { Some(x) => x, None => return };
     let o = &g.tab.doortools_door_op[op];
-    if g.gd[l.gd].state == crate::game::GuardState::Dead || !o.men.contains(&l.gd) || o.mine.get(l.gd).copied() != Some(l.cover) { return; }
+    if crate::condition::down(g, g.gd[l.gd].ch) || !o.men.contains(&l.gd) || o.mine.get(l.gd).copied() != Some(l.cover) { return; }
     let b = l.back;
     door_tools_assign(g, op, l.gd, &DoorToolsAssignA {
         post: b.post, face: b.face, watch: b.watch, stance: b.stance, upper: b.upper, move_: b.move_, stack_side: b.stack_side,
@@ -243,13 +243,13 @@ pub(super) fn door_tools_close_words_of(g: &crate::game::Game, seat: &crate::sea
     let inn = door_pt(g, d, width / 2.0, 0.45, into, Some(1.1));
     let (mut near, mut far): (Vec<String>, Vec<String>) = (Vec::new(), Vec::new());
     let others = crate::ask::WorldAsk::of(g).over(crate::ask::Over::but_door(g, d));
-    if !g.pl[seat.player].down && g.puppet.is_none() {
+    if !crate::condition::down(g, g.pl[seat.player].ch) && g.puppet.is_none() {
         let p = g.ch[g.pl[seat.player].ch].pos;
         close_ask(g, &others, d, side, out, inn, p, String::from("you"), true, &mut near, &mut far);
     }
     // (every man of the team's who is up, whoever's orders he takes: a charge asks nobody)
     for &gd in &g.guards {
-        if g.gd[gd].unit.is_none() || g.gd[gd].team != crate::teams::Team::Operative || g.gd[gd].state == crate::game::GuardState::Dead { continue; }
+        if g.gd[gd].unit.is_none() || g.gd[gd].team != crate::teams::Team::Operative || crate::condition::down(g, g.gd[gd].ch) { continue; }
         let (p, who) = (pos_of(g, gd), callsign(g, gd));
         close_ask(g, &others, d, side, out, inn, p, who, false, &mut near, &mut far);
     }
@@ -364,7 +364,7 @@ pub(super) fn door_tools_sam_tick(g: &mut crate::game::Game) {
     let d = s.door;
     let c = g.pl[pl].ch;
     let p = g.ch[c].pos;
-    if g.pl[pl].down || g.pl[pl].sprinting || g.pl[pl].dragging.is_some() || g.pl[pl].holding.is_some() || g.pl[pl].takedown.is_some() || g.pl[pl].kick.is_some() || g.puppet.is_some()
+    if crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].sprinting || g.pl[pl].dragging.is_some() || g.pl[pl].holding.is_some() || g.pl[pl].takedown.is_some() || g.pl[pl].kick.is_some() || g.puppet.is_some()
         || crate::doors::door_off(g, d) || is_open(g, d) || door_tools_charge_on(g, &crate::seats::here(g), d).is_some()
         || charge_order_on(g, &crate::seats::here(g), d)
         || off_of(g, d, p, s.side) <= 0.0 || flat(p, s.at) > SAM_SHIFT || (act_some && !(mine && act_door == Some(d))) {
@@ -1046,14 +1046,14 @@ pub fn door_tools_frag_behind(g: &mut crate::game::Game, d: DoorId, side: f64, m
     let at = door_tools_land_for(g, d, side, deep);
     let land: V3 = [at[0], 0.3, at[2]];
     for gd in g.guards.clone() {
-        if g.gd[gd].team == crate::teams::Team::Operative && g.gd[gd].state != crate::game::GuardState::Dead && !men.contains(&gd) {
+        if g.gd[gd].team == crate::teams::Team::Operative && !crate::condition::down(g, g.gd[gd].ch) && !men.contains(&gd) {
             let p = pos_of(g, gd);
             if frag_in_it(g, d, side, land, p) { return Some(callsign(g, gd)); }
         }
     }
     let pl = g.player;
     let p = g.ch[g.pl[pl].ch].pos;
-    if !g.pl[pl].down && frag_in_it(g, d, side, land, p) { Some(String::from("you")) } else { None }
+    if !crate::condition::down(g, g.pl[pl].ch) && frag_in_it(g, d, side, land, p) { Some(String::from("you")) } else { None }
 }
 
 /// A teammate outside this order on the far side of the door, in the open reach of a charge on it.   (doortools.ts behind)

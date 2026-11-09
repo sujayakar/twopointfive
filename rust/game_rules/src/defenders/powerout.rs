@@ -65,7 +65,7 @@ fn id_share(g: &crate::game::Game, gd: GuardId) -> f64 {
 
 /// a living man who has not fled the level. (powerout.ts alive)
 fn alive(g: &crate::game::Game, gd: GuardId) -> bool {
-    g.gd[gd].state != crate::game::GuardState::Dead && g.ch[g.gd[gd].ch].alive && !g.gd[gd].fled
+    !crate::condition::down(g, g.gd[gd].ch) && g.ch[g.gd[gd].ch].alive && !g.gd[gd].fled
 }
 
 /// alive, nobody's arm on him, his wits about him. (powerout.ts fit)

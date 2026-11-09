@@ -94,7 +94,7 @@ pub fn sam_big_spot(g: &mut crate::game::Game, d: DoorId, from: V3, tool: crate:
     let men: Vec<V3> = g
         .guards
         .iter()
-        .filter(|&&q| g.gd[q].state != crate::game::GuardState::Dead)
+        .filter(|&&q| !crate::condition::down(g, g.gd[q].ch))
         .map(|&q| g.ch[g.gd[q].ch].pos)
         .collect();
     let n0 = crate::doortools::door_pt(g, d, 0.0, 0.0, side, None);
@@ -339,7 +339,7 @@ pub fn sam_big_tail_tick(g: &mut crate::game::Game, dt: f64) {
         b.t += dt;
     }
     let pl = &g.pl[pid];
-    let taken = pl.down
+    let taken = g.cond[pl.ch].down
         || pl.kick.is_some()
         || pl.holding.is_some()
         || pl.takedown.is_some()
@@ -556,7 +556,7 @@ pub fn big_carried(g: &crate::game::Game, c_2: crate::bigkit::BigCarriedC) -> Op
 
 /// He carries the hammer in his big slot.   (bigkit.ts carriesHammer)
 pub fn carries_hammer(g: &crate::game::Game, gd: GuardId) -> bool {
-    g.gd[gd].state != crate::game::GuardState::Dead && crate::kit::kit_big(g, gd) == crate::kit::BigKit::Hammer
+    !crate::condition::down(g, g.gd[gd].ch) && crate::kit::kit_big(g, gd) == crate::kit::BigKit::Hammer
 }
 
 /// The shotgun comes up off its sling into a teammate's hands; true once it has been up long enough for the shell to go.   (bigkit.ts gunUp)
@@ -605,7 +605,7 @@ pub(super) fn gun_down(g: &mut crate::game::Game, gd: GuardId) {
     s.out = false;
     let (own, own_id, ahead) = (s.own, s.own_id, s.ahead);
     g.stats.bigkit.slung += 1;
-    if g.gd[gd].state == crate::game::GuardState::Dead {
+    if crate::condition::down(g, g.gd[gd].ch) {
         return;
     }
     let (route, c) = (g.gd[gd].route, g.gd[gd].ch);
@@ -688,7 +688,7 @@ pub(super) fn hammer_out_tick(g: &mut crate::game::Game, mine: &mut dyn FnMut(&m
         i += 1;
         let Some(end) = g.gd[gd].big_out.as_ref().map(|h| h.end) else { continue };
         let c = g.gd[gd].ch;
-        if g.gd[gd].state == crate::game::GuardState::Dead {
+        if crate::condition::down(g, g.gd[gd].ch) {
             g.gd[gd].big_out = None;
             g.ch[c].anim.big_tool = None;
             continue;

@@ -45,11 +45,11 @@ fn shell_man(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<Guar
         None => None,
     };
     let gd = match puppet_target {
-        Some(t) if g.gd[t].state != crate::game::GuardState::Dead => Some(t),
+        Some(t) if !crate::condition::down(g, g.gd[t].ch) => Some(t),
         _ => seat.aim_guard,
     };
     match gd {
-        Some(id) if g.gd[id].state != crate::game::GuardState::Dead && g.gd[id].team != crate::teams::Team::Operative => Some(id),
+        Some(id) if !crate::condition::down(g, g.gd[id].ch) && g.gd[id].team != crate::teams::Team::Operative => Some(id),
         _ => None,
     }
 }
@@ -62,7 +62,7 @@ pub fn shell_bodies(g: &crate::game::Game) -> Vec<CharId> {
         let gd = g.guards[i];
         i += 1;
         let ch = g.gd[gd].ch;
-        if g.gd[gd].state != crate::game::GuardState::Dead
+        if !crate::condition::down(g, g.gd[gd].ch)
             && g.gd[gd].team != crate::teams::Team::Operative
             && g.ch[ch].alive
             && !crate::fogofwar::fog_of_war_hidden(g, gd)
@@ -312,7 +312,7 @@ pub fn update_shells(g: &mut crate::game::Game, dt: f64) {
             while w < g.guards.len() {
                 let gd = g.guards[w];
                 w += 1;
-                if g.gd[gd].state != crate::game::GuardState::Dead && g.gd[gd].team != crate::teams::Team::Operative {
+                if !crate::condition::down(g, g.gd[gd].ch) && g.gd[gd].team != crate::teams::Team::Operative {
                     let c = g.gd[gd].ch;
                     try_char(g, shooter, c, Some(gd), pos, dir, reach, &mut best, &mut hit_c, &mut hit_g);
                 }
@@ -322,7 +322,7 @@ pub fn update_shells(g: &mut crate::game::Game, dt: f64) {
                 try_char(g, shooter, c, Some(cv), pos, dir, reach, &mut best, &mut hit_c, &mut hit_g);
             }
             for pl in crate::seats::men(g) {
-                if !g.pl[pl].down {
+                if !crate::condition::down(g, g.pl[pl].ch) {
                     let c = g.pl[pl].ch;
                     try_char(g, shooter, c, None, pos, dir, reach, &mut best, &mut hit_c, &mut hit_g);
                 }

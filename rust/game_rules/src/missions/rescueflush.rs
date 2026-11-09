@@ -26,7 +26,7 @@ fn rescue_flush_live(g: &crate::game::Game) -> bool {
 
 /// The living hostages, in the list's order.   (rescueflush.ts RescueFlush.alive)
 fn rescue_flush_alive(g: &crate::game::Game) -> Vec<GuardId> {
-    g.rescue.hostages.iter().copied().filter(|&h| g.gd[h].state != crate::game::GuardState::Dead).collect()
+    g.rescue.hostages.iter().copied().filter(|&h| !crate::condition::down(g, g.gd[h].ch)).collect()
 }
 
 /// He came for her: his wait is `killSecs`.   (rescueflush.ts RescueFlush.came)
@@ -46,7 +46,7 @@ fn rescue_flush_line(g: &mut crate::game::Game, by: GuardId, v: GuardId) -> f64 
 
 /// His nearest line on any of `alive`, or Infinity when he cannot hold a gun on anybody. (the closure `has` of ts:94)
 fn has(g: &mut Game, h: GuardId, alive: &[GuardId]) -> f64 {
-    if g.gd[h].state == crate::game::GuardState::Dead || g.gd[h].held.is_some() || crate::control::man::blind(g, h)
+    if crate::condition::down(g, g.gd[h].ch) || g.gd[h].held.is_some() || crate::control::man::blind(g, h)
         || crate::owner::has(g, h, crate::owner::by::RUNNER) || crate::owner::has(g, h, crate::owner::by::MORALE) { return f64::INFINITY; }
     let mut best = f64::INFINITY;
     for &v in alive { let d = rescue_flush_line(g, h, v); best = m::min(best, d); }
@@ -118,7 +118,7 @@ pub(super) fn rescue_flush_tick(g: &mut crate::game::Game) {
     if alive.is_empty() || crate::rescue::rescue_noise_at(g).is_none() { return; }
     if g.rescue.flush.fell_at.is_nan() {
         for c in crate::rescue::rescue_cast(g) {
-            if c.in_room && g.gd[c.gd].state != crate::game::GuardState::Dead && g.gd[c.gd].held.is_none() && !g.gd[c.gd].fled { return; }
+            if c.in_room && !crate::condition::down(g, g.gd[c.gd].ch) && g.gd[c.gd].held.is_none() && !g.gd[c.gd].fled { return; }
         }
         g.rescue.flush.fell_at = g.time;
         g.rescue.flush.next_at = g.time + g.k.rescueflush.after_secs;
@@ -128,7 +128,7 @@ pub(super) fn rescue_flush_tick(g: &mut crate::game::Game) {
     // one of them stands in the room and nobody is there to shoot: they have been taken out
     if g.rescue.flush.gone_at.is_nan() && !in_room {
         let by = g.rescue.hostiles.iter().copied().find(|&h| {
-            g.gd[h].state != crate::game::GuardState::Dead && g.gd[h].held.is_none() && crate::squad::in_bounds(g.ch[g.gd[h].ch].pos, b, None)
+            !crate::condition::down(g, g.gd[h].ch) && g.gd[h].held.is_none() && crate::squad::in_bounds(g.ch[g.gd[h].ch].pos, b, None)
         });
         if let Some(by) = by {
             g.rescue.flush.gone_at = g.time;
@@ -143,7 +143,7 @@ pub(super) fn rescue_flush_tick(g: &mut crate::game::Game) {
     let mut walk = 0;
     while let Some(h) = g.rescue.flush.sent.next_key(&mut walk) {
         let Some(mark) = g.rescue.flush.sent.get(h).and_then(|s| s.via.first().copied()) else { continue; };
-        if g.gd[h].state == crate::game::GuardState::Dead || g.gd[h].held.is_some() || flat(g.ch[g.gd[h].ch].pos, mark) > g.k.rescueflush.at_door_m { continue; }
+        if crate::condition::down(g, g.gd[h].ch) || g.gd[h].held.is_some() || flat(g.ch[g.gd[h].ch].pos, mark) > g.k.rescueflush.at_door_m { continue; }
         if g.time - g.gd[h].last_seen_t < g.k.rescueflush.busy_secs || g.gd[h].saw_foe_this_frame { continue; }
         g.rescue.flush.sent.get_mut(h).unwrap().via.remove(0);
         let next = g.rescue.flush.sent.get(h).unwrap().via.first().copied();

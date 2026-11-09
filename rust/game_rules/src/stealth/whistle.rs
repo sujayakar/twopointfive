@@ -60,7 +60,7 @@ pub fn whistle_key(g: &mut crate::game::Game, input: InputId) {
 /// Blow it if the breath is back: the event at his feet, the meter's tick, the voice at his head. False = nothing happened.   (whistle.ts tryWhistle)
 pub fn try_whistle(g: &mut crate::game::Game) -> bool {
     let pl = g.player;
-    if g.pl[pl].down { return false; }
+    if crate::condition::down(g, g.pl[pl].ch) { return false; }
     let now = g.time;
     let (cooldown, level, gain) = (g.k.whistle.cooldown, g.k.whistle.level, g.k.whistle.gain);
     let b = blower(g);
@@ -124,7 +124,7 @@ fn resolve<'g>(g: &'g mut crate::game::Game, e: crate::game::GameEvent, keen: f6
     while at < g.guards.len() {
         let gd = g.guards[at];
         at += 1;
-        if g.gd[gd].state == crate::game::GuardState::Dead { continue; }
+        if crate::condition::down(g, g.gd[gd].ch) { continue; }
         let team = g.gd[gd].team;
         if crate::seats::is_man_id(g, who) && !crate::teams::is_hostile(g, team, crate::teams::Team::Player) { continue; }
         let pos = g.ch[g.gd[gd].ch].pos;

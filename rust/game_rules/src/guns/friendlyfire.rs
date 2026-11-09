@@ -13,7 +13,7 @@ pub(super) fn ff_live(g: &crate::game::Game) -> bool {
 /// A man of Sam's own side whose body a round of that side can find: living, on his feet. (friendlyfire.ts ffBody)
 pub(super) fn ff_body(g: &crate::game::Game, gd: GuardId) -> bool {
     let c = g.gd[gd].ch;
-    if !(g.gd[gd].state != crate::game::GuardState::Dead && g.ch[c].alive && !g.gd[gd].god && !g.gd[gd].civ.is_some()) {
+    if !(!crate::condition::down(g, g.gd[gd].ch) && g.ch[c].alive && !g.gd[gd].god && !g.gd[gd].civ.is_some()) {
         return false;
     }
     let team = g.gd[gd].team;
@@ -65,7 +65,7 @@ pub fn friend_in_cone(g: &mut crate::game::Game, self_: GuardId, muzzle: V3, to:
     let mut best: Option<crate::friendlyfire::FriendInCone> = None;
     let mut bt = f64::INFINITY;
     for pl in crate::seats::men(g) {
-        if !g.pl[pl].down {
+        if !crate::condition::down(g, g.pl[pl].ch) {
             let c = g.pl[pl].ch;
             ask(g, c, crate::friendlyfire::FriendInCone::Player, muzzle, dx, dz, rise, k, past, energy, thin, &mut best, &mut bt);
         }

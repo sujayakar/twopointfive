@@ -62,7 +62,7 @@ fn log(g: &mut crate::game::Game, s: &str) {
 /// A man this rule may have: a defender, up, on his own senses. (doorforce.ts defender)
 fn defender(g: &crate::game::Game, gd: GuardId) -> bool {
     let c = g.gd[gd].ch;
-    g.gd[gd].team != crate::teams::Team::Operative && g.gd[gd].state != crate::game::GuardState::Dead && g.ch[c].alive
+    g.gd[gd].team != crate::teams::Team::Operative && !crate::condition::down(g, g.gd[gd].ch) && g.ch[c].alive
 }
 
 /// A leaf that is a shut door to a man: hung, home in its frame. (doorforce.ts shut)

@@ -11,7 +11,7 @@ fn live(g: &mut crate::game::Game, pl: crate::sprintdoor::LivePl) -> bool {
 
 /// What his door contact carries this frame: the rule's numbers while he is at a sprint, nothing otherwise.   (sprintdoor.ts sprintDoorRun)
 pub fn sprint_door_run(g: &mut crate::game::Game, pl: PlayerId) -> Option<crate::doors::DoorContactRun> {
-    let down = g.pl[pl].down;
+    let down = crate::condition::down(g, g.pl[pl].ch);
     if live(g, crate::sprintdoor::LivePl { down }) && g.pl[pl].sprinting {
         Some(crate::doors::DoorContactRun { bash: g.k.sprintdoor.bash_vel, rip: g.k.sprintdoor.rip_vel, rip_level: g.k.sprintdoor.rip_level })
     } else {
@@ -21,7 +21,7 @@ pub fn sprint_door_run(g: &mut crate::game::Game, pl: PlayerId) -> Option<crate:
 
 /// THE BOOT AT THE RUN: the leaf his sprint is about to meet from the face it opens toward, when a boot is the thing to do about it. None = no kick this frame.   (sprintdoor.ts sprintDoorKick)
 pub fn sprint_door_kick(g: &mut crate::game::Game, pl: PlayerId) -> Option<DoorId> {
-    let down = g.pl[pl].down;
+    let down = crate::condition::down(g, g.pl[pl].ch);
     if !live(g, crate::sprintdoor::LivePl { down }) || !g.pl[pl].sprinting { return None; }
     {
         let p = &g.pl[pl];

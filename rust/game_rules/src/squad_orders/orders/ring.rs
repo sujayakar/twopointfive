@@ -528,7 +528,7 @@ fn squad_orders_man_at(g: &mut crate::game::Game, input: InputId, cam: CameraId,
     let t = squad_orders_target_under(g, input, cam, canvas);
     if let OrderTarget::None(OrderTargetNone { man: Some(man), .. }) = t {
         if let Some(k) = squad.iter().position(|&gd| gd == man) {
-            if g.gd[man].state != crate::game::GuardState::Dead { return k as f64; }
+            if !crate::condition::down(g, g.gd[man].ch) { return k as f64; }
         }
     }
     let (w, h) = (canvas.client_width, canvas.client_height);
@@ -536,7 +536,7 @@ fn squad_orders_man_at(g: &mut crate::game::Game, input: InputId, cam: CameraId,
     let mut bd = g.k.cmdring.man_px * crate::cmdring::ring_zoom(g, w, h);
     let (mx, my) = mouse(g, input);
     for (k, &gd) in squad.iter().enumerate() {
-        if g.gd[gd].state == crate::game::GuardState::Dead { continue; }
+        if crate::condition::down(g, g.gd[gd].ch) { continue; }
         let pos = g.ch[g.gd[gd].ch].pos;
         let (sx, sy, front) = crate::camera::follow_camera_project(g, cam, pos, w, h, None, None);
         if !front { continue; }
@@ -591,7 +591,7 @@ pub(super) fn squad_orders_sync(g: &mut crate::game::Game) -> Vec<GuardId> {
         }
     }
     let stands = match g.orders.who {
-        Who::Num(k) => g.orders.roster.get(k as usize).map_or(true, |&gd| g.gd[gd].state != crate::game::GuardState::Dead),
+        Who::Num(k) => g.orders.roster.get(k as usize).map_or(true, |&gd| !crate::condition::down(g, g.gd[gd].ch)),
         Who::All => true,
         Who::Red => !squad_orders_men(g, &crate::seats::here(g), Some(SquadOrdersMenSel::Red), None).is_empty(),
         Who::Blue => !squad_orders_men(g, &crate::seats::here(g), Some(SquadOrdersMenSel::Blue), None).is_empty(),

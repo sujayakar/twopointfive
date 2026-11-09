@@ -137,7 +137,7 @@ fn burns_from(g: &mut crate::game::Game, held: V3, p: V3) -> V3 {
 /// somebody not of his side in the beam, this side of what it ends on (guards.ts wallDark `manIn`)
 fn man_in(g: &Game, gd: GuardId, o: V3, d: V3, hl: f64, m: f64) -> bool {
     g.guards.iter().any(|&x| {
-        if x == gd || g.gd[x].state == crate::game::GuardState::Dead || g.gd[x].team == crate::teams::Team::Operative {
+        if x == gd || crate::condition::down(g, g.gd[x].ch) || g.gd[x].team == crate::teams::Team::Operative {
             return false;
         }
         let at = g.ch[g.gd[x].ch].pos;
@@ -150,7 +150,7 @@ fn man_in(g: &Game, gd: GuardId, o: V3, d: V3, hl: f64, m: f64) -> bool {
 
 /// LIGHTS.wallOff: a teammate's weapon light is dark while its beam is into something that stands within reach of the lens (guards.ts wallDark)
 pub(super) fn wall_dark(g: &mut crate::game::Game, gd: GuardId, held: Option<V3>) -> bool {
-    if g.gd[gd].team != crate::teams::Team::Operative || g.gd[gd].unit.is_none() || g.gd[gd].state == crate::game::GuardState::Dead {
+    if g.gd[gd].team != crate::teams::Team::Operative || g.gd[gd].unit.is_none() || crate::condition::down(g, g.gd[gd].ch) {
         return false;
     }
     let Some(held) = held else { return false };
@@ -237,7 +237,7 @@ pub fn gun_on_lit_man(g: &mut crate::game::Game, gd: GuardId) -> bool {
             Some(kept)
                 if op.turn.is_none()
                     && g.gd[gd].script.is_some()
-                    && g.gd[kept.h].state != crate::game::GuardState::Dead
+                    && !crate::condition::down(g, g.gd[kept.h].ch)
                     && t - kept.t >= 0.0
                     && t - kept.t < 1.5 =>
             {

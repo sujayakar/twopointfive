@@ -724,7 +724,6 @@ pub struct Player {
     pub aim: crate::aim::AimState,
     pub aimw: crate::aimweight::AimWeight,
     #[is(1.0)] pub hits_left: f64,
-    pub down: bool,
     #[is(FirearmId(0))] pub pistol: FirearmId,
     pub ocp: crate::weapons::Ocp,
     #[is(4.0)] pub canisters: f64,

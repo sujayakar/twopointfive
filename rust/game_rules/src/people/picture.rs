@@ -67,8 +67,8 @@ fn floor(p: V3) -> V3 {
 /// (picture.ts up)
 fn up(g: &mut crate::game::Game, w: crate::picture::Who) -> bool {
     match w {
-        Who::Player => !g.pl[g.player].down,
-        Who::Guard(o) => g.gd[o].state != crate::game::GuardState::Dead && g.ch[g.gd[o].ch].alive,
+        Who::Player => !crate::condition::down(g, g.pl[g.player].ch),
+        Who::Guard(o) => !crate::condition::down(g, g.gd[o].ch) && g.ch[g.gd[o].ch].alive,
     }
 }
 
@@ -99,7 +99,7 @@ fn made_out(g: &mut crate::game::Game, gd: GuardId, p: V3) -> bool {
 
 /// a man who keeps a picture: a living armed man of an AI side (picture.ts fighter)
 fn fighter(g: &crate::game::Game, gd: GuardId) -> bool {
-    g.gd[gd].state != crate::game::GuardState::Dead && g.ch[g.gd[gd].ch].alive && g.gd[gd].civ.is_none() && g.gd[gd].team != crate::teams::Team::Civilian
+    !crate::condition::down(g, g.gd[gd].ch) && g.ch[g.gd[gd].ch].alive && g.gd[gd].civ.is_none() && g.gd[gd].team != crate::teams::Team::Civilian
 }
 
 /// the enemies there are for a side, as a list of men and Sam (picture.ts foesOf)
@@ -243,7 +243,7 @@ fn look(g: &mut crate::game::Game, gd: GuardId) {
 fn look_sam(g: &mut crate::game::Game) {
     let now = g.time;
     let c = g.pl[g.player].ch;
-    if g.pl[g.player].down {
+    if crate::condition::down(g, g.pl[g.player].ch) {
         return;
     }
     let cpos = g.ch[c].pos;
@@ -898,7 +898,7 @@ fn step_free(g: &mut Game, q: V3, gd: GuardId, mark: V3, sam: V3, bad: Option<V3
         let o = g.guards[i];
         i += 1;
         let ot = g.gd[o].team;
-        if o == gd || g.gd[o].state == crate::game::GuardState::Dead || crate::teams::is_hostile(g, team, ot) {
+        if o == gd || crate::condition::down(g, g.gd[o].ch) || crate::teams::is_hostile(g, team, ot) {
             continue;
         }
         if flat(g.ch[g.gd[o].ch].pos, q) < 0.8 {

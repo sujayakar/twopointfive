@@ -77,8 +77,8 @@ fn set_chew(g: &mut Game, gd: GuardId, f: impl FnOnce(&mut Chew)) {
 /// is he up, for a reader that holds the state (coverfire.ts upOf)
 fn up_now(g: &Game, seat: &crate::seats::SeatRef, who: crate::game::Foe) -> bool {
     match who {
-        crate::game::Foe::Player => !g.pl[seat.player].down,
-        crate::game::Foe::Guard(x) => g.gd[x].state != crate::game::GuardState::Dead && g.ch[g.gd[x].ch].alive,
+        crate::game::Foe::Player => !crate::condition::down(g, g.pl[seat.player].ch),
+        crate::game::Foe::Guard(x) => !crate::condition::down(g, g.gd[x].ch) && g.ch[g.gd[x].ch].alive,
     }
 }
 
@@ -249,7 +249,7 @@ fn known(g: &mut crate::game::Game, gd: GuardId, who: Option<crate::game::Foe>) 
     }
     let (team, my_pos) = (g.gd[gd].team, g.ch[g.gd[gd].ch].pos);
     for (mate, row) in s.men.iter() {
-        if mate == gd || g.gd[mate].team != team || g.gd[mate].state == crate::game::GuardState::Dead { continue; }
+        if mate == gd || g.gd[mate].team != team || crate::condition::down(g, g.gd[mate].ch) { continue; }
         let mc = g.gd[mate].ch;
         if !g.ch[mc].alive || flat(g.ch[mc].pos, my_pos) > call_m { continue; }
         for k in row.know.iter() {
@@ -369,14 +369,14 @@ pub fn cover_lane(g: &mut crate::game::Game, gd: GuardId, from: V3, to: V3) -> b
     let team = g.gd[gd].team;
     if !crate::teams::is_hostile(g, team, crate::teams::Team::Player) {
         for pl in crate::seats::men(g) {
-            if !g.pl[pl].down { let pc = g.pl[pl].ch; if lane_hit(g, pc, from, dx, dz, l2, t_max, l) { return false; } }
+            if !crate::condition::down(g, g.pl[pl].ch) { let pc = g.pl[pl].ch; if lane_hit(g, pc, from, dx, dz, l2, t_max, l) { return false; } }
         }
     }
     let mut i = 0;
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        if o == gd || g.gd[o].state == crate::game::GuardState::Dead { continue; }
+        if o == gd || crate::condition::down(g, g.gd[o].ch) { continue; }
         let oc = g.gd[o].ch;
         if !g.ch[oc].alive { continue; }
         let oteam = g.gd[o].team;
@@ -391,7 +391,7 @@ pub fn cover_lane(g: &mut crate::game::Game, gd: GuardId, from: V3, to: V3) -> b
         let h = g.rescue.hostages[i];
         i += 1;
         let hc = g.gd[h].ch;
-        if g.gd[h].state != crate::game::GuardState::Dead && g.ch[hc].alive && lane_hit(g, hc, from, dx, dz, l2, t_max, l) { return false; }
+        if !crate::condition::down(g, g.gd[h].ch) && g.ch[hc].alive && lane_hit(g, hc, from, dx, dz, l2, t_max, l) { return false; }
     }
     true
 }
@@ -811,7 +811,7 @@ pub fn coverfire_tick(g: &mut crate::game::Game, dt: f64) {
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
-        if g.gd[gd].state == crate::game::GuardState::Dead || !g.ch[g.gd[gd].ch].alive { continue; }
+        if crate::condition::down(g, g.gd[gd].ch) || !g.ch[g.gd[gd].ch].alive { continue; }
         if g.gd[gd].state == crate::game::GuardState::Alert && seen_now(g.time, dt, g.gd[gd].last_seen_t) {
             if let Some(foe) = g.gd[gd].foe {
                 if !crate::teams::foe_down(g, gd) {
@@ -828,10 +828,10 @@ pub fn coverfire_tick(g: &mut crate::game::Game, dt: f64) {
             let id = g.fight.ops[i];
             i += 1;
             let (op, tgt) = (g.tab.roomfight_op[id].gd, g.tab.roomfight_op[id].tgt);
-            if g.gd[op].state == crate::game::GuardState::Dead || g.gd[op].script.is_none() { continue; }
+            if crate::condition::down(g, g.gd[op].ch) || g.gd[op].script.is_none() { continue; }
             let meters: Vec<(GuardId, f64, f64)> = g.tab.roomfight_op[id].meters.iter().map(|(h, v)| (h, v.m, v.seen_t)).collect();
             for (h, mv, seen_t) in meters {
-                if g.gd[h].state != crate::game::GuardState::Dead && seen_now(g.time, dt, seen_t) && (tgt == Some(h) || mv >= notice) {
+                if !crate::condition::down(g, g.gd[h].ch) && seen_now(g.time, dt, seen_t) && (tgt == Some(h) || mv >= notice) {
                     let low = g.ch[g.gd[h].ch].anim.crouch > 0.5;
                     see(g, op, crate::game::Foe::Guard(h), low);
                 }

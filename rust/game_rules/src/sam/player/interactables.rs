@@ -164,7 +164,7 @@ pub(super) fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: 
         list.push(it);
     }
 
-    let down = g.pl[pl].down;
+    let down = crate::condition::down(g, g.pl[pl].ch);
     if !down && g.pl[pl].holding.is_some() {
         // a man in his arm: HIS rows are the only rows
         let hold = g.pl[pl].holding.clone().unwrap();
@@ -430,7 +430,7 @@ pub(super) fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: 
         while gi < g.guards.len() {
             let gd = g.guards[gi];
             gi += 1;
-            if g.gd[gd].state == crate::game::GuardState::Dead || g.pl[pl].takedown.is_some() { continue; }
+            if crate::condition::down(g, g.gd[gd].ch) || g.pl[pl].takedown.is_some() { continue; }
             if g.gd[gd].team == crate::teams::Team::Operative || crate::fogofwar::fog_of_war_hidden(g, gd) { continue; }
             crate::close::close_rows(g, gd, &p, busy, row_cb!(crate::close::CloseRowsRowOver), offer_cb!(list, things));
         }
@@ -499,7 +499,7 @@ pub(super) fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: 
         let mut bodies: Vec<GuardId> = g.guards.clone();
         bodies.extend(crate::civilians::civilians_shown(g));
         for gd in bodies {
-            if g.gd[gd].state != crate::game::GuardState::Dead || crate::fogofwar::fog_of_war_hidden(g, gd) { continue; }
+            if !crate::condition::down(g, g.gd[gd].ch) || crate::fogofwar::fog_of_war_hidden(g, gd) { continue; }
             let gc = g.gd[gd].ch;
             let hips = match g.ch[gc].bones.get(crate::character::Bone::Hips) { Some(b) => *b, None => g.ch[gc].pos };
             let mid: V3 = [hips[0], hips[1] + 0.12, hips[2]];
@@ -775,9 +775,9 @@ pub fn toggle_drag(g: &mut crate::game::Game, which: Option<GuardId>) {
         release_body(g, None);
         return;
     }
-    if g.pl[pl].down || g.pl[pl].sprinting { return; }
+    if crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].sprinting { return; }
     let mut best: Option<GuardId> = match which {
-        Some(w) if g.gd[w].state == crate::game::GuardState::Dead => Some(w),
+        Some(w) if crate::condition::down(g, g.gd[w].ch) => Some(w),
         _ => None,
     };
     if best.is_none() {
@@ -785,7 +785,7 @@ pub fn toggle_drag(g: &mut crate::game::Game, which: Option<GuardId>) {
         let mut all: Vec<GuardId> = g.guards.clone();
         all.extend(crate::civilians::civilians_shown(g));
         for gd in all {
-            if g.gd[gd].state != crate::game::GuardState::Dead { continue; }
+            if !crate::condition::down(g, g.gd[gd].ch) { continue; }
             let d = body_dist(g, gd, Some(1.3));
             if d < bd {
                 bd = d;
@@ -871,7 +871,7 @@ fn settle(g: &mut Game, q: &mut V3) -> bool {
 /// Sandbox / harness: stand the player at p, free of anything he was in the middle of   (player.ts teleportPlayer)
 pub fn teleport_player(g: &mut crate::game::Game, p: V3) {
     let pl = g.player;
-    if g.pl[pl].down { return; }
+    if crate::condition::down(g, g.pl[pl].ch) { return; }
     if !p[0].is_finite() || !p[2].is_finite() { return; }
     cancel_actions(g);
     let mut q: V3 = [p[0], 0.0, p[2]];

@@ -47,7 +47,7 @@ fn hands(g: &mut crate::game::Game) -> bool {
     let me = g.player;
     g.puppet.is_none()
         && g.pl[me].holstered
-        && !g.pl[me].down
+        && !crate::condition::down(g, g.pl[me].ch)
         && g.pl[me].holding.is_none()
         && g.pl[me].takedown.is_none()
         && g.pl[me].dragging.is_none()
@@ -162,7 +162,7 @@ fn corner_gate(g: &mut crate::game::Game) -> bool {
         || drawn
         || g.puppet.is_some()
         || !g.pl[me].holstered
-        || g.pl[me].down
+        || crate::condition::down(g, g.pl[me].ch)
         || g.pl[me].holding.is_some()
         || g.pl[me].takedown.is_some()
         || g.pl[me].dragging.is_some()

@@ -34,7 +34,7 @@ pub fn fire_line_tick(g: &mut crate::game::Game) {
         f.shots = shots_fired;
     }
     let (round_t, gap, live_t) = (f.round_t, f.gap, f.live_t);
-    if g.pl[pl].down || g.pl[pl].sprinting {
+    if crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].sprinting {
         return;
     }
     let since = t - round_t;

@@ -129,7 +129,7 @@ fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 /// up, and not broken and run: off the net from his shout on (laststand.ts alive)
 fn alive(g: &crate::game::Game, d: RoomfightDefId) -> bool {
     let gd = g.tab.roomfight_def[d].gd;
-    g.gd[gd].state != crate::game::GuardState::Dead && !crate::owner::has(g, gd, crate::owner::by::RUNNER)
+    !crate::condition::down(g, g.gd[gd].ch) && !crate::owner::has(g, gd, crate::owner::by::RUNNER)
 }
 
 /// a beat between two numbers, off the state's own die (laststand.ts pick)
@@ -147,7 +147,7 @@ fn note(g: &mut crate::game::Game, gd: Option<GuardId>, what: &str) {
 
 /// fit to speak or be spoken to: up, not held, his wits about him (laststand.ts fitGd)
 fn fit_gd(g: &crate::game::Game, gd: GuardId) -> bool {
-    g.gd[gd].state != crate::game::GuardState::Dead && g.gd[gd].held.is_none() && !crate::owner::has(g, gd, crate::owner::by::RUNNER)
+    !crate::condition::down(g, g.gd[gd].ch) && g.gd[gd].held.is_none() && !crate::owner::has(g, gd, crate::owner::by::RUNNER)
         && !crate::control::man::blind(g, gd) && !crate::control::man::staggered(g, gd)
 }
 
@@ -538,7 +538,7 @@ fn step_stand(g: &mut crate::game::Game) {
         let all = g.night_breach.hostiles.clone();
         let few = m::min(g.k.laststand.few, m::floor(all.len() as f64 / 3.0));
         let mut up = 0;
-        for &h in &all { if g.gd[h].state != crate::game::GuardState::Dead && !g.gd[h].fled { up += 1; } }
+        for &h in &all { if !crate::condition::down(g, g.gd[h].ch) && !g.gd[h].fled { up += 1; } }
         if up as f64 > few || up == 0 { return; }
         let row = fresh(g);
         g.m.laststand.states = Some(row);

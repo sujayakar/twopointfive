@@ -44,7 +44,7 @@ fn script_smokes(g: &Game, gd: GuardId) -> bool {
 pub fn smoking(g: &crate::game::Game, gd: GuardId) -> bool {
     let Some(s) = g.gd[gd].script.as_ref() else { return false };
     s.smoke.unwrap_or(false)
-        && g.gd[gd].state != crate::game::GuardState::Dead
+        && !crate::condition::down(g, g.gd[gd].ch)
         && g.gd[gd].held.is_none()
         && g.ch[g.gd[gd].ch].alive
         && (s.goal.is_none() || s.arrived.unwrap_or(false))

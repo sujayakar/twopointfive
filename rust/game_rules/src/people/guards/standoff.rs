@@ -19,11 +19,11 @@ pub(super) fn shield_up(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> 
         Some(h) => h.g,
         None => return false,
     };
-    if g.pl[p].down {
+    if crate::condition::down(g, g.pl[p].ch) {
         return false;
     }
     let hc = g.gd[held].ch;
-    g.gd[held].state != crate::game::GuardState::Dead
+    !crate::condition::down(g, g.gd[held].ch)
         && g.ch[hc].alive
         && matches!(&g.gd[held].held, Some(h) if h.by == crate::game::GuardHeldBy::Player)
         && crate::game::game_on_floor(g, held)
@@ -280,7 +280,7 @@ fn hostage_call(g: &mut crate::game::Game, gd: GuardId, p: crate::guards::Pair) 
     let team = g.gd[gd].team;
     for i in 0..g.guards.len() {
         let o = g.guards[i];
-        if o == gd || o == p.held || g.gd[o].state == crate::game::GuardState::Dead || g.gd[o].held.is_some() || g.gd[o].team != team {
+        if o == gd || o == p.held || crate::condition::down(g, g.gd[o].ch) || g.gd[o].held.is_some() || g.gd[o].team != team {
             continue;
         }
         let state = g.gd[o].state;
@@ -330,7 +330,7 @@ fn no_sight_at(g: &mut Game, x: f64, z: f64, c_2: V3) -> bool {
 fn pick_side(g: &mut crate::game::Game, gd: GuardId, p: crate::guards::Pair) -> f64 {
     for i in 0..g.guards.len() {
         let o = g.guards[i];
-        if o == gd || g.gd[o].state == crate::game::GuardState::Dead {
+        if o == gd || crate::condition::down(g, g.gd[o].ch) {
             continue;
         }
         if let Some(s) = g.gd[o].standoff {
@@ -583,7 +583,7 @@ pub(super) fn orbit_goal_for(g: &mut crate::game::Game, gd: GuardId, s: GuardsSt
     let mut others: Vec<GuardId> = Vec::new();
     for i in 0..g.guards.len() {
         let o = g.guards[i];
-        if o == gd || g.gd[o].state == crate::game::GuardState::Dead {
+        if o == gd || crate::condition::down(g, g.gd[o].ch) {
             continue;
         }
         if let Some(os) = g.gd[o].standoff {

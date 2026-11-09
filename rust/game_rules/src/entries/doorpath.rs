@@ -397,7 +397,7 @@ fn door_path_fallen(g: &crate::game::Game, at: V3, r: f64) -> Vec<V3> {
     let mut out: Vec<V3> = Vec::new();
     for &x in g.guards.iter().chain(g.civilians.iter()) {
         let c = g.gd[x].ch;
-        if g.gd[x].state != crate::game::GuardState::Dead && g.ch[c].ragdoll.is_none() {
+        if !crate::condition::down(g, g.gd[x].ch) && g.ch[c].ragdoll.is_none() {
             continue;
         }
         for bone in [crate::character::Bone::Hips, crate::character::Bone::Chest, crate::character::Bone::Head] {
@@ -531,7 +531,7 @@ pub(super) fn door_path_may_go(g: &mut crate::game::Game, op: DoorOpId, q: crate
         },
         None => return true,
     };
-    if g.gd[v_gd].state == crate::game::GuardState::Dead {
+    if crate::condition::down(g, g.gd[v_gd].ch) {
         return true;
     }
     // (`walks.get(V.gd) !== V`: the last-of row holds the man and his walk's serial. toLine reads the live row)
@@ -674,7 +674,7 @@ fn tick_walk(g: &mut Game, gd: GuardId, w: &mut crate::doorpath::Walk, t: f64, d
     let k = g.k.doorpath;
     let c = g.gd[gd].ch;
     let p = g.ch[c].pos;
-    if g.gd[gd].state == crate::game::GuardState::Dead || t < w.t0 || !g.guards.contains(&gd) {
+    if crate::condition::down(g, g.gd[gd].ch) || t < w.t0 || !g.guards.contains(&gd) {
         g.door_path.walks.delete(gd); // (dead · the clock has gone back · not on the floor any more)
         return false;
     }

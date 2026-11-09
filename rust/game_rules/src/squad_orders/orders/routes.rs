@@ -162,7 +162,7 @@ pub fn squad_orders_held_on(g: &crate::game::Game, seat: &crate::seats::SeatRef,
     let mut out = Vec::new();
     for (gd, &a) in seat.orders.asg.iter() {
         let row = &g.tab.orders_assignment[a];
-        if !men.contains(&gd) && !ignore.contains(&gd) && g.gd[gd].state != crate::game::GuardState::Dead && row.door == Some(d) {
+        if !men.contains(&gd) && !ignore.contains(&gd) && !crate::condition::down(g, g.gd[gd].ch) && row.door == Some(d) {
             if let Some(post) = row.post { out.push(post); }
         }
     }
@@ -211,7 +211,7 @@ pub(super) fn squad_orders_worked_stack(g: &mut crate::game::Game, d: DoorId, si
 pub(super) fn squad_orders_stood_on(g: &crate::game::Game, seat: &crate::seats::SeatRef, d: DoorId, men: &[GuardId], p: V3) -> bool {
     for (gd, &a) in seat.orders.asg.iter() {
         let row = &g.tab.orders_assignment[a];
-        if men.contains(&gd) && g.gd[gd].state != crate::game::GuardState::Dead && row.door == Some(d) {
+        if men.contains(&gd) && !crate::condition::down(g, g.gd[gd].ch) && row.door == Some(d) {
             if let Some(post) = row.post {
                 if flat(post, p) < 0.3 && flat(g.ch[g.gd[gd].ch].pos, post) < 0.6 { return true; }
             }

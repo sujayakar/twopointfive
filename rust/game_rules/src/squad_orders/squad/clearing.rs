@@ -46,7 +46,7 @@ fn perceive_here(g: &mut crate::game::Game, gd: GuardId, before: f64) -> Option<
     let pc = g.pl[g.player].ch;
     let pp = g.ch[pc].pos;
     let gp = g.ch[g.gd[gd].ch].pos;
-    if !g.pl[g.player].down && !g.player_invisible && m::hyp2(pp[0] - gp[0], pp[2] - gp[2]) < 0.62 {
+    if !crate::condition::down(g, g.pl[g.player].ch) && !g.player_invisible && m::hyp2(pp[0] - gp[0], pp[2] - gp[2]) < 0.62 {
         crate::mind::set(g, gd, 1.0, "squad");
         crate::mind::fix(g, gd, Some(v3::copy(pp)), "squad");
         g.gd[gd].last_seen_t = g.time;
@@ -118,7 +118,7 @@ fn clearing_men(g: &mut crate::game::Game) -> Vec<GuardId> {
 /// The point man's line, if he lives. (squad.ts Clearing.say)
 fn clearing_say(g: &mut crate::game::Game, text: &str, radio: Option<bool>) {
     let a = cl!(g).a;
-    if g.gd[a].state != crate::game::GuardState::Dead {
+    if !crate::condition::down(g, g.gd[a].ch) {
         crate::game::game_say(g, a, text, Some(radio.unwrap_or(false)), None);
     }
 }
@@ -130,12 +130,12 @@ pub fn clearing_tick(g: &mut crate::game::Game, dt: f64) -> bool {
     if !g.guards.contains(&a) || b.map_or(false, |b| !g.guards.contains(&b)) { cl!(g).stage = ClearStage::Done; return false; }
     if !g.ai_enabled || crate::guards::escalation_of(g) < 2.0 || crate::seats::all_down(g) { clearing_cancel(g); return false; }
     { let c = cl!(g); c.t += dt; c.total += dt; }
-    if g.gd[a].state == crate::game::GuardState::Dead || b.map_or(false, |b| g.gd[b].state == crate::game::GuardState::Dead) {
+    if crate::condition::down(g, g.gd[a].ch) || b.map_or(false, |b| crate::condition::down(g, g.gd[b].ch)) {
         if cl!(g).stage != ClearStage::Muster {
-            let dead = if g.gd[a].state == crate::game::GuardState::Dead { a } else { b.unwrap() };
+            let dead = if crate::condition::down(g, g.gd[a].ch) { a } else { b.unwrap() };
             let left = if dead == a { b } else { Some(a) };
             if let Some(left) = left {
-                if g.gd[left].state != crate::game::GuardState::Dead {
+                if !crate::condition::down(g, g.gd[left].ch) {
                     end_guard_script(g, left, Some(EndGuardScriptState::Suspicious));
                     crate::mind::raise(g, left, 0.6, "squad");
                     let at = g.ch[g.gd[dead].ch].pos;

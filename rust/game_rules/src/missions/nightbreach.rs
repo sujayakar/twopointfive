@@ -268,7 +268,7 @@ fn live_stun_off(g: &mut Game) {
 /// Every man of the list down or fled. (nightbreach.ts:352, 381)
 fn all_taken(g: &Game) -> bool {
     for h in g.night_breach.hostiles.clone() {
-        if !(g.gd[h].state == crate::game::GuardState::Dead || g.gd[h].fled) { return false; }
+        if !(crate::condition::down(g, g.gd[h].ch) || g.gd[h].fled) { return false; }
     }
     true
 }
@@ -289,7 +289,7 @@ fn script_state(s: crate::game::GuardState) -> Option<crate::squad::EndGuardScri
 /// One defender's blind fire this frame; true when a round left the barrel. (nightbreach.ts blindTurn)
 pub(super) fn blind_turn(g: &mut crate::game::Game, h: GuardId, k: f64, b: &mut crate::nightbreach::BlindBurst, door: V3) -> bool {
     let bl = crate::nightbreach::blind();
-    if g.gd[h].state == crate::game::GuardState::Dead || !crate::control::man::blind(g, h) { return false; }
+    if crate::condition::down(g, g.gd[h].ch) || !crate::control::man::blind(g, h) { return false; }
     if g.cond[g.gd[h].ch].blind_until > b.until + 1e-6 {
         b.until = g.cond[g.gd[h].ch].blind_until;
         b.n = 0.0;
@@ -461,7 +461,7 @@ fn night_breach_once_by_a_man(g: &mut crate::game::Game, key: &str, text: &str) 
 
 /// What a teammate says when the man the drill leaned on has fallen and the room is the player's now.
 pub fn night_breach_down_line(g: &crate::game::Game) -> String {
-    let down = night_breach_drill_ops(g).into_iter().find(|&o| g.gd[o].state == crate::game::GuardState::Dead);
+    let down = night_breach_drill_ops(g).into_iter().find(|&o| crate::condition::down(g, g.gd[o].ch));
     format!("{}'s down at the door. it's on you.", down.map_or("the point man", |o| g.gd[o].callsign.as_str()))
 }
 
@@ -525,7 +525,7 @@ pub fn night_breach_call_off(g: &mut crate::game::Game) -> Option<String> {
                 g.night_breach.bang_by = None;
             }
             for o in night_breach_drill_ops(g) {
-                if g.gd[o].state != crate::game::GuardState::Dead && g.gd[o].script.is_some() {
+                if !crate::condition::down(g, g.gd[o].ch) && g.gd[o].script.is_some() {
                     crate::squad::order(g, o, crate::squad::OrderPatch { goal: Some(None), ..Default::default() });
                 }
             }
@@ -555,7 +555,7 @@ pub fn night_breach_tick(g: &mut crate::game::Game, dt: f64, input: InputId, cam
         for s in g.seats.clone() {
             let man = crate::cmd::seat_man(g, s);
             let seat_input = g.tab.cmd_seat[s].input;
-            if !g.pl[man].down && crate::input::input_hit(g, seat_input, "KeyF") {
+            if !crate::condition::down(g, g.pl[man].ch) && crate::input::input_hit(g, seat_input, "KeyF") {
                 night_breach_order(g);
                 break;
             }
@@ -566,7 +566,7 @@ pub fn night_breach_tick(g: &mut crate::game::Game, dt: f64, input: InputId, cam
         let n = g.night_breach.hostiles.len();
         for i in 0..n {
             let Some(h) = g.night_breach.hostiles.get(i).copied() else { break };
-            if g.gd[h].state == crate::game::GuardState::Dead { continue; }
+            if crate::condition::down(g, g.gd[h].ch) { continue; }
             if g.gd[h].script.is_some() {
                 let was = script_state(g.gd[h].state);
                 crate::squad::end_guard_script(g, h, was);
@@ -599,7 +599,7 @@ pub fn night_breach_tick(g: &mut crate::game::Game, dt: f64, input: InputId, cam
     match night_breach_state(g) {
         NightBreachState::Recalled | NightBreachState::Failed => {
             for o in night_breach_drill_ops(g) {
-                if g.gd[o].state != crate::game::GuardState::Dead && g.gd[o].script.is_some() && !in_his_book(g, o) {
+                if !crate::condition::down(g, g.gd[o].ch) && g.gd[o].script.is_some() && !in_his_book(g, o) {
                     crate::squad::end_guard_script(g, o, Some(crate::squad::EndGuardScriptState::Search));
                     crate::control::set_hold(g, o, true, "nightbreach");
                     crate::control::set_pinned(g, o, true, "nightbreach");
@@ -714,6 +714,7 @@ mod tests {
         let mut g = Game::blank();
         let bl = crate::nightbreach::blind();
         let mut man = crate::game::Guard::blank();
+        man.ch = crate::character::man_new(&mut g, crate::character::Character::blank());
         g.cond[man.ch].blind_until = 3.0;
         man.held = Some(crate::game::GuardHeld::default());   // (cover at :114 is another part's: in Sam's arm it is not asked)
         let h = g.gd.push(man);

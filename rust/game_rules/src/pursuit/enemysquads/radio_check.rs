@@ -1316,13 +1316,13 @@ fn lying(g: &mut Game, q: EnemysquadsSquadId, gd: GuardId, x: Option<Enemysquads
         let men = sq!(g, x).men.clone();
         for b in men.iter() {
             let b = *b;
-            if g.gd[b].state == crate::game::GuardState::Dead && !rc!(g, q).known.has(b) && crate::guards::body_seen(g, gd, b, if around { Some(LOOK_ROUND_M) } else { None }) {
+            if crate::condition::down(g, g.gd[b].ch) && !rc!(g, q).known.has(b) && crate::guards::body_seen(g, gd, b, if around { Some(LOOK_ROUND_M) } else { None }) {
                 return Some(b);
             }
         }
         return None;
     }
-    if g.gd[who].state == crate::game::GuardState::Dead && !rc!(g, q).known.has(who) && around && crate::guards::body_seen(g, gd, who, Some(LOOK_ROUND_M)) {
+    if crate::condition::down(g, g.gd[who].ch) && !rc!(g, q).known.has(who) && around && crate::guards::body_seen(g, gd, who, Some(LOOK_ROUND_M)) {
         Some(who)
     } else {
         None

@@ -36,7 +36,7 @@ fn blank() -> crate::startle::St {
 /// THE START, for any caller: he jolts toward `at`; for `secs` his gun stays down. False = not given.   (startle.ts giveStartle)
 pub fn give_startle(g: &mut crate::game::Game, gd: GuardId, at: V3, secs: Option<f64>, torch: Option<bool>) -> bool {
     let secs = secs.unwrap_or(g.k.startle.beat);
-    if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].held.is_some() || g.gd[gd].civ.is_some() || crate::owner::has(g, gd, crate::owner::by::RUNNER) { return false; }
+    if crate::condition::down(g, g.gd[gd].ch) || g.gd[gd].held.is_some() || g.gd[gd].civ.is_some() || crate::owner::has(g, gd, crate::owner::by::RUNNER) { return false; }
     if g.time < g.m.startle.state_of.get_or_insert_with(gd, blank).until { return false; }
     let c = g.gd[gd].ch;
     let torch = match torch { Some(t) => t, None => crate::guards::hand_carry(g, gd) == crate::guards::HandCarry::Torch };

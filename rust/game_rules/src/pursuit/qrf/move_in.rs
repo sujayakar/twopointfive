@@ -84,7 +84,7 @@ fn silent_net(g: &mut crate::game::Game) -> bool {
         let x = &g.gd[g.guards[i]];
         if x.unit.is_some() || x.team != crate::teams::Team::Guard { continue; }
         roster += 1;
-        if x.state != crate::game::GuardState::Dead && x.held.is_none() { on += 1; }
+        if !g.cond[x.ch].down && x.held.is_none() { on += 1; }
     }
     if roster == 0 || on != 0 || (g.qrf.silent_at < 0.0 && g.time - g.qrf.loud_t >= LOUD_MEMORY_SECS) || !response_here(g) {
         g.qrf.silent_at = -1.0;
@@ -130,7 +130,7 @@ pub fn update_qrf(g: &mut crate::game::Game, dt: f64) {
         if e.kind == EventKind::Shot && !rd {
             for j in 0..g.guards.len() {
                 let x = g.guards[j];
-                if g.gd[x].unit.is_none() && g.gd[x].state != crate::game::GuardState::Dead && g.gd[x].held.is_none() && v3::dist(e.pos, pos_of(g, x)) <= 80.0 {
+                if g.gd[x].unit.is_none() && !crate::condition::down(g, g.gd[x].ch) && g.gd[x].held.is_none() && v3::dist(e.pos, pos_of(g, x)) <= 80.0 {
                     g.qrf.loud_t = g.time;
                     break;
                 }
@@ -359,7 +359,7 @@ fn tick_men(g: &mut crate::game::Game, dt: f64) {
     el.retain(|x| !g.qrf.perim.as_ref().map_or(false, |p| p.men.iter().any(|r| r.gd == *x)));
     // trained: short beats; nobody of theirs talks himself calm
     let mut all = alive(g);
-    if let Some(p) = g.qrf.perim.as_ref() { for r in &p.men { if g.gd[r.gd].state != GuardState::Dead { all.push(r.gd); } } }
+    if let Some(p) = g.qrf.perim.as_ref() { for r in &p.men { if !crate::condition::down(g, g.gd[r.gd].ch) { all.push(r.gd); } } }
     for x in all {
         let cap = g.k.trained.react_cap;
         let t = g.time;
@@ -503,7 +503,7 @@ fn perceive_here(g: &mut crate::game::Game, m: GuardId, dt: f64) -> bool {
     }
     let pp = player_pos(g, &crate::seats::here(g));
     let gp = pos_of(g, m);
-    if !g.pl[g.player].down && !g.player_invisible && crate::m::hyp2(pp[0] - gp[0], pp[2] - gp[2]) < 0.62 {
+    if !crate::condition::down(g, g.pl[g.player].ch) && !g.player_invisible && crate::m::hyp2(pp[0] - gp[0], pp[2] - gp[2]) < 0.62 {
         crate::mind::set(g, m, 1.0, "qrf");
         crate::mind::fix(g, m, Some(v3::copy(pp)), "qrf");
         g.gd[m].last_seen_t = g.time;
@@ -519,7 +519,7 @@ fn perceive_here(g: &mut crate::game::Game, m: GuardId, dt: f64) -> bool {
         while i < g.guards.len() {
             let o = g.guards[i];
             i += 1;
-            if g.gd[o].state == GuardState::Dead || g.gd[o].civ.is_some() || !crate::teams::hostile_to(g, m, crate::teams::HostileToO::Guard(o)) || crate::rails::rails_down(g, o) { continue; }
+            if crate::condition::down(g, g.gd[o].ch) || g.gd[o].civ.is_some() || !crate::teams::hostile_to(g, m, crate::teams::HostileToO::Guard(o)) || crate::rails::rails_down(g, o) { continue; }
             let oc = g.gd[o].ch;
             let vo = crate::guards::can_see_char(g, m, oc, false);
             if !vo.visible { continue; }
@@ -571,7 +571,7 @@ fn perceive_here(g: &mut crate::game::Game, m: GuardId, dt: f64) -> bool {
             while i < g.guards.len() {
                 let x = g.guards[i];
                 i += 1;
-                if g.gd[x].state != GuardState::Dead || g.gd[x].found || g.gd[x].team != team { continue; }
+                if !crate::condition::down(g, g.gd[x].ch) || g.gd[x].found || g.gd[x].team != team { continue; }
                 let take = x == o || {
                     let xp = crate::guards::body_pos(g, x);
                     flat(xp, bp) < 3.0 && !crate::scene_collision::segment_blocked(g, eye, v3::add(xp, [0.0, 0.3, 0.0]), None, None, None)
@@ -604,13 +604,13 @@ fn man_down(g: &mut crate::game::Game) {
     if let Some(p) = g.qrf.perim.as_ref() { for r in &p.men { theirs.push(r.gd); } }
     for &d in &theirs {
         let key = crate::Num(char_id(g, d));
-        if g.gd[d].state != GuardState::Dead || g.qrf.seen_ids.has(key) { continue; }
+        if !crate::condition::down(g, g.gd[d].ch) || g.qrf.seen_ids.has(key) { continue; }
         g.qrf.seen_ids.add(key);
         g.qrf.lost += 1.0;
         let bp = crate::guards::body_pos(g, d);
         let (mut sp, mut bd) = (None, f64::INFINITY);
         for &o in &theirs {
-            if o == d || g.gd[o].state == GuardState::Dead || !g.guards.contains(&o) { continue; }
+            if o == d || crate::condition::down(g, g.gd[o].ch) || !g.guards.contains(&o) { continue; }
             let dd = flat(pos_of(g, o), bp);
             if dd < bd && (dd < 6.0 || crate::guards::point_in_view(g, o, v3::add(bp, [0.0, 0.4, 0.0]), Some(14.0), Some(100.0))) { bd = dd; sp = Some(o); }
         }
@@ -818,7 +818,7 @@ fn sweep_places(g: &crate::game::Game) -> Vec<crate::qrf::SweepPlacesItem> {
         for r in &rooms {
             let mut held = false;
             for &h in &r.defenders {
-                if g.gd[h].state != crate::game::GuardState::Dead && !crate::owner::has(g, h, crate::owner::by::RUNNER) { held = true; break; }
+                if !crate::condition::down(g, g.gd[h].ch) && !crate::owner::has(g, h, crate::owner::by::RUNNER) { held = true; break; }
             }
             if !held { out.push(SweepPlacesItem { name: r.def.name.clone(), pos: mid(&r.def.bounds) }); }
         }

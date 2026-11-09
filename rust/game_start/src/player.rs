@@ -161,7 +161,7 @@ impl Player {
     pub fn t(&self) -> f64 { self.t.get() }
     pub fn pos(&self) -> V3 { self.seen(|g, s| g.ch[g.pl[s.player].ch].pos) }
     pub fn man_at(&self, gd: GuardId) -> V3 { self.ask(|g| g.ch[g.gd[gd].ch].pos) }
-    pub fn dead(&self, gd: GuardId) -> bool { self.ask(|g| g.gd[gd].state == game::game::GuardState::Dead) }
+    pub fn dead(&self, gd: GuardId) -> bool { self.ask(|g| game::condition::down(g, g.gd[gd].ch)) }
     /// a place of the world on the picture, and is it inside the margins of the picture a hand can point at
     pub fn screen(&self, p: V3) -> (f64, f64, bool) {
         let n = self.now.borrow();

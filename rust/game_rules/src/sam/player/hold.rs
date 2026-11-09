@@ -64,7 +64,7 @@ pub(super) fn update_hold(g: &mut crate::game::Game, dt: f64, input: InputId, ca
         Some(h) => h.by == crate::game::GuardHeldBy::Player,
         None => false,
     };
-    if !crate::game::game_on_floor(g, gd) || g.gd[gd].state == crate::game::GuardState::Dead || !by_player {
+    if !crate::game::game_on_floor(g, gd) || crate::condition::down(g, g.gd[gd].ch) || !by_player {
         drop_hold(g);
         crate::character::character_update(g, c, dt);
         return;
@@ -346,7 +346,7 @@ pub(super) fn update_hold(g: &mut crate::game::Game, dt: f64, input: InputId, ca
                 g.pl[p].last_fire_t = time;
                 hold!(g, p).shot_t = time;
                 let ag = match g.aim_guard {
-                    Some(a) if a != gd && g.gd[a].state != crate::game::GuardState::Dead => Some(a),
+                    Some(a) if a != gd && !crate::condition::down(g, g.gd[a].ch) => Some(a),
                     _ => None,
                 };
                 let tgt: V3 = if let Some(t) = g.aim_target {
@@ -787,7 +787,7 @@ fn keep_held_off_guards(g: &mut crate::game::Game, dt: f64) {
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        if o == held || g.gd[o].state == crate::game::GuardState::Dead || g.gd[o].held.is_some() {
+        if o == held || crate::condition::down(g, g.gd[o].ch) || g.gd[o].held.is_some() {
             continue;
         }
         let oc = g.gd[o].ch;
@@ -1031,7 +1031,7 @@ pub(super) fn hand_back(g: &mut crate::game::Game, gd: GuardId, stagger: f64) {
     g.gd[gd].body_duty = None;
     g.gd[gd].stall_ref = None;
     g.ch[hc].aim_pitch = 0.0;
-    if g.gd[gd].state == crate::game::GuardState::Dead {
+    if crate::condition::down(g, g.gd[gd].ch) {
         return;
     }
     if g.gd[gd].gun_lost_at >= 0.0 {

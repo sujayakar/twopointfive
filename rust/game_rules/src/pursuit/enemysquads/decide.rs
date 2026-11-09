@@ -82,7 +82,7 @@ pub(super) fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 /// (enemysquads.ts pick)
 pub(super) fn pick(g: &mut crate::game::Game, who: crate::dice::Who, r: [f64; 2]) -> f64 { r[0] + crate::dice::draw_for(g, "enemysquads::pick#1", who) * (r[1] - r[0]) }
 /// a man who dropped it and ran is no man of his squad's any more (enemysquads.ts alive)
-pub(super) fn alive(g: &crate::game::Game, gd: GuardId) -> bool { g.gd[gd].state != crate::game::GuardState::Dead && !g.gd[gd].fled }
+pub(super) fn alive(g: &crate::game::Game, gd: GuardId) -> bool { !crate::condition::down(g, g.gd[gd].ch) && !g.gd[gd].fled }
 /// (enemysquads.ts grown)
 fn grown(b: crate::scene_scenarios::Rect, m: f64) -> crate::enemysquads::Grown { Grown { x0: b.x0 - m, x1: b.x1 + m, z0: b.z0 - m, z1: b.z1 + m } }
 /// (enemysquads.ts roomOf)

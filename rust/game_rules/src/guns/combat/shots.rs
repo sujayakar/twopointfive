@@ -180,7 +180,7 @@ pub(in crate::guns) fn run_shell_late(g: &mut crate::game::Game, late: &crate::s
 /// The man the round found: where it landed decides, then the sound, whose round it was. (fireWeapon's manDown)
 fn man_down(g: &mut Game, hit_guard: GuardId, sg: Option<GuardId>, shooter: CharId, is_player: bool, ff_ours: bool, hostage_hit: bool, muzzle: V3, dir: V3, t_hit: f64, hit_p: V3) {
     use crate::game::{DownBy, DownKind, GuardState};
-    let was_up = g.gd[hit_guard].state != GuardState::Dead;
+    let was_up = !crate::condition::down(g, g.gd[hit_guard].ch);
     let team = g.gd[hit_guard].team;
     let foe = match sg { Some(s) => { let st = g.gd[s].team; crate::teams::is_hostile(g, st, team) } None => false };
     let sign = g.gd[hit_guard].callsign.clone();
@@ -201,7 +201,7 @@ fn man_down(g: &mut Game, hit_guard: GuardId, sg: Option<GuardId>, shooter: Char
     if was_up { g.gd[hit_guard].killer_id = g.ch[shooter].id; }
     if hostage_hit {
         if let Some(sh) = sg {
-            if g.gd[sh].state != GuardState::Dead { crate::guards::hostage_hit_bark(g, sh, hit_guard); }
+            if !crate::condition::down(g, g.gd[sh].ch) { crate::guards::hostage_hit_bark(g, sh, hit_guard); }
         }
     }
 }
@@ -439,7 +439,7 @@ fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, is_pl
     } else {
         let mut t_h = -1.0;
         if let Some(h) = held {
-            if g.gd[h].state != GuardState::Dead && g.gd[h].ch != shooter {
+            if !crate::condition::down(g, g.gd[h].ch) && g.gd[h].ch != shooter {
                 let c = g.gd[h].ch;
                 t_h = scan(g, &f, t_hit, c, false);
             }
@@ -453,7 +453,7 @@ fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, is_pl
                 let s = g.seats[i];
                 i += 1;
                 let pl = crate::cmd::seat_man(g, s);
-                if pl == g.player || g.pl[pl].down { continue; }
+                if pl == g.player || crate::condition::down(g, g.pl[pl].ch) { continue; }
                 let c = g.pl[pl].ch;
                 let to = scan(g, &f, t_hit, c, false);
                 if to >= 0.0 && to < t_hit { t_hit = to; player_hit = true; hit_guard = None; hostage_hit = false; hit_view = pl; }
@@ -465,7 +465,7 @@ fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, is_pl
             i += 1;
             let c = g.gd[od].ch;
             let team = g.gd[od].team;
-            if Some(od) == held || g.gd[od].state == GuardState::Dead || !g.ch[c].alive || c == shooter || !crate::teams::is_hostile(g, sg_team, team) || g.gd[od].god { continue; }
+            if Some(od) == held || crate::condition::down(g, g.gd[od].ch) || !g.ch[c].alive || c == shooter || !crate::teams::is_hostile(g, sg_team, team) || g.gd[od].god { continue; }
             let to = scan(g, &f, t_hit, c, false);
             if to >= 0.0 && to < t_hit { t_hit = to; hit_guard = Some(od); hostage_hit = false; player_hit = false; }
         }
@@ -475,7 +475,7 @@ fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, is_pl
                 let s = g.seats[i];
                 i += 1;
                 let pl = crate::cmd::seat_man(g, s);
-                if g.pl[pl].down { continue; }
+                if crate::condition::down(g, g.pl[pl].ch) { continue; }
                 let c = g.pl[pl].ch;
                 let t_s = scan(g, &f, t_hit, c, true);
                 if t_s >= 0.0 && t_s < t_hit { t_hit = t_s; player_hit = true; hit_guard = None; hostage_hit = false; hit_view = pl; }
@@ -613,7 +613,7 @@ fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, is_pl
     let hit_c = hit_guard.map(|h| g.gd[h].ch);
     if ff_on && is_player && lead { crate::friendlyfire::ff_past(g, muzzle, hit_p, hit_c); }
     let victim = if player_hit { Some(g.pl[hit_view].ch) } else { hit_c };
-    let was_down = if player_hit { g.pl[hit_view].down } else { match hit_guard { Some(h) => g.gd[h].state == GuardState::Dead, None => false } };
+    let was_down = if player_hit { crate::condition::down(g, g.pl[hit_view].ch) } else { match hit_guard { Some(h) => crate::condition::down(g, g.gd[h].ch), None => false } };
     crate::deathrecap::recap_round(g, victim, was_down, shooter, muzzle, hit_p, &def, o.blind);
     if let Some(hg) = hit_guard {
         let late = crate::shotgun::ShellLate::ManDown { hit_guard: hg, sg, shooter, is_player, ff_ours, hostage_hit, muzzle, dir, t_hit, hit_p };

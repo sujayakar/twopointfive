@@ -96,7 +96,7 @@ impl Snow {
             self.words.push(SnowWord { w });
         } }
         for &s in &g.seats { let c = g.pl[game::cmd::seat_man(g, s)].ch; self.man(g, c, false, false); }
-        for &gd in g.guards.iter().chain(game::civilians::civilians_shown(g).iter()) { self.man(g, g.gd[gd].ch, hidden(g, gd), g.gd[gd].state == GuardState::Dead); }
+        for &gd in g.guards.iter().chain(game::civilians::civilians_shown(g).iter()) { self.man(g, g.gd[gd].ch, hidden(g, gd), game::condition::down(g, g.gd[gd].ch)); }
         self.props(g);
         self.items(g);
         self.chunks(g);

@@ -39,7 +39,7 @@ pub(super) fn drop_hold(g: &mut crate::game::Game) {
     }
     let gc = g.gd[gd].ch;
     g.ch[gc].anim.held_pose = None;
-    if g.gd[gd].state != crate::game::GuardState::Dead {
+    if !crate::condition::down(g, g.gd[gd].ch) {
         let talk = g.gd[gd].talk;
         g.tab.game_talk[talk].held_since = -1.0;
     }
@@ -50,7 +50,7 @@ pub(super) fn drop_hold(g: &mut crate::game::Game) {
 /// The 'pick the lock' row: drop what the hands were doing and start working the lock.   (player.ts startPicking)
 pub fn start_picking(g: &mut crate::game::Game, d: DoorId) {
     let pl = g.player;
-    if g.pl[pl].down || g.pl[pl].takedown.is_some() || g.pl[pl].kick.is_some() {
+    if crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].takedown.is_some() || g.pl[pl].kick.is_some() {
         return;
     }
     if g.dr[d].def.steel.unwrap_or(false) {
@@ -126,7 +126,7 @@ pub(super) fn update_picking(g: &mut crate::game::Game, dt: f64, input: InputId)
 pub fn start_wand(g: &mut crate::game::Game, d: DoorId) {
     let pl = g.player;
     let c = g.pl[pl].ch;
-    if g.pl[pl].down || g.pl[pl].takedown.is_some() || g.pl[pl].kick.is_some() || g.pl[pl].holding.is_some() || g.pl[pl].wanding.is_some() {
+    if crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].takedown.is_some() || g.pl[pl].kick.is_some() || g.pl[pl].holding.is_some() || g.pl[pl].wanding.is_some() {
         return;
     }
     if g.pl[pl].coding.is_some() || g.pl[pl].door_move.is_some() || g.pl[pl].breaker_move.is_some() || g.mission.drive_t >= 0.0 || crate::handwork::sam_work(g).is_some() {
@@ -322,7 +322,7 @@ pub fn start_kick(g: &mut crate::game::Game, d: DoorId, run: Option<bool>, tool:
     let run = run.unwrap_or(false);
     let pl = g.player;
     let c = g.pl[pl].ch;
-    if g.pl[pl].kick.is_some() || g.pl[pl].down || g.pl[pl].takedown.is_some() || crate::character::anim_kicking(g, c) {
+    if g.pl[pl].kick.is_some() || crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].takedown.is_some() || crate::character::anim_kicking(g, c) {
         return;
     }
     if g.pl[pl].crouch && !can_stand(g) {
@@ -659,7 +659,7 @@ pub fn update_aim(g: &mut crate::game::Game, input: InputId, cam: CameraId, canv
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
-        if g.gd[gd].state == crate::game::GuardState::Dead || Some(gd) == held || crate::fogofwar::fog_of_war_hidden(g, gd) || crate::friends::friend_no_snap(g, gd) {
+        if crate::condition::down(g, g.gd[gd].ch) || Some(gd) == held || crate::fogofwar::fog_of_war_hidden(g, gd) || crate::friends::friend_no_snap(g, gd) {
             continue;
         }
         let com = chest_or(g, gd, 1.2);

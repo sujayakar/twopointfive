@@ -500,7 +500,7 @@ pub fn glass_break_update(g: &mut crate::game::Game, dt: f64) {
             let men = ::sim::panes::men_addr() as *mut f64;
             let mut k = 0usize;
             for pl in crate::seats::men(g) {
-                if g.pl[pl].down || g.pl[pl].holding.is_some() || g.pl[pl].dragging.is_some() || g.pl[pl].wall.is_some() { continue; }
+                if crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].holding.is_some() || g.pl[pl].dragging.is_some() || g.pl[pl].wall.is_some() { continue; }
                 let c = g.pl[pl].ch;
                 let (pos, vel, id) = (g.ch[c].pos, g.ch[c].vel, g.ch[c].id);
                 if k < ::sim::panes::MAX_MEN {

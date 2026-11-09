@@ -247,7 +247,7 @@ pub fn drive_pulled(g: &mut crate::game::Game) {
 pub fn send_rack_check(g: &mut crate::game::Game) {
     use crate::game::{GuardState, GuardTask, GuardTaskArm0, GuardTaskArm0Kind};
     let pl = g.player;
-    if g.pl[pl].down {
+    if crate::condition::down(g, g.pl[pl].ch) {
         return;
     }
     let front = g.level.mission.rack.front;
