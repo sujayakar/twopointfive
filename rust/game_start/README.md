@@ -312,6 +312,7 @@ target/release/gate save            # only rows whose name starts with a word: `
 target/release/gate pin [ROW…]      # record the pins again and say which moved; nothing moved = the file is as it was, byte for byte
 target/release/gate breaks          # each row of the breaks' table plays unbroken and must PASS, then each break must FAIL in its check's own words. Exit 0 = all did
 target/release/gate list            # the rows
+target/release/gate tests [BINARY [TEST]]   # the whole native test set: no part of the quick kind
 ```
 
 Each row prints one line in the rows' order, and the last line is the count and the wall time, with what each kind cost. A row is a child process, so a game that panics costs its own rows, which then
@@ -330,6 +331,8 @@ FAIL with the first lines of what it wrote; the four rows of one run share a chi
 
 The runs (`RUNS` in `rows.rs`) reach the office's night breach under `doors`, a room clear in the rain (`depot-four`) under `bangs`, `compound-four` under `doors`, `glasshouse-four` under `kit`,
 `killhouse-four` and `bazaar-quiet` and a rescue under `push`, and the snow (`pass-four`) under `bangs`.
+
+**`gate tests`** builds the tests of every crate that has any (the list is at the head of `src/bin/gate/tests.rs`, and a crate with tests that is not on it fails the run) and runs each binary as a process of its own from its crate's folder, as many at once as there are cores. It prints each binary with its counts and seconds, every red test by name with its panic line, what is ignored and why, the ten slowest and a last line. Exit 1 on a red, a binary that ended badly or a build that failed. `gate tests squad_doors [test]` is that binary alone, or that test. `--break=BINARY` plants a red, to show that one is read.
 
 **What it does not hold.** A row holds a game to itself, to its pins or to the same game by another road, never that it is any good, and a mistake made at a pin passes: `start` a game at rest, `play` and `again` what the eight hands reach, `save` the three seconds after each moment, `seats` a fight nobody plays well, `par` thirty seconds of a clock that has not yet finished.
 `draw` holds the rows a page is handed, not what a GPU makes of them; and no row has a page, a module build or a teammate's conduct in it, and the par clock's arithmetic and its row are `tests/par.rs`'s.
