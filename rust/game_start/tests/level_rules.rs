@@ -167,3 +167,37 @@ fn the_traffic_map_is_worn_where_the_level_is_walked() {
         assert!(far > 20, "{level}: {far} points nobody walks by");
     }
 }
+
+/// THE RULE: a door's leaf is made of what its paint is. In a level that wears the look an outside leaf in the level's own accent is paint and an inside one in the palette's wood is wood,
+/// whatever shade its own name gives it; one with old paint faded on it is plain; a level whose row gives its paint as numbers says nothing for that side unless its row says a word, and a row
+/// with one word means every leaf. A steel door is left as it was made.
+/// A FAILURE MEANS: a blown leaf's pieces and a round's chips are of another stuff than the door that was drawn.
+#[test]
+fn a_levels_leaves_are_made_of_their_paint() {
+    // (outside, inside, steel) words met, and the shades of the outside leaves
+    let leaves = |level: &str| {
+        let p = Play::mission(level, "?roomclear&squad4", &Opts::default());
+        let (mut out, mut inside, mut steel, mut shades) = (Vec::new(), Vec::new(), Vec::new(), Vec::new());
+        for &d in &p.g.doors.list {
+            let (def, b) = (&p.g.dr[d].def, &p.g.tab.boxes[p.g.dr[d].box_]);
+            let of = if def.steel == Some(true) { &mut steel } else if def.exterior == Some(true) { shades.push((b.albedo[2] * 1e4) as i64); &mut out } else { &mut inside };
+            let word = b.stuff.map_or(String::from("plain"), |s| format!("{s:?}"));
+            if !of.contains(&word) { of.push(word); }
+        }
+        out.sort(); inside.sort(); shades.sort(); shades.dedup();
+        (out.join(" "), inside.join(" "), steel.join(" "), shades.len())
+    };
+    let is = |level: &str, out: &str, inside: &str, steel: &str| {
+        let (o, i, s, shades) = leaves(level);
+        assert_eq!((o.as_str(), i.as_str(), s.as_str()), (out, inside, steel), "{level}: outside, inside, steel");
+        shades
+    };
+    let shades = is("barracks.json", "Paint", "Wood plain", "");   // no row: the accent its boxes are painted in, the palette's wood, old paint on some
+    assert!(shades > 4, "each leaf a shade of its own: {shades}");
+    is("office.json", "Paint", "Wood plain", "plain");
+    is("block.json", "plain", "Wood plain", "plain");         // a row of numbers
+    is("warehouse.json", "Paint", "Wood plain", "");          // a row that says paint for the outside
+    is("killhouse.json", "plain", "Wood plain", "");          // a row that says wood for numbers inside
+    let one = changed("killhouse.json", "enamel", &|l| *member(l, "name") = Json::Str("white-roof".into()));
+    is(one.to_str().unwrap(), "Enamel", "Enamel", "");        // a row with one word: every leaf, the ones with old paint too
+}

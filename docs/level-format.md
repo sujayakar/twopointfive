@@ -3,17 +3,15 @@
 The office is **data**: `levels/office.json`. This note is for whoever edits it by hand or from a generator, and for the lanes that extend it (G2 floors + stairs, G4 cameras / keypads / lasers).
 
 ```
-levels/office.json ──import──▶ tools/levels/lib/level.ts buildLevel() ──▶ levelLoad.ts loadLevel() ──▶ Level ──▶ Game / Engine
-        ▲                                                                                        │
-        └──── tools/level-export.ts ◀── levelLoad.ts levelToData() ◀── officeGen.ts buildOfficeProcedural()  (LEGACY generator)
+a generator (tools/levels/<name>.ts, the office's is lib/officeGen.ts) ──▶ Level ──▶ lib/levelLoad.ts levelToData() ──▶ levels/<name>.json ──▶ the game (rust/game_start level.rs)
+                                                                                  ◀── loadLevel() ◀── (a tool that reads a file back)
 ```
 
 * **Schema + validator + serializer**: `tools/levels/lib/levelData.ts` (`LevelData`, `validateLevelData`, `serializeLevelData`,
-  `parseLevelData`, `canonicalLevelData`, `levelDataDigest`, `structuralDiff`, `indexLevelData`, `freshId`, flag name ⇄ bit helpers).
-* **Conversions**: `tools/levels/lib/levelLoad.ts` (`loadLevel(data) → Level`, `levelToData(level, opts) → LevelData`, `fitPropFootprint`).
-* **The game's entry point**: `tools/levels/lib/level.ts` `buildLevel()` = `loadLevel(OFFICE_DATA)`; `OFFICE_DATA` is the bundled JSON
-  (a plain `import … from '../../levels/office.json'` — Bun inlines it into the JS chunk, so the playable Artifact, the dev server
-  and the headless harness all get it with no extra asset and nothing to fetch).
+  `parseLevelData`, `canonicalLevelData`, `levelDataDigest`, `structuralDiff`, `freshId`, flag name ⇄ bit helpers).
+* **Conversions**: `tools/levels/lib/levelLoad.ts` (`loadLevel(data) → Level`, the whole file; `levelToData(level, opts) → LevelData`, `fitPropFootprint`).
+* **The game reads the file itself** (`rust/game_start/src/level.rs`): nothing under `src` makes, reads or checks a level, and the page's build refuses to
+  (`tools/draw/ban.ts`). Everything that does is beside the level tools, in `tools/levels/lib`.
 * **Regenerate**: `bun run tools/level-export.ts` (`--check` = write nothing, exit 1 if the file is stale vs the generator).
 * **Prove**: `bun run tools/qa/probes.ts level` — `level-identity` (generator vs loaded JSON: 0 structural diffs, one digest, file
   not stale, file canonical), `level-validate` (validator clean + 12 planted faults caught + surface map ≡ `rust/game_rules/src/floor`),
@@ -382,18 +380,13 @@ Play it with `?levelFile=<name>.json&roomclear[=seed][&squad4]` or `&rescue` (th
 ## Working on a level from code
 
 ```ts
-import { OFFICE_DATA, buildLevel } from './scene/level';                       // the bundled data (read-only) / a fresh runtime Level
-import { loadLevel, levelToData, fitPropFootprint } from './scene/levelLoad';  // LevelData → Level (validates, copies everything) / Level → LevelData
+import { loadLevel, levelToData, fitPropFootprint } from './lib/levelLoad';  // LevelData → Level (validates, copies everything) / Level → LevelData
 import { validateLevelData, serializeLevelData, parseLevelData, canonicalLevelData, levelDataDigest, structuralDiff,
-         indexLevelData, freshId, flagsToBits, bitsToFlags, AUTHORED_FLAGS, LEVEL_DATA_VERSION } from './scene/levelData';
+         freshId, flagsToBits, bitsToFlags, AUTHORED_FLAGS, LEVEL_DATA_VERSION } from './lib/levelData';
 ```
 
-* Edit a `LevelData` (deep-copy `OFFICE_DATA` first — it is the module's one bundled object), `validateLevelData` on every op,
-  `loadLevel(data)` to get a `Level` (hand it to the stand-up exactly as main.ts does), `serializeLevelData` to save.
-* `loadLevel` output carries no ids; keep the `LevelData` as the document and use `indexLevelData(d)` for id → index when talking
-  to the running `Game` (its `world.statics[i]`, `targets`, `doors.byName(id)`).
-* Nothing in `Level` is derived from anything else EXCEPT at Game construction (area lights off emissive switchables, AreaLit flags,
-  reach masks, nav / wall rasters) — so an edit means: mutate data → `loadLevel` → rebuild the Game (cheap: ~100 ms headless).
+* Parse a file, edit the `LevelData`, `validateLevelData` it, `serializeLevelData` to save. `loadLevel(data)` gives a `Level` to ask things of.
+* `loadLevel` output carries no ids; keep the `LevelData` as the document. `data.boxes[i]` is `level.boxes[i]`, and static box i of the game.
 
 ## The level editor is gone
 

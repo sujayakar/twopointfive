@@ -21,8 +21,7 @@ import { gwotKit, type GwotHost, type GwotKit, type RugStyle } from './lib/gwotK
 import { MARKING_TEXEL, mkHash } from '../../src/scene/markings';
 import { doesOf } from '../../src/scene/materials';
 import { stampDoes } from './doesWas';
-import { DRESS_GROUP } from './lib/dressing';
-import { isLived } from './lib/lived';
+import { DRESS_GROUP, isLived } from './lib/lived';
 import { saidAs, tonedAs, worded, repainted, type BoxStuff } from '../../src/scene/stuff';
 import { flatsOverlap, isFlat, layFlats } from './flatLayers';
 

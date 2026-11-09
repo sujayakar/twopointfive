@@ -27,13 +27,11 @@ const { level, scenarios, groups, surfaces } = gen.build();
 { const { fitDoors, fitWaysOut } = await import(`${ROOT}/tools/levels/lib/doorSize.ts`);
   fitDoors(level.doors);   // every leaf the real door of its slot (doorSize.ts — a generator that frames a COPY of a def leaves the level's own unfitted)
   fitWaysOut(level, scenarios?.quiet); }   // … and a way out that names a door goes through the door as fitted
-// DRESSING (tools/levels/dress.ts): the loud levels get things to wreck, appended LAST under their own group — which the loader leaves out with the destruction switch off
-// (lib/dressing.ts), so the switch is raised here for the reload check below: the file must reproduce the DRESSED level.
-// LIVED-IN ROOMS (lib/lived.ts): what furnishes a room — boxes in group 'lived.<room>', props / lights / fixtures named 'lived.…' — is left out by the loader with
-// its switch off, and off must be the level as it was. So: the lived things are the TAIL of each of the generator's lists (nothing kept comes after one, so no kept
-// index moves and a fixture's box references stay true), nothing kept names a lived box, and the dressing below is dealt as if they were not there (the same
-// dressing whether the switch is on or off). The switch is raised here for the reload check, like the destruction's.
-const { LIVED, isLived } = await import(`${ROOT}/tools/levels/lib/lived.ts`); LIVED.on = true;
+// DRESSING (tools/levels/dress.ts): the loud levels get things to wreck, appended LAST under their own group, which the game leaves out on its own word.
+// LIVED-IN ROOMS (lib/lived.ts): what furnishes a room — boxes in group 'lived.<room>', props / lights / fixtures named 'lived.…' — the game can leave out too, and
+// without it must be the level as it was. So: the lived things are the TAIL of each of the generator's lists (nothing kept comes after one, so no kept
+// index moves and a fixture's box references stay true), nothing kept names a lived box, and the dressing below is dealt as if they were not there.
+const { isLived } = await import(`${ROOT}/tools/levels/lib/lived.ts`);
 const livedFrom = (() => { const tail = (what: string, tags: (string | undefined)[]) => { let first = tags.findIndex(isLived); if (first < 0) first = tags.length; const stray = tags.findIndex((t, i) => i > first && !isLived(t)); if (stray >= 0) throw new Error(`lived things must come last: ${what} ${stray} ('${tags[stray]}') follows the lived ${what} ${first} ('${tags[first]}')`); return first; };
   const boxes = tail('box', groups), props = tail('prop', level.props.map((p: { name: string }) => p.name)), lights = tail('light', level.lights.map((l: { name: string }) => l.name)), switchables = tail('switchable', level.switchables.map((s: { name: string }) => s.name));
   level.switchables.forEach((s: { name: string; boxes: number[] }, i: number) => { if (i < switchables && s.boxes.some(b => b >= boxes)) throw new Error(`switchable '${s.name}' is not lived and names a lived box`); });
@@ -55,8 +53,7 @@ const dressBare = (dressLevel: (l: Level, g: string[]) => { added: number; surfa
   if (hit.length) throw new Error(`lived things stand in the dressing (${hit.length}): ${hit.slice(0, 6).join(' · ')} — the dressing is dealt as if the furniture were not there; move them off the surfaces it dresses`);
   return st; };
 const nGen = level.boxes.length;   // (the generator's own boxes + its lived things: what follows is the dressing)
-{ const { DESTRUCTION } = await import(`${ROOT}/tools/levels/lib/dressing.ts`); DESTRUCTION.on = true;
-  const { dressLevel, LOUD_LEVELS } = await import('./dress.ts');
+{ const { dressLevel, LOUD_LEVELS } = await import('./dress.ts');
   if (LOUD_LEVELS.some((l: { gen: string }) => l.gen === name) && !argv.includes('--bare')) { const st = dressBare(dressLevel); console.log(`dressing: ${st.added} boxes on ${st.surfaces} surfaces — ${Object.entries(st.by).map(([k, n]) => `${n} ${k}`).join(', ')}`); } }   // (surfaces: the footstep map — rust/game_rules/src/floor; a generator that gives none gets the office's)
 if (groups.length !== level.boxes.length) throw new Error(`trace: ${groups.length} groups for ${level.boxes.length} boxes`);
 // THE FLOOR IN ORDER (tools/levels/flatLayers.ts layFloor): two ground finishes or floor decals of different paint that overlap never share a plane — the picture

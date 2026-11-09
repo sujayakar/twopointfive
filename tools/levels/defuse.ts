@@ -88,7 +88,7 @@ export const DEFUSE_STRUCTURE: StructureData = {
 // firing wire down the hall is out of the picture's reach behind it: the set brings the
 // wire, its battery plate, a dead charge and the bench it was built on to the wall the stack stands on, under one warm bulb.
 /** the firing wire's copper. The palette has no paint of this hue, so it is a colour of this file's own and only decals and the kit view's set wear it; the outside door's paint is
- *  this, darker: src/scene/look.ts LOOK_DOORS */
+ *  this, darker: rust/game_rules/src/doors/paint.rs */
 const COPPER: [number, number, number] = [0.46, 0.21, 0.07];
 const DEFUSE_KITVIEW: KitViewData = {
   sets: { front: { ref: [20.25, 20],

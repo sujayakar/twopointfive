@@ -1,16 +1,10 @@
-// LIVED-IN ROOMS (the levels goal; the maintainer, 10-10: "the office level is awesome and it has a lot of personality per room, we should makes sure all levels are
-// like that"): the furniture, clutter, floor pieces, loose props and lamps that make a room of another level ITS room, as the office's rooms are — a bunk room's
-// bunks, a radio room's bench, a tyre store's stacks. They ride in the level FILE under one name and the loader (levelLoad.ts) leaves them out with the switch
-// off, so every other box, prop, light and fixture keeps its index and the level is the one it was before there were any:
-//   a BOX whose editor group is 'lived' or starts 'lived.' ('lived.<room>')   ·   a PROP, LIGHT or SWITCHABLE whose id starts 'lived.'
-// ONE SWITCH. OFF in this module; the PAGE turns it on at boot before the
-// level loads (on unless the URL carries ?lived=0), and TPS_LIVED=1 in front of any bun tool raises it (read here, so a tool that
-// only parses a level file follows it too). Furnished rooms are real things — cover, things to walk
-// round, things that break — so on is NOT the off game by digest; off is.
-// No imports here: scene/, game/ and the tools all read it.
-export const LIVED = { on: (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.TPS_LIVED === '1' };
-export const LIVED_GROUP = 'lived';
+// THE TWO TIERS A LEVEL FILE CARRIES AT THE TAIL OF ITS LISTS, known by name. The game leaves either out on its own word (rust/game_start level.rs: `lived`, `destruction`), so they
+// come last and every other box, prop, light and fixture has the index it would have without them. Nothing here leaves one out: a level loaded by a tool is the whole file.
+//   LIVED-IN ROOMS   the furniture, clutter, floor pieces, loose props and lamps that make a room of a level ITS room, as the office's rooms are (the maintainer, 10-10: "the office level
+//                    is awesome and it has a lot of personality per room, we should makes sure all levels are like that"): a bunk room's bunks, a radio room's bench, a tyre store's stacks.
+//                    A BOX whose editor group is 'lived' or starts 'lived.' ('lived.<room>'), a PROP, LIGHT or SWITCHABLE whose id starts 'lived.'
+//   THE DRESSING     the boxes that are there only as things to wreck (tools/levels/dress.ts appends them, last of all): the group DRESS_GROUP
+const LIVED_GROUP = 'lived';
 /** is this box group / prop, light or switchable id one of the lived things? */
 export const isLived = (tag: string | undefined | null): boolean => typeof tag === 'string' && (tag === LIVED_GROUP || tag.startsWith(LIVED_GROUP + '.'));
-/** the page's answer: on unless ?lived=0 (or ?lived=off) */
-export function livedOfQuery(q: URLSearchParams): boolean { const v = q.get('lived'); return v !== '0' && v !== 'off'; }
+export const DRESS_GROUP = 'dressing';

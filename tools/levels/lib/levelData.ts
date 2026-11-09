@@ -1,9 +1,9 @@
 // LevelData: the level as DATA — the JSON schema every level file (levels/*.json) is written in, its validator, canonical serializer and digest.
 //
 // What lives here vs elsewhere:
-//   level.ts      the RUNTIME shape the game consumes (Level: Box[] with bit flags and array indices, LightDef[], PropDef[], plans…) + buildLevel()
+//   level.ts      the RUNTIME shape the game consumes (Level: Box[] with bit flags and array indices, LightDef[], PropDef[], plans…)
 //   levelData.ts  (this) the AUTHORED shape: string ids everywhere, flags by name, materials by key, box references by id, nothing derived
-//   levelLoad.ts  the two conversions: loadLevel(LevelData) → Level (what the game boots from) and levelToData(Level, opts) → LevelData (the exporter's
+//   levelLoad.ts  the two conversions: loadLevel(LevelData) → Level (the game's own reader is rust/game_start level.rs) and levelToData(Level, opts) → LevelData (the exporter's
 //                       direction: tools/level-export.ts runs the legacy procedural generator once and writes levels/office.json)
 //
 // Design rules (the in-browser editor — lane G1b — and later lanes G2 floors / G4 devices build on this, and the maintainer hand-edits the JSON):
@@ -22,7 +22,7 @@
 import type { Vec3 } from '../../../src/math/vec';
 import { AUTHORED_FLAGS, type BoxData, type DoorData, type FlagName, type LightData, type ShapeData, type ShapePieceData } from '../../../src/scene/levelRows';
 export { AUTHORED_FLAGS, type BoxData, type DoorData, type FlagName, type LightData, type ShapeData, type ShapePieceData };
-import type { WeaponId } from './weaponIds';
+import type { WeaponId } from './level';
 import type { RoomClearPlan, BreachPlan, CivilianTask } from './level';
 import type { LevelScenarios } from '../../../src/scene/scenarios';
 import { SQUAD_MAX_MEN, QUIET_MAX_ROUTES } from '../../../src/scene/scenarios';
@@ -107,9 +107,6 @@ export type DeviceData =
   | { id: string; kind: 'camera'; floor?: string; pos: Vec3; yaw: number; pitch?: number; sweep?: [number, number]; sweepPeriod?: number; fovDeg?: number; range?: number; group?: string; mains?: boolean; notes?: string }
   | { id: string; kind: 'keypad'; floor?: string; pos: Vec3; yaw: number; /** DoorData.id it unlocks */ door: string; code: string; notes?: string }
   | { id: string; kind: 'laser'; floor?: string; from: Vec3; to: Vec3; group?: string; mains?: boolean; alarm?: 'suspicion' | 'alarm'; notes?: string };
-export type CameraData = Extract<DeviceData, { kind: 'camera' }>;
-export type KeypadData = Extract<DeviceData, { kind: 'keypad' }>;
-export type LaserData = Extract<DeviceData, { kind: 'laser' }>;
 /** the defaults an absent optional device field means (rust/game_rules/src/devices and the editor read them from here) */
 export const DEVICE_DEFAULTS = { pitch: -0.35, fovDeg: 70, range: 14, sweepPeriod: 9, group: 'security', alarm: 'suspicion' as 'suspicion' | 'alarm', codeRe: /^\d{4}$/ };
 /** An HVAC supply VENT (rust/game_rules/src/wind runs the air; docs/level-format.md 'Vents'; level.ts VentDef is the runtime shape): a diffuser at `pos` (its face centre,
@@ -118,8 +115,6 @@ export const DEVICE_DEFAULTS = { pitch: -0.35, fovDeg: 70, range: 14, sweepPerio
  *  `duty?` / `phase?` = slow cycling (seconds, on-fraction 0‥1, offset s; absent = steady), `mains?` (absent = true: on the breaker — a blackout stops the air),
  *  `floor?` as everywhere. The grille itself is an ordinary box (group 'ceiling.vents') like a door's frame is. */
 export interface VentData { id: string; floor?: string; pos: Vec3; dir: Vec3; speed: number; spread: number; reach: number; size?: number; period?: number; duty?: number; phase?: number; mains?: boolean; notes?: string; }
-/** the defaults an absent optional vent field means (rust/game_rules/src/wind and the editor read them from here) */
-export const VENT_DEFAULTS = { size: 0.6, duty: 1, phase: 0, mains: true };
 /** TODO(G2): links between floors (a stair volume joining nav cells of two floors, with a traversal cost and a footstep material). */
 export type ConnectorData =
   | { id: string; kind: 'stair' | 'ladder'; from: { floor: string; c: Vec3; h: Vec3 }; to: { floor: string; c: Vec3; h: Vec3 }; cost?: number; mat?: SurfaceMat; notes?: string };
@@ -904,25 +899,11 @@ export function parseLevelData(text: string, opts: { kitView?: 'drop' } = {}): L
   if (errs.length) throw new Error(`level '${(d as any)?.name ?? '?'}': ${errs.length} error(s)\n  ${errs.slice(0, 20).join('\n  ')}${errs.length > 20 ? `\n  … ${errs.length - 20} more` : ''}`);
   return d;
 }
-/** JSON.parse + validate WITHOUT refusing a document that has problems — for the editor's RESTORE paths (the autosave slot, a session's own text), where a level
- *  with, say, one marking off its face must still open, its problems listed, rather than be silently replaced by another level and then overwritten (review
- *  T4.1). Throws only when the text is not JSON, not a level object of this version, or so misshapen that its canonical form cannot be built (a collection that is not an
- *  array, a record that is not an object) — those nobody can edit back into shape from inside the editor. `data` is the CANONICAL deep copy. */
-export function parseLevelDataLenient(text: string): { data: LevelData; errors: string[] } {
-  const d = JSON.parse(text) as LevelData;
-  if (!d || typeof d !== 'object' || Array.isArray(d)) throw new Error('level: the text is JSON but not a level object');
-  if ((d as any).version !== LEVEL_DATA_VERSION) throw new Error(`level: ${versionWord((d as any).version)}`);
-  const errors = validateLevelData(d);
-  let data: LevelData;
-  try { data = canonicalLevelData(d); }
-  catch (e) { throw new Error(`level '${(d as any)?.name ?? '?'}': too misshapen to open (${(e as Error)?.message ?? e}) — ${errors.length} validation error(s)\n  ${errors.slice(0, 12).join('\n  ')}`); }
-  return { data, errors };
-}
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------ canonical form
 // Every record rebuilt with its keys in schema order (KEYS) and undefined-valued keys dropped: what the serializer prints and the digest hashes, so two
 // LevelData values that MEAN the same level serialize to the same bytes whatever order an editor assembled them in. The result is a DEEP COPY (every array
-// and record new): safe to use as a working buffer without touching the input (OFFICE_DATA is the bundle's one object).
+// and record new): safe to use as a working buffer without touching the input.
 /** deep copy of plain JSON data (arrays / records / leaves), undefined-valued keys dropped, key order kept */
 function copyPlain<T>(v: T): T { if (Array.isArray(v)) return v.map(copyPlain) as unknown as T; if (v && typeof v === 'object') { const o: any = {}; for (const k of Object.keys(v)) { const x = (v as any)[k]; if (x !== undefined) o[k] = copyPlain(x); } return o; } return v; }
 /** the record with only `keys`, in that order, values deep-copied */
@@ -1070,11 +1051,6 @@ export function structuralDiff(a: unknown, b: unknown, out: string[] = [], limit
 }
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------ id helpers (for the editor)
-/** id → array index for every id-bearing array, built once per LevelData (the editor's lookups; loadLevel builds its own). */
-export function indexLevelData(d: LevelData) {
-  const ix = (a: { id: string }[]) => { const m = new Map<string, number>(); a.forEach((e, i) => m.set(e.id, i)); return m; };
-  return { boxes: ix(d.boxes), props: ix(d.props), lights: ix(d.lights), switchables: ix(d.switchables), doors: ix(d.doors), routes: ix(d.routes), chokepoints: ix(d.chokepoints), volumes: ix(d.volumes), devices: ix(d.devices), vents: ix(d.vents ?? []), connectors: ix(d.connectors), beacons: ix(d.beacons), roomClear: ix(d.plans.roomClear) };
-}
 /** A fresh id with the given prefix that no entry of `existing` carries: prefix_0000, prefix_0001, … from max+1 of the ones already numbered that way. */
 export function freshId(prefix: string, existing: Iterable<{ id: string }>): string {
   let max = -1; const re = new RegExp(`^${prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}_(\\d+)$`);

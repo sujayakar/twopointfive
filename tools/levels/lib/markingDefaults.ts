@@ -277,16 +277,6 @@ export function rackMarks(h: Vec3, slots: { v: number; amber: boolean }[], t = T
   }
   return some(out);
 }
-/** DOOR LEAF (rust/game_rules/src/doors: h = [w/2 − 0.01, height/2, thick/2], big faces ±z): a stainless kick plate along the bottom of both faces and a push plate at hand height by
- *  the latch edge on the +z face. Steel fire doors get neither (they are the plate). */
-export function doorLeafMarks(h: Vec3, t = T): MarkingDef[] {
-  const yb = -(h[1] - 0.02);
-  return some([
-    markFromRect('+z', 'coarse', [-(h[0] - 0.04), yb, h[0] - 0.04, yb + 0.2], [P.steel], c => c.fill(1), t),
-    markFromRect('-z', 'coarse', [-(h[0] - 0.04), yb, h[0] - 0.04, yb + 0.2], [P.steel], c => c.fill(1), t),
-    markFromRect('+z', 'base', [h[0] - 0.22, -0.075, h[0] - 0.1, 0.225], [P.steel], c => c.fill(1), t),
-  ]);
-}
 /** WALL CLOCK rim box (h = [0.16, 0.16, 0.02], front `face`): the light face and two hands on the fine lattice — hour along ±u, minute down (half past). One bitmap. */
 export function clockMarks(face: MarkFace, minuteUp = false, t = T): MarkingDef[] {
   return some([markFromRect(face, 'fine', [-0.125, -0.125, 0.125, 0.125], [{ albedo: [0.88, 0.88, 0.85] }, { albedo: [0.04, 0.04, 0.045] }], c => {

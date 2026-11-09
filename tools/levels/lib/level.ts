@@ -1,18 +1,15 @@
-// The level the game RUNS: the runtime types (Level — Box[] with bit flags and array indices, LightDef[], PropDef[], doors, routes, plans…) every game
-// module imports from here, and buildLevel(), which is now a LOADER: the office is data (levels/office.json, schema in levelData.ts) bundled into
-// the build by this import and turned into a Level by levelLoad.ts loadLevel(). The procedural code that used to BE this file lives on as the legacy
-// generator (officeGen.ts) that tools/level-export.ts regenerates the JSON from. Units: meters. +X east, +Z south, +Y up. Floor top at y=0.
-import { Vec3, DEG } from '../../../src/math/vec';
+// A LEVEL AS A GENERATOR BUILDS IT AND THE LOADER HANDS IT BACK (Box[] with bit flags and array indices, LightDef[], PropDef[], doors, routes, plans…): the shape level-file tools work on.
+// The file's own shape is levelData.ts; levelLoad.ts turns one into the other. (The game reads the file itself: rust/game_start level.rs.) Units: meters. +X east, +Z south, +Y up. Floor top at y=0.
+import type { Vec3 } from '../../../src/math/vec';
 import type { LightDef } from '../../../src/render/lights';
 import type { Box } from '../../../src/scene/boxes';
 import type { MarkingDef } from '../../../src/scene/markings';
-import type { LevelData, SurfacesData } from './levelData';
-import { loadLevel } from './levelLoad';
-import officeData from '../../../levels/office.json' with { type: 'json' };
+import type { SurfacesData } from './levelData';
 import type { LevelScenarios } from '../../../src/scene/scenarios';
-import type { WeaponId } from './weaponIds';
 
 export type { LightDef };
+/** a gun by its word, as a level file's routes hand one out */
+export type WeaponId = 'fiveseven' | 'guard9mm' | 'aks74u' | 'ak74m' | 'akms' | 'fn2000' | 'm870' | 'mk12' | 'mp7' | 'mk46' | 'm1014' | 'hk45' | 'g18' | 'pkm' | 'mk18bare' | 'g19bare';
 
 /** One man's beat. `weapon`: the rust/game_rules/src/weapons row he carries (absent = the 9 mm service pistol) — dealt at spawn (rust/game_rules/src/game Guard); nobody on this level is authored one
  *  yet (the carbine lanes decide who: docs/internal/sc20k-design.md §3.5). `keys`: the keys on his belt, by lock name (rust/game_rules/src/doors DoorDef.lock) — what Sam takes off
@@ -178,14 +175,3 @@ export interface Level {
     /** the way OUT through the exit, a unit vector on the floor (dx, dz): past (exfilX, exfilZ) going this way is out. Absent = east, [1, 0] — the office's */
     exfilOut?: [number, number] };
 }
-
-/** The office level, loaded from its data (levels/office.json → loadLevel). A fresh Level every call: the game mutates the one it is given (box flags,
- *  the breach's scratch routes), so nothing may be shared between two boots. The JSON is imported, not fetched — Bun inlines it into the bundle, so the
- *  playable Artifact gets it with no extra asset. */
-export function buildLevel(): Level {
-  return loadLevel(OFFICE_DATA);
-}
-/** the office's level data as bundled (read-only: loadLevel copies everything it hands out) */
-export const OFFICE_DATA: LevelData = officeData as unknown as LevelData;
-
-export { DEG };

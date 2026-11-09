@@ -301,7 +301,7 @@ export const NAME = 'hall';
 export const MATERIALS = GWOT_MATERIALS;
 export const NOTES = `${PLAIN_NOTES}${LOOK_NOTE}`;
 /** the company's pale sky blue. The palette has no paint this pale (its blues are deep ones), so it is a colour of this file's own and only decals wear it; the outside door's paint is this,
- *  darker: src/scene/look.ts LOOK_DOORS */
+ *  darker: rust/game_rules/src/doors/paint.rs */
 const SKY: Vec3 = [0.25, 0.55, 0.72];
 /** the firing line (x), the hall's two walls' faces (z), the line of the front door (z) and half its opening */
 const FIRE_X = 27.6, HALL_Z0 = 12.92, HALL_Z1 = 15.08, DOOR_Z = 14.25, DOOR_HALF = 0.45, FRONT_X = 9;
