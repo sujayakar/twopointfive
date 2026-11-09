@@ -38,6 +38,9 @@ pub fn gun_spent(g: &Game, gd: GuardId) -> f64 {
     if full > 0.0 { crate::m::max(0.0, 1.0 - left / full) } else { 0.0 }
 }
 
+/// A blast has broken him, or has him ducked: what he does is that rule's.
+pub fn nerve_gone(g: &Game, gd: GuardId) -> bool { crate::morale::rung_of(g, gd) >= 2.0 || crate::owner::has(g, gd, crate::owner::by::MORALE | crate::owner::by::RUNNER) }
+
 /// He has seen nobody he fights, and heard no shot, for `secs` seconds.
 pub fn quiet_for(g: &Game, gd: GuardId, secs: f64) -> bool {
     !saw_his_man_within(g, gd, secs) && g.time - g.gd[gd].witness.heard.last_shot_t >= secs
