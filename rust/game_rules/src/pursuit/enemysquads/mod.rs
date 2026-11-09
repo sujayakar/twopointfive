@@ -1,0 +1,12 @@
+pub use ::game_types::enemysquads::types;
+pub use types::*;
+pub mod p_01;
+pub use p_01::*;
+pub mod decide;
+pub use decide::*;
+pub mod radio_check;
+pub use radio_check::*;
+pub mod net;
+pub use net::*;
+pub mod p_05;
+pub use p_05::*;
