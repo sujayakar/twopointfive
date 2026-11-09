@@ -187,7 +187,7 @@ pub(super) fn step_out(st: &KitStage, b: &Beat, metres: f64) -> V2 {
     [b.home[0] + dx * k, b.home[1] + dz * k]
 }
 /// AT A WALL LEFT OPEN a restage would stand the wall, so nobody is put back: the row after the charge waits for the men and Sam on their own legs, `swap_secs + home_secs` at most, and from then on a row waits only for the men the row before it moved, as long at most. A man whom a row's walk does not get home holds nothing again. True: the row waits.
-fn homing_at_hole(g: &mut Game, st: &mut KitStage) -> bool {
+fn homing_at_hole(g: &Game, st: &mut KitStage) -> bool {
     let now = g.time;
     let (on, act, all) = (K.on_slot + 0.1, actor(g, st), st.a.hole_all);
     let mut men = core::mem::take(&mut st.a.hole_men);

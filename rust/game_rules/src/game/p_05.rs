@@ -236,7 +236,7 @@ fn audio_play_rate(g: &mut Game, name: &str, pos: V3, gain: f64, rate: f64) {
 pub fn game_clear_nearest_room(g: &mut crate::game::Game) { crate::guards::force_clear(g) }
 
 /// Camera follow position: a spectated guard, `at`, else the player.   (game.ts followPos)
-pub fn game_follow_pos(g: &mut crate::game::Game, at: Option<V3>) -> V3 {
+pub fn game_follow_pos(g: &crate::game::Game, at: Option<V3>) -> V3 {
     let gd = if g.spectate >= 0.0 { g.guards.get(g.spectate as usize).copied() } else { None };
     if let Some(gd) = gd { let c = g.gd[gd].ch; return g.ch[c].pos; }
     if let Some(a) = at { return a; }

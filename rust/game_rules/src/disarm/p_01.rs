@@ -260,7 +260,7 @@ fn clear_strip(g: &mut Game, pl: PlayerId) {
 }
 
 /// `men(g).some(o => o.holding?.strip?.item === it)`
-fn any_man_carries(g: &mut Game, it: ItemId) -> bool {
+fn any_man_carries(g: &Game, it: ItemId) -> bool {
     let men = crate::seats::men(g);
     men.iter().any(|&o| g.pl[o].holding.as_ref().and_then(|h| h.strip).and_then(|s| s.item) == Some(it))
 }

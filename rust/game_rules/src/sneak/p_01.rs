@@ -34,7 +34,7 @@ pub fn leaf_moved(g: &mut crate::game::Game, d: DoorId) -> bool {
 pub fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 
 /// What he did, newest last. (sneak.ts note)
-pub fn note(g: &mut crate::game::Game, gd: GuardId, what: &str) {
+pub fn note(g: &crate::game::Game, gd: GuardId, what: &str) {
 }
 
 /// The sneak is live for the squad this frame; one read a frame. (sneak.ts sneakLive)

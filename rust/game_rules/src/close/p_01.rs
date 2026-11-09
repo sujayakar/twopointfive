@@ -13,7 +13,7 @@ fn fresh_state() -> crate::close::State {
 }
 
 /// The log of what was taken, the debugger's. (close.ts note)
-pub fn note(g: &mut crate::game::Game, gd: GuardId, what: crate::close::NoteWhat, kind: Option<crate::close::CloseKind>, bearing: Option<f64>, dist: Option<f64>) {
+pub fn note(g: &crate::game::Game, gd: GuardId, what: crate::close::NoteWhat, kind: Option<crate::close::CloseKind>, bearing: Option<f64>, dist: Option<f64>) {
 }
 
 /// The men sat down, made if none yet: the table itself. (close.ts seatedOf)
@@ -94,7 +94,7 @@ pub fn clear_between(g: &mut crate::game::Game, p: &[f64], q: &[f64]) -> bool {
 }
 
 /// May anything be done to him at all by Sam's hands. (close.ts closeSubject)
-pub fn close_subject(g: &mut crate::game::Game, gd: GuardId) -> bool {
+pub fn close_subject(g: &crate::game::Game, gd: GuardId) -> bool {
     if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].held.is_some() { return false; }
     if g.gd[gd].team == crate::teams::Team::Operative || crate::fogofwar::fog_of_war_hidden(g, gd) { return false; }
     if g.gd[gd].civ.is_some() && crate::rescue::rescue_is_hostage(g, gd) { return false; }
