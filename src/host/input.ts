@@ -6,7 +6,7 @@ export class Input {
   pressed = new Set<string>();     // edge-triggered this frame
   mouseX = 0; mouseY = 0;          // CSS pixels relative to canvas
   orbitDX = 0;                     // horizontal mouse travel this frame WHILE the camera's key is held (Ctrl, or the Space bar while it is spare — host/keymap.ts camKey; the loop consumes it)
-  wheelCtrl = 0;                   // wheel travel with the camera's key held, or a pinch (zoom); plain `wheel` is the walking-pace control (player.ts)
+  wheelCtrl = 0;                   // wheel travel with the camera's key held, or a pinch (zoom); plain `wheel` is the walking-pace control (rust/game_rules/src/player)
   buttons = 0; clicked = 0;        // held / edge-this-frame button bits, 1 << MouseEvent.button: 1 = LMB, 2 = MMB, 4 = RMB (see mmb() / rmb())
   suppressClick = false;           // set by the title card: swallow the very next mouse press
   wheel = 0;
@@ -14,11 +14,11 @@ export class Input {
   /** when set, real keyboard / mouse input is ignored except these key codes (the showcase tour drives the player itself; P still stops it).
    *  Synthetic input (pressed.add / clicked |= / mouseX =) is unaffected. */
   lockExcept: Set<string> | null = null;
-  /** is F5 the game's right now (the save by hand — savestate.ts SAVETIMELINE; the page's to say: a run is up)? Then its bare press is kept from the browser, whose reload it is */
+  /** is F5 the game's right now (the save by hand — rust/game_rules/src/savestate SAVETIMELINE; the page's to say: a run is up)? Then its bare press is kept from the browser, whose reload it is */
   saveKey: (() => boolean) | null = null;
   /** called (rate-limited by the owner) when a real key / click is swallowed by the lock — lets the page tell the viewer why nothing happened */
   onLockedInput: (() => void) | null = null;
-  /** asked about every real key before the game reads it: true = a UI surface took it (main.ts hands the tweak panel's onKey — ← / → over the panel walk its
+  /** asked about every real key before the game reads it: true = a UI surface took it (host/debugger.ts hands the panel's onKey — ← / → over the panel walk its
    *  systems; a typed letter is the game's unless a field of the panel was clicked) and the game never sees it. Order-independent, unlike a second capture listener on window. */
   keyVeto: ((e: KeyboardEvent) => boolean) | null = null;
 
@@ -36,14 +36,14 @@ export class Input {
    *  key and wherever Control sits on his board. The wheel asks it (KEYMAP.pinchOnly, below): a wheel that says Ctrl while no Ctrl key is down is a pinch */
   private ctrlDown = false;
 
-  /** an Input with EVERY field initialised and NO listeners — the headless harness's, the session replayer's and a native host's: they write keys / pressed / mouse /
-   *  buttons themselves (tools/qa/headless.ts used to Object.create(Input.prototype) and forgot orbitDX / wheelCtrl / keyVeto). `el` is null: focusGame() is a no-op. */
+  /** an Input with EVERY field initialised and NO listeners — a native host's: it writes keys / pressed / mouse /
+   *  buttons itself. `el` is null: focusGame() is a no-op. */
   static detached(): Input { return new Input(null); }
 
   private el: HTMLElement | null = null;
   constructor(el: HTMLElement | null) { if (el) this.listen(el); }   // (null = detached, above: no DOM, no listeners — the state fields above are the whole object)
-  /** THE DOM HALF, put on an Input made detached: its listeners on `el` and the window. The page makes its Input before the game is stood (the stand
-   *  hands it to the game, once: game.ts hostInput) and listens only here, where the page's Input was always made: a key tapped while the page still
+  /** THE DOM HALF, put on an Input made detached: its listeners on `el` and the window. The page's Input
+   *  listens only here: a key tapped while the page still
    *  boots is nobody's, as ever. Once. */
   listen(el: HTMLElement): void {
     if (this.el) throw new Error('Input.listen: this Input listens already');
@@ -60,7 +60,7 @@ export class Input {
     { const mods = (e: { ctrlKey: boolean }) => { this.ctrlDown = e.ctrlKey; };   // (ahead of this class's own listeners and behind none of their gates: a field with the focus, a lock and a repeat say it too. A screen whose listener is ahead of these and stops a BARE Ctrl key would hide it: none does. Focus lost keeps it: the next move of the mouse says how it is)
       for (const t of ['keydown', 'keyup', 'mousemove', 'mousedown', 'mouseup'] as const) window.addEventListener(t, mods, { capture: true }); }
     window.addEventListener('keydown', e => {
-      if (e.code === 'F5' && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey && this.saveKey?.()) e.preventDefault();   // (F5 is the save by hand while the page says so — main.ts: a bare press must not reload the page under the run, a slider of the Options that kept the focus included; with a modifier, on the start page or over a broken frame it is the browser's reload as ever)
+      if (e.code === 'F5' && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey && this.saveKey?.()) e.preventDefault();   // (F5 is the save by hand while the page says so: a bare press must not reload the page under the run, a slider of the Options that kept the focus included; with a modifier, on the start page or over a broken frame it is the browser's reload as ever)
       if (typingTarget(e)) return;
       if (this.keyVeto?.(e)) { e.stopPropagation(); return; }   // (a UI surface — the tweak panel — took it: not a game key this time)
       this.modsUp(e);

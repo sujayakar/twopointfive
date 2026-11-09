@@ -1,4 +1,4 @@
-// A RED CARD TELLS THE BACKEND (src/main.ts FATAL.tell → src/cloud/cloud.ts cloudFatal; the card: src/gpu/device.ts showFatal), on the real page in headless
+// A RED CARD TELLS THE BACKEND (src/gpu/device.ts FATAL.tell → src/cloud/cloud.ts cloudFatal; the card: src/gpu/device.ts showFatal), on the real page in headless
 // Chromium, software WebGPU adapter, against a STAND-IN backend on this machine (cloud/test/standin.ts: `npm ci` in cloud/ first). `requestAdapter` is stubbed
 // before the page's own script runs (?stub=none, as tools/qa/nogpu-page.cjs does), so the page dies before the game is up:
 //   1. a fresh browser on a page with the backend's address BUILT IN, as a hosted build has (`__TPS_CLOUD__` set before the page's script; its requests are

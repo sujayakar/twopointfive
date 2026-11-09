@@ -25,7 +25,7 @@
 // piece itself: a piece's own flags never change.
 // TO EVERY ENGINE THAT SWEEPS THE LEVEL'S THINGS A PIECE IS NOT THERE: not an item of the destruction lane, not a rider or a load in a blast's furniture
 // (rust/game_rules/src/furnblast: its index, its mouth rule), not a thing hung on a wall (rust/game_rules/src/wallbreak ghosts). An engine that walks the statics as things
-// skips `piece`; tools/qa/shapes-check.ts line 11 holds each of them to the plain level's answer.
+// skips `piece`.
 // A whole cylinder standing on its end is not said here: that is a ROUND THING (scene/round.ts), the one way to say it.
 //
 // ONE MODEL: the record is built by scene/cut.ts cutRecord, so a shaped box is a cut box to everybody — the picture draws the solid, every GPU ray and every
@@ -35,12 +35,10 @@
 // rule), which is the plain box, and a piece is met by nobody. The rules that mark a level's boxes by their size as it is stood up (thin things, a window's
 // bars: src/host/drawpage.ts) read the plain boxes too: shapes are given after them.
 // WHAT AN ENGINE CUTS UP ITSELF SAYS NO FORM: a window's bar (rust/game_rules/src/winbars breaks it into lengths) is left plain by shapeLevel, a round thing is
-// refused a shape by the lint (scene/round.ts), and tools/qa/shapes-check.ts is red on a level file whose shape does not
-// stand.
+// refused a shape by the lint (scene/round.ts).
 // A BLAST: a box whose shape has a form is one cell to the wall engine and never a wall cut into cells (its cells would be cut from the whole box); its
 // trim is out of the picture the moment the box is (above), and joins, loads and hangs on nothing meanwhile.
-// THE SWITCH IS THE SIMULATION'S, and a picture setting may not move it (as round.ts): with the cut-pieces switch down (scene/cut.ts cutConfig.on: a headless
-// tool, `?nocutboxes`) the game's rays still meet a shape's record (boxes.ts cutMet), and only the picture and the GPU's rays fall back to its uncut box.
+// THE SWITCH IS THE SIMULATION'S, and a picture setting may not move it (as round.ts): with the cut-pieces switch down (scene/cut.ts cutConfig.on: `?nocutboxes`) the game's rays still meet a shape's record (boxes.ts cutMet), and only the picture and the GPU's rays fall back to its uncut box.
 // THE PICTURE'S WORDS (formBox, with the record): a round and an arc are SHADED AS ONE TURNING FACE (Box.cutRound: the axis; Box.cutArc: how far under the
 // box's centre the arc's round has its axis, R − h.y) and an `old` cut takes the box's paint and lying snow (Box.cutOld). They ride in the cut record's
 // own row and only the g-buffer's cut pass reads them: rays, collision and the level's fingerprint meet the flat facets as before. Never beside markings
@@ -53,13 +51,11 @@
 // A LEVEL STOOD ON ITS SHAPES IS ANOTHER LEVEL: the level's fingerprint (rust/game_rules/src/savestate) takes in a number of the shapes that STAND (shapeStamp: their
 // geometry to the millimetre, 0 = none), so a checkpoint or a recording made on them is refused by the plain level, and the other way about, and by the level
 // once its shapes have changed — by the one refusal a checkpoint and every tape player already have. With no shape standing the fingerprint is the one the
-// level always had, so nothing recorded on the frozen stand moves.
+// level always had.
 //
-// THE SWITCH: SHAPES.on — ON in the page (`?shapes=0` puts it off), OFF in the module and on the frozen stand (FROZEN_HOLDS; TPS_SHAPES=1 raises it there).
-// Read ONCE, as a level is stood up, and the debugger's row reloads the page. Off = no box touched, none added: the build as it was by run digest.
-// A recording carries the stand's word (host/standEnv.ts) and the table; one from before the table has the switch put down before its level stands
-// (shapesTape: replay/recipestand.ts and tools/qa/rerun.ts `tables`; journal.ts applyKnobs says the same afterwards).
-// CHECK: tools/qa/shapes-check.ts (SHAPES_BREAK=1 must fail), both stands. Nothing here has been seen on a GPU.
+// THE SWITCH: SHAPES.on — ON in the page, OFF in the module.
+// Read ONCE, as a level is stood up, and the debugger's row reloads the page. Off = no box touched, none added.
+// Nothing here has been seen on a GPU.
 import { makeBox, BoxFlag, type Box, type BoxStuff } from './boxes';
 import { cutPlane, cutRecord, cutToWorld, MAX_CUT_PLANES, type CutPlane } from './cut';
 import type { Vec3 } from '../math/vec';

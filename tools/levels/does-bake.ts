@@ -4,11 +4,11 @@
 // no cover, nothing a round goes through. This writes the words in, from the old rule kept frozen in ./doesWas.ts:
 //   · each material ROW says what its colour did (the row of the table of materials);
 //   · each box, shape's piece and prop's part says its own word ONLY where its colour did another thing than its row now says.
-// The diff of a file is `"does"` words and nothing more, and every box does what it did (tools/qa/does-audit.ts counts it).
+// The diff of a file is `"does"` words and nothing more, and every box does what it did.
 // A FILE THAT ALREADY SAYS (a row or a box with `does`) IS LEFT ALONE: its words are somebody's, and the old rule knows nothing of them.
 //   bun run tools/levels/does-bake.ts levels/some.json …   write each file in place
 //   bun run tools/levels/does-bake.ts --all                 every levels/*.json
-//   … --check       write nothing; exit 1 if a file from before is still to be brought forward (tools/qa/does-check.ts asks the same of every file)
+//   … --check       write nothing; exit 1 if a file from before is still to be brought forward
 // A LEVEL WITH A GENERATOR IS NOT MENDED HERE: its export writes the words (tools/levels/export.ts). This is the bridge for a file laid without one: a
 // level saved from the editor before that day, a file of a branch cut before it.
 import { basename, resolve } from 'node:path';

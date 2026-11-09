@@ -252,7 +252,7 @@ fn upsampleVol(pix: vec2i, pin: vec2f, z: f32) -> vec4f {
 // the sector's branch crack and its dagger's snap, the territory line where two blows' cracks met, a laminated pane's tight web, the crushed crater of a blow too soft to punch
 // it, and the bright chipped RIM of any piece that borders a hole. A tempered pane letting go is crazed through into dice wherever it still stands. Antialiased over the footprint like the stars.
 fn gbLine(d: f32, w: f32, wt: f32) -> f32 { return (1.0 - smoothstep(w * 0.6, w * 1.6, d)) * wt; }
-/** distance to the nearest edge of the dice (glassPattern.ts gpDiceEdge: F2 − F1 of a jittered 3 × 3 cellular pattern of cell size grain) */
+/** distance to the nearest edge of the dice (rust/game_rules/src/glass_pattern gp_dice_edge: F2 − F1 of a jittered 3 × 3 cellular pattern of cell size grain) */
 fn gbDice(uv: vec2f, grain: f32, seed: u32) -> f32 {
   let p = uv / grain; let ip = vec2i(floor(p));
   var f1 = 1e9; var f2 = 1e9;
@@ -790,7 +790,7 @@ struct Beams { n: u32, p0: u32, p1: u32, p2: u32, k: vec4f, seg: array<BeamSeg, 
 @group(1) @binding(15) var<uniform> beams: Beams;
 @group(1) @binding(16) var powderTex: texture_2d<f32>;   // THE LOOK PROTOTYPE: the loose snow in the air (render/powderField.ts: r = its column, g = column × height); a 1×1 "none" until it is live, read only with frame.veilA.z > 0
 @group(1) @binding(17) var<uniform> placeBuf: PlaceBuf;   // THE LOOK PROTOTYPE: the place field (render/placeField.ts; lookExpoGain). A buffer, not a texture: this stage has no sampled texture left. All zeros = no field
-const BEAM_R0 = 0.0022;                           // combat.ts beamBoxes: the beam's own half-width, m
+const BEAM_R0 = 0.0022;                           // rust/game_rules/src/combat beam_boxes: the beam's own half-width, m
 fn beamOutdoors(p: vec2f) -> bool {
   if (lv(WX_KINDS)) { if (frame.cardCfg.y != 0u) { return !wxRoofed(p); } }
   let I = frame.weatherC; let A = frame.weatherD;
@@ -999,7 +999,7 @@ fn compositePixel(pix0: vec2f) -> vec3f {
     // glass (FLAG_GLASS): is there a pane between the eye and this pixel's surface? Then what the G-buffer shaded is the TRANSMITTED picture: tinted by every pane
     // crossed, less the share the nearest pane reflects instead (Schlick, at most the physical term); what that pane adds toward the eye — mirror image, glints,
     // dust glow — comes up from the gather's specular field below. All of it was settled above, ahead of the reads.
-    // Rounds that stopped in a pane (glass.ts glassHit → a 'glassHit' decal; decals.wgsl glassMarks): the hole, the milky collar and the crack star ON the glass
+    // Rounds that stopped in a pane (rust/game_rules/src/glass glass_hit → a 'glassHit' decal; decals.wgsl glassMarks): the hole, the milky collar and the crack star ON the glass
     // where the view ray crosses it. Cracked glass and pulverised glass are diffusers: they cut what comes THROUGH (darker against the lit room), mirror more along
     // the crack faces, and light up with whatever falls ON the pane from either side (a torch on the glazing sets the star alight; in the dark it is a dark web
     // against the room behind). The hole itself is just dark. Only under FLAG_DECALS (up while any mark exists), only for pixels on a pane.

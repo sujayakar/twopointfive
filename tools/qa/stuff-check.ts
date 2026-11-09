@@ -6,7 +6,7 @@
 //   COAT_BREAK=1 bun run tools/qa/stuff-check.ts      the table of named coats (scene/stuff.ts NAMED_COATS) is emptied: line 8 must FAIL
 //   (line 18 builds every level generator in this process: a second or so; it reads no level file, so neither word above changes it)
 // No game is stood up and no picture is looked at: what a box is drawn as is decided on the CPU (the loader puts a word on the box, lookWordOf reads it) and
-// this asks it. What a material LOOKS like on a desk is a page's still and then a GPU's. What every box WAS drawn as before the colour rule went, against what it is now, is tools/qa/stuff-audit.ts.
+// this asks it. What a material LOOKS like on a desk is a page's still and then a GPU's.
 import { readFileSync, readdirSync } from 'node:fs';
 import { ROOT } from './here.ts';
 import { fromBefore, paintUsers, rowOf } from '../levels/paintUsers.ts';

@@ -1,4 +1,4 @@
-// THE KEPT PAGE ON THE REAL PAGE (src/gpu/keep.ts, src/host/keeppage.ts): headless Chromium on the software WebGPU adapter (tools/qa/page-look.cjs's recipe).
+// THE KEPT PAGE ON THE REAL PAGE (src/gpu/keep.ts, src/host/keeppage.ts): headless Chromium on the software WebGPU adapter.
 //   PORT=5199 node tools/qa/keeppage-page.cjs      (a dev server on that port: PORT=5199 bun run tools/serve.ts; JOBS=kept or JOBS=fresh = that job alone)
 //   kept     a mission's address opened with ?keeppage=1: the tab's page is a SHELL (the keeper on it, the game's hooks not; its own __ready resolved) and the game
 //            boots in its frame on lease 1, compiling its pipelines. A second mission's address opened in the frame, as a page load:
@@ -8,7 +8,7 @@
 //            …and the first mission's Game is gone from the browser's memory once the collector has run (a mark on it, held weakly by the shell).
 //   fresh    the second mission's address under ?keeppage=0 in a tab of its own: a page as it always was (no frame, the hooks on it), the digest `kept` is held to
 // exit 0 = every job, with no page error · 1 = otherwise. KEEPPAGE_BREAK=1 opens `kept` under ?keeppage=0: it must FAIL.
-// THE FRAMES ARE NOT DRAWN unless REAL=1 (carlamps-page.cjs's STEP: the software adapter takes minutes over a frame of the level). REAL=1 adds to `kept` one
+// THE FRAMES ARE NOT DRAWN unless REAL=1 (the software adapter takes minutes over a frame of the level). REAL=1 adds to `kept` one
 // drawn frame of the second mission read back, held equal pixel for pixel to `fresh`'s: the kept pipelines draw the picture a whole load's draw. Game logic,
 // the DOM and (REAL=1) the software adapter's picture: nothing here has been seen on a GPU.
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
@@ -22,7 +22,7 @@ const want = (name) => !ONLY.length || ONLY.includes(name);
 
 // in the page: the game after n frames, the renderer's draw put aside
 const PLAY = (n) => { window.__draw.run(n, [], 'none'); return JSON.stringify(window.__draw.game.mark(true)); };
-// in the page: one drawn frame, read back (page-look.cjs DRAW), as a short hash of its bytes
+// in the page: one drawn frame, read back, as a short hash of its bytes
 const DRAW = async () => {
   const dev = window.__engine.device; window.__draw.run(1, [], 'last'); await dev.queue.onSubmittedWorkDone();
   window.__engine.render(window.__draw.cam, window.__game.time, 1 / 60, false); const fr = await window.__engine.readbackFrame(); if (!fr) return null;

@@ -12,7 +12,7 @@
 //   a  OLD     old grey snow: wheel ruts, slops, the ring round cleared earth.
 // Every edge in it is soft and wanders (value noise, seeded by position: the same level bakes the same field) — no straight line of the file survives as one.
 // The g-buffer shades the ground and every snow-painted box off it (snow.wgsl snowBox / fsSnow). PICTURE ONLY: nothing in the simulation reads the field, and
-// the men's light is measured as it always was. A pure function of the level; built by game.ts beside the traffic map, only on a snow level with the switch on.
+// the men's light is measured as it always was. A pure function of the level; built by rust/game_rules/src/game beside the traffic map, only on a snow level with the switch on.
 import type { Box } from '../scene/boxes';
 import { BoxFlag } from '../scene/boxes';
 import { WORLD } from '../scene/world';
@@ -226,7 +226,7 @@ export function buildSnowField(level: { boxes: Box[] }, opts: { wind?: readonly 
 }
 
 /** A BLAST DIGS THE STANDING SNOW OUT (rust/game_rules/src/snow_blast, under SNOW_LOOK.blast). The hills are baked once; a blast that goes off in one left it standing — a
- *  charge cut a hole in a wall, the bank at its foot went with the blast (furnblast.ts FURN.mouth.snow) and its hill was still drawn across the hole. This lowers the hill round (x, z): to nothing within about `r` m, back
+ *  charge cut a hole in a wall, the bank at its foot went with the blast (rust/game_rules/src/furnblast FURN.mouth.snow) and its hill was still drawn across the hole. This lowers the hill round (x, z): to nothing within about `r` m, back
  *  to itself by 1.5 × r, on a ragged outline (the bake's own noise, turned by `seed`), always reckoned from the hill AS BAKED (asked twice, nothing more is dug) — but never under a snow box that still STANDS there solid (a drift,
  *  a bank nothing took: it is still what a boot meets, and the box would show through as a box): each keeps a hill of the bake's own shape, never higher
  *  than the hill as baked. `boxes` = the level's, as they are now. Returns the texels changed ([x0, z0, x1, z1], inclusive) or

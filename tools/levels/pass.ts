@@ -74,7 +74,7 @@ const TEA_IN: Vec3 = [17.25, 1.1, 10.9], PASS_W: Vec3 = [21.9, 1.1, 6.75], PASS_
 const STORE_W: Vec3 = [27.9, 1.1, 8.25], STORE_E: Vec3 = [28.1, 1.1, 8.25], INNER_N: Vec3 = [32.25, 1.1, 10.9], INNER_S: Vec3 = [32.25, 1.1, 11.2], BUNK_IN: Vec3 = [28.2, 1.1, 13.75];
 
 /** THE ROOM CLEAR (scene/scenarios.ts StructureData). Eight men: the tea room 3, the kitchen 2, the store 1, the bunk room 2.
- *  THE HAND PLACEMENT (roomclear.ts placeDefenders: seed 0 / attempt 1 = each room's first `garrison` marks IN FILE ORDER; the page deals it on every try).
+ *  THE HAND PLACEMENT (rust/game_rules/src/roomclear place_defenders: seed 0 / attempt 1 = each room's first `garrison` marks IN FILE ORDER; the page deals it on every try).
  *  The problem, in one sentence: the yard between the lorry and the doors is white, lit and watched through glass from two sides.
  *  · THE GATE is the one hole in the wall and it is lit, but THE LORRY stands 2.6 m inside it, between it and the tea room's two windows: a team comes in
  *    behind the lorry. Only bunk 1, at the dark bunk room's window, has the gateway, from the side (a low wall of sandbags stands on that side of it).
@@ -298,7 +298,7 @@ export function build(extra: PassExtra = {}): { level: Level; scenarios: LevelSc
   add({ c: [25.94, 0.05, 11.29], h: [0.2, 0.05, 0.15], yaw: 0.2, ...S.snowPacked, rough: 0.2, flags: DECAL, shape: { cut: [[0.5, 1, 0.2, 0.035], [-0.6, 1, 0.5, 0.04], [0.1, 1, -0.8, 0.05]], old: true } });   // … and its ice at the foot
   G.beamEnds('x', 11, 12.0, 28.0, 1);                                                         // the roof's beam ends
   // split wood stacked under the first window's sill, and two billets that rolled off it. (The trial stacked it under the second window, on the wall the
-  // third and fourth men of a stack on the tea room's door stand along: tools/qa/lived-stack-check.ts --ask shows a face's marks. The wood moved.)
+  // third and fourth men of a stack on the tea room's door stand along. The wood moved.)
   G.splitWood('x', 11, 13.3, 14.5, 1, 3);
   G.log(14.42, 11.8, 1.05 + HALF, 0.42, 0.08); G.log(13.5, 11.78, -0.5 + HALF, 0.36, 0.07);
   G.ladder('x', 11, 21.72, 1);                                                                // a ladder leaned by the kitchen's door
@@ -360,7 +360,7 @@ export function build(extra: PassExtra = {}): { level: Level; scenarios: LevelSc
   G.tyres(15.3, 20.75, 1);                                                                    // a loose tyre by the cart, flat in the snow
   // (No steel pipes in this yard. They lay in the corner south of the bunk room, 'out of every stack mark and charge place': that corner is the pocket
   // the squad bunches in to breach the bunk room's south wall, and the pile stood two metres straight behind the man who sets the charge, on the floor
-  // his men step back over. One stayed in the blast: tools/qa/menclear-check.ts. The piece is the kit's and stands in the showroom.)
+  // his men step back over. One stayed in the blast. The piece is the kit's and stands in the showroom.)
   // fuel drums in the pocket of yard between the lean-to and the bay: three standing, one on its side
   G.drum(7.7, 9.85, 'rust'); G.drum(8.36, 9.72, 'drumBlue'); G.drum(8.02, 10.4, 'olive', 0.3);
   const DRUM_DOWN = { x: 9.15, z: 10.75, yaw: 0.5 }, drumTop = G.drumDown(DRUM_DOWN.x, DRUM_DOWN.z, DRUM_DOWN.yaw, 'drumRed');
@@ -378,7 +378,7 @@ export function build(extra: PassExtra = {}): { level: Level; scenarios: LevelSc
   cleared('gateway', 18.15, 20.7, 20.85, 23.3, 0.45);
   cleared('tea_door', 16.15, 11.14, 18.35, 12.5, 0.4);
   cleared('generator', 9.75, 5.7, 11.2, 8.7, 0.35);
-  melted('brazier', 19.6, 13.6, 0.5, 0.3);                                                     // (round, as the drum is: tools/qa/pass-check.ts holds it)
+  melted('brazier', 19.6, 13.6, 0.5, 0.3);                                                     // (round, as the drum is)
   cleared('kitchen_door', 24.75, 11.14, 25.75, 11.9, 0.3);
   cleared('back_door', 24.75, 4.1, 25.75, 4.86, 0.3);
   // ---- trodden paths: from the gate to each door, between the doors, to the generator and the bay; the cook's path to the refuse heap ----
@@ -485,7 +485,7 @@ export function build(extra: PassExtra = {}): { level: Level; scenarios: LevelSc
       name: 'lamp_gate', group: 'exterior', enabled: true, volumetric: 0.15, fixtureBox: head, radius: 0.12, broad: true }); }
   // THE MOON IS TWO FIFTHS OF ANOTHER LEVEL'S (0.06 against 0.15): it is snowing, the sky is shut, and snow is the brightest ground paint in the game — at 0.15 a man on it
   // read 0.24 by the page's meter (which counts the moon; the headless one does not), over twice what 'dark' is on every other floor. At 0.06 moonlit snow sends the eye what
-  // their moonlit dust does, and the starts read dark by both meters (0.11 at 0.08: over the line) (tools/qa/pass-check.ts, the light)
+  // their moonlit dust does, and the starts read dark by both meters (0.11 at 0.08: over the line)
   lights.push({ kind: 'dir', pos: [0, 0, 0], dir: norm([0.45, -0.5, -0.74]), color: [0.5, 0.68, 1.0], intensity: 0.06, range: 1e6, innerDeg: 0, outerDeg: 0, name: 'moon', group: 'exterior', enabled: true, volumetric: 0, radius: 0.009, mains: false });
 
   // ---- the mains, where a man can follow them: the generator in the lean-to, a flex slung to the range and one across the yard to the gate's lamp ----
@@ -508,7 +508,7 @@ export function build(extra: PassExtra = {}): { level: Level; scenarios: LevelSc
     // 'back' opens OUT behind the range; 'pass' and 'store' open into the kitchen, 'inner' into the store. So with every yard door shut against the team it
     // still walks back → kitchen → tea room, and kitchen → store → bunk room, each door opened by hand from the side it is on.
     // The three yard doors author NO swing: the room rule deals each into its own room (what the lines above need), and the outward rule for outside doors
-    // (DOORWAY.exitsOut, off as shipped) can turn them like any other level's — an authored inward side there is what `probes.ts oneway-deal` holds against.
+    // (DOORWAY.exitsOut, off as shipped) can turn them like any other level's .
     { name: 'tea', hinge: [16.42, 11.0], closedDir: 0, width: 1.16, exterior: true },
     { name: 'kitchen', hinge: [24.42, 11.0], closedDir: 0, width: 1.16, exterior: true },
     { name: 'back', hinge: [24.42, 5.0], closedDir: 0, width: 1.16, exterior: true, swing: -1 },

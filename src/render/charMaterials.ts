@@ -318,7 +318,7 @@ export const CHAR_MATS: Record<CharSide, SideTable> = {
       metal_dark:    { albedo: [0.03, 0.028, 0.027], rough: 0.36, spec: 1.1, metal: 1, soak: 0, grime: 0.2, wear: 1 },
       rubber:        { pick: HAIR, rough: 0.65, spec: 0.12, soak: 0.05, grime: 0.8, wear: 0.5 },
       lens:          { as: 'skin' },
-      accent:        { pick: [[0.64, 0.61, 0.5], [0.06, 0.06, 0.075]], rough: 0.5, spec: 0.3, soak: 1, grime: 0, wear: 0.6 },   // TWO things, dealt by the same id parity the cast deals its two civilians by (cast.ts castVariantOf: list[id % 2]; pickIndex's start for this slot and a list of two is 0): an even id is the cleaner, whose APRON is pale cotton (her kerchief is on cloth_plain = the tunic's own colour: pale, it read as the response team's white crown mark from above); an odd id the office worker, whose TIE is dark. A third civilian variant wants this row rethought
+      accent:        { pick: [[0.64, 0.61, 0.5], [0.06, 0.06, 0.075]], rough: 0.5, spec: 0.3, soak: 1, grime: 0, wear: 0.6 },   // TWO things, dealt by the same id parity the cast deals its two civilians by (rust/game_rules/src/cast cast_variant_of: list[id % 2]; pickIndex's start for this slot and a list of two is 0): an even id is the cleaner, whose APRON is pale cotton (her kerchief is on cloth_plain = the tunic's own colour: pale, it read as the response team's white crown mark from above); an odd id the office worker, whose TIE is dark. A third civilian variant wants this row rethought
       eye:           { ...EYE_WHITE },
     },
     grime: { color: [0.2, 0.17, 0.13], height: 0.04, band: 0.12, k: 0.15 }, cavity: 0.4, ridge: 0.3,
@@ -380,7 +380,7 @@ export const CHAR_MATS_LOOK: Partial<Record<CharSide, SideTable>> = {
 };
 /** THE SNEAKING SUIT (scene/look.ts LOOK.suit; who wears it and when: rust/game_rules/src/cast sneak_suit — Sam, and a quiet mission's partner, on a mission that is not a squad's
  *  loud one): an operator's THIRD set of rows. The cast has no part of its own for it (32 of 32 are dealt), so it is the operator's own suit part — uniform, vest and
- *  boots — drawn without the helmet and the back kit (cast.ts castParts) and shaded here as one matt black: cloth, rig, boots and gloves within a third of a stop of
+ *  boots — drawn without the helmet and the back kit (rust/game_rules/src/cast cast_parts) and shaded here as one matt black: cloth, rig, boots and gloves within a third of a stop of
  *  each other, the rig told from the cloth by its finish alone (harder, a little glossier), so under a lamp he reads as a man in a suit with a harness and in the
  *  dark as a shape. The marking keeps a sixth of the pair's colour (a partner is told from Sam by a dim patch on each shoulder); the kit card's suit colour keeps a
  *  fourteenth of the cloth (a cast to the black, never a colour). Little of the ground's dust: the look's tan dust on black boots read as tan boots. */
@@ -429,7 +429,7 @@ export function resetCharMats() { const s = JSON.parse(SHIPPED) as typeof CHAR_M
 let matsVersion = 1;
 export function charMatsVersion() { return matsVersion * 2 + (lookDress() ? 1 : 0); }   // (the look switch is part of the version: a palette cached under one look is rebuilt under the other)
 
-/** a stable per-man die for slot `salt` (never Math.random: the same man wears the same shirt every boot, in the harness and in the page) */
+/** a stable per-man die for slot `salt` (never Math.random: the same man wears the same shirt every boot) */
 function die(id: number, salt: number): number { let h = (Math.imul(id | 0, 0x9E3779B1) ^ Math.imul(salt + 1, 0x85EBCA6B)) >>> 0; h ^= h >>> 15; h = Math.imul(h, 0x2C1B3C6D); h ^= h >>> 12; h = Math.imul(h, 0x297A2D39); h ^= h >>> 15; return (h >>> 0) / 4294967296; }
 
 /** which of a list of `n` a man takes: a WALK through the list by id from a per-slot start, so men with neighbouring ids (a squad, a shift) never wear the same
@@ -452,7 +452,7 @@ export function slotAlbedo(side: CharSide, slot: CharSlot, tint: Vec3, tint2: Ve
   return [Math.min(1, Math.max(0, c[0])), Math.min(1, Math.max(0, c[1])), Math.min(1, Math.max(0, c[2]))];
 }
 
-/** THE LOOK PROTOTYPE (shaders/look.wgsl lookMan; main.ts raises it on that page only): H0.x, the per-man switch, also says whose side he is on (1 + this) */
+/** THE LOOK PROTOTYPE (shaders/look.wgsl lookMan; host/drawpage.ts raises it): H0.x, the per-man switch, also says whose side he is on (1 + this) */
 const LOOK_SIDE: Record<CharSide, number> = { operator: 0, defender: 1, responder: 2, civilian: 3 };
 /** Write a man's CHAR_MAT_ROWS rows at float offset `o` of `out` (anim/characters.ts setMaterials): H0 = (1 = on, grime height, grime band, crease
  *  darkening) · H1 = (grime rgb × its strength folded into the slots' own, ridge lightening) · per slot A = (albedo, lobe roughness), B = (lobe gain, soak,
@@ -472,7 +472,7 @@ export function writeCharPalette(out: Float32Array, o: number, side: CharSide, t
 }
 
 /** What secondary hits see of him: one colour per shadow proxy (Character.capsules() order) = the area-weighted mix of the slots that proxy carries, with the
- *  ground's dust on the shins and shoes; `wetK` = the coat's darkening (game.ts: 1 − 0.35 × wet), applied by each slot's `soak`; `whole` = record 0 carries
+ *  ground's dust on the shins and shoes; `wetK` = the coat's darkening (rust/game_rules/src/game: 1 − 0.35 × wet), applied by each slot's `soak`; `whole` = record 0 carries
  *  the whole man's mix instead of his lower trunk's (see below); `mask` = the parts he wears, on a cast of part meshes. */
 export function proxyAlbedos(sd: CharSlotData, pal: Float32Array, o: number, wetK = 1, whole = false, mask = 0): Vec3[] {
   const W = sd.weights(mask);

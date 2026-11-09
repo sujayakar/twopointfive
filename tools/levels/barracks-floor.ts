@@ -31,7 +31,7 @@
 // an empty room and a held one read the same.
 // The shell is the office's rectangle (outer walls on x 4 / 36, z 4 / 24): the weather's 'indoors' rectangle is typed to it, so the rooms are dry — and so is the
 // yard, which the weather also takes for indoors (no rain falls in it). Only the old demo's kit (src/scene/officeGen.ts officeKit). Units: metres. +X east, +Z south.
-// NOT SEEN DRAWN: laid out on paper and checked headless (map:check); nobody has looked at it on a GPU.
+// NOT SEEN DRAWN: laid out on paper and checked headless; nobody has looked at it on a GPU.
 import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef } from '../../src/scene/level';
 import type { KitViewData, LevelScenarios, PlacesData, Rect, StructureData } from '../../src/scene/scenarios';
@@ -630,7 +630,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---------------- what the room clear takes from this level ----------------
   // ELEVEN DEFENDERS, PLACED BY HAND. A room's first `garrison` marks, in the order written, are the men who stand there (placement seed 0, the first staging:
-  // roomclear.ts placeDefenders); the marks after them are only what another seed may deal. THE PROBLEM, in one sentence: two men on a dark post at the north
+  // rust/game_rules/src/roomclear place_defenders); the marks after them are only what another seed may deal. THE PROBLEM, in one sentence: two men on a dark post at the north
   // gallery's east end look across the yard at the lit south gallery — one at the floor in front of the wash room and out through the arch, one square onto
   // bunks 5's door — so the nearest way in, and the door the marker points at, are both walked under guns the team cannot reach from there.
   //   gallery post 2              (31.0, 8.9) THE ARCH MAN: the south gallery from s3's east jamb to s4, the yard's east end, the arch. (32.6, 9.4) THE DOOR MAN:
@@ -645,7 +645,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   //   mess hall 2                 opposite corners, crossing diagonals: every one of the six doors is in somebody's eyes
   //   bunks 3 2                   one gun a door
   //   bunks 5 2                   both on the NORTH side of the room, off the line of the south window: (29.2, 21.4) on the gallery door, (26.4, 21.6) on the wash room's
-  // Squads: a wing each and the link. Alpha = the day room + the post, four men in two rooms, so it has a pair to send (enemysquads.ts: a squad with fewer than
+  // Squads: a wing each and the link. Alpha = the day room + the post, four men in two rooms, so it has a pair to send (rust/game_rules/src/enemysquads: a squad with fewer than
   // two men past one a room only ever barricades); it wedges the day room's east door alone.
   const door = (id: string) => doorDefs.find(d => d.name === id)!;
   /** the point a gun rests on for a door, seen from inside room `r`: the middle of the opening, 0.16 m to the room's side of the wall line, chest high */
@@ -706,7 +706,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
           mark(R.day, 30.6, 7.4, 'n4a'),           // west of the locker stub, along the wall
         ] },
       { id: 'ngal_e', name: 'gallery post', bounds: { ...NGAL_E }, garrison: 2,
-        doors: [{ id: 'n_end', from: 'outside' }, { id: 'ng_e', from: 'north gallery' }, { id: 'n4b', from: 'day room' }, { id: 'n4a', from: 'day room' }],   // NOT n3, the armoury's: a door a held room lists is hung to open into it, and n3's leaf stops at 1.3 for the armoury's racks — hung into the gallery it left a man no way through from its pull face (probes.ts oneway-men)
+        doors: [{ id: 'n_end', from: 'outside' }, { id: 'ng_e', from: 'north gallery' }, { id: 'n4b', from: 'day room' }, { id: 'n4a', from: 'day room' }],   // NOT n3, the armoury's: a door a held room lists is hung to open into it, and n3's leaf stops at 1.3 for the armoury's racks — hung into the gallery it left a man no way through from its pull face
         marks: [
           mark(NGAL_E, 31.0, 8.9, 'n_end', [33.0, 1.1, 18.6]),   // PLACED: THE ARCH MAN. Back from the east opening, his gun across the yard on the floor in front of the wash room's door
           mark(NGAL_E, 32.6, 9.4, 'ng_e', [27.6, 1.1, 18.6]),    // PLACED: THE DOOR MAN. In the same opening, east of his mate, across the yard's corner onto bunks 5's door

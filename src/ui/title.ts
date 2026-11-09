@@ -81,8 +81,8 @@ const TITLE_FOOT = 'W S choose · Enter select · Esc back · ` the debugger';
 /** the card's one button to the one starting page (ui/startpage.ts) */
 const PLAY = 'Play ›';
 
-/** THE BOOT CARD: the title screen, up from the first tick of main.ts while the GPU process compiles the renderer's kernels in the background (engine.ts init), with a
- *  one-line status ('compiling shaders 40 / 97 …') main.ts rewrites as they resolve. Menu.open('start') renders the live title over it the moment everything is ready; `off()`
+/** THE BOOT CARD: the title screen, up from the first tick of host/drawpage.ts while the GPU process compiles the renderer's kernels in the background (engine.ts init), with a
+ *  one-line status ('compiling shaders 40 / 97 …') host/drawpage.ts rewrites as they resolve. Menu.open('start') renders the live title over it the moment everything is ready; `off()`
  *  clears it for boots that open no card (?solo, a scenario). An address that names a mission with no load brief has nothing to choose: the head and the status line, no buttons. */
 export function bootCard(): { status(text: string): void; off(): void } {
   menuTheme();

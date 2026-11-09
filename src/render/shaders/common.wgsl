@@ -128,7 +128,7 @@ struct FogSightT {            // THE FOG OF WAR'S SIGHT TABLE (render/fogofwar.t
   looks: array<vec4f, 7>,     // … where he looks, his cone and near field
   cfg: vec4f,                 // x = eyes, y = 1 while this frame's table is written (0: no table — every spot answers 'seen'), z = topPad (m), w = the fog's soft edge: its band (m; 0 = the hard line — shaders/fogofwar.wgsl fowEdge, the fog pass alone reads it)
   soft: vec4f,                // xyz = the cone's soft edges, as FowU.soft · w = one whole number, three bits (4 = FOG.kept, fogKeptOn below): 1 = smoke and dust are drawn under the fog too (fogSmokeOn below; 0 = cut there, as it was), 2 = thin things that stand free do not stop a fog eye (fogThinOn)
-  thin: array<vec4u, 32>,     // WHICH statics are thin and free (rust/game_rules/src/fogofwar FOG.thin; scene/thin.ts): a bit a box index, 4096 boxes (fogThinBox below). In the buffer the sight table's own pass reads here too (the stand-in: render/fogofwar.ts FogSight.stand)
+  thin: array<vec4u, 32>,     // WHICH statics are thin and free (rust/game_rules/src/fogofwar FOG.thin): a bit a box index, 4096 boxes (fogThinBox below). In the buffer the sight table's own pass reads here too (the stand-in: render/fogofwar.ts FogSight.stand)
 };
 @group(0) @binding(11) var<uniform> fogSight: FogSightT;   // (a UNIFORM, 58 KB: the fragment stage's sampled textures are all spoken for — passes.ts lComp)
 // binding 12 — the per-light reach rows (render/reach.ts, lights.ts reachBuf) — is declared by the scene prelude (frame.ts scenePrelude) as either a read-only
@@ -233,7 +233,7 @@ fn skyRadiance(rd: vec3f) -> vec3f {
 // ---- WEATHER KINDS (rust/game_rules/src/weather_kinds, rust/game_rules/src/weather): the level's third / fourth roof footprint and the FOG in the outdoor air, packed in the three spare words
 // of frame.cardCfg (.y .z .w; all 0 = no kind picked; .y is never 0 under a kind — 1 = an empty footprint). Every caller sits behind the scene prelude's
 // `const WX_KINDS` (render/frame.ts weatherKindConfig: true only in a page opened with ?weather=<kind>), so without it these are dead code and the modules are as they were. The fog is ONE field for the picture and for the
-// men's eyes: extinction σ0·e^(−y∕H) per metre in the open (H 0 = uniform), × leak under a roof — weatherKinds.ts unpackFog / fogTau are these functions on the CPU.
+// men's eyes: extinction σ0·e^(−y∕H) per metre in the open (H 0 = uniform), × leak under a roof — rust/game_rules/src/weather_kinds unpack_fog / fogTau are these functions on the CPU.
 fn wxRect(w: u32) -> vec4f { return vec4f(f32(w & 255u), f32((w >> 8u) & 255u), f32((w >> 16u) & 255u), f32(w >> 24u)) * 0.2; }
 fn wxInRect(R: vec4f, p: vec2f) -> bool { return p.x >= R.x && p.y >= R.y && p.x <= R.z && p.y <= R.w; }
 /** is ground point p (xz) under one of the roofs the weather is cut by — weatherC, weatherD and (the level's own roofs in force: a kind picked, or its own storm) the two packed ones */
@@ -396,7 +396,7 @@ const ROT_IDENTITY: u32 = 0x3C00u;
 fn cutPlaneRow(bi: u32, k: u32) -> vec4f { return boxMat[CUT_BASE + bi * CUT_STRIDE + k]; }
 /** the row after a box's planes: (the colour its cut faces show, 1), or all zero = they show the box's own (Box.cutCore) */
 fn cutCoreRow(bi: u32) -> vec4f { return boxMat[CUT_BASE + bi * CUT_STRIDE + CUT_ROWS]; }
-// NO LOOP IN THE BOX TEST (tools/qa/cutboxes-probes.ts holds it). Every box walk has this test written into its own loops, and a loop INSIDE it costs a
+// NO LOOP IN THE BOX TEST. Every box walk has this test written into its own loops, and a loop INSIDE it costs a
 // walk far more than the loop's own work: with the planes taken in a `for`, the fog's march took twice as long on an NVIDIA card with no cut box in the world,
 // and the same planes written straight down took nothing (timed 2026-11-05 on a rented A10: 3.3 ms to 6.6 with the loop, of one plane or of eight; 3.0 with no
 // loop). So the record's eight rows are taken four at a time, with no loop and no branch.
@@ -419,7 +419,7 @@ fn cutFour(bi: u32, k0: u32, lo: vec3f, ld: vec3f, s: vec4f) -> vec4f {
   let up = mIn > s.x;                                                 // (strictly: a plane at the entry the ray already has changes nothing, not even a zero's sign)
   return vec4f(select(s.x, mIn, up), select(min(s.y, mOut), -1.0, gone), select(s.z, face, up), select(0.0, 1.0, l3));
 }
-const_assert CUT_ROWS == 8u;   // (isectCut takes a record as two fours: more rows want more fours, there and in tools/qa/cut-rule.ts)
+const_assert CUT_ROWS == 8u;   // (isectCut takes a record as two fours: more rows want more fours, there)
 fn isectCut(lo: vec3f, ld: vec3f, tmn: vec3f, tN0: f32, tF0: f32, tmax: f32, bi: u32) -> vec2f {
   let s = cutFour(bi, 4u, lo, ld, cutFour(bi, 0u, lo, ld, vec4f(tN0, tF0, 7.0, 1.0)));   // (CUT_ROWS is 8: two fours)
   let tN = s.x; let tF = s.y; var code = s.z;
@@ -436,7 +436,7 @@ fn isectCut(lo: vec3f, ld: vec3f, tmn: vec3f, tN0: f32, tF0: f32, tmax: f32, bi:
 // ends (the y slab) cut down to its stay inside the circle. The circle's quadratic is solved from where the ray enters the box round it (tBox), so a ray from far
 // off loses no bits to the distance. Codes: an end keeps isectBox's 2 / 3, 7 = origin inside, and the SIDE answers ROUND_SIDE (negative, under the cut planes'
 // −1‥−8: every caller's `code > 6.5` inside test and its t tests read it as an ordinary face). The side's normal needs the hit point: roundNormalAt, asked by the
-// closest-hit walks after boxNormalFromCode. boxes.ts rayBoxRound is this on the CPU (rayBox, and collision.ts lineBox).
+// closest-hit walks after boxNormalFromCode. boxes.ts rayBoxRound is this on the CPU (rayBox).
 // (docs/agents/levels.md, the round things' bullet, has the whole of it and what was run.)
 const ROUND_SIDE: f32 = -9.0;
 // A RAY MEETS A ROUND AS ITS PICTURE'S PRISM (the prelude's ROUND_AS_CUT: a module compiled with the cut rule, which is every one where cut boxes are on).
@@ -571,8 +571,7 @@ fn proxyNormal(p: vec3f, cp: Capsule) -> vec3f { return roundConeNormal(p, cp.a,
 
 // ---- mesh-traced character shadows (FLAG_MESH_SHADOWS; data written by render/meshShadows.ts every frame the flag is up, layout described there;
 // meshLoad() and MESH_MAX_CHARS come from the scene prelude). The CPU twin of every function here is render/meshbvh.ts (triHit / bvhAnyHit):
-// same tolerances, same visiting order — tools/qa/mesh-shadow-ref.ts checks that one against brute force, and its fixture checks this one
-// against that (main.ts __meshTrace).
+// same tolerances, same visiting order.
 const MESH_EPS_UV: f32 = 1e-5;    // barycentric slack: triangles are this much fat at their edges, so a ray through a shared edge cannot slip between both
 const MESH_TMIN: f32 = 1e-4;      // hits nearer than this are ignored (origins sit on some other surface, a centimetre or more off it)
 // Möller–Trumbore, both faces: t in (MESH_TMIN, tmax] of the triangle whose three skinned corners start at element c0, or −1.
@@ -620,7 +619,7 @@ fn meshAnyHitChar(k: u32, ro: vec3f, rd: vec3f, invRd: vec3f, tmax: f32) -> f32 
   return -1.0;
 }
 // Every character in this frame's list: bounding-sphere cull (scene.charBounds, as the proxy loops do), owner skip (all of a character's records carry
-// his id — the first one is enough), then his tree, whose root box is the exact broad phase. NOT the proxies: tools/qa/mesh-shadow-ref.ts found 6–12 %
+// his id — the first one is enough), then his tree, whose root box is the exact broad phase. NOT the proxies: 6–12 %
 // of the rays the mesh blocks (shins, feet, hands) touched no capsule at all (the proxies of the time; the fitted cones are slimmer still), so gating on
 // them would clip the very silhouette this is for. First blocker found (its t), or −1.
 // THE LIST HOLDS MORE MEN THAN THERE ARE TREES (boxes.ts MAX_CAST against MESH_MAX_CHARS): a man past the trees' places is his round cones to every ray, here and in meshClosest's
@@ -688,7 +687,7 @@ fn selfShadowT(P: vec3f, N: vec3f, rd: vec3f, tmax: f32, owner: u32) -> f32 {
 // gridCells[GRID_CB + 2ci]     = heightMask (bit s ⇔ some box registered in ci covers quantised heights [10s, 10s+9]) | cheby << 24
 // gridCells[GRID_CB + 2ci + 1] = start (24 bits) | min(count, 255) << 24          cheby = Chebyshev distance (cells) to the nearest occupied cell, 0 = occupied
 // gridItems[itemsB + k]        = box index (16 bits) | qmin << 16 | qmax << 24     q = gridYq of the box's y extent widened by 4 cm each way
-// scene.globalsY               = the same padded extent per global, in metres (no shader reads it since the height cull became globalOutside's own test: tools/qa/grid-globals.ts does)
+// scene.globalsY               = the same padded extent per global, in metres (no shader reads it since the height cull became globalOutside's own test)
 //
 // Why both are exact (same hit.t / idx / code, same occlusion answers, flag on or off):
 //  * Empty runs. An empty cell has no items, so not loading its (equal) start/end pair changes nothing; a cell at Chebyshev distance d from
@@ -1441,13 +1440,13 @@ fn onCard(x: vec3f, nx: vec3f, c0: vec4f, c1: vec4f) -> bool {
 // one) ask here. A pane is a thin yawed box: (centre, cos yaw), (half, sin yaw), (tint, box index). ≤ MAX_GLASS slab tests on uniform data per call.
 // ---- GLASS BREAKING (rust/game_rules/src/glassbreak + rust/game_rules/src/glass_pattern; only ever CALLED inside `if (GLASS_BREAK)` blocks — the prelude const, false = the module as it was): per
 // SceneInfo.glass slot k a record of GB_STRIDE vec4 rows in boxMat's tail after the marking table (GB_BASE, generated into the prelude by render/frame.ts; boxes.ts packGlass ←
-// glassbreak.ts fill(), the layout's one writer): row 0 = (site count n ≤ 8, flags: 1 something is open · 2 the pane has RUN · 4 dicing · 8 gone · 16 web, u axis: 0 = the
+// rust/game_rules/src/glassbreak fill(), the layout's one writer): row 0 = (site count n ≤ 8, flags: 1 something is open · 2 the pane has RUN · 4 dicing · 8 gone · 16 web, u axis: 0 = the
 // pane's local x spans it / 1 = local z, damage 0‥1), row 1 = (hu, hv, type, 0), row 2 = the dice wave (the blow's u, v, the open threshold on a clump's key, grain), row 3 = (dice cols, rows, seed, 0),
 // then 4 rows per site: (u, v, rot, ring-zone radius) · (radials, 24-bit seed, energy, merge share) · the four rho · the open-piece masks (bands 0 | 1 << 12, 2 | 3 << 12,
-// 4 | 5 << 12, 6). The functions below are glassPattern.ts's statement for statement — a blow's SITE cuts the glass round it into pieces (sector s between radial cracks s and
+// 4 | 5 << 12, 6). The functions below are rust/game_rules/src/glass_pattern's statement for statement — a blow's SITE cuts the glass round it into pieces (sector s between radial cracks s and
 // s+1; band 0 the crater, 1‥2 the ring pieces between the chords, 3‥6 the daggers: near / far of the sector's left and right half), territories are the power diagram of the
 // sites — and a piece whose bit is set has fallen out: every ray then passes that part of the pane as if no glass were there (view, mirror, light), which is the hole; the CPU's
-// raycast / segment tests ask glassbreak.ts openAt, the same rule. A DICING tempered pane (flag 4) opens by clumps instead: the cells of a jittered lattice (gbClumpKey).
+// raycast / segment tests ask rust/game_rules/src/glassbreak open_at, the same rule. A DICING tempered pane (flag 4) opens by clumps instead: the cells of a jittered lattice (gbClumpKey).
 const GB_STRIDE: u32 = 36u;
 const GB_HDR: u32 = 4u;
 const GP_ANG_JIT: f32 = 0.6;
@@ -1472,7 +1471,7 @@ fn gbSiteLoad(k: u32, i: u32) -> GbSite {
   var S: GbSite; S.c = a.xy; S.rot = a.z; S.rz = a.w; S.n = clamp(u32(b.x + 0.5), 3u, 12u); S.seed = u32(b.y); S.e = b.z; S.merge = b.w; S.rho = gbRow(k, o + 2u); S.m = gbRow(k, o + 3u);
   return S;
 }
-/** glassPattern.ts gpHash: (seed, a, b) → 24 bits */
+/** rust/game_rules/src/glass_pattern gp_hash: (seed, a, b) → 24 bits */
 fn gpHash(seed: u32, a: u32, b: u32) -> u32 {
   var h = seed ^ ((a + 1u) * 0x9E3779B1u) ^ ((b + 1u) * 0x85EBCA77u);
   h = (h ^ (h >> 15u)) * 0x2C1B3C6Du;
@@ -1536,7 +1535,7 @@ fn gbPieceOpen(S: GbSite, s: u32, b: u32) -> bool {
 /** pane-local point (glassTrace's frame: Rᵀ·(X − c)) → the record's (u, v) */
 fn gbUV(k: u32, lp: vec3f) -> vec2f { return select(vec2f(lp.x, lp.y), vec2f(lp.z, lp.y), gbHeader(k).z > 0.5); }
 fn gbLocal(k: u32, X: vec3f) -> vec3f { let p0 = scene.glass[k * 3u]; let p1 = scene.glass[k * 3u + 1u]; let p = X - p0.xyz; return vec3f(p0.w * p.x - p1.w * p.z, p.y, p1.w * p.x + p0.w * p.z); }
-/** the centre of dice clump (c, r) of pane k (glassPattern.ts gpDiceCentre): its lattice cell's centre, jittered */
+/** the centre of dice clump (c, r) of pane k (rust/game_rules/src/glass_pattern gp_dice_centre): its lattice cell's centre, jittered */
 fn gbClumpCentre(hh: vec2f, g: vec2f, seed: u32, c: u32, r: u32) -> vec2f {
   return -hh + (vec2f(f32(c), f32(r)) + 0.5 + GP_DICE_JIT * (vec2f(gpJit(seed, c, r), gpJit(seed ^ 0x5bd1e9u, c, r)) - 0.5)) * 2.0 * hh / g;
 }

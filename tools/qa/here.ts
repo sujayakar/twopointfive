@@ -1,5 +1,5 @@
 // WHERE THE CHECKOUT IS, AND A PLATFORM WITH NO GPU: the enums a render module names as it loads, and a stand-in for the device. Nothing of the game is loaded:
-// a check of the picture's own code imports this; a check that stands a game imports headless.ts.
+// a check of the picture's own code imports this.
 import { resolve } from 'node:path';
 
 export const ROOT = resolve(import.meta.dir, '../..');

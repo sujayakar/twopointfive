@@ -2,7 +2,7 @@
 // lane 0), its energy bookkeeping (the cone-flux closed form the shader's 64 stratified samples estimate, and the 4-point quadrature the gather evaluates,
 // both against brute-force integration of the true spot profile on a wall), the card nomination (lights.ts cardSlotsFor), and the flag / settings table
 // (bits distinct, defaults off, the frame block sized for the card slots). The GPU halves are verified by measurement (the doc's protocol); this is what
-// can be held without one.   bun run tools/qa/perf-probes.ts   (also `probes.ts perf`)
+// can be held without one.   bun run tools/qa/perf-probes.ts
 import { ROOT } from './here.ts';
 
 const { FrameFlags, FRAME_BYTES, MAX_CARDS, writeFrame, noWeather } = await import(`${ROOT}/src/render/frame.ts`);
@@ -21,7 +21,7 @@ const cross = (a: V3, b: V3): V3 => [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[
 const smoothstep = (e0: number, e1: number, x: number) => { const t = Math.min(1, Math.max(0, (x - e0) / (e1 - e0))); return t * t * (3 - 2 * t); };
 
 let fails = 0;
-/** failures so far (probes.ts prints the family verdict off it) */
+/** failures so far */
 export const perfProbeFailures = () => fails;
 const check = (ok: boolean, label: string, detail: string) => { if (!ok) fails++; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}: ${detail}`); };
 

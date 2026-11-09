@@ -37,7 +37,7 @@ if (childOf >= 0) {
 }
 
 let red = 0; const check = (ok: boolean, what: string, more = ''): void => { console.log(`${ok ? '- PASS' : '- FAIL'} — ${what}${more ? `\n    ${more}` : ''}`); if (!ok) red++; };
-const ROWS = { TPS_COMPACTSHADERS: '1', TPS_SPLITRAYS: '1', TPS_CUTWHENNEEDED: '1', TPS_FIRSTFRAME: '1', TPS_SHADERSWHENNEEDED: '1' };   // (the rows as the page opens: tools/qa/wgsl-compile.cjs's list)
+const ROWS = { TPS_COMPACTSHADERS: '1', TPS_SPLITRAYS: '1', TPS_CUTWHENNEEDED: '1', TPS_FIRSTFRAME: '1', TPS_SHADERSWHENNEEDED: '1' };   // (the rows as the page opens)
 const boot = (setting: string, env: Record<string, string>): Rec | null => {
   const r = spawnSync('bun', ['run', import.meta.path, '--child', setting], { encoding: 'utf8', env: { ...process.env, ...env }, maxBuffer: 1 << 26 });
   const line = String(r.stdout).split("\n").find((l: string) => l.startsWith("LEVELSET "));

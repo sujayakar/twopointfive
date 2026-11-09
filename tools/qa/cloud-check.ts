@@ -273,7 +273,7 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
       check(went2 && none.every(x => x === null) && many.filter(Boolean).length === CL.FATAL.max && went3 && there.length === 1 && there[0].data.message === 'routed' && !!Cr,
         `off: a told browser's dead page sends at once; ?cloudstats=0, ?cloud=0 and a browser that said no send none; a visit says it ${CL.FATAL.max} times at most; once a visit is up the word goes on its records`);
       CL.cloudForget(); }
-    // A PAGE THAT IS NOT A VISIT REPORTS TOO (cloud.ts cloudReports: the replay viewer, the game's page playing a tape): under the records' own words, only
+    // A PAGE THAT IS NOT A VISIT REPORTS TOO (cloud.ts cloudReports: the game's page playing a tape): under the records' own words, only
     // in a browser that has read the notice, with no request at all until there is something to say
     { const RP5 = await import(`${ROOT}/src/cloud/report.ts`), ER5 = await import(`${ROOT}/tools/cloud/errors.ts`), realStore = (globalThis as any).localStorage, wait = (ms: number) => new Promise(r => setTimeout(r, ms));
       const quietConsole = { error: () => { /* the check's own lines */ }, warn: () => { /* */ } }, realE = console.error, realW = console.warn, secs = CL.PAGE_REPORTS.secs;
@@ -411,7 +411,7 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
     const S4 = new TapeSync(W, R3.store, { pid: PID, notes: memoryNotes(), gz: null }); await S4.round(); TAPESYNC.chunk = was;
     const D3 = await pullDump(ADMIN, { pid: PID }), A3 = D3 ? handsOf(handLines(linesOf(D3.bytes).lines, 'visit-c')) : null, L3 = await keptHands(R3.store, 'visit-c');
     check(S4.stats.parts > S4.stats.pieces * 2 && sameBytes(A3, L3) && sameBytes(A3, R3.tape.whole()) && D3!.visits.length === 3, `tapes: pieces cut into parts (${S4.stats.parts} parts for ${S4.stats.pieces} pieces) and sent unpacked read back whole, beside the other visits (${D3?.visits.length} in the file)`); }
-  // A ROUND ASKED FOR WHILE ONE RUNS is one more round after it: the running one read the store before a run's end was filed (ui/replaykey.ts onEndKept)
+  // A ROUND ASKED FOR WHILE ONE RUNS is one more round after it: the running one read the store before a run's end was filed
   { const M = KS.memoryStore(), rowOf = (pieces: number, lastAt: string) => ({ sid: 'ends', startedAt: '2026-10-26T13:00:00.000Z', lastAt, scenario: 'x', url: '?x', seconds: 5 * pieces, pieces, bytes: 10 * pieces });
     await M.put(rowOf(1, '2026-10-26T13:00:05.000Z'), 0, 'zero', 'head'); await M.put(rowOf(2, '2026-10-26T13:00:10.000Z'), 1, 'the end');
     let n = 0, open!: () => void; const gate = new Promise<void>(r => { open = r; });

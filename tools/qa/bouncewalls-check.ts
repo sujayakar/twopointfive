@@ -1,6 +1,6 @@
 // THE BOUNCE IS NEVER READ THROUGH A WALL OFF A MAN — the check behind the scene prelude's BOUNCE_WALLS (src/render/frame.ts bounceWallsConfig; on,
 // ?nobouncewalls at boot = as it was; no game table, nothing for a recording to carry).
-//   bun run tools/qa/probes.ts bouncewalls        (family `render`)        BOUNCEWALLS_BREAK=1 = the rule off and the same lines asked: must FAIL
+//   bun run tools/qa/checks.ts bouncewalls        BOUNCEWALLS_BREAK=1 = the rule off and the same lines asked: must FAIL
 // Its last three lines are REFL WALLS (a metal's reflection rays take the same read: section (5) below; REFLWALLS_BREAK=1 = that rule off: must FAIL).
 // the maintainer, 10-20, the pass at night, the squad in the snow against a lit room's outer wall: "i think there's some leak on direct and specular and indirect
 // with the wall here". The radiance cache (a 1 m lattice) is read a probe spacing along a face's normal — sound for a wall, and for a man standing by a wall the

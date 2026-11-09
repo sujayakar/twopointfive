@@ -1,6 +1,6 @@
 // Perf SWEEP (F8): a measurement take that prices each heavy feature on the machine it runs on. GPU pass timings overlap (Metal runs independent passes side by side:
 // the per-pass sum over-states the frame by a third or more), so a pass's own number is not what switching it off gives back — only an A/B on that machine says.
-// One key: the world is frozen where it stands (the scene holds still — Shift+F8 leaves it running), auto quality is held (main.ts stops sampling the ladder while
+// One key: the world is frozen where it stands (the scene holds still — Shift+F8 leaves it running), auto quality is held (host/drawpage.ts stops sampling the ladder while
 // `active`; preset and scale stay where they were), the F9 recorder starts, and then ONE row of SWEEP_ROWS at a time is flipped for a second and a half and put back:
 // base · flip 1 · base · flip 2 · … · base, a few rounds, the first in the list's order and every later one in a shuffle of its own (sweepOrder). Each segment is a recorder EVENT (kind 'sweep', JSON text) naming
 // the row and how much of its start to drop (histories settle, GPU readbacks lag a few frames). At the end every setting is put back, the world goes on and the

@@ -55,7 +55,7 @@
 //     breaker says, while its own two men stand east of the lamp's throw under the beacon only. The hall's own emergency lamps sweep the team in the hall
 //     the whole time.
 //   (these numbers are an older build's; the newest, and what the mess table's move did to them, are in docs/agents/levels.md — grep 'THE MESS TABLE')
-//   MEASURED (the shipped stand, seeds 1‥12, the four man squad, the scripted commander; won of 12 · men up of 48; Hard and standard play the same run
+//   MEASURED (seeds 1‥12, the four man squad, the scripted commander; won of 12 · men up of 48; Hard and standard play the same run
 //   for run, since nobody leaves a room):
 //     the hall doors  0 ·  0     the heel doors 12 · 40     the dark, then the hall doors (the store by its heel) 11 · 24
 //     the dark, then the heel doors 10 · 29 (Hard)     the second start, heel doors 12 · 37
@@ -174,7 +174,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   wallZ(4, 4, 24, 0.24, ext, [{ a: 10.5, b: 11.7, y0: 0, y1: 2.2 }, { a: 16.5, b: 19.5, y0: 0.9, y1: 2.4, mullions: 3, glass: 'whole' }]);
   // the west wall's long window, on the side nobody comes from: its shutters are folded back on the wall and the winter's wood is stacked under the sill
   // (the library's pieces for a wall's face — src/scene/gwotKit.ts through the office kit's door). THE OPEN FORM, AND MEASURED: no mark watches through
-  // this pane and no mark's line crosses this wall (rust/game_start levels sight), so one leaf was first laid shut; on the page's stand the scripted team
+  // this pane and no mark's line crosses this wall (rust/game_start levels sight), so one leaf was first laid shut; the scripted team
   // then took the floor 3 times in 24 seeds, against 7 in 24 before the shutters and 7 in 24 with them folded back. A shut leaf costs the team too (not
   // traced further: a look, a shot and the window's daylight all stop at it). So a window is shut only where its mission's tally is read with it shut.
   { const G = gwotKit(gwotOfOffice(K)); G.shutters('z', 4, 16.5, 19.5, -1, 'open', 'paintGreen', 0.9, 2.4); G.splitWood('z', 4, 16.7, 19.3, -1, 3); }
@@ -215,7 +215,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   grp('staging');
   bench(5.0, 6.2, Math.PI / 2); bench(5.0, 8.4, Math.PI / 2);
   shelf(7.4, 4.5, 2.6, 0.5, 0, 4, 2.0);
-  // THINGS TO WRECK (tools/qa/loudchaos-probes.ts loudLevels: a loud level carries twenty dressing boxes and six sheets of paper): a second bay of racking in
+  // THINGS TO WRECK (a loud level carries twenty dressing boxes and six sheets of paper): a second bay of racking in
   // the dead corner by the first, for the dressing's binders, and delivery notes left on the two benches. The rooms' own tables are lived things, which the
   // dressing does not see.
   shelf(9.75, 4.5, 2.0, 0.5, 0, 4, 2.0);
@@ -320,14 +320,14 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     beacons.push({ pos: [x, H - 0.3, z], box: dome });
   };
   beacon(18.0, 13.2); beacon(30.0, 13.2); beacon(7.5, 14.0);
-  // one in every held room's FAR leg, clear of both its men (a beacon is a beam tilted 27° down that turns about the vertical, game.ts: it lights nothing within
+  // one in every held room's FAR leg, clear of both its men (a beacon is a beam tilted 27° down that turns about the vertical, rust/game_rules/src/game: it lights nothing within
   // a metre of its own foot — the store's stood over its B man and never lit him). With the mains out it sweeps the far leg and on out through the turn; the
   // near leg is black down its length but not at the turn (the head comment has the readings)
   beacon(18.4, 5.0); beacon(28.4, 5.0); beacon(19.4, 20.2); beacon(33.2, 21.4);
 
   // THE IDS: a held room's two doors keep their shorthand (the structure lists them, so rust/game_rules/src/doornames says them as the rooms they join: 'hall-side mess
-  // door'). Every other door's id is SAID as it stands (orders.ts doorIdWords: 'kitchen to hall door'), so it is the two places it joins and carries no compass
-  // letter. (doornames.ts shorthandId counts the 'to' as shorthand; the structure lists none of these doors, so nothing renames them.)
+  // door'). Every other door's id is SAID as it stands (rust/game_rules/src/orders door_id_words: 'kitchen to hall door'), so it is the two places it joins and carries no compass
+  // letter. (rust/game_rules/src/doornames shorthand_id counts the 'to' as shorthand; the structure lists none of these doors, so nothing renames them.)
   const doorDefs: LevelDoorDef[] = [
     { name: 'm_s', hinge: [12.82, 12.0], closedDir: 0, width: 1.16 },                       // hall → the mess (its near leg)
     { name: 'kitchen_to_hall', hinge: [16.82, 12.0], closedDir: 0, width: 1.16, swing: 1 },               // hall → the kitchen
@@ -411,7 +411,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     // LINEMEN'S MESS: the table under red oilcloth in the near leg's far corner, beside the coats over their boots; round the turn the tea counter and its urn.
     // WHERE THE TABLE MAY STAND (nav cells are 0.5 m and a box blocks every cell within 0.3 m of it): not on the west wall south of z 7.5 — the cells
     // x 11.5‥12, z 8‥11.5 are where the third and fourth man of a stack on m_s from inside file up, and with the table there that order was refused 'no room
-    // on that door' (tools/qa/lived-stack-check.ts); not within a cell of (11.7, 6.5), the squads file's third man; not under the first coat on the rail
+    // on that door'; not within a cell of (11.7, 6.5), the squads file's third man; not under the first coat on the rail
     // (x 11.83‥12.11 at the north wall). So: z 4.5‥5.7 on the west wall.
     P.room('mess');
     P.floor(12.7, 8.03, 3.24, 7.78, [0.36, 0.42, 0.35], 0.004, 0.006); P.floor(17.35, 5.73, 5.94, 3.18, [0.36, 0.42, 0.35], 0.004, 0.006);   // sage lino, both legs

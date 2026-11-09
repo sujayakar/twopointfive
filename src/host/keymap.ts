@@ -1,11 +1,11 @@
 // THE PLAYER'S OWN KEYS: which key on the board gives each key the game asks for. Options ▸ Controls rebinds one (ui/keybinds.ts), this machine keeps it
 // (localStorage `twopointsix.keys`), and Reset there puts every one back. `?keybinds=0` = the build's own keys for the visit, the kept ones left as kept.
-// OFF IN THE MODULE: the game page turns it on as it boots (`keysBoot`, main.ts's first line). A headless tool never does, so its keys are the build's whatever this machine has kept.
+// OFF IN THE MODULE: the game page turns it on as it boots (`keysBoot`, host/drawpage.ts).
 // WHERE IT SITS: at the keyboard, and nowhere else. host/input.ts asks `gameCode()` what a key that went down IS before it files it, so the game goes on asking
-// for the codes it always did (`input.hit('KeyR')`), and everything downstream of the Input is as it was: the tick's PlayerCmd, the session journal, a run's
-// tape, a replay. A recording made with R on another key holds 'KeyR' and plays the same on any machine. Nothing here is read by src/game but that one call
+// for the codes it always did (`input.hit('KeyR')`), and everything downstream of the Input is as it was: the tick's PlayerCmd, a run's
+// tape, a replay. A recording made with R on another key holds 'KeyR' and plays the same on any machine. Nothing here is read by the game but that one call
 // (and the keyboard's own two: `camKey` and `KEYMAP.pinchOnly`, which key the camera is on and what the wheel under Ctrl is):
-// it is no rule of the game, so it is no knob table and the harness's two stands (whose Input has no keyboard) never meet it.
+// it is no rule of the game.
 // WHAT CAN MOVE: the keys of KEY_ACTS, one row each. A key that does two things in the build (E puts away and swaps a hold; V whistles and is a row of the order
 // menu; the digits are the kit and the menu's rows) moves as one: it is the KEY that is rebound, not the verb. The mouse, the wheel and the camera's key stay (Ctrl, or the Space bar
 // while no row has it: `camSpace`, `camKey` — it is no row, so it has no cap to click and a row put on Space takes Space from it).
@@ -47,7 +47,7 @@
 // THE MENU'S LETTERS ARE ASLEEP (`KEYMAP.letGo`, `LETTERS`; only with `qOnly`): frag and clear on G, the big tool and the squad's smoke on H were rows of the
 // listed menu. While the ring carries every order those two have no key and nothing to bind, and G and H on the board are spare: a row put on one takes it from nobody.
 // Options never lists them. What is kept for one stays kept. The facts are LIVE: `onlyWhen` (the page hands it rust/game_rules/src/cmdring `only`) and `throwWhen`
-// (game/quickthrow.ts: G is the quick throw's key then, with no menu up, and stays awake: no list shows it there). OFF IN THE MODULE; the page turns it on as it boots, `?menuletters=0` = both rows on G and H as they were.
+// (rust/game_rules/src/quickthrow: G is the quick throw's key then, with no menu up, and stays awake: no list shows it there). OFF IN THE MODULE; the page turns it on as it boots, `?menuletters=0` = both rows on G and H as they were.
 // TWO MORE ROWS THE BUILD GIVES NO KEY (`KEYMAP.setFree`, `SETFREED`): the selector's (Z) and the weapon light's (L). Both are rows of the setup that the
 // digit of the gun in his hands opens (rust/game_rules/src/slotsetup), so neither needs a key of its own. As with the wall hold: the game goes on asking for 'KeyZ'
 // and 'KeyL', the board gives neither until the player puts the row on a key here, a kept entry is kept as he set it, and the letters are not the rows'
@@ -85,7 +85,7 @@ export const KEYMAP = { /** false = the build's own keys, whatever is kept: the 
   /** the squad's command (the quick order's row, code 'KeyB') has Q for its key in the build and B gives nothing: only with `qFree`. false = it is on B: the module's own stand, and the page's under `?bkey` */ qCmd: false,
   /** the who row (code 'KeyT') has no key in the build: the squad's keys are the command key and the word's, and the ring is the menu (rust/game_rules/src/cmdring `only`, raised with it). false = it is on T: the module's own stand, and the page's under `?qonly=0` */ qOnly: false,
   /** the menu's letters sleep (the header's note). false = both rows on G and H: the module's own stand, and the page's under `?menuletters=0` */ letGo: false,
-  /** …only while the ring carries every order (the page hands it rust/game_rules/src/cmdring `only`; null = whenever `qOnly`) */ onlyWhen: null as (() => boolean) | null, /** …and G not while it is the quick throw's key (game/quickthrow.ts; null = never) */ throwWhen: null as (() => boolean) | null,
+  /** …only while the ring carries every order (the page hands it rust/game_rules/src/cmdring `only`; null = whenever `qOnly`) */ onlyWhen: null as (() => boolean) | null, /** …and G not while it is the quick throw's key (rust/game_rules/src/quickthrow; null = never) */ throwWhen: null as (() => boolean) | null,
   /** the selector's row and the weapon light's have no key in the build: both are rows of the gun's setup (the header's note). false = they are on Z and L: the module's own stand, and the page's under `?slotsetup=0` */ setFree: false,
   /** …only while this says so (the page hands it the setup's own switch as it stands, so a recording that plays with the setup off has Z and L back; null = always) */ setWhen: null as (() => boolean) | null,
   /** …only while this says so (the page hands it the walk-in switch; null = always) */ freeWhen: null as (() => boolean) | null,
@@ -150,7 +150,7 @@ for (const a of WITH_SLOT) { byId.set(a.id, a); byCap.set(a.cap.toLowerCase(), a
 
 /** A code a key on a board can have ('KeyK', 'Numpad1', 'IntlBackslash'): letters and digits, nothing else */
 const CODE = /^[A-Za-z][A-Za-z0-9]{1,23}$/;
-/** THE GAME PAGE, as it boots (main.ts, before anything is drawn): the player's keys are live here unless `?keybinds=0`, and what this machine kept is read */
+/** THE GAME PAGE, as it boots (host/drawpage.ts, before anything is drawn): the player's keys are live here unless `?keybinds=0`, and what this machine kept is read */
 export function keysBoot(q: URLSearchParams) {
   KEYMAP.on = q.get('keybinds') !== '0'; KEYMAP.qFree = q.get('qfree') !== '0'; KEYMAP.qCmd = !q.has('bkey'); KEYMAP.setFree = q.get('slotsetup') !== '0'; KEYMAP.camSpace = q.get('camspace') !== '0'; KEYMAP.pinchOnly = q.get('pinchonly') !== '0'; KEYMAP.qOnly = q.get('qonly') !== '0' && q.get('qring') !== '0'; KEYMAP.letGo = q.get('menuletters') !== '0';
   try { const v = JSON.parse((globalThis as any).localStorage?.getItem(LS) ?? 'null'); if (v && typeof v === 'object') adopt(v); } catch { /* no store */ }
@@ -252,7 +252,7 @@ export function actOfCap(cap: string): KeyAct | null { return byCap.get(cap.toLo
 export function keyCap(cap: string): string { fresh(); if (!map) return cap; const a = byCap.get(cap.toLowerCase()); if (!a || same(keysNow(a), a.codes)) return cap; const now = capNow(a.id); return cap === cap.toUpperCase() && cap !== cap.toLowerCase() ? now.toUpperCase() : now; }
 /** THE HIDDEN TEXT BOX IS NO FIELD. In somebody else's frame (the playable artifact) host/input.ts keeps the keys in a text box nobody sees, told by this
  *  label; a key aimed at it is a key of the game's. `typedInto` is the test a key's listener makes of its target: an input, a select, a text area or
- *  editable text he types in, and never that box (host/input.ts's own `typingTarget`, for a listener that cannot see its box). (replay/engineplay.ts spells the same test itself.) */
+ *  editable text he types in, and never that box (host/input.ts's own `typingTarget`, for a listener that cannot see its box). */
 export const SINK_LABEL = 'game input';
 export function typedInto(t: EventTarget | null): boolean { const el = t as { tagName?: string; isContentEditable?: boolean; getAttribute?(k: string): string | null } | null; return !!el && (/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName ?? '') && el.getAttribute?.('aria-label') !== SINK_LABEL || !!el.isContentEditable); }
 /** THE CAMERA'S KEY (host/input.ts: held, the mouse turns the view and the wheel zooms): the Space bar while the board leaves

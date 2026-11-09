@@ -1,6 +1,6 @@
 // THE MIRROR AND THE HIGHLIGHTS ARE TWO TERMS IN TWO TARGETS: the check behind reflect.wgsl outHi, common.wgsl RT_HI_FADE / rtHiFade and composite.wgsl
 // upsampleHi (docs/agents/render.md has the rule at length).
-//   bun run tools/qa/probes.ts highlights        (family `render`)
+//   bun run tools/qa/checks.ts highlights
 //   HIGHLIGHTS_BREAK=1     the highlights faded as the mirror is, at its cut-off, by a pixel's own roughness: must FAIL
 //   PORTALMIRROR_BREAK=1   a ray that leaves by a lit opening brings its sky back whole, as it did: must FAIL
 // The maintainer on his GPU, 11-04: "overcast dark room has specular sparkles". On the white roof's rolled skim (finish 0.45, High's cut-off 0.45) the lamp's

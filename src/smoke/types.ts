@@ -73,7 +73,7 @@ export interface SmokeSystemLike {
   round?(from: Vec3, dir: Vec3, len: number): boolean;
   /** how many more emitters would still be packed for the solver this step (an effect sizing its spark-trail count charges against this) */
   budget?(): number;
-  /** is smoke handed over now stepped AND drawn (a solver switched off or frozen, or its rendering switched off, is not; absent = no: the harness's null one)? The solver's
+  /** is smoke handed over now stepped AND drawn (a solver switched off or frozen, or its rendering switched off, is not; absent = no)? The solver's
    *  own question (emit drops a look-only source when it is not, and the picture asks it): the game asks nothing */
   drawing?(): boolean;
   /** drop every emitter and all the smoke (encounter restart: a 30 s canister must not keep venting into the next one) */

@@ -20,10 +20,10 @@
 //     canvas divides by `textZoom()` (the overlay's marks, `uiSize()`). The two are the same number wherever an engine measures a zoomed element in window
 //     pixels, which the boot asks it once (`rectZoom` is 1 on one that answers in the element's own). A canvas drawn inside a layer multiplies its
 //     device pixels by `textZoom()` or it is stretched (the debrief's map, the wind graph).
-// THE SWITCH: `TEXTSIZE.on`, OFF in this module, raised by the page's boot (main.ts → bootTextSize; `?textsize=0` = off: no factor, no class, the browser's
+// THE SWITCH: `TEXTSIZE.on`, OFF in this module, raised by the page's boot (host/drawpage.ts → bootTextSize; `?textsize=0` = off: no factor, no class, the browser's
 // own zoom keys, every rule as it was — `var(--tz, 1)` is 1). Never in the Team & kit picture's own window (an iframe is zoomed with the layer it sits in).
-// It is a look, not a rule of the game: the picture's canvas, the cursor and every number the game reads are untouched, nothing here is in a recording, and
-// the headless harness never boots it. Plain DOM; nothing at module level uses another module's exports.
+// It is a look, not a rule of the game: the picture's canvas, the cursor and every number the game reads are untouched, and nothing here is in a recording.
+// Plain DOM; nothing at module level uses another module's exports.
 export const TEXTSIZE = {
   /** the whole thing; off = the page as it was */
   on: false,
@@ -125,7 +125,7 @@ export function zoomKey(e: { key?: string; code?: string; ctrlKey?: boolean; met
   return null;
 }
 
-/** the page's boot (main.ts), before anything is drawn: the switch off the URL, this machine's step, the rules and the listeners. `child` = the Team & kit
+/** the page's boot (host/drawpage.ts), before anything is drawn: the switch off the URL, this machine's step, the rules and the listeners. `child` = the Team & kit
  *  picture's own window, which is never sized by itself. */
 export function bootTextSize(q: URLSearchParams, child = false) {
   if (booted || typeof window === 'undefined' || typeof document === 'undefined' || !document.documentElement?.classList) return;

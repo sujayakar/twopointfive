@@ -108,7 +108,7 @@ export function buildSfxWas(ctx: SfxContext): Record<SfxNameWas, SfxBuffer> {
     for (let k = 0; k < 60; k++) { const t = 0.07 + 2.25 * Math.pow(u(), 1.8); bits.push([t, 130 + 1100 * u() * u(), 0.006 + 0.04 * u(), (0.3 + 0.7 * u()) * (1 - 0.55 * t / 2.3), 0.25 + 0.75 * u()]); } }
   return {
     ...gunfireWas(ctx),
-    // the ring-airfoil launcher (launcher.ts): a hand-cycled tube under the fore-end letting a rubber ring go — the 'throw' body's whoosh, short, over a low hollow
+    // the ring-airfoil launcher (rust/game_rules/src/launcher): a hand-cycled tube under the fore-end letting a rubber ring go — the 'throw' body's whoosh, short, over a low hollow
     // thunk (magOut's first click slowed) and a puff of propellant: near silent, the doc's "CT's near-silent launcher" (a 'prop' event at 0.45, not gunfire)
     launcher: render(ctx, 0.32, (t, _i, sr, rnd, st) => {
       const whoosh = lp(rnd(), st, 0, 0.05 + 0.3 * Math.sin(Math.PI * Math.min(1, t / 0.18))) * Math.sin(Math.PI * Math.min(1, t / 0.2)) * 0.45;
@@ -268,7 +268,7 @@ export function buildSfxWas(ctx: SfxContext): Record<SfxNameWas, SfxBuffer> {
     // ---- the response team's way in (rust/game_rules/src/qrf): the west stair door — a steel fire door on a crash bar — thrown open against its stop in a bare concrete stairwell,
     //      and the boots coming up that stairwell heard through it just before. The door: the bar's clack, the leaf booming off the stop (doorBang's low body, harder),
     //      the steel skin ringing (a cluster of inharmonic partials, 180–900 Hz, a third of a second), and the stairwell throwing it back for most of a second (a dense
-    //      dark tail). Also played, pitched up and quieter, under a boot that rings off it (doors.ts 'clang').
+    //      dark tail). Also played, pitched up and quieter, under a boot that rings off it (rust/game_rules/src/doors 'clang').
     stairDoor: render(ctx, 1.3, (t, _i, _sr, rnd, st) => {
       const bar = (rnd() - lp(rnd(), st, 0, 0.3)) * env(t, 0.0005, 0.008) * 0.5 + Math.sin(TAU * 1400 * t) * env(t, 0.0005, 0.01) * 0.15;
       const tb = t - 0.02; const boom = tb > 0 ? lp(rnd(), st, 1, 0.025) * env(tb, 0.002, 0.14) * 2.4 + Math.sin(TAU * 58 * tb) * env(tb, 0.002, 0.18) * 1.0 + Math.sin(TAU * 116 * tb) * env(tb, 0.002, 0.1) * 0.45 : 0;
@@ -283,10 +283,10 @@ export function buildSfxWas(ctx: SfxContext): Record<SfxNameWas, SfxBuffer> {
       for (let k = 0; k < steps.length; k++) { const th = t - steps[k]; if (th < 0 || th > 0.25) continue; const near = 0.45 + 0.55 * (k / (steps.length - 1)); out += (lp(rnd(), st, k % 4, 0.03 + 0.05 * near) * env(th, 0.003, 0.05) * 1.6 + Math.sin(TAU * (70 + 8 * (k % 3)) * th) * env(th, 0.002, 0.06) * 0.6 + (rnd() - lp(rnd(), st, 4 + (k % 3), 0.4)) * env(th, 0.001, 0.012) * 0.25 * near) * near; }
       return out * 0.8;
     }, 227),
-    // ---- the hold (player.ts startGrab → the questions → chokeOut / whipOut; freeHeld when a round takes Sam down under him): close, quiet body sounds a metre from
+    // ---- the hold (rust/game_rules/src/player start_grab → the questions → chokeOut / whipOut; freeHeld when a round takes Sam down under him): close, quiet body sounds a metre from
     //      the listener — cloth, breath, a throat, one hard knock. The voiced bits are a glottal pulse train (phase-accumulated in st[3], jittered) rounded off by the
-    //      low-pass and gating a band of breath noise: no words, a stand-in for voices, kept well under the thuds. Levels sit against bodyHit at the takedown's 0.55
-    //      (tools/qa/audio-render.ts prints the table); the game plays them at grabScuffle 0.4, chokeStrain 0.25, chokeLimp 0.35, whipThud 0.7, shove 0.3 (freeHeld: he
+    //      low-pass and gating a band of breath noise: no words, a stand-in for voices, kept well under the thuds. Levels sit against bodyHit at the takedown's 0.55;
+    //      the game plays them at grabScuffle 0.4, chokeStrain 0.25, chokeLimp 0.35, whipThud 0.7, shove 0.3 (freeHeld: he
     //      wrenches loose — the E shove it was made for is gone), murmur 0.2, heldProtest 0.18 (0.16 under an answer).
     // the grab: Sam's sleeve over the man's shoulder and the forearm dragging across his collar (two rustles of mid-band cloth), his chest into the man's back (a soft
     // low bump), and the breath the man snatches as the arm arrives — voiceless intake, a flutter of voice in it, choked OFF at 100 ms rather than let fade
@@ -303,7 +303,7 @@ export function buildSfxWas(ctx: SfxContext): Record<SfxNameWas, SfxBuffer> {
       return cloth + bump + gasp;
     }, 173),
     // the choke, while the arm is closed: ONE GRAIN of strain, 0.62 s — pressed, creaky voice at ~75 Hz (short open phase, the rate wandering) with air forced past the
-    // forearm chopped by the same pulses, under a slow tremor; an 80 ms rise and a 220 ms fall so grains retriggered every 0.4 s (player.ts CHOKE_GRAIN) run into one
+    // forearm chopped by the same pulses, under a slow tremor; an 80 ms rise and a 220 ms fall so grains retriggered every 0.4 s (rust/game_rules/src/player CHOKE_GRAIN) run into one
     // strained sound, and letting go of Space just lets the last one die — nothing to stop
     chokeStrain: render(ctx, 0.62, (t, _i, sr, rnd, st) => {
       const n = rnd();

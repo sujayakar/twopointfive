@@ -21,7 +21,7 @@ const verdict = (ok: boolean, label: string, detail = '') => { if (!ok) fails++;
 export const castFailures = () => fails;
 const MANNEQUIN = 'file://' + ROOT + '/public/assets/ual/AnimationLibrary_Godot_Standard.gltf';
 const { LOOK, setLookPlace, lookDress, lookOffice, placeOfQuery } = await import(`${ROOT}/src/scene/look.ts`);
-const CAST_PATH = ROOT + '/public/assets/chars/' + castFileName();   // (the file this run stands on: cast-gwot.gltf under TPS_LOOK=1)
+const CAST_PATH = ROOT + '/public/assets/chars/' + castFileName();
 const pathOf = (look: boolean) => ROOT + '/public/assets/chars/' + (look ? CAST_FILE_LOOK : CAST_FILE);
 /** the budgets tools/chars builds to (README there): one man, and everything in the file */
 const MAX_VARIANT_TRIS = 14000, MAX_UNION_TRIS = 45000;

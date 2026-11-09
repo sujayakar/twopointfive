@@ -1,12 +1,12 @@
-// THE OPTIONS SCREEN: one full-screen layer with four tabs — GRAPHICS · AUDIO · GAME · CONTROLS — opened from the title screen and from the pause card
-// (ui/menu.ts). It is the player's settings page said as a game says it: a row per setting (its name, one wide control, its value), the highlighted row's
+// THE OPTIONS SCREEN: one full-screen layer with four tabs — GRAPHICS · AUDIO · GAME · CONTROLS — opened from the title screen and from the pause card.
+// It is the player's settings page said as a game says it: a row per setting (its name, one wide control, its value), the highlighted row's
 // plain-words description at the foot, Back and Reset in the corner. What a row DOES is what the pause card's Settings tab did before this screen existed
 // (the maintainer, 08-13: 'make the graphics choices well thought out … art constants are not for the player to edit'): GRAPHICS = the one real decision (a
 // quality tier, or Auto) with what it is doing on THIS machine live under it, the render resolution, whether it may drop resolution to hold frame rate,
 // brightness, a frame-rate read-out; AUDIO = the four buses; GAME = autosave, the interaction hints and the three sandbox cheats named as cheats;
 // CONTROLS = every key, grouped by what the hand is doing. Every renderer trade-off and experiment stays on the debugger (backtick).
 // KEYS (no held key, no digit above 5): 1 2 3 4 the tabs · W S / ↑ ↓ the rows · A D / ← → change the row · Enter or Space flips a switch · Esc back.
-// WHILE THE PAGE BOOTS there is no engine yet (ui/menu.ts hands the live objects over when its Menu is made — setOptionsDeps): CONTROLS is live from the
+// WHILE THE PAGE BOOTS there is no engine yet (setOptionsDeps hands the live objects over): CONTROLS is live from the
 // first tick, the other three say what they wait for and fill in place when it arrives.
 // KEPT PER MACHINE here: the four volumes and the hints switch (localStorage `twopointsix.options`; a deploy is a page load, and a volume that came back
 // loud on every mission was no option). The tier, autosave and the cheats were already kept by their own modules; brightness is the mission's own (its hour
@@ -199,13 +199,13 @@ let turned = 1, wrote: number | null = null;
 
 function el(tag: string, cls?: string, text?: string) { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
 function kept(): { vol?: Partial<typeof VOLUME_DEFAULTS>; hints?: boolean; wallpress?: boolean } { try { const v = JSON.parse(globalThis.localStorage?.getItem(LS) ?? 'null'); return v && typeof v === 'object' ? v : {}; } catch { return {}; } }
-/** a page held silent (`?mute`, or the automation profile's kept flag: main.ts pins the master bus at 0 there): that 0 is the rig's, never the player's level */
+/** a page held silent (`?mute`, or the automation profile's kept flag: host/drawpage.ts pins the master bus at 0 there): that 0 is the rig's, never the player's level */
 function muted(): boolean { try { return new URLSearchParams(globalThis.location?.search ?? '').has('mute') || globalThis.localStorage?.getItem('twopointsix.testMute') === '1'; } catch { return false; } }
 function keep() { if (!deps) return; try { const v = deps.audio.volume, master = muted() ? kept().vol?.master ?? VOLUME_DEFAULTS.master : v.master; globalThis.localStorage?.setItem(LS, JSON.stringify({ vol: { master, sfx: v.sfx, ambience: v.ambience, music: v.music }, hints: deps.game.hints, ...(pressKept !== null ? { wallpress: pressKept } : {}) })); } catch { /* no store */ } }
 /** the wall taken without Q (rust/game_rules/src/wallsnap `press`): what this machine has kept (null = never chosen: the build's own), and whether this visit's `?wallpress=` chose */
 let pressKept: boolean | null = null, pressUrl = false;
 
-/** ui/menu.ts hands the live objects over when its Menu is made (the boot is over): what this machine kept is put on them, and a screen that is up fills in */
+/** the page hands the live objects over (the boot is over): what this machine kept is put on them, and a screen that is up fills in */
 export function setOptionsDeps(d: OptionsDeps | null) {
   deps = d; if (!d) return;
   const k = kept(), vol = d.audio.volume;
@@ -408,12 +408,12 @@ export function displayNote(): string {
   const tier = quality.auto ? `Auto is running ${quality.current}${/^(auto|calibrat)/.test(quality.lastChange ?? '') ? ' — ' + quality.lastChange : ''}` : `${quality.current[0].toUpperCase()}${quality.current.slice(1)} (pinned)`;
   return [tier, res, gpu > 0.5 ? `GPU ${gpu.toFixed(1)} ms a frame (≈ ${fps.toFixed(0)} fps of headroom)` : ''].filter(Boolean).join(' · ');
 }
-/** Auto's calibration has just settled under an open screen (ui/menu.ts refreshQualityNote): its line and the tier's button follow */
+/** Auto's calibration has just settled under an open screen: its line and the tier's button follow */
 export function refreshOptions() { open?.paint(); }
 
 if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
   window.addEventListener(TEXT_EVENT, () => open?.paint());   // (the size stepped by its keys under an open screen: the row follows)
-  // registered at module load = ahead of every listener main.ts adds at boot (its Esc handler, the Input class): a key the screen takes stops here
+  // registered at module load = ahead of every listener host/drawpage.ts adds at boot (its Esc handler, the Input class): a key the screen takes stops here
   window.addEventListener('keydown', e => {
     const S = open; if (!S || e.ctrlKey || e.metaKey || e.altKey) return;
     const eat = () => { e.preventDefault(); e.stopImmediatePropagation(); };

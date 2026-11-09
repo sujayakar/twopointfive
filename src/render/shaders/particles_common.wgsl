@@ -8,7 +8,7 @@ const P_SPARK: u32 = 0u;    // incandescent: emissive, gravity, bounces low and 
 const P_DEBRIS: u32 = 1u;   // chips knocked out of drywall / wood / concrete: LIT (albedo of what was hit), gravity, bounce, come to rest and stay ~20 s
 const P_DUST: u32 = 2u;     // a puff: LIT soft blob, drag-dominated, grows and fades over ~1.5 s (bullet impacts, the stun charge's ring, a kicked door)
 const P_CASING: u32 = 3u;   // spent brass: LIT + a glint off the strongest light, ejected per shot, bounces, lies on the floor
-const P_SHEET: u32 = 4u;    // a leaf of office paper (destruction.ts: a burst raking a desk turns its paper stacks into these): a LIT two-sided oriented quad,
+const P_SHEET: u32 = 4u;    // a leaf of office paper (rust/game_rules/src/destruction: a burst raking a desk turns its paper stacks into these): a LIT two-sided oriented quad,
                             // gravity + anisotropic drag + flutter torque (render/sheetModel.ts is the CPU reference of the same equations), slides / settles
                             // flat on what it lands on and sleeps like a chip; casts no shadow (a splat, not a box)
 const P_RAIN: u32 = 5u;     // a rain drop (rust/game_rules/src/rain_fx): born on top of the weather's rain slab over the outdoor ground near the view, falls at terminal speed with the wind
@@ -40,7 +40,7 @@ struct Particle {
   ori: u32, omg: u32, omgZ: u32, aux: u32,       // SHEET: unit normal (octahedral, 2 × snorm16), angular velocity rad/s (x, y as f16 × 2 | z as f16, high half spare); aux = pack2x16float(aspect = length ÷ width, SHEET: gust s — the blast wind still carrying it, 0 in still air) — every kind carries aspect (a splinter is a chip with aspect 3; 1 = the chip as it was)
 };
 
-// the shard's constants the kind block has no slot for (render/shardModel.ts SHARD.<NAME> — tools/qa/shards-probes.ts compares them by name)
+// the shard's constants the kind block has no slot for (render/shardModel.ts SHARD.<NAME>)
 const SHARD_REF_SIZE: f32 = 0.01;
 const SHARD_DRAG_MAX: f32 = 6.0;
 const SHARD_ANG_DAMP: f32 = 0.3;
@@ -93,7 +93,7 @@ fn shardRestScatter(size: f32, seed: u32) -> f32 {   // (seed bits 20‥27: the 
 // the sheet's two constants the kind block has no slot for (render/sheetModel.ts SHEET.ANG_DAMP / SPIN_MAX)
 const SHEET_ANG_DAMP: f32 = 1.8;
 const SHEET_SPIN_MAX: f32 = 3.0;
-// the sheet's IMPULSE response (render/sheetModel.ts SHEET_IMP / SHEET_GUST — the probes compare them): a kicked leaf is tipped off flat by up to TILT rad toward a hashed
+// the sheet's IMPULSE response (render/sheetModel.ts SHEET_IMP / SHEET_GUST): a kicked leaf is tipped off flat by up to TILT rad toward a hashed
 // side, set tumbling at TUMBLE rad/s per m/s of kick (|ω| ≤ WMAX), and carried by the blast's wind for GUST_TAU × clamp((kick − GUST0) / GUST1) s, during which drag
 // and flutter torque are taken against the co-moving air: × (1 − GUST_K·g), g = 1 until the last GUST_RAMP share of TAU, then falling to 0
 const SHEET_IMP_TILT: f32 = 0.9;
@@ -162,7 +162,7 @@ const MAX_IMPS: u32 = 16u;
 struct ImpulseRec {
   pos: vec3f, radius: f32,       // centre of the push, its reach (m)
   bias: vec3f, strength: f32,    // a direction folded into the push, |bias| = its weight (the round's travel along the surface it struck; zero for a blast); peak Δv (m/s) a SHEET gets at the centre — the other kinds scale it by their gain
-  eye: vec3f, up: f32,           // where the occlusion ray starts when iflags has bit 0 (a blast's reach judged from just over desk height, as destruction.ts judges the stacks); the upward share added to the radial direction
+  eye: vec3f, up: f32,           // where the occlusion ray starts when iflags has bit 0 (a blast's reach judged from just over desk height, as rust/game_rules/src/destruction judges the stacks); the upward share added to the radial direction
   kinds: u32, seed: u32, iflags: u32, spare: u32,   // bit k set = kind k responds; the seed each kicked sheet hashes its tilt / tumble from with its slot; 1 = one any-hit ray + the glass panes eye → particle gate it (a partition or a pane between a charge and the litter behind it stops the push)
 };
 // WIND records (rust/game_rules/src/wind → render/particles.ts setWind): the frame's ≤ 8 wind sources ride in the SAME array right BEHIND the impulses — imps[numImps ‥ numImps +
@@ -254,8 +254,8 @@ fn rainRoofed(P: vec3f) -> bool {
  *  (weather.ts ownRoofs; the packed third / fourth to 0.2 m), so the walls' OUTER FACES, the doors in them and the walls' tops all counted as indoors: snow fell in
  *  front of a man at the wall's foot and stopped dead at the wall behind him. For snow the rule asks what it means — is this surface UNDER the roof: inside a roof's
  *  rectangle drawn in by FLAKE_WALL_IN (past the outer face and the door in the wall, short of the inner face) AND below the ceiling (a wall's top is in the open).
- *  The rooms stay dry to the eye as before; the world's rim as before. rust/game_rules/src/snow_fx flakeHidden is this function on the CPU (tools/qa/snow-check.ts walls). */
-const FLAKE_WALL_IN: f32 = 0.2;   // m (snowFx.ts FLAKE_WALL_IN: the same number)
+ *  The rooms stay dry to the eye as before; the world's rim as before. rust/game_rules/src/snow_fx flakeHidden is this function on the CPU. */
+const FLAKE_WALL_IN: f32 = 0.2;   // m (rust/game_rules/src/snow_fx FLAKE_WALL_IN: the same number)
 fn flakeRectIn(R: vec4f, p: vec2f) -> bool { return p.x >= R.x + FLAKE_WALL_IN && p.y >= R.y + FLAKE_WALL_IN && p.x <= R.z - FLAKE_WALL_IN && p.y <= R.w - FLAKE_WALL_IN; }
 /** UNDER THE ROOFS, WHICHEVER SLAB (the prelude's SNOW_UNDER, rust/game_rules/src/weather_kinds SNOW_LOOK.under). flakeRectIn draws each roof's rectangle in by itself, so on the
  *  line where two slabs of one building meet neither's holds and a strip two insets wide was open to snow: the floor along that wall's foot, the floor of a doorway in
@@ -264,9 +264,8 @@ fn flakeRectIn(R: vec4f, p: vec2f) -> bool { return p.x >= R.x + FLAKE_WALL_IN &
  *  wide about it all roofed (common.wgsl wxRoofed: any of the level's roofs) — for a rectangle alone that is flakeRectIn to the letter. A top takes the snow only
  *  within FLAKE_TOP_IN of the roofs' edge: an outer wall's (a quarter metre thick under a roof that overhangs it by centimetres, so the wall's own inset would dry
  *  its inner half). What stands ABOVE the ceiling's plane (nothing does today) is in the open, as it was. FIVE POINTS, not the whole square: a gap in the roofs
- *  narrower than 2 d that falls between the corners is not seen (none on a level today). rust/game_rules/src/snow_fx flakeUnder / flakeHiddenUnder are these on the CPU
- *  (tools/qa/snowunder-check.ts asks them against the whole square). */
-const FLAKE_TOP_IN: f32 = 0.5;   // m (snowFx.ts FLAKE_TOP_IN: the same number)
+ *  narrower than 2 d that falls between the corners is not seen (none on a level today). rust/game_rules/src/snow_fx flakeUnder / flakeHiddenUnder are these on the CPU. */
+const FLAKE_TOP_IN: f32 = 0.5;   // m (rust/game_rules/src/snow_fx FLAKE_TOP_IN: the same number)
 fn flakeUnder(p: vec2f, d: f32) -> bool { return wxRoofed(p) && wxRoofed(p + vec2f(d, d)) && wxRoofed(p + vec2f(-d, d)) && wxRoofed(p + vec2f(d, -d)) && wxRoofed(p - vec2f(d, d)); }
 fn flakeHidden(P: vec3f) -> bool {
   let q = P.xz;
@@ -318,7 +317,7 @@ const RAIN_SPLASH_DROPLETS: u32 = 4u; // secondary droplets a landing throws out
 fn unpackRgb8(c: u32) -> vec3f { return vec3f(f32(c & 255u), f32((c >> 8u) & 255u), f32((c >> 16u) & 255u)) / 255.0; }
 
 // the spark's colour ramp (rust/game_rules/src/sparks boxes(): white-hot → orange → red as it cools; e is meant to clip — the bloom is the glow)
-const SPARK_EMISSIVE: f32 = 25.0;   // effects.ts sparks.emissive: HDR radiance at f = 1 before brightness
+const SPARK_EMISSIVE: f32 = 25.0;   // rust/game_rules/src/effects sparks.emissive: HDR radiance at f = 1 before brightness
 fn sparkRadiance(u: f32, hold: f32, brightness: f32) -> vec3f {
   let f = select(max(0.0, 1.0 - (u - hold) / max(1e-3, 1.0 - hold)), 1.0, u < hold);
   let e = f * f * brightness * SPARK_EMISSIVE;

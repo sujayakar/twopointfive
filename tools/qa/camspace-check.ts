@@ -1,6 +1,6 @@
 // THE CAMERA'S KEY IS THE SPACE BAR (src/host/keymap.ts KEYMAP.camSpace, camKey; host/input.ts). The page has it on
-// (`?camspace=0` = Ctrl, as it was); the module's own stand has it off, so both of the harness's stands start with Ctrl and this check raises it itself.
-//   bun run tools/qa/probes.ts camspace        (family `player`)        CAMSPACE_BREAK=1 = the switch left off and the same lines asked: must FAIL (all but `off`)
+// (`?camspace=0` = Ctrl, as it was); the module's own stand has it off, so this check raises it itself.
+//   bun run tools/qa/checks.ts camspace        CAMSPACE_BREAK=1 = the switch left off and the same lines asked: must FAIL (all but `off`)
 //
 //   the board     Space is the camera's only while it is no row's: his actions a ring on E and empty hands a slot; with either off, with the switch off,
 //                 or with a row put on Space by hand, the camera is on Ctrl

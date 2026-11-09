@@ -5,8 +5,8 @@
 // that is solved on it; that file keeps the field, its buffer and Sam's eye, and reads the plan from here.
 // WHO READS IT: render/placeField.ts (the light of a place, the look's exposure), render/wallSides.ts (which side of a wall a point is on), scene/openings.ts
 // (where a place is open to the sky), and the checks of each.
-// PLACE holds the plan's numbers AND the field's solve numbers in one table, as it always did (a tool hands one table of both: tools/qa/place-field-page.cjs
-// --place); the solve's are read by render/placeField.ts alone.
+// PLACE holds the plan's numbers AND the field's solve numbers in one table, as it always did;
+// the solve's are read by render/placeField.ts alone.
 import { Box, BoxFlag, type PlanBox } from './boxes';
 import { WORLD } from './world';
 import { type Pt, apart, narrowest, footprint, WAY } from './wayThrough';

@@ -8,7 +8,7 @@ import type { Vec3 } from '../math/vec';
 export interface SfxBuffer { readonly sampleRate: number; readonly length: number; readonly duration: number; readonly numberOfChannels: number; getChannelData(channel: number): Float32Array; }
 /** what buildSfx and the buffer helpers need of a context: the rate and a buffer factory — a BaseAudioContext is one, sfxContext(sr) another */
 export interface SfxContext { readonly sampleRate: number; createBuffer(channels: number, length: number, sampleRate: number): SfxBuffer; }
-/** the stand-in context: plain buffers, for a host without Web Audio (the native backend loads the Float32Arrays; the QA harness never needs one) */
+/** the stand-in context: plain buffers, for a host without Web Audio (the native backend loads the Float32Arrays) */
 export function sfxContext(sampleRate = 48000): SfxContext {
   return { sampleRate, createBuffer(channels, length, sr) { const ch: Float32Array[] = []; for (let c = 0; c < channels; c++) ch.push(new Float32Array(length)); return { sampleRate: sr, length, duration: length / sr, numberOfChannels: channels, getChannelData: (c) => ch[c] }; } };
 }

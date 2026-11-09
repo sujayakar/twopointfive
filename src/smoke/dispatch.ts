@@ -1,4 +1,4 @@
-// HOW A STEP OF THE SMOKE SOLVER DISPATCHES ITS PER-BRICK KERNELS (smoke/smoke.ts encode), and which way a page opens on (main.ts). Two plain rules in a
+// HOW A STEP OF THE SMOKE SOLVER DISPATCHES ITS PER-BRICK KERNELS (smoke/smoke.ts encode), and which way a page opens on (host/drawpage.ts). Two plain rules in a
 // file with nothing of the GPU in it, so that a check can ask them (tools/qa/perf-sweep-logic.ts) and the F8 sweep's row asks the same one the solver does.
 //
 // THE TWO WAYS. By THE GPU'S OWN COUNT of the step's list (`sparse.indirect`, about twenty dispatchWorkgroupsIndirect calls a step): the solver's own

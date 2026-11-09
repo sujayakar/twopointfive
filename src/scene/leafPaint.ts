@@ -1,9 +1,9 @@
-// A LEVEL'S LEAVES ARE PAINTED AS THE GAME IS STOOD (game.ts, where the doors are made; rust/game_rules/src/doors/paint.rs is the same rule at the same place). A leaf
+// A LEVEL'S LEAVES ARE PAINTED AS THE GAME IS STOOD (rust/game_rules/src/game, where the doors are made; rust/game_rules/src/doors/paint.rs is the same rule at the same place). A leaf
 // is built in the office's colours whatever the level (rust/game_rules/src/doors: a veneer inside, the fire exits' blue-grey outside), and on a mud compound those read as office
 // doors. A level that WEARS the look has an outside door in its own accent paint (its row in look.ts LOOK_DOORS, else the one its dado is painted in, counted off the
 // level's boxes; army green where it has none) and an inside one in weathered grey wood (one in four with that paint faded on it), each a shade of its own by its name.
 // Steel doors are left alone. It is the box's own colour and word, so what a breach throws off a leaf and a round's chips take it. No rule asks what colour a leaf is
-// (a round into one is wood whatever its paint: particleFx.ts), no dice are drawn, and a level that carries none of the look's paints is not touched.
+// (a round into one is wood whatever its paint: rust/game_rules/src/particle_fx), no dice are drawn, and a level that carries none of the look's paints is not touched.
 import { GWOT_PALETTE, lookPaintOf } from './gwotPalette';
 import { paintOf } from './stuff';
 import type { Box } from './boxes';

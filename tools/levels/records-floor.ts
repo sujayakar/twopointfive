@@ -225,7 +225,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
   K.sofa(k, 27.7, 7.75, 0, RECORDS_PAINT.sofa);                                       // on the north wall, east of the window
   K.bin(k, 23.0, 12.5); K.plant(k, 29.4, 11.2, 0.9);
   K.wallArt(k, 27.4, 1.55, 12.925, 1.4, 0.8, [0.55, 0.32, 0.14], true);
-  K.ceilingPanel(k, 26.0, 10.0, true, 'staff');                    // lit (measured: in a dark room the pair does not see its man in time whatever the door or the tool — tools/qa/records-runs.ts doors --also … )
+  K.ceilingPanel(k, 26.0, 10.0, true, 'staff');                    // lit (measured: in a dark room the pair does not see its man in time whatever the door or the tool)
 
   // ---------------- hall (x 10.12‥29.88, z 13.06‥16.94): one panel lit, over the staff room's door; nothing stands in it ----------------
   K.grp(k, 'hall');

@@ -31,7 +31,7 @@ import { kitViewQuietKind } from '../host/kitViewQuiet';   // (pure: the mission
 
 /** the picture is LIVE and the open card's man acts in it (`?stillkit` = off: the still picture, every change a plain restage) · ms after a kit message in which further changes are folded into ONE more */
 export const KIT_VIEW = { acts: true, kitMs: 150, quiet: true };
-try { const q = new URLSearchParams(location.search); if (q.has('stillkit')) KIT_VIEW.acts = false; if (q.has('kitloud')) KIT_VIEW.quiet = false; } catch { /* no page (the harness) */ }
+try { const q = new URLSearchParams(location.search); if (q.has('stillkit')) KIT_VIEW.acts = false; if (q.has('kitloud')) KIT_VIEW.quiet = false; } catch { /* no page */ }
 /** where things sit, in the figure column's own widths and heights (the page's 330 px column: the picture is hung on the DOOR — its line about six tenths
  *  of the way across, the first metre of the room behind it clear to the column's right edge, where a can thrown through the door comes to rest — and the
  *  five places left of it with 16 px of margin) */
@@ -98,7 +98,7 @@ export function mountKitView(root: HTMLElement, body: HTMLElement, column: HTMLE
   const from = (origin: string) => origin === location.origin || (onDisk() && origin === 'null');
   const tell = (m: object) => { try { frame?.contentWindow?.postMessage(m, postTo()); } catch { /* */ } };
   let wornNow: string[] = [];
-  const kitNow = (squad: number) => JSON.stringify({ worn: wornNow, squad });   // (the cards as the team of that size wears them, which the picture's own table then wears as written: main.ts kitCards)
+  const kitNow = (squad: number) => JSON.stringify({ worn: wornNow, squad });   // (the cards as the team of that size wears them, which the picture's own table then wears as written)
   /** the kit and the size, when they are not what the instance last had */
   const kit = () => { want = ''; if (!frame || !up) return; const now = kitNow(squadNow); if (now === sent) return; sent = now; tell({ kv: 'kit', members: wornNow.map(t => (t ? JSON.parse(t) as unknown : null)), squad: squadNow }); };
   /** whose card is open and the tile under the highlight · off the step or on it — each told when it is not what the window last had */

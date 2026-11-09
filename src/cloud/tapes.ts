@@ -55,7 +55,7 @@ export class TapeSync {
     this.gz = o.gz !== undefined ? o.gz : typeof CompressionStream === 'undefined' ? null : (text: string) => new Response(new Blob([text]).stream().pipeThrough(new CompressionStream('gzip'))).blob();
   }
   /** one round. ASKED FOR WHILE ONE RUNS, IT IS ONE MORE ROUND AFTER THAT ONE (one, however many ask): a running round read the store when it began, and
-   *  what was filed since — a run's end (ui/replaykey.ts `onEndKept`), the tail a hidden page files — is not in it; it used to wait for the next beat, 20 s
+   *  what was filed since — a run's end, the tail a hidden page files — is not in it; it used to wait for the next beat, 20 s
    *  on, and a tab shut before that left the replay on the backend short of its end until that browser came back. Never rejects */
   round(): Promise<void> {
     if (this.busy) return BREAK ? this.busy : this.next ??= this.busy.then(() => { this.next = null; return this.round(); });

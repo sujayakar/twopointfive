@@ -1,6 +1,6 @@
 // KILLHOUSE — 'The kill house': a small shoot house on a range, run AGAINST A CLOCK. Five small rooms off one short corridor that a ply partition and a
 // door cut in two; a front door on the corridor's west end and a back door into the mess; six defenders dealt afresh every
-// visit (roomclear.ts ROOMCLEAR.fresh). The idea is the PAR: the file's `scenarios.par` block (rust/game_rules/src/par) times the run from the first thing anybody does
+// visit (rust/game_rules/src/roomclear ROOMCLEAR.fresh). The idea is the PAR: the file's `scenarios.par` block (rust/game_rules/src/par) times the run from the first thing anybody does
 // to 'structure taken', adds seconds for every teammate lost, and names a medal.
 //
 //        x 12        17.5        23         28

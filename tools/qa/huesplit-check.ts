@@ -1,6 +1,6 @@
 // THE HUE SPLIT ASKS THE BELIEF THE HUE WAS BUILT BY: the check behind the place of the dark memory's update in restir.wgsl (no switch: it is the estimator's own
 // rule put right, on every page).
-//   bun run tools/qa/probes.ts huesplit        (family `render`)        HUESPLIT_BREAK=1 = the memory is moved before the shade, as it was: must FAIL
+//   bun run tools/qa/checks.ts huesplit        HUESPLIT_BREAK=1 = the memory is moved before the shade, as it was: must FAIL
 // The maintainer on his GPU, 11-04, the depot at midday: "red rim on shadow also looks odd". Every shadow the sun threw was edged in red. The red was the mast's
 // obstruction lamp, which sends that ground under a ten-thousandth of the sun's light: with the lamp's colour set to black the edge was neutral, and with every
 // sample shaded in its own lamp's hue (a debugger row, gone since) it was neutral too. THE FAULT: the estimator shades a class's light in the hue of the lamps the

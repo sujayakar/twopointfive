@@ -15,10 +15,10 @@ export class FollowCamera {
   pos: Vec3 = [0, 0, 0]; forward: Vec3 = [0, 0, -1];
   aspect = 16 / 9;
   /** Optional world-space nudge added to the follow point (before smoothing): the player controller sets it while Sam peeks round the end of the wall he is
-   *  pressed to (player.ts moveOnWall — a point past the corner and a little out from the wall), null the rest of the time. Nothing else reads or writes it. */
+   *  pressed to (rust/game_rules/src/player move_on_wall — a point past the corner and a little out from the wall), null the rest of the time. Nothing else reads or writes it. */
   peekOffset: Vec3 | null = null;
 
-  /** Automation only (main.ts __stage): a fixed framing that update() applies verbatim — look-at, yaw, pitch, distance, no damping, no aim lead, no peek
+  /** Automation only: a fixed framing that update() applies verbatim — look-at, yaw, pitch, distance, no damping, no aim lead, no peek
    *  offset — so a scripted capture frames what it means to frame instead of wherever the follow camera has drifted to. null = the live follow camera. */
   pin: { look: Vec3; yaw: number; pitch: number; dist: number } | null = null;
   update(dt: number, follow: Vec3, aimPoint: Vec3 | null) { this.frame(); this.step(dt, follow, aimPoint); }
@@ -37,8 +37,7 @@ export class FollowCamera {
   }
 
   /** A PICTURE-ONLY KICK (rust/game_rules/src/blast_feel writes it once a frame; null = none): metres added to the look-at for the frame's render and nothing else. The loop
-   *  (src/host/drawpage.ts) calls kickIn() right before the render and kickOut() after the HUD has drawn against the same picture, so whatever reads the camera inside
-   *  Game.update — the aim ray, WASD's basis, the on-screen tests, the session journal — reads it as it was without the kick, to the bit (rebuild() from the same
+   *  (src/host/drawpage.ts) calls kickIn() right before the render and kickOut() after the HUD has drawn against the same picture, so whatever else reads the camera — the aim ray, WASD's basis, the on-screen tests — reads it as it was without the kick, to the bit (rebuild() from the same
    *  look-at, angles and distance gives the same matrices). */
   kick: Vec3 | null = null;
   private kickHeld: Vec3 | null = null; private kickDrawn: Float32Array | null = null; private kickVP = m4.create();
@@ -99,8 +98,8 @@ export class FollowCamera {
   /** World point → CSS pixels of a w×h view (origin top-left) through this frame's viewProj, plus whether it is showable: in front of the eye
    *  (clip w > minW) and, when `margin` is given, inside |ndc| < margin on both axes (1 = the view's edge — the HUD keeps markers alive a little
    *  past it). A point exactly on the eye plane (w = 0) is divided by 1 instead, as m4.transformPoint does; behind the eye the pixel is mirrored
-   *  nonsense and only the flag means anything. The one projection the overlay markers, speech bubbles, the cursor's hover test, the tour's
-   *  puppet aim and the viewer gizmo share. */
+   *  nonsense and only the flag means anything. The one projection the overlay markers, speech bubbles and the cursor's hover test
+   *  share. */
   project(p: Vec3, w: number, h: number, margin = Infinity, minW = 0): [number, number, boolean] {
     const vp = this.viewProj;
     const cw = vp[3] * p[0] + vp[7] * p[1] + vp[11] * p[2] + vp[15]; const d = cw || 1;

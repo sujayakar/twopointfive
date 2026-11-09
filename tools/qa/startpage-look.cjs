@@ -53,7 +53,7 @@ const cardOf = page => page.evaluate(() => ({ buttons: [...document.querySelecto
   const ctx = await browser.newContext({ viewport: { width: W, height: H } });
   if (!GPU) await ctx.addInitScript(() => { addEventListener('DOMContentLoaded', () => { const s = document.createElement('style'); s.textContent = '#fatal { display: none !important; }'; document.head.appendChild(s); }); });
   const page = await ctx.newPage(); watch(page);
-  // a DEPLOY is a page load of another URL. What that URL boots is tools/qa/picks-probes.ts picks-boot's to say; here the load is answered with an empty page,
+  // a DEPLOY is a page load of another URL. Here the load is answered with an empty page,
   // so the software adapter is not left compiling a mission's shaders under the next check (minutes each)
   let stub = false;
   await page.route('**/*', r => (stub && r.request().isNavigationRequest() && r.request().resourceType() === 'document' ? r.fulfill({ contentType: 'text/html', body: '<title>deployed</title>' }) : r.continue()));

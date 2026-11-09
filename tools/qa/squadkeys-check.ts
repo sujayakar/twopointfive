@@ -1,7 +1,7 @@
 // THE CONTROLS LIST SAYS THE SQUAD'S KEYS AS THE PAGE HAS THEM, AND NAMES NO PLAN MODE (src/ui/options.ts squadRows; rust/game_rules/src/cmdring `only`, `goals`).
 // The maintainer, 10-26: "let's remove plan mode and update the tutorials accordingly". On the page the squad's keys are the command key and the word's;
 // Shift with the command key sends a part of the squad to one more thing. Reads the module and the screen's source as text: no stand, no page.
-//   bun run tools/qa/squadkeys-check.ts      (also `probes.ts squadkeys`, family ui)
+//   bun run tools/qa/squadkeys-check.ts
 //   as built   with `only` off the rows are handed back untouched
 //   keys       with `only` and `goals`: the command key's row says its tap and its hold, a row of the sprint key with that key follows it (both caps are
 //              rows' own, so they follow a rebinding), and the word's row says what the word does
@@ -11,7 +11,7 @@
 //   words      nothing the rows say with `goals` on names plan mode; in the screen's source the "Plan mode circles" row and the who row's
 //              plan mode words are behind `goals` being off, or are not there at all (plan mode out of the game)
 // SQUADKEYS_BREAK=1 asks for the rows with `goals` off where the page has it on: 'keys' must FAIL.
-// The page's half (Options ▸ Controls as drawn, the older card's key list): tools/qa/squadkeys-page.cjs.
+// The page's half (Options ▸ Controls as drawn, the older card's key list) is not here.
 const ROOT = new URL('../..', import.meta.url).pathname.replace(/\/$/, '');
 import { readFileSync } from 'node:fs';
 

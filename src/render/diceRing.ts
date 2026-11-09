@@ -14,7 +14,7 @@
 // HOW. The cache bakes whole into its dice (its own running mean off: rc.setDiceBlend(1)); step() copies that bake into its slot of a texture that holds
 // one bake a point and writes the mean of the slots held back into the dice. Everything downstream binds the dice as before.
 // PICTURE AND METER: the light meter and the smoke read the dice, so on the look page the row changes what they read (steadier, a few frames later).
-// It takes no die and no wall clock and imports nothing from src/game. NEVER SEEN ON A GPU.
+// It takes no die and no wall clock and imports no game code. NEVER SEEN ON A GPU.
 import { makeBuffer, makeShader, computePipelineAsync } from '../gpu/device';
 import ringSrc from './shaders/dice_ring.wgsl' with { type: 'text' };
 

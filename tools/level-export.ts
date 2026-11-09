@@ -30,8 +30,8 @@ const level = buildOfficeProcedural(trace, TEXEL !== undefined ? { texel: TEXEL,
 if (trace.groups.length !== level.boxes.length) throw new Error(`trace: ${trace.groups.length} groups for ${level.boxes.length} boxes`);
 if (TEXEL !== undefined) level.markTexel = TEXEL;   // (the Level's own: levelToData writes it into the file's meta, the loader hands it back. How kept the office is goes the same way: `level.kept`, set by the builder)
 
-// 2. annotations the runtime Level has no slot for: the palette as materials, the footstep surface map (officeFloor.ts —
-//    cross-checked by tools/qa/level-probes.ts), one floor, the traceable world bounds
+// 2. annotations the runtime Level has no slot for: the palette as materials, the footstep surface map (officeFloor.ts),
+//    one floor, the traceable world bounds
 stampDoes(level);   // (Box.does, as tools/levels/export.ts gives it: each box the word its colour had, unless its maker said one)
 const materials: Record<string, { albedo: [number, number, number]; rough?: number; metal?: boolean; does?: string }> = {};
 { const seen = new Map<string, string>();

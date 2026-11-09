@@ -1,6 +1,6 @@
 // A PRESSED THING'S ARRISES ARE ROLLED, AND A LACQUER MIRRORS MORE THAN PAINT: the check behind lookTex.ts STUFFS' `rolled` and `mirrors`, look.wgsl
 // lookRoll / lookRollUp and the reflection pass's `coat` (docs/agents/render.md has the rule at length).
-//   bun run tools/qa/probes.ts rolled        (family `render`)
+//   bun run tools/qa/checks.ts rolled
 //   ROLLED_BREAK=1   no stuff says either word (the second writing below is handed a table with neither): must FAIL
 // The maintainer, of the cars: "we don't need to go full hyperrealistic but we should sell it more", and "how reflective is the car material, btw? it
 // does feel like it should reflect more of the environment and be quite dynamic as we move around it". Drawn on a GPU, a stronger and smoother coat

@@ -1,8 +1,8 @@
 // THE REPLAY FILE (the maintainer, 10-11: "a replay system where we can always save a replay after the fact and then a viewer where i can annotate bugs").
 // A replay is a TRACE of what happened — who stood where, facing what, doing what, on which route; the rounds, the doors, the words — sampled off the running game
-// by game/replaybuf.ts and saved after the fact (F7 on the game page). Nothing here is re-simulated to be read, so a replay opens
-// on ANY later build, whatever has happened to the level, the doors or the save format since. The viewer (replay.html → src/replay/viewer.ts) draws it as a map
-// with a scrubber and takes NOTES — a moment, a spot, words — which are kept IN the file; tools/qa/replay-at.ts reads file and notes in a thread.
+// and saved after the fact (F7 on the game page). Nothing here is re-simulated to be read, so a replay opens
+// on ANY later build, whatever has happened to the level, the doors or the save format since. NOTES — a moment, a spot, words — are kept IN the file;
+// tools/qa/replay-dump.ts reads file and notes.
 //
 // No import from the game: the viewer page and the bun tool read a file with this module alone.
 //
@@ -16,21 +16,21 @@
 interface Recipe { seed: number | null; search: string; levelFile?: string; scenario: string | null; env: unknown; knobs: unknown; stand?: 'page' | 'shipped' | 'frozen'; words?: Record<string, string>; tables?: Record<string, unknown>; kit?: { on: boolean; members: unknown[] } }
 
 export const REPLAY_VERSION = 1;
-/** how a 'mark' line that files a PAGE ERROR starts (ui/replaykey.ts files one at the play moment the error came; the viewer and replay-at.ts find them by it) */
+/** how a 'mark' line that files a PAGE ERROR starts (`errorMarks` finds them by it) */
 export const ERROR_MARK = 'the page hit an error: ';
 /** is this line a page error's */
 export const isErrorMark = (l: ReplayLine): boolean => l.k === 'mark' && typeof l.text === 'string' && l.text.startsWith(ERROR_MARK);
 /** the page errors a file holds, oldest first: the moment (seconds from the file's start) and the error's words */
 export const errorMarks = (f: { lines: ReplayLine[] }): { r: number; text: string }[] => f.lines.filter(isErrorMark).map(l => ({ r: l.r, text: l.text.slice(ERROR_MARK.length) }));
 
-/** what the player's row of the cast is called (replaybuf.ts writes it; a reader puts it on an older file's row) */
+/** what the player's row of the cast is called (a reader puts it on an older file's row) */
 export const PLAYER_NAME = 'Player';
 /** one of the cast: Sam, a man of any side, a civilian */
 export interface CastRow {
   /** 'player' | 'man' | 'civ' */
   kind: 'player' | 'man' | 'civ';
   name: string;
-  /** the side: 'player' for Sam; teams.ts's name for the rest ('guard', 'operative', 'hostile', 'civilian' …) */
+  /** the side: 'player' for Sam; rust/game_rules/src/teams's name for the rest ('guard', 'operative', 'hostile', 'civilian' …) */
   team: string;
   /** the character id rounds and sounds name their maker by */
   id: number;
@@ -101,7 +101,7 @@ export interface ReplayMap {
   doors: { name: string; hinge: [number, number]; dir: number; width: number }[];
 }
 
-/** THE RUN TAPE (game/runtape.ts): what a headless game is walked through the same run with (tools/qa/rerun.ts) — the recipe, then per step (`f`, from the game's
+/** THE RUN TAPE: what a game is walked through the same run with — the recipe, then per step (`f`, from the game's
  *  first) its dt, the player's input and camera, and what was done to the game from outside a step: the game senses for itself, so nothing else goes into it. */
 export type TapeVal = number | string | null;
 /** a step's input where it differs from the step before: keys held, keys that went down, clicked bits, buttons, the cursor, the wheel */
@@ -110,10 +110,9 @@ export interface TapeInput { k?: string[]; p?: string[]; c?: number; b?: number;
 export const TAPE_VERSION = 2;
 export interface RunTape {
   v: number; ticks: number;
-  /** the game's die, the page's query (+ its level file), the scenario up at the first step, and the journal's env / knobs snapshots (journal.ts EnvSnap / KnobsSnap);
-   *  `stand` = where the game stood (the real page, or a headless tool's shipped / frozen stand: a re-run stands the same way; `words` = the stand's env words a
-   *  tool was started with, src/host/standEnv.ts), `tables` = every registered knob table that is NOT in `knobs.tables` (knobs.ts knobRegistry — a recording's
-   *  tables are a subset of the registry), `kit` = the kit cards (kit.ts KIT: in no registry). All absent on a tape from before they were carried: such a page tape
+  /** the game's die, the page's query (+ its level file), the scenario up at the first step, and the journal's env / knobs snapshots (rust/game_rules/src/journal EnvSnap / KnobsSnap);
+   *  `stand` = where the game stood, `words` = the env words a
+   *  tool was started with, `tables` = the knob tables that are NOT in `knobs.tables`, `kit` = the kit cards (rust/game_rules/src/kit KIT). All absent on a tape from before they were carried: such a page tape
    *  is re-run on the page's switches for its query, nothing kept per machine */
   recipe: Recipe;
   /** [count, dt] runs · [f, css w, css h, px w, px h] · [f, mask, …changed of: look-at x y z, yaw, pitch, distance, aspect, fov, aim lead] · [f, input] */
@@ -125,7 +124,7 @@ export interface RunTape {
   lens: TapeVal[][];
   /** from outside a step, before step f: 'restart' ('start' = put back to the start the run was kept at, clock and die and all: the page's) · 'load' the slot of a save this run made in memory · 'flags' {…} · 'tune' {…} · 'table' [name, {…}] · 'kit' {…} · 'pose' [the player's place x y z, velocity x y z,
    *  body yaw, aim yaw, hands empty 0 | 1, low 0 | 1 — each a TapeVal: where he was put from outside a step] — and one row that is not from outside: 'posein', the
-   *  same ten values, where a restart made INSIDE step f left him (a page's own staging behind it). Both are done by game/runtape.ts tapePoses */
+   *  same ten values, where a restart made INSIDE step f left him (a page's own staging behind it). */
   x: [number, string, unknown?][];
 }
 
@@ -140,7 +139,7 @@ export interface ReplayFile {
   commit?: string;
   /** the page's query (the level file, the scenario and its seed, the visit's switches) and the browser */
   url?: string; userAgent?: string;
-  /** the level's fingerprint (savestate.ts levelFingerprint) and, where known, its file and the scenario's title */
+  /** the level's fingerprint (rust/game_rules/src/savestate) and, where known, its file and the scenario's title */
   level: { fp: string; boxes: number; file?: string; scenario?: string };
   /** the game's own die: what it was seeded with */
   seed?: number;
@@ -155,7 +154,7 @@ export interface ReplayFile {
   events: ReplayEvent[];
   lines: ReplayLine[];
   notes: ReplayNote[];
-  /** the run tape, when the run could be taped from its first step (else why not): present = `bun run tools/qa/replay-at.ts <file> --rerun` can walk a game to a note */
+  /** the run tape, when the run could be taped from its first step (else why not) */
   rerun?: RunTape | { dead: string; tick: number };
 }
 
@@ -224,15 +223,14 @@ export function replayParts(F: unknown): string[] {
   put(F, 0); return parts;
 }
 /** a replay as ONE file's bytes and the name it goes under: the notes that have words in it, plain JSON written in parts (the backend's road packs a text
- *  file itself on its way, cloud/files.ts: packing it here too would make two shapes of one kind of file). What F7 with no shelf sends (ui/replaykey.ts),
- *  the map viewer's Send (viewer.ts) and the engine replay's bar (engineplay.ts) */
+ *  file itself on its way, cloud/files.ts: packing it here too would make two shapes of one kind of file). What F7 with no shelf sends. */
 export function replayBlob(F: ReplayFile): { name: string; blob: Blob } {
   const out: ReplayFile = { ...F, notes: F.notes.filter(n => n.text.trim()) };
   return { name: replayName(out), blob: new Blob(replayParts(out), { type: 'application/json' }) };
 }
 
 // ── ONE WINDOW (the maintainer, 10-15: "replays should just play in the current window, not open a new tab"): the game page leaves a mark when it goes to a
-//    replay, and each replay page's '‹ Game' reads it. Here, not in ui/replaykey.ts, because the map viewer's page reads it too and carries none of the game.
+//    replay, and each replay page's '‹ Game' reads it.
 /** where this window was when it left for a replay (sessionStorage: this tab's own): the address, the history SLOT it was in (the Navigation API's entry key —
  *  the count of entries cannot tell where a window stands once it has gone Back) and the shelf entry or kept visit it left for. ONE TRIP'S: a game page that is up again drops it
  *  (`gameUp`), so a replay reached later by another road finds none and goes to the

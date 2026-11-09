@@ -13,7 +13,7 @@
 /** `on`: a second ask and the gathered card (the page's `?gpuask=0` puts it off). `waitMs`: how long an ask made after the first may take before it is
  *  written down as unanswered (the first ask is waited for as long as it takes, as it always was) */
 export const GPU_ASK = { on: true, waitMs: 4000, /** … and the software ask, made for the record only */ softMs: 2000 };
-try { if (new URLSearchParams(location.search).get('gpuask') === '0') GPU_ASK.on = false; } catch { /* no page (the harness) */ }
+try { if (new URLSearchParams(location.search).get('gpuask') === '0') GPU_ASK.on = false; } catch { /* no page */ }
 
 export type AskHow = 'the fast card' | 'any card' | 'software';
 const OPTS: Record<AskHow, GPURequestAdapterOptions | undefined> = { 'the fast card': { powerPreference: 'high-performance' }, 'any card': undefined, software: { forceFallbackAdapter: true } };
