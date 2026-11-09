@@ -142,11 +142,11 @@ pub fn stand_with(data: &Json, assets: Assets, o: &StartOpts, before: &mut dyn F
         words: address.as_ref().map(|q| kit.as_ref().map_or_else(|| q.clone(), crate::kit_stage::mission_words)),
         scenario: o.scenario.clone(),
     };
-    // (THE LEVEL AS IT STANDS BEFORE THE MEN: what a restart stands them on again)
-    game::savestate::control::keep_level(&mut g, &men);
     // the die BEFORE the Game is made: its constructor rolls the men's construction dice
     // (it goes home to the block with the rest of the moving state, in `settle`: until then it draws off its own word)
     g.dice = Some(game::math_dice::sim_dice_new(o.seed as f64));
+    // (THE LEVEL AS IT STANDS BEFORE THE MEN: what a restart stands them on again)
+    game::savestate::control::keep_level(&mut g, &men);
     let why = game::standing::stand_men(&mut g, &men);
     // (a picture of a mission that refused is a picture of nothing, never a stop)
     if let (Some(why), None, false) = (why.as_ref(), kit.as_ref(), o.may_refuse) {

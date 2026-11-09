@@ -557,10 +557,10 @@ let (intensity, emissive) = (home::fixture_base_intensity(g, t), g.tab.sim_light
     if !st.still { acts::live(g, st); }
 }
 
-/// WHAT EVERY STAGING STARTS FROM: the mission as its start left it, and the stage as it then is. A staged game is never mended and never grows: it is thrown away whole.
+/// WHAT EVERY STAGING STARTS FROM: the mission from its stand, and the stage as it is before its first staging. A staged game is never mended and never grows: it is thrown away whole.
 pub fn keep_base(g: &mut Game) { crate::savestate::control::keep_first(g); }
 
-/// THE MISSION FROM ITS START and the team staged again, as the cards, the size and the open card now stand.
+/// THE MISSION FROM ITS STAND, with new men, and the team staged again, as the cards, the size and the open card now stand.
 pub fn restage(g: &mut Game) {
     let Some(mut was) = take(g) else { return };
     // (the file's order, as team indexes: every row id the stage holds is dead after this)
@@ -568,14 +568,12 @@ pub fn restage(g: &mut Game) {
     let keep: Vec<usize> = was.order.iter().filter_map(|x| team.iter().position(|t| t == x)).collect();
     // (the tables go on as they are, so what a row wrote for its length is put back first)
     acts::tables_back(g, &mut was);
-    if !crate::savestate::control::again(g) { was.due = false; g.kit_stage = Some(was); return; }
+    if !crate::savestate::control::again(g, was.size) { was.due = false; g.kit_stage = Some(was); return; }
     let Some(mut st) = take(g) else { return };
     (st.want, st.field, st.size, st.frame, st.aspect) = (was.want, was.field.clone(), was.size, was.frame, was.aspect);
     (st.roused_men, st.roused_alarms) = (was.roused_men, was.roused_alarms);
     (st.veil, st.still, st.shown, st.keep) = (was.veil, was.still, was.shown, Some(keep));
     acts::carry(&was.a, &mut st.a);
-    // (new men, who take the cards and the size as they now stand)
-    crate::game::game_restart_encounter(g);
     place(g, &mut st);
     // (another picture than the last: nothing of it is blended into this one)
     g.restart_cut = true;

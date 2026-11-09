@@ -37,11 +37,6 @@ pub fn exit_point(x: &crate::scene_scenarios::QuietExit, past: Option<f64>) -> V
     [x.x + x.out[0] * past, 0.0, x.z + x.out[1] * past]
 }
 
-/// a new mission, inert. The constructor's `current()` only ever handed back another Game's switches: the switches are this Game's here   (quiet.ts QuietMission)
-pub fn quiet_mission_new(g: &crate::game::Game) -> crate::quiet::QuietMission {
-    crate::quiet::QuietMission::blank()
-}
-
 /// the start dealt   (quiet.ts QuietMission.start_)
 fn quiet_mission_start_(g: &crate::game::Game) -> Option<crate::scene_scenarios::QuietStart> {
     if !g.quiet.active { return None; }
@@ -78,14 +73,20 @@ fn quiet_mission_patrol(g: &crate::game::Game) -> Vec<String> {
     g.level.routes.iter().map(|&r| g.tab.route[r].name.clone()).collect()
 }
 
-/// why it cannot start right now   (quiet.ts QuietMission.canStart)
-fn quiet_mission_can_start(g: &crate::game::Game, squad: Option<f64>) -> Option<String> {
-    let squad = squad.unwrap_or(0.0);
+/// why this level can carry none
+fn quiet_mission_level_refuses(g: &crate::game::Game) -> Option<String> {
     let q = match g.level.scenarios.as_ref().and_then(|s| s.quiet.as_ref()) {
         Some(q) => q,
         None => return Some(String::from("this level carries no quiet mission (its scenarios.quiet block)")),
     };
     if q.starts.is_empty() || q.spots.is_empty() || q.exits.is_empty() { return Some(String::from("its quiet mission wants at least one start, one spot and one exit")); }
+    None
+}
+
+/// why it cannot start right now   (quiet.ts QuietMission.canStart)
+fn quiet_mission_can_start(g: &crate::game::Game, squad: Option<f64>) -> Option<String> {
+    let squad = squad.unwrap_or(0.0);
+    if let Some(why) = quiet_mission_level_refuses(g) { return Some(why); }
     if !g.ai_enabled { return Some(String::from("the AI is switched off (sandbox: no AI) — nobody would walk his route")); }
     if js::truthy(squad) && !g.tune.teams { return Some(String::from("sides are switched off (tune.teams): no partner")); }
     if let Some(r) = g.director.run {
@@ -108,7 +109,6 @@ pub(super) fn quiet_mission_start(g: &mut crate::game::Game, pin: Option<f64>, s
     g.quiet.failure = None;
     g.quiet.staged = 0.0;
     g.quiet.log.clear();
-    g.quiet.authored = Some(crate::quiet::QuietMissionAuthored { spawn: g.level.player_spawn, mission: g.level.mission.clone() });
     quiet_mission_current(g);
     if js::truthy(squad) {
         g.quiet.was = Some(held_now(g));
@@ -123,11 +123,13 @@ pub(super) fn quiet_mission_start(g: &mut crate::game::Game, pin: Option<f64>, s
     }
     g.quiet.active = true;
     g.stats.quiet.starts += 1;
-    crate::game::game_restart_encounter(g);   // → beforeRestart deals and writes the level; onEncounterRestart stages
+    quiet_mission_rack(g);
+    quiet_mission_off_shift(g);
+    quiet_mission_stage(g);
     if g.quiet.active { None } else { Some(g.quiet.failure.clone().unwrap_or_else(|| String::from("the staging failed"))) }
 }
 
-/// Stop it: the partner gone, every route manned, the authored mission and spawn back, a fresh night encounter   (quiet.ts QuietMission.stop)
+/// Stop it: the partner gone, every route manned, the authored mission and spawn back   (quiet.ts QuietMission.stop)
 fn quiet_mission_stop(g: &mut crate::game::Game) {
     if !g.quiet.active { return; }
     g.quiet.active = false;
@@ -136,7 +138,6 @@ fn quiet_mission_stop(g: &mut crate::game::Game) {
     g.quiet.ops = Vec::new();
     g.quiet.data = None;
     g.quiet.pending = None;
-    crate::game::game_restart_encounter(g);
 }
 
 /// the level as authored   (quiet.ts QuietMission.putBack)
@@ -189,14 +190,14 @@ pub fn quiet_mission_current(g: &mut crate::game::Game) {
     }
 }
 
-/// restartEncounter's FIRST act: the deal, written into the level before the fresh Player and Guards read it   (quiet.ts QuietMission.beforeRestart)
-pub fn quiet_mission_before_restart(g: &mut crate::game::Game) {
-    if !g.quiet.active { return; }
-    let q = match g.quiet.data.clone() { Some(q) => q, None => return };
-    quiet_mission_unbench(g);
-    g.quiet.deal = match g.quiet.pending { Some(d) => d, None => quiet_mission_deal_one(g, &q) };
-    g.quiet.pending = None;
+/// THE DEAL, BEFORE THE MEN ARE MADE: where they stand and what they make for are written into the level they read. Where the level or the seats refuse the mission nothing is written, and the men stand on the level as authored   (quiet.ts QuietMission.beforeRestart)
+pub fn quiet_mission_deal(g: &mut crate::game::Game, pin: Option<f64>, seats: f64) {
+    if seats > 1.0 && !crate::seats::seats_kind("quiet") || quiet_mission_level_refuses(g).is_some() { return; }
+    let q = match g.level.scenarios.as_ref().and_then(|s| s.quiet.clone()) { Some(q) => q, None => return };
+    g.quiet.pin = pin;
+    g.quiet.deal = match g.quiet.pending.take() { Some(d) => d, None => quiet_mission_deal_one(g, &q) };
     g.stats.quiet.deals += 1;
+    g.quiet.authored = Some(crate::quiet::QuietMissionAuthored { spawn: g.level.player_spawn, mission: g.level.mission.clone() });
     let s = &q.starts[g.quiet.deal.start as usize];
     let p = &q.spots[g.quiet.deal.spot as usize];
     let x = &q.exits[0];
@@ -210,8 +211,10 @@ pub fn quiet_mission_before_restart(g: &mut crate::game::Game) {
         exfil_z: x.z,
         exfil_out: Some([x.out[0], x.out[1]]),
     };
-    quiet_mission_rack(g);
-    // the routes this run does not man: off the guard list, their torches out of the light set
+}
+
+/// the routes this run does not man: off the guard list, their torches out of the light set
+fn quiet_mission_off_shift(g: &mut crate::game::Game) {
     let manned = quiet_mission_patrol(g);
     let off: Vec<GuardId> = g.guards.iter().copied().filter(|&x| g.gd[x].unit.is_none() && !manned.contains(&g.tab.route[g.gd[x].route].name)).collect();
     for &gd in &off {
@@ -223,9 +226,8 @@ pub fn quiet_mission_before_restart(g: &mut crate::game::Game) {
     g.quiet.benched = off;
 }
 
-/// restartEncounter's last act: Sam faced as the start has him, the partner staged. A staging that fails ends the mission cleanly   (quiet.ts QuietMission.onEncounterRestart)
-pub fn quiet_mission_on_encounter_restart(g: &mut crate::game::Game) {
-    if !g.quiet.active { return; }
+/// Sam faced as the start has him, the partner staged. A staging that fails ends the mission cleanly   (quiet.ts QuietMission.onEncounterRestart)
+fn quiet_mission_stage(g: &mut crate::game::Game) {
     if let Err(e) = stage_or_why(g) {
         let failure = format!("the staging failed: {}", e);
         g.quiet.failure = Some(failure.clone());

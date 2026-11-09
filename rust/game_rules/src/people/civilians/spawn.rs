@@ -76,6 +76,14 @@ pub fn spawn_civilians(g: &mut crate::game::Game) {
     }
 }
 
+/// A mission that takes the floor: the level's own civilians leave it, and a mission that stops stands them again (`spawn_civilians`)
+pub fn civilians_leave(g: &mut crate::game::Game) {
+    for cv in core::mem::take(&mut g.civilians) {
+        let c = g.gd[cv].ch;
+        crate::sim_men_store::man_leaves(g, c);
+    }
+}
+
 /// Whoever a seat has hold of or is hauling let go of, then fresh civilians.   (civilians.ts resetCivilians)
 pub fn reset_civilians(g: &mut crate::game::Game) {
     for s in g.seats.clone() {
