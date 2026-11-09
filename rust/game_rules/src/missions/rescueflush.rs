@@ -84,7 +84,7 @@ pub(super) fn rescue_flush_victims(g: &mut crate::game::Game, by: GuardId, of: &
 
 /// May he be sent now? (the closure `free` of ts:136)
 fn free(g: &mut Game, h: GuardId, b: Option<crate::scene_level::BreachPlanBounds>, in_room: bool) -> bool {
-    if crate::owner::kept(g, h, crate::owner::by::MISSION).is_some() || crate::owner::has(g, h, crate::owner::by::WALK) { return false; }
+    if crate::owner::kept(g, h, crate::owner::by::MISSION).is_some() { return false; }
     if crate::squad::in_bounds(g.ch[g.gd[h].ch].pos, b, None) && in_room { return false; }
     if g.time - g.gd[h].last_seen_t < g.k.rescueflush.busy_secs || g.gd[h].saw_foe_this_frame { return false; }
     let f = crate::roomfight::def_of(g, h);
@@ -117,9 +117,7 @@ pub(super) fn rescue_flush_tick(g: &mut crate::game::Game) {
     let alive = rescue_flush_alive(g);
     if alive.is_empty() || crate::rescue::rescue_noise_at(g).is_none() { return; }
     if g.rescue.flush.fell_at.is_nan() {
-        for c in crate::rescue::rescue_cast(g) {
-            if c.in_room && !crate::condition::down(g, g.gd[c.gd].ch) && g.gd[c.gd].held.is_none() && !g.gd[c.gd].fled { return; }
-        }
+        if g.rescue.defs.iter().any(|(h, d)| d.in_room && !crate::condition::down(g, g.gd[h].ch) && g.gd[h].held.is_none() && !g.gd[h].fled) { return; }
         g.rescue.flush.fell_at = g.time;
         g.rescue.flush.next_at = g.time + g.k.rescueflush.after_secs;
         crate::rescue::rescue_note(g, "flush:fell");

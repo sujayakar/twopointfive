@@ -88,7 +88,7 @@ fn alarmed(g: &crate::game::Game, gd: GuardId) -> bool {
 /// nobody's but his own.
 fn own(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let x = &g.gd[gd];
-    x.script.is_none() && !x.hold && !x.pinned && x.standoff.is_none() && x.task.is_none() && x.body_duty.is_none() && !g.staged.leads(gd) && !crate::owner::has(g, gd, crate::owner::by::MORALE) && !crate::owner::has(g, gd, crate::owner::by::LAST_MAN)
+    x.script.is_none() && !x.hold && !x.pinned && x.standoff.is_none() && x.task.is_none() && x.body_duty.is_none() && !crate::mission::leads(g, gd) && !crate::owner::has(g, gd, crate::owner::by::MORALE) && !crate::owner::has(g, gd, crate::owner::by::LAST_MAN)
 }
 
 /// may the rule have him at all this frame.
