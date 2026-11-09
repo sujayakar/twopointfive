@@ -21,7 +21,7 @@ export const PAGES: readonly PageRow[] = [
   ['startpage-look.cjs', 'menus', "every mission on the start page goes through its loadout to Deploy", 0.9],
   ['cards-page.ts', 'menus', "the start page walked: every mission, row and card written down as the page shows them", 2.3],
   ['kitdense-page.cjs', 'menus', "the dense kit card: tiles, pop-ups, fits at four window sizes", 0.5],
-  ['kitguide-page.cjs', 'menus', "the kit step's brief and the tutorial's walkthrough", 0.8],
+  ['kitbrief-page.cjs', 'menus', "the kit step's brief", 0.8],
   ['kitpaste-page.cjs', 'menus', "copy and paste for loadouts", 0.2],
   ['keybinds-page.cjs', 'menus', "the player's own keys on Options > Controls", 0.2],
   ['textsize-page.cjs', 'menus', "the game's own text size, the screens at each size", 1.5],
