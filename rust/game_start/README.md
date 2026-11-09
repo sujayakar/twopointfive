@@ -136,8 +136,7 @@ dropped and `cargo test`'s threads take turns. A test that stands a second game 
 2. The block of `rust/sim` the game stands in, zeroed under the layout's word (`stand.rs`).
 3. The character: skeleton, skin, clips, the cast's meshes and variants, from the glTF files' bytes (`gltf.rs`). The page reads the same files for its
    own drawing with `src/anim/gltf.ts`.
-4. The host: an empty box world and light set, the picture's settings (the game's `box_world_new`; `settings.rs`, a copy of the values of
-   `defaultSettings` in `src/settings.ts`, kept by hand: no check holds the two equal).
+4. The host: an empty box world and light set (the game's `box_world_new`).
 5. The level file read into the `Level`, its boxes and routes as rows (`level.rs`). The records the game keeps as its own types (a mission's `scenarios`,
    the footsteps' map, devices, civilians, vents, the drill plans) and the file's own records the game crate has a type for (a box with its shape and
    markings, a light, a door) go through `read.rs` and `records.rs`, a line a type.

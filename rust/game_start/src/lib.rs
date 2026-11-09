@@ -12,7 +12,6 @@ pub mod gltf;
 pub mod file;
 pub mod level;
 pub mod passes;
-pub mod settings;
 pub mod stand;
 pub mod handed;
 #[cfg(feature = "std")]

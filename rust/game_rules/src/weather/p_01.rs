@@ -610,18 +610,10 @@ pub fn weather_set_wet_2(g: &mut crate::game::Game, on: bool) {
         }
         if let Some(b) = asphalt { soak(g, b); }
         g.weather.lot = asphalt;
-        if g.weather.wet_gloss && g.weather.gloss_was.is_none() {
-            g.weather.gloss_was = Some(g.engine.settings.gloss);
-            g.engine.settings.gloss = true;
-        }
     } else {
         let touched = core::mem::take(&mut g.weather.touched);
         for t in &touched { paint(g, t.box_, t.albedo, t.flags, t.rough, t.aniso); }
         g.weather.lot = None;
-        if let Some(was) = g.weather.gloss_was {
-            if g.engine.settings.gloss { g.engine.settings.gloss = was; }   // (only if it is still what we set: a gloss switched off by hand stays off)
-            g.weather.gloss_was = None;
-        }
     }
     // the rest of the wet ground is the picture's and follows in this very call
     crate::wet_ground::wet_ground_follow(g);
