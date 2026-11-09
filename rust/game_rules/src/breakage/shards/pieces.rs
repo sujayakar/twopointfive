@@ -1,4 +1,4 @@
-//! GlassShards: broken glass after it lets go (shards.ts 154-670).
+//! GlassShards: broken glass after it lets go.
 
 use super::*;
 use crate::game::Game;
@@ -8,12 +8,12 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// The one gate: the switch on AND glass breaking live.   (shards.ts shardsLive)
+/// The one gate: the switch on AND glass breaking live.
 pub(in crate::breakage) fn shards_live(g: &crate::game::Game) -> bool {
     g.tune.glass_shards && crate::glassbreak::glass_break_live(g)
 }
 
-/// `x >>> 0`, as the number it is in the TypeScript.   (shards.ts u32)
+/// `x >>> 0`, as the number it is in the TypeScript.
 pub(super) fn u32(x: f64) -> f64 {
     js::to_u32(x) as f64
 }
@@ -70,15 +70,15 @@ fn to_sched(f: GlassShardsFallOf) -> GlassShardsScheduleFall { GlassShardsSchedu
 fn to_landing(f: GlassShardsFallOf) -> GlassShardsLandingFall { GlassShardsLandingFall { t: f.t, pos: f.pos } }
 
 // ---- what the skeleton still cannot do
-/// `b.x` of a Box: the row of a box. Skeleton 5 has `g.col.boxes` as a `Vec<BoxId>` and no table of rows.
+/// `b.x` of a Box: the row of a box.
 fn seam_box<'g>(g: &'g mut Game, b: impl Into<AnyBoxId>) -> &'g mut crate::scene_boxes::Box { &mut g.tab[b.into()] }
 
-/// The shards' books.   (shards.ts GlassShards.constructor)
+/// The shards' books.
 pub fn glass_shards_new(_g: &crate::game::Game) -> crate::shards::GlassShards {
     crate::shards::GlassShards::blank()
 }
 
-/// One fragment lets go: its plates, its spray, its landing. False = the model is not live.   (shards.ts GlassShards.release)
+/// One fragment lets go: its plates, its spray, its landing. False = the model is not live.
 pub(in crate::breakage) fn glass_shards_release(g: &mut crate::game::Game, f: &crate::shards::GlassFragmentLike) -> bool {
     use crate::glasspen::PaneType;
     use crate::shards::{GlassFragmentLikeCause as Cause, GlassFragmentLikeKind as Kind};
@@ -148,7 +148,7 @@ pub(in crate::breakage) fn glass_shards_release(g: &mut crate::game::Game, f: &c
     true
 }
 
-/// A blow that knocked nothing out still spits fines off both faces. Particles only.   (shards.ts GlassShards.spall)
+/// A blow that knocked nothing out still spits fines off both faces. Particles only.
 pub(in crate::breakage) fn glass_shards_spall(g: &mut crate::game::Game, at: V3, n: V3, dir: Option<V3>, thickness: f64, tint: V3, seed: f64, far: Option<bool>) {
     let far = far.unwrap_or(true);
     if !shards_live(g) || g.k.shards.spall_out + g.k.shards.spall_back <= 0.0 { return; }
@@ -163,7 +163,7 @@ pub(in crate::breakage) fn glass_shards_spall(g: &mut crate::game::Game, at: V3,
     glass_shards_emit(g, v3::mad(at, n, thickness * 0.5 + 0.01), n, nb, spray(1.6 * sp, 0.8, 1.0, fine_life * 0.8, 0.4, fine_size * 0.9, 0.6, 1.3, 45.0, 1.0, 0.012, None, tint), xor_u32(seed, 0xBACC as f64));
 }
 
-/// The fragment's rigid part: 1‥4 thin boxes over its outline; returns how many.   (shards.ts GlassShards.plates)
+/// The fragment's rigid part: 1‥4 thin boxes over its outline; returns how many.
 fn glass_shards_plates(g: &mut crate::game::Game, f: &crate::shards::GlassFragmentLike, n: V3) -> f64 {
     use crate::shards::GlassFragmentLikeKind as Kind;
     let fr = frame_of(&f.outline, f.centre, n);
@@ -197,7 +197,7 @@ fn glass_shards_plates(g: &mut crate::game::Game, f: &crate::shards::GlassFragme
     made
 }
 
-/// The fragment's own cell as ONE box cut along its edges (two halves if a record cannot hold it); returns how many.   (shards.ts GlassShards.cutPlates)
+/// The fragment's own cell as ONE box cut along its edges (two halves if a record cannot hold it); returns how many.
 fn glass_shards_cut_plates(g: &mut crate::game::Game, f: &crate::shards::GlassFragmentLike, n: V3, fr: crate::shards::GlassShardsCutPlatesFr) -> f64 {
     let flat: Vec<[f64; 2]> = f.outline.iter().map(|p| { let d = v3::sub(*p, fr.mid); [v3::dot(d, fr.u), v3::dot(d, fr.v)] }).collect();
     let poly = tidy_poly(&flat);
@@ -228,7 +228,7 @@ fn glass_shards_cut_plates(g: &mut crate::game::Game, f: &crate::shards::GlassFr
     made
 }
 
-/// One plate into the debris pool, inside glass's share: over it the oldest resting plate crumbles; none resting = refused.   (shards.ts GlassShards.plate)
+/// One plate into the debris pool, inside glass's share: over it the oldest resting plate crumbles; none resting = refused.
 fn glass_shards_plate(g: &mut crate::game::Game, box_: BoxId, v: V3, w: V3, who: f64, meta: &crate::shards::PlateMeta, cut: Option<&crate::shards::GlassShardsPlateCut>) -> Option<DebrisChunkId> {
     let pool_cap = crate::debris::DEBRIS_CAP;
     let cap = m::max(2.0, m::floor(pool_cap * g.k.shards.plate_share));
@@ -279,13 +279,13 @@ fn glass_shards_plate(g: &mut crate::game::Game, box_: BoxId, v: V3, w: V3, who:
     Some(ch)
 }
 
-/// A resting plate retired to make room: gone from the pool, a few particles where it was.   (shards.ts GlassShards.crumble)
+/// A resting plate retired to make room: gone from the pool, a few particles where it was.
 fn glass_shards_crumble(g: &mut crate::game::Game, c_2: DebrisChunkId) {
     if let Some(i) = g.destr.debris.list.iter().position(|c| *c == c_2) { g.destr.debris.list.remove(i); }
     glass_shards_crumbs(g, c_2);
 }
 
-/// A few grains of a plate's own glass where it lay.   (shards.ts GlassShards.crumbs)
+/// A few grains of a plate's own glass where it lay.
 fn glass_shards_crumbs(g: &mut crate::game::Game, c_2: DebrisChunkId) {
     g.stats.shards.crumbled += 1;
     let meta = g.tab.debris_chunk[c_2].glass.clone().unwrap();
@@ -296,10 +296,10 @@ fn glass_shards_crumbs(g: &mut crate::game::Game, c_2: DebrisChunkId) {
     glass_shards_emit(g, v3::add(at, [0.0, 0.01, 0.0]), [0.0, 1.0, 0.0], n, spray(0.25, 0.8, 1.3, mid_life * 0.7, 0.3, mid_size, 0.5, 1.6, 6.0, 0.2, m::sqrt(meta.area) * 0.4, None, meta.tint), xor_u32(meta.seed, 0xC2B2 as f64));
 }
 
-/// The same as gone, for a caller outside the pool's own hook.   (shards.ts GlassShards.evicted)
+/// The same as gone, for a caller outside the pool's own hook.
 pub(in crate::breakage) fn glass_shards_evicted(g: &mut crate::game::Game, c_2: DebrisChunkId) { glass_shards_gone(g, c_2); }
 
-/// A glass plate left the pool by the pool's own hand: it goes as a few grains.   (shards.ts GlassShards.gone)
+/// A glass plate left the pool by the pool's own hand: it goes as a few grains.
 pub(in crate::breakage) fn glass_shards_gone(g: &mut crate::game::Game, c_2: DebrisChunkId) {
     if !shards_live(g) || g.tab.debris_chunk[c_2].glass.is_none() { return; }
     let bx = g.tab.debris_chunk[c_2].box_;
@@ -307,7 +307,7 @@ pub(in crate::breakage) fn glass_shards_gone(g: &mut crate::game::Game, c_2: Deb
     glass_shards_crumbs(g, c_2);
 }
 
-/// A plate's first hard touch: its sound and hearing now, whether it breaks decided here and done in update. Always true.   (shards.ts GlassShards.landed)
+/// A plate's first hard touch: its sound and hearing now, whether it breaks decided here and done in update. Always true.
 pub(in crate::breakage) fn glass_shards_landed(g: &mut crate::game::Game, c_2: DebrisChunkId, speed: f64) -> bool {
     let meta = g.tab.debris_chunk[c_2].glass.clone().unwrap();
     let (serial, who, bx) = { let c = &g.tab.debris_chunk[c_2]; (c.serial, c.who, c.box_) };
@@ -324,7 +324,7 @@ pub(in crate::breakage) fn glass_shards_landed(g: &mut crate::game::Game, c_2: D
     true
 }
 
-/// A plate came to rest: it takes the colour of what it lies on, and its glass is litter there.   (shards.ts GlassShards.rested)
+/// A plate came to rest: it takes the colour of what it lies on, and its glass is litter there.
 pub(in crate::breakage) fn glass_shards_rested(g: &mut crate::game::Game, c_2: DebrisChunkId) {
     let meta = g.tab.debris_chunk[c_2].glass.clone().unwrap();
     let bx = g.tab.debris_chunk[c_2].box_;
@@ -347,7 +347,7 @@ pub(in crate::breakage) fn glass_shards_rested(g: &mut crate::game::Game, c_2: D
     }
 }
 
-/// The edges a plate broke along shed their crumbs where it stops, two grains to a point round its outline. Once per plate.   (shards.ts GlassShards.shed)
+/// The edges a plate broke along shed their crumbs where it stops, two grains to a point round its outline. Once per plate.
 fn glass_shards_shed(g: &mut crate::game::Game, c_2: DebrisChunkId) {
     let meta = g.tab.debris_chunk[c_2].glass.clone().unwrap();
     let bx = g.tab.debris_chunk[c_2].box_;
@@ -375,7 +375,7 @@ fn glass_shards_shed(g: &mut crate::game::Game, c_2: DebrisChunkId) {
     }
 }
 
-/// shed() for a cut plate: round its real outline.   (shards.ts GlassShards.shedCut)
+/// shed() for a cut plate: round its real outline.
 fn glass_shards_shed_cut(g: &mut crate::game::Game, c_2: DebrisChunkId, n: f64) {
     let meta = g.tab.debris_chunk[c_2].glass.clone().unwrap();
     let bx = g.tab.debris_chunk[c_2].box_;
@@ -408,7 +408,7 @@ fn glass_shards_shed_cut(g: &mut crate::game::Game, c_2: DebrisChunkId, n: f64) 
     }
 }
 
-/// A plate that landed hard comes apart: 2‥3 smaller plates along its long side, a burst where it struck.   (shards.ts GlassShards.shatter)
+/// A plate that landed hard comes apart: 2‥3 smaller plates along its long side, a burst where it struck.
 fn glass_shards_shatter(g: &mut crate::game::Game, c_2: DebrisChunkId, speed: f64) {
     let i = match g.destr.debris.list.iter().position(|c| *c == c_2) { Some(i) => i, None => return };
     let meta = g.tab.debris_chunk[c_2].glass.clone().unwrap();
@@ -492,14 +492,14 @@ fn glass_shards_shatter(g: &mut crate::game::Game, c_2: DebrisChunkId, speed: f6
     glass_shards_note(g, &alloc::format!("plate {} (gen {}, {} cm²) broke at {} m/s into {} (+{} particles)", js::num_str(serial), js::num_str(meta.gen_), js::to_fixed(meta.area * 1e4, 0), js::to_fixed(speed, 1), js::num_str(k), js::num_str(nm + nf)));
 }
 
-/// `g.level.boxes[bi]?.albedo ?? the pale default`. That list and `g.col.boxes` are one array in the TypeScript (game.ts:1219); off the list (a negative, fractional or NaN index) is undefined
+/// `g.level.boxes[bi]?.albedo ?? the pale default`. That list and `g.col.boxes` are one array in the TypeScript; off the list (a negative, fractional or NaN index) is undefined
 fn level_box_albedo(g: &mut Game, bi: f64) -> V3 {
     let ix = bi as usize;
     let row = if ix as f64 == bi { g.col.boxes.get(ix).copied() } else { None };
     match row { Some(b) => seam_box(g, b).albedo, None => [0.72, 0.8, 0.82] }
 }
 
-/// A round went through a sheet: the exit spall, and a little litter where the jet comes down.   (shards.ts GlassShards.crossed)
+/// A round went through a sheet: the exit spall, and a little litter where the jet comes down.
 pub fn glass_shards_crossed(g: &mut crate::game::Game, x: crate::shards::PaneCrossLike, who: f64) -> bool {
     if !shards_live(g) { return false; }
     g.stats.shards.crossings += 1;
@@ -534,7 +534,7 @@ pub fn glass_shards_crossed(g: &mut crate::game::Game, x: crate::shards::PaneCro
     true
 }
 
-/// `want` births inside the live budget.   (shards.ts GlassShards.budget)
+/// `want` births inside the live budget.
 fn glass_shards_budget(g: &mut crate::game::Game, want: f64) -> f64 {
     if want <= 0.0 { return 0.0; }
     let cap = g.k.shards.live_cap;
@@ -547,7 +547,7 @@ fn glass_shards_budget(g: &mut crate::game::Game, want: f64) -> f64 {
     n
 }
 
-/// One emit record: out now, or waiting its turn, or trimmed.   (shards.ts GlassShards.emit)
+/// One emit record: out now, or waiting its turn, or trimmed.
 fn glass_shards_emit(g: &mut crate::game::Game, pos: V3, dir: V3, count: f64, o: crate::shards::SprayOpts, seed: f64) {
     if count <= 0.0 { return; }
     if g.shards.recs_this_frame < g.k.shards.recs_per_frame { glass_shards_send(g, pos, dir, count, o, seed); return; }
@@ -557,7 +557,7 @@ fn glass_shards_emit(g: &mut crate::game::Game, pos: V3, dir: V3, count: f64, o:
     g.shards.deferred.push(GlassShardsDeferredItem { pos: v3::copy(pos), dir: v3::copy(dir), count, o, seed });
 }
 
-/// One record out: the books first, the same with or without a GPU.   (shards.ts GlassShards.send)
+/// One record out: the books first, the same with or without a GPU.
 fn glass_shards_send(g: &mut crate::game::Game, pos: V3, dir: V3, count: f64, o: crate::shards::SprayOpts, seed: f64) {
     let mut o = o;
     g.shards.recs_this_frame += 1.0;
@@ -579,14 +579,14 @@ fn glass_shards_send(g: &mut crate::game::Game, pos: V3, dir: V3, count: f64, o:
     });
 }
 
-/// Where and when a fragment let go at `c` with velocity `v` reaches what is under it.   (shards.ts GlassShards.fallOf)
+/// Where and when a fragment let go at `c` with velocity `v` reaches what is under it.
 fn glass_shards_fall_of(g: &mut crate::game::Game, c_2: V3, v: V3) -> crate::shards::GlassShardsFallOf {
     let gravity = crate::shard_model::shard().gravity;
     let r = crate::falling::fall_of(g, c_2, v, gravity, 0.8, crate::falling::FallWorld::Statics);
     GlassShardsFallOf { t: r.t, pos: r.pos }
 }
 
-/// A landing filed in the game's fall store.   (shards.ts GlassShards.schedule)
+/// A landing filed in the game's fall store.
 fn glass_shards_schedule(g: &mut crate::game::Game, fall: crate::shards::GlassShardsScheduleFall, name: crate::sim_fallshome::FallSound, gain: f64, rate: f64, amount: f64, who: f64, event: Option<bool>) {
     let event = event.unwrap_or(true);
     let t = g.time + fall.t;
@@ -595,14 +595,14 @@ fn glass_shards_schedule(g: &mut crate::game::Game, fall: crate::shards::GlassSh
     crate::sim_fallshome::fall_store_schedule(g, t, fall.pos[0], fall.pos[1], fall.pos[2], name, gain, rate, amount, who, word, 0.0, cap, None, None);
 }
 
-/// By the fall: a fragment's one landing, the floor told whatever the ear gets.   (shards.ts GlassShards.landing)
+/// By the fall: a fragment's one landing, the floor told whatever the ear gets.
 fn glass_shards_landing(g: &mut crate::game::Game, fall: crate::shards::GlassShardsLandingFall, gain: f64, rate: f64, amount: f64, who: f64) {
     let t = g.time + fall.t;
     let cap = g.k.shards.pending_max;
     crate::sim_fallshome::fall_store_schedule(g, t, fall.pos[0], fall.pos[1], fall.pos[2], crate::sim_fallshome::FallSound::GlassTinkle, gain, rate, amount, who, crate::sim_fallshome::FALL_HEARD, 0.0, cap, None, None);
 }
 
-/// A voice, inside the frame's cap and the voice's gap; a merged landing thickens the next.   (shards.ts GlassShards.sound)
+/// A voice, inside the frame's cap and the voice's gap; a merged landing thickens the next.
 fn glass_shards_sound(g: &mut crate::game::Game, name: &str, pos: V3, gain: f64, rate: f64) {
     if gain <= 0.0 { return; }
     let key = String::from(name);
@@ -625,7 +625,7 @@ fn glass_shards_sound(g: &mut crate::game::Game, name: &str, pos: V3, gain: f64,
     crate::audio_iface::game_audio_like_play(g, name, Some(v3::copy(pos)), Some(gain + owed), Some(&crate::audio_iface::PlayOpts::Rate { rate }));
 }
 
-/// A footfall on litter crunches, is louder, and grinds the glass down. Elsewhere `level` back untouched.   (shards.ts GlassShards.step)
+/// A footfall on litter crunches, is louder, and grinds the glass down. Elsewhere `level` back untouched.
 pub fn glass_shards_step(g: &mut crate::game::Game, pos: V3, level: f64) -> f64 {
     if !crate::sim_fallshome::fall_store_any(g) || !shards_live(g) { return level; }
     let (full, grind, gain, add) = (g.k.shards.crunch_full, g.k.shards.grind, g.k.shards.crunch_gain, g.k.shards.crunch_add);
@@ -639,7 +639,7 @@ pub fn glass_shards_step(g: &mut crate::game::Game, pos: V3, level: f64) -> f64 
     r.level
 }
 
-/// Per frame: waiting records, the live estimate, breaks, landings due.   (shards.ts GlassShards.update)
+/// Per frame: waiting records, the live estimate, breaks, landings due.
 pub fn glass_shards_update(g: &mut crate::game::Game, _dt: f64) {
     if !shards_live(g) {
         if js::truthy(crate::sim_fallshome::fall_store_waiting(g)) { crate::sim_fallshome::fall_store_clear(g, Some(true), None); }
@@ -681,7 +681,7 @@ pub fn glass_shards_update(g: &mut crate::game::Game, _dt: f64) {
     g.shards.sounds_this_frame = 0.0;
 }
 
-/// A restart: nothing pending, no litter.   (shards.ts GlassShards.reset)
+/// A restart: nothing pending, no litter.
 pub fn glass_shards_reset(g: &mut crate::game::Game) {
     glass_shards_clear(g);
     g.shards.log.clear();
@@ -689,7 +689,7 @@ pub fn glass_shards_reset(g: &mut crate::game::Game) {
     g.shards.crunch_n = 0.0;
 }
 
-/// The particles and moving debris were wiped: nothing of ours is still owed.   (shards.ts GlassShards.clear)
+/// The particles and moving debris were wiped: nothing of ours is still owed.
 pub fn glass_shards_clear(g: &mut crate::game::Game) {
     g.shards.sound_at = JsMap::new();
     g.shards.sound_owed = JsMap::new();
@@ -703,14 +703,14 @@ pub fn glass_shards_clear(g: &mut crate::game::Game) {
     g.shards.sounds_this_frame = 0.0;
 }
 
-/// The albedo of the static under `p`, or a neutral floor.   (shards.ts GlassShards.underAlbedo)
+/// The albedo of the static under `p`, or a neutral floor.
 fn glass_shards_under_albedo(g: &mut crate::game::Game, p: V3) -> V3 {
     let hit = crate::scene_collision::raycast(g, [p[0], p[1] + 0.05, p[2]], [0.0, -1.0, 0.0], p[1] + 0.6);
     let b = match hit { Some(h) if h.index >= 0.0 => g.engine.world.statics.get(h.index as usize).copied(), _ => None };
     match b { Some(b) => seam_box(g, b).albedo, None => [0.4, 0.4, 0.4] }
 }
 
-/// A line in the tool's log, the last sixty kept.   (shards.ts GlassShards.note)
+/// A line in the tool's log, the last sixty kept.
 fn glass_shards_note(g: &mut crate::game::Game, s: &str) {
     let line = alloc::format!("{} {}", js::to_fixed(g.time, 2), s);
     g.shards.log.push(line);

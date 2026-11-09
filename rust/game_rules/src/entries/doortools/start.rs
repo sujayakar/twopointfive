@@ -1,4 +1,3 @@
-//! src/game/doortools.ts lines 971 to 1352
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -19,15 +18,15 @@ fn still_mine(g: &Game, seat: &crate::seats::SeatRef, op: DoorOpId, m: GuardId) 
     now.is_some() && now == g.tab.doortools_door_op[op].mine.get(m).copied()
 }
 
-/// (doortools.ts:1050) the verbs of a door's lock rows, where the player's own prompts tell him it is locked
+///  the verbs of a door's lock rows, where the player's own prompts tell him it is locked
 fn is_lock_verb(v: Option<crate::game::Verb>) -> bool {
     matches!(v, Some(crate::game::Verb::Pick) | Some(crate::game::Verb::Kick) | Some(crate::game::Verb::Rattle) | Some(crate::game::Verb::Nocode) | Some(crate::game::Verb::Code))
 }
 
-/// (doortools.ts:1013) the bit of `tried` for this face, known shut or found free
+///  the bit of `tried` for this face, known shut or found free
 fn know_mask(side: f64, free: bool) -> i32 { (if side > 0.0 { 1 } else { 2 }) << (if free { 2 } else { 0 }) }
 
-/// (doortools.ts:1014) `tried` after this face is learnt: `free` none forgets the face
+///  `tried` after this face is learnt: `free` none forgets the face
 fn learned(was: f64, side: f64, free: Option<bool>) -> f64 {
     let b: i32 = if side > 0.0 { 1 } else { 2 };
     let kept = js::to_i32(was) & !(b | b << 2);
@@ -37,7 +36,7 @@ fn learned(was: f64, side: f64, free: Option<bool>) -> f64 {
     }
 }
 
-/// an assignment of a plain stack, the shape every mark of this file gives (doortools.ts:1246 and on)
+/// an assignment of a plain stack, the shape every mark of this file gives
 fn stacked_a(post: V3, face: f64, watch: V3, stance: crate::character::Stance, stack_side: f64, name: &str) -> crate::doortools::DoorToolsAssignA {
     crate::doortools::DoorToolsAssignA {
         post: Some(post),
@@ -71,7 +70,7 @@ fn can_t_then(t: &crate::doortools::DoorToolsThresholdThenT) -> crate::doortools
 /// the door of a target, none off a door
 fn door_of_t(t: &crate::orders::OrderTarget) -> Option<DoorId> { match t { crate::orders::OrderTarget::Door(x) => Some(x.door), _ => None } }
 
-/// (doortools.ts:1139) `{ order: op.kind, door: op.door, shy: op.door, ...a }`; three callers say `shy: null` (doortools.ts:2344, 2934, 3063), which stays null
+///  `{ order: op.kind, door: op.door, shy: op.door, ...a }`; three callers say `shy: null`, which stays null
 fn merged_assign(kind: &str, door: DoorId, a: &crate::doortools::DoorToolsAssignA) -> crate::orders::SquadOrdersAssignA {
     crate::orders::SquadOrdersAssignA {
         post: a.post,
@@ -133,13 +132,13 @@ fn post_at(posts: &[crate::orders::StackPost], used: &mut [bool], p: V3) -> crat
 
 // ------------------------------------------------------------ the frame, the boot
 
-/// what a man says to an entry order there when no pick opens it (doortools.ts DoorTools.noBoot)
+/// what a man says to an entry order there when no pick opens it
 pub(super) fn door_tools_no_boot(g: &crate::game::Game, seat: &crate::seats::SeatRef, d: DoorId) -> String {
     let s = if door_tools_charge_on(g, seat, d).is_some() { "opens toward us. no boot. blow the charge." } else if seat.door_tools.charges > 0.0 { "opens toward us. no boot. charge it." } else { "opens toward us. no boot, no charge." };
     String::from(s)
 }
 
-/// open()'s answer at a door whose frame holds a boot; false: a silent squad with its picks switched off (doortools.ts DoorTools.frameAnswer)
+/// open()'s answer at a door whose frame holds a boot; false: a silent squad with its picks switched off
 pub(super) fn door_tools_frame_answer(g: &mut crate::game::Game, op: DoorOpId) -> bool {
     let (d, lead) = (g.tab.doortools_door_op[op].door, g.tab.doortools_door_op[op].lead);
     if !door_tools_pickable(g, d) {
@@ -156,7 +155,7 @@ pub(super) fn door_tools_frame_answer(g: &mut crate::game::Game, op: DoorOpId) -
     true
 }
 
-/// this order's door will take the boot, or where its frame holds a boot the pick: the lock a shared gate waits on (doortools.ts DoorTools.willKick)
+/// this order's door will take the boot, or where its frame holds a boot the pick: the lock a shared gate waits on
 pub(super) fn door_tools_will_kick(g: &mut crate::game::Game, op: DoorOpId) -> bool {
     let (d, side) = (g.tab.doortools_door_op[op].door, g.tab.doortools_door_op[op].side);
     let men = g.tab.doortools_door_op[op].men.clone();
@@ -165,7 +164,7 @@ pub(super) fn door_tools_will_kick(g: &mut crate::game::Game, op: DoorOpId) -> b
     door_tools_locked_out(g, d, side) && (!door_tools_frame_held(g, d, side) || door_tools_pickable(g, d) || door_tools_big_opens(g, d, &men))
 }
 
-/// one of these men carries a big-slot tool that takes this door's lock from either face (doortools.ts DoorTools.bigOpens)
+/// one of these men carries a big-slot tool that takes this door's lock from either face
 pub(super) fn door_tools_big_opens(g: &mut crate::game::Game, d: DoorId, men: &[GuardId]) -> bool {
     if !g.k.bigslot.on || is_steel(g, d) { return false; }
     if crate::silent::squad_silent(g, &crate::seats::here(g)) && !crate::silent::urgent(g) { return false; }
@@ -176,7 +175,7 @@ pub(super) fn door_tools_big_opens(g: &mut crate::game::Game, d: DoorId, men: &[
     false
 }
 
-/// the tool the big slot's row names for these men on that door: toGun's own order (doortools.ts DoorTools.bigWord)
+/// the tool the big slot's row names for these men on that door: toGun's own order
 pub fn door_tools_big_word(g: &crate::game::Game, t: &crate::orders::OrderTarget, men: &[GuardId]) -> crate::doortools::DoorToolsBigWord {
     let wedged = match t {
         crate::orders::OrderTarget::Door(x) => crate::doors::door_locked(g, x.door) && is_wedge(g, x.door) && door_tools_known_shut(g, x.door, x.side),
@@ -190,7 +189,7 @@ pub fn door_tools_big_word(g: &crate::game::Game, t: &crate::orders::OrderTarget
     crate::doortools::DoorToolsBigWord::Hammer
 }
 
-/// where the lead boots a door from: beside the latch jamb where the floor allows and no pane stands behind him, else square to the leaf (doortools.ts DoorTools.bootSpot)
+/// where the lead boots a door from: beside the latch jamb where the floor allows and no pane stands behind him, else square to the leaf
 pub fn door_tools_boot_spot(g: &mut crate::game::Game, d: DoorId, side: f64) -> crate::doortools::DoorToolsBootSpot {
     let from = door_pt(g, d, g.dr[d].def.width - 0.25, 1.0, side, None);
     let sq = crate::doors::doors_kick_spot(g, d, from);
@@ -205,25 +204,25 @@ pub fn door_tools_boot_spot(g: &mut crate::game::Game, d: DoorId, side: f64) -> 
 
 // ------------------------------------------------------------ what the team knows of a door
 
-/// the team knows this face of the door: shut, or (`free`) tried and found free (doortools.ts DoorTools.knows)
+/// the team knows this face of the door: shut, or (`free`) tried and found free
 fn door_tools_knows(g: &crate::game::Game, seat: &crate::seats::SeatRef, d: DoorId, side: f64, free: bool) -> bool {
     let was = seat.door_tools.tried.get(d).copied().unwrap_or(0.0);
     (js::to_i32(was) & know_mask(side, free)) != 0
 }
 
-/// write what the team knows of this face; `free` none forgets it (doortools.ts DoorTools.learn)
+/// write what the team knows of this face; `free` none forgets it
 fn door_tools_learn(g: &mut crate::game::Game, d: DoorId, side: f64, free: Option<bool>) {
     let was = g.door_tools.tried.get(d).copied().unwrap_or(0.0);
     g.door_tools.tried.set(d, learned(was, side, free));
 }
 
-/// why a hand does not open it, in a man's words (doortools.ts DoorTools.shutWhy)
+/// why a hand does not open it, in a man's words
 pub fn door_tools_shut_why(g: &crate::game::Game, d: DoorId) -> String {
     let s = if is_steel(g, d) { "steel, and locked" } else if door_tools_pickable(g, d) { "locked" } else if is_wedge(g, d) { "wedged from inside" } else { "keypad lock, no code" };
     String::from(s)
 }
 
-/// does the team know this door is locked against it on that face (doortools.ts DoorTools.knownShut)
+/// does the team know this door is locked against it on that face
 pub fn door_tools_known_shut(g: &crate::game::Game, d: DoorId, side: f64) -> bool {
     door_tools_knows(g, &crate::seats::here(g), d, side, false) && stays_shut(g, d, side)
 }
@@ -237,12 +236,12 @@ pub(super) fn door_tools_forget(g: &mut Game) {
     }
 }
 
-/// nobody of the team has tried that face of it (doortools.ts DoorTools.untried)
+/// nobody of the team has tried that face of it
 pub fn door_tools_untried(g: &crate::game::Game, d: DoorId, side: f64) -> bool {
     !door_tools_known_shut(g, d, side)
 }
 
-/// the handle tried by a man at the jamb; true: locked against the team (doortools.ts DoorTools.test)
+/// the handle tried by a man at the jamb; true: locked against the team
 fn door_tools_test(g: &mut crate::game::Game, d: DoorId, side: f64, gd: GuardId, say: bool) -> bool {
     if is_open(g, d) || crate::doors::door_off(g, d) { return false; }
     let out = door_tools_locked_out(g, d, side);
@@ -264,7 +263,7 @@ fn door_tools_test(g: &mut crate::game::Game, d: DoorId, side: f64, gd: GuardId,
     out
 }
 
-/// a man of the stack on that door stood, at the orders' last tick, on his mark with a man in his sight whom hold fire holds (doortools.ts DoorTools.stackHeld)
+/// a man of the stack on that door stood, at the orders' last tick, on his mark with a man in his sight whom hold fire holds
 fn door_tools_stack_held(g: &crate::game::Game, seat: &crate::seats::SeatRef, d: DoorId) -> bool {
     let roster = seat.door_tools.roster.clone();
     for m in roster {
@@ -276,7 +275,7 @@ fn door_tools_stack_held(g: &crate::game::Game, seat: &crate::seats::SeatRef, d:
     false
 }
 
-/// once a frame: a man come to the jamb on a plain 'stack up' tries the door; a door whose lock rows the player stands at is known too (doortools.ts DoorTools.testStacks)
+/// once a frame: a man come to the jamb on a plain 'stack up' tries the door; a door whose lock rows the player stands at is known too
 pub(super) fn door_tools_test_stacks(g: &mut crate::game::Game) {
     let mut i = 0;
     while i < g.door_tools.roster.len() {
@@ -306,7 +305,7 @@ pub(super) fn door_tools_test_stacks(g: &mut crate::game::Game) {
     }
 }
 
-/// the order halts at a door that turns out shut: he says what he found, the order is over, its men stay stacked. true = halted (doortools.ts DoorTools.haltAt)
+/// the order halts at a door that turns out shut: he says what he found, the order is over, its men stay stacked. true = halted
 pub(super) fn door_tools_halt_at(g: &mut crate::game::Game, op: DoorOpId) -> bool {
     let (d, side, lead) = { let o = &g.tab.doortools_door_op[op]; (o.door, o.side, o.lead) };
     if g.tab.doortools_door_op[op].coded.unwrap_or(false) || is_open(g, d) { return false; }
@@ -328,7 +327,7 @@ pub(super) fn door_tools_halt_at(g: &mut crate::game::Game, op: DoorOpId) -> boo
     true
 }
 
-/// what the man who tried it says of a door found shut, and the count of it (doortools.ts DoorTools.shutSaid)
+/// what the man who tried it says of a door found shut, and the count of it
 fn door_tools_shut_said(g: &mut crate::game::Game, lead: GuardId, d: DoorId) -> String {
     let why = door_tools_shut_why(g, d);
     g.door_tools.stats.halted += 1.0;
@@ -336,7 +335,7 @@ fn door_tools_shut_said(g: &mut crate::game::Game, lead: GuardId, d: DoorId) -> 
     why
 }
 
-/// (doortools.ts:1082 `on`) a walker stands on his mark
+///  a walker stands on his mark
 fn walker_on(g: &mut Game, m: GuardId) -> bool {
     let b = crate::orders::squad_orders_of(g, &crate::seats::here(g), m).unwrap();
     let at = pos_of(g, m);
@@ -344,7 +343,7 @@ fn walker_on(g: &mut Game, m: GuardId) -> bool {
     match row.post { Some(p) => row.arrived && v3::dist_xz(at, p) <= 0.6, None => false }
 }
 
-/// (doortools.ts:1085 `marks`) each walker's mark on the door he came to
+///  each walker's mark on the door he came to
 fn walk_marks(g: &Game, seat: &crate::seats::SeatRef, men: &[GuardId]) -> JsMap<GuardId, crate::doortools::DoorToolsStackLeftPostValue> {
     let mut out = JsMap::new();
     for &m in men {
@@ -355,7 +354,7 @@ fn walk_marks(g: &Game, seat: &crate::seats::SeatRef, men: &[GuardId]) -> JsMap<
     out
 }
 
-/// a walk that came to a door nobody had tried: the man on the jamb tries the handle; locked, the halt of a door order; else the walk is asked again (doortools.ts DoorTools.walkTried)
+/// a walk that came to a door nobody had tried: the man on the jamb tries the handle; locked, the halt of a door order; else the walk is asked again
 pub(super) fn door_tools_walk_tried(g: &mut crate::game::Game) {
     let mut seen: JsSet<OrdersAssignmentId> = JsSet::new();
     let mut i = 0;
@@ -417,7 +416,7 @@ pub(super) fn door_tools_walk_tried(g: &mut crate::game::Game) {
     }
 }
 
-/// on a door the other pair is charging: the men just left stacked on it are asked to step back, clear of that order's marks (doortools.ts DoorTools.haltBack)
+/// on a door the other pair is charging: the men just left stacked on it are asked to step back, clear of that order's marks
 fn door_tools_halt_back(g: &mut crate::game::Game, d: DoorId, side: f64, halted: &[GuardId]) {
     let ch = g.door_tools.ops.iter().copied().find(|&o| {
         let r = &g.tab.doortools_door_op[o];
@@ -444,7 +443,7 @@ fn door_tools_halt_back(g: &mut crate::game::Game, d: DoorId, side: f64, halted:
     if let Some(back) = door_tools_step_backs(g, d, side, &rest, &taken, None) { door_tools_make_room(g, d, &back); }
 }
 
-/// an order over with its men left a plain stack on the marks they came to the door by (doortools.ts DoorTools.plainStack)
+/// an order over with its men left a plain stack on the marks they came to the door by
 fn door_tools_plain_stack(g: &mut crate::game::Game, op: DoorOpId, left: &[GuardId], note: Option<&str>) {
     let d = g.tab.doortools_door_op[op].door;
     let mut post = JsMap::new();
@@ -454,7 +453,7 @@ fn door_tools_plain_stack(g: &mut crate::game::Game, op: DoorOpId, left: &[Guard
     door_tools_stack_left(g, d, &post, left, note);
 }
 
-/// the same for men with a mark each on that door, whoever dealt it (doortools.ts DoorTools.stackLeft)
+/// the same for men with a mark each on that door, whoever dealt it
 fn door_tools_stack_left(g: &mut crate::game::Game, d: DoorId, post: &JsMap<GuardId, crate::doortools::DoorToolsStackLeftPostValue>, left: &[GuardId], note: Option<&str>) {
     let note = note.unwrap_or("");
     let name = crate::orders::door_words(g, d);
@@ -481,7 +480,7 @@ fn door_tools_stack_left(g: &mut crate::game::Game, d: DoorId, post: &JsMap<Guar
     crate::orders::squad_orders_spare_rear(g, left, d, None, None);
 }
 
-/// how an entry row on that door begins, by what the team knows of it (doortools.ts DoorTools.entryVerb)
+/// how an entry row on that door begins, by what the team knows of it
 pub fn door_tools_entry_verb(g: &mut crate::game::Game, t: &crate::orders::OrderTarget) -> crate::doortools::DoorToolsEntryVerb {
     let crate::orders::OrderTarget::Door(x) = t else { return crate::doortools::DoorToolsEntryVerb::Open };
     if !door_tools_known_shut(g, x.door, x.side) || is_steel(g, x.door) { return crate::doortools::DoorToolsEntryVerb::Open; }
@@ -490,7 +489,7 @@ pub fn door_tools_entry_verb(g: &mut crate::game::Game, t: &crate::orders::Order
     if door_tools_frame_held(g, x.door, x.side) { if pick { crate::doortools::DoorToolsEntryVerb::Pick } else { crate::doortools::DoorToolsEntryVerb::Open } } else { crate::doortools::DoorToolsEntryVerb::Kick }
 }
 
-/// men these rows go to are holding that door from outside (doortools.ts DoorTools.heldPlain)
+/// men these rows go to are holding that door from outside
 pub fn door_tools_held_plain(g: &crate::game::Game, seat: &crate::seats::SeatRef, t: &crate::orders::OrderTarget, men: &[GuardId]) -> bool {
     if door_of_t(t).is_none() { return false; }
     let mut up = Vec::new();
@@ -501,11 +500,11 @@ pub fn door_tools_held_plain(g: &crate::game::Game, seat: &crate::seats::SeatRef
     !door_tools_held_on(g, seat, t, &up).is_empty()
 }
 
-/// a line of the order log (doortools.ts DoorTools.note)
+/// a line of the order log
 pub(super) fn door_tools_note(g: &crate::game::Game, what: &str) {
 }
 
-/// a beat of an order, and its line in the log (doortools.ts DoorTools.beat)
+/// a beat of an order, and its line in the log
 pub(super) fn door_tools_beat(g: &mut crate::game::Game, op: DoorOpId, what: &str) {
     let t = g.time;
     g.tab.doortools_door_op[op].beats.push(crate::doortools::DoorToolsDoneItemBeatsItem { t, what: String::from(what) });
@@ -516,7 +515,7 @@ pub(super) fn door_tools_beat(g: &mut crate::game::Game, op: DoorOpId, what: &st
 
 // ------------------------------------------------------------ orders in
 
-/// hand a man this op's next assignment, and remember it as ours (doortools.ts DoorTools.assign)
+/// hand a man this op's next assignment, and remember it as ours
 pub(super) fn door_tools_assign(g: &mut crate::game::Game, op: DoorOpId, gd: GuardId, a: &crate::doortools::DoorToolsAssignA) {
     let (kind, door) = (g.tab.doortools_door_op[op].kind, g.tab.doortools_door_op[op].door);
     let merged = merged_assign(kind.as_str(), door, a);
@@ -525,7 +524,7 @@ pub(super) fn door_tools_assign(g: &mut crate::game::Game, op: DoorOpId, gd: Gua
     g.tab.doortools_door_op[op].mine.set(gd, now);
 }
 
-/// a new order: the men are this order's now, and an order left with none is over (doortools.ts DoorTools.newOp)
+/// a new order: the men are this order's now, and an order left with none is over
 pub(super) fn door_tools_new_op(g: &mut crate::game::Game, kind: crate::doortools::DoorToolKind, d: DoorId, side: f64, men: &[GuardId], phase: crate::doortools::Phase) -> DoorOpId {
     for o in g.door_tools.ops.clone() {
         g.tab.doortools_door_op[o].men.retain(|m| !men.contains(m));
@@ -580,7 +579,7 @@ pub(super) fn door_tools_new_op(g: &mut crate::game::Game, kind: crate::doortool
     op
 }
 
-/// the menu's release: a reason when it cannot be done (doortools.ts DoorTools.issue)
+/// the menu's release: a reason when it cannot be done
 pub fn door_tools_issue(g: &mut crate::game::Game, kind: crate::doortools::DoorToolKind, men: &[GuardId], t: &crate::orders::OrderTarget, on_word: Option<bool>) -> crate::doortools::DoorToolsIssue {
     match door_tools_start(g, kind, men, t, on_word, None) {
         crate::doortools::DoorToolsStart::Text(s) => crate::doortools::DoorToolsIssue::Text(s),
@@ -588,13 +587,13 @@ pub fn door_tools_issue(g: &mut crate::game::Game, kind: crate::doortools::DoorT
     }
 }
 
-/// a fresh gate, for each door that is to go on the one signal; `go` false: they hold until somebody raises it (doortools.ts DoorTools.together)
+/// a fresh gate, for each door that is to go on the one signal; `go` false: they hold until somebody raises it
 pub fn door_tools_together(g: &mut crate::game::Game, go: Option<bool>) -> DoorGateId {
     let go = go.unwrap_or(true);
     g.tab.doortools_door_gate.push(crate::doortools::DoorGate { ops: Vec::new(), go, open_t: f64::NAN })
 }
 
-/// one of the entry orders given by code: to exactly these men, on that face of that door (doortools.ts DoorTools.order)
+/// one of the entry orders given by code: to exactly these men, on that face of that door
 pub fn door_tools_order(g: &mut crate::game::Game, kind: crate::doortools::DoorToolsOrderKind, men: &[GuardId], door: DoorId, side: f64, gate: Option<DoorGateId>, hold: Option<bool>) -> crate::doortools::DoorToolsOrder {
     let hold = hold.unwrap_or(false);
     let mut up = Vec::new();
@@ -622,7 +621,7 @@ pub fn door_tools_order(g: &mut crate::game::Game, kind: crate::doortools::DoorT
     crate::doortools::DoorToolsOrder::DoorOp(op)
 }
 
-/// work the room from the threshold, as an order's `issue` (doortools.ts DoorTools.threshold)
+/// work the room from the threshold, as an order's `issue`
 pub fn door_tools_threshold(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget, on_word: Option<bool>, hold: Option<bool>) -> crate::doortools::DoorToolsThreshold {
     match door_tools_start(g, crate::doortools::DoorToolKind::Threshold, men, t, on_word, hold) {
         crate::doortools::DoorToolsStart::Text(s) => crate::doortools::DoorToolsThreshold::Text(s),
@@ -630,7 +629,7 @@ pub fn door_tools_threshold(g: &mut crate::game::Game, men: &[GuardId], t: &crat
     }
 }
 
-/// work it and hold the jambs until told what next (doortools.ts DoorTools.thresholdHold)
+/// work it and hold the jambs until told what next
 pub fn door_tools_threshold_hold(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget, on_word: Option<bool>) -> crate::doortools::DoorToolsThresholdHold {
     match door_tools_threshold(g, men, t, on_word, Some(true)) {
         crate::doortools::DoorToolsThreshold::Text(s) => crate::doortools::DoorToolsThresholdHold::Text(s),
@@ -638,7 +637,7 @@ pub fn door_tools_threshold_hold(g: &mut crate::game::Game, men: &[GuardId], t: 
     }
 }
 
-/// the same order's `valid` (doortools.ts DoorTools.canThreshold)
+/// the same order's `valid`
 pub fn door_tools_can_threshold(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, men: &[GuardId]) -> crate::doortools::DoorToolsCanThreshold {
     match door_tools_stackable(g, t, men) {
         crate::doortools::DoorToolsStackable::Text(s) => crate::doortools::DoorToolsCanThreshold::Text(s),
@@ -646,7 +645,7 @@ pub fn door_tools_can_threshold(g: &mut crate::game::Game, t: &crate::orders::Or
     }
 }
 
-/// the rooms being worked from the threshold whose men are still outside on the jambs, among these men (doortools.ts DoorTools.thresholdHeld)
+/// the rooms being worked from the threshold whose men are still outside on the jambs, among these men
 pub(in crate::entries) fn door_tools_threshold_held(g: &crate::game::Game, seat: &crate::seats::SeatRef, men: &[GuardId], door: Option<DoorId>) -> Vec<DoorOpId> {
     let mut out = Vec::new();
     for &o in &seat.door_tools.ops {
@@ -656,7 +655,7 @@ pub(in crate::entries) fn door_tools_threshold_held(g: &crate::game::Game, seat:
     out
 }
 
-/// on the door a menu is up on (none off a door) (doortools.ts DoorTools.heldOn)
+/// on the door a menu is up on (none off a door)
 pub fn door_tools_held_on(g: &crate::game::Game, seat: &crate::seats::SeatRef, t: &crate::orders::OrderTarget, men: &[GuardId]) -> Vec<DoorOpId> {
     match door_of_t(t) {
         Some(d) => door_tools_threshold_held(g, seat, men, Some(d)),
@@ -664,13 +663,13 @@ pub fn door_tools_held_on(g: &crate::game::Game, seat: &crate::seats::SeatRef, t
     }
 }
 
-/// the men among these who hold it: who the held page's rows go to (doortools.ts DoorTools.heldMen)
+/// the men among these who hold it: who the held page's rows go to
 pub fn door_tools_held_men(g: &crate::game::Game, seat: &crate::seats::SeatRef, men: &[GuardId], t: &crate::orders::OrderTarget) -> Vec<GuardId> {
     let ops = door_tools_held_on(g, seat, t, men);
     men.iter().copied().filter(|m| ops.iter().any(|&o| g.tab.doortools_door_op[o].men.contains(m))).collect()
 }
 
-/// what next, to men working a room from the threshold: step in, bang then step in, or off the door. A reason when there is nothing to tell (doortools.ts DoorTools.thresholdThen)
+/// what next, to men working a room from the threshold: step in, bang then step in, or off the door. A reason when there is nothing to tell
 pub(super) fn door_tools_threshold_then(g: &mut crate::game::Game, what: crate::doortools::DoorToolsThresholdThenWhat, men: &[GuardId], t: Option<&crate::doortools::DoorToolsThresholdThenT>) -> crate::doortools::DoorToolsThresholdThen {
     door_tools_sync(g);
     let ask = match what { crate::doortools::DoorToolsThresholdThenWhat::Bang => crate::doortools::DoorToolsCanThresholdThenWhat::Bang, crate::doortools::DoorToolsThresholdThenWhat::Step => crate::doortools::DoorToolsCanThresholdThenWhat::Step, crate::doortools::DoorToolsThresholdThenWhat::Leave => crate::doortools::DoorToolsCanThresholdThenWhat::Leave };
@@ -721,7 +720,7 @@ pub(super) fn door_tools_threshold_then(g: &mut crate::game::Game, what: crate::
     crate::doortools::DoorToolsThresholdThen::Arm1(())
 }
 
-/// given with 'wait for my word' on: the jambs stay held and the word is then what the row said (doortools.ts DoorTools.thenOnWord)
+/// given with 'wait for my word' on: the jambs stay held and the word is then what the row said
 pub(super) fn door_tools_then_on_word(g: &mut crate::game::Game, what: crate::doortools::DoorToolsThenOnWordWhat, men: &[GuardId], t: &crate::orders::OrderTarget) -> crate::doortools::DoorToolsThenOnWord {
     let ask = match what { crate::doortools::DoorToolsThenOnWordWhat::Bang => crate::doortools::DoorToolsCanThresholdThenWhat::Bang, crate::doortools::DoorToolsThenOnWordWhat::Step => crate::doortools::DoorToolsCanThresholdThenWhat::Step };
     let can = can_t(t);
@@ -741,7 +740,7 @@ pub(super) fn door_tools_then_on_word(g: &mut crate::game::Game, what: crate::do
     crate::doortools::DoorToolsThenOnWord::Arm1(())
 }
 
-/// thresholdThen's `valid`: no cans, or one of ours behind the door: no bang (doortools.ts DoorTools.canThresholdThen)
+/// thresholdThen's `valid`: no cans, or one of ours behind the door: no bang
 pub(super) fn door_tools_can_threshold_then(g: &mut crate::game::Game, what: crate::doortools::DoorToolsCanThresholdThenWhat, t: Option<&crate::doortools::DoorToolsCanThresholdThenT>, men: &[GuardId]) -> crate::doortools::DoorToolsCanThresholdThen {
     let door = match t { Some(crate::doortools::DoorToolsCanThresholdThenT::Door(x)) => Some(x.door), _ => None };
     let ops = door_tools_threshold_held(g, &crate::seats::here(g), men, door);
@@ -763,7 +762,7 @@ pub(super) fn door_tools_can_threshold_then(g: &mut crate::game::Game, what: cra
     crate::doortools::DoorToolsCanThresholdThen::Bool(true)
 }
 
-/// the step in, from the jambs: at once, or on a word that has other doors to wait for, with them (doortools.ts DoorTools.toStep)
+/// the step in, from the jambs: at once, or on a word that has other doors to wait for, with them
 pub(super) fn door_tools_to_step(g: &mut crate::game::Game, op: DoorOpId) {
     if g.tab.doortools_door_op[op].word.is_some() {
         g.tab.doortools_door_op[op].bang_t = -1e9;
@@ -773,12 +772,12 @@ pub(super) fn door_tools_to_step(g: &mut crate::game::Game, op: DoorOpId) {
     }
 }
 
-/// (doortools.ts:1260 `floor`) floor at `p`, nothing solid from `from`, and this room's
+///  floor at `p`, nothing solid from `from`, and this room's
 fn floor_at(g: &mut Game, d: DoorId, side: f64, from: V3, p: V3) -> bool {
     !crate::scene_collision::nav_grid_is_blocked(g, p[0], p[2]) && !crate::scene_collision::solid_blocked(g, [from[0], 0.45, from[2]], [p[0], 0.45, p[2]], None) && crate::stackroom::stack_room_keeps(g, d, side, p)
 }
 
-/// open and clear / bang and clear / clear from outside / the threshold: into the stack first (doortools.ts DoorTools.start)
+/// open and clear / bang and clear / clear from outside / the threshold: into the stack first
 fn door_tools_start(g: &mut crate::game::Game, kind: crate::doortools::DoorToolKind, men: &[GuardId], t: &crate::orders::OrderTarget, on_word: Option<bool>, hold: Option<bool>) -> crate::doortools::DoorToolsStart {
     let on_word = on_word.unwrap_or(false);
     let hold = hold.unwrap_or(false);
@@ -934,7 +933,7 @@ fn door_tools_start(g: &mut crate::game::Game, kind: crate::doortools::DoorToolK
     crate::doortools::DoorToolsStart::DoorOp(op)
 }
 
-/// which hand of the opening a point is on, on this face: +1 past the far jamb, -1 before the near one, 0 on neither (doortools.ts DoorTools.handOf)
+/// which hand of the opening a point is on, on this face: +1 past the far jamb, -1 before the near one, 0 on neither
 fn door_tools_hand_of(g: &mut crate::game::Game, d: DoorId, side: f64, p: V3) -> f64 {
     if off_of(g, d, p, side) <= 0.0 || v3::dist_xz(p, g.dr[d].frame_centre) > g.k.stackroom.view_men { return 0.0; }
     let w = g.dr[d].def.width;
@@ -945,13 +944,13 @@ fn door_tools_hand_of(g: &mut crate::game::Game, d: DoorId, side: f64, p: V3) ->
     if v3::dist_xz(p, j) > 0.5 && crate::scene_collision::solid_blocked(g, [p[0], 0.45, p[2]], [j[0], 0.45, j[2]], None) { 0.0 } else { h }
 }
 
-/// a walk from where he stands to that place changes hands in front of the opening (doortools.ts DoorTools.crossesOpen)
+/// a walk from where he stands to that place changes hands in front of the opening
 pub(super) fn door_tools_crosses_open(g: &mut crate::game::Game, d: DoorId, side: f64, from: V3, to: V3) -> bool {
     let h = door_tools_hand_of(g, d, side, from);
     h != 0.0 && (if along_of(g, d, to) > g.dr[d].def.width / 2.0 { 1.0 } else { -1.0 }) != h
 }
 
-/// (doortools.ts:1325, 1343 `others`) Sam and the teammates not on the order: nobody is sent to stand on them
+///  Sam and the teammates not on the order: nobody is sent to stand on them
 fn others_of(g: &mut Game, op: DoorOpId) -> Vec<V3> {
     let mut out = vec![crate::orders::squad_orders_sam_stood(g, &crate::seats::here(g))];
     for x in g.guards.clone() {
@@ -961,7 +960,7 @@ fn others_of(g: &mut Game, op: DoorOpId) -> Vec<V3> {
     out
 }
 
-/// (doortools.ts:1326, 1344 `free`) clear of every man's place, floor, this room's
+///  clear of every man's place, floor, this room's
 fn place_free(g: &mut Game, op: DoorOpId, gd: GuardId, others: &[V3], c: V3) -> bool {
     let (d, side) = (g.tab.doortools_door_op[op].door, g.tab.doortools_door_op[op].side);
     for m in g.tab.doortools_door_op[op].men.clone() {
@@ -973,7 +972,7 @@ fn place_free(g: &mut Game, op: DoorOpId, gd: GuardId, others: &[V3], c: V3) -> 
     !crate::scene_collision::nav_grid_is_blocked(g, c[0], c[2]) && crate::stackroom::stack_room_keeps(g, d, side, c)
 }
 
-/// the door stands open: a man of the order whose place is on the other hand of the opening takes his own hand's wall (doortools.ts DoorTools.keepHands)
+/// the door stands open: a man of the order whose place is on the other hand of the opening takes his own hand's wall
 fn door_tools_keep_hands(g: &mut crate::game::Game, op: DoorOpId, posts: &[crate::orders::StackPost], watch: V3) {
     let (d, side) = (g.tab.doortools_door_op[op].door, g.tab.doortools_door_op[op].side);
     let w = g.dr[d].def.width;
@@ -1013,7 +1012,7 @@ fn door_tools_keep_hands(g: &mut crate::game::Game, op: DoorOpId, posts: &[crate
     }
 }
 
-/// the lead himself, whom a deal can leave no lead mark on his own hand: his place is then his own hand's jamb. None = the place as dealt (doortools.ts DoorTools.leadHand)
+/// the lead himself, whom a deal can leave no lead mark on his own hand: his place is then his own hand's jamb. None = the place as dealt
 fn door_tools_lead_hand(g: &mut crate::game::Game, op: DoorOpId, posts: &[crate::orders::StackPost], watch: V3) {
     let (d, side, gd) = { let o = &g.tab.doortools_door_op[op]; (o.door, o.side, o.lead) };
     let w = g.dr[d].def.width;

@@ -1,4 +1,3 @@
-//! src/game/character.ts lines 4293 to 4876
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -1020,7 +1019,7 @@ mod tests {
 }
 
 
-// ---- the animator's place: `anim.posIn = this.pos` (character.ts:4419) is a REFERENCE to the body's position array
+// ---- the animator's place: `anim.posIn = this.pos` is a REFERENCE to the body's position array
 //
 // The TypeScript hands the animator the body's own `pos` array at every Character.update. Until the next update the animator reads THAT ARRAY: it
 // sees a write made in place (the collision's push, a door's shove), and it does NOT see a new array put in `pos`'s place (`c.pos = v3.mad(…)`, the

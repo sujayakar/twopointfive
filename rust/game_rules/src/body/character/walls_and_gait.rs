@@ -1,4 +1,3 @@
-//! src/game/character.ts lines 3085 to 3539
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -37,7 +36,7 @@ pub(super) fn clip_at(g: &mut Game, c: CharId, clip: ClipId, t: f64) -> ::sim::l
 /// RUNARMS: the run's own arms carried close
 pub(super) fn anim_run_arms(g: &mut crate::game::Game, c: CharId, pose: crate::anim_skeleton::Pose, w: f64, ws: f64) { anim_layer(g, c, |s, _, k| ::sim::layers::run_arms(s, at(pose), w, ws, k)); }
 
-/// the sum of a run clip's stances from its toes, with no animator in it   (character.ts stanceOf)
+/// the sum of a run clip's stances from its toes, with no animator in it
 fn stance_of(ty: &[Vec<f64>], tz: &[Vec<f64>]) -> Option<AnimStanceOf> {
     let mm = ty[0].len();
     let mut cs: Vec<f64> = Vec::with_capacity(ty.len());
@@ -72,7 +71,7 @@ pub(super) fn anim_life_layer(g: &mut crate::game::Game, c: CharId, dt: f64, s: 
     anim_layer(g, c, |slot, an, k| ::sim::layers::life_layer(slot, an, dt, s, crouch_pose, w, w_f, p0, k));
 }
 
-/// deliberate movement's body and, if they are in, its arms   (character.ts sneakLayer)
+/// deliberate movement's body and, if they are in, its arms
 pub(super) fn anim_sneak_layer(g: &mut crate::game::Game, c: CharId, dl: f64, pace: f64, soft: f64, arms_in: f64, surge: f64, dsh: Option<f64>) {
     let dsh = dsh.unwrap_or(0.0);
     anim_sneak_body(g, c, dl, pace, soft, surge, dsh);
@@ -85,7 +84,7 @@ fn anim_sneak_body(g: &mut crate::game::Game, c: CharId, dl: f64, pace: f64, sof
 /// …and its arms
 fn anim_sneak_arms(g: &mut crate::game::Game, c: CharId, arms_in: f64) { anim_layer(g, c, |s, an, k| ::sim::layers::sneak_arms(s, an, arms_in, k)); }
 
-/// MOVES.steady: the crouch walk's waddle taken out; the cycle's own mean is measured once off the clip   (character.ts steadyLayer)
+/// MOVES.steady: the crouch walk's waddle taken out; the cycle's own mean is measured once off the clip
 pub(super) fn anim_steady_layer(g: &mut crate::game::Game, c: CharId, w: f64, base: Option<f64>, sunk: Option<f64>) {
     let (base, sunk) = (base.unwrap_or(1.0), sunk.unwrap_or(0.0));
     if g.ch[c].anim.steady_mean.is_none() {
@@ -116,7 +115,7 @@ pub(super) fn anim_carry_arms(g: &mut crate::game::Game, c: CharId, w: f64, kick
 
 // ---- the long gun
 
-/// which row of LONG_RELOAD this gun's carry takes   (character.ts rlRow)
+/// which row of LONG_RELOAD this gun's carry takes
 fn anim_rl_row(g: &crate::game::Game, c: CharId) -> crate::character::LONGRELOADBox {
     let (back, has_feed) = (g.ch[c].anim.reload_back, g.ch[c].anim.feed.is_some());
     let r = crate::character::long_reload();
@@ -136,7 +135,7 @@ fn anim_lg_channels(g: &crate::game::Game, c: CharId) -> [f64; ::sim::layers::LC
         _ => core::array::from_fn(|i| a.lg.ch[i].x),
     }
 }
-/// GUN HAND (`longReload`), once a frame after the carriage's springs: how much of the reload carry the long gun shows   (character.ts reloadCarry)
+/// GUN HAND (`longReload`), once a frame after the carriage's springs: how much of the reload carry the long gun shows
 pub(super) fn anim_reload_carry(g: &mut crate::game::Game, c: CharId, dt: f64, want: crate::character::LongStance) {
     let r = crate::character::long_reload();
     let a = &mut g.ch[c].anim;
@@ -224,7 +223,7 @@ pub(super) fn anim_signal_layer(g: &mut crate::game::Game, c: CharId, t: f64) {
     anim_layer(g, c, |s, an, k| ::sim::layers::signal_layer(s, an, t, kind, dur, k));
 }
 
-/// a smoke's arm, its clock   (character.ts smokeLayer)
+/// a smoke's arm, its clock
 pub(super) fn anim_smoke_layer(g: &mut crate::game::Game, c: CharId, dt: f64, free: bool) {
     let k = crate::character::SMOKEARM;
     let a = &mut g.ch[c].anim;
@@ -238,7 +237,7 @@ pub(super) fn anim_smoke_layer(g: &mut crate::game::Game, c: CharId, dt: f64, fr
 /// the smoke's arm itself
 fn anim_smoke_pose(g: &mut crate::game::Game, c: CharId) { anim_layer(g, c, |s, an, k| ::sim::layers::smoke_pose(s, an, k)); }
 
-/// KIT.nv: one frame of a goggle flip   (character.ts nvLayer)
+/// KIT.nv: one frame of a goggle flip
 pub(super) fn anim_nv_layer(g: &mut crate::game::Game, c: CharId, dt: f64, free: bool) {
     let (h, o) = (g.k.kit.nv.hand, g.k.kit.nv.nod);
     let a = &mut g.ch[c].anim;
@@ -265,7 +264,7 @@ pub(super) fn anim_nv_layer(g: &mut crate::game::Game, c: CharId, dt: f64, free:
 }
 /// the goggle flip's arm itself
 fn anim_nv_pose(g: &mut crate::game::Game, c: CharId, shown: f64) { anim_layer(g, c, |s, an, k| ::sim::layers::nv_pose(s, an, shown, k)); }
-/// a goggle nod's tip of the HEAD joint on `pose` (+ = chin down)   (character.ts nvTip)
+/// a goggle nod's tip of the HEAD joint on `pose` (+ = chin down)
 pub(super) fn anim_nv_tip(g: &mut crate::game::Game, c: CharId, pose: crate::anim_skeleton::Pose, nod: f64, g_2: Option<Quat>) {
     let gq = match g_2 { Some(q) => q, None => anim_nv_head(g, c, pose) };
     let (hd, rest_inv) = (g.ch[c].anim.nodes.head, g.ch[c].anim.head_rest_inv);
@@ -275,13 +274,13 @@ pub(super) fn anim_nv_tip(g: &mut crate::game::Game, c: CharId, pose: crate::ani
     let turned = v3::quat::normalize(v3::quat::mul(crate::anim_skeleton::pose_rot(g, pose, hd as f64), v3::quat::axis_angle(v3::quat::rotate(v3::quat::conj(gq), ax), nod)));
     crate::anim_skeleton::pose_set_rot(g, pose, hd as f64, turned);
 }
-/// a yaw and a pitch of the twists as one turn   (character.ts nvHead twq)
+/// a yaw and a pitch of the twists as one turn
 fn twq(y: f64, p: f64) -> Quat {
     let mut q = v3::quat::yaw(y);
     if p != 0.0 { q = v3::quat::mul(v3::quat::axis_angle(v3::quat::rotate(q, [1.0, 0.0, 0.0]), p), q); }
     q
 }
-/// the head joint's rotation on `pose` as it will be DRAWN   (character.ts nvHead)
+/// the head joint's rotation on `pose` as it will be DRAWN
 fn anim_nv_head(g: &mut crate::game::Game, c: CharId, pose: crate::anim_skeleton::Pose) -> Quat {
     // (the fk stands out of g for the call: pose_fk_run takes both)
     let mut fk = core::mem::replace(&mut g.ch[c].anim.fk, crate::anim_skeleton::PoseFK::blank());

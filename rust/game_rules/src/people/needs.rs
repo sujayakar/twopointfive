@@ -28,10 +28,6 @@ macro_rules! trip {
 fn on_trip(g: &Game, gd: GuardId) -> bool {
     g.m.needs.mem_of.get(gd).map_or(false, |r| r.trip.is_some())
 }
-/// `g.level.scenarios?.quiet` is there
-fn has_quiet(g: &Game) -> bool {
-    g.level.scenarios.as_ref().map_or(false, |s| s.quiet.is_some())
-}
 /// `gd.route.points[wp]`
 fn route_point(g: &Game, gd: GuardId, wp: f64) -> V3 {
     g.tab.route[g.gd[gd].route].points[wp as usize]
@@ -55,10 +51,10 @@ fn key(s: &str) -> String {
     String::from(s)
 }
 
-/// Where a need is answered on this level, or None. (needs.ts needSpot)
+/// Where a need is answered on this level, or None.
 fn need_spot(g: &crate::game::Game, kind: crate::needs::NeedKind) -> Option<crate::needs::NeedSpot> {
-    let Some(q) = g.level.scenarios.as_ref().and_then(|s| s.quiet.as_ref()) else { return need_spots().get(key(kind.as_str())).cloned() };
-    let s = q.needs.as_ref().and_then(|n| match kind {
+    if !g.level.own_places() { return need_spots().get(key(kind.as_str())).cloned(); }
+    let s = g.level.needs().and_then(|n| match kind {
         NeedKind::Coffee => n.coffee.as_ref(),
         NeedKind::Smoke => n.smoke.as_ref(),
         NeedKind::Water => n.water.as_ref(),
@@ -73,17 +69,17 @@ fn own_spot(g: &crate::game::Game, s: &crate::needs::OwnSpotS, kind: crate::need
     NeedSpot { name: s.name.clone(), pos: s.pos, face: s.face, loop_: s.loop_.clone() }
 }
 
-/// A new man's row: never back from a break, so his rest is long had. (needs.ts:111)
+/// A new man's row: never back from a break, so his rest is long had.
 fn blank_mem() -> NeedMem {
     NeedMem { needs: Vec::new(), trip: None, last_back_at: -1e9, trips: 0.0, cancels: 0.0, shaken: false, dealt: false }
 }
 
-/// His row, made if new. (needs.ts mem)
+/// His row, made if new.
 pub fn mem<'g>(g: &'g mut crate::game::Game, gd: GuardId) -> &'g mut crate::needs::NeedMem {
     g.m.needs.mem_of.get_or_insert_with(gd, blank_mem)
 }
 
-/// When anybody last walked off; made if new. (needs.ts floor)
+/// When anybody last walked off; made if new.
 fn floor<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::needs::NeedsModFloorOfValue {
     g.m.needs.floor_of.get_or_insert_with(|| NeedsModFloorOfValue { last_depart_at: -1e9 })
 }
@@ -92,18 +88,17 @@ fn floor<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::needs::NeedsModFloo
 fn log(g: &mut crate::game::Game, gd: GuardId, what: &str) {
 }
 
-/// (needs.ts frac)
 fn frac(s: &str) -> f64 {
     js::rem(crate::math_dice::hash_str(s), 100000.0) / 100000.0
 }
 
-/// Metres by path; infinite if there is none. (needs.ts pathMetres)
+/// Metres by path; infinite if there is none.
 fn path_metres(g: &mut crate::game::Game, from: V3, to: V3) -> f64 {
     let Some(p) = crate::scene_collision::nav_grid_find_path(g, from, to, Some(6000.0), None) else { return m::INF };
     path_len(from, &p)
 }
 
-/// The waypoint of his route a trip to `spot` starts from; wp −1 = none. (needs.ts departurePoint)
+/// The waypoint of his route a trip to `spot` starts from; wp −1 = none.
 fn departure_point(g: &mut crate::game::Game, gd: GuardId, spot: &crate::needs::NeedSpot) -> crate::needs::DeparturePoint {
     let r = g.tab.route[g.gd[gd].route].clone();
     let mut best = -1.0;
@@ -121,7 +116,7 @@ fn departure_point(g: &mut crate::game::Game, gd: GuardId, spot: &crate::needs::
     DeparturePoint { wp: best, m: bm }
 }
 
-/// Deal this man his needs, once, off his callsign. (needs.ts deal)
+/// Deal this man his needs, once, off his callsign.
 fn deal(g: &mut crate::game::Game, gd: GuardId) {
     mem(g, gd).dealt = true;
     if g.gd[gd].team != Team::Guard || g.gd[gd].unit.is_some() || g.gd[gd].route_i < 0 {
@@ -161,7 +156,7 @@ fn deal(g: &mut crate::game::Game, gd: GuardId) {
     log(g, gd, &format!("dealt {}", list));
 }
 
-/// May the needs play in this run at all? (needs.ts needsLive)
+/// May the needs play in this run at all?
 fn needs_live(g: &crate::game::Game) -> bool {
     g.tune.needs
         && g.ai_enabled
@@ -171,12 +166,12 @@ fn needs_live(g: &crate::game::Game) -> bool {
         && !crate::seats::all_down(g)
 }
 
-/// Would a man leave his route on this floor? (needs.ts floorCalm)
+/// Would a man leave his route on this floor?
 fn floor_calm(g: &crate::game::Game) -> bool {
     crate::guards::escalation_of(g) == 0.0 && !g.alarm.episode && !crate::sim_lightshome::mains_active(g)
 }
 
-/// Is he calm and free? (needs.ts manCalm)
+/// Is he calm and free?
 fn man_calm(g: &crate::game::Game, gd: GuardId, awareness: f64) -> bool {
     let x = &g.gd[gd];
     x.state == GuardState::Patrol
@@ -192,7 +187,7 @@ fn man_calm(g: &crate::game::Game, gd: GuardId, awareness: f64) -> bool {
         && g.guards.contains(&gd)
 }
 
-/// Why a trip under way must be broken off now, or None. (needs.ts interruptOf)
+/// Why a trip under way must be broken off now, or None.
 fn interrupt_of(g: &crate::game::Game, gd: GuardId) -> Option<String> {
     if !g.tune.needs {
         return Some(key("switched off"));
@@ -256,7 +251,7 @@ fn interrupt_of(g: &crate::game::Game, gd: GuardId) -> Option<String> {
     None
 }
 
-/// Once a frame: levels, the after-alert cap, interrupts, the deal of a trip. (needs.ts needsTick)
+/// Once a frame: levels, the after-alert cap, interrupts, the deal of a trip.
 pub fn needs_tick(g: &mut crate::game::Game, dt: f64) {
     if !g.tune.needs {
         let mut i = 0;
@@ -339,7 +334,7 @@ pub fn needs_tick(g: &mut crate::game::Game, dt: f64) {
     }
 }
 
-/// Put this man on a trip, the telegraph starting now. False if the place cannot be reached. (needs.ts scheduleTrip)
+/// Put this man on a trip, the telegraph starting now. False if the place cannot be reached.
 fn schedule_trip(g: &mut crate::game::Game, gd: GuardId, kind: crate::needs::NeedKind, forced: bool) -> bool {
     let spot = need_spot(g, kind);
     let c = g.gd[gd].ch;
@@ -411,7 +406,7 @@ fn schedule_trip(g: &mut crate::game::Game, gd: GuardId, kind: crate::needs::Nee
     true
 }
 
-/// Length of a path, walked from `from`. (needs.ts pathLen)
+/// Length of a path, walked from `from`.
 fn path_len(from: V3, p: &[V3]) -> f64 {
     let mut s = 0.0;
     let mut prev = from;
@@ -422,7 +417,7 @@ fn path_len(from: V3, p: &[V3]) -> f64 {
     s
 }
 
-/// Break the trip off wherever he is; nothing is resumed. (needs.ts cancelTrip)
+/// Break the trip off wherever he is; nothing is resumed.
 fn cancel_trip(g: &mut crate::game::Game, gd: GuardId, why: &str) {
     if !on_trip(g, gd) {
         return;
@@ -457,7 +452,7 @@ fn cancel_trip(g: &mut crate::game::Game, gd: GuardId, why: &str) {
     log(g, gd, &format!("{} CANCELLED in {} — {}", t.kind.as_str(), t.phase.as_str(), why));
 }
 
-/// The line for a slot, off his name and his count. (needs.ts pickLine)
+/// The line for a slot, off his name and his count.
 fn pick_line(g: &mut crate::game::Game, pool: &[String], gd: GuardId, salt: &str) -> String {
     let trips = mem(g, gd).trips;
     let cancels = mem(g, gd).cancels;
@@ -465,7 +460,7 @@ fn pick_line(g: &mut crate::game::Game, pool: &[String], gd: GuardId, salt: &str
     pool[js::rem(h, pool.len() as f64) as usize].clone()
 }
 
-/// The colleague he tells: the nearest staff man his words reach. (needs.ts partnerFor)
+/// The colleague he tells: the nearest staff man his words reach.
 fn partner_for(g: &mut crate::game::Game, gd: GuardId) -> Option<GuardId> {
     let mouth = head_or_guess(g, gd);
     let my_pos = g.ch[g.gd[gd].ch].pos;
@@ -492,12 +487,12 @@ fn partner_for(g: &mut crate::game::Game, gd: GuardId) -> Option<GuardId> {
     best
 }
 
-/// Say it: to the partner's face, else over the net. (needs.ts announce)
+/// Say it: to the partner's face, else over the net.
 fn announce(g: &mut crate::game::Game, gd: GuardId, t: &mut crate::needs::Trip) {
     t.told = true;
     g.stats.needs.told += 1;
     let p = partner_for(g, gd);
-    let quiet = has_quiet(g);
+    let quiet = g.level.own_places();
     let lines = crate::dialogue::needs_lines_table();
     let kind = t.kind.as_str();
     if let Some(p) = p {
@@ -529,7 +524,7 @@ fn announce(g: &mut crate::game::Game, gd: GuardId, t: &mut crate::needs::Trip) 
     }
 }
 
-/// The partner's grumble, if he is still one to give it. (needs.ts partnerReply)
+/// The partner's grumble, if he is still one to give it.
 fn partner_reply(g: &mut crate::game::Game, gd: GuardId, t: &mut crate::needs::Trip) {
     t.replied = true;
     let Some(p) = t.partner else { return };
@@ -569,14 +564,14 @@ fn partner_reply(g: &mut crate::game::Game, gd: GuardId, t: &mut crate::needs::T
     log(g, gd, &format!("{} answers: \"{}\"", pcs, line));
 }
 
-/// `stand()` of needsPatrol: his feet stop. (needs.ts:292)
+/// `stand()` of needsPatrol: his feet stop.
 fn stand(g: &mut Game, gd: GuardId, dt: f64) {
     g.gd[gd].speed = v3::damp(g.gd[gd].speed, 0.0, 8.0, dt);
     let c = g.gd[gd].ch;
     g.ch[c].vel = [0.0, 0.0, 0.0];
 }
 
-/// If a trip owns his feet this frame, run them and return true; false = the branch walks his route. (needs.ts needsPatrol)
+/// If a trip owns his feet this frame, run them and return true; false = the branch walks his route.
 pub(super) fn needs_patrol(g: &mut crate::game::Game, gd: GuardId, dt: f64, walk: f64) -> bool {
     if !on_trip(g, gd) {
         return false;
@@ -646,7 +641,7 @@ pub(super) fn needs_patrol(g: &mut crate::game::Game, gd: GuardId, dt: f64, walk
                 d.set(key("kind"), text(kind.as_str()));
                 d.set(key("what"), text("left"));
                 d.set(key("to"), text(&trip!(g, gd).spot.name));
-                if has_quiet(g) {
+                if g.level.own_places() {
                     d.set(key("own"), Some(ChronicleDataValue::Num(1.0)));
                 }
                 let at = g.ch[c].pos;
@@ -796,7 +791,7 @@ pub(super) fn needs_patrol(g: &mut crate::game::Game, gd: GuardId, dt: f64, walk
     }
 }
 
-/// The probes: put a man's need at a level; false if he does not carry that kind. (needs.ts needsSetLevel)
+/// The probes: put a man's need at a level; false if he does not carry that kind.
 pub fn needs_set_level(g: &mut crate::game::Game, gd: GuardId, kind: crate::needs::NeedKind, level: f64) -> bool {
     if !mem(g, gd).dealt {
         deal(g, gd);

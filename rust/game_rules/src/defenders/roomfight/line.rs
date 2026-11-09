@@ -18,7 +18,7 @@ pub(super) fn head_of(g: &Game, c: CharId) -> V3 {
     match g.ch[c].bones.get(crate::character::Bone::Head) { Some(b) => *b, None => v3::add(g.ch[c].pos, [0.0, 1.6, 0.0]) }
 }
 
-/// Is this body within the clearance it is owed of the line from → to (the `hit` of roomfight.ts friendInLine)
+/// Is this body within the clearance it is owed of the line from → to
 pub(super) fn line_hit(g: &mut Game, ch: CharId, mate: bool, from: V3, dx: f64, dz: f64, l2: f64, l: f64, t_max: f64) -> bool {
     let pos = g.ch[ch].pos;
     let vel = g.ch[ch].vel;
@@ -41,7 +41,7 @@ pub(super) fn line_hit(g: &mut Game, ch: CharId, mate: bool, from: V3, dx: f64, 
     m::hyp2(from[0] + dx * t - h[0], from[2] + dz * t - h[2]) < clear
 }
 
-/// A friend, Sam or another living operative, within a body's breadth of the line from → to and a metre past it, wider for one on the move. (roomfight.ts friendInLine)
+/// A friend, Sam or another living operative, within a body's breadth of the line from → to and a metre past it, wider for one on the move.
 pub fn room_fight_friend_in_line(g: &mut crate::game::Game, from: V3, to: V3, self_: GuardId) -> Option<CharId> {
     let dx = to[0] - from[0];
     let dz = to[2] - from[2];
@@ -69,7 +69,7 @@ pub fn room_fight_friend_in_line(g: &mut crate::game::Game, from: V3, to: V3, se
     None
 }
 
-/// Sam between a teammate's gun and what it is on, or a metre past it: the gun goes to the low ready while he is there. (roomfight.ts samInLine)
+/// Sam between a teammate's gun and what it is on, or a metre past it: the gun goes to the low ready while he is there.
 pub(super) fn room_fight_sam_in_line(g: &mut crate::game::Game, o: RoomfightOpId, to: V3) -> bool {
     let gd = g.tab.roomfight_op[o].gd;
     let c = g.gd[gd].ch;
@@ -80,7 +80,7 @@ pub(super) fn room_fight_sam_in_line(g: &mut crate::game::Game, o: RoomfightOpId
     true
 }
 
-/// True of an enemy who is NOT this covering man's: off his ordered way, and a mate has him. (roomfight.ts coverPasses)
+/// True of an enemy who is NOT this covering man's: off his ordered way, and a mate has him.
 pub(super) fn room_fight_cover_passes(g: &crate::game::Game, seat: &crate::seats::SeatRef, o: RoomfightOpId, h: GuardId) -> bool {
     let r = g.k.roomfight;
     let a = match crate::orders::squad_orders_of(g, seat, g.tab.roomfight_op[o].gd) { Some(a) => a, None => return false };

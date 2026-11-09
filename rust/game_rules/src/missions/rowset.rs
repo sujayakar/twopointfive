@@ -1,4 +1,4 @@
-//! src/game/rowset.ts: a mission row's own hour and weather
+//! a mission row's own hour and weather
 
 pub use ::game_types::rowset::types;
 pub use types::*;
@@ -9,7 +9,7 @@ use crate::scene_scenarios::ScenarioEntry;
 
 /// the switch is up (rowset.ts `live`; `ROWSET_BREAK` is a check's own word and is never up here)
 fn live(g: &Game) -> bool { !BREAK }
-/// a row with a level file of its own that names an hour or a weather (rowset.ts `own`)
+/// a row with a level file of its own that names an hour or a weather
 fn own(e: &ScenarioEntry) -> bool { e.level.as_deref().is_some_and(|l| !l.is_empty()) && (e.hour.is_some() || e.weather.is_some()) }
 
 /// The row whose own hour or weather a query is started in, or none: the first row of the query's level file that names one (THE HOUR IS THE
@@ -20,7 +20,7 @@ fn row_of(g: &Game, q: &Query) -> Option<ScenarioEntry> {
     crate::scene_scenario_list::all_missions().into_iter().find(|e| own(e) && e.level.as_deref() == Some(level.as_str()))
 }
 
-/// The row's own hour and weather WRITTEN ONTO a query, over whatever it carried; answers what was put on. (rowset.ts rowSettings)
+/// The row's own hour and weather WRITTEN ONTO a query, over whatever it carried; answers what was put on.
 pub(super) fn row_settings(g: &Game, q: &mut Query) -> RowSettings {
     let mut put = RowSettings::default();
     let Some(e) = row_of(g, q) else { return put; };

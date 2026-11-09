@@ -1,8 +1,7 @@
-//! A LEAF OFF ITS HINGES, IN THE AIR (src/game/doorblast.ts stepSlab) — the loose slab a blast or a boot at a run sent out of its frame, for one tick: it
+//! A LEAF OFF ITS HINGES, IN THE AIR — the loose slab a blast or a boot at a run sent out of its frame, for one tick: it
 //! flies, drags its foot, topples about it, is stopped dead by the walls its rays find, is pushed out of what its toppling reaches, slams flat, slides
 //! out and comes to rest clear of every static.
 //!
-//! STATEMENT FOR STATEMENT, as doors.rs and props.rs are. tools/qa/slab-ident.ts and the missions of tools/qa/rust-check.ts hold the two together.
 //!
 //! WHAT IS STATE, AND WHAT IS HANDED IN. A slab's own numbers are the `slabs` part of the game's block (state.rs), laid out as the furniture's are
 //! (props.rs says why): DENSE ROWS, and the rows in the air first — rows 0 .. fly are the slabs a tick steps, in the order of their doors, with no test;
@@ -74,7 +73,7 @@ pub struct Slabs {
 }
 const _: () = assert!(size_of::<Slabs>() == 16 + 17 * CAP * 8 + 4 * CAP * 4);
 const _: () = assert!(offset_of!(Slabs, px) % 16 == 0 && offset_of!(Slabs, flags) % 16 == 0 && (CAP * 4) % 16 == 0);
-/// the columns in their order (src/sim/slabshome.ts SLAB_F64 and SLAB_U32 name them the same)
+/// the columns in their order
 pub const COLS: [usize; 21] = [
     offset_of!(Slabs, px),
     offset_of!(Slabs, py),
@@ -165,7 +164,7 @@ const HALF_PI: f64 = core::f64::consts::PI / 2.0;
 const PI: f64 = core::f64::consts::PI;
 const LIFT: f64 = 0.005;
 const G: f64 = 9.8;
-/// statics one gather of the TypeScript's can list (doorblast.ts OV)
+/// statics one gather of the TypeScript's can list
 const OV: usize = 512;
 
 /// a slab as the step works on it (the columns the step may write, copied in and, if the step is this module's to take, out)
@@ -206,23 +205,23 @@ struct Leaf {
     laid: f64,
 }
 
-/// doorblast.ts support: the slab's centre height with its foot (or its face) on the floor at this much tip
+/// The slab's centre height with its foot (or its face) on the floor at this much tip
 #[inline(always)]
 fn support(d: &Leaf, tip: f64) -> f64 {
     (d.height / 2.0) * cos(tip) + (d.thick / 2.0) * sin(tip) + LIFT
 }
-/// doorblast.ts acrossOf: the slab's reach across its own line at this much tip
+/// The slab's reach across its own line at this much tip
 #[inline(always)]
 fn across_of(d: &Leaf, tip: f64) -> f64 {
     (d.height / 2.0) * sin(tip) + (d.thick / 2.0) * cos(tip)
 }
-/// doorblast.ts reachAlong: its half extent along the horizontal unit direction (ex, ez)
+/// Its half extent along the horizontal unit direction (ex, ez)
 #[inline(always)]
 fn reach_along(d: &Leaf, s: &Now, ex: f64, ez: f64) -> f64 {
     let (ux, uz) = (cos(s.a), sin(s.a));
     js_abs(ex * ux + ez * uz) * d.hu + js_abs(-ex * uz + ez * ux) * across_of(d, s.tip)
 }
-/// doorblast.ts hitAt: the nearest static, or other door's leaf, along a horizontal ray: how far, and the face's normal in plan
+/// The nearest static, or other door's leaf, along a horizontal ray: how far, and the face's normal in plan
 fn hit_at(d: &mut Leaf, x: f64, y: f64, z: f64, ex: f64, ez: f64, tmax: f64, tune: &Knobs) -> Option<(f64, f64, f64)> {
     let mut out = [0.0f64; 4];
     d.rays += 1.0;
@@ -236,7 +235,7 @@ fn hit_at(d: &mut Leaf, x: f64, y: f64, z: f64, ex: f64, ez: f64, tmax: f64, tun
     }
     Some((out[0], out[1], out[3]))
 }
-/// doorblast.ts overlaps: does a floor rectangle — centre (x, z), heading a, half extents hu along it × hn across — cut into a static standing in the
+/// Does a floor rectangle — centre (x, z), heading a, half extents hu along it × hn across — cut into a static standing in the
 /// heights [y0, y1]?
 #[allow(clippy::too_many_arguments)]
 fn overlaps(d: &mut Leaf, x: f64, z: f64, a: f64, hu: f64, hn: f64, y0: f64, y1: f64) -> bool {
@@ -267,7 +266,7 @@ fn overlaps(d: &mut Leaf, x: f64, z: f64, a: f64, hu: f64, hn: f64, y0: f64, y1:
     }
     false
 }
-/// doorblast.ts freeSpot: the nearest spot within max_r where that rectangle stands clear (rings of sixteen bearings, nearest first)
+/// The nearest spot within max_r where that rectangle stands clear (rings of sixteen bearings, nearest first)
 #[allow(clippy::too_many_arguments)]
 fn free_spot(d: &mut Leaf, x: f64, z: f64, a: f64, hu: f64, hn: f64, y0: f64, y1: f64, max_r: f64) -> Option<(f64, f64)> {
     let mut r = 0.03;
@@ -285,7 +284,7 @@ fn free_spot(d: &mut Leaf, x: f64, z: f64, a: f64, hu: f64, hn: f64, y0: f64, y1
     }
     None
 }
-/// doorblast.ts unstick: in the air, once out of its frame, a slab that has come to cut into a static is moved to the nearest clear spot and loses what
+/// In the air, once out of its frame, a slab that has come to cut into a static is moved to the nearest clear spot and loses what
 /// speed it had into the thing
 fn unstick(d: &mut Leaf, s: &mut Now) {
     let (hu, hn, y0, y1) = (d.hu, across_of(d, s.tip), 0.06, js_max(0.3, 2.0 * s.py - 0.06));
@@ -307,7 +306,7 @@ fn unstick(d: &mut Leaf, s: &mut Now) {
     s.pz = t1;
     s.spin *= 0.3;
 }
-/// doorblast.ts settle: at rest it lies clear of every static — where it stopped if that is clear; else the nearest clear spot, as it lies or turned a
+/// At rest it lies clear of every static — where it stopped if that is clear; else the nearest clear spot, as it lies or turned a
 /// little; else laid through its own doorway
 fn settle(d: &mut Leaf, s: &mut Now) {
     let (hu, hn, y0, y1) = (d.hu, d.height / 2.0, 0.06, 0.3);
@@ -333,7 +332,7 @@ fn settle(d: &mut Leaf, s: &mut Now) {
         d.laid += 1.0;
     }
 }
-/// doorblast.ts pushOut: keep the slab's floor rectangle out of the statics as toppling (and its spin) lengthen it
+/// Keep the slab's floor rectangle out of the statics as toppling (and its spin) lengthen it
 fn push_out(d: &mut Leaf, s: &mut Now, tune: &Knobs) {
     let (ux, uz) = (cos(s.a), sin(s.a));
     let (nx, nz, hu, hn) = (-uz, ux, d.hu, across_of(d, s.tip));

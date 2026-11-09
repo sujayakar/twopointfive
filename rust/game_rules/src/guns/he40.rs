@@ -79,7 +79,7 @@ pub fn shell_bodies(g: &crate::game::Game) -> Vec<CharId> {
     out
 }
 
-/// This round's flight table in the launcher's shape (TypeScript hands HE40 itself to launcher.ts).
+/// This round's flight table in the launcher's shape.
 fn ballistics(g: &Game) -> crate::launcher::Ballistics {
     let k = g.k.he40;
     crate::launcher::Ballistics {

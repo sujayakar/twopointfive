@@ -7,13 +7,13 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{string::String, vec, vec::Vec};
 
-/// INVENTED: THE whole write of a man's path. Every `gd.path = x` of the TypeScript (a new array, even `[]`) is this call: identity readers (doorpath.ts:336-337, doorway.ts:328, guards.ts:2037) compare path_serial. An in-place edit (splice, push, index, `length = n`) is not a whole write and does not call it. ONE exception: runner.ts:294 puts the same array back, so it restores path and path_serial together and does not call this
+/// INVENTED: THE whole write of a man's path. Every `gd.path = x` of the TypeScript (a new array, even `[]`) is this call: identity readers compare path_serial. An in-place edit (splice, push, index, `length = n`) is not a whole write and does not call it. ONE exception: runner.ts:294 puts the same array back, so it restores path and path_serial together and does not call this
 pub fn guard_set_path(g: &mut crate::game::Game, gd: GuardId, path: Vec<V3>) { let o = &mut g.gd[gd]; o.path = path; o.path_serial = o.path_serial.wrapping_add(1); }
 
 /// A game stands in this slot of rust/sim's: its own word says so, and the box mirror's, which the world's lookups read.
 pub fn stand_in(g: &mut crate::game::Game, slot: usize) { g.sim = slot; g.col.mirror.slot = slot as f64; }
 
-/// A man easing past furniture: a player crouched and not dashing; anyone else low.   (game.ts quietMan)
+/// A man easing past furniture: a player crouched and not dashing; anyone else low.
 pub(super) fn quiet_man(g: &crate::game::Game, pl: Option<PlayerId>, c: CharId) -> bool {
     match pl {
         Some(p) => g.pl[p].crouch && !g.pl[p].dash,
@@ -21,7 +21,7 @@ pub(super) fn quiet_man(g: &crate::game::Game, pl: Option<PlayerId>, c: CharId) 
     }
 }
 
-/// Chaos Theory's own words: seen = assault; nothing known = ghost; else panther.   (game.ts missionRating)
+/// Chaos Theory's own words: seen = assault; nothing known = ghost; else panther.
 fn mission_rating(s: &crate::game::MissionStats) -> crate::game::MissionRating {
     if s.spotted > 0.0 {
         crate::game::MissionRating::Assault
@@ -32,7 +32,7 @@ fn mission_rating(s: &crate::game::MissionStats) -> crate::game::MissionRating {
     }
 }
 
-/// `m:ss` of a count of seconds.   (game.ts fmtClock)
+/// `m:ss` of a count of seconds.
 pub fn fmt_clock(sec: f64) -> String {
     let s = m::max(0.0, m::floor(sec));
     let tail = js::num_str(js::rem(s, 60.0));
@@ -40,7 +40,7 @@ pub fn fmt_clock(sec: f64) -> String {
     alloc::format!("{}:{}{}", js::num_str(m::floor(s / 60.0)), pad, tail)
 }
 
-/// The mission thread as a run starts. `serial` is 0 here, having no `g`: the caller that writes `g.mission` whole deals it.   (game.ts newMission)
+/// The mission thread as a run starts. `serial` is 0 here, having no `g`: the caller that writes `g.mission` whole deals it.
 pub(super) fn new_mission(t0: f64) -> crate::game::Mission {
     crate::game::Mission {
         stage: crate::game::MissionStage::Infiltrate,
@@ -128,19 +128,19 @@ mod tests {
     }
 }
 
-/// The selector open as a list, not up as a ring. (game.ts Player.listOpen)
+/// The selector open as a list, not up as a ring.
 pub fn player_list_open(g: &crate::game::Game, id: PlayerId) -> bool {
     let sel = &g.pl[id].sel;
     sel.open && sel.ring.is_none()
 }
 
-/// The selector open with his hand on it: a list, or a ring whose key is still down. (game.ts Player.choosing)
+/// The selector open with his hand on it: a list, or a ring whose key is still down.
 pub fn player_choosing(g: &crate::game::Game, id: PlayerId) -> bool {
     let sel = &g.pl[id].sel;
     sel.open && !sel.ring.as_ref().and_then(|r| r.free).unwrap_or(false)
 }
 
-/// Makes a player: his guns first (the field initialisers), then his body. (game.ts Player.constructor)
+/// Makes a player: his guns first (the field initialisers), then his body.
 pub(in crate::tick) fn player_new(g: &mut crate::game::Game, men: crate::Opaque, ch: RigId, pos: V3, has_rifle: Option<bool>, seat: Option<f64>) -> PlayerId {
     let has_rifle = has_rifle.unwrap_or(true);
     let seat = seat.unwrap_or(0.0);
@@ -165,7 +165,7 @@ pub(in crate::tick) fn player_new(g: &mut crate::game::Game, men: crate::Opaque,
     id
 }
 
-/// What is physically in the gun hand right now. (game.ts Player.gunInHand)
+/// What is physically in the gun hand right now.
 pub fn player_gun_in_hand(g: &crate::game::Game, id: PlayerId) -> Option<FirearmId> {
     if g.pl[id].holstered {
         None
@@ -178,33 +178,33 @@ pub fn player_gun_in_hand(g: &crate::game::Game, id: PlayerId) -> Option<Firearm
     }
 }
 
-/// The Five-seveN is the selected item and drawn. (game.ts Player.pistolUp)
+/// The Five-seveN is the selected item and drawn.
 pub fn player_pistol_up(g: &crate::game::Game, id: PlayerId) -> bool {
     g.pl[id].slot == crate::game::SlotKind::Pistol && !g.pl[id].holstered
 }
 
-/// The FN2000 is the selected item and the kit has it. (game.ts Player.rifleSel)
+/// The FN2000 is the selected item and the kit has it.
 pub fn player_rifle_sel(g: &crate::game::Game, id: PlayerId) -> bool {
     g.pl[id].slot == crate::game::SlotKind::Rifle && g.pl[id].has_rifle
 }
 
-/// The FN2000 is in both hands. (game.ts Player.rifleUp)
+/// The FN2000 is in both hands.
 pub fn player_rifle_up(g: &crate::game::Game, id: PlayerId) -> bool {
     player_rifle_sel(g, id) && !g.pl[id].holstered && g.pl[id].dragging.is_none() && !crate::condition::down(g, g.pl[id].ch)
 }
 
-/// Braced on the foregrip, on his own legs this tick. (game.ts Player.braced)
+/// Braced on the foregrip, on his own legs this tick.
 pub fn player_braced(g: &crate::game::Game, id: PlayerId) -> bool {
     let sprinting = g.pl[id].sprinting;
     player_braced_at(g, id, sprinting)
 }
 
-/// Braced, asked of legs that are or are not at a run. (game.ts Player.bracedAt)
+/// Braced, asked of legs that are or are not at a run.
 pub fn player_braced_at(g: &crate::game::Game, id: PlayerId, sprinting: bool) -> bool {
     player_rifle_up(g, id) && !sprinting && g.pl[id].kick.is_none()
 }
 
-/// The canister the selected slot puts in the fist, None with a gun selected. (game.ts Player.canisterSel)
+/// The canister the selected slot puts in the fist, None with a gun selected.
 pub fn player_canister_sel(g: &crate::game::Game, id: PlayerId) -> Option<crate::game::ThrowKind> {
     match g.pl[id].slot {
         crate::game::SlotKind::Smoke => Some(crate::game::ThrowKind::Smoke),
@@ -214,7 +214,7 @@ pub fn player_canister_sel(g: &crate::game::Game, id: PlayerId) -> Option<crate:
     }
 }
 
-/// A living friend stands in the lane his gun points down. Geometry only. (game.ts friendBeforeMuzzle)
+/// A living friend stands in the lane his gun points down. Geometry only.
 pub fn friend_before_muzzle(g: &crate::game::Game, gd: GuardId) -> bool {
     let c = g.gd[gd].ch;
     let y = crate::character::character_gun_yaw(g, c);
@@ -236,14 +236,14 @@ fn in_lane(p: V3, at: V3, y: f64) -> bool {
     crate::character::in_dip_lane(p[0] - at[0], p[2] - at[2], y)
 }
 
-/// Down but breathing: put out cold, not shot. False for a living man and for a corpse. (game.ts isBreathing)
+/// Down but breathing: put out cold, not shot. False for a living man and for a corpse.
 pub fn is_breathing(g: &crate::game::Game, gd: GuardId) -> bool {
     crate::condition::down(g, g.gd[gd].ch)
         && g.gd[gd].down_kind.is_some()
         && g.gd[gd].down_kind != Some(crate::game::DownKind::Shot)
 }
 
-/// What a man has personally perceived, as an encounter starts. (game.ts newWitness)
+/// What a man has personally perceived, as an encounter starts.
 fn new_witness() -> crate::game::Witness {
     crate::game::Witness {
         heard: crate::game::WitnessHeard { shots: 0.0, last_shot_t: -1.0, kick: 0.0, bang: 0.0, small: 0.0, small_where: None, loud_at: None, last_t: -1.0 },
@@ -259,7 +259,7 @@ fn new_witness() -> crate::game::Witness {
     }
 }
 
-/// A man's interrogation progress, as an encounter starts. (game.ts newTalk)
+/// A man's interrogation progress, as an encounter starts.
 fn new_talk(g: &mut crate::game::Game) -> GameTalkId {
     g.tab.game_talk.push(fresh_talk())
 }
@@ -302,7 +302,7 @@ mod tests_2 {
     }
 }
 
-/// Stamp fix_t if the fix has moved since last looked at; called once a frame by update_guard. (game.ts Guard.trackFix)
+/// Stamp fix_t if the fix has moved since last looked at; called once a frame by update_guard.
 pub fn guard_track_fix(g: &mut crate::game::Game, id: GuardId, now: f64) {
     let lk = match g.gd[id].last_known {
         Some(lk) => lk,
@@ -315,7 +315,7 @@ pub fn guard_track_fix(g: &mut crate::game::Game, id: GuardId, now: f64) {
     if moved { g.gd[id].fix_ref = Some(v3::copy(lk)); g.gd[id].fix_t = now; }
 }
 
-/// A man: his record, his body facing down the first leg, his keys, his gun. Field initialisers first (the look phase's draw comes BEFORE the body's own). (game.ts Guard.constructor)
+/// A man: his record, his body facing down the first leg, his keys, his gun. Field initialisers first (the look phase's draw comes BEFORE the body's own).
 pub fn guard_new(g: &mut crate::game::Game, men: crate::Opaque, ch: RigId, id_2: f64, route: RouteId, route_i: i32, flashlight: LightId, tint: V3, look: Option<&crate::game::GuardNewLook>) -> GuardId {
     let id = g.gd.push(Guard::blank());
     g.gd[id].witness = new_witness();

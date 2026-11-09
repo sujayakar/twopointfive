@@ -6,12 +6,12 @@ use crate::ids::*;
 use crate::v3::{self, Quat, V3};
 use alloc::vec::Vec;
 
-/// the script startle.ts lent for the frame (guards.ts:2134), as the run left it, put back on his row: startle.ts:133 reads its `arrived` (conventions 4).
+/// the script startle.ts lent for the frame, as the run left it, put back on his row: startle.ts:133 reads its `arrived`.
 pub(super) fn startle_script_ran(g: &mut crate::game::Game, gd: GuardId, ran: Option<crate::game::GuardScript>) {
     if let (Some(ran), Some(s)) = (ran, g.m.startle.state_of.get_mut(gd)) { if s.script.is_some() { s.script = Some(ran); } }
 }
 
-/// A man's record as it starts: never startled, never calm.   (startle.ts blank)
+/// A man's record as it starts: never startled, never calm.
 fn blank() -> crate::startle::St {
     crate::startle::St {
         calm_t: -100.0,
@@ -33,7 +33,7 @@ fn blank() -> crate::startle::St {
     }
 }
 
-/// THE START, for any caller: he jolts toward `at`; for `secs` his gun stays down. False = not given.   (startle.ts giveStartle)
+/// THE START, for any caller: he jolts toward `at`; for `secs` his gun stays down. False = not given.
 pub fn give_startle(g: &mut crate::game::Game, gd: GuardId, at: V3, secs: Option<f64>, torch: Option<bool>) -> bool {
     let secs = secs.unwrap_or(g.k.startle.beat);
     if crate::condition::down(g, g.gd[gd].ch) || g.gd[gd].held.is_some() || g.gd[gd].civ.is_some() || crate::owner::has(g, gd, crate::owner::by::RUNNER) { return false; }
@@ -48,7 +48,7 @@ pub fn give_startle(g: &mut crate::game::Game, gd: GuardId, at: V3, secs: Option
     true
 }
 
-/// updateGuard, right after the state transitions: the end of a beat, the calm he last stood in, the first sight itself.   (startle.ts startleSight)
+/// updateGuard, right after the state transitions: the end of a beat, the calm he last stood in, the first sight itself.
 pub(super) fn startle_sight(g: &mut crate::game::Game, gd: GuardId, prev: crate::game::GuardState, seen: bool) {
     if let Some(s) = g.m.startle.state_of.get_mut(gd) {
         if s.until >= 0.0 && g.time >= s.until {
@@ -92,37 +92,37 @@ pub(super) fn startle_sight(g: &mut crate::game::Game, gd: GuardId, prev: crate:
     }
 }
 
-/// updateGuard, at the pose write: his gun is held down this frame.   (startle.ts startleGunDown)
+/// updateGuard, at the pose write: his gun is held down this frame.
 pub(super) fn startle_gun_down(g: &crate::game::Game, gd: GuardId) -> bool {
     let now = g.time;
     match g.m.startle.state_of.get(gd) { Some(s) => now < s.until || s.pre || s.run.is_some(), None => false }
 }
 
-/// handCarry: the hand torch is still what he carries (he had it when the start took him).   (startle.ts startleTorch)
+/// handCarry: the hand torch is still what he carries (he had it when the start took him).
 pub(super) fn startle_torch(g: &crate::game::Game, gd: GuardId) -> bool {
     let Some(s) = g.m.startle.state_of.get(gd) else { return false };
     s.torch && (g.gd[gd].state == crate::game::GuardState::Alert || g.gd[gd].state == crate::game::GuardState::Suspicious) && g.gd[gd].script.is_none()
 }
 
-/// Is he in a start right now, anybody's.   (startle.ts startled)
+/// Is he in a start right now, anybody's.
 pub fn startled(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let now = g.time;
     match g.m.startle.state_of.get(gd) { Some(s) => now < s.until, None => false }
 }
 
-/// The seconds of a start still on him, and of the draw after it (0: none): the least his reaction clock may read.   (startle.ts startleLeft)
+/// The seconds of a start still on him, and of the draw after it (0: none): the least his reaction clock may read.
 pub fn startle_left(g: &crate::game::Game, gd: GuardId) -> f64 {
     let now = g.time;
     let Some(s) = g.m.startle.state_of.get(gd) else { return 0.0 };
     if now < s.until { s.until - now } else if now < s.draw_until { s.draw_until - now } else { 0.0 }
 }
 
-/// Is he running for cover off a start.   (startle.ts startleRunning)
+/// Is he running for cover off a start.
 fn startle_running(g: &crate::game::Game, gd: GuardId) -> bool {
     match g.m.startle.state_of.get(gd) { Some(s) => s.run.is_some(), None => false }
 }
 
-/// The run ends here; on his own feet he holds the spot as a man shifted under fire holds his.   (startle.ts startleScript `stop`)
+/// The run ends here; on his own feet he holds the spot as a man shifted under fire holds his.
 fn stop(g: &mut crate::game::Game, gd: GuardId, hold: bool) -> Option<crate::game::GuardScript> {
     g.m.startle.state_of.get_mut(gd).unwrap().run = None;
     let now = g.time;
@@ -134,7 +134,7 @@ fn stop(g: &mut crate::game::Game, gd: GuardId, hold: bool) -> Option<crate::gam
 }
 
 /// THE RULE'S OWN STATE, moved a tick (the first of a rule's three parts, control/): a run ends where he cannot go on with it, where he is stuck, where
-/// he has arrived or it has taken too long; else its stuck watch is kept and its script is made.   (startle.ts startleScript, the part that writes)
+/// he has arrived or it has taken too long; else its stuck watch is kept and its script is made.
 pub(super) fn startle_transition(g: &mut crate::game::Game, gd: GuardId) {
     let Some(run) = g.m.startle.state_of.get(gd).and_then(|s| s.run) else { return };
     let now = g.time;
@@ -174,7 +174,7 @@ pub(super) fn startle_propose(g: &crate::game::Game, gd: GuardId) -> Option<crat
     if s.run.is_some() { s.script } else { None }
 }
 
-/// The beat is over: he draws (the fight as it was, from here) or he runs.   (startle.ts choose)
+/// The beat is over: he draws (the fight as it was, from here) or he runs.
 fn choose(g: &mut crate::game::Game, gd: GuardId) {
     let now = g.time;
     if g.gd[gd].state != crate::game::GuardState::Alert || g.gd[gd].held.is_some() || crate::condition::is_blind(g, g.gd[gd].ch) || crate::condition::is_folded(g, g.gd[gd].ch) { return; }
@@ -190,7 +190,7 @@ fn choose(g: &mut crate::game::Game, gd: GuardId) {
     g.m.startle.state_of.get_mut(gd).unwrap().call = false;
 }
 
-/// A green man alone, caught inside `run_m` and not inside `near_m`, runs for it.   (startle.ts runs)
+/// A green man alone, caught inside `run_m` and not inside `near_m`, runs for it.
 fn runs(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let c = g.gd[gd].ch;
     let toward = g.m.startle.state_of.get(gd).unwrap().toward;

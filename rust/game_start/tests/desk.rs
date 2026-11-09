@@ -1,15 +1,13 @@
 //! The desk as a page has it: asks by their bytes, answers read off the wire's shape.
 use game::kit::{MemberKit, TrimId};
 use game::view::{BriefView, CardRow, CardView, MissionRow, MissionsView, Pressed, Setting, SheetView, ShortView, StartView, TeamView};
-use game_run::command::apply;
-use game_run::desk::Desk;
-use game_run::kept;
+use game_start::host::desk::Desk;
+use game_start::host::kept;
 
 const CARD: u32 = 0;
 const STEP: u32 = 1;
 const COPY: u32 = 4;
 const PASTE: u32 = 5;
-const KIT_COMMAND: u32 = 18;
 
 fn text(b: &mut Vec<u8>, s: &str) { b.extend_from_slice(&(s.len() as u32).to_le_bytes()); b.extend_from_slice(s.as_bytes()); }
 fn head(n: u32, who: u32) -> Vec<u8> { let mut b = n.to_le_bytes().to_vec(); b.extend_from_slice(&who.to_le_bytes()); b }
@@ -29,9 +27,7 @@ fn step(d: &mut Desk, who: u32, field: &str, dir: i32) -> Pressed {
 fn card_row<'a>(c: &'a CardView, field: &str) -> &'a CardRow { c.rows.iter().find(|r| r.field == field).unwrap_or_else(|| panic!("no row {field}")) }
 fn desk_with(kept: &str) -> Desk {
     let mut d = Desk::new();
-    let mut b = KIT_COMMAND.to_le_bytes().to_vec();
-    text(&mut b, kept);
-    apply(&mut d.g, &b).expect("a command the game has");
+    kept::read(&mut d.g, kept);
     d
 }
 fn members(d: &Desk) -> Vec<MemberKit> { d.g.m.kit.kit.members.clone() }
@@ -225,9 +221,6 @@ const MISSION: u32 = 14;
 const SHORT: u32 = 15;
 const NEXT: u32 = 16;
 const LEAVE: u32 = 17;
-const LEVER_COMMAND: u32 = 13;
-const QUIET_FOG_COMMAND: u32 = 19;
-const QUIET_CAMS_COMMAND: u32 = 20;
 const LEVELS: &str = "twopointsix.difficulty";
 const LEVERS: &str = "twopointsix.levers";
 const QUIET_FOG: &str = "twopointsix.quietfog";
@@ -341,11 +334,8 @@ fn a_quiet_missions_fog_press_keeps_the_quiet_pick_and_not_the_squads() {
 #[test]
 fn what_is_kept_of_the_quiet_picks_is_read_as_the_store_is() {
     let mut d = Desk::new();
-    let mut b = worded(QUIET_FOG_COMMAND, &["own"]);
-    b.extend_from_slice(&QUIET_CAMS_COMMAND.to_le_bytes());
-    b.extend_from_slice(&0u32.to_le_bytes());
-    d.machine(&b).expect("commands the game has");
-    d.machine(&worded(QUIET_FOG_COMMAND, &["no rung"])).expect("commands the game has");
+    d.machine(r#"{"quietFog":"own","quietCams":false}"#, "").expect("a record");
+    d.machine(r#"{"quietFog":"no rung"}"#, "").expect("a record");
     let s = sheet(&mut d, "bazaar-quiet");
     assert_eq!(lit(&s, "fog"), ["own"]);
     assert_eq!(lit(&s, "cams"), ["0"]);
@@ -354,10 +344,10 @@ fn what_is_kept_of_the_quiet_picks_is_read_as_the_store_is() {
 #[test]
 fn a_lever_the_address_says_rides_on_the_links_and_one_the_machine_keeps_does_not() {
     let mut kept = Desk::new();
-    kept.machine(&worded(LEVER_COMMAND, &["fog", "own"])).expect("a command the game has");
+    kept.machine(r#"{"levers":{"fog":"own"}}"#, "").expect("a record");
     assert!(!link_of(&start(&mut kept, ""), "depot-four").contains("fog=own"));
     let mut said = Desk::new();
-    said.machine(&worded(LEVER_COMMAND, &["fog", "own"])).expect("a command the game has");
+    said.machine("", "?fog=own").expect("a record");
     assert!(link_of(&start(&mut said, "?fog=own"), "depot-four").contains("fog=own"));
     // … and pressed, the machine keeps them all: the page a link loads reads them back
     let p = set(&mut said, "depot-four", "ai", "hard");

@@ -5,7 +5,7 @@ use game_derive::Knobs;
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct DoorpathK {
     /// where the lane cuts the frame line: this share of the opening from the hinge (the leaf's root is at 0). 0.52 since the doors are real size
-    ///  (scene/doorSize.ts): between a leaf standing square on its stop and the latch stop a man's body has 0.325 to 0.556 m of a 0.86 m leaf's frame line to
+    ///  : between a leaf standing square on its stop and the latch stop a man's body has 0.325 to 0.556 m of a 0.86 m leaf's frame line to
     ///  put his middle on, and the lane runs down the middle of that (0.6, as it was for the 1.16 m leaves, ran him a hand off the latch stop)
     #[k(0.52)] pub at: f64,
     /// the lane's ends: metres short of the frame line, metres past it

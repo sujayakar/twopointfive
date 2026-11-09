@@ -1,4 +1,3 @@
-//! src/game/pressure.ts lines 938 to 1121
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -22,7 +21,7 @@ fn first_holding(g: &mut Game) -> Option<RoomfightDefId> {
 }
 fn word_t(st: &State) -> f64 { st.word.map(|w| w.t).unwrap_or(f64::NEG_INFINITY) }
 
-/// the fight a man's ears give him to go to: stood to, a report is nobody's room being hit   (pressure.ts reportStands)
+/// the fight a man's ears give him to go to: stood to, a report is nobody's room being hit
 pub(super) fn report_stands(g: &mut crate::game::Game, d: RoomfightDefId) -> bool {
     let w = if g.k.pressure.warned { state_of(g).warn } else { None };
     match w {
@@ -31,13 +30,13 @@ pub(super) fn report_stands(g: &mut crate::game::Game, d: RoomfightDefId) -> boo
     }
 }
 
-/// the room a man's ears send him to, unless a report stands   (pressure.ts aim)
+/// the room a man's ears send him to, unless a report stands
 pub(super) fn aim(g: &mut crate::game::Game, d: RoomfightDefId) -> Option<crate::pressure::Aim> {
     if report_stands(g, d) { return None; }
     target(g, d).map(|x| Aim { t: x.t, at: x.at })
 }
 
-/// the held room of theirs the noise points at: the one with a door the shortest way on foot from it   (pressure.ts roomFor)
+/// the held room of theirs the noise points at: the one with a door the shortest way on foot from it
 fn room_for(g: &mut crate::game::Game, at: V3) -> Option<RoomfightRoomId> {
     #[derive(Clone, Copy)]
     struct Way { r: RoomfightRoomId, o: V3, d: f64 }
@@ -78,7 +77,7 @@ fn room_for(g: &mut crate::game::Game, at: V3) -> Option<RoomfightRoomId> {
     best
 }
 
-/// STAND TO, once a frame before anybody is considered for a press: the report heard, called, stood down, or overtaken by a room being hit   (pressure.ts standTo)
+/// STAND TO, once a frame before anybody is considered for a press: the report heard, called, stood down, or overtaken by a room being hit
 fn stand_to(g: &mut crate::game::Game) {
     let warn = state_of(g).warn;
     let w = match warn {
@@ -180,7 +179,7 @@ fn stand_to(g: &mut crate::game::Game) {
     note(g, gd, &text);
 }
 
-/// STAND AND FIGHT, once a frame: a hunter the press called, with eyes and a clear shot on one of them out of the room he was called to, stops where he stands   (pressure.ts standAndFight)
+/// STAND AND FIGHT, once a frame: a hunter the press called, with eyes and a clear shot on one of them out of the room he was called to, stops where he stands
 fn stand_and_fight(g: &mut crate::game::Game) {
     let mut i = 0;
     while i < g.fight.defs.len() {
@@ -233,9 +232,9 @@ fn look_free(g: &mut Game, d: RoomfightDefId, p: V3) -> bool {
     !crate::lanes::lane_bars(g, gd, Some(p)) && !crate::lanes::lane_known_at(g, gd, Some(p))
 }
 
-/// GO AND LOOK, once a frame after the press's own rules: the word is kept every frame; a look is called when it has gone quiet   (pressure.ts goLook)
+/// GO AND LOOK, once a frame after the press's own rules: the word is kept every frame; a look is called when it has gone quiet
 fn go_look(g: &mut crate::game::Game) {
-    if g.rescue.active { return; }   // (a hostage rescue's men are pinned to their room a frame at a time)
+    if g.staged.facts.leads_foes { return; }
     let mut up = 0.0;
     let mut i = 0;
     while i < g.fight.defs.len() {
@@ -362,13 +361,13 @@ fn fresh_state(g: &mut Game) {
     if st.stale { st.stale = false; st.stats = new_stats(); }
 }
 
-/// once a frame from RoomFight.tick, after the defenders' and the teammates' own ticks   (pressure.ts pressTick)
+/// once a frame from RoomFight.tick, after the defenders' and the teammates' own ticks
 pub(in crate::defenders) fn press_tick(g: &mut crate::game::Game, dt: f64) {
     step_press(g, dt);
     press_say(g);
 }
 
-/// the press's frame: the kit, what it learned, then stand to, its men, its presses and the men fallen back   (pressure.ts stepPress)
+/// the press's frame: the kit, what it learned, then stand to, its men, its presses and the men fallen back
 fn step_press(g: &mut crate::game::Game, _dt: f64) {
     // the kit is its own lever: what a defender carries is handed out whether or not the press is on
     let mut i = 0;
@@ -417,7 +416,7 @@ fn step_press(g: &mut crate::game::Game, _dt: f64) {
     if g.k.pressure.sweep { go_look(g); }
 }
 
-/// the fight is over: every press forgotten; the counts stay for whoever reads them after the run   (pressure.ts pressStop)
+/// the fight is over: every press forgotten; the counts stay for whoever reads them after the run
 pub(in crate::defenders) fn press_stop(g: &mut crate::game::Game) {
     if g.m.pressure.states.is_none() { return; }
     let press = crate::owner::by::PRESS;
@@ -454,7 +453,7 @@ pub(in crate::defenders) fn press_stop(g: &mut crate::game::Game) {
     st.stale = true;
 }
 
-/// when the look this man is on was called (called and not yet gone, or still out), or none. Words only   (pressure.ts lookSince)
+/// when the look this man is on was called (called and not yet gone, or still out), or none. Words only
 pub fn look_since(g: &crate::game::Game, gd: GuardId) -> Option<f64> {
     let st = g.m.pressure.states.as_ref()?;
     let is_his = |d: &RoomfightDefId| g.tab.roomfight_def[*d].gd == gd;
@@ -462,7 +461,7 @@ pub fn look_since(g: &crate::game::Game, gd: GuardId) -> Option<f64> {
     if on_look || st.out.as_ref().map_or(false, |o| o.iter().any(is_his)) { Some(st.look_t) } else { None }
 }
 
-/// the shipped values back; dropping the stored copy is the host's   (pressure.ts resetPressure)
+/// the shipped values back; dropping the stored copy is the host's
 pub fn reset_pressure(g: &mut crate::game::Game) {
     g.k.pressure = pressure_defaults();
 }

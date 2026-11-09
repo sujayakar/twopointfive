@@ -1,4 +1,3 @@
-//! src/game/game.ts lines 1582 to 1864
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,7 +6,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// `s.view` handed to `f`. A game of one seat has no view: its seat's view IS the Game (seats.ts seatsStand).
+/// `s.view` handed to `f`. A game of one seat has no view: its seat's view IS the Game.
 fn in_seat<R>(g: &mut Game, s: SeatId, mut f: impl FnMut(&mut Game) -> R) -> R {
     crate::seats::on_seat(g, Some(s), &mut f)
 }
@@ -23,7 +22,7 @@ fn bone_or(g: &Game, c: CharId, b: crate::character::Bone, up: f64) -> V3 {
     match g.ch[c].bones.get(b) { Some(p) => *p, None => v3::add(g.ch[c].pos, [0.0, up, 0.0]) }
 }
 
-/// THE TICK, off the players' plain records. The order of these lines is the game.   (game.ts stepSeats)
+/// THE TICK, off the players' plain records. The order of these lines is the game.
 pub fn game_step_seats(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::PlayerCmd]) {
     let n = g.seats.len();
     if cmds.len() != n { panic!("stepSeats: {} record(s) for {} seat(s)", cmds.len(), n); }
@@ -56,7 +55,7 @@ fn game_tick_end(g: &mut crate::game::Game, dt: f64) {
     crate::render_lights::light_set_update(g, dt, now);
 }
 
-/// The tick's lines, with the first seat on Game.   (game.ts stepSeats)
+/// The tick's lines, with the first seat on Game.
 fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::PlayerCmd]) {
     let seats: Vec<SeatId> = g.seats.clone();
     let n = seats.len();
@@ -204,7 +203,7 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     for &s in &seats { in_seat(g, s, |g| crate::disarm::disarm_tick(g, dt)); }
     // (wet characters: the coats are the picture's, but the soak's ask stands the rule's copy of the box world and may cast the sky's rays: game.ts updateWetness)
     crate::wet::update_wetness(g, dt);
-    // THE DRESSING ROWS WHOSE STEPS THE TICK ITSELF READS (game.ts:1697, :1699; dress.ts). The wind's sources are read by the moths' pull (`wind.at`), and
+    // THE DRESSING ROWS WHOSE STEPS THE TICK ITSELF READS. The wind's sources are read by the moths' pull (`wind.at`), and
     // the moths are keyed boxes of the frame's list, which the fog of war's records, the frame's room and the kit's place in the list count: so both
     // run here under their rows, as in the TypeScript. The rows between them (the air's field, the snow's look, the particle rain, the wet ground's
     // words for the renderer) write what only the picture reads and stay with the host.
@@ -242,7 +241,7 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     crate::scene_collision::tick_shut(g);
 }
 
-/// threat proximity → how deliberately Sam moves   (game.ts threatTick)
+/// threat proximity → how deliberately Sam moves
 pub(super) fn game_threat_tick(g: &mut crate::game::Game) {
     use crate::character::Bone;
     use crate::game::GuardState;
@@ -281,7 +280,7 @@ pub(super) fn game_threat_tick(g: &mut crate::game::Game) {
     g.threat_proximity = t; g.ch[pc].anim.deliberate = t;
 }
 
-/// the muzzle of the stand-in gun in his hands   (game.ts:1767, :1772)
+/// the muzzle of the stand-in gun in his hands
 fn stand_in_muzzle(g: &Game, long: Option<crate::guards::LongRigOf>, cb: bool, def: crate::weapons::WeaponId) -> f64 {
     if long == Some(crate::guards::LongRigOf::Sc20k) { return crate::rig_props::sc20k_muzzle_ahead(None); }
     let row = weapon_row(g, def);
@@ -289,7 +288,7 @@ fn stand_in_muzzle(g: &Game, long: Option<crate::guards::LongRigOf>, cb: bool, d
     row.muzzle_ahead
 }
 
-/// the carbine dealt by the sandbox knob, and every man's animator armed with what is then in his hands   (game.ts dealWeapons)
+/// the carbine dealt by the sandbox knob, and every man's animator armed with what is then in his hands
 pub(super) fn game_deal_weapons(g: &mut crate::game::Game, dt: Option<f64>) {
     use crate::character::AnimLongGrip;
     use crate::game::{CarbineDeal, GuardState};
@@ -394,7 +393,7 @@ pub(super) fn game_deal_weapons(g: &mut crate::game::Game, dt: Option<f64>) {
     crate::condition::condition_pose(g);
 }
 
-/// this frame's dynamic boxes, and what steps while they are gathered. Returns whether stature scaled anybody   (game.ts stepFxAndDynBoxes)
+/// this frame's dynamic boxes, and what steps while they are gathered. Returns whether stature scaled anybody
 pub(super) fn game_step_fx_and_dyn_boxes(g: &mut crate::game::Game, all: &[CharId], dt: f64) -> bool {
     g.dyn_boxes.clear();
     // (the list is lent to the callees for the whole gathering: none of them reads g.dyn_boxes)
@@ -404,7 +403,7 @@ pub(super) fn game_step_fx_and_dyn_boxes(g: &mut crate::game::Game, all: &[CharI
     crate::throwables::throwables_boxes(g, &mut out);
     crate::destruction::destruction_boxes(g, &mut out);
     crate::devices::device_boxes(g, &mut out);
-    if g.m.dress.dress.moths { crate::moths::moths_boxes(g, &mut out); }   // (game.ts:1805)
+    if g.m.dress.dress.moths { crate::moths::moths_boxes(g, &mut out); }
     if !g.rings.is_empty() { crate::launcher::ring_boxes(g, &mut out); }
     let seats = g.seats.clone();
     for &s in seats.iter() {
@@ -413,7 +412,7 @@ pub(super) fn game_step_fx_and_dyn_boxes(g: &mut crate::game::Game, all: &[CharI
     }
     crate::lightswitch::switch_boxes(g, &mut out);
     if !g.shells.is_empty() { crate::he40::shell_boxes(g, &mut out); }
-    // STATURE (game.ts:1814): each man's drawn scale about his feet this frame; false with no cast loaded, and nothing below is asked
+    // STATURE: each man's drawn scale about his feet this frame; false with no cast loaded, and nothing below is asked
     let statured = g.m.dress.dress.stature && crate::stature::stature_tick(g, all, dt);
     let rig0 = out.len();
     crate::combat::hand_props(g, &mut out);
@@ -444,7 +443,7 @@ pub(super) fn game_step_fx_and_dyn_boxes(g: &mut crate::game::Game, all: &[CharI
     statured
 }
 
-/// characters → what each man wears (the renderer's own half is the picture's), and the frame's dynamic boxes handed to the world   (game.ts drawCharacters)
+/// characters → what each man wears (the renderer's own half is the picture's), and the frame's dynamic boxes handed to the world
 pub(super) fn game_draw_characters(g: &mut crate::game::Game, all: &[CharId], statured: bool) {
     game_draw_men(g, all, statured, Some(false));   // (DRESS.men down: dress.ts, "what each WEARS is still dealt")
     let mut list = core::mem::take(&mut g.dyn_boxes);
@@ -466,7 +465,7 @@ fn view_px_sum(distance: f64, fov: f64, height: f64) -> f64 { 2.0 * distance * m
 #[cfg(test)]
 mod tests {
     use super::*;
-    // the bits are the TypeScript's own, under bun with EXACT.on (the formula of game.ts viewPx)
+    // the bits are the TypeScript's own, under bun with EXACT.on
     #[test]
     fn view_px_is_the_typescripts_bits() {
         assert_eq!(view_px_sum(4.25, 1.1, 150.0).to_bits(), 0x3f9aaeadc2d0442a);

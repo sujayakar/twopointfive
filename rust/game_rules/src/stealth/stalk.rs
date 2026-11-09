@@ -1,4 +1,4 @@
-//! The stalk: the last metres to a man's back as one held click (src/game/stalk.ts). The state row is keyed by `g.player`.
+//! The stalk: the last metres to a man's back as one held click. The state row is keyed by `g.player`.
 
 pub use ::game_types::stalk::types;
 pub use types::*;
@@ -9,18 +9,18 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::string::String;
 
-/// A new row, every key from birth. (stalk.ts fresh)
+/// A new row, every key from birth.
 pub fn fresh() -> crate::stalk::St {
     St { on: None, grab: None, t: -1.0, wait: Some(false), armed: Some(false), orbit_r: None, orbit_t: None, orbit_ask: None, broke: None }
 }
 
-/// This seat's row, made if it is not there. (stalk.ts stateOf)
+/// This seat's row, made if it is not there.
 fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::stalk::St {
     let me = g.player;
     g.m.stalk.state.get_or_insert_with(me, fresh)
 }
 
-/// The stalk is over, for `why` if one was on. (stalk.ts end)
+/// The stalk is over, for `why` if one was on.
 fn end(g: &mut crate::game::Game, pl: PlayerId, why: crate::stalk::Why) {
     let r = g.m.stalk.state.get_mut(pl).unwrap();
     if r.on.is_some() {
@@ -35,14 +35,14 @@ fn end(g: &mut crate::game::Game, pl: PlayerId, why: crate::stalk::Why) {
     r.orbit_ask = None;
 }
 
-/// His bearing to a point, off his facing (0 = dead ahead). (stalk.ts bearingOf)
+/// His bearing to a point, off his facing (0 = dead ahead).
 fn bearing_of(g: &crate::game::Game, gd: GuardId, p: &[f64]) -> f64 {
     let c = g.gd[gd].ch;
     let pos = g.ch[c].pos;
     v3::wrap_angle(m::atan2(p[0] - pos[0], p[2] - pos[2]) - g.ch[c].body_yaw)
 }
 
-/// Are Sam's hands free for it at all: empty, and nothing else has him. (stalk.ts hands)
+/// Are Sam's hands free for it at all: empty, and nothing else has him.
 fn hands(g: &mut crate::game::Game) -> bool {
     let me = g.player;
     g.puppet.is_none()
@@ -59,44 +59,43 @@ fn hands(g: &mut crate::game::Game) -> bool {
         && able(g, &crate::seats::here(g))
 }
 
-/// Is the held click his to begin one with. (stalk.ts free)
+/// Is the held click his to begin one with.
 fn free(g: &mut crate::game::Game) -> bool {
     hands(g) && !shut(g)
 }
 
-/// A tutorial step has taken the click. (stalk.ts shut)
+/// A tutorial step has taken the click.
 fn shut(g: &mut crate::game::Game) -> bool {
     crate::rails::rails_shuts(g, "stalk")
 }
 
-/// The gate game.ts puts on a grab: not folded by a blast, no hand on a breaker's lever. (stalk.ts able)
+/// The gate game.ts puts on a grab: not folded by a blast, no hand on a breaker's lever.
 fn able(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
     let me = seat.player;
     !crate::samstun::sam_staggered(g, seat, None) && g.pl[me].breaker_move.is_none()
 }
 
-/// How far off a press can begin one. (stalk.ts beginM)
+/// How far off a press can begin one.
 fn begin_m(g: &crate::game::Game) -> f64 {
     m::max(g.k.close.mode_m, g.k.stalk.low_begin_m)
 }
 
-/// How far off one is given up. (stalk.ts outM)
+/// How far off one is given up.
 fn out_m(g: &crate::game::Game) -> f64 {
     m::max(g.k.close.mode_out_m, g.k.stalk.low_out_m)
 }
 
-/// (stalk.ts stalkBeginM)
 pub(super) fn stalk_begin_m(g: &crate::game::Game) -> f64 {
     begin_m(g)
 }
 
-/// Is the held click the ONE way to grab a man from behind: on the page, only on a wall. (stalk.ts stalkClickOnly)
+/// Is the held click the ONE way to grab a man from behind: on the page, only on a wall.
 pub(super) fn stalk_click_only(g: &mut crate::game::Game) -> bool {
     let me = g.player;
     g.pl[me].wall.is_some() && !shut(g)
 }
 
-/// Why this man cannot be stalked from `p` right now, or None when he can (`begin`: a press's stricter test). (stalk.ts outOf)
+/// Why this man cannot be stalked from `p` right now, or None when he can (`begin`: a press's stricter test).
 fn out_of(g: &mut crate::game::Game, gd: GuardId, p: &[f64], begin: bool) -> Option<crate::stalk::Why> {
     if g.gd[gd].civ.is_some() || !crate::close::close_subject(g, gd) || g.gd[gd].state == crate::game::GuardState::Alert {
         return Some(Why::Him);
@@ -117,7 +116,7 @@ fn out_of(g: &mut crate::game::Game, gd: GuardId, p: &[f64], begin: bool) -> Opt
     None
 }
 
-/// Could a press on this man begin one from where Sam stands. (stalk.ts stalkCould)
+/// Could a press on this man begin one from where Sam stands.
 pub(super) fn stalk_could(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if !free(g) {
         return false;
@@ -126,7 +125,7 @@ pub(super) fn stalk_could(g: &mut crate::game::Game, gd: GuardId) -> bool {
     out_of(g, gd, &p, true).is_none()
 }
 
-/// The man a press at the cursor is on: the reticle's if he can be stalked, else the nearest within `cursorM` of the floor point. (stalk.ts pressed)
+/// The man a press at the cursor is on: the reticle's if he can be stalked, else the nearest within `cursorM` of the floor point.
 fn pressed(g: &mut crate::game::Game) -> Option<GuardId> {
     let p = g.ch[g.pl[g.player].ch].pos;
     let a = g.aim_point;
@@ -151,7 +150,7 @@ fn pressed(g: &mut crate::game::Game) -> Option<GuardId> {
     best
 }
 
-/// May the wait at a corner be his this frame: on a wall (not the stack), hands empty, room to come up. (stalk.ts cornerGate)
+/// May the wait at a corner be his this frame: on a wall (not the stack), hands empty, room to come up.
 fn corner_gate(g: &mut crate::game::Game) -> bool {
     let me = g.player;
     let (kind, drawn) = match &g.pl[me].wall {
@@ -175,7 +174,7 @@ fn corner_gate(g: &mut crate::game::Game) -> bool {
         || (g.pl[me].crouch && !crate::player::can_stand(g)))
 }
 
-/// The man the wait at a corner takes this frame: the nearest who has come past him. (stalk.ts cornerMan)
+/// The man the wait at a corner takes this frame: the nearest who has come past him.
 fn corner_man(g: &mut crate::game::Game) -> Option<GuardId> {
     if !corner_gate(g) {
         return None;
@@ -201,7 +200,7 @@ fn corner_man(g: &mut crate::game::Game) -> Option<GuardId> {
     best
 }
 
-/// The animator's soft duck, away from this man. (stalk.ts duck)
+/// The animator's soft duck, away from this man.
 fn duck(g: &mut crate::game::Game, gd: GuardId, k: f64) {
     let c = g.pl[g.player].ch;
     let p = g.ch[c].pos;
@@ -209,7 +208,7 @@ fn duck(g: &mut crate::game::Game, gd: GuardId, k: f64) {
     crate::character::anim_flinch_from(g, c, Some([pos[0] - p[0], 0.0, pos[2] - p[2]]), Some(k), Some(true));
 }
 
-/// The man who turned off his back: if he comes on round to face where Sam stood inside `joltSecs`, or is onto him, Sam ducks. (stalk.ts brokeDuck)
+/// The man who turned off his back: if he comes on round to face where Sam stood inside `joltSecs`, or is onto him, Sam ducks.
 fn broke_duck(g: &mut crate::game::Game, pl: PlayerId) {
     let row = *g.m.stalk.state.get(pl).unwrap();
     let b = match row.broke {
@@ -240,7 +239,7 @@ fn broke_duck(g: &mut crate::game::Game, pl: PlayerId) {
     }
 }
 
-/// Once a frame from updatePlayer, before his keys become a step: what the stalk asks of his feet, or None = his own. (stalk.ts stalkStep)
+/// Once a frame from updatePlayer, before his keys become a step: what the stalk asks of his feet, or None = his own.
 pub fn stalk_step(g: &mut crate::game::Game, lmb: bool, lmb_hit: bool, own_keys: bool, keys: Option<crate::stalk::StalkKeys>) -> Option<crate::stalk::StalkMove> {
     let me = g.player;
     let now = g.time;
@@ -342,12 +341,12 @@ pub fn stalk_step(g: &mut crate::game::Game, lmb: bool, lmb_hit: bool, own_keys:
     Some(StalkMove { mx: bx / bl, mz: bz / bl, pace, at, keep: None })
 }
 
-/// The share of a way into the man left to it at `dist`: all until 20 cm outside `keyM`, none from 4 cm outside. (stalk.ts intoKeep)
+/// The share of a way into the man left to it at `dist`: all until 20 cm outside `keyM`, none from 4 cm outside.
 fn into_keep(g: &crate::game::Game, dist: f64) -> f64 {
     v3::clamp((dist - g.k.stalk.key_m - 0.04) / 0.16, 0.0, 1.0)
 }
 
-/// A way across the floor taken round the man, split as first asked into its share toward him and its share round him. (stalk.ts orbited)
+/// A way across the floor taken round the man, split as first asked into its share toward him and its share round him.
 fn orbited(g: &mut crate::game::Game, pl: PlayerId, gd: GuardId, p: &[f64], at: V3, dist: f64, dx: f64, dz: f64, pace: f64, dt: f64) -> crate::stalk::StalkMove {
     let c = g.gd[gd].ch;
     let gp = g.ch[c].pos;
@@ -407,12 +406,12 @@ fn orbited(g: &mut crate::game::Game, pl: PlayerId, gd: GuardId, p: &[f64], at: 
     StalkMove { mx: vx / v, mz: vz / v, pace: m::min(v, g.k.stalk.pace + m::hyp2(hv[0], hv[2])), at, keep: Some(true) }
 }
 
-/// (from − d) / (from − to), held to 0‥1: straight by the distance. (stalk.ts stalkTell `by`)
+/// (from − d) / (from − to), held to 0‥1: straight by the distance.
 fn by(d: f64, from: f64, to: f64) -> f64 {
     v3::clamp((from - d) / m::max(0.05, from - to), 0.0, 1.0)
 }
 
-/// The man Sam's body speaks of, where the hands go, and how far he is sunk. (stalk.ts stalkTell)
+/// The man Sam's body speaks of, where the hands go, and how far he is sunk.
 pub(super) fn stalk_tell(g: &mut crate::game::Game) -> Option<crate::stalk::StalkTell> {
     if !free(g) {
         return None;
@@ -447,7 +446,7 @@ pub(super) fn stalk_tell(g: &mut crate::game::Game) -> Option<crate::stalk::Stal
     Some(StalkTell { gd, at, reach: 0.0, rise: 0.0, low })
 }
 
-/// The wait at a corner on his body: where his hands point, how much of the grab's reach, how far he is sunk. (stalk.ts stalkWait)
+/// The wait at a corner on his body: where his hands point, how much of the grab's reach, how far he is sunk.
 pub(super) fn stalk_wait(g: &mut crate::game::Game) -> Option<crate::stalk::StalkWait> {
     let me = g.player;
     let row = *g.m.stalk.state.get(me)?;
@@ -496,7 +495,7 @@ pub fn stalk_waits(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool 
     g.pl[seat.player].wall.is_some() && g.m.stalk.state.get(seat.player).map_or(false, |r| r.wait == Some(true) && g.time - r.t <= 0.1)
 }
 
-/// The man the stalk reached this frame: the grab to take now. (stalk.ts stalkGrab)
+/// The man the stalk reached this frame: the grab to take now.
 pub fn stalk_grab(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<GuardId> {
     match g.m.stalk.state.get(seat.player) {
         Some(s) if s.t == g.time => s.grab,
@@ -504,7 +503,7 @@ pub fn stalk_grab(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option
     }
 }
 
-/// The row's grab on this man is about to be taken: is it the stalk's? A question only. (stalk.ts stalkKeyCan)
+/// The row's grab on this man is about to be taken: is it the stalk's? A question only.
 pub fn stalk_key_can(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let me = g.player;
     if g.gd[gd].civ.is_some() || !hands(g) || (g.pl[me].crouch && !crate::player::can_stand(g)) {
@@ -514,7 +513,7 @@ pub fn stalk_key_can(g: &mut crate::game::Game, gd: GuardId) -> bool {
     out_of(g, gd, &p, false).is_none()
 }
 
-/// The grab took him: the stalk on him, if any, is over, counted as a grab. (stalk.ts stalkKeyTook)
+/// The grab took him: the stalk on him, if any, is over, counted as a grab.
 pub fn stalk_key_took(g: &mut crate::game::Game) {
     let r = state_of(g);
     r.on = None;
@@ -523,12 +522,12 @@ pub fn stalk_key_took(g: &mut crate::game::Game) {
     g.stats.stalk.last = String::from("grab");
 }
 
-/// The man being stalked right now. (stalk.ts stalkOn)
+/// The man being stalked right now.
 pub fn stalk_on(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<GuardId> {
     g.m.stalk.state.get(seat.player).and_then(|s| s.on)
 }
 
-/// A reset of the floor's men, a load: nothing is stalked. (stalk.ts stalkReset)
+/// A reset of the floor's men, a load: nothing is stalked.
 pub fn stalk_reset(g: &mut crate::game::Game) {
     let me = g.player;
     if let Some(r) = g.m.stalk.state.get_mut(me) {
@@ -536,7 +535,7 @@ pub fn stalk_reset(g: &mut crate::game::Game) {
     }
 }
 
-/// The step in's ease, 0‥1 → 0‥1: a quadratic off the mark, then a cubic ease-out joined with one slope. (stalk.ts stepEase)
+/// The step in's ease, 0‥1 → 0‥1: a quadratic off the mark, then a cubic ease-out joined with one slope.
 pub fn step_ease(u: f64) -> f64 {
     let v = v3::clamp(u, 0.0, 1.0);
     let pp = 0.15;

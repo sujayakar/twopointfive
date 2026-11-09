@@ -7,7 +7,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{string::String, vec, vec::Vec};
 
-/// Everything the reactions keep, back to rest; the scalar itself stays.   (suppression.ts Sup.clearReactions)
+/// Everything the reactions keep, back to rest; the scalar itself stays.
 fn sup_clear_reactions(this: &mut crate::suppression::Sup) {
     this.down_t = 0.0;
     this.latched = false;
@@ -21,7 +21,7 @@ fn temperament_row(callsign: &str) -> Option<crate::game::Temperament> {
     crate::game::temperament().iter().find(|row| row.0 == callsign).map(|row| row.1)
 }
 
-/// How readily this body accrues suppression, by his temperament.   (suppression.ts keenOf)
+/// How readily this body accrues suppression, by his temperament.
 fn keen_of(g: &crate::game::Game, seat: &crate::seats::SeatRef, c_2: CharId) -> f64 {
     if c_2 == g.pl[seat.player].ch { return 1.0; }
     let mut t: Option<crate::game::Temperament> = None;
@@ -40,7 +40,7 @@ fn keen_of(g: &crate::game::Game, seat: &crate::seats::SeatRef, c_2: CharId) -> 
     }
 }
 
-/// One round has just been traced: every OTHER living, free man it passed close to or struck close to accrues.   (suppression.ts noteRound)
+/// One round has just been traced: every OTHER living, free man it passed close to or struck close to accrues.
 pub fn note_round(g: &mut crate::game::Game, shooter: CharId, from: V3, to: V3, hit: Option<CharId>) {
     let seg = v3::sub(to, from);
     let t_hit = v3::len(seg);
@@ -74,7 +74,7 @@ struct Round {
     shooter_team: crate::teams::Team,
 }
 
-/// One man's share of one round.   (suppression.ts noteRound's `each`)
+/// One man's share of one round.
 fn note_one(g: &mut Game, r: &Round, c: CharId, gd: Option<GuardId>, held: bool, team: crate::teams::Team) {
     if c == r.shooter || Some(c) == r.hit || !g.ch[c].alive || held { return; }
     let chest = match g.ch[c].bones.get(crate::character::Bone::Chest) {
@@ -110,7 +110,7 @@ fn note_one(g: &mut Game, r: &Round, c: CharId, gd: Option<GuardId>, held: bool,
     sup.src_t = now;
 }
 
-/// Which held-back line outranks which.   (suppression.ts RANK)
+/// Which held-back line outranks which.
 fn rank_of(moment: crate::suppression::SupMoment) -> i32 {
     match moment {
         SupMoment::Recover => 0,
@@ -121,7 +121,7 @@ fn rank_of(moment: crate::suppression::SupMoment) -> i32 {
     }
 }
 
-/// The lines, by moment and temperament ('*' for anybody), in the written order.   (suppression.ts SUP_LINES)
+/// The lines, by moment and temperament ('*' for anybody), in the written order.
 static SUP_LINES: [(SupMoment, &[(&str, &[&str])]); 5] = [
     (SupMoment::Flinch, &[
         ("*", &["taking fire!", "rounds coming in!", "he's shooting — get down!", "that was close—"]),
@@ -162,7 +162,7 @@ fn lines_of(moment: SupMoment, key: &str) -> &'static [&'static str] {
 /// A byte JavaScript's `\w` holds (every byte of a non-ASCII character is outside it, as a non-unicode regex sees that character).
 fn is_word(b: u8) -> bool { b.is_ascii_alphanumeric() || b == b'_' }
 
-/// `/\b(he|he's|him|his)\b/.test(l)`.   (suppression.ts:169)
+/// `/\b(he|he's|him|his)\b/.test(l)`.
 fn mentions_him(l: &str) -> bool {
     let b = l.as_bytes();
     for w in ["he", "he's", "him", "his"] {
@@ -181,12 +181,12 @@ fn mentions_him(l: &str) -> bool {
     false
 }
 
-/// A teammate with the player's round going past him says what a man says of a colleague's.   (suppression.ts watchYourFire)
+/// A teammate with the player's round going past him says what a man says of a colleague's.
 pub fn watch_your_fire(g: &mut crate::game::Game, gd: GuardId) -> bool {
     sup_bark(g, gd, SupMoment::Friendly, None)
 }
 
-/// One suppression line from this man if the clocks allow; a line held back is kept `pending`.   (suppression.ts supBark)
+/// One suppression line from this man if the clocks allow; a line held back is kept `pending`.
 fn sup_bark(g: &mut crate::game::Game, gd: GuardId, moment: crate::suppression::SupMoment, force: Option<bool>) -> bool {
     let force = force.unwrap_or(false);
     let now = g.time;
@@ -225,7 +225,7 @@ fn sup_bark(g: &mut crate::game::Game, gd: GuardId, moment: crate::suppression::
     true
 }
 
-/// The suppression lines, every moment's or one moment's.   (suppression.ts suppressionLines)
+/// The suppression lines, every moment's or one moment's.
 fn suppression_lines(moment: Option<crate::suppression::SupMoment>) -> Vec<String> {
     let mut out = Vec::new();
     for row in SUP_LINES.iter() {
@@ -241,12 +241,12 @@ fn suppression_lines(moment: Option<crate::suppression::SupMoment>) -> Vec<Strin
     out
 }
 
-/// May this man's behaviour react at all this frame.   (suppression.ts reacts)
+/// May this man's behaviour react at all this frame.
 fn reacts(g: &crate::game::Game, gd: GuardId) -> bool {
     g.tune.suppression && g.ai_enabled && !crate::condition::down(g, g.gd[gd].ch) && g.gd[gd].held.is_none() && g.gd[gd].script.is_none()
 }
 
-/// Once a frame's decay of one man's scalar and pulse.   (suppression.ts updateSuppression's `decay`)
+/// Once a frame's decay of one man's scalar and pulse.
 fn decay(sup: &mut Sup, k: f64, kk: f64) {
     sup.v *= k;
     sup.kick *= kk;
@@ -254,7 +254,7 @@ fn decay(sup: &mut Sup, k: f64, kk: f64) {
     if sup.kick < 1e-5 { sup.kick = 0.0; }
 }
 
-/// His band, with hysteresis: a scalar hovering about a line under a steady volley is ONE episode.   (suppression.ts:196)
+/// His band, with hysteresis: a scalar hovering about a line under a steady volley is ONE episode.
 fn band_of(v: f64, was: f64, pinned: f64, release: f64, flinch: f64) -> f64 {
     if v >= pinned || (was == 2.0 && v >= release) {
         2.0
@@ -265,7 +265,7 @@ fn band_of(v: f64, was: f64, pinned: f64, release: f64, flinch: f64) -> f64 {
     }
 }
 
-/// Where his start jolts him from: the muzzle of the last round, off his own feet.   (suppression.ts:197, :201)
+/// Where his start jolts him from: the muzzle of the last round, off his own feet.
 fn start_from_round(g: &mut Game, gd: GuardId) {
     let c = g.gd[gd].ch;
     let toward = match g.cond[g.gd[gd].ch].sup.src { Some(src) => Some(v3::sub(src, g.ch[c].pos)), None => None };
@@ -273,7 +273,7 @@ fn start_from_round(g: &mut Game, gd: GuardId) {
     crate::character::anim_flinch_from(g, c, toward, Some(scale), None);
 }
 
-/// Once a frame, ahead of the player and the guards: decay everybody's scalar and pulse; the guards' edges.   (suppression.ts updateSuppression)
+/// Once a frame, ahead of the player and the guards: decay everybody's scalar and pulse; the guards' edges.
 pub fn update_suppression(g: &mut crate::game::Game, dt: f64) {
     let k = m::pow(2.0, -dt / g.k.suppression.half_life);
     let kk = m::exp(-g.k.suppression.kick_decay * dt);
@@ -390,7 +390,7 @@ fn clear_walk(g: &mut Game, gd: GuardId) {
     o.stall_ref = None;
 }
 
-/// The alert branch's question each frame: is this man's head down, or is he shifting to cover.   (suppression.ts headDown)
+/// The alert branch's question each frame: is this man's head down, or is he shifting to cover.
 pub(super) fn head_down(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> crate::suppression::HeadDown {
     if !reacts(g, gd) {
         sup_clear_reactions(&mut g.cond[g.gd[gd].ch].sup);
@@ -450,7 +450,7 @@ pub(super) fn head_down(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> crat
     HeadDown::Down
 }
 
-/// The shift is over: hold the spot a few seconds, the first round from there a beat late.   (suppression.ts endDisplace)
+/// The shift is over: hold the spot a few seconds, the first round from there a beat late.
 pub(super) fn end_displace(g: &mut crate::game::Game, gd: GuardId, why: &str) {
     let until = g.time + g.k.suppression.cover_hold;
     let delay = g.k.suppression.head_down_delay;
@@ -464,12 +464,12 @@ pub(super) fn end_displace(g: &mut crate::game::Game, gd: GuardId, why: &str) {
     g.gd[gd].fire_cd = m::max(g.gd[gd].fire_cd, delay);
 }
 
-/// May the plain fight close on the player right now, or is he holding the cover he has just reached.   (suppression.ts holdingCover)
+/// May the plain fight close on the player right now, or is he holding the cover he has just reached.
 pub(super) fn holding_cover(g: &crate::game::Game, gd: GuardId) -> bool {
     g.tune.suppression && g.time < g.cond[g.gd[gd].ch].sup.cover_until
 }
 
-/// No place hidden from everybody: the kept one, the hard place in another man's line over the thin one.   (suppression.ts coverFrom's `fall`)
+/// No place hidden from everybody: the kept one, the hard place in another man's line over the thin one.
 fn cover_fall(g: &mut Game, kept_open: Option<V3>, as_was: Option<V3>) -> Option<V3> {
     if kept_open.is_some() { g.stats.wallpen.harder += 1; }
     kept_open.or(as_was)
@@ -488,7 +488,7 @@ fn through_a_shut_door(g: &crate::game::Game, from: V3, path: &[V3]) -> bool {
     false
 }
 
-/// Where a pinned man shifts to: first fit in the preference order, a dozen path plans at most.   (suppression.ts coverFrom)
+/// Where a pinned man shifts to: first fit in the preference order, a dozen path plans at most.
 pub fn cover_from(g: &mut crate::game::Game, gd: GuardId, threat: V3) -> Option<V3> {
     let all = crate::picture::ideas_of(g, gd).len() > 1;
     let mut as_was: Option<V3> = None;
@@ -568,7 +568,7 @@ pub fn cover_from(g: &mut crate::game::Game, gd: GuardId, threat: V3) -> Option<
     cover_fall(g, kept_open, as_was)
 }
 
-/// What suppression does to a guard's next round: extra cone, and x the cadence he draws after it.   (suppression.ts guardFireMods)
+/// What suppression does to a guard's next round: extra cone, and x the cadence he draws after it.
 pub fn guard_fire_mods(g: &crate::game::Game, gd: GuardId) -> crate::suppression::GuardFireMods {
     if !g.tune.suppression { return GuardFireMods { spread: 0.0, gap: 1.0 }; }
     let v = g.cond[g.gd[gd].ch].sup.v;
@@ -576,12 +576,12 @@ pub fn guard_fire_mods(g: &crate::game::Game, gd: GuardId) -> crate::suppression
     GuardFireMods { spread, gap: 1.0 + g.k.suppression.gap_k * g.cond[g.gd[gd].ch].sup.v }
 }
 
-/// Is he rattled (over the flinch line, reactions on).   (suppression.ts flinching)
+/// Is he rattled (over the flinch line, reactions on).
 pub fn flinching(g: &crate::game::Game, gd: GuardId) -> bool {
     reacts(g, gd) && g.cond[g.gd[gd].ch].sup.v >= g.k.suppression.flinch
 }
 
-/// Extra cone on the player's own round for his own suppression.   (suppression.ts samSpread)
+/// Extra cone on the player's own round for his own suppression.
 pub fn sam_spread(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> f64 {
     if g.tune.suppression && g.puppet.is_none() {
         let p = seat.player;

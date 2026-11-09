@@ -1,7 +1,7 @@
 # The game's module
 
 `rust/game_face` is the game as one WebAssembly module with one memory: what a page, the game server and the tools load. It links the rules
-(`rust/game_rules`), what is drawn (`rust/game_draw`), what a host does round a step (`rust/game_run`), a start (`rust/game_start`) and the world's
+(`rust/game_rules`), what is drawn (`rust/game_draw`), a start and what a host does round a step (`rust/game_start`) and the world's
 numbers (`rust/sim`). It imports nothing. A host hands it a start and what each seat's hands did, and reads back what is drawn and told; a game is a
 number.
 

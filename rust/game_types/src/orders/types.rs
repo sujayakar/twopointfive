@@ -3,17 +3,17 @@
 use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// what marksKeep took, to put back once: the makers' counters, the room rule's book, the leaf's answer (orders.ts marksKeep). Not kept past the one trial.
+/// what marksKeep took, to put back once: the makers' counters, the room rule's book, the leaf's answer. Not kept past the one trial.
 #[derive(Clone, Debug)]
 pub enum MarksKeep {
     Kept { leaf: bool, stack_own: crate::doorway::DoorwayModSTACKOWN, doorway: crate::doorway::DoorwayStats, stackroom: crate::stackroom::StackroomStats, glasspen: crate::glasspen::GlasspenStats, book: crate::stackroom::StackRoomBookKeep },
 }
-/// what one deal of a stack costs in men squeezing past one another (orders.ts fileCross): `file` = each spot's file, `tight` = by a spot's file, is it tight, `l` = man by spot, his walk (0 off a tight file), `cost` = ORDERS.fileQueueCost. Needs no g to price a deal.
+/// what one deal of a stack costs in men squeezing past one another: `file` = each spot's file, `tight` = by a spot's file, is it tight, `l` = man by spot, his walk (0 off a tight file), `cost` = ORDERS.fileQueueCost. Needs no g to price a deal.
 #[derive(Clone, Debug)]
 pub enum FileCross {
     Tight { file: Vec<usize>, tight: Vec<bool>, l: Vec<Vec<f64>>, spots: Vec<V3>, cost: f64 },
 }
-/// a teammate's way, nav.findPath's penalty: a cell of `dear` costs `cost`, any other 1, times what `pen` asks (orders.ts propPenalty). `dear` is by nav.idx; the nav is read from g when priced.
+/// a teammate's way, nav.findPath's penalty: a cell of `dear` costs `cost`, any other 1, times what `pen` asks. `dear` is by nav.idx; the nav is read from g when priced.
 #[derive(Clone, Debug)]
 pub enum PropPenalty {
     Dear { dear: JsSet<crate::Num>, cost: f64, pen: Option<crate::lanes::LanePenalty> },
@@ -224,7 +224,7 @@ pub struct SquadOrdersLogItem {
     pub who: Vec<String>,
     pub target: String,
     pub auto: Option<bool>,
-    /// INVENTED: g.serial() at the push (orders.ts:881 cuts the front): rescue.ts:570 and lesson.ts:113 hold a row as a cursor by identity
+    /// INVENTED: g.serial() at the push: rescue.ts:570 and lesson.ts:113 hold a row as a cursor by identity
     pub serial: u32,
 }
 
@@ -439,7 +439,7 @@ pub struct Assignment {
     pub lean: Option<f64>,
     pub fit: Option<crate::roomfit::Fit>,
     pub tries: Option<crate::doortools::DoorToolsDoneItemLaneBackTries>,
-    /// INVENTED: true at assign and at the unguarded writes made here (orders.ts:1473, :1475, :1640, :2346, :1457, wallreact.ts:587, pairorders.ts:439, :486, rescue.ts:769), not for doorpath.ts:273, :316, which alias s.goal. orders.ts:1519 passes held: !(a.new_leg && the A.goal arm was chosen) and clears it then
+    /// INVENTED: true at assign and at the unguarded writes made here, not for doorpath.ts:273, :316, which alias s.goal. orders.ts:1519 passes held: !(a.new_leg && the A.goal arm was chosen) and clears it then
     pub new_leg: bool,
 }
 
@@ -658,56 +658,39 @@ pub struct FarOff {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct OrdersMod {
-    /// (src/game/orders.ts:529 FOLLOW_WORD)
     pub follow_word: JsMap<OrdersAssignmentId, crate::orders::OrdersModFOLLOWWORDValue>,
 }
 
-/// (src/game/orders.ts:114 NOWHERE: a table nothing writes)
 pub fn nowhere() -> V3 { [10000000.0, 0.0, 10000000.0] }
 
-/// (src/game/orders.ts:116 OWN_EPS)
 pub const OWN_EPS: f64 = 0.15;
 
-/// (src/game/orders.ts:118 IN_WAY_WORDS)
 pub const IN_WAY_WORDS: &str = "you're in the way.";
 
-/// (src/game/orders.ts:121 FUR_M)
 pub const FUR_M: f64 = 0.12;
 
-/// (src/game/orders.ts:123 BACK_TRIES)
 pub const BACK_TRIES: f64 = 2.0;
 
-/// (src/game/orders.ts:334 WHEEL_STEP)
 pub const WHEEL_STEP: f64 = 60.0;
 
-/// (src/game/orders.ts:336 ORDER_DIGITS)
 pub const ORDER_DIGITS: f64 = 5.0;
 
-/// (src/game/orders.ts:2629 LOW: a table nothing writes)
 pub fn low() -> crate::orders::LOW { crate::orders::LOW { stance: crate::character::Stance::LowReady, upper: crate::character::UpperMode::None } }
 
-/// (src/game/orders.ts:2630 AIM: a table nothing writes)
 pub fn aim() -> crate::orders::AIM { crate::orders::AIM { stance: crate::character::Stance::None, upper: crate::character::UpperMode::Aim } }
 
-/// (src/game/orders.ts:2634 OFF_M)
 pub const OFF_M: f64 = 0.3;
 
-/// (src/game/orders.ts:2634 ROUND_ITER)
 pub const ROUND_ITER: f64 = 30000.0;
 
-/// (src/game/orders.ts:2634 MOUTH_M)
 pub const MOUTH_M: f64 = 0.8;
 
-/// (src/game/orders.ts:2636 SAME_PLUS_M)
 pub const SAME_PLUS_M: f64 = 2.0;
 
-/// (src/game/orders.ts:2679 ROUND_PLUS_M)
 pub const ROUND_PLUS_M: f64 = 3.0;
 
-/// (src/game/orders.ts:2681 ROUND_LESS)
 pub const ROUND_LESS: f64 = 0.5;
 
-/// (src/game/orders.ts:2695 DOOR_SAID: a table nothing writes)
 pub fn door_said() -> JsMap<String, String> { { let mut t = JsMap::new(); t.set(String::from("n"), String::from("north")); t.set(String::from("s"), String::from("south")); t.set(String::from("e"), String::from("east")); t.set(String::from("w"), String::from("west")); t.set(String::from("ne"), String::from("north-east")); t.set(String::from("nw"), String::from("north-west")); t.set(String::from("se"), String::from("south-east")); t.set(String::from("sw"), String::from("south-west")); t.set(String::from("ext"), String::from("outside")); t.set(String::from("breakroom"), String::from("break room")); t.set(String::from("mgr"), String::from("manager's")); t } }
 
 use crate::game::Game;

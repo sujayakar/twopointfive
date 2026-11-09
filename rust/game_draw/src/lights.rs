@@ -11,7 +11,7 @@ section! {
         pub key: u32,
         /// 0 a point, 1 a spot, 2 the sky's, 3 a panel
         pub kind: u32,
-        /// what it is by day (render/photometry.ts lightClass): 0 drawn as it is, 1 a fixture, 2 in a hand, 3 a vehicle's, 4 a flash, 5 a glowing face
+        /// what it is by day: 0 drawn as it is, 1 a fixture, 2 in a hand, 3 a vehicle's, 4 a flash, 5 a glowing face
         pub class: u32,
         /// 1 it burns · 2 transient · 4 broad · 8 a carried spot · 16 infrared · 32 it moves (a hand's, Sam's own)
         pub says: u32,

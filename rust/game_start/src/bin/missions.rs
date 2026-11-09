@@ -23,7 +23,7 @@ use std::collections::BTreeMap;
 
 /// every room clear of the mission list by its level, and by their ids the missions whose defenders are in no squad
 fn every_mission() -> Vec<String> {
-    use game::scene_scenarios::ScenarioEntryKind::{Nightbreach, Rescue};
+    use game::scene_scenarios::MissionKind::{Nightbreach, Rescue};
     let clears = room_clear_files().into_iter().map(|f| f.trim_end_matches(".json").to_string());
     clears.chain(game::scene_scenario_list::scenarios().into_iter().filter(|e| matches!(e.kind, Nightbreach | Rescue)).map(|e| e.id)).collect()
 }

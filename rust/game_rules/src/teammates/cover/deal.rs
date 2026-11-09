@@ -1,4 +1,3 @@
-//! src/game/cover.ts lines 233 to 744
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -17,18 +16,17 @@ const ON_MARK_M: f64 = 0.6;
 /// a gun within this of an opening, with a line to it, is on it
 const ON_IT: f64 = 25.0 * v3::DEG;
 
-/// Does his script hold this point of ours. By value: a point the cover made is p + sin(yaw) * r, no other writer holds its bits, and every move of it is written through to the script here (poseFor, turnOut). (cover.ts:630,640,675,700 `gd.script?.aimAt === J.aim`)
+/// Does his script hold this point of ours. By value: a point the cover made is p + sin(yaw) * r, no other writer holds its bits, and every move of it is written through to the script here (poseFor, turnOut).
 fn script_aim_is(g: &Game, gd: GuardId, aim: V3) -> bool {
     g.gd[gd].script.as_ref().map_or(false, |s| s.aim_at == Some(aim))
 }
 
-/// The squad's book that moves this man: his seat's. (cover.ts:440 `ordersOf(g, gd).trailBack`)
+/// The squad's book that moves this man: his seat's.
 fn trail_back(g: &mut Game, gd: GuardId, extra: f64) -> Option<V3> {
     let seat = crate::seats::view_of(g, gd);
     crate::seats::with_seat(g, seat, &mut |g: &mut Game| crate::orders::squad_orders_trail_back(g, gd, extra))
 }
 
-/// (cover.ts:559,586 `ordersOf(g, gd).samStopped`)
 fn sam_stopped(g: &mut Game, gd: GuardId) -> bool {
     let seat = crate::seats::view_of(g, gd);
     crate::seats::with_seat(g, seat, &mut |g: &mut Game| crate::orders::squad_orders_sam_stopped(g, &crate::seats::here(g)))
@@ -43,7 +41,7 @@ fn rear_pin(g: &mut Game, gd: GuardId) -> Option<crate::rearwatch::RearPin> {
 /// An optional boolean as a condition.
 fn yes(o: Option<bool>) -> bool { o.unwrap_or(false) }
 
-/// (cover.ts Cover) The constructor: the field initialisers, the file's one rear opening, the page's knobs.
+///  The constructor: the field initialisers, the file's one rear opening, the page's knobs.
 pub fn cover_new(g: &mut Game) -> Cover {
     let mut c = Cover::blank();
     c.knobs = g.k.cover;
@@ -51,7 +49,7 @@ pub fn cover_new(g: &mut Game) -> Cover {
     c
 }
 
-/// Nothing dealt, nothing known: a restart. (cover.ts reset)
+/// Nothing dealt, nothing known: a restart.
 pub fn cover_reset(g: &mut Game) {
     let c = &mut g.cover;
     c.jobs.clear();
@@ -70,16 +68,16 @@ pub fn cover_reset(g: &mut Game) {
     c.log.clear();
 }
 
-/// What he was dealt. (cover.ts of)
+/// What he was dealt.
 pub(in crate::teammates) fn cover_of(g: &Game, gd: GuardId) -> Option<CoverJob> { g.cover.jobs.get(gd).copied() }
 
-/// The level's openings, built if they are not yet. (cover.ts ready)
+/// The level's openings, built if they are not yet.
 pub fn cover_ready(g: &mut Game) -> Vec<CoverOpeningId> {
     if !g.cover.nav { cover_build(g); }
     g.cover.openings.clone()
 }
 
-/// The level's openings: its doors, and the gaps of its nav grid that are not a door's own doorway. (cover.ts build)
+/// The level's openings: its doors, and the gaps of its nav grid that are not a door's own doorway.
 fn cover_build(g: &mut Game) {
     g.cover.nav = true;
     let list = g.doors.list.clone();
@@ -113,7 +111,7 @@ fn cover_build(g: &mut Game) {
     g.cover.openings = doors;
 }
 
-/// His order leaves his eyes spare now. (cover.ts spare)
+/// His order leaves his eyes spare now.
 fn cover_spare(g: &mut Game, gd: GuardId, a: OrdersAssignmentId) -> bool {
     if !yes(g.tab.orders_assignment[a].spare) || g.tab.orders_assignment[a].post.is_none() { return false; }
     if g.tab.orders_assignment[a].from.is_none() { return false; }
@@ -137,7 +135,7 @@ pub fn cover_eyes_free(g: &Game, gd: GuardId, a: OrdersAssignmentId) -> bool {
     walking || crate::orders::rows::is(g, a, crate::orders::Is::LooksAbout)
 }
 
-/// Is this man free to be dealt an opening: the order he is under if so. (cover.ts free)
+/// Is this man free to be dealt an opening: the order he is under if so.
 fn cover_free(g: &mut Game, gd: GuardId) -> Option<OrdersAssignmentId> {
     if crate::condition::down(g, g.gd[gd].ch) || g.gd[gd].script.is_none() || crate::control::man::blind(g, gd) || g.gd[gd].held.is_some() { return None; }
     let a = crate::seats::order_of(g, gd)?;
@@ -151,7 +149,7 @@ fn cover_free(g: &mut Game, gd: GuardId) -> Option<OrdersAssignmentId> {
     Some(a)
 }
 
-/// What a rear man on a door-less mark watches. (cover.ts readRear)
+/// What a rear man on a door-less mark watches.
 fn cover_read_rear(g: &mut Game, gd: GuardId, a: OrdersAssignmentId, list: &[(GuardId, OrdersAssignmentId)], bodies: &[V3]) -> Option<crate::roomfit::Watchable> {
     let k = g.k.cover;
     let c = g.gd[gd].ch;
@@ -191,7 +189,7 @@ fn cover_read_rear(g: &mut Game, gd: GuardId, a: OrdersAssignmentId, list: &[(Gu
     picked
 }
 
-/// A stack's rear man still on the walk to his mark, further out than the last steps. (cover.ts walkOnly)
+/// A stack's rear man still on the walk to his mark, further out than the last steps.
 pub fn cover_walk_only(g: &Game, gd: GuardId, a: OrdersAssignmentId) -> bool {
     let row = &g.tab.orders_assignment[a];
     if !yes(row.spare) || row.from.is_none() { return false; }
@@ -201,7 +199,7 @@ pub fn cover_walk_only(g: &Game, gd: GuardId, a: OrdersAssignmentId) -> bool {
     }
 }
 
-/// A door standing open by his way, with floor beyond it the team has not been on. (cover.ts walkDoor)
+/// A door standing open by his way, with floor beyond it the team has not been on.
 fn cover_walk_door(g: &mut Game, o: CoverOpeningId, a: OrdersAssignmentId) -> bool {
     let d = match g.tab.cover_opening[o].door { Some(d) => d, None => return false };
     if Some(d) == g.tab.orders_assignment[a].door { return false; }
@@ -212,21 +210,21 @@ fn cover_walk_door(g: &mut Game, o: CoverOpeningId, a: OrdersAssignmentId) -> bo
     !(js::truthy(ra) && js::truthy(rb) && crate::cleared::cleared_rooms_is_known(g, ra) && crate::cleared::cleared_rooms_is_known(g, rb))
 }
 
-/// His eye over a spot. (cover.ts eyeOf)
+/// His eye over a spot.
 fn cover_eye_of(g: &Game, p: V3) -> V3 { [p[0], EYE, p[2]] }
 
-/// The point of this opening a man stood at `p` can watch. (cover.ts sightFrom)
+/// The point of this opening a man stood at `p` can watch.
 pub(in crate::teammates) fn cover_sight_from(g: &mut Game, p: V3, o: CoverOpeningId) -> Option<V3> {
     let eye = cover_eye_of(g, p);
     cover_sight(g, eye, o)
 }
 
-/// A line from this eye to the opening itself. (cover.ts line)
+/// A line from this eye to the opening itself.
 fn cover_line(g: &mut Game, eye: V3, o: CoverOpeningId) -> bool {
     cover_sight(g, eye, o) == Some(g.tab.cover_opening[o].at)
 }
 
-/// The point of this opening a man at `eye` can watch: the opening, or just past an open leaf's free edge. (cover.ts sight)
+/// The point of this opening a man at `eye` can watch: the opening, or just past an open leaf's free edge.
 fn cover_sight(g: &mut Game, eye: V3, o: CoverOpeningId) -> Option<V3> {
     let k = g.k.cover;
     let at = g.tab.cover_opening[o].at;
@@ -245,7 +243,7 @@ fn cover_sight(g: &mut Game, eye: V3, o: CoverOpeningId) -> Option<V3> {
     if v3::dist_xz(eye, t) > k.in_m && !crate::scene_collision::segment_blocked(g, eye, t, None, None, None) { Some(t) } else { None }
 }
 
-/// Once a frame, before the orders pose the men. (cover.ts tick)
+/// Once a frame, before the orders pose the men.
 pub fn cover_tick(g: &mut Game) {
     let k = g.k.cover;
     if !crate::seats::team_active(g) {
@@ -413,7 +411,7 @@ fn held_by(g: &mut Game, cx: &Cx, o: CoverOpeningId) -> bool {
     false
 }
 
-/// Weigh one opening and put it on the list if some free man can take it or sees its leaf's edge: its index in `live`. (cover.ts deal: add)
+/// Weigh one opening and put it on the list if some free man can take it or sees its leaf's edge: its index in `live`.
 fn add(g: &mut Game, cx: &Cx, live: &mut Vec<LiveOpening>, o: CoverOpeningId, kind_k: f64) -> Option<usize> {
     let k = g.k.cover;
     let oat = g.tab.cover_opening[o].at;
@@ -444,7 +442,7 @@ fn rear_moved(g: &mut Game, r: CoverOpeningId) {
     for (_, j) in g.cover.jobs.iter_mut() { if j.o == r { j.to = at; } }
 }
 
-/// The point his gun rests on along (dx, dz): the furthest of three his eye has a line to. (cover.ts deal: along)
+/// The point his gun rests on along (dx, dz): the furthest of three his eye has a line to.
 fn along(g: &mut Game, p: V3, dx: f64, dz: f64, l: f64, far: bool) -> Option<V3> {
     let h = m::hyp2(dx, dz);
     if !(h > 1e-6) { return None; }
@@ -461,7 +459,7 @@ fn along(g: &mut Game, p: V3, dx: f64, dz: f64, l: f64, far: bool) -> Option<V3>
 
 fn find_live(live: &[LiveOpening], o: CoverOpeningId) -> Option<usize> { live.iter().position(|l| l.o == o) }
 
-/// Every dealing of `hands` men to the pool tried: the best, -1 being none. (cover.ts deal: rec)
+/// Every dealing of `hands` men to the pool tried: the best, -1 being none.
 struct Search<'a> { score: &'a [Vec<f64>], used: Vec<bool>, cur: Vec<i32>, best: Vec<i32>, bs: f64 }
 fn rec(z: &mut Search, i: usize, s: f64) {
     if i == z.score.len() {
@@ -480,7 +478,7 @@ fn rec(z: &mut Search, i: usize, s: f64) {
     }
 }
 
-/// The deal: every live opening weighed, the free men dealt one each. (cover.ts deal)
+/// The deal: every live opening weighed, the free men dealt one each.
 fn cover_deal(g: &mut Game) {
     let k = g.k.cover;
     let sams: Vec<CharId> = crate::seats::men_up(g).iter().map(|&pl| g.pl[pl].ch).collect();
@@ -687,7 +685,7 @@ fn cover_deal(g: &mut Game) {
     deal_out(g, &cx, &list, live, open_doors, rear_l, last, pins);
 }
 
-/// The second half of the deal: who gets which, and the jobs handed out. (cover.ts deal)
+/// The second half of the deal: who gets which, and the jobs handed out.
 fn deal_out(g: &mut Game, cx: &Cx, list: &[(GuardId, OrdersAssignmentId)], mut live: Vec<LiveOpening>, open_doors: Vec<CoverOpeningId>, rear_l: Option<CoverOpeningId>, last: Option<GuardId>, pins: Vec<(GuardId, CoverOpeningId)>) {
     let k = g.k.cover;
     // (`live` no longer changes shape from here: a row's index is its handle)
@@ -794,13 +792,13 @@ fn deal_out(g: &mut Game, cx: &Cx, list: &[(GuardId, OrdersAssignmentId)], mut l
     cover_step_deal(g, list, &cx.asg_of, &got_ids, &live, &open_doors, bodies, &cx.spd, &mut w_of, if rear_l.is_some() { last } else { None });
 }
 
-/// The row he was dealt: `got` names its opening, `live` holds it, one row an opening. (cover.ts stepDeal `got.get(gd)`)
+/// The row he was dealt: `got` names its opening, `live` holds it, one row an opening.
 fn got_row<'a>(got: &JsMap<GuardId, CoverOpeningId>, live: &'a [LiveOpening], gd: GuardId) -> Option<&'a LiveOpening> {
     let o = *got.get(gd)?;
     live.iter().find(|l| l.o == o)
 }
 
-/// Step to see: every open door nobody has a line into gets one man. (cover.ts stepDeal)
+/// Step to see: every open door nobody has a line into gets one man.
 fn cover_step_deal(g: &mut Game, list: &[(GuardId, OrdersAssignmentId)], asg_of: &JsMap<GuardId, OrdersAssignmentId>, got: &JsMap<GuardId, CoverOpeningId>, live: &[LiveOpening], open: &[CoverOpeningId], bodies: &[(CharId, V3)], spd: &JsMap<GuardId, f64>, w_of: &mut dyn FnMut(&mut Game, CoverOpeningId) -> f64, rear_man: Option<GuardId>) {
     let k = g.k.cover;
     let t = g.time;
@@ -895,7 +893,7 @@ fn cover_step_deal(g: &mut Game, list: &[(GuardId, OrdersAssignmentId)], asg_of:
     }
 }
 
-/// The steps that no longer stand. (cover.ts pruneSteps)
+/// The steps that no longer stand.
 fn cover_prune_steps(g: &mut Game) {
     for gd in g.cover.steps.keys() {
         let sa = g.cover.steps.get(gd).unwrap().a;
@@ -905,7 +903,7 @@ fn cover_prune_steps(g: &mut Game) {
     }
 }
 
-/// Is `x` in the lane a → b, within `lane` of the line. (cover.ts stepSpot: inLane)
+/// Is `x` in the lane a → b, within `lane` of the line.
 fn in_lane(x: V3, a: V3, b: V3, lane: f64) -> bool {
     let dx = b[0] - a[0];
     let dz = b[2] - a[2];
@@ -916,7 +914,7 @@ fn in_lane(x: V3, a: V3, b: V3, lane: f64) -> bool {
     along > 0.15 && along < len && m::abs(sx * dz - sz * dx) / len < lane
 }
 
-/// The spot a man steps to to see through open door `o`. (cover.ts stepSpot)
+/// The spot a man steps to to see through open door `o`.
 fn cover_step_spot(g: &mut Game, gd: GuardId, from: V3, o: CoverOpeningId, bodies: &[(CharId, V3)]) -> Option<CoverStepSpot> {
     let k = g.k.cover;
     let me = g.gd[gd].ch;
@@ -967,12 +965,12 @@ fn cover_step_spot(g: &mut Game, gd: GuardId, from: V3, o: CoverOpeningId, bodie
     best.map(|q| CoverStepSpot { q, c: bc })
 }
 
-/// Where the cover has this man step to under the order he has now. (cover.ts stepOf)
+/// Where the cover has this man step to under the order he has now.
 pub fn cover_step_of(g: &Game, gd: GuardId, a: OrdersAssignmentId) -> Option<V3> {
     match g.cover.steps.get(gd) { Some(s) if s.a == a => Some(s.q), _ => None }
 }
 
-/// He cannot get to it: where he stands is where the step ends. (cover.ts stepHalt)
+/// He cannot get to it: where he stands is where the step ends.
 pub fn cover_step_halt(g: &mut Game, gd: GuardId) {
     let p = pos_of(g, gd);
     let t = g.time;
@@ -981,14 +979,14 @@ pub fn cover_step_halt(g: &mut Game, gd: GuardId) {
     if !s.done { s.done = true; s.t = t; g.cover.no_step.set(gd, t + 4.0); }
 }
 
-/// A change of hands, for the probes' record: the newest 400. (cover.ts note)
+/// A change of hands, for the probes' record: the newest 400.
 fn cover_note(g: &mut Game, gd: GuardId, id_2: Option<&str>) {
     let log = &mut g.cover.log;
     log.push(CoverLogItem {  });
     if log.len() > 400 { let extra = log.len() - 400; log.drain(0..extra); }
 }
 
-/// His job goes; `taken`: something else has him now and may not re-pose him. (cover.ts drop)
+/// His job goes; `taken`: something else has him now and may not re-pose him.
 fn cover_drop(g: &mut Game, gd: GuardId, taken: Option<bool>) {
     let taken = taken.unwrap_or(false);
     let j = match g.cover.jobs.get(gd).copied() { Some(j) => j, None => return };
@@ -1008,7 +1006,7 @@ fn cover_drop(g: &mut Game, gd: GuardId, taken: Option<bool>) {
     if taken { cover_release(g, gd, j); }
 }
 
-/// What the cover wrote into his script goes with the job. (cover.ts release)
+/// What the cover wrote into his script goes with the job.
 fn cover_release(g: &mut Game, gd: GuardId, j: CoverJob) {
     if g.gd[gd].script.is_none() || crate::condition::down(g, g.gd[gd].ch) { return; }
     let s = g.gd[gd].script.as_mut().unwrap();
@@ -1016,7 +1014,7 @@ fn cover_release(g: &mut Game, gd: GuardId, j: CoverJob) {
     if script_aim_is(g, gd, j.aim) { give_aim_back(g, gd, j.a); }
 }
 
-/// `s.aimAt = A.watch`, and the gun-up carriage if nobody has changed it since. (cover.ts release, unturn)
+/// `s.aimAt = A.watch`, and the gun-up carriage if nobody has changed it since.
 fn give_aim_back(g: &mut Game, gd: GuardId, a: OrdersAssignmentId) {
     let (watch, upper, stance) = (g.tab.orders_assignment[a].watch, g.tab.orders_assignment[a].upper, g.tab.orders_assignment[a].stance);
     let s = g.gd[gd].script.as_mut().unwrap();
@@ -1027,7 +1025,7 @@ fn give_aim_back(g: &mut Game, gd: GuardId, a: OrdersAssignmentId) {
     }
 }
 
-/// The deal has let go of a man walking backwards on his opening: from here his feet are turnOut's. (cover.ts turnFrom)
+/// The deal has let go of a man walking backwards on his opening: from here his feet are turnOut's.
 fn cover_turn_from(g: &mut Game, gd: GuardId, j: CoverJob) {
     let strafing = g.gd[gd].script.as_ref().map_or(false, |s| yes(s.strafe));
     if j.back && strafing && !crate::condition::down(g, g.gd[gd].ch) {
@@ -1036,7 +1034,7 @@ fn cover_turn_from(g: &mut Game, gd: GuardId, j: CoverJob) {
     }
 }
 
-/// The way he goes: at the corner of his path he is walking to, else the way he is moving. (cover.ts wayOf)
+/// The way he goes: at the corner of his path he is walking to, else the way he is moving.
 fn cover_way_of(g: &Game, gd: GuardId) -> f64 {
     let c = g.gd[gd].ch;
     let p = g.ch[c].pos;
@@ -1046,7 +1044,7 @@ fn cover_way_of(g: &Game, gd: GuardId) -> f64 {
     g.cover.heading.get(gd).copied().unwrap_or(g.ch[c].body_yaw)
 }
 
-/// Is he still coming out of a back-pedal. (cover.ts turning)
+/// Is he still coming out of a back-pedal.
 fn cover_turning(g: &Game, gd: GuardId, still: bool, pace: f64) -> bool {
     let o = match g.cover.outs.get(gd) { Some(o) => *o, None => return false };
     let k = g.k.cover;
@@ -1054,7 +1052,7 @@ fn cover_turning(g: &Game, gd: GuardId, still: bool, pace: f64) -> bool {
     !still && pace <= k.back_out && m::abs(t - o.t) <= 0.1 && m::abs(t - o.t0) < k.back_turn_secs && m::cos(g.ch[g.gd[gd].ch].body_yaw - cover_way_of(g, gd)) < k.back_turn_body
 }
 
-/// His pose while he is: the path's own feet, the body turning to the way he goes, the gun carried round in front of it. (cover.ts turnOut)
+/// His pose while he is: the path's own feet, the body turning to the way he goes, the gun carried round in front of it.
 fn cover_turn_out(g: &mut Game, gd: GuardId, still: bool, pace: f64) -> Option<CoverTurnOut> {
     let (was_aim, was_on) = { let o = g.cover.outs.get(gd)?; (o.aim, o.on) };
     if !cover_turning(g, gd, still, pace) { g.cover.outs.delete(gd); return None; }
@@ -1075,7 +1073,7 @@ fn cover_turn_out(g: &mut Game, gd: GuardId, still: bool, pace: f64) -> Option<C
     Some(CoverTurnOut { at: aim, face: Some(face), strafe: true })
 }
 
-/// Something else has him: what the turn-out wrote into his script goes. (cover.ts unturn)
+/// Something else has him: what the turn-out wrote into his script goes.
 fn cover_unturn(g: &mut Game, gd: GuardId) {
     let o = match g.cover.outs.delete(gd) { Some(o) => o, None => return };
     if g.gd[gd].script.is_none() || crate::condition::down(g, g.gd[gd].ch) { return; }
@@ -1084,13 +1082,13 @@ fn cover_unturn(g: &mut Game, gd: GuardId) {
     if o.on && script_aim_is(g, gd, o.aim) { give_aim_back(g, gd, o.j.a); }
 }
 
-/// The gun comes off an opening the deal let go of. (cover.ts unkeep)
+/// The gun comes off an opening the deal let go of.
 fn cover_unkeep(g: &mut Game, gd: GuardId, taken: Option<bool>) {
     let k = match g.cover.kept.delete(gd) { Some(k) => k, None => return };
     if taken.unwrap_or(false) { cover_release(g, gd, k.j); } else { cover_turn_from(g, gd, k.j); }
 }
 
-/// The opening the deal last took off this man, while his gun is still on it. (cover.ts keptOf)
+/// The opening the deal last took off this man, while his gun is still on it.
 fn cover_kept_of(g: &mut Game, gd: GuardId) -> Option<CoverJob> {
     let kv = *g.cover.kept.get(gd)?;
     let p = pos_of(g, gd);
@@ -1121,7 +1119,7 @@ fn cover_kept_of(g: &mut Game, gd: GuardId) -> Option<CoverJob> {
     Some(j)
 }
 
-/// Everything goes: the knob, or no team. (cover.ts dropAll)
+/// Everything goes: the knob, or no team.
 fn cover_drop_all(g: &mut Game) {
     for gd in g.cover.jobs.keys() { cover_drop(g, gd, Some(true)); }
     for gd in g.cover.kept.keys() { cover_unkeep(g, gd, Some(true)); }
@@ -1134,7 +1132,7 @@ fn put_job(g: &mut Game, gd: GuardId, j: CoverJob) {
     else if let Some(x) = g.cover.kept.get_mut(gd) { x.j = j; }
 }
 
-/// Where his gun goes and how he carries himself for the opening he was dealt: None, the order's own pose stands. (cover.ts poseFor)
+/// Where his gun goes and how he carries himself for the opening he was dealt: None, the order's own pose stands.
 pub fn cover_pose_for(g: &mut Game, gd: GuardId, still: bool, pace: f64) -> Option<CoverPoseFor> {
     let found = match g.cover.jobs.get(gd).copied() { Some(j) => Some(j), None => cover_kept_of(g, gd) };
     let mut j = match found {
@@ -1191,7 +1189,7 @@ pub fn cover_pose_for(g: &mut Game, gd: GuardId, still: bool, pace: f64) -> Opti
     None
 }
 
-/// An opening in a few words, as this man would say it. (cover.ts nameOf)
+/// An opening in a few words, as this man would say it.
 fn cover_name_of(g: &Game, o: CoverOpeningId, from: Option<V3>) -> String {
     let (kind, door, at) = (g.tab.cover_opening[o].kind, g.tab.cover_opening[o].door, g.tab.cover_opening[o].at);
     if kind == OpeningKind::Rear { return String::from("the rear"); }
@@ -1205,15 +1203,15 @@ fn cover_name_of(g: &Game, o: CoverOpeningId, from: Option<V3>) -> String {
     }
 }
 
-/// Has he an opening dealt, and is on it. (cover.ts has)
+/// Has he an opening dealt, and is on it.
 pub fn cover_has(g: &Game, gd: GuardId) -> bool { cover_on_of(g, gd).map_or(false, |j| !j.off) }
 
-/// The opening his gun is on: dealt, or let go of and still his for the moment. (cover.ts onOf)
+/// The opening his gun is on: dealt, or let go of and still his for the moment.
 fn cover_on_of(g: &Game, gd: GuardId) -> Option<CoverJob> {
     match g.cover.jobs.get(gd) { Some(j) => Some(*j), None => g.cover.kept.get(gd).map(|k| k.j) }
 }
 
-/// What he is on, in words. (cover.ts words)
+/// What he is on, in words.
 fn cover_words(g: &Game, gd: GuardId) -> String {
     match cover_on_of(g, gd) {
         Some(j) if !j.off => { let p = pos_of(g, gd); alloc::format!("on {}", cover_name_of(g, j.o, Some(p))) }
@@ -1221,7 +1219,7 @@ fn cover_words(g: &Game, gd: GuardId) -> String {
     }
 }
 
-/// The tail of his row in the squad block. (cover.ts tail)
+/// The tail of his row in the squad block.
 pub fn cover_tail(g: &Game, gd: GuardId) -> String {
     let w = cover_words(g, gd);
     if w.is_empty() { w } else { alloc::format!(" · {}", w) }

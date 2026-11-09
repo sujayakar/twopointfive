@@ -1,7 +1,7 @@
 //! THE GAME'S STATE IN THE MODULE — everything of a game that lives in this memory from one call to the next is ONE BLOCK of bytes a game, and it is here.
 //!
 //! WHY ONE BLOCK. State of the game has to be taken and put back (a rollback, a save kept in memory), put into another game, folded into the state's word and
-//! compared (src/game/rollback.ts), and one day sent. A block is all of those with no line a system: the host copies its bytes. So:
+//! compared, and one day sent. A block is all of those with no line a system: the host copies its bytes. So:
 //!   · a family of the update that keeps state here adds ONE FIELD to `State` (a struct of flat, fixed-size columns) and its row in `PARTS`. Nothing else in
 //!     the crate is state: every other `static mut` is SCRATCH (written and read inside one call) or a COPY the host proves (the box world), and
 //!     tools/qa/rust-rules-check.ts is red on a `static mut` it has no row for (STATICS there).
@@ -38,7 +38,7 @@ pub const GAMES: usize = 4;
 pub struct Head {
     /// the word of the layout this block was written under (`LAYOUT`): the host writes it into a new block
     pub layout: u32,
-    /// WHICH SYSTEMS' STATE IS AT HOME HERE, a bit a system (the host's table, src/sim/state.ts): a system whose bit is down keeps its state in the
+    /// WHICH SYSTEMS' STATE IS AT HOME HERE, a bit a system: a system whose bit is down keeps its state in the
     /// TypeScript objects, as it did before it moved, and the part it would use here is zeros
     pub homes: u32,
     pub spare: [u32; 2],

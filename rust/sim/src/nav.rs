@@ -24,7 +24,7 @@ pub const MAX_WAY: usize = 1 << 13;
 /// table here can be outgrown, whatever cap the caller puts on the search: a search closes a cell once and lists eight more at most as it does (so the
 /// open list and the list of cells written hold 1 + 8 × cells entries at most), and a way has no more waypoints than the floor has cells. The floor is
 /// the BUILD's (src/scene/world.ts WORLD: 40 m × 28 m, four cells to the metre square, 4,480 cells), so one over this is a mistake of the build, said
-/// once by the host (collision.ts NavGrid.there), and never a level's.
+/// once by the host, and never a level's.
 pub const MAX_FLOOR: usize = least(least(MAX_NAV, MAX_WAY), (MAX_OPEN - 1) / 8);
 const fn least(a: usize, b: usize) -> usize {
     if a < b {

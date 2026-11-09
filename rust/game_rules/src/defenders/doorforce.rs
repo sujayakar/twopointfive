@@ -27,10 +27,10 @@ fn clear_walk(g: &mut Game, gd: GuardId) {
     o.path_goal_orbit = false;
 }
 
-/// The rule is up: the AI runs. (doorforce.ts live)
+/// The rule is up: the AI runs.
 fn live(g: &mut crate::game::Game) -> bool { g.ai_enabled }
 
-/// The game's state, made if absent, every belief forgotten if the clock went back (a load). (doorforce.ts stateOf)
+/// The game's state, made if absent, every belief forgotten if the clock went back (a load).
 fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::doorforce::State {
     let now = g.time;
     let s = g.m.doorforce.states.get_or_insert_with(|| State { last_t: now, men: JsMap::new(), kickers: JsMap::new(), boots: JsMap::new() });
@@ -38,20 +38,20 @@ fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::doorforce::State
     s
 }
 
-/// A new man's row, with the literal's numbers (not `Man::default`: served and cfT start long ago). (doorforce.ts manOf)
+/// A new man's row, with the literal's numbers (not `Man::default`: served and cfT start long ago).
 fn new_man() -> Man {
     Man { beliefs: JsMap::new(), saw: None, on: None, kick: None, rest: JsMap::new(), served: -1e9, cf_t: -1e9 }
 }
 
-/// A man's row, made if absent. (doorforce.ts manOf)
+/// A man's row, made if absent.
 fn man_of<'g>(g: &'g mut crate::game::Game, gd: GuardId) -> &'g mut crate::doorforce::Man {
     state_of(g).men.get_or_insert_with(gd, new_man)
 }
 
-/// Distance on the floor. (doorforce.ts flat)
+/// Distance on the floor.
 fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 
-/// A line for the panel's log. (doorforce.ts log)
+/// A line for the panel's log.
 fn log(g: &mut crate::game::Game, s: &str) {
     let line = alloc::format!("{} {}", js::to_fixed(g.time, 2), s);
     let l = &mut g.m.doorforce.doorforce_log;
@@ -59,18 +59,18 @@ fn log(g: &mut crate::game::Game, s: &str) {
     if l.len() > 400 { l.drain(0..200); }
 }
 
-/// A man this rule may have: a defender, up, on his own senses. (doorforce.ts defender)
+/// A man this rule may have: a defender, up, on his own senses.
 fn defender(g: &crate::game::Game, gd: GuardId) -> bool {
     let c = g.gd[gd].ch;
     g.gd[gd].team != crate::teams::Team::Operative && !crate::condition::down(g, g.gd[gd].ch) && g.ch[c].alive
 }
 
-/// A leaf that is a shut door to a man: hung, home in its frame. (doorforce.ts shut)
+/// A leaf that is a shut door to a man: hung, home in its frame.
 fn shut(g: &mut crate::game::Game, d: DoorId) -> bool {
     !crate::doors::door_off(g, d) && crate::doors::door_is_closed(g, d)
 }
 
-/// `at` is close behind the shut leaf for a man at `from`, and it is not a leaf he is set on behind a wedge. (doorforce.ts behind)
+/// `at` is close behind the shut leaf for a man at `from`, and it is not a leaf he is set on behind a wedge.
 fn behind(g: &mut crate::game::Game, gd: GuardId, d: DoorId, from: V3, at: V3) -> bool {
     let k = g.k.doorforce;
     if !shut(g, d) || flat(g.dr[d].frame_centre, at) > k.behind_m || flat(g.dr[d].frame_centre, from) > k.reach_m { return false; }
@@ -80,7 +80,7 @@ fn behind(g: &mut crate::game::Game, gd: GuardId, d: DoorId, from: V3, at: V3) -
     !crate::digin::dig_in_set_on(g, gd, d)
 }
 
-/// HEARD: the shut door `at` is close behind for a man at `from`, the nearest such to `at`. (doorforce.ts doorBetween)
+/// HEARD: the shut door `at` is close behind for a man at `from`, the nearest such to `at`.
 fn door_between(g: &mut crate::game::Game, gd: GuardId, from: V3, at: V3) -> Option<DoorId> {
     let mut best: Option<DoorId> = None;
     let mut bd = m::INF;
@@ -95,7 +95,7 @@ fn door_between(g: &mut crate::game::Game, gd: GuardId, from: V3, at: V3) -> Opt
     best
 }
 
-/// SEEN: the shut door that is now the first thing in his eyes' line to where he last saw the man. (doorforce.ts doorHiding)
+/// SEEN: the shut door that is now the first thing in his eyes' line to where he last saw the man.
 fn door_hiding(g: &mut crate::game::Game, gd: GuardId, at: V3) -> Option<DoorId> {
     let c = g.gd[gd].ch;
     let pos = g.ch[c].pos;
@@ -111,7 +111,7 @@ fn door_hiding(g: &mut crate::game::Game, gd: GuardId, at: V3) -> Option<DoorId>
     if behind(g, gd, d, pos, at) { Some(d) } else { None }
 }
 
-/// He has word of an enemy at the far face of `d`: sureness adds (a sighting sets a floor), the place and the time are the newest. (doorforce.ts learn)
+/// He has word of an enemy at the far face of `d`: sureness adds (a sighting sets a floor), the place and the time are the newest.
 fn learn(g: &mut crate::game::Game, gd: GuardId, d: DoorId, at: V3, add: f64, seen: bool) {
     let now = g.time;
     let man = man_of(g, gd);
@@ -123,7 +123,7 @@ fn learn(g: &mut crate::game::Game, gd: GuardId, d: DoorId, at: V3, add: f64, se
     b.seen = seen;
 }
 
-/// His ears: a sound that came to him across a shut leaf, or a door's own noise, is word of that door. (doorforce.ts doorForceHear)
+/// His ears: a sound that came to him across a shut leaf, or a door's own noise, is word of that door.
 pub fn door_force_hear(g: &mut crate::game::Game, gd: GuardId, e: crate::game::GameEvent, prop: crate::doorforce::DoorForceHearProp) {
     use crate::director::EventKind;
     if !live(g) || g.gd[gd].state != crate::game::GuardState::Alert || !defender(g, gd) || g.gd[gd].script.is_some() { return; }
@@ -203,7 +203,7 @@ pub fn door_force_hear(g: &mut crate::game::Game, gd: GuardId, e: crate::game::G
     g.stats.doorforce.heard += 1;
 }
 
-/// This 'kick' is a boot this rule had a man of the listener's own side (or the listener) throw: no intruder. (doorforce.ts doorForceOwnBoot)
+/// This 'kick' is a boot this rule had a man of the listener's own side (or the listener) throw: no intruder.
 pub fn door_force_own_boot(g: &mut crate::game::Game, gd: GuardId, e: crate::game::GameEvent) -> bool {
     if e.kind != crate::director::EventKind::Kick { return false; }
     let who = match e.who { Some(w) => w, None => return false };
@@ -217,7 +217,7 @@ pub fn door_force_own_boot(g: &mut crate::game::Game, gd: GuardId, e: crate::gam
     !crate::teams::is_hostile(g, team, their)
 }
 
-/// Once a frame after the guards: what each man saw and heard fades, a sighting just lost is put behind the leaf it went behind. (doorforce.ts doorForceTick)
+/// Once a frame after the guards: what each man saw and heard fades, a sighting just lost is put behind the leaf it went behind.
 pub fn door_force_tick(g: &mut crate::game::Game, dt: f64) {
     if !live(g) { return; }
     let (kf, time) = (g.k.doorforce, g.time);
@@ -309,7 +309,7 @@ pub fn door_force_tick(g: &mut crate::game::Game, dt: f64) {
     }
 }
 
-/// A man's row goes, and the door he had the boot of is free. (doorforce.ts drop)
+/// A man's row goes, and the door he had the boot of is free.
 fn drop(g: &mut crate::game::Game, gd: GuardId) {
     let s = state_of(g);
     if let Some(kick) = s.men.get(gd).and_then(|x| x.kick) {
@@ -330,7 +330,7 @@ fn round_through(g: &mut Game, gd: GuardId, def: crate::weapons::WeaponId, from:
     crate::glasspen::shot_energy(g, c, Some(def)) != Some(0.0)
 }
 
-/// Where his rounds go for this belief: the place when the leaf is first in the line and the round crosses it, or the stretch of leaf nearest a man right at it. (doorforce.ts roundFor)
+/// Where his rounds go for this belief: the place when the leaf is first in the line and the round crosses it, or the stretch of leaf nearest a man right at it.
 fn round_for(g: &mut crate::game::Game, gd: GuardId, b: &mut crate::doorforce::Belief) -> Option<V3> {
     let kf = g.k.doorforce;
     let d = b.door;
@@ -358,7 +358,7 @@ fn round_for(g: &mut crate::game::Game, gd: GuardId, b: &mut crate::doorforce::B
     if round_through(g, gd, def, from, to, e, index) { Some(to) } else { None }
 }
 
-/// The alert branch's hook: the door this man is on, where his gun points and how fast his legs go. None = nothing of the kind. (doorforce.ts doorForce)
+/// The alert branch's hook: the door this man is on, where his gun points and how fast his legs go. None = nothing of the kind.
 pub fn door_force(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<crate::doorforce::DoorForce> {
     if !live(g) || !defender(g, gd) || g.gd[gd].script.is_some() || g.gd[gd].held.is_some() || crate::control::man::blind(g, gd) || crate::control::man::staggered(g, gd) { return None; }
     g.m.doorforce.states.as_ref()?.men.get(gd)?;
@@ -475,7 +475,7 @@ pub fn door_force(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<cra
         } else {
             crate::combat::FireOpts { spread: Some(mo.spread), ..Default::default() }
         };
-        crate::combat::fire_weapon(g, c, aim, false, Some(&opts));
+        crate::combat::fire_weapon(g, c, aim, Some(&opts));
         if crate::weapons::firearm_rounds_ready(g, w) == 0.0 { crate::guards::start_reload_beat(g, gd); }
     }
     let out = had - crate::weapons::firearm_rounds_ready(g, w);
@@ -515,7 +515,7 @@ fn kick_end(g: &mut Game, gd: GuardId, d: DoorId, b: Option<Belief>, why: Option
     None
 }
 
-/// The walk to the boot's spot, the set, the boot. None = it is over: the caller's own branch goes on. (doorforce.ts kickStep)
+/// The walk to the boot's spot, the set, the boot. None = it is over: the caller's own branch goes on.
 fn kick_step(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<crate::doorforce::KickStep> {
     let row = man!(g, gd);
     let kk = row.kick.unwrap();
@@ -582,14 +582,14 @@ fn kick_step(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<crate::d
     kick_end(g, gd, d, b, None, false)
 }
 
-/// QA: hand `gd` the record a real sighting of his foe at `at` leaves, `age` seconds old. (doorforce.ts doorForceSaw)
+/// QA: hand `gd` the record a real sighting of his foe at `at` leaves, `age` seconds old.
 fn door_force_saw(g: &mut crate::game::Game, gd: GuardId, at: V3, age: Option<f64>) {
     let age = age.unwrap_or(0.0);
     let t = g.time - age;
     man_of(g, gd).saw = Some(ManSaw { at: [at[0], 0.0, at[2]], t, used: false });
 }
 
-/// A restart or a checkpoint load: forget everything about this game. (doorforce.ts doorForceReset)
+/// A restart or a checkpoint load: forget everything about this game.
 pub fn door_force_reset(g: &mut crate::game::Game) { g.m.doorforce.states = None; }
 
 #[cfg(test)]

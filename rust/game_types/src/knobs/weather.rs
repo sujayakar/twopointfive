@@ -6,8 +6,8 @@ use game_derive::Knobs;
 /// storm, the two office footprints below, and NOTHING of the simulation touched (hearMask and airTrans answer exactly 1). With a kind set:
 ///   ROOFS      the no-rain footprints are the LEVEL's own ceiling slabs (roofsOf: up to four — the compound's yard and the barracks' courtyard are open sky), for the
 ///              rain drawn, the wet men, the rain bed in the mixer, the wind and the fog alike; the renderer gets the first two as before (weatherC / D) and the other
-///              two packed in spare words of the Frame (frame.ts roofC / roofD → cardCfg.y / .z), so the Frame is the size it was.
-///   FOG        one field for picture and simulation (weatherKinds.ts): composite.wgsl draws it along every pixel's ray, vol_common.wgsl thickens the lit haze by it,
+///              two packed in spare words of the Frame, so the Frame is the size it was.
+///   FOG        one field for picture and simulation: composite.wgsl draws it along every pixel's ray, vol_common.wgsl thickens the lit haze by it,
 ///              and airTrans() below is its transmittance along a sight line — guards.ts / roomfight.ts / civilians.ts / devices.ts multiply it into the smoke
 ///              transmittance they already carry, so fog blinds an eye by the smoke's own thresholds (< 0.3 nothing, 0.3‥0.8 slower).
 ///   HEARING    rain is NOISE at the listener (it drowns SMALL sounds; a loud one is placed as in dry air: loudLen): hearMask() stretches every sound's path by 1 + WX_SIM.rainK × the very bed level the mixer plays there (full outdoors,

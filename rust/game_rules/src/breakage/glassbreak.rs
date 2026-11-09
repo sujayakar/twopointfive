@@ -9,7 +9,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, vec, vec::Vec};
 
-/// the one gate every entry point takes first (glassbreak.ts glassBreakLive). GLASSFX.on is settled on.
+/// the one gate every entry point takes first. GLASSFX.on is settled on.
 pub fn glass_break_live(g: &crate::game::Game) -> bool {
     g.tune.glass_break && crate::destruction::chaos_of(g) > 0.0
 }
@@ -22,7 +22,7 @@ use crate::Num;
 // ---------------------------------------------------------------- what the TypeScript reads off an array by a number
 /// a box's row. `g.col.boxes: Vec<BoxId>` names it, `g.tab.boxes` holds it
 fn seam_box<'g>(g: &'g mut Game, b: impl Into<AnyBoxId>) -> &'g mut crate::scene_boxes::Box { &mut g.tab[b.into()] }
-/// `g.level.boxes[bi]`: undefined off the list (a negative, fractional or NaN index included). That list and `g.col.boxes` are one array in the TypeScript (game.ts:1219): the box at place bi
+/// `g.level.boxes[bi]`: undefined off the list (a negative, fractional or NaN index included). That list and `g.col.boxes` are one array in the TypeScript: the box at place bi
 fn box_at(g: &Game, bi: f64) -> Option<BoxId> {
     let ix = bi as usize;
     if ix as f64 != bi { return None; }
@@ -103,7 +103,7 @@ fn fragment_of(f: &GlassBreakLetGoF) -> GlassFragment {
     }
 }
 
-/// The class's fields as made; its hooks are called by name, so what is hung here is which they are (glassbreak.ts GlassBreak.constructor)
+/// The class's fields as made; its hooks are called by name, so what is hung here is which they are
 pub fn glass_break_new(g: &mut crate::game::Game) -> crate::glassbreak::GlassBreak {
     crate::scene_collision::glass_rule(g, Some(crate::scene_collision::PaneRule::GlassBreak), Some(crate::scene_collision::PaneRows::GlassBreak));
     g.engine.world.glass_open = Some(crate::scene_collision::PaneRule::GlassBreak);
@@ -113,12 +113,12 @@ pub fn glass_break_new(g: &mut crate::game::Game) -> crate::glassbreak::GlassBre
 }
 
 // ---------------------------------------------------------------- the call
-/// a question or a rule of the module's, for a neighbour (glassbreak.ts GlassBreak.asking)
+/// a question or a rule of the module's, for a neighbour
 pub fn glass_break_asking<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, fn_: &mut dyn FnMut(&mut crate::game::Game, f64, f64) -> T) -> T {
     glass_break_ask(g, fn_)
 }
 
-/// a question or a rule of the module's, over this game's block and the copy of its box world as it stands: `fn_` gets the block's slot and the world's, and asks `::sim::panes_*` under the context set here (glassbreak.ts GlassBreak.ask)
+/// a question or a rule of the module's, over this game's block and the copy of its box world as it stands: `fn_` gets the block's slot and the world's, and asks `::sim::panes_*` under the context set here
 fn glass_break_ask<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, fn_: &mut dyn FnMut(&mut crate::game::Game, f64, f64) -> T) -> T {
     crate::scene_collision::window(g, &mut |g| {
         crate::scene_collision::rules_statics(g);
@@ -135,7 +135,7 @@ fn glass_break_ask<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, fn_: 
     })
 }
 
-/// the level's sheets of glass for the copy of its box world: each its static, how far it stands on the plan from the nearest door's opening, which face has the sky (glassbreak.ts GlassBreak.sheets)
+/// the level's sheets of glass for the copy of its box world: each its static, how far it stands on the plan from the nearest door's opening, which face has the sky
 pub fn glass_break_sheets(g: &mut crate::game::Game) -> Vec<f64> {
     if g.glass_break.sheet_list.is_none() {
         let mut out = Vec::new();
@@ -153,7 +153,7 @@ pub fn glass_break_sheets(g: &mut crate::game::Game) -> Vec<f64> {
     g.glass_break.sheet_list.clone().unwrap()
 }
 
-/// the level has stood up: which glass each pane is, settled as the level stands (glassbreak.ts GlassBreak.stood)
+/// the level has stood up: which glass each pane is, settled as the level stands
 pub fn glass_break_stood(g: &mut crate::game::Game) {
     g.glass_break.sheet_list = None;
     let mut l = glass_break_sheets(g);
@@ -169,7 +169,7 @@ pub fn glass_break_stood(g: &mut crate::game::Game) {
     crate::scene_collision::glass_wrote(g);
 }
 
-/// metres on the plan from pane b to the nearest door's opening; Infinity with no door (glassbreak.ts GlassBreak.doorGap)
+/// metres on the plan from pane b to the nearest door's opening; Infinity with no door
 fn glass_break_door_gap(g: &mut crate::game::Game, b: BoxId) -> f64 {
     let (yaw, bc, bh) = { let r = seam_box(g, b); (r.yaw, r.c, r.h) };
     let cs = m::cos(yaw); let sn = m::sin(yaw); let wide = bh[0] >= bh[2]; let hu = m::max(bh[0], bh[2]);
@@ -185,7 +185,7 @@ fn glass_break_door_gap(g: &mut crate::game::Game, b: BoxId) -> f64 {
     d
 }
 
-/// what the last call let go, handed on in the order it went; the list is read whole first, since what is told of a fragment may ask the module anything (glassbreak.ts GlassBreak.drain)
+/// what the last call let go, handed on in the order it went; the list is read whole first, since what is told of a fragment may ask the module anything
 fn glass_break_drain(g: &mut crate::game::Game) {
     let n = ::sim::panes::out_n();
     if n == 0 { return; }
@@ -230,7 +230,7 @@ fn glass_break_drain(g: &mut crate::game::Game) {
     for f in &list { glass_break_let_go(g, f); }
 }
 
-/// a fragment the rule let go, told to the game: its one way out (glassbreak.ts GlassBreak.letGo)
+/// a fragment the rule let go, told to the game: its one way out
 fn glass_break_let_go(g: &mut crate::game::Game, f: &crate::glassbreak::GlassBreakLetGoF) {
     let key = f.key;
     let v = glass_break_geom(g, f.bi);
@@ -248,20 +248,20 @@ fn glass_break_let_go(g: &mut crate::game::Game, f: &crate::glassbreak::GlassBre
     glass_break_stand_in(g, v, &fragment_of(f), key, f.bi);
 }
 
-/// a pane's frame, for what the host still makes of a fragment (glassbreak.ts GlassBreak.geom)
+/// a pane's frame, for what the host still makes of a fragment
 fn glass_break_geom(g: &mut crate::game::Game, bi: f64) -> crate::glassbreak::PaneFrame {
     let box_ = box_at(g, bi).unwrap();
     let st = row_at(g, bi);
     PaneFrame { key: st.key as f64, u_axis: if st.u_axis == 0 { 0.0 } else { 2.0 }, ht: st.ht, box_ }
 }
 
-/// pane-local (u, v) → world (glassbreak.ts GlassBreak.world)
+/// pane-local (u, v) → world
 fn glass_break_world(g: &mut crate::game::Game, v: crate::glassbreak::PaneFrame, u: f64, v_2: f64, w: Option<f64>) -> V3 {
     let (yaw, c) = { let b = seam_box(g, v.box_); (b.yaw, b.c) };
     world_on(yaw, c, v.u_axis, u, v_2, w.unwrap_or(0.0))
 }
 
-/// world → pane-local (u, v) (glassbreak.ts GlassBreak.uv)
+/// world → pane-local (u, v)
 fn glass_break_uv(g: &mut crate::game::Game, v: crate::glassbreak::PaneFrame, x: V3) -> [f64; 2] {
     let (yaw, c) = { let b = seam_box(g, v.box_); (b.yaw, b.c) };
     uv_on(yaw, c, v.u_axis, x)
@@ -286,7 +286,7 @@ fn normal_on(yaw: f64, u_axis: f64) -> V3 {
     if u_axis == 0.0 { [sn, 0.0, cs] } else { [cs, 0.0, -sn] }
 }
 
-/// no shards consumer attached: thin Debris boxes over the fragment and a burst of pale chips (glassbreak.ts GlassBreak.standIn)
+/// no shards consumer attached: thin Debris boxes over the fragment and a burst of pale chips
 fn glass_break_stand_in(g: &mut crate::game::Game, v: crate::glassbreak::PaneFrame, f: &crate::glassbreak::GlassFragment, key: f64, bi: f64) {
     let mut uv = Vec::with_capacity(f.outline.len());
     for p in &f.outline { uv.push(glass_break_uv(g, v, *p)); }
@@ -356,13 +356,13 @@ fn glass_break_stand_in(g: &mut crate::game::Game, v: crate::glassbreak::PaneFra
 
 // ---------------------------------------------------------------- which glass
 
-/// the type of pane bi as it will break; None for anything not a sheet (glassbreak.ts GlassBreak.typeOfPane)
+/// the type of pane bi as it will break; None for anything not a sheet
 pub fn glass_break_type_of_pane(g: &mut crate::game::Game, bi: f64) -> Option<crate::glasspen::PaneType> {
     let t = glass_break_ask(g, &mut |g, _s, _w| ::sim::panes_type(js::to_u32(bi), &g.k));
     if t as f64 == NO_TYPE { None } else { Some(type_word(t)) }
 }
 
-/// make pane bi break as `type_` from here on, whole first; None = back to typeOf (glassbreak.ts GlassBreak.setType)
+/// make pane bi break as `type_` from here on, whole first; None = back to typeOf
 pub fn glass_break_set_type(g: &mut crate::game::Game, bi: f64, type_: Option<crate::glasspen::PaneType>) {
     let ty = match type_ { Some(t) => type_index(t), None => NO_OVER as u32 };
     glass_break_ask(g, &mut |g, s, _w| { ::sim::panes::set_type(s as usize, js::to_u32(bi), ty); });
@@ -374,7 +374,7 @@ pub fn glass_break_set_type(g: &mut crate::game::Game, bi: f64, type_: Option<cr
 }
 
 // ---------------------------------------------------------------- stimuli
-/// THE IMPACT ENTRY POINT: a blow of `energy` met pane `bi` at world x going `dir`: the module files it and answers what the glass did (glassbreak.ts GlassBreak.impact)
+/// THE IMPACT ENTRY POINT: a blow of `energy` met pane `bi` at world x going `dir`: the module files it and answers what the glass did
 pub fn glass_break_impact(g: &mut crate::game::Game, bi: f64, x: V3, dir: Option<V3>, energy: f64, who: f64, through: Option<bool>) -> crate::glassbreak::GlassImpact {
     let b = box_at(g, bi);
     let shape = match b { Some(b) => { let r = seam_box(g, b); Some((r.flags, r.h)) } None => None };
@@ -405,7 +405,7 @@ pub fn glass_break_impact(g: &mut crate::game::Game, bi: f64, x: V3, dir: Option
     res
 }
 
-/// a pellet through glass its own shell has just broken: no blow filed, but a standing piece of an annealed pane goes with it; fragments let go (glassbreak.ts GlassBreak.widen)
+/// a pellet through glass its own shell has just broken: no blow filed, but a standing piece of an annealed pane goes with it; fragments let go
 pub fn glass_break_widen(g: &mut crate::game::Game, bi: f64, x: V3) -> f64 {
     if !glass_break_live(g) { return 0.0; }
     let n = glass_break_ask(g, &mut |g, _s, _w| {
@@ -416,7 +416,7 @@ pub fn glass_break_widen(g: &mut crate::game::Game, bi: f64, x: V3) -> f64 {
     n as f64
 }
 
-/// A BLAST at `at`: every sheet in reach takes it by type and by k = power × (1 − d / radius); the panes it changed (glassbreak.ts GlassBreak.blast)
+/// A BLAST at `at`: every sheet in reach takes it by type and by k = power × (1 − d / radius); the panes it changed
 pub fn glass_break_blast(g: &mut crate::game::Game, at: V3, opts: Option<crate::glassbreak::GlassBlastOpts>) -> f64 {
     let opts = opts.unwrap_or_default();
     if !glass_break_live(g) { return 0.0; }
@@ -438,19 +438,19 @@ pub fn glass_break_blast(g: &mut crate::game::Game, at: V3, opts: Option<crate::
     changed
 }
 
-/// a stun charge went off at `at`: a blast at bangPower (glassbreak.ts GlassBreak.bang)
+/// a stun charge went off at `at`: a blast at bangPower
 pub fn glass_break_bang(g: &mut crate::game::Game, at: V3, who: f64) -> f64 {
     let opts = GlassBlastOpts { radius: Some(g.k.glassbreak.blast_m), power: Some(g.k.glassbreak.bang_power), who: Some(who) };
     glass_break_blast(g, at, Some(opts))
 }
 
 // ---------------------------------------------------------------- a burst's view of the glass
-/// where the rule's state stands: the slot is `g.sim`, so what comes back says only that it is the module's (glassbreak.ts GlassBreak.home)
+/// where the rule's state stands: the slot is `g.sim`, so what comes back says only that it is the module's
 pub fn glass_break_home(g: &crate::game::Game) -> Option<crate::Opaque> {
     Some(crate::Opaque)
 }
 
-/// for the length of `fn_`, every solid walk and every ray also passes a pane where a burst at `from` of this size sees no glass (glassbreak.ts GlassBreak.seeThrough)
+/// for the length of `fn_`, every solid walk and every ray also passes a pane where a burst at `from` of this size sees no glass
 pub fn glass_break_see_through<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, view: crate::glassbreak::GlassBreakSeeThroughView, from: V3, size: crate::glassbreak::GlassBlastOpts, fn_: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T {
     let kind = match view {
         GlassBreakSeeThroughView::Blown => GlassBreakViewOfKind::Blown,
@@ -466,7 +466,7 @@ pub fn glass_break_see_through<T: Clone + core::fmt::Debug>(g: &mut crate::game:
     out
 }
 
-/// the view in hand as numbers: which view, the burst's point, reach and power, whether a man counts on it (glassbreak.ts GlassBreak.view)
+/// the view in hand as numbers: which view, the burst's point, reach and power, whether a man counts on it
 pub fn glass_break_view(g: &crate::game::Game) -> Option<crate::scene_box_mirror::PaneView> {
     let v = g.glass_break.view_of?;
     Some(PaneView {
@@ -475,14 +475,14 @@ pub fn glass_break_view(g: &crate::game::Game) -> Option<crate::scene_box_mirror
     })
 }
 
-/// the rule's whole answer at a point: a piece out, or the view in hand counts the glass there out (glassbreak.ts GlassBreak.ruleOpen)
+/// the rule's whole answer at a point: a piece out, or the view in hand counts the glass there out
 pub fn glass_break_rule_open(g: &mut crate::game::Game, bi: f64, p: V3) -> bool {
     if g.glass_break.view_of.is_none() { return glass_break_open_at(g, bi, p); }
     glass_break_ask(g, &mut |g, _s, w| ::sim::glass_open(w as usize, js::to_u32(bi), p[0], p[1], p[2], &g.k) == 1)
 }
 
 // ---------------------------------------------------------------- per frame
-/// per frame: the gusts, then every touched pane's step in the module, draining after each (glassbreak.ts GlassBreak.update)
+/// per frame: the gusts, then every touched pane's step in the module, draining after each
 pub fn glass_break_update(g: &mut crate::game::Game, dt: f64) {
     let touched = !glass_break_untouched(g);
     let s = g.sim;
@@ -496,7 +496,7 @@ pub fn glass_break_update(g: &mut crate::game::Game, dt: f64) {
     if n > 0 {
         glass_break_ask(g, &mut |g, gs, _w| {
             ::sim::panes::frame_begin(gs as usize);
-            // who may walk into what is left of a pane: any player's man, on his feet with his hands free (seats.ts)
+            // who may walk into what is left of a pane: any player's man, on his feet with his hands free
             let men = ::sim::panes::men_addr() as *mut f64;
             let mut k = 0usize;
             for pl in crate::seats::men(g) {
@@ -521,7 +521,7 @@ pub fn glass_break_update(g: &mut crate::game::Game, dt: f64) {
     }
 }
 
-/// a wind source through each shot-out exterior pane, its speed each frame the storm at that face times the open share (glassbreak.ts GlassBreak.updateGusts)
+/// a wind source through each shot-out exterior pane, its speed each frame the storm at that face times the open share
 fn glass_break_update_gusts(g: &mut crate::game::Game) {
     let swv = crate::wind::wind_storm_wind(g);
     let sw = swv.map(|s| [s[0], s[2]]);
@@ -591,27 +591,27 @@ fn glass_break_untouched(g: &crate::game::Game) -> bool {
     ::sim::state::state_read(g.sim).panes.used == 0
 }
 
-/// is world point x on pane bi where a piece has fallen out (glassbreak.ts GlassBreak.openAt)
+/// is world point x on pane bi where a piece has fallen out
 pub fn glass_break_open_at(g: &crate::game::Game, bi: f64, x: V3) -> bool {
     !glass_break_untouched(g) && ::sim::panes::open_at(g.sim, js::to_u32(bi), x[0], x[1], x[2])
 }
 
-/// the movement rule's answer for pane bi, false for a pane never hit (glassbreak.ts GlassBreak.walkable)
+/// the movement rule's answer for pane bi, false for a pane never hit
 pub fn glass_break_walkable(g: &mut crate::game::Game, bi: f64) -> bool {
     !glass_break_untouched(g) && ::sim::panes::walkable(g.sim, js::to_u32(bi))
 }
 
-/// a number that changes whenever what is open in any pane changes (glassbreak.ts GlassBreak.openSig)
+/// a number that changes whenever what is open in any pane changes
 pub fn glass_break_open_sig(g: &mut crate::game::Game) -> f64 {
     if glass_break_untouched(g) { 0.0 } else { ::sim::panes::open_sig(g.sim) as f64 }
 }
 
-/// open fraction of pane bi by area, 0 = whole (glassbreak.ts GlassBreak.openFraction)
+/// open fraction of pane bi by area, 0 = whole
 fn glass_break_open_fraction(g: &mut crate::game::Game, bi: f64) -> f64 {
     if glass_break_untouched(g) { 0.0 } else { ::sim::panes::open_fraction(g.sim, js::to_u32(bi)) }
 }
 
-/// what a sibling needs to know about pane bi without touching it; None = not a sheet of glass (glassbreak.ts GlassBreak.paneInfo)
+/// what a sibling needs to know about pane bi without touching it; None = not a sheet of glass
 pub fn glass_break_pane_info(g: &mut crate::game::Game, bi: f64) -> Option<crate::glassbreak::GlassBreakPaneInfo> {
     let type_ = glass_break_type_of_pane(g, bi)?;
     let b = box_at(g, bi).unwrap();
@@ -631,7 +631,7 @@ pub fn glass_break_pane_info(g: &mut crate::game::Game, bi: f64) -> Option<crate
     Some(GlassBreakPaneInfo { open_fraction, gone })
 }
 
-/// the panes that have been touched, as a tool or the picture reads them (a copy, made when asked; nothing here is kept) (glassbreak.ts GlassBreak.panes)
+/// the panes that have been touched, as a tool or the picture reads them (a copy, made when asked; nothing here is kept)
 fn glass_break_panes(g: &mut crate::game::Game) -> JsMap<crate::Num, crate::glassbreak::PaneState> {
     let mut out = JsMap::new();
     if glass_break_untouched(g) { return out; }
@@ -654,7 +654,7 @@ fn glass_break_handle(g: &mut crate::game::Game, bi: f64) -> crate::glassbreak::
     glass_break_row_state(g, s as f64, r as f64)
 }
 
-/// row r of the module, read out as the TypeScript's PaneState (glassbreak.ts GlassBreak.rowState)
+/// row r of the module, read out as the TypeScript's PaneState
 fn glass_break_row_state(g: &mut crate::game::Game, s: f64, r: f64) -> crate::glassbreak::PaneState {
     let s = s as usize;
     let st = *::sim::panes::row_ref(s, r as usize);   // (a read: the row's words as they stand, and no reference held over what comes next)
@@ -707,7 +707,7 @@ fn glass_break_row_state(g: &mut crate::game::Game, s: f64, r: f64) -> crate::gl
     }
 }
 
-/// the record for the renderer, GB_RECORD_ROWS vec4 rows: reads the pane, writes nothing of it (glassbreak.ts GlassBreak.fill)
+/// the record for the renderer, GB_RECORD_ROWS vec4 rows: reads the pane, writes nothing of it
 fn glass_break_fill(g: &mut crate::game::Game, bi: f64, dst: &mut Vec<f32>, off: f64) -> bool {
     let s = g.sim;
     let r = ::sim::panes::row_index(s, js::to_u32(bi));
@@ -770,7 +770,7 @@ fn glass_break_fill(g: &mut crate::game::Game, bi: f64, dst: &mut Vec<f32>, off:
     true
 }
 
-/// every pane whole, the gust sources gone (glassbreak.ts GlassBreak.reset)
+/// every pane whole, the gust sources gone
 pub fn glass_break_reset(g: &mut crate::game::Game) {
     ::sim::panes::reset(g.sim);
     crate::scene_collision::wrote(g);
@@ -782,7 +782,7 @@ pub fn glass_break_reset(g: &mut crate::game::Game) {
     g.glass_break.gust_dirty = false;
 }
 
-/// row r's static (glassbreak.ts s0Bi)
+/// row r's static
 fn s0_bi(g: &mut crate::game::Game, s: f64, r: f64) -> f64 {
     ::sim::panes::row_ref(s as usize, r as usize).w[0] as f64
 }

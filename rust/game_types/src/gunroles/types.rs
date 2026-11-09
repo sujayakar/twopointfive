@@ -58,8 +58,6 @@ pub struct GunrolesStats {
     pub posts: i32,
 }
 
-/// (src/game/gunroles.ts:69 ROLE: a table nothing writes)
 pub fn role() -> crate::gunroles::ROLE { crate::gunroles::ROLE { fiveseven: None, guard9mm: None, aks74u: None, ak74m: None, akms: None, fn2000: None, m870: None, mk12: Some(String::from("reach")), mp7: Some(String::from("room")), mk46: Some(String::from("belt")), m1014: Some(String::from("room")), hk45: None, g18: None, pkm: Some(String::from("belt")), mk18bare: None, g19bare: None } }
 
-/// (src/game/gunroles.ts:71 RANK: a table nothing writes)
 pub fn rank() -> JsMap<String, f64> { { let mut t = JsMap::new(); t.set(String::from("room"), 0.0); t.set(String::from("rifle"), 1.0); t.set(String::from("pistol"), 1.0); t.set(String::from("reach"), 2.0); t.set(String::from("belt"), 2.0); t } }

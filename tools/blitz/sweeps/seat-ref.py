@@ -32,7 +32,7 @@ KEEP = {
     'tick/cmd.rs': ['seat_man'],      # the man of ANY seat by its id: from the game where it stands, from where it is kept
 }
 # the crates whose callers the compiler is asked for, in the order they build
-CRATES = ['game_rules', 'game', 'game_start', 'game_run']
+CRATES = ['game_rules', 'game', 'game_start']
 
 def read(p): return open(p, encoding='utf-8').read()
 def write(p, t): open(p, 'w', encoding='utf-8').write(t)

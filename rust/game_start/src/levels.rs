@@ -558,9 +558,9 @@ fn stands(levels: &[String]) -> Verdicts {
             let mut p = Play::mission(&format!("{level}.json"), &format!("?levelFile={level}.json&{words}"), &Opts { squad: 2, ..Default::default() });
             let (on, faults) = match key {
                 "roomClear" => (game::roomclear::room_clear_scenario_active(&p.g), game::roomclear::check_structure(&mut p.g, None)),
-                "rescue" => (p.g.rescue.active, game::rescue::check_rescue(&mut p.g, None)),
-                "nightBreach" => (p.g.night_breach.active, vec![]),
-                _ => { let on = p.g.quiet.active; drop(p); p = Play::level(&format!("{level}.json"), false, &Opts::default()); (on, game::quiet::check_quiet(&mut p.g)) }
+                "rescue" => (game::rescue::rescue_up(&p.g), game::rescue::check_rescue(&mut p.g, None)),
+                "nightBreach" => (game::nightbreach::night_breach_up(&p.g), vec![]),
+                _ => { let on = game::quiet::quiet_of(&p.g); drop(p); p = Play::level(&format!("{level}.json"), false, &Opts::default()); (on, game::quiet::check_quiet(&mut p.g)) }
             };
             if !on { bad.push(format!("{key}: it did not start")); }
             for f in faults { if f.contains(": standing in ") { said.push(f); } else { bad.push(format!("{key}: {f}")); } }
@@ -771,7 +771,7 @@ fn rain(levels: &[String]) -> Verdicts {
     let mut v = Verdicts::default();
     let levels: Vec<String> = if levels.is_empty() { every_level() } else { levels.to_vec() };
     let wd = game::scene_world::world();
-    let ceiling = 3.0;   // (src/scene/world.ts WORLD.ceilingY)
+    let ceiling = 3.0;
     let (mut walls, mut faces, mut inners) = (0, 0, 0);
     for level in &levels {
         let mut p = Play::level(&format!("{level}.json"), false, &Opts { dress: true, ..Default::default() });

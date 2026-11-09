@@ -6,7 +6,7 @@ use crate::js::{self, JsMap, JsSet};
 use alloc::{string::String, vec};
 
 /// A second cast of the squad's code: its own orders and door tools, each stood up with `g.orders` / `g.door_tools` reading as the
-/// TypeScript's view has them at that moment; Sam's pair is back in place on return.   (squadcast.ts squadCast)
+/// TypeScript's view has them at that moment; Sam's pair is back in place on return.
 pub fn squad_cast(g: &mut crate::game::Game, of: &crate::orders::OtherCast) -> crate::squadcast::SquadCast {
     let was_in_cast = core::mem::replace(&mut g.in_cast, true);
     // The orders are made while `g.orders` is still Sam's (`over` has no 'orders' yet); the tools see the cast's orders and still Sam's tools.

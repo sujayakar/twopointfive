@@ -131,7 +131,7 @@ fn waits_on_key(g: &Game, seat: &SeatRef, paired: bool, out: &mut Vec<PlanDoor>)
         }
     }
     // the rescue's entry on the hostage room, held for the second word
-    if g.rescue.active && g.rescue.result.is_none() {
+    if crate::rescue::rescue_up(g) && g.rescue.result.is_none() {
         if let Some(entry) = &g.rescue.entry {
             if !g.tab.doortools_door_gate[entry.gate].go {
                 for e in entry.ops.iter() {

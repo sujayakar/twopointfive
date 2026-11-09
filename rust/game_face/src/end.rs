@@ -1,6 +1,6 @@
 //! WHAT AN END CARD IS DRAWN FROM beside its debrief (face_debrief_view): how the run ended with every man of it, the course's par, and the floor its map is of. Asked as a card opens; a read.
 fn r2(v: f64) -> f64 { (v * 100.0).round() / 100.0 }
-use game_run::kept::text;
+use game_start::host::kept::text;
 fn or(s: Option<String>) -> String { s.unwrap_or_else(|| String::from("null")) }
 fn list(v: &[f64]) -> String { let s: Vec<String> = v.iter().map(|&x| format!("{}", r2(x))).collect(); format!("[{}]", s.join(",")) }
 

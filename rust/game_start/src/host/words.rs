@@ -1,4 +1,4 @@
-//! THE ADDRESS'S WORDS FOR THE GAME'S NUMBERS. A word here turns a knob as the game is made, over what the machine keeps. `?knob.<name>=<number>` turns any number of the
+//! THE ADDRESS'S WORDS FOR THE GAME'S NUMBERS. A word here turns a knob as the game is made, over what the machine keeps (`host::lay`). `?knob.<name>=<number>` turns any number of the
 //! tables by its name (game_types `knobs`), and these are the short words people already use. `?training=` and `?nerve=` pick as the panel's rows do (actions.rs).
 use game::game::Game;
 use game::query::Query;
@@ -46,11 +46,6 @@ pub static WORDS: &[Word] = &[
 ];
 
 /// the words of an address laid on a game before it is made
-/// what a start does with what its host hands it: the words first, so that the commands' kit stands under `?nobigslot` and its like, then the commands
-pub fn at_start(g: &mut Game, words: &str, commands: &[u8]) -> Result<(), String> {
-    apply(g, words);
-    crate::command::apply(g, commands)
-}
 pub fn apply(g: &mut Game, words: &str) {
     let q = Query::parse(words);
     for w in WORDS {
@@ -60,12 +55,12 @@ pub fn apply(g: &mut Game, words: &str) {
             Says::ZeroIs(z) => if q.get(w.word) == Some("0") { Some(z) } else { None },
             Says::Share => q.get(w.word).and_then(|t| t.parse::<f64>().ok()).filter(|n| *n > 0.0).map(|n| n.min(1.0)),
         };
-        if let Some(v) = v { crate::knobs::set(g, w.knob, v); }
+        if let Some(v) = v { super::knobs::set(g, w.knob, v); }
     }
     for (k, v) in q.words() {
-        if let (Some(name), Ok(v)) = (k.strip_prefix("knob."), v.parse::<f64>()) { crate::knobs::set_table(g, name, v); }
+        if let (Some(name), Ok(v)) = (k.strip_prefix("knob."), v.parse::<f64>()) { super::knobs::set_table(g, name, v); }
     }
     for (word, name) in [("training", "training"), ("nerve", "nerve")] {
-        if let Some(pick) = q.get(word) { crate::actions::act(g, name, 0.0, pick); }
+        if let Some(pick) = q.get(word) { super::actions::act(g, name, 0.0, pick); }
     }
 }

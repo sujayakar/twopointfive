@@ -1,4 +1,3 @@
-//! src/game/netquiet.ts lines 1 to 433
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -9,15 +8,15 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 // ---------------------------------------------------------------- this file's data and private helpers
 
-/// `Mind.say` and `Mind.last_kind` are indices of THIS list (netquiet.ts KINDS), not of the enum's own order.
+/// `Mind.say` and `Mind.last_kind` are indices of THIS list, not of the enum's own order.
 static KINDS: [LineKind; 6] = [LineKind::Name, LineKind::Why, LineKind::Last, LineKind::Body, LineKind::Alone, LineKind::Ask];
 
-/// (netquiet.ts LINES) one kind's pool, from the skeleton's table
+///  one kind's pool, from the skeleton's table
 fn lines_of(kind: LineKind) -> Vec<String> {
     lines().get(String::from(kind.as_str())).cloned().unwrap_or_default()
 }
 
-/// (netquiet.ts LINES_NOW) a line as it is said now, by the line it stands for
+///  a line as it is said now, by the line it stands for
 fn line_now(t: &str) -> Option<String> {
     lines_now().get(String::from(t)).cloned()
 }
@@ -39,36 +38,36 @@ fn id_of(g: &Game, gd: GuardId) -> f64 {
 
 // ---------------------------------------------------------------- the small questions
 
-/// distance in plan (netquiet.ts flat)
+/// distance in plan
 fn flat(a: V3, b: V3) -> f64 {
     m::hyp2(a[0] - b[0], a[2] - b[2])
 }
 
-/// the loud noises his ears have counted (netquiet.ts loudOf)
+/// the loud noises his ears have counted
 fn loud_of(g: &crate::game::Game, gd: GuardId) -> f64 {
     let h = &g.gd[gd].witness.heard;
     h.shots + h.kick + h.bang
 }
 
-/// a man this file is about at all: a defender or night staff, not the hostage rescue's cast (netquiet.ts side)
+/// a man this file is about at all: a defender or night staff, not a man the mission leads itself
 fn side(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let team = g.gd[gd].team;
     g.gd[gd].civ.is_none()
         && (team == crate::teams::Team::Hostile || team == crate::teams::Team::Guard)
-        && !(g.rescue.active && g.rescue.hostiles.contains(&gd))
+        && !g.staged.leads(gd)
 }
 
-/// …and alive (netquiet.ts ours)
+/// …and alive
 fn ours(g: &mut crate::game::Game, gd: GuardId) -> bool {
     !crate::condition::down(g, g.gd[gd].ch) && side(g, gd)
 }
 
-/// …on the net: alive, not in Sam's arm, not a man who has run (netquiet.ts onNet)
+/// …on the net: alive, not in Sam's arm, not a man who has run
 fn on_net(g: &mut crate::game::Game, gd: GuardId) -> bool {
     ours(g, gd) && g.gd[gd].held.is_none() && !crate::owner::has(g, gd, crate::owner::by::RUNNER)
 }
 
-/// gone to his mates, whether or not they know it yet (netquiet.ts lostTo)
+/// gone to his mates, whether or not they know it yet
 fn lost_to(g: &crate::game::Game, m: GuardId) -> bool {
     crate::condition::down(g, g.gd[m].ch)
         || g.gd[m].held.is_some()
@@ -76,7 +75,7 @@ fn lost_to(g: &crate::game::Game, m: GuardId) -> bool {
         || !g.guards.contains(&m)
 }
 
-/// his row, made on first meeting: the row itself, for a few lines (netquiet.ts mind)
+/// his row, made on first meeting: the row itself, for a few lines
 fn mind<'g>(g: &'g mut crate::game::Game, gd: GuardId) -> &'g mut crate::netquiet::Mind {
     if !g.m.netquiet.state_of.has(gd) {
         let (heard_t, cs) = (g.gd[gd].witness.heard.last_t, g.gd[gd].witness.heard.small);
@@ -120,7 +119,7 @@ fn mind<'g>(g: &'g mut crate::game::Game, gd: GuardId) -> &'g mut crate::netquie
     g.m.netquiet.state_of.get_mut(gd).unwrap()
 }
 
-/// a shock of this file's on one man; a steady man takes `steadyK` of it (netquiet.ts shock)
+/// a shock of this file's on one man; a steady man takes `steadyK` of it
 fn shock(g: &mut crate::game::Game, gd: GuardId, amount: f64) {
     if amount > 0.0 {
         let k = if matches!(crate::morale::training_of(g, gd), crate::morale::TrainingOf::Steady) { g.k.netquiet.steady_k } else { 1.0 };
@@ -128,7 +127,7 @@ fn shock(g: &mut crate::game::Game, gd: GuardId, amount: f64) {
     }
 }
 
-/// …for one dead man: what this adds over the most he has already taken for that man (netquiet.ts pay)
+/// …for one dead man: what this adds over the most he has already taken for that man
 fn pay(g: &mut crate::game::Game, gd: GuardId, id_2: f64, amount: f64) {
     let n = mind(g, gd);
     let had = n.paid.get(crate::Num(id_2)).copied().unwrap_or(0.0);
@@ -138,14 +137,14 @@ fn pay(g: &mut crate::game::Game, gd: GuardId, id_2: f64, amount: f64) {
     }
 }
 
-/// a line owed `after` seconds from now; a later one replaces one not yet said (netquiet.ts owe)
+/// a line owed `after` seconds from now; a later one replaces one not yet said
 fn owe(n: &mut crate::netquiet::Mind, kind: crate::netquiet::LineKind, name: &str, after: f64) {
     n.say = kind_index(kind);
     n.say_t = after;
     n.say_name = String::from(name);
 }
 
-/// he says a line of the kind's pool (netquiet.ts speak)
+/// he says a line of the kind's pool
 fn speak(g: &mut crate::game::Game, gd: GuardId, kind: crate::netquiet::LineKind, name: &str, radio: bool) {
     let pool: Vec<String> = lines_of(kind).into_iter().map(|t| line_now(&t).unwrap_or(t)).collect();
     let len = pool.len() as f64;
@@ -159,7 +158,7 @@ fn speak(g: &mut crate::game::Game, gd: GuardId, kind: crate::netquiet::LineKind
     let id = id_of(g, gd);
 }
 
-/// is anybody of his side up on the whole net, the men in `but` aside (netquiet.ts netUp)
+/// is anybody of his side up on the whole net, the men in `but` aside
 fn net_up(g: &mut crate::game::Game, gd: GuardId, but: Option<&[GuardId]>) -> bool {
     let but = but.unwrap_or(&[]);
     let mut i = 0;
@@ -175,7 +174,7 @@ fn net_up(g: &mut crate::game::Game, gd: GuardId, but: Option<&[GuardId]>) -> bo
 
 // ---------------------------------------------------------------- the feeds
 
-/// the men of `silent` who do not answer `asker`, and the line he owes for it (netquiet.ts quietFor)
+/// the men of `silent` who do not answer `asker`, and the line he owes for it
 fn quiet_for(g: &mut crate::game::Game, asker: GuardId, silent: &[GuardId], hearers: &[GuardId]) {
     let (unanswered, heard_it, ask_beat) = (g.k.netquiet.unanswered, g.k.netquiet.heard_it, g.k.netquiet.ask_beat);
     mind(g, asker);
@@ -218,7 +217,7 @@ fn quiet_for(g: &mut crate::game::Game, asker: GuardId, silent: &[GuardId], hear
     }
 }
 
-/// a radio check's silence: `men` = the net he asked on (netquiet.ts netQuietAsked)
+/// a radio check's silence: `men` = the net he asked on
 pub fn net_quiet_asked(g: &mut crate::game::Game, asker: Option<GuardId>, who: GuardId, men: &[GuardId]) {
     let Some(asker) = asker else { return };
     if !on_net(g, asker) || asker == who {
@@ -237,7 +236,7 @@ pub fn net_quiet_asked(g: &mut crate::game::Game, asker: Option<GuardId>, who: G
     quiet_for(g, asker, &[who], &hearers);
 }
 
-/// the last defenders' check closes: `silent` did not answer `asker`, `heard` did (netquiet.ts netQuietClosed)
+/// the last defenders' check closes: `silent` did not answer `asker`, `heard` did
 pub fn net_quiet_closed(g: &mut crate::game::Game, asker: GuardId, silent: &[GuardId], heard: &[GuardId]) {
     if !on_net(g, asker) {
         return;
@@ -262,7 +261,7 @@ pub fn net_quiet_closed(g: &mut crate::game::Game, asker: GuardId, silent: &[Gua
     quiet_for(g, asker, &quiet, &hearers);
 }
 
-/// the man he has found: the nearest in view he does not know of, else the nearest he does not know of (netquiet.ts bodyOf)
+/// the man he has found: the nearest in view he does not know of, else the nearest he does not know of
 fn body_of(g: &mut crate::game::Game, finder: GuardId, men: &[GuardId]) -> Option<GuardId> {
     let at = pos_of(g, finder);
     let eye: V3 = [at[0], 1.5, at[2]];
@@ -289,7 +288,7 @@ fn body_of(g: &mut crate::game::Game, finder: GuardId, men: &[GuardId]) -> Optio
     best
 }
 
-/// a body found: the finder, and the men of `men` he tells (netquiet.ts netQuietBody)
+/// a body found: the finder, and the men of `men` he tells
 pub fn net_quiet_body(g: &mut crate::game::Game, finder: Option<GuardId>, men: &[GuardId]) {
     let Some(finder) = finder else { return };
     if !ours(g, finder) || crate::owner::has(g, finder, crate::owner::by::RUNNER) {
@@ -349,7 +348,7 @@ pub fn net_quiet_body(g: &mut crate::game::Game, finder: Option<GuardId>, men: &
     }
 }
 
-/// has he an enemy in his eyes now, or had one inside `shooterSecs` (netquiet.ts foeInView)
+/// has he an enemy in his eyes now, or had one inside `shooterSecs`
 fn foe_in_view(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if g.time - g.gd[gd].last_seen_t < g.k.netquiet.shooter_secs {
         return true;
@@ -363,14 +362,14 @@ fn foe_in_view(g: &mut crate::game::Game, gd: GuardId) -> bool {
         let o = g.guards[i];
         i += 1;
         let (o_team, o_ch) = (g.gd[o].team, g.gd[o].ch);
-        if o != gd && !crate::condition::down(g, g.gd[o].ch) && crate::teams::is_hostile(g, team, o_team) && crate::guards::can_see_char(g, gd, o_ch, false).visible {
+        if o != gd && !crate::condition::down(g, g.gd[o].ch) && crate::teams::is_hostile(g, team, o_team) && crate::guards::can_see_char(g, gd, o_ch).visible {
             return true;
         }
     }
     false
 }
 
-/// a man goes down: every mate with the fall in his eyes takes it, and knows he is gone (netquiet.ts netQuietFall)
+/// a man goes down: every mate with the fall in his eyes takes it, and knows he is gone
 pub fn net_quiet_fall(g: &mut crate::game::Game, victim: GuardId) {
     if !ours(g, victim) {
         return;
@@ -385,7 +384,7 @@ pub fn net_quiet_fall(g: &mut crate::game::Game, victim: GuardId) {
         if o == victim || !on_net(g, o) || g.gd[o].team != v_team || crate::control::man::blind(g, o) {
             continue;
         }
-        if !crate::guards::can_see_char(g, o, v_ch, false).visible {
+        if !crate::guards::can_see_char(g, o, v_ch).visible {
             continue;
         }
         mind(g, o);
@@ -406,7 +405,7 @@ pub fn net_quiet_fall(g: &mut crate::game::Game, victim: GuardId) {
 
 // ---------------------------------------------------------------- the whip
 
-/// where he whips to, for what his ears have just counted; never truer than his hearing (netquiet.ts noiseOf)
+/// where he whips to, for what his ears have just counted; never truer than his hearing
 fn noise_of(g: &mut crate::game::Game, gd: GuardId, d: Option<RoomfightDefId>, small: bool, loud: bool) -> Option<V3> {
     let (fx, fz) = {
         let n = mind(g, gd);
@@ -473,7 +472,7 @@ fn noise_of(g: &mut crate::game::Game, gd: GuardId, d: Option<RoomfightDefId>, s
     Some([at[0], 0.0, at[2]])
 }
 
-/// on the noise now: the swing made and time left of it, and not low on his spot (netquiet.ts whipping)
+/// on the noise now: the swing made and time left of it, and not low on his spot
 pub(super) fn whipping(g: &crate::game::Game, gd: GuardId) -> bool {
     let Some(n) = g.m.netquiet.state_of.get(gd) else { return false };
     n.whip_at.is_some() && n.whip_in <= 0.0 && n.whip_t > 0.0 && !n.low
@@ -481,7 +480,7 @@ pub(super) fn whipping(g: &crate::game::Game, gd: GuardId) -> bool {
 
 // ---------------------------------------------------------------- the last man's spot
 
-/// the entries as seen from `p` by a crouched man: how many he has a line to, the arc they sit in, its middle (netquiet.ts arcAt)
+/// the entries as seen from `p` by a crouched man: how many he has a line to, the arc they sit in, its middle
 fn arc_at(g: &mut crate::game::Game, e: &[crate::roomfight::Entry], p: V3) -> crate::netquiet::ArcAt {
     let eye: V3 = [p[0], g.k.netquiet.eye_m, p[2]];
     let mut seen = 0.0;
@@ -517,7 +516,7 @@ fn arc_at(g: &mut crate::game::Game, e: &[crate::roomfight::Entry], p: V3) -> cr
     ArcAt { seen, arc, yaw: v3::wrap_angle(from + arc / 2.0), near }
 }
 
-/// a spot's marks (netquiet.ts lowSpot `rate`)
+/// a spot's marks
 #[derive(Clone, Copy, Debug)]
 struct Rate {
     p: V3,
@@ -527,7 +526,6 @@ struct Rate {
     score: f64,
 }
 
-/// (netquiet.ts lowSpot `rate`)
 fn rate(g: &mut Game, e: &[crate::roomfight::Entry], from: V3, lim: f64, p: V3) -> Rate {
     let a = arc_at(g, e, p);
     let back: V3 = [p[0] - m::sin(a.yaw) * 1.1, 1.0, p[2] - m::cos(a.yaw) * 1.1];
@@ -535,7 +533,6 @@ fn rate(g: &mut Game, e: &[crate::roomfight::Entry], from: V3, lim: f64, p: V3) 
     Rate { p, seen: a.seen, arc: m::max(a.arc, lim), near: a.near, score }
 }
 
-/// (netquiet.ts lowSpot `better`)
 fn better(a: &Rate, b: &Rate, by: f64) -> bool {
     if a.seen != b.seen {
         a.seen > b.seen
@@ -546,7 +543,6 @@ fn better(a: &Rate, b: &Rate, by: f64) -> bool {
     }
 }
 
-/// (netquiet.ts lowSpot `order`)
 fn order_of(a: &Rate, b: &Rate) -> f64 {
     if better(a, b, 0.0) {
         -1.0
@@ -576,7 +572,7 @@ fn sort_spots(v: &mut [Rate], cmp: impl Fn(&Rate, &Rate) -> f64) {
     }
 }
 
-/// where he goes: of his room's free floor, the spot with the most entries in view inside the narrowest arc; None = stay. No die. (netquiet.ts lowSpot)
+/// where he goes: of his room's free floor, the spot with the most entries in view inside the narrowest arc; None = stay. No die.
 fn low_spot(g: &mut crate::game::Game, gd: GuardId, r: RoomfightRoomId) -> Option<V3> {
     let (door_m, stay_m, max_m, lim) = (g.k.netquiet.door_m, g.k.netquiet.stay_m, g.k.netquiet.max_m, g.k.netquiet.arc_deg * v3::DEG);
     let (cs, w) = (g.col.nav.cell, g.col.nav.w);
@@ -623,13 +619,13 @@ fn low_spot(g: &mut crate::game::Game, gd: GuardId, r: RoomfightRoomId) -> Optio
 
 // ---------------------------------------------------------------- the tick
 
-/// may this file act on him this frame (netquiet.ts free)
+/// may this file act on him this frame
 pub fn free(g: &mut crate::game::Game, gd: GuardId) -> bool {
     g.ai_enabled
         && crate::owner::kept(g, gd, crate::owner::by::LAST_MAN).is_none()
 }
 
-/// is he the last: 2 = he had mates and none of his side is up anywhere · 1 = his squad is down and he knows it, nobody at his side · 0 = neither (netquiet.ts lastKind)
+/// is he the last: 2 = he had mates and none of his side is up anywhere · 1 = his squad is down and he knows it, nobody at his side · 0 = neither
 fn last_kind(g: &mut crate::game::Game, gd: GuardId) -> f64 {
     let mut had = crate::enemysquads::squad_of(g, gd).map_or(0, |q| q.men.len()) > 1;
     let mut up = false;
@@ -659,7 +655,7 @@ fn last_kind(g: &mut crate::game::Game, gd: GuardId) -> f64 {
     if !near && knows_squad(g, gd) { 1.0 } else { 0.0 }
 }
 
-/// every man of his squad is down or taken, and he knows it of each (netquiet.ts knowsSquad)
+/// every man of his squad is down or taken, and he knows it of each
 fn knows_squad(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let Some(q) = crate::enemysquads::squad_of(g, gd) else { return false };
     if q.men.len() < 2 {
@@ -681,14 +677,14 @@ fn knows_squad(g: &mut crate::game::Game, gd: GuardId) -> bool {
     true
 }
 
-/// the last man at his act, and this file's to keep where he is (netquiet.ts mine)
+/// the last man at his act, and this file's to keep where he is
 fn mine(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let (last_beat, give_up) = (g.k.netquiet.last_beat, g.k.netquiet.give_up);
     let Some(n) = g.m.netquiet.state_of.get(gd) else { return false };
     n.last >= SAID && n.last <= LOW && !(n.last == SAID && n.t > last_beat + give_up)
 }
 
-/// the record of who is the last man at his act, as the frame's acts leave it (netquiet.ts syncLastMan)
+/// the record of who is the last man at his act, as the frame's acts leave it
 fn sync_last_man(g: &mut crate::game::Game) {
     let last_man = crate::owner::by::LAST_MAN;
     let mut i = 0;
@@ -704,12 +700,12 @@ fn sync_last_man(g: &mut crate::game::Game) {
     }
 }
 
-/// at his post: holding his room, on nobody's scripted leg (netquiet.ts posted)
+/// at his post: holding his room, on nobody's scripted leg
 fn posted(g: &crate::game::Game, gd: GuardId, d: RoomfightDefId) -> bool {
     crate::roomfight::at_post(g, d) && g.gd[gd].hold && g.gd[gd].script.is_none()
 }
 
-/// once a frame, after morale's tick: the lines owed, the whip, a step of the last man's act (netquiet.ts netQuietTick)
+/// once a frame, after morale's tick: the lines owed, the whip, a step of the last man's act
 pub fn net_quiet_tick(g: &mut crate::game::Game, dt: f64) {
     g.m.netquietfeed.netfeed.live = true;
     for f in crate::netquietfeed::net_feed_take(g) {
@@ -757,7 +753,7 @@ pub fn net_quiet_tick(g: &mut crate::game::Game, dt: f64) {
     sync_last_man(g);
 }
 
-/// one man's frame of the tick; a `return` here is the TypeScript loop's `continue` (netquiet.ts netQuietTick)
+/// one man's frame of the tick; a `return` here is the TypeScript loop's `continue`
 fn tick_man(g: &mut Game, gd: GuardId, dt: f64) {
     let k = g.k.netquiet.clone();
     mind(g, gd);
@@ -997,7 +993,7 @@ fn tick_man(g: &mut Game, gd: GuardId, dt: f64) {
     }
 }
 
-/// on his gun: roused, at the floor's own alert line (netquiet.ts rouse)
+/// on his gun: roused, at the floor's own alert line
 fn rouse(g: &mut crate::game::Game, gd: GuardId) {
     if g.gd[gd].state != crate::game::GuardState::Alert {
         crate::mind::set_state(g, gd, crate::game::GuardState::Alert, "netquiet");
@@ -1005,18 +1001,18 @@ fn rouse(g: &mut crate::game::Game, gd: GuardId) {
     crate::mind::raise(g, gd, 0.92, "netquiet");
 }
 
-/// …and off it again: wary, not alert (netquiet.ts ease)
+/// …and off it again: wary, not alert
 fn ease(g: &mut crate::game::Game, gd: GuardId) {
     crate::mind::set_state(g, gd, crate::game::GuardState::Suspicious, "netquiet");
     g.stats.netquiet.eased += 1;
 }
 
-/// the awareness he does not fall under, low on his spot (netquiet.ts wary)
+/// the awareness he does not fall under, low on his spot
 fn wary(g: &mut crate::game::Game, gd: GuardId) {
     { let to = g.k.netquiet.wary; crate::mind::raise(g, gd, to, "netquiet"); }
 }
 
-/// down where he stands, on his gun: the arc as it reads from here (netquiet.ts settle)
+/// down where he stands, on his gun: the arc as it reads from here
 fn settle(g: &mut crate::game::Game, gd: GuardId, d: RoomfightDefId) {
     let at = pos_of(g, gd);
     let p: V3 = [at[0], 0.0, at[2]];

@@ -52,7 +52,7 @@ fn run_lent_script(g: &mut Game, gd: GuardId, lent: crate::game::GuardScript, dt
 const LOW_AT: f64 = 0.7;
 const LOW_QUIET_SECS: f64 = 4.0;
 
-/// ONE MAN'S FRAME, part by part. Each part is a function below, in this order.   (guards.ts updateGuard)
+/// ONE MAN'S FRAME, part by part. Each part is a function below, in this order.
 ///   incapable   dead or held: nothing below runs
 ///   sense       his ears and eyes (senses/), whoever has his body
 ///   hands       a change of magazine goes on, whoever has the rest of him

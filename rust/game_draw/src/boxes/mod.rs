@@ -114,7 +114,7 @@ section! {
     }
 }
 
-/// WHAT THE PAGE SAYS OF ITS LOOK, once and when it changes (src/draw/look.ts writes the same numbers in the same order)
+/// WHAT THE PAGE SAYS OF ITS LOOK, once and when it changes
 #[derive(Clone)]
 pub struct Look {
     /// drawn with the fog off: no face as the team last knew it (a viewer's, and no number of a page's look)

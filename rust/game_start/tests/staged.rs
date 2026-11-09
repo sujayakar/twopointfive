@@ -1,11 +1,10 @@
-//! A man is staged with what his card shows: the desk and a start are done the same commands, and on every mission of the list whose cards can be changed the men stand
+//! A man is staged with what his card shows: the desk and a start are laid the same record, and on every mission of the list whose cards can be changed the men stand
 //! with the cards the desk says they go with.
 use game::kit;
 use game::view::{Pressed, StartView, TeamView};
-use game_run::command::apply;
-use game_run::desk::Desk;
-use game_run::kept;
-use game_start::stand::{stand_with, StartOpts};
+use game_start::host::desk::Desk;
+use game_start::host::kept;
+use game_start::stand::{stand, StartOpts};
 use game_start::{files, json};
 
 fn text(b: &mut Vec<u8>, s: &str) { b.extend_from_slice(&(s.len() as u32).to_le_bytes()); b.extend_from_slice(s.as_bytes()); }
@@ -27,10 +26,9 @@ const KEPT: &str = r#"{"v":2,"stealth":{"weapon":"pistol","suppressed":true,"sid
 
 #[test]
 fn a_man_is_staged_with_what_his_card_shows() {
-    let mut commands = 18u32.to_le_bytes().to_vec();
-    text(&mut commands, KEPT);
+    let held = kept::Kept { cards: Some(String::from(KEPT)), ..Default::default() };
     let mut d = Desk::new();
-    apply(&mut d.g, &commands).expect("a command the game has");
+    d.machine(&format!("{{\"cards\":{}}}", kept::text(KEPT)), "").expect("a record");
     let list: StartView = answer(&mut d, &ask(11, &[""], &[]));
     let character = files::CharacterFiles::read();
     let (mut missions, mut men) = (0, 0);
@@ -43,7 +41,7 @@ fn a_man_is_staged_with_what_his_card_shows() {
             if !took.ok || (size as f64 != row.squad && size != 3) { continue; }
             let team: TeamView = answer(&mut d, &ask(8, &[], &[]));
             let data = json::parse(&files::level_text(&row.level)).expect("a level's file");
-            let s = stand_with(&data, character.assets(), &StartOpts { seed: 7, link: Some(team.link.clone()), ..StartOpts::default() }, &mut |g| apply(g, &commands).expect("a command the game has"));
+            let s = stand(&data, character.assets(), &StartOpts { seed: 7, link: Some(team.link.clone()), kept: held.clone(), ..StartOpts::default() });
             let g = &s.game;
             let ops = g.m.kit.kit_staged.ops.clone();
             assert_eq!(ops.len(), size as usize, "{} with {size}", row.id);

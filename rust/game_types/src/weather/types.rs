@@ -111,50 +111,34 @@ pub struct WeatherStrikeOpts {
     pub peak: Option<f64>,
 }
 
-/// (src/game/weather.ts:63 LEGACY: a table nothing writes)
 pub fn legacy() -> crate::weather::LEGACY { crate::weather::LEGACY { storm: 0.7, rain: 0.55, wind: [1.1, 0.45], cloud: 0.95 } }
 
-/// (src/game/weather.ts:64 NO_RECT: a table nothing writes)
 pub fn no_rect() -> [f64; 4] { [1000000.0, 1000000.0, -1000000.0, -1000000.0] }
 
-/// (src/game/weather.ts:102 INTERIOR: a table nothing writes)
 pub fn interior() -> [f64; 4] { [4.0, 4.0, 36.0, 24.0] }
 
-/// (src/game/weather.ts:105 ANNEX: a table nothing writes)
 pub fn annex() -> [f64; 4] { [1.1, 9.33, 4.0, 12.87] }
 
-/// (src/game/weather.ts:106 RAIN_TOP)
 pub const RAIN_TOP: f64 = 7.0;
 
-/// (src/game/weather.ts:107 RAIN_V)
 pub const RAIN_V: f64 = 9.0;
 
-/// (src/game/weather.ts:108 WET_ROUGH)
 pub const WET_ROUGH: f64 = 0.22;
 
-/// (src/game/weather.ts:109 WET_ALBEDO)
 pub const WET_ALBEDO: f64 = 0.5;
 
-/// (src/game/weather.ts:110 FLASH_COLOR: a table nothing writes)
 pub fn flash_color() -> V3 { [0.78, 0.86, 1.0] }
 
-/// (src/game/weather.ts:111 FLASH_SECS)
 pub const FLASH_SECS: f64 = 0.5;
 
-/// (src/game/weather.ts:113 SKY_FLASH_K)
 pub const SKY_FLASH_K: f64 = 0.045;
 
-/// (src/game/weather.ts:114 THUNDER_LINES: a table nothing writes)
 pub fn thunder_lines() -> Vec<String> { alloc::vec![String::from("lovely night for it."), String::from("that one was close."), String::from("glad I'm not out in that."), String::from("it's really coming down."), String::from("storm's right on top of us.")] }
 
-/// (src/game/weather.ts:116 THUNDER_OUT)
 pub const THUNDER_OUT: &str = "no let-up, is there.";
 
-/// (src/game/weather.ts:116 THUNDER_OUT_GUIDE)
 pub const THUNDER_OUT_GUIDE: &str = "it's not letting up, huh.";
 
-/// (src/game/weather.ts:117 BARK_COOLDOWN)
 pub const BARK_COOLDOWN: f64 = 45.0;
 
-/// (src/game/weather.ts:118 BARK_CHANCE)
 pub const BARK_CHANCE: f64 = 0.35;

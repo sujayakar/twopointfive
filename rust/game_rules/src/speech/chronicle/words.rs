@@ -1,4 +1,3 @@
-//! src/game/chronicle.ts lines 459 to 529
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -76,7 +75,7 @@ fn stage_words(d: &Data) -> String {
     if i as f64 == x && i < names.len() { names[i].clone() } else { text(d, "stage") }
 }
 
-/// How a man was put out, in a row's words (chronicle.ts:480 and :491, one chain).
+/// How a man was put out, in a row's words.
 fn put_out_how(g: &Game, d: &Data) -> String {
     if is(d, "method", "choke") { String::from("choked out") }
     else if is(d, "method", "whip") { String::from("pistol-whipped") }
@@ -88,7 +87,7 @@ fn put_out_how(g: &Game, d: &Data) -> String {
 /// is this row the floor's alarm going down (the card gives such a row no pin)
 pub fn alarm_down(e: &crate::chronicle::ChronEvent) -> bool { e.kind == ChronKind::Alarm && !on(&e.data, "up") }
 
-/// A row's words: the debrief card's timeline.   (chronicle.ts eventText)
+/// A row's words: the debrief card's timeline.
 pub fn event_text(g: &crate::game::Game, e: &crate::chronicle::ChronEvent) -> String {
     let d = &e.data;
     let n = js::or(number(d, "n"), 1.0);

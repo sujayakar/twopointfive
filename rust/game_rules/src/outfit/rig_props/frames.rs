@@ -1,4 +1,3 @@
-//! src/game/rigProps.ts lines 1 to 419
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,7 +6,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// Frame from an origin, an 'along' axis and an up hint; falls back when the axis is (anti)parallel to the hint. (rigProps.ts frameFrom)
+/// Frame from an origin, an 'along' axis and an up hint; falls back when the axis is (anti)parallel to the hint.
 pub(super) fn frame_from(o: V3, along: V3, up_hint: Option<V3>) -> crate::rig_props::Frame {
     let up_hint = up_hint.unwrap_or([0.0, 1.0, 0.0]);
     let z = v3::normalize(along);
@@ -20,12 +19,12 @@ pub(super) fn frame_from(o: V3, along: V3, up_hint: Option<V3>) -> crate::rig_pr
     Frame { o: v3::copy(o), x, y, z }
 }
 
-/// `v` turned `ang` about `axis`; a turn under a millionth of a radian leaves it as it is. (rigProps.ts rotAxis)
+/// `v` turned `ang` about `axis`; a turn under a millionth of a radian leaves it as it is.
 pub(super) fn rot_axis(v: V3, axis: V3, ang: f64) -> V3 {
     if m::abs(ang) < 1e-6 { v } else { v3::quat::rotate(v3::quat::axis_angle(axis, ang), v) }
 }
 
-/// Child frame: the parent moved by adj.off along its axes, turned by adj.rot (degrees about the parent's x, then y, then z). (rigProps.ts applyAdj)
+/// Child frame: the parent moved by adj.off along its axes, turned by adj.rot (degrees about the parent's x, then y, then z).
 pub(super) fn apply_adj(f: crate::rig_props::Frame, adj: Option<crate::rig_props::Adj>) -> crate::rig_props::Frame {
     let adj = match adj {
         Some(a) => a,
@@ -64,17 +63,17 @@ pub(super) fn apply_adj(f: crate::rig_props::Frame, adj: Option<crate::rig_props
     Frame { o, x, y, z }
 }
 
-/// A new all-zero adjustment. (rigProps.ts ZERO_ADJ)
+/// A new all-zero adjustment.
 fn zero_adj() -> crate::rig_props::Adj {
     Adj { off: [0.0, 0.0, 0.0], rot: [0.0, 0.0, 0.0] }
 }
 
-/// A character's id as the word on his boxes. (rigProps.ts `c.id & 0xff`)
+/// A character's id as the word on his boxes.
 fn owner_of(g: &mut Game, c: CharId) -> f64 {
     (js::to_i32(g.ch[c].id) & 0xff) as f64
 }
 
-/// A bound hostage's wrist tie: one pale strap round both wrists while they are crossed. (rigProps.ts wristTieBoxes)
+/// A bound hostage's wrist tie: one pale strap round both wrists while they are crossed.
 pub fn wrist_tie_boxes(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<AnyBoxId>) {
     let (Some(a), Some(b)) = (g.ch[c_2].bones.get(crate::character::Bone::HandL).copied(), g.ch[c_2].bones.get(crate::character::Bone::HandR).copied()) else { return };
     let d = v3::sub(b, a);
@@ -100,14 +99,14 @@ pub fn wrist_tie_boxes(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<Any
     out.push(made.into());
 }
 
-/// One stick part as a box laid along its frame's z, after the part's own adjustment in the group frame. (rigProps.ts seg)
+/// One stick part as a box laid along its frame's z, after the part's own adjustment in the group frame.
 pub(super) fn seg(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>, g_2: crate::rig_props::Frame, s: crate::rig_props::Seg, albedo: V3, emissive: Option<V3>, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>, path: Option<&str>, label: Option<&str>, depth: Option<f64>, name: Option<&str>) {
     let adj = s.adj;
     let emissive = emissive.unwrap_or([0.0, 0.0, 0.0]);
     seg_at(g, out, g_2, s, adj, albedo, emissive, meta, path, label, depth, name);
 }
 
-/// seg() with the part's adjustment handed in. (rigProps.ts segAt)
+/// seg() with the part's adjustment handed in.
 pub(super) fn seg_at(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>, g_2: crate::rig_props::Frame, s: crate::rig_props::Seg, adj: Option<crate::rig_props::Adj>, albedo: V3, emissive: V3, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>, path: Option<&str>, label: Option<&str>, depth: Option<f64>, name: Option<&str>) {
     let f = if adj.is_some() { apply_adj(g_2, adj) } else { g_2 };
     let dir = f.z;
@@ -137,7 +136,7 @@ pub(super) fn seg_at(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>, g_2: cr
     out.push(made.into());
 }
 
-/// Flattened head 'forward'; the body's heading when the head looks nearly straight up or down. (rigProps.ts headFlatForward)
+/// Flattened head 'forward'; the body's heading when the head looks nearly straight up or down.
 fn head_flat_forward(g: &crate::game::Game, c_2: CharId) -> V3 {
     let hd = crate::character::character_head_dir(g, c_2);
     let flat = m::hyp2(hd[0], hd[2]);
@@ -164,7 +163,7 @@ fn goggle_part(g: &mut Game, c: V3, h: V3, yaw: f64, albedo: V3, flags: f64, own
     })
 }
 
-/// The goggles: two tubes on a bridge, down over the eyes or flipped up on the forehead, `k` part way between. (rigProps.ts gogglesBoxes)
+/// The goggles: two tubes on a bridge, down over the eyes or flipped up on the forehead, `k` part way between.
 pub fn goggles_boxes(g: &mut crate::game::Game, c_2: CharId, nv: bool, out: &mut Vec<AnyBoxId>, g_2: crate::rig_props::RigGoggles, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>, k: Option<f64>) {
     let mut meta = meta;
     let Some(head) = g.ch[c_2].bones.get(crate::character::Bone::Head).copied() else { return };

@@ -9,7 +9,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 // ---------------------------------------------------------------- seams: what skeleton 5 cannot give yet
 
-/// A static box's `c`, `h`, `yaw` and whether it has a `rot` (handwork.ts:126). Once a table of Box rows stands, the body is that row's four fields.
+/// A static box's `c`, `h`, `yaw` and whether it has a `rot`. Once a table of Box rows stands, the body is that row's four fields.
 fn seam_box_read(g: &Game, b: BoxId) -> (V3, V3, f64, bool) { let x = &g.tab.boxes[b]; (x.c, x.h, x.yaw, x.rot.is_some()) }
 
 // ---------------------------------------------------------------- private helpers
@@ -23,24 +23,24 @@ fn owner_of(g: &Game, c: CharId) -> f64 { (js::to_i32(g.ch[c].id) & 0xff) as f64
 
 // ---------------------------------------------------------------- the work pose
 
-/// Feed one man's work pose for this frame. (handwork.ts workAt)
+/// Feed one man's work pose for this frame.
 pub fn work_at(g: &mut crate::game::Game, c_2: CharId, kind: crate::character::WorkKind, p: V3, n: V3, t: f64, dur: f64, more: Option<&crate::handwork::WorkAtMore>) {
     let (keys, dir, hand) = match more { Some(x) => (x.keys.clone(), x.dir, x.hand), None => (None, None, None) };
     g.ch[c_2].anim.work = Some(crate::character::WorkPose { kind, p, n, t, dur, keys, dir, hand });
     g.stats.handwork.work += 1;
 }
 
-/// A level normal out of a thing's face toward a man: the axis nearest the line from the spot to him. (handwork.ts faceToward)
+/// A level normal out of a thing's face toward a man: the axis nearest the line from the spot to him.
 fn face_toward(spot: V3, from: V3) -> V3 {
     let dx = from[0] - spot[0];
     let dz = from[2] - spot[2];
     if m::abs(dx) > m::abs(dz) { [js::or(m::sign(dx), 1.0), 0.0, 0.0] } else { [0.0, 0.0, js::or(m::sign(dz), 1.0)] }
 }
 
-/// His right as he faces a face whose normal (toward him) is n. (handwork.ts rightOf)
+/// His right as he faces a face whose normal (toward him) is n.
 fn right_of(n: V3) -> V3 { [n[2], 0.0, -n[0]] }
 
-/// Walk a man the step in to arm's length of the thing; returns the way he is to face. Position only: the caller settles him. (handwork.ts workStand)
+/// Walk a man the step in to arm's length of the thing; returns the way he is to face. Position only: the caller settles him.
 pub(super) fn work_stand(g: &mut crate::game::Game, c_2: CharId, p: V3, n: V3, dt: f64, hand: Option<f64>, pace: Option<f64>) -> f64 {
     let hand = hand.unwrap_or(1.0);
     let pace = pace.unwrap_or(g.k.handwork.step_pace);
@@ -59,7 +59,7 @@ pub(super) fn work_stand(g: &mut crate::game::Game, c_2: CharId, p: V3, n: V3, d
     m::atan2(-n[0], -n[2])
 }
 
-/// Has his hand got to the thing? handWait counts the wait and gives up at waitSecs. (handwork.ts handThere)
+/// Has his hand got to the thing? handWait counts the wait and gives up at waitSecs.
 fn hand_there(g: &mut crate::game::Game, pl: PlayerId, dt: f64, p: V3, n: V3) -> bool {
     let c = g.pl[pl].ch;
     if crate::character::anim_work_info(g, c).w > 0.85 { return true; }
@@ -69,21 +69,21 @@ fn hand_there(g: &mut crate::game::Game, pl: PlayerId, dt: f64, p: V3, n: V3) ->
     g.pl[pl].hand_wait > g.k.handwork.wait_secs
 }
 
-/// Which of Sam's hands works a thing: the left while the right is full, else the right. (handwork.ts samWorkHand)
+/// Which of Sam's hands works a thing: the left while the right is full, else the right.
 pub(super) fn sam_work_hand(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> f64 {
     let pl = seat.player;
     let full = crate::game::player_pistol_up(g, pl) || crate::game::player_rifle_up(g, pl) || { let c = g.pl[pl].ch; g.ch[c].anim.grip[1] };
     if full { 0.0 } else { 1.0 }
 }
 
-/// As workAt is told it: the off hand named where his own is full. (handwork.ts samHand)
+/// As workAt is told it: the off hand named where his own is full.
 pub fn sam_hand(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<f64> {
     if js::truthy(sam_work_hand(g, seat)) { None } else { Some(0.0) }
 }
 
 // ---------------------------------------------------------------- the keypad
 
-/// The four keys a code presses; a code of another length is gone through in turn. (handwork.ts padKeys)
+/// The four keys a code presses; a code of another length is gone through in turn.
 fn pad_keys(code: &str) -> Vec<[f64; 2]> {
     let table = key_at();
     let five = *table.get(String::from("5")).unwrap();
@@ -92,7 +92,7 @@ fn pad_keys(code: &str) -> Vec<[f64; 2]> {
     (0..4).map(|k| ks[k % ks.len()]).collect()
 }
 
-/// Once a frame while the code goes in: his finger on the pad; returns the seconds the code's clock may run; each key's beep and light on its press. (handwork.ts padHands)
+/// Once a frame while the code goes in: his finger on the pad; returns the seconds the code's clock may run; each key's beep and light on its press.
 pub fn pad_hands(g: &mut crate::game::Game, pad: &crate::handwork::PadHandsPad, dt: f64, secs: f64) -> f64 {
     let pl = g.player;
     let keys = pad_keys(&pad.def.code);
@@ -129,7 +129,7 @@ pub fn pad_hands(g: &mut crate::game::Game, pad: &crate::handwork::PadHandsPad, 
 
 // ---------------------------------------------------------------- a charge going on
 
-/// A setter's hands on the charge while he sets it: the pose, and the slab under his palms once they have pressed it there. (handwork.ts chargeHands)
+/// A setter's hands on the charge while he sets it: the pose, and the slab under his palms once they have pressed it there.
 pub fn charge_hands(g: &mut crate::game::Game, c_2: CharId, p: V3, n: V3, t: f64, dur: f64, hand: Option<f64>) {
     let more = WorkAtMore { hand, ..Default::default() };
     work_at(g, c_2, crate::character::WorkKind::Charge, p, n, t, dur, Some(&more));
@@ -150,7 +150,7 @@ pub fn charge_hands(g: &mut crate::game::Game, c_2: CharId, p: V3, n: V3, t: f64
 
 // ---------------------------------------------------------------- Sam's plants: the breaker, the drive, a wall charge
 
-/// The face of the breaker panel toward a man: the panel box's thin axis when it has one, else the axis nearest him. (handwork.ts breakerFace)
+/// The face of the breaker panel toward a man: the panel box's thin axis when it has one, else the axis nearest him.
 fn breaker_face(g: &crate::game::Game, from: V3) -> crate::handwork::BreakerFace {
     let pos = g.level.breaker.pos;
     // `statics[boxes[0]]`: undefined past the end, or with no boxes at all
@@ -168,14 +168,14 @@ fn breaker_face(g: &crate::game::Game, from: V3) -> crate::handwork::BreakerFace
     BreakerFace { p: pos, n: face_toward(pos, from) }
 }
 
-/// The face of the objective's holder toward a man: the office's rack faces ±z; a quiet mission's holder faces the way he came at it. (handwork.ts rackFace)
+/// The face of the objective's holder toward a man: the office's rack faces ±z; a quiet mission's holder faces the way he came at it.
 fn rack_face(g: &crate::game::Game, from: V3) -> crate::handwork::RackFace {
     let rf = g.level.mission.rack.front;
     let n = if crate::quiet::quiet_of(g) { face_toward(rf, from) } else { [0.0, 0.0, js::or(m::sign(from[2] - rf[2]), 1.0)] };
     RackFace { p: rf, n }
 }
 
-/// What Sam's hands are on, if a verb of his that plants him is running. (handwork.ts samWork)
+/// What Sam's hands are on, if a verb of his that plants him is running.
 pub fn sam_work(g: &mut crate::game::Game) -> Option<crate::handwork::SamWork> {
     if g.puppet.is_some() { return None; }
     let pl = g.player;
@@ -195,7 +195,7 @@ pub fn sam_work(g: &mut crate::game::Game) -> Option<crate::handwork::SamWork> {
     None
 }
 
-/// The 'breaker' rows: his hand goes to the lever and throws it. True = taken here. (handwork.ts breakerStart)
+/// The 'breaker' rows: his hand goes to the lever and throws it. True = taken here.
 pub fn breaker_start(g: &mut crate::game::Game, on: bool) -> bool {
     if g.puppet.is_some() { return false; }
     let pl = g.player;
@@ -206,7 +206,7 @@ pub fn breaker_start(g: &mut crate::game::Game, on: bool) -> bool {
     true
 }
 
-/// Once a frame: the lever's move waits for the hand, the mains go over at leverAt, the hand comes away at leverSecs. (handwork.ts breakerTick)
+/// Once a frame: the lever's move waits for the hand, the mains go over at leverAt, the hand comes away at leverSecs.
 pub fn breaker_tick(g: &mut crate::game::Game, dt: f64) {
     let pl = g.player;
     let Some(mut mv) = g.pl[pl].breaker_move else { return };
@@ -244,7 +244,7 @@ pub fn breaker_tick(g: &mut crate::game::Game, dt: f64) {
     if mv.t >= lever_secs { g.pl[pl].breaker_move = None; }
 }
 
-/// A click while a plant runs lets go of it; the breaker's half second is committed: false = not let go of. (handwork.ts samWorkLetGo)
+/// A click while a plant runs lets go of it; the breaker's half second is committed: false = not let go of.
 pub(super) fn sam_work_let_go(g: &mut crate::game::Game, w: crate::handwork::SamWork) -> bool {
     match w.kind {
         SamWorkKind::Breaker => return false,
@@ -256,7 +256,7 @@ pub(super) fn sam_work_let_go(g: &mut crate::game::Game, w: crate::handwork::Sam
     true
 }
 
-/// A guard at the thrown breaker, re-arming it: his hand on the lever for the `dur` he fumbles. (handwork.ts leverHands)
+/// A guard at the thrown breaker, re-arming it: his hand on the lever for the `dur` he fumbles.
 pub fn lever_hands(g: &mut crate::game::Game, c_2: CharId, t: f64, dur: f64) {
     let pos = g.ch[c_2].pos;
     let f = breaker_face(g, pos);
@@ -264,7 +264,7 @@ pub fn lever_hands(g: &mut crate::game::Game, c_2: CharId, t: f64, dur: f64) {
     work_at(g, c_2, crate::character::WorkKind::Lever, f.p, f.n, t, dur, Some(&more));
 }
 
-/// A teammate sent to work a thing: the work pose in the door hand's place, his left working. True = this layer has the hand. (handwork.ts teamWorkHand)
+/// A teammate sent to work a thing: the work pose in the door hand's place, his left working. True = this layer has the hand.
 pub fn team_work_hand(g: &mut crate::game::Game, c_2: CharId, h: Option<crate::handwork::TeamWorkHandH>, kind: Option<crate::handwork::TeamWorkHandKind>, t: Option<f64>, dur: Option<f64>, dir: Option<f64>) -> bool {
     let Some(h) = h else { return false };
     let kind = match kind.unwrap_or(TeamWorkHandKind::Lever) {
@@ -279,7 +279,7 @@ pub fn team_work_hand(g: &mut crate::game::Game, c_2: CharId, h: Option<crate::h
     true
 }
 
-/// The man sent to the breaker: in the re-arm's reach he steps up and squares to it; the way to face and the step's pace, or null. (handwork.ts leverStand)
+/// The man sent to the breaker: in the re-arm's reach he steps up and squares to it; the way to face and the step's pace, or null.
 pub fn lever_stand(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<crate::handwork::LeverStand> {
     let c = g.gd[gd].ch;
     if !crate::lighting::breaker_reset_near(g, gd) { return None; }
@@ -291,7 +291,7 @@ pub fn lever_stand(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<cr
     Some(LeverStand { yaw, speed: if dt > 0.0 { m::hyp2(now[0] - x, now[2] - z) / dt } else { 0.0 } })
 }
 
-/// Once a frame of the drive stage: both hands in the rack, then the thing put away at his hip. `pulled` = this is the frame it came free. (handwork.ts driveHands)
+/// Once a frame of the drive stage: both hands in the rack, then the thing put away at his hip. `pulled` = this is the frame it came free.
 pub fn drive_hands(g: &mut crate::game::Game, secs: f64, pulled: bool) {
     let pl = g.player;
     let c = g.pl[pl].ch;
@@ -309,7 +309,7 @@ pub fn drive_hands(g: &mut crate::game::Game, secs: f64, pulled: bool) {
     work_at(g, c, crate::character::WorkKind::Take, f.p, f.n, t, secs, Some(&more));
 }
 
-/// The thing in his hand while it comes out and is put away: a caddy-sized box off the working hand. (handwork.ts workProps)
+/// The thing in his hand while it comes out and is put away: a caddy-sized box off the working hand.
 pub fn work_props(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<AnyBoxId>) {
     let i = crate::character::anim_work_info(g, c_2);
     let Some(l) = i.pose else { return };
@@ -341,7 +341,7 @@ pub fn work_props(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<AnyBoxId
 
 // ---------------------------------------------------------------- the radio hand
 
-/// A line that goes over the net: his hand goes to the handset for about as long as the line stands. (handwork.ts radioHand)
+/// A line that goes over the net: his hand goes to the handset for about as long as the line stands.
 pub fn radio_hand(g: &mut crate::game::Game, gd: GuardId, secs: f64) {
     if crate::condition::down(g, g.gd[gd].ch) || g.gd[gd].civ.is_some() { return; }
     g.stats.handwork.radio += 1;
@@ -352,7 +352,7 @@ pub fn radio_hand(g: &mut crate::game::Game, gd: GuardId, secs: f64) {
 
 // ---------------------------------------------------------------- the guard's torch / sidearm swap
 
-/// Once a frame per man before anybody is posed: what the rule has in his gun hand; the animator makes a move of a change. (handwork.ts swapFeed)
+/// Once a frame per man before anybody is posed: what the rule has in his gun hand; the animator makes a move of a change.
 pub fn swap_feed(g: &mut crate::game::Game, gd: GuardId, held: Option<crate::handwork::SwapFeedHeld>, plain: bool) {
     if !plain || crate::condition::down(g, g.gd[gd].ch) || g.gd[gd].held.is_some() { return; }
     let c = g.gd[gd].ch;
@@ -373,7 +373,7 @@ pub fn swap_feed(g: &mut crate::game::Game, gd: GuardId, held: Option<crate::han
     }));
 }
 
-/// What his gun hand visibly holds this frame: the rule's answer, but for the frames of a swap. (handwork.ts swapHeld)
+/// What his gun hand visibly holds this frame: the rule's answer, but for the frames of a swap.
 pub fn swap_held(g: &crate::game::Game, gd: GuardId, held: Option<crate::handwork::SwapHeldHeld>) -> Option<crate::handwork::SwapHeld> {
     let c = g.gd[gd].ch;
     let rule = held.map(|h| match h {
@@ -386,7 +386,7 @@ pub fn swap_held(g: &crate::game::Game, gd: GuardId, held: Option<crate::handwor
     })
 }
 
-/// The torch on his belt while the sidearm is out: at the front of the right hip, lens down, dark. (handwork.ts beltTorch)
+/// The torch on his belt while the sidearm is out: at the front of the right hip, lens down, dark.
 pub fn belt_torch(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<AnyBoxId>) {
     let Some(hp) = g.ch[c_2].bones.get(crate::character::Bone::Hips).copied() else { return };
     let f = crate::character::character_forward(g, c_2);

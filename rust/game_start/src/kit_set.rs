@@ -25,7 +25,8 @@ use crate::json::{self, Json};
 use crate::kit_plan::{self, Planned, Way, PlanBox, PlanOpts, PlanSet, V2, V3};
 use game::kitstage::KIT_PLAN;
 use game::query::Query;
-use game::scene_scenario_list::{kind_of, ScenarioSpecKind};
+use game::scene_scenario_list::kind_of;
+use game::scene_scenarios::MissionKind;
 
 /// the stand-ins' names and numbers (the head)
 pub struct KitSetNumbers {
@@ -68,7 +69,7 @@ pub fn set_of(data: &Json, way: usize) -> Option<SetOf<'_>> {
 pub fn set_query(q: &Query) -> Query {
     let mut o = q.clone();
     let kind = kind_of(q);
-    let quiet = kind == Some(ScenarioSpecKind::Quiet);
+    let quiet = kind == Some(MissionKind::Quiet);
     if quiet || kind.is_none() {
         let t = js_trim(q.get("squad").unwrap_or(""));
         let n = if quiet && t.len() == 1 && matches!(t.as_bytes()[0], b'1'..=b'4') { "1" } else { "0" };
@@ -85,7 +86,7 @@ pub enum QuietKind { Quiet, Solo }
 /// WHICH QUIET KIND a mission's link is: a quiet mission, alone or as two; a link that names no mission (the solo night); none: a loud one. Read off the link and never off the scenario that is up: a set
 /// way's picture is staged as a room clear (`set_query` strips the words), so the game's own quiet is off there.
 pub fn quiet_kind(q: &Query) -> Option<QuietKind> {
-    match kind_of(q) { Some(ScenarioSpecKind::Quiet) => Some(QuietKind::Quiet), None => Some(QuietKind::Solo), Some(_) => None }
+    match kind_of(q) { Some(MissionKind::Quiet) => Some(QuietKind::Quiet), None => Some(QuietKind::Solo), Some(_) => None }
 }
 /// what a set's men wear: `suit` the sneaking suit's word (none: Sam alone in it, as the plain night has him), `sling` where the rifle goes
 #[derive(Clone, Copy, Debug, PartialEq)]

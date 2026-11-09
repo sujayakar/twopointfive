@@ -5,10 +5,6 @@ use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Rescue {
-    pub active: bool,
-    pub ops: Vec<GuardId>,
-    pub hostiles: Vec<GuardId>,
-    pub hostages: Vec<GuardId>,
     pub plan: Option<crate::scene_level::RoomClearPlan>,
     pub entry: Option<crate::rescue::Entry>,
     pub staged: f64,
@@ -82,7 +78,6 @@ pub struct RescueResult {
     pub state: crate::rescue::RescueResultState,
     pub grade: crate::rescue::RescueResultGrade,
     pub why: String,
-    pub hostages: f64,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
@@ -215,18 +210,13 @@ pub struct RescueObjective {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct RescueMod {
-    /// (src/game/rescue.ts:150 applied)
     #[is({ let k = crate::knobs::RescueK::page(); Some(crate::scene_scenarios::TeamStart { sam: k.sam_at, sam_yaw: k.sam_yaw, ops: Some(k.ops_at.to_vec()), ops_yaw: None }) })] pub applied: Option<crate::scene_scenarios::TeamStart>,
 }
 
-/// (src/game/rescue.ts:156 NUMBER: a table nothing writes)
 pub fn number() -> Vec<String> { alloc::vec![String::from("no"), String::from("one"), String::from("two"), String::from("three"), String::from("four"), String::from("five"), String::from("six")] }
 
-/// (src/game/rescue.ts:161 SEARCH_RATE)
 pub const SEARCH_RATE: f64 = 1.3;
 
-/// (src/game/rescue.ts:161 SEARCH_HALF)
 pub const SEARCH_HALF: f64 = 1.75;
 
-/// (src/game/rescue.ts:218 CREW_SEEN)
 pub const CREW_SEEN: f64 = 4.0;

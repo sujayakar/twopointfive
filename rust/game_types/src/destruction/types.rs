@@ -3,7 +3,7 @@
 use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// which CHAOS row a rate cap reads, live at each take (destruction.ts:235): puffsPerSec, papersPerSec, knocksPerSec, decalsPerSec
+/// which CHAOS row a rate cap reads, live at each take: puffsPerSec, papersPerSec, knocksPerSec, decalsPerSec
 #[derive(Clone, Copy, Debug, ToBytes)]
 pub enum RateCapN {
     Puff,
@@ -11,7 +11,7 @@ pub enum RateCapN {
     Knock,
     Decal,
 }
-/// who is told of a blast, in the order they subscribed, before the doors and walls are judged: Glass adds its count to ev.res.panes (glassbreak.ts:219), Bars (winbars.ts:80), Snow (snowBlast.ts:119)
+/// who is told of a blast, in the order they subscribed, before the doors and walls are judged: Glass adds its count to ev.res.panes, Bars, Snow
 #[derive(Clone, Copy, Debug, ToBytes)]
 pub enum BlastListener {
     Glass,
@@ -154,7 +154,6 @@ pub struct DestructionPallEmitR {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct DestructionMod {
-    /// (src/game/destruction.ts:189 DESTR_LOG)
     pub destr_log: Vec<String>,
 }
 
@@ -190,11 +189,8 @@ pub struct DestructionStats {
     pub destr_fixtures_refused: i32,
 }
 
-/// (src/game/destruction.ts:152 PALL_DIRS: a table nothing writes)
 pub fn pall_dirs() -> Vec<[f64; 2]> { alloc::vec![[1.0, 0.0], [0.7071, 0.7071], [0.0, 1.0], [-0.7071, 0.7071], [-1.0, 0.0], [-0.7071, -0.7071], [0.0, -1.0], [0.7071, -0.7071]] }
 
-/// (src/game/destruction.ts:187 LANE_MARK: a table nothing writes)
 pub fn lane_mark() -> JsMap<String, crate::destruction::LaneMark> { { let mut t = JsMap::new(); t.set(String::from("dent"), crate::destruction::LaneMark { look: 0.0, r: [0.036, 0.045], s: [0.7, 0.9] }); t.set(String::from("shred"), crate::destruction::LaneMark { look: 1.0, r: [0.06, 0.075], s: [0.85, 0.85] }); t.set(String::from("crack"), crate::destruction::LaneMark { look: 2.0, r: [0.085, 0.11], s: [0.9, 0.9] }); t } }
 
-/// (src/game/destruction.ts:194 ROOF_RAYS: a table nothing writes)
 pub fn roof_rays() -> Vec<[f64; 2]> { alloc::vec![[0.0, 0.0], [0.29, 0.0], [-0.29, 0.0], [0.0, 0.29], [0.0, -0.29]] }

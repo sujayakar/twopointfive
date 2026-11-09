@@ -1,20 +1,22 @@
-//! THE DESK: what the cards before a game show and press, with no game on the floor. One blank game, done the same commands a start is done, so a man is staged with what his card shows. A
+//! THE DESK: what the cards before a game show and press, with no game on the floor. One blank game, laid what a start is laid, so a man is staged with what his card shows. A
 //! page asks by the list below (`asks!`, whose caller on the page is made from it by `bun run tools/draw/gen.ts`) and is answered with a view.
 //!
 //! The bytes of an ask: its number (u32), then its fields in order, as a command's. A PRESS changes the desk and answers `Pressed`; every other ask changes nothing.
-use crate::command::{Bytes, Field};
-use crate::kept;
+use super::command::{Bytes, Field};
+use super::kept;
+use crate::json::{parse, Json};
+use crate::read::{At, Faults, FromJson};
+use alloc::{boxed::Box, format, string::{String, ToString}, vec, vec::Vec};
+use core::any::Any;
 use game::game::Game;
 use game::bytes::{ToBytes, W};
+use game::difficulty;
 use game::kit::{self, CardFor, KitPreset, MemberKit, TeamFor};
 use game::loadout::entry_of;
 use game::query::{after_mark, Query};
 use game::scene_scenarios::IssueData;
 use game::start_list::{self, Sitting};
 use game::view::{BriefView, CardView, KeptText, MissionsView, Pressed, SheetView, ShortView, StartView, TeamView};
-use game_start::json::{parse, Json};
-use game_start::read::{At, Faults, FromJson};
-use std::any::Any;
 
 pub struct Desk {
     pub g: Box<Game>,
@@ -34,10 +36,16 @@ pub struct Desk {
 
 impl Default for Desk { fn default() -> Self { Desk::new() } }
 impl Desk {
-    /// The host's commands, done as a start is done them: what this machine keeps and what the address says.
-    pub fn machine(&mut self, b: &[u8]) -> Result<(), String> {
-        crate::command::apply(&mut self.g, b)?;
-        self.list.said(crate::command::levers_said(b));
+    /// What this machine keeps and what the address says, laid as a start lays them (`host::lay`).
+    pub fn machine(&mut self, kept_text: &str, address: &str) -> Result<(), String> {
+        let k = kept::Kept::read(kept_text)?;
+        super::lay(&mut self.g, &k, Some(address));
+        // (what the list knows of the levers: what is kept, then what the address says over it; a lesson's address has neither)
+        let q = Query::parse(address);
+        if game::scenario_run::lesson_of_address(&q).is_none() {
+            let said = difficulty::levers_now(&self.g).into_iter().filter_map(|l| q.get(&l.param).filter(|w| !w.is_empty()).map(|w| (l.key, String::from(w))));
+            self.list.said(k.levers.iter().cloned().chain(said).map(|(key, rung)| (String::from(key.as_str()), rung)).collect());
+        }
         self.kept = kept::write(&mut self.g);
         Ok(())
     }

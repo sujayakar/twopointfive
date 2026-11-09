@@ -30,8 +30,6 @@ pub struct BELTTORCH {
     pub at: Vec<f64>,
 }
 
-/// (src/game/inhand.ts:61 IN_PISTOL: a table nothing writes)
 pub fn in_pistol() -> crate::inhand::InHandWord { crate::inhand::InHandWord::Pistol }
 
-/// (src/game/inhand.ts:71 BELT_TORCH: a table nothing writes)
 pub fn belt_torch() -> crate::inhand::BELTTORCH { crate::inhand::BELTTORCH { was: alloc::vec![0.15, 0.115], at: alloc::vec![0.21, 0.16] } }

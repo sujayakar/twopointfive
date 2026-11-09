@@ -7,7 +7,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, vec::Vec};
 
-/// The flame's own middle `up` metres over its mouth: how far downwind (x, z) and its slope there.   (fire.ts axisAt)
+/// The flame's own middle `up` metres over its mouth: how far downwind (x, z) and its slope there.
 fn axis_at(g: &crate::game::Game, up: f64, wind: [f64; 2]) -> [f64; 4] {
     axis_with(&g.k.fire, up, wind)
 }
@@ -21,17 +21,17 @@ fn axis_with(k: &crate::knobs::FireK, up: f64, wind: [f64; 2]) -> [f64; 4] {
     [wind[0] * b, wind[1] * b, wind[0] * sl, wind[1] * sl]
 }
 
-/// A new row of the counts: its least and most start at the infinities, not at a blank's zeros.   (fire.ts fresh)
+/// A new row of the counts: its least and most start at the infinities, not at a blank's zeros.
 fn fresh() -> crate::fire::FireStats {
     crate::fire::FireStats { fires: 0.0, lit: 0.0, frames: 0.0, cracks: 0.0, lo: m::INF, hi: -m::INF, sum: 0.0, n: 0.0 }
 }
 
-/// The game's row of counts, made if it has none: the row itself, a caller writes through it.   (fire.ts stateOf)
+/// The game's row of counts, made if it has none: the row itself, a caller writes through it.
 fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::fire::FireStats {
     g.m.fire.states.get_or_insert_with(fresh)
 }
 
-/// The counts to read now and not to keep: a game the fire has not run in gets a blank row, and none is made for it.   (fire.ts fireStats)
+/// The counts to read now and not to keep: a game the fire has not run in gets a blank row, and none is made for it.
 fn fire_stats(g: &crate::game::Game) -> crate::fire::FireStats {
     match g.m.fire.states {
         Some(s) => s,
@@ -39,7 +39,7 @@ fn fire_stats(g: &crate::game::Game) -> crate::fire::FireStats {
     }
 }
 
-/// Integer hash to [0, 1). The TypeScript's signed and unsigned steps give these same 32 bits.   (fire.ts h01)
+/// Integer hash to [0, 1). The TypeScript's signed and unsigned steps give these same 32 bits.
 fn h01(x: f64) -> f64 {
     let mut x = (js::to_i32(x) as u32 ^ 0x2545F491).wrapping_mul(0x9E3779B1);
     x ^= x >> 15;
@@ -48,7 +48,7 @@ fn h01(x: f64) -> f64 {
     (x >> 8) as f64 / 16777216.0
 }
 
-/// Is this light target an open fire, by its name.   (fire.ts isFire)
+/// Is this light target an open fire, by its name.
 pub fn is_fire(g: &crate::game::Game, t: FixtureId) -> bool {
     let row = &g.tab.sim_lightshome_fixture[t];
     if row.kind != crate::sim_lightshome::FixtureKind::Analytic || row.light.is_none() {
@@ -62,7 +62,7 @@ pub fn is_fire(g: &crate::game::Game, t: FixtureId) -> bool {
     false
 }
 
-/// A fire's own seed, 0 to 1, off where it stands.   (fire.ts fireSeed)
+/// A fire's own seed, 0 to 1, off where it stands.
 pub fn fire_seed(g: &crate::game::Game, t: FixtureId) -> f64 {
     let p = g.tab.sim_lightshome_fixture[t].pos;
     seed_at(p)
@@ -71,7 +71,7 @@ fn seed_at(p: V3) -> f64 {
     h01(m::round(p[0] * 100.0) * 7919.0 + m::round(p[2] * 100.0) * 104729.0 + 17.0)
 }
 
-/// The cracks of the wood near `time`, the latest first, none older than `back` s.   (fire.ts firePops)
+/// The cracks of the wood near `time`, the latest first, none older than `back` s.
 fn fire_pops(g: &crate::game::Game, seed: f64, time: f64, back: f64) -> Vec<crate::fire::FirePopsItem> {
     pops_with(&g.k.fire, seed, time, back)
 }
@@ -101,7 +101,7 @@ fn pops_with(fk: &crate::knobs::FireK, seed: f64, time: f64, back: f64) -> Vec<c
     out
 }
 
-/// The light's flicker at `time`: what the authored strength is multiplied by.   (fire.ts fireFlicker)
+/// The light's flicker at `time`: what the authored strength is multiplied by.
 pub fn fire_flicker(g: &crate::game::Game, seed: f64, time: f64) -> f64 {
     flicker_with(&g.k.fire, seed, time)
 }
@@ -134,7 +134,7 @@ fn static_at(g: &Game, ix: f64) -> Option<BoxId> {
     g.engine.world.statics.get(ix as usize).copied()
 }
 
-/// Where the fire's mouth is and how wide: the glowing box hung on the lamp, or a hand under the lamp.   (fire.ts mouthOf)
+/// Where the fire's mouth is and how wide: the glowing box hung on the lamp, or a hand under the lamp.
 pub fn mouth_of(g: &crate::game::Game, t: FixtureId) -> crate::fire::MouthOf {
     let first = g.tab.sim_lightshome_fixture[t].boxes.first().copied();
     let b = match first {
@@ -150,12 +150,12 @@ pub fn mouth_of(g: &crate::game::Game, t: FixtureId) -> crate::fire::MouthOf {
     crate::fire::MouthOf { pos: [p[0], p[1] - 0.16, p[2]], r: 0.19 * mouth, lid: 0.0 }
 }
 
-/// How hot a fire burns, 0 to 1: its lamp's share of its authored strength.   (fire.ts heatOf)
+/// How hot a fire burns, 0 to 1: its lamp's share of its authored strength.
 pub fn heat_of(g: &crate::game::Game, t: FixtureId) -> f64 {
     m::max(0.0, m::min(1.0, crate::sim_lightshome::fixture_factor(g, t)))
 }
 
-/// Whether it burns at all.   (fire.ts burns)
+/// Whether it burns at all.
 pub fn burns(g: &crate::game::Game, t: FixtureId) -> bool {
     if !(heat_of(g, t) > 0.001) {
         return false;
@@ -164,7 +164,7 @@ pub fn burns(g: &crate::game::Game, t: FixtureId) -> bool {
     g.tab.light[l].enabled
 }
 
-/// The wind at a fire's flame: as it blows, how hard, and what leans the flame (capped).   (fire.ts windAt)
+/// The wind at a fire's flame: as it blows, how hard, and what leans the flame (capped).
 fn wind_at(g: &crate::game::Game, mouth: V3) -> crate::fire::WindAt {
     let (height, wind_max) = (g.k.fire.height, g.k.fire.wind_max);
     let wv = crate::wind::wind_at(g, [mouth[0], mouth[1] + height * 0.6, mouth[2]], None);
@@ -182,12 +182,12 @@ pub fn flame_wind(g: &crate::game::Game, mouth: V3) -> crate::fire::WindAt {
     crate::fire::WindAt { wv, wl, wind: [wv[0] * wk, wv[2] * wk] }
 }
 
-/// Whether a round or a blast leaves `t` burning: to the fixture rules such a fire is no fixture at all.   (fire.ts fireHolds)
+/// Whether a round or a blast leaves `t` burning: to the fixture rules such a fire is no fixture at all.
 pub fn fire_holds(g: &crate::game::Game, t: FixtureId) -> bool {
     is_fire(g, t)
 }
 
-/// Did a round that stopped at `p`, in static `ix`, stop in this fire: its own box, or the drum under its mouth.   (fire.ts fireStruck)
+/// Did a round that stopped at `p`, in static `ix`, stop in this fire: its own box, or the drum under its mouth.
 pub fn fire_struck(g: &mut crate::game::Game, t: FixtureId, p: V3, ix: f64) -> bool {
     if g.tab.sim_lightshome_fixture[t].boxes.contains(&ix) {
         return true;
@@ -203,7 +203,7 @@ pub fn fire_struck(g: &mut crate::game::Game, t: FixtureId, p: V3, ix: f64) -> b
     p[1] <= mouth.pos[1] + 0.05 && m::hyp2(p[0] - mouth.pos[0], p[2] - mouth.pos[2]) <= r
 }
 
-/// A hit on a burning fire: a crack now and a throw of embers on its next frame, by the host's book.   (fire.ts fireStir)
+/// A hit on a burning fire: a crack now and a throw of embers on its next frame, by the host's book.
 pub fn fire_stir(g: &mut crate::game::Game, t: FixtureId) {
     let booked = matches!(&g.engine.host_books, Some(b) if b.fire.is_some());
     if !booked || !burns(g, t) {
@@ -236,7 +236,7 @@ pub fn fire_stir(g: &mut crate::game::Game, t: FixtureId) {
     crate::audio_iface::game_audio_like_play(g, "fireCrack", Some(pos), Some(volume), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.7 }));
 }
 
-/// Out but still lit in the fog's picture: the remembered pool stays a fire's.   (fire.ts held)
+/// Out but still lit in the fog's picture: the remembered pool stays a fire's.
 fn held(g: &mut crate::game::Game, t: FixtureId) {
     let l = g.tab.sim_lightshome_fixture[t].light.unwrap();
     let tp = g.tab.sim_lightshome_fixture[t].pos;
@@ -269,7 +269,7 @@ fn held(g: &mut crate::game::Game, t: FixtureId) {
     lt.range = range * reach;
 }
 
-/// The lamp back as the level hung it, and nothing said to the steady readers.   (fire.ts plain)
+/// The lamp back as the level hung it, and nothing said to the steady readers.
 fn plain(g: &mut crate::game::Game, t: FixtureId) {
     let l = g.tab.sim_lightshome_fixture[t].light.unwrap();
     let tp = g.tab.sim_lightshome_fixture[t].pos;
@@ -287,7 +287,7 @@ fn plain(g: &mut crate::game::Game, t: FixtureId) {
 
 // ---- the one seam: what skeleton 5 still cannot do (notes.md, ## Skeleton) ----
 
-/// A box's row (Box.c, Box.h: fire.ts:271, :295). Other parts' notes say skeleton 5.1 has the table `g.tab.boxes`; if so, the body is `&mut g.tab.boxes[b]`.
+/// A box's row.
 fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 #[cfg(test)]
@@ -469,23 +469,22 @@ mod tests_need_box_rows {
     }
 }
 
-/// bx.emissive = e (fire.ts:358): skeleton 5 keeps no row of a Box anywhere (`g.col.boxes` and `world.statics` are lists of BoxId, Tabs has no box table).
 fn seam_box_set_emissive(g: &mut Game, bx: BoxId, e: V3) { g.tab.boxes[bx].emissive = e; }
 
-/// A lamp's place across: where the level hung it, wandering by two sines. (fire.ts:354, 355)
+/// A lamp's place across: where the level hung it, wandering by two sines.
 fn wander_across(hung: f64, wander: f64, rate_a: f64, phase_a: f64, rate_b: f64, phase_b: f64, time: f64) -> f64 {
     hung + wander * m::sin(TAU * (rate_a * time + phase_a)) * m::sin(TAU * (rate_b * time + phase_b))
 }
-/// A lamp's height: in the body of the flame, up with the flicker by no more than the table says. (fire.ts:356)
+/// A lamp's height: in the body of the flame, up with the flicker by no more than the table says.
 fn wander_height(hung: f64, lift: f64, wander_up: f64, flicker: f64, depth: f64) -> f64 {
     hung + lift + wander_up * m::max(-1.0, m::min(1.0, (flicker - 1.0) / m::max(depth, 1e-6)))
 }
-/// The coals' share of the authored glow, breathing with the light. (fire.ts:358)
+/// The coals' share of the authored glow, breathing with the light.
 fn coal_share(factor: f64, coals: f64, coal_swing: f64, flicker: f64) -> f64 {
     factor * coals * (1.0 + coal_swing * (flicker - 1.0))
 }
 
-/// The host's book of the fires, on a frame that moves the clock (where it has just been made). (fire.ts updateFire's `P`)
+/// The host's book of the fires, on a frame that moves the clock (where it has just been made).
 fn book(g: &mut Game) -> &mut FireShown { g.engine.host_books.as_mut().unwrap().fire.as_mut().unwrap() }
 
 /// `arr[ix] = x` on a book's array: an index past its end leaves holes, written as `hole`, which every reader takes as the array's missing entry.
@@ -500,7 +499,7 @@ const NO_FRAME: f64 = -1.0;
 /// One fire's embers, as this frame files them: the closure's captures at fire.ts:369.
 struct EmberFrom { mouth: MouthOf, flame_h: f64, e_up: f64, e_a: [f64; 4], heat: f64, si: f64 }
 
-/// A throw of embers off one fire, by its own seed and not the particles' serial. (fire.ts:369 emberEmit)
+/// A throw of embers off one fire, by its own seed and not the particles' serial.
 fn ember_emit(g: &mut Game, f: &EmberFrom, n: f64, hard: f64, k: f64) {
     let fl = fire_look_smoke();
     let (ember_speed, ember_life, ember_size, ember_gain) = (g.k.fire.ember_speed, g.k.fire.ember_life, g.k.fire.ember_size, g.k.fire.ember_gain);
@@ -524,7 +523,7 @@ fn ember_emit(g: &mut Game, f: &EmberFrom, n: f64, hard: f64, k: f64) {
     });
 }
 
-/// `n` embers off one fire, counted in the book. (fire.ts:371, :372, :375: `ember(n, hard, P.embers); P.embers += n`)
+/// `n` embers off one fire, counted in the book.
 fn ember_throw(g: &mut Game, f: &EmberFrom, n: f64, hard: f64) {
     let k = book(g).embers;
     ember_emit(g, f, n, hard, k);
@@ -537,7 +536,7 @@ fn smoke_emit(g: &mut Game, e: &crate::smoke_types::SmokeEmitter) {
     crate::out_events::push_smoke_system_like_emit(g, e);
 }
 
-/// Once a frame behind the lamps' paint: each fire's lamp flickered, moved and fed to its row, its coals, its cracks, and what the host shows and plays of it. (fire.ts updateFire)
+/// Once a frame behind the lamps' paint: each fire's lamp flickered, moved and fed to its row, its coals, its cracks, and what the host shows and plays of it.
 pub fn update_fire(g: &mut Game, dt: f64) {
     let mut any = false;
     let mut i = 0;

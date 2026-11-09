@@ -241,29 +241,20 @@ pub struct ThrowablesSpawnOpts {
     pub carried: Option<bool>,
 }
 
-/// (src/game/throwables.ts:40 SC20K_ITEM: a table nothing writes)
 pub fn sc20_k_item() -> crate::throwables::SC20KITEM { crate::throwables::SC20KITEM { thick: 0.024, metal: [0.026, 0.026, 0.03] } }
 
-/// (src/game/throwables.ts:51 M4_ITEM: a table nothing writes)
 pub fn m4_item() -> crate::throwables::M4ITEM { crate::throwables::M4ITEM { hull: crate::throwables::M4ITEMHull { z: -0.09, h: [0.017, 0.034, 0.2] }, fore: crate::throwables::M4ITEMFore { z: 0.285, h: [0.023, 0.021, 0.17] }, mag: crate::throwables::M4ITEMMag { z: 0.085, y: -0.095, h: [0.011, 0.065, 0.028] }, optic: crate::throwables::M4ITEMOptic { z: 0.035, y: 0.052, h: [0.016, 0.02, 0.035] }, polymer: [0.03, 0.03, 0.033], metal: [0.03, 0.03, 0.033], fore_col: [0.2, 0.155, 0.1] } }
 
-/// (src/game/throwables.ts:59 CAN_ITEM: a table nothing writes)
 pub fn can_item() -> crate::throwables::CANITEM { crate::throwables::CANITEM { radius: 0.055, restitution: 0.38, friction: 0.35 } }
 
-/// (src/game/throwables.ts:63 FRAG_ITEM: a table nothing writes)
 pub fn frag_item() -> crate::throwables::FRAGITEM { crate::throwables::FRAGITEM { radius: 0.04, restitution: 0.3, friction: 0.45, half: [0.032, 0.032, 0.038], body: [0.13, 0.17, 0.08], band: [0.75, 0.62, 0.1], fuze: [0.3, 0.3, 0.28] } }
 
-/// (src/game/throwables.ts:65 RING_ITEM: a table nothing writes)
 pub fn ring_item() -> crate::throwables::RINGITEM { crate::throwables::RINGITEM { radius: 0.03, restitution: 0.3, friction: 0.6, life: 60.0 } }
 
-/// (src/game/throwables.ts:71 SPONGE_ITEM: a table nothing writes)
 pub fn sponge_item() -> crate::throwables::SPONGEITEM { crate::throwables::SPONGEITEM { wide: 0.023, nose: crate::throwables::SPONGEITEMNose { z: 0.019, h: [0.022, 0.022, 0.019], albedo: [0.07, 0.24, 0.62] }, body: crate::throwables::SPONGEITEMBody { z: -0.014, h: [0.021, 0.021, 0.014], albedo: [0.05, 0.05, 0.055] }, band: crate::throwables::SPONGEITEMBand { z: -0.033, h: [0.023, 0.023, 0.005], albedo: [0.3, 0.3, 0.31] } } }
 
-/// (src/game/throwables.ts:85 SHELL_ITEM: a table nothing writes)
 pub fn shell_item() -> crate::throwables::SHELLITEM { crate::throwables::SHELLITEM { radius: 0.035, restitution: 0.22, friction: 0.5, life: 120.0, half: [0.02, 0.02, 0.05], body: [0.42, 0.43, 0.4], nose: [0.72, 0.55, 0.12] } }
 
-/// (src/game/throwables.ts:91 RIFLE_ITEM: a table nothing writes)
 pub fn rifle_item() -> crate::throwables::RIFLEITEM { crate::throwables::RIFLEITEM { radius: 0.06, restitution: 0.18, friction: 0.55, prop_share: 0.3, thick: 0.02, receiver: crate::throwables::RIFLEITEMReceiver { z: -0.02, h: [0.018, 0.03, 0.13] }, fore: crate::throwables::RIFLEITEMFore { z: 0.24, h: [0.02, 0.022, 0.13] }, mag: crate::throwables::RIFLEITEMMag { z: 0.06, y: -0.075, h: [0.013, 0.05, 0.03], cant: 0.35 }, stock: crate::throwables::RIFLEITEMStock { z: -0.27, h: [0.008, 0.026, 0.12] }, steel: [0.05, 0.05, 0.055], wood: [0.2, 0.085, 0.05] } }
 
-/// (src/game/throwables.ts:182 GRAVITY)
 pub const GRAVITY: f64 = 9.81;

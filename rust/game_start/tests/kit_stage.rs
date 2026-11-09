@@ -149,16 +149,16 @@ fn another_size_stages_that_many_and_the_mission_keeps_its_own() {
 #[test]
 fn an_open_card_stands_its_man_first() {
     let mut p = stood("records.json", "roomclear&squad4");
-    let team = game::scenario_run::team_of(&p.g);
+    let team = p.g.staged.team.clone();
     kitstage::open(&mut p.g, 2, "weapon"); p.frame();
     assert_eq!(st(&p).who, 2);
-    let now = game::scenario_run::team_of(&p.g);
+    let now = p.g.staged.team.clone();
     assert_eq!(team.len(), now.len());
     assert_eq!(st(&p).order[0], now[1], "the open card's man is first at the door");
     on_their_places(&p, "card 2", 0.05);
     kitstage::open(&mut p.g, 0, ""); p.frame();
     assert_eq!(st(&p).who, 0);
-    assert_eq!(st(&p).order[0], game::scenario_run::team_of(&p.g)[1], "a staging keeps the file's order");
+    assert_eq!(st(&p).order[0], p.g.staged.team[1], "a staging keeps the file's order");
 }
 
 #[test]
@@ -169,7 +169,7 @@ fn a_card_may_be_open_before_its_man_has_come() {
     assert_eq!((st(&p).who, st(&p).order.len()), (0, 3), "three came: the player's card stands in");
     kitstage::cards(&mut p.g, 4); p.frame();
     assert_eq!(st(&p).who, 4);
-    assert_eq!(st(&p).order[0], game::scenario_run::team_of(&p.g)[3], "he came, and his card is open");
+    assert_eq!(st(&p).order[0], p.g.staged.team[3], "he came, and his card is open");
     // (a message and a card in the same moment are one restaging, from the same start)
     kitstage::cards(&mut p.g, 3); p.frame();
     let was = p.g.mission.serial;

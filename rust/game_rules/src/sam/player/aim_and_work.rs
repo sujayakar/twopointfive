@@ -1,4 +1,3 @@
-//! src/game/player.ts lines 2027 to 2301
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,7 +6,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// Let go at once: the man is handed straight back, Sam's side cleared; past killCut with the knife in, he dies by it.   (player.ts freeHeld)
+/// Let go at once: the man is handed straight back, Sam's side cleared; past killCut with the knife in, he dies by it.
 pub fn free_held(g: &mut crate::game::Game, why: crate::player::FreeHeldWhy) {
     let pl = g.player;
     let c = g.pl[pl].ch;
@@ -29,7 +28,7 @@ pub fn free_held(g: &mut crate::game::Game, why: crate::player::FreeHeldWhy) {
     }
 }
 
-/// The hold simply ceases: Sam's side cleared, and his if he is still about.   (player.ts dropHold)
+/// The hold simply ceases: Sam's side cleared, and his if he is still about.
 pub(super) fn drop_hold(g: &mut crate::game::Game) {
     let pl = g.player;
     let c = g.pl[pl].ch;
@@ -47,7 +46,7 @@ pub(super) fn drop_hold(g: &mut crate::game::Game) {
     g.ch[c].anim.hold_pose = None;
 }
 
-/// The 'pick the lock' row: drop what the hands were doing and start working the lock.   (player.ts startPicking)
+/// The 'pick the lock' row: drop what the hands were doing and start working the lock.
 pub fn start_picking(g: &mut crate::game::Game, d: DoorId) {
     let pl = g.player;
     if crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].takedown.is_some() || g.pl[pl].kick.is_some() {
@@ -70,7 +69,7 @@ pub fn start_picking(g: &mut crate::game::Game, d: DoorId) {
     g.pl[pl].crouch = true;
 }
 
-/// Hands off the tools: the progress stays on the door, he stays on his knee.   (player.ts stopPicking)
+/// Hands off the tools: the progress stays on the door, he stays on his knee.
 pub(in crate::sam) fn stop_picking(g: &mut crate::game::Game) {
     let pl = g.player;
     if g.pl[pl].picking.is_none() {
@@ -82,7 +81,7 @@ pub(in crate::sam) fn stop_picking(g: &mut crate::game::Game) {
     g.pl[pl].speed_sm = 0.0;
 }
 
-/// Working the lock, on its own clock once begun.   (player.ts updatePicking)
+/// Working the lock, on its own clock once begun.
 pub(super) fn update_picking(g: &mut crate::game::Game, dt: f64, input: InputId) {
     let pl = g.player;
     let c = g.pl[pl].ch;
@@ -122,7 +121,7 @@ pub(super) fn update_picking(g: &mut crate::game::Game, dt: f64, input: InputId)
     pose_gun_light(g);
 }
 
-/// The 'look under it' row of a shut door: the hands' work dropped, onto his knee at the middle of the leaf.   (player.ts startWand)
+/// The 'look under it' row of a shut door: the hands' work dropped, onto his knee at the middle of the leaf.
 pub fn start_wand(g: &mut crate::game::Game, d: DoorId) {
     let pl = g.player;
     let c = g.pl[pl].ch;
@@ -152,7 +151,7 @@ pub fn start_wand(g: &mut crate::game::Game, d: DoorId) {
     g.stats.wand.looks += 1;
 }
 
-/// The wand pulled out: he stays on his knee.   (player.ts stopWand)
+/// The wand pulled out: he stays on his knee.
 pub(in crate::sam) fn stop_wand(g: &mut crate::game::Game) {
     let pl = g.player;
     if g.pl[pl].wanding.is_none() {
@@ -162,7 +161,7 @@ pub(in crate::sam) fn stop_wand(g: &mut crate::game::Game) {
     g.pl[pl].speed_sm = 0.0;
 }
 
-/// One frame of the look: planted on his knee at the leaf; once there the lens is live and turns after the aim point.   (player.ts updateWanding)
+/// One frame of the look: planted on his knee at the leaf; once there the lens is live and turns after the aim point.
 pub(super) fn update_wanding(g: &mut crate::game::Game, dt: f64) {
     let pl = g.player;
     let c = g.pl[pl].ch;
@@ -235,7 +234,7 @@ fn wand_row_back(g: &mut crate::game::Game, pl: PlayerId, w: crate::wand::Wandin
     }
 }
 
-/// Keying a code in: stood at the pad with the feet still, turned to the plate, the rifle low. HANDWORK.on and .work are settled on.   (player.ts updateCodingPlant)
+/// Keying a code in: stood at the pad with the feet still, turned to the plate, the rifle low. HANDWORK.on and .work are settled on.
 pub(super) fn update_coding_plant(g: &mut crate::game::Game, dt: f64) {
     let pl = g.player;
     let c = g.pl[pl].ch;
@@ -269,7 +268,7 @@ pub(super) fn update_coding_plant(g: &mut crate::game::Game, dt: f64) {
     pose_gun_light(g);
 }
 
-/// Hands at work on a thing that is not a lock or a pad: the keypad's plant.   (player.ts updateWorkPlant)
+/// Hands at work on a thing that is not a lock or a pad: the keypad's plant.
 pub(super) fn update_work_plant(g: &mut crate::game::Game, dt: f64, w: &mut crate::handwork::SamWork) {
     let pl = g.player;
     let c = g.pl[pl].ch;
@@ -304,7 +303,7 @@ pub(super) fn update_work_plant(g: &mut crate::game::Game, dt: f64, w: &mut crat
     pose_gun_light(g);
 }
 
-/// W.at[0] += dx; W.at[2] += dz. W.at IS the verb's owner's own vector in the TypeScript (handwork.ts samWork): the write goes to that owner, by the kind of work.
+/// W.at[0] += dx; W.at[2] += dz. W.at IS the verb's owner's own vector in the TypeScript: the write goes to that owner, by the kind of work.
 fn work_at_walked(g: &mut crate::game::Game, pl: PlayerId, kind: crate::handwork::SamWorkKind, dx: f64, dz: f64) {
     let at = match kind {
         crate::handwork::SamWorkKind::Wall => g.wall_charge.sam.as_mut().map(|s| &mut s.at),
@@ -317,7 +316,7 @@ fn work_at_walked(g: &mut crate::game::Game, pl: PlayerId, kind: crate::handwork
     }
 }
 
-/// Kick a door in: one committed second, updateKick runs it; with a tool the big slot's beat in the boot's place.   (player.ts startKick)
+/// Kick a door in: one committed second, updateKick runs it; with a tool the big slot's beat in the boot's place.
 pub fn start_kick(g: &mut crate::game::Game, d: DoorId, run: Option<bool>, tool: Option<crate::player::StartKickTool>) {
     let run = run.unwrap_or(false);
     let pl = g.player;
@@ -413,7 +412,7 @@ fn big_spot_tool(t: crate::player::StartKickTool) -> crate::bigkit::SamBigSpotTo
     }
 }
 
-/// The spot a kick is thrown from BESIDE the door, for a kicker already beside its latch jamb; None = the square kick.   (player.ts sideKickSpot)
+/// The spot a kick is thrown from BESIDE the door, for a kicker already beside its latch jamb; None = the square kick.
 fn side_kick_spot(g: &mut crate::game::Game, d: DoorId, from: V3) -> Option<crate::player::SideKickSpot> {
     if crate::doors::door_off(g, d) {
         return None;
@@ -430,7 +429,7 @@ fn side_kick_spot(g: &mut crate::game::Game, d: DoorId, from: V3) -> Option<crat
     Some(crate::player::SideKickSpot { pos: s.pos, yaw: s.yaw })
 }
 
-/// The kick beat: eased to the kicking distance over the wind-up, rooted there; on the impact frame the lock goes.   (player.ts updateKick)
+/// The kick beat: eased to the kicking distance over the wind-up, rooted there; on the impact frame the lock goes.
 pub(super) fn update_kick(g: &mut crate::game::Game, dt: f64) {
     let pl = g.player;
     let c = g.pl[pl].ch;
@@ -500,7 +499,7 @@ pub(super) fn update_kick(g: &mut crate::game::Game, dt: f64) {
     pose_gun_light(g);
 }
 
-/// Planar distance from the player to a corpse: the nearer of its ankles, its hips and its grip.   (player.ts bodyDist)
+/// Planar distance from the player to a corpse: the nearer of its ankles, its hips and its grip.
 pub(super) fn body_dist(g: &mut crate::game::Game, gd: GuardId, within: Option<f64>) -> f64 {
     let within = within.unwrap_or(f64::INFINITY);
     let me = g.pl[g.player].ch;
@@ -528,7 +527,7 @@ fn body_reach(g: &mut crate::game::Game, a: V3, p: V3, q: Option<V3>, add: f64, 
     if crate::scene_collision::solid_blocked(g, a, t, None) { 99.0 } else { d }
 }
 
-/// Throw origin, right hand-ish.   (player.ts throwOrigin)
+/// Throw origin, right hand-ish.
 pub(super) fn throw_origin(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> V3 {
     let pl = seat.player;
     let c = g.pl[pl].ch;
@@ -537,7 +536,7 @@ pub(super) fn throw_origin(g: &crate::game::Game, seat: &crate::seats::SeatRef) 
     [pos[0] + f[0] * 0.32, pos[1] + (if g.pl[pl].crouch { 1.05 } else { 1.5 }), pos[2] + f[2] * 0.32]
 }
 
-/// The wind-up of a throw: the can counted now, it leaves the hand at THROW_RELEASE along the arc previewed.   (player.ts doThrow)
+/// The wind-up of a throw: the can counted now, it leaves the hand at THROW_RELEASE along the arc previewed.
 pub(super) fn do_throw(g: &mut crate::game::Game, sol: &crate::throwables::ThrowSolution, kind: crate::game::ThrowKind) {
     let pl = g.player;
     if crate::game::game_throw_count(g, &crate::seats::here(g), kind) <= 0.0 {
@@ -559,22 +558,22 @@ pub(super) fn do_throw(g: &mut crate::game::Game, sol: &crate::throwables::Throw
     crate::audio_iface::game_audio_like_play(g, "throw", Some(at), Some(0.7), None);
 }
 
-/// The gun's heading eased to the cursor's bearing.   (player.ts aimEase)
+/// The gun's heading eased to the cursor's bearing.
 pub fn aim_ease(yaw: f64, to_aim: V3, dt: f64) -> f64 {
     yaw + v3::wrap_angle(v3::yaw_of(to_aim) - yaw) * (1.0 - m::exp(-16.0 * dt))
 }
 
-/// The aim of a cursor whose ray met nothing: level, a metre ahead of the way his body faces.   (player.ts aimLevel)
+/// The aim of a cursor whose ray met nothing: level, a metre ahead of the way his body faces.
 pub fn aim_level(c_2: crate::player::AimLevelC) -> V3 {
     v3::add(v3::add(c_2.pos, [m::sin(c_2.body_yaw), 0.0, m::cos(c_2.body_yaw)]), [0.0, 1.15, 0.0])
 }
 
-/// What the cursor's ray meets: the first thing of the world on it, never the man's own body.   (player.ts cursorHit)
+/// What the cursor's ray meets: the first thing of the world on it, never the man's own body.
 pub fn cursor_hit(g: &mut crate::game::Game, ray: crate::player::CursorHitRay, own: f64) -> Option<crate::scene_boxes::BoxWorldRaycast> {
     crate::scene_boxes::box_world_raycast(g, ray.ro, ray.rd, Some(200.0), None, Some(own), None)
 }
 
-/// The point the cursor's ray gives: where it hit, else the floor under it, else None.   (player.ts cursorPoint)
+/// The point the cursor's ray gives: where it hit, else the floor under it, else None.
 pub fn cursor_point(g: &crate::game::Game, cam: CameraId, u: f64, v: f64, ray: crate::player::CursorPointRay, hit: Option<crate::player::CursorPointHit>) -> Option<V3> {
     match hit {
         Some(h) => Some(v3::mad(ray.ro, ray.rd, h.t)),
@@ -582,7 +581,7 @@ pub fn cursor_point(g: &crate::game::Game, cam: CameraId, u: f64, v: f64, ray: c
     }
 }
 
-/// The frame's aim: the cursor's point, the interaction rows, then the reticle's snap to a man or a light.   (player.ts updateAim)
+/// The frame's aim: the cursor's point, the interaction rows, then the reticle's snap to a man or a light.
 pub fn update_aim(g: &mut crate::game::Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View) {
     let puppet_aim = g.puppet.as_ref().and_then(|p| p.aim);
     if let Some(aim) = puppet_aim {

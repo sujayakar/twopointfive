@@ -60,7 +60,7 @@ const FAR: f64 = 60.0;
 const TOP: f64 = 10.0;
 /// a roof is what stands over a place higher than this (m)
 const ROOF: f64 = 2.0;
-/// what the ground outside sends back of the light on it, as an opening shows it (the picture's own guess: scene/openings.ts LOOK_OPENINGS.ground), and what
+/// what the ground outside sends back of the light on it, as an opening shows it, and what
 /// a floor with no box of its own does
 const GROUND: f64 = 0.5;
 const BARE: f64 = 0.25;
@@ -70,7 +70,7 @@ const NEAR: f64 = 12.0;
 const MOST: usize = 24;
 /// a new field's first steps, a whole sweep each · steps to a round once the lamps have changed, and how many such rounds
 const FIRST: usize = 4;
-/// HOW LIGHT A PLACE IS: how far it is smoothed (m; scene/placePlan.ts PLACE.reach), the solve's over-relaxation (the best for a pull this hard over cells a metre wide: the
+/// HOW LIGHT A PLACE IS: how far it is smoothed, the solve's over-relaxation (the best for a pull this hard over cells a metre wide: the
 /// picture's 1.93 is its 0.4 m cells'), its rounds a step (a change is nine tenths in within one) and in each of a new field's first; no reading under
 /// this is told from the dark, and what a metre that holds none counts for
 const REACH: f64 = 8.0;

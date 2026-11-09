@@ -4,7 +4,7 @@ use crate::game::Game;
 use crate::js::{self, JsMap, JsSet};
 use alloc::{format, string::String};
 
-/// A paint's record with only the words it means: a finish needs its roughness, a metal flag goes with one, 'plain' is no word. (stuff.ts record)
+/// A paint's record with only the words it means: a finish needs its roughness, a metal flag goes with one, 'plain' is no word.
 fn record(name: &str, finish: Option<crate::scene_stuff::Finish>, stuff: Option<crate::scene_stuff::BoxStuff>, does: Option<crate::scene_materials::DoesWord>) -> crate::scene_stuff::Paint {
     let (rough, metal) = match finish {
         Some(f) if f.rough.is_some() => (f.rough, if f.metal == Some(true) { Some(true) } else { None }),
@@ -19,7 +19,7 @@ fn record(name: &str, finish: Option<crate::scene_stuff::Finish>, stuff: Option<
     }
 }
 
-/// What a paint is, in words, for the refusal's message. (stuff.ts fin)
+/// What a paint is, in words, for the refusal's message.
 fn fin(p: &crate::scene_stuff::Paint) -> String {
     let stuff = match p.stuff {
         Some(s) => s.as_str(),
@@ -36,7 +36,7 @@ fn fin(p: &crate::scene_stuff::Paint) -> String {
     format!("{}{}{}", stuff, finish, does)
 }
 
-/// The paint this array is, if anybody said so. (stuff.ts paintOf)
+/// The paint this array is, if anybody said so.
 pub fn paint_of(g: &crate::game::Game, albedo: Option<&[f64]>) -> Option<crate::scene_stuff::Paint> {
     match albedo {
         Some(row) => seam_paints_get(g, row),
@@ -44,7 +44,7 @@ pub fn paint_of(g: &crate::game::Game, albedo: Option<&[f64]>) -> Option<crate::
     }
 }
 
-/// The words a box made with `albedo` carries: the maker's ('plain' = nothing, said over a paint that says something), else the paint's. (stuff.ts wordFor)
+/// The words a box made with `albedo` carries: the maker's ('plain' = nothing, said over a paint that says something), else the paint's.
 pub fn word_for(g: &crate::game::Game, albedo: Option<&[f64]>, said: Option<crate::scene_stuff::BoxStuff>, does: Option<crate::scene_materials::DoesWord>) -> crate::scene_stuff::WordFor {
     let p = paint_of(g, albedo);
     let p_stuff = p.as_ref().and_then(|p| p.stuff);
@@ -57,8 +57,6 @@ pub fn word_for(g: &crate::game::Game, albedo: Option<&[f64]>, said: Option<crat
     }
 }
 
-/// PAINTS.get(row) (stuff.ts:110, 141, 196): skeleton 5.1's table, keyed by the colour's bits (review 5's ruling: the TypeScript keys by the ARRAY's identity, so
-/// two paints of one colour are one here, and a colour written out as numbers that happens to equal a paint's is that paint).
 fn seam_paints_get(g: &Game, row: &[f64]) -> Option<Paint> {
     if row.len() < 3 { return None; }
     g.m.scene_stuff.paints.get([row[0].to_bits(), row[1].to_bits(), row[2].to_bits()]).cloned()

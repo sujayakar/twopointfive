@@ -3,7 +3,7 @@
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// what the nearest charge of his own does when set off (ownblow.ts ownSet): a door's goes by door_tools_trigger(g, Some(d)), a wall's by wall_charge_blow(g, Some(w), None), its result dropped
+/// what the nearest charge of his own does when set off: a door's goes by door_tools_trigger(g, Some(d)), a wall's by wall_charge_blow(g, Some(w), None), its result dropped
 #[derive(Clone, Debug)]
 pub enum OwnSetGo {
     Door { d: ChargeId },
@@ -30,5 +30,4 @@ impl Default for OwnSet {
     }
 }
 
-/// (src/game/ownblow.ts:33 SAM_BY)
 pub const SAM_BY: &str = "Sam";

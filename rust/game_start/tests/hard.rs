@@ -1,4 +1,4 @@
-//! A MISSION'S ADDRESS NAMES ITS DIFFICULTY, AND A NATIVE START READS IT (`scenario_run::difficulty_of_address`, src/host/standup.ts difficultyOfAddress): `&hard` on a link stands a hard
+//! A MISSION'S ADDRESS NAMES ITS DIFFICULTY, AND A NATIVE START READS IT (`host::lay`): `&hard` on a link stands a hard
 //! game, where a page stands one. Before, every host but a page stood such a link on standard, to the man. Each test holds one rule over three seeds beside a control that differs in the
 //! one word the rule is about.
 use game::difficulty::{difficulty_now, DifficultyNow};

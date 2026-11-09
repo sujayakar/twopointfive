@@ -18,7 +18,7 @@ export interface Verdict { won: boolean; word: string; why: string; secs: number
 /** what a measuring take notes: each man by what he is at and whether he carries a light, the reaction force, the alarm, the run's saves, the mission's stage */
 export interface Tally { men: [state: string, lit: 0 | 1][]; qrf: string; escalation: number; autosaves: number; manual: number; loads: number; stage: string; alarm: boolean; alerts: number; /** a room clear is staged */ clear: boolean; /** the kind of mission its verdict is for */ kind: string | null; /** the mission's own counts */ stats: Record<string, number | boolean | string | null> }
 /** what a start is handed beside the level (rust/game_start/src/handed.rs PARTS) */
-export interface Start { level: Uint8Array; words: string; mannequin: Uint8Array; mannequinBin: Uint8Array; cast: Uint8Array; castLook: Uint8Array; seed: number; seats?: number; /** what a tape of the run says it is of */ named?: { level: string; build: string } }
+export interface Start { level: Uint8Array; words: string; mannequin: Uint8Array; mannequinBin: Uint8Array; cast: Uint8Array; castLook: Uint8Array; seed: number; seats?: number; /** what the machine keeps, as its one text (empty: nothing) */ kept?: string; /** what a tape of the run says it is of */ named?: { level: string; build: string } }
 /** the parts of a start that are the build's own, as a tape holds a walk's to its */
 export const partsOf = (o: Start): PartOf[] => (['mannequin', 'mannequinBin', 'cast', 'castLook'] as const).map(name => ({ name, length: o[name].length, hash: hashOf(o[name]) }));
 
@@ -91,12 +91,12 @@ export class DrawGame {
     this.lost = null; this.h = h; this.between = 1; const label = this.answer(); this.said = null; this.done++; this.draw(); return label;
   }
 
-  /** A GAME, from its start; what has been commanded by now is done to it before it is made */
+  /** A GAME, from its start, on what the machine keeps (`o.kept`: rust/game_start/src/host/kept.rs). What has been commanded by now is done to it at its first step */
   start(o: Start): void {
     this.lost = null;
-    const said = this.commands.take().slice(), seats = o.seats ?? 1;
-    this.tape?.start({ build: o.named?.build ?? '', levelName: o.named?.level ?? '', level: o.level, words: o.words, parts: partsOf(o), seed: o.seed, seats, flags: DRESS, commands: said });
-    const parts = [o.level, this.enc.encode(o.words), o.mannequin, o.mannequinBin, o.cast, o.castLook, said], n = 4 + parts.reduce((s, p) => s + 4 + p.length, 0);
+    const kept = o.kept ?? '', seats = o.seats ?? 1;
+    this.tape?.start({ build: o.named?.build ?? '', levelName: o.named?.level ?? '', level: o.level, words: o.words, parts: partsOf(o), seed: o.seed, seats, flags: DRESS, kept });
+    const parts = [o.level, this.enc.encode(o.words), o.mannequin, o.mannequinBin, o.cast, o.castLook, this.enc.encode(kept)], n = 4 + parts.reduce((s, p) => s + 4 + p.length, 0);
     const at = this.X.face_alloc(n) >>> 0, b = new Uint8Array(this.memory.buffer, at, n), d = new DataView(this.memory.buffer, at, n); let q = 4;
     d.setUint32(0, parts.length, true);
     for (const p of parts) { d.setUint32(q, p.length, true); b.set(p, q + 4); q += 4 + p.length; }
@@ -265,14 +265,14 @@ export class DrawGame {
     for (let at = 0; at < n;) { const w = d.getUint32(at, true), len = w & 0x7fffffff; out.push({ name: this.dec.decode(new Uint8Array(b, at + 4, len)), yes: w >>> 31 === 1, value: d.getFloat64(at + 4 + len, true) }); at += 12 + len; }
     return out;
   }
-  /** the panel's rows of the game's numbers, as the module lists them (game_run shown.rs) */
+  /** the panel's rows of the game's numbers, as the module lists them (game_start host/shown.rs) */
   shown(): ShownRow[] {
     this.X.face_shown(); const p = this.X.face_out_ptr() >>> 0, n = this.X.face_out_len() >>> 0, b = this.memory.buffer.slice(p, p + n), d = new DataView(b), out: ShownRow[] = []; let at = 0;
     const text = (): string => { const len = d.getUint32(at, true), t = this.dec.decode(new Uint8Array(b, at + 4, len)); at += 4 + len; return t; }, num = (): number => { const v = d.getFloat64(at, true); at += 8; return v; };
     while (at < n) { const name = text(), label = text(), section = text(), title = text(), lo = num(), hi = num(), step = num(), scale = num(), def = num(), bits = d.getUint32(at, true); at += 4; out.push({ name, label, section, title, lo, hi, step, scale, def, kept: (bits & 1) !== 0, adv: (bits & 2) !== 0 }); }
     return out;
   }
-  /** the panel's actions, as the module lists them (game_run actions.rs) */
+  /** the panel's actions, as the module lists them (game_start host/actions.rs) */
   actions(): ActionRow[] {
     this.X.face_actions(this.h); const p = this.X.face_out_ptr() >>> 0, n = this.X.face_out_len() >>> 0, b = this.memory.buffer.slice(p, p + n), d = new DataView(b), out: ActionRow[] = []; let at = 0;
     const u = (): number => { const v = d.getUint32(at, true); at += 4; return v; }, text = (): string => { const len = u(), t = this.dec.decode(new Uint8Array(b, at, len)); at += len; return t; }, num = (): number => { const v = d.getFloat64(at, true); at += 8; return v; }, words = (): string[] => { const k = u(), w: string[] = []; for (let i = 0; i < k; i++) w.push(text()); return w; };
@@ -291,6 +291,9 @@ export class DrawGame {
   turn(name: string, value: number): void { this.turned.set(name, value); this.commands.knob(name, value); }
   turnAgain(): void { for (const [name, value] of this.turned) this.commands.knob(name, value); for (const [name, word] of this.picked) this.commands.act(name, 0, word); }
   private picked = new Map<string, string>();
+  /** a row or a pick a start's record laid: noted, and turned again as one of the panel's */
+  keptTurn(name: string, value: number): void { this.turned.set(name, value); }
+  keptPick(name: string, word: string): void { this.picked.set(name, word); }
   /** what the panel and this machine have turned and picked, by name: what a play record says */
   get turnedNow(): Record<string, number | string> { return { ...Object.fromEntries(this.turned), ...Object.fromEntries(this.picked) }; }
   /** one of the panel's picks, for the visit: a restart or a load stands a game that has another, and this is picked again */

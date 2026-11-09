@@ -8,7 +8,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{string::String, vec, vec::Vec};
 
-/// the script runner.ts lent for the frame (guards.ts:2144), as the run left it, put back on his row (conventions 4; see morale's b_01).
+/// the script runner.ts lent for the frame, as the run left it, put back on his row (conventions 4; see morale's b_01).
 pub(super) fn runner_script_ran(g: &mut crate::game::Game, gd: GuardId, ran: Option<crate::game::GuardScript>) {
     if let (Some(ran), Some(r)) = (ran, g.m.runner.state_of.get_mut(gd)) { r.script = ran; }
 }
@@ -22,12 +22,12 @@ macro_rules! run {
 
 // ---- the lines
 
-/// one kind's row of the skeleton's table   (runner.ts LINES)
+/// one kind's row of the skeleton's table
 fn lines_of(kind: LineKind) -> LINESValue {
     lines().get(String::from(kind.as_str())).unwrap().clone()
 }
 
-/// one line of a kind from this man, shouted, never on the net   (runner.ts bark)
+/// one line of a kind from this man, shouted, never on the net
 fn bark(g: &mut crate::game::Game, gd: GuardId, kind: crate::runner::LineKind) {
     let l = lines_of(kind);
     let extra = if g.gd[gd].team != crate::teams::Team::Guard { crate::words::w(g, &l.they, &l.he) } else { l.he };
@@ -38,52 +38,52 @@ fn bark(g: &mut crate::game::Game, gd: GuardId, kind: crate::runner::LineKind) {
     crate::game::game_say(g, gd, &pool[at], Some(false), Some(true));
 }
 
-/// distance on the floor   (runner.ts flat)
+/// distance on the floor
 fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 
-/// the chest bone, or where it would be   (runner.ts chestOf)
+/// the chest bone, or where it would be
 fn chest_of(g: &crate::game::Game, c_2: CharId) -> V3 {
     if let Some(b) = g.ch[c_2].bones.get(crate::character::Bone::Chest) { return *b; }
     let p = g.ch[c_2].pos;
     [p[0], p[1] + 1.2, p[2]]
 }
 
-/// the head bone, or where it would be   (runner.ts headOf)
+/// the head bone, or where it would be
 fn head_of(g: &crate::game::Game, c_2: CharId) -> V3 {
     if let Some(b) = g.ch[c_2].bones.get(crate::character::Bone::Head) { return *b; }
     let p = g.ch[c_2].pos;
     [p[0], p[1] + 1.6, p[2]]
 }
 
-/// a living defender or a man of the night staff: never a civilian, an operative, a body   (runner.ts ours)
+/// a living defender or a man of the night staff: never a civilian, an operative, a body
 fn ours(g: &crate::game::Game, gd: GuardId) -> bool {
     let o = &g.gd[gd];
     !g.cond[o.ch].down && o.civ.is_none() && (o.team == crate::teams::Team::Hostile || o.team == crate::teams::Team::Guard)
 }
 
-/// nobody's to take: the hostage rescue's cast and the response team   (runner.ts spoken)
+/// nobody's to take: the men a mission leads itself and the response team
 fn spoken(g: &crate::game::Game, gd: GuardId) -> bool {
-    (g.rescue.active && g.rescue.hostiles.contains(&gd)) || crate::qrf::qrf_owns(g, gd)
+    g.staged.leads(gd) || crate::qrf::qrf_owns(g, gd)
 }
 
-/// may the sequence start on him this frame   (runner.ts reacts)
+/// may the sequence start on him this frame
 fn reacts(g: &crate::game::Game, gd: GuardId) -> bool {
     if !g.ai_enabled || g.gd[gd].held.is_some() { return false; }
     g.gd[gd].script.is_none() || g.fight.defs.iter().any(|d| g.tab.roomfight_def[*d].gd == gd)
 }
 
-/// a living armed man of his own side, on his feet: somebody to run to, somebody to tell   (runner.ts mateOf)
+/// a living armed man of his own side, on his feet: somebody to run to, somebody to tell
 fn mate_of(g: &crate::game::Game, gd: GuardId, o: GuardId) -> bool {
     o != gd && ours(g, o) && g.gd[o].team == g.gd[gd].team && g.gd[o].held.is_none() && !g.m.runner.state_of.has(o)
 }
 
-/// an enemy as a run reckons with him   (runner.ts foeAt)
+/// an enemy as a run reckons with him
 fn foe_at(g: &crate::game::Game, c_2: CharId, who: crate::picture::Who) -> crate::runner::Foe {
     let eye = head_of(g, c_2);
     Foe { pos: g.ch[c_2].pos, eye, who }
 }
 
-/// his enemies on the floor: the player and every living man of a side hostile to his   (runner.ts foes)
+/// his enemies on the floor: the player and every living man of a side hostile to his
 pub fn foes(g: &crate::game::Game, gd: GuardId) -> Vec<crate::runner::Foe> {
     let mut out = Vec::new();
     let team = g.gd[gd].team;
@@ -104,7 +104,7 @@ pub fn foes(g: &crate::game::Game, gd: GuardId) -> Vec<crate::runner::Foe> {
     out
 }
 
-/// the enemies a run is planned round: the men he knows of, each where he believes him to be   (runner.ts known)
+/// the enemies a run is planned round: the men he knows of, each where he believes him to be
 fn known(g: &mut crate::game::Game, gd: GuardId) -> Vec<crate::runner::Foe> {
     let mut out = Vec::new();
     let (forget, eye_h) = (g.k.picture.forget_secs, g.k.picture.eye_h);
@@ -114,7 +114,7 @@ fn known(g: &mut crate::game::Game, gd: GuardId) -> Vec<crate::runner::Foe> {
     out
 }
 
-/// the nearest enemy plainly in his eyes inside `closeM`; nobody for a man with magnesium in his eyes   (runner.ts closeFoe)
+/// the nearest enemy plainly in his eyes inside `closeM`; nobody for a man with magnesium in his eyes
 fn close_foe(g: &mut crate::game::Game, gd: GuardId) -> Option<CharId> {
     if crate::control::man::blind(g, gd) { return None; }
     let mut best: Option<CharId> = None;
@@ -135,7 +135,7 @@ fn close_foe(g: &mut crate::game::Game, gd: GuardId) -> Option<CharId> {
         let ot = g.gd[o].team;
         if crate::condition::down(g, g.gd[o].ch) || !crate::teams::is_hostile(g, team, ot) { continue; }
         let c = g.gd[o].ch;
-        let vis = crate::guards::can_see_char(g, gd, c, false);
+        let vis = crate::guards::can_see_char(g, gd, c);
         if vis.visible && vis.dist <= bd && crate::guards::sight_gain_on(g, gd, o, vis.dist) > 0.25 {
             best = Some(g.gd[o].ch);
             bd = vis.dist;
@@ -144,7 +144,7 @@ fn close_foe(g: &mut crate::game::Game, gd: GuardId) -> Option<CharId> {
     best
 }
 
-/// is he the man: broken, alone, dry, and nobody else's   (runner.ts ripe)
+/// is he the man: broken, alone, dry, and nobody else's
 fn ripe(g: &crate::game::Game, gd: GuardId) -> bool {
     if !ours(g, gd) || spoken(g, gd) || !reacts(g, gd) || crate::morale::rung_of(g, gd) != 2.0 { return false; }
     let mo = match crate::morale::morale_of(g, gd) { Some(x) if x.alone => x, _ => return false };
@@ -154,13 +154,13 @@ fn ripe(g: &crate::game::Game, gd: GuardId) -> bool {
     crate::weapons::firearm_rounds_ready(g, w) == 0.0
 }
 
-/// or the man his leader's fall left: broken, green, and he saw it   (runner.ts lost)
+/// or the man his leader's fall left: broken, green, and he saw it
 fn lost(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if !ours(g, gd) || spoken(g, gd) || !reacts(g, gd) || crate::morale::rung_of(g, gd) != 2.0 { return false; }
     crate::morale::morale_of(g, gd).map_or(false, |x| x.green) && crate::morale::saw_leader_fall(g, gd).is_finite()
 }
 
-/// the shout: from here his body is this file's, and morale.ts's sequence is over   (runner.ts start)
+/// the shout: from here his body is this file's, and morale.ts's sequence is over
 fn start(g: &mut crate::game::Game, gd: GuardId, from: V3) {
     let c = g.gd[gd].ch;
     let at = v3::copy(g.ch[c].pos);
@@ -180,7 +180,7 @@ fn start(g: &mut crate::game::Game, gd: GuardId, from: V3) {
     g.stats.runner.said += 1;
 }
 
-/// start the sequence on this man directly. False = he is not a man of this file's, or it already has him   (runner.ts runnerBreak)
+/// start the sequence on this man directly. False = he is not a man of this file's, or it already has him
 pub fn runner_break(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if !ours(g, gd) || spoken(g, gd) || !reacts(g, gd) || g.m.runner.state_of.has(gd) { return false; }
     let pos = g.ch[g.gd[gd].ch].pos;
@@ -197,13 +197,12 @@ pub fn runner_break(g: &mut crate::game::Game, gd: GuardId) -> bool {
     true
 }
 
-/// the rectangle round every room of the level's structure [x0, x1, z0, z1], worked out once a level   (runner.ts rectOf)
+/// the rectangle round every room of the level's structure [x0, x1, z0, z1], worked out once a level
 fn rect_of(g: &mut crate::game::Game) -> Option<[f64; 4]> {
-    let none = match g.level.scenarios.as_ref().and_then(|s| s.room_clear.as_ref()) { Some(s) => s.rooms.is_empty(), None => true };
-    if none { return None; }
+    if g.level.rooms().is_empty() { return None; }
     if let Some(r) = g.m.runner.rects { return Some(r); }
     let mut r = [m::INF, -m::INF, m::INF, -m::INF];
-    for room in &g.level.scenarios.as_ref().unwrap().room_clear.as_ref().unwrap().rooms {
+    for room in g.level.rooms() {
         r[0] = m::min(r[0], room.bounds.x0);
         r[1] = m::max(r[1], room.bounds.x1);
         r[2] = m::min(r[2], room.bounds.z0);
@@ -213,7 +212,7 @@ fn rect_of(g: &mut crate::game::Game) -> Option<[f64; 4]> {
     Some(r)
 }
 
-/// out of the building: outside the rooms' rectangle by `clearM` under open sky; with no structure, the rim of the walkable map   (runner.ts outside)
+/// out of the building: outside the rooms' rectangle by `clearM` under open sky; with no structure, the rim of the walkable map
 fn outside(g: &mut crate::game::Game, p: V3) -> bool {
     let (clear, edge) = (g.k.runner.clear_m, g.k.runner.edge_m);
     let r = rect_of(g);
@@ -232,19 +231,19 @@ fn outside(g: &mut crate::game::Game, p: V3) -> bool {
     roofed < 3
 }
 
-/// has this enemy a line to a man at `p`   (runner.ts lineTo)
+/// has this enemy a line to a man at `p`
 fn line_to(g: &mut crate::game::Game, e: crate::runner::Foe, p: V3) -> bool {
     !crate::scene_collision::segment_blocked(g, e.eye, [p[0], p[1] + 1.2, p[2]], None, None, None)
 }
 
-/// the nearest enemy to a point   (runner.ts flood's near)
+/// the nearest enemy to a point
 fn near(e: &[Foe], p: V3) -> f64 {
     let mut d = m::INF;
     for x in e { d = m::min(d, flat(x.pos, p)); }
     d
 }
 
-/// the floor he can reach, flooded once from where he stands: the nearest outside, for choice unseen, and the farthest corner   (runner.ts flood)
+/// the floor he can reach, flooded once from where he stands: the nearest outside, for choice unseen, and the farthest corner
 fn flood(g: &mut crate::game::Game, gd: GuardId, e: &[crate::runner::Foe], ask: Option<f64>, see: Option<&[crate::runner::Foe]>) -> crate::runner::Flood {
     let ask = ask.unwrap_or(g.k.runner.ask_cells);
     let see = see.unwrap_or(e);
@@ -320,7 +319,7 @@ fn flood(g: &mut crate::game::Game, gd: GuardId, e: &[crate::runner::Foe], ask: 
     Flood { out: out.or(seen_out), hidden: out.is_some(), corner, shied }
 }
 
-/// his way to `goal`, with every cell inside `shyM` of an enemy made dear, doors threaded   (runner.ts route)
+/// his way to `goal`, with every cell inside `shyM` of an enemy made dear, doors threaded
 fn route(g: &mut crate::game::Game, gd: GuardId, goal: V3, e: &[crate::runner::Foe]) -> bool {
     let shy = g.k.runner.shy_m;
     let cs = g.col.nav.cell;
@@ -362,7 +361,7 @@ fn route(g: &mut crate::game::Game, gd: GuardId, goal: V3, e: &[crate::runner::F
     p.map_or(false, |p| !p.is_empty())
 }
 
-/// a path's length on the floor   (runner.ts pathLen)
+/// a path's length on the floor
 fn path_len(from: V3, path: &[V3]) -> f64 {
     let mut l = 0.0;
     let mut a = from;
@@ -373,7 +372,7 @@ fn path_len(from: V3, path: &[V3]) -> f64 {
     l
 }
 
-/// the mate he runs to: the nearest by the floor, inside `mateM`, of the four nearest by air   (runner.ts pickMate)
+/// the mate he runs to: the nearest by the floor, inside `mateM`, of the four nearest by air
 fn pick_mate(g: &mut crate::game::Game, gd: GuardId) -> Option<GuardId> {
     let pos = g.ch[g.gd[gd].ch].pos;
     let mate_m = g.k.runner.mate_m;
@@ -403,7 +402,7 @@ fn pick_mate(g: &mut crate::game::Game, gd: GuardId) -> Option<GuardId> {
     best
 }
 
-/// is there an enemy in the `aheadM` of his way in front of him, nearer to it than to him   (runner.ts wayBarred)
+/// is there an enemy in the `aheadM` of his way in front of him, nearer to it than to him
 fn way_barred(g: &crate::game::Game, gd: GuardId, e: &[crate::runner::Foe]) -> bool {
     if e.is_empty() { return false; }
     let (shy, ahead) = (g.k.runner.shy_m, g.k.runner.ahead_m);
@@ -430,7 +429,7 @@ fn way_barred(g: &crate::game::Game, gd: GuardId, e: &[crate::runner::Foe]) -> b
     false
 }
 
-/// the drop: the weapon on the floor, a calm man on the books, and off he goes   (runner.ts drop)
+/// the drop: the weapon on the floor, a calm man on the books, and off he goes
 fn drop(g: &mut crate::game::Game, gd: GuardId) {
     let c = g.gd[gd].ch;
     let def = g.fa[g.gd[gd].weapon].def;
@@ -481,10 +480,10 @@ fn drop(g: &mut crate::game::Game, gd: GuardId) {
     }
 }
 
-/// a flood's answer as plan_out reads it   (runner.ts:288 F)
+/// a flood's answer as plan_out reads it
 fn plan_f(f: &Flood) -> PlanOutF { PlanOutF { out: f.out, shied: f.shied } }
 
-/// out of the building by the nearest floor that is outside; no such floor: the corner   (runner.ts toOut)
+/// out of the building by the nearest floor that is outside; no such floor: the corner
 fn to_out(g: &mut crate::game::Game, gd: GuardId, e: &[crate::runner::Foe]) {
     let f = flood(g, gd, e, None, None);
     {
@@ -500,7 +499,7 @@ fn to_out(g: &mut crate::game::Game, gd: GuardId, e: &[crate::runner::Foe]) {
     }
 }
 
-/// to a corner, low   (runner.ts toLow)
+/// to a corner, low
 fn to_low(g: &mut crate::game::Game, gd: GuardId, at: V3, e: &[crate::runner::Foe]) {
     {
         let r = run!(g, gd);
@@ -513,7 +512,7 @@ fn to_low(g: &mut crate::game::Game, gd: GuardId, at: V3, e: &[crate::runner::Fo
     g.stats.runner.low += 1;
 }
 
-/// a way out, planned: round the enemies he knows of, else the nearest the floor itself gives him. True = he is on it   (runner.ts planOut)
+/// a way out, planned: round the enemies he knows of, else the nearest the floor itself gives him. True = he is on it
 fn plan_out(g: &mut crate::game::Game, gd: GuardId, e: &[crate::runner::Foe], f: crate::runner::PlanOutF) -> bool {
     if let Some(out) = f.out {
         if route(g, gd, out, e) {
@@ -553,7 +552,7 @@ fn plan_out(g: &mut crate::game::Game, gd: GuardId, e: &[crate::runner::Foe], f:
     false
 }
 
-/// the mates are told where the team is: every mate inside `toldM` of him   (runner.ts tell)
+/// the mates are told where the team is: every mate inside `toldM` of him
 fn tell(g: &mut crate::game::Game, gd: GuardId) {
     let (told_m, tell_beat, tell_aware) = (g.k.runner.told_m, g.k.runner.tell_beat, g.k.runner.tell_aware);
     let from = run!(g, gd).from;
@@ -575,7 +574,7 @@ fn tell(g: &mut crate::game::Game, gd: GuardId) {
     }
 }
 
-/// what this file's script holds him to this frame   (runner.ts pose)
+/// what this file's script holds him to this frame
 fn pose(g: &mut crate::game::Game, gd: GuardId) {
     let pos = g.ch[g.gd[gd].ch].pos;
     let chase = g.tune.guard_chase;
@@ -596,7 +595,7 @@ fn pose(g: &mut crate::game::Game, gd: GuardId) {
     if fled { r.script.light = Some(false); }
 }
 
-/// once a frame, after morale.ts's tick: the ripe men are asked for the enemy in their eyes, every man in a run takes a step   (runner.ts runnerTick)
+/// once a frame, after morale.ts's tick: the ripe men are asked for the enemy in their eyes, every man in a run takes a step
 pub fn runner_tick(g: &mut crate::game::Game, dt: f64) {
     let mut i = g.guards.len();
     while i > 0 {   // (backwards: a man gone leaves the list under it)
@@ -615,7 +614,7 @@ pub fn runner_tick(g: &mut crate::game::Game, dt: f64) {
     }
 }
 
-/// one frame of a man's run   (runner.ts step)
+/// one frame of a man's run
 fn step(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     let c = g.gd[gd].ch;
     crate::morale::morale_release(g, gd);
@@ -785,7 +784,7 @@ fn step(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     drive(g, gd);
 }
 
-/// out and unseen: a spawned unit leaves the world; a man of the level's own roster stays low where he is   (runner.ts gone)
+/// out and unseen: a spawned unit leaves the world; a man of the level's own roster stays low where he is
 fn gone(g: &mut crate::game::Game, gd: GuardId) {
     g.stats.runner.gone += 1;
     let drilled = match crate::guards::engagement_of(g) { Some(x) => !x.done && x.hostiles.contains(&gd), None => false };
@@ -806,7 +805,7 @@ fn gone(g: &mut crate::game::Game, gd: GuardId) {
     drive(g, gd);
 }
 
-/// this file's script has him this frame   (runner.ts drive)
+/// this file's script has him this frame
 fn drive(g: &mut crate::game::Game, gd: GuardId) {
     pose(g, gd);
     let now = g.time;
@@ -824,13 +823,13 @@ pub(super) fn runner_propose(g: &crate::game::Game, gd: GuardId) -> Option<crate
     }
 }
 
-/// and his sidearm with it   (runner.ts runnerBare)
+/// and his sidearm with it
 pub fn runner_bare(g: &crate::game::Game, gd: GuardId) -> bool { g.m.runner.state_of.get(gd).map_or(false, |r| r.bare) }
 
-/// counts for nothing, from the drop   (runner.ts runnerNobody)
+/// counts for nothing, from the drop
 pub fn runner_nobody(g: &crate::game::Game, gd: GuardId) -> bool { g.gd[gd].fled }
 
-/// speaks for nobody, from the shout   (runner.ts runnerMute)
+/// speaks for nobody, from the shout
 pub fn runner_mute(g: &crate::game::Game, gd: GuardId) -> bool { let rule = crate::owner::by::RUNNER; crate::owner::has(g, gd, rule) }
 
 #[cfg(test)]

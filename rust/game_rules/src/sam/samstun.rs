@@ -5,7 +5,7 @@ use crate::ids::*;
 use crate::m;
 use crate::v3::{self, Quat, V3};
 
-/// Can a stun show on the player at all: up, no puppet's strings.   (samstun.ts live)
+/// Can a stun show on the player at all: up, no puppet's strings.
 fn live(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { live_of(g, seat.player) }
 /// …of one man
 fn live_of(g: &crate::game::Game, p: PlayerId) -> bool {
@@ -25,7 +25,7 @@ pub fn stagger_player(g: &mut crate::game::Game, secs: f64, dir: V3) {
     g.stats.samstun.staggered += 1;
 }
 
-/// What a fold takes out of his hands: a can wound up goes back on the belt, a quick throw is dropped, every sustained verb stops.   (samstun.ts foldCancels)
+/// What a fold takes out of his hands: a can wound up goes back on the belt, a quick throw is dropped, every sustained verb stops.
 pub fn fold_cancels(g: &mut crate::game::Game) {
     let p = g.player;
     if let Some(k) = g.pl[p].pending_throw.as_ref().map(|t| t.kind) {
@@ -53,7 +53,7 @@ pub fn dazzle_player(g: &mut crate::game::Game, secs: f64, at: V3) {
     g.stats.samstun.dazzled += 1;
 }
 
-/// Is he folded right now (rooted, gun down, no round)? `now`: the clock asked of.   (samstun.ts samStaggered)
+/// Is he folded right now (rooted, gun down, no round)? `now`: the clock asked of.
 pub fn sam_staggered(g: &crate::game::Game, seat: &crate::seats::SeatRef, now: Option<f64>) -> bool {
     let now = now.unwrap_or(g.time);
     if !live(g, &crate::seats::here(g)) { return false; }
@@ -61,7 +61,7 @@ pub fn sam_staggered(g: &crate::game::Game, seat: &crate::seats::SeatRef, now: O
     now < g.cond[g.pl[p].ch].fold_until
 }
 
-/// How blind he is right now: 1 for the body of a dazzle, easing to 0 over its last `fade` seconds.   (samstun.ts samBlind)
+/// How blind he is right now: 1 for the body of a dazzle, easing to 0 over its last `fade` seconds.
 pub(super) fn sam_blind(g: &crate::game::Game, seat: &crate::seats::SeatRef, now: Option<f64>) -> f64 { man_blind(g, seat.player, now) }
 /// …of one man
 pub fn man_blind(g: &crate::game::Game, p: PlayerId, now: Option<f64>) -> f64 {
@@ -71,7 +71,7 @@ pub fn man_blind(g: &crate::game::Game, p: PlayerId, now: Option<f64>) -> f64 {
     if left <= 0.0 { 0.0 } else { v3::clamp(left / m::max(0.05, g.k.samstun.fade), 0.0, 1.0) }
 }
 
-/// May his feet move? A dazzle does not root him on the page (SAMSTUN.blindRoots).   (samstun.ts samRooted)
+/// May his feet move? A dazzle does not root him on the page (SAMSTUN.blindRoots).
 pub fn sam_rooted(g: &crate::game::Game, seat: &crate::seats::SeatRef, now: Option<f64>) -> bool {
     sam_staggered(g, seat, now)
 }

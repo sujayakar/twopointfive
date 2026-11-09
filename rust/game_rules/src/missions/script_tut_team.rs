@@ -84,7 +84,7 @@ fn stop_holds(g: &Game, r: DirectorRunId, stop: u16) -> bool {
     }
 }
 
-/// the men of the roadblock on their feet, by name, spawned once (tut-team.script.ts:61 block)
+/// the men of the roadblock on their feet, by name, spawned once
 fn block(g: &mut Game, r: DirectorRunId, b: DirectorLiveBeatId, spawn: bool) -> Result<Vec<crate::director::UnitRef>, String> {
     let mut out = Vec::new();
     for (name, at) in POSTS {
@@ -104,7 +104,7 @@ fn block(g: &mut Game, r: DirectorRunId, b: DirectorLiveBeatId, spawn: bool) -> 
     }
     Ok(out)
 }
-/// the squad's men on their feet (tut-team.script.ts:66 squad)
+/// the squad's men on their feet
 fn squad(g: &mut Game, r: DirectorRunId) -> Vec<crate::director::UnitRef> {
     let mut out = Vec::new();
     for name in SQUAD {
@@ -116,22 +116,20 @@ fn squad(g: &mut Game, r: DirectorRunId) -> Vec<crate::director::UnitRef> {
     }
     out
 }
-/// inside the bunkhouse's own walls (tut-team.script.ts:68 inBunk)
+/// inside the bunkhouse's own walls
 fn in_bunk(g: &Game, r: DirectorRunId, u: &crate::director::UnitRef) -> Result<bool, String> {
     let p = crate::director::director_query_pos_unit(g, r, u)?;
     Ok(p[0] > 29.1 && p[0] < 35.9 && p[2] > 13.6 && p[2] < 19.9)
 }
-/// (tut-team.script.ts:69 inKitchen)
 fn in_kitchen(g: &Game, r: DirectorRunId, u: &crate::director::UnitRef) -> Result<bool, String> {
     let p = crate::director::director_query_pos_unit(g, r, u)?;
     Ok(p[0] > 14.0 && p[0] < 22.0 && p[2] > 4.0 && p[2] < 11.5)
 }
-/// (tut-team.script.ts:70 inYard)
 fn in_yard(g: &Game, r: DirectorRunId, u: &crate::director::UnitRef) -> Result<bool, String> {
     let p = crate::director::director_query_pos_unit(g, r, u)?;
     Ok(p[0] > YARD_X0 && p[0] < YARD_X1 && p[2] > YARD_Z0 && p[2] < YARD_Z1)
 }
-/// which index pick(c, a) takes of a list this long: one die (tut-team.script.ts:71 pick)
+/// which index pick(c, a) takes of a list this long: one die
 fn pick(g: &mut Game, r: DirectorRunId, len: usize) -> usize {
     let n = len as f64;
     let roll = crate::director::director_beat_rand(g, r);
@@ -161,7 +159,7 @@ fn speaker(g: &mut Game, r: DirectorRunId) -> Option<crate::director::UnitRef> {
         None => squad(g, r).into_iter().next(),
     }
 }
-/// hold's closure met (tut-team.script.ts:112)
+/// hold's closure met
 fn hold_met(g: &mut Game, r: DirectorRunId) -> Result<bool, String> {
     let door = tut_team_vars(g, r).bunk_door.clone().unwrap();
     if crate::director::director_query_door(g, &door)?.open {
@@ -174,7 +172,7 @@ fn hold_met(g: &mut Game, r: DirectorRunId) -> Result<bool, String> {
     }
     Ok(false)
 }
-/// cook's closure met (tut-team.script.ts:126)
+/// cook's closure met
 fn cook_met(g: &mut Game, r: DirectorRunId) -> Result<bool, String> {
     let (pass, kitchen) = {
         let v = tut_team_vars(g, r);
@@ -191,7 +189,7 @@ fn cook_met(g: &mut Game, r: DirectorRunId) -> Result<bool, String> {
     Ok(false)
 }
 
-/// (levels/tut-team.script.ts: `script(D)`) the define pass: the loadout, the three doors, the response team off, the one program.
+///  the define pass: the loadout, the three doors, the response team off, the one program.
 pub(super) fn tut_team_define(m: &mut crate::director::Manifest) -> Result<crate::script_tut_team::TutTeamVars, String> {
     let rifle = crate::director::manifest_loadout(m, "roadblock", crate::director::LoadoutSpec { team: crate::teams::Team::Hostile, weapon: Some(crate::weapons::WeaponId::Akms), tint: None, tint2: None, light: Some(false), trained: None });
     let yaw = -crate::m::PI / 2.0;
@@ -900,7 +898,7 @@ fn tut_team_harass_helper_step(g: &mut crate::game::Game, r: DirectorRunId, b: D
     }
 }
 
-/// the helper's closure call: a man calls his can (tut-team.script.ts:158)
+/// the helper's closure call: a man calls his can
 fn smoke_call(g: &mut Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::script_tut_team::TutTeamSmokeHelperFrame, i: usize) {
     if let Some(u) = &f.by[i] {
         if crate::director::director_query_alive(g, r, u) {
@@ -909,7 +907,7 @@ fn smoke_call(g: &mut Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::
         }
     }
 }
-/// the helper's closure toss: his can leaves his hand (tut-team.script.ts:159)
+/// the helper's closure toss: his can leaves his hand
 fn smoke_toss(g: &mut Game, r: DirectorRunId, b: DirectorLiveBeatId, f: &crate::script_tut_team::TutTeamSmokeHelperFrame, i: usize) -> Result<(), String> {
     if let Some(u) = &f.by[i] {
         if crate::director::director_query_alive(g, r, u) {

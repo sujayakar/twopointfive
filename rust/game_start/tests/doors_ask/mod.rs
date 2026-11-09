@@ -609,8 +609,8 @@ impl DoorsAsk for Play {
     fn rescue_t0(&self) -> f64 { self.g.rescue.t0 }
     fn rescue_clock(&self) -> f64 { self.g.rescue.resolve }
     fn rescue_lost(&self) -> Option<bool> { self.g.rescue.result.as_ref().map(|r| r.state == game::rescue::RescueResultState::Lost) }
-    fn rescue_men(&self) -> Vec<GuardId> { self.g.rescue.hostiles.clone() }
-    fn rescue_hostages(&self) -> Vec<GuardId> { self.g.rescue.hostages.clone() }
+    fn rescue_men(&self) -> Vec<GuardId> { self.g.staged.foes.clone() }
+    fn rescue_hostages(&self) -> Vec<GuardId> { self.g.staged.captives.clone() }
     fn rescue_blind(&self) -> f64 { self.g.rescue.blind_rounds }
     fn rescue_quiet_floor(&mut self) { self.g.k.rescue.roamers = 0.0; self.g.k.rescue.door_man = game::knobs::RescueKDoorMan::Inside; }
     fn rescue_on(&mut self, first: f64, second: f64, set: f64) {
@@ -621,8 +621,8 @@ impl DoorsAsk for Play {
     fn fight_notes(&self, name: &str) -> Vec<String> { self.g.fight.log.iter().filter(|n| n.who == name).map(|n| n.what.clone()).collect() }
     fn rescue_aim(&self) -> f64 { self.g.k.rescue.aim_secs }
     fn dazzled_for(&mut self, gd: GuardId, secs: f64) { self.g.cond[self.g.gd[gd].ch].blind_until = self.g.time + secs; }
-    fn room_cleared(&self, id: &str) -> bool { self.g.room_clear.rooms.iter().find(|r| r.def.id == id).is_some_and(|r| r.cleared) }
-    fn room_men(&self, id: &str) -> Vec<GuardId> { self.g.room_clear.rooms.iter().find(|r| r.def.id == id).map_or(Vec::new(), |r| r.defenders.clone()) }
+    fn room_cleared(&self, id: &str) -> bool { self.g.staged.rooms.iter().find(|r| r.def.id == id).is_some_and(|r| r.cleared) }
+    fn room_men(&self, id: &str) -> Vec<GuardId> { self.g.staged.rooms.iter().find(|r| r.def.id == id).map_or(Vec::new(), |r| r.defenders.clone()) }
     fn gun_on(&self, gd: GuardId) -> Option<GuardId> { self.g.fight.ops.iter().map(|&o| &self.g.tab.roomfight_op[o]).find(|o| o.gd == gd).and_then(|o| o.tgt) }
     fn puppet(&mut self, foe: GuardId, at: [f64; 2], yaw: f64) {
         self.pin_man(foe, at, yaw, GuardState::Patrol, 0.0);
@@ -775,7 +775,7 @@ impl DoorsAsk for Play {
         }
         game::game::game_restart(&mut self.g);
     }
-    fn round_from(&mut self, m: GuardId, at: [f64; 3]) { let c = self.g.gd[m].ch; let q = self.g.ch[c].pos; self.g.ch[c].muzzle = [q[0], 1.35, q[2]]; let o = game::combat::FireOpts { spread: Some(0.0), weapon: None, steady: Some(true), blind: None }; game::combat::fire_weapon(&mut self.g, c, at, false, Some(&o)); }
+    fn round_from(&mut self, m: GuardId, at: [f64; 3]) { let c = self.g.gd[m].ch; let q = self.g.ch[c].pos; self.g.ch[c].muzzle = [q[0], 1.35, q[2]]; let o = game::combat::FireOpts { spread: Some(0.0), weapon: None, steady: Some(true), blind: None }; game::combat::fire_weapon(&mut self.g, c, at, Some(&o)); }
     fn sam_down_hits(&self) -> (bool, f64) { let p = &self.g.pl[self.g.player]; (self.g.cond[p.ch].down, p.hits_left) }
     fn down_how(&self, m: GuardId) -> Option<(game::game::DownKind, game::game::DownBy)> { let h = &self.g.gd[m]; Some((h.down_kind?, h.down_by?)) }
     fn rescue_free(&self) -> bool { game::rescue::rescue_mode(&self.g) == game::rescue::RescueMode::Free }
@@ -795,7 +795,7 @@ impl DoorsAsk for Play {
         self.g.ch[c].muzzle = [from[0], 1.35, from[1]];
         let def = self.g.m.weapons.weapons.get(game::weapons::WeaponId::M870).unwrap().clone();
         let o = game::combat::FireOpts { spread: Some(spread), weapon: Some(def), steady: Some(true), blind: None };
-        game::combat::fire_weapon(&mut self.g, c, at, false, Some(&o));
+        game::combat::fire_weapon(&mut self.g, c, at, Some(&o));
     }
     fn shotgun_rule(&mut self) -> (f64, f64, bool, Vec<bool>) {
         let def = self.g.m.weapons.weapons.get(game::weapons::WeaponId::M870).unwrap().clone();

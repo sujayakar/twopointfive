@@ -14,7 +14,7 @@ macro_rules! st {
     };
 }
 
-/// What a new row of `states` holds (doorway.ts stateOf's literal).
+/// What a new row of `states` holds.
 fn fresh() -> St {
     St {
         t: -1e9, held_t: 0.0, pass: -1e9, by: None, spot: None, door: None, side: 1.0, path: None, no_spot: -1e9, round_t: -1e9,
@@ -22,35 +22,35 @@ fn fresh() -> St {
     }
 }
 
-/// A man's row, made if new; the row itself is handed back.   (doorway.ts stateOf)
+/// A man's row, made if new; the row itself is handed back.
 fn state_of<'g>(g: &'g mut crate::game::Game, gd: GuardId) -> &'g mut crate::doorway::St {
     g.m.doorway.states.get_or_insert_with(gd, fresh)
 }
 
-/// Distance on the floor.   (doorway.ts flat)
+/// Distance on the floor.
 fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 
-/// The two sides whose men keep these manners.   (doorway.ts ours)
+/// The two sides whose men keep these manners.
 fn ours(g: &crate::game::Game, gd: GuardId) -> bool {
     let team = g.gd[gd].team;
     team == crate::teams::Team::Operative || team == crate::teams::Team::Hostile
 }
 
-/// `p` in `d`'s frame's own axes.   (doorway.ts rel)
+/// `p` in `d`'s frame's own axes.
 fn rel(g: &crate::game::Game, d: DoorId, p: V3) -> crate::doorway::Rel {
     let f = crate::guards::frame_of(g, d);
     let (x, z) = (p[0] - f.hx, p[2] - f.hz);
     Rel { along: x * f.ux + z * f.uz, perp: x * f.nx + z * f.nz, f }
 }
 
-/// `p` in `d`'s opening: inside the leaf's span, within `half` of the frame line.   (doorway.ts inOpening)
+/// `p` in `d`'s opening: inside the leaf's span, within `half` of the frame line.
 pub fn in_opening(g: &crate::game::Game, d: DoorId, p: V3, half: Option<f64>) -> bool {
     let half = half.unwrap_or(g.k.doormanners.half);
     let r = rel(g, d, p);
     r.along >= -0.05 && r.along <= r.f.w + 0.05 && m::abs(r.perp) <= half
 }
 
-/// `p` where `d`'s leaf swings: inside its arc between its stops, off the opening's own strip.   (doorway.ts inSweep)
+/// `p` where `d`'s leaf swings: inside its arc between its stops, off the opening's own strip.
 fn in_sweep(g: &crate::game::Game, d: DoorId, p: V3) -> bool {
     if crate::doors::door_off(g, d) { return false; }
     let r = rel(g, d, p);
@@ -60,7 +60,7 @@ fn in_sweep(g: &crate::game::Game, d: DoorId, p: V3) -> bool {
     a >= crate::doors::door_min_a(g, d) && a <= crate::doors::door_max_a(g, d) && m::abs(a) > 0.05
 }
 
-/// STAND: is `p` no place to stand about: in some frame's strip, or where its leaf swings.   (doorway.ts doorwayStand)
+/// STAND: is `p` no place to stand about: in some frame's strip, or where its leaf swings.
 pub fn doorway_stand(g: &crate::game::Game, p: V3) -> bool {
     for i in 0..g.doors.list.len() {
         let d = g.doors.list[i];
@@ -70,12 +70,12 @@ pub fn doorway_stand(g: &crate::game::Game, p: V3) -> bool {
     false
 }
 
-/// Not standing open enough to have a lane: on its hinges and latched, or under `laneAjar`.   (doorway.ts:181, 195)
+/// Not standing open enough to have a lane: on its hinges and latched, or under `laneAjar`.
 fn no_lane(g: &mut crate::game::Game, d: DoorId) -> bool {
     !crate::doors::door_off(g, d) && (crate::doors::door_latched(g, d) || m::abs(crate::doors::door_angle(g, d)) < g.k.doormanners.lane_ajar)
 }
 
-/// STAND, the lane: the door standing open whose lane `p` is in.   (doorway.ts doorwayLane)
+/// STAND, the lane: the door standing open whose lane `p` is in.
 pub fn doorway_lane(g: &mut crate::game::Game, p: V3, but: Option<DoorId>) -> Option<DoorId> {
     for i in 0..g.doors.list.len() {
         let d = g.doors.list[i];
@@ -94,7 +94,7 @@ pub fn doorway_lane(g: &mut crate::game::Game, p: V3, but: Option<DoorId>) -> Op
     None
 }
 
-/// STAND, the lane: nav.findPath's `penalty` for a walk an order gives; `None`: no door standing open onto floor the team has not been on.   (doorway.ts doorwayLanePrice)
+/// STAND, the lane: nav.findPath's `penalty` for a walk an order gives; `None`: no door standing open onto floor the team has not been on.
 pub fn doorway_lane_price(g: &mut crate::game::Game, not: Option<&mut dyn FnMut(&mut crate::game::Game, DoorId) -> bool>) -> Option<crate::doorway::DoorwayLanePrice> {
     let mut not = not;
     let mut open: Vec<DoorId> = Vec::new();
@@ -109,7 +109,7 @@ pub fn doorway_lane_price(g: &mut crate::game::Game, not: Option<&mut dyn FnMut(
     Some(DoorwayLanePrice::Lanes { open, memo: JsMap::new() })
 }
 
-/// What a `DoorwayLanePrice` costs at a cell: the function doorwayLanePrice hands back.   (doorway.ts:199)
+/// What a `DoorwayLanePrice` costs at a cell: the function doorwayLanePrice hands back.
 pub fn doorway_lane_price_at(g: &mut crate::game::Game, price: &mut crate::doorway::DoorwayLanePrice, ix: f64, iz: f64) -> f64 {
     let DoorwayLanePrice::Lanes { open, memo } = price;
     let i = crate::Num(crate::scene_collision::nav_grid_idx(g, ix, iz));
@@ -133,7 +133,7 @@ pub fn doorway_lane_price_at(g: &mut crate::game::Game, price: &mut crate::doorw
     v
 }
 
-/// STAND, the lane: the place for a man of the file whose place `p` is in an open door's lane; `None`: in no lane, or no such floor.   (doorway.ts doorwayOffLane)
+/// STAND, the lane: the place for a man of the file whose place `p` is in an open door's lane; `None`: in no lane, or no such floor.
 pub fn doorway_off_lane(g: &mut crate::game::Game, p: V3, from: V3, k: f64, taken: Option<&[V3]>) -> Option<V3> {
     let taken: &[V3] = taken.unwrap_or(&[]);
     let d = doorway_lane(g, p, None)?;
@@ -155,7 +155,7 @@ pub fn doorway_off_lane(g: &mut crate::game::Game, p: V3, from: V3, k: f64, take
     None
 }
 
-/// Is the place at (along, perp) of `d`'s frame behind its open leaf.   (doorway.ts behindLeaf)
+/// Is the place at (along, perp) of `d`'s frame behind its open leaf.
 fn behind_leaf(g: &crate::game::Game, d: DoorId, along: f64, perp: f64) -> bool {
     if crate::doors::door_off(g, d) { return false; }
     let w = g.dr[d].def.width;
@@ -163,7 +163,7 @@ fn behind_leaf(g: &crate::game::Game, d: DoorId, along: f64, perp: f64) -> bool 
     leaf_cuts(w, angle, along, perp)
 }
 
-/// The sum of behindLeaf: does the leaf, a body's breadth past its tip, cut the line from the place to the opening's middle.   (doorway.ts:231-234)
+/// The sum of behindLeaf: does the leaf, a body's breadth past its tip, cut the line from the place to the opening's middle.
 fn leaf_cuts(w: f64, angle: f64, along: f64, perp: f64) -> bool {
     let l = w + 0.35;
     let (lx, lz) = (m::cos(angle) * l, m::sin(angle) * l);
@@ -175,10 +175,10 @@ fn leaf_cuts(w: f64, angle: f64, along: f64, perp: f64) -> bool {
     s > 0.0 && s < 1.0 && t > 0.0 && t < 1.0
 }
 
-/// `leafRound`: does this man go round a leaf standing open across his walk.   (doorway.ts roundsLeaves)
+/// `leafRound`: does this man go round a leaf standing open across his walk.
 pub fn rounds_leaves(g: &crate::game::Game, gd: GuardId) -> bool { g.gd[gd].team == crate::teams::Team::Operative }
 
-/// leafStall: he is walking on the spot by a leaf standing open (or was, less than `leafStallPush` ago): this frame the leaf is his to push.   (doorway.ts leafStalled)
+/// leafStall: he is walking on the spot by a leaf standing open (or was, less than `leafStallPush` ago): this frame the leaf is his to push.
 pub fn leaf_stalled(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if g.gd[gd].team != crate::teams::Team::Operative || crate::condition::down(g, g.gd[gd].ch) { return false; }
     state_of(g, gd);
@@ -216,7 +216,7 @@ pub fn leaf_stalled(g: &mut crate::game::Game, gd: GuardId) -> bool {
     false
 }
 
-/// The first frame his walk goes through within `reach`.   (doorway.ts doorAhead)
+/// The first frame his walk goes through within `reach`.
 fn door_ahead(g: &crate::game::Game, gd: GuardId) -> Option<crate::doorway::DoorAhead> {
     let pos = g.ch[g.gd[gd].ch].pos;
     let reach = g.k.doormanners.reach;
@@ -240,7 +240,7 @@ fn door_ahead(g: &crate::game::Game, gd: GuardId) -> Option<crate::doorway::Door
     None
 }
 
-/// His own side about him, living, other than himself: the men, and Sam with the squad.   (doorway.ts friends)
+/// His own side about him, living, other than himself: the men, and Sam with the squad.
 fn friends(g: &mut crate::game::Game, gd: GuardId) -> Vec<crate::doorway::FriendsItem> {
     let mut out = Vec::new();
     let team = g.gd[gd].team;
@@ -258,7 +258,7 @@ fn friends(g: &mut crate::game::Game, gd: GuardId) -> Vec<crate::doorway::Friend
     out
 }
 
-/// Ease `gd` to `p` over open floor, his feet moved; true = there.   (doorway.ts stepTo)
+/// Ease `gd` to `p` over open floor, his feet moved; true = there.
 fn step_to(g: &mut crate::game::Game, gd: GuardId, p: V3, pace: f64, dt: f64, turn: bool) -> bool {
     let c = g.gd[gd].ch;
     let at = g.ch[c].pos;
@@ -281,7 +281,7 @@ fn step_to(g: &mut crate::game::Game, gd: GuardId, p: V3, pace: f64, dt: f64, tu
     false
 }
 
-/// Is `p` floor nobody has, by `apart`, nor is waiting at.   (doorway.ts spotFree)
+/// Is `p` floor nobody has, by `apart`, nor is waiting at.
 fn spot_free(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, p: V3, apart: f64) -> bool {
     if nav_blocked(g, p[0], p[2]) { return false; }
     if g.gd[gd].team == crate::teams::Team::Operative && !crate::condition::down(g, g.pl[seat.player].ch) && flat(g.ch[g.pl[seat.player].ch].pos, p) < apart { return false; }
@@ -296,7 +296,7 @@ fn spot_free(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, p
     true
 }
 
-/// A place off a jamb of `d` on face `side` for a held man: the nearest he can walk straight to that is free, off every swing and every opening.   (doorway.ts jambSpot)
+/// A place off a jamb of `d` on face `side` for a held man: the nearest he can walk straight to that is free, off every swing and every opening.
 fn jamb_spot(g: &mut crate::game::Game, gd: GuardId, d: DoorId, side: f64) -> Option<V3> {
     let f = crate::guards::frame_of(g, d);
     let pos = g.ch[g.gd[gd].ch].pos;
@@ -324,7 +324,7 @@ fn jamb_spot(g: &mut crate::game::Game, gd: GuardId, d: DoorId, side: f64) -> Op
     best
 }
 
-/// Does `o`'s walk go through `d` within reach: metres of walk to the line and the face he comes from.   (doorway.ts through)
+/// Does `o`'s walk go through `d` within reach: metres of walk to the line and the face he comes from.
 fn through(g: &mut crate::game::Game, o: GuardId, d: DoorId) -> Option<crate::doorway::Through> {
     let reach = g.k.doormanners.reach;
     let (mut a, mut run) = (g.ch[g.gd[o].ch].pos, 0.0);
@@ -342,7 +342,7 @@ fn through(g: &mut crate::game::Game, o: GuardId, d: DoorId) -> Option<crate::do
     None
 }
 
-/// Leave the place off a jamb; `replan` walks him afresh if he had one.   (doorway.ts:330 release)
+/// Leave the place off a jamb; `replan` walks him afresh if he had one.
 fn release(g: &mut crate::game::Game, gd: GuardId, replan: bool) {
     let s = st!(g, gd);
     let was = s.spot.is_some();
@@ -353,25 +353,25 @@ fn release(g: &mut crate::game::Game, gd: GuardId, replan: bool) {
     }
 }
 
-/// Pace by the gap to the man ahead: full at `gap`, none at `gapMin`.   (doorway.ts:343 gapK)
+/// Pace by the gap to the man ahead: full at `gap`, none at `gapMin`.
 fn gap_k(g: &crate::game::Game, d: f64) -> f64 {
     v3::clamp((d - g.k.doormanners.gap_min) / (g.k.doormanners.gap - g.k.doormanners.gap_min), 0.0, 1.0)
 }
 
-/// The mark his order gave him, if any.   (doorway.ts:340, 344 `g.orders.of(x)?.post`)
+/// The mark his order gave him, if any.
 fn order_post(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> Option<V3> {
     let a = crate::orders::squad_orders_of(g, seat, gd)?;
     g.tab.orders_assignment[a].post
 }
 
-/// On the mark his order gave him.   (doorway.ts:344 onOwn)
+/// On the mark his order gave him.
 fn on_own(g: &crate::game::Game, seat: &crate::seats::SeatRef, o: Option<GuardId>) -> bool {
     let Some(o) = o else { return false };
     let Some(post) = order_post(g, seat, o) else { return false };
     flat(g.ch[g.gd[o].ch].pos, post) < g.k.doormanners.own_m
 }
 
-/// PASS: the pace `gd` walks his path at this frame; `None`: this file has his feet.   (doorway.ts doorwayGate)
+/// PASS: the pace `gd` walks his path at this frame; `None`: this file has his feet.
 pub fn doorway_gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64) -> Option<f64> {
     if !ours(g, gd) || crate::condition::down(g, g.gd[gd].ch) || !(speed > 0.0) { return Some(speed); }
     state_of(g, gd);
@@ -592,7 +592,7 @@ const BEFORE_WIDE: f64 = 0.25;
 /// against a leaf: a man's own radius and a little
 const BRUSH_M: f64 = 0.6;
 
-/// FIGHT: a man planted in an open doorway `funnel` seconds steps off the opening. True = this file moved his feet this frame. (doorway.ts offThreshold)
+/// FIGHT: a man planted in an open doorway `funnel` seconds steps off the opening. True = this file moved his feet this frame.
 pub fn off_threshold(g: &mut crate::game::Game, gd: GuardId, aim_at: Option<V3>, dt: f64, need_shot: bool) -> bool {
     if !ours(g, gd) || g.gd[gd].script.is_some() { return false; }
     let aim_at = match aim_at { Some(a) => a, None => return false };
@@ -696,7 +696,7 @@ fn exposed(g: &mut Game, aim_at: V3, p: V3) -> i32 {
     e
 }
 
-/// `p` is in a door's way for a man left standing there: in some frame's own strip, or where a leaf swings. (doorway.ts doorwayInWay)
+/// `p` is in a door's way for a man left standing there: in some frame's own strip, or where a leaf swings.
 pub fn doorway_in_way(g: &crate::game::Game, p: V3) -> bool {
     for i in 0..g.doors.list.len() {
         let d = g.doors.list[i];
@@ -746,7 +746,7 @@ pub fn only_brushes(g: &crate::game::Game, gd: GuardId) -> bool {
     shut && !open   // (an open leaf beside it he moves as ever)
 }
 
-/// Who the PASS gate has `gd` held for this frame: 'Player', a man's callsign, or None when he is not held short of a man. (doorway.ts doorwayHeldBy)
+/// Who the PASS gate has `gd` held for this frame: 'Player', a man's callsign, or None when he is not held short of a man.
 pub fn doorway_held_by(g: &crate::game::Game, gd: GuardId) -> Option<String> {
     let time = g.time;
     match g.m.doorway.states.get(gd) {
@@ -755,7 +755,7 @@ pub fn doorway_held_by(g: &crate::game::Game, gd: GuardId) -> Option<String> {
     }
 }
 
-/// The PASS gate has `gd` held this frame: short of a frame for a man in it, or stepped off to a jamb. (doorway.ts doorGateStopped)
+/// The PASS gate has `gd` held this frame: short of a frame for a man in it, or stepped off to a jamb.
 pub fn door_gate_stopped(g: &crate::game::Game, gd: GuardId) -> bool {
     let time = g.time;
     match g.m.doorway.states.get(gd) {
@@ -765,7 +765,7 @@ pub fn door_gate_stopped(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// The nearest floor to `p`, within `clearM`, that is not `bad`, walkable straight from `p`, never through a frame to its other face, `apart` clear of every
-/// `taken`; of the nearest ring that has any, the spot farthest from the doors by it. (doorway.ts doorwayClearNear)
+/// `taken`; of the nearest ring that has any, the spot farthest from the doors by it.
 pub fn doorway_clear_near(g: &mut crate::game::Game, p: V3, bad: &mut dyn FnMut(&mut crate::game::Game, V3) -> bool, taken: Option<&[V3]>, apart: Option<f64>, face: Option<V3>) -> Option<V3> {
     let taken: &[V3] = taken.unwrap_or(&[]);
     let apart = apart.unwrap_or(g.k.doormanners.apart);

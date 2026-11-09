@@ -12,7 +12,6 @@ pub const ORDER: Row = Row {
     ..Row::new("bigClear", label, issue)
 };
 
-/// doortools.ts:929
 fn label(g: &mut Game, t: &OrderTarget) -> String {
     let men = recipients_of(g, &crate::seats::here(g), t);
     format!("{} and clear", crate::doortools::door_tools_big_word(g, t, &men).as_str())
@@ -37,7 +36,6 @@ fn valid(g: &mut Game, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<St
     crate::doortools::row_stackable(g, t, men)
 }
 
-/// doortools.ts:937
 fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
     let on_word = o.map_or(false, |o| on(o.on_word));
     g.door_tools.big_next = true;

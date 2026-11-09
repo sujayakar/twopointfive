@@ -10,7 +10,7 @@ fn part_bit(i: usize) -> f64 {
     1i32.wrapping_shl(i as u32) as u32 as f64
 }
 
-/// A part's bit by name, 0 where the cast has no such part.   (gltf.ts castGoggles's `bit`)
+/// A part's bit by name, 0 where the cast has no such part.
 fn named_bit(g: &Game, cast: AnimGltfCastInfoId, n: &str) -> f64 {
     match g.tab.anim_gltf_cast_info[cast].parts.iter().position(|p| p == n) {
         Some(i) => part_bit(i),
@@ -18,7 +18,7 @@ fn named_bit(g: &Game, cast: AnimGltfCastInfoId, n: &str) -> f64 {
     }
 }
 
-/// THE GOGGLES RULE: `boxes` = the rig's own box goggles are drawn, so neither mesh pair; else the mesh pair flipped up on the mount.   (gltf.ts castGoggles)
+/// THE GOGGLES RULE: `boxes` = the rig's own box goggles are drawn, so neither mesh pair; else the mesh pair flipped up on the mount.
 pub fn cast_goggles(g: &mut crate::game::Game, cast: AnimGltfCastInfoId, mask: f64, boxes: bool) -> f64 {
     let nb = match g.m.anim_gltf.nvg_bits.get(cast).copied() {
         Some(nb) => nb,
@@ -37,7 +37,7 @@ pub fn cast_goggles(g: &mut crate::game::Game, cast: AnimGltfCastInfoId, mask: f
     if boxes { bare } else { (js::to_i32(bare) | js::to_i32(js::or(up, down))) as u32 as f64 }
 }
 
-/// THE SNEAKING SUIT's mask: a variant's parts less the helmet, every `kit_*` and the mesh goggles.   (gltf.ts castSuit)
+/// THE SNEAKING SUIT's mask: a variant's parts less the helmet, every `kit_*` and the mesh goggles.
 pub fn cast_suit(g: &mut crate::game::Game, cast: AnimGltfCastInfoId, mask: f64) -> f64 {
     let b = match g.m.anim_gltf.suit_bits.get(cast).copied() {
         Some(b) => b,
@@ -56,7 +56,7 @@ pub fn cast_suit(g: &mut crate::game::Game, cast: AnimGltfCastInfoId, mask: f64)
     cast_goggles(g, cast, worn, true)
 }
 
-/// The variants of the cast worn by `side`, in the cast's order.   (gltf.ts castSide's filter)
+/// The variants of the cast worn by `side`, in the cast's order.
 fn variants_of(g: &Game, cast: AnimGltfCastInfoId, side: CastSide) -> Vec<AnimGltfCastVariantId> {
     let mut v = Vec::new();
     for &x in g.tab.anim_gltf_cast_info[cast].variants.iter() {
@@ -67,7 +67,7 @@ fn variants_of(g: &Game, cast: AnimGltfCastInfoId, side: CastSide) -> Vec<AnimGl
     v
 }
 
-/// The variants of one side; a side with none falls back to all of them, the responders to the defenders first.   (gltf.ts castSide)
+/// The variants of one side; a side with none falls back to all of them, the responders to the defenders first.
 pub fn cast_side(g: &crate::game::Game, cast: AnimGltfCastInfoId, side: crate::anim_gltf::CastSide) -> Vec<AnimGltfCastVariantId> {
     let v = variants_of(g, cast, side);
     if !v.is_empty() {

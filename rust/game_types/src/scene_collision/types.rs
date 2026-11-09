@@ -3,27 +3,27 @@
 use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// the share of the wind a square metre of the plan has (wind.ts:237 stormDrift): crate::wind::wind_share_under(g, x, z, roofs)
+/// the share of the wind a square metre of the plan has: crate::wind::wind_share_under(g, x, z, roofs)
 #[derive(Clone, Debug)]
 pub enum GridWindShare {
     Under { roofs: Option<Vec<Vec<f64>>> },
 }
-/// is this point of a pane open (glassbreak.ts:213): glass_break_open_at(g, bi, p), or the burst's view `also` where one is on
+/// is this point of a pane open: glass_break_open_at(g, bi, p), or the burst's view `also` where one is on
 #[derive(Clone, Copy, Debug, ToBytes)]
 pub enum PaneRule {
     GlassBreak,
 }
-/// what the module's copy judges panes by (glassbreak.ts:213, () => this): g.glassBreak
+/// what the module's copy judges panes by: g.glassBreak
 #[derive(Clone, Copy, Debug, ToBytes)]
 pub enum PaneRows {
     GlassBreak,
 }
-/// is this pane open along a walker's whole height (glassbreak.ts:215): glass_break_walkable(g, bi)
+/// is this pane open along a walker's whole height: glass_break_walkable(g, bi)
 #[derive(Clone, Copy, Debug, ToBytes)]
 pub enum GlassWalkable {
     GlassBreak,
 }
-/// the flags a line of fire passes (winbars.ts:79): BoxFlag.Bar if crate::winbars::bars_live(g), else 0
+/// the flags a line of fire passes: BoxFlag.Bar if crate::winbars::bars_live(g), else 0
 #[derive(Clone, Copy, Debug, ToBytes)]
 pub enum FirePass {
     Bars,
@@ -257,24 +257,16 @@ pub struct Raycast {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, Blank)]
 pub struct SceneCollisionMod {
-    /// (src/scene/collision.ts:105 ANYTIME)
     #[is(crate::scene_collision::SceneCollisionModANYTIME { on: true, proofs: 0.0, windows: 0.0 })] pub anytime: crate::scene_collision::SceneCollisionModANYTIME,
-    /// (src/scene/collision.ts:107 SENSED)
     #[is(crate::scene_collision::SceneCollisionModSENSED { sight: 0.0, light: 0.0, sound: 0.0, paths: 0.0 })] pub sensed: crate::scene_collision::SceneCollisionModSENSED,
-    /// (src/scene/collision.ts:118 LAMPS)
     #[is(crate::scene_collision::SceneCollisionModLAMPS { parts: 0.0 })] pub lamps: crate::scene_collision::SceneCollisionModLAMPS,
-    /// (src/scene/collision.ts:126 RAYS)
     #[is(crate::scene_collision::SceneCollisionModRAYS { n: 0.0 })] pub rays: crate::scene_collision::SceneCollisionModRAYS,
-    /// (src/scene/collision.ts:130 PRICED)
     #[is(crate::scene_collision::SceneCollisionModPRICED { n: 0.0, needs: 0.0, cells: 0.0, waits: false })] pub priced: crate::scene_collision::SceneCollisionModPRICED,
 }
 
-/// (src/scene/collision.ts:87 FEET_Y)
 pub const FEET_Y: f64 = 0.2;
 
-/// (src/scene/collision.ts:87 BAKE_Y)
 pub const BAKE_Y: f64 = 0.25;
 
-/// (src/scene/collision.ts:132 SIGHT_EYES)
 pub const SIGHT_EYES: f64 = 7.0;
 

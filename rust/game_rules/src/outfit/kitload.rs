@@ -7,7 +7,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{string::String, vec, vec::Vec};
 
-/// The guns a card puts on member i, the one in his hands first.   (kitload.ts gunsOf)
+/// The guns a card puts on member i, the one in his hands first.
 fn guns_of(g: &crate::game::Game, i: f64, m: &crate::kit::MemberKit) -> Vec<crate::weapons::WeaponId> {
     let hand = crate::kit::kit_gun(g, m);
     if m.weapon == crate::kit::KitWeapon::Pistol {
@@ -26,7 +26,7 @@ fn guns_of(g: &crate::game::Game, i: f64, m: &crate::kit::MemberKit) -> Vec<crat
     }
 }
 
-/// What one gun takes off the two scores, by its row.   (kitload.ts gunLoad)
+/// What one gun takes off the two scores, by its row.
 fn gun_load(g: &crate::game::Game, w: crate::weapons::WeaponId) -> crate::kitload::KitLoad {
     match g.m.weapons.weapons.get(w) {
         Some(d) => crate::kitload::KitLoad {
@@ -37,7 +37,7 @@ fn gun_load(g: &crate::game::Game, w: crate::weapons::WeaponId) -> crate::kitloa
     }
 }
 
-/// A cost plus `n` (default 1) of another; no other, no change.   (kitload.ts add)
+/// A cost plus `n` (default 1) of another; no other, no change.
 fn add(a: [f64; 2], b: Option<[f64; 2]>, n: Option<f64>) -> [f64; 2] {
     let n = n.unwrap_or(1.0);
     match b {
@@ -61,7 +61,7 @@ fn card_count(m: &crate::kit::MemberKit, field: &str) -> f64 {
     js::to_i32(n) as f64
 }
 
-/// What ONE row of member i's card takes off his two scores as the card stands (None: a row that weighs nothing).   (kitload.ts loadShare)
+/// What ONE row of member i's card takes off his two scores as the card stands (None: a row that weighs nothing).
 pub(super) fn load_share(g: &crate::game::Game, i: f64, m: &crate::kit::MemberKit, field: &str) -> Option<crate::kitload::KitLoad> {
     let mut c: [f64; 2] = [0.0, 0.0];
     if field == "weapon" || field == "primary" || field == "secondary" {
@@ -99,7 +99,7 @@ pub(super) fn load_share(g: &crate::game::Game, i: f64, m: &crate::kit::MemberKi
     }
 }
 
-/// Member i's two scores for the card `m`: 1 less what every row his card HAS takes.   (kitload.ts loadOf)
+/// Member i's two scores for the card `m`: 1 less what every row his card HAS takes.
 pub(super) fn load_of(g: &mut crate::game::Game, i: f64, m: &crate::kit::MemberKit) -> crate::kitload::KitLoad {
     let (mut mob, mut con) = (0.0, 0.0);
     for r in crate::kit::kit_rows(g, i) {
@@ -111,18 +111,18 @@ pub(super) fn load_of(g: &mut crate::game::Game, i: f64, m: &crate::kit::MemberK
     crate::kitload::KitLoad { mob: v3::clamp(1.0 - mob, 0.0, 1.0), con: v3::clamp(1.0 - con, 0.0, 1.0) }
 }
 
-/// The reference for member i: his own card as issued, to a team of `n`.   (kitload.ts loadRef)
+/// The reference for member i: his own card as issued, to a team of `n`.
 pub(super) fn load_ref(g: &mut crate::game::Game, i: f64, n: Option<f64>) -> crate::kitload::KitLoad {
     let issued = crate::kit::kit_issued_shown(g, i, n);
     load_of(g, i, &issued)
 }
 
-/// A score within a hair of his reference IS it: ×1 exactly.   (kitload.ts snap)
+/// A score within a hair of his reference IS it: ×1 exactly.
 fn snap(x: f64, r: f64) -> f64 {
     if m::abs(x - r) < 1e-9 { r } else { x }
 }
 
-/// What member i wears with the card `m` on him; None with the pouches rule off.   (kitload.ts loadWorn)
+/// What member i wears with the card `m` on him; None with the pouches rule off.
 fn load_worn(g: &mut crate::game::Game, i: f64, m: &crate::kit::MemberKit, n: Option<f64>) -> Option<crate::kitload::KitWorn> {
     if !g.k.slots.on {
         return None;
@@ -132,17 +132,17 @@ fn load_worn(g: &mut crate::game::Game, i: f64, m: &crate::kit::MemberKit, n: Op
     Some(crate::kitload::KitWorn { mob: snap(l.mob, r.mob), con: snap(l.con, r.con), ref_mob: r.mob, ref_con: r.con })
 }
 
-/// His legs' pace × his reference.   (kitload.ts loadPaceK)
+/// His legs' pace × his reference.
 fn load_pace_k(g: &crate::game::Game, w: crate::kitload::KitWorn) -> f64 {
     m::max(0.5, 1.0 + (w.mob - w.ref_mob) * g.k.kitload.pace)
 }
 
-/// The notice he builds in an eye × his reference.   (kitload.ts loadSeenK)
+/// The notice he builds in an eye × his reference.
 fn load_seen_k(g: &crate::game::Game, w: crate::kitload::KitWorn) -> f64 {
     m::max(0.25, 1.0 - (w.con - w.ref_con) * g.k.kitload.seen)
 }
 
-/// His footfall's level × his reference.   (kitload.ts loadHeardK)
+/// His footfall's level × his reference.
 fn load_heard_k(g: &crate::game::Game, w: crate::kitload::KitWorn) -> f64 {
     m::max(0.25, 1.0 - (w.con - w.ref_con) * g.k.kitload.heard)
 }

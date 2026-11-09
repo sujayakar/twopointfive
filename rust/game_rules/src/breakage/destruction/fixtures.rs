@@ -1,4 +1,3 @@
-//! src/game/destruction.ts lines 764 to 891
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,7 +6,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// A broken cell's dust: the puff now if the caps allow, else it waits in the burst queue. No dice.   (destruction.ts cellDust)
+/// A broken cell's dust: the puff now if the caps allow, else it waits in the burst queue. No dice.
 pub(in crate::breakage) fn destruction_cell_dust(g: &mut crate::game::Game, p: V3, n: V3, scale: f64, surf: crate::scene_materials::Surf) {
     if chaos_of(g) <= 0.0 { return; }
     let r0 = g.stats.destruction.destr_puffs_refused;
@@ -19,7 +18,7 @@ pub(in crate::breakage) fn destruction_cell_dust(g: &mut crate::game::Game, p: V
     g.destr.any_heat = true;
 }
 
-/// A lot of dust from one event: `count` puffs within `spread` of `at`, queued for the frames ahead; the dice move whether or not the queue has room.   (destruction.ts dustBurst)
+/// A lot of dust from one event: `count` puffs within `spread` of `at`, queued for the frames ahead; the dice move whether or not the queue has room.
 pub(super) fn destruction_dust_burst(g: &mut crate::game::Game, at: V3, n: V3, count: f64, scale: f64, surf: crate::scene_materials::Surf, spread: Option<f64>) {
     let spread = spread.unwrap_or(0.5);
     if chaos_of(g) <= 0.0 { return; }
@@ -44,7 +43,7 @@ pub(super) fn destruction_dust_burst(g: &mut crate::game::Game, at: V3, n: V3, c
     g.destr.any_heat = true;   // (update runs on while anything waits)
 }
 
-/// Small statics near the hit come off the desk.   (destruction.ts clutterNear)
+/// Small statics near the hit come off the desk.
 pub(super) fn destruction_clutter_near(g: &mut crate::game::Game, hit_p: V3, dir: V3, chaos: f64, who: f64) {
     let mut list: Vec<Destructible> = Vec::new();
     let near = destruction_near(g, hit_p, &mut list);
@@ -60,7 +59,7 @@ pub(super) fn destruction_clutter_near(g: &mut crate::game::Game, hit_p: V3, dir
     }
 }
 
-/// Hide the static and hand its box to the debris pool with a shove along `dirn`; over the pool's cap it becomes a burst of chips. Its group rides on the same slot.   (destruction.ts knockOff)
+/// Hide the static and hand its box to the debris pool with a shove along `dirn`; over the pool's cap it becomes a burst of chips. Its group rides on the same slot.
 pub(super) fn destruction_knock_off(g: &mut crate::game::Game, d: &crate::destruction::Destructible, dirn: V3, chaos: f64, kind: crate::debris::ChunkKind, who: Option<f64>) -> bool {
     let who = who.unwrap_or(crate::consts::NOBODY_ID);
     if g.destr.hidden.has(crate::Num(d.i)) || !destruction_take(g, DestructionTakeK::Knock) { return false; }
@@ -116,7 +115,7 @@ pub(super) fn destruction_knock_off(g: &mut crate::game::Game, d: &crate::destru
     true
 }
 
-/// A tile of the ceiling grid over `p` lets go: a slab under the ceiling, crumbs, dust; or the light panel in that square does.   (destruction.ts tileDrop)
+/// A tile of the ceiling grid over `p` lets go: a slab under the ceiling, crumbs, dust; or the light panel in that square does.
 pub fn destruction_tile_drop(g: &mut crate::game::Game, p: V3, chaos: f64, force: Option<bool>, who: Option<f64>, panels: Option<bool>) -> bool {
     let force = force.unwrap_or(false);
     let who = who.unwrap_or(crate::consts::NOBODY_ID);
@@ -221,7 +220,7 @@ pub fn destruction_tile_drop(g: &mut crate::game::Game, p: V3, chaos: f64, force
     true
 }
 
-/// A fixture a stray round, a blast or a shaken ceiling can put out: a lit, interactive lamp or panel, not one already dead or one a fire holds.   (destruction.ts fixtureLive)
+/// A fixture a stray round, a blast or a shaken ceiling can put out: a lit, interactive lamp or panel, not one already dead or one a fire holds.
 pub(super) fn destruction_fixture_live(g: &crate::game::Game, t: FixtureId) -> bool {
     use crate::sim_lightshome::{fixture_broken, fixture_factor, fixture_on, FixtureKind};
     !fixture_broken(g, t)
@@ -231,7 +230,7 @@ pub(super) fn destruction_fixture_live(g: &crate::game::Game, t: FixtureId) -> b
         && !crate::fire::fire_holds(g, t)
 }
 
-/// Put `t` out: its broken bit, the glass down, counted against the encounter's cap (`force`: a blast ignores the gap, not the cap). Whether a light went.   (destruction.ts killFixture)
+/// Put `t` out: its broken bit, the glass down, counted against the encounter's cap (`force`: a blast ignores the gap, not the cap). Whether a light went.
 pub(super) fn destruction_kill_fixture(g: &mut crate::game::Game, t: FixtureId, from: V3, why: &str, force: Option<bool>) -> bool {
     let force = force.unwrap_or(false);
     if g.destr.fixture_count >= g.k.chaos.loud.fixtures_per_encounter || (!force && g.time - g.destr.last_fixture_t < g.k.chaos.loud.fixture_gap_secs) {
@@ -269,7 +268,7 @@ pub(super) fn destruction_kill_fixture(g: &mut crate::game::Game, t: FixtureId, 
     true
 }
 
-/// A round that is not the player's flew muzzle to muzzle + dir * tHit and stopped in static `index`: a fixture it stopped in, or passed within fixtureHitM of, goes dark.   (destruction.ts fixtureRound)
+/// A round that is not the player's flew muzzle to muzzle + dir * tHit and stopped in static `index`: a fixture it stopped in, or passed within fixtureHitM of, goes dark.
 pub fn destruction_fixture_round(g: &mut crate::game::Game, muzzle: V3, dir: V3, t_hit: f64, index: Option<f64>) {
     if !loud_now(g) || chaos_of(g) <= 0.0 { return; }
     if let Some(index) = index {
@@ -313,18 +312,18 @@ fn knock_kind(kind: DKind) -> crate::debris::ChunkKind {
     if kind == DKind::Binder { crate::debris::ChunkKind::Binder } else { crate::debris::ChunkKind::Clutter }
 }
 
-/// The key of a tile's square, in the language's own words for a number (a -0 is "0").   (destruction.ts tileDrop `${tx},${tz}`)
+/// The key of a tile's square, in the language's own words for a number (a -0 is "0").
 fn tile_key(tx: f64, tz: f64) -> String {
     format!("{},{}", js::num_str(tx), js::num_str(tz))
 }
 
-/// A vehicle lamp's glass, from the fixture's row.   (destruction.ts killFixture, two sites)
+/// A vehicle lamp's glass, from the fixture's row.
 fn lens_shatter(g: &mut Game, t: FixtureId, from: V3) {
     let lens = crate::particle_fx::LensShatterFxT { pos: g.tab.sim_lightshome_fixture[t].pos, lens: g.tab.sim_lightshome_fixture[t].lens };
     crate::particle_fx::lens_shatter_fx(g, lens, from);
 }
 
-/// `b.…` for any box: a box's row, statics and made boxes alike. Skeleton 5 keeps `g.col.boxes: Vec<BoxId>` and no table of Box rows, while the index says `g.col.boxes[id].c`. Once there is a table the body is the row, and no other line changes.
+/// `b.…` for any box: a box's row, statics and made boxes alike. Vec<BoxId>` and no table of Box rows, while the index says `g.col.boxes[id].c`. Once there is a table the body is the row, and no other line changes.
 fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 #[cfg(test)]

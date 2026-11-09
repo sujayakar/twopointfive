@@ -6,20 +6,20 @@ use alloc::{string::String, vec::Vec};
 
 // ---------------------------------------------------------------- what the part's own tables hold
 
-/// DIFFICULTIES in the TypeScript's order; the enum sorts its words, so never walk by the enum. (difficulty.ts:40)
+/// DIFFICULTIES in the TypeScript's order; the enum sorts its words, so never walk by the enum.
 const DIFFICULTIES_ROWS: [Difficulty; 2] = [Difficulty::Standard, Difficulty::Hard];
 
-/// the `Cone && '.' + Cone` of difficultyWords, HARD.cone being settled on. (difficulty.ts:347)
+/// the `Cone && '.' + Cone` of difficultyWords, HARD.cone being settled on.
 const CONE_TAIL: &str = ". Under the fog of war each teammate sees only the cone he's looking down, so the floor behind everyone's back is dark, and they call out what you can't see";
 
 // ---------------------------------------------------------------- the two rows outside the code
 
-/// HARD_AT[structure]?.stuns: a row with no stuns reads as no row. (difficulty.ts:92, read at :150, :167, :352, :354)
+/// HARD_AT[structure]?.stuns: a row with no stuns reads as no row.
 fn hard_at_stuns(g: &Game, structure: &str) -> Option<f64> {
     g.k.hard_at.rows.get(String::from(structure)).copied().flatten()
 }
 
-/// storeName with what it needs: `store_name`'s signature has no g, and the store is reached through it. (difficulty.ts:214)
+/// storeName with what it needs: `store_name`'s signature has no g, and the store is reached through it.
 fn store_name_in(g: &Game, level: Difficulty) {
     if level == Difficulty::Standard { crate::savestate::save_store_remove(g, LS); } else { crate::savestate::save_store_set(g, LS, level.as_str()); }
 }
@@ -174,12 +174,12 @@ macro_rules! rows_same {
     }};
 }
 
-/// `same` of two PRESSURE tables. (difficulty.ts:163)
+/// `same` of two PRESSURE tables.
 fn pressure_same(a: &crate::knobs::PressureK, b: &crate::knobs::PressureK) -> bool {
     rows_same!(a, b, crate::knobs::PressureK; on, press, flank, squad_drill, second, max_men, memory_secs, organise_k, warned, stand_press, report_secs, stand_secs, stand_grace, again_secs, stuns, stun_know_secs, stun_moved_secs, last_holds, picket, by_way, rescue_crew, drilled, flank_max_m, flank_k, flank_slack_m, last_man_secs, loud_secs, out_secs, gather_secs, flank_secs, siege_secs, word_secs, way_out, way_out_m, way_out_secs, sweep, sweep_secs, sweep_men, sweep_beat, sweep_pair_m)
 }
 
-/// `same` of two DIGIN tables. (difficulty.ts:163)
+/// `same` of two DIGIN tables.
 fn digin_same(a: &crate::knobs::DiginK, b: &crate::knobs::DiginK) -> bool {
     rows_same!(a, b, crate::knobs::DiginK; on, stay, reach_m, keeper, cover, brace_in_room, noticed_secs, shut_open, shut_secs, shut_home_rad, shut_doors, gather, gather_m, gather_shy_m, think, wedge_secs, wedges, caught, try_secs, pace, close_m, prop_m, haul_speed, scrape_level, scrape_every, shout_m, alt_m, better, fear, hold_secs, redig_secs, lane_secs)
 }
@@ -226,12 +226,12 @@ fn set_put(s: &mut DifficultyModSET, key: LeverKey, word: &str) {
     }
 }
 
-/// /^(hard|difficulty)(=|$)/. (difficulty.ts:311)
+/// /^(hard|difficulty)(=|$)/.
 fn is_level_key(k: &str) -> bool {
     k == "hard" || k == "difficulty" || k.starts_with("hard=") || k.starts_with("difficulty=")
 }
 
-/// `const [path, query = ''] = href.split('?')` and `query.split('&').filter(k => k)`. (difficulty.ts:311, :321)
+/// `const [path, query = ''] = href.split('?')` and `query.split('&').filter(k => k)`.
 fn href_parts(href: &str) -> (&str, Vec<&str>) {
     let mut at = href.split('?');
     let path = at.next().unwrap_or("");
@@ -241,13 +241,13 @@ fn href_parts(href: &str) -> (&str, Vec<&str>) {
 
 // ---------------------------------------------------------------- the part
 
-/// the structure a level file's room clear stands on. (difficulty.ts structureOfLevel)
+/// the structure a level file's room clear stands on.
 pub fn structure_of_level(file: Option<&str>) -> String {
     let file = file.unwrap_or("");
     level_structure().get(String::from(file)).cloned().unwrap_or_default()
 }
 
-/// LEVERS with the fog's bottom rung and the fourth lever; TOLD.on and TOLD.fogOff are settled on. (difficulty.ts leversNow)
+/// LEVERS with the fog's bottom rung and the fourth lever; TOLD.on and TOLD.fogOff are settled on.
 pub fn levers_now(g: &crate::game::Game) -> Vec<crate::difficulty::LeverDef> {
     let mut out = levers();
     for l in out.iter_mut() {
@@ -260,18 +260,18 @@ pub fn levers_now(g: &crate::game::Game) -> Vec<crate::difficulty::LeverDef> {
     out
 }
 
-/// the fog lever stands on its bottom rung. (difficulty.ts fogOffNow)
+/// the fog lever stands on its bottom rung.
 pub fn fog_off_now(g: &crate::game::Game) -> bool {
     g.m.difficulty.set.fog == Some(crate::quietfog::QuietRung::Off)
 }
 
-/// a lever is moved off the level by hand. (difficulty.ts anySet)
+/// a lever is moved off the level by hand.
 fn any_set(g: &crate::game::Game) -> bool {
     let s = &g.m.difficulty.set;
     s.fog.is_some() || s.ai.is_some() || s.kit.is_some() || s.told.is_some()
 }
 
-/// v is a word and a rung of lever k. (difficulty.ts isRung)
+/// v is a word and a rung of lever k.
 pub fn is_rung(g: &crate::game::Game, k: crate::difficulty::LeverKey, v: Option<&str>) -> bool {
     match v {
         Some(w) => levers_now(g).iter().find(|l| l.key == k).map_or(false, |l| l.rungs.iter().any(|r| r.id == w)),
@@ -279,7 +279,7 @@ pub fn is_rung(g: &crate::game::Game, k: crate::difficulty::LeverKey, v: Option<
     }
 }
 
-/// where a level puts every lever, on the structure the game stands on. (difficulty.ts presetLevers)
+/// where a level puts every lever, on the structure the game stands on.
 fn preset_levers(g: &crate::game::Game, level: crate::difficulty::Difficulty, structure: Option<&str>) -> crate::difficulty::Levers {
     let here;
     let structure = match structure {
@@ -295,7 +295,7 @@ fn preset_levers(g: &crate::game::Game, level: crate::difficulty::Difficulty, st
     Levers { fog, ai, kit, told: Some(crate::told::told_of_level(level)) }
 }
 
-/// the game stands on a new structure: tables standing at hard are written again for it. (difficulty.ts difficultyHere)
+/// the game stands on a new structure: tables standing at hard are written again for it.
 pub fn difficulty_here(g: &mut crate::game::Game, structure: &str) {
     if structure == g.m.difficulty.here { return; }
     let was = difficulty_now(g);
@@ -308,7 +308,7 @@ pub fn difficulty_here(g: &mut crate::game::Game, structure: &str) {
     }
 }
 
-/// JSON.stringify(a) === JSON.stringify(b), of what this file compares. (difficulty.ts same)
+/// JSON.stringify(a) === JSON.stringify(b), of what this file compares.
 fn same(a: &crate::difficulty::SameOf, b: &crate::difficulty::SameOf) -> bool {
     match (a, b) {
         (SameOf::Levers { shown: a }, SameOf::Levers { shown: b }) => a.fog == b.fog && a.ai == b.ai && a.kit == b.kit && a.told == b.told,
@@ -318,7 +318,7 @@ fn same(a: &crate::difficulty::SameOf, b: &crate::difficulty::SameOf) -> bool {
     }
 }
 
-/// the two tables a level and the levers over it write. (difficulty.ts tablesOf)
+/// the two tables a level and the levers over it write.
 fn tables_of(g: &crate::game::Game, level: crate::difficulty::Difficulty, set: Option<crate::difficulty::TablesOfSet>) -> crate::difficulty::TablesOf {
     let set = set.unwrap_or(TablesOfSet { ai: None, kit: None });
     let mut p = crate::pressure::pressure_defaults();
@@ -346,7 +346,7 @@ fn tables_of(g: &crate::game::Game, level: crate::difficulty::Difficulty, set: O
     TablesOf { p, d }
 }
 
-/// the level the two tables stand at now. (difficulty.ts difficultyNow)
+/// the level the two tables stand at now.
 pub fn difficulty_now(g: &crate::game::Game) -> crate::difficulty::DifficultyNow {
     if any_set(g) {
         let s = levers_shown(g, None);
@@ -366,7 +366,7 @@ pub fn difficulty_now(g: &crate::game::Game) -> crate::difficulty::DifficultyNow
     if pressure_same(&t.p, &g.k.pressure) && digin_same(&t.d, &g.k.digin) { DifficultyNow::Hard } else { DifficultyNow::Custom }
 }
 
-/// the levers as they stand, each read off its table; None = no rung. (difficulty.ts leversShown)
+/// the levers as they stand, each read off its table; None = no rung.
 pub fn levers_shown(g: &crate::game::Game, structure: Option<&str>) -> crate::difficulty::LeversShown {
     let h = tables_of(g, Difficulty::Hard, None);
     if let Some(structure) = structure {
@@ -395,19 +395,18 @@ pub fn levers_shown(g: &crate::game::Game, structure: Option<&str>) -> crate::di
     LeversShown { fog, ai, kit, told: Some(crate::told::told_now(g)) }
 }
 
-/// the two tables still stand where the level and the levers last wrote them. (difficulty.ts tablesStand)
+/// the two tables still stand where the level and the levers last wrote them.
 fn tables_stand(g: &crate::game::Game) -> bool {
     let (base, set) = (g.m.difficulty.base, set_as_tables(g.m.difficulty.set));
     let t = tables_of(g, base, Some(set));
     pressure_same(&t.p, &g.k.pressure) && digin_same(&t.d, &g.k.digin)
 }
 
-/// (difficulty.ts coneOf)
 fn cone_of(rung: crate::quietfog::QuietRung) -> bool {
     rung == crate::quietfog::QuietRung::Cones || rung == crate::quietfog::QuietRung::Own
 }
 
-/// the level whose fog, AI and kit rungs the levers stand on as set. (difficulty.ts levelOfThree)
+/// the level whose fog, AI and kit rungs the levers stand on as set.
 fn level_of_three(g: &crate::game::Game) -> crate::difficulty::Difficulty {
     let (s, base) = (g.m.difficulty.set, g.m.difficulty.base);
     if s.fog.is_none() && s.ai.is_none() && s.kit.is_none() { return base; }
@@ -420,7 +419,7 @@ fn level_of_three(g: &crate::game::Game) -> crate::difficulty::Difficulty {
     base
 }
 
-/// the fog's cone stands where the fog lever put it. (difficulty.ts fogStands)
+/// the fog's cone stands where the fog lever put it.
 fn fog_stands(g: &crate::game::Game) -> bool {
     match g.m.difficulty.set.fog {
         None => true,
@@ -428,18 +427,18 @@ fn fog_stands(g: &crate::game::Game) -> bool {
     }
 }
 
-/// every lever of the three with rows stands on a rung. (difficulty.ts shownWhole)
+/// every lever of the three with rows stands on a rung.
 fn shown_whole(g: &crate::game::Game) -> bool {
     let s = levers_shown(g, None);
     s.fog.is_some() && s.ai.is_some() && s.kit.is_some()
 }
 
-/// levers are moved and every one stands on a rung, but on no level's. (difficulty.ts leversMixed)
+/// levers are moved and every one stands on a rung, but on no level's.
 pub fn levers_mixed(g: &crate::game::Game) -> bool {
     any_set(g) && shown_whole(g) && difficulty_now(g) == DifficultyNow::Custom
 }
 
-/// the tables written whole from the level and the levers over it, the fog's two rows with them. (difficulty.ts write)
+/// the tables written whole from the level and the levers over it, the fog's two rows with them.
 fn write(g: &mut crate::game::Game, fog_only: Option<bool>) {
     if !fog_only.unwrap_or(false) {
         let (base, set) = (g.m.difficulty.base, set_as_tables(g.m.difficulty.set));
@@ -469,7 +468,7 @@ fn write(g: &mut crate::game::Game, fog_only: Option<bool>) {
     }
 }
 
-/// the machine's store keeps the moved levers, with the kept rungs this visit hides unless `all`. (difficulty.ts storeLevers)
+/// the machine's store keeps the moved levers, with the kept rungs this visit hides unless `all`.
 fn store_levers(g: &crate::game::Game, all: Option<bool>) {
     let s = g.m.difficulty.set;
     let (fog, ai, kit, told) = (s.fog, s.ai, s.kit, s.told);
@@ -479,7 +478,7 @@ fn store_levers(g: &crate::game::Game, all: Option<bool>) {
     }
 }
 
-/// set the level: both tables written whole, every lever back on the level's own rung. (difficulty.ts setDifficulty)
+/// set the level: both tables written whole, every lever back on the level's own rung.
 pub fn set_difficulty(g: &mut crate::game::Game, level: crate::difficulty::Difficulty, keep: Option<bool>) {
     let keep = keep.unwrap_or(true);
     g.m.difficulty.base = level;
@@ -494,7 +493,7 @@ pub fn set_difficulty(g: &mut crate::game::Game, level: crate::difficulty::Diffi
     write(g, None);
 }
 
-/// the level under the levers as the tables stand, read back off them if another road moved them. (difficulty.ts adopt)
+/// the level under the levers as the tables stand, read back off them if another road moved them.
 fn adopt(g: &mut crate::game::Game) -> bool {
     if !fog_stands(g) { g.m.difficulty.set.fog = None; }
     if tables_stand(g) { return true; }
@@ -511,12 +510,12 @@ fn adopt(g: &mut crate::game::Game) -> bool {
     tables_stand(g)
 }
 
-/// a lever that writes nothing of the defenders' two tables. (difficulty.ts own)
+/// a lever that writes nothing of the defenders' two tables.
 fn own(key: crate::difficulty::LeverKey) -> bool {
     key == LeverKey::Fog || key == LeverKey::Told
 }
 
-/// move one lever; None = back to the level's own. Answers whether the level's name is kept anew with it. (difficulty.ts setLever)
+/// move one lever; None = back to the level's own. Answers whether the level's name is kept anew with it.
 pub fn set_lever(g: &mut crate::game::Game, key: crate::difficulty::LeverKey, rung: Option<&str>, keep: Option<bool>, structure: Option<&str>) -> bool {
     let keep = keep.unwrap_or(true);
     if rung.is_some() && !is_rung(g, key, rung) { return false; }
@@ -568,7 +567,7 @@ pub fn set_lever(g: &mut crate::game::Game, key: crate::difficulty::LeverKey, ru
     keep && (stood || !own(key))
 }
 
-/// the fog lever's rung over the feel rows. (difficulty.ts leversFog)
+/// the fog lever's rung over the feel rows.
 pub fn levers_fog(g: &mut crate::game::Game) {
     if g.m.difficulty.own_for.is_some() {
         if let Some(was) = g.m.difficulty.own_was { g.k.fog.own = was; }
@@ -580,7 +579,7 @@ pub fn levers_fog(g: &mut crate::game::Game) {
     }
 }
 
-/// the cone for this visit, whatever the level; None = the level decides. (difficulty.ts setConeVisit)
+/// the cone for this visit, whatever the level; None = the level decides.
 pub fn set_cone_visit(g: &mut crate::game::Game, v: Option<bool>) {
     g.m.difficulty.cone_visit = v;
     g.k.fog.cone = match v {
@@ -592,12 +591,12 @@ pub fn set_cone_visit(g: &mut crate::game::Game, v: Option<bool>) {
     };
 }
 
-/// the fog's cone as pinned for this visit. (difficulty.ts coneVisitNow)
+/// the fog's cone as pinned for this visit.
 pub fn cone_visit_now(g: &crate::game::Game) -> Option<bool> {
     g.m.difficulty.cone_visit
 }
 
-/// WHAT AN ADDRESS SAYS OF THE DIFFICULTY, and no more: None where it says nothing. `plain` (a Training lesson's address) reads no lever. Writes nothing. (difficulty.ts difficultyAsked)
+/// WHAT AN ADDRESS SAYS OF THE DIFFICULTY, and no more: None where it says nothing. `plain` (a Training lesson's address) reads no lever. Writes nothing.
 pub fn difficulty_asked(g: &crate::game::Game, q: &crate::query::Query, plain: bool) -> Option<crate::difficulty::DifficultyAsked> {
     let v = if q.has("hard") { Some(if q.get("hard") == Some("0") { "standard" } else { "hard" }) } else { q.get("difficulty") };
     let level = match v { Some("hard") => Some(Difficulty::Hard), Some("standard") => Some(Difficulty::Standard), _ => None };
@@ -614,8 +613,8 @@ pub fn difficulty_asked(g: &crate::game::Game, q: &crate::query::Query, plain: b
     Some(DifficultyAsked { level, levers, digin, pressure, cone })
 }
 
-/// …AND IT LAID ON THE GAME'S TABLES, not stored: the level, the levers over it, the two older single-switch flags over whatever those wrote. (difficulty.ts difficultyLay; no host of a
-/// Rust start keeps anything, so nothing goes between)
+/// …AND IT LAID ON THE GAME'S TABLES, not stored: the level, the levers over it, the two older single-switch flags over whatever those wrote. (difficulty.ts difficultyLay; what a machine keeps
+/// goes under it: game_start `host::lay`)
 pub fn difficulty_lay(g: &mut crate::game::Game, a: &crate::difficulty::DifficultyAsked) {
     if let Some(level) = a.level { set_difficulty(g, level, Some(false)); }
     for (key, rung) in a.levers.iter() { set_lever(g, *key, Some(rung.as_str()), Some(false), None); }
@@ -624,32 +623,32 @@ pub fn difficulty_lay(g: &mut crate::game::Game, a: &crate::difficulty::Difficul
     if a.cone.is_some() { set_cone_visit(g, a.cone); }
 }
 
-/// the rung one lever stands moved to by hand. (difficulty.ts leversSet()[key])
+/// the rung one lever stands moved to by hand.
 pub fn lever_set(g: &crate::game::Game, key: crate::difficulty::LeverKey) -> Option<&'static str> { set_word(&g.m.difficulty.set, key) }
 
-/// the rung of one lever in a line ('' = it stands on none). (difficulty.ts leverWords)
+/// the rung of one lever in a line ('' = it stands on none).
 pub fn lever_words(g: &crate::game::Game, key: crate::difficulty::LeverKey, rung: Option<&str>) -> String {
     let Some(rung) = rung else { return String::new() };
     levers_now(g).into_iter().find(|l| l.key == key).and_then(|l| l.rungs.into_iter().find(|r| r.id == rung)).map_or(String::new(), |r| r.words)
 }
 
-/// the text this machine keeps of the levers moved, in the order they were moved ('' = it keeps none). (difficulty.ts storeLevers)
+/// the text this machine keeps of the levers moved, in the order they were moved ('' = it keeps none).
 pub fn levers_text(g: &crate::game::Game, order: &[crate::difficulty::LeverKey]) -> String {
     let rows: Vec<(&str, Option<&str>)> = order.iter().map(|k| (k.as_str(), lever_set(g, *k))).collect();
     levers_json(&rows).unwrap_or_default()
 }
 
-/// the text this machine keeps of the level ('' = standard, which keeps nothing). (difficulty.ts storeName)
+/// the text this machine keeps of the level ('' = standard, which keeps nothing).
 pub fn level_text(g: &crate::game::Game) -> String {
     let base = g.m.difficulty.base;
     if base == Difficulty::Standard { String::new() } else { String::from(base.as_str()) }
 }
 
-/// how a row's Hard is worded: the row's own fact, or squads cut from the rooms of a room clear whose file names none. (difficulty.ts squadsHeld)
+/// how a row's Hard is worded: the row's own fact, or squads cut from the rooms of a room clear whose file names none.
 pub fn squads_held(e: &crate::scene_scenarios::ScenarioEntry) -> crate::difficulty::DifficultyWordsSquads {
     use crate::difficulty::DifficultyWordsSquads as S;
     if e.squads == Some(true) { return e.level.clone().filter(|l| !l.is_empty()).map_or(S::Bool(true), S::Text); }
-    S::Bool(e.kind == crate::scene_scenarios::ScenarioEntryKind::Roomclear)
+    S::Bool(e.kind == crate::scene_scenarios::MissionKind::Roomclear)
 }
 
 /// The same, by whoever knows whether this machine keeps the levers as they stand.
@@ -691,7 +690,7 @@ pub fn levers_href_kept(g: &crate::game::Game, href: &str, kept: bool) -> String
     if q.is_empty() { String::from(path) } else { alloc::format!("{}?{}", path, q) }
 }
 
-/// what a level is, in a sentence. (difficulty.ts difficultyWords)
+/// what a level is, in a sentence.
 pub fn difficulty_words(g: &crate::game::Game, level: Option<crate::difficulty::DifficultyWordsLevel>, squads: Option<&crate::difficulty::DifficultyWordsSquads>) -> String {
     let level = match level {
         Some(l) => l,
@@ -734,7 +733,7 @@ pub fn difficulty_words(g: &crate::game::Game, level: Option<crate::difficulty::
     }
 }
 
-/// the levers in a line; `all` false: only the ones moved by hand. (difficulty.ts leversLine)
+/// the levers in a line; `all` false: only the ones moved by hand.
 fn levers_line(g: &crate::game::Game, all: Option<bool>) -> String {
     let all = all.unwrap_or(false);
     let s = levers_shown(g, None);

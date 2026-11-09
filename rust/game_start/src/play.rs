@@ -20,7 +20,7 @@ static CHARACTER: OnceLock<files::CharacterFiles> = OnceLock::new();
 
 /// the level file of every room clear of the game's mission list, each once, by name: a new row is here with nothing to write
 pub fn room_clear_files() -> Vec<String> {
-    let mut files: Vec<String> = game::scene_scenario_list::scenarios().into_iter().filter(|e| e.kind == game::scene_scenarios::ScenarioEntryKind::Roomclear).map(|e| e.level.unwrap_or_else(|| String::from("office.json"))).collect();
+    let mut files: Vec<String> = game::scene_scenario_list::scenarios().into_iter().filter(|e| e.kind == game::scene_scenarios::MissionKind::Roomclear).map(|e| e.level.unwrap_or_else(|| String::from("office.json"))).collect();
     files.sort();
     files.dedup();
     files
@@ -38,7 +38,7 @@ pub struct Opts {
     pub squad: u32,
     /// how many players (1 or 2): each has a seat, his own man and his share of the squad. The hand's keys and cursor are the first seat's.
     pub seats: u32,
-    /// THE ROWS THAT ONLY DRESS THE PICTURE (game/dress.ts DRESS), as a page has them: the debris pool tumbling a break's pieces, above all. Off (the default) as
+    /// THE ROWS THAT ONLY DRESS THE PICTURE, as a page has them: the debris pool tumbling a break's pieces, above all. Off (the default) as
     /// on any host that draws nothing: a thrown piece is then only its one landing told to the floor, and the pool stays empty.
     pub dress: bool,
     /// a mission the game refuses is said (`Play.refused`) and no stop
@@ -97,7 +97,7 @@ fn start_by(data: &Json, room_clear: bool, link: Option<&str>, o: &Opts) -> Play
     // (a test that failed while it held the lock left it poisoned and its game dead: the next one stands on a block zeroed anew)
     let one = ONE_GAME.lock().unwrap_or_else(|p| p.into_inner());
     let ch = CHARACTER.get_or_init(files::CharacterFiles::read);
-    let scenario = if room_clear { Some(game::scene_scenario_list::ScenarioSpec { kind: game::scene_scenario_list::ScenarioSpecKind::Roomclear, squad: o.squad as f64, level: None, seed: None }) } else { None };
+    let scenario = if room_clear { Some(game::scene_scenario_list::ScenarioSpec { kind: game::scene_scenarios::MissionKind::Roomclear, squad: o.squad as f64, level: None, seed: None }) } else { None };
     let Stood { mut game, host, refused, .. } = stand::stand(data, ch.assets(), &StartOpts { seed: o.seed, seats: o.seats, scenario, link: link.map(String::from), dress: o.dress, may_refuse: o.may_refuse, ..Default::default() });
     game.out.clear();
     HOLDS.with(|h| h.set(true));   // (only once a Play exists to put it down: a stand that panicked holds nothing)
@@ -340,9 +340,9 @@ impl Play {
     /// a man of the list set down at a place: a test of what he sees from there, where walking him is a test of his legs
     pub fn man_stands(&mut self, gd: GuardId, at: [f64; 2]) { let c = self.g.gd[gd].ch; self.g.ch[c].pos[0] = at[0]; self.g.ch[c].pos[2] = at[1]; }
     /// the way in the room clear that is up stood its team on: 0 the level's own, k its k-th other
-    pub fn way_taken(&self) -> usize { self.g.room_clear.way as usize }
+    pub fn way_taken(&self) -> usize { self.g.staged.way as usize }
     /// where each teammate the mission staged stands (x, z), in the order it staged them
-    pub fn team_at(&self) -> Vec<[f64; 2]> { game::scenario_run::team_of(&self.g).into_iter().map(|m| { let p = self.g.ch[self.g.gd[m].ch].pos; [p[0], p[2]] }).collect() }
+    pub fn team_at(&self) -> Vec<[f64; 2]> { self.g.staged.team.iter().map(|&m| { let p = self.g.ch[self.g.gd[m].ch].pos; [p[0], p[2]] }).collect() }
     /// the restart a player presses: the same mission staged again
     pub fn restaged(&mut self) { game::roomclear::room_clear_scenario_restage(&mut self.g); }
     /// where a seat's player stands
@@ -430,7 +430,7 @@ impl Play {
     pub fn man_fires_at(&mut self, gd: GuardId, at: [f64; 2]) {
         let c = self.g.gd[gd].ch;
         let o = game::combat::FireOpts { steady: Some(true), spread: Some(0.0), ..game::combat::FireOpts::default() };
-        game::combat::fire_weapon(&mut self.g, c, [at[0], 1.2, at[1]], false, Some(&o));
+        game::combat::fire_weapon(&mut self.g, c, [at[0], 1.2, at[1]], Some(&o));
     }
     /// A MAN GOES DOWN by combat's own call, in any of its ways (`quiet`: put out with no noise).
     pub fn falls_as(&mut self, gd: GuardId, how: game::game::DownKind, quiet: bool, by: game::game::DownBy) { game::combat::kill_guard(&mut self.g, gd, [1.0, 0.0, 0.0], Some(quiet), Some(how), Some(by), None); }
@@ -462,10 +462,10 @@ impl Play {
         self.g.ch[c].vel = [0.0; 3];
         self.g.ch[c].body_yaw = yaw;
         self.g.ch[c].aim_yaw = yaw;
+        self.g.cond[c].down = state == GuardState::Dead;
         let h = &mut self.g.gd[gd];
         (h.hold, h.pinned, h.state, h.awareness, h.path_goal) = (true, true, state, aware, None);
         h.path.clear();
-        self.g.cond[c].down = state == GuardState::Dead;
     }
     /// Every man of the other side but these is down.
     pub fn drop_all_but(&mut self, keep: &[GuardId]) {

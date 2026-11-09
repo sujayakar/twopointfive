@@ -7,7 +7,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{vec, vec::Vec};
 
-/// A pellet has found a man `t` metres from the muzzle: does it put him down? Booked either way. (shotgun.ts pelletDrops)
+/// A pellet has found a man `t` metres from the muzzle: does it put him down? Booked either way.
 pub fn pellet_drops(g: &mut crate::game::Game, s: &mut crate::shotgun::Shell, who: Option<GuardId>, t: f64, dir: V3) -> bool {
     let p = s.def.pellets.unwrap();
     let h = s.men.get_or_insert_with(who, || crate::shotgun::ShellMenValue { n: 0.0, near: t, dir, down: false });
@@ -22,20 +22,20 @@ pub fn pellet_drops(g: &mut crate::game::Game, s: &mut crate::shotgun::Shell, wh
     false
 }
 
-/// Where a pellet stopped, if it was not in a man. (shotgun.ts pelletEnd)
+/// Where a pellet stopped, if it was not in a man.
 pub(super) fn pellet_end(s: &mut crate::shotgun::Shell, index: f64, t: f64, at: V3) {
     s.ends.push(crate::shotgun::ShellEndsItem { index, t, at });
 }
 
-/// One pull of a shotgun's trigger: every pellet through fireWeapon, then what the pattern as a whole did. (shotgun.ts fireShell)
-pub(super) fn fire_shell(g: &mut crate::game::Game, shooter: CharId, target: V3, is_player: bool, o: &crate::combat::FireOpts, def: &crate::weapons::WeaponDef) {
+/// One pull of a shotgun's trigger: every pellet through fireWeapon, then what the pattern as a whole did.
+pub(super) fn fire_shell(g: &mut crate::game::Game, shooter: CharId, target: V3, o: &crate::combat::FireOpts, def: &crate::weapons::WeaponDef) {
     let p = def.pellets.unwrap();
     let mut shell = crate::shotgun::Shell { def: def.clone(), i: 0.0, dir: None, men: JsMap::new(), ends: Vec::new(), glass: JsMap::new(), late: Vec::new() };
     g.stats.shotgun.shells += 1;
     g.stats.shotgun.pellets += p.n as i32;
     let muzzle = v3::copy(g.ch[shooter].muzzle);
     let first = crate::combat::FireOpts { spread: o.spread, weapon: Some(def.clone()), steady: o.steady, blind: o.blind };
-    crate::combat::fire_pellet(g, shooter, target, is_player, &first, &mut shell);
+    crate::combat::fire_pellet(g, shooter, target, &first, &mut shell);
     let d0 = match shell.dir { Some(d) => d, None => v3::normalize(v3::sub(target, muzzle)) };
     let ax = v3::normalize(v3::cross(d0, if m::abs(d0[1]) < 0.95 { [0.0, 1.0, 0.0] } else { [1.0, 0.0, 0.0] }));
     let ay = v3::cross(ax, d0);
@@ -48,7 +48,7 @@ pub(super) fn fire_shell(g: &mut crate::game::Game, shooter: CharId, target: V3,
         let y = r * m::sin(a);
         let dir = v3::normalize([d0[0] + ax[0] * x + ay[0] * y, d0[1] + ax[1] * x + ay[1] * y, d0[2] + ax[2] * x + ay[2] * y]);
         let rest = crate::combat::FireOpts { spread: Some(0.0), weapon: Some(def.clone()), steady: Some(true), blind: o.blind };
-        crate::combat::fire_pellet(g, shooter, v3::mad(muzzle, dir, 30.0), is_player, &rest, &mut shell);
+        crate::combat::fire_pellet(g, shooter, v3::mad(muzzle, dir, 30.0), &rest, &mut shell);
         i += 1.0;
     }
     let mut l = 0;
@@ -100,7 +100,7 @@ pub(super) fn fire_shell(g: &mut crate::game::Game, shooter: CharId, target: V3,
                 let id = g.ch[shooter].id;
                 if !crate::doors::doors_kick_in(g, d, muzzle, id, Some(true)) { continue; }
                 g.stats.shotgun.locks += 1;
-                if is_player {
+                if crate::character::is_player(g, shooter) {
                     crate::chronicle::chron_door(g, crate::chronicle::ChronDoorKind::DoorKicked, d);
                 }
             }
@@ -108,7 +108,7 @@ pub(super) fn fire_shell(g: &mut crate::game::Game, shooter: CharId, target: V3,
     }
 }
 
-/// He carries a gun that takes a lock, in hand or in his big slot. (shotgun.ts carriesBreacher)
+/// He carries a gun that takes a lock, in hand or in his big slot.
 pub fn carries_breacher(g: &crate::game::Game, gd: GuardId) -> bool {
     if crate::condition::down(g, g.gd[gd].ch) { return false; }
     let def = g.fa[g.gd[gd].weapon].def;
@@ -116,14 +116,14 @@ pub fn carries_breacher(g: &crate::game::Game, gd: GuardId) -> bool {
     breach || crate::kit::kit_big(g, gd) == crate::kit::BigKit::Shotgun
 }
 
-/// The lock as a man on face `side` shoots it: a hand in from the latch edge, lever high, just proud of the leaf. (shotgun.ts lockPoint)
+/// The lock as a man on face `side` shoots it: a hand in from the latch edge, lever high, just proud of the leaf.
 pub fn lock_point(g: &crate::game::Game, d: DoorId, side: f64) -> V3 {
     let a = g.dr[d].def.width - g.k.shotgun.lock_in;
     let y = g.k.shotgun.lock_h;
     crate::doortools::door_pt(g, d, a, LOCK_PROUD, side, Some(y))
 }
 
-/// Where the man with the gun stands for d's lock on face `side`. None: no spot has floor and a line. (shotgun.ts breachSpot)
+/// Where the man with the gun stands for d's lock on face `side`. None: no spot has floor and a line.
 pub fn breach_spot(g: &mut crate::game::Game, d: DoorId, side: f64, avoid: Option<&[V3]>, mark: Option<V3>, close: Option<crate::shotgun::BreachSpotClose>) -> Option<crate::shotgun::BreachSpot> {
     let avoid: &[V3] = avoid.unwrap_or(&[]);
     let at = lock_point(g, d, side);

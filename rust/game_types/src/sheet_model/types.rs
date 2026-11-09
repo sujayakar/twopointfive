@@ -30,8 +30,6 @@ pub struct ImpulseKick {
     pub s: f64,
 }
 
-/// (src/game/sheetModel.ts:115 IMP_MIN_KICK)
 pub const IMP_MIN_KICK: f64 = 0.03;
 
-/// (src/game/sheetModel.ts:134 IMP_JITTER: a table nothing writes)
 pub fn imp_jitter() -> crate::sheet_model::IMPJITTER { crate::sheet_model::IMPJITTER { mag: 0.6, side: 0.35 } }

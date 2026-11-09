@@ -146,7 +146,7 @@ fn a_flash_of_either_player_is_the_teams() {
         for (c, seat, player, class) in men {
             let (id, at, had) = (p.g.ch[c].id, p.g.ch[c].pos, p.g.engine.lights.lights.clone());
             let o = game::combat::FireOpts { steady: Some(true), spread: Some(0.0), ..game::combat::FireOpts::default() };
-            game::seats::with_seat(&mut p.g, seat, &mut |g| game::combat::fire_weapon(g, c, [at[0], at[1] + 30.0, at[2] + 1.0], player, Some(&o)));
+            game::seats::with_seat(&mut p.g, seat, &mut |g| game::combat::fire_weapon(g, c, [at[0], at[1] + 30.0, at[2] + 1.0], Some(&o)));
             let of: Vec<f64> = p.g.engine.lights.lights.iter().filter(|l| !had.contains(l) && p.g.tab.light[**l].owner == id).map(|&l| game::render_lights::light_set_fog_class(&p.g, l)).collect();
             assert!(!of.is_empty() && of.iter().all(|&k| k == class), "seed {seed}: the flashes of #{id} are {of:?}, not all {class}");
         }
@@ -188,7 +188,7 @@ fn a_moment_of_a_game_of_two_put_back_plays_the_same() {
 #[test]
 fn a_rescue_refuses_two_players() {
     let mut p = Play::level("office.json", false, &Opts { seed: 5, seats: 2, ..Default::default() });
-    let why = game::scenario_run::start_scenario(&mut p.g, &game::scene_scenario_list::ScenarioSpec { kind: game::scene_scenario_list::ScenarioSpecKind::Rescue, squad: 2.0, level: None, seed: None });
+    let why = game::scenario_run::start_scenario(&mut p.g, &game::scene_scenario_list::ScenarioSpec { kind: game::scene_scenarios::MissionKind::Rescue, squad: 2.0, level: None, seed: None });
     assert!(why.is_some_and(|w| !w.is_empty()) && p.g.rescue.result.is_none());
     for _ in 0..30 { frame(&mut p, 0); }
 }

@@ -12,8 +12,6 @@ pub struct QuietDeal {
 
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct QuietMission {
-    pub active: bool,
-    pub ops: Vec<GuardId>,
     pub squad: f64,
     pub pin: Option<f64>,
     #[is(crate::quiet::QuietDeal { start: 0.0, spot: 0.0, patrol: -1.0 })] pub deal: crate::quiet::QuietDeal,
@@ -99,7 +97,6 @@ pub struct QuietWords {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct QuietMod {
-    /// (src/game/quiet.ts:60 holder)
     pub holder: bool,
 }
 
@@ -111,11 +108,8 @@ pub struct QuietStats {
     pub mates: i32,
 }
 
-/// (src/game/quiet.ts:53 EXIT_HALF_W)
 pub const EXIT_HALF_W: f64 = 1.8;
 
-/// (src/game/quiet.ts:55 EXIT_DEPTH)
 pub const EXIT_DEPTH: f64 = 12.0;
 
-/// (src/game/quiet.ts:362 FIRST_SIGHT_M)
 pub const FIRST_SIGHT_M: f64 = 16.0;

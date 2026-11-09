@@ -1,4 +1,3 @@
-//! src/game/player.ts lines 2301 to 2631
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -13,7 +12,7 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 fn mark(kind: crate::game::InteractableKind, pos: V3, line1: String, line2: String, in_reach: bool, off: bool) -> crate::game::Interactable {
     crate::game::Interactable { kind, pos, line1, line2, in_reach, off, ..Default::default() }
 }
-/// a verb row: the marker's identity, 'Space  <verb>' and any hint lines for the thing's other inputs   (player.ts row)
+/// a verb row: the marker's identity, 'Space  <verb>' and any hint lines for the thing's other inputs
 fn row(base: &crate::game::Interactable, verb: crate::game::Verb, text: &str, hints: &str) -> crate::game::Interactable {
     let mut r = base.clone();
     r.verb = Some(verb);
@@ -22,7 +21,7 @@ fn row(base: &crate::game::Interactable, verb: crate::game::Verb, text: &str, hi
     r.line2 = if hints.is_empty() { format!("Space  {}", text) } else { format!("Space  {}  ·  {}", text, hints) };
     r
 }
-/// the one row of a running sustained verb: worded as running, its bar, and how it stops   (player.ts running)
+/// the one row of a running sustained verb: worded as running, its bar, and how it stops
 fn running(base: &crate::game::Interactable, verb: crate::game::Verb, text: &str, progress: Option<f64>) -> crate::game::Interactable {
     let mut r = base.clone();
     r.verb = Some(verb);
@@ -32,7 +31,7 @@ fn running(base: &crate::game::Interactable, verb: crate::game::Verb, text: &str
     r.in_reach = true;
     r
 }
-/// a row Space does nothing with: no verb   (player.ts status)
+/// a row Space does nothing with: no verb
 fn status(base: &crate::game::Interactable, text: &str) -> crate::game::Interactable {
     let mut r = base.clone();
     r.verb = None;
@@ -42,7 +41,7 @@ fn status(base: &crate::game::Interactable, text: &str) -> crate::game::Interact
     r.in_reach = true;
     r
 }
-/// the marker of a thing that has verb rows: its line2 lists them. `things` holds the marker's place in `list`: the two are one object in the TypeScript   (player.ts offer)
+/// the marker of a thing that has verb rows: its line2 lists them. `things` holds the marker's place in `list`: the two are one object in the TypeScript
 fn offer(list: &mut Vec<crate::game::Interactable>, things: &mut Vec<(usize, Vec<crate::game::Interactable>)>, mut it: crate::game::Interactable, verbs: Vec<crate::game::Interactable>) {
     if !verbs.is_empty() {
         it.line2 = join_line2(&verbs);
@@ -59,7 +58,7 @@ fn join_line2(rows: &[crate::game::Interactable]) -> String {
     }
     s
 }
-/// the door's marker this frame, or a plain one if it has none   (player.ts marker)
+/// the door's marker this frame, or a plain one if it has none
 fn marker(g: &Game, list: &[crate::game::Interactable], d: DoorId) -> crate::game::Interactable {
     if let Some(x) = list.iter().find(|x| x.door == Some(d)) { return x.clone(); }
     let pos = crate::doors::door_pos(g, d);
@@ -128,7 +127,7 @@ fn civ_whose(g: &Game, cv: CivId) -> String {
     if g.cv[cv].she == "he" { String::from("his") } else { g.cv[cv].her.clone() }
 }
 
-/// the closure interactOrder returns (interactOrder is not in the game: this is the ordering): in reach first, then by what matters (INTERACT_PRIORITY, lower = higher up), then nearest   (player.ts:2559)
+/// the closure interactOrder returns (interactOrder is not in the game: this is the ordering): in reach first, then by what matters (INTERACT_PRIORITY, lower = higher up), then nearest
 fn interact_cmp(g: &mut Game, p: V3, priority: &JsMap<String, f64>, a: &crate::game::Interactable, b: &crate::game::Interactable) -> f64 {
     if a.in_reach != b.in_reach { return if a.in_reach { -1.0 } else { 1.0 }; }
     let rank = |k: crate::game::InteractableKind| *priority.get(String::from(k.as_str())).unwrap();
@@ -137,7 +136,7 @@ fn interact_cmp(g: &mut Game, p: V3, priority: &JsMap<String, f64>, a: &crate::g
     js::or(by_rank, by_dist)
 }
 
-/// The markers Space concerns itself with, and the rows: what Space can do right now, one verb a row, the highlighted one.   (player.ts buildInteractables)
+/// The markers Space concerns itself with, and the rows: what Space can do right now, one verb a row, the highlighted one.
 pub(super) fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: f64, my: f64, w: f64, h: f64) {
     let pl = g.player;
     let mut list: Vec<crate::game::Interactable> = Vec::new();
@@ -390,7 +389,7 @@ pub(super) fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: 
                     }
                 }
             }
-            // the big slot's tool (bigkit.ts): in the boot's own row. True = the shotgun, false = the hammer
+            // the big slot's tool: in the boot's own row. True = the shotgun, false = the hammer
             {
                 let can = !busy && !dragging_any && !sprinting && (!crouch || can_stand(g));
                 let far = if can && !reach && g.pl[pl].holding.is_none() { crate::bigkit::sam_big_far(g, d, p) } else { None };
@@ -413,7 +412,7 @@ pub(super) fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: 
                     }
                 }
             }
-            // the optical wand (wand.ts): the last row of whatever the door offers; where the rows are already MAX_NEAR it takes the place of 'try the handle'
+            // the optical wand: the last row of whatever the door offers; where the rows are already MAX_NEAR it takes the place of 'try the handle'
             if reach && !busy && crate::wand::wand_offered(g, pl, d) {
                 if verbs.len() as f64 >= MAX_NEAR {
                     if let Some(k) = verbs.iter().position(|v| v.verb == Some(crate::game::Verb::Rattle)) { verbs.remove(k); }
@@ -437,7 +436,7 @@ pub(super) fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: 
         for gd in crate::civilians::civilian_bodies(g) {
             if g.pl[pl].takedown.is_some() || crate::fogofwar::fog_of_war_hidden(g, gd) { continue; }
             let cv = g.gd[gd].civ.unwrap();
-            if crate::rescue::rescue_is_hostage(g, gd) { continue; }
+            if g.staged.captives.contains(&gd) { continue; }
             let gc = g.gd[gd].ch;
             let gp = g.ch[gc].pos;
             let (dx, dz) = (p[0] - gp[0], p[2] - gp[2]);
@@ -700,7 +699,7 @@ pub(in crate::sam) fn who_of<'g>(g: &'g crate::game::Game, r: &crate::game::Inte
     }
 }
 
-/// identity of a row: the thing and the verb   (player.ts rowKey)
+/// identity of a row: the thing and the verb
 fn row_key(g: &crate::game::Game, r: &crate::game::Interactable) -> String {
     let who = who_of(g, r);
     match r.verb {
@@ -709,7 +708,7 @@ fn row_key(g: &crate::game::Game, r: &crate::game::Interactable) -> String {
     }
 }
 
-/// Game.hover ← the highlighted row, Game.useDoor ← its door if it is a door row in reach   (player.ts pickHover)
+/// Game.hover ← the highlighted row, Game.useDoor ← its door if it is a door row in reach
 pub fn pick_hover(g: &mut crate::game::Game) {
     let pl = g.player;
     let n = g.nearby.len() as i32;
@@ -723,7 +722,7 @@ pub fn pick_hover(g: &mut crate::game::Game) {
     g.hover = best;
 }
 
-/// the selector's bottom row while it is open: letting go of Space on it does nothing   (player.ts cancelRow)
+/// the selector's bottom row while it is open: letting go of Space on it does nothing
 pub(in crate::sam) fn cancel_row(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> crate::game::Interactable {
     let p = g.ch[g.pl[seat.player].ch].pos;
     let mut it = mark(crate::game::InteractableKind::Cancel, [p[0], 1.3, p[2]], String::from("cancel"), String::from("let go here — nothing happens"), true, false);
@@ -732,7 +731,7 @@ pub(in crate::sam) fn cancel_row(g: &crate::game::Game, seat: &crate::seats::Sea
     it
 }
 
-/// how far a thing is from him, as its reach is measured: a door by its leaf or its doorway's centre, whichever is nearer   (player.ts thingDist)
+/// how far a thing is from him, as its reach is measured: a door by its leaf or its doorway's centre, whichever is nearer
 pub(in crate::sam) fn thing_dist(g: &crate::game::Game, it: &crate::game::Interactable, p: V3) -> f64 {
     let d = v3::dist_xz(it.pos, p);
     match it.door {
@@ -741,7 +740,7 @@ pub(in crate::sam) fn thing_dist(g: &crate::game::Game, it: &crate::game::Intera
     }
 }
 
-/// how many of a kind are on the belt   (player.ts throwCount)
+/// how many of a kind are on the belt
 pub fn throw_count(g: &crate::game::Game, seat: &crate::seats::SeatRef, kind: crate::game::ThrowKind) -> f64 {
     let pl = seat.player;
     match kind {
@@ -751,7 +750,7 @@ pub fn throw_count(g: &crate::game::Game, seat: &crate::seats::SeatRef, kind: cr
     }
 }
 
-/// a thrown thing not yet out of the hand goes back on the belt   (player.ts canBack)
+/// a thrown thing not yet out of the hand goes back on the belt
 pub(super) fn can_back(g: &mut crate::game::Game, pl: PlayerId, kind: crate::game::ThrowKind) {
     match kind {
         crate::game::ThrowKind::Frag => g.pl[pl].frags += 1.0,
@@ -760,7 +759,7 @@ pub(super) fn can_back(g: &mut crate::game::Game, pl: PlayerId, kind: crate::gam
     }
 }
 
-/// a wind-up called off with the can still in his fist: back on the belt   (player.ts throwOff)
+/// a wind-up called off with the can still in his fist: back on the belt
 pub(super) fn throw_off(g: &mut crate::game::Game, pl: PlayerId) {
     if let Some(kind) = g.pl[pl].pending_throw.as_ref().map(|t| t.kind) {
         can_back(g, pl, kind);
@@ -768,7 +767,7 @@ pub(super) fn throw_off(g: &mut crate::game::Game, pl: PlayerId) {
     }
 }
 
-/// F: let go of the body you are dragging, or take hold of the nearest one within reach   (player.ts toggleDrag)
+/// F: let go of the body you are dragging, or take hold of the nearest one within reach
 pub fn toggle_drag(g: &mut crate::game::Game, which: Option<GuardId>) {
     let pl = g.player;
     if g.pl[pl].dragging.is_some() {
@@ -809,7 +808,7 @@ pub fn toggle_drag(g: &mut crate::game::Game, which: Option<GuardId>) {
     crate::hands::haul_begin(g, best);
 }
 
-/// Let go of the body in tow: the ankle pins come off and its feet fall where they are   (player.ts releaseBody)
+/// Let go of the body in tow: the ankle pins come off and its feet fall where they are
 pub(super) fn release_body(g: &mut crate::game::Game, laid: Option<bool>) {
     let laid = laid.unwrap_or(false);
     let pl = g.player;
@@ -826,7 +825,7 @@ pub(super) fn release_body(g: &mut crate::game::Game, laid: Option<bool>) {
     crate::audio_iface::game_audio_like_play(g, "bodyFall", Some(at), Some(if laid { 0.12 } else { 0.3 }), None);
 }
 
-/// Break off whatever the hands and feet are in the middle of that belongs to the SPOT, and stand ready   (player.ts cancelActions)
+/// Break off whatever the hands and feet are in the middle of that belongs to the SPOT, and stand ready
 pub fn cancel_actions(g: &mut crate::game::Game) {
     let pl = g.player;
     let c = g.pl[pl].ch;
@@ -858,7 +857,7 @@ pub fn cancel_actions(g: &mut crate::game::Game) {
     g.ch[c].vel = [0.0, 0.0, 0.0];
 }
 
-/// pushed out of whatever is there: did that converge (false: a gap the body cannot fit)   (player.ts teleportPlayer's settle)
+/// pushed out of whatever is there: did that converge (false: a gap the body cannot fit)
 fn settle(g: &mut Game, q: &mut V3) -> bool {
     crate::scene_collision::clamp_to_world(g, q, BODY_R);
     let r = body_r(g, *q);
@@ -868,7 +867,7 @@ fn settle(g: &mut Game, q: &mut V3) -> bool {
     !crate::scene_collision::collide_circle(g, &mut t, r, 0.05, 2.2, Some(1.0)) || v3::dist_xz(t, *q) < 0.005
 }
 
-/// Sandbox / harness: stand the player at p, free of anything he was in the middle of   (player.ts teleportPlayer)
+/// Sandbox / harness: stand the player at p, free of anything he was in the middle of
 pub fn teleport_player(g: &mut crate::game::Game, p: V3) {
     let pl = g.player;
     if crate::condition::down(g, g.pl[pl].ch) { return; }

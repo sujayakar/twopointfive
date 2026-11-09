@@ -7,13 +7,13 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{format, string::String, vec::Vec};
 
-/// Live: a run is on and it really is the player playing. (mission.ts missionLive)
+/// Live: a run is on and it really is the player playing.
 pub fn mission_live(g: &crate::game::Game) -> bool {
     let s = g.mission.stage;
     !g.aside && g.puppet.is_none() && s != crate::game::MissionStage::Done && s != crate::game::MissionStage::Failed
 }
 
-/// One more of a counted thing on the run's card, if the run is live. (mission.ts tally)
+/// One more of a counted thing on the run's card, if the run is live.
 pub fn tally(g: &mut crate::game::Game, k: crate::mission::TallyK) {
     if mission_live(g) {
         let s = &mut g.mission.stats;
@@ -29,7 +29,7 @@ pub fn tally(g: &mut crate::game::Game, k: crate::mission::TallyK) {
     }
 }
 
-/// Planar distance from a floor point to the mission rack's face. (mission.ts rackDist)
+/// Planar distance from a floor point to the mission rack's face.
 pub fn rack_dist(g: &mut crate::game::Game, p: V3) -> f64 {
     let front = g.level.mission.rack.front;
     let half_w = g.level.mission.rack.half_w;
@@ -43,12 +43,12 @@ pub fn rack_dist(g: &mut crate::game::Game, p: V3) -> f64 {
     rack_dist_plain(front, half_w, p)
 }
 
-/// rackDist's arm for a rack on the plain night: anywhere across its width counts. (mission.ts:50)
+/// rackDist's arm for a rack on the plain night: anywhere across its width counts.
 fn rack_dist_plain(front: V3, half_w: f64, p: V3) -> f64 {
     m::hyp2(m::max(0.0, m::abs(p[0] - front[0]) - half_w), p[2] - front[2])
 }
 
-/// Out through the mission's exit, or any exit of a quiet mission. (mission.ts outNow)
+/// Out through the mission's exit, or any exit of a quiet mission.
 fn out_now(g: &crate::game::Game, p: V3) -> bool {
     if crate::quiet::quiet_of(g) {
         let exits = crate::quiet::quiet_mission_exits(g);
@@ -57,7 +57,7 @@ fn out_now(g: &crate::game::Game, p: V3) -> bool {
     out_plain(g.level.mission.exfil_x, g.level.mission.exfil_z, g.level.mission.exfil_out, p)
 }
 
-/// outNow's arm for the level's one exit: past its point going its way, or east past its x; inside its frame. (mission.ts:56-58)
+/// outNow's arm for the level's one exit: past its point going its way, or east past its x; inside its frame.
 fn out_plain(exfil_x: f64, exfil_z: f64, exfil_out: Option<[f64; 2]>, p: V3) -> bool {
     if let Some(o) = exfil_out {
         return (p[0] - exfil_x) * o[0] + (p[2] - exfil_z) * o[1] > 0.0 && m::abs((p[0] - exfil_x) * o[1] - (p[2] - exfil_z) * o[0]) < 1.8;
@@ -65,7 +65,7 @@ fn out_plain(exfil_x: f64, exfil_z: f64, exfil_out: Option<[f64; 2]>, p: V3) -> 
     p[0] > exfil_x && m::abs(p[2] - exfil_z) < 1.8
 }
 
-/// The mission's stage machine: infiltrate, drive, exfil, and the run's counts. (mission.ts updateMission)
+/// The mission's stage machine: infiltrate, drive, exfil, and the run's counts.
 pub fn update_mission(g: &mut crate::game::Game, dt: f64, input: InputId) {
     use crate::game::{GuardState, InteractableKind, MissionStage, Verb};
     if g.aside || g.puppet.is_some() {
@@ -118,8 +118,8 @@ pub fn update_mission(g: &mut crate::game::Game, dt: f64, input: InputId) {
         }
         g.mission.spotted_t = g.time;
     }
-    if crate::roomclear::room_clear_scenario_active(g) || g.rescue.active {
-        // the room clear or the hostage rescue has the floor: no stage of the stealth mission moves under it
+    if g.staged.facts.own_rule {
+        // a mission that goes by its own rule has the floor: no stage of the stealth mission moves under it
     } else if g.mission.stage == MissionStage::Infiltrate {
         let p = player_pos(g, &crate::seats::here(g));
         let (x0, x1, z0, z1) = {
@@ -190,7 +190,7 @@ pub fn update_mission(g: &mut crate::game::Game, dt: f64, input: InputId) {
     }
 }
 
-/// Hands off the drive before it is out: the pull starts over next time. (mission.ts cancelDrive)
+/// Hands off the drive before it is out: the pull starts over next time.
 pub fn cancel_drive(g: &mut crate::game::Game) {
     if g.mission.drive_t < 0.0 {
         return;
@@ -198,7 +198,7 @@ pub fn cancel_drive(g: &mut crate::game::Game) {
     g.mission.drive_t = -1.0;
 }
 
-/// The caddy comes free: the rack goes dark, the clunk is heard, and soon a man is sent to look. (mission.ts drivePulled)
+/// The caddy comes free: the rack goes dark, the clunk is heard, and soon a man is sent to look.
 pub fn drive_pulled(g: &mut crate::game::Game) {
     let rf = g.level.mission.rack.front;
     let n = js::num_str(g.level.mission.rack.index + 1.0);
@@ -243,7 +243,7 @@ pub fn drive_pulled(g: &mut crate::game::Game) {
     crate::dialogue::handler_beat(g, crate::dialogue::HandlerBeat::Drive, Some(1.5));
 }
 
-/// The dead rack is noticed: the nearest calm patrol goes to look at it. (mission.ts sendRackCheck)
+/// The dead rack is noticed: the nearest calm patrol goes to look at it.
 pub fn send_rack_check(g: &mut crate::game::Game) {
     use crate::game::{GuardState, GuardTask, GuardTaskArm0, GuardTaskArm0Kind};
     let pl = g.player;
@@ -301,6 +301,47 @@ pub fn send_rack_check(g: &mut crate::game::Game) {
     crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.6), None);
     crate::dialogue::handler_beat(g, crate::dialogue::HandlerBeat::Rack, Some(2.6));
 }
+
+/// HOW THE RUN THAT IS UP HAS ENDED (None: it goes on): won or lost, the card's word and why, by the rule of whoever staged it. The verdict asks it each tick and latches the first answer.
+pub fn ended(g: &crate::game::Game) -> Option<(bool, &'static str, String)> {
+    if crate::seats::all_down(g) {
+        let by = &g.chronicle.counts.down_by;
+        return Some((false, "DOWN", if by.is_empty() { String::new() } else { format!("by {}", by) }));
+    }
+    use crate::game::MissionStage;
+    use crate::scene_scenarios::MissionKind as K;
+    match g.staged.up {
+        Some(K::Roomclear) => crate::roomclear::room_clear_scenario_ended(g),
+        Some(K::Rescue) => crate::rescue::rescue_ended(g),
+        Some(K::Nightbreach) => crate::nightbreach::night_breach_ended(g),
+        Some(K::Quiet) | None => match g.mission.stage { MissionStage::Done => Some((true, "OUT", String::new())), MissionStage::Failed => Some((false, "FAILED", String::new())), _ => None },
+    }
+}
+
+/// The mission that is up has its men in an entry of its own, or a clock that runs.
+pub fn going(g: &crate::game::Game) -> bool {
+    use crate::scene_scenarios::MissionKind as K;
+    match g.staged.up {
+        Some(K::Roomclear | K::Nightbreach) => crate::nightbreach::night_breach_going(g),
+        Some(K::Rescue) => crate::rescue::rescue_dynamic(g) && !g.staged.over,
+        Some(K::Quiet) | None => false,
+    }
+}
+
+/// The captives who live.
+pub fn captives_up(g: &crate::game::Game) -> Vec<GuardId> { g.staged.captives.iter().copied().filter(|&h| !crate::condition::down(g, g.gd[h].ch)).collect() }
+
+/// Who holds the captives now.
+pub fn captor(g: &mut crate::game::Game) -> Option<GuardId> { if g.staged.captives.is_empty() { None } else { crate::rescue::rescue_captor(g) } }
+
+/// He lies in wait, and nothing said on the net may give his place away.
+pub fn lies_in_wait(g: &crate::game::Game, gd: GuardId) -> bool { g.staged.leads(gd) && crate::rescue::rescue_crew_hides(g, gd) }
+
+/// The mission's own place for his gun, where it leads him and has one.
+pub fn gun_place(g: &crate::game::Game, gd: GuardId) -> Option<V3> { if g.staged.leads(gd) { crate::rescue::rescue_crew_look(g, gd) } else { None } }
+
+/// The last warning before a captive dies, as the men at a door have it.
+pub fn last_warning(g: &mut crate::game::Game, d: DoorId) -> bool { !g.staged.captives.is_empty() && crate::rescue::rescue_last_warning(g, d) }
 
 /// THE MISSION'S ONE LINE AND ITS PLACE, as they stand now, and whose they are: a level's program while it runs, a lesson's step over its own scenario,
 /// the room clear, the rescue, the night breach by itself, and else the stealth mission's own stages.
@@ -363,12 +404,12 @@ fn stage_words(g: &Game, seat: &crate::seats::SeatRef) -> String {
     }
 }
 
-/// `Math.min(99, Math.round(m.driveT / DRIVE_SECS * 100))`, the pull's percent on the HUD (mission.ts:166, 169).
+/// `Math.min(99, Math.round(m.driveT / DRIVE_SECS * 100))`, the pull's percent on the HUD.
 fn drive_percent(drive_t: f64) -> String {
     js::num_str(m::min(99.0, m::round(drive_t / crate::consts::DRIVE_SECS * 100.0)))
 }
 
-/// `g.doors.byName(name)?.frameCentre ?? null` (mission.ts:150).
+/// `g.doors.byName(name)?.frameCentre ?? null`.
 fn door_centre(g: &Game, name: &str) -> Option<V3> {
     crate::doors::doors_by_name(g, name).map(|d| g.dr[d].frame_centre)
 }
