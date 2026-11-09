@@ -222,7 +222,7 @@ pub fn crossing(g: &mut crate::game::Game, index: f64, o: V3, d: V3, t: f64, n: 
     let dir_out = deflect(g, b, at, d, toll.take, e);
     let into = born_in(g, exit, d, index);
     Some(WallCross {
-        stuff: toll.stuff, take: toll.take, e_out: toll.e_out, thru: toll.thru,
+        stuff: toll.stuff, e_out: toll.e_out, thru: toll.thru,
         index, t, n_in, n_out, exit, at, dir_in: d, dir_out, e_in: e, into,
     })
 }
@@ -339,8 +339,7 @@ pub fn thin_line(g: &mut crate::game::Game, from: V3, to: V3, energy: f64, short
     let p = thin_path(g, from, dir, reach, energy, Some(Some(hit)), None)?;
     if p.st.is_some() || p.walls.is_empty() { return None; }
     g.stats.wallpen.through += 1;
-    let e = p.segs[p.segs.len() - 1].e;
-    Some(ThinLine2::ThinLine(ThinLine { panes: p.cross.len() as f64, e, walls: p.walls }))
+    Some(ThinLine2::ThinLine(ThinLine { panes: p.cross.len() as f64, walls: p.walls }))
 }
 
 /// The hardest round any gun in the game fires. (wallpen.ts topEnergy)

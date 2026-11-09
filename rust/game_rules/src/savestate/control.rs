@@ -24,8 +24,7 @@ pub enum Do {
 fn key_of(slot: SlotInfoSlot, i: usize) -> String { format!("{}.{}", if slot == SlotInfoSlot::Auto { "auto" } else { "manual" }, i) }
 fn ring(g: &Game, slot: SlotInfoSlot) -> usize { (if slot == SlotInfoSlot::Auto { g.k.savetimeline.auto } else { g.k.savetimeline.manual }) as usize }
 fn note(g: &mut Game, what: String) {
-    let t = g.time;
-    g.saves.log.push(CheckpointsLogItem { t, what });
+    g.saves.log.push(CheckpointsLogItem {  });
     if g.saves.log.len() > 40 { g.saves.log.remove(0); }
 }
 fn here(g: &mut Game) -> String { let p = g.ch[g.pl[g.player].ch].pos; crate::chronicle::room_of(g, p) }
@@ -34,7 +33,6 @@ fn rank(s: MissionStage) -> u32 { match s { MissionStage::Infiltrate => 0, Missi
 /// Why the game cannot be kept right now; `authored` = a tutorial's own checkpoint, taken whatever is on the floor.   (savestate.ts runNo, for a save in memory)
 pub fn run_no(g: &Game, seat: &crate::seats::SeatRef, authored: bool) -> Option<String> {
     if g.touring || g.quiet_utility || g.puppet.is_some() { return Some(String::from("a show is running")); }
-    if !authored { if let Some(r) = g.director.run { let r = &g.tab.director_run[r]; if !r.ended { return Some(format!("the level script's program '{}' is running", r.name)); } } }
     if g.seats.len() > 1 { return Some(String::from("two players (a checkpoint holds one player today)")); }
     if g.pl[seat.player].down { return Some(String::from("the player is down")); }
     if matches!(g.mission.stage, MissionStage::Failed | MissionStage::Done) { return Some(format!("the run is over ({}) \u{2014} nothing to come back to", g.mission.stage.as_str())); }
@@ -271,9 +269,8 @@ fn write(g: &mut Game, slot: SlotInfoSlot, label: &str, authored: bool) -> Optio
     let key = key_of(slot, n);
     // (which came after which: no clock of the machine's is in a game)
     let saved_at = g.saves.shelf.m.values().map(|e| e.info.saved_at).fold(0.0, crate::m::max) + 1.0;
-    let kind = if slot == SlotInfoSlot::Auto { SlotInfoKind::Auto } else { SlotInfoKind::Manual };
-    let info = SlotInfo { key: key.clone(), slot, n: n as f64, label: String::from(label), kind, saved_at, mission_t: g.mission.stats.elapsed, stage: String::from(g.mission.stage.as_str()), run_id: g.saves.run_id.clone(), bytes: 0.0, regret: None, mem: Some(true) };
-    g.saves.shelf.m.set(key.clone(), MemSave { info, pic: None });
+    let info = SlotInfo { key: key.clone(), slot, label: String::from(label), saved_at, mission_t: g.mission.stats.elapsed, run_id: g.saves.run_id.clone(), regret: None };
+    g.saves.shelf.m.set(key.clone(), MemSave { info });
     g.saves.last_save_t = g.time;
     g.saves.quiet_t = 0.0;
     let t = g.time;
@@ -327,7 +324,6 @@ pub fn put_back(g: &mut Game, key: &str, was: Abandoned) -> String {
     let t = g.time;
     g.saves.flash = Some(CheckpointsFlash { text: String::from("CHECKPOINT LOADED"), t });
     note(g, format!("loaded {key}"));
-    crate::rails::rails_put_back(g);
     if label.is_empty() { String::from("checkpoint loaded") } else { format!("checkpoint loaded \u{2014} {label}") }
 }
 /// This run's saves, oldest first on the mission's clock: what a card lays out.   (Checkpoints.timeline)

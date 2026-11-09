@@ -75,7 +75,7 @@ export const enum View {
   stood = 1,
   /** u32: the shown man's id */
   man = 2,
-  /** f32 × 3: where he stands, and where the view follows (him, a man spectated, the squad from the sky) */
+  /** f32 × 3: where he stands, and where the view follows (him, or a man spectated) */
   at = 3,
   /** f32 × 3 */
   follow = 6,
@@ -517,7 +517,7 @@ export const enum AirPush {
   tick = 0,
   /** u32 */
   serial = 1,
-  /** u32: 0 at a point, 1 along a line, 2 by a standing body, 3 a jet, 4 outward */
+  /** u32: 0 at a point, 1 along a line, 2 by a standing body, 3 a jet, 4 outward, 5 a round's path, 6 a walking man's stride */
   shape = 2,
   /** f32 × 3 */
   pos = 3,

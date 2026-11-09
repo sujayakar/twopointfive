@@ -1,5 +1,5 @@
 // EVERYTHING IN A LEVEL FILE THAT WEARS A PAINT, and the material row it wears: what a tool that reads "what is each box made of" walks (the material check,
-// tools/qa/stuff-check.ts; and, while files from before 2026-11-04 exist, tools/levels/stuff-bake.ts and tools/qa/stuff-audit.ts).
+// tools/qa/stuff-check.ts; and, while files from before 2026-11-04 exist, tools/levels/stuff-bake.ts).
 export type Paints = { material?: string; albedo?: number[]; stuff?: string };
 export type Data = { materials: Record<string, { albedo: number[]; stuff?: string }>; boxes: Paints[]; props: { parts: Paints[] }[]; scenarios?: { kitView?: { ways?: { add?: { boxes?: Paints[] } }[]; sets?: Record<string, { boxes: Paints[] }> } } };
 /** everything in a level file that wears a paint, with where it is: the boxes, the props' parts, and a gear screen's own boxes (its sets, a way's pieces) */

@@ -1,5 +1,5 @@
 // WHAT A HUD IS HANDED: the game's record (`view`), the world asked (`ask`), and what only a page that draws can say: the clock between ticks, where it drew a man, and what the page itself tells the HUD. A page
-// with no game makes one of these from what it draws; the page that holds a game makes it in one place (host/hudsource.ts). Types and one blank; nothing under them imports the game (tools/qa/view-check.ts).
+// with no game makes one of these from what it draws. Types and one blank; nothing under them imports the game (tools/qa/view-check.ts).
 import type { Vec3 } from '../math/vec';
 import type { TickView } from './read';
 import type { WorldAsk } from './worldask';

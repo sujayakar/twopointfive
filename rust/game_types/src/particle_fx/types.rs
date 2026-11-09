@@ -1,9 +1,8 @@
-//! The types of `particle_fx`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `particle_fx`.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: ImpactRecipe, src/game/particleFx.ts:130)
 #[derive(Clone, Copy, Debug)]
 pub struct ImpactRecipe {
     pub sparks: f64,
@@ -14,9 +13,8 @@ pub struct ImpactRecipe {
     pub spark_speed: Option<f64>,
     pub chip_size: Option<f64>,
 }
-impl ImpactRecipe {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
+impl Default for ImpactRecipe {
+    fn default() -> Self {
         ImpactRecipe {
             sparks: 0.0,
             chips: 0.0,
@@ -28,9 +26,7 @@ impl ImpactRecipe {
         }
     }
 }
-impl Default for ImpactRecipe { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: a union)
 #[derive(Clone, Copy, Debug)]
 pub enum ImpactRecipeChipTint {
     List(V3),
@@ -38,15 +34,13 @@ pub enum ImpactRecipeChipTint {
     Pale,
 }
 
-/// (TypeScript: a union)
 #[derive(Clone, Copy, Debug)]
 pub enum ImpactRecipeDustTint {
     List(V3),
     Albedo,
 }
 
-/// (TypeScript: CasingSpec, src/game/particleFx.ts:266)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct CasingSpec {
     pub color: V3,
     pub diameter: f64,
@@ -58,77 +52,27 @@ pub struct CasingSpec {
     pub speed: f64,
     pub tink: f64,
 }
-impl CasingSpec {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CasingSpec {
-            color: [0.0; 3],
-            diameter: 0.0,
-            from: crate::particle_fx::CasingSpecFrom::Hand,
-            ahead: 0.0,
-            up: 0.0,
-            right: 0.0,
-            dir: [0.0; 3],
-            speed: 0.0,
-            tink: 0.0,
-        }
-    }
-}
-impl Default for CasingSpec { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum CasingSpecFrom {
-    Hand,
+    #[default] Hand,
     Muzzle,
 }
-impl CasingSpecFrom {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            CasingSpecFrom::Hand => "hand",
-            CasingSpecFrom::Muzzle => "muzzle",
-        }
-    }
-}
 
-/// (TypeScript: FxState, src/game/particleFx.ts:289)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct FxState {
     pub tinks: Vec<crate::particle_fx::FxStateTinksItem>,
     pub n: f64,
 }
-impl FxState {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FxState {
-            tinks: Vec::new(),
-            n: 0.0,
-        }
-    }
-}
-impl Default for FxState { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/particleFx.ts:289 FxState.tinks, src/game/particleFx.ts:289)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct FxStateTinksItem {
     pub t: f64,
     pub pos: V3,
     pub rate: f64,
 }
-impl FxStateTinksItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FxStateTinksItem {
-            t: 0.0,
-            pos: [0.0; 3],
-            rate: 0.0,
-        }
-    }
-}
-impl Default for FxStateTinksItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/particleFx.ts:35 DUST, src/game/particleFx.ts:35)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct ParticleFxModDUST {
     pub count: f64,
     pub size: f64,
@@ -137,23 +81,8 @@ pub struct ParticleFxModDUST {
     pub rise: f64,
     pub spread: f64,
 }
-impl ParticleFxModDUST {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ParticleFxModDUST {
-            count: 0.0,
-            size: 0.0,
-            life: 0.0,
-            speed: 0.0,
-            rise: 0.0,
-            spread: 0.0,
-        }
-    }
-}
-impl Default for ParticleFxModDUST { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/particleFx.ts:39 DUST_LOOK, src/game/particleFx.ts:39)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct ParticleFxModDUSTLOOK {
     pub opacity: f64,
     pub growth: f64,
@@ -162,23 +91,8 @@ pub struct ParticleFxModDUSTLOOK {
     pub wrap: f64,
     pub ambient: f64,
 }
-impl ParticleFxModDUSTLOOK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ParticleFxModDUSTLOOK {
-            opacity: 0.0,
-            growth: 0.0,
-            fade_in: 0.0,
-            soft: 0.0,
-            wrap: 0.0,
-            ambient: 0.0,
-        }
-    }
-}
-impl Default for ParticleFxModDUSTLOOK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/particleFx.ts:96 STUFF_SURF, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct STUFFSURF {
     pub carpet: Option<String>,
     pub grass: Option<String>,
@@ -213,49 +127,8 @@ pub struct STUFFSURF {
     pub plain: Option<String>,
     pub waits: Option<String>,
 }
-impl STUFFSURF {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        STUFFSURF {
-            carpet: None,
-            grass: None,
-            rubber: None,
-            metal: None,
-            glass: None,
-            wood: None,
-            plastic: None,
-            fabric: None,
-            steel: None,
-            enamel: None,
-            tarmac: None,
-            mud_wall: None,
-            plaster: None,
-            block: None,
-            earth: None,
-            gravel: None,
-            slab: None,
-            sheet: None,
-            cloth: None,
-            paint: None,
-            veneer: None,
-            carpaint: None,
-            stucco: None,
-            skim: None,
-            gloss_block: None,
-            board_concrete: None,
-            cast_panel: None,
-            paver: None,
-            brushed: None,
-            louvre: None,
-            plain: None,
-            waits: None,
-        }
-    }
-}
-impl Default for STUFFSURF { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/particleFx.ts:113 SOLID_GLASS_CRACK, src/game/particleFx.ts:113)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SOLIDGLASSCRACK {
     pub look: f64,
     pub pistol: f64,
@@ -263,22 +136,8 @@ pub struct SOLIDGLASSCRACK {
     pub pellet: f64,
     pub strength: f64,
 }
-impl SOLIDGLASSCRACK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SOLIDGLASSCRACK {
-            look: 0.0,
-            pistol: 0.0,
-            rifle: 0.0,
-            pellet: 0.0,
-            strength: 0.0,
-        }
-    }
-}
-impl Default for SOLIDGLASSCRACK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/particleFx.ts:144 PFX, src/game/particleFx.ts:144)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct ParticleFxModPFX {
     pub impact_scale_rifle: f64,
     pub spark_size: f64,
@@ -314,50 +173,8 @@ pub struct ParticleFxModPFX {
     pub tink_gain: f64,
     pub ember_size: f64,
 }
-impl ParticleFxModPFX {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ParticleFxModPFX {
-            impact_scale_rifle: 0.0,
-            spark_size: 0.0,
-            spark_life: 0.0,
-            spark_spread: 0.0,
-            chip_speed: 0.0,
-            chip_life: 0.0,
-            chip_size: 0.0,
-            chip_spread: 0.0,
-            dust_speed: 0.0,
-            dust_life: 0.0,
-            dust_size: 0.0,
-            muzzle_spark_size: 0.0,
-            bang_sparks: 0.0,
-            bang_spark_size: 0.0,
-            bang_ring: 0.0,
-            bang_ring_radius: 0.0,
-            bang_ring_speed: 0.0,
-            bang_ring_life: 0.0,
-            bang_ring_size: 0.0,
-            bang_puff: 0.0,
-            kick_dust: 0.0,
-            kick_splinters: 0.0,
-            lock_splinters: 0.0,
-            lock_splinters_back: 0.0,
-            lock_screws: 0.0,
-            tube_shards: 0.0,
-            bulb_shards: 0.0,
-            tube_sparks: 0.0,
-            breaker_sparks: 0.0,
-            clack_sparks: 0.0,
-            casing_life: 0.0,
-            tink_gain: 0.0,
-            ember_size: 0.0,
-        }
-    }
-}
-impl Default for ParticleFxModPFX { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/particleFx.ts:269 CASINGS, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct CASINGS {
     pub fiveseven: Option<crate::particle_fx::CasingSpec>,
     pub guard9mm: Option<crate::particle_fx::CasingSpec>,
@@ -376,204 +193,59 @@ pub struct CASINGS {
     pub mk18bare: Option<crate::particle_fx::CasingSpec>,
     pub g19bare: Option<crate::particle_fx::CasingSpec>,
 }
-impl CASINGS {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CASINGS {
-            fiveseven: None,
-            guard9mm: None,
-            aks74u: None,
-            ak74m: None,
-            akms: None,
-            fn2000: None,
-            m870: None,
-            mk12: None,
-            mp7: None,
-            mk46: None,
-            m1014: None,
-            hk45: None,
-            g18: None,
-            pkm: None,
-            mk18bare: None,
-            g19bare: None,
-        }
-    }
-}
-impl Default for CASINGS { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/particleFx.ts:117 hitLook(hit), src/game/particleFx.ts:117)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct HitLookHit {
     pub index: Option<f64>,
     pub prop: Option<PropId>,
     pub box_: Option<BoxId>,
 }
-impl HitLookHit {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HitLookHit {
-            index: None,
-            prop: None,
-            box_: None,
-        }
-    }
-}
-impl Default for HitLookHit { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/particleFx.ts:117 hitLook ->, src/game/particleFx.ts:117)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct HitLook {
     pub surf: crate::scene_materials::Surf,
     pub albedo: V3,
     pub solid: bool,
     pub said: bool,
 }
-impl HitLook {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HitLook {
-            surf: crate::scene_materials::Surf::Carpet,
-            albedo: [0.0; 3],
-            solid: false,
-            said: false,
-        }
-    }
-}
-impl Default for HitLook { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/particleFx.ts:162 impactFx(hit), src/game/particleFx.ts:162)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct ImpactFxHit {
     pub n: V3,
     pub index: Option<f64>,
     pub prop: Option<PropId>,
     pub box_: Option<BoxId>,
 }
-impl ImpactFxHit {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ImpactFxHit {
-            n: [0.0; 3],
-            index: None,
-            prop: None,
-            box_: None,
-        }
-    }
-}
-impl Default for ImpactFxHit { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/particleFx.ts:214 fixtureShatterFx(t), src/game/particleFx.ts:214)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct FixtureShatterFxT {
     pub pos: V3,
     pub kind: String,
     pub boxes: Vec<f64>,
 }
-impl FixtureShatterFxT {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FixtureShatterFxT {
-            pos: [0.0; 3],
-            kind: String::new(),
-            boxes: Vec::new(),
-        }
-    }
-}
-impl Default for FixtureShatterFxT { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/particleFx.ts:226 lensShatterFx(t), src/game/particleFx.ts:226)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct LensShatterFxT {
     pub pos: V3,
     pub lens: Option<V3>,
 }
-impl LensShatterFxT {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LensShatterFxT {
-            pos: [0.0; 3],
-            lens: None,
-        }
-    }
-}
-impl Default for LensShatterFxT { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/particleFx.ts:259 emberFx(o), src/game/particleFx.ts:259)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct EmberFxO {
     pub count: f64,
     pub speed: f64,
     pub cone: f64,
     pub life: f64,
 }
-impl EmberFxO {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        EmberFxO {
-            count: 0.0,
-            speed: 0.0,
-            cone: 0.0,
-            life: 0.0,
-        }
-    }
-}
-impl Default for EmberFxO { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/particleFx.ts:319 pendingTinks ->, src/game/particleFx.ts:319)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct PendingTinksItem {
     pub t: f64,
     pub pos: V3,
 }
-impl PendingTinksItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PendingTinksItem {
-            t: 0.0,
-            pos: [0.0; 3],
-        }
-    }
-}
-impl Default for PendingTinksItem { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at quiet sparkSink ->, src/game/particleFx.ts:323)
-#[derive(Clone, Copy, Debug)]
-pub struct SparkSink {
-}
-impl SparkSink {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SparkSink {
-        }
-    }
-}
-impl Default for SparkSink { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum TestBurstKind {
-    Dust,
-    Bang,
-    Debris,
-    Sheets,
-    Sparks,
-    Casings,
-}
-impl TestBurstKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            TestBurstKind::Dust => "dust",
-            TestBurstKind::Bang => "bang",
-            TestBurstKind::Debris => "debris",
-            TestBurstKind::Sheets => "sheets",
-            TestBurstKind::Sparks => "sparks",
-            TestBurstKind::Casings => "casings",
-        }
-    }
-}
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct ParticleFxMod {
     /// (src/game/particleFx.ts:35 DUST)
     pub dust: crate::particle_fx::ParticleFxModDUST,
@@ -595,9 +267,6 @@ impl ParticleFxMod {
     }
 }
 
-/// (src/game/particleFx.ts:41 DUST_LS)
-pub const DUST_LS: &str = "twopointsix.dust.v2";
-
 /// (src/game/particleFx.ts:69 PROP_SURF: a table nothing writes)
 pub fn prop_surf() -> JsMap<String, String> { { let mut t = JsMap::new(); t.set(String::from("chair"), String::from("fabric")); t.set(String::from("cardboard"), String::from("cardboard")); t.set(String::from("bin"), String::from("metal")); t.set(String::from("plant"), String::from("foliage")); t } }
 
@@ -615,15 +284,6 @@ pub fn solid_glass_crack() -> crate::particle_fx::SOLIDGLASSCRACK { crate::parti
 
 /// (src/game/particleFx.ts:131 IMPACT: a table nothing writes)
 pub fn impact() -> JsMap<String, crate::particle_fx::ImpactRecipe> { { let mut t = JsMap::new(); t.set(String::from("metal"), crate::particle_fx::ImpactRecipe { sparks: 16.0, chips: 2.0, dust: 0.0, chip_tint: crate::particle_fx::ImpactRecipeChipTint::List([0.08, 0.08, 0.09]), dust_tint: crate::particle_fx::ImpactRecipeDustTint::List([0.5, 0.5, 0.5]), spark_speed: Some(6.0), chip_size: Some(0.005) }); t.set(String::from("plastic"), crate::particle_fx::ImpactRecipe { sparks: 6.0, chips: 5.0, dust: 1.0, chip_tint: crate::particle_fx::ImpactRecipeChipTint::Albedo, dust_tint: crate::particle_fx::ImpactRecipeDustTint::List([0.5, 0.5, 0.5]), spark_speed: None, chip_size: None }); t.set(String::from("glass"), crate::particle_fx::ImpactRecipe { sparks: 4.0, chips: 9.0, dust: 0.0, chip_tint: crate::particle_fx::ImpactRecipeChipTint::List([0.1, 0.11, 0.12]), dust_tint: crate::particle_fx::ImpactRecipeDustTint::List([0.5, 0.5, 0.5]), spark_speed: None, chip_size: Some(0.006) }); t.set(String::from("wood"), crate::particle_fx::ImpactRecipe { sparks: 0.0, chips: 12.0, dust: 3.0, chip_tint: crate::particle_fx::ImpactRecipeChipTint::List([0.66, 0.52, 0.34]), dust_tint: crate::particle_fx::ImpactRecipeDustTint::List([0.62, 0.52, 0.4]), spark_speed: None, chip_size: None }); t.set(String::from("cardboard"), crate::particle_fx::ImpactRecipe { sparks: 0.0, chips: 8.0, dust: 3.0, chip_tint: crate::particle_fx::ImpactRecipeChipTint::Albedo, dust_tint: crate::particle_fx::ImpactRecipeDustTint::List([0.6, 0.5, 0.36]), spark_speed: None, chip_size: None }); t.set(String::from("drywall"), crate::particle_fx::ImpactRecipe { sparks: 0.0, chips: 10.0, dust: 6.0, chip_tint: crate::particle_fx::ImpactRecipeChipTint::Pale, dust_tint: crate::particle_fx::ImpactRecipeDustTint::List([0.8, 0.78, 0.74]), spark_speed: None, chip_size: None }); t.set(String::from("concrete"), crate::particle_fx::ImpactRecipe { sparks: 5.0, chips: 10.0, dust: 5.0, chip_tint: crate::particle_fx::ImpactRecipeChipTint::List([0.45, 0.44, 0.42]), dust_tint: crate::particle_fx::ImpactRecipeDustTint::List([0.55, 0.54, 0.52]), spark_speed: Some(5.0), chip_size: None }); t.set(String::from("carpet"), crate::particle_fx::ImpactRecipe { sparks: 0.0, chips: 4.0, dust: 4.0, chip_tint: crate::particle_fx::ImpactRecipeChipTint::Albedo, dust_tint: crate::particle_fx::ImpactRecipeDustTint::Albedo, spark_speed: None, chip_size: None }); t.set(String::from("fabric"), crate::particle_fx::ImpactRecipe { sparks: 2.0, chips: 5.0, dust: 3.0, chip_tint: crate::particle_fx::ImpactRecipeChipTint::Albedo, dust_tint: crate::particle_fx::ImpactRecipeDustTint::Albedo, spark_speed: None, chip_size: None }); t.set(String::from("foliage"), crate::particle_fx::ImpactRecipe { sparks: 0.0, chips: 10.0, dust: 2.0, chip_tint: crate::particle_fx::ImpactRecipeChipTint::List([0.14, 0.32, 0.1]), dust_tint: crate::particle_fx::ImpactRecipeDustTint::List([0.3, 0.22, 0.14]), spark_speed: None, chip_size: None }); t } }
-
-/// (src/game/particleFx.ts:267 HULL: a table nothing writes)
-pub fn hull() -> V3 { [0.55, 0.06, 0.04] }
-
-/// (src/game/particleFx.ts:268 BRASS: a table nothing writes)
-pub fn brass() -> V3 { [0.72, 0.5, 0.16] }
-
-/// (src/game/particleFx.ts:268 LACQUERED_STEEL: a table nothing writes)
-pub fn lacquered_steel() -> V3 { [0.2, 0.19, 0.12] }
 
 /// (src/game/particleFx.ts:269 CASINGS: a table nothing writes)
 pub fn casings() -> crate::particle_fx::CASINGS { crate::particle_fx::CASINGS { fiveseven: Some(crate::particle_fx::CasingSpec { color: [0.72, 0.5, 0.16], diameter: 0.008, from: crate::particle_fx::CasingSpecFrom::Hand, ahead: 0.07, up: 0.055, right: 0.02, dir: [1.0, 0.9, -0.25], speed: 2.6, tink: 0.5 }), guard9mm: Some(crate::particle_fx::CasingSpec { color: [0.72, 0.5, 0.16], diameter: 0.0095, from: crate::particle_fx::CasingSpecFrom::Hand, ahead: 0.07, up: 0.055, right: 0.02, dir: [1.0, 0.8, -0.2], speed: 3.0, tink: 0.5 }), aks74u: Some(crate::particle_fx::CasingSpec { color: [0.2, 0.19, 0.12], diameter: 0.01, from: crate::particle_fx::CasingSpecFrom::Hand, ahead: 0.16, up: 0.07, right: 0.03, dir: [1.0, 0.45, 0.5], speed: 4.8, tink: 0.55 }), ak74m: Some(crate::particle_fx::CasingSpec { color: [0.2, 0.19, 0.12], diameter: 0.01, from: crate::particle_fx::CasingSpecFrom::Hand, ahead: 0.16, up: 0.07, right: 0.03, dir: [1.0, 0.45, 0.5], speed: 4.8, tink: 0.55 }), akms: Some(crate::particle_fx::CasingSpec { color: [0.2, 0.19, 0.12], diameter: 0.0113, from: crate::particle_fx::CasingSpecFrom::Hand, ahead: 0.16, up: 0.07, right: 0.03, dir: [1.0, 0.45, 0.5], speed: 4.5, tink: 0.55 }), fn2000: Some(crate::particle_fx::CasingSpec { color: [0.72, 0.5, 0.16], diameter: 0.0095, from: crate::particle_fx::CasingSpecFrom::Muzzle, ahead: -0.16, up: -0.01, right: 0.045, dir: [0.35, -0.15, 1.0], speed: 1.1, tink: 0.4 }), m870: None, mk12: Some(crate::particle_fx::CasingSpec { color: [0.72, 0.5, 0.16], diameter: 0.0095, from: crate::particle_fx::CasingSpecFrom::Hand, ahead: 0.16, up: 0.07, right: 0.03, dir: [1.0, 0.5, 0.15], speed: 3.4, tink: 0.5 }), mp7: Some(crate::particle_fx::CasingSpec { color: [0.72, 0.5, 0.16], diameter: 0.0075, from: crate::particle_fx::CasingSpecFrom::Hand, ahead: 0.1, up: 0.06, right: 0.02, dir: [1.0, 0.7, -0.1], speed: 3.0, tink: 0.5 }), mk46: Some(crate::particle_fx::CasingSpec { color: [0.72, 0.5, 0.16], diameter: 0.0095, from: crate::particle_fx::CasingSpecFrom::Hand, ahead: 0.16, up: 0.02, right: 0.03, dir: [1.0, -0.1, 0.1], speed: 3.0, tink: 0.45 }), m1014: Some(crate::particle_fx::CasingSpec { color: [0.55, 0.06, 0.04], diameter: 0.02, from: crate::particle_fx::CasingSpecFrom::Hand, ahead: 0.14, up: 0.07, right: 0.03, dir: [1.0, 0.35, 0.1], speed: 2.6, tink: 0.5 }), hk45: Some(crate::particle_fx::CasingSpec { color: [0.72, 0.5, 0.16], diameter: 0.012, from: crate::particle_fx::CasingSpecFrom::Hand, ahead: 0.07, up: 0.055, right: 0.02, dir: [1.0, 0.8, -0.2], speed: 2.6, tink: 0.5 }), g18: Some(crate::particle_fx::CasingSpec { color: [0.72, 0.5, 0.16], diameter: 0.0095, from: crate::particle_fx::CasingSpecFrom::Hand, ahead: 0.07, up: 0.055, right: 0.02, dir: [1.0, 0.8, -0.2], speed: 3.0, tink: 0.5 }), pkm: Some(crate::particle_fx::CasingSpec { color: [0.2, 0.19, 0.12], diameter: 0.0124, from: crate::particle_fx::CasingSpecFrom::Hand, ahead: 0.16, up: 0.05, right: -0.03, dir: [-1.0, 0.2, 0.1], speed: 3.6, tink: 0.5 }), mk18bare: Some(crate::particle_fx::CasingSpec { color: [0.72, 0.5, 0.16], diameter: 0.0095, from: crate::particle_fx::CasingSpecFrom::Muzzle, ahead: -0.16, up: -0.01, right: 0.045, dir: [0.35, -0.15, 1.0], speed: 1.1, tink: 0.4 }), g19bare: Some(crate::particle_fx::CasingSpec { color: [0.72, 0.5, 0.16], diameter: 0.008, from: crate::particle_fx::CasingSpecFrom::Hand, ahead: 0.07, up: 0.055, right: 0.02, dir: [1.0, 0.9, -0.25], speed: 2.6, tink: 0.5 }) } }

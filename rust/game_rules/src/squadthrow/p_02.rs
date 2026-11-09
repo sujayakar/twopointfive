@@ -55,7 +55,7 @@ fn state_key(g: &mut Game) -> PlayerId {
 /// This view's state, the row itself, made if it is not there. (squadthrow.ts state)
 pub fn state<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::squadthrow::State {
     let k = crate::seats::view_key(g, &crate::seats::here(g));
-    g.m.squadthrow.states.get_or_insert_with(k, || State::zeroed())
+    g.m.squadthrow.states.get_or_insert_with(k, || State::default())
 }
 
 /// The thing leaves his hand; the count is taken already. (squadthrow.ts throwIt)
@@ -91,7 +91,7 @@ pub fn throw_it(g: &mut crate::game::Game, gd: GuardId, arc: &crate::squadthrow:
     }
     let who_said = g.gd[gd].callsign.clone();
     let log = &mut g.m.squadthrow.squadthrow_log;
-    log.push(SquadthrowModSQUADTHROWLOGItem { t, kind, who: who_said, from: arc.from, at: v3::copy(at), land: v3::copy(arc.sol.land), rest: arc.rest });
+    log.push(SquadthrowModSQUADTHROWLOGItem { who: who_said, rest: arc.rest });
     if log.len() > 100 {
         log.drain(0..50);
     }
@@ -102,7 +102,7 @@ pub fn squad_log_row(g: &mut crate::game::Game, gd: GuardId, order: &str, at: V3
     let (t, who) = (g.time, g.gd[gd].callsign.clone());
     let target = format!("floor:{},{}", js::to_fixed(at[0], 1), js::to_fixed(at[2], 1));
     let serial = g.serial();
-    g.orders.log.push(crate::orders::SquadOrdersLogItem { t, order: String::from(order), who: vec![who], target, auto: None, laid: None, serial });
+    g.orders.log.push(crate::orders::SquadOrdersLogItem { t, order: String::from(order), who: vec![who], target, auto: None, serial });
 }
 
 /// The assignment that walks him to his throw, under the row's own id. (squadthrow.ts walkTo)
@@ -199,7 +199,7 @@ pub fn squad_lend(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: Guard
                 fit: w.fit,
                 tries: w.tries,
                 set_line: None,
-                ..LentBack::zeroed()
+                ..LentBack::default()
             })
         }
         _ => None,
@@ -478,7 +478,7 @@ pub fn rows(g: &mut crate::game::Game) -> Vec<OrdersOrderDefId> {
         hot_key: Some(g.k.frag.order_key.clone()),
         targets: vec![crate::orders::TargetKind::Floor],
         free: Some(true),
-        ..crate::orders::OrderDef::zeroed()
+        ..crate::orders::OrderDef::default()
     });
     let open = crate::orders::squad_orders_row(g, open);
     let mut out = vec![open];
@@ -487,7 +487,7 @@ pub fn rows(g: &mut crate::game::Game) -> Vec<OrdersOrderDefId> {
             page: Some(String::from(THROW_PAGE)),
             targets: vec![crate::orders::TargetKind::Floor],
             free: Some(true),
-            ..crate::orders::OrderDef::zeroed()
+            ..crate::orders::OrderDef::default()
         });
         out.push(crate::orders::squad_orders_row(g, one));
     }

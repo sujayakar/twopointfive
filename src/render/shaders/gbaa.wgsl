@@ -1,4 +1,4 @@
-// GBAA — geometry-buffer anti-aliasing (Persson 2011), the image-quality program's single-frame edge AA (docs/internal/image-quality.md §C3).
+// GBAA — geometry-buffer anti-aliasing (Persson 2011), the image-quality program's single-frame edge AA.
 // The g-buffer's box raster writes, per pixel, the signed distance in PIXELS from the pixel centre to the nearest silhouette / crease edge of the box face it shows,
 // along the screen axis that edge is most nearly perpendicular to (gbuffer.wgsl boxEdgeOffset → the `edge` target, rg8unorm, d·½+½; a component ≥ ½ in magnitude =
 // no edge crosses this pixel along that axis). Here, per pixel of the composite (hdr):

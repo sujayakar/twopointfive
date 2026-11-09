@@ -1,12 +1,11 @@
-//! The types of `teams`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `teams`.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
 pub enum Team {
-    Guard,
+    #[default] Guard,
     Operative,
     Hostile,
     Player,
@@ -24,7 +23,6 @@ impl Team {
     }
 }
 
-/// (TypeScript: a union)
 #[derive(Clone, Copy, Debug)]
 pub enum HostileToO {
     Guard(GuardId),
@@ -32,7 +30,7 @@ pub enum HostileToO {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct TeamsMod {
     /// (src/game/teams.ts:23 HOSTILE)
     pub hostile: JsMap<crate::teams::Team, JsMap<crate::teams::Team, bool>>,
@@ -48,5 +46,3 @@ impl TeamsMod {
     }
 }
 
-/// (src/game/teams.ts:20 TEAMS: a table nothing writes)
-pub fn teams() -> Vec<String> { alloc::vec![String::from("guard"), String::from("operative"), String::from("hostile"), String::from("player"), String::from("civilian")] }

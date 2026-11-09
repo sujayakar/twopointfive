@@ -4,6 +4,11 @@
 //!   levels sight [LEVEL…] [--write]                                a defender sees what he watches
 //!   levels walked [LEVEL…] [--write]                               its starts and its doors are on a way
 //!   levels stacks [MISSION…]                                       every stack mark is by its door
+//!   levels stands [LEVEL…]                                         what it names stands on its built floor, and can be walked to
+//!   levels doors [LEVEL…] [--list]                                 every door is a real door's size and the walk grid goes through it
+//!   levels charges [LEVEL…] [--write]                              no place for a wall charge was taken by a thing stood at a wall
+//!   levels names [LEVEL…]                                          it is named by its own rooms
+//!   levels rain [LEVEL…]                                           its storm rains by its own roofs
 //!
 //! A LEVEL is a file of levels/ by its name; none named = every level the question is about. Exit 0 every line passes, 1 a FAIL line, 2 a word or a level that is not known.
 //! LEVELS_BREAK=1 = each question's red path, which must fail.
@@ -23,6 +28,19 @@
 //!
 //! STACKS: over every squad mission, every door, both faces, the whole squad, a pair and one man: from every mark the squad's own search reaches the doorway's front in no more than 2.5 times the
 //! crow's flight and a metre, with the door shut and with its leaf at its stop.
+//!
+//! STANDS: each mission the file names is started, and the game's own words on its block against the floor are read (the room clear's structure, the rescue's marks, a quiet mission's block); the spawn, the
+//! objectives, the patrols' points and legs and the chokepoints are on floor and joined. A man of a rescue stood in a chair is said and passes: it is pushed.
+//!
+//! DOORS (tools/levels/lib/doorSize.ts): each leaf's own size, the air between its jambs and under its head, the guards' own search through its frame, a stride of free floor on both faces, nothing of the level
+//! in the gap, a wall at both its ends; and each doorway with no leaf, found by its head.
+//!
+//! CHARGES (the compound's wood piles once took 23 of 891 places and nobody chose it): how many places of the level have floor behind them as the walk grid stands, against its count file
+//! (tools/levels/counts/charges: one number; a line that starts # says what was given up and why). Fewer and more are both red.
+//!
+//! NAMES: over the whole floor on a half-metre lattice, what a line calls a spot and what the debrief does is one of the level's own rooms and places, and the middle of each is its own name.
+//!
+//! RAIN (the maintainer: "rain is busted on records office"): ground under open sky is rained on, and ground under the level's ceiling slabs is not.
 use game::game::{Game, GuardState};
 use game::ids::*;
 use game_draw::traffic::{door_mid, ways, WayKind};
@@ -461,11 +479,320 @@ fn stacks(ids: &[String]) -> i32 {
     v.end("stacks")
 }
 
+// ---------------------------------------------------------------------------------------------------------------- stands
+fn kinds(data: &Json) -> Vec<(&'static str, &'static str)> {
+    let s = data.get("scenarios");
+    [("roomClear", "roomclear&squad4"), ("rescue", "rescue&squad=2"), ("nightBreach", "nightbreach&squad=2"), ("quiet", "quiet")].into_iter().filter(|(k, _)| !s.get(k).is_null()).collect()
+}
+fn floor_of(g: &mut Game, p: V3) -> Option<V3> { game::scene_collision::nav_grid_nearest_free_point(g, p[0], p[2]) }
+fn walk_len(g: &mut Game, a: V3, b: V3) -> Option<f64> { let w = game::scene_collision::nav_grid_find_path(g, a, b, Some(20000.0), None)?; let mut n = 0.0; let mut q = a; for p in w { n += hyp(q, p); q = p; } Some(n) }
+/// a response block against its built floor: free marks apart from each other, a walk in for each man from his muster to his fan and on to the level's floor, a door of the level between the two, posts and
+/// places that can be reached, a way clear of every start
+const RESPONSE_CLEAR: f64 = 12.0;
+fn response(g: &mut Game, sc: &Json, bad: &mut Vec<String>) {
+    let r = sc.get("response");
+    if r.is_null() { return; }
+    let pts = |j: &Json| -> Vec<V3> { j.items().iter().filter_map(|p| p.v3()).collect() };
+    let free = |g: &Game, p: V3| !game::scene_collision::nav_grid_is_blocked(g, p[0], p[2]);
+    let flat = |p: V3| [p[0], 0.0, p[2]];
+    let floor = g.level.routes.first().and_then(|r| g.tab.route[*r].points.first().copied()).unwrap_or(g.level.player_spawn);
+    let mut firsts: Vec<V3> = vec![];
+    let mut fan0: Option<V3> = None;
+    for (k, y) in r.get("ways").items().iter().enumerate() {
+        let w = format!("the response's way {} '{}'", k + 1, y.get("name").str().unwrap_or("?"));
+        let (muster, entry) = (pts(y.get("muster")), pts(y.get("entry")));
+        let door = y.get("door").str().map(|n| (n, g.doors.list.iter().copied().find(|d| g.dr[*d].def.name == n)));
+        if let Some((n, None)) = door { bad.push(format!("{w}: no door '{n}' on this level")); }
+        for (what, ps) in [("muster", &muster), ("fan", &entry)] {
+            for (i, p) in ps.iter().enumerate() { if !free(g, *p) { bad.push(format!("{w}: {what} mark {} is not free floor", i + 1)); } for q in &ps[i + 1..] { if hyp(*p, *q) < 0.6 { bad.push(format!("{w}: two {what} marks are {:.2} m apart", hyp(*p, *q))); } } }
+        }
+        for (i, (p, e)) in muster.iter().zip(&entry).enumerate() { if free(g, *p) && free(g, *e) { match walk_len(g, flat(*p), flat(*e)) { Some(l) if l <= 30.0 => {} Some(l) => bad.push(format!("{w}: man {}'s walk in is {l:.1} m", i + 1)), None => bad.push(format!("{w}: man {} has no walk in", i + 1)) } } }
+        if let Some(e) = entry.first() { if free(g, *e) && walk_len(g, flat(*e), floor).is_none() { bad.push(format!("{w}: no walk from its fan to the level's floor")); } }
+        if let (Some((n, Some(d))), Some(m), Some(e)) = (door, muster.first(), entry.first()) { if game::doors::doors_pull_face(g, d, *m) == game::doors::doors_pull_face(g, d, *e) { bad.push(format!("{w}: its muster and its fan are on the same side of '{n}'")); } }
+        firsts.extend(muster.first());
+        if fan0.is_none() { fan0 = entry.first().copied(); }
+    }
+    for s in sc.get("quiet").get("starts").items() { if let Some(p) = s.get("sam").v3() { if !firsts.iter().any(|m| hyp(p, *m) >= RESPONSE_CLEAR) { bad.push("a start with every way's muster beside it".into()); } } }
+    let outside = pts(r.get("outside"));
+    for (i, p) in outside.iter().enumerate() { if !free(g, *p) { bad.push(format!("the response's outside mark {} is not free floor", i + 1)); } }
+    for (i, p) in r.get("posts").items().iter().enumerate() { let Some(q) = p.get("pos").v3() else { continue }; if !free(g, q) { bad.push(format!("the response's post {} is not free floor", i + 1)); } else if !outside.iter().any(|o| free(g, *o) && walk_len(g, *o, q).is_some()) { bad.push(format!("the response's post {} has no walk from an outside mark", i + 1)); } }
+    for (i, p) in r.get("sweep").items().iter().enumerate() { let Some(q) = p.get("pos").v3() else { continue }; if !free(g, q) { bad.push(format!("the response's place {} is not free floor", i + 1)); } else if let Some(e) = fan0 { if walk_len(g, flat(e), q).is_none() { bad.push(format!("the response's place {} has no walk from its first fan", i + 1)); } } }
+}
+fn stands(levels: &[String]) -> i32 {
+    let mut v = Verdicts::default();
+    let levels: Vec<String> = if levels.is_empty() { every_level() } else { levels.to_vec() };
+    for level in &levels {
+        let data = data_of(level);
+        let (mut bad, mut said): (Vec<String>, Vec<String>) = (vec![], vec![]);
+        for (key, words) in kinds(&data) {
+            let mut p = Play::mission(&format!("{level}.json"), &format!("?levelFile={level}.json&{words}"), &Opts { squad: 2, ..Default::default() });
+            let (on, faults) = match key {
+                "roomClear" => (game::roomclear::room_clear_scenario_active(&p.g), game::roomclear::check_structure(&mut p.g, None)),
+                "rescue" => (p.g.rescue.active, game::rescue::check_rescue(&mut p.g, None)),
+                "nightBreach" => (p.g.night_breach.active, vec![]),
+                _ => { let on = p.g.quiet.active; drop(p); p = Play::level(&format!("{level}.json"), false, &Opts::default()); (on, game::quiet::check_quiet(&mut p.g)) }
+            };
+            if !on { bad.push(format!("{key}: it did not start")); }
+            for f in faults { if f.contains(": standing in ") { said.push(f); } else { bad.push(format!("{key}: {f}")); } }
+        }
+        let mut p = Play::level(&format!("{level}.json"), false, &Opts::default());
+        let g: &mut Game = &mut p.g;
+        let free = |g: &Game, q: V3| !game::scene_collision::nav_grid_is_blocked(g, q[0], q[2]);
+        let spawn = if breaks() { g.tab.boxes[g.col.boxes.iter().copied().find(|b| { let b = &g.tab.boxes[*b]; b.h[1] > 0.9 && b.c[1] < 2.0 && (b.flags as i64 & 2) == 0 }).expect("a wall")].c } else { g.level.player_spawn };
+        if !free(g, spawn) { bad.push(format!("the spawn ({}, {}) is not on floor", spawn[0], spawn[2])); }
+        let mut from = spawn;
+        for o in data.get("mission").get("objectives").items() {
+            let n = |k: &str| o.get(k).num().unwrap_or(0.0);
+            let to: V3 = match o.get("kind").str() { Some("reach") => { let a = o.get("area"); let e = |k: &str| a.get(k).num().unwrap_or(0.0); [(e("x0") + e("x1")) / 2.0, 0.0, (e("z0") + e("z1")) / 2.0] } Some("drive") => { let f = o.get("front").nums(); [f[0], 0.0, f[2] + 0.6] } _ => [n("x"), 0.0, n("z")] };
+            let id = o.get("id").str().unwrap_or("?");
+            match floor_of(g, to).filter(|q| hyp(*q, to) <= 1.5) { None => bad.push(format!("the objective '{id}' has no floor within 1.5 m")), Some(q) => { if walk_len(g, from, q).is_none() { bad.push(format!("no way on foot to the objective '{id}'")); } from = q; } }
+        }
+        for r in g.level.routes.clone() {
+            let (name, pts) = { let r = &g.tab.route[r]; (r.name.clone(), r.points.clone()) };
+            for (i, q) in pts.iter().enumerate() { if !free(g, *q) { if floor_of(g, *q).is_some() { said.push(format!("the route '{name}' stands its point {i} off free floor")); } else { bad.push(format!("the route '{name}' has no floor at its point {i}")); } } }
+            for i in 0..pts.len() { let j = (i + 1) % pts.len(); if i == j { break; } if let (Some(a), Some(b)) = (floor_of(g, pts[i]), floor_of(g, pts[j])) { if walk_len(g, a, b).is_none() { bad.push(format!("the route '{name}' has no way from its point {i} to its point {j}")); } } }
+        }
+        response(g, data.get("scenarios"), &mut bad);
+        // a walkable cell of the building with no slab under it is a man walking on nothing
+        let s = data.get("surfaces").get("building");
+        if !s.is_null() {
+            let e = |k: &str| s.get(k).num().unwrap_or(0.0);
+            let slabs: Vec<(V3, V3, f64)> = g.col.boxes.iter().map(|b| &g.tab.boxes[*b]).filter(|b| { let top = b.c[1] + b.h[1]; (-0.6..=0.3).contains(&top) }).map(|b| (b.c, b.h, b.yaw)).collect();
+            let mut holes: Vec<String> = vec![];
+            let mut z = e("z0") + 0.25;
+            while z < e("z1") { let mut x = e("x0") + 0.25; while x < e("x1") {
+                if !game::scene_collision::nav_grid_is_blocked(g, x, z) && !slabs.iter().any(|(c, h, yaw)| { let (dx, dz, k, n) = (x - c[0], z - c[2], yaw.cos(), yaw.sin()); (k * dx - n * dz).abs() <= h[0] && (n * dx + k * dz).abs() <= h[2] }) { holes.push(format!("({x:.2}, {z:.2})")); }
+                x += 0.5; } z += 0.5; }
+            if !holes.is_empty() { bad.push(format!("{} walkable cells with no floor under them: {}", holes.len(), holes.iter().take(8).cloned().collect::<Vec<_>>().join(" "))); }
+        }
+        for c in data.get("chokepoints").items() { if let Some(q) = c.get("pos").v3() { if !free(g, q) { said.push(format!("the chokepoint '{}' is off free floor", c.get("id").str().unwrap_or("?"))); } } }
+        v.say(bad.is_empty(), &format!("{level}: what it names stands on its floor and can be walked to"), &format!("{} missions, {} routes{}{}", kinds(&data).len(), p.g.level.routes.len(), list(&bad), if said.is_empty() { String::new() } else { format!("\n    said, and passes: {}", said.join(" · ")) }));
+    }
+    v.end("stands")
+}
+
+// ---------------------------------------------------------------------------------------------------------------- doors
+// tools/levels/lib/doorSize.ts DOOR_SIZE: the hole, its head, the widest that is a door's, the leaf
+const GAP: f64 = 0.9;
+const HEAD: f64 = 2.05;
+const SLOT_MAX: f64 = 1.3;
+const LEAF_W: f64 = GAP - 0.04;
+const LEAF_H: f64 = HEAD - 0.04;
+fn doors(levels: &[String], rows: bool) -> i32 {
+    let mut v = Verdicts::default();
+    let levels: Vec<String> = if levels.is_empty() { every_level() } else { levels.to_vec() };
+    let (mut leaves, mut bare, mut wide) = (0, 0, 0);
+    for level in &levels {
+        let data = data_of(level);
+        let mut p = Play::level(&format!("{level}.json"), false, &Opts::default());
+        let g: &mut Game = &mut p.g;
+        g.col.dynamic_boxes.clear(); game::scene_collision::wrote(g);   // (the frames are measured with no leaf in them)
+        let air = |g: &mut Game, p: V3, d: V3, max: f64| game::scene_collision::raycast(g, p, d, max).map_or(max, |h| h.t);
+        let mut bad: Vec<String> = vec![];
+        let mut mids: Vec<[f64; 2]> = vec![];
+        for (k, d) in g.level.doors.clone().into_iter().enumerate() {
+            leaves += 1;
+            let u = [d.closed_dir.cos(), d.closed_dir.sin()]; let n = [-u[1], u[0]];
+            let width = if breaks() { d.width + 0.2 } else { d.width };
+            let m = [d.hinge[0] + u[0] * d.width / 2.0, d.hinge[1] + u[1] * d.width / 2.0]; mids.push(m);
+            let clear = air(g, [m[0], 1.0, m[1]], [u[0], 0.0, u[1]], 3.0) + air(g, [m[0], 1.0, m[1]], [-u[0], 0.0, -u[1]], 3.0);
+            let head = 0.1 + air(g, [m[0], 0.1, m[1]], [0.0, 1.0, 0.0], 6.0);
+            let tall = data.get("doors").items().get(k).and_then(|x| x.get("height").num()).unwrap_or(LEAF_H);
+            let mut why: Vec<String> = vec![];
+            if (width - LEAF_W).abs() > 0.005 { why.push(format!("a leaf {width:.2} m wide, the rule's is {LEAF_W:.2}")); }
+            if (clear - width).abs() > 0.03 { why.push(format!("{clear:.2} m between the jamb faces for a {width:.2} m leaf")); }
+            if head > HEAD + 0.01 || head < tall - 0.005 { why.push(format!("{head:.2} m under the head, the rule's is {tall:.2} to {HEAD:.2}")); }
+            if head > tall + 0.01 + 1e-4 { why.push(format!("a {:.1} cm slot between the shut leaf's top and the head", (head - tall - 0.01) * 100.0)); }
+            if (tall - LEAF_H).abs() > 0.005 { why.push(format!("a leaf {tall:.2} m tall, the rule's is {LEAF_H:.2}")); }
+            for o in [-0.6, 0.6] { if game::scene_collision::nav_grid_is_blocked(g, m[0] + n[0] * o, m[1] + n[1] * o) { why.push(format!("the floor a stride {} the frame's middle is not free", if o < 0.0 { "behind" } else { "before" })); } }
+            // the guards' own search from a metre out on one side to a metre out on the other comes through the doorway
+            let (a, b) = ([m[0] - n[0], 0.0, m[1] - n[1]], [m[0] + n[0], 0.0, m[1] + n[1]]);
+            let through = game::scene_collision::nav_grid_find_path(g, a, b, None, None).is_some_and(|w| { let (mut len, mut far, mut q) = (0.0, 0.0f64, a); for p in w { len += hyp(q, p); far = far.max((p[0] - m[0]).hypot(p[2] - m[1])); q = p; } len < 3.5 && far < 1.8 });
+            if !through { why.push("the walk grid does not pass through the frame".into()); }
+            let mut s = 0.15;
+            while s < d.width - 0.1 { let mut q = [d.hinge[0] + u[0] * s, 0.0, d.hinge[1] + u[1] * s]; if game::scene_collision::collide_circle(g, &mut q, 0.02, 0.4, 1.9, Some(1.0)) { why.push("a thing of the level stands in the doorway".into()); break; } s += 0.2; }
+            for (end, s) in [("hinge", -0.14), ("latch", d.width + 0.14)] { let mut q = [d.hinge[0] + u[0] * s, 0.0, d.hinge[1] + u[1] * s]; if !game::scene_collision::collide_circle(g, &mut q, 0.06, 1.0, 1.6, Some(1.0)) { why.push(format!("no wall meets the leaf's {end} end: shut, it does not seal")); } }
+            if rows { println!("      {level} {}: air {clear:.2} by {head:.2}, leaf {width:.2} by {tall:.2}", d.name); }
+            if !why.is_empty() { bad.push(format!("{}: {}", d.name, why.join("; "))); }
+        }
+        let flag = game::scene_boxes::box_flag();
+        let skip = flag.no_shadow as i64 | flag.dynamic as i64 | flag.glass as i64;
+        for bi in 0..g.col.boxes.len() {
+            let (c, h, yaw, flags) = { let b = &g.tab.boxes[g.col.boxes[bi]]; (b.c, b.h, b.yaw, b.flags as i64) };
+            if flags & skip != 0 || (2.0 * yaw).sin().abs() > 1e-3 { continue; }
+            let (y0, y1) = (c[1] - h[1], c[1] + h[1]);
+            if y0 < 1.9 || y0 > 2.3 || y1 < y0 + 0.1 { continue; }
+            let turned = yaw.sin().abs() > 0.5; let (hx, hz) = if turned { (h[2], h[0]) } else { (h[0], h[2]) };
+            let (thin, long) = (hx.min(hz), hx.max(hz));
+            if thin > 0.13 || thin < 0.05 || long < 0.3 || long > 2.6 { continue; }
+            if mids.iter().any(|q| (q[0] - c[0]).hypot(q[1] - c[2]) < 0.5) { continue; }   // (a leaf's own head)
+            if game::scene_collision::raycast(g, [c[0], y0 - 0.02, c[2]], [0.0, -1.0, 0.0], y0 - 0.3).is_some() { continue; }   // (something stands under it: no doorway)
+            let u = if hx > hz { [1.0, 0.0] } else { [0.0, 1.0] };
+            let clear = air(g, [c[0], 1.0, c[2]], [u[0], 0.0, u[1]], 4.0) + air(g, [c[0], 1.0, c[2]], [-u[0], 0.0, -u[1]], 4.0);
+            if (clear - 2.0 * long).abs() > 0.2 { continue; }   // (the air under it is not its own opening)
+            if clear > SLOT_MAX + 0.01 { wide += 1; continue; }
+            bare += 1;
+            let mut why: Vec<String> = vec![];
+            if clear > GAP + 0.01 { why.push(format!("a doorway {clear:.2} m wide, the rule's is {GAP:.2}")); }
+            if y0 > HEAD + 0.01 { why.push(format!("{y0:.2} m under the head, the rule's is {HEAD:.2}")); }
+            if game::scene_collision::nav_grid_is_blocked(g, c[0], c[2]) { why.push("no free walk cell in it".into()); }
+            if !why.is_empty() { bad.push(format!("the doorway at {:.2}, {:.2}: {}", c[0], c[2], why.join("; "))); }
+        }
+        v.say(bad.is_empty(), &format!("{level}: every door is a real door's size, and the walk grid goes through it"), &format!("{} leaves{}", mids.len(), list(&bad)));
+    }
+    println!("    {} levels, {leaves} leaves, {bare} doorways without a leaf, {wide} wider openings left as drawn", levels.len());
+    v.end("doors")
+}
+
+// ---------------------------------------------------------------------------------------------------------------- charges
+fn charges(levels: &[String], write: bool) -> i32 {
+    let mut v = Verdicts::default();
+    let levels: Vec<String> = if levels.is_empty() { every_level().into_iter().filter(|l| counts("charges", l).exists() || game::scene_scenario_list::all_missions().iter().any(|e| level_of(e) == *l)).collect() } else { levels.to_vec() };
+    for level in &levels {
+        let clear = !data_of(level).get("scenarios").get("roomClear").is_null();
+        let mut p = if clear { Play::mission(&format!("{level}.json"), &format!("?levelFile={level}.json&roomclear&squad4"), &Opts::default()) } else { Play::level(&format!("{level}.json"), false, &Opts::default()) };
+        p.g.ai_enabled = false;
+        for _ in 0..30 { p.frame(); }
+        let g: &mut Game = &mut p.g;
+        let mut places: BTreeSet<(usize, i64, i64)> = BTreeSet::new();
+        for bi in 0..(g.destr.walls.authored as usize).min(g.col.boxes.len()) {
+            let (c, h) = { let b = &g.tab.boxes[g.col.boxes[bi]]; (b.c, b.h) };
+            if h[1] < 0.9 || h[0].min(h[2]) > 0.2 || h[0].max(h[2]) < 0.75 { continue; }
+            let along_x = h[0] >= h[2]; let l = if along_x { h[0] } else { h[2] };
+            let mut u = -l + 0.1;
+            while u <= l - 0.1 + 1e-6 {
+                for side in [1.0, -1.0] {
+                    let at: V3 = if along_x { [c[0] + u, 0.0, c[2]] } else { [c[0], 0.0, c[2] + u] };
+                    let from: V3 = if along_x { [at[0], 0.0, c[2] + side * 2.0] } else { [c[0] + side * 2.0, 0.0, at[2]] };
+                    let Some(w0) = game::wallcharge::wall_at(g, at, Some(from)) else { continue };
+                    if w0.index as usize != bi || !w0.ok { continue; }
+                    let w = game::wallcharge::wall_charge_settle(g, &w0);
+                    if game::wallcharge::wall_charge_set_spot(g, &w).is_none() || game::wallcharge::wall_charge_open_at(g, &w) { continue; }
+                    if game::wallcharge::wall_charge_far_floor(g, &w, Some(false)).is_some() { places.insert((bi, w.side as i64, (w.u * 1000.0).round() as i64)); }
+                }
+                u += 0.25;
+            }
+        }
+        let n = places.len() - usize::from(breaks());
+        let file = held("charges", level);
+        let want: Option<usize> = file.iter().flatten().filter(|l| !l.starts_with('#')).find_map(|l| l.parse().ok());
+        if write && !breaks() {
+            let notes: String = std::fs::read_to_string(counts("charges", level)).unwrap_or_default().lines().filter(|l| l.starts_with('#')).map(|l| format!("{l}\n")).collect();
+            let notes = if notes.is_empty() { format!("# places for a wall charge on levels/{level}.json (floor behind them as the walk grid stands)\n") } else { notes };
+            keep("charges", level, &format!("{notes}{n}\n"));
+        }
+        v.say(write || want == Some(n), &format!("{level}: it has the places for a wall charge its file holds"), &format!("{n} places, the file holds {}{}", want.map_or("none".into(), |w| w.to_string()), match want { Some(w) if n < w => " · FEWER: something took a place where a charge could be set", Some(w) if n > w => " · MORE: --write keeps it", None => " (--write)", _ => "" }));
+    }
+    v.end("charges")
+}
+
+// ---------------------------------------------------------------------------------------------------------------- names
+/// every room the office's tables name: a word is wrong only on a level that names no such place itself
+const OFFICE_WORDS: [&str; 15] = ["server room", "back offices", "car park", "cubicles", "break room", "lobby", "corridor", "manager's office", "conference room", "storage room", "storage", "south lot", "east side", "north side", "west side"];
+fn bare(n: &str) -> String { n.strip_prefix("the ").unwrap_or(n).to_lowercase() }
+fn word_in(text: &str, w: &str) -> bool { let t = text.to_lowercase(); t.match_indices(w).any(|(i, _)| { let edge = |c: Option<char>| !c.is_some_and(|c| c.is_ascii_lowercase()); edge(t[..i].chars().last()) && edge(t[i + w.len()..].chars().next()) }) }
+fn names(levels: &[String]) -> i32 {
+    let mut v = Verdicts::default();
+    let named = !levels.is_empty();
+    let levels: Vec<String> = if named { levels.to_vec() } else { every_level() };
+    for level in &levels {
+        let data = data_of(level);
+        let sc = data.get("scenarios");
+        let office = ["corridor", "cubicles", "lobby_break"].iter().all(|n| data.get("routes").items().iter().any(|r| r.get("id").str().or(r.get("name").str()) == Some(n)));
+        if office || sc.is_null() { continue; }
+        let rect = |b: &Json| { let e = |k: &str| b.get(k).num().unwrap_or(0.0); [e("x0"), e("x1"), e("z0"), e("z1")] };
+        let mut rects: Vec<(String, [f64; 4])> = vec![];
+        for r in sc.get("roomClear").get("rooms").items().iter().chain(sc.get("places").get("areas").items()) { rects.push((bare(r.get("name").str().unwrap_or("?")), rect(r.get("bounds")))); }
+        for q in sc.get("quiet").get("spots").items() { rects.push((bare(q.get("place").str().unwrap_or("?")), rect(q.get("area")))); }
+        let own: BTreeSet<String> = rects.iter().map(|r| r.0.clone()).collect();
+        let foreign: Vec<&str> = OFFICE_WORDS.into_iter().filter(|w| breaks() || !own.iter().any(|o| o == w || o.ends_with(&format!(" {w}")))).collect();
+        let p = Play::level(&format!("{level}.json"), false, &Opts::default());
+        let g: &Game = &p.g;
+        let legal = |how: &str, text: &str| if own.is_empty() { bare(text) == "building" } else { own.contains(&bare(text)) || (how == "a line's place" && own.iter().any(|o| text.to_lowercase() == format!("outside the {o}") || text.to_lowercase() == format!("outside {o}"))) };
+        let (mut x0, mut x1, mut z0, mut z1) = (f64::INFINITY, -f64::INFINITY, f64::INFINITY, -f64::INFINITY);
+        for b in data.get("boxes").items() { let (c, h) = (b.get("c").nums(), b.get("h").nums()); x0 = x0.min(c[0] - h[0]); x1 = x1.max(c[0] + h[0]); z0 = z0.min(c[2] - h[2]); z1 = z1.max(c[2] + h[2]); }
+        let (mut wrong, mut pts): (BTreeMap<String, String>, usize) = (BTreeMap::new(), 0);
+        let mut z = z0.max(-20.0) + 0.25;
+        while z < z1.min(80.0) {
+            let mut x = x0.max(-20.0) + 0.25;
+            while x < x1.min(80.0) {
+                pts += 1;
+                let at = [x, 0.0, z];
+                for (how, text) in [("a line's room", game::dialogue::room_name(g, at)), ("a line's place", game::dialogue::place_name(g, at)), ("the debrief", game::chronicle::room_of(g, at))] {
+                    if foreign.iter().any(|w| word_in(&text, w)) || !legal(how, &text) { wrong.entry(format!("{how} says '{text}'")).or_insert(format!("({x:.1}, {z:.1})")); }
+                }
+                x += 0.5;
+            }
+            z += 0.5;
+        }
+        for (name, r) in &rects {
+            let c = [(r[0] + r[1]) / 2.0, 0.0, (r[2] + r[3]) / 2.0];
+            let first = &rects.iter().find(|q| c[0] >= q.1[0] && c[0] <= q.1[1] && c[2] >= q.1[2] && c[2] <= q.1[3]).unwrap().0;   // (two over one spot: the first listed is its name)
+            for (how, got) in [("a line", bare(&game::dialogue::room_name(g, c))), ("the debrief", bare(&game::chronicle::room_of(g, c)))] { if got != *first { wrong.insert(format!("the middle of {name}: {how} says '{got}'"), format!("({:.1}, {:.1})", c[0], c[2])); } }
+        }
+        let bad: Vec<String> = wrong.into_iter().map(|(k, at)| format!("{k} at {at}")).collect();
+        v.say(bad.is_empty(), &format!("{level}: it is named by its own rooms"), &format!("{pts} points, {} names{}", own.len(), list(&bad)));
+    }
+    v.end("names")
+}
+
+// ---------------------------------------------------------------------------------------------------------------- rain
+fn rain(levels: &[String]) -> i32 {
+    let mut v = Verdicts::default();
+    let levels: Vec<String> = if levels.is_empty() { every_level() } else { levels.to_vec() };
+    let wd = game::scene_world::world();
+    let ceiling = 3.0;   // (src/scene/world.ts WORLD.ceilingY)
+    let (mut walls, mut faces, mut inners) = (0, 0, 0);
+    for level in &levels {
+        let mut p = Play::level(&format!("{level}.json"), false, &Opts { dress: true, ..Default::default() });
+        for _ in 0..3 { p.frame(); }
+        let g: &mut Game = &mut p.g;
+        if !g.weather.own { continue; }   // (a level whose roofs are the office's two, or a still night)
+        // rain shows in front of an outer wall's outer face and not of its inner one: the picture hides it from a point 0.2 m or more inside the roofs on every side (common.wgsl wxUnderRoof)
+        let roofs = g.weather.roof_rects.clone();
+        let under_any = |x: f64, z: f64| roofs.iter().any(|r| x >= r[0] && z >= r[1] && x <= r[2] && z <= r[3]);
+        let hidden = |x: f64, z: f64| under_any(x, z) && (breaks() || [[0.2, 0.2], [-0.2, 0.2], [0.2, -0.2], [-0.2, -0.2]].iter().all(|d| under_any(x + d[0], z + d[1])));
+        for b in &g.col.boxes {
+            let (c, h) = { let b = &g.tab.boxes[*b]; (b.c, b.h) };
+            if h[1] < 1.0 || c[1] + h[1] < ceiling - 0.01 { continue; }
+            let along = if h[0] < 0.2 && h[2] > 0.3 { 0 } else if h[2] < 0.2 && h[0] > 0.3 { 2 } else { continue };
+            for s in [-1.0, 1.0] {
+                let at = |d: f64| if along == 0 { [c[0] + s * d, c[2]] } else { [c[0], c[2] + s * d] };
+                let (t, sky, deep) = (h[along], at(h[along] + 0.5), at(-h[along] - 0.5));
+                if under_any(sky[0], sky[1]) || !under_any(deep[0], deep[1]) { continue; }
+                walls += 1;
+                let (o, i) = (at(t), at(-t));
+                if !hidden(o[0], o[1]) { faces += 1; }
+                if hidden(i[0], i[1]) { inners += 1; }
+            }
+        }
+        let (mut open, mut dry, mut roofed, mut rained) = (0, 0, 0, 0);
+        let under = |g: &mut Game, x: f64, z: f64| if breaks() { x > 4.0 && x < 36.0 && z > 4.0 && z < 24.0 } else { game::weather::weather_under_roof(g, x, z) };
+        let blocked = |g: &mut Game, a: V3, b: V3| game::scene_collision::solid_blocked(g, a, b, None);
+        let mut x = wd.min[0] + 1.5;
+        while x < wd.max[0] - 1.0 {
+            let mut z = wd.min[2] + 1.5;
+            while z < wd.max[2] - 1.0 {
+                let sky = !blocked(g, [x, 0.3, z], [x, ceiling + 6.0, z]);
+                let slab = !sky && !blocked(g, [x, 0.3, z], [x, ceiling - 0.4, z]) && [-0.45, 0.45].iter().all(|d| blocked(g, [x + d, ceiling - 0.4, z + d], [x + d, ceiling + 0.6, z + d]));
+                let u = under(g, x, z);
+                if sky { open += 1; if u && [[-0.5, 0.0], [0.5, 0.0], [0.0, -0.5], [0.0, 0.5]].iter().all(|d| under(g, x + d[0], z + d[1])) { dry += 1; } }   // (half a metre of slack at a roof's edge)
+                else if slab { roofed += 1; if !u { rained += 1; } }
+                z += 1.0;
+            }
+            x += 1.0;
+        }
+        v.say(dry == 0 && rained as f64 <= (roofed as f64 * 0.02).ceil(), &format!("{level}: open ground is rained on, and ground under a ceiling is not"), &format!("{open} points of open ground, {dry} kept dry; {roofed} under a ceiling, {rained} rained on"));
+    }
+    if levels.len() > 1 { v.say(walls >= 100 && faces as f64 >= walls as f64 * 0.85 && inners as f64 >= walls as f64 * 0.97, "rain shows in front of nearly every outer wall's face, and of next to no inner one", &format!("{walls} outer walls, {faces} faces shown, {inners} inner faces dry")); }
+    v.end("rain")
+}
+
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
-    let usage = || -> ! { eprintln!("levels second-way [LEVEL…] [--list] [--walls] [--nolists] | sight [LEVEL…] [--write] | walked [LEVEL…] [--write] | stacks [MISSION…]"); std::process::exit(2) };
+    let usage = || -> ! { eprintln!("levels second-way [LEVEL…] [--list] [--walls] [--nolists] | sight [LEVEL…] [--write] | walked [LEVEL…] [--write] | stacks [MISSION…] | stands | doors [--list] | charges [--write] | names | rain [LEVEL…]"); std::process::exit(2) };
     let Some(ask) = args.first() else { usage() };
-    let allowed: &[&str] = match ask.as_str() { "second-way" => &["--list", "--walls", "--nolists"], "sight" | "walked" => &["--write"], "stacks" => &[], _ => usage() };
+    let allowed: &[&str] = match ask.as_str() { "second-way" => &["--list", "--walls", "--nolists"], "sight" | "walked" | "charges" => &["--write"], "doors" => &["--list"], "stacks" | "stands" | "names" | "rain" => &[], _ => usage() };
     let (flags, names): (Vec<&String>, Vec<&String>) = args[1..].iter().partition(|a| a.starts_with("--"));
     if flags.iter().any(|f| !allowed.contains(&f.as_str())) { usage(); }
     let has = |f: &str| flags.iter().any(|x| *x == f);
@@ -476,6 +803,11 @@ fn main() {
         "second-way" => second_way(&names, &SecondWay { list: has("--list"), walls: has("--walls"), nolists: has("--nolists") }),
         "sight" => sight(&names, has("--write")),
         "walked" => walked(&names, has("--write")),
+        "stands" => stands(&names),
+        "doors" => doors(&names, has("--list")),
+        "charges" => charges(&names, has("--write")),
+        "names" => self::names(&names),
+        "rain" => rain(&names),
         _ => stacks(&names),
     });
 }

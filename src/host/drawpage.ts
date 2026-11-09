@@ -12,12 +12,12 @@ import { hourExposure } from '../render/photometry';
 import { charSlots, meshAuthored } from '../render/charMaterials';
 import { MeshShadows } from '../render/meshShadows';
 import { fitRig, fitRigCast } from '../render/sdfrig';
-import { cutConfig, initCutSwitch } from '../scene/cut';
+import { initCutSwitch } from '../scene/cut';
 import { CAST_FILE, CAST_FILE_LOOK, castUrlFor, loadCharacterSet } from '../anim/gltf';
 import { CharacterRenderer } from '../anim/characters';
 import { COATFINISH, SOLIDGLASS } from '../scene/stuff';
 import { MARKING_TEXEL } from '../scene/markings';
-import { LOOK, lookKeptOf, placeOfQuery, setLookPlace } from '../scene/look';
+import { lookKeptOf, placeOfQuery, setLookPlace } from '../scene/look';
 import { Input } from './input';
 import { FollowCamera } from './camera';
 import { FIXEDSTEP, planTicks } from './fixedstep';
@@ -44,10 +44,11 @@ import { HOSTED, coopFromUrl, coopInvite, coopRows } from '../ui/coop';
 import { commandText } from '../net/start';
 import { netKeyed, netLeave } from '../net/door';
 import { NETPLAY, NET_JOIN } from '../net/address';
-import { keptName, keptNotes, tapeAddress, tapeAsked } from './tapepage';
+import { keptBeside, keptName, tapeAddress, tapeAsked } from './tapepage';
 import { sessionId } from './session';
 import { TapeBar, type Played, type Sees } from '../tape/bar';
 import { TapeMap } from '../tape/map';
+import { soundLanes, type LaneTape } from '../tape/soundlanes';
 import { FreeCam } from '../tape/freecam';
 import { PLAYTAPE } from '../tape/address';
 import { RunKeep, keeps } from '../tape/run';
@@ -55,7 +56,9 @@ import { backToGame, gameUp } from '../tape/format';
 import { keptStore } from '../tape/keptui';
 import { cloudNotes } from '../cloud/cloud';
 import { buildName } from './buildname';
-import { HandTape } from '../tape/handtape';
+import { HandTape, TapeRefused } from '../tape/handtape';
+import { MODULE } from '../tape/module';
+import { refusedCard } from '../tape/refused';
 import { drawCloud } from './drawcloud';
 import { cloudAdopt } from '../cloud/cloud';
 import { tellRedCards } from '../cloud/redcards';
@@ -64,7 +67,7 @@ import { cloudNote } from '../ui/cloudnote';
 import { keptFreeze, startCallClock } from '../gpu/keep';
 import * as boot from '../ui/boot';
 import { BENCH_RUN_KEY, benchBegin, benchSceneWaits } from '../ui/benchrun';
-import { priceLevelsPage } from '../ui/pricerun';
+import { PRICE_KEY, PRICE_RUN_KEY, priceLevelsPage } from '../ui/pricerun';
 import { urlFlagsOnEngine } from './engineflags';
 import { pictureKeepsPace, pictureMakes, pictureOpens, pictureSolves, pictureWords } from './pictureopens';
 import { FRAMECAP, watchTextures } from '../render/framecap';
@@ -86,14 +89,13 @@ import { KitPage, kitNone } from './kitpage';
 import { Desk, desk, setDesk, type DeskFace } from '../view/desk';
 import type { BriefView } from '../view/read';
 import { Commands } from '../draw/commands';
-import { pickRedirect } from '../scene/picks';
 import { nextPickOf } from '../ui/picks';
 import { keepPageBoot } from './keeppage';
 import { heldPage, ownPage, runPage } from './runpage';
 import { bootTextSize } from '../ui/textsize';
 import { Fog, Heard, Man, Section, Sky, View } from '../draw/sections';
 import { AudioEngine, SFX_TABLE, SFX_WARM, warmSfx } from '../audio/audio';
-import { setlistOfQuery } from '../audio/setlist';
+import { setlistLevel, setlistOf } from '../audio/setlist';
 import { MUSIC } from '../audio/pieces';
 import { askOf } from '../draw/ask';
 import { rimsFrom } from '../draw/rims';
@@ -137,16 +139,26 @@ async function main(): Promise<void> {
   TITLE.coop = () => COOP.on ? coopRows : null;
   // (a game hosted from here stands on this machine's settings; both players play the kit as issued)
   HOSTED.setup = scenario => { const w = new URLSearchParams(scenario), C = new Commands(); w.set('nokit', ''); machineBefore(w, w.get('levelFile') ?? '', C); return { commands: commandText(C.take()) }; };
-  { const to = tape || coop ? null : pickRedirect(location.search); if (to !== null) { location.replace(location.pathname + to + location.hash); return; } }
   const canvas = document.getElementById('view') as HTMLCanvasElement;
   // (the Team & kit picture has no HUD)
   if (kitPicture) for (const el of document.getElementById('app')!.children) if (!['view', 'panel', 'lcol', 'veil', 'loading', 'menu', 'missions', 'fatal'].includes(el.id)) (el as HTMLElement).style.display = 'none';
-  // (the benchmark asked for on the address goes to its first scene's page before anything boots; so does the pricing run)
-  let refused: string | null = null; if (q.has('bench') && !q.has(BENCH_RUN_KEY)) { refused = benchBegin(false); if (refused === null) return; console.info(`benchmark: ${refused}`); }
-  if (priceLevelsPage(q)) return;
   gameKeysBoot(q, walkInNow); bootTextSize(q, kitPicture);
-  LOOK.on = true; setLookPlace(placeOfQuery(q));
+  setLookPlace(placeOfQuery(q));
   const name = coop?.start.file ?? (/^[\w.-]+\.json$/.test(q.get('levelFile') ?? '') ? q.get('levelFile')! : 'office.json'), at = (p: string) => new URL(p, document.baseURI).href;
+
+  // ---- the game's module
+  const faceP = fetchFace(say).then(face => { MODULE.name = face.name ?? '';
+    // THE DESK: the cards before a game ask the module, and what a press keeps goes in this machine's store, where the next page's start reads it
+    const C = new Commands(); setDesk(new Desk(face.exports as unknown as DeskFace, face.exports.memory as WebAssembly.Memory, (key, text) => { try { if (text) localStorage.setItem(key, text); else localStorage.removeItem(key); } catch { /* no store: nothing is kept */ } }));
+    C.words(location.search); machineBefore(q, name, C); desk().do(C); return face; });
+  faceP.catch(() => { /* told where it is awaited, below */ });
+  // (an address that may only say where to go waits for the module before anything else is fetched: a row of the short list named and nothing to play goes to that row's own page, the benchmark asked
+  //  for to its first scene's, the pricing run to its first level's. A page of a pricing run under way takes its part here, before the picture boots)
+  let refused: string | null = null;
+  if (q.has('bench') || q.has(PRICE_KEY) || q.has(PRICE_RUN_KEY) || (q.has('pick') && !q.has('levelFile') && !q.has('solo'))) { await faceP;
+    const to = tape || coop ? '' : desk().pick(location.search); if (to) { location.replace(location.pathname + to + location.hash); return; }
+    if (q.has('bench') && !q.has(BENCH_RUN_KEY)) { refused = benchBegin(false); if (refused === null) return; console.info(`benchmark: ${refused}`); }
+    if (priceLevelsPage(q)) return; }
 
   SFX_TABLE.was = q.has('oldsounds'); SFX_TABLE.redone = q.has('newsounds'); if (q.has('bench') || q.has(BENCH_RUN_KEY)) SFX_WARM.on = false; else if (!q.has('mute')) warmSfx();   // (the sounds, a voice at a time in idle moments)
 
@@ -155,10 +167,7 @@ async function main(): Promise<void> {
   const chP = loadCharacterSet(at('assets/ual/AnimationLibrary_Godot_Standard.gltf'), castUrlFor(location.search, document.baseURI)); chP.then(() => boot.span('gltf', tBoot), () => { /* awaited below */ });
   const tFiles = performance.now(), filesP = Promise.all([tape ? new Uint8Array(0) : coop ? bytesOf(`levels/${name}`) : levelBytes(name).then(b => { boot.span('level', tFiles); return b; }), bytesOf(at('assets/ual/AnimationLibrary_Godot_Standard.gltf')), bytesOf(at('assets/ual/AnimationLibrary_Godot_Standard.bin')), bytesOf(at(`assets/chars/${CAST_FILE}`)), bytesOf(at(`assets/chars/${CAST_FILE_LOOK}`))]); filesP.catch(() => { /* awaited below */ });
   boot.expose();
-  const face = await fetchFace(say, () => { throw new Error('the game asked a die the page never hands in'); });
-  // THE DESK: the cards before a game ask the module, and what a press keeps goes in this machine's store, where the next page's start reads it
-  { const C = new Commands(); setDesk(new Desk(face.exports as unknown as DeskFace, face.exports.memory as WebAssembly.Memory, (key, text) => { try { if (text) localStorage.setItem(key, text); else localStorage.removeItem(key); } catch { /* no store: nothing is kept */ } }));
-    C.words(location.search); machineBefore(q, name, C); desk().do(C); }
+  const face = await faceP;
   // (an address that plays a mission comes up on that mission's brief, one that plays nothing on the title; either is live from here, and the game is made behind it)
   LOADBRIEF.on = q.get('loadbrief') !== '0'; settleOfQuery(q);
   LOADBRIEF.options = { open: () => openOptions({ tab: 'controls' }), close: closeOptions, up: optionsOpen };
@@ -170,7 +179,8 @@ async function main(): Promise<void> {
   boot.mark('module'); const tGame = performance.now();
   const game = new DrawGame(face), asked0 = Number(q.get('seed') ?? NaN), seed = Number.isFinite(asked0) ? asked0 >>> 0 : crypto.getRandomValues(new Uint32Array(1))[0], sid = sessionId(); let built = '';
   const unkept = kitPicture || !!tape || !!coop || ownPage(q);   // (what this machine keeps of the runs played: a page that plays a run of its own is nobody's)
-  const play = tape ? new DrawPlay(game, tape) : null;
+  const named = q.get(PLAYTAPE) ?? '', beside = tape && keptName(named) ? await keptBeside(named) : null;   // (a file says of no module that it was played on it)
+  const play = tape ? new DrawPlay(game, tape, !!beside && !beside.other) : null;
   const net = coop ? new DrawNet(coop.door, coop.start, game, () => deaf()) : null; let deaf = (): void => { /* nothing sounds yet */ };
   if (play) play.start({ mannequin, mannequinBin, cast, castLook });
   else if (net) net.start({ level, mannequin, mannequinBin, cast, castLook });
@@ -178,7 +188,7 @@ async function main(): Promise<void> {
     // (the run's tape: not of a title's floor, which nobody plays, nor of a page that measures)
     if (!title && !unkept && !q.has('noreplay')) game.tape = new HandTape(HAND.count);
     if (game.tape) built = await buildName();
-    machineBefore(q, name, game.commands, game.shown());
+    machineBefore(q, name, game.commands, game);
     game.start({ level, words: location.search, mannequin, mannequinBin, cast, castLook, seed, named: { level: name, build: built } });
     machineAfter(game.commands, !benchSceneWaits() && !heldPage(q));
   }
@@ -234,7 +244,7 @@ async function main(): Promise<void> {
   { const eye: [number, number] = [0, 0]; lookConfig.eyeAt = () => { const o = view() + View.at; eye[0] = D.f[o]; eye[1] = D.f[o + 2]; return eye; }; }
   const gaps = doorways(D); { const lines = gaps.map(d => [d.hinge[0], d.hinge[1], d.hinge[0] + Math.cos(d.closedDir) * d.width, d.hinge[1] + Math.sin(d.closedDir) * d.width] as [number, number, number, number]); lookConfig.doorGaps = () => lines; }
   const fog = makeFogFrame(), ask = askOf(game), audio = new AudioEngine(ask), events = new DrawEvents(D, engine.particles, smoke, audio, i => game.nameOf(i));
-  MUSIC.pieces = MUSIC.byLevel = MUSIC.theirs = true; audio.scoreSet = setlistOfQuery(location.search); let run = -1;   // (the level's own music, as tense as those who are against him)
+  MUSIC.pieces = MUSIC.byLevel = MUSIC.theirs = true; audio.scoreSet = setlistOf(setlistLevel(q.get('levelFile')), desk().kind(location.search) || null); let run = -1;   // (the level's own music, as tense as those who are against him)
   if (q.has('mute')) { audio.volume.master = 0; audio.start = () => { /* silent */ }; }
   const hud = kitPicture ? null : new DrawHud(game, ask); if (hud && (play || q.get('cards') === '0')) hud.overlay.cards = false;   // (a run being played again waits for nobody)
   deaf = () => audio.hush();
@@ -264,8 +274,8 @@ async function main(): Promise<void> {
   const books = new RunBooks();   // (what this machine keeps of the runs played: a page that plays a run of its own is nobody's)
   /** the game is another than the one last drawn (a restart, a load): what the picture and the sound carry over from frame to frame starts over, before anything of the new one is played */
   const anew = (): void => {
-    const o = view(), first = stood < 0; stood = D.u[o + View.stood]; if (first) return;
-    engine.restartPicture(); engine.particles?.clear(); smoke.clearAll(); events.cut(); weather.cut(); audio.hush(); game.turnAgain(); pair.cut(); lag.reset(); books.anew(); three(cam.target, o + View.follow);
+    const o = view(), first = stood < 0; stood = D.u[o + View.stood]; if (first) { events.stands(); return; }
+    engine.restartPicture(); engine.particles?.clear(); smoke.anew(); events.cut(); events.stands(); weather.cut(); audio.hush(); game.turnAgain(); pair.cut(); lag.reset(); books.anew(); three(cam.target, o + View.follow);
   };
   anew(); lens(); cam.aspect = Math.max(1, canvas.clientWidth) / Math.max(1, canvas.clientHeight); cam.rebuild();
 
@@ -286,7 +296,7 @@ async function main(): Promise<void> {
   const firstAt = Math.max(0, Math.floor(Number(q.get('at')) || 0));
   const played: Played & { to: number; readonly ends: string } = { paused: !!play, pace: 1, to: firstAt > 0 ? firstAt : -1, get seeking() { return this.to >= 0; }, get at() { return play?.at ?? 0; }, get total() { return play?.total ?? 0; }, get ends() { return play?.ends ?? ''; }, get parted() { return play?.parted?.tick ?? null; }, get lost() { return play ? (play.lost ?? game.lost)?.words.split('\n')[0] ?? null : null; }, get tries() { return play?.tries ?? []; }, seek(t: number): void { played.to = Math.max(0, Math.min(played.total, Math.round(t))); } };
   if (!play && !kitPicture) gameUp();
-  let bar: TapeBar | null = null; const runView = (): { look: [number, number, number]; yaw: number; pitch: number; dist: number; fov: number } => { const n = play?.next; return n && play!.total ? { look: [n[HAND.target], n[HAND.target + 1], n[HAND.target + 2]], yaw: n[HAND.yaw], pitch: n[HAND.pitch], dist: n[HAND.distance], fov: n[HAND.fov] } : { look: [cam.target[0], cam.target[1], cam.target[2]], yaw: cam.yaw, pitch: cam.pitch, dist: cam.distance, fov: cam.fov }; };
+  let bar: TapeBar | null = null, laneTape: LaneTape | null = null; const runView = (): { look: [number, number, number]; yaw: number; pitch: number; dist: number; fov: number } => { const n = play?.next; return n && play!.total ? { look: [n[HAND.target], n[HAND.target + 1], n[HAND.target + 2]], yaw: n[HAND.yaw], pitch: n[HAND.pitch], dist: n[HAND.distance], fov: n[HAND.fov] } : { look: [cam.target[0], cam.target[1], cam.target[2]], yaw: cam.yaw, pitch: cam.pitch, dist: cam.distance, fov: cam.fov }; };
   // whoever watches a run sees it his own way: the fog off his picture, a tube or none whatever the run's goggles were (null: as the run had it), eased by the page's clock
   const watched = { fog: true, tube: null as boolean | null, k: 0 }, seesAs = (fog: boolean, tube: boolean | null): void => { watched.fog = fog; watched.tube = tube; if (hud) hud.page.bared = !fog; game.viewAs(!fog, tube); };
   const tubeOf = (runs: number, dt: number): number => { if (!play) return runs; const to = watched.tube === null ? runs : watched.tube ? 1 : 0, by = dt * 4; if (watched.tube === null && Math.abs(runs - watched.k) <= by) return watched.k = runs; return watched.k += Math.max(-by, Math.min(by, to - watched.k)); };
@@ -383,11 +393,12 @@ async function main(): Promise<void> {
     if (!drawn) { input.endFrame(); if (still) thaw = true; return; }
     { if (reel.live) { ear[0] = cam.target[0]; ear[1] = cam.target[1] + 1.6; ear[2] = cam.target[2]; } else { const o = view() + View.at; ear[0] = D.f[o]; ear[1] = D.f[o + 1] + 1.6; ear[2] = D.f[o + 2]; } audio.setListener(ear, cam.forward); audio.update(dt, time); audio.scoreMenu = title;
       D.fresh(); const h = D.at[Section.heard]; if (audio.music) { audio.music.intensity = D.f[h + Heard.tension]; if (D.u[h + Heard.run] !== run) audio.music.mission(); } run = D.u[h + Heard.run]; }
-    smoke.update(dt);
+    for (const s of world.stale) smoke.obstaclesChanged(s.c, s.r);   // (what stands is another thing there: the last frame's rows say where)
+    world.stale.length = 0; smoke.update(dt);
     const a = ticks === undefined ? lag.at(acc * FIXEDSTEP.hz) : 1, pose = pair.at(a, cam);
     if (pose) cam.drawIn(pose);
     game.frame(a, cam.focus); if (!kit) rimsFrom(rims, D); lights.from(); men.from(engine.device.queue); reach.from(); world.from();
-    cam.kickIn(); try { engine.render(cam, time, dt, true); const tH = performance.now(); if (hud) { hud.blank = title && !reel.live; hud.told(); hud.draw(cam, canvas); } told.hud = performance.now() - tH; } finally { cam.kickOut(); cam.drawOut(); }
+    cam.kickIn(); try { engine.render(cam, time, dt, true); const tH = performance.now(); if (hud) { hud.blank = title && !reel.live; hud.told(); hud.draw(cam, canvas); } told.hud = performance.now() - tH; laneTape?.drawn?.(); } finally { cam.kickOut(); cam.drawOut(); }
     kit?.after(D.u[view() + View.kit], D.u[view() + View.veil]);
     if (plan.ticks) input.endFrame(); else if (still) { input.endFrame(); thaw = true; }   // (pressed over a held world: nobody's, and the first tick after it is told)
     told.update = t1 - t0; told.render = performance.now() - t1 - told.hud; told.frames++;
@@ -451,11 +462,13 @@ async function main(): Promise<void> {
     turned: up => { paused = up; if (up) { game.commands.letGo(); hud?.tabShow(false); } else { thaw = true; asked = false; } input.keys.clear(); input.buttons = 0; input.endFrame(); input.lockExcept = up ? new Set() : null; afresh(); } });
   onEnded = () => { if (!kit && !play && !ownPage(q)) pause.end(); };   // (a run's page has no end card: the next is its own)
   const cloud = kitPicture || play ? null : drawCloud(q, { sid, store: !unkept && keeps(q) ? keptStore() : null, gpu, engine, quality, game, measure, mission: desk().brief(location.search).title || (q.get('levelFile') ?? ''), offBooks: ownPage(q) || !!net, live: () => !title && !stopped() && !document.hidden && game.view().live, still: () => stopped() || measure.sweep.active });
-  if (play && freeCam) { const named = q.get(PLAYTAPE) ?? '', mine = keptName(named), notes = mine ? await keptNotes(named) : [];
+  if (play && freeCam) { const mine = !!beside, { notes, other } = beside ?? { notes: [], other: false };
     const map = new TapeMap({ floor: () => game.floor(), now: () => game.map(), view: () => freeCam.view(), notes, to: (x, z) => freeCam.to([x, freeCam.view().look[1], z]), at: () => played.at });
     const sees: Sees = { get fog() { return watched.fog; }, get tube() { return watched.tube; }, get fogged() { return D.u[D.at[Section.fog] + Fog.on] !== 0; }, get runs() { return D.f[view() + View.night] > 0.5; }, get lit() { return watched.tube ?? this.runs; }, set: seesAs };
-    bar = new TapeBar({ played, sees, map, cam: freeCam, canvas, title: desk().brief(location.search).title || name.replace(/\.json$/, ''), notes, keep: mine ? async all => { const ok = await keptStore().patch(named, { notes: all }); if (ok) void cloudNotes(q, keptStore()).catch(() => { /* on the next round */ }); return ok; } : null,
-      back: () => backToGame(named, location.pathname), begun: () => { audio.start(); input.focusGame(); } }); }
+    bar = new TapeBar({ played, sees, map, other, cam: freeCam, canvas, title: desk().brief(location.search).title || name.replace(/\.json$/, ''), notes, keep: mine ? async all => { const ok = await keptStore().patch(named, { notes: all }); if (ok) void cloudNotes(q, keptStore()).catch(() => { /* on the next round */ }); return ok; } : null,
+      back: () => backToGame(named, location.pathname), begun: () => { audio.start(); input.focusGame(); } });
+    laneTape = { ticks: played.total, key: named, label: named.split('/').pop() ?? named, get f() { return played.at; }, get speed() { return played.pace; }, get seeking() { return played.seeking; }, get playing() { return !played.paused; }, play: () => { if (played.paused) bar!.toggle(); }, pause: () => { played.paused = true; }, seek: f => played.seek(f), drawn: null };
+    soundLanes(laneTape, audio); }
   const bencher = drawBench({ idle: capMs => cloud ? cloud.cloud.filesIdle(capMs) : Promise.resolve(true), gpu, engine, smoke, quality, input, game, settings, measure, say: words => readout.say(words) }); bencher.go(); if (refused) readout.say(`benchmark not now: ${refused}`);
   // ---- the title stays up over its floor, live; a mission's run begins when the player starts it
   const drawTitle = (): void => { const root = document.getElementById('menu')!, c = document.createElement('div'); c.className = 'card'; root.textContent = ''; root.classList.add('on', 'title'); root.appendChild(c); titleScreen(c, { note: cloudNote, shows: { bench: () => { bencher.begin(); return true; } }, cheats: () => cheatWords(settings), closed: moved => { if (title && moved) drawTitle(); } }); };
@@ -481,7 +494,7 @@ tapConsole();   // (before the page boots: its own complaints are held until the
 tellRedCards(() => kitPicture);
 const uncaught = (head: string, e: unknown): void => { if (document.getElementById('fatal')?.style.display !== 'flex') showFatal(`${head}\n\n${(e as Error)?.stack ?? e}`); };
 window.addEventListener('error', ev => { if (!/ResizeObserver loop/.test(ev.message) && !(ev.error instanceof GameLost)) uncaught('Uncaught error:', ev.error ?? ev.message); });
-window.addEventListener('unhandledrejection', ev => { if (!(ev.reason instanceof GameLost)) uncaught('Unhandled promise rejection:', ev.reason); });
+window.addEventListener('unhandledrejection', ev => { if (!(ev.reason instanceof GameLost) && !(ev.reason instanceof TapeRefused)) uncaught('Unhandled promise rejection:', ev.reason); });
 // (a tool waits for the programs made behind the start too: until then a pass draws its stand-in, and the fog of war is the lit one)
 const ready = main(); (window as unknown as { __ready: Promise<void> }).__ready = ready.then(() => laterIdle());
-ready.catch(e => { console.error(e); if (kitPicture) kitNone(); if ((e as Error)?.name === 'RustGameError') showFatal((e as Error).message, { report: { message: (e as Error).message.slice(0, 400), stack: (e as Error).stack, stage: 'rust game' } }); else showFatalError(e); });
+ready.catch(e => { if (e instanceof TapeRefused) { refusedCard(e.message); return; } console.error(e); if (kitPicture) kitNone(); if ((e as Error)?.name === 'RustGameError') showFatal((e as Error).message, { report: { message: (e as Error).message.slice(0, 400), stack: (e as Error).stack, stage: 'rust game' } }); else showFatalError(e); });

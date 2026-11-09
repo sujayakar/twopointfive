@@ -9,13 +9,13 @@
 //   Each scenario of the plan starts on a fresh profile, so its first visit is cold. The default plan: full:5:full short:5:3 big:5:3:102400 restart:4:full::restart
 // Needs a real adapter: on a machine without one the page never reaches its start and every visit reads `no interactive mark`. Seconds are the machine's own and
 // say nothing of another's; what compares is one visit against the next.
-const { chromium } = require('/opt/node-tools/node_modules/playwright');
+const { playwright, browserAt, note: log } = require('./page.cjs');
 const fs = require('fs'), os = require('os'), path = require('path');
 const argv = process.argv.slice(2), flag = (n, d) => { const i = argv.indexOf(n); return i >= 0 ? argv[i + 1] : d; };
 const PORT = process.env.PORT; if (!PORT) { console.error('PORT=<the dev server\'s port> is needed (bun run dev, or PORT=5199 bun run tools/serve.ts)'); process.exit(2); }
 const QUERY = flag('--query', 'look&solo&levelFile=office.json&quality=high&seed=1&nokeep&mute&adapt=0').replace(/^\?/, ''), OUT = flag('--out', '');
 const PLAN = flag('--plan', 'full:5:full short:5:3 big:5:3:102400 restart:4:full::restart').split(/\s+/).filter(Boolean).map(s => { const [name, visits, stay, kb, how] = s.split(':'); return { name, visits: +visits || 3, stay: stay === 'full' || !stay ? 'full' : +stay, kb: +kb || 0, restart: how === 'restart' }; });
-const LIMIT = +flag('--limit', 240) * 1000, T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a);
+const LIMIT = +flag('--limit', 240) * 1000;
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 let ctx = null; const stop = async () => { try { ctx && await ctx.close(); } catch { } ctx = null; };
 for (const s of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(s, () => { stop().then(() => process.exit(130)); });
@@ -50,7 +50,7 @@ async function visit(sc, k) {
   const all = { query: QUERY, browser: '', adapter: null, scenarios: [] };
   for (const sc of PLAN) {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'warmboot-')), args = ['--enable-unsafe-webgpu', ...(sc.kb ? [`--gpu-disk-cache-size-kb=${sc.kb}`] : [])];
-    const open = async () => { ctx = await chromium.launchPersistentContext(dir, { args, viewport: { width: 1920, height: 1080 } }); await ctx.addInitScript(() => { }); all.browser = ctx.browser() ? ctx.browser().version() : all.browser; };
+    const open = async () => { ctx = await playwright().chromium.launchPersistentContext(dir, { ...browserAt(), args, viewport: { width: 1920, height: 1080 } }); all.browser = ctx.browser() ? ctx.browser().version() : all.browser; };
     await open(); const rows = [];
     if (!all.adapter) { const p = await ctx.newPage(); await p.goto(`http://localhost:${PORT}/?${QUERY}`, { waitUntil: 'commit' }).catch(() => { }); all.adapter = await p.evaluate(async () => { if (!navigator.gpu) return 'no navigator.gpu'; const a = await navigator.gpu.requestAdapter(); return a ? `${a.info.vendor} ${a.info.architecture} ${a.info.description || ''}`.trim() : 'no adapter'; }).catch(e => String(e).slice(0, 80)); await p.close(); log('adapter:', all.adapter); }
     log(`== ${sc.name}: ${sc.visits} visits, each stays ${sc.stay === 'full' ? 'until every shader behind the start is in' : sc.stay + ' s after interactive'}${sc.kb ? `, the shader store set to ${sc.kb} KB` : ''}${sc.restart ? ', the browser restarted between visits' : ''}`);

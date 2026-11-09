@@ -1,6 +1,5 @@
 //! A man is staged with what his card shows: the desk and a start are done the same commands, and on every mission of the list whose cards can be changed the men stand
 //! with the cards the desk says they go with.
-use game::io::{Io, R};
 use game::kit;
 use game::view::{Pressed, StartView, TeamView};
 use game_run::command::apply;
@@ -16,7 +15,7 @@ fn ask(n: u32, texts: &[&str], more: &[u32]) -> Vec<u8> {
     for m in more { b.extend_from_slice(&m.to_le_bytes()); }
     b
 }
-fn answer<T: Io>(d: &mut Desk, b: &[u8]) -> T { T::r(&mut R::new(&d.ask(b).expect("an ask the desk has"))) }
+fn answer<T: 'static>(d: &mut Desk, b: &[u8]) -> T { *d.answer(b).expect("an ask the desk has").itself().downcast().expect("the answer it is asked for") }
 
 /// what a machine keeps: every man's card moved off the issued one, colors too, the stealth card as well
 const KEPT: &str = r#"{"v":2,"stealth":{"weapon":"pistol","suppressed":true,"sideCan":true,"light":false,"nvg":true,"bangs":1,"smoke":2,"frags":0,"shells":0,"rings":0,"cams":0,"charges":0,"walls":0,"wand":true,"big":"none","primary":"mk18","secondary":"g19","suit":"navy","trim":"red"},

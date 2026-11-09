@@ -2,11 +2,10 @@
 // (internal → output resolution, taau.wgsl) + bloom + post + sharpen/grain at output resolution, OR (TAAU off) bloom + post + FXAA/grain at internal resolution as it always was.
 import { placeNone } from './placeField';
 import { makeBuffer, makeShader, computePipelineAsync, laterPipelineAsync, laterRenderPipelineAsync, renderPipelineAsync, writeWordsIfChanged, PIPE_QUEUE } from '../gpu/device';
-import { shaderText } from '../gpu/wgslTrim';
 import { FrameFlags, scenePrelude, MAX_CARDS } from './frame';
 import { Mat4 } from '../math/vec';
 import taauSrc from './shaders/taau.wgsl' with { type: 'text' };
-import sharpSrc from './shaders/sharp_direct.wgsl' with { type: 'text' };   // SHARP DIRECT: the unshadowed direct term re-scored per OUTPUT pixel × the internal visibility ratio (docs/internal/sharp-direct.md)
+import sharpSrc from './shaders/sharp_direct.wgsl' with { type: 'text' };   // SHARP DIRECT: the unshadowed direct term re-scored per OUTPUT pixel × the internal visibility ratio
 import { GBuffer } from './gbuffer';
 import { RadianceCascades } from './rc';
 import lightingCommon from './shaders/lighting_common.wgsl' with { type: 'text' };
@@ -18,7 +17,7 @@ import dustLookSrc from './shaders/dust_look.wgsl' with { type: 'text' };
 import volCommon from './shaders/vol_common.wgsl' with { type: 'text' };
 import placeCommonSrc from './shaders/place_common.wgsl' with { type: 'text' };   // THE LOOK PROTOTYPE: a place and what it is shown by, pasted in front of the composite and of every volumetric march (the kernels that bind the place field)
 import compositeSrc from './shaders/composite.wgsl' with { type: 'text' };
-import fireSrc from './shaders/fire.wgsl' with { type: 'text' };   // the open fires' flame, coals and drawn smoke (game/fire.ts): compiled into the composite, ahead of its own text
+import fireSrc from './shaders/fire.wgsl' with { type: 'text' };   // the open fires' flame, coals and drawn smoke (rust/game_rules/src/fire): compiled into the composite, ahead of its own text
 import fxaaSrc from './shaders/fxaa.wgsl' with { type: 'text' };
 import { SPLIT_TEXEL_BYTES, splitGatherSrc, splitRefused } from './gatherSplit';   // THE GATHER IS TWO PROGRAMS, made from its own texts (the one-kernel gather and the row that chose between them are gone)
 import { reportErrorLine, reportWarningLine } from '../cloud/report';   // (the reporter, a leaf that imports nothing: a line it is given prints as it did and is one of the visit's records)
@@ -36,9 +35,9 @@ import refractCommonSrc from './shaders/refract_common.wgsl' with { type: 'text'
 import { decalWgslConsts } from './decals';
 import { TexturePool, TargetOps, texBytes } from './texpool';
 import { capUsage } from './framecap';
-import { Denoiser, dnTravel, dnIters, DN_STRIDES } from './denoise';
+import { Denoiser, dnTravel, DN_STRIDES } from './denoise';
 import type { Box } from '../scene/boxes';
-import { FogPass, type FogFrame } from './fogofwar';   // FOG OF WAR (game/fogofwar.ts): one in-place pass over the composite while its switch is on — nothing while off
+import { FogPass, type FogFrame } from './fogofwar';   // FOG OF WAR (rust/game_rules/src/fogofwar): one in-place pass over the composite while its switch is on — nothing while off
 import { OutlinePass, type OutlineFrame } from './outline';   // THE OUTLINE IN THE DARK (host/findme.ts): one scissored blend onto the composite while its Options row is on — nothing while off
 
 const CS = GPUShaderStage.COMPUTE, FS = GPUShaderStage.FRAGMENT;
@@ -54,7 +53,7 @@ const allSkipT = () => [...new Set(DN_STRIDES.map((_, i) => skipThreshold(dnTrav
 
 /** One re-allocation of a set of targets (a resize, or a divisor flip): what to zero, what to resample from what, what to park afterwards — settled in finishRealloc */
 interface Realloc { toClear: GPUTexture[]; toRelease: GPUTexture[]; blits: { src: GPUTexture; dst: GPUTexture }[]; nearest: { src: GPUTexture; dst: GPUTexture }[]; nearestU: { src: GPUTexture; dst: GPUTexture }[]; created: number; reused: number; what: string[] }
-const SU = () => GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_SRC;   // (COPY_SRC: scripted measurement reads the linear intermediates back — tools/qa/perf-harness.js readTexture) — a function: the usage enums do not exist at module load under plain Bun (tools/qa)
+const SU = () => GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_SRC;   // (COPY_SRC: scripted measurement reads the linear intermediates back) — a function: the usage enums do not exist at module load under plain Bun (tools/qa)
 const RT = () => GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING | capUsage();   // (a frame capture reads every target back: render/framecap.ts capUsage, nothing under ?framecap=0)
 
 /** What the engine hands the TAAU resolve each frame (engine.render → setTaauFrame): last frame's unjittered view-projection, this frame's jitter (internal px), the knobs, and the two facts only
@@ -66,8 +65,8 @@ const TAAU_PARAM_BYTES = 128;   // struct TaauParams in taau.wgsl: mat4 (64) + 3
 /** restir.wgsl RestirU ahead of prevLights: cfg (16) + cfg2 (16) + jitter (16) + mot (16) + fwd (64) + inv (64) = 192 B (was 176 before the MOTION vec4 — direct-motion lane) */
 /** lasers / tracers handed to the reflection pass (setBeams): segments at most, and the uniform's size — 16 B of count + 48 B a segment (reflect.wgsl `Beams`) */
 const BEAM_MAX = 8, BEAM_HEAD = 32, BEAM_SEG_BYTES = BEAM_HEAD + BEAM_MAX * 48, FIRE_MAX = 4, FIRE_REC = 64, FIRE_AT = BEAM_SEG_BYTES, FIRE_LOOK_AT = FIRE_AT + 16 + FIRE_MAX * FIRE_REC, FIRE_LOOK_FLOATS = 16, BEAM_BYTES = FIRE_LOOK_AT + FIRE_LOOK_FLOATS * 4;   // (header: n, flags, 2 spare words, then k: vec4f — reflect.wgsl / composite.wgsl `Beams` … and behind the segments, for the composite alone, THE OPEN FIRES: a count word + FIRE_MAX records of 4 vec4f — fire.wgsl FireRec, setFires — and behind those the look's twelve numbers, fire.wgsl FireLook, setFireLook)
-/** one open fire as the composite draws it (game/fire.ts makes them; shaders/fire.wgsl FireRec) */
-export interface FireRecord { pos: ArrayLike<number>; r: number; h: number; heat: number; seed: number; time: number; wind: ArrayLike<number>; flick: number; /** the bed of coals' radius, m (0 or absent = none drawn) */ bed?: number; /** under the fog of war (RtLight.fog's numbers): 0 or absent = drawn wherever it stands · 1 = only where the team sees · 2 = only where it does not */ fog?: number; /** how far its smoke is the smoke solver's soot (0‥1; game/fire.ts FIRE_LOOK_SMOKE, the look page's ONE COLUMN): the drawn soot hands over by that much */ soot?: number }
+/** one open fire as the composite draws it (rust/game_rules/src/fire makes them; shaders/fire.wgsl FireRec) */
+export interface FireRecord { pos: ArrayLike<number>; r: number; h: number; heat: number; seed: number; time: number; wind: ArrayLike<number>; flick: number; /** the bed of coals' radius, m (0 or absent = none drawn) */ bed?: number; /** under the fog of war (RtLight.fog's numbers): 0 or absent = drawn wherever it stands · 1 = only where the team sees · 2 = only where it does not */ fog?: number; /** how far its smoke is the smoke solver's soot (0‥1; rust/game_rules/src/fire FIRE_LOOK_SMOKE, the look page's ONE COLUMN): the drawn soot hands over by that much */ soot?: number }
 const RESTIR_U_HEAD = 192, RESTIR_U_FWD = 64, RESTIR_U_INV = 128;
 const TF = { Reset: 1, Bypass: 2, Particles: 4, Velocity: 8 } as const;   // TaauParams.flags (TF_* in taau.wgsl)
 
@@ -78,7 +77,7 @@ export class LightingPasses {
   /** engine.settings.taau, mirrored by the engine every frame BEFORE resize (setTaau): the resolve runs, its history pair exists, bloom / post read the resolved picture, the final blit sharpens
    *  instead of FXAA. Off = the chain exactly as it was. */
   taauOn = false;
-  /** SHARP DIRECT (docs/internal/sharp-direct.md; engine mirrors it before resize — setSharp): the g-buffer is rasterised and the composite + TAA run at the OUTPUT size (cw × ch = ow × oh)
+  /** SHARP DIRECT (engine mirrors it before resize — setSharp): the g-buffer is rasterised and the composite + TAA run at the OUTPUT size (cw × ch = ow × oh)
    *  — U (unshadowed direct), albedo, emissive, glass, decals native — while every stochastic term keeps its INTERNAL grid and is joint-bilateral upsampled: sharp_direct.wgsl writes the output-size
    *  shadowed direct pair `sharpE` (U(out) × the internal S∕U per class), composite.wgsl's compute twin (SHARP = true) reads it with the output-size g-buffer, taau.wgsl resolves 1 : 1. Off: cw × ch =
    *  the internal size and the fragment composite / the upsampling resolve exactly as they were. Needs TAAU (the output-size history) — the engine only raises it then. */
@@ -152,7 +151,7 @@ export class LightingPasses {
    *  knownDark = the lights the tile's own rays found dark leave the fresh draw (restir.wgsl BELIEFS; false = the unbiased first-cut draw, A/B), audit = the share of lanes
    *  spending one extra ray a frame re-testing those lights. */
   restirRays = 4; restirSpatial = 3; restirHistory = 20; restirRadius = 16; restirGradient = true; restirGradK = 3.5; restirYoung = 8; restirSpatialAll = false; restirAudit = 0.25; restirKnownDark = true; restirPenRays = false;
-  /** the HYBRID estimator (direct-quality lane, docs/internal/direct-quality.md): K stratified rays for each of the two carried leaders at a pixel, 0 = off (restir.wgsl HELD) — engine mirrors settings.heldRays */
+  /** the HYBRID estimator: K stratified rays for each of the two carried leaders at a pixel, 0 = off (restir.wgsl HELD) — engine mirrors settings.heldRays */
   heldRays = 6; restirHueSplit = true;   // (+ the hue split: ru.cfg.w & 128 — restir.wgsl HUE SPLIT; false = the belief hue as it was)
   /** THE LIGHTING TRADES (restir.wgsl TRADES; engine mirrors settings.heldAdaptive / restirStableRetrace / restirDimClass — all off by default = the estimator's program and uniform
    *  exactly as they were): each gives up a little accuracy for shadow rays. While any is on the encode takes restir.wgsl's RESTIR_TRADE twin, compiled on FIRST USE — a boot with the rows off compiles nothing new; until the twin exists the frame takes the plain program (which never reads the rows' bits). */
@@ -167,7 +166,7 @@ export class LightingPasses {
     }
     return this.restirTrade;
   }
-  /** MOTION (lane fix/direct-motion, docs/internal/direct-motion.md; restir.wgsl header MOTION): bitmask 1 = stochastic-bilinear reservoir reprojection, 2 = motion-scaled confidence,
+  /** MOTION (restir.wgsl header MOTION): bitmask 1 = stochastic-bilinear reservoir reprojection, 2 = motion-scaled confidence,
    *  4 = spatial reuse wherever the pixel moves; 0 = none of them. V = the screen motion in px a frame AT 1000 INTERNAL ROWS (scaled to the target like restirRadius)
    *  under which the history keeps full confidence — the cut ramps to Min (fraction of the M cap) by 1.6 × V, Px = the motion (px a frame at 1000 rows, scaled alike) past which (4) opens the spatial pass. Engine mirrors settings.restirMotion*. */
   restirMotionLive = false;   // this frame's uniform carries the motion bits: restirMotion ≠ 0 AND the camera moved — engine decides; a still camera's frame carries none
@@ -267,10 +266,10 @@ export class LightingPasses {
   get directView(): GPUTextureView { return this.dSView[0]; }
   get softView(): GPUTextureView { return this.dSView[1]; }
   /** LASERS / TRACERS IN THE REFLECTIONS: those boxes are NoShadow (no ray meets one), so the reflection pass is handed the nearest BEAM_MAX of them as line segments
-   *  (reflect.wgsl / reflect_p5.wgsl `beams`, group 1 binding 11: count, then per segment from + half-width · to · emitted rgb) and adds their mirror image analytically.
+   *  (reflect.wgsl `beams`, group 1 binding 11: count, then per segment from + half-width · to · emitted rgb) and adds their mirror image analytically.
    *  Picture only: read off the list the picture is drawn from (what the fog of war hid or an infrared beam nobody's tube shows is not in it). Count 0 = the pass as it was. */
   private beamBuf!: GPUBuffer; private beamData = new Float32Array(BEAM_SEG_BYTES / 4); private beamN = -1;
-  /** …and, `opts.air` given (settings.beamAir), THE SQUAD'S WEAPON LASERS AS LIGHT IN THE AIR: a line `opts.air` knows (thinline.ts thinAirOf → its bead or null) is handed over
+  /** …and, `opts.air` given (settings.beamAir), THE SQUAD'S WEAPON LASERS AS LIGHT IN THE AIR: a line `opts.air` knows (rust/game_rules/src/thinline → its bead or null) is handed over
    *  with the air's share `opts.A` in e.w and whether it ends on a dot in b.w, composite.wgsl `beamAir` adds it to the picture as a thin additive line + dot, and the line and bead
    *  boxes are RETURNED so the raster leaves them out this frame (BoxWorld.hidePrimary). Lasers go first inside the cap; one past it stays a box. Header: n · flags (1 = mirror
    *  images on, 2 = the air look on) · k = (rain rate, the wet film's share for the reflection pass (settings.wetMirror; 0 = off), how far a stuff's own `mirrors` stands in for a plain coat's (the look's Pressed panels row, 0‥1; 0 on a page without the look), 0). Nothing here writes a box. */
@@ -298,7 +297,7 @@ export class LightingPasses {
     this.beamN = n; this.device.queue.writeBuffer(this.beamBuf, 0, F.buffer, 0, BEAM_HEAD + n * 48);
     return hide.size ? hide : null;
   }
-  /** THE OPEN FIRES (game/fire.ts → engine.fires): the nearest FIRE_MAX as records behind the beam segments, in the same uniform — the composite's fireOver draws
+  /** THE OPEN FIRES (rust/game_rules/src/fire → engine.fires): the nearest FIRE_MAX as records behind the beam segments, in the same uniform — the composite's fireOver draws
    *  each one's flame, coals and drawn smoke along the pixel's ray (shaders/fire.wgsl). Picture only. None = a zero count, written once: the composite as it was. */
   private fireData = new Float32Array((16 + FIRE_MAX * FIRE_REC) / 4); private fireN = -1;
   setFires(list: readonly FireRecord[] | null | undefined) {
@@ -312,7 +311,7 @@ export class LightingPasses {
       F[o + 12] = r.bed ?? 0; F[o + 13] = r.fog ?? 0; F[o + 14] = r.soot ?? 0; F[o + 15] = 0; }
     this.fireN = n; this.device.queue.writeBuffer(this.beamBuf, FIRE_AT, F.buffer, 0, 16 + n * FIRE_REC);
   }
-  /** … and THE LOOK'S NUMBERS every fire is drawn with (game/fire.ts FIRE.look → engine.fireLook; fire.wgsl FireLook: sixteen floats in its order), written when they move */
+  /** … and THE LOOK'S NUMBERS every fire is drawn with (rust/game_rules/src/fire FIRE.look → engine.fireLook; fire.wgsl FireLook: sixteen floats in its order), written when they move */
   private fireLook = new Float32Array(FIRE_LOOK_FLOATS); private fireLookSet = false;
   setFireLook(look: ArrayLike<number> | null | undefined) {
     if (!look) return;
@@ -501,7 +500,7 @@ export class LightingPasses {
   /** EVERY pipeline the constructor used to create, made through createComputePipelineAsync / createRenderPipelineAsync (gpu/device.ts: compiled on the GPU process's worker
    *  threads, resolved when ready — the synchronous forms compiled ninety kernels on the thread that also composites the browser's UI and froze Chrome for seconds on a cold
    *  shader cache) — the same modules, labels, layouts and constants as before, plus the v3 denoiser's and the target-ops kernels of the modules this one
-   *  owns. `opts.sharp` / `opts.gbaa`: also prepare the sharp-direct trio / the GBAA kernel now instead of synchronously on the first frame a preset switches them on (main.ts
+   *  owns. `opts.sharp` / `opts.gbaa`: also prepare the sharp-direct trio / the GBAA kernel now instead of synchronously on the first frame a preset switches them on (host/drawpage.ts
    *  passes true unless the URL vetoes the feature; the edge-ray experiment's two stay first-use). Engine.init awaits it; nothing may encode before it resolves. */
   async init(opts: { sharp?: boolean; gbaa?: boolean; onGroup?: (name: string) => void } = {}): Promise<void> {
     const device = this.device, sceneLayout = this.sceneLayout, pre = scenePrelude();

@@ -6,7 +6,7 @@
 // north-west) of the walls, the lorry and whatever stands in the open, deeper in the corners; caps lie on the tops of the yard wall, the gate posts, the
 // lorry, the wood, the crates; trodden paths run from the gate to the doors, the ground is cleared to earth at the gate, the tea room's door and the
 // generator, and two ruts run in from the road to the lorry's back wheels. Nothing white lies under a roof: a little grey slush is tracked in at each
-// outside door. What FALLS is the weather's (src/game/weatherKinds.ts, keyed on this level's name) and no part of this file.
+// outside door. What FALLS is the weather's (rust/game_rules/src/weather_kinds, keyed on this level's name) and no part of this file.
 // THE LIGHT is a cold moon on the snow and warm things that burn: the lamp over the gate, a brazier in front of the tea room, bulbs in the tea room, the kitchen and the
 // store (the mains: the generator in the lean-to), a stove's glow in the tea room and the bunk room, the bread oven's in the kitchen, lanterns. The tea
 // room's two windows, the kitchen's and the bunk room's throw their light out onto the snow.
@@ -31,21 +31,21 @@
 //   z 22 +==================*====[ GATE ]==========================+      * = the lamp over the gate
 //   z 24    way 1 (x 11.6)         the road (packed snow, ruts)       jersey barriers
 //
-// Built from the 2010s kit (src/scene/gwotKit.ts) on the office kit's walls and panes, plus the snow paints (src/scene/gwotPalette.ts SNOW_PALETTE): flat
+// Built from the 2010s kit (lib/gwotKit.ts) on the office kit's walls and panes, plus the snow paints (src/scene/gwotPalette.ts SNOW_PALETTE): flat
 // colours, boxes only; no second look file.
-// WHAT A SNOW PIECE IS TO A MAN (scene/collision.ts: a static blocks feet and the nav grid only where it stands over 0.2 m):
+// WHAT A SNOW PIECE IS TO A MAN (rust/game_rules/src/scene_collision: a static blocks feet and the nav grid only where it stands over 0.2 m):
 //   · ground, road, cleared earth  = thin solid slabs at the floor (feet, rounds and light land on them);
 //   · paths, ruts, tracked-in slush = decals (NoShadow: drawn and lit, no ray and no collision query sees them);
 //   · a DRIFT                       = solid boxes whose top is under 0.2 m (the check holds 0.19; the tallest is 0.18): men wade through it, a round knocks snow out of it;
 //   · a BANK                        = a drift with tiers over 0.2 m: it stops feet. Only against a wall or the lorry, never within 1.4 m of a door;
 //   · a CAP                         = a decal on the top of a thing: a round goes through it to the thing; where the thing is cover that breaks (the
-//                                     wood, a wooden crate) the cap is to the wall engine what every decal on a broken piece is (game/wallbreak.ts `ghosts`).
+//                                     wood, a wooden crate) the cap is to the wall engine what every decal on a broken piece is (rust/game_rules/src/wallbreak `ghosts`).
 import type { Vec3 } from '../../src/math/vec';
-import type { Level, LevelDoorDef } from '../../src/scene/level';
-import type { KitViewData, LevelScenarios, Rect, StructureData } from '../../src/scene/scenarios';
-import type { SurfacesData } from '../../src/scene/levelData';
-import { officeKit, normalize3 as norm, type GeneratorTrace } from '../../src/scene/officeGen';
-import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, type GwotOpening } from '../../src/scene/gwotKit';
+import type { Level, LevelDoorDef } from './lib/level';
+import type { KitViewData, LevelScenarios, Rect, StructureData } from './lib/scenarios';
+import type { SurfacesData } from './lib/levelData';
+import { officeKit, normalize3 as norm, type GeneratorTrace } from './lib/officeGen';
+import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, type GwotOpening } from './lib/gwotKit';
 import { SNOW_PALETTE, SNOW_FINISH, SNOW_MATERIALS, type SnowMat } from '../../src/scene/gwotPalette';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
@@ -73,8 +73,8 @@ const YARD_W: Vec3 = [12.7, 1.1, 16.2], YARD_E: Vec3 = [22.4, 1.1, 16.6], GATE_S
 const TEA_IN: Vec3 = [17.25, 1.1, 10.9], PASS_W: Vec3 = [21.9, 1.1, 6.75], PASS_E: Vec3 = [22.1, 1.1, 6.75], BACK_IN: Vec3 = [25.25, 1.1, 5.2], KITCHEN_IN: Vec3 = [25.25, 1.1, 10.9];
 const STORE_W: Vec3 = [27.9, 1.1, 8.25], STORE_E: Vec3 = [28.1, 1.1, 8.25], INNER_N: Vec3 = [32.25, 1.1, 10.9], INNER_S: Vec3 = [32.25, 1.1, 11.2], BUNK_IN: Vec3 = [28.2, 1.1, 13.75];
 
-/** THE ROOM CLEAR (scene/scenarios.ts StructureData). Eight men: the tea room 3, the kitchen 2, the store 1, the bunk room 2.
- *  THE HAND PLACEMENT (roomclear.ts placeDefenders: seed 0 / attempt 1 = each room's first `garrison` marks IN FILE ORDER; the page deals it on every try).
+/** THE ROOM CLEAR (lib/scenarios.ts StructureData). Eight men: the tea room 3, the kitchen 2, the store 1, the bunk room 2.
+ *  THE HAND PLACEMENT (rust/game_rules/src/roomclear place_defenders: seed 0 / attempt 1 = each room's first `garrison` marks IN FILE ORDER; the page deals it on every try).
  *  The problem, in one sentence: the yard between the lorry and the doors is white, lit and watched through glass from two sides.
  *  · THE GATE is the one hole in the wall and it is lit, but THE LORRY stands 2.6 m inside it, between it and the tea room's two windows: a team comes in
  *    behind the lorry. Only bunk 1, at the dark bunk room's window, has the gateway, from the side (a low wall of sandbags stands on that side of it).
@@ -133,7 +133,7 @@ export const PASS_STRUCTURE: StructureData = {
     { id: 'lines', name: 'Lines', rooms: ['store', 'bunk'], rally: [30.2, 0, 15.8], barricade: ['bunk'] },
   ],
 };
-/** THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest): a bespoke set for both ways in — the compound's mud wall
+/** THE TEAM & KIT PICTURE (lib/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest): a bespoke set for both ways in — the compound's mud wall
  *  on the road, the wicket in the truck gate under its one lamp, the lorry behind the wall, snow on everything. The level's own two starts stand in the open dark
  *  with no door near them; the set is what the place looks like from the road. */
 const PASS_KITVIEW: KitViewData = {
@@ -262,7 +262,7 @@ export function build(extra: PassExtra = {}): { level: Level; scenarios: LevelSc
   G.ground(28, 11, 34, 18, 'mudFloor', 0.006);                                                // the bunk room
   G.ground(5.9, 13.4, 12.1, 20.6, 'dirt', 0.006);                                             // the bay: dry earth under its roof, to the eaves
   G.ground(5.9, 4.9, 9.6, 9.1, 'slab', 0.006);                                                // the lean-to
-  // THE ROOFS: four slabs, no more (the weather takes a level's four biggest ceiling slabs as its roofs — game/weather.ts roofsOf — and snow falls everywhere
+  // THE ROOFS: four slabs, no more (the weather takes a level's four biggest ceiling slabs as its roofs — rust/game_rules/src/weather roofs_of — and snow falls everywhere
   // else): the range, the bunk room, the bay, the lean-to
   grp('ceiling');
   slab(11.9, H, 4.9, 34.1, H + 0.2, 11.1, P.mudLight, { flags: BoxFlag.NoPrimary, rough: 0.95 });
@@ -298,13 +298,13 @@ export function build(extra: PassExtra = {}): { level: Level; scenarios: LevelSc
   add({ c: [25.94, 0.05, 11.29], h: [0.2, 0.05, 0.15], yaw: 0.2, ...S.snowPacked, rough: 0.2, flags: DECAL, shape: { cut: [[0.5, 1, 0.2, 0.035], [-0.6, 1, 0.5, 0.04], [0.1, 1, -0.8, 0.05]], old: true } });   // … and its ice at the foot
   G.beamEnds('x', 11, 12.0, 28.0, 1);                                                         // the roof's beam ends
   // split wood stacked under the first window's sill, and two billets that rolled off it. (The trial stacked it under the second window, on the wall the
-  // third and fourth men of a stack on the tea room's door stand along: tools/qa/lived-stack-check.ts --ask shows a face's marks. The wood moved.)
+  // third and fourth men of a stack on the tea room's door stand along. The wood moved.)
   G.splitWood('x', 11, 13.3, 14.5, 1, 3);
   G.log(14.42, 11.8, 1.05 + HALF, 0.42, 0.08); G.log(13.5, 11.78, -0.5 + HALF, 0.36, 0.07);
   G.ladder('x', 11, 21.72, 1);                                                                // a ladder leaned by the kitchen's door
   // a plank bench with a pot and a can on it, another can on its side in front: at the wall's WEST end, beside the first window, where
   // no charge could be set before (the trial stood it by the kitchen's door, on the one stretch of the kitchen's front a wall charge goes on:
-  // tools/qa/wallfurn-check.ts held the count, and the bench moved, not the count)
+  // levels charges held the count, and the bench moved, not the count)
   G.plankBench(12.56, 11.37, 0, 1.0); G.pot(12.8, 11.37, 0.41);
   add({ c: [12.3, 0.58, 11.36], h: [0.11, 0.17, 0.07], yaw: 0.35, ...M.jerryYellow }); add({ c: [12.5, 0.085, 11.78], h: [0.17, 0.075, 0.11], yaw: -0.55, ...M.olive });
   G.bricks(18.2, 11.33, 0.04, 5);                                                             // mud bricks left under the mend they were for
@@ -360,7 +360,7 @@ export function build(extra: PassExtra = {}): { level: Level; scenarios: LevelSc
   G.tyres(15.3, 20.75, 1);                                                                    // a loose tyre by the cart, flat in the snow
   // (No steel pipes in this yard. They lay in the corner south of the bunk room, 'out of every stack mark and charge place': that corner is the pocket
   // the squad bunches in to breach the bunk room's south wall, and the pile stood two metres straight behind the man who sets the charge, on the floor
-  // his men step back over. One stayed in the blast: tools/qa/menclear-check.ts. The piece is the kit's and stands in the showroom.)
+  // his men step back over. One stayed in the blast. The piece is the kit's and stands in the showroom.)
   // fuel drums in the pocket of yard between the lean-to and the bay: three standing, one on its side
   G.drum(7.7, 9.85, 'rust'); G.drum(8.36, 9.72, 'drumBlue'); G.drum(8.02, 10.4, 'olive', 0.3);
   const DRUM_DOWN = { x: 9.15, z: 10.75, yaw: 0.5 }, drumTop = G.drumDown(DRUM_DOWN.x, DRUM_DOWN.z, DRUM_DOWN.yaw, 'drumRed');
@@ -378,7 +378,7 @@ export function build(extra: PassExtra = {}): { level: Level; scenarios: LevelSc
   cleared('gateway', 18.15, 20.7, 20.85, 23.3, 0.45);
   cleared('tea_door', 16.15, 11.14, 18.35, 12.5, 0.4);
   cleared('generator', 9.75, 5.7, 11.2, 8.7, 0.35);
-  melted('brazier', 19.6, 13.6, 0.5, 0.3);                                                     // (round, as the drum is: tools/qa/pass-check.ts holds it)
+  melted('brazier', 19.6, 13.6, 0.5, 0.3);                                                     // (round, as the drum is)
   cleared('kitchen_door', 24.75, 11.14, 25.75, 11.9, 0.3);
   cleared('back_door', 24.75, 4.1, 25.75, 4.86, 0.3);
   // ---- trodden paths: from the gate to each door, between the doors, to the generator and the bay; the cook's path to the refuse heap ----
@@ -485,7 +485,7 @@ export function build(extra: PassExtra = {}): { level: Level; scenarios: LevelSc
       name: 'lamp_gate', group: 'exterior', enabled: true, volumetric: 0.15, fixtureBox: head, radius: 0.12, broad: true }); }
   // THE MOON IS TWO FIFTHS OF ANOTHER LEVEL'S (0.06 against 0.15): it is snowing, the sky is shut, and snow is the brightest ground paint in the game — at 0.15 a man on it
   // read 0.24 by the page's meter (which counts the moon; the headless one does not), over twice what 'dark' is on every other floor. At 0.06 moonlit snow sends the eye what
-  // their moonlit dust does, and the starts read dark by both meters (0.11 at 0.08: over the line) (tools/qa/pass-check.ts, the light)
+  // their moonlit dust does, and the starts read dark by both meters (0.11 at 0.08: over the line)
   lights.push({ kind: 'dir', pos: [0, 0, 0], dir: norm([0.45, -0.5, -0.74]), color: [0.5, 0.68, 1.0], intensity: 0.06, range: 1e6, innerDeg: 0, outerDeg: 0, name: 'moon', group: 'exterior', enabled: true, volumetric: 0, radius: 0.009, mains: false });
 
   // ---- the mains, where a man can follow them: the generator in the lean-to, a flex slung to the range and one across the yard to the gate's lamp ----
@@ -508,7 +508,7 @@ export function build(extra: PassExtra = {}): { level: Level; scenarios: LevelSc
     // 'back' opens OUT behind the range; 'pass' and 'store' open into the kitchen, 'inner' into the store. So with every yard door shut against the team it
     // still walks back → kitchen → tea room, and kitchen → store → bunk room, each door opened by hand from the side it is on.
     // The three yard doors author NO swing: the room rule deals each into its own room (what the lines above need), and the outward rule for outside doors
-    // (DOORWAY.exitsOut, off as shipped) can turn them like any other level's — an authored inward side there is what `probes.ts oneway-deal` holds against.
+    // (DOORWAY.exitsOut, off as shipped) can turn them like any other level's .
     { name: 'tea', hinge: [16.42, 11.0], closedDir: 0, width: 1.16, exterior: true },
     { name: 'kitchen', hinge: [24.42, 11.0], closedDir: 0, width: 1.16, exterior: true },
     { name: 'back', hinge: [24.42, 5.0], closedDir: 0, width: 1.16, exterior: true, swing: -1 },
@@ -521,7 +521,7 @@ export function build(extra: PassExtra = {}): { level: Level; scenarios: LevelSc
 
   extra.kept?.({ K, G, cap });
 
-  // ---- LIVED IN (src/scene/lived.ts: all of it goes with the switch off — group 'lived.<room>', props 'lived.<room>.<kind><n>'; LAST, after every kept thing) ----
+  // ---- LIVED IN (lib/lived.ts: all of it goes with the switch off — group 'lived.<room>', props 'lived.<room>.<kind><n>'; LAST, after every kept thing) ----
   // What each room is for, said by what stands in it: the TEA ROOM is rugs and floor cushions round the stove, low tables with the tea on them, the
   // samovar's table; the KITCHEN the bread oven, a work table, flour in sacks and the water cans; the STORE sacks to the beams, fuel drums and
   // crates under one dim bulb; the BUNK ROOM four cots, a tin trunk and a felt on the floor round its stove; the BAY the halt's pickup, a bench, tyres and a
@@ -581,7 +581,7 @@ export function build(extra: PassExtra = {}): { level: Level; scenarios: LevelSc
     // the stealth mission's three places, because the level format wants them (the room clear stands the mission still): the store, a point on its back wall, the tea room's door
     mission: { serverRoom: { ...STORE }, entryDoor: 'store', rack: { index: 0, front: [32.4, 1.0, 5.6], halfW: 0.3 }, exfilDoor: 'tea', exfilX: 17.25, exfilZ: 11.6, exfilOut: [0, 1] },
   };
-  // ---- what is underfoot (game/floor.ts; the six it has): fresh snow is 'grass' (the soft, quiet one); the road, the trodden paths, cleared earth and the
+  // ---- what is underfoot (rust/game_rules/src/floor; the six it has): fresh snow is 'grass' (the soft, quiet one); the road, the trodden paths, cleared earth and the
   // dry earth under the bay's roof are 'asphalt' (the nearest the six have to hard ground); the rooms' beaten earth and slab are 'stone', the rugs 'carpet'.
   // First match wins: rugs, rooms, then the yard's hard patches (pushed as they were laid above)
   const surfaces: SurfacesData = {

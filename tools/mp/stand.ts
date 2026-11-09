@@ -11,28 +11,27 @@ import { NetGame, type NetFace } from '../../src/net/modgame.ts';
 import { wordTick } from '../../src/net/words.ts';
 import { Commands } from '../../src/draw/commands.ts';
 import { machineBefore } from '../../src/host/machine.ts';
-import { LOOK } from '../../src/scene/look.ts';
+import { toolDesk, toolModule } from '../desk.ts';
 import { characterFiles, pack } from '../blitz/start-pack.ts';
-import { faceHere } from '../blitz/face-build.ts';
 
 const ROOT = resolve(import.meta.dir, '../..');
 
 /** what whoever makes a game says of it: the page's address for the mission, the die, and what the host has set before the game is made (its commands' bytes as base64; none said: what
  *  the address itself says of it, on a machine that keeps nothing) */
 export interface StartSetup { search: string; seed: number; commands?: string }
+/** a game is of a mission: the game says whether the words name one */
+const namesNone = (s: NetStart): string => toolDesk().kind(s.words) ? '' : `the words ${s.words.slice(0, 60)} name no mission`;
 export function freshStart(setup: StartSetup): NetStart {
   const q = new URLSearchParams(setup.search), named = q.get('levelFile') ?? 'office.json', C = new Commands();
-  LOOK.on = true;
   if (setup.commands === undefined) machineBefore(q, named, C);
   const start: NetStart = { file: named, words: setup.search, seed: setup.seed, seats: Number(q.get('seats') ?? 1), commands: setup.commands ?? commandText(C.take()) };
-  const why = startWhy(start); if (why) throw new Error(`the setup: ${why}`);
+  const why = startWhy(start) || namesNone(start); if (why) throw new Error(`the setup: ${why}`);
   return start;
 }
 
 interface StartFace extends NetFace { face_start(p: number, n: number, slot: number, seed: number, seats: number, flags: number): number; face_reserve(n: number): void; face_show_seat(h: number, seat: number): void; face_panic_ptr(): number; face_panic_len(): number }
 /** `face_start`'s: the rows that dress the picture are up, on a page and so on every machine of a game */
 const DRESS = 1;
-let MODULE: WebAssembly.Module | null = null;
 
 /** every call of the face: a trap (a panic, the stack run out) is thrown as the panic's words */
 function guarded(raw: Record<string, unknown>, memory: WebAssembly.Memory): StartFace {
@@ -60,11 +59,10 @@ export interface Stood {
 }
 
 export async function standStart(start: NetStart): Promise<Stood> {
-  const why = startWhy(start); if (why) throw new Error(`no networked game can be stood from this start: ${why}`);
+  const why = startWhy(start) || namesNone(start); if (why) throw new Error(`no networked game can be stood from this start: ${why}`);
   const level = resolve(ROOT, 'levels', start.file); if (!existsSync(level)) throw new Error(`${start.file} is not a level of this build`);
-  if (!MODULE) { const file = faceHere(); if (!file) throw new Error('the game\'s module is not built and the checked-in one is of other sources (bun run tools/blitz/face-build.ts)'); MODULE = new WebAssembly.Module(new Uint8Array(readFileSync(file))); }
-  const raw = new WebAssembly.Instance(MODULE, { env: { face_roll: () => { throw new Error('the game asked its host for a roll'); } } }).exports as Record<string, unknown>, memory = raw.memory as WebAssembly.Memory, X = guarded(raw, memory);
-  const bytes = pack([readFileSync(level), new TextEncoder().encode(start.words), ...characterFiles(ROOT), new Uint8Array(0), commandBytes(start)]);
+  const raw = new WebAssembly.Instance(toolModule()).exports as Record<string, unknown>, memory = raw.memory as WebAssembly.Memory, X = guarded(raw, memory);
+  const bytes = pack([readFileSync(level), new TextEncoder().encode(start.words), ...characterFiles(ROOT), commandBytes(start)]);
   const p = X.face_alloc(bytes.length) >>> 0; new Uint8Array(memory.buffer, p, bytes.length).set(bytes);
   const h = X.face_start(p, bytes.length, -1, start.seed, start.seats, DRESS) >>> 0;
   X.face_free(p, bytes.length); X.face_reserve(64 * 1048576);

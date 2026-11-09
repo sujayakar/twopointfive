@@ -12,14 +12,14 @@
 //   C3. EVERY CARD OPEN, EVERY SQUAD SIZE: no two men within a body of each other, the fourth man's acting place on free floor.
 //   D. A QUIET MISSION'S WAY hangs its pool lamp over a glowing box on a wall (no box, no fixture to shoot out).
 //   E. THE WORD `laid` is the loader's and a file may not write it; a broken block does not refuse a level to play (parseLevelData `kitView: 'drop'`), and is refused everywhere else.
-// Lines are `- PASS — …` / `- FAIL — …` (tools/qa/gate.sh counts them). The first line printed names the levels that carry a block (nothing else lists them). Exit 0 = all pass · 1 = a row failed · 2 = an
+// Lines are `- PASS — …` / `- FAIL — …`. The first line printed names the levels that carry a block (nothing else lists them). Exit 0 = all pass · 1 = a row failed · 2 = an
 // unknown level, or a module with no `face_kit_plan` (it is older than this tool: bun run tools/blitz/face-build.ts).
 // KITPLAN_BREAK=1: what is asked is spoiled (the side worked out read flipped, a block's second place moved onto the wall's line, every way's door read as steel, the way in asked of a point past the floor, the fourth man's place on Sam's): rows of B, C and C3 must FAIL, exit 1.
 import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { faceHere, FACE_WASM } from '../blitz/face-build';
-import { parseLevelData, validateLevelData } from '../../src/scene/levelData';
-import { ALL_MISSIONS } from '../../src/scene/scenarioList';
+import { parseLevelData, validateLevelData } from '../levels/lib/levelData';
+import { missionRows } from '../desk.ts';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type Data = any;
@@ -40,10 +40,10 @@ const f2 = (v: number) => (Math.round(v * 100) / 100).toString();
 const pt = (p: readonly number[]) => `(${p.map(f2).join(', ')})`;
 const dist = (a: readonly number[], b: readonly number[]) => Math.hypot(a[0] - b[0], a[1] - b[1]);
 
-// ---- the module: a read of no game, so the die it imports is never rolled
+// ---- the module: a read of no game
 const WASM = faceHere() ?? FACE_WASM;
 if (!existsSync(WASM)) { console.log(`kitview-plan: no module at ${WASM} (bun run tools/blitz/face-build.ts)`); process.exit(2); }
-const X: Data = new WebAssembly.Instance(new WebAssembly.Module(new Uint8Array(readFileSync(WASM))), { env: { face_roll: () => 0 } }).exports;
+const X: Data = new WebAssembly.Instance(new WebAssembly.Module(new Uint8Array(readFileSync(WASM)))).exports;
 if (typeof X.face_kit_plan !== 'function') { console.log(`kitview-plan: the module at ${WASM} has no face_kit_plan: it is older than this tool (bun run tools/blitz/face-build.ts)`); process.exit(2); }
 const encode = new TextEncoder(), decode = new TextDecoder();
 function ask(text: string, way: number): Data {
@@ -90,7 +90,7 @@ function parity() {
 }
 
 // ---- C
-/** a `hide` / `show` / `pane.box` that names a box by its GENERATED id (scene/levelLoad.ts gives a box with no name of its own its PLACE in the file): add a box before it in the level's source and the
+/** a `hide` / `show` / `pane.box` that names a box by its GENERATED id (tools/levels/lib/levelLoad.ts gives a box with no name of its own its PLACE in the file): add a box before it in the level's source and the
  *  name is another box's, with nothing red. And of a WRITTEN `hide` (it wins outright, so nothing else looks at it): a box it takes in no line from the camera, and what still stands in those lines */
 const GENERATED = /^box_\d{4,}$/;
 function hideNotes(w: string, Y: Data, A: Data) {
@@ -155,7 +155,7 @@ function acting() {
 // ---- D
 function quietWays() {
   say('\n=== D. a quiet mission\'s way: the pool lamp hangs over a glowing box on a wall');
-  const quietLevels = new Set((ALL_MISSIONS as Data[]).filter(e => e.kind === 'quiet').map(e => (e.level ?? 'office.json').replace(/\.json$/, ''))); quietLevels.add('office');   // (the solo night: no row of the list, the bundled office's first way)
+  const quietLevels = new Set(missionRows().filter(e => e.kind === 'quiet').map(e => e.level.replace(/\.json$/, ''))); quietLevels.add('office');   // (the solo night: no row of the list, the bundled office's first way)
   for (const name of withBlock) { if (!quietLevels.has(name)) continue; const Y = levelOf(name).data.scenarios.kitView.ways[0], F = (answers.get(`${name} 0`) ?? ask(levelOf(name).text, 0)).plan.lamps.porch.fixture;
     row(!!F, `${said(name, Y, 0)}: ${F ? `the box at ${pt(F.at)}` : 'NO WALL CARRIES ONE: nothing to shoot out'}`); }
 }

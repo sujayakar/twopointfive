@@ -541,7 +541,7 @@ pub fn flank_call(g: &crate::game::Game, plan: TacticsPlanId, m: GuardId, place:
 /// A role as dealt, a new row. (tactics.ts:410 mk)
 fn mk(g: &mut Game, plan: TacticsPlanId, kind: crate::tactics::RoleKind, hold_at: Option<V3>, route: Vec<V3>, len: f64, bearing: f64, av: Option<JsSet<crate::Num>>) -> TacticsRoleId {
     let t0 = g.time;
-    g.tab.tactics_role.push(crate::tactics::Role { kind, plan, hold_at, route, len, bearing, avoid: av, set: false, holding: false, hold_t: 0.0, arrived: false, said_moving: false, said_set: false, t0, ground: None, last_pos: None })
+    g.tab.tactics_role.push(crate::tactics::Role { kind, plan, hold_at, bearing, avoid: av, set: false, holding: false, hold_t: 0.0, arrived: false, said_moving: false, said_set: false, t0, ground: None, last_pos: None })
 }
 
 /// His side's dangerous doorways priced in, no avoid-set, made once a man; the roster's own delete / set kept as it was (it moves him to the map's end). (tactics.ts:399 dangerOnly)
@@ -612,20 +612,14 @@ pub fn plan_approach(g: &mut crate::game::Game, men: &[GuardId], target: V3, why
         st.plan_serial
     };
     let plan = g.tab.tactics_plan.push(crate::tactics::Plan {
-        id,
         team,
         target: t_pt,
         t0: now,
         replanned_at: now,
-        replans: 0.0,
         members: routes.iter().map(|r| r.0).collect(),
         roles: JsMap::new(),
         phase: crate::tactics::PlanPhase::Approach,
         go_t: -1.0,
-        why: String::from(why),
-        presser_bearing: p_bear,
-        presser_len: p0_len,
-        corridor,
         first_arrive_t: -1.0,
         last_radio_t: -100.0,
         contact: false,
@@ -844,8 +838,8 @@ mod tests {
         use crate::tactics::{Plan, PlanPhase, RoleKind};
         let mut g = Game::blank();
         let (a, b): (GuardId, GuardId) = (GuardId(0), GuardId(1));
-        let old = g.tab.tactics_plan.push(Plan::zeroed());
-        let new = g.tab.tactics_plan.push(Plan::zeroed());
+        let old = g.tab.tactics_plan.push(Plan::default());
+        let new = g.tab.tactics_plan.push(Plan::default());
         g.tab.tactics_plan[old].phase = PlanPhase::Approach;
         g.tab.tactics_plan[new].phase = PlanPhase::Approach;
         let ra = mk(&mut g, old, RoleKind::Presser, None, Vec::new(), 0.0, 0.0, None);

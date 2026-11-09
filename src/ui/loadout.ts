@@ -1,8 +1,8 @@
 // THE KIT STEP OF THE ONE STARTING PAGE (ui/startpage.ts mounts it in the mission list's sheet; the maintainer, 10-07: "a "loadout" screen or something like that
 // for picking how many squad members you want … think like mgsv did!"): you and a slot per teammate, how many come — none to four — and DEPLOY, which loads the
-// mission's own URL with the size on it (game/loadout.ts squadSearch: at the mission's own size it is the URL its row always loaded). The team and its rules are the desk's
+// mission's own URL with the size on it (rust/game_rules/src/loadout squad_search: at the mission's own size it is the URL its row always loaded). The team and its rules are the desk's
 // (src/view/desk.ts: `for`, then `team` at each paint that can have changed, and the presses `size` and `named`; read.ts TeamView); this file is the DOM and the keys. THE SOLO NIGHT comes through here too (kind 'solo': the team row is greyed at solo,
-// your own card is the only one) and Deploy loads `?solo`, where main.ts puts your card on the plain night's player.
+// your own card is the only one) and Deploy loads `?solo`, where host/drawpage.ts puts your card on the plain night's player.
 //
 // WHAT IS ON IT, top to bottom: TEAM (the size) · the five member slots, each with its man's kit in a line — one of those who come is PICKED ·
 // the picked member's KIT AND UNIFORM CARD (src/ui/kitCard.ts memberCard), mounted in the one `[data-member="i"]` host under the
@@ -16,7 +16,7 @@
 // C copies the picked man's kit and V pastes the copied kit onto him, from any row (ui/kitCard.ts; Ctrl / Cmd with either is the same press while
 // no text on the page is selected and no text field has the keys): pick a man, C, step along the roster, V on each. A man who wears the copied kit
 // carries its mark on his chip. The two go by the letter on the key (kitCard.ts clipKey), the rest of the screen's keys by their place.
-// While the page's keys are on it every key is this screen's: the listener below is registered when this module loads, before main.ts's own; the card never
+// While the page's keys are on it every key is this screen's: the listener below is registered when this module loads, before host/drawpage.ts's own; the card never
 // listens for itself here (it is handed its keys: card.key). The screen's first squad-wide row is the SQUAD KIT: a button for the
 // issued kit and one for each of the cost table's named loadouts this build can carry — one press puts it on all five cards, colours kept (by the keys: A D move
 // the pick along the row, Enter puts it on); the lit one is what the cards are now (none: a mix of your own).
@@ -54,8 +54,6 @@ export interface LoadoutOpts {
   keys(): boolean;
   /** a key, before any row of the screen has it: true = it was the host's (the map sheet — ui/kitBrief.ts) */
   key?(code: string, repeat: boolean): boolean;
-  /** a key the highlighted row did not take, before the screen's own Enter / Esc / W A S D: true = it was the host's (the walkthrough — ui/kitGuide.ts: an open pop-up's Esc is the card's first) */
-  rest?(code: string, repeat: boolean): boolean;
   /** Deploy is about to load `search` with `n` teammates (told before the load or `deploy`; nothing is replaced) */
   onDeploy?: (search: string, n: SquadSize) => void;
   /** told at the end of every paint (the one starting page's picture of the team follows it: ui/kitView.ts) */
@@ -211,7 +209,7 @@ export function openLoadout(entry: Mission, opts: LoadoutOpts): LoadoutScreen {
       const to = S.search(); close(); opts.onDeploy?.(to, squad);
       if (opts.deploy) { opts.deploy(to, squad); return; }
       // the solo night off the real start card over the plain night: Start, as it has always been — no load (this screen stands between the list and the run), wherever the desk says the link starts
-      // what this page stands (the hour, the weather, the fog); `startSolo(true)` closes the card and then puts your kit on this game's player (ui/menu.ts)
+      // what this page stands (the hour, the weather, the fog); `startSolo(true)` closes the card and then puts your kit on this game's player
       if (entry.kind === 'solo' && MISSIONS.startSolo && desk().same(to, pageSearch)) { MISSIONS.startSolo(true); return; }
       const url = location.pathname + to + location.hash;
       if (url === location.pathname + location.search + location.hash) location.reload(); else location.assign(url);
@@ -243,7 +241,6 @@ export function openLoadout(entry: Mission, opts: LoadoutOpts): LoadoutScreen {
       if (code && opts.key?.(code, repeat)) return true;
       const row = S.rows[S.sel];
       if (row?.key?.(code, repeat)) return true;
-      if (code && opts.rest?.(code, repeat)) return true;
       if (repeat && (code === 'Enter' || code === 'NumpadEnter' || code === 'Space' || code === 'Escape')) return true;   // (a held Enter or Esc acts once)
       switch (code) {
         case 'KeyW': case 'ArrowUp': S.move(-1); return true;
@@ -293,7 +290,7 @@ export function openLoadout(entry: Mission, opts: LoadoutOpts): LoadoutScreen {
   return S;
 }
 
-// every key is the screen's while it has them (registered at module load: ahead of main.ts's Esc — which would close the start card under it — and of the game's Input)
+// every key is the screen's while it has them (registered at module load: ahead of host/drawpage.ts's Esc — which would close the start card under it — and of the game's Input)
 const eaten = new Set<string>();
 if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
   window.addEventListener('keydown', e => {
@@ -304,7 +301,7 @@ if (typeof window !== 'undefined' && typeof window.addEventListener === 'functio
     else if (e.ctrlKey || e.metaKey || e.altKey) return;   // (the browser's own: reload, devtools)
     if (/^F\d+$/.test(e.code)) return;   // (the recorders' keys and the browser's stay theirs, and BEFORE the stop below: F7 to F9 never reached their listeners behind this one)
     e.stopImmediatePropagation(); if (!chord) eaten.add(e.code);   // (a chord's release is not waited for: macOS sends no keyup for a key let go under Cmd, and one left here would eat the game's next release of that key)
-    (window as unknown as { __attract?: { poke?: () => void } }).__attract?.poke?.();   // (main.ts's own idle listener is behind this one: somebody is here)
+    (window as unknown as { __attract?: { poke?: () => void } }).__attract?.poke?.();
     e.preventDefault();
     S.key(clip === 'copy' ? 'KeyC' : clip === 'paste' ? 'KeyV' : e.code === 'KeyC' || e.code === 'KeyV' ? '' : e.code, e.repeat);   // (a held Enter or Esc acts once, and nothing in a kit card repeats: key() and the card see to it; copy and paste by their letter, so the two places are nothing on a layout that types another letter there)
   }, { capture: true });
@@ -400,7 +397,7 @@ const STYLE = `
 #loadout .lo-kit .kc-sub, #loadout .lo-kit .kc-pouch { font-family: var(--m-head); font-weight: 600; font-size: 11px; letter-spacing: 0.16em; }
 #loadout .lo-kit .kc-pips i { width: 12px; height: 12px; border-radius: 0; }
 #loadout .lo-kit .kc-pips i.on { background: var(--m-accent); }
-#loadout .lo-kit .kc-pips i.big { width: 30px; margin-left: 5px; }   /* (the big slot: game/kit.ts BIGSLOT) */
+#loadout .lo-kit .kc-pips i.big { width: 30px; margin-left: 5px; }   /* (the big slot: rust/game_rules/src/kit BIGSLOT) */
 #loadout .lo-kit .kc-words { padding: 8px 4px 0; font-size: 11.5px; line-height: 1.4; border-top: 0; }
 #loadout .lo-kit .kc-row { display: grid; grid-template-columns: 64px minmax(0, 1fr); column-gap: 10px; align-content: start; padding: 7px 8px 7px 9px; background: rgba(var(--m-panel2-rgb),0.85); border: 1px solid rgba(var(--m-edge),0.16); border-left: 3px solid rgba(var(--m-edge),0.3); border-radius: 0; }
 #loadout .lo-kit .kc.focus .kc-row.sel { background: rgba(var(--m-sel-rgb),0.95); border-color: var(--m-accent); border-left-color: var(--m-accent); }
@@ -420,7 +417,7 @@ const STYLE = `
 #missions.one #loadout .lo-kit .kc-clip { min-width: 0; padding: 7px 13px 6px; font: 600 12px/1.3 var(--m-head); letter-spacing: 0.12em; text-transform: uppercase; color: var(--m-soft); background: none; border: 0; border-radius: 0; box-shadow: none; }
 #missions.one #loadout .lo-kit .kc-clip:hover:not(.on):not(.off) { color: var(--m-bright); background: rgba(var(--m-edge),0.1); border: 0; }
 #missions.one #loadout .lo-kit .kc-clip.on { color: var(--m-bright); background: none; box-shadow: inset 0 -2px 0 var(--m-soft); }
-/* the card as a tree (game/kittree.ts; the one start page lays it out in full — ui/startpage.ts): a gun's tile over what rides on it */
+/* the card as a tree (rust/game_types/src/knobs/kittree.rs; the one start page lays it out in full — ui/startpage.ts): a gun's tile over what rides on it */
 #loadout .lo-kit .kc-tree .kc-gun { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
 #loadout .lo-kit .kc-tree .kc-kids { display: flex; flex-direction: column; gap: 4px; margin: 0 0 0 12px; padding: 0 0 0 8px; border-left: 2px solid rgba(var(--m-edge),0.28); }
 #loadout .lo-kit .kc-tree .kc-kids:empty { display: none; }

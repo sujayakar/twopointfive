@@ -5,15 +5,16 @@
 use crate::command::{Bytes, Field};
 use crate::kept;
 use game::game::Game;
-use game::io::{Io, W};
+use game::bytes::{ToBytes, W};
 use game::kit::{self, CardFor, KitPreset, MemberKit, TeamFor};
 use game::loadout::entry_of;
 use game::query::{after_mark, Query};
 use game::scene_scenarios::IssueData;
 use game::start_list::{self, Sitting};
-use game::view::{BriefView, CardView, KeptText, Pressed, SheetView, ShortView, StartView, TeamView};
+use game::view::{BriefView, CardView, KeptText, MissionsView, Pressed, SheetView, ShortView, StartView, TeamView};
 use game_start::json::{parse, Json};
 use game_start::read::FromJson;
+use std::any::Any;
 
 pub struct Desk {
     pub g: Box<Game>,
@@ -134,19 +135,29 @@ fn issue_block(text: &str) -> Option<IssueData> {
     Some(IssueData::from_json(&j, "issue"))
 }
 
+/// what an ask is answered with: bytes to a page, and to who runs beside the desk the answer itself
+pub trait Answer: ToBytes { fn itself(self: Box<Self>) -> Box<dyn Any>; }
+impl<T: ToBytes + Any> Answer for T { fn itself(self: Box<Self>) -> Box<dyn Any> { self } }
+impl Desk {
+    /// the bytes of an ask's answer
+    pub fn ask(&mut self, b: &[u8]) -> Result<Vec<u8>, String> {
+        let mut w = W::new();
+        self.answer(b)?.w(&mut w);
+        Ok(w.b)
+    }
+}
+
 macro_rules! asks {
     ($($(#[$m:meta])* $i:literal $name:ident { $($f:ident: $t:ty),* } -> $out:ty = $do:expr;)*) => {
         impl Desk {
             /// the ask in `b`, answered; a number no ask has says so
-            pub fn ask(&mut self, b: &[u8]) -> Result<Vec<u8>, String> {
+            pub fn answer(&mut self, b: &[u8]) -> Result<Box<dyn Answer>, String> {
                 let mut r = Bytes::of(b);
                 match u32::read(&mut r) {
                     $($i => {
                         $(let $f = <$t as Field>::read(&mut r);)*
                         let f: fn(&mut Desk, $($t),*) -> $out = $do;
-                        let mut w = W::new();
-                        f(self, $($f),*).w(&mut w);
-                        Ok(w.b)
+                        Ok(Box::new(f(self, $($f),*)))
                     })*
                     n => Err(format!("no ask has the number {n}")),
                 }
@@ -205,4 +216,10 @@ asks! {
     18 Brief { search: &str } -> BriefView = |_, search| start_list::brief_of(search);
     /// 1 where the link starts what a page at this address already stands, so that it needs no page load; else 0
     19 Same { link: &str, page: &str } -> u32 = |d, link, page| start_list::same_start(&d.g, link, page) as u32;
+    /// every mission there is, as its row of the table says it
+    20 Missions {} -> MissionsView = |_| start_list::missions_view();
+    /// the kind of mission an address starts (empty: none), on the list or not
+    21 Kind { search: &str } -> String = |_, search| start_list::kind_of_address(search);
+    /// where an address that names a row of the short list and nothing to play goes instead (empty: it stays)
+    22 Pick { search: &str } -> String = |_, search| game::scene_scenario_list::pick_goes(search).unwrap_or_default();
 }

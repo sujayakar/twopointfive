@@ -54,15 +54,6 @@ pub fn bar_at(g: &mut crate::game::Game, index: f64) -> bool {
     stands(seam_box(g, b).flags)
 }
 
-/// The bars a round or a blast has taken, ascending.   (winbars.ts barsGone)
-pub fn bars_gone(g: &mut crate::game::Game) -> Vec<f64> {
-    let mut out = Vec::new();
-    if untouched(g) { return out; }
-    let s = g.sim;
-    for i in 0..::sim::panes::bars_gone(s) as usize { out.push(::sim::panes::bar_gone(s, i) as f64); }
-    out
-}
-
 /// The flags a bar this rule took was authored with, or None.   (winbars.ts barFlags0)
 pub fn bar_flags0(g: &mut crate::game::Game, index: f64) -> Option<f64> {
     if untouched(g) { return None; }
@@ -136,7 +127,7 @@ pub fn break_bar(g: &mut crate::game::Game, index: f64, at: V3, dir: V3, who: f6
     if !taken { return false; }
     let flags = seam_box(g, b).flags;
     seam_box(g, b).flags = bor(flags, HIDE);
-    changed(g, b);
+    changed(g);
     g.stats.winbars.broken += 1;
     if cause == BreakBarCause::Round { g.stats.winbars.by_round += 1; } else { g.stats.winbars.by_blast += 1; }
 
@@ -220,13 +211,11 @@ pub fn break_bar(g: &mut crate::game::Game, index: f64, at: V3, dir: V3, who: f6
     true
 }
 
-/// The level changed where bar `b` stands: whoever keeps an answer about the level's boxes asks again.   (winbars.ts changed)
-pub fn changed(g: &mut crate::game::Game, b: BoxId) {
+/// The level changed where a bar stood: whoever keeps an answer about the level's boxes asks again.   (winbars.ts changed)
+pub fn changed(g: &mut crate::game::Game) {
     g.engine.world.geom_serial += 1.0;
     crate::scene_collision::wrote(g);
     crate::scene_collision::sound_paths_invalidate(g);
-    let (c, h) = { let r = seam_box(g, b); (r.c, r.h) };
-    crate::smoke_types::smoke_system_like_obstacles_changed(g, c, m::hyp3(h[0], h[1], h[2]) + 0.6);
 }
 
 /// The blasts' list: every standing bar with a point of its length inside the radius and nothing solid between goes, thrown out from the blast.   (winbars.ts barsBlast)
@@ -259,7 +248,7 @@ pub fn reset_bars(g: &mut crate::game::Game) {
     for k in 0..::sim::panes::bars_gone(s) as usize {
         if let Some(b) = box_of(g, ::sim::panes::bar_gone(s, k) as f64) {
             seam_box(g, b).flags = ::sim::panes::bar_flags(s, k) as f64;
-            changed(g, b);
+            changed(g);
         }
     }
     ::sim::panes::bars_clear(s);

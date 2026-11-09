@@ -50,7 +50,7 @@ export const SNOWTRACKS = {
   dragDeep: 0.3,      // how deep a scuff is cut at the boot's end, of the way from the outline to the floor (in the byte: 0.5 + dragDeep × 0.45); it runs out to nothing
   // ---- a RUN tears the snow up (the maintainer, 10-15: "sprinting should leave messier trails"). How fast the man is going when the foot lands = `run` 0‥1
   // (0 at runLo and under: a walk's print is the print above, byte for byte; 1 at runHi: a flat sprint, 4.7 m/s; a jog's 3.3 m/s is about two fifths). Every
-  // number below is × run × runMess × mess. The player's trail, a defender's who runs, and a teammate's where teampace.ts has him run.
+  // number below is × run × runMess × mess. The player's trail, a defender's who runs, and a teammate's where rust/game_rules/src/teampace has him run.
   runMess: 1,         // 0‥1: all of it at once (0 = a sprinter's print is a walker's)
   runLo: 2.4,         // m/s
   runHi: 4.4,         // m/s
@@ -65,7 +65,7 @@ export const SNOWTRACKS = {
   spray: 12,          // … and this many more thrown out BEHIND it, the way the foot came from, where the push-off flings them …
   sprayFar: 0.85,     // m: … the furthest of them this far back …
   sprayFan: 0.5,      // rad: … in a fan this wide either side of that line
-  // ---- A MARK FORMS (SNOW_LOOK.marks). `force` = what made it: a walker's boot about 0.45, a sprinter's 1.2, a fallen man 1.3, a blast 2 (snowMarks.ts has the
+  // ---- A MARK FORMS (SNOW_LOOK.marks). `force` = what made it: a walker's boot about 0.45, a sprinter's 1.2, a fallen man 1.3, a blast 2 (rust/game_rules/src/snow_marks has the
   // things'). 0 on `form` = a mark is whole at once.
   form: 0.2,          // s: a mark's floor sinks in over this ÷ (0.5 + force) — a walker's print about a seventh of a second, a sprinter's an eighth, a blast's at once
   throwLag: 0.16,     // s: the lumps it threw land this × (0.6 + 0.4 × force) after it was made (thrown harder, they fly longer) …
@@ -75,7 +75,7 @@ export const SNOWTRACKS = {
   puffUp: 2.6,        // m/s, the fastest, × (0.5 + 0.5 × force): a flake's own drag has it stopped a hand or two up
   puffLife: 0.9,      // s
   puffMost: 48,       // the most one mark throws
-  puffRecs: 3,        // kicks filed a frame, the hardest first (snowFx.ts markKicks: each is a particle record, and a frame has twelve for everything)
+  puffRecs: 3,        // kicks filed a frame, the hardest first (src/picture/snow/fx.ts: each is a particle record, and a frame has twelve for everything)
   puffWait: 12,       // … and this many may wait for the next frame
   puffKeep: 0.25,     // s: a kick leaves the list after this, filed or not (formSnowTracks): one still not filed by then never is
 };
@@ -87,17 +87,17 @@ export interface SnowTracks {
   dirty: [number, number, number, number] | null;
   /** prints pressed so far (feet) and hollows (bodies) — for the panel and a check */
   prints: number; hollows: number;
-  /** … and the craters blasts have blown in it (snowBlast.ts) */
+  /** … and the craters blasts have blown in it (rust/game_rules/src/snow_blast) */
   craters: number;
   /** every piece of `data` changed since the last hand-over, each by itself (`dirty` is the one rect round them all) */
   rects: [number, number, number, number][];
-  /** marks made by things that are not men or blasts: a pushed chair's furrow, a grenade's dent (snowMarks.ts) */
+  /** marks made by things that are not men or blasts: a pushed chair's furrow, a grenade's dent (rust/game_rules/src/snow_marks) */
   marks: number;
   /** the marks still forming (SNOW_LOOK.marks; `formSnowTracks` brings them on) */
   forming: Forming[];
-  /** snow kicked up in the last `puffKeep` s (snowFx.ts files each once, telling the new ones by their number `n`; nobody else reads it). The list is the GAME's:
+  /** snow kicked up in the last `puffKeep` s (src/picture/snow/fx.ts files each once, telling the new ones by their number `n`; nobody else reads it). The list is the GAME's:
    *  only time empties it (formSnowTracks), a restart, and the cap (the oldest dropped) — nothing a particle pool does reaches it, so a host with a pool and a
-   *  host without keep the same list. What the pool has taken and what waits on it is the host's book (snowFx.ts SnowShown kickSeen / kickQ) */
+   *  host without keep the same list. What the pool has taken and what waits on it is the host's book (src/picture/snow/fx.ts SnowShown kickSeen / kickQ) */
   kicks: SnowKick[];
   /** kicks queued so far, never wound back by a restart: a kick's own number */
   kicked: number;
@@ -189,7 +189,7 @@ export function stampMark(T: SnowTracks, force: number, fn: (body: Stamp, thrown
     if (T.kicks.length > KICKS_MOST) T.kicks.splice(0, T.kicks.length - KICKS_MOST);
   }
 }
-/** Once a frame (game.ts stepSnowTracks, AFTER the frame's own marks were pressed — a mark starts forming the frame it is made): the marks still forming come on by `dt`. A mark's own floor sinks from the level of the snow (the
+/** Once a frame (AFTER the frame's own marks were pressed — a mark starts forming the frame it is made): the marks still forming come on by `dt`. A mark's own floor sinks from the level of the snow (the
  *  byte's middle, where the shader reads no height) to its depth, easing out, and its bank widens with it; what it threw is not there until it lands, then
  *  swells to its size. Never lowers a byte: what is already pressed stays. Formed, a mark's bytes are its goal's, exactly. */
 export function formSnowTracks(T: SnowTracks, dt: number) {
@@ -214,8 +214,6 @@ export function formSnowTracks(T: SnowTracks, dt: number) {
   }
   T.forming.length = n;
 }
-/** every mark still forming, formed now (a check's, and a restart's that keeps the map) */
-export function settleSnowTracks(T: SnowTracks) { for (const m of T.forming) { m.age = m.delay + m.sink; } formSnowTracks(T, 0); }
 
 /** press a capsule from (ax, az) to (bx, bz), `r` m about its spine (`r0` at its first end, if another), into the bytes (never lifts what is already pressed): 255 inside, 128 on its outline, 0 half a skirt out */
 function press(T: Stamp, ax: number, az: number, bx: number, bz: number, r: number, r0 = r) {
@@ -334,15 +332,15 @@ function pressMessy(T: Stamp, TC: Stamp, cx: number, cz: number, ux: number, uz:
   }
 }
 
-/** how a crater is shaped (game/snowBlast.ts SNOWBLAST hands its own numbers in: this file knows the bytes, that one the blast) */
+/** how a crater is shaped (rust/game_rules/src/snow_blast SNOWBLAST hands its own numbers in: this file knows the bytes, that one the blast) */
 export interface CraterLook { lobe: number; rag: number; floor: number; rim: number; rays: number; rayLen: number; rayWide: number; clods: number; clodFar: number; clodR: number }
-/** A BLAST'S CRATER at (cx, cz), its pan `r0` m across the middle (snowBlast.ts; the maintainer, 10-15: "grenades/he don't seem to really affect snow"). In the
+/** A BLAST'S CRATER at (cx, cz), its pan `r0` m across the middle (rust/game_rules/src/snow_blast; the maintainer, 10-15: "grenades/he don't seem to really affect snow"). In the
  *  prints' own byte, read by the shader as a print is: THE PAN — snow blown out down to a churned floor, its edge thrown into lobes and broken into lumps, a bank
  *  heaped wider than a boot's round it; THE RAYS — grooves the burst scoured outward, each narrowing and running out to nothing, bank and all; THE CLODS — lumps
  *  of snow thrown clear, lying on the surface out to several radii, most of them near. All off a hash of the place and the crater's number (never the game's
  *  die): the same blast presses the same bytes. Never lifts what is already pressed. */
 export function pressCrater(T: SnowTracks, cx: number, cz: number, r0: number, serial: number, L: CraterLook) {
-  stampMark(T, 2, (S, SC) => craterInto(S, SC, cx, cz, r0, serial, L));   // (a blast: its pan is there at once, its clods land after — and it kicks nothing up here: the blast throws its own snow, snowBlast.ts)
+  stampMark(T, 2, (S, SC) => craterInto(S, SC, cx, cz, r0, serial, L));   // (a blast: its pan is there at once, its clods land after — and it kicks nothing up here: the blast throws its own snow, rust/game_rules/src/snow_blast)
   T.craters++;
 }
 function craterInto(T: Stamp, TC: Stamp, cx: number, cz: number, r0: number, serial: number, L: CraterLook) {
@@ -407,7 +405,7 @@ function craterInto(T: Stamp, TC: Stamp, cx: number, cz: number, r0: number, ser
   }
 }
 
-/** A THING'S MARK (snowMarks.ts — what a pushed chair's leg, a rolling grenade, a slab of debris leaves): the capsule from (ax, az) to (bx, bz), `r0` m about
+/** A THING'S MARK (rust/game_rules/src/snow_marks — what a pushed chair's leg, a rolling grenade, a slab of debris leaves): the capsule from (ax, az) to (bx, bz), `r0` m about
  *  its first end and `r` about its last, pressed down to `deep` (0‥1 of a boot's full depth: a light thing rides high), its outline broken into lumps and its
  *  bank's reach broken along its length as a print's are (`m` = how untidy, 0‥1; SNOWTRACKS.crumble / lump / reach). Never lifts what is already pressed. */
 export function pressGroove(T: Stamp, ax: number, az: number, bx: number, bz: number, r0: number, r: number, deep: number, m: number) {

@@ -230,7 +230,7 @@ pub fn door_ahead(g: &crate::game::Game, gd: GuardId) -> Option<crate::doorway::
             if flat(pos, g.dr[d].frame_centre) > reach + g.dr[d].def.width { continue; }
             let Some(x) = crate::guards::crosses_door(g, a, b, d) else { continue };
             let dist = run + flat(a, x.at);
-            if dist <= reach && best.map_or(true, |b| dist < b.dist) { best = Some(DoorAhead { d, side: x.side, at: x.at, dist }); }
+            if dist <= reach && best.map_or(true, |b| dist < b.dist) { best = Some(DoorAhead { d, side: x.side, dist }); }
         }
         if best.is_some() { return best; }
         run += flat(a, b);
@@ -384,7 +384,6 @@ pub fn doorway_gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64)
     s.t = t;
     let walk = g.gd[gd].path_serial;
     let s = st!(g, gd);
-    if s.spot.is_some() { crate::game::b_tap::tap(crate::game::b_tap::DOORWAY_WALK_ASKED); if s.path != Some(walk) { crate::game::b_tap::tap(crate::game::b_tap::DOORWAY_WALK_NEW); } }
     if s.spot.is_some() && s.path != Some(walk) { s.spot = None; s.door = None; }   // given a new walk while he waited at a jamb: the old door is no longer his business (the time held is kept)
     let turn = !match g.gd[gd].script.as_ref().and_then(|s| s.over.as_ref()) { Some(o) => o.walk == Some(true) && o.face.is_some(), None => false };
     // in an opening: he clears it, whoever stands about
@@ -398,7 +397,7 @@ pub fn doorway_gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64)
     }
     let (spot, door, side) = { let s = st!(g, gd); (s.spot, s.door, s.side) };
     let x = match (spot, door) {
-        (Some(_), Some(d)) => { let fc = g.dr[d].frame_centre; Some(DoorAhead { d, side, at: fc, dist: flat(pos, fc) }) }
+        (Some(_), Some(d)) => { let fc = g.dr[d].frame_centre; Some(DoorAhead { d, side, dist: flat(pos, fc) }) }
         _ => door_ahead(g, gd),
     };
     let waiting = spot.is_some();

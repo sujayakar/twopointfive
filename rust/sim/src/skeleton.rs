@@ -67,20 +67,6 @@ pub fn bench() -> &'static mut Bench {
 pub fn bench_read() -> &'static Bench {
     unsafe { &*core::ptr::addr_of!(BENCH) }
 }
-/// where a table of the bench is (a byte address): 0 rot · 1 pos · 2 args · 3 pose · 4 mask · 5 parent · 6 order
-pub fn addr(table: u32) -> usize {
-    let b = bench();
-    match table {
-        0 => b.rot.as_ptr() as usize,
-        1 => b.pos.as_ptr() as usize,
-        2 => b.args.as_ptr() as usize,
-        3 => b.pose.as_ptr() as usize,
-        4 => b.mask.as_ptr() as usize,
-        5 => b.parent.as_ptr() as usize,
-        6 => b.order.as_ptr() as usize,
-        _ => 0,
-    }
-}
 
 /// `x || 1` of a length: 1 where it is nothing or no number
 #[inline(always)]
@@ -606,54 +592,5 @@ pub fn ask_run(g: usize, at: usize, root: i32) -> bool {
     } else {
         fk_run_from(&rig, d, &mut b.rot, &mut b.pos, root as usize);
     }
-    true
-}
-/// PoseFK.parentRot → args 0‥3
-pub fn ask_parent_rot(g: usize, at: usize, i: usize) -> bool {
-    let b = bench();
-    let (n, rig) = rig_of!(b);
-    let Some(s) = start(g, at, n) else {
-        return false;
-    };
-    if i >= n {
-        return false;
-    }
-    let q = parent_rot(&rig, &poses_of!(b, g)[s..s + singles(n)], i);
-    b.args[..4].copy_from_slice(&q);
-    true
-}
-/// 0 rotateLocal (q in args 0‥3) · 1 rotateModel (q, then the parent's rotation in 4‥7) · 2 setModelRot (the rotation, then the parent's). `nodes` = the
-/// pose's own count of nodes (a turn needs no rig)
-pub fn ask_turn(g: usize, at: usize, nodes: usize, i: usize, how: u32) -> bool {
-    let b = bench();
-    let Some(s) = start(g, at, nodes) else {
-        return false;
-    };
-    if i >= nodes {
-        return true; // (no such node: the TypeScript writes nothing there, and so does this)
-    }
-    let (q, par) = ([b.args[0], b.args[1], b.args[2], b.args[3]], [b.args[4], b.args[5], b.args[6], b.args[7]]);
-    let d = &mut poses_of!(b, g)[s..s + singles(nodes)];
-    match how {
-        0 => rotate_local(d, i, &q),
-        1 => rotate_model(d, i, &q, &par),
-        _ => set_model_rot(d, i, &q, &par),
-    }
-    true
-}
-/// twoBoneIK: the target in args 0‥2, the pole in 3‥5 (flag 1), its weight in 6, the end's rotation in 7‥10 (flag 2); flag 4 = `fresh`
-pub fn ask_ik(g: usize, at: usize, a: usize, bb: usize, c: usize, flags: u32) -> bool {
-    let b = bench();
-    let (n, rig) = rig_of!(b);
-    let Some(s) = start(g, at, n) else {
-        return false;
-    };
-    if a >= n || bb >= n || c >= n {
-        return false;
-    }
-    let (target, pole, end) = ([b.args[0], b.args[1], b.args[2]], [b.args[3], b.args[4], b.args[5]], [b.args[7], b.args[8], b.args[9], b.args[10]]);
-    let pole_w = b.args[6];
-    let d = &mut poses_of!(b, g)[s..s + singles(n)];
-    two_bone_ik(&rig, d, &mut b.rot, &mut b.pos, a, bb, c, &target, if flags & 1 != 0 { Some(&pole) } else { None }, pole_w, if flags & 2 != 0 { Some(&end) } else { None }, flags & 4 != 0);
     true
 }

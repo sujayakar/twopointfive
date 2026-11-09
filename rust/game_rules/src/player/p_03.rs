@@ -292,14 +292,6 @@ pub fn find_wall(g: &mut crate::game::Game, quick: Option<bool>, why: Option<&mu
     None
 }
 
-/// Is he free to put his back to a wall, and would Q find one from where he stands? (player.ts canWallSnap)
-pub fn can_wall_snap(g: &mut crate::game::Game) -> bool {
-    let pl = g.player;
-    let p = &g.pl[pl];
-    if p.wall.is_some() || p.down || p.dragging.is_some() || p.takedown.is_some() || p.holding.is_some() || p.kick.is_some() || p.picking.is_some() || p.wanding.is_some() || p.sprinting { return false; }
-    find_wall(g, Some(true), None, None).is_some()
-}
-
 /// where a sole is drawn this moment (wallSnap `ft`)
 fn foot_at(a: Option<V3>, toe: Option<V3>) -> Option<(V3, f64)> {
     match (a, toe) {
@@ -338,7 +330,7 @@ pub fn wall_snap(g: &mut crate::game::Game, cam: CameraId, why: Option<&mut crat
         n, along: t, d: f.d, lo: f.lo, hi: f.hi, open_lo, open_hi,
         u: f.u, v: 0.0, side, off: 0.0, away_t: 0.0, settle: 0.0, from: v3::copy(g.ch[c].pos), block_dir: 0.0, block_t: 0.0, seated: false,
         drawn: !g.pl[pl].holstered, at_edge: 0.0, peek: 0.0, peek_dir: side, crouched: g.pl[pl].crouch, serial,
-        ..WallHold::zeroed()
+        ..WallHold::default()
     });
     let stack = g.k.wallsnap.on && crate::game::player_rifle_up(g, pl);
     if g.k.wallsnap.on {

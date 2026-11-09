@@ -93,7 +93,7 @@ pub fn wall_charge_reset(g: &mut crate::game::Game) {
     g.wall_charge.carried = n;
     g.wall_charge.brought = n;
     g.wall_charge.log = Vec::new();
-    g.wall_charge.stats = WallChargeStats::zeroed();
+    g.wall_charge.stats = WallChargeStats::default();
     g.wall_charge.last_blow = None;
     g.wall_charge.walks = None;
     g.wall_charge.keep.asks = 0.0;
@@ -114,15 +114,12 @@ pub fn wall_charge_stop(g: &mut crate::game::Game) {
 
 /// (wallcharge.ts note)
 pub fn wall_charge_note(g: &mut crate::game::Game, what: &str) {
-    let t = g.time;
-    g.wall_charge.log.push(WallChargeLogItem { t, what: String::from(what) });
+    g.wall_charge.log.push(WallChargeLogItem {  });
     if g.wall_charge.log.len() > 300 { g.wall_charge.log.drain(0..100); }
 }
 
 /// (wallcharge.ts beat)
 pub fn wall_charge_beat(g: &mut crate::game::Game, op: WallOpId, what: &str) {
-    let t = g.time;
-    g.tab.wallcharge_wall_op[op].beats.push(WallChargeDoneItemBeatsItem { t, what: String::from(what) });
     let line = format!("wall {}: {}", g.tab.wallcharge_wall_op[op].wall.index, what);
     wall_charge_note(g, &line);
 }

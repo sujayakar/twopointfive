@@ -1,3 +1,4 @@
+// A big body is written once here and asked in a loop: the compile pastes every call. Credit: Stephen Jayakar, from his pull request 1.
 // Half-resolution (quarter with the lossy volQuarter option: frame.lossyCfg.y is the divisor) volumetrics: (a) thin haze lit by spot/point lights with ray-traced shadows (visible beams),
 // (b) ray-marched smoke domains lit by the same lights (shadow rays + self-shadowing) and by the RC mean radiance, (c) the weather's rain / splashes / sky flash.
 // Output: rgb = in-scattered radiance, a = transmittance toward the surface.
@@ -29,7 +30,7 @@ fn airShow(X: vec3f, l: f32) -> f32 {
   return lookShowBy(vec3f(l), g).x / l;
 }
 
-// ---- the worst-case caps (docs/internal/renderer-v3.md §2: the smoke march and the beams were the field's #1 variance source) ----
+// ---- the worst-case caps (the smoke march and the beams were the field's #1 variance source) ----
 // frame.volCfg.x = K, the most lights any one march step (smoke) / any one view ray (haze beams) spends shadow rays on: the K strongest by UNSHADOWED
 // contribution there, the rest dropped (never credited unshadowed: a torch behind a wall must not glow in the smoke this side of it). Every tier runs K ≥ 1
 // (ui/quality.ts presets: high 4 · medium, low and very low 2; RenderSettings.volLightCap, which the engine keeps at 1 or more). The smoke march (1) walks each
@@ -42,7 +43,7 @@ const VOL_RAY_STEPS: u32 = 160u;   // march steps one view ray may spend over AL
 
 // (coneInterval — the ray's stretch inside a spot's cone — lives in vol_common.wgsl with the other shared helpers)
 
-// ---- (c) weather (game/weather.ts): rain streaks and splash rings in the OUTDOOR air, and the lit-sky glow of a lightning stroke ----
+// ---- (c) weather (rust/game_rules/src/weather): rain streaks and splash rings in the OUTDOOR air, and the lit-sky glow of a lightning stroke ----
 // Rain is not simulated: it is a lattice of falling drop columns evaluated analytically along the view ray. Columns stand at hashed points of a
 // RAIN_CELL xz lattice (two per cell, each with a rank so frame.weatherA.x thins them out), leaning with the wind (weatherA.yz: metres sideways per
 // metre of height), and carry a drop every RAIN_PERIOD metres falling at RAIN_V, each drawn out RAIN_LEN long — the streak a 1/30 s eye makes of it.
@@ -64,7 +65,7 @@ const SPLASH_FILL: f32 = 0.056; // the light of a ring's own line over that of i
 const SPLASH_GAIN: f32 = 0.05;  // the same for the crown a drop throws up where it lands (a ring growing over 60 ms on outdoor ground)
 
 fn outdoorsXZ(p: vec2f) -> bool { if (lv(WX_KINDS)) { if (frame.cardCfg.y != 0u) { return !wxRoofed(p); } } let I = frame.weatherC; let A = frame.weatherD; return (p.x < I.x || p.y < I.y || p.x > I.z || p.y > I.w) && (p.x < A.x || p.y < A.y || p.x > A.z || p.y > A.w); }   // outside the interior footprint AND outside the annex (the stair tower: a ray ending on its floor is under a roof — its column is not cut out of passing rays, being three metres of air against the facade)
-/** PARTICLE RAIN (experiment, game/rainFx.ts): the share of the lattice's streaks / splash rings KEPT at ground point p — 1 outside the particle layer's disc (frame.weatherE: centre xz,
+/** PARTICLE RAIN (experiment, src/picture/rain.ts): the share of the lattice's streaks / splash rings KEPT at ground point p — 1 outside the particle layer's disc (frame.weatherE: centre xz,
  *  radius, the share it takes), 1 − that share inside its inner 70 %, eased between over the rim the recycler thins its births across (particles.wgsl emit's taper). weatherE.w 0 =
  *  no particle layer anywhere: 1 exactly, and the callers below then multiply by nothing (their untouched statements run). */
 fn rainNearKeep(p: vec2f) -> f32 {
@@ -246,7 +247,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   let jitterS = fract(jitter + f32(frame.frameIdx & 63u) * 0.61803399);   // the weather's air march's start offset: the same texel dither, ROTATED by the golden ratio each frame, so a still view converges
                                                                              // smooth under the resolve and a moving one carries fine temporal noise it damps. The smoke march, the rain and the haze march
                                                                              // start at `jitter`, fixed per texel, as high's march always has (the froxel-lit march the tiers under high drew until 2026-11-07
-                                                                             // started at the rotated one: docs/agents/render.md, ONE FOG MARCH ON EVERY TIER, what went with it)
+                                                                             // started at the rotated one)
   let invRd = safeInv(rd);
   var inscatter = vec3f(0.0);
   var T = 1.0;
@@ -512,7 +513,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
     }
   }
 
-  // ---- (c) weather: rain streaks / splash rings / the sky flash — outdoor air only (rainAlong / splashAt above; game/weather.ts feeds frame.weatherA‥D) ----
+  // ---- (c) weather: rain streaks / splash rings / the sky flash — outdoor air only (rainAlong / splashAt above; rust/game_rules/src/weather feeds frame.weatherA‥D) ----
   var reactL = 0.0;   // what (c) adds toward the eye, for the TAAU resolve (outReact) — nothing drawn here has a history worth keeping: streaks fall metres a frame. (Beams are deliberately NOT
   if (wxAirOn) { reactL += wxFlash * (0.5 + 0.5 * T); }   // (the air a stroke lit, as the march above composed it: lit and gone with the stroke, not a history's worth)
                       // in it: a torch beam is a smooth gradient the history serves well, and marking it reactive handed the resolve the raw internal-resolution march instead — measured, reverted.)

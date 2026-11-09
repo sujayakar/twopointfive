@@ -236,31 +236,6 @@ fn file_kind(k: CueKind) -> CuesFileKind {
         CueKind::Surprised => CuesFileKind::Surprised,
     }
 }
-fn log_kind(k: CuesFileKind) -> CuesLogItemKind {
-    match k {
-        CuesFileKind::Heard => CuesLogItemKind::Heard,
-        CuesFileKind::Stay => CuesLogItemKind::Stay,
-        CuesFileKind::Calm => CuesLogItemKind::Calm,
-        CuesFileKind::Cover => CuesLogItemKind::Cover,
-        CuesFileKind::Call => CuesLogItemKind::Call,
-        CuesFileKind::Flinch => CuesLogItemKind::Flinch,
-        CuesFileKind::Still => CuesLogItemKind::Still,
-        CuesFileKind::Help => CuesLogItemKind::Help,
-        CuesFileKind::StayOurs => CuesLogItemKind::StayOurs,
-        CuesFileKind::HuntOver => CuesLogItemKind::HuntOver,
-        CuesFileKind::FellBack => CuesLogItemKind::FellBack,
-        CuesFileKind::Planted => CuesLogItemKind::Planted,
-        CuesFileKind::PinnedIn => CuesLogItemKind::PinnedIn,
-        CuesFileKind::SquadHears => CuesLogItemKind::SquadHears,
-        CuesFileKind::SquadCopies => CuesLogItemKind::SquadCopies,
-        CuesFileKind::SquadWaits => CuesLogItemKind::SquadWaits,
-        CuesFileKind::SquadCopiesWaits => CuesLogItemKind::SquadCopiesWaits,
-        CuesFileKind::SquadStays => CuesLogItemKind::SquadStays,
-        CuesFileKind::SquadQuiet => CuesLogItemKind::SquadQuiet,
-        CuesFileKind::Surprised => CuesLogItemKind::Surprised,
-        CuesFileKind::Raw => CuesLogItemKind::Raw,
-    }
-}
 
 // ---------------------------------------------------------------- the functions of the module
 
@@ -326,7 +301,6 @@ pub fn cues_new(g: &crate::game::Game) -> crate::cues::Cues {
 /// The encounter is another one (a restart, a checkpoint loaded: the clock may have gone back).   (cues.ts Cues.reset)
 pub fn cues_reset(g: &mut crate::game::Game) {
     g.cues.heard_row = None;
-    g.cues.heard_log.clear();
     g.cues.heard_said.clear();
     g.cues.shout_t = None;
     g.cues.rows.clear();
@@ -336,10 +310,10 @@ pub fn cues_reset(g: &mut crate::game::Game) {
     g.cues.said.clear();
     g.cues.class_t.clear();
     g.cues.squad_t.clear();
-    g.cues.kind_t = CuesKindT::zeroed();
+    g.cues.kind_t = CuesKindT::default();
     g.cues.squelch_due = false;
     g.cues.stats = new_stats();
-    g.cues.kinds = CuesKinds::zeroed();
+    g.cues.kinds = CuesKinds::default();
     g.cues.log.clear();
 }
 
@@ -352,7 +326,7 @@ fn prune_rows(g: &mut Game) {
 /// `done` of `file`: tally, log, answer.
 fn file_done(g: &mut Game, t: f64, text: &str, cls: f64, who: &str, kind: CuesFileKind, drawn: bool, why: &str) -> bool {
     if drawn { g.cues.stats.drawn[cls as usize] += 1.0; }
-    g.cues.log.push(CuesLogItem { t: fixed2(t), who: String::from(who), text: String::from(text), cls, kind: log_kind(kind), drawn, why: String::from(why) });
+    g.cues.log.push(CuesLogItem { why: String::from(why) });
     if g.cues.log.len() > 400 { g.cues.log.drain(0..100); }
     drawn
 }
@@ -411,7 +385,7 @@ pub fn cues_file(g: &mut crate::game::Game, text: &str, cls: f64, who: &str, kin
         g.cues.stats.bumped += 1.0;
     }
     if cls > 0.0 { g.cues.squelch_due = true; }   // (a row that arrives is heard arriving: tick, once a frame)
-    g.cues.rows.push(CueRow { t, text: String::from(text), cls, rank, who: String::from(who) });
+    g.cues.rows.push(CueRow { t, text: String::from(text), cls, rank });
     g.cues.said.set(String::from(words), t);
     sparse_set(&mut g.cues.class_t, c, t);
     if squad { sparse_set(&mut g.cues.squad_t, c, t); }
@@ -446,7 +420,7 @@ pub fn cues_heard(g: &mut crate::game::Game, gd: GuardId, text: &str) {
 }
 
 /// A defender's line that is telling only: the strip's row, and this file's own bubble (never Guard.bubble).   (cues.ts Cues.net)
-#[doc(hidden)] pub fn cues_net__body(g: &mut crate::game::Game, gd: GuardId, text: &str, cls: f64) {
+pub fn cues_net(g: &mut crate::game::Game, gd: GuardId, text: &str, cls: f64) {
     let t = g.time;
     g.cues.bubbles.set(gd, Bubble { text: String::from(text), t, dur: crate::guards::bubble_secs(text), radio: true });
     if !crate::roomfight::fight_live(g) { return; }
@@ -482,8 +456,6 @@ pub fn cues_ears(g: &mut crate::game::Game) -> Vec<V3> {
 
 /// `done` of `overheard`.
 fn heard_done(g: &mut Game, t: f64, text: &str, why: &str) -> bool {
-    g.cues.heard_log.push(CuesHeardLogItem { t: fixed2(t), text: String::from(text), drawn: why.is_empty(), why: String::from(why) });
-    if g.cues.heard_log.len() > 200 { g.cues.heard_log.drain(0..50); }
     why.is_empty()
 }
 
@@ -539,7 +511,7 @@ pub fn cues_adopt(g: &mut crate::game::Game, msgs: &[crate::cues::CuesAdoptMsgsI
     g.cues.heard_row = None;
     let radio: Vec<&crate::cues::CuesAdoptMsgsItem> = msgs.iter().filter(|m| m.text.starts_with("radio: ")).collect();
     let from = tail_from(radio.len(), g.k.cues.rows);
-    g.cues.rows = radio[from..].iter().map(|m| CueRow { t: m.t, text: String::from(&m.text[7..]), cls: 0.0, rank: 1.0, who: String::new() }).collect();
+    g.cues.rows = radio[from..].iter().map(|m| CueRow { t: m.t, text: String::from(&m.text[7..]), cls: 0.0, rank: 1.0 }).collect();
 }
 
 /// A word over a man and nothing else: the bubble, no strip row, no class clock: nothing the net's own lines wait on (the recap's side call)
@@ -591,7 +563,7 @@ pub fn bubbles_view(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<
         let m = &g.gd[gd];
         if !up(b.t, b.dur) || m.state == crate::game::GuardState::Dead { continue; }
         if m.civ.map_or(false, |c| g.cv[c].state == crate::civilians::CivState::Gone) { continue; }
-        let hidden = crate::fogofwar::fog_of_war_hidden__body(g, gd);
+        let hidden = crate::fogofwar::fog_of_war_hidden(g, gd);
         let place = if !crate::orders::squad_orders_mine(g, seat, gd) {
             if hidden { continue; }
             BubblePlace::Over
@@ -888,15 +860,6 @@ pub fn radio_rows(g: &crate::game::Game) -> Vec<crate::view::RadioRow> {
     out
 }
 
-
-#[doc(hidden)] pub fn cues_net(g: &mut crate::game::Game, gd: GuardId, text: &str, cls: f64) {
-    use crate::io::Io;
-    if g.taps & (1u64 << 15) == 0 { return cues_net__body(g, gd, text, cls); }
-    let mut o = crate::io::W::new(); gd.w(&mut o); alloc::string::String::from(text).w(&mut o); cls.w(&mut o);
-    cues_net__body(g, gd, text, cls);
-    crate::out_events::push_tap(g, 15, &o.b, &[]);
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1072,7 +1035,7 @@ mod tests {
         fn strip(g: &mut Game) -> Vec<(String, f64)> { radio_rows(g).into_iter().map(|r| (alloc::format!("{}: {}", if r.kind == crate::view::RadioKind::Heard { "heard" } else { "radio" }, r.text), g.time - r.age)).collect() }
         fn want(v: &[(&str, f64)]) -> Vec<(String, f64)> { v.iter().map(|r| (String::from(r.0), r.1)).collect() }
         assert_eq!(strip(g), want(&[("radio: c", 15.0), ("radio: d", 16.0)]));
-        let row = |t: f64, text: &str| CueRow { t, text: String::from(text), cls: 1.0, rank: 3.0, who: String::new() };
+        let row = |t: f64, text: &str| CueRow { t, text: String::from(text), cls: 1.0, rank: 3.0 };
         g.cues.rows = vec![row(14.0, "p"), row(18.0, "q"), row(21.0, "future")];
         g.cues.heard_row = Some(CuesHeardRow { t: 16.0, text: String::from("find them!") });
         assert_eq!(strip(g), want(&[("radio: p", 14.0), ("heard: find them!", 16.0), ("radio: q", 18.0)]));
@@ -1093,11 +1056,11 @@ mod tests {
 
     #[test]
     fn a_kinds_clock_and_tally_are_its_own() {
-        let mut v = CuesKindT::zeroed();
+        let mut v = CuesKindT::default();
         *kind_t_of(&mut v, CueKind::StayOurs) = Some(1.0);
         assert_eq!(v.stay, None);
         assert_eq!(v.stay_ours, Some(1.0));
-        let mut k = CuesKinds::zeroed();
+        let mut k = CuesKinds::default();
         *kinds_of(&mut k, CueKind::Surprised) = Some(2.0);
         assert_eq!(k.surprised, Some(2.0));
         assert_eq!(k.squad_quiet, None);

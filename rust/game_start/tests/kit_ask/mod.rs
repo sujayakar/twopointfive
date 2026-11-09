@@ -182,6 +182,8 @@ pub trait KitAsk {
     fn order_keys(&self) -> Vec<(String, Option<f64>, bool)>;
     /// the name each door is said by, as the level stands
     fn door_names(&self) -> Vec<String>;
+    /// what a man calls each of the level's routes
+    fn route_words(&self) -> Vec<String>;
     /// what the big tools have done so far: Sam's blows, his shells; a teammate's blows, doors he has hammered
     fn big_counts(&self) -> (i32, i32, i32, i32);
     /// is a man's own gun in his hands (no tool out on a sling)
@@ -418,7 +420,7 @@ impl KitAsk for Play {
     }
     fn sam_holds_his_spot(&mut self, aim: [f64; 2]) {
         let at = self.sam_at();
-        self.g.puppet = Some(game::game::GamePuppet { goal: Some([at[0], 0.0, at[1]]), aim: Some([aim[0], 1.2, aim[1]]), ..game::game::GamePuppet::zeroed() });
+        self.g.puppet = Some(game::game::GamePuppet { goal: Some([at[0], 0.0, at[1]]), aim: Some([aim[0], 1.2, aim[1]]), ..game::game::GamePuppet::default() });
     }
     fn all_but_held(&mut self, gd: GuardId) {
         for o in self.g.guards.clone() { if o != gd { let m = &mut self.g.gd[o]; (m.hold, m.pinned, m.dazzled_until) = (true, true, 1e9); } }
@@ -426,14 +428,14 @@ impl KitAsk for Play {
     fn aim_model(&mut self, on: bool) { self.g.tune.aim_model = on; }
     fn sam_round_at(&mut self, at: [f64; 3]) {
         let c = self.g.pl[self.g.player].ch;
-        let o = game::combat::FireOpts { steady: Some(true), spread: Some(0.0), ..game::combat::FireOpts::zeroed() };
+        let o = game::combat::FireOpts { steady: Some(true), spread: Some(0.0), ..game::combat::FireOpts::default() };
         game::combat::fire_weapon(&mut self.g, c, at, true, Some(&o));
     }
 
     fn sam_a_ghost(&mut self) { self.g.player_invisible = true; }
     fn sam_low(&mut self, low: bool) { let pl = self.g.player; self.g.pl[pl].crouch = low; }
     fn sam_walks_to(&mut self, goal: [f64; 2], low: bool) {
-        self.g.puppet = Some(game::game::GamePuppet { goal: Some([goal[0], 0.0, goal[1]]), crouch: Some(low), ..game::game::GamePuppet::zeroed() });
+        self.g.puppet = Some(game::game::GamePuppet { goal: Some([goal[0], 0.0, goal[1]]), crouch: Some(low), ..game::game::GamePuppet::default() });
     }
     fn sam_stops(&mut self) { self.g.puppet = None; }
     fn man_walks_to(&mut self, gd: GuardId, from: [f64; 2], goal: [f64; 2], speed: f64) {
@@ -445,7 +447,7 @@ impl KitAsk for Play {
         let m = &mut self.g.gd[gd];
         (m.hold, m.pinned, m.path_goal, m.state, m.awareness) = (false, false, None, GuardState::Patrol, 0.0);
         m.path.clear();
-        m.script = Some(game::game::GuardScript { goal: Some([goal[0], 0.0, goal[1]]), speed: Some(speed), upper: Some(game::character::UpperMode::Relaxed), ..game::game::GuardScript::zeroed() });
+        m.script = Some(game::game::GuardScript { goal: Some([goal[0], 0.0, goal[1]]), speed: Some(speed), upper: Some(game::character::UpperMode::Relaxed), ..game::game::GuardScript::default() });
     }
     fn sam_lunges(&mut self, gd: GuardId) { game::player::start_takedown(&mut self.g, gd, None, None, None); }
     fn sam_grabs(&mut self, gd: GuardId) { game::player::start_grab(&mut self.g, gd, None); }
@@ -600,6 +602,7 @@ impl KitAsk for Play {
     fn switch_on(&self, sw: &game::lightswitch::WallSwitch) -> bool { game::lightswitch::switch_lit(&self.g, sw) }
     fn order_keys(&self) -> Vec<(String, Option<f64>, bool)> { self.g.tab.orders_order_def.iter().map(|(_, r)| (r.id.clone(), r.key, r.hot_key.is_some())).collect() }
     fn door_names(&self) -> Vec<String> { self.g.doors.list.iter().filter_map(|&d| game::doornames::door_said_name(&self.g, d)).collect() }
+    fn route_words(&self) -> Vec<String> { (0..self.g.level.routes.len()).map(|i| game::dialogue::route_name(&self.g, i as f64)).collect() }
     fn big_counts(&self) -> (i32, i32, i32, i32) { let b = &self.g.stats.bigkit; (b.sam_blows, b.sam_shells, b.mate_blows, b.mate_hammered) }
     fn own_gun_up(&self, gd: GuardId) -> bool { self.g.gd[gd].slung.as_ref().map_or(true, |s| !s.out) && self.g.ch[self.g.gd[gd].ch].anim.big_tool.is_none() }
     fn frame_blows(&self) -> f64 { self.g.k.bigslot.swings }

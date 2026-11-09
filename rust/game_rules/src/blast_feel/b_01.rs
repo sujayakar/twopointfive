@@ -7,9 +7,9 @@
 //! THE PICTURE'S HALF (the fireball, the dust ring, the pushes, the ceiling's dust) is picture.rs.
 //!
 //! STAND-IN: THE REPORT IS PLAYED AT ONCE. The TypeScript holds each of the report's sounds back by the time sound takes from the blast to the player's
-//! head (at most 0.25 s; the thump a frame and the patter 0.1 s after that) on a queue of closures (`later`). The generated queue row holds no data
-//! (`StateQueueItem.run` is a closure's place), so there is nowhere to keep "which sound, how loud" until its time: the sounds go out as the blast's own
-//! tick's out events. Belongs: a queue row that says what to run (asked of the generator), or the host's audio taking a delay.
+//! head (at most 0.25 s; the thump a frame and the patter 0.1 s after that) on a queue of closures (`later`). There is no such queue
+//! here: the sounds go out as the blast's own
+//! tick's out events. Belongs: a queue row that says which sound, how loud and when, or the host's audio taking a delay.
 #![allow(unused_imports, unused_variables)]
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
@@ -25,7 +25,7 @@ pub fn load_feel(g: &mut crate::game::Game) { g.m.blast_feel.loaded = true; }
 /// this view's state, made on first ask (src/game/blastFeel.ts:93 stateOf)
 fn state_mut(g: &mut Game) -> &mut State {
     let key = crate::seats::view_key(g, &crate::seats::here(g));
-    g.m.blast_feel.state.get_or_insert_with(key, || State { seen: Vec::new(), queue: Vec::new(), kicks: Vec::new(), serial: 1.0, last: -1.0, list: None })
+    g.m.blast_feel.state.get_or_insert_with(key, || State { seen: Vec::new(), kicks: Vec::new(), serial: 1.0, last: -1.0 })
 }
 
 /// This module's own dice: a counter of its own through a hash. (src/game/blastFeel.ts:95 hashU)
@@ -53,10 +53,6 @@ pub fn holed(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> bool
     let (a, b) = (crate::wallcharge::wall_pt(g, w, 0.0, 0.12, Some(h)), crate::wallcharge::wall_pt(g, w, 0.0, -(th + 0.12), Some(h)));
     !crate::scene_collision::solid_blocked(g, a, b, None)
 }
-
-/// A stage let go now or queued. The queue's rows hold no data (the head of this file): a stage with nothing of the tick's in it is not kept at all.
-/// (src/game/blastFeel.ts:105 later)
-pub fn later(g: &mut crate::game::Game, pl: PlayerId, secs: f64, run: &mut dyn FnMut(&mut crate::game::Game)) { run(g); }
 
 /// Combat's stun burst, where it plays the can's report: true = this burst is a wall charge's and its own report is played (the can's is not); false =
 /// not this module's (the switch off, the DRESS row down, a thrown can, a door charge). (src/game/blastFeel.ts:109 wallReport)
@@ -102,7 +98,7 @@ pub fn blast_feel_tick_raw(g: &mut crate::game::Game, cam: CameraId) {
     let key = crate::seats::view_key(g, &crate::seats::here(g));
     // (`g.wallCharge` is always there in the Rust game)
     if !live(g) {
-        if let Some(s) = g.m.blast_feel.state.get_mut(key) { s.seen.clear(); s.queue.clear(); s.kicks.clear(); }
+        if let Some(s) = g.m.blast_feel.state.get_mut(key) { s.seen.clear();  s.kicks.clear(); }
         if g.tab.camera[cam].kick.is_some() { g.tab.camera[cam].kick = None; }
         return;
     }
@@ -114,7 +110,7 @@ pub fn blast_feel_tick_raw(g: &mut crate::game::Game, cam: CameraId) {
         let s = state_mut(g);
         // (the clock went back, a load: nothing of the old encounter's blast plays into this one. The TypeScript also asks whether the charges' list is a
         //  NEW ARRAY, a restart whose clock runs on; a Rust list has no identity to ask, and a restart here is a game made again, with no state of this module)
-        if time < s.last { s.queue.clear(); s.kicks.clear(); s.seen.clear(); }
+        if time < s.last {  s.kicks.clear(); s.seen.clear(); }
         s.last = time;
         s.seen = set;
         // (the queue: nothing of the tick's is ever on it, the head of this file)
@@ -160,7 +156,6 @@ pub fn report(g: &mut crate::game::Game, pl: PlayerId, at: V3) {
     let carry = 1.0 + k.carry * m::min(1.0, m::max(0.0, (d - k.carry_from) / k.carry_over));
     let (r2, r3) = { let s = state_mut(g); let r2 = 0.96 + 0.06 * dice(s); let r3 = 0.94 + 0.12 * dice(s); (r2, r3) };
     // (the crack passes NO rate: the mixer draws its own)
-    crate::out_events::push_wall_feel(g, at);   // (the picture's half of the feel: the fireball, the dust ring, the pushes, the ceiling's dust)
     crate::audio_iface::game_audio_like_play(g, "wallCrack", Some(at), Some(k.crack * (0.25 + 0.75 * dull) * carry), None);
     crate::audio_iface::game_audio_like_play(g, "wallThump", Some(at), Some(k.thump * carry), Some(&crate::audio_iface::PlayOpts::Rate { rate: r2 }));
     crate::audio_iface::game_audio_like_play(g, "wallDebris", Some(at), Some(k.debris * (0.4 + 0.6 * dull) * carry), Some(&crate::audio_iface::PlayOpts::Rate { rate: r3 }));

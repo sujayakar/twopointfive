@@ -1,10 +1,12 @@
 // WHAT THE LEVEL ITSELF SAYS OF HOW IT LOOKS, handed over where Rust left it: the traffic map its floors read (rust/game_draw traffic.rs) and how its puffs of dust look (dust.rs).
 import { WORLD } from '../scene/world';
-import { WEAR_RES } from '../render/wear';
 import type { GBuffer } from '../render/gbuffer';
 import type { Particles } from '../render/particles';
 import type { Drawn } from './drawn';
 import { DustLook, Section } from './sections';
+
+/** texels a metre of the traffic map (rust/game_draw/src/traffic.rs makes it) */
+const WEAR_RES = 8;
 
 /** once, as the level opens */
 export function trafficFrom(gbuffer: GBuffer, D: Drawn): void {

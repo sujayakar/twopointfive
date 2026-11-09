@@ -1,12 +1,11 @@
-//! The types of `rescueflow`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `rescueflow`.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum OpenState {
-    Held,
+    #[default] Held,
     Unknown,
     Cleared,
     Hot,
@@ -24,8 +23,7 @@ impl OpenState {
     }
 }
 
-/// (TypeScript: Region, src/game/rescueflow.ts:73)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct Region {
     pub id: String,
     pub rect: crate::scene_scenarios::Rect,
@@ -35,41 +33,14 @@ pub struct Region {
     pub hot: JsMap<GuardId, crate::rescueflow::RegionHotValue>,
     pub was_in: f64,
 }
-impl Region {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Region {
-            id: String::new(),
-            rect: crate::scene_scenarios::Rect::zeroed(),
-            pts: Vec::new(),
-            seen_t: Vec::new(),
-            cleared: false,
-            hot: JsMap::new(),
-            was_in: 0.0,
-        }
-    }
-}
-impl Default for Region { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rescueflow.ts:73 Region.hot, src/game/rescueflow.ts:73)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct RegionHotValue {
     pub t: f64,
     pub at: V3,
 }
-impl RegionHotValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RegionHotValue {
-            t: 0.0,
-            at: [0.0; 3],
-        }
-    }
-}
-impl Default for RegionHotValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Known, src/game/rescueflow.ts:74)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct Known {
     pub o: crate::scene_scenarios::RouteOpening,
     pub region: RescueflowRegionId,
@@ -80,25 +51,8 @@ pub struct Known {
     pub held: Option<GuardId>,
     pub hot: bool,
 }
-impl Known {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Known {
-            o: crate::scene_scenarios::RouteOpening::zeroed(),
-            region: RescueflowRegionId(0),
-            lookable: Vec::new(),
-            built_open: false,
-            share: 0.0,
-            state: crate::rescueflow::OpenState::Held,
-            held: None,
-            hot: false,
-        }
-    }
-}
-impl Default for Known { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Job, src/game/rescueflow.ts:75)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct Job {
     pub kind: crate::rescueflow::JobKind,
     pub o: crate::scene_scenarios::RouteOpening,
@@ -110,41 +64,14 @@ pub struct Job {
     pub said_wait: bool,
     pub leap: bool,
 }
-impl Job {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Job {
-            kind: crate::rescueflow::JobKind::Cover,
-            o: crate::scene_scenarios::RouteOpening::zeroed(),
-            a: OrdersAssignmentId(0),
-            t0: 0.0,
-            on_t: 0.0,
-            chain: Vec::new(),
-            said_hot: false,
-            said_wait: false,
-            leap: false,
-        }
-    }
-}
-impl Default for Job { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum JobKind {
-    Cover,
+    #[default] Cover,
     Corridor,
 }
-impl JobKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            JobKind::Cover => "cover",
-            JobKind::Corridor => "corridor",
-        }
-    }
-}
 
-/// (TypeScript: RescueFlow, src/game/rescueflow.ts:77)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct RescueFlow {
     pub knobs: crate::rescueflow::RescueFlowKnobs,
     pub known: Vec<crate::rescueflow::Known>,
@@ -163,7 +90,7 @@ pub struct RescueFlow {
     pub came_in: Option<crate::rescueflow::RescueFlowCameIn>,
 }
 impl RescueFlow {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         RescueFlow {
             knobs: crate::rescueflow::RescueFlowKnobs { abreast: 0.6, unpass: 2.0, past: 1.5, max_cover: 2.5, give_up: 7.0, want_secs: 6.0, hot_hold: 6.0, hot_secs: 20.0, hot_empty: 0.6, look_share: 0.6, look_secs: 10.0, clear_share: 0.7, clear_secs: 25.0, eye_m: 16.0, sense_hz: 6.0, sample_y: 0.9, hold_secs: 3.0, wait_m: 9.0, glow: 1.0 },
@@ -186,8 +113,7 @@ impl RescueFlow {
 }
 impl Default for RescueFlow { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: inline at src/game/rescueflow.ts:78 RescueFlow.knobs, src/game/rescueflow.ts:47)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct RescueFlowKnobs {
     pub abreast: f64,
     pub unpass: f64,
@@ -209,36 +135,8 @@ pub struct RescueFlowKnobs {
     pub wait_m: f64,
     pub glow: f64,
 }
-impl RescueFlowKnobs {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RescueFlowKnobs {
-            abreast: 0.0,
-            unpass: 0.0,
-            past: 0.0,
-            max_cover: 0.0,
-            give_up: 0.0,
-            want_secs: 0.0,
-            hot_hold: 0.0,
-            hot_secs: 0.0,
-            hot_empty: 0.0,
-            look_share: 0.0,
-            look_secs: 0.0,
-            clear_share: 0.0,
-            clear_secs: 0.0,
-            eye_m: 0.0,
-            sense_hz: 0.0,
-            sample_y: 0.0,
-            hold_secs: 0.0,
-            wait_m: 0.0,
-            glow: 0.0,
-        }
-    }
-}
-impl Default for RescueFlowKnobs { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rescueflow.ts:87 RescueFlow.stats, src/game/rescueflow.ts:87)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct RescueFlowStats {
     pub takes: f64,
     pub chained: f64,
@@ -247,93 +145,19 @@ pub struct RescueFlowStats {
     pub hot_holds: f64,
     pub unmanned: f64,
 }
-impl RescueFlowStats {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RescueFlowStats {
-            takes: 0.0,
-            chained: 0.0,
-            corridor: 0.0,
-            overridden: 0.0,
-            hot_holds: 0.0,
-            unmanned: 0.0,
-        }
-    }
-}
-impl Default for RescueFlowStats { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rescueflow.ts:94 RescueFlow.corr, src/game/rescueflow.ts:94)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct RescueFlowCorr {
     pub x: f64,
     pub t: f64,
 }
-impl RescueFlowCorr {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RescueFlowCorr {
-            x: 0.0,
-            t: 0.0,
-        }
-    }
-}
-impl Default for RescueFlowCorr { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rescueflow.ts:95 RescueFlow.cameIn, src/game/rescueflow.ts:95)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct RescueFlowCameIn {
     pub region: String,
     pub o: crate::scene_scenarios::RouteOpening,
     pub t: f64,
 }
-impl RescueFlowCameIn {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RescueFlowCameIn {
-            region: String::new(),
-            o: crate::scene_scenarios::RouteOpening::zeroed(),
-            t: 0.0,
-        }
-    }
-}
-impl Default for RescueFlowCameIn { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/rescueflow.ts:108 jobOf ->, src/game/rescueflow.ts:108)
-#[derive(Clone, Debug)]
-pub struct RescueFlowJobOf {
-    pub kind: crate::rescueflow::RescueFlowJobOfKind,
-    pub opening: String,
-    pub queued: Vec<String>,
-}
-impl RescueFlowJobOf {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RescueFlowJobOf {
-            kind: crate::rescueflow::RescueFlowJobOfKind::Cover,
-            opening: String::new(),
-            queued: Vec::new(),
-        }
-    }
-}
-impl Default for RescueFlowJobOf { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum RescueFlowJobOfKind {
-    Cover,
-    Corridor,
-}
-impl RescueFlowJobOfKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RescueFlowJobOfKind::Cover => "cover",
-            RescueFlowJobOfKind::Corridor => "corridor",
-        }
-    }
-}
-
-/// (src/game/rescueflow.ts:47 FLOW: a table nothing writes)
-pub fn flow() -> crate::rescueflow::RescueFlowKnobs { crate::rescueflow::RescueFlowKnobs { abreast: 0.6, unpass: 2.0, past: 1.5, max_cover: 2.5, give_up: 7.0, want_secs: 6.0, hot_hold: 6.0, hot_secs: 20.0, hot_empty: 0.6, look_share: 0.6, look_secs: 10.0, clear_share: 0.7, clear_secs: 25.0, eye_m: 16.0, sense_hz: 6.0, sample_y: 0.9, hold_secs: 3.0, wait_m: 9.0, glow: 1.0 } }
 
 /// (src/game/rescueflow.ts:68 COLOUR: a table nothing writes)
 pub fn colour() -> JsMap<String, V3> { { let mut t = JsMap::new(); t.set(String::from("unknown"), [1.0, 0.55, 0.08]); t.set(String::from("looked"), [0.6, 0.62, 0.5]); t.set(String::from("hot"), [2.6, 0.12, 0.05]); t.set(String::from("held"), [0.12, 0.5, 1.6]); t.set(String::from("cleared"), [0.1, 1.0, 0.3]); t } }
@@ -341,5 +165,3 @@ pub fn colour() -> JsMap<String, V3> { { let mut t = JsMap::new(); t.set(String:
 /// (src/game/rescueflow.ts:69 EYE)
 pub const EYE: f64 = 1.55;
 
-/// (src/game/rescueflow.ts:70 NO_ROUTE: a table nothing writes)
-pub fn no_route() -> Vec<crate::scene_scenarios::RouteOpening> { Vec::new() }

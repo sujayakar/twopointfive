@@ -65,11 +65,6 @@ fn out_plain(exfil_x: f64, exfil_z: f64, exfil_out: Option<[f64; 2]>, p: V3) -> 
     p[0] > exfil_x && m::abs(p[2] - exfil_z) < 1.8
 }
 
-/// THE END CARD, once: the mission's run is over and the card is due. The host opens it after the step. Never while the tour runs: a show's mission is nobody's run.
-fn end_card(g: &mut crate::game::Game) {
-    if !g.mission_in_tour { crate::out_events::end_card(g); }
-}
-
 /// The mission's stage machine: infiltrate, drive, exfil, and the run's counts. (mission.ts updateMission)
 pub fn update_mission(g: &mut crate::game::Game, dt: f64, input: InputId) {
     use crate::game::{GuardState, InteractableKind, MissionStage, Verb};
@@ -94,7 +89,6 @@ pub fn update_mission(g: &mut crate::game::Game, dt: f64, input: InputId) {
     }
     if g.mission.stage == MissionStage::Failed && g.mission.down_card_at > 0.0 && g.time >= g.mission.down_card_at {
         g.mission.down_card_at = -1.0;
-        end_card(g);
     }
     if g.mission.stage == MissionStage::Done || g.mission.stage == MissionStage::Failed {
         return;
@@ -196,7 +190,6 @@ pub fn update_mission(g: &mut crate::game::Game, dt: f64, input: InputId) {
             };
             crate::chronicle::chron_objective(g, &line, None);
             g.mission.stage = MissionStage::Done;
-            end_card(g);
             let d = crate::chronicle::debrief_of(g, &crate::seats::here(g));
             let mut line = format!("exfiltrated — {}", crate::game::fmt_clock(g.mission.stats.elapsed));
             if !d.grade.is_empty() {
@@ -258,7 +251,7 @@ pub fn drive_pulled(g: &mut crate::game::Game) {
         level: Some(0.35),
         who: Some(who),
         serial,
-        ..crate::game::GameEvent::zeroed()
+        ..crate::game::GameEvent::default()
     });
     g.pl[pl].noise = m::max(g.pl[pl].noise, 0.35);
     if let Some(w) = &w {

@@ -1,17 +1,19 @@
-// Minimal dev server: bundles index.html and the tool pages (the replay viewer, sounds, music; TS, WGSL as text) via Bun's HTML imports, serves ./public statically,
+// Minimal dev server: bundles index.html and the tool pages (sounds, music; TS, WGSL as text) via Bun's HTML imports, serves ./public statically,
 // and answers the game's fetches of level files under /levels/ (tools/levels-api.ts: index and read, loopback only).
 // Listens on LOOPBACK only (HOST=… overrides that on purpose).
 import index from "../index.html";
-import replay from "../replay.html";   // the REPLAY VIEWER (src/replay/viewer.ts): a replay saved with F7 as a map with a scrubber and notes
 import sounds from "../sounds.html";   // the LISTENING PAGE (src/sounds/main.ts): every sound the game makes, one row each, through the game's own mixer graph
 import music from "../music.html";   // the SCORE'S LISTENING PAGE (src/music/main.ts): every piece of the score on one row, played by the game's own sequencer and voices
 import { handleLevels } from "./levels-api.ts";
 import { localCloud } from "./cloud/local.ts";
 import { devRunner, type DevRunner } from "./mp/runner.ts";
 import { writePieces } from "./qa/capture-pieces.ts";
-import { faceAsk } from "./blitz/face-build.ts";   // the Rust game's module (rust/game_face), built when its sources are newer: the page asks for it only under ?rust=1
+import { faceAsk } from "./blitz/face-build.ts";   // the game's module (rust/game_face), built when its sources are newer
 
-const COMMIT = (() => { try { const r = Bun.spawnSync(["git", "rev-parse", "--short=12", "HEAD"]); return r.success ? new TextDecoder().decode(r.stdout).trim() : ""; } catch { return ""; } })();   // (read once at start: a dev server outlives commits, but the journal only wants "about which build")
+/** the module file's own name (a kept run says which module it was played on: src/tape/module.ts) */
+let faceNamed = { path: "", at: 0, name: "" };
+async function faceName(path: string): Promise<string> { const f = Bun.file(path), at = f.lastModified; if (faceNamed.path !== path || faceNamed.at !== at) faceNamed = { path, at, name: Bun.hash(await f.arrayBuffer()).toString(36) }; return faceNamed.name; }
+const COMMIT = (() => { try { const r = Bun.spawnSync(["git", "rev-parse", "--short=12", "HEAD"]); return r.success ? new TextDecoder().decode(r.stdout).trim() : ""; } catch { return ""; } })();   // (read once at start: a dev server outlives commits, but a kept file only wants "about which build")
 let CLOUD: ReturnType<typeof localCloud> = null;   // the local build's backend (tools/cloud/local.ts), started below once the port is ours: null on a plain start — `bun run dev` asks for one (TPS_LOCAL_CLOUD=1), TPS_DEV_CLOUD names one that is already up
 let MP: DevRunner | null = null;   // co-op's game servers on this machine (tools/mp/runner.ts): the local backend asks this server to start and stop them. null where no backend was asked for
 const port = Number(process.env.PORT ?? 5173);
@@ -20,7 +22,7 @@ const server = Bun.serve({
   port, hostname, maxRequestBodySize: 512 << 20,   // (a frame capture of a whole 4K frame, gzipped: POST /capture below, which says who may send one)
   development: { hmr: false, console: true },
   routes: {
-    "/": index, "/replay": replay, "/sounds": sounds, "/music": music,
+    "/": index, "/sounds": sounds, "/music": music,
     "/look": req => { const u = new URL(req.url); return Response.redirect("/?look&" + (u.searchParams.has("levelFile") ? "" : "roomclear&squad4&levelFile=pass.json&hud&") + u.search.slice(1), 302); },   // THE LOOK PROTOTYPE (src/render/shaders/look.wgsl): the game's page with ?look, on the pass unless the link names its own mission
   },
   async fetch(req) {
@@ -28,7 +30,6 @@ const server = Bun.serve({
     let path: string; try { path = decodeURIComponent(url.pathname); } catch { return new Response("bad path encoding", { status: 400 }); }
     if (path.includes("..")) return new Response("bad path", { status: 400 });
     if (path === "/index.html") return Response.redirect("/" + url.search + url.hash, 302);   // the game is '/', and a built page's neighbour link ('index.html?…') must open here too
-    if (path === "/replay.html" || path === "/replay/") return Response.redirect("/replay" + url.search, 302);
     if (path === "/sounds.html" || path === "/sounds/") return Response.redirect("/sounds" + url.search, 302);
     if (path === "/draw" || path === "/draw.html" || path === "/draw/") return Response.redirect("/" + url.search, 302);   // (an address kept from before the game's page was this one)
     if (path === "/music.html" || path === "/music/") return Response.redirect("/music" + url.search, 302);
@@ -46,16 +47,16 @@ const server = Bun.serve({
       console.log(`capture: captures/${name}.tpscap.gz${pieces ? ` (and in ${pieces} pieces, ${name}.part1of${pieces}.tpscap.gz …)` : ''}  ·  bun run tools/qa/capture-read.ts captures/${name}.tpscap.gz`);
       return new Response(pieces ? `captured in ${pieces} pieces` : "captured");
     }
-    if (path === "/game_face.wasm") {   // THE RUST GAME (src/host/rustgame.ts, ?rust=1): the module's file. Where a source under rust/ is newer it is built first (tools/blitz/face-build.ts, the `play` profile), and the request is NOT held for the minutes that takes: 202 and a line the page shows while it asks again; where it cannot be built, 503 and the reason with the one command that mends it
+    if (path === "/game_face.wasm") {   // THE GAME: the module's file. Where a source under rust/ is newer it is built first (tools/blitz/face-build.ts, the `play` profile), and the request is NOT held for the minutes that takes: 202 and a line the page shows while it asks again; where it cannot be built, 503 and the reason with the one command that mends it
       const r = faceAsk(l => console.log(l), "play");
       if ("why" in r) return new Response(r.why, { status: 503, headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" } });
       if ("wait" in r) return new Response(r.wait, { status: 202, headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store", "Retry-After": "2" } });
-      return new Response(Bun.file(r.path), { headers: { "Content-Type": "application/wasm", "Cache-Control": "no-store" } });
+      return new Response(Bun.file(r.path), { headers: { "Content-Type": "application/wasm", "Cache-Control": "no-store", ETag: `"${await faceName(r.path)}"` } });
     }
     const lv = await handleLevels(req); if (lv) return lv;
-    if (path === "/qa/commit") return new Response(COMMIT, { headers: { "Cache-Control": "no-store", "Content-Type": "text/plain" } });   // the commit this server was started on (a replay and a report file it: src/ui/replaykey.ts)
+    if (path === "/qa/commit") return new Response(COMMIT, { headers: { "Cache-Control": "no-store", "Content-Type": "text/plain" } });   // the commit this server was started on (a run and a report file it)
     if (path === "/qa/cloud") return new Response(CLOUD?.url() ?? "", { headers: { "Cache-Control": "no-store", "Content-Type": "text/plain" } });   // the backend this server runs for the page, or nothing (src/cloud/cloud.ts cloudFind asks once a page load)
-    if (/^\/qa\/[\w.-]+\.js$/.test(path)) { const qa = Bun.file("./tools" + path); if (await qa.exists()) return new Response(qa, { headers: { "Cache-Control": "no-store" } }); }   // the in-page measurement harnesses (dev only, never bundled): `await import('/qa/perf-harness.js')` → window.__perf, '/qa/perf-frames.js' → window.__pf
+    if (/^\/qa\/[\w.-]+\.js$/.test(path)) { const qa = Bun.file("./tools" + path); if (await qa.exists()) return new Response(qa, { headers: { "Cache-Control": "no-store" } }); }   // the in-page measurement harnesses (dev only, never bundled)
     const f = Bun.file("./public" + path);
     if (await f.exists()) return new Response(f);
     return new Response("not found: " + path, { status: 404 });

@@ -3,7 +3,7 @@
 //! start stands like any level of `levels/`. So a test's scene is no second way to make a game: it goes in by the level format, through the one
 //! start (`stand.rs`).
 //!
-//! The pieces are the level kit's own (`src/scene/levelKit.ts`, `doorSize.ts`), size for size: a wall 12 cm thick and 3 m high, a doorway cut for
+//! The pieces are the level kit's own (`tools/levels/lib/levelKit.ts`, `doorSize.ts`), size for size: a wall 12 cm thick and 3 m high, a doorway cut for
 //! the real door inside a 1.2 m slot (on a walk-grid cell centre), its frame of two jambs, a head and two stops, a bare bulb on its flex.
 //!
 //! WHO STANDS IN A SCENE, one of two ways and never both (the room clear's staging takes every other man off the floor):

@@ -9,7 +9,7 @@ fn step(p: &mut Play) {
     let me = game::game::game_host_seat(g);
     let mut c = game::seats::with_seat(g, me, &mut |g| game::cmd::sample_cmd(g, h.input, h.cam, h.canvas, None));
     c.keys.push(String::from("KeyW"));
-    game_run::step(g, 1.0 / 60.0, &c);
+    game::game::game_step(g, 1.0 / 60.0, &c);
 }
 
 #[test]

@@ -182,7 +182,7 @@ pub fn wall_break_index(g: &mut crate::game::Game) {
 /// The breakable a static index belongs to, an authored box or one of its pieces: what a round met. (WallBreak.breakableAt)
 pub fn wall_break_breakable_at(g: &crate::game::Game, index: f64) -> Option<crate::wallbreak::WallBreakBreakableAt> {
     let b = &g.tab.wallbreak_breakable[owner_of(g, index)?];
-    Some(WallBreakBreakableAt { id: b.id, kind: b.kind, surf: b.surf, open: b.n_open, cells: b.open.len() as f64, hard: if is_hard(b) { Some(true) } else { None } })
+    Some(WallBreakBreakableAt { id: b.id, kind: b.kind, open: b.n_open, cells: b.open.len() as f64, hard: if is_hard(b) { Some(true) } else { None } })
 }
 
 /// Could authored static `index` be taken on as a hard wall: a breaching charge's wall, by shape. (WallBreak.adoptable)
@@ -503,20 +503,13 @@ pub fn wall_break_open_cells(g: &mut crate::game::Game, b: WallbreakBreakableId,
     // what stood on it, what hung from it
     let mut rects: Vec<[f64; 4]> = vec![[x0, z0, x1, z1]];
     wall_break_settle(g, b, AABB { x0, x1, z0, z1, y0: 0.0, y1: 0.0 }, dir, who, quiet, &mut rects);
-    // one model: the routes sound took, the smoke's obstacles, the nav cells, the lights' reach
+    // one model: the routes sound took, the nav cells
     crate::scene_collision::sound_paths_invalidate(g);
-    crate::smoke_types::smoke_system_like_obstacles_changed(g, pos, m::hyp2(x1 - x0, z1 - z0) / 2.0 + 1.5);
     let mut opened: Vec<f64> = Vec::new();
     for r in &rects {
         let ch = crate::scene_collision::nav_grid_rebake(g, r[0], r[1], r[2], r[3]);
         let mut k = 0;
         while k < ch.len() { if ch[k + 1] == 0.0 { opened.push(ch[k]); } k += 2; }
-    }
-    // the lights' reach masks are the picture's: told where, and how long the blast's own frame may be spared the reading (wallbreak.ts:413)
-    if b_kind == BKind::Wall {
-        let pace = &g.m.destruction_switch.blast_pace;
-        let hold = if pace.on { pace.reach_hold } else { -1.0 };
-        crate::render_reach_keep::reach_keep_changed(g, Some([x0, z0, x1, z1]), Some(hold));
     }
     if is_hard(&g.tab.wallbreak_breakable[b]) { for &c in &opened { g.destr.walls.shell_gaps.add(crate::Num(c)); } }
     g.stats.wallbreak.nav_opened += opened.len() as i32;
@@ -524,7 +517,7 @@ pub fn wall_break_open_cells(g: &mut crate::game::Game, b: WallbreakBreakableId,
     { let bl = crate::edge_look::break_like(g, b); crate::edge_look::edge_look_opened(g, &bl, &fresh, cause.as_str(), dir, quiet); crate::wallskin::wall_skin_opened(g, &bl); }
     if !quiet && (cause == LevelChangeCause::Fire || cause == LevelChangeCause::Collapse) { crate::floormess::mess_opened(g, [x0, z0, x1, z1]); }
     let walkable = !opened.is_empty(); let n_opened = opened.len();
-    let c = WallBreakNoteC { kind, cause, id: b_id, name: None, pos, rect: [x0, z0, x1, z1], opened, walkable, sight: true, dead, who };
+    let c = WallBreakNoteC { kind, cause, id: b_id, pos, rect: [x0, z0, x1, z1], opened, walkable, who };
     let row = wall_break_note(g, &c);
     let line = { let r = &g.tab.wallbreak_breakable[b]; format!("{} {} {} #{} cells {} ({}/{}) nav+{}{}", js::to_fixed(g.time, 2), kind.as_str(), cause.as_str(), b_id, fresh.len(), r.n_open, r.open.len(), n_opened, if dead { " DEAD" } else { "" }) };
     g.m.wallbreak.wall_log.push(line);
@@ -599,7 +592,7 @@ fn tell(g: &mut Game, who: ChangeListener, row: &LevelChange) {
 /// Files a row in the feed: serial and time stamped here, the subscriber told. (WallBreak.note)
 pub fn wall_break_note(g: &mut crate::game::Game, c_2: &crate::wallbreak::WallBreakNoteC) -> crate::wallbreak::LevelChange {
     g.destr.walls.serial += 1.0;
-    let row = LevelChange { serial: g.destr.walls.serial, t: g.time, kind: c_2.kind, cause: c_2.cause, id: c_2.id, name: c_2.name.clone(), pos: c_2.pos, rect: c_2.rect, opened: c_2.opened.clone(), walkable: c_2.walkable, sight: c_2.sight, dead: c_2.dead, who: c_2.who };
+    let row = LevelChange { serial: g.destr.walls.serial, t: g.time, kind: c_2.kind, cause: c_2.cause, id: c_2.id, pos: c_2.pos, rect: c_2.rect, opened: c_2.opened.clone(), walkable: c_2.walkable, who: c_2.who };
     let max = g.k.walls.max_changes;
     let w = &mut *g.destr.walls;
     w.changes.push(row.clone());

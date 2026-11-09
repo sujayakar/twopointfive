@@ -205,8 +205,7 @@ fn a_guard_who_hears_a_shot_behind_a_shut_door_turns_to_it_and_goes() {
     }
 }
 
-/// Every scene of this file as a level file under `target/scenes/`, for the compare with the TypeScript start (`tools/blitz/start.sh <file>`),
-/// and each read back as the level it was written from.
+/// Every scene of this file as a level file under `target/scenes/`, and each read back as the level it was written from.
 #[test]
 fn the_scenes_are_level_files() {
     let dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("target/scenes");

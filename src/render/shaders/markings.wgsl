@@ -331,7 +331,7 @@ fn markPatternAtMirror(mref: u32, li: Light, Po: vec3f, N: vec3f, V: vec3f, alph
   let R = reflect(-V, N);                                                  // the receiver's mirror direction
   let dn = dot(R, n);
   if (dn > -1e-3) { return vec3f(1.0); }
-  let s = dot(li.pos - n * 0.07 - Po, n) / dn;                             // (game.ts stands the light 7 cm proud of the face)
+  let s = dot(li.pos - n * 0.07 - Po, n) / dn;                             // (rust/game_rules/src/game stands the light 7 cm proud of the face)
   if (s <= 0.0) { return vec3f(1.0); }
   let X = Po + R * s;
   let g = boxGeo[bi]; let q = boxRot(bi); let qi = vec4f(-q.xyz, q.w);

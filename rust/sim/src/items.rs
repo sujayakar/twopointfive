@@ -35,7 +35,6 @@ const _: () = assert!(CAP % 4 == 0);
 
 // a thing's truths (`flags`): lying at rest · its fuse has run (another rule's: carried here) · in a hand, placed by whoever carries it
 pub const F_SETTLED: u32 = 1;
-pub const F_FIRED: u32 = 2;
 pub const F_CARRIED: u32 = 4;
 // the kinds this step tells apart (throwables.ts ITEM_KINDS, by their place there): what share of a bounce's momentum the furniture gets
 pub const K_SMOKE: u32 = 0;
@@ -182,20 +181,6 @@ pub fn addr(table: u32) -> usize {
     match table {
         0 => par().as_ptr() as usize,
         1 => evs().as_ptr() as usize,
-        _ => 0,
-    }
-}
-/// 0 = rows · 1 = the hand-over's length · 2 = events the list holds · 3 = doubles an event · 4 = roofs a walk is handed · 13 = the part's length in bytes · 100 + k = where
-/// column k of the part starts (COLS)
-pub fn cap(table: u32) -> usize {
-    match table {
-        0 => CAP,
-        1 => NPAR,
-        2 => MAX_EVENTS,
-        3 => EV,
-        4 => MAX_ROOFS,
-        13 => size_of::<Items>(),
-        k if k >= 100 && ((k - 100) as usize) < COLS.len() => COLS[(k - 100) as usize],
         _ => 0,
     }
 }

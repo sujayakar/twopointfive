@@ -1,9 +1,8 @@
-//! The types of `autopilot`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `autopilot`.
 #![allow(unused_imports)]
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: AutoPick, src/game/autopilot.ts:76)
 #[derive(Clone, Debug)]
 pub struct AutoPick {
     pub id: Option<String>,
@@ -13,25 +12,22 @@ pub struct AutoPick {
     pub t: crate::orders::OrderTarget,
     pub kept: Option<bool>,
 }
-impl AutoPick {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
+impl Default for AutoPick {
+    fn default() -> Self {
         AutoPick {
             id: None,
             men: None,
             word: false,
             why: crate::autopilot::AutoPickWhy::Set,
-            t: crate::orders::OrderTarget::Floor(crate::orders::OrderTargetFloor::zeroed()),
+            t: crate::orders::OrderTarget::Floor(crate::orders::OrderTargetFloor::default()),
             kept: None,
         }
     }
 }
-impl Default for AutoPick { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum AutoPickWhy {
-    Set,
+    #[default] Set,
     Blow,
     Contact,
     Pending,
@@ -42,115 +38,13 @@ pub enum AutoPickWhy {
     Known,
     Word,
 }
-impl AutoPickWhy {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            AutoPickWhy::Set => "set",
-            AutoPickWhy::Blow => "blow",
-            AutoPickWhy::Contact => "contact",
-            AutoPickWhy::Pending => "pending",
-            AutoPickWhy::Unknown => "unknown",
-            AutoPickWhy::Shut => "shut",
-            AutoPickWhy::First => "first",
-            AutoPickWhy::Silent => "silent",
-            AutoPickWhy::Known => "known",
-            AutoPickWhy::Word => "word",
-        }
-    }
-}
 
-/// (TypeScript: a union)
-#[derive(Clone, Copy, Debug)]
-pub enum DoorTarget {
-    Arm0,
-    Door(crate::autopilot::DoorTargetDoor),
-    Arm2,
-    Arm3,
-}
-
-/// (TypeScript: inline at src/game/autopilot.ts:84 contactBehind(t), src/game/autopilot.ts:84 contactBehind(t))
-#[derive(Clone, Copy, Debug)]
-pub struct DoorTargetDoor {
-    pub at: V3,
-    pub door: DoorId,
-    pub side: f64,
-}
-impl DoorTargetDoor {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DoorTargetDoor {
-            at: [0.0; 3],
-            door: DoorId(0),
-            side: 0.0,
-        }
-    }
-}
-impl Default for DoorTargetDoor { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/autopilot.ts:93 autoEntries ->, src/game/autopilot.ts:93)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct AutoEntries {
     pub ids: Vec<String>,
     pub why: crate::autopilot::AutoPickWhy,
     pub kept: Option<bool>,
 }
-impl AutoEntries {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        AutoEntries {
-            ids: Vec::new(),
-            why: crate::autopilot::AutoPickWhy::Set,
-            kept: None,
-        }
-    }
-}
-impl Default for AutoEntries { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum AutoEntriesWhy {
-    Set,
-    Blow,
-    Contact,
-    Pending,
-    Unknown,
-    Shut,
-    First,
-    Silent,
-    Known,
-    Word,
-}
-impl AutoEntriesWhy {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            AutoEntriesWhy::Set => "set",
-            AutoEntriesWhy::Blow => "blow",
-            AutoEntriesWhy::Contact => "contact",
-            AutoEntriesWhy::Pending => "pending",
-            AutoEntriesWhy::Unknown => "unknown",
-            AutoEntriesWhy::Shut => "shut",
-            AutoEntriesWhy::First => "first",
-            AutoEntriesWhy::Silent => "silent",
-            AutoEntriesWhy::Known => "known",
-            AutoEntriesWhy::Word => "word",
-        }
-    }
-}
-
-/// (TypeScript: inline at src/game/autopilot.ts:152 showSecsOf(row), src/game/autopilot.ts:152)
-#[derive(Clone, Copy, Debug)]
-pub struct ShowSecsOfRow {
-    pub auto: Option<bool>,
-}
-impl ShowSecsOfRow {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ShowSecsOfRow {
-            auto: None,
-        }
-    }
-}
-impl Default for ShowSecsOfRow { fn default() -> Self { Self::zeroed() } }
 
 /// the counters this module keeps for the checks
 #[derive(Clone, Debug, Default)]

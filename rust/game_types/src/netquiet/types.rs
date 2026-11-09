@@ -1,12 +1,11 @@
-//! The types of `netquiet`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `netquiet`.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
 pub enum LineKind {
-    Body,
+    #[default] Body,
     Name,
     Last,
     Why,
@@ -26,8 +25,7 @@ impl LineKind {
     }
 }
 
-/// (TypeScript: Mind, src/game/netquiet.ts:122)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct Mind {
     pub quiet: f64,
     pub asked: JsSet<crate::Num>,
@@ -62,256 +60,35 @@ pub struct Mind {
     pub look: Option<V3>,
     pub low: bool,
 }
-impl Mind {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Mind {
-            quiet: 0.0,
-            asked: JsSet::new(),
-            known: JsSet::new(),
-            paid: JsMap::new(),
-            say: 0.0,
-            say_t: 0.0,
-            say_name: String::new(),
-            bark: 0.0,
-            last_kind: 0.0,
-            body_t: 0.0,
-            roused: 0.0,
-            heard_t: 0.0,
-            cs: 0.0,
-            cl: 0.0,
-            fx: 0.0,
-            fz: 0.0,
-            whip_at: None,
-            whip_in: 0.0,
-            whip_t: 0.0,
-            whip_held: 0.0,
-            last: 0.0,
-            t: 0.0,
-            mate_t: 0.0,
-            news: 0.0,
-            news_t: 0.0,
-            eye: 0.0,
-            eye_half: 0.0,
-            spot: None,
-            yaw: 0.0,
-            arc: 0.0,
-            look: None,
-            low: false,
-        }
-    }
-}
-impl Default for Mind { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: NetQuietSnap, src/game/netquiet.ts:495)
-#[derive(Clone, Debug)]
-pub struct NetQuietSnap {
-    pub men: Vec<Option<Vec<f64>>>,
-    pub pts: Vec<Option<Vec<f64>>>,
-    pub names: Vec<Option<String>>,
-    pub asked: Vec<Option<Vec<f64>>>,
-    pub known: Option<Vec<Option<Vec<f64>>>>,
-    pub paid: Option<Vec<Option<Vec<f64>>>>,
-}
-impl NetQuietSnap {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        NetQuietSnap {
-            men: Vec::new(),
-            pts: Vec::new(),
-            names: Vec::new(),
-            asked: Vec::new(),
-            known: None,
-            paid: None,
-        }
-    }
-}
-impl Default for NetQuietSnap { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/netquiet.ts:89 NETQUIET_LOG, src/game/netquiet.ts:89)
-#[derive(Clone, Debug)]
-pub struct NetquietModNETQUIETLOGItem {
-    pub id: f64,
-    pub t: f64,
-    pub kind: crate::netquiet::LineKind,
-    pub text: String,
-    pub radio: bool,
-}
-impl NetquietModNETQUIETLOGItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        NetquietModNETQUIETLOGItem {
-            id: 0.0,
-            t: 0.0,
-            kind: crate::netquiet::LineKind::Body,
-            text: String::new(),
-            radio: false,
-        }
-    }
-}
-impl Default for NetquietModNETQUIETLOGItem { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/netquiet.ts:93 NETQUIET_QA, src/game/netquiet.ts:93)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct NETQUIETQA {
     pub broken: bool,
 }
-impl NETQUIETQA {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        NETQUIETQA {
-            broken: false,
-        }
-    }
-}
-impl Default for NETQUIETQA { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/netquiet.ts:262 arcAt ->, src/game/netquiet.ts:262)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct ArcAt {
     pub seen: f64,
     pub arc: f64,
     pub yaw: f64,
     pub near: f64,
 }
-impl ArcAt {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ArcAt {
-            seen: 0.0,
-            arc: 0.0,
-            yaw: 0.0,
-            near: 0.0,
-        }
-    }
-}
-impl Default for ArcAt { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/netquiet.ts:456 netQuietPose ->, src/game/netquiet.ts:456)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct NetQuietPose {
     pub aim: Option<V3>,
     pub crouch: f64,
 }
-impl NetQuietPose {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        NetQuietPose {
-            aim: None,
-            crouch: 0.0,
-        }
-    }
-}
-impl Default for NetQuietPose { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/netquiet.ts:469 netQuietSpot ->, src/game/netquiet.ts:469)
-#[derive(Clone, Copy, Debug)]
-pub struct NetQuietSpot {
-    pub to: Option<V3>,
-    pub arc: f64,
-    pub seen: f64,
-}
-impl NetQuietSpot {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        NetQuietSpot {
-            to: None,
-            arc: 0.0,
-            seen: 0.0,
-        }
-    }
-}
-impl Default for NetQuietSpot { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at quiet netQuietOf ->, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1597)
-#[derive(Clone, Debug)]
-pub struct NetQuietOf {
-    pub quiet: f64,
-    pub asked: JsSet<crate::Num>,
-    pub known: JsSet<crate::Num>,
-    pub paid: JsMap<crate::Num, f64>,
-    pub say: f64,
-    pub say_t: f64,
-    pub say_name: String,
-    pub bark: f64,
-    pub last_kind: f64,
-    pub body_t: f64,
-    pub roused: f64,
-    pub heard_t: f64,
-    pub cs: f64,
-    pub cl: f64,
-    pub fx: f64,
-    pub fz: f64,
-    pub whip_at: Option<V3>,
-    pub whip_in: f64,
-    pub whip_t: f64,
-    pub whip_held: f64,
-    pub last: f64,
-    pub t: f64,
-    pub mate_t: f64,
-    pub news: f64,
-    pub news_t: f64,
-    pub eye: f64,
-    pub eye_half: f64,
-    pub spot: Option<V3>,
-    pub yaw: f64,
-    pub arc: f64,
-    pub look: Option<V3>,
-    pub low: bool,
-}
-impl NetQuietOf {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        NetQuietOf {
-            quiet: 0.0,
-            asked: JsSet::new(),
-            known: JsSet::new(),
-            paid: JsMap::new(),
-            say: 0.0,
-            say_t: 0.0,
-            say_name: String::new(),
-            bark: 0.0,
-            last_kind: 0.0,
-            body_t: 0.0,
-            roused: 0.0,
-            heard_t: 0.0,
-            cs: 0.0,
-            cl: 0.0,
-            fx: 0.0,
-            fz: 0.0,
-            whip_at: None,
-            whip_in: 0.0,
-            whip_t: 0.0,
-            whip_held: 0.0,
-            last: 0.0,
-            t: 0.0,
-            mate_t: 0.0,
-            news: 0.0,
-            news_t: 0.0,
-            eye: 0.0,
-            eye_half: 0.0,
-            spot: None,
-            yaw: 0.0,
-            arc: 0.0,
-            look: None,
-            low: false,
-        }
-    }
-}
-impl Default for NetQuietOf { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct NetquietMod {
-    /// (src/game/netquiet.ts:89 NETQUIET_LOG)
-    pub netquiet_log: Vec<crate::netquiet::NetquietModNETQUIETLOGItem>,
     /// (src/game/netquiet.ts:125 stateOf)
     pub state_of: JsMap<GuardId, crate::netquiet::Mind>,
 }
 impl NetquietMod {
     pub fn blank() -> Self {
         NetquietMod {
-            netquiet_log: Vec::new(),
             state_of: JsMap::new(),
         }
     }
@@ -367,5 +144,3 @@ pub const LOW: f64 = 3.0;
 /// (src/game/netquiet.ts:115 DONE)
 pub const DONE: f64 = 4.0;
 
-/// (src/game/netquiet.ts:484 VISIT)
-pub const VISIT: &str = "twopointsix.netquiet.visit";

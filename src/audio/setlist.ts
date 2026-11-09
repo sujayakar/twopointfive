@@ -2,14 +2,13 @@
 // (pieces.ts) written down for it here — two: the one that opens it and the one that follows — and music.ts plays that list in its order instead of dealing from a
 // shuffled bag: the first piece opens the level when play begins (off the menu, or on a page that loads straight in), the second takes over once a piece has had
 // MUSIC.minutes at a calm phrase end, and round again. A retry keeps the music it has. The theme is on no list: it is the main menu's alone.
-//   MUSIC.byLevel  the switch (pieces.ts): ON in the page (`?shuffle` = the shuffled bag, as it was), OFF in the module and on the frozen stand (TPS_MUSIC=1 raises it with
-//                  the pieces). The listener's ears only: no rule reads it.
+//   MUSIC.byLevel  the switch (pieces.ts): ON in the page, OFF in the module.
+//                  The listener's ears only: no rule reads it.
 //   the key        a level's file name without `.json` ('office' = the bundled level), and before it `<level>:<kind>` for a mission kind that wants its own on that level
 //                  (the office holds four kinds of mission: the solo night's slow lean is not a rescue's clock).
-//   a new level    is a row here: tools/qa/music-check.ts ('every level') is red on a mission with no row, a row for no level, a row that is not two pieces, the theme on one.
+//   a new level    is a row here.
 // A level typed by hand that has no row (a test yard) plays SETLIST_ELSE. Names, not indices: PIECE_NAMES is read when a list is asked for, never at module load.
 import { PIECE_NAMES } from './pieces';
-import { specOfQuery } from '../scene/scenarioList';
 
 /** level (or `level:kind`) → its pieces in playing order, by name (pieces.ts PIECE_NAMES). Each row's comment is why. */
 export const SETLISTS: Record<string, readonly string[]> = {
@@ -58,11 +57,6 @@ export function setlistLevel(levelFile: string | null | undefined): string {
   if (!levelFile || !/^[\w.-]+\.json$/.test(levelFile) || /^office(-[\w.-]+)?\.json$/.test(levelFile)) return 'office';
   return levelFile.replace(/\.json$/, '');
 }
-/** the key's two halves as a query string names them: the level (setlistLevel of its `levelFile`) and the mission's kind */
-export function setlistKey(search: string | URLSearchParams): { level: string; kind: string | null } {
-  const q = typeof search === 'string' ? new URLSearchParams(search) : search;
-  return { level: setlistLevel(q.get('levelFile')), kind: specOfQuery(q)?.kind ?? null };
-}
 /** the row a level and a mission kind play, the key it is under, and whether it is one written for them (false = SETLIST_ELSE, under the level's name) */
 export function setlistNames(level: string, kind: string | null = null): { key: string; names: readonly string[]; own: boolean } {
   for (const key of kind ? [`${level}:${kind}`, level] : [level]) if (Object.hasOwn(SETLISTS, key)) return { key, names: SETLISTS[key], own: true };   // (hasOwn: the level's name comes off a URL)
@@ -72,5 +66,3 @@ export function setlistNames(level: string, kind: string | null = null): { key: 
 export function setlistOf(level: string, kind: string | null = null): number[] {
   return setlistNames(level, kind).names.map(n => PIECE_NAMES.indexOf(n)).filter(i => i > 0);
 }
-/** the list of the level a page's query string boots (main.ts says it again from the running game at every new mission: a scenario quit in the page is another kind) */
-export function setlistOfQuery(search: string | URLSearchParams): number[] { const k = setlistKey(search); return setlistOf(k.level, k.kind); }

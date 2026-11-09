@@ -130,10 +130,8 @@ pub fn ragdoll_is_pinned(g: &crate::game::Game, id: RagdollId, i: f64) -> bool {
 pub fn ragdoll_clear_pins(g: &mut crate::game::Game, id: RagdollId) { rd_clear_pins(&mut g.tab.ragdoll[id]) }
 /// (Ragdoll.ride)
 pub fn ragdoll_ride(g: &mut crate::game::Game, id: RagdollId, about: V3, dx: f64, dz: f64, dyaw: f64) { rd_ride(&mut g.tab.ragdoll[id], about, dx, dz, dyaw) }
-/// (Ragdoll.settleAt)
-pub fn ragdoll_settle_at(g: &mut crate::game::Game, id: RagdollId, xs: &[f64], rot: Option<&[f64]>, own: Option<bool>) { rd_settle_at(&mut g.tab.ragdoll[id], xs, rot, own) }
 /// (Ragdoll.takeImpact)
-#[doc(hidden)] pub fn ragdoll_take_impact__body(g: &mut crate::game::Game, id: RagdollId, min: Option<f64>, gap: Option<f64>) -> f64 { rd_take_impact(&mut g.tab.ragdoll[id], min, gap) }
+pub fn ragdoll_take_impact(g: &mut crate::game::Game, id: RagdollId, min: Option<f64>, gap: Option<f64>) -> f64 { rd_take_impact(&mut g.tab.ragdoll[id], min, gap) }
 /// Distance between two particles.   (ragdoll.ts Ragdoll.dist)
 fn rd_dist(this: &crate::ragdoll::Ragdoll, i: f64, j: f64) -> f64 {
     let (i, j) = (i as usize, j as usize);
@@ -253,50 +251,6 @@ fn rd_ride_by(this: &mut crate::ragdoll::Ragdoll, k: f64) {
     }
     this.ride_v[0] += sx;
     this.ride_v[1] += sz;
-}
-
-/// Checkpoint restore: lay the body straight into a settled pose, at rest, unpinned, asleep.   (ragdoll.ts Ragdoll.settleAt)
-fn rd_settle_at(this: &mut crate::ragdoll::Ragdoll, xs: &[f64], rot: Option<&[f64]>, own: Option<bool>) {
-    let own = own.unwrap_or(false);
-    for i in 0..N * 3 {
-        // (a short list reads undefined → NaN in the TypeScript: the particle stays)
-        let v = xs.get(i).copied().unwrap_or(m::NAN);
-        if v.is_finite() { this.x[i] = v; }
-    }
-    for i in 0..N { this.x[i * 3 + 1] = m::max(this.x[i * 3 + 1], RADIUS[i]); }
-    if let Some(rot) = rot {
-        let at = |k: usize| rot.get(k).copied().unwrap_or(m::NAN);
-        let (r0, r1, r2, r3) = (at(0), at(1), at(2), at(3));
-        if (r0 + r1 + r2 + r3).is_finite() {
-            let l = js::or(m::hyp4(r0, r1, r2, r3), 1.0);
-            this.rot[0] = r0 / l; this.rot[1] = r1 / l; this.rot[2] = r2 / l; this.rot[3] = r3 / l;
-        }
-    }
-    rd_clear_pins(this);
-    if own { this.snap.copy_from_slice(&this.x); }   // (the file's particles, kept over the fit)
-    for _ in 0..8 { rd_shape_match(this); }
-    if own {   // the rest shape = the file's trunk about its own centroid, turned back by the fitted rotation
-        let (mut cx, mut cy, mut cz) = (0.0, 0.0, 0.0);
-        for &i in TRUNK.iter() {
-            let ms = MASS[i];
-            cx += this.snap[i * 3] * ms; cy += this.snap[i * 3 + 1] * ms; cz += this.snap[i * 3 + 2] * ms;
-        }
-        cx /= this.trunk_mass; cy /= this.trunk_mass; cz /= this.trunk_mass;
-        for (k, &i) in TRUNK.iter().enumerate() {
-            let s = &this.snap;
-            let (dx, dy, dz) = (s[i * 3] - cx, s[i * 3 + 1] - cy, s[i * 3 + 2] - cz);
-            let rr = &this.r;
-            this.r0[k * 3] = rr[0] * dx + rr[3] * dy + rr[6] * dz;
-            this.r0[k * 3 + 1] = rr[1] * dx + rr[4] * dy + rr[7] * dz;
-            this.r0[k * 3 + 2] = rr[2] * dx + rr[5] * dy + rr[8] * dz;
-        }
-        this.x.copy_from_slice(&this.snap);
-        this.centre[0] = cx; this.centre[1] = cy; this.centre[2] = cz;
-    }
-    for i in 0..N * 3 { this.px[i] = this.x[i]; }
-    this.prev_centre = this.centre;
-    this.snap.copy_from_slice(&this.x);
-    this.snap_t = 0.0; this.awake = 0.0; this.acc = 0.0; this.strain = 0.0; this.impact_v = 0.0; this.sleeping = true;
 }
 
 /// Hardest trunk / head landing worth hearing since the last one reported; 0 otherwise.   (ragdoll.ts Ragdoll.takeImpact)
@@ -762,17 +716,6 @@ fn quat_mat(q: Quat, out: &mut [f64]) {
     out[0] = 1.0 - yy - zz; out[1] = xy - wz; out[2] = xz + wy;
     out[3] = xy + wz; out[4] = 1.0 - xx - zz; out[5] = yz - wx;
     out[6] = xz - wy; out[7] = yz + wx; out[8] = 1.0 - xx - yy;
-}
-
-
-#[doc(hidden)] pub fn ragdoll_take_impact(g: &mut crate::game::Game, id: RagdollId, min: Option<f64>, gap: Option<f64>) -> f64 {
-    use crate::io::Io;
-    if g.taps & (1u64 << 11) == 0 { return ragdoll_take_impact__body(g, id, min, gap); }
-    let mut o = crate::io::W::new(); id.w(&mut o); min.w(&mut o); gap.w(&mut o);
-    let r = ragdoll_take_impact__body(g, id, min, gap);
-    let mut a = crate::io::W::new(); r.w(&mut a);
-    crate::out_events::push_tap(g, 11, &o.b, &a.b);
-    r
 }
 
 #[cfg(test)]

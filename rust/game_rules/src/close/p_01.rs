@@ -14,15 +14,6 @@ fn fresh_state() -> crate::close::State {
 
 /// The log of what was taken, the debugger's. (close.ts note)
 pub fn note(g: &mut crate::game::Game, gd: GuardId, what: crate::close::NoteWhat, kind: Option<crate::close::CloseKind>, bearing: Option<f64>, dist: Option<f64>) {
-    let what = match what {
-        crate::close::NoteWhat::Take => crate::close::CloseModCLOSELOGItemWhat::Take,
-        crate::close::NoteWhat::Grab => crate::close::CloseModCLOSELOGItemWhat::Grab,
-        crate::close::NoteWhat::Seat => crate::close::CloseModCLOSELOGItemWhat::Seat,
-        crate::close::NoteWhat::Unseat => crate::close::CloseModCLOSELOGItemWhat::Unseat,
-    };
-    let item = crate::close::CloseModCLOSELOGItem { t: g.time, who: g.gd[gd].callsign.clone(), what, kind, bearing: bearing.unwrap_or(0.0), dist: dist.unwrap_or(0.0) };
-    g.m.close.close_log.push(item);
-    if g.m.close.close_log.len() > 200 { g.m.close.close_log.remove(0); }
 }
 
 /// The men sat down, made if none yet: the table itself. (close.ts seatedOf)
@@ -122,7 +113,7 @@ pub fn close_at(g: &mut crate::game::Game, gd: GuardId, p: &[f64]) -> crate::clo
     let bearing = v3::wrap_angle(m::atan2(dx, dz) - g.ch[c].body_yaw);
     let wins = close_windows(g, gd);
     let win = window_at(&wins, bearing);
-    let mut o = crate::close::CloseOffer { guard: gd, win, dist, bearing, in_reach: false, clear: false, grab: false, strike: false, can: false, why: String::new() };
+    let mut o = crate::close::CloseOffer { guard: gd, win, dist, in_reach: false, clear: false, grab: false, strike: false, can: false, why: String::new() };
     let cv = g.gd[gd].civ;
     let him: String = match cv { Some(cv) => g.cv[cv].her.clone(), None => String::from("him") };
     let win = match win {
@@ -212,7 +203,7 @@ pub fn close_rows(g: &mut crate::game::Game, gd: GuardId, p: &[f64], busy: bool,
     if far >= 2.4 {
         if !busy && far < crate::stalk::stalk_begin_m(g) && crate::stalk::stalk_could(g, gd) {
             let line2 = sneak_hint(g);
-            let it = Interactable { kind: InteractableKind::Guard, pos: v3::add(gp, [0.0, 1.35, 0.0]), line1: String::from("guard"), line2, in_reach: false, off: false, guard: Some(gd), ..Interactable::zeroed() };
+            let it = Interactable { kind: InteractableKind::Guard, pos: v3::add(gp, [0.0, 1.35, 0.0]), line1: String::from("guard"), line2, in_reach: false, off: false, guard: Some(gd), ..Interactable::default() };
             offer(g, it, Vec::new());
         }
         return;
@@ -223,7 +214,7 @@ pub fn close_rows(g: &mut crate::game::Game, gd: GuardId, p: &[f64], busy: bool,
     let alert = g.gd[gd].state == crate::game::GuardState::Alert;
     let where_ = match o.win { None => "", Some(w) => match w.kind { K::Front => " · facing you", K::Side => " · side on", _ => "" } };
     let line1 = format!("guard{}{}", if alert { " · alert" } else if seated { " · seated" } else { "" }, if alert { "" } else { where_ });
-    let mut it = Interactable { kind: InteractableKind::Guard, pos: v3::add(gp, [0.0, if seated { 1.05 } else { 1.35 }, 0.0]), line1, line2: o.why.clone(), in_reach: o.can, off: false, guard: Some(gd), close: Some(kind), ..Interactable::zeroed() };
+    let mut it = Interactable { kind: InteractableKind::Guard, pos: v3::add(gp, [0.0, if seated { 1.05 } else { 1.35 }, 0.0]), line1, line2: o.why.clone(), in_reach: o.can, off: false, guard: Some(gd), close: Some(kind), ..Interactable::default() };
     let sneak = !busy && crate::stalk::stalk_could(g, gd);
     if sneak && !o.can { it.line2 = sneak_hint(g); }
     let mut verbs: Vec<Interactable> = Vec::new();
@@ -477,7 +468,7 @@ pub fn close_station(g: &crate::game::Game, gd: GuardId, kind: crate::close::Clo
     let a = g.ch[c].body_yaw + bearing;
     let r = if kind == crate::close::CloseKind::Seat { g.k.close.seat_dist } else { g.k.close.strike_dist };
     let pos: V3 = [gp[0] + m::sin(a) * r, 0.0, gp[2] + m::cos(a) * r];
-    crate::close::CloseStation { pos, yaw: m::atan2(gp[0] - pos[0], gp[2] - pos[2]) }
+    crate::close::CloseStation { pos }
 }
 
 /// The fall's hearing level for a way in, and his shout if he was onto Sam. (close.ts closeNoise)
@@ -589,9 +580,9 @@ mod tests {
     #[test]
     fn no_offer_is_from_behind() {
         assert_eq!(close_kind_of(None), K::Behind);
-        let o = crate::close::CloseOffer { win: Some(arc(I::Left, K::Side, 1.0, 0.5, 1.0, false, true)), ..crate::close::CloseOffer::zeroed() };
+        let o = crate::close::CloseOffer { win: Some(arc(I::Left, K::Side, 1.0, 0.5, 1.0, false, true)), ..crate::close::CloseOffer::default() };
         assert_eq!(close_kind_of(Some(&o)), K::Side);
-        assert_eq!(close_kind_of(Some(&crate::close::CloseOffer::zeroed())), K::Behind);
+        assert_eq!(close_kind_of(Some(&crate::close::CloseOffer::default())), K::Behind);
     }
 
     const BITS_ARCS: [(u64, u64, u64); 4] = [

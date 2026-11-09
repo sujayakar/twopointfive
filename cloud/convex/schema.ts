@@ -118,7 +118,7 @@ export default defineSchema({
     runner: v.string(),
     /** the setup record as the host sent it: `{ scenario, seed, knobs, seats }` (the server is handed it with `game`, `build` and `seatKeys` added) */
     setup: v.any(),
-    /** a seat proves itself to the server with its key; the server proves its heartbeats with `secret`. Neither is in any public answer but a seat's own key */
+    /** a seat's holder proves himself to the server with its key (another holder, another key); the server proves its heartbeats with `secret`. Neither is in any public answer but a seat's own key */
     seatKeys: v.array(v.string()),
     secret: v.string(),
     /** 'starting' (a server was asked for) · 'waiting' · 'playing' (the server's own words) · 'ended' · 'failed'. The first three are LIVE and count against the cap */
@@ -130,7 +130,7 @@ export default defineSchema({
     /** where its server answers (ws:// or wss://) and the runner's own id for it: '' until the runner has started it */
     address: v.string(),
     server: v.string(),
-    /** who holds which seat: a pid, '' = free */
+    /** who holds which seat: a pid, '' = nobody yet (games.ts `openSeat` says when one is another's) */
     holders: v.array(v.string()),
     /** the last heartbeat's words: which seats are connected, the tick, and at its end the outcome */
     connected: v.array(v.boolean()),
@@ -140,6 +140,9 @@ export default defineSchema({
     createdAt: v.number(),
     heardAt: v.number(),
     seatedAt: v.number(),
+    /** …and for each seat, when its holder was last known to be on his way: given it, come through the door again, or told its server is up (a game made
+     *  before seats were let go has none) */
+    heldAt: v.optional(v.array(v.number())),
     endedAt: v.optional(v.number()),
   })
     .index("by_code", ["code"])

@@ -114,7 +114,7 @@ pub fn seg_at(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>, g_2: crate::ri
     let mid = v3::mad(f.o, dir, (s.l0 + s.l1) / 2.0);
     let len = m::max(0.001, (s.l1 - s.l0) / 2.0);
     if let Some(meta) = meta {
-        meta.push(RigNodeMeta { path: String::from(path.unwrap_or("")), label: String::from(label.unwrap_or("")), depth: depth.unwrap_or(0.0), parent: g_2, frame: Frame { o: mid, ..f }, box_start: out.len() as f64, box_count: 1.0 });
+        meta.push(RigNodeMeta {  });
     }
     let lit = emissive[0] + emissive[1] + emissive[2] > 0.0;
     let yaw = m::atan2(dir[0], dir[2]);
@@ -189,9 +189,8 @@ pub fn goggles_boxes(g: &mut crate::game::Game, c_2: CharId, nv: bool, out: &mut
             cl = Frame { o: v3::mad(v3::lerp3(a.o, b.o, k), fwd, crate::rig_props::NV_SWING * m::sin(m::PI * k)), x, y, z };
         }
     }
-    let path = if nv { "goggles.on" } else { "goggles.off" };
     if let Some(meta) = meta.as_deref_mut() {
-        meta.push(RigNodeMeta { path: String::from(path), label: String::from(if nv { "goggles (down, NV on)" } else { "goggles (up, NV off)" }), depth: 1.0, parent: head_f, frame: cl, box_start: out.len() as f64, box_count: 6.0 });
+        meta.push(RigNodeMeta {  });
     }
     let owner = owner_of(g, c_2);
     g.m.rig_props.cur_owner = owner;
@@ -202,7 +201,7 @@ pub fn goggles_boxes(g: &mut crate::game::Game, c_2: CharId, nv: bool, out: &mut
     let rot_h = v3::quat::from_basis(hs.x, hs.y, hs.z);
     let yaw_h = m::atan2(hs.z[0], hs.z[2]);
     if let Some(meta) = meta.as_deref_mut() {
-        meta.push(RigNodeMeta { path: alloc::format!("{}.bridge", path), label: String::from("bridge + mount arm"), depth: 2.0, parent: cl, frame: hs, box_start: out.len() as f64, box_count: 2.0 });
+        meta.push(RigNodeMeta {  });
     }
     for (part_at, part_half) in [(t.bridge.at, t.bridge.half), (t.arm.at, t.arm.half)] {
         let made = goggle_part(g, at(hs, part_at), v3::copy(part_half), yaw_h, col.goggles_housing, crate::rig_props::PROP_FLAGS, owner, rot_h);
@@ -212,7 +211,7 @@ pub fn goggles_boxes(g: &mut crate::game::Game, c_2: CharId, nv: bool, out: &mut
     let rot_l = v3::quat::from_basis(ln.x, ln.y, ln.z);
     let yaw_l = m::atan2(ln.z[0], ln.z[2]);
     if let Some(meta) = meta.as_deref_mut() {
-        meta.push(RigNodeMeta { path: alloc::format!("{}.tubes", path), label: String::from("the two tubes"), depth: 2.0, parent: cl, frame: ln, box_start: out.len() as f64, box_count: 4.0 });
+        meta.push(RigNodeMeta {  });
     }
     for sx in [-t.side, t.side] {
         let tube = goggle_part(g, at(ln, [sx, t.down, (t.front - t.back) / 2.0]), [t.half, t.half, (t.front + t.back) / 2.0], yaw_l, col.goggles_housing, crate::rig_props::PROP_FLAGS, owner, rot_l);

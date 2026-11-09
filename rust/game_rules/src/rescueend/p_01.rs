@@ -90,7 +90,7 @@ pub fn rescue_end_rows(g: &mut crate::game::Game, p: V3, busy: bool, row: &mut d
             in_reach: can && !had,
             off: false,
             guard: Some(h),
-            ..crate::game::Interactable::zeroed()
+            ..crate::game::Interactable::default()
         };
         if had { offer(g, it, Vec::new()); continue; }
         let verbs = if can && !busy {

@@ -1,4 +1,4 @@
-// FOG OF WAR — the picture's half (game/fogofwar.ts has the rule; render/fogofwar.ts owns this pass). Dispatched ONLY while the switch is on: off = no pass,
+// FOG OF WAR — the picture's half (rust/game_rules/src/fogofwar has the rule; render/fogofwar.ts owns this pass). Dispatched ONLY while the switch is on: off = no pass,
 // no copy, and no other shader's text touched. Runs after the composite (+ the particles' splat, + GBAA) and before the resolve, IN PLACE on hdr: the host copies
 // hdr → a copy first, this reads the copy and stores hdr (the GBAA arrangement).
 //
@@ -6,12 +6,12 @@
 // own height, to the spot's (x, z) through the renderer's own trace grid (occludedTBoxes: every box a shadow ray meets — statics, door leaves, furniture, and
 // the things other men carry; glass panes are not in the grid, so sight passes them; characters' bodies are not asked, and the eye's own kit is skipped). In
 // plan, at eye height: the floor behind a desk is seen (he sees over it) and the floor behind a wall, a tall cabinet or a shut leaf is not — the Door Kickers
-// picture, on the statics and leaves the CPU's eye test (collision.ts segmentBlocked) walks for the men. The eye is handed in over the man's FEET at a nominal
-// height for his stance (game/fogofwar.ts FogEye.at), not at his animated head: the mask must not move with his stride.
+// picture, on the statics and leaves the CPU's eye test (rust/game_rules/src/scene_collision segment_blocked) walks for the men. The eye is handed in over the man's FEET at a nominal
+// height for his stance (rust/game_rules/src/fogofwar FogEye.at), not at his animated head: the mask must not move with his stride.
 // The ray stops a hand short of the spot: a wall's FACE is seen when the floor at its foot is (the spot is pushed off the face along its normal first), and a
 // top face above the eye — a wall's top, a tall cabinet's — when the line reaches within `topPad` of it (its own box stands in the way of anything nearer).
 // A pixel nobody sees keeps its radiance, pushed toward its own grey by `desat` and scaled by `dim`. The sky is left alone.
-// THE CONE (game/fogofwar.ts FOG.cone — hard's fog): an eye's wedge then has a SOFT edge in the picture — the dimming comes in across `soft.x ‥ soft.y` (the
+// THE CONE (rust/game_rules/src/fogofwar FOG.cone — hard's fog): an eye's wedge then has a SOFT edge in the picture — the dimming comes in across `soft.x ‥ soft.y` (the
 // cosines either side of the wedge's own) and outward over `soft.z` metres from the near field's rim — so the mask a turning man sweeps over the floor has no
 // hard line in it. All three 0 (every eye all round, or a plain fovDeg wedge) = seen or not, the answer as it always was.
 //
@@ -26,13 +26,13 @@
 //            walk is not taken. A box that does not answer proves nothing: the walk is taken as ever. The table only PROPOSES a box; the answer is the test's.
 //            So a pixel nobody sees costs a box test or two an eye where it cost a walk an eye, and no pixel's answer can differ. It also leaves alone what it does
 //            not change: a seen pixel and the sky are not stored back (hdr already holds them) and the copy is read only where it is needed.
-//   (`//#C ` / `//#CH ` lines + the count section: tools/qa/fog-pass-check.cjs's counting programs — rays, box tests and cells per pixel instead of the picture.)
+//   (`//#C ` / `//#CH ` lines + the count section: the counting programs — rays, box tests and cells per pixel instead of the picture.)
 struct FowU {
   eyes: array<vec4f, 7>,    // xyz = the eye, w = his character id (0 = no eye in this slot): the ray skips the boxes he carries himself (goggles at the eye, the gun)
   looks: array<vec4f, 7>,   // xy = where it looks in plan (x, z; unit), z = cos of the half field (≤ −1.5: all round), w = the near field's radius (m)
   cfg: vec4f,               // x = eyes, y = dim, z = desaturation, w = topPad (m)
   soft: vec4f,              // the cone's soft edges: x = cos(half field − half band), y = cos(half field + half band) (x > y; both 0 = a hard line), z = the near rim's band (m; 0 = hard) · w = the fog's own light (0 = off: the live frame, dimmed)
-  lit: vec4f,               // THE FOG LIT AS THE TEAM LAST KNEW IT (game/fogofwar.ts FOG.lit; read only under the fog's own light, soft.w > 0): x = gain on the remembered lamps' light, over cfg.y (0 = off: the one fixed light), y = the fill's level as displayed, z = lamps in fowLights, w = a lamp that would add less than this at the pixel (as displayed) is not traced, one under twice it is faded in
+  lit: vec4f,               // THE FOG LIT AS THE TEAM LAST KNEW IT (rust/game_rules/src/fogofwar FOG.lit; read only under the fog's own light, soft.w > 0): x = gain on the remembered lamps' light, over cfg.y (0 = off: the one fixed light), y = the fill's level as displayed, z = lamps in fowLights, w = a lamp that would add less than this at the pixel (as displayed) is not traced, one under twice it is faded in
   lit2: vec4f,              // x = how much of the fill a corner, the foot of a wall or the floor under a table loses (0 = no such rays), y = how far those rays reach (m) · z = 1: THE FULL PICTURE (FOG.full) — soft.w's light, as lit.y, is a fill added to the live frame dimmed, and no lamp of fowLights is read
 };
 @group(1) @binding(0) var fowSrc: texture_2d<f32>;                          // the composite as written (a copy: hdr itself is stored over)
@@ -44,11 +44,11 @@ struct FowU {
 
 const FOW_LIGHTS: u32 = 48u;                // render/fogofwar.ts FOG_LIGHTS (change both together)
 struct FowLights { l: array<Light, 48> };
-@group(1) @binding(8) var<uniform> fowLights: FowLights;                    // the level's own lamps as the team last knew them + the sun or moon (game/fogofwar.ts litBlock): never `lights`, the live frame's
+@group(1) @binding(8) var<uniform> fowLights: FowLights;                    // the level's own lamps as the team last knew them + the sun or moon (rust/game_rules/src/fogofwar litBlock): never `lights`, the live frame's
 
 const FOW_FACE_OFF: f32 = 0.06;   // the spot is taken this far off its surface along the normal (in plan), and the ray stops this short of it
 
-// ---- THE FOG'S SOFT EDGE (game/fogofwar.ts FOG.edge — the maintainer, 10-15: 'fog of war edges shouldn't be so sharp'; fogSight.cfg.w = the band in metres, 0 = the
+// ---- THE FOG'S SOFT EDGE (rust/game_rules/src/fogofwar FOG.edge — the maintainer, 10-15: 'fog of war edges shouldn't be so sharp'; fogSight.cfg.w = the band in metres, 0 = the
 // hard line as it was). THE BAND LIES ACROSS THE SIGHT LINE, half on each side: an eye gives a spot it sees 1, less within half a band of its sight edge, and a
 // spot it does not see 0, more within half a band of it — 0.5 on the line itself — and the team's answer is the most any eye gives, as it always was (so the line of a
 // stack of men is one man's line, and the cone's soft edge is untouched). NOTHING HIDDEN SHOWS: what the band brightens past the line is the fog's own picture (rule 4g: the live frame with every
@@ -62,8 +62,7 @@ const FOW_FACE_OFF: f32 = 0.06;   // the spot is taken this far off its surface 
 //   · of a spot it does NOT see, the first bearing that goes as far as the spot (fowFirstClear; less FOW_EDGE_SLANT × the way across, which is what a wall
 //     through the spot at a slant explains), and the same question of the step before it: past a thing that ends, not a wall that carries on.
 // The band is `cfg.w` × how sure the step is (FOW_EDGE_JLO ‥ JHI: no pop as a man walks) × how far behind the nearer thing the spot is, up to a band (the line
-// leaves a corner hard and widens behind it, as a shadow's edge does; a spot beside the thing is not dimmed). tools/qa/fog-probes.ts edgeReplica is this, in
-// plan, statement for statement, and holds its rules: CHANGE BOTH TOGETHER (the probe pins this text's hash).
+// leaves a corner hard and widens behind it, as a shadow's edge does; a spot beside the thing is not dimmed).
 const FOW_EDGE_BINS: i32 = 64;      // the most bearings searched a side
 const FOW_EDGE_JLO: f32 = 0.06;     // a nearer thing starts where 1 / range steps up by this share over the bearings beside it … (no band under it)
 const FOW_EDGE_JHI: f32 = 0.18;     // … the whole band from this share up
@@ -177,7 +176,7 @@ fn fowSeen(P: vec3f, N: vec3f) -> f32 {
 
 // ---- THE FOG LIT AS THE TEAM LAST KNEW IT (FOG.lit) — an unseen pixel's light is traced here from three things and nothing else: the paint under the pixel, the
 // level's own lamps in the state the team last saw each in (fowLights — the CPU's list; `lights`, the live frame's, is never read), and the boxes as handed to the
-// picture, which under the fog are the statics, the leaves and the loose things where the team last saw them (game/fogofwar.ts rules 4b, 4d). No radiance of the
+// picture, which under the fog are the statics, the leaves and the loose things where the team last saw them (rust/game_rules/src/fogofwar rules 4b, 4d). No radiance of the
 // live frame, no man's torch, no flash; and no man's shadow either: a box somebody carries is passed through (fowLitHit), and bodies are not boxes.
 /// occludedTBoxes (common.wgsl), its walk statement for statement, with two differences: no capsule cap, and EVERY box that has an owner is passed through. How far
 /// along the ray the first box met stands (near-first by cell, as there), −1 = clear.
@@ -246,7 +245,7 @@ fn fowLitOpen(Po: vec3f, N: vec3f) -> f32 {
   return 1.0 - fow.lit2.x * min(shut * 0.3, 1.0);
 }
 /// the unseen pixel under FOG.lit: the paint under the fill (`form` = the fixed light's own shape; shut out where fowLitOpen says) + under each remembered lamp that
-/// a ray from the spot reaches + the glow of a lit panel's own face (an area lamp stands 7 cm proud of the face it is the light of: game.ts)
+/// a ray from the spot reaches + the glow of a lit panel's own face (an area lamp stands 7 cm proud of the face it is the light of: rust/game_rules/src/game)
 fn fowLit(P: vec3f, N: vec3f, paint: vec3f, form: f32) -> vec3f {
   let Po = P + N * 0.03;
   let inv = 1.0 / max(frame.exposure, 1e-4);
@@ -296,7 +295,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   //#H let c = textureLoad(fowSrc, p, 0);
   let grey = vec3f(luminance(c.rgb));
   var unseen = mix(c.rgb, grey, fow.cfg.z) * fow.cfg.y;
-  // THE FOG'S OWN LIGHT (game/fogofwar.ts FOG.flat): a pixel nobody sees is the surface's paint under one fixed light — nothing of the live frame is in it, so no
+  // THE FOG'S OWN LIGHT (rust/game_rules/src/fogofwar FOG.flat): a pixel nobody sees is the surface's paint under one fixed light — nothing of the live frame is in it, so no
   // lamp, weapon light, muzzle flash, tracer, smoke, beam or particle in a room nobody watches shows there (soft.w = the level as displayed: the exposure is taken out)
   if (fow.soft.w > 0.0) {
     let paint = textureLoad(fowAlbedo, p, 0).rgb;
@@ -425,7 +424,7 @@ fn pre(@builtin(global_invocation_id) gid: vec3u) {
   textureStore(fowHintOut, vec2i(gid.xy), vec4u(h, 0u, 0u, 0u));
   //#C textureStore(fowHintOut, vec2i(i32(gid.x), i32(gid.y) + 7), vec4u(u32(fowCount.z) | (u32(fowCount.w) << 16u), 0u, 0u, 0u));   // (the counting table is twice as tall: what each ray cost, under the rows — 7 = the eyes, the arrays' own literal)
 }
-//#SECTION count — the counting programs only (tools/qa/fog-pass-check.cjs through FogPass.qaRun): per pixel x = walks taken (+ 64 for every disagreement: a hint that
+//#SECTION count — the counting programs only (FogPass.qaRun): per pixel x = walks taken (+ 64 for every disagreement: a hint that
 // answered where the walk says clear, or fowWalk against occludedTBoxes) · y = the hints' box tests · z = the walks' box tests · w = the cells the walks crossed
 var<private> fowCount: vec4f;
 fn fowTally(ro: vec3f, rd: vec3f, tmax: f32, owner: u32) {

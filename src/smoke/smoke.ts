@@ -1,4 +1,4 @@
-// The GPU smoke simulation (smoke.wgsl has the design; docs/internal/sparse-smoke.md the record): one world-wide lattice per voxel size, cut into 8³-cell bricks that exist only where
+// The GPU smoke simulation (smoke.wgsl has the design): one world-wide lattice per voxel size, cut into 8³-cell bricks that exist only where
 // smoke is, out of one pool. Nothing is placed, refused, recycled, migrated or retired on the CPU — an emitter is handed to the GPU in world coordinates and the GPU makes the bricks it
 // needs. Exposes a SmokeBinding for the renderer. (Until 2026-10 this file was eight 64³ boxes placed by the CPU: git history has them.)
 import { makeBuffer, makeShader, computePipelineAsync } from '../gpu/device';
@@ -10,11 +10,11 @@ import { SmokeEmitter, SmokePush, SmokeSystemLike, WIND_GPU_MAX } from './types'
 import type { WindGpuSource } from './types';
 import { smokeGrid, smokeSolverConsts, SmokeGrid } from './smokeGrid';
 import { byGpuCount } from './dispatch';
-import { sysRandom } from '../math/dice';   // the mixer / the solver draw the SYSTEM die, never the simulation's seeded one under a session recording (math/dice.ts)
+import { sysRandom } from '../math/dice';   // the mixer / the solver draw the SYSTEM die (math/dice.ts)
 import { DUST_DRAW } from './dustTint';
 import { lookConfig } from '../render/frame';
 import smokeSrc from './smoke.wgsl' with { type: 'text' };
-// WIND (game/wind.ts): the field's one WGSL text + the solver's block / forcing term, prepended to the module; the records come in through setWind() once a frame
+// WIND (rust/game_rules/src/wind): the field's one WGSL text + the solver's block / forcing term, prepended to the module; the records come in through setWind() once a frame
 import windFieldSrc from '../render/shaders/wind_field.wgsl' with { type: 'text' };
 import windForceSrc from './wind_force.wgsl' with { type: 'text' };
 
@@ -52,7 +52,9 @@ const MAX_DIRTY = 8;
 const META_STRIDE = 42, A_HEADER = 32, M_HEADER = 16, STAT_WORDS = 64;
 /** the game's smoke, behind the pool's records (smoke.wgsl M_BENT): the head, a word a place of the plan, a row a brick */
 const BENT_HEAD = 16, BENT_PLAN = 512, BENT_ROW = 160, BENT_WORDS = BENT_HEAD + BENT_PLAN * (1 + BENT_ROW);
-const LEGACY_PUSH = 25, LINE_MOST = 4 /* m: the longest stretch of a line one emitter carries (push) */, DT_MAX = 1 / 30, DT_CAP_WAIT = 1 / 12 /* the most one step of a brick that waited integrates */, OMEGA_MIN = 1.0, OMEGA_MAX = 1.95, PAIRS_MAX = 16;
+const LEGACY_PUSH = 25, LINE_MOST = 4 /* m: the longest stretch of a line one emitter carries (push) */, DT_MIN = 1 / 2000, DT_MAX = 1 / 30, DT_CAP_WAIT = 1 / 12 /* the most one step of a brick that waited integrates */, OMEGA_MIN = 1.0, OMEGA_MAX = 1.95, PAIRS_MAX = 16;
+/** steps that take the game's smoke whole, one after another ahead of one frame (each leaves a share of the difference: it is shaded between bricks) */
+const WHOLE_STEPS = 6;
 const CS = GPUShaderStage.COMPUTE;
 
 interface SealPose { cx: number; cz: number; yaw: number; ex: number; ez: number; y0: number; y1: number }
@@ -69,7 +71,7 @@ export class SmokeSystem implements SmokeSystemLike {
    *  once it is all zero; 0.002 is where the view march stops counting a sample — at half-float's 6e-5 a plume's invisible skirt would hold bricks for another 25 s); thinDecay / thinBelow =
    *  density under thinBelow goes up to thinDecay/s faster, always (a look knob: how far the faint skirt spreads); soft* = the pool's soft ceiling (smoke.wgsl SP); viewBias / viewR = that ceiling by where the
    *  camera looks: past viewR metres from engine.viewFocus (full at twice that) it starts sooner, bites harder, and the last quarter of the pool is refused (0 = one ceiling everywhere); indirect = dispatch exactly the live
-   *  bricks off a GPU-written count (false: dispatch the whole pool, idle workgroups return at once; THE PAGE OPENS WITH IT OFF since 2026-11-05, smoke/dispatch.ts and main.ts); directAt = with `indirect` on, the share of the pool stepping
+   *  bricks off a GPU-written count (false: dispatch the whole pool, idle workgroups return at once; THE PAGE OPENS WITH IT OFF since 2026-11-05, smoke/dispatch.ts and host/drawpage.ts); directAt = with `indirect` on, the share of the pool stepping
    *  (as last read back) from which the whole pool is dispatched anyway: each indirect call costs a validation dispatch, −0.14 ms a step on the maintainer's Mac at ¾ full (> 1 = never); split = time the step's five
    *  parts apart. WHO STEPS (smoke.wgsl buildList): calmMax = the longest a brick may wait between steps, in frames (1 = every brick every frame, the solver as first benched; 2; 4); how calm it must be is
    *  params.calmCells (cells its fastest air may cross in the wait, 0 = never waits in sight); farCells = the same allowance out of sight (needs viewBias; 0 = no laxer than in sight; 1 keeps a far plume within a fifth of its stepped-every-frame mass at 7 s for two thirds fewer steps, 2 leaves nearly twice the smoke hanging: notebook §9.1).
@@ -115,10 +117,9 @@ export class SmokeSystem implements SmokeSystemLike {
   private stepNo = 0;
   private quiet = 1e9;         // read-backs in a row that found the pool empty, counted only from steps after the last emit (never per step: a script stepping without yielding sees no read-back land)
   private emitStep = 0;        // the step count when something was last emitted
-  private epoch = 0;           // bumped by clearAll: a read-back in flight across one is dropped
+  private epoch = 0;           // bumped by anew: a read-back in flight across one is dropped
   private needsReset = true; private needsWipe = true;
-  private bentAt = 0; private bentMade = -1; private bentPlan = 0; private bentRows = 0;   // the game's smoke as last handed over: which making of it (−1 = none since the last clearAll), the places of its plan, the bricks that stand
-  private snap = 0;            // steps the game's smoke is still taken whole (it stood already as the first was handed over, and nothing drawn does)
+  private bentAt = 0; private bentMade = -1; private bentPlan = 0; private bentRows = 0;   // the game's smoke as last handed over: which making of it (−1 = none since the last anew), the places of its plan, the bricks that stand
   private dirty: { lo: Vec3; hi: Vec3 }[] = []; private bakeAll = false;
   private sealed = new Map<Box, SealPose>();
 
@@ -233,7 +234,7 @@ export class SmokeSystem implements SmokeSystemLike {
   inSmokeDomain(p: Vec3): boolean { for (const b of this.boxes) if (this.inBox(b, p)) return true; return false; }
   budget(): number { let n = 0; for (const e of this.emitters) if (!e.look) n++; return Math.max(0, MAX_EMITTERS - 12 - n); }   // (a `look` source is never counted: types.ts)
   drawing(): boolean { return this.params.enabled && !this.params.frozen && (this.engine.settings.flags & FrameFlags.Smoke) !== 0; }
-  /** A ROUND THROUGH SMOKE (the smoke lab's rows; game/combat.ts asks with the Stirred smoke row up). The maintainer, 11-02: "also still can't see bullets leaving trails through
+  /** A ROUND THROUGH SMOKE (the smoke lab's rows; rust/game_rules/src/combat asks with the Stirred smoke row up). The maintainer, 11-02: "also still can't see bullets leaving trails through
    *  the somke". A round used to be a row of soft shoves 7 cm across (a cell and a bit) for one step, which moved nothing anyone could see. It is ONE LINE now (`push`
    *  with `line`): the air within about `radius` of the path is brought up to `speed` along it, once (smoke.wgsl: never slowed, never turned, the same whatever the
    *  frame's length), and a long thin jet is nearly free of divergence, so the pressure step leaves it standing: it drags smoke after the round out of the far side
@@ -251,14 +252,17 @@ export class SmokeSystem implements SmokeSystemLike {
    *  is another than the one held */
   bent(made: number, wide: number, deep: number, bricks: number, rows: (buffer: GPUBuffer, plan: number, bricks: number) => void) {
     if (made === this.bentMade) return;
-    if (this.bentMade < 0) this.snap = bricks ? 4 : 0;
     this.bentMade = made; this.bentPlan = Math.min(wide * deep, BENT_PLAN); this.bentRows = bricks;
     this.engine.device.queue.writeBuffer(this.M, this.bentAt * 4, new Uint32Array([wide, deep]));
     rows(this.M, (this.bentAt + BENT_HEAD) * 4, (this.bentAt + BENT_HEAD + BENT_PLAN) * 4);
   }
   /** the cans venting stop now: what they let out stays in the air */
   shutCans() { for (const e of this.emitters) if (e.kind === 'vent' || e.kind === 'canister') e.ttl = Math.min(e.ttl, e.age); }
-  clearAll() { this.snap = 0; this.bentMade = -1; this.bentPlan = 0; this.bentRows = 0; this.emitters.length = 0; this.pushes.length = 0; this.needsReset = true; this.needsWipe = true; this.boxes = []; this.binding.count = 0; this.quiet = 1e9; this.epoch++; this.zeroStats(); }
+  /** WHAT IS DRAWN IS ANOTHER MOMENT'S than the game's (a load, a restart, a place sought on a tape, a game joined, the smoke cleared): all of it is let go of, and the game's smoke is taken
+   *  whole in the next frame drawn */
+  anew() { this.bentMade = -1; this.bentPlan = 0; this.bentRows = 0; this.emitters.length = 0; this.pushes.length = 0; this.needsReset = true; this.needsWipe = true; this.boxes = []; this.binding.count = 0; this.quiet = 1e9; this.epoch++; this.zeroStats(); }
+  /** nothing is drawn yet and the game has smoke: the next frame takes it whole, whether or not time goes by in it */
+  private whole(): boolean { return this.needsReset && this.bentRows > 0 && this.params.bend > 0 && !this.params.frozen; }
   private again = false; private skipWas = false;
   obstaclesChanged(c: Vec3, r: number) { this.noteDirty([c[0] - r, c[1] - r, c[2] - r], [c[0] + r, c[1] + r, c[2] + r]); }
   setWind(srcs: readonly WindGpuSource[], relax: number) { this.windSrcs = srcs; this.windRelax = relax; }
@@ -297,7 +301,7 @@ export class SmokeSystem implements SmokeSystemLike {
     }
     if (this.live()) this.watchSealers();
     this.stats.emitters = this.emitters.length;
-    const on = this.params.enabled && this.live() && !this.needsReset;
+    const on = this.params.enabled && this.live() && (!this.needsReset || this.whole());
     this.stats.live = on ? Math.max(1, Math.round(this.stats.pool / 512)) : 0;
     this.binding.count = on ? 8 : 0;
     this.binding.dusty = DUST_DRAW.on && on && (this.stats.tinted > 0 || this.emitters.some(e => !!e.tint));   // (look only: the volumetric pass draws dust as dust on such frames — shaders/dust_look.wgsl; never with the page's dust look put off)
@@ -331,7 +335,7 @@ export class SmokeSystem implements SmokeSystemLike {
   }
 
   // ---------------------------------------------------------------- GPU
-  private writeParams(dt: number) {
+  private writeParams(dt: number, whole: boolean) {
     const f = this.spF, u = this.spU, P = this.params, X = this.sparse, g = this.grid;
     const room = MAX_EMITTERS - Math.min(this.pushes.length, 12);
     let ems: Packed[] = this.emitters;
@@ -339,9 +343,9 @@ export class SmokeSystem implements SmokeSystemLike {
     if (ems.length > room) ems = ems.map((e, i) => ({ e, i })).sort((a, b) => (prioOf(b.e) - prioOf(a.e)) || (b.i - a.i)).slice(0, room).map(x => x.e);
     const all: Packed[] = [...ems, ...this.pushes.slice(0, MAX_EMITTERS - ems.length)];
     const expands = (e: Packed) => P.expansion && (e.expand ?? 0) > 0;
-    const em = [...all.filter(expands), ...all.filter(e => !expands(e))];
+    const em = whole ? [] : [...all.filter(expands), ...all.filter(e => !expands(e))];   // (nothing is let out, and nothing waits, while the game's smoke is taken whole)
     const omega = Math.min(OMEGA_MAX, Math.max(OMEGA_MIN, +P.omega || 0)); this.stats.omega = omega;
-    const calmMax = X.calmMax >= 4 ? 4 : X.calmMax >= 2 ? 2 : 1;
+    const calmMax = whole ? 1 : X.calmMax >= 4 ? 4 : X.calmMax >= 2 ? 2 : 1;
     u[0] = em.length; u[1] = em.filter(expands).length; u[2] = this.stepNo; u[3] = Math.max(calmMax > 1 ? 8 : 1, X.keep | 0);   // (a brick that waits must step once more, to tell the readers it is empty, before its slot goes)
     f[4] = dt; f[5] = this.time; f[6] = P.buoyancy; f[7] = P.weight;
     f[8] = P.vortConf; f[9] = P.velDamp; f[10] = P.densDecay; f[11] = P.tempDecay;
@@ -351,7 +355,7 @@ export class SmokeSystem implements SmokeSystemLike {
     f[24] = Math.max(0, X.thinDecay); f[25] = Math.max(1e-4, X.thinBelow); f[26] = X.readSkip ? 1 : 0; f[27] = Math.min(0.4, Math.max(0, +X.fresh || 0));
     const vf = this.engine.viewFocus; f[28] = vf[0]; f[29] = vf[2]; f[30] = Math.max(1, X.viewR); f[31] = Math.min(1, Math.max(0, X.viewBias));
     f[32] = Math.max(0, +P.calmCells || 0); f[33] = Math.max(0, +X.farCells || 0); u[34] = calmMax; f[35] = calmMax > 1 ? DT_CAP_WAIT : DT_MAX;
-    f[36] = this.bentPlan ? Math.max(0, +P.bend || 0) : 0; f[37] = this.snap > 0 ? 1 : 0; f[38] = Math.max(0, +X.fineDecay || 0); f[39] = Math.min(1, Math.max(0.02, Number.isFinite(+X.fineShare) ? +X.fineShare : 1));
+    f[36] = this.bentPlan ? Math.max(0, +P.bend || 0) : 0; f[37] = whole ? 1 : 0; f[38] = Math.max(0, +X.fineDecay || 0); f[39] = Math.min(1, Math.max(0.02, Number.isFinite(+X.fineShare) ? +X.fineShare : 1));
     const lets = f[38] > 0; f[40] = lets ? Math.max(0, +X.fineEps || 0) : 0; f[41] = lets ? Math.max(0, +X.fineHeat || 0) : 0; u[42] = lets ? Math.max(1, X.fineRing | 0) : 8; f[43] = Math.max(0, +P.pull || 0);   // (its floors and its air go with the fade: one row off = all three)
     g.levels.forEach((L, l) => { const o = SP_HEADER_WORDS + l * 8; u[o] = L.dims[0]; u[o + 1] = L.dims[1]; u[o + 2] = L.dims[2]; u[o + 3] = L.pageBase; f[o + 4] = L.voxel; u[o + 5] = L.texY; u[o + 6] = L.tile; u[o + 7] = L.tileBase; });
     const dAt = SP_HEADER_WORDS + SP_LEVEL_WORDS;
@@ -362,7 +366,7 @@ export class SmokeSystem implements SmokeSystemLike {
     for (const s of this.windNear()) {
       const o = (WIND_HDR_BYTES + n * WIND_SRC_BYTES) / 4;
       if (s.kind === 'storm') {
-        const R = s.roofs, Z = [0, 0, 0, 0]; const I = R ? R[0] : s.interior ?? Z, A = R ? R[1] ?? Z : s.annex ?? Z;   // (ROOF BY ROOF, game/wind.ts WX_OWN.wind: the level's first two roofs here, its third / fourth in the block's eight spare words, spare0 = 1 says so — wind_force.wgsl windSrcVel)
+        const R = s.roofs, Z = [0, 0, 0, 0]; const I = R ? R[0] : s.interior ?? Z, A = R ? R[1] ?? Z : s.annex ?? Z;   // (ROOF BY ROOF, rust/game_rules/src/wind WX_OWN.wind: the level's first two roofs here, its third / fourth in the block's eight spare words, spare0 = 1 says so — wind_force.wgsl windSrcVel)
         for (let k = 0; k < 8; k++) wf[4 + k] = R?.[2 + (k >> 2)]?.[k & 3] ?? 0;
         wf[o] = I[0]; wf[o + 1] = I[1]; wf[o + 2] = I[2]; wf[o + 3] = I[3]; wf[o + 4] = s.dir[0]; wf[o + 5] = s.dir[1]; wf[o + 6] = s.dir[2]; wf[o + 7] = s.speed;
         wf[o + 8] = A[0]; wf[o + 9] = A[1]; wf[o + 10] = A[2]; wf[o + 11] = A[3]; wu[o + 12] = 1;
@@ -403,7 +407,7 @@ export class SmokeSystem implements SmokeSystemLike {
       const q = (x: number) => Math.max(0, Math.min(255, Math.round((1 - x) * 255))), t = DUST_DRAW.on && kind !== 'canister' ? e.tint : undefined;
       u[o + 14] = ((e.held ? 0 : 255) | (t ? q(t[0]) << 8 | q(t[1]) << 16 | q(t[2]) << 24 : 0)) >>> 0;
     });
-    this.pushes.length = 0;
+    if (!whole) this.pushes.length = 0;
     this.engine.device.queue.writeBuffer(this.spBuf, 0, this.spData, 0, (SP_EMIT_AT + Math.max(1, em.length) * EMITTER_WORDS) * 4);
     return em.length;
   }
@@ -418,6 +422,10 @@ export class SmokeSystem implements SmokeSystemLike {
     this.stats.steps = 0;
     if (!this.params.enabled || !this.live()) return;
     if (this.sparse.readSkip !== this.skipWas) { this.skipWas = this.sparse.readSkip; this.again = true; }
+    if (this.whole()) {   // (its steps' numbers are each their own, so each is handed over by itself, ahead of the frame's)
+      const device = this.engine.device;
+      for (let i = 0; i < WHOLE_STEPS; i++) { const e = device.createCommandEncoder({ label: 'smokeWhole' }); this.step(e, DT_MIN, () => undefined, true); device.queue.submit([e.finish()]); }
+    }
     if (this.params.frozen || this.engine.lastDt <= 0) {   // nothing steps; what the readers are handed still follows its rows
       if (!this.again || this.needsReset || !this.pipes.publishAll) return;
       this.again = false;
@@ -427,7 +435,13 @@ export class SmokeSystem implements SmokeSystemLike {
       pass.setPipeline(this.pipes.boxes); pass.setBindGroup(2, this.gBox); pass.dispatchWorkgroups(1); pass.end(); this.stats.steps = 2;
       return;
     }
-    const dt = Math.min(DT_MAX, Math.max(1 / 2000, this.engine.lastDt));
+    this.step(enc, Math.min(DT_MAX, Math.max(DT_MIN, this.engine.lastDt)), ts);
+    this.stats.perStep = this.stats.steps;
+    const r = this.statBusy.indexOf(false);
+    if (r >= 0 && this.statQueued < 0) { enc.copyBufferToBuffer(this.statBuf, 0, this.statRead[r], 0, STAT_WORDS * 4); this.statQueued = r; }
+  }
+  /** one step of the solver; `whole` = one of those that take the game's smoke whole (smoke.wgsl THE GAME'S SMOKE) */
+  private step(enc: GPUCommandEncoder, dt: number, ts: (n: string) => GPUComputePassTimestampWrites | undefined, whole = false) {
     const g = this.grid, cap = g.cap;
     if (this.needsReset) {   // an empty pool: every slot on the free list, no page entry, no record
       // (queue writes land before this command buffer runs, so the clears cannot be in it: the header + free list are written whole instead, and the rest cleared in a buffer of its own now)
@@ -441,8 +455,8 @@ export class SmokeSystem implements SmokeSystemLike {
       this.sealed.clear(); this.watchSealers(true); this.dirty.length = 0; this.bakeAll = false;
     }
     this.stepNo++;
-    for (const e of this.emitters) e.age += dt;
-    const nEm = this.writeParams(dt);
+    if (!whole) for (const e of this.emitters) e.age += dt;
+    const nEm = this.writeParams(dt, whole);
     this.ensureLinkBG();
     type Op = { name: string; part: string; g2?: GPUBindGroup; n?: [number, number, number]; all?: boolean };   // (n absent = one workgroup per brick that steps this frame; all = per live brick)
     const ops: Op[] = []; let part = 'Alloc';
@@ -451,14 +465,14 @@ export class SmokeSystem implements SmokeSystemLike {
     if (this.needsWipe) { direct('wipePage', Math.ceil(g.pageTex[0] / 4), Math.ceil(g.pageTex[1] / 4), Math.ceil(g.pageTex[2] / 4), this.gPub); this.needsWipe = false; }
     direct('stepBegin', 1);
     if (nEm > 0) direct('markEmit', nEm);
-    if (this.bentRows > 0 && this.params.bend > 0) { direct('markBent', this.bentPlan); if (this.snap > 0) this.snap--; }
+    if (this.bentRows > 0 && this.params.bend > 0) direct('markBent', this.bentPlan);
     bricks('markNbr', undefined, true);
     direct('freeIdle', Math.ceil(cap / 64));
     direct('buildList', Math.ceil(cap / 64));
     direct('writeArgs', 1, 1, 1, this.gArgs);
     bricks('link', this.gLink!);
     part = 'Vel'; bricks('advectVel'); bricks('curl'); bricks('forces'); bricks('divergence');
-    const pairs = Math.min(PAIRS_MAX, Math.max(1, Math.round(+this.params.rbIters) || 1)); this.stats.rbPairs = pairs;
+    const pairs = whole ? 1 : Math.min(PAIRS_MAX, Math.max(1, Math.round(+this.params.rbIters) || 1)); this.stats.rbPairs = pairs;   // (no air moves while it is taken whole)
     part = 'Pressure'; for (let i = 0; i < pairs; i++) { bricks('rbgsR'); bricks('rbgsB'); }
     bricks('project');
     part = 'Scalars'; bricks('advectScalars'); bricks('injectDecay');
@@ -477,9 +491,6 @@ export class SmokeSystem implements SmokeSystemLike {
       if (this.perOp) { pass.end(); pass = null; this.perOp(op.name); }
     }
     pass?.end();
-    this.stats.perStep = this.stats.steps;
-    const r = this.statBusy.indexOf(false);
-    if (r >= 0 && this.statQueued < 0) { enc.copyBufferToBuffer(this.statBuf, 0, this.statRead[r], 0, STAT_WORDS * 4); this.statQueued = r; }
   }
 
   private perOp: ((name: string) => void) | null = null;
@@ -491,7 +502,7 @@ export class SmokeSystem implements SmokeSystemLike {
     const b = this.statRead[r], epoch = this.epoch;
     b.mapAsync(GPUMapMode.READ).then(() => {
       const m = b.getMappedRange(); const u = new Uint32Array(m.slice(0)); const f = new Float32Array(u.buffer); b.unmap(); this.statBusy[r] = false;
-      if (epoch !== this.epoch || u[8] < this.stats.stepNo) return;   // (a step from before a clearAll, or an older one landing late)
+      if (epoch !== this.epoch || u[8] < this.stats.stepNo) return;   // (a step from before an anew, or an older one landing late)
       const s = this.stats;
       s.stepNo = u[8]; s.pool = u[0]; s.bricksScalar = u[1]; s.bricksRender = u[2]; s.failed = u[3]; s.failedTotal += u[3]; s.free = u[4]; s.vmax = f[5]; s.made = u[6]; s.freed = u[7];
       s.boxes = u[9]; s.bakes += u[10]; s.fine = u[11]; s.eps = f[12]; s.act = u[13]; s.stepped = u[14]; s.skipped = u[0] - u[14]; s.work = u[15]; s.thin = f[32]; s.tinted = u[33]; s.off = u[37] ? u[36] / 1024 / u[37] : 0; s.fineAll = u[34]; s.fineHeld = u[35]; s.fineHeldTotal += u[35]; s.peak = Math.max(s.peak, u[0]);

@@ -2,7 +2,7 @@ import { Vec3 } from '../math/vec';
 
 /** A request to inject smoke. Emitters live for `ttl` seconds; `track` lets them follow a moving source (gun barrel, a flying spark).
  *  Everything after `mode` is optional and absent = the original behaviour, so the hand-tuned legacy emitters are bit-identical;
- *  the graded effects in src/game/effects.ts are the ones that set them (semantics ported from twopointfive's fluid.wgsl Source). */
+ *  the graded effects in rust/game_rules/src/effects are the ones that set them (semantics ported from twopointfive's fluid.wgsl Source). */
 export interface SmokeEmitter {
   /** an open fire's: the graphics preset that sheds a fire's smoke drops it (smoke.ts emit) */
   fire?: boolean;
@@ -14,7 +14,7 @@ export interface SmokeEmitter {
   ttl: number; age: number;
   /** moving source; returning null parks it (or kills it when `confined`) */
   track?: () => { pos: Vec3; dir: Vec3 } | null;
-  kind: 'flash' | 'wisp' | 'canister' | 'burst' | 'cloud' | 'jet' | 'trail' | 'vent' | 'puff' | 'breath';   // breath: a man's breath in the cold (game/snowBreath.ts BREATHSTEAM): a `look` source that rides his mouth by `trackVel` · puff: the destruction lane's impact DUST — a short cold cloud knocked out of plaster / a dropped ceiling tile (game/destruction.ts dustPuff): density the guards' sight lines and the froxels light like any smoke
+  kind: 'flash' | 'wisp' | 'canister' | 'burst' | 'cloud' | 'jet' | 'trail' | 'vent' | 'puff' | 'breath';   // breath: a man's breath in the cold (src/picture/snow/breath.ts BREATHSTEAM): a `look` source that rides his mouth by `trackVel` · puff: the destruction lane's impact DUST — a short cold cloud knocked out of plaster / a dropped ceiling tile (rust/game_rules/src/destruction dustPuff): density the guards' sight lines and the froxels light like any smoke
   mode?: 'jet' | 'burst';   // burst = velocity points radially away from pos
   push?: number;        // drag RATE (1/s) toward dir·speed at the core; blend per step = clamp(push·g·dt). Default 25 = the old hard-coded constant
   expand?: number;      // divergence source (1/s) at the core: the pressure solve is asked to LEAVE div v = expand·g in the field, so the puff genuinely
@@ -30,7 +30,7 @@ export interface SmokeEmitter {
                         // own smoke (rust/game_rules/src/sense), and the first cut when a step holds more emitters than it packs — under every `prio`
   held?: boolean;       // the game's own smoke holds what it lets out (rust/game_rules/src/sense): the drawn smoke of it is bent toward that (smoke.wgsl THE GAME'S SMOKE)
   trackVel?: boolean;   // its track()'s `dir` is the gas's VELOCITY (m/s), taken turn by turn, heading and speed both: a source on a mouth that turns and walks
-  tint?: Vec3;          // LOOK ONLY (game/dustLook.ts): the scattering colour of what this emitter raises — it rides with the smoke per cell, which is drawn tinted toward it and with the dust
+  tint?: Vec3;          // LOOK ONLY (rust/game_rules/src/dust_look): the scattering colour of what this emitter raises — it rides with the smoke per cell, which is drawn tinted toward it and with the dust
                         // shape (render/shaders/dust_look.wgsl); the solver, the shadow rays and the light probe's sight lines never see it
 }
 
@@ -45,12 +45,12 @@ export interface SmokePush { pos: Vec3; dir: Vec3; speed: number; radius: number
   /** how hard: the share of the way to `dir`·`speed` the air is taken a second, at the middle (absent = the soft shove a push always was) */
   push?: number; }
 
-/** One live WIND source this frame, in the shape both GPU consumers take it (game/wind.ts builds ≤ WIND_GPU_MAX of them; render/particles.ts packs them behind the
+/** One live WIND source this frame, in the shape both GPU consumers take it (rust/game_rules/src/wind builds ≤ WIND_GPU_MAX of them; render/particles.ts packs them behind the
  *  impulses as ImpulseRec records in 'wind' mode, smoke.ts into its own small uniform for the forces step; render/shaders/wind_field.wgsl is the field both then
- *  evaluate — game/wind.ts jetVel / stormVel the CPU copy). kind 'jet' (a supply vent, the gust through an open exterior door): pos = the face centre, dir = unit
+ *  evaluate — rust/game_rules/src/wind jet_vel / stormVel the CPU copy). kind 'jet' (a supply vent, the gust through an open exterior door): pos = the face centre, dir = unit
  *  axis, speed = m/s at the face THIS frame (cycling, the mains, the gusting already folded in), reach = where it has halved, tanSpread, r0 = the core's radius at
  *  the face, dMax = where it is cut off, floorY = the floor a down-jet turns along (absent = none). kind 'storm': dir × speed = the wind; interior / annex = the two
- *  roofed footprints it does not blow inside (x0 z0 x1 z1) — or, ROOF BY ROOF (game/wind.ts WX_OWN.wind on a level of three or four roofs of its own), `roofs` = every
+ *  roofed footprints it does not blow inside (x0 z0 x1 z1) — or, ROOF BY ROOF (rust/game_rules/src/wind WX_OWN.wind on a level of three or four roofs of its own), `roofs` = every
  *  one of them (≤ 4; wind_field.wgsl windStormRoofs: the particles take the first two in the record and the other two off the Frame, where the rain's own test reads
  *  them; the solver the first two in the record and the other two in its block's spare words); `field` = that rule is on (the wisps read the field). bound = a sphere round the whole support (what the consumers cull by); kinds = the particle kinds that
  *  answer to it (bit per kind; absent = every kind that answers to wind at all). Never allocates anything in either consumer: wind only forces air already simulated. */
@@ -73,16 +73,14 @@ export interface SmokeSystemLike {
   round?(from: Vec3, dir: Vec3, len: number): boolean;
   /** how many more emitters would still be packed for the solver this step (an effect sizing its spark-trail count charges against this) */
   budget?(): number;
-  /** is smoke handed over now stepped AND drawn (a solver switched off or frozen, or its rendering switched off, is not; absent = no: the harness's null one)? The solver's
+  /** is smoke handed over now stepped AND drawn (a solver switched off or frozen, or its rendering switched off, is not; absent = no)? The solver's
    *  own question (emit drops a look-only source when it is not, and the picture asks it): the game asks nothing */
   drawing?(): boolean;
-  /** drop every emitter and all the smoke (encounter restart: a 30 s canister must not keep venting into the next one) */
-  clearAll?(): void;
   /** every can venting stops venting now, what it has let out left in the air (the game's `SmokeCansShut`) */
   shutCans?(): void;
   /** something solid within r of c stopped being solid (or came back): the bricks there re-bake their obstacle field — the destruction lane hiding a static it knocked off */
   obstaclesChanged?(c: Vec3, r: number): void;
-  /** this frame's WIND (game/wind.ts, called once a frame at the end of Game.update; an empty list = still air): the solver's forces step relaxes the air of every
+  /** this frame's WIND (rust/game_rules/src/wind, called once a frame at the end of Game.update; an empty list = still air): the solver's forces step relaxes the air of every
    *  brick a source's bound overlaps toward the source's analytic field inside its support (smoke/wind_force.wgsl) with the per-particle-kind knobs the list
    *  carries ignored. It never makes, keeps alive or retires a brick — wind only bends smoke that is already there. `relax` = the rate (1/s) at the jet's core. */
   setWind?(srcs: readonly WindGpuSource[], relax: number): void;

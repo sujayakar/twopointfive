@@ -1,10 +1,9 @@
-//! The types of `gunhold`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `gunhold`.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: Known, src/game/gunhold.ts:81)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct Known {
     pub gun_t: f64,
     pub shot_t: f64,
@@ -20,32 +19,10 @@ pub struct Known {
     pub said_gun: bool,
     pub said_shot: bool,
 }
-impl Known {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Known {
-            gun_t: 0.0,
-            shot_t: 0.0,
-            sam: [0.0; 3],
-            facing: 0.0,
-            fix_t: 0.0,
-            gone_t: 0.0,
-            expo: JsMap::new(),
-            expo_at: [0.0; 3],
-            expo_t: 0.0,
-            talker: None,
-            said_t: 0.0,
-            said_gun: false,
-            said_shot: false,
-        }
-    }
-}
-impl Default for Known { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
 pub enum Phase {
-    Back,
+    #[default] Back,
     Run,
     Cover,
     Plan,
@@ -54,23 +31,8 @@ pub enum Phase {
     Peek,
     Flank,
 }
-impl Phase {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Phase::Back => "back",
-            Phase::Run => "run",
-            Phase::Cover => "cover",
-            Phase::Plan => "plan",
-            Phase::Line => "line",
-            Phase::React => "react",
-            Phase::Peek => "peek",
-            Phase::Flank => "flank",
-        }
-    }
-}
 
-/// (TypeScript: St, src/game/gunhold.ts:85)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct St {
     pub phase: crate::gunhold::Phase,
     pub go_t: f64,
@@ -93,37 +55,8 @@ pub struct St {
     pub bad: Option<V3>,
     pub said_round: bool,
 }
-impl St {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        St {
-            phase: crate::gunhold::Phase::Back,
-            go_t: 0.0,
-            spot: None,
-            low: false,
-            edge: None,
-            goal: None,
-            plan_sam: None,
-            plan_facing: 0.0,
-            plan_t: 0.0,
-            peek_t: 0.0,
-            peek_end: 0.0,
-            peek_from: 0.0,
-            check_t: 0.0,
-            run_t: 0.0,
-            line_t: 0.0,
-            retry_t: 0.0,
-            cover_bad: false,
-            shown_t: 0.0,
-            bad: None,
-            said_round: false,
-        }
-    }
-}
-impl Default for St { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: GunHoldStats, src/game/gunhold.ts:86)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct GunHoldStats {
     pub armed: f64,
     pub ran: f64,
@@ -135,114 +68,29 @@ pub struct GunHoldStats {
     pub lines: f64,
     pub free_t: f64,
 }
-impl GunHoldStats {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GunHoldStats {
-            armed: 0.0,
-            ran: 0.0,
-            no_cover: 0.0,
-            rounds: 0.0,
-            no_way: 0.0,
-            looks: 0.0,
-            gone: 0.0,
-            lines: 0.0,
-            free_t: 0.0,
-        }
-    }
-}
-impl Default for GunHoldStats { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/gunhold.ts:90 GUNHOLD_DEBUG, src/game/gunhold.ts:90)
-#[derive(Clone, Copy, Debug)]
-pub struct GUNHOLDDEBUG {
-}
-impl GUNHOLDDEBUG {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GUNHOLDDEBUG {
-        }
-    }
-}
-impl Default for GUNHOLDDEBUG { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/gunhold.ts:262 LINES, src/game/gunhold.ts:262)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct LINES {
     pub gun: Vec<String>,
     pub shot: Vec<String>,
     pub round: Vec<String>,
     pub gone: Vec<String>,
 }
-impl LINES {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LINES {
-            gun: Vec::new(),
-            shot: Vec::new(),
-            round: Vec::new(),
-            gone: Vec::new(),
-        }
-    }
-}
-impl Default for LINES { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at quiet partOf ->, src/game/gunhold.ts:117)
-#[derive(Clone, Debug)]
-pub struct PartOf {
-    pub k: crate::gunhold::Known,
-    pub st: crate::gunhold::St,
-}
-impl PartOf {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PartOf {
-            k: crate::gunhold::Known::zeroed(),
-            st: crate::gunhold::St::zeroed(),
-        }
-    }
-}
-impl Default for PartOf { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/gunhold.ts:177 wayTo ->, src/game/gunhold.ts:177)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct WayTo {
     pub path: Vec<V3>,
     pub len: f64,
     pub show: f64,
 }
-impl WayTo {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WayTo {
-            path: Vec::new(),
-            len: 0.0,
-            show: 0.0,
-        }
-    }
-}
-impl Default for WayTo { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/gunhold.ts:190 pickCover ->, src/game/gunhold.ts:190)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct PickCover {
     pub spot: V3,
     pub low: bool,
     pub edge: Option<V3>,
 }
-impl PickCover {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PickCover {
-            spot: [0.0; 3],
-            low: false,
-            edge: None,
-        }
-    }
-}
-impl Default for PickCover { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum GunHoldPoolKind {
     Shot,
@@ -261,7 +109,6 @@ impl GunHoldPoolKind {
     }
 }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum BarkKind {
     Shot,
@@ -269,38 +116,14 @@ pub enum BarkKind {
     Gone,
     Gun,
 }
-impl BarkKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            BarkKind::Shot => "shot",
-            BarkKind::Round => "round",
-            BarkKind::Gone => "gone",
-            BarkKind::Gun => "gun",
-        }
-    }
-}
 
-/// (TypeScript: inline at src/game/gunhold.ts:297 gunHoldFeet(fs), src/game/gunhold.ts:297)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct GunHoldFeetFs {
     pub ok: bool,
     pub rear: f64,
-    pub clear: f64,
 }
-impl GunHoldFeetFs {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GunHoldFeetFs {
-            ok: false,
-            rear: 0.0,
-            clear: 0.0,
-        }
-    }
-}
-impl Default for GunHoldFeetFs { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/gunhold.ts:297 gunHoldFeet ->, src/game/gunhold.ts:297)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct GunHoldFeet {
     pub move_: f64,
     pub run: bool,
@@ -308,22 +131,9 @@ pub struct GunHoldFeet {
     pub crouch: f64,
     pub quiet: bool,
 }
-impl GunHoldFeet {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GunHoldFeet {
-            move_: 0.0,
-            run: false,
-            look: None,
-            crouch: 0.0,
-            quiet: false,
-        }
-    }
-}
-impl Default for GunHoldFeet { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct GunholdMod {
     /// (src/game/gunhold.ts:88 knowns)
     pub knowns: JsMap<u32, crate::gunhold::Known>,
@@ -345,12 +155,6 @@ impl GunholdMod {
         }
     }
 }
-
-/// (src/game/gunhold.ts:76 GUNHOLD_DEFAULTS: a table nothing writes)
-pub fn gunhold_defaults() -> crate::knobs::GunholdK { crate::knobs::page_gunhold() }
-
-/// (src/game/gunhold.ts:90 GUNHOLD_DEBUG: a table nothing writes)
-pub fn gunhold_debug() -> crate::gunhold::GUNHOLDDEBUG { crate::gunhold::GUNHOLDDEBUG {  } }
 
 /// (src/game/gunhold.ts:111 HEAR_M)
 pub const HEAR_M: f64 = 7.0;

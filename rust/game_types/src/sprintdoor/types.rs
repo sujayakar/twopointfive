@@ -1,9 +1,8 @@
-//! The types of `sprintdoor`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `sprintdoor`.
 #![allow(unused_imports)]
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: DoorStamps, src/game/sprintdoor.ts:51)
 #[derive(Clone, Copy, Debug)]
 pub struct DoorStamps {
     pub down: bool,
@@ -11,9 +10,8 @@ pub struct DoorStamps {
     pub door_bash_at: f64,
     pub door_bash_lean: f64,
 }
-impl DoorStamps {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
+impl Default for DoorStamps {
+    fn default() -> Self {
         DoorStamps {
             down: false,
             door_rip_until: -1.0,
@@ -22,22 +20,11 @@ impl DoorStamps {
         }
     }
 }
-impl Default for DoorStamps { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/sprintdoor.ts:52 live(pl), ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1604)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct LivePl {
     pub down: bool,
 }
-impl LivePl {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LivePl {
-            down: false,
-        }
-    }
-}
-impl Default for LivePl { fn default() -> Self { Self::zeroed() } }
 
 /// the counters this module keeps for the checks
 #[derive(Clone, Debug, Default)]

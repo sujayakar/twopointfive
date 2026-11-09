@@ -1,7 +1,7 @@
 {
   "version": 2,
   "name": "office",
-  "meta": { "bounds": { "min": [0, -0.25, 0], "max": [40, 8, 28] }, "generator": "src/scene/officeGen.ts buildOfficeProcedural → tools/level-export.ts", "notes": "The night-shift office: one floor, box geometry only. Regenerated from the legacy generator until the editor (lane G1b) takes over; hand edits survive only if the generator is retired first.", "kept": 1 },
+  "meta": { "bounds": { "min": [0, -0.25, 0], "max": [40, 8, 28] }, "generator": "tools/levels/lib/officeGen.ts buildOfficeProcedural → tools/level-export.ts", "notes": "The night-shift office: one floor, box geometry only. Regenerated from the legacy generator until the editor (lane G1b) takes over; hand edits survive only if the generator is retired first.", "kept": 1 },
   "floors": [
     { "id": "f0", "name": "ground floor", "y": 0, "ceiling": 3 }
   ],
@@ -1162,7 +1162,7 @@
       "doorMan": { "inside": { "pos": [23.4, 0, 6.6], "aimAt": [25.6, 1.1, 9.9] }, "outside": { "pos": [29.4, 0, 11.1], "aimAt": [21, 1.1, 11.1] } },
       "roamers": [
         { "pos": [31.4, 0, 15.2], "aimAt": [30.6, 1.1, 12.4] },
-        { "pos": [7.2, 0, 6.4], "aimAt": [9.6, 1.1, 9.8] }
+        { "pos": [19.5, 0, 13.4], "aimAt": [15.9, 1.1, 13.4] }
       ],
       "flow": { "corridor": { "x0": 4, "x1": 36, "z0": 10, "z1": 12.25 }, "regions": [{ "id": "conference", "door": "conference", "rect": { "x0": 4.12, "x1": 13.94, "z0": 4.12, "z1": 9.94 } }, { "id": "server", "door": "server", "rect": { "x0": 14.12, "x1": 21.88, "z0": 4.12, "z1": 9.94 } }, { "id": "cubicles", "door": null, "rect": { "x0": 12.2, "x1": 27.8, "z0": 12.3, "z1": 23.9 } }], "route": [{ "id": "conference", "name": "conference room", "short": "conf", "region": "conference", "kind": "glass", "door": "conference", "at": [9.6, 0, 10], "mark": [9, 0, 11.55], "watch": [10.2, 1.1, 7.4], "half": 0.55, "north": true, "call": "glass left.", "side": "left", "look": 0.9 }, { "id": "cubicles-w", "name": "cubicles west", "short": "cub W", "region": "cubicles", "kind": "doorway", "door": null, "at": [15.75, 0, 12.2], "mark": [14.9, 0, 10.6], "watch": [16, 1.1, 13.6], "half": 0.7, "north": false, "call": "opening right.", "side": "right", "look": 0.9 }, { "id": "server", "name": "server room", "short": "server", "region": "server", "kind": "door", "door": "server", "at": [17.6, 0, 10], "mark": [16.7, 0, 11.55], "watch": [17.6, 1.05, 10], "half": 0.55, "north": true, "call": "door left.", "side": "left", "look": 0.4 }, { "id": "cubicles-e", "name": "cubicles east", "short": "cub E", "region": "cubicles", "kind": "doorway", "door": null, "at": [22.75, 0, 12.2], "mark": [21.9, 0, 10.6], "watch": [23, 1.1, 13.6], "half": 0.7, "north": false, "call": "opening right.", "side": "right", "look": 0.9 }], "hold": { "ahead": 9, "xMax": 31, "z": 11.1 } }
     },

@@ -44,16 +44,10 @@ pub fn chest_of(g: &crate::game::Game, c_2: CharId) -> V3 {
     }
 }
 
-/// What of the light from `a`'s eye to `b`'s chest comes through the smoke, a picked weather's fog on top.   (roomfight.ts pairSmoke)
+/// What of the light from `a`'s eye to `b`'s chest comes through the air.   (roomfight.ts pairSmoke)
 pub fn pair_smoke(g: &mut crate::game::Game, a: CharId, b: CharId) -> f64 {
     let (eye, chest) = (eye_of(g, a), chest_of(g, b));
-    let t = crate::sense::smoke_between(g, eye, chest);
-    if crate::weather::weather_fog(g).is_some() {
-        let ca = chest_of(g, a);
-        t * crate::weather::air_trans(g, ca, chest)
-    } else {
-        t
-    }
+    crate::sense::clear_between(g, eye, chest)
 }
 
 /// The light to read for `o` when `eye` stands inside the cone of his burning weapon light, else 0: as strong beside an hour's light as the lamp is, to eyes used to the place.   (roomfight.ts lampGlare)
@@ -187,18 +181,6 @@ pub fn room_fight_seen_by(g: &crate::game::Game, h: GuardId) -> Vec<GuardId> {
         if by_meter || by_own_eyes { out.push(o.gd); }
     }
     out
-}
-
-/// The sight test between two AI men in one call; stateless, anybody may ask it of any pair.   (roomfight.ts RoomFight.sightOn)
-pub fn room_fight_sight_on(g: &mut crate::game::Game, viewer: GuardId, target: GuardId) -> crate::roomfight::RoomFightSightOn {
-    let target_ch = g.gd[target].ch;
-    let vis = crate::guards::can_see_char(g, viewer, target_ch, false);
-    let meter = op_of(g, viewer)
-        .and_then(|o| g.tab.roomfight_op[o].meters.get(target))
-        .map_or(0.0, |meter| meter.m);
-    let known = meter >= g.fight.skill.get(crate::roomfight::RoomFightSkillKey::Operative).unwrap().notice;
-    let rate = if vis.visible { room_fight_rate_on(g, viewer, target, vis.dist, Some(known)) } else { 0.0 };
-    crate::roomfight::RoomFightSightOn { visible: vis.visible, rate, dist: vis.dist, sighting: rate > 0.25 }
 }
 
 pub(super) fn op_id(g: &Game, gd: GuardId) -> Option<RoomfightOpId> { g.fight.ops.iter().copied().find(|&o| g.tab.roomfight_op[o].gd == gd) }
@@ -351,7 +333,7 @@ pub fn room_fight_stop(g: &mut crate::game::Game) {
 /// a fresh staging.   (roomfight.ts reset)
 pub fn room_fight_reset(g: &mut crate::game::Game) {
     room_fight_stop(g);
-    g.fight.blind_fire = true; g.fight.drill_said = false; g.fight.log.clear(); g.fight.stats = RoomFightStats::zeroed();
+    g.fight.blind_fire = true; g.fight.drill_said = false; g.fight.log.clear(); g.fight.stats = RoomFightStats::default();
 }
 
 #[cfg(test)]
@@ -370,7 +352,7 @@ mod tests {
     }
 
     fn op(g: &mut Game, gd: GuardId) -> RoomfightOpId {
-        let mut o = crate::roomfight::Op::zeroed();
+        let mut o = crate::roomfight::Op::default();
         o.gd = gd;
         let id = g.tab.roomfight_op.push(o);
         g.fight.ops.push(id);
@@ -422,7 +404,7 @@ mod tests {
     fn a_lamp_gives_its_carrier_away_inside_its_cone() {
         let mut g = Game::blank();
         g.fight.live = true;
-        let mut lamp = crate::render_lights::RtLight::zeroed();
+        let mut lamp = crate::render_lights::RtLight::default();
         lamp.enabled = true; lamp.intensity = 1.0; lamp.pos = [0.0, 0.0, 0.0]; lamp.dir = [0.0, 0.0, 1.0]; lamp.range = 10.0; lamp.outer_deg = 30.0;
         let l = g.tab.light.push(lamp);
         let eye = g.ch.push(crate::character::Character::blank());

@@ -1,23 +1,18 @@
 // THE NEW PAGE DRAWS A SNOW LEVEL, A WET NIGHT AND A FIRE: the page on the software adapter, stepped by hand, read by what its picture holds, a still of each. Never a GPU's judgement: what
 // it holds is that the rows reach the picture and nothing throws. The page's own map of prints, flakes in the ring, the drip lines, a crater, the air's map, a fire's records.
 //   PORT=<a dev server> node tools/draw/weather-page.cjs [--out dir]      exit 0 = every check passed, 1 = a FAIL, 2 = the script died
-const { chromium } = (() => { try { return require('playwright'); } catch { return require('/opt/node-tools/node_modules/playwright'); } })();
+const PAGE = require('../qa/page.cjs').page({ name: 'weather-page', detail: 'json' }), { check } = PAGE;
 const { mkdirSync } = require('node:fs');
-const PORT = process.env.PORT || 5199, at = process.argv.indexOf('--out'), OUT = at > 0 ? process.argv[at + 1] : null;
-const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog', '--no-sandbox'];
-let fails = 0;
-const check = (ok, what, got) => { console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}${got === undefined ? '' : `   (${JSON.stringify(got)})`}`); if (!ok) fails++; };
+const at = process.argv.indexOf('--out'), OUT = at > 0 ? process.argv[at + 1] : null;
 async function open(browser, words) {
-  const page = await browser.newPage({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 }), errors = [];
-  page.on('pageerror', x => errors.push(String(x && x.stack || x).slice(0, 500)));
-  page.on('console', m => { const t = m.text(); if (m.type() === 'error' || /Invalid|error:/.test(t)) errors.push(t.slice(0, 300)); });
-  await page.goto(`http://localhost:${PORT}/?paused&quality=verylow&mute&seed=5&${words}`, { timeout: 300000 });
-  await page.evaluate(() => window.__ready);
+  const { page, errors, go, ready } = await PAGE.open({ browser, errors: { also: /Invalid|error:/ } });
+  await go(`paused&quality=verylow&mute&seed=5&${words}`, { timeout: 300000 });
+  await ready();
   return { page, errors };
 }
 const still = async (page, name) => { if (OUT) { mkdirSync(OUT, { recursive: true }); await page.evaluate(() => window.__draw.engine.device.queue.onSubmittedWorkDone()); await page.screenshot({ path: `${OUT}/${name}.png`, timeout: 240000 }); } };
 (async () => {
-  const browser = await chromium.launch({ headless: true, executablePath: process.env.CHROMIUM || '/usr/bin/chromium', args: FLAGS });
+  const browser = await PAGE.launch();
   { // ---- a snow level with a fire
     const { page, errors } = await open(browser, 'levelFile=pass.json');
     const s0 = await page.evaluate(() => { const d = window.__draw; d.run(60, [], 'last'); const w = d.weather, P = d.engine.particles; return { snow: !!w.snow?.field, quads: w.snow?.field?.quads.length ?? 0, tracks: !!w.snow?.tracks, ring: P.rainStats.emitted, fires: d.engine.fires.length, firePos: d.engine.fires[0] ? Array.from(d.engine.fires[0].pos) : null, disc: Array.from(d.engine.weather.nearFade), air: !!d.engine.air, snowW: d.engine.weather.snow }; });
@@ -48,7 +43,5 @@ const still = async (page, name) => { if (OUT) { mkdirSync(OUT, { recursive: tru
     check(errors.length === 0, 'a downpour: nothing threw and no GPU error was said', errors.slice(0, 4));
     await page.close();
   }
-  await browser.close();
-  console.log(fails ? `=== weather page: ${fails} FAILED ===` : '=== weather page: ALL PASS ===');
-  process.exit(fails ? 1 : 0);
+  await PAGE.end(PAGE.fails ? `=== weather page: ${PAGE.fails} FAILED ===` : '=== weather page: ALL PASS ===');
 })().catch(e => { console.error(e); process.exit(2); });

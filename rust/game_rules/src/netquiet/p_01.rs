@@ -44,16 +44,6 @@ pub fn flat(a: V3, b: V3) -> f64 {
     m::hyp2(a[0] - b[0], a[2] - b[2])
 }
 
-/// both switches: settled on the page (netquiet.ts live)
-pub fn live(g: &mut crate::game::Game) -> bool {
-    true
-}
-
-/// live, and the check's breakage is never set by the game (netquiet.ts fed)
-pub fn fed(g: &mut crate::game::Game) -> bool {
-    true
-}
-
 /// the loud noises his ears have counted (netquiet.ts loudOf)
 pub fn loud_of(g: &crate::game::Game, gd: GuardId) -> f64 {
     let h = &g.gd[gd].witness.heard;
@@ -166,11 +156,7 @@ pub fn speak(g: &mut crate::game::Game, gd: GuardId, kind: crate::netquiet::Line
     n.bark = 0.0;
     n.last_kind = kind_index(kind);
     g.stats.netquiet.lines += 1;
-    let (id, t) = (id_of(g, gd), g.time);
-    g.m.netquiet.netquiet_log.push(NetquietModNETQUIETLOGItem { id, t, kind, text, radio });
-    if g.m.netquiet.netquiet_log.len() > 64 {
-        g.m.netquiet.netquiet_log.remove(0);
-    }
+    let id = id_of(g, gd);
 }
 
 /// is anybody of his side up on the whole net, the men in `but` aside (netquiet.ts netUp)
@@ -642,11 +628,7 @@ pub fn free(g: &mut crate::game::Game, gd: GuardId) -> bool {
     g.ai_enabled
         && !g.touring
         && !g.quiet_utility
-        && g.gd[gd].held.is_none()
-        && !crate::control::man::blind(g, gd)
-        && !crate::control::man::staggered(g, gd)
-        && !crate::owner::has(g, gd, crate::owner::by::MORALE)
-        && !crate::owner::has(g, gd, crate::owner::by::RUNNER)
+        && crate::owner::kept(g, gd, crate::owner::by::LAST_MAN).is_none()
 }
 
 /// is he the last: 2 = he had mates and none of his side is up anywhere · 1 = his squad is down and he knows it, nobody at his side · 0 = neither (netquiet.ts lastKind)
@@ -1096,7 +1078,7 @@ mod tests {
 
     #[test]
     fn owed_lines_index_the_files_own_list_not_the_enums_order() {
-        let mut n = Mind::zeroed();
+        let mut n = Mind::default();
         owe(&mut n, LineKind::Name, "x", 1.0);
         assert_eq!(n.say, 0.0);
         owe(&mut n, LineKind::Why, "", 1.0);
@@ -1115,7 +1097,7 @@ mod tests {
         assert!(!mine(&mut g, gd));
         assert!(!whipping(&mut g, gd));
         assert!(!g.m.netquiet.state_of.has(gd));
-        g.m.netquiet.state_of.set(gd, Mind::zeroed());
+        g.m.netquiet.state_of.set(gd, Mind::default());
         owe(mind(&mut g, gd), LineKind::Why, "x", 1.4);
         assert_eq!(g.m.netquiet.state_of.get(gd).unwrap().say, 1.0);
         mind(&mut g, gd).last = SAID;

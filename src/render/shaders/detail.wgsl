@@ -3,7 +3,7 @@
 // roughness / metalness), so the direct light, the bounce at the pixel, the reflections and their highlights all answer to it by themselves and no ray, cache
 // or light meter ever pays for it:
 //   • WORN PATHS on the polished floors — where the shift walks (the level's traffic map: patrol routes traced over the nav grid + every door's threshold,
-//     render/wear.ts) the wax is scuffed matte and holds a little ground-in grey: roughness up, albedo a touch duller. Uneven at the half-metre scale (wear
+//     rust/game_draw/src/traffic.rs) the wax is scuffed matte and holds a little ground-in grey: roughness up, albedo a touch duller. Uneven at the half-metre scale (wear
 //     never is even), never finer.
 //   • GRIME AT THE SKIRTING — the band of floor a mop does not reach (the traffic map's wall-proximity channel: within ~15 cm of anything standing on the
 //     floor): rougher, a shade darker; and the bottom hand-width of every wall / cabinet face carries the shoe and mop marks: darker, rougher.
@@ -12,7 +12,7 @@
 //   • EDGE WEAR ON METAL — within a couple of centimetres of a metal box's edges the paint / oxide is rubbed through to bright bare metal: base colour up,
 //     roughness down (the exact edge distance is free in a box world).
 // One amount k = frame.matCfg.w (settings.detail, 0‥1; 0.35 = 'lived-in', 1 = as far as it goes; 0 = none of this runs and the pixel is what it was).
-@group(1) @binding(6) var wearTex: texture_2d<f32>;      // the traffic map over the world's XZ footprint (render/wear.ts; rg8: r = traffic 0‥1, g = wall proximity 0‥1) — a 1×1 zero where nobody built one (the viewer)
+@group(1) @binding(6) var wearTex: texture_2d<f32>;      // the traffic map over the world's XZ footprint (rust/game_draw/src/traffic.rs; rg8: r = traffic 0‥1, g = wall proximity 0‥1) — a 1×1 zero where nobody built one (the viewer)
 
 const DUST_Y: f32 = 1.6;             // tops above this (m) gather dust
 const DUST_GREY: f32 = 0.33;         // what thick dust tends toward (a light warm grey, linear)
@@ -26,7 +26,7 @@ fn detailNoise(p: vec2f) -> f32 {
   return mix(mix(detailHash(ip), detailHash(ip + vec2i(1, 0)), w.x), mix(detailHash(ip + vec2i(0, 1)), detailHash(ip + vec2i(1, 1)), w.x), w.y);
 }
 
-// ---- WET GROUND (the storm's wet lot: game/weather.ts gives the ground slab roughness 0.22 + the aniso finish; fsBox calls this on an upward aniso face while
+// ---- WET GROUND (the storm's wet lot: rust/game_rules/src/weather gives the ground slab roughness 0.22 + the aniso finish; fsBox calls this on an upward aniso face while
 // settings.wetBreakup > 0, whatever the detail layer's amount). Ground is never flat: the water STANDS in its low spots and only darkens the aggregate between
 // them. One smooth height field off the world position (the same value noise the wear uses, never under half a metre a cell: unevenness, not texture) — below
 // the water line the film stays nearly as smooth as it was (a little rain-stippled), above it the finish climbs toward the reflection pass's roughness

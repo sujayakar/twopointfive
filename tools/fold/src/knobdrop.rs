@@ -1,7 +1,6 @@
 //! A field leaves the Rust source: a row of a knob table, a setting, any field of a struct.
 //!
-//! `tools/wire/wire.ts drop` takes a field off the wire (the table, io.rs, the page's half). This takes the same
-//! field out of the Rust source: its line of the struct, its `field: value` in every literal of that struct (the table's blank,
+//! Its line of the struct, its `field: value` in every literal of that struct (the table's blank,
 //! its page values, a literal a body writes), every pattern that takes it by name, and every statement that only sets it on a
 //! value the text itself says is of that struct (`s.field = …;` where `s` is a parameter of the type, a `let s: Type`, or a
 //! `let s = Type { … }` / `Type::f(…)` with `f` a function of the type that hands back `Self`), in the game's crates and the
@@ -182,11 +181,6 @@ pub fn drop(root: &Path, names: &[String], write: bool) -> Result<(usize, usize,
     let mut makers: HashMap<String, HashSet<String>> = HashMap::new();
     let mut parsed: Vec<(std::path::PathBuf, String, syn::File)> = Vec::new();
     for p in files {
-        let name = p.file_name().and_then(|n| n.to_str()).unwrap_or("");
-        // (io.rs and puppet.rs are the wire's own, written by its tool)
-        if matches!(name, "io.rs" | "puppet.rs") {
-            continue;
-        }
         let Ok(src) = std::fs::read_to_string(&p) else { continue };
         if !want.keys().any(|t| src.contains(t.as_str())) {
             continue;
@@ -288,8 +282,7 @@ pub fn drop(root: &Path, names: &[String], write: bool) -> Result<(usize, usize,
 
 /// A type leaves the Rust source: its declaration, its `impl`s and a free function that hands it back (`page_par`: the table's
 /// page values, which `fields-drop` has left with no caller; a caller still there is the compile error that says so), in the game's crates and the crates that use them. `names`:
-/// `mod::Type`, one each. It is for a type the last field of its kind has left (`fields-drop`), after `tools/wire/wire.ts
-/// drop-type` has taken its lines off the wire: if anything is left that names the type, nothing is written and the places are said.
+/// `mod::Type`, one each. It is for a type the last field of its kind has left (`fields-drop`): if anything is left that names the type, nothing is written and the places are said.
 /// Returns (items cut, what still names a type).
 pub fn drop_types(root: &Path, names: &[String], write: bool) -> Result<(usize, Vec<String>), String> {
     let want: HashSet<String> = names.iter().map(|n| n.rsplit("::").next().unwrap_or(n).to_string()).collect();

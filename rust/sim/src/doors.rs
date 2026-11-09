@@ -161,12 +161,6 @@ pub const KF_HAND: u32 = 256;
 
 // a noise (doors.ts DoorEvent): the door, the sound (the place of its name in DoorSound), who, how loud, whether the door's kept centre was made anew for
 // it, and that centre
-pub const E_DOOR: usize = 0;
-pub const E_SOUND: usize = 1;
-pub const E_WHO: usize = 2;
-pub const E_LEVEL: usize = 3;
-pub const E_PX: usize = 4;
-pub const E_PZ: usize = 5;
 pub const NEV: usize = 6;
 pub const S_CREAK: f64 = 0.0;
 pub const S_BANG: f64 = 1.0;

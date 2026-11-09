@@ -1,12 +1,11 @@
-//! The types of `told`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `told`.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum ToldRung {
-    Bare,
+    #[default] Bare,
     Guided,
     Standard,
 }
@@ -20,5 +19,3 @@ impl ToldRung {
     }
 }
 
-/// (src/game/told.ts:31 TOLD_RUNGS: a table nothing writes)
-pub fn told_rungs() -> Vec<String> { alloc::vec![String::from("guided"), String::from("standard"), String::from("bare")] }

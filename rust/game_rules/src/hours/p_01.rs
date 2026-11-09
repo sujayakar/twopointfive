@@ -281,7 +281,7 @@ pub fn put_in(g: &mut crate::game::Game, def: &crate::hours::HourDef, from: Opti
         name: String::from(SUN_NAME), group: String::from(SUN_GROUP), kind: 2.0, pos: [0.0, 0.0, 0.0], dir: v3::scale(to_sun, -1.0), color: v3::copy(def.sun.color),
         intensity: power, range: 1e6, inner_deg: 0.0, outer_deg: 0.0, radius: def.sun.radius, volumetric: def.sun.volumetric, owner: 0.0, enabled: true,
         fixture_box: -1.0, flicker: 0.0, ttl: -1.0, age: 0.0, peak_intensity: power, broad: false,
-        ..crate::render_lights::RtLight::zeroed()   // every optional field absent, as in the literal
+        ..crate::render_lights::RtLight::default()   // every optional field absent, as in the literal
     });
     g.engine.lights.lights.insert(at, sun);
     g.engine.settings.sky_zenith = v3::copy(def.sky.zenith);
@@ -354,11 +354,6 @@ pub fn hour_after_reset(g: &mut crate::game::Game) {
     let Some(st) = g.m.hours.states.as_mut() else { return };
     st.lamps.clear();
     lamps_out(g);
-}
-
-/// The statics changed under a running game: what the sky reaches is asked afresh. (hours.ts hourWorldChanged)
-pub fn hour_world_changed(g: &mut crate::game::Game) {
-    g.m.hours.reach = crate::hours::SkyReach::blank();
 }
 
 // ---------------------------------------------------------------- the meter's stand-in
@@ -734,7 +729,7 @@ mod tests {
         assert_eq!(hour_id_of(None), HourId::Night);
     }
     fn lamp(g: &mut Game, kind: f64, dir: V3, intensity: f64) -> LightId {
-        let l = g.tab.light.push(crate::render_lights::RtLight { kind, dir, color: [1.0, 1.0, 1.0], intensity, enabled: true, ttl: -1.0, ..crate::render_lights::RtLight::zeroed() });
+        let l = g.tab.light.push(crate::render_lights::RtLight { kind, dir, color: [1.0, 1.0, 1.0], intensity, enabled: true, ttl: -1.0, ..crate::render_lights::RtLight::default() });
         g.engine.lights.lights.push(l);
         l
     }
@@ -753,14 +748,14 @@ mod tests {
         let out = lamp(&mut g, 2.0, [0.0, -1.0, 0.0], 9.0);
         g.tab.light[out].enabled = false;
         assert_eq!(sky_lamp_of(&mut g), Some(moon));
-        g.m.hours.states = Some(HourState { sun: dim, ..HourState::zeroed() });   // an hour in: its sun is the estimate's, the night has no lamp
+        g.m.hours.states = Some(HourState { sun: dim, ..HourState::default() });   // an hour in: its sun is the estimate's, the night has no lamp
         assert_eq!(sky_lamp_of(&mut g), None);
     }
     #[test]
     fn the_sun_strength_lands_in_the_light() {
         let mut g = Game::blank();
         let sun = lamp(&mut g, 2.0, [0.0, -1.0, 0.0], 0.0);
-        let mut st = HourState { sun, ..HourState::zeroed() };
+        let mut st = HourState { sun, ..HourState::default() };
         st.def.sun.intensity = 6.0;
         g.m.hours.states = Some(st);
         set_sun_strength(&mut g, 0.5, None);

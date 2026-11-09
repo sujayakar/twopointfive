@@ -32,7 +32,7 @@ fn prop_noise(g: &mut Game, pos: V3, level: f64) {
         level: Some(level),
         who: Some(who),
         serial,
-        ..crate::game::GameEvent::zeroed()
+        ..crate::game::GameEvent::default()
     });
     g.pl[p].noise = m::max(g.pl[p].noise, level);
 }
@@ -387,7 +387,7 @@ pub fn update_hold(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Came
                     free_aim(g, &crate::seats::here(g), Some(0.6))
                 };
                 let (spread_sup, spread_aim) = (crate::suppression::sam_spread(g, &crate::seats::here(g)), crate::aim::sam_aim(g));
-                let opts = crate::combat::FireOpts { spread: Some(HOLD_SPREAD + spread_sup + spread_aim), ..crate::combat::FireOpts::zeroed() };
+                let opts = crate::combat::FireOpts { spread: Some(HOLD_SPREAD + spread_sup + spread_aim), ..crate::combat::FireOpts::default() };
                 crate::combat::fire_weapon(g, c, tgt, true, Some(&opts));
                 if crate::weapons::firearm_rounds_ready(g, pistol) == 0.0 {
                     crate::game::game_msg(g, "empty — and no hand free to reload");
@@ -630,7 +630,7 @@ fn tail_end(g: &mut Game, dt: f64, speed: f64, c: CharId) {
             loud: false,
             level: Some(loud),
             serial,
-            ..crate::game::GameEvent::zeroed()
+            ..crate::game::GameEvent::default()
         });
         g.pl[p].noise = m::max(g.pl[p].noise, loud);
     }
@@ -979,7 +979,7 @@ pub fn take_key(g: &mut crate::game::Game, gd: GuardId, rnd: Option<&mut dyn FnM
     if let Some(variant) = variant {
         if let Some(line) = crate::dialogue::sam_key_line_for(g, gd, variant, rnd) {
             if let Some(h) = g.pl[p].holding.as_mut() {
-                h.after = Some(crate::player::HoldAfter { text: line.text, id: line.id });
+                h.after = Some(crate::player::HoldAfter { text: line.text });
             }
         }
     }
@@ -1136,7 +1136,7 @@ mod tests {
 
     #[test]
     fn the_knife_is_only_the_kill_phase() {
-        let mut h = Hold::zeroed();
+        let mut h = Hold::default();
         h.phase = crate::character::HoldPhase::Kill;
         assert!(hold_killing(&h));
         h.phase = crate::character::HoldPhase::Choke;

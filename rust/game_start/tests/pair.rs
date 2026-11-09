@@ -303,7 +303,7 @@ fn hears(who: impl Fn(&Play, GuardId, GuardId) -> f64, kind: game::director::Eve
     for _ in 0..5 { p.pin_man(foe, [at[0], at[2]], yaw, GuardState::Patrol, 0.0); p.frame(); }
     let id = who(&p, m, foe);
     let (time, serial) = (p.g.time, p.g.serial());
-    p.g.events.push(game::game::GameEvent { kind, pos: [at[0] + 2.0, 0.3, at[2]], time, loud: false, level: Some(0.3), who: Some(id), serial, ..game::game::GameEvent::zeroed() });
+    p.g.events.push(game::game::GameEvent { kind, pos: [at[0] + 2.0, 0.3, at[2]], time, loud: false, level: Some(0.3), who: Some(id), serial, ..game::game::GameEvent::default() });
     p.frame();
     p.g.gd[foe].awareness
 }

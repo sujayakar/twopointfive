@@ -253,6 +253,12 @@ impl Panes {
         let at = self.holes_at() + h * HOLE_W;
         unsafe { &mut *(self.body.as_mut_ptr().add(at) as *mut Hole) }
     }
+    /// …to read
+    #[inline]
+    pub fn hole_read(&self, h: usize) -> &Hole {
+        let at = self.holes_at() + h * HOLE_W;
+        unsafe { &*(self.body.as_ptr().add(at) as *const Hole) }
+    }
     #[inline]
     fn q(&mut self, i: usize) -> &mut Q {
         let at = self.q_at() + i * Q_W;
@@ -601,7 +607,6 @@ pub struct Ctx {
 fn solid(c: &Ctx, a: [f64; 3], b: [f64; 3]) -> bool {
     lines::solid_line(c.w, c.set, ASK_GLASS, a[0], a[1], a[2], b[0], b[1], b[2]).unwrap_or(true)
 }
-
 
 // ---- which glass a pane is
 /// glassbreak.ts skySide: which face of the pane has the open sky (+1 the side its normal points to, −1 the other, 0 neither or both). Asked of the level's own
@@ -1916,17 +1921,6 @@ fn held_set(r: &Row, without: i32) -> &'static [u32; 21] {
     }
     unsafe { &*core::ptr::addr_of!(HELD_BITS) }
 }
-/// …for a tool
-pub fn held_bits(g: usize, bi: u32, without: i32) -> &'static [u32; 21] {
-    let p = pn(g);
-    match p.row_of(bi) {
-        Some(ri) if p.row(ri).ty == ANNEALED => held_set(p.row(ri), without),
-        _ => unsafe {
-            *core::ptr::addr_of_mut!(HELD_BITS) = [0; 21];
-            &*core::ptr::addr_of!(HELD_BITS)
-        },
-    }
-}
 /// glassbreak.ts supportPass: what a change left unheld falls, a beat later and staggered
 fn support_pass(c: &Ctx, ri: usize) {
     let (frags, key, lu, lv) = {
@@ -2256,50 +2250,6 @@ pub fn forget_heard(g: usize) {
         p.settle();
     }
 }
-/// where each of a row's fields stands (bytes from its start), for the host's reads, and how long a row is
-pub fn field(i: u32) -> usize {
-    match i {
-        0 => offset_of!(Row, d),
-        1 => offset_of!(Row, w),
-        2 => offset_of!(Row, e),
-        3 => offset_of!(Row, hits),
-        4 => offset_of!(Row, c),
-        5 => offset_of!(Row, hu),
-        6 => offset_of!(Row, hv),
-        7 => offset_of!(Row, ht),
-        8 => offset_of!(Row, energy),
-        9 => offset_of!(Row, damage),
-        10 => offset_of!(Row, next_think),
-        11 => offset_of!(Row, last_dir),
-        12 => offset_of!(Row, last_uv),
-        13 => offset_of!(Row, sound_at),
-        14 => offset_of!(Row, who),
-        15 => offset_of!(Row, key),
-        16 => offset_of!(Row, ty),
-        17 => offset_of!(Row, u_axis),
-        18 => offset_of!(Row, exterior),
-        19 => offset_of!(Row, hit_n),
-        20 => offset_of!(Row, n_open),
-        21 => offset_of!(Row, d_next),
-        22 => offset_of!(Row, walkable),
-        23 => offset_of!(Row, q0),
-        24 => offset_of!(Row, qn),
-        25 => size_of::<Row>(),
-        26 => size_of::<Q>(),
-        27 => offset_of!(Q, at),
-        28 => offset_of!(Q, from),
-        29 => offset_of!(Q, k),
-        30 => offset_of!(Q, fid),
-        31 => offset_of!(Q, cause),
-        _ => 0,
-    }
-}
-/// a row's place from the block's start, in bytes; the queue's; how many rows there are
-pub fn row_addr(g: usize, ri: usize) -> usize {
-    let p = pn(g);
-    let at = p.rows_at() + ri * ROW_W;
-    offset_of!(crate::state::State, panes) + HEAD + at * 8
-}
 pub fn q_addr(g: usize) -> usize {
     let p = pn(g);
     offset_of!(crate::state::State, panes) + HEAD + p.q_at() * 8
@@ -2319,37 +2269,12 @@ pub fn jet(c: &Ctx, at: [f64; 3], d: [f64; 3], speed: f64, amount: f64, who: f64
     let (t, p) = fall_of(c, at, v, c.gravity, 0.8);
     falls::schedule(c.g, falls::L_GLASS, c.now + t, p[0], p[1], p[2], SOUND_TINKLE, 0.0, 1.0, amount, who, EV_UNHEARD, 0.0, 0.0, k(SH_PENDING_MAX));
 }
-pub fn hole_rows(g: usize) -> u32 {
-    pn(g).nh
-}
-pub fn hole_bi(g: usize, r: usize) -> u32 {
-    pn(g).hole(r).bi
-}
-pub fn hole_n(g: usize, r: usize) -> u32 {
-    pn(g).hole(r).n
-}
-pub fn hole_pt(g: usize, r: usize, i: usize) -> f64 {
-    pn(g).hole(r).p[i]
-}
 pub fn clear_holes(g: usize) {
     let p = pn(g);
     if p.used != 0 {
         p.clear_holes();
         p.settle();
     }
-}
-/// glassbreak.ts typeOf
-pub fn type_place(c: &Ctx, bi: u32) -> u32 {
-    let s = match sheet_of(world(c.w), bi) {
-        Some(s) => s,
-        None => return ANNEALED,
-    };
-    let (h0, h1, h2, cy) = {
-        let o = world(c.w);
-        let b = rec(o, bi as usize);
-        (b[R_H], b[R_H + 1], b[R_H + 2], b[R_C + 1])
-    };
-    type_by_place(c, s, h0, h1, h2, cy)
 }
 /// glassbreak.ts fill's open threshold: the midpoint between the last clump out and the next in
 pub fn dice_threshold(g: usize, bi: u32) -> f64 {

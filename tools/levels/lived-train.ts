@@ -6,14 +6,14 @@
 //   motor pool = the engine hoist · kitchen court = the row of cauldrons · generator yard = the cable spools · the range = the red flag
 //   · quarters = the wash bench · the white house = the pigeon loft · the well court = the water cart.
 //
-// The contract (src/scene/lived.ts, rebuild/play-style-levels/rooms/read-first.md): every box is in a group
+// The contract (lib/lived.ts): every box is in a group
 // `lived.<place>`, every prop is named `lived.<place>.<kind><n>`, all of it the TAIL of the generator's lists — so a furnish step runs
 // AFTER `T.finish()` — and NO LIGHT is added on any of the seven (lesson 3 is about the lights; the quiet lessons' dark ways are measured).
 // Boxes only, flat colours off the GWOT kit's palette, no dice: the same file every run.
 import { BoxFlag } from '../../src/scene/boxes';
-import { drawnRoundSlabs, GW_SHELL, ROUND_FROM, roundFace, roundRadius, roundSlabs, type GwotMat } from '../../src/scene/gwotKit';
-import type { PropKind } from '../../src/scene/level';
-import { pieces } from '../../src/scene/library';
+import { drawnRoundSlabs, GW_SHELL, ROUND_FROM, roundFace, roundRadius, roundSlabs, type GwotMat } from './lib/gwotKit';
+import type { PropKind } from './lib/level';
+import { pieces } from './lib/library';
 import type { trainGround } from './train-ground';
 
 /** what the furniture needs of the ground it stands on: the two kits and the ground's own box and group calls (so a level that is not on the shared yard can lay it too) */
@@ -33,7 +33,7 @@ export function livedTrain(T: Ground) {
   // ---- boxes, in world rectangles
   const bx = (x0: number, z0: number, x1: number, z1: number, y0: number, y1: number, m: GwotMat, flags = 0, yaw = 0) =>
     T.add({ c: [(x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2], h: [Math.abs(x1 - x0) / 2, (y1 - y0) / 2, Math.abs(z1 - z0) / 2], ...M[m], ...(flags ? { flags } : {}), ...(yaw ? { yaw } : {}) });
-  /** a ROUND thing standing from y0 to y1, radius r: the kits' one way of writing a round (src/scene/gwotKit.ts): from 0.2 m one box that says it is round; smaller,
+  /** a ROUND thing standing from y0 to y1, radius r: the kits' one way of writing a round (lib/gwotKit.ts): from 0.2 m one box that says it is round; smaller,
    *  two squares an eighth of a turn apart. A round thinner than 8 mm is no round: lay it `flat`. With `flags`, drawn only */
   const rd = (x: number, z: number, r: number, y0: number, y1: number, m: GwotMat, flags = 0) => {
     if (!(y1 - y0 > 0.008)) throw new Error(`lived-train: a round ${((y1 - y0) * 1000).toFixed(0)} mm thick at (${x}, ${z}): lay a flat piece for a thing that thin`);
@@ -164,7 +164,7 @@ export function livedTrain(T: Ground) {
     f.b(-0.8, -0.29, 0, 0.29, 0.56, 1.14, 'drumBlue'); f.b(0.04, -0.29, 0.84, 0.29, 0.56, 1.14, 'plasticBlue'); f.b(-0.86, -0.04, -0.8, 0.04, 0.62, 0.7, 'tin', NS);
   };
 
-  // the TOOLS (a place, raw boxes and rounds, a frame, a raw prop), then the PIECES by name (src/scene/library.ts)
+  // the TOOLS (a place, raw boxes and rounds, a frame, a raw prop), then the PIECES by name (lib/library.ts)
   return { place, done, bx, rd, flat, hung, at, loose, NS, G, T,
     ...pieces('livedTrain', { table, plank, rack, row, stool, bucket, pot, jerry, helmet, toolRoll, chest, hoist, cauldrons, spools, flag, basins, loft, waterCart }) };
 }

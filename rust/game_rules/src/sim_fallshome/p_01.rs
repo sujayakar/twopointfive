@@ -61,7 +61,7 @@ pub fn fall_store_new(g: &crate::game::Game, home: crate::Opaque) -> crate::sim_
     st.head.homes |= bit;
     let base = (js::to_u32(crate::sim_state::sim_part(crate::sim_state::P_FALLS)) >> 3) as f64;
     st.falls.last_event_t = [NEVER; sim::falls::NLIST];
-    FallStore { base, home }
+    FallStore {  }
 }
 
 

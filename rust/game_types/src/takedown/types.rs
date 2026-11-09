@@ -1,9 +1,8 @@
-//! The types of `takedown`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `takedown`.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum Half {
     Blow,
@@ -16,41 +15,16 @@ pub enum Half {
     ChokeBeats,
     Haul,
 }
-impl Half {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Half::Blow => "blow",
-            Half::Kill => "kill",
-            Half::Partner => "partner",
-            Half::Victim => "victim",
-            Half::Fall => "fall",
-            Half::Breathe => "breathe",
-            Half::Lower => "lower",
-            Half::ChokeBeats => "chokeBeats",
-            Half::Haul => "haul",
-        }
-    }
-}
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum TakeFallHow {
     Choke,
     Whip,
     Kill,
 }
-impl TakeFallHow {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            TakeFallHow::Choke => "choke",
-            TakeFallHow::Whip => "whip",
-            TakeFallHow::Kill => "kill",
-        }
-    }
-}
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct TakedownMod {
     /// (src/game/takedown.ts:162 BREATHING)
     pub breathing: bool,

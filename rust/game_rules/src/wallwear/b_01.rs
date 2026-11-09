@@ -95,14 +95,14 @@ fn throw_out(g: &mut Game, b: &crate::scene_boxes::Box, surf: Surf, hit_p: V3, d
         // out of the far face, along the round (kept off the wall plane so nothing is born inside it)
         let out = v3::normalize(v3::add(v3::scale(n, -1.0), v3::scale(dir, 0.6)));
         let at = v3::mad(hit_p, n, -(2.0 * half + 0.03));
-        let o = EmitOpts { shape: Some(EmitShape::Puff), speed: 0.35 + 0.5 * s, speed_jit: Some(0.5), lift: Some(0.2), life: 1.1 + 0.6 * s, life_jit: Some(0.3), size: 0.09 + 0.08 * s, size_jit: Some(0.35), pos_jit: Some(0.04 + 0.05 * s), vadd: Some(v3::scale(out, 0.3 + 0.4 * s)), color: Some(dust), ..EmitOpts::zeroed() };
+        let o = EmitOpts { shape: Some(EmitShape::Puff), speed: 0.35 + 0.5 * s, speed_jit: Some(0.5), lift: Some(0.2), life: 1.1 + 0.6 * s, life_jit: Some(0.3), size: 0.09 + 0.08 * s, size_jit: Some(0.35), pos_jit: Some(0.04 + 0.05 * s), vadd: Some(v3::scale(out, 0.3 + 0.4 * s)), color: Some(dust), ..EmitOpts::default() };
         let puffs = match crate::particle_fx::dust_asked(g, m::min(room, 1.0 + m::round(2.0 * s)), o) { Some((c, o)) => throw(g, PKind::Dust, at, out, c, o, ours), None => 0.0 };
         room = m::max(0.0, room - puffs);
         let chips = m::min(room, if s < w.exit_chips_from { 1.0 } else { m::round(3.0 + 8.0 * s) });
         room -= chips;
-        if chips > 0.0 { throw(g, PKind::Debris, at, out, chips, EmitOpts { speed: 1.2 + 2.2 * s, speed_jit: Some(0.7), spread: Some(0.7 + 0.3 * s), life: 14.0, life_jit: Some(0.3), size: if wood { 0.006 } else { 0.007 + 0.004 * s }, size_jit: Some(0.6), aspect: Some(if wood { 3.0 } else { 1.0 }), color: Some(chip), ..EmitOpts::zeroed() }, ours); }
+        if chips > 0.0 { throw(g, PKind::Debris, at, out, chips, EmitOpts { speed: 1.2 + 2.2 * s, speed_jit: Some(0.7), spread: Some(0.7 + 0.3 * s), life: 14.0, life_jit: Some(0.3), size: if wood { 0.006 } else { 0.007 + 0.004 * s }, size_jit: Some(0.6), aspect: Some(if wood { 3.0 } else { 1.0 }), color: Some(chip), ..EmitOpts::default() }, ours); }
     }
     // near face: a cell most of the way gone sheds a few bigger flakes that fall
     let flakes = m::min(room, if s > 0.45 { m::round(5.0 * s) } else { 0.0 });
-    if flakes > 0.0 { throw(g, PKind::Debris, v3::mad(hit_p, n, 0.02), v3::normalize(v3::add(n, [0.0, -0.4, 0.0])), flakes, EmitOpts { speed: 0.9, speed_jit: Some(0.7), spread: Some(1.1), life: 14.0, life_jit: Some(0.3), size: if wood { 0.007 } else { 0.012 }, size_jit: Some(0.6), aspect: Some(if wood { 3.0 } else { 1.4 }), color: Some(chip), ..EmitOpts::zeroed() }, ours); }
+    if flakes > 0.0 { throw(g, PKind::Debris, v3::mad(hit_p, n, 0.02), v3::normalize(v3::add(n, [0.0, -0.4, 0.0])), flakes, EmitOpts { speed: 0.9, speed_jit: Some(0.7), spread: Some(1.1), life: 14.0, life_jit: Some(0.3), size: if wood { 0.007 } else { 0.012 }, size_jit: Some(0.6), aspect: Some(if wood { 3.0 } else { 1.4 }), color: Some(chip), ..EmitOpts::default() }, ours); }
 }

@@ -48,7 +48,7 @@ fn lamp_row(g: &Game, l: LightId) -> Option<usize> {
 pub fn columns(g: &crate::game::Game) {
     let (cols, caps) = (light_cols().len(), light_caps());
     if rs::cap(14) != cols || rs::cap(0) as f64 != caps.targets || rs::cap(1) as f64 != caps.rows || rs::cap(2) as f64 != caps.beacons || rs::cap(3) as f64 != caps.cameras || rs::cap(4) as f64 != caps.lasers {
-        panic!("the Rust module lays the lights out as {} columns and src/sim/lightshome.ts as {}: bun run tools/sim/build.ts", rs::cap(14), cols);
+        panic!("rust/sim lays the lights out as {} columns and the rules as {}", rs::cap(14), cols);
     }
 }
 
@@ -68,13 +68,11 @@ pub fn fixture_new(g: &mut crate::game::Game, i: f64, st: crate::Opaque, def: &c
         light: def.light,
         boxes: def.boxes.clone(),
         base_emissive: def.base_emissive,
-        fluorescent_flicker: def.fluorescent_flicker,
         mains: def.mains,
         interactive: def.interactive,
         area_lights: def.area_lights.as_ref().map(|v| v.iter().map(|a| FixtureAreaLightsItem { light: a.light, base: a.base }).collect()),
         lens: def.lens,
         i,
-        st,
     })
 }
 
@@ -262,10 +260,9 @@ pub fn light_home_new(g: &crate::game::Game, st: crate::Opaque) -> crate::sim_li
         panic!("two stores of the lights over one game's block: a part of a block is one store's");
     }
     head.homes |= bit;
-    let mains = Mains { st };
     let fresh = light_in().fresh;
     light_home_in(g, fresh, None, None, None, None, None);
-    LightHome { mains, lamps: Vec::new(), st }
+    LightHome { lamps: Vec::new(), st }
 }
 
 /// A fixture more (the level as it is built). (lightshome.ts LightHome.add)
@@ -538,7 +535,7 @@ mod tests {
     extern crate std;
 
     fn def(on: bool, kind: FixtureDefKind) -> FixtureDef {
-        FixtureDef { on, kind, disabled_until: -1.0, factor: 0.5, stagger: 0.25, base_intensity: 7.0, mains: true, ..FixtureDef::zeroed() }
+        FixtureDef { on, kind, disabled_until: -1.0, factor: 0.5, stagger: 0.25, base_intensity: 7.0, mains: true, ..FixtureDef::default() }
     }
 
     /// what this file writes and reads of the columns, on one slot of its own (one test: a slot's block is one game's)
@@ -605,7 +602,7 @@ mod tests {
 
     /// a lamp of the list, as a level's lights hang it
     fn lamp(g: &mut Game, name: &str, on: bool) -> LightId {
-        let mut l = crate::render_lights::RtLight::zeroed();
+        let mut l = crate::render_lights::RtLight::default();
         l.name = String::from(name);
         l.enabled = on;
         l.ttl = -1.0;
@@ -630,7 +627,7 @@ mod tests {
             g.tab.light[spot].peak_intensity = 9.0;
             g.tab.light[own].pos = [1.0, 2.0, 3.0];
             g.tab.light[own].intensity = 5.0;
-            g.tab.light[own].steady = Some(crate::render_lights::RtLightSteady { intensity: 4.0, pos: [6.0, 7.0, 8.0], radius: 0.5, ..crate::render_lights::RtLightSteady::zeroed() });
+            g.tab.light[own].steady = Some(crate::render_lights::RtLightSteady { intensity: 4.0, pos: [6.0, 7.0, 8.0], radius: 0.5, ..crate::render_lights::RtLightSteady::default() });
 
             let a = light_home_add(g, &FixtureDef { light: Some(own), ..def(true, FixtureDefKind::Analytic) });
             let b = light_home_add(g, &FixtureDef { group: String::from("monitors"), area_lights: Some(vec![FixtureDefAreaLightsItem { light: panel, base: 2.5 }]), ..def(true, FixtureDefKind::Emissive) });

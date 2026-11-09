@@ -1,6 +1,7 @@
 // WHAT A TICK DID THAT IS DRAWN ONCE, played: particles thrown and kicked, the air pushed, smoke let go. Every row carries the id that names it (its tick, its kind,
 // its place among that kind), and an id is played once, however often its tick is run.
 import type { EmitOpts, ImpulseOpts, Particles, PKind } from '../render/particles';
+import { lookConfig } from '../render/frame';
 import type { SmokeSystem } from '../smoke/smoke';
 import type { SmokeEmitter } from '../smoke/types';
 import type { Vec3 } from '../math/vec';
@@ -23,7 +24,9 @@ class Played {
   forget(): void { this.by.clear(); }
 }
 const LOOK = 1, CONFINED = 2, RIDES_VELOCITY = 4, HELD = 8, FIRE = 16;
-const LATTICES = [undefined, 'fine', 'coarse'] as const, SHAPE_LINE = 1, SHAPE_BODY = 2, SHAPE_OUT = 4, SHAPE_ROUND = 5;
+const LATTICES = [undefined, 'fine', 'coarse'] as const, SHAPE_LINE = 1, SHAPE_BODY = 2, SHAPE_OUT = 4, SHAPE_ROUND = 5, SHAPE_STRIDE = 6;
+/** m/s a stride throws the air at the most, and the most the look's amount of it counts */
+const STRIDE_MOST = 2.2, STIR_MOST = 2;
 const said = (v: number): number | undefined => v === v ? v : undefined;
 
 export class DrawEvents {
@@ -36,6 +39,8 @@ export class DrawEvents {
   private v3(o: number): Vec3 { const f = this.D.f; return [f[o], f[o + 1], f[o + 2]]; }
   private v3said(o: number): Vec3 | undefined { return this.D.f[o] === this.D.f[o] ? this.v3(o) : undefined; }
 
+  /** the game stands anew: what lets smoke out where it stands, whoever heard it begin */
+  stands(): void { this.ride(); this.sources(); }
   /** the tick that has just run */
   from(): void {
     this.ride(); this.sounds();
@@ -48,10 +53,12 @@ export class DrawEvents {
         const k = u[o + Kick.kinds], w: ImpulseOpts = { up: said(f[o + Kick.up]), bias: this.v3said(o + Kick.bias), eye: this.v3said(o + Kick.eye), occlude: u[o + Kick.occlude] !== 0, kinds: k ? PKINDS.filter((_, n) => k >>> n & 1) as PKind[] : undefined, seed: u[o + Kick.seed] === 0xffffffff ? undefined : u[o + Kick.seed] };
         P.impulse(this.v3(o + Kick.pos), f[o + Kick.radius], f[o + Kick.strength], w); }
     }
-    for (let i = 0, o = D.at[Section.sources]; i < D.n[Section.sources]; i++, o += SmokeSource.row) if (this.played.once(Section.sources, u[o + SmokeSource.tick], u[o + SmokeSource.serial])) this.source(o);
-    for (let i = 0, o = D.at[Section.pushes]; i < D.n[Section.pushes]; i++, o += AirPush.row) if ((u[o + AirPush.shape] <= SHAPE_BODY || u[o + AirPush.shape] === SHAPE_ROUND) && this.played.once(Section.pushes, u[o + AirPush.tick], u[o + AirPush.serial])) {
+    this.sources();
+    const stir = Math.max(0, lookConfig.stir); this.smoke.setStir(stir);   // (how hard a moving man curls the smoke about him)
+    for (let i = 0, o = D.at[Section.pushes]; i < D.n[Section.pushes]; i++, o += AirPush.row) if ((u[o + AirPush.shape] <= SHAPE_BODY || u[o + AirPush.shape] >= SHAPE_ROUND) && this.played.once(Section.pushes, u[o + AirPush.tick], u[o + AirPush.serial])) {
       const shape = u[o + AirPush.shape], len = f[o + AirPush.len], vel = this.v3(o + AirPush.vel);
       if (shape === SHAPE_ROUND) { this.smoke.round?.(this.v3(o + AirPush.pos), this.v3(o + AirPush.dir), len); continue; }
+      if (shape === SHAPE_STRIDE) { if (stir > 0) this.smoke.push({ pos: this.v3(o + AirPush.pos), dir: this.v3(o + AirPush.dir), speed: Math.min(STRIDE_MOST, Math.hypot(vel[0], vel[1], vel[2]) * Math.min(STIR_MOST, stir)), radius: f[o + AirPush.radius] }); continue; }
       this.smoke.push({ pos: this.v3(o + AirPush.pos), dir: this.v3(o + AirPush.dir), speed: Math.hypot(vel[0], vel[1], vel[2]), radius: f[o + AirPush.radius], lattice: LATTICES[u[o + AirPush.lattice]], line: shape === SHAPE_LINE ? len : undefined, body: shape === SHAPE_BODY ? len : undefined, push: said(f[o + AirPush.hard]) }); }
   }
   /** the sounds of the tick that has just run, after what they follow is known */
@@ -68,6 +75,7 @@ export class DrawEvents {
       A.play(this.names[n] ??= this.nameOf(n), pos, gain, opts); }
     for (let i = 0, o = D.at[Section.footfalls]; i < D.n[Section.footfalls]; i++, o += Footfall.row, D.fresh()) if (this.played.once(Section.footfalls, D.u[o + Footfall.tick], D.u[o + Footfall.serial])) { const m = D.u[o + Footfall.floor]; A.footstep(this.v3(o + Footfall.pos), D.f[o + Footfall.loud], D.u[o + Footfall.own] !== 0, m ? FLOORS[m - 1] as FloorMat : undefined); }
   }
+  private sources(): void { const D = this.D; for (let i = 0, o = D.at[Section.sources]; i < D.n[Section.sources]; i++, o += SmokeSource.row) if (this.played.once(Section.sources, D.u[o + SmokeSource.tick], D.u[o + SmokeSource.serial])) this.source(o); }
   /** a source of smoke, with the push of the air that goes with it, as today's solver takes them: one emitter */
   private source(o: number): void {
     const D = this.D, f = D.f, u = D.u, n = u[o + SmokeSource.push], a = n ? D.at[Section.pushes] + (n - 1) * AirPush.row : -1, says = u[o + SmokeSource.says], key = u[o + SmokeSource.anchor];

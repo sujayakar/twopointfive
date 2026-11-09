@@ -15,13 +15,14 @@ pub trait Id: Copy + Ord {
 macro_rules! id {
     ($($(#[$m:meta])* $name:ident),* $(,)?) => { $(
         $(#[$m])*
-        #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+        #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Default)]
         pub struct $name(pub u32);
         impl $crate::ids::Id for $name {
             const NAME: &'static str = stringify!($name);
             #[inline] fn from_ix(i: usize) -> Self { $name(i as u32) }
             #[inline] fn ix(self) -> usize { self.0 as usize }
         }
+        impl $crate::bytes::ToBytes for $name { #[inline] fn w(&self, o: &mut $crate::bytes::W) { $crate::bytes::ToBytes::w(&self.0, o) } }
     )* };
 }
 id! {
@@ -182,9 +183,6 @@ impl<I: Id, T> Tab<I, T> {
     }
     pub fn len(&self) -> usize {
         self.rows.len()
-    }
-    pub fn is_empty(&self) -> bool {
-        self.rows.is_empty()
     }
     /// every ID, in the order made
     pub fn ids(&self) -> impl Iterator<Item = I> {

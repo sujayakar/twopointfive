@@ -127,6 +127,42 @@ fn where_a_machine_looks_does_not_part_the_two_machines() {
     if let Some((k, parts)) = parting(&play(0, false), &play(1, true)) { panic!("the machine that looks at the fire parts in {parts} {:.1} s on", (k + 1) as f64 / 10.0); }
 }
 
+/// THE RULE: each player's own view (which way it is turned, how far off it is) is his own picture's alone: with the two views unlike, the machine that shows one player holds the same game, in
+/// every part of its state, as the machine that shows the other. A round's streak is as thick in both, and each machine draws it as wide as its own view's pixels have it seen.
+/// A FAILURE MEANS: the tick has come to ask for a number of THIS machine's view (a pixel's size, an ear), or the drawer no longer widens a line for its own.
+#[test]
+fn each_players_view_is_his_own_pictures_alone() {
+    let play = |seed: u32, shown: usize| -> (Vec<Vec<u32>>, f64, f64) {
+        let mut p = Play::mission("office.json", "?levelFile=office.json&roomclear&squad4", &Opts { seed, seats: 2, dress: true, ..Default::default() });
+        let (seats, mut drawn, mut own, mut wide) = (p.g.seats.clone(), game_draw::Drawn::default(), 0.0f64, 0.0f64);
+        let rows = (0..90).map(|k| {
+            let theirs = p.g.tab.cmd_seat[seats[1]].cam;
+            let c = &mut p.g.tab.camera[theirs];
+            (c.yaw, c.distance, c.desired_distance) = (2.0, 84.0, 84.0);
+            if k % 6 == 0 { game::tracers::tracers_spawn(&mut p.g, [8.0, 1.4, 8.0], [0.0, 0.0, 1.0], 9.0, game::tracers::TracerImpact::None, [1.0, 0.5, 0.2], 0x1ff as f64); }
+            p.net_frame(shown);
+            game::seats::show_seat(&mut p.g, seats[shown]);
+            drawn.take(&p.g, u32::MAX);
+            let n = drawn.boxes.statics() as usize;
+            for (i, id) in drawn.boxes.own_ids().enumerate() {
+                let Some(t) = p.g.m.thinline.thin.get(id) else { continue };
+                assert_eq!(p.g.tab[id].h[0], t.hw0, "the box of a line is as thick as it is noted");
+                own = own.max(t.hw0);
+                wide = wide.max(f32::from_bits(drawn.boxes.geo[n + i].w[4]) as f64);
+            }
+            game::seats::show_seat(&mut p.g, seats[0]);
+            p.words()
+        }).collect();
+        (rows, own, wide)
+    };
+    for s in SEEDS {
+        let ((mine, own, near), (theirs, _, far)) = (play(s, 0), play(s, 1));
+        assert!(own > 0.0, "seed {s}: no line of light stood in a second and a half");
+        if let Some((k, parts)) = parting(&mine, &theirs) { panic!("seed {s}: with their views unlike, the machine that shows the other player parts at frame {k} in {parts}"); }
+        assert!(near >= own && far > 2.0 * near, "seed {s}: a line {own} m thick is drawn {near} m wide from where the first player looks and {far} m from four times as far");
+    }
+}
+
 /// Two players in the yard, every seat refereed as over the net, the second's man walking on `keys`; before every tenth tick a machine that `looks` looks 24 records ahead
 /// for him. Answers the words at each tick, and for each look whether his legs were his own and
 /// nobody within a metre and a half of him all through it, where it had him after each record and where the game then had him.

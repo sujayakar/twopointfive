@@ -1,5 +1,5 @@
 // LIBRARY-HALL: the SHOWROOM OF THE OLDER KITS — NOT a level to play for its own sake and not in the missions list. An open floor with one of every piece of
-// the office's kit (src/scene/officeGen.ts officeKit), the loud levels' lived kit (livedKit.ts), the furniture of the records levels (livedPieces.ts), the
+// the office's kit (lib/officeGen.ts officeKit), the loud levels' lived kit (livedKit.ts), the furniture of the records levels (livedPieces.ts), the
 // quiet pair's pen (lived-quiet.ts) and the training furniture (lived-train.ts), so each can be exported, looked at on the page
 // (?levelFile=library-hall.json&solo&hour=midday) and drawn into the catalogue (docs/library.md, tools/levels/library.ts). The look's own kit stands in its
 // own showroom, tools/levels/gwot-yard.ts (the pieces that one does not stand are here, by the car and on a stretch of their own): between the two, every piece of the library stands once, and `library.ts --check` is red when one does not.
@@ -15,14 +15,13 @@
 //   z 19 │  ▒▒▒▒ livedQuiet ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒ │
 //   z 22 │  ░░░░ livedTrain ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ │
 //   z 28 └────────────────────────────────────────────────────────┘      the man starts in the west aisle (x under 3)
-// THE FOUR LIVED KITS' PIECES ARE LIVED THINGS (src/scene/lived.ts): the tail of the lists, left out with the switch off. So on the frozen stand the hall is
-// the hut and the bare grounds.
+// THE FOUR LIVED KITS' PIECES ARE LIVED THINGS (lib/lived.ts): the tail of the lists, left out with the switch off.
 import type { Vec3 } from '../../src/math/vec';
-import type { Level, LevelDoorDef } from '../../src/scene/level';
-import type { LevelScenarios, Rect } from '../../src/scene/scenarios';
-import type { SurfacesData } from '../../src/scene/levelData';
-import { officeKit, normalize3 as norm, OFFICE_PALETTE, type GeneratorTrace } from '../../src/scene/officeGen';
-import { gwotKit, gwotOfOffice, GWOT_MATERIALS, type GwotMat } from '../../src/scene/gwotKit';
+import type { Level, LevelDoorDef } from './lib/level';
+import type { LevelScenarios, Rect } from './lib/scenarios';
+import type { SurfacesData } from './lib/levelData';
+import { officeKit, normalize3 as norm, OFFICE_PALETTE, type GeneratorTrace } from './lib/officeGen';
+import { gwotKit, gwotOfOffice, GWOT_MATERIALS, type GwotMat } from './lib/gwotKit';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { livedKit, LIVED_PAINT } from './livedKit';

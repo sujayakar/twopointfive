@@ -56,7 +56,7 @@ pub fn room_fight_adopt(g: &mut crate::game::Game, gd: GuardId) -> RoomfightDefI
         heard_t: H.last_t, cnt: DefCnt { shots: H.shots, kick: H.kick, bang: H.bang, small: H.small }, noise_at: None, noise_t: -100.0, noise_out: false,
         last_state: String::from(g.gd[gd].state.as_str()), last_seen: g.gd[gd].last_seen_t, fix_keep: -1.0, pre: false, nerve, lost_at: 0.0, moved_at: -100.0, rally_at: f64::NAN, rally_go: false,
         mode: DefMode::Hold, move_kind: DefMoveKind::Cover, move_t: 0.0, came_by: None, stall_at: p, stall_t: 0.0, free_at: 0.0,
-        burst: DefBurst { until: -1.0, n: 0.0, next: 0.0, broke: false, daze: 0.0 }, bolt_until: -1.0, bolt_from: None, pt_stamp: None,
+        burst: DefBurst { until: -1.0, n: 0.0, next: 0.0, broke: false, daze: 0.0 }, bolt_until: -1.0, bolt_from: None,
     };
     g.tab.roomfight_def.push(row)
 }
@@ -135,7 +135,6 @@ pub fn room_fight_evidence(g: &mut crate::game::Game, d: RoomfightDefId, dt: f64
         D.heard_t = H.last_t; D.cnt = DefCnt { shots: H.shots, kick: H.kick, bang: H.bang, small: H.small };
     }
     if g.time - g.gd[gd].last_seen_t < 0.3 {
-        let pt = g.tab.roomfight_def[d].pt;
         if let Some(seen) = crate::belief::eyes_fix_def(g, gd, d) {
             let e = room_fight_entry_toward(g, d, seen);
             if e >= 0.0 { let i = e as usize; let v = m::min(3.0, ev_at(g, d, i) + 1.2 * dt); ev_set(g, d, i, v); }
@@ -562,14 +561,12 @@ pub fn room_fight_rally(g: &mut crate::game::Game, d: RoomfightDefId) {
     let gd = g.tab.roomfight_def[d].gd;
     let skill = hostile_skill(g);
     let at = match g.tab.roomfight_def[d].noise_at { Some(at) => at, None => return };
-    if crate::owner::has(g, gd, crate::owner::by::SQUAD) { return; } // a squad's man goes to another squad's fight on his squad's word
-    if crate::owner::has(g, gd, crate::owner::by::PRESS) || crate::pressure::press_keeps_home(g, d, None) { return; }
-    if g.k.digin.on && crate::digin::dig_in_stays(g, gd) { return; }
-    if crate::lanes::lane_bars(g, gd, Some(at)) || crate::lanes::lane_known_at(g, gd, Some(at)) {
-        if g.tab.roomfight_def[d].rally_at != f64::INFINITY { g.tab.roomfight_def[d].rally_at = f64::NAN; }
+    // the weakest of all: only a man nobody has, with no covered lane on the way
+    if crate::owner::kept(g, gd, crate::owner::By::NOBODY).is_some() || crate::pressure::press_keeps_home(g, d, None)
+        || crate::lanes::lane_bars(g, gd, Some(at)) || crate::lanes::lane_known_at(g, gd, Some(at)) {
+        g.tab.roomfight_def[d].rally_at = f64::NAN;
         return;
     }
-    if crate::owner::has(g, gd, crate::owner::by::LAST_MAN) { g.tab.roomfight_def[d].rally_at = f64::NAN; return; }
     let noise_t = g.tab.roomfight_def[d].noise_t;
     let fresh = g.time - noise_t < 1.5 && g.time - g.gd[gd].last_seen_t > 3.0;
     if !fresh {
@@ -674,7 +671,7 @@ mod tests {
     }
     fn post(g: &mut Game, pt: V3) -> (GuardId, RoomfightDefId) {
         let gd = g.gd.push(crate::game::Guard::blank());
-        let mut row = Def::zeroed(); row.gd = gd; row.pt = pt;
+        let mut row = Def::default(); row.gd = gd; row.pt = pt;
         (gd, g.tab.roomfight_def.push(row))
     }
     #[test]

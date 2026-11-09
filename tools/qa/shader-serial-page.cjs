@@ -14,12 +14,10 @@
 // that do not wait (createComputePipeline, createRenderPipeline) cannot be held or timed and are only counted.
 // ON THE SOFTWARE ADAPTER THE MILLISECONDS ARE THAT ADAPTER'S: the order may be nothing like a driver's. The table is worth reading from a machine with a
 // GPU. Exit 0 = the page came ready and every program of the line came back, 1 = not.
-const { chromium } = require('/opt/node-tools/node_modules/playwright');
+const { page: pageRun } = require('./page.cjs');
 const fs = require('fs');
 const argv = process.argv.slice(2); const opt = (k, d) => { const i = argv.indexOf('--' + k); if (i < 0) return d; const v = argv[i + 1]; argv.splice(i, 2); return v; };
-const PORT = opt('port', process.env.PORT || 5199), SETTLE = Number(opt('settle', 6)), JSON_OUT = opt('json', null);
-const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
-const T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a);
+const PAGE = pageRun({ name: 'shader-serial-page', port: opt('port', process.env.PORT || 5199) }), { note: log } = PAGE, SETTLE = Number(opt('settle', 6)), JSON_OUT = opt('json', null);
 
 // in the page, before its script: the one line
 const LINE = () => {
@@ -42,14 +40,10 @@ const LINE = () => {
 (async () => {
   const addr = argv[0] ?? '?';
   const q = new URLSearchParams(addr.replace(/^\?/, '')); if (!q.has('mute')) q.set('mute', ''); if (!q.has('quality')) q.set('quality', 'medium');
-  const url = `http://localhost:${PORT}/?${q.toString().replace(/=(?=&|$)/g, '')}`;
-  const browser = await chromium.launch({ headless: true, channel: 'chromium', args: FLAGS });
+  const url = PAGE.url(q.toString().replace(/=(?=&|$)/g, ''));
   let red = 0;
   try {
-    const ctx = await browser.newContext({ viewport: { width: 320, height: 180 }, deviceScaleFactor: 1 });
-    await ctx.addInitScript(() => { });
-    await ctx.addInitScript(LINE);
-    const page = await ctx.newPage(); const gpuErrs = [];
+    const { page } = await PAGE.open({ size: [320, 180], init: [LINE], errors: { console: false } }), gpuErrs = [];
     page.on('console', m => { if (m.type() === 'error' && /WebGPU|GPU device|pipeline/i.test(m.text())) gpuErrs.push(m.text().slice(0, 300)); });
     log(url);
     await page.goto(url, { waitUntil: 'commit' });
@@ -75,7 +69,5 @@ const LINE = () => {
     if (R.line) console.log(`the page's own line (its times are the held line's, not a boot's): ${R.line}`);
     if (JSON_OUT) fs.writeFileSync(JSON_OUT, JSON.stringify({ url, adapter: env, sync: R.sync, rows: R.rows }, null, 1));
   } catch (e) { red++; console.log(`- FAIL — ${String(e && e.stack || e).slice(0, 600)}`); }
-  await browser.close().catch(() => {});
-  console.log(red ? `shader-serial-page: ${red} FAILED` : 'shader-serial-page: ok');
-  process.exit(red ? 1 : 0);
+  await PAGE.end(red ? `shader-serial-page: ${red} FAILED` : 'shader-serial-page: ok', red ? 1 : 0);
 })();

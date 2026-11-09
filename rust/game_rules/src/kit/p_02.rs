@@ -296,12 +296,6 @@ pub fn kit_worn(g: &mut crate::game::Game, n: Option<f64>, cards: Option<&[crate
     lend(g, &base, &t, n, &cards, mine)
 }
 
-/// The cards are the player's own layout: read, or put back as a recording had it (kit.ts kitOwn)
-pub fn kit_own(g: &mut crate::game::Game, v: Option<bool>) -> bool {
-    if let Some(v) = v { g.m.kit.deal_own = v; }
-    g.m.kit.deal_own
-}
-
 /// Member i's card as he wears it (kit.ts kitShown)
 pub fn kit_shown(g: &mut crate::game::Game, i: f64) -> crate::kit::MemberKit {
     kit_worn(g, None, None).swap_remove(i as usize)
@@ -487,13 +481,13 @@ pub fn kit_cost(g: &mut crate::game::Game, i: f64, m: Option<&crate::kit::Member
     for k in slot_amount().keys() {
         let n = slot_amount_of(g, &k, &m);
         let p = slot_cost(g, &k, n, None);
-        if js::truthy(p) { lines.push(crate::kit::KitCostLinesItem { item: k, n, pouches: p }); }
+        if js::truthy(p) { lines.push(crate::kit::KitCostLinesItem {  }); }
     }
     let t = table(g);
     let used = cost_of(g, &m, &t);
     let total = pouches_at(&t, iu);
     let big = if big_is_on(g) { Some(crate::kit::KitCostBig { used: big_used(g, &m, &t), total: big_slots(&t, iu) }) } else { None };
-    crate::kit::KitCost { used, total, free: total - used, lines, big }
+    crate::kit::KitCost { used, total, free: total - used, big }
 }
 
 /// The pouches the teammates who come fill between them, of the squad's total (kit.ts squadCost)
@@ -921,7 +915,7 @@ mod tests {
     use super::*;
 
     fn card(charges: f64, bangs: f64, frags: f64, smoke: f64) -> MemberKit {
-        MemberKit { charges, bangs, frags, smoke, ..MemberKit::zeroed() }
+        MemberKit { charges, bangs, frags, smoke, ..MemberKit::default() }
     }
 
     #[test]

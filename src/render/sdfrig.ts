@@ -1,16 +1,15 @@
-// The per-character SDF RIG (docs/internal/sdf-characters.md is the record). Every mannequin's 15 shadow / reflection proxies — the segments
+// The per-character SDF RIG (docs/agents/render-light.md, "Men in rays"). Every mannequin's 15 shadow / reflection proxies — the segments
 // Character.capsules() builds off the skeleton each frame, in that order — are ROUND CONES (tapered capsules: radius r0 at end a, r1 at end b) whose
 // radii are LEAST-SQUARES FITTED to the glTF mesh once at load: for each slot, the bind-pose vertices dominated by its joints (JOINTS below) are
 // projected onto its bind-pose segment and ρ ≈ r0·(1 − u) + r1·u is solved (a vertex past an end fits that end's cap radius), the residual per slot
 // printed (`rigTable`), and RIG_OVERRIDES lets a slot be pinned by hand. Nothing here touches the GPU: BoxWorld.upload applies the fit to every frame's
 // proxy list (scene/boxes.ts applyRig — r0 replaces the hand radius, r1 rides quantised to the millimetre in the top byte of `misc`, the character's cull
-// sphere is fitted to the cones) once the Engine has it (setRigFit: game.ts / the viewer at character load), and shaders/sdfrig.wgsl (appended to the
+// sphere is fitted to the cones) once the Engine has it (setRigFit: the page at character load), and shaders/sdfrig.wgsl (appended to the
 // scene prelude) has the GPU side: the closed-form ray / round-cone test every proxy loop in common.wgsl runs, plus two switchable extras — (ii) the
 // sphere-traced SMOOTH UNION of a man's cones (polynomial smin, K below per slot) as the reflection pass's closest hit, (iii) the soft-shadow query as
 // the direct estimator's character visibility (an experiment).
 import { GltfCharacter, MeshData, castGoggles, castSuit } from '../anim/gltf';
 import { Mat4, Vec3, m4, v3 } from '../math/vec';
-import { wallClock } from '../math/side';
 
 /** = BoxWorld.CAPS_PER_CHAR: the slots of Character.capsules(), in its order */
 export const RIG_SLOTS = 15;
@@ -43,7 +42,7 @@ export interface RigSlotFit {
 }
 export interface RigFit { r0: Float32Array; r1: Float32Array; slots: RigSlotFit[]; verts: number; ms: number;
   /** THE CAST: men who wear different parts of the cast mesh have different fits — keyed by the character's id (the owner byte of his proxy records), read by BoxWorld.applyRig before the
-   *  fit's own radii (game.ts fills it as men are drawn: fitRig(ch, his part mask)). Absent / no entry = this fit. */
+   *  fit's own radii (rust/game_rules/src/game fills it as men are drawn: fitRig(ch, his part mask)). Absent / no entry = this fit. */
   byOwner?: Map<number, { r0: Float32Array; r1: Float32Array; pad?: number }>;
   /** THE CAST: how far (m) the worn mesh reaches outside the union of its own fitted cones in bind pose (a hat brim, an antenna, goggles flipped up) — BoxWorld.applyRig adds it to
    *  the man's cull sphere, which is also the mesh walk's broad phase, so a ray that grazes only that sliver still meets him. Absent on the mannequin (mask 0): the sphere as it was. */
@@ -66,7 +65,7 @@ export function sdRoundCone(p: Vec3, a: Vec3, b: Vec3, r0: number, r1: number): 
  *  chest, the pelvis line the lower torso — a torso is wider than deep, and one round cone up the spine fits its depth) */
 const SLOTS: { name: RigSlotName; seg: (j: J) => [Vec3, Vec3]; joints: string[]; uRange: [number, number]; after?: RigSlotName[]; rhoMax?: number }[] = (() => {
   const ext = (a: Vec3, b: Vec3, e: number): Vec3 => v3.mad(b, v3.normalize(v3.sub(b, a)), e);
-  const TOE_FLOOR_Y = 0.0147;   // = character.ts TOE_FLOOR_Y (the toe bone's height with the sole on the floor)
+  const TOE_FLOOR_Y = 0.0147;   // = rust/game_rules/src/character TOE_FLOOR_Y (the toe bone's height with the sole on the floor)
   const sole = (foot: Vec3, toe: Vec3): [Vec3, Vec3] => {
     const up = TOE_FLOOR_Y; const heel: Vec3 = [foot[0] - (toe[0] - foot[0]) * 0.35, Math.min(foot[1], toe[1] - up + 0.033 + (foot[1] - toe[1]) * 0.15), foot[2] - (toe[2] - foot[2]) * 0.35];
     const tip: Vec3 = [toe[0], toe[1] - up + 0.033, toe[2]];
@@ -104,7 +103,7 @@ function bindJoints(ch: GltfCharacter): J {
 
 const cache = new WeakMap<MeshData, Map<number, RigFit>>();
 let padV = new Int32Array(0), padD = new Float64Array(0);   // (fitRig's scratch: the vertices that stand outside their own cone, and by how much)
-/** The rig fit for a loaded character (solved on first use, ~10 ms for the mannequin's 8.5k vertices; cached per mesh — the QA harness builds many Games). `parts`: on a CAST mesh
+/** The rig fit for a loaded character (solved on first use, ~10 ms for the mannequin's 8.5k vertices; cached per mesh). `parts`: on a CAST mesh
  *  (anim/gltf.ts loadGltfCast) fit only the vertices of the parts in this mask — one man's kit; 0 = every vertex (the mannequin; on a cast, the union of all parts). */
 /** the most a cast outfit may add to its cull sphere (RigFit.pad), m */
 export const RIG_PAD_MAX = 0.3;
@@ -146,7 +145,7 @@ export function fitRig(ch: GltfCharacter, parts = 0): RigFit {
     r0[si] = q0; r1[si] = q1;
     slots.push({ name: S.name, r0: q0, r1: q1, solved: [f0, f1], n, rms: n ? Math.sqrt(se / n) : 0, maxAbs: mx, cover: n ? inside / n : 0, len, hand: HAND_RADII[si], overridden: !!ov });
   });
-  const fit: RigFit = wallClock({ r0, r1, slots, verts: V, ms: performance.now() - t0 }, 'ms');   // (how long the solve took: a clock reading the game's state reaches — Game.rigFitOf — and nothing compares)
+  const fit: RigFit = { r0, r1, slots, verts: V, ms: performance.now() - t0 };
   if (partOf) {   // the cast: the least-squares cones do not BOUND what he wears — measure how far it stands outside them (capped: one stray vertex must not blow the sphere up)
     // pad = the greatest, over the worn vertices, of the distance to the NEAREST cone — found without asking every cone of every vertex: a vertex's nearest cone is no
     // farther than its OWN (the first slot it is a row of, else the one whose line it lies nearest: meshRows), so a vertex whose own-cone distance is inside the pad so far
@@ -172,7 +171,7 @@ export function fitRig(ch: GltfCharacter, parts = 0): RigFit {
   return fit;
 }
 /** THE CAST'S FITS AHEAD OF PLAY: every mask a man of this cast can be drawn with — each variant with its mesh goggles up, and with the rig's box goggles in
- *  their place; a variant without goggles as it is listed; an operator's also in the sneaking suit (anim/gltf.ts castGoggles / castSuit; game/cast.ts castParts picks among exactly these) — solved now, so the frame a kit is first seen in finds its fit in the cache
+ *  their place; a variant without goggles as it is listed; an operator's also in the sneaking suit (anim/gltf.ts castGoggles / castSuit; rust/game_rules/src/cast cast_parts picks among exactly these) — solved now, so the frame a kit is first seen in finds its fit in the cache
  *  instead of solving it mid-play. Nothing with the mannequin loaded. A fit that throws is left for its first use to report, as before. */
 export function fitRigCast(ch: GltfCharacter) {
   const cast = ch.cast; if (!cast) return;

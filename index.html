@@ -209,7 +209,6 @@
     body.onrails #log { bottom: var(--raillog, 30px); transition: bottom .18s ease-out; } body.onrails #log .rx { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }   /* (the net's rows stay under a tutorial mission's line: three of them, one line each, never up over it — and when the line is at the bottom edge, clear of your men, they stand just above it: ui/railclear.ts) */
     #railprompt.on { display: flex; animation: railin .45s cubic-bezier(.2,.9,.3,1.2); }
     #railprompt .line { padding: 13px 26px 12px; background: rgba(var(--h-plate),0.78); border-radius: 4px; border-bottom: 2px solid var(--h-acc); font: 600 27px/1.25 var(--h-head); letter-spacing: 0.02em; color: var(--h-hi); text-shadow: var(--h-shadow); white-space: normal; text-align: center; text-wrap: balance; width: max-content; max-width: max(320px, calc(100vw / var(--tz, 1) - 860px)); }
-    body.skyseat #railprompt .line { max-width: calc(86vw / var(--tz, 1)); }   /* (the kit panel owns the lower left 400 px: a long line breaks in two beside it; in the sky seat there is no kit panel) */
     #railprompt kbd { display: inline-block; min-width: 22px; margin: 0 3px; padding: 3px 9px 2px; border-radius: 5px; background: var(--h-acc); color: var(--h-on); box-shadow: 0 3px 0 rgba(0,0,0,0.45); font: 700 24px/1.2 var(--h-head); text-align: center; text-shadow: none; position: relative; top: -2px; }
     #railprompt .note { padding: 5px 14px 4px; background: var(--h-acc); color: var(--h-on); border-radius: 4px; font: 700 17px/1.2 var(--h-head); letter-spacing: 0.03em; } #railprompt .note:empty { display: none; } #railprompt .line:empty { display: none; }   /* (a tap the step refused: what to do instead, under the line) */
     #railprompt .note kbd { min-width: 16px; padding: 1px 6px 0; margin: 0 2px; background: var(--h-on); color: var(--h-acc); font-size: 15px; box-shadow: none; top: 0; }
@@ -235,7 +234,6 @@
     @keyframes railcardin { from { opacity: 0; } to { opacity: 1; } }
     @keyframes railin { from { opacity: 0; transform: translateX(-50%) translateY(calc(14px + var(--railshift, 0px) + var(--railman, 0px))) scale(0.96); } to { opacity: 1; transform: translateX(-50%) translateY(calc(var(--railshift, 0px) + var(--railman, 0px))); } }   /* (the line comes in where it stands: a ring's step and the step to the bottom edge clear of your men — ui/railclear.ts — are in both ends) */
     @media (max-width: 900px) { #railprompt .line { font-size: 20px; white-space: normal; text-align: center; } #railprompt .line.watch { font-size: 17px; } #railprompt kbd { font-size: 18px; } }
-    body.skyseat #equip, body.skyseat #meters { display: none !important; }
     /* a tutorial mission: the place its one line points at is a ring that beats, not a small diamond */
     body.onrails .objmark { transform: translate(-50%, -50%); }
     body.onrails .objmark i { width: 26px; height: 26px; border-width: 3px; border-radius: 50%; transform: none; box-shadow: 0 0 10px rgba(0,0,0,0.7), inset 0 0 6px rgba(0,0,0,0.5); animation: railbeat 1.05s ease-out infinite; }
@@ -495,8 +493,8 @@
     #menu .vd-tries .try.win { border-color: var(--m-bright); background: var(--m-bright); }
     #menu .vd-tries .more { font: 10px/1 var(--m-mono); font-style: normal; color: var(--m-dim); margin-right: 2px; }
     #menu .vd-why { margin-top: 6px; font: 12px/1.4 ui-sans-serif, system-ui, -apple-system, sans-serif; color: var(--m-soft); letter-spacing: 0.03em; }
-    #menu .vd-men { display: grid; gap: 5px; margin: 0 0 12px; }
-    #menu .vd-man { display: grid; grid-template-columns: 92px minmax(0, 1fr) 40px; align-items: center; gap: 10px; --tone: #b7a98a; }
+    #menu .vd-men { display: grid; grid-template-columns: fit-content(150px) minmax(0, 1fr) minmax(40px, max-content); gap: 5px 10px; margin: 0 0 12px; }   /* (the name's column is as wide as its longest up to 150 px, whatever font the page found) */
+    #menu .vd-man { display: grid; grid-template-columns: subgrid; grid-column: 1 / -1; align-items: center; --tone: #b7a98a; }
     #menu .vd-man.t-you { --tone: var(--m-bright); } #menu .vd-man.t-purple { --tone: #a98be8; } #menu .vd-man.t-red { --tone: #c9655b; } #menu .vd-man.t-blue { --tone: #5b8fc9; }
     #menu .vd-man .nm { font: 700 13px/1 var(--m-head); letter-spacing: 0.12em; text-transform: uppercase; color: var(--tone); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     #menu .vd-man:not(.s-up):not(.vd-count) .nm { text-decoration: line-through; text-decoration-color: #ff9c84; }

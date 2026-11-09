@@ -1,6 +1,6 @@
 // THE HUE SPLIT ASKS THE BELIEF THE HUE WAS BUILT BY: the check behind the place of the dark memory's update in restir.wgsl (no switch: it is the estimator's own
 // rule put right, on every page).
-//   bun run tools/qa/probes.ts huesplit        (family `render`)        HUESPLIT_BREAK=1 = the memory is moved before the shade, as it was: must FAIL
+//   bun run tools/qa/checks.ts huesplit        HUESPLIT_BREAK=1 = the memory is moved before the shade, as it was: must FAIL
 // The maintainer on his GPU, 11-04, the depot at midday: "red rim on shadow also looks odd". Every shadow the sun threw was edged in red. The red was the mast's
 // obstruction lamp, which sends that ground under a ten-thousandth of the sun's light: with the lamp's colour set to black the edge was neutral, and with every
 // sample shaded in its own lamp's hue (a debugger row, gone since) it was neutral too. THE FAULT: the estimator shades a class's light in the hue of the lamps the
@@ -12,7 +12,7 @@
 // WHAT THIS CAN AND CANNOT SAY. No shader runs here. Line 1 holds the order BY ITS TEXT in both writings of the estimator. Line 2 is A MODEL, not the
 // estimator: one ray a frame toward the lamp, no history sample and no neighbour's, which in the kernel thin the fault (a still of the depot measured about a
 // third of a half shadow's light in the lamp's hue where the model says a half). It takes the order from the text line 1 read, so it shows what that order
-// costs. What the picture looks like is the page's to show; it was drawn on the software adapter only (docs/agents/render.md, THE HUE SPLIT ASKS THE BELIEF).
+// costs. What the picture looks like is the page's to show; it was drawn on the software adapter only.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { ROOT } from './here.ts';

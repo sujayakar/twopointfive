@@ -333,8 +333,6 @@ pub fn rescue_end(g: &mut crate::game::Game, state: crate::rescue::RescueEndStat
         grade,
         why: String::from(why),
         hostages: left as f64,
-        team: team as f64,
-        secs,
     });
     rescue_end_act(g);
     if lost { rescue_note(g, &alloc::format!("lost:{}", why)); } else { rescue_note(g, "rescued"); }

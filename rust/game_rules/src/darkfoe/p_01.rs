@@ -321,10 +321,10 @@ pub fn dark_foe_kept(g: &mut crate::game::Game, gd: GuardId, d: Option<Roomfight
         None => g.fight.defs.iter().copied().find(|&row| g.tab.roomfight_def[row].gd == gd),
     };
     let Some(d) = d else { return Some(String::from("not a room's defender")) };
+    if let Some(who) = crate::owner::kept(g, gd, crate::owner::by::BREAKER) { return Some(String::from(who)); }
     if g.tab.roomfight_def[d].mode != crate::roomfight::DefMode::Hold { return Some(String::from("on the move")); }
-    if g.tab.roomfight_def[d].rally_at == f64::INFINITY { return Some(String::from("the mission's man")); }
     if g.tab.roomfight_def[d].room.is_none() { return Some(String::from("no room of his own")); }
-    if g.gd[gd].script.is_some() || g.gd[gd].held.is_some() || crate::control::man::blind(g, gd) { return Some(String::from("not his own man")); }
+    if g.gd[gd].script.is_some() { return Some(String::from("on a script")); }
     if g.gd[gd].state != crate::game::GuardState::Alert { return Some(String::from("not alert")); }
     if g.time - g.gd[gd].last_seen_t < g.k.darkfoe.quiet_secs
         || g.time - g.gd[gd].witness.heard.last_shot_t < g.k.darkfoe.calm_secs
@@ -332,17 +332,9 @@ pub fn dark_foe_kept(g: &mut crate::game::Game, gd: GuardId, d: Option<Roomfight
     {
         return Some(String::from("in a fight"));
     }
-    if crate::digin::dig_in_phase(g, gd) != "idle" { return Some(String::from("dug in")); }
-    if crate::owner::has(g, gd, crate::owner::by::SQUAD_WORD) { return Some(String::from("his squad's")); }
-    if crate::gunroles::gun_keeps_post(g, gd) || crate::owner::has(g, gd, crate::owner::by::LANE) { return Some(String::from("holds a lane")); }
-    let man = g.tab.roomfight_def[d].gd;
-    let hands = crate::owner::by::PRESS;
-    if crate::owner::has(g, man, hands) || crate::pressure::press_keeps_home(g, d, Some(false)) {
-        return Some(String::from("the press's"));
-    }
-    if crate::rescue::rescue_captor(g) == Some(gd) {
-        return Some(String::from("the captor"));
-    }
+    if crate::gunroles::gun_keeps_post(g, gd) { return Some(String::from("his gun keeps its post")); }
+    if crate::pressure::press_keeps_home(g, d, Some(false)) { return Some(String::from("kept home by the press")); }
+    if crate::rescue::rescue_captor(g) == Some(gd) { return Some(String::from("the captor")); }
     None
 }
 
@@ -441,47 +433,6 @@ pub fn dark_foe_tick(g: &mut crate::game::Game, dt: f64) {
         if to.mate { g.stats.darkfoe.to_mate += 1; }
         walk(g, d, to.spot);
     }
-}
-
-/// The debug panel's line: what the rule has of each man it rules.   (darkfoe.ts darkFoeSummary)
-pub fn dark_foe_summary(g: &mut crate::game::Game) -> String {
-    let mut men: Vec<String> = Vec::new();
-    let mut i = 0;
-    while i < g.guards.len() {
-        let gd = g.guards[i];
-        i += 1;
-        if !dark_foe_ruled(g, gd) { continue; }
-        let s = g.m.darkfoe.state_of.get(gd).copied();
-        let has = carries_dark_lamp(g, gd);
-        let what = match s {
-            Some(s) if s.knows || s.word => {
-                if s.lit {
-                    String::from("lamp ON")
-                } else if !s.blind {
-                    String::from("can see")
-                } else if has {
-                    String::from("blind, lamp coming")
-                } else if js::truthy(s.moves) {
-                    String::from("no light, walked")
-                } else {
-                    let c = g.gd[gd].ch;
-                    let pos = g.ch[c].pos;
-                    let why = if dark_foe_sees(g, pos, None) {
-                        String::from(" by lit floor")
-                    } else if dark_foe_kept(g, gd, None).is_some() {
-                        alloc::format!(" ({})", dark_foe_kept(g, gd, None).unwrap_or_default())
-                    } else {
-                        String::new()
-                    };
-                    alloc::format!("no light, blind{}", why)
-                }
-            }
-            _ => String::from("does not know"),
-        };
-        men.push(alloc::format!("{} {}", g.gd[gd].callsign, what));
-    }
-    let list = men.join(" \u{b7} ");
-    alloc::format!("dark \u{25b8} {}", if list.is_empty() { "no defender with a dark light" } else { list.as_str() })
 }
 
 #[cfg(test)]

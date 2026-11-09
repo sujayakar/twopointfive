@@ -1,7 +1,6 @@
-// WHAT IS LEFT OF THE GAME THAT WAS TYPESCRIPT'S, AND WHAT HOLDS EACH FILE OF IT. The pages that stay (the game's page, which draws the Rust game, and the sound and music pages) are
-// built from some files of src; every other file of src, and every level's script, is LEFT: it goes when nothing holds it. A file is held by what names it, at any depth, as code or only as
-// a type: the old page, the replay viewer, a check, a level tool, the bridge, or a file of a page that stays that still names a type of it. A tool's string that spells a file's path (a check
-// that reads its text) holds that one file.
+// WHAT THE PAGES ARE BUILT FROM, AND WHAT HOLDS EVERY OTHER FILE OF SRC. The pages (the game's, which draws the Rust game, and the sound and music pages) are built from some files of src; every
+// other file of src, and every TypeScript file beside the levels, is LEFT: a tool's or a check's, held by what names it, at any depth, as code or only as a type, and to go when nothing does. A tool's
+// string that spells a file's path (a check that reads its text) holds that one file.
 //
 //   bun run tools/draw/held.ts                 the counts: how much is left, by folder and by holder, and what nothing holds (it can go now)
 //   bun run tools/draw/held.ts --free          the files nothing holds, one a line
@@ -23,31 +22,28 @@ if (!existsSync(TS_LIB)) stop(`no TypeScript at ${TS_LIB} (vendor/typescript, or
 const ts = await import(TS_LIB).then(m => m.default ?? m) as typeof import('typescript');
 const argv = process.argv.slice(2), flag = (n: string) => argv.includes(n), opt = (n: string): string | undefined => { const i = argv.indexOf(n); return i < 0 ? undefined : argv[i + 1] && !argv[i + 1].startsWith('--') ? argv[i + 1] : ''; };
 
-/** the pages that stay, and the two that go: every html file's entry is one of these */
-const PAGES = ['src/host/drawpage.ts', 'src/ui/startpage.ts', 'src/ui/loadbrief.ts', 'src/sounds/main.ts', 'src/music/main.ts'], GOING = ['src/main.ts', 'src/replay/viewer.ts'];
+/** every html file's entry is one of these */
+const PAGES = ['src/host/drawpage.ts', 'src/ui/startpage.ts', 'src/ui/loadbrief.ts', 'src/sounds/main.ts', 'src/music/main.ts'];
 /** what holds a left file, by where it stands: the first that fits */
-const KINDS: [string, RegExp][] = [['old page', /^src\/main\.ts$/], ['replay viewer', /^src\/replay\/viewer\.ts$/], ["pages' types", /^src\//], ['level tools', /^tools\/(levels\/|level-export\.ts$)/],
+const KINDS: [string, RegExp][] = [["pages' types", /^src\//], ['level tools', /^tools\/(levels\/|level-export\.ts$)/],
   ['checks', /^tools\/(qa\/|draw\/[\w-]+-check\.ts$)/], ['bridge', /^tools\/(blitz|wire)\//], ['multiplayer', /^tools\/mp\//], ['other tools', /^tools\//]];
 const kindOf = (f: string): string => KINDS.find(([, re]) => re.test(f))![0];
-const GAME = /^(src\/(game|sim)\/|src\/anim\/skeleton\.ts$|src\/host\/(rustgame|rustdress|standup|profile|loop|tween|ahead)\.ts$)/;
 
 // ---- the files
 const every: string[] = [];
 const walk = (d: string): void => { for (const x of readdirSync(join(ROOT, d))) { if (x === 'node_modules' || x === 'target' || x.startsWith('.')) continue; const p = `${d}/${x}`; if (statSync(join(ROOT, p)).isDirectory()) walk(p); else if ((/\.(ts|mts|cjs|mjs|js)$/.test(x) || x === 'tsconfig.json') && p !== ME) every.push(p); } };
 for (const d of ['src', 'tools', 'levels']) walk(d);
 const there = new Set(every), text = new Map(every.map(f => [f, readFileSync(join(ROOT, f), 'utf8')])), lines = new Map([...text].map(([f, s]) => [f, s.split('\n').length - 1]));
-for (const x of readdirSync(ROOT)) if (x.endsWith('.html')) for (const m of readFileSync(join(ROOT, x), 'utf8').matchAll(/<script[^>]+src="\.?\/?(src\/[^"]+\.ts)"/g)) if (!PAGES.includes(m[1]) && !GOING.includes(m[1])) stop(`${x}'s entry ${m[1]} is in neither list of pages`);
+for (const x of readdirSync(ROOT)) if (x.endsWith('.html')) for (const m of readFileSync(join(ROOT, x), 'utf8').matchAll(/<script[^>]+src="\.?\/?(src\/[^"]+\.ts)"/g)) if (!PAGES.includes(m[1])) stop(`${x}'s entry ${m[1]} is not in the list of pages`);
 const find = (p: string): string | undefined => [p, `${p}.ts`, `${p}/index.ts`].find(x => there.has(x)), at = (f: string, sp: string) => find(relative(ROOT, resolve(ROOT, dirname(f), sp)));
 
 // ---- what each names: as code or a type (held at any depth), and by a string that spells its path (that file alone)
 const names = new Map<string, Set<string>>(), spells = new Map<string, Set<string>>();
-const BRIDGE = new Map<string, string>(); { const s = text.get('tools/blitz/page-plugin.ts') ?? ''; for (const m of s.matchAll(/(\w[\w-]*)\s*:\s*'(?:\.\/)?([\w./-]+\.ts)'/g)) { const p = find(`tools/blitz/${m[2]}`); if (p) BRIDGE.set(m[1], p); } }
 for (const f of every) {
   const out = new Set<string>(), said = new Set<string>(), s = text.get(f)!, put = (to: Set<string>, p?: string) => { if (p && p !== f) to.add(p); };
   if (f.endsWith('tsconfig.json')) { for (const m of s.matchAll(/"([^"*]+\.ts)"/g)) put(out, at(f, m[1])); }
   else {
     for (const i of ts.preProcessFile(s, true, true).importedFiles) if (i.fileName.startsWith('.')) put(out, at(f, i.fileName));
-    for (const m of s.matchAll(/['"`]tps-bridge\/([\w-]+)['"`]/g)) { put(out, find('src/host/rustbridge.d.ts')); put(out, BRIDGE.get(m[1]) ?? find(`tools/blitz/${m[1]}`)); }
     if (f.startsWith('src/')) for (const m of s.matchAll(/['"]\/([\w-]+\.ts)['"]/g)) put(out, find(`${dirname(f)}/${m[1]}`));   // (a file handed to the bundler by its name beside this one)
     else for (const m of s.matchAll(/(['"`])((?:\$\{\w+\}\/)?[\w./-]+\.(?:ts|cjs|mjs))\1/g)) {
       const rooted = m[2].startsWith('${'), q = m[2].replace(/^\$\{\w+\}\//, '');
@@ -63,7 +59,7 @@ const loc = (l: Iterable<string>) => { let n = 0; for (const f of l) n += lines.
 const scan = new Bun.Transpiler({ loader: 'ts' }), coded = (f: string): string[] => f.endsWith('.ts') ? scan.scanImports(text.get(f)!).filter(i => i.path.startsWith('.')).map(i => at(f, i.path)).filter((p): p is string => !!p) : [];
 const stays = new Set(PAGES.filter(f => there.has(f)));
 { const q = [...stays]; while (q.length) for (const p of coded(q.shift()!)) if (!stays.has(p)) { stays.add(p); q.push(p); }
-  const w = [...stays]; while (w.length) for (const p of names.get(w.shift()!)!) if (!stays.has(p) && ![...reach([p])].some(x => GAME.test(x) && !stays.has(x))) { stays.add(p); w.push(p); } }
+  const w = [...stays]; while (w.length) for (const p of names.get(w.shift()!)!) if (!stays.has(p)) { stays.add(p); w.push(p); } }
 const left = new Set(every.filter(f => (f.startsWith('src/') || f.startsWith('levels/')) && !stays.has(f)));
 const typed = [...stays].filter(f => [...names.get(f)!].some(p => left.has(p)));   // (a file of a page that stays that names a type of what is left)
 const typesOf = new Map(typed.map(f => [f, [...names.get(f)!].filter(p => left.has(p))]));
@@ -74,7 +70,7 @@ interface Held { held: Map<string, Set<string>>; by: Map<string, Set<string>>; k
 function hold(gone: (f: string) => boolean): Held {
   const held = new Map<string, Set<string>>(), by = new Map<string, Set<string>>(), kinds = new Map<string, string[]>(), take = (r: string, l: Iterable<string>) => { const L = new Set([...l].filter(f => left.has(f) && !gone(f))); if (!L.size) return; held.set(r, L); const k = kindOf(r); if (!by.has(k)) by.set(k, new Set()); for (const f of L) by.get(k)!.add(f); };
   const keep = new Map(names); for (const f of every) if (gone(f)) names.set(f, new Set());
-  for (const r of every) { if (gone(r)) continue; if (r.startsWith('tools/')) { const l = reach([r]); for (const f of [...l]) for (const p of f.startsWith('tools/') ? spells.get(f)! : []) l.add(p); take(r, l); } else if (GOING.includes(r)) take(r, reach([r])); else if (typesOf.has(r)) take(r, reach(typesOf.get(r)!)); }
+  for (const r of every) { if (gone(r)) continue; if (r.startsWith('tools/')) { const l = reach([r]); for (const f of [...l]) for (const p of f.startsWith('tools/') ? spells.get(f)! : []) l.add(p); take(r, l); } else if (typesOf.has(r)) take(r, reach(typesOf.get(r)!)); }
   for (const [f, s] of keep) names.set(f, s);
   for (const [k, l] of by) for (const f of l) kinds.set(f, [...(kinds.get(f) ?? []), k]);
   return { held, by, kinds, free: [...left].filter(f => !gone(f) && !kinds.has(f)).sort() };

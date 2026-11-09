@@ -95,7 +95,7 @@ pub fn choose_sam_line(g: &mut crate::game::Game, tiers: &[Vec<crate::dialogue::
         m.said.set(chosen.0.id.clone(), ctx.time);
         m.last = Some(chosen.0.id.clone());
     }
-    Some(crate::dialogue::ChooseSamLine { l: chosen.0, text: chosen.1, fresh })
+    Some(crate::dialogue::ChooseSamLine { text: chosen.1 })
 }
 
 /// Sam's line for the coming exchange: the script's beat if a script is live, else the category's pool (the 'q' tier first when the man is about to give).   (dialogue.ts pickSamLine)
@@ -119,7 +119,7 @@ pub fn pick_sam_line(g: &mut crate::game::Game, ctx: &mut crate::dialogue::Dialo
         if let Some(text) = expand(&line, &tokens).filter(|t| !t.is_empty() && js_len(t) <= crate::dialogue::SAM_MAX_CHARS) {
             let id = alloc::format!("S:{}:{}{}", sc.id, stage_word(s), if asks { "?" } else { "" });
             if let Some(m) = mem.as_deref_mut() { m.said.set(id.clone(), ctx.time); m.last = Some(id.clone()); }
-            return SamPick { text, id, s: cat, q, stage: s, fresh: true, script: Some(sc.id.clone()) };
+            return SamPick { text };
         }
     }
     let tiers: Vec<Vec<crate::dialogue::SamLine>> = match q {
@@ -132,8 +132,8 @@ pub fn pick_sam_line(g: &mut crate::game::Game, ctx: &mut crate::dialogue::Dialo
     let facts = sam_facts(g, ctx, variant);
     let c = choose_sam_line(g, &tiers, ctx, &facts, mem, rnd);
     match c {
-        Some(c) => SamPick { text: c.text, id: c.l.id, s: cat, q, stage: s, fresh: c.fresh, script: None },
-        None => SamPick { text: String::from("…"), id: String::from("-"), s: cat, q, stage: s, fresh: false, script: None },
+        Some(c) => SamPick { text: c.text },
+        None => SamPick { text: String::from("…") },
     }
 }
 
@@ -160,7 +160,7 @@ pub fn sam_key_line_for(g: &mut crate::game::Game, gd: GuardId, variant: crate::
     let mut mem = sam_memory_lend(g);
     let c = choose_sam_line(g, &tiers, &ctx, &facts, Some(&mut mem), rnd);
     *sam_memory_of(g) = mem;
-    c.map(|c| crate::dialogue::SamKeyLineFor { text: c.text, id: c.l.id })
+    c.map(|c| crate::dialogue::SamKeyLineFor { text: c.text })
 }
 
 /// One of Sam's pistol openers as a remark, for the moment he draws on a man already in his arm. Nobody answers it.   (dialogue.ts samRemarkFor)
@@ -174,7 +174,7 @@ pub fn sam_remark_for(g: &mut crate::game::Game, gd: GuardId, rnd: Option<&mut d
     let mut mem = sam_memory_lend(g);
     let c = choose_sam_line(g, &tiers, &ctx, &facts, Some(&mut mem), rnd);
     *sam_memory_of(g) = mem;
-    c.map(|c| crate::dialogue::SamRemarkFor { text: c.text, id: c.l.id })
+    c.map(|c| crate::dialogue::SamRemarkFor { text: c.text })
 }
 
 /// The hold's script if it is still live at this exchange: `sc0 && stageN <= 4 && scriptLive(sc0, ctx) ? sc0 : null`, written twice in the TypeScript (:945, :993).
@@ -311,7 +311,7 @@ mod tests {
     /// the weights against the TypeScript's own bits (`1.4 * 1.6 * 1.5 * 2.5` under bun: 0x4020cccccccccccc, not 8.4)
     #[test]
     fn weights_multiply_in_the_typescript_order() {
-        let mut l = SamLine::zeroed();
+        let mut l = SamLine::default();
         assert_eq!(sam_weight(&l).to_bits(), 1.0f64.to_bits());
         l.needs = Some(Vec::new());
         assert_eq!(sam_weight(&l).to_bits(), 1.0f64.to_bits());   // an empty list is falsy by its length
@@ -325,7 +325,7 @@ mod tests {
     }
 
     fn pool(weights: &[f64]) -> Vec<Eligible> {
-        weights.iter().map(|w| (SamLine::zeroed(), String::new(), *w)).collect()
+        weights.iter().map(|w| (SamLine::default(), String::new(), *w)).collect()
     }
 
     #[test]
@@ -341,11 +341,11 @@ mod tests {
 
     #[test]
     fn a_line_named_for_a_man_fits_only_him() {
-        let mut ctx = crate::dialogue::DialogueCtx::zeroed();
+        let mut ctx = crate::dialogue::DialogueCtx::default();
         ctx.t = Temperament::Hard;
         ctx.k = Knowledge::Saw;
         let facts = JsMap::new();
-        let mut l = SamLine::zeroed();
+        let mut l = SamLine::default();
         assert!(sam_line_fits(&l, &ctx, &facts));
         l.t = Some(Temperament::Nervy);
         assert!(!sam_line_fits(&l, &ctx, &facts));
@@ -357,11 +357,11 @@ mod tests {
 
     #[test]
     fn a_line_with_needs_wants_every_fact_on() {
-        let ctx = crate::dialogue::DialogueCtx::zeroed();
+        let ctx = crate::dialogue::DialogueCtx::default();
         let mut facts = JsMap::new();
         facts.set(SamNeed::Gun, true);
         facts.set(SamNeed::Alarm, false);
-        let mut l = SamLine::zeroed();
+        let mut l = SamLine::default();
         l.needs = Some(vec![SamNeed::Gun]);
         assert!(sam_line_fits(&l, &ctx, &facts));
         l.needs = Some(vec![SamNeed::Gun, SamNeed::Alarm]);
@@ -388,7 +388,7 @@ mod tests {
     #[test]
     fn sams_facts_read_the_floor_and_the_hold_and_the_knife_is_gone() {
         let mut g = Game::blank();
-        let mut ctx = crate::dialogue::DialogueCtx::zeroed();
+        let mut ctx = crate::dialogue::DialogueCtx::default();
         let f = sam_facts(&mut g, &ctx, crate::character::HoldVariant::Arm);
         assert_eq!(f.get(SamNeed::Arm), Some(&true));
         assert_eq!(f.get(SamNeed::Gun), Some(&false));
@@ -411,7 +411,7 @@ mod tests {
 
     #[test]
     fn the_token_map_keys_are_the_words_a_line_is_looked_up_by() {
-        let mut t = crate::dialogue::DialogueCtxTokens::zeroed();
+        let mut t = crate::dialogue::DialogueCtxTokens::default();
         t.saw_where = Some(String::from("the vault"));
         let m = tokens_map(&t);
         assert_eq!(m.get(String::from("sawWhere")), Some(&Some(String::from("the vault"))));

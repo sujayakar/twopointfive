@@ -22,7 +22,7 @@ fn a_line_on_the_floor_is_told_as_the_scene_says_it() {
         let mate = p.red()[0];
         // the seat's own man: his words and whose they are
         says(&mut p, mate, "with you.");
-        let hidden = |p: &Play, gd| game::fogofwar::fog_of_war_hidden__body(&p.g, gd);
+        let hidden = |p: &Play, gd| game::fogofwar::fog_of_war_hidden(&p.g, gd);
         let b = line_of(&p.view(), id_of(&p, mate)).unwrap_or_else(|| panic!("seed {}: a man of the seat's own said something and the HUD was not told", seed));
         assert_eq!(b.text, "with you.", "seed {}", seed);
         assert_eq!(b.edge, format!("{}: with you.", p.g.gd[mate].callsign), "seed {}", seed);

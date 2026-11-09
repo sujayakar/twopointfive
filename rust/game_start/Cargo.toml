@@ -10,7 +10,7 @@ edition = "2021"
 publish = false
 
 [dependencies]
-game = { path = "../game" }
+game = { path = "../game_rules", package = "game_rules" }
 sim = { path = "../sim" }
 # (hold draws what it plays)
 game_draw = { path = "../game_draw", optional = true }
@@ -20,10 +20,18 @@ opt-level = 0
 debug = false
 
 [profile.test]
-opt-level = 0
+opt-level = 1
 debug = false
 
 [features]
 # `std`: the readers of this repository's own files (the character, a level) for a native host and the tests. The start itself reads no file.
 default = ["std"]
 std = ["dep:game_draw"]
+
+# THE GATE'S OWN BUILD (`cargo build --profile gate --bin gate`): what is run once or twice after an edit is built cheaply, and a pin depends on no profile.
+[profile.gate]
+inherits = "release"
+opt-level = 2
+lto = false
+codegen-units = 256
+incremental = true

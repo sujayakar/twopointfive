@@ -19,7 +19,7 @@ macro_rules! st {
 
 /// A new game's state: the TypeScript's own literal, whose clocks are not zero.   (lanes.ts fresh)
 pub fn fresh(g: &mut crate::game::Game) -> crate::lanes::State {
-    State { said_t: -100.0, t: -1.0, ..State::zeroed() }
+    State { said_t: -100.0, t: -1.0, ..State::default() }
 }
 
 /// The game's state, made if it has none: the row itself.   (lanes.ts S)
@@ -65,7 +65,7 @@ pub fn lane_of(g: &crate::game::Game, gd: GuardId) -> Option<LanesLaneId> {
 /// The owner's record says what this file's state says of him.   (lanes.ts laneSay)
 pub fn lane_say(g: &mut crate::game::Game, gd: GuardId) {
     let (rule, t) = (crate::owner::by::LANE, g.time);
-    if lane_of(g, gd).is_some() {
+    if lane_of(g, gd).is_some() && !crate::owner::has(g, gd, crate::owner::by::RUNNER) {
         crate::owner::claim(g, gd, rule, t, None);
     } else {
         crate::owner::release(g, gd, rule, t);
@@ -449,12 +449,11 @@ pub fn cost(g: &mut crate::game::Game, from: V3, at: V3, man: GuardId, down: boo
                 at: [at[0], 0.0, at[2]],
                 dx,
                 dz,
-                t0: now,
                 last_t: now,
                 known_at: -1.0,
                 push_until: -1.0,
                 pin_by: -1.0,
-                ..Lane::zeroed()
+                ..Lane::default()
             });
             let st = st!(g);
             st.lanes.push(l);
@@ -760,10 +759,10 @@ mod tests {
     /// lanes.ts:303: who goes first when a side keeps too many
     #[test]
     fn rank_orders_stray_rounds_before_a_lane_before_one_on_the_net() {
-        let stray = Lane { weight: 0.5, ..Lane::zeroed() };
-        let lane = Lane { weight: 1.0, ..Lane::zeroed() };
-        let said = Lane { weight: 0.5, known: true, ..Lane::zeroed() };
-        let both = Lane { weight: 2.0, known: true, ..Lane::zeroed() };
+        let stray = Lane { weight: 0.5, ..Lane::default() };
+        let lane = Lane { weight: 1.0, ..Lane::default() };
+        let said = Lane { weight: 0.5, known: true, ..Lane::default() };
+        let both = Lane { weight: 2.0, known: true, ..Lane::default() };
         assert!(rank(&stray) < rank(&lane));
         assert!(rank(&lane) < rank(&said));
         assert!(rank(&said) < rank(&both));
@@ -773,7 +772,7 @@ mod tests {
     fn add_lane(g: &mut Game, id: f64, known: bool, cell: f64) -> LanesLaneId {
         let mut cells = JsSet::new();
         cells.add(crate::Num(cell));
-        let l = g.tab.lanes_lane.push(Lane { id, known, cells: Some(cells), ..Lane::zeroed() });
+        let l = g.tab.lanes_lane.push(Lane { id, known, cells: Some(cells), ..Lane::default() });
         s(g).lanes.push(l);
         l
     }
@@ -787,9 +786,9 @@ mod tests {
         let a = add_lane(&mut g, 1.0, true, 0.0);
         let b = add_lane(&mut g, 2.0, true, 1.0);
         assert!(lane_of(&mut g, gd).is_none());
-        s(&mut g).peek.set(gd, Peek { lane: 2.0, ..Peek::zeroed() });
+        s(&mut g).peek.set(gd, Peek { lane: 2.0, ..Peek::default() });
         assert!(lane_of(&mut g, gd) == Some(b));
-        s(&mut g).held.set(gd, StateHeldValue { lane: 1.0, ..StateHeldValue::zeroed() });
+        s(&mut g).held.set(gd, StateHeldValue { lane: 1.0, ..StateHeldValue::default() });
         assert!(lane_of(&mut g, gd) == Some(a));
         s(&mut g).lanes.remove(0);
         assert!(lane_of(&mut g, gd).is_none());

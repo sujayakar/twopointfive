@@ -17,7 +17,6 @@ fn bone_or(g: &Game, c: CharId, b: crate::character::Bone, up: f64) -> V3 {
 pub fn game_draw_men(g: &mut crate::game::Game, all: &[CharId], statured: bool, draw: Option<bool>) {
     crate::scene_boxes::box_world_reset_capsules(g);
     let mut drawn = crate::fogofwar::fog_of_war_filter(g, all);
-    if crate::rails::rails_sky_on(g) { let me = g.pl[g.player].ch; drawn.retain(|c| *c != me); }
     if drawn.len() > 8 && (g.night_breach.active || g.rescue.active) {
         let mut down: Vec<CharId> = Vec::new();
         let mut i = 0;
@@ -46,7 +45,7 @@ pub fn game_light_meter(g: &mut crate::game::Game, dt: f64) {
         let pc = g.pl[pl].ch;
         let chest = bone_or(g, pc, Bone::Chest, 1.1);
         let eye = bone_or(g, g.gd[gd].ch, Bone::Head, 1.65);
-        g.gd[gd].smoke_trans = crate::sense::smoke_between(g, eye, chest) * crate::weather::air_trans(g, eye, chest);
+        g.gd[gd].smoke_trans = crate::sense::clear_between(g, eye, chest);
     }
     for &s in seats.iter() { crate::seats::with_seat(g, s, &mut |g| game_meter_read(g, dt)); }
 }
@@ -114,7 +113,7 @@ pub fn game_update_doors(g: &mut crate::game::Game, dt: f64) {
         let hand = crate::handleside::hand_press(g, gd);
         let round = speed > crate::doorway::ROUND_PACE && crate::doorway::rounds_leaves(g, gd) && !crate::doorway::leaf_stalled(g, gd);
         of.push(Some(c));
-        contacts.push(DoorContact { pos: g.ch[c].pos, radius: 0.34, bash, who: g.ch[c].id, quiet, key: Some(true), hand, round: Some(round), ..DoorContact::zeroed() });
+        contacts.push(DoorContact { pos: g.ch[c].pos, radius: 0.34, bash, who: g.ch[c].id, quiet, weak: Some(crate::doorway::only_brushes(g, gd)), key: Some(true), hand, round: Some(round), ..DoorContact::default() });
     }
     let n0 = contacts.len();
     crate::civilians::civilian_door_contacts(g, &mut contacts);
@@ -146,7 +145,7 @@ pub fn game_update_doors(g: &mut crate::game::Game, dt: f64) {
             let radius = crate::ragdoll::ragdoll_radius(g, rag, i);
             body_contacts.push((contacts.len(), ch, i));
             of.push(None);
-            contacts.push(DoorContact { pos: p, radius, bash: false, who: g.ch[ch].id, quiet: true, weak: Some(true), ..DoorContact::zeroed() });
+            contacts.push(DoorContact { pos: p, radius, bash: false, who: g.ch[ch].id, quiet: true, weak: Some(true), ..DoorContact::default() });
         }
     }
     let list = g.doors.list.clone();
@@ -206,7 +205,7 @@ pub fn game_door_contact(g: &mut crate::game::Game) -> Option<crate::doors::Door
     let solid = g.puppet.is_none() && !g.touring;
     Some(crate::doors::DoorContact {
         pos: g.ch[pc].pos, radius: 0.34, bash: g.pl[pl].sprinting, who: g.ch[pc].id, quiet: g.pl[pl].crouch && !g.pl[pl].dash,
-        keys: Some(g.pl[pl].keys.clone()), run, solid: Some(solid), vel: Some(g.ch[pc].vel), ..crate::doors::DoorContact::zeroed()
+        keys: Some(g.pl[pl].keys.clone()), run, solid: Some(solid), vel: Some(g.ch[pc].vel), ..crate::doors::DoorContact::default()
     })
 }
 

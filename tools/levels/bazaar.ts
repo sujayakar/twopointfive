@@ -36,18 +36,18 @@
 // from the lorry's driver, the money changer's man, the tea house's man, the garage's man and the street's night watchman. All three gates are ways out.
 // QUIET_VARIANT=spot,set,start exports ONE deal to levels/bazaar.v<spot><set><start>.json for the checks (never committed).
 //
-// In the GWOT look kit (src/scene/gwotKit.ts). Units: metres. +X east, +Z south, +Y up. Laid out on paper and proved headless (tools/qa/quiet-light.ts,
-// tools/qa/solo-night.ts on every deal); seen drawn once, on the software renderer.
+// In the GWOT look kit (lib/gwotKit.ts). Units: metres. +X east, +Z south, +Y up. Laid out on paper and proved headless
+// on every deal; seen drawn once, on the software renderer.
 import type { Vec3 } from '../../src/math/vec';
-import type { Level, LevelDoorDef, DeviceDef, CivilianDef, PatrolRoute } from '../../src/scene/level';
-import type { LevelScenarios, QuietData, Rect, ResponseData } from '../../src/scene/scenarios';
-import type { SurfacesData } from '../../src/scene/levelData';
-import { officeKit, normalize3 as norm, type GeneratorTrace } from '../../src/scene/officeGen';
-import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS } from '../../src/scene/gwotKit';
+import type { Level, LevelDoorDef, DeviceDef, CivilianDef, PatrolRoute } from './lib/level';
+import type { LevelScenarios, QuietData, Rect, ResponseData } from './lib/scenarios';
+import type { SurfacesData } from './lib/levelData';
+import { officeKit, normalize3 as norm, type GeneratorTrace } from './lib/officeGen';
+import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS } from './lib/gwotKit';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { drawnAs, PANEL_GREY } from '../../src/scene/stuff';
-import { carCoat } from '../../src/scene/carShapes';
+import { carCoat } from './lib/carShapes';
 
 /** one deal for the checks: QUIET_VARIANT=spot,set,start (absent = the committed file: the first of each, every route) */
 const VARIANT = (() => { const s = (typeof process !== 'undefined' && process.env.QUIET_VARIANT) || ''; if (!s) return null; const v = s.split(',').map(Number); if (v.length !== 3 || v.some(n => !Number.isInteger(n) || n < 0 || n > 2)) throw new Error(`QUIET_VARIANT=${s}: want spot,set,start, each 0‥2`); return v as [number, number, number]; })();
@@ -221,7 +221,7 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
   kiosk(30.1, 31.1, 18.2, P.paintRust);                                                              // a third, hard by the garage's wicket: from the wicket to the east gate nobody up the street sees you
   // THE LORRY, nose east along the south wall: a canvas tilt over the bed, a red cab
   slab(14.2, 0.45, 19.5, 18.6, 2.5, 21.88, P.canvas, { rough: 0.9 });
-  const cabRed = carCoat(P.truckRed);   // (a vehicle's body says it is a car's coat: scene/carShapes.ts)
+  const cabRed = carCoat(P.truckRed);   // (a vehicle's body says it is a car's coat: lib/carShapes.ts)
   slab(18.6, 0.45, 19.7, 20.0, 1.25, 21.7, cabRed, { rough: 0.5 }); slab(18.7, 1.25, 19.78, 19.9, 1.86, 21.62, P.glassDark, { rough: 0.2 }); slab(18.62, 1.86, 19.72, 19.98, 1.9, 21.68, cabRed, { rough: 0.5 });
   for (const x of [15.0, 17.6, 19.4]) for (const z of [19.75, 21.6]) add({ c: [x, 0.3, z], h: [0.36, 0.3, 0.14], ...M.rubber });
   for (const x of [14.9, 15.8, 16.7, 17.6]) slab(x, 2.5, 19.5, x + 0.08, 2.57, 21.88, P.woodGrey, { rough: 0.8 });                // the tilt's hoops
@@ -335,8 +335,8 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
     // its door, west down the alley, TRIES THE PHARMACY'S BACK DOOR — some thirteen seconds in, his back to the north gate — down the passage, up to the
     // pharmacy's window for a look in, east along the street under the camera, in at the garage's wicket, a look at the office's keypad door, and through the
     // garage's back door to the generator again
-    // (hand-set: the last stand is 1 s, was 4. His lap with a talk at the lorry in it is then the west torch's 85.7 s (84.7 / 87.8 / 85.6 measured on the
-    // shipped stand); without a talk it is 71.9 s. The talks run out after three laps; the needs breaks have begun by then.)
+    // (hand-set: the last stand is 1 s, was 4. His lap with a talk at the lorry in it is then the west torch's 85.7 s (84.7 / 87.8 / 85.6 measured);
+    // without a talk it is 71.9 s. The talks run out after three laps; the needs breaks have begun by then.)
     { name: 'roundE', points: [W(34.2, 6.6), W(31.0, 6.0), W(27.0, 4.9), W(25.4, 6.0), W(22.6, 6.3), W(20.9, 6.3), W(20.9, 7.2), W(17.0, 6.4), W(17.0, 14.0), W(17.6, 18.5), W(19.2, 18.4), W(19.2, 17.2), W(20.9, 17.4), W(23.0, 19.1), W(26.0, 18.4), W(30.6, 18.9), W(31.9, 17.2), W(31.6, 9.9), W(30.9, 9.9), W(33.4, 9.2)],
       wait: [2, 0, 0, 0, 0, 0, 3, 0, 0, 0, 0, 4, 0, 0, 0, 0, 0, 0, 1, 0] },
     // the lorry's driver, awake: up and down the flank of his lorry — a while by the bed looking west down the street, a long while leaning on the cab with
@@ -344,7 +344,7 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
     // (ON THE FIRST LAP he has not arrived from anywhere: for those first ten seconds he faces EAST along the lorry, down his first leg, not west. Every
     // number of this level was measured that way; a lead-in waypoint would turn him west from the first frame and wants the deals measured again.)
     // (hand-set waits, the original points: 17 s by the bed, 10.75 s at the cab, so his lap is HALF the east torch's own (35.95 of 71.9 s). The east
-    // torch comes out of the passage's mouth as he starts back from the cab every lap; on the first three laps they stop and talk there (dialogue.ts
+    // torch comes out of the passage's mouth as he starts back from the cab every lap; on the first three laps they stop and talk there (rust/game_rules/src/dialogue
     // AMBIENT: each of the level's three talks is heard once a run, and a talk holds both men, so they stay in step through it). He is then by the bed,
     // his back to the pharmacy, for about 14 s after the torch leaves the shutter: that is the shops route's way across the shop. He must be walking east
     // by t = 20 s: stood by the bed then he is within talking reach of the west torch and the first talk holds the west round up instead.)
@@ -403,10 +403,10 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
       stretch: { name: 'the street', pos: [24.5, 0, 18.9], face: HALF, loop: [W(24.5, 18.9), W(28.0, 18.8), W(28.0, 19.6), W(21.0, 19.0), W(13.0, 18.6)] },
     },
     phones: [{ name: 'the tea house\'s phone', pos: [5.4, 0, 14.6], face: -HALF }],
-    wayouts: [{ name: 'the street\'s west end', pos: [2.6, 0, 19.0], face: -HALF }, { name: 'the alley\'s mouth', pos: [2.6, 0, 6.0], face: -HALF }],
+    wayouts: [{ name: 'the open end of the street', pos: [2.6, 0, 19.0], face: -HALF }, { name: 'the alley\'s mouth', pos: [2.6, 0, 6.0], face: -HALF }],
   };
 
-  // ---------------- LIVED-IN ROOMS (src/scene/lived.ts; rebuild/play-style-levels/rooms/read-first.md): what makes each shop, the alley, the passage and the
+  // ---------------- LIVED-IN ROOMS (lib/lived.ts; rebuild/play-style-levels/rooms/read-first.md): what makes each shop, the alley, the passage and the
   //                  street ITS place. Everything below is in a group 'lived.<place>' or named 'lived.<place>.<thing>' and is the TAIL of every list: the
   //                  loader leaves it all out with the switch off. Additions only; nothing above is moved. No emitter: each place says its light with colour.
   //                  Solids keep 1.1 m off every door line, off the patrol legs and off every authored point; what is under 0.25 m is walked over ----------------
@@ -662,10 +662,10 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
     { name: 'bread oven', bounds: { x0: 8.6, x1: 13.4, z0: 4.12, z1: 7.88 } }, { name: 'lorry', bounds: { x0: 13.6, x1: 20.4, z0: 18.6, z1: 21.88 } },
     { name: 'alley', bounds: { x0: 4.12, x1: 32.4, z0: 4.12, z1: 7.88 } }, { name: 'street', bounds: { x0: 4.12, x1: 35.88, z0: 16.12, z1: 21.88 } },
   ] };
-  // THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest): the south gate from the lane outside it (the third start's side), the
+  // THE TEAM & KIT PICTURE (lib/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest): the south gate from the lane outside it (the third start's side), the
   // street's stalls and awnings over the wall behind the man.
   const kitView = { ways: [{ door: 'gate_s', ref: [22.4, 25.4], side: -1 }] };
-  // WHO COMES WHEN THE STREET GOES LOUD (scenarios.response — game/qrf.ts, tools/qa/response-check.ts): the town is under curfew and a patrol is never far.
+  // WHO COMES WHEN THE STREET GOES LOUD (scenarios.response — rust/game_rules/src/qrf, rust/game_start/tests/response_team.rs): the town is under curfew and a patrol is never far.
   // It walks in by the street's open end or by a gate; every mark is out past the row or a stride inside it (Character yaws: forward = [sin, 0, cos]).
   const response: ResponseData = {
     why: 'A market street in a town under curfew: the only armed men out at night are the patrol, and gunfire in the bazaar is the one thing they are out for.',

@@ -189,11 +189,6 @@ pub fn quiet_mission_current(g: &mut crate::game::Game) {
     }
 }
 
-/// deal afresh on the same run   (quiet.ts QuietMission.restage)
-pub fn quiet_mission_restage(g: &mut crate::game::Game) {
-    if g.quiet.active { crate::game::game_restart_encounter(g); }
-}
-
 /// restartEncounter's FIRST act: the deal, written into the level before the fresh Player and Guards read it   (quiet.ts QuietMission.beforeRestart)
 pub fn quiet_mission_before_restart(g: &mut crate::game::Game) {
     if !g.quiet.active { return; }
@@ -376,7 +371,7 @@ fn stage_or_why(g: &mut crate::game::Game) -> Result<(), String> {
             name: Some(String::from("Blue One")),
             light: Some(false),
             pair: Some(crate::game::PairId::Blue),
-            ..crate::guards::UnitOpts::zeroed()
+            ..crate::guards::UnitOpts::default()
         })?;
         crate::mind::set_state(g, man, crate::game::GuardState::Patrol, "quiet");
         crate::mind::set(g, man, 0.0, "quiet");
@@ -391,7 +386,7 @@ fn stage_or_why(g: &mut crate::game::Game) -> Result<(), String> {
             aim_at: Some(None),
             light: Some(Some(false)),
             crouch: Some(Some(false)),
-            ..crate::squad::OrderPatch::zeroed()
+            ..crate::squad::OrderPatch::default()
         });
         g.quiet.ops.push(man);
         g.quiet.fall_in = true;
@@ -455,7 +450,7 @@ pub fn holder_stand(g: &mut crate::game::Game, front: V3, area: Option<crate::qu
             if s < bs { bs = s; best = Some([x, 0.0, z]); clear = c; inside = n; }
         }
     }
-    crate::quiet::HolderStand { pos: best, ok: best.is_some() && clear && inside, clear, inside }
+    crate::quiet::HolderStand { pos: best, clear, inside }
 }
 
 /// the quiet mission that is up on this game   (quiet.ts quietOf)
@@ -653,7 +648,7 @@ mod tests {
     use crate::scene_scenarios::QuietExit;
 
     fn exit() -> QuietExit {
-        QuietExit { x: 1.5, z: -2.25, out: [0.6, 0.8], ..QuietExit::zeroed() }
+        QuietExit { x: 1.5, z: -2.25, out: [0.6, 0.8], ..QuietExit::default() }
     }
 
     /// a cut must be seen by Seat.takeCut, which watches the serial, and leaves the two on one point

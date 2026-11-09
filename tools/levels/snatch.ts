@@ -14,13 +14,13 @@
 //   z 23 └────────────────┤ south gate ├────────────────┘
 //              [the van]▸  the team starts here (x 16, z 25.4)
 //
-// Built from the 2010s kit (src/scene/gwotKit.ts): flat colours, boxes only. Regenerate: bun run tools/levels/export.ts snatch
+// Built from the 2010s kit (lib/gwotKit.ts): flat colours, boxes only. Regenerate: bun run tools/levels/export.ts snatch
 import type { Vec3 } from '../../src/math/vec';
-import type { Level, LevelDoorDef } from '../../src/scene/level';
-import type { LevelScenarios, Rect } from '../../src/scene/scenarios';
-import type { SurfacesData } from '../../src/scene/levelData';
-import { officeKit, type GeneratorTrace } from '../../src/scene/officeGen';
-import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, GW_PART } from '../../src/scene/gwotKit';
+import type { Level, LevelDoorDef } from './lib/level';
+import type { LevelScenarios, Rect } from './lib/scenarios';
+import type { SurfacesData } from './lib/levelData';
+import { officeKit, type GeneratorTrace } from './lib/officeGen';
+import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, GW_PART } from './lib/gwotKit';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { livedTail } from './livedKit';
@@ -148,7 +148,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   ];
   for (const d of doors) doorFrame(d);
 
-  // ---- LIVED IN (src/scene/lived.ts: all of it goes with the switch off — group 'lived.<place>', props 'lived.<place>.<kind><n>'; LAST, after every kept thing) ----
+  // ---- LIVED IN (lib/lived.ts: all of it goes with the switch off — group 'lived.<place>', props 'lived.<place>.<kind><n>'; LAST, after every kept thing) ----
   // The rooms were furnished when the house was built. This is what the yards and the ground outside were short of: from above the ground is most of the
   // picture, and the courtyard and the dust round the wall were each one sheet. What a household leaves on its ground: a water point with its mud, last
   // night's fire by the bed the watch sleeps on, the generator's fuel and what it drips, a bike against the wall, the drip line under the washing, bricks
@@ -248,7 +248,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       { name: 'the side yard', bounds: { x0: 26.2, x1: 31.8, z0: 3.2, z1: 18.2 } }, { name: 'the wash yard', bounds: { x0: 7.2, x1: 11.8, z0: 7.8, z1: 18.2 } },
     ] },
   };
-  // ---- what is underfoot (game/floor.ts): the yard is 'asphalt' (the nearest the six have to earth), the house's beaten floor stone, the rugs carpet
+  // ---- what is underfoot (rust/game_rules/src/floor): the yard is 'asphalt' (the nearest the six have to earth), the house's beaten floor stone, the rugs carpet
   // `building` is the whole world, so the plan is all zones (first match wins), as on the floodlit yard: a zone is read only inside it, and with the house's
   // own rectangle here the gate hut's zone, out in the side yard, was never read (its floor sounded as the yard's).
   const surfaces: SurfacesData = {
@@ -260,7 +260,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       { id: 'hut', mat: 'stone', x0: 29, z0: 6.6, x1: 31.76, z1: 10.4 },
     ],
   };
-  // THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest): the team starts at the level's own south gate, whose two
+  // THE TEAM & KIT PICTURE (lib/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest): the team starts at the level's own south gate, whose two
   // blue leaves stand folded open. A picture anchored on that opening had nothing for the kit that works a leaf (the hammer, the shotgun, a door charge, the
   // wand, a bang or a frag on order all stood idle), so the way is the door the gate leads to: the house's front door across the courtyard. What stands in
   // the camera's way is worked out and sunk by the plan.

@@ -40,7 +40,7 @@ pub fn fresh(g: &mut crate::game::Game) -> crate::laststand::State {
     rot.set(LineKind::MovedFree, 0.0);
     State {
         post, key, die, next_at: 0.0, check: None, known: JsSet::new(), named: JsMap::new(), spots: JsMap::new(), at: JsMap::new(), 
-        lone_said: false, few_n: 0.0, told: JsSet::new(), said: Vec::new(), stats: new_stats(), stale: false, rot, cls_at: Vec::new(), later: Vec::new(),
+        lone_said: false, few_n: 0.0, said: Vec::new(), stats: new_stats(), stale: false, rot, cls_at: Vec::new(), later: Vec::new(),
     }
 }
 

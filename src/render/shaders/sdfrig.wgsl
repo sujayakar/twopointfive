@@ -1,3 +1,4 @@
+// A big body is written once here and asked in a loop: the compile pastes every call. Credit: Stephen Jayakar, from his pull request 1.
 // ---- SDF character rig (render/sdfrig.ts fits it; the prelude prepends RB_QUANT — frame.ts scenePrelude). Every character's 15 shadow proxies
 // (capsules[k·capsPerChar + slot], struct Capsule in common.wgsl) are ROUND CONES: radius cp.r at end a, coneRb(cp) at end b (the top byte of misc, millimetres;
 // 0 = r again — an untapered cone, which is what a record nobody fitted decodes to). This file is the primitive alone — coneRb / sdRoundCone / roundConeNormal /

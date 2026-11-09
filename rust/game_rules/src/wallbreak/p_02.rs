@@ -332,7 +332,6 @@ pub fn wall_break_fall(g: &mut crate::game::Game, j: f64, a: crate::wallbreak::A
     seam_box(g, b).flags = with_bits(flags, HIDE);
     wall_break_bump(g);
     let c = seam_box(g, b).c;
-    crate::smoke_types::smoke_system_like_obstacles_changed(g, c, m::hyp3(h[0], h[1], h[2]) + 0.6);
     rects.push([a.x0, a.z0, a.x1, a.z1]);
     let hung = if quiet { None } else { g.destr.walls.hung_now.as_ref().filter(|n| n.set.contains(&j)).map(|n| (n.at, n.n)) };
     if let Some((at, n)) = hung {
@@ -393,7 +392,7 @@ pub fn wall_break_plan_blast(g: &mut crate::game::Game, at: V3, opts: crate::wal
         Some(h) => Vec::from(h),
         None => match opts.hung { Some(x) => wall_break_hung_at(g, x.wall, at, x.r), None => Vec::new() },
     };
-    let as_item = |p: WallBreakPlanOfItem| WallBreakPlanBlastItem { b: p.b, cells: p.cells, d: p.d };
+    let as_item = |p: WallBreakPlanOfItem| WallBreakPlanBlastItem { b: p.b, cells: p.cells };
     if own.is_empty() { return wall_break_plan_of(g, at, opts, r).into_iter().map(as_item).collect(); }
     // (the boards stand in no line of the plan: hidden as the engine hides a static, and put back)
     let own: Vec<BoxId> = own.iter().map(|&j| box_at(g, j)).collect();
@@ -699,18 +698,13 @@ pub fn wall_break_reset(g: &mut crate::game::Game, silent: Option<bool>) {
     let world = crate::scene_world::world();
     crate::scene_collision::nav_grid_rebake(g, world.min[0], world.min[2], world.max[0], world.max[2]);
     crate::scene_collision::sound_paths_invalidate(g);
-    crate::smoke_types::smoke_system_like_obstacles_changed(g, [(world.min[0] + world.max[0]) / 2.0, 1.0, (world.min[2] + world.max[2]) / 2.0], 60.0);
-    crate::render_reach_keep::reach_keep_changed(g, None, None);
     if !silent {
         wall_break_note(g, &WallBreakNoteC {
-            dead: false,
             kind: LevelChangeKind::Reset,
             cause: LevelChangeCause::Reset,
-            name: None,
             who: crate::consts::NOBODY_ID,
             pos: [0.0, 0.0, 0.0],
             id: -1.0,
-            sight: false,
             rect: [world.min[0], world.min[2], world.max[0], world.max[2]],
             opened: Vec::new(),
             walkable: false,

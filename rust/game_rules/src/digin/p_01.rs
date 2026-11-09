@@ -55,12 +55,7 @@ pub fn at(p: V3, y: f64) -> V3 { [p[0], y, p[2]] }
 
 /// A line in the file's log, capped, and in the fight's. (digin.ts log)
 pub fn log(g: &mut Game, gd: Option<GuardId>, what: &str) {
-    let who = match gd {
-        Some(id) => g.gd[id].callsign.clone(),
-        None => String::from("-"),
-    };
-    let t = g.time;
-    g.m.digin.digin_log.push(crate::digin::DiginModDIGINLOGItem { t, who, what: String::from(what) });
+    g.m.digin.digin_log.push(crate::digin::DiginModDIGINLOGItem { what: String::from(what) });
     if g.m.digin.digin_log.len() > 400 {
         g.m.digin.digin_log.drain(0..150);
     }
@@ -97,7 +92,7 @@ pub fn heard_by(g: &mut Game, src: V3, reach_m: f64) -> Option<crate::digin::Hea
         let p = crate::weather::hear_path(g, at(src, 1.2), l.head, None);
         if p.path_len < reach_m * p.carry && p.path_len < bd {
             bd = p.path_len;
-            best = Some(crate::digin::HeardBy { gd: l.gd });
+            best = Some(crate::digin::HeardBy {  });
         }
     }
     best
@@ -541,7 +536,7 @@ pub fn scrape(g: &mut Game, gd: GuardId, m: crate::digin::Man, r: Option<&mut cr
         level: Some(level),
         who: Some(who),
         serial,
-        ..crate::game::GameEvent::zeroed()
+        ..crate::game::GameEvent::default()
     });
     g.stats.digin.scrapes += 1;
     let l = match heard_noise(g, pos, level) {
@@ -646,8 +641,8 @@ mod tests {
     #[test]
     fn heard_at_takes_his_ears_only_for_a_newer_noise_outside() {
         let mut g = Game::blank();
-        let d = g.tab.roomfight_def.push(crate::roomfight::Def::zeroed());
-        let mut man = crate::digin::Man::zeroed();
+        let d = g.tab.roomfight_def.push(crate::roomfight::Def::default());
+        let mut man = crate::digin::Man::default();
         man.know = [1.0, 0.0, 1.0];
         man.know_t = 5.0;
         assert_eq!(heard_at(&mut g, d, man), man.know);
@@ -671,9 +666,9 @@ mod tests {
     #[test]
     fn fear_lands_on_his_door_of_the_room_fights_row() {
         let mut g = Game::blank();
-        let d = g.tab.roomfight_def.push(crate::roomfight::Def::zeroed());
+        let d = g.tab.roomfight_def.push(crate::roomfight::Def::default());
         g.tab.roomfight_def[d].ev = vec![0.5, 2.9];
-        let mut man = crate::digin::Man::zeroed();
+        let mut man = crate::digin::Man::default();
         man.entry = 0.0;
         fear(&mut g, d, man);
         man.entry = 1.0;

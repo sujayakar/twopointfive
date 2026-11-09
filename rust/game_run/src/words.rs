@@ -1,5 +1,5 @@
 //! THE ADDRESS'S WORDS FOR THE GAME'S NUMBERS. A word here turns a knob as the game is made, over what the machine keeps. `?knob.<name>=<number>` turns any number of the
-//! tables by its name (knobs.rs `KNOBS`), and these are the short words people already use. `?training=` and `?nerve=` pick as the panel's rows do (actions.rs).
+//! tables by its name (game_types `knobs`), and these are the short words people already use. `?training=` and `?nerve=` pick as the panel's rows do (actions.rs).
 use game::game::Game;
 use game::query::Query;
 

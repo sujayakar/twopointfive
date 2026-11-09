@@ -165,11 +165,6 @@ pub fn unpack_rect(w: f64) -> [f64; 4] {
     [(w & 255) as f64 * ROOF_Q, ((w >> 8) & 255) as f64 * ROOF_Q, ((w >> 16) & 255) as f64 * ROOF_Q, (w >> 24) as f64 * ROOF_Q]
 }
 
-/// Is (x, z) in the footprint, edges included? (weatherKinds.ts inRect)
-pub fn in_rect(r: &[f64], x: f64, z: f64) -> bool {
-    x >= r[0] && z >= r[1] && x <= r[2] && z <= r[3]
-}
-
 /// The kind a query names, if any. (weatherKinds.ts weatherOfSearch, of words already read)
 pub fn weather_of(q: &crate::query::Query) -> Option<crate::weather_kinds::WeatherKind> { startable_kind(q.get(WEATHER_KEY)?) }
 

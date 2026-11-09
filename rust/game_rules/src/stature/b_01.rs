@@ -88,12 +88,3 @@ pub fn drawn_boxes(g: &mut crate::game::Game, men: &[CharId], out: &Vec<AnyBoxId
     if any { for x in g.m.stature.by_id.iter_mut() { *x = None; } }
 }
 
-/// A weapon laser's ray as drawn: it leaves the DRAWN muzzle and still ends on the simulation's point (from + dir · L). `k` = drawn length ÷ the
-/// simulation's. (src/game/stature.ts:103 drawnBeam)
-pub fn drawn_beam(g: &crate::game::Game, c_2: CharId, from: V3, dir: V3, l: f64) -> crate::stature::DrawnBeam {
-    let s = stature_of(g, c_2);
-    if s == 1.0 || !(l > 1e-4) { return DrawnBeam { from, dir, k: 1.0 }; }
-    let a = drawn_point(g, c_2, from, Some(s));
-    let d: V3 = [from[0] + dir[0] * l - a[0], from[1] + dir[1] * l - a[1], from[2] + dir[2] * l - a[2]]; let n = m::hyp3(d[0], d[1], d[2]);
-    if n > 1e-4 { DrawnBeam { from: a, dir: [d[0] / n, d[1] / n, d[2] / n], k: n / l } } else { DrawnBeam { from, dir, k: 1.0 } }
-}

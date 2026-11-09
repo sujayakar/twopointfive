@@ -3,16 +3,16 @@
 // WHY: those five operations are exact by the IEEE standard on every machine and in every JavaScript engine; the functions above are not. The language lets an
 // engine round them as it likes in the last place, and the engines do: JavaScriptCore (bun, Safari) asks the system's C library, V8 (Chrome, node) carries ports
 // of its own, and Chrome's sin is not node's. One unit in the last place of a facing angle at frame 0 is a different fight a minute later — the same seed and the
-// same inputs played apart on two engines (measured: tools/qa/exact-check.ts). A server and a client that are to agree, or a page and the headless harness, need
+// same inputs played apart on two engines (measured). A server and a client that are to agree need
 // one arithmetic. With EXACT.on the functions below stand in Math's place (`Math.sin = sin` …: no call site changes, new code is covered by writing Math.sin as
 // ever, and the lengths of math/hyp.ts go to one algorithm on every engine); off, Math is the engine's own and nothing here runs — the build as it was.
 //
-// WHAT IT IS NOT: correctly rounded. These are within a unit or two in the last place of the true value (exact-check.ts measures it against the engine's own),
+// WHAT IT IS NOT: correctly rounded. These are within a unit or two in the last place of the true value,
 // the same on every engine, and that is all the game needs of them. NOT replaced, because nothing under src/ calls them: cbrt, expm1, log1p, sinh, cosh, asinh,
-// acosh, atanh — exact-check.ts is red on a call to one from the simulation's folders.
+// acosh, atanh.
 //
-// THE SWITCH is a property with a setter, so every road that writes a knob table (the page's URL, a stand, the journal's applyKnobs, the debugger panel) puts the
-// functions in or takes them out by writing it; a recording carries it, and one from before it replays on the engine's maths.
+// THE SWITCH is a property with a setter, so writing it puts the
+// functions in or takes them out.
 //
 // The algorithms and constants are those of the Go standard library's portable math package (pure Go: sin.go, tan.go, atan.go, asin.go, atan2.go, exp.go, log.go,
 // log10.go, pow.go, tanh.go, frexp.go, ldexp.go, trig_reduce.go), rewritten for doubles held in JavaScript numbers. Their notices:
@@ -313,15 +313,11 @@ export let mathsEpoch = 0;
 const remade: (() => void)[] = [];
 /** A CONSTANT A MODULE WORKS OUT AS IT LOADS from one of the functions above (`const C = Math.cos(…)` at the top of a file) is made before any switch is
  *  written, on the engine's maths. Make it here instead: `fn` runs now, and again each time the switch changes, so the constant is the engine's with the switch
- *  off and the game's own with it on. exact-check.ts is red on a load-time call that is not inside one of these. */
+ *  off and the game's own with it on. */
 export function onExact(fn: () => void): void { remade.push(fn); fn(); }
 /** the fourteen, and the three lengths of math/hyp.ts, as one set */
 export type Maths = typeof SYS & { hyp2(a: number, b: number): number; hyp3(a: number, b: number, c: number): number; hyp4(a: number, b: number, c: number, d: number): number };
 let other: Maths | null = null;
-/** THE SAME ARITHMETIC FROM ELSEWHERE: while the switch is on, `fns` stand in Math's place instead of the functions above (null = the ones above again). The
- *  caller's promise is that they are the same functions TO THE BIT — src/sim/sim.ts hands in the Rust ones (its RUST.maths row), and tools/qa/rust-check.ts
- *  holds that promise. With the switch off this changes nothing: the engine's own are in place either way. */
-export function mathsFrom(fns: Maths | null): void { if (fns === other) return; other = fns; if (installed) install(true); }
 function install(on: boolean): void {
   installed = on; mathsEpoch++;
   const from: typeof SYS = on ? (other ?? OWN) : SYS, M = Math as unknown as Record<string, unknown>;
@@ -330,10 +326,9 @@ function install(on: boolean): void {
   for (const fn of remade) fn();
 }
 /** `on` = the simulation (and everything else on the page) computes on the functions above; off (the module's default) = on the engine's own.
- *  WHEREVER THE GAME IS PLAYED IT IS ON, and no word takes it out: the page's boot and the harness's stand-up write it (sim.ts mathsUp, standup.ts
- *  pinMaths), because the Rust module's rows answer under no other maths. It is OFF AS THIS MODULE LOADS on purpose: a tool that stands no game — the
- *  level exporters above all — works on the engine's own functions, and the level files in the repo are what those gave. The setter also serves the
- *  checks that hold the two sets of functions against each other in their own process (tools/qa/exact-check.ts). Writing it does the work. */
+ *  WHEREVER THE GAME IS PLAYED IT IS ON, and no word takes it out: the page's boot writes it,
+ *  because the Rust module's rows answer under no other maths. It is OFF AS THIS MODULE LOADS on purpose: a tool that stands no game — the
+ *  level exporters above all — works on the engine's own functions, and the level files in the repo are what those gave. Writing it does the work. */
 export const EXACT = {
   get on(): boolean { return installed; },
   set on(v: boolean) { if (!!v !== installed) install(!!v); },

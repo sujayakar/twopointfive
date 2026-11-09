@@ -4,7 +4,7 @@ import { lookDress } from '../scene/look';
 
 export interface GltfNode { name: string; parent: number; children: number[]; t: Vec3; r: Quat; s: Vec3; }
 export interface Track { readonly node: number; readonly path: 0 | 1 | 2; readonly times: Float32Array; readonly values: Float32Array; readonly step: boolean; } // path: 0 T, 1 R, 2 S
-/** AUTHORED DATA, NEVER WRITTEN AFTER IT IS LOADED: anim/skeleton.ts keeps what it works out of a clip beside the clip's object (which tracks share their key
+/** AUTHORED DATA, NEVER WRITTEN AFTER IT IS LOADED: rust/game_rules/src/anim_skeleton keeps what it works out of a clip beside the clip's object (which tracks share their key
  *  times; the Rust module's copy of it), once. A different animation is a different Clip object, never this one changed: the fields are readonly for that
  *  (the compiler holds the fields and the list; what is IN a track's arrays it cannot, and the rule stands for them as well). */
 export interface Clip { readonly name: string; readonly duration: number; readonly tracks: readonly Track[]; }
@@ -38,7 +38,7 @@ export function castGoggles(cast: CastInfo, mask: number, boxes: boolean): numbe
   const bare = (mask & ~(up | down)) >>> 0;
   return boxes ? bare : (bare | (up || down)) >>> 0;
 }
-/** THE SNEAKING SUIT's mask (game/cast.ts sneakSuit says who wears it and when): a variant's own parts less the helmet and every `kit_*` (the back kit: radio, ram,
+/** THE SNEAKING SUIT's mask (rust/game_rules/src/cast sneak_suit says who wears it and when): a variant's own parts less the helmet and every `kit_*` (the back kit: radio, ram,
  *  packs) and less the mesh goggles, which hang on the helmet's mount — by name, so a cast file without those parts loses nothing. Here, beside castGoggles, so the
  *  game's castParts and the proxy fits solved ahead of play (render/sdfrig.ts fitRigCast) read ONE rule. */
 const suitBits = new WeakMap<CastInfo, number>();
@@ -221,7 +221,7 @@ export async function loadCharacterSet(baseUrl: string, castUrl: string | null):
   try { return await loadGltfCast(castUrl, base); } catch (e) { console.error('cast: the new character meshes did not load — the mannequin stands in', e); return base; }
 }
 /** where the cast is, for a page: null under `?mannequin` (the build as it was: one mannequin mesh for everybody) */
-/** THE CAST'S FILE: today's, or the look's (scene/look.ts LOOK — one switch for the whole look: the defenders in local dress, the operators' helmet with its rails; built by the
+/** THE CAST'S FILE: today's, or the look's (scene/look.ts lookDress, the place's: the defenders in local dress, the operators' helmet with its rails; built by the
  *  same tools/chars builder under `--look gwot`, same skeleton, slots and contract, its own 32 parts). Everything that loads a cast asks here. */
 export const CAST_FILE = 'cast.gltf', CAST_FILE_LOOK = 'cast-gwot.gltf';
 export function castFile(look = lookDress()): string { return look ? CAST_FILE_LOOK : CAST_FILE; }

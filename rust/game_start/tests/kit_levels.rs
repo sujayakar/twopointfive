@@ -1,6 +1,7 @@
-//! THE KIT PICTURE ON EVERY LEVEL THAT HAS ONE: every level file with a `scenarios.kitView` block, every way of it, each mission kind the mission list has for that level, stands from its link with `kitview`
-//! in it as the page's frame stands it, says it has a picture (the view's word 1), has its lamps and pin in finite numbers, and holds for five seconds with nobody of the level roused. The list is read off its own
-//! file (src/scene/scenarioList.ts), so a new row or a new way is asked here with nothing to write. What a level's AUTHOR runs is tools/qa/kitview-plan.ts: that one reads the plan, this one stands the game.
+//! THE KIT PICTURE ON EVERY LEVEL THAT HAS ONE: every level file with a `scenarios.kitView` block, every way of it, each mission kind the mission list has for that level, stands from its link
+//! with `kitview` in it as the page's frame stands it, says it has a picture (the view's word 1), has its lamps and pin in finite numbers, and holds for five seconds with nobody of the level
+//! roused. The list is the game's, so a new row or a new way is asked here with nothing to write. What a level's AUTHOR runs is tools/qa/kitview-plan.ts: that one reads the plan, this one
+//! stands the game.
 //! A level with a block and no row of the list has the kind its own file writes.
 use game_start::json::{self, Json};
 use game_start::play::{Opts, Play};
@@ -9,16 +10,9 @@ use std::path::PathBuf;
 
 fn root() -> PathBuf { game_start::files::root() }
 
-/// (kind, level file) of every row of the mission list; the office writes no file there
+/// (kind, level file) of every row of the mission list
 fn rows_of_the_list() -> Vec<(String, String)> {
-    let text = std::fs::read_to_string(root().join("src/scene/scenarioList.ts")).expect("the mission list");
-    let after = |c: &str, key: &str| c.find(key).map(|i| { let t = &c[i + key.len()..]; String::from(&t[..t.find('\'').expect("a closing quote")]) });
-    let rows: Vec<(String, String)> = text.split("{ id: '").skip(1).filter_map(|c| {
-        let kind = after(c, "kind: '")?;
-        Some((kind, after(c, "level: '").unwrap_or_else(|| String::from("office.json"))))
-    }).collect();
-    assert!(rows.len() >= 20, "the mission list reads {} rows: its file has changed shape and this reader wants mending", rows.len());
-    rows
+    game::scene_scenario_list::all_missions().into_iter().map(|e| (String::from(e.kind.as_str()), e.level.unwrap_or_else(|| String::from("office.json")))).collect()
 }
 /// what a mission of that kind says in its link, and how many teammates it brings by default
 fn words_of(kind: &str) -> Option<&'static str> {

@@ -6,6 +6,9 @@
 //   the end   `reap` (crons.ts, twice a minute) ends a game whose server never answered, went silent, has had nobody connected, or is past its lifetime.
 //             A server ends itself by the same clocks (it is handed them); this is what holds when it does not.
 // A game that is over is never live again. Its row stays.
+// A SEAT IS HELD BY WHO IS THERE (`openSeat`): its holder has a little while to come, and after it a seat nobody is connected in is the next one's who asks by
+// the code. Nothing is asked of a page that goes: the server says at once when a seat empties, however it was left. Its holder has it back by coming first. A seat's key
+// is its holder's: it changes as the seat becomes another's, and the server hears of it in a heartbeat's answer (it asks with one when a key is new to it).
 import { v } from "convex/values";
 import { internal } from "./_generated/api";
 import type { Doc } from "./_generated/dataModel";
@@ -38,15 +41,17 @@ const seconds = (k: string, d: number): number => {
 };
 /** THE CLOCKS, in seconds (a deployment's environment may set any of them): a server asked for must be heard from within `start`; a server not heard from
  *  for `silent` is gone; a server nobody has been connected to for `idle`, or older than `max`, ends itself, and is ended here one `silent` later if it
- *  did not */
+ *  did not; whoever is given a seat has `come` to connect in it before it may be another's */
 export const policy = () => ({
   start: seconds("MP_START_S", 120),
   silent: seconds("MP_SILENT_S", 45),
   idle: seconds("MP_IDLE_S", 60),
   max: seconds("MP_MAX_S", 3600),
+  come: seconds("MP_COME_S", 15),
 });
-/** (the check's red paths, tools/qa/mp-control-check.ts: MPCAP_BREAK=1 = a game is made without counting; MPREAP_BREAK=1 = the reaper does nothing.
- *  Dead words on the service: it names its own address in every function's environment, and a word of a deployment's environment breaks nothing) */
+/** (the check's red paths, tools/qa/mp-control-check.ts: MPCAP_BREAK=1 = a game is made without counting; MPREAP_BREAK=1 = the reaper does nothing;
+ *  MPSEAT_BREAK=1 = a seat once taken is never another's. Dead words on the service: it names its own address in every function's environment, and a
+ *  word of a deployment's environment breaks nothing) */
 const broken = (k: string): boolean => !env("CONVEX_CLOUD_URL") && env(k) === "1";
 
 const dice = (n: number): Uint8Array => crypto.getRandomValues(new Uint8Array(n));
@@ -75,6 +80,16 @@ async function byCode(ctx: QueryCtx, code: string): Promise<Game | null> {
   if (code.length !== MP.codeLen) return null;
   const rows = await ctx.db.query("games").withIndex("by_code", q => q.eq("code", code)).collect();
   return rows.find(isLive) ?? rows.sort((a, b) => b.createdAt - a.createdAt)[0] ?? null;
+}
+/** when each seat's holder was last known to be on his way (schema.ts) */
+const heldAt = (g: Game): number[] => g.heldAt ?? g.holders.map(() => g.createdAt);
+/** the seat one who comes by the code may have (−1 = none): one nobody has taken, else one whose holder is not there and has had his time to come. No seat is
+ *  let go while the server is being started: nobody can be there yet */
+function openSeat(g: Game): number {
+  const never = g.holders.indexOf("");
+  if (never >= 0 || g.state === "starting" || broken("MPSEAT_BREAK")) return never;
+  const since = Date.now() - policy().come * 1000;
+  return heldAt(g).findIndex((at, i) => !g.connected[i] && at < since);
 }
 /** what a page is told of a game. Only who holds a seat is told that seat's key, where the server is, and the name the server knows the game by (a client's
  *  hello to a game server names its game: the row's id, which is what the runner was handed as the game) */
@@ -157,15 +172,15 @@ export const make = mutation({
       state: "starting", address: "", server: "",
       holders: Array.from({ length: n }, (_, i) => (i === 0 ? pid : "")),
       connected: Array.from({ length: n }, () => false), tick: 0,
-      createdAt: now, heardAt: now, seatedAt: now,
+      heldAt: Array.from({ length: n }, () => now), createdAt: now, heardAt: now, seatedAt: now,
     });
     await ctx.scheduler.runAfter(0, internal.runners.start, { game: id });
     return view((await ctx.db.get(id))!, pid);
   },
 });
 
-/** JOIN BY CODE: the first free seat is this browser's (a browser that holds one already gets that one back: a page loaded again is the same player).
- *  Refused with `code: …` (no live game has it), `build: …` (the page is another build than the game), `full: …` (every seat is held) */
+/** JOIN BY CODE: an open seat is this browser's (a browser that holds one already gets that one back: a page loaded again is the same player).
+ *  Refused with `code: …` (no live game has it), `build: …` (the page is another build than the game), `full: …` (no seat is open) */
 export const join = mutation({
   args: { pid: v.string(), code: v.string(), build: v.string() },
   handler: async (ctx, { pid, code, build }): Promise<GameView> => {
@@ -174,16 +189,14 @@ export const join = mutation({
     const g = await byCode(ctx, word(code, "code").toUpperCase());
     if (!g || !isLive(g)) return bad("code: no game has this code");
     if (g.build !== build) bad("build: the game is another build than this page");
-    let seat = g.holders.indexOf(pid);
-    if (seat < 0) {
-      seat = g.holders.indexOf("");
-      if (seat < 0) bad("full: every seat is taken");
-      const holders = g.holders.slice();
-      holders[seat] = pid;
-      await ctx.db.patch(g._id, { holders });
-      return view({ ...g, holders }, pid);
-    }
-    return view(g, pid);
+    const mine = g.holders.indexOf(pid), seat = mine >= 0 ? mine : openSeat(g);
+    if (seat < 0) bad("full: every seat is taken");
+    const holders = g.holders.slice(), held = heldAt(g).slice(), seatKeys = g.seatKeys.slice();
+    if (mine < 0 && holders[seat] !== "") seatKeys[seat] = key();
+    holders[seat] = pid;
+    held[seat] = Date.now();
+    await ctx.db.patch(g._id, { holders, heldAt: held, seatKeys });
+    return view({ ...g, holders, seatKeys }, pid);
   },
 });
 
@@ -243,10 +256,10 @@ export const unstarted = internalMutation({
   },
 });
 
-/** A HEARTBEAT (http.ts): 'ok' · 'gone' = no live game has this id, and a server told so stops · 'no' = not this game's secret */
+/** A HEARTBEAT (http.ts): the seats' keys now · 'gone' = no live game has this id, and a server told so stops · 'no' = not this game's secret */
 export const heard = internalMutation({
   args: { game: v.string(), secret: v.string(), state: v.string(), tick: v.number(), seats: v.array(v.boolean()), outcome: v.optional(v.any()) },
-  handler: async (ctx, { game, secret, state, tick, seats, outcome }): Promise<"ok" | "gone" | "no"> => {
+  handler: async (ctx, { game, secret, state, tick, seats, outcome }): Promise<string[] | "gone" | "no"> => {
     const id = ctx.db.normalizeId("games", game);
     const g = id ? await ctx.db.get(id) : null;
     if (!g) return "gone";
@@ -262,11 +275,13 @@ export const heard = internalMutation({
     const now = Date.now();
     // (the idle clock starts when the server is first heard from, and again whenever somebody is connected)
     const seatedAt = g.state === "starting" || seats.some(Boolean) ? now : g.seatedAt;
+    // (who waited for the server to start has his time to come from here)
+    const held = g.state === "starting" ? g.holders.map(() => now) : heldAt(g);
     if (state === "ended") {
       await ctx.db.patch(g._id, { tick, connected: seats, heardAt: now });
       await retire(ctx, g, "ended", "server", { outcome });
-    } else await ctx.db.patch(g._id, { state, tick, connected: seats, heardAt: now, seatedAt });
-    return "ok";
+    } else await ctx.db.patch(g._id, { state, tick, connected: seats, heardAt: now, seatedAt, heldAt: held });
+    return g.seatKeys;
   },
 });
 

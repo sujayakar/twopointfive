@@ -29,16 +29,16 @@
 //   z 23.5 ───────────────────── parapet ─────────────────────
 //   bun run tools/levels/export.ts white-roof [--check]     → levels/white-roof.json
 //   page: ?look&solo&levelFile=white-roof.json&hour=midday
-import type { Level, LevelDoorDef } from '../../src/scene/level';
-import type { LevelScenarios, Rect } from '../../src/scene/scenarios';
-import type { SurfacesData } from '../../src/scene/levelData';
-import { officeKit, normalize3 as norm, type GeneratorTrace } from '../../src/scene/officeGen';
-import { gwotKit, gwotOfOffice, GWOT_MATERIALS } from '../../src/scene/gwotKit';
+import type { Level, LevelDoorDef } from './lib/level';
+import type { LevelScenarios, Rect } from './lib/scenarios';
+import type { SurfacesData } from './lib/levelData';
+import { officeKit, normalize3 as norm, type GeneratorTrace } from './lib/officeGen';
+import { gwotKit, gwotOfOffice, GWOT_MATERIALS } from './lib/gwotKit';
 import { PANEL_GREY, saidAs } from '../../src/scene/stuff';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag, type Box } from '../../src/scene/boxes';
 import { markFromRect, type MarkPal } from '../../src/scene/markings';
-import * as MD from '../../src/scene/markingDefaults';
+import * as MD from './lib/markingDefaults';
 import { madeOf } from '../../src/scene/stuff';
 import type { Vec3 } from '../../src/math/vec';
 
@@ -78,10 +78,10 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   };
   /** a cast block standing on the deck, its top edged */
   const mass = (x0: number, z0: number, x1: number, z1: number, h: number, p: Paint = PANEL) => { const i = slab(x0, 0, z0, x1, h, z1, p.albedo, { rough: p.rough, stuff: p.stuff }); edged(x0, z0, x1, z1, h); return i; };
-  // paint on what is there: the kit's tools (scene/officeGen.ts: a box by its face, markings added to it, a world place in a face's own metres)
+  // paint on what is there: the kit's tools (lib/officeGen.ts: a box by its face, markings added to it, a world place in a face's own metres)
   const { paintOn: mark, onS, onTop, rectTop } = K;
   /** a run of conduit on a wall's south face from x0 to x1 at height y, a clip every metre and a half; `drop` = a branch down to that height at x1 (the kit's
-   *  piece, standing: scene/officeGen.ts conduit) */
+   *  piece, standing: tools/levels/lib/officeGen.ts conduit) */
   const conduitS = (x0: number, x1: number, y: number, zFace: number, drop?: number) => K.conduit('x', zFace, x0, x1, 1, y, COAT.albedo, STEEL.albedo, drop, 0, true);
   /** a round thing standing up: the kit's pipe, solid: one round box (scene/round.ts), standing */
   const round = (x: number, z: number, y0: number, y1: number, r: number, p: Paint) => K.pipe(x, z, y0, y1, r, p.albedo, [], true);
@@ -224,7 +224,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   grp('lights');
   G.tube(8.8, 11.0, false, 'service'); G.tube(8.8, 13.4, false, 'service'); G.tube(14.2, 11.0, false, 'lounge'); G.tube(14.2, 13.4, false, 'lounge');
   // (THE TUBES ARE THE ROOMS' LIGHT, each a light of its own, as in every level of the kit. A point lamp of 60 hung between each pair as well until 11-05: over twice the
-  // kit's bulb, it put 1.75 times the night's white on the floor under it before any bounce, and a night shows a lit room at the night's own exposure. docs/agents/levels.md)
+  // kit's bulb, it put 1.75 times the night's white on the floor under it before any bounce, and a night shows a lit room at the night's own exposure.)
   grp('exterior.lamps');
   G.floodLight(18.5, 22.8, [0.3, -1], 'flood_deck', true);
   lights.push({ kind: 'dir', pos: [0, 0, 0], dir: norm([0.5, -0.5, -0.7]), color: [0.55, 0.7, 1.0], intensity: 0.9, range: 1e6, innerDeg: 0, outerDeg: 0, name: 'moon', group: 'exterior', enabled: true, volumetric: 0, radius: 0.009, mains: false });
@@ -258,14 +258,14 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     // the stealth mission's three places, because the level format wants them
     mission: { serverRoom: { ...SERVICE }, entryDoor: 'service', rack: { index: 0, front: [8.0, 1.0, 9.7], halfW: 0.3 }, exfilDoor: 'lounge', exfilX: 18.5, exfilZ: 12.0, exfilOut: [1, 0] },
   };
-  // ---- what is underfoot (game/floor.ts): pavers and a skimmed floor are stone, the lounge a carpet
+  // ---- what is underfoot (rust/game_rules/src/floor): pavers and a skimmed floor are stone, the lounge a carpet
   const surfaces: SurfacesData = {
     building: { x0: 5, x1: 35, z0: 5, z1: 23.5 }, grassEdge: 0, inside: 'stone', outside: 'stone', verge: 'stone',
     zones: [{ id: 'lounge', mat: 'carpet', x0: 11.5, z0: 9, x1: 17, z1: 15 }],
   };
-  // ---- how the roof is walked (scene/ways.ts: the look's page wears its floors by it). Nobody patrols a roof and no team is staged on this one, so its ways
+  // ---- how the roof is walked (rust/game_draw/src/traffic.rs: the look's page wears its floors by it). Nobody patrols a roof and no team is staged on this one, so its ways
   // are all its author's: whoever comes up comes by the stair, a fitter goes to the plant and to the service room, the others to the lounge's door and
-  // through the lounge. A way's ends are names, so the roof names three of its places (these are words the game may say of this level: game/dialogue.ts)
+  // through the lounge. A way's ends are names, so the roof names three of its places (these are words the game may say of this level: rust/game_rules/src/dialogue)
   const places = { areas: [{ name: 'stair landing', bounds: { x0: 31, x1: 34.5, z0: 13.6, z1: 15.6 } }, { name: 'plant pad', bounds: { x0: 8, x1: 16, z0: 17.5, z1: 22 } }, { name: 'service room', bounds: { ...SERVICE } }] };
   const walked = [{ from: 'stair landing', to: 'lounge', weight: 3 }, { from: 'stair landing', to: 'service', weight: 3 }, { from: 'stair landing', to: 'plant pad', weight: 2 }, { from: 'service', to: 'plant pad', weight: 2 }, { from: 'service room', to: 'between' }, { from: 'between', to: 'lounge' }];
   return { level, scenarios: { places, walked, doorNames: [{ door: 'service', name: 'service door' }, { door: 'lounge', name: 'lounge door' }, { door: 'between', name: 'service to lounge door' }] }, groups: trace.groups, surfaces };

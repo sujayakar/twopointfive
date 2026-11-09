@@ -114,11 +114,6 @@ fn the_word(n: &str) -> String {
 }
 /// `+x.toFixed(2)` (:213)
 fn to_fixed2(x: f64) -> f64 { js::to_fixed(x, 2).parse().unwrap_or(f64::NAN) }
-/// the cell's number as a Set's key: -0 is 0 to a JavaScript Set
-fn room_has(g: &Game, r: RoomfightRoomId, p: V3) -> bool {
-    let c = cell_of(g, p);
-    g.tab.roomfight_room[r].cells.has(crate::Num(c + 0.0))
-}
 
 // ---------------------------------------------------------------- the skeleton's functions
 
@@ -126,9 +121,8 @@ fn room_has(g: &Game, r: RoomfightRoomId, p: V3) -> bool {
 pub fn new_stats() -> crate::laststand::StateStats {
     StateStats {
         t0: f64::NAN, up0: 0.0, checks: 0.0, answers: 0.0, silent: 0.0, last_man: 0.0,
-        stands: 0.0, gathered: 0.0, sent: 0.0, arrived: 0.0, short: 0.0, met: 0.0, died_on_way: 0.0, dropped: 0.0, quiet: 0.0, no_way: 0.0,
         moved: 0.0,
-        dig_orders: 0.0, stand_t: f64::NAN, set_t: f64::NAN, set_men: 0.0, thumps: 0.0, lines: 0.0,
+        stand_t: f64::NAN, set_t: f64::NAN, lines: 0.0,
     }
 }
 
@@ -144,17 +138,6 @@ pub fn alive(g: &crate::game::Game, d: RoomfightDefId) -> bool {
 /// a beat between two numbers, off the state's own die (laststand.ts pick)
 pub fn pick(g: &mut crate::game::Game, r: [f64; 2]) -> f64 {
     r[0] + crate::math_dice::roll(&mut st_of(g).die) * (r[1] - r[0])
-}
-
-/// the nav cell of a point (laststand.ts cellOf)
-pub fn cell_of(g: &crate::game::Game, p: V3) -> f64 {
-    let cell = g.col.nav.cell;
-    crate::scene_collision::nav_grid_idx(g, m::floor(p[0] / cell), m::floor(p[2] / cell))
-}
-
-/// is the point on this room's cells (laststand.ts inRoom)
-pub fn in_room(g: &mut crate::game::Game, r: Option<RoomfightRoomId>, p: V3) -> bool {
-    match r { Some(r) => room_has(g, r, p), None => false }
 }
 
 /// a row of the room fight's log (laststand.ts note)
@@ -227,10 +210,8 @@ pub fn voice(g: &mut crate::game::Game, gd: GuardId, kind: crate::laststand::Lin
     let callsign = g.gd[gd].callsign.clone();
     crate::game::game_msg(g, &alloc::format!("{} (radio): {}", callsign, text));
     crate::cues::cues_net(g, gd, text, cls);
-    let p = g.ch[g.gd[gd].ch].pos;
-    let t = to_fixed2(g.time);
     let st = st_of(g);
-    st.said.push(LastStandSaid { t, who: callsign, kind: String::from(kind.as_str()), text: String::from(text), at: [to_fixed2(p[0]), to_fixed2(p[2])] });
+    st.said.push(LastStandSaid { who: callsign, text: String::from(text) });
     if st.said.len() > 200 { st.said.drain(0..50); }
     st.stats.lines += 1.0;
     note(g, Some(gd), &alloc::format!("net: {}", text));
@@ -373,8 +354,7 @@ pub fn start_check(g: &mut crate::game::Game) {
         at += pick(g, between);
     }
     let close_at = (match due.last() { Some(x) => x.at, None => g.time + 1.2 }) + pick(g, listen);
-    let t = g.time;
-    st_of(g).check = Some(Check { caller, t, close_at, due, got: Vec::new() });
+    st_of(g).check = Some(Check { caller, close_at, due, got: Vec::new() });
     note(g, Some(caller_gd), &alloc::format!("asks the net who is up (check {}, {} up)", checks, men.len()));
 }
 
@@ -460,7 +440,6 @@ pub fn tell_only(g: &mut crate::game::Game, c_2: RoomfightDefId) {
     }
 }
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -509,7 +488,7 @@ mod tests {
 
     #[test]
     fn lone_is_said_once() {
-        let mut st = State::zeroed();
+        let mut st = State::default();
         assert!(lone(&mut st));
         assert!(!lone(&mut st));
         assert_eq!(st.stats.last_man, 1.0);

@@ -8,27 +8,18 @@
 //   PORT=5247 node tools/qa/tut-road-page.cjs        (a dev server on that port: PORT=5247 bun run tools/serve.ts)
 //   env: QUALITY (default verylow) · STEPS (stop after this many)
 // exit 0 = every line passes · 1 = a FAIL or a page error.
-const { chromium } = require('/opt/node-tools/node_modules/playwright');
+const { page: pageRun, NOISE } = require('./page.cjs'), PAGE = pageRun({ name: 'tut-road-page' }), { check, note: log } = PAGE;
 const fs = require('fs'), path = require('path');
-const PORT = process.env.PORT || 5199, QUALITY = process.env.QUALITY || 'verylow', ROOT = path.resolve(__dirname, '../..');
+const QUALITY = process.env.QUALITY || 'verylow', ROOT = path.resolve(__dirname, '../..');
 const STEPS = +(process.env.STEPS || 99);
-const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
-const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage textures \(5\) in the Compute stage/;
-const T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a);
-let failed = false;
 const same = (drawn, written) => drawn.replace(/\s+/g, ' ').trim() === written.replace(/[\[\]]/g, '').replace(/\s+/g, ' ').trim();   // (the line as drawn carries its key on a cap, not in brackets)
-const check = (ok, label, detail) => { if (!ok) failed = true; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
 /** a key cap's words → the key's code */
 const codeOf = cap => cap === 'Space' ? 'Space' : cap === 'Ctrl' ? 'ControlLeft' : cap === 'Shift' ? 'ShiftLeft' : cap === 'Tab' ? 'Tab' : /^[0-9]$/.test(cap) ? 'Digit' + cap : /^[A-Z]$/.test(cap) ? 'Key' + cap : cap;
 
 (async () => {
   const data = JSON.parse(fs.readFileSync(path.join(ROOT, 'levels', 'tut-road.json'), 'utf8')), steps = data.scenarios.lesson.steps, step = id => steps.find(s => s.id === id);
-  const browser = await chromium.launch({ headless: true, channel: 'chromium', args: FLAGS });
-  const page = await (await browser.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 })).newPage(); const errors = [];
-  page.setDefaultTimeout(0);
-  page.on('console', m => { if (m.type() === 'error' && !NOISE.test(m.text()) && !/Failed to load resource/.test(m.text())) errors.push(m.text().slice(0, 300)); });
-  page.on('pageerror', x => errors.push('pageerror: ' + String(x && x.stack || x).slice(0, 400)));
-  const run = n => page.evaluate(n => window.__draw.run(n, [], 'last'), n);   // (the last of them laid out and never drawn: the renderer is stubbed, a drawn frame is half a minute here)
+  const { page, errors, step: frames } = await PAGE.open({ timeout: 0, errors: { skip: [NOISE, /Failed to load resource/] } });
+  const run = n => frames(n);   // (the last of them laid out and never drawn: the renderer is stubbed, a drawn frame is half a minute here)
   const read = () => page.evaluate(() => { const D = window.__draw, G = D.game, V = G.view(), L = V.lesson, M = G.map(), T = G.tally(), el = document.getElementById('railprompt'), card = document.getElementById('railcard'), me = M.men.find(m => m.kind === 'player'), men = M.men.filter(m => m.kind === 'man'), gun = V.kit.gun;
     const hut = M.doors.find(d => d.name === 'hut') ?? M.doors[0];
     return { i: L?.step ?? -1, id: L?.id ?? null, done: !!L?.finished, line: el?.querySelector('.line')?.textContent ?? '', keys: [...(el?.querySelectorAll('.line kbd') ?? [])].map(k => k.textContent), up: !!el && getComputedStyle(el).display !== 'none' && !!el.querySelector('.line'),
@@ -60,7 +51,7 @@ const codeOf = cap => cap === 'Space' ? 'Space' : cap === 'Ctrl' ? 'ControlLeft'
   const shoot = async (k, secs, stop) => { if (!await onMan(k)) return; await page.mouse.down(); try { for (let n = 0; n < secs * 10; n++) { await onMan(k); await run(6); if (stop(await read())) break; } } finally { await page.mouse.up(); await run(3); } };
   const until = async (id, n) => { for (let k = 0; k < n; k++) { await run(60); if ((await read()).id !== id) break; } };
 
-  const url = `http://localhost:${PORT}/?levelFile=tut-road.json&quiet&paused&quality=${QUALITY}&mute`;
+  const url = PAGE.url(`levelFile=tut-road.json&quiet&paused&quality=${QUALITY}&mute`);
   log(url);
   await page.goto(url, { timeout: 0 });
   await page.evaluate(async () => { await window.__ready; window.__engine.render = () => {}; window.__draw.run(3, [], 'last'); });
@@ -81,7 +72,7 @@ const codeOf = cap => cap === 'Space' ? 'Space' : cap === 'Ctrl' ? 'ControlLeft'
     // (the view's key is the one the line's own cap names)
     turn: async () => { const R0 = await read(), k = codeOf(R0.keys[0] || 'Ctrl'); await page.keyboard.down(k); for (let x = 400; x <= 900 && (await read()).id === 'turn'; x += 25) { await page.mouse.move(x, 320); await run(3); } await page.keyboard.up(k);
       const R1 = await read(); check(Math.abs(R1.yaw - R0.yaw) > 0.5, 'the view turns with the key on the line\'s cap held and the mouse moved', `cap [${R0.keys}] → ${k} · the view's yaw ${R0.yaw} → ${R1.yaw}`);
-      // (and back as it opened, by the harness and not by a hand: the pictures after this are the level as a player first sees it)
+      // (and back as it opened, by the script and not by a hand: the pictures after this are the level as a player first sees it)
       for (let n = 0; n < 6; n++) { const y = (await read()).yaw; if (Math.abs(y - R0.yaw) < 0.01) break; await page.evaluate(d => window.__draw.cam.rotate(d), R0.yaw - y); await run(6); }
       const back = (await read()).yaw; if (Math.abs(back - R0.yaw) > 0.05) log(`  (the view is at ${back}, it opened at ${R0.yaw})`); },
     ready: async () => { await tap('Digit2'); await run(40); },
@@ -133,6 +124,5 @@ const codeOf = cap => cap === 'Space' ? 'Space' : cap === 'Ctrl' ? 'ControlLeft'
   log('end', JSON.stringify({ ...R, men: R.foes }));
   check(R.done && R.stage === 'done', 'every line done, he is out through the gate and the mission is over', `lesson ${R.done ? 'finished' : `on '${R.id}'`} · stage '${R.stage}' · ${R.t} s of play`);
   check(!errors.length, 'no page error and no console error', errors.length ? errors.slice(0, 6).join('\n    ') : 'none');
-  await browser.close();
-  process.exit(failed ? 1 : 0);
+  await PAGE.end('');
 })().catch(e => { console.error(e); process.exit(1); });

@@ -144,7 +144,7 @@ pub(super) fn lean_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
             b.marks.push("lean");
             if b.mark_t.is_nan() { b.mark_t = g.time; }
             to(g, b, "hold");
-            g.puppet = Some(GamePuppet::zeroed());
+            g.puppet = Some(GamePuppet::default());
             Step::On
         }
         "hold" => { if el < QK.lean_secs { return Step::On; } to(g, b, "back"); sam_goes(g, st.sam); Step::On }
@@ -235,7 +235,7 @@ pub(super) fn cost_begin(g: &mut Game, st: &mut KitStage, b: &Beat) {
     let p = cost_lamp(g, st, hinge);
     st.a.cost_t = g.time;
     st.a.cost_n += 1;
-    st.a.cost_last = Some(CostSeen { field: b.field, i: b.i, door: hinge.is_some(), leaf: 0.0, up: false, s: 0.0, how: "", moved: 0.0, pool: false });
+    st.a.cost_last = Some(CostSeen { leaf: 0.0, up: false, s: 0.0, how: "", moved: 0.0, pool: false });
     st.a.cost_feet = v2(g.ch[g.pl[g.player].ch].pos);
     super::stage::quiet_inside(g, st, 1.0, QK.cost.blade);
     let c = &QK.cost.lamp;

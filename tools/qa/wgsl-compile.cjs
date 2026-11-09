@@ -1,5 +1,5 @@
 // DOES EVERY SHADER TEXT COMPILE (a minute, where a page boot on the software adapter is six). tools/qa/wgsl-dump.ts writes every module text the page's boot
-// makes (with the switches main.ts raises: tools/qa/pageboot.ts) under one setting of the switches; this asks for every setting the tree
+// makes (with the switches host/drawpage.ts raises: tools/qa/pageboot.ts) under one setting of the switches; this asks for every setting the tree
 // has (the title, a snow level in its weather, the smoke lab's page, the walls' row down), hands each distinct
 // text to a headless Chromium's WGSL compiler (createShaderModule + getCompilationInfo: no pipeline is made, so it is quick) and prints every error AND EVERY
 // WARNING with its line of the text (the page files each warning as a report, and a text the fold of constant switches cut badly says so first as 'code is
@@ -8,9 +8,8 @@
 //   node tools/qa/wgsl-compile.cjs            exit 0 = every text compiles with no warning, 1 = an error or a warning (printed), 2 = no browser or no adapter
 //   WGSL_BREAK=1 node tools/qa/wgsl-compile.cjs      one text is given a line that cannot compile: must FAIL
 const { spawnSync } = require('node:child_process'); const fs = require('node:fs'); const os = require('node:os'); const path = require('node:path');
-const { chromium } = require('/opt/node-tools/node_modules/playwright');
+const { launch } = require('./page.cjs');
 const ROOT = path.resolve(__dirname, '../..'), JSON_AT = path.join(os.tmpdir(), `wgsl-dump-${process.pid}.json`);
-const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
 (async () => {
   // one dump a setting. (Until 2026-11-07 there were two, the second with the shader rows' words in the environment: the ten big kernels and the gather have
   // one writing now, and the row that is left, the first-frame start, changes WHEN a program is compiled and no text.)
@@ -23,7 +22,7 @@ const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftsha
     fs.unlinkSync(JSON_AT);
   }
   if (process.env.WGSL_BREAK === '1') mods[0].code += '\nfn wgslBreak() -> f32 { return aNameNothingDeclares; }';   // (the break path: one text is given a line that cannot compile, and the run must FAIL)
-  const browser = await chromium.launch({ args: FLAGS });
+  const browser = await launch();
   try {
     const page = await browser.newPage();
     await page.route('https://wgsl.test/', r => r.fulfill({ contentType: 'text/html', body: '<!doctype html><title>wgsl</title>' }));   // (a secure page: navigator.gpu is not on about:blank)

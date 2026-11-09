@@ -60,8 +60,6 @@ fn game_tick_end(g: &mut crate::game::Game, dt: f64) {
 fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::PlayerCmd]) {
     let seats: Vec<SeatId> = g.seats.clone();
     let n = seats.len();
-    let me = game_host_seat(g);
-    let me_cam = g.tab.cmd_seat[me].cam;
     g.ticking = true;
     crate::scene_collision::tick_open(g);
     // (game.ts:1591 `this.sim.settle(this)`: the die's move is use_dice below; the pool's tenant tends it: a man who left the lists is out of it, one who
@@ -84,7 +82,7 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     crate::sense::smoke_step(g, dt);
     for i in 0..n { crate::cmd::seat_load(g, seats[i], &checked[i]); }
     let (input, cam) = (g.tab.cmd_seat[seats[0]].input, g.tab.cmd_seat[seats[0]].cam);   // (what a ONE-PLAYER part of the tick reads is the first seat's)
-    crate::rails::rails_gate(g, input, cam, dt);
+    crate::rails::rails_gate(g, input);
     crate::opening::opening_start(g);
     if n > 1 { crate::seats::deal_seats(g); }
     for &s in &seats {
@@ -203,8 +201,7 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     crate::lighting::update_targets(g, dt);
     crate::fire::update_fire(g, dt);
     crate::devices::update_devices(g, dt);
-    let yaw = g.tab.camera[me_cam].yaw;
-    crate::weather::weather_update(g, dt, Some(yaw));
+    crate::weather::weather_update(g, dt);
     crate::takedown::takedown_tick(g);
     for &s in &seats { in_seat(g, s, |g| crate::disarm::disarm_tick(g, dt)); }
     // (wet characters: the coats are the picture's, but the soak's ask stands the rule's copy of the box world and may cast the sky's rays: game.ts updateWetness)
@@ -225,8 +222,7 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     for &s in &seats { let c = man_char(g, s); all.push(c); }
     for j in 0..g.guards.len() { let gd = g.guards[j]; all.push(g.gd[gd].ch); }
     for gd in crate::civilians::civilians_shown(g) { all.push(g.gd[gd].ch); }
-    let canvas = g.tab.cmd_seat[me].canvas;
-    let statured = crate::game::game_step_fx_and_dyn_boxes(g, &all, dt, me_cam, canvas);
+    let statured = crate::game::game_step_fx_and_dyn_boxes(g, &all, dt);
     crate::game::game_draw_characters(g, &all, statured);
     crate::smokebreak::update_smoke_break(g, dt);
     crate::game::game_light_meter(g, dt);
@@ -244,7 +240,6 @@ fn step_seats_on_first(g: &mut crate::game::Game, dt: f64, cmds: &[crate::cmd::P
     crate::teamtally::team_tally_tick(g);
     crate::deathrecap::recap_tick(g);   // (last: it reads the frame as it ended, and moves nothing a rule reads)
     crate::render_decals::marks_settle(g);   // (the marks' arms ask the world as the tick left it)
-    crate::rails::rails_ease_mid(g);
     g.ticking = false;
     crate::scene_collision::tick_shut(g);
     g.m.rustknobs.rust_knobs.tick = false;   // (game.ts:1727, the finally)
@@ -411,7 +406,7 @@ pub fn game_deal_weapons(g: &mut crate::game::Game, dt: Option<f64>) {
 }
 
 /// this frame's dynamic boxes, and what steps while they are gathered. Returns whether stature scaled anybody   (game.ts stepFxAndDynBoxes)
-pub fn game_step_fx_and_dyn_boxes(g: &mut crate::game::Game, all: &[CharId], dt: f64, cam: CameraId, canvas: crate::host_hud::View) -> bool {
+pub fn game_step_fx_and_dyn_boxes(g: &mut crate::game::Game, all: &[CharId], dt: f64) -> bool {
     g.dyn_boxes.clear();
     // (the list is lent to the callees for the whole gathering: none of them reads g.dyn_boxes)
     let mut out = core::mem::take(&mut g.dyn_boxes);
@@ -429,8 +424,6 @@ pub fn game_step_fx_and_dyn_boxes(g: &mut crate::game::Game, all: &[CharId], dt:
     }
     crate::lightswitch::switch_boxes(g, &mut out);
     if !g.shells.is_empty() { crate::he40::shell_boxes(g, &mut out); }
-    let lens = crate::game::GameViewPxCam { distance: g.tab.camera[cam].distance, fov: g.tab.camera[cam].fov };
-    g.m_per_px = game_view_px(g, lens, crate::game::GameViewPxCanvas { height: canvas.height });
     // STATURE (game.ts:1814): each man's drawn scale about his feet this frame; false with no cast loaded, and nothing below is asked
     let statured = g.m.dress.dress.stature && crate::stature::stature_tick(g, all, dt);
     let rig0 = out.len();
@@ -448,8 +441,7 @@ pub fn game_step_fx_and_dyn_boxes(g: &mut crate::game::Game, all: &[CharId], dt:
     // (game.ts:1818: his rig and a can in his fist are drawn where his drawn hands are: Box.dc / dh; the boxes themselves stay the simulation's)
     if statured { crate::stature::drawn_boxes(g, all, &out, rig0 as f64); }
     if !g.tune.tracers && js::truthy(g.tracers.live) { crate::tracers::tracers_clear(g); }
-    let px = g.m_per_px;
-    crate::tracers::tracers_update(g, dt, &mut out, Some(px));
+    crate::tracers::tracers_update(g, dt, &mut out);
     crate::sparks::sparks_update(g, dt);
     crate::sparks::sparks_boxes(g, &mut out);
     // (game.ts:1822: spent cases heard landing when they are due: the list is the tick's own (a shot adds to it), so the step that empties it is here too)
@@ -473,12 +465,14 @@ pub fn game_draw_characters(g: &mut crate::game::Game, all: &[CharId], statured:
     g.engine.world.dynamics = dynamics;
 }
 
-/// the world size of one drawn pixel at a camera's look-at depth, for a view of `canvas`'s height   (game.ts viewPx)
-pub fn game_view_px(g: &crate::game::Game, cam: crate::game::GameViewPxCam, canvas: crate::game::GameViewPxCanvas) -> f64 {
+/// the world size of one drawn pixel at the look-at depth of the shown seat's view. A drawer's: no rule reads it
+pub fn game_shown_px(g: &crate::game::Game) -> f64 {
+    let seat = &g.tab.cmd_seat[game_host_seat(g)];
+    let cam = &g.tab.camera[seat.cam];
     let sharp_still = g.engine.sharp_on.unwrap_or(false) && g.engine.settings.sharp_decouple;
-    view_px_sum(cam.distance, cam.fov, canvas.height, sharp_still, g.engine.effective_scale)
+    view_px_sum(cam.distance, cam.fov, seat.canvas.height, sharp_still, g.engine.effective_scale)
 }
-/// viewPx's sum
+/// its sum
 fn view_px_sum(distance: f64, fov: f64, height: f64, sharp_still: bool, effective_scale: f64) -> f64 {
     2.0 * distance * (if sharp_still { 1.6 } else { 1.0 }) * m::tan(fov / 2.0) / m::max(200.0, height * (if sharp_still { 1.0 } else { js::or(effective_scale, 1.0) }))
 }

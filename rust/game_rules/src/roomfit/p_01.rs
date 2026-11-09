@@ -118,7 +118,7 @@ pub fn watchables_at(g: &mut crate::game::Game, p: V3, front: f64, reach: f64, b
     for t in threats_of(g, &r, at, front, Some(reach)).iter() {
         let dist = v3::dist_xz(at, t.at);
         if dist <= 1.0 || !sees(g, at, t) || bodies.iter().any(|b| off_line(*b, at, t.at) < k.lane_m) { continue; }
-        out.push(crate::roomfit::Watchable { at: t.at, w: t.w, key: t.key.clone(), yaw: v3::yaw_to(at, t.at), dist, way: t.way.is_some() });
+        out.push(crate::roomfit::Watchable { at: t.at, w: t.w, key: t.key.clone(), yaw: v3::yaw_to(at, t.at), way: t.way.is_some() });
     }
     out
 }
@@ -494,7 +494,7 @@ mod tests {
     #[test]
     fn fit_groups_pairs_as_the_typescript_does() {
         let fits = |l: &[[f64; 2]]| -> Vec<crate::roomfit::Fit> {
-            l.iter().map(|p| { let mut f = crate::roomfit::Fit::zeroed(); f.pos = [p[0], 0.0, p[1]]; f }).collect()
+            l.iter().map(|p| { let mut f = crate::roomfit::Fit::default(); f.pos = [p[0], 0.0, p[1]]; f }).collect()
         };
         assert_eq!(fit_groups(&fits(&[[0.0, 0.0], [1.0, 1.0]])), [0.0, 0.0]);
         assert_eq!(fit_groups(&fits(&[[0.0, 0.0], [5.0, 0.0], [1.0, 0.0]])), [0.0, 1.0, 0.0]);

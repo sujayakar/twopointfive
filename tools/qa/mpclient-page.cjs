@@ -17,21 +17,18 @@
 //   network page  the debugger's rows make the page's connection worse and better, live
 // The page is driven by script, two frames of it drawn: what a PLAYER sees and feels on a GPU is not what this checks.
 // exit 0 = pass · 1 = a line failed · 2 = something could not be started
-const { chromium } = require(process.env.PLAYWRIGHT_MODULE || '/opt/node-tools/node_modules/playwright');
+const { page: pageRun, NOISE } = require('./page.cjs'), PAGE = pageRun({ name: 'mpclient-page' }), line = PAGE.check;
 const { spawn } = require('node:child_process');
 const { resolve } = require('node:path');
 const fs = require('node:fs');
 const ROOT = resolve(__dirname, '../..');
-const PORT = process.env.PORT || 5199, BREAK = process.env.MPCLIENT_BREAK === '1', NO_AHEAD = process.env.MPCLIENT_BREAK === 'ahead', BAD_WAY = process.env.MPCLIENT_BREAK === 'way', QUALITY = process.env.QUALITY || 'verylow';
+const BREAK = process.env.MPCLIENT_BREAK === '1', NO_AHEAD = process.env.MPCLIENT_BREAK === 'ahead', BAD_WAY = process.env.MPCLIENT_BREAK === 'way', QUALITY = process.env.QUALITY || 'verylow';
 const arg = (k, d) => { const i = process.argv.indexOf(`--${k}`); return i >= 0 ? process.argv[i + 1] : d; };
 const WORDS = arg('words', ''); if (WORDS) { fs.mkdirSync(WORDS, { recursive: true }); for (const f of fs.readdirSync(WORDS)) if (f.endsWith('.words')) fs.unlinkSync(`${WORDS}/${f}`); }
 const N = Number(arg('ticks', '600')), setup = JSON.parse(arg('setup', '{"scenario":"?roomclear&squad4","seed":7}')), TWO = arg('seats', '1') === '2';
 if (TWO) setup.scenario += '&seats=2';
 const KEYS = TWO ? ['seat-one', 'seat-two'] : ['seat-one'], MINE = KEYS.length - 1;   // (the page takes the last seat)
 const MP = 5800 + (process.pid % 150);
-const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog', '--no-sandbox'];
-const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage textures \(5\) in the Compute stage/;
-let fails = 0; const line = (ok, what) => { console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}`); if (!ok) fails++; };
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const health = async () => { try { return await (await fetch(`http://127.0.0.1:${MP}/health`)).json(); } catch { return null; } };
 
@@ -126,7 +123,9 @@ async function drive({ N, BREAK, NO_AHEAD, PICK, WORDS }) {
     let way = '', room = -1, last = ''; for (const k of ['KeyW', 'KeyS', 'KeyD', 'KeyA']) { const d = await go(k); last = k; if (d > room) { room = d; way = k; } if (d >= 2.5) break; }
     if (last !== way) { await go(BACK[way]); room = await go(way); }
     await stood();
-    const k = BACK[way]; for (let i = 0; i < 2; i++) { step(10, [k]); await tick0(); }   // (turned back, and asleep at once: not walked back to the wall he started from)
+    // (turned back, and asleep at once: not walked back to the wall he started from. A page that hitched is catching up with its hands off the keys: asleep once the key has gone out)
+    const k = BACK[way], t0 = performance.now(), out = () => { const r = C.pending[C.pending.length - 1]; return !!r && r[1].k.includes(k); };
+    for (let i = 0; (i < 2 || S().far || !out()) && performance.now() - t0 < 30000; i++) { step(10, [k]); await tick0(); }
     const a = pos(), down = man().down; if (rest) C.rest(performance.now());
     // (past the last tick he said anything for, half a second let him come to a stand: what the server does with a man nobody speaks for)
     const lastSaid = Math.max(C.confirmed, ...C.pending.map(q => q[0])), was = C.walk; let quiet = null;
@@ -161,11 +160,11 @@ async function drive({ N, BREAK, NO_AHEAD, PICK, WORDS }) {
   const bot = spawn('bun', ['run', 'tools/mp/bot.ts', '--url', `ws://127.0.0.1:${MP}`, '--game', 'check', '--build', '', '--ticks', String(N), '--timeout', '900', ...(TWO ? ['--key', 'seat-one'] : [])], { cwd: ROOT, stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, ...(WORDS ? { MP_WORDS: `${resolve(WORDS)}/bun` } : {}) } });
   let botOut = ''; bot.stdout.on('data', d => { botOut += d; }); const botDone = new Promise(r => bot.on('exit', r));
 
-  let browser = null; const errs = [];
+  const errs = [];
   try {
-    browser = await chromium.launch({ headless: true, ...(process.env.CHROMIUM ? { executablePath: process.env.CHROMIUM } : {}), args: FLAGS }); const page = await browser.newPage({ viewport: { width: 480, height: 270 } }); page.setDefaultTimeout(600000);
-    page.on('console', m => { if (process.env.MPCLIENT_SAY && m.text().startsWith('[mpc]')) console.log('  ' + m.text()); if (m.type() === 'error' && !NOISE.test(m.text())) errs.push(m.text().slice(0, 200)); }); page.on('pageerror', e => errs.push('PAGEERROR ' + String(e).slice(0, 300)));
-    await page.goto(`http://localhost:${PORT}/?net=${encodeURIComponent(`ws://127.0.0.1:${MP}`)}&netgame=check&netkey=${KEYS[MINE]}&paused&mute&quality=${QUALITY}${NO_AHEAD ? '&netpredict=0' : ''}`, { waitUntil: 'load' });
+    const { page, go } = await PAGE.open({ size: [480, 270], timeout: 600000, errors: { into: errs, skip: NOISE } });
+    if (process.env.MPCLIENT_SAY) page.on('console', m => { if (m.text().startsWith('[mpc]')) console.log('  ' + m.text()); });
+    await go(`net=${encodeURIComponent(`ws://127.0.0.1:${MP}`)}&netgame=check&netkey=${KEYS[MINE]}&paused&mute&quality=${QUALITY}${NO_AHEAD ? '&netpredict=0' : ''}`, { waitUntil: 'load' });
     await page.waitForFunction(() => new URLSearchParams(location.search).has('seed'), null, { timeout: 60000 });
     const moved = new URLSearchParams(await page.evaluate(() => location.search));
     let hWait = null; for (let i = 0; i < 600; i++) { hWait = await health(); if (hWait && hWait.seats[MINE]) break; await sleep(50); }   // (asked the moment the moved page has said hello: its game is nowhere near stood)
@@ -193,7 +192,6 @@ async function drive({ N, BREAK, NO_AHEAD, PICK, WORDS }) {
     const bl = botOut.split('\n').find(x => x.startsWith('MPBOT ')), B = bl ? JSON.parse(bl.slice(6)) : null;
     line(!!B && B.confirmed >= N && !B.bad && B.wordsOk >= words && B.watchOff === 0, `beside it: a ${TWO ? 'client in the first seat' : 'watcher'} on bun walked the same ${B?.confirmed ?? 0} ticks and matched ${B?.wordsOk ?? 0} words, and every part of the game on ${B?.watchOk ?? 0}`);
   } catch (e) { line(false, `the page could not be driven: ${String(e && e.stack || e).slice(0, 400)}${errs.length ? ` · page errors: ${errs.slice(0, 3).join(' | ')}` : ''}`); }
-  try { await browser?.close(); } catch { /* gone */ } try { bot.kill(); } catch { /* gone */ } srv.kill();
-  console.log(fails ? `mpclient-page: ${fails} line${fails === 1 ? '' : 's'} FAILED${BREAK ? ' (MPCLIENT_BREAK=1: the same-fight line must, the every-part line and the ahead line with it)' : NO_AHEAD ? ' (MPCLIENT_BREAK=ahead: the ahead line must, and no other)' : BAD_WAY ? ' (MPCLIENT_BREAK=way: the network page line must, and no other)' : ''}` : 'mpclient-page: every line passed');
-  process.exit(fails ? 1 : 0);
+  await PAGE.close(); try { bot.kill(); } catch { /* gone */ } srv.kill();
+  await PAGE.end(PAGE.fails ? `mpclient-page: ${PAGE.fails} line${PAGE.fails === 1 ? '' : 's'} FAILED${BREAK ? ' (MPCLIENT_BREAK=1: the same-fight line must, the every-part line and the ahead line with it)' : NO_AHEAD ? ' (MPCLIENT_BREAK=ahead: the ahead line must, and no other)' : BAD_WAY ? ' (MPCLIENT_BREAK=way: the network page line must, and no other)' : ''}` : 'mpclient-page: every line passed');
 })().catch(e => { console.log(`mpclient-page: ${String(e && e.stack || e).slice(0, 400)}`); process.exit(2); });

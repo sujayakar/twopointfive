@@ -703,7 +703,7 @@ fn tick_contact(g: &mut Game, q: EnemysquadsSquadId) {
             let s = &mut g.tab.enemysquads_squad[q];
             s.state = SquadState::Down;
             s.due.clear();
-            s.events.push(SquadEvent { t, what: SquadEventWhat::Down, n: 0.0, why: String::from("every man of it is down") });
+            s.events.push(SquadEvent { t, what: SquadEventWhat::Down });
             let what = format!("{} down", s.name);
             note(g, None, &what);
         }
@@ -719,7 +719,6 @@ fn tick_contact(g: &mut Game, q: EnemysquadsSquadId) {
         let mine = room_of(g, q, p0, Some(1.0));
         let (d, mine) = match (d, mine) { (Some(d), Some(r)) => (d, r), _ => continue };
         if g.time - g.gd[m].last_seen_t < 1.0 && (noticed(g, m) || glimpse(g, q, m)) {
-            let pt = g.tab.roomfight_def[d].pt;
             let p = match crate::belief::eyes_fix_def(g, m, d) { Some(k) => k, None => pos_of(g, m) };
             let r = match room_of(g, q, p, Some(0.75)) { Some(r) => r, None => mine };
             if !(noticed(g, m) && key_up(g, q, m, p, Some(&r), None)) { at = Some(p); room = Some(r); break; }
@@ -802,7 +801,7 @@ fn tick_due(g: &mut Game, q: EnemysquadsSquadId, men: &[GuardId]) {
         }
         let t = g.time;
         let from = v3::copy(g.tab.roomfight_def[d].station);
-        g.tab.enemysquads_squad[q].sent.push(Sent { gd: due.gd, from, role: SentRole::Reinforce, phase: SentPhase::Loose, spot: None, door: None, fix_at: due.at, tries: 0.0, step_t: -100.0, t0: t, ..Sent::zeroed() });
+        g.tab.enemysquads_squad[q].sent.push(Sent { gd: due.gd, from, role: SentRole::Reinforce, phase: SentPhase::Loose, spot: None, door: None, fix_at: due.at, tries: 0.0, step_t: -100.0, t0: t, ..Sent::default() });
         crate::pressure::loose(g, d, due.at);
         let (a, b) = (pos_of(g, due.gd), g.gd[due.gd].last_known.unwrap_or(due.at));
         let way = crate::dialogue::way_name(g, a, b, lost.as_ref().map(|l| l.name.as_str()));

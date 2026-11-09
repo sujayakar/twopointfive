@@ -155,7 +155,7 @@ fn man_singles_of(g: &mut Game, s: &crate::levelfit::Stood) -> f64 {
 
 /// One row of the count.
 fn row(row: &str, what: &str, has: f64, cap: f64, table: Option<&str>) -> crate::levelfit::FitRow {
-    crate::levelfit::FitRow { row: String::from(row), what: String::from(what), has, cap, table: table.map(String::from), play: None }
+    crate::levelfit::FitRow { what: String::from(what), has, cap, play: None }
 }
 
 /// Every count of a stood game against what holds it.   (levelfit.ts fitRows)
@@ -214,7 +214,7 @@ pub fn fit_rows(g: &mut crate::game::Game, g_2: &crate::levelfit::Stood, tables:
     rows.push(row("doors", "doors (a row a door, and a row a leaf off its hinges)", big.doors, cap.doors, None));
     rows.push(row("men", "a man a seat and the guards as the level is stood up (what guards.ts spawnUnit counts against the picture's budget of characters)", crate::seats::seat_count(g) + guards, crate::guards::MAX_SKINNED, None));
     let man_rows = men_most(g, civs);
-    rows.push(row("manrows", "rows of the men's columns against every man a game can hold (menMost: at most what a step's hand-over holds, by civMost; a man who has left keeps no row)", man_rows, crate::sim_men_schema::MEN_ROWS, None));
+    rows.push(row("manrows", "rows of the men's columns against every man a game can hold (menMost: at most what a step's hand-over holds, by civMost; a man who has left keeps no row)", man_rows, ::sim::men::ROWS as f64, None));
     let poses = if held { let c = civ_most(g); men_most(g, c) * man_singles_of(g, g_2) } else { 0.0 };
     rows.push(row("poses", "singles of the pool the men's poses stand in, against every man a game can hold (menMost with civMost), each with every pose an animator can make", poses, if held { crate::anim_skeleton::pose_pool_room() } else { inf }, None));
     let civ_cap = civ_most(g);

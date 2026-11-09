@@ -304,7 +304,6 @@ pub fn player_props(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     use crate::kitanim::KitShowVRifle as Rf;
     use crate::rig_props::{RigOpts, RigOptsRifle};
     let p = g.player;
-    let mine0 = out.len();
     let c = g.pl[p].ch;
     let busy = g.ch[c].anim.hide_held_item;
     let kind_sel = crate::game::player_canister_sel(g, p);
@@ -393,7 +392,6 @@ pub fn player_props(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     crate::rig_props::rig_boxes(g, c, opts, out, None, None);
     crate::handwork::work_props(g, c, out);
     crate::irlaser::sam_laser_boxes(g, out);
-    if crate::rails::rails_sky_on(g) { out.truncate(mine0); }
 }
 
 /// Where the hammer's grip point and handle are at the side of the pack this man wears, in his chest joint's space. None: no pack.   (combat.ts hammerSide)
@@ -586,30 +584,6 @@ pub fn hidden_props(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     rig_keys(g, out, n0);
 }
 
-/// A hunting man's weapon laser: a thin emissive line from the muzzle to what it meets, and a dot there. LASER.enemy is off on the page: a man hostile to the player has none.   (combat.ts laserBoxes)
-pub fn laser_boxes(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<AnyBoxId>) {
-    let team = g.gd[gd].team;
-    if crate::teams::is_hostile(g, team, crate::teams::Team::Player) { return; }
-    let ir = crate::irlaser::laser_band(g, gd) == crate::irlaser::LaserBand::Ir;
-    if ir && !crate::irlaser::ir_viewer(g) { return; }
-    let c = g.gd[gd].ch;
-    let r = match laser_reach(g, c, Some(gd), Some(ir)) { Some(r) => r, None => return };
-    let (from, dir, l, dot) = (r.from, r.dir, r.l, r.dot);
-    if ir {
-        if let Some(on) = r.on { if crate::irlaser::paints_own(g, gd, on) { return; } }
-    }
-    let b = crate::stature::drawn_beam(g, c, from, dir, l);
-    if crate::fogofwar::fog_of_war_active(g) && !crate::fogofwar::fog_of_war_on_team(g, gd) {
-        if !crate::fogofwar::fog_of_war_seen(g, gd) { return; }
-        for run in crate::fogofwar::fog_of_war_beam_runs(g, from, dir, l) {
-            let (t0, t1) = (run[0], run[1]);
-            if t1 - t0 > 0.02 { beam_boxes(g, v3::mad(b.from, b.dir, t0 * b.k), b.dir, (t1 - t0) * b.k, out, dot && t1 >= l - 1e-6, Some(ir), None); }
-        }
-        return;
-    }
-    beam_boxes(g, b.from, b.dir, l * b.k, out, dot, Some(ir), Some(true));
-}
-
 /// Where a weapon laser goes: from the muzzle along the bore to the first thing inside 30 m, and the man it ends on. None: no bore, or the muzzle is against what it meets.   (combat.ts laserReach)
 pub fn laser_reach(g: &mut crate::game::Game, c_2: CharId, self_: Option<GuardId>, civ: Option<bool>) -> Option<crate::combat::LaserReach> {
     let civ = civ.unwrap_or(false);
@@ -649,7 +623,7 @@ pub fn laser_reach(g: &mut crate::game::Game, c_2: CharId, self_: Option<GuardId
         }
     }
     if l < 0.05 { return None; }
-    Some(LaserReach { from, dir, l, dot: wh.is_some() || ph.is_some() || l < 30.0, on })
+    Some(LaserReach { from, dir, l, dot: wh.is_some() || ph.is_some() || l < 30.0 })
 }
 
 /// A laser line from `from` along unit `dir` for `l` metres and (dot) the bead where it lands: emissive geometry no ray sees. The one place an infrared box is made.   (combat.ts beamBoxes)
@@ -658,8 +632,7 @@ pub fn beam_boxes(g: &mut crate::game::Game, from: V3, dir: V3, l: f64, out: &mu
     let air = air.unwrap_or(false);
     if ir && !crate::irlaser::ir_viewer(g) { return; }
     let red: V3 = if ir { crate::irlaser::ir_tint() } else { [1.0, 0.06, 0.03] };
-    let hw = m::max(0.0022, 0.45 * g.m_per_px);
-    let gain = 0.0022 / hw;
+    const HW: f64 = 0.0022;
     let up: V3 = if m::abs(dir[1]) < 0.95 { [0.0, 1.0, 0.0] } else { [1.0, 0.0, 0.0] };
     let x = v3::normalize(v3::cross(up, dir));
     let y = v3::cross(dir, x);
@@ -667,15 +640,15 @@ pub fn beam_boxes(g: &mut crate::game::Game, from: V3, dir: V3, l: f64, out: &mu
     let box_flags = flags_or(flags.no_shadow, flags.dynamic);
     let line = crate::scene_boxes::make_box_frame(g, &crate::scene_boxes::MakeBoxP {
         c: v3::mad(from, dir, l / 2.0),
-        h: [hw, hw, l / 2.0],
+        h: [HW, HW, l / 2.0],
         yaw: Some(v3::yaw_of(dir)),
         rot: Some(v3::quat::from_basis(x, y, dir)),
         albedo: Some(if ir { [0.0, 0.0, 0.0] } else { [0.02, 0.0, 0.0] }),
-        emissive: Some(v3::scale(red, 9.0 * gain)),
+        emissive: Some(v3::scale(red, 9.0)),
         flags: Some(box_flags),
         ..Default::default()
     });
-    crate::thinline::thin_note(g, line.into(), 0.0022, 0.45, red[0] * 9.0, red[1] * 9.0, red[2] * 9.0);
+    crate::thinline::thin_note(g, line.into(), HW, 0.45, red[0] * 9.0, red[1] * 9.0, red[2] * 9.0);
     let shown = if ir { crate::irlaser::ir_note(g, line.into()) } else { line.into() };
     out.push(shown);
     if dot {
@@ -735,6 +708,11 @@ pub fn smoke_params(g: &crate::game::Game) -> Option<crate::smoke_types::Caniste
     g.smoke.params
 }
 
+/// What a smoke can lets out: the attached solver's tuning, or its own numbers behind a stand-in without any.
+pub fn can_params(g: &crate::game::Game) -> crate::smoke_types::CanisterParams {
+    smoke_params(g).unwrap_or(crate::smoke_types::CanisterParams { canister_duration: 32.0, canister_density: 95.0, canister_radius: 0.2, canister_temp: 1.6, canister_speed: 1.9 })
+}
+
 /// A smoke can's fuse is out: it starts to pour, hisses, and the pop draws attention nearby.   (combat.ts startCanister)
 pub fn start_canister(g: &mut crate::game::Game, it: ItemId) {
     let seconds: f64;
@@ -743,11 +721,11 @@ pub fn start_canister(g: &mut crate::game::Game, it: ItemId) {
         let at = crate::effects::vent_mouth(crate::throwables::item_pos(g, it), yaw);
         seconds = crate::effects::spawn_vent(g, at, yaw, None);
     } else {
-        let p = smoke_params(g).unwrap_or(crate::smoke_types::CanisterParams { canister_duration: 32.0, canister_density: 95.0, canister_radius: 0.2, canister_temp: 1.6, canister_speed: 1.9 });
+        let p = can_params(g);
         seconds = p.canister_duration;
         let pos = v3::add(crate::throwables::item_pos(g, it), [0.0, 0.1, 0.0]);
         // `track` (the can's top, while it rolls) has no arm in effects::Track: notes, Skeleton
-        let e = crate::smoke_types::SmokeEmitter { pos, dir: [0.0, 1.0, 0.0], speed: p.canister_speed, radius: p.canister_radius, density: p.canister_density, temperature: p.canister_temp, ttl: p.canister_duration, age: 0.0, kind: crate::smoke_types::SmokeEmitterKind::Canister, ..crate::smoke_types::SmokeEmitter::zeroed() };
+        let e = crate::smoke_types::SmokeEmitter { pos, dir: [0.0, 1.0, 0.0], speed: p.canister_speed, radius: p.canister_radius, density: p.canister_density, temperature: p.canister_temp, ttl: p.canister_duration, age: 0.0, kind: crate::smoke_types::SmokeEmitterKind::Canister, ..crate::smoke_types::SmokeEmitter::default() };
         crate::smoke_types::smoke_system_like_emit(g, &e);
         crate::out_events::push_smoke_system_like_emit(g, &e);
     }

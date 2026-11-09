@@ -1,10 +1,9 @@
-//! The types of `suppression`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `suppression`.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: Sup, src/game/suppression.ts:70)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Sup {
     pub v: f64,
     pub kick: f64,
@@ -29,7 +28,7 @@ pub struct Sup {
     pub was_pinned: bool,
 }
 impl Sup {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         Sup {
             v: 0.0,
@@ -58,8 +57,7 @@ impl Sup {
 }
 impl Default for Sup { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum SupMoment {
     Flinch,
     Friendly,
@@ -79,42 +77,21 @@ impl SupMoment {
     }
 }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum HeadDown {
     Down,
     None,
     Displace,
 }
-impl HeadDown {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            HeadDown::Down => "down",
-            HeadDown::None => "none",
-            HeadDown::Displace => "displace",
-        }
-    }
-}
 
-/// (TypeScript: inline at src/game/suppression.ts:298 guardFireMods ->, src/game/suppression.ts:298)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct GuardFireMods {
     pub spread: f64,
     pub gap: f64,
 }
-impl GuardFireMods {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GuardFireMods {
-            spread: 0.0,
-            gap: 0.0,
-        }
-    }
-}
-impl Default for GuardFireMods { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SuppressionMod {
     /// (src/game/suppression.ts:144 floorLineT)
     pub floor_line_t: Option<f64>,

@@ -1,10 +1,10 @@
-// SDF CHARACTER RIG (docs/internal/sdf-characters.md) — the CPU-held parts, headless:
+// SDF CHARACTER RIG — the CPU-held parts, headless:
 //   sdfrig-fit      the round-cone fit off the shipped mannequin: deterministic (two solves agree bit for bit), every radius sane (1–20 cm), left / right slots mirror,
 //                   per-slot rms under 30 mm and the whole under 25 mm, no overrides unaccounted for; prints the table
 //   sdfrig-pack     BoxWorld.upload on the fake device turns a frame's proxy list into the rig exactly: r0 over the hand radius, r1's millimetres in misc's top byte,
 //                   owner + albedo bits untouched, padding records left alone, the cull sphere fitted and holding every cone, idempotent, and rig = null (no fit attached) leaves the
 //                   list as written
-//   bun run tools/qa/probes.ts sdfrig
+//   bun run tools/qa/checks.ts sdfrig
 import { ROOT, fake, main } from './here.ts';
 
 const { loadGltfCharacter } = await import(`${ROOT}/src/anim/gltf.ts`);

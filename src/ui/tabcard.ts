@@ -3,7 +3,7 @@
 // objectives modal that also has your squad equipment?". It is the home of what the corner panel no longer says (ui/corner.ts: the line per man, loud
 // or quiet, the counts). Every word on it is one the game already makes (the objective's line, the view's squad and each man's card); this file lays them
 // out. No page under it: `tabCard` is the card as data, `tabCardOf` the card of a view as it stands, `tabCardHtml` its
-// markup. The card is called from the page's Tab key only (main.ts), and `objectiveWords` from the HUD's row as well: nothing here runs at module load.
+// markup. The card is called from the page's Tab key only (host/drawhud.ts), and `objectiveWords` from the HUD's row as well: nothing here runs at module load.
 import { objectiveParts } from './corner';
 import { capsPlain, keyText } from '../host/keymap';
 import { locked, type TickView } from '../view/seatview';
@@ -20,7 +20,7 @@ export interface TabCard {
   /** what the squad carries between them and what waits on him, as the block's notes word it ('charges 2 · bangs 3') */
   carry: string[];
 }
-/** An objective that lists ('clear the structure: ✓ the guard hut · [the store] · the workshop' — roomclear.ts: a tick is a room taken, brackets the one
+/** An objective that lists ('clear the structure: ✓ the guard hut · [the store] · the workshop' — rust/game_rules/src/roomclear: a tick is a room taken, brackets the one
  *  being called) as its sentence and its list; any other as its sentence alone. */
 export function objectiveList(text: string): { goal: string; items: TabCard['items'] } {
   const cut = text.indexOf(': '), parts = cut < 0 ? [] : text.slice(cut + 2).split(' · ').map(x => x.trim()).filter(Boolean);
@@ -33,7 +33,7 @@ export function tabCard(objective: string, men: TabMan[], carry: string[], who =
   const O = objectiveParts(objective), L = O?.label === 'objective' ? objectiveList(O.text) : { goal: O?.text ?? '', items: [] };
   return { label: O?.label ?? '', note: O?.note ?? '', goal: L.goal, items: L.items, men, who, carry };
 }
-/** a kit line with its counted things said as what he set out with: the squad's throwables and charges are one pool once the run is on (doortools.ts),
+/** a kit line with its counted things said as what he set out with: the squad's throwables and charges are one pool once the run is on (rust/game_rules/src/doortools),
  *  and its count is the note under the men, so a man's own count is what his card gave him, not what he has left */
 export const staged = (kit: string): string => kit.split(' · ').map(p => (/^\d+ stun\b/.test(p) ? `started with ${p}` : p)).join(' · ');
 /** the mission's line in the player's keys */

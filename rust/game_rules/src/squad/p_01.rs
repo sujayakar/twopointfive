@@ -7,7 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-
 /// The field of a table of the plan's lines (or of BODY_LINES and its kin) that a say key names. (squad.ts `X[key]`)
 macro_rules! line_of {
     ($t:expr, $k:expr) => {
@@ -319,7 +318,7 @@ pub fn order(g: &mut crate::game::Game, gd: GuardId, patch: crate::squad::OrderP
 
     if g.gd[gd].script.is_none() {
         let serial = g.serial();   // (the one place a man's own script is made: doorpath.ts:178 asks by identity whether it is still his)
-        g.gd[gd].script = Some(crate::game::GuardScript { serial, ..crate::game::GuardScript::zeroed() });
+        g.gd[gd].script = Some(crate::game::GuardScript { serial, ..crate::game::GuardScript::default() });
     }
     if let Some(goal) = patch.goal {
         let had = g.gd[gd].script.as_ref().unwrap().goal;
@@ -432,14 +431,6 @@ pub fn room_clear_start(g: &mut crate::game::Game, id: RoomClearId) {
     if has_b {
         route_man(g, id, true, &[stack[1]], OrderPatch { aim_at: Some(Some(aim_b)), speed: Some(Some(1.5)), face: Some(Some(stack_face[1])), stance: Some(Some(crate::character::Stance::HighReady)), upper: Some(Some(crate::character::UpperMode::None)), crouch: Some(Some(false)), ..OrderPatch::default() });
     }
-}
-
-/// Hand both men back to the AI. (squad.ts RoomClear.end)
-pub fn room_clear_end(g: &mut crate::game::Game, id: RoomClearId, state: Option<crate::squad::RoomClearEndState>) {
-    let st = match state.unwrap_or(RoomClearEndState::Patrol) { RoomClearEndState::Patrol => EndGuardScriptState::Patrol, RoomClearEndState::Search => EndGuardScriptState::Search };
-    let (a, b) = (g.tab.squad_room_clear[id].a, g.tab.squad_room_clear[id].b);
-    end_guard_script(g, a, Some(st));
-    if let Some(b) = b { end_guard_script(g, b, Some(st)); }
 }
 
 /// False once there is nothing left to drive. (squad.ts RoomClear.intact)

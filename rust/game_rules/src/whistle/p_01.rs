@@ -80,7 +80,7 @@ pub fn try_whistle(g: &mut crate::game::Game) -> bool {
         level: Some(level),
         who: Some(who),
         serial,
-        ..crate::game::GameEvent::zeroed()
+        ..crate::game::GameEvent::default()
     });
     g.pl[pl].noise = m::max(g.pl[pl].noise, level);
     let at = match g.ch[c].bones.get(crate::character::Bone::Head) {
@@ -132,7 +132,7 @@ pub fn resolve<'g>(g: &'g mut crate::game::Game, e: crate::game::GameEvent, keen
         let prop = crate::weather::hear_path(g, src, v3::add(pos, [0.0, 1.5, 0.0]), None);
         let reach = g.k.whistle.reach_k * prop.carry * keen;
         if prop.path_len >= reach { continue; }
-        r.hearers.set(gd, Heard { d: prop.path_len, at: [prop.via[0], 0.0, prop.via[2]], direct: prop.direct, carry: prop.carry });
+        r.hearers.set(gd, Heard { at: [prop.via[0], 0.0, prop.via[2]] });
         if can_answer(g, gd, who) && prop.path_len < bd {
             bd = prop.path_len;
             best = Some(gd);
@@ -143,8 +143,7 @@ pub fn resolve<'g>(g: &'g mut crate::game::Game, e: crate::game::GameEvent, keen
     g.stats.whistle.heard_by += r.hearers.len() as i32;
     if best.is_none() { g.stats.whistle.unanswered += 1; }
     let hearers: Vec<String> = r.hearers.keys().into_iter().map(|x| g.gd[x].callsign.clone()).collect();
-    let responder = best.map(|x| g.gd[x].callsign.clone());
-    g.m.whistle.whistle_log.push(WhistleModWHISTLELOGItem { t: g.time, pos: v3::copy(e.pos), hearers, responder, answered: None, search: false });
+    g.m.whistle.whistle_log.push(WhistleModWHISTLELOGItem { t: g.time, answered: None, search: false });
     if g.m.whistle.whistle_log.len() > 32 { g.m.whistle.whistle_log.remove(0); }
     g.m.whistle.res_of.set(key, r);
     g.m.whistle.res_of.get_mut(key).unwrap()

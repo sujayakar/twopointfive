@@ -306,7 +306,7 @@ pub fn door_new(g: &mut crate::game::Game, def: &crate::doors::DoorDef, index: O
         rough: Some(if steel { 0.3 } else { 0.55 }),
         metal: if steel { Some(true) } else { None },
         marks,
-        ..crate::scene_boxes::MakeBoxP::zeroed()
+        ..crate::scene_boxes::MakeBoxP::default()
     });
     g.dr[id].box_ = leaf;
     // push plate + lever handle (raster only)
@@ -321,7 +321,7 @@ pub fn door_new(g: &mut crate::game::Game, def: &crate::doors::DoorDef, index: O
             flags: Some(handle_flags),
             rough: Some(0.25),
             metal: Some(true),
-            ..crate::scene_boxes::MakeBoxP::zeroed()
+            ..crate::scene_boxes::MakeBoxP::default()
         }));
     }
     g.dr[id].handle_boxes = handles;
@@ -463,7 +463,7 @@ pub fn doors_new(g: &mut crate::game::Game, defs: &[crate::doors::DoorDef], emit
         seam_box(g, h0).mkey = Some(key + i as f64 * 4.0 + 1.0);
         seam_box(g, h1).mkey = Some(key + i as f64 * 4.0 + 2.0);
     }
-    crate::doors::Doors { list, store, slabs, ..crate::doors::Doors::blank() }
+    crate::doors::Doors { list, slabs, ..crate::doors::Doors::blank() }
 }
 /// (doors.ts Doors.byName)
 pub fn doors_by_name(g: &crate::game::Game, n: &str) -> Option<DoorId> {
@@ -492,9 +492,8 @@ pub fn doors_wedge_holds(g: &crate::game::Game, d: DoorId, from: V3) -> bool {
 pub fn doors_swing_of(g: &crate::game::Game, d: DoorId) -> crate::doors::DoorSwing {
     let (hx, hz, w, c) = (g.dr[d].def.hinge[0], g.dr[d].def.hinge[1], g.dr[d].def.width, g.dr[d].def.closed_dir);
     let s = door_swing(g, d);
-    let (ux, uz) = (m::cos(c), m::sin(c));
     let open = m::abs(if s > 0.0 { g.dr[d].max_auth } else { g.dr[d].min_auth });
-    crate::doors::DoorSwing { hinge: [hx, 0.0, hz], handle: [hx + ux * w, 0.0, hz + uz * w], swing: s, into: [-uz * s, ux * s], open, radius: w, closed_dir: c, one_way: true }
+    crate::doors::DoorSwing { hinge: [hx, 0.0, hz], swing: s, open, radius: w, closed_dir: c, one_way: true }
 }
 /// how far (x, z) is from the leaf standing at world angle `a`   (doors.ts Doors.swingOf seg)
 fn swing_seg(s: &crate::doors::DoorSwing, x: f64, z: f64, a: f64) -> f64 {
@@ -730,7 +729,7 @@ mod tests {
     /// the answers are the TypeScript's own: Doors.swingOf of that door with swing -1, sweeps(x, z, pad)
     #[test]
     fn the_sweep_answers_as_the_typescript_does() {
-        let s = crate::doors::DoorSwing { hinge: [1.25, 0.0, -3.5], handle: [0.0; 3], swing: -1.0, into: [0.0; 2], open: 1.92, radius: 0.93, closed_dir: 0.7, one_way: true };
+        let s = crate::doors::DoorSwing { hinge: [1.25, 0.0, -3.5], swing: -1.0, open: 1.92, radius: 0.93, closed_dir: 0.7, one_way: true };
         for (x, z, pad, want) in [(1.761, -3.331, 0.0, true), (1.6, -3.2, 0.0, false), (1.25, -2.3, 0.2, false), (1.25, -4.2, 0.1, false), (2.0, -2.8, 0.05, false), (2.4, -3.1, 0.1, false), (0.8, -3.9, 0.05, false), (1.3, -3.9, 0.2, true)] {
             assert_eq!(door_swing_sweeps(&s, x, z, Some(pad)), want, "{x} {z} {pad}");
         }
@@ -752,9 +751,9 @@ mod tests {
         std::thread::Builder::new().stack_size(1 << 30).spawn(|| {
             let mut g = alloc::boxed::Box::new(Game::blank());
             let d = DoorId(3);
-            let hit = crate::doors::DoorStrike { door: d, ..crate::doors::DoorStrike::zeroed() };
+            let hit = crate::doors::DoorStrike { door: d, ..crate::doors::DoorStrike::default() };
             let run = crate::doors::DoorContactRun { bash: 1.0, rip: 2.0, rip_level: 3.0 };
-            let full = crate::doors::DoorContact { blocked_by: Some(d), bashed: Some(d), ripped: Some(d), bashed_at: Some(0.5), struck: Some(hit), moved: Some(true), man: Some(7.0), ..crate::doors::DoorContact::zeroed() };
+            let full = crate::doors::DoorContact { blocked_by: Some(d), bashed: Some(d), ripped: Some(d), bashed_at: Some(0.5), struck: Some(hit), moved: Some(true), man: Some(7.0), ..crate::doors::DoorContact::default() };
             let mut v = vec![crate::doors::DoorContact { run: Some(run), ..full.clone() }, full];
             doors_update(&mut g, 0.016, &mut v);
             let (a, b) = (&v[0], &v[1]);

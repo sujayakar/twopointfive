@@ -1,4 +1,4 @@
-// THE GWOT PALETTE — the default look's colours and finishes by name (scene/gwotKit.ts builds with them; scene/look.ts is the switch).
+// THE GWOT PALETTE — the default look's colours and finishes by name (tools/levels/lib/gwotKit.ts builds with them).
 // WHAT EACH ONE IS TO A ROUND AND A BLAST IS SAID, NOT READ OFF IT: a row's name says what a box of it does (scene/stuff.ts PAINT_DOES, a word of the table
 // of materials), the kit puts that word on the box (Box.does), and the rules read the box. `gwotAs(name, does)` is the same paint, to the eye exactly,
 // on a thing that does something else: a mud PARTITION ('plasterboard': a charge cuts it) beside a mud SHELL ('concrete').
@@ -77,7 +77,7 @@ export const SNOW_MATERIALS: Readonly<Record<string, { albedo: Vec3; rough: numb
 /** the palette + finishes as the exporter's `materials` rows (tools/levels/export.ts: a generator's `MATERIALS` export) */
 export const GWOT_MATERIALS: Readonly<Record<string, { albedo: Vec3; rough: number; metal?: boolean }>> = Object.fromEntries(
   (Object.keys(GWOT_PALETTE) as GwotMat[]).map(n => [n, { albedo: GWOT_PALETTE[n], rough: GWOT_FINISH[n]?.rough ?? ROUGH_CLOTH, ...(GWOT_FINISH[n]?.metal ? { metal: true } : {}) }]));
-/** WHICH FOOTSTEP SURFACE a ground material is (the six the game has — a level's `surfaces` block is separate data; scene/levelData.ts SurfacesData) */
+/** WHICH FOOTSTEP SURFACE a ground material is (the six the game has — a level's `surfaces` block is separate data; tools/levels/lib/levelData.ts SurfacesData) */
 export const GWOT_SURFACE: Readonly<Partial<Record<GwotMat, 'carpet' | 'lino' | 'stone' | 'tile' | 'asphalt' | 'grass'>>> = {
   dust: 'asphalt', dirt: 'asphalt', gravel: 'asphalt', mudFloor: 'stone', slab: 'stone', rugRed: 'carpet', rugNavy: 'carpet', rugCream: 'carpet', rugMadder: 'carpet',
 };

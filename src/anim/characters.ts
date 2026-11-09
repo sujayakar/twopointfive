@@ -2,18 +2,16 @@
 import { makeBuffer, makeBufferWithData, writeWordsIfChanged } from '../gpu/device';
 import { SkinnedDrawable } from '../render/gbuffer';
 import { GltfCharacter } from './gltf';
-import { Vec3 } from '../math/vec';
 import { CHAR_MAT_FLOATS, charSlots } from '../render/charMaterials';
 
 export const JOINT_STRIDE = 64; // joint slots per character in the jointMats buffer
 export const MAX_CHARS = 16;
 /** bytes per CharInst (gbuffer.wgsl): tint.xyz + jointOffset · tint2.xyz + owner · wet (coat, beads, rain, phase) · wetK (bead density, bead size, trail length, roughness wet) ·
  *  wetK2 (roughness dry, darken exponent, darken multiplier, specular gain) · wetK3 (waterline height in bind-pose m above the sole, the wicking band above it, THE CAST'S PART MASK as u32
- *  bits, 0) — the last four rows are the wet-character look (game/wet.ts), all zero for a dry man; the part mask (anim/gltf.ts loadGltfCast: which parts of the cast mesh this man wears)
+ *  bits, 0) — the last four rows are the wet-character look (rust/game_rules/src/wet), all zero for a dry man; the part mask (anim/gltf.ts loadGltfCast: which parts of the cast mesh this man wears)
  *  is 0 on the mannequin = every vertex drawn, the two tints by matSel, exactly as it always was */
 export const CHAR_INST_BYTES = 96;
 const INST_F32 = CHAR_INST_BYTES / 4;
-const PARTS_AT = 22;   // gbuffer.wgsl CharInst.parts: the word after wetK3's two floats (a u32 on both sides — never through a float: a mask's bit pattern can be a denormal or a NaN)
 /** bytes per instance in `charMats` (render/charMaterials.ts: CHAR_MAT_ROWS vec4 rows — the per-slot materials; all zero = the two tints above, as ever) */
 export const CHAR_MAT_BYTES = CHAR_MAT_FLOATS * 4;
 
@@ -26,7 +24,7 @@ export class CharacterRenderer implements SkinnedDrawable {
   jointsFormat: GPUVertexFormat;
   private instData = new Float32Array(MAX_CHARS * INST_F32); private instU32 = new Uint32Array(this.instData.buffer);
   private jointStaging = new Float32Array(MAX_CHARS * JOINT_STRIDE * 16);
-  /** every man's material rows and instance words are written whole next frame (a rollback snapshot put back: these books went back with the men, the buffers did not — scene/boxes.ts forgetSent) */
+  /** every man's material rows and instance words are written whole next frame */
   forgetSent() { this.matDirty = true; this.instSent.fill(0xffffffff); }
   private instSent = new Uint32Array(MAX_CHARS * INST_F32);   // charInsts as last written (gpu/device.ts writeWordsIfChanged)
 
@@ -72,17 +70,6 @@ export class CharacterRenderer implements SkinnedDrawable {
     return r;
   }
 
-  /** Set instance i's joint matrices + tint; call finish() after all instances. `wet` writes the sixteen wet-look floats at the given offset of the instance
-   *  block (game/wet.ts wetInstance + wetKnobs + wetLineRow: coat, beads, rain, phase, the eight look knobs, the waterline row) — omitted (the viewer, a dry man) they are zero, and the
-   *  g-buffer shades him exactly as it always did. `parts`: the cast's part mask for this man (0 = the mannequin: everything, as it was). */
-  setInstance(i: number, jointData: Float32Array, tint: Vec3, tint2: Vec3, owner: number, wet?: (out: Float32Array, offset: number) => void, parts = 0) {
-    this.jointStaging.set(jointData, i * JOINT_STRIDE * 16);
-    const o = i * INST_F32; const f = this.instData, u = this.instU32;
-    f[o] = tint[0]; f[o + 1] = tint[1]; f[o + 2] = tint[2]; u[o + 3] = i * JOINT_STRIDE;
-    f[o + 4] = tint2[0]; f[o + 5] = tint2[1]; f[o + 6] = tint2[2]; u[o + 7] = owner >>> 0;
-    if (wet) wet(f, o + 8); else f.fill(0, o + 8, o + INST_F32);
-    u[o + PARTS_AT] = parts >>> 0; this.masks[i] = parts >>> 0;
-  }
   /** Instance i's material rows for this frame: `write` fills CHAR_MAT_FLOATS floats at the offset it is handed (charMaterials.ts writeCharPalette), omitted = zeros = the
    *  two tints. Uploaded by finish() only when a row changed, so a frame with the switch off — every frame, by default — writes nothing after the first. */
   setMaterials(i: number, write?: (out: Float32Array, offset: number) => void) {
@@ -102,12 +89,9 @@ export class CharacterRenderer implements SkinnedDrawable {
   /** …and their material rows, where one changed */
   materialsOut(queue: GPUQueue) { if (this.matDirty) { queue.writeBuffer(this.charMats, 0, this.matData.buffer, 0, MAX_CHARS * CHAR_MAT_BYTES); this.matDirty = false; } }
   private scratch = new Float32Array(CHAR_MAT_FLOATS);
-  // DRAWING BETWEEN TICKS (host/tween.ts): the palette as the last tick staged it (instance i's joints at i × jointFloats), who instance i is, and a write of the PICTURE's own
+  // DRAWING BETWEEN TICKS (src/host/between.ts): the palette as the last tick staged it (instance i's joints at i × jointFloats), who instance i is, and a write of the PICTURE's own
   // palette — a blend of two ticks', in an array of the caller's — over the GPU's copy. The staging is never written by it: what the game staged is what the next tick finds.
   get staged(): Float32Array { return this.jointStaging; }
-  readonly jointFloats = JOINT_STRIDE * 16;
-  ownerOf(i: number): number { return this.instU32[i * INST_F32 + 7]; }
-  drawJoints(data: Float32Array, count: number) { if (count > 0) this.device.queue.writeBuffer(this.jointMats, 0, data.buffer, data.byteOffset, count * JOINT_STRIDE * 64); }
   finish(count: number) {
     this.instanceCount = count;
     if (this.matDirty) { this.device.queue.writeBuffer(this.charMats, 0, this.matData.buffer, 0, MAX_CHARS * CHAR_MAT_BYTES); this.matDirty = false; }

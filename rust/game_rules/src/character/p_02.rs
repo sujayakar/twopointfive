@@ -270,8 +270,7 @@ mod tests {
     #[test]
     fn the_polish_numbers_are_the_pages() {
         let u = crate::character::hold_polish_up();
-        let h = crate::knobs::page_hold();
-        assert_eq!((u.way_shape, u.catch_shape, u.hit_shape), (h.way_shape, h.catch_shape, h.hit_shape));
+        let h = crate::knobs::HoldK::page();
         let (a, b): ([f64; 8], [f64; 8]) = (
             [u.lay_ahead, u.dip, u.back, u.m, u.twist, u.side, u.tip, u.arch],
             [h.lay_ahead, h.lunge.dip, h.lunge.back, h.sway.m, h.sway.twist, h.apart.side, h.apart.tip, h.yank.arch],
@@ -305,10 +304,10 @@ mod tests {
 
     #[test]
     fn hold_out_rate_bits() {
-        let hold = crate::knobs::page_hold();
+        let hold = crate::knobs::HoldK::page();
         let show = crate::character::CharacterModHOLDSHOW { kill: true, beats: false };
         let speeds = [0.0, 0.1, 0.3, -0.45, 0.6, 2.0];
-        let pose = |phase, t, kill, beats, variant| HoldPose { phase, t, kill, beats, variant, ..HoldPose::zeroed() };
+        let pose = |phase, t, kill, beats, variant| HoldPose { phase, t, kill, beats, variant, ..HoldPose::default() };
         let cases: [(HoldPose, bool, &[u64; 6]); 7] = [
             (pose(HoldPhase::Kill, 0.0, None, None, None), false, &OUT_KILL_SHOWN),
             (pose(HoldPhase::Kill, 0.0, Some(false), None, None), false, &OUT_KILL_OFF),

@@ -89,7 +89,7 @@ pub fn agitation_terms(g: &mut crate::game::Game, gd: GuardId) -> crate::dialogu
     let shaken = crate::morale::shaken_of(g, gd);
     let dread = m::max(0.0, shaken - m::max(0.0, a));
     add(&mut a, &mut why, dread, "dread");
-    AgitationTerms { a: m::max(0.0, m::min(1.0, a)), why }
+    AgitationTerms { a: m::max(0.0, m::min(1.0, a)) }
 }
 
 /// By callsign; a spawned unit, whatever it is called, is a fighting man: hard.   (dialogue.ts temperamentOf)
@@ -635,7 +635,7 @@ mod tests {
     #[test]
     fn said_text_takes_the_first_that_applies() {
         let l = SaidTextL { text: st("t"), now: Some(st("n")), away: Some(st("a")), bare: Some(st("b")), guide: Some(st("g")) };
-        let mut ctx = DialogueCtx::zeroed();
+        let mut ctx = DialogueCtx::default();
         assert_eq!(said_of(&l, &ctx), "a");
         ctx.facts.office = Some(false);
         assert_eq!(said_of(&l, &ctx), "a");

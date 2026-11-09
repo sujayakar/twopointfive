@@ -1,21 +1,16 @@
 // A RUN ON THE PAGE THAT DRAWS IS KEPT AND PLAYED AGAIN: the page on the software adapter, stepped by hand. A run with a save, a load and a restart is played, F7 keeps it, the page of it walks it to the same state,
 // is sought both ways, its camera taken off and given back, its pace turned, a note kept on it. Never a GPU's judgement.
 //   PORT=<a dev server> node tools/draw/tape-page.cjs [--out dir]      exit 0 = every check passed, 1 = a FAIL, 2 = the script died
-const { chromium } = (() => { try { return require('playwright'); } catch { return require('/opt/node-tools/node_modules/playwright'); } })();
+const PAGE = require('../qa/page.cjs').page({ name: 'tape-page', detail: 'json' }), { check } = PAGE;
 const { mkdirSync } = require('node:fs');
-const PORT = process.env.PORT || 5199, at = process.argv.indexOf('--out'), OUT = at > 0 ? process.argv[at + 1] : null;
-const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog', '--no-sandbox'];
-let fails = 0;
-const check = (ok, what, got) => { console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}${got === undefined ? '' : `   (${JSON.stringify(got)})`}`); if (!ok) fails++; };
+const at = process.argv.indexOf('--out'), OUT = at > 0 ? process.argv[at + 1] : null;
 // (a page that plays a run has the game keep what a viewer's own picture is made from: its whole state is every such walk's, the run's own in its die and its parts)
 const same = (a, b) => a.die === b.die && a.parts === b.parts, whole = (a, b) => same(a, b) && a.state === b.state;
 (async () => {
-  const browser = await chromium.launch({ headless: true, executablePath: process.env.CHROMIUM || '/usr/bin/chromium', args: FLAGS }), ctx = await browser.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
+  const ctx = await PAGE.context();
   const open = async (words, ready = true) => {
-    const page = await ctx.newPage(), errors = []; page.setDefaultTimeout(600000);
-    page.on('pageerror', x => errors.push(String(x && x.stack || x).slice(0, 500)));
-    page.on('console', m => { const t = m.text(); if (m.type() === 'error' || /Invalid|error:/.test(t)) errors.push(t.slice(0, 300)); });
-    await page.goto(`http://localhost:${PORT}/?${words}`, { timeout: 300000 });
+    const { page, errors, go } = await PAGE.open({ context: ctx, timeout: 600000, errors: { also: /Invalid|error:/ } });
+    await go(words, { timeout: 300000 });
     if (ready) { await page.waitForFunction(() => !!window.__ready && !!window.__draw, null, { timeout: 600000 }); await page.evaluate(() => window.__ready); }
     return { page, errors };
   };
@@ -39,7 +34,7 @@ const same = (a, b) => a.die === b.die && a.parts === b.parts, whole = (a, b) =>
   const sid = run.rows[0] && run.rows[0].sid;
   // ---- its page
   const W = await open(`paused&quality=verylow&mute&playtape=${sid}`);
-  const s0 = await W.page.evaluate(() => { const d = window.__draw, P = d.played; d.run(0); return { at: P.at, total: P.total, tries: P.tries, paused: P.paused, big: !!document.getElementById('tapebig'), bar: !!document.getElementById('tapebar'), search: location.search, tape: !!d.game.tape }; });
+  const s0 = await W.page.evaluate(() => { const d = window.__draw, P = d.played; d.run(0); return { at: P.at, total: P.total, tries: P.tries, paused: P.paused, big: !!document.getElementById('tapebig'), bar: !!document.getElementById('tapebar'), said: document.querySelector('#tapebar .say').textContent, search: location.search, tape: !!d.game.tape }; });
   check(s0.at === 0 && s0.total === 664 && s0.tries.length === 1 && s0.paused && s0.big && s0.bar && /roomclear/.test(s0.search) && !s0.tape, 'the run\'s page stands on its first tick, under a play button, at the run\'s own address, and tapes nothing', s0);
   const s1 = await W.page.evaluate(() => { const d = window.__draw, P = d.played; d.run(30, [], 'last'); const c = d.cam.target.slice(); d.run(P.total, [], 'none'); return { at: P.at, parted: P.parted, lost: P.lost, m: d.game.mark(true), c }; });
   check(s1.at === 664 && s1.parted === null && s1.lost === null && same(s1.m, run.m), 'it walks to its end, and the die and the parts there are the run\'s', { walked: s1, played: run.m });
@@ -93,14 +88,25 @@ const same = (a, b) => a.die === b.die && a.parts === b.parts, whole = (a, b) =>
       P.seek(200); for (let i = 0; i < 600 && P.seeking; i++) d.run(1, [], 'none'); const back = P.at, up = !G.lost; d.run(P.total, [], 'none'); return { lost, stood, back, up, card: !!document.querySelector('#fatal[style*="flex"]'), m: G.mark(true) }; });
     check(s.lost && s.stood === 400 && Math.abs(s.back - 200) < 3 && s.up && !s.card && whole(s.m, s1.m), 'lost to a panic, it stands, is sought back and ends the same', s); await L.page.close(); }
   // ---- live: a person's page, its own frames
-  { const small = await browser.newContext({ viewport: { width: 320, height: 180 }, deviceScaleFactor: 1, storageState: await ctx.storageState({ indexedDB: true }) }), page = await small.newPage(), errors = []; page.setDefaultTimeout(600000); page.on('pageerror', x => errors.push(String(x).slice(0, 300)));
-    await page.goto(`http://localhost:${PORT}/?quality=verylow&mute&playtape=${sid}`, { timeout: 300000 }); await page.waitForFunction(() => !!window.__ready && !!window.__draw && !!document.getElementById('tapebig'), null, { timeout: 600000 }); await page.evaluate(() => window.__ready);
+  { const { context: small, page, errors, go } = await PAGE.open({ size: [320, 180], options: { storageState: await ctx.storageState({ indexedDB: true }) }, timeout: 600000, errors: { console: false } });
+    await go(`quality=verylow&mute&playtape=${sid}`, { timeout: 300000 }); await page.waitForFunction(() => !!window.__ready && !!window.__draw && !!document.getElementById('tapebig'), null, { timeout: 600000 }); await page.evaluate(() => window.__ready);
     const still0 = await page.evaluate(() => window.__draw.played.at); await page.evaluate(() => document.getElementById('tapebig').click());
     const went = await page.waitForFunction(() => window.__draw.played.at >= 12, null, { timeout: 400000 }).then(() => true).catch(() => false), s = await page.evaluate(() => { const P = window.__draw.played; return { at: P.at, paused: P.paused, parted: P.parted, big: !!document.getElementById('tapebig'), frames: window.__draw.told.frames }; });
     check(still0 === 0 && went && !s.paused && s.parted === null && !s.big && errors.length === 0, 'on a person\'s page it waits under the play button, and plays by the page\'s own frames', { still0, ...s, errors: errors.slice(0, 3) }); await small.close(); }
+  // ---- the list, down the title's column
+  { const T = await open('paused&quality=verylow&mute');
+    const s = await T.page.evaluate(async () => { const at = q => [...document.querySelectorAll('#menu .actions .btn')].find(b => b.textContent.startsWith(q)), wait = ms => new Promise(r => setTimeout(r, ms)), out = {};
+      at('Extras').click(); out.extras = !!at('Replays'); at('Replays').click(); await wait(1200); const a = document.querySelector('#menu .xlist a.xrow'); out.row = a && { href: a.getAttribute('href'), name: a.querySelector('b').textContent, line: a.querySelector('i').textContent }; out.note = document.querySelector('#menu .xnote').textContent; return out; }); await still(T.page, 'tape-3-list');
+    const gone = await T.page.evaluate(async () => { const at = q => [...document.querySelectorAll('#menu .actions .btn')].find(b => b.textContent.startsWith(q)); window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', key: 'Escape', bubbles: true, cancelable: true })); await new Promise(r => setTimeout(r, 100)); return !!at('Play'); });
+    check(s.extras && s.row && s.row.href === `?playtape=${sid}` && /Room clear/.test(s.row.name) && /1 note/.test(s.row.line) && gone, 'the title lists the runs kept, and Esc goes back', s); check(T.errors.length === 0, 'the title: nothing threw', T.errors.slice(0, 3)); await T.page.close(); }
+  // ---- played on another version of the game: the list and the bar say so
+  { const T = await open('paused&quality=verylow&mute');
+    const was = await T.page.evaluate(async sid => { const db = await new Promise((res, rej) => { const q = indexedDB.open('twopointsix-kept'); q.onsuccess = () => res(q.result); q.onerror = rej; }); const tx = db.transaction('visits', 'readwrite'), st = tx.objectStore('visits'), r = await new Promise(res => { const q = st.get(sid); q.onsuccess = () => res(q.result); }); const m = r.module; r.module = 'another'; st.put(r); await new Promise(res => { tx.oncomplete = res; }); return m; }, sid);
+    const s = await T.page.evaluate(async () => { const at = q => [...document.querySelectorAll('#menu .actions .btn')].find(b => b.textContent.startsWith(q)); at('Extras').click(); at('Replays').click(); await new Promise(r => setTimeout(r, 1200)); const a = document.querySelector('#menu .xlist a.xrow'); return { old: a.classList.contains('old'), line: a.querySelector('i').textContent }; });
+    await still(T.page, 'tape-4-older'); await T.page.close();
+    const U = await open(`paused&quality=verylow&mute&playtape=${sid}`), [b, parted] = await U.page.evaluate(() => { const d = window.__draw; d.run(1, [], 'none'); const said = document.querySelector('#tapebar .say').textContent; d.run(240, [], 'none'); return [said, d.played.parted]; }); await U.page.close();
+    check(!!was && s.old && /older version/.test(s.line) && /older version of the game/.test(b) && !/older/.test(s0.said) && parted === null, 'a run of an older version of the game is said to be one, on the list and on the bar, and plays as it was', { was, ...s, bar: b, parted, own: s0.said }); }
   // ---- refused in words
-  const N = await open('paused&quality=verylow&mute&playtape=20200101T000000-none', false); await N.page.waitForFunction(() => /saved in this browser/.test(document.body.textContent), null, { timeout: 300000 }).then(() => check(true, 'a replay that is gone is refused in words')).catch(() => check(false, 'a replay that is gone is refused in words'));
-  await browser.close();
-  console.log(fails ? `=== tape page: ${fails} FAILED ===` : '=== tape page: ALL PASS ===');
-  process.exit(fails ? 1 : 0);
+  const N = await open('paused&quality=verylow&mute&playtape=20200101T000000-none', false); await N.page.waitForFunction(() => /saved in this browser/.test(document.body.textContent), null, { timeout: 300000 }).then(async () => check(await N.page.evaluate(() => { const c = document.getElementById('taperefuse'); return !!c && document.getElementById('fatal').style.display !== 'flex' && !/\n\s+at |\.ts:/.test(c.textContent) && c.querySelector('a').textContent === '\u2039 Main menu'; }), 'a replay that is gone is refused in words, with a way back')).catch(() => check(false, 'a replay that is gone is refused in words'));
+  await PAGE.end(PAGE.fails ? `=== tape page: ${PAGE.fails} FAILED ===` : '=== tape page: ALL PASS ===');
 })().catch(e => { console.error(e); process.exit(2); });

@@ -2,7 +2,7 @@
 //
 // Math.hypot is the one Math function that is slow where this game runs. In V8 every call goes out to a builtin and comes back with a boxed number; up to V8 12
 // (node 22) that builtin also ALLOCATES a scratch array per call (~100 ns and ~a hundred bytes of garbage), and for four arguments or more it still does in
-// Chrome. In JavaScriptCore (bun: the headless harness) it is a host call at ~45 ns. The step asks for several thousand lengths a frame. sqrt(a² + b² + c²) is no
+// Chrome. In JavaScriptCore (bun) it is a host call at ~45 ns. The step asks for several thousand lengths a frame. sqrt(a² + b² + c²) is no
 // substitute: it differs from hypot in the last bit about one time in three, and lengths feed everything the digests hash.
 //
 // So this file carries two ALGORITHMS over scalars and picks per arity — at load, by trial against the runtime's own Math.hypot on a fixed sample — the one that
@@ -14,8 +14,7 @@
 //   · anything else (Safari and bun on a Mac: libc++; Firefox; an FMA-contracted build): whatever the trial finds — where nothing matches, the builtin, no gain.
 // THE TRIAL IS A SAMPLED MATCH, NOT A PROOF: TRIALS fixed inputs an arity (unit vectors, metres, millimetres, whole numbers, zeros of both signs, huge and tiny
 // mixed, subnormals, the ends of the range, NaN, the infinities). An algorithm that differs from a candidate less than about once in ten thousand ordinary inputs
-// could pass it; the ones known (the table in the goal's notes) differ at one in 700 or more. tools/qa/hypot-ident.ts holds every export against Math.hypot over
-// tens of millions of inputs (bun and node); the play-through digests hold the rest.
+// could pass it; the ones known (the table in the goal's notes) differ at one in 700 or more.
 // (No imports: src/math is below everything, and this runs at load.)
 
 const INF = Infinity;

@@ -11,15 +11,15 @@
 // recognise. WGSL's module scope has no order and no side effects, and an implementation compiles one entry point's reachable declarations: the program a
 // pipeline runs is the same program. Mentions are matched as bare words, so a local that shares a global's name only ever keeps MORE.
 //
-// `?shadertrim=0` = every module as it was, whole. tools/qa/shadertrim-check.ts holds the rule to the shipped shaders; the page's own boot (every pipeline
+// `?shadertrim=0` = every module as it was, whole. tools/qa/shaders-check.ts trim holds the rule to the shipped shaders; the page's own boot (every pipeline
 // made, no GPU error) is what says the compiler agrees.
 export const SHADER_TRIM = { on: true };
-try { if (new URLSearchParams(location.search).get('shadertrim') === '0') SHADER_TRIM.on = false; } catch { /* no page (the harness) */ }
+try { if (new URLSearchParams(location.search).get('shadertrim') === '0') SHADER_TRIM.on = false; } catch { /* no page */ }
 
 // …AND CUT TO WHAT ITS CONSTANT SWITCHES LEAVE ON. The scene prelude's switches are module-scope constants (`const WX_KINDS: bool = false;`, render/frame.ts), read
 // once at boot, and the kernels branch on them: `if (WX_KINDS) { … }`. The rule above keeps a declaration that anything kept MENTIONS, so the dead side of such a
 // branch kept everything it calls: a trial that is off on this page was still written into every program that could have run it, and Chrome on Windows pastes
-// every call into its caller before it drops the branch (tools/qa/shaderinline-check.ts counts it that way). The fold cuts those branches out of the text first.
+// every call into its caller before it drops the branch (tools/qa/shaders-check.ts inline counts it that way). The fold cuts those branches out of the text first.
 // In a function's body an `if` statement is read whole, with its `else if`s and its `else`, and each test is read left to right with the module's bool constants
 // in hand (`!`, `&&`, `||`, parentheses; a constant written as a test of other constants counts): an arm whose test is false goes, an arm whose test is true
 // becomes the statement's `else` and what stood after it goes, and where every arm before it went the statement is that block alone. When that block cannot be
@@ -32,11 +32,10 @@ try { if (new URLSearchParams(location.search).get('shadertrim') === '0') SHADER
 // switches it was cut under, and whatever reads a text for a switch (the compile queue's background lane looks for `const CUT_BOXES: bool = true;`,
 // gpu/device.ts) reads what it always did.
 // A function is folded when the trim first keeps it, never before: most of the prelude's functions are not kept by any one module.
-// `?shaderfold=0` = no branch is cut (the trim's own rule alone, as it was). Nothing is cut with the trim off. tools/qa/shaderfold-check.ts holds the rule to
-// small texts of every form and to the shaders the engine boots with; that the folded text COMPILES, with no warning, is tools/qa/wgsl-compile.cjs's to say,
-// and that it draws the same frame tools/qa/draw-equal.cjs's (`--with shaderfold=0` against none, on the software adapter).
+// `?shaderfold=0` = no branch is cut (the trim's own rule alone, as it was). Nothing is cut with the trim off. tools/qa/shaders-check.ts fold holds the rule to
+// small texts of every form and to the shaders the engine boots with; that the folded text COMPILES, with no warning, is tools/qa/wgsl-compile.cjs's to say.
 export const SHADER_FOLD = { on: true };
-try { if (new URLSearchParams(location.search).get('shaderfold') === '0') SHADER_FOLD.on = false; } catch { /* no page (the harness) */ }
+try { if (new URLSearchParams(location.search).get('shaderfold') === '0') SHADER_FOLD.on = false; } catch { /* no page */ }
 
 interface Decl { text: string; name: string | null; root: boolean; entry: boolean; fn: boolean; ids: readonly string[] }
 /** by declaration text: the prelude's few hundred declarations are read once, whatever number of modules carry them. Its keys are slices of the modules' own

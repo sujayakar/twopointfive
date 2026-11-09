@@ -338,12 +338,10 @@ pub fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, i
     }
     // gas, light and powder: the shot from effects.ts
     if lead {
-        let seed = g.fx_seed;
         g.fx_seed += 1.0;
         let gain = mf.light_gain * (if def.suppressed { crate::effects::shot().suppressed_gain } else { 1.0 });
         let gas = !crate::fogofwar::fog_of_war_air_hides(g, shooter);
         let lights = crate::effects::spawn_shot(g, muzzle, dir, &crate::effects::SpawnShotO {
-            seed,
             light_gain: Some(gain),
             light_range: mf.light_range,
             track: Some(crate::effects::Track::Muzzle { by: shooter }),
@@ -769,7 +767,7 @@ pub fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, i
             who: Some(who),
             blind: if o.blind.unwrap_or(false) { Some(true) } else { None },
             serial,
-            ..crate::game::GameEvent::zeroed()
+            ..crate::game::GameEvent::default()
         };
         g.events.push(ev);
     }
@@ -829,7 +827,7 @@ mod tests {
     /// what a call writes on the lent glass is on the shell afterwards (the pellets of one shell share it)
     #[test]
     fn a_shell_gets_its_glass_back() {
-        let mut shell = crate::shotgun::Shell::zeroed();
+        let mut shell = crate::shotgun::Shell::default();
         let mut pel = Some(&mut shell);
         with_glass(&mut pel, |sh| { sh.unwrap().glass.set(crate::Num(7.0), vec![1.0]); });
         assert_eq!(shell.glass.get(crate::Num(7.0)).map(|v| v.len()), Some(1));

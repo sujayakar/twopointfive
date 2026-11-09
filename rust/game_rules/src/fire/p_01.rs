@@ -295,7 +295,6 @@ mod tests {
     // (The arithmetic goes by the knob table through the private `*_with` helpers: fire_pops and the rest only lend them `g.k.fire`.)
     // The bits were printed by the TypeScript under bun with EXACT.on, from src/game/fire.ts of this tree.
     use super::*;
-    use crate::knobs::page_fire;
 
     #[test]
     fn the_seed_and_h01_match_the_typescript() {
@@ -313,7 +312,7 @@ mod tests {
 
     #[test]
     fn the_cracks_match_the_typescript() {
-        let k = page_fire();
+        let k = crate::knobs::FireK::page();
         let one = |seed, time, back| {
             let v = pops_with(&k, seed, time, back);
             assert_eq!(v.len(), 1);
@@ -327,7 +326,7 @@ mod tests {
 
     #[test]
     fn the_flicker_matches_the_typescript() {
-        let k = page_fire();
+        let k = crate::knobs::FireK::page();
         let cases: [(f64, f64, u64); 5] = [
             (0.3, 10.0, 0x3ff035f24fcffb2c),
             (0.77, 123.456, 0x3ff86c2289bbfc56),
@@ -342,7 +341,7 @@ mod tests {
 
     #[test]
     fn the_flame_axis_matches_the_typescript() {
-        let k = page_fire();
+        let k = crate::knobs::FireK::page();
         let cases: [(f64, [f64; 2], [u64; 4]); 3] = [
             (0.5, [1.5, -0.75], [0x3fb7c74a5a234cee, 0xbfa7c74a5a234cee, 0x3fd1d577c39a79b3, 0xbfc1d577c39a79b3]),
             (3.0, [2.5, 1.1], [0x3ff605fcfd04d500, 0x3fe3616dfd606985, 0x3fd58752997b9b3e, 0x3fc2f1f6c48140f0]),
@@ -374,7 +373,7 @@ mod tests {
     /// a lamp on a fixture, with no box hung on it
     fn stand() -> (crate::game::Game, FixtureId, LightId) {
         let mut g = crate::game::Game::blank();
-        let l = g.tab.light.push(crate::render_lights::RtLight::zeroed());
+        let l = g.tab.light.push(crate::render_lights::RtLight::default());
         let mut f = crate::sim_lightshome::Fixture::blank();
         f.pos = [1.0, 2.0, 3.0];
         f.light = Some(l);
@@ -433,11 +432,11 @@ mod tests_need_box_rows {
     /// a lamp on a fixture, its box the world's first static
     fn stand() -> (crate::game::Game, FixtureId) {
         let mut g = crate::game::Game::blank();
-        let l = g.tab.light.push(crate::render_lights::RtLight::zeroed());
+        let l = g.tab.light.push(crate::render_lights::RtLight::default());
         let mut f = crate::sim_lightshome::Fixture::blank();
         f.pos = [1.0, 2.0, 3.0];
         f.light = Some(l);
-        let mut b = crate::scene_boxes::Box::zeroed();
+        let mut b = crate::scene_boxes::Box::default();
         b.c = [1.0, 2.0, 3.0];
         b.h = [0.5, 0.1, 0.25];
         let id = g.tab.boxes.push(b);
@@ -458,7 +457,7 @@ mod tests_need_box_rows {
     #[test]
     fn a_round_strikes_the_drum_under_its_mouth() {
         let (mut g, t) = stand();
-        let mut drum = crate::scene_boxes::Box::zeroed();
+        let mut drum = crate::scene_boxes::Box::default();
         drum.c = [1.0, 1.0, 3.0];
         let id = g.tab.boxes.push(drum);
         g.engine.world.statics.push(id);

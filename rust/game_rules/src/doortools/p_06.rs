@@ -41,7 +41,7 @@ fn cut_a(g: &Game, seat: &crate::seats::SeatRef, post: V3, face: f64, watch: V3,
     }
 }
 /// `{ post: P.pos, face: P.face, watch: the frame, stance: 'highReady', upper: 'none', move, stackSide, going, there }`: stood off from the charge
-fn standing_off(g: &Game, d: DoorId, p: &crate::orders::StackPost, name: &str) -> DoorToolsAssignA {
+pub(super) fn standing_off(g: &Game, d: DoorId, p: &crate::orders::StackPost, name: &str) -> DoorToolsAssignA {
     let c = g.dr[d].frame_centre;
     DoorToolsAssignA {
         post: Some(p.pos), face: Some(p.face), watch: Some([c[0], 1.05, c[2]]), stance: Some(crate::character::Stance::HighReady), upper: Some(crate::character::UpperMode::None),
@@ -574,7 +574,7 @@ fn step_enter(g: &mut Game, op: DoorOpId, cx: &Cx) {
     while i > 0 {
         i -= 1;
         let q = o!(g, op).queue[i];
-        let mq = crate::doorpath::DoorPathMayGoQ { gd: q.gd, pod: crate::doorpath::DoorPathMayGoQPod { pos: q.pod.pos } };
+        let mq = crate::doorpath::DoorPathMayGoQ { gd: q.gd };
         if !crate::doorpath::door_path_may_go(g, op, mq, i as f64) { continue; }
         o!(g, op).queue.remove(i);
         if o!(g, op).men.contains(&q.gd) {
@@ -786,7 +786,7 @@ fn step_place(g: &mut Game, op: DoorOpId, cx: &Cx) {
         return;
     }
     let by = g.gd[lead].callsign.clone();
-    let c = g.tab.doortools_set_charge.push(SetCharge { door: d, side, t, by });
+    let c = g.tab.doortools_set_charge.push(SetCharge { door: d, side, by });
     g.door_tools.set.push(c);
     let dp = crate::doors::door_pos(g, d);
     crate::audio_iface::game_audio_like_play(g, "lockPick", Some(dp), Some(0.6), None);
@@ -1033,7 +1033,7 @@ fn step_thr(g: &mut Game, op: DoorOpId, cx: &Cx) {
                     else if end_on { -1.0 }
                     else {
                         let arg = { let s = sl!(g, op, gd); let r = s.pie.as_ref().unwrap();
-                            DoorToolsPieNextS { pts: s.pts.clone(), i: s.i, pie: Some(DoorToolsPieNextSPie { eyes: r.eyes.clone(), knee: r.knee.clone() }) } };
+                            DoorToolsPieNextS { pts: s.pts.clone(), i: s.i, pie: Some(DoorToolsPieNextSPie { eyes: r.eyes.clone() }) } };
                         door_tools_pie_next(g, op, gd, &arg)
                     };
                 if next >= 0.0 {

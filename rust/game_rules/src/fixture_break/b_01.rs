@@ -91,7 +91,7 @@ pub fn add(g: &mut crate::game::Game, t: FixtureId, kind: f64, born: f64) -> cra
     let c: V3 = match sb { Some(b) => g.tab.boxes[b].c, None => g.tab.sim_lightshome_fixture[t].pos };
     let seed = (js::to_i32(m::round(c[0] * 100.0) * 73856093.0) ^ js::to_i32(m::round(c[2] * 100.0) * 19349663.0) ^ js::to_i32(m::round(c[1] * 100.0) * 83492791.0)) as f64;
     let scan = state(g).scan;
-    let mut r = Rec { t, kind, born, seed, seen: scan, hinge: c, uh: [1.0, 0.0, 0.0], l: 0.0, w: 0.0, th: 0.0, om: 0.0, rest: 0.0, still: false, hang: Vec::new(), pieces: Vec::new(),
+    let mut r = Rec { t, born, seed, seen: scan, hinge: c, uh: [1.0, 0.0, 0.0], l: 0.0, w: 0.0, th: 0.0, om: 0.0, rest: 0.0, still: false, hang: Vec::new(), pieces: Vec::new(),
         pop: 0.0, last_slot: -1.0, glass_out: false, tip: c, emits: 0.0, phase: 0.0, fall_at: f64::INFINITY, h0: c, th0: 0.0, t0: 0.0, lie: c, uh0: [1.0, 0.0, 0.0], skew: 0.0, lay: 0.0 };
     let beat = born > -1e8;
     if !beat { r.pop = f.pops.len() as f64; r.glass_out = true; }

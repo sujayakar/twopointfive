@@ -536,7 +536,7 @@ pub fn row_of(g: &mut crate::game::Game, i: f64, field: crate::kit::KitField) ->
 /// What a step of one row of member i's card would do, nothing written, as his card is worn.   (kit.ts kitPeek)
 pub fn kit_peek(g: &mut crate::game::Game, i: f64, field: crate::kit::KitField, dir: f64) -> crate::kit::KitPeek {
     let p = on_worn(g, i, &mut |g: &mut Game| peek(g, i, field, dir), None);
-    KitPeek { value: p.value, why: p.why, passed: p.passed }
+    KitPeek { value: p.value, why: p.why }
 }
 
 /// A step of one row: the value it lands on, wrapping; or `why` and the value as it stands.   (kit.ts peek)
@@ -575,10 +575,10 @@ pub fn peek(g: &mut crate::game::Game, i: f64, field: crate::kit::KitField, dir:
 pub fn kit_try(g: &mut crate::game::Game, i: f64, field: crate::kit::KitField, dir: f64) -> crate::kit::KitTry {
     on_worn(g, i, &mut |g: &mut Game| {
         let p = peek(g, i, field, dir);
-        if !p.why.is_empty() { return KitTry { ok: false, value: p.value, why: p.why, passed: p.passed }; }
+        if !p.why.is_empty() { return KitTry { ok: false, why: p.why, passed: p.passed }; }
         let row = row_of(g, i, field).expect("peek found the row");
         write_row(g, i, &row, &p.value);
-        KitTry { ok: true, value: p.value, why: p.why, passed: p.passed }
+        KitTry { ok: true, why: p.why, passed: p.passed }
     }, Some(&mut |_g: &mut Game, r: KitTry| r.ok))
 }
 
@@ -589,11 +589,6 @@ fn write_row(g: &mut Game, i: f64, row: &KitRow, v: &KitValue) {
     row_set(g, row, &mut card, v);
     g.m.kit.kit.members[at] = card;
     g.m.kit.kit_note[at] = String::new();
-}
-
-/// Step one row to its next or last value, wrapping; kept. Returns the value the row now has.   (kit.ts kitStep)
-pub fn kit_step(g: &mut crate::game::Game, i: f64, field: crate::kit::KitField, dir: f64) -> crate::kit::KitValue {
-    kit_try(g, i, field, dir).value
 }
 
 /// Set one row outright; refused for a value the row does not offer, or one his pouches have no room for.   (kit.ts kitSet)
@@ -665,17 +660,6 @@ pub fn kit_preset_why(g: &mut crate::game::Game, i: f64, p: crate::kit::KitPrese
     }, None)
 }
 
-/// A set on all five at once (always a legal fill).   (kit.ts kitPresetAll)
-pub fn kit_preset_all(g: &mut crate::game::Game, p: crate::kit::KitPreset) {
-    for at in 0..(KIT_MEMBERS as usize) {
-        let t = table_in_force(g);
-        let c = set_card_base(g, at as f64, p, t.as_ref());
-        g.m.kit.kit.members[at] = c;
-        g.m.kit.kit_note[at] = String::new();
-    }
-    g.m.kit.deal_own = false;
-}
-
 /// Which set member i's card is, if it is exactly one.   (kit.ts kitPresetOf)
 pub fn kit_preset_of(g: &mut crate::game::Game, i: f64) -> Option<crate::kit::KitPreset> {
     let mut m = kit_shown(g, i);
@@ -719,7 +703,7 @@ fn moved_rows(g: &Game, rows: &[KitRow], a: &mut MemberKit, b: &mut MemberKit) -
 /// What a paste would do, nothing written, as his card is worn.   (kit.ts kitPastePeek)
 pub fn kit_paste_peek(g: &mut crate::game::Game, i: f64, from: &crate::kit::MemberKit) -> crate::kit::KitPastePeek {
     let p = on_worn(g, i, &mut |g: &mut Game| paste_peek(g, i, from), None);
-    KitPastePeek { card: p.card, changed: p.changed, why: p.why }
+    KitPastePeek { changed: p.changed, why: p.why }
 }
 
 /// The card a paste would make, the rows of his it would move, why it would be refused ('' = taken).   (kit.ts pastePeek)
@@ -751,9 +735,6 @@ pub fn kit_paste(g: &mut crate::game::Game, i: f64, from: &crate::kit::MemberKit
 pub fn kit_wears(g: &mut crate::game::Game, i: f64, from: &crate::kit::MemberKit) -> bool {
     kit_paste_peek(g, i, from).changed.is_empty()
 }
-
-
-
 
 /// `out[field] = v` of a stored value, for a row with no reader of its own (one its value was found on, so the value's kind fits the field).
 fn put_field(card: &mut MemberKit, field: KitField, v: &KitValue) {
@@ -875,7 +856,7 @@ mod tests {
     use super::*;
 
     fn card(smoke: f64, bangs: f64) -> MemberKit {
-        let mut m = MemberKit::zeroed();
+        let mut m = MemberKit::default();
         m.smoke = smoke;
         m.bangs = bangs;
         m

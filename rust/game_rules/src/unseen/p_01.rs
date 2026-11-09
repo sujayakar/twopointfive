@@ -7,7 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-
 // ------------------------------------------------------------ the state
 
 /// `g = viewOf(g, gd)`: run `f` in the game as this teammate's seat has it. The seat already on Game is that view: re-entrant by this test (seats.ts viewOf)
@@ -117,11 +116,6 @@ pub fn unseen_live(g: &mut Game) -> bool {
         g.stats.unseen.seconds += dt;
     }
     if live != was {
-        let what = if live { UnseenModUNSEENLOGItemWhat::On } else { UnseenModUNSEENLOGItemWhat::Off };
-        g.m.unseen.unseen_log.push(UnseenModUNSEENLOGItem { t: now, what, why });
-        if g.m.unseen.unseen_log.len() > 200 {
-            g.m.unseen.unseen_log.drain(0..100);
-        }
         if live {
             g.stats.unseen.spells += 1;
             let k = crate::seats::view_key(g, &crate::seats::here(g));
@@ -353,20 +347,6 @@ pub fn unseen_word(g: &Game, seat: &crate::seats::SeatRef) -> Option<String> {
     if live { Some(String::from("sneaking")) } else { None }
 }
 
-/// (unseen.ts unseenSummary)
-pub fn unseen_summary(g: &mut Game) -> String {
-    let first = if unseen_live(g) {
-        String::from("sneaking with the player")
-    } else {
-        alloc::format!("not sneaking ({})", state_of(g).why)
-    };
-    let st = &g.stats.unseen;
-    alloc::format!(
-        "{} · spells {} · held {} · held for glass {} · wall places {} ({} handed back to a door's lane)",
-        first, st.spells, st.held, st.held_glass, st.wall_places, st.wall_lost
-    )
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -390,7 +370,7 @@ mod tests {
     fn a_wall_counts_once_his_back_has_been_on_it_a_beat() {
         let (mut g, pl) = game_with_sam();
         assert!(!on_wall(&mut g, pl));
-        g.pl[pl].wall = Some(crate::player::WallHold::zeroed());
+        g.pl[pl].wall = Some(crate::player::WallHold::default());
         assert!(on_wall(&mut g, pl));   // a hold with no clock counts at once
         let secs = g.k.unseen.wall_secs;
         g.pl[pl].wall.as_mut().unwrap().hit_t = Some(secs - 0.01);
@@ -419,7 +399,7 @@ mod tests {
         let gd = GuardId(0);
         g.time = 5.0;
         assert!(!off_wall(&mut g, gd));   // Sam on no wall
-        g.pl[pl].wall = Some(crate::player::WallHold::zeroed());
+        g.pl[pl].wall = Some(crate::player::WallHold::default());
         assert!(off_wall(&mut g, gd));    // no place dealt
         g.m.unseen.on_wall_at.set(gd, 5.0);
         assert!(!off_wall(&mut g, gd));   // a place dealt this frame

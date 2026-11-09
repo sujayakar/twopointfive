@@ -31,10 +31,6 @@ pub fn handle_of(g: &mut crate::game::Game, d: DoorId) -> V3 {
 
 /// A line of the order's log, newest last. (shutdoor.ts note)
 pub fn note(g: &mut crate::game::Game, gd: GuardId, d: DoorId, what: &str) {
-    let row = ShutdoorModSHUTDOORLOGItem { t: g.time, who: g.gd[gd].callsign.clone(), door: g.dr[d].def.name.clone(), what: String::from(what) };
-    let log = &mut g.m.shutdoor.shutdoor_log;
-    log.push(row);
-    if log.len() > 200 { log.drain(0..50); }
 }
 
 /// Does d stand open (off its hinges it reads wide open: its row is there, greyed). (shutdoor.ts standsOpen)
@@ -476,7 +472,7 @@ pub fn register_shut_door(g: &mut crate::game::Game) {
         targets: vec![crate::orders::TargetKind::Door],
         ack: Some(vec![String::from("shutting it."), String::from("got the door.")]),
         stands_in: Some(crate::orders::OrderDefStandsIn { for_: String::from(crate::orders::rows::charge::ORDER.id) }),
-        ..crate::orders::OrderDef::zeroed()
+        ..crate::orders::OrderDef::default()
     });
     let id = crate::orders::squad_orders_row(g, def);
     crate::orders::squad_orders_register(g, id, None);

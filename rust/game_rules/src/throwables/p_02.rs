@@ -19,9 +19,9 @@ pub fn throwables_ray(g: &mut crate::game::Game, ro: V3, rd: V3, tmax: f64) -> O
     let st = crate::scene_collision::raycast(g, ro, rd, tmax);
     let ph = crate::props::prop_system_raycast(g, ro, rd, match &st { Some(s) => s.t, None => tmax });
     if let Some(ph) = ph {
-        return Some(ThrowablesRay { t: ph.t, n: ph.n, prop: Some(ph.prop) });
+        return Some(ThrowablesRay { t: ph.t });
     }
-    st.map(|s| ThrowablesRay { t: s.t, n: s.n, prop: None })
+    st.map(|s| ThrowablesRay { t: s.t })
 }
 
 /// The rows are the list: where `items` is not the list the rows were last laid in, what left it leaves with its numbers and the rows are laid anew.   (throwables.ts Throwables.sync)

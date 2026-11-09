@@ -68,3 +68,29 @@ fn nobody_fires_with_his_magazine_out_and_no_change_stands_still() {
     }
     assert!(ours > 60 && theirs > 60, "the staging is wrong: the squad's men were changing magazine for {ours} frames and theirs for {theirs}");
 }
+
+/// The office's room clear with nobody on the floor but the squad, its first man with `rounds` in his long gun and no other: how long until he has begun a change, if he does within `secs`.
+fn begins(seed: u32, rounds: f64, secs: f64) -> Option<f64> {
+    let mut p = Play::mission("office.json", "?levelFile=office.json&roomclear&squad4", &Opts { seed, ..Default::default() });
+    p.sam_unhurt();
+    p.run(0.1);
+    let mates = p.mates();
+    p.drop_all_but(&[]);
+    let m = mates[0];
+    p.run(6.0);
+    p.no_second_gun(m);
+    p.gun_has(m, rounds);
+    p.until(secs, |p| p.reloading(m).is_some())
+}
+
+/// THE RULE: a man left with an empty gun on a quiet floor changes his magazine then; with a low one, once it has been quiet a while; with a full one, never.
+/// A FAILURE MEANS: the last man of a fight walks into the next room on an empty gun, and his first pull there is a click.
+#[test]
+fn a_man_on_a_quiet_floor_sees_to_his_gun() {
+    for s in SEEDS {
+        let dry = begins(s, 0.0, 10.0).unwrap_or_else(|| panic!("seed {s}: ten seconds on a quiet floor with nothing in his gun"));
+        assert!(dry < 1.0, "seed {s}: dry, and {dry:.1} s before he saw to it");
+        assert!(begins(s, 3.0, 10.0).is_some(), "seed {s}: ten seconds on a quiet floor with three rounds in his gun");
+        assert!(begins(s, 28.0, 10.0).is_none(), "seed {s}: he changed a magazine that was nearly full");
+    }
+}

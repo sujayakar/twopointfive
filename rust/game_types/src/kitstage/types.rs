@@ -68,7 +68,7 @@ pub struct Planned {
     pub src: Vec<(&'static str, Src)>,
     /// what is wrong with this way, in plain words (empty: it stages)
     pub problems: Vec<String>,
-    /// the set it was planned on (`plan_way`; none: the level itself)
+    /// the set it was planned on (none: the level itself)
     pub set: Option<String>,
 }
 
@@ -189,7 +189,7 @@ pub struct Beat {
 }
 /// A beat that is over, as a check reads it
 #[derive(Clone, Debug, Default)]
-pub struct BeatOver { pub n: u32, pub field: &'static str, pub i: u32, pub t: f64, pub phase: &'static str, pub marks: Vec<&'static str>, pub how: &'static str, pub rest: Option<V3>, pub drift: f64 }
+pub struct BeatOver { pub n: u32, pub field: &'static str,   pub phase: &'static str, pub marks: Vec<&'static str>, pub how: &'static str,  }
 /// a teammate's gun on its way in
 #[derive(Clone, Copy, Debug)]
 pub struct GunSwap { pub man: GuardId, pub id: crate::weapons::WeaponId, pub at: f64 }
@@ -198,7 +198,7 @@ pub struct GunSwap { pub man: GuardId, pub id: crate::weapons::WeaponId, pub at:
 pub struct Scan { pub key: Option<GuardId>, pub k: usize, pub from: f64, pub to: f64, pub t0: f64, pub next: f64, pub v: f64, pub on: bool }
 /// loud kit's cost as it last played
 #[derive(Clone, Copy, Debug, Default)]
-pub struct CostSeen { pub field: &'static str, pub i: u32, pub door: bool, pub leaf: f64, pub up: bool, pub s: f64, pub how: &'static str, pub moved: f64, pub pool: bool }
+pub struct CostSeen {    pub leaf: f64, pub up: bool, pub s: f64, pub how: &'static str, pub moved: f64, pub pool: bool }
 
 /// The director's own state
 #[derive(Clone, Debug)]

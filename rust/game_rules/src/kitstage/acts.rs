@@ -128,7 +128,7 @@ fn leaf_wait(g: &Game, st: &KitStage) -> bool { is_ajar(g, st) || (st.leaf_rest 
 pub(super) fn off_rest(g: &Game, st: &KitStage) -> bool { st.door.map_or(false, |d| !door_off(g, d) && m::abs(door_angle(g, d) - st.leaf_rest) >= 0.03) }
 fn unlock(g: &mut Game, st: &KitStage) { if let Some(d) = st.door { door_set_locked(g, d, false); } }
 fn on_door(g: &Game, st: &KitStage) -> OrderTarget { OrderTarget::Door(crate::orders::OrderTargetDoor { at: [st.foot[0], 0.0, st.foot[2]], door: the_door(st), side: st.side }) }
-fn floor(p: V3) -> OrderTarget { OrderTarget::Floor(crate::orders::OrderTargetFloor { at: [p[0], 0.0, p[2]], ..crate::orders::OrderTargetFloor::zeroed() }) }
+fn floor(p: V3) -> OrderTarget { OrderTarget::Floor(crate::orders::OrderTargetFloor { at: [p[0], 0.0, p[2]], ..crate::orders::OrderTargetFloor::default() }) }
 fn roster(g: &Game, x: GuardId) -> Who { Who::Num(crate::orders::squad_orders_squad(g, &crate::seats::here(g)).iter().position(|&o| o == x).map_or(-1.0, |i| i as f64)) }
 fn order_def(g: &Game, seat: &crate::seats::SeatRef, id: &str) -> Option<OrdersOrderDefId> { seat.orders.defs.iter().copied().find(|&d| g.tab.orders_order_def[d].id == id) }
 fn assignment_order(g: &Game, x: GuardId) -> Option<String> { crate::orders::squad_orders_of(g, &crate::seats::here(g), x).map(|a| g.tab.orders_assignment[a].order.clone()) }
@@ -185,7 +185,7 @@ pub(super) fn pools(g: &mut Game, st: &KitStage, f: Option<&str>) {
     let walls = sum("walls", 0);
     crate::wallcharge::wall_charge_set_carried(g, Some(walls));
     let mine: Vec<&'static str> = crate::kit::kit_rows(g, 0.0).iter().map(|r| r.field.as_str()).collect();
-    let empty = MemberKit::zeroed();
+    let empty = MemberKit::default();
     let c = cards.first().unwrap_or(&empty);
     let one = |k: &str| m::max(count(c, k), if Some(k) == f { 1.0 } else { 0.0 });
     let has = |k: &str| mine.iter().any(|x| *x == k) || Some(k) == f;
@@ -208,7 +208,7 @@ pub(super) fn fire_at(g: &mut Game, man: Option<GuardId>, to: V3) {
     let c = match man { Some(x) => g.gd[x].ch, None => g.pl[g.player].ch };
     let w = crate::combat::firearm_of(g, c, man.is_none());
     if !crate::weapons::firearm_fire(g, w) { crate::weapons::firearm_rearm(g, w); crate::weapons::firearm_fire(g, w); }
-    let o = crate::combat::FireOpts { steady: Some(true), ..crate::combat::FireOpts::zeroed() };
+    let o = crate::combat::FireOpts { steady: Some(true), ..crate::combat::FireOpts::default() };
     crate::combat::fire_weapon(g, c, to, man.is_none(), Some(&o));
 }
 /// WHAT A BURST LEAVES, all of it put back plain: the marks, the glass's books and holes, the panes, the destruction, the shards, every prop, every shot-out fixture; never the doors, the switches or the men. A wall left open keeps its marks, its cells and its props: they go with the restage that stands it.
@@ -499,7 +499,7 @@ fn thrown_start(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Result<(), Str
     unlock(g, st);
     match b.man {
         Some(x) => { go(g, st, x, vec![p], K.pace, 0.0, false); walk_of(st, x).unwrap().face = Some(yaw_to(v3(p), spot)); }
-        None => g.puppet = Some(GamePuppet { goal: Some(v3(p)), throw_at: Some(spot), walk: Some(K.sam_walk), ..GamePuppet::zeroed() }),
+        None => g.puppet = Some(GamePuppet { goal: Some(v3(p)), throw_at: Some(spot), walk: Some(K.sam_walk), ..GamePuppet::default() }),
     }
     if frag { stay(g, st, true); st.a.pin = Some(b.n); }
     Ok(())
@@ -980,7 +980,7 @@ fn wall_start(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Result<(), Strin
         to(g, b, "clear");
         return Ok(());
     }
-    let opts = crate::orders::GiveOpts { men: Some(men.clone()), ..crate::orders::GiveOpts::zeroed() };
+    let opts = crate::orders::GiveOpts { men: Some(men.clone()), ..crate::orders::GiveOpts::default() };
     if let Some(why) = crate::orders::squad_orders_give(g, "wallCharge", Some(&t), Some(Who::All), Some(&opts)) { b.spot = None; return keep(st, b, why); }
     b.moved = men;
     b.given = true;
@@ -996,7 +996,7 @@ fn wall_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
         g.puppet = None;
         let a = st.a.wall_ask.clone();
         let why = match a.as_ref() {
-            Some((t, men)) => { let opts = crate::orders::GiveOpts { men: Some(men.clone()), ..crate::orders::GiveOpts::zeroed() }; crate::orders::squad_orders_give(g, "wallCharge", Some(t), Some(Who::All), Some(&opts)) }
+            Some((t, men)) => { let opts = crate::orders::GiveOpts { men: Some(men.clone()), ..crate::orders::GiveOpts::default() }; crate::orders::squad_orders_give(g, "wallCharge", Some(t), Some(Who::All), Some(&opts)) }
             None => Some(String::from("no wall to set it on")),
         };
         if let Some(why) = why { st.a.refused = Some(format!("walls: {}", why)); wall_kept(st, b, &why); b.marks.push("kept"); return Step::Done; }
@@ -1323,7 +1323,7 @@ pub(super) fn finish(g: &mut Game, st: &mut KitStage, mut b: Beat, how: &'static
         g.pl[pl].wand = st.a.wand_was;
         if let Some((x, was)) = st.a.wand_kit.take() { if let Some(e) = g.m.kit.man_of.get_mut(x) { e.kit.wand = was; } }
     }
-    st.a.last = Some(BeatOver { n: b.n, field: b.field, i: b.i, t: b.time, phase: b.phase, marks: b.marks.clone(), how, rest: b.rest, drift: b.drift });
+    st.a.last = Some(BeatOver { n: b.n, field: b.field, phase: b.phase, marks: b.marks.clone(), how });
     if b.field == "smoke" && !b.mark_t.is_nan() { st.a.vent_at = b.mark_t + K.vent_secs; }
     st.a.clicked = 0.0;
     b.lit = false;
@@ -1528,7 +1528,7 @@ fn tidy(g: &mut Game, st: &mut KitStage) {
     // (the quiet picture: he gives way first: with a partner's card open his place is a step back along the wall)
     if let Some(back) = st.sam_back { st.sam = if actor(g, st).is_some() { back } else { st.sam_rest }; }
     let slack = if st.quiet && b_man.is_some() { 0.25 } else { 0.0 };
-    if !st.a.cost_t.is_nan() { g.puppet = Some(GamePuppet { aim: Some(at(st, [0.0, 0.0, QK.cost.aim_y])), ..GamePuppet::zeroed() }); }
+    if !st.a.cost_t.is_nan() { g.puppet = Some(GamePuppet { aim: Some(at(st, [0.0, 0.0, QK.cost.aim_y])), ..GamePuppet::default() }); }
     else if (!b_some || b_man.is_some()) && !b_team {
         // (his walk would stop theirs, so the men first. At a wall left open: only the men it has yet to wait for, `swap_secs` at most: then he is walked home by the same wait)
         // (and never under the man whose card just opened: he is on his way past him)

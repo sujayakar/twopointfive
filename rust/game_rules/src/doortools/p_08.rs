@@ -893,7 +893,6 @@ fn enter_go(g: &mut Game, op: DoorOpId, t: f64, queue: Vec<DoorToolsDoneItemQueu
 pub fn door_tools_enter(g: &mut crate::game::Game, op: DoorOpId) {
     if g.tab.doortools_door_op[op].thr.is_some() { door_tools_step_in(g, op); return; }
     let t = g.time;
-    let second = g.k.doortools.second;
     let (door, side, lead) = { let o = &g.tab.doortools_door_op[op]; (o.door, o.side, o.lead) };
     let n_men = g.tab.doortools_door_op[op].men.len();
     let big = crate::orders::squad_orders_big(g, &crate::seats::here(g));
@@ -954,7 +953,7 @@ pub fn door_tools_enter(g: &mut crate::game::Game, op: DoorOpId) {
             door_tools_beat(g, op, &format!("outside · {}", names.join(", ")));
         }
         let queue: Vec<DoorToolsDoneItemQueueItem> = in_men.iter().enumerate().map(|(i, &gd)| {
-            DoorToolsDoneItemQueueItem { gd, at: t + i as f64 * second, pod: deal.get(gd).copied().unwrap_or(pods[0]) }
+            DoorToolsDoneItemQueueItem { gd, pod: deal.get(gd).copied().unwrap_or(pods[0]) }
         }).collect();
         enter_go(g, op, t, queue);
         return;
@@ -964,7 +963,7 @@ pub fn door_tools_enter(g: &mut crate::game::Game, op: DoorOpId) {
     let pairs = crate::orders::squad_orders_pair(g, &men, &spots, None, None);
     let queue: Vec<DoorToolsDoneItemQueueItem> = men.iter().enumerate().map(|(i, &gd)| {
         let to = pairs.iter().find(|x| x.0 == gd).unwrap().1;
-        DoorToolsDoneItemQueueItem { gd, at: t + i as f64 * second, pod: own.iter().find(|p| p.pos == to).copied().unwrap_or(own[0]) }
+        DoorToolsDoneItemQueueItem { gd, pod: own.iter().find(|p| p.pos == to).copied().unwrap_or(own[0]) }
     }).collect();
     enter_go(g, op, t, queue);
 }
@@ -1001,7 +1000,7 @@ pub fn door_tools_blow(g: &mut crate::game::Game, c_2: Option<ChargeId>) -> Opti
     let c = match c_2 { Some(c) => Some(c), None => door_tools_nearest(g, None) };
     let who = g.ch[g.pl[g.player].ch].id;
     let r = crate::fogofwar::fog_of_war_doing(g, Some(who), &mut |g: &mut Game| door_tools_blow_raw(g, c));
-    r.map(|x| DoorToolsBlow { knocked: x.knocked, stunned: x.stunned, backblast: x.backblast })
+    r.map(|x| DoorToolsBlow {  })
 }
 
 #[cfg(test)]

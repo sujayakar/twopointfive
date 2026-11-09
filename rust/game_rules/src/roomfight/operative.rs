@@ -53,7 +53,7 @@ pub fn room_fight_new_op(g: &mut crate::game::Game, gd: GuardId) -> RoomfightOpI
     let aim: V3 = [0.0, 0.0, 0.0];
     g.tab.roomfight_op.push(Op {
         gd, meters: JsMap::new(), tgt: None, turn: None, pass: None, kept: None, track: 0.0, pre: false, ready_at: 0.0, n: 0.0, next: 0.0, lost_at: -100.0,
-        fell: None, first: true, aim, ov: OpOv { face: None, walk: None }, step: None, hot_t: -100.0, step_t: -100.0, step_by: None, door_by: None,
+        fell: None, aim, ov: OpOv { face: None, walk: None }, step: None, hot_t: -100.0, step_t: -100.0, step_by: None, door_by: None,
         funnel_t: 0.0, line_t: 0.0, line_by: None, line_at: -100.0, wall_t: 0.0, step_until: 0.0, said_t: -100.0, rounds: 0.0, held_for_friend: 0.0,
         held_for_line: 0.0, block_t: 0.0, feet_sm: None, feet_t: None, short_seen: -100.0, short_since: -100.0, short_t: -100.0,
     })
@@ -869,7 +869,7 @@ mod tests {
     #[test]
     fn the_post_moved_takes_what_is_on_it() {
         let (mut g, gd, _) = man_with_overlay();
-        let d = g.tab.roomfight_def.push(Def::zeroed());
+        let d = g.tab.roomfight_def.push(Def::default());
         g.tab.roomfight_def[d].gd = gd;
         g.tab.roomfight_def[d].pt = [1.0, 0.0, 1.0];
         g.gd[gd].covers = Some([1.0, 0.0, 1.0]);

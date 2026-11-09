@@ -1,10 +1,9 @@
-//! The types of `tracers`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `tracers`.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: Tracers, src/game/tracers.ts:58)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Tracers {
     pub pool: Vec<crate::tracers::Tracer>,
     pub live: f64,
@@ -13,7 +12,7 @@ pub struct Tracers {
     pub params: crate::tracers::TracersParams,
 }
 impl Tracers {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         Tracers {
             pool: Vec::new(),
@@ -26,8 +25,7 @@ impl Tracers {
 }
 impl Default for Tracers { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: Tracer, src/game/tracers.ts:39)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Tracer {
     pub alive: bool,
     pub from: V3,
@@ -45,49 +43,15 @@ pub struct Tracer {
     pub box_: BoxId,
     pub lamp: LightId,
 }
-impl Tracer {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Tracer {
-            alive: false,
-            from: [0.0; 3],
-            dir: [0.0; 3],
-            l: 0.0,
-            s: 0.0,
-            v: 0.0,
-            age: 0.0,
-            frames: 0.0,
-            color: [0.0; 3],
-            owner: 0.0,
-            impact: crate::tracers::TracerImpact::None,
-            arrived: false,
-            light: None,
-            box_: BoxId(0),
-            lamp: LightId(0),
-        }
-    }
-}
-impl Default for Tracer { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum TracerImpact {
-    None,
+    #[default] None,
     Solid,
     Flesh,
 }
-impl TracerImpact {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            TracerImpact::None => "none",
-            TracerImpact::Solid => "solid",
-            TracerImpact::Flesh => "flesh",
-        }
-    }
-}
 
-/// (TypeScript: inline at src/game/tracers.ts:69 Tracers.params, src/game/effects.ts:156)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct TracersParams {
     pub speed: f64,
     pub min_life: f64,
@@ -108,45 +72,6 @@ pub struct TracersParams {
     pub max_live: f64,
     pub max_lights: f64,
 }
-impl TracersParams {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        TracersParams {
-            speed: 0.0,
-            min_life: 0.0,
-            shutter: 0.0,
-            thickness: 0.0,
-            emissive: 0.0,
-            min_path: 0.0,
-            light_intensity: 0.0,
-            light_range: 0.0,
-            light_radius: 0.0,
-            ember_sparks: 0.0,
-            ember_speed: 0.0,
-            ember_cone: 0.0,
-            ember_life: 0.0,
-            ember_intensity: 0.0,
-            ember_range: 0.0,
-            ember_ttl: 0.0,
-            max_live: 0.0,
-            max_lights: 0.0,
-        }
-    }
-}
-impl Default for TracersParams { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: SparkSink, src/game/tracers.ts:20)
-#[derive(Clone, Copy, Debug)]
-pub struct SparkSink {
-}
-impl SparkSink {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SparkSink {
-        }
-    }
-}
-impl Default for SparkSink { fn default() -> Self { Self::zeroed() } }
 
 /// (src/game/tracers.ts:56 LAMP_TTL)
 pub const LAMP_TTL: f64 = 30.0;

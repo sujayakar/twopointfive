@@ -12,21 +12,20 @@ import { FollowCamera } from '../../src/host/camera';
 import { Section, Head, View } from '../../src/draw/sections';
 
 const ROOT = resolve(import.meta.dir, '../..'), BREAK = process.env.PLAY_BREAK === '1';
-const { ALL_MISSIONS, pickSearch } = await import(`${ROOT}/src/scene/scenarioList.ts`), { LOOK } = await import(`${ROOT}/src/scene/look.ts`);
-LOOK.on = true;
+const { missionRows } = await import(`${ROOT}/tools/desk.ts`) as typeof import('../desk.ts'), LISTED = missionRows();
 const wasm = faceHere(); if (!wasm) { console.error('play-check: no module of these sources (tools/blitz/face-build.ts)'); process.exit(1); }
-const instance = new WebAssembly.Instance(new WebAssembly.Module(new Uint8Array(readFileSync(wasm))), { env: { face_roll: () => { throw new Error('the game asked a die'); } } });
+const instance = new WebAssembly.Instance(new WebAssembly.Module(new Uint8Array(readFileSync(wasm))));
 const [mannequin, mannequinBin, cast, castLook] = characterFiles(ROOT), only = process.argv.slice(2);
 let fails = 0; const line = (ok: boolean, what: string, why = '') => { if (!ok) fails++; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}${why ? `\n    ${why}` : ''}`); };
 const bytes = (f: string): Uint8Array => new Uint8Array(readFileSync(resolve(ROOT, 'levels', f)));
 
-{ const stray = only.filter(id => !(ALL_MISSIONS as { id: string }[]).some(m => m.id === id)); if (stray.length) { console.error(`play-check: no mission ${stray.join(', ')}`); process.exit(2); } }
+{ const stray = only.filter(id => !LISTED.some(m => m.id === id)); if (stray.length) { console.error(`play-check: no mission ${stray.join(', ')}`); process.exit(2); } }
 /** from above nobody on the floor is the hand's to walk */
 const SKY = new Set(['tut-sky']);
 /** …and every level's file with no mission named, as an address with nothing on it but the level opens it */
-const PLAIN = [...new Set((ALL_MISSIONS as { id: string }[]).map(m => new URLSearchParams(pickSearch(m, '')).get('levelFile') ?? 'office.json'))].map(f => ({ id: `${f.replace('.json', '')} (no mission)`, words: `?levelFile=${f}` }));
-for (const m of [...ALL_MISSIONS, ...(only.length ? [] : [{ id: 'the plain address', words: '?seed=1' }, ...PLAIN])] as { id: string; words?: string }[]) { if (only.length && !only.includes(m.id)) continue;
-  const words: string = m.words ?? pickSearch(m, ''), file = new URLSearchParams(words).get('levelFile') ?? 'office.json';
+const PLAIN = [...new Set(LISTED.map(m => m.level))].map(f => ({ id: `${f.replace('.json', '')} (no mission)`, words: `?levelFile=${f}` }));
+for (const m of [...LISTED.map(m => ({ id: m.id, words: m.link })), ...(only.length ? [] : [{ id: 'the plain address', words: '?seed=1' }, ...PLAIN])]) { if (only.length && !only.includes(m.id)) continue;
+  const { words } = m, file = new URLSearchParams(words).get('levelFile') ?? 'office.json';
   const game = new DrawGame({ exports: instance.exports, bytes: 0, fetchMs: 0, compileMs: 0 }), D = game.drawn, cam = new FollowCamera(), input = { keys: new Set<string>(), pressed: new Set<string>(), buttons: 0, clicked: 0, wheel: 0, mouseX: 640, mouseY: 300 }, canvas = { clientWidth: 1280, clientHeight: 720, width: 1280, height: 720 };
   let at = 'the start', warmMs = 0, worst = 0, sum = 0, n = 0, boxes = 0;
   const where = (): [number, number] => { const o = D.at[Section.view] + View.at; return [D.f[o], D.f[o + 2]]; }, stood = (): number => D.u[D.at[Section.view] + View.stood];

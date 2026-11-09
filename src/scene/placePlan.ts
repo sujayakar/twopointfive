@@ -5,8 +5,8 @@
 // that is solved on it; that file keeps the field, its buffer and Sam's eye, and reads the plan from here.
 // WHO READS IT: render/placeField.ts (the light of a place, the look's exposure), render/wallSides.ts (which side of a wall a point is on), scene/openings.ts
 // (where a place is open to the sky), and the checks of each.
-// PLACE holds the plan's numbers AND the field's solve numbers in one table, as it always did (a tool hands one table of both: tools/qa/place-field-page.cjs
-// --place); the solve's are read by render/placeField.ts alone.
+// PLACE holds the plan's numbers AND the field's solve numbers in one table, as it always did;
+// the solve's are read by render/placeField.ts alone.
 import { Box, BoxFlag, type PlanBox } from './boxes';
 import { WORLD } from './world';
 import { type Pt, apart, narrowest, footprint, WAY } from './wayThrough';
@@ -56,7 +56,7 @@ export function placeWall(b: PlanBox): number {
   for (let k = 0; k < SLICES; k++) { const y = PLACE.maxFoot + (k + 0.5) * step; if (y0 - 0.02 <= y && y <= y1 + 0.02) bits |= 1 << k; }
   return bits;
 }
-/** OR `bits` into the cells of one box's footprint (render-side twin of game/airSim.ts stamp: a box thinner than a cell is padded to one, so a wall never leaks) */
+/** OR `bits` into the cells of one box's footprint (render-side twin of src/picture/air.ts stamp: a box thinner than a cell is padded to one, so a wall never leaks) */
 export function stampCells(cx: number, cz: number, hx: number, hz: number, yaw: number, each: (k: number) => void): void {
   const cell = 1 / PLACE_RES, c = Math.cos(yaw), s = Math.sin(yaw), square = Math.abs(c * s) < 0.02;
   const need = cell * (square ? 0.5 : 0.75) + 1e-4, ex = Math.max(hx, need), ez = Math.max(hz, need);
@@ -165,11 +165,6 @@ export function placeMask(statics: readonly Box[], dynamics: readonly Box[], out
   gaps.forEach((g, n) => { if (steps[n]) onLine(g, k => { door[k] = 1; deg[k] = steps[n]; }); });
   for (let k = 0; k < W * H; k++) if (out[k] !== 255) out[k] = (door[k] ? 1 : 2) | (roof[k] ? 0 : 4) | (door[k] ? deg[k] << 3 : 0);
   return out;
-}
-/** "is this spot free floor under the open sky?" on the plan of a list of boxes as they stand, for a rule that asks before the world is filled. Off the map is the open air. */
-export function skyPlan(statics: readonly Box[]): (x: number, z: number) => boolean {
-  const m = placeMask(statics, []);
-  return (x, z) => { const i = Math.floor((x - WORLD.rcMin[0]) * PLACE_RES), j = Math.floor((z - WORLD.rcMin[2]) * PLACE_RES); if (i < 0 || j < 0 || i >= PLACE_W || j >= PLACE_H) return true; const v = m[j * PLACE_W + i]; return v !== 255 && (v & 4) !== 0; };
 }
 /** a number that changes when the map's walls would: every box that is part of a wall or a roof */
 function wallsKey(statics: readonly Box[]): number {

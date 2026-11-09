@@ -116,7 +116,6 @@ pub fn stand_off_spot(g: &mut crate::game::Game, d: RoomfightDefId, t: Roomfight
         iz += 1;
     }
     js::sort_by(&mut cand, |a, b| a.d - b.d);
-    let team = g.gd[gd].team;
     // dark and well clear of his mates and their lines · any light, a body's width clear · a floor too small for lanes: behind a mate
     for (apart, lane, dark) in [(1.4, 0.8, true), (1.0, 0.45, false), (1.0, 0.0, false)] {
         let mut best: Option<(V3, f64)> = None;
@@ -372,7 +371,7 @@ pub fn boots(g: &mut crate::game::Game, gd: GuardId, last: f64) -> f64 {
     let ev = crate::game::GameEvent {
         kind: crate::director::EventKind::Step, pos: g.ch[c].pos, time: g.time, loud: false,
         level: Some(if speed > 2.0 { 0.8 } else { 0.4 }), who: Some(g.ch[c].id), serial,
-        ..crate::game::GameEvent::zeroed()
+        ..crate::game::GameEvent::default()
     };
     g.events.push(ev);
     g.time
@@ -427,14 +426,10 @@ pub fn consider(g: &mut crate::game::Game, d: RoomfightDefId) {
     let gd = gd_of(g, d);
     let again = g.k.pressure.again_secs;
     let hold = crate::roomfight::DefMode::Hold;
-    // (rallyAt Infinity = somebody pinned him to his room: not ours either)
-    let ok0 = df(g, d).mode == hold && !state_of(g).of.has(d) && df(g, d).noise_out && g.gd[gd].held.is_none() && df(g, d).rally_at != m::INF
-        && !crate::control::man::blind(g, gd) && !crate::control::man::staggered(g, gd)
+    let ok0 = df(g, d).mode == hold && !state_of(g).of.has(d) && df(g, d).noise_out && crate::owner::kept(g, gd, crate::owner::by::PRESS).is_none()
         && g.time - df(g, d).noise_t < g.k.pressure.memory_secs && g.time - g.gd[gd].last_seen_t > 3.0
         && g.time - state_of(g).done_at.get(d).copied().unwrap_or(-100.0) > again && !state_of(g).outs.iter().any(|o| o.def == d)
-        && !{ let n = df(g, d).noise_at; crate::lanes::lane_bars(g, gd, n) }
-        && !crate::owner::has(g, gd, crate::owner::by::SQUAD)
-        && !(g.k.digin.on && crate::digin::dig_in_stays(g, gd));
+        && !{ let n = df(g, d).noise_at; crate::lanes::lane_bars(g, gd, n) };
     // the last of them alive has no others to go to, and nobody on the net to call: he keeps his room
     let lone = last_alone(g, d);
     let ok = ok0 && !lone;
@@ -503,7 +498,7 @@ pub fn consider(g: &mut crate::game::Game, d: RoomfightDefId) {
     let mut others: Vec<RoomfightDefId> = Vec::new();
     if by_way {
         for &x in &defs {
-            if x != d && alive(g, x) && df(g, x).room == my_room && df(g, x).mode != crate::roomfight::DefMode::Free && !state_of(g).of.has(x) && g.gd[gd_of(g, x)].held.is_none() && df(g, x).rally_at != m::INF { others.push(x); }
+            if x != d && alive(g, x) && df(g, x).room == my_room && df(g, x).mode != crate::roomfight::DefMode::Free && !state_of(g).of.has(x) && crate::owner::kept(g, gd_of(g, x), crate::owner::by::PRESS).is_none() { others.push(x); }
         }
     }
     let far_room = by_way && my_room.is_some() && !next_door(g, my_room, tt);
@@ -594,7 +589,7 @@ pub fn consider(g: &mut crate::game::Game, d: RoomfightDefId) {
             st.serial += 1.0;
             st.presses.push(crate::pressure::Press {
                 id: st.serial, room: tt, at: tat, t0: now, phase: if forms_now { PressPhase::Gather } else { PressPhase::Go }, team_in: false, set_at: -1.0,
-                lone_at: None, sprung: None, listen_at: 0.0, moving: false, word_at: 0.0, go_at: now, n0: 0.0, lone: false, men: Vec::new(),
+                lone_at: None, sprung: None, moving: false, word_at: 0.0, go_at: now, n0: 0.0, lone: false, men: Vec::new(),
             });
             st.stats.press_formed += 1.0;
             st.presses.len() - 1
@@ -1167,13 +1162,6 @@ pub fn awaiting(g: &mut crate::game::Game) -> bool {
 /// a report was called and a room has since been hit: all hands, for the rest of the fight. (pressure.ts stoodTo)
 pub fn stood_to(g: &mut crate::game::Game) -> bool {
     g.k.pressure.warned && state_of(g).warn.map_or(false, |w| w.call_t >= 0.0 && w.phase == WarnPhase::Over)
-}
-/// a man of the reaction force: a report stands (or its room was hit only just now) and the room it points at is not his. (pressure.ts readyMan)
-pub fn ready_man(g: &mut crate::game::Game, d: RoomfightDefId, now: f64) -> bool {
-    if !g.k.pressure.warned { return false; }
-    let w = match state_of(g).warn { Some(w) => w, None => return false };
-    if w.room.is_none() || df(g, d).room == w.room { return false; }
-    w.phase != WarnPhase::Over || (w.call_t >= 0.0 && now - w.hit_t.unwrap_or(m::NAN) < g.k.pressure.stand_grace)
 }
 
 #[cfg(test)]

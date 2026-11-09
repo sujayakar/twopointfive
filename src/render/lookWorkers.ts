@@ -1,5 +1,5 @@
 // THE LOOK'S MAPS ARE MADE ON WORKERS (11-05). A map is a third of a second of arithmetic and a level names twenty: seconds of one thread, which the boot
-// waits for (main.ts awaits gbuffer.needLook beside the pipelines). Where the shaders are compiling for half a minute nobody sees it; on a machine whose
+// waits for (host/drawpage.ts awaits gbuffer.needLook beside the pipelines). Where the shaders are compiling for half a minute nobody sees it; on a machine whose
 // shaders are cached it is the last thing the start card waits for. The layers do not depend on each other, so each is made by render/lookTex.ts lookLayer on
 // a worker and handed back (its two arrays are moved, not copied). THE SAME BYTES: a worker runs the same file (lookWorkerSource.ts hands it over as text when
 // the page is bundled) on the same engine AND THE SAME MATHS (the page computes on the game's own sin and cos, math/exact.ts; a worker is told which with

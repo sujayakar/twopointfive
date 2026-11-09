@@ -1,13 +1,12 @@
 #!/bin/bash
 # WHAT THE RUST GAME NEVER RUNS, DELETED, AND SAID IN LISTS (tools/fold/README.md, "What the game never runs"):
 #   tools/fold/never.sh [--tests-too] [--scratch DIR] [--report FILE]
-# 1. `fold --unnamed --write`: the free functions of the body files that nothing names, to a fixed point.
+# 1. `fold unnamed --write`: the free functions of the body files that nothing names, to a fixed point.
 # 2. `sharp.sh`: what the compiler's own reading still calls dead, the unit tests counted as live, to a fixed point.
 # 3. `sharp.sh --dry --no-tests`: one more reading without the tests. It names what only a unit test uses.
 # With --tests-too:
 # 4. `fold tests-cut`: the tests that are there for what 3 named go (a test that also calls a live function stays);
 # 5. `sharp.sh` again: what those tests alone held up goes, by the compiler's reading; then 3 once more for what is still kept.
-# Last, `fold --write` once more: a settled row whose only writer was dead code is a constant now.
 # Then every crate under rust/ is checked with all its targets, and the run stops red if one does not.
 # The report: lines by module before and after, then the lists.
 # Exit: 0 done · 3 a step failed (the tree is left as that step left it). Each check of the game crate takes several GB and about
@@ -26,7 +25,7 @@ section() { awk -v h="$2" 'index($0, h) == 1 { on = 1; next } /^##/ { on = 0 } o
 step() { "$@" > "$S/step.out" 2>&1 || { tail -8 "$S/step.out" | cut -c1-300; echo "never.sh: failed: $*"; exit 3; }; }
 count > "$S/before.txt"
 
-"$FOLD" --unnamed --write --report "$S/unnamed.md" > "$S/unnamed.out" || { cat "$S/unnamed.out"; echo "never.sh: the pass by name failed"; exit 3; }
+"$FOLD" unnamed --write --report "$S/unnamed.md" > "$S/unnamed.out" || { cat "$S/unnamed.out"; echo "never.sh: the pass by name failed"; exit 3; }
 count > "$S/mid.txt"
 rm -rf "$S/sharp" "$S/kept" "$S/sharp2" "$S/kept2" "$S/tests.md"
 step tools/fold/sharp.sh --scratch "$S/sharp"
@@ -44,8 +43,6 @@ if [ -n "$TOO" ]; then
   count > "$S/after.txt"
 fi
 
-"$FOLD" --write --report "$S/fold-after.md" > "$S/fold-after.out" || { cat "$S/fold-after.out"; echo "never.sh: the fold after the passes failed"; exit 3; }
-count > "$S/after.txt"
 # THE CLOSING PROOF: every crate under rust/ still checks, with all its targets (its binaries and its tests; the face for wasm).
 # A function the game never runs but another crate calls is live: a root this missed shows here as an error, and the run stops red.
 for c in rust/*/; do
@@ -69,7 +66,6 @@ N4=0; [ -d "$S/sharp2" ] && N4=$(cat "$S"/sharp2/round-*.md | grep -c '^- .* lin
   echo "- deleted, only a function deleted here named it: $N2 functions"
   echo "- deleted, the compiler's reading (reached from nothing the game, another crate under rust/ or a unit test uses): $N3 items"
   [ -f "$S/tests.md" ] && echo "- deleted with the tests that were its only users: $N4 items, and $(head -1 "$S/tests.md")"
-  echo "- settled rows whose only writer went with the dead code, now constants:$(sed -n 's/^  folded://p' "$S/fold-after.out")"
   echo "- KEPT although the game never runs it, because a unit test that stays uses it: $(head -1 "$KEPT" | sed 's/ (nothing written: --write)//')"
   echo
   echo "## Lines by module, where they changed (before -> after)"

@@ -6,6 +6,7 @@ import { handsOf, keptHands } from '../tape/keep';
 import type { ReplayNote } from '../tape/format';
 import { parseLines } from '../tape/kept';
 import { keptStore } from '../tape/keptui';
+import { otherModule } from '../tape/module';
 
 async function opened(b: Uint8Array): Promise<Uint8Array> {
   if (b[0] !== 0x1f || b[1] !== 0x8b) return b;
@@ -23,8 +24,8 @@ export async function tapeAsked(q: URLSearchParams): Promise<Uint8Array | null> 
 }
 /** is this a kept visit's name (host/session.ts) */
 export const keptName = (s: string): boolean => /^\d{8}T\d{6}-\w+$/.test(s);
-/** the notes on a kept visit */
-export async function keptNotes(sid: string): Promise<ReplayNote[]> { return (await keptStore().rows()).find(r => r.sid === sid)?.notes?.slice() ?? []; }
+/** what is kept beside a visit's tape: its notes, and whether it was played on another module than this page's */
+export async function keptBeside(sid: string): Promise<{ notes: ReplayNote[]; other: boolean }> { const r = (await keptStore().rows()).find(x => x.sid === sid); return { notes: r?.notes?.slice() ?? [], other: !!r && otherModule(r.module) }; }
 /** the address this tape plays at, or null: this page is at it */
 export function tapeAddress(bytes: Uint8Array, q: URLSearchParams): string | null {
   const S = new HandWalk(bytes, HAND.count).start, own: Record<string, string> = { [PLAYTAPE]: q.get(PLAYTAPE) ?? '' }; { const at = q.get('at'); if (at !== null) own.at = at; }

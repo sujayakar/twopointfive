@@ -40,7 +40,7 @@ pub fn look_keyed(g: &crate::game::Game, b: AnyBoxId) -> bool {
 
 /// boxOf's value, before it has a place in the table
 fn box_value(c: V3, h: V3, yaw: f64, albedo: V3, emissive: V3, flags: f64, owner: f64, rot: Option<Quat>, name: Option<String>) -> Bx {
-    Bx { c, h, yaw, albedo, emissive, flags, owner, cut_height: 1e6, rot, name, ..Bx::zeroed() }
+    Bx { c, h, yaw, albedo, emissive, flags, owner, cut_height: 1e6, rot, name, ..Bx::default() }
 }
 
 /// Is this piece of trim drawn: while the box that says it is. (boxes.ts trimDrawn)
@@ -194,6 +194,8 @@ fn footprint_of(b: &Bx) -> [f64; 2] {
 /// brought up as a tick opens. A game with none, or a grid of fewer statics than stand, asks the rest one by one and has the same answers.
 #[derive(Clone, Debug)]
 pub struct RayGrid { start: Vec<u32>, items: Vec<u32>, globals: Vec<f64>, n: f64, shape: Vec<f64>, fill: Vec<u32>, ranges: Vec<i32>, pub builds: u32 }
+/// (made from the statics: in no bytes)
+impl crate::bytes::ToBytes for RayGrid { fn w(&self, _: &mut crate::bytes::W) {} }
 impl Default for RayGrid {
     fn default() -> Self {
         let wd = crate::scene_world::world();

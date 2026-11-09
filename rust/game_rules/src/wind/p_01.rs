@@ -233,7 +233,6 @@ fn gpu_of(s: &WindSource) -> crate::smoke_types::WindGpuSource {
             WindSourceKind::Jet => crate::smoke_types::WindGpuSourceKind::Jet,
             WindSourceKind::Storm => crate::smoke_types::WindGpuSourceKind::Storm,
         },
-        name: s.name.clone(),
         pos: s.pos,
         dir: s.dir,
         speed: s.speed,
@@ -242,9 +241,6 @@ fn gpu_of(s: &WindSource) -> crate::smoke_types::WindGpuSource {
         r0: s.r0,
         d_max: s.d_max,
         floor_y: s.floor_y,
-        interior: s.interior,
-        annex: s.annex,
-        roofs: s.roofs.clone(),
         field: s.field,
         bound: s.bound,
         kinds: s.kinds,
@@ -397,7 +393,7 @@ pub fn wind_blows(g: &crate::game::Game) -> bool {
 }
 
 /// The storm's wind vector when it should be felt, none otherwise. (wind.ts Wind.stormWind)
-#[doc(hidden)] pub fn wind_storm_wind__body(g: &crate::game::Game) -> Option<V3> {
+pub fn wind_storm_wind(g: &crate::game::Game) -> Option<V3> {
     if !wind_blows(g) {
         return None;
     }
@@ -579,17 +575,6 @@ pub fn wind_describe(g: &crate::game::Game) -> Vec<String> {
         .collect()
 }
 
-
-#[doc(hidden)] pub fn wind_storm_wind(g: &mut crate::game::Game) -> Option<V3> {
-    use crate::io::Io;
-    if g.taps & (1u64 << 12) == 0 { return wind_storm_wind__body(g); }
-    let mut o = crate::io::W::new(); 
-    let r = wind_storm_wind__body(g);
-    let mut a = crate::io::W::new(); r.w(&mut a);
-    crate::out_events::push_tap(g, 12, &o.b, &a.b);
-    r
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -669,7 +654,7 @@ mod tests {
 
     #[test]
     fn a_vents_cycle() {
-        let mut v = crate::scene_level::VentDef::zeroed();
+        let mut v = crate::scene_level::VentDef::default();
         assert!(vent_due(&v, 123.0)); // no period: always
         v.period = Some(10.0);
         v.duty = Some(0.5);
@@ -683,7 +668,7 @@ mod tests {
 
     fn with_storm() -> (Game, WindWindSourceId) {
         let mut g = Game::blank();
-        let mut s = WindSource::zeroed();
+        let mut s = WindSource::default();
         s.why = WindWhy::Storm;
         s.kind = WindSourceKind::Storm;
         s.name = String::from("storm");
@@ -707,7 +692,7 @@ mod tests {
     #[test]
     fn a_reroof_writes_the_one_storm_and_takes_out_only_extra() {
         let (mut g, st) = with_storm();
-        let mut door = WindSource::zeroed();
+        let mut door = WindSource::default();
         door.why = WindWhy::Glass;
         door.name = String::from("twin");
         let keep = g.tab.wind_wind_source.push(door.clone());

@@ -189,7 +189,7 @@ fn or<T: Copy>(a: Option<T>, b: T) -> T { a.unwrap_or(b) }
 /// a hung lamp as the picture has it
 struct Hung { kind: f64, pos: V3, dir: V3, color: V3, intensity: f64, range: f64, inner: f64, outer: f64, radius: f64, volumetric: f64, broad: bool }
 fn hang(g: &mut Game, name: &str, h: &Hung) -> LightId {
-    let mut l = crate::render_lights::RtLight::zeroed();
+    let mut l = crate::render_lights::RtLight::default();
     l.name = String::from(name); l.group = String::from("kitview"); l.fixture_box = -1.0; l.ttl = -1.0;
     let id = g.tab.light.push(l);
     crate::render_lights::light_set_add(g, id);
@@ -463,7 +463,7 @@ let (intensity, emissive) = (home::fixture_base_intensity(g, t), g.tab.sim_light
     {
         if let (Some(fx), true) = (plan.lamps.porch.fixture.as_ref(), porch_i > 0.0) {
             let (c, half) = (porch_color, or(o.porch.fix_half, T.fixture.half));
-            let mut p = MakeBoxP::zeroed();
+            let mut p = MakeBoxP::default();
             p.c = at_of(&plan, fx.at);
             p.h = half;
             p.yaw = Some(m::atan2(plan.s[1], plan.s[0]));
@@ -481,7 +481,7 @@ let (intensity, emissive) = (home::fixture_base_intensity(g, t), g.tab.sim_light
         if q {
             let c = porch_color;
             let porch = st.porch.unwrap();
-            let mut d = FixtureDef::zeroed();
+            let mut d = FixtureDef::default();
             d.name = String::from("kitview_porch"); d.group = String::from("kitview"); d.kind = FixtureDefKind::Analytic; d.pos = g.tab.light[porch].pos; d.light = Some(porch);
             d.base_emissive = [c[0] * porch_glow, c[1] * porch_glow, c[2] * porch_glow];
             d.base_intensity = porch_i;

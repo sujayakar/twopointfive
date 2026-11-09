@@ -536,7 +536,7 @@ pub fn character_ragdollize(g: &mut crate::game::Game, id: CharId, world: bool, 
         } else { None }
     };
     // (ragdoll_new asks only whether he falls in a world; which one is read off g)
-    let in_world = crate::ragdoll::RagdollWorld::zeroed();
+    let in_world = crate::ragdoll::RagdollWorld::default();
     let rag = crate::ragdoll::ragdoll_new(g, &pts, vel.as_deref(), if world { Some(&in_world) } else { None });
     // the shove: carried along `dir` and pitched top-first the same way, then the knees kicked out
     let f = character_forward(g, id);
@@ -986,7 +986,7 @@ mod tests {
         let mut rag = crate::ragdoll::Ragdoll::blank();
         rag.x = vec![0.0; 48];
         for i in 0..16 { let n = i as f64; rag.x[i * 3] = 0.1 + n * 0.03; rag.x[i * 3 + 1] = 0.2 + n * 0.1; rag.x[i * 3 + 2] = -0.3 + n * 0.017; }
-        let rg = crate::ragdoll::RAG { pelvis: 0.0, spine: 1.0, neck: 2.0, head: 3.0, sho_l: 4.0, sho_r: 5.0, elb_l: 6.0, elb_r: 7.0, hand_l: 8.0, hand_r: 9.0, hip_l: 10.0, hip_r: 11.0, knee_l: 12.0, knee_r: 13.0, ank_l: 14.0, ank_r: 15.0 };
+        let rg = crate::ragdoll::RAG { pelvis: 0.0, spine: 1.0, neck: 2.0, head: 3.0, sho_l: 4.0, sho_r: 5.0, hand_l: 8.0, hand_r: 9.0, hip_l: 10.0, hip_r: 11.0, knee_l: 12.0, knee_r: 13.0, ank_l: 14.0, ank_r: 15.0 };
         let gd = fall_guide_of(&rag, &rg, kind, [0.6, 0.0, 0.8], [-0.8, 0.0, 0.6], 0.97, -1.0, None, 1.0, ahead);
         (rag, gd)
     }

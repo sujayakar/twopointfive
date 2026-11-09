@@ -41,7 +41,7 @@ pub fn rescue_flush_line(g: &mut crate::game::Game, by: GuardId, v: GuardId) -> 
     let e: V3 = [pb[0], 1.5, pb[2]];
     let c = match g.ch[cv].bones.get(crate::character::Bone::Chest) { Some(p) => *p, None => v3::add(pv, [0.0, 0.6, 0.0]) };
     if crate::scene_collision::shot_blocked(g, e, c, None, None) { return f64::INFINITY; }
-    if crate::sense::smoke_between(g, e, c) < g.k.rescueflush.smoke_k { f64::INFINITY } else { d }
+    if crate::sense::clear_between(g, e, c) < g.k.rescueflush.smoke_k { f64::INFINITY } else { d }
 }
 
 /// His nearest line on any of `alive`, or Infinity when he cannot hold a gun on anybody. (the closure `has` of ts:94)
@@ -89,8 +89,7 @@ fn fight_def_of(g: &Game, h: GuardId) -> Option<RoomfightDefId> {
 
 /// May he be sent now? (the closure `free` of ts:136)
 fn free(g: &mut Game, h: GuardId, b: Option<crate::scene_level::BreachPlanBounds>, in_room: bool) -> bool {
-    if g.gd[h].state == crate::game::GuardState::Dead || g.gd[h].held.is_some() || crate::control::man::blind(g, h) || crate::control::man::staggered(g, h)
-        || crate::owner::has(g, h, crate::owner::by::RUNNER) || crate::owner::has(g, h, crate::owner::by::MORALE) || crate::owner::has(g, h, crate::owner::by::WALK) { return false; }
+    if crate::owner::kept(g, h, crate::owner::by::MISSION).is_some() || crate::owner::has(g, h, crate::owner::by::WALK) { return false; }
     if crate::squad::in_bounds(g.ch[g.gd[h].ch].pos, b, None) && in_room { return false; }
     if g.time - g.gd[h].last_seen_t < g.k.rescueflush.busy_secs || g.gd[h].saw_foe_this_frame { return false; }
     let f = fight_def_of(g, h);

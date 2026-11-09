@@ -1,10 +1,9 @@
-//! The types of `rescue`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `rescue`.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: Rescue, src/game/rescue.ts:221)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Rescue {
     pub active: bool,
     pub ops: Vec<GuardId>,
@@ -52,7 +51,7 @@ pub struct Rescue {
     pub noise_serial: Option<u32>,
 }
 impl Rescue {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         Rescue {
             active: false,
@@ -103,8 +102,7 @@ impl Rescue {
 }
 impl Default for Rescue { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: Entry, src/game/rescue.ts:213)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct Entry {
     pub ops: Vec<crate::rescue::EntryOpsItem>,
     pub gate: DoorGateId,
@@ -114,24 +112,8 @@ pub struct Entry {
     pub go_t: f64,
     pub in_t: f64,
 }
-impl Entry {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Entry {
-            ops: Vec::new(),
-            gate: DoorGateId(0),
-            men: Vec::new(),
-            split: false,
-            set_t: 0.0,
-            go_t: 0.0,
-            in_t: 0.0,
-        }
-    }
-}
-impl Default for Entry { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rescue.ts:213 Entry.ops, src/game/rescue.ts:213)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct EntryOpsItem {
     pub op: DoorOpId,
     pub side: bool,
@@ -139,96 +121,35 @@ pub struct EntryOpsItem {
     pub kicked: bool,
     pub ended: Option<String>,
 }
-impl EntryOpsItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        EntryOpsItem {
-            op: DoorOpId(0),
-            side: false,
-            seen: 0.0,
-            kicked: false,
-            ended: None,
-        }
-    }
-}
-impl Default for EntryOpsItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rescue.ts:236 Rescue.log, src/game/rescue.ts:236)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct RescueLogItem {
     pub t: f64,
     pub what: String,
 }
-impl RescueLogItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RescueLogItem {
-            t: 0.0,
-            what: String::new(),
-        }
-    }
-}
-impl Default for RescueLogItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rescue.ts:244 Rescue.result, src/game/rescue.ts:244)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct RescueResult {
     pub state: crate::rescue::RescueResultState,
     pub grade: crate::rescue::RescueResultGrade,
     pub why: String,
     pub hostages: f64,
-    pub team: f64,
-    pub secs: f64,
 }
-impl RescueResult {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RescueResult {
-            state: crate::rescue::RescueResultState::Lost,
-            grade: crate::rescue::RescueResultGrade::Failed,
-            why: String::new(),
-            hostages: 0.0,
-            team: 0.0,
-            secs: 0.0,
-        }
-    }
-}
-impl Default for RescueResult { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum RescueResultState {
-    Lost,
+    #[default] Lost,
     Rescued,
 }
-impl RescueResultState {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RescueResultState::Lost => "lost",
-            RescueResultState::Rescued => "rescued",
-        }
-    }
-}
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum RescueResultGrade {
-    Failed,
+    #[default] Failed,
     Clean,
     Costly,
 }
-impl RescueResultGrade {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RescueResultGrade::Failed => "failed",
-            RescueResultGrade::Clean => "clean",
-            RescueResultGrade::Costly => "costly",
-        }
-    }
-}
 
-/// (TypeScript: Def, src/game/rescue.ts:216)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Def {
     pub role: crate::rescue::Role,
     pub in_room: bool,
@@ -244,89 +165,32 @@ pub struct Def {
     pub spot: Option<V3>,
     pub noise0: Option<u32>,
 }
-impl Def {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Def {
-            role: crate::rescue::Role::Guard,
-            in_room: false,
-            mark: crate::rescue::DefMark::zeroed(),
-            learned: 0.0,
-            set: false,
-            saw_foe: false,
-            released: false,
-            burst: crate::nightbreach::BlindBurst::zeroed(),
-            k: 0.0,
-            crew: crate::rescue::DefCrew::Empty,
-            look: None,
-            spot: None,
-            noise0: None,
-        }
-    }
-}
-impl Default for Def { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum Role {
-    Guard,
+    #[default] Guard,
     Door,
     Captor,
     Roamer,
 }
-impl Role {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Role::Guard => "guard",
-            Role::Door => "door",
-            Role::Captor => "captor",
-            Role::Roamer => "roamer",
-        }
-    }
-}
 
-/// (TypeScript: inline at src/game/rescue.ts:216 Def.mark, src/game/rescue.ts:216)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct DefMark {
     pub pos: V3,
     pub aim_at: V3,
 }
-impl DefMark {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DefMark {
-            pos: [0.0; 3],
-            aim_at: [0.0; 3],
-        }
-    }
-}
-impl Default for DefMark { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum DefCrew {
-    Empty,
+    #[default] Empty,
     Cross,
     Out,
     Wait,
     Going,
     In,
 }
-impl DefCrew {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DefCrew::Empty => "",
-            DefCrew::Cross => "cross",
-            DefCrew::Out => "out",
-            DefCrew::Wait => "wait",
-            DefCrew::Going => "going",
-            DefCrew::In => "in",
-        }
-    }
-}
 
-/// (TypeScript: inline at src/game/rescue.ts:246 Rescue.act, src/game/rescue.ts:246)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct RescueAct {
     pub by: GuardId,
     pub victim: GuardId,
@@ -334,22 +198,8 @@ pub struct RescueAct {
     pub def: Option<RoomfightDefId>,
     pub hold: bool,
 }
-impl RescueAct {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RescueAct {
-            by: GuardId(0),
-            victim: GuardId(0),
-            at: 0.0,
-            def: None,
-            hold: false,
-        }
-    }
-}
-impl Default for RescueAct { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum RescueStep {
     Waiting,
     Shouting,
@@ -369,41 +219,14 @@ impl RescueStep {
     }
 }
 
-/// (TypeScript: inline at quiet Rescue.lastOrder, quiet Rescue.lastOrder)
-#[derive(Clone, Copy, Debug)]
-pub struct RescueLastOrder {
-}
-impl RescueLastOrder {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RescueLastOrder {
-        }
-    }
-}
-impl Default for RescueLastOrder { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/rescue.ts:262 Rescue.searchA, src/game/rescue.ts:262)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct RescueSearchAValue {
     pub a: OrdersAssignmentId,
     pub face: Option<f64>,
     pub watch: Option<V3>,
     pub there: String,
 }
-impl RescueSearchAValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RescueSearchAValue {
-            a: OrdersAssignmentId(0),
-            face: None,
-            watch: None,
-            there: String::new(),
-        }
-    }
-}
-impl Default for RescueSearchAValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum RescueState {
     Lost,
@@ -413,136 +236,46 @@ pub enum RescueState {
     Secured,
     Running,
 }
-impl RescueState {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RescueState::Lost => "lost",
-            RescueState::Off => "off",
-            RescueState::Rescued => "rescued",
-            RescueState::Staged => "staged",
-            RescueState::Secured => "secured",
-            RescueState::Running => "running",
-        }
-    }
-}
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum RescueRoomPointWhich {
     Hold,
     Outside,
 }
-impl RescueRoomPointWhich {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RescueRoomPointWhich::Hold => "hold",
-            RescueRoomPointWhich::Outside => "outside",
-        }
-    }
-}
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum RescueMode {
     Door,
     Free,
 }
-impl RescueMode {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RescueMode::Door => "door",
-            RescueMode::Free => "free",
-        }
-    }
-}
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum RescuePress {
-    Bang,
-    Blow,
-    Stack,
-    Go,
-}
-impl RescuePress {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RescuePress::Bang => "bang",
-            RescuePress::Blow => "blow",
-            RescuePress::Stack => "stack",
-            RescuePress::Go => "go",
-        }
-    }
-}
-
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum RescueOrderDoor {
     Bang,
     Stack,
     Go,
 }
-impl RescueOrderDoor {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RescueOrderDoor::Bang => "bang",
-            RescueOrderDoor::Stack => "stack",
-            RescueOrderDoor::Go => "go",
-        }
-    }
-}
 
-/// (TypeScript: inline at src/game/rescue.ts:483 pick ->, src/game/rescue.ts:483)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct RescuePick {
     pub front: Vec<GuardId>,
     pub side: Vec<GuardId>,
 }
-impl RescuePick {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RescuePick {
-            front: Vec::new(),
-            side: Vec::new(),
-        }
-    }
-}
-impl Default for RescuePick { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum RescueEndState {
     Lost,
     Rescued,
 }
-impl RescueEndState {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RescueEndState::Lost => "lost",
-            RescueEndState::Rescued => "rescued",
-        }
-    }
-}
 
-/// (TypeScript: inline at src/game/rescue.ts:1037 objective ->, src/game/rescue.ts:1037)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct RescueObjective {
     pub text: String,
     pub pos: Option<V3>,
 }
-impl RescueObjective {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RescueObjective {
-            text: String::new(),
-            pos: None,
-        }
-    }
-}
-impl Default for RescueObjective { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct RescueMod {
     /// (src/game/rescue.ts:150 applied)
     pub applied: Option<crate::scene_scenarios::TeamStart>,
@@ -551,7 +284,7 @@ impl RescueMod {
     pub fn blank() -> Self {
         RescueMod {
             // (the team's start the knob table holds as it is made: a start whose level names another writes its own over the knobs)
-            applied: { let k = crate::knobs::page_rescue(); Some(crate::scene_scenarios::TeamStart { sam: k.sam_at, sam_yaw: k.sam_yaw, ops: Some(k.ops_at.to_vec()), ops_yaw: None }) },
+            applied: { let k = crate::knobs::RescueK::page(); Some(crate::scene_scenarios::TeamStart { sam: k.sam_at, sam_yaw: k.sam_yaw, ops: Some(k.ops_at.to_vec()), ops_yaw: None }) },
         }
     }
 }

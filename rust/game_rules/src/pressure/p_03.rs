@@ -229,10 +229,7 @@ pub fn stand_and_fight(g: &mut crate::game::Game) {
 fn look_free(g: &mut Game, d: RoomfightDefId, p: V3) -> bool {
     if !alive(g, d) || g.tab.roomfight_def[d].mode != crate::roomfight::DefMode::Hold || state_of(g).of.has(d) { return false; }
     let gd = g.tab.roomfight_def[d].gd;
-    if g.gd[gd].held.is_some() || g.tab.roomfight_def[d].rally_at == f64::INFINITY || crate::control::man::blind(g, gd) || crate::control::man::staggered(g, gd) { return false; }
-    if state_of(g).outs.iter().any(|o| o.def == d) || crate::owner::has(g, gd, crate::owner::by::SQUAD) { return false; }
-    let ph = crate::digin::dig_in_phase(g, gd);   // (on his way to cover or at a door with a wedge: busy. Set on his door, he has done getting ready)
-    if ph != "idle" && ph != "set" { return false; }
+    if crate::owner::kept(g, gd, crate::owner::by::PRESS).is_some() || state_of(g).outs.iter().any(|o| o.def == d) { return false; }
     !crate::lanes::lane_bars(g, gd, Some(p)) && !crate::lanes::lane_known_at(g, gd, Some(p))
 }
 
@@ -469,7 +466,4 @@ pub fn look_since(g: &crate::game::Game, gd: GuardId) -> Option<f64> {
 pub fn reset_pressure(g: &mut crate::game::Game) {
     g.k.pressure = pressure_defaults();
 }
-
-/// the host's stored copy of the table: nothing here   (pressure.ts savePressure)
-pub fn save_pressure(g: &crate::game::Game) {}
 

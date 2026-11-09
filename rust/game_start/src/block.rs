@@ -1,5 +1,5 @@
-//! A GAME'S BLOCK OF rust/sim, AS A HOST COMPARES IT: the bytes of a slot, and a hash of each part (the fold tools/blitz's runner prints, over a
-//! part's words up to the last that is not zero).
+//! A GAME'S BLOCK OF rust/sim, AS A HOST COMPARES IT: the bytes of a slot, and a hash of each part (over a part's words up to the
+//! last that is not zero).
 use alloc::vec::Vec;
 
 /// the parts' names, in the parts' order (rust/sim/src/state.rs PARTS)
@@ -22,9 +22,4 @@ pub fn part_hashes(slot: usize) -> Vec<u32> {
         for &x in &part[..n] { h = (h ^ x).wrapping_mul(0x01000193); }
         h
     }).collect()
-}
-/// the parts in which two slots' blocks differ, by their place in the parts' list: the bytes themselves compared
-pub fn parts_that_differ(a: usize, b: usize) -> Vec<usize> {
-    let (x, y) = (bytes(a), bytes(b));
-    (0..sim::state::PARTS.len()).filter(|&i| { let p = &sim::state::PARTS[i]; x[p.off..p.off + p.len] != y[p.off..p.off + p.len] }).collect()
 }

@@ -18,11 +18,10 @@
 // the sentry's turn, which got out clean before the lock, is shot at the keyway on both deals.
 // THREE men: the window's sentry on the north side, one walks the east strip
 // past the fire door and the east gate, one keeps the cook fire on the south side.
-// Checked and measured by tools/qa/lights-out-run.ts; the page is rebuild/missions/new/duo.md in the project files.
-import type { KitViewData, QuietData } from '../../src/scene/scenarios';
-import type { DeviceDef } from '../../src/scene/level';
+import type { KitViewData, QuietData } from './lib/scenarios';
+import type { DeviceDef } from './lib/level';
 import { BoxFlag } from '../../src/scene/boxes';
-import { GWOT_MATERIALS } from '../../src/scene/gwotKit';
+import { GWOT_MATERIALS } from './lib/gwotKit';
 import { trainGround, TRAIN_MATERIALS, EXIT_W, EXIT_E, HALF } from './train-ground';
 import { yardGateShell } from './train-ground-kitview';
 import { livedTail } from './livedKit';
@@ -32,7 +31,7 @@ export const NOTES = 'Lights out: a quiet mission as two. A relay post in a wall
 export const MATERIALS = TRAIN_MATERIALS;
 
 type V3 = [number, number, number];
-/** the places the scripted players and the checks name (tools/qa/lights-out-run.ts imports these, so a moved wall moves the script) */
+/** the places the scripted players and the checks name */
 export const LIGHTS = {
   breaker: [13.44, 1.35, 16.4] as V3,                     // the panel, on the shed's east wall, inside
   cage: [11.0, 0, 19.4] as V3,                            // where the partner waits and hides: the west end of the fuel cage
@@ -64,7 +63,7 @@ const PLACES = { areas: [
   { name: 'front track', bounds: { x0: 0, x1: 8.12, z0: 0, z1: 28 } }, { name: 'back track', bounds: { x0: 31.88, x1: 40, z0: 0, z1: 28 } },
 ] };
 
-/** THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest): a bespoke set on the yard's west gate
+/** THE TEAM & KIT PICTURE (lib/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest): a bespoke set on the yard's west gate
  *  (train-ground-kitview.ts). In the level the generator and the breaker stand in a walled shed south of the gate, where the picture cannot see in. So: a lean-to
  *  of the shed's block against the yard wall, open to the gate, with the generator, the breaker on its back wall and the fuel out of the cage. The generator, the breaker's
  *  paint and the drums are this level's own boxes as exported (levels/lights-out.json), moved; the ids are the set's (lo_). */
@@ -143,7 +142,7 @@ export function build() {
   T.add({ c: [27.4, 0.67, 13.72], h: [0.44, 0.55, 0.34], ...GWOT_MATERIALS.iron });
   T.add({ c: [27.4, 0.67, 14.07], h: [0.36, 0.46, 0.012], ...GWOT_MATERIALS.galv, flags: BoxFlag.NoShadow });
   T.add({ c: [27.56, 0.72, 14.095], h: [0.07, 0.07, 0.014], ...GWOT_MATERIALS.iron, flags: BoxFlag.NoShadow });
-  // the holder's tell-tale (game.ts rackTargets: the switchable named rack<rackIndex>_leds goes dark when the thing is taken), as on the other quiet levels
+  // the holder's tell-tale (rust/game_rules/src/game rack_targets: the switchable named rack<rackIndex>_leds goes dark when the thing is taken), as on the other quiet levels
   { const led = T.add({ c: [27.16, 1.04, 14.088], h: [0.03, 0.012, 0.006], ...GWOT_MATERIALS.iron, emissive: [3, 0.4, 0.2], flags: BoxFlag.NoShadow });
     T.switchables.push({ name: 'rack0_leds', boxes: [led], group: 'objective', on: true, baseEmissive: [3, 0.4, 0.2], mains: false }); }
   // the signallers' room: the set on its table, bedrolls, the spares
@@ -204,7 +203,7 @@ export function build() {
   return out;
 }
 
-// ---- LIVED IN (src/scene/lived.ts: all of it goes with the switch off — group 'lived.<place>'; the tail of every list, laid after T.finish()) ----
+// ---- LIVED IN (lib/lived.ts: all of it goes with the switch off — group 'lived.<place>'; the tail of every list, laid after T.finish()) ----
 // The post's rooms and its yard's cover were laid when the level was built. What it was short of is its GROUND, and anything that says RELAY POST from
 // above. So, every piece the kit's own by name: the track kept as soldiers keep one (whitewashed stones down both edges, the lorry's ruts between
 // them), the post's dish on its pole in the north-east corner, the fuel's ground at the shed door and in the cage, the tank's overflow, the cook's ash and

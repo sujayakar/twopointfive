@@ -72,7 +72,7 @@ mod tests {
     use crate::scene_level_data::{Rect, SurfacesData, SurfacesDataZonesItem};
 
     fn zone(mat: FloorMat, x0: f64, z0: f64, x1: f64, z1: f64) -> SurfacesDataZonesItem {
-        SurfacesDataZonesItem { id: String::new(), mat, x0, z0, x1, z1, notes: None }
+        SurfacesDataZonesItem { mat, x0, z0, x1, z1 }
     }
 
     // Expected values printed by the TypeScript's own floorAt under bun.

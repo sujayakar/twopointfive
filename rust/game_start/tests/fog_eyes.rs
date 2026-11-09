@@ -172,3 +172,51 @@ fn no_teammate_walks_through_a_leaf_the_picture_has_shut() {
     }
 }
 fn door_normal(p: &Play, name: &str) -> [f64; 2] { let d = game::doors::doors_by_name(&p.g, name).unwrap(); let th = p.g.dr[d].def.closed_dir; [-th.sin(), th.cos()] }
+
+/// On the open lot north of the office in this weather, the team at its west end, the fog of war up: a man of the other side held 25 m east of them, and nobody else about.
+fn across_the_lot(s: u32, weather: &str) -> (Play, GuardId, [f64; 2]) {
+    let mut p = Play::mission("office.json", &format!("?levelFile=office.json&roomclear&squad4&weather={weather}"), &Opts { seed: s, ..Default::default() });
+    p.sam_unhurt();
+    let h = p.hostiles()[0];
+    p.drop_all_but(&[h]);
+    p.fog_up();
+    let post = [27.0, 2.0 + nudge(s, 0)];
+    (p, h, post)
+}
+/// …some frames of it: Sam and his men held where they are, but for one if said
+fn held_there(p: &mut Play, h: GuardId, post: [f64; 2], forward: bool, frames: usize) {
+    let mates = p.mates();
+    for _ in 0..frames {
+        p.sam_put([2.0, 2.0]);
+        for (k, &m) in mates.iter().enumerate() { p.man_stands(m, if k == 0 && forward { [post[0] - 10.0, 2.0] } else { [1.5 + 0.5 * k as f64, 3.0] }); }
+        if p.up(h) { p.pin_man(h, post, EAST, GuardState::Patrol, 0.0); }
+        p.frame();
+    }
+}
+
+/// THE RULE: the player is shown whom his team can see, and the weather's fog stands in the way of both alike. Twenty-five metres off in fog a man no eye of the team's gets through to is
+/// not in the picture; a teammate ten metres from him shows him; and so with a body. CONTROL: in clear weather all of them see him, and he is shown.
+/// A FAILURE MEANS: the player is shown a man his own squad cannot see, so it looks dumb for not shooting; or the fog hides a man somebody has.
+#[test]
+fn the_weathers_fog_hides_whom_no_eye_of_the_team_gets_through_to() {
+    let sees = |p: &mut Play, h: GuardId| { let c = p.g.gd[h].ch; p.mates().iter().filter(|&&m| { let o = p.g.gd[m].ch; game::roomfight::pair_smoke(&mut p.g, o, c) >= 0.3 }).count() };
+    for s in SEEDS {
+        let (mut p, h, post) = across_the_lot(s, "clear");
+        held_there(&mut p, h, post, false, 40);
+        assert!(sees(&mut p, h) == 4 && !p.fogged(h), "seed {s}: in clear weather he is seen by {} of four, hidden: {}", sees(&mut p, h), p.fogged(h));
+        drop(p);
+
+        let (mut p, h, post) = across_the_lot(s, "fog");
+        held_there(&mut p, h, post, false, 40);
+        assert!(sees(&mut p, h) == 0 && p.fogged(h), "seed {s}: in fog he is seen by {} of four, hidden: {}", sees(&mut p, h), p.fogged(h));
+        held_there(&mut p, h, post, true, 15);
+        assert!(sees(&mut p, h) == 1 && !p.fogged(h), "seed {s}: a teammate at ten metres: seen by {}, hidden: {}", sees(&mut p, h), p.fogged(h));
+        held_there(&mut p, h, post, false, 60);
+        assert!(p.fogged(h), "seed {s}: the teammate back, and he is still in the picture");
+        p.falls(h, game::game::DownBy::World);
+        held_there(&mut p, h, post, false, 60);
+        assert!(p.fogged(h), "seed {s}: his body is in the picture, and nobody has seen it");
+        held_there(&mut p, h, post, true, 15);
+        assert!(!p.fogged(h), "seed {s}: a teammate at ten metres from his body, and it is hidden");
+    }
+}

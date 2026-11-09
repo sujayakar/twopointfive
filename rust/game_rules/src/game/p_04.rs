@@ -165,7 +165,6 @@ pub fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Option<crate::game::
                         if bi < 4096.0 && k < 4 { Some(((js::to_i32(bi) << 2) | k as i32) as f64) } else { None });
                     g.tab.sim_lightshome_fixture[t].area_lights.get_or_insert_with(Vec::new).push(crate::sim_lightshome::FixtureAreaLightsItem { light, base: i0 });
                     g.m.scene_markings.area_lit_marks.add(crate::scene_markings::mark_key(mk));
-                    g.mark_lights.push(crate::game::GameMarkLightsItem { target: name.clone(), box_: bi, face: String::from(mk.face.as_str()), pos: v3::mad(r.centre, n, 0.07), i0, area: st.area, mean_l: st.mean_l });
                 }
             }
         }
@@ -322,7 +321,7 @@ fn add_light(g: &mut Game, name: &str, group: &str, kind: f64, pos: V3, dir: V3,
         peak_intensity,
         broad,
         mark_ref,
-        ..crate::render_lights::RtLight::zeroed()
+        ..crate::render_lights::RtLight::default()
     });
     crate::render_lights::light_set_add(g, l)
 }
@@ -379,8 +378,6 @@ fn stood_of(g: &Game, seat: &crate::seats::SeatRef, level: &crate::scene_level::
         props: Some(crate::levelfit::StoodProps {
             all: g.props.all.iter().map(|&p| crate::levelfit::StoodPropsAllItem { boxes: vec![crate::Opaque; g.tab.props_prop[p].boxes.len()] }).collect(),
         }),
-        engine: Some(crate::Opaque),   // (a whole Game has both: levelfit.ts Stood)
-        beacons: Some(crate::Opaque),
         player: Some(seat.player),
         guards: Some(g.guards.clone()),
         civilians: Some(g.civilians.clone()),
@@ -411,7 +408,7 @@ fn stagger_of(g: &mut Game, stagger: &mut JsMap<String, f64>, grp: &str) -> f64 
 }
 
 /// A line for the player's log; the log keeps five. (game.ts Game.msg)
-#[doc(hidden)] pub fn game_msg__body(g: &mut crate::game::Game, text: &str) {
+pub fn game_msg(g: &mut crate::game::Game, text: &str) {
     let (t, serial) = (g.time, g.serial());
     g.messages.push(crate::game::GameMessagesItem { text: String::from(text), t, serial });
     if g.messages.len() > 5 { g.messages.remove(0); }
@@ -419,40 +416,13 @@ fn stagger_of(g: &mut Game, stagger: &mut JsMap<String, f64>, grp: &str) -> f64 
 }
 
 /// A man says something. (game.ts Game.say)
-#[doc(hidden)] pub fn game_say__body(g: &mut crate::game::Game, g_2: GuardId, text: &str, radio: Option<bool>, force: Option<bool>, row: Option<bool>) {
+pub fn game_say(g: &mut crate::game::Game, g_2: GuardId, text: &str, radio: Option<bool>, force: Option<bool>, row: Option<bool>) {
     crate::guards::say(g, g_2, text, radio, force, row);
 }
 
 /// A utility or sandbox confirmation: the showcase's own plumbing stays out of the log. (game.ts Game.note)
-#[doc(hidden)] pub fn game_note__body(g: &mut crate::game::Game, text: &str) {
+pub fn game_note(g: &mut crate::game::Game, text: &str) {
     if !g.quiet_utility { game_msg(g, text); }
-}
-
-
-#[doc(hidden)] pub fn game_msg(g: &mut crate::game::Game, text: &str) {
-    use crate::io::Io;
-    if g.taps & (1u64 << 0) == 0 { return game_msg__body(g, text); }
-    let mut o = crate::io::W::new(); alloc::string::String::from(text).w(&mut o);
-    game_msg__body(g, text);
-    crate::out_events::push_tap(g, 0, &o.b, &[]);
-}
-
-
-#[doc(hidden)] pub fn game_say(g: &mut crate::game::Game, g_2: GuardId, text: &str, radio: Option<bool>, force: Option<bool>, row: Option<bool>) {
-    use crate::io::Io;
-    if g.taps & (1u64 << 1) == 0 { return game_say__body(g, g_2, text, radio, force, row); }
-    let mut o = crate::io::W::new(); g_2.w(&mut o); alloc::string::String::from(text).w(&mut o); radio.w(&mut o); force.w(&mut o); row.w(&mut o);
-    game_say__body(g, g_2, text, radio, force, row);
-    crate::out_events::push_tap(g, 1, &o.b, &[]);
-}
-
-
-#[doc(hidden)] pub fn game_note(g: &mut crate::game::Game, text: &str) {
-    use crate::io::Io;
-    if g.taps & (1u64 << 2) == 0 { return game_note__body(g, text); }
-    let mut o = crate::io::W::new(); alloc::string::String::from(text).w(&mut o);
-    game_note__body(g, text);
-    crate::out_events::push_tap(g, 2, &o.b, &[]);
 }
 
 #[cfg(test)]
@@ -460,13 +430,13 @@ mod tests {
     use super::*;
 
     fn def(name: &str, mains: Option<bool>) -> crate::scene_level::LightDef {
-        crate::scene_level::LightDef { name: String::from(name), mains, ..crate::scene_level::LightDef::zeroed() }
+        crate::scene_level::LightDef { name: String::from(name), mains, ..crate::scene_level::LightDef::default() }
     }
 
     /// `new Map(level.lights.map(d => [d.name, d]))`: the last of a name wins, and a light with no def or no word is on the mains.
     #[test]
     fn a_lights_mains_is_the_last_def_of_its_name() {
-        let mut level = crate::scene_level::Level::zeroed();
+        let mut level = crate::scene_level::Level::default();
         level.lights = vec![def("a", Some(false)), def("b", Some(false)), def("a", None)];
         assert!(light_def_mains(&level, "a"));
         assert!(!light_def_mains(&level, "b"));

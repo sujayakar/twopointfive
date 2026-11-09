@@ -1,37 +1,20 @@
-//! The types of `doorswing`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `doorswing`.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: SwingDeal, src/game/doorswing.ts:31)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct SwingDeal {
-    pub door: String,
     pub swing: f64,
     pub why: crate::doorswing::SwingWhy,
     pub into: Option<String>,
     pub out: Option<alloc::boxed::Box<crate::doorswing::SwingDeal>>,
     pub clear: Option<alloc::boxed::Box<crate::doorswing::SwingDeal>>,
 }
-impl SwingDeal {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SwingDeal {
-            door: String::new(),
-            swing: 0.0,
-            why: crate::doorswing::SwingWhy::Mission,
-            into: None,
-            out: None,
-            clear: None,
-        }
-    }
-}
-impl Default for SwingDeal { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum SwingWhy {
-    Mission,
+    #[default] Mission,
     Floor,
     Authored,
     Folds,
@@ -63,43 +46,19 @@ impl SwingWhy {
     }
 }
 
-/// (TypeScript: Rect, src/game/doorswing.ts:36)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Rect {
     pub x0: f64,
     pub x1: f64,
     pub z0: f64,
     pub z1: f64,
 }
-impl Rect {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Rect {
-            x0: 0.0,
-            x1: 0.0,
-            z0: 0.0,
-            z1: 0.0,
-        }
-    }
-}
-impl Default for Rect { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doorswing.ts:70 floors ->, src/game/doorswing.ts:70)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct FloorsValue {
     pub plus: f64,
     pub minus: f64,
 }
-impl FloorsValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FloorsValue {
-            plus: 0.0,
-            minus: 0.0,
-        }
-    }
-}
-impl Default for FloorsValue { fn default() -> Self { Self::zeroed() } }
 
 /// (src/game/doorswing.ts:38 MIN_OPEN)
 pub const MIN_OPEN: f64 = 0.9;

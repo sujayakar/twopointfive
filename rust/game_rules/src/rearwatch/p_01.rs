@@ -76,7 +76,7 @@ fn room_of(g: &mut Game, p: V3) -> Option<RoomfightRoomId> {
 pub fn book_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::rearwatch::Book {
     let key = crate::seats::view_key(g, &crate::seats::here(g));
     // (the literal in the TypeScript is all empty: the same as zeroed)
-    g.m.rearwatch.books.get_or_insert_with(key, Book::zeroed)
+    g.m.rearwatch.books.get_or_insert_with(key, Book::default)
 }
 
 /// A door off its hinges, or unlatched and far enough open. (rearwatch.ts isOpenWay)
@@ -562,7 +562,6 @@ pub fn rear_watch_tick(g: &mut crate::game::Game) {
                 side: gr.side,
                 op: gr.op,
                 cls: pcls,
-                t0: time,
                 seen_t: time,
                 a,
                 going: None,
@@ -767,7 +766,6 @@ pub fn room_keep_tick(g: &mut crate::game::Game, pl: PlayerId) {
                     side: 1.0,
                     op: None,
                     cls: 0.0,
-                    t0: time,
                     seen_t: time,
                     a,
                     going: None,
@@ -1092,7 +1090,7 @@ mod tests {
 
     #[test]
     fn the_log_keeps_the_newest_200_and_counts_them_all() {
-        let mut b = Book::zeroed();
+        let mut b = Book::default();
         for i in 0..205 {
             note(&mut b, &format!("{}", i));
         }

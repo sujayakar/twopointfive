@@ -76,7 +76,7 @@ mod tests {
     fn watch_writes_the_row() {
         on_a_game(|g| {
             let gd = GuardId(0);
-            let row = Mind { spot: Some([1.25, 0.0, -3.5]), yaw: 0.7, eye: 0.785, eye_half: 0.45, arc: 0.6, ..Mind::zeroed() };
+            let row = Mind { spot: Some([1.25, 0.0, -3.5]), yaw: 0.7, eye: 0.785, eye_half: 0.45, arc: 0.6, ..Mind::default() };
             g.m.netquiet.state_of.set(gd, row);
             watch(g, gd);
             let want = look_from([1.25, 0.0, -3.5], 0.7, 0.785, 0.45, 0.6, g.k.netquiet.eye_slack);

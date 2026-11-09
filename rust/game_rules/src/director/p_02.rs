@@ -37,24 +37,9 @@ fn obj(pairs: Vec<(&str, Json)>) -> Json {
     }
     Json::Arm4(o)
 }
-fn log_kind(k: DirectorPushRowKind) -> LogRowKind {
-    match k {
-        DirectorPushRowKind::Camera => LogRowKind::Camera,
-        DirectorPushRowKind::Radio => LogRowKind::Radio,
-        DirectorPushRowKind::Error => LogRowKind::Error,
-        DirectorPushRowKind::Spawn => LogRowKind::Spawn,
-        DirectorPushRowKind::Beat => LogRowKind::Beat,
-        DirectorPushRowKind::Drill => LogRowKind::Drill,
-        DirectorPushRowKind::Note => LogRowKind::Note,
-        DirectorPushRowKind::Program => LogRowKind::Program,
-        DirectorPushRowKind::Trigger => LogRowKind::Trigger,
-        DirectorPushRowKind::Yield => LogRowKind::Yield,
-        DirectorPushRowKind::Stimulus => LogRowKind::Stimulus,
-    }
-}
 /// `this.push({ beat, kind, what, data })`
 fn note(g: &mut Game, beat: &str, kind: DirectorPushRowKind, what: &str, data: Option<Json>) {
-    director_push(g, &DirectorPushRow { kind, what: String::from(what), data, beat: String::from(beat), t: None });
+    director_push(g, &DirectorPushRow { t: None });
 }
 /// `g.guards.find(x => x.char.id === id)`
 fn guard_by_char_id(g: &Game, id: f64) -> Option<GuardId> {
@@ -207,8 +192,7 @@ pub fn director_signal(g: &mut crate::game::Game, name: &str, data: Option<&crat
         DirectorSignalData::Arm4(x) => Json::Arm4(x.clone()),
     });
     let rr = &mut g.tab.director_run[r];
-    let t = rr.t;
-    rr.signals.push(RunSignalsItem { name: String::from(name), t, data: data.clone() });
+    rr.signals.push(RunSignalsItem { name: String::from(name) });
     note(g, "", DirectorPushRowKind::Note, &format!("signal:{}", name), data);
 }
 
@@ -229,7 +213,7 @@ pub fn director_push(g: &mut crate::game::Game, row: &crate::director::DirectorP
         }
         None => (row.t.unwrap_or(g.time), 0.0, String::new()),
     };
-    g.director.log.push(LogRow { t, run, program, beat: row.beat.clone(), kind: log_kind(row.kind), what: row.what.clone(), data: row.data.clone() });
+    g.director.log.push(LogRow {  });
     let n = g.director.log.len();
     let cap = LOG_CAP as usize;
     if n > cap {
@@ -257,7 +241,6 @@ pub fn director_start(g: &mut crate::game::Game, name: &str, opts: Option<crate:
         dt: 0.0,
         tick_n: 0.0,
         dice: crate::dice::Die::new(js::to_u32(seed)),
-        seed,
         beats: Vec::new(),
         fired: JsSet::new(),
         signals: Vec::new(),
@@ -345,7 +328,7 @@ pub fn director_stop(g: &mut crate::game::Game, finished: Option<bool>) {
     g.tab.director_run[r].ended = true;
     note(g, "", DirectorPushRowKind::Program, if finished { "finished" } else { "stopped" }, None);
     let (serial, name, t) = { let rr = &g.tab.director_run[r]; (rr.serial, rr.name.clone(), rr.t) };
-    g.director.last_run = Some(DirectorLastRun { serial, name, t, finished });
+    g.director.last_run = Some(DirectorLastRun {  });
     g.director.run = None;
     g.director.frame = None;
     g.director.due_keys.clear();
@@ -406,7 +389,7 @@ pub fn director_tick(g: &mut crate::game::Game, dt: f64, _input: Option<InputId>
     while (g.tab.director_run[r].sig_seen as usize) < g.tab.director_run[r].signals.len() {
         let rr = &g.tab.director_run[r];
         let s = &rr.signals[rr.sig_seen as usize];
-        let s = SignalViewS { name: s.name.clone(), t: s.t, data: s.data.clone() };
+        let s = SignalViewS { name: s.name.clone() };
         fresh.push(signal_view(g, &crate::seats::here(g), r, &s));
         g.tab.director_run[r].sig_seen += 1.0;
     }
@@ -723,8 +706,7 @@ pub fn director_begin_finish(g: &mut crate::game::Game, r: DirectorRunId) {
 /// The end of every tick and of start(): the showcase's camera shot, veil and cut, and the frame main.ts reads. (director.ts Director.tail)
 pub fn director_tail(g: &mut crate::game::Game, r: DirectorRunId, dt: f64) {
     let rr = &mut g.tab.director_run[r];
-    let (end_veil, end_hold, failed, lower) = (rr.def.opts.end_veil.unwrap_or(0.35), rr.def.opts.end_hold.unwrap_or(0.5), rr.failed_show, rr.def.opts.lower_third.unwrap_or(false));
-    let name = rr.name.clone();
+    let (end_veil, end_hold, failed) = (rr.def.opts.end_veil.unwrap_or(0.35), rr.def.opts.end_hold.unwrap_or(0.5), rr.failed_show);
     let Some(s) = rr.show.as_mut() else {
         g.director.frame = None;
         return;
@@ -752,15 +734,7 @@ pub fn director_tail(g: &mut crate::game::Game, r: DirectorRunId, dt: f64) {
             s.fade = if s.fade < s.fade_to { m::min(s.fade_to, s.fade + step) } else { m::max(s.fade_to, s.fade - step) };
         }
     }
-    let s = g.tab.director_run[r].show.as_ref().unwrap();
     let frame = DirectorFrame {
-        look: if s.handed_over { None } else { Some(v3::copy(s.look)) },
-        caption: s.caption.clone(),
-        sub: s.sub.clone(),
-        fade: s.fade,
-        lower_third: lower && !s.handed_over,
-        program: name,
-        handed_over: s.handed_over,
     };
     g.director.frame = Some(frame);
 }
@@ -803,8 +777,8 @@ pub fn director_enter_show(g: &mut crate::game::Game, r: DirectorRunId) {
     let saved = ShowStateSaved { ai: g.ai_enabled, god: g.god_mode, invisible: g.player_invisible, quiet: g.quiet_utility, touring: g.touring, cam };
     let look = v3::copy(crate::game::game_follow_pos(g, None));
     g.tab.director_run[r].show = Some(ShowState {
-        saved, look, shot: None, shot_i: -1.0, chapter_t0: 0.0, chapters: Vec::new(), caption: String::new(), sub: String::new(), fade: 0.0, fade_to: 0.0, fade_rate: 0.0,
-        ending: None, benched: None, variant_on: false, puppet: false, weather_saved: None, mission_on: false, handed_over: false, chaos_set: false,
+        saved, look, shot: None, fade: 0.0, fade_to: 0.0, fade_rate: 0.0,
+        ending: None, benched: None, variant_on: false, puppet: false, weather_saved: None, handed_over: false, chaos_set: false,
     });
     g.quiet_utility = true;
     g.touring = true;
@@ -1201,7 +1175,7 @@ mod tests {
     /// the TypeScript's own answers, from bun
     #[test]
     fn volume() {
-        let v = crate::scene_level::VolumeDef { c: [1.0, 0.5, 2.0], h: [3.0, 0.5, 1.0], yaw: Some(0.7), ..crate::scene_level::VolumeDef::zeroed() };
+        let v = crate::scene_level::VolumeDef { c: [1.0, 0.5, 2.0], h: [3.0, 0.5, 1.0], yaw: Some(0.7), ..crate::scene_level::VolumeDef::default() };
         for (p, want) in VOLUME_CASES {
             assert_eq!(in_volume(&v, *p), *want, "{:?}", p);
         }

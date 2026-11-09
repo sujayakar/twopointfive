@@ -12,7 +12,7 @@ pub fn ir_flags(g: &crate::game::Game) {}
 
 /// The kit's row, made if there is none. The TypeScript's literal holds nothing but empty lists, which is what `zeroed` holds. (irlight.ts kitOf)
 pub fn kit_of(g: &mut crate::game::Game) -> &mut crate::irlight::Kit {
-    g.m.irlight.kits.get_or_insert_with(Kit::zeroed)
+    g.m.irlight.kits.get_or_insert_with(Kit::default)
 }
 
 /// One carrier's reading, which `burn` has made: re-got after every call that takes `g`.
@@ -43,7 +43,7 @@ pub fn lamp(g: &mut crate::game::Game, name: &str, owner: f64) -> LightId {
         ttl: -1.0,
         age: 0.0,
         peak_intensity: 0.0,
-        ..crate::render_lights::RtLight::zeroed()
+        ..crate::render_lights::RtLight::default()
     })
 }
 
@@ -410,7 +410,7 @@ mod tests {
     use super::*;
 
     fn test_light(pos: V3, dir: V3, intensity: f64, radius: f64, owner: f64, range: f64, outer_deg: f64, inner_deg: f64, enabled: bool) -> crate::render_lights::RtLight {
-        crate::render_lights::RtLight { pos, dir, intensity, radius, owner, range, outer_deg, inner_deg, enabled, ..crate::render_lights::RtLight::zeroed() }
+        crate::render_lights::RtLight { pos, dir, intensity, radius, owner, range, outer_deg, inner_deg, enabled, ..crate::render_lights::RtLight::default() }
     }
 
     /// irLightAt's sums against the TypeScript's own bits (irlight.ts under bun, EXACT on). Every lens stands too near the point to ask the world (tmax <= 0.05).

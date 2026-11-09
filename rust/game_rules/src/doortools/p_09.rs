@@ -138,7 +138,7 @@ pub fn door_tools_blow_raw(g: &mut crate::game::Game, c_2: Option<ChargeId>) -> 
             door_tools_beat(g, e, &format!("blow · {} down {} stunned", knocked, stunned));
         }
     }
-    Some(DoorToolsBlowRaw { knocked, stunned, backblast })
+    Some(DoorToolsBlowRaw {  })
 }
 
 /// the seat's man and the blast: true where it dazzled him   (the closure handed to eachSeat in blowRaw)

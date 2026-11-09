@@ -4,10 +4,10 @@
 //!   the block of rust/sim the game stands in, zeroed under the layout's word   (sim/state.ts SimState.born)
 //!   the character's rows                                                       (anim/gltf.ts; `gltf.rs`)
 //!   the host: an empty box world and light set, the picture's settings         (host/stub.ts)
-//!   the level file read                                                        (scene/levelLoad.ts; `level.rs`)
+//!   the level file read                                                        (tools/levels/lib/levelLoad.ts; `level.rs`)
 //!   the level's marks, its statics into the world, its lights into the set     (standup.ts populateHost; `passes.rs`)
 //!   the die, seeded: the men's construction dice are its first draws           (standup.ts: newDice, useDice)
-//!   the Game's constructor                                                     (game.ts; rust/game `game_new`)
+//!   the Game's constructor                                                     (game.ts; `game_new`)
 //!   the state that still moves, at home in the block                           (sim/state.ts settle)
 //!   the host's own Input and camera, the camera on the level's spawn           (headless.ts standUp)
 //!
@@ -42,7 +42,7 @@ pub struct StartOpts {
     pub slot: usize,
     /// the mission to start on the stood level by the game's own `startScenario`, none = the level as its file has it
     pub scenario: Option<game::scene_scenario_list::ScenarioSpec>,
-    /// …or THE ADDRESS'S WORDS a click on a mission's row loads (`?levelFile=depot.json&roomclear&squad4`: scenarios.ts scenarioQuery), started by
+    /// …or THE ADDRESS'S WORDS a click on a mission's row loads (`?levelFile=depot.json&roomclear&squad4`), started by
     /// the game's own `start_from_query` AS THE PAGE STARTS A MISSION: the row's own hour and weather, the fog of war, a quiet mission's rung and
     /// cameras, then the mission. The level file is the caller's to read (the page reads the file the link names, in the look that is on).
     /// Wins over `scenario`
@@ -52,14 +52,23 @@ pub struct StartOpts {
     /// read the difficulty off `link` (`&hard`, `&enemyai=hard`: `scenario_run::difficulty_of_address`). A host that hands its knob tables has read its own address, and what it
     /// keeps, onto them, and has laid its recipe over that: such a start says false, or the address's words would be laid over what the host decided
     pub difficulty: bool,
+    /// a mission that the address's words ask for and the game refuses is said (`Stood.refused`) and is no stop: for whoever holds the refusals themselves to something (the gate)
+    pub may_refuse: bool,
 }
-impl Default for StartOpts { fn default() -> Self { StartOpts { seed: 20942, seats: 1, slot: 0, scenario: None, link: None, dress: false, difficulty: true } } }
+impl Default for StartOpts { fn default() -> Self { StartOpts { seed: 20942, seats: 1, slot: 0, scenario: None, link: None, dress: false, difficulty: true, may_refuse: false } } }
 
 /// THE HOST'S OWN HALF of a stood game: the Input a hand writes, the camera that follows, the canvas's size (headless.ts standUp: `input`, `cam`, `canvas`).
 #[derive(Clone, Copy, Debug)]
 pub struct Host { pub input: InputId, pub cam: CameraId, pub canvas: game::host_hud::View }
 
-pub struct Stood { pub game: Box<Game>, pub host: Host, pub level: level::Loaded, pub rig: RigId }
+pub struct Stood {
+    pub game: Box<Game>,
+    pub host: Host,
+    pub level: level::Loaded,
+    pub rig: RigId,
+    /// the game's own words where the address's mission was refused: no mission is up on the level
+    pub refused: Option<String>,
+}
 
 /// a block for a game that had none: zeros under the layout's word (state.ts born; a slot another game stood in is that game's no more)
 fn born(slot: usize) {
@@ -149,10 +158,10 @@ pub fn stand_with(data: &Json, assets: Assets, o: &StartOpts, before: &mut dyn F
     let cast = if game::scene_look::look_dress(&mut g) { assets.cast_look.or(assets.cast) } else { assets.cast };
     let rig = gltf::character(&mut g, assets.mannequin, cast);
     // the rows that only dress the picture, as this host has them (game/dress.ts DRESS: up on a page, down on a host that draws nothing)
-    if !o.dress { g.m.dress.dress = game::dress::DressModDRESS::zeroed(); }
+    if !o.dress { g.m.dress.dress = game::dress::DressModDRESS::default(); }
     // the host with no picture: an empty world and light set, the picture's settings, effectiveScale 1, no skin (stub.ts stubHost)
     g.engine.world = game::scene_boxes::box_world_new(&mut g, game::Opaque, None);
-    game::io::set_slot(&mut g, o.slot);   // (the slot is held twice: the game's own word and the box mirror's, which the world's lookups read)
+    game::game::stand_in(&mut g, o.slot);
     g.engine.lights = game::render_lights::LightSet::blank();
     g.engine.settings = settings::default_settings();
     g.engine.effective_scale = 1.0;
@@ -178,11 +187,13 @@ pub fn stand_with(data: &Json, assets: Assets, o: &StartOpts, before: &mut dyn F
     // the visit's hour laid over the level's own night (standGame's line: the hour is the address's, read before the game was made)
     { let hour = g.stood.hour; if hour != game::hours::HourId::Night { game::hours::apply_hour(&mut g, hour); } }
     let host = host_new(&mut g);
+    let mut refused = None;
     if let Some(q) = address.as_ref() {
         let words = kit.as_ref().map(crate::kit_stage::mission_words);
         let r = game::scenario_run::start_at_address(&mut g, words.as_ref().unwrap_or(q));
         // (a picture of a mission that refused is a picture of nothing, never a stop)
-        if let (Some(why), None) = (r.why, kit.as_ref()) { panic!("the game refused the start from '{}': {}", o.link.as_deref().unwrap_or(""), why); }
+        if let (Some(why), None, false) = (r.why.as_ref(), kit.as_ref(), o.may_refuse) { panic!("the game refused the start from '{}': {}", o.link.as_deref().unwrap_or(""), why); }
+        refused = r.why;
         settle(&mut g);
         if let Some(k) = kit.as_ref() { crate::kit_stage::begin(&mut g, k); settle(&mut g); }
     } else if let Some(spec) = o.scenario.as_ref() {
@@ -191,21 +202,23 @@ pub fn stand_with(data: &Json, assets: Assets, o: &StartOpts, before: &mut dyn F
     }
     // (what the light under a roof is worked out from is made behind the loading, and not in the first step, whichever host stands it)
     game::scene_collision::light_ready(&mut g);
-    Stood { game: g, host, level: loaded, rig }
+    Stood { game: g, host, level: loaded, rig, refused }
 }
 
 /// ONE FRAME OF A HOST WITH NO PICTURE (headless.ts `step`): the game's update on the host's Input and camera, the camera after the man, the lights'
-/// envelopes, the Input's frame ended. Answers WHAT THE STEP TOLD ITS HOST (tools/blitz/OUT-EVENTS.md: the sounds to
+/// envelopes, the Input's frame ended. Answers WHAT THE STEP TOLD ITS HOST (the sounds to
 /// play, the marks to draw, the lines said): the list is a step's output and the host drains it, or it grows for the life of the game.
 pub fn frame(g: &mut Game, h: &Host, dt: f64) -> Vec<game::out_events::OutEvent> {
+    step(g, h, dt);
+    core::mem::take(&mut g.out)
+}
+/// …the same with what the step told its host still on the game (`g.out`), for a host that draws before it empties the list, as a page does
+pub fn step(g: &mut Game, h: &Host, dt: f64) {
     game::game::game_update(g, dt, h.input, h.cam, h.canvas);
     let me = game::game::game_host_seat(g);
     let (follow, aim) = game::seats::with_seat(g, me, &mut |g| (game::game::game_follow_pos(g, None), g.aim_point));
     let aim = if g.spectate >= 0.0 { None } else { Some(aim) };
     game::camera::follow_camera_update(g, h.cam, dt, follow, aim);
     game::input::input_end_frame(g, h.input);
-    core::mem::take(&mut g.out)
 }
 
-#[allow(dead_code)]
-fn unused() -> String { String::new() }

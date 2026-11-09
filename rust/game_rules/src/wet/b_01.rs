@@ -81,10 +81,6 @@ fn open_sky_of(g: &mut Game, c: CharId) -> bool {
     })
 }
 
-/// Is `c` under the open sky, asked from outside the tick (a panel's line, a check). The same ask as the tick's, so it moves his sky's memory as the
-/// TypeScript's did. (src/game/wet.ts:75 openSky)
-pub fn open_sky(g: &mut Game, c_2: CharId) -> bool { open_sky_of(g, c_2) }
-
 /// Sam indoors after the rain: his print budget and his drip clock. The drops themselves are GPU particles (`drip` below: nothing with no particle
 /// system), but the ask of the sky is the rule's and moves his sky's memory, which the next soak reads. (src/game/wet.ts:115 samAftermath)
 pub fn sam_aftermath(g: &mut crate::game::Game, dt: f64) {
@@ -136,7 +132,7 @@ pub fn drip(g: &mut crate::game::Game, c_2: CharId) {
         vadd: Some(vel),
         owner: Some(id),
         color: Some([0.42, 0.47, 0.55]),
-        ..crate::render_particles::EmitOpts::zeroed()
+        ..crate::render_particles::EmitOpts::default()
     });
     g.stats.wet.drips += 1;
 }
@@ -171,9 +167,7 @@ pub fn wet_footfall(g: &mut crate::game::Game, left_hint: bool) {
         param: Some(k),
         look: Some(true),
         seed: Some(seed as f64),
-        ..crate::render_decals::DecalOpts::zeroed()
+        ..crate::render_decals::DecalOpts::default()
     }));
 }
 
-/// BOUNDARY: the host's debug panel and `__wet.summary()` write this line (coats, prints, drips) at the swap; a headless run has no panel, so no line.   (src/game/wet.ts:204 wetSummary)
-pub fn wet_summary(g: &crate::game::Game) -> String { String::new() }

@@ -1,10 +1,9 @@
-//! The types of `stickycam`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `stickycam`.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: StickyCam, src/game/stickycam.ts:65)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct StickyCam {
     pub pos: V3,
     pub n: V3,
@@ -13,76 +12,13 @@ pub struct StickyCam {
     pub si: f64,
     pub id: f64,
 }
-impl StickyCam {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StickyCam {
-            pos: [0.0; 3],
-            n: [0.0; 3],
-            vel: None,
-            age: 0.0,
-            si: 0.0,
-            id: 0.0,
-        }
-    }
-}
-impl Default for StickyCam { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: StickySnap, src/game/stickycam.ts:67)
-#[derive(Clone, Debug)]
-pub struct StickySnap {
-    pub p: Vec<f64>,
-    pub n: Vec<f64>,
-    pub si: f64,
-    pub id: f64,
-}
-impl StickySnap {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StickySnap {
-            p: Vec::new(),
-            n: Vec::new(),
-            si: 0.0,
-            id: 0.0,
-        }
-    }
-}
-impl Default for StickySnap { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: CamMark, src/game/stickycam.ts:270)
-#[derive(Clone, Copy, Debug)]
-pub struct CamMark {
-    pub at: V3,
-    pub sends: bool,
-}
-impl CamMark {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CamMark {
-            at: [0.0; 3],
-            sends: false,
-        }
-    }
-}
-impl Default for CamMark { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/stickycam.ts:183 stickyLive(pl), src/game/stickycam.ts:183)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct StickyLivePl {
     pub cams: Vec<StickyCamId>,
 }
-impl StickyLivePl {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StickyLivePl {
-            cams: Vec::new(),
-        }
-    }
-}
-impl Default for StickyLivePl { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/stickycam.ts:221 stickyRows(row), ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct StickyRowsRowOver {
     pub kind: Option<crate::stickycam::StickyRowsRowOverKind>,
     pub pos: Option<V3>,
@@ -100,31 +36,7 @@ pub struct StickyRowsRowOver {
     pub past: Option<bool>,
     pub framed: Option<bool>,
 }
-impl StickyRowsRowOver {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StickyRowsRowOver {
-            kind: None,
-            pos: None,
-            line1: None,
-            line2: None,
-            in_reach: None,
-            off: None,
-            progress: None,
-            target: None,
-            door: None,
-            guard: None,
-            verb: None,
-            running: None,
-            close: None,
-            past: None,
-            framed: None,
-        }
-    }
-}
-impl Default for StickyRowsRowOver { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum StickyRowsRowOverKind {
     Cam,
@@ -160,7 +72,7 @@ impl StickyRowsRowOverKind {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct StickycamMod {
     /// (src/game/stickycam.ts:76 VISIT)
     pub visit: Option<f64>,
@@ -205,5 +117,3 @@ pub fn lens_live() -> V3 { [0.42, 0.05, 0.04] }
 /// (src/game/stickycam.ts:261 CAM_KEY)
 pub const CAM_KEY: f64 = 8388608.0;
 
-/// (src/game/stickycam.ts:277 NO_MARKS: a table nothing writes)
-pub fn no_marks() -> Vec<crate::stickycam::CamMark> { Vec::new() }

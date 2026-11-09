@@ -94,6 +94,18 @@ pub fn on_first_bare<R>(g: &mut crate::game::Game, f: &mut dyn FnMut(&mut crate:
     r
 }
 
+/// EVERY SEAT'S SET IN ITS OWN ROW for the length of the call, that of the seat that stands on Game too (Game's fields of it are blank meanwhile): for who walks the sets.
+pub fn parked<R>(g: &mut crate::game::Game, f: &mut dyn FnMut(&mut crate::game::Game) -> R) -> R {
+    let on = g.seat;
+    let mut set = SeatSet::default();
+    swap_set(g, &mut set);
+    g.tab.cmd_seat[on].own = Some(set);
+    let r = f(g);
+    let mut back = g.tab.cmd_seat[on].own.take().unwrap();
+    swap_set(g, &mut back);
+    r
+}
+
 /// HOW MANY PLAYERS' MEN STAND ON THE FLOOR: one a seat. Every budget of characters counts this, never "1" (a floor holds at most
 /// guards::MAX_SKINNED characters with every seat counted: the seats' men, every teammate, every other man stood).
 pub fn seat_count(g: &crate::game::Game) -> f64 { g.seats.len() as f64 }

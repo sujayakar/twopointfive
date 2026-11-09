@@ -217,13 +217,12 @@ pub fn home(g: &mut crate::game::Game, q: EnemysquadsSquadId) -> Vec<RoomfightDe
     let mut out = Vec::new();
     let men = g.tab.enemysquads_squad[q].men.clone();
     for m in men {
-        if !fit(g, m) || g.time - g.gd[m].last_seen_t < 2.0 || g.tab.enemysquads_squad[q].sent.iter().any(|s| s.gd == m)
+        if crate::owner::kept(g, m, crate::owner::by::SQUAD_LEG).is_some() || g.time - g.gd[m].last_seen_t < 2.0 || g.tab.enemysquads_squad[q].sent.iter().any(|s| s.gd == m)
             || g.tab.enemysquads_squad[q].rc.as_ref().map_or(false, |c| c.look.iter().any(|l| l.gd == m)) { continue; }
-        if crate::owner::has(g, m, crate::owner::by::LAST_MAN) { continue; }
         if g.gd[m].script.is_some() && crate::director::director_lesson_runs(g) { continue; }
         if let Some(d) = def_of(g, m) {
             let row = &g.tab.roomfight_def[d];
-            if row.mode == crate::roomfight::DefMode::Hold && row.rally_at != f64::INFINITY { out.push(d); }
+            if row.mode == crate::roomfight::DefMode::Hold { out.push(d); }
         }
     }
     out
@@ -241,7 +240,7 @@ pub fn team_known(g: &crate::game::Game) -> Vec<V3> {
     for d in g.fight.defs.clone() {
         let gd = g.tab.roomfight_def[d].gd;
         if !alive(g, gd) { continue; }
-        if g.time - g.gd[gd].last_seen_t < 4.0 { let pt = g.tab.roomfight_def[d].pt; if let Some(seen) = crate::belief::eyes_fix_def(g, gd, d) { out.push(seen); } }
+        if g.time - g.gd[gd].last_seen_t < 4.0 { if let Some(seen) = crate::belief::eyes_fix_def(g, gd, d) { out.push(seen); } }
         if let Some(n) = g.tab.roomfight_def[d].noise_at { if g.time - g.tab.roomfight_def[d].noise_t < 4.0 { out.push(n); } }
     }
     out
@@ -348,7 +347,7 @@ pub fn team_known_how(g: &mut crate::game::Game) -> Vec<crate::enemysquads::Know
     for d in g.fight.defs.clone() {
         let gd = g.tab.roomfight_def[d].gd;
         if !alive(g, gd) { continue; }
-        if g.time - g.gd[gd].last_seen_t < 4.0 { let pt = g.tab.roomfight_def[d].pt; if let Some(seen) = crate::belief::eyes_fix_def(g, gd, d) { out.push(Known { p: seen, firm: true }); } }
+        if g.time - g.gd[gd].last_seen_t < 4.0 { if let Some(seen) = crate::belief::eyes_fix_def(g, gd, d) { out.push(Known { p: seen, firm: true }); } }
         if let Some(n) = g.tab.roomfight_def[d].noise_at {
             if g.time - g.tab.roomfight_def[d].noise_t < 4.0 {
                 let c = pos_of(g, gd);
@@ -582,7 +581,7 @@ fn hold_ok(g: &mut Game, q: V3, s: f64, l: f64, outside: V3, back: f64, used: &[
 pub fn event(g: &mut crate::game::Game, q: EnemysquadsSquadId, what: crate::enemysquads::SquadEventWhat, why: &str, by: Option<GuardId>) {
     let n = home(g, q).len() as f64;
     let t = g.time;
-    let row = SquadEvent { t, what, n, why: String::from(why) };
+    let row = SquadEvent { t, what };
     let ev = &mut g.tab.enemysquads_squad[q].events;
     ev.push(row);
     if ev.len() > 240 { ev.drain(0..80); }

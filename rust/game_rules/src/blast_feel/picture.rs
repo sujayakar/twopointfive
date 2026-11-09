@@ -21,6 +21,7 @@ struct Stage { at: f64, what: What }
 /// the stages to come, in the order they were asked for; the faces their blasts have, each ring's sectors stopped by a wall kept on its face; and this half's own counter
 #[derive(Clone, Debug, Default)]
 pub struct Stages { queue: Vec<Stage>, faces: Vec<Vec<Face>>, serial: f64 }
+impl crate::bytes::ToBytes for Stages { fn w(&self, _: &mut crate::bytes::W) {} }
 
 fn stages(g: &mut Game) -> &mut Stages { let s: &mut Stages = g.feel.at(); if s.serial == 0.0 { s.serial = 1.0; } s }
 fn draw(g: &mut Game) -> f64 { let s = stages(g); let n = s.serial; s.serial += 1.0; hash_u(n) / 4294967296.0 }
@@ -45,7 +46,7 @@ fn later(g: &mut Game, secs: f64, what: What) {
 fn sparks(g: &mut Game, ways: &[Way], open: bool, count: &[f64], speed: &[f64], life: f64, size: f64, jit: f64) {
     for w in ways {
         let i = if open { w.k } else { 0 };
-        emit(g, PKind::Spark, w.from, v3::normalize([w.d[0], 0.15, w.d[2]]), count[i], EmitOpts { shape: Some(EmitShape::Cone), speed: speed[i], speed_jit: Some(0.7), spread: Some(1.25), life, life_jit: Some(0.5), size, size_jit: Some(0.5), pos_jit: Some(jit), ..EmitOpts::zeroed() });
+        emit(g, PKind::Spark, w.from, v3::normalize([w.d[0], 0.15, w.d[2]]), count[i], EmitOpts { shape: Some(EmitShape::Cone), speed: speed[i], speed_jit: Some(0.7), spread: Some(1.25), life, life_jit: Some(0.5), size, size_jit: Some(0.5), pos_jit: Some(jit), ..EmitOpts::default() });
     }
 }
 
@@ -71,7 +72,7 @@ pub fn feel_starts(g: &mut Game, wall: &crate::wallcharge::WallSpot) {
     { for w in &ways {
         let i = if open { w.k } else { 0 };
         let c = &b.chunks;
-        emit(g, PKind::Debris, w.from, v3::normalize([w.d[0], 0.35, w.d[2]]), c.count[i], EmitOpts { shape: Some(EmitShape::Cone), speed: c.speed[i], speed_jit: Some(0.6), spread: Some(0.95), life: c.life, life_jit: Some(0.3), size: c.size, size_jit: Some(0.6), aspect: Some(1.7), pos_jit: Some(0.25), color: Some(c.color), ..EmitOpts::zeroed() });
+        emit(g, PKind::Debris, w.from, v3::normalize([w.d[0], 0.35, w.d[2]]), c.count[i], EmitOpts { shape: Some(EmitShape::Cone), speed: c.speed[i], speed_jit: Some(0.6), spread: Some(0.95), life: c.life, life_jit: Some(0.3), size: c.size, size_jit: Some(0.6), aspect: Some(1.7), pos_jit: Some(0.25), color: Some(c.color), ..EmitOpts::default() });
     } }
     later(g, b.roll.after * FRAME, What::Roll(ways.clone(), open));
     for i in 0..b.soot.len() { later(g, b.soot[i].after * FRAME, What::Soot(i, ways.clone(), open)); }
@@ -135,7 +136,7 @@ fn ring(g: &mut Game, k: u32, blast: usize) {
             let dir = [fa.d[0] * c2 - fa.d[2] * s2, 0.0, fa.d[2] * c2 + fa.d[0] * s2];
             let p = [fa.o[0] + dir[0] * r2, r.y, fa.o[2] + dir[2] * r2];
             if crate::scene_collision::solid_blocked(g, [fa.o[0], 0.3, fa.o[2]], [p[0], 0.3, p[2]], None) { continue; }
-            emit(g, PKind::Dust, p, dir, if k < 4 { 4.0 } else { 3.0 }, EmitOpts { shape: Some(EmitShape::Cone), speed: r.speed * (0.5 + 0.5 * fr), speed_jit: Some(0.4), spread: Some(0.3), life: r.life, life_jit: Some(0.3), size: r.size * (1.5 - 0.5 * fr), size_jit: Some(0.3), pos_jit: Some(m::min(0.1, r.y * 0.7)), color: Some(r.color), ..EmitOpts::zeroed() });
+            emit(g, PKind::Dust, p, dir, if k < 4 { 4.0 } else { 3.0 }, EmitOpts { shape: Some(EmitShape::Cone), speed: r.speed * (0.5 + 0.5 * fr), speed_jit: Some(0.4), spread: Some(0.3), life: r.life, life_jit: Some(0.3), size: r.size * (1.5 - 0.5 * fr), size_jit: Some(0.3), pos_jit: Some(m::min(0.1, r.y * 0.7)), color: Some(r.color), ..EmitOpts::default() });
         }
     }
 }
@@ -156,15 +157,15 @@ pub fn feel_stages(g: &mut Game) {
                 let s = &f.fire.soot[k];
                 for w in &ways {
                     let n = if open { w.k } else { 0 };
-                    emit(g, PKind::Dust, v3::mad(w.from, w.d, 0.15), v3::normalize([w.d[0], 0.5, w.d[2]]), s.count[n], EmitOpts { shape: Some(EmitShape::Puff), speed: s.speed, speed_jit: Some(0.5), lift: Some(0.5), life: s.life, life_jit: Some(0.3), size: s.size, size_jit: Some(0.3), pos_jit: Some(0.22), vadd: Some(v3::scale(w.d, s.speed * 0.6)), color: Some(f.fire.soot_color), ..EmitOpts::zeroed() });
+                    emit(g, PKind::Dust, v3::mad(w.from, w.d, 0.15), v3::normalize([w.d[0], 0.5, w.d[2]]), s.count[n], EmitOpts { shape: Some(EmitShape::Puff), speed: s.speed, speed_jit: Some(0.5), lift: Some(0.5), life: s.life, life_jit: Some(0.3), size: s.size, size_jit: Some(0.3), pos_jit: Some(0.22), vadd: Some(v3::scale(w.d, s.speed * 0.6)), color: Some(f.fire.soot_color), ..EmitOpts::default() });
                 }
             },
             What::Ring(k, blast) => ring(g, k, blast),
             What::Push(k, blast) => push(g, k, blast),
             What::Ceil(at) => {
                 let c = &f.ceil;
-                emit(g, PKind::Dust, at, [0.0, -1.0, 0.0], c.puffs, EmitOpts { shape: Some(EmitShape::Puff), speed: 0.9, speed_jit: Some(0.5), lift: Some(-0.6), life: 1.7, life_jit: Some(0.3), size: 0.13, size_jit: Some(0.35), pos_jit: Some(0.12), color: Some(c.color), ..EmitOpts::zeroed() });
-                emit(g, PKind::Debris, at, [0.0, -1.0, 0.0], c.crumbs, EmitOpts { shape: Some(EmitShape::Cone), speed: 0.8, speed_jit: Some(0.8), spread: Some(0.9), life: 14.0, life_jit: Some(0.3), size: 0.012, size_jit: Some(0.6), pos_jit: Some(0.1), color: Some(c.color), ..EmitOpts::zeroed() });
+                emit(g, PKind::Dust, at, [0.0, -1.0, 0.0], c.puffs, EmitOpts { shape: Some(EmitShape::Puff), speed: 0.9, speed_jit: Some(0.5), lift: Some(-0.6), life: 1.7, life_jit: Some(0.3), size: 0.13, size_jit: Some(0.35), pos_jit: Some(0.12), color: Some(c.color), ..EmitOpts::default() });
+                emit(g, PKind::Debris, at, [0.0, -1.0, 0.0], c.crumbs, EmitOpts { shape: Some(EmitShape::Cone), speed: 0.8, speed_jit: Some(0.8), spread: Some(0.9), life: 14.0, life_jit: Some(0.3), size: 0.012, size_jit: Some(0.6), pos_jit: Some(0.1), color: Some(c.color), ..EmitOpts::default() });
             },
         }
     }

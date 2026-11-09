@@ -1,12 +1,11 @@
-//! The types of `hours`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `hours`.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum HourId {
-    Overcast,
+    #[default] Overcast,
     Night,
     Dawn,
     Midday,
@@ -24,8 +23,7 @@ impl HourId {
     }
 }
 
-/// (TypeScript: HourDef, src/game/hours.ts:47)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct HourDef {
     pub id: crate::hours::HourId,
     pub label: String,
@@ -38,27 +36,8 @@ pub struct HourDef {
     pub lamps: bool,
     pub cloud: Option<f64>,
 }
-impl HourDef {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HourDef {
-            id: crate::hours::HourId::Overcast,
-            label: String::new(),
-            clock: String::new(),
-            words: String::new(),
-            sun: crate::hours::HourDefSun::zeroed(),
-            sky: crate::hours::HourDefSky::zeroed(),
-            haze: 0.0,
-            exposure: 0.0,
-            lamps: false,
-            cloud: None,
-        }
-    }
-}
-impl Default for HourDef { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/hours.ts:56 HourDef.sun, src/game/hours.ts:56)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct HourDefSun {
     pub bearing_deg: f64,
     pub elev_deg: f64,
@@ -67,75 +46,26 @@ pub struct HourDefSun {
     pub radius: f64,
     pub volumetric: f64,
 }
-impl HourDefSun {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HourDefSun {
-            bearing_deg: 0.0,
-            elev_deg: 0.0,
-            color: [0.0; 3],
-            intensity: 0.0,
-            radius: 0.0,
-            volumetric: 0.0,
-        }
-    }
-}
-impl Default for HourDefSun { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/hours.ts:57 HourDef.sky, src/game/hours.ts:57)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct HourDefSky {
     pub zenith: V3,
     pub horizon: V3,
 }
-impl HourDefSky {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HourDefSky {
-            zenith: [0.0; 3],
-            horizon: [0.0; 3],
-        }
-    }
-}
-impl Default for HourDefSky { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Ray, src/game/hours.ts:114)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Ray {
     pub d: V3,
     pub c6: Vec<f64>,
 }
-impl Ray {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Ray {
-            d: [0.0; 3],
-            c6: Vec::new(),
-        }
-    }
-}
-impl Default for Ray { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Open, src/game/hours.ts:115)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Open {
     pub ray: usize,
     pub len: f64,
     pub sun_k: f64,
     pub sky_k: f64,
 }
-impl Open {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Open {
-            ray: 0,
-            len: 0.0,
-            sun_k: 0.0,
-            sky_k: 0.0,
-        }
-    }
-}
-impl Default for Open { fn default() -> Self { Self::zeroed() } }
 
 /// WHAT OF THE SKY REACHES THE LEVEL'S CELLS, asked of a cell when a point in it is first asked about and kept until a static is written or the sun (or the
 /// moon) stands elsewhere. Made again from the world, so it is no state: it is on no wire and in no word
@@ -150,12 +80,11 @@ pub struct SkyReach {
 }
 impl SkyReach {
     /// of no world yet
-    pub fn blank() -> Self { SkyReach { wrote: -1.0, to_sun: [0.0; 3], box_: crate::hours::SkyStateBox::zeroed(), cells: JsMap::new(), fine: JsMap::new() } }
+    pub fn blank() -> Self { SkyReach { wrote: -1.0, to_sun: [0.0; 3], box_: crate::hours::SkyStateBox::default(), cells: JsMap::new(), fine: JsMap::new() } }
 }
 impl Default for SkyReach { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: inline at src/game/hours.ts:118 SkyState.box, src/game/hours.ts:118)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SkyStateBox {
     pub x0: f64,
     pub x1: f64,
@@ -163,39 +92,14 @@ pub struct SkyStateBox {
     pub z1: f64,
     pub top: f64,
 }
-impl SkyStateBox {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SkyStateBox {
-            x0: 0.0,
-            x1: 0.0,
-            z0: 0.0,
-            z1: 0.0,
-            top: 0.0,
-        }
-    }
-}
-impl Default for SkyStateBox { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/hours.ts:121 SkyState.dome, src/game/hours.ts:121)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SkyStateDome {
     pub zenith: V3,
     pub horizon: V3,
 }
-impl SkyStateDome {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SkyStateDome {
-            zenith: [0.0; 3],
-            horizon: [0.0; 3],
-        }
-    }
-}
-impl Default for SkyStateDome { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: HourState, src/game/hours.ts:124)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct HourState {
     pub sun: LightId,
     pub def: crate::hours::HourDef,
@@ -209,50 +113,21 @@ pub struct HourState {
     pub storm: Option<crate::weather::WeatherSnap>,
     pub to_sun: V3,
 }
-impl HourState {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HourState {
-            sun: LightId(0),
-            def: crate::hours::HourDef::zeroed(),
-            sun_k: 0.0,
-            given: false,
-            soft: 0.0,
-            sky_k: 0.0,
-            was_off: false,
-            moons: Vec::new(),
-            lamps: JsMap::new(),
-            storm: None,
-            to_sun: [0.0; 3],
-        }
-    }
-}
-impl Default for HourState { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/hours.ts:79 NIGHT, src/game/hours.ts:79)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct NIGHT {
     pub label: String,
     pub clock: String,
     pub words: String,
 }
-impl NIGHT {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        NIGHT {
-            label: String::new(),
-            clock: String::new(),
-            words: String::new(),
-        }
-    }
-}
-impl Default for NIGHT { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct HoursMod {
     /// (src/game/hours.ts:140 states)
     pub states: Option<crate::hours::HourState>,
+    /// (made again from the world: in no bytes)
+    #[bytes(skip)]
     pub reach: crate::hours::SkyReach,
 }
 impl HoursMod {
@@ -318,5 +193,3 @@ pub const DOOR_M: f64 = 7.0;
 /// (src/game/hours.ts:308 GROUND_ALBEDO)
 pub const GROUND_ALBEDO: f64 = 0.25;
 
-/// (src/game/hours.ts:341 NO_BOXES: a table nothing writes)
-pub fn no_boxes() -> Vec<BoxId> { Vec::new() }

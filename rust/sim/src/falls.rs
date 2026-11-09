@@ -26,7 +26,6 @@ pub const CELL_MAX: f64 = 0.25;
 pub const MAXP: usize = 96;
 /// the lists: fragments of glass · pieces thrown by a thing that breaks
 pub const L_GLASS: usize = 0;
-pub const L_PIECES: usize = 1;
 pub const NLIST: usize = 2;
 
 // a landing's columns (fallshome.ts FP names them by the same numbers)

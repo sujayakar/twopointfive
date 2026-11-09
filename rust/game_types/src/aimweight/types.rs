@@ -1,10 +1,9 @@
-//! The types of `aimweight`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `aimweight`.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: AimWeight, src/game/aimweight.ts:42)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AimWeight {
     pub vel: f64,
     pub r: f64,
@@ -17,7 +16,7 @@ pub struct AimWeight {
     pub launch_t: f64,
 }
 impl AimWeight {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         AimWeight {
             vel: 0.0,
@@ -34,20 +33,10 @@ impl AimWeight {
 }
 impl Default for AimWeight { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: inline at src/game/aimweight.ts:65 aimSwing(w), src/game/aimweight.ts:65)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct AimSwingW {
     pub vel: f64,
 }
-impl AimSwingW {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        AimSwingW {
-            vel: 0.0,
-        }
-    }
-}
-impl Default for AimSwingW { fn default() -> Self { Self::zeroed() } }
 
 /// the counters this module keeps for the checks
 #[derive(Clone, Debug, Default)]

@@ -8,8 +8,7 @@
 // rate the pacer read off them; plays the gaps of a real recording through the readout; reads the wiring off the page's source as text.
 // What it cannot say: that a fast display's picture is even. Nobody here has one, and a headless browser's display runs at 60, where no frame is passed over.
 // Giving way (EVENPACE.giveway) is played the same way: a GPU that takes so long over a frame, the queue's word coming back when it is done, the focus going
-// and coming back. What it cannot say there: that a second window of a real browser on a real GPU starts beside the first (docs/agents/render.md has what
-// two windows of headless Chromium did on the software adapter).
+// and coming back. What it cannot say there: that a second window of a real browser on a real GPU starts beside the first.
 // Waiting for the GPU (EVENPACE.flight) is played on the same model: no more frames with the GPU than the rule allows, as many frames a second as the GPU
 // finishes, the even pace untouched where the work fits it. What it cannot say: how late a real browser's queue answers, which is what the rule's cost on a
 // real machine hangs on (the maintainer's own try of the look page's trial on a 120 Hz laptop is the only word on that).
@@ -179,7 +178,7 @@ const mean = (g: number[]) => g.reduce((a, b) => a + b, 0) / Math.max(1, g.lengt
 { const r = playAway(120, 60, 3600, 20, () => false), q = playAway(60, 60, 1800, 25, () => false);
   check(r.most <= 2 && about(r.rate, 50, 0.03) && r.gaps.every(g => g > 16 && g < 25.1), `the ladder's 60 on 120 Hz with the GPU at 20 ms: ${r.rate.toFixed(1)} frames a second, ${span(r.gaps)} apart, ${r.most} with the GPU at the most`);
   check(q.most <= 2 && about(q.rate, 40, 0.03) && q.gaps.every(g => g > 16 && g < 33.4), `a 60 Hz display with the GPU at 25 ms: ${q.rate.toFixed(1)} frames a second, ${span(q.gaps)} apart, ${q.most} with the GPU at the most`); }
-// 23. a frame held for the GPU is the machine's own pace, not a window giving way: the ladder reads its gap (main.ts `rested` counts only `gave`)
+// 23. a frame held for the GPU is the machine's own pace, not a window giving way: the ladder reads its gap (host/drawpage.ts `rested` counts only `gave`)
 { const r = playAway(60, 60, 1800, 25, () => false);
   check(r.held > 0 && r.gave === 0, `the same 60 Hz display: ${r.held} display frames held for the GPU, none counted as giving way (${r.gave})`); }
 // 24. one at a time (`?flight=1`): a frame is begun only when the last has left the GPU

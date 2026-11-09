@@ -4,13 +4,6 @@ use game_start::play::{dist, Opts, Play};
 
 const SEEDS: [u32; 3] = [1, 2, 3];
 fn stood(seed: u32, seats: u32) -> Play { let mut p = Play::level("kit-yard.json", true, &Opts { seed, seats, ..Default::default() }); p.run(1.0); p }
-/// every word of the game's state, a word a part: the game's own parts, then rust/sim's block
-fn words(p: &mut Play) -> Vec<u32> {
-    let (mut w, mut words) = (game::io::W::new(), Vec::new());
-    game::state_words::state_words(&mut p.g, &mut w, &mut words);
-    words.extend(game_start::block::part_hashes(0));
-    words
-}
 
 /// A FAILURE MEANS: the HUD is told the cursor is on another thing than an order given there would be about.
 #[test]
@@ -52,15 +45,15 @@ fn the_hud_is_told_what_an_order_there_would_be_about() {
 fn any_cursor_is_answered_and_pointing_changes_nothing() {
     for seed in SEEDS {
         let mut p = stood(seed, 1);
-        let before = words(&mut p);
+        let before = p.words();
         let mut roll = seed as u64 * 0x9e37_79b9 + 7;
         let mut r = || { roll ^= roll << 13; roll ^= roll >> 7; roll ^= roll << 17; (roll % 100_000) as f64 / 100_000.0 };
         for k in 0..400 {
             let mouse = match k % 8 { 0 => [f64::NAN, 10.0], 1 => [-5000.0, 1e7], _ => [r() * 1600.0, r() * 900.0] };
             p.pointed(0, mouse);
         }
-        let after = words(&mut p);
-        let parts: Vec<&str> = (0..game::state_words::STATE_NAMES.len()).filter(|&i| after[i] != before[i]).map(|i| game::state_words::STATE_NAMES[i]).collect();
+        let after = p.words();
+        let parts: Vec<String> = game::state_words::state_names().into_iter().enumerate().filter(|(i, _)| after[*i] != before[*i]).map(|(_, n)| n).collect();
         assert!(parts.is_empty() && before == after, "seed {}: pointing moved {:?}", seed, parts);
     }
 }

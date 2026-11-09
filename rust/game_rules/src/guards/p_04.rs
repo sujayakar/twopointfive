@@ -20,7 +20,6 @@ fn lay_path(g: &mut Game, gd: GuardId, path: Vec<V3>) {
 /// that fact no longer that object. Every whole write of `path_goal` outside the standoff goes through here, so the flag cannot be left standing.
 pub fn guard_set_path_goal(g: &mut crate::game::Game, gd: GuardId, goal: Option<V3>) {
     let o = &mut g.gd[gd];
-    if o.path_goal_orbit { crate::game::b_tap::tap(crate::game::b_tap::PATH_GOAL_SET_WITH_ORBIT_UP); }
     o.path_goal = goal;
     o.path_goal_orbit = false;
 }
@@ -89,7 +88,7 @@ pub fn standoff_alert(g: &mut crate::game::Game, gd: GuardId, dt: f64, p: crate:
     let before2 = g.ch[c].pos[2];
     g.tab.guards_standoff[s].replan_t -= dt;
     g.tab.guards_standoff[s].rest_t = m::max(0.0, g.tab.guards_standoff[s].rest_t - dt);
-    let gh = crate::gunhold::gun_hold_feet(g, gd, dt, p, s, crate::gunhold::GunHoldFeetFs { ok: fs.ok, rear: fs.rear, clear: fs.clear });
+    let gh = crate::gunhold::gun_hold_feet(g, gd, dt, p, s, crate::gunhold::GunHoldFeetFs { ok: fs.ok, rear: fs.rear });
     let backing = gh.is_none() && dist < STANDOFF_MIN_M - 0.3;
     let pace_base = if far || backing { g.tune.guard_investigate } else { g.tune.guard_walk };
     let pace_k = if crate::suppression::flinching(g, gd) { g.k.suppression.standoff_pace_k } else { 1.0 };
@@ -126,11 +125,6 @@ pub fn standoff_alert(g: &mut crate::game::Game, gd: GuardId, dt: f64, p: crate:
         if backing {
             // (pathGoal !== S.orbitGoal, of two objects: path_goal_orbit says they are the one object)
             // (…and the flag is believed only while the goal still holds that point's numbers: a write that slipped past the setter cannot leave it up)
-            {   // (the loop's counters, b_tap.rs)
-                use crate::game::b_tap as tp;
-                tp::tap(tp::STANDOFF_ORBIT_ASKED);
-                if !(g.gd[gd].path_goal_orbit && g.gd[gd].path_goal == Some(goal)) { tp::tap(tp::STANDOFF_ORBIT_RELAID); if g.gd[gd].path_goal_orbit { tp::tap(tp::STANDOFF_ORBIT_FLAG_UP_GOAL_MOVED); } }
-            }
             if !(g.gd[gd].path_goal_orbit && g.gd[gd].path_goal == Some(goal)) {
                 lay_path(g, gd, vec![goal]);
                 g.gd[gd].path_i = 0;
@@ -248,9 +242,8 @@ pub fn standoff_upkeep(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::
                     crate::chronicle::chron_body_found(g, b, gd);
                 }
                 let victim = g.gd[b].callsign.clone();
-                let t = g.time;
                 let breathing = crate::game::is_breathing(g, b);
-                g.gd[gd].witness.saw_body = Some(crate::game::WitnessSawBody { victim, t, breathing });
+                g.gd[gd].witness.saw_body = Some(crate::game::WitnessSawBody { victim, breathing });
             }
             if g.gd[b].down_by != Some(crate::game::DownBy::Guard) {
                 standoff_bark(g, gd, crate::guards::StandoffMoment::Dropped, Some(crate::guards::StandoffBarkForce::Bool(true)), Some(b));
@@ -277,36 +270,6 @@ pub fn hostage_hit_bark(g: &mut crate::game::Game, shooter: GuardId, victim: Gua
     standoff_bark(g, shooter, crate::guards::StandoffMoment::HitHim, Some(crate::guards::StandoffBarkForce::Always), Some(victim));
 }
 
-/// Panel / QA: one line per man in a standoff. Text only; `{:.n}` stands for toFixed (they differ on an exact tie).   (guards.ts standoffSummary)
-pub fn standoff_summary(g: &mut crate::game::Game) -> String {
-    let p = pair_of(g, &crate::seats::here(g));
-    let mut parts: Vec<String> = Vec::new();
-    let mut i = 0;
-    while i < g.guards.len() {
-        let gd = g.guards[i];
-        i += 1;
-        let s = match g.gd[gd].standoff { Some(s) => s, None => continue };
-        if g.gd[gd].state == crate::game::GuardState::Dead { continue; }
-        let fs = match p {
-            Some(q) if q.held == g.tab.guards_standoff[s].pair => Some(flank_shot(g, gd, q)),
-            _ => None,
-        };
-        let line = match fs {
-            Some(f) => format!("{} m, {}° off their rear, clear {}{}", js::to_fixed(f.dist, 1), m::round(f.rear / v3::DEG), js::to_fixed(f.clear, 2), if f.ok { " LINE" } else { "" }),
-            None => String::from("pair gone"),
-        };
-        let so = g.tab.guards_standoff[s];
-        let feet = match so.orbit_goal {
-            Some(o) => format!("to ({}, {})", js::to_fixed(o[0], 1), js::to_fixed(o[2], 1)),
-            None => String::from(if so.cornered { "cornered" } else if so.rest_t > 0.0 { "resting" } else { "planted" }),
-        };
-        parts.push(format!(
-            "{}: {} · side {} · {} · {} shot{}, {} m walked, seen {} s ago",
-            g.gd[gd].callsign, line, if so.side > 0.0 { "+" } else { "−" }, feet, so.shots, if so.shots == 1.0 { "" } else { "s" }, js::to_fixed(so.orbit_m, 1), js::to_fixed(g.time - so.seen_t, 1)));
-    }
-    parts.join(" | ")
-}
-
 /// The player he has in mind, in the view of the seat that has this man.   (guards.ts canSee)
 pub fn can_see(g: &mut crate::game::Game, gd: GuardId) -> crate::guards::CanSee {
     let c = g.gd[gd].ch;
@@ -322,7 +285,7 @@ pub fn can_see(g: &mut crate::game::Game, gd: GuardId) -> crate::guards::CanSee 
             can_see_char(g, gd, pc, true)
         })
     };
-    crate::guards::CanSee { visible: r.visible, dist: r.dist, in_cone: r.in_cone }
+    crate::guards::CanSee { visible: r.visible, dist: r.dist }
 }
 
 /// he sees a man who is up: any player, each asked of on his own seat
@@ -362,7 +325,7 @@ pub fn can_see_char(g: &mut crate::game::Game, gd: GuardId, pc: CharId, is_playe
     let smoke_trans = g.gd[gd].smoke_trans;
     let mut r = eye_contact(g, e, pc, is_player, blind, smoke_trans, Some(through));
     if !is_player && r.visible && crate::roomfight::pair_smoke(g, c, pc) < 0.3 { r.visible = false; }
-    crate::guards::CanSeeChar { visible: r.visible, dist: r.dist, in_cone: r.in_cone }
+    crate::guards::CanSeeChar { visible: r.visible, dist: r.dist }
 }
 
 /// How far a man's eye reaches for a man with `lit` on him.   (guards.ts eyeReach)
@@ -688,7 +651,7 @@ mod tests {
     // the TypeScript's own bits, under bun with EXACT on and the page's GUARD_EYE
     #[test]
     fn dist_term_is_the_typescripts_bits() {
-        let k = crate::knobs::page_guard_eye();
+        let k = crate::knobs::GuardEyeK::page();
         for (d, bits) in [
             (0f64, 0x3ff0000000000000u64),
             (3f64, 0x3ff0000000000000u64),
@@ -708,7 +671,7 @@ mod tests {
 
     #[test]
     fn eye_reach_is_the_typescripts_bits() {
-        let k = crate::knobs::page_guard_eye();
+        let k = crate::knobs::GuardEyeK::page();
         for (l, bits) in [
             (0f64, 0x4030000000000000u64),
             (0.39f64, 0x4030000000000000u64),
@@ -726,7 +689,7 @@ mod tests {
 
     #[test]
     fn a_far_glimpse_writes_a_fix_by_his_state() {
-        let k = crate::knobs::page_guard_eye();
+        let k = crate::knobs::GuardEyeK::page();
         // inside `range`: never faint
         assert!(!faint_of(&k, GuardState::Patrol, 0.0, 16.0, 0.0));
         // calm, past `range`: only the frame the sight itself tips him over 0.3

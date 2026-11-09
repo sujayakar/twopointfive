@@ -13,17 +13,10 @@ fn act(p: &mut Play, k: usize) {
     if k == 20 { p.order("fallIn", [20.0, 14.0], game::orders::Who::All); }
     if k % 90 == 60 { p.sam_fires_at([16.0 + (k % 7) as f64, 12.0], 0.0); }
 }
-/// every word of the game's state, a word a part: the game's own parts, then rust/sim's block
-fn words(p: &mut Play) -> Vec<u32> {
-    let mut w = p.words();
-    w.extend(game_start::block::part_hashes(p.g.sim));
-    w
-}
 /// which parts two lines of words differ in
 fn differ(a: &[u32], b: &[u32]) -> Vec<String> {
-    let names = game::state_words::STATE_NAMES.iter().map(|s| s.to_string()).chain(game_start::block::PART_NAMES.iter().map(|s| format!("block.{s}")));
     assert_eq!(a.len(), b.len());
-    names.zip(a.iter().zip(b.iter())).filter(|(_, (x, y))| x != y).map(|(s, _)| s).collect()
+    game_start::parts::differ(&game_start::parts::names(), a, b).into_iter().map(String::from).collect()
 }
 /// what a host asks between ticks: rays round Sam, the view of its HUD. Answers how many boxes the rays met, and their indices, each a box of the world
 fn ask(p: &mut Play) -> Vec<(f64, f64)> {
@@ -50,7 +43,7 @@ fn a_host_that_asks_and_one_that_does_not_play_one_game() {
             act(&mut p, k);
             if asks { met += ask(&mut p).len(); }
             p.frame();
-            out.push(words(&mut p));
+            out.push(p.words());
         }
         (out, met)
     };
@@ -62,31 +55,30 @@ fn a_host_that_asks_and_one_that_does_not_play_one_game() {
     }
 }
 
-/// A FAILURE MEANS: the record is missing something a rule reads, or a thing made from the record is read before it is made.
+/// A FAILURE MEANS: a rule reads something that is only made from the record before it is made again.
 #[test]
-fn a_game_taken_in_goes_on_as_the_one_it_was_taken_from() {
-    let run = |take: bool| -> Vec<Vec<u32>> {
+fn what_is_made_from_the_record_may_be_forgotten() {
+    let run = |forget: bool| -> Vec<Vec<u32>> {
         let mut p = office();
         let mut out = Vec::new();
         for k in 0..360 {
-            if k == 240 && take {
+            if k == 240 && forget {
                 let had = ask(&mut p);
-                let slot = p.g.sim;
-                let mut g = std::boxed::Box::new(game::io::import(&game::io::export(&p.g)));
-                game::io::set_slot(&mut g, slot);
-                p.g = g;
-                assert!(p.g.ray_grid.get::<game::scene_boxes::RayGrid>().is_none(), "a game just taken in has a grid before any tick made it");
+                p.g.ray_grid = Default::default();
+                p.g.m.hours.reach = Default::default();
+                p.g.col.lamp_q = Default::default();
+                game::scene_collision::unstand(&mut p.g);
                 assert_eq!(ask(&mut p), had, "a ray with no grid and a ray with one");
             }
             act(&mut p, k);
             p.frame();
-            if k >= 240 { out.push(words(&mut p)); }
+            if k >= 240 { out.push(p.words()); }
         }
         out
     };
-    let (taken, kept) = (run(true), run(false));
+    let (forgot, kept) = (run(true), run(false));
     for k in 0..120 {
-        let off = differ(&taken[k], &kept[k]);
+        let off = differ(&forgot[k], &kept[k]);
         assert!(off.is_empty(), "tick {}: {off:?}", k + 240);
     }
 }

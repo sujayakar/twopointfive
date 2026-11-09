@@ -249,7 +249,7 @@ pub fn ahead(g: &crate::game::Game, gd: GuardId) -> Option<crate::handleside::Ah
             if m::abs(fc[0] - a[0]) > seg + 2.0 || m::abs(fc[2] - a[2]) > seg + 2.0 { continue; }
             if let Some(x) = crate::guards::crosses_door(g, a, b, d) {
                 let dist = len + seg * x.t;
-                return if dist <= look { Some(crate::handleside::Ahead { d, k, at: x.at, dist }) } else { None };
+                return if dist <= look { Some(crate::handleside::Ahead { d, k, dist }) } else { None };
             }
         }
         len += seg;
@@ -629,7 +629,7 @@ pub fn tool_spot(g: &mut crate::game::Game, d: DoorId, side: f64, at: V3, peek: 
             Some(crate::handleside::NearStand::List(n)) => {
                 let hd = handle_at(g, d);
                 if !peek { g.stats.handleside.tool_nears += 1; }
-                return Some(crate::handleside::ToolSpot { pos: n, yaw: m::atan2(hd[0] - n[0], hd[2] - n[2]), pull: false, far: false });
+                return Some(crate::handleside::ToolSpot { pos: n, yaw: m::atan2(hd[0] - n[0], hd[2] - n[2]), far: false });
             }
             None => {}
         }
@@ -652,7 +652,7 @@ pub fn tool_spot(g: &mut crate::game::Game, d: DoorId, side: f64, at: V3, peek: 
         }
     };
     if !peek { g.stats.handleside.tool_walks += 1; }
-    Some(crate::handleside::ToolSpot { pos: h.pos, yaw: h.yaw, pull: h.pull, far: h.far.unwrap_or(false) })
+    Some(crate::handleside::ToolSpot { pos: h.pos, yaw: h.yaw, far: h.far.unwrap_or(false) })
 }
 
 /// Where a door order's lead works the handle from without standing in the opening. (handleside.ts nearStand)

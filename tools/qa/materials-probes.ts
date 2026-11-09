@@ -1,4 +1,4 @@
-// Renderer v3 PHASE 4 — materials, ray-traced reflections, the detail layer (docs/internal/p4-materials.md) — the CPU-held / pure parts. The passes need the
+// Renderer v3 PHASE 4 — materials, ray-traced reflections, the detail layer — the CPU-held / pure parts. The passes need the
 // GPU (the Browser pane: boots, toggles, __png identity, the cost tables); what a headless bun can hold is everything AROUND them:
 //   materials-finish     the finish (rough / metal) through the level format: the office file carries it per material and per box, loadLevel resolves box over
 //                        material, an old file (no finish anywhere) loads to boxes without one, levelToData writes only what the paint does not say, the
@@ -13,18 +13,15 @@
 //                        stretches the lobe along the axis it is told to
 //   materials-arealight  the analytic stand-in for a panel on a rough finish (centre direction, lobe widened by r / 2d, no renormalisation) against a quadrature
 //                        of the true GGX integral over a 1.2 × 0.6 panel: peak within −35 % / +60 % for rough 0.3‥0.45 — the choice reflect.wgsl rtGlints documents
-//   materials-wear       the traffic map's band along the foot of a wall (render/wear.ts): deterministic, 1 at a wall's foot and 0 mid-room, the size the shader's
-//                        mapping assumes, and the look's page's strip along a long face (WEARFOOT_BREAK=1: must fail). The ways walked are not asked: the game's walk grid is Rust's
-//   bun run tools/qa/probes.ts materials       (each prints PASS / FAIL lines and an '=== name: ALL PASS | N FAIL ===' verdict; probes.ts sets the exit code)
+//   bun run tools/qa/checks.ts materials       (each prints PASS / FAIL lines and an '=== name: ALL PASS | N FAIL ===' verdict)
 import { ROOT, fake, main } from './here.ts';
-import { mkdtempSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { execFileSync } from 'node:child_process';
 
-const { OFFICE_DATA, buildLevel } = await import(`${ROOT}/src/scene/level.ts`);
-const { loadLevel, levelToData } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-const { validateLevelData, canonicalLevelData, structuralDiff } = await import(`${ROOT}/src/scene/levelData.ts`);
+const { loadLevel, levelToData } = await import(`${ROOT}/tools/levels/lib/levelLoad.ts`);
+const { validateLevelData, canonicalLevelData, structuralDiff } = await import(`${ROOT}/tools/levels/lib/levelData.ts`);
 const { makeBox, matWord, ROUGH_DEFAULT } = await import(`${ROOT}/src/scene/boxes.ts`);
 const { PRESETS, QUALITY_NAMES, rtVeto, Quality } = await import(`${ROOT}/src/ui/quality.ts`);
 const { FrameFlags, FRAME_BYTES, writeFrame, noWeather } = await import(`${ROOT}/src/render/frame.ts`);
@@ -45,33 +42,30 @@ function decodeFinish(w: number) { w -= 8 * Math.floor(w / 8);   // (on the look
 // ------------------------------------------------------------------------------------------------------------------------------------------------ finish
 export async function materialsFinish() {
   console.log('\n=== materials-finish: the finish through the level file, the loader both ways, the validator, the GPU word ===');
-  const D = OFFICE_DATA; const mats = D.materials;
-  // THE FILE CARRIES THE OFFICE'S LIVED TIER (its hand pass's drawn-only things at the tail: scene/lived.ts). This probe holds the FILE against what the loader
-  // makes of it, so it loads the whole file: loaded without that tier, the round trip below compared 845 boxes with 783
-  const load = (d: Parameters<typeof loadLevel>[0]) => loadLevel(d, { lived: true });
+  const D = JSON.parse(readFileSync(`${ROOT}/levels/office.json`, 'utf8')); const mats = D.materials;
   const withRough = Object.entries(mats).filter(([, m]: any) => m.rough !== undefined).length;
   verdict(withRough >= 20 && mats.lino?.rough === 0.22 && mats.stone?.rough === 0.15 && mats.metal?.metal === true && mats.metal?.rough === 0.28 && mats.screenOff?.rough === 0.08 && mats.carpet?.rough >= 0.9,
     `office.json: ${withRough}/${Object.keys(mats).length} materials carry a finish (lino ${mats.lino?.rough}, stone ${mats.stone?.rough}, metal ${mats.metal?.rough} metal=${mats.metal?.metal}, screenOff ${mats.screenOff?.rough}, carpet ${mats.carpet?.rough})`);
   const boxRough = D.boxes.filter((b: any) => b.rough !== undefined);
   verdict(boxRough.length >= 9 && boxRough.every((b: any) => b.albedo && !b.material), `${boxRough.length} boxes carry their own finish, all of them inline-albedo one-offs (the racks, the server floor)`, boxRough.slice(0, 3).map((b: any) => `${b.id} ${b.rough}`).join(' · '));
-  const L = load(D);
+  const L = loadLevel(D);
   const idx = (id: string) => D.boxes.findIndex((b: any) => b.id === id);
   const linoI = D.boxes.findIndex((b: any) => b.material === 'lino'), metalI = D.boxes.findIndex((b: any) => b.material === 'metal'), rackI = idx(boxRough[0]?.id), carpetI = D.boxes.findIndex((b: any) => b.material === 'carpet');
   const inlineNoFinish = D.boxes.findIndex((b: any) => b.albedo && b.rough === undefined && b.metal === undefined);
   verdict(L.boxes[linoI].rough === 0.22 && !L.boxes[linoI].metal && L.boxes[metalI].rough === 0.28 && L.boxes[metalI].metal === true && L.boxes[rackI].rough === boxRough[0].rough && L.boxes[inlineNoFinish].rough === undefined && L.boxes[carpetI].rough >= 0.9,
     'loadLevel: a lino box gets 0.22, a metal box 0.28 + metal, a rack its own 0.3, an inline box with no finish gets none (matte = ROUGH_DEFAULT on the GPU)',
     `lino ${L.boxes[linoI].rough} · metal ${L.boxes[metalI].rough}/${L.boxes[metalI].metal} · rack ${L.boxes[rackI].rough} · inline ${L.boxes[inlineNoFinish].rough}`);
-  { const D2 = JSON.parse(JSON.stringify(D)); D2.boxes[carpetI].rough = 0.3; D2.boxes[metalI].metal = false; D2.boxes[metalI].rough = 0.5; const L2 = load(D2);
+  { const D2 = JSON.parse(JSON.stringify(D)); D2.boxes[carpetI].rough = 0.3; D2.boxes[metalI].metal = false; D2.boxes[metalI].rough = 0.5; const L2 = loadLevel(D2);
     verdict(L2.boxes[carpetI].rough === 0.3 && L2.boxes[metalI].rough === 0.5 && L2.boxes[metalI].metal === undefined, 'a box\'s own rough / metal override its material\'s (metal:false over a metal material = no metal)', `carpet box ${L2.boxes[carpetI].rough} · metal box ${L2.boxes[metalI].rough}/${L2.boxes[metalI].metal}`); }
   { const old = JSON.parse(JSON.stringify(D)); for (const m of Object.values(old.materials) as any[]) { delete m.rough; delete m.metal; } for (const b of old.boxes) { delete b.rough; delete b.metal; }
-    const errs = validateLevelData(old); const Lo = load(old); const any = Lo.boxes.some((b: any) => b.rough !== undefined || b.metal !== undefined);
+    const errs = validateLevelData(old); const Lo = loadLevel(old); const any = Lo.boxes.some((b: any) => b.rough !== undefined || b.metal !== undefined);
     const rest: string[] = []; const n = structuralDiff({ ...L, boxes: L.boxes.map((b: any) => { const c = { ...b }; delete c.rough; delete c.metal; return c; }) }, Lo, rest, 3);
     verdict(errs.length === 0 && !any && n === 0, 'a file without any finish (every rough / metal stripped) validates, loads, and gives the same Level minus the finishes', errs.length ? errs[0] : `${n} other diffs ${rest.join(' | ')}`); }
   { const D1 = levelToData(L, { name: D.name, materials: D.materials, boxIds: D.boxes.map((b: any) => b.id), boxGroups: D.boxes.map((b: any) => b.group), floors: D.floors, surfaces: D.surfaces, meta: D.meta, volumes: D.volumes, connectors: D.connectors, devices: D.devices });
     const diffs: string[] = []; const n = structuralDiff(canonicalLevelData(D), canonicalLevelData(D1), diffs, 4);
     verdict(n === 0, 'data → level → data keeps every finish where it was (materials by name, the one-offs per box, nothing duplicated onto 900 boxes)', diffs.join(' | '));
-    const Lm = load(D); Lm.boxes[linoI].rough = undefined; delete Lm.boxes[linoI].rough;
-    const Dm = levelToData(Lm, { name: D.name, materials: D.materials, boxIds: D.boxes.map((b: any) => b.id) }); const back = load(Dm);
+    const Lm = loadLevel(D); Lm.boxes[linoI].rough = undefined; delete Lm.boxes[linoI].rough;
+    const Dm = levelToData(Lm, { name: D.name, materials: D.materials, boxIds: D.boxes.map((b: any) => b.id) }); const back = loadLevel(Dm);
     verdict(Dm.boxes[linoI].rough === ROUGH_DEFAULT && back.boxes[linoI].rough === ROUGH_DEFAULT, 'a finished-material box made matte at runtime is written as an explicit rough 1 and loads back matte', `written ${Dm.boxes[linoI].rough}`); }
   { const bad = JSON.parse(JSON.stringify(D)); bad.materials.lino.rough = 1.5; bad.materials.metal.metal = 'yes'; bad.boxes[3].rough = -0.1; bad.boxes[4].metal = 1;
     const errs: string[] = validateLevelData(bad);
@@ -259,72 +253,4 @@ export async function materialsArealight() {
   done('materials-arealight');
 }
 
-// ------------------------------------------------------------------------------------------------------------------------------------------------ the foot of a wall
-/** the office's wall band as every page has it, summed byte by byte (render/wear.ts bandByOccupancy): moved only on purpose */
-const WALL_BAND_SUM = 3450058653;
-export async function materialsWear() {
-  console.log('\n=== materials-wear: the band along the foot of a wall, on the office and on a made-up floor (render/wear.ts) ===');
-  const { buildWearMap, WEAR_RES } = await import(`${ROOT}/src/render/wear.ts`);
-  const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
-  const level = buildLevel();
-  const t0 = performance.now(); const A = buildWearMap(level, null); const ms = performance.now() - t0; const B = buildWearMap(level, null);   // (no walk grid: the ways walked are not asked here)
-  verdict(A.w === WORLD.gridW * WORLD.gridCell * WEAR_RES && A.h === WORLD.gridH * WORLD.gridCell * WEAR_RES && A.data.length === A.w * A.h * 2, `${A.w}×${A.h} texels, 2 bytes each = the world's ${WORLD.gridW}×${WORLD.gridH} m grid at ${WEAR_RES}/m (detail.wgsl maps wp.xz through WORLD_MIN / GRID_W·H / GRID_CELL)`, `${A.data.length} B in ${ms.toFixed(0)} ms`);
-  let same = A.data.length === B.data.length; for (let i = 0; same && i < A.data.length; i++) if (A.data[i] !== B.data[i]) same = false;
-  verdict(same, 'deterministic: two builds are byte-identical (nothing random — the same level draws the same wear)');
-  const at = (x: number, z: number, ch: 0 | 1) => { const tx = Math.floor((x - WORLD.min[0]) * WEAR_RES), tz = Math.floor((z - WORLD.min[2]) * WEAR_RES); return A.data[(tz * A.w + tx) * 2 + ch] / 255; };
-  // wall proximity: 1 at the corridor's north wall foot, 0 in the middle of the lobby / the corridor
-  const wallFoot = at(17.0, 10.06, 1), midLobby = at(8.0, 20.0, 1), midCorr = at(17.0, 11.1, 1);
-  verdict(wallFoot > 0.7 && midLobby < 0.05 && midCorr < 0.05, 'wall proximity: high at the corridor\'s wall foot, ≈ 0 mid-lobby and mid-corridor (GRIME_REACH 16 cm)', `wall foot ${wallFoot.toFixed(2)} · mid-lobby ${midLobby.toFixed(2)} · mid-corridor ${midCorr.toFixed(2)}`);
-  { // the band as every page has it is not to move (the build's grime band reads it): its sum on the office, held to the byte
-    let sum = 0; for (let i = 1; i < A.data.length; i += 2) sum = (Math.imul(sum, 31) + A.data[i]) >>> 0;
-    verdict(sum === WALL_BAND_SUM, 'the wall band every page has is the one it always had: a sum over the office\'s band, byte by byte', `${sum} (held: ${WALL_BAND_SUM})`); }
-  { // THE LOOK'S PAGE (buildWearMap's `longFoot`): the band is a strip along a long face. WEARFOOT_BREAK=1 = the band as every other page has it: must fail.
-    // A made-up floor, each thing far from the next. A long wall (20 cm thick) with a crate pushed against its side and a board leant flat on it; a front of
-    // pier, low sill, pier, then a doorway and a short pier past it, laid along x, along z and at a yaw, each with a crate against its sill; the kit's corner
-    // (24 cm walls on a 44 cm pillar) with a crate touching the pillar; a short wall; a block; four crates in a row along x and along z; a table's leg, a thin
-    // post, a pier, a crate, two crates side by side; a slab standing 3° off true beside a wall.
-    const on = process.env.WEARFOOT_BREAK !== '1';
-    type B = { c: number[]; h: number[]; yaw: number; flags: number };
-    const bx = (c: number[], h: number[], yaw = 0): B => ({ c, h, yaw, flags: 0 });
-    /** boxes authored along x about the origin, turned by `yaw` about +y and put down at `at` (Box.yaw: local +x → (cos, 0, −sin)) */
-    const put = (at: number[], yaw: number, bs: B[]): B[] => bs.map(b => { const c = Math.cos(yaw), s = Math.sin(yaw); return bx([at[0] + c * b.c[0] + s * b.c[2], b.c[1], at[1] - s * b.c[0] + c * b.c[2]], b.h, b.yaw + yaw); });
-    const spot = (at: number[], yaw: number, x: number, z: number): [number, number] => { const c = Math.cos(yaw), s = Math.sin(yaw); return [at[0] + c * x + s * z, at[1] - s * x + c * z]; };
-    const front = (): B[] => [bx([-1, 1.4, 0], [0.4, 1.4, 0.1]), bx([0, 0.45, 0], [0.6, 0.45, 0.1]), bx([1, 1.4, 0], [0.4, 1.4, 0.1]), bx([1.9, 2.45, 0], [0.5, 0.35, 0.1]), bx([2.8, 1.4, 0], [0.4, 1.4, 0.1]), bx([0, 0.3, 0.4], [0.3, 0.3, 0.3])];
-    const FRONTS: [number[], number][] = [[[8, 20], 0], [[20, 20], Math.PI / 2], [[30, 20], 0.6]];
-    const row = (): B[] => [-0.9, -0.3, 0.3, 0.9].map(x => bx([x, 0.3, 0], [0.3, 0.3, 0.3]));
-    const ROWS: [number[], number][] = [[[8, 25], 0], [[14, 25], Math.PI / 2]];
-    const LEG = [10.02, 0.37, 9.02], POST = [14.05, 1, 9.05], PIER = [18, 1, 9], CRATE = [22, 0.3, 9], PAIR = [26, 0.3, 9];
-    const boxes: B[] = [bx([10, 1.2, 5], [4, 1.2, 0.1]), bx([12, 0.3, 5.4], [0.3, 0.3, 0.3]), bx([8, 0.6, 5.12], [0.5, 0.6, 0.02]),
-      bx(LEG, [0.02, 0.37, 0.02]), bx(POST, [0.05, 1, 0.05]), bx(PIER, [0.12, 1, 0.12]), bx(CRATE, [0.3, 0.3, 0.3]), bx([PAIR[0] - 0.3, 0.3, 9], [0.3, 0.3, 0.3]), bx([PAIR[0] + 0.3, 0.3, 9], [0.3, 0.3, 0.3]),
-      bx([22, 1.2, 14], [0.8, 1.2, 0.1]), bx([30, 1, 14], [1.5, 1, 0.5]),
-      ...FRONTS.flatMap(([at, yaw]) => put(at, yaw, front())), ...ROWS.flatMap(([at, yaw]) => put(at, yaw, row())),
-      bx([24, 1.2, 25], [3, 1.2, 0.12]), bx([27.22, 1.2, 25], [0.22, 1.2, 0.22]), bx([27.74, 0.3, 25], [0.3, 0.3, 0.3]),          // the kit's corner and a crate touching its pillar
-      bx([34, 1.2, 8], [0.12, 1.2, 3.9]), bx([33.6, 0.4, 5], [0.28, 0.4, 0.12], Math.PI / 2 + 0.03)];                             // a wall along z and a slab 3° off true at its side
-    const S = buildWearMap({ routes: [], doors: [], boxes } as any, null, on);
-    const g = (x: number, z: number) => S.data[(Math.floor((z - WORLD.min[2]) * WEAR_RES) * S.w + Math.floor((x - WORLD.min[0]) * WEAR_RES)) * 2 + 1] / 255;
-    const round = (c: number[], r: number) => Math.max(g(c[0] + r, c[2]), g(c[0] - r, c[2]), g(c[0], c[2] + r), g(c[0], c[2] - r), g(c[0] + r, c[2] + r), g(c[0] - r, c[2] - r));
-    const wall = g(10, 4.8), beside = Math.min(g(11.62, 5.2), g(12.38, 5.2)), board = g(8, 5.24), leant = Math.max(g(12, 5.8), g(11.6, 5.6), g(12.4, 5.6));
-    const none = Math.max(round(LEG, 0.13), round(POST, 0.15), round(PIER, 0.2), round(CRATE, 0.38), g(26, 9.38), g(26.68, 9), g(25.32, 9), g(26, 8.62), leant);
-    const short = g(22, 14.2), blockSide = g(30, 14.6), blockEnd = g(31.6, 14);
-    // each front: the least along its back face and along its front face clear of the crate (a hand off the face), the most round the crate's free sides, in the doorway and at the pier past it
-    const fr = FRONTS.map(([at, yaw]) => { const q = (x: number, z: number) => g(...spot(at, yaw, x, z)); let least = 1;
-      for (let x = -1.3; x <= 1.3; x += 0.05) { least = Math.min(least, q(x, -0.2)); if (Math.abs(x) > 0.45) least = Math.min(least, q(x, 0.2)); }
-      return { least, crate: Math.max(q(0, 0.82), q(0.42, 0.55), q(-0.42, 0.55)), door: q(1.9, 0.2), past: Math.max(q(2.8, 0.2), q(2.8, -0.2)) }; });
-    const rw = ROWS.map(([at, yaw]) => { const q = (x: number, z: number) => g(...spot(at, yaw, x, z)); let least = 1; for (let x = -1.1; x <= 1.1; x += 0.05) least = Math.min(least, q(x, 0.4), q(x, -0.4)); return { least, end: Math.max(q(1.4, 0), q(-1.4, 0)) }; });
-    const corner = Math.max(g(27.74, 25.42), g(27.74, 24.58), g(28.16, 25)), cornerWall = g(24, 25.24), slab = Math.max(g(33.38, 5), g(33.6, 5.4), g(33.6, 4.6));
-    // a 10 cm wall at every yaw, a hand off its face along six metres of it: the least of them (a run through texels lost the band at the steps of a turned wall)
-    let least = 1, leastAt = 0;
-    for (let k = 0; k < 24; k++) { const yaw = Math.PI * k / 24, at = [20, 14], M = buildWearMap({ routes: [], doors: [], boxes: [bx([20, 1.2, 14], [4, 1.2, 0.05], yaw)] } as any, null, on);
-      for (let t = -3; t <= 3; t += 0.05) { const [x, z] = spot(at, yaw, t, 0.13), v = M.data[(Math.floor((z - WORLD.min[2]) * WEAR_RES) * M.w + Math.floor((x - WORLD.min[0]) * WEAR_RES)) * 2 + 1] / 255; if (v < least) { least = v; leastAt = k * 7.5; } } }
-    const f2 = (v: number) => v.toFixed(2);
-    verdict(wall > 0.5 && beside === wall && board > 0.5 && none === 0 && short > 0.02 && short < wall && blockSide > 0.5 && blockEnd === 0
-      && fr.every(f => f.least > 0.3 && f.crate === 0 && f.door === 0 && f.past === 0) && rw.every(r => r.least > 0.2 && r.end === 0) && Math.abs(rw[0].least - rw[1].least) < 0.15
-      && corner === 0 && cornerWall > 0.5 && slab === 0 && least > 0.3,
-      'on the look\'s page the band is a strip along a long face: whole at a wall, beside a crate pushed against it and along a board leant on it; along a front of piers and a sill laid along x, along z or at a yaw, with nothing round the crate against its sill, in its doorway or at the short pier past it; a 10 cm wall at any of 24 yaws keeps it; a short wall has part of it; a block and a row of four crates have it along their long sides and not at their ends, whichever way the row lies; a table leg, a thin post, a pier, a crate, two crates, a crate against a wall, a crate touching the kit\'s corner pillar and a slab 3° off true beside a wall have none',
-      `wall ${f2(wall)} · beside the leant crate ${f2(beside)} · along the board ${f2(board)} · fronts (least / crate / doorway / pier past) ${fr.map(f => `${f2(f.least)} ${f2(f.crate)} ${f2(f.door)} ${f2(f.past)}`).join(' | ')} · rows (least along / ends) ${rw.map(r => `${f2(r.least)} ${f2(r.end)}`).join(' | ')} · least along a turned wall ${f2(least)} (at ${leastAt}°) · 1.6 m wall ${f2(short)} · block side ${f2(blockSide)} end ${f2(blockEnd)} · corner pillar's crate ${f2(corner)}, its wall ${f2(cornerWall)} · tilted slab ${f2(slab)} · leg, post, pier, crate, two crates, leant crate: ${f2(none)}`); }
-  let grimy = 0; const n = A.w * A.h; for (let i = 0; i < n; i++) if (A.data[i * 2 + 1] > 128) grimy++;
-  verdict(grimy / n > 0.02 && grimy / n < 0.35, 'the grime band (> ½) is a minority of the floor, 2–35 %', `grime ${(100 * grimy / n).toFixed(1)} %`);
-  done('materials-wear');
-}
-
-if (import.meta.main) await main([materialsFinish, materialsPresets, materialsFrame, materialsVndf, materialsArealight, materialsWear], materialsFailures);
+if (import.meta.main) await main([materialsFinish, materialsPresets, materialsFrame, materialsVndf, materialsArealight], materialsFailures);

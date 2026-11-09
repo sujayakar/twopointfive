@@ -1,4 +1,4 @@
-// HOW A STEP OF THE SMOKE SOLVER DISPATCHES ITS PER-BRICK KERNELS (smoke/smoke.ts encode), and which way a page opens on (main.ts). Two plain rules in a
+// HOW A STEP OF THE SMOKE SOLVER DISPATCHES ITS PER-BRICK KERNELS (smoke/smoke.ts encode), and which way a page opens on (host/drawpage.ts). Two plain rules in a
 // file with nothing of the GPU in it, so that a check can ask them (tools/qa/perf-sweep-logic.ts) and the F8 sweep's row asks the same one the solver does.
 //
 // THE TWO WAYS. By THE GPU'S OWN COUNT of the step's list (`sparse.indirect`, about twenty dispatchWorkgroupsIndirect calls a step): the solver's own
@@ -10,7 +10,7 @@
 // thirty times slower (0.2 s against 5 s); it is the adapter of the cloud's page tools, and a player's only where the browser has no card to give. It
 // changes nothing a real card computes. What would remove it: a solver whose step list is capped by a count the page hands it, so that a direct dispatch
 // can be in proportion to the smoke (a count the page merely GUESSES was tried and thrown out the same day: a blast makes hundreds of bricks in one step,
-// the read-back is frames old, and the bricks past the count are listed and never linked). docs/agents/render.md, 'A COST NO STAMP SEES'.
+// the read-back is frames old, and the bricks past the count are listed and never linked).
 
 /** this step's per-brick kernels go by the GPU-written count (else: directly over the whole pool) */
 export const byGpuCount = (k: { indirect: boolean; directAt: number }, stepped: number, cap: number): boolean => k.indirect && stepped < k.directAt * cap;

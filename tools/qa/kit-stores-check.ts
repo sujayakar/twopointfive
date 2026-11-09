@@ -1,4 +1,4 @@
-// THE LOOK KIT'S DRUMS (src/scene/gwotKit.ts drum, drums, drumDown): is a drum steel whatever it is painted, and is the one lying on its side a round?
+// THE LOOK KIT'S DRUMS (tools/levels/lib/gwotKit.ts drum, drums, drumDown): is a drum steel whatever it is painted, and is the one lying on its side a round?
 //   bun run tools/qa/kit-stores-check.ts                       exit 0 = all pass, 1 = a line failed (named)
 //   KITSTORES_BREAK=1 bun run tools/qa/kit-stores-check.ts     the red path: each line is asked of the thing a drum once was (a crate in the same paint for
 //                                                              the drum standing, the wood pile's plain boxes for the drum lying) — every line must FAIL
@@ -15,9 +15,9 @@
 //   3 lying      the drum on its side is ONE solid box that says `round: 1` (scene/shapes.ts), square across its length and standing on the ground, with
 //                its two ends and its two ribs as trim (drawn only, each round about the same axis, none over 2 cm out of the box, bare metal where the
 //                drum's paint is), on two chocks that reach in under the round's flank; it carries no markings (a box that says a form cannot); and it
-//                hands back its top, along which the kit's `lay` puts a sheet that follows the round (scene/carShapes.ts layOn)
-// The files that follow from the kit are held by the levels' own checks (tools/levels/export.ts --check, tools/qa/lived-check.ts <level>). No picture is
-// judged here; the shape rule's own check (tools/qa/shapes-check.ts) holds what a round box is to a ray and a walker.
+//                hands back its top, along which the kit's `lay` puts a sheet that follows the round (tools/levels/lib/carShapes.ts layOn)
+// The files that follow from the kit are held by the levels' own checks (tools/levels/export.ts --check, levels stands <level>). No picture is
+// judged here; the shape rule's own check holds what a round box is to a ray and a walker.
 import type { Vec3 } from '../../src/math/vec';
 import { BoxFlag, type Box } from '../../src/scene/boxes';
 import { GWOT_PALETTE, GWOT_FINISH } from '../../src/scene/gwotPalette';

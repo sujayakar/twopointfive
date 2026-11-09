@@ -325,7 +325,7 @@ pub fn settle(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::digin
 
 /// a man the dig-in has not touched yet   (digin.ts newMan)
 pub fn new_man() -> crate::digin::Man {
-    Man { far: false, owe: 0.0, haul_by: 0.0, deep: false, look: None, tried_deep: false, gathered: false, gather_to: None, dug_once: false, ordered: false, phase: Phase::Idle, until: 0.0, know: [0.0, 0.0, 0.0], know_t: -100.0, room: None, entry: -1.0, brace: -1.0, prop: None, stand: [0.0, 0.0, 0.0], rest: [0.0, 0.0, 0.0], scrape_t: -100.0, set_at: -100.0, spot: None, kept: false, eyes_t: None, lane_t: None, also: None, also_n: None, home_t: None, home_d: None, home_at: None, hand_t: None, pull_t: None, pushes: None, pull_a: None, stalls: None }
+    Man { far: false, owe: 0.0, haul_by: 0.0, deep: false, look: None, tried_deep: false, gathered: false, gather_to: None, dug_once: false, ordered: false, phase: Phase::Idle, until: 0.0, know: [0.0, 0.0, 0.0], know_t: -100.0, room: None, entry: -1.0, brace: -1.0, prop: None, stand: [0.0, 0.0, 0.0], rest: [0.0, 0.0, 0.0], scrape_t: -100.0, set_at: -100.0, spot: None, eyes_t: None, lane_t: None, also: None, also_n: None, home_t: None, home_d: None, home_at: None, hand_t: None, pull_t: None, pushes: None, pull_a: None, stalls: None }
 }
 
 /// he lets go of what he was at; furniture left where it stands is somebody else's to haul   (digin.ts drop)
@@ -458,6 +458,15 @@ pub fn dig_in_tick(g: &mut crate::game::Game, def: RoomfightDefId, _dt: f64) {
     let mut m = *state_of(g).men.get_or_insert_with(gd, new_man);
     tick_man(g, def, &mut m);
     state_of(g).men.set(gd, m);                                       // his row, checked out for the frame: the one write back
+    say(g, gd, m.phase);
+}
+
+/// The owner's record says what his row says: at it (from the moment he sets off, not while he thinks), or set on his door.
+fn say(g: &mut Game, gd: GuardId, phase: Phase) {
+    use crate::owner::by;
+    let t = g.time;
+    let is = match phase { Phase::Idle | Phase::Think => crate::owner::By::NOBODY, Phase::Set => by::DUG, _ => by::DIG };
+    for b in [by::DIG, by::DUG] { if b == is { crate::owner::claim(g, gd, b, t, None); } else { crate::owner::release(g, gd, b, t); } }
 }
 
 /// digInTick's body, with his row in `m`
@@ -491,7 +500,7 @@ fn tick_man(g: &mut Game, d: RoomfightDefId, m: &mut Man) {
         let shout_m = g.k.digin.shout_m;
         let heard = heard_by(g, pos, shout_m).is_some();              // (he says it out loud into his radio: a cue only to a team within earshot of HIM)
         state_of(g).called.add(gd);
-        state_of(g).fix = Some(StFix { at: pos, t: now, room: my_room, heard });
+        state_of(g).fix = Some(StFix { at: pos, t: now, room: my_room });
         g.stats.digin.radio += 1;
         let pool = crate::words::w(g, &["contact! they're here. hold your rooms!", "they're on us. watch your doors!"], &["contact! they're inside. hold your rooms!", "they're in here. watch your doors!"]);
         let line = one_of(g, crate::dice::Who::Def(d), &pool);
@@ -520,8 +529,7 @@ fn tick_man(g: &mut Game, d: RoomfightDefId, m: &mut Man) {
             if crate::gunroles::gun_keeps_post(g, gd) { m.know_t = t; return; }   // the belt-fed gun stays on its line: heard, and let lie
             // (DIGIN.keeper off, the difficulty's hard: the press's keeper does not start on his room: heard, and let lie   digin.ts:705)
             if !g.k.digin.keeper && reach <= 0.0 {
-                crate::game::b_tap::tap(crate::game::b_tap::DIGIN_KEEPER_OFF_HEARD);
-                if crate::pressure::press_keeps(g, d) { crate::game::b_tap::tap(crate::game::b_tap::DIGIN_KEEPER_LETS_LIE); m.know_t = t; return; }
+                if crate::pressure::press_keeps(g, d) { m.know_t = t; return; }
             }
             let think = g.k.digin.think;
             m.know = know; m.know_t = t; m.phase = Phase::Think; m.until = now + paced(g, crate::dice::Who::Def(d), think);
@@ -538,9 +546,8 @@ fn tick_man(g: &mut Game, d: RoomfightDefId, m: &mut Man) {
             if now < m.until { return; }
             if crate::owner::has(g, gd, crate::owner::by::SQUAD_WORD) { return; }    // his squad has heard and not yet said what it does
             let far = m.far && reach > 0.0;
-            if !far && crate::pressure::press_wants(g, d) { return; } // on his beat toward a press, or in one: the press has him first
             // (DIGIN.keeper off: made the keeper while he thought: he does not dig in   digin.ts:716)
-            if !g.k.digin.keeper && !far && crate::pressure::press_keeps(g, d) { crate::game::b_tap::tap(crate::game::b_tap::DIGIN_KEEPER_WHILE_THINKING); m.phase = Phase::Idle; return; }
+            if !g.k.digin.keeper && !far && crate::pressure::press_keeps(g, d) { m.phase = Phase::Idle; return; }
             if !far && !g.tab.roomfight_def[d].rally_at.is_nan() && g.tab.roomfight_def[d].rally_go && now < g.tab.roomfight_def[d].rally_at + 0.5 { return; }   // he means to go to the fight next door: the rally has him first
             begin(g, d, m);
         }
@@ -818,12 +825,6 @@ pub fn dig_in_order(g: &mut crate::game::Game, def: RoomfightDefId, know: V3, be
     true
 }
 
-/// where his dig-in stands ('idle' = not at it)   (digin.ts digInPhase)
-pub fn dig_in_phase(g: &crate::game::Game, gd: GuardId) -> String {
-    let phase = g.m.digin.states.as_ref().and_then(|s| s.men.get(gd)).map_or(Phase::Idle, |x| x.phase);
-    String::from(phase.as_str())
-}
-
 /// roomfight.ts applyWatch: a man set off the door's line rests his gun on the floor they must cross (writes `pt`)   (digin.ts digInLook)
 pub fn dig_in_look(g: &crate::game::Game, gd: GuardId, pt: &mut V3) {
     let m = match g.m.digin.states.as_ref().and_then(|s| s.men.get(gd)) { Some(x) => *x, None => return };
@@ -831,15 +832,6 @@ pub fn dig_in_look(g: &crate::game::Game, gd: GuardId, pt: &mut V3) {
     let look = match m.look { Some(l) => l, None => return };
     pt[0] = look[0];
     pt[2] = look[2];
-}
-
-/// roomfight.ts rally: a man who is digging in holds his room, if the fight is out of his reach   (digin.ts digInStays)
-pub fn dig_in_stays(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    let reach = g.k.digin.reach_m;
-    let w = match g.m.digin.states.as_mut().and_then(|s| s.men.get_mut(gd)) { Some(x) => x, None => return false };
-    if w.phase == Phase::Idle || !(w.far && reach > 0.0) { return false; }
-    if !w.kept { w.kept = true; g.stats.digin.no_rally += 1; }
-    true
 }
 
 /// pressure.ts lastMan: he is SET on his door   (digin.ts digInSet)
@@ -914,6 +906,7 @@ pub fn leg_dist(p: V3, a: V3, b: V3) -> f64 {
 /// a fresh staging: wedged doors get their own lock back, everything remembered dropped   (digin.ts digInReset)
 pub fn dig_in_reset(g: &mut crate::game::Game) {
     if g.m.digin.states.is_none() { return; }                         // nothing dug in since the last one: nothing to put back
+    for gd in state_of(g).men.keys() { say(g, gd, Phase::Idle); }
     for d in state_of(g).wedges.keys() {
         let w = state_of(g).wedges.get(d).unwrap().clone();
         g.dr[d].key_side = w.key_side;
@@ -926,7 +919,7 @@ pub fn dig_in_reset(g: &mut crate::game::Game) {
     g.m.digin.states = None;
     g.stats.digin = DiginStats::default();
     g.m.digin.digin_log.clear();
-    g.m.digin.digin_shut = DiginModDIGINSHUT { home: 0.0, held: 0.0, again: 0.0, more: 0.0, left: 0.0 };
+    g.m.digin.digin_shut = DiginModDIGINSHUT {  };
 }
 
 #[cfg(test)]

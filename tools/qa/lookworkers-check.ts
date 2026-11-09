@@ -4,8 +4,8 @@
 // set against itself, and the page's own loop (makeLayers) is run with the workers down and up over a counting device.
 //   bun run tools/qa/lookworkers-check.ts      exit 0 = all pass, 1 = a FAIL line
 //   LOOKWORKERS_BREAK=1 …   = the workers are handed a text that answers with the NEXT layer's maps: the bytes line must fail
-//   bun run tools/qa/probes.ts lookworkers     (also under `render`)
-// No GPU and no browser: tools/qa/lookworkers-page.cjs does the bytes in Chromium; what the page's boot gains is in docs/agents/render.md.
+//   bun run tools/qa/checks.ts lookworkers     (also under `render`)
+// No GPU and no browser.
 import { LOOK_WORKERS, LookPool, lookWorkerText, lookWorkersGaveUp, lookWorkersAgain } from '../../src/render/lookWorkers';
 import { LOOK_NAMES, LOOK_N, LOOK_LAYERS, lookLayer, lookMip } from '../../src/render/lookTex';
 import { GBuffer, lookNeed, lookForget } from '../../src/render/gbuffer';

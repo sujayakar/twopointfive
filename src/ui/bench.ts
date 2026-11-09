@@ -1,8 +1,8 @@
 // THE BENCHMARK (title ▸ Extras ▸ Benchmark, or ?bench on the game's address): one press, hands off, and the machine it ran on has said what the game costs it —
 // as a file for tuning the quality levels with, and as a text short enough to paste into a message from a machine nobody on the project can sit at.
-// What a run does. It plays A SET OF SCENES (host/benchScenes.ts): real missions on their own floors, each taken by the hands-off player (host/handsoff.ts: the
+// What a run does. It plays A SET OF SCENES (host/benchScenes.ts): real missions on their own floors, each taken by the hands-off player (the
 // game's own keys and cursor, the game's own camera) on a seed that names the deal and the dice. A level is a page load, so a run is one page per scene: the page
-// hands its lines to the next through the tab's own session store (the page's half: main.ts) and this module plays ONE page's part — a LEG (BenchLeg):
+// hands its lines to the next through the tab's own session store (the page's half: host/drawpage.ts) and this module plays ONE page's part — a LEG (BenchLeg):
 //   1. waits, the world held still, while auto quality finishes measuring the machine; on the FIRST page it then times that picture AS THE PAGE OPENED;
 //   2. THE SCENE, live, auto quality doing what it does in play: frames a second over the whole of it. On every page but the last that is the page's part: its
 //      line is handed on and the next scene's page loads;
@@ -91,7 +91,7 @@ export interface BenchStep {
    *  NOT in `gpu`: that is the compute passes' union, the number the quality ladder is fed, and it leaves every drawn pass out because a drawn pass's stamps are
    *  not to be trusted on Metal (ui/perfrec.ts). So work that lands in the g-buffer (more boxes, a richer material) showed in no number of a line. It is LISTED
    *  APART, and its own stamp is good on the one Metal chip it was checked on: in an M4 Max's takes it moved with g-buffer work and not with the frame's
-   *  length, where `post` and `fxaa` did the opposite (docs/agents/qa.md). `gpu + gbuf` is an estimate of the frame's GPU work: two separate statistics, counted twice wherever a driver
+   *  length, where `post` and `fxaa` did the opposite. `gpu + gbuf` is an estimate of the frame's GPU work: two separate statistics, counted twice wherever a driver
    *  ran the g-buffer beside a compute pass. Under sharp direct the pass draws at the OUTPUT size (and its downsample is not stamped), so it follows the
    *  line's quality row, not its 'drawn at': hold it only against a line with the same rows. */
   gbuf?: number;
@@ -381,10 +381,10 @@ export class Bench {
   constructor(private engine: Engine, private quality: Quality, private rec: PerfRecorder, private deps: BenchDeps = {}) {}
 
   get active(): boolean { return this.state !== 'idle'; }
-  /** the world holds still (host/loop.ts frozen) for all of a run but the scene itself: the wait and the first window on the level's opening picture — the same
+  /** the world holds still (src/host/drawpage.ts frozen) for all of a run but the scene itself: the wait and the first window on the level's opening picture — the same
    *  picture on every machine — and the presets and the features on the scene's heavy moment */
   get freezing(): boolean { return this.carded || (this.active && this.state !== 'scene' && this.state !== 'tail'); }
-  /** a window is being timed on a picture held still: nothing of the page's quality model runs under it (main.ts: no sample() while the world is held, and the boot's
+  /** a window is being timed on a picture held still: nothing of the page's quality model runs under it (host/drawpage.ts: no sample() while the world is held, and the boot's
    *  calibration, where the wait gave up on it, picks nothing in the middle of a window; it goes on in the scene) */
   get timing(): boolean { return this.state === 'opened' || this.state === 'held' || this.state === 'sweep'; }
   get progress(): string { return this.active ? this.state : this.last; }
@@ -414,7 +414,7 @@ export class Bench {
       { const c = this.deps.covered?.() ?? null; if (c) { this.finish(c, false); return; } }
       // SHADERS STILL BUILDING BEHIND THE START (the first-frame start, on where a person sits: the start card does not wait for the heaviest
       // programs, and a pass draws its stand-in until its own is in). A window timed meanwhile is that simpler picture's price, so the wait, and auto quality's
-      // measure (main.ts holds it back while this page waits), begin when nothing stands in. Every page of a set comes through here, and nothing is asked of
+      // measure (host/drawpage.ts holds it back while this page waits), begin when nothing stands in. Every page of a set comes through here, and nothing is asked of
       // the compiler after the boot, so no timed window can meet a stand-in this wait did not. standInMs in all; past it the lines are timed as they are and
       // the report says so, once.
       if (this.standing(now)) { this.t0 = now; this.frames = 0; return; }
@@ -629,7 +629,7 @@ export class Bench {
     view?.show(this.report, back, went);
   }
   /** while it runs the keyboard is the benchmark's: Esc stops it, and no other key goes on to a listener after this one or does its default (the browser's own
-   *  shortcuts pass). The page's listeners registered BEFORE this one still hear the key: its Esc and its hotkeys stand down by themselves while a run is on (main.ts) */
+   *  shortcuts pass). The page's listeners registered BEFORE this one still hear the key: its Esc and its hotkeys stand down by themselves while a run is on (host/drawpage.ts) */
   private grabKeys(on: boolean): void {
     if (typeof window === 'undefined') return;
     if (this.keys) { window.removeEventListener('keydown', this.keys, true); this.keys = null; }

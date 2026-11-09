@@ -1,10 +1,9 @@
-//! The types of `verdict`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `verdict`.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: Verdict, src/game/verdict.ts:99)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Verdict {
     pub run: Option<u32>,
     pub t0: f64,
@@ -29,7 +28,7 @@ pub struct Verdict {
     pub kept: Option<crate::verdict::KeptNote>,
 }
 impl Verdict {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         Verdict {
             run: None,
@@ -58,21 +57,7 @@ impl Verdict {
 }
 impl Default for Verdict { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: inline at quiet Verdict.run, quiet Verdict.run)
-#[derive(Clone, Copy, Debug)]
-pub struct VerdictRun {
-}
-impl VerdictRun {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        VerdictRun {
-        }
-    }
-}
-impl Default for VerdictRun { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: Track, src/game/verdict.ts:96)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct Track {
     pub id: f64,
     pub name: String,
@@ -89,33 +74,10 @@ pub struct Track {
     pub every: f64,
     pub next: f64,
 }
-impl Track {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Track {
-            id: 0.0,
-            name: String::new(),
-            tone: None,
-            human: false,
-            gd: None,
-            state: crate::verdict::ManState::Dead,
-            down_at: 0.0,
-            down_room: String::new(),
-            down_by: String::new(),
-            down_pos: None,
-            drops: Vec::new(),
-            path: Vec::new(),
-            every: 0.0,
-            next: 0.0,
-        }
-    }
-}
-impl Default for Track { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum ManState {
-    Dead,
+    #[default] Dead,
     Out,
     Up,
 }
@@ -129,8 +91,7 @@ impl ManState {
     }
 }
 
-/// (TypeScript: RunVerdict, src/game/verdict.ts:76)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct RunVerdict {
     pub kind: Option<crate::verdict::RunVerdictKind>,
     pub won: bool,
@@ -147,31 +108,8 @@ pub struct RunVerdict {
     pub hostages: Option<crate::verdict::RunVerdictHostages>,
     pub start: [f64; 2],
 }
-impl RunVerdict {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RunVerdict {
-            kind: None,
-            won: false,
-            word: String::new(),
-            why: String::new(),
-            secs: 0.0,
-            approach: None,
-            void: false,
-            clean: false,
-            men: Vec::new(),
-            lost: 0.0,
-            of: 0.0,
-            foes: crate::verdict::RunVerdictFoes::zeroed(),
-            hostages: None,
-            start: [0.0; 2],
-        }
-    }
-}
-impl Default for RunVerdict { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum RunVerdictKind {
     Nightbreach,
     Roomclear,
@@ -189,8 +127,7 @@ impl RunVerdictKind {
     }
 }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum Approach {
     Doors,
     Quiet,
@@ -208,8 +145,7 @@ impl Approach {
     }
 }
 
-/// (TypeScript: VerdictMan, src/game/verdict.ts:71)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct VerdictMan {
     pub id: f64,
     pub name: String,
@@ -223,204 +159,21 @@ pub struct VerdictMan {
     pub drops: Vec<f64>,
     pub path: Vec<f64>,
 }
-impl VerdictMan {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        VerdictMan {
-            id: 0.0,
-            name: String::new(),
-            tone: None,
-            human: false,
-            state: crate::verdict::ManState::Dead,
-            down_at: 0.0,
-            down_room: String::new(),
-            down_by: String::new(),
-            down_pos: None,
-            drops: Vec::new(),
-            path: Vec::new(),
-        }
-    }
-}
-impl Default for VerdictMan { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/verdict.ts:88 RunVerdict.foes, src/game/verdict.ts:88)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct RunVerdictFoes {
     pub down: f64,
     pub of: f64,
     pub fell: Vec<f64>,
 }
-impl RunVerdictFoes {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RunVerdictFoes {
-            down: 0.0,
-            of: 0.0,
-            fell: Vec::new(),
-        }
-    }
-}
-impl Default for RunVerdictFoes { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/verdict.ts:89 RunVerdict.hostages, src/game/verdict.ts:89)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct RunVerdictHostages {
     pub alive: f64,
     pub of: f64,
 }
-impl RunVerdictHostages {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RunVerdictHostages {
-            alive: 0.0,
-            of: 0.0,
-        }
-    }
-}
-impl Default for RunVerdictHostages { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: KeptNote, src/game/verdict.ts:94)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct KeptNote {
-    pub streak: f64,
-    pub fresh: bool,
-    pub gold: bool,
-    pub ways: crate::verdict::KeptNoteWays,
-    pub lesson: Option<bool>,
-}
-impl KeptNote {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KeptNote {
-            streak: 0.0,
-            fresh: false,
-            gold: false,
-            ways: crate::verdict::KeptNoteWays::zeroed(),
-            lesson: None,
-        }
-    }
-}
-impl Default for KeptNote { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/verdict.ts:94 KeptNote.ways, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Copy, Debug)]
-pub struct KeptNoteWays {
-    pub doors: Option<crate::verdict::KeptNoteWaysDoors>,
-    pub quiet: Option<crate::verdict::KeptNoteWaysDoors>,
-    pub walls: Option<crate::verdict::KeptNoteWaysDoors>,
-    pub dark: Option<crate::verdict::KeptNoteWaysDoors>,
-}
-impl KeptNoteWays {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KeptNoteWays {
-            doors: None,
-            quiet: None,
-            walls: None,
-            dark: None,
-        }
-    }
-}
-impl Default for KeptNoteWays { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at KeptNoteWays.doors, src/game/verdict.ts:94)
-#[derive(Clone, Copy, Debug)]
-pub struct KeptNoteWaysDoors {
-    pub first: bool,
-    pub clean: bool,
-}
-impl KeptNoteWaysDoors {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KeptNoteWaysDoors {
-            first: false,
-            clean: false,
-        }
-    }
-}
-impl Default for KeptNoteWaysDoors { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/verdict.ts:180 onlyMate(h), src/game/verdict.ts:180)
-#[derive(Clone, Debug)]
-pub struct VerdictOnlyMateH {
-    pub killer_id: f64,
-    pub down_by: Option<String>,
-    pub down_kind: Option<String>,
-}
-impl VerdictOnlyMateH {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        VerdictOnlyMateH {
-            killer_id: 0.0,
-            down_by: None,
-            down_kind: None,
-        }
-    }
-}
-impl Default for VerdictOnlyMateH { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/verdict.ts:228 ended ->, src/game/verdict.ts:228)
-#[derive(Clone, Debug)]
-pub struct VerdictEnded {
-    pub won: bool,
-    pub word: String,
-    pub why: String,
-}
-impl VerdictEnded {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        VerdictEnded {
-            won: false,
-            word: String::new(),
-            why: String::new(),
-        }
-    }
-}
-impl Default for VerdictEnded { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/verdict.ts:244 close(end), src/game/verdict.ts:244)
-#[derive(Clone, Debug)]
-pub struct VerdictCloseEnd {
-    pub won: bool,
-    pub word: String,
-    pub why: String,
-}
-impl VerdictCloseEnd {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        VerdictCloseEnd {
-            won: false,
-            word: String::new(),
-            why: String::new(),
-        }
-    }
-}
-impl Default for VerdictCloseEnd { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum VerdictApproachKind {
-    Nightbreach,
-    Roomclear,
-    Rescue,
-    Quiet,
-}
-impl VerdictApproachKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            VerdictApproachKind::Nightbreach => "nightbreach",
-            VerdictApproachKind::Roomclear => "roomclear",
-            VerdictApproachKind::Rescue => "rescue",
-            VerdictApproachKind::Quiet => "quiet",
-        }
-    }
 }
 
-/// (src/game/verdict.ts:97 PATH_CAP)
-pub const PATH_CAP: f64 = 1500.0;
-
-/// (src/game/verdict.ts:97 PATH_SECS)
-pub const PATH_SECS: f64 = 0.5;
-
-/// (src/game/verdict.ts:97 HOLE_M)
-pub const HOLE_M: f64 = 0.9;

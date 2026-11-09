@@ -2,7 +2,7 @@
 // calls (cloud/convex/games.ts make · join · get) and the addresses. The screen is ui/coop.ts.
 //   A CO-OP GAME HAS ONE DOOR: `Lobby.seat(code)`. Its address is  /?join=<CODE>  (the link a friend opens; a game's address pasted into a tab that holds no
 //   seat comes through it too); the title's Host and Join go through the same call with no page load of their own. Whoever comes through it is given a seat
-//   by the control plane (`games:join`: the first free one, or the one this tab already holds), waits for the game's server to answer, and is sent on to the server's own
+//   by the control plane (`games:join`: an open one, or the one this tab already holds), waits for the game's server to answer, and is sent on to the server's own
 //   address — `?net=…&netgame=…&netkey=…`, door.ts — with `join=<CODE>` still on it, so the page in the game can show the code and a reload finds the game.
 //   WHO A SEAT'S HOLDER IS: the TAB (an id kept in sessionStorage). Two windows of one browser on one machine are two players, a tab loaded again is the same
 //   one. (The browser's own id — cloud/cloud.ts cloudPid — is one for every window of it: the second window would be handed the first one's seat.)
@@ -14,7 +14,6 @@
 // reads: a game is the server's start whatever this says.
 import type { Wire } from '../cloud/wire';
 import { NETPLAY, NET_GAME, NET_KEY, NET_JOIN } from './address';
-import { bare } from '../scene/scenarioList';
 
 export const COOP = {
   on: typeof window !== 'undefined' && typeof window.addEventListener === 'function',
@@ -24,7 +23,7 @@ export const COOP = {
    *  for a start is two minutes: cloud/convex/games.ts policy) */
   pollMs: 500, startMs: 150_000,
 };
-try { if (/^(0|off|false|no)$/i.test(new URLSearchParams(location.search).get('coop') ?? '')) COOP.on = false; } catch { /* no page (the harness) */ }
+try { if (/^(0|off|false|no)$/i.test(new URLSearchParams(location.search).get('coop') ?? '')) COOP.on = false; } catch { /* no page */ }
 
 /** a code's letters and length, as the control plane deals them (cloud/convex/games.ts MP: no vowels, no digits) */
 export const CODE = { letters: 'BCDFGHJKLMNPQRSTVWXZ', len: 5 };
@@ -42,7 +41,7 @@ export function coopScenario(search: string, kept: [string, string][] = []): str
   for (const k of ['squad4', 'loadout', 'pick', NET_JOIN, NETPLAY, NET_GAME, NET_KEY]) q.delete(k);
   q.set('squad', String(COOP.squad)); q.set('seats', String(COOP.seats));
   for (const [k, v] of kept) if (!q.has(k)) q.set(k, v);
-  return bare(q);   // (bare flags left bare: `?roomclear`, as the starting page writes them)
+  return '?' + [...q].map(([k, v]) => v === '' ? encodeURIComponent(k) : `${encodeURIComponent(k)}=${encodeURIComponent(v)}`).join('&');   // (bare flags left bare: `?roomclear`, as the starting page writes them)
 }
 /** THE DOOR'S ADDRESS, and the link to send: this page's own address with the code and nothing else of this visit's */
 export const joinLink = (origin: string, path: string, code: string): string => `${origin}${path}?${NET_JOIN}=${code}`;

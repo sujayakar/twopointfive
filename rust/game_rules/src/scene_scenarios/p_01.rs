@@ -1,4 +1,4 @@
-//! src/scene/scenarios.ts lines 1 to 618
+//! What a level file's `scenarios` block says of itself.
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// A squad's barricade doors: the file's own list if it names one (an empty list means never), else every door of its rooms
-/// except one shared by two of its own rooms.   (scenarios.ts squadBarricade)
+/// except one shared by two of its own rooms.
 pub fn squad_barricade(q: &crate::scene_scenarios::SquadData, rooms: &[crate::scene_scenarios::StructureRoom]) -> Vec<String> {
     if let Some(barricade) = &q.barricade {
         return barricade.clone();
@@ -44,7 +44,7 @@ mod tests {
     use crate::scene_scenarios::{SquadData, StructureDoor, StructureRoom};
 
     fn room(id: &str, doors: &[&str]) -> StructureRoom {
-        let mut r = StructureRoom::zeroed();
+        let mut r = StructureRoom::default();
         r.id = String::from(id);
         r.doors = doors
             .iter()
@@ -55,7 +55,7 @@ mod tests {
 
     fn squad(rooms: Option<&[&str]>, barricade: Option<&[&str]>) -> SquadData {
         let strings = |list: &[&str]| list.iter().map(|s| String::from(*s)).collect::<Vec<String>>();
-        let mut q = SquadData::zeroed();
+        let mut q = SquadData::default();
         q.rooms = rooms.map(|l| strings(l));
         q.barricade = barricade.map(|l| strings(l));
         q

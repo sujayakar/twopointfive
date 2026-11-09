@@ -5,4 +5,3 @@ pub use base::*;
 pub mod control;
 pub mod b_01;
 pub use b_01::*;
-pub use types::local_store;

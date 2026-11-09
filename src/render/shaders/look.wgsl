@@ -12,7 +12,7 @@
 //             (lookDeal), is laid in bays (lookPiece), and a kept place drifts a shade over ten metres.
 //   MASONRY   a mud wall's stone plinth and the mud brick where its render has fallen: two more maps, laid by the wall's own height and length.
 //   WEATHER   what follows the BUILDING, not the map: damp and dirt climbing a wall's foot to a ragged line, a bleached head and the runs under it, slow blotches;
-//             on the ground the level's own traffic map (render/wear.ts) — walked earth packed pale and smooth, dirt and stones gathered where nobody walks,
+//             on the ground the level's own traffic map (rust/game_draw/src/traffic.rs) — walked earth packed pale and smooth, dirt and stones gathered where nobody walks,
 //             against the walls.
 //   RELIEF    the map's normal, stood on the face. The g-buffer keeps the TILTED normal with alpha 0 (the target's spare code); gdown hands every working-size
 //             pass the box's own face back (common.wgsl lookGeoN), so the filters, the gather and the reservoirs see the flat wall they always saw, and only the

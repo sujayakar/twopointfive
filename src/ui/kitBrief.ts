@@ -17,23 +17,21 @@
 //   · A CLICK OFF THE LARGE MAP PUTS IT BACK (the maintainer, 10-23: "clicking outside the map should close it"): large, the sheet reads as a card laid
 //     over the step, and a card is left by a click beside it. That click does nothing else: the kit under the sheet does not take it. KITBRIEF.outside,
 //     `?mapout=0` = as it was (a click on the map, M, Esc, Enter or Space).
-//   · THE COUNTS ARE THE MISSION'S AS STAGED, not the file's alone: a rescue finds its side door unlocked (game/rescue.ts), so it is not counted there.
-//   · THE SWITCH: KITBRIEF.on — on in the page, `?kitbrief=0` = the step as it was (the name alone). UI only: nothing under src/game reads it, no
-//     recording carries it, and it is mounted only by the one starting page (ui/startpage.ts), which no headless stand opens.
+//   · THE COUNTS ARE THE MISSION'S AS STAGED, not the file's alone: a rescue finds its side door unlocked (rust/game_rules/src/rescue), so it is not counted there.
+//   · THE SWITCH: KITBRIEF.on — on in the page, `?kitbrief=0` = the step as it was (the name alone). UI only: nothing in the game reads it, and
+//     it is mounted only by the one starting page (ui/startpage.ts).
 // Plain DOM and one style block, injected once. Nothing at module level uses another module's exports.
 import { placeNeeds, type Mission, type PlaceNeeds } from './missions';
 
 export const KITBRIEF = { on: true,
   /** a click anywhere off the large map puts it back, and does nothing else (`?mapout=0` = only the map itself, M and the keys that leave a card did) */
   outside: true };
-try { const q = new URLSearchParams(location.search); if (q.get('kitbrief') === '0') KITBRIEF.on = false; if (q.get('mapout') === '0') KITBRIEF.outside = false; } catch { /* no page (the harness) */ }
+try { const q = new URLSearchParams(location.search); if (q.get('kitbrief') === '0') KITBRIEF.on = false; if (q.get('mapout') === '0') KITBRIEF.outside = false; } catch { /* no page */ }
 
 const WORDS = ['none', '1', '2', '3', '4', '5', 'six', 'seven', 'eight', 'nine', 'ten', 'eleven', 'twelve'];
 /** a count as the menus write one: a digit up to five, a word past it */
 export function countWords(n: number): string { return WORDS[n] ?? 'many'; }
 /** the cells this file adds to the facts row: [label, value, the sentence its tooltip says] */
-/** a line of the list's with its counts as the menus write them ('11' → 'eleven', '3 holding hostages' as it is) */
-export function wordsOf(line: string): string { return line.replace(/\d+/g, n => countWords(Number(n))); }
 function needCells(n: PlaceNeeds | null, rescue: boolean): [string, string, string][] {
   const out: [string, string, string][] = [];
   if (rescue) out.push(['Hostages', n && n.hostages > 0 ? countWords(n.hostages) : 'inside', 'a frag thrown onto their floor will hit them too']);

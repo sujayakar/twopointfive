@@ -1,4 +1,4 @@
-// THE SHARED WALLED YARD'S WEST GATE AS THE SHELL OF A TEAM & KIT SET (scene/scenarios.ts KitViewSet; the yard is tools/levels/train-ground.ts).
+// THE SHARED WALLED YARD'S WEST GATE AS THE SHELL OF A TEAM & KIT SET (lib/scenarios.ts KitViewSet; the yard is tools/levels/train-ground.ts).
 // The picture's column shows the men on the track, the wall, the gate, and a strip some two metres deep behind the wall on the stack's side — so every level
 // on this yard looks the same from its own gate unless what makes it that level stands in that strip. A level that wants its own picture takes this shell
 // (the ground, the west wall and its gate as the yard has them, the north wall's west half, the gate's frame and leaf) and dresses the strip in its own file:
@@ -8,7 +8,7 @@
 // what the column cannot show (the south and east walls, the pier caps, the frame's stops).
 // `p` prefixes every id (a set's ids are its own: unique in the file, never `kitset_`). Paint is by the yard kit's material names (TRAIN_MATERIALS).
 // Free floor a dressing must leave: the gate's lane (z 13.8..14.7) for 2.25 m behind the wall, where a can is put and the stand-in man is stood.
-import type { KitViewSet } from '../../src/scene/scenarios';
+import type { KitViewSet } from './lib/scenarios';
 import { HALF } from './train-ground';
 
 export function yardGateShell(p: string): Pick<KitViewSet, 'ref' | 'doors' | 'boxes'> {

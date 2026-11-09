@@ -1,17 +1,16 @@
-//! The types of `guards`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `guards`.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// what litPlace last read the light for besides the man himself: the man he has, or the point he is turning to (guards.ts litPlace's `key`; null is the Option's None)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub enum LitSeenTgt {
     Man { gd: GuardId },
     Pt,
 }
 
-/// (TypeScript: Engagement, src/game/guards.ts:3532)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct Engagement {
     pub operatives: Vec<GuardId>,
     pub hostiles: Vec<GuardId>,
@@ -23,116 +22,20 @@ pub struct Engagement {
     pub rounds: crate::guards::EngagementRounds,
     pub alive: JsSet<GuardId>,
 }
-impl Engagement {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Engagement {
-            operatives: Vec::new(),
-            hostiles: Vec::new(),
-            t0: 0.0,
-            timeout: 0.0,
-            done: false,
-            result: None,
-            kills: Vec::new(),
-            rounds: crate::guards::EngagementRounds::zeroed(),
-            alive: JsSet::new(),
-        }
-    }
-}
-impl Default for Engagement { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: EngageResult, src/game/guards.ts:3531)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct EngageResult {
-    pub outcome: crate::guards::EngageResultOutcome,
-    pub secs: f64,
-    pub kills: Vec<crate::guards::EngageResultKillsItem>,
-    pub rounds: crate::guards::EngageResultRounds,
-    pub operatives_left: f64,
-    pub hostiles_left: f64,
-}
-impl EngageResult {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        EngageResult {
-            outcome: crate::guards::EngageResultOutcome::Wiped,
-            secs: 0.0,
-            kills: Vec::new(),
-            rounds: crate::guards::EngageResultRounds::zeroed(),
-            operatives_left: 0.0,
-            hostiles_left: 0.0,
-        }
-    }
-}
-impl Default for EngageResult { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum EngageResultOutcome {
-    Wiped,
-    Reset,
-    Cleared,
-    Timeout,
-    Superseded,
-}
-impl EngageResultOutcome {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            EngageResultOutcome::Wiped => "wiped",
-            EngageResultOutcome::Reset => "reset",
-            EngageResultOutcome::Cleared => "cleared",
-            EngageResultOutcome::Timeout => "timeout",
-            EngageResultOutcome::Superseded => "superseded",
-        }
-    }
 }
 
-/// (TypeScript: inline at src/game/guards.ts:3531 EngageResult.kills, src/game/guards.ts:3531)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct EngageResultKillsItem {
-    pub victim: String,
-    pub team: crate::teams::Team,
-    pub by: String,
-    pub t: f64,
 }
-impl EngageResultKillsItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        EngageResultKillsItem {
-            victim: String::new(),
-            team: crate::teams::Team::Guard,
-            by: String::new(),
-            t: 0.0,
-        }
-    }
-}
-impl Default for EngageResultKillsItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:3531 EngageResult.rounds, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct EngageResultRounds {
-    pub guard: Option<f64>,
-    pub operative: Option<f64>,
-    pub hostile: Option<f64>,
-    pub player: Option<f64>,
-    pub civilian: Option<f64>,
 }
-impl EngageResultRounds {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        EngageResultRounds {
-            guard: None,
-            operative: None,
-            hostile: None,
-            player: None,
-            civilian: None,
-        }
-    }
-}
-impl Default for EngageResultRounds { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:3534 Engagement.rounds, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct EngagementRounds {
     pub guard: Option<f64>,
     pub operative: Option<f64>,
@@ -140,25 +43,10 @@ pub struct EngagementRounds {
     pub player: Option<f64>,
     pub civilian: Option<f64>,
 }
-impl EngagementRounds {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        EngagementRounds {
-            guard: None,
-            operative: None,
-            hostile: None,
-            player: None,
-            civilian: None,
-        }
-    }
-}
-impl Default for EngagementRounds { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Standoff, src/game/guards.ts:854)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Standoff {
     pub pair: GuardId,
-    pub since: f64,
     pub side: f64,
     pub way: f64,
     pub orbit_goal: Option<V3>,
@@ -173,73 +61,18 @@ pub struct Standoff {
     pub cornered: bool,
     pub backing: bool,
 }
-impl Standoff {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Standoff {
-            pair: GuardId(0),
-            since: 0.0,
-            side: 0.0,
-            way: 0.0,
-            orbit_goal: None,
-            replan_t: 0.0,
-            rest_t: 0.0,
-            seen_t: 0.0,
-            last_bark_t: 0.0,
-            line_open: false,
-            shots: 0.0,
-            orbit_m: 0.0,
-            stalls: 0.0,
-            cornered: false,
-            backing: false,
-        }
-    }
-}
-impl Default for Standoff { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Pair, src/game/guards.ts:859)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Pair {
     pub key: u32,
     pub held: GuardId,
     pub sam: V3,
-    pub held_axis: V3,
     pub centre: V3,
     pub facing: f64,
     pub aim: V3,
     pub vel: V3,
 }
-impl Pair {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Pair {
-            key: 0,
-            held: GuardId(0),
-            sam: [0.0; 3],
-            held_axis: [0.0; 3],
-            centre: [0.0; 3],
-            facing: 0.0,
-            aim: [0.0; 3],
-            vel: [0.0; 3],
-        }
-    }
-}
-impl Default for Pair { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at quiet Pair.key, quiet Pair.key)
-#[derive(Clone, Copy, Debug)]
-pub struct PairKey {
-}
-impl PairKey {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PairKey {
-        }
-    }
-}
-impl Default for PairKey { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum StandoffMoment {
     Lost,
@@ -266,8 +99,7 @@ impl StandoffMoment {
     }
 }
 
-/// (TypeScript: Eye, src/game/guards.ts:1322)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Eye {
     pub pos: V3,
     pub look: V3,
@@ -277,48 +109,19 @@ pub struct Eye {
     pub near_deg: f64,
     pub v_half_deg: Option<f64>,
 }
-impl Eye {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Eye {
-            pos: [0.0; 3],
-            look: [0.0; 3],
-            range: 0.0,
-            half_deg: 0.0,
-            near_m: 0.0,
-            near_deg: 0.0,
-            v_half_deg: None,
-        }
-    }
-}
-impl Default for Eye { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: UnstickLeg, src/game/guards.ts:1363)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct UnstickLeg {
     pub to: V3,
     pub best: f64,
     pub stall_t: f64,
 }
-impl UnstickLeg {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        UnstickLeg {
-            to: [0.0; 3],
-            best: 0.0,
-            stall_t: 0.0,
-        }
-    }
-}
-impl Default for UnstickLeg { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: SearchSpot, src/game/guards.ts:1776)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct SearchSpot {
     pub pos: V3,
     pub cell: f64,
     pub kind: crate::guards::SearchSpotKind,
-    pub hidden: bool,
     pub cover: f64,
     pub dark: f64,
     pub e: Option<f64>,
@@ -330,69 +133,23 @@ pub struct SearchSpot {
     pub unreachable: bool,
     pub samples: Vec<crate::guards::SearchSpotSamplesItem>,
 }
-impl SearchSpot {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SearchSpot {
-            pos: [0.0; 3],
-            cell: 0.0,
-            kind: crate::guards::SearchSpotKind::Wall,
-            hidden: false,
-            cover: 0.0,
-            dark: 0.0,
-            e: None,
-            need: 0.0,
-            plaus: 0.0,
-            score: 0.0,
-            visited: false,
-            by: 0.0,
-            unreachable: false,
-            samples: Vec::new(),
-        }
-    }
-}
-impl Default for SearchSpot { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum SearchSpotKind {
-    Wall,
+    #[default] Wall,
     Prop,
     Open,
     Corner,
     Leaf,
 }
-impl SearchSpotKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SearchSpotKind::Wall => "wall",
-            SearchSpotKind::Prop => "prop",
-            SearchSpotKind::Open => "open",
-            SearchSpotKind::Corner => "corner",
-            SearchSpotKind::Leaf => "leaf",
-        }
-    }
-}
 
-/// (TypeScript: inline at src/game/guards.ts:1790 SearchSpot.samples, src/game/guards.ts:1790)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct SearchSpotSamplesItem {
     pub t: f64,
     pub e: f64,
 }
-impl SearchSpotSamplesItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SearchSpotSamplesItem {
-            t: 0.0,
-            e: 0.0,
-        }
-    }
-}
-impl Default for SearchSpotSamplesItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: SearchPlan, src/game/guards.ts:1792)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct SearchPlan {
     pub fix: V3,
     pub t0: f64,
@@ -407,48 +164,16 @@ pub struct SearchPlan {
     pub rr: f64,
     pub said: bool,
 }
-impl SearchPlan {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SearchPlan {
-            fix: [0.0; 3],
-            t0: 0.0,
-            serial: 0.0,
-            built_at: 0.0,
-            flood_at: 0.0,
-            spots: Vec::new(),
-            current: 0.0,
-            phase: crate::guards::SearchPlanPhase::Done,
-            phase_t: 0.0,
-            visits: 0.0,
-            rr: 0.0,
-            said: false,
-        }
-    }
-}
-impl Default for SearchPlan { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum SearchPlanPhase {
-    Done,
+    #[default] Done,
     Look,
     Walk,
     Sweep,
 }
-impl SearchPlanPhase {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SearchPlanPhase::Done => "done",
-            SearchPlanPhase::Look => "look",
-            SearchPlanPhase::Walk => "walk",
-            SearchPlanPhase::Sweep => "sweep",
-        }
-    }
-}
 
-/// (TypeScript: Pieing, src/game/guards.ts:1993)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Pieing {
     pub door: DoorId,
     pub phase: crate::guards::PieingPhase,
@@ -460,43 +185,15 @@ pub struct Pieing {
     pub path_ref: u32,
     pub bent: bool,
 }
-impl Pieing {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Pieing {
-            door: DoorId(0),
-            phase: crate::guards::PieingPhase::Slice,
-            side: 0.0,
-            at: [0.0; 3],
-            near: 0.0,
-            t: 0.0,
-            t0: 0.0,
-            path_ref: 0,
-            bent: false,
-        }
-    }
-}
-impl Default for Pieing { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum PieingPhase {
-    Slice,
+    #[default] Slice,
     Approach,
     Cross,
 }
-impl PieingPhase {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            PieingPhase::Slice => "slice",
-            PieingPhase::Approach => "approach",
-            PieingPhase::Cross => "cross",
-        }
-    }
-}
 
-/// (TypeScript: Rollcall, src/game/guards.ts:3034)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Rollcall {
     pub next_at: f64,
     pub stage: crate::guards::RollcallStage,
@@ -506,41 +203,15 @@ pub struct Rollcall {
     pub answered: bool,
     pub checks: f64,
 }
-impl Rollcall {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Rollcall {
-            next_at: 0.0,
-            stage: crate::guards::RollcallStage::Idle,
-            t0: 0.0,
-            caller: None,
-            missing: None,
-            answered: false,
-            checks: 0.0,
-        }
-    }
-}
-impl Default for Rollcall { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum RollcallStage {
-    Idle,
+    #[default] Idle,
     Called,
     Asked,
 }
-impl RollcallStage {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RollcallStage::Idle => "idle",
-            RollcallStage::Called => "called",
-            RollcallStage::Asked => "asked",
-        }
-    }
-}
 
-/// (TypeScript: UnitOpts, src/game/guards.ts:3459)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct UnitOpts {
     pub team: crate::teams::Team,
     pub pos: V3,
@@ -554,452 +225,123 @@ pub struct UnitOpts {
     pub pair: Option<crate::game::PairId>,
     pub budget: Option<f64>,
 }
-impl UnitOpts {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        UnitOpts {
-            team: crate::teams::Team::Guard,
-            pos: [0.0; 3],
-            yaw: None,
-            weapon: None,
-            tint: None,
-            tint2: None,
-            carbine_rig: None,
-            name: None,
-            light: None,
-            pair: None,
-            budget: None,
-        }
-    }
-}
-impl Default for UnitOpts { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:270 groundTrack, src/game/guards.ts:270)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct GuardsModGroundTrackValue {
     pub pos: V3,
     pub t: f64,
     pub vel: V3,
 }
-impl GuardsModGroundTrackValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GuardsModGroundTrackValue {
-            pos: [0.0; 3],
-            t: 0.0,
-            vel: [0.0; 3],
-        }
-    }
-}
-impl Default for GuardsModGroundTrackValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:368 BODY_LIGHT_DEFAULTS, src/game/guards.ts:368)
-#[derive(Clone, Copy, Debug)]
-pub struct BODYLIGHTDEFAULTS {
-    pub lit: f64,
-    pub lit_near: f64,
-    pub near_m: f64,
-    pub far_m: f64,
-    pub smoke: f64,
-}
-impl BODYLIGHTDEFAULTS {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BODYLIGHTDEFAULTS {
-            lit: 0.0,
-            lit_near: 0.0,
-            near_m: 0.0,
-            far_m: 0.0,
-            smoke: 0.0,
-        }
-    }
-}
-impl Default for BODYLIGHTDEFAULTS { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/guards.ts:370 bodyMeters, src/game/guards.ts:370)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct GuardsModBodyMetersValue {
     pub vis: f64,
-    pub e: f64,
     pub t: f64,
 }
-impl GuardsModBodyMetersValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GuardsModBodyMetersValue {
-            vis: 0.0,
-            e: 0.0,
-            t: 0.0,
-        }
-    }
-}
-impl Default for GuardsModBodyMetersValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:375 bodyProbeN, src/game/guards.ts:375)
-#[derive(Clone, Copy, Debug)]
-pub struct GuardsModBodyProbeNValue {
-    pub t: f64,
-    pub n: f64,
-}
-impl GuardsModBodyProbeNValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GuardsModBodyProbeNValue {
-            t: 0.0,
-            n: 0.0,
-        }
-    }
-}
-impl Default for GuardsModBodyProbeNValue { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/guards.ts:674 LINE_DEBUG, src/game/guards.ts:674)
-#[derive(Clone, Copy, Debug)]
-pub struct LINEDEBUG {
-}
-impl LINEDEBUG {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LINEDEBUG {
-        }
-    }
-}
-impl Default for LINEDEBUG { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/guards.ts:856 STANDOFF_DEBUG, src/game/guards.ts:856)
-#[derive(Clone, Copy, Debug)]
-pub struct STANDOFFDEBUG {
-}
-impl STANDOFFDEBUG {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        STANDOFFDEBUG {
-        }
-    }
-}
-impl Default for STANDOFFDEBUG { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/guards.ts:914 HELD_METER, src/game/guards.ts:914)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct HELDMETER {
     pub gap_secs: f64,
     pub moved_m: f64,
 }
-impl HELDMETER {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HELDMETER {
-            gap_secs: 0.0,
-            moved_m: 0.0,
-        }
-    }
-}
-impl Default for HELDMETER { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:915 heldMeters, src/game/guards.ts:915)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct GuardsModHeldMetersValue {
     pub vis: f64,
     pub t: f64,
     pub at: V3,
 }
-impl GuardsModHeldMetersValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GuardsModHeldMetersValue {
-            vis: 0.0,
-            t: 0.0,
-            at: [0.0; 3],
-        }
-    }
-}
-impl Default for GuardsModHeldMetersValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:1003 STANDOFF_LINES, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct STANDOFFLINESValue {
     pub steady: Option<Vec<String>>,
     pub nervy: Option<Vec<String>>,
     pub hard: Option<Vec<String>>,
     pub under: Option<Vec<String>>,
 }
-impl STANDOFFLINESValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        STANDOFFLINESValue {
-            steady: None,
-            nervy: None,
-            hard: None,
-            under: None,
-        }
-    }
-}
-impl Default for STANDOFFLINESValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:1020 STANDOFF_NAMELESS, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct STANDOFFNAMELESS {
-    pub lost: Option<String>,
-    pub enter: Option<String>,
-    pub cornered: Option<String>,
-    pub no_shot: Option<String>,
-    pub line: Option<String>,
     pub dropped: Option<String>,
     pub freed: Option<String>,
     pub hit_him: Option<String>,
 }
-impl STANDOFFNAMELESS {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        STANDOFFNAMELESS {
-            lost: None,
-            enter: None,
-            cornered: None,
-            no_shot: None,
-            line: None,
-            dropped: None,
-            freed: None,
-            hit_him: None,
-        }
-    }
-}
-impl Default for STANDOFFNAMELESS { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:1371 UNSTICK, src/game/guards.ts:1371)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct GuardsModUNSTICK {
     pub legs: f64,
     pub snaps: f64,
     pub last_snap_t: f64,
     pub last_snap_who: Option<GuardId>,
 }
-impl GuardsModUNSTICK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GuardsModUNSTICK {
-            legs: 0.0,
-            snaps: 0.0,
-            last_snap_t: 0.0,
-            last_snap_who: None,
-        }
-    }
-}
-impl Default for GuardsModUNSTICK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:1545 litSeen, src/game/guards.ts:1545)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct GuardsModLitSeenValue {
     pub t: f64,
     pub lit: bool,
     pub a: Option<OrdersAssignmentId>,
     pub tgt: Option<crate::guards::LitSeenTgt>,
 }
-impl GuardsModLitSeenValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GuardsModLitSeenValue {
-            t: 0.0,
-            lit: false,
-            a: None,
-            tgt: None,
-        }
-    }
-}
-impl Default for GuardsModLitSeenValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:1563 darkSeen, src/game/guards.ts:1563)
-#[derive(Clone, Copy, Debug)]
-pub struct GuardsModDarkSeenValue {
-    pub t: f64,
-    pub dark: bool,
-}
-impl GuardsModDarkSeenValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GuardsModDarkSeenValue {
-            t: 0.0,
-            dark: false,
-        }
-    }
-}
-impl Default for GuardsModDarkSeenValue { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/guards.ts:1579 wallSeen, src/game/guards.ts:1579)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct GuardsModWallSeenValue {
     pub t: f64,
     pub since: f64,
     pub dark: bool,
     pub out: Option<bool>,
 }
-impl GuardsModWallSeenValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GuardsModWallSeenValue {
-            t: 0.0,
-            since: 0.0,
-            dark: false,
-            out: None,
-        }
-    }
-}
-impl Default for GuardsModWallSeenValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:1642 torchLowSeen, src/game/guards.ts:1642)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct GuardsModTorchLowSeenValue {
     pub t: f64,
     pub low: bool,
 }
-impl GuardsModTorchLowSeenValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GuardsModTorchLowSeenValue {
-            t: 0.0,
-            low: false,
-        }
-    }
-}
-impl Default for GuardsModTorchLowSeenValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:1665 litManSeen, src/game/guards.ts:1665)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct GuardsModLitManSeenValue {
     pub t: f64,
     pub tgt: GuardId,
     pub v: bool,
 }
-impl GuardsModLitManSeenValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GuardsModLitManSeenValue {
-            t: 0.0,
-            tgt: GuardId(0),
-            v: false,
-        }
-    }
-}
-impl Default for GuardsModLitManSeenValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:2601 NO_SIGHT, src/game/guards.ts:2601)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct NOSIGHT {
     pub visible: bool,
     pub dist: f64,
-    pub in_cone: bool,
 }
-impl NOSIGHT {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        NOSIGHT {
-            visible: false,
-            dist: 0.0,
-            in_cone: false,
-        }
-    }
-}
-impl Default for NOSIGHT { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:3591 BREACH_HOOKS, src/game/guards.ts:3591)
-#[derive(Clone, Copy, Debug)]
-pub struct BREACHHOOKS {
-}
-impl BREACHHOOKS {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BREACHHOOKS {
-        }
-    }
-}
-impl Default for BREACHHOOKS { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/guards.ts:222 shotRelation(e), src/game/guards.ts:222)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct ShotRelationE {
     pub kind: crate::director::EventKind,
     pub who: Option<f64>,
 }
-impl ShotRelationE {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ShotRelationE {
-            kind: crate::director::EventKind::Shot,
-            who: None,
-        }
-    }
-}
-impl Default for ShotRelationE { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum ShotRelation {
     None,
     Own,
     Threat,
 }
-impl ShotRelation {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            ShotRelation::None => "none",
-            ShotRelation::Own => "own",
-            ShotRelation::Threat => "threat",
-        }
-    }
-}
 
-/// (TypeScript: inline at src/game/guards.ts:229 colleagueFirePos(e), src/game/guards.ts:229)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct ColleagueFirePosE {
     pub who: Option<f64>,
     pub pos: V3,
     pub to: Option<V3>,
     pub blind: Option<bool>,
 }
-impl ColleagueFirePosE {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ColleagueFirePosE {
-            who: None,
-            pos: [0.0; 3],
-            to: None,
-            blind: None,
-        }
-    }
-}
-impl Default for ColleagueFirePosE { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:252 stepIsThreat(e), src/game/guards.ts:252)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct StepIsThreatE {
     pub who: Option<f64>,
 }
-impl StepIsThreatE {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StepIsThreatE {
-            who: None,
-        }
-    }
-}
-impl Default for StepIsThreatE { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:434 lightOutSeen(e), src/game/guards.ts:434)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct LightOutSeenE {
     pub pos: V3,
     pub from: Option<V3>,
 }
-impl LightOutSeenE {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LightOutSeenE {
-            pos: [0.0; 3],
-            from: None,
-        }
-    }
-}
-impl Default for LightOutSeenE { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum AlertCause {
     Body,
@@ -1007,391 +349,150 @@ pub enum AlertCause {
     Sound,
     Sight,
 }
-impl AlertCause {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            AlertCause::Body => "body",
-            AlertCause::Radio => "radio",
-            AlertCause::Sound => "sound",
-            AlertCause::Sight => "sight",
-        }
-    }
-}
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum DoorTamper {
     Picked,
     Forced,
 }
-impl DoorTamper {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DoorTamper::Picked => "picked",
-            DoorTamper::Forced => "forced",
-        }
-    }
-}
 
-/// (TypeScript: inline at src/game/guards.ts:554 bodyAftermath ->, src/game/guards.ts:554)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct BodyAftermath {
     pub move_: f64,
     pub aim: Option<V3>,
 }
-impl BodyAftermath {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BodyAftermath {
-            move_: 0.0,
-            aim: None,
-        }
-    }
-}
-impl Default for BodyAftermath { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:680 lineGeom ->, src/game/guards.ts:680)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct LineGeom {
     pub t: f64,
     pub e: f64,
     pub d: f64,
     pub clear: f64,
 }
-impl LineGeom {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LineGeom {
-            t: 0.0,
-            e: 0.0,
-            d: 0.0,
-            clear: 0.0,
-        }
-    }
-}
-impl Default for LineGeom { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum LineStep {
     Clear,
     None,
     Step,
 }
-impl LineStep {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            LineStep::Clear => "clear",
-            LineStep::None => "none",
-            LineStep::Step => "step",
-        }
-    }
-}
 
-/// (TypeScript: inline at src/game/guards.ts:991 flankShot ->, src/game/guards.ts:991)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct FlankShot {
     pub ok: bool,
     pub rear: f64,
-    pub clear: f64,
-    pub dist: f64,
 }
-impl FlankShot {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FlankShot {
-            ok: false,
-            rear: 0.0,
-            clear: 0.0,
-            dist: 0.0,
-        }
-    }
-}
-impl Default for FlankShot { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: a union)
 #[derive(Clone, Copy, Debug)]
 pub enum StandoffBarkForce {
     Bool(bool),
     Always,
 }
 
-/// (TypeScript: inline at src/game/guards.ts:1139 standoffAlert ->, src/game/guards.ts:1139)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct StandoffAlert {
     pub move_: f64,
     pub aim: V3,
     pub crouch: f64,
 }
-impl StandoffAlert {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StandoffAlert {
-            move_: 0.0,
-            aim: [0.0; 3],
-            crouch: 0.0,
-        }
-    }
-}
-impl Default for StandoffAlert { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:1242 canSee ->, src/game/guards.ts:1242)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct CanSee {
     pub visible: bool,
     pub dist: f64,
-    pub in_cone: bool,
 }
-impl CanSee {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CanSee {
-            visible: false,
-            dist: 0.0,
-            in_cone: false,
-        }
-    }
-}
-impl Default for CanSee { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:1248 canSeeChar ->, src/game/guards.ts:1248)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct CanSeeChar {
     pub visible: bool,
     pub dist: f64,
-    pub in_cone: bool,
 }
-impl CanSeeChar {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CanSeeChar {
-            visible: false,
-            dist: 0.0,
-            in_cone: false,
-        }
-    }
-}
-impl Default for CanSeeChar { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:1330 eyeContact ->, src/game/guards.ts:1330)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct EyeContact {
     pub visible: bool,
     pub dist: f64,
     pub in_cone: bool,
 }
-impl EyeContact {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        EyeContact {
-            visible: false,
-            dist: 0.0,
-            in_cone: false,
-        }
-    }
-}
-impl Default for EyeContact { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum FreeCellNearTest {
     Room,
     Walk,
 }
-impl FreeCellNearTest {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            FreeCellNearTest::Room => "room",
-            FreeCellNearTest::Walk => "walk",
-        }
-    }
-}
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum UnstickBegin {
     Leg,
     Snapped,
     No,
 }
-impl UnstickBegin {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            UnstickBegin::Leg => "leg",
-            UnstickBegin::Snapped => "snapped",
-            UnstickBegin::No => "no",
-        }
-    }
-}
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum UnstickStep {
     Done,
     Stale,
     Walking,
 }
-impl UnstickStep {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            UnstickStep::Done => "done",
-            UnstickStep::Stale => "stale",
-            UnstickStep::Walking => "walking",
-        }
-    }
-}
 
-/// (TypeScript: inline at src/game/guards.ts:1818 floodFrom ->, src/game/guards.ts:1818)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct FloodFrom {
     pub secs: Vec<f32>,
     pub metres: Vec<f32>,
 }
-impl FloodFrom {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FloodFrom {
-            secs: Vec::new(),
-            metres: Vec::new(),
-        }
-    }
-}
-impl Default for FloodFrom { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:2003 crossesDoor ->, src/game/guards.ts:2003)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct CrossesDoor {
     pub t: f64,
     pub side: f64,
     pub at: V3,
 }
-impl CrossesDoor {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CrossesDoor {
-            t: 0.0,
-            side: 0.0,
-            at: [0.0; 3],
-        }
-    }
-}
-impl Default for CrossesDoor { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:2020 pieDoorway ->, src/game/guards.ts:2020)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct PieDoorway {
     pub speed: f64,
     pub look: Option<V3>,
 }
-impl PieDoorway {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PieDoorway {
-            speed: 0.0,
-            look: None,
-        }
-    }
-}
-impl Default for PieDoorway { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/guards.ts:2087 chaseFix ->, src/game/guards.ts:2087)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct ChaseFix {
     pub move_: f64,
     pub aim: Option<V3>,
     pub pied: bool,
     pub crouch: f64,
 }
-impl ChaseFix {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ChaseFix {
-            move_: 0.0,
-            aim: None,
-            pied: false,
-            crouch: 0.0,
-        }
-    }
-}
-impl Default for ChaseFix { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: a union)
 #[derive(Clone, Copy, Debug)]
 pub enum SteadyLamps {
     Bool(bool),
     LampRows(crate::scene_collision::LampRows),
 }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum RigOf {
     Pistol,
     Carbine,
     Sc20k,
 }
-impl RigOf {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RigOf::Pistol => "pistol",
-            RigOf::Carbine => "carbine",
-            RigOf::Sc20k => "sc20k",
-        }
-    }
-}
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum LongRigOf {
     Carbine,
     Sc20k,
 }
-impl LongRigOf {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            LongRigOf::Carbine => "carbine",
-            LongRigOf::Sc20k => "sc20k",
-        }
-    }
-}
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum HandCarry {
     Torch,
     Weapon,
 }
-impl HandCarry {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            HandCarry::Torch => "torch",
-            HandCarry::Weapon => "weapon",
-        }
-    }
-}
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum InHand {
     Torch,
     Weapon,
 }
-impl InHand {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            InHand::Torch => "torch",
-            InHand::Weapon => "weapon",
-        }
-    }
-}
 
-/// (TypeScript: a union)
-#[derive(Clone, Debug)]
-pub enum InViewVp {
-    Array(Vec<f64>),
-    Float32Array(Vec<f32>),
-}
-
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum RaiseEscalationCause {
     Search,
@@ -1414,7 +515,6 @@ impl RaiseEscalationCause {
     }
 }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum PlanClearsCause {
     Search,
@@ -1422,18 +522,7 @@ pub enum PlanClearsCause {
     Body,
     Panel,
 }
-impl PlanClearsCause {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            PlanClearsCause::Search => "search",
-            PlanClearsCause::Missing => "missing",
-            PlanClearsCause::Body => "body",
-            PlanClearsCause::Panel => "panel",
-        }
-    }
-}
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum EndEngagementOutcome {
     Wiped,
@@ -1442,20 +531,9 @@ pub enum EndEngagementOutcome {
     Timeout,
     Superseded,
 }
-impl EndEngagementOutcome {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            EndEngagementOutcome::Wiped => "wiped",
-            EndEngagementOutcome::Reset => "reset",
-            EndEngagementOutcome::Cleared => "cleared",
-            EndEngagementOutcome::Timeout => "timeout",
-            EndEngagementOutcome::Superseded => "superseded",
-        }
-    }
-}
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct GuardsMod {
     /// (src/game/guards.ts:270 groundTrack)
     pub ground_track: JsMap<PlayerId, crate::guards::GuardsModGroundTrackValue>,
@@ -1479,8 +557,6 @@ pub struct GuardsMod {
     pub unstick: crate::guards::GuardsModUNSTICK,
     /// (src/game/guards.ts:1545 litSeen)
     pub lit_seen: JsMap<GuardId, crate::guards::GuardsModLitSeenValue>,
-    /// (src/game/guards.ts:1563 darkSeen)
-    pub dark_seen: JsMap<GuardId, crate::guards::GuardsModDarkSeenValue>,
     /// (src/game/guards.ts:1577 litUntil)
     pub lit_until: JsMap<GuardId, f64>,
     /// (src/game/guards.ts:1579 wallSeen)
@@ -1512,7 +588,6 @@ impl GuardsMod {
             held_last_frame: JsSet::new(),
             unstick: crate::guards::GuardsModUNSTICK { legs: 0.0, snaps: 0.0, last_snap_t: -1.0, last_snap_who: None },
             lit_seen: JsMap::new(),
-            dark_seen: JsMap::new(),
             lit_until: JsMap::new(),
             wall_seen: JsMap::new(),
             torch_low_seen: JsMap::new(),
@@ -1561,12 +636,6 @@ pub const MOTION_NEAR_FLOOR: f64 = 0.8;
 /// (src/game/guards.ts:266 MOTION_HUNT_FLOOR)
 pub const MOTION_HUNT_FLOOR: f64 = 0.7;
 
-/// (src/game/guards.ts:368 BODY_LIGHT_DEFAULTS: a table nothing writes)
-pub fn body_light_defaults() -> crate::guards::BODYLIGHTDEFAULTS { crate::guards::BODYLIGHTDEFAULTS { lit: 0.22, lit_near: 0.04, near_m: 2.0, far_m: 5.0, smoke: 0.3 } }
-
-/// (src/game/guards.ts:403 BODY_LIGHT_LS)
-pub const BODY_LIGHT_LS: &str = "twopointsix.bodyLight";
-
 /// (src/game/guards.ts:493 BODY_DUTY_CAP)
 pub const BODY_DUTY_CAP: f64 = 45.0;
 
@@ -1611,9 +680,6 @@ pub const LINE_FAIL_M: f64 = 0.75;
 
 /// (src/game/guards.ts:671 LINE_WALK_CLEAR_M)
 pub const LINE_WALK_CLEAR_M: f64 = 0.5;
-
-/// (src/game/guards.ts:674 LINE_DEBUG: a table nothing writes)
-pub fn line_debug() -> crate::guards::LINEDEBUG { crate::guards::LINEDEBUG {  } }
 
 /// (src/game/guards.ts:826 STANDOFF_MIN_M)
 pub const STANDOFF_MIN_M: f64 = 3.5;
@@ -1675,9 +741,6 @@ pub const SHIELD_RELEASE_BEAT_MIN: f64 = 0.35;
 /// (src/game/guards.ts:846 SHIELD_RELEASE_BEAT_JITTER)
 pub const SHIELD_RELEASE_BEAT_JITTER: f64 = 0.3;
 
-/// (src/game/guards.ts:856 STANDOFF_DEBUG: a table nothing writes)
-pub fn standoff_debug() -> crate::guards::STANDOFFDEBUG { crate::guards::STANDOFFDEBUG {  } }
-
 /// (src/game/guards.ts:900 PAIR_LEGIBLE)
 pub const PAIR_LEGIBLE: f64 = 3.0;
 
@@ -1691,10 +754,7 @@ pub fn standoff_lines() -> JsMap<String, crate::guards::STANDOFFLINESValue> { { 
 pub fn standoff_now() -> JsMap<String, String> { { let mut t = JsMap::new(); t.set(String::from("{held}, stay loose — I'm coming round"), String::from("{held}, stay loose — I'm coming around")); t.set(String::from("{held}! —I can't— I haven't got a line—"), String::from("{held}! —I can't— I don't have a shot—")); t.set(String::from("I have him."), String::from("I've got him.")); t.set(String::from("I— I think I have him—"), String::from("I— I think I've got him—")); t.set(String::from("can't get round him — hold what you've got"), String::from("can't get around him — hold what you've got")); t.set(String::from("no way round. {held}, hang on"), String::from("no way around. {held}, hang on")); t } }
 
 /// (src/game/guards.ts:1020 STANDOFF_NAMELESS: a table nothing writes)
-pub fn standoff_nameless() -> crate::guards::STANDOFFNAMELESS { crate::guards::STANDOFFNAMELESS { lost: None, enter: None, cornered: None, no_shot: None, line: None, dropped: Some(String::from("he's dropped {him} — TAKE HIM")), freed: Some(String::from("he's loose — get clear!")), hit_him: Some(String::from("…christ— I hit {him}—")) } }
-
-/// (src/game/guards.ts:1318 SIGHTS_COS)
-pub const SIGHTS_COS: f64 = 0.866;
+pub fn standoff_nameless() -> crate::guards::STANDOFFNAMELESS { crate::guards::STANDOFFNAMELESS { dropped: Some(String::from("he's dropped {him} — TAKE HIM")), freed: Some(String::from("he's loose — get clear!")), hit_him: Some(String::from("…christ— I hit {him}—")) } }
 
 /// (src/game/guards.ts:1360 UNSTICK_REACH_M)
 pub const UNSTICK_REACH_M: f64 = 2.4;
@@ -1711,17 +771,8 @@ pub const UNSTICK_SNAP_REACH_M: f64 = 3.5;
 /// (src/game/guards.ts:1360 UNSTICK_BODY_R)
 pub const UNSTICK_BODY_R: f64 = 0.15;
 
-/// (src/game/guards.ts:1578 WALL_BREAK)
-pub const WALL_BREAK: bool = false;
-
-/// (src/game/guards.ts:1585 FLOOR_BREAK)
-pub const FLOOR_BREAK: bool = false;
-
 /// (src/game/guards.ts:1586 FLOOR_TOP)
 pub const FLOOR_TOP: f64 = 0.249;
-
-/// (src/game/guards.ts:1641 TORCH_WALL_BREAK)
-pub const TORCH_WALL_BREAK: bool = false;
 
 /// (src/game/guards.ts:1759 SEARCH_RADIUS_M)
 pub const SEARCH_RADIUS_M: f64 = 9.0;
@@ -1805,7 +856,7 @@ pub const SEP_MAX_M: f64 = 0.25;
 pub const SEP_SETTLE_MIN: f64 = 0.02;
 
 /// (src/game/guards.ts:2601 NO_SIGHT: a table nothing writes)
-pub fn no_sight() -> crate::guards::NOSIGHT { crate::guards::NOSIGHT { visible: false, dist: 99.0, in_cone: false } }
+pub fn no_sight() -> crate::guards::NOSIGHT { crate::guards::NOSIGHT { visible: false, dist: 99.0 } }
 
 /// (src/game/guards.ts:2799 BURST_BROKEN_CD)
 pub const BURST_BROKEN_CD: f64 = 0.4;
@@ -1909,5 +960,3 @@ pub fn team_tint() -> JsMap<String, V3> { { let mut t = JsMap::new(); t.set(Stri
 /// (src/game/guards.ts:3475 TEAM_TINT2: a table nothing writes)
 pub fn team_tint2() -> JsMap<String, V3> { { let mut t = JsMap::new(); t.set(String::from("guard"), [0.02, 0.02, 0.025]); t.set(String::from("operative"), [0.05, 0.07, 0.06]); t.set(String::from("hostile"), [0.09, 0.08, 0.05]); t.set(String::from("player"), [0.1, 0.32, 0.18]); t.set(String::from("civilian"), [0.05, 0.06, 0.1]); t } }
 
-/// (src/game/guards.ts:3591 BREACH_HOOKS: a table nothing writes)
-pub fn breach_hooks() -> crate::guards::BREACHHOOKS { crate::guards::BREACHHOOKS {  } }

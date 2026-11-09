@@ -51,7 +51,6 @@ fn blast_step(s: u32) -> u32 {
 
 // ---- the part ----
 
-
 /// per-Game glass bookkeeping, made at first asking: the row itself (glass.ts glassState)
 pub fn glass_state<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::glass::GlassState {
     if g.m.glass.states.is_none() {
@@ -104,7 +103,7 @@ pub fn pane_normal(g: &mut crate::game::Game, b: BoxId) -> V3 {
 /// files a pane's crash for the floor's ears, heard from both its faces (glass.ts glassEvent)
 pub fn glass_event(g: &mut crate::game::Game, b: BoxId, at: V3, level: f64, who: f64) {
     let serial = g.serial();
-    let mut e = crate::game::GameEvent { kind: crate::director::EventKind::Glass, pos: [at[0], 0.0, at[2]], time: g.time, loud: true, level: Some(level), who: Some(who), serial, ..crate::game::GameEvent::zeroed() };
+    let mut e = crate::game::GameEvent { kind: crate::director::EventKind::Glass, pos: [at[0], 0.0, at[2]], time: g.time, loud: true, level: Some(level), who: Some(who), serial, ..crate::game::GameEvent::default() };
     let n = pane_normal(g, b);
     let (c, h) = { let row = seam_box(g, b); (row.c, row.h) };
     let off = v3::dot(v3::sub(at, c), n);
@@ -126,12 +125,6 @@ pub fn nearest_on_box(g: &mut crate::game::Game, b: BoxId, p: V3) -> crate::glas
     let lz = v3::clamp(sn * dx + cs * dz, -h[2], h[2]);
     let q: V3 = [c[0] + cs * lx + sn * lz, c[1] + ly, c[2] - sn * lx + cs * lz];
     NearestOnBox { q, d: v3::dist(p, q) }
-}
-
-/// one number of a seed, to the millimetre, folded into the word so far (glass.ts seedMix)
-pub fn seed_mix(h: f64, x: f64) -> f64 {
-    let h = m::imul(js::to_i32(h) ^ js::to_i32(m::round(x * 1000.0)), 0x85EBCA77u32 as i32) as u32;
-    (h ^ (h >> 13)) as f64
 }
 
 /// what a box is, as one 32-bit word: its centre and half sizes to the millimetre (glass.ts boxSeed)
@@ -297,35 +290,6 @@ pub fn update_glass(g: &mut crate::game::Game) {
     }
 }
 
-/// the panel's 'crack test': star the sheet on the line from Sam's chest through the aim point (and 6 m beyond), else the pane nearest the aim point within 4 m; the pane or -1 (glass.ts crackTest)
-pub fn crack_test(g: &mut crate::game::Game) -> f64 {
-    let aim = g.aim_point;
-    let c = g.pl[g.player].ch;
-    let from: V3 = v3::add(g.ch[c].pos, [0.0, 1.3, 0.0]);
-    let d = v3::sub(aim, from);
-    let l = v3::len(d);
-    if l > 1e-3 {
-        let rd = v3::scale(d, 1.0 / l);
-        if let Some(h) = crate::scene_collision::raycast(g, from, rd, l + 6.0) {
-            let bx = box_at(g, h.index);
-            if h.index < 1e6 && is_sheet(g, bx) {
-                glass_hit(g, h.index, v3::mad(from, rd, h.t), Some(rd), 0.0, Some(GlassHitCause::Hand), None);
-                return h.index;
-            }
-        }
-    }
-    let (mut best, mut best_d, mut best_q) = (-1.0, 4.0, None);
-    for bi in glass_panes(g) {
-        let b = g.col.boxes[bi as usize];
-        let near = nearest_on_box(g, b, aim);
-        if near.d < best_d { best_d = near.d; best = bi; best_q = Some(near.q); }
-    }
-    if let Some(q) = best_q {
-        glass_hit(g, best, q, Some(v3::sub(q, from)), 0.0, Some(GlassHitCause::Hand), None);
-    }
-    best
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -402,7 +366,7 @@ mod tests {
     #[test]
     fn an_event_of_another_kind_is_not_looked_at() {
         let mut g = Game::blank();
-        let e = crate::game::GameEvent { kind: crate::director::EventKind::Glass, serial: 7, ..crate::game::GameEvent::zeroed() };
+        let e = crate::game::GameEvent { kind: crate::director::EventKind::Glass, serial: 7, ..crate::game::GameEvent::default() };
         g.events.push(e);
         update_glass(&mut g);
         assert!(!glass_state(&mut g).seen.has(7));

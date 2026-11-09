@@ -91,7 +91,7 @@ fn clip_of(g: &Game, c: CharId, name: &'static str) -> ClipId { *g.ch[c].anim.cl
 /// A clip's length (`c.Walk_Loop.duration`).
 fn clip_dur(g: &Game, c: CharId, name: &'static str) -> f64 { g.tab.clip[clip_of(g, c, name)].duration }
 /// `bigOff(this.bigTool)`: the skeleton's parameter is the fields it reads.
-fn big_off_tool(b: &AnimBigTool) -> bool { big_off(BigOffB { t: b.t, equip: b.equip, stow: b.stow, end: b.end, snug: b.snug }) }
+fn big_off_tool(b: &AnimBigTool) -> bool { big_off(BigOffB { t: b.t, equip: b.equip, stow: b.stow, end: b.end }) }
 /// What the goggles' flip and a smoke both ask of the hands (lines 2585 and 2588 share every term after `!this.nv`).
 fn left_hand_clear(g: &Game, c: CharId, w_hd: f64, w_he: f64, w_lp: f64, w_hl: f64, w_lg: f64, w_wall_arms: f64, w_act: f64, w_strike: f64, kt: f64) -> bool {
     let a = &g.ch[c].anim;

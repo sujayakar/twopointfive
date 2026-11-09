@@ -12,29 +12,25 @@
 //   say walk into it · a click and Q: the cap is Q, marked, kept; Reset is — again · ?wallpress=0: Q again · ?keybinds=0: a plain —.
 //   Q and F only: the orders menu's cap and the who cap are a dashed —, unmarked · a click and X: the menu's cap is X, marked, kept; Reset is — again.
 //   NO ROW HOLDS A KEY UNSEEN (its own line, the page's own board): every row with a key has its cap on the list; G and H give nothing.
-//   EMPTY HANDS ARE A SLOT (game/handslot.ts, host/keymap.ts SLOT; the last line): 'Empty hands' heads the kit's rows on a cap that reads backtick, unmarked;
+//   EMPTY HANDS ARE A SLOT (rust/game_types/src/handslot, host/keymap.ts SLOT; the last line): 'Empty hands' heads the kit's rows on a cap that reads backtick, unmarked;
 //   there is no row for E; the debugger's cap reads backslash, unmarked · a click and K: the slot's cap is K, marked, kept; Reset is backtick again.
 // GPU=1, THE GAME: crouch put on K on the screen, over the start card: K crouches him at once, C does nothing; the kit column names the light's new key; a
 //   door's Space row names Space's new key; a page load later K still crouches; no page error, no GPU error.
 // exit 0 = every line PASS with no page error · 1 = otherwise. Nothing here has been seen on a GPU, and nobody has played it.
-const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const fs = require('fs'), path = require('path');
-const PORT = process.env.PORT || 5199, GPU = process.env.GPU === '1', QUALITY = process.env.QUALITY || 'verylow', outDir = process.argv[2] || '';
-const GPU_FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
+const PAGE = require('./page.cjs').page({ name: 'keybinds-page' }), { NO_GPU, late } = require('./page.cjs'), { check, note: log } = PAGE;
+const GPU = process.env.GPU === '1', QUALITY = process.env.QUALITY || 'verylow', outDir = process.argv[2] || '';
 const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage textures \(5\) in the Compute stage|No WebGPU adapter|WebGPU is not available|Failed to load resource/;
-const T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a);
 if (outDir) fs.mkdirSync(outDir, { recursive: true });
-const checks = [], errors = [];
-const check = (ok, label, detail = '') => { checks.push(!!ok); console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}${detail ? `\n    ${detail}` : ''}`); };
-const watch = (page, name, gpu) => { page.on('pageerror', e => { if (gpu || !/WebGPU adapter/.test(e.message)) errors.push(`${name}: ${e.message}`); });   // (the screen's browser has no GPU)
-  page.on('console', m => { if (m.type() === 'error' && !(NOISE.test(m.text())) && (gpu || !/GPU|adapter|WebGPU/i.test(m.text()))) errors.push(`${name}: ${m.text().slice(0, 200)}`); }); };
+const errors = [];
+// (the screen's browser has no GPU)
+const watching = (name, gpu) => ({ into: errors, as: `${name}: `, thrown: gpu ? undefined : /WebGPU adapter/, skip: gpu ? NOISE : [NOISE, /GPU|adapter|WebGPU/i] });
 const still = async (page, name) => { if (!outDir) return; const ok = await page.screenshot({ path: path.join(outDir, name), timeout: 180000 }).then(() => true, () => false); if (!ok) log(`no picture ${name}: the screenshot did not come`); };   // (a picture for a person: one that will not come is said, never a red)
 // (`board`: every line but the last four is asked on the board as it was, the wall hold on Q, E the holster, Space the action and V the whistle —
 // ?qfree=0&handslot=0&handring=0&qonly=0; the page's own board gives the wall's row no key, has empty hands as a slot on backtick with the debugger on
 // backslash, and gives the orders menu's row and the who row no key (Q and F are the squad's only keys: the ring is the menu).
-// &slotsetup=0 on every line: the selector and the light on Z and L and the kit column as it was — the rows a gun's setup frees and its box are
-// slotsetup-page.cjs's)
-const url = (more = '', board = '&qfree=0&qonly=0') => `http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&slotsetup=0${board}${more ? '&' + more : ''}`;
+// &slotsetup=0 on every line: the selector and the light on Z and L and the kit column as it was — the rows a gun's setup frees and its box are not looked at here)
+const url = (more = '', board = '&qfree=0&qonly=0') => PAGE.url(`paused&quality=${QUALITY}&mute&slotsetup=0${board}${more ? '&' + more : ''}`);
 const openControls = async page => { await page.waitForSelector('#menu .actions button', { timeout: 60000 });
   await page.evaluate(() => [...document.querySelectorAll('#menu .actions button')].find(b => /^Options/.test(b.textContent))?.click()); await page.waitForSelector('#options.on', { timeout: 10000 });
   await page.evaluate(() => document.querySelector('#options .op-tab[data-tab="controls"]').click()); await page.waitForTimeout(150); };   // (a click by the page's own hand: under the software adapter the frame is seconds late and a pointer waits for it)
@@ -45,7 +41,7 @@ const SCREEN = () => ({ up: !!document.querySelector('#options.on'), tab: docume
 
 const marksOf = c => c.replace(/\b(sel|none)\b/g, '').trim();   // (a marked cap's classes: a row the build gives no key reads `none`, unmarked)
 async function screen(browser) {
-  const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 }), page = await ctx.newPage(); watch(page, 'screen', false);
+  const { context: ctx, page } = await PAGE.open({ browser, size: [1280, 800], errors: watching('screen', false) });
   await page.goto(url(), { waitUntil: 'domcontentloaded' }); await openControls(page);
   const key = async k => { await page.keyboard.press(k); await page.waitForTimeout(60); };
   { const caps = await page.evaluate(CAPS), S = await page.evaluate(SCREEN), want = { KeyW: 'W', KeyA: 'A', KeyS: 'S', KeyD: 'D', ShiftLeft: 'Shift', KeyC: 'C', KeyQ: 'Q', Space: 'E', KeyV: '—', KeyN: 'N', KeyR: 'R', KeyZ: 'Z', KeyL: 'L', Digit0: '`', Digit1: '1', Digit2: '2', Digit3: '3', Digit4: '4', Digit5: '5', KeyB: 'B', KeyT: 'T', KeyF: 'F', Backquote: '\\' };
@@ -75,7 +71,7 @@ async function screen(browser) {
   { await page.goto(url(), { waitUntil: 'domcontentloaded' }); await openControls(page); await page.click('#options [data-act="reset"]'); await page.waitForTimeout(80);
     const caps = await page.evaluate(CAPS), off = Object.entries(caps).filter(([, v]) => marksOf(v.c)).map(([k]) => k), kept = await page.evaluate(KEPT);
     check(caps.KeyC.t === 'C' && caps.KeyQ.t === 'Q' && caps.KeyR.t === 'R' && caps.Digit2.t === '2' && !off.length && kept === null, 'Reset: every cap is the build\'s again, none marked, and nothing is kept', `C Q R 2: ${caps.KeyC.t} ${caps.KeyQ.t} ${caps.KeyR.t} ${caps.Digit2.t} · still marked: ${off.join(' ') || 'none'} · kept ${kept}`); }
-  { await page.goto(url('bkey', ''), { waitUntil: 'domcontentloaded' }); await openControls(page);   // (the wall hold's rule by itself, the squad's command left on B: with it on Q, as the page opens, Q given to the wall is a swap — tools/qa/qkey-check.ts)
+  { await page.goto(url('bkey', ''), { waitUntil: 'domcontentloaded' }); await openControls(page);   // (the wall hold's rule by itself, the squad's command left on B: with it on Q, as the page opens, Q given to the wall is a swap)
     const row = () => page.evaluate(() => { const b = document.querySelector('#options button.op-key[data-key="KeyQ"]'), r = b?.closest('.op-krow'); return { t: b?.textContent ?? '', c: (b?.className ?? '').replace('op-key', '').replace('sel', '').trim(), what: r?.querySelector('.op-what')?.firstChild?.textContent ?? '', small: r?.querySelector('small')?.textContent ?? '' }; });
     const a = await row(), kept0 = await page.evaluate(KEPT);
     await page.evaluate(() => document.querySelector('#options button.op-key[data-key="KeyQ"]').click()); await page.waitForTimeout(80); await key('q'); const b = await row(), kept = await page.evaluate(KEPT);
@@ -106,7 +102,7 @@ async function screen(browser) {
 }
 
 async function game(browser) {
-  const ctx = await browser.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 }); let page = await ctx.newPage(); watch(page, 'game', true);
+  const opened = await PAGE.open({ browser, errors: watching('game', true) }), ctx = opened.context; let page = opened.page;
   const boot = async () => { const fatal = await page.evaluate(async () => { await window.__ready; return document.getElementById('fatal')?.textContent || ''; }).catch(e => String(e)); log(`booted${fatal ? `: ${fatal}` : ''}`); return fatal; };
   const key = async k => { await page.keyboard.press(k); await page.waitForTimeout(60); };
   /** a real key down, some frames, the key up: what he is doing after */
@@ -122,19 +118,16 @@ async function game(browser) {
   { const hud = await page.evaluate(() => { window.__draw.run(12, [], 'last'); return { gad: [...document.querySelectorAll('#equip .hb-st .o.on')].map(e => e.textContent), keys: [...document.querySelectorAll('#equip .slot .key')].map(e => e.textContent) }; });
     check(hud.gad.includes('O LIGHT') && !hud.gad.includes('L LIGHT') && hud.keys[1] === '1', 'the HUD names the keys as bound: the kit column\'s light is on O, a key not moved reads as ever', `kit column: ${hud.gad.join(' · ')} · slots: ${hud.keys.join(' ')}`); }
   // the page load: a fresh page of the same machine (the same store). The one that played is shut without waiting for it: under the software adapter it answers a reload late
-  { const was = page; page = await ctx.newPage(); watch(page, 'game, loaded again', true); was.close().catch(() => { }); await page.goto(url(), { waitUntil: 'domcontentloaded', timeout: 180000 }); }
+  { const was = page; ({ page } = await PAGE.open({ context: ctx, errors: watching('game, loaded again', true) })); was.close().catch(() => { }); await page.goto(url(), { waitUntil: 'domcontentloaded', timeout: 180000 }); }
   const fatal2 = await boot();
   { await page.evaluate(() => { window.__draw.run(20, [], 'none'); }); const k = await tap('k'), c = await tap('c');
     check(!fatal2 && k.filed === 'KeyC' && c.filed === '', 'a page load later, nothing touched: K is still the crouch key and C files nothing', `K: filed '${k.filed}' · C: filed '${c.filed}'`); }
   await late(ctx.close());   // (the context is this run's own: its kept table goes with it)
 }
 
-// a page under the software adapter can be minutes shutting: the run does not wait on it past half a minute
-const late = p => Promise.race([p.catch(() => { }), new Promise(r => setTimeout(r, 30000))]);
-
 (async () => {
-  if (process.env.ONLY !== 'game') { const browser = await chromium.launch({ headless: true, args: ['--disable-gpu'] }); try { await screen(browser); } finally { await browser.close(); } }
-  if (GPU) { const browser = await chromium.launch({ headless: true, channel: 'chromium', args: GPU_FLAGS }); try { await game(browser); } finally { await late(browser.close()); } }
+  if (process.env.ONLY !== 'game') { const browser = await PAGE.launch({ flags: NO_GPU }); try { await screen(browser); } finally { await PAGE.close(); } }
+  if (GPU) { const browser = await PAGE.launch(); try { await game(browser); } finally { await PAGE.close(); } }
   check(!errors.length, 'no page error', errors.slice(0, 6).join(' · ') || 'none');
-  const ok = checks.every(Boolean); console.log(`=== keybinds-page: ${ok ? 'ALL PASS' : 'FAILURES above'}${GPU ? '' : ' (the screen only: GPU=1 adds the game)'} ===`); process.exit(ok ? 0 : 1);
+  await PAGE.end(`=== keybinds-page: ${PAGE.fails ? 'FAILURES above' : 'ALL PASS'}${GPU ? '' : ' (the screen only: GPU=1 adds the game)'} ===`);
 })().catch(e => { console.error(e); process.exit(1); });

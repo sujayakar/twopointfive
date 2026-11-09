@@ -1,65 +1,52 @@
 # twopointsix — context for agents
 
-**THIS FILE IS AN INDEX. NEW BULLETS GO INTO THE MATCHING `docs/agents/` FILE, NEVER INTO CLAUDE.md. A SESSION READS ONLY THE AREA
-FILES ITS WORK NEEDS** — and inside one, the bullet it needs, not the file: `grep -n '<module or switch>' docs/agents/*.md`, then read
-those lines. This file is loaded into every session; it was 640 KB and sessions died of it. `bun run tools/qa/claude-md-check.ts`
-fails when it is over 14 KB or 150 lines, or when an area file is missing from the index below.
+**This file is loaded into every session: it is the index and the rules every session needs, under 12 KB.** What a system is, where its code
+is, its rules and how to change it stand in one page a system under `docs/agents/`, true to the code today. Read the pages your work needs,
+and mend a page in the commit that makes it false. `bun run tools/qa/docs-check.ts` holds every name in them, and their size.
 
 ## What this is
 
-A 2.5D top-down **squad game** on raw WebGPU / WGSL: Sam (the player) + up to four AI teammates under an orders menu, box-only levels
-where every photon is dynamic, guards that see and hear through the same light meter and sound propagation the player is shown. It grew
-out of a solo stealth demo (touchstone: Splinter Cell: Chaos Theory), which is still one mission. Bun toolchain, **no npm dependencies**
-(TypeScript vendored under `vendor/typescript`, gitignored). The build is the page in the browser.
+A top-down **squad game** on raw WebGPU: Sam (the player) and up to four AI teammates under an orders ring, box levels where every light is
+live, enemies who see and hear by the same light, smoke and sound paths the player is shown. **The game is Rust** (`rust/`), one WebAssembly
+module; **the page draws it** (`src/`, TypeScript on Bun, **no npm dependencies**). `docs/agents/overview.md` has the whole map.
 
-## Run · build · check
+## Run, build, check
 
 ```bash
-bun run dev            # tools/serve.ts → http://localhost:5173 (game at /, replay viewer at /replay, /sounds, /music)
-bun run build          # tools/build.ts → dist/
-bun run typecheck      # src/      ← before every commit (no vendor/typescript in a cloud checkout: a system `tsc --noEmit -p tsconfig.json`)
-bun run typecheck:qa   # tools/qa (its own tsconfig)
-(cd rust && cargo test -p game_start)                     # the game's rules: rust/game_start/README.md says how to write one; no check of the game is written in TypeScript
-bun run tools/qa/checks.ts [group|name … --list]          # the picture, the shaders' texts, the page, the menus, the sounds, the level files: a minute
-bun run tools/qa/pages.ts [group|name …]                  # the real page in a browser on the software adapter, one script at a time
-bun run tools/qa/knobs-check.ts                           # after adding a knob table
-bun run tools/sim/build.ts                                # after any change under rust/ → src/sim/built.ts, src/dress/built.ts; `--check` is red on a stale one
-bun run tools/qa/soak.ts --seeds 1,2,3 --minutes 12 --quiet   # after gameplay changes
+bun run dev            # tools/serve.ts: the game at http://localhost:5173, also /sounds and /music
+bun run build          # tools/build.ts: the static build
+bun run typecheck      # src/ (with no vendored compiler: a system tsc --noEmit -p tsconfig.json) · typecheck:qa for tools/qa
+(cd rust/game_start && cargo run --profile gate --bin gate -- tests [BINARY [TEST]])   # the native tests: the game's rules
+(cd rust/game_start && cargo run --profile gate --bin gate)                            # what a build is held to (gate pin, breaks, long)
+bun run tools/qa/checks.ts [group|name …]     # picture, shaders, page, menus, sounds, levels, words, these pages: a minute
+bun run tools/qa/pages.ts [group|name …]      # the real page in a browser on the software adapter, one script at a time
+bun run tools/blitz/face-build.ts             # the module, after a change under rust/
+bun run tools/draw/gen.ts                     # the page's half, after a change to what is drawn, told or commanded
 ```
-Detail, exit codes, the page's `window` hooks and URL flags: `docs/agents/qa.md`.
+
+In full, with exit codes, hooks and address words: `docs/agents/qa.md`. A page driven from scratch: `.claude/skills/verify/SKILL.md`. A level,
+from its idea to its row: `.claude/skills/level/SKILL.md`.
 
 ## Rules every session needs
 
-- **No GPU in the cloud.** The headless harness (`tools/qa/`, the whole Game over a Proxy GPU device) cannot see rendering, the GPU
-  light meter, smoke sight lines or audio; a page check there runs on the software adapter. Say what was checked and how, and say
-  "never seen on a GPU" of anything that was not. "Verified" in full also means driven in a real browser with no console / GPU errors.
-- **One stand** (`src/host/profile.ts`). A headless tool stands the game AS THE PAGE OPENS IT, and a check is run once, with no word
-  in front (`TPS_PROFILE=shipped` is accepted and changes nothing). The old FROZEN stand, every newer rule held off (`FROZEN_HOLDS`
-  lists the rows and the word that raises each there), is `TPS_PROFILE=frozen`: kept for the switch cleanup until the off paths are
-  gone, said on stderr by a run that uses it, and no new fixture is recorded on it. A header that says "both stands" is older.
-- **A new rule is a switch.** ON in the page (a URL flag puts it off), OFF in its module: so a switch's value is read off the page's
-  stand (`bun run tools/qa/stand-dump.ts`), never off the module's own table. A `FROZEN_HOLDS` row while that list stands; its table
-  registered in `src/game/knobs.ts` (`knobs-check` is red otherwise) and carried by a tape's recipe (`journal.ts`) so that a recording from
-  before the key replays with it off (`journal.ts applyKnobs`). Off = the build as it was, by run digest. It ships with a check
-  whose `<NAME>_BREAK=1` path must fail.
-- **The game is Rust** (`rust/`); what is left of `src/game` and `src/sim` only stands a game for the last tools that ask it to, and goes
-  as they do (`bun run tools/draw/held.ts`). Nothing new is written there. No wall clock and no die but the game's own in a rule.
-- **`src/game` is one runtime import cycle.** No top-level statement may USE another game module's export (a module-level table or
-  `new X()` built from one breaks only in the page's bundle). Build such tables lazily; boot a new module once in the page.
-  The one exception is a leaf of the cycle, a file with type-only imports (`owner.ts`): it has always evaluated first.
-- **One model for presentation and AI.** What the AI senses is what the picture shows (light, smoke, sound paths). No GPU value reaches
-  game code: the Rust game senses for itself.
-- **Player-facing rules.** Show, not tell. No digit above 5 on a menu. No compass words on the HUD or in a door's name. Never harder
-  by hit points. Teammates walk at the player's pace, slow down to let him catch up, and run only for a reason (`teampace.ts`). Level and effects numbers tuned in the viewer are authored data.
-- **Git.** Work on your own branch; never push to `main` (it moves only by a PR the maintainer merges); no force-push; never
-  `git stash`; never `cd` into `.worktrees/*` (`git -C`). Unsigned commits are fine (`git -c commit.gpgsign=false commit`). Human-style
-  messages only: no attribution lines, no tool trailers, no model names anywhere in the repo. This repo is PUBLIC: nothing from
-  outside the game goes into a file or a commit message (no private links or ids, no names, no machine paths). The build to play is
-  the head of branch `twopointsix`.
-- **Servers.** Never `pkill -f tools/serve.ts`; stop a server by pid or port. Do not edit `src/` under a running measurement: every
-  run is a fresh bun that imports the tree as it is.
-- **A change that players read or that moves a tally** says, in its area file: the switch and its words, the check, what was
-  measured and on how many seeds, and what nobody has seen or played.
+- **Where a rule goes.** A rule of play is Rust, in its module under `rust/game_rules/src/`, with its numbers under
+  `rust/game_types/src/knobs/`. None is written in `src/` (`tools/draw/ban.ts`, the build's first step).
+- **A new rule lands on,** with a native test that fails without it. It gets an off word only if somebody asks for one.
+- **Strong general systems.** No special case for one level, one door or one man where a system can carry it.
+- **The same inputs make the same game.** No clock, no die but the game's own (`rust/game_rules/src/dice.rs`), no order that is not written
+  down, all state reachable from `Game` or in its block.
+- **One model for the picture and the AI.** What a man senses is what the picture shows. No number off the GPU reaches a rule.
+- **No GPU here.** Native tests see no picture and hear nothing; a page script runs on the software adapter. Say what was checked and how,
+  and "never seen on a GPU" of the rest. "Verified" in full means driven in a real browser with no console or GPU errors.
+- **For the player.** Show, not tell. No digit above 5 on a menu. No compass words on the HUD or in a door's name. Harder by smarter enemies,
+  never by hit points. Teammates walk at the player's pace and run only for a reason (`teampace/`). Nothing is painted on the world for the player.
+- **Small commits.** Build it, drive it, type check, commit. A change that moves play says what moved and what was measured; one that moves a
+  pin says why (`rust/game_start/pins.txt` is made by `gate pin`, never by hand).
+- **Git.** Work on your own branch off `twopointsix`, whose head is the build to play and moves only by the merge of a finished branch. Never
+  push to it or to `main`; no force-push; never `git stash`. Unsigned commits are fine (`git -c commit.gpgsign=false commit`). Human-style
+  messages: no attribution lines, no tool trailers, no model names.
+- **This repo is public.** Nothing from outside the game goes into a file or a message: no private links or ids, no names, no machine paths.
+- **Servers and measurements.** Never `pkill -f tools/serve.ts`: stop a server by pid or port. Do not edit `src/` under a running measurement.
 
 ## Writing for the player
 
@@ -82,59 +69,40 @@ The maintainer's model, from a tutorial card:
 - **Short is good, clipped is not.** Cut ideas, never the small words (the, a, to, you, press). "Show, not tell" means fewer
   screens of text, not telegrams. A character cap is there for layout: if a natural sentence doesn't fit, say less or raise the
   cap openly. Never squeeze the sentence.
-- **A voice keeps its brevity, not odd grammar.** A radio call can be "Stacked up." or "Room clear."; it still runs in the order a
+- **A voice keeps its brevity, not odd grammar.** A radio call can be "stacking up." or "room clear."; it still runs in the order a
   person would say it.
 
 The banned words stand (no compass words, no digit above 5) and a key is still written as its code in brackets (`[B]`). Longer
 notes and before and after pairs from the game's own text: `docs/agents/writing.md`.
 
-## The area files (`docs/agents/`)
+## The pages (`docs/agents/`)
 
-Each is the old CLAUDE.md's bullets for that area, word for word (moved 2026-10-13). The git log is the newest in-repo record of what
-happened when; the live queue is outside the repo.
+- `overview.md` — what the game is, the two halves, one tick, where everything stands, how to change it, what holds it.
+- `qa.md` — run, build and check; the module; `gate`, `hold`, the checks and page scripts; the address words and `window` hooks; what "verified" means.
+- `missions.md` — the list, each kind of mission staged, won and lost, par, the tutorials and their scripts.
+- `menus.md` — the title, start page, kit, HUD, rings, cards, Options and keys, the debugger.
+- `squad.md` — the order keys and the ring, every order, who takes it, parts of the squad, following, pace, covering unasked.
+- `door-tools.md` — what the squad does at a door on order: stacks, cans, charges, locks, the entry, corners, after it, what is refused.
+- `team-feel.md` — how teammates fight, look and keep quiet unasked: the room fight, night vision, lights, silent, sneaking.
+- `enemies.md` — defenders, night staff and civilians: senses, states, difficulty, squads, pursuit, nerve, the dark, the response team.
+- `dialogue.md` — who says what, how a line is picked and reaches the screen, door and place names.
+- `stealth.md` — the fog of war, the meters, lights as things, Sam's close work, the wall hold, the whistle, stuck cameras, the wand, devices.
+- `player.md` — Sam's feet, aim, guns, throws, kit, rows; friends in the line; being hit; restarts.
+- `doors.md` — doors and furniture: which way one opens, locks, the boot, a leaf's weight, who works one from where, the level rules.
+- `destruction.md` — what breaks: rounds, blasts and wall charges on walls, furniture and glass; debris, marks, restarts.
+- `weather.md` — hours, weather kinds, roofs, wind, fire, snow, wet men; what of it moves a rule and what is dress.
+- `levels.md` — the level file, its generators and kits, rooms, marks, lamps, paint and the look, what a level owes and what checks it.
+- `anim.md` — the skeleton, the layers that pose a man, the turn, falls, outfits and materials.
+- `render.md` — the frame, the box world, smoke as drawn, exposure, fog, glass, presets and the ladder, shader text, measuring, judging a picture.
+- `render-light.md` — direct light, the gather, the cascades, the denoiser, reflections, TAAU and sharp direct, men in rays.
+- `replays.md` — the tape, why a run is the same again, the kept runs, the replay page, saves.
+- `net.md` — two players: the wire, the server, the lobby, seats in the rules; the hosted build and its backend.
+- `rust.md` — writing Rust here: the crates, determinism, state, borrowing, asking the world, adding anything, leftovers.
+- `ai-architecture.md` — a man as data, the order he is thought in, adding a reaction or an order, where it is going. Read it before adding a behavior.
+- `sounds.md` — how a sound is asked for, its path to the ear, the mixer, the table, the score, the listening pages and sound lanes.
+- `rulings.md` — the maintainer's rulings that stand on no system's page.
+- `writing.md` — how player text is written, by kind of text, on the game's own lines.
 
-- `overview.md` — what the game is, one model for picture and AI, where the module families live, a line per small module, the
-  architecture map (files, frame flags, box flags, the Frame layout), the removed Mac app, the import cycle.
-- `qa.md` — run / build / check in full, the stand and the old one, the knob registry, the gates, driving the page headlessly (hooks, URL flags,
-  `__stage`, `__ready`), checkpoints + autosave.
-- `missions.md` — scenario kinds, fresh deals and ways in, the lesson engine (the old Training lessons are out), the par clock, the snatch, timed charges, Mousehole, the
-  long hall, the vault, quiet missions, lights-out, the glasshouse, the solo night's opening.
-- `menus.md` — title, start page, Team & kit, the kit figure, key art, the debrief, the sandbox row, the debugger panel (backtick).
-- `squad.md` — the orders menu and its keys, every squad order, move-there, four in two pairs and the word, fall in, rear men, throws
-  on order, a teammate works a thing, log lines.
-- `door-tools.md` — open / bang / charge / outside, the threshold, the whole-room rule, doors found shut, entry paths, cans and leaves.
-- `team-feel.md` — the room fight's feel rules and Team feel rows, cleared rooms, corners and lead, night vision, IR lasers, silent or
-  loud, sneaking with Sam.
-- `enemies.md` — difficulty and Hard, defender cues, defender squads and the radio check, covered lanes, QRF, pursuit tactics, the
-  gun-in-a-hold rule, needs, civilians, the calm torch.
-- `dialogue.md` — the dialogue pass (`WORDS`): who says what where, hostages, defenders, door names, the lint.
-- `stealth.md` — fog of war (cone, squad doors, squad fire, nothing live in the fog), sticky cameras, interaction rows, devices, the
-  wall hold, the whistle, the close-in mode, takedowns, stealth poses, the optical wand.
-- `player.md` — guns at walls, small player rules, friends in the line, blasts on the player, the kit and the FN2000 / issue kit, aim
-  weight, kit handling, hands, hands at work, the player's own charges.
-- `doors.md` — locks and keys, one-way doors, frames that hold a boot, doors stay where left, rolling chairs, real-size doors, the
-  second-way-in level rule.
-- `destruction.md` — wall charges (outer walls, furniture, the safety radius), glass (panes, refraction, fracture, rounds through),
-  decals, GPU particles, destruction under fire, the paced blast frame, cut boxes.
-- `weather.md` — the hour, weather kinds, cloud over the hour, the level's own roofs, the dust volume, wet characters, wind.
-- `levels.md` — the level is data, scenario data in the level file, the GWOT look and its look files, lived-in rooms, the roof rule.
-- `showcases.md` — the breach drill and the daylight variant, the Director (level scripting, no program today), the removed
-  night and day showcases.
-- `anim.md` — MOVES and TURN, the second MOVES pass, wounds, character materials.
-- `render.md` — judging renderer output, GPU timing traps, quality presets and the ladder, caps, froxels, ReSTIR, TAAU, sharp direct,
-  the gather, the denoiser, the smoke solver, effects numbers, prototype branches (longer renderer bullets:
-  `docs/internal/claude-md-renderer-systems.md`).
-- `replays.md` — the game's own die, the fixed step, the input record, F7 replays, the
-  engine replay player, kept runs and the dump.
-- `net.md` — networked play: the wire (inputs, never state), the server's input rule, the server and client cores, the game server
-  process and its environment, the page as a client (`?net=`), the lobby (host or join a co-op game, `?join=`), their checks.
-- `rust.md` — the simulation in Rust: the crate and its build, `src/sim/built.ts`, the one way in, the `RUST` rows, what Rust code owes
-  the game, what holds a moved system to the TypeScript it replaces, gameplay against dressing (`src/game/dress.ts`, the two modules).
-- `ai-architecture.md` — the AI's design: a man's records, assignment and control, `rust/game/src/control/` (the list of rules, adding one).
-- `sounds.md` — the game's sound table, sound lanes on the engine replay, takes, tuning, the score and its pieces.
-- `writing.md` — how player text is written: the rules above at length, by kind of text (prompt, card, list row, menu, radio line),
-  with before and after pairs from the game.
-- `workflow.md` — the fast loop, reviews, lanes and their deliverables, commits, the maintainer's taste, where the repo lives.
-
-Other maps: `STYLE.md` (the look as rules), `docs/level-format.md`, `docs/internal/<topic>.md` (notebooks),
-`STATUS.md`. `handoff.md` and a few old logs are not in this repo: see `docs/agents/workflow.md`.
+Other maps: `STYLE.md` (the look as rules), `docs/level-format.md` (a level file, member by member), `docs/library.md` (every piece and paint a
+level can use), `rust/game_start/README.md` (writing a native test, the gate), `tools/blitz/FACE.md` (the module), `cloud/README.md` (the
+backend), `tools/chars/README.md` (the cast).

@@ -81,7 +81,7 @@ pub fn room_read(g: &mut crate::game::Game, p: V3, reach: Option<f64>, hint: Opt
         if best < 0.0 {
             let room = crate::cleared::cleared_rooms_room_at(g, p);
             let known = crate::cleared::cleared_rooms_known_at(g, p);
-            return RoomRead { at: [p[0], 0.0, p[2]], room, known, cells: Vec::new(), steps: JsMap::new(), ways: Vec::new() };
+            return RoomRead { cells: Vec::new(), steps: JsMap::new(), ways: Vec::new() };
         }
         sx = js::rem(best, w);
         sz = js::to_i32(best / w) as f64;
@@ -154,13 +154,13 @@ pub fn room_read(g: &mut crate::game::Game, p: V3, reach: Option<f64>, hint: Opt
             Some(d) => shut && crate::doors::door_locked(g, d) && crate::doors::door_latched(g, d) && crate::doors::doors_locked_out(g, d, [ex, 0.0, ez], Some(ring)),
             None => false,
         };
-        ways.push(RoomWay { o, in_n, beyond, far, far_known, shut, locked, dist: flat(o_at, p) });
+        ways.push(RoomWay { o, in_n, beyond, far_known, shut, locked, dist: flat(o_at, p) });
     }
     let tab = &g.tab.cover_opening;
     js::sort_by(&mut ways, |a, b| js::or(a.dist - b.dist, if tab[a.o].id < tab[b.o].id { -1.0 } else { 1.0 }));
     let room = crate::cleared::cleared_rooms_room_at(g, p);
     let known = crate::cleared::cleared_rooms_known_at(g, p);
-    RoomRead { at: [(sx + 0.5) * cs, 0.0, (sz + 0.5) * cs], room, known, cells, steps, ways }
+    RoomRead { cells, steps, ways }
 }
 
 /// the part of a door `side_sign` reads (the TypeScript's structural parameter)

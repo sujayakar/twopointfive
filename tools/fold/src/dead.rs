@@ -5,8 +5,7 @@
 //! rust/: two functions that share a name keep each other, and so does a field or a local of that name. It
 //! can keep a dead function; it cannot delete a live one that is named in Rust source.
 //!
-//! Only what the fold made dead goes: a function that was dead before the fold is left, and listed.
-//! A function only the tools' call surface (`call_gen.rs`) names is left too, and listed.
+//! A function only the tools' call surface (`call_gen.rs`) names is left, and listed.
 
 use proc_macro2::{TokenStream, TokenTree};
 use std::collections::{HashMap, HashSet};

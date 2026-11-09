@@ -1,4 +1,5 @@
 # how many of 21 lines each man of office has open to the ground his gun rests on: his name, his count (levels sight --write; a line that starts # under this one is a note and is kept)
+# rescue.roamers#1 stands in the cubicles since 2026-11-08 (his mark was in the conference table): 12 is that place, over the desks
 plans.breach.hostiles#0 15
 plans.breach.hostiles#1 12
 plans.breach.hostiles#2 15
@@ -21,4 +22,4 @@ rescue.captor 18
 rescue.doorMan.inside 12
 rescue.doorMan.outside 15
 rescue.roamers#0 9
-rescue.roamers#1 18
+rescue.roamers#1 12

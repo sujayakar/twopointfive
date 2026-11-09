@@ -691,7 +691,7 @@ pub fn update_takedown(g: &mut crate::game::Game, dt: f64) {
             level: Some(level),
             who: Some(g.ch[c].id),
             serial: g.serial(),
-            ..crate::game::GameEvent::zeroed()
+            ..crate::game::GameEvent::default()
         };
         g.events.push(ev);
         g.pl[p].noise = m::max(g.pl[p].noise, level);
@@ -839,7 +839,7 @@ pub fn start_grab(g: &mut crate::game::Game, gd: GuardId, way: Option<crate::clo
         ask: None,
         after: None,
         serial,
-        ..Hold::zeroed()
+        ..Hold::default()
     });
     crate::disarm::disarm_begin(g);
     if let Some(k) = kind { crate::close::close_took(g, gd, crate::close::CloseTookWhat::Grab, k, b0, r0); }
@@ -854,7 +854,7 @@ pub fn start_grab(g: &mut crate::game::Game, gd: GuardId, way: Option<crate::clo
         level: Some(GRAB_NOISE),
         who: Some(g.ch[c].id),
         serial: g.serial(),
-        ..crate::game::GameEvent::zeroed()
+        ..crate::game::GameEvent::default()
     };
     g.events.push(ev);
     g.pl[p].noise = m::max(g.pl[p].noise, GRAB_NOISE);

@@ -3,7 +3,7 @@
 //   bun run tools/qa/hud-look-check.ts              every check below; exit 0 = all pass, 1 = one failed (named)
 //   HUDLOOK_BREAK=1 bun run tools/qa/hud-look-check.ts   the red path: one rule in the old look (a green, a typeface by name) is added to the sheet as read —
 //                                                       'no green' and 'type' must then FAIL, and with them 'tally' and 'tally pair' (their own two old rules)
-// Reads files only: no game is stood up, so there is no frozen or shipped stand to run it on, and it says nothing about what the page DRAWS.
+// Reads files only: no game is stood up, and it says nothing about what the page DRAWS.
 // WHAT IS HELD:
 //   no green   no colour literal in a rule of the sheet is of the green-to-teal family (hue 75°‥190°, the pale mints the old look used for text included), and
 //              no near-black is tinted green or blue; a colour written in a form this file does not read (hsl(), a space-separated rgb()) is red too: the old HUD was
@@ -16,7 +16,7 @@
 //   tally pair the tally and its map wrap by the card's width, and their least widths side by side fit the debrief card with a scroll bar of 17 px drawn (the
 //              widest a browser draws): the map does not drop under the tally at an ordinary window on a machine that draws its scroll bars
 //   overlay    src/ui/overlay.ts, which colours a few marks from code, holds no green either (the only file of code read: a tool's or a debug view's own
-//              colours, `ui/panel.ts`, `ui/replaykey.ts`, `ui/windviz.ts` …, are not this check's)
+//              colours, `ui/panel.ts` …, are not this check's)
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 const ROOT = join(import.meta.dir, '..', '..');

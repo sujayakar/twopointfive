@@ -168,12 +168,19 @@ pub fn room_name(g: &crate::game::Game, p: V3) -> String {
     if rect_holds(&building, p) { return String::from("the back offices"); }
     String::from("the car park")
 }
-/// (dialogue.ts routeName)
+/// the one named place every point of a walk is in
+fn place_kept_to(g: &Game, points: &[V3]) -> Option<String> {
+    let rects = level_rects(g)?;
+    let (first, at) = place_among(&rects, *points.first()?);
+    if at.d > 0.0 || points.iter().any(|p| { let (i, o) = place_among(&rects, *p); i != first || o.d > 0.0 }) { return None; }
+    Some(at.rect.name)
+}
+/// What a man calls his route: the level's own place, where it keeps to one, else its name in words.
 pub fn route_name(g: &crate::game::Game, route_i: f64) -> String {
     let route = if route_i >= 0.0 && m::floor(route_i) == route_i { g.level.routes.get(route_i as usize).copied() } else { None };
+    if let Some(one) = route.and_then(|r| place_kept_to(g, &g.tab.route[r].points)) { return one; }
     let n = match route { Some(r) => g.tab.route[r].name.clone(), None => String::from("route") };
     if let Some(s) = route_names().get(n.clone()) { return s.clone(); }
-    if let Some(Some(s)) = route_names_guide().get(n.clone()) { return s.clone(); }
     if let Some(s) = route_names_now().get(n.clone()) { return s.clone(); }
     alloc::format!("the {}", n.replace('_', " "))
 }
@@ -286,7 +293,7 @@ pub fn gather(g: &mut crate::game::Game, gd: GuardId) -> crate::dialogue::Dialog
     let lvl = crate::guards::escalation_of(g);
     let k = knowledge_of(g, gd);
     let terms = agitation_terms(g, gd);
-    let (a, why) = (terms.a, terms.why);
+    let a = terms.a;
     let band = band_of(a);
     let t = temperament_of(g, gd);
     let hs = held_since_of(g, gd);
@@ -305,7 +312,7 @@ pub fn gather(g: &mut crate::game::Game, gd: GuardId) -> crate::dialogue::Dialog
     let callsign = g.gd[gd].callsign.clone();
     let idle = r.stage == crate::guards::RollcallStage::Idle;
 
-    let mut tokens = DialogueCtxTokens::zeroed();   // (every field is written below)
+    let mut tokens = DialogueCtxTokens::default();   // (every field is written below)
     let partner_word = partner.map(|x| g.gd[x].callsign.clone());
     tokens.partner = partner_word;
     tokens.victim = w.saw_act.as_ref().map(|x| x.victim.clone()).or_else(|| w.saw_held.as_ref().map(|x| x.who.clone()));
@@ -399,7 +406,7 @@ pub fn gather(g: &mut crate::game::Game, gd: GuardId) -> crate::dialogue::Dialog
     if !shift { for it in intel.iter_mut() { it.live = false; } }
     let recent = g.m.dialogue.recent_by_game.get_or_insert_with(JsMap::new).clone();
     let own_rooms = !is_office(g);
-    DialogueCtx { who: callsign, k, a, band, t, why, facts, tokens, own_rooms: Some(own_rooms), nameless: Some(nameless), intel, time: g.time, recent: Some(recent) }
+    DialogueCtx { who: callsign, k, band, t, facts, tokens, own_rooms: Some(own_rooms), nameless: Some(nameless), intel, time: g.time, recent: Some(recent) }
 }
 
 // ---------------------------------------------------------------- the picker (pure over a DialogueCtx + the man's Talk state)
@@ -535,15 +542,6 @@ pub fn swallowed(g: &mut crate::game::Game, sc: Option<&crate::dialogue::Script>
         None => false,
     }
 }
-fn pick_k(k: crate::dialogue::Knowledge) -> DialoguePickLineK {
-    match k { Knowledge::None => DialoguePickLineK::None, Knowledge::Heard => DialoguePickLineK::Heard, Knowledge::Glimpsed => DialoguePickLineK::Glimpsed, Knowledge::Saw => DialoguePickLineK::Saw, Knowledge::SawHurt => DialoguePickLineK::SawHurt }
-}
-fn pick_k_of_him(k: HimOfK) -> DialoguePickLineK {
-    match k { HimOfK::None => DialoguePickLineK::None, HimOfK::Heard => DialoguePickLineK::Heard, HimOfK::Glimpsed => DialoguePickLineK::Glimpsed, HimOfK::Saw => DialoguePickLineK::Saw, HimOfK::SawHurt => DialoguePickLineK::SawHurt, HimOfK::Empty => DialoguePickLineK::Empty }
-}
-fn pick_k_of_line(k: LineK) -> DialoguePickLineK {
-    match k { LineK::None => DialoguePickLineK::None, LineK::Heard => DialoguePickLineK::Heard, LineK::Glimpsed => DialoguePickLineK::Glimpsed, LineK::Saw => DialoguePickLineK::Saw, LineK::SawHurt => DialoguePickLineK::SawHurt, LineK::Empty => DialoguePickLineK::Empty }
-}
 /// `sayable`: a rejoinder as it would be said, or null   (dialogue.ts pickLine)
 fn sayable(text: Option<&str>, tokens: &JsMap<String, Option<String>>) -> Option<String> {
     match text { Some(x) if !x.is_empty() && REJOINDERS => expand(x, tokens), _ => None }
@@ -577,12 +575,10 @@ pub fn pick_line(g: &mut crate::game::Game, ctx: &mut crate::dialogue::DialogueC
         let row = &mut g.tab.game_talk[talk];
         row.stage = stage_n; row.presses += 1.0; row.last_t = time;
     }
-    let cell = alloc::format!("{}·{}·{}", ctx.k.as_str(), ctx.band.as_str(), ctx.t.as_str());
     let sc = sc0.filter(|x| stage_n <= 4.0 && script_live(x, ctx));
     let beat = sc.as_ref().map(|x| beat_for(x, s, ctx));
-    let (script_id, shape) = (sc.as_ref().map(|x| x.id.clone()), sc.as_ref().map(|x| x.shape));
     let tokens = ctx_tokens_map(&ctx.tokens);
-    let base = DialoguePick { text: String::new(), id: String::new(), kind: None, stage: s, stage_n, cell: cell.clone(), k: ctx.k, band: ctx.band, t: ctx.t, line_k: pick_k(ctx.k), widened: DialoguePickWidened::Empty, after: None, script: script_id, shape };
+    let base = DialoguePick { text: String::new(), id: String::new(), kind: None, stage_n, after: None };
     let stage_word = stage_str(s);
     // the giving stages: the INTEL generator first
     let given_none = g.tab.game_talk[talk].given.is_empty();
@@ -592,7 +588,7 @@ pub fn pick_line(g: &mut crate::game::Game, ctx: &mut crate::dialogue::DialogueC
             let row = &mut g.tab.game_talk[talk];
             row.given.add(String::from(it.kind.as_str()));
             row.said.add(id.clone());
-            row.last = Some(crate::game::TalkLast { id: id.clone(), cell, stage: stage_word, kind: Some(String::from(it.kind.as_str())) });
+            row.last = Some(crate::game::TalkLast { id: id.clone() });
             return DialoguePick { text: it.text, id, kind: Some(it.kind), after: sayable(beat.as_ref().and_then(|b| b.take.as_deref()), &tokens), ..base };
         }
     }
@@ -604,8 +600,8 @@ pub fn pick_line(g: &mut crate::game::Game, ctx: &mut crate::dialogue::DialogueC
             row.said.add(id.clone());
             let n = row.said_n.get(id.clone()).copied().unwrap_or(0.0) + 1.0;
             row.said_n.set(id.clone(), n);
-            row.last = Some(crate::game::TalkLast { id: id.clone(), cell, stage: stage_word, kind: None });
-            return DialoguePick { text: h.text, id, line_k: pick_k_of_him(h.k), after: sayable(b.after.as_deref(), &tokens), ..base };
+            row.last = Some(crate::game::TalkLast { id: id.clone() });
+            return DialoguePick { text: h.text, id, after: sayable(b.after.as_deref(), &tokens), ..base };
         }
     }
     // the pool for this cell and stage: exact, else any temperament, else any agitation too; never another man's knowledge
@@ -630,8 +626,8 @@ pub fn pick_line(g: &mut crate::game::Game, ctx: &mut crate::dialogue::DialogueC
     }
     if pool.is_empty() {
         let id = String::from("-");
-        g.tab.game_talk[talk].last = Some(crate::game::TalkLast { id: id.clone(), cell, stage: stage_word, kind: None });
-        return DialoguePick { text: String::from("…"), id, widened: DialoguePickWidened::Repeat, ..base };
+        g.tab.game_talk[talk].last = Some(crate::game::TalkLast { id: id.clone() });
+        return DialoguePick { text: String::from("…"), id, ..base };
     }
     let mut total = 0.0;
     for p in pool.iter() { total += p.2; }
@@ -649,8 +645,8 @@ pub fn pick_line(g: &mut crate::game::Game, ctx: &mut crate::dialogue::DialogueC
         rec.set(l.id.clone(), ctx.time);
         g.m.dialogue.recent_by_game.get_or_insert_with(JsMap::new).set(l.id.clone(), ctx.time);
     }
-    g.tab.game_talk[talk].last = Some(crate::game::TalkLast { id: l.id.clone(), cell, stage: stage_word, kind: None });
-    DialoguePick { text, id: l.id.clone(), line_k: pick_k_of_line(l.k), widened, ..base }
+    g.tab.game_talk[talk].last = Some(crate::game::TalkLast { id: l.id.clone() });
+    DialoguePick { text, id: l.id.clone(), ..base }
 }
 /// The whole exchange for a real man: gather → pick; null for a man who cannot talk.   (dialogue.ts interrogate)
 pub fn interrogate(g: &mut crate::game::Game, gd: GuardId, rnd: Option<&mut dyn FnMut(&mut crate::game::Game) -> f64>) -> Option<crate::dialogue::DialoguePick> {
@@ -671,7 +667,7 @@ pub fn interrogate(g: &mut crate::game::Game, gd: GuardId, rnd: Option<&mut dyn 
         // (`.length` of the TypeScript counts UTF-16 units: '…' and '—' are one, three bytes here)
         if holds_him && after.encode_utf16().count() as f64 <= SAM_MAX_CHARS {
             let id = alloc::format!("{}+", pick.id);
-            g.pl[player].holding.as_mut().unwrap().after = Some(crate::player::HoldAfter { text: after.clone(), id: id.clone() });
+            g.pl[player].holding.as_mut().unwrap().after = Some(crate::player::HoldAfter { text: after.clone() });
             let mem = sam_memory_of(g);
             mem.said.set(id.clone(), time);
             mem.last = Some(id);
@@ -689,25 +685,6 @@ pub fn prompt_for(g: &mut crate::game::Game, gd: GuardId) -> crate::dialogue::Pr
     if next == StageKey::Num(2.0) { PromptFor { text: String::from("lean on him"), spent: false } }
     else if next == StageKey::Num(3.0) { PromptFor { text: String::from("ask what he knows"), spent: false } }
     else { PromptFor { text: String::from("he's got nothing left"), spent: true } }
-}
-/// One line for the panel and probes: his cell, the next press, what he has said, what he would give next.   (dialogue.ts dialogueSummary)
-pub fn dialogue_summary(g: &mut crate::game::Game, gd: GuardId) -> String {
-    let ctx = gather(g, gd);
-    let talk = g.gd[gd].talk;
-    let next = stage_key_of(g.tab.game_talk[talk].stage + 1.0);
-    let sc = peek_script(g, talk);
-    let live = sc.as_ref().filter(|x| script_live(x, &ctx));
-    let it = intel_for(g, &ctx, talk, live);
-    let row = &g.tab.game_talk[talk];
-    let why = if ctx.why.is_empty() { String::from("—") } else { ctx.why.join(", ") };
-    let script = match sc.as_ref() { Some(x) => alloc::format!("{} ({})", x.id, x.shape.as_str()), None => String::from("—") };
-    let gives = if gives_at(ctx.t, ctx.band).contains(&next) { " (gives)" } else { "" };
-    let gave = if row.given.is_empty() { String::new() } else { alloc::format!(" · gave {}", row.given.keys().join("/")) };
-    let last = match row.last.as_ref() { Some(l) => alloc::format!(" · last: {} @{} s{}", l.id, l.cell, l.stage), None => String::new() };
-    alloc::format!("{} ({}{}) · cell {}·{}·{} · A {} [{}] · script {} · next press: stage {}{} · said {}{} · next intel: {}{}",
-        g.gd[gd].callsign, ctx.t.as_str(), if g.gd[gd].state == crate::game::GuardState::Dead { ", down" } else { "" },
-        ctx.k.as_str(), ctx.band.as_str(), ctx.t.as_str(), js::to_fixed(ctx.a, 2), why, script, stage_str(next), gives, row.said.len(), gave,
-        it.as_ref().map_or("—", |x| x.kind.as_str()), last)
 }
 
 #[cfg(test)]
@@ -743,13 +720,13 @@ mod tests {
     }
     #[test]
     fn the_ctx_tables_reach_the_picker() {
-        let mut t = DialogueCtxTokens::zeroed();
+        let mut t = DialogueCtxTokens::default();
         t.saw_where = Some(String::from("the yard"));
         t.pad_door = Some(String::from("the pad door"));
         let tab = ctx_tokens_map(&t);
         assert_eq!(expand("{SawWhere}, {padDoor}", &tab).as_deref(), Some("The yard, the pad door"));
         assert_eq!(expand("{clearRoom}", &tab), None);
-        let mut f = DialogueCtxFacts::zeroed();
+        let mut f = DialogueCtxFacts::default();
         f.office = Some(true);
         f.saw_drop = Some(false);
         assert!(hold_fact(&f, Need::Office));

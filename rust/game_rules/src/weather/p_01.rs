@@ -368,7 +368,6 @@ pub fn weather_snapshot(g: &crate::game::Game) -> crate::weather::WeatherSnap {
     WeatherSnap {
         kind,
         thunder_until: if kind.is_some() { Some(weather_thunder_until(g)) } else { None },
-        on: g.weather.on,
         storm: weather_storm(g),
         rain_rate: weather_rain_rate(g),
         wind: [g.weather.wind[0], g.weather.wind[1]],
@@ -429,7 +428,7 @@ pub fn weather_strike(g: &mut crate::game::Game, opts: Option<crate::weather::We
     // the dice and the thunder are the module's. What was given is a number, what was not is thrown for
     let mut said = [0.0; 8];
     ::sim::weather::strike(wx(g), g.time, opts.bearing.unwrap_or(f64::NAN), opts.elev_deg.unwrap_or(f64::NAN), opts.dist_km.unwrap_or(f64::NAN), opts.peak.unwrap_or(f64::NAN), &mut said);
-    let (bearing, elev, dist_km, peak) = (said[0], said[1], said[2], said[3]);
+    let (bearing, elev, peak) = (said[0], said[1], said[3]);
     // two return strokes, sometimes a third flicker
     let mut stroke = Stroke { pulses: vec![StrokePulsesItem { t0: 0.0, amp: 1.0, tau: 0.022 }, StrokePulsesItem { t0: 0.085, amp: said[4], tau: 0.05 }] };
     if said[5] != 0.0 { stroke.pulses.push(StrokePulsesItem { t0: said[6], amp: said[7], tau: 0.03 }); }
@@ -437,10 +436,10 @@ pub fn weather_strike(g: &mut crate::game::Game, opts: Option<crate::weather::We
     let light = g.tab.light.push(crate::render_lights::RtLight {
         name: String::from("lightning"), group: String::from("weather"), kind: 2.0, pos: [0.0, 0.0, 0.0], dir, color: v3::copy(flash_color()), intensity: 0.0, range: 1e6, inner_deg: 0.0, outer_deg: 0.0,
         radius: 0.006, volumetric: 1.3, owner: 0.0, enabled: true, fixture_box: -1.0, flicker: 0.0, ttl: -1.0, age: 0.0, peak_intensity: peak, transient: Some(true),
-        ..crate::render_lights::RtLight::zeroed()   // (every field the literal leaves absent)
+        ..crate::render_lights::RtLight::default()   // (every field the literal leaves absent)
     });
     crate::render_lights::light_set_add(g, light);
-    g.weather.flash = Some(Flash { light, stroke, t: 0.0, peak, dir, bearing, dist_km });
+    g.weather.flash = Some(Flash { light, stroke, t: 0.0, peak });
     g.weather.stats.flashes += 1.0;
     weather_apply_flash(g, 0.0, 1.0 / 60.0);   // lit from this very frame
     g.weather.flash.clone()
@@ -455,8 +454,7 @@ pub fn weather_thunder_due(g: &mut crate::game::Game, i: f64) -> Option<Vec<f64>
 }
 
 /// Once a frame from Game.update: the clock, the strokes, the flash lamp, the thunder due. The frame's numbers are the picture's (notes). (weather.ts Weather.update)
-pub fn weather_update(g: &mut crate::game::Game, dt: f64, cam_yaw: Option<f64>) {
-    g.weather.cam_yaw = cam_yaw.unwrap_or(0.0);
+pub fn weather_update(g: &mut crate::game::Game, dt: f64) {
     weather_sync_roofs(g, None);
     // THE FRAME'S NUMBERS (weather.ts:350, :351, :356, :373-381). The part left them out as the picture's, but skeleton 5.2's bridge carries `g.engine.weather`
     // as a thing the tick reads (wet.ts rainNow reads `.rain` to say who is rained on), so the tick writes it as the TypeScript does.
@@ -560,15 +558,16 @@ pub fn weather_play_thunder(g: &mut crate::game::Game, th: crate::weather::Thund
     let gain = (if near { 1.0 } else { 0.85 }) * th.loud * (0.6 + 0.4 * weather_storm(g));
     let lowpass = v3::clamp(9000.0 * m::exp(-th.dist_km * 0.75), 500.0, 9000.0);
     let rate = v3::clamp(1.02 - th.dist_km * 0.06, 0.78, 1.02) * (0.96 + 0.08 * dice[3]);
-    let cy = m::cos(g.weather.cam_yaw);
-    let sy = m::sin(g.weather.cam_yaw);
+    // (which ear it is in: the shown seat's, and no number of the game's)
+    let yaw = g.tab.camera[g.tab.cmd_seat[crate::game::game_host_seat(g)].cam].yaw;
+    let (cy, sy) = (m::cos(yaw), m::sin(yaw));
     let bx = m::sin(th.bearing);
     let bz = -m::cos(th.bearing);
     let right = bx * cy - bz * sy;
     let opts = crate::audio_iface::PlayOpts::Thunder { lowpass, rate, pan: v3::clamp(right * 0.6, -0.6, 0.6), wet: if near { 0.35 } else { 0.55 } };
     crate::audio_iface::game_audio_like_play(g, name, None, Some(gain), Some(&opts));
     g.weather.stats.thunders += 1.0;
-    g.weather.stats.last_thunder = Some(WeatherStatsLastThunder { at: th.at, dist_km: th.dist_km, bearing: th.bearing, loud: th.loud, played_at: g.time, name: String::from(name), gain });
+    g.weather.stats.last_thunder = Some(WeatherStatsLastThunder {  });
     // the three dice for a remark are thrown on EVERY thunder, whoever is on screen: same seed, same storm
     let (r_bark, r_who, r_line) = (dice[4], dice[5], dice[6]);
     if th.loud > 0.45 && g.time - weather_last_bark_t(g) > BARK_COOLDOWN && r_bark < BARK_CHANCE {

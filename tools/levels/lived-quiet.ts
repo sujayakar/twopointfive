@@ -1,17 +1,17 @@
 // LIVED-IN ROOMS for the two quiet levels played as two (tools/levels/crossing.ts, tools/levels/quiet-relay.ts): the small pen their `furnish()` steps draw with.
-// Everything it adds is a LIVED thing (src/scene/lived.ts): a box in the editor group `lived.<room>`, a loose prop named `lived.<room>.<what>` — left out by the
-// loader with the switch off, so off is the level as it was. The contract: rebuild/play-style-levels/rooms/read-first.md.
+// Everything it adds is a LIVED thing (lib/lived.ts): a box in the editor group `lived.<room>`, a loose prop named `lived.<room>.<what>` — left out by the
+// loader with the switch off, so off is the level as it was. The contract: lib/lived.ts.
 // Rules it keeps for its callers: paint only from the GWOT kit's palette (the simulation reads paint; these two levels have no second look file), NO light and
 // no emissive box (the hiding dark is the level), no Math.random (a piece is what its arguments say). What it cannot keep for them — off every door's line,
-// every authored point and every patrol leg — tools/qa/lived-check.ts holds.
+// every authored point and every patrol leg — levels stands holds.
 // SOLID vs DRAWN: `s()` is a real box (feet, rounds, eyes and the nav grid meet it once it stands over 0.25 m); `d()` is drawn only (BoxFlag.NoShadow: paint on
 // a floor, a thing hung on a wall, paper on a table). A floor piece is `mat()` / `line()`: drawn only, a hair over the level's own ground slabs and rugs.
 import type { Vec3 } from '../../src/math/vec';
 import type { Box } from '../../src/scene/boxes';
 import { BoxFlag } from '../../src/scene/boxes';
-import type { PropDef, PropKind, PropPart } from '../../src/scene/level';
-import { drawnRoundSlabs, ROUND_FROM, roundFace, roundRadius, roundSlabs, type GwotMat } from '../../src/scene/gwotKit';
-import { pieces } from '../../src/scene/library';
+import type { PropDef, PropKind, PropPart } from './lib/level';
+import { drawnRoundSlabs, ROUND_FROM, roundFace, roundRadius, roundSlabs, type GwotMat } from './lib/gwotKit';
+import { pieces } from './lib/library';
 
 type Mat = { albedo: Vec3; rough: number; metal?: boolean };
 export interface LivedHost {
@@ -27,7 +27,7 @@ export function livedQuiet(K: LivedHost, M: Record<GwotMat, Mat>) {
     if (!room) throw new Error(`lived-quiet: a box at (${x}, ${z}) before room() — it would land in a group that is not lived`);
     return K.add({ c: [x, (y0 + y1) / 2, z], h: [hx, (y1 - y0) / 2, hz], yaw, albedo: M[m].albedo, rough: M[m].rough, ...(M[m].metal ? { metal: true } : {}), ...(flags ? { flags } : {}), ...(isRound ? { round: true } : {}) });
   };
-  // The two bands only one of body and nav grid sees (tools/qa/lived-check.ts holds them on the built floor; here they are refused as the piece is written):
+  // The two bands only one of body and nav grid sees (levels stands holds them on the built floor; here they are refused as the piece is written):
   // R1 a top in [0.20, 0.25) m stops a body on floor the grid calls free; R2 an underside in [1.50, 1.70) m stops a standing player where every guard walks under.
   const solid = (x: number, z: number, y0: number, y1: number, hx: number, hz: number, m: GwotMat, yaw: number, stood: boolean, isRound = false) => {
     const E = 1e-9, at = `the solid at (${x}, ${z}) y ${y0}‥${y1} of lived.${room}`;
@@ -37,7 +37,7 @@ export function livedQuiet(K: LivedHost, M: Record<GwotMat, Mat>) {
   };
   /** a SOLID box: centre (x, z), from y0 up to y1, half extents hx × hz */
   const s = (x: number, z: number, y0: number, y1: number, hx: number, hz: number, m: GwotMat, yaw = 0, isRound = false) => solid(x, z, y0, y1, hx, hz, m, yaw, false, isRound);
-  /** a SOLID box STOOD ON FURNITURE that already shuts the floor under it (ledgers on a shelf's top board): R2 is not asked here — lived-check still asks it of the built floor */
+  /** a SOLID box STOOD ON FURNITURE that already shuts the floor under it (ledgers on a shelf's top board): R2 is not asked here — levels stands still asks it of the built floor */
   const on = (x: number, z: number, y0: number, y1: number, hx: number, hz: number, m: GwotMat, yaw = 0) => solid(x, z, y0, y1, hx, hz, m, yaw, true);
   /** a DRAWN-ONLY box (no shadow, no foot, no round) */
   const d = (x: number, z: number, y0: number, y1: number, hx: number, hz: number, m: GwotMat, yaw = 0) => put(x, z, y0, y1, hx, hz, m, yaw, NS);
@@ -47,7 +47,7 @@ export function livedQuiet(K: LivedHost, M: Record<GwotMat, Mat>) {
   const line = (x0: number, z0: number, x1: number, z1: number, wid: number, m: GwotMat, y = 0.03) => {
     const L = Math.hypot(x1 - x0, z1 - z0) || 0.01; return put((x0 + x1) / 2, (z0 + z1) / 2, y, y + 0.004, L / 2, wid / 2, m, Math.atan2(-(z1 - z0), x1 - x0), NS);
   };
-  /** a ROUND thing standing from y0 to y1, radius r: the kits' one way of writing a round (src/scene/gwotKit.ts): from 0.2 m one box that says it is round; smaller,
+  /** a ROUND thing standing from y0 to y1, radius r: the kits' one way of writing a round (lib/gwotKit.ts): from 0.2 m one box that says it is round; smaller,
    *  two squares 45° apart, the second a hair lower so the tops never fight. Only for a round standing on a FLOOR or a table: a disc on a wall's face is one flat
    *  `d()`. `solid` false = drawn only */
   const round = (x: number, z: number, y0: number, y1: number, r: number, m: GwotMat, solid = true) => {
@@ -80,7 +80,7 @@ export function livedQuiet(K: LivedHost, M: Record<GwotMat, Mat>) {
   ]);
   /** a kit PROP (a chair, a jerry can) taken into this room: renamed `lived.<room>.<what>` */
   const own = (p: PropDef, what: string) => { if (!room) throw new Error(`lived-quiet: the prop '${what}' before room()`); const name = `lived.${room}.${what}`; if (names.has(name)) throw new Error(`two lived props named ${name}`); names.add(name); p.name = name; return p; };
-  // the pen's TOOLS (the room, raw boxes and rounds, a raw prop), then its PIECES by name (src/scene/library.ts)
+  // the pen's TOOLS (the room, raw boxes and rounds, a raw prop), then its PIECES by name (lib/library.ts)
   return {
     /** everything that follows belongs to this place */
     room(id: string) { room = id; K.grp(`lived.${id}`); },

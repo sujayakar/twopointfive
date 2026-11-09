@@ -19,7 +19,7 @@ macro_rules! row { ($g:expr, $o:expr) => { match $o { None => &mut st!($g).sam, 
 fn ensure_pic(s: &mut State, gd: GuardId, now: f64, look_secs: f64) {
     if !s.men.has(gd) {
         let look_t = now + (s.men.len() % 8) as f64 * look_secs / 8.0;
-        s.men.set(gd, Pic { owner: Some(gd), look_t, ..Pic::zeroed() });
+        s.men.set(gd, Pic { owner: Some(gd), look_t, ..Pic::default() });
     }
 }
 /// a man's ideas, copied in their order; None = he has no picture
@@ -33,11 +33,9 @@ pub fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::picture::Sta
     if g.m.picture.states.is_none() {
         g.m.picture.states = Some(State {
             men: JsMap::new(),
-            sam: Pic { owner: None, look_t: -1e9, ..Pic::zeroed() },
+            sam: Pic { owner: None, look_t: -1e9, ..Pic::default() },
             tell_t: -1e9,
             done: JsSet::new(),
-            view: None,
-            view_t: -1e9,
         });
     }
     g.m.picture.states.as_mut().unwrap()
@@ -64,14 +62,6 @@ pub fn flat(a: V3, b: V3) -> f64 {
 /// (picture.ts floor)
 pub fn floor(p: V3) -> V3 {
     [p[0], 0.0, p[2]]
-}
-
-/// (picture.ts nameOf)
-pub fn name_of(g: &crate::game::Game, w: crate::picture::Who) -> String {
-    match w {
-        Who::Player => String::from("Player"),
-        Who::Guard(o) => g.gd[o].callsign.clone(),
-    }
 }
 
 /// (picture.ts up)
@@ -801,7 +791,7 @@ pub fn known_places(g: &mut crate::game::Game, men: &[GuardId], max_age: f64) ->
     let mut out = Vec::new();
     for (who, j) in best.iter() {
         if !j.2 {
-            out.push(KnownPlacesItem { who, at: v3::copy(j.0), age: now - j.1 });
+            out.push(KnownPlacesItem { who, at: v3::copy(j.0) });
         }
     }
     out
@@ -875,7 +865,7 @@ pub fn cover_near(g: &mut crate::game::Game, gd: GuardId, around: V3, r: f64, n:
                     break;
                 }
             }
-            out.push(CoverSpot { at: q, stand, low, edge, score: (if stand > 0.0 { 0.7 } else { 1.0 }) + (if edge { 0.4 } else { 0.0 }) - 0.3 * d / m::max(1.0, r) });
+            out.push(CoverSpot { at: q, stand, low, score: (if stand > 0.0 { 0.7 } else { 1.0 }) + (if edge { 0.4 } else { 0.0 }) - 0.3 * d / m::max(1.0, r) });
         }
     }
     js::sort_by(&mut out, |a, b| b.score - a.score);
@@ -1074,125 +1064,13 @@ pub fn picture_step(g: &mut crate::game::Game, gd: GuardId, key: u32, mark: V3, 
 }
 
 // ---------------------------------------------------------------- showing it (the host's floor view; nothing of the tick calls these)
-/// whose picture the floor shows: the fighter nearest the aim point, None with the view not on the cursor (picture.ts pictureShown)
-pub fn picture_shown(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<GuardId> {
-    if g.k.picture.show != crate::knobs::PictureKShow::Cursor {
-        return None;
-    }
-    let aim = seat.aim_point;
-    let mut best = None;
-    let mut bd = 2.5;
-    let mut i = 0;
-    while i < g.guards.len() {
-        let gd = g.guards[i];
-        i += 1;
-        if !fighter(g, gd) {
-            continue;
-        }
-        let d = flat(g.ch[g.gd[gd].ch].pos, aim);
-        if d < bd {
-            bd = d;
-            best = Some(gd);
-        }
-    }
-    best
-}
-
-/// viewOf1 with no count ticked; the flag falls to false after, as written (picture.ts viewOf)
-pub fn view_of(g: &mut crate::game::Game, gd: GuardId, ground: bool) -> crate::picture::PictureView {
-    g.m.picture.viewing = true;
-    let r = view_of1(g, gd, ground);
-    g.m.picture.viewing = false;
-    r
-}
-
-/// one man's picture as the floor view draws it (picture.ts viewOf1)
-pub fn view_of1(g: &mut crate::game::Game, gd: GuardId, ground: bool) -> crate::picture::PictureView {
-    let c = g.ch[g.gd[gd].ch].pos;
-    let show_m = g.k.picture.show_m;
-    let mut ideas: Vec<PictureViewIdeasItem> = Vec::new();
-    for i in ideas_of(g, gd) {
-        let who = name_of(g, i.who);
-        let w = idea_weight(g, i);
-        let reach = idea_reach(g, i);
-        let maybe = maybe_of(g, i);
-        ideas.push(PictureViewIdeasItem { who, at: i.at, age: g.time - i.t, how: i.how, w, reach, lost: i.lost, maybe });
-    }
-    let mut unsafe_: Vec<[f64; 3]> = Vec::new();
-    if ground && !ideas.is_empty() {
-        let (x0, z0) = (m::round(c[0]), m::round(c[2]));
-        let span = m::ceil(show_m) as i32;
-        for ix in -span..=span {
-            for iz in -span..=span {
-                let q: V3 = [x0 + ix as f64 + 0.25, 0.0, z0 + iz as f64 + 0.25];
-                if flat(q, c) > show_m || crate::scene_collision::nav_grid_is_blocked(g, q[0], q[2]) {
-                    continue;
-                }
-                let e = exposed_at(g, gd, q, None);
-                if e > 0.0 {
-                    unsafe_.push([q[0], q[2], e]);
-                }
-            }
-        }
-    }
-    let cover = if ground { cover_near(g, gd, c, show_m, Some(6.0), None) } else { Vec::new() };
-    PictureView { gd, from: [c[0], 0.05, c[2]], ideas, unsafe_, cover }
-}
-
-/// what the floor view draws this frame; the ground and the cover re-read four times a second (picture.ts pictureViews)
-pub fn picture_views(g: &mut crate::game::Game) -> Vec<crate::picture::PictureView> {
-    let show = g.k.picture.show;
-    if show == crate::knobs::PictureKShow::Off || g.touring {
-        return Vec::new();
-    }
-    if show == crate::knobs::PictureKShow::All {
-        let mut men: Vec<GuardId> = Vec::new();
-        let mut i = 0;
-        while i < g.guards.len() {
-            let gd = g.guards[i];
-            i += 1;
-            if fighter(g, gd) && g.gd[gd].team == crate::teams::Team::Operative {
-                men.push(gd);
-            }
-        }
-        let mut out = Vec::new();
-        for gd in men {
-            out.push(view_of(g, gd, false));
-        }
-        return out;
-    }
-    let shown = picture_shown(g, &crate::seats::here(g));
-    state_of(g);
-    let gd = match shown {
-        Some(gd) => gd,
-        None => {
-            st!(g).view = None;
-            return Vec::new();
-        }
-    };
-    let now = g.time;
-    let (view_gd, view_t) = {
-        let s = st!(g);
-        (s.view.as_ref().map(|v| v.gd), s.view_t)
-    };
-    if view_gd != Some(gd) || now - view_t >= 0.25 || now < view_t {
-        let v = view_of(g, gd, true);
-        let s = st!(g);
-        s.view = Some(v);
-        s.view_t = now;
-    } else {
-        let c = g.ch[g.gd[gd].ch].pos;
-        st!(g).view.as_mut().unwrap().from = [c[0], 0.05, c[2]];
-    }
-    vec![st!(g).view.clone().unwrap()]
-}
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
     fn knobs() -> crate::knobs::PictureK {
-        let mut k = crate::knobs::PictureK::zeroed();
+        let mut k = crate::knobs::PictureK::default();
         k.fresh_secs = 2.0;
         k.stale_secs = 20.0;
         k.stale_k = 0.4;
@@ -1228,7 +1106,7 @@ mod tests {
 
     #[test]
     fn learning_again_keeps_since_and_takes_him_off_the_downs() {
-        let mut p = Pic::zeroed();
+        let mut p = Pic::default();
         p.downs.set(Who::Player, 1.0);
         learn_now(5.0, &mut p, Who::Player, [1.0, 2.0, 3.0], 4.0, IdeaHow::Seen, None);
         assert!(!p.downs.has(Who::Player));
@@ -1314,14 +1192,14 @@ mod tests {
     #[test]
     fn safest_sets_keeps_the_order_with_nothing_known() {
         let mut g = Game::blank();
-        let one = vec![crate::orders::StackPost::zeroed()];
+        let one = vec![crate::orders::StackPost::default()];
         assert_eq!(safest_sets(&mut g, &[GuardId(1)], &[one.clone()]), vec![0]);
         assert_eq!(safest_sets(&mut g, &[GuardId(1)], &[one.clone(), one.clone(), one]), vec![0, 1, 2]);
     }
 
     #[test]
     fn a_new_picture_takes_its_turn_by_the_table_size() {
-        let mut s = State::zeroed();
+        let mut s = State::default();
         for n in 0..9 {
             ensure_pic(&mut s, GuardId(n), 10.0, 0.2);
         }

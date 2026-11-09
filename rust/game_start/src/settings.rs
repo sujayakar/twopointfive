@@ -4,7 +4,7 @@
 use game::root_settings::RenderSettings;
 
 pub fn default_settings() -> RenderSettings {
-    let mut s = RenderSettings::zeroed();
+    let mut s = RenderSettings::default();
     s.render_scale = 1.0;
     s.max_internal_height = 1000.0;
     s.taau = true;

@@ -3,7 +3,7 @@
 // a box: what was curved on the look page was cut by code that went over one level after it loaded. Here the level file says it. A box may carry a SHAPE:
 // how it stands when shapes are on.
 //
-// THE DATA NAMES THE SHAPE, never the engine's record (scene/levelData.ts BoxData.shape, scene/levelLoad.ts reads and writes it). Everything in it is said in
+// THE DATA NAMES THE SHAPE, never the engine's record (tools/levels/lib/levelData.ts BoxData.shape, tools/levels/lib/levelLoad.ts reads and writes it). Everything in it is said in
 // the box's OWN frame (metres from its centre along its own axes), so a box that is moved, turned or copied takes its shape along:
 //   round   1 | 3            the box is a twelve-sided prism about its own x or z (a wheel on its axle, a tank): the box is square across that axis, or
 //                            within 15 hundredths of it (the round's radius is then the smaller half, and the longer way keeps the box's own two faces: past that the
@@ -24,47 +24,42 @@
 // blast, a wall coming down) has hidden its trim, and whatever puts the box back has put the trim back, with nothing hidden, filed or restored for the
 // piece itself: a piece's own flags never change.
 // TO EVERY ENGINE THAT SWEEPS THE LEVEL'S THINGS A PIECE IS NOT THERE: not an item of the destruction lane, not a rider or a load in a blast's furniture
-// (game/furnblast.ts: its index, its mouth rule), not a thing hung on a wall (game/wallbreak.ts ghosts). An engine that walks the statics as things
-// skips `piece`; tools/qa/shapes-check.ts line 11 holds each of them to the plain level's answer.
+// (rust/game_rules/src/furnblast: its index, its mouth rule), not a thing hung on a wall (rust/game_rules/src/wallbreak ghosts). An engine that walks the statics as things
+// skips `piece`.
 // A whole cylinder standing on its end is not said here: that is a ROUND THING (scene/round.ts), the one way to say it.
 //
 // ONE MODEL: the record is built by scene/cut.ts cutRecord, so a shaped box is a cut box to everybody — the picture draws the solid, every GPU ray and every
 // CPU ray and segment meet it (sight, a round, a lamp's shadow, sound, a throw's arc; the game's own module too, whose copy of the boxes carries each record:
-// scene/boxMirror.ts).
+// rust/game_rules/src/scene_box_mirror).
 // WHAT WALKS MEETS THE PLAIN LEVEL, by construction and not by a rule its author must keep: a shaped box is pushed against as its UNCUT box (cut.ts's own
 // rule), which is the plain box, and a piece is met by nobody. The rules that mark a level's boxes by their size as it is stood up (thin things, a window's
-// bars: host/standup.ts) read the plain boxes too: shapes are given after them.
-// WHAT AN ENGINE CUTS UP ITSELF SAYS NO FORM: a window's bar (game/winbars.ts breaks it into lengths) is left plain by shapeLevel, a round thing is
-// refused a shape by the lint (scene/round.ts), and tools/qa/shapes-check.ts is red on a level file whose shape does not
-// stand.
+// bars: src/host/drawpage.ts) read the plain boxes too: shapes are given after them.
+// WHAT AN ENGINE CUTS UP ITSELF SAYS NO FORM: a window's bar (rust/game_rules/src/winbars breaks it into lengths) is left plain by shapeLevel, a round thing is
+// refused a shape by the lint (scene/round.ts).
 // A BLAST: a box whose shape has a form is one cell to the wall engine and never a wall cut into cells (its cells would be cut from the whole box); its
 // trim is out of the picture the moment the box is (above), and joins, loads and hangs on nothing meanwhile.
-// THE SWITCH IS THE SIMULATION'S, and a picture setting may not move it (as round.ts): with the cut-pieces switch down (scene/cut.ts cutConfig.on: a headless
-// tool, `?nocutboxes`) the game's rays still meet a shape's record (boxes.ts cutMet), and only the picture and the GPU's rays fall back to its uncut box.
+// THE SWITCH IS THE SIMULATION'S, and a picture setting may not move it (as round.ts): with the cut-pieces switch down (scene/cut.ts cutConfig.on: `?nocutboxes`) the game's rays still meet a shape's record (boxes.ts cutMet), and only the picture and the GPU's rays fall back to its uncut box.
 // THE PICTURE'S WORDS (formBox, with the record): a round and an arc are SHADED AS ONE TURNING FACE (Box.cutRound: the axis; Box.cutArc: how far under the
 // box's centre the arc's round has its axis, R − h.y) and an `old` cut takes the box's paint and lying snow (Box.cutOld). They ride in the cut record's
 // own row and only the g-buffer's cut pass reads them: rays, collision and the level's fingerprint meet the flat facets as before. Never beside markings
 // (the lint refuses a form on a box that carries any: a mark is laid out on the flat face).
 //
-// HOW: as a level is stood up (host/standup.ts populateHost, after its round things, before a box goes to the world and before the Game is built), with the
+// HOW: as a level is stood up (src/host/drawpage.ts populate_host, after its round things, before a box goes to the world and before the Game is built), with the
 // switch up each box that says a shape is given its record (Box.shaped) and its pieces are added AFTER every box the level has (Box.piece), so no box changes
 // its number; plainLevel takes the records and the pieces away. A level built by a generator in the page (the office) is shaped the same way as
 // one read from a file: the shape rides on the Box.
-// A LEVEL STOOD ON ITS SHAPES IS ANOTHER LEVEL: the level's fingerprint (game/savestate.ts) takes in a number of the shapes that STAND (shapeStamp: their
+// A LEVEL STOOD ON ITS SHAPES IS ANOTHER LEVEL: the level's fingerprint (rust/game_rules/src/savestate) takes in a number of the shapes that STAND (shapeStamp: their
 // geometry to the millimetre, 0 = none), so a checkpoint or a recording made on them is refused by the plain level, and the other way about, and by the level
 // once its shapes have changed — by the one refusal a checkpoint and every tape player already have. With no shape standing the fingerprint is the one the
-// level always had, so nothing recorded on the frozen stand moves.
+// level always had.
 //
-// THE SWITCH: SHAPES.on — ON in the page (`?shapes=0` puts it off), OFF in the module and on the frozen stand (FROZEN_HOLDS; TPS_SHAPES=1 raises it there).
-// Read ONCE, as a level is stood up, and the debugger's row reloads the page. Off = no box touched, none added: the build as it was by run digest.
-// A recording carries the stand's word (host/standEnv.ts) and the table; one from before the table has the switch put down before its level stands
-// (shapesTape: replay/recipestand.ts and tools/qa/rerun.ts `tables`; journal.ts applyKnobs says the same afterwards).
-// CHECK: tools/qa/shapes-check.ts (SHAPES_BREAK=1 must fail), both stands. Nothing here has been seen on a GPU.
+// THE SWITCH: SHAPES.on — ON in the page, OFF in the module.
+// Read ONCE, as a level is stood up, and the debugger's row reloads the page. Off = no box touched, none added.
+// Nothing here has been seen on a GPU.
 import { makeBox, BoxFlag, type Box, type BoxStuff } from './boxes';
 import { cutPlane, cutRecord, cutToWorld, MAX_CUT_PLANES, type CutPlane } from './cut';
 import type { Vec3 } from '../math/vec';
 
-export const SHAPES = { on: false };
 export const SHAPES_STATS = { shaped: 0, pieces: 0, levels: 0 };
 
 /** one plane of a shape in the box's own frame: [nx, ny, nz, d] keeps n · p ≤ d (n need not be unit: d is measured along n as given) */
@@ -103,7 +98,7 @@ function planesOf(h: Vec3, f: ShapeForm): CutPlane[] {
   return more;
 }
 
-/** what is wrong with a shape said of a box of half size h (the level lint, scene/levelData.ts): nothing = []. `pieceKeys` = the keys a piece may carry
+/** what is wrong with a shape said of a box of half size h (the level lint, tools/levels/lib/levelData.ts): nothing = []. `pieceKeys` = the keys a piece may carry
  *  beside its form (its place, size, turn, paint and finish as a box says them: the lint's own list, so a piece is painted by the one reader a box is).
  *  `piece` = this IS a piece of that box. */
 export function shapeErrors(s: unknown, h: Vec3, pieceKeys: readonly string[], piece = false): string[] {
@@ -153,20 +148,6 @@ function formBox(b: Box, f: ShapeForm): void {
   else if (b.cut && f.arc) { const w = f.arc.axis === 1 ? b.h[2] : b.h[0], R = (w * w + f.arc.rise * f.arc.rise) / (2 * f.arc.rise); b.cutRound = f.arc.axis; b.cutArc = R - b.h[1]; }
   if (b.cut && f.old) b.cutOld = true;
 }
-/** A NUMBER OF THE SHAPES A LEVEL STANDS ON (the level's fingerprint takes it in: game/savestate.ts), over its first `n` boxes: FNV-1a over each shaped
- *  box's place in the list and the GEOMETRY of its shape to the millimetre — its form, and each piece's place, size, turn and form (a piece has a number in
- *  the list and a blast reads where it hangs). Never a paint, a finish or the picture's `old`: a repaint is not another level. 0 = no box stands shaped. */
-export function shapeStamp(boxes: readonly Box[], n = boxes.length): number {
-  let h = 0x811c9dc5, any = false;
-  const num = (v: number) => { h ^= Math.round(v * 1000) & 0xffffffff; h = Math.imul(h, 0x01000193) >>> 0; };
-  const form = (f: ShapeForm) => { num(f.round ?? 0); num(f.arc ? f.arc.axis : 0); num(f.arc ? f.arc.rise : 0); num(f.cut ? f.cut.length : 0); for (const q of f.cut ?? []) for (const v of q) num(v); };
-  for (let i = 0; i < n && i < boxes.length; i++) {
-    const b = boxes[i]; if (b.shaped !== true) continue; const s = b.shape!; any = true;
-    num(i / 1000); form(s); num(s.with ? s.with.length : 0);
-    for (const w of s.with ?? []) { for (const v of w.off) num(v); for (const v of w.h) num(v); num(w.yaw ?? 0); form(w); }
-  }
-  return any ? (h || 1) : 0;
-}
 
 /** A LEVEL AS ITS FILE HAS IT: every record a stand-up gave is taken back and the pieces added then are taken away. Idempotent. */
 export function plainLevel(boxes: Box[]): void {
@@ -195,9 +176,4 @@ export function shapeLevel(boxes: Box[], on: boolean): number {
   for (const p of tail) boxes.push(p);
   SHAPES_STATS.shaped = made; SHAPES_STATS.pieces = tail.length; SHAPES_STATS.levels++;
   return made;
-}
-/** A RECORDING'S TABLES, before its level is stood up (replay/recipestand.ts and tools/qa/rerun.ts `tables`): one from before this table is played on a floor
- *  of plain boxes, as it was recorded — journal.ts applyKnobs says the same afterwards, too late for a level already standing */
-export function shapesTape(tables: Record<string, unknown>) {
-  const t = tables.SHAPES; if (t === null || typeof t !== 'object') SHAPES.on = false;
 }

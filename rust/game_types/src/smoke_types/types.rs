@@ -1,12 +1,12 @@
-//! The types of `smoke_types`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `smoke_types`.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// what kind of source an emitter is, for the host's solver (smoke/types.ts:15 SmokeEmitter.kind)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub enum SmokeEmitterKind {
-    Flash,
+    #[default] Flash,
     Wisp,
     Canister,
     Burst,
@@ -24,8 +24,7 @@ pub enum SmokeEmitterLattice {
     Coarse,
 }
 
-/// (TypeScript: SmokeEmitter, src/smoke/types.ts:6)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct SmokeEmitter {
     /// an open fire's: the graphics preset that sheds a fire's smoke drops it
     pub fire: Option<bool>,
@@ -47,7 +46,6 @@ pub struct SmokeEmitter {
     pub lattice: Option<crate::smoke_types::SmokeEmitterLattice>,
     pub confined: Option<bool>,
     pub prio: Option<f64>,
-    pub anchor: Option<V3>,
     pub min_voxels: Option<f64>,
     pub look: Option<bool>,
     /// the game's own smoke holds what it lets out (said as it goes out to the host: out_events)
@@ -55,57 +53,14 @@ pub struct SmokeEmitter {
     pub track_vel: Option<bool>,
     pub tint: Option<V3>,
 }
-impl SmokeEmitter {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SmokeEmitter {
-            fire: None,
-            pos: [0.0; 3],
-            dir: [0.0; 3],
-            speed: 0.0,
-            radius: 0.0,
-            density: 0.0,
-            temperature: 0.0,
-            ttl: 0.0,
-            age: 0.0,
-            track: None,
-            kind: crate::smoke_types::SmokeEmitterKind::Flash,
-            mode: None,
-            push: None,
-            expand: None,
-            attack: None,
-            jitter: None,
-            lattice: None,
-            confined: None,
-            prio: None,
-            anchor: None,
-            min_voxels: None,
-            look: None,
-            held: None,
-            track_vel: None,
-            tint: None,
-        }
-    }
-}
-impl Default for SmokeEmitter { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum SmokeEmitterMode {
     Burst,
     Jet,
 }
-impl SmokeEmitterMode {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SmokeEmitterMode::Burst => "burst",
-            SmokeEmitterMode::Jet => "jet",
-        }
-    }
-}
 
-/// (TypeScript: SmokePush, src/smoke/types.ts:35)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SmokePush {
     pub pos: V3,
     pub dir: V3,
@@ -116,43 +71,16 @@ pub struct SmokePush {
     pub line: Option<f64>,
     pub push: Option<f64>,
 }
-impl SmokePush {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SmokePush {
-            pos: [0.0; 3],
-            dir: [0.0; 3],
-            speed: 0.0,
-            radius: 0.0,
-            lattice: None,
-            body: None,
-            line: None,
-            push: None,
-        }
-    }
-}
-impl Default for SmokePush { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum SmokePushLattice {
     Fine,
     Coarse,
 }
-impl SmokePushLattice {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SmokePushLattice::Fine => "fine",
-            SmokePushLattice::Coarse => "coarse",
-        }
-    }
-}
 
-/// (TypeScript: WindGpuSource, src/smoke/types.ts:54)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct WindGpuSource {
     pub kind: crate::smoke_types::WindGpuSourceKind,
-    pub name: String,
     pub pos: V3,
     pub dir: V3,
     pub speed: f64,
@@ -161,74 +89,25 @@ pub struct WindGpuSource {
     pub r0: f64,
     pub d_max: f64,
     pub floor_y: Option<f64>,
-    pub interior: Option<[f64; 4]>,
-    pub annex: Option<[f64; 4]>,
-    pub roofs: Option<Vec<Vec<f64>>>,
     pub field: Option<bool>,
     pub bound: crate::smoke_types::WindGpuSourceBound,
     pub kinds: Option<f64>,
     pub heat: Option<bool>,
 }
-impl WindGpuSource {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WindGpuSource {
-            kind: crate::smoke_types::WindGpuSourceKind::Jet,
-            name: String::new(),
-            pos: [0.0; 3],
-            dir: [0.0; 3],
-            speed: 0.0,
-            reach: 0.0,
-            tan_spread: 0.0,
-            r0: 0.0,
-            d_max: 0.0,
-            floor_y: None,
-            interior: None,
-            annex: None,
-            roofs: None,
-            field: None,
-            bound: crate::smoke_types::WindGpuSourceBound::zeroed(),
-            kinds: None,
-            heat: None,
-        }
-    }
-}
-impl Default for WindGpuSource { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum WindGpuSourceKind {
-    Jet,
+    #[default] Jet,
     Storm,
 }
-impl WindGpuSourceKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            WindGpuSourceKind::Jet => "jet",
-            WindGpuSourceKind::Storm => "storm",
-        }
-    }
-}
 
-/// (TypeScript: inline at src/smoke/types.ts:54 WindGpuSource.bound, src/smoke/types.ts:54)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct WindGpuSourceBound {
     pub c: V3,
     pub r: f64,
 }
-impl WindGpuSourceBound {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WindGpuSourceBound {
-            c: [0.0; 3],
-            r: 0.0,
-        }
-    }
-}
-impl Default for WindGpuSourceBound { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: CanisterParams, src/smoke/types.ts:59)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct CanisterParams {
     pub canister_duration: f64,
     pub canister_density: f64,
@@ -236,34 +115,11 @@ pub struct CanisterParams {
     pub canister_temp: f64,
     pub canister_speed: f64,
 }
-impl CanisterParams {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CanisterParams {
-            canister_duration: 0.0,
-            canister_density: 0.0,
-            canister_radius: 0.0,
-            canister_temp: 0.0,
-            canister_speed: 0.0,
-        }
-    }
-}
-impl Default for CanisterParams { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: SmokeSystemLike, src/smoke/types.ts:61)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct SmokeSystemLike {
     pub params: Option<crate::smoke_types::CanisterParams>,
 }
-impl SmokeSystemLike {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SmokeSystemLike {
-            params: None,
-        }
-    }
-}
-impl Default for SmokeSystemLike { fn default() -> Self { Self::zeroed() } }
 
 /// (src/smoke/types.ts:56 WIND_GPU_MAX)
 pub const WIND_GPU_MAX: f64 = 8.0;

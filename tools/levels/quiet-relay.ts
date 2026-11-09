@@ -4,9 +4,7 @@
 // THE LEVEL'S ONE IDEA: THE LONG WAY ROUND — both doors of the hut block are watched from the far side of the light. One of the two goes round to the watcher in
 // the dark; the other is already at the door when he drops. (The border crossing is two men down on one beat; this is one man down and one man through.)
 //   bun run tools/levels/export.ts quiet-relay [--check]     → levels/quiet-relay.json
-//   bun run tools/qa/quiet-check.ts quiet-relay.json         the scenarios.quiet block against the built floor, every deal
-//   bun run tools/qa/quiet-light.ts quiet-relay              the light a sneaking man stands in, on paper
-//   bun run tools/qa/quiet-pair.ts --level quiet-relay.json --seeds 1-48      the scripted pair beside the same run alone
+//   levels stands quiet-relay         the scenarios.quiet block against the built floor, every deal
 //   page: ?levelFile=quiet-relay.json&quiet&squad=1          (&quiet=N pins the deal; without &squad=1 it is played alone)
 //
 //          x 4        10    14        20        27  29        36
@@ -76,15 +74,15 @@
 // your way and the wicket is the short way in), three spots (the rack in the comms hut · the safe in the ops room · the locker in the bunk hut), three sets,
 // four ways out (east · west · north · the wicket), all open every run.
 //
-// NOT SEEN ON A GPU: laid out on paper and checked headless (validator, level-lint, quiet-check, quiet-light, the scripted solo night and pair), one still
-// on the software renderer. Nobody has played it. In the GWOT kit (src/scene/gwotKit.ts): walls, ground, furniture and yard pieces are the kit's; the mast, the racks, the
+// NOT SEEN ON A GPU: laid out on paper and checked headless (validator, level-lint, levels stands, the scripted solo night and pair), one still
+// on the software renderer. Nobody has played it. In the GWOT kit (lib/gwotKit.ts): walls, ground, furniture and yard pieces are the kit's; the mast, the racks, the
 // safe, the locker and the lamps are this file's own boxes in the kit's paint. Units: metres. +X east, +Z south, +Y up.
 import type { Vec3 } from '../../src/math/vec';
-import type { DeviceDef, Level, LevelDoorDef, PatrolRoute } from '../../src/scene/level';
-import type { KitViewData, LevelScenarios, QuietData, Rect } from '../../src/scene/scenarios';
-import type { SurfacesData } from '../../src/scene/levelData';
-import { officeKit, normalize3 as norm, type GeneratorTrace } from '../../src/scene/officeGen';
-import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS } from '../../src/scene/gwotKit';
+import type { DeviceDef, Level, LevelDoorDef, PatrolRoute } from './lib/level';
+import type { KitViewData, LevelScenarios, QuietData, Rect } from './lib/scenarios';
+import type { SurfacesData } from './lib/levelData';
+import { officeKit, normalize3 as norm, type GeneratorTrace } from './lib/officeGen';
+import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS } from './lib/gwotKit';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { livedQuiet } from './lived-quiet';
@@ -104,7 +102,7 @@ export const RELAY_ROOMS: Record<'comms' | 'ops' | 'bunk' | 'shed', Rect> = {
 };
 const R = RELAY_ROOMS;
 
-/** THE SEVEN BEATS (level.routes: the union of every patrol set; seven and no more — a level's men are named off game.ts CALLSIGNS by route, which holds seven). A waypoint with a wait is where he stands and looks; he faces the way he arrived.
+/** THE SEVEN BEATS (level.routes: the union of every patrol set; seven and no more — a level's men are named off rust/game_rules/src/game CALLSIGNS by route, which holds seven). A waypoint with a wait is where he stands and looks; he faces the way he arrived.
  *  ON THE FIRST LAP a man stands on waypoint 0 from the first frame and has not 'arrived' from anywhere (he faces down his first leg, or wherever a settling step leaves him): so every long stand
  *  here is waypoint 1 or later, behind a lead-in waypoint with no wait a stride short of it, and is come at on the first lap as on every other. (The walker's and the fuel man's short first stands are not.)
  *  The route called 'mast' is the generator man's (it keeps its first name: sets and traces say 'mast'). */
@@ -118,9 +116,9 @@ export const RELAY_ROUTES: PatrolRoute[] = [
   // His back is the east mouth of the alley behind the blast wall: the far side of the light from the doors
   // (THE LAP STARTS ON THE LEAD-IN, a stride and a half due SOUTH of the stand: he is on his stand looking north from the second second of a run and has looked nowhere
   //  else first. It used to start at the east end of the few paces: ten seconds looking south-west and west before the first stand, and a partner ordered to his
-  //  back in that time — pairorders.ts goes for the back of the way a man MOSTLY faces — was sent to his EAST side, across the dark band in front of him and
+  //  back in that time — rust/game_rules/src/pairorders goes for the back of the way a man MOSTLY faces — was sent to his EAST side, across the dark band in front of him and
   //  into the near field of his eye when he looked north. THE LEAD-IN IS DUE SOUTH ON PURPOSE: a standing man keeps the yaw of the leg he walked in by
-  //  (guards.ts never turns him on a stand), and pairorders.ts calls the floor inside 2.4 m of a man whose head sweeps watched, all but 25 degrees either
+  //  (rust/game_rules/src/guards never turns him on a stand), and pairorders calls the floor inside 2.4 m of a man whose head sweeps watched, all but 25 degrees either
   //  side of dead astern. From the south-east (27.6, 22.4) he faced 36 to 51 degrees west of north and the strip behind the blast wall came out 45 degrees off
   //  his stern: an early order onto him never set. From due south the strip is inside the free wedge and the first order sets. The price: the lit door is
   //  53 degrees off his axis, so on his own (door camera out) he is about a second slower onto a man there.)
@@ -154,7 +152,7 @@ export const QUIET: QuietData = {
     { name: 'the road', sam: [35.2, 0, 27.1], samYaw: -Math.PI / 2, mate: [36.4, 0, 27.2] },
   ],
   spots: [
-    { place: 'the comms hut', area: R.comms, door: 'comms', holder: 'the middle rack', rackIndex: 0, front: [16.0, 1.0, 9.77], halfW: 0.4, wired: true },   // (on the station's network: pulled, it drops off a board and a man is sent — game/takecheck.ts; a safe and a locker tell nobody)
+    { place: 'the comms hut', area: R.comms, door: 'comms', holder: 'the middle rack', rackIndex: 0, front: [16.0, 1.0, 9.77], halfW: 0.4, wired: true },   // (on the station's network: pulled, it drops off a board and a man is sent — rust/game_rules/src/takecheck; a safe and a locker tell nobody)
     { place: 'the ops room', area: R.ops, door: 'ops', holder: 'the safe', rackIndex: 1, front: [25.9, 1.0, 9.77], halfW: 0.3 },
     { place: 'the bunk hut', area: R.bunk, door: 'bunk', holder: 'the steel locker', rackIndex: 2, front: [4.77, 1.0, 6.5], halfW: 0.3 },
   ],
@@ -335,7 +333,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   G.pickup(32.0, 25.3, Math.PI, 'truckWhite');                                            // left on the road for the night, against the wall: the road start is behind it and the way west passes south of it
   G.bush(2.4, 22.6, 1.1); G.bush(37.6, 9.0); G.bush(14.0, 2.0, 0.9); G.bush(31.0, 2.2, 1.2); G.bush(2.2, 7.4); G.rubble(37.4, 15.0, 0.9, 8);
 
-  // ---------------- what goes dark when the thing is taken (game.ts rackTargets: the switchables named rack<rackIndex>_leds): a tell-tale on each holder ----------------
+  // ---------------- what goes dark when the thing is taken (rust/game_rules/src/game rack_targets: the switchables named rack<rackIndex>_leds): a tell-tale on each holder ----------------
   grp('objective');
   for (const s of QUIET.spots) { const f = s.front, onX = s.rackIndex === 2;
     const led = add({ c: onX ? [f[0] + 0.006, 1.45, f[2] + 0.2] : [f[0] + 0.2, 1.45, f[2] + 0.006], h: onX ? [0.004, 0.012, 0.03] : [0.03, 0.012, 0.004], ...M.plasticBlack, emissive: [0.3, 4, 0.6], flags: BoxFlag.NoShadow });
@@ -375,7 +373,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     { name: 'gate_n', hinge: [22.32, 4.0], closedDir: 0, width: 1.16, exterior: true },
     { name: 'gate_s', hinge: [19.42, 24.0], closedDir: 0, width: 1.16, exterior: true },
   ];
-  // (`exterior` is for the leaves in the COMPOUND wall: wind.ts gives each a gust; the huts' outside doors stand in 0.24 walls too, so their FRAMES are cut the thick way)
+  // (`exterior` is for the leaves in the COMPOUND wall: rust/game_rules/src/wind gives each a gust; the huts' outside doors stand in 0.24 walls too, so their FRAMES are cut the thick way)
   const THICK = new Set(['comms', 'ops', 'bunk', 'shed']);
   for (const d of doors) doorFrame(THICK.has(d.name) ? { ...d, exterior: true } : d);
 
@@ -403,11 +401,11 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     playerSpawn: [START.sam[0], 0, START.sam[2]],
     routes: RELAY_ROUTES.map(r => ({ ...r, points: r.points.map(p => [...p] as Vec3), wait: [...r.wait] })), chokepoints: [], clearPlans: [],
     sky: { zenith: [0.012, 0.02, 0.045], horizon: [0.04, 0.045, 0.07] },
-    // the level's own mission in the shape every level file carries: spots[0] and exits[0], as game/quiet.ts writes a deal
+    // the level's own mission in the shape every level file carries: spots[0] and exits[0], as rust/game_rules/src/quiet writes a deal
     mission: { serverRoom: { ...SPOT.area }, entryDoor: SPOT.door, rack: { index: SPOT.rackIndex, front: [...SPOT.front] as Vec3, halfW: SPOT.halfW }, exfilDoor: EXIT.door, exfilX: EXIT.x, exfilZ: EXIT.z, exfilOut: [EXIT.out[0], EXIT.out[1]] },
   };
 
-  // ---------------- what is underfoot (game/floor.ts): the six materials have no word for earth: 'asphalt' for dirt and gravel, 'stone' for a slab or a
+  // ---------------- what is underfoot (rust/game_rules/src/floor): the six materials have no word for earth: 'asphalt' for dirt and gravel, 'stone' for a slab or a
   //                  beaten floor, 'carpet' for the bunk hut's felt ----------------
   const surfaces: SurfacesData = {
     building: { x0: 4, x1: 36, z0: 4, z1: 24 }, grassEdge: 0, inside: 'asphalt', outside: 'asphalt', verge: 'asphalt',
@@ -420,7 +418,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       { id: 'mast_pad', mat: 'stone', x0: 21.4, z0: 16.7, x1: 24.4, z1: 19.7 },
     ],
   };
-  // THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest): the west gate from the track (the first start's side), the west yard's
+  // THE TEAM & KIT PICTURE (lib/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest): the west gate from the track (the first start's side), the west yard's
   // lamp and the generator shed over the wall behind the pair.
   // FOR THE PICTURE ONLY (`add`: the mission never loads these): the yard's west lamp lights the near side of the gate and the strip behind the wall was black,
   // and what makes this a relay (the mast, the dishes) is under the tiles. So the picture gets a work bulb on a pole against the wall and A SPARE SECTION OF
@@ -429,7 +427,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // not the floor. THE BULB STANDS 1.5 m UP THE WALL FROM THE GATE, NOT BY IT: at 0.25 m from the jamb its light falls through a blown gate on Sam's place
   // (what the AI senses is what the picture shows); from here every line to a place of the pair meets the wall. (The page check's no-alarm row is red on
   // this gate's charge and wall rows WITH AND WITHOUT these pieces, at build 78cc3abb: not this block's.) THE PLINTH IS 0.64 m TALL because
-  // tools/qa/lived-check.ts walks an added box whose centre is within 0.3 m of the floor as a place a man goes. Never seen on a GPU.
+  // levels stands walks an added box whose centre is within 0.3 m of the floor as a place a man goes. Never seen on a GPU.
   const KX = 4.85, KZ = 10.45, kvMast: NonNullable<NonNullable<KitViewData['ways'][number]['add']>['boxes']> = [
     { id: 'kv_mast_plinth', group: 'kv.mast', c: [KX, 0.32, KZ], h: [0.28, 0.32, 0.28], material: 'block' },
     ...([[-1, -1], [1, -1], [1, 1], [-1, 1]] as const).map(([sx, sz], k) => ({ id: `kv_mast_leg${k}`, group: 'kv.mast', c: [KX + sx * 0.18, 2.02, KZ + sz * 0.18] as Vec3, h: [0.025, 1.38, 0.025] as Vec3, material: 'galv' })),
@@ -454,13 +452,13 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     lamps: [{ id: 'kv_bulb', kind: 'point', pos: [4.75, 2.2, 11.8], dir: [0, -1, 0], color: [1, 0.62, 0.22], intensity: 13, range: 7, innerDeg: 0, outerDeg: 180, group: 'kv', enabled: true, volumetric: 0.05, radius: 0.06, mains: false, fixture: 'kv_fix' }],
   };
   const kitView: KitViewData = { ways: [{ door: 'gate_w', ref: [1.8, 16.6], side: -1, add: kitAdd }] };
-  // what a row calls the four ways through the wall (scenarios.doorNames — game/doornames.ts; no bearing in a name): by what is outside or just inside each
+  // what a row calls the four ways through the wall (scenarios.doorNames — rust/game_rules/src/doornames; no bearing in a name): by what is outside or just inside each
   const doorNames = [{ door: 'gate_s', name: 'wicket' }, { door: 'gate_w', name: 'track gate' }, { door: 'gate_n', name: 'back strip gate' }, { door: 'gate_e', name: 'dish gate' }];
   return { level, scenarios: { quiet: QUIET, kitView, doorNames }, groups: trace.groups, surfaces };
 }
 
 // ---------------------------------------------------------------- LIVED-IN ROOMS ----------------------------------------------------------------
-// What each place of the station is FOR, seen from above (src/scene/lived.ts: every box here is in a group `lived.<place>`, every prop is named
+// What each place of the station is FOR, seen from above (lib/lived.ts: every box here is in a group `lived.<place>`, every prop is named
 // `lived.<place>.<what>`, all of it the tail of the lists and left out with the switch off). No light and no change to one: the hiding dark is the level.
 // Out of doors nothing stands taller than a man's knee where a flood, the picket or a walker looks: paint, plates in the ground, things against a wall.
 // A SOLID thing's top is either under 0.2 m (feet and the nav grid both pass over it) or over 0.25 (both go round): between the two a body is stopped by floor the grid calls free.

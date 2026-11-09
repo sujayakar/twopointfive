@@ -1,7 +1,6 @@
 //! The desk as a page has it: asks by their bytes, answers read off the wire's shape.
-use game::io::{Io, R};
 use game::kit::{MemberKit, TrimId};
-use game::view::{BriefView, CardRow, CardView, Pressed, Setting, SheetView, ShortView, StartView, TeamView};
+use game::view::{BriefView, CardRow, CardView, MissionRow, MissionsView, Pressed, Setting, SheetView, ShortView, StartView, TeamView};
 use game_run::command::apply;
 use game_run::desk::Desk;
 use game_run::kept;
@@ -16,10 +15,11 @@ fn text(b: &mut Vec<u8>, s: &str) { b.extend_from_slice(&(s.len() as u32).to_le_
 fn head(n: u32, who: u32) -> Vec<u8> { let mut b = n.to_le_bytes().to_vec(); b.extend_from_slice(&who.to_le_bytes()); b }
 
 /// the card's answer, in the bytes that go to the page
+fn answer<T: 'static>(d: &mut Desk, ask: &[u8]) -> T { *d.answer(ask).expect("an ask the desk has").itself().downcast().expect("the answer it is asked for") }
 fn card_bytes(d: &mut Desk, who: u32) -> Vec<u8> { d.ask(&head(CARD, who)).expect("an ask the desk has") }
-fn card(d: &mut Desk, who: u32) -> CardView { CardView::r(&mut R::new(&card_bytes(d, who))) }
+fn card(d: &mut Desk, who: u32) -> CardView { answer(d, &head(CARD, who)) }
 fn all_cards(d: &mut Desk) -> Vec<Vec<u8>> { (0..5).map(|who| card_bytes(d, who)).collect() }
-fn press(d: &mut Desk, ask: &[u8]) -> Pressed { Pressed::r(&mut R::new(&d.ask(ask).expect("an ask the desk has"))) }
+fn press(d: &mut Desk, ask: &[u8]) -> Pressed { answer(d, ask) }
 fn step(d: &mut Desk, who: u32, field: &str, dir: i32) -> Pressed {
     let mut b = head(STEP, who);
     text(&mut b, field);
@@ -123,7 +123,7 @@ fn go(d: &mut Desk, mission: &str, link: &str, issue: &str, walls: u32) -> Press
     press(d, &b)
 }
 fn team_bytes(d: &mut Desk) -> Vec<u8> { d.ask(&TEAM.to_le_bytes()).expect("an ask the desk has") }
-fn team(d: &mut Desk) -> TeamView { TeamView::r(&mut R::new(&team_bytes(d))) }
+fn team(d: &mut Desk) -> TeamView { answer(d, &TEAM.to_le_bytes()) }
 fn size(d: &mut Desk, n: u32) -> Pressed { press(d, &head(SIZE, n)) }
 fn named(d: &mut Desk, id: &str) -> Pressed {
     let mut b = NAMED.to_le_bytes().to_vec();
@@ -239,18 +239,18 @@ fn worded(n: u32, words: &[&str]) -> Vec<u8> {
     b
 }
 fn start_bytes(d: &mut Desk, search: &str) -> Vec<u8> { d.ask(&worded(START, &[search])).expect("an ask the desk has") }
-fn start(d: &mut Desk, search: &str) -> StartView { StartView::r(&mut R::new(&start_bytes(d, search))) }
+fn start(d: &mut Desk, search: &str) -> StartView { answer(d, &worded(START, &[search])) }
 fn sheet_bytes(d: &mut Desk, mission: &str) -> Vec<u8> { d.ask(&worded(SHEET, &[mission])).expect("an ask the desk has") }
-fn sheet(d: &mut Desk, mission: &str) -> SheetView { SheetView::r(&mut R::new(&sheet_bytes(d, mission))) }
+fn sheet(d: &mut Desk, mission: &str) -> SheetView { answer(d, &worded(SHEET, &[mission])) }
 fn set(d: &mut Desk, mission: &str, key: &str, to: &str) -> Pressed { press(d, &worded(SET, &[mission, key, to])) }
-fn word_of(d: &mut Desk, ask: &[u8]) -> String { String::r(&mut R::new(&d.ask(ask).expect("an ask the desk has"))) }
+fn word_of(d: &mut Desk, ask: &[u8]) -> String { answer(d, ask) }
 fn mission_of(d: &mut Desk, search: &str) -> String { word_of(d, &worded(MISSION, &[search])) }
 fn short(d: &mut Desk, id: &str, search: &str, hard: i32) -> String {
     let mut b = worded(SHORT, &[id, search]);
     b.extend_from_slice(&hard.to_le_bytes());
     word_of(d, &b)
 }
-fn next(d: &mut Desk, search: &str) -> ShortView { ShortView::r(&mut R::new(&d.ask(&worded(NEXT, &[search])).expect("an ask the desk has"))) }
+fn next(d: &mut Desk, search: &str) -> ShortView { answer(d, &worded(NEXT, &[search])) }
 fn row<'a>(s: &'a SheetView, key: &str) -> &'a Setting { s.settings.iter().find(|r| r.key == key).unwrap_or_else(|| panic!("no row {key}")) }
 fn lit(s: &SheetView, key: &str) -> Vec<String> { row(s, key).choices.iter().filter(|c| c.on).map(|c| c.id.clone()).collect() }
 /// what a press says this machine keeps under a name: None where it says nothing of it
@@ -263,7 +263,7 @@ fn asked_twice_the_list_and_the_sheet_are_the_same_and_nothing_is_kept_anew() {
         let mut d = Desk::new();
         let kept_before = kept::write(&mut d.g);
         let list = start_bytes(&mut d, address);
-        let ids: Vec<String> = StartView::r(&mut R::new(&list)).rows.iter().map(|r| r.id.clone()).collect();
+        let ids: Vec<String> = start(&mut d, address).rows.iter().map(|r| r.id.clone()).collect();
         let sheets: Vec<Vec<u8>> = ids.iter().map(|id| sheet_bytes(&mut d, id)).collect();
         go(&mut d, &ids[0], "", "", 0);
         let team_first = team_bytes(&mut d);
@@ -465,8 +465,8 @@ fn the_team_works_out_its_own_link_from_the_list_with_the_size_on_it() {
 
 const BRIEF: u32 = 18;
 const SAME: u32 = 19;
-fn brief(d: &mut Desk, search: &str) -> BriefView { BriefView::r(&mut R::new(&d.ask(&worded(BRIEF, &[search])).expect("an ask the desk has"))) }
-fn same(d: &mut Desk, link: &str, page: &str) -> bool { u32::r(&mut R::new(&d.ask(&worded(SAME, &[link, page])).expect("an ask the desk has"))) != 0 }
+fn brief(d: &mut Desk, search: &str) -> BriefView { answer(d, &worded(BRIEF, &[search])) }
+fn same(d: &mut Desk, link: &str, page: &str) -> bool { answer::<u32>(d, &worded(SAME, &[link, page])) != 0 }
 
 #[test]
 fn a_brief_is_the_row_its_address_starts_with_the_team_it_deploys() {
@@ -536,4 +536,56 @@ fn no_group_draws_more_than_eight_rows_and_every_group_draws_one() {
     groups.dedup();
     assert_eq!(groups.len(), 6, "every group once, in a run of its own: {groups:?}");
     for g in groups { let n = rows.iter().filter(|r| r.group == g).count(); assert!((1..=8).contains(&n), "{g}: {n} rows"); }
+}
+
+const MISSIONS: u32 = 20;
+const KIND: u32 = 21;
+const PICK: u32 = 22;
+fn missions(d: &mut Desk) -> Vec<MissionRow> { answer::<MissionsView>(d, &MISSIONS.to_le_bytes()).rows }
+fn kind(d: &mut Desk, search: &str) -> String { word_of(d, &worded(KIND, &[search])) }
+fn goes(d: &mut Desk, search: &str) -> String { word_of(d, &worded(PICK, &[search])) }
+
+#[test]
+fn every_mission_is_told_once_by_the_address_that_starts_it() {
+    let mut d = Desk::new();
+    let all = missions(&mut d);
+    let mut ids: Vec<&str> = all.iter().map(|m| m.id.as_str()).collect();
+    ids.sort();
+    ids.dedup();
+    assert_eq!(ids.len(), all.len(), "two rows of one name");
+    assert_eq!(all[0].id, "solo-night");
+    for m in &all {
+        assert_eq!(mission_of(&mut d, &m.link), m.id, "{}", m.link);
+        assert_eq!(kind(&mut d, &m.link), if m.kind == "solo" { "" } else { m.kind.as_str() }, "{}", m.link);
+        assert!(!m.title.is_empty() && !m.level.is_empty(), "{}", m.id);
+    }
+    // (the list's own rows are these, as the cards draw them)
+    for r in start(&mut d, "?offlist=0").rows {
+        let m = all.iter().find(|m| m.id == r.id).unwrap_or_else(|| panic!("{} is no mission", r.id));
+        assert_eq!((&m.title, &m.kind, &m.group, &m.level, &m.blurb, &m.ways, &m.line, m.off_list), (&r.title, &r.kind, &r.group, &r.level, &r.blurb, &r.ways, &r.line, r.off_list), "{}", r.id);
+        assert_eq!(r.two, (r.kind == "roomclear" || r.kind == "nightbreach") && m.only.is_empty() && !r.lesson, "{}", r.id);
+    }
+}
+
+#[test]
+fn a_kind_is_the_addresss_own_on_the_list_or_not() {
+    let mut d = Desk::new();
+    for (search, want) in [("?roomclear&levelFile=kit-yard.json", "roomclear"), ("?squad4", "roomclear"), ("?squad4&quiet", "quiet"), ("?nightbreach", "nightbreach"), ("?rescue", "rescue"), ("", ""), ("?mute", ""), ("?solo", "")] {
+        assert_eq!(kind(&mut d, search), want, "{search}");
+    }
+}
+
+#[test]
+fn an_address_that_names_a_row_of_the_short_list_alone_goes_to_that_row_and_stays_there() {
+    let mut d = Desk::new();
+    for (search, want) in [
+        ("?pick=1", "?levelFile=compound.json&roomclear&squad4&difficulty=standard&pick=compound"),
+        ("?pick=depot&mute", "?levelFile=depot.json&roomclear&squad4&difficulty=standard&pick=depot&mute"),
+        ("?pick=depot&difficulty=hard", "?levelFile=depot.json&roomclear&squad4&difficulty=hard&pick=depot"),
+        ("?pick=solo&hour=midday&mute", "?solo&pick=solo&mute"),
+    ] {
+        assert_eq!(goes(&mut d, search), want, "{search}");
+        assert_eq!(goes(&mut d, want), "", "{want} is the row's own page");
+    }
+    for search in ["", "?mute", "?pick", "?pick=9", "?pick=nosuch", "?pick=compound&roomclear", "?pick=compound&solo", "?pick=1&levelFile=depot.json"] { assert_eq!(goes(&mut d, search), "", "{search}"); }
 }

@@ -1,6 +1,6 @@
-// Regenerate levels/office.json from the legacy procedural generator (src/scene/officeGen.ts buildOfficeProcedural): run it ONCE, convert the Level it
-// returns to level data (src/scene/levelLoad.ts levelToData — ids, flag names, palette materials, editor groups), validate, and write the file in the
-// canonical one-entity-per-line format (src/scene/levelData.ts serializeLevelData). Then prove the file is the level: parse it back, load it
+// Regenerate levels/office.json from the legacy procedural generator (tools/levels/lib/officeGen.ts buildOfficeProcedural): run it ONCE, convert the Level it
+// returns to level data (tools/levels/lib/levelLoad.ts levelToData — ids, flag names, palette materials, editor groups), validate, and write the file in the
+// canonical one-entity-per-line format (tools/levels/lib/levelData.ts serializeLevelData). Then prove the file is the level: parse it back, load it
 // (loadLevel) and diff the result against the generator's Level field by field — the export refuses to write a file that does not reproduce it.
 //   bun run tools/level-export.ts            write levels/office.json (+ print counts, sizes, digest)
 //   bun run tools/level-export.ts --check    write nothing; exit 1 if levels/office.json is missing or differs from what the generator gives now
@@ -10,13 +10,13 @@ import { resolve } from 'node:path';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 
 const ROOT = resolve(import.meta.dir, '..');
-const { buildOfficeProcedural, OFFICE_PALETTE, OFFICE_FINISH } = await import(`${ROOT}/src/scene/officeGen.ts`);
+const { buildOfficeProcedural, OFFICE_PALETTE, OFFICE_FINISH } = await import(`${ROOT}/tools/levels/lib/officeGen.ts`);
 const { rowWord, rowDoes } = await import(`${ROOT}/src/scene/stuff.ts`);   // (what each paint is made of, by its name: written into the file's material rows)
-const { levelToData, loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
+const { levelToData, loadLevel } = await import(`${ROOT}/tools/levels/lib/levelLoad.ts`);
 const { stampDoes } = await import('./levels/doesWas.ts');   // (what a box nobody spoke for does: the word its colour had. src/scene/materials.ts)
-const { validateLevelData, serializeLevelData, parseLevelData, levelDataDigest, structuralDiff, canonicalLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
+const { validateLevelData, serializeLevelData, parseLevelData, levelDataDigest, structuralDiff, canonicalLevelData } = await import(`${ROOT}/tools/levels/lib/levelData.ts`);
 const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
-const { FINISHES, BUILDING, GRASS_EDGE } = await import(`${ROOT}/src/scene/officeFloor.ts`);
+const { FINISHES, BUILDING, GRASS_EDGE } = await import(`${ROOT}/tools/levels/lib/officeFloor.ts`);
 
 const argv = process.argv.slice(2);
 const CHECK = argv.includes('--check');
@@ -26,12 +26,12 @@ const OUT = resolve(ROOT, argv.includes('--out') ? argv[argv.indexOf('--out') + 
 
 // 1. the procedural level, with the editor group of every box recorded on the side
 const trace = { groups: [] as string[] };
-const level = buildOfficeProcedural(trace, TEXEL !== undefined ? { texel: TEXEL, lived: true } : { lived: true });   // (lived: the FILE carries the office's lived tier, whatever stand this tool runs on)
+const level = buildOfficeProcedural(trace, TEXEL !== undefined ? { texel: TEXEL } : {});
 if (trace.groups.length !== level.boxes.length) throw new Error(`trace: ${trace.groups.length} groups for ${level.boxes.length} boxes`);
 if (TEXEL !== undefined) level.markTexel = TEXEL;   // (the Level's own: levelToData writes it into the file's meta, the loader hands it back. How kept the office is goes the same way: `level.kept`, set by the builder)
 
-// 2. annotations the runtime Level has no slot for: the palette as materials, the footstep surface map (officeFloor.ts —
-//    cross-checked by tools/qa/level-probes.ts), one floor, the traceable world bounds
+// 2. annotations the runtime Level has no slot for: the palette as materials, the footstep surface map (officeFloor.ts),
+//    one floor, the traceable world bounds
 stampDoes(level);   // (Box.does, as tools/levels/export.ts gives it: each box the word its colour had, unless its maker said one)
 const materials: Record<string, { albedo: [number, number, number]; rough?: number; metal?: boolean; does?: string }> = {};
 { const seen = new Map<string, string>();
@@ -49,7 +49,7 @@ const data = levelToData(level, {
   name: 'office',
   materials, surfaces, boxGroups: trace.groups,
   floors: [{ id: 'f0', name: 'ground floor', y: 0, ceiling: WORLD.ceilingY }],
-  meta: { bounds: { min: [...WORLD.min], max: [...WORLD.max] }, generator: 'src/scene/officeGen.ts buildOfficeProcedural → tools/level-export.ts', notes: 'The night-shift office: one floor, box geometry only. Regenerated from the legacy generator until the editor (lane G1b) takes over; hand edits survive only if the generator is retired first.' },
+  meta: { bounds: { min: [...WORLD.min], max: [...WORLD.max] }, generator: 'tools/levels/lib/officeGen.ts buildOfficeProcedural → tools/level-export.ts', notes: 'The night-shift office: one floor, box geometry only. Regenerated from the legacy generator until the editor (lane G1b) takes over; hand edits survive only if the generator is retired first.' },
 });
 
 // 3. validate + serialize
@@ -60,7 +60,7 @@ const text = serializeLevelData(data);
 // 4. the proof: text → LevelData → Level must be the generator's Level, field for field (and the data must survive its own round trip)
 const parsed = parseLevelData(text);
 const dataDiffs: string[] = []; const nData = structuralDiff(canonicalLevelData(data), parsed, dataDiffs);
-const reloaded = loadLevel(parsed, { lived: true });   // (the proof is of the whole file, its lived tier in)
+const reloaded = loadLevel(parsed);
 const levelDiffs: string[] = []; const nLevel = structuralDiff(level, reloaded, levelDiffs);
 if (nData || nLevel) {
   console.error(`export REFUSED: the file would not reproduce the level — ${nLevel} Level diff(s), ${nData} data diff(s)`);

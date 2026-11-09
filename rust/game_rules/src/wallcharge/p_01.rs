@@ -74,14 +74,6 @@ pub fn wall_charge_on(g: &crate::game::Game) -> bool {
     crate::wallbreak::wall_break_on(g) && crate::destruction::chaos_of(g) > 0.0
 }
 
-/// The faces of a wall the open sky is over: 0 a wall inside, 1 a building's outer wall, 2 a yard wall. Kept per static.   (wallcharge.ts skyFaces)
-pub fn sky_faces(g: &mut crate::game::Game, index: f64) -> f64 {
-    if let Some(&n) = g.m.wallcharge.sky_memo.as_ref().and_then(|k| k.get(crate::Num(index))) { return n; }
-    crate::scene_collision::stands(g);
-    let n = sky_faces_of(g, index);
-    g.m.wallcharge.sky_memo.get_or_insert_with(JsMap::new).set(crate::Num(index), n);
-    n
-}
 /// …asked of the game shared: what is kept, or worked out and not kept
 pub fn sky_faces_of(g: &Game, index: f64) -> f64 {
     if let Some(&n) = g.m.wallcharge.sky_memo.as_ref().and_then(|k| k.get(crate::Num(index))) {
@@ -159,17 +151,12 @@ pub fn charge_indoors_of(g: &crate::game::Game, w: &crate::wallcharge::WallSpot)
     }
     roof * 2 > sky_off.len() * 3
 }
-/// …for a rule that holds the game: the copy of the boxes stood first
-pub fn charge_indoors(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> bool {
-    crate::scene_collision::stands(g);
-    charge_indoors_of(g, w)
-}
 
 /// The safety radius at a place: how far the squad stands off, and how far the blast reaches on its own side.   (wallcharge.ts safeRadius)
 pub fn safe_radius_of(g: &crate::game::Game, w: &crate::wallcharge::WallSpot) -> crate::wallcharge::WallChargeAwayMarksValueR {
     let indoors = charge_indoors_of(g, w);
     let i = if indoors { 1 } else { 0 };
-    crate::wallcharge::WallChargeAwayMarksValueR { standoff: g.k.wallcharge.safe_standoff[i], reach: g.k.wallcharge.safe_reach[i], indoors }
+    crate::wallcharge::WallChargeAwayMarksValueR { standoff: g.k.wallcharge.safe_standoff[i], reach: g.k.wallcharge.safe_reach[i] }
 }
 /// …for a rule that holds the game: the copy of the boxes stood first
 pub fn safe_radius(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> crate::wallcharge::WallChargeAwayMarksValueR {
@@ -336,13 +323,13 @@ pub fn wall_charge_new(g: &mut crate::game::Game) -> crate::wallcharge::WallChar
         listed: Some(Vec::new()),
         opens: Some(String::from(WALL_PAGE)),
         key: Some(5.0),
-        ..crate::orders::OrderDef::zeroed()
+        ..crate::orders::OrderDef::default()
     }));
     wc.row = crate::orders::squad_orders_row(g, crate::orders::rows::def(&crate::orders::rows::wallrow::ORDER, crate::orders::OrderDef {
         targets: vec![crate::orders::TargetKind::Floor],
         listed: Some(Vec::new()),
         ack: Some(vec![String::from("copy."), String::from("on it.")]),
-        ..crate::orders::OrderDef::zeroed()
+        ..crate::orders::OrderDef::default()
     }));
     wc
 }
@@ -352,7 +339,7 @@ mod tests {
     use super::*;
 
     fn spot(along_x: bool, index: f64, u: f64, side: f64) -> crate::wallcharge::WallSpot {
-        crate::wallcharge::WallSpot { along_x, index, u, side, ..crate::wallcharge::WallSpot::zeroed() }
+        crate::wallcharge::WallSpot { along_x, index, u, side, ..crate::wallcharge::WallSpot::default() }
     }
 
     /// bits from the TypeScript's own line under bun with EXACT.on

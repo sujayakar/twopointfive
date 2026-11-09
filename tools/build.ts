@@ -1,4 +1,4 @@
-// Static production build into ./dist (bundle + copy public/ + the level files): the game (index.html) and the tool pages (the replay viewer, sounds, music).
+// Static production build into ./dist (bundle + copy public/ + the level files): the game (index.html) and the tool pages (sounds, music).
 // A HOSTED BUILD'S TWO EXTRAS, both from the environment and both absent on a plain `bun run build`:
 //   TPS_CLOUD_URL          the backend's address (cloud/, a Convex deployment), built into the page as `__TPS_CLOUD__` (src/cloud/cloud.ts): with none the page has no backend at all
 //   VERCEL_GIT_COMMIT_SHA  (else `git rev-parse` of a clean checkout) → dist/qa/commit, the file the dev server answers /qa/commit with: a recording made on the build names it
@@ -6,13 +6,13 @@ import { $ } from "bun";
 import { faceWasm } from "./blitz/face-build.ts";
 const cloud = (process.env.TPS_CLOUD_URL ?? "").trim();
 if (cloud && !/^https:\/\/[\w.-]+(:\d+)?\/?$/.test(cloud)) { console.error(`build — TPS_CLOUD_URL is not an https address: ${cloud}`); process.exit(1); }
-await $`bun run tools/draw/ban.ts`;   // (the page that draws holds no game: an import of one stops the build)
+await $`bun run tools/draw/ban.ts`;   // (the page makes no level: an import of what makes one stops the build)
 await $`rm -rf dist`;
-const res = await Bun.build({ entrypoints: ["./index.html", "./replay.html", "./sounds.html", "./music.html"], outdir: "./dist", minify: true, target: "browser", sourcemap: "linked", loader: { ".wgsl": "text" }, ...(cloud ? { define: { __TPS_CLOUD__: JSON.stringify(cloud) } } : {}) });
+const res = await Bun.build({ entrypoints: ["./index.html", "./sounds.html", "./music.html"], outdir: "./dist", minify: true, target: "browser", sourcemap: "linked", loader: { ".wgsl": "text" }, ...(cloud ? { define: { __TPS_CLOUD__: JSON.stringify(cloud) } } : {}) });
 if (!res.success) { for (const m of res.logs) console.error(m); process.exit(1); }
 await $`cp -R public/. dist/`;
 await $`mkdir -p dist/levels`; await $`cp ${(await Array.fromAsync(new Bun.Glob("levels/*.json").scan())).sort()} dist/levels/`;   // (every mission's level file, fetched as /levels/<file>: without them a mission with a level of its own fell back to the office on a static host)
-{ const face = await faceWasm(l => console.log(l));   // THE RUST GAME'S MODULE (?rust=1): copied beside the page where it is built or can be; a build without it plays the TypeScript game, and says so under the word
+{ const face = await faceWasm(l => console.log(l));   // THE GAME'S MODULE: copied beside the page where it is built or can be
   if ("path" in face) await $`cp ${face.path} dist/game_face.wasm`;
   else if (process.env.FACE_BUILD === "1") { console.error(`build — FACE_BUILD=1 and the Rust game's module could not be built on this machine: ${face.why}`); process.exit(1); }   // (a hosted build makes its own module or fails: it never goes out without one, and never with the checked-in one)
   else console.log(`game_face.wasm: not in this build (${face.why})`); }

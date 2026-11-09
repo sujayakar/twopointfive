@@ -1,6 +1,6 @@
-//! The types of `effects`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `effects`.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// what a smoke source rides, read live each time it is asked: a shot's two off the shooter's body (combat.ts fireWeaponRaw), a blast's trail off its spark (sparks.ts tracker: answers nothing once the spark dies or its slot is reused)
@@ -13,8 +13,7 @@ pub enum Track {
     Cigarette { by: CharId },
 }
 
-/// (TypeScript: FxLight, src/game/effects.ts:36)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct FxLight {
     pub pos: V3,
     pub color: V3,
@@ -23,23 +22,8 @@ pub struct FxLight {
     pub ttl: f64,
     pub radius: Option<f64>,
 }
-impl FxLight {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FxLight {
-            pos: [0.0; 3],
-            color: [0.0; 3],
-            intensity: 0.0,
-            range: 0.0,
-            ttl: 0.0,
-            radius: None,
-        }
-    }
-}
-impl Default for FxLight { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: MuzzleFx, src/game/effects.ts:80)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct MuzzleFx {
     pub card_ahead: f64,
     pub card_half: V3,
@@ -47,24 +31,10 @@ pub struct MuzzleFx {
     pub light_gain: f64,
     pub light_range: Option<f64>,
 }
-impl MuzzleFx {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        MuzzleFx {
-            card_ahead: 0.0,
-            card_half: [0.0; 3],
-            card_emissive: [0.0; 3],
-            light_gain: 0.0,
-            light_range: None,
-        }
-    }
-}
-impl Default for MuzzleFx { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum MuzzleFxKey {
-    Mk12,
+    #[default] Mk12,
     Mp7,
     Mk46,
     M1014,
@@ -92,8 +62,7 @@ impl MuzzleFxKey {
     }
 }
 
-/// (TypeScript: inline at src/game/effects.ts:39 flags, src/game/effects.ts:39)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Flags {
     pub shot_sparks: bool,
     pub ejection_wisp: bool,
@@ -101,22 +70,8 @@ pub struct Flags {
     pub vent_canister: bool,
     pub dazzle: bool,
 }
-impl Flags {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Flags {
-            shot_sparks: false,
-            ejection_wisp: false,
-            trails: false,
-            vent_canister: false,
-            dazzle: false,
-        }
-    }
-}
-impl Default for Flags { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/effects.ts:53 shot, src/game/effects.ts:53)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Shot {
     pub standoff: f64,
     pub jet_off: V3,
@@ -160,58 +115,8 @@ pub struct Shot {
     pub spark_cone: f64,
     pub spark_life: f64,
 }
-impl Shot {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Shot {
-            standoff: 0.0,
-            jet_off: [0.0; 3],
-            port_off: [0.0; 3],
-            wisp_off: [0.0; 3],
-            jet_radius: 0.0,
-            jet_density: 0.0,
-            jet_temp: 0.0,
-            jet_speed: 0.0,
-            jet_rise: 0.0,
-            jet_push: 0.0,
-            jet_expand: 0.0,
-            jet_life: 0.0,
-            jet_attack: 0.0,
-            ports: 0.0,
-            port_fraction: 0.0,
-            port_angle: 0.0,
-            port_radius_k: 0.0,
-            port_speed_k: 0.0,
-            port_push_k: 0.0,
-            port_expand_k: 0.0,
-            wisp_radius: 0.0,
-            wisp_density: 0.0,
-            wisp_temp: 0.0,
-            wisp_rise: 0.0,
-            wisp_push: 0.0,
-            wisp_life: 0.0,
-            wisp_attack: 0.0,
-            eject_radius: 0.0,
-            eject_density: 0.0,
-            eject_temp: 0.0,
-            eject_life: 0.0,
-            jitter: 0.0,
-            light_color: [0.0; 3],
-            light_power: 0.0,
-            light_duration: 0.0,
-            light_range: 0.0,
-            suppressed_gain: 0.0,
-            spark_count: 0.0,
-            spark_speed: 0.0,
-            spark_cone: 0.0,
-            spark_life: 0.0,
-        }
-    }
-}
-impl Default for Shot { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/effects.ts:81 muzzleFx, src/game/effects.ts:81)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct MuzzleFx2 {
     pub pistol_suppressed: crate::effects::MuzzleFx,
     pub pistol_bare: crate::effects::MuzzleFx,
@@ -224,44 +129,14 @@ pub struct MuzzleFx2 {
     pub hk45: crate::effects::MuzzleFx,
     pub g18: crate::effects::MuzzleFx,
 }
-impl MuzzleFx2 {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        MuzzleFx2 {
-            pistol_suppressed: crate::effects::MuzzleFx::zeroed(),
-            pistol_bare: crate::effects::MuzzleFx::zeroed(),
-            carbine: crate::effects::MuzzleFx::zeroed(),
-            sc20k: crate::effects::MuzzleFx::zeroed(),
-            mk12: crate::effects::MuzzleFx::zeroed(),
-            mp7: crate::effects::MuzzleFx::zeroed(),
-            mk46: crate::effects::MuzzleFx::zeroed(),
-            m1014: crate::effects::MuzzleFx::zeroed(),
-            hk45: crate::effects::MuzzleFx::zeroed(),
-            g18: crate::effects::MuzzleFx::zeroed(),
-        }
-    }
-}
-impl Default for MuzzleFx2 { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/effects.ts:110 muzzleCard, src/game/effects.ts:110)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct MuzzleCard {
     pub albedo: V3,
     pub ttl: f64,
 }
-impl MuzzleCard {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        MuzzleCard {
-            albedo: [0.0; 3],
-            ttl: 0.0,
-        }
-    }
-}
-impl Default for MuzzleCard { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/effects.ts:118 bang, src/game/effects.ts:118)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Bang {
     pub fuse: f64,
     pub max_air: f64,
@@ -303,107 +178,20 @@ pub struct Bang {
     pub spark_count: f64,
     pub trail_count: f64,
     pub trail_reserve: f64,
-    pub hearing: f64,
     pub dazzle_radius: f64,
     pub dazzle_seconds: f64,
     pub dazzle_min: f64,
 }
-impl Bang {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Bang {
-            fuse: 0.0,
-            max_air: 0.0,
-            height: 0.0,
-            radius: 0.0,
-            density: 0.0,
-            temp: 0.0,
-            expand: 0.0,
-            life: 0.0,
-            attack: 0.0,
-            end_push: 0.0,
-            vent_speed: 0.0,
-            half_length: 0.0,
-            asymmetry: 0.0,
-            tilt: 0.0,
-            jitter: 0.0,
-            body_vents: 0.0,
-            body_fraction: 0.0,
-            body_push: 0.0,
-            body_radius_k: 0.0,
-            body_speed_k: 0.0,
-            body_expand_k: 0.0,
-            wisp_radius: 0.0,
-            wisp_density: 0.0,
-            wisp_temp: 0.0,
-            wisp_rise: 0.0,
-            wisp_push: 0.0,
-            wisp_life: 0.0,
-            wisp_attack: 0.0,
-            frame_jitter: 0.0,
-            density_gain: 0.0,
-            temp_gain: 0.0,
-            light_color: [0.0; 3],
-            light_power: 0.0,
-            light_duration: 0.0,
-            light_range: 0.0,
-            light_radius: 0.0,
-            light_lift: 0.0,
-            spark_count: 0.0,
-            trail_count: 0.0,
-            trail_reserve: 0.0,
-            hearing: 0.0,
-            dazzle_radius: 0.0,
-            dazzle_seconds: 0.0,
-            dazzle_min: 0.0,
-        }
-    }
-}
-impl Default for Bang { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/effects.ts:138 sparks, src/game/effects.ts:138)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Sparks {
     pub speed: f64,
     pub spread: f64,
     pub lift: f64,
     pub life: f64,
-    pub gravity: f64,
-    pub drag: f64,
-    pub brightness: f64,
-    pub hold: f64,
-    pub max_live: f64,
-    pub emissive: f64,
-    pub thickness: f64,
-    pub shutter: f64,
-    pub min_streak: f64,
-    pub collide: bool,
 }
-impl Sparks {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Sparks {
-            speed: 0.0,
-            spread: 0.0,
-            lift: 0.0,
-            life: 0.0,
-            gravity: 0.0,
-            drag: 0.0,
-            brightness: 0.0,
-            hold: 0.0,
-            max_live: 0.0,
-            emissive: 0.0,
-            thickness: 0.0,
-            shutter: 0.0,
-            min_streak: 0.0,
-            collide: false,
-        }
-    }
-}
-impl Default for Sparks { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/effects.ts:171 trail, src/game/effects.ts:171)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Trail {
     pub radius: f64,
     pub min_voxels: f64,
@@ -412,23 +200,8 @@ pub struct Trail {
     pub life: f64,
     pub attack: f64,
 }
-impl Trail {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Trail {
-            radius: 0.0,
-            min_voxels: 0.0,
-            density: 0.0,
-            temp: 0.0,
-            life: 0.0,
-            attack: 0.0,
-        }
-    }
-}
-impl Default for Trail { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/effects.ts:180 vent, src/game/effects.ts:180)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Vent {
     pub radius: f64,
     pub density: f64,
@@ -443,102 +216,33 @@ pub struct Vent {
     pub standoff: f64,
     pub height: f64,
 }
-impl Vent {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Vent {
-            radius: 0.0,
-            density: 0.0,
-            temp: 0.0,
-            speed: 0.0,
-            rise: 0.0,
-            push: 0.0,
-            expand: 0.0,
-            seconds: 0.0,
-            attack: 0.0,
-            jitter: 0.0,
-            standoff: 0.0,
-            height: 0.0,
-        }
-    }
-}
-impl Default for Vent { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/effects.ts:195 muzzleFrame ->, src/game/effects.ts:195)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct MuzzleFrame {
     pub o: V3,
     pub x: V3,
     pub y: V3,
     pub z: V3,
 }
-impl MuzzleFrame {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        MuzzleFrame {
-            o: [0.0; 3],
-            x: [0.0; 3],
-            y: [0.0; 3],
-            z: [0.0; 3],
-        }
-    }
-}
-impl Default for MuzzleFrame { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/effects.ts:201 spawnShot(o), src/game/effects.ts:201)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct SpawnShotO {
-    pub seed: f64,
     pub light_gain: Option<f64>,
     pub light_range: Option<f64>,
     pub track: Option<crate::effects::Track>,
     pub eject: Option<crate::effects::Track>,
     pub gas: Option<bool>,
 }
-impl SpawnShotO {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SpawnShotO {
-            seed: 0.0,
-            light_gain: None,
-            light_range: None,
-            track: None,
-            eject: None,
-            gas: None,
-        }
-    }
-}
-impl Default for SpawnShotO { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/effects.ts:230 spawnBurst(o), src/game/effects.ts:230)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SpawnBurstO {
     pub spark_count: Option<f64>,
 }
-impl SpawnBurstO {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SpawnBurstO {
-            spark_count: None,
-        }
-    }
-}
-impl Default for SpawnBurstO { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/effects.ts:274 spawnVent(o), src/game/effects.ts:274)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SpawnVentO {
     pub seconds: Option<f64>,
 }
-impl SpawnVentO {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SpawnVentO {
-            seconds: None,
-        }
-    }
-}
-impl Default for SpawnVentO { fn default() -> Self { Self::zeroed() } }
 
 /// (src/game/effects.ts:39 flags: a table nothing writes)
 pub fn flags() -> crate::effects::Flags { crate::effects::Flags { shot_sparks: true, ejection_wisp: true, trails: true, vent_canister: false, dazzle: true } }
@@ -553,10 +257,10 @@ pub fn muzzle_fx() -> crate::effects::MuzzleFx2 { crate::effects::MuzzleFx2 { pi
 pub fn muzzle_card() -> crate::effects::MuzzleCard { crate::effects::MuzzleCard { albedo: [1.0, 0.8, 0.5], ttl: 0.035 } }
 
 /// (src/game/effects.ts:118 bang: a table nothing writes)
-pub fn bang() -> crate::effects::Bang { crate::effects::Bang { fuse: 1.5, max_air: 3.0, height: 0.07, radius: 0.23, density: 6.3, temp: 48.0, expand: 90.0, life: 0.12, attack: 0.02, end_push: 40.0, vent_speed: 7.0, half_length: 0.1, asymmetry: 0.45, tilt: 0.25, jitter: 0.6, body_vents: 5.0, body_fraction: 0.25, body_push: 30.0, body_radius_k: 0.7, body_speed_k: 0.6, body_expand_k: 0.5, wisp_radius: 0.24, wisp_density: 1.2, wisp_temp: 10.5, wisp_rise: 0.6, wisp_push: 5.0, wisp_life: 3.0, wisp_attack: 0.3, frame_jitter: 0.08, density_gain: 1.0, temp_gain: 1.0, light_color: [1.0, 0.98, 0.95], light_power: 1600.0, light_duration: 0.14, light_range: 14.0, light_radius: 0.15, light_lift: 0.3, spark_count: 72.0, trail_count: 12.0, trail_reserve: 2.0, hearing: 28.0, dazzle_radius: 8.0, dazzle_seconds: 6.0, dazzle_min: 2.0 } }
+pub fn bang() -> crate::effects::Bang { crate::effects::Bang { fuse: 1.5, max_air: 3.0, height: 0.07, radius: 0.23, density: 6.3, temp: 48.0, expand: 90.0, life: 0.12, attack: 0.02, end_push: 40.0, vent_speed: 7.0, half_length: 0.1, asymmetry: 0.45, tilt: 0.25, jitter: 0.6, body_vents: 5.0, body_fraction: 0.25, body_push: 30.0, body_radius_k: 0.7, body_speed_k: 0.6, body_expand_k: 0.5, wisp_radius: 0.24, wisp_density: 1.2, wisp_temp: 10.5, wisp_rise: 0.6, wisp_push: 5.0, wisp_life: 3.0, wisp_attack: 0.3, frame_jitter: 0.08, density_gain: 1.0, temp_gain: 1.0, light_color: [1.0, 0.98, 0.95], light_power: 1600.0, light_duration: 0.14, light_range: 14.0, light_radius: 0.15, light_lift: 0.3, spark_count: 72.0, trail_count: 12.0, trail_reserve: 2.0, dazzle_radius: 8.0, dazzle_seconds: 6.0, dazzle_min: 2.0 } }
 
 /// (src/game/effects.ts:138 sparks: a table nothing writes)
-pub fn sparks() -> crate::effects::Sparks { crate::effects::Sparks { speed: 20.0, spread: 0.55, lift: 0.5, life: 0.55, gravity: 16.0, drag: 1.6, brightness: 2.6, hold: 0.15, max_live: 96.0, emissive: 25.0, thickness: 0.002, shutter: 0.017, min_streak: 0.02, collide: true } }
+pub fn sparks() -> crate::effects::Sparks { crate::effects::Sparks { speed: 20.0, spread: 0.55, lift: 0.5, life: 0.55 } }
 
 /// (src/game/effects.ts:156 tracerFx: a table nothing writes)
 pub fn tracer_fx() -> crate::tracers::TracersParams { crate::tracers::TracersParams { speed: 280.0, min_life: 0.042, shutter: 0.011, thickness: 0.012, emissive: 60.0, min_path: 0.5, light_intensity: 4.0, light_range: 4.0, light_radius: 0.06, ember_sparks: 3.0, ember_speed: 5.0, ember_cone: 0.9, ember_life: 0.3, ember_intensity: 2.5, ember_range: 2.5, ember_ttl: 0.06, max_live: 24.0, max_lights: 6.0 } }
@@ -567,5 +271,3 @@ pub fn trail() -> crate::effects::Trail { crate::effects::Trail { radius: 0.036,
 /// (src/game/effects.ts:180 vent: a table nothing writes)
 pub fn vent() -> crate::effects::Vent { crate::effects::Vent { radius: 0.33, density: 18.0, temp: 0.0, speed: 4.5, rise: 0.15, push: 45.0, expand: 0.0, seconds: 30.0, attack: 0.12, jitter: 0.12, standoff: 0.07, height: 0.12 } }
 
-/// (src/game/effects.ts:200 NO_GAS: a table nothing writes)
-pub fn no_gas() -> crate::smoke_types::SmokeSystemLike { crate::smoke_types::SmokeSystemLike { params: None } }

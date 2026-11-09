@@ -1,10 +1,9 @@
-//! The types of `lighting`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `lighting`.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: DayState, src/game/lighting.ts:177)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct DayState {
     pub hour: crate::hours::HourId,
     pub hour_sun_k: f64,
@@ -14,44 +13,13 @@ pub struct DayState {
     pub sun: LightId,
     pub blackout: Option<crate::lighting::DayStateBlackout>,
 }
-impl DayState {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DayState {
-            hour: crate::hours::HourId::Overcast,
-            hour_sun_k: 0.0,
-            hour_sun_given: false,
-            targets: JsMap::new(),
-            lights_off: Vec::new(),
-            sun: LightId(0),
-            blackout: None,
-        }
-    }
-}
-impl Default for DayState { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/lighting.ts:177 DayState.blackout, src/game/lighting.ts:177)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct DayStateBlackout {
-    pub active: bool,
-    pub permanent: bool,
     pub until: f64,
     pub since: f64,
 }
-impl DayStateBlackout {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DayStateBlackout {
-            active: false,
-            permanent: false,
-            until: 0.0,
-            since: 0.0,
-        }
-    }
-}
-impl Default for DayStateBlackout { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum SetBlackoutCause {
     Shot,
@@ -70,23 +38,14 @@ impl SetBlackoutCause {
     }
 }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum LightEventCause {
     Shot,
     Ocp,
 }
-impl LightEventCause {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            LightEventCause::Shot => "shot",
-            LightEventCause::Ocp => "ocp",
-        }
-    }
-}
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct LightingMod {
     /// (src/game/lighting.ts:33 LENS_FROM)
     pub lens_from: JsMap<LightId, V3>,

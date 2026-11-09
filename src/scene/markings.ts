@@ -1,5 +1,5 @@
 // MARKINGS — object legibility from one or two SIGNIFIERS per object class, made of the same thing the world is made of: rectangles, in 2D, ON a box
-// face (docs/review/legibility.html; the maintainer's ask 08-10: "the monitor looks great but the keyboard doesn't … cardboard boxes are hard to recognize
+// face (the maintainer's ask 08-10: "the monitor looks great but the keyboard doesn't … cardboard boxes are hard to recognize
 // … vending machine"). REPRESENTATION (agreed with the maintainer: image-style authoring, analytic rendering): a marking is a tiny PALETTE-INDEXED
 // BITMAP — W × H ≤ 32 × 32 cells, 2 bits a cell (0 = transparent, 1‥3 = palette entries), each palette entry a MATERIAL (albedo — absolute or × the
 // box's own — roughness, emitted radiance), never a shaded colour, so baked lighting is impossible by construction — laid on a world-space texel
@@ -12,7 +12,7 @@
 // first) — canonical, deterministic, greppable. Readable text / logos would come later as an SDF-glyph atlas add-on to this same table, not now.
 //
 // This file also computes each marking's per-entry COVERAGE FRACTIONS (the mean the shader fades to; area-averaged over the box, the albedo the secondary
-// rays see — boxes.ts upload: GI energy right at zero ray cost) and its MEAN EMISSION (an emissive marking is a LIGHT: game.ts registers a one-sided
+// rays see — boxes.ts upload: GI energy right at zero ray cost) and its MEAN EMISSION (an emissive marking is a LIGHT: rust/game_rules/src/game registers a one-sided
 // rectangular emitter for it exactly like an emissive fixture box, so ReSTIR shadows, the beams, the bounce and the light meter all see it).
 import type { Vec3 } from '../math/vec';
 import { onExact } from '../math/exact';
@@ -364,7 +364,7 @@ export function packMarking(out: Float32Array, row: number, m: MarkingDef, st: M
   const [W, H] = m.size; const cb = o + MARK_HEAD_ROWS * 4;
   for (let j = 0; j < H; j++) { const rowStr = m.cells[H - 1 - j]; for (let i = 0; i < W; i++) { const e = CELL_CHARS.indexOf(rowStr[i]); if (e <= 0) continue; const c = j * W + i; out[cb + Math.floor(c / CELLS_PER_FLOAT)] += e << (2 * (c % CELLS_PER_FLOAT)); } }
 }
-/** markings whose emission has been registered as an analytic light (game.ts): reflections then take only emitTraceK of the traced radiance, as for an area-lit fixture */
+/** markings whose emission has been registered as an analytic light (rust/game_rules/src/game): reflections then take only emitTraceK of the traced radiance, as for an area-lit fixture */
 export const AREA_LIT_MARKS = new WeakSet<MarkingDef>();
 export function faceAreas(h: Vec3): { areas: number[]; total: number } {
   const areas = MARK_FACES.map((_, f) => { const { hu, hv } = faceHalf(h, f); return 4 * hu * hv; });
@@ -377,12 +377,4 @@ export function secondaryAlbedo(base: Vec3, h: Vec3, marks: readonly MarkingDef[
   const out: Vec3 = [base[0], base[1], base[2]];
   for (const m of marks) { const st = markStats(m, base, texelBase); const w = Math.min(st.area / total, 1); out[0] += st.dAlbedo[0] * w; out[1] += st.dAlbedo[1] * w; out[2] += st.dAlbedo[2] * w; }
   return [Math.min(Math.max(out[0], 0), 1), Math.min(Math.max(out[1], 0), 1), Math.min(Math.max(out[2], 0), 1)];
-}
-/** the world-space centre, half sizes and outward normal of a marking's bitmap on box (c, h, yaw) — where game.ts stands its light */
-export function markWorldRect(m: MarkingDef, c: Vec3, h: Vec3, yaw: number, texelBase = MARKING_TEXEL): { centre: Vec3; n: Vec3; hu: number; hv: number } {
-  const f = faceIndex(m.face); const ax = FACE_AXES[f]; const t = texelOf(m, texelBase);
-  const cs = Math.cos(yaw), sn = Math.sin(yaw); const toWorld = (l: Vec3): Vec3 => [cs * l[0] + sn * l[2], l[1], -sn * l[0] + cs * l[2]];   // Box.yaw convention: +X → (cos, 0, −sin), +Z → (sin, 0, cos)
-  const n = toWorld(ax.n), uW = toWorld(ax.u), vW = toWorld(ax.v); const { hn } = faceHalf(h, f);
-  const uc = (m.at[0] + m.size[0] / 2) * t, vc = (m.at[1] + m.size[1] / 2) * t;
-  return { centre: [c[0] + n[0] * hn + uW[0] * uc + vW[0] * vc, c[1] + n[1] * hn + uW[1] * uc + vW[1] * vc, c[2] + n[2] * hn + uW[2] * uc + vW[2] * vc], n, hu: m.size[0] * t / 2, hv: m.size[1] * t / 2 };
 }

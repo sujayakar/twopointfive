@@ -28,7 +28,7 @@ struct SP {
   thinDecay: f32, thinBelow: f32, readSkip: f32, fresh: f32,       // density under thinBelow decays up to thinDecay/s faster, always (0 = off): how far a plume's faint skirt spreads before it is gone · fresh: WHO GIVES WAY below
   viewX: f32, viewZ: f32, viewR: f32, viewBias: f32,              // where the camera looks (floor plan) and how far round it counts as seen: past viewR, rising to full at 2 viewR, the pool's ceiling comes sooner and harder (farOf); bias 0 = one ceiling for all
   calmCells: f32, farCells: f32, calmMax: u32, dtCap: f32,        // WHO STEPS (buildList): cells a brick's fastest air may cross between two of its steps, in sight / out of sight; the longest wait in frames (1 = every brick every frame, 2, 4); the most time one step integrates
-  bend: f32, snap: f32, fineDecay: f32, fineShare: f32,           // THE GAME'S SMOKE (below): how fast the coarse lattice is bent toward it (0 = not) · 1 = at once · THE FINE LATTICE LETS GO below
+  bend: f32, whole: f32, fineDecay: f32, fineShare: f32,           // THE GAME'S SMOKE (below): how fast the coarse lattice is bent toward it (0 = not) · 1 = the whole of the way · THE FINE LATTICE LETS GO below
   fineEps: f32, fineHeat: f32, fineRing: u32, pull: f32,          // pull: how hard smoke is drawn toward where the game has more of it (THE GAME'S SMOKE)
   levels: array<Level, 2>,
   dirty: array<vec4f, 16>,                                        // ≤ 8 boxes (lo, hi) whose obstacles changed since the last step
@@ -81,7 +81,9 @@ const MAX_TRACE: f32 = 14.0;   // cells a backtrace may span: two bricks less th
 //   · IT GOES THERE FIRST: smoke is drawn toward where the game has more of it (`pull`, along the difference's gradient; K_PULL), so a cloud rolls out to where it should be and what is left to mend is little.
 //   · TOO MUCH is thinned where it stands, its thin parts first; TOO LITTLE is thickened where it stands, its thick parts first, so billows stay billows; where there is next to none it comes up out of the air in wisps (bendTo; no haze is laid between billows).
 //   · ONLY THE GAME'S SMOKE is measured and bent. A source the game does not hold (a breath, a fire's plume, gun gas) says so in the first byte of its K word, and that share of a cell is nobody's here.
-//   · what the grid holds that has no brick gets one (markBent), so a game put back grows its cloud again; a picture let go of while the grid holds smoke takes it whole (`snap`).
+//   · what the grid holds that has no brick gets one (markBent).
+//   · A JUMP IS THE SAME BEND TAKEN THE WHOLE OF THE WAY (`whole`): where the game is another moment's than the picture, the empty pool takes the grid as it stands in a few steps of next to no time, all before the
+//     frame is drawn (smoke.ts anew). What made the game jump is nobody's to ask here.
 const M_BENT: u32 = M_META + CAP * MS;   // (+ 0: the grid's plan in its own bricks, along x · + 1: along z)
 const M_BAT: u32 = M_BENT + 16u;         // a word a place of the plan: the row of the brick there and one (0 = none stands)
 const M_BROW: u32 = M_BAT + 512u;        // rows of 160 words: 128 densities (4 along x, then 4 along z, then 8 up), then a byte a cell: 1, 2, 4 = open toward +x, up, +z
@@ -854,7 +856,7 @@ fn lumps(p: vec3f) -> f32 {
 }
 /** the game's smoke in a cell, bent: `g` of it stands there, the grid holds h.x about it and h.y is drawn. The mean over a brick moves by the share of the way the rate says, whatever is in its cells. */
 fn bendTo(g: f32, h: vec2f, P: vec3f, dt: f32) -> f32 {
-  let o = bentThrough(h.x, 1.5) - bentThrough(h.y, 1.5); let a = select(1.0 - exp(-sp.bend * o * o * dt), 1.0, sp.snap > 0.0);
+  let o = bentThrough(h.x, 1.5) - bentThrough(h.y, 1.5); let a = select(1.0 - exp(-sp.bend * o * o * dt), 1.0, sp.whole > 0.0);
   let d = h.x - h.y;
   let thick = 2.0 * g / max(g + h.y, 1e-6);   // (1 where a cell holds what the brick does, toward 2 in its billows, 0 in its gaps)
   if (d <= 0.0) { return g * max(1.0 + a * d / max(h.y, 1e-6) * (2.0 - thick), 0.0); }

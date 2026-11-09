@@ -194,7 +194,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
       }
       {   // radiance in the AIR this frame with nothing to reproject it by — rain streaks, a stroke's lit sky, the beam of a torch that swings with its man (volumetrics.wgsl outReact): what share of this pixel's light it is
         let vdiv = max(1, i32(frame.lossyCfg.y)); let vd = vec2i(textureDimensions(volReactTex)) - 1;
-        var qv = q / vdiv; if (SHARP) { qv = vec2i((vec2f(q) + 0.5) * (frame.sharpCfg.xy / P.inSize) + frame.sharpCfgC.xy) / vdiv; }   // (SHARP DIRECT, docs/internal/sharp-direct.md: q is an OUTPUT pixel then and the volumetric grid a fraction of the INTERNAL raster — `SHARP` is a const passes.ts prepends; false = the statement as it was)
+        var qv = q / vdiv; if (SHARP) { qv = vec2i((vec2f(q) + 0.5) * (frame.sharpCfg.xy / P.inSize) + frame.sharpCfgC.xy) / vdiv; }   // (SHARP DIRECT: q is an OUTPUT pixel then and the volumetric grid a fraction of the INTERNAL raster — `SHARP` is a const passes.ts prepends; false = the statement as it was)
         let vr = textureLoad(volReactTex, clamp(qv, vec2i(0), vd), 0); let airL = vr.x;
         if (airL > 0.0) {
           let curL = luminance(tunmap(fromYcc(cur)));

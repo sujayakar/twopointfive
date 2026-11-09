@@ -9,7 +9,8 @@
 //              a seat's key opens its seat on the server and no other key does
 //   idle       a server nobody is connected to ends itself: its game is over, its process is gone, and the place it held is free again
 //   join       by code: the next free seat, its own key, the same seat again for the same browser; refused for a full game, another build, no such code;
-//              a stranger is told no key and no address; both seats connected is 'playing'
+//              a stranger is told no key and no address; both seats connected is 'playing'; a seat its holder left is the next one's, with a new key,
+//              and one he is in or still has time to come to is not
 //   door       the heartbeat's door refuses what is not a heartbeat, a wrong secret, a game that is not live
 //   reaper     servers that do NOT keep the contract are ended by the control plane: one that never says a word, one that goes silent, one that sits
 //              with nobody connected, one past its lifetime — each game marked with why, each process stopped by the sweep
@@ -18,7 +19,7 @@
 //   hosted     the hosted build's registration: no Modal token, no runner; with one, a runner at the Modal app for this build, and a game of that build
 //              goes to Modal's client (which is pointed at nothing here: the start fails, the game says so, the place is freed)
 // The red paths: MPCAP_BREAK=1 (cloud/convex/games.ts makes a game without counting) must FAIL `cap`; MPREAP_BREAK=1 (the reaper ends nothing) must FAIL
-// `reaper` and `runner` (a sweep that was missed is never asked for again).
+// `reaper` and `runner` (a sweep that was missed is never asked for again); MPSEAT_BREAK=1 (a seat once taken is never another's) must FAIL `join`.
 // NOT HERE: the service itself (its scheduler, its cron, its transactions under real contention: the test library runs one mutation at a time), a runner
 // that makes sandboxes (cloud/convex/modal.ts is reached here and no further: never run against Modal), the real game server, a page.
 // EXIT 0 all pass · 1 a failure · 2 the backend's packages are not installed.
@@ -28,8 +29,8 @@ import { wire, WireError } from '../../src/cloud/wire.ts';
 import { localRunner } from '../mp/runner.ts';
 const ROOT = resolve(import.meta.dir, '../..');
 if (!existsSync(`${ROOT}/cloud/node_modules/convex-test`) || !existsSync(`${ROOT}/cloud/node_modules/modal`)) { console.error('mp-control-check: the backend\'s packages are not installed — run `npm ci` in cloud/ first'); process.exit(2); }
-// (the clocks, before a function reads them: a server must be heard from in 3 s, is gone after 1.5 s of silence, idles out after 2 s, lives 30 s)
-Object.assign(process.env, { MP_START_S: '3', MP_SILENT_S: '1.5', MP_IDLE_S: '2', MP_MAX_S: '30', MP_BEAT_S: '0.25' });
+// (the clocks, before a function reads them: a server must be heard from in 3 s, is gone after 1.5 s of silence, idles out after 2 s, lives 30 s; a seat's holder has 1.5 s to connect)
+Object.assign(process.env, { MP_START_S: '3', MP_SILENT_S: '1.5', MP_IDLE_S: '2', MP_MAX_S: '30', MP_COME_S: '1.5', MP_BEAT_S: '0.25' });
 const { standIn } = await import(`${ROOT}/cloud/test/standin.ts`);
 
 const FAMILIES = ['cap', 'idle', 'join', 'door', 'reaper', 'runner', 'hosted'];
@@ -133,7 +134,15 @@ await family('join', async () => {
   check(await until(async () => { const g = await get(21, a.code); return g!.state === 'waiting' && g!.connected[0] && !g!.connected[1]; }), 'one of them gone, it waits again and says which seat is connected');
   await Bun.sleep(3200);
   check((await get(21, a.code))!.state === 'waiting' && carries() === 1, 'a game somebody is connected to is not idle: it still runs past the idle clock');
-  w0?.close();
+  const c = await page.mutation<View>('games:join', { pid: pid(23), code: a.code, build: BUILD }).catch((e: Error) => e.message);
+  check(typeof c !== 'string' && c.seat === 1 && c.address === host.address && c.seatKey.length >= 32 && c.seatKey !== b.seatKey && (await get(22, a.code))!.seat === -1, 'the seat the second left is the third\'s who asks, with a key of his own, and the second is told he has none');
+  check(/full:/.test(await refused(page.mutation('games:join', { pid: pid(22), code: a.code, build: BUILD }))), 'the third has his time to come: the second asking at once is told every seat is taken');
+  const back = await sit(host.address, 1, b.seatKey); let let_go = false; if (back) back.onclose = () => { let_go = true; };
+  const w2 = typeof c === 'string' ? null : await sit(c.address, c.seat, c.seatKey);
+  await until(async () => (await get(21, a.code))!.connected.every(Boolean)); await Bun.sleep(2500);
+  check(!!w2 && (!back || let_go) && await sit(host.address, 1, b.seatKey) === null, 'the third sits in it, the second\'s key opens it no more, and the second is let go if he had sat down again meanwhile');
+  check(!!w2 && /full:/.test(await refused(page.mutation('games:join', { pid: pid(22), code: a.code, build: BUILD }))), 'a seat somebody is in is nobody else\'s, past that time too');
+  w0?.close(); w2?.close();
   check(await over(21, a.code, 'ended', 'server') && await quiet(), 'both gone, it idles out and its server is gone');
 });
 
@@ -156,6 +165,9 @@ await family('reaper', async () => {
   const dumb = await held(41, { STANDIN_MUTE_S: '0' });
   const still = await held(42, {});
   check(await up(42, still.code) && carries() === 2, 'two servers that will not end themselves are up (one of them never says a word)');
+  await Bun.sleep(Math.max(0, t0 + 2200 - Date.now()));
+  const late = await page.mutation<View>('games:join', { pid: pid(46), code: dumb.code, build: BUILD }).catch((e: Error) => e.message);
+  check(typeof late !== 'string' && late.seat === 1 && /full:/.test(await refused(page.mutation('games:join', { pid: pid(47), code: dumb.code, build: BUILD }))), 'a server that is still being started: its host waits for it past the time he has to come, and keeps his seat');
   check(await over(41, dumb.code, 'failed', 'never started') && await over(42, still.code, 'ended', 'idle'), 'the one never heard from is failed as never started; the one that sits with nobody connected is ended as idle');
   check(await until(() => carries() === 0), `the sweep stopped both processes (${((Date.now() - t0) / 1000).toFixed(1)} s after they were asked for)`);
   const hush = await held(43, { STANDIN_MUTE_S: '1' });

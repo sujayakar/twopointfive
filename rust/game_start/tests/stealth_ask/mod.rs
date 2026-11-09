@@ -295,7 +295,7 @@ impl StealthAsk for Play {
         got
     }
     fn fog_up(&mut self) { self.g.fog_of_war.on = true; }
-    fn fogged(&self, gd: GuardId) -> bool { game::fogofwar::fog_of_war_hidden__body(&self.g, gd) }
+    fn fogged(&self, gd: GuardId) -> bool { game::fogofwar::fog_of_war_hidden(&self.g, gd) }
     fn things_kept(&self) -> Vec<([f64; 2], bool)> { self.g.fog_of_war.thing_recs.values().map(|r| ([r.x, r.z], r.held)).collect() }
     fn furniture(&self) -> Vec<game::ids::PropId> { self.g.props.props.iter().copied().collect() }
     fn prop_at(&self, it: game::ids::PropId) -> [f64; 2] { [game::props::prop_x(&self.g, it), game::props::prop_z(&self.g, it)] }
@@ -451,7 +451,7 @@ impl StealthAsk for Play {
     fn seated(&self, gd: GuardId) -> bool { game::close::close_seated(&self.g, gd) }
     fn footfall(&mut self, at: [f64; 2], level: f64) {
         let (time, serial) = (self.g.time, self.g.serial());
-        self.g.events.push(game::game::GameEvent { kind: game::director::EventKind::Step, pos: [at[0], 0.0, at[1]], time, loud: false, level: Some(level), serial, ..game::game::GameEvent::zeroed() });
+        self.g.events.push(game::game::GameEvent { kind: game::director::EventKind::Step, pos: [at[0], 0.0, at[1]], time, loud: false, level: Some(level), serial, ..game::game::GameEvent::default() });
     }
     fn trip(&mut self, gd: GuardId) -> Option<game::needs::Trip> { game::needs::mem(&mut self.g, gd).trip.clone() }
     fn alert_on_fix(&mut self, gd: GuardId, fix: [f64; 2]) {
@@ -486,7 +486,7 @@ impl StealthAsk for Play {
     fn staggered(&self, gd: GuardId) -> bool { self.g.time < self.g.gd[gd].stagger_until }
     fn loud_report(&mut self) {
         let (at, time, serial, who) = (self.g.ch[self.g.pl[self.g.player].ch].pos, self.g.time, self.g.serial(), self.g.ch[self.g.pl[self.g.player].ch].id);
-        self.g.events.push(game::game::GameEvent { kind: game::director::EventKind::Shot, pos: [at[0], 0.0, at[2]], time, loud: true, level: Some(1.0), who: Some(who), serial, ..game::game::GameEvent::zeroed() });
+        self.g.events.push(game::game::GameEvent { kind: game::director::EventKind::Shot, pos: [at[0], 0.0, at[2]], time, loud: true, level: Some(1.0), who: Some(who), serial, ..game::game::GameEvent::default() });
     }
     fn squad_men(&self, name: &str) -> (Vec<GuardId>, usize) {
         let st = self.g.m.enemysquads.states.as_ref().expect("the level's squads");

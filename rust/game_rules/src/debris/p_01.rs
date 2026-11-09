@@ -109,7 +109,7 @@ pub fn debris_landings(g: &mut crate::game::Game) {
     for p in due {
         if p.heard {
             let (time, serial) = (g.time, g.serial());
-            g.events.push(crate::game::GameEvent { kind: crate::director::EventKind::Prop, pos: p.pos, time, loud: false, level: Some(p.level), who: Some(p.who), serial, ..crate::game::GameEvent::zeroed() });
+            g.events.push(crate::game::GameEvent { kind: crate::director::EventKind::Prop, pos: p.pos, time, loud: false, level: Some(p.level), who: Some(p.who), serial, ..crate::game::GameEvent::default() });
         }
         if p.dust > 0.0 {
             crate::destruction::destruction_cell_dust(g, p.pos, [0.0, 1.0, 0.0], p.dust, crate::scene_materials::Surf::Drywall);
@@ -120,7 +120,6 @@ pub fn debris_landings(g: &mut crate::game::Game) {
 /// spawn() without the glass door; `told` = the simulation has this piece's landing.   (debris.ts Debris.spawnRaw)
 pub fn debris_spawn_raw(g: &mut crate::game::Game, kind: crate::debris::ChunkKind, box_: BoxId, v: V3, w: V3, who: Option<f64>, told: Option<bool>) -> Option<DebrisChunkId> {
     let who = who.unwrap_or(crate::consts::NOBODY_ID);
-    let told = told.unwrap_or(false);
     while (g.destr.debris.list.len() as f64) >= DEBRIS_CAP {
         let list = g.destr.debris.list.clone();
         let mut ok = |g: &mut Game, c: DebrisChunkId| evictable(g, c);
@@ -149,7 +148,7 @@ pub fn debris_spawn_raw(g: &mut crate::game::Game, kind: crate::debris::ChunkKin
         flags: Some(crate::scene_boxes::box_flag().dynamic),
         name: Some(String::from("debris")),
         mkey: Some(crate::scene_boxes::mkey().debris + ((js::to_i32(serial) & 65535) as f64)),
-        ..crate::scene_boxes::MakeBoxP::zeroed()
+        ..crate::scene_boxes::MakeBoxP::default()
     };
     let b = crate::scene_boxes::make_box(g, &p);
     let l = landing_of(kind);
@@ -157,7 +156,7 @@ pub fn debris_spawn_raw(g: &mut crate::game::Game, kind: crate::debris::ChunkKin
         kind, box_: b.into(), v: v3::copy(v), w: v3::copy(w), rest: false, still_t: 0.0, age: 0.0, sounded: false,
         level: l.level, sfx: sfx_of(&l), serial, who, on: None, on_pose: 0.0,
         dress: Some(true),
-        ..Chunk::zeroed()
+        ..Chunk::default()
     });
     g.destr.debris.list.push(id);
     g.destr.debris.stats.spawned += 1.0;
@@ -205,7 +204,7 @@ pub fn debris_impulse(g: &mut crate::game::Game, imp: crate::sheet_model::Impuls
     g.destr.debris.impulses += 1.0;
     let k = g.destr.debris.impulses;
     let di = debris_imp();
-    let resp = crate::sheet_model::ImpulseResponse { gain: di.gain, up_k: di.up_k, v_max: di.v_max, wake: di.wake };
+    let resp = crate::sheet_model::ImpulseResponse { gain: di.gain, up_k: di.up_k };
     let mut i = 0;
     while i < g.destr.debris.list.len() {
         let c = g.destr.debris.list[i];
@@ -396,7 +395,7 @@ pub fn debris_loose(g: &mut crate::game::Game, box_: AnyBoxId, lift: Option<f64>
     g.tab.debris_chunk.push(Chunk {
         kind: ChunkKind::Chunk, box_, lift: Some(lift.unwrap_or(0.0)), v: [0.0, 0.0, 0.0], w: [0.0, 0.0, 0.0], rest: true, still_t: 0.0, age: 0.0,
         sounded: true, level: l.level, sfx: sfx_of(&l), serial: 0.0, who: crate::consts::NOBODY_ID, on: None, on_pose: 0.0,
-        ..Chunk::zeroed()
+        ..Chunk::default()
     })
 }
 
@@ -942,7 +941,7 @@ pub fn debris_land(g: &mut crate::game::Game, c_2: DebrisChunkId, speed: f64) {
     }
     if !is_on(g.tab.debris_chunk[c].dress) {
         let (time, level, who, ev) = (g.time, g.tab.debris_chunk[c].level, g.tab.debris_chunk[c].who, g.serial());
-        g.events.push(crate::game::GameEvent { kind: crate::director::EventKind::Prop, pos: p, time, loud: false, level: Some(level), who: Some(who), serial: ev, ..crate::game::GameEvent::zeroed() });
+        g.events.push(crate::game::GameEvent { kind: crate::director::EventKind::Prop, pos: p, time, loud: false, level: Some(level), who: Some(who), serial: ev, ..crate::game::GameEvent::default() });
     }
 }
 

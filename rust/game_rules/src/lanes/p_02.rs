@@ -538,7 +538,7 @@ pub fn stun(g: &mut crate::game::Game, l: LanesLaneId, at: &[GuardId]) {
     let now = g.time;
     let gap = g.k.lanes.stun_gap;
     let x = &mut g.tab.lanes_lane[l];
-    x.can = Some(crate::lanes::LaneCan { who: cid, t: now, land: sol.land });
+    x.can = Some(crate::lanes::LaneCan { t: now, land: sol.land });
     x.stun_at = now + gap;
     s(g).stats.stuns += 1.0;
     say_net(g, best, "bang out — on me!");
@@ -1127,7 +1127,7 @@ mod tests {
     use super::*;
     #[test]
     fn the_middle_is_the_gun_nearest_the_mean() {
-        let mut l = crate::lanes::Lane::zeroed();
+        let mut l = crate::lanes::Lane::default();
         l.from = [9.0, 0.0, 9.0];
         assert_eq!(mid_of(&l), [9.0, 0.0, 9.0]);
         l.guns = vec![[0.0, 0.0, 0.0], [4.0, 0.0, 0.0], [3.0, 0.0, 0.0]];   // (mean x 7/3: nearest is 3)

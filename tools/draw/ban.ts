@@ -1,6 +1,7 @@
-// THE PAGE THAT DRAWS NAMES NOTHING OF THE GAME: src/host/drawpage.ts, the start page and the load brief (the cards before a game: the desk answers them) and everything they name, at any depth,
-// name none of the game's TypeScript (src/game, src/sim, the animator, the bridge, the old page's files), not even as a type: a static import, an export-from, an import type (`import('…').X`) and a dynamic import
-// all count and are followed, as the TypeScript scanner reads them. `bun run build` runs this first. No TypeScript on this machine (a hosted build; vendor/typescript or TS_LIB=<path to typescript.js>): only what the
+// THE PAGE DRAWS, AND HOLDS NO RULE AND MAKES NO LEVEL: src/host/drawpage.ts, the start page and the load brief (the cards before a game: the desk answers them) and everything they name, at any depth,
+// name no file where the game's TypeScript stood (src/game, src/sim: the game is rust/) and nothing a level is made with (a Level and its file's reader and writer, a generator, a tool), not even as a type: the game reads
+// its own level file. A static import, an export-from, an import type
+// (`import('…').X`) and a dynamic import all count and are followed, as the TypeScript scanner reads them. `bun run build` runs this first. No TypeScript on this machine (a hosted build; vendor/typescript or TS_LIB=<path to typescript.js>): only what the
 // bundle runs is followed, and it says so.
 //   bun run tools/draw/ban.ts      exit 0 · 1 and each name that breaks it, with the road to it
 //   BAN_BREAK=1 bun run tools/draw/ban.ts     the red path: one name of each kind planted in the page, in memory: exit 1 with all four named (2: no TypeScript here to see a type with, 3: it missed one)
@@ -8,8 +9,8 @@ import { existsSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 
 const ROOT = resolve(import.meta.dir, '../..'), ENTRIES = ['src/host/drawpage.ts', 'src/ui/startpage.ts', 'src/ui/loadbrief.ts'].map(f => join(ROOT, f));
-const BANNED = /^(src\/(game|sim|replay)\/|src\/anim\/skeleton\.ts$|src\/host\/(rustgame|rustdress|standup|profile|loop|tween|ahead|handsoff)\.ts$|src\/main\.ts$|src\/net\/recipe\.ts$|src\/scene\/(collision|boxMirror|level|levelData|levelLoad|levelScripts)\.ts$|levels\/.*\.ts$|tools\/)|^tps-bridge\//;
-const BREAK = process.env.BAN_BREAK === '1', PLANT = "\nimport type { Game } from '../game/game';\nexport type { Skeleton } from '../anim/skeleton';\ntype Planted = import('../sim/sim').Sim;\nvoid import('../host/profile');\n", PLANTED = 4;
+const BANNED = /^(src\/(game|sim|replay)\/|src\/anim\/skeleton\.ts$|tools\/)/;
+const BREAK = process.env.BAN_BREAK === '1', PLANT = "\nimport type { Level } from '../../tools/levels/lib/level';\nexport type { LevelData } from '../../tools/levels/lib/levelData';\ntype Planted = import('../../tools/levels/lib/levelLoad').Level;\nvoid import('../../tools/levels/floors');\n", PLANTED = 4;
 const TS_LIB = process.env.TS_LIB ?? join(ROOT, 'vendor/typescript/lib/typescript.js'), ts: any = existsSync(TS_LIB) ? ((m: any) => m.default ?? m)(await import(TS_LIB)) : null;
 if (!ts) { console.log(`draw ban: no TypeScript at ${TS_LIB}: what the bundle runs is followed, and no type`); if (BREAK) process.exit(2); }
 const scan = new Bun.Transpiler({ loader: 'ts' });
@@ -36,6 +37,6 @@ while (queue.length) { const f = queue.shift()!, text = readFileSync(f, 'utf8') 
     if (p && !from.has(p)) { from.set(p, f); queue.push(p); }
   } }
 for (const b of bad) console.log(`draw ban: ${b}`);
-console.log(bad.length ? `draw ban: ${bad.length} names of the game under the page that draws` : `draw ban: ${from.size} files under the page that draws, none of them the game's`);
+console.log(bad.length ? `draw ban: ${bad.length} names of level making under the page that draws` : `draw ban: ${from.size} files under the page that draws, none of them level making's`);
 if (BREAK && bad.length < PLANTED) { console.log(`draw ban: the red path planted ${PLANTED} names and ${bad.length} were seen`); process.exit(3); }
 process.exit(bad.length ? 1 : 0);

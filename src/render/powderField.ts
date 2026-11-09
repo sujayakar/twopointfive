@@ -3,10 +3,10 @@
 // reacts to walls, and it seems to imply a wind velocity that doesn't match the wind velocity for the falling snow"; the puffs "look like particle effects".
 // So the powder has no wind of its own and a puff is not a sprite: both are stuff in one field over the level's floor plan, moved by the air the flakes ride,
 // and drawn on the pixel under them with that pixel's own light and shadow (composite.wgsl lookPowder).
-// PICTURE ONLY: nothing in the simulation reads it, it takes no die and no wall clock, and it imports nothing from src/game. What lives here: the two textures,
-// the numbers (POWDER), a step's encoding (one dispatch and a copy, one uniform write), the kicks' short lives, and the read-back for the test page.
+// PICTURE ONLY: nothing in the simulation reads it, it takes no die and no wall clock, and it imports no game code. What lives here: the two textures,
+// the numbers (POWDER), a step's encoding (one dispatch and a copy, one uniform write), the kicks' short lives, and a read-back.
 // WHO JUDGED WHICH NUMBER: the rows the maintainer moved on his GPU on 11-05 are named at POWDER and POWDER_DRAW below. Every other row was judged on Chromium's
-// software adapter, from pictures of the read-back field (tools/qa/powder-field-page.cjs), and stands as he left it untouched in the panel.
+// software adapter, from pictures of the read-back field, and stands as he left it untouched in the panel.
 import { makeBuffer, makeShader, computePipelineAsync, laterHold } from '../gpu/device';
 import type { AirField } from './airField';
 import { AIR_RES } from './airField';
@@ -26,7 +26,7 @@ export const POWDER = {
   pick: 1.0,         // column picked up a second at a full crest in a full gust (1 = hides 63 % of the ground seen from above)
   liftPick: 1.5,     // column lifted a second per m/s of the air's lift (a wall's windward foot)
   gateLo: 1.35,      // × the ambient wind: air slower than this lifts nothing …
-  gateHi: 2.35,      // … and at this it lifts in full (a jet round a corner is over it; the open wind is between). Twice the old gates, and by the solver's own page (powder-field-page.cjs) the open ground still streams about as before (a mean column of 0.093 for 0.103) while a wall's lee is emptied (0.000 for 0.003): the gate is against the DRIVE's speed, and the open air runs well over that
+  gateHi: 2.35,      // … and at this it lifts in full (a jet round a corner is over it; the open wind is between). Twice the old gates, and the open ground still streams about as before (a mean column of 0.093 for 0.103) while a wall's lee is emptied (0.000 for 0.003): the gate is against the DRIVE's speed, and the open air runs well over that
   patch: 3.5,        // m: a gust patch's size
   crest: 0.36,       // m: a crest's size (the thread it gives is about this wide)
   crestCut: 0.84,    // 0‥1: the share of the ground that is NOT a crest

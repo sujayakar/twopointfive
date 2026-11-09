@@ -1,12 +1,11 @@
-//! The types of `floor`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `floor`.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum FloorMat {
-    Carpet,
+    #[default] Carpet,
     Lino,
     Stone,
     Tile,
@@ -26,48 +25,21 @@ impl FloorMat {
     }
 }
 
-/// (TypeScript: inline at src/game/floor.ts:22 FLOOR, src/game/floor.ts:22)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct FLOORValue {
     pub loud: f64,
     pub hard: bool,
-    pub rate: f64,
 }
-impl FLOORValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FLOORValue {
-            loud: 0.0,
-            hard: false,
-            rate: 0.0,
-        }
-    }
-}
-impl Default for FLOORValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/floor.ts:32 BUILDING, src/game/floor.ts:32)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct BUILDING {
     pub x0: f64,
     pub x1: f64,
     pub z0: f64,
     pub z1: f64,
 }
-impl BUILDING {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BUILDING {
-            x0: 0.0,
-            x1: 0.0,
-            z0: 0.0,
-            z1: 0.0,
-        }
-    }
-}
-impl Default for BUILDING { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/floor.ts:38 FINISHES, src/game/floor.ts:38)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct FINISHESItem {
     pub mat: crate::floor::FloorMat,
     pub x0: f64,
@@ -75,22 +47,9 @@ pub struct FINISHESItem {
     pub x1: f64,
     pub z1: f64,
 }
-impl FINISHESItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FINISHESItem {
-            mat: crate::floor::FloorMat::Carpet,
-            x0: 0.0,
-            z0: 0.0,
-            x1: 0.0,
-            z1: 0.0,
-        }
-    }
-}
-impl Default for FINISHESItem { fn default() -> Self { Self::zeroed() } }
 
 /// (src/game/floor.ts:22 FLOOR: a table nothing writes)
-pub fn floor() -> &'static [(crate::floor::FloorMat, crate::floor::FLOORValue)] { &[(crate::floor::FloorMat::Carpet, crate::floor::FLOORValue { loud: 0.6, hard: false, rate: 0.94 }), (crate::floor::FloorMat::Lino, crate::floor::FLOORValue { loud: 1.0, hard: true, rate: 1.0 }), (crate::floor::FloorMat::Stone, crate::floor::FLOORValue { loud: 1.1, hard: true, rate: 1.08 }), (crate::floor::FloorMat::Tile, crate::floor::FLOORValue { loud: 1.05, hard: true, rate: 1.04 }), (crate::floor::FloorMat::Asphalt, crate::floor::FLOORValue { loud: 0.9, hard: true, rate: 0.97 }), (crate::floor::FloorMat::Grass, crate::floor::FLOORValue { loud: 0.45, hard: false, rate: 0.88 })] }
+pub fn floor() -> &'static [(crate::floor::FloorMat, crate::floor::FLOORValue)] { &[(crate::floor::FloorMat::Carpet, crate::floor::FLOORValue { loud: 0.6, hard: false }), (crate::floor::FloorMat::Lino, crate::floor::FLOORValue { loud: 1.0, hard: true }), (crate::floor::FloorMat::Stone, crate::floor::FLOORValue { loud: 1.1, hard: true }), (crate::floor::FloorMat::Tile, crate::floor::FLOORValue { loud: 1.05, hard: true }), (crate::floor::FloorMat::Asphalt, crate::floor::FLOORValue { loud: 0.9, hard: true }), (crate::floor::FloorMat::Grass, crate::floor::FLOORValue { loud: 0.45, hard: false })] }
 
 /// (src/game/floor.ts:32 BUILDING: a table nothing writes)
 pub fn building() -> crate::floor::BUILDING { crate::floor::BUILDING { x0: 4.0, x1: 36.0, z0: 4.0, z1: 24.0 } }

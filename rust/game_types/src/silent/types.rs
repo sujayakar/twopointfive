@@ -1,29 +1,17 @@
-//! The types of `silent`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `silent`.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum By {
-    Start,
+    #[default] Start,
     Order,
     Tool,
     Api,
 }
-impl By {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            By::Start => "start",
-            By::Order => "order",
-            By::Tool => "tool",
-            By::Api => "api",
-        }
-    }
-}
 
-/// (TypeScript: State, src/game/silent.ts:109)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct State {
     pub cast: Vec<GuardId>,
     pub silent: bool,
@@ -32,94 +20,24 @@ pub struct State {
     pub was: Option<bool>,
     pub booted: Option<JsSet<DoorId>>,
 }
-impl State {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        State {
-            cast: Vec::new(),
-            silent: false,
-            since: 0.0,
-            hot: false,
-            was: None,
-            booted: None,
-        }
-    }
-}
-impl Default for State { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/silent.ts:112 SILENT_LOG, src/game/silent.ts:112)
-#[derive(Clone, Copy, Debug)]
-pub struct SilentModSILENTLOGItem {
-    pub t: f64,
-    pub to: crate::silent::SilentModSILENTLOGItemTo,
-    pub by: crate::silent::By,
-}
-impl SilentModSILENTLOGItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SilentModSILENTLOGItem {
-            t: 0.0,
-            to: crate::silent::SilentModSILENTLOGItemTo::Silent,
-            by: crate::silent::By::Start,
-        }
-    }
-}
-impl Default for SilentModSILENTLOGItem { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum SilentModSILENTLOGItemTo {
-    Silent,
-    Loud,
-}
-impl SilentModSILENTLOGItemTo {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SilentModSILENTLOGItemTo::Silent => "silent",
-            SilentModSILENTLOGItemTo::Loud => "loud",
-        }
-    }
-}
-
-/// (TypeScript: inline at src/game/silent.ts:233 seats, src/game/silent.ts:233)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct SilentModSeatsValue {
     pub on: bool,
     pub go_digit: bool,
 }
-impl SilentModSeatsValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SilentModSeatsValue {
-            on: false,
-            go_digit: false,
-        }
-    }
-}
-impl Default for SilentModSeatsValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum SilentBoot {
     First,
     Again,
 }
-impl SilentBoot {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SilentBoot::First => "first",
-            SilentBoot::Again => "again",
-        }
-    }
-}
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SilentMod {
     /// (src/game/silent.ts:110 states)
     pub states: JsMap<PlayerId, crate::silent::State>,
-    /// (src/game/silent.ts:112 SILENT_LOG)
-    pub silent_log: Vec<crate::silent::SilentModSILENTLOGItem>,
     /// (src/game/silent.ts:233 seats)
     pub seats: JsMap<PlayerId, crate::silent::SilentModSeatsValue>,
 }
@@ -127,7 +45,6 @@ impl SilentMod {
     pub fn blank() -> Self {
         SilentMod {
             states: JsMap::new(),
-            silent_log: Vec::new(),
             seats: JsMap::new(),
         }
     }
@@ -153,5 +70,3 @@ pub fn targets() -> Vec<crate::orders::TargetKind> { alloc::vec![crate::orders::
 /// (src/game/silent.ts:222 LISTED: a table nothing writes)
 pub fn listed() -> Option<Vec<crate::orders::TargetKind>> { Some(alloc::vec![crate::orders::TargetKind::Floor, crate::orders::TargetKind::None]) }
 
-/// (src/game/silent.ts:223 HEAD)
-pub const HEAD: &str = "the whole squad";

@@ -104,7 +104,7 @@ fn explain(g: &mut Game, man: OnFloor, me: &RecapMan, floor: &[OnFloor], gaze: f
     let c = man.ch;
     let (at, now) = (xz(g.ch[c].pos), g.time);
     g.recap.deaths_dealt += 1;
-    let mut d = RecapDeath { t: now, victim: me.id, name: me.name.clone(), side: me.side.clone(), player: man.gd.is_none(), at, gaze, cause: RecapCause::Unknown, by: -1.0, to: at, serial: g.recap.deaths_dealt, ..RecapDeath::zeroed() };
+    let mut d = RecapDeath { t: now, victim: me.id, name: me.name.clone(), side: me.side.clone(), player: man.gd.is_none(), at, gaze, cause: RecapCause::Unknown, by: -1.0, to: at, serial: g.recap.deaths_dealt, ..RecapDeath::default() };
     let (mut blast, mut through): (Option<&RecapShot>, Option<&RecapShot>) = (None, None);
     for s in g.recap.shots.iter().rev() {
         if now - s.t > CAUSE_SECS { break; }
@@ -132,7 +132,7 @@ fn explain(g: &mut Game, man: OnFloor, me: &RecapMan, floor: &[OnFloor], gaze: f
 fn sample(g: &mut Game, floor: &[OnFloor]) {
     let k = g.k.recap;
     let keep = m::ceil((k.secs + k.after + 1.0) * k.hz) as usize;
-    let mut f = if g.recap.frames.len() >= keep { g.recap.frames.pop_front().unwrap_or_default() } else { RecapFrame::zeroed() };
+    let mut f = if g.recap.frames.len() >= keep { g.recap.frames.pop_front().unwrap_or_default() } else { RecapFrame::default() };
     f.t = g.time;
     f.n = floor.len() as f64;
     f.men.clear();
@@ -253,7 +253,7 @@ fn file_ripe(g: &mut Game) {
 fn squad_lost(g: &mut Game, d: &RecapDeath) {
     let src = d.from.or(d.by_at).and_then(|s| eighth(s[0] - d.at[0], s[1] - d.at[1]));
     let heard_it = d.loud && match d.from { Some(f) => heard(g, [f[0], 1.3, f[1]]), None => false };
-    g.recap.lost_live.push(LostMan { id: d.victim, name: d.name.clone(), t: d.t, at: d.at, from: None, known_at: f64::INFINITY });
+    g.recap.lost_live.push(LostMan { id: d.victim, t: d.t, at: d.at, from: None, known_at: f64::INFINITY });
     g.recap.lost.push(Lost { src, heard: heard_it, saw: None, players_saw: Vec::new(), done: false });
     g.recap.lost_next = 0.0;
 }
