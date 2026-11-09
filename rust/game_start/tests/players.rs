@@ -174,13 +174,10 @@ fn a_moment_of_a_game_of_two_put_back_plays_the_same() {
         };
         play(&mut p, 0, 100);
         let there = p.words();
-        let (kept, block) = (p.g.clone(), unsafe { std::slice::from_raw_parts(sim::state::addr(p.g.sim) as *const u8, std::mem::size_of::<sim::state::State>()).to_vec() });
+        let kept = game_start::moment::Moment::of(&p.g);
         let once = play(&mut p, 100, 90);
-        assert!(once[89] != there && p.g.fx_seed > kept.fx_seed, "seed {seed}: the staging: nobody fired");
-        unsafe { std::ptr::copy_nonoverlapping(block.as_ptr(), sim::state::addr(kept.sim) as *mut u8, block.len()); }
-        p.g = kept;
-        game::scene_collision::unstand(&mut p.g);
-        game::scene_collision::stands(&mut p.g);
+        assert!(once[89] != there && p.g.fx_seed > kept.game.fx_seed, "seed {seed}: the staging: nobody fired");
+        p.g = kept.stands(p.g.sim);
         assert_eq!(p.words(), there, "seed {seed}: the moment put back is the moment");
         let again = play(&mut p, 100, 90);
         if let Some((k, parts)) = parting(&once, &again) { panic!("seed {seed}: from the moment put back the same hands part in {parts} at tick {k}"); }
