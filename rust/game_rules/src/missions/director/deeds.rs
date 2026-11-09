@@ -168,7 +168,7 @@ pub(in crate::missions) fn director_beat_say(g: &mut crate::game::Game, r: Direc
     let radio = radio.unwrap_or(false);
     let gd = director_guard_of(g, r, u)?;
     if !line.is_empty() && g.gd[gd].state != crate::game::GuardState::Dead {
-        crate::guards::say(g, gd, line, Some(radio), Some(true), None); // (forced: a scripted line is deliberate)
+        crate::guards::say(g, gd, line, Some(radio), Some(true)); // (forced: a scripted line is deliberate)
         let what = format!("{}{}: {}", g.gd[gd].callsign, if radio { "" } else { " (says)" }, line);
         push(g, b, DirectorPushRowKind::Radio, what, None);
     }
@@ -183,7 +183,7 @@ pub(in crate::missions) fn director_beat_radio(g: &mut crate::game::Game, b: Dir
         crate::handwork::radio_hand(g, x, dur);
         crate::chronicle::chron_radio(g, x, line);
     }
-    crate::game::game_msg(g, &format!("radio: {} — {}", callsign, line));
+    crate::cues::cues_radio(g, &format!("{} — {}", callsign, line));
     let at = gd.map(|x| { let c = g.gd[x].ch; match g.ch[c].bones.get(crate::character::Bone::Head) { Some(p) => *p, None => g.ch[c].pos } });
     crate::audio_iface::game_audio_like_play(g, "radio", at, Some(if gd.is_some() { 0.7 } else { 0.55 }), None);
     push(g, b, DirectorPushRowKind::Radio, format!("{}: {}", callsign, line), None);

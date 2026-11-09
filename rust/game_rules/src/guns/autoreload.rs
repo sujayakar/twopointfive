@@ -9,8 +9,3 @@ pub fn auto_reload_due(g: &crate::game::Game, pl: PlayerId, gun: FirearmId) -> b
     let since = g.time - g.pl[pl].last_fire_t; // a stamp ahead of the clock is no reason to wait
     !(since >= 0.0 && since < g.k.reload.delay)
 }
-
-/// The words for a gun just gone dry: the reload is coming, so R is not asked for. (autoreload.ts autoReloads)
-pub fn auto_reloads(g: &crate::game::Game, gun: FirearmId) -> bool {
-    !g.puppet.is_some() && !g.fa[gun].spare.is_empty()
-}

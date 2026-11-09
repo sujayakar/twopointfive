@@ -218,7 +218,7 @@ fn cue(g: &mut crate::game::Game, gd: GuardId, text: &str, gap: Option<f64>) {
     if t - r.said_t < gap { return; }
     r.said_t = t;
     g.stats.spotted.cues += 1;
-    crate::game::game_say(g, gd, text, None, None, None);
+    crate::game::game_say(g, gd, text, None, None);
 }
 
 /// candidate spots round `p`, nearest first: on the floor, a straight walk from where he stands, off every doorway and off Sam (spotted.ts ring)

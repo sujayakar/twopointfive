@@ -136,7 +136,7 @@ pub(super) fn pick_next_spot(g: &mut crate::game::Game, gd: GuardId) {
     } else {
         String::from("check the corners")
     };
-    crate::game::game_say(g, gd, &text, None, None, None);
+    crate::game::game_say(g, gd, &text, None, None);
 }
 
 /// The closed frame of a door: hinge, unit along the frame hinge → latch, unit normal (+ = CCW side), width.   (guards.ts frameOf)

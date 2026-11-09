@@ -499,7 +499,7 @@ fn breaker_say(g: &mut crate::game::Game) {
 fn stay(g: &mut Game, speaker: GuardId, line: &str, why: &str, word: bool) {
     let s = st(g);
     s.word = s.word || word;
-    crate::game::game_say(g, speaker, line, Some(true), None, None);
+    crate::game::game_say(g, speaker, line, Some(true), None);
     event(g, PowerOutEventWhat::Stay, Some(speaker), why);
 }
 
@@ -666,7 +666,7 @@ fn decide(g: &mut crate::game::Game, defs: &[RoomfightDefId]) {
     s.go_at = go_at;
     s.way_m = lead.1.l;
     let line = if second.is_some() { "power's out — two moving to the breaker!" } else { "power's out — on my way to the breaker!" };
-    crate::game::game_say(g, lead_gd, line, Some(true), None, None);
+    crate::game::game_say(g, lead_gd, line, Some(true), None);
     let names: Vec<&str> = go.iter().map(|x| g.gd[g.tab.roomfight_def[x.0].gd].callsign.as_str()).collect();
     let why = alloc::format!(
         "{} for the breaker, {} m off by the way he walks{}; they step off in {} s",
@@ -827,7 +827,7 @@ fn step_man(g: &mut Game, i: usize, lever: Option<usize>, defs: &[RoomfightDefId
             let s = st(g);
             s.fell = None;
             s.word = true;
-            crate::game::game_say(g, gd, "he's down at the breaker — that's them! Stay on your doors!", Some(true), None, None);
+            crate::game::game_say(g, gd, "he's down at the breaker — that's them! Stay on your doors!", Some(true), None);
             crate::roomfight::run(g, d, from, None, 0.0, crate::owner::by::BREAKER);
             event(g, PowerOutEventWhat::Abort, Some(gd), "sees the man he came with on the floor: says so, and back to his post at a run");
             return false;
@@ -888,7 +888,7 @@ fn step_man(g: &mut Game, i: usize, lever: Option<usize>, defs: &[RoomfightDefId
             crate::squad::order(g, gd, crate::squad::OrderPatch { face: Some(Some(face)), aim_at: Some(None), upper: Some(Some(crate::character::UpperMode::None)), ..Default::default() });
             if bo_permanent(g) && g.time - there_t > g.k.powerout.look_secs {
                 st(g).word = true;
-                crate::game::game_say(g, gd, "breaker's wrecked — that's them! Stay on your doors!", Some(true), None, None);
+                crate::game::game_say(g, gd, "breaker's wrecked — that's them! Stay on your doors!", Some(true), None);
                 event(g, PowerOutEventWhat::Wrecked, Some(gd), "the breaker is shot to scrap: no fault, and nothing to mend");
                 all_back(g);
             }
@@ -1039,7 +1039,7 @@ fn missed(g: &mut crate::game::Game, defs: &[RoomfightDefId], fight: bool) {
     if fight {
         return;
     }
-    crate::game::game_say(g, speaker, "nothing from the breaker — that's them! Stay on your doors!", Some(true), None, None);
+    crate::game::game_say(g, speaker, "nothing from the breaker — that's them! Stay on your doors!", Some(true), None);
     event(g, PowerOutEventWhat::Overdue, Some(speaker), "the men sent for the lights have not been heard from and the mains are still down");
 }
 

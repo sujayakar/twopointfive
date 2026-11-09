@@ -289,8 +289,6 @@ fn ring_hits_character(g: &mut crate::game::Game, r: crate::launcher::Ring, c_2:
         None => {
             crate::character::anim_hit(g, c);
             play_rate(g, "bodyHit", at, 0.5, 1.1);
-            let text = crate::gear::gear_text(g, if high { "a ring airfoil off the side of your head — from a friend, luckily" } else { "a ring airfoil in the ribs" });
-            crate::game::game_msg(g, &text);
         }
         Some(gd) if g.gd[gd].civ.is_some() && !high => {
             crate::character::anim_hit(g, c);
@@ -367,7 +365,7 @@ pub fn stagger_guard(g: &mut crate::game::Game, gd: GuardId, dir: V3, shooter: C
     let pool = crate::words::w(g, &now, &all);
     let roll = m::floor(crate::dice::draw_of(g, "launcher::stagger_guard#1", gd) * pool.len() as f64);
     let line = &pool[js::rem(roll, pool.len() as f64) as usize];
-    crate::game::game_say(g, gd, line, None, None, None);
+    crate::game::game_say(g, gd, line, None, None);
     let shooter_id = g.ch[shooter].id;
     let pos = v3::copy(g.ch[c].pos);
     prop_event(g, pos, hit_noise, shooter_id, None);

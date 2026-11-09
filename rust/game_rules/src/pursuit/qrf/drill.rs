@@ -13,7 +13,7 @@ fn man_yaw(g: &Game, m: GuardId) -> f64 { g.ch[g.gd[m].ch].body_yaw }
 fn man_arrived(g: &Game, m: GuardId) -> bool { g.gd[m].script.as_ref().map_or(false, |s| s.arrived == Some(true)) }
 /// where a man with no foe named looks: the player nearest him
 fn near_man_pos(g: &Game, gd: GuardId) -> V3 { let pl = crate::seats::nearest_or_first(g, &g.ch[g.gd[gd].ch].pos); g.ch[g.pl[pl].ch].pos }
-fn say(g: &mut Game, m: GuardId, text: &str) { crate::game::game_say(g, m, text, None, None, None) }
+fn say(g: &mut Game, m: GuardId, text: &str) { crate::game::game_say(g, m, text, None, None) }
 /// `Q.target!.plan!`
 fn target_plan(g: &Game) -> crate::scene_level::RoomClearPlan { g.qrf.target.as_ref().unwrap().plan.clone().unwrap() }
 /// `Q.target!.room`

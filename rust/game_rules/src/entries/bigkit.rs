@@ -452,7 +452,6 @@ pub fn sam_big_tick(g: &mut crate::game::Game, dt: f64) -> bool {
             if v3::dist_xz(g.ch[c].pos, spot) < 0.5 {
                 tool!(g, pid).moves.as_mut().unwrap().arrived = true;
             } else {
-                crate::game::game_msg(g, "no room to work it from here");
                 over(g, pid, 0.0, false);
                 return false;
             }
@@ -485,7 +484,6 @@ pub fn sam_big_tick(g: &mut crate::game::Game, dt: f64) -> bool {
             crate::doors::doors_kick_in(g, d, pos, id, Some(true))
         };
         if gave && !lock {
-            crate::game::game_msg(g, "you shot it open, and the whole floor heard that");
             crate::chronicle::chron_door(g, crate::chronicle::ChronDoorKind::DoorKicked, d);
         }
         if gave {
@@ -493,7 +491,6 @@ pub fn sam_big_tick(g: &mut crate::game::Game, dt: f64) -> bool {
             on_tool(g, pid, |t| t.gave = Some(true));
             over(g, pid, TAIL, true);
         } else if n >= g.k.bigslot.shells {
-            crate::game::game_msg(g, if lock { "the lock held" } else { "it held" });
             over(g, pid, TAIL, true);
         } else {
             let next = now + m870(g).cd;
@@ -519,7 +516,6 @@ pub fn sam_big_tick(g: &mut crate::game::Game, dt: f64) -> bool {
     if gave {
         g.stats.bigkit.sam_hammered += 1;
         on_tool(g, pid, |t| t.gave = Some(true));
-        crate::game::game_msg(g, "you hammered it open, and the whole floor heard that");
         crate::chronicle::chron_door(g, crate::chronicle::ChronDoorKind::DoorKicked, d);
     }
     over(g, pid, TAIL, true);

@@ -59,7 +59,7 @@ fn unique_joined(words: Vec<String>) -> String {
     seen.join(" + ")
 }
 fn say(g: &mut Game, gd: GuardId, text: &str) {
-    crate::game::game_say(g, gd, text, None, None, None);
+    crate::game::game_say(g, gd, text, None, None);
 }
 /// `const PRE`: the phases before the door goes (doortools.ts:621)
 fn is_pre(ph: Phase) -> bool {

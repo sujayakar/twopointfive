@@ -118,7 +118,7 @@ fn light_out(g: &mut Game, gd: GuardId, s: &Sound) {
                     g.events[at_e].announced = Some(true);
                     let lines = ocp_mutter();
                     let line = js::rem(g.ch[c].id + m::floor(g.time), lines.len() as f64) as usize;
-                    crate::game::game_say(g, gd, &lines[line], Some(false), None, None);
+                    crate::game::game_say(g, gd, &lines[line], Some(false), None);
                 }
             }
         } else {
@@ -234,7 +234,7 @@ fn loud(g: &mut Game, gd: GuardId, s: &Sound) {
         } else {
             "that was a shot — find him!"
         };
-        crate::game::game_say(g, gd, line, Some(e.kind != K::Bang), None, None);
+        crate::game::game_say(g, gd, line, Some(e.kind != K::Bang), None);
     }
 }
 
@@ -280,7 +280,7 @@ fn glass(g: &mut Game, gd: GuardId, s: &Sound) {
             if calm && unannounced(g, at_e) {
                 g.events[at_e].announced = Some(true);
                 let line = if d < 10.0 { "glass! — that was right here" } else { "that was glass going — somebody's out there" };
-                crate::game::game_say(g, gd, line, Some(false), None, None);
+                crate::game::game_say(g, gd, line, Some(false), None);
             }
         }
     }

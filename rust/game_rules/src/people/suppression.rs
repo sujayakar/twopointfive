@@ -228,7 +228,7 @@ fn sup_bark(g: &mut crate::game::Game, gd: GuardId, moment: crate::suppression::
     sup.bark_was = Some(moment);
     sup.pending = None;
     g.m.suppression.floor_bark_t = Some(now);
-    crate::game::game_say(g, gd, pool[i], None, None, None);
+    crate::game::game_say(g, gd, pool[i], None, None);
     true
 }
 
@@ -355,7 +355,7 @@ pub fn update_suppression(g: &mut crate::game::Game, dt: f64) {
                     g.gd[gd].sup.bark_was = Some(SupMoment::Pinned);
                     g.m.suppression.floor_bark_t = Some(now);
                     let line = if g.gd[gd].team != crate::teams::Team::Guard { "they've got us pinned!" } else { "he's got us pinned!" };
-                    crate::game::game_say(g, gd, line, Some(true), None, None);
+                    crate::game::game_say(g, gd, line, Some(true), None);
                 } else {
                     let force = g.gd[gd].sup.bark_was == Some(SupMoment::Flinch) && g.time - g.gd[gd].sup.bark_t > 1.5;
                     sup_bark(g, gd, if friendly { SupMoment::Friendly } else { SupMoment::Pinned }, Some(force));

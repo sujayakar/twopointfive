@@ -482,7 +482,6 @@ fn destruction_kill_screen(g: &mut crate::game::Game, item: &crate::destruction:
                 let name = g.tab.sim_lightshome_fixture[t].name.clone();
                 dlog(g, &alloc::format!("screen {} shot dead", name));
                 if by_player {
-                    crate::game::game_msg(g, &alloc::format!("shot out {}", name));
                     crate::chronicle::chron_light_shot(g, t);
                 }
             }

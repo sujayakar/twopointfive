@@ -293,7 +293,7 @@ pub(super) fn acquire_foe(g: &mut crate::game::Game, gd: GuardId) {
         if g.gd[gd].foe != Some(b) {
             crate::mind::foe(g, gd, Some(b), "guards");
             crate::aim::aim_state_clear(&mut g.gd[gd].aim);
-            if mine { crate::game::game_say(g, gd, if op { "he's down — next." } else { "got him!" }, None, None, None); }
+            if mine { crate::game::game_say(g, gd, if op { "he's down — next." } else { "got him!" }, None, None); }
             return;
         }
     }
@@ -301,7 +301,7 @@ pub(super) fn acquire_foe(g: &mut crate::game::Game, gd: GuardId) {
         // a staff man: the man he dropped is one of two intruders, and the other is still on his floor
         crate::mind::foe(g, gd, Some(Foe::Player), "guards");
         g.gd[gd].last_seen_t = m::min(g.gd[gd].last_seen_t, g.time - 0.5);
-        if mine { crate::game::game_say(g, gd, "got him!", None, None, None); }
+        if mine { crate::game::game_say(g, gd, "got him!", None, None); }
     } else if lost_man && best.is_none() && (g.gd[gd].state == GuardState::Alert || g.gd[gd].state == GuardState::Search) {
         // the man he was fighting is down and no other enemy is in his sight: he comes off the alert to a wary look round
         crate::mind::set_state(g, gd, GuardState::Suspicious, "guards");
@@ -316,12 +316,12 @@ pub(super) fn acquire_foe(g: &mut crate::game::Game, gd: GuardId) {
         let said = left || floor_called_clear(g, gd, team);
         if mine {
             let text = if op { if said { "he's down." } else { "he's down — clear." } } else if said { "got him!" } else { "got him — that's all of them." };
-            crate::game::game_say(g, gd, text, None, None, None);
+            crate::game::game_say(g, gd, text, None, None);
         } else if !said && !knee {
-            crate::game::game_say(g, gd, if op { "clear." } else { "that's all of them." }, None, None, None);
+            crate::game::game_say(g, gd, if op { "clear." } else { "that's all of them." }, None, None);
         }
     } else if mine {
-        crate::game::game_say(g, gd, if op { "he's down." } else { "got him!" }, None, None, None);
+        crate::game::game_say(g, gd, if op { "he's down." } else { "got him!" }, None, None);
     }
 }
 
@@ -416,7 +416,7 @@ pub fn in_hand(g: &crate::game::Game, gd: GuardId) -> Option<crate::guards::InHa
 pub fn start_reload_beat(g: &mut crate::game::Game, gd: GuardId) {
     if g.gd[gd].second.is_some() && crate::gunslots::side_out_alert(g, gd) { return; }
     begin_reload(g, gd);
-    crate::game::game_say(g, gd, "reloading!", None, None, None);
+    crate::game::game_say(g, gd, "reloading!", None, None);
 }
 /// HIS MAGAZINE COMES OUT: the one way a man begins a change of magazine, whichever side he is on. His hands go on with it from here (`frame.rs hands`); he says his own word.
 pub fn begin_reload(g: &mut crate::game::Game, gd: GuardId) {

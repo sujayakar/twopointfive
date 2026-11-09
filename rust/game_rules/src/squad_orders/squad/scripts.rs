@@ -473,7 +473,7 @@ fn room_clear_say(g: &mut crate::game::Game, id: RoomClearId, key: crate::squad:
         None => None,
     };
     let text = match line { Some(x) => x, None => line_of!(g.tab.squad_room_clear[id].plan.lines.clone(), key) };
-    crate::game::game_say(g, gd, &text, Some(radio), None, None);
+    crate::game::game_say(g, gd, &text, Some(radio), None);
 }
 
 /// A found colleague lying in this room within a few metres of the man, in his plain sight. (squad.ts RoomClear.bodyHere)
