@@ -37,7 +37,7 @@ export const SNOW_SURF = {
   rough: 0.92,          // fresh snow's finish; trodden is a touch tighter
   pillow: 0.22,         // m from a cap's edge over which it rounds off
   capWave: 0.06,        // m: how far a cap's edge wanders in from the thing it lies on
-  trackDeep: 0.08,     // m: how deep a boot's print is drawn in fresh snow (rust/game_rules/src/snow_tracks; deeper where a drift's skirt stands, shallower in trodden snow)
+  trackDeep: 0.08,     // m: how deep a boot's print is drawn in fresh snow (src/picture/snow/tracks.ts; deeper where a drift's skirt stands, shallower in trodden snow)
   trackRim: 0.012,      // m: the bank of pushed-up snow round a print
 };
 

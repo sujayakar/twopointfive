@@ -18,7 +18,7 @@
 // roughness) · p[7] = the snow PAINT's rgb (how a snow box is known), fresh roughness · p[8] = (a cap's edge wander m, a glint grain's lean, a print's depth m — 0 = no prints, the prints' texels a metre) · p[9] = the TRODDEN paint's rgb · p[10] = the OLD paint's rgb (how a path's or a rut's strip is known), a print's rim m   — render/snowField.ts snowCfgRows
 struct SnowCfg { p: array<vec4f, 11> };
 @group(1) @binding(9) var<uniform> snowCfg: SnowCfg;
-// THE PRINTS (rust/game_rules/src/snow_tracks; `const SNOW_TRACKS`): one byte a texel over the same plan — 1 where a boot or a fallen man has pressed the snow, 0.5 on the
+// THE PRINTS (src/picture/snow/tracks.ts; `const SNOW_TRACKS`): one byte a texel over the same plan — 1 where a boot or a fallen man has pressed the snow, 0.5 on the
 // print's outline, 0 half a skirt outside it. Read as a height: a floor, a wall, and outside the outline the bank of snow the boot pushed up. An untidy print
 // (SNOWTRACKS.mess) is the same byte read the same way: its stamp breaks the outline, the bank's reach and the floor, and sets clods in the bank's half.
 @group(1) @binding(10) var snowTrackTex: texture_2d<f32>;
@@ -57,7 +57,7 @@ fn snowPrint(xz: vec2f, deep: f32, mess: f32, fine: f32) -> f32 {
   }
   return up - down;
 }
-/** how untidy the prints are, 0‥1 (rust/game_rules/src/snow_tracks SNOWTRACKS.mess, × 100 in a byte): the map carries it itself, in the first texel of the middle one of its
+/** how untidy the prints are, 0‥1 (src/picture/snow/tracks.ts SNOWTRACKS.mess, × 100 in a byte): the map carries it itself, in the first texel of the middle one of its
  *  three rows past the plan (the block's eleven rows are full, and the number belongs to the stamps that wrote the map) */
 fn snowPrintMess() -> f32 { let d = vec2i(textureDimensions(snowTrackTex)); return clamp(textureLoad(snowTrackTex, vec2i(0, max(d.y - 2, 0)), 0).r * 2.55, 0.0, 1.0); }
 /** the whole surface's height over the ground (m) from a field sample: the hills, snow's own depth where it lies, the troughs boots and wheels pressed */

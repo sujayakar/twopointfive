@@ -52,12 +52,12 @@
 // digit of the gun in his hands opens (rust/game_rules/src/slotsetup), so neither needs a key of its own. As with the wall hold: the game goes on asking for 'KeyZ'
 // and 'KeyL', the board gives neither until the player puts the row on a key here, a kept entry is kept as he set it, and the letters are not the rows'
 // while they are unbound. The page turns it on as it boots; `?slotsetup=0` (the setup's own word) = Z and L as they were.
-// EMPTY HANDS ARE A SLOT ON BACKTICK (`KEYMAP.slotWhen`, `SLOT`; the rule is rust/game_rules/src/handslot): while the page says the slot is on, its code ('Digit0') has
+// EMPTY HANDS ARE A SLOT ON BACKTICK (`KEYMAP.slotWhen`, `SLOT`; the rule is rust/game_types/src/handslot): while the page says the slot is on, its code ('Digit0') has
 // the backtick key in the build, the debugger's code ('Backquote', which the page goes on asking for) has the backslash key, and E's row (put away or
 // draw, the swap of a hold) has no key: E is spare. Nothing kept is rewritten; a row he moved stays where he put it. IN WORDS the letter E is still the
 // way a line names putting it away ('E puts it away', written all over the game and its lessons): while the slot is on that letter is read as the
 // slot's key (`ALIAS`), so those lines follow without being rewritten, and follow a rebind of the slot. OFF IN THE MODULE (`slotWhen` null).
-// HIS OWN ACTIONS ARE A RING (`KEYMAP.handWhen`, `HAND`, `HAND_SLOT`; the rule is rust/game_rules/src/handring): while the page says so the whistle's row has no key
+// HIS OWN ACTIONS ARE A RING (`KEYMAP.handWhen`, `HAND`, `HAND_SLOT`; the rule is rust/game_types/src/knobs/handring.rs): while the page says so the whistle's row has no key
 // (it is the ring's last wedge; its letter in a line of words is left alone, as a freed row's is), and over the slot's layer the interaction's row is on
 // E, the Space key giving the game nothing: 'Space  open' reads 'E  open'. OFF IN THE MODULE (`handWhen` null).
 // (E's letter is the slot's) Only while E's row has no key: put on a key by hand it is that key again, in caps and in words, and its row is back on the Controls list. The slot's
@@ -75,7 +75,7 @@ export const KEY_ACTS: KeyAct[] = [
   act('B', 'KeyB'), act('T', 'KeyT'), act('F', 'KeyF'), act('G', 'KeyG'), act('H', 'KeyH'),
   act('`', 'Backquote'),
 ];
-/** the empty hands' slot (rust/game_rules/src/handslot): a row only while the slot is on (the header's note). Off, it is on no list and the 0 key is anybody's */
+/** the empty hands' slot (rust/game_types/src/handslot): a row only while the slot is on (the header's note). Off, it is on no list and the 0 key is anybody's */
 const SLOT_ACT = act('0', 'Digit0'), WITH_SLOT = [...KEY_ACTS, SLOT_ACT];
 /** the page's own: never a row's key (Esc the pause, Enter the checkpoint, Tab the way back, the arrows the highlight, the F row the browser's and the
  *  recorders', the modifiers the camera's and the browser's, P [ ] the showcase's and the exposure's, Caps Lock a key some boards only ever press) */
@@ -93,7 +93,7 @@ export const KEYMAP = { /** false = the build's own keys, whatever is kept: the 
   /** …and while it is, THE WHEEL UNDER A HELD CTRL KEY IS NOTHING (the maintainer, 10-24: "ctrl-scroll still zooms in and out, should remove"). A
    *  trackpad pinch still zooms: the browser sends it as a wheel that says Ctrl with no Ctrl key down, and that is how the two are told apart
    *  (host/input.ts `ctrlDown`). false = any wheel that says Ctrl zooms, as it was: the module's own stand, and the page's under `?pinchonly=0` */ pinchOnly: false,
-  /** empty hands are a slot on backtick while this says so (the page hands it rust/game_rules/src/handslot's switch; null = never: the module's own stand) */ slotWhen: null as (() => boolean) | null, /** his own actions are a ring while this says so (rust/game_rules/src/handring; null = never): the whistle's row has no key and, with the slot on, the interaction's row is on the key E left */ handWhen: null as (() => boolean) | null, /** steps on every change: what a drawn surface keys its cache on */ rev: 0 };
+  /** empty hands are a slot on backtick while this says so (the page hands it rust/game_types/src/handslot's switch; null = never: the module's own stand) */ slotWhen: null as (() => boolean) | null, /** his own actions are a ring while this says so (rust/game_types/src/knobs/handring.rs; null = never): the whistle's row has no key and, with the slot on, the interaction's row is on the key E left */ handWhen: null as (() => boolean) | null, /** steps on every change: what a drawn surface keys its cache on */ rev: 0 };
 const LS = 'twopointsix.keys';
 /** the rows whose keys in the build are not their own codes, while `qFree` is on: row id → its keys ([] = none) */
 const FREED: Record<string, string[]> = { KeyQ: [] };
@@ -115,7 +115,7 @@ const setFreed = (id: string) => setNow() && !!SETFREED[id];
 const SLOT: Record<string, string[]> = { KeyE: [], Digit0: ['Backquote'], Backquote: ['Backslash'] };
 /** …and the row a line of words means by another row's letter then */
 const ALIAS: Record<string, string> = { KeyE: 'Digit0' };
-/** HIS OWN ACTIONS ARE A RING (rust/game_rules/src/handring): the whistle's row has no key (it is a wedge of that ring; the player may give it one) — and, over the
+/** HIS OWN ACTIONS ARE A RING (rust/game_types/src/knobs/handring.rs): the whistle's row has no key (it is a wedge of that ring; the player may give it one) — and, over the
  *  slot's layer, which is what leaves E spare, the interaction's row is on E and the Space key gives the game nothing */
 const HAND: Record<string, string[]> = { KeyV: [] }, HAND_SLOT: Record<string, string[]> = { Space: ['KeyE'] };
 const SLOT_ID = SLOT_ACT.id;

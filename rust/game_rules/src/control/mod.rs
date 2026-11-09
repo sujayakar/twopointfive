@@ -29,7 +29,7 @@
 //!
 //! TO ADD A RULE: one file here and one line in `rules!` at its rank. Nothing else in the game names it.
 //!
-//! A body has three channels (`Channel`): legs, aim, hands. Every intent here takes all three; the record is kept by channel so that a rule
+//! A body has three channels: legs, aim, hands. Every intent here takes all three; the record is kept by channel so that a rule
 //! which wants only one (the fight wants aim while an order has his legs) can be granted it without a change of shape.
 use crate::bytes::{ToBytes, W};
 use crate::game::{Game, GuardScript};
@@ -189,7 +189,7 @@ pub enum Holder {
 /// one man's record: who has each channel, since when, and which rules were asked and said no this tick
 #[derive(Clone, Copy, PartialEq, Debug, ToBytes)]
 pub struct Control {
-    /// by `Channel as usize`
+    /// legs, aim, hands
     pub holder: [Holder; 3],
     /// the game's clock when that channel last changed hands
     pub since: [f64; 3],

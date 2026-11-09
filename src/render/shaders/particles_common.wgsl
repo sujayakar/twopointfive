@@ -11,7 +11,7 @@ const P_CASING: u32 = 3u;   // spent brass: LIT + a glint off the strongest ligh
 const P_SHEET: u32 = 4u;    // a leaf of office paper (rust/game_rules/src/destruction: a burst raking a desk turns its paper stacks into these): a LIT two-sided oriented quad,
                             // gravity + anisotropic drag + flutter torque (render/sheetModel.ts is the CPU reference of the same equations), slides / settles
                             // flat on what it lands on and sleeps like a chip; casts no shadow (a splat, not a box)
-const P_RAIN: u32 = 5u;     // a rain drop (rust/game_rules/src/rain_fx): born on top of the weather's rain slab over the outdoor ground near the view, falls at terminal speed with the wind
+const P_RAIN: u32 = 5u;     // a rain drop (src/picture/rain.ts): born on top of the weather's rain slab over the outdoor ground near the view, falls at terminal speed with the wind
                             // field's air, LIT like a chip (the strongest lights shadow-rayed) + refracting / glinting in the splat, dies where it hits and becomes its own
                             // splash crown there (PB_ASLEEP = splashed); its own ring past the two gameplay rings (EmitBlock.rainWin)
 const P_SHARD: u32 = 6u;    // a fragment of a broken glass pane (rust/game_rules/src/shards files them where the fracture model lets a piece go; render/shardModel.ts is the CPU reference of its
@@ -182,7 +182,7 @@ struct EmitBlock {
   recs: array<EmitRec, MAX_EMITS>,
   imps: array<ImpulseRec, MAX_IMPS>,
   rainWin: Window,                // the RAIN ring's window (experiment; render/particles.ts RAIN_RING) — in the tail so everything above sits where it always sat; live 0 unless it rains particles
-  // PARTICLE RAIN v2 — the rain kind's LOOK (render/particles.ts RainLook ← rust/game_rules/src/rain_fx PRAIN, live), written with the window above while the ring holds anything:
+  // PARTICLE RAIN v2 — the rain kind's LOOK (render/particles.ts RainLook ← src/picture/rain.ts PRAIN, live), written with the window above while the ring holds anything:
   rainCfg: vec4f,                 // the drop's PHASE + glint: x = isotropic floor, y = forward-lobe weight, z = its Henyey-Greenstein g, w = the strand glint's weight (particles.wgsl rainPhase)
   rainCfgB: vec4f,                // x = the glint lobe's own roughness (+ each emitter's angular half-size), y = its cap per light (× E × gain), z = × everything the drop scatters (gain), w = the TAIL's share of last frame's shade
   rainCfgC: vec4f,                // REFRACTION in the splat (particles_draw.wgsl rainFragment, through refract_common.wgsl): x = on 0‥1 (× the streak's coverage as an 'over') + 2 × round(100 × how much of the PICTURE a read taken beside the streak keeps, 0‥1: 1 = the fetch as it is; 0 = its light only — no colour of its own, its luminance half way to the pixel's own, its offset's length scattered per pixel and frame: rainRefractTap), y = the refracted ray's reach behind the drop (m: the scene depth behind the pixel less the drop's own, capped here), z = each fetch's display-luminance clamp, w = depth guard (a fetch this much nearer the eye than the drop is not behind it)
@@ -224,19 +224,19 @@ fn rainOverWall(P: vec3f) -> bool {
 /** SNOW PAST THE LEVEL'S RIM (rust/game_rules/src/weather_kinds SNOW_LOOK.past; the maintainer, of a view by the pass's edge: "snowfall missing from bottom left of image"). A flake
  *  high in the air is drawn well off its own ground, toward the camera's foot: with the rim on the camera's side, the flakes that would show over the near part of
  *  the picture are in the air PAST the rim, and none was ever there (births, the step and the splat all kept to the world's rectangle). snowPast() = how many metres
- *  past the rim the snow goes on falling: rust/game_rules/src/snow_fx hands it over as frame.weatherE.w NEGATIVE (that slot is the lattice rain's share, asked `> 0.0` by its
- *  readers; a snow level has no lattice rain, and rust/game_rules/src/rain_fx stands down on one before it reads the slot). 0 = no flake past the rim: the build as it was. */
+ *  past the rim the snow goes on falling: src/picture/snow/fx.ts hands it over as frame.weatherE.w NEGATIVE (that slot is the lattice rain's share, asked `> 0.0` by its
+ *  readers; a snow level has no lattice rain, and src/picture/rain.ts stands down on one before it reads the slot). 0 = no flake past the rim: the build as it was. */
 fn snowPast() -> f32 { return max(-frame.weatherE.w, 0.0); }
 /** … may a FLAKE be in the air over ground point p: inside the world's rim grown by snowPast() and under no roof — rainOutdoors' own answer for p, or for the rim
  *  beside it when p is past it (one roof rule: a roof's dry column runs straight out from the rim). With 0 it is rainOutdoors to the letter. Nothing LIES past the
- *  rim (a wisp, a grain, a kick, a blast's throw are born by rainOutdoors): only the sky's falling snow. rust/game_rules/src/snow_fx flakeOpen is this on the CPU. */
+ *  rim (a wisp, a grain, a kick, a blast's throw are born by rainOutdoors): only the sky's falling snow. src/picture/snow/fx.ts flakeOpen is this on the CPU. */
 fn flakeOpen(p: vec2f) -> bool {
   let m = snowPast();
   if (m <= 0.0) { return rainOutdoors(p); }
   return all(p > WORLD_MIN.xz - vec2f(m)) && all(p < WORLD_MAX.xz + vec2f(m)) && rainOutdoors(clamp(p, WORLD_MIN.xz + vec2f(0.26), WORLD_MAX.xz - vec2f(0.26)));
 }
 /** … and is p past the world's rectangle (no box, no air field out there) */
-const PAST_RIM_IN = 0.5; const PAST_RIM_OUT = 0.8;   // shares of the view's disc between which the fall past the rim thins to nothing (rust/game_rules/src/snow_fx PAST_TAPER holds the same two)
+const PAST_RIM_IN = 0.5; const PAST_RIM_OUT = 0.8;   // shares of the view's disc between which the fall past the rim thins to nothing (src/picture/snow/fx.ts PAST_TAPER holds the same two)
 fn pastWorld(p: vec3f) -> bool { return p.x < WORLD_MIN.x || p.z < WORLD_MIN.z || p.x > WORLD_MAX.x || p.z > WORLD_MAX.z; }
 /** … and is SURFACE point P under one of the two roofs — inside the interior / annex footprint AND below the ceiling slab (a wall's top or a unit standing on the roof is in the open).
  *  Rain only exists outdoors, so nothing under a roof can ever be seen THROUGH a drop: the top-down raster looks straight through the NoPrimary roof and lays the lit rooms a few
@@ -254,8 +254,8 @@ fn rainRoofed(P: vec3f) -> bool {
  *  (weather.ts ownRoofs; the packed third / fourth to 0.2 m), so the walls' OUTER FACES, the doors in them and the walls' tops all counted as indoors: snow fell in
  *  front of a man at the wall's foot and stopped dead at the wall behind him. For snow the rule asks what it means — is this surface UNDER the roof: inside a roof's
  *  rectangle drawn in by FLAKE_WALL_IN (past the outer face and the door in the wall, short of the inner face) AND below the ceiling (a wall's top is in the open).
- *  The rooms stay dry to the eye as before; the world's rim as before. rust/game_rules/src/snow_fx flakeHidden is this function on the CPU. */
-const FLAKE_WALL_IN: f32 = 0.2;   // m (rust/game_rules/src/snow_fx FLAKE_WALL_IN: the same number)
+ *  The rooms stay dry to the eye as before; the world's rim as before. src/picture/snow/fx.ts flakeHidden is this function on the CPU. */
+const FLAKE_WALL_IN: f32 = 0.2;   // m (src/picture/snow/fx.ts FLAKE_WALL_IN: the same number)
 fn flakeRectIn(R: vec4f, p: vec2f) -> bool { return p.x >= R.x + FLAKE_WALL_IN && p.y >= R.y + FLAKE_WALL_IN && p.x <= R.z - FLAKE_WALL_IN && p.y <= R.w - FLAKE_WALL_IN; }
 /** UNDER THE ROOFS, WHICHEVER SLAB (the prelude's SNOW_UNDER, rust/game_rules/src/weather_kinds SNOW_LOOK.under). flakeRectIn draws each roof's rectangle in by itself, so on the
  *  line where two slabs of one building meet neither's holds and a strip two insets wide was open to snow: the floor along that wall's foot, the floor of a doorway in
@@ -264,8 +264,8 @@ fn flakeRectIn(R: vec4f, p: vec2f) -> bool { return p.x >= R.x + FLAKE_WALL_IN &
  *  wide about it all roofed (common.wgsl wxRoofed: any of the level's roofs) — for a rectangle alone that is flakeRectIn to the letter. A top takes the snow only
  *  within FLAKE_TOP_IN of the roofs' edge: an outer wall's (a quarter metre thick under a roof that overhangs it by centimetres, so the wall's own inset would dry
  *  its inner half). What stands ABOVE the ceiling's plane (nothing does today) is in the open, as it was. FIVE POINTS, not the whole square: a gap in the roofs
- *  narrower than 2 d that falls between the corners is not seen (none on a level today). rust/game_rules/src/snow_fx flakeUnder / flakeHiddenUnder are these on the CPU. */
-const FLAKE_TOP_IN: f32 = 0.5;   // m (rust/game_rules/src/snow_fx FLAKE_TOP_IN: the same number)
+ *  narrower than 2 d that falls between the corners is not seen (none on a level today). src/picture/snow/fx.ts flakeUnder / flakeHiddenUnder are these on the CPU. */
+const FLAKE_TOP_IN: f32 = 0.5;   // m (src/picture/snow/fx.ts FLAKE_TOP_IN: the same number)
 fn flakeUnder(p: vec2f, d: f32) -> bool { return wxRoofed(p) && wxRoofed(p + vec2f(d, d)) && wxRoofed(p + vec2f(-d, d)) && wxRoofed(p + vec2f(d, -d)) && wxRoofed(p - vec2f(d, d)); }
 fn flakeHidden(P: vec3f) -> bool {
   let q = P.xz;
@@ -277,21 +277,21 @@ fn flakeHidden(P: vec3f) -> bool {
   return r;
 }
 // the rain kind's constants shared by the step (particles.wgsl rainStep) and the splat (particles_draw.wgsl rainVertex / rainFragment)
-/** is this frame a snow level's — the rain kind's particles are FLAKES (rust/game_rules/src/snow_fx)? The page was opened on a level built for snow (the prelude's WX_SNOW: every
+/** is this frame a snow level's — the rain kind's particles are FLAKES (src/picture/snow/fx.ts)? The page was opened on a level built for snow (the prelude's WX_SNOW: every
  *  flake statement is dead code on any other page) AND no rain is falling: a snow level's weather hands rain 0, and the office standing in for a level file that failed
  *  to load rains as it always did, drop for drop. */
 fn snowNow() -> bool { return lv(WX_SNOW) && frame.weatherA.x <= 0.0; }
-/** … and is this rain-kind particle a WISP of blowing snow (rust/game_rules/src/snow_fx SNOWWISPS — the prelude's SNOW_WISPS: dead code on every other page)? It is filed with
+/** … and is this rain-kind particle a WISP of blowing snow (src/picture/snow/fx.ts SNOWWISPS — the prelude's SNOW_WISPS: dead code on every other page)? It is filed with
  *  aspect 2 (every drop and flake: 1). A wisp's numbers: em.rainCfgC.yzw = × the air's speed, the streak's weight, × the light (the refraction's slots — a snow level's
  *  refraction is off, nothing else reads them there); its colour word = stretch s ÷ 2, meander m/s ÷ 4, gust patch m ÷ 32. */
 fn wispIs(aux: u32) -> bool { return lv(SNOW_WISPS) && snowNow() && unpack2x16float(aux).x > 1.5 && unpack2x16float(aux).x < 2.5; }
-/** … or a GRAIN of blown snow near the view (rust/game_rules/src/snow_fx SNOWGRAINS — the prelude's SNOW_GRAINS: dead code on every other page)? Filed with aspect 3. A grain
+/** … or a GRAIN of blown snow near the view (src/picture/snow/fx.ts SNOWGRAINS — the prelude's SNOW_GRAINS: dead code on every other page)? Filed with aspect 3. A grain
  *  is not born and spent like a flake: its slot lives as long as a flake's, and in that time the grain is picked up off the ground, flies a second or two on the
  *  air field (render/airField.ts) and lies again, over and over (particles.wgsl grainStep). What it keeps between frames, in the rows a flake does not use:
  *  spin = the age its flight began (under 0: on the ground, nothing drawn), omg = the age it ends (f32 bits), ori = how many tries it has had (its dice),
  *  omgZ = what the splat shows of its light this frame, 0‥1 (f32 bits: its weight × its fade in and out × the radius' rim). */
 fn grainIs(aux: u32) -> bool { return lv(SNOW_GRAINS) && snowNow() && unpack2x16float(aux).x > 2.5; }
-// (how long a dash a grain is drawn as is live: rust/game_rules/src/snow_fx SNOWGRAINS shutter / dash / tail → grain.e → packed into the grain by its step — particles_draw.wgsl grainVertex)
+// (how long a dash a grain is drawn as is live: src/picture/snow/fx.ts SNOWGRAINS shutter / dash / tail → grain.e → packed into the grain by its step — particles_draw.wgsl grainVertex)
 const GRAIN_MIN_PX: f32 = 0.6;       // half-width floor on screen (thinner than this it is drawn this wide and dimmed by as much) …
 const GRAIN_MAX_PX: f32 = 1.6;       // … and ceiling: fine snow is never a blob, however near the lens
 const GRAIN_SHADE_MAX: f32 = 48.0;   // the most light a grain carries, a channel (scene units, before its weight and the exposure): a grain a hand from a lamp — past that it is clamped, never infinite
@@ -324,7 +324,7 @@ fn sparkRadiance(u: f32, hold: f32, brightness: f32) -> vec3f {
   return vec3f(e, e * (0.35 + 0.5 * f), e * (0.08 + 0.25 * f * f));
 }
 
-// STEAM (rust/game_rules/src/snow_breath; render/particles.ts EmitOpts.steam): a DUST puff whose colour word's top byte is under 255 is warm breath — that byte ÷ 254 is × its
+// STEAM (src/picture/snow/breath.ts; render/particles.ts EmitOpts.steam): a DUST puff whose colour word's top byte is under 255 is warm breath — that byte ÷ 254 is × its
 // peak opacity, and it rises where a puff of dust settles. Every other record carries 255 there: 1 from this, and nothing of theirs is changed.
 fn steamIs(color: u32) -> bool { return (color >> 24u) != 255u; }
 fn steamOf(color: u32) -> f32 { return select(1.0, f32(color >> 24u) * (1.0 / 254.0), steamIs(color)); }

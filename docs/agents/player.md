@@ -35,7 +35,7 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | `slotsetup/` | the setup a gun's digit opens |
 | `launcher/`, `he40/`, `shotgun/` | the sponge round; the 40 mm; a shell's pellets and a lock taken with them |
 | `throwables/`, `throwplan/`, `frag/` | things in the air and `throwables_solve`; a flight asked ahead; the frag, `blast`, `throw_reach` |
-| `kit/`, `kitload/`, `loadout/`, `issue/`, `gear/` | the card (`kit_player`); the two scores; lent rounds; a mission's size; a level's wall charges; the issued kit's words |
+| `kit/`, `kitload/`, `loadout/`, `issue/`, `gear/` | the card (`kit_player`); the two scores; a mission's size; a level's wall charges; the issued kit's words |
 | `bigkit/`, `packside/`, `inhand/` | hammer and breaching shotgun, Sam's beat with them; what stands where on a pack; what sits where in a hand |
 | `hands/`, `handwork/`, `workstow/`, `workthings/` | bodies and a leaf by hand; a hand on a thing; the gun put away for a job; a teammate's jobs |
 | `handslot/`, `handring/` | the empty-hands key; the ring |

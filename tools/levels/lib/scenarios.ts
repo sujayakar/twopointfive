@@ -224,7 +224,7 @@ export interface LessonStep {
   line: string;
   /** the line while a gun's key again opens its setup (rust/game_rules/src/slotsetup SLOTSETUP.on), where the step's keys are others then (absent: `line`) */
   setupLine?: string;
-  /** the line while his own actions are a ring (rust/game_rules/src/handring HANDRING.on), where the step's keys are others then: the whistle has no key of its own
+  /** the line while his own actions are a ring (rust/game_types/src/knobs/handring.rs HANDRING.on), where the step's keys are others then: the whistle has no key of its own
    *  there, it is the ring's last wedge (absent: `line`) */
   ringLine?: string;
   /** the line while a charge his own hands set goes off from his own actions (rust/game_rules/src/ownblow OWNBLOW.on), where the step names the squad's key for

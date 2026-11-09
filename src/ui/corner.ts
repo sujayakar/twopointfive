@@ -1,4 +1,4 @@
-// THE CORNER PANEL IS THREE THINGS (rust/game_rules/src/handring HANDRING.corner): the objective, what a quick press of his own key does, what a quick press of
+// THE CORNER PANEL IS THREE THINGS (rust/game_types/src/knobs/handring.rs HANDRING.corner): the objective, what a quick press of his own key does, what a quick press of
 // the squad's key does. Each is there only while it has something to say, and nothing else is: no heading over a row (the thing's name and state),
 // no line per man of the squad, no counts of what the squad carries, no alternative under a key's line.
 //

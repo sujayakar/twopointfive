@@ -39,7 +39,7 @@ In `rust/game_rules/src/`, with types and numbers of the same name in `rust/game
 
 Beside these: weapon lights are `team_lit`, `light_ruled`, `lit_place` and `wall_dark` in `rust/game_rules/src/guards/p_05.rs`, numbers in `LightsK`.
 Corners and the floor search are in `rust/game_rules/src/doortools/p_07.rs` and `p_08.rs`. Openings dealt to stopped men are `cover/`, the team's pace
-`teampace/` (`squad.md`). `teamfeel/` holds a type nothing reads.
+`teampace/` (`squad.md`).
 
 The page draws: `rust/game_draw/src/lights.rs` hands over the infrared lights, `src/render/lights.ts` caps them.
 

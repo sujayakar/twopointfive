@@ -60,7 +60,7 @@ export interface DecalOpts {
   tangent?: Vec3;
   /** kind parameter (see Decal.param); defaults per kind */
   param?: number;
-  /** laid only for the picture (rust/game_rules/src/look_decals): in a full ring it goes before any mark play laid and never pushes one out — the marks play laid are the same
+  /** laid only for the picture: in a full ring it goes before any mark play laid and never pushes one out — the marks play laid are the same
    *  marks with it and without it */
   look?: boolean;
   /** ride this (dynamic) box: pos / normal / tangent are converted into its local frame now and follow it from then on, and only ITS pixels take the mark */
