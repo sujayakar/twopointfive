@@ -1,0 +1,143 @@
+[
+ {
+  "w": 1280,
+  "h": 720,
+  "method": "realtime",
+  "scale": 0.8,
+  "name": "q-pass",
+  "dist": 27,
+  "look": [
+   -1.5,
+   1,
+   -0.6
+  ],
+  "yaw": 0.3,
+  "pitch": 0.68,
+  "samples": 200,
+  "run": true,
+  "tick": 200,
+  "hour": 17.6,
+  "snow": 1,
+  "snowfall": 0.7,
+  "cut": 7.2
+ },
+ {
+  "w": 1280,
+  "h": 720,
+  "method": "realtime",
+  "scale": 0.8,
+  "name": "q-lodge",
+  "dist": 13,
+  "look": [
+   -7.6,
+   1.4,
+   -2.6
+  ],
+  "yaw": 0.25,
+  "pitch": 0.45,
+  "samples": 160,
+  "run": true,
+  "tick": 200,
+  "hour": 17.6,
+  "snow": 1,
+  "snowfall": 0.7,
+  "cut": 7.2
+ },
+ {
+  "w": 1280,
+  "h": 720,
+  "method": "realtime",
+  "scale": 0.8,
+  "name": "q-customs",
+  "dist": 12,
+  "look": [
+   4.4,
+   0.9,
+   1.0
+  ],
+  "yaw": 0.35,
+  "pitch": 0.5,
+  "samples": 160,
+  "run": true,
+  "tick": 200,
+  "hour": 17.6,
+  "snow": 1,
+  "snowfall": 0.7,
+  "cut": 7.2
+ },
+ {
+  "w": 1280,
+  "h": 720,
+  "method": "realtime",
+  "scale": 0.8,
+  "name": "q-all",
+  "dist": 50,
+  "look": [
+   0,
+   3,
+   -3
+  ],
+  "yaw": 0.3,
+  "pitch": 0.5,
+  "samples": 120,
+  "run": true,
+  "tick": 200,
+  "hour": 17.6,
+  "snow": 1,
+  "snowfall": 0.7,
+  "cut": 1000000000.0
+ },
+ {
+  "w": 1280,
+  "h": 720,
+  "method": "realtime",
+  "scale": 0.8,
+  "name": "q-day",
+  "dist": 26,
+  "look": [
+   0,
+   0.8,
+   0
+  ],
+  "yaw": 0.3,
+  "pitch": 0.7,
+  "samples": 160,
+  "run": true,
+  "tick": 200,
+  "hour": 11,
+  "snow": 1,
+  "snowfall": 0,
+  "cut": 7.2
+ },
+ {
+  "w": 1280,
+  "h": 720,
+  "method": "realtime",
+  "scale": 0.8,
+  "name": "q-play",
+  "dist": 12,
+  "pitch": 0.8,
+  "yaw": 0.3,
+  "samples": 220,
+  "run": true,
+  "tick": 200,
+  "hour": 20.5,
+  "snow": 1,
+  "snowfall": 0.7,
+  "cut": 7.2,
+  "play": {
+   "at": [
+    -3.0,
+    0.05,
+    4.6
+   ],
+   "x": -0.75,
+   "z": 0.62,
+   "aim": [
+    -8,
+    1.2,
+    0
+   ]
+  }
+ }
+]

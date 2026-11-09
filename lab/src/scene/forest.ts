@@ -26,7 +26,7 @@ function fernCrown(seed: number): Cluster {
   } return { leaves, kind: 0 };
 }
 /** a flat bough of a redwood: a stem, side twigs in its plane, short leaves in two rows along each */
-function bough(seed: number, per = 4, size = 0.075): Cluster {
+export function bough(seed: number, per = 4, size = 0.075): Cluster {
   const q = rng(seed), leaves: Leaf[] = []; const leaf = (p: V3, d: V3, size: number) => { const t = norm(d), n0: V3 = norm([(q() - 0.5) * 0.5, 1, (q() - 0.5) * 0.5]), k = n0[0] * t[0] + n0[1] * t[1] + n0[2] * t[2]; leaves.push({ at: add(p, mul(t, size)), n: norm(sub(n0, mul(t, k))), t, size, tone: q() }); };
   for (let i = 0; i < 15; i++) { const t = (i + 0.5) / 15, from: V3 = [-0.95 + 1.9 * t, -0.18 * t * t, 0], len = 0.62 * Math.sin(Math.PI * Math.min(0.98, 0.15 + t * 0.85)) + 0.12; for (const s of [-1, 1]) { const d: V3 = norm([0.62, -0.10 - 0.1 * q(), s]); for (let j = 1; j <= per; j++) { const p = add(from, mul(d, len * j / per)); for (const w of [-1, 1]) leaf(p, [d[0] * 0.8 - d[2] * w * 0.6, d[1], d[2] * 0.8 + d[0] * w * 0.6], size * (1 + 0.27 * q())); } } } return { leaves, kind: 0 };
 }

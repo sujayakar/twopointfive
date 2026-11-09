@@ -23,6 +23,6 @@ fn phase(mu: f32) -> f32 { let g = 0.62; return 0.35 + 0.65 * (1.0 - g * g) / po
   for (var q = 0u; q < 2u; q++) { if (who[q] < 0 || best[q] < 1e-4) { continue; } let a = aimLamp(u32(who[q]), at, vec2f(0.5)); L += a.E * (phase(dot(rd, a.dir)) * select(0.055, 0.22, snow)) * lum(visible(at, a.dir, 1e-3, a.dist - 0.05)); }
   let px = distance(at, frame.camPos.xyz) * 2.0 * length(frame.camUp.xyz) / frame.size.w; let edge = 1.0 - smoothstep(0.75, 1.0, away); let near = smoothstep(0.8, 2.4, distance(at, frame.camPos.xyz));
   if (splash > 0.0) { let u = since / 0.22; let r = (0.012 + 0.055 * sqrt(u)) * size; o.head = vec4f(at, r); o.tail = vec4f(u, 0.0, 0.0, 1.0); o.light = vec4f(L, 0.20 * (1.0 - u) * edge * near); drops[i] = o; return; }
-  let wide = select(0.0028, 0.0075, snow) * size; let w = max(wide, 0.85 * px); let long = select(min(sp * (1.0 / 34.0) * (0.55 + 0.9 * g.w), run), w * 1.2, snow);
+  let wide = select(0.0028, 0.013, snow) * size; let w = max(wide, 0.85 * px); let long = select(min(sp * (1.0 / 34.0) * (0.55 + 0.9 * g.w), run), w * 1.2, snow);
   o.head = vec4f(at, w); o.tail = vec4f(at - d * long, 0.0); o.light = vec4f(L, min(1.0, 3.2 * wide / w) * (0.35 + 0.5 * h.w) * edge * near); drops[i] = o;
 }
