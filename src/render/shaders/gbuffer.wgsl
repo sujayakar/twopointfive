@@ -199,10 +199,10 @@ fn cubeNormal(vi: u32) -> vec3f {
 }
 
 // ---------------- skinned characters ----------------
-// The rows past the tints are the WET look (rust/game_rules/src/wet → anim/characters.ts setInstance; all zero for a dry man or with settings.wetChars off — fsSkin then
+// The rows past the tints are the WET look (rust/game_rules/src/air/wet.rs → anim/characters.ts setInstance; all zero for a dry man or with settings.wetChars off — fsSkin then
 // stores exactly what it always stored): wet = (coat 0‥1, beads 0‥1, the rain rate the drops were fed at, a per-man clock offset in s), wetK = (bead density,
 // bead radius m, run / trail length m, coat roughness soaked), wetK2 = (coat roughness dry, darken exponent, darken multiplier, specular gain).
-struct CharInst { tint: vec3f, jointOffset: u32, tint2: vec3f, owner: u32, wet: vec4f, wetK: vec4f, wetK2: vec4f, wetK3: vec2f, parts: u32, pad: u32 };   // wetK3 = (waterline: bind-pose m above the sole the coat reaches, the wicking band above it, 0, 0) — rust/game_rules/src/wet wetLineRow
+struct CharInst { tint: vec3f, jointOffset: u32, tint2: vec3f, owner: u32, wet: vec4f, wetK: vec4f, wetK2: vec4f, wetK3: vec2f, parts: u32, pad: u32 };   // wetK3 = (waterline: bind-pose m above the sole the coat reaches, the wicking band above it, 0, 0) — rust/game_rules/src/air/wet.rs wetLineRow
 @group(1) @binding(1) var<storage, read> jointMats: array<mat4x4f>;
 @group(1) @binding(2) var<storage, read> chars: array<CharInst>;
 // CHARACTER MATERIALS (render/charMaterials.ts → anim/characters.ts setMaterials): CHAR_MAT_ROWS vec4 rows per instance. Row 0 = (on, grime height, grime band, crease
@@ -430,10 +430,10 @@ fn packWet(rough: f32, gain: f32, tilt: vec2f) -> u32 {
   }
   let soak = select(1.0, v.fin.z, slotted);   // how much of the rain's darkening this material takes (1 with no slots: every factor below is then the one it always was)
   let W = v.wet;
-  // the WATERLINE (wetK3, rust/game_rules/src/wet wetLineRow): the coat — and any drops — only below it, easing to nothing across the wicking band above; the rain's line sits far over
+  // the WATERLINE (wetK3, rust/game_rules/src/air/wet.rs wetLineRow): the coat — and any drops — only below it, easing to nothing across the wicking band above; the rain's line sits far over
   // his head (all of him, exactly as before there was one), a wading depth wets him to there and leaves the rest of him the dry man he was
   let below = 1.0 - smoothstep(v.wetK3.x, v.wetK3.x + max(v.wetK3.y, 0.005), v.mp.y);
-  if ((W.x > 0.0 || W.y > 0.0) && below > 0.0) {   // wet (rust/game_rules/src/wet) — a dry man, or the dry part of one, never enters: those pixels are stored exactly as they always were
+  if ((W.x > 0.0 || W.y > 0.0) && below > 0.0) {   // wet (rust/game_rules/src/air/wet.rs) — a dry man, or the dry part of one, never enters: those pixels are stored exactly as they always were
     let K = v.wetK; let K2 = v.wetK2;    // K = (bead density, bead radius, run length, film roughness) · K2 = (dry-cloth roughness, darken exponent, darken multiplier, specular gain)
     let fp = distance(v.wp, frame.camPos) * 2.0 * frame.post.w * frame.invScreen.y;   // the pixel's footprint on him (m)
     let S = wetSurface(v.mp);

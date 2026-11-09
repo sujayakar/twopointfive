@@ -29,9 +29,9 @@ is drawn is `render.md`.
 | `tools/qa/map-plan.ts` | a level's plan as an SVG |
 | `src/scene/materials.ts`, `stuff.ts`, `gwotPalette.ts`, `look.ts`, `markings.ts`, `shapes.ts`, `round.ts`, `cut.ts` | made of and does, the palette, the men's dress, face marks, shapes |
 
-In `rust/game_rules/src/`: `scene_level/`, `scene_level_data/` and `scene_scenarios/` are the records; `scene_materials/`, `scene_stuff/` and
-`scene_markings/` what a box is and wears; `scene_shapes/` and `scene_cut/` its form; `scene_look/` the men's dress; `scene_scenario_list/` the
-mission rows; `levelfit/` refuses a level too big for the game's lists; `lightswitch/`, `carlamps/` and `hours/` a level's switches, vehicle lamps and
+In `rust/game_rules/src/`: `scene_level/`, `scene_level_data/` and `scene_scenarios.rs` are the records; `scene_materials.rs`, `scene_stuff.rs` and
+`scene_markings.rs` what a box is and wears; `scene_shapes/` and `scene_cut.rs` its form; `scene_look.rs` the men's dress; `scene_scenario_list/` the
+mission rows; `levelfit.rs` refuses a level too big for the game's lists; `lightswitch.rs`, `carlamps.rs` and `hours/` a level's switches, vehicle lamps and
 street lamps. `rust/game_draw/src/traffic.rs` makes the wear map.
 
 ## How it works
@@ -62,7 +62,7 @@ hand. A top-level `marks[]` row is a named spot where a person stands to use a t
 **Lights and lamps.** `lights[]` are point, spot or directional; `group` and `mains` say what can put one out, `fixture` names its glowing box.
 `switchables[]` are glowing boxes on a switch. The directional light in group `exterior` is the moon, and an hour's sun goes in at its place.
 `lamps_out` puts out group `exterior` at an hour whose `lamps` is false. No file places a wall switch: `room_light` picks the mains lights a plate
-works. `tools/levels/lib/carLamps.ts` and `carlamps/` find a vehicle's lamps by what the kits write. Guards read the light the picture shows, so a
+works. `tools/levels/lib/carLamps.ts` and `carlamps.rs` find a vehicle's lamps by what the kits write. Guards read the light the picture shows, so a
 lamp moved for the look changes the play.
 
 **Furniture and props.** A fixed thing is plain boxes. A loose thing is a `props[]` row: `kind`, `mass`, `parts`, its footprint fitted by
@@ -82,7 +82,7 @@ else: a mud partition a charge cuts beside a mud shell. `finish` is usually `ski
 
 **The look.** The default kit is `gwotKit.ts`; `gwotPalette.ts` names its paints. `look_dress` is true on any `?levelFile=` but the office and
 `office-*`, and picks the cast (`place_of`). `KEPT`, 0 to 1, is `meta.kept`: how kept the place is, for the picture. A mark on a face is a
-`MarkingDef` bitmap (`tools/levels/lib/markingDefaults.ts`). `surfaces` is the footstep map `floor/` reads. Snow is a level's own, by name
+`MarkingDef` bitmap (`tools/levels/lib/markingDefaults.ts`). `surfaces` is the footstep map `floor.rs` reads. Snow is a level's own, by name
 (`snow_level`).
 
 **Roofs.** A roof over walkable floor is a slab flagged `NoPrimary` (`ceiling` in `levelKit.ts`), so the camera sees through it. `roofs_box` asks only

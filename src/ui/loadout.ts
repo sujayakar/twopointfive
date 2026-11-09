@@ -1,6 +1,6 @@
 // THE KIT STEP OF THE ONE STARTING PAGE (ui/startpage.ts mounts it in the mission list's sheet; the maintainer, 10-07: "a "loadout" screen or something like that
 // for picking how many squad members you want … think like mgsv did!"): you and a slot per teammate, how many come — none to four — and DEPLOY, which loads the
-// mission's own URL with the size on it (rust/game_rules/src/loadout squad_search: at the mission's own size it is the URL its row always loaded). The team and its rules are the desk's
+// mission's own URL with the size on it (rust/game_rules/src/outfit/loadout squad_search: at the mission's own size it is the URL its row always loaded). The team and its rules are the desk's
 // (src/view/desk.ts: `for`, then `team` at each paint that can have changed, and the presses `size` and `named`; read.ts TeamView); this file is the DOM and the keys. THE SOLO NIGHT comes through here too (kind 'solo': the team row is greyed at solo,
 // your own card is the only one) and Deploy loads `?solo`, where host/drawpage.ts puts your card on the plain night's player.
 //
@@ -397,7 +397,7 @@ const STYLE = `
 #loadout .lo-kit .kc-sub, #loadout .lo-kit .kc-pouch { font-family: var(--m-head); font-weight: 600; font-size: 11px; letter-spacing: 0.16em; }
 #loadout .lo-kit .kc-pips i { width: 12px; height: 12px; border-radius: 0; }
 #loadout .lo-kit .kc-pips i.on { background: var(--m-accent); }
-#loadout .lo-kit .kc-pips i.big { width: 30px; margin-left: 5px; }   /* (the big slot: rust/game_rules/src/kit BIGSLOT) */
+#loadout .lo-kit .kc-pips i.big { width: 30px; margin-left: 5px; }   /* (the big slot: rust/game_rules/src/outfit/kit BIGSLOT) */
 #loadout .lo-kit .kc-words { padding: 8px 4px 0; font-size: 11.5px; line-height: 1.4; border-top: 0; }
 #loadout .lo-kit .kc-row { display: grid; grid-template-columns: 64px minmax(0, 1fr); column-gap: 10px; align-content: start; padding: 7px 8px 7px 9px; background: rgba(var(--m-panel2-rgb),0.85); border: 1px solid rgba(var(--m-edge),0.16); border-left: 3px solid rgba(var(--m-edge),0.3); border-radius: 0; }
 #loadout .lo-kit .kc.focus .kc-row.sel { background: rgba(var(--m-sel-rgb),0.95); border-color: var(--m-accent); border-left-color: var(--m-accent); }

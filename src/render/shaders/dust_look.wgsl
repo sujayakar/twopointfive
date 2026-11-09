@@ -24,7 +24,7 @@ const DUST_SOFT_HI: f32 = 0.95;     // … and for all of it to be (the body, a 
 const DUST_VEIL: f32 = 0.05;        // density under which the veil frays (× 0.35‥1.65 by the noise): at it and above the field is kept
 const DUST_BILLOW: f32 = 0.4;       // 0 = the solver's field as it is · 1 = fully modulated by the billow noise
 const DUST_FULL_AT: f32 = 0.14;     // the mean of 1 − tint over a cell's smoke from which it is drawn fully as dust: the palest dust there is (drywall), undiluted
-const DUST_FIRE_AT: f32 = 0.035;    // SMOKE OF A FIRE (rust/game_rules/src/fire FIRE_LOOK_SMOKE.soot): a cell whose tint's blue is this far over its red is a fire's smoke and not dust. It keeps the tint, the billows and the lit side, and is NOT thinned where it ends nor frayed: a fire's column is 0.2 m wide, every sample of it is an edge, and (1) drew it at a tenth of itself. Every dust is warm or neutral, so no dust is read as this
+const DUST_FIRE_AT: f32 = 0.035;    // SMOKE OF A FIRE (rust/game_rules/src/air/fire.rs FIRE_LOOK_SMOKE.soot): a cell whose tint's blue is this far over its red is a fire's smoke and not dust. It keeps the tint, the billows and the lit side, and is NOT thinned where it ends nor frayed: a fire's column is 0.2 m wide, every sample of it is an edge, and (1) drew it at a tenth of itself. Every dust is warm or neutral, so no dust is read as this
 
 fn dustShapeAt(p: vec3f, v: f32, fine: bool, fire: f32) -> f32 {
   let t = frame.time;

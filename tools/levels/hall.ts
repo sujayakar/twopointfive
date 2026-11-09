@@ -3,7 +3,7 @@
 // the wing opens onto its near end, and every room but one has the hall for its only way in: the entry, and every stack after it, is made in those men's
 // view. The hall is itself a ROOM of the structure (its door: 'front') — a room clear shuts every door a structure room lists, so a gun put behind an open
 // door at the hall's end would be staged behind a shut one. The kit is AS ISSUED for every man — the file's `scenarios.issue`
-// block (rust/game_rules/src/kit kit_issue), no visit to the loadout screen. (It was built round a ballistic shield on the first teammate; the shield is gone from the
+// block (rust/game_rules/src/outfit/kit kit_issue), no visit to the loadout screen. (It was built round a ballistic shield on the first teammate; the shield is gone from the
 // game — the maintainer, 10-18 — and nobody has re-tuned the hall without it.)
 //
 //        x 9              20          22              32        37
@@ -45,7 +45,7 @@ import { lookMarks } from './lookMarks';
 
 const PLAIN_NOTES = 'The long hall: four rooms off one bare hall that two men hold from its dim far end; a room clear for the four, every man in the plain issue (scenarios.issue). Regenerate: bun run tools/levels/export.ts hall';
 
-/** THE ISSUE (rust/game_rules/src/kit kit_issue): every man as issued, whatever the machine keeps (an empty block: the plain issue cards). It handed the first
+/** THE ISSUE (rust/game_rules/src/outfit/kit kit_issue): every man as issued, whatever the machine keeps (an empty block: the plain issue cards). It handed the first
  *  teammate the ballistic shield until the shield left the game (10-18); since 10-15 the page has staged this level with the plain issue. */
 export const ISSUE: IssueData = { members: {} };
 
@@ -136,7 +136,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   const doors: LevelDoorDef[] = [
     { name: 'front', hinge: [9.0, 13.42], closedDir: Math.PI / 2, width: 1.16, exterior: true },
     { name: 'bunks', hinge: [14.02, 12.8], closedDir: 0, width: 1.16 },
-    // (the kit room's and the ready room's doors open OUT INTO THE HALL: a wedge or hauled furniture inside holds neither (rust/game_rules/src/doors), so from the
+    // (the kit room's and the ready room's doors open OUT INTO THE HALL: a wedge or hauled furniture inside holds neither (rust/game_rules/src/fittings/doors), so from the
     // hall they open by hand; 'link' opens into the ready room and so by hand from there into the store — rust/game_start levels second-way)
     { name: 'kit_room', hinge: [25.02, 12.8], closedDir: 0, width: 1.16, swing: 1 },
     { name: 'store', hinge: [18.02, 15.2], closedDir: 0, width: 1.16 },
@@ -227,7 +227,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   const STORE: Rect = { x0: 9.12, x1: 21.94, z0: 15.26, z1: 19.88 }, READY: Rect = { x0: 22.06, x1: 31.94, z0: 15.26, z1: 19.88 };
   const GUARD: Rect = { x0: 32.06, x1: 36.88, z0: 8.12, z1: 19.88 }, HALL: Rect = { x0: 9.12, x1: 31.94, z0: 12.86, z1: 15.14 };
 
-  // (TRIED AND TAKEN OUT, 10-11: a clear plan for 'front' with both points of domination on the door's own line — rust/game_rules/src/doortools pods2 reads a plan's two for the
+  // (TRIED AND TAKEN OUT, 10-11: a clear plan for 'front' with both points of domination on the door's own line — rust/game_rules/src/entries/doortools pods2 reads a plan's two for the
   //  first two men in. The first two then stand in file and only the front man's gun answers the far guns, while the third and fourth still fan out and one
   //  goes on up the hall alone (Blue Two lost 7 m in, in 15 of 24 runs): 24 seeds as shipped, 40 of 96 teammates up against 60 without the plan, the far guns' kills 38 against 12.)
 
@@ -301,7 +301,7 @@ export const NAME = 'hall';
 export const MATERIALS = GWOT_MATERIALS;
 export const NOTES = `${PLAIN_NOTES}${LOOK_NOTE}`;
 /** the company's pale sky blue. The palette has no paint this pale (its blues are deep ones), so it is a colour of this file's own and only decals wear it; the outside door's paint is this,
- *  darker: rust/game_rules/src/doors/paint.rs */
+ *  darker: rust/game_rules/src/fittings/doors/paint.rs */
 const SKY: Vec3 = [0.25, 0.55, 0.72];
 /** the firing line (x), the hall's two walls' faces (z), the line of the front door (z) and half its opening */
 const FIRE_X = 27.6, HALL_Z0 = 12.92, HALL_Z1 = 15.08, DOOR_Z = 14.25, DOOR_HALF = 0.45, FRONT_X = 9;

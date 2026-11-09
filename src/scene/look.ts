@@ -8,7 +8,7 @@
 /** THE MEN'S DRESS FOLLOWS THE PLACE (the maintainer, 10-10: "middle eastern enemies also don't make sense for the office level"): the look's cast and colour
  *  tables — local dress for the defenders, tan issue for the operators — are for the look's places. On the OFFICE family (the bundled office, relief, the texel
  *  variants) the men are dressed as they were before the look: the first cast file and its tables, and of its defenders only the ones dressed for a building
- *  (rust/game_rules/src/cast office_dress: no straw hat, no bandolier). Not a knob: it is a fact of the level the
+ *  (rust/game_rules/src/outfit/cast.rs office_dress: no straw hat, no bandolier). Not a knob: it is a fact of the level the
  *  PAGE booted on, said once at boot (host/drawpage.ts, before the cast is fetched); a tool leaves it true: the look's dress.
  *  Looks only. */
 let lookPlace = true;

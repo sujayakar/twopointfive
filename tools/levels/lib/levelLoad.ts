@@ -122,16 +122,16 @@ export function loadLevel(data: LevelData): Level {
     playerSpawn: V(data.mission.playerSpawn),
     routes, chokepoints, clearPlans,
     ...(civilians ? { civilians } : {}),
-    ...(data.volumes.length ? { volumes: data.volumes.map((v): VolumeDef => ({ name: v.id, kind: v.kind, c: V(v.c), h: V(v.h), ...(v.yaw !== undefined ? { yaw: v.yaw } : {}) })) } : {}),   // the level script's trigger volumes (rust/game_rules/src/director onEnter) — written iff authored, so a level with none loads key for key as before
-    ...(data.marks?.length ? { marks: data.marks.map((m): MarkDef => ({ name: m.id, pos: V(m.pos), ...(m.yaw !== undefined ? { yaw: m.yaw } : {}) })) } : {}),   // the level's named marks (rust/game_types/src/scene_ways, rust/game_rules/src/director) — written iff the file names any, so a level with none loads key for key as before
+    ...(data.volumes.length ? { volumes: data.volumes.map((v): VolumeDef => ({ name: v.id, kind: v.kind, c: V(v.c), h: V(v.h), ...(v.yaw !== undefined ? { yaw: v.yaw } : {}) })) } : {}),   // the level script's trigger volumes (rust/game_rules/src/missions/director onEnter) — written iff authored, so a level with none loads key for key as before
+    ...(data.marks?.length ? { marks: data.marks.map((m): MarkDef => ({ name: m.id, pos: V(m.pos), ...(m.yaw !== undefined ? { yaw: m.yaw } : {}) })) } : {}),   // the level's named marks (rust/game_types/src/scene_ways, rust/game_rules/src/missions/director) — written iff the file names any, so a level with none loads key for key as before
     sky: { zenith: V(data.sky.zenith), horizon: V(data.sky.horizon) },
     mission: { serverRoom: { x0: reach.area.x0, x1: reach.area.x1, z0: reach.area.z0, z1: reach.area.z1 }, entryDoor: reach.door, rack: { index: drive.rackIndex, front: V(drive.front), halfW: drive.halfW }, exfilDoor: exfil.door, exfilX: exfil.x, exfilZ: exfil.z, ...(exfil.out ? { exfilOut: [exfil.out[0], exfil.out[1]] as [number, number] } : {}) },
     ...(data.meta.markTexel !== undefined ? { markTexel: data.meta.markTexel } : {}),
     ...(data.meta.kept !== undefined ? { kept: data.meta.kept } : {}),
     ...(data.scenarios ? { scenarios: clone(data.scenarios) } : {}),   // (the runtime structs verbatim: lib/scenarios.ts)
   };
-  // data.surfaces → Level.surfaces, what rust/game_rules/src/floor reads for this level's footsteps: non-enumerable, so a Level compared or written as data is what it was
-  // (a file with none: rust/game_rules/src/floor's own office map).
+  // data.surfaces → Level.surfaces, what rust/game_rules/src/world/floor.rs reads for this level's footsteps: non-enumerable, so a Level compared or written as data is what it was
+  // (a file with none: rust/game_rules/src/world/floor.rs's own office map).
   if (data.surfaces) Object.defineProperty(level, 'surfaces', { value: clone(data.surfaces), enumerable: false, writable: true, configurable: true });
   return level;
 }
@@ -213,7 +213,7 @@ export function levelToData(level: Level, opts: LevelToDataOpts): LevelData {
     if (used.has(id)) { let k = 2; while (used.has(`${id}_${k}`)) k++; id = `${id}_${k}`; }
     used.add(id); ids[i] = id;
   }
-  // bits the runtime derives and may have OR'd into a Level it was handed (rust/game_rules/src/game sets AreaLit on lit fixtures; Emissive / Rot / Dynamic live in the GPU word
+  // bits the runtime derives and may have OR'd into a Level it was handed (rust/game_rules/src/tick/game sets AreaLit on lit fixtures; Emissive / Rot / Dynamic live in the GPU word
   // or on prop boxes) are not authored data: masked here so 'export the level the game is running' works off game.level too. Anything else unknown still throws.
   const DERIVED = BoxFlag.AreaLit | BoxFlag.Emissive | BoxFlag.Rot | BoxFlag.Dynamic | BoxFlag.Thin | BoxFlag.Bar;
   const boxes: BoxData[] = level.boxes.slice(0, n).map((b, i) => {

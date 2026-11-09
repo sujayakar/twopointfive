@@ -1,4 +1,4 @@
-//! THE KIT'S COLUMN (`view.kit`, rust/game_rules/src/kit `kit_view`): what a HUD is told of what a man carries, held to what the game says he carries and to the keys a player presses.
+//! THE KIT'S COLUMN (`view.kit`, rust/game_rules/src/outfit/kit `kit_view`): what a HUD is told of what a man carries, held to what the game says he carries and to the keys a player presses.
 use game::game::SlotKind;
 use game::view::{KitSlot, KitThing, KitView};
 use game::weapons::WeaponId;

@@ -34,7 +34,7 @@
 // 'Manageable with four' as the depot held it: the corridor and the hall are ≥ 3 m and bare; every door a stack forms on has ≥ 1.9 m of clear floor past a jamb
 // on the side it is taken from; the hostage room's two doors are 11 m apart on one wall (one screen), their stacks out of each other's line.
 // The shell is the office's (exterior walls on x 4 / 36, z 4 / 24) so what the game still keys to that footprint — the weather's INTERIOR rectangle, the world
-// bounds typed into the shaders — holds without a change. The footstep surface map is still rust/game_rules/src/floor's, the OFFICE's rectangles in code.
+// bounds typed into the shaders — holds without a change. The footstep surface map is still rust/game_rules/src/world/floor.rs's, the OFFICE's rectangles in code.
 // LIGHT is the cue and the balance: the lobby, most of the corridor, the records room and the back office are dark (a team in them is hard to see), the rooms that
 // hold a man show him under a panel (visa, kitchen, a dim waiting room, the suite), and the hall's north end — where a stack on the main door stands — is lit.
 // All lit, the scripted four lost more than half their men on the way in; this way round the approach is the team's and the doors are the fight.
@@ -457,7 +457,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   const SIDE: Vec3 = [29.1, 1.1, 17.0];    // … and on the side door, the south half's
   const scenarios: LevelScenarios = {
     rescue: {
-      // the four: the red pair in front, the blue pair a stride behind (rust/game_rules/src/rescue stages team.ops[0..3] in the squad's own order)
+      // the four: the red pair in front, the blue pair a stride behind (rust/game_rules/src/missions/rescue stages team.ops[0..3] in the squad's own order)
       team: { sam: [7.2, 0, 15.4], samYaw: Math.PI / 2, ops: [[5.9, 0, 14.7], [5.9, 0, 16.1], [4.85, 0, 14.7], [4.85, 0, 16.1]], opsYaw: Math.PI / 2 },
       room: { name: "consul's office", where: 'end of the corridor', door: 'suite', bounds: R.suite, lights: 'suite', doorAim: MAIN },
       side: { door: 'suite_side', hold: [29.1, 0, 17.0], from: { door: 'back', bounds: R.back }, pair: true },
@@ -506,7 +506,7 @@ export const MATERIALS = GWOT_MATERIALS;
 export const NOTES = `${PLAIN_NOTES}${LOOK_NOTE}`;
 const R = CONSULATE_ROOMS, SPLIT = CONSULATE_SPLIT;
 /** the carpets' plum. The palette has no paint of this hue (its reds are the depot's and the registry's), so it is a colour of this file's own and only decals
- *  wear it; the wainscot is the palette's dark madder. The outside doors' paint is this, lighter: rust/game_rules/src/doors/paint.rs */
+ *  wear it; the wainscot is the palette's dark madder. The outside doors' paint is this, lighter: rust/game_rules/src/fittings/doors/paint.rs */
 const PLUM: Vec3 = [0.15, 0.035, 0.075];
 const SKIN: Skin = {
   wall: 'mudLight', house: 'mudLight', inner: 'mudLight', frameOut: VARNISH, frameIn: VARNISH, dado: 'rugMadder', ground: 'gravel', verge: 'scrub', patches: 4,

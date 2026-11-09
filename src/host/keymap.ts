@@ -17,7 +17,7 @@
 // `keyText` READS FINISHED WORDS, and that is a guess: a cap standing alone is taken for the key unless the words round it say it is a place's letter ('room B',
 // 'Vault B', 'B wing', 'T-junction'); a digit only where the words say key ('then 3', '2 again'); the walk keys only in a list of keys. A line that hands the
 // HUD a code instead of a letter would need none of it: the lines are written all over the game, and that is a pass of its own.
-// A ROW THE BUILD GIVES NO KEY (`KEYMAP.qFree`, `FREED`): the wall hold's. Walking into a wall takes it and walking off it lets go (rust/game_rules/src/wallsnap `press`),
+// A ROW THE BUILD GIVES NO KEY (`KEYMAP.qFree`, `FREED`): the wall hold's. Walking into a wall takes it and walking off it lets go (rust/game_rules/src/stealth/wallsnap.rs `press`),
 // so its key is spare and Q is left for something else. The game goes on asking for 'KeyQ' and MEANS the wall hold by it, as every recording made before
 // does; what changed is the board: nothing on it gives that code until the player puts the row on a key here (Q itself, if he likes: a rebind like any
 // other, kept, and Reset takes it off again). Q pressed with the row unbound files nothing. OFF IN THE MODULE like the rest; the game page turns it on as
@@ -43,13 +43,13 @@
 // need all the other keys"): THE LISTED ORDERS MENU AND ITS KEY ARE GONE (no row, and the game asks for no such code; a kept 'KeyX' is a stranger's row and is dropped), and the who row
 // (code 'KeyT') has no key in the build, the way the wall hold's has none. A who row kept on a key from before keeps it, as he set it, and Options lists it only while it has one (ui/options.ts).
 // T pressed with the row unbound files nothing, and no line of words is rewritten for it. The page turns it on as it
-// boots with the ring that carries every order (rust/game_rules/src/cmdring `only`); `?qonly=0` = the who row on its key.
+// boots with the ring that carries every order (rust/game_rules/src/squad_orders/cmdring.rs `only`); `?qonly=0` = the who row on its key.
 // THE MENU'S LETTERS ARE ASLEEP (`KEYMAP.letGo`, `LETTERS`; only with `qOnly`): frag and clear on G, the big tool and the squad's smoke on H were rows of the
 // listed menu. While the ring carries every order those two have no key and nothing to bind, and G and H on the board are spare: a row put on one takes it from nobody.
-// Options never lists them. What is kept for one stays kept. The facts are LIVE: `onlyWhen` (the page hands it rust/game_rules/src/cmdring `only`) and `throwWhen`
+// Options never lists them. What is kept for one stays kept. The facts are LIVE: `onlyWhen` (the page hands it rust/game_rules/src/squad_orders/cmdring.rs `only`) and `throwWhen`
 // (rust/game_rules/src/quickthrow: G is the quick throw's key then, with no menu up, and stays awake: no list shows it there). OFF IN THE MODULE; the page turns it on as it boots, `?menuletters=0` = both rows on G and H as they were.
 // TWO MORE ROWS THE BUILD GIVES NO KEY (`KEYMAP.setFree`, `SETFREED`): the selector's (Z) and the weapon light's (L). Both are rows of the setup that the
-// digit of the gun in his hands opens (rust/game_rules/src/slotsetup), so neither needs a key of its own. As with the wall hold: the game goes on asking for 'KeyZ'
+// digit of the gun in his hands opens (rust/game_rules/src/outfit/slotsetup.rs), so neither needs a key of its own. As with the wall hold: the game goes on asking for 'KeyZ'
 // and 'KeyL', the board gives neither until the player puts the row on a key here, a kept entry is kept as he set it, and the letters are not the rows'
 // while they are unbound. The page turns it on as it boots; `?slotsetup=0` (the setup's own word) = Z and L as they were.
 // EMPTY HANDS ARE A SLOT ON BACKTICK (`KEYMAP.slotWhen`, `SLOT`; the rule is rust/game_types/src/handslot): while the page says the slot is on, its code ('Digit0') has
@@ -83,9 +83,9 @@ const FIXED = /^(Escape|Enter|NumpadEnter|Tab|Arrow(Up|Down|Left|Right)|F\d{1,2}
 export const KEYMAP = { /** false = the build's own keys, whatever is kept: the module's own stand (a tool, the editor, the viewer), and the page's under `?keybinds=0` */ on: false,
   /** the wall hold's row has no key in the build (the header's note). false = it is on Q: the module's own stand, and the page's under `?qfree=0` */ qFree: false,
   /** the squad's command (the quick order's row, code 'KeyB') has Q for its key in the build and B gives nothing: only with `qFree`. false = it is on B: the module's own stand, and the page's under `?bkey` */ qCmd: false,
-  /** the who row (code 'KeyT') has no key in the build: the squad's keys are the command key and the word's, and the ring is the menu (rust/game_rules/src/cmdring `only`, raised with it). false = it is on T: the module's own stand, and the page's under `?qonly=0` */ qOnly: false,
+  /** the who row (code 'KeyT') has no key in the build: the squad's keys are the command key and the word's, and the ring is the menu (rust/game_rules/src/squad_orders/cmdring.rs `only`, raised with it). false = it is on T: the module's own stand, and the page's under `?qonly=0` */ qOnly: false,
   /** the menu's letters sleep (the header's note). false = both rows on G and H: the module's own stand, and the page's under `?menuletters=0` */ letGo: false,
-  /** …only while the ring carries every order (the page hands it rust/game_rules/src/cmdring `only`; null = whenever `qOnly`) */ onlyWhen: null as (() => boolean) | null, /** …and G not while it is the quick throw's key (rust/game_rules/src/quickthrow; null = never) */ throwWhen: null as (() => boolean) | null,
+  /** …only while the ring carries every order (the page hands it rust/game_rules/src/squad_orders/cmdring.rs `only`; null = whenever `qOnly`) */ onlyWhen: null as (() => boolean) | null, /** …and G not while it is the quick throw's key (rust/game_rules/src/quickthrow; null = never) */ throwWhen: null as (() => boolean) | null,
   /** the selector's row and the weapon light's have no key in the build: both are rows of the gun's setup (the header's note). false = they are on Z and L: the module's own stand, and the page's under `?slotsetup=0` */ setFree: false,
   /** …only while this says so (the page hands it the setup's own switch as it stands, so a recording that plays with the setup off has Z and L back; null = always) */ setWhen: null as (() => boolean) | null,
   /** …only while this says so (the page hands it the walk-in switch; null = always) */ freeWhen: null as (() => boolean) | null,

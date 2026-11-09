@@ -1,4 +1,4 @@
-// The verdict's part of the end card (ui/debrief.ts hosts it; rust/game_rules/src/verdict made the record): how the run went, at a glance.
+// The verdict's part of the end card (ui/debrief.ts hosts it; rust/game_rules/src/missions/verdict.rs made the record): how the run went, at a glance.
 //
 //   THE HEAD  one word (won or lost), the clock, the par medal where the level has one, the four ways this mission can be won with the ones won lit
 //             (ui/verdictPips.ts), and one tick per try it took — hollow for a try lost or given up, filled for the win. A run played with a cheat on

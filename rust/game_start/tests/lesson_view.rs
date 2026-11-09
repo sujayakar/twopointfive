@@ -1,4 +1,4 @@
-//! WHAT THE HUD IS TOLD OF A LESSON (the view's `lesson` section: rust/game_rules/src/lesson `lesson_view`, src/rails `rails_view`): the step that is up, its
+//! WHAT THE HUD IS TOLD OF A LESSON (the view's `lesson` section: rust/game_rules/src/missions/lesson.rs `lesson_view`, src/rails `rails_view`): the step that is up, its
 //! line, its card and its arrow, the actions open, the men the line keeps clear of. The page words none of it again.
 use game::orders::Who;
 use game::view::{LessonView, RailsView};

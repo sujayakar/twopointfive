@@ -21,7 +21,7 @@ const STEP = 0.0008;
 const shifted = (a: V, code: number): number[] => [0, 1, 2].map(c => Math.round((a[c] + ((code >> (2 * c)) & 3) * STEP) * 1e4) / 1e4);
 const WET = (a: V): number[] => [a[0] * 0.5, a[1] * 0.5, a[2] * 0.5 * 1.04];
 
-/** an exact colour → the office paint's name (the first row of those numbers), as rust/game_rules/src/particle_fx built it */
+/** an exact colour → the office paint's name (the first row of those numbers), as rust/game_rules/src/breakage/particle_fx.rs built it */
 const officeBy = new Map<string, string>(); for (const [k, a] of Object.entries(OFFICE)) { const key = a.join(','); if (!officeBy.has(key)) officeBy.set(key, k); }
 /** an exact colour of the look's → what it stood for, as scene/gwotPalette.ts gwotSimOf built it, in its order */
 const lookBy = new Map<string, string>();
@@ -44,27 +44,27 @@ const STEEL_GREY = { chroma: 0.07, value: [0.3, 0.8] };
 const SCREEN_OFF = [0.02, 0.02, 0.025];
 export const lum = (a: V): number => 0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2];
 const near = (a: V, b: V, e: number): boolean => Math.abs(a[0] - b[0]) < e && Math.abs(a[1] - b[1]) < e && Math.abs(a[2] - b[2]) < e;
-const near3 = near;   // (rust/game_rules/src/destruction had its own, the same test)
+const near3 = near;   // (rust/game_rules/src/breakage/destruction had its own, the same test)
 
 /** WHAT THE RULES MADE OF A COLOUR, each as the code that read it wrote it (the file and the function are named a line) */
 export interface Was {
-  /** rust/game_rules/src/particle_fx: the office paint's name, its own or the one a look's paint stood for */
+  /** rust/game_rules/src/breakage/particle_fx.rs: the office paint's name, its own or the one a look's paint stood for */
   name: string | undefined;
-  /** rust/game_rules/src/particle_fx */
+  /** rust/game_rules/src/breakage/particle_fx.rs */
   surf: Surf;
-  /** rust/game_rules/src/furnblast break_class_of */
+  /** rust/game_rules/src/breakage/furnblast.rs break_class_of */
   breaks: BreakClass;
-  /** rust/game_rules/src/furnblast */
+  /** rust/game_rules/src/breakage/furnblast.rs */
   steel: boolean;
-  /** rust/game_rules/src/wallbreak index, wallpen stuff_of: the wall paints */
+  /** rust/game_rules/src/breakage/wallbreak index, wallpen stuff_of: the wall paints */
   wall: 'board' | 'screen' | undefined;
-  /** rust/game_rules/src/wallpen stuff_of: a named paint that is plasterboard */
+  /** rust/game_rules/src/guns/wallpen.rs stuff_of: a named paint that is plasterboard */
   board: boolean;
-  /** rust/game_rules/src/wallbreak index (cover), furnblast (a panel, a carton) */
+  /** rust/game_rules/src/breakage/wallbreak index (cover), furnblast (a panel, a carton) */
   cover: 'wood' | 'cardboard' | undefined;
-  /** rust/game_rules/src/furnblast STRUCT; and its one exception, white */
+  /** rust/game_rules/src/breakage/furnblast.rs STRUCT; and its one exception, white */
   struct: boolean; counter: boolean;
-  /** rust/game_rules/src/destruction index: not over 0.1 bright; over 0.7; the dead screen's colour to 0.004 */
+  /** rust/game_rules/src/breakage/destruction index: not over 0.1 bright; over 0.7; the dead screen's colour to 0.004 */
   casing: boolean; paper: boolean; screen: boolean;
   /** render/snowField.ts snowPaintOf: a snow paint to 0.002 */
   snow: SnowKind | undefined;
@@ -88,7 +88,7 @@ export function wasOf(albedo: V): Was {
 }
 /** is this colour, to the number, a row of the look's palette or a snow paint AS THEY STOOD (not a stand-in a hair off one)? */
 export const lookRowWas = (albedo: V): boolean => { const k = albedo.join(','); return Object.values(LOOK).some(a => a.join(',') === k) || Object.values(SNOW).some(a => a.join(',') === k); };
-/** … and of the lot's slab while the weather had soaked it (rust/game_rules/src/weather setWet halved its colour in place, and the rules read that) */
+/** … and of the lot's slab while the weather had soaked it (rust/game_rules/src/air/weather.rs setWet halved its colour in place, and the rules read that) */
 export const wasWetOf = (albedo: V): Was => wasOf(WET(albedo));
 
 /** the row each office paint's name is (scene/materials.ts) */

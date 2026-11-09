@@ -1,4 +1,4 @@
-//! ONE LIST DECIDES WHOSE MAN HE IS (rust/game_rules/src/owner/ `kept`): a rule takes a man only if nobody above it in the list has him, and whatever is below does not keep him from it.
+//! ONE LIST DECIDES WHOSE MAN HE IS (rust/game_rules/src/people/owner.rs `kept`): a rule takes a man only if nobody above it in the list has him, and whatever is below does not keep him from it.
 use game::ids::{GuardId, RoomfightDefId};
 use game::owner::{self, by, By, TASKERS};
 use game_start::play::{Opts, Play};

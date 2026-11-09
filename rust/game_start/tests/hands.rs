@@ -1,4 +1,4 @@
-//! HIS HANDS (rust/game_rules/src/guards/frame.rs `hands`): a change of magazine a man has begun goes on, whoever has the rest of him, and it is the same one
+//! HIS HANDS (rust/game_rules/src/people/guards/frame.rs `hands`): a change of magazine a man has begun goes on, whoever has the rest of him, and it is the same one
 //! for every man of either side.
 use game::game::GuardState;
 use game::orders::Who;
