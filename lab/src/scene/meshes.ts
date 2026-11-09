@@ -15,29 +15,37 @@ import { stones, relief, children, SIDE } from '../mesh/floor';
 
 /** how fine it is made (set before the scene is) */
 export const FINE = { /** triangles of a pebble: 20 · 4^n */ pebble: 5, shapes: 6, /** how often the column's net is split in four */ column: 2, /** squares a side */ yard: 12, kinds: 4, /** the relief's grid */ relief: 160 };
-export interface Meshes { data: Float32Array<ArrayBuffer>; list: { name: string; packed: Packed }[]; objects: PackedObject[]; weigh: Record<string, number>; ms: Record<string, number>; hero: Dag; depth: number }
+export interface Meshes { data: Float32Array<ArrayBuffer>; list: { name: string; packed: Packed }[]; squares: PackedObject[]; heroes: PackedObject[]; objects: PackedObject[]; weigh: Record<string, number>; ms: Record<string, number>; depth: number }
 
-export function makeMeshes(): Building {
-  const w = new World(), ms: Record<string, number> = {}, timed = <T>(k: string, f: () => T): T => { const t = performance.now(), v = f(); ms[k] = (ms[k] ?? 0) + performance.now() - t; return v; };
+/** everything that takes long: shapes, levels, packing. Plain data, so a worker may do it */
+export function buildMeshes(say: (what: string) => void = () => {}): Meshes {
+  const ms: Record<string, number> = {}, timed = <T>(k: string, f: () => T): T => { const t = performance.now(), v = f(); ms[k] = (ms[k] ?? 0) + performance.now() - t; return v; };
   const s = new Store(0), list: Meshes['list'] = [], keep = (name: string, d: Dag) => { const packed = timed('pack', () => packMesh(s, d)); list.push({ name, packed }); return packed; };
   // ---- pebbles, and the squares of floor made of them
-  const dags = Array.from({ length: FINE.shapes }, (_, i) => { const m = timed('shapes', () => pebble(11 + i * 7, FINE.pebble, [0.85, 0.95, 0.6, 1, 0.75, 0.35, 0.9, 0.5][i % 8]!)); return timed('levels', () => buildDag(m)); }), shapes = dags.map((d, i) => keep('pebble ' + i, d));
+  const dags = Array.from({ length: FINE.shapes }, (_, i) => { say(`Pebble ${i + 1} of ${FINE.shapes}`); const m = timed('shapes', () => pebble(11 + i * 7, FINE.pebble, [0.85, 0.95, 0.6, 1, 0.75, 0.35, 0.9, 0.5][i % 8]!)); return timed('levels', () => buildDag(m)); }), shapes = dags.map((d, i) => keep('pebble ' + i, d));
   const squares = Array.from({ length: FINE.kinds }, (_, k) => {
-    const st = stones(k, FINE.shapes), m = timed('relief', () => relief(st, dags, FINE.relief, -0.02)), d = timed('levels', () => buildDag(m, 48)), r = keep('relief ' + k, d);
+    say(`Floor ${k + 1} of ${FINE.kinds}`); const st = stones(k, FINE.shapes), m = timed('relief', () => relief(st, dags, FINE.relief, -0.02)), d = timed('levels', () => buildDag(m, 48)), r = keep('relief ' + k, d);
     return packObject(s, [{ error: 0, children: children(st, shapes) }, { error: 1.0 * SIDE / FINE.relief, children: [{ mesh: r, at: [0, 0, 0], rot: ID, scale: 1, tint: [1, 1, 1] }] }]);
   });
   // ---- the hero
-  const heroes = [false, true].map(drum => { const m = timed('shapes', () => column(drum, 0.011, FINE.column)), d = timed('levels', () => buildDag(m)), p = keep(drum ? 'drum' : 'column', d); return { d, o: packObject(s, [{ error: 0, children: [{ mesh: p, at: [0, 0, 0], rot: ID, scale: 1, tint: [1, 1, 1] }] }]) }; });
+  const heroes = [false, true].map(drum => { say(drum ? 'The fallen drum' : 'The column'); const m = timed('shapes', () => column(drum, 0.011, FINE.column)), d = timed('levels', () => buildDag(m)), p = keep(drum ? 'drum' : 'column', d); return packObject(s, [{ error: 0, children: [{ mesh: p, at: [0, 0, 0], rot: ID, scale: 1, tint: [1, 1, 1] }] }]); });
+  return { data: s.data, list, squares, heroes, objects: [...squares, ...heroes], weigh: s.weigh, ms, depth: Math.max(...list.map(l => l.packed.depth)) };
+}
+let ready: Meshes | null = null;
+/** meshes made elsewhere, for the next scene */
+export const give = (m: Meshes) => { ready = m; };
+export function makeMeshes(): Building {
+  const w = new World(), made = ready ?? buildMeshes(), { squares, heroes } = made;
   const place = (o: PackedObject, at: V3, rot: Rot, scale: number, mat: number, tint: V3) => { const half = [0, 1, 2].map(k => Math.max(Math.abs(o.mn[k]!), Math.abs(o.mx[k]!)) * scale + 1e-4) as V3; w.pieces.push({ at, rot, half, mat, flags: F.MESH, quad: [scale, 0, 0, 0], tint, mesh: o.row }); };
   const Y = FINE.yard, q = rng(5); for (let z = 0; z < Y; z++) for (let x = 0; x < Y; x++) place(squares[Math.floor(q() * FINE.kinds)]!, [(x - (Y - 1) / 2) * SIDE, 0, (z - (Y - 1) / 2) * SIDE], ID, 1, M.gravel!, [1.22, 1.22, 1.22]);
-  place(heroes[0]!.o, [0, -0.005, 0], rotY(0.35), 1, M.concrete!, [1.10, 1.08, 1.04]); place(heroes[1]!.o, [0.95, 0.285, 0.75], compose(rotY(-0.72), rotZ(0.03)), 1, M.concrete!, [1.10, 1.08, 1.04]);
+  place(heroes[0]!, [0, -0.005, 0], rotY(0.35), 1, M.concrete!, [1.10, 1.08, 1.04]); place(heroes[1]!, [0.95, 0.285, 0.75], compose(rotY(-0.72), rotZ(0.03)), 1, M.concrete!, [1.10, 1.08, 1.04]);
   // ---- what stands round it
   const h = Y / 2; w.box([-60, -1, -60], [60, -0.03, 60], M.soil!, { tint: [2.2, 2.1, 2.0] });
   w.box([-h - 0.3, -0.5, -h - 0.3], [h, 2.6, -h], M.plaster!, { tint: [1, 1, 1] }); w.box([-h - 0.3, -0.5, -h], [-h, 2.6, h], M.paint!, { tint: [1.0, 0.50, 0.11] });
   w.box([-h, -0.5, h], [h, 0.06, h + 0.2], M.concrete!); w.box([h, -0.5, -h], [h + 0.2, 0.06, h + 0.2], M.concrete!);
   w.lamp({ kind: 'rect', at: [0, 2.55, -h + 0.4], u: [1.2, 0, 0], v: [0, 0, 0.12], n: [0, -1, 0], radiance: [40, 30, 18], name: 'wall', on: 1, night: true });
   const solid = new Solid(w, []), people: Building['people'] = [], bodies = new Bodies(solid, [], people), player = new Player(w, solid, [2, 0.05, 2], []); settle(w.pieces.filter(p => !(p.flags & F.MESH))); solid.settle(); for (const [p, mask] of freeEdges(w.pieces.filter(p => !(p.flags & F.MESH)))) p.flags |= mask << 16; for (const p of w.moving) if (!p.quad && !p.planes?.length && !p.bend) p.flags |= 0xfff << 16;
-  w.meshes = { data: s.data, list, objects: [...squares, ...heroes.map(x => x.o)], weigh: s.weigh, ms, hero: heroes[0]!.d, depth: Math.max(...list.map(l => l.packed.depth)) };
+  w.meshes = made;
   return { hung: [], bodies, solid, player, world: w, doors: [], people, levels: [{ name: 'All of it', cut: 1e9, look: [0.2, 0.5, 0.2] }], pool: [0, 0, -1, -1], poolTop: -99, poolDeep: 0, place: PLACE };
 }
 const PLACE: Place = {

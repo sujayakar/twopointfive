@@ -15,9 +15,11 @@ var<private> meshError = 0.0; var<private> meshFoot = 0.0; var<private> meshLeve
 /** and so many levels coarser than that: for the seam's study */
 var<private> meshMore = 0u;
 /** how wide the ray's answer is there, in metres that a level may be off */
-fn meshWide(t: f32) -> f32 { return max(meshError, meshFoot * footAt(t)); }
+fn meshWide(t: f32) -> f32 { return max(meshError, (meshFoot + frame.knobs.y) * footAt(t)); }
 /** as far as this a ray does not meet the backs of triangles: it began under them, on a finer level */
 var<private> meshBack = 0.0;
+/** unless told otherwise that is a few times what the level it meets is off */
+var<private> meshOwn = true;
 /** nodes and triangles looked at (nothing reads it but the panel) */
 var<private> meshSteps = 0u;
 
@@ -30,13 +32,14 @@ fn meetMesh(k: u32, ro: vec3f, rd: vec3f, tmin: f32, tmax: f32) -> bool {
   let oh = (*p).planes; let head = mrowU(oh); let hull = boxSpan(-(*p).half / sc, (*p).half / sc, oo, safeInv(od)); if (max(hull.x, tmin) > min(hull.y, tmax)) { return false; }
   var li = head.x - 1u; let may = meshWide(max(hull.x, 0.0)) / sc; loop { if (li == 0u || (meshLevel == 0u && mrow(oh + 3u + li).x <= may)) { break; } li -= 1u; }
   var stack: array<u32, 64>; var stackT: array<f32, 64>; var sp = 1; stack[0] = mrowU(oh + 3u + li).y; stackT[0] = tmin;
-  var best = tmax; var found = false; var o = oo; var d = od; var inv = safeInv(d); var child = 0xffffffffu; var mh = 0u; var mn = vec3f(0.0); var st = vec3f(1.0); var recs = 0u; var tris = 0u; let backTo = meshBack;
+  var best = tmax; var found = false; var o = oo; var d = od; var inv = safeInv(d); var child = 0xffffffffu; var mh = 0u; var mn = vec3f(0.0); var st = vec3f(1.0); var recs = 0u; var tris = 0u; var backTo = meshBack;
   loop {
     if (sp == 0) { break; } sp -= 1; let at = stack[sp]; if (at == 0xffffffffu) { child = at; o = oo; d = od; inv = safeInv(d); continue; } if (stackT[sp] >= best) { continue; } meshSteps += 1u;
     if ((at & 0x80000000u) != 0u) {                                  // a child: into its own frame
       child = at & 0x7fffffffu; let c = head.z + child * 4u; let c0 = mrow(c); let c1 = mrow(c + 1u); let c2 = mrow(c + 2u); let c3 = mrowU(c + 3u); o = vec3f(dot(c0.xyz, oo) + c0.w, dot(c1.xyz, oo) + c1.w, dot(c2.xyz, oo) + c2.w); d = vec3f(dot(c0.xyz, od), dot(c1.xyz, od), dot(c2.xyz, od)); inv = safeInv(d);
       mh = c3.x; let a = mrow(mh); let b = mrow(mh + 1u); mn = a.xyz; st = b.xyz; recs = bitcast<u32>(b.w); tris = mrowU(mh + 2u).x; let l = meshPick(mh, bitcast<u32>(a.w), meshWide(max(stackT[sp], 0.0)) / (sc * bitcast<f32>(c3.z)));
-      stack[sp] = 0xffffffffu; stack[sp + 1] = mrowU(mh + 4u + l).y; stackT[sp + 1] = stackT[sp]; sp += 2; continue;
+      let lv = mrow(mh + 4u + l); if (meshOwn) { backTo = max(meshBack, 3.0 * lv.x * sc * bitcast<f32>(c3.z)); }
+      stack[sp] = 0xffffffffu; stack[sp + 1] = bitcast<u32>(lv.y); stackT[sp + 1] = stackT[sp]; sp += 2; continue;
     }
     let n0 = mrow(at); let n1 = mrow(at + 1u); let first = bitcast<u32>(n0.w); let count = bitcast<u32>(n1.w);
     if (count == 0u) {

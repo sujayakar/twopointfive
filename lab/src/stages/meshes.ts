@@ -8,7 +8,7 @@ import pickCode from './meshpick.wgsl' with { type: 'text' };
 import drawCode from './meshdraw.wgsl' with { type: 'text' };
 
 /** turned while looking: pixels of error; or a fixed error in metres; what is left out; how corners are fetched */
-export const RASTER = { tau: 1, fixed: 0, cone: true, hide: true, share: true, /** only the heroes, for measuring */ heroes: false };
+export const RASTER = { tau: 1, fixed: 0, cone: true, hide: true, share: true, /** only the heroes, for measuring */ heroes: false, /** what was picked stays, wherever the camera goes */ freeze: false };
 const QUEUE = 1 << 19, MOST = 1 << 17, INDICES = 1 << 24, GROUPS = 256;
 /** indices of what was picked (expand), and what is to be drawn of it (say): first all that was seen at once, then what the second look found */
 const shareCode = `@group(1) @binding(0) var<storage, read> slots: array<vec4f>;
@@ -58,16 +58,16 @@ fn at(p: vec2i) -> f32 { let m = vec2i(textureDimensions(src)) - 1; return textu
     const pipe = (entryPoint: string) => d.createRenderPipelineAsync({ label: entryPoint, layout: d.createPipelineLayout({ bindGroupLayouts: [g.shared.layout, drawL] }), vertex: { module: drawM, entryPoint }, fragment: { module: drawM, entryPoint: 'put', targets: [{ format: 'r32uint' }] }, primitive: { topology: 'triangle-list', cullMode: 'back', frontFace: 'ccw' }, depthStencil: { format: 'depth32float', depthWriteEnabled: true, depthCompare: 'greater' } }), [pull, share] = await Promise.all([pipe('pull'), pipe('share')]);
     const most = Math.max(...w.objects.map(o => o.most)); let frames = 0;
     return enc => {
-      fit(); const ts = (name: string) => g.timer.pass(name), stamp = (name: string) => { const t = ts(name); return t ? { timestampWrites: t } : {}; }, hide = RASTER.hide && frames++ > 0, many = RASTER.heroes ? heroes : all.length;
+      fit(); const ts = (name: string) => g.timer.pass(name), stamp = (name: string) => { const t = ts(name); return t ? { timestampWrites: t } : {}; }, hide = RASTER.hide && !RASTER.freeze && frames++ > 0, many = RASTER.heroes ? heroes : all.length;
       for (let i = 0; i < K.length; i++) { const f = new Float32Array(12), u = new Uint32Array(f.buffer); f[0] = RASTER.tau; f[1] = RASTER.fixed; u[2] = many; u[3] = MOST; f[4] = RASTER.cone ? 1 : 0; f[5] = hide ? 1 : 0; u[6] = Math.max(0, i - 1); u[7] = QUEUE; f[8] = hzbSize[0]; f[9] = hzbSize[1]; f[10] = hzbViews.length; d.queue.writeBuffer(K[i]!, 0, f); }
-      enc.clearBuffer(n); const B = bind();
-      { const p = enc.beginComputePass({ label: 'mesh pick', ...stamp('mesh pick') }); p.setBindGroup(0, g.shared.group()); p.setPipeline(seed!); p.setBindGroup(1, B[0]!); p.dispatchWorkgroups(Math.ceil(most / 64), many); p.setPipeline(round!); for (let i = 0; i < ROUNDS; i++) { p.setBindGroup(1, B[i + 1]!); p.dispatchWorkgroups(GROUPS); } p.end(); }
-      const draw = (name: string, phase: 0 | 1) => {
-        { const p = enc.beginComputePass({ label: name + ' indices', ...stamp(name + ' indices') }); p.setBindGroup(0, g.shared.group()); p.setBindGroup(1, shareG[phase]!); if (RASTER.share) { p.setPipeline(expand!); p.dispatchWorkgroups(1024); } p.setPipeline(say!); p.dispatchWorkgroups(1); p.end(); }
+      const B = bind(), held = RASTER.freeze && frames > 2; if (!held) enc.clearBuffer(n);
+      if (!held) { const p = enc.beginComputePass({ label: 'mesh pick', ...stamp('mesh pick') }); p.setBindGroup(0, g.shared.group()); p.setPipeline(seed!); p.setBindGroup(1, B[0]!); p.dispatchWorkgroups(Math.ceil(most / 64), many); p.setPipeline(round!); for (let i = 0; i < ROUNDS; i++) { p.setBindGroup(1, B[i + 1]!); p.dispatchWorkgroups(GROUPS); } p.end(); }
+      const draw = (name: string, phase: 0 | 1, held = false) => {
+        if (!held) { const p = enc.beginComputePass({ label: name + ' indices', ...stamp(name + ' indices') }); p.setBindGroup(0, g.shared.group()); p.setBindGroup(1, shareG[phase]!); if (RASTER.share) { p.setPipeline(expand!); p.dispatchWorkgroups(1024); } p.setPipeline(say!); p.dispatchWorkgroups(1); p.end(); }
         const p = enc.beginRenderPass({ label: name, colorAttachments: [{ view: g.view('id'), loadOp: 'load', storeOp: 'store' }], depthStencilAttachment: { view: g.view('depth'), depthLoadOp: 'load', depthStoreOp: 'store' }, ...(stamp(name) as { timestampWrites?: GPURenderPassTimestampWrites }) }); p.setBindGroup(0, g.shared.group()); p.setBindGroup(1, drawG);
         if (RASTER.share) { p.setPipeline(share!); p.setIndexBuffer(indices, 'uint32'); p.drawIndexedIndirect(args, 16); } else { p.setPipeline(pull!); p.drawIndirect(args, 0); } p.end();
       };
-      draw('mesh draw', 0);
+      draw('mesh draw', 0, held);
       { const p = enc.beginComputePass({ label: 'mesh depth', ...stamp('mesh depth') }); reduce(p); if (hide) { p.setBindGroup(0, g.shared.group()); p.setPipeline(second!); p.setBindGroup(1, B[0]!); p.dispatchWorkgroups(GROUPS); } p.end(); }
       if (hide) draw('mesh second', 1);
     };

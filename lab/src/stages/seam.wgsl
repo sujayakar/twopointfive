@@ -10,6 +10,7 @@ fn errorAt(h: Hit, more: u32, px: f32) -> f32 { let p = &pieces[h.piece]; let he
     first[at * 3u] = vec4u(bitcast<vec3u>(s.x), select(0u, h.piece + 1u, h.piece != NOTHING && (pieces[h.piece].flags & MESH) != 0u)); first[at * 3u + 1u] = vec4u(octPack(s.n), octPack(s.ng), h.code, bitcast<u32>(select(h.t, 1e6, h.piece == NOTHING))); first[at * 3u + 2u] = bitcast<vec4u>(vec4f(s.albedo, 0.0)); return;
   }
   let a = first[at * 3u]; if (a.w == 0u) { return; } let b = first[at * 3u + 1u]; let x = bitcast<vec3f>(a.xyz); let n = octUnpack(b.x); let ng = octUnpack(b.y); var h: Hit; h.piece = a.w - 1u; h.code = b.z; let px = seamK.px * bitcast<f32>(b.w);
+  meshOwn = false;
   for (var c = 0u; c < seamK.n; c++) {
     let k = seamK.c[c]; let more = u32(k.x); let how = u32(k.y); let finest = k.x < 0.0; rngInit(id.xy, 4001u + u32(k.w)); let e = select(errorAt(h, more, px), 0.0, finest); let off = select(0.0, e * k.z, (how & 1u) != 0u) + 0.0002 + px * 0.05; let back = select(0.0, 3.0 * e, (how & 2u) != 0u);
     let u = rnd2(); let u2 = rnd2(); let u3 = rnd2(); var sun = 0.0; var E = 0.0; let wide = cosineDir(n, u2); var hitAt = vec3f(0.0); var hitN = vec3f(0.0); var go = false; var alb = vec3f(0.0);
