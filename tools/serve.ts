@@ -10,6 +10,9 @@ import { devRunner, type DevRunner } from "./mp/runner.ts";
 import { writePieces } from "./qa/capture-pieces.ts";
 import { faceAsk } from "./blitz/face-build.ts";   // the Rust game's module (rust/game_face), built when its sources are newer: the page asks for it only under ?rust=1
 
+/** the module file's own name (a kept run says which module it was played on: src/tape/module.ts) */
+let faceNamed = { path: "", at: 0, name: "" };
+async function faceName(path: string): Promise<string> { const f = Bun.file(path), at = f.lastModified; if (faceNamed.path !== path || faceNamed.at !== at) faceNamed = { path, at, name: Bun.hash(await f.arrayBuffer()).toString(36) }; return faceNamed.name; }
 const COMMIT = (() => { try { const r = Bun.spawnSync(["git", "rev-parse", "--short=12", "HEAD"]); return r.success ? new TextDecoder().decode(r.stdout).trim() : ""; } catch { return ""; } })();   // (read once at start: a dev server outlives commits, but the journal only wants "about which build")
 let CLOUD: ReturnType<typeof localCloud> = null;   // the local build's backend (tools/cloud/local.ts), started below once the port is ours: null on a plain start — `bun run dev` asks for one (TPS_LOCAL_CLOUD=1), TPS_DEV_CLOUD names one that is already up
 let MP: DevRunner | null = null;   // co-op's game servers on this machine (tools/mp/runner.ts): the local backend asks this server to start and stop them. null where no backend was asked for
@@ -48,7 +51,7 @@ const server = Bun.serve({
       const r = faceAsk(l => console.log(l), "play");
       if ("why" in r) return new Response(r.why, { status: 503, headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store" } });
       if ("wait" in r) return new Response(r.wait, { status: 202, headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store", "Retry-After": "2" } });
-      return new Response(Bun.file(r.path), { headers: { "Content-Type": "application/wasm", "Cache-Control": "no-store" } });
+      return new Response(Bun.file(r.path), { headers: { "Content-Type": "application/wasm", "Cache-Control": "no-store", ETag: `"${await faceName(r.path)}"` } });
     }
     const lv = await handleLevels(req); if (lv) return lv;
     if (path === "/qa/commit") return new Response(COMMIT, { headers: { "Cache-Control": "no-store", "Content-Type": "text/plain" } });   // the commit this server was started on (a replay and a report file it: src/ui/replaykey.ts)

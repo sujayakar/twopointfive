@@ -22,6 +22,8 @@ export interface KeptRow {
   notes?: ReplayNote[];
   /** its tape is one of hands (tape/keep.ts): the page that draws plays it, and it has no trace to draw a map of */
   hands?: boolean;
+  /** the module it was played on (module.ts) */
+  module?: string;
   /** its page said it was going (pagehide): nobody is playing it. NEVER STORED ON THE ROW — `rows()` reads it off the store's own mark (`left` below), which a
    *  going page can write without reading the row back, and so without laying an old row over a note another tab wrote since */
   left?: boolean;
