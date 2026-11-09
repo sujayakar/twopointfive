@@ -5,6 +5,7 @@ use crate::played;
 use game::cmd::PlayerCmd;
 use game::scene_scenario_list::{all_missions, pick_search};
 use game::scene_scenarios::ScenarioEntry;
+use game_start::figures::Track;
 use game_start::hand::{act, read_hand, Hand};
 use game_start::hands_off::{HandsOff, Plan};
 use game_start::moment::Moment;
@@ -101,20 +102,24 @@ pub fn long() -> Vec<Row> {
 pub fn every() -> Vec<Row> { let mut out = all(); out.extend(long()); out }
 /// ONE FAULT A CHECK: the row, the break's name, and a piece of the check's own words its failure must hold
 pub fn breaks() -> Vec<(String, &'static str, &'static str)> {
-    let (run, moved) = (run_name(6), run_name(1));
+    let (run, moved, held_run) = (run_name(6), run_name(1), run_name(5));
     let start = start_name("tut-road", 1);
     let (seats, par) = (format!("seats {}", SEATS[0]), String::from("par killhouse-four"));
     vec![
         (start.clone(), "pin", "the start moved"), (start, "second", "a second start"),
-        (format!("play {}", run), "pin", "parts from its pin"), (format!("play {}", run), "silent", "never happens"),
+        (format!("play {}", run), "pin", "moved from second"), (format!("play {}", run), "silent", "never happens"),
+        // (what a player sees: the figures may not be blind to any of it. On the kill house, whose squad is under an order by then)
+        (format!("play {}", held_run), "aside", "where"), (format!("play {}", held_run), "round", "rounds"), (format!("play {}", held_run), "door", "door"), (format!("play {}", held_run), "order", "order"), (format!("play {}", held_run), "die", "die"),
+        // (a word that moved with no figure: this row passes, and says so)
+        (format!("play {}", held_run), "word", "only the words moved"),
         (format!("again {}", run), "second", "the second run"),
         (format!("save {}", run), "block", "put back, parts"),
         (format!("load {}", run), "block", "loaded into"),
         // (a run whose statics move: the mirror has something to skip)
         (format!("draw {}", moved), "told", "drawing the game changed it"), (format!("draw {}", moved), "mark", "the page's"), (format!("draw {}", moved), "head", "the boxes' head says"), (format!("draw {}", moved), "opened", "just opened"),
-        (seats.clone(), "pin", "parts from its pin"), (seats.clone(), "fresh", "a fresh game"), (seats.clone(), "moment", "a moment of the fight"), (seats, "idle", "the two players' hands"),
+        (seats.clone(), "pin", "moved from second"), (seats.clone(), "fresh", "a fresh game"), (seats.clone(), "moment", "a moment of the fight"), (seats, "idle", "the two players' hands"),
         (par.clone(), "moves", "the clock moved"), (par, "noclock", "the staging"),
-        (format!("played {}", SEATS[0]), "deaf", "the pinned line"), (format!("played {}", SEATS[0]), "wall", "inside a static box"),
+        (format!("played {}", SEATS[0]), "deaf", "moved from second"), (format!("played {}", SEATS[0]), "wall", "inside a static box"),
         (String::from("lesson tut-road"), "third", "steps went by on their deeds"),
     ]
 }
@@ -147,7 +152,7 @@ pub fn stand(e: &ScenarioEntry, seed: u32, seats: u32) -> Play { Play::mission(&
 /// a refusal as the pins hold it: one line
 fn clean(why: &str) -> String { why.replace(['\n', '\t'], " ").trim().to_string() }
 /// names, at most so many of them
-fn named(list: &[&str]) -> String {
+pub fn named(list: &[&str]) -> String {
     if list.len() <= NAMED { return list.join(", "); }
     format!("{} and {} more", list[..NAMED].join(", "), list.len() - NAMED)
 }
@@ -167,6 +172,33 @@ fn by_name(words: &[u32]) -> BTreeMap<String, u32> { parts::names().into_iter().
 pub fn word_of(words: &[u32]) -> u32 { let f = parts::fold(words); (f ^ (f >> 32)) as u32 }
 pub fn hex(words: &[u32]) -> String { words.iter().map(|w| format!("{:08x}", w)).collect::<Vec<_>>().join(" ") }
 
+// ---- what a row is held to: the figures
+
+/// the column of a run's parts at its last second
+fn end_column(name: &str) -> String { name.replace(' ', "~") }
+fn parts_line(words: &[u32]) -> String { parts::names().iter().zip(words).map(|(n, w)| format!("{}={:08x}", n, w)).collect::<Vec<_>>().join(" ") }
+/// a row's pins, to the parent. `detail`: the figures' digits go in too (a played run is too long to keep them, and its line says what moved)
+pub fn pin_of(name: &str, track: &Track, end: &[u32], line: Option<&str>, detail: bool) {
+    println!("pin\tseries\t{}\t{}", name, hex(&track.words));
+    println!("pin\tstart\t{}\tparts\t{}", end_column(name), parts_line(end));
+    if let Some(l) = line { println!("pin\tline\t{}\t{}", name, l); }
+    if detail { println!("pin\tfigures\t{}\t{}\t{}", name, track.names.join(","), track.digits().join(" ")); }
+}
+/// A ROW AGAINST ITS PINS. Its figures moved: play moved, and it fails. They stand and its parts moved: nothing a player sees did, and it passes and says so. Answers the failures and the note.
+pub fn held(name: &str, track: &Track, end: &[u32], line: Option<&str>, pins: &Pins, f: Flags) -> (Vec<String>, String) {
+    let mut now = track.words.clone();
+    if f.breaks("pin") { now[0] ^= 1; }
+    let Some(was) = pins.series.get(name) else { return (vec![String::from("no pin: `gate pin` records it")], String::new()) };
+    if was != &now {
+        let at = was.iter().zip(&now).position(|(a, b)| a != b).unwrap_or(was.len().min(now.len()));
+        let kind = name.split(' ').next().unwrap();
+        let line_was = match (pins.lines.get(name), line) { (Some(a), Some(b)) if a != b => format!(" ('{}', and now '{}')", a, b), _ => String::new() };
+        return (vec![format!("{} moved from second {}: {}{} (pins.txt)", kind, at + 1, pins.figures_moved(name, at, &track.names, &track.digits()), line_was)], String::new());
+    }
+    let words = match pins.starts.get(&end_column(name)) { Some(Start::Parts(m)) => moved_parts(m, &by_name(end)), _ => String::from("none kept") };
+    (Vec::new(), if words.is_empty() { String::new() } else { format!("only the words moved ({})", words) })
+}
+
 // ---- start
 
 /// THE START IS THE PINNED START, AND A SECOND START IN ONE PROCESS IS THE FIRST.
@@ -180,20 +212,23 @@ fn start_row(name: &str, id: &str, seats: u32, pins: &Pins, f: Flags) {
     if f.pin {
         match &refused {
             Some(why) => println!("pin\tstart\t{}\trefused\t{}", col, why),
-            None => println!("pin\tstart\t{}\tparts\t{}", col, parts::names().iter().zip(&first).map(|(n, w)| format!("{}={:08x}", n, w)).collect::<Vec<_>>().join(" ")),
+            None => { let mut track = Track::default(); track.second(&p.g); println!("pin\tstart\t{}\tparts\t{}", col, parts_line(&first)); println!("pin\tseries\t{}\t{}", col, hex(&track.words)); println!("pin\tfigures\t{}\t{}\t{}", col, track.names.join(","), track.digits().join(" ")); }
         }
         return say(name, t.elapsed().as_secs_f64(), &[], "");
     }
-    let mut fail = Vec::new();
+    let (mut fail, mut note) = (Vec::new(), String::new());
     match (pins.starts.get(&col), &refused) {
         (None, _) => fail.push(String::from("no pin: `gate pin` records it")),
         (Some(Start::Refused(a)), Some(b)) => if a != b { fail.push(format!("refused in other words: pinned '{}', now '{}' (pins.txt)", a, b)); },
         (Some(Start::Refused(a)), None) => fail.push(format!("it stands now, and is pinned as refused: '{}' (pins.txt)", a)),
         (Some(Start::Parts(_)), Some(b)) => fail.push(format!("it is refused now, and is pinned as standing: '{}' (pins.txt)", b)),
         (Some(Start::Parts(m)), None) => {
-            let mut now = by_name(&first);
-            if f.breaks("pin") { now.values_mut().next().map(|w| *w ^= 1); }
-            let said = moved_parts(m, &now); if !said.is_empty() { fail.push(format!("the start moved in {} (pins.txt)", said)); }
+            let mut track = Track::default();
+            track.second(&p.g);
+            if f.breaks("pin") { track.words[0] ^= 1; }
+            let said = moved_parts(m, &by_name(&first));
+            if pins.series.get(&col) != Some(&track.words) { fail.push(format!("the start moved: {} (pins.txt)", pins.figures_moved(&col, 0, &track.names, &track.digits()))); }
+            else if !said.is_empty() { note = format!("only the words moved ({})", said); }
         }
     }
     if refused.is_some() { return say(name, t.elapsed().as_secs_f64(), &fail, "refused as pinned"); }
@@ -211,7 +246,7 @@ fn start_row(name: &str, id: &str, seats: u32, pins: &Pins, f: Flags) {
     else if let Some((k, w)) = idle(&mut again).iter().zip(&was).enumerate().find(|(_, (a, b))| a != b).map(|(k, (a, b))| (k, parts::differ(&names, b, a))) {
         fail.push(format!("a second start in one process, after {}, parts {:.1} s on in {}", other.id, (k + 1) as f64 / 2.0, named(&w)));
     }
-    say(name, t.elapsed().as_secs_f64(), &fail, "");
+    say(name, t.elapsed().as_secs_f64(), &fail, &note);
 }
 /// the mission before this one on the list that stands for that many players (the first's is the last on the list), stood
 fn before_it(e: &ScenarioEntry, seats: u32) -> (ScenarioEntry, Play) {
@@ -250,6 +285,18 @@ fn frame_of(p: &mut Play, hand: &Hand, k: usize, next: &mut usize, did: &mut [(u
     p.frame();
 }
 
+/// when a figure is moved by a break of `play`
+const BREAK_AT: usize = 5;
+/// WHAT A PLAYER WOULD SEE, MOVED: each break of `play` moves one thing, and the figures must not be blind to it
+fn plant(p: &mut Play, f: Flags) {
+    let man = p.g.guards[0];
+    if f.breaks("aside") { let c = p.g.gd[man].ch; p.g.ch[c].pos[0] += 0.01; }
+    if f.breaks("round") { let gun = p.g.gd[man].weapon; p.g.fa[gun].chamber -= 1.0; }
+    if f.breaks("door") { let d = p.g.doors.list[0]; let a = game::doors::door_angle(&p.g, d); game::doors::door_set_angle(&mut p.g, d, a + 0.1); }
+    if f.breaks("order") { let (s, g) = (p.g.seats[0], p.g.guards.clone()); let a = g.iter().find_map(|&m| game::orders::squad_orders_of(&p.g, &game::seats::seat(&p.g, s), m)).expect("a man under an order"); p.g.tab.orders_assignment[a].order = String::from("planted"); }
+    if f.breaks("die") { game::math_dice::sim_random(&mut p.g); }
+}
+
 /// a moment of a run, what a host keeps beside it, and every frame's words of the seconds after it
 struct Kept { at: usize, moment: Moment, next: usize, cursor: Option<[f64; 3]>, words: Vec<Vec<u32>> }
 
@@ -265,29 +312,26 @@ fn run_rows(k: usize, kinds: &[&str], pins: &Pins, f: Flags) {
     let (mut series, mut seconds): (Vec<u32>, Vec<Vec<u32>>) = (Vec::new(), Vec::new());
     let mut kept: Vec<Kept> = Vec::new();
     let keeps = (kinds.contains(&"save") || kinds.contains(&"load")) && !f.pin;
+    let mut track = Track::default();
     for i in 0..frames {
+        if i == BREAK_AT * 60 { plant(&mut p, f); }
         if keeps && MOMENTS.contains(&(i / 60)) && i % 60 == 0 { kept.push(Kept { at: i, moment: Moment::of(&p.g), next, cursor: p.cursor, words: Vec::new() }); }
         frame_of(&mut p, &hand, i, &mut next, &mut did);
         parts::words(&mut p.g, &mut w, &mut row);
         if let Some(m) = kept.last_mut() { if i < m.at + AFTER_MOMENT_SECS * 60 { m.words.push(row.clone()); } }
-        if i % 60 == 59 { series.push(word_of(&row)); seconds.push(row.clone()); }
+        // (a counter nobody reads, poked where nothing can come of it: a word moves and no figure)
+        if i == frames - 1 && f.breaks("word") { p.g.fx_seed += 1.0; parts::words(&mut p.g, &mut w, &mut row); }
+        if i % 60 == 59 { series.push(word_of(&row)); seconds.push(row.clone()); track.second(&p.g); }
     }
     if kinds.contains(&"play") {
-        if f.pin { println!("pin\tseries\t{}\t{}", name("play"), hex(&series)); return say(&name("play"), t.elapsed().as_secs_f64(), &[], ""); }
-        let mut fail = Vec::new();
-        let now = if f.breaks("pin") { series.iter().enumerate().map(|(i, w)| if i == 0 { w ^ 1 } else { *w }).collect() } else { series.clone() };
-        match pins.series.get(&name("play")) {
-            None => fail.push(String::from("no pin: `gate pin` records it")),
-            Some(a) => if a != &now {
-                let at = a.iter().zip(&now).position(|(x, y)| x != y).unwrap_or(a.len().min(series.len())) + 1;
-                fail.push(format!("the run parts from its pin in second {} (pins.txt): `hold keep` on the build before and `hold check` on this one name the part", at));
-            },
-        }
+        let line = game_start::figures::line(&p.g);
+        if f.pin { pin_of(&name("play"), &track, &row, Some(&line), true); return say(&name("play"), t.elapsed().as_secs_f64(), &[], ""); }
+        let (mut fail, note) = held(&name("play"), &track, &row, Some(&line), pins, f);
         // (a line of the hand that nothing comes of holds nothing, and looks as if it did: the hand is mended, or the line leaves it)
         if f.breaks("silent") { did[0].0 = 0; }
         let never: Vec<String> = hand.lines.iter().zip(&did).filter(|(_, d)| d.0 == 0).map(|(l, d)| format!("{} ({})", l, d.1.trim_end_matches('.'))).collect();
         if !never.is_empty() { fail.push(format!("a line of the hand never happens: {}", never.join("; "))); }
-        say(&name("play"), t.elapsed().as_secs_f64(), &fail, "");
+        say(&name("play"), t.elapsed().as_secs_f64(), &fail, &note);
     }
     if kinds.contains(&"save") { save_row(&name("save"), &mut p, &hand, &mut kept, &names, f); }
     drop(p);
@@ -397,6 +441,7 @@ fn seats_row(name: &str, id: &str, pins: &Pins, f: Flags) {
     let (mut records, mut rows, mut series): (Vec<[String; 2]>, Vec<Vec<u32>>, Vec<u32>) = (Vec::new(), Vec::new(), Vec::new());
     let (mut same_hands, mut walked, mut was) = (0, [0.0f64; 2], [[0.0f64; 3]; 2]);
     let mut moment = None;
+    let mut track = Track::default();
     let mut players = [0usize, 1].map(|k| HandsOff::new(p.g.seats[k], Plan { seed: SEED + k as u32, cap: SEATS_SECS as f64 + 1.0, ..Default::default() }));
     for i in 0..ticks {
         if i == SEATS_MOMENT.0 * 60 { moment = Some(Moment::of(&p.g)); }
@@ -414,16 +459,12 @@ fn seats_row(name: &str, id: &str, pins: &Pins, f: Flags) {
             if i > 0 { walked[s] += (at[0] - was[s][0]).hypot(at[2] - was[s][2]); }
             was[s] = at;
         }
-        if i % half == half - 1 { let w = p.words(); if i % 60 == 59 { series.push(word_of(&w)); } rows.push(w); }
+        if i % half == half - 1 { let w = p.words(); if i % 60 == 59 { series.push(word_of(&w)); track.second(&p.g); } rows.push(w); }
     }
-    if f.pin { println!("pin\tseries\t{}\t{}", name, hex(&series)); return say(name, t.elapsed().as_secs_f64(), &[], ""); }
+    let line = game_start::figures::line(&p.g);
+    if f.pin { pin_of(name, &track, rows.last().expect("a row"), Some(&line), true); return say(name, t.elapsed().as_secs_f64(), &[], ""); }
     let rounds: f64 = p.g.fa.iter().map(|(_, gun)| gun.shots_fired).sum();
-    let mut fail = Vec::new();
-    let now = if f.breaks("pin") { series.iter().enumerate().map(|(i, w)| if i == 0 { w ^ 1 } else { *w }).collect() } else { series.clone() };
-    match pins.series.get(name) {
-        None => fail.push(String::from("no pin: `gate pin` records it")),
-        Some(a) => if a != &now { fail.push(format!("the fight parts from its pin in second {} (pins.txt)", a.iter().zip(&now).position(|(x, y)| x != y).unwrap_or(a.len().min(now.len())) + 1)); },
-    }
+    let (mut fail, note) = held(name, &track, rows.last().expect("a row"), Some(&line), pins, f);
     if (ticks - same_hands) * HANDS_DIFFER_ONE_IN < ticks { fail.push(format!("the two players' hands are the same on {} of {} ticks", same_hands, ticks)); }
     if walked[0] < MEN_WALK || walked[1] < MEN_WALK { fail.push(format!("the staging: the men walked {:.0} and {:.0} metres, and a fight of two has them walk {} at least", walked[0], walked[1], MEN_WALK)); }
     if rounds < FIGHT_FIRES { fail.push(format!("the staging: the fight fired {} rounds, and it has {} at least", rounds, FIGHT_FIRES)); }
@@ -450,7 +491,7 @@ fn seats_row(name: &str, id: &str, pins: &Pins, f: Flags) {
         let mut q = stand(&e, SEED, 2);
         if let Some(why) = replay(&mut q, shown, 0, ticks, f.breaks("fresh")) { fail.push(format!("a fresh game played from the records, showing seat {}, {}", shown, why)); }
     }
-    say(name, t.elapsed().as_secs_f64(), &fail, &format!("the men walked {:.0} and {:.0} metres, {} rounds", walked[0], walked[1], rounds));
+    say(name, t.elapsed().as_secs_f64(), &fail, &if note.is_empty() { format!("the men walked {:.0} and {:.0} metres, {} rounds", walked[0], walked[1], rounds) } else { note });
 }
 
 // ---- par
