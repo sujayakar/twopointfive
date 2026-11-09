@@ -303,6 +303,8 @@ impl DarkAsk for Play {
 pub trait YardAsk {
     /// a man is out of it: parked far off, held, blind and deaf
     fn parked_far(&mut self, gd: GuardId, k: usize);
+    /// he stands calm at a post, looking a way, eyes and ears open, held there
+    fn posted_calm(&mut self, gd: GuardId, at: [f64; 2], face: [f64; 2]);
     /// he starts a search round a fix this instant, stood at `at`, deaf: what is asked is where he looks
     fn searches(&mut self, gd: GuardId, at: [f64; 2], fix: [f64; 2]);
     /// the spots of his plan: (where, how dark, how much cover, is it open floor, how plausible)
@@ -319,6 +321,8 @@ pub trait YardAsk {
     fn camera_seen(&self) -> f64;
     /// how many times the beam has been tripped, by its place in the level's list
     fn beam_trips(&self, k: usize) -> f64;
+    /// the walk grid, as a number
+    fn level_nav(&self) -> u64;
     /// the man sent on a device's errand
     fn sent_to_look(&self) -> Option<GuardId>;
     /// Sam walks to a place by the keys, as a hand does: whether he got there in time
@@ -332,6 +336,13 @@ impl YardAsk for Play {
         self.man_put(gd, [37.5, 6.0 + k as f64], [0.0, 0.0]);
         let (h, t) = (&mut self.g.gd[gd], self.g.time);
         (h.hold, h.pinned, h.dazzled_until, h.heard_up_to) = (true, true, t + 1e9, 1e12);
+    }
+    fn posted_calm(&mut self, gd: GuardId, at: [f64; 2], face: [f64; 2]) {
+        self.man_put(gd, at, face);
+        let h = &mut self.g.gd[gd];
+        (h.pinned, h.dazzled_until, h.heard_up_to, h.hold) = (false, -1.0, 0.0, true);
+        (h.state, h.awareness, h.last_known, h.react_t, h.search_t, h.search_plan) = (game::game::GuardState::Patrol, 0.0, None, 0.0, 0.0, None);
+        (h.script, h.task, h.body_duty) = (None, None, None);
     }
     fn searches(&mut self, gd: GuardId, at: [f64; 2], fix: [f64; 2]) {
         self.man_put(gd, at, fix);
@@ -365,6 +376,7 @@ impl YardAsk for Play {
     fn camera_state(&self) -> game::sim_lightshome::CameraState { game::sim_lightshome::camera_machine_state(&self.g, self.g.devices.cameras[0]) }
     fn camera_seen(&self) -> f64 { game::sim_lightshome::camera_machine_seen(&self.g, self.g.devices.cameras[0]) }
     fn beam_trips(&self, k: usize) -> f64 { game::sim_lightshome::laser_machine_trips(&self.g, self.g.devices.lasers[k]) }
+    fn level_nav(&self) -> u64 { self.g.col.nav.blocked.iter().fold(7u64, |h, b| h.wrapping_mul(31).wrapping_add(*b as u64)) }
     fn sent_to_look(&self) -> Option<GuardId> { self.g.guards.iter().copied().find(|&m| matches!(self.g.gd[m].task, Some(game::game::GuardTask::Arm0(game::game::GuardTaskArm0 { kind: game::game::GuardTaskArm0Kind::Device, .. })))) }
     fn sam_goes_to(&mut self, at: [f64; 2], secs: f64) -> bool {
         let keys = ["KeyW", "KeyS", "KeyA", "KeyD"];
@@ -387,3 +399,230 @@ impl YardAsk for Play {
     }
 }
 const CROUCH_KEY: &str = "KeyC";
+
+/// Furniture, and a game kept
+#[derive(Clone)]
+pub struct Kept { g: Box<game::game::Game>, block: Vec<u8> }
+
+pub trait FurnAsk {
+    /// a blast at a point, by Sam's hand, as a wall charge is told it: `power` Some(0) is one of no strength for the wall. How many walls it holed.
+    fn wall_blast(&mut self, at: [f64; 3], power: Option<f64>) -> f64;
+    /// the piece of furniture that stands at a place: its statics
+    fn furniture_at(&mut self, at: [f64; 2]) -> Vec<f64>;
+    /// how many of those statics stand
+    fn standing(&self, of: &[f64]) -> usize;
+    /// the prop nearest a place
+    fn prop_near(&self, at: [f64; 2]) -> PropId;
+    /// where a prop is
+    fn prop_at(&self, it: PropId) -> [f64; 2];
+    /// every static's flags, every prop's pose and presence, the walk grid: one line a part, to compare
+    fn level_as_it_stands(&self) -> [String; 3];
+    /// the game kept whole, as a host keeps it
+    fn keep(&self) -> Kept;
+    /// and put back
+    fn put_back(&mut self, k: &Kept);
+}
+
+impl FurnAsk for Play {
+    fn wall_blast(&mut self, at: [f64; 3], power: Option<f64>) -> f64 {
+        let o = game::wallbreak::BlastOpts { who: Some(game::consts::PLAYER_ID), chaos: Some(false), power, ..Default::default() };
+        game::destruction::destruction_blast(&mut self.g, at, Some(o)).walls
+    }
+    fn furniture_at(&mut self, at: [f64; 2]) -> Vec<f64> {
+        game::furnblast::furniture_first_to_go(&mut self.g, [at[0], 1.0, at[1]], game::furnblast::BlastSource::Wall);   // (the index is made when it is first asked)
+        let groups = self.g.destr.furn.groups.as_ref().expect("the furniture's index");
+        let gr = groups.iter().find(|x| at[0] >= x.a.x0 - 0.05 && at[0] <= x.a.x1 + 0.05 && at[1] >= x.a.z0 - 0.05 && at[1] <= x.a.z1 + 0.05).unwrap_or_else(|| panic!("no furniture stands at {at:?}"));
+        gr.members.iter().map(|&m| self.g.tab.furnblast_member[m].i).collect()
+    }
+    fn standing(&self, of: &[f64]) -> usize {
+        let hidden = game::js::to_i32(game::scene_boxes::box_flag().no_primary);
+        of.iter().filter(|&&i| game::js::to_i32(self.g.tab.boxes[self.g.col.boxes[i as usize]].flags) & hidden == 0).count()
+    }
+    fn prop_near(&self, at: [f64; 2]) -> PropId {
+        let d = |&it: &PropId| { let q = self.prop_at(it); (q[0] - at[0]).hypot(q[1] - at[1]) };
+        *self.g.props.all.iter().min_by(|a, b| d(a).partial_cmp(&d(b)).unwrap()).expect("a prop")
+    }
+    fn prop_at(&self, it: PropId) -> [f64; 2] { [game::props::prop_x(&self.g, it), game::props::prop_z(&self.g, it)] }
+    fn level_as_it_stands(&self) -> [String; 3] {
+        let n = self.g.destr.walls.authored as usize;
+        let flags: Vec<String> = self.g.col.boxes.iter().take(n).map(|&b| format!("{}", self.g.tab.boxes[b].flags)).collect();
+        let props: Vec<String> = self.g.props.props.iter().map(|&it| { let q = self.prop_at(it); format!("{it:?}:{:.4},{:.4}", q[0], q[1]) }).collect();
+        let nav: u64 = self.g.col.nav.blocked.iter().fold(7u64, |h, b| h.wrapping_mul(31).wrapping_add(*b as u64));
+        [flags.join(","), props.join(" "), format!("{nav}")]
+    }
+    fn keep(&self) -> Kept { Kept { g: self.g.clone(), block: game_start::block::bytes(self.g.sim).to_vec() } }
+    fn put_back(&mut self, k: &Kept) {
+        unsafe { std::ptr::copy_nonoverlapping(k.block.as_ptr(), sim::state::addr(self.g.sim) as *mut u8, k.block.len()); }
+        self.g = k.g.clone();
+        game::scene_collision::unstand(&mut self.g);
+        game::scene_collision::stands(&mut self.g);
+    }
+}
+
+/// The net
+pub trait NetAsk {
+    /// the men the room clear dealt a room of this id
+    fn men_of_room(&self, room: &str) -> Vec<GuardId>;
+    /// how shaken he is
+    fn shaken(&self, gd: GuardId) -> f64;
+    /// is he dealt steady
+    fn steady(&mut self, gd: GuardId) -> bool;
+    /// is this one of the net's lines of a kind
+    fn net_line(&self, text: &str, kind: &str, name: &str) -> bool;
+    /// the men of his squad
+    fn squad_men_of(&self, gd: GuardId) -> Vec<GuardId>;
+    /// the net's check of the squads falls due
+    fn net_check_due(&mut self, secs: f64);
+    /// when any squad first filed an event of this kind
+    fn net_event_at(&self, what: game::enemysquads::SquadEventWhat) -> Option<f64>;
+    /// a man is put down without a sound, by nobody anyone heard
+    fn put_down(&mut self, gd: GuardId);
+}
+
+impl NetAsk for Play {
+    fn men_of_room(&self, room: &str) -> Vec<GuardId> { self.g.room_clear.rooms.iter().find(|r| r.def.id == room).map_or(Vec::new(), |r| r.defenders.clone()) }
+    fn shaken(&self, gd: GuardId) -> f64 { self.g.m.morale.state_of.get(gd).map_or(0.0, |m| m.shock) }
+    fn steady(&mut self, gd: GuardId) -> bool { game::morale::training_of(&mut self.g, gd) == game::morale::TrainingOf::Steady }
+    fn net_line(&self, text: &str, kind: &str, name: &str) -> bool { game::netquiet::lines().get(String::from(kind)).map_or(false, |r| r.iter().any(|l| l.replace("{name}", name) == text)) }
+    fn squad_men_of(&self, gd: GuardId) -> Vec<GuardId> { game::enemysquads::squad_of(&self.g, gd).map_or(Vec::new(), |q| q.men.clone()) }
+    fn net_check_due(&mut self, secs: f64) { let at = self.g.time + secs; if let Some(st) = self.g.m.enemysquads.states.as_mut() { if let Some(n) = st.nc.as_mut() { n.next_at = at; } } }
+    fn net_event_at(&self, what: game::enemysquads::SquadEventWhat) -> Option<f64> {
+        let st = self.g.m.enemysquads.states.as_ref()?;
+        st.squads.iter().flat_map(|&q| self.g.tab.enemysquads_squad[q].events.iter()).filter(|e| e.what == what).map(|e| e.t).fold(None, |a: Option<f64>, t| Some(a.map_or(t, |x| x.min(t))))
+    }
+    fn put_down(&mut self, gd: GuardId) { game::combat::kill_guard(&mut self.g, gd, [0.0, 0.0, 1.0], Some(true), None, None, None); }
+}
+
+/// A hostage rescue
+pub trait RescueAsk {
+    /// the men posted with the hostages, by combat's own call: shot, loud or struck down without a sound
+    fn hostage_room_falls(&mut self, loud: bool);
+    /// the middle of the hostage room
+    fn hostage_room_middle(&self) -> [f64; 2];
+    /// the hostages who live
+    fn hostages_up(&self) -> Vec<GuardId>;
+    /// the men of theirs who live
+    fn theirs_up(&self) -> Vec<GuardId>;
+    /// is this place in the hostage room
+    fn in_hostage_room(&self, at: [f64; 2]) -> bool;
+    /// the rescue's own log: when a line that begins so first came
+    fn rescue_said(&self, starts: &str) -> Option<f64>;
+    /// every line of the rescue's own log that begins so
+    fn rescue_lines(&self, starts: &str) -> Vec<String>;
+    /// Sam beside a hostage, her row on the interaction key tapped: was it there to take
+    fn hostage_row_taken(&mut self, h: GuardId, verb: game::game::Verb) -> bool;
+    /// is she behind Sam
+    fn led_by_sam(&self, h: GuardId) -> bool;
+    /// where the way out is
+    fn way_out(&self) -> [f64; 2];
+    /// Sam walks the grid's way to a place at a walker's pace, set down a frame at a time: no sound of his, no gun of theirs
+    fn sam_walks_the_grid(&mut self, to: [f64; 2]);
+    /// a loud round is heard where the men of the room are
+    fn a_loud_round_at_the_room(&mut self);
+    /// how the run came out: rescued, and its words
+    fn rescue_result(&self) -> Option<(bool, String)>;
+}
+
+impl RescueAsk for Play {
+    fn hostage_room_falls(&mut self, loud: bool) {
+        let cast: Vec<GuardId> = game::rescue::rescue_cast(&self.g).into_iter().filter(|c| c.in_room).map(|c| c.gd).collect();
+        for m in cast {
+            let how = if loud { game::game::DownKind::Shot } else { game::game::DownKind::Struck };
+            game::combat::kill_guard(&mut self.g, m, [1.0, 0.0, 0.0], Some(!loud), Some(how), Some(game::game::DownBy::Player), None);
+        }
+    }
+    fn hostage_room_middle(&self) -> [f64; 2] { let b = game::rescue::rescue_bounds(&self.g).expect("a hostage room"); [(b.x0 + b.x1) / 2.0, (b.z0 + b.z1) / 2.0] }
+    fn hostages_up(&self) -> Vec<GuardId> { self.g.rescue.hostages.iter().copied().filter(|&m| self.g.gd[m].state != game::game::GuardState::Dead).collect() }
+    fn theirs_up(&self) -> Vec<GuardId> { self.g.rescue.hostiles.iter().copied().filter(|&m| self.g.gd[m].state != game::game::GuardState::Dead).collect() }
+    fn in_hostage_room(&self, at: [f64; 2]) -> bool { let b = game::rescue::rescue_bounds(&self.g).expect("a hostage room"); at[0] >= b.x0 && at[0] <= b.x1 && at[1] >= b.z0 && at[1] <= b.z1 }
+    fn rescue_said(&self, starts: &str) -> Option<f64> { self.g.rescue.log.iter().find(|l| l.what.starts_with(starts)).map(|l| l.t) }
+    fn rescue_lines(&self, starts: &str) -> Vec<String> { self.g.rescue.log.iter().filter(|l| l.what.starts_with(starts)).map(|l| l.what.clone()).collect() }
+    fn hostage_row_taken(&mut self, h: GuardId, verb: game::game::Verb) -> bool {
+        let at = self.at(h);
+        for k in 0..8 {
+            let a = k as f64 * std::f64::consts::FRAC_PI_4;
+            self.sam_put([at[0] + a.sin() * 1.2, at[1] + a.cos() * 1.2]);
+            self.run(2.0 / 60.0);
+            if self.g.nearby.iter().any(|r| r.guard == Some(h) && r.verb == Some(verb)) && game::game::game_select_verb(&mut self.g, game::game::InteractableKind::Guard, Some(verb)) {
+                self.key_down("Space");
+                self.frame();
+                self.key_up("Space");
+                self.frame();
+                return true;
+            }
+        }
+        false
+    }
+    fn led_by_sam(&self, h: GuardId) -> bool { let c = self.g.gd[h].civ.expect("a civilian"); self.g.cv[c].lead == Some(self.g.pl[self.g.player].ch) }
+    fn way_out(&self) -> [f64; 2] { let o = game::rescueend::rescue_end_out(&self.g).expect("a way out"); [o[0], o[2]] }
+    fn sam_walks_the_grid(&mut self, to: [f64; 2]) {
+        let from = self.sam_at();
+        let path = game::scene_collision::nav_grid_find_path(&mut self.g, [from[0], 0.0, from[1]], [to[0], 0.0, to[1]], Some(12000.0), None).unwrap_or_else(|| vec![[to[0], 0.0, to[1]]]);
+        let mut q = from;
+        for w in path {
+            let (w, l) = ([w[0], w[2]], (w[0] - q[0]).hypot(w[2] - q[1]));
+            let n = ((l / (2.4 / 60.0)).ceil() as usize).max(1);
+            for i in 1..=n { if self.g.rescue.result.is_some() { return; } self.sam_put([q[0] + (w[0] - q[0]) * i as f64 / n as f64, q[1] + (w[1] - q[1]) * i as f64 / n as f64]); self.frame(); }
+            q = w;
+        }
+    }
+    fn a_loud_round_at_the_room(&mut self) {
+        let m = game::rescue::rescue_cast(&self.g).into_iter().find(|c| c.in_room).expect("a man in the room").gd;
+        let (at, time, serial) = (self.at(m), self.g.time, self.g.serial());
+        self.g.events.push(game::game::GameEvent { kind: game::director::EventKind::Shot, pos: [at[0], 0.0, at[1]], time, loud: true, level: Some(1.0), who: Some(game::consts::PLAYER_ID), serial, ..game::game::GameEvent::zeroed() });
+    }
+    fn rescue_result(&self) -> Option<(bool, String)> { self.g.rescue.result.as_ref().map(|r| (r.state == game::rescue::RescueResultState::Rescued, r.why.clone())) }
+}
+
+/// What a player would call the floor, a part a line: what a restart has to put back
+pub fn the_floor(p: &mut Play) -> Vec<(&'static str, String)> {
+    let danger = game::tactics::danger_doors(&mut p.g, None).len();
+    let hits = game::glass::glass_state(&mut p.g).hits;
+    let [statics, props, nav] = p.level_as_it_stands();
+    let g = &p.g;
+    let men: Vec<String> = g.guards.iter().map(|&m| { let q = p.at(m); format!("{} {:.3},{:.3} {:?} {:.3} {:?} {:?}", g.gd[m].callsign, q[0], q[1], p.state(m), p.awareness(m), p.fix(m), g.gd[m].task.is_some()) }).collect();
+    let doors: Vec<String> = g.doors.list.iter().map(|&d| format!("{:.3} {} {}", game::doors::door_angle(g, d), game::doors::door_latched(g, d), game::doors::door_locked(g, d))).collect();
+    let lamps: Vec<String> = g.targets.iter().map(|&t| format!("{} {}", game::sim_lightshome::fixture_on(g, t), game::sim_lightshome::fixture_broken(g, t))).collect();
+    vec![("men", men.join("; ")), ("doors", doors.join("; ")), ("lamps", lamps.join("; ")), ("mains", format!("{}", game::sim_lightshome::mains_active(g))), ("statics", statics), ("props", props), ("walk grid", nav),
+        ("things thrown", format!("{}", g.items.items.len())), ("alarm", format!("{}", g.escalation)), ("dangerous doors", format!("{danger}")), ("charges", format!("{}", g.wall_charge.set.len())), ("glass hits", format!("{hits}"))]
+}
+
+/// What a review found
+pub trait ReviewAsk {
+    /// the fixture that is the first lit lamp of the floor
+    fn first_lamp(&self) -> FixtureId;
+    /// Sam's trigger on the box: the OCP knocks this lamp out
+    fn lamp_knocked_out(&mut self, t: FixtureId);
+    /// the game told that a lamp was shot dark
+    fn lamp_shot_dark(&mut self, t: FixtureId);
+    /// is it out for now
+    fn lamp_disabled(&self, t: FixtureId) -> bool;
+    /// a thing spawned as the game spawns it: (fired, seconds left to vent)
+    fn thing(&mut self, kind: game::throwables::ItemKind, fired: Option<bool>, emit: Option<f64>) -> ItemId;
+    /// the list of things
+    fn things(&self) -> Vec<ItemId>;
+    /// the list is emptied
+    fn things_gone(&mut self);
+    /// the errand a man is on, if any
+    fn on_errand(&self, gd: GuardId) -> bool;
+    /// a civilian's state
+    fn civ_state(&self, gd: GuardId) -> game::civilians::CivState;
+    /// has the chronicle a row of a kind
+    fn civ_ko_rows(&self) -> usize;
+}
+
+impl ReviewAsk for Play {
+    fn first_lamp(&self) -> FixtureId { self.g.targets.iter().copied().find(|&t| game::sim_lightshome::fixture_on(&self.g, t) && self.g.tab.sim_lightshome_fixture[t].kind != game::sim_lightshome::FixtureKind::Breaker).expect("a lamp lit") }
+    fn lamp_knocked_out(&mut self, t: FixtureId) { let pl = self.g.player; self.g.pl[pl].ocp.charge = 1.0; self.g.aim_target = Some(t); game::game::game_ocp(&mut self.g, Some(t)); }
+    fn lamp_shot_dark(&mut self, t: FixtureId) { game::game::game_light_event(&mut self.g, t, Some(game::game::GameLightEventCause::Shot), None); }
+    fn lamp_disabled(&self, t: FixtureId) -> bool { game::sim_lightshome::fixture_disabled_until(&self.g, t) > self.g.time }
+    fn thing(&mut self, kind: game::throwables::ItemKind, fired: Option<bool>, emit: Option<f64>) -> ItemId {
+        let o = game::throwables::ThrowablesSpawnOpts { fired, emit_t: emit, ..game::throwables::ThrowablesSpawnOpts::zeroed() };
+        game::throwables::throwables_spawn(&mut self.g, kind, [5.0, 0.5, 5.0], [0.0; 3], Some(o))
+    }
+    fn things(&self) -> Vec<ItemId> { self.g.items.items.clone() }
+    fn things_gone(&mut self) { self.g.items.items.clear(); }
+    fn on_errand(&self, gd: GuardId) -> bool { self.g.gd[gd].task.is_some() }
+    fn civ_state(&self, gd: GuardId) -> game::civilians::CivState { self.g.cv[self.g.gd[gd].civ.expect("a civilian")].state }
+    fn civ_ko_rows(&self) -> usize { self.g.chronicle.events.iter().filter(|e| format!("{:?}", e.kind).contains("CivilianKo") || format!("{:?}", e.kind).contains("CivilianKO")).count() }
+}
