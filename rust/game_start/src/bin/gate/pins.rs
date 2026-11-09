@@ -1,7 +1,8 @@
 //! THE PINS (`rust/game_start/pins.txt`): what the rows are held to, as text that a commit's diff can be read in. Made by `gate pin`, read by the rows. Four sections.
 //! ROWS: every row's name, a line each, in order: a mission or a run that leaves the list leaves its pins with no row, and a whole `gate` says so.
 //! STARTS: the columns that are refused with the game's words, a line of the columns' names, then a line a part: its name, then an 8-digit word a column, or one word where every column has
-//! the same. A part that joins or leaves the state is then one line of the file. SERIES: a line a run: its name and a colon, then a word a second. LINES: what a run played to its end did, as a reader reads it: its name, a colon, the words.
+//! the same. A part that joins or leaves the state is then one line of the file: a run's parts at its last second are a column too (`play~depot-four~bangs`). SERIES: a line a run or a start: its name and a colon, then its
+//! figures' word a second (game_start::figures): THIS IS THE PIN. A row whose figures stand and whose parts moved has moved no play. FIGURES: their names, and a hex digit of each a second, which is what lets a moved word say which moved. LINES: what a run played to its end did, as a reader reads it: its name, a colon, the words.
 use crate::rows::Row;
 use std::collections::BTreeMap;
 
@@ -13,7 +14,7 @@ const NONE: &str = "--------";
 pub enum Start { Refused(String), Parts(BTreeMap<String, u32>) }
 
 #[derive(Default)]
-pub struct Pins { pub rows: Vec<String>, pub starts: BTreeMap<String, Start>, pub series: BTreeMap<String, Vec<u32>>, pub lines: BTreeMap<String, String> }
+pub struct Pins { pub rows: Vec<String>, pub starts: BTreeMap<String, Start>, pub series: BTreeMap<String, Vec<u32>>, pub lines: BTreeMap<String, String>, pub names: BTreeMap<String, Vec<String>>, pub digits: BTreeMap<String, Vec<String>> }
 
 pub fn path() -> std::path::PathBuf { std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("pins.txt") }
 fn hex(w: u32) -> String { format!("{:08x}", w) }
@@ -30,6 +31,13 @@ impl Pins {
             if l == "starts" { section = 1; continue; }
             if l == "series" { section = 2; continue; }
             if l == "lines" { section = 4; continue; }
+            if l == "figures" { section = 5; continue; }
+            if section == 5 {
+                let (head, words) = l.split_once(": ").unwrap_or_else(|| panic!("pins.txt: '{}' is no line of figures", l));
+                if let Some(name) = head.strip_prefix("names ") { p.names.insert(name.to_string(), words.split(',').map(String::from).collect()); }
+                if let Some(name) = head.strip_prefix("digits ") { p.digits.insert(name.to_string(), words.split(' ').map(String::from).collect()); }
+                continue;
+            }
             if section == 4 {
                 let (name, words) = l.split_once(": ").unwrap_or_else(|| panic!("pins.txt: '{}' is no line of a run", l));
                 p.lines.insert(name.to_string(), words.to_string());
@@ -86,7 +94,15 @@ impl Pins {
         out += "lines\n";
         let runs: Vec<&String> = rows.iter().filter(|r| r.worded()).filter_map(|r| self.lines.get_key_value(&r.name).map(|x| x.0)).collect();
         for n in runs.iter().copied().chain(self.lines.keys().filter(|n| !runs.contains(n))) { out += &format!("{}: {}\n", n, self.lines[n]); }
+        out += "figures\n";
+        for (n, list) in &self.names { out += &format!("names {}: {}\ndigits {}: {}\n", n, list.join(","), n, self.digits[n].join(" ")); }
         out
+    }
+    /// which figures moved at a second of a row, by their digits (a figure that moved and kept its digit, one in sixteen, is not named)
+    pub fn figures_moved(&self, key: &str, second: usize, names: &[String], digits: &[String]) -> String {
+        let (Some(was), Some(old), Some(now)) = (self.names.get(key), self.digits.get(key).and_then(|d| d.get(second)), digits.get(second)) else { return String::from("no figures kept to name them by") };
+        let moved: Vec<&str> = names.iter().enumerate().filter(|(i, n)| was.iter().position(|w| w == *n).and_then(|k| old.as_bytes().get(k)).copied().unwrap_or(b'-') != now.as_bytes()[*i]).map(|(_, n)| n.as_str()).collect();
+        if moved.is_empty() { String::from("a figure whose digit happens to agree") } else { crate::rows::named(&moved) }
     }
     /// what the rows' list has lost and gained against the pinned one, in the words a whole `gate` says it
     pub fn rows_differ(&self, now: &[String]) -> Vec<String> {
@@ -102,6 +118,7 @@ impl Pins {
     pub fn take(&mut self, lines: &[String], whole: bool) -> Vec<String> {
         let (mut starts, mut series, mut said): (BTreeMap<String, Start>, BTreeMap<String, Vec<u32>>, Vec<String>) = (BTreeMap::new(), BTreeMap::new(), Vec::new());
         let mut worded: BTreeMap<String, String> = BTreeMap::new();
+        let (mut names, mut digits): (BTreeMap<String, Vec<String>>, BTreeMap<String, Vec<String>>) = (BTreeMap::new(), BTreeMap::new());
         for l in lines {
             let w: Vec<&str> = l.splitn(4, '\t').collect();
             match w[..] {
@@ -109,31 +126,37 @@ impl Pins {
                 ["start", col, "parts", list] => { starts.insert(col.to_string(), Start::Parts(list.split(' ').map(|x| { let (n, v) = x.split_once('=').unwrap(); (n.to_string(), word(v)) }).collect())); }
                 ["series", name, list] => { series.insert(name.to_string(), list.split(' ').map(word).collect()); }
                 ["line", name, words] => { worded.insert(name.to_string(), words.to_string()); }
+                ["figures", name, list, rows] => { names.insert(name.to_string(), list.split(',').map(String::from).collect()); digits.insert(name.to_string(), rows.split(' ').map(String::from).collect()); }
                 _ => panic!("a child's pin: '{}'", l),
             }
         }
+        // (each move as what it is: play that moved, which a commit says why of; or only the words, which it says are only that)
+        let moved_at = |name: &str, now: &Vec<u32>| -> Option<usize> { let a = self.series.get(name)?; if a == now { None } else { Some(a.iter().zip(now).position(|(x, y)| x != y).unwrap_or(a.len().min(now.len()))) } };
+        let mut played_moved: Vec<&String> = Vec::new();
+        for (name, now) in &series {
+            if !self.series.contains_key(name) { said.push(format!("PLAY   {}: a new row", name)); }
+            else if let Some(at) = moved_at(name, now) {
+                played_moved.push(name);
+                let figs = names.get(name).map_or(String::from("no figures kept to name them by"), |n| self.figures_moved(name, at, n, &digits[name]));
+                said.push(format!("PLAY   {}: moved from second {}: {}", name, at + 1, figs));
+            }
+        }
         for (col, now) in &starts {
+            let row = col.replace('~', " ");
             match (self.starts.get(col), now) {
-                (None, _) => said.push(format!("moved  start {}: a new column", col)),
+                (None, _) => {}
                 (Some(a), b) if a == b => {}
-                (Some(Start::Parts(a)), Start::Parts(b)) => said.push(format!("moved  start {}: {}", col, crate::rows::moved_parts(a, b))),
+                (Some(Start::Parts(a)), Start::Parts(b)) => if !played_moved.contains(&&row) { said.push(format!("WORDS  {}: only the words moved ({})", row, crate::rows::moved_parts(a, b))); },
                 (Some(Start::Refused(a)), Start::Refused(b)) => said.push(format!("moved  start {}: refused in other words: '{}', then '{}'", col, a, b)),
                 (Some(Start::Refused(a)), _) => said.push(format!("moved  start {}: it stands now, and was refused: '{}'", col, a)),
                 (Some(_), Start::Refused(b)) => said.push(format!("moved  start {}: it is refused now: '{}'", col, b)),
-            }
-        }
-        for (name, now) in &series {
-            match self.series.get(name) {
-                None => said.push(format!("moved  {}: a new run", name)),
-                Some(a) if a == now => {}
-                Some(a) => said.push(format!("moved  {}: from second {} on (`hold keep` on the build before and `hold check` on this one name the part)", name, a.iter().zip(now).position(|(x, y)| x != y).unwrap_or(a.len().min(now.len())) + 1)),
             }
         }
         for (name, now) in &worded {
             match self.lines.get(name) {
                 None => {}
                 Some(a) if a == now => {}
-                Some(a) => said.push(format!("moved  {}: '{}', then '{}'", name, a, now)),
+                Some(a) => said.push(format!("line   {}: '{}', then '{}'", name, a, now)),
             }
         }
         if whole {
@@ -145,10 +168,14 @@ impl Pins {
             self.starts.clear();
             self.series.clear();
             self.lines.clear();
+            self.names.clear();
+            self.digits.clear();
         }
         self.starts.extend(starts);
         self.series.extend(series);
         self.lines.extend(worded);
+        self.names.extend(names);
+        self.digits.extend(digits);
         said
     }
 }
