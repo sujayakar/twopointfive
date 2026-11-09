@@ -74,12 +74,6 @@ mod tests {
     }
 }
 
-/// The selector open as a list, not up as a ring.
-pub fn player_list_open(g: &crate::game::Game, id: PlayerId) -> bool {
-    let sel = &g.pl[id].sel;
-    sel.open && sel.ring.is_none()
-}
-
 /// The selector open with his hand on it: a list, or a ring whose key is still down.
 pub fn player_choosing(g: &crate::game::Game, id: PlayerId) -> bool {
     let sel = &g.pl[id].sel;

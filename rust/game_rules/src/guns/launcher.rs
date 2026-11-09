@@ -110,12 +110,7 @@ pub fn arc_solve(g: &mut crate::game::Game, from: V3, target: V3, r: crate::laun
 
 /// The point to send a ring at: the head of the man under the reticle, led by his ground velocity; else the fixture or world point the cursor names.
 pub fn ring_aim_point(g: &crate::game::Game, seat: &crate::seats::SeatRef, from: V3) -> V3 {
-    let puppet = g.puppet.as_ref().and_then(|p| p.target);
-    let gd = match puppet {
-        Some(t) if !crate::condition::down(g, g.gd[t].ch) => Some(t),
-        _ => seat.aim_guard,
-    };
-    if let Some(gd) = gd {
+    if let Some(gd) = seat.aim_guard {
         let c = g.gd[gd].ch;
         let head_bone = match g.ch[c].bones.get(crate::character::Bone::Head) { Some(b) => *b, None => v3::add(g.ch[c].pos, [0.0, 1.6, 0.0]) };
         let head = v3::add(head_bone, [0.0, 0.04, 0.0]);

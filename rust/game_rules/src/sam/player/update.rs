@@ -60,7 +60,7 @@ pub fn legs_own(g: &mut crate::game::Game) -> bool {
     let pl = g.player;
     let busy = crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].takedown.is_some() || g.pl[pl].holding.is_some() || g.pl[pl].kick.is_some() || g.pl[pl].picking.is_some()
         || g.pl[pl].wanding.is_some() || g.pl[pl].coding.is_some() || g.pl[pl].wall.is_some() || g.pl[pl].dragging.is_some() || g.pl[pl].haul.is_some()
-        || g.pl[pl].door_move.is_some() || g.puppet.is_some();
+        || g.pl[pl].door_move.is_some();
     !(busy || crate::handwork::sam_work(g).is_some() || crate::stalk::stalk_on(g, &crate::seats::here(g)).is_some() || crate::rails::rails_allowed(g).is_some())
 }
 
@@ -71,8 +71,19 @@ fn free_pace(g: &crate::game::Game, seat: &crate::seats::SeatRef, m: crate::play
         else if m.dragging.is_some() { if m.haul.is_some() { crate::hands::haul_speed(g, seat) } else { g.tune.player_crouch * 0.6 } }
         else if m.dash { g.k.crouchrun.pace }
         else { (if m.crouch { crouch_pace(g) } else { g.tune.player_walk }) * m.pace };
-    if let Some(walk) = g.puppet.as_ref().and_then(|p| p.walk) { if ml > 0.0 { max_speed *= walk; } }
     crate::kitload::sam_load_pace(g, g.pl[seat.player].ch, max_speed, Some(m.sprinting))
+}
+
+/// the walk keys, ahead, left, back and right
+pub const WALK_KEYS: [&str; 4] = ["KeyW", "KeyA", "KeyS", "KeyD"];
+/// Which of them a hand holds to go from `from` toward `to`, in a view that looks along `forward`: the nearest of the eight ways they can go.
+pub fn walk_keys(from: V3, to: [f64; 2], forward: V3) -> [bool; 4] {
+    let (dx, dz) = (to[0] - from[0], to[1] - from[2]);
+    let (d, l) = (m::hyp2(dx, dz), m::hyp2(forward[0], forward[2]));
+    if d <= 0.0 || l <= 0.0 { return [false; 4]; }
+    let (fx, fz) = (forward[0] / l, forward[2] / l);
+    let (ahead, right) = ((dx * fx + dz * fz) / d, (dz * fx - dx * fz) / d);
+    [ahead > 0.3827, right < -0.3827, ahead < -0.3827, right > 0.3827]
 }
 
 /// His move keys as a way across the floor, in the view's basis, not yet of unit length.
@@ -95,12 +106,10 @@ pub fn crouch_key(g: &mut crate::game::Game, m: &mut crate::player::Legs) -> boo
 
 /// His stance for this stride: Shift and a direction stands him up to run, or keeps him down and quick; a body in his hands sets it.
 pub fn sprint_stance(g: &mut crate::game::Game, m: &mut crate::player::Legs, want_sprint: bool, stalk: bool) {
-    let dashes = g.puppet.is_none();
-    if want_sprint && m.crouch && can_stand_at(g, m.char.pos) && !dashes { m.crouch = false; }
     let dragging = m.dragging.is_some();
     if dragging { m.crouch = crate::hands::haul_crouch(g); }
     m.sprinting = want_sprint && !m.crouch;
-    m.dash = dashes && want_sprint && m.crouch && !dragging && !stalk;
+    m.dash = want_sprint && m.crouch && !dragging && !stalk;
 }
 
 /// One stride: his pace taken up or let go, his place moved by it, the walls and then the men given their say.
@@ -201,12 +210,8 @@ fn cursor_pitch(g: &Game, seat: &crate::seats::SeatRef, pl: PlayerId, c: CharId,
     v3::clamp(m::atan2(target_y - gun_y, m::max(aim_dist, 0.5)), -60.0 * v3::DEG, 70.0 * v3::DEG)
 }
 
-/// What a round goes at: the puppet's man, a fixture under the reticle, a man under the cursor, else level along the heading.
+/// What a round goes at: a fixture under the reticle, a man under the cursor, else level along the heading.
 fn shot_target(g: &Game, seat: &crate::seats::SeatRef) -> V3 {
-    let pt = g.puppet.as_ref().and_then(|p| p.target);
-    if let Some(t) = pt {
-        if !crate::condition::down(g, g.gd[t].ch) { return v3::add(g.ch[g.gd[t].ch].pos, [0.0, 1.25, 0.0]); }
-    }
     if let Some(t) = seat.aim_target { return v3::copy(g.tab.sim_lightshome_fixture[t].pos); }
     if let Some(gd) = seat.aim_guard {
         return man_aim(g, seat, gd, 1.25);
@@ -397,41 +402,28 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
     let keys_on = down(g, input, "KeyW") || down(g, input, "KeyA") || down(g, input, "KeyS") || down(g, input, "KeyD");
     let sprint_key = !crate::condition::is_hurt(g, g.pl[pl].ch, None) && shift_down(g, input) && keys_on;
     if hit(g, input, "KeyR") || (crate::game::player_pistol_up(g, pl) && crate::autoreload::auto_reload_due(g, pl, gun)) || (crate::game::player_rifle_up(g, pl) && crate::autoreload::auto_reload_due(g, pl, rifle)) {
-        let sprinting = sprint_key && !wall_ran_on(g, pl, input) && !(g.pl[pl].crouch && g.puppet.is_none());
+        let sprinting = sprint_key && !wall_ran_on(g, pl, input) && !(g.pl[pl].crouch);
         reload_in_hand(g, Some(sprinting), None);
     }
     // movement input: none while the selector is open
     let basis = crate::camera::follow_camera_planar_basis(g, cam);
     let (fwd, right) = (basis.fwd, basis.right);
     let (mut mx, mut mz) = (0.0, 0.0);
-    if !crate::game::player_list_open(g, pl) {
-        let (w, s, d, a) = (down(g, input, "KeyW"), down(g, input, "KeyS"), down(g, input, "KeyD"), down(g, input, "KeyA"));
-        let way = keys_way(fwd, right, w, s, d, a);
-        mx = way[0]; mz = way[1];
-    }
+    let (w, s, d, a) = (down(g, input, "KeyW"), down(g, input, "KeyS"), down(g, input, "KeyD"), down(g, input, "KeyA"));
+    let way = keys_way(fwd, right, w, s, d, a);
+    mx = way[0]; mz = way[1];
     let stalk = {
         let (lmb, lmb_hit) = (input_lmb(g, input), input_lmb_hit(g, input));
         crate::stalk::stalk_step(g, lmb, lmb_hit, mx != 0.0 || mz != 0.0, Some(crate::stalk::StalkKeys { mx, mz, dt }))
     };
     if let Some(st) = stalk { mx = st.mx; mz = st.mz; g.pl[pl].crouch = true; }
-    if g.puppet.is_some() {
-        mx = 0.0; mz = 0.0;
-        if let Some(gl) = g.puppet.as_ref().and_then(|p| p.goal) {
-            let (dx, dz) = (gl[0] - g.ch[c].pos[0], gl[2] - g.ch[c].pos[2]);
-            let dl = m::hyp2(dx, dz);
-            if dl > 0.1 { mx = dx / dl; mz = dz / dl; }
-        }
-        if let Some(cr) = g.puppet.as_ref().and_then(|p| p.crouch) {
-            if g.pl[pl].dragging.is_none() && (cr || can_stand(g)) { g.pl[pl].crouch = cr; }
-        }
-    }
     if g.pl[pl].dragging.is_none() && (g.pl[pl].haul.is_some() || g.ch[c].anim.haul.is_some()) { g.pl[pl].haul = None; g.ch[c].anim.haul = None; }
     let stunned = crate::samstun::sam_staggered(g, &crate::seats::here(g), None);
     let rooted = crate::samstun::sam_rooted(g, &crate::seats::here(g), None);
     let own_move = !rooted && (mx != 0.0 || mz != 0.0);
     let mut hands_walk = false;
     {
-        let own = own_move && g.puppet.is_none();
+        let own = own_move;
         if let Some(hs) = crate::hands::hands_step(g, own, dt) { mx = hs[0]; mz = hs[1]; hands_walk = true; }
     }
     if rooted { mx = 0.0; mz = 0.0; }
@@ -782,7 +774,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
     };
     g.pl[pl].held_kind = kind;
     if !g.pl[pl].sprinting && crate::game::game_throw_count(g, &crate::seats::here(g), kind) > 0.0 && slot_kind.is_some() {
-        let tp = g.puppet.as_ref().and_then(|p| p.throw_at).unwrap_or(ap);
+        let tp = ap;
         let origin = throw_origin(g, &crate::seats::here(g));
         let sol = crate::throwables::throwables_solve(g, origin, [tp[0], m::max(0.05, m::min(tp[1], 2.6)), tp[2]], None);
         g.pl[pl].throw_preview = Some(sol.clone());

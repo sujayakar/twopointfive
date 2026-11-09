@@ -13,7 +13,7 @@ fn sam_job(g: &mut crate::game::Game) -> bool {
 /// Head of the player's frame: a job begun puts away what is in his hand, a job over brings it back.
 pub fn sam_stow_tick(g: &mut crate::game::Game, holster: &mut dyn FnMut(&mut crate::game::Game, bool)) {
     let pl = g.player;
-    let job = g.puppet.is_none() && sam_job(g);
+    let job = sam_job(g);
     let Some(s) = g.pl[pl].work_stow else {
         if !job { return; }
         let mut owed = false;

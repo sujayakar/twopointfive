@@ -15,6 +15,7 @@ fn two_rooms(sam: [f64; 2], s: u32) -> Play {
     let mut p = Play::scene(&sc, &seed(s));
     p.sam_a_ghost();
     p.sam_unhurt();
+    p.g.k.wallsnap.press = false;   // (a wall walked into is walked into: he takes no hold of it)
     p.run(0.1);
     p
 }

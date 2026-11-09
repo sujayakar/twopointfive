@@ -40,15 +40,7 @@ pub fn preview_too_close(g: &crate::game::Game, pl: PlayerId) -> bool {
 
 /// The living man under the reticle a round can meet, never one of Sam's own side. (he40.ts shellMan)
 fn shell_man(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<GuardId> {
-    let puppet_target = match &g.puppet {
-        Some(p) => p.target,
-        None => None,
-    };
-    let gd = match puppet_target {
-        Some(t) if !crate::condition::down(g, g.gd[t].ch) => Some(t),
-        _ => seat.aim_guard,
-    };
-    match gd {
+    match seat.aim_guard {
         Some(id) if !crate::condition::down(g, g.gd[id].ch) && g.gd[id].team != crate::teams::Team::Operative => Some(id),
         _ => None,
     }

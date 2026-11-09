@@ -71,7 +71,6 @@ fn friend_under_cursor(g: &mut crate::game::Game, c_2: CharId) -> Option<GuardId
 pub fn sam_off_friend(g: &mut crate::game::Game, c_2: CharId, up: bool, dt: f64) -> Option<crate::friends::SamOffFriend> {
     let pl = g.player;
     let live = up
-        && !g.puppet.is_some()
         && !g.pl[pl].wall.is_some()
         && !g.pl[pl].holding.is_some()
         && !g.pl[pl].dragging.is_some()

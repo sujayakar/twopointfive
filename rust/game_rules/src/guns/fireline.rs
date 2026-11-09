@@ -6,11 +6,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{string::String, vec, vec::Vec};
 
-/// Is the rule running: a round of the player's is a round to his own men.
-fn live(g: &mut crate::game::Game) -> bool {
-    crate::friendlyfire::ff_live(g)
-}
-
 /// Once a frame before the men are posed: is the player firing, by the rounds counted off the gun in his hands.
 pub fn fire_line_tick(g: &mut crate::game::Game) {
     let pl = g.player;
@@ -251,7 +246,7 @@ pub fn fire_line_feet(g: &mut crate::game::Game, gd: GuardId, goal: Option<V3>, 
             st = None;
         }
     }
-    if !live(g) || mine || goal.is_none() || !crate::friendlyfire::ff_side(g, Some(gd)) || !crate::friendlyfire::ff_body(g, gd) || g.gd[gd].held.is_some() {
+    if mine || goal.is_none() || !crate::friendlyfire::ff_side(g, Some(gd)) || !crate::friendlyfire::ff_body(g, gd) || g.gd[gd].held.is_some() {
         end(g, gd, st.as_ref());
         return None;
     }

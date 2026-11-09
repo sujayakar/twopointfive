@@ -145,7 +145,7 @@ pub fn work_things_things(g: &crate::game::Game, seat: &crate::seats::SeatRef) -
 /// THE TICK'S LIST OF THEM, for the seat standing: read afresh when what places them changes and once a second besides
 pub fn work_things_keep(g: &mut crate::game::Game) {
     let (active, permanent) = mains(g);
-    let drive = g.mission.stage == crate::game::MissionStage::Drive && g.puppet.is_none();
+    let drive = g.mission.stage == crate::game::MissionStage::Drive;
     let live = !(active && permanent);
     let bp = g.level.breaker.pos;
     let rf = g.level.errand.front;

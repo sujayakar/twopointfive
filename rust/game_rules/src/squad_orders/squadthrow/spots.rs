@@ -656,7 +656,7 @@ pub(super) fn squad_stun_catches(g: &mut crate::game::Game, rest: V3, at: V3) ->
     if !crate::effects::flags().dazzle { return Vec::new(); }
     let pts = stun_pts(rest, at);
     let mut out: Vec<String> = Vec::new();
-    if !crate::condition::down(g, g.pl[g.player].ch) && g.puppet.is_none() {
+    if !crate::condition::down(g, g.pl[g.player].ch) {
         let c = g.pl[g.player].ch;
         let eye = match g.ch[c].bones.get(crate::character::Bone::Head) { Some(h) => *h, None => v3::add(g.ch[c].pos, [0.0, 1.6, 0.0]) };
         if stun_in(g, &pts, eye, true) { out.push(String::from("you")); }

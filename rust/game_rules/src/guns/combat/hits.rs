@@ -117,7 +117,7 @@ pub fn kill_guard_by(g: &mut crate::game::Game, gd: GuardId, dir: V3, quiet: Opt
     let held = crate::guards::in_hand(g, gd);
     if by == DownBy::Player {
         let team = g.gd[gd].team;
-        if !(crate::friendlyfire::ff_live(g) && !crate::teams::is_hostile(g, crate::teams::Team::Player, team)) {
+        if !(!crate::teams::is_hostile(g, crate::teams::Team::Player, team)) {
             crate::mission::tally(g, if how == DownKind::Shot { crate::mission::TallyK::Kills } else { crate::mission::TallyK::Knockouts });
         }
         crate::chronicle::chron_down_by(g, gd, how, line, weapon);

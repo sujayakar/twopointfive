@@ -340,9 +340,9 @@ pub fn guard_acquired(g: &crate::game::Game, gd: GuardId) -> bool {
     g.tune.aim_model && g.gd[gd].state == crate::game::GuardState::Alert && g.arms[g.gd[gd].ch].aim.track >= g.k.aim.guard.acquire_min - 1e-9
 }
 
-/// Sam's cone under the model and his track: nothing with the model off or under the puppet.
+/// Sam's cone under the model and his track: nothing with the model off.
 pub fn player_aim(g: &crate::game::Game, pl: PlayerId) -> crate::aim::PlayerAim {
-    if !g.tune.aim_model || g.puppet.is_some() {
+    if !g.tune.aim_model {
         return crate::aim::PlayerAim { spread: 0.0, track: 1.0, base: 0.0, settle: 1.0, tgt: 0.0, own: 0.0 };
     }
     let p = g.k.aim.player;
@@ -363,7 +363,7 @@ pub fn player_aim(g: &crate::game::Game, pl: PlayerId) -> crate::aim::PlayerAim 
 pub(super) fn sam_aim(g: &mut crate::game::Game) -> f64 {
     let pl = g.player;
     let r = player_aim(g, pl);
-    if !g.tune.aim_model || g.puppet.is_some() {
+    if !g.tune.aim_model {
         return 0.0;
     }
     let now = g.time;

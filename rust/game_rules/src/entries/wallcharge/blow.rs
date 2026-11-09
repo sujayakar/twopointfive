@@ -878,7 +878,7 @@ fn blow_seat(g: &mut Game, w: &WallSpot, hole: bool, r: crate::wallcharge::WallC
     let tk = thick(g, w);
     let (knock_m, stun_m, ours_secs, near_m) = (g.k.doortools.knock_m, g.k.doortools.stun_m, g.k.wallshot.ours_secs, g.k.wallkill.near_m);
     let pl = g.player;
-    if wk && !crate::condition::down(g, g.pl[pl].ch) && !g.god_mode && g.puppet.is_none() {
+    if wk && !crate::condition::down(g, g.pl[pl].ch) && !g.god_mode {
         let p = g.ch[g.pl[pl].ch].pos;
         let far = wall_off(g, w, p) < -tk / 2.0;
         let dist = v3::dist_xz(p, xz);
@@ -894,7 +894,7 @@ fn blow_seat(g: &mut Game, w: &WallSpot, hole: bool, r: crate::wallcharge::WallC
     if k > 0.0 { wall_charge_sam_caught(g, pl, k, xz); }
     *sam = m::max(*sam, k);
     // (samstun.ts: the blast does to the player what it does to a teammate standing there)
-    if !crate::condition::down(g, g.pl[pl].ch) && g.puppet.is_none() {
+    if !crate::condition::down(g, g.pl[pl].ch) {
         let p = g.ch[g.pl[pl].ch].pos;
         let far = wall_off(g, w, p) < -tk / 2.0;
         let dist = v3::dist_xz(p, xz);

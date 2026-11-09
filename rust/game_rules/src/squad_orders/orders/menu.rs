@@ -168,7 +168,6 @@ pub fn squad_orders_new(g: &mut crate::game::Game, cast: Option<&crate::orders::
 
 /// Is there a squad to order at all (a living operative unit, outside any show).
 pub fn squad_orders_active(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
-    if g.puppet.is_some() { return false; }
     let mut i = 0;
     while i < g.guards.len() {
         let gd = g.guards[i];

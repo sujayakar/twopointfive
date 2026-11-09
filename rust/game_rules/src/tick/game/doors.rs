@@ -194,10 +194,9 @@ fn game_door_contact(g: &mut crate::game::Game) -> Option<crate::doors::DoorCont
     if crate::condition::down(g, g.pl[pl].ch) { return None; }
     let run = crate::sprintdoor::sprint_door_run(g, pl);
     // (DOORWAY.solid, DOORWAY.oneWay: both true on the page)
-    let solid = g.puppet.is_none();
     Some(crate::doors::DoorContact {
         pos: g.ch[pc].pos, radius: 0.34, bash: g.pl[pl].sprinting, who: g.ch[pc].id, quiet: g.pl[pl].crouch && !g.pl[pl].dash,
-        keys: Some(g.pl[pl].keys.clone()), run, solid: Some(solid), vel: Some(g.ch[pc].vel), ..crate::doors::DoorContact::default()
+        keys: Some(g.pl[pl].keys.clone()), run, solid: Some(true), vel: Some(g.ch[pc].vel), ..crate::doors::DoorContact::default()
     })
 }
 
@@ -408,7 +407,7 @@ fn game_door_after(g: &mut crate::game::Game, own: Option<&mut crate::doors::Doo
     }
     if let Some(d) = own.and_then(|o| o.blocked_by) {
         let p = &g.pl[pl];
-        if p.sprinting && p.kick.is_none() && p.picking.is_none() && p.coding.is_none() && p.takedown.is_none() && p.holding.is_none() && g.puppet.is_none() {
+        if p.sprinting && p.kick.is_none() && p.picking.is_none() && p.coding.is_none() && p.takedown.is_none() && p.holding.is_none() {
             let u = crate::doors::door_dir(g, d);
             let (pos, vel) = (g.ch[pc].pos, g.ch[pc].vel);
             let into = -(-u[1] * vel[0] + u[0] * vel[2]) * crate::doors::doors_side(g, d, pos);

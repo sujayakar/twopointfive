@@ -77,7 +77,6 @@ pub(super) fn haul_begin(g: &mut crate::game::Game, gd: GuardId) {
     let c = g.pl[pl].ch;
     g.pl[pl].haul = None;
     let Some(rc) = rag_char(g, gd) else { return };
-    if g.puppet.is_some() { return; }
     let pos = g.ch[c].pos;
     if stand_room(g, pos) {
         let rag = crate::ragdoll::rag();
@@ -641,7 +640,7 @@ pub fn door_move_begin(g: &mut crate::game::Game, d: DoorId) -> bool {
     use crate::doors::{door_angle, door_is_closed, door_max_a, door_min_a, door_off, door_swing};
     let pl = g.player;
     let p = g.ch[g.pl[pl].ch].pos;
-    if g.puppet.is_some() || door_off(g, d) || hands_busy(g, &crate::seats::here(g)) { return false; }
+    if door_off(g, d) || hands_busy(g, &crate::seats::here(g)) { return false; }
     let keys = g.pl[pl].keys.clone();
     if crate::doors::doors_locked_out(g, d, p, Some(&keys)) { return false; }
     let open = door_is_closed(g, d);
@@ -792,7 +791,6 @@ pub(super) fn hands_step(g: &mut crate::game::Game, own: bool, dt: f64) -> Optio
         if h.phase == P::Rise || h.phase == P::Set { return Some([0.0, 0.0]); }
         if h.phase == P::Reach {
             let Some(rc) = rag_char(g, body) else { return Some([0.0, 0.0]) };
-            if crate::game::player_list_open(g, pl) { return Some([0.0, 0.0]); }
             if own && h.carry.is_none() {   // a step of his own: no walking him in
                 let t = m::max(h.t, g.k.hands.step_secs);
                 g.pl[pl].haul.as_mut().unwrap().t = t;
@@ -818,7 +816,6 @@ pub(super) fn hands_step(g: &mut crate::game::Game, own: bool, dt: f64) -> Optio
         g.pl[pl].door_move.as_mut().unwrap().goal = None;
         return None;
     }
-    if crate::game::player_list_open(g, pl) { return Some([0.0, 0.0]); }   // choosing a row: feet still, the leaf waits
     let pos = g.ch[c].pos;
     let (dx, dz) = (goal[0] - pos[0], goal[2] - pos[2]);
     let dl = m::hyp2(dx, dz);

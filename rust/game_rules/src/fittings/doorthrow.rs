@@ -47,9 +47,7 @@ pub(super) fn door_man(g: &mut Game, who: f64) -> f64 {
         let (folded, until) = crate::seats::with_seat(g, seat, &mut |g: &mut Game| {
             (crate::samstun::sam_staggered(g, &crate::seats::here(g), None), g.cond[g.pl[g.player].ch].fold_until)
         });
-        let braced = if g.puppet.is_some() {
-            braced_bit | held_bit
-        } else if until >= 0.0 && now < until + again {
+        let braced = if until >= 0.0 && now < until + again {
             braced_bit
         } else {
             0
@@ -236,7 +234,7 @@ fn throw_sam(g: &mut Game, s: crate::doors::DoorStrike) {
     let pl = g.player;
     let hard = s.tier == crate::doors::DoorStrikeTier::Boot;
     let secs = if hard { g.k.doorthrow.kick_secs } else { g.k.doorthrow.push_secs };
-    if crate::condition::down(g, g.pl[pl].ch) || g.puppet.is_some() {
+    if crate::condition::down(g, g.pl[pl].ch) {
         return;
     }
     crate::samstun::stagger_player(g, secs, [s.dir[0], 0.0, s.dir[1]]);

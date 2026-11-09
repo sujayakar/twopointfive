@@ -176,7 +176,6 @@ fn rack_face(g: &crate::game::Game, from: V3) -> crate::handwork::RackFace {
 
 /// What Sam's hands are on, if a verb of his that plants him is running.
 pub fn sam_work(g: &mut crate::game::Game) -> Option<crate::handwork::SamWork> {
-    if g.puppet.is_some() { return None; }
     let pl = g.player;
     let c = g.pl[pl].ch;
     let p = g.ch[c].pos;
@@ -196,7 +195,6 @@ pub fn sam_work(g: &mut crate::game::Game) -> Option<crate::handwork::SamWork> {
 
 /// The 'breaker' rows: his hand goes to the lever and throws it. True = taken here.
 pub fn breaker_start(g: &mut crate::game::Game, on: bool) -> bool {
-    if g.puppet.is_some() { return false; }
     let pl = g.player;
     if g.pl[pl].breaker_move.is_some() { return true; }
     g.pl[pl].breaker_move = Some(crate::game::PlayerBreakerMove { on, t: 0.0, thrown: false });

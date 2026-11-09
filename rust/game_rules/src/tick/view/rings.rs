@@ -80,7 +80,7 @@ pub(super) fn hand_ring_view(g: &Game, seat: &SeatRef) -> Option<HandRingView> {
 /// why a press did nothing, for as long as it is up. An empty tap's word goes sooner, when it is no longer what a tap would say: a step into reach, or away, takes it down
 pub(super) fn empty_view(g: &Game, seat: &SeatRef) -> Option<EmptyView> {
     let pl = &g.pl[seat.player];
-    if g.puppet.is_some() || g.cond[pl.ch].down || pl.sel.word.is_empty() { return None; }
+    if g.cond[pl.ch].down || pl.sel.word.is_empty() { return None; }
     let age = g.time - pl.sel.word_t;
     if !(age >= 0.0 && age < crate::handring::EMPTY_SHOW_SECS) { return None; }
     if let Some(kind) = pl.sel.word_kind { return Some(EmptyView { word: pl.sel.word.clone(), kind, dist: None }); }

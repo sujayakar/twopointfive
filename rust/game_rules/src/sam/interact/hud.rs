@@ -64,13 +64,13 @@ fn rides(g: &Game, it: &Interactable) -> (Option<f64>, f64) {
 }
 
 /// the list for `seat`. With the ring standing for the list the corner shows one line, what the key would do now (the highlighted row, or a running verb's own; none while the
-/// ring's lit wedge is the whistle), and under it the first line no key gives; a puppet keeps the whole list
+/// ring's lit wedge is the whistle), and under it the first line no key gives
 pub fn interact_view(g: &Game, seat: &SeatRef) -> InteractView {
     let pl = &g.pl[seat.player];
     let (near, p) = (seat.nearby, g.ch[pl.ch].pos);
     let hv = seat.hover.as_ref().map(|_| pl.near_sel as usize).filter(|&i| i < near.len());
     let lead = hv.filter(|&i| { let r = &near[i]; r.kind != K::Cancel && (r.verb.is_some() || r.running == Some(true)) && !pl.sel.ring.as_ref().is_some_and(|x| x.whistle == Some(true)) });
-    let whole = !g.k.handring.on || g.puppet.is_some();
+    let whole = !g.k.handring.on;
     let list: Vec<usize> = if whole { (0..near.len()).collect() } else {
         lead.into_iter().chain((0..near.len()).filter(|&i| near[i].verb.is_none() && Some(i) != lead).take(1)).collect()
     };
@@ -109,7 +109,6 @@ pub fn interact_view(g: &Game, seat: &SeatRef) -> InteractView {
         lit: lit.filter(|&i| i < cap).map_or(-1.0, |i| i as f64),
         more: list.len().saturating_sub(cap) as f64,
         open: pl.sel.open && pl.sel.ring.is_none(),
-        corner: g.puppet.is_none(),
         ring,
         dots,
     }

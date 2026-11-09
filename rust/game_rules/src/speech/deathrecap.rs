@@ -72,9 +72,6 @@ fn recap_man(g: &Game, man: OnFloor) -> RecapMan {
 /// Whose deaths are explained: the players', their teammates', the people they came for.
 fn ours(side: &str) -> bool { side == "player" || side == "operative" || side == "civilian" }
 
-/// somebody plays: no puppet
-fn live(g: &Game) -> bool { g.puppet.is_none() }
-
 /// A GAME IS BEING KEPT (a checkpoint, by value or as bytes: the same either way): the copy has no record, and the next tick starts one from the floor as it is.
 pub fn recap_left_behind(g: &mut Game) { g.recap = Recap::blank(); }
 
@@ -88,7 +85,7 @@ fn this_run(g: &mut Game) {
 /// game's to say: the tick reads the answer off the man himself. `was_down`: a round into a man on the floor is not the round that put him there, and must not replace it.
 pub fn recap_round(g: &mut Game, victim: Option<CharId>, was_down: bool, shooter: CharId, muzzle: V3, hit: V3, def: &crate::weapons::WeaponDef, blind: Option<bool>) {
     let Some(victim) = victim else { return; };
-    if was_down || !live(g) { return; }
+    if was_down { return; }
     this_run(g);
     g.stats.deathrecap.rounds += 1;
     let (id, by, by_at, t) = (g.ch[victim].id, g.ch[shooter].id, xz(g.ch[shooter].pos), g.time);
@@ -205,7 +202,6 @@ pub fn recap_tick(g: &mut Game) {
     this_run(g);
     g.recap.all_down = crate::seats::all_down(g);
     // (not watching: whoever goes down meanwhile is not a death seen, and the next look starts from the floor as it is)
-    if !live(g) { g.recap.primed = false; return; }
     let now = g.time;
     g.recap.last_t = now;
     read_events(g);

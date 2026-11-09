@@ -361,7 +361,8 @@ pub struct Game {
     pub act: Option<crate::game::Interactable>,
     /// (a machine's own: in no bytes)
     #[bytes(skip)]
-    pub puppet: Option<crate::game::GamePuppet>,
+    /// a scripted hand is at this point of the world: his cursor is on it, and his aim is it
+    pub hand_at: Option<V3>,
     pub tmp_v: V3,
     pub called_in: bool,
     pub stood_down: bool,
@@ -528,17 +529,6 @@ pub struct Game {
     #[is(crate::owned::Owned::new())] pub feel: crate::owned::Owned,
     /// this tick's count of keyed draws a (site, man) (dice.rs): empty between ticks; not on the wire
     pub keyed: crate::dice::Keyed,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct GamePuppet {
-    pub goal: Option<V3>,
-    pub aim: Option<V3>,
-    pub crouch: Option<bool>,
-    pub walk: Option<f64>,
-    pub fixtures: Option<bool>,
-    pub target: Option<GuardId>,
-    pub throw_at: Option<V3>,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -750,7 +740,7 @@ pub struct Player {
     pub hand_wait: f64,
     pub near_sel: i32,
     #[is(String::from(""))] pub near_key: String,
-    #[is(crate::game::PlayerSel { down_t: -1.0, open: false, moved: false, wheel_acc: 0.0, run_key: String::from(""), move_latch: 0.0, word: String::from(""), word_t: -1000000000.0, word_kind: None, ring: None })] pub sel: crate::game::PlayerSel,
+    #[is(crate::game::PlayerSel { down_t: -1.0, open: false, run_key: String::from(""), move_latch: 0.0, word: String::from(""), word_t: -1000000000.0, word_kind: None, ring: None })] pub sel: crate::game::PlayerSel,
     #[is(1.0)] pub pace: f64,
     pub nv: bool,
     pub nv_amount: f64,
@@ -850,8 +840,6 @@ pub struct PlayerBreakerMove {
 pub struct PlayerSel {
     pub down_t: f64,
     pub open: bool,
-    pub moved: bool,
-    pub wheel_acc: f64,
     pub run_key: String,
     pub move_latch: f64,
     pub word: String,

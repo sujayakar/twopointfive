@@ -583,7 +583,7 @@ pub fn flinching(g: &crate::game::Game, gd: GuardId) -> bool {
 
 /// Extra cone on the player's own round for his own suppression.
 pub fn sam_spread(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> f64 {
-    if g.tune.suppression && g.puppet.is_none() {
+    if g.tune.suppression {
         let p = seat.player;
         let v = g.cond[g.pl[p].ch].sup.v;
         g.k.suppression.sam_spread * crate::condition::condition_sup(g, g.pl[p].ch, v)

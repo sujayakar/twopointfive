@@ -126,10 +126,13 @@ pub(super) fn aims(g: &mut Game, st: &mut KitStage) {
                 }
             }
             None => {
-                if g.puppet.is_some() {
+                if let Some(mut led) = st.a.led {
                     st.a.sam_h += (b.h_to - st.a.sam_h) * m::min(1.0, dt * 6.0);
                     let h = if b.quiet { st.a.sam_h } else { 1.0 };
-                    g.puppet.as_mut().unwrap().aim = Some([p[0] + m::sin(y) * d, h, p[2] + m::cos(y) * d]);
+                    // (what is thrown goes where his hand is: on its spot, once the can is in it)
+                    let spot = b.spot.filter(|_| b.phase == "throw" && matches!(b.row, Act::ThrowSmoke | Act::ThrowFlash | Act::ThrowFrag));
+                    led.at = Some(spot.unwrap_or([p[0] + m::sin(y) * d, h, p[2] + m::cos(y) * d]));
+                    st.a.led = Some(led);
                 }
             }
         }
@@ -181,7 +184,7 @@ fn scan(g: &Game, st: &mut KitStage, key: Option<GuardId>, i: usize, ok: bool, v
 /// IDLE LIFE: a man who is in no row, on his place, lets his gun wander a few degrees either side of his rest aim: a fixed list of angles and waits, no dice, the game's clock. Nobody's feet move.
 /// Sam at rest is not aimed through his cursor: his rest aim is written to his aim's channel after the step.
 pub(super) fn idle(g: &mut Game, st: &mut KitStage, cmd: &crate::cmd::PlayerCmd) {
-    let free = g.puppet.is_none() && !st.none;
+    let free = st.a.led.is_none() && !st.none;
     let now = g.time;
     let (b_man, b_team, b_moved, b_sam) = match st.a.beat.as_ref() {
         Some(b) => (b.man, super::acts::row(b.row).team, b.moved.clone(), b.man.is_none()),
