@@ -18,7 +18,7 @@ cd rust/game_start && cargo run --release --bin levels -- stands <name>     # on
 ```
 
 A FAIL is exit 1, and a NOTE is something to look at and say out loud. `levels <question>` below means the third line, run in `rust/game_start`. **By eye** and **by
-play** mark what no tool can ask: do them, and say whether you did. `tools/qa/checks.ts` and `gate` run no `levels` question. A bullet that starts with
+play** mark what no tool can ask: do them, and say whether you did. `gate long` runs every `levels` question over every level. A bullet that starts with
 a `word` is that need.
 
 ## 1. Before you touch anything
