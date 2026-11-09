@@ -42,7 +42,6 @@ pub fn send(g: &mut Game, d: RoomfightDefId, leg: Leg, by: &'static str) {
     row.move_t = 0.0;
     row.stall_at = here;
     row.stall_t = 0.0;
-    row.rally_at = f64::NAN;   // (no clock of his own to go next door runs on behind it)
     crate::control::set_pinned(g, gd, false, by);
     crate::squad::order(g, gd, crate::squad::OrderPatch {
         goal: Some(Some(leg.to)), speed: Some(Some(leg.pace)), face: Some(leg.face), strafe: Some(Some(leg.face.is_some())), aim_at: Some(leg.aim),
@@ -59,7 +58,6 @@ pub fn loose(g: &mut Game, gd: GuardId, by: &'static str) {
         let row = &mut g.tab.roomfight_def[d];
         row.mode = DefMode::Free;
         row.free_at = now;
-        row.rally_at = f64::NAN;
     }
     crate::control::set_hold(g, gd, false, by);
     crate::control::set_pinned(g, gd, false, by);
@@ -85,7 +83,6 @@ pub fn back_on(g: &mut Game, d: RoomfightDefId, h: Held, by: &'static str) {
     row.want = h.want;
     row.glance_until = -1.0;
     row.fix_keep = -1.0;
-    row.rally_at = f64::NAN;
     row.last_state = state;
     row.last_seen = seen;
     // (his watched point moves in place: a fix that is it moves with it)

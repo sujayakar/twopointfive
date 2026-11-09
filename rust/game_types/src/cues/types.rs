@@ -75,9 +75,6 @@ pub struct Man {
     pub stood_t: f64,
     pub moved: Option<crate::cues::ManMoved>,
     pub from: String,
-    pub noise_t: f64,
-    pub ep: f64,
-    pub rally_at: f64,
     pub covered: bool,
 }
 
