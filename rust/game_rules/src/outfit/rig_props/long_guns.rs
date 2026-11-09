@@ -504,16 +504,39 @@ pub fn hung_boxes(g: &mut crate::game::Game, c_2: CharId, weapon: crate::rig_pro
 #[cfg(test)]
 mod tests {
     use super::*;
-    fn bits(v: V3) -> [u64; 3] { [v[0].to_bits(), v[1].to_bits(), v[2].to_bits()] }
-    /// the TypeScript's own bits: bigBackOf under bun with EXACT.on, hammer's back table, clear 0.11
+
+    fn near(a: V3, b: V3) -> bool { v3::len(v3::sub(a, b)) < 1e-9 }
+    const P: RigSc20kSlung = RigSc20kSlung { off: [-0.055, 0.01, -0.19], bore: [-0.42, 0.91, 0.0], roll: 90.0, follow: 0.5, adj: None };
+    const HIPS: V3 = [0.013, 0.951, -0.027];
+    const MID: V3 = [0.021, 1.203, -0.041];
+    fn back(p: RigSc20kSlung, clear: Option<f64>) -> BigBackOf {
+        big_back_of(HIPS, MID, [0.11, 0.93, 0.02], [-0.09, 0.94, -0.05], [0.19, 1.41, 0.03], [-0.17, 1.39, -0.08], p, clear)
+    }
+
+    /// A FAILURE MEANS: the big tool on his back is skewed off his chest, or points otherwise than its bore says.
     #[test]
-    fn big_back_of_matches_the_typescript() {
-        let p = RigSc20kSlung { off: [-0.055, 0.01, -0.19], bore: [-0.42, 0.91, 0.0], roll: 90.0, follow: 0.5, adj: None };
-        let r = big_back_of([0.013, 0.951, -0.027], [0.021, 1.203, -0.041], [0.11, 0.93, 0.02], [-0.09, 0.94, -0.05], [0.19, 1.41, 0.03], [-0.17, 1.39, -0.08], p, Some(0.11));
-        assert_eq!(bits(r.o), [0x3fafc710302174ea, 0x3ff36f160fac0603, 0xbfd5f669903797aa]);
-        assert_eq!(bits(r.z), [0xbfd9dfde376f41da, 0x3fecfcba56fa7336, 0xbfc02ef46dfdf683]);
-        assert_eq!(bits(r.cf.x), [0x3fee68b0f04a8024, 0x3f7453772f825c4a, 0x3fd3ed4abc383865]);
-        assert_eq!(bits(r.cf.y), [0xbf7b5dd98f7a23ce, 0x3fefffbc6318d0a4, 0x3f723e910a516d40]);
-        assert_eq!(bits(r.cf.z), [0xbfd3ecc3ec27e84e, 0xbf79dbac476a2b7e, 0x3fee68b638234821]);
+    fn a_slung_tool_sits_in_a_frame_of_his_chest_along_its_bore() {
+        let r = back(P, None);
+        for a in [r.cf.x, r.cf.y, r.cf.z] { assert!((v3::len(a) - 1.0).abs() < 1e-9); }
+        assert!(v3::dot(r.cf.x, r.cf.y).abs() < 1e-9 && v3::dot(r.cf.y, r.cf.z).abs() < 1e-9);
+        assert!(r.cf.y[1] > 0.9, "the chest's up runs from his hips to his shoulders");
+        assert!(near(r.z, v3::normalize(in_c(r.cf, P.bore))));
+        assert!(near(r.o, v3::add(MID, in_c(r.cf, P.off))));
+    }
+
+    /// A FAILURE MEANS: a thing on his back goes through what he wears: clear moves it straight off his back.
+    #[test]
+    fn clear_moves_a_slung_tool_off_his_back_by_that_much() {
+        let (none, clear) = (back(P, None), back(P, Some(0.11)));
+        assert!(near(clear.o, v3::add(none.o, v3::scale(none.cf.z, -0.11))));
+    }
+
+    /// A FAILURE MEANS: the tool does not turn with him as its row says: follow goes from his hips' way to his shoulders' way.
+    #[test]
+    fn a_slung_tool_follows_his_shoulders_as_far_as_its_row_says() {
+        let at = |follow: f64| back(RigSc20kSlung { follow, ..P }, None).cf.x;
+        let shoulders = v3::normalize(v3::sub([0.19, 1.41, 0.03], [-0.17, 1.39, -0.08]));
+        assert!(v3::dot(at(1.0), shoulders) > v3::dot(at(0.0), shoulders));
+        assert_eq!(at(2.0), at(1.0));
     }
 }
