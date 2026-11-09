@@ -96,7 +96,7 @@ fn debris_thrown(g: &mut crate::game::Game, kind: crate::debris::ChunkKind, box_
     if !js::truthy(lv) { lv = l.level; }
     if !js::truthy(lv) { lv = landing_of(kind).level; }
     let t = g.time + f.t;
-    if crate::sim_fallshome::fall_store_schedule(g, t, f.pos[0], f.pos[1], f.pos[2], crate::sim_fallshome::FallSound::Empty, 0.0, 1.0, 0.0, who, crate::sim_fallshome::FALL_HEARD, lv, crate::sim_fallshome::FALL_MAXP, Some(crate::sim_fallshome::FALL_PIECES), Some(l.dust)) {
+    if crate::falls::schedule(&mut g.falls, crate::falls::FallKind::Pieces, crate::falls::Landing { t, pos: f.pos, sound: crate::falls::FallSound::Empty, gain: 0.0, rate: 1.0, amount: 0.0, who, told: crate::falls::FallTold::Always, level: lv, dust: l.dust }, crate::falls::MAX_WAITING as f64) {
         g.destr.debris.stats.told += 1.0;
     }
 }
@@ -104,7 +104,7 @@ fn debris_thrown(g: &mut crate::game::Game, kind: crate::debris::ChunkKind, box_
 /// The thrown pieces whose landing has come: the floor is told of each.
 pub(in crate::breakage) fn debris_landings(g: &mut crate::game::Game) {
     let time = g.time;
-    let due = crate::sim_fallshome::fall_store_due(g, time, 0.0, 0.0, Some(crate::sim_fallshome::FALL_PIECES));
+    let due = crate::falls::due(&mut g.falls, crate::falls::FallKind::Pieces, time, 0.0, 0.0);
     for p in due {
         if p.heard {
             let (time, serial) = (g.time, g.serial());
@@ -165,7 +165,7 @@ pub fn debris_spawn_raw(g: &mut crate::game::Game, kind: crate::debris::ChunkKin
 
 /// Back to an empty pool; `serial` runs on.
 pub(in crate::breakage) fn debris_clear(g: &mut crate::game::Game) {
-    crate::sim_fallshome::fall_store_clear(g, Some(false), Some(crate::sim_fallshome::FALL_PIECES));
+    crate::falls::clear(&mut g.falls, crate::falls::FallKind::Pieces);
     let d = &mut g.destr.debris;
     d.fling = None;
     d.list.clear();
