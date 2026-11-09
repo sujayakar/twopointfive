@@ -1215,7 +1215,7 @@
         { "name": "the tea house's phone", "pos": [5.4, 0, 14.6], "face": -1.5707963267948966 }
       ],
       "wayouts": [
-        { "name": "the street's west end", "pos": [2.6, 0, 19], "face": -1.5707963267948966 },
+        { "name": "the open end of the street", "pos": [2.6, 0, 19], "face": -1.5707963267948966 },
         { "name": "the alley's mouth", "pos": [2.6, 0, 6], "face": -1.5707963267948966 }
       ]
     },
