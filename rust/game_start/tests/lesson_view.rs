@@ -84,6 +84,24 @@ fn the_hud_is_told_the_step_that_is_up_and_what_it_opens() {
     }
 }
 
+/// A FAILURE MEANS: the kit tutorial lost a card: a step that explains something comes up with no card, or with another's.
+#[test]
+fn the_kit_tutorial_shows_each_of_its_cards() {
+    let mut p = mission("tut-kit", 1, 1);
+    let cards: Vec<(String, Option<String>)> = game::lesson::lesson_data(&p.g).unwrap().steps.iter()
+        .filter_map(|t| t.explain.as_ref().map(|e| (t.id.clone(), e.title.clone()))).collect();
+    assert!(cards.len() >= 5, "the mission has lost its cards: {:?}", cards);
+    p.frame();
+    for (id, title) in cards {
+        // (asked of the step with no frame after it: a frame can pass a step whose deed is already done on a floor nobody has walked)
+        p.g.lesson.i = game::lesson::lesson_data(&p.g).unwrap().steps.iter().position(|t| t.id == id).unwrap() as f64;
+        let v = lesson(&p);
+        let card = frame_of(&v).card.clone().unwrap_or_else(|| panic!("step '{}' has no card", id));
+        assert_eq!(card.title, title, "step '{}'", id);
+        assert!(!card.text.is_empty() && !card.text.contains('{'), "step '{}': {:?}", id, card);
+    }
+}
+
 /// A FAILURE MEANS: a card lands on the deed before it, or a line asks for a key while the moment plays out. The step before a card settles, what its men are
 /// doing up and nothing asked; then the card comes with its own step, its words written out.
 #[test]
