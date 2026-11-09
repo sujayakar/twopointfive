@@ -2,7 +2,7 @@
 {
 "scene": "rooftop",
 "frames": {
-"truth": 320,
+"truth": 256,
 "rest": 96,
 "wait": 1200,
 "settle": 16
@@ -24,108 +24,72 @@
 ],
 "doors": 0.8,
 "lamp": "atrium"
-}
-],
-"rest": [
-"none",
-"paths n=24 exact=1 clamp=1",
-"today",
-"patch",
-"patch cap=1000",
-"patch direct=0",
-"patch roam=1 spread=1",
-"patch levels=4 flat=1 roam=1 spread=1 widen=1",
-"faces",
-"faces direct=0",
-"probes step=1",
-"probes step=1 rate=2 rays=64",
-"probes step=1 vis=1",
-"probes oct=0 step=1 vis=1",
-"probes oct=0 step=1 vis=0",
-"near",
-"near rays=8",
-"surfels",
-"net",
-"net batch=16384 lr=0.02",
-"paths n=3"
-],
-"cost": [
-"none",
-"today",
-"patch",
-"patch direct=0",
-"faces",
-"probes step=1",
-"near",
-"surfels",
-"net",
-"paths n=3"
-],
-"settle": {
-"lamp": [
-"today",
-"faces",
-"probes step=1"
-],
-"cold": [
-"today",
-"surfels"
-]
-},
-"pictures": [
-"paths n=24 exact=1",
-"paths n=24 exact=1 clamp=1",
-"today",
-"patch",
-"faces",
-"probes step=1",
-"probes oct=0 step=1 vis=1",
-"near",
-"surfels",
-"net"
-]
 },
 {
-"scene": "street",
-"frames": {
-"truth": 96,
-"rest": 48,
-"wait": 600,
-"settle": 16
-},
-"rounds": 1,
-"views": [
-{
-"name": "street",
+"name": "leak",
 "w": 1280,
 "h": 720,
-"dist": 27,
+"tick": 600,
+"dist": 34,
+"hour": 23,
+"cut": 2.55,
 "look": [
-0.5,
-1,
--1.0
+0,
+0.6,
+0
 ],
-"yaw": 0.5,
-"pitch": 0.72,
-"hour": 22.2,
-"cut": 2.5,
-"tick": 300,
-"lamp": "store"
+"doors": 0,
+"lamp": "atrium",
+"moon": 0,
+"groups": {
+"atrium": 0,
+"orange": 0,
+"green": 0,
+"blue": 1,
+"gallery": 0,
+"studio": 0,
+"lounge": 0,
+"landing": 0,
+"terrace": 0,
+"pool": 0
+}
 }
 ],
 "rest": [
+"none",
 "today",
+"today clamp=1",
+"patch lamp=0",
 "patch",
+"patch clamp=1",
+"patch direct=0",
+"patch roam=1 bits=20",
+"patch spread=1 bits=20",
+"patch roam=1 spread=1 bits=20",
+"patch cell=0.64 flat=1 roam=1 spread=1 bits=19 coarse=0",
+"patch rate=1",
+"patch keep=400",
+"patch second=0",
+"patch joins=0",
+"patch coarse=0 spread=1 bits=20",
+"faces lamp=0",
 "faces",
+"faces joins=0",
+"faces rate=1",
+"faces cell=1.28",
+"faces direct=0",
 "probes step=1",
 "near",
-"surfels",
+"surfels cell=0.6",
 "net"
 ],
 "pictures": [
 "paths n=24 exact=1",
 "today",
-"faces"
+"patch",
+"faces",
+"probes step=1",
+"net"
 ]
 }
 ]

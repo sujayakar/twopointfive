@@ -31,7 +31,7 @@ fn add4(a: u32, g: vec4f) { for (var k = 0u; k < 4u; k++) { let q = i32(clamp(g[
   var t = vec3f(0.0); if (ok) { let p = x + n * 0.012; let w = wideDir(p, n, rnd2(), rnd()); if (w.w > 0.0) { lookPiece = NOTHING; t = min(look(p, w.xyz, 1.0) * w.w, vec3f(60.0)); if (lookPiece != NOTHING && (lookPiece & LEAF_HIT) == 0u) { hits[HITS + i] = vec4u(bitcast<vec3u>(lookX), octPack(lookN) | 1u); } } }
   t = finite4(vec4f(t, 0.0), 1e3).xyz; x += n * 0.05;
 ${enc('master', levels)}${layer('master', 'h', 'x', IN, HID, NET.w1, NET.b1, true)}${layer('master', 'k', 'h', HID, HID, NET.w2, NET.b2, true)}${layer('master', 'o', 'k', HID, 1, NET.w3, NET.b3, false)}
-  let E = exp(clamp(o0.xyz, vec3f(-12.0), vec3f(6.0))); let m = lum(E); let g = clamp(2.0 * (E - t) * E / (m * m + 1e-5), vec3f(-24.0), vec3f(24.0)); let e0 = select(vec4f(0.0), vec4f(g, 0.0), ok);
+  let E = exp(clamp(o0.xyz, vec3f(-12.0), vec3f(6.0))); let m = lum(E); let g = clamp(2.0 * (E - t) * E / (m * m + 1e-5), vec3f(-2000.0), vec3f(2000.0)); let e0 = select(vec4f(0.0), vec4f(g, 0.0), ok);
 ${back('master', 'f', 'e', HID, 1, NET.w3, 'k')}${back('master', 'q', 'f', HID, HID, NET.w2, 'h')}${back('master', 'z', 'q', 5, HID, NET.w1).replaceAll(/master\[(\d+)u\]/g, (s, a: string) => { const r = +a - NET.w1, o = Math.floor(r / 20), i = Math.floor((r % 20) / 4), c = r % 4; return `master[${NET.w1 + (o * IN + i) * 4 + c}u]`; })}
   if (ok) {
 ${Array.from({ length: levels }, (_, l) => `    { let g = x / cellAt(${l}u); let b = floor(g); let f = g - b; for (var k = 0u; k < 8u; k++) { let o = vec3f(f32(k & 1u), f32((k >> 1u) & 1u), f32(k >> 2u)); let t = mix(1.0 - f, f, o); add4(cornerAt(vec3i(b + o), ${l}u), z${l} * (t.x * t.y * t.z)); } }`).join('\n')}

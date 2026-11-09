@@ -12,6 +12,9 @@ import { realtime } from './stages/realtime';
 import { keep, type Kept } from './caches/parts';
 import { KNOBS, defaults, type Knob } from './tune';
 import { Present } from './present';
+import { bench, flicker } from './bench';
+import { pathTracer } from './stages/path';
+import { readTexture } from './gpu';
 import type { V3 } from './math';
 
 export interface View { name: string; w: number; h: number; hour?: number; cut?: number; look?: V3; yaw?: number; pitch?: number; dist?: number; tick?: number; doors?: number; groups?: Record<string, number>; moon?: number; lamp?: string; /** light only from these rooms' lamps: how much there is elsewhere is leak */ lit?: string; tune?: Record<string, number> }
@@ -84,7 +87,14 @@ export async function kept(scene = 'rooftop') {
   };
   const picture = async (spec: string, frames = 48) => { const w = await way(spec); await lab.use(w.m); await draw(60, w.lean); const a = await look(w, frames), [hw, hh] = lab.graph.px('half'), cv = document.createElement('canvas'); cv.width = hw; cv.height = hh; const im = new ImageData(hw, hh); let mean = 0; for (const x of T!.b) mean += Math.max(0, x); mean /= T!.b.length; for (let i = 0; i < hw * hh; i++) { for (let k = 0; k < 3; k++) { const x = Math.max(0, a.b[i * 3 + k]!) / mean * 0.22; im.data[i * 4 + k] = 255 * Math.pow(x / (1 + x), 1 / 2.2); } im.data[i * 4 + 3] = 255; } cv.getContext('2d')!.putImageData(im, 0, 0); return cv.toDataURL('image/jpeg', 0.88); };
   const wrong = async (spec: string, frames = 96) => { const w = await way(spec); await lab.use(w.m); await draw(60, w.lean); const a = await look(w, frames), [hw, hh] = lab.graph.px('half'), b3 = blur3(a.b, hw, hh), cv = document.createElement('canvas'); cv.width = hw; cv.height = hh; const im = new ImageData(hw, hh); let mean = 0; for (const x of T!.b) mean += Math.max(0, x); mean /= T!.b.length; for (let i = 0; i < hw * hh; i++) { const p = b3[i * 3]! + b3[i * 3 + 1]! + b3[i * 3 + 2]!, t = T!.b3[i * 3]! + T!.b3[i * 3 + 1]! + T!.b3[i * 3 + 2]!, s = T!.ok[i] && T!.b3[i * 3]! >= 0 ? Math.max(-1, Math.min(1, Math.log2((p + mean * 0.06) / (t + mean * 0.06)) / 0.5)) : 0; im.data[i * 4] = 255 * (s > 0 ? 1 : 1 + s); im.data[i * 4 + 1] = 255 * (1 - Math.abs(s)); im.data[i * 4 + 2] = 255 * (s < 0 ? 1 : 1 - s); im.data[i * 4 + 3] = 255; } cv.getContext('2d')!.putImageData(im, 0, 0); return cv.toDataURL('image/jpeg', 0.85); };
+  /** the whole picture, every stage as in play, against the reference path tracer: bias, noise, error (bench.ts), and how much the shown picture flickers (of 255) */
+  const methods = new Map<string, Method>(), full = async (specs: string[], paths = 1500) => {
+    const v = V!, dict: Record<string, () => Method> = { reference: () => methods.get('reference') ?? (methods.set('reference', pathTracer()), methods.get('reference')!) }; for (const s of specs) dict[s] = () => { let m = methods.get(s); if (!m) methods.set(s, m = realtime({ name: 'full ' + s, cache: keep(s) })); return m; };
+    const b = await bench(lab, [v as never], dict, { reference: paths, settle: 400, mean: 24, stage: (w: never) => stage(w as View) }), out: Record<string, unknown>[] = [];
+    for (const x of b) { const m = methods.get(x.method)!; stage(v); await lab.use(m); present.set(lab, true); const shown = async () => { const t = lab.gpu.device.createTexture({ size: [v.w, v.h], format: 'rgba8unorm', usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.COPY_SRC }), e = lab.gpu.device.createCommandEncoder(); lab.graph.flip(); present.run(e, lab, lab.graph.texture(m.result), t.createView(), 'rgba8unorm', 'rt', { grain: 0 }); lab.graph.flip(); q.submit([e.finish()]); const r = await readTexture(lab.gpu, t); t.destroy(); return new Uint8ClampedArray(r.data); }; const fl = await flicker(lab, m, shown, v.w, v.h, 120, 32); out.push({ spec: x.method, bias: x.bias, noise: x.noise, error: x.error, flicker: fl.by.all?.mean, flickerMatte: fl.by.matte?.mean }); }
+    return out;
+  };
   const drop = (spec: string) => { const w = ways.get(spec); if (!w) return; ways.delete(spec); lab.methods.delete(spec); };
-  return { lab, way: async (s: string) => { await way(s); return log[log.length - 1]; }, begin, rest, cost, bands, settle, picture, wrong, drop, info: () => ({ gpu: lab.gpu.info, stamps: lab.gpu.timestamps, storage: lab.gpu.device.limits.maxStorageBuffersPerShaderStage, ...lab.scene.counts }) };
+  return { lab, way: async (s: string) => { await way(s); return log[log.length - 1]; }, begin, rest, cost, bands, settle, picture, wrong, full, drop, info: () => ({ gpu: lab.gpu.info, stamps: lab.gpu.timestamps, storage: lab.gpu.device.limits.maxStorageBuffersPerShaderStage, ...lab.scene.counts }) };
 }
 (globalThis as never as { kept: unknown }).kept = kept;
