@@ -1,11 +1,132 @@
-//! src/game/game.ts lines 300 to 588
-use super::*;                      // your own module: its types, its other parts' functions
+#![allow(unused_variables)]
+use super::*;
 use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use alloc::{string::String, vec, vec::Vec};
+
+/// INVENTED: THE whole write of a man's path. Every `gd.path = x` of the TypeScript (a new array, even `[]`) is this call: identity readers (doorpath.ts:336-337, doorway.ts:328, guards.ts:2037) compare path_serial. An in-place edit (splice, push, index, `length = n`) is not a whole write and does not call it. ONE exception: runner.ts:294 puts the same array back, so it restores path and path_serial together and does not call this
+pub fn guard_set_path(g: &mut crate::game::Game, gd: GuardId, path: Vec<V3>) { let o = &mut g.gd[gd]; o.path = path; o.path_serial = o.path_serial.wrapping_add(1); }
+
+/// A game stands in this slot of rust/sim's: its own word says so, and the box mirror's, which the world's lookups read.
+pub fn stand_in(g: &mut crate::game::Game, slot: usize) { g.sim = slot; g.col.mirror.slot = slot as f64; }
+
+/// A man easing past furniture: a player crouched and not dashing; anyone else low.   (game.ts quietMan)
+pub fn quiet_man(g: &crate::game::Game, pl: Option<PlayerId>, c: CharId) -> bool {
+    match pl {
+        Some(p) => g.pl[p].crouch && !g.pl[p].dash,
+        None => g.ch[c].anim.crouch > 0.5,
+    }
+}
+
+/// Chaos Theory's own words: seen = assault; nothing known = ghost; else panther.   (game.ts missionRating)
+pub fn mission_rating(s: &crate::game::MissionStats) -> crate::game::MissionRating {
+    if s.spotted > 0.0 {
+        crate::game::MissionRating::Assault
+    } else if s.kills == 0.0 && s.alerts == 0.0 && s.bodies == 0.0 {
+        crate::game::MissionRating::Ghost
+    } else {
+        crate::game::MissionRating::Panther
+    }
+}
+
+/// `m:ss` of a count of seconds.   (game.ts fmtClock)
+pub fn fmt_clock(sec: f64) -> String {
+    let s = m::max(0.0, m::floor(sec));
+    let tail = js::num_str(js::rem(s, 60.0));
+    let pad = if tail.len() < 2 { "0" } else { "" };
+    alloc::format!("{}:{}{}", js::num_str(m::floor(s / 60.0)), pad, tail)
+}
+
+/// The mission thread as a run starts. `serial` is 0 here, having no `g`: the caller that writes `g.mission` whole deals it.   (game.ts newMission)
+pub fn new_mission(t0: f64) -> crate::game::Mission {
+    crate::game::Mission {
+        stage: crate::game::MissionStage::Infiltrate,
+        t0,
+        drive_t: -1.0,
+        pulled: false,
+        alarm_on: false,
+        sweep_at: -1.0,
+        spotted_t: -100.0,
+        down_card_at: -1.0,
+        hands_on: false,
+        stats: crate::game::MissionStats {
+            qrf_who: None,
+            elapsed: 0.0,
+            alerts: 0.0,
+            spotted: 0.0,
+            bodies: 0.0,
+            shots: 0.0,
+            kills: 0.0,
+            knockouts: 0.0,
+            keys: 0.0,
+            blackout: false,
+            sandbox: false,
+            qrf: 0.0,
+            qrf_at: -1.0,
+        },
+        serial: 0,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::game::{MissionRating, MissionStage};
+
+    /// Expected strings printed by the TypeScript's own fmtClock under bun.
+    #[test]
+    fn fmt_clock_matches_the_typescript() {
+        let cases: &[(f64, &str)] = &[
+            (0.0, "0:00"),
+            (-0.0, "0:00"),
+            (-5.0, "0:00"),
+            (0.5, "0:00"),
+            (9.99, "0:09"),
+            (59.9, "0:59"),
+            (60.0, "1:00"),
+            (61.0, "1:01"),
+            (3725.5, "62:05"),
+            (359999.0, "5999:59"),
+            (1e15, "16666666666666:40"),
+            (f64::NAN, "NaN:NaN"),
+            (f64::INFINITY, "Infinity:NaN"),
+            (f64::NEG_INFINITY, "0:00"),
+            (1e21, "16666666666666666000:40"),
+            (6e22, "1e+21:00"),
+            (1.2e23, "2e+21:00"),
+        ];
+        for (x, want) in cases {
+            assert_eq!(fmt_clock(*x), *want, "fmt_clock({})", x);
+        }
+    }
+
+    /// Answers printed by the TypeScript's own missionRating under bun.
+    #[test]
+    fn mission_rating_matches_the_typescript() {
+        let base = new_mission(0.0).stats;
+        let with = |f: fn(&mut crate::game::MissionStats)| {
+            let mut s = base.clone();
+            f(&mut s);
+            mission_rating(&s)
+        };
+        assert_eq!(mission_rating(&base), MissionRating::Ghost);
+        assert_eq!(with(|s| { s.spotted = 1.0; s.kills = 1.0; s.alerts = 1.0; s.bodies = 1.0; }), MissionRating::Assault);
+        assert_eq!(with(|s| s.kills = 1.0), MissionRating::Panther);
+        assert_eq!(with(|s| s.alerts = 1.0), MissionRating::Panther);
+        assert_eq!(with(|s| s.bodies = 1.0), MissionRating::Panther);
+    }
+
+    #[test]
+    fn a_new_mission_holds_the_makers_numbers_not_blanks() {
+        let n = new_mission(7.5);
+        assert_eq!(n.stage, MissionStage::Infiltrate);
+        assert_eq!((n.t0, n.drive_t, n.sweep_at, n.spotted_t, n.down_card_at, n.stats.qrf_at), (7.5, -1.0, -1.0, -100.0, -1.0, -1.0));
+        assert_eq!(n.serial, 0);
+    }
+}
 
 /// The selector open as a list, not up as a ring. (game.ts Player.listOpen)
 pub fn player_list_open(g: &crate::game::Game, id: PlayerId) -> bool {
@@ -159,7 +280,7 @@ fn fresh_talk() -> crate::game::Talk {
 }
 
 #[cfg(test)]
-mod tests {
+mod tests_2 {
     use super::*;
 
     #[test]
@@ -179,4 +300,70 @@ mod tests {
         assert!(t.stage == 0.0 && t.last.is_none());
         assert!(t.last_t == -1.0 && t.held_since == -1.0 && t.abort_t == -1.0);
     }
+}
+
+/// Stamp fix_t if the fix has moved since last looked at; called once a frame by update_guard. (game.ts Guard.trackFix)
+pub fn guard_track_fix(g: &mut crate::game::Game, id: GuardId, now: f64) {
+    let lk = match g.gd[id].last_known {
+        Some(lk) => lk,
+        None => { g.gd[id].fix_ref = None; return; }
+    };
+    let moved = match g.gd[id].fix_ref {
+        None => true,
+        Some(r) => m::hyp2(lk[0] - r[0], lk[2] - r[2]) > 0.5,
+    };
+    if moved { g.gd[id].fix_ref = Some(v3::copy(lk)); g.gd[id].fix_t = now; }
+}
+
+/// A man: his record, his body facing down the first leg, his keys, his gun. Field initialisers first (the look phase's draw comes BEFORE the body's own). (game.ts Guard.constructor)
+pub fn guard_new(g: &mut crate::game::Game, men: crate::Opaque, ch: RigId, id_2: f64, route: RouteId, route_i: i32, flashlight: LightId, tint: V3, look: Option<&crate::game::GuardNewLook>) -> GuardId {
+    let id = g.gd.push(Guard::blank());
+    g.gd[id].witness = new_witness();
+    g.gd[id].talk = new_talk(g);
+    g.gd[id].look_phase = crate::dice::draw_world(g, "game::guard_new#1") * 10.0;
+
+    let (p0, p1, weapon, keys) = {
+        let r = &g.tab.route[route];
+        (r.points[0], r.points[1 % r.points.len()], r.weapon, r.keys.clone())
+    };
+    let pos = v3::copy(p0);
+    let desc = crate::character::CharacterDesc {
+        id: id_2,
+        tint,
+        tint2: look.and_then(|l| l.tint2).unwrap_or([0.02, 0.02, 0.025]),
+        pos,
+        yaw: match look.and_then(|l| l.yaw) { Some(y) => y, None => v3::yaw_to(pos, p1) },
+        men: Some(men),
+    };
+    let c = crate::character::character_new(g, ch, desc);
+    g.gd[id].ch = c;
+    g.ch[c].who = crate::character::Who::Guard(id);
+
+    g.gd[id].last_pos = v3::copy(pos);
+    g.gd[id].route_i = route_i;
+    g.gd[id].route = route;
+    g.gd[id].flashlight = flashlight;
+    g.gd[id].callsign = match look.and_then(|l| l.name.clone()) {
+        Some(name) => name,
+        None => {
+            let cs = callsigns();
+            cs[js::rem(m::max(0.0, id_2 - 10.0), cs.len() as f64) as usize].clone()
+        }
+    };
+    if let Some(team) = look.and_then(|l| l.team) { g.gd[id].team = team; }
+    let team = g.gd[id].team;
+    if team != crate::teams::Team::Guard && team != crate::teams::Team::Hostile { crate::mind::foe(g, id, None, "game"); }
+    let keys = match keys {
+        Some(k) => k,
+        None => vec![String::from(crate::doors::FLOOR_KEY)],
+    };
+    let mut held: JsSet<String> = JsSet::new();
+    for k in keys { held.add(k); }
+    g.gd[id].keys = held;
+    // a row the table does not hold panics here, as the TypeScript's throws
+    let row = g.m.weapons.weapons.get(weapon.unwrap_or(crate::weapons::WeaponId::Guard9mm)).unwrap().clone();
+    let w = crate::weapons::firearm_new(g, &row);
+    g.gd[id].weapon = w;
+    g.ch[c].muzzle_ahead = row.muzzle_ahead;
+    id
 }

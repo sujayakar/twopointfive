@@ -1,11 +1,14 @@
-//! src/game/breakTable.ts lines 1 to 333
-use super::*;                      // your own module: its types, its other parts' functions
+#![allow(unused_variables)]
+use super::*;
 use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use alloc::{boxed::Box, vec, vec::Vec};
+
+/// INVENTED, for BREAK[mat] (src/game/breakTable.ts:61): the row of a material. Rows are read only by key, nothing writes them, and they do not borrow from g, so a row may be held across a call that takes g.
+pub fn break_row(mat: crate::break_table::Mat) -> &'static crate::break_table::BreakRow { &crate::break_table::break_().iter().find(|e| e.0 == mat).unwrap().1 }
 
 type P2 = [f64; 2];
 

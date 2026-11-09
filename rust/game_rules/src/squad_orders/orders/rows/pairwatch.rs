@@ -28,7 +28,7 @@ fn valid(g: &mut Game, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<St
 }
 
 fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
-    crate::pairorders::p_01::watch_issue(g, men, t)
+    crate::pairorders::watch_issue(g, men, t)
 }
 
 /// (pairorders.ts:232 the 'watch him' row's `tick`: his gun stays on the man he was told to watch, while he sees him)

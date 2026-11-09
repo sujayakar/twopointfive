@@ -24,7 +24,7 @@ fn can(g: &mut Game, gd: GuardId, t: &OrderTarget) -> Option<String> {
 }
 
 fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
-    crate::pairorders::p_01::dark_issue(g, men, t)
+    crate::pairorders::dark_issue(g, men, t)
 }
 
 /// in move's place while the squad is silent and the pair orders are up
