@@ -918,7 +918,7 @@ pub(super) fn pin_step(g: &mut crate::game::Game, gd: GuardId, l: LanesLaneId, d
     let w = g.gd[gd].weapon;
     let spread = g.k.lanes.pin_spread;
     if on && g.time >= fr.next && !g.gd[gd].muzzle_down && !crate::guards::round_past_colleague(g, gd, at, None, Some(spread * 0.75)) && crate::weapons::firearm_fire(g, w) {
-        crate::combat::fire_weapon(g, c, at, false, Some(&crate::combat::FireOpts { steady: Some(true), spread: Some(spread), ..Default::default() }));
+        crate::combat::fire_weapon(g, c, at, Some(&crate::combat::FireOpts { steady: Some(true), spread: Some(spread), ..Default::default() }));
         if fr.n == g.k.lanes.pin_rounds && g.tab.lanes_lane[l].pin_n == 1.0 { s(g).said_t = g.time; say_net(g, gd, "putting fire on them!"); }
         fr.n -= 1.0;
         let cd = g.m.weapons.weapons.get(g.fa[w].def).unwrap().cd;

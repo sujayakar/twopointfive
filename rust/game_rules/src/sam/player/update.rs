@@ -663,7 +663,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
                 let tgt = shot_target(g, &crate::seats::here(g));
                 let at = crate::aimweight::aim_weigh_shot(g, tgt);
                 let spread = grow + crate::suppression::sam_spread(g, &crate::seats::here(g)) + crate::aim::sam_aim(g);
-                crate::combat::fire_weapon(g, c, at, true, Some(&crate::combat::FireOpts { spread: Some(spread), ..Default::default() }));
+                crate::combat::fire_weapon(g, c, at, Some(&crate::combat::FireOpts { spread: Some(spread), ..Default::default() }));
             } else if input_lmb_hit(g, input) {
                 g.pl[pl].fire_cd = 0.25;
                 let muzzle = g.ch[c].muzzle; play(g, "dryFire", Some(muzzle), 0.7);
@@ -692,7 +692,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
                 let tgt = shot_target(g, &crate::seats::here(g));
                 let at = crate::aimweight::aim_weigh_shot(g, tgt);
                 let spread = rifle_spread(g, &crate::seats::here(g), speed) + grow + crate::suppression::sam_spread(g, &crate::seats::here(g)) + crate::aim::sam_aim(g);
-                crate::combat::fire_weapon(g, c, at, true, Some(&crate::combat::FireOpts { weapon: Some(def_row(g, rifle_def).clone()), spread: Some(spread), ..Default::default() }));
+                crate::combat::fire_weapon(g, c, at, Some(&crate::combat::FireOpts { weapon: Some(def_row(g, rifle_def).clone()), spread: Some(spread), ..Default::default() }));
             } else if input_lmb_hit(g, input) {
                 g.pl[pl].fire_cd = 0.25;
                 let muzzle = g.ch[c].muzzle; play(g, "dryFire", Some(muzzle), 0.7);

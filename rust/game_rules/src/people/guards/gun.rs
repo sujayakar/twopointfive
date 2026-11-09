@@ -231,7 +231,7 @@ fn consider(g: &mut Game, gd: GuardId, f: crate::game::Foe, ch: CharId, best: &m
             sight_gain(g, gd, vis.dist)
         }
         crate::game::Foe::Guard(o) => {
-            let vis = can_see_char(g, gd, ch, false);
+            let vis = can_see_char(g, gd, ch);
             if !vis.visible { return; }
             sight_gain_on(g, gd, o, vis.dist)
         }
@@ -568,7 +568,7 @@ pub fn burst_trigger(g: &mut crate::game::Game, gd: GuardId, dt: f64, aim_at: V3
     } else {
         crate::aim::guard_round(g, gd, grow + mods.spread, Some(b.idx == 0.0))
     };
-    crate::combat::fire_weapon(g, c, aim, false, Some(&opts));
+    crate::combat::fire_weapon(g, c, aim, Some(&opts));
     if b.off.is_none() { crate::aim::note_bore(g, gd, aim); }
     b.idx += 1.0;
     b.left -= 1.0;

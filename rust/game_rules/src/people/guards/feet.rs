@@ -188,7 +188,7 @@ pub(super) fn standoff_alert(g: &mut crate::game::Game, gd: GuardId, dt: f64, p:
         let mods = crate::suppression::guard_fire_mods(g, gd);
         g.gd[gd].fire_cd = (STANDOFF_SHOT_SECS + crate::dice::draw_of(g, "guards::standoff_alert#1", gd) * 0.6) * mods.gap;
         let o = crate::aim::guard_round(g, gd, mods.spread, None);
-        crate::combat::fire_weapon(g, c, aim, false, Some(&o));
+        crate::combat::fire_weapon(g, c, aim, Some(&o));
         g.tab.guards_standoff[s].shots += 1.0;
         let w = g.gd[gd].weapon;
         if crate::weapons::firearm_rounds_ready(g, w) == 0.0 { start_reload_beat(g, gd); }
@@ -277,11 +277,11 @@ pub fn can_see(g: &mut crate::game::Game, gd: GuardId) -> crate::guards::CanSee 
     // (a game of one seat, or a view handed in: the seat is already the one on Game, and there is nothing to swap)
     let r = if seat == g.seat {
         let pc = g.pl[g.player].ch;
-        can_see_char(g, gd, pc, true)
+        can_see_char(g, gd, pc)
     } else {
         crate::seats::with_seat(g, seat, &mut |g: &mut Game| {
             let pc = g.pl[g.player].ch;
-            can_see_char(g, gd, pc, true)
+            can_see_char(g, gd, pc)
         })
     };
     crate::guards::CanSee { visible: r.visible, dist: r.dist }
@@ -291,7 +291,7 @@ pub fn can_see(g: &mut crate::game::Game, gd: GuardId) -> crate::guards::CanSee 
 pub fn sees_a_man(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if g.seats.len() == 1 { let p = g.player; return !crate::condition::down(g, g.pl[p].ch) && can_see(g, gd).visible; }
     for s in g.seats.clone() {
-        if crate::seats::with_seat(g, s, &mut |g: &mut Game| { let p = g.player; !crate::condition::down(g, g.pl[p].ch) && { let pc = g.pl[p].ch; can_see_char(g, gd, pc, true).visible } }) { return true; }
+        if crate::seats::with_seat(g, s, &mut |g: &mut Game| { let p = g.player; !crate::condition::down(g, g.pl[p].ch) && { let pc = g.pl[p].ch; can_see_char(g, gd, pc).visible } }) { return true; }
     }
     false
 }
@@ -309,7 +309,8 @@ pub fn sees_a_man(g: &mut crate::game::Game, gd: GuardId) -> bool {
 pub fn look_of(g: &crate::game::Game, c: CharId) -> V3 { crate::fogofwar::gaze_of(g, c) }
 
 /// canSee against any man `pc`.
-pub fn can_see_char(g: &mut crate::game::Game, gd: GuardId, pc: CharId, is_player: bool) -> crate::guards::CanSeeChar {
+pub fn can_see_char(g: &mut crate::game::Game, gd: GuardId, pc: CharId) -> crate::guards::CanSeeChar {
+    let is_player = crate::character::is_player(g, pc);
     let c = g.gd[gd].ch;
     let eye = match g.ch[c].bones.get(crate::character::Bone::Head) {
         Some(h) => *h,
@@ -317,12 +318,12 @@ pub fn can_see_char(g: &mut crate::game::Game, gd: GuardId, pc: CharId, is_playe
     };
     let look = look_of(g, c);
     let sam = crate::seats::here(g).player;
-    let range = reach_for(g, sam, gd, pc, is_player, eye);
+    let range = reach_for(g, sam, gd, pc, eye);
     let e = crate::guards::Eye { pos: eye, look, range, half_deg: g.k.guard_eye.half_deg, near_m: g.k.guard_eye.near_m, near_deg: g.k.guard_eye.near_deg, v_half_deg: None };
     let through = eye_through(g, gd);
     let blind = crate::control::man::blind(g, gd) || crate::pairorders::pair_gripped(g, gd) || crate::doze::doze_asleep(g, gd);
     let smoke_trans = g.gd[gd].smoke_trans;
-    let mut r = eye_contact(g, e, pc, is_player, blind, smoke_trans, Some(through));
+    let mut r = eye_contact(g, e, pc, blind, smoke_trans, Some(through));
     if !is_player && r.visible && crate::roomfight::pair_smoke(g, c, pc) < 0.3 { r.visible = false; }
     crate::guards::CanSeeChar { visible: r.visible, dist: r.dist }
 }
@@ -339,7 +340,8 @@ fn reach_of(k: &crate::knobs::GuardEyeK, lit: f64) -> f64 {
 }
 
 /// …for the man `pc` in this man's view.
-fn reach_for(g: &mut crate::game::Game, sam: PlayerId, gd: GuardId, pc: CharId, is_player: bool, eye: V3) -> f64 {
+fn reach_for(g: &mut crate::game::Game, sam: PlayerId, gd: GuardId, pc: CharId, eye: V3) -> f64 {
+    let is_player = crate::character::is_player(g, pc);
     if is_player {
         let vis = g.shown[g.pl[sam].ch].visibility;
         return eye_reach(g, vis);
@@ -404,7 +406,8 @@ pub fn eye_blocked(g: &mut crate::game::Game, gd: GuardId, a: V3, b: V3) -> bool
 }
 
 /// THE line-of-sight test, whoever's eye it is: one question to the module; what hides Sam is read last, of a man the eye would otherwise see.
-pub fn eye_contact(g: &mut crate::game::Game, e: crate::guards::Eye, pc: CharId, is_player: bool, blind: bool, smoke_trans: f64, through: Option<f64>) -> crate::guards::EyeContact {
+pub fn eye_contact(g: &mut crate::game::Game, e: crate::guards::Eye, pc: CharId, blind: bool, smoke_trans: f64, through: Option<f64>) -> crate::guards::EyeContact {
+    let is_player = crate::character::is_player(g, pc);
     let through = match through { Some(t) => t, None => crate::scene_boxes::box_flag().glass };
     let tgt = match g.ch[pc].bones.get(crate::character::Bone::Chest) { Some(b) => *b, None => v3::add(g.ch[pc].pos, [0.0, 1.1, 0.0]) };
     let tgt2 = match g.ch[pc].bones.get(crate::character::Bone::Head) { Some(b) => *b, None => v3::add(g.ch[pc].pos, [0.0, 1.6, 0.0]) };

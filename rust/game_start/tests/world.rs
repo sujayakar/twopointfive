@@ -26,7 +26,7 @@ fn a_round_through_a_wall_leaves_the_far_hole_then_the_mark_it_wears() {
     // a round fired between two ticks: the marks the next one lays of it, in their order
     let fired = |p: &mut Play, at: [f64; 3]| -> (Vec<Mark>, usize) {
         let (c, had, crossed) = (p.g.pl[p.g.player].ch, mark_set(&p.g).map_or(0, |s| s.serial), p.g.stats.wallpen.crossed);
-        game::combat::fire_weapon(&mut p.g, c, at, true, None);
+        game::combat::fire_weapon(&mut p.g, c, at, None);
         let crossed = (p.g.stats.wallpen.crossed - crossed) as usize;
         p.frame();
         (mark_set(&p.g).map_or(Vec::new(), |s| s.list.iter().filter(|m| m.serial > had && matches!(m.kind, DecalKind::Bullet | DecalKind::Damage)).copied().collect()), crossed)
@@ -304,7 +304,7 @@ fn a_game_kept_with_glass_in_the_air_plays_on_as_it_did() {
             if game::scene_collision::nav_grid_is_blocked(&p.g, from[0], from[1]) { continue; }
             p.sam_put(from);
             p.run(0.2);
-            for _ in 0..12 { game::combat::fire_weapon(&mut p.g, c, [at[0], 1.2, at[2]], true, None); p.run(0.1); if game::sim_fallshome::fall_store_waiting(&p.g) > 0.0 { fell = true; break 'panes; } }
+            for _ in 0..12 { game::combat::fire_weapon(&mut p.g, c, [at[0], 1.2, at[2]], None); p.run(0.1); if game::sim_fallshome::fall_store_waiting(&p.g) > 0.0 { fell = true; break 'panes; } }
         }
     }
     assert!(fell, "the staging is wrong: twelve rounds and no glass in the air");

@@ -135,7 +135,7 @@ fn close_foe(g: &mut crate::game::Game, gd: GuardId) -> Option<CharId> {
         let ot = g.gd[o].team;
         if crate::condition::down(g, g.gd[o].ch) || !crate::teams::is_hostile(g, team, ot) { continue; }
         let c = g.gd[o].ch;
-        let vis = crate::guards::can_see_char(g, gd, c, false);
+        let vis = crate::guards::can_see_char(g, gd, c);
         if vis.visible && vis.dist <= bd && crate::guards::sight_gain_on(g, gd, o, vis.dist) > 0.25 {
             best = Some(g.gd[o].ch);
             bd = vis.dist;

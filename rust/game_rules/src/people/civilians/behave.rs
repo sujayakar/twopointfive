@@ -464,7 +464,7 @@ fn see(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     g.gd[gd].smoke_trans = crate::sense::clear_between(g, eye, chest);
     let e = eye_of(g, gd);
     let smoke = g.gd[gd].smoke_trans;
-    let vis = crate::guards::eye_contact(g, crate::guards::Eye { pos: eye, look, range: e.range, half_deg: e.half_deg, near_m: e.near_m, near_deg: e.near_deg, v_half_deg: None }, pc, true, false, smoke, None);
+    let vis = crate::guards::eye_contact(g, crate::guards::Eye { pos: eye, look, range: e.range, half_deg: e.half_deg, near_m: e.near_m, near_deg: e.near_deg, v_half_deg: None }, pc, false, smoke, None);
     let decay = if g.cv[cv].state == CivState::Work { 0.08 } else { 0.05 };
     if !vis.visible { { let to = m::max(0.0, g.gd[gd].awareness - dt * decay); crate::mind::set(g, gd, to, "civilians"); } return; }
     let holding_other = g.pl[pl].holding.as_ref().map_or(false, |h| h.g != gd);

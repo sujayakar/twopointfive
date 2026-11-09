@@ -158,7 +158,7 @@ fn look(g: &mut crate::game::Game, gd: GuardId) {
             }
             Who::Guard(o) => {
                 let c = g.gd[o].ch;
-                let vis = crate::guards::can_see_char(g, gd, c, false);
+                let vis = crate::guards::can_see_char(g, gd, c);
                 if !vis.visible {
                     continue;
                 }

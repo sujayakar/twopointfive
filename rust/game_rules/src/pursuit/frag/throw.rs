@@ -475,7 +475,7 @@ fn tick_carrier(g: &mut Game, ci: usize, dt: f64) {
             if flat(op, fix) > g.k.frag.def_bunch { continue; }
             if !(matches!(g.gd[gd].foe, Some(crate::game::Foe::Guard(f)) if f == o) || g.shown[g.gd[o].ch].visibility > 0.2) { continue; }
             let oh = g.ch[oc].bones.get(crate::character::Bone::Head).copied();
-            if crate::guards::can_see_char(g, gd, oc, false).visible || sights(g, gd, c, head, op, oh) { bunch += 1; }
+            if crate::guards::can_see_char(g, gd, oc).visible || sights(g, gd, c, head, op, oh) { bunch += 1; }
         }
     }
     car!(g, ci).bunch_t = if bunch >= 2 { car!(g, ci).bunch_t + dt } else { 0.0 };
@@ -552,7 +552,7 @@ fn seat_in_bunch(v: &mut Game, gd: GuardId, c: CharId, head: V3, fix: V3) -> boo
     if v.cond[v.pl[pl].ch].down || v.player_invisible || flat(p, fix) > v.k.frag.def_bunch { return false; }
     if !(matches!(v.gd[gd].foe, Some(crate::game::Foe::Player)) || v.shown[v.pl[pl].ch].visibility > 0.2) { return false; }
     let ph = v.ch[pc].bones.get(crate::character::Bone::Head).copied();
-    crate::guards::can_see_char(v, gd, pc, true).visible || (v.gd[gd].smoke_trans >= 0.3 && sights(v, gd, c, head, p, ph))
+    crate::guards::can_see_char(v, gd, pc).visible || (v.gd[gd].smoke_trans >= 0.3 && sights(v, gd, c, head, p, ph))
 }
 
 /// Of `n` spots by the fix, those of open floor with the burst's line to the man's chest; `from` given: only the first his arm lands.

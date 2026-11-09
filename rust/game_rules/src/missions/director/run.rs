@@ -676,7 +676,7 @@ fn director_tick_bursts(g: &mut crate::game::Game, r: DirectorRunId) {
         };
         if crate::weapons::firearm_fire(g, weapon) {
             let c = g.gd[gd].ch;
-            crate::combat::fire_weapon(g, c, at, false, Some(&crate::combat::FireOpts { steady: Some(true), spread: Some(b.spread), ..Default::default() }));
+            crate::combat::fire_weapon(g, c, at, Some(&crate::combat::FireOpts { steady: Some(true), spread: Some(b.spread), ..Default::default() }));
             let rr = &mut g.tab.director_run[r];
             let t = rr.t;
             let row = &mut rr.bursts[k];

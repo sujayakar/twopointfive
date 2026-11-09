@@ -92,7 +92,7 @@ fn pistol_at_the_far_wall(p: &mut Play) {
     p.run(0.7);
     let c = p.g.pl[pl].ch;
     let at = p.sam_at();
-    game::combat::fire_weapon(&mut p.g, c, [at[0], 1.0, at[1] - 3.0], true, None);
+    game::combat::fire_weapon(&mut p.g, c, [at[0], 1.0, at[1] - 3.0], None);
     p.run(0.05);
 }
 

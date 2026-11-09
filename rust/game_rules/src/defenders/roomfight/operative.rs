@@ -167,7 +167,7 @@ fn his_eyes(g: &mut Game, o: RoomfightOpId, dt: f64, sk: &FightSkill, blind: boo
             }
         }
         let hc = g.gd[h].ch;
-        let vis = if blind { None } else { Some(crate::guards::can_see_char(g, gd, hc, false)) };
+        let vis = if blind { None } else { Some(crate::guards::can_see_char(g, gd, hc)) };
         let visible = vis.map_or(false, |v| v.visible);
         let known = g.tab.roomfight_op[o].meters.get(h).unwrap().m >= sk.notice;
         let rate = match vis { Some(v) if v.visible => room_fight_rate_on(g, gd, h, v.dist, Some(known)), _ => 0.0 };
@@ -435,7 +435,7 @@ fn fires(g: &mut Game, o: RoomfightOpId, h: GuardId, to: V3, dt: f64, speed: f64
         room_fight_speak(g, o, "reloading.", Some(0.0));
         return;
     }
-    crate::combat::fire_weapon(g, c, to, false, Some(&crate::combat::FireOpts { steady: Some(true), spread: Some(wide), ..Default::default() }));
+    crate::combat::fire_weapon(g, c, to, Some(&crate::combat::FireOpts { steady: Some(true), spread: Some(wide), ..Default::default() }));
     g.tab.roomfight_op[o].rounds += 1.0;
     g.tab.roomfight_op[o].n += 1.0;
     g.fight.stats.op_rounds += 1.0;

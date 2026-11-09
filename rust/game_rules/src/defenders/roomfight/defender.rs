@@ -286,7 +286,7 @@ fn room_fight_blind(g: &mut crate::game::Game, d: RoomfightDefId, k: f64) {
     if !crate::weapons::firearm_fire(g, gun) { return; }
     let at = v3::mad(g.ch[c].muzzle, g.ch[c].gun_dir, 8.0);
     let o = crate::combat::FireOpts { steady: Some(true), spread: Some(bl.spread), blind: Some(true), ..Default::default() };
-    crate::combat::fire_weapon(g, c, at, false, Some(&o));
+    crate::combat::fire_weapon(g, c, at, Some(&o));
     g.fight.blind_rounds += 1.0;
     if !g.fight.drill_said && room_fight_drilled(g) {
         g.fight.drill_said = true;

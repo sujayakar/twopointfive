@@ -215,7 +215,7 @@ pub(super) fn stand_in(p: V3, low: bool) -> crate::sneak::Target {
 /// guards.ts eyeContact asked of what the sneak's eye test takes: a man's own body, or a spot (standIn: alive, never the player, so only `blind` shuts the eye).
 fn ask(g: &mut Game, e: crate::guards::Eye, pc: &Target, blind: bool) -> crate::guards::EyeContact {
     match *pc {
-        Target::Man { c } => crate::guards::eye_contact(g, e, c, false, blind, 1.0, None),
+        Target::Man { c } => crate::guards::eye_contact(g, e, c, blind, 1.0, None),
         Target::Spot { chest, head } => {
             let lens = crate::scene_collision::EyeContactE { pos: e.pos, look: e.look, range: e.range, half_deg: e.half_deg, near_m: e.near_m, near_deg: e.near_deg, v_half_deg: e.v_half_deg };
             let r = crate::scene_collision::eye_contact(g, lens, chest, head, blind, false, crate::scene_boxes::box_flag().glass);

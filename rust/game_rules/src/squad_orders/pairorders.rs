@@ -507,7 +507,7 @@ fn pair_orders_watcher(g: &mut Game, foe: GuardId, gd: GuardId) -> Option<GuardI
         i += 1;
         let team = g.gd[o].team;
         if o == foe || crate::condition::down(g, g.gd[o].ch) || g.gd[o].held.is_some() || team == crate::teams::Team::Operative || !crate::teams::is_hostile(g, crate::teams::Team::Player, team) { continue; }
-        let s = crate::guards::can_see_char(g, o, gc, false);
+        let s = crate::guards::can_see_char(g, o, gc);
         if s.visible && crate::guards::sight_gain_on(g, o, gd, s.dist) * g.k.pair.watch_secs >= g.k.pair.watch_aw { return Some(o); }
         if team != g.gd[foe].team || !crate::guards::point_in_view(g, o, at, None, None) { continue; }
         if pair_orders_body_lit(g, o, foe, at) { return Some(o); }

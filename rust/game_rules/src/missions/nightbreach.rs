@@ -308,7 +308,7 @@ pub(super) fn blind_turn(g: &mut crate::game::Game, h: GuardId, k: f64, b: &mut 
     if !crate::weapons::firearm_fire(g, weapon) { return false; }
     let target = v3::mad(g.ch[c].muzzle, g.ch[c].gun_dir, 8.0);
     let opts = crate::combat::FireOpts { steady: Some(true), spread: Some(bl.spread), blind: Some(true), ..Default::default() };
-    crate::combat::fire_weapon(g, c, target, false, Some(&opts));
+    crate::combat::fire_weapon(g, c, target, Some(&opts));
     true
 }
 

@@ -357,7 +357,7 @@ pub(super) fn update_hold(g: &mut crate::game::Game, dt: f64, input: InputId, ca
                 };
                 let (spread_sup, spread_aim) = (crate::suppression::sam_spread(g, &crate::seats::here(g)), crate::aim::sam_aim(g));
                 let opts = crate::combat::FireOpts { spread: Some(HOLD_SPREAD + spread_sup + spread_aim), ..crate::combat::FireOpts::default() };
-                crate::combat::fire_weapon(g, c, tgt, true, Some(&opts));
+                crate::combat::fire_weapon(g, c, tgt, Some(&opts));
             }
         }
         // ---- turning: the pair comes round toward the cursor, rate-limited
