@@ -6,7 +6,7 @@ import { Box, BoxFlag, makeBox } from '../../../src/scene/boxes';
 import { saidFor, namePaints, paintOf, worded, type BoxStuff, drawnAs, PANEL_GREY, CHAIR_GREY, KERB_GREY, RACK_BLACK, KEY_BLACK, PHONE_BLACK, madeOf, saidAs } from '../../../src/scene/stuff';
 import { carShapes, hubPaint, carSays } from './carShapes';
 import { WORLD } from '../../../src/scene/world';
-import type { Level, LightDef, PatrolRoute, Chokepoint, RoomClearPlan, BreachPlan, DaylightDef, LevelDoorDef, PropKind, PropPart, PropDef, DeviceDef, CivilianDef, VentDef } from './level';
+import type { Level, LightDef, PatrolRoute, Chokepoint, RoomClearPlan, BreachPlan, LevelDoorDef, PropKind, PropPart, PropDef, DeviceDef, CivilianDef, VentDef } from './level';
 import { MarkingDef, MARKING_TEXEL, MAX_MARKS_PER_BOX, markStats, stencilWidth, type MarkFace, type MarkPal } from '../../../src/scene/markings';
 import * as MD from './markingDefaults';
 import { fitOpenings, fitDoorDef, exitThrough, JAMB_FACE, DOOR_HEAD, LEAF_H } from './doorSize';
@@ -26,7 +26,7 @@ export interface GeneratorOpts { markings?: boolean; demote?: boolean; texel?: n
 
 const H = WORLD.ceilingY;
 /** How far one drawn face is sunk behind another that would lie in its plane, so that the depth test can choose between them (two faces in one plane, drawn
- *  differently, flicker: tools/qa/zfight-check.ts). Under half a centimetre: the level's fingerprint reads a box to the centimetre (rust/game_rules/src/savestate). */
+ *  differently, flicker: tools/qa/zfight-check.ts). Under half a centimetre: the level's fingerprint reads a box to the centimetre (rust/game_rules/src/tick/savestate). */
 const HAIR = 0.004;
 
 // palette (linear)
@@ -60,7 +60,7 @@ export const OFFICE_FINISH: Readonly<Record<string, { rough: number; metal?: boo
   wood: { rough: 0.55 }, woodDark: { rough: 0.6 },          // varnished desks: borderline — rays only on ultra
   wall: { rough: 0.85 }, wallDark: { rough: 0.85 }, concrete: { rough: 0.9 }, ceiling: { rough: 0.9 },   // paint / render / tile: no rays
   carpet: { rough: 0.95 }, carpetBlue: { rough: 0.95 }, carpetRed: { rough: 0.95 },
-  asphalt: { rough: 0.92 },                                 // DRY asphalt; the storm wets it to 0.22 + anisotropic at runtime (rust/game_rules/src/weather)
+  asphalt: { rough: 0.92 },                                 // DRY asphalt; the storm wets it to 0.22 + anisotropic at runtime (rust/game_rules/src/air/weather.rs)
   black: { rough: 0.6 }, cardboard: { rough: 0.9 }, chair: { rough: 0.9 }, plant: { rough: 0.9 }, grass: { rough: 1.0 },
   partRed: { rough: 0.9 }, partBlue: { rough: 0.9 }, partTan: { rough: 0.9 }, red: { rough: 0.45 },   // (red = the extinguisher / agent cylinder: gloss enamel)
 };
@@ -73,7 +73,7 @@ export type Opening = { a: number; b: number; y0?: number; y1?: number; mullions
  *  and what a generator for ANOTHER level builds with (tools/levels/: the scenario levels — same boxes, same palette, same finishes, same markings; no new art).
  *  Every call appends to the kit's own `boxes` / `props` / `lights` / `switchables`; `grp(name)` names the editor group of what follows (trace.groups). */
 /** THE TWO VENDING MACHINES' LIT BODIES, for whoever stands one up (the office's break room): the upper body's half size and paint, and its
- *  markings with the emissive field's radiances scaled so the ONE light rust/game_rules/src/game registers for it has the LUMINOUS intensity of the slab it replaced (luminance of
+ *  markings with the emissive field's radiances scaled so the ONE light rust/game_rules/src/tick/game registers for it has the LUMINOUS intensity of the slab it replaced (luminance of
  *  its mean radiance × its area = luminance of the old slab's radiance × the old slab's area; luminance, not the peak channel the light's intensity keys on: the
  *  field's light is whiter than the pure red or blue slab, and matched on the peak channel the meter read a third more in front of the machines). `red` is the
  *  drinks machine (a painted red body, satin), `blue` the near-black navy one. colW = the half width of the control column, which stands on a flush block; the
@@ -108,7 +108,7 @@ export function officeKit(trace?: GeneratorTrace, opts: GeneratorOpts = {}) {
   // A pane is a 12 mm box flagged Glass standing in the wall's centre plane, its albedo the transmission tint. It is authored to fill its hole EXACTLY (sill to
   // head, jamb / wall face to wall face) so no untinted sliver shows at an edge, and it may pass clean through the mullions and door jambs that are thicker than
   // it: rays never see the pane, the raster never draws it, and the analytic test finds the mullion's face nearer than the glass wherever they overlap. What the
-  // renderer, the AI's eyes and ears, the rounds and the boot make of it: boxes.ts BoxFlag.Glass, rust/game_rules/src/scene_collision segment_blocked, rust/game_rules/src/glass.
+  // renderer, the AI's eyes and ears, the rounds and the boot make of it: boxes.ts BoxFlag.Glass, rust/game_rules/src/world/scene_collision.rs segment_blocked, rust/game_rules/src/breakage/glass.rs.
   const PANE_HALF_T = 0.006;
   /** a GLASS pane in a wall along X at fixed z, x0‥x1 by y0‥y1, in the tint given: sight passes it, feet and sound do not, a round breaks it */
   const paneX = (z: number, x0: number, x1: number, y0: number, y1: number, tint: Vec3) => add({ c: [(x0 + x1) / 2, (y0 + y1) / 2, z], h: [(x1 - x0) / 2, (y1 - y0) / 2, PANE_HALF_T], albedo: tint, flags: BoxFlag.Glass });   // in a wall along X (fixed z)
@@ -287,7 +287,7 @@ export function officeKit(trace?: GeneratorTrace, opts: GeneratorOpts = {}) {
   // the same stretch whichever way the wall faces; `side` ±1 = which face (toward +z / +x is +1); `t` = the wall's thickness (0 = `line` is the face itself:
   // the front of a cabinet, of a cast block). Each takes a paint ROW and says that row's word (scene/stuff.ts). DRAWN ONLY unless `solid`: a fitting is
   // dressing, so no foot, round or sight line meets it; `solid` = it is traced and stands (its edge throws its line of shadow), where a level means that.
-  // WHEN ITS WALL IS BREACHED (rust/game_rules/src/wallbreak `hangers`): what is drawn only, a quarter of a metre or more off the floor, goes once half the wall behind
+  // WHEN ITS WALL IS BREACHED (rust/game_rules/src/breakage/wallbreak `hangers`): what is drawn only, a quarter of a metre or more off the floor, goes once half the wall behind
   // it is open, so a level lays a long run of conduit in lengths; a band from the floor stays, as the other kit's painted dado does (gwotKit.ts skirt).
   /** a box on a wall's face: u0‥u1 along the wall, y0‥y1 up it, d0‥d1 out from the face */
   const onFace = (axis: 'x' | 'z', line: number, side: 1 | -1, t: number) => { const f = line + side * t / 2;
@@ -417,12 +417,12 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
   ]);   // (glass: the lobby frontage a pane a bay — you shoot your way through one bay, not six metres of it — the rest one pane an opening)
   // north wall z=4: a few high windows in offices
   wallX(4, 3.88, 36.12, 0.24, ext, [{ a: 24, b: 28, y0: 2.05, y1: 2.6, mullions: 3, glass: 'whole' }, { a: 6, b: 12, y0: 2.05, y1: 2.6, mullions: 4, glass: 'whole' }]);   // manager's office + conference room: clerestory strips (a cabinet / the whiteboard stand against the solid wall below; a full window behind the cabinet read as light bleeding round it)
-  // west wall x=4: lobby glazing z 17..23, conference window z 5..9 — and (QRF infil door, rust/game_rules/src/qrf) the west stair door under the exit sign at the corridor's
+  // west wall x=4: lobby glazing z 17..23, conference window z 5..9 — and (QRF infil door, rust/game_rules/src/pursuit/qrf) the west stair door under the exit sign at the corridor's
   // west end, z 10.5..11.7: the way Sam came in, a steel fire door onto the stairwell landing built outside the wall just below (see 'stairwell' in doorDefs)
   wallZ(4, 4, 24, 0.24, ext, [{ a: 17, b: 23, y0: 0.5, y1: 2.6, mullions: 4, glass: 'bay' }, { a: 5, b: 9, y0: 0.9, y1: 2.4, mullions: 3, glass: 'whole' }, { a: 10.5, b: 11.7, y0: 0, y1: 2.2 }]);
   // QRF infil: the west stairwell's landing outside that door — a bare concrete box on the facade (floor, three walls, a roof slab the camera looks through like
   // the ceiling), unlit: dark until the response team's weapon lights fill it. Inner floor x 1.34‥3.88, z 9.57‥12.63 (nav cells x 1.75‥3.25 × z 9.75‥12.25 free;
-  // the doorway's walkable column is z 11.25). rust/game_rules/src/qrf QRF_MARKS stands the team in it. TODO(level-format lane): a 'landing' volume + the marks in LevelData.
+  // the doorway's walkable column is z 11.25). rust/game_rules/src/pursuit/qrf QRF_MARKS stands the team in it. TODO(level-format lane): a 'landing' volume + the marks in LevelData.
   slab(1.34, 0, 9.57, 3.88, 0.02, 12.63, K.landing);                                              // landing floor (over the grass strip's decal)
   wallX(9.45, 1.1, 3.88, 0.24, ext); wallX(12.75, 1.1, 3.88, 0.24, ext); wallZ(1.22, 9.57, 12.63, 0.24, ext);   // north, south, west walls of the stair tower (the west one between the other two: no coplanar corner faces)
   slab(1.1, H, 9.33, 3.88, H + 0.2, 12.87, C.ceiling, { flags: BoxFlag.NoPrimary });              // its roof (light-only, hidden from the camera like the ceiling)
@@ -526,7 +526,7 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
   const printerBody = add({ c: [12.5, 0.45, 16.0], h: [0.35, 0.45, 0.45], albedo: C.white, ...mk(DEMOTE ? MD.ledMarks('+x', -0.2, 0.4, [0.2, 6, 0.4], 1, 2, TX) : []) }); add({ c: [12.5, 0.95, 16.0], h: [0.3, 0.06, 0.35], albedo: [0.15, 0.15, 0.16] });   // (the printer's ready LED: a marking on its east face, or the old emissive nub)
   const printerLed = DEMOTE ? printerBody : add({ c: [12.86, 0.85, 16.2], h: [0.005, 0.01, 0.03], albedo: C.black, emissive: [0.2, 6, 0.4], flags: BoxFlag.NoShadow });
   // water cooler
-  add({ c: [27.5, 0.5, 23.4], h: [0.18, 0.5, 0.18], albedo: C.white }); add({ c: [27.5, 1.2, 23.4], h: [0.15, 0.2, 0.15], albedo: [0.3, 0.45, 0.6] });   // (the bottle is a plain box again, 08-12: as refracting solid glass a box read as an ice cube under a torch, and a one-off cylinder for one prop was not worth carrying — the maintainer's call; rust/game_rules/src/glass keeps the solid-glass rule for any future thick Glass box)
+  add({ c: [27.5, 0.5, 23.4], h: [0.18, 0.5, 0.18], albedo: C.white }); add({ c: [27.5, 1.2, 23.4], h: [0.15, 0.2, 0.15], albedo: [0.3, 0.45, 0.6] });   // (the bottle is a plain box again, 08-12: as refracting solid glass a box read as an ice cube under a torch, and a one-off cylinder for one prop was not worth carrying — the maintainer's call; rust/game_rules/src/breakage/glass.rs keeps the solid-glass rule for any future thick Glass box)
   cabinet(24.6, 12.62, Math.PI); cabinet(25.12, 12.62, Math.PI); cabinet(27.55, 15.4, Math.PI / 2);   // filing cabinets (drawers into the room)
   papers(15.4, 0.76, 14.5, 0.3); papers(24.1, 0.76, 21.4, -0.2); papers(17.6, 0.76, 21.3, 0.9); papers(22.0, 0.76, 14.4, 0.1);
   bin(14.6, 16.3); bin(21.2, 21.7); bin(25.0, 16.2);
@@ -574,7 +574,7 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
   switchables.push({ name: 'exit_sign_e', boxes: [exitE], group: 'corridor', on: true, baseEmissive: [0.3, 3.2, 0.6], mains: false });
   add({ c: [20.0, 1.1, 12.08], h: [0.15, 0.3, 0.06], albedo: K.red, ...mk(MD.extinguisherBoxMarks([0.15, 0.3, 0.06], '-z', TX)) });   // (markings: the pictogram square + handle slot on its corridor face)
   add({ c: [28.5, 1.5, 10.1], h: [0.9, 0.45, 0.02], albedo: [0.45, 0.35, 0.2] });
-  bench(26.6, 11.86, 0); plant(4.65, 11.78, 0.9); plant(35.4, 11.7, 0.9); bin(21.3, 11.95);   // bench on the blank wall run between the east cubicle opening and the break-room door; the west plant in the SOUTH-west corner (QRF infil door: the stair door's leaf swings in along the north side of that end — rust/game_rules/src/qrf)
+  bench(26.6, 11.86, 0); plant(4.65, 11.78, 0.9); plant(35.4, 11.7, 0.9); bin(21.3, 11.95);   // bench on the blank wall run between the east cubicle opening and the break-room door; the west plant in the SOUTH-west corner (QRF infil door: the stair door's leaf swings in along the north side of that end — rust/game_rules/src/pursuit/qrf)
   wallArt(11.5, 1.6, 12.12, 1.3, 0.75, [0.16, 0.28, 0.4], true); wallArt(15.6, 1.6, 10.09, 1.0, 0.7, [0.5, 0.42, 0.2], true);
   rug(20.0, 11.1, 30.0, 1.1, [0.24, 0.22, 0.2]);                                     // long runner
   ceilingPanel(8, 11.1, false, 'corridor', false, 1.2, 0.3); ceilingPanel(14, 11.1, true, 'corridor', false, 1.2, 0.3, [7, 6.8, 6.4]);
@@ -766,11 +766,11 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
   // the slabs go and the bodies carry the signifiers — A is a RED drinks machine (a backlit red field on the coarse lattice with a white swoosh and a wordmark
   // block, the control column and the dispenser opening as plain markings that do not glow), B a deep BLUE one (a blue field with a light wave band; control
   // column behind its little keypad block, dispenser). ONE chroma per emissive field, luminance redistributed (markingDefaults.ts states the rule): each field
-  // is emissive, rust/game_rules/src/game registers ONE light for it whose colour is the field's mean, and its radiances are scaled here so that light's LUMINOUS intensity
+  // is emissive, rust/game_rules/src/tick/game registers ONE light for it whose colour is the field's mean, and its radiances are scaled here so that light's LUMINOUS intensity
   // equals the old slab's. Their switchables drive the bodies (marking gain).
   if (DEMOTE) {
     // Calibration: the window's LUMINOUS intensity (luminance of its mean radiance × its area) = the old slab's (luminance of its radiance × its area). Luminance, not the peak
-    // channel rust/game_rules/src/game keys the light's intensity on: the window's light is whiter than the pure red / blue slab, and it is luminous flux that the light meter and the eye
+    // channel rust/game_rules/src/tick/game keys the light's intensity on: the window's light is whiter than the pure red / blue slab, and it is luminous flux that the light meter and the eye
     // integrate — matched on the peak channel the meter read a third more in front of the machines.
     const VENDING_FLUX_K = 1.0;   // TASTE: × the old slabs' luminous intensity. 1 = the break room lit exactly as before (and the fields as pale on screen as the old slabs: AgX desaturates radiance ≈ 2.3 at this exposure); ~0.5 reads a saturated red / blue front in a room half as bright
     // Each machine = an UPPER body (the marked front: field + control column) standing on a black PLINTH set 6 cm back over its left two-thirds — the dispenser
@@ -866,7 +866,7 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
   add({ c: [36.72, 0.29, 17.5], h: [0.58, 0.29, 0.5], albedo: drawnAs('wood', [0.4, 0.3, 0.19]), ...mk(DEMOTE ? MD.palletDeckMarks([0.58, 0.29, 0.5], TX) : []) });                                                                                          // pallet stack (x 36.14‥37.30, z 17‥18): four pallets as one block (the top one's deck boards a coarse marking when demoted)…
   if (!DEMOTE) for (let i = 0; i < 5; i++) add({ c: [36.2 + i * 0.26, 0.591, 17.5], h: [0.05, 0.011, 0.5], albedo: drawnAs('wood', [0.5, 0.39, 0.25]) });                                               // …or five board boxes (relief — traced ones)
   // the lot's two open edges get a concrete upstand (6 cm × 32 cm, flush with the slab's rim): the world's edge there becomes real geometry instead of only the
-  // player's world clamp. That clamp and his static push-out are applied in turn (rust/game_rules/src/player), and where a parked vehicle stands within a body width of the rim —
+  // player's world clamp. That clamp and his static push-out are applied in turn (rust/game_rules/src/sam/player), and where a parked vehicle stands within a body width of the rim —
   // the van's south face 0.5‥0.8 m off it, the red car's 0.6 — a man sprinting along the rim was fed between the two, up to 30 cm inside the bodywork (the soak's
   // 'in-geometry' at (32.9, 27.6); the same numbers on main). With the rim in the collision grid the push-out sees both faces at once and turns him out at the
   // corner. It costs the rim row of nav cells, where nothing is ever authored or rolled (a fix on a man standing at the kerb resolves to the nearest free cell, as at
@@ -904,7 +904,7 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
   beacon(20.0, 17.6);                           // cubicle floor
   beacon(32.0, 17.5);                           // break room
 
-  // door frames: jambs + head slightly proud of the wall around every doorway that gets a leaf (see `doors` below), and the frame's stops: rust/game_rules/src/doors hangs the leaf
+  // door frames: jambs + head slightly proud of the wall around every doorway that gets a leaf (see `doors` below), and the frame's stops: rust/game_rules/src/fittings/doors hangs the leaf
   // 2 cm off its hinge line (the knuckle clearance) and ends it exactly on the far jamb's face, which left a 2 cm sight slot up the hinge side of every shut door
   // (guards' eye rays — segmentBlocked over statics + leaves — went clean through it: a hundred-odd fan segments per door in the headless probe) and a hairline
   // at the latch seam. Two full-height fillers in the leaf's own plane close both: hinge side from 1.2 cm inside the jamb to 4 mm into the leaf's edge, latch
@@ -920,28 +920,28 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
     { name: 'storage', hinge: [32.02, 10.0], closedDir: 0, width: 1.16, locked: true },
     { name: 'breakroom_n', hinge: [30.02, 12.2], closedDir: 0, width: 1.16, maxAngle: 1.55 },
     // the side door between the manager's office and the server room — the QUIET way in (the manager's leaf stands ajar, this one was open to anyone): now on a
-    // KEYPAD (devices below, rust/game_rules/src/devices). Its bolt is thrown and keyed to the pad's own lock, cylinder on the office face (keySide −1: hinged at z 8.02 running
+    // KEYPAD (devices below, rust/game_rules/src/stealth/devices.rs). Its bolt is thrown and keyed to the pad's own lock, cylinder on the office face (keySide −1: hinged at z 8.02 running
     // south, the office is the leaf's CW side): from the office Sam needs the code (a man gives it up under questioning, or two of them say it out loud where he
     // can hear) or his boot; from the server room it is a thumb-turn as every keyed door is. Staff walk it either way. The front server door keeps its key.
     { name: 'server_manager', hinge: [22.0, 8.02], closedDir: Math.PI / 2, width: 1.06, locked: true, lock: 'pad_side', keySide: -1 },
     { name: 'breakroom_w', hinge: [28.0, 17.02], closedDir: Math.PI / 2, width: 1.16, angle: 1.35, closer: false },
     { name: 'breakroom_ext', hinge: [31.02, 24.0], closedDir: 0, width: 1.16, exterior: true, maxAngle: 3.05 },   // folds (almost) flat against the outside wall: open at the usual 110° it lay across the 1.4 m alley to the van and wedged anyone walking it
     { name: 'fire_exit', hinge: [36.0, 20.02], closedDir: Math.PI / 2, width: 1.16, exterior: true },
-    // QRF infil door (rust/game_rules/src/qrf): the west stair door under the exit sign — how Sam got onto the floor. A steel fire door: shut, its bolt thrown, the cylinder on the
+    // QRF infil door (rust/game_rules/src/pursuit/qrf): the west stair door under the exit sign — how Sam got onto the floor. A steel fire door: shut, its bolt thrown, the cylinder on the
     // CORRIDOR face (keySide −1: hinged on the north jamb, the corridor is the leaf's CW side) keyed to a lock nobody on this floor carries ('stairwell'), so from
-    // inside it neither picks (no keyway offered — rust/game_rules/src/player) nor kicks (rust/game_rules/src/doors: a boot on steel is noise and nothing else); the landing side is the crash bar —
+    // inside it neither picks (no keyway offered — rust/game_rules/src/sam/player) nor kicks (rust/game_rules/src/fittings/doors: a boot on steel is noise and nothing else); the landing side is the crash bar —
     // it always opens from there, which is how the response team comes through it. Sprung shut, and it swings INTO the corridor along the north side of its west end.
     { name: 'stairwell', hinge: [4.0, 10.52], closedDir: Math.PI / 2, width: 1.16, exterior: true, locked: true, lock: 'stairwell', keySide: -1, steel: true },
   ];
   for (const d of doorDefs) doorFrame(d);
 
-  // ---------------- HVAC supply vents (rust/game_rules/src/wind): the building's air, as ONE field the particles and the smoke solver both take ----------------
+  // ---------------- HVAC supply vents (rust/game_rules/src/air/wind.rs): the building's air, as ONE field the particles and the smoke solver both take ----------------
   // Six ceiling diffusers blowing DOWN: two over cubicle desks that carry paper (the north-west desk of the red cluster, the south desks of the south-east one —
   // a leaf under a diffuser trembles and now and then slides), one over the middle aisle where a thrown can comes to rest (its plume bends), one in the corridor
   // outside the server door, one inside the break room's corridor door, one over the server room's front aisle (the cold aisle: the strongest). Each stands ≥ 1.7 m
-  // off every light panel and beacon (a grille in a panel's shadow rays would dim it) and on its own 0.6 m ceiling square (rust/game_rules/src/destruction then finds the
+  // off every light panel and beacon (a grille in a panel's shadow rays would dim it) and on its own 0.6 m ceiling square (rust/game_rules/src/breakage/destruction then finds the
   // square taken, as it finds a panel's). All on the mains: a blackout spins the air handler down and the plumes straighten. Two cycle slowly (VAV boxes hunting)
-  // so a visitor sees a jet die and come back; the rest are steady but for the gusting rust/game_rules/src/wind folds in. The GRILLE is a plain box per vent (last in the box list,
+  // so a visitor sees a jet die and come back; the rest are steady but for the gusting rust/game_rules/src/air/wind.rs folds in. The GRILLE is a plain box per vent (last in the box list,
   // so no older index moves; NoPrimary like every ceiling fixture — traced, so it shows in the polished floors' reflections — its louvre a coarse marking).
   const vents: VentDef[] = [
     { name: 'vent_cub_nw', pos: [15.3, H - 0.035, 14.1], dir: [0, -1, 0], speed: 2.2, spread: 24, reach: 1.2, mains: true },              // over the red cluster's north-west desk and its papers (15.4, 14.5); panel (16.5, 15.2) 1.6 m off its rim
@@ -959,16 +959,16 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
     { name: 'cubicles', points: [[13.6, 0, 13.2], [19.8, 0, 13.4], [19.9, 0, 17.0], [26.3, 0, 18.0], [26.4, 0, 23.0], [19.8, 0, 23.2], [19.7, 0, 18.9], [13.5, 0, 18.0]], wait: [2, 0, 1.5, 0, 2.5, 0, 1, 0] },   // the two mid-aisle pauses stop just short of the carton at (19.8, 17.9) — where the nav grid used to halt the guard when it was a static — instead of shoving it back and forth every lap
     { name: 'lobby_break', points: [[30.6, 0, 16], [33.5, 0, 21], [30.5, 0, 13.0], [14, 0, 11.0], [10.5, 0, 13.5], [10.6, 0, 20.5], [6.5, 0, 17.5], [10.4, 0, 13.4], [14.2, 0, 11.3], [30.6, 0, 11.4]], wait: [0, 3, 0, 0, 1.5, 2.5, 3, 0, 0, 0] },
   ];
-  // lockdown posts (rust/game_rules/src/guards holds the corridor junction nearest the last alarm with the spare man): each is held from an end wall or the north wall, so the
+  // lockdown posts (rust/game_rules/src/people/guards holds the corridor junction nearest the last alarm with the spare man): each is held from an end wall or the north wall, so the
   // man has the length of the corridor in front of him, the openings nearest him inside his cone, and stands clear of the patrol line (z 11.1‥11.4) and the swing
   // of every leaf — west end (back to the end wall under the exit sign: the lobby arch a step ahead on his right, the conference door on his left), the north wall
   // between the conference glazing and the west cubicle opening (that opening ahead-right, the server-room door ahead-left), east end (back to the fire-exit end:
   // the storage door — the breaker — ahead-right, the break-room door ahead-left)
-  // the building's own night people (rust/game_rules/src/civilians): Marta cleans the cubicle floor and the corridor's south side; Owen works late at the tan cluster's north-west
+  // the building's own night people (rust/game_rules/src/people/civilians): Marta cleans the cubicle floor and the corridor's south side; Owen works late at the tan cluster's north-west
   // desk (its screen is one of the lit ones), fetches his printing and stands at the south windows now and then. Every mark is a free nav cell at least 0.6 m off
   // every patrol leg and waiting point (checked headlessly), no leaf on either loop, no waypoint of theirs on top of a chair or a bin —
   // she kneels 0.6 m short of the bin she empties. `face` = the yaw she does the task at (Character convention); the seated man's mark IS his chair (the sitting
-  // clip carries the pelvis 0.33 m behind the root: rust/game_rules/src/civilians SIT_ADVANCE puts him onto it), facing his desk.
+  // clip carries the pelvis 0.33 m behind the root: rust/game_rules/src/people/civilians SIT_ADVANCE puts him onto it), facing his desk.
   const civilians: CivilianDef[] = [
     { name: 'Marta', kind: 'cleaner', tint: [0.78, 0.62, 0.08], tint2: [0.05, 0.06, 0.1],
       points: [[26.85, 0, 15.4], [25.6, 0, 16.7], [21.2, 0, 22.3], [18.9, 0, 23.3], [14.6, 0, 16.9], [15.7, 0, 12.9], [20.7, 0, 11.85], [22.7, 0, 12.75]],
@@ -988,7 +988,7 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
     { name: 'east end', pos: [35.0, 0, 10.8], yaw: -Math.PI / 2 },
   ];
 
-  // room clearing in a lockdown (rust/game_rules/src/guards plan_clears → rust/game_rules/src/squad Clearing / RoomClear): one plan per room the pair can take from the corridor. Every door on
+  // room clearing in a lockdown (rust/game_rules/src/people/guards plan_clears → rust/game_rules/src/squad_orders/squad Clearing / RoomClear): one plan per room the pair can take from the corridor. Every door on
   // the corridor's north wall hinges on its west jamb and swings north into its room, so the pair stack on the east (latch) jamb — #1 bladed to the wall half a
   // metre off it, #2 tucked in 0.85 m behind — #1 breaches by the lock and hooks east along the near wall, #2 takes the west, door side a beat later; the break
   // room is taken through its corridor door the same way mirrored (that wall is on their left). Staff carry keys, so every breach here is 'open': the leaf comes
@@ -1069,7 +1069,7 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
         push1: 'pushing down the left — get your light under the table.', under2: 'checking under the table…', nothing2: 'nothing under it.', corner1: "back corner clear — outside door's shut.",
         empty2: "break room's clear.", radio1: 'negative contact, break room.' } },
     { // break room again, from the cubicle side through its west door (hinged on the north jamb, latch to the south, shoved east into the room where it lies along the
-      // north side of the doorway): the variant the pair takes when that is the shorter walk (rust/game_rules/src/squad Clearing) — stacked south of the door on the partition, wall on
+      // north side of the doorway): the variant the pair takes when that is the shorter walk (rust/game_rules/src/squad_orders/squad Clearing) — stacked south of the door on the partition, wall on
       // their right; #1 hooks right down the west wall to the south-west corner and later walks the south wall to the far end; #2 rounds the leaf's tip onto the north
       // side and kneels there, between the machines and the table
       door: 'breakroom_w', room: 'break room', breach: 'open', bounds: { x0: 28.12, x1: 35.88, z0: 12.26, z1: 23.88 },
@@ -1086,7 +1086,7 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
         empty2: "break room's clear.", radio1: 'negative contact, break room.' } },
   ];
 
-  // ---------------- devices (rust/game_rules/src/devices): three cameras, the side door's keypad, two tripwires ----------------
+  // ---------------- devices (rust/game_rules/src/stealth/devices.rs): three cameras, the side door's keypad, two tripwires ----------------
   // Everything a device shows is drawn by the game from these records (bodies, LEDs, the beams): nothing here is a box. Cameras see Sam through the guards' own
   // eye test and light meter — dark is dark to them too — call the floor's radio when they have had him lit for most of a second and put the floor up a step if
   // he stays in view; the tripwires call the radio when something breaks them. All but the lobby camera and the storage beam are on the mains (a blackout kills
@@ -1113,28 +1113,7 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
     { kind: 'laser', name: 'laser_storage', from: [31.85, 1.25, 10.1], to: [33.35, 1.25, 10.1], mains: false, alarm: 'suspicion' },
   ];
 
-  // ---------------- daylight (the breach showcase's variant; rust/game_rules/src/lighting set_daylight swaps it in and back out) ----------------
-  // Ten in the morning: the sun stands over the south lot, low enough (≈ 33°) that the south windows lay long mullioned patches three or four metres across the
-  // cubicle floor and the lobby's two runs of glazing throw theirs over the stone — it comes from the south-west, so it enters through the lobby glass side of the
-  // building and rakes east-north-east across the main office; warm white against a lifted blue-white sky (the escaping gather rays and the windows' own view of it);
-  // every fluorescent group in the building on, the sodium lamps and the moon out. Intensity: a directional light's number is the irradiance on a surface square to
-  // it (direct.wgsl evalLight kind 2) — 8 puts ≈ 4.4 W/m² on the floor, four times what a lit panel manages straight below itself, so a sun patch reads as sun next
-  // to fixture-lit carpet without whiting out under AgX at exposure 2.4. radius = angular radius: 0.02 rad ≈ four suns — window bars soften a hand's breadth over
-  // three metres of throw, enough to lose the stair-stepping of a hard edge at internal resolution, not enough to smear the mullions away. volumetric 1.5: the
-  // haze pass marches the sun under the ceiling only (volumetrics.wgsl — the building's dust, not weather), and from the game's high camera the scattering angle
-  // never gets much inside 60°, so the shafts under the south windows want about this much over a lamp's 1.0 to read as shafts and not a tint; haze 0.06 over
-  // the night's 0.035 for the same reason. All five numbers are the ones to judge by eye (Tab ▸ Frame ▸ exposure / haze; the sun is game.level.daylight.sun,
-  // re-read at the next setDaylight(true)).
-  const daylight: DaylightDef = {
-    sun: { kind: 'dir', pos: [0, 0, 0], dir: normalize3([0.45, -0.55, -0.70]), color: [1.0, 0.95, 0.86], intensity: 8, range: 1e6, innerDeg: 0, outerDeg: 0, name: 'sun', group: 'daylight', enabled: true, volumetric: 1.5, radius: 0.02, mains: false },
-    sky: { zenith: [0.5, 0.72, 1.15], horizon: [1.1, 1.15, 1.2] },
-    groupsOn: ['lobby', 'cubicles', 'corridor', 'conference', 'server', 'manager', 'storage', 'breakroom', 'monitors'],
-    groupsOff: ['exterior'],
-    lightsOff: ['moon'],
-    haze: 0.06,
-    exposure: 2.4,
-  };
-  // ---------------- the breach (rust/game_rules/src/breach): two operatives take the break room through its cubicle-side door ----------------
+  // ---------------- the breach (rust/game_rules/src/missions/breach.rs): two operatives take the break room through its cubicle-side door ----------------
   // The break room is the room for it: its west door is the one door on this floor that opens straight off the main office (the conference room's is across the
   // corridor and walled in glass — nobody stacks on glass), the partition it sits in is solid, so the men on the marks are hidden from the room and the room from
   // the charge's flash test until the leaf goes, and the way to it is the long east-west aisle between the cubicle blocks — fourteen sunlit metres of approach for
@@ -1159,7 +1138,7 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
     from: [[9.4, 0, 18.75], [8.3, 0, 19.05]],                                          // in the lobby short of the opening into the main office: they come through it into the shot with the whole aisle ahead of them
     stack: [[27.42, 0, 18.68], [27.42, 0, 19.55]], stackFace: [Math.PI, Math.PI], stackSide: 1,   // in file on the partition south of the door facing north along it, the wall (and the jamb) on their right: #1's shoulder at the jamb, #2 tucked in 0.87 m behind
     stackAim: [[27.9, 1.05, 18.0], [27.85, 1.9, 17.7]],                               // #1's muzzle on the leaf's latch edge, #2's high over his shoulder at the head of the frame
-    kickFrom: [27.24, 0, 18.04], kickFace: Math.PI / 2, fling: -6.5,                   // square to the leaf by the lock, 0.76 m off it; −6.5 rad/s throws it east into the room hard enough to bang off its stop and come to rest lying along the north side of the frame — flung harder it rebounds off the stop to stand across the mouth of the doorway, and the first man's shoulder on it at the stop is read as a hand pulling it to (rust/game_rules/src/doors): the room shut itself behind them
+    kickFrom: [27.24, 0, 18.04], kickFace: Math.PI / 2, fling: -6.5,                   // square to the leaf by the lock, 0.76 m off it; −6.5 rad/s throws it east into the room hard enough to bang off its stop and come to rest lying along the north side of the frame — flung harder it rebounds off the stop to stand across the mouth of the doorway, and the first man's shoulder on it at the stop is read as a hand pulling it to (rust/game_rules/src/fittings/doors): the room shut itself behind them
     retreat: { mark: [26.55, 0, 18.9], face: Math.PI / 2 },                            // #1's two steps back off the boot: back and out onto his own side to a stride outside #2's shoulder, level with him, chest still on the doorway — 0.7 m south of the latch jamb's line, so no part of him stands in the opening, and #2's throw and his own way back to the frame both stay clear
     toss: { mark: [27.5, 0, 18.62], face: Math.PI, land: [30.7, 0.05, 16.6] },         // #2 tight on the latch jamb (his shoulder where #1's was), facing up the wall; the charge round the jamb, through the south half of the opening, to the open floor north of the table
     hostiles: [
@@ -1189,7 +1168,7 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
     next: { door: 'breakroom_n', stack: [[31.62, 0, 12.78], [32.5, 0, 12.8]], stackFace: [-Math.PI / 2, -Math.PI / 2], stackSide: 1,   // on the corridor door's latch (east) side facing west along the north wall, the wall on their right: #2's shoulder at the jamb, #1 behind him (the machines fill the hinge side's corner: nobody stands there)
       stackAim: [[30.9, 1.05, 12.3], [30.5, 1.85, 12.3]],
       via: [[29.75, 0, 18.7], [30.3, 0, 16.2], [30.9, 0, 14.3]] },                    // #1's way up from his point on the west wall: clear of the table's chairs and the flung leaf's tip, then in toward the north wall
-    // RoomClear's fields, kept coherent with the flow above so the same plan dry-runs in rust/game_rules/src/squad (entry = the flows' legs, the sectors = their sweeps)
+    // RoomClear's fields, kept coherent with the flow above so the same plan dry-runs in rust/game_rules/src/squad_orders/squad (entry = the flows' legs, the sectors = their sweeps)
     entry: [
       [[27.45, 0, 17.72], [28.55, 0, 17.8], [29.6, 0, 17.92], [29.25, 0, 19.3], [28.95, 0, 20.45]],
       [[27.55, 0, 17.5], [28.55, 0, 17.42], [29.4, 0, 17.2], [29.95, 0, 16.2], [29.8, 0, 14.75], [29.45, 0, 14.05]],
@@ -1259,10 +1238,18 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
   }
 
   return {
-    boxes, props, lights, switchables, daylight, breach,
+    boxes, props, lights, switchables, breach,
     doors: doorDefs,   // hinged leaves for the doorway gaps (closedDir 0: leaf runs +X from the hinge along a z-wall; π/2: runs +Z along an x-wall)
     devices,
-    vents,             // the HVAC diffusers (rust/game_rules/src/wind): after devices, where loadLevel puts them — the identity probe compares key order too
+    vents,             // the HVAC diffusers (rust/game_rules/src/air/wind.rs): after devices, where loadLevel puts them — the identity probe compares key order too
+    hums: [
+      { name: 'hum_servers', kind: 'servers', pos: [18, 1.2, 7], level: 0.5, radius: 12 },   // the server room
+      { name: 'hum_vending', kind: 'buzz', pos: [29.5, 1.2, 13.2], level: 0.35, radius: 7 },   // the vending machines
+      { name: 'hum_ballast', kind: 'buzz', pos: [16.5, 2.8, 20.6], level: 0.15, radius: 6 },   // the flickering panel's ballast
+      { name: 'hum_air', kind: 'hum', pos: [8, 2.6, 18], level: 0.25, radius: 14 },   // the air handling
+      { name: 'wind_lot', kind: 'wind', pos: [16, 3, 27], level: 0.5, radius: 18, mains: false },   // the wind over the lot
+      { name: 'wind_west', kind: 'wind', pos: [1.5, 3, 20], level: 0.4, radius: 14, mains: false },   // …and along the west side
+    ],
     breaker: { pos: [34.3, 1.35, 9.8], boxes: [brk, brkLed] },
     beacons,
     playerSpawn: [5.1, 0, 15.2],

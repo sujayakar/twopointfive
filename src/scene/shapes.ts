@@ -24,17 +24,17 @@
 // blast, a wall coming down) has hidden its trim, and whatever puts the box back has put the trim back, with nothing hidden, filed or restored for the
 // piece itself: a piece's own flags never change.
 // TO EVERY ENGINE THAT SWEEPS THE LEVEL'S THINGS A PIECE IS NOT THERE: not an item of the destruction lane, not a rider or a load in a blast's furniture
-// (rust/game_rules/src/furnblast: its index, its mouth rule), not a thing hung on a wall (rust/game_rules/src/wallbreak ghosts). An engine that walks the statics as things
+// (rust/game_rules/src/breakage/furnblast.rs: its index, its mouth rule), not a thing hung on a wall (rust/game_rules/src/breakage/wallbreak ghosts). An engine that walks the statics as things
 // skips `piece`.
 // A whole cylinder standing on its end is not said here: that is a ROUND THING (scene/round.ts), the one way to say it.
 //
 // ONE MODEL: the record is built by scene/cut.ts cutRecord, so a shaped box is a cut box to everybody — the picture draws the solid, every GPU ray and every
 // CPU ray and segment meet it (sight, a round, a lamp's shadow, sound, a throw's arc; the game's own module too, whose copy of the boxes carries each record:
-// rust/game_rules/src/scene_box_mirror).
+// rust/game_rules/src/world/scene_box_mirror.rs).
 // WHAT WALKS MEETS THE PLAIN LEVEL, by construction and not by a rule its author must keep: a shaped box is pushed against as its UNCUT box (cut.ts's own
 // rule), which is the plain box, and a piece is met by nobody. The rules that mark a level's boxes by their size as it is stood up (thin things, a window's
 // bars: src/host/drawpage.ts) read the plain boxes too: shapes are given after them.
-// WHAT AN ENGINE CUTS UP ITSELF SAYS NO FORM: a window's bar (rust/game_rules/src/winbars breaks it into lengths) is left plain by shapeLevel, a round thing is
+// WHAT AN ENGINE CUTS UP ITSELF SAYS NO FORM: a window's bar (rust/game_rules/src/breakage/winbars.rs breaks it into lengths) is left plain by shapeLevel, a round thing is
 // refused a shape by the lint (scene/round.ts).
 // A BLAST: a box whose shape has a form is one cell to the wall engine and never a wall cut into cells (its cells would be cut from the whole box); its
 // trim is out of the picture the moment the box is (above), and joins, loads and hangs on nothing meanwhile.
@@ -48,7 +48,7 @@
 // switch up each box that says a shape is given its record (Box.shaped) and its pieces are added AFTER every box the level has (Box.piece), so no box changes
 // its number; plainLevel takes the records and the pieces away. A level built by a generator in the page (the office) is shaped the same way as
 // one read from a file: the shape rides on the Box.
-// A LEVEL STOOD ON ITS SHAPES IS ANOTHER LEVEL: the level's fingerprint (rust/game_rules/src/savestate) takes in a number of the shapes that STAND (shapeStamp: their
+// A LEVEL STOOD ON ITS SHAPES IS ANOTHER LEVEL: the level's fingerprint (rust/game_rules/src/tick/savestate) takes in a number of the shapes that STAND (shapeStamp: their
 // geometry to the millimetre, 0 = none), so a checkpoint or a recording made on them is refused by the plain level, and the other way about, and by the level
 // once its shapes have changed — by the one refusal a checkpoint and every tape player already have. With no shape standing the fingerprint is the one the
 // level always had.
@@ -96,47 +96,6 @@ function planesOf(h: Vec3, f: ShapeForm): CutPlane[] {
   if (f.round) return ringPlanes(Math.min(h[1], f.round === 1 ? h[2] : h[0]), f.round);
   if (f.arc) { const own = more.slice(0, ARC_PLANES); return [...arcPlanes(h, f.arc.axis, f.arc.rise, arcFacets(own.length)), ...own]; }
   return more;
-}
-
-/** what is wrong with a shape said of a box of half size h (the level lint, tools/levels/lib/levelData.ts): nothing = []. `pieceKeys` = the keys a piece may carry
- *  beside its form (its place, size, turn, paint and finish as a box says them: the lint's own list, so a piece is painted by the one reader a box is).
- *  `piece` = this IS a piece of that box. */
-export function shapeErrors(s: unknown, h: Vec3, pieceKeys: readonly string[], piece = false): string[] {
-  const out: string[] = [], isV = (v: unknown): v is Vec3 => Array.isArray(v) && v.length === 3 && v.every(x => typeof x === 'number' && Number.isFinite(x));
-  if (s === null || typeof s !== 'object' || Array.isArray(s)) return ['must be an object'];
-  const o = s as Record<string, unknown>, keys: readonly string[] = piece ? [...pieceKeys, ...FORM_KEYS] : SHAPE_KEYS;
-  for (const k of Object.keys(o)) if (!keys.includes(k)) out.push(`unknown key '${k}'${piece && k === 'flags' ? ' (a piece is trim: it always stands NoShadow)' : ''}`);
-  if (piece && !(isV(o.off) && isV(o.h) && o.h.every(x => x > 0))) { out.push('a piece needs off and h > 0'); return out; }
-  if (piece && o.yaw !== undefined && !(typeof o.yaw === 'number' && Number.isFinite(o.yaw))) { out.push('yaw must be a number'); return out; }
-  const hh = piece ? o.h as Vec3 : h;   // (the box a form is cut from: the piece's own, or the plain box — a shaped box keeps its centre and half size)
-  if (o.old !== undefined && o.old !== true) out.push('old is true or absent');
-  if (o.round !== undefined && o.arc !== undefined) out.push('round and arc: one or the other');
-  const planes = o.cut; let form = true;
-  if (planes !== undefined && !(Array.isArray(planes) && planes.length > 0 && planes.every(p => Array.isArray(p) && p.length === 4 && p.every(x => typeof x === 'number' && Number.isFinite(x)) && Math.hypot(p[0], p[1], p[2]) > 1e-9))) { out.push('cut must be planes [nx, ny, nz, d] with a normal'); form = false; }
-  const nCut = Array.isArray(planes) ? planes.length : 0;
-  if (o.round !== undefined) {
-    if (o.round !== 1 && o.round !== 3) { out.push('round is the axis 1 (x) or 3 (z); a cylinder on its end is a round thing of the kit'); form = false; }
-    else { const a = o.round === 1 ? hh[2] : hh[0]; if (Math.abs(hh[1] - a) > 0.15 * Math.min(hh[1], a) + 1e-9) out.push(`round ${o.round}: the box must be square across that axis, or within 15 hundredths of it (${hh[1]} by ${a})`); }
-    if (nCut) out.push('round takes every plane of the record: no cut beside it');
-  } else if (o.arc !== undefined) {
-    const a = o.arc as { axis?: unknown; rise?: unknown };
-    if (a === null || typeof a !== 'object' || (a.axis !== 1 && a.axis !== 3) || typeof a.rise !== 'number' || !(a.rise > 0)) { out.push('arc must be { axis: 1 | 3, rise > 0 }'); form = false; }
-    else { const w = a.axis === 1 ? hh[2] : hh[0]; if (a.rise > 2 * hh[1] + 1e-6) out.push(`arc: a rise of ${a.rise} in a box ${2 * hh[1]} high`); if (a.rise > w + 1e-6) out.push(`arc: a rise of ${a.rise} over a half width of ${w} (a half round is the most an arc can be)`); }
-    if (nCut > ARC_PLANES) out.push(`an arc leaves room for ${ARC_PLANES} planes (${nCut})`);
-  } else if (nCut > SHAPE_PLANES) out.push(`at most ${SHAPE_PLANES} planes (${nCut})`);
-  // the record itself (cut.ts cutRecord): a plane of the author's that takes the whole box or none of it (a slip of a sign says nothing and stands the plain
-  // box), and a form that leaves nothing. (Each plane is judged against the box alone: whether it still bites beside an arc's own facets is not asked.)
-  if (form && !out.length) {
-    (planes as ShapePlane[] | undefined)?.forEach((q, i) => { const r = cutRecord(hh, [cutPlane([q[0], q[1], q[2]], q[3])]);
-      if (r.empty) out.push(`cut[${i}] leaves nothing of the box`); else if (!r.cut?.length) out.push(`cut[${i}] cuts nothing of the box`); });
-    if (!out.length && (nCut || o.arc !== undefined || o.round !== undefined) && cutRecord(hh, planesOf(hh, o as ShapeForm)).empty) out.push('the form leaves nothing of the box');
-  }
-  if (!piece && o.with !== undefined) {
-    if (!Array.isArray(o.with) || !o.with.length) out.push('with must be a list of pieces');
-    else o.with.forEach((w, i) => { for (const e of shapeErrors(w, h, pieceKeys, true)) out.push(`with[${i}]: ${e}`); });
-  }
-  if (!piece && o.round === undefined && o.arc === undefined && !nCut && o.with === undefined) out.push('says nothing');
-  return out;
 }
 
 /** give `b` a shape's form: its record. (THE PICTURE'S WORDS go here too once the look's cut pass is in the build — a round or an arc as one turning face

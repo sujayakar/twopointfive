@@ -37,7 +37,7 @@ replays are `replays.md`, co-op is `net.md`, how text is worded is `writing.md`.
 | `src/ui/tabcard.ts`, `src/host/drawhud.ts` | Tab's card; the page's HUD |
 | `src/ui/overlay.ts`, `corner.ts`, `handbox.ts`, `bubbles.ts` | the HUD's DOM, the corner panel's reduction, the kit column, speech |
 | `cmdring.ts`, `ringlone.ts`, `planfloor.ts`, `squadthrowviz.ts`, `attentionviz.ts` | on the floor's layer: both rings, a ring with one row, the plan, a squad throw, a guard's attention |
-| `src/view/`, `rust/game_rules/src/view/` | the view as the page reads it (`read.ts` is written from `rust/game_types/src/view/`); `tick_view`, `debrief_view` |
+| `src/view/`, `rust/game_rules/src/tick/view/` | the view as the page reads it (`read.ts` is written from `rust/game_types/src/view/`); `tick_view`, `debrief_view` |
 | `src/host/debugger.ts`, `src/ui/panel.ts`, `graphicspanel.ts`, `lookpanel.ts`, `netrows.ts` | the debugger: its rows, the panel, its other pages |
 | `rust/game_run/src/shown.rs`, `actions.rs`, `knobs.rs` | its rows of numbers, its buttons, every knob by name |
 | `src/host/sandbox.ts`, `src/host/machine.ts` | what this machine keeps of the cheats and how it plays, as the commands a game is handed |
@@ -79,11 +79,11 @@ the tick; otherwise it is the card. `stopped` is every reason the world holds st
 drawn, through the camera that drew it. `HudPage` and `pageSay` are the little the page adds. `locked` and `offered` are how a tutorial shuts keys and rows.
 The corner panel is `cornerRows`.
 
-**The rings** are one drawing (`RingDraw`), told by `view.ring` (`ring_view`) and `view.hand` (`hand_ring_view`). The rule is `cmdring/` and `interact/`. A tap does the default;
+**The rings** are one drawing (`RingDraw`), told by `view.ring` (`ring_view`) and `view.hand` (`hand_ring_view`). The rule is `cmdring.rs` and `interact/`. A tap does the default;
 the key kept down a moment puts the ring up. Let go on a wedge does it; let go in the middle leaves the ring up, and 1 to 5 or a click picks. The whistle is the last wedge of
 his own ring (`whistle_wedge`). The squad's key tapped twice is fall in (`twice`), and Shift with it sends part of the squad.
 
-**The kit column** is `kit_view`, drawn by `drawHandBox`. The gun's digit pressed again opens its setup (`slotsetup/`), above the column. On every gun 1 is the selector, 2 the
+**The kit column** is `kit_view`, drawn by `drawHandBox`. The gun's digit pressed again opens its setup (`slotsetup.rs`), above the column. On every gun 1 is the selector, 2 the
 load, 3 the light.
 
 **A run's end.** `View.ended` moves, `onEnded` runs `pause.end()`, and `drawEnd` asks the module once. `renderDebrief` lays it out, and Run so far is the same record. `RunBooks`
@@ -151,5 +151,3 @@ Page scripts, on the software adapter: `bun run tools/qa/pages.ts menus` runs `s
 ## Not seen
 
 No check sees how the kit picture, the reel or the HUD over a real frame look on a GPU.
-
-Known fault: `Overlay.setCaption` and `setTimeline`, with the `#caption` and `#timeline` layers, have no caller.

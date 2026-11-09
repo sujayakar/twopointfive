@@ -1,6 +1,6 @@
 //! The types of `wallbreak`.
 #![allow(unused_imports)]
-use crate::{Blank, bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// who is told of a row of the change feed, on the frame it is filed (wallbreak.ts note): WallReact = the game's one WallReact takes the row into its queue (wallreact.ts:167)

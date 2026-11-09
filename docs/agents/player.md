@@ -24,28 +24,28 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | module | what it does |
 |---|---|
 | `player/` | `update_player`, one tick of his keys, feet, aim, guns, throws and footfalls; the cursor (`update_aim`); his rows (`build_interactables`) |
-| `noshove/` | a teammate falling in goes round Sam |
-| `aim/`, `aimweight/`, `aimcost/` | how settled a shot is, both sides; turn rate and the lagging ring; lamps need a real hit, feet cost the shot |
+| `noshove.rs` | a teammate falling in goes round Sam |
+| `aim.rs`, `aimweight.rs`, `aimcost.rs` | how settled a shot is, both sides; turn rate and the lagging ring; lamps need a real hit, feet cost the shot |
 | `combat/` | a round's flight (`fire_weapon_raw`), who it finds, `hit_player`, held things as boxes, cans going off |
-| `weapons/` | a gun's state: magazine, chamber, modes, reload, the launcher's loads, the OCP. The rows are `rows` in `game_types/src/weapons/` |
-| `tracers/`, `thinline/` | which rounds show a streak; boxes the page draws as thin lines |
-| `gunreload/`, `autoreload/` | reload beats and cues, shell by shell on a tube gun; the dry gun starting its own |
-| `gunwall/` | a raised gun comes down at a wall, for every man |
-| `gunslots/`, `gunroles/` | the picks a card offers, a teammate's sidearm when dry; what a teammate's gun is for |
-| `slotsetup/` | the setup a gun's digit opens |
-| `launcher/`, `he40/`, `shotgun/` | the sponge round; the 40 mm; a shell's pellets and a lock taken with them |
-| `throwables/`, `throwplan/`, `frag/` | things in the air and `throwables_solve`; a flight asked ahead; the frag, `blast`, `throw_reach` |
-| `kit/`, `kitload/`, `loadout/`, `issue/`, `gear/` | the card (`kit_player`); the two scores; a mission's size; a level's wall charges; the issued kit's words |
-| `bigkit/`, `packside/`, `inhand/` | hammer and breaching shotgun, Sam's beat with them; what stands where on a pack; what sits where in a hand |
-| `hands/`, `handwork/`, `workstow/`, `workthings/` | bodies and a leaf by hand; a hand on a thing; the gun put away for a job; a teammate's jobs |
+| `weapons.rs` | a gun's state: magazine, chamber, modes, reload, the launcher's loads, the OCP. The rows are `rows` in `game_types/src/weapons/` |
+| `tracers.rs`, `thinline.rs` | which rounds show a streak; boxes the page draws as thin lines |
+| `gunreload.rs`, `autoreload.rs` | reload beats and cues, shell by shell on a tube gun; the dry gun starting its own |
+| `gunwall.rs` | a raised gun comes down at a wall, for every man |
+| `gunslots.rs`, `gunroles.rs` | the picks a card offers, a teammate's sidearm when dry; what a teammate's gun is for |
+| `slotsetup.rs` | the setup a gun's digit opens |
+| `launcher.rs`, `he40.rs`, `shotgun.rs` | the sponge round; the 40 mm; a shell's pellets and a lock taken with them |
+| `throwables/`, `throwplan.rs`, `frag/` | things in the air and `throwables_solve`; a flight asked ahead; the frag, `blast`, `throw_reach` |
+| `kit/`, `kitload.rs`, `loadout/`, `issue.rs`, `gear.rs` | the card (`kit_player`); the two scores; a mission's size; a level's wall charges; the issued kit's words |
+| `bigkit.rs`, `packside.rs`, `inhand/` | hammer and breaching shotgun, Sam's beat with them; what stands where on a pack; what sits where in a hand |
+| `hands.rs`, `handwork.rs`, `workstow.rs`, `workthings.rs` | bodies and a leaf by hand; a hand on a thing; the gun put away for a job; a teammate's jobs |
 | `handslot/`, `handring/` | the empty-hands key; the ring |
-| `friends/`, `friendlyfire/`, `fireline/` | ring and low ready; rounds among friends; a teammate waiting out Sam's lane of fire |
-| `condition/`, `samstun/`, `flinch/`, `deathrecap/` | hurt; folded and blind; a man ducking at a round; the record of a death |
-| `ownblow/`, `cleanrestart/` | Sam's own charge as his own row; the restart's counters |
-| `camera/` | the follow camera and the rays off it |
+| `friends.rs`, `friendlyfire.rs`, `fireline.rs` | ring and low ready; rounds among friends; a teammate waiting out Sam's lane of fire |
+| `condition.rs`, `samstun.rs`, `flinch.rs`, `deathrecap.rs` | hurt; folded and blind; a man ducking at a round; the record of a death |
+| `ownblow.rs`, `cleanrestart/` | Sam's own charge as his own row; the restart's counters |
+| `camera.rs` | the follow camera and the rays off it |
 
 The page's half: `src/host/keymap.ts` (which key gives which code), `src/host/camera.ts`, `src/host/sandbox.ts`, `src/ui/handbox.ts` (kit column),
-`src/ui/recap.ts` (death panel). The HUD reads `kit_view` and `rust/game_rules/src/view/`.
+`src/ui/recap.ts` (death panel). The HUD reads `kit_view` and `rust/game_rules/src/tick/view/`.
 
 ## How it works
 
@@ -93,7 +93,7 @@ killed is the same, wounded calls `condition_hurt`, wounded or stunned sets `sta
 `fold_cancels` empties his hands. Folded he is rooted (`sam_rooted`). Blind he keeps his feet and takes no ring.
 
 **The view.** The page steps `FollowCamera` in `src/host/camera.ts` and hands it in with each hand (`game_face/src/hand.rs`); native hosts step
-`camera/` (`follow_camera_update`). Rules only ask it: `follow_camera_planar_basis`, `follow_camera_ray`. It leads the aim by `aim_lead`;
+`camera.rs` (`follow_camera_update`). Rules only ask it: `follow_camera_planar_basis`, `follow_camera_ray`. It leads the aim by `aim_lead`;
 `peek_offset` is the peek at a wall's end.
 
 **Other keys.** N is `nv_key`, only if `kit_you_nvg`. The weapon light is `light_on` on each gun, row 3 of the setup, one lamp posed by
@@ -141,7 +141,7 @@ killed is the same, wounded calls `condition_hurt`, wounded or stunned sets `sta
 
 - **A number:** its table in `knobs/`, by the panel or `?knob.aimweight.heft=2`. Paces are `player_walk`, `player_sprint`, `player_crouch` in
   `GameTune`, and `knobs/player.rs`.
-- **A gun:** a row in `rows`, a `WeaponId`, a pick in `picks` (`game_types/src/gunslots/`), its look in `gunlook/`. `Fn2000` and `Fiveseven` are the
+- **A gun:** a row in `rows`, a `WeaponId`, a pick in `picks` (`game_types/src/gunslots/`), its look in `gunlook.rs`. `Fn2000` and `Fiveseven` are the
   ids of the Mk 18 and the Glock 19, and a line written with the old names goes through `gear_text`.
 - **A thing on the card:** `MemberKit`, `SlotTable` in `knobs/kit.rs`, its row in `kit/`, its weight in `knobs/kitload.rs`, its write in `kit_player`.
 - **A row for Sam:** `build_interactables`, its `Verb`, the rule that reads `g.act`. A job that plants him is an arm of `sam_work`. A key: its code in
@@ -152,7 +152,7 @@ killed is the same, wounded calls `condition_hurt`, wounded or stunned sets `sta
 
 ## What holds it
 
-Native tests in `rust/game_start/tests/`. `friends/`, `samstun/`, `aimweight/` and `condition/` carry unit tests too.
+Native tests in `rust/game_start/tests/`. `friends.rs`, `samstun.rs`, `aimweight.rs` and `condition.rs` carry unit tests too.
 
 | file | what it holds |
 |---|---|

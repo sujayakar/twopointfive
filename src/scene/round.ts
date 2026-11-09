@@ -6,11 +6,11 @@
 //     round it, a rolled rim on its lid — gbuffer_cut.wgsl ROUND);
 //   · GPU rays: every ray program traces it as the picture's own prism, through the cut test and the eight rows boxes.ts wrote for the picture (common.wgsl
 //     isectBox, the prelude's ROUND_AS_CUT): up to 3.5 % of the radius further out at the twelve corners, the side's normal still the cylinder's;
-//   · CPU rays and segments: boxes.ts rayBox, rust/game_rules/src/scene_collision line_box (rounds, aim, sight, sound, throw arcs, the cursor);
-//   · MOVEMENT: rust/game_rules/src/scene_collision collide_circle / circleTouches push a body off the circle, and the walk grid is baked by the same question.
+//   · CPU rays and segments: boxes.ts rayBox, rust/game_rules/src/world/scene_collision.rs line_box (rounds, aim, sight, sound, throw arcs, the cursor);
+//   · MOVEMENT: rust/game_rules/src/world/scene_collision.rs collide_circle / circleTouches push a body off the circle, and the walk grid is baked by the same question.
 // What still meets the box round it (a square of side 2 × radius, its sides along the world's axes): the trace grid's and the ray grid's registration (a superset:
 // it only costs a test), a shoved prop's, a ragdoll's and a piece of debris's own contact, the smoke solver's obstacle bake, the replay's map, and a blast, which
-// takes it as that box (rust/game_rules/src/furnblast). A round thing a round can chew through (rust/game_rules/src/wallbreak: one in a cover paint) is ONE cell: it goes whole, never in pieces.
+// takes it as that box (rust/game_rules/src/breakage/furnblast.rs). A round thing a round can chew through (rust/game_rules/src/breakage/wallbreak: one in a cover paint) is ONE cell: it goes whole, never in pieces.
 
 /** THE PICTURE'S PRISM: the eight planes that, with the box's own four side faces, stand a regular twelve-sided prism round the cylinder — written as cut-table
  *  rows (n.xyz, d) at dst[o‥o + 32) by boxes.ts for the g-buffer's cut pass, and for a ray of a program compiled with the cut rule (common.wgsl ROUND_AS_CUT:

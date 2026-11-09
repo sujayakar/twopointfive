@@ -112,7 +112,7 @@ const read = () => {
       [['you', you, yo], ['teammate', mate, mo]].map(([w, c, o]) => `${w}: card to ${c?.card.b.toFixed(0)}, pop-up to ${gun(o, 'primary')?.pop?.b.toFixed(0) ?? '—'}, foot at ${c?.footTop.toFixed(0)}${c?.scroller ? ' · scrolls ' + c.scroller : ''}${[...(c?.cut ?? []), ...(o?.cut ?? [])].length ? ' · cut ' + [...c.cut, ...o.cut].join(' | ') : ''}`).join(' · '));
     await ctx.close(); }
 
-  // a quiet mission: its rounds are on your stealth card (rust/game_rules/src/kit KITDEAL.stealth: no tile is the mission's)
+  // a quiet mission: its rounds are on your stealth card (rust/game_rules/src/outfit/kit KITDEAL.stealth: no tile is the mission's)
   { const { ctx, page } = await open('police-post-quiet', 1317, 775);
     const c = await page.evaluate(read), rings = gun(c, 'primary')?.chips.find(x => x.f === 'rings');
     await click(page, TILE('primary')); const o = await page.evaluate(read), kid = gun(o, 'primary')?.pop?.kids.find(k => k.f === 'rings'); await shot(page, 'kitdense-quiet-pop');

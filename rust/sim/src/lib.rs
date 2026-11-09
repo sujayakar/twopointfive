@@ -32,7 +32,7 @@ pub mod layers;
 pub mod light;
 pub mod lights;
 pub mod lines;
-pub use prim::maths;
+pub mod maths;
 pub mod men;
 pub mod nav;
 pub mod panes;
@@ -152,6 +152,11 @@ pub fn lights_cap(table: u32) -> usize {
     lights::cap(table)
 }
 
+// ---- the doors' step (doors.rs: the leaves' state in the game's block, the men near them handed in, each leaf's row of the box world written)
+/// how many rows a table holds (5: the columns of the doors' part of a block)
+pub fn doors_cap(table: u32) -> usize {
+    doors::cap(table)
+}
 // ---- the furniture men shove (props.rs: each thing's state in the game's block, the men, the leaves and the door frames handed in)
 /// how many rows a table holds (0, 2 … 6), how wide a row of one is (9 … 12: a thing's facts, a man, a frame, a noise), how long the part is (13), and
 /// where column k of the part starts (100 + k)
@@ -275,37 +280,6 @@ pub fn pen_cross(bi: u32, ox: f64, oy: f64, oz: f64, dx: f64, dy: f64, dz: f64, 
         }
         None => 0,
     }
-}
-/// glasspen.ts roundPath. `fi` < −1: no first ray given is no case here, the caller always has one (−1: it met nothing). → 0: it crosses no pane · 1, and what it comes to →
-/// `pen_path_head`, the legs and crossings → scratch
-pub fn pen_path(x: f64, y: f64, z: f64, dx: f64, dy: f64, dz: f64, range: f64, energy: f64, nth0: usize, ft: f64, fi: i32, fnx: f64, fny: f64, fnz: f64) -> u32 {
-    let first = if fi >= 0 { Some((ft, fi, [fnx, fny, fnz])) } else { None };
-    let s = scratch();
-    match pen::round_path(&cx(), [x, y, z], [dx, dy, dz], range, energy, first, nth0, &mut s[..]) {
-        Some(p) => {
-            let head = unsafe { &mut *core::ptr::addr_of_mut!(PEN_HEAD) };
-            head[0] = p.legs as f64;
-            head[1] = p.crosses as f64;
-            head[2] = p.len;
-            match p.st {
-                Some((t, i, n)) => {
-                    head[3] = i as f64;
-                    head[4] = t;
-                    head[5] = n[0];
-                    head[6] = n[1];
-                    head[7] = n[2];
-                }
-                None => head[3] = -1.0,
-            }
-            head[8..8 + pen::MAX_CROSS].copy_from_slice(&p.into);
-            1
-        }
-        None => 0,
-    }
-}
-static mut PEN_HEAD: [f64; 8 + pen::MAX_CROSS] = [0.0; 8 + pen::MAX_CROSS];
-pub fn pen_path_head() -> usize {
-    core::ptr::addr_of!(PEN_HEAD) as usize
 }
 /// glasspen.ts armThroughGlass's walk: −1 the old rule stands · n panes took, their crossings → scratch; the energy left → the last double of the scratch
 pub fn pen_arm(fx: f64, fy: f64, fz: f64, mx: f64, my: f64, mz: f64, dx: f64, dy: f64, dz: f64, energy: f64) -> i32 {

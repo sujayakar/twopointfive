@@ -1,7 +1,6 @@
 // G-buffer targets + raster pipelines (boxes, skinned characters).
 import { makeShader, makeBuffer, renderPipelineAsync, renderPipelineOrNull, laterRenderPipelineAsync } from '../gpu/device';
 import { KEPT } from '../gpu/keep';   // (the kept page's lease: the look's maps are worked out once a visit — makeLayers)
-import { EXACT } from '../math/exact';
 import { scenePrelude, snowLookConfig, lookConfig } from './frame';
 import { decalWgslConsts } from './decals';
 import { TexturePool } from './texpool';
@@ -37,7 +36,7 @@ export function lookNeed(stuffs: Iterable<string>) { for (const w of stuffs) loo
  *  twice. FIVE BITS OF STUFF, one of moving, then the number (11-04: it was four bits and 0‥90; the word rides one float above the finish, which is read to a
  *  500th, and the float has no bit to spare, so the room for 31 stuffs is paid for by the number's range and nothing else). The number is the box's and not its place in the list: a breach appends statics and every later box's index moves, and by the index every door's boards
  *  jumped in the frame a wall went. A thing that moves is told by its motion key, or by its size; a thing that stands, by where it stands.
- *  (Known, left: a device's boxes are keyed by their order among the devices' boxes (rust/game_rules/src/devices), so a tripwire's beam coming or going still moves the
+ *  (Known, left: a device's boxes are keyed by their order among the devices' boxes (rust/game_rules/src/stealth/devices.rs), so a tripwire's beam coming or going still moves the
  *  number of the device boxes after it; and two unkeyed movers of one size share a number.)
  *  WHAT IT IS MADE OF IS WHAT THE BOX SAYS (Box.stuff: its own word or its material row's, put there when the level was loaded or the box was made:
  *  scene/stuff.ts) and nothing else: a box that says nothing is plain. No colour is asked, so rain that darkens a slab, a repaint or a tone of wear cannot
@@ -226,10 +225,9 @@ export class GBuffer {
     const tex = this.lookTex;
     // ON WORKERS WHERE THERE ARE ANY (render/lookWorkers.ts): every layer of the batch is asked for at once and taken here in the batch's own order, so the
     // slots, the order of lookMade and the moment a stuff is pointed at its slot are what they were. A layer no worker made is made here, in slices, as before
-    // ONCE A VISIT (gpu/keep.ts Lease.bytes): a map is the same bytes on every level — it depends on its layer, its size, the evening and whose sin and cos
-    // made it, which is what its name says — so on the kept page a layer the visit has made is handed over, every size of it, and only the others are
+    // ONCE A VISIT (gpu/keep.ts Lease.bytes): a map is the same bytes on every level — it depends on its layer, its size and the evening, which is what its name says — so on the kept page a layer the visit has made is handed over, every size of it, and only the others are
     // worked out; each of those is then kept. A page with no lease (a driven one, a whole one) makes every layer as it did.
-    const lease = KEPT.lease && KEPT.lease.alive ? KEPT.lease : null, nameOf = (l: number) => `look map ${l} ${LOOK_N} ${this.lookEven ? 1 : 0} ${EXACT.on ? 1 : 0}`;
+    const lease = KEPT.lease && KEPT.lease.alive ? KEPT.lease : null, nameOf = (l: number) => `look map ${l} ${LOOK_N} ${this.lookEven ? 1 : 0}`;
     const had = make.map(l => { const k = lease?.bytes(nameOf(l)) ?? null; return k && k.bytes.length === this.lookMips * 2 && k.nums.length === 2 ? k : null; }), toMake = had.filter(k => !k).length;
     const pool = toMake ? await LookPool.open(toMake) : null, asked: (ReturnType<LookPool['make']> | null)[] | null = pool ? make.map((l, k) => had[k] ? null : pool.make(l, LOOK_N, this.lookEven)) : null;
     asked?.forEach(p => p?.catch(() => { /* taken below, where the layer is then made here */ }));   // (null = a layer the visit had: nothing asked)

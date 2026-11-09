@@ -8,6 +8,8 @@ const NUMBERS: Record<string, [string, number]> = { f64: ['Float64', 8], f32: ['
 const camel = (s: string): string => s.replace(/^r#/, '').replace(/_$/, '').replace(/_([a-z0-9])/g, (_, c) => c.toUpperCase());
 /** what stands between the commas of a list, those inside brackets left alone */
 function split(t: string): string[] { const out: string[] = []; let d = 0, at = 0; for (let i = 0; i <= t.length; i++) { const c = t[i]; if (c === undefined || (c === ',' && d === 0)) { if (t.slice(at, i).trim()) out.push(t.slice(at, i).trim()); at = i + 1; } else if ('<([{'.includes(c)) d++; else if ('>)]}'.includes(c)) d--; } return out; }
+/** the attributes a field or an arm opens with, and the rest of it */
+function lead(r: string): { attrs: string; rest: string } { let at = 0; while (r.startsWith('#[', at)) { let end = at + 2; for (let d = 1; d; end++) d += r[end] === '[' ? 1 : r[end] === ']' ? -1 : 0; at = end; while (/\s/.test(r[at] ?? '')) at++; } return { attrs: r.slice(0, at), rest: r.slice(at) }; }
 /** what stands between a brace that opened before `at` and the one that closes it */
 function inside(s: string, at: number): string { let end = at; for (let d = 1; d; end++) d += s[end] === '{' ? 1 : s[end] === '}' ? -1 : 0; return s.slice(at, end - 1); }
 
@@ -16,10 +18,10 @@ export function viewReader(root: string, die: (why: string) => never): string {
   const source = (mod: string): string => { let s = sources.get(mod); if (s === undefined) { s = readdirSync(join(types, mod)).filter(f => f.endsWith('.rs')).map(f => readFileSync(join(types, mod, f), 'utf8')).join('\n').replace(/\/\/[^\n]*/g, ''); sources.set(mod, s); } return s; };
   const declared = (path: string): Declared => {
     const [, mod, name] = path.split('::'), s = source(mod), m = new RegExp(`pub (struct|enum) ${name} \\{`).exec(s) ?? die(`the view names ${path}, which is no struct or enum with a body in rust/game_types/src/${mod}`);
-    const rows = split(inside(s, m.index + m[0].length).replace(/#\[(?!bytes)[^\]\n]*\]/g, ''));
-    if (m[1] === 'struct') return { name, fields: rows.filter(r => !r.startsWith('#[bytes(skip)]')).map(r => { const f = /^(?:pub(?:\([a-z]+\))? )?((?:r#)?\w+)\s*:\s*([^]+)$/.exec(r) ?? die(`${path}: ${r}`); return { name: f[1], ty: f[2].trim() }; }) };
+    const rows = split(inside(s, m.index + m[0].length)).map(lead);
+    if (m[1] === 'struct') return { name, fields: rows.filter(r => !r.attrs.includes('#[bytes(skip)]')).map(({ rest: r }) => { const f = /^(?:pub(?:\([a-z]+\))? )?((?:r#)?\w+)\s*:\s*([^]+)$/.exec(r) ?? die(`${path}: ${r}`); return { name: f[1], ty: f[2].trim() }; }) };
     const own = [...s.matchAll(new RegExp(`^impl (?:[\\w:]+ for )?${name} \\{`, 'gm'))].map(m => inside(s, m.index + m[0].length)).join('\n');   // (a word is the enum's own, where it says one)
-    return { name, words: rows.map(r => { if (!/^\w+$/.test(r)) die(`${path}: a view's enum is plain words, and ${r} holds something`); return new RegExp(`\\b(?:${name}|Self)::${r} => "([^"]+)"`).exec(own)?.[1] ?? r[0].toLowerCase() + r.slice(1); }) };
+    return { name, words: rows.map(({ attrs, rest: r }) => { if (!/^\w+$/.test(r)) die(`${path}: a view's enum is plain words, and ${r} holds something`); return /#\[word\("([^"]+)"\)\]/.exec(attrs)?.[1] ?? new RegExp(`\\b(?:${name}|Self)::${r} => "([^"]+)"`).exec(own)?.[1] ?? r[0].toLowerCase() + r.slice(1); }) };
   };
   const list: string[] = [], seen = new Set<string>();
   const visit = (path: string): void => { if (seen.has(path)) return; seen.add(path); const d = declared(path); known.set(path, d); for (const f of d.fields ?? []) for (const m of full(path, f.ty).matchAll(/crate::\w+::\w+/g)) if (m[0] !== 'crate::v3::m4') visit(m[0]); list.push(path); };

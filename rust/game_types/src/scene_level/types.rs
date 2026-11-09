@@ -1,6 +1,6 @@
 //! The types of `scene_level`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
+use crate::{Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// which level's script this is, by the level file's name (scene/levelScripts.ts LEVEL_SCRIPTS); the body is levels/<name>.script.ts, its define pass called by a match
@@ -51,6 +51,35 @@ pub struct VentDef {
     pub period: Option<f64>,
     pub duty: Option<f64>,
     pub phase: Option<f64>,
+    pub mains: Option<bool>,
+}
+
+#[derive(Clone, Copy, Debug, ToBytes, Default, PartialEq)]
+pub enum HumKind {
+    #[default]
+    Hum,
+    Servers,
+    Buzz,
+    Wind,
+}
+impl HumKind {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            HumKind::Hum => "hum",
+            HumKind::Servers => "servers",
+            HumKind::Buzz => "buzz",
+            HumKind::Wind => "wind",
+        }
+    }
+}
+
+#[derive(Clone, Debug, ToBytes, Default)]
+pub struct HumDef {
+    pub name: String,
+    pub kind: crate::scene_level::HumKind,
+    pub pos: V3,
+    pub level: f64,
+    pub radius: f64,
     pub mains: Option<bool>,
 }
 
@@ -299,6 +328,7 @@ pub struct Level {
     pub doors: Vec<crate::scene_level::LevelDoorDef>,
     pub devices: Option<Vec<crate::scene_level::DeviceDef>>,
     pub vents: Option<Vec<crate::scene_level::VentDef>>,
+    pub hums: Option<Vec<crate::scene_level::HumDef>>,
     pub civilians: Option<Vec<crate::scene_level::CivilianDef>>,
     pub volumes: Option<Vec<crate::scene_level::VolumeDef>>,
     pub marks: Option<Vec<crate::scene_level::MarkDef>>,
@@ -308,7 +338,6 @@ pub struct Level {
     pub breaker: crate::scene_level::LevelBreaker,
     pub beacons: Vec<crate::scene_level::LevelBeaconsItem>,
     pub sky: crate::scene_level::LevelSky,
-    pub daylight: Option<crate::scene_level::DaylightDef>,
     pub breach: Option<crate::scene_level::BreachPlan>,
     pub mark_texel: Option<f64>,
     pub kept: Option<f64>,
@@ -443,23 +472,6 @@ pub struct LevelBeaconsItem {
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct LevelSky {
-    pub zenith: V3,
-    pub horizon: V3,
-}
-
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct DaylightDef {
-    pub sun: crate::scene_level::LightDef,
-    pub sky: crate::scene_level::DaylightDefSky,
-    pub groups_on: Vec<String>,
-    pub groups_off: Vec<String>,
-    pub lights_off: Vec<String>,
-    pub haze: f64,
-    pub exposure: f64,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct DaylightDefSky {
     pub zenith: V3,
     pub horizon: V3,
 }

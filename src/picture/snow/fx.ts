@@ -66,7 +66,7 @@ export const SNOWWISPS = {
   gain: 2,            // × the light a flake would show there — LIVE
   meander: 0.8,       // m/s of crosswind sway on a slow noise the wisps run through (they snake together)
   gustLen: 5,         // m across a gust patch (three times as long down the wind)
-  gustPow: 3,         // births × (the storm's gust this frame)^this: they come and go with the wind's own gusting (rust/game_rules/src/wind storm_gust_amp)
+  gustPow: 3,         // births × (the storm's gust this frame)^this: they come and go with the wind's own gusting (rust/game_rules/src/air/wind.rs storm_gust_amp)
   minAir: 0.15,       // m/s: under this much storm air nothing blows
   // ---- ONE SNOW IN ONE AIR (SNOW_LOOK.oneAir): a wisp is snow the wind LIFTS off the ground — all LIVE. The speeds are the air's at the ground, in m/s as the
   // wind sim's row shows them (the pass: 0.47 with no gust, 0.3 ‥ 0.63 through one, more where the walls squeeze it). speedK, gustLen, gustPow are not read then.

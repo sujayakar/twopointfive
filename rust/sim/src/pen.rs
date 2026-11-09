@@ -17,8 +17,6 @@ const THICK_GLASS_HALF: f64 = 0.05;
 const EXIT_EPS: f64 = 1e-3;
 /// the most panes one flight is followed through (GLASSPEN.maxPanes is under this)
 pub const MAX_CROSS: usize = 16;
-/// doubles a leg, a crossing
-pub const LEG: usize = 9;
 pub const CROSS: usize = 25;
 
 #[derive(Clone, Copy)]
@@ -60,7 +58,7 @@ fn sheet_box(c: &Ctx, bi: usize) -> Option<&'static [f64]> {
 /// glasspen.ts nearHole
 fn near_hole(g: usize, bi: u32, p: [f64; 3]) -> bool {
     let ps = crate::panes::pn(g);
-    let r = tune().glasspen.hole_r;
+    let r = k(PEN_HOLE_R);
     let r2 = r * r;
     for h in 0..ps.nh as usize {
         let row = ps.hole(h);
@@ -79,7 +77,7 @@ fn near_hole(g: usize, bi: u32, p: [f64; 3]) -> bool {
 /// glasspen.ts paneToll: what sheet `bi` takes from a round of energy `e` meeting it at `at` flying `d` (unit), the `nth` pane of its flight; None: the round is spent in it
 pub fn pane_toll(c: &Ctx, bi: u32, at: [f64; 3], d: [f64; 3], e: f64, nth: usize) -> Option<Toll> {
     let b = sheet_box(c, bi as usize)?;
-    if nth as f64 >= js_min(MAX_CROSS as f64, tune().glasspen.max_panes) {
+    if nth as f64 >= js_min(MAX_CROSS as f64, k(PEN_MAX_PANES)) {
         return None;
     }
     let (cs, sn) = (b[R_COS], b[R_SIN]);
@@ -89,7 +87,7 @@ pub fn pane_toll(c: &Ctx, bi: u32, at: [f64; 3], d: [f64; 3], e: f64, nth: usize
         n = [n[0] * -1.0, n[1] * -1.0, n[2] * -1.0];
         co = -co;
     }
-    if co < tune().glasspen.graze_cos {
+    if co < k(PEN_GRAZE_COS) {
         return None;
     }
     let hole = near_hole(c.g, bi, at);
@@ -102,9 +100,9 @@ pub fn pane_toll(c: &Ctx, bi: u32, at: [f64; 3], d: [f64; 3], e: f64, nth: usize
         LAMINATED => PEN_COST_L,
         _ => PEN_COST_A,
     });
-    let take = cost * (2.0 * js_min(b[R_H], b[R_H + 2]) / tune().glasspen.ref_thick) * js_min(tune().glasspen.oblique_max, 1.0 / co) * (if hole { tune().glasspen.hole_k } else { 1.0 });
+    let take = cost * (2.0 * js_min(b[R_H], b[R_H + 2]) / k(PEN_REF_THICK)) * js_min(k(PEN_OBLIQUE_MAX), 1.0 / co) * (if hole { k(PEN_HOLE_K) } else { 1.0 });
     let e_out = e - take;
-    if e_out < tune().glasspen.min_energy {
+    if e_out < k(PEN_MIN_ENERGY) {
         return None;
     }
     Some(Toll { ty, n, cos: co, take, e_out, hole })
@@ -143,7 +141,7 @@ fn born_in(c: &Ctx, p: [f64; 3], d: [f64; 3], me: u32) -> i32 {
 }
 /// glasspen.ts deflect: the turn, toward the normal by the slant's share, plus the hashed scatter
 fn deflect(b: &[f64], at: [f64; 3], d: [f64; 3], t: &Toll, e_in: f64) -> [f64; 3] {
-    let a = tune().glasspen.deflect_deg * PI / 180.0 * clamp(t.take / js_max(e_in, 1e-6), 0.0, 1.0);
+    let a = k(PEN_DEFLECT_DEG) * PI / 180.0 * clamp(t.take / js_max(e_in, 1e-6), 0.0, 1.0);
     if a < 1e-6 {
         return d;
     }
@@ -159,7 +157,7 @@ fn deflect(b: &[f64], at: [f64; 3], d: [f64; 3], t: &Toll, e_in: f64) -> [f64; 3
     let mut out = [d[0] + (e1[0] * cos(phi) + e2[0] * sin(phi)) * r, d[1] + (e1[1] * cos(phi) + e2[1] * sin(phi)) * r, d[2] + (e1[2] * cos(phi) + e2[2] * sin(phi)) * r];
     let si = sqrt(js_max(0.0, 1.0 - t.cos * t.cos));
     if si > 1e-4 {
-        let kk = tan(a * tune().glasspen.bend_k * si) / si;
+        let kk = tan(a * k(PEN_BEND_K) * si) / si;
         let (px, py, pz) = (t.n[0] - d[0] * t.cos, t.n[1] - d[1] * t.cos, t.n[2] - d[2] * t.cos);
         out = [out[0] + px * kk, out[1] + py * kk, out[2] + pz * kk];
     }
@@ -218,80 +216,6 @@ pub fn write_cross(x: &Crossing, o: &mut [f64]) {
 #[inline]
 fn ray(c: &Ctx, o: [f64; 3], d: [f64; 3], tmax: f64, out: &mut [f64; 4]) -> i32 {
     lines::ray_rule(c.w, o[0], o[1], o[2], d[0], d[1], d[2], tmax, c.set, -1, true, out)
-}
-/// what a flight comes to, as the host reads it after `round_path`
-pub struct Path {
-    pub st: Option<(f64, i32, [f64; 3])>,
-    pub len: f64,
-    pub legs: usize,
-    pub crosses: usize,
-    pub into: [f64; MAX_CROSS],
-}
-/// glasspen.ts roundPath: the flight of a round of `energy` from `from` along `dir` for at most `range` metres: every sheet it goes through and the legs between them.
-/// None: it crosses no pane (the caller's own straight line stands). Nothing is filed. `first`: the caller's own ray along it; legs and crossings → `out`
-pub fn round_path(c: &Ctx, from: [f64; 3], dir: [f64; 3], range: f64, energy: f64, first: Option<(f64, i32, [f64; 3])>, nth0: usize, out: &mut [f64]) -> Option<Path> {
-    let mut hit = first;
-    let is_sheet = |i: i32| i < RAY_LEAF && sheet_box(c, i as usize).is_some();
-    match hit {
-        Some((_, i, _)) if is_sheet(i) => {}
-        _ => return None,
-    }
-    let (mut o, mut d, mut t0, mut e) = (from, dir, 0.0, energy);
-    let (mut legs, mut crosses) = (0usize, 0usize);
-    let mut into = [0.0; MAX_CROSS];
-    let leg = |legs: &mut usize, out: &mut [f64], o: [f64; 3], d: [f64; 3], t0: f64, len: f64, e: f64| {
-        let w = &mut out[*legs * LEG..(*legs + 1) * LEG];
-        w[0] = o[0];
-        w[1] = o[1];
-        w[2] = o[2];
-        w[3] = d[0];
-        w[4] = d[1];
-        w[5] = d[2];
-        w[6] = t0;
-        w[7] = len;
-        w[8] = e;
-        *legs += 1;
-    };
-    let cross_at = (MAX_CROSS + 1) * LEG;
-    loop {
-        let (ht, hi, hn) = match hit {
-            None => {
-                leg(&mut legs, out, o, d, t0, range - t0, e);
-                return if crosses > 0 { Some(Path { st: None, len: range, legs, crosses, into }) } else { None };
-            }
-            Some(h) => h,
-        };
-        let x = if hi < RAY_LEAF { pane_crossing(c, hi as u32, o, d, ht, e, nth0 + crosses) } else { None };
-        leg(&mut legs, out, o, d, t0, ht, e);
-        let mut x = match x {
-            None => {
-                return if crosses > 0 { Some(Path { st: Some((t0 + ht, hi, hn)), len: t0 + ht, legs, crosses, into }) } else { None };
-            }
-            Some(x) => x,
-        };
-        x.at_t = t0 + ht;
-        write_cross(&x, &mut out[cross_at + crosses * CROSS..cross_at + (crosses + 1) * CROSS]);
-        into[crosses] = x.into as f64;
-        crosses += 1;
-        t0 = x.at_t + x.thru;
-        o = x.exit;
-        d = x.dir_out;
-        e = x.t.e_out;
-        if t0 >= range {
-            return Some(Path { st: None, len: range, legs, crosses, into });
-        }
-        hit = if x.into >= 0 {
-            Some((0.0, x.into, [d[0] * -1.0, d[1] * -1.0, d[2] * -1.0]))
-        } else {
-            let mut h = [0.0; 4];
-            let m = ray(c, o, d, range - t0, &mut h);
-            if m >= 0 {
-                Some((h[0], m, [h[1], h[2], h[3]]))
-            } else {
-                None
-            }
-        };
-    }
 }
 /// glasspen.ts armInHole: the arm's line met nothing: is that because every sheet of glass across it has fallen where the line crosses it (and there is one)?
 fn arm_in_hole(c: &Ctx, from: [f64; 3], rd: [f64; 3], len: f64) -> bool {
@@ -385,7 +309,7 @@ pub fn add_hole(g: usize, bi: u32, p: [f64; 3]) {
     let ps = crate::panes::pn(g);
     ps.stand();
     let row = panes_hole_row(g, bi);
-    let cap = js_min(panes::HOLE_PTS as f64, tune().glasspen.holes) as usize;
+    let cap = js_min(panes::HOLE_PTS as f64, k(PEN_HOLES)) as usize;
     let h = ps.hole(row);
     if h.n as usize >= cap {
         h.p.copy_within(3..3 * cap, 0);

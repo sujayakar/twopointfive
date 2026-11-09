@@ -1,4 +1,4 @@
-//! WHAT A SEAT IS TOLD OF ITS RINGS AND ITS PLAN (`view.ring`, `hand`, `empty`, `plan`; rust/game_rules/src/view/rings.rs, plan.rs, orders/words.rs): the page draws these.
+//! WHAT A SEAT IS TOLD OF ITS RINGS AND ITS PLAN (`view.ring`, `hand`, `empty`, `plan`; rust/game_rules/src/tick/view/rings.rs, plan.rs, orders/words.rs): the page draws these.
 use game::orders::Who;
 use game::view::{KeyCap, PlanView, RingView, WaitWhy};
 use game_start::play::{nudge, Opts, Play};

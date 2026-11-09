@@ -14,8 +14,9 @@
 //   outward normal, the faces overlapping by more than a finger each way. A tilted box (`rot`) is not asked, and the count says how many were left out.
 //   Never the undersides (−y: no camera of the game looks up from under the floor).
 // ITS VERDICT:
-//   seen    the two are drawn differently (another material, paint, glow, gloss or markings) and part of the patch is open: a player can watch it flicker.
-//           FAILS the check. The mend is the level's: sink one face a few millimetres, or end one box at the other.
+//   seen    the two are drawn differently (another material, paint, glow, gloss or markings), part of the patch is open and it is 100 cm2 or more: a player
+//           can watch it flicker. FAILS the check. The mend is the level's generator's: end one box at the other, or sink one face a few millimetres.
+//   speck   the same of a smaller patch, a few pixels where the game's camera stands. Counted, and listed by --all.
 //   same    the two are drawn alike, so today's picture shows nothing. A NOTE: a look that paints a box by its own size or place (the look prototype's
 //           plinth and weather) makes it flicker.
 //   covered a third drawn box lies against the whole patch (asked a point every 10 cm, 2 mm off the plane). Counted, not listed.
@@ -29,11 +30,13 @@ const ROOT = resolve(import.meta.dir, '../..');
 export const EPS = 5e-4;
 /** a patch thinner than this either way is no patch (a finger) */
 const MIN = 0.01;
+/** a patch smaller than this (m2) is a speck */
+const SHOWS = 0.01;
 /** how far off the plane a covering box is looked for, and the grid the patch is asked on (a point every STEP, no more than GRID a side) */
 const OUT = 0.002, STEP = 0.1, GRID = 32;
 
 interface FileBox { round?: boolean; id?: string; group?: string; c: number[]; h: number[]; yaw?: number; rot?: unknown; flags?: string[]; material?: string; albedo?: number[]; emissive?: unknown; metal?: number; rough?: number; markings?: unknown }
-export interface Pair { a: string; b: string; /** the angle the two stand at, in degrees (0 = square to the world: `axis` and `plane` are then the world's) */ turn: number; groupA: string; groupB: string; axis: 'x' | 'y' | 'z'; sign: '+' | '-'; plane: number; at: [number, number, number]; size: [number, number]; verdict: 'seen' | 'same' | 'covered' }
+export interface Pair { a: string; b: string; /** the angle the two stand at, in degrees (0 = square to the world: `axis` and `plane` are then the world's) */ turn: number; groupA: string; groupB: string; axis: 'x' | 'y' | 'z'; sign: '+' | '-'; plane: number; at: [number, number, number]; size: [number, number]; verdict: 'seen' | 'speck' | 'same' | 'covered' }
 export interface ZRead { boxes: number; turned: number; pairs: Pair[] }
 
 /** a box as it is asked: where it is in the world, and in the FRAME of its own angle (the world turned by its yaw less whole quarter turns, in which it stands
@@ -74,7 +77,7 @@ export function zfight(data: { boxes?: FileBox[] }): ZRead {
       }
       const fa = [0, 0, 0]; fa[a] = pa; fa[o[0]] = (lo[0] + hi[0]) / 2; fa[o[1]] = (lo[1] + hi[1]) / 2; const at = [cf * fa[0] + sf * fa[2], fa[1], -sf * fa[0] + cf * fa[2]];
       pairs.push({ a: A.b.id ?? `#${A.i}`, b: B.b.id ?? `#${B.i}`, groupA: A.b.group ?? '?', groupB: B.b.group ?? '?', turn: +(A0.f * 180 / Math.PI).toFixed(1), axis: AX[a], sign: sgn > 0 ? '+' : '-', plane: +pa.toFixed(4),
-        at: at.map(x => +x.toFixed(2)) as [number, number, number], size: [+(hi[0] - lo[0]).toFixed(3), +(hi[1] - lo[1]).toFixed(3)], verdict: !open ? 'covered' : paint(A.b) === paint(B.b) ? 'same' : 'seen' });
+        at: at.map(x => +x.toFixed(2)) as [number, number, number], size: [+(hi[0] - lo[0]).toFixed(3), +(hi[1] - lo[1]).toFixed(3)], verdict: !open ? 'covered' : paint(A.b) === paint(B.b) ? 'same' : (hi[0] - lo[0]) * (hi[1] - lo[1]) < SHOWS ? 'speck' : 'seen' });
     }
   }
   pairs.sort((x, y) => y.size[0] * y.size[1] - x.size[0] * x.size[1]);
@@ -89,31 +92,33 @@ if (import.meta.main) {
     const level = { boxes: [wall('wall', [5, 1.2, 0], [5, 1.2, 0.12]), wall('post', [9.83, 1.25, 0], [0.17, 1.25, 0.17], 'render'), wall('twin', [3, 1.2, 0], [2, 1.2, 0.12]),
       wall('wall2', [5, 1.2, 9], [5, 1.2, 0.12]), wall('post2', [9.83, 1.2, 9], [0.17, 1.2, 0.17], 'render'), wall('cap', [10.3, 1.2, 9], [0.3, 1.3, 0.5], 'stone'),
       { ...wall('hid', [5, 1.2, 4], [5, 1.2, 0.12]), flags: ['NoPrimary'] }, wall('hidpost', [9.83, 1.25, 4], [0.17, 1.25, 0.17], 'render'), { ...wall('skew', [20, 1.2, 6], [3, 1.2, 0.12]), yaw: 0.4 }, { ...wall('skewpost', [20 + 2.83 * Math.cos(0.4), 1.25, 6 - 2.83 * Math.sin(0.4)], [0.17, 1.25, 0.17], 'render'), yaw: 0.4 + Math.PI / 2 },
-      { ...wall('pane', [9.83, 1.2, 12], [0.17, 1.2, 0.17], 'glass'), flags: ['Glass'] }, wall('wall3', [5, 1.2, 12], [5, 1.2, 0.12]), { ...wall('lean', [5, 1.2, 14], [0.17, 1.2, 0.17]), rot: [0.1, 0, 0] }] };
+      { ...wall('pane', [9.83, 1.2, 12], [0.17, 1.2, 0.17], 'glass'), flags: ['Glass'] }, wall('wall3', [5, 1.2, 12], [5, 1.2, 0.12]), { ...wall('lean', [5, 1.2, 14], [0.17, 1.2, 0.17]), rot: [0.1, 0, 0] }, wall('bar', [5, 1.2, 17], [0.5, 0.04, 0.02]), wall('tip', [5.48, 1.2, 17], [0.04, 0.04, 0.02], 'render')] };
     const r = zfight(level), has = (a: string, b: string, axis: string, v: string) => r.pairs.some(p => p.a === a && p.b === b && p.axis === axis && p.verdict === v);
     const missed = [!has('wall', 'post', 'x', 'seen') && 'a post flush in a wall\'s end was not SEEN', !has('wall', 'twin', 'y', 'same') && 'two lengths of one wall with one top were not a NOTE',
       !has('wall2', 'post2', 'x', 'covered') && 'a pair under a cap was not read as covered', r.pairs.some(p => p.a === 'hid' || p.b === 'hid') && 'a box the picture does not draw was asked',
-      r.turned !== 1 && 'the tilted box was not counted as left out', !r.pairs.some(p => p.a === 'skew' && p.b === 'skewpost' && p.verdict === 'seen' && p.turn > 22 && p.turn < 23) && 'a post flush in the end of a TURNED wall was not SEEN', r.pairs.some(p => p.a === 'pane' || p.b === 'pane') && 'a pane of glass was asked', r.pairs.some(p => p.axis === 'y' && p.sign === '-') && 'an underside was asked'].filter(Boolean);
+      r.turned !== 1 && 'the tilted box was not counted as left out', !r.pairs.some(p => p.a === 'skew' && p.b === 'skewpost' && p.verdict === 'seen' && p.turn > 22 && p.turn < 23) && 'a post flush in the end of a TURNED wall was not SEEN', r.pairs.some(p => p.a === 'pane' || p.b === 'pane') && 'a pane of glass was asked', r.pairs.some(p => p.axis === 'y' && p.sign === '-') && 'an underside was asked',
+      (r.pairs.some(p => p.a === 'bar' && p.verdict === 'seen') || !r.pairs.some(p => p.a === 'bar' && p.b === 'tip' && p.verdict === 'speck')) && 'a patch of a few centimetres was not read as a speck'].filter(Boolean);
     console.log(missed.length ? `=== zfight-check BREAK: MISSED: ${missed.join('; ')} ===` : `=== zfight-check BREAK: every planted pair was read right (${r.pairs.length} pairs) ===`);
     process.exit(missed.length ? 0 : 1);
   }
   const named = args.filter((a, i) => !a.startsWith('--') && args[i - 1] !== '--json');
   const names = named.length ? named.map(n => basename(n).replace(/\.json$/, '')) : readdirSync(resolve(ROOT, 'levels')).filter(f => f.endsWith('.json') && !f.endsWith('.lint.json')).map(f => f.replace(/\.json$/, '')).sort();
-  const out: Record<string, ZRead> = {}; let seen = 0, same = 0, bad = false;
+  const out: Record<string, ZRead> = {}; let seen = 0, same = 0, specks = 0, bad = false;
   for (const n of names) {
     const path = resolve(ROOT, 'levels', `${n}.json`); if (!existsSync(path)) { console.log(`${n}: no such level`); bad = true; continue; }
     const data = JSON.parse(readFileSync(path, 'utf8')); if (!Array.isArray(data.boxes)) continue;   // (a file under levels/ that is no level)
     const r = zfight(data); out[n] = r;
-    const S = r.pairs.filter(p => p.verdict === 'seen'), N = r.pairs.filter(p => p.verdict === 'same'), C = r.pairs.length - S.length - N.length; seen += S.length; same += N.length;
+    const S = r.pairs.filter(p => p.verdict === 'seen'), N = r.pairs.filter(p => p.verdict === 'same'), K = r.pairs.filter(p => p.verdict === 'speck'), C = r.pairs.length - S.length - N.length - K.length; seen += S.length; same += N.length; specks += K.length;
     const line = (p: Pair) => `    ${p.a} / ${p.b}  ${p.sign}${p.axis}${p.turn ? ` (turned ${p.turn}°)` : ` at ${p.plane}`}  ${p.size[0]} × ${p.size[1]} m  near [${p.at.join(', ')}]  ${p.groupA === p.groupB ? p.groupA : `${p.groupA} × ${p.groupB}`}`;
     const list = (ps: Pair[]) => { const k = flag('--all') ? ps.length : 12; for (const p of ps.slice(0, k)) console.log(line(p)); if (ps.length > k) console.log(`    … and ${ps.length - k} smaller (--all)`); };
     if (S.length) { console.log(`${n}: FAIL  ${S.length} patch${S.length === 1 ? '' : 'es'} a player can watch flicker (two faces in one plane, drawn differently)`); list(S); }
     if (!flag('--quiet')) {
       if (N.length) { console.log(`${n}: NOTE  ${N.length} pair${N.length === 1 ? '' : 's'} in one plane, drawn alike (nothing shows until a look paints each box by itself)`); list(N); }
+      if (K.length && flag('--all')) { console.log(`${n}: ${K.length} specks (under ${SHOWS * 1e4} cm2, drawn differently)`); list(K); }
       if (!S.length) console.log(`${n}: ${N.length ? 'no patch that shows' : 'PASS'} · ${r.boxes} boxes asked, ${r.turned} tilted ones left out, ${C} covered`);
     }
   }
   const jf = val('--json'); if (jf) writeFileSync(resolve(jf), JSON.stringify(out, null, 1));
-  console.log(`=== zfight-check: ${seen ? `FAIL (${seen} seen)` : bad ? 'NOT RUN (a level named is not there)' : 'PASS'} · ${same} noted · ${Object.keys(out).length} levels ===`);
+  console.log(`=== zfight-check: ${seen ? `FAIL (${seen} seen)` : bad ? 'NOT RUN (a level named is not there)' : 'PASS'} · ${specks} specks · ${same} noted · ${Object.keys(out).length} levels ===`);
   process.exit(bad ? 2 : seen ? 1 : 0);
 }

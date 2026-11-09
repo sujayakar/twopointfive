@@ -21,21 +21,21 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 
 | module | what it does |
 |---|---|
-| `fogofwar/`, `peeksight/` | who is an eye, who is seen, what is kept as last seen (`picture.rs`: what the renderer is told); the eye moved by a peek |
-| `quietfog/`, `told/` | the fog lever's rungs on a quiet mission; how much the player is told |
-| `sense/`, `sim_lightshome/`, `lighting/` | smoke; fixtures and the mains' columns; carried lights, the blackout, the jammer |
-| `lightswitch/`, `carlamps/`, `powerout/` | wall switches; a vehicle's lamps; a garrison's answer to the dark (`enemies.md`) |
+| `fogofwar/`, `peeksight.rs` | who is an eye, who is seen, what is kept as last seen (`picture.rs`: what the renderer is told); the eye moved by a peek |
+| `quietfog.rs`, `told.rs` | the fog lever's rungs on a quiet mission; how much the player is told |
+| `sense.rs`, `sim_lightshome.rs`, `lighting.rs` | smoke; fixtures and the mains' columns; carried lights, the blackout, the jammer |
+| `lightswitch.rs`, `carlamps.rs`, `powerout.rs` | wall switches; a vehicle's lamps; a garrison's answer to the dark (`enemies.md`) |
 | `interact/`, `handring/` | one key and a ring over the rows `build_interactables` lists |
-| `close/`, `stalk/`, `takedown/`, `disarm/` | what Sam can do to a man from where he stands; the creep; blows and falls; the gun out of his hand |
-| `hands/`, `handwork/` | a body hauled, a door by hand; hands on a keypad or a lever |
-| `wallsnap/`, `samlook/`, `stealthfeed/` | the wall hold's numbers; Sam's head and his room round a man; the word to his animator |
-| `whistle/`, `attention/` | the whistle and who answers; a calm man's one attention |
-| `stickycam/`, `wand/`, `wandorder/` | stuck cameras; Sam's wand; a teammate's on order |
-| `devices/`, `chronicle/` | cameras, beams, keypads; the run's record, score and badges |
-| `unseen/`, `sneak/` | the team going low because Sam is (`team-feel.md`) |
+| `close.rs`, `stalk.rs`, `takedown.rs`, `disarm.rs` | what Sam can do to a man from where he stands; the creep; blows and falls; the gun out of his hand |
+| `hands.rs`, `handwork.rs` | a body hauled, a door by hand; hands on a keypad or a lever |
+| `wallsnap.rs`, `samlook.rs`, `stealthfeed.rs` | the wall hold's numbers; Sam's head and his room round a man; the word to his animator |
+| `whistle.rs`, `attention.rs` | the whistle and who answers; a calm man's one attention |
+| `stickycam.rs`, `wand.rs`, `wandorder.rs` | stuck cameras; Sam's wand; a teammate's on order |
+| `devices.rs`, `chronicle/` | cameras, beams, keypads; the run's record, score and badges |
+| `unseen.rs`, `sneak/` | the team going low because Sam is (`team-feel.md`) |
 
 The hot loops are `rust/sim/src/fog.rs` (eyes against men), `rust/sim/src/light.rs` (lamps on a point) and `rust/sim/src/lights.rs` (fixtures, the
-mains, the machines of cameras and beams). The hold and the wall are in `player/`, the meters in `game/p_07.rs`.
+mains, the machines of cameras and beams). The hold and the wall are in `player/`, the meters in `game/doors.rs`.
 
 The page's half: `rust/game_draw/src/fog.rs` fills the fog's section, `src/draw/fog.ts` reads it into `src/render/fogofwar.ts` (kernels
 `fogofwar.wgsl`, `fogsight.wgsl`). `src/ui/overlay.ts` draws `marks_view` (meters, marks, lenses) and `deriveInteractions`. `src/host/keymap.ts` gives
@@ -49,8 +49,9 @@ A new effect asks whose it is. The place is live: walls, weather, a lamp's glow,
 
 **The pass.** `fog_of_war_pass`, late in the tick, while `fog_of_war_active`. The eyes, in order: each seat's man (or his wand's lens or peek), living
 teammates not blind, live stuck cameras, then a tutorial step's eye (`rails_step_eye`), up to `fog_eye_count` and never past `FOG_EYES`. Under
-`k.fog.own` a teammate counts only by an ordered lens. Each man off the team is asked of them all (`fog_of_war_sees`, smoke by `smoke_between`) and
-`judge` writes his `Rec`.
+`k.fog.own` a teammate counts only by an ordered lens. Each man off the team, up or down, is asked of them all: a line (`fog_of_war_sees`) through air
+that lets it (`fog_of_war_clear`: `clear_between` at `k.fog.smoke`, as a man's own eyes are held to), and `judge` writes his `Rec`. Places (the lit
+floor, doors, lamps, loose things) are asked of lines alone.
 
 **A man is drawn** (`fog_of_war_drawn`) if seen, seen within `k.fog.linger`, fired on by a teammate (`fog_of_war_fired_on`), shown by a script, or a
 body the team has seen, which stays for good. Otherwise he is in `hidden_chars`, and what he breathes or fires files no air.
@@ -151,7 +152,7 @@ the mains stop them (`alive`). `sensing` is off under a night breach and a rescu
   kept like `thing_recs`. The place's: nothing to do. No fog exception of its own, and no rule reads `g.fog_picture`.
 - **A new eye:** a `FogEye` in `fog_of_war_pass`, under the cap. More room means `FOG_EYES`, `MAX_EYES`, `rust/game_draw/src/fog.rs` and the kernels.
 - **A new row for Sam:** a `Verb`, a row in `build_interactables` or a `*_rows` call beside it, and the owner reads `g.act`.
-- **A new device:** a `CameraDef2` or `LaserDef2` row in the level; a new kind goes in `devices/` and `rust/sim/src/lights.rs`, drawn by
+- **A new device:** a `CameraDef2` or `LaserDef2` row in the level; a new kind goes in `devices.rs` and `rust/sim/src/lights.rs`, drawn by
   `device_boxes`.
 - **A price:** `ScoreK`; a new count is a `chron_*` and a `RunCounts` field.
 
@@ -176,6 +177,5 @@ Native tests in `rust/game_start/tests/`:
 ## Not seen
 
 - The fog's picture on a GPU: the levels of `dim`, `lit`, `flat` and `edge`, and how a never-seen room should look, are the maintainer's to judge.
-- Whether `attention/` and `powerout/` read well in play has been checked by numbers only.
-- The knife is dead code: `close_bare` is true outside a show, so `start_kill`, `kill_out` and the lethal blow in `game/p_07.rs` cannot happen in
-  play.
+- Whether `attention.rs` and `powerout.rs` read well in play has been checked by numbers only.
+- The knife is dead code: nothing enters the hold's kill, so `kill_out` and a lethal blow cannot happen in play.

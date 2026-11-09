@@ -1,6 +1,6 @@
 //! The types of `roomfight`.
 #![allow(unused_imports)]
-use crate::{Blank, bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -148,6 +148,8 @@ pub struct Def {
     pub mode: crate::roomfight::DefMode,
     pub move_kind: crate::roomfight::DefMoveKind,
     pub move_t: f64,
+    /// who sent him on the leg he is on, or was on last: a tasker of owner/, `By::NOBODY` the room fight itself
+    pub leg_by: crate::owner::By,
     pub came_by: Option<DoorId>,
     pub stall_at: V3,
     pub stall_t: f64,

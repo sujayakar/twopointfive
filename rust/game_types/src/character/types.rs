@@ -1,6 +1,6 @@
 //! The types of `character`.
 #![allow(unused_imports)]
-use crate::{Blank, bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// THE NAMES OF A BODY'S JOINTS, in the order a real game's `bones` has them (read off a running game: `for k in b` walks this order)
@@ -252,7 +252,6 @@ pub struct DoorPush {
     pub n: V3,
     pub w: f64,
     pub hand: f64,
-    pub hold_only: Option<bool>,
     pub reach: Option<bool>,
 }
 

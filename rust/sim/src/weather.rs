@@ -6,7 +6,6 @@
 //! WHAT IS NOT HERE, AND WHY: rain, snow and wet as they are drawn (rainFx.ts, snowFx.ts, wetGround.ts and the rest: dressing, reading this); the kinds' tables
 //! (weatherKinds.ts: authored numbers handed in when a kind is set); the lot's soaked box (a Box of the host's, which a round's material still reads); a man's
 //! place, head and coat (fields of TypeScript objects, handed over as a call's numbers until the men's columns land); the hour (hours.ts: last, on the lamps' table).
-use crate::knobs::tune;
 use crate::air::Air;
 use crate::knobs::{k, WET_BEAD_RUNOFF, WET_DRY_PER_SEC, WET_SOAK_PER_SEC, WX_RAIN_K, WX_ROOF_BED, WX_THUNDER_K, WX_THUNDER_LOUD, WX_THUNDER_SECS};
 use crate::lines;
@@ -155,7 +154,7 @@ pub fn roofs_end(out: &mut [f64]) -> usize {
 #[inline]
 pub fn rain_bed(w: &Weather, x: f64, z: f64) -> f64 {
     if w.rain_rate > 0.001 {
-        (0.35 + 0.65 * w.rain_rate) * (if under_roof(w, x, z) { tune().wx_sim.roof_bed } else { 1.0 })
+        (0.35 + 0.65 * w.rain_rate) * (if under_roof(w, x, z) { k(WX_ROOF_BED) } else { 1.0 })
     } else {
         0.0
     }
@@ -165,9 +164,9 @@ pub fn hear_mask(w: &Weather, time: f64, x: f64, z: f64) -> f64 {
     if w.live == 0.0 {
         return 1.0;
     }
-    let mut m = 1.0 + tune().wx_sim.rain_k * rain_bed(w, x, z);
+    let mut m = 1.0 + k(WX_RAIN_K) * rain_bed(w, x, z);
     if time < w.thunder_until {
-        m += tune().wx_sim.thunder_k * (if under_roof(w, x, z) { 0.6 } else { 1.0 });
+        m += k(WX_THUNDER_K) * (if under_roof(w, x, z) { 0.6 } else { 1.0 });
     }
     m
 }
@@ -290,8 +289,8 @@ pub fn thunder_due(w: &mut Weather, i: usize, time: f64, out: &mut [f64]) -> boo
     out[1] = bearing;
     out[2] = loud;
     out[3] = rnd(w);
-    if w.live != 0.0 && loud > tune().wx_sim.thunder_loud {
-        w.thunder_until = time + tune().wx_sim.thunder_secs;
+    if w.live != 0.0 && loud > k(WX_THUNDER_LOUD) {
+        w.thunder_until = time + k(WX_THUNDER_SECS);
     }
     out[4] = rnd(w);
     out[5] = rnd(w);
@@ -381,16 +380,16 @@ pub fn wet_step(wx: &Weather, wo: usize, set: i32, ask: u32, time: f64, dt: f64,
     m[M_OPEN] = open;
     m[M_ASKED] = if asked { 1.0 } else { 0.0 };
     let (mut wet, mut beads, mut rate, mut line) = (m[M_WET], m[M_BEADS], m[M_RAIN], m[M_LINE]);
-    let runoff = js_max(tune().wet.bead_runoff_secs, 0.1);
+    let runoff = js_max(k(WET_BEAD_RUNOFF), 0.1);
     if wetting {
         line = f64::INFINITY;
-        let soak = tune().wet.soak_per_sec;
+        let soak = k(WET_SOAK_PER_SEC);
         wet = clamp(wet + soak * (0.4 + 0.6 * rain) * dt, 0.0, 1.0);
         let beads_to = clamp(0.35 + 0.65 * rain, 0.0, 1.0);
         beads = if beads < beads_to { js_min(beads_to, beads + 3.0 * soak * (0.4 + 0.6 * rain) * dt) } else { js_max(beads_to, beads - dt / runoff) };
         rate = rate + (rain - rate) * js_min(1.0, dt * 2.0);
     } else {
-        wet = clamp(wet - tune().wet.dry_per_sec * dt, 0.0, 1.0);
+        wet = clamp(wet - k(WET_DRY_PER_SEC) * dt, 0.0, 1.0);
         beads = clamp(beads - dt / runoff, 0.0, 1.0);
     }
     if wet <= 0.0 && beads <= 0.0 {

@@ -162,9 +162,9 @@ fn a_wall_stops_a_teammate_bringing_a_leaf_up_to_date() {
         let men = p.mates();
         let put = |p: &mut Play| for (i, &m) in men.iter().enumerate() { let c = p.g.gd[m].ch; p.g.ch[c].pos = if i == 0 { [at[0], 0.0, at[1]] } else { [far[0] + i as f64, 0.0, far[1] + 1.0] }; };
         for _ in 0..30 { put(&mut p); p.frame(); }
-        p.g.dr[d].leaf.latched = false;
-        p.g.dr[d].leaf.angle = turn;
-        for _ in 0..12 { put(&mut p); p.frame(); p.g.dr[d].leaf.angle = turn; }
+        game::doors::door_set_latched(&mut p.g, d, false);
+        game::doors::door_set_angle(&mut p.g, d, turn);
+        for _ in 0..12 { put(&mut p); p.frame(); game::doors::door_set_angle(&mut p.g, d, turn); }
         let shown = game::fogofwar::fog_of_war_door_shown(&mut p.g, d);
         assert_eq!(shown.abs() > 0.5, sees, "a man at {at:?}: the picture has the leaf at {shown:.2}, it stands at {turn:.2}");
     }

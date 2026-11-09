@@ -1,4 +1,4 @@
-// THE VIEW: what the HUD is told of the game beside what it draws. It is the Rust game's answer (rust/game_rules/src/view `tick_view`), asked by the host that
+// THE VIEW: what the HUD is told of the game beside what it draws. It is the Rust game's answer (rust/game_rules/src/tick/view `tick_view`), asked by the host that
 // steps the game and read here by name: `game.view.mission.text`. Nothing in this folder works anything out, and nothing of it is kept by the game: a host
 // asks again after a tick (or after anything else that moved the Rust game) and hands over the new record.
 //
@@ -11,7 +11,7 @@ import type { TickView } from './read';
 export type { BubbleView, EmptyView, HandRingView, KitGun, KitSetup, KitSlot, KitThing, KitView, LessonView, ManMark, MateLine, MissionOf, MissionView, Note, Pair, PlanView, RadioRow, RailCard, RailPrompt, RailsView, RingView, SquadView, ThrowLine, TickView } from './read';
 
 /** what a game no host steps is told */
-export const NO_VIEW: TickView = { mission: null, lesson: null, radio: [], bubbles: [], me: -1, place: '',
+export const NO_VIEW: TickView = { mission: { of: 'stages', text: '', pos: null }, lesson: null, radio: [], bubbles: [], me: -1, place: '',
   kit: { slots: [], gun: null, setup: null, big: null, hitsLeft: 0, hitsMax: 0, down: false, god: false, nightVision: null, keyTag: null },
   marks: { men: [], seen: [], cams: [], frags: [], blind: 0, light: 0, irradiance: 0, noise: 0, stalk: null, stalkWaits: false, floor: null },
   aim: { ring: null, dot: null, tooClose: false, throw: null },

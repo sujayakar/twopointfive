@@ -14,7 +14,7 @@ In the body files of rust/game_rules/src (`p_NN.rs`, `b_NN.rs`; not a file's tes
    block (or to where the same name is bound to a man again) is a field of it or hands it whole to a function
    (`no_path(d)` becomes `no_path(&mut g.gd[gd])`). Anything else is listed and left for a hand.
 
-2. Every `g.gd[<man>].awareness = <value>;` and `g.gd[<man>].state = <value>;` becomes a call of rust/game_rules/src/mind.rs:
+2. Every `g.gd[<man>].awareness = <value>;` and `g.gd[<man>].state = <value>;` becomes a call of rust/game_rules/src/people/mind.rs:
 
        g.gd[x].awareness = m::max(g.gd[x].awareness, V);   crate::mind::raise(g, x, V, "<module>");
        g.gd[x].awareness = m::min(g.gd[x].awareness, V);   crate::mind::cap(g, x, V, "<module>");

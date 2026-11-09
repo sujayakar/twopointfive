@@ -1,10 +1,9 @@
 //! THE TUTORIALS, PLAYED (`game_start::lessons`): each one by a man at the keys, every step on its deed, to its end, as the page stands it. `TUT=<id>` picks one; `PACE=<secs>` has him read each line.
 //! Each is ignored by `cargo test` because the longest takes a debug build over a minute: `cargo test --release --test lessons -- --ignored`.
-use game::savestate::control::{self, Do};
+use game::savestate::control;
 use game::scene_scenario_list::{all_missions, pick_search};
-use game::scene_scenarios::LessonTestKind;
+use game::lesson::LessonTest;
 use game_start::lessons::{tutorials, Lesson, Tutorial};
-use game_start::moment::Moment;
 use game_start::owes::{self, Owes};
 use game_start::play::{Opts, Play};
 
@@ -38,36 +37,14 @@ fn play(id: &str) {
 
 // ---- what is held with no run played
 
-/// what is wrong with a test of a step on this floor. (A flag's word is not asked here: a misspelt one is a step no run goes by)
-fn test_faults(p: &Play, t: &LessonTestKind, out: &mut Vec<String>) {
-    use LessonTestKind as K;
+/// what is wrong with a test of a step once its mission stands: the lights and the men. (A word is the read's to refuse, a door, a room and a route the file's judge's: lesson_words.rs)
+fn test_faults(p: &Play, t: &LessonTest, out: &mut Vec<String>) {
+    use LessonTest as K;
     let g = &p.g;
-    let door = |n: &str| g.doors.list.iter().any(|&d| g.dr[d].def.name == n);
-    let room = |n: &str| g.level.scenarios.as_ref().and_then(|s| s.room_clear.as_ref()).is_some_and(|c| c.rooms.iter().any(|r| r.id == n));
-    let area = |r: &game::scene_scenarios::Rect| r.x0 < r.x1 && r.z0 < r.z1;
     match t {
-        K::Unknown { is } => out.push(format!("no test is called '{}'", is)),
-        K::In { area: r } | K::Body { area: r } | K::Squad { area: r, .. } => if !area(r) { out.push(format!("an area that holds nothing: {:?}", r)); },
-        K::Near { at, r } => if !at.iter().all(|v| v.is_finite()) || r.is_some_and(|r| r <= 0.0) { out.push(format!("a place no man can be near: {:?}, {:?}", at, r)); },
-        K::Slot { slot, .. } => if !["pistol", "rifle", "smoke", "flash", "frag"].contains(&slot.as_str()) { out.push(format!("no slot '{}'", slot)); },
-        K::Stage { stage } => if !["drive", "exfil", "done"].contains(&stage.as_str()) { out.push(format!("no stage '{}'", stage)); },
-        K::Door { door: d, state } => {
-            if !door(d) { out.push(format!("no door named '{}'", d)); }
-            if !["open", "shut", "unlocked", "broken", "charged"].contains(&state.as_str()) { out.push(format!("no door state '{}'", state)); }
-        }
         K::Target { name, .. } => if !g.targets.iter().any(|&f| g.tab.sim_lightshome_fixture[f].name == *name) { out.push(format!("no light or device named '{}'", name)); },
-        K::Men { down } => if down.is_some_and(|n| n < 1.0) { out.push(String::from("down: how many, at least one")); },
-        K::Did { what, on, .. } => {
-            let kinds = ["act:", "event:", "chron:", "order:"];
-            if !kinds.iter().any(|k| what.len() > k.len() && what.starts_with(k)) { out.push(format!("what: no deed '{}'", what)); }
-            if let Some(foe) = what.split_once("@foe:").map(|x| x.1) { if !g.guards.iter().any(|&x| g.gd[x].callsign == foe) { out.push(format!("no man called '{}' on this floor", foe)); } }
-            if let Some(d) = on { if !what.starts_with("order:") || !door(d) { out.push(format!("on: no door '{}' to give '{}' on", d, what)); } }
-        }
-        K::Calm { route: Some(r) } => if !g.level.routes.iter().any(|&x| g.tab.route[x].name == *r) { out.push(format!("no patrol route named '{}'", r)); },
-        K::StackOn { door: d, .. } => if !door(d) { out.push(format!("no door named '{}'", d)); },
-        K::Stacks { doors, .. } => for d in doors { if !door(d) { out.push(format!("no door named '{}'", d)); } },
-        K::Taken { room: r } => if !room(r) { out.push(format!("no room '{}'", r)); },
-        K::All { of } | K::Any { of } => { if of.is_empty() { out.push(String::from("a list of no tests")); } for x in of { test_faults(p, x, out); } }
+        K::Did { what, .. } => if let Some(foe) = what.split_once("@foe:").map(|x| x.1) { if !g.guards.iter().any(|&x| g.gd[x].callsign == foe) { out.push(format!("no man called '{}' on this floor", foe)); } },
+        K::All { of } | K::Any { of } => for x in of { test_faults(p, x, out); },
         _ => {}
     }
 }
@@ -105,24 +82,16 @@ fn a_checkpoint_carries_the_step_that_is_up() {
         let mut p = stand(id);
         let steps = game::lesson::lesson_data(&p.g).unwrap().steps.clone();
         let k = steps.iter().position(|s| s.checkpoint.is_some()).unwrap_or_else(|| panic!("{}: a tutorial played alone names no checkpoint on any step", id));
-        let label = steps[k].checkpoint.clone().unwrap();
-        let tick = |p: &mut Play, kept: &mut Option<(String, Moment)>| {
-            let asked = p.g.stats.rails.kept;
+        let tick = |p: &mut Play, kept: &mut Option<String>| {
             p.frame();
-            // (the frame asks its host for it, and the host asks the controller)
-            if p.g.stats.rails.kept > asked { control::keep(&mut p.g, &label); }
-            match control::tick(&mut p.g, 1.0 / 60.0) {
-                Some(Do::Keep { key, .. }) => *kept = Some((key, Moment::of(&p.g))),
-                Some(Do::Back { key }) => { let was = control::abandoned(&p.g); let m = kept.take().expect("what was kept"); assert_eq!(m.0, key); p.g = m.1.stands(p.g.sim); control::put_back(&mut p.g, &key, was); }
-                _ => {}
-            }
+            for told in p.told.drain(..) { if told.kept.is_some() { *kept = told.kept; } }
         };
         let mut kept = None;
         for _ in 0..30 { tick(&mut p, &mut kept); }
         kept = None;
         p.g.lesson.i = k as f64;
         for _ in 0..3 { tick(&mut p, &mut kept); }
-        let key = kept.as_ref().unwrap_or_else(|| panic!("{}: no checkpoint was kept when step {} came up", id, k + 1)).0.clone();
+        let key = kept.clone().unwrap_or_else(|| panic!("{}: no checkpoint was kept when step {} came up", id, k + 1));
         p.g.lesson.i = 0.0;
         assert_eq!(control::ask_load(&mut p.g, &key), None, "{}", id);
         for _ in 0..3 { tick(&mut p, &mut kept); }

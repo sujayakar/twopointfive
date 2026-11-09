@@ -83,11 +83,9 @@ pub struct FireK {
     ///  flame's height (its foot, a radius lower, stays over a standing man's head on a drum: tools/qa/fire-check.ts holds it), the source's radius (m) and its least width in cells, what it lets out a second, how hot, how fast it leaves, and how hard the air is dragged along;
     ///  filed afresh every `every` s for that long; only for a fire within `viewR` m of what the view looks at; `on` false = a fire with no smoke
     pub smoke: FireKSmoke,
-    /// THE SOUND: the bed's level at the fire and each crack's (× how hard the crack is), and how long one bed voice is held before the next takes over (the
-    ///  mixer lets a followed voice go after its own time, and one it never took — the mixer off, a page in the background — is asked for again then)
+    /// THE SOUND: the bed's level at the fire (heard for as long as it burns) and each crack's (× how hard the crack is)
     #[k(0.85)] pub bed: f64,
     #[k(0.9)] pub crack: f64,
-    #[k(12.0)] pub bed_secs: f64,
     /// the renderer takes this many fires (four at most: its uniform's size), nearest the view first, none past `drawR` m of what it looks at; the wind a flame and
     ///  its embers are shown is capped at `windMax` m/s (a storm lays the smoke over, not the flame flat)
     #[k(4.0)] pub max: f64,

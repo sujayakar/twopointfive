@@ -201,7 +201,6 @@ pub mod roomclear { pub mod types; pub use types::*; }
 pub mod roomfight { pub mod types; pub use types::*; }
 pub mod roomfit { pub mod types; pub use types::*; }
 pub mod roomread { pub mod types; pub use types::*; }
-pub mod root_settings { pub mod types; pub use types::*; }
 pub mod rowset { pub mod types; pub use types::*; }
 pub mod runner { pub mod types; pub use types::*; }
 pub mod rustknobs { pub mod types; pub use types::*; }
@@ -245,6 +244,7 @@ pub mod shotgun { pub mod types; pub use types::*; }
 pub mod showwhy { pub mod types; pub use types::*; }
 pub mod shutdoor { pub mod types; pub use types::*; }
 pub mod silent { pub mod types; pub use types::*; }
+pub mod sim_doorshome { pub mod types; pub use types::*; }
 pub mod sim_fallshome { pub mod types; pub use types::*; }
 pub mod sim_itemshome { pub mod types; pub use types::*; }
 pub mod sim_lightshome { pub mod types; pub use types::*; }

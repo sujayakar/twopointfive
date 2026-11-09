@@ -22,6 +22,3 @@ pub fn floor(x: f64) -> f64 {
 pub fn trunc(x: f64) -> f64 {
     x.trunc()
 }
-
-pub mod dice;
-pub mod maths;

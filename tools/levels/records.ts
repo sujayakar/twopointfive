@@ -74,7 +74,7 @@ export const RECORDS_START: Vec3 = [13.0, 0, 26.9];
  *  into BOTH (as the office's server ↔ manager door is). The team's marks carry four men: the pair's two first, two more for the four. */
 export const RECORDS_STRUCTURE: StructureData = {
   name: 'records office',
-  wayOut: true,   // (hard only — rust/game_rules/src/pressure PRESSURE.wayOut: the hunters hold the lost room's doors from back off them)
+  wayOut: true,   // (hard only — rust/game_rules/src/defenders/pressure PRESSURE.wayOut: the hunters hold the lost room's doors from back off them)
   team: { sam: RECORDS_START, samYaw: Math.PI, ops: [[12.0, 0, 27.0], [14.0, 0, 27.0], [11.0, 0, 27.0], [15.0, 0, 27.0]], opsYaw: Math.PI },
   // the second way in (ROOMCLEAR.way): the dark west side, on the records room's own outside door instead of the front office's
   starts: [{ sam: [6.4, 0, 8.6], samYaw: Math.PI / 2, ops: [[5.2, 0, 7.6], [5.2, 0, 9.6], [4.0, 0, 7.6], [4.0, 0, 9.6]], opsYaw: Math.PI / 2 }],
@@ -116,7 +116,7 @@ export const RECORDS_STRUCTURE: StructureData = {
 /** the parked car's boxes, by the ids the export writes (body, cabin, roof, wheels, lamps): what the front door's kit view takes out of ITS picture — it stands
  *  between that camera and the men. (tools/qa/kitview-plan.ts holds each id to what stands in the camera's way: a level edit that renumbers them is red there.) */
 const CAR = ['box_0212', 'box_0213', 'box_0214', 'box_0215', 'box_0216', 'box_0217', 'box_0218', 'box_0219', 'box_0220', 'box_0221', 'box_0222'];
-/** THE RECORDS OFFICE'S RESPONSE TEAM (lib/scenarios.ts ResponseData; rust/game_rules/src/qrf RESPONSE.raid — rust/game_start/tests/response_team.rs stands every mark
+/** THE RECORDS OFFICE'S RESPONSE TEAM (lib/scenarios.ts ResponseData; rust/game_rules/src/pursuit/qrf RESPONSE.raid — rust/game_start/tests/response_team.rs stands every mark
  *  on the built floor). A raid's team: it stands with the defenders. WHY HERE: the front office is 'the first room on a QUIET floor' — a night desk, a lamp,
  *  a screen, and a telephone. Gunfire the desk hears, and a few seconds to dial, is a patrol car on its way; the desk taken first and quietly, from the dark
  *  lot, and nobody calls. Two men, never more: this is the pair's level. */
@@ -137,9 +137,9 @@ export const RESPONSE: ResponseData = {
 export const RECORDS_SCENARIOS: LevelScenarios = { roomClear: RECORDS_STRUCTURE, response: RESPONSE,
   // the floor nobody holds, by name (lib/scenarios.ts PlacesData — words only): what a line on their net calls a spot that is no room of the structure
   places: { areas: [{ name: RECORDS_ROOMS.hall.name, bounds: { ...RECORDS_ROOMS.hall.bounds } }] },
-  // the start page's picture of the team at the way-in door (lib/scenarios.ts KitViewData, rust/game_rules/src/kitstage; picture only), per way in as the starts are:
+  // the start page's picture of the team at the way-in door (lib/scenarios.ts KitViewData, rust/game_rules/src/outfit/kitstage; picture only), per way in as the starts are:
   // the south lot's front door with the worked-out camera and lamp and its slots written down; the dark west side's the same way (no pin: one worked-out camera rule for both)
-  // (Sam's slot is 1.8 m from each door's middle, further off the wall than the worked-out 1.2 m: a door charge's moment goes off beside him — rust/game_rules/src/kitstage KIT_VIEW_STAGE)
+  // (Sam's slot is 1.8 m from each door's middle, further off the wall than the worked-out 1.2 m: a door charge's moment goes off beside him — rust/game_rules/src/outfit/kitstage KIT_VIEW_STAGE)
   // (what the plan — rust/game_start/src/kit_plan.rs — would otherwise MEASURE and get a different picture from, written down as this level's own: the stack was laid out
   //  0.9 m apart (`slotGap`: spread to the picture's spacing), the yard's lived things stay in the front picture (`show`), and the front fill stands at its full 6.5 m
   //  though the lot's far kerb is nearer than that)
@@ -321,7 +321,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
     for (const [x, z] of [[32.6, 19.6], [35.4, 19.9], [35.1, 22.6], [32.4, 22.2], [38.6, 19.5], [38.8, 23.1], [38.5, 26.6], [32.9, 26.3]]) P.peg(x + 0.16, z + 0.05);
     P.tripod(35.4, 19.9, 1.1); P.rod(35.3, 20.6, 35.1, 22.4, 1.8);
     { const L = P.at(20.0, 3.5, 0); L.box(0, 0, 0, 1.0, 0.08, 1.0, C.concrete); L.box(0, 0.08, 0, 0.4, 1.0, 0.4, C.concrete); L.box(0, 1.08, 0, 0.12, 0.02, 0.12, INK.brass); for (let i = 0; i < 5; i++) P.peg(21.2 + i * 1.1, 3.5 + i * 0.12); }   // the trig pillar and its line
-    { const L = P.at(9.62, 19.0, W); for (const sx of [-0.5, 0.5]) L.box(sx, 0, 0, 0.62, 0.62, 0.04, INK.rubber); L.box(0, 0.45, 0, 1.0, 0.05, 0.04, C.red); L.box(-0.22, 0.8, 0, 0.22, 0.05, 0.12, C.black); L.box(0.42, 0.86, 0, 0.04, 0.04, 0.46, C.metal); L.box(-0.05, 0, -0.12, 0.05, 0.8, 0.05, C.metal); }   // a bicycle
+    { const L = P.at(9.62, 19.0, W); for (const sx of [-0.5, 0.5]) L.box(sx, 0, 0, 0.62, 0.62, 0.04, INK.rubber); L.box(0, 0.45, 0, 0.38, 0.05, 0.04, C.red); L.box(-0.22, 0.8, 0, 0.22, 0.05, 0.12, C.black); L.box(0.42, 0.86, 0, 0.04, 0.04, 0.46, C.metal); L.box(-0.05, 0, -0.12, 0.05, 0.8, 0.05, C.metal); }   // a bicycle
     { const L = P.at(6.8, 18.5, 0.3); P.floor(6.8, 18.5, 1.6, 1.5, RECORDS_PAINT.ash, 0.5, 0.013); G.drum(6.8, 18.5, 'rust', 0.3); L.sheet(0.7, 0.014, 0.3, 0.2, 0.26, drawnAs('gravel', [0.12, 0.11, 0.1]), 0.6); L.sheet(-0.5, 0.014, 0.6, 0.18, 0.22, INK.paper, 1.1); }   // the burn drum on its ash (the library's drum)
     K.bench(k, 30.36, 12.2, W);
     P.loose('barrow', 'cardboard', 32.3, 11.9, 0.5, 14, [P.part(0, 0.28, 0, 0.9, 0.24, 0.6, INK.yellow), P.part(0.55, 0, 0, 0.36, 0.36, 0.08, C.black), P.part(-0.68, 0.42, -0.25, 0.5, 0.04, 0.04, C.wood), P.part(-0.68, 0.42, 0.25, 0.5, 0.04, 0.04, C.wood), P.part(-0.3, 0, -0.22, 0.04, 0.28, 0.04, C.metal), P.part(-0.3, 0, 0.22, 0.04, 0.28, 0.04, C.metal), P.part(0, 0.52, 0, 0.5, 0.12, 0.3, C.white)]);

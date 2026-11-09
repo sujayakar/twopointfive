@@ -1,6 +1,6 @@
 //! The types of `orders`.
 #![allow(unused_imports)]
-use crate::{Blank, bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// what marksKeep took, to put back once: the makers' counters, the room rule's book, the leaf's answer (orders.ts marksKeep). Not kept past the one trial.
@@ -468,7 +468,7 @@ pub struct AIM {
     pub upper: crate::character::UpperMode,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub enum SquadOrdersMenSel {
     Num(f64),
     Guard(GuardId),

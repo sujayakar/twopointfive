@@ -26,7 +26,6 @@ pub struct Destruction {
     pub edge_look: crate::edge_look::EdgeLook,
     pub furn: crate::furnblast::Furniture,
     pub breaks: crate::break_table::Breaks,
-    pub show_chaos: Option<f64>,
     pub heat: Vec<f32>,
     pub hw: f64,
     pub hh: f64,

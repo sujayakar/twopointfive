@@ -1,5 +1,3 @@
-[workspace]
-
 [package]
 name = "sim"
 version = "0.1.0"
@@ -7,8 +5,7 @@ edition = "2021"
 publish = false
 
 [lib]
-crate-type = ["rlib"]
+crate-type = ["cdylib", "rlib"]
 
 [dependencies]
 prim = { path = "../prim" }
-game_types = { path = "../game_types" }

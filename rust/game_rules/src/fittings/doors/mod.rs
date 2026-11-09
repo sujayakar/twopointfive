@@ -1,0 +1,12 @@
+pub use ::game_types::doors::types;
+pub use types::*;
+pub mod slab;
+pub use slab::*;
+pub mod leaf;
+pub use leaf::*;
+pub mod step;
+pub use step::*;
+pub mod work;
+pub use work::*;
+pub mod paint;
+pub(crate) use paint::paint_leaves;

@@ -1,6 +1,6 @@
 //! The types of `sim_fallshome`.
 #![allow(unused_imports)]
-use crate::{Blank, bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Words)]
@@ -22,9 +22,17 @@ pub struct FallDue {
     pub dust: f64,
 }
 
-#[derive(Clone, Copy, Debug, ToBytes, Blank)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct FallStore {
 }
+impl FallStore {
+    /// what a new one holds
+    pub fn blank() -> Self {
+        FallStore {
+        }
+    }
+}
+impl Default for FallStore { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Debug, Default)]
 pub struct SimFallshomeModFALLS {

@@ -22,18 +22,18 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | module | what it does |
 |---|---|
 | `character/` | a man: his animator (`Anim`), the order of its layers, his turn, his bones, his falls |
-| `anim_skeleton/`, `posehome/` | poses, masks, sampling a clip, blending, joint matrices; a man's poses kept in the game's pool |
-| `ragdoll/` | the dead body: sixteen weighted points, sticks, floor and walls |
-| `condition/` | hurt, shaken and folded, told to the figure every frame (`condition_pose`) |
-| `stealthfeed/`, `kitanim/`, `handwork/` | what the game tells Sam's stealth poses; his errands (draw, stow, reload, goggles, sling); where hands go on a thing |
-| `rig_props/`, `gunlook/` | what he holds and wears as boxes (`rig_boxes`), a gun's grip and muzzle; which models a man has (`gun_look_of`) |
-| `cast/`, `anim_gltf/`, `stature/`, `char_look/` | his outfit and part mask; his drawn height; which side's dress a team wears |
+| `anim_skeleton.rs`, `posehome.rs` | poses, masks, sampling a clip, blending, joint matrices; a man's poses kept in the game's pool |
+| `ragdoll.rs` | the dead body: sixteen weighted points, sticks, floor and walls |
+| `condition.rs` | hurt, shaken and folded, told to the figure every frame (`condition_pose`) |
+| `stealthfeed.rs`, `kitanim.rs`, `handwork.rs` | what the game tells Sam's stealth poses; his errands (draw, stow, reload, goggles, sling); where hands go on a thing |
+| `rig_props/`, `gunlook.rs` | what he holds and wears as boxes (`rig_boxes`), a gun's grip and muzzle; which models a man has (`gun_look_of`) |
+| `cast.rs`, `anim_gltf.rs`, `stature.rs`, `char_look.rs` | his outfit and part mask; his drawn height; which side's dress a team wears |
 
 | file | what it does |
 |---|---|
 | `rust/sim/src/layers.rs` | the layers themselves, each pose written in place |
 | `rust/sim/src/skeleton.rs`, `poses.rs`, `clips.rs` | blends and the two-bone solve; the pose pool in the game's block; the clip store |
-| `rust/sim/src/knobs.rs`, `rustknobs/` | the numbers and named nodes a layer reads, and who writes them there |
+| `rust/sim/src/knobs.rs`, `rustknobs.rs` | the numbers and named nodes a layer reads, and who writes them there |
 | `rust/game_start/src/gltf.rs` | the character files read for the game: skeleton, clips, the cast's parts and variants |
 | `rust/game_draw/src/men.rs` | what the picture is told of a man: sections `Man`, `Inst`, `Bones`, `Cap` |
 | `src/draw/men.ts`, `src/anim/characters.ts`, `src/anim/gltf.ts` | those sections handed to the GPU; the mesh's buffers; the mesh read for the page |
@@ -69,7 +69,7 @@ pose under them (`anim_under_pose`), so the game reads joints with `character_jo
 
 **The turn.** Between a man's updates `body_yaw` and `aim_yaw` hold the weighed yaws. `character_turn_begin`, at the head of `update_guard`, puts his AI's wish back. Then
 `character_turn_weigh` steps body and gun toward the wish with acceleration, a top speed and a brake (`k.turn`, `handling_of`, `anim.trained`). It is on for the guards list but
-a held man or a show. Sam and civilians have no turn.
+a held man. Sam and civilians have no turn.
 
 **The long gun.** A set of springs toward one of `LongStance` (`long_targets`). `anim_long_body` sets the trunk and `anim_long_arms` puts both hands on the grip. A pistol's
 reload is its clip. A long gun plays none: `anim_reload_carry` brings the gun and head round and `anim_reload_arm` works the support hand, by `reload_at` where the game deals it.
@@ -119,7 +119,7 @@ files for skeleton and clips; the page reads them for the mesh (`loadCharacterSe
 
 - **A number:** `knobs/character.rs` (`hold`, `moves`, `mv`, `turn`, `runarms`, `runready`, `hardbreath`, `kit`), `knobs/stealthpose.rs`, `knobs/kitanim.rs`, `knobs/condition.rs`. The panel or
   `?knob.moves.steady=0` turns one. Tables with no panel are functions in `rust/game_types/src/character/types.rs`: `stances`, `blend`, `sneak`, `creep`, `life`, `mv2`, `long_reload`.
-- **A number for a layer:** a line in `rust/sim/src/knobs.rs` and its `k[…]` line in `rustknobs/base.rs`.
+- **A number for a layer:** a line in `rust/sim/src/knobs.rs` and its `k[…]` line in `rustknobs.rs`.
 - **A new layer:** a `pub fn` in `layers.rs`; an `anim_*` and `anim_*_ask` pair (copy `anim_lean_body`); a line in `anim_update_standing` where it should write over what is
   under it; its kept springs in `Anim`, with columns. Add it to the stand-down lists of what it gives way to.
 - **A one-shot:** an `anim_*` function that starts a clock in `Anim` (`sig_t`), advanced and read in the layer's place. Rules call that function, never the layer.

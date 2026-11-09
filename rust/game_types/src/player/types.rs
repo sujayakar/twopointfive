@@ -205,7 +205,6 @@ pub struct GunRaisedM {
 pub struct LeafFacingDp {
     pub w: f64,
     pub n: Vec<f64>,
-    pub hold_only: Option<bool>,
 }
 
 #[derive(Clone, Copy, Debug, Default)]

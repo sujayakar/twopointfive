@@ -1,5 +1,5 @@
 // THE BROWSER'S SETTINGS, KEPT ON THE BACKEND TOO. Every setting of the game lives in this browser's localStorage under a `twopointsix.*` key, each written
-// by its own module (ui/options.ts, host/keymap.ts, ui/findme.ts, rust/game_rules/src/loadout …). This file does not know those modules: it takes the keys AS A MAP —
+// by its own module (ui/options.ts, host/keymap.ts, ui/findme.ts, rust/game_rules/src/outfit/loadout …). This file does not know those modules: it takes the keys AS A MAP —
 // every `twopointsix.*` key bar the ones below — and keeps that map on the backend under the browser's id (`prefs:put`), sent again a little after it changed.
 // A browser that is handed another's id (a link: cloud.ts `?player=`) takes that map as its own before the game reads a single key.
 // LEFT OUT (`skipped`): this module family's own keys; what belongs to the MACHINE, not the player (the quality tier and what auto settled on, the text
@@ -15,7 +15,7 @@ const PREFIX = 'twopointsix.';
 const SKIP: (string | RegExp)[] = [
   /^twopointsix\.cloud\./,
   'twopointsix.quality', 'twopointsix.autoPreset', 'twopointsix.autoScaleRel', 'twopointsix.textsize', 'twopointsix.gpuLost', 'twopointsix.gentle', 'twopointsix.plainAir' /* (two notes of mitigations gone 2026-11-07: a browser may still hold one, and a machine's note is never another machine's) */, 'twopointsix.bench', 'twopointsix.shaderrows',
-  /^twopointsix\.save\./, 'twopointsix.editorLevel', /^twopointsix\.editor\./, /^twopointsix\.viewer\./, /^twopointsix\.workbench\./,
+  /^twopointsix\.save\./, 'twopointsix.editorLevel', /^twopointsix\.editor\./, /^twopointsix\.viewer\./, /^twopointsix\.workbench\./,   // (kept by pages that are gone: a browser may still hold them, and they are nobody's settings)
   /^twopointsix\.kept\./, 'twopointsix.replay.from', 'twopointsix.testMute', /\.visit$/,
 ];
 export const skipped = (k: string): boolean => !k.startsWith(PREFIX) || SKIP.some(s => typeof s === 'string' ? s === k : s.test(k));

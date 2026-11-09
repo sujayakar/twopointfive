@@ -1,4 +1,4 @@
-//! THE WORLD AS A QUESTION TAKES IT (rust/game_rules/src/ask): a line or a ray asked of the level as it stands, of its statics alone, or with a leaf let through,
+//! THE WORLD AS A QUESTION TAKES IT (rust/game_rules/src/world/ask.rs): a line or a ray asked of the level as it stands, of its statics alone, or with a leaf let through,
 //! and nothing of the game changed to ask it.
 use game::ask::Over;
 use game::scene_collision::{raycast_over, segment_blocked_over, shot_blocked_over, solid_blocked_over};
@@ -116,7 +116,7 @@ fn between_two_ticks_a_question_of_the_game_shared_is_answered_as_a_rules_is() {
         let d = p.g.doors.list[0];
         let c = p.g.dr[d].frame_centre;
         for round in 0..2 {
-            if round == 1 { for x in [-1.0, 1.0] { if p.g.dr[d].leaf.angle.abs() < 0.3 { game::doors::doors_kick_in(&mut p.g, d, [c[0] + x, 0.0, c[2]], 0.0, None); p.run(0.4); } } assert!(p.g.dr[d].leaf.angle.abs() > 0.3, "seed {}: the door stands open", seed); }
+            if round == 1 { for x in [-1.0, 1.0] { if game::doors::door_angle(&p.g, d).abs() < 0.3 { game::doors::doors_kick_in(&mut p.g, d, [c[0] + x, 0.0, c[2]], 0.0, None); p.run(0.4); } } assert!(game::doors::door_angle(&p.g, d).abs() > 0.3, "seed {}: the door stands open", seed); }
             for k in 0..60 {
                 let th = k as f64 * 0.1047;
                 let (from, dir) = ([c[0] - 3.0, 1.2, c[2] + 0.4], [th.cos(), 0.0, th.sin()]);

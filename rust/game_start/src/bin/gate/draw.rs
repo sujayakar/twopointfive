@@ -24,7 +24,7 @@ use crate::rows::{Flags, RUN_SECS, SEED};
 use game_draw::boxes::{Cut, Geo, Mat, Row4, Word};
 use game_draw::{want, Drawn, Row};
 use game_start::hand::act;
-use game_start::moment::Moment;
+use game::savestate::control::Moment;
 use game_start::parts;
 use std::time::Instant;
 
@@ -43,7 +43,7 @@ const LOOK_AGAIN: usize = 600;
 const PAGE_LOOK: [f64; game_draw::LOOK] = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.02, 0.05, 0.025,
     26.0, 28.0, 0.0, 10.0, 0.0, 7.0, 13.0, 14.0, 15.0, 25.0, 27.0, 1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 8.0, 9.0, 11.0, 12.0, 16.0, 17.0, 18.0, 19.0, 20.0, 21.0, 22.0, 23.0, 24.0, 0.0, 0.0,
     -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, 0.2, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0, -1.0,
-    1.0, 2.0, 1.0, 1.0];
+    1.0, 2.0, 1.0, 1.0, 1.0];
 
 /// a row as words: two rows are the same where their bits are (a NaN is the same as itself)
 fn same<T>(a: &T, b: &T) -> bool { unsafe { std::slice::from_raw_parts(a as *const T as *const u8, size_of::<T>()) == std::slice::from_raw_parts(b as *const T as *const u8, size_of::<T>()) } }

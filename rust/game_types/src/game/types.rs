@@ -1,6 +1,6 @@
 //! The types of `game`.
 #![allow(unused_imports)]
-use crate::{Blank, bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
@@ -117,7 +117,6 @@ pub enum SlotKind {
     Flash,
     Frag,
 }
-
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default, Words)]
 pub enum GuardState {
@@ -297,11 +296,13 @@ pub struct StoodWith {
     pub dry: bool,
     /// a harness game stood plain, whose missions ask the solo card's question by kit_solo_stand
     pub solo_stand: bool,
+    /// the way in asked for: 0 the level's own, k its k-th other, however many the level has (roomclear way_taken)
+    pub way: usize,
 }
 impl StoodWith {
     /// what a game stood with nothing said for it holds: the level's own weather, at the level's own night
     pub fn blank() -> Self {
-        StoodWith { weather: None, locked: false, hour: crate::hours::HourId::Night, sun: 1.0, sun_given: false, dry: true, solo_stand: false }
+        StoodWith { weather: None, locked: false, hour: crate::hours::HourId::Night, sun: 1.0, sun_given: false, dry: true, solo_stand: false, way: 0 }
     }
 }
 impl Default for StoodWith { fn default() -> Self { Self::blank() } }
@@ -353,7 +354,6 @@ pub struct Game {
     pub props: crate::props::PropSystem,
     pub use_door: Option<DoorId>,
     pub reach_interior: Option<Vec<u8>>,
-    pub touring: bool,
     pub hover: Option<crate::game::Interactable>,
     pub interactables: Vec<crate::game::Interactable>,
     pub nearby: Vec<crate::game::Interactable>,
@@ -376,9 +376,6 @@ pub struct Game {
     pub fx: Vec<crate::game::GameFxItem>,
     #[is(crate::sparks::Sparks { pool: alloc::vec![crate::sparks::Spark { pos: [0.0, -10.0, 0.0], vel: [0.0, 0.0, 0.0], age: 0.0, life: 0.0, alive: false, gen_: 0.0 }; 96], live: 0.0, params: crate::sparks::SparkParams { gravity: 16.0, drag: 1.6, hold: 0.15, brightness: 2.6, max_live: 96.0, emissive: 25.0, thickness: 0.002, shutter: 0.017, min_streak: 0.02, collide: true } })] pub sparks: crate::sparks::Sparks,
     pub tracers: crate::tracers::Tracers,
-    /// (the picture's: in no bytes)
-    #[bytes(skip)]
-    pub decals: crate::render_decals::Decals,
     pub weather: crate::weather::Weather,
     #[is(1.0)] pub fx_seed: f64,
     pub ocp_cooldown: f64,
@@ -439,8 +436,8 @@ pub struct Game {
     pub level: crate::scene_level::Level,
     #[is(RigId(0))] pub rig: RigId,
     pub smoke: crate::smoke_types::SmokeSystemLike,
-    pub quiet_utility: bool,
-    pub mission_in_tour: bool,
+    /// nobody plays and the floor is looked at (the title's reel): no run is kept, counted or spoken to
+    pub aside: bool,
     /// (the host's camera: in no bytes)
     #[bytes(skip)]
     pub view_proj: Option<crate::game::GameViewProj>,
@@ -663,7 +660,6 @@ pub struct GameDoorHandRecsValue {
     pub t0: f64,
     pub crack: bool,
     pub hand: f64,
-    pub hold_only: Option<bool>,
     pub move_: Option<bool>,
 }
 
@@ -1463,6 +1459,9 @@ pub struct Mods {
     pub character: crate::character::CharacterMod,
     /// (where rust/sim's rows lie in this process, and counts: in no bytes)
     #[bytes(skip)]
+    pub sim_doorshome: crate::sim_doorshome::SimDoorshomeMod,
+    /// (where rust/sim's rows lie in this process, and counts: in no bytes)
+    #[bytes(skip)]
     pub sim_slabshome: crate::sim_slabshome::SimSlabshomeMod,
     pub teams: crate::teams::TeamsMod,
     pub opening: crate::opening::OpeningMod,
@@ -1548,7 +1547,6 @@ pub struct Mods {
     pub shotgun: crate::shotgun::ShotgunMod,
     pub player: crate::player::PlayerMod,
     pub close: crate::close::CloseMod,
-    pub takedown: crate::takedown::TakedownMod,
     pub spotted: crate::spotted::SpottedMod,
     pub pairorders: crate::pairorders::PairordersMod,
     pub pairup: crate::pairup::PairupMod,

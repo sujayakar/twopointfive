@@ -1,4 +1,4 @@
-//! THE SILENT PARTNER'S WORDS (rust/game_rules/src/spotted, pairorders, silent `posture_word`, guards `say`): what the squad line says while a
+//! THE SILENT PARTNER'S WORDS (rust/game_rules/src/teammates/spotted.rs, pairorders, silent `posture_word`, guards `say`): what the squad line says while a
 //! defender is onto him, and what he says when he has finished a blown job by hand. The partner is on in the page where a quiet mission brings a
 //! squad, and with `?pair`.
 use game::game::GuardState;

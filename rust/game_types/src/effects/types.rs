@@ -1,6 +1,6 @@
 //! The types of `effects`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
+use crate::{Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// what a smoke source rides, read live each time it is asked: a shot's two off the shooter's body (combat.ts fireWeaponRaw), a blast's trail off its spark (sparks.ts tracker: answers nothing once the spark dies or its slot is reused)

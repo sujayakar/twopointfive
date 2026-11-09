@@ -5,7 +5,7 @@
 // THE SWITCH: PLAN_PACE.on — ON in the page (`?planpace=old` = each planner whole, on the frame that asks for it, as it was, to the frame), OFF here.
 // A PICTURE ONLY: engine.ts reads it as
 // it draws and nothing in the game does. What it moves is WHEN a plan lands, by a
-// few frames, and the game's light meter reads the picture those plans shape (render/steps.ts).
+// few frames (render/steps.ts).
 export const PLAN_PACE = {
   on: false,
   /** milliseconds of planning a drawn frame, between all the planners. The jobs in steps stop often (most stops are a quarter to half a millisecond of

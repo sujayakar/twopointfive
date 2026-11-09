@@ -1,7 +1,7 @@
 // The DETAIL LAYER (renderer v3 phase 4; gbuffer.wgsl fsBox calls detailSurface while frame.matCfg.w > 0). The art rule: the blocky flat-shaded look stays —
 // no image textures, no albedo noise painted on walls; every term here is WEAR YOU CAN EXPLAIN, evaluated at the primary hit only (the g-buffer's albedo /
-// roughness / metalness), so the direct light, the bounce at the pixel, the reflections and their highlights all answer to it by themselves and no ray, cache
-// or light meter ever pays for it:
+// roughness / metalness), so the direct light, the bounce at the pixel, the reflections and their highlights all answer to it by themselves and no ray or cache
+// ever pays for it:
 //   • WORN PATHS on the polished floors — where the shift walks (the level's traffic map: patrol routes traced over the nav grid + every door's threshold,
 //     rust/game_draw/src/traffic.rs) the wax is scuffed matte and holds a little ground-in grey: roughness up, albedo a touch duller. Uneven at the half-metre scale (wear
 //     never is even), never finer.
@@ -26,7 +26,7 @@ fn detailNoise(p: vec2f) -> f32 {
   return mix(mix(detailHash(ip), detailHash(ip + vec2i(1, 0)), w.x), mix(detailHash(ip + vec2i(0, 1)), detailHash(ip + vec2i(1, 1)), w.x), w.y);
 }
 
-// ---- WET GROUND (the storm's wet lot: rust/game_rules/src/weather gives the ground slab roughness 0.22 + the aniso finish; fsBox calls this on an upward aniso face while
+// ---- WET GROUND (the storm's wet lot: rust/game_rules/src/air/weather.rs gives the ground slab roughness 0.22 + the aniso finish; fsBox calls this on an upward aniso face while
 // settings.wetBreakup > 0, whatever the detail layer's amount). Ground is never flat: the water STANDS in its low spots and only darkens the aggregate between
 // them. One smooth height field off the world position (the same value noise the wear uses, never under half a metre a cell: unevenness, not texture) — below
 // the water line the film stays nearly as smooth as it was (a little rain-stippled), above it the finish climbs toward the reflection pass's roughness

@@ -1,6 +1,6 @@
 // THE TEAM AT THE DOOR, on the start page's Team & kit step (the maintainer's pick, 10-13): the REAL renderer's top-down picture of the team as picked, stood at the mission's own way-in door. The game
 // behind the start page is not the picked mission's level, so the picture is a SECOND page in an iframe: this page again, on the very query Deploy would load plus `&kitview&mute&noreplay`. Its module is that mission
-// with its team staged at the way in and from then on live: the open card's man uses what he carries at the door, a beat at a time (rust/game_rules/src/kitstage; `&stillkit` on it = drawn for a warm window, then
+// with its team staged at the way in and from then on live: the open card's man uses what he carries at the door, a beat at a time (rust/game_rules/src/outfit/kitstage; `&stillkit` on it = drawn for a warm window, then
 // held). The window is read-only on this origin's storage (host/kitguard.ts) and answers through host/kitpage.ts. It is thrown away when the page closes or Deploy fires, so its seat on the kept device goes with it.
 //
 // WHEN: the Team & kit step, a mission whose level file says where the team stands for the way in picked (`scenarios.kitView.ways`: ui/missions.ts kitViewWays, the plan's own fetch), and a window the figure's
@@ -17,8 +17,7 @@
 //
 // NOBODY STANDS IN FOR THE PICTURE (the maintainer, 10-20): the column WAITS EMPTY until the window's first `ready` (`data-kv-wait` on #missions), and is EMPTY for good (`data-kv-none`), the element dropped and the
 // query marked for this page's life, when the window says `none` (a refused device, a failed fetch, a moment that threw) or its load errors. THE WAIT HAS NO CLOCK: a second game that takes long to come up (a cold
-// shader cache, a slow adapter) is waited for however long that is. The second game lives only while it can show: it is dropped too when the mission picked has no block, the way in is dealt (its die would deal
-// another door than Deploy's: the query carries no seed), or the window goes under 720 px; it is kept across the Mission step. Under 720 px the column is not laid out at all.
+// shader cache, a slow adapter) is waited for however long that is. The second game lives only while it can show: it is dropped too when the mission picked has no block or the window goes under 720 px; it is kept across the Mission step. Under 720 px the column is not laid out at all.
 //
 // LAYOUT: every rule is in the one block below; ONE root class, `kv-on`, is on #missions only while the picture is shown (the iframe's own rules stand without it: it must be laid out, though unseen, for its page to
 // draw at all). The iframe is the LAST child of `.mbody`, absolutely placed behind the sheet and anchored left, KIT_VIEW_PLACE.wide columns wide; the figure's column is the clear window onto it: the men in its left
@@ -46,7 +45,7 @@ const KIT_VIEW_PLACE = {
   /** from the column's right edge: the picture whole up to here (the edge itself: the room behind the door is in the column's last third) · three tenths
    *  of it here (the first tile's left edge — or at that edge itself if it is nearer: no tile has more of the picture under it than it had) · gone here (on the tile rows) */
   fade0: 0, fadeA: 0.07, fade1: 1,
-  /** THE QUIET PICTURE (a quiet kind's link, `KIT_VIEW.quiet` on — `?kitloud` = off, the same word that puts the picture itself back: rust/game_rules/src/kitstage/quiet.rs): a dark stage shows through the gaps between the tiles and under the empty lower panel as noise, so there the picture is GONE from
+  /** THE QUIET PICTURE (a quiet kind's link, `KIT_VIEW.quiet` on — `?kitloud` = off, the same word that puts the picture itself back: rust/game_rules/src/outfit/kitstage/quiet.rs): a dark stage shows through the gaps between the tiles and under the empty lower panel as noise, so there the picture is GONE from
    *  this share of ITS OWN window's width on (the iframe's; or from the first tile's left edge where that is further right) — the clear column is as
    *  it is, the fade runs from its edge to there and nothing of the picture lies under the panel — and the pool of picture under the last row of
    *  tiles is not laid at all */
@@ -68,7 +67,7 @@ const CSS = `
 function styles() { if (document.getElementById?.('kitview-css')) return; const s = document.createElement('style'); s.id = 'kitview-css'; s.textContent = CSS; (document.head ?? document.body)?.appendChild?.(s); }
 
 /** what the page asks to be shown: the loadout's own query (what Deploy would load), the mission's kind and level file, the way in as the PAGE has it
- *  (ui/missions.ts MissionsScreen.way: 0 = the level's own, N = the Nth, −1 = dealt), the team's size */
+ *  (ui/missions.ts MissionsScreen.way: 0 = the level's own, N = the Nth), the team's size */
 export interface KitViewAsk { search: string; kind: string; level?: string; way: number; squad: number;
   /** each place's card as the team wears it, as a kept text ('' for a man who stays): TeamView.men's `worn` */
   worn: string[];
@@ -123,7 +122,7 @@ export function mountKitView(root: HTMLElement, body: HTMLElement, column: HTMLE
     const nx = (x: number) => ((x - f.left) / f.width) * 2 - 1;
     tell({ kv: 'frame', cx: nx(c.left + c.width * P.cx), cy: 1 - ((c.top + c.height * P.cy - f.top) / f.height) * 2, h: Math.min(0.9, c.height * P.h / f.height), w: Math.min(0.9, c.width * P.w / f.width), man: Math.min(0.9, c.height * P.man / f.height),
       door: nx(c.left + c.width * P.door), left: nx(c.left + c.width * P.left), right: nx(c.right - c.width * P.right), keep: P.keep,
-      top: 1 - ((c.top - f.top) / f.height) * 2, bottom: 1 - ((c.bottom - f.top) / f.height) * 2 });   // (…and the column's own top and foot: the quiet picture is framed down it — rust/game_rules/src/kitstage/quiet.rs)
+      top: 1 - ((c.top - f.top) / f.height) * 2, bottom: 1 - ((c.bottom - f.top) / f.height) * 2 });   // (…and the column's own top and foot: the quiet picture is framed down it — rust/game_rules/src/outfit/kitstage/quiet.rs)
   };
   const hide = () => { if (shown) { shown = false; root.classList.remove(ROOT_CLASS); } };
   // (the picture's hold on the kept page's device ends here, by name: its buffers and textures are freed now, not when the browser gets round to its window — gpu/keep.ts)
@@ -158,9 +157,9 @@ export function mountKitView(root: HTMLElement, body: HTMLElement, column: HTMLE
       quietAsk = KIT_VIEW.quiet && !q.has('kitloud') && kitViewQuietKind(q) !== null;
       if (W === undefined) { ways.set(lv, null); void kitViewWays(ask.level).then(w => w, () => [] as boolean[]).then(w => { ways.set(lv, w); again(); }); }
       if (W == null) { hide(); drop(); root.setAttribute('data-kv-wait', ''); return; }   // (asked, not yet answered — the plan's own fetch, a moment: the column waits empty)
-      // the way in as the page's own row has it; one past the level's ways is the game's to fold (any of them must then have a picture); a dealt one is no picture
-      const way = ask.way < 0 ? -1 : ask.way ? ask.way - 1 : 0;
-      if (!W || failed.has(k) || way < 0 || !(way < W.length ? W[way] : W.length > 0 && W.every(Boolean))) { hide(); drop(); root.setAttribute('data-kv-none', ''); return; }   // (no picture to be had here: the column is empty — nobody stands in)
+      // the way in as the page's own row has it; one past the level's ways is the game's to fold (any of them must then have a picture)
+      const way = ask.way ? ask.way - 1 : 0;
+      if (!W || failed.has(k) || !(way < W.length ? W[way] : W.length > 0 && W.every(Boolean))) { hide(); drop(); root.setAttribute('data-kv-none', ''); return; }   // (no picture to be had here: the column is empty — nobody stands in)
       squadNow = ask.squad; wornNow = ask.worn; paused = false;
       sel = JSON.stringify({ who: ask.member ?? 0, field: ask.field ?? null });
       if (!frame || k !== key) {   // another mission, way in, hour …: a new element, on exactly what Deploy would load

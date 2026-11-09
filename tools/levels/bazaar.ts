@@ -30,7 +30,7 @@
 // the garage's man smokes outside the generator room's door, looking up the alley as far as the water tank; on 0 and 2 the tea house's man smokes at the
 // kitchen door at the alley's other end. On set 2 the office is the camera's alone.
 //
-// WHAT THE SEED DEALS (QUIET below, rebuild/play-style-levels/quiet-missions/contract.md): one of three starts (behind the north wall at its west end · outside the
+// WHAT THE SEED DEALS (QUIET below): one of three starts (behind the north wall at its west end · outside the
 // north gate · outside the south gate), one of three places for the thing (the money changer's safe · the phone shop's display case, under its lit window ·
 // the garage's steel cabinet, which roundE walks past every lap) and one of three sets of five men: the two rounds are on every set, the other three are dealt
 // from the lorry's driver, the money changer's man, the tea house's man, the garage's man and the street's night watchman. All three gates are ways out.
@@ -101,7 +101,7 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
   grp('walls.shops');
   G.wallX(8, 4, 16, 'mud', [{ a: 6.8, b: 8.0 }, { a: 12.3, b: 13.5 }]);                                                          // tea_back, phone_back
   G.wallX(8, 18, 32.38, 'render', [{ a: 20.3, b: 21.5 }, { a: 28.2, b: 29.2, y0: 1.35, y1: 2.0 }]);                              // pharm_back; the office's high barred window
-  G.wallX(8, 32.38, 36, 'render', [{ a: 32.8, b: 34.0 }]);                                                                       // garage_back (into the generator room)
+  G.wallX(8, 32.38, 35.88, 'render', [{ a: 32.8, b: 34.0 }]);                                                                       // garage_back (into the generator room)
   G.wallX(16, 4, 16, 'mud', [{ a: 6.3, b: 7.5 }, { a: 8.2, b: 9.6, y0: 0.9, y1: 2.2 }, { a: 12.3, b: 13.5 }, { a: 14.0, b: 15.6, y0: 0.9, y1: 2.2, glass: 'whole' }]);   // tea_front + its open window, phone_front + its glass
   G.wallX(16, 18, 36, 'render', [{ a: 18.5, b: 19.9, y0: 0.9, y1: 2.2, glass: 'whole' }, { a: 20.3, b: 21.5 }, { a: 26.3, b: 27.5 }, { a: 28.0, b: 29.6, y0: 1.0, y1: 2.0, mullions: 4, glass: 'whole' }, { a: 31.3, b: 32.5 }]);   // pharmacy glass + pharm_front, hawala_front + its barred glass, garage_front (the wicket in the roller door)
   G.wallZ(4, 7.88, 16.12, 'mud');                                                                    // the tea house's blind gable
@@ -344,7 +344,7 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
     // (ON THE FIRST LAP he has not arrived from anywhere: for those first ten seconds he faces EAST along the lorry, down his first leg, not west. Every
     // number of this level was measured that way; a lead-in waypoint would turn him west from the first frame and wants the deals measured again.)
     // (hand-set waits, the original points: 17 s by the bed, 10.75 s at the cab, so his lap is HALF the east torch's own (35.95 of 71.9 s). The east
-    // torch comes out of the passage's mouth as he starts back from the cab every lap; on the first three laps they stop and talk there (rust/game_rules/src/dialogue
+    // torch comes out of the passage's mouth as he starts back from the cab every lap; on the first three laps they stop and talk there (rust/game_rules/src/speech/dialogue
     // AMBIENT: each of the level's three talks is heard once a run, and a talk holds both men, so they stay in step through it). He is then by the bed,
     // his back to the pharmacy, for about 14 s after the torch leaves the shutter: that is the shops route's way across the shop. He must be walking east
     // by t = 20 s: stood by the bed then he is within talking reach of the west torch and the first talk holds the west round up instead.)
@@ -406,7 +406,7 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
     wayouts: [{ name: 'the open end of the street', pos: [2.6, 0, 19.0], face: -HALF }, { name: 'the alley\'s mouth', pos: [2.6, 0, 6.0], face: -HALF }],
   };
 
-  // ---------------- LIVED-IN ROOMS (lib/lived.ts; rebuild/play-style-levels/rooms/read-first.md): what makes each shop, the alley, the passage and the
+  // ---------------- LIVED-IN ROOMS (lib/lived.ts): what makes each shop, the alley, the passage and the
   //                  street ITS place. Everything below is in a group 'lived.<place>' or named 'lived.<place>.<thing>' and is the TAIL of every list: the
   //                  loader leaves it all out with the switch off. Additions only; nothing above is moved. No emitter: each place says its light with colour.
   //                  Solids keep 1.1 m off every door line, off the patrol legs and off every authored point; what is under 0.25 m is walked over ----------------
@@ -665,7 +665,7 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
   // THE TEAM & KIT PICTURE (lib/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest): the south gate from the lane outside it (the third start's side), the
   // street's stalls and awnings over the wall behind the man.
   const kitView = { ways: [{ door: 'gate_s', ref: [22.4, 25.4], side: -1 }] };
-  // WHO COMES WHEN THE STREET GOES LOUD (scenarios.response — rust/game_rules/src/qrf, rust/game_start/tests/response_team.rs): the town is under curfew and a patrol is never far.
+  // WHO COMES WHEN THE STREET GOES LOUD (scenarios.response — rust/game_rules/src/pursuit/qrf, rust/game_start/tests/response_team.rs): the town is under curfew and a patrol is never far.
   // It walks in by the street's open end or by a gate; every mark is out past the row or a stride inside it (Character yaws: forward = [sin, 0, cos]).
   const response: ResponseData = {
     why: 'A market street in a town under curfew: the only armed men out at night are the patrol, and gunfire in the bazaar is the one thing they are out for.',

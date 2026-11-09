@@ -113,7 +113,7 @@ export function trainGround() {
       mission: o.mission, ...o.level,
     };
     const surfaces: SurfacesData = { building: { ...YARD }, grassEdge: 0, inside: 'asphalt', outside: 'asphalt', verge: 'asphalt', zones };
-    // WHAT A ROW CALLS THE GROUND'S TWO GATES (scenarios.doorNames — rust/game_rules/src/doornames; no bearing in a name): the one off the track and the one across the ground.
+    // WHAT A ROW CALLS THE GROUND'S TWO GATES (scenarios.doorNames — rust/game_rules/src/speech/doornames.rs; no bearing in a name): the one off the track and the one across the ground.
     // A level on this ground that knows a gate by something of its own writes its own row for it, and that row stands; its other rows are kept beside these.
     const own = o.scenarios.doorNames ?? [], gates = [{ door: 'gate_w', name: 'track gate' }, { door: 'gate_e', name: 'far gate' }].filter(g => !own.some(r => r.door === g.door));
     return { level, scenarios: { ...o.scenarios, doorNames: [...gates, ...own] }, groups: trace.groups, surfaces };

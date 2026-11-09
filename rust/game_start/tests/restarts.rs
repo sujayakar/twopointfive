@@ -28,8 +28,8 @@ fn wreck(p: &mut Play) {
     p.mains_pulled();
     let d = p.g.doors.list[0];
     let turn = game::doors::door_swing(&mut p.g, d) * 1.4;
-    p.g.dr[d].leaf.latched = false;
-    p.g.dr[d].leaf.angle = turn;
+    game::doors::door_set_latched(&mut p.g, d, false);
+    game::doors::door_set_angle(&mut p.g, d, turn);
     game::tactics::mark_danger(&mut p.g, d, game::teams::Team::Guard, game::tactics::DangerWhy::Rounds, Some("Kowalski"));
     let pane = p.g.col.boxes.clone().into_iter().find(|&b| game::glass::is_pane(&mut p.g, Some(b))).expect("a pane");
     let c = p.g.tab.boxes[pane].c;

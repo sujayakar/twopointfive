@@ -1,4 +1,4 @@
-// ---- WIND in the smoke solver (rust/game_rules/src/wind → smoke.ts setWind → the `forces` kernel of smoke.wgsl; render/shaders/wind_field.wgsl, prepended just ahead of
+// ---- WIND in the smoke solver (rust/game_rules/src/air/wind.rs → smoke.ts setWind → the `forces` kernel of smoke.wgsl; render/shaders/wind_field.wgsl, prepended just ahead of
 // this, IS the field). One small uniform of ≤ 8 source records; WHICH of them reach a brick is a mask the solver's `link` kernel makes per brick from each source's bound. The forces
 // step calls windForce(u, worldP, mask, dt) once per cell of a brick some source reaches (a whole-workgroup branch: the mask is per brick); inside a source's support the
 // cell's velocity is RELAXED toward the air's — u += k·w·(v_air − u)·dt, w = |v_air| ÷ the source's face speed (1 at a
@@ -10,7 +10,7 @@ struct WindSrc {
   pos: vec3f, reach: f32,                    // jet: face centre, where it has halved · storm: interior footprint x0 z0 x1 (+ reach = z1)
   dir: vec3f, speed: f32,                    // jet: unit axis, m/s at the face this frame · storm: unit wind direction, m/s
   aux: vec4f,                                // jet: tanSpread, r0, dMax, floorY (≤ −100 = none) · storm: the annex footprint x0 z0 x1 z1
-  kind: u32, spare0: u32, spare1: u32, spare2: u32,   // 0 jet · 1 storm; spare0 = 1 on a storm = ROOF BY ROOF (rust/game_rules/src/wind WX_OWN.wind): pos + reach / aux = the level's first two roofs, the block's `spare` = its third / fourth as two vec4f (all 0 = none)
+  kind: u32, spare0: u32, spare1: u32, spare2: u32,   // 0 jet · 1 storm; spare0 = 1 on a storm = ROOF BY ROOF (rust/game_rules/src/air/wind.rs WX_OWN.wind): pos + reach / aux = the level's first two roofs, the block's `spare` = its third / fourth as two vec4f (all 0 = none)
 };
 const WIND_MAX_SRC: u32 = 8u;
 struct WindBlock {

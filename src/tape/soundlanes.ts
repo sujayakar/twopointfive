@@ -57,7 +57,7 @@ const GUT = 148, DOCK = 260, DOCK_MIN = 120, CARD = 360, SPAN_DEF = 30, SPAN_LO 
 // THE RULER IS TWO ROWS: the checkpoints' flags (and the two heads' marks), then the times — nothing is drawn over a time. A stretch's handles hang BELOW it.
 /** the game's own HUD and the replay's corner map, hidden while the RECORDED picture is up (they would show NOW's values, and now's places, over then's picture);
  *  the replay's bar stays, and so does its big map (M), which is asked for */
-const HUD = ['#overlay', '#equip', '#lcol', '#meters', '#log', '#objective', '#alarm', '#checkpoint', '#caption', '#blind', '#veil', '#tapemap'];
+const HUD = ['#overlay', '#equip', '#lcol', '#meters', '#log', '#objective', '#alarm', '#checkpoint', '#blind', '#veil', '#tapemap'];
 const CSS = `
 #sndl{position:fixed;left:0;right:0;z-index:69;display:flex;flex-direction:column;height:${DOCK}px;box-sizing:border-box;border-top:1px solid rgba(233,226,214,.2);background:${BG};color:#e9e2d6;font:11px/1 var(--m-head,system-ui),system-ui,sans-serif;letter-spacing:.04em;user-select:none}
 #sndl.shut{height:auto}

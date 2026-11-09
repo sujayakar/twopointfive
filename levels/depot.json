@@ -271,7 +271,7 @@
     { "id": "box_0160", "floor": "f0", "group": "bay", "c": [16.2, 0.2, 23.55], "h": [0.03, 0.2, 0.18], "yaw": 3.141592653589793, "material": "iron" },
     { "id": "box_0161", "floor": "f0", "group": "bay", "c": [17.55, 0.66, 22.6], "h": [0.23, 0.66, 0.3], "yaw": -1.5707963267948966, "material": "galv", "does": "unnamed light grey", "markings": [{ "face": "-z", "res": "coarse", "at": [-4, -13], "size": [8, 26], "pal": [{ "mul": 0.45 }, { "albedo": [0.2, 0.2, 0.21], "rough": 0.35 }], "cells": ["........", "........", "..bbb...", "........", "........", "........", "........", "........", "aaaaaaaa", "........", "........", "..bbb...", "........", "........", "........", "........", "aaaaaaaa", "........", "........", "..bbb...", "........", "........", "........", "........", "........", "........"] }] },
     { "id": "sw_panel_bay_7", "floor": "f0", "group": "bay", "c": [13.5, 2.98, 21], "h": [0.6, 0.02, 0.3], "material": "white", "flags": ["NoPrimary"] },
-    { "id": "box_0163", "floor": "f0", "group": "room_c", "c": [20.4, 0.98, 18.7], "h": [1, 0.02, 0.1], "material": "woodGrey" },
+    { "id": "box_0163", "floor": "f0", "group": "room_c", "c": [20.4, 0.98, 18.71], "h": [1, 0.02, 0.09], "material": "woodGrey" },
     { "id": "box_0164", "floor": "f0", "group": "room_c", "c": [19.77, 1, 22.4], "h": [0.02, 1, 1.1], "material": "olive", "does": "steel" },
     { "id": "box_0165", "floor": "f0", "group": "room_c", "c": [20.23, 1, 22.4], "h": [0.02, 1, 1.1], "material": "olive", "does": "steel" },
     { "id": "box_0166", "floor": "f0", "group": "room_c", "c": [20, 0.15, 22.4], "h": [0.25, 0.015, 1.1], "material": "olive", "does": "steel" },

@@ -28,7 +28,7 @@
 // the hall's length: the dock doors and the west door look straight down them. A racking bay is loaded full (nobody sees or shoots through), low (a man kneels
 // behind it and stands to see over), high (legs show under it) or empty; pallets and one tall crate stand in the middle lane.
 // ELEVEN DEFENDERS IN FOUR SQUADS, by the rooms they hold (`scenarios.roomClear.squads`, the squads part's format: docs/level-format.md).
-// A squad sends men out only with two to spare past one a room (rust/game_rules/src/enemysquads), so who can LEAVE is the level's own decision:
+// A squad sends men out only with two to spare past one a room (rust/game_rules/src/pursuit/enemysquads), so who can LEAVE is the level's own decision:
 //   office (3)  the front office 2, the manager's office 1 — one to spare: they lock down and hold
 //   floor (3)   the hall — two to spare: a pair can come round
 //   dock (3)    the dock — two to spare: a pair can come round
@@ -37,9 +37,9 @@
 // The plant room, the lockers and the break room are held by nobody: rooms the fog keeps shut until somebody looks, and the north side's way round.
 //
 // The shell is the office's (exterior walls on x 4 / 36, z 4 / 24): the weather's INTERIOR rectangle and the world bounds typed into the shaders hold without a
-// change. No stair tower: the response team is gated off under the scenarios — but rust/game_rules/src/weather still types the office's tower in as ANNEX (x 1.1..4,
+// change. No stair tower: the response team is gated off under the scenarios — but rust/game_rules/src/air/weather.rs still types the office's tower in as ANNEX (x 1.1..4,
 // z 9.33..12.87), and the fire exit opens beside it: in the storm that patch of the west verge stays dry and the door lets no gust in. Known, left: the only
-// doorway the north corridor's end can take is this one, and the rectangle is not a level's to move. The footstep surface map is still the office's (rust/game_rules/src/floor), as on every level.
+// doorway the north corridor's end can take is this one, and the rectangle is not a level's to move. The footstep surface map is still the office's (rust/game_rules/src/world/floor.rs), as on every level.
 // NO BREACH PLAN: no F drill — all four teammates are the order menu's from the first frame. Only the old demo's kit (lib/officeGen.ts officeKit).
 // Units: meters. +X east, +Z south, +Y up.
 // NOT SEEN DRAWN: laid out on paper and checked headless (validator, level-lint, the scenario probes, scripted play-throughs); nobody has looked at it on a GPU.
@@ -635,7 +635,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // Eleven defenders in six held rooms (maxMen: with Sam and the four that is sixteen characters, all the skinning holds). Every room gives more marks than men,
   // split between its doors. The room order is the order a scripted commander works them, each room's first door the one he tries first: from the staff door the
   // front office, the manager's office through it, the hall by its west door, the dock from the hall, then the two north-east rooms.
-  // THE ELEVEN ARE PLACED BY HAND: placement seed 0, attempt 1 (rust/game_rules/src/roomclear place_defenders) stands each room's FIRST `garrison` marks, in the order written here,
+  // THE ELEVEN ARE PLACED BY HAND: placement seed 0, attempt 1 (rust/game_rules/src/missions/roomclear.rs place_defenders) stands each room's FIRST `garrison` marks, in the order written here,
   // so the first marks of every room are the level's one authored problem and the rest are spares a seeded deal may still draw. What the hand placement is for:
   //   THE PROBLEM  the building is a ring: whichever door the team fights at, somebody can walk round to its back. The hall's three and the dock's three each
   //                have a pair to send (one squad of one room, two to spare); the offices' three and the two store rooms hold where they are.
@@ -651,7 +651,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     roomClear: {
       name: 'the warehouse', maxMen: 11,
       team: { sam: [8.0, 0, 26.2], samYaw: Math.PI / 2, ops: [[9.4, 0, 25.6], [8.6, 0, 25.4], [7.2, 0, 25.4], [6.4, 0, 25.6]], opsYaw: Math.PI / 2 },
-      // THE OTHER WAY IN (`starts`: stood on only when a run asks — the mission sheet's Way in row, ?way=2, or ?way=any for a dealt one): the dark off the SOUTH-EAST corner,
+      // THE OTHER WAY IN (`starts`: stood on only when a run asks — the mission sheet's Way in row, ?way=2): the dark off the SOUTH-EAST corner,
       // looking up the loading apron. The apron's lamp lights both dock doors; they are eight metres apart, one pair's each on a single word. Kill the lamp
       // or cross its light. (The first spot tried, outside the plant room's own door at the north-west corner, handed the level its best answer for nothing.)
       starts: [{ sam: [36.6, 0, 26.2], samYaw: Math.PI * 0.75, ops: [[35.2, 0, 25.6], [35.2, 0, 26.8], [34.0, 0, 25.6], [34.0, 0, 26.8]], opsYaw: Math.PI * 0.75 }],
@@ -733,7 +733,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // the debrief calls a spot that is no room of the structure
   scenarios.places = { areas: [{ name: 'plant room', bounds: { ...R.plant } }, { name: 'locker room', bounds: { ...R.lockers } }, { name: 'break room', bounds: { ...R.brk } }, { name: 'service corridor', bounds: { ...R.ncorr } }, { name: 'staff corridor', bounds: { ...R.wcorr } }] };
   scenarios.kitView = WAREHOUSE_KITVIEW;
-  scenarios.doorNames = [{ door: 'lb', name: 'locker room to break room door' }, { door: 'p_s', name: 'plant room door' }, { door: 'l_s', name: 'locker room door' }, { door: 'b_s', name: 'break room door' }];   // (doorNames: what a row calls the doors no room of the level names — rust/game_rules/src/doornames; no bearing in a name)
+  scenarios.doorNames = [{ door: 'lb', name: 'locker room to break room door' }, { door: 'p_s', name: 'plant room door' }, { door: 'l_s', name: 'locker room door' }, { door: 'b_s', name: 'break room door' }];   // (doorNames: what a row calls the doors no room of the level names — rust/game_rules/src/speech/doornames.rs; no bearing in a name)
   return { level, scenarios, groups: trace.groups, surfaces };
 }
 

@@ -201,3 +201,13 @@ fn a_levels_leaves_are_made_of_their_paint() {
     let one = changed("killhouse.json", "enamel", &|l| *member(l, "name") = Json::Str("white-roof".into()));
     is(one.to_str().unwrap(), "Enamel", "Enamel", "");        // a row with one word: every leaf, the ones with old paint too
 }
+
+/// A level file's most (game::levelfit, what `faults.rs` holds it to) is what the game's lists have room for.
+#[test]
+fn a_level_may_have_what_the_game_has_room_for() {
+    let c = game::levelfit::level_caps();
+    for (name, most, room) in [("doors", c.doors, sim::doors_cap(0)), ("things", c.things, sim::props_cap(0)), ("parts", c.parts, sim::props_cap(3)), ("fixtures", c.fixtures, sim::lights_cap(0)), ("lamps", c.lamps, sim::lights_cap(1)),
+        ("beacons", c.beacons, sim::lights_cap(2)), ("cameras", c.cameras, sim::lights_cap(3)), ("lasers", c.lasers, sim::lights_cap(4))] {
+        assert_eq!(most, room as f64, "{name}");
+    }
+}

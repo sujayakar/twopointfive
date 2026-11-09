@@ -128,11 +128,37 @@ fn copy_tree(from: &Path, to: &Path) -> std::io::Result<()> {
     Ok(())
 }
 
+/// A file outside rust/ that a source includes (a test that reads the page's settings) goes into the copy at the same place from the root.
+fn copy_includes(root: &Path, scratch: &Path) -> Result<(), String> {
+    let mut all = Vec::new();
+    crate::dead::rs_files(&root.join("rust"), &mut all);
+    let root = root.canonicalize().map_err(|e| e.to_string())?;
+    for p in all {
+        let Ok(t) = std::fs::read_to_string(&p) else { continue };
+        for word in ["include_str!(\"", "include_bytes!(\""] {
+            for (at, _) in t.match_indices(word) {
+                let rest = &t[at + word.len()..];
+                let Some(end) = rest.find('"') else { continue };
+                let Ok(file) = p.parent().unwrap().join(&rest[..end]).canonicalize() else { continue };
+                let Ok(rel) = file.strip_prefix(&root) else { continue };
+                if rel.starts_with("rust") {
+                    continue;
+                }
+                let dest = scratch.join(rel);
+                std::fs::create_dir_all(dest.parent().unwrap()).map_err(|e| e.to_string())?;
+                std::fs::copy(&file, &dest).map_err(|e| format!("cannot copy {}: {e}", file.display()))?;
+            }
+        }
+    }
+    Ok(())
+}
+
 /// Write the private copy under `scratch/rust`.
 pub fn prep(root: &Path, scratch: &Path) -> Result<String, String> {
     let to = scratch.join("rust");
     let _ = std::fs::remove_dir_all(&to);
     copy_tree(&root.join("rust"), &to).map_err(|e| format!("cannot copy rust/ to {}: {e}", to.display()))?;
+    copy_includes(root, scratch)?;
     let lay = crate::layout::find(root)?;
     let mut said = Vec::new();
     let mut n = 0;

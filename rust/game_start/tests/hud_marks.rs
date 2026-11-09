@@ -1,4 +1,4 @@
-//! WHAT THE HUD MARKS AND DRAWS OF THE AIM (rust/game_rules/src/view/marks.rs): which men the fog hides from a seat's team, what stands over each man, the last sightings, the grenades and
+//! WHAT THE HUD MARKS AND DRAWS OF THE AIM (rust/game_rules/src/tick/view/marks.rs): which men the fog hides from a seat's team, what stands over each man, the last sightings, the grenades and
 //! the cameras, the meters, the ring and the arc. The HUD reads these and works nothing out; a test here holds what it is told to what the game says.
 use game::game::{GuardState, SlotKind, ThrowKind};
 use game::view::{HeadTone, RingOn, TickView};

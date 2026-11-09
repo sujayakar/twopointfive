@@ -1,6 +1,5 @@
 // THE SCORE, LEVEL BY LEVEL. The maintainer, 10-15: "we should curate the music for each level, not do it randomly". So every level has a short list of the score's pieces
-// (pieces.ts) written down for it here — two: the one that opens it and the one that follows — and music.ts plays that list in its order instead of dealing from a
-// shuffled bag: the first piece opens the level when play begins (off the menu, or on a page that loads straight in), the second takes over once a piece has had
+// (pieces.ts) written down for it here — two: the one that opens it and the one that follows — and music.ts plays that list in its order: the first piece opens the level when play begins (off the menu, or on a page that loads straight in), the second takes over once a piece has had
 // MUSIC.minutes at a calm phrase end, and round again. A retry keeps the music it has. The theme is on no list: it is the main menu's alone.
 //   MUSIC.byLevel  the switch (pieces.ts): ON in the page, OFF in the module.
 //                  The listener's ears only: no rule reads it.

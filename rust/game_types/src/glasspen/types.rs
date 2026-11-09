@@ -1,6 +1,6 @@
 //! The types of `glasspen`.
 #![allow(unused_imports)]
-use crate::{Blank, bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default, Words)]
@@ -103,9 +103,6 @@ pub fn pane_types() -> Vec<String> { alloc::vec![String::from("annealed"), Strin
 
 /// (src/game/glasspen.ts:191 CROSS)
 pub const CROSS: f64 = 25.0;
-
-/// (src/game/glasspen.ts:191 LEG)
-pub const LEG: f64 = 9.0;
 
 /// (src/game/glasspen.ts:191 MAX_CROSS)
 pub const MAX_CROSS: f64 = 16.0;

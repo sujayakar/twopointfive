@@ -432,9 +432,9 @@ fn men_getting_off_a_grenade_leave_by_a_door_that_stands_open_and_not_a_shut_one
         let d = game::doors::doors_by_name(&p.g, "foot_gate").unwrap();
         let frame_x = p.g.dr[d].frame_centre[0];
         let marks = [[2.8, 22.75], [2.8, 20.75], [2.0, 23.45], [2.0, 20.05]];
-        p.g.dr[d].leaf.locked = false;
-        p.g.dr[d].leaf.latched = !open;
-        p.g.dr[d].leaf.angle = if open { 1.5 } else { 0.0 };
+        game::doors::door_set_locked(&mut p.g, d, false);
+        game::doors::door_set_latched(&mut p.g, d, !open);
+        game::doors::door_set_angle(&mut p.g, d, if open { 1.5 } else { 0.0 });
         for (i, &m) in ours.iter().enumerate() { p.man_stands(m, marks[i]); }
         p.run(0.05);
         for (i, &m) in ours.iter().enumerate() { p.man_stands(m, marks[i]); }
@@ -444,8 +444,8 @@ fn men_getting_off_a_grenade_leave_by_a_door_that_stands_open_and_not_a_shut_one
         let (mut latched, mut swung, mut there) = (true, 0.0f64, Vec::new());
         for _ in 0..(((FUSE + 0.5) * 60.0) as usize) {
             there = ours.iter().map(|&m| (m, p.at(m))).collect();
-            latched &= p.g.dr[d].leaf.latched;
-            swung = swung.max(p.g.dr[d].leaf.angle.abs());
+            latched &= game::doors::door_latched(&mut p.g, d);
+            swung = swung.max(game::doors::door_angle(&p.g, d).abs());
             p.frame();
             if p.g.stats.frag.bursts > bursts0 { break; }
         }

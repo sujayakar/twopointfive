@@ -1,6 +1,6 @@
 //! The types of `fogofwar`.
 #![allow(unused_imports)]
-use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -24,7 +24,6 @@ pub struct FogOfWar {
     pub fired_n: JsMap<u32, f64>,
     pub fired_at: JsMap<GuardId, f64>,
     pub fire_clock: f64,
-    pub shown: JsSet<GuardId>,
     pub recs: JsMap<GuardId, crate::fogofwar::Rec>,
     pub door_recs: JsMap<DoorId, crate::fogofwar::FogOfWarDoorRecsValue>,
     pub doors_held: f64,

@@ -22,39 +22,39 @@
 
 /** what a round knocks out of a thing, and the class a wall of it is to the wall engine, a round and a charge */
 export type Surf = 'metal' | 'plastic' | 'glass' | 'wood' | 'cardboard' | 'drywall' | 'concrete' | 'carpet' | 'fabric' | 'foliage';
-/** how a blast breaks a piece of furniture (rust/game_rules/src/furnblast FURN_BREAK has a row a class) */
+/** how a blast breaks a piece of furniture (rust/game_rules/src/breakage/furnblast.rs FURN_BREAK has a row a class) */
 export type BreakClass = 'wood' | 'board' | 'metal' | 'hard' | 'soft';
-/** lying snow, by how trodden it is (render/snowField.ts, rust/game_rules/src/snow_bog) */
+/** lying snow, by how trodden it is (render/snowField.ts, rust/game_rules/src/air/snow_bog.rs) */
 export type SnowKind = 'snow' | 'snowPacked' | 'snowOld';
 
 /** WHAT A MATERIAL DOES: every column a rule reads. An absent flag is false; an absent word is none. */
 export interface Does {
-  /** a round's hit (rust/game_rules/src/particle_fx), how tough a wall of it is (rust/game_rules/src/wallbreak), what a round goes through (rust/game_rules/src/wallpen), what a charge is told (rust/game_rules/src/wallcharge) */
+  /** a round's hit (rust/game_rules/src/breakage/particle_fx.rs), how tough a wall of it is (rust/game_rules/src/breakage/wallbreak), what a round goes through (rust/game_rules/src/guns/wallpen.rs), what a charge is told (rust/game_rules/src/entries/wallcharge) */
   surf: Surf;
-  /** how a blast breaks furniture of it (rust/game_rules/src/furnblast, winbars) */
+  /** how a blast breaks furniture of it (rust/game_rules/src/breakage/furnblast.rs, winbars) */
   breaks: BreakClass;
-  /** sheet steel on a frame: a cabinet or a locker of it comes apart as sheets and a carcass (rust/game_rules/src/furnblast steel) */
+  /** sheet steel on a frame: a cabinet or a locker of it comes apart as sheets and a carcass (rust/game_rules/src/breakage/furnblast.rs steel) */
   steel?: true;
-  /** the wall engine's partitions (rust/game_rules/src/wallbreak): 'board' = a plasterboard wall where it stands full height, low cover where it does not; 'screen' = a
+  /** the wall engine's partitions (rust/game_rules/src/breakage/wallbreak): 'board' = a plasterboard wall where it stands full height, low cover where it does not; 'screen' = a
    *  cubicle's partition, a full wall the same way and, thin and low, cloth on a frame */
   wall?: 'board' | 'screen';
-  /** plasterboard to a round: it goes through a thin run of it under a roof (rust/game_rules/src/wallpen). A pale thing of no row is nobody's plasterboard */
+  /** plasterboard to a round: it goes through a thin run of it under a roof (rust/game_rules/src/guns/wallpen.rs). A pale thing of no row is nobody's plasterboard */
   board?: true;
-  /** low cover the wall engine breaks, and furniture a blast takes where it is a panel or a small carton (rust/game_rules/src/wallbreak, furnblast) */
+  /** low cover the wall engine breaks, and furniture a blast takes where it is a panel or a small carton (rust/game_rules/src/breakage/wallbreak, furnblast) */
   cover?: 'wood' | 'cardboard';
-  /** the building, not its furniture: a blast leaves it standing and its mouth throws none of it (rust/game_rules/src/furnblast) */
+  /** the building, not its furniture: a blast leaves it standing and its mouth throws none of it (rust/game_rules/src/breakage/furnblast.rs) */
   struct?: true;
-  /** … but low down it is a counter or an appliance, which the mouth of a hole does throw (rust/game_rules/src/furnblast) */
+  /** … but low down it is a counter or an appliance, which the mouth of a hole does throw (rust/game_rules/src/breakage/furnblast.rs) */
   counter?: true;
-  /** a dark casing: a screen's housing, a monitor's foot and neck are found by it (rust/game_rules/src/destruction index) */
+  /** a dark casing: a screen's housing, a monitor's foot and neck are found by it (rust/game_rules/src/breakage/destruction index) */
   casing?: true;
-  /** a small thin sheet of it lying on a desk or pinned to a wall is paper (rust/game_rules/src/destruction index) */
+  /** a small thin sheet of it lying on a desk or pinned to a wall is paper (rust/game_rules/src/breakage/destruction index) */
   paper?: true;
-  /** a thin slab of it is a screen or a television (rust/game_rules/src/destruction index) */
+  /** a thin slab of it is a screen or a television (rust/game_rules/src/breakage/destruction index) */
   screen?: true;
-  /** lying snow (rust/game_rules/src/snow_bog, air_sim, the blast's mouth, and the picture's snow field) */
+  /** lying snow (rust/game_rules/src/air/snow_bog.rs, air_sim, the blast's mouth, and the picture's snow field) */
   snow?: SnowKind;
-  /** THE WORD IT TAKES WHILE SOAKED, for the one slab the weather soaks in place (the lot: rust/game_rules/src/weather). Nothing is kept: whoever asks what a round
+  /** THE WORD IT TAKES WHILE SOAKED, for the one slab the weather soaks in place (the lot: rust/game_rules/src/air/weather.rs). Nothing is kept: whoever asks what a round
    *  knocks out of the lot while the ground is wet is answered from this (doesWet below). Absent = the same wet as dry. As measured: wet tarmac sparks. */
   wet?: string;
 }
@@ -119,8 +119,6 @@ export const DOES_DEFAULT: DoesWord = 'unnamed';
 /** word → its `does`, made once from the table and never written again */
 const ROWS: ReadonlyMap<string, Does> = new Map(Object.entries(MATERIALS as Record<string, Material>).flatMap(([w, m]): [string, Does][] => m.does ? [[w, m.does]] : []));
 const DEFAULT: Does = ROWS.get(DOES_DEFAULT)!;
-/** every word that has a `does`, in the table's order */
-export const DOES_WORDS: readonly string[] = [...ROWS.keys()];
 export const doesWordOk = (v: unknown): v is DoesWord => typeof v === 'string' && ROWS.has(v);
 /** the columns of a word (the default row's for a word the table does not have: a file opened leniently can carry any string) */
 export const doesOfWord = (w: string | undefined): Does => (w !== undefined && ROWS.get(w)) || DEFAULT;

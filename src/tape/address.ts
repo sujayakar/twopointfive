@@ -13,7 +13,7 @@ export const visitWord = (k: string): boolean => VISIT_FLAGS.includes(k);
 /** the visit's words on an address, pair by pair in the list's order (a word can stand more than once: the look page's rows) */
 export const visitPairs = (q: URLSearchParams): [string, string][] => VISIT_FLAGS.flatMap(k => q.getAll(k).map(v => [k, v] as [string, string]));
 /** keys of the tape's query that are this visit's and not the run's (the tape's seed is said by its recipe) */
-const NOT_THE_RUNS = ['paused', 'mute', 'quality', 'seed', 'pick', 'loadout', 'noreplay', 'hud', 'oldsounds', 'newsounds', 'onetheme', 'shuffle', 'soundlanes', PLAYTAPE, 'at', 'player', 'net', 'netgame', 'netkey'];
+const NOT_THE_RUNS = ['paused', 'mute', 'quality', 'seed', 'pick', 'loadout', 'noreplay', 'hud', 'oldsounds', 'newsounds', 'soundlanes', PLAYTAPE, 'at', 'player', 'net', 'netgame', 'netkey'];
 /** THE SENDING WORDS (cloud/cloud.ts: whether this browser sends, and what) are the viewer's, not the run's — a tape recorded against one backend does not
  *  point the page that replays it there, and a viewer's `?cloud=0` stays on the replay's address — with ONE thing kept from the tape: its OFF, where the
  *  viewer's address says nothing of that word (the map viewer's road here carries no words, and a visit that did not send must not start sending on its

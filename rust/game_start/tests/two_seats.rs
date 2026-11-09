@@ -275,7 +275,7 @@ fn a_hand_at_work_says_what_the_work_is_for_either_seat() {
     for s in SEEDS {
         for seat in 0..2 {
             let (mut p, _) = two(s);
-            for d in p.g.doors.list.clone() { p.g.dr[d].leaf.locked = false; }
+            for d in p.g.doors.list.clone() { game::doors::door_set_locked(&mut p.g, d, false); }
             p.run(0.3);
             let sn = p.g.seats[seat];
             let th = game::workthings::work_things_things(&p.g, &game::seats::seat(&p.g, sn)).into_iter().find(|x| x.kind == game::workthings::WorkThingKind::Breaker).expect("the office has a breaker");
