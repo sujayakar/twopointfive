@@ -1758,3 +1758,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   pushed half a metre out of it on the first frame. It is (19.5, 13.4) now, watching the cubicles' first doorway off the corridor. NOT BACK IN THE CONFERENCE ROOM: with his mark on its floor the room
   has a man at home and one door he can wedge, and `levels second-way office` is red (a shut cell had hidden it). A man goes back there when the room has a second way in: a walk-through pane in its
   glass is the mend the hall and the kill house have. Nobody has played it.
+- **The old game's level checks are out** (2026-11-09; `levels` has five questions more). WHAT HOLDS WHAT: second-way, marksight, walked and stack-marks are `levels second-way|sight|walked|stacks` (above);
+  scenario-level-probes' data part, quiet-check, map-check's structure and nav, lived-check's points and one floor, and the lint's walk-grid lines are `levels stands` (every mission the file names
+  started, the game's own words on its block, spawn, objectives, routes, a floor under every cell) with `levels doors`; door-size is `levels doors` (311 leaves, 5 and 5 doorways, as it read them);
+  wallfurn's held places are `levels charges` (30 levels, every count its file's: `tools/levels/counts/charges`); level-names is `levels names`; ownroofs' ground is `levels rain` (20 levels, four
+  before). The lint keeps what reads the file alone (its findings on every level are what they were). `level-needs --run` asks them; its `kit` need is out with the old game's kit tables. NOTHING HOLDS,
+  from today: a level's response block against its built floor (response_team.rs has the team's rules), a level's own cards and wall charges as staged (issue, wallissue), the promise that a place
+  furniture stands behind is holed (wallfurn), the kit listing, lived things off being the level as it was (the switch has no off in the new game), a storm's wind and wetness by the level's roofs.

@@ -752,7 +752,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     // map's edge. What a farm leaves outside its own wall, every piece of it the look's kit (src/scene/gwotKit.ts through the office kit's own add; the twin
     // keeps a palette paint as it is) and EVERY PIECE OUT AT THE STRIP'S OUTER EDGE, none at the wall's foot. Two things live at that foot and a pile there
     // takes them away: a place to set a wall charge (the squad breaches this wall from its starts: two piles on the north wall took 17 of its 891 places,
-    // tools/qa/wallfurn-check.ts) and the defenders' way round, which hugs the wall (below). The middle of each strip is the walk to a gate and stays bare,
+    // levels charges) and the defenders' way round, which hugs the wall (below). The middle of each strip is the walk to a gate and stays bare,
     // and so does the ground the four stand on. Only things that stand square or round: a drum on its side and a bush were tried and read, from
     // the opening frame, as an orange crate and a dark box (the kit's lying and leafy pieces are boxes still). Colour: none of its own — wood, stone, rubber
     L.room('outside');

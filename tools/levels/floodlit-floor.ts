@@ -12,7 +12,7 @@
 // at 4 the dark cost 11 teammates of 96 over 24 shipped seeds, at 6 it costs 34, at 8 38, and the yard taken lit costs 54 and a third of the runs). No emergency beacons. The MOON is an
 // overcast night's 0.04: the page's meter counts it (probe.wgsl sums kind-2 lights) where the headless stand-in does not, and at the kit's 0.9 the yard
 // with the mains out read about half lit to a bare eye there (floodlit-check asks nvg.ts nvgPlaceLight, which counts the moon, for that reason).
-// CHECKED WITH THE FOUR ONLY: bun run tools/qa/scenario-level-probes.ts levels/floodlit.json --only data,four --seeds 3,4,5,6,7,8 — the level is not tuned
+// CHECKED WITH THE FOUR ONLY: levels stands floodlit --only data,four --seeds 3,4,5,6,7,8 — the level is not tuned
 // for a pair (a pair crossing the lit yard is wiped on most of that probe's seeds; that is the level's point, not a fault to tune away). WHEN THIS WAS
 // WRITTEN the probe's default seeds were 1,2,3 and seed 2 was red with the four: the last defender left by the store's back door and stood in the dark
 // strip east of the building, and that probe's driver has no hunt (it ran to its time cap with one teammate up). playthrough.ts's commander hunts him:
