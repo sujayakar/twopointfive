@@ -11,6 +11,7 @@ A small WebGPU renderer, from scratch, with no dependencies: one world, one cloc
     node lab/tools/card.cjs lab/tools/poison.json --guards 3           # what the checks cost
 
     node lab/tools/card.cjs lab/tools/detail.json --detail             # how much of the reference's detail is there, by size in pixels, and how far off from dark to bright
+    node lab/tools/kept.cjs lab/tools/kept/last1.json                 # ways of keeping light, against paths, by time, memory and settling (notes/kept.md)
     node lab/tools/card.cjs lab/tools/table.json --table               # the kept light alone, against paths, room by room
     node lab/tools/card.cjs lab/tools/steady.json --steady             # what shimmers, what is off in motion
     node lab/tools/card.cjs lab/tools/steady.json --settle             # frames until right again after a turn, after doors
