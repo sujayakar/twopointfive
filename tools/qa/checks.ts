@@ -10,9 +10,9 @@ type Group = 'picture' | 'shaders' | 'page' | 'menus' | 'sound' | 'levels' | 'wo
 type Row = readonly [file: string, group: Group, ...args: string[]];
 const ROWS: readonly Row[] = [
   ['bouncewalls-check.ts', 'picture'], ['cast-probes.ts', 'picture'], ['charmats-probes.ts', 'picture'], ['floor-order-check.ts', 'picture'], ['frame-layout.ts', 'picture'],
-  ['highlights-check.ts', 'picture'], ['huesplit-check.ts', 'picture'], ['kept-check.ts', 'picture'], ['ladder-replay.ts', 'picture', '--selftest'], ['lookcells-check.ts', 'picture'],
+  ['highlights-check.ts', 'picture'], ['huesplit-check.ts', 'picture'], ['kept-check.ts', 'picture'], ['lookcells-check.ts', 'picture'],
   ['lookexpo-check.ts', 'picture'], ['lookgrade-check.ts', 'picture'], ['lookmaps-check.ts', 'picture'], ['lookunits-check.ts', 'picture'], ['lookveil-check.ts', 'picture'], ['lookworkers-check.ts', 'picture'],
-  ['materials-probes.ts', 'picture'], ['passtimer-check.ts', 'picture'], ['perf-probes.ts', 'picture'], ['portal-check.ts', 'picture'], ['quality-plan.ts', 'picture'], ['rainscale-check.ts', 'picture'],
+  ['materials-probes.ts', 'picture'], ['passtimer-check.ts', 'picture'], ['perf-probes.ts', 'picture'], ['portal-check.ts', 'picture'], ['quality-check.ts', 'picture'], ['rainscale-check.ts', 'picture'],
   ['rainwalls-check.ts', 'picture'], ['reflup-check.ts', 'picture'], ['rolled-check.ts', 'picture'], ['sdfrig-probes.ts', 'picture'], ['sharpcap-check.ts', 'picture'], ['smokeline-check.ts', 'picture'],
   ['smokelook-check.ts', 'picture'], ['splitrays-check.ts', 'picture'], ['steadybounce-check.ts', 'picture'], ['sunglint-check.ts', 'picture'],
   ['sweep-ir-check.ts', 'picture'],

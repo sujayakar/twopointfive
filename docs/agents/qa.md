@@ -964,10 +964,10 @@ but synthetic writes still work.
   address it is how the visit OPENS: a tier or Auto picked in Options afterwards is the player's, and Reset puts the defaults back under the address's
   words. With the ladder off the page has no frame rate to hold, so outside a benchmark the even pace has no target and the page draws every display frame
   (a pinned tier with the row off always did; a benchmark draws every frame anyway). The kit view's frame is opened without the word (it is pinned to a
-  tier and its pacer counts on its ladder), the viewer reads the address by the same reader, and `ladder-replay.ts` replays a take with the row as the take
+  tier and its pacer counts on its ladder), the viewer reads the address by the same reader, and `quality-check.ts` replays a take with the row as the take
   had it. Asked for by the look's join to read 'within a tenth of the GPU time with the look off'; whether a machine HOLDS 60 is still read on a run
   without the word. `bench-check` has the word on both addresses, the page's wiring (one reader of the two words, before a frame is drawn; Reset and the
-  viewer by the same reader) and the card's lines (a whole run each, the unnamed tier among them); `ladder-replay.ts --selftest` plays a 36 fps fight with
+  viewer by the same reader) and the card's lines (a whole run each, the unnamed tier among them); `quality-check.ts` plays a 36 fps fight with
   the word under hold 60 and as now, through a pinned High and through auto with sharp direct its own to shed and a size left behind, and then the page's
   own order (a ladder made from what a browser remembers, the address read, a hand's pick, Reset): nothing moves and nothing is written as the machine's
   choice; `ADAPT_BREAK=1` leaves the word off and the seven lines that play it fail. Run on a cloud NVIDIA card (two benchmark runs, every
