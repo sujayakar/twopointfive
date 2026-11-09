@@ -46,7 +46,7 @@ function fork(p: Put, fine: number): () => void {
     { const b = B(1), m0 = mix(b[5]!, b[6]!, 0.08), m2 = add(m0, [0.062, 0.150, 0.012]), k = norm([-0.10, 0.02, -1]), mr: Rot = [norm(cross(k, [0, 1, 0])), k, cross(norm(cross(k, [0, 1, 0])), k)]; path(p, fine === 0 ? [m0, add(m0, [0.012, 0.070, 0.020]), m2] : [m0, m2], 0.0052, M.chrome!, ONE); p.add({ at: m2, half: [0.056, 0.018, 0.044], rot: mr, mat: M.steel!, tint: ALLOY, quad: [1 / 0.056 ** 2, 1 / 0.018 ** 2, 1 / 0.044 ** 2, 0], planes: [[[0, 1, 0], 0.004]] }); if (fine === 0) p.add({ at: add(m2, mul(k, 0.004)), half: [0.0525, 0.0022, 0.0405], rot: mr, mat: M.mirror!, tint: ONE, quad: [1 / 0.0525 ** 2, 0, 1 / 0.0405 ** 2, 0] }); }
     if (fine === 0) both(s => { const at = (a: number, x: number): V3 => add(FRONT, [x, 0.300 * Math.sin(a), 0.300 * Math.cos(a)]); p.bar(add(FRONT, [s * 0.080, 0, 0]), at(2.70, s * 0.047), 0.0042, 0.0041, M.steel!, ONE); p.bar(at(0.95, s * 0.047), leg(0.20, s * 0.066), 0.0042, 0.0041, M.steel!, ONE); });
   });
-  return () => { void spin; steer.rot = turn(D, angle.steer); spin.rot = rotX(angle.spin); p.pose(); };
+  return () => { steer.rot = turn(D, angle.steer); spin.rot = rotX(angle.spin); p.pose(); };
 }
 const angle = { steer: 0, spin: 0 }, AT_REST = 0.27;
 /** all levels move as one: the bars swing to and fro, the wheel runs on */
@@ -115,7 +115,7 @@ export const moped: ObjectKind = { name: 'moped', title: 'Moped', make: (): Made
   name: 'moped', title: 'Moped', size: [0.70, 1.17, 1.78], on: 'floor', close: { at: [0.05, 0.50, 0.02], far: 5.5 }, read: 0, moves: { kind: 'works' }, crowd: 49,
   levels: [
     { shape: 'pieces', error: 0, less: '', put: p => put(p, 0) },
-    { shape: 'pieces', error: 0.012, less: 'cables, fins, coils, stays, the small bright parts', put: p => put(p, 1) },
-    { shape: 'pieces', error: 0.030, less: 'rims, levers, pipes: the frame, the wheels\' rings with three bars across, saddle, engine, bars', put: p => put(p, 2) },
+    { shape: 'pieces', error: 0.012, less: 'fins, coils, stays, the small bright parts', put: p => put(p, 1) },
+    { shape: 'pieces', error: 0.030, less: 'rims, levers, cables: the frame, the wheels\' rings with three bars across, saddle, engine, bars', put: p => put(p, 2) },
   ],
 }) };
