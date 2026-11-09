@@ -17,7 +17,7 @@ fn wx_read(g: &Game) -> &'static ::sim::weather::Weather { ::sim::weather::of_re
 /// The skeleton has no console, so it says nothing yet (notes, Skeleton).
 fn seam_console_warn(_line: String) {}
 
-/// A box's row (Box.* in the TypeScript): the one seam left. Vec<BoxId>` and no table of Box rows; where the table comes back this is the one line `&mut g.<table>[b]`.
+/// a box's row
 fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 /// `g.level.boxes` as IDs: that list and `g.col.boxes` are one array in the TypeScript, statics appended later included. `level.boxes` is not a field in Rust.

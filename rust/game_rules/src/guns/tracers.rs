@@ -9,7 +9,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 // ---------------------------------------------------------------- what stands between this file and a box's row
 
-/// A box's row. Vec<BoxId>` and no table of Box rows, while index/properties.txt says `g.col.boxes[id].c`. Once it is the table, the body is `&mut g.col.boxes[b]`.
+/// a box's row
 #[cfg(not(test))]
 fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 /// makeBox and thinNote, here so a test of this file's own arithmetic stands on no stub (a test's versions are at the foot of the file).

@@ -7,8 +7,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 // ---------------------------------------------------------------- seam: what skeleton 5 still cannot say (see notes.md)
-/// `b.…` for any box: a box's row. Vec<BoxId>` and no table of Box rows, while the index says `g.col.boxes[id].c`. When the table comes this
-/// body is the one line `&mut g.<table>[b]`; every read and write of a box in this file goes through here.
+/// a box's row
 fn seam_box<'g>(g: &'g mut Game, b: impl Into<AnyBoxId>) -> &'g mut crate::scene_boxes::Box { &mut g.tab[b.into()] }
 
 // ---------------------------------------------------------------- small private helpers

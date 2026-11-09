@@ -40,7 +40,7 @@ fn drive_kind_num(k: crate::doors::DoorDriveKind) -> f64 {
     }
 }
 
-/// A box's row. Vec<BoxId>` and no table of Box rows, while the index says `g.col.boxes[id].c`. Once the table is back, the body is that row (and a leaf is a made box: notes)
+/// a box's row
 fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 pub fn door_angle(g: &crate::game::Game, id: DoorId) -> f64 { col(g, id, ::sim::doors::ANGLE) }

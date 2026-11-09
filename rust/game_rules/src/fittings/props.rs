@@ -60,7 +60,7 @@ fn turn_row(c: &mut sim::props::Props, r: usize, y: f64) {
     c.yaw[r] = y;
 }
 
-/// A box's row. Vec<BoxId>` and no table of Box rows: once the table is back the body is that row
+/// a box's row
 fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 pub fn prop_x(g: &crate::game::Game, id: PropId) -> f64 {

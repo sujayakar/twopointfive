@@ -12,7 +12,7 @@ fn mem(at: f64) -> f64 {
     unsafe { core::ptr::read((at as usize * 8) as *const f64) }
 }
 
-/// A box's row. Vec<BoxId>` and no table of Box rows, while the index says `g.col.boxes[id].c`. Once the table is back, the body is that row.
+/// a box's row
 fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 /// `DOOR_SOUNDS[n]`: the module's number is a place in that list, and the word is the variant.
