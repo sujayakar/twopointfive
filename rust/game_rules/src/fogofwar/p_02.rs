@@ -219,27 +219,21 @@ pub fn fog_of_war_pass(g: &mut crate::game::Game, _dt: f64) {
     }
     let mut lines: JsMap<GuardId, bool> = JsMap::new();
     fog_of_war_hand_eyes(g, &eyes);
+    let hazy = g.k.fog.smoke > 0.0 && crate::sense::hazy(g);
     for &gd in men.iter() {
-        let dead = is_dead(g, gd);
         if held == Some(gd) || held_too == Some(gd) { lines.set(gd, true); continue; }
-        if dead {
-            let seen = fog_of_war_sees(g, &eyes, IN_ORDER, 1.0, gd, None) >= ONE_EYE;
+        let (at, chest) = if is_dead(g, gd) { (body_at(g, gd), None) } else { let c = chest_of(g, g.gd[gd].ch); (c, Some(c)) };
+        if !hazy {
+            let seen = fog_of_war_sees(g, &eyes, IN_ORDER, 1.0, gd, chest) >= ONE_EYE;
             lines.set(gd, seen);
             continue;
         }
-        let c = g.gd[gd].ch;
-        let chest = chest_of(g, c);
-        if g.k.fog.smoke <= 0.0 || !crate::sense::smoky(g) {
-            let seen = fog_of_war_sees(g, &eyes, IN_ORDER, 1.0, gd, Some(chest)) >= ONE_EYE;
-            lines.set(gd, seen);
-            continue;
-        }
-        // there is smoke somewhere: he is in view of any eye with a clear line to him that the smoke lets through, the nearest asked first, and the rest only
-        // where that one has smoke before it
+        // there is something in the air: he is in view of any eye with a clear line to him that the air lets through, the nearest asked first, and the rest only
+        // where that one has too much of it before it
         let mut near: Vec<usize> = Vec::with_capacity(eyes.len());
         let mut near_d: Vec<f64> = Vec::with_capacity(eyes.len());
         for (ei, e) in eyes.iter().enumerate() {
-            let d = m::pow(e.pos[0] - chest[0], 2.0) + m::pow(e.pos[2] - chest[2], 2.0);
+            let d = m::pow(e.pos[0] - at[0], 2.0) + m::pow(e.pos[2] - at[2], 2.0);
             let mut k = near.len();
             near.push(0); near_d.push(0.0);
             while k > 0 && near_d[k - 1] > d { near[k] = near[k - 1]; near_d[k] = near_d[k - 1]; k -= 1; }
@@ -249,10 +243,10 @@ pub fn fog_of_war_pass(g: &mut crate::game::Game, _dt: f64) {
         for (k, &ei) in near.iter().enumerate() { order |= (ei as i32).wrapping_shl(4 * k as u32); }
         let (mut clear, mut seen) = (0, false);
         for want in [1.0, eyes.len() as f64] {
-            let r = js::to_u32(fog_of_war_sees(g, &eyes, order as f64, want, gd, Some(chest)));
+            let r = js::to_u32(fog_of_war_sees(g, &eyes, order as f64, want, gd, chest));
             let had = clear;
             clear = r >> 28;
-            seen = (had..clear).any(|k| crate::sense::smoke_between(g, eyes[((r >> (4 * k)) & 15) as usize].pos, chest) >= g.k.fog.smoke);
+            seen = (had..clear).any(|k| fog_of_war_clear(g, eyes[((r >> (4 * k)) & 15) as usize].pos, at));
             if seen || clear == 0 { break; }
         }
         if clear > 0 && !seen { g.fog_of_war.stats.smoke_hid += 1.0; }
@@ -268,7 +262,7 @@ pub fn fog_of_war_pass(g: &mut crate::game::Game, _dt: f64) {
             match g.fog_of_war.recs.get(gd) { Some(r) if r.seen => {}, _ => continue }
             let c = g.gd[gd].ch;
             let chest = chest_of(g, c);
-            if fog_of_war_line_to_man(g, *eye, gd, chest) {
+            if fog_of_war_eye_on_man(g, *eye, gd, chest) {
                 let now = g.time;
                 let wt = g.fog_of_war.recs.get(gd).unwrap().wand_t;
                 if match wt { None => true, Some(w) => now - w > 1.0 || now < w } { g.stats.wand.marked += 1; }
@@ -484,7 +478,7 @@ pub fn fog_of_war_tell_calls(g: &mut crate::game::Game, dt: f64) {
     for &h in foes.iter() {
         if !g.fog_of_war.recs.get(h).map_or(false, |r| r.seen) { continue; }
         let chest = chest_of(g, g.gd[h].ch);
-        if fog_of_war_line_to_man(g, me, h, chest) { g.fog_of_war.known_t.set(h, now); }
+        if fog_of_war_eye_on_man(g, me, h, chest) { g.fog_of_war.known_t.set(h, now); }
     }
     if now - g.fog_of_war.last_call < g.k.fog.call_gap { return; }
     let mut mates: Vec<GuardId> = Vec::new();
@@ -501,7 +495,7 @@ pub fn fog_of_war_tell_calls(g: &mut crate::game::Game, dt: f64) {
         for &h in foes.iter() {
             if !call_fresh(g, h, now) { continue; }
             let chest = chest_of(g, g.gd[h].ch);
-            if !fog_of_war_line_to_man(g, e, h, chest) { continue; }
+            if !fog_of_war_eye_on_man(g, e, h, chest) { continue; }
             call_say(g, gd, h, crate::fogofwar::FogOfWarCallWordsKind::Contact, chest, now);
             return;
         }
@@ -561,14 +555,30 @@ pub fn fog_of_war_line_to_man(g: &mut crate::game::Game, e: crate::fogofwar::Fog
     !fog_of_war_sight_blocked(g, e.pos, head)
 }
 
+/// Does the air between an eye and a point let it through: the smoke, the fog and the dust a man's own eyes are held to, at their bar.
+pub fn fog_of_war_clear(g: &mut crate::game::Game, eye: V3, p: V3) -> bool {
+    g.k.fog.smoke <= 0.0 || crate::sense::clear_between(g, eye, p) >= g.k.fog.smoke
+}
+
+/// One eye of the team's on one living man: a line to him, through air that lets it. (A lesson step's eye asks for the line alone: it is the picture's and not a man's.)
+fn fog_of_war_eye_on_man(g: &mut crate::game::Game, e: crate::fogofwar::FogEye, gd: GuardId, chest: V3) -> bool {
+    fog_of_war_line_to_man(g, e, gd, chest) && fog_of_war_clear(g, e.pos, chest)
+}
+
+/// Where a body is looked for: a hand's height over where it lies.
+fn body_at(g: &crate::game::Game, gd: GuardId) -> V3 {
+    let c = g.gd[gd].ch;
+    let hp = match g.ch[c].bones.get(crate::character::Bone::Hips) { Some(v) => *v, None => g.ch[c].pos };
+    [hp[0], m::max(hp[1], 0.0) + 0.3, hp[2]]
+}
+
 /// The eyes with a line to a man (`chest` given) or his body (None), one question to the module: how many × 2^28 + those eyes, four bits each. (FogOfWar.sees)
 pub fn fog_of_war_sees(g: &mut crate::game::Game, eyes: &[crate::fogofwar::FogEye], order: f64, want: f64, gd: GuardId, chest: Option<V3>) -> f64 {
     let pc = g.gd[gd].ch;
     let (a, b, kind): (V3, V3, f64) = match chest {
         Some(c) => (c, bone_or(g, pc, crate::character::Bone::Head, 1.6), if g.ch[pc].alive { 3.0 } else { 1.0 }),
         None => {
-            let hp = match g.ch[pc].bones.get(crate::character::Bone::Hips) { Some(v) => *v, None => g.ch[pc].pos };
-            let at = [hp[0], m::max(hp[1], 0.0) + 0.3, hp[2]];
+            let at = body_at(g, gd);
             (at, at, 0.0)
         }
     };
@@ -589,9 +599,7 @@ pub fn fog_of_war_hand_eyes(g: &mut crate::game::Game, eyes: &[crate::fogofwar::
 
 /// One eye on a body: a clear line to a hand's height over where it lies, inside the eye's field. (FogOfWar.eyeOnBody)
 pub fn fog_of_war_eye_on_body(g: &mut crate::game::Game, e: crate::fogofwar::FogEye, gd: GuardId) -> bool {
-    let c = g.gd[gd].ch;
-    let hp = match g.ch[c].bones.get(crate::character::Bone::Hips) { Some(v) => *v, None => g.ch[c].pos };
-    let at = [hp[0], m::max(hp[1], 0.0) + 0.3, hp[2]];
+    let at = body_at(g, gd);
     fog_of_war_in_field(g, e, at) && !fog_of_war_sight_blocked(g, e.pos, at)
 }
 
