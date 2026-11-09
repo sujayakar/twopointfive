@@ -254,18 +254,6 @@ fn wall_stands(g: &mut crate::game::Game, sw: &crate::lightswitch::WallSwitch) -
     }
 }
 
-/// A restart: the plates are found again on the level as dealt, and no fixture is a hand's. (lightswitch.ts lightSwitchReset)
-pub fn light_switch_reset(g: &mut crate::game::Game) {
-    g.m.lightswitch.states = None;
-    let targets = g.targets.clone();
-    for t in targets {
-        if crate::sim_lightshome::fixture_hand_off(g, t).is_some() {
-            let kind = crate::sim_lightshome::light_in().hand;
-            crate::sim_lightshome::light_home_in(g, kind, Some(t), Some(m::NAN), None, None, None);
-        }
-    }
-}
-
 // ---------------------------------------------------------------- the flip
 /// Are the room's lights on at the switch: any fixture of it switched on. (lightswitch.ts switchLit)
 pub fn switch_lit(g: &crate::game::Game, sw: &crate::lightswitch::WallSwitch) -> bool {
