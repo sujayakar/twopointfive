@@ -1,0 +1,68 @@
+[
+{
+"w": 960,
+"h": 540,
+"tick": 600,
+"samples": 300,
+"methods": [
+"denlin",
+"onelin"
+],
+"paths": 900,
+"name": "smoke night",
+"dist": 26,
+"hour": 21.5,
+"cut": 2.55,
+"look": [
+2,
+0.6,
+-1
+],
+"doors": 0.9,
+"smoke": [
+[
+0.5,
+0.02,
+1.5
+],
+[
+6.5,
+0.02,
+-3
+]
+]
+},
+{
+"w": 960,
+"h": 540,
+"tick": 600,
+"samples": 300,
+"methods": [
+"denlin",
+"onelin"
+],
+"paths": 900,
+"name": "smoke day",
+"dist": 30,
+"hour": 15,
+"cut": 2.55,
+"look": [
+0,
+0.6,
+0
+],
+"doors": 0.9,
+"smoke": [
+[
+0.5,
+0.02,
+1.5
+],
+[
+6.5,
+0.02,
+-3
+]
+]
+}
+]
