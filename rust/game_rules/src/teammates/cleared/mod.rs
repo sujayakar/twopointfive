@@ -1,5 +1,7 @@
 pub use ::game_types::cleared::types;
 pub use types::*;
+pub mod looked;
+pub use looked::*;
 use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
@@ -31,7 +33,7 @@ fn free(g: &mut Game, dc: &JsMap<crate::Num, DoorId>, x: f64, z: f64) -> bool {
 }
 
 /// The rooms of the level: a flood from the floor on either face of every door. Built once: a game has one nav grid, rebaked in place.   (cleared.ts ClearedRooms.build)
-fn cleared_rooms_build(g: &mut crate::game::Game) {
+pub fn cleared_rooms_build(g: &mut crate::game::Game) {
     if g.cleared.room_of_cell.is_some() { return; }
     let (w, h, cs) = (g.col.nav.w, g.col.nav.h, g.col.nav.cell);
     let dc = crate::guards::door_cells(g);
@@ -120,6 +122,7 @@ pub fn cleared_rooms_new(g: &crate::game::Game) -> crate::cleared::ClearedRooms 
 pub fn cleared_rooms_reset(g: &mut crate::game::Game) {
     crate::seenwalk::seen_reset(g);
     g.cleared.known_room.fill(0);
+    g.cleared.looked.clear();
     g.cleared.known = 0.0;
     g.cleared.last = -1.0;
     g.cleared.stats = crate::cleared::ClearedRoomsStats { round: 0.0, through: 0.0, face: 0.0, mouth: 0.0 };
@@ -157,7 +160,7 @@ pub fn cleared_rooms_has_floor(g: &mut crate::game::Game, d: DoorId, side: f64) 
 }
 
 /// The room a mark is in; a mark on a cell that is no room's is in every room a cell away.   (cleared.ts ClearedRooms.roomsOf)
-fn cleared_rooms_rooms_of(g: &mut crate::game::Game, p: V3) -> Vec<f64> {
+pub fn cleared_rooms_rooms_of(g: &mut crate::game::Game, p: V3) -> Vec<f64> {
     let r = cleared_rooms_room_at(g, p);
     if js::truthy(r) { return vec![r]; }
     cleared_rooms_build(g);
@@ -208,7 +211,7 @@ pub fn cleared_rooms_unknown_eyes(g: &mut crate::game::Game, step: f64) -> Vec<c
 }
 
 /// One of ours stands at `p`.   (cleared.ts ClearedRooms.mark)
-fn cleared_rooms_mark(g: &mut crate::game::Game, p: V3) {
+pub fn cleared_rooms_mark(g: &mut crate::game::Game, p: V3) {
     let r = cleared_rooms_room_at(g, p);
     if js::truthy(r) && !known_flag(g, r) {
         g.cleared.known_room[r as usize] = 1;
@@ -233,6 +236,7 @@ pub fn cleared_rooms_tick(g: &mut crate::game::Game) {
             cleared_rooms_mark(g, p);
         }
     }
+    look_over(g);
 }
 
 /// A walk's price list for nav.findPath: every cell of a room nobody of the team has been in is `dear`, bar the room he stands in and the room his mark is in; `also`: rooms dear whatever is known of them. None: nothing on this floor is dear for this walk.   (cleared.ts ClearedRooms.dearFor)

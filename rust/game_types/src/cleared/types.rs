@@ -18,6 +18,8 @@ pub struct ClearedRooms {
     pub seeds: JsMap<DoorId, [f64; 2]>,
     #[is(crate::cleared::ClearedRoomsStats { round: 0.0, through: 0.0, face: 0.0, mouth: 0.0 })] pub stats: crate::cleared::ClearedRoomsStats,
     pub known: f64,
+    /// a mark a nav cell: somebody of the team has looked it over (cleared/looked.rs)
+    pub looked: Vec<u8>,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]

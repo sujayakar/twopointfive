@@ -9,6 +9,8 @@ pub enum OpeningKind {
     Mouth,
     Gap,
     Rear,
+    /// floor of the room he is in that nobody has looked over
+    Floor,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -81,6 +83,7 @@ pub struct Cover {
     pub heading: JsMap<GuardId, f64>,
     pub rear: Option<CoverOpeningId>,
     pub rears: JsMap<GuardId, CoverOpeningId>,
+    pub floors: JsMap<GuardId, CoverOpeningId>,
     pub reads: JsMap<OrdersAssignmentId, crate::cover::CoverReadsValue>,
     pub kept: JsMap<GuardId, crate::cover::CoverKeptValue>,
     pub outs: JsMap<GuardId, crate::cover::CoverOutsValue>,
