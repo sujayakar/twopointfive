@@ -4,7 +4,7 @@
 // coat turns away, by Schlick's curve a twenty-first of what is left. White rooms are the judge: a hundredth too much a bounce is a tenth too bright in the end.)
 fn returns(s: Surf) -> vec3f { let f = coatF0(s); let r = s.rough; let a = f * (0.955 / (1.0 + 1.346 * pow(r, 3.67))) + vec3f(0.0476 * exp(-3.55 * r * r)); let lf = lum(f); return matteOf(s) * matteMean(s.kind, s.albedo) * (1.0 - lf - (1.0 - lf) / 21.0) + a; }
 fn sentBack(q: Surf, leaf: bool, j: vec2f, rd: vec3f) -> vec3f {
-  let c = cacheRead(q.x, select(q.ng, vec3f(0.0), leaf), j);
+  askPiece = select(q.piece, NOTHING, leaf); let c = cacheRead(q.x, select(q.ng, vec3f(0.0), leaf), j);
   if (leaf) { let a = (q.albedo + q.through) / PI; if (c.n > 0.0) { return a * c.E + leafPhase(q, rd) * frame.sunE.xyz * c.sun; } return a * (frame.sunE.xyz * 0.06 + skyLod(vec3f(0.0, 1.0, 0.0), 6.0) * 0.5); }
   if (c.n <= 0.0) { return vec3f(0.0); } return returns(q) / PI * (c.E + frame.sunE.xyz * max(dot(q.ng, frame.sunDir.xyz), 0.0) * c.sun);
 }

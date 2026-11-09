@@ -4,6 +4,8 @@
 //   (a round reads cells and writes fresh, which is then copied over: what an entry sees of another never depends on which ran first)
 //   cells[2s]    E.rgb, samples                        cells[2s+1]  its point, sun seen          norms[slot]  its normal, packed
 const SLOTS = 262144u; const REACH = 32u; const CELL = 0.32; const COARSE = 1.35; const FAR_CELL = 6.0;
+/** what a reader tells it beside where and which way: how wide the asking ray is, and the piece it stands on (other ways of keeping light may want them) */
+var<private> askWide: f32 = 1.0; var<private> askPiece: u32 = NOTHING;
 const EVERY_WAY = 0x80010003u;                                      // a normal that is none: foliage, which faces every way
 fn facing(n: vec3f) -> u32 { if (all(n == vec3f(0.0))) { return 6u; } let a = abs(n); if (a.x >= a.y && a.x >= a.z) { return select(1u, 0u, n.x > 0.0); } if (a.y >= a.z) { return select(3u, 2u, n.y > 0.0); } return select(5u, 4u, n.z > 0.0); }
 /** the building and its roof are kept finely; the city only coarsely, or it would fill the table by itself */

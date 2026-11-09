@@ -1,0 +1,1 @@
+@compute @workgroup_size(64) fn main(@builtin(global_invocation_id) id: vec3u) { let i = id.x + id.y * 2097152u; if (i >= SURFELS) { return; } let f = fresh[i]; if (f.w == 0u) { return; } fresh[i].w = 0u; let a = unpack2x16float(f.x); let b = unpack2x16float(f.y); surfels[3u * i + 1u] = vec4f(a, b.x, bitcast<f32>(f.z)); surfels[3u * i + 2u].x = b.y; }

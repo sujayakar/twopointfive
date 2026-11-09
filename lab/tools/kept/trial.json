@@ -1,0 +1,5 @@
+{"scene": "rooftop", "frames": {"truth": 96, "rest": 48, "wait": 400, "settle": 16}, "rounds": 2,
+ "views": [{"name": "night", "w": 1280, "h": 720, "tick": 600, "dist": 34, "hour": 21.5, "cut": 2.55, "look": [0, 0.6, 0], "doors": 0.8, "lamp": "blue"}],
+ "rest": ["none", "today", "patch", "patch direct=0", "patch levels=5 cell=0.16 flat=1 roam=1 spread=1", "faces", "faces direct=0", "probes step=1", "probes step=1 vis=1", "probes oct=0 step=1 vis=1", "near", "surfels", "net", "paths n=1", "paths n=3"],
+ "cost": ["none", "today", "patch", "patch direct=0", "patch levels=5 cell=0.16 flat=1 roam=1 spread=1", "faces", "faces direct=0", "probes step=1", "probes step=1 vis=1", "probes oct=0 step=1 vis=1", "near", "surfels", "net", "paths n=1", "paths n=3"],
+ "bands": ["today"], "settle": {"lamp": ["today", "faces"], "cold": ["today", "net"]}, "pictures": ["paths n=24 exact=1", "today", "faces", "probes step=1", "near", "surfels", "net"]}
