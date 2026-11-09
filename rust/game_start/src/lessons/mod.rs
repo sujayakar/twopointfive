@@ -83,11 +83,9 @@ impl Lesson {
         let mut down_for = 0.0;
         let ups_w = up_at;
         let script = Scripted::new(hands, async move { run(&own, t, pace, &wrote, &ups).await }).watched(move |p| {
-            // WHAT THE WHOLE RUN OWES, whichever line it is on: nobody stands nowhere, he is not down for long, the run has an end
+            // WHAT THE WHOLE RUN OWES, whichever line it is on (and `owes`, which the tests hold it to): he is not down for long, the run has an end
             let i = p.ask(|g| g.lesson.i) as usize;
             { let mut u = ups_w.borrow_mut(); if u.len() <= i { u.resize(i + 1, None); } if u[i].is_none() { u[i] = Some(p.t()); } }
-            let bad = p.ask(|g| g.guards.iter().find(|&&x| { let q = g.ch[g.gd[x].ch].pos; !(q[0] + q[1] + q[2]).is_finite() }).map(|&x| g.gd[x].callsign.clone()));
-            if let Some(who) = bad { p.failure(format!("a position that is no number on {}", who)); }
             let moved: Vec<String> = p.ask(|g| g.guards.iter().filter_map(|&x| {
                 let st = g.gd[x].state;
                 match guards.iter_mut().find(|w| w.0 == x) {
