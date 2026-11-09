@@ -19,6 +19,6 @@ export const ficus: ObjectKind = { name: 'ficus', title: 'Ficus in a pot', make:
   levels: [
     { shape: 'leaves', error: 0, less: '', put(p) { put(p, 1, true, 0); } },
     { shape: 'leaves', error: 0.02, less: 'three leaves of four (the fourth is twice as long), twigs', put(p) { put(p, 4, false, 0.004); } },
-    { shape: 'leaves', error: 0.05, less: 'fifteen leaves of sixteen, thin branches', put(p) { put(p, 16, false, 0.012, 1.035); } },
+    { shape: 'leaves', error: 0.05, less: 'fifteen leaves of sixteen, thin branches', put(p) { put(p, 16, false, 0.012, 1.048); } },
   ],
 }) };
