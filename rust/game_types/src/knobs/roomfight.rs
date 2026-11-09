@@ -68,8 +68,8 @@ pub struct RoomfightK {
     #[k(12.0)] pub preaim_deg: f64,
 }
 
-/// DRILLED DEFENDERS — hard on the night breach (difficulty.ts HARD.drilled → pressure.ts PRESSURE.drilled; record
-///  rebuild/hard-everywhere/round2-night-breach.md). One room, three men, no warning: the canister blinds all three and the room is taken in
+/// DRILLED DEFENDERS — hard on the night breach (difficulty.ts HARD.drilled → pressure.ts PRESSURE.drilled).
+///  One room, three men, no warning: the canister blinds all three and the room is taken in
 ///  two seconds, so nothing a defender could do smarter comes before he is shot. What is left is how a man takes a bang, and that is training — nerves only, no
 ///  reaction, aim or hit-point number is in it. A drilled man is blind exactly as long as anybody (combat.ts FLASH.secs, untouched) and breaks as often
 ///  (bangBreak, untouched); he is HALF AS SHAKEN — `shaken` × the seconds a stun canister doubles him over (FLASH.stagger 2.5‥1.0 s → 1.25‥0.5: combat.ts

@@ -1,4 +1,4 @@
-// The pure parts of the renderer perf / noise pass (docs/internal/perf-2026-08-10.md): the torch bounce card's geometry (a CPU twin of cards.wgsl's
+// The pure parts of the renderer perf / noise pass: the torch bounce card's geometry (a CPU twin of cards.wgsl's
 // lane 0), its energy bookkeeping (the cone-flux closed form the shader's 64 stratified samples estimate, and the 4-point quadrature the gather evaluates,
 // both against brute-force integration of the true spot profile on a wall), the card nomination (lights.ts cardSlotsFor), and the flag / settings table
 // (bits distinct, defaults off, the frame block sized for the card slots). The GPU halves are verified by measurement (the doc's protocol); this is what

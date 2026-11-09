@@ -276,7 +276,7 @@ const before = (p: ReturnType<typeof page>) => JSON.stringify([p.S, p.Q.current,
     const u1 = new URLSearchParams(searchOf(pg.went[0]));
     check(u1.get('benchrun') === '1' && SHADER_ROW_WORDS.every((w, i) => u1.get(w) === String((i + 1) % 2)), `and on the next scene's (${pg.went[0]})`);
     store.clear(); }
-  // …and the word for how a save's picture is taken: `?bench&savepic=0` against `?bench` is the pair that prices the wider canvas (docs/agents/qa.md), and with the
+  // …and the word for how a save's picture is taken: `?bench&savepic=0` against `?bench` is the pair that prices the wider canvas, and with the
   // word dropped at the first scene that pair was one run twice
   { store.clear(); const t3 = tab('?bench&savepic=0'); benchBegin(false, t3); const u3 = new URLSearchParams(searchOf(t3.went[0]));
     check(u3.get('savepic') === '0' && benchLegOfPage(tab(searchOf(t3.went[0])))!.leg.notes.every(n => !/played without/.test(n)), `the save picture's word is on the first scene's address, and no note says it was left behind (${t3.went[0]})`); store.clear(); }

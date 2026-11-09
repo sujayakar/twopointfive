@@ -1,7 +1,7 @@
 // THE WAREHOUSE — a big many-room floor for the four squad, in the Door Kickers mould: one racked hall with long lanes, a loading dock on its east side, and a
 // ring of small rooms (plant room, lockers, break room, tool cage, shipping office, two offices) off an L-shaped service corridor that runs round the hall's
 // north and west sides. The team starts OUTSIDE, in the dark off the south-west corner, and there is a way in on every face of the building.
-// A level generator in the scenario levels' shape (tools/levels/block.ts is what it was cut from; rebuild/scenario-levels/contract.md the how-to):
+// A level generator in the scenario levels' shape (tools/levels/block.ts is what it was cut from; docs/agents/levels.md the how-to):
 //   bun run tools/levels/export.ts warehouse [--check]     → levels/warehouse.json, with its `scenarios.roomClear` block
 //   page: ?levelFile=warehouse.json&roomclear&squad4       · headless: levels stands warehouse --only data,four
 //
@@ -27,7 +27,7 @@
 // THE HALL: two rows of pallet racking run east-west (A north, B south), each in two lengths with a 2 m cross gap, the gaps staggered. Three lanes of 3 to 4 m run
 // the hall's length: the dock doors and the west door look straight down them. A racking bay is loaded full (nobody sees or shoots through), low (a man kneels
 // behind it and stands to see over), high (legs show under it) or empty; pallets and one tall crate stand in the middle lane.
-// ELEVEN DEFENDERS IN FOUR SQUADS, by the rooms they hold (`scenarios.roomClear.squads`, the squads part's format: rebuild/enemy-squads/squad-format.md).
+// ELEVEN DEFENDERS IN FOUR SQUADS, by the rooms they hold (`scenarios.roomClear.squads`, the squads part's format: docs/level-format.md).
 // A squad sends men out only with two to spare past one a room (rust/game_rules/src/enemysquads), so who can LEAVE is the level's own decision:
 //   office (3)  the front office 2, the manager's office 1 — one to spare: they lock down and hold
 //   floor (3)   the hall — two to spare: a pair can come round
@@ -80,7 +80,7 @@ export const WAREHOUSE_ROOMS: Record<'plant' | 'lockers' | 'brk' | 'cage' | 'shi
   hall: { x0: 13.06, x1: 29.94, z0: 11.06, z1: 23.88 },
   dock: { x0: 30.06, x1: 35.88, z0: 11.06, z1: 23.88 },
 };
-/** THE SQUADS, in the squads part's format (/rebuild/enemy-squads/squad-format.md, stable 2026-10-07): which of the structure's rooms each holds — its men are
+/** THE SQUADS, in the squads part's format (docs/level-format.md): which of the structure's rooms each holds — its men are
  *  those rooms' garrisons — and where it regroups (a mark of one of its rooms). `barricade` is left at its default: every door of a squad's
  *  rooms but the one joining two of its own (`off`, `co`). `mayLeave` is the default (free to leave) for all but the Stores, who stay (`mayLeave: false`). What a squad DOES is the AI's. */
 export const WAREHOUSE_SQUADS: { id: string; name: string; rooms: string[]; rally: Vec3; mayLeave?: boolean }[] = [

@@ -1,7 +1,7 @@
 // A MAP'S PLAN PICTURE — tools/qa/level-plan.ts's top-down drawing of the level file with the map's own scenario data laid over it, read from the file alone
 // (no GPU, no game): the rooms to take with their names and how many men each holds, every defender's mark with the line his gun rests on, the team's
 // start (Sam and the four), the ways in (outside doors, and the doors that lead into a held room from floor nobody holds), and — once the file declares
-// them (scenarios.roomClear.squads, the format of rebuild/enemy-squads/squad-format.md) — the enemy SQUADS: each squad's rooms and marks in its colour, its
+// them (scenarios.roomClear.squads, the format of docs/level-format.md) — the enemy SQUADS: each squad's rooms and marks in its colour, its
 // rally point, the doors it would wedge, where a late squad comes in, and a legend under the plan.
 //   bun run tools/qa/map-plan.ts <name> [--out file.svg] [--png] [--scale 36]
 //     <name>   a level's name (levels/<name>.json), its file, or a scenario id from src/scene/scenarioList.ts

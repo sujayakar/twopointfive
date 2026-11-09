@@ -26,7 +26,7 @@
 // → across the yard and back; a second, tighter one through the duty office (mess hall → o_hall → o_s1 → bunks 3 → s1 → south gallery → h_s).
 // FIRE DOORS: two cross walls with a door in each cut every gallery in three (ng_w, ng_e, sg_w, sg_e), so no straight run of gallery is much longer than eleven
 // metres. Without them the scripted four were shot from both ends of a 23 m gallery walking to their second room (24 seeds, Standard: 10 runs won; with, 15).
-// ELEVEN DEFENDERS IN THREE SQUADS, a wing each and the link (rebuild/enemy-squads/squad-format.md): Charlie the south wing (bunks 5, bunks 3), Bravo the link
+// ELEVEN DEFENDERS IN THREE SQUADS, a wing each and the link (docs/level-format.md): Charlie the south wing (bunks 5, bunks 3), Bravo the link
 // (mess hall, galley), Alpha the north wing (the day room and the post at the north gallery's east end). Six rooms stand EMPTY (wash room, bunks 4, duty office, bunks 1, bunks 2, armoury): behind a shut door
 // an empty room and a held one read the same.
 // The shell is the office's rectangle (outer walls on x 4 / 36, z 4 / 24): the weather's 'indoors' rectangle is typed to it, so the rooms are dry — and so is the
@@ -722,7 +722,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
           mark(NGAL_E, 29.6, 9.9, 'n_end'),                      // by the pier between the two openings, down the gallery onto the end door
         ] },
     ],
-    // (rebuild/enemy-squads/squad-format.md) who holds what; what a squad does about it is the AI's. Rally = one of its rooms' marks.
+    // (docs/level-format.md) who holds what; what a squad does about it is the AI's. Rally = one of its rooms' marks.
     squads: [
       { id: 'charlie', name: 'Charlie', rooms: ['bunks5', 'bunks3'], rally: [16.2, 0, 22.4] },
       { id: 'bravo', name: 'Bravo', rooms: ['hall', 'galley'], rally: [9.0, 0, 12.9] },

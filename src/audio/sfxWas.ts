@@ -71,7 +71,7 @@ function gunfireWas(ctx: SfxContext): Record<'pistolSuppressed' | 'pistolLoud' |
       const tail = lp(rnd(), st, 1, 0.015) * env(t, 0.02, 0.35) * 0.9;
       return Math.tanh((crack + body + thump + tail) * 1.4) * 0.95;
     }, 23),
-    // the guards' AKS-74U indoors (rifles, docs/internal/sc20k-design.md §3.3): pistolLoud's recipe pushed — a harder, shorter supersonic crack (0.4 ms up, gone in
+    // the guards' AKS-74U indoors (rifles): pistolLoud's recipe pushed — a harder, shorter supersonic crack (0.4 ms up, gone in
     // 20 ms, with a spitting high edge on it), the propellant body a shade darker and longer, the chest thump an octave down (55 Hz, diving — phase-accumulated so
     // the sweep is exact at any sample rate), the short barrel's bark as a brief mid honk, and a 0.6 s slap off every wall; driven harder into tanh than the pistol.
     // Three of these 0.1 s apart overlap into the ripping sound of a burst; the mixer's propagation (occlusion low-pass, the routed doorway source, the reverb send)
@@ -85,7 +85,7 @@ function gunfireWas(ctx: SfxContext): Record<'pistolSuppressed' | 'pistolLoud' |
       const tail = lp(rnd(), st, 2, 0.012) * env(t, 0.03, 0.6) * 1.0 + lp(rnd(), st, 4, 0.04) * env(t, 0.01, 0.2) * 0.5;
       return Math.tanh((crack + body + thump + bark + tail) * 1.8) * 0.97;
     }, 211),
-    // Sam's FN2000 (rifles, docs/internal/sc20k-design.md §5): pistolSuppressed's recipe — 5.56 through an integral suppressor is still a 'thwip', not a bang — with a
+    // Sam's FN2000 (rifles): pistolSuppressed's recipe — 5.56 through an integral suppressor is still a 'thwip', not a bang — with a
     // rifle's worth behind it: the snap band a little wider, the thump deeper (50 Hz, diving, phase-accumulated) and heavier, the ACTION louder than the pistol's slide
     // (a bolt carrier's clack 45 ms in, then it running home at 95 ms), and the gas hissing out of the can for a fifth of a second after. Level 1 to the floor like the
     // pistol (finding 1: "not materially louder"): the difference is character, and thirty of them a magazine on AUTO overlapping into a stuttering hiss.

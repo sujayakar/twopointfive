@@ -25,8 +25,8 @@ const KEPT_CAMS: &str = quietfog::LS_CAMS;
 /// The groups of the list, in the order the page draws them: id, title, line.   (scenarios.ts MISSION_GROUPS)
 const GROUPS: [(MissionGroup, &str, &str); 6] = [
     (MissionGroup::Tutorial, "Tutorial", "The game, a mission at a time"),
-    (MissionGroup::Raids, "Raids", "Small buildings"),
-    (MissionGroup::Strongholds, "Strongholds", "Big buildings"),
+    (MissionGroup::Raids, "Raids", "Small buildings, up to seven defenders"),
+    (MissionGroup::Strongholds, "Strongholds", "Eight to eleven defenders"),
     (MissionGroup::Clock, "On the clock", "A hostage or a par time"),
     (MissionGroup::QuietAlone, "Quiet, alone", "Light, noise and cameras"),
     (MissionGroup::QuietTwo, "Quiet, as two", "You and one partner, silent from the start"),

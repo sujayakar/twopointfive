@@ -4,6 +4,7 @@
 //   a name of the code (`doors_kick_in`, `DoorContact`, `face_step`, `k.doorthrow`, `?doorcost=0`)      it is a word of rust/, src/, tools/, cloud/ or the page's own files
 //   a command (`bun run tools/qa/pages.ts boot`, `gate tests`)                                          what it runs is there
 // A plain lower-case word or a phrase is nobody's name and is not asked. A page holds no date: git has the history.
+// The same is asked of the other documents people work from (OTHER).
 //   bun run tools/qa/docs-check.ts [page …]       exit 0 · 1 and each fault
 //   DOCS_BREAK=1 bun run tools/qa/docs-check.ts   the red path: a page with one fault of each kind planted, in memory: exit 1 with every one found (3: it missed one)
 import { execFileSync } from 'node:child_process';
@@ -11,9 +12,13 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 const ROOT = resolve(import.meta.dir, '../..'), BREAK = process.env.DOCS_BREAK === '1', asked = process.argv.slice(2);
-const INDEX = { bytes: 14_000, lines: 150 }, PAGE = 15_000, WIDE = 200;
+const INDEX = { bytes: 12_000, lines: 150 }, PAGE = 15_000, WIDE = 200;
 /** pages still to be written over: named by the index, asked nothing. This list only gets shorter */
-const OLD = ['ai-architecture', 'destruction', 'door-tools', 'enemies', 'rust', 'squad', 'team-feel', 'workflow'].map(a => `docs/agents/${a}.md`);
+const OLD = ['ai-architecture', 'destruction', 'door-tools', 'enemies', 'rust', 'squad', 'team-feel'].map(a => `docs/agents/${a}.md`);
+
+/** the other documents people work from, and the most each may be */
+const OTHER: Readonly<Record<string, number>> = { 'CLAUDE.md': 12_000, 'README.md': 8_000, 'STYLE.md': 18_000, 'docs/level-format.md': 42_000, '.claude/skills/verify/SKILL.md': 11_000, '.claude/skills/level/SKILL.md': 20_000,
+  'rust/game_start/README.md': 34_000, 'tools/blitz/FACE.md': 4_000, 'tools/fold/README.md': 12_000, 'tools/chars/README.md': 15_000, 'tools/chars/look/README.md': 5_000, 'cloud/README.md': 9_000 };
 
 const read = (f: string) => readFileSync(resolve(ROOT, f), 'utf8');
 const files: string[] = (execFileSync('git', ['-C', ROOT, 'ls-files', '--cached', '--others', '--exclude-standard'], { encoding: 'utf8', maxBuffer: 64 << 20 }) as string).split('\n').filter(f => f && existsSync(resolve(ROOT, f)));
@@ -49,6 +54,11 @@ function gone(code: string): string[] {
   }
   return [...new Set(out)]; }
 
+/** whose work it is, said on its page and at the code: a rewrite of either keeps the line as it stands */
+const CREDIT = { line: 'Credit: Stephen Jayakar, from his pull request 1.', at: ['docs/agents/render.md',
+  ...['composite', 'fgather', 'gather_common', 'particles', 'reflect', 'restir', 'sdfrig', 'sharp_direct', 'volumetrics'].map(k => `src/render/shaders/${k}.wgsl`)] };
+const uncredited = (text: (f: string) => string) => CREDIT.at.filter(f => !text(f).includes(CREDIT.line));
+
 /** every fault of a page */
 function faults(text: string, most: number): string[] {
   const out: string[] = [], bytes = Buffer.byteLength(text); if (bytes > most) out.push(`${bytes} bytes, ${most} at most`);
@@ -66,7 +76,7 @@ if (BREAK) {
   const planted = '# A page\n\nThe boot is `doors_kick_nobody`, in `rust/game_rules/src/nowhere/` and `gone_test.rs`; see [it](docs/not-here.md). Since 2026-10-13.\n\n```sh\nbun run tools/qa/none-check.ts\n(cd rust/game_start && cargo run --bin nobin)\n```\n'
     + `\`?nosuchword=1\` and \`DoorNobody\` and \`k.nosuchtable.x\`.\n${'x'.repeat(PAGE)}\n`, found = faults(planted, PAGE);
   const want = ['doors_kick_nobody', 'rust/game_rules/src/nowhere/', 'gone_test.rs', 'docs/not-here.md', '2026-10', 'none-check.ts', '--bin nobin', '?nosuchword=1', 'DoorNobody', 'k.nosuchtable', `${PAGE} at most`, 'letters wide'];
-  const missed = want.filter(w => !found.some(f => f.includes(w))); for (const f of found) console.log(`- FAIL — planted: ${f.slice(0, 160)}`);
+  const missed = want.filter(w => !found.some(f => f.includes(w))); if (uncredited(f => read(f).replace(CREDIT.line, '')).length !== CREDIT.at.length) missed.push(CREDIT.line); for (const f of found) console.log(`- FAIL — planted: ${f.slice(0, 160)}`);
   console.log(missed.length ? `docs: MISSED ${missed.join(' · ')}` : `docs: every planted fault found (${want.length})`); process.exit(missed.length ? 3 : 1);
 }
 let bad = 0;
@@ -77,8 +87,12 @@ if (!asked.length) {
   const unnamed = areas.filter(f => !index.includes(`\`${f.slice(12)}\``)), lost = OLD.filter(f => !areas.includes(f));
   line(!unnamed.length, `the index names every page (${areas.length})${unnamed.length ? `: not ${unnamed.join(' ')}` : ''}`);
   line(!lost.length, `the list of pages still to be written over names pages that are there${lost.length ? `: not ${lost.join(' ')}` : ` (${OLD.length})`}`);
+  const un = uncredited(f => files.includes(f) ? read(f) : '');
+  line(!un.length, `"${CREDIT.line}" stands at all ${CREDIT.at.length} of its places${un.length ? `: not ${un.join(' ')}` : ''}`);
 }
 for (const f of areas.filter(a => asked.length ? asked.some(w => a.endsWith(`/${w.replace(/\.md$/, '')}.md`) || a === w) : !OLD.includes(a))) {
   const found = faults(read(f), PAGE); line(!found.length, `${f}${found.length ? '' : `: ${Buffer.byteLength(read(f))} bytes, every name in it is there`}`); for (const x of found) console.log(`    ${x}`); }
+for (const [f, most] of Object.entries(OTHER)) if (!asked.length || asked.includes(f)) {
+  const found = files.includes(f) ? faults(read(f), most) : ['it is not in the tree']; line(!found.length, `${f}${found.length ? '' : `: ${Buffer.byteLength(read(f))} bytes`}`); for (const x of found) console.log(`    ${x}`); }
 console.log(bad ? `=== docs: ${bad} FAILED ===` : '=== docs: ALL PASS ===');
 process.exit(bad ? 1 : 0);

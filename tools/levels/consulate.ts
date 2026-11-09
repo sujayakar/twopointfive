@@ -1,5 +1,5 @@
 // THE CONSULATE — the four's hostage rescue: three hostages at the far end of a floor of rooms the squad has no time to clear, in a room one stack cannot take.
-// A level generator in the scenario levels' shape (tools/levels/test-rooms.ts is the template; rebuild/scenario-levels/contract.md the how-to):
+// A level generator in the scenario levels' shape (tools/levels/test-rooms.ts is the template; docs/agents/levels.md the how-to):
 //   bun run tools/levels/export.ts consulate [--check]   → levels/consulate.json, with its `scenarios.rescue` block
 //   page: ?levelFile=consulate.json&rescue&squad=4
 //

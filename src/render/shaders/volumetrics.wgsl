@@ -1,3 +1,4 @@
+// A big body is written once here and asked in a loop: the compile pastes every call. Credit: Stephen Jayakar, from his pull request 1.
 // Half-resolution (quarter with the lossy volQuarter option: frame.lossyCfg.y is the divisor) volumetrics: (a) thin haze lit by spot/point lights with ray-traced shadows (visible beams),
 // (b) ray-marched smoke domains lit by the same lights (shadow rays + self-shadowing) and by the RC mean radiance, (c) the weather's rain / splashes / sky flash.
 // Output: rgb = in-scattered radiance, a = transmittance toward the surface.
@@ -29,7 +30,7 @@ fn airShow(X: vec3f, l: f32) -> f32 {
   return lookShowBy(vec3f(l), g).x / l;
 }
 
-// ---- the worst-case caps (docs/internal/renderer-v3.md §2: the smoke march and the beams were the field's #1 variance source) ----
+// ---- the worst-case caps (the smoke march and the beams were the field's #1 variance source) ----
 // frame.volCfg.x = K, the most lights any one march step (smoke) / any one view ray (haze beams) spends shadow rays on: the K strongest by UNSHADOWED
 // contribution there, the rest dropped (never credited unshadowed: a torch behind a wall must not glow in the smoke this side of it). Every tier runs K ≥ 1
 // (ui/quality.ts presets: high 4 · medium, low and very low 2; RenderSettings.volLightCap, which the engine keeps at 1 or more). The smoke march (1) walks each
@@ -246,7 +247,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   let jitterS = fract(jitter + f32(frame.frameIdx & 63u) * 0.61803399);   // the weather's air march's start offset: the same texel dither, ROTATED by the golden ratio each frame, so a still view converges
                                                                              // smooth under the resolve and a moving one carries fine temporal noise it damps. The smoke march, the rain and the haze march
                                                                              // start at `jitter`, fixed per texel, as high's march always has (the froxel-lit march the tiers under high drew until 2026-11-07
-                                                                             // started at the rotated one: docs/agents/render.md, ONE FOG MARCH ON EVERY TIER, what went with it)
+                                                                             // started at the rotated one)
   let invRd = safeInv(rd);
   var inscatter = vec3f(0.0);
   var T = 1.0;

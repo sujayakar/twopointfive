@@ -12,7 +12,7 @@
 //   const T = trainGround();                    the shell: ground, the yard wall, both gates, the moon, a breaker, a beacon
 //   T.hut({ … })                                a room: four walls, a floor, a roof, its doors cut and hung → its inside rect
 //   T.lamp(x, z, name)                          a yard lamp: a 7 m pool of light to walk round
-//   T.G.crates(…) / T.G.sandbags(…) …           the kit's pieces (the guide: rebuild/play-style-levels/look/read-first.md)
+//   T.G.crates(…) / T.G.sandbags(…) …           the kit's pieces (the guide: docs/library.md)
 //   return T.finish({ spawn, routes, mission, scenarios: { quiet, lesson } });
 import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef, PatrolRoute } from './lib/level';

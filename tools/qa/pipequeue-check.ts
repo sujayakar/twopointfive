@@ -1,7 +1,7 @@
 // THE COMPILE QUEUE (src/gpu/device.ts PIPE_QUEUE): every …Async pipeline goes to the browser through a queue, so that a burst of slow compiles cannot hold every
 // one of the browser's GPU workers and stall the drawing of the page. What is checked here is the queue's own logic over a stand-in device, with no browser: how many are
 // in flight during the boot and after it, which one goes next, that a failed or broken creation gives its slot back, and that a pipeline's time is counted from its turn.
-// What a queue does to a real load is a measurement on a Windows machine (docs/agents/render.md), not a check.
+// What a queue does to a real load is a measurement on a Windows machine, not a check.
 //   bun run tools/qa/pipequeue-check.ts                    exit 0 = every check passed, 1 = one failed
 //   PIPEQUEUE_BREAK=1 bun run tools/qa/pipequeue-check.ts  the device is left as the browser made it (?pipequeue=0): must FAIL
 import { PIPE_QUEUE, lostFlying, pipeQueue, pipeQueueFor, installPipeQueue, computePipelineAsync, laterPipelineAsync, laterProgress, pipelineProgress } from '../../src/gpu/device';
