@@ -44,33 +44,6 @@ fn ats_abc(g: &Game, c: CharId) -> (usize, usize, usize) {
 
 // ---- the layers' columns: get / put, in the order the module's layer is handed them
 
-fn act_cols_get(an: &Anim, c: &mut [f64], o: usize) { c[o] = an.slump_w; }
-fn act_cols_put(an: &mut Anim, c: &[f64], o: usize) { an.slump_w = c[o]; }
-fn lean_cols_get(an: &Anim, c: &mut [f64], o: usize) { c[o] = an.lean_sm; }
-fn lean_cols_put(an: &mut Anim, c: &[f64], o: usize) { an.lean_sm = c[o]; }
-fn gaze_cols_get(an: &Anim, c: &mut [f64], o: usize) {
-    let gz = &an.gz;
-    c[o] = gz.w; c[o + 1] = gz.pitch; c[o + 2] = gz.yaw_ref; c[o + 3] = if gz.yaw_init { 1.0 } else { 0.0 };
-}
-fn gaze_cols_put(an: &mut Anim, c: &[f64], o: usize) {
-    let gz = &mut an.gz;
-    gz.w = c[o]; gz.pitch = c[o + 1]; gz.yaw_ref = c[o + 2]; gz.yaw_init = c[o + 3] != 0.0;
-}
-fn mv_pre_cols_get(an: &Anim, c: &mut [f64], o: usize) {
-    let (m, dp, gt) = (&an.mvs, &an.mv2.dip, &an.mv_out);
-    c[o] = m.back; c[o + 1] = m.climb; c[o + 2] = m.yaw; c[o + 3] = m.rock; c[o + 4] = m.sho; c[o + 5] = m.head; c[o + 6] = m.glide.x; c[o + 7] = m.glide.v; c[o + 8] = m.hip_y; c[o + 9] = dp.x; c[o + 10] = dp.v;
-    c[o + 11] = gt.g; c[o + 12] = gt.u; c[o + 13] = gt.st; c[o + 14] = if gt.live { 1.0 } else { 0.0 }; c[o + 15] = an.mv2_shown.dip; c[o + 16] = an.sights_lift;
-}
-fn mv_pre_cols_put(an: &mut Anim, c: &[f64], o: usize) {
-    {
-        let m = &mut an.mvs;
-        m.back = c[o]; m.climb = c[o + 1]; m.yaw = c[o + 2]; m.rock = c[o + 3]; m.sho = c[o + 4]; m.head = c[o + 5]; m.glide.x = c[o + 6]; m.glide.v = c[o + 7]; m.hip_y = c[o + 8];
-    }
-    an.mv2.dip.x = c[o + 9]; an.mv2.dip.v = c[o + 10];
-    let gt = &mut an.mv_out;
-    gt.g = c[o + 11]; gt.u = c[o + 12]; gt.st = c[o + 13]; gt.live = c[o + 14] != 0.0;
-    an.mv2_shown.dip = c[o + 15]; an.sights_lift = c[o + 16];
-}
 fn mv_post_cols_get(an: &Anim, c: &mut [f64], o: usize) {
     let (m, p) = (&an.mvs, &an.mv_po);
     c[o] = m.fl_t; c[o + 1] = m.fl_k; c[o + 2] = m.st_t; c[o + 3] = m.ht_t; c[o + 4] = m.dz.x; c[o + 5] = m.dz.v; c[o + 6] = m.dz_sd; c[o + 7] = m.dz_t; c[o + 8] = m.cf.x; c[o + 9] = m.cf.v; c[o + 10] = m.cf_t;
@@ -147,71 +120,37 @@ pub fn anim_act_layer(g: &mut crate::game::Game, c: CharId, dt: f64) -> f64 {
     w
 }
 
-/// The action's clip over the pose at weight `w`, and the slump. (character.ts actPose)
+/// The action's clip over the pose at weight `w`, and the slump.
 pub fn anim_act_pose(g: &mut crate::game::Game, c: CharId, clip: ClipId, w: f64, dt: f64) {
-    let slot = crate::anim_skeleton::layer_slot(g, c);
-    anim_act_pose_ask(g, c, slot, clip, w, dt);
-}
-
-/// rust/sim layers act_pose, asked. (character.ts actPoseAsk)
-pub fn anim_act_pose_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, clip: ClipId, w: f64, dt: f64) {
-    let m = args();
-    m[0] = w;
-    let n = g.ch[c].anim.p_a.nodes as f64;
-    m[1] = crate::anim_skeleton::clip_no(g, clip, n);
-    let an = &g.ch[c].anim;
-    m[2] = an.act_t; m[3] = if an.act_loop { 1.0 } else { 0.0 }; m[4] = dt; m[5] = an.slump;
-    act_cols_get(an, args(), COLS);
-    let (at, at_b, at_rest) = ats_abr(g, c);
-    let code = ::sim::layers::act_pose(g_2 as usize, at, at_b, at_rest) as f64;
+    let slot = crate::anim_skeleton::layer_slot(g, c) as usize;
+    let clip = crate::anim_skeleton::clip_no(g, clip, g.ch[c].anim.p_a.nodes as f64);
+    let code = ::sim::layers::act_pose(slot, &mut g.ch[c].anim, clip, w, dt) as f64;
     crate::anim_skeleton::layer_ran(g, code, c);
-    act_cols_put(&mut g.ch[c].anim, args(), COLS);
 }
 
 // ---- MOVES
 
-/// Before the stances and the arms: the recoil's sums bled off and the pelvis's share of how a side carries itself. What the trunk layer needs. (character.ts mvPre)
+/// Before the stances and the arms: the recoil's sums bled off and the pelvis's share of how a side carries itself. What the trunk layer needs.
 pub fn anim_mv_pre(g: &mut crate::game::Game, c: CharId, dt: f64, move_w: f64, stand_w: f64) -> crate::character::MvGait {
-    let slot = crate::anim_skeleton::layer_slot(g, c);
-    anim_mv_pre_ask(g, c, slot, dt, move_w, stand_w);
+    let slot = crate::anim_skeleton::layer_slot(g, c) as usize;
+    let code = ::sim::layers::mv_pre(slot, &mut g.ch[c].anim, dt, move_w, stand_w) as f64;
+    crate::anim_skeleton::layer_ran(g, code, c);
     g.ch[c].anim.mv_out
 }
 
-/// A lean round an edge, eased. (character.ts leanBody)
+/// A lean round an edge, eased.
 pub fn anim_lean_body(g: &mut crate::game::Game, c: CharId, dt: f64) {
-    let slot = crate::anim_skeleton::layer_slot(g, c);
-    anim_lean_body_ask(g, c, slot, dt);
-}
-
-/// rust/sim layers lean_body, asked. (character.ts leanBodyAsk)
-pub fn anim_lean_body_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, dt: f64) {
-    let a = args();
-    a[0] = dt; a[1] = g.ch[c].anim.lean;
-    lean_cols_get(&g.ch[c].anim, args(), COLS);
-    let at = g.ch[c].anim.p_a.at as usize;
-    let code = ::sim::layers::lean_body(g_2 as usize, at) as f64;
+    let slot = crate::anim_skeleton::layer_slot(g, c) as usize;
+    let code = ::sim::layers::lean_body(slot, &mut g.ch[c].anim, dt) as f64;
     crate::anim_skeleton::layer_ran(g, code, c);
-    lean_cols_put(&mut g.ch[c].anim, args(), COLS);
 }
 
-/// The gaze stabiliser's working out: the yaw the neck and head take out this frame. (character.ts gazeKeep)
+/// The gaze stabiliser's working out: the yaw the neck and head take out this frame.
 pub fn anim_gaze_keep(g: &mut crate::game::Game, c: CharId, dt: f64, want_w: f64, crouch_pose: f64, w_sprint: f64) -> f64 {
-    let slot = crate::anim_skeleton::layer_slot(g, c);
-    anim_gaze_keep_ask(g, c, slot, dt, want_w, crouch_pose, w_sprint)
-}
-
-/// rust/sim layers gaze_keep, asked. (character.ts gazeKeepAsk)
-pub fn anim_gaze_keep_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, dt: f64, want_w: f64, crouch_pose: f64, w_sprint: f64) -> f64 {
-    let a = args();
-    let an = &g.ch[c].anim;
-    let gl = an.gaze_local;
-    a[0] = dt; a[1] = want_w; a[2] = crouch_pose; a[3] = w_sprint; a[4] = an.nv_a; a[5] = an.mvs.hu.x; a[6] = an.mvs.sk.x; a[7] = gl[0]; a[8] = gl[1]; a[9] = gl[2];
-    gaze_cols_get(an, args(), COLS);
-    let at = an.p_a.at as usize;
-    let code = ::sim::layers::gaze_keep(g_2 as usize, at) as f64;
-    crate::anim_skeleton::layer_ran(g, code, c);
-    gaze_cols_put(&mut g.ch[c].anim, args(), COLS);
-    args_read()[COLS + 4]
+    let slot = crate::anim_skeleton::layer_slot(g, c) as usize;
+    let (code, fix) = ::sim::layers::gaze_keep(slot, &mut g.ch[c].anim, dt, want_w, crouch_pose, w_sprint);
+    crate::anim_skeleton::layer_ran(g, code as f64, c);
+    fix
 }
 
 /// The slot a rule of the character's that keeps no pose is asked in. (character.ts ruleSlot)
@@ -224,33 +163,11 @@ pub fn anim_rule_ran(g: &mut crate::game::Game, c: CharId, code: f64) {
     crate::anim_skeleton::layer_ran(g, code, c);
 }
 
-/// rust/sim layers mv_pre, asked. (character.ts mvPreAsk)
-pub fn anim_mv_pre_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, dt: f64, move_w: f64, stand_w: f64) {
-    let a = args();
-    let an = &g.ch[c].anim;
-    a[0] = dt; a[1] = move_w; a[2] = stand_w; a[3] = an.trained; a[4] = if an.long_gun { 1.0 } else { 0.0 }; a[5] = an.dip; a[6] = an.lg.w.x; a[7] = an.upper_w.aim;
-    mv_pre_cols_get(an, args(), COLS);
-    let at = an.p_a.at as usize;
-    let code = ::sim::layers::mv_pre(g_2 as usize, at) as f64;
-    crate::anim_skeleton::layer_ran(g, code, c);
-    mv_pre_cols_put(&mut g.ch[c].anim, args(), COLS);
-}
-
-/// The trunk's share, into pA right before the long gun's own trunk set. (character.ts mvTrunk)
+/// The trunk's share, into pA right before the long gun's own trunk set.
 pub fn anim_mv_trunk(g: &mut crate::game::Game, c: CharId, w: f64, o: crate::character::MvGait, aim_pass: bool) {
     if w < 0.003 { return; }
-    let slot = crate::anim_skeleton::layer_slot(g, c);
-    anim_mv_trunk_ask(g, c, slot, w, o, aim_pass);
-}
-
-/// rust/sim layers mv_trunk, asked. (character.ts mvTrunkAsk)
-pub fn anim_mv_trunk_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, w: f64, o: crate::character::MvGait, aim_pass: bool) {
-    let a = args();
-    let an = &g.ch[c].anim;
-    let m = &an.mvs;
-    a[0] = w; a[1] = o.g; a[2] = o.u; a[3] = o.st; a[4] = if aim_pass { 1.0 } else { 0.0 }; a[5] = an.phase; a[6] = an.speed; a[7] = m.rock; a[8] = m.sho; a[9] = m.head;
-    let at = an.p_a.at as usize;
-    let code = ::sim::layers::mv_trunk(g_2 as usize, at) as f64;
+    let slot = crate::anim_skeleton::layer_slot(g, c) as usize;
+    let code = ::sim::layers::mv_trunk(slot, &g.ch[c].anim, w, o, aim_pass) as f64;
     crate::anim_skeleton::layer_ran(g, code, c);
 }
 

@@ -28,34 +28,11 @@ fn work_kind_no(k: WorkKind) -> f64 { *work_no().get(String::from(k.as_str())).u
 
 // ---- the door hand
 
-/// doorCols.get onto the bench (character.ts:3984)
-fn door_cols_get(g: &mut Game, c: CharId) {
-    let s = &g.ch[c].anim.dp;
-    let (a, o) = (args(), COLS);
-    a[o] = s.w_l.x; a[o + 1] = s.w_l.v; a[o + 2] = s.w_r.x; a[o + 3] = s.w_r.v; a[o + 4] = b01(s.reach_ok); a[o + 5] = b01(s.right);
-}
-/// doorCols.put off the bench (character.ts:3985)
-fn door_cols_put(g: &mut Game, c: CharId) {
-    let s = &mut g.ch[c].anim.dp;
-    let (a, o) = (args_read(), COLS);
-    s.w_l.x = a[o]; s.w_l.v = a[o + 1]; s.w_r.x = a[o + 2]; s.w_r.v = a[o + 3]; s.reach_ok = a[o + 4] != 0.0; s.right = a[o + 5] != 0.0;
-}
-
-/// The door hand's numbers onto the bench, the layer, its columns back. (character.ts doorLayerAsk)
+/// The door hand.
 pub fn anim_door_layer_ask(g: &mut crate::game::Game, c: CharId, g_2: f64, l: crate::character::DoorPush, dt: f64, intent: f64, armed: bool, tw_y: f64, tw_p: f64) {
-    let n = anim_to_model_d(g, c, l.n);
-    let p = anim_to_model_p(g, c, l.p);
-    {
-        let an = &g.ch[c].anim;
-        let a = args();
-        a[0] = dt; a[1] = intent; a[2] = b01(!armed && an.upper != UpperMode::Torch && an.throw_t < 0.0); a[3] = tw_y; a[4] = tw_p; a[5] = l.hand; a[6] = b01(l.reach.unwrap_or(false));
-        for i in 0..3 { a[7 + i] = n[i]; a[10 + i] = p[i]; }
-        for i in 0..4 { a[13 + i] = an.hand_fix[0][i]; a[17 + i] = an.hand_fix[1][i]; }
-    }
-    door_cols_get(g, c);
-    let (slot, at, at_b, at_rest) = (g_2 as usize, g.ch[c].anim.p_a.at as usize, g.ch[c].anim.p_b.at as usize, g.ch[c].anim.rest.at as usize);
-    anim_hands_ask(g, c, &mut |_g| ::sim::layers::door_layer(slot, at, at_b, at_rest) as f64);
-    door_cols_put(g, c);
+    let (n, p) = (anim_to_model_d(g, c, l.n), anim_to_model_p(g, c, l.p));
+    let free = !armed && g.ch[c].anim.upper != UpperMode::Torch && g.ch[c].anim.throw_t < 0.0;
+    anim_hands_ask(g, c, &mut |g| ::sim::layers::door_layer(g_2 as usize, &mut g.ch[c].anim, &l, n, p, dt, intent, free, tw_y, tw_p) as f64);
 }
 
 // ---- handwork

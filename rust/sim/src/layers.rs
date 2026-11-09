@@ -13,6 +13,7 @@
 //! ticks is not the layer's business (today the TypeScript animator's own fields, which every save already carries).
 use crate::knobs::*;
 use crate::maths::{acos, asin, atan2, cos, exp, hypot2, hypot3, hypot4, pow, sin};
+use game_types::character::{Anim, AnimGz, DoorPush, MvGait, Spring};
 use prim::{floor, sqrt};
 use crate::single::{get, put, S};
 use crate::skeleton::{NODE, ask_blend as ask_blend_how, ask_mask, ask_sample as ask_sample_how, bench, fk_run, parent_rot, rotate_local, rotate_model, set_model_rot, set_unit, two_bone_ik, with_pose, Fk, Rig};
@@ -234,12 +235,11 @@ fn cast(n: usize, roles: &[usize]) -> bool {
     roles.iter().all(|&r| role(r) < n)
 }
 
-/// CharacterAnimator.mvTrunk — the trunk's share of MOVES, straight into the pose. args: 0 w · 1 o.g · 2 o.u · 3 o.st · 4 aimPass (1 or 0) · 5 phase ·
-/// 6 speed · 7 mvs.rock · 8 mvs.sho · 9 mvs.head
-pub fn mv_trunk(g: usize, at: usize) -> u32 {
-    let a = own_args::<10>();
-    let (w, og, ou, ost, aim_pass, phase, speed, rock, sho, head) = (a[0], a[1], a[2], a[3], a[4] != 0.0, a[5], a[6], a[7], a[8], a[9]);
-    with_pose(g, at, |d, rig, n, _fk| {
+/// The trunk's share of how a side carries itself, straight into the pose.
+pub fn mv_trunk(g: usize, an: &Anim, w: f64, o: MvGait, aim_pass: bool) -> u32 {
+    let (phase, speed, rock, sho, head) = (an.phase, an.speed, an.mvs.rock, an.mvs.sho, an.mvs.head);
+    let (og, ou, ost) = (o.g, o.u, o.st);
+    with_pose(g, an.p_a.at as usize, |d, rig, n, _fk| {
         if !cast(n, &[SPINE1, SPINE2, SPINE3, NECK, HEAD]) {
             return 0;
         }
@@ -380,6 +380,12 @@ pub fn long_body(g: usize, at: usize) -> u32 {
 fn mv_on(i: usize) -> bool {
     on(MOVES_ON) && on(i)
 }
+/// one step of a critically damped spring toward `target`
+fn spring_step(s: &mut Spring, target: f64, w: f64, dt: f64) {
+    let mut d = [s.x, s.v];
+    spring(&mut d, 0, target, w, dt);
+    (s.x, s.v) = (d[0], d[1]);
+}
 /// CharacterAnimator.mvHips: the pelvis moved by `off` (model space) with both feet held where the pose under it has them (the legs of `fk` current on entry;
 /// all of it on exit)
 fn mv_hips(d: &mut [S], rig: &Rig, fk: &mut Fk, off: &[f64; 3]) {
@@ -392,97 +398,70 @@ fn mv_hips(d: &mut [S], rig: &Rig, fk: &mut Fk, off: &[f64; 3]) {
 }
 const LEG_ROLES: [usize; 7] = [HIPS, THIGH_L, SHIN_L, FOOT_L, THIGH_R, SHIN_R, FOOT_R];
 
-/// CharacterAnimator.mvPre — before the stances and the arms: the recoil's sums bled off (each at its own rate, by training), the muzzle's dip past a friend's
+/// Before the stances and the arms: the recoil's sums bled off (each at its own rate, by training), the muzzle's dip past a friend's
 /// back, and the pelvis's share of how a side carries itself: a trained man with a long gun sinks onto bent knees when he moves and most of the walk's bob is
 /// taken out, the feet held where the cycle has them.
-/// args: 0 dt · 1 moveW · 2 standW · 3 trained · 4 longGun (1 or 0) · 5 dip · 6 the long gun's weight (lg.w.x) · 7 upperW.aim; then from 64 its columns:
-/// the recoil's back · climb · yaw · rock · sho · head · glide (x, v) · hipY · the dip's spring (x, v) · what the trunk layer is handed: g · u · st · live
-/// (1 or 0) · the dip shown · sightsLift
-pub fn mv_pre(g: usize, at: usize) -> u32 {
-    const COLS: usize = 17;
-    const BACK: usize = 0;
-    const CLIMB: usize = 1;
-    const YAW: usize = 2;
-    const ROCK: usize = 3;
-    const SHO: usize = 4;
-    const HEAD: usize = 5;
-    const GLIDE: usize = 6;
-    const HIP_Y: usize = 8;
-    const DIP: usize = 9;
-    const O_G: usize = 11;
-    const O_U: usize = 12;
-    const O_ST: usize = 13;
-    const O_LIVE: usize = 14;
-    const DIP_SHOWN: usize = 15;
-    const SIGHTS_LIFT: usize = 16;
-    let mut a = [0.0f64; L_IN + COLS];
-    a.copy_from_slice(&bench().args[..L_IN + COLS]);
-    let (dt, move_w, stand_w, trained, long_gun, dip, lg_w, aim) = (a[0], a[1], a[2], a[3], a[4] != 0.0, a[5], a[6], a[7]);
-    let st = &mut a[L_IN..];
-    let code = with_pose(g, at, |d, rig, n, fk| {
+pub fn mv_pre(g: usize, an: &mut Anim, dt: f64, move_w: f64, stand_w: f64) -> u32 {
+    let (at, trained, long_gun, dip, lg_w, aim) = (an.p_a.at as usize, an.trained, an.long_gun, an.dip, an.lg.w.x, an.upper_w.aim);
+    with_pose(g, at, |d, rig, n, fk| {
         if !cast(n, &LEG_ROLES) {
             return 0;
         }
+        let (m, sp, o) = (&mut an.mvs, &mut an.mv2.dip, &mut an.mv_out);
         let t = clamp(trained, 0.0, 1.0);
         let kk = |p0: usize, p1: usize| lerp(k(p0), k(p1), t);
-        let sum = st[BACK] + st[CLIMB] + abs(st[YAW]) + st[ROCK] + st[SHO] + st[HEAD];
+        let sum = m.back + m.climb + abs(m.yaw) + m.rock + m.sho + m.head;
         if sum > 0.0 {
             if sum < 1e-4 {
-                for i in [BACK, CLIMB, YAW, ROCK, SHO, HEAD] {
-                    st[i] = 0.0;
-                }
+                (m.back, m.climb, m.yaw, m.rock, m.sho, m.head) = (0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
             } else {
                 let (eb, ec, er) = (exp(-dt / kk(RECOIL_BACK_TAU_0, RECOIL_BACK_TAU_1)), exp(-dt / kk(RECOIL_CLIMB_TAU_0, RECOIL_CLIMB_TAU_1)), exp(-dt / kk(RECOIL_ROCK_TAU_0, RECOIL_ROCK_TAU_1)));
-                st[BACK] *= eb;
-                st[CLIMB] *= ec;
-                st[YAW] *= ec;
-                st[ROCK] *= er;
-                st[SHO] *= er;
-                st[HEAD] *= er;
+                m.back *= eb;
+                m.climb *= ec;
+                m.yaw *= ec;
+                m.rock *= er;
+                m.sho *= er;
+                m.head *= er;
             }
         }
         // MOVES.entry: the muzzle down past a friend's back, and up again the moment he is clear of it
         let want = if mv_on(MOVES_ENTRY) && long_gun { clamp(dip, 0.0, 1.0) } else { 0.0 };
-        if want > 0.0 || st[DIP] != 0.0 {
-            let rate = if want > st[DIP] { k(DIP_RATE_IN) } else { k(DIP_RATE_OUT) };
-            spring(st, DIP, want, rate, dt);
-            if want == 0.0 && st[DIP] < 0.01 {
-                st[DIP] = 0.0;
-                st[DIP + 1] = 0.0;
+        if want > 0.0 || sp.x != 0.0 {
+            let rate = if want > sp.x { k(DIP_RATE_IN) } else { k(DIP_RATE_OUT) };
+            spring_step(sp, want, rate, dt);
+            if want == 0.0 && sp.x < 0.01 {
+                sp.x = 0.0;
+                sp.v = 0.0;
             }
         }
-        st[DIP_SHOWN] = clamp(st[DIP], 0.0, 1.0);
-        st[SIGHTS_LIFT] = 0.0;
-        st[O_G] = 0.0;
-        st[O_U] = 0.0;
-        st[O_ST] = 0.0;
+        an.mv2_shown.dip = clamp(sp.x, 0.0, 1.0);
+        an.sights_lift = 0.0;
+        o.g = 0.0;
+        o.u = 0.0;
+        o.st = 0.0;
         let mut ran = RAN;
         if mv_on(MOVES_GAIT) {
             let (lgw, tw) = (clamp(lg_w, 0.0, 1.0), smoothstep(0.5, 1.0, trained));
-            spring(st, GLIDE, tw * move_w * lgw, 9.0, dt);
-            st[O_G] = clamp(st[GLIDE], 0.0, 1.0);
-            st[O_U] = (1.0 - smoothstep(0.0, 0.5, trained)) * lgw * stand_w;
-            st[O_ST] = tw * lgw * stand_w;
-            let drop = k(GAIT_DROP) * st[O_G] + k(GAIT_AIM_DROP) * st[O_ST] * aim * (1.0 - st[O_G]);
-            if drop > 2e-4 || st[O_G] > 0.003 {
+            spring_step(&mut m.glide, tw * move_w * lgw, 9.0, dt);
+            o.g = clamp(m.glide.x, 0.0, 1.0);
+            o.u = (1.0 - smoothstep(0.0, 0.5, trained)) * lgw * stand_w;
+            o.st = tw * lgw * stand_w;
+            let drop = k(GAIT_DROP) * o.g + k(GAIT_AIM_DROP) * o.st * aim * (1.0 - o.g);
+            if drop > 2e-4 || o.g > 0.003 {
                 fk.part(rig, d, list(FK_LEGS));
                 let hy = fk.at(role(HIPS))[1];
-                st[HIP_Y] = if finite(st[HIP_Y]) { st[HIP_Y] + (hy - st[HIP_Y]) * (1.0 - exp(-dt / 0.35)) } else { hy };
-                let flat = clamp((st[HIP_Y] - hy) * k(GAIT_BOB) * st[O_G], -0.03, 0.03);
+                m.hip_y = if finite(m.hip_y) { m.hip_y + (hy - m.hip_y) * (1.0 - exp(-dt / 0.35)) } else { hy };
+                let flat = clamp((m.hip_y - hy) * k(GAIT_BOB) * o.g, -0.03, 0.03);
                 mv_hips(d, rig, fk, &[0.0, flat - drop, 0.0]);
                 ran |= RAN_ALL;
             } else {
-                st[HIP_Y] = f64::NAN;
+                m.hip_y = f64::NAN;
             }
         }
-        st[O_LIVE] = if st[O_G] > 0.003 || st[O_U] > 0.003 || st[O_ST] > 0.003 || st[ROCK] > 1e-4 || st[SHO] > 1e-4 { 1.0 } else { 0.0 };
+        o.live = o.g > 0.003 || o.u > 0.003 || o.st > 0.003 || m.rock > 1e-4 || m.sho > 1e-4;
         ran
     })
-    .unwrap_or(0);
-    if code != 0 {
-        bench().args[L_IN..L_IN + COLS].copy_from_slice(&a[L_IN..]);
-    }
-    code
+    .unwrap_or(0)
 }
 
 /// CharacterAnimator.stanceBody — the stance, body half: the pelvis bladed toward the wall and settled onto soft knees over feet put back exactly where the
@@ -2105,22 +2084,19 @@ pub fn turn_weigh() -> u32 {
     RAN
 }
 
-/// CharacterAnimator.leanBody — a lean round an edge: the trunk rolled about the figure's fore-aft line over the three spine joints, the arms and the gun with
+/// A lean round an edge: the trunk rolled about the figure's fore-aft line over the three spine joints, the arms and the gun with
 /// it, and the neck and head brought part of the way back so the eyes stay near level.
-/// args: 0 dt · 1 the lean asked (−1‥1); then from 64 its column: the lean as shown (eased)
-pub fn lean_body(g: usize, at: usize) -> u32 {
-    let (dt, lean) = (bench().args[0], bench().args[1]);
-    let mut sm = bench().args[L_IN];
-    let code = with_pose(g, at, |d, rig, n, _fk| {
+pub fn lean_body(g: usize, an: &mut Anim, dt: f64) -> u32 {
+    with_pose(g, an.p_a.at as usize, |d, rig, n, _fk| {
         if !cast(n, &[SPINE1, SPINE2, SPINE3, NECK, HEAD]) {
             return 0;
         }
-        let want = clamp(lean, -1.0, 1.0);
-        sm += (want - sm) * min(1.0, k(LEAN_RATE) * dt);
-        if want == 0.0 && abs(sm) < 0.01 {
-            sm = 0.0;
+        let want = clamp(an.lean, -1.0, 1.0);
+        an.lean_sm += (want - an.lean_sm) * min(1.0, k(LEAN_RATE) * dt);
+        if want == 0.0 && abs(an.lean_sm) < 0.01 {
+            an.lean_sm = 0.0;
         }
-        let r = sm * k(LEAN_DEG) * DEGR;
+        let r = an.lean_sm * k(LEAN_DEG) * DEGR;
         if r != 0.0 {
             turn(d, rig, role(SPINE1), q_roll(r * 0.3));
             turn(d, rig, role(SPINE2), q_roll(r * 0.35));
@@ -2130,21 +2106,13 @@ pub fn lean_body(g: usize, at: usize) -> u32 {
         }
         RAN
     })
-    .unwrap_or(0);
-    if code != 0 {
-        bench().args[L_IN] = sm;
-    }
-    code
+    .unwrap_or(0)
 }
 
-/// CharacterAnimator.actPose — a one-shot action's clip laid over the finished pose (the animator keeps which clip, its clock and its weight), and a man asleep
+/// A one-shot action's clip laid over the finished pose (the animator keeps which clip, its clock and its weight), and a man asleep
 /// in his chair slumped over it.
-/// args: 0 the weight · 1 the clip's number · 2 its clock · 3 it loops (1 or 0) · 4 dt · 5 the slump asked; then from 64 its column: the slump as shown
-pub fn act_pose(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
-    let mut a = [0.0f64; 6];
-    a.copy_from_slice(&bench().args[..6]);
-    let (w, clip, t, looped, dt, slump) = (a[0], a[1], a[2], a[3] != 0.0, a[4], a[5]);
-    let mut slump_w = bench().args[L_IN];
+pub fn act_pose(g: usize, an: &mut Anim, clip: f64, w: f64, dt: f64) -> u32 {
+    let (at, at_b, at_rest, t, looped) = (an.p_a.at as usize, an.p_b.at as usize, an.rest.at as usize, an.act_t, an.act_loop);
     let Some(Some(n)) = with_pose(g, at, |_d, _rig, n, _fk| if cast(n, &[SPINE3, NECK, HEAD]) { Some(n) } else { None }) else {
         return 0;
     };
@@ -2152,10 +2120,10 @@ pub fn act_pose(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
         return 0;
     }
     let mut code = RAN;
-    if slump > 0.0 || slump_w > 0.0 {
-        let ds = slump - slump_w;
-        slump_w += if ds > 0.0 { min(ds, dt / 1.6) } else { max(ds, -dt / 0.35) };
-        let s = slump_w * w;
+    if an.slump > 0.0 || an.slump_w > 0.0 {
+        let ds = an.slump - an.slump_w;
+        an.slump_w += if ds > 0.0 { min(ds, dt / 1.6) } else { max(ds, -dt / 0.35) };
+        let s = an.slump_w * w;
         if s > 1e-4 {
             let br = sin(t * 1.75);
             code = with_pose(g, at, |d, rig, _n, fk| {
@@ -2168,61 +2136,43 @@ pub fn act_pose(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
             .unwrap_or(0);
         }
     }
-    if code != 0 {
-        bench().args[L_IN] = slump_w;
-    }
     code
 }
 
-/// CharacterAnimator.gazeKeep — the gaze stabiliser: the head kept level and steady while the body works under it. Measured off the finished pose (the head's
+/// The gaze stabiliser: the head kept level and steady while the body works under it. Measured off the finished pose (the head's
 /// chain alone), it works out the pitch the neck and head take toward the gait's own eye line and the yaw wobble they take out against a half-second
-/// reference of itself. It turns nothing: the host pushes the two twists.
-/// args: 0 dt · 1 the weight wanted · 2 the crouch shown · 3 the sprint's share · 4 the goggle nod as posed · 5 hurt's weight (mvs.hu.x) · 6 shaken's
-/// (mvs.sk.x) · 7‥9 gazeLocal; then from 64 its columns: 0 its weight · 1 the pitch it holds · 2 the yaw's slow reference · 3 that reference is set (1 or 0)
-/// · and, out only, 4 the yaw it takes out this frame
-pub fn gaze_keep(g: usize, at: usize) -> u32 {
-    const COLS: usize = 5;
-    const W: usize = 0;
-    const PITCH: usize = 1;
-    const REF: usize = 2;
-    const INIT: usize = 3;
-    const FIX: usize = 4;
-    let mut a = [0.0f64; L_IN + COLS];
-    a.copy_from_slice(&bench().args[..L_IN + COLS]);
-    let (dt, want_w, crouch, sprint, nod, hu, sk, gaze_local) = (a[0], a[1], a[2], a[3], a[4], a[5], a[6], [a[7], a[8], a[9]]);
-    let st = &mut a[L_IN..];
-    st[FIX] = 0.0;
+/// reference of itself. It turns nothing: it answers the yaw to take out this frame.
+pub fn gaze_keep(g: usize, an: &mut Anim, dt: f64, want_w: f64, crouch: f64, sprint: f64) -> (u32, f64) {
+    let (at, nod, hu, sk, gaze_local, gz) = (an.p_a.at as usize, an.nv_a, an.mvs.hu.x, an.mvs.sk.x, an.gaze_local, &mut an.gz);
+    let mut fix = 0.0;
     let code = with_pose(g, at, |d, rig, n, fk| {
         if !cast(n, &[NECK, HEAD]) {
             return 0;
         }
-        st[W] = damp(st[W], want_w, 10.0, dt);
-        if st[W] > 0.01 {
+        gz.w = damp(gz.w, want_w, 10.0, dt);
+        if gz.w > 0.01 {
             fk.part(rig, d, list(FK_HEAD));
-            let gz = q_rotate(&fk.rot(role(HEAD)), &gaze_local);
-            let (el, gyaw) = (asin(clamp(gz[1], -1.0, 1.0)) + nod, atan2(gz[0], gz[2]));
+            let look = q_rotate(&fk.rot(role(HEAD)), &gaze_local);
+            let (el, gyaw) = (asin(clamp(look[1], -1.0, 1.0)) + nod, atan2(look[0], look[2]));
             let bow = (k(HURT_PITCH) + k(HURT_HEAD)) * clamp(hu, 0.0, 1.0) + (k(SHAKEN_PITCH) + k(SHAKEN_HEAD)) * clamp(sk, 0.0, 1.0);
             let target_el = -(k(GAZE_STAND) + (k(GAZE_CROUCH) - k(GAZE_STAND)) * crouch + (k(GAZE_SPRINT) - k(GAZE_STAND)) * sprint * (1.0 - crouch) + bow) * DEGR;
             let want_pitch = clamp((el - target_el) * k(GAZE_KEEP), -30.0 * DEGR, 30.0 * DEGR);
-            st[PITCH] = damp(st[PITCH], want_pitch, 25.0, dt);
-            if st[INIT] == 0.0 {
-                st[REF] = gyaw;
-                st[INIT] = 1.0;
+            gz.pitch = damp(gz.pitch, want_pitch, 25.0, dt);
+            if !gz.yaw_init {
+                gz.yaw_ref = gyaw;
+                gz.yaw_init = true;
             }
-            st[REF] += wrap_angle(gyaw - st[REF]) * clamp(dt / 0.5, 0.0, 1.0);
-            st[FIX] = clamp(-wrap_angle(gyaw - st[REF]) * k(GAZE_YAW_DAMP), -12.0 * DEGR, 12.0 * DEGR);
+            gz.yaw_ref += wrap_angle(gyaw - gz.yaw_ref) * clamp(dt / 0.5, 0.0, 1.0);
+            fix = clamp(-wrap_angle(gyaw - gz.yaw_ref) * k(GAZE_YAW_DAMP), -12.0 * DEGR, 12.0 * DEGR);
             RAN | ran_list(FK_HEAD)
         } else {
-            st[INIT] = 0.0;
-            st[PITCH] = damp(st[PITCH], 0.0, 10.0, dt);
+            gz.yaw_init = false;
+            gz.pitch = damp(gz.pitch, 0.0, 10.0, dt);
             RAN
         }
     })
     .unwrap_or(0);
-    if code != 0 {
-        bench().args[L_IN..L_IN + COLS].copy_from_slice(&a[L_IN..]);
-    }
-    code
+    (code, fix)
 }
 
 // ================================================================ THE ARMS
@@ -5576,26 +5526,19 @@ fn arm_of(side: usize) -> (usize, usize, usize, usize) {
         (role(SHOULDER_L), role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L))
     }
 }
-/// CharacterAnimator.doorLayer — a hand on a door: the spine bowed into a long reach, then the arm that is up by IK on a copy, its target
-/// travelling with the eased weight from wherever the pose beneath has the wrist to the spot on the leaf, the palm flat on the face. Its own
-/// numbers: 0 dt · 1 how much he means it · 2 the right hand free for it? · 3, 4 the twist · 5 which hand (−1 not settled) · 6 a leaf a
-/// stride off too? · 7‥9 out of the face toward him · 10‥12 the spot · 13‥16, 17‥20 the hands' fixes. Its columns: the left and right
-/// weights' springs (value, speed), in reach?, the right hand?
-pub fn door_layer(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
-    let mut a = [0.0f64; 21];
-    a.copy_from_slice(&bench().args[..21]);
-    let mut cs = [0.0f64; 6];
-    cs.copy_from_slice(&bench().args[L_IN..L_IN + 6]);
-    let (dt, intent, right_free, tw_y, tw_p, hand_no, reach) = (a[0], a[1], a[2] != 0.0, a[3], a[4], a[5], a[6] != 0.0);
-    let (p0, fix) = ([a[10], a[11], a[12]], [[a[13], a[14], a[15], a[16]], [a[17], a[18], a[19], a[20]]]);
-    let (live, w_was) = (intent > 0.003, clamp(max(cs[0], cs[2]), 0.0, 1.0));
+/// A hand on a door: the spine bowed into a long reach, then the arm that is up by IK on a copy, its target
+/// travelling with the eased weight from wherever the pose beneath has the wrist to the spot on the leaf (`p0`), the palm flat on the face (`n` out of it
+/// toward him, both in the model's space).
+pub fn door_layer(g: usize, an: &mut Anim, l: &DoorPush, n: [f64; 3], p0: [f64; 3], dt: f64, intent: f64, right_free: bool, tw_y: f64, tw_p: f64) -> u32 {
+    let (at, at_b, at_rest) = (an.p_a.at as usize, an.p_b.at as usize, an.rest.at as usize);
+    let (hand_no, reach, fix, dp) = (l.hand, l.reach.unwrap_or(false), &an.hand_fix, &mut an.dp);
+    let (live, w_was) = (intent > 0.003, clamp(max(dp.w_l.x, dp.w_r.x), 0.0, 1.0));
     if live && hand_no >= 0.0 {
-        cs[5] = if hand_no == 1.0 && right_free { 1.0 } else { 0.0 };
+        dp.right = hand_no == 1.0 && right_free;
     }
-    let right = cs[5] != 0.0;
+    let right = dp.right;
     let arm = if right { 1 } else { 0 };
-    let n0 = normalize([a[7], a[8], a[9]]);
-    let c = &mut cs;
+    let n0 = normalize(n);
     let Some(Some((n, tw, f, p_tgt, w_l, w_r))) = with_pose(g, at, |d, rig, n, fk| {
         if !(cast(n, &ARM_ROLES) && cast(n, &[SPINE1, SPINE2, NECK, HEAD])) {
             return None;
@@ -5623,8 +5566,8 @@ pub fn door_layer(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
         if live && hand_no >= 0.0 {
             let (sh, wr) = (fk.at(ua0), wrist_of(p_tgt));
             let (dd, ahead, far) = (dist3(&sh, &wr), wr[2] - sh[2], if reach { 0.45 } else { 0.0 });
-            let ok = if c[4] != 0.0 { dd < 0.585 + far && dd > 0.16 && ahead > 0.02 } else { dd < 0.56 + far && dd > 0.2 && ahead > 0.06 };
-            c[4] = if ok { 1.0 } else { 0.0 };
+            let ok = if dp.reach_ok { dd < 0.585 + far && dd > 0.16 && ahead > 0.02 } else { dd < 0.56 + far && dd > 0.2 && ahead > 0.06 };
+            dp.reach_ok = ok;
             if ok {
                 if right {
                     tgt_r = intent;
@@ -5633,14 +5576,14 @@ pub fn door_layer(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
                 }
             }
         } else {
-            c[4] = 0.0;
+            dp.reach_ok = false;
         }
         // ≈ 0.15 s in, 0.25 s out
         let rate = |t: f64, x: f64| if t > x { 40.0 } else { 26.0 };
-        let (rl, rr) = (rate(tgt_l, c[0]), rate(tgt_r, c[2]));
-        spring(c, 0, tgt_l, rl, dt);
-        spring(c, 2, tgt_r, rr, dt);
-        Some((n, tw, f, p_tgt, clamp(c[0], 0.0, 1.0), clamp(c[2], 0.0, 1.0)))
+        let (rl, rr) = (rate(tgt_l, dp.w_l.x), rate(tgt_r, dp.w_r.x));
+        spring_step(&mut dp.w_l, tgt_l, rl, dt);
+        spring_step(&mut dp.w_r, tgt_r, rr, dt);
+        Some((n, tw, f, p_tgt, clamp(dp.w_l.x, 0.0, 1.0), clamp(dp.w_r.x, 0.0, 1.0)))
     }) else {
         return 0;
     };
@@ -5683,7 +5626,6 @@ pub fn door_layer(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
         }
     }
     hands_out(&hs);
-    bench().args[L_IN..L_IN + 6].copy_from_slice(&cs);
     RAN | RAN_ALL
 }
 /// what a hand at work does: the wrist's spot, where the fingers point and the back of the hand faces, the fingers themselves, and whether
