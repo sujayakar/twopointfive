@@ -234,7 +234,7 @@ fn ok_target(g: &Game, name: &str, on: bool) -> bool {
 
 fn ok_men(g: &Game, down: Option<f64>) -> bool {
     let guards = g.guards.clone();
-    let n = guards.iter().filter(|&&x| crate::teams::hostile_to(g, x, crate::teams::HostileToO::Player) && crate::condition::down(g, g.gd[x].ch)).count();
+    let n = guards.iter().filter(|&&x| crate::teams::hostile_to(g, x, crate::teams::Team::Player) && crate::condition::down(g, g.gd[x].ch)).count();
     n as f64 >= down.unwrap_or(1.0)
 }
 
@@ -256,7 +256,7 @@ fn ok_body(g: &Game, seat: &crate::seats::SeatRef, area: crate::scene_scenarios:
 fn ok_calm(g: &Game, route: Option<&str>) -> bool {
     let guards = g.guards.clone();
     guards.iter().all(|&x| {
-        !crate::teams::hostile_to(g, x, crate::teams::HostileToO::Player) || crate::condition::down(g, g.gd[x].ch)
+        !crate::teams::hostile_to(g, x, crate::teams::Team::Player) || crate::condition::down(g, g.gd[x].ch)
             || route.map_or(false, |r| g.tab.route[g.gd[x].route].name != r)
             || g.gd[x].state == crate::game::GuardState::Patrol
     })

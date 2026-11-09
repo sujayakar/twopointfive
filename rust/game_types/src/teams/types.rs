@@ -12,12 +12,6 @@ pub enum Team {
     Civilian,
 }
 
-#[derive(Clone, Copy, Debug)]
-pub enum HostileToO {
-    Guard(GuardId),
-    Player,
-}
-
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct TeamsMod {

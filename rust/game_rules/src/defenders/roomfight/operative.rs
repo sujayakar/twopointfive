@@ -128,7 +128,7 @@ fn under_the_fight_ai(g: &mut Game, o: RoomfightOpId) {
     if let (crate::game::GuardState::Alert, Some(fc)) = (g.gd[gd].state, fc) {
         let muzzle = g.ch[c].muzzle;
         let at = chest_of(g, fc);
-        if matches!(room_fight_friend_in_line(g, muzzle, at, gd), Some(RoomFightFriendInLine::Player)) {
+        if room_fight_friend_in_line(g, muzzle, at, gd).is_some_and(|f| crate::character::is_player(g, f)) {
             g.gd[gd].muzzle_down = true;
             g.gd[gd].muzzle_clear_t = 0.0;
             g.tab.roomfight_op[o].held_for_friend += 1.0;
@@ -327,7 +327,7 @@ fn engage(g: &mut Game, o: RoomfightOpId, dt: f64, speed: f64, sk: &FightSkill) 
         g.tab.roomfight_op[o].held_for_friend += 1.0;
         g.fight.stats.held_for_friend += 1.0;
         g.tab.roomfight_op[o].line_t += dt;
-        g.tab.roomfight_op[o].line_by = Some(OpLineBy::Player);
+        g.tab.roomfight_op[o].line_by = Some(g.pl[g.player].ch);
         g.tab.roomfight_op[o].line_at = g.time;
         room_fight_side_step(g, o, chest, speed, None, None);
         room_fight_let_go(g, o);
@@ -413,16 +413,16 @@ fn fires(g: &mut Game, o: RoomfightOpId, h: GuardId, to: V3, dt: f64, speed: f64
     let mut in_line = room_fight_friend_in_line(g, muzzle, to, gd);
     if in_line.is_none() { // a friend anywhere this round could go holds it as one in the lane does
         let cone = wide + match def.pellets { Some(pl) => pl.cone * 2.0, None => 0.0 };
-        in_line = crate::friendlyfire::friend_in_cone(g, gd, muzzle, to, cone, None, Some(hc)).map(cone_friend);
+        in_line = crate::friendlyfire::friend_in_cone(g, gd, muzzle, to, cone, None, Some(hc));
         if in_line.is_some() { crate::friendlyfire::ff_held(g); }
     }
     if let Some(f) = in_line {
         g.tab.roomfight_op[o].held_for_friend += 1.0;
         g.fight.stats.held_for_friend += 1.0;
         g.tab.roomfight_op[o].line_t += dt;
-        g.tab.roomfight_op[o].line_by = Some(line_by(f));
+        g.tab.roomfight_op[o].line_by = Some(f);
         g.tab.roomfight_op[o].line_at = g.time;
-        if matches!(f, RoomFightFriendInLine::Player) { room_fight_hold_short(g, o); }
+        if crate::character::is_player(g, f) { room_fight_hold_short(g, o); }
         room_fight_side_step(g, o, to, speed, None, None);
         room_fight_let_go(g, o);
         return;
