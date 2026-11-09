@@ -11,8 +11,8 @@
 //   {k:'piece'}  one piece, numbered from 0 within its visit
 //   {k:'hands'}  a piece of a visit to the page that draws: bytes of its tape of hands, from where in it (tape/keep.ts)
 //   {k:'notes'}  notes put on a kept visit in the viewer
-//   {k:'f7'}     a file saved by the key that the shelf holds: its notes and which visit it is a window of (the trace itself is in the visit's pieces)
-//   {k:'file'}   a whole replay file the shelf holds whose visit is NOT kept here (saved before the page kept tapes, or its visit has been let go)
+//   {k:'f7'}     a file an older page's key saved: its notes and which visit it is a window of (the trace itself is in the visit's pieces)
+//   {k:'file'}   a whole replay file an older page saved whose visit is NOT kept (saved before the page kept tapes, or its visit has been let go)
 // `assemble` turns one visit's head and pieces back into a ReplayFile — the very thing F7 writes, so the viewer, tools/qa/replay-at.ts and the re-run read it as
 // they read any other. No game code is imported: the viewer page and the reading tool (tools/qa/replay-dump.ts) load this file alone.
 import type { CastRow, Sample, ReplayEvent, ReplayLine, ReplayNote, ReplayFile, RunTape, TapeVal } from './format';
