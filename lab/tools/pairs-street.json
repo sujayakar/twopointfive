@@ -1,0 +1,192 @@
+[
+ {
+  "name": "x-crates-rt",
+  "w": 960,
+  "h": 540,
+  "hour": 22.2,
+  "cut": 2.5,
+  "tick": 300,
+  "look": [
+   -4.0,
+   0.5,
+   -0.6
+  ],
+  "dist": 6,
+  "yaw": 0.35,
+  "pitch": 0.5,
+  "method": "realtime",
+  "samples": 260,
+  "scale": 1
+ },
+ {
+  "name": "x-crates-ref",
+  "w": 960,
+  "h": 540,
+  "hour": 22.2,
+  "cut": 2.5,
+  "tick": 300,
+  "look": [
+   -4.0,
+   0.5,
+   -0.6
+  ],
+  "dist": 6,
+  "yaw": 0.35,
+  "pitch": 0.5,
+  "method": "reference",
+  "samples": 500,
+  "scale": 1
+ },
+ {
+  "name": "x-pole-rt",
+  "w": 960,
+  "h": 540,
+  "hour": 22.2,
+  "cut": 2.5,
+  "tick": 300,
+  "look": [
+   6.9,
+   1.6,
+   0.9
+  ],
+  "dist": 6,
+  "yaw": 0.5,
+  "pitch": 0.45,
+  "method": "realtime",
+  "samples": 260,
+  "scale": 1
+ },
+ {
+  "name": "x-pole-ref",
+  "w": 960,
+  "h": 540,
+  "hour": 22.2,
+  "cut": 2.5,
+  "tick": 300,
+  "look": [
+   6.9,
+   1.6,
+   0.9
+  ],
+  "dist": 6,
+  "yaw": 0.5,
+  "pitch": 0.45,
+  "method": "reference",
+  "samples": 500,
+  "scale": 1
+ },
+ {
+  "name": "x-car-rt",
+  "w": 960,
+  "h": 540,
+  "hour": 22.2,
+  "cut": 2.5,
+  "tick": 300,
+  "look": [
+   -2.6,
+   0.6,
+   7.1
+  ],
+  "dist": 6.5,
+  "yaw": 0.5,
+  "pitch": 0.42,
+  "method": "realtime",
+  "samples": 260,
+  "scale": 1
+ },
+ {
+  "name": "x-car-ref",
+  "w": 960,
+  "h": 540,
+  "hour": 22.2,
+  "cut": 2.5,
+  "tick": 300,
+  "look": [
+   -2.6,
+   0.6,
+   7.1
+  ],
+  "dist": 6.5,
+  "yaw": 0.5,
+  "pitch": 0.42,
+  "method": "reference",
+  "samples": 500,
+  "scale": 1
+ },
+ {
+  "name": "x-glass-rt",
+  "w": 960,
+  "h": 540,
+  "hour": 22.2,
+  "cut": 2.5,
+  "tick": 300,
+  "look": [
+   3.6,
+   1.2,
+   -1.4
+  ],
+  "dist": 5,
+  "yaw": 0.2,
+  "pitch": 0.4,
+  "method": "realtime",
+  "samples": 260,
+  "scale": 1
+ },
+ {
+  "name": "x-glass-ref",
+  "w": 960,
+  "h": 540,
+  "hour": 22.2,
+  "cut": 2.5,
+  "tick": 300,
+  "look": [
+   3.6,
+   1.2,
+   -1.4
+  ],
+  "dist": 5,
+  "yaw": 0.2,
+  "pitch": 0.4,
+  "method": "reference",
+  "samples": 500,
+  "scale": 1
+ },
+ {
+  "name": "x-fridge-rt",
+  "w": 960,
+  "h": 540,
+  "hour": 22.2,
+  "cut": 2.5,
+  "tick": 300,
+  "look": [
+   -3.0,
+   1.2,
+   -9.0
+  ],
+  "dist": 5,
+  "yaw": 0.2,
+  "pitch": 0.35,
+  "method": "realtime",
+  "samples": 260,
+  "scale": 1
+ },
+ {
+  "name": "x-fridge-ref",
+  "w": 960,
+  "h": 540,
+  "hour": 22.2,
+  "cut": 2.5,
+  "tick": 300,
+  "look": [
+   -3.0,
+   1.2,
+   -9.0
+  ],
+  "dist": 5,
+  "yaw": 0.2,
+  "pitch": 0.35,
+  "method": "reference",
+  "samples": 500,
+  "scale": 1
+ }
+]
