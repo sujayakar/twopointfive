@@ -362,6 +362,31 @@ fn a_foot_clears_the_floor_in_every_gait() {
     }
 }
 
+/// THE RULE: a fallen man's toes stay over his floor, from the moment he falls until he lies still, on his round or off it.
+/// THE CONTROL: he has fallen: his hips are down. (Off his round: Sam's shots have sent him away from it, where a man used to come to rest with a foot through the floor.)
+/// A FAILURE MEANS: a dead man's foot goes through the floor.
+#[test]
+fn a_fallen_mans_toes_stay_over_the_floor() {
+    for s in SEEDS {
+        for (wait, shots) in [(2.0, false), (8.0, false), (14.0, false), (20.0, false), (26.0, false), (32.0, false), (6.0, true)] {
+            let mut p = floor(s);
+            let post = p.guard("post");
+            if shots { p.sam_takes_his_rifle(); p.run(1.5); p.press(Button::Left); p.run(0.5); p.release(Button::Left); }
+            p.run(wait);
+            let c = p.body_of(post);
+            p.falls(post, game::game::DownBy::Player);
+            for _ in 0..300 {
+                p.frame();
+                for b in [Bone::ToeL, Bone::ToeR] {
+                    let y = p.joint(c, b)[1];
+                    assert!(y > -0.01, "seed {s}, {wait} s on: a fallen man's toe is {:.3} m under the floor", -y);
+                }
+            }
+            assert!(p.joint(c, Bone::Hips)[1] < 0.4, "seed {s}, {wait} s on: his hips are at {:.2} m", p.joint(c, Bone::Hips)[1]);
+        }
+    }
+}
+
 /// THE RULE: however he goes from one thing to another, no joint moves more in one frame than a limb can: a change of what he is doing is a blend and not a cut. (Measured from his hips, so what is left is the pose.)
 /// A FAILURE MEANS: a pop on the screen as a man starts, stops, goes low or changes guns.
 #[test]
