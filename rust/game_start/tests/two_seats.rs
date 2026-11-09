@@ -59,7 +59,7 @@ fn the_team_is_down_when_all_of_it_is() {
             p.pin_man(t1, [21.0, AISLE], 0.0, game::game::GuardState::Patrol, 0.0);
             assert!(game::doze::live(&mut p.g), "seed {s}: CONTROL: both up, a calm floor dozes");
             let m = man(&p, seat);
-            p.g.pl[m].down = true;
+            p.g.cond[p.g.pl[m].ch].down = true;
             assert!(game::doze::live(&mut p.g), "seed {s}: seat {seat}'s man down and the other up: the floor is still calm");
             p.g.gd[t1].team = game::teams::Team::Guard;   // (the floor's alarm is the guards': a level's night, not this room clear's defenders)
             p.g.alarm.episode = true;
@@ -70,8 +70,8 @@ fn the_team_is_down_when_all_of_it_is() {
             drop(p);
             let (mut q, t2) = two(s);
             let (a, b) = (man(&q, 0), man(&q, 1));
-            q.g.pl[a].down = true;
-            q.g.pl[b].down = true;
+            q.g.cond[q.g.pl[a].ch].down = true;
+            q.g.cond[q.g.pl[b].ch].down = true;
             assert!(!game::doze::live(&mut q.g), "seed {s}: CONTROL: both down, nobody is left to doze for");
             q.g.gd[t2].team = game::teams::Team::Guard;
             q.g.alarm.episode = true;
@@ -212,7 +212,7 @@ fn an_eye_sees_a_man_up_with_the_other_down() {
             let (mut p, _) = two(s);
             let m = man(&p, seat);
             let other = man(&p, 1 - seat);
-            p.g.pl[other].down = true;
+            p.g.cond[p.g.pl[other].ch].down = true;
             p.seat_stands(seat, [16.0, AISLE]);
             let pc = p.g.pl[m].ch;
             let (from, chest) = ([20.0, 1.5, AISLE], [16.0, 1.2, AISLE]);

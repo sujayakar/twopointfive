@@ -23,7 +23,6 @@ fn cell_key(i: f64) -> crate::Num { crate::Num(i + 0.0) }
 
 fn pos_of(g: &Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }
 fn mode_of(g: &Game, d: RoomfightDefId) -> crate::roomfight::DefMode { g.tab.roomfight_def[d].mode }
-fn is_dead(g: &Game, gd: GuardId) -> bool { g.gd[gd].state == crate::game::GuardState::Dead }
 /// `gd.path = []; gd.pathGoal = null`
 fn clear_path(g: &mut Game, gd: GuardId) { crate::game::guard_set_path(g, gd, Vec::new()); crate::guards::guard_set_path_goal(g, gd, None); }
 /// `g.say(gd, text, true)`
@@ -55,7 +54,7 @@ pub(super) fn peek_step(g: &mut crate::game::Game, gd: GuardId) {
     let ll = find_lane(g, p.lane);
     let dd = def_of(g, gd);
     let now = g.time;
-    if is_dead(g, gd) {
+    if crate::condition::down(g, g.gd[gd].ch) {
         peek_off(g, gd);
         if p.frag.is_some() {
             s(g).stats.frag_lost += 1.0;

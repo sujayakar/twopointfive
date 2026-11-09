@@ -206,13 +206,13 @@ fn in_the_way(g: &mut crate::game::Game, d: DoorId, but: Option<GuardId>, seen: 
     let player = g.player;
     let sam_ch = g.pl[player].ch;
     let sam_at = g.ch[sam_ch].pos;
-    if !g.pl[player].down && in_shut_swing(g, d, sam_at[0], sam_at[2], Some(k().body)) { return Some(String::from("you're in its way.")); }
+    if !crate::condition::down(g, g.pl[player].ch) && in_shut_swing(g, d, sam_at[0], sam_at[2], Some(k().body)) { return Some(String::from("you're in its way.")); }
     let mut all = g.guards.clone();
     all.extend(crate::civilians::civilians_shown(g));
     for m in all {
         if Some(m) == but { continue; }
         let c = g.gd[m].ch;
-        if g.gd[m].state == crate::game::GuardState::Dead {
+        if crate::condition::down(g, g.gd[m].ch) {
             if body_in_swing(g, d, c) { return Some(String::from("a body's in its way.")); }
             continue;
         }
@@ -227,7 +227,7 @@ fn in_the_way(g: &mut crate::game::Game, d: DoorId, but: Option<GuardId>, seen: 
             String::from("somebody's in its way.")
         });
     }
-    if g.pl[player].down && body_in_swing(g, d, sam_ch) { Some(String::from("a body's in its way.")) } else { None }
+    if crate::condition::down(g, g.pl[player].ch) && body_in_swing(g, d, sam_ch) { Some(String::from("a body's in its way.")) } else { None }
 }
 
 /// An enemy somebody of the team has in sight right now through that doorway.
@@ -236,13 +236,13 @@ fn contact_through(g: &mut crate::game::Game, d: DoorId) -> bool {
     let sam_ch = g.pl[player].ch;
     for h in g.guards.clone() {
         let team = g.gd[h].team;
-        if g.gd[h].state == crate::game::GuardState::Dead || !crate::teams::is_hostile(g, crate::teams::Team::Operative, team) { continue; }
+        if crate::condition::down(g, g.gd[h].ch) || !crate::teams::is_hostile(g, crate::teams::Team::Operative, team) { continue; }
         for m in crate::roomfight::room_fight_seen_by(g, h) {
             let (m_at, h_at) = (pos_of(g, m), pos_of(g, h));
             if crate::guards::crosses_door(g, m_at, h_at, d).is_some() { return true; }
         }
         let (sam_at, h_at) = (g.ch[sam_ch].pos, pos_of(g, h));
-        if !g.pl[player].down
+        if !crate::condition::down(g, g.pl[player].ch)
             && crate::guards::crosses_door(g, sam_at, h_at, d).is_some()
             && flat(sam_at, h_at) < 30.0
             && crate::fogofwar::fog_of_war_drawn(g, h)

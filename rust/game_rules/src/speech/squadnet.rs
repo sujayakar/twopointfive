@@ -35,7 +35,7 @@ pub fn squad_net_line(g: &mut crate::game::Game) {
 
 /// A line that tells the player something, by the man it is about if he can speak, else by the nearest of the seat's men who can. Whether anybody said it.
 pub fn team_says(g: &mut crate::game::Game, about: Option<GuardId>, text: &str) -> bool {
-    let can = |g: &Game, gd: GuardId| g.gd[gd].state != crate::game::GuardState::Dead && g.gd[gd].held.is_none() && !crate::runner::runner_mute(g, gd);
+    let can = |g: &Game, gd: GuardId| !crate::condition::down(g, g.gd[gd].ch) && g.gd[gd].held.is_none() && !crate::runner::runner_mute(g, gd);
     let by = about.filter(|&gd| can(g, gd)).or_else(|| {
         let at = g.ch[g.pl[g.player].ch].pos;
         let mut best: Option<(GuardId, f64)> = None;
@@ -59,12 +59,12 @@ pub fn squad_net_tick(g: &mut crate::game::Game) {
     let squad = crate::seats::team_squad(g, &crate::seats::here(g));
     if !g.squad_net.down.is_empty() {
         let kept: Vec<String> = g.squad_net.down.iter()
-            .filter(|c| squad.iter().any(|&gd| g.gd[gd].callsign == **c && g.gd[gd].state == crate::game::GuardState::Dead))
+            .filter(|c| squad.iter().any(|&gd| g.gd[gd].callsign == **c && crate::condition::down(g, g.gd[gd].ch)))
             .cloned().collect();
         g.squad_net.down = kept;
     }
     for &gd in &squad {
-        if g.gd[gd].state != crate::game::GuardState::Dead || g.squad_net.down.contains(&g.gd[gd].callsign) { continue; }
+        if !crate::condition::down(g, g.gd[gd].ch) || g.squad_net.down.contains(&g.gd[gd].callsign) { continue; }
         let callsign = g.gd[gd].callsign.clone();
         g.squad_net.down.push(callsign.clone());
         if !g.squad_net.seeded { continue; }

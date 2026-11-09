@@ -7,13 +7,8 @@ use crate::m;
 use crate::v3::{self, V3};
 use alloc::{string::String, vec::Vec};
 
-/// Is he down: dead, choked out, or a player out of hits.
-pub fn down(g: &Game, c: CharId) -> bool {
-    match g.ch[c].who {
-        crate::character::Who::Guard(gd) => g.gd[gd].state == crate::game::GuardState::Dead,
-        crate::character::Who::Player(pl) => g.pl[pl].down,
-    }
-}
+/// Is he down: dead, knocked out, or a player out of hits.
+pub fn down(g: &Game, c: CharId) -> bool { g.cond[c].down }
 /// Is this man hurt now; `now` is the clock asked of, the game's by default.
 pub fn is_hurt(g: &Game, c: CharId, now: Option<f64>) -> bool {
     let (at, now) = (g.cond[c].hurt_at, now.unwrap_or(g.time));
@@ -154,7 +149,7 @@ pub fn stun_pose(g: &mut Game, c: CharId, live: bool, from: V3) -> (bool, bool) 
 mod tests {
     use super::*;
     use alloc::vec;
-    use crate::game::{Guard, GuardState, Player};
+    use crate::game::{Guard, Player};
 
     fn game() -> (Game, GuardId, PlayerId, CharId, CharId) {
         let mut g = Game::blank();
@@ -193,7 +188,7 @@ mod tests {
         g.gd[gd].god = true;
         assert!(!condition_hurt(&mut g, cg));
         g.gd[gd].god = false;
-        g.gd[gd].state = GuardState::Dead;
+        g.cond[cg].down = true;
         assert!(!condition_hurt(&mut g, cg));
         g.god_mode = true;
         assert!(!condition_hurt(&mut g, cp));
@@ -225,7 +220,7 @@ mod tests {
         g.cond[g.gd[gd].ch].fold_until = 11.0;
         g.cond[g.pl[pl].ch].hurt_at = 9.0;
         assert_eq!(condition_summary(&g, &crate::seats::here(&g)), "condition \u{25b8} you hurt \u{b7} Reyes folded hurt");
-        g.pl[pl].down = true;
+        g.cond[cp].down = true;
         assert_eq!(condition_summary(&g, &crate::seats::here(&g)), "condition \u{25b8} Reyes folded hurt");
         assert!(condition_of(&mut g, cp).down);
         assert!(!condition_of(&mut g, cp).hurt);

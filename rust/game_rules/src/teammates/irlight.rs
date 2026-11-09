@@ -289,7 +289,7 @@ pub fn ir_light_tick(g: &mut crate::game::Game) {
         i += 1;
         let c = g.gd[gd].ch;
         let id = g.ch[c].id;
-        if g.gd[gd].state == crate::game::GuardState::Dead || !crate::nvg::nvg_down(g, gd) {
+        if crate::condition::down(g, g.gd[gd].ch) || !crate::nvg::nvg_down(g, gd) {
             let had = kit_of(g).men.get(gd).copied();
             out(g, had);
             drop(g, id);

@@ -177,7 +177,7 @@ pub fn update_stickies(g: &mut crate::game::Game, dt: f64) {
             let mut hit: Option<(CharId, GuardId)> = None;
             for i in 0..g.guards.len() {
                 let gd = g.guards[i];
-                if g.gd[gd].state != crate::game::GuardState::Dead && g.gd[gd].team != crate::teams::Team::Operative {
+                if !crate::condition::down(g, g.gd[gd].ch) && g.gd[gd].team != crate::teams::Team::Operative {
                     let c = g.gd[gd].ch;
                     try_char(g, c, gd, pos, dir, reach, &mut best, &mut hit);
                 }

@@ -194,12 +194,12 @@ fn work_things_prune(g: &mut crate::game::Game) {
     let squad = crate::orders::squad_orders_squad(g, &crate::seats::here(g));
     for gd in g.work.jobs.keys() {
         let a = g.work.jobs.get(gd).unwrap().a;
-        if g.gd[gd].state == crate::game::GuardState::Dead || !squad.contains(&gd) || crate::orders::squad_orders_of(g, &crate::seats::here(g), gd) != Some(a) {
+        if crate::condition::down(g, g.gd[gd].ch) || !squad.contains(&gd) || crate::orders::squad_orders_of(g, &crate::seats::here(g), gd) != Some(a) {
             g.work.jobs.delete(gd);
         }
     }
     for c in g.work.hands.keys() {
-        if !squad.iter().any(|&gd| g.gd[gd].ch == c && g.gd[gd].state != crate::game::GuardState::Dead) {
+        if !squad.iter().any(|&gd| g.gd[gd].ch == c && !crate::condition::down(g, g.gd[gd].ch)) {
             g.work.hands.delete(c);
         }
     }
@@ -410,7 +410,7 @@ pub fn work_things_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignm
     put_job(g, gd, &j);
     // the run has ended under his hand: the mission's thing is nobody's; the breaker is the level's and goes on
     let pl = g.player;
-    if g.pl[pl].down && verb == WorkVerb::Drive {
+    if crate::condition::down(g, g.pl[pl].ch) && verb == WorkVerb::Drive {
         g.stats.workthings.moot += 1;
         work_things_note(g, gd, "moot: the run is over");
         work_things_settle(g, gd, &mut j, None, false);
@@ -569,7 +569,7 @@ fn work_things_at_thing(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd:
 /// Is this man working a thing.
 fn work_things_working(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> bool {
     let a = match seat.work.jobs.get(gd) { Some(j) => j.a, None => return false };
-    g.gd[gd].state != crate::game::GuardState::Dead && crate::orders::squad_orders_of(g, seat, gd) == Some(a)
+    !crate::condition::down(g, g.gd[gd].ch) && crate::orders::squad_orders_of(g, seat, gd) == Some(a)
 }
 
 /// A line of the module's log, kept to 200.

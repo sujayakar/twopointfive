@@ -591,7 +591,7 @@ fn lone_call(g: &mut crate::game::Game, gd: GuardId, l: &mut crate::tactics::Lon
     let list = g.guards.clone();
     for o in list {
         let man = &g.gd[o];
-        if o == gd || man.state == crate::game::GuardState::Dead || man.held.is_some() || man.hold || man.pinned || man.team != team || man.script.is_some() {
+        if o == gd || g.cond[man.ch].down || man.held.is_some() || man.hold || man.pinned || man.team != team || man.script.is_some() {
             continue;
         }
         let was_calm = matches!(man.state, crate::game::GuardState::Patrol | crate::game::GuardState::Suspicious | crate::game::GuardState::Search);
@@ -751,7 +751,7 @@ pub fn tactics_tick(g: &mut crate::game::Game, dt: f64) {
         }
     }
     for m in s(g).cleared.keys() {
-        if !g.guards.contains(&m) || g.gd[m].state == crate::game::GuardState::Dead {
+        if !g.guards.contains(&m) || crate::condition::down(g, g.gd[m].ch) {
             s(g).cleared.delete(m);
         }
     }
@@ -967,7 +967,7 @@ pub(super) fn gate_mate(g: &mut crate::game::Game, g_2: &crate::tactics::Gate, r
     let team = g.tab.tactics_danger_rec[g_2.rec].team;
     let st = g.m.tactics.states.as_ref().unwrap();
     for (o, h) in st.gates.iter() {
-        if o != except && h.door == g_2.door && g.tab.tactics_danger_rec[h.rec].team == team && h.role == want && g.gd[o].state != crate::game::GuardState::Dead {
+        if o != except && h.door == g_2.door && g.tab.tactics_danger_rec[h.rec].team == team && h.role == want && !crate::condition::down(g, g.gd[o].ch) {
             return Some(GateMate { gd: o, g: h.clone() });
         }
     }
@@ -1049,7 +1049,7 @@ pub(super) fn gate_call(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate:
     let mut bd = SUMMON_M;
     let list = g.guards.clone();
     for o in list {
-        if o == gd || g.gd[o].state == crate::game::GuardState::Dead || g.gd[o].team != my_team || !free_man(g, o) || s(g).gates.has(o) || s(g).roles.has(o) || in_contact(g, o) {
+        if o == gd || crate::condition::down(g, g.gd[o].ch) || g.gd[o].team != my_team || !free_man(g, o) || s(g).gates.has(o) || s(g).roles.has(o) || in_contact(g, o) {
             continue;
         }
         if g.gd[o].state == crate::game::GuardState::Alert {
@@ -1159,7 +1159,7 @@ fn try_engage(g: &mut crate::game::Game, gd: GuardId, recs: &[TacticsDangerRecId
             let st = g.m.tactics.states.as_ref().unwrap();
             st.gates
                 .iter()
-                .find(|(o, h)| *o != gd && h.door == d && g.tab.tactics_danger_rec[h.rec].team == my_team && h.role == GateRole::Lead && g.gd[*o].state != crate::game::GuardState::Dead && h.phase != GatePhase::Cross && h.phase != GatePhase::Done && h.side == here)
+                .find(|(o, h)| *o != gd && h.door == d && g.tab.tactics_danger_rec[h.rec].team == my_team && h.role == GateRole::Lead && !crate::condition::down(g, g.gd[*o].ch) && h.phase != GatePhase::Cross && h.phase != GatePhase::Done && h.side == here)
                 .map(|(o, h)| (o, h.side, h.near_a))
         };
         let role = if lead.is_some() { GateRole::Second } else { GateRole::Lead };
@@ -1229,7 +1229,7 @@ pub fn door_gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64) ->
     }
     {
         let m = &g.gd[gd];
-        if m.script.is_some() || m.held.is_some() || m.hold || m.pinned || m.state == crate::game::GuardState::Dead || (m.state == crate::game::GuardState::Patrol && !m.drawn) {
+        if m.script.is_some() || m.held.is_some() || m.hold || m.pinned || g.cond[m.ch].down || (m.state == crate::game::GuardState::Patrol && !m.drawn) {
             return false;
         }
     }

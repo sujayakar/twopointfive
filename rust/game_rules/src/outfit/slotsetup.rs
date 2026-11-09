@@ -32,7 +32,7 @@ fn gun_of(g: &Game, pl: PlayerId, gun: SetupGun) -> FirearmId {
 fn setup_gun(g: &crate::game::Game, pl: PlayerId) -> Option<crate::slotsetup::SetupGun> {
     let f = crate::game::player_gun_in_hand(g, pl);
     let f = match f {
-        Some(f) if !g.pl[pl].down => f,
+        Some(f) if !crate::condition::down(g, g.pl[pl].ch) => f,
         _ => return None,
     };
     if f == g.pl[pl].rifle {

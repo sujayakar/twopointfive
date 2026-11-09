@@ -66,7 +66,7 @@ fn par_secs(g: &Game) -> f64 {
 /// teammates down now, of how many
 fn lost(g: &Game) -> (f64, f64) {
     let ops = &g.night_breach.ops;
-    (ops.iter().filter(|&&o| g.gd[o].state == crate::game::GuardState::Dead).count() as f64, ops.len() as f64)
+    (ops.iter().filter(|&&o| crate::condition::down(g, g.gd[o].ch)).count() as f64, ops.len() as f64)
 }
 
 /// rounds and throws so far this mission (the mission's own tally and the chronicle's count: both fresh with the mission)

@@ -44,7 +44,7 @@ pub(super) fn collide_guard(g: &mut crate::game::Game, gd: GuardId, p0x: f64, p0
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        if o == gd || g.gd[o].state == crate::game::GuardState::Dead { continue; }
+        if o == gd || crate::condition::down(g, g.gd[o].ch) { continue; }
         let oc = g.gd[o].ch;
         let mut d = v3::sub(g.ch[c].pos, g.ch[oc].pos);
         d[1] = 0.0;
@@ -257,12 +257,12 @@ pub(super) fn acquire_foe(g: &mut crate::game::Game, gd: GuardId) {
         None => false,
     };
     if let Some(cur) = cur_man {
-        if g.gd[cur].state == GuardState::Dead || !g.guards.contains(&cur) || g.gd[cur].fled || knee {
+        if crate::condition::down(g, g.gd[cur].ch) || !g.guards.contains(&cur) || g.gd[cur].fled || knee {
             let cur_pos = g.ch[g.gd[cur].ch].pos;
             if let Some(lk) = g.gd[gd].last_known {
                 if v3::dist_xz(lk, cur_pos) < 1.5 { crate::mind::fix(g, gd, None, "guards"); }
             }
-            mine = g.gd[cur].state == GuardState::Dead && g.gd[cur].killer_id == g.ch[g.gd[gd].ch].id && g.gd[gd].state == GuardState::Alert;
+            mine = crate::condition::down(g, g.gd[cur].ch) && g.gd[cur].killer_id == g.ch[g.gd[gd].ch].id && g.gd[gd].state == GuardState::Alert;
             crate::mind::foe(g, gd, None, "guards");
             crate::aim::aim_state_clear(&mut g.gd[gd].aim);
             lost_man = true;
@@ -270,7 +270,7 @@ pub(super) fn acquire_foe(g: &mut crate::game::Game, gd: GuardId) {
     }
     let (mut best, mut best_rate, mut cur_visible): (Option<Foe>, f64, bool) = (None, 0.05, false);
     let team = g.gd[gd].team;
-    if crate::teams::is_hostile(g, team, Team::Player) && !g.pl[g.player].down && !g.player_invisible {
+    if crate::teams::is_hostile(g, team, Team::Player) && !crate::condition::down(g, g.pl[g.player].ch) && !g.player_invisible {
         let ch = g.pl[g.player].ch;
         consider(g, gd, Foe::Player, ch, &mut best, &mut best_rate, &mut cur_visible);
     }
@@ -278,7 +278,7 @@ pub(super) fn acquire_foe(g: &mut crate::game::Game, gd: GuardId) {
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        if o == gd || g.gd[o].state == GuardState::Dead { continue; }
+        if o == gd || crate::condition::down(g, g.gd[o].ch) { continue; }
         let och = g.gd[o].ch;
         if !g.ch[och].alive { continue; }
         let oteam = g.gd[o].team;
@@ -296,7 +296,7 @@ pub(super) fn acquire_foe(g: &mut crate::game::Game, gd: GuardId) {
             return;
         }
     }
-    if lost_man && best.is_none() && g.gd[gd].unit.is_none() && team == Team::Guard && !g.pl[g.player].down {
+    if lost_man && best.is_none() && g.gd[gd].unit.is_none() && team == Team::Guard && !crate::condition::down(g, g.pl[g.player].ch) {
         // a staff man: the man he dropped is one of two intruders, and the other is still on his floor
         crate::mind::foe(g, gd, Some(Foe::Player), "guards");
         g.gd[gd].last_seen_t = m::min(g.gd[gd].last_seen_t, g.time - 0.5);
@@ -330,11 +330,11 @@ fn enemy_up_on_floor(g: &Game, seat: &crate::seats::SeatRef, team: crate::teams:
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        if g.gd[o].state == crate::game::GuardState::Dead { continue; }
+        if crate::condition::down(g, g.gd[o].ch) { continue; }
         let oteam = g.gd[o].team;
         if crate::teams::is_hostile(g, team, oteam) { return true; }
     }
-    crate::teams::is_hostile(g, team, crate::teams::Team::Player) && !g.pl[seat.player].down
+    crate::teams::is_hostile(g, team, crate::teams::Team::Player) && !crate::condition::down(g, g.pl[seat.player].ch)
 }
 
 /// One of his side said it in the last three seconds.
@@ -402,7 +402,7 @@ pub fn gun_back(g: &mut crate::game::Game, gd: GuardId) {
 pub fn in_hand(g: &crate::game::Game, gd: GuardId) -> Option<crate::guards::InHand> {
     if g.gd[gd].fled { return None; }
     if g.gd[gd].gun_lost_at >= 0.0 { return None; }
-    if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].civ.is_some() { return None; }
+    if crate::condition::down(g, g.gd[gd].ch) || g.gd[gd].civ.is_some() { return None; }
     match hand_carry(g, gd) {
         crate::guards::HandCarry::Torch => {
             if g.gd[gd].dropped.is_some() || g.gd[gd].torch_lost_at >= 0.0 { None } else { Some(crate::guards::InHand::Torch) }
@@ -641,7 +641,7 @@ fn pose_flashlight(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<V3
     }
     let mut held: Option<V3> = g.ch[c].bones.get(Bone::UpperArmR).copied();
     let lost_live = if torch && g.gd[gd].torch_lost_at >= 0.0 { g.gd[gd].torch_lost_at } else { g.gd[gd].gun_lost_at };
-    if g.gd[gd].state == GuardState::Dead || lost_live >= 0.0 {
+    if crate::condition::down(g, g.gd[gd].ch) || lost_live >= 0.0 {
         if let Some(it) = g.gd[gd].dropped {
             let (yaw, tumble) = (crate::throwables::item_yaw(g, it), crate::throwables::item_tumble(g, it));
             let hd: V3 = [m::sin(yaw) * m::cos(tumble), -m::sin(tumble), m::cos(yaw) * m::cos(tumble)];
@@ -651,12 +651,12 @@ fn pose_flashlight(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<V3
             held = Some(at);
         }
     }
-    if g.gd[gd].state != GuardState::Dead && lost_live >= 0.0 {
+    if !crate::condition::down(g, g.gd[gd].ch) && lost_live >= 0.0 {
         if !g.gd[gd].light_lit_at_loss { g.tab.light[fl].enabled = false; return held; }
         sputter(g, fl, g.time - lost_live);
         return held;
     }
-    if g.gd[gd].state == GuardState::Dead && g.time >= g.gd[gd].light_dead_until {
+    if crate::condition::down(g, g.gd[gd].ch) && g.time >= g.gd[gd].light_dead_until {
         if !g.gd[gd].light_lit_at_loss { g.tab.light[fl].enabled = false; return held; }
         let (tl, gl) = (g.gd[gd].torch_lost_at, g.gd[gd].gun_lost_at);
         let lost_at = m::min(m::min(if tl >= 0.0 { tl } else { f64::INFINITY }, if gl >= 0.0 { gl } else { f64::INFINITY }), g.gd[gd].died_at);

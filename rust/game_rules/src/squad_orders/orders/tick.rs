@@ -54,7 +54,7 @@ pub fn squad_orders_tick(g: &mut crate::game::Game) {
     let mut at = 0usize;
     while let Some(gd) = g.orders.asg.next_key(&mut at) {
         let a = *g.orders.asg.get(gd).unwrap();
-        if g.gd[gd].state == crate::game::GuardState::Dead { squad_orders_drop(g, gd); continue; }
+        if crate::condition::down(g, g.gd[gd].ch) { squad_orders_drop(g, gd); continue; }
         if nightbreach_owns(g, gd) { squad_orders_drop(g, gd); continue; }   // a drill has taken him: its order stands, ours is dropped
         let c = g.gd[gd].ch;
         if g.tab.orders_assignment[a].thru.is_some() {   // (ORDERS.ownDoor: he is in the room, by its door)
@@ -538,7 +538,7 @@ fn squad_orders_ahead(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: G
     let follow = g.tab.orders_assignment[a].follow;
     for (o, &b) in seat.orders.asg.iter() {
         let bb = &g.tab.orders_assignment[b];
-        if o != gd && bb.post.is_none() && bb.follow < follow && g.gd[o].state != crate::game::GuardState::Dead { out.push(bb.goal); }
+        if o != gd && bb.post.is_none() && bb.follow < follow && !crate::condition::down(g, g.gd[o].ch) { out.push(bb.goal); }
     }
     out
 }
@@ -549,7 +549,7 @@ fn squad_orders_on_top(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: 
     let (mine, apart) = (g.ch[g.gd[gd].ch].pos, g.k.doormanners.apart);
     for (o, &b) in seat.orders.asg.iter() {
         let bb = &g.tab.orders_assignment[b];
-        if o != gd && g.gd[o].state != crate::game::GuardState::Dead && (bb.post.is_some() || bb.follow < follow) && flat(g.ch[g.gd[o].ch].pos, mine) < apart { return true; }
+        if o != gd && !crate::condition::down(g, g.gd[o].ch) && (bb.post.is_some() || bb.follow < follow) && flat(g.ch[g.gd[o].ch].pos, mine) < apart { return true; }
     }
     false
 }
@@ -576,7 +576,7 @@ fn rest_bad(g: &mut Game, q: V3) -> bool { squad_orders_in_frame(g, q) || crate:
 fn rest_others(g: &Game, seat: &crate::seats::SeatRef, gd: GuardId) -> Vec<V3> {
     let mut out: Vec<V3> = vec![squad_orders_sam_stood(g, seat)];
     for (o, &b) in seat.orders.asg.iter() {
-        if o != gd && g.gd[o].state != crate::game::GuardState::Dead { out.push(g.ch[g.gd[o].ch].pos); out.push(g.tab.orders_assignment[b].goal); }
+        if o != gd && !crate::condition::down(g, g.gd[o].ch) { out.push(g.ch[g.gd[o].ch].pos); out.push(g.tab.orders_assignment[b].goal); }
     }
     out
 }
@@ -670,7 +670,7 @@ fn squad_orders_rest_short(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssi
     }
     let mut taken: Vec<V3> = vec![squad_orders_sam_stood(g, &crate::seats::here(g))];
     for (o, &b) in g.orders.asg.iter() {
-        if o != gd && g.gd[o].state != crate::game::GuardState::Dead {
+        if o != gd && !crate::condition::down(g, g.gd[o].ch) {
             taken.push(g.ch[g.gd[o].ch].pos);
             if let Some(q) = g.tab.orders_assignment[b].post { taken.push(q); }
         }
@@ -770,7 +770,7 @@ fn squad_orders_apart_slot(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssi
     let mut t = squad_orders_ahead(g, &crate::seats::here(g), gd, a);
     for (o, &b) in g.orders.asg.iter() {
         let bb = &g.tab.orders_assignment[b];
-        if o != gd && g.gd[o].state != crate::game::GuardState::Dead && bb.post.is_some() { t.push(bb.goal); }
+        if o != gd && !crate::condition::down(g, g.gd[o].ch) && bb.post.is_some() { t.push(bb.goal); }
     }
     let mut any = false;
     for &q in t.iter() { if flat(q, slot) < k && apart_open(g, q, slot) { any = true; break; } }

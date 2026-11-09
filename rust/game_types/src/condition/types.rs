@@ -6,6 +6,8 @@ use alloc::{string::String, vec::Vec};
 /// HOW A MAN IS: what a blast, a flash, a blow and fire have left on him, whoever he is. A clock that is past is nothing
 #[derive(Clone, Copy, Debug, ToBytes, Blank)]
 pub struct Cond {
+    /// out of it: dead, knocked out, or a player out of hits
+    pub down: bool,
     /// a blast reached him and left him up (below 0: none did)
     #[is(-1.0)] pub hurt_at: f64,
     /// blind until, and where the flash was

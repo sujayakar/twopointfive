@@ -242,7 +242,7 @@ fn stood_at(g: &crate::game::Game, seat: &crate::seats::SeatRef, d: DoorId, q: V
     for man in crate::orders::squad_orders_squad(g, seat) {
         let a = crate::orders::squad_orders_of(g, seat, man);
         let Some(a) = a else { continue };
-        if g.gd[man].state == crate::game::GuardState::Dead { continue; }
+        if crate::condition::down(g, g.gd[man].ch) { continue; }
         if g.tab.orders_assignment[a].door != Some(d) { continue; }
         let Some(post) = g.tab.orders_assignment[a].post else { continue };
         if flat(post, q) < SAME_M && flat(g.ch[g.gd[man].ch].pos, post) < 0.6 { return true; }
@@ -730,9 +730,9 @@ fn next_room(g: &mut crate::game::Game, d: DoorId, side: f64, f: &crate::stackro
         ring
     };
     let mut ours: Vec<V3> = Vec::new();
-    if !g.pl[pl].down { ours.push(g.ch[g.pl[pl].ch].pos); }
+    if !crate::condition::down(g, g.pl[pl].ch) { ours.push(g.ch[g.pl[pl].ch].pos); }
     for man in crate::orders::squad_orders_squad(g, &crate::seats::here(g)) {
-        if g.gd[man].state != crate::game::GuardState::Dead { ours.push(g.ch[g.gd[man].ch].pos); }
+        if !crate::condition::down(g, g.gd[man].ch) { ours.push(g.ch[g.gd[man].ch].pos); }
     }
     for n in 0..g.doors.list.len() {
         let o = g.doors.list[n];

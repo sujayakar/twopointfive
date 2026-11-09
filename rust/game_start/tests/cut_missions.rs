@@ -44,7 +44,7 @@ fn the_workshops_are_a_plain_room_clear_with_nothing_to_make_safe() {
         // (the old clock ran 75 seconds and a lost one blew: well past it the floor is not lost)
         p.run(90.0);
         assert_ne!(p.room_clear_end().map(|e| e.0), Some(RoomClearEnd::Wiped), "seed {seed}");
-        for gd in men { if p.g.gd[gd].state != game::game::GuardState::Dead { p.falls(gd, DownBy::Player); } }
+        for gd in men { if !game::condition::down(&p.g, p.g.gd[gd].ch) { p.falls(gd, DownBy::Player); } }
         assert!(p.until(10.0, |p| p.room_clear_end().is_some()).is_some(), "seed {seed}: the house fell and nothing ended");
         assert_eq!(p.room_clear_end().map(|e| e.0), Some(RoomClearEnd::Taken), "seed {seed}");
     }

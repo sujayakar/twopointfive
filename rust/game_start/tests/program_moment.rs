@@ -69,7 +69,7 @@ fn a_checkpoint_touches_nothing(id: &str, step: &str, checkpoint: &str) {
     let run = p.g.director.run;
     let starts = p.g.stats.rails.starts;
     for i in 0..CHECKPOINT_SECS * 60 { hands(&mut p, i, checkpoint); h.frame(&mut p); }
-    let awake = |g: &Game| g.guards.iter().filter(|&&x| g.gd[x].script.is_some() && g.gd[x].state != GuardState::Dead).map(|&x| (g.gd[x].callsign.clone(), g.gd[x].state)).collect::<Vec<_>>();
+    let awake = |g: &Game| g.guards.iter().filter(|&&x| g.gd[x].script.is_some() && !game::condition::down(g, g.gd[x].ch)).map(|&x| (g.gd[x].callsign.clone(), g.gd[x].state)).collect::<Vec<_>>();
     let (men, taken) = (awake(&p.g), h.taken);
     assert!(!men.is_empty(), "{}: the program holds nobody", id);
     put_step(&mut p, checkpoint);

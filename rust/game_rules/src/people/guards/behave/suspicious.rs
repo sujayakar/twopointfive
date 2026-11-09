@@ -95,7 +95,7 @@ pub(in crate::people) fn suspicious(g: &mut Game, gd: GuardId, dt: f64, s: &Sens
         crate::mind::set_state(g, gd, St::Patrol, "guards");
         clear_path(g, gd);
         g.gd[gd].body_duty = None;
-        let player_down = g.pl[g.player].down;
+        let player_down = crate::condition::down(g, g.pl[g.player].ch);
         if matches!(g.gd[gd].foe, Some(crate::game::Foe::Player)) && player_down {
             if !g.stood_down {
                 g.stood_down = true;

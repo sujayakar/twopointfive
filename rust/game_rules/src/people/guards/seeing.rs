@@ -326,7 +326,7 @@ pub fn body_in_view(g: &mut crate::game::Game, gd: GuardId) -> Option<GuardId> {
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        if o == gd || g.gd[o].state != crate::game::GuardState::Dead || g.gd[o].found || g.gd[o].team != g.gd[gd].team {
+        if o == gd || !crate::condition::down(g, g.gd[o].ch) || g.gd[o].found || g.gd[o].team != g.gd[gd].team {
             continue;
         }
         if crate::guards::body_seen(g, gd, o, None) {

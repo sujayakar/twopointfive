@@ -305,7 +305,7 @@ pub fn squad_orders_own_marks(g: &crate::game::Game, seat: &crate::seats::SeatRe
     let mut out: Vec<V3> = Vec::new();
     for gd in men.iter().copied() {
         let id = match seat.orders.asg.get(gd) { Some(a) => *a, None => continue };
-        if g.gd[gd].state == crate::game::GuardState::Dead { continue; }
+        if crate::condition::down(g, g.gd[gd].ch) { continue; }
         let a = &g.tab.orders_assignment[id];
         if a.door != Some(d) { continue; }
         let post = match a.post { Some(p) => p, None => continue };
@@ -664,7 +664,7 @@ fn squad_orders_stack_places(g: &mut crate::game::Game, over: &Over, d: DoorId, 
     let mut held: Vec<V3> = Vec::new();
     if squad_orders_big(g, &crate::seats::here(g)) {
         for (gd, id) in g.orders.asg.iter() {
-            if men.contains(&gd) || ignore.contains(&gd) || g.gd[gd].state == crate::game::GuardState::Dead { continue; }
+            if men.contains(&gd) || ignore.contains(&gd) || crate::condition::down(g, g.gd[gd].ch) { continue; }
             let a = &g.tab.orders_assignment[*id];
             if a.door != Some(d) { continue; }
             if let Some(post) = a.post { held.push(post); }

@@ -56,7 +56,7 @@ pub(super) fn run_gate(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::
     let inside = door_pt(g, d, w / 2.0, -1.0, g_2.side, Some(1.1));   // what a stacked man's muzzle rests on
     // a second whose lead has gone (dead, released, fighting) leads from where he is
     if g_2.role == GateRole::Second {
-        let gone = match g_2.lead { None => true, Some(l) => !s(g).gates.has(l) || g.gd[l].state == GuardState::Dead };
+        let gone = match g_2.lead { None => true, Some(l) => !s(g).gates.has(l) || crate::condition::down(g, g.gd[l].ch) };
         if gone { g_2.role = GateRole::Lead; g_2.lead = None; if g_2.phase == GatePhase::Stacked { g_2.phase = GatePhase::Wait; } }
     }
     match g_2.phase {
@@ -116,7 +116,7 @@ pub(super) fn run_gate(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::
             }
             if g_2.t >= 0.8 {
                 g_2.t = 0.0;
-                let toss_by = match (g_2.action, g_2.thrower) { (GateAction::Toss, Some(t)) if g.gd[t].state != GuardState::Dead && !crate::doors::door_is_closed(g, d) => Some(t), _ => None };
+                let toss_by = match (g_2.action, g_2.thrower) { (GateAction::Toss, Some(t)) if !crate::condition::down(g, g.gd[t].ch) && !crate::doors::door_is_closed(g, d) => Some(t), _ => None };
                 match toss_by { Some(t) => begin_toss(g, gd, g_2, t), None => begin_slice(g, gd, g_2) }
             }
             true
@@ -276,7 +276,7 @@ fn begin_toss(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::tactics::
 pub(super) fn tick_gates(g: &mut crate::game::Game) {
     let men = s(g).gates.keys();
     for man in men {
-        if !g.guards.contains(&man) || g.gd[man].state == crate::game::GuardState::Dead || g.gd[man].held.is_some() {
+        if !g.guards.contains(&man) || crate::condition::down(g, g.gd[man].ch) || g.gd[man].held.is_some() {
             let row = s(g).gates.delete(man);
             if let Some(mut row) = row { loose_can(g, &mut row); }
         }

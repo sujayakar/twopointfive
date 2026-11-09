@@ -23,7 +23,7 @@ fn ambient_live(g: &crate::game::Game) -> bool {
     if g.alarm.episode { return false; }
     if crate::sim_lightshome::mains_active(g) { return false; }
     let men = crate::seats::men(g);
-    !men.iter().any(|&p| g.pl[p].holding.is_some() || g.pl[p].down)
+    !men.iter().any(|&p| g.pl[p].holding.is_some() || crate::condition::down(g, g.pl[p].ch))
 }
 
 /// A calm patrolling staff man with nothing on his hands or mind, not talking, not held by a script.
@@ -156,7 +156,7 @@ pub fn update_ambient(g: &mut crate::game::Game, dt: f64) {
             if crate::scene_collision::solid_blocked(g, [pa[0], 1.4, pa[2]], [pb[0], 1.4, pb[2]], None) { continue; }
             let mut third: Option<GuardId> = None;
             for x in g.guards.clone() {
-                if x == a || x == b || g.gd[x].unit.is_some() || g.gd[x].state == crate::game::GuardState::Dead { continue; }
+                if x == a || x == b || g.gd[x].unit.is_some() || crate::condition::down(g, g.gd[x].ch) { continue; }
                 let callsign = g.gd[x].callsign.clone();
                 if !known_down(g, a).has(callsign) { third = Some(x); break; }
             }

@@ -13,9 +13,9 @@ pub struct Man { pub ch: CharId, pub team: String, pub kind: &'static str, pub d
 /// everybody on the floor, seen or not
 pub fn men(g: &Game) -> Vec<Man> {
     let mut out = Vec::new();
-    for (i, &s) in g.seats.iter().enumerate() { let p = game::cmd::seat_man(g, s); let q = &g.pl[p]; out.push(Man { ch: q.ch, team: String::from("player"), kind: "player", down: q.down, name: game::seats::player_name(g, p), state: String::new(), guard: None, player: Some((i, p)) }); }
-    for &gd in &g.guards { let m = &g.gd[gd]; out.push(Man { ch: m.ch, team: m.team.as_str().to_string(), kind: "man", down: m.state == GuardState::Dead, name: m.callsign.clone(), state: m.state.as_str().to_string(), guard: Some(gd), player: None }); }
-    for &gd in &g.civilians { let m = &g.gd[gd]; out.push(Man { ch: m.ch, team: String::from("civilian"), kind: "civ", down: m.state == GuardState::Dead, name: m.callsign.clone(), state: String::new(), guard: Some(gd), player: None }); }
+    for (i, &s) in g.seats.iter().enumerate() { let p = game::cmd::seat_man(g, s); let q = &g.pl[p]; out.push(Man { ch: q.ch, team: String::from("player"), kind: "player", down: g.cond[q.ch].down, name: game::seats::player_name(g, p), state: String::new(), guard: None, player: Some((i, p)) }); }
+    for &gd in &g.guards { let m = &g.gd[gd]; out.push(Man { ch: m.ch, team: m.team.as_str().to_string(), kind: "man", down: g.cond[m.ch].down, name: m.callsign.clone(), state: m.state.as_str().to_string(), guard: Some(gd), player: None }); }
+    for &gd in &g.civilians { let m = &g.gd[gd]; out.push(Man { ch: m.ch, team: String::from("civilian"), kind: "civ", down: g.cond[m.ch].down, name: m.callsign.clone(), state: String::new(), guard: Some(gd), player: None }); }
     out
 }
 
@@ -91,7 +91,7 @@ pub fn read(g: &Game) -> Vec<(String, String)> {
         out.push((format!("{} facing", who), format!("{} {}", bits(c.body_yaw), bits(c.aim_yaw))));
         if let Some((_, p)) = m.player {
             let q = &g.pl[p];
-            out.push((format!("{} up", who), format!("{} {}", q.down, q.hits_left)));
+            out.push((format!("{} up", who), format!("{} {}", g.cond[q.ch].down, q.hits_left)));
             out.push((format!("{} light", who), bits(q.visibility)));
             out.push((format!("{} holds", who), format!("{} {} {}", q.slot.as_str(), q.holstered, q.rifle_gone)));
             out.push((format!("{} rounds", who), format!("{} {}", rounds(g, q.pistol), rounds(g, q.rifle))));
@@ -148,9 +148,9 @@ impl Track {
 /// what a reader reads of a moment: who is down, the rounds, the orders
 pub fn line(g: &Game) -> String {
     let mut said = Vec::new();
-    for (i, &s) in g.seats.iter().enumerate() { let q = &g.pl[game::cmd::seat_man(g, s)]; said.push(format!("seat {} {}", i, if q.down { "down" } else { "up" })); }
+    for (i, &s) in g.seats.iter().enumerate() { let q = &g.pl[game::cmd::seat_man(g, s)]; said.push(format!("seat {} {}", i, if g.cond[q.ch].down { "down" } else { "up" })); }
     let side = |ours: bool| g.guards.iter().filter(move |&&x| (g.gd[x].team == game::teams::Team::Operative) == ours);
-    let up = |ours: bool| side(ours).filter(|&&x| g.gd[x].state != GuardState::Dead && g.gd[x].down_kind.is_none()).count();
+    let up = |ours: bool| side(ours).filter(|&&x| !game::condition::down(g, g.gd[x].ch) && g.gd[x].down_kind.is_none()).count();
     said.push(format!("{} of {} ours up", up(true), side(true).count()));
     said.push(format!("{} of {} others up", up(false), side(false).count()));
     said.push(format!("{} rounds", g.mission.stats.shots));

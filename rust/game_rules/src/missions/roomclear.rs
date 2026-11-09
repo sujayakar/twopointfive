@@ -15,17 +15,13 @@ fn blocked(g: &mut Game, x: f64, z: f64) -> bool {
 fn in_rect(p: V3, r: crate::scene_scenarios::Rect) -> bool {
     crate::squad::in_bounds(p, Some(crate::scene_level::BreachPlanBounds { x0: r.x0, x1: r.x1, z0: r.z0, z1: r.z1 }), None)
 }
-/// `h.state !== 'dead'`
-fn up(g: &Game, h: GuardId) -> bool {
-    g.gd[h].state != crate::game::GuardState::Dead
-}
 /// `h.state !== 'dead' && !h.fled`
 fn holds(g: &Game, h: GuardId) -> bool {
-    up(g, h) && !g.gd[h].fled
+    !crate::condition::down(g, g.gd[h].ch) && !g.gd[h].fled
 }
 /// `nb.ops.filter(o => o.state !== 'dead').length`
 fn ops_up(g: &Game) -> usize {
-    g.night_breach.ops.iter().filter(|o| up(g, **o)).count()
+    g.night_breach.ops.iter().filter(|o| !crate::condition::down(g, g.gd[**o].ch)).count()
 }
 /// the structure as checkStructure's parameter has it
 fn check_s_of(s: &crate::scene_scenarios::StructureData) -> crate::roomclear::CheckStructureS {
@@ -691,7 +687,7 @@ pub(super) fn room_clear_scenario_objective(g: &crate::game::Game, seat: &crate:
     let text = match end {
         Some(crate::roomclear::RoomClearEnd::Taken) => String::from("structure taken — press shift+enter to restart"),
         Some(crate::roomclear::RoomClearEnd::Wiped) => {
-            let key = if g.pl[seat.player].down { "enter" } else { "shift+enter" };
+            let key = if crate::condition::down(g, g.pl[seat.player].ch) { "enter" } else { "shift+enter" };
             format!("{} — press {} to restart", g.room_clear.end_say, key)
         }
         None => {

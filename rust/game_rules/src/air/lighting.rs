@@ -82,7 +82,7 @@ pub fn breaker_reset_near(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if !(crate::sim_lightshome::mains_active(g)
         && !crate::sim_lightshome::mains_permanent(g)
         && g.time - crate::sim_lightshome::mains_since(g) > 3.0
-        && g.gd[gd].state != crate::game::GuardState::Dead
+        && !crate::condition::down(g, g.gd[gd].ch)
         && g.gd[gd].held.is_none())
     {
         return false;
@@ -166,7 +166,7 @@ pub fn set_blackout(g: &mut crate::game::Game, seconds: f64, cause: crate::light
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
-        if g.gd[gd].state == crate::game::GuardState::Dead {
+        if crate::condition::down(g, g.gd[gd].ch) {
             continue;
         }
         if g.gd[gd].state == crate::game::GuardState::Patrol {
@@ -283,7 +283,7 @@ pub fn ocpable(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
         Some(gd) => gd,
         None => return false,
     };
-    if g.gd[gd].state == crate::game::GuardState::Dead {
+    if crate::condition::down(g, g.gd[gd].ch) {
         return false;
     }
     let l = g.gd[gd].flashlight;
@@ -301,7 +301,7 @@ pub fn ocp(g: &mut crate::game::Game, t: Option<FixtureId>) {
         Some(t) => t,
         None => {
             if let Some(gd) = g.aim_guard {
-                if g.gd[gd].state != crate::game::GuardState::Dead {
+                if !crate::condition::down(g, g.gd[gd].ch) {
                     if !ocpable(g, &crate::seats::here(g)) {
                         return;
                     }

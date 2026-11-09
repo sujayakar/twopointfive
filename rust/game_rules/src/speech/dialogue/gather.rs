@@ -294,9 +294,9 @@ pub(super) fn gather(g: &mut crate::game::Game, gd: GuardId) -> crate::dialogue:
     // tokens
     let partner = partner_of(g, gd);
     let missing_man = missing_known_to(g, gd);
-    let checker = g.guards.iter().copied().find(|&x| g.gd[x].state != crate::game::GuardState::Dead && matches!(g.gd[x].task, Some(crate::game::GuardTask::CheckOn(_))));
+    let checker = g.guards.iter().copied().find(|&x| !crate::condition::down(g, g.gd[x].ch) && matches!(g.gd[x].task, Some(crate::game::GuardTask::CheckOn(_))));
     let check_task = match checker { Some(c) => match g.gd[c].task { Some(crate::game::GuardTask::CheckOn(x)) => Some(x), _ => None }, None => None };
-    let post_man = g.guards.iter().copied().find(|&x| g.gd[x].state != crate::game::GuardState::Dead && g.gd[x].post.is_some());
+    let post_man = g.guards.iter().copied().find(|&x| !crate::condition::down(g, g.gd[x].ch) && g.gd[x].post.is_some());
     let keyed = keyed_door_on(g, gd);
     let my_pos = g.ch[g.gd[gd].ch].pos;
     let pad = crate::devices::devices_pad_near(g, my_pos);
@@ -640,7 +640,7 @@ fn pick_line(g: &mut crate::game::Game, ctx: &mut crate::dialogue::DialogueCtx, 
 }
 /// The whole exchange for a real man: gather → pick; null for a man who cannot talk.
 pub fn interrogate(g: &mut crate::game::Game, gd: GuardId, rnd: Option<&mut dyn FnMut(&mut crate::game::Game) -> f64>) -> Option<crate::dialogue::DialoguePick> {
-    if g.gd[gd].state == crate::game::GuardState::Dead || !g.guards.contains(&gd) { return None; }
+    if crate::condition::down(g, g.gd[gd].ch) || !g.guards.contains(&gd) { return None; }
     let talk = g.gd[gd].talk;
     let time = g.time;
     let unheld = g.gd[gd].held.is_none();

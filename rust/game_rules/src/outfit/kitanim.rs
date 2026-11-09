@@ -13,7 +13,7 @@ fn note(g: &crate::game::Game, row: crate::kitanim::NoteRow) {
 fn nv_hand_free(g: &mut crate::game::Game) -> bool {
     let p = g.player;
     let c = g.pl[p].ch;
-    if g.pl[p].down
+    if crate::condition::down(g, g.pl[p].ch)
         || g.pl[p].holding.is_some()
         || g.pl[p].takedown.is_some()
         || g.pl[p].dragging.is_some()
@@ -86,7 +86,7 @@ fn big_off_of(b: &crate::character::AnimBigTool) -> crate::character::BigOffB {
 pub fn kit_in_hand(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<crate::character::KitItem> {
     let p = seat.player;
     let c = g.pl[p].ch;
-    if g.pl[p].down {
+    if crate::condition::down(g, g.pl[p].ch) {
         return None;
     }
     if let Some(variant) = g.pl[p].holding.as_ref().map(|h| h.variant) {
@@ -189,7 +189,7 @@ pub fn kit_tick(g: &mut crate::game::Game, late: Option<bool>) {
     let sel = crate::game::player_canister_sel(g, p);
     // something else has his arms, or the item is not his to carry about: no errand
     let carry = crate::bigkit::sam_big_carry(g, &crate::seats::here(g));
-    let hard = g.pl[p].down
+    let hard = crate::condition::down(g, g.pl[p].ch)
         || g.pl[p].holding.is_some()
         || g.pl[p].takedown.is_some()
         || g.pl[p].dragging.is_some()
@@ -275,7 +275,7 @@ pub fn kit_click(g: &mut crate::game::Game, input: InputId) {
     } else {
         None
     };
-    if g.pl[p].down || want.is_none() || g.orders.menu.is_some() || g.pl[p].holding.is_some() || g.pl[p].dragging.is_some() {
+    if crate::condition::down(g, g.pl[p].ch) || want.is_none() || g.orders.menu.is_some() || g.pl[p].holding.is_some() || g.pl[p].dragging.is_some() {
         g.pl[p].kit_owed = -1.0;
         return;
     }
@@ -334,7 +334,7 @@ pub fn kit_show(g: &mut crate::game::Game, v: &mut crate::kitanim::KitShowV) -> 
     let p = g.player;
     let c = g.pl[p].ch;
     let h = g.ch[c].anim.kit_hold;
-    if g.pl[p].down {
+    if crate::condition::down(g, g.pl[p].ch) {
         return None;
     }
     let mut kit: Option<crate::rig_props::KitDraw> = None;

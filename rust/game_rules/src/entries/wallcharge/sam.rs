@@ -270,7 +270,7 @@ pub(super) fn wall_charge_sam_tick(g: &mut crate::game::Game) {
         }
     }
     let s = match g.wall_charge.sam.clone() { Some(s) => s, None => return };
-    if g.pl[pl].down || g.pl[pl].sprinting || g.pl[pl].dragging.is_some() || g.pl[pl].holding.is_some() || g.pl[pl].takedown.is_some()
+    if crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].sprinting || g.pl[pl].dragging.is_some() || g.pl[pl].holding.is_some() || g.pl[pl].takedown.is_some()
         || v3::dist_xz(p, s.at) > g.k.wallcharge.sam_shift || (has_act && !mine) {
         wall_charge_cancel(g);
         return;

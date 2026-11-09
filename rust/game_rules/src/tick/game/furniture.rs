@@ -77,7 +77,7 @@ pub(super) fn game_hands_on_doors(g: &mut crate::game::Game, before: &[f64]) {
             c: p.ch,
             pl: Some(pl),
             gd: None,
-            can: !p.down && p.dragging.is_none() && p.holding.is_none() && p.kick.is_none() && p.picking.is_none() && p.wanding.is_none() && p.takedown.is_none(),
+            can: !g.cond[p.ch].down && p.dragging.is_none() && p.holding.is_none() && p.kick.is_none() && p.picking.is_none() && p.wanding.is_none() && p.takedown.is_none(),
             right_free: p.holstered,
         });
     }
@@ -88,14 +88,14 @@ pub(super) fn game_hands_on_doors(g: &mut crate::game::Game, before: &[f64]) {
             c: m_.ch,
             gd: Some(gd),
             pl: None,
-            can: m_.state != crate::game::GuardState::Dead && m_.held.is_none(),
+            can: !g.cond[m_.ch].down && m_.held.is_none(),
             right_free: m_.state == crate::game::GuardState::Patrol && !m_.drawn && m_.dropped.is_some(),
         });
     }
     for cv in crate::civilians::civilians_shown(g) {
         let m_ = &g.gd[cv];
         let c = m_.ch;
-        who.push(WhoRow { c, gd: None, pl: None, can: m_.state != crate::game::GuardState::Dead && m_.held.is_none() && g.ch[c].anim.act.is_none(), right_free: true });
+        who.push(WhoRow { c, gd: None, pl: None, can: !g.cond[m_.ch].down && m_.held.is_none() && g.ch[c].anim.act.is_none(), right_free: true });
     }
     for c in g.door_hand_recs.keys() {
         if !who.iter().any(|w| w.c == c) { g.door_hand_recs.delete(c); }
@@ -284,14 +284,14 @@ pub fn game_update_props(g: &mut crate::game::Game, dt: f64) {
     let mut chars: Vec<CharId> = Vec::new();
     for s in seats.iter().copied() {
         let pl = crate::cmd::seat_man(g, s);
-        if !g.pl[pl].down { chars.push(g.pl[pl].ch); }
+        if !crate::condition::down(g, g.pl[pl].ch) { chars.push(g.pl[pl].ch); }
     }
     for i in 0..g.guards.len() {
         let gd = g.guards[i];
-        if g.gd[gd].state != crate::game::GuardState::Dead && !crate::doze::doze_in_chair(g, gd) { chars.push(g.gd[gd].ch); }
+        if !crate::condition::down(g, g.gd[gd].ch) && !crate::doze::doze_in_chair(g, gd) { chars.push(g.gd[gd].ch); }
     }
     for cv in crate::civilians::civilians_shown(g) {
-        if g.gd[cv].state != crate::game::GuardState::Dead && !crate::civilians::civilian_seated(g, cv) && crate::civilians::civilian_pushes_props(g, cv) { chars.push(g.gd[cv].ch); }
+        if !crate::condition::down(g, g.gd[cv].ch) && !crate::civilians::civilian_seated(g, cv) && crate::civilians::civilian_pushes_props(g, cv) { chars.push(g.gd[cv].ch); }
     }
     let mut contacts: Vec<crate::props::PropContact> = Vec::with_capacity(chars.len());
     for c in chars.iter().copied() {
@@ -323,7 +323,7 @@ pub fn game_update_props(g: &mut crate::game::Game, dt: f64) {
     crate::game::game_roll_tick(g, dt);
     for s in seats.iter().copied() {
         let pl = crate::cmd::seat_man(g, s);
-        if !g.pl[pl].down {
+        if !crate::condition::down(g, g.pl[pl].ch) {
             crate::seats::with_seat(g, s, &mut |g: &mut Game| {
                 crate::player::settle_player(g);
                 crate::player::settle_held(g);

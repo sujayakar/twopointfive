@@ -77,7 +77,7 @@ pub(super) fn pick(g: &mut crate::game::Game, who: crate::dice::Who, r: [f64; 2]
 
 pub(super) fn alive(g: &crate::game::Game, d: RoomfightDefId) -> bool {
     let gd = g.tab.roomfight_def[d].gd;
-    g.gd[gd].state != crate::game::GuardState::Dead
+    !crate::condition::down(g, g.gd[gd].ch)
 }
 
 /// A line in the fight's log, which keeps its last 400 to 600.

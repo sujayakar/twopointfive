@@ -62,7 +62,7 @@ pub(super) fn told(g: &mut Game, st: &mut KitStage, size: Option<u32>) {
     let was = core::mem::replace(&mut st.a.cards, g.m.kit.kit.members.clone());
     let team = crate::scenario_run::team_of(g);
     st.a.hi = thing(g, &st.field, st.who);
-    let alive = team.iter().filter(|&&x| g.gd[x].state != crate::game::GuardState::Dead).count() as u32;
+    let alive = team.iter().filter(|&&x| !crate::condition::down(g, g.gd[x].ch)).count() as u32;
     let n = size.unwrap_or(alive);
     let mut hard = st.none || n != alive;
     let mut play: Option<&'static str> = None;

@@ -34,7 +34,7 @@ fn taken_by(g: &mut crate::game::Game, l: Option<usize>, gd: GuardId, dz: V3) ->
     let mut n = 0;
     while n < g.guards.len() {
         let o = g.guards[n]; n += 1;
-        if o == gd || g.gd[o].state == crate::game::GuardState::Dead || g.gd[o].team != team { continue; }
+        if o == gd || crate::condition::down(g, g.gd[o].ch) || g.gd[o].team != team { continue; }
         let s = l.and_then(|i| flee_of(g, i, o));
         let oc = g.gd[o].ch;
         let p = g.ch[oc].pos;
@@ -105,7 +105,7 @@ fn tick_book(g: &mut Game, i: usize) {
         for gd in live!(g, i).flee.keys() {
             crate::game::guard_set_path(g, gd, Vec::new());
             crate::guards::guard_set_path_goal(g, gd, None);
-            if g.gd[gd].state != crate::game::GuardState::Dead { let c = g.gd[gd].ch; g.ch[c].anim.crouch_target = 0.0; }
+            if !crate::condition::down(g, g.gd[gd].ch) { let c = g.gd[gd].ch; g.ch[c].anim.crouch_target = 0.0; }
         }
         g.m.frag.books.as_mut().unwrap().remove(i);
         return;
@@ -125,7 +125,7 @@ fn tick_book(g: &mut Game, i: usize) {
 
 /// One man's turn under one grenade: noticing, the shout, and his legs.
 fn tick_man(g: &mut Game, i: usize, it: ItemId, at: V3, eye_at: V3, wise: &crate::frag::Rest, dz: V3, gd: GuardId) {
-    if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].held.is_some() || g.gd[gd].civ.is_some() { return; }
+    if crate::condition::down(g, g.gd[gd].ch) || g.gd[gd].held.is_some() || g.gd[gd].civ.is_some() { return; }
     let c = g.gd[gd].ch;
     let pos = g.ch[c].pos;
     let team = g.gd[gd].team;
@@ -164,7 +164,7 @@ fn tick_man(g: &mut Game, i: usize, it: ItemId, at: V3, eye_at: V3, wise: &crate
         let mut n = 0;
         while n < g.guards.len() {
             let o = g.guards[n]; n += 1;
-            if o == gd || g.gd[o].state == crate::game::GuardState::Dead || g.gd[o].team != team || live!(g, i).knows.has(o) { continue; }
+            if o == gd || crate::condition::down(g, g.gd[o].ch) || g.gd[o].team != team || live!(g, i).knows.has(o) { continue; }
             let oc = g.gd[o].ch;
             if v3::dist(g.ch[oc].pos, pos) > g.k.frag.shout_m { continue; }
             let oh = head_of(g, oc);
@@ -347,7 +347,7 @@ pub fn sam_cue(g: &mut crate::game::Game, l: usize, eye_at: V3) {
 fn cue_here(g: &mut crate::game::Game, l: usize, eye_at: V3) {
     let pl = g.player;
     let pc = g.pl[pl].ch;
-    if g.pl[pl].down { return; }
+    if crate::condition::down(g, g.pl[pl].ch) { return; }
     let pos = g.ch[pc].pos;
     let d = m::hyp2(pos[0] - eye_at[0], pos[2] - eye_at[2]);
     if d > g.k.frag.cue_m { return; }
@@ -446,7 +446,7 @@ fn tick_carrier(g: &mut Game, ci: usize, dt: f64) {
     let gd = car!(g, ci).gd;
     let c = g.gd[gd].ch;
     if !js::truthy(car!(g, ci).frags) { return; }
-    if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].held.is_some() || { let r = crate::owner::by::RUNNER; crate::owner::has(g, gd, r) } { car!(g, ci).wind = None; return; }
+    if crate::condition::down(g, g.gd[gd].ch) || g.gd[gd].held.is_some() || { let r = crate::owner::by::RUNNER; crate::owner::has(g, gd, r) } { car!(g, ci).wind = None; return; }
     let out = crate::control::man::staggered(g, gd) || crate::control::man::blind(g, gd);
     let head = head_of(g, c);
     if car!(g, ci).wind.is_some() { tick_wind(g, ci, gd, c, out); return; }
@@ -469,7 +469,7 @@ fn tick_carrier(g: &mut Game, ci: usize, dt: f64) {
         let mut n = 0;
         while n < g.guards.len() {
             let o = g.guards[n]; n += 1;
-            if g.gd[o].team != crate::teams::Team::Operative || g.gd[o].state == crate::game::GuardState::Dead || crate::rails::rails_down(g, o) { continue; }
+            if g.gd[o].team != crate::teams::Team::Operative || crate::condition::down(g, g.gd[o].ch) || crate::rails::rails_down(g, o) { continue; }
             let oc = g.gd[o].ch;
             let op = g.ch[oc].pos;
             if flat(op, fix) > g.k.frag.def_bunch { continue; }
@@ -549,7 +549,7 @@ fn seat_in_bunch(v: &mut Game, gd: GuardId, c: CharId, head: V3, fix: V3) -> boo
     let pl = v.player;
     let pc = v.pl[pl].ch;
     let p = v.ch[pc].pos;
-    if v.pl[pl].down || v.player_invisible || flat(p, fix) > v.k.frag.def_bunch { return false; }
+    if v.cond[v.pl[pl].ch].down || v.player_invisible || flat(p, fix) > v.k.frag.def_bunch { return false; }
     if !(matches!(v.gd[gd].foe, Some(crate::game::Foe::Player)) || v.pl[pl].visibility > 0.2) { return false; }
     let ph = v.ch[pc].bones.get(crate::character::Bone::Head).copied();
     crate::guards::can_see_char(v, gd, pc, true).visible || (v.gd[gd].smoke_trans >= 0.3 && sights(v, gd, c, head, p, ph))
@@ -624,7 +624,7 @@ fn wind_up(g: &mut crate::game::Game, c_2: usize, head: V3, from: V3, aim: V3, t
     let mut n = 0;
     while n < g.guards.len() {   // the team's, the same shout in the same ears: for the next few seconds they are looking for it
         let o = g.guards[n]; n += 1;
-        if g.gd[o].state == crate::game::GuardState::Dead || g.gd[o].team == team || same_side(g.gd[o].team, team) { continue; }
+        if crate::condition::down(g, g.gd[o].ch) || g.gd[o].team == team || same_side(g.gd[o].team, team) { continue; }
         let oh = head_of(g, g.gd[o].ch);
         let po = crate::scene_collision::sound_paths_propagate(g, head, oh, None);
         if po.path_len <= g.k.frag.cue_m * 1.5 && po.muffle < 0.75 {
@@ -657,7 +657,7 @@ fn free(g: &mut crate::game::Game, gd: GuardId) -> Option<usize> {
     let b = g.m.frag.def_books.as_ref()?;
     let ci = b.carriers.iter().position(|x| x.gd == gd)?;
     if !js::truthy(b.carriers[ci].frags) || b.carriers[ci].wind.is_some() { return None; }
-    if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].held.is_some() || { let r = crate::owner::by::RUNNER; crate::owner::has(g, gd, r) } || crate::control::man::staggered(g, gd) || crate::control::man::blind(g, gd) || frag_flee(g, gd).is_some() || g.time - book!(g).last_t < g.k.frag.def_gap { return None; }
+    if crate::condition::down(g, g.gd[gd].ch) || g.gd[gd].held.is_some() || { let r = crate::owner::by::RUNNER; crate::owner::has(g, gd, r) } || crate::control::man::staggered(g, gd) || crate::control::man::blind(g, gd) || frag_flee(g, gd).is_some() || g.time - book!(g).last_t < g.k.frag.def_gap { return None; }
     Some(ci)
 }
 
@@ -718,7 +718,7 @@ fn lands(g: &crate::game::Game, sol: V3, p: V3, tol: f64) -> bool {
 /// A live hostage in what a grenade there would reach.
 fn hostage_near(g: &crate::game::Game, p: V3) -> bool {
     let reach = g.k.frag.wound_m + g.k.frag.def_scatter[1];
-    g.rescue.hostages.iter().any(|&h| g.gd[h].state != crate::game::GuardState::Dead && flat(g.ch[g.gd[h].ch].pos, p) < reach)
+    g.rescue.hostages.iter().any(|&h| !crate::condition::down(g, g.gd[h].ch) && flat(g.ch[g.gd[h].ch].pos, p) < reach)
 }
 
 /// Nobody of the thrower's own side within defOwnM of where it would land with a line to it, and he not within his own arm's error.
@@ -730,7 +730,7 @@ fn own_clear(g: &mut crate::game::Game, gd: GuardId, land: V3, release: Option<b
     while n < g.guards.len() {
         let o = g.guards[n]; n += 1;
         if g.gd[o].team != team { continue; }
-        if g.gd[o].state == crate::game::GuardState::Dead {   // a mate down and breathing is still one of his
+        if crate::condition::down(g, g.gd[o].ch) {   // a mate down and breathing is still one of his
             if down_asked(g, o) {
                 let b = lying(g, o);
                 if flat(b[0], land) <= g.k.frag.def_own_m && lying_shows(g, from, &b, crate::frag::GlassView::Wary) > 0.0 { return false; }

@@ -649,7 +649,7 @@ pub fn wall_charge_known_foes(g: &mut crate::game::Game) -> Vec<V3> {
 
 fn counts(g: &mut Game, h: GuardId, held: Option<GuardId>) -> bool {
     let team = g.gd[h].team;
-    Some(h) != held && g.gd[h].state != crate::game::GuardState::Dead && g.ch[g.gd[h].ch].alive && crate::teams::is_hostile(g, team, crate::teams::Team::Player)
+    Some(h) != held && !crate::condition::down(g, g.gd[h].ch) && g.ch[g.gd[h].ch].alive && crate::teams::is_hostile(g, team, crate::teams::Team::Player)
 }
 
 fn fire_new(g: &mut Game, w: Option<&WallSpot>, all: Option<&[V3]>) -> WallChargeFireAsk {
@@ -719,7 +719,7 @@ pub fn wall_charge_clear_of(g: &mut crate::game::Game, gd: GuardId, where_: &mut
     for c in g.wall_charge.away_marks.keys() { if !g.wall_charge.set.contains(&c) { g.wall_charge.away_marks.delete(c); } }
     for m_ in g.wall_charge.away.keys() {
         let a = *g.wall_charge.away.get(m_).unwrap();
-        if g.gd[m_].state == crate::game::GuardState::Dead || !g.wall_charge.set.contains(&a.c) || (m_ != gd && m::abs(t - a.t) > 0.5) { g.wall_charge.away.delete(m_); }
+        if crate::condition::down(g, g.gd[m_].ch) || !g.wall_charge.set.contains(&a.c) || (m_ != gd && m::abs(t - a.t) > 0.5) { g.wall_charge.away.delete(m_); }
     }
     let mut mine = g.wall_charge.away.get(gd).copied();
     if let Some(a) = mine {
@@ -796,7 +796,7 @@ pub fn wall_charge_too_close_of(g: &crate::game::Game, seat: &crate::seats::Seat
     let w = wall_of(g, c);
     let r = safe_radius_of(g, &w);
     let mut out = Vec::new();
-    if !g.pl[seat.player].down {
+    if !crate::condition::down(g, g.pl[seat.player].ch) {
         let p = sam_pos(g, seat);
         if wall_charge_blast_share_of(g, &w, p, Some(r), Some(false)) > 0.0 { out.push(String::from("you")); }
     }
@@ -831,7 +831,7 @@ fn wall_charge_behind_of(g: &crate::game::Game, seat: &crate::seats::SeatRef, c_
     let mut out = Vec::new();
     {
         let p = sam_pos(g, seat);
-        if !g.pl[seat.player].down && g.puppet.is_none() && wall_off(g, &w, p) < -t / 2.0 && flat(p, at) < stun_m && lined(g, &w, t, p) { out.push(String::from("you")); }
+        if !crate::condition::down(g, g.pl[seat.player].ch) && g.puppet.is_none() && wall_off(g, &w, p) < -t / 2.0 && flat(p, at) < stun_m && lined(g, &w, t, p) { out.push(String::from("you")); }
     }
     for gd in crate::orders::squad_orders_men(g, seat, None, None) {
         let p = man_pos(g, gd);

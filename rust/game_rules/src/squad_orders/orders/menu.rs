@@ -62,9 +62,6 @@ fn sel_of_who(w: Who) -> SquadOrdersMenSel {
 pub(crate) fn same_bits(a: V3, b: V3) -> bool {
     a[0].to_bits() == b[0].to_bits() && a[1].to_bits() == b[1].to_bits() && a[2].to_bits() == b[2].to_bits()
 }
-fn is_dead(g: &Game, gd: GuardId) -> bool {
-    g.gd[gd].state == crate::game::GuardState::Dead
-}
 /// a string as a condition
 pub(crate) fn truthy_str(s: &Option<String>) -> bool {
     s.as_deref().map_or(false, |x| !x.is_empty())
@@ -120,7 +117,7 @@ pub(super) fn nightbreach_status(g: &crate::game::Game, gd: GuardId) -> Option<S
 /// A module that changed these men's plan with nobody asking says so: drawn for a moment.
 pub fn squad_orders_show(g: &mut crate::game::Game, men: &[GuardId]) {
     let t = g.time;
-    let who: Vec<String> = men.iter().filter(|&&m| !is_dead(g, m)).map(|&m| g.gd[m].callsign.clone()).collect();
+    let who: Vec<String> = men.iter().filter(|&&m| !crate::condition::down(g, g.gd[m].ch)).map(|&m| g.gd[m].callsign.clone()).collect();
     g.orders.shows.push(SquadOrdersShowsItem { t, who });
     if g.orders.shows.len() > 16 { g.orders.shows.drain(0..8); }
     g.stats.autopilot.shows += 1;
@@ -176,7 +173,7 @@ pub fn squad_orders_active(g: &crate::game::Game, seat: &crate::seats::SeatRef) 
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
-        if squad_orders_mine(g, seat, gd) && !is_dead(g, gd) { return true; }
+        if squad_orders_mine(g, seat, gd) && !crate::condition::down(g, g.gd[gd].ch) { return true; }
     }
     false
 }
@@ -227,7 +224,7 @@ pub fn squad_orders_ring(g: &crate::game::Game, seat: &crate::seats::SeatRef) ->
 pub fn squad_orders_recipients(g: &crate::game::Game, seat: &crate::seats::SeatRef, t: Option<&crate::orders::OrderTarget>, who: Option<crate::orders::Who>) -> Vec<GuardId> {
     if let Some(OrderTarget::None(x)) = t {
         if let Some(man) = x.man {
-            return if !is_dead(g, man) && squad_orders_squad(g, seat).contains(&man) { vec![man] } else { Vec::new() };
+            return if !crate::condition::down(g, g.gd[man].ch) && squad_orders_squad(g, seat).contains(&man) { vec![man] } else { Vec::new() };
         }
     }
     let who = who.unwrap_or(seat.orders.who);
@@ -250,7 +247,7 @@ pub fn squad_orders_men(g: &crate::game::Game, seat: &crate::seats::SeatRef, sel
         SquadOrdersMenSel::Guard(gd) => if s.contains(&gd) { vec![gd] } else { Vec::new() },
     };
     let down = opts.and_then(|o| o.down).unwrap_or(false);
-    list.into_iter().filter(|&gd| down || !is_dead(g, gd)).collect()
+    list.into_iter().filter(|&gd| down || !crate::condition::down(g, g.gd[gd].ch)).collect()
 }
 
 /// The squad of four (any roster of more than two).
@@ -290,7 +287,7 @@ pub fn squad_orders_cycle_who(g: &mut crate::game::Game, dir: Option<f64>) -> cr
         }
     } else {
         for (k, &gd) in s.iter().enumerate() {
-            if !is_dead(g, gd) { ring.push(Who::Num(k as f64)); }
+            if !crate::condition::down(g, g.gd[gd].ch) { ring.push(Who::Num(k as f64)); }
         }
     }
     let was = g.orders.who;
@@ -314,7 +311,7 @@ pub fn squad_orders_who_words(g: &crate::game::Game, seat: &crate::seats::SeatRe
         Some(m) => m,
         None => { own = squad_orders_recipients(g, seat, None, None); &own }
     };
-    let alive = squad_orders_squad(g, seat).into_iter().filter(|&gd| !is_dead(g, gd)).count();
+    let alive = squad_orders_squad(g, seat).into_iter().filter(|&gd| !crate::condition::down(g, g.gd[gd].ch)).count();
     if men.len() == alive && men.len() > 1 {
         return String::from(if squad_orders_paired(g, seat) { "gold" } else { "all" });
     }
@@ -500,7 +497,7 @@ pub fn squad_orders_clear(g: &mut crate::game::Game, men: Option<&[GuardId]>) {
         None => { own = g.orders.asg.keys(); &own }
     };
     for &gd in men {
-        if g.orders.asg.has(gd) && g.gd[gd].script.is_some() && !is_dead(g, gd) { crate::squad::order(g, gd, crate::squad::OrderPatch { goal: Some(None), ..Default::default() }); }
+        if g.orders.asg.has(gd) && g.gd[gd].script.is_some() && !crate::condition::down(g, g.gd[gd].ch) { crate::squad::order(g, gd, crate::squad::OrderPatch { goal: Some(None), ..Default::default() }); }
         squad_orders_drop(g, gd);
     }
     if !g.orders.asg.values().any(|&a| g.tab.orders_assignment[a].post.is_none()) { g.orders.trail.clear(); }
@@ -556,7 +553,7 @@ pub(super) fn target_at(g: &Game, seat: &crate::seats::SeatRef, p: V3, asked: &m
     let mut dm = man_m;
     for gd in squad_orders_squad(g, seat) {
         let x = v3::dist_xz(g.ch[g.gd[gd].ch].pos, at);
-        if !is_dead(g, gd) && x < dm { dm = x; man = Some(gd); }
+        if !crate::condition::down(g, g.gd[gd].ch) && x < dm { dm = x; man = Some(gd); }
     }
     let ds = v3::dist_xz(sam, at);
     let fo = squad_orders_people_near(g, seat, at);   // (pairorders.ts: a man of the other side nearer the point than a door, a teammate or Sam himself)

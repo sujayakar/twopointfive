@@ -129,7 +129,7 @@ fn finish(g: &mut Game, b: &Burst, rep: &mut BlastReport, gd: GuardId) {
 fn seat_blast(g: &mut Game, b: &Burst, rep: &mut BlastReport) {
     let pl = g.player;
     let c = g.pl[pl].ch;
-    if g.pl[pl].down { return; }
+    if crate::condition::down(g, g.pl[pl].ch) { return; }
     let head = bone_or(g, c, crate::character::Bone::Head, 1.6);
     let (feet, id) = (g.ch[c].pos, g.ch[c].id);
     let j = judge(g, b, feet, head, id);
@@ -148,7 +148,7 @@ fn seat_blast(g: &mut Game, b: &Burst, rep: &mut BlastReport) {
             for x in g.guards.clone() { if g.ch[g.gd[x].ch].id == b.who { by = Some(g.gd[x].callsign.clone()); break; } }
             let by = by.unwrap_or_else(|| if b.mine { String::from("his own grenade") } else { b.name.clone() });
             crate::chronicle::chron_hit(g, Some(&by));
-            if !g.pl[pl].down { rep.player = Some(BlastResult::Wounded); }
+            if !crate::condition::down(g, g.pl[pl].ch) { rep.player = Some(BlastResult::Wounded); }
         }
     }
     if rep.player == Some(BlastResult::Wounded) { crate::condition::condition_hurt(g, c); }
@@ -189,7 +189,7 @@ pub(super) fn blast_raw(g: &mut crate::game::Game, at: V3, spec: &crate::frag::B
         crate::marks::bang_scorch(g, from);
         let ears = crate::seats::host_man(g);
         let eye = bone_or(g, g.pl[ears].ch, crate::character::Bone::Head, 1.6);
-        if !g.pl[ears].down && v3::dist(eye, from) < wound && !crate::scene_collision::segment_blocked(g, from, eye, None, None, None) {
+        if !crate::condition::down(g, g.pl[ears].ch) && v3::dist(eye, from) < wound && !crate::scene_collision::segment_blocked(g, from, eye, None, None, None) {
             crate::audio_iface::game_audio_like_play(g, "earRing", None, Some(v3::clamp(1.1 - v3::dist(eye, from) / wound, 0.2, 0.7)), None);
         }
     }
@@ -209,7 +209,7 @@ pub(super) fn blast_raw(g: &mut crate::game::Game, at: V3, spec: &crate::frag::B
         let mut all = g.guards.clone();
         all.extend(crate::civilians::civilians_shown(g));
         for gd in all {
-            if g.gd[gd].state != crate::game::GuardState::Dead && !g.gd[gd].god {
+            if !crate::condition::down(g, g.gd[gd].ch) && !g.gd[gd].god {
                 let c = g.gd[gd].ch;
                 let (feet, head, id) = (g.ch[c].pos, bone_or(g, c, crate::character::Bone::Head, 1.65), g.ch[c].id);
                 if v3::dist(from, [feet[0], feet[1] + 0.9, feet[2]]) <= wound { let e = exposure(g, from, feet, head, Some(GlassView::Blown)); map.set(crate::Num(id), e); }
@@ -222,7 +222,7 @@ pub(super) fn blast_raw(g: &mut crate::game::Game, at: V3, spec: &crate::frag::B
             }
         }
         for pl in crate::seats::men(g) {
-            if !g.pl[pl].down {
+            if !crate::condition::down(g, g.pl[pl].ch) {
                 let c = g.pl[pl].ch;
                 let (feet, head, id) = (g.ch[c].pos, bone_or(g, c, crate::character::Bone::Head, 1.6), g.ch[c].id);
                 if v3::dist(from, [feet[0], feet[1] + 0.9, feet[2]]) <= wound { let e = exposure(g, from, feet, head, Some(GlassView::Blown)); map.set(crate::Num(id), e); }
@@ -251,7 +251,7 @@ pub(super) fn blast_raw(g: &mut crate::game::Game, at: V3, spec: &crate::frag::B
     let mut all = g.guards.clone();
     all.extend(crate::civilians::civilians_shown(g));
     for gd in all {
-        if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].god {
+        if crate::condition::down(g, g.gd[gd].ch) || g.gd[gd].god {
             if down_asked(g, gd) { finish(g, &b, &mut rep, gd); }
             continue;
         }

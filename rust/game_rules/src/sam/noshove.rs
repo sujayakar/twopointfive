@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 
 /// Is this a man the rule has: one of the player's own under 'fall in', on his order's legs, not on a live grenade's.
 pub(super) fn falling_in_yields(g: &Game, seat: &crate::seats::SeatRef, gd: GuardId) -> bool {
-    if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].script.is_none() { return false; }
+    if crate::condition::down(g, g.gd[gd].ch) || g.gd[gd].script.is_none() { return false; }
     match crate::orders::squad_orders_of(g, seat, gd) {
         Some(a) => g.tab.orders_assignment[a].post.is_none() && !crate::frag::frag_running(g, gd),
         None => false,
