@@ -193,7 +193,7 @@ fn able(g: &crate::game::Game, gd: GuardId) -> bool {
         && man.awareness < g.k.attention.calm_aw
         && !crate::condition::is_blind(g, man.ch);
     if !calm { return false; }
-    if crate::roomfight::fight_live(g) && !g.quiet.active { return false; }
+    if crate::roomfight::fight_live(g) && !g.staged.facts.unseen { return false; }
     let team = g.gd[gd].team;
     crate::teams::is_hostile(g, team, crate::teams::Team::Player)
 }

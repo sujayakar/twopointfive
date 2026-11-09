@@ -36,16 +36,13 @@ fn at_of(p: &Planned, o: V3) -> V3 {
 /// THE WAY THE MISSION THAT IS UP STAGED ITS TEAM ON, whatever its kind, and whether it has ended. A quiet mission and the solo night have way 0 and their own men.
 struct Way { active: bool, way: usize, ended: bool, fixed: bool }
 fn staged_way_of(g: &Game, asks_none: bool) -> Way {
-    if crate::roomclear::room_clear_scenario_active(g) { return Way { active: true, way: g.room_clear.way as usize, ended: g.room_clear.end.is_some(), fixed: false }; }
-    if g.rescue.active { return Way { active: true, way: 0, ended: g.rescue.result.is_some(), fixed: false }; }
-    if g.night_breach.active { return Way { active: true, way: 0, ended: false, fixed: false }; }
-    if g.quiet.active { return Way { active: true, way: 0, ended: false, fixed: true }; }
-    Way { active: asks_none, way: 0, ended: false, fixed: true }
+    let s = &g.staged;
+    Way { active: s.up.is_some() || asks_none, way: s.way as usize, ended: s.over, fixed: !s.facts.fight }
 }
 /// the way a game stood from a link stages: its index, or none (no mission started)
 pub fn staged_way(g: &Game, asks_none: bool) -> Option<usize> { let w = staged_way_of(g, asks_none); if w.active { Some(w.way) } else { None } }
 
-fn ops(g: &Game) -> Vec<GuardId> { crate::scenario_run::team_of(g).into_iter().filter(|&x| !crate::condition::down(g, g.gd[x].ch)).collect() }
+fn ops(g: &Game) -> Vec<GuardId> { g.staged.team.iter().copied().filter(|&x| !crate::condition::down(g, g.gd[x].ch)).collect() }
 
 /// EVERYBODY WHO IS NOT THE TEAM, far off, dark, held, calm and deaf, the level's devices inert, and the alarm a stray noise placed dropped while the floor is at 0. A blast is made inside the step, so the mark
 /// on a man's ears is set past any number an event can get, and renewed here. Answers what it had to put right: men found roused, the alarm's marks dropped.
@@ -354,7 +351,7 @@ let (intensity, emissive) = (home::fixture_base_intensity(g, t), g.tab.sim_light
     st.who = if st.want >= 1 && (st.want as usize) <= team.len() { st.want } else { 0 };
     let head = acts::actor(g, st).filter(|h| team.contains(h));
     // (a restage keeps the file's order, the men's places by team index: a restart makes new men. The open card's man goes to the head of it by the card switch's own walk, the fourth man round Sam: `live`. Only a first staging and the still picture, which has no walks, stand him first)
-    let all0 = crate::scenario_run::team_of(g);
+    let all0 = g.staged.team.clone();
     let keep = st.keep.take();
     let kept_order = keep.is_some() && !st.still;
     let kept_men: Vec<GuardId> = keep.map_or(Vec::new(), |perm| perm.iter().filter_map(|&i| all0.get(i).copied()).filter(|x| team.contains(x)).collect());
@@ -551,7 +548,7 @@ let (intensity, emissive) = (home::fixture_base_intensity(g, t), g.tab.sim_light
     t.aim_acc = m::round(K.gun_rate * R / K.ramp * 100.0) / 100.0;
     t.body = m::round(K.body_rate * R * 1000.0) / 1000.0;
     t.body_acc = m::round(K.body_rate * R / K.ramp * 100.0) / 100.0;
-    for x in crate::scenario_run::team_of(g) { g.gd[x].god = true; }
+    for x in g.staged.team.clone() { g.gd[x].god = true; }
     // (the posing step walked the parked men back inside the world's edge)
     let _ = park(g);
     if !st.still { acts::live(g, st); }
@@ -564,7 +561,7 @@ pub fn keep_base(g: &mut Game) { crate::savestate::control::keep_first(g); }
 pub fn restage(g: &mut Game) {
     let Some(mut was) = take(g) else { return };
     // (the file's order, as team indexes: every row id the stage holds is dead after this)
-    let team = crate::scenario_run::team_of(g);
+    let team = g.staged.team.clone();
     let keep: Vec<usize> = was.order.iter().filter_map(|x| team.iter().position(|t| t == x)).collect();
     // (the tables go on as they are, so what a row wrote for its length is put back first)
     acts::tables_back(g, &mut was);
@@ -818,7 +815,7 @@ pub fn open(g: &mut Game, who: u32, field: &str) {
 pub fn cards(g: &mut Game, size: i32) {
     let Some(mut st) = take(g) else { return };
     let size = if (0..=4).contains(&size) && !staged_way_of(g, st.asks_none).fixed { Some(size as u32) } else { None };
-    if let Some(n) = size { if g.rescue.active { g.k.rescue.squad = n as f64; } else { g.k.nightbreach.squad = n as f64; } }
+    if let Some(n) = size { if crate::rescue::rescue_up(g) { g.k.rescue.squad = n as f64; } else { g.k.nightbreach.squad = n as f64; } }
     if size.is_some() { st.size = size; }
     if st.still { st.due = true; } else { super::cards::told(g, &mut st, size); }
     g.kit_stage = Some(st);

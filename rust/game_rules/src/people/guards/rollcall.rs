@@ -421,7 +421,7 @@ fn update_rollcall(g: &mut crate::game::Game, dt: f64) {
         r.next_at = -1.0;
         return;
     }
-    if g.level.scenarios.as_ref().and_then(|s| s.quiet.as_ref()).and_then(|q| q.radio_check) == Some(false) {
+    if !g.level.radio_check() {
         let r = rollcall_state(g);
         r.stage = RollcallStage::Idle;
         r.next_at = -1.0;

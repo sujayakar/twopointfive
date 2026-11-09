@@ -480,9 +480,8 @@ fn given_of(g: &Game) -> Given {
             plans.push((p.door.clone(), p.fling, p.room.clone(), p.bounds.as_ref().map(plan_rect)));
         }
     }
-    let scenarios = level.scenarios.as_ref();
-    let rooms = scenarios.and_then(|s| s.room_clear.as_ref()).map_or_else(Vec::new, |r| r.rooms.clone());
-    let rescue = scenarios.and_then(|s| s.rescue.as_ref()).map(|rs| {
+    let rooms = level.rooms().to_vec();
+    let rescue = level.held_room().map(|rs| {
         let bounds = match &rs.room.bounds {
             Some(b) => Some(rect_of(b)),
             None => plans.iter().find(|p| p.0 == rs.room.door).and_then(|p| p.3),

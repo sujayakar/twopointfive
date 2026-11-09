@@ -29,7 +29,7 @@ fn as_two(seed: u32) -> Play {
     let mut p = Play::mission("crossing.json", "?levelFile=crossing.json&quiet&squad=1", &Opts { seed, ..Default::default() });
     p.g.god_mode = true;
     p.run(0.5);
-    assert!(p.g.quiet.active && p.g.quiet.ops.len() == 1, "the staging is wrong: this is not a quiet mission as two");
+    assert!(game::quiet::quiet_of(&p.g) && p.g.staged.team.len() == 1, "the staging is wrong: this is not a quiet mission as two");
     p
 }
 /// A defender down and breathing by `by`'s hand, on the card, come to rest. A partner's man goes on the card by the tally at the end of the step he goes
@@ -67,7 +67,7 @@ fn a_burst_on_a_man_out_cold_moves_him_from_knockout_to_kill() {
         (6, DownBy::Guard, false, None, "a teammate's frag grenade"),
     ] {
         let (mut p, man) = one_down(seed, by);
-        let who = if sams { p.g.ch[p.g.pl[p.g.player].ch].id } else { p.id_of(p.g.quiet.ops[0]) };
+        let who = if sams { p.g.ch[p.g.pl[p.g.player].ch].id } else { p.id_of(p.g.staged.team[0]) };
         burst_beside(&mut p, man, who, name, seed);
         p.run(0.5);
         assert_eq!(p.g.gd[man].down_kind, Some(DownKind::Shot), "{by:?}, thrown by Sam {sams}: the burst did not reach him");
@@ -84,7 +84,7 @@ fn a_burst_on_a_man_out_cold_moves_him_from_knockout_to_kill() {
 fn a_man_put_down_and_burst_in_one_step_is_one_kill() {
     let mut p = as_two(7);
     let man = defender(&p, None);
-    let partner = p.id_of(p.g.quiet.ops[0]);
+    let partner = p.id_of(p.g.staged.team[0]);
     p.falls_as(man, DownKind::Struck, true, DownBy::Guard);
     burst_beside(&mut p, man, partner, None, 7);
     assert_eq!(p.g.gd[man].down_kind, Some(DownKind::Shot), "the burst did not reach him");

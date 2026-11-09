@@ -188,7 +188,7 @@ fn a_moment_of_a_game_of_two_put_back_plays_the_same() {
 #[test]
 fn a_rescue_refuses_two_players() {
     let mut p = Play::level("office.json", false, &Opts { seed: 5, seats: 2, ..Default::default() });
-    let why = game::scenario_run::start_scenario(&mut p.g, &game::scene_scenario_list::ScenarioSpec { kind: game::scene_scenario_list::ScenarioSpecKind::Rescue, squad: 2.0, level: None, seed: None });
+    let why = game::scenario_run::start_scenario(&mut p.g, &game::scene_scenario_list::ScenarioSpec { kind: game::scene_scenarios::MissionKind::Rescue, squad: 2.0, level: None, seed: None });
     assert!(why.is_some_and(|w| !w.is_empty()) && p.g.rescue.result.is_none());
     for _ in 0..30 { frame(&mut p, 0); }
 }

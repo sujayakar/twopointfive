@@ -240,10 +240,10 @@ impl Bot {
     pub fn stacked(&self) -> bool { self.squad().into_iter().all(|x| self.order_of(x).is_some_and(|a| a.order == "stack" && a.arrived)) }
     pub fn following(&self) -> bool { self.squad().into_iter().all(|x| self.ordered(x) == "fallIn") }
     pub fn men_in(&self, r: [f64; 4]) -> usize { self.squad().into_iter().filter(|&x| { let p = self.man_at(x); p[0] > r[0] && p[0] < r[1] && p[2] > r[2] && p[2] < r[3] }).count() }
-    pub fn cleared(&self, room: &str) -> bool { self.ask(|g| g.room_clear.rooms.iter().any(|r| r.def.id == room && r.cleared)) }
+    pub fn cleared(&self, room: &str) -> bool { self.ask(|g| g.staged.rooms.iter().any(|r| r.def.id == room && r.cleared)) }
     /// a room is theirs: cleared, or three of them are in it
     pub fn taken(&self, room: &str) -> bool {
-        let b = self.ask(|g| g.room_clear.rooms.iter().find(|r| r.def.id == room).map(|r| (r.cleared, [r.def.bounds.x0, r.def.bounds.x1, r.def.bounds.z0, r.def.bounds.z1])));
+        let b = self.ask(|g| g.staged.rooms.iter().find(|r| r.def.id == room).map(|r| (r.cleared, [r.def.bounds.x0, r.def.bounds.x1, r.def.bounds.z0, r.def.bounds.z1])));
         let Some((cleared, b)) = b else { return false };
         cleared || self.men_in(b) >= 3
     }

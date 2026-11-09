@@ -118,8 +118,8 @@ pub fn update_mission(g: &mut crate::game::Game, dt: f64, input: InputId) {
         }
         g.mission.spotted_t = g.time;
     }
-    if crate::roomclear::room_clear_scenario_active(g) || g.rescue.active {
-        // the room clear or the hostage rescue has the floor: no stage of the stealth mission moves under it
+    if g.staged.facts.own_rule {
+        // a mission that goes by its own rule has the floor: no stage of the stealth mission moves under it
     } else if g.mission.stage == MissionStage::Infiltrate {
         let p = player_pos(g, &crate::seats::here(g));
         let (x0, x1, z0, z1) = {
@@ -301,6 +301,47 @@ pub fn send_rack_check(g: &mut crate::game::Game) {
     crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.6), None);
     crate::dialogue::handler_beat(g, crate::dialogue::HandlerBeat::Rack, Some(2.6));
 }
+
+/// HOW THE RUN THAT IS UP HAS ENDED (None: it goes on): won or lost, the card's word and why, by the rule of whoever staged it. The verdict asks it each tick and latches the first answer.
+pub fn ended(g: &crate::game::Game) -> Option<(bool, &'static str, String)> {
+    if crate::seats::all_down(g) {
+        let by = &g.chronicle.counts.down_by;
+        return Some((false, "DOWN", if by.is_empty() { String::new() } else { format!("by {}", by) }));
+    }
+    use crate::game::MissionStage;
+    use crate::scene_scenarios::MissionKind as K;
+    match g.staged.up {
+        Some(K::Roomclear) => crate::roomclear::room_clear_scenario_ended(g),
+        Some(K::Rescue) => crate::rescue::rescue_ended(g),
+        Some(K::Nightbreach) => crate::nightbreach::night_breach_ended(g),
+        Some(K::Quiet) | None => match g.mission.stage { MissionStage::Done => Some((true, "OUT", String::new())), MissionStage::Failed => Some((false, "FAILED", String::new())), _ => None },
+    }
+}
+
+/// The mission that is up has its men in an entry of its own, or a clock that runs.
+pub fn going(g: &crate::game::Game) -> bool {
+    use crate::scene_scenarios::MissionKind as K;
+    match g.staged.up {
+        Some(K::Roomclear | K::Nightbreach) => crate::nightbreach::night_breach_going(g),
+        Some(K::Rescue) => crate::rescue::rescue_dynamic(g) && !g.staged.over,
+        Some(K::Quiet) | None => false,
+    }
+}
+
+/// The captives who live.
+pub fn captives_up(g: &crate::game::Game) -> Vec<GuardId> { g.staged.captives.iter().copied().filter(|&h| g.gd[h].state != crate::game::GuardState::Dead).collect() }
+
+/// Who holds the captives now.
+pub fn captor(g: &mut crate::game::Game) -> Option<GuardId> { if g.staged.captives.is_empty() { None } else { crate::rescue::rescue_captor(g) } }
+
+/// He lies in wait, and nothing said on the net may give his place away.
+pub fn lies_in_wait(g: &crate::game::Game, gd: GuardId) -> bool { g.staged.leads(gd) && crate::rescue::rescue_crew_hides(g, gd) }
+
+/// The mission's own place for his gun, where it leads him and has one.
+pub fn gun_place(g: &crate::game::Game, gd: GuardId) -> Option<V3> { if g.staged.leads(gd) { crate::rescue::rescue_crew_look(g, gd) } else { None } }
+
+/// The last warning before a captive dies, as the men at a door have it.
+pub fn last_warning(g: &mut crate::game::Game, d: DoorId) -> bool { !g.staged.captives.is_empty() && crate::rescue::rescue_last_warning(g, d) }
 
 /// THE MISSION'S ONE LINE AND ITS PLACE, as they stand now, and whose they are: a level's program while it runs, a lesson's step over its own scenario,
 /// the room clear, the rescue, the night breach by itself, and else the stealth mission's own stages.

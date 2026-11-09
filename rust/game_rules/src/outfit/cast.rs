@@ -67,11 +67,11 @@ pub fn sneak_suit(g: &mut Game, c_2: CharId) -> bool {
     // (k: None = no mission; Some(true) = quiet; Some(false) = any other kind)
     let k: Option<bool> = match crate::scene_look::suit_as(g) {
         Some(asked) => asked.map(|_| true),   // (cast.ts:74 `asked !== undefined ? asked : activeScenario(g)`: null = no mission)
-        None => crate::scenario_run::active_scenario(g).map(|a| a == crate::scenario_run::ActiveScenario::Quiet),
+        None => g.staged.up.map(|_| g.staged.facts.unseen),
     };
     if k == Some(false) { return false; }
     if crate::seats::man_of(g, Some(c_2)).is_some() { return true; }
-    k == Some(true) && crate::scenario_run::team_of(g).iter().any(|gd| g.gd[*gd].ch == c_2)
+    k == Some(true) && g.staged.team.iter().any(|gd| g.gd[*gd].ch == c_2)
 }
 /// The part mask to draw this man with this frame (0 with no cast loaded).
 pub fn cast_parts(g: &mut Game, c_2: CharId) -> f64 {

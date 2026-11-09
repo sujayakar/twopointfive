@@ -491,7 +491,7 @@ pub struct LevelScenariosDoorNamesItem {
 pub struct ScenarioEntry {
     pub id: String,
     pub title: String,
-    pub kind: crate::scene_scenarios::ScenarioEntryKind,
+    pub kind: crate::scene_scenarios::MissionKind,
     /// teammates: the pair or the four (the rescue is the pair's as built); a quiet mission's is nobody or one partner
     pub squad: f64,
     /// which heading of the list it is under (none: by what it is)
@@ -525,8 +525,9 @@ pub struct ScenarioEntry {
     pub squads: Option<bool>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Words)]
-pub enum ScenarioEntryKind {
+/// what kind of mission it is. A word for lists, cards and addresses: a rule asks the mission that is up what it brings (`g.staged`)
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
+pub enum MissionKind {
     #[default] Nightbreach,
     Roomclear,
     Rescue,

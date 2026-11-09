@@ -172,7 +172,7 @@ fn a_frag_refused_for_who_is_in_it_says_who() {
         let at = p.at(man);
         let spot = [at[0], 0.0, at[1]];
         let mut says = |hostages: Vec<_>, civilians: Vec<_>| {
-            p.g.rescue.hostages = hostages;
+            p.g.staged.captives = hostages;
             p.g.civilians = civilians;
             game::squadthrow::squad_frag_catches(&mut p.g, spot, spot, None, Some(false), None, None)
         };

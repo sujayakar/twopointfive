@@ -164,7 +164,7 @@ fn calm(g: &mut crate::game::Game, d: RoomfightDefId) -> bool {
 
 /// where a point is, by the structure's own rooms
 fn where_(g: &mut crate::game::Game, p: V3) -> crate::laststand::Where {
-    let rooms = match crate::roomclear::room_clear_scenario_structure(g) { Some(s) => s.rooms, None => Vec::new() };
+    let rooms = g.level.rooms().to_vec();
     let mut best: Option<usize> = None;
     let mut bd = f64::INFINITY;
     for (i, r) in rooms.iter().enumerate() {
@@ -190,8 +190,7 @@ fn spoken(g: &mut crate::game::Game, p: V3) -> crate::laststand::Spoken {
         None => return Spoken { id: w.id, the: w.the, at: w.at, spot: None },
     };
     let id = if id_truthy(&r.id) {
-        let structure = crate::roomclear::room_clear_scenario_structure(g);
-        let held = structure.map_or(false, |s| s.rooms.iter().any(|x| Some(x.id.as_str()) == r.id.as_deref()));
+        let held = g.level.rooms().iter().any(|x| Some(x.id.as_str()) == r.id.as_deref());
         if held { r.id.clone() } else { None }
     } else { None };
     let spot = if id.is_some() { None } else {
@@ -512,7 +511,7 @@ fn fresh(g: &mut crate::game::Game) -> crate::laststand::State {
         Some(p) => p,
         None => {
             let mut p: JsMap<GuardId, String> = JsMap::new();
-            for r in &g.room_clear.rooms { for &gd in &r.defenders { p.set(gd, r.def.id.clone()); } }
+            for r in &g.staged.rooms { for &gd in &r.defenders { p.set(gd, r.def.id.clone()); } }
             p
         }
     };
@@ -532,9 +531,9 @@ pub(super) fn last_stand_tick(g: &mut crate::game::Game) {
 
 /// The frame of the endgame: 'most are down' starts it; then the lines waiting, the check, who has moved, the stand.
 fn step_stand(g: &mut crate::game::Game) {
-    if !crate::roomclear::room_clear_scenario_active(g) || g.room_clear.end.is_some() || g.rescue.active { return; }
+    if g.staged.rooms.is_empty() || g.staged.over { return; }
     if g.m.laststand.states.as_ref().map_or(true, |st| st.stale) {
-        let all = g.night_breach.hostiles.clone();
+        let all = g.staged.foes.clone();
         let few = m::min(g.k.laststand.few, m::floor(all.len() as f64 / 3.0));
         let mut up = 0;
         for &h in &all { if !crate::condition::down(g, g.gd[h].ch) && !g.gd[h].fled { up += 1; } }

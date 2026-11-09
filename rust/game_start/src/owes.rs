@@ -122,7 +122,7 @@ impl Owes {
     }
     /// a teammate, or a hostage, down by one of the team
     fn by_the_team(&self, g: &Game, gd: GuardId) -> bool {
-        if g.gd[gd].team != Team::Operative && !g.rescue.hostages.contains(&gd) { return false; }
+        if g.gd[gd].team != Team::Operative && !g.staged.captives.contains(&gd) { return false; }
         let k = g.gd[gd].killer_id;
         k == game::consts::PLAYER_ID || g.guards.iter().any(|&x| g.gd[x].team == Team::Operative && g.ch[g.gd[x].ch].id == k)
     }

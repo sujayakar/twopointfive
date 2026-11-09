@@ -19,42 +19,7 @@ fn row_file(g: &crate::game::Game) -> Option<String> {
 
 /// The mission that is up is the stealth game's kind on a row that leans loud: nothing grades that run as a sneak. VERDICT.loudCard is settled ON on the page.
 pub fn loud_row(g: &crate::game::Game) -> bool {
-    let file = row_file(g);
-    let run = crate::scenario_run::running_scenario(g, file.as_deref(), None);
-    match run {
-        Some(run) => {
-            run.kind == crate::scenario_run::RunningScenarioKind::Quiet
-                && run.entry.and_then(|e| e.lean) == Some(crate::ui_missions::Lean::Loud)
-        }
-        None => false,
-    }
-}
-
-/// This tick's end, by the mission kind's own rule (None: still running). The tick asks it and latches the first answer.
-pub(crate) fn ended(g: &crate::game::Game) -> Option<(bool, &'static str, String)> {
-    use crate::scenario_run::ActiveScenario as K;
-    let kind = crate::scenario_run::active_scenario(g);
-    let roomclear = kind == Some(K::Roomclear);
-    let mut all_down = true;
-    for i in 0..g.seats.len() { let s = g.seats[i]; let p = crate::cmd::seat_man(g, s); if !crate::condition::down(g, g.pl[p].ch) { all_down = false; break; } }
-    if all_down {
-        let by = &g.chronicle.counts.down_by;
-        return Some((false, "DOWN", if by.is_empty() { String::new() } else { alloc::format!("by {}", by) }));
-    }
-    if roomclear {
-        use crate::roomclear::RoomClearEnd as E;
-        let end = g.room_clear.end;
-        return match end { Some(E::Taken) => Some((true, "CLEAR", g.room_clear.end_why.clone())), Some(E::Wiped) => Some((false, "WIPED", g.room_clear.end_why.clone())), None => None };
-    }
-    if kind == Some(K::Rescue) {
-        return g.rescue.result.as_ref().map(|r| if r.state == crate::rescue::RescueResultState::Rescued { (true, "RESCUED", r.why.clone()) } else { (false, "LOST", r.why.clone()) });
-    }
-    if kind == Some(K::Nightbreach) {
-        let h = &g.night_breach.hostiles;
-        if !h.is_empty() && h.iter().all(|&x| crate::condition::down(g, g.gd[x].ch) || g.gd[x].fled) { return Some((true, "CLEAR", String::new())); }
-        return if g.mission.stage == crate::game::MissionStage::Failed { Some((false, "FAILED", String::new())) } else { None };
-    }
-    match g.mission.stage { crate::game::MissionStage::Done => Some((true, "OUT", String::new())), crate::game::MissionStage::Failed => Some((false, "FAILED", String::new())), _ => None }
+    g.staged.facts.unseen && crate::scenario_run::running_row(g, row_file(g).as_deref()).and_then(|e| e.lean) == Some(crate::ui_missions::Lean::Loud)
 }
 
 ///  a man's walk is at most this many samples, one every half second until it is halved; a hole counts as walked through this near
@@ -95,7 +60,7 @@ pub fn team_paired(g: &Game, seat: &crate::seats::SeatRef) -> bool {
 fn start_at(g: &Game) -> Option<V3> {
     if !crate::roomclear::room_clear_scenario_active(g) { return None; }
     let s = crate::roomclear::room_clear_scenario_structure(g)?;
-    let way = g.room_clear.way;
+    let way = g.staged.way;
     if way > 0.0 { if let Some(t) = s.starts.as_ref().and_then(|v| v.get(way as usize - 1)) { return Some(t.sam); } }
     s.team.as_ref().map(|t| t.sam)
 }
@@ -136,7 +101,7 @@ fn roster(g: &mut Game) {
         g.verdict.tracks.set(crate::Num(id), track(id, name, Some(tone), true, None));
     }
     let paired = team_paired(g, &crate::seats::here(g));
-    for gd in crate::scenario_run::team_of(g) {
+    for gd in g.staged.team.clone() {
         let id = g.ch[g.gd[gd].ch].id;
         if g.verdict.tracks.has(crate::Num(id)) { continue; }
         let tone = if paired { match g.gd[gd].unit.as_ref().and_then(|u| u.pair) { Some(crate::game::PairId::Red) => Some(Hue::Red), Some(crate::game::PairId::Blue) => Some(Hue::Blue), None => None } } else { None };
@@ -226,11 +191,11 @@ fn watch(g: &mut Game) {
 }
 
 /// The way a won run was won: quiet, dark, walls, doors, in that order.
-fn approach(g: &Game, kind: Option<crate::scenario_run::ActiveScenario>) -> Approach {
+fn approach(g: &Game) -> Approach {
     let (s, n) = (&g.mission.stats, &g.chronicle.counts);
     // a loaded run lost this module's own latches: for the kinds that can be loaded the chronicle says the same, and for the stealth game the
     // mission's own books decide with it, loaded or not
-    let stealth = kind.is_none() || kind == Some(crate::scenario_run::ActiveScenario::Quiet);
+    let stealth = !g.staged.facts.fight;
     let loaded = g.verdict.resumed && stealth;
     let found = g.verdict.found_at >= 0.0 || (stealth && (s.alerts > 0.0 || s.spotted > 0.0 || n.esc1 + n.esc2 > 0.0));
     if !found { return Approach::Quiet; }
@@ -240,18 +205,16 @@ fn approach(g: &Game, kind: Option<crate::scenario_run::ActiveScenario>) -> Appr
 
 /// The run is over: its one verdict is made, and stays.
 fn close(g: &mut Game, end: (bool, &'static str, String)) {
-    use crate::scenario_run::ActiveScenario as K;
-    let kind = crate::scenario_run::active_scenario(g);
     let secs = secs(g);
     let men: Vec<VerdictMan> = g.verdict.tracks.values().map(|t| VerdictMan { id: t.id, name: t.name.clone(), tone: t.tone, human: t.human, state: t.state, down_at: t.down_at, down_room: t.down_room.clone(), down_by: t.down_by.clone(), down_pos: t.down_pos, drops: t.drops.clone(), path: t.path.clone() }).collect();
     let lost = men.iter().filter(|x| x.state != ManState::Up).count() as f64;
     let foes_down = g.verdict.foes.iter().filter(|&h| crate::condition::down(g, g.gd[h].ch)).count() as f64;
-    let hostages = if kind == Some(K::Rescue) { g.rescue.result.as_ref().map(|r| RunVerdictHostages { alive: r.hostages, of: g.rescue.hostages.len() as f64 }) } else { None };
+    let hostages = g.staged.saved.map(|alive| RunVerdictHostages { alive, of: g.staged.captives.len() as f64 });
     let (won, word, why) = end;
     let res = RunVerdict {
-        kind: kind.map(|k| match k { K::Nightbreach => RunVerdictKind::Nightbreach, K::Roomclear => RunVerdictKind::Roomclear, K::Rescue => RunVerdictKind::Rescue, K::Quiet => RunVerdictKind::Quiet }),
+        kind: g.staged.up,
         won, word: String::from(word), why, secs,
-        approach: if won { Some(approach(g, kind)) } else { None },
+        approach: if won { Some(approach(g)) } else { None },
         void: g.verdict.cheat || (g.verdict.resumed && g.mission.stats.sandbox),
         clean: lost == 0.0, of: men.len() as f64, men, lost,
         foes: RunVerdictFoes { down: foes_down, of: g.verdict.foes.keys().len() as f64, fell: g.verdict.fell_at.clone() },
@@ -259,7 +222,7 @@ fn close(g: &mut Game, end: (bool, &'static str, String)) {
     };
     // the stealth mission raises its own card (the exfil, a player down); every other end is this module's to announce
     let stage = g.mission.stage;
-    let all_down = { let mut a = true; for i in 0..g.seats.len() { let p = crate::cmd::seat_man(g, g.seats[i]); if !crate::condition::down(g, g.pl[p].ch) { a = false; break; } } a };
+    let all_down = crate::seats::all_down(g);
     let own = stage == crate::game::MissionStage::Done || (stage == crate::game::MissionStage::Failed && g.mission.down_card_at > 0.0) || (stage != crate::game::MissionStage::Failed && all_down);
     g.verdict.card_at = if own { -1.0 } else { g.time + if won { g.k.verdict.win_secs } else { g.k.verdict.loss_secs } };
     g.verdict.res = Some(res);
@@ -287,7 +250,7 @@ pub fn verdict_tick(g: &mut crate::game::Game) {
     // (rails.ts: the seat with nobody on the floor parks him unseen: the mission's own staging, not a sandbox tick)
     if started(g) && (g.god_mode || !g.ai_enabled || g.infinite_ammo || g.player_invisible) { g.verdict.cheat = true; }
     watch(g);
-    if let Some(end) = ended(g) { close(g, end); }
+    if let Some(end) = crate::mission::ended(g) { close(g, end); }
 }
 
 /// HOW THE MISSION ENDED, read off the latched record: None while it is being played (and for a run that is not this mission any more), else whether
@@ -318,7 +281,7 @@ pub fn run_on(g: &crate::game::Game) -> (bool, bool) {
 pub fn run_view(g: &crate::game::Game) -> crate::view::RunView {
     let (begun, over) = run_on(g);
     let file = row_file(g);
-    let entry = crate::scenario_run::running_scenario(g, file.as_deref(), None).and_then(|r| r.entry);
+    let entry = crate::scenario_run::running_row(g, file.as_deref());
     let level = String::from(crate::difficulty::difficulty_now(g).as_str());
     let res = if over { g.verdict.res.as_ref() } else { None };
     let name = file.as_deref().unwrap_or("office");
@@ -332,7 +295,7 @@ pub fn run_view(g: &crate::game::Game) -> crate::view::RunView {
         way: res.and_then(|r| r.approach),
         clean: res.map_or(false, |r| r.clean),
         secs: res.map_or(0.0, |r| r.secs),
-        course: format!("{}|way{}|squad{}|{}", name, g.room_clear.way + 1.0, g.night_breach.ops.len(), level),
+        course: format!("{}|way{}|squad{}|{}", name, g.staged.way + 1.0, g.staged.team.len(), level),
         level,
         par: crate::par::par_result_now(g).map(|r| r.shown),
     }

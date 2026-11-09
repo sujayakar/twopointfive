@@ -60,7 +60,7 @@ const COUNTS: [&str; 8] = ["bangs", "frags", "smoke", "charges", "walls", "cams"
 /// the cards are written (the caller's) and how many come (`size`: asked, where the mission's men are not its own). WHAT MOVED is written live; what cannot be is staged again under the dissolve.
 pub(super) fn told(g: &mut Game, st: &mut KitStage, size: Option<u32>) {
     let was = core::mem::replace(&mut st.a.cards, g.m.kit.kit.members.clone());
-    let team = crate::scenario_run::team_of(g);
+    let team = g.staged.team.clone();
     st.a.hi = thing(g, &st.field, st.who);
     let alive = team.iter().filter(|&&x| !crate::condition::down(g, g.gd[x].ch)).count() as u32;
     let n = size.unwrap_or(alive);
