@@ -32,7 +32,7 @@ pub mod layers;
 pub mod light;
 pub mod lights;
 pub mod lines;
-pub mod maths;
+pub use prim::maths;
 pub mod men;
 pub mod nav;
 pub mod panes;

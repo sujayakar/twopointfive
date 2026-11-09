@@ -8,7 +8,7 @@
 //! Do not tidy the arithmetic: `(a - b) - c` is not `a - (b + c)`, a polynomial written by Horner's rule stays one, and a term that looks like it cancels
 //! (`n * n - 0.0`) is there because the other side has it.
 
-use prim::{floor, sqrt, trunc};
+use crate::{floor, sqrt, trunc};
 
 const INF: f64 = f64::INFINITY;
 const PI: f64 = 3.141592653589793;

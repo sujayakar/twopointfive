@@ -21,7 +21,6 @@ version = "0.1.0"
 dependencies = [
  "game_derive",
  "prim",
- "sim",
 ]
 
 [[package]]
@@ -32,5 +31,6 @@ version = "0.1.0"
 name = "sim"
 version = "0.1.0"
 dependencies = [
+ "game_types",
  "prim",
 ]
