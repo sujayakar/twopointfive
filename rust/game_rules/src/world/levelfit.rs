@@ -10,12 +10,12 @@ use alloc::{string::String, vec, vec::Vec};
 // ---- the terms of the count: called by the bodies below, stubs with no other caller, written here so no refusal panics on an empty stub
 
 /// Men a game holds at once, at most.   (levelfit.ts menMost)
-pub fn men_most(g: &crate::game::Game, civilians: f64) -> f64 {
+fn men_most(g: &crate::game::Game, civilians: f64) -> f64 {
     crate::guards::MAX_SKINNED + civilians + g.k.seats.max - 1.0
 }
 
 /// Men one step can be handed: the doors' hand-over in contacts, by the contacts one man is at most, and the furniture's in men. Infinity where there is no module.   (levelfit.ts menHeld)
-pub fn men_held(g: &mut crate::game::Game) -> f64 {
+fn men_held(g: &mut crate::game::Game) -> f64 {
     if !crate::sim_sim::sim_why_not().is_empty() { return f64::INFINITY; }
     let doors = crate::sim_doorshome::door_io(g).max_contacts;
     let held = m::floor(doors / (crate::game::body_door_particles().len() as f64 + 1.0));
@@ -23,7 +23,7 @@ pub fn men_held(g: &mut crate::game::Game) -> f64 {
 }
 
 /// What one step is handed of the men, at most.   (levelfit.ts handOverMost)
-pub fn hand_over_most(g: &crate::game::Game, civilians: f64) -> crate::levelfit::HandOverMost {
+fn hand_over_most(g: &crate::game::Game, civilians: f64) -> crate::levelfit::HandOverMost {
     let door_men = men_most(g, civilians) * (crate::game::body_door_particles().len() as f64 + 1.0);
     let prop_men = men_most(g, civilians);
     crate::levelfit::HandOverMost { door_men, prop_men }
@@ -59,7 +59,7 @@ fn marked(g: &Game, group: &str, b: Option<BoxId>) -> f64 {
 }
 
 /// What a level says of itself, counted before it is built.   (levelfit.ts levelCounts)
-pub fn level_counts(g: &mut crate::game::Game, level: &crate::levelfit::LevelCountsLevel) -> crate::levelfit::LevelFit {
+fn level_counts(g: &mut crate::game::Game, level: &crate::levelfit::LevelCountsLevel) -> crate::levelfit::LevelFit {
     let (mut parts, mut sheets) = (0.0, 0.0);
     for p in level.props.iter() { parts += p.parts.len() as f64; }
     for &b in level.boxes.iter() { if crate::glass::is_sheet(g, Some(b)) { sheets += 1.0; } }
@@ -97,14 +97,14 @@ pub fn level_counts(g: &mut crate::game::Game, level: &crate::levelfit::LevelCou
 }
 
 /// Statics that carry a cut record.   (levelfit.ts cutStatics)
-pub fn cut_statics(g: &crate::game::Game, boxes: &[BoxId]) -> f64 {
+fn cut_statics(g: &crate::game::Game, boxes: &[BoxId]) -> f64 {
     let mut n = 0.0;
     for &b in boxes.iter() { if g.tab.boxes[b].cut.as_ref().is_some_and(|c| !c.is_empty()) { n += 1.0; } }
     n
 }
 
 /// The clumps the largest sheet of a level's glass dices into, as the rule cuts them.   (levelfit.ts clumpsMost)
-pub fn clumps_most(g: &mut crate::game::Game, boxes: &[BoxId]) -> f64 {
+fn clumps_most(g: &mut crate::game::Game, boxes: &[BoxId]) -> f64 {
     let mut n = 0.0;
     for &b in boxes.iter() {
         if !crate::glass::is_sheet(g, Some(b)) { continue; }
@@ -158,7 +158,7 @@ fn row(row: &str, what: &str, has: f64, cap: f64, table: Option<&str>) -> crate:
 }
 
 /// Every count of a stood game against what holds it.   (levelfit.ts fitRows)
-pub fn fit_rows(g: &mut crate::game::Game, g_2: &crate::levelfit::Stood, tables: &JsMap<String, f64>) -> Vec<crate::levelfit::FitRow> {
+fn fit_rows(g: &mut crate::game::Game, g_2: &crate::levelfit::Stood, tables: &JsMap<String, f64>) -> Vec<crate::levelfit::FitRow> {
     let col = &g_2.col;
     let lv = &g_2.level;
     let counted = crate::levelfit::LevelCountsLevel {

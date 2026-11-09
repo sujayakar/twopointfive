@@ -23,7 +23,7 @@ fn slab_par_read() -> &'static [f64; sim::slabs::NPAR] {
 }
 
 /// Keeps a line of what the doors' blasts did. (doorblast.ts note)
-pub fn note(g: &mut crate::game::Game, s: &str) {
+fn note(g: &mut crate::game::Game, s: &str) {
     let line = format!("{}s {}", js::to_fixed(g.time, 2), s);
     let log = &mut g.m.doorblast.doorblast_log;
     log.push(line);
@@ -33,12 +33,12 @@ pub fn note(g: &mut crate::game::Game, s: &str) {
 }
 
 /// The slab's centre height with its foot (or its face) on the floor at this much tip. (doorblast.ts support)
-pub fn support(g: &crate::game::Game, d: DoorId, tip: f64) -> f64 {
+fn support(g: &crate::game::Game, d: DoorId, tip: f64) -> f64 {
     (g.dr[d].height / 2.0) * m::cos(tip) + (g.dr[d].thick / 2.0) * m::sin(tip) + LIFT
 }
 
 /// Does a floor rectangle cut into a static standing in the heights [y0, y1]? (doorblast.ts overlaps)
-pub fn overlaps(g: &mut crate::game::Game, x: f64, z: f64, a: f64, hu: f64, hn: f64, y0: f64, y1: f64) -> bool {
+fn overlaps(g: &mut crate::game::Game, x: f64, z: f64, a: f64, hu: f64, hn: f64, y0: f64, y1: f64) -> bool {
     let (ux, uz, su, sn) = (m::cos(a), m::sin(a), hu - 0.012, hn - 0.012);
     let ex = m::abs(ux) * hu + m::abs(uz) * hn;
     let ez = m::abs(uz) * hu + m::abs(ux) * hn;
@@ -69,7 +69,7 @@ pub fn overlaps(g: &mut crate::game::Game, x: f64, z: f64, a: f64, hu: f64, hn: 
 }
 
 /// The nearest spot within maxR where that rectangle stands clear, by rings of sixteen bearings. (doorblast.ts freeSpot)
-pub fn free_spot(g: &mut crate::game::Game, x: f64, z: f64, a: f64, hu: f64, hn: f64, y0: f64, y1: f64, max_r: f64) -> Option<[f64; 2]> {
+fn free_spot(g: &mut crate::game::Game, x: f64, z: f64, a: f64, hu: f64, hn: f64, y0: f64, y1: f64, max_r: f64) -> Option<[f64; 2]> {
     let mut r = 0.03;
     while r <= max_r + 1e-9 {
         for i in 0..16 {
@@ -86,12 +86,12 @@ pub fn free_spot(g: &mut crate::game::Game, x: f64, z: f64, a: f64, hu: f64, hn:
 }
 
 /// A step that has met nothing yet. (doorblast.ts nothingMet)
-pub fn nothing_met() -> crate::doorblast::SlabMet {
+fn nothing_met() -> crate::doorblast::SlabMet {
     crate::doorblast::SlabMet { landed: false, lx: 0.0, lz: 0.0, rested: false, nudged: 0.0, nudge_max: 0.0, laid: 0.0 }
 }
 
 /// The doors' side of a blast: every leaf within `tear_m` that it reaches comes off. (doorblast.ts doorBlast)
-pub fn door_blast(g: &mut crate::game::Game, at: V3, tear_m: f64, who: f64) -> Vec<DoorId> {
+pub(super) fn door_blast(g: &mut crate::game::Game, at: V3, tear_m: f64, who: f64) -> Vec<DoorId> {
     let mut out = Vec::new();
     if !(tear_m > 0.0) {
         return out;
@@ -135,7 +135,7 @@ pub fn door_blast_reach(g: &mut crate::game::Game, at: V3, tear_m: f64) -> Vec<c
 }
 
 /// Has the blast a line to the leaf that no wall is in (the leaves themselves are not walls to it). (doorblast.ts reaches)
-pub fn reaches(g: &mut crate::game::Game, d: DoorId, at: V3) -> bool {
+fn reaches(g: &mut crate::game::Game, d: DoorId, at: V3) -> bool {
     let [hx, hz] = g.dr[d].def.hinge;
     let w = g.dr[d].def.width;
     let u = crate::doors::door_dir(g, d);
@@ -158,7 +158,7 @@ pub fn reaches(g: &mut crate::game::Game, d: DoorId, at: V3) -> bool {
 }
 
 /// Sam's hands come off a leaf that has left its frame. (doorblast.ts handsOff)
-pub fn hands_off(g: &mut crate::game::Game, d: DoorId) {
+fn hands_off(g: &mut crate::game::Game, d: DoorId) {
     for pl in crate::seats::men(g) {
         if g.pl[pl].easing == Some(d) {
             g.pl[pl].easing = None;
@@ -285,7 +285,7 @@ pub fn tear_off(g: &mut crate::game::Game, d: DoorId, from: V3, who: f64, k: Opt
 }
 
 /// The rounds' work a leaf stands: DOORSHOT.toll times plasterboard's. (doorblast.ts leafTough)
-pub fn leaf_tough(g: &crate::game::Game) -> f64 {
+fn leaf_tough(g: &crate::game::Game) -> f64 {
     let drywall = g.k.walls.tough.get(String::from("drywall")).copied().unwrap_or(6.0);
     let wood = g.k.walls.tough.get(String::from("wood")).copied().unwrap_or(9.0);
     m::min(drywall, wood) * m::max(0.1, g.k.doorshot.toll)
@@ -626,7 +626,7 @@ pub fn door_slabs(g: &mut crate::game::Game, dt: f64) {
 }
 
 /// One slab's step, and what it met said in one place: the tallies, the slam for the floor to hear, the log line. (doorblast.ts flySlab)
-pub fn fly_slab(g: &mut crate::game::Game, d: DoorId, dt: f64) {
+fn fly_slab(g: &mut crate::game::Game, d: DoorId, dt: f64) {
     let i = g.dr[d].i;
     let r = crate::sim_slabshome::slab_store_row_of(g, i);
     if r < 0.0 {
@@ -661,7 +661,7 @@ pub fn fly_slab(g: &mut crate::game::Game, d: DoorId, dt: f64) {
 }
 
 /// The row read out, stepped, written back. (doorblast.ts stepHere)
-pub fn step_here(g: &mut crate::game::Game, d: DoorId, r: f64, dt: f64) -> crate::doorblast::SlabMet {
+fn step_here(g: &mut crate::game::Game, d: DoorId, r: f64, dt: f64) -> crate::doorblast::SlabMet {
     let mut s = crate::sim_slabshome::slab_store_load(g, r);
     let mut met = nothing_met();
     step_slab(g, d, &mut s, dt, &mut met);
@@ -670,7 +670,7 @@ pub fn step_here(g: &mut crate::game::Game, d: DoorId, r: f64, dt: f64) -> crate
 }
 
 /// Can this slab's step run in the module: the world standing with the game's own leaves in it, which of them is the slab's own box (−1: none), and the pane's rule; None: a pane rule the module cannot judge by. (doorblast.ts slabThere)
-pub fn slab_there(g: &mut crate::game::Game, d: DoorId) -> Option<crate::doorblast::SlabThere> {
+fn slab_there(g: &mut crate::game::Game, d: DoorId) -> Option<crate::doorblast::SlabThere> {
     let dyn_ = g.col.dynamic_boxes.clone();
     crate::scene_collision::rules_world(g, &dyn_);
     let ask = crate::scene_collision::rules_panes(g);
@@ -683,7 +683,7 @@ pub fn slab_there(g: &mut crate::game::Game, d: DoorId) -> Option<crate::doorbla
 }
 
 /// The step in the module: the door's facts and the rules' numbers handed over, the step taken, what it met read back. (doorblast.ts stepThere)
-pub fn step_there(g: &mut crate::game::Game, d: DoorId, r: f64, dt: f64, w: crate::doorblast::SlabThere) -> crate::doorblast::SlabMet {
+fn step_there(g: &mut crate::game::Game, d: DoorId, r: f64, dt: f64, w: crate::doorblast::SlabThere) -> crate::doorblast::SlabMet {
     let q = slab_par();
     q[sim::slabs::P_DT] = dt;
     q[sim::slabs::P_ROW] = r;
@@ -732,7 +732,7 @@ pub fn step_there(g: &mut crate::game::Game, d: DoorId, r: f64, dt: f64, w: crat
 }
 
 /// TWIN of sim::slabs::step: `s` put in the door's row, stepped there and read back, what it met added to `t`. (doorblast.ts stepSlab)
-pub fn step_slab(g: &mut crate::game::Game, d: DoorId, s: &mut crate::sim_slabshome::SlabNow, dt: f64, t: &mut crate::doorblast::SlabMet) {
+fn step_slab(g: &mut crate::game::Game, d: DoorId, s: &mut crate::sim_slabshome::SlabNow, dt: f64, t: &mut crate::doorblast::SlabMet) {
     if s.rest {
         return;
     }
@@ -757,7 +757,7 @@ pub fn step_slab(g: &mut crate::game::Game, d: DoorId, s: &mut crate::sim_slabsh
 }
 
 /// The slab's box (and the two handles on it) where the slab is: tilted while it topples, then an ordinary yaw-only box lying flat. (doorblast.ts poseSlab)
-pub fn pose_slab(g: &mut crate::game::Game, d: DoorId) {
+fn pose_slab(g: &mut crate::game::Game, d: DoorId) {
     let i = g.dr[d].i;
     let r = crate::sim_slabshome::slab_store_row_of(g, i);
     if r < 0.0 {

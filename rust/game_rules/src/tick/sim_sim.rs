@@ -12,7 +12,7 @@ fn why_not_linked() -> String {
 }
 
 /// The module's face: rust/sim is linked, so nothing is compiled or started and the check of its version is what is left. (sim.ts start)
-pub fn start() -> crate::sim_sim::SimExports {
+fn start() -> crate::sim_sim::SimExports {
     let no = why_not_linked();
     if !no.is_empty() { panic!("{}", no); }
     SimExports {  }

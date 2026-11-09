@@ -19,7 +19,7 @@ pub const FRAME_BOXES: f64 = 768.0;
 /// a box made to stay: a row of g.tab.boxes for good
 pub fn box_new(g: &mut Game, b: crate::scene_boxes::Box) -> BoxId { g.tab.boxes.push(b) }
 /// a box made for this frame's list: a row freed by boxes_frame_reset is used again, else a new row
-pub fn box_frame(g: &mut Game, b: crate::scene_boxes::Box) -> FrameBoxId {
+fn box_frame(g: &mut Game, b: crate::scene_boxes::Box) -> FrameBoxId {
     let id = box_kept(g, b);
     g.box_frame_rows.push(id);
     id
@@ -88,7 +88,7 @@ fn bx_mut(g: &mut Game, id: impl Into<AnyBoxId>) -> &mut Bx { &mut g.tab[id.into
 fn seam_box_push(g: &mut Game, b: Bx) -> BoxId { crate::scene_boxes::box_new(g, b) }
 
 /// A piece of the picture, which no game ray meets. (boxes.ts lookKeyed)
-pub fn look_keyed(g: &crate::game::Game, b: AnyBoxId) -> bool {
+fn look_keyed(g: &crate::game::Game, b: AnyBoxId) -> bool {
     let (dress, mkey) = { let x = bx(g, b); (x.dress, x.mkey) };
     dress == Some(true) || (match mkey { Some(k) => js::to_u32(k) >> 24 == js::to_u32(crate::scene_boxes::mkey().look) >> 24, None => false })
 }
@@ -99,7 +99,7 @@ fn box_value(c: V3, h: V3, yaw: f64, albedo: V3, emissive: V3, flags: f64, owner
 }
 
 /// Is this piece of trim drawn: while the box that says it is. (boxes.ts trimDrawn)
-pub fn trim_drawn(g: &mut crate::game::Game, all: &[BoxId], t: BoxId) -> bool {
+fn trim_drawn(g: &mut crate::game::Game, all: &[BoxId], t: BoxId) -> bool {
     match bx(g, t).of {
         None => true,
         Some(of) => js::to_i32(bx(g, all[of as usize]).flags) & js::to_i32(box_flag().no_primary) == 0,
@@ -217,7 +217,7 @@ pub fn box_world_keep_statics(g: &mut crate::game::Game, n: usize) {
 }
 
 /// Static `i` goes and those after it close up, the one place one static is taken out. The grid's numbers then name other boxes, so the grid goes too: the rays ask one by one until the next tick opens.
-pub fn box_world_drop_static(g: &mut crate::game::Game, i: usize) {
+fn box_world_drop_static(g: &mut crate::game::Game, i: usize) {
     g.engine.world.statics.remove(i);
     g.ray_grid = Default::default();
 }
@@ -229,7 +229,7 @@ pub fn box_world_reset_capsules(g: &mut crate::game::Game) {
 }
 
 /// Half extents in world XZ of a yawed or rotated box. (boxes.ts BoxWorld.footprint)
-pub fn box_world_footprint(g: &mut crate::game::Game, b: BoxId) -> [f64; 2] {
+fn box_world_footprint(g: &mut crate::game::Game, b: BoxId) -> [f64; 2] {
     footprint_of(bx(g, b))
 }
 
@@ -267,7 +267,7 @@ pub fn box_world_at(g: &crate::game::Game, i: usize) -> Option<AnyBoxId> {
 }
 
 /// The ray grid brought up to the statics, where one of their shapes moved. Returns the statics' count. (boxes.ts BoxWorld.list)
-pub fn box_world_list(g: &mut crate::game::Game) -> f64 {
+fn box_world_list(g: &mut crate::game::Game) -> f64 {
     let w = &g.engine.world;
     let n_stat = w.statics.len();
     if (n_stat + w.dynamics.len()) as f64 > w.max_boxes { panic!("too many boxes: {}", n_stat + w.dynamics.len()); }
@@ -462,7 +462,7 @@ pub fn shape_cut(g: &crate::game::Game, b: AnyBoxId) -> bool {
 }
 
 /// Is this box's cut record met by the game's rays? Ask it only of a box that has one. (boxes.ts cutMet; CUT.on is settled on)
-pub fn cut_met(g: &crate::game::Game, b: AnyBoxId) -> bool {
+pub(super) fn cut_met(g: &crate::game::Game, b: AnyBoxId) -> bool {
     bx(g, b).cut.as_ref().unwrap().len() > 0
 }
 
@@ -599,7 +599,7 @@ pub fn ray_box(g: &crate::game::Game, ro: V3, rd: V3, b: AnyBoxId, tmax: f64) ->
 }
 
 /// The test against a box with a cut record: the slab interval, cut down by the record's planes. (boxes.ts rayBoxCut)
-pub fn ray_box_cut(g: &crate::game::Game, ro: V3, rd: V3, b: AnyBoxId, tmax: f64) -> Option<crate::scene_boxes::RayBoxCut> {
+fn ray_box_cut(g: &crate::game::Game, ro: V3, rd: V3, b: AnyBoxId, tmax: f64) -> Option<crate::scene_boxes::RayBoxCut> {
     let (c, h, yaw, rot) = { let x = bx(g, b); (x.c, x.h, x.yaw, x.rot) };
     let (mut cs, mut sn) = (1.0, 0.0);
     let (px, py, pz) = (ro[0] - c[0], ro[1] - c[1], ro[2] - c[2]);
@@ -630,7 +630,7 @@ pub fn ray_box_cut(g: &crate::game::Game, ro: V3, rd: V3, b: AnyBoxId, tmax: f64
 }
 
 /// (boxes.ts rayBoxRound)
-pub fn ray_box_round(g: &crate::game::Game, ro: V3, rd: V3, b: AnyBoxId, tmax: f64) -> Option<crate::scene_boxes::RayBoxRound> {
+fn ray_box_round(g: &crate::game::Game, ro: V3, rd: V3, b: AnyBoxId, tmax: f64) -> Option<crate::scene_boxes::RayBoxRound> {
     ray_round(ro, rd, bx(g, b), tmax).map(|(t, n)| crate::scene_boxes::RayBoxRound { t, n })
 }
 

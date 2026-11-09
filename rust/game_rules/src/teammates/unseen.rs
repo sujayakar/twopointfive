@@ -15,7 +15,7 @@ fn in_view<R>(g: &mut Game, gd: GuardId, f: &mut dyn FnMut(&mut Game) -> R) -> R
 }
 
 /// (unseen.ts clamp)
-pub fn clamp(x: f64, a: f64, b: f64) -> f64 {
+fn clamp(x: f64, a: f64, b: f64) -> f64 {
     m::max(a, m::min(b, x))
 }
 
@@ -25,23 +25,23 @@ fn new_state() -> State {
 }
 
 /// this view's row, made if it is not there (unseen.ts stateOf)
-pub fn state_of<'g>(g: &'g mut Game) -> &'g mut State {
+fn state_of<'g>(g: &'g mut Game) -> &'g mut State {
     let k = crate::seats::view_key(g, &crate::seats::here(g));
     g.m.unseen.states.get_or_insert_with(k, new_state)
 }
 
 /// which player the squad reads (unseen.ts lead)
-pub fn lead(g: &mut Game) -> PlayerId {
+fn lead(g: &mut Game) -> PlayerId {
     g.player
 }
 
 /// (unseen.ts mate)
-pub fn mate(g: &Game, gd: GuardId) -> bool {
+fn mate(g: &Game, gd: GuardId) -> bool {
     g.gd[gd].team == crate::teams::Team::Operative && g.gd[gd].unit.is_some()
 }
 
 /// on a wall, as the sneak counts it: his back on it `wall_secs`, where the hold keeps that clock (unseen.ts onWall)
-pub fn on_wall(g: &Game, pl: PlayerId) -> bool {
+fn on_wall(g: &Game, pl: PlayerId) -> bool {
     let Some(w) = &g.pl[pl].wall else { return false };
     match w.hit_t {
         None => true,
@@ -55,7 +55,7 @@ pub fn sam_sneaks(g: &Game, pl: PlayerId) -> bool {
 }
 
 /// what has given the squad away (None: nothing) (unseen.ts squadFound)
-pub fn squad_found(g: &Game, men: &[GuardId]) -> Option<String> {
+fn squad_found(g: &Game, men: &[GuardId]) -> Option<String> {
     for &gd in men {
         if crate::roomfight::room_fight_hot_for(g, gd) {
             return Some(String::from("loud"));
@@ -74,7 +74,7 @@ pub fn squad_found(g: &Game, men: &[GuardId]) -> Option<String> {
 }
 
 /// The squad is unseen this frame, read once a frame by whoever asks first (unseen.ts unseenLive)
-pub fn unseen_live(g: &mut Game) -> bool {
+fn unseen_live(g: &mut Game) -> bool {
     let now = g.time;
     let s = state_of(g);
     if s.t == now {
@@ -127,7 +127,7 @@ pub fn unseen_live(g: &mut Game) -> bool {
 }
 
 /// said once as a spell starts, by the first man following; `pl` is the key of the spell's row in `states`, not always a man (a cast's is CAST_KEY) (unseen.ts cue)
-pub fn cue(g: &mut Game, pl: PlayerId) {
+fn cue(g: &mut Game, pl: PlayerId) {
     let now = g.time;
     if now - g.m.unseen.states.get(pl).unwrap().cue_t < g.k.unseen.cue_gap {
         return;
@@ -154,18 +154,18 @@ pub fn under_unseen(g: &mut Game, gd: GuardId) -> bool {
 }
 
 /// he is one of a door tool's men right now: that work is the door's own (unseen.ts entering)
-pub fn entering(g: &Game, seat: &crate::seats::SeatRef, gd: GuardId) -> bool {
+fn entering(g: &Game, seat: &crate::seats::SeatRef, gd: GuardId) -> bool {
     seat.door_tools.ops.iter().any(|&op| g.tab.doortools_door_op[op].men.contains(&gd))
 }
 
 /// Sam on a wall, and no place on it for this man right now (unseen.ts offWall)
-pub fn off_wall(g: &mut Game, gd: GuardId) -> bool {
+fn off_wall(g: &mut Game, gd: GuardId) -> bool {
     let pl = lead(g);
     on_wall(g, pl) && (g.m.unseen.on_wall_at.get(gd).copied() != Some(g.time) || g.m.unseen.kneel_at.get(gd).copied() == Some(g.time))
 }
 
 /// (unseen.ts lowNow)
-pub fn low_now(g: &mut Game, gd: GuardId) -> bool {
+fn low_now(g: &mut Game, gd: GuardId) -> bool {
     let pl = lead(g);
     g.pl[pl].crouch || off_wall(g, gd)
 }
@@ -221,7 +221,7 @@ pub fn unseen_wall_lost(g: &mut Game, gd: GuardId) {
 }
 
 /// the place itself: along Sam's face, on the file's side, a body's width off it (unseen.ts wallSlot)
-pub fn wall_slot(g: &mut Game, gd: GuardId, back: f64, file: &[GuardId]) -> Option<V3> {
+fn wall_slot(g: &mut Game, gd: GuardId, back: f64, file: &[GuardId]) -> Option<V3> {
     if !under_unseen(g, gd) {
         return None;
     }
@@ -290,12 +290,12 @@ pub fn wall_slot(g: &mut Game, gd: GuardId, back: f64, file: &[GuardId]) -> Opti
 // ------------------------------------------------------------ the posture's seams (silent.ts asks each beside its own rule)
 
 /// the most his legs may be asked for; None: no cap of this file's (unseen.ts unseenPace)
-pub fn unseen_pace(g: &mut Game, gd: GuardId) -> Option<f64> {
+pub(super) fn unseen_pace(g: &mut Game, gd: GuardId) -> Option<f64> {
     in_view(g, gd, &mut |g: &mut Game| if g.k.unseen.cap > 0.0 && under_unseen(g, gd) { Some(g.k.unseen.cap) } else { None })
 }
 
 /// a footfall's level; None: his usual (unseen.ts unseenStep)
-pub fn unseen_step(g: &mut Game, gd: GuardId) -> Option<f64> {
+pub(super) fn unseen_step(g: &mut Game, gd: GuardId) -> Option<f64> {
     in_view(g, gd, &mut |g: &mut Game| {
         if !under_unseen(g, gd) {
             return None;
@@ -306,17 +306,17 @@ pub fn unseen_step(g: &mut Game, gd: GuardId) -> Option<f64> {
 }
 
 /// (unseen.ts unseenHush)
-pub fn unseen_hush(g: &mut Game, gd: GuardId) -> bool {
+pub(super) fn unseen_hush(g: &mut Game, gd: GuardId) -> bool {
     in_view(g, gd, &mut |g: &mut Game| under_unseen(g, gd))
 }
 
 /// (unseen.ts unseenEase)
-pub fn unseen_ease(g: &mut Game, gd: GuardId) -> bool {
+pub(super) fn unseen_ease(g: &mut Game, gd: GuardId) -> bool {
     in_view(g, gd, &mut |g: &mut Game| under_unseen(g, gd))
 }
 
 /// his round at `h` is held: nobody has found the squad, and `h` has not noticed anybody. `urgent` runs in the caller's game, not the view, as its closure does (unseen.ts unseenHolds)
-pub fn unseen_holds(g: &mut Game, gd: GuardId, h: GuardId, noticed: f64, quiet: bool, urgent: &mut dyn FnMut(&mut Game) -> bool) -> bool {
+pub(super) fn unseen_holds(g: &mut Game, gd: GuardId, h: GuardId, noticed: f64, quiet: bool, urgent: &mut dyn FnMut(&mut Game) -> bool) -> bool {
     if quiet || !in_view(g, gd, &mut |g: &mut Game| under_unseen(g, gd) && !crate::roomfight::room_fight_hot_for(g, gd)) {
         return false;
     }
@@ -329,19 +329,19 @@ pub fn unseen_holds(g: &mut Game, gd: GuardId, h: GuardId, noticed: f64, quiet: 
 }
 
 /// through standing glass the hold is the silent order's own: is that rule his this frame (unseen.ts unseenGlass)
-pub fn unseen_glass(g: &mut Game, gd: GuardId) -> bool {
+pub(super) fn unseen_glass(g: &mut Game, gd: GuardId) -> bool {
     in_view(g, gd, &mut |g: &mut Game| under_unseen(g, gd) && !crate::roomfight::room_fight_hot_for(g, gd))
 }
 
 /// silent.ts's glass hold held a round under this rule (unseen.ts unseenGlassHeld)
-pub fn unseen_glass_held(g: &mut Game) {
+pub(super) fn unseen_glass_held(g: &mut Game) {
     g.stats.unseen.held_glass += 1;
 }
 
 // ------------------------------------------------------------ the HUD's word, QA
 
 /// the squad line's word beside the posture (None: nothing to say) (unseen.ts unseenWord)
-pub fn unseen_word(g: &Game, seat: &crate::seats::SeatRef) -> Option<String> {
+pub(super) fn unseen_word(g: &Game, seat: &crate::seats::SeatRef) -> Option<String> {
     let live = g.m.unseen.states.get(crate::seats::view_key(g, seat)).is_some_and(|s| s.live);   // (as the tick last read it: `unseen_live` is a clock of its own, kept by the tick)
     if live { Some(String::from("sneaking")) } else { None }
 }

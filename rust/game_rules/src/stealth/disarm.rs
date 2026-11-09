@@ -6,10 +6,10 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 
 /// (disarm.ts lerp)
-pub fn lerp(a: f64, b: f64, t: f64) -> f64 { a + (b - a) * t }
+fn lerp(a: f64, b: f64, t: f64) -> f64 { a + (b - a) * t }
 
 /// (disarm.ts sstep)
-pub fn sstep(a: f64, b: f64, t: f64) -> f64 {
+fn sstep(a: f64, b: f64, t: f64) -> f64 {
     let u = m::min(1.0, m::max(0.0, (t - a) / (b - a)));
     u * u * (3.0 - 2.0 * u)
 }
@@ -36,12 +36,12 @@ pub fn disarm_catch(g: &mut crate::game::Game, at: V3) {
 }
 
 /// The disarm leads for this move: a gun to take with an empty hand, not the pistol hold's rap. (disarm.ts leads)
-pub fn leads(g: &crate::game::Game, s: Option<crate::disarm::Strip>) -> bool {
+fn leads(g: &crate::game::Game, s: Option<crate::disarm::Strip>) -> bool {
     match s { Some(s) => !s.rap, None => false }
 }
 
 /// The rate the move's clock runs at: ahead of the hold's until the let-go, the hold's own pace from there. (disarm.ts lead)
-pub fn lead(g: &mut crate::game::Game, s: crate::disarm::Strip) -> f64 {
+fn lead(g: &mut crate::game::Game, s: crate::disarm::Strip) -> f64 {
     if !leads(g, Some(s)) { return 1.0; }
     let (k_take, k_drop) = (g.k.hold.strip.take, g.k.hold.strip.drop);
     let (f_take, f_drop) = (g.k.hold.first.take, g.k.hold.first.drop);
@@ -119,18 +119,18 @@ pub fn disarm_tick(g: &mut crate::game::Game, dt: f64) {
 }
 
 /// (disarm.ts handOf)
-pub fn hand_of(g: &crate::game::Game, gd: GuardId) -> V3 {
+fn hand_of(g: &crate::game::Game, gd: GuardId) -> V3 {
     let c = g.gd[gd].ch;
     let hand = g.ch[c].bones.get(crate::character::Bone::HandR).copied();
     v3::copy(match hand { Some(w) => w, None => v3::add(g.ch[c].pos, [0.0, 1.05, 0.0]) })
 }
 
 /// (disarm.ts long)
-pub fn long(kind: &str) -> bool { kind == "rifle" }
+fn long(kind: &str) -> bool { kind == "rifle" }
 
 /// The gun leaves his hand: an item from here on, his `dropped`, his hands empty; in Sam's hand or, rapped out by the pistol hold, falling. (disarm.ts take)
 /// Its writes go to `s`: the caller holds the move and puts it back in the hold.
-pub fn take(g: &mut crate::game::Game, pl: PlayerId, s: &mut crate::disarm::Strip) {
+fn take(g: &mut crate::game::Game, pl: PlayerId, s: &mut crate::disarm::Strip) {
     let gd = g.pl[pl].holding.as_ref().unwrap().g;
     let c = g.gd[gd].ch;
     let opts = crate::throwables::ThrowablesSpawnOpts {
@@ -164,7 +164,7 @@ pub fn take(g: &mut crate::game::Game, pl: PlayerId, s: &mut crate::disarm::Stri
 }
 
 /// The gun in Sam's hand this frame: a hand's length ahead of his wrist, swung out to his right and muzzle-down as he tears it clear. (disarm.ts carry)
-pub fn carry(g: &mut crate::game::Game, s: &crate::disarm::Strip, sam: CharId) {
+fn carry(g: &mut crate::game::Game, s: &crate::disarm::Strip, sam: CharId) {
     let it = s.item.unwrap();
     let Some(w) = g.ch[sam].bones.get(crate::character::Bone::HandR).copied() else { return };
     let tip = g.ch[sam].bones.get(crate::character::Bone::FingerR).copied().unwrap_or(w);
@@ -185,7 +185,7 @@ pub fn carry(g: &mut crate::game::Game, s: &crate::disarm::Strip, sam: CharId) {
 
 /// Let go of: it falls from where it is with the pair's own motion and a little push out to that man's right; never from inside a wall. The throw's fall is
 /// timed so the knock stays a beat: he throws it down just hard enough to land `fall` seconds on, and never into a wall. (disarm.ts letGo)
-pub fn let_go(g: &mut crate::game::Game, it: ItemId, by: CharId, fall: Option<f64>) {
+fn let_go(g: &mut crate::game::Game, it: ItemId, by: CharId, fall: Option<f64>) {
     let fall = fall.unwrap_or(0.0);
     let y = g.ch[by].body_yaw;
     let by_pos = g.ch[by].pos;

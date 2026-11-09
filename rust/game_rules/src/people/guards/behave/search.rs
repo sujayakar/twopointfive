@@ -9,7 +9,7 @@ use crate::v3::{self, V3};
 use crate::game::GuardState as St;
 use crate::character::UpperMode;
 
-pub fn search(g: &mut Game, gd: GuardId, dt: f64, s: &Sensed) -> Acts {
+pub(in crate::people) fn search(g: &mut Game, gd: GuardId, dt: f64, s: &Sensed) -> Acts {
     let &Sensed { c, staff, dazzled, .. } = s;
     let Acts { mut move_speed, mut aim_at, mut pied, .. } = Acts::still();
     let mut upper;

@@ -6,12 +6,12 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 
 /// Is the rule running: no puppet.
-pub fn ff_live(g: &crate::game::Game) -> bool {
+pub(super) fn ff_live(g: &crate::game::Game) -> bool {
     !g.puppet.is_some()
 }
 
 /// A man of Sam's own side whose body a round of that side can find: living, on his feet. (friendlyfire.ts ffBody)
-pub fn ff_body(g: &crate::game::Game, gd: GuardId) -> bool {
+pub(super) fn ff_body(g: &crate::game::Game, gd: GuardId) -> bool {
     let c = g.gd[gd].ch;
     if !(g.gd[gd].state != crate::game::GuardState::Dead && g.ch[c].alive && !g.gd[gd].god && !g.gd[gd].civ.is_some()) {
         return false;
@@ -21,7 +21,7 @@ pub fn ff_body(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// Is this shooter's side Sam's: an operative, never the night staff or a defender. (friendlyfire.ts ffSide)
-pub fn ff_side(g: &crate::game::Game, sg: Option<GuardId>) -> bool {
+pub(super) fn ff_side(g: &crate::game::Game, sg: Option<GuardId>) -> bool {
     let Some(sg) = sg else { return false };
     if g.gd[sg].civ.is_some() {
         return false;
@@ -132,7 +132,7 @@ fn reaches(g: &mut Game, muzzle: V3, p: V3, energy: Option<f64>, thin: f64) -> b
 }
 
 /// A teammate's round about to be born with a friend in its cone: not pressed. (friendlyfire.ts ffUnpressed)
-pub fn ff_unpressed(g: &mut crate::game::Game, sg: Option<GuardId>, muzzle: V3, to: V3, spread: f64, def: &crate::weapons::WeaponDef) -> bool {
+pub(super) fn ff_unpressed(g: &mut crate::game::Game, sg: Option<GuardId>, muzzle: V3, to: V3, spread: f64, def: &crate::weapons::WeaponDef) -> bool {
     let Some(sg) = sg else { return false };
     let b = def.pellets.as_ref().and_then(|p| p.breach);
     if let Some(b) = b {
@@ -149,7 +149,7 @@ pub fn ff_unpressed(g: &mut crate::game::Game, sg: Option<GuardId>, muzzle: V3, 
 }
 
 /// The PLAYER's round flown from `from` to where it stopped: every standing teammate it went close past says so. (friendlyfire.ts ffPast)
-pub fn ff_past(g: &mut crate::game::Game, from: V3, to: V3, into: Option<CharId>) {
+pub(super) fn ff_past(g: &mut crate::game::Game, from: V3, to: V3, into: Option<CharId>) {
     let dx = to[0] - from[0];
     let dy = to[1] - from[1];
     let dz = to[2] - from[2];
@@ -190,7 +190,7 @@ pub fn ff_held(g: &mut crate::game::Game) {
 }
 
 /// A round of Sam's side has gone into a man of Sam's side: counted. (friendlyfire.ts ffNote)
-pub fn ff_note(g: &mut crate::game::Game, sg: Option<GuardId>, is_player: bool, into_sam: bool) {
+pub(super) fn ff_note(g: &mut crate::game::Game, sg: Option<GuardId>, is_player: bool, into_sam: bool) {
     let s = &mut g.stats.friendlyfire;
     if is_player {
         s.sam_on_mate += 1;

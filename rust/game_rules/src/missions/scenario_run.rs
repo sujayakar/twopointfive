@@ -21,19 +21,19 @@ fn capitalised(w: &str) -> String {
 }
 
 /// The query's level is a Training lesson's.   (scenarioRun.ts lessonLevel)
-pub fn lesson_level(q: &crate::query::Query) -> bool {
+fn lesson_level(q: &crate::query::Query) -> bool {
     // A row with no level is `undefined`, which is never `===` the `null` of a query with no levelFile.
     let Some(level_file) = q.get("levelFile") else { return false };
     crate::scene_scenario_list::tutorial_missions().iter().any(|e| e.level.as_deref() == Some(level_file))
 }
 
 /// Fog of war on a page with no scenario up: only if the URL asks.   (scenarioRun.ts plainFog)
-pub fn plain_fog(q: &crate::query::Query) -> bool {
+fn plain_fog(q: &crate::query::Query) -> bool {
     !(q.has("nofow") || q.has("nofogofwar")) && (q.has("fow") || q.has("fogofwar"))
 }
 
 /// The link is one the quiet fog reads: a quiet mission's, or the solo night's own.   (scenarioRun.ts quietLike)
-pub fn quiet_like(g: &crate::game::Game, q: &crate::query::Query) -> bool {
+fn quiet_like(g: &crate::game::Game, q: &crate::query::Query) -> bool {
     match crate::scene_scenario_list::spec_of(q) {
         Some(s) => s.kind == crate::scene_scenario_list::ScenarioSpecKind::Quiet,
         None => crate::quietfog::solo_fog_link(g, q),
@@ -51,7 +51,7 @@ pub fn quiet_cams_of_link(g: &crate::game::Game, q: &crate::query::Query) -> f64
 }
 
 /// The rung of the fog lever a quiet mission's query asks to be played under.   (scenarioRun.ts quietRungOfQuery)
-pub fn quiet_rung_of_query(g: &crate::game::Game, q: &crate::query::Query) -> crate::quietfog::QuietRung {
+pub(super) fn quiet_rung_of_query(g: &crate::game::Game, q: &crate::query::Query) -> crate::quietfog::QuietRung {
     if quiet_like(g, q) {
         let lesson = lesson_level(q);
         crate::quietfog::quiet_fog_of_query(g, q, Some(lesson))
@@ -69,7 +69,7 @@ pub fn fog_of_query(g: &crate::game::Game, q: &crate::query::Query) -> bool {
 }
 
 /// Fog of war as the link alone asks, whatever the squad's fog lever says.   (scenarioRun.ts fogOfLink)
-pub fn fog_of_link(g: &crate::game::Game, q: &crate::query::Query) -> bool {
+pub(super) fn fog_of_link(g: &crate::game::Game, q: &crate::query::Query) -> bool {
     if q.has("nofow") || q.has("nofogofwar") {
         return false;
     }
@@ -226,7 +226,7 @@ fn running_kind(kind: ActiveScenario) -> RunningScenarioKind {
 }
 
 /// The scenario that is up, in the picker's words. None: none is up.   (scenarioRun.ts runningScenario)
-pub fn running_scenario(g: &crate::game::Game, level_file: Option<&str>, list: Option<&[crate::scene_scenarios::ScenarioEntry]>) -> Option<crate::scenario_run::RunningScenario> {
+pub(super) fn running_scenario(g: &crate::game::Game, level_file: Option<&str>, list: Option<&[crate::scene_scenarios::ScenarioEntry]>) -> Option<crate::scenario_run::RunningScenario> {
     let kind = active_scenario(g)?;
     let squad = if kind == ActiveScenario::Quiet { g.quiet.squad } else { m::min(4.0, team_of(g).len() as f64) };
     let all;

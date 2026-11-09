@@ -55,7 +55,7 @@ pub fn has_a_man_in_front(g: &Game, gd: GuardId) -> bool {
 }
 
 /// His legs are still (under a tenth of a metre a second over the floor). It does not say why: at his post, braked by a rule, or stuck.
-pub fn still(g: &Game, gd: GuardId) -> bool {
+fn still(g: &Game, gd: GuardId) -> bool {
     let v = g.ch[g.gd[gd].ch].vel;
     v[0] * v[0] + v[2] * v[2] < 0.01
 }

@@ -29,7 +29,7 @@ fn gun_of(g: &Game, pl: PlayerId, gun: SetupGun) -> FirearmId {
 }
 
 /// the gun in his hands, as the setup names it; None: none (slotsetup.ts setupGun)
-pub fn setup_gun(g: &crate::game::Game, pl: PlayerId) -> Option<crate::slotsetup::SetupGun> {
+fn setup_gun(g: &crate::game::Game, pl: PlayerId) -> Option<crate::slotsetup::SetupGun> {
     let f = crate::game::player_gun_in_hand(g, pl);
     let f = match f {
         Some(f) if !g.pl[pl].down => f,
@@ -94,14 +94,14 @@ pub fn slot_setup_open(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> b
 }
 
 /// the HUD's words for a load on the launcher and how many of it are left
-pub fn load_word(load: crate::weapons::RifleAttachment, left: f64, on: bool) -> crate::view::KitWord {
+pub(super) fn load_word(load: crate::weapons::RifleAttachment, left: f64, on: bool) -> crate::view::KitWord {
     use crate::weapons::RifleAttachment as A;
     let name = match load { A::Ring => crate::gear::ring_tag(), A::He40 => crate::gear::shell_tag(), A::Cam => "CAM" };
     crate::view::KitWord { text: alloc::format!("{} ×{}", name, left), on, out: left <= 0.0 }
 }
 
 /// the setup that is open, as the HUD shows it; None: none is
-pub fn setup_view(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<crate::view::KitSetup> {
+pub(super) fn setup_view(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<crate::view::KitSetup> {
     if !slot_setup_open(g, seat) { return None; }
     let gun = setup_gun(g, seat.player)?;
     let word = |text: &str, on: bool| crate::view::KitWord { text: String::from(text), on, out: false };
@@ -127,7 +127,7 @@ pub fn slot_setup_shut(g: &mut crate::game::Game) -> bool {
 }
 
 /// presses of the launcher's own step from the load that is up to the next one he has any of; 0: none but the one up (slotsetup.ts loadSteps)
-pub fn load_steps(g: &crate::game::Game, pl: PlayerId) -> f64 {
+fn load_steps(g: &crate::game::Game, pl: PlayerId) -> f64 {
     let rf = g.pl[pl].rifle;
     let a = g.fa[rf].attachments.clone();
     let n = a.len();
@@ -145,7 +145,7 @@ pub fn load_steps(g: &crate::game::Game, pl: PlayerId) -> f64 {
 }
 
 /// a row's digit: step its position, and the click (slotsetup.ts stepRow)
-pub fn step_row(g: &mut crate::game::Game, gun: crate::slotsetup::SetupGun, row: &crate::slotsetup::SetupRow) {
+fn step_row(g: &mut crate::game::Game, gun: crate::slotsetup::SetupGun, row: &crate::slotsetup::SetupRow) {
     let pl = g.player;
     let f = gun_of(g, pl, gun);
     match row.kind {
@@ -168,7 +168,7 @@ pub fn step_row(g: &mut crate::game::Game, gun: crate::slotsetup::SetupGun, row:
 }
 
 /// a gun's digit still in the frame that is not the gun in his hands: the press the slot lines will draw that gun on (slotsetup.ts drawPress)
-pub fn draw_press(g: &mut crate::game::Game, input: InputId, in_hand: Option<crate::slotsetup::SetupGun>) {
+fn draw_press(g: &mut crate::game::Game, input: InputId, in_hand: Option<crate::slotsetup::SetupGun>) {
     for gun in [SetupGun::Pistol, SetupGun::Rifle] {
         if Some(gun) != in_hand && crate::input::input_hit(g, input, &digit_code(slot_digit(gun))) {
             let (pl, t) = (g.player, g.time);

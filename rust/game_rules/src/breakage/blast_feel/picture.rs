@@ -51,7 +51,7 @@ fn sparks(g: &mut Game, ways: &[Way], open: bool, count: &[f64], speed: &[f64], 
 }
 
 /// A WALL CHARGE WENT OFF, as the tick left the wall: the fireball now, and the rest of it to come
-pub fn feel_starts(g: &mut Game, wall: &crate::wallcharge::WallSpot) {
+pub(in crate::breakage) fn feel_starts(g: &mut Game, wall: &crate::wallcharge::WallSpot) {
     if !live(g) { return; }
     let f = g.m.blast_feel.feel.clone();
     { let s = stages(g); s.serial += 2.0; }   // (the report's two draws of this half's counter, so the seeds after them are the ones they would be)
@@ -142,7 +142,7 @@ fn ring(g: &mut Game, k: u32, blast: usize) {
 }
 
 /// THE TICK'S LAST STEP: the stages whose time has come
-pub fn feel_stages(g: &mut Game) {
+pub(in crate::breakage) fn feel_stages(g: &mut Game) {
     if g.feel.get::<Stages>().map_or(true, |s| s.queue.is_empty()) { return; }
     if !live(g) { stages(g).queue.clear(); return; }
     let time = g.time;
@@ -174,4 +174,4 @@ pub fn feel_stages(g: &mut Game) {
 }
 
 /// the level is put back: nothing of the old encounter's blast plays into this one
-pub fn feel_cleared(g: &mut Game) { if let Some(s) = g.feel.get::<Stages>() { if !s.queue.is_empty() { let s = stages(g); s.queue.clear(); s.faces.clear(); } } }
+pub(in crate::breakage) fn feel_cleared(g: &mut Game) { if let Some(s) = g.feel.get::<Stages>() { if !s.queue.is_empty() { let s = stages(g); s.queue.clear(); s.faces.clear(); } } }

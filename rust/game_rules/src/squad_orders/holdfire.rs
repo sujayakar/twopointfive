@@ -12,30 +12,30 @@ fn fresh() -> State {
 }
 
 /// This view's row, made if missing.   (holdfire.ts stateOf)
-pub fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::holdfire::State {
+fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::holdfire::State {
     let key = crate::seats::view_key(g, &crate::seats::here(g));
     g.m.holdfire.states.get_or_insert_with(key, fresh)
 }
 
 /// Which player's squad this is.   (holdfire.ts leadOf)
-pub fn lead_of(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> PlayerId {
+fn lead_of(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> PlayerId {
     seat.player
 }
 
 /// A teammate under orders.   (holdfire.ts mate)
-pub fn mate(g: &crate::game::Game, gd: GuardId) -> bool {
+fn mate(g: &crate::game::Game, gd: GuardId) -> bool {
     g.gd[gd].team == crate::teams::Team::Operative && g.gd[gd].unit.is_some()
 }
 
 /// The squad's living men.   (holdfire.ts living)
-pub fn living(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<GuardId> {
+fn living(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<GuardId> {
     let mut men = crate::orders::squad_orders_squad(g, seat);
     men.retain(|&gd| g.gd[gd].state != crate::game::GuardState::Dead);
     men
 }
 
 /// The squad has been found: something loud in a man's ears, or a defender roused who has really seen them.   (holdfire.ts holdFireFound)
-pub fn hold_fire_found(g: &crate::game::Game, men: &[GuardId]) -> Option<String> {
+fn hold_fire_found(g: &crate::game::Game, men: &[GuardId]) -> Option<String> {
     for &gd in men {
         if crate::roomfight::room_fight_hot_for(g, gd) {
             return Some(String::from("loud"));
@@ -58,7 +58,7 @@ pub fn hold_fire_found(g: &crate::game::Game, men: &[GuardId]) -> Option<String>
 }
 
 /// A door order of the squad is being worked, or a rescue's clock is running. Waiting is not working.   (holdfire.ts working)
-pub fn working(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
+fn working(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
     let dead = crate::game::GuardState::Dead;
     if seat.door_tools.ops.iter().any(|&id| {
         let op = &g.tab.doortools_door_op[id];
@@ -88,7 +88,7 @@ pub fn working(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
 }
 
 /// His shot or his order has started the fight. A stamp from a roster that is gone, or from ahead of the clock, is no lift.   (holdfire.ts holdFireLifted)
-pub fn hold_fire_lifted(g: &mut crate::game::Game) -> bool {
+fn hold_fire_lifted(g: &mut crate::game::Game) -> bool {
     let key = crate::seats::view_key(g, &crate::seats::here(g));
     if let Some(lift_t) = g.m.holdfire.states.get(key).map(|s| s.lift_t) {
         if lift_t > f64::NEG_INFINITY {
@@ -116,7 +116,7 @@ pub fn hold_fire_lifted(g: &mut crate::game::Game) -> bool {
 }
 
 /// The hold comes off: a stamp still running is extended, one fight, one count.   (holdfire.ts lift)
-pub fn lift(g: &mut crate::game::Game, why: crate::holdfire::LiftWhy, what: &str, by: PlayerId, loud: Option<bool>) {
+fn lift(g: &mut crate::game::Game, why: crate::holdfire::LiftWhy, what: &str, by: PlayerId, loud: Option<bool>) {
     let loud = loud.unwrap_or(false);
     if !crate::orders::squad_orders_active(g, &crate::seats::here(g)) {
         return;
@@ -170,7 +170,7 @@ pub fn hold_fire_order(g: &mut crate::game::Game, id_2: &str, o: Option<crate::h
 }
 
 /// Asked before an order's row is issued: is this 'go loud' told to a squad that is silent right now.   (holdfire.ts holdFireSilent)
-pub fn hold_fire_silent(g: &crate::game::Game, seat: &crate::seats::SeatRef, id_2: &str) -> bool {
+pub(super) fn hold_fire_silent(g: &crate::game::Game, seat: &crate::seats::SeatRef, id_2: &str) -> bool {
     id_2 == crate::holdfire::LOUD_ORDER && crate::silent::squad_silent(g, seat)
 }
 
@@ -202,7 +202,7 @@ pub fn hold_fire_drill(g: &mut crate::game::Game, by: Option<PlayerId>) {
 }
 
 /// Is this loud teammate under the hold this frame.   (holdfire.ts held)
-pub fn held(g: &mut crate::game::Game, gd: GuardId) -> bool {
+fn held(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if !mate(g, gd) || !crate::orders::squad_orders_active(g, &crate::seats::here(g)) || hold_fire_lifted(g) {
         return false;
     }
@@ -211,7 +211,7 @@ pub fn held(g: &mut crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// This rule's own answer for one man's round at `h`, nothing counted.   (holdfire.ts holds)
-pub fn holds(g: &mut crate::game::Game, gd: GuardId, h: GuardId, noticed: f64, quiet: bool, urgent: &mut dyn FnMut(&mut crate::game::Game) -> bool) -> bool {
+fn holds(g: &mut crate::game::Game, gd: GuardId, h: GuardId, noticed: f64, quiet: bool, urgent: &mut dyn FnMut(&mut crate::game::Game) -> bool) -> bool {
     let state = g.gd[h].state;
     if state == crate::game::GuardState::Alert || state == crate::game::GuardState::Search || g.gd[h].awareness >= noticed {
         return false;

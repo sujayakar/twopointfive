@@ -32,7 +32,7 @@ fn push_out(g: &mut Game, c: CharId, iterations: Option<f64>) {
 }
 
 /// The bottom of updateGuard: the statics swept and pushed out, the colleagues' capped shove, the statics again for the shove. (guards.ts collideGuard)
-pub fn collide_guard(g: &mut crate::game::Game, gd: GuardId, p0x: f64, p0z: f64) {
+pub(super) fn collide_guard(g: &mut crate::game::Game, gd: GuardId, p0x: f64, p0z: f64) {
     let c = g.gd[gd].ch;
     // (1) statics, swept from the frame's start (or the snap's spot)
     let snapped = g.m.guards.unstick.last_snap_who == Some(gd) && g.m.guards.unstick.last_snap_t == g.time;
@@ -64,7 +64,7 @@ pub fn collide_guard(g: &mut crate::game::Game, gd: GuardId, p0x: f64, p0z: f64)
 }
 
 /// Walks a body from (fx, fz) to where its pos says in strides with a two-pass push-out after each, when that is more than one stride. (guards.ts sweepStatics)
-pub fn sweep_statics(g: &mut crate::game::Game, c_2: CharId, fx: f64, fz: f64) {
+fn sweep_statics(g: &mut crate::game::Game, c_2: CharId, fx: f64, fz: f64) {
     let c = c_2;
     let (tx, tz) = (g.ch[c].pos[0], g.ch[c].pos[2]);
     let dd = m::hyp2(tx - fx, tz - fz);
@@ -142,7 +142,7 @@ fn light_in(g: &mut crate::game::Game, p: V3, skip_owner: Option<&mut dyn FnMut(
 }
 
 /// Is this lamp, one no fixture feeds, one of a light question's. The level's own lamps have these gates in the module (light.rs `row`). (guards.ts lampAsked)
-pub fn lamp_asked(g: &mut crate::game::Game, l: LightId, skip_owner: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>, steady_only: bool) -> bool {
+fn lamp_asked(g: &mut crate::game::Game, l: LightId, skip_owner: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>, steady_only: bool) -> bool {
     if !g.tab.light[l].enabled || g.tab.light[l].intensity <= 0.0 || g.tab.light[l].kind == 2.0 { return false; }
     if let Some(f) = skip_owner {
         let owner = g.tab.light[l].owner;
@@ -152,14 +152,14 @@ pub fn lamp_asked(g: &mut crate::game::Game, l: LightId, skip_owner: Option<&mut
 }
 
 /// What a light question says of the level's own lamps: this game's rows, less the passing ones and each as its steady self to who asks what the place lights, less what the asker leaves out. (guards.ts rowsOf)
-pub fn rows_of(g: &mut crate::game::Game, steady_only: bool, leave: f64) -> crate::scene_collision::LampRows {
+fn rows_of(g: &mut crate::game::Game, steady_only: bool, leave: f64) -> crate::scene_collision::LampRows {
     let st = crate::sim_lightshome::light_home_block(g);
     let leave = if steady_only { (js::to_i32(leave) | js::to_i32(crate::sim_lightshome::row_bit().passing)) as f64 } else { leave };
     crate::scene_collision::LampRows { leave, steady: steady_only }
 }
 
 /// A light question's own lamps written to the module, in the list's order, each with how many of the level's rows stand before it; the rows themselves are the module's to read. False = no question stands and the table is full. (guards.ts writeLamps)
-pub fn write_lamps(g: &mut crate::game::Game, p: Option<V3>, skip_owner: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>, steady_only: bool) -> bool {
+fn write_lamps(g: &mut crate::game::Game, p: Option<V3>, skip_owner: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>, steady_only: bool) -> bool {
     let mut skip_owner = skip_owner;
     let exposure = crate::hours::exposure(g);
     let mut rows = 0.0;
@@ -194,7 +194,7 @@ pub fn steady_lamps(g: &mut crate::game::Game) -> crate::guards::SteadyLamps {
 }
 
 /// The lamps' part of the light on a point: the level's own read where they stand, the question's own written, summed by the module onto the six faces as one list in the engine's order, each dimmed by the smoke on its way.
-pub fn lamps_on(g: &mut crate::game::Game, p: V3, skip_owner: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>, steady_only: bool, acc: &mut Vec<f64>, leave: f64) {
+fn lamps_on(g: &mut crate::game::Game, p: V3, skip_owner: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>, steady_only: bool, acc: &mut Vec<f64>, leave: f64) {
     let shade = crate::sense::smoky(g);
     let rows = rows_of(g, steady_only, leave);
     crate::scene_collision::lamps_begin(g, p, shade, Some(rows));
@@ -212,7 +212,7 @@ pub fn light_on(g: &mut crate::game::Game, c: CharId) -> [f64; 2] {
     [m::max(a, b), m::max(a * eyes_at(g, pa), b * eyes_at(g, pb))]
 }
 /// The light meter of a man some AI side can be hostile to, eased at Sam's rate into his visibility. (guards.ts unitLightMeter)
-pub fn unit_light_meter(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
+pub(super) fn unit_light_meter(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     let c = g.gd[gd].ch;
     let [stands, e] = light_on(g, c);
     g.gd[gd].irradiance = stands;
@@ -245,7 +245,7 @@ fn consider(g: &mut Game, gd: GuardId, f: crate::game::Foe, ch: CharId, best: &m
 }
 
 /// A unit's foe this frame: off a man who is gone, then on the most salient enemy he can see; a fight his eyes have won ends here. (guards.ts acquireFoe)
-pub fn acquire_foe(g: &mut crate::game::Game, gd: GuardId) {
+pub(super) fn acquire_foe(g: &mut crate::game::Game, gd: GuardId) {
     use crate::game::{Foe, GuardState};
     use crate::teams::Team;
     let cur_man = match g.gd[gd].foe {
@@ -435,7 +435,7 @@ pub fn begin_reload(g: &mut crate::game::Game, gd: GuardId) {
 }
 
 /// Counted down each frame he could otherwise fire; a staged row lets the empty go as the beat crosses `out`. (guards.ts tickReloadBeat)
-pub fn tick_reload_beat(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
+pub(super) fn tick_reload_beat(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     let w = g.gd[gd].weapon;
     let rr = crate::weapons::firearm_reload_row(g, w);
     let before = rr.dur - g.gd[gd].reload_t;
@@ -473,7 +473,7 @@ pub fn tick_reload_beat(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
 
 /// The closure of burstTrigger: the burst ends, and the beat to the next runs from its last serviced frame. (guards.ts:2809 end)
 /// The burst he is firing, if he is firing one, is broken off: the next waits its moment.
-pub fn burst_broken(g: &mut Game, gd: GuardId) {
+pub(in crate::people) fn burst_broken(g: &mut Game, gd: GuardId) {
     let w = g.gd[gd].weapon;
     if g.fa[w].burst.is_some() { burst_end(g, gd, w, BURST_BROKEN_CD); }
 }
@@ -604,7 +604,7 @@ fn weapon_rig_is_pistol(g: &Game, gd: GuardId) -> bool {
 }
 
 /// The light at its lens, its beam and whether it burns; returns what the lens hangs off. (guards.ts poseFlashlight)
-pub fn pose_flashlight(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<V3> {
+fn pose_flashlight(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<V3> {
     use crate::character::Bone;
     use crate::game::GuardState;
     let c = g.gd[gd].ch;

@@ -56,7 +56,7 @@ impl Acts {
 }
 
 /// what he does this tick, by his state
-pub fn act(g: &mut Game, gd: GuardId, dt: f64, s: &Sensed) -> Acts {
+pub(in crate::people::guards) fn act(g: &mut Game, gd: GuardId, dt: f64, s: &Sensed) -> Acts {
     match g.gd[gd].state {
         GuardState::Patrol => patrol::patrol(g, gd, dt, s),
         GuardState::Suspicious => suspicious::suspicious(g, gd, dt, s),

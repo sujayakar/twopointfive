@@ -123,7 +123,7 @@ pub fn foe(g: &mut Game, gd: GuardId, to: Option<crate::game::Foe>, by: &'static
 
 /// Why he is as aware as he is, in one line: his awareness and state, and who last raised him, lowered him and
 /// changed his state, with how long ago.
-pub fn why(g: &Game, gd: GuardId) -> String {
+fn why(g: &Game, gd: GuardId) -> String {
     let man = &g.gd[gd];
     let n = crate::control::state(g).and_then(|s| s.mind.get(gd)).copied().unwrap_or_default();
     let mut s = format!("{}: {} at {:.2}", man.callsign, man.state.as_str(), man.awareness);

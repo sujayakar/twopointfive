@@ -14,7 +14,7 @@ fn office_spots() -> crate::civilians::CivSpots {
 }
 
 /// The phones and the ways off this level's floor: the quiet mission's own, else the office's.   (civilians.ts civSpots)
-pub fn civ_spots(g: &mut crate::game::Game) -> crate::civilians::CivSpots {
+pub(super) fn civ_spots(g: &mut crate::game::Game) -> crate::civilians::CivSpots {
     let Some(sc) = g.level.scenarios.as_ref() else { return office_spots(); };
     if sc.quiet.is_none() {
         return office_spots();
@@ -41,7 +41,7 @@ fn own_spots_of(sc: &crate::scene_scenarios::LevelScenarios) -> crate::civilians
 
 
 /// One line of what happened to her, kept on the record, the last few only.   (civilians.ts log)
-pub fn log(g: &mut crate::game::Game, gd: GuardId, what: &str) {
+pub(super) fn log(g: &mut crate::game::Game, gd: GuardId, what: &str) {
     let line = format!("{} {}", js::to_fixed(g.time, 1), what);
     let c = g.gd[gd].civ.unwrap();
     g.cv[c].log.push(line);
@@ -51,7 +51,7 @@ pub fn log(g: &mut crate::game::Game, gd: GuardId, what: &str) {
 }
 
 /// A civilian comes into a game here and nowhere else; one more than a step of the doors can be handed is a level too big.   (civilians.ts join)
-pub fn join(g: &mut crate::game::Game, gd: GuardId) -> GuardId {
+fn join(g: &mut crate::game::Game, gd: GuardId) -> GuardId {
     let most = crate::levelfit::civ_most(g);
     if g.civilians.len() as f64 >= most {
         let why = format!("more than {} civilians at once (its own, a rescue's hostages), and a game holds no more men than one step of its doors can be handed (game/levelfit.ts civMost)", most);
@@ -113,7 +113,7 @@ pub fn reset_civilians(g: &mut crate::game::Game) {
 }
 
 /// A civilian of the usual make at her first mark, doing what she does there.   (civilians.ts makeCivilian)
-pub fn make_civilian(g: &mut crate::game::Game, def: &crate::scene_level::CivilianDef, i: f64) -> GuardId {
+fn make_civilian(g: &mut crate::game::Game, def: &crate::scene_level::CivilianDef, i: f64) -> GuardId {
     let id = CIV_ID0 + i;
     let route = crate::scene_level::PatrolRoute {
         name: def.name.clone(),

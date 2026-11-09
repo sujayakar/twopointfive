@@ -18,7 +18,7 @@ pub fn frag_script_ran(g: &mut crate::game::Game, gd: GuardId, ran: Option<crate
 use crate::ask::Over;
 
 /// The burst's one roll: a hash of its serial and the man's id, 0‥1. (frag.ts hash01)
-pub fn hash01(a: f64, b: f64) -> f64 {
+pub(super) fn hash01(a: f64, b: f64) -> f64 {
     let mut x = (m::imul(js::to_i32(a), 0x9E3779B1u32 as i32) ^ m::imul(js::to_i32(b).wrapping_add(0x7F4A7C15), 0x85EBCA6Bu32 as i32)) as u32;
     x ^= x >> 15;
     x = m::imul(x as i32, 0xC2B2AE35u32 as i32) as u32;
@@ -27,7 +27,7 @@ pub fn hash01(a: f64, b: f64) -> f64 {
 }
 
 /// `fn_` asked with glass as `view` reckons it for a burst at `from`. (frag.ts throughGlass)
-pub fn through_glass<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, from: V3, view: crate::frag::GlassView, fn_: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T {
+fn through_glass<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, from: V3, view: crate::frag::GlassView, fn_: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T {
     let see = match view {
         GlassView::Whole => return fn_(g),
         GlassView::Blown => crate::glassbreak::GlassBreakSeeThroughView::Blown,
@@ -42,9 +42,9 @@ pub fn through_glass<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, fro
 }
 
 /// Is a burst's line from a to b stopped: by anything solid, and by glass as glass is to a burst. (frag.ts burstBlocked)
-pub fn burst_blocked(g: &mut crate::game::Game, a: V3, b: V3) -> bool { burst_blocked_over(g, &Over::OWN, a, b) }
+fn burst_blocked(g: &mut crate::game::Game, a: V3, b: V3) -> bool { burst_blocked_over(g, &Over::OWN, a, b) }
 /// …of the world as the question takes it
-pub fn burst_blocked_over(g: &mut Game, over: &Over, a: V3, b: V3) -> bool {
+fn burst_blocked_over(g: &mut Game, over: &Over, a: V3, b: V3) -> bool {
     if !crate::glassbreak::glass_break_live(g) {
         return crate::scene_collision::shot_blocked_over(g, over, a, b, None, None);
     }
@@ -65,7 +65,7 @@ pub fn burst_line(g: &mut crate::game::Game, from: V3, to: V3, view: Option<crat
 /// Share (0‥1) of a man the burst point has a clear line to: four points from shin to head. (frag.ts exposure)
 pub fn exposure(g: &mut crate::game::Game, from: V3, feet: V3, head: V3, view: Option<crate::frag::GlassView>) -> f64 { exposure_over(g, &Over::OWN, from, feet, head, view) }
 /// …of the world as the question takes it
-pub fn exposure_over(g: &mut Game, over: &Over, from: V3, feet: V3, head: V3, view: Option<crate::frag::GlassView>) -> f64 {
+pub(super) fn exposure_over(g: &mut Game, over: &Over, from: V3, feet: V3, head: V3, view: Option<crate::frag::GlassView>) -> f64 {
     let view = view.unwrap_or(GlassView::Wary);
     let h = m::max(0.5, head[1] - feet[1]);
     let pts: [V3; 4] = [
@@ -89,7 +89,7 @@ fn share_clear(g: &mut Game, over: &Over, from: V3, pts: &[V3]) -> f64 {
 }
 
 /// The leaves a hand grenade bursting at `from` would take off its hinges. (frag.ts leavesFor)
-pub fn leaves_for(g: &mut crate::game::Game, from: V3) -> Vec<BoxId> {
+fn leaves_for(g: &mut crate::game::Game, from: V3) -> Vec<BoxId> {
     let opts = crate::destruction::DestructionDoorsForOpts { radius: Some(g.k.frag.destr_m), power: Some(1.0) };
     let doors = crate::destruction::destruction_doors_for(g, from, Some(opts));
     doors.into_iter().map(|d| g.dr[d].box_).collect()
@@ -109,7 +109,7 @@ pub fn exposed_to(g: &mut crate::game::Game, from: V3, feet: V3, head: V3, view:
 }
 
 /// The walls and cover a hand grenade bursting at `from` would open; the plan asked once a tick for a point. (frag.ts wallsFor)
-pub fn walls_for(g: &mut crate::game::Game, from: V3) -> Vec<crate::wallbreak::WallOpening> {
+fn walls_for(g: &mut crate::game::Game, from: V3) -> Vec<crate::wallbreak::WallOpening> {
     let serial = g.destr.walls.serial;
     let time = g.time;
     let keep = match &g.m.frag.walls_for {
@@ -137,18 +137,18 @@ pub fn walls_for(g: &mut crate::game::Game, from: V3) -> Vec<crate::wallbreak::W
 }
 
 /// Distance on the floor. (frag.ts flat)
-pub fn flat(a: V3, b: V3) -> f64 {
+pub(super) fn flat(a: V3, b: V3) -> f64 {
     m::hyp2(a[0] - b[0], a[2] - b[2])
 }
 
 /// One side: the same team, or the player and an operative. (frag.ts sameSide)
-pub fn same_side(a: crate::teams::Team, b: crate::teams::Team) -> bool {
+pub(super) fn same_side(a: crate::teams::Team, b: crate::teams::Team) -> bool {
     use crate::teams::Team;
     a == b || (a == Team::Player && b == Team::Operative) || (a == Team::Operative && b == Team::Player)
 }
 
 /// A man a burst can still kill where he lies: down and breathing, the player's enemy, never a civilian. (frag.ts downAsked)
-pub fn down_asked(g: &crate::game::Game, gd: GuardId) -> bool {
+pub(super) fn down_asked(g: &crate::game::Game, gd: GuardId) -> bool {
     if !crate::game::is_breathing(g, gd) || g.gd[gd].god || g.gd[gd].civ.is_some() {
         return false;
     }
@@ -157,7 +157,7 @@ pub fn down_asked(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// The points of a lying man a burst is asked for: hips, chest, head, a shin, none under the floor's skin. (frag.ts lying)
-pub fn lying(g: &crate::game::Game, gd: GuardId) -> Vec<V3> {
+pub(super) fn lying(g: &crate::game::Game, gd: GuardId) -> Vec<V3> {
     use crate::character::Bone;
     let c = g.gd[gd].ch;
     let pos = g.ch[c].pos;
@@ -177,9 +177,9 @@ fn lying_up(p: V3) -> V3 {
 }
 
 /// How much of those points a burst at `from` has a line to (0‥1), through the glass as `view` reckons it. (frag.ts lyingShows)
-pub fn lying_shows(g: &mut crate::game::Game, from: V3, pts: &[V3], view: crate::frag::GlassView) -> f64 { lying_shows_over(g, &Over::OWN, from, pts, view) }
+pub(super) fn lying_shows(g: &mut crate::game::Game, from: V3, pts: &[V3], view: crate::frag::GlassView) -> f64 { lying_shows_over(g, &Over::OWN, from, pts, view) }
 /// …of the world as the question takes it
-pub fn lying_shows_over(g: &mut Game, over: &Over, from: V3, pts: &[V3], view: crate::frag::GlassView) -> f64 {
+pub(super) fn lying_shows_over(g: &mut Game, over: &Over, from: V3, pts: &[V3], view: crate::frag::GlassView) -> f64 {
     through_glass(g, from, view, &mut |g: &mut Game| share_clear(g, over, from, pts))
 }
 

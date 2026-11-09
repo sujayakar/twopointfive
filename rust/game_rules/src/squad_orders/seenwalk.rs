@@ -13,7 +13,7 @@ fn block_of(ix: f64, iz: f64) -> (f64, f64, f64) {
 }
 
 /// What the game holds of this tick's floor, thrown away with the clock, a room, the floor, a door or a number changed. Hands back the row.   (seenwalk.ts sharedOf)
-pub fn shared_of(g: &mut crate::game::Game) -> &mut crate::seenwalk::Shared {
+fn shared_of(g: &mut crate::game::Game) -> &mut crate::seenwalk::Shared {
     let mut doors = String::new();
     let mut i = 0;
     while i < g.doors.list.len() {
@@ -56,7 +56,7 @@ pub fn seen_reset(g: &mut crate::game::Game) {
 }
 
 /// The price of the floor to a walk from `from` by `base`: `dear` on lit floor in view of an uncleared room, 1 elsewhere; None when no uncleared room is within an eye's reach of that walk.   (seenwalk.ts seenPrice)
-pub fn seen_price(g: &mut crate::game::Game, from: V3, base: &[V3]) -> Option<crate::seenwalk::SeenPrice> {
+pub(super) fn seen_price(g: &mut crate::game::Game, from: V3, base: &[V3]) -> Option<crate::seenwalk::SeenPrice> {
     let all = shared_of(g).eyes.clone();
     g.stats.seenwalk.asks += 1;
     if all.is_empty() { return None; }
@@ -83,7 +83,7 @@ pub fn seen_price(g: &mut crate::game::Game, from: V3, base: &[V3]) -> Option<cr
 }
 
 /// What a price `seen_price` handed back asks of a cell.   (seenwalk.ts seenPrice, the returned closure)
-pub fn seen_price_at(g: &mut crate::game::Game, price: &crate::seenwalk::SeenPrice, ix: f64, iz: f64) -> f64 {
+pub(super) fn seen_price_at(g: &mut crate::game::Game, price: &crate::seenwalk::SeenPrice, ix: f64, iz: f64) -> f64 {
     let SeenPrice::Floor { x0, x1, z0, z1, eyes } = price;
     let cs = g.col.nav.cell;
     let (x, z) = ((ix + 0.5) * cs, (iz + 0.5) * cs);

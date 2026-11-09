@@ -6,7 +6,7 @@ use crate::game::GuardState as St;
 use crate::v3;
 use alloc::string::String;
 
-pub fn body(g: &mut Game, gd: GuardId, c: CharId, staff: bool, lvl: f64) {
+pub(in crate::people) fn body(g: &mut Game, gd: GuardId, c: CharId, staff: bool, lvl: f64) {
     let now = g.time;
     // a downed colleague in view: the finder's call and the floor's short script for a found body
     if staff && g.gd[gd].state != St::Alert && g.gd[gd].body_duty.is_none() && now - g.gd[gd].saw_body_t > 20.0 {

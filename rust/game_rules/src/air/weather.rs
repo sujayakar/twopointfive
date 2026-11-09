@@ -41,7 +41,7 @@ fn preset(g: &Game, kind: crate::weather_kinds::WeatherKind) -> &crate::weather_
 // ---- the file's free functions
 
 /// The level's roofs as footprints: its ceiling slabs, biggest first, at most MAX_ROOFS. (weather.ts roofsOf)
-pub fn roofs_of(g: &mut crate::game::Game, boxes: &[BoxId]) -> Vec<[f64; 4]> {
+fn roofs_of(g: &mut crate::game::Game, boxes: &[BoxId]) -> Vec<[f64; 4]> {
     let ceiling_y = crate::scene_world::world().ceiling_y;
     ::sim::weather::roofs_begin();
     for &b in boxes {
@@ -56,12 +56,12 @@ pub fn roofs_of(g: &mut crate::game::Game, boxes: &[BoxId]) -> Vec<[f64; 4]> {
 }
 
 /// A level that carries its own places: the office's footprints are not its building's. (weather.ts ownFloor)
-pub fn own_floor(g: &crate::game::Game) -> bool {
+fn own_floor(g: &crate::game::Game) -> bool {
     match &g.level.scenarios { Some(s) => s.quiet.is_some(), None => false }
 }
 
 /// Mean of the stroke's envelope over [a, b]: the module's, its pulses handed over as three doubles each. (weather.ts strokeMean)
-pub fn stroke_mean(s: &crate::weather::Stroke, a: f64, b: f64) -> f64 {
+fn stroke_mean(s: &crate::weather::Stroke, a: f64, b: f64) -> f64 {
     let n = s.pulses.len();
     let mut v: Vec<f64> = Vec::with_capacity(n * 3);
     for p in &s.pulses { v.push(p.t0); v.push(p.amp); v.push(p.tau); }
@@ -77,16 +77,16 @@ pub fn weather_enabled(g: &crate::game::Game) -> bool { g.weather.on }
 pub fn weather_kind(g: &crate::game::Game) -> Option<crate::weather_kinds::WeatherKind> { g.weather.kind_now }
 
 /// Sets the kind and the module's `live` with it. Not setKind, which is `weather_set_kind_2`. (weather.ts Weather.kind)
-pub fn weather_set_kind(g: &mut crate::game::Game, k: Option<crate::weather_kinds::WeatherKind>) {
+fn weather_set_kind(g: &mut crate::game::Game, k: Option<crate::weather_kinds::WeatherKind>) {
     g.weather.kind_now = k;
     wx(g).live = if k.is_some() { 1.0 } else { 0.0 };
 }
 
 /// The no-rain footprints in force. (weather.ts Weather.roofs)
-pub fn weather_roofs(g: &crate::game::Game) -> Vec<[f64; 4]> { g.weather.roof_rects.clone() }
+pub(super) fn weather_roofs(g: &crate::game::Game) -> Vec<[f64; 4]> { g.weather.roof_rects.clone() }
 
 /// The footprints, into the table the rules read: its one writer. (weather.ts Weather.roofs)
-pub fn weather_set_roofs(g: &mut crate::game::Game, r: &[[f64; 4]]) {
+fn weather_set_roofs(g: &mut crate::game::Game, r: &[[f64; 4]]) {
     let n = r.len();
     if n > ::sim::weather::ROOFS { panic!("weather: {} roofs, and the table holds {}", n, ::sim::weather::ROOFS); }
     let w = wx(g);
@@ -99,7 +99,7 @@ pub fn weather_set_roofs(g: &mut crate::game::Game, r: &[[f64; 4]]) {
 pub fn weather_fog(g: &crate::game::Game) -> Option<crate::weather_kinds::FogSpec> { g.weather.fog_spec }
 
 /// The fog's word, and what an eye reads of it into the module's table. (weather.ts Weather.setFog)
-pub fn weather_set_fog(g: &mut crate::game::Game, word: f64) {
+fn weather_set_fog(g: &mut crate::game::Game, word: f64) {
     let f = crate::weather_kinds::unpack_fog(word);
     g.weather.fog_word = word;
     g.weather.fog_spec = f;
@@ -111,13 +111,13 @@ pub fn weather_set_fog(g: &mut crate::game::Game, word: f64) {
 }
 
 /// Game time until which a thunderclap is drowning the floor's small noises. (weather.ts Weather.thunderUntil)
-pub fn weather_thunder_until(g: &crate::game::Game) -> f64 { wx_read(g).thunder_until }
+fn weather_thunder_until(g: &crate::game::Game) -> f64 { wx_read(g).thunder_until }
 
 /// (weather.ts Weather.thunderUntil)
-pub fn weather_set_thunder_until(g: &mut crate::game::Game, v: f64) { wx(g).thunder_until = v; }
+fn weather_set_thunder_until(g: &mut crate::game::Game, v: f64) { wx(g).thunder_until = v; }
 
 /// Cloud cover 0..1 for whoever owns the sun and the moon to read. (weather.ts Weather.cloud)
-pub fn weather_cloud(g: &crate::game::Game) -> f64 {
+pub(super) fn weather_cloud(g: &crate::game::Game) -> f64 {
     if !g.weather.on { return 0.0; }
     match g.weather.kind_now { Some(k) => preset(g, k).cloud, None => legacy().cloud }
 }
@@ -135,13 +135,13 @@ pub fn weather_rain_rate(g: &crate::game::Game) -> f64 { wx_read(g).rain_rate }
 pub fn weather_set_rain_rate(g: &mut crate::game::Game, v: f64) { wx(g).rain_rate = v; }
 
 /// Current wetness 0..1. (weather.ts Weather.wet)
-pub fn weather_wet(g: &crate::game::Game) -> f64 { wx_read(g).wet }
+fn weather_wet(g: &crate::game::Game) -> f64 { wx_read(g).wet }
 
 /// Sets the wetness. Not setWet, which is `weather_set_wet_2`. (weather.ts Weather.wet)
-pub fn weather_set_wet(g: &mut crate::game::Game, v: f64) { wx(g).wet = v; }
+fn weather_set_wet(g: &mut crate::game::Game, v: f64) { wx(g).wet = v; }
 
 /// The thunder on its way, the module's list as it stands. (weather.ts Weather.thunders)
-pub fn weather_thunders(g: &crate::game::Game) -> Vec<crate::weather::Thunder> {
+fn weather_thunders(g: &crate::game::Game) -> Vec<crate::weather::Thunder> {
     let w = wx_read(g);
     let mut out = Vec::new();
     let mut i = 0usize;
@@ -153,7 +153,7 @@ pub fn weather_thunders(g: &crate::game::Game) -> Vec<crate::weather::Thunder> {
 }
 
 /// The module's list made this one. (weather.ts Weather.thundersAre)
-pub fn weather_set_thunders_are(g: &mut crate::game::Game, l: &[crate::weather::Thunder]) {
+fn weather_set_thunders_are(g: &mut crate::game::Game, l: &[crate::weather::Thunder]) {
     let w = wx(g);
     w.thunders_n = 0.0;
     for t in l { ::sim::weather::thunder_push(w, t.at, t.dist_km, t.bearing, t.loud); }
@@ -164,22 +164,22 @@ pub fn weather_wind(g: &crate::game::Game) -> [f64; 2] { g.weather.wind }
 pub fn weather_set_wind(g: &mut crate::game::Game, v: [f64; 2]) { g.weather.wind = v; }
 
 /// When the next stroke is due (game time). (weather.ts Weather.nextFlashAt)
-pub fn weather_next_flash_at(g: &crate::game::Game) -> f64 { wx_read(g).next_flash_at }
+fn weather_next_flash_at(g: &crate::game::Game) -> f64 { wx_read(g).next_flash_at }
 
 /// (weather.ts Weather.nextFlashAt)
 pub fn weather_set_next_flash_at(g: &mut crate::game::Game, v: f64) { wx(g).next_flash_at = v; }
 
 /// The storm's own die: a word of the module's table. (weather.ts Weather.die)
-pub fn weather_die(g: &crate::game::Game) -> f64 { wx_read(g).dice as f64 }
+fn weather_die(g: &crate::game::Game) -> f64 { wx_read(g).dice as f64 }
 
 /// A store into the word: the Uint32Array's own conversion. (weather.ts Weather.die)
-pub fn weather_set_die(g: &mut crate::game::Game, v: f64) { wx(g).dice = js::to_u32(v); }
+fn weather_set_die(g: &mut crate::game::Game, v: f64) { wx(g).dice = js::to_u32(v); }
 
 /// When the last remark was made. (weather.ts Weather.lastBarkT)
-pub fn weather_last_bark_t(g: &crate::game::Game) -> f64 { wx_read(g).last_bark_t }
+fn weather_last_bark_t(g: &crate::game::Game) -> f64 { wx_read(g).last_bark_t }
 
 /// (weather.ts Weather.lastBarkT)
-pub fn weather_set_last_bark_t(g: &mut crate::game::Game, v: f64) { wx(g).last_bark_t = v; }
+fn weather_set_last_bark_t(g: &mut crate::game::Game, v: f64) { wx(g).last_bark_t = v; }
 
 /// The weather a new game is born in. Runs on `g.weather` (every method's path) and returns what the caller stores there. (weather.ts Weather.constructor)
 pub fn weather_new(g: &mut crate::game::Game) -> crate::weather::Weather {
@@ -220,14 +220,14 @@ pub fn weather_new(g: &mut crate::game::Game) -> crate::weather::Weather {
 }
 
 /// A level built for snow is born in the kind 'snow' and stays in it; None = any other level. (weather.ts Weather.levelKind)
-pub fn weather_level_kind(g: &crate::game::Game) -> Option<crate::weather_kinds::WeatherKind> {
+fn weather_level_kind(g: &crate::game::Game) -> Option<crate::weather_kinds::WeatherKind> {
     let name = crate::scene_level_load::level_name_of(g);
     let stood = g.stood;
     if crate::weather_kinds::snow_level(g, name.as_deref()) && (!stood.locked || stood.weather == Some(crate::weather_kinds::WeatherKind::Snow)) { Some(crate::weather_kinds::WeatherKind::Snow) } else { None }
 }
 
 /// No weather picked on a floor that is none of the office's: its own night is dry and still, under its own roofs. (weather.ts Weather.ownNight)
-pub fn weather_own_night(g: &mut crate::game::Game) {
+fn weather_own_night(g: &mut crate::game::Game) {
     weather_set_storm(g, 0.0);
     weather_set_rain_rate(g, 0.0);
     g.weather.wind = [0.0, 0.0];
@@ -237,10 +237,10 @@ pub fn weather_own_night(g: &mut crate::game::Game) {
 }
 
 /// The level's own storm is in force, cut by the level's own roofs (WX_OWN.roofs). (weather.ts Weather.ownStorm)
-pub fn weather_own_storm(g: &crate::game::Game) -> bool { g.weather.own }
+pub(super) fn weather_own_storm(g: &crate::game::Game) -> bool { g.weather.own }
 
 /// Do the office's two rectangles fit this level's roofs (asked once). (weather.ts Weather.officeFit)
-pub fn weather_office_fit(g: &mut crate::game::Game) -> bool {
+fn weather_office_fit(g: &mut crate::game::Game) -> bool {
     if let Some(f) = g.weather.fits { return f; }
     let boxes = level_boxes(g);
     let fits = if boxes.is_empty() {
@@ -259,7 +259,7 @@ fn near(a: &[f64; 4], b: &[f64; 4]) -> bool {
 }
 
 /// The footprints follow the rule in force. (weather.ts Weather.syncRoofs)
-pub fn weather_sync_roofs(g: &mut crate::game::Game, tell_wind: Option<bool>) { sync_roofs(g, tell_wind.unwrap_or(false), true) }
+fn weather_sync_roofs(g: &mut crate::game::Game, tell_wind: Option<bool>) { sync_roofs(g, tell_wind.unwrap_or(false), true) }
 
 /// syncRoofs, with `built` false while the constructor runs: `g.wind` is built after this object and has nothing to be told yet.
 fn sync_roofs(g: &mut Game, tell_wind: bool, built: bool) {
@@ -282,7 +282,7 @@ fn sync_roofs(g: &mut Game, tell_wind: bool, built: bool) {
 pub fn weather_level_roofs(g: &crate::game::Game) -> bool { g.weather.kind_now.is_some() || g.weather.own }
 
 /// The level's own ceiling slabs as the no-rain footprints (roofs 0 / 1 exact, 2 / 3 as the Frame packs them). (weather.ts Weather.ownRoofs)
-pub fn weather_own_roofs(g: &mut crate::game::Game) -> Vec<[f64; 4]> {
+fn weather_own_roofs(g: &mut crate::game::Game) -> Vec<[f64; 4]> {
     let boxes = level_boxes(g);
     roofs_of(g, &boxes).into_iter().enumerate().map(|(i, r)| if i < 2 { r } else { crate::weather_kinds::unpack_rect(crate::weather_kinds::pack_rect(Some(r))) }).collect()
 }
@@ -344,7 +344,7 @@ pub fn weather_under_roof(g: &mut crate::game::Game, x: f64, z: f64) -> bool {
 }
 
 /// The rain bed's level at a listener (0..1). (weather.ts Weather.rainBed)
-pub fn weather_rain_bed(g: &mut crate::game::Game, x: f64, z: f64) -> f64 {
+fn weather_rain_bed(g: &mut crate::game::Game, x: f64, z: f64) -> f64 {
     weather_sync_roofs(g, None);
     knobs_here(g);
     ::sim::weather::rain_bed(wx_read(g), x, z)
@@ -363,7 +363,7 @@ pub fn weather_air_trans(g: &mut crate::game::Game, a: V3, b: V3) -> f64 {
 }
 
 /// Everything the storm's next minutes hang on; a stroke in progress is not carried. hours.ts holds a level's own storm in one, so it is a rule's call and not only a checkpoint's. (weather.ts Weather.snapshot)
-pub fn weather_snapshot(g: &crate::game::Game) -> crate::weather::WeatherSnap {
+pub(super) fn weather_snapshot(g: &crate::game::Game) -> crate::weather::WeatherSnap {
     let kind = g.weather.kind_now;
     WeatherSnap {
         kind,
@@ -385,7 +385,7 @@ pub fn weather_snapshot(g: &crate::game::Game) -> crate::weather::WeatherSnap {
 fn finite_or(x: f64, d: f64) -> f64 { if x.is_finite() { x } else { d } }
 
 /// The storm as a snapshot had it; on / off stays the session's. (weather.ts Weather.restore)
-pub fn weather_restore(g: &mut crate::game::Game, s: &crate::weather::WeatherSnap) {
+pub(super) fn weather_restore(g: &mut crate::game::Game, s: &crate::weather::WeatherSnap) {
     weather_end_flash(g);
     let k = if crate::weather_kinds::is_any_kind(g, s.kind) { s.kind } else { None };
     if k != g.weather.kind_now { weather_set_kind_2(g, k); }   // the kind is the file's: the run it holds was played under it
@@ -446,7 +446,7 @@ pub fn weather_strike(g: &mut crate::game::Game, opts: Option<crate::weather::We
 }
 
 /// One thunder, asked: due and gone from the list (its numbers and four dice), or None. (weather.ts Weather.thunderDue)
-pub fn weather_thunder_due(g: &mut crate::game::Game, i: f64) -> Option<Vec<f64>> {
+fn weather_thunder_due(g: &mut crate::game::Game, i: f64) -> Option<Vec<f64>> {
     knobs_here(g);
     let mut said = [0.0; 8];
     if !::sim::weather::thunder_due(wx(g), i as usize, g.time, &mut said) { return None; }
@@ -514,13 +514,13 @@ pub fn weather_update(g: &mut crate::game::Game, dt: f64) {
 }
 
 /// Seconds to the next stroke; the first one of a night comes sooner. (weather.ts Weather.gap)
-pub fn weather_gap(g: &mut crate::game::Game, first: bool) -> f64 { ::sim::weather::gap(wx(g), first) }
+fn weather_gap(g: &mut crate::game::Game, first: bool) -> f64 { ::sim::weather::gap(wx(g), first) }
 
 /// The rain falling on the game this tick, the module's table: what the frame draws, and what soaks a man. (weather.ts Weather.rainNow)
-pub fn weather_set_rain_now(g: &mut crate::game::Game, v: f64) { wx(g).rain_now = v; }
+fn weather_set_rain_now(g: &mut crate::game::Game, v: f64) { wx(g).rain_now = v; }
 
 /// The stroke's light over [t, t + dt]. (weather.ts Weather.applyFlash)
-pub fn weather_apply_flash(g: &mut crate::game::Game, t: f64, dt: f64) {
+fn weather_apply_flash(g: &mut crate::game::Game, t: f64, dt: f64) {
     let f = g.weather.flash.as_ref().unwrap();
     let intensity = f.peak * stroke_mean(&f.stroke, t, t + m::max(dt, 1e-4));
     let enabled = intensity > 1e-3 * f.peak;
@@ -531,14 +531,14 @@ pub fn weather_apply_flash(g: &mut crate::game::Game, t: f64, dt: f64) {
 }
 
 /// The stroke's light leaves the set. (weather.ts Weather.endFlash)
-pub fn weather_end_flash(g: &mut crate::game::Game) {
+fn weather_end_flash(g: &mut crate::game::Game) {
     let light = match g.weather.flash.as_ref() { Some(f) => f.light, None => return };
     crate::render_lights::light_set_remove(g, light);
     g.weather.flash = None;
 }
 
 /// A thunder that came due (`dice`: the module threw its four and its clap drowned the small noises): the sound of it, and somebody's remark. (weather.ts Weather.playThunder)
-pub fn weather_play_thunder(g: &mut crate::game::Game, th: crate::weather::Thunder, dice: &[f64]) {
+fn weather_play_thunder(g: &mut crate::game::Game, th: crate::weather::Thunder, dice: &[f64]) {
     // near: the crack and the clap on top of the roll; far: the roll alone, darker and slower
     let near = th.dist_km < 1.3;
     let name = if near { "thunderNear" } else { "thunderFar" };
@@ -584,7 +584,7 @@ pub fn weather_play_thunder(g: &mut crate::game::Game, th: crate::weather::Thund
 }
 
 /// The wet lot: the asphalt slab darkened and glossy, or everything put back. Idempotent both ways. (weather.ts Weather.setWet)
-pub fn weather_set_wet_2(g: &mut crate::game::Game, on: bool) {
+fn weather_set_wet_2(g: &mut crate::game::Game, on: bool) {
     if on == g.weather.wet_on { return; }
     g.weather.wet_on = on;
     if on {
@@ -615,7 +615,7 @@ fn soak(g: &mut Game, b: BoxId) {
 }
 
 /// Everything off and put back. (weather.ts Weather.teardown)
-pub fn weather_teardown(g: &mut crate::game::Game) {
+fn weather_teardown(g: &mut crate::game::Game) {
     weather_end_flash(g);
     weather_set_thunders_are(g, &[]);
     weather_set_next_flash_at(g, -1.0);
@@ -648,13 +648,13 @@ mod tests {
 }
 
 /// The direction a stroke's light travels, for a stroke seen at this bearing and elevation.   (weather.ts dirOf)
-pub fn dir_of(bearing: f64, elev: f64) -> V3 {
+fn dir_of(bearing: f64, elev: f64) -> V3 {
     let to: V3 = [m::sin(bearing) * m::cos(elev), m::sin(elev), -m::cos(bearing) * m::cos(elev)];
     [-to[0], -to[1], -to[2]]
 }
 
 /// The weather's frame with everything off.   (weather.ts zero)
-pub fn zero(f: &mut crate::render_frame::WeatherFrame) {
+fn zero(f: &mut crate::render_frame::WeatherFrame) {
     f.rain = 0.0;
     f.snow = Some(0.0);
     f.wet = 0.0;

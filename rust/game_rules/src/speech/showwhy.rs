@@ -15,7 +15,7 @@ const LINE_LAG: &str = "I can't keep up.";
 const LINE_KEEP: &str = "I've got this door.";
 
 /// A man's memory, all void. (showwhy.ts blank)
-pub fn blank(t: f64) -> crate::showwhy::Mem {
+fn blank(t: f64) -> crate::showwhy::Mem {
     Mem {
         t,
         line_t0: -100.0,
@@ -40,12 +40,12 @@ pub fn blank(t: f64) -> crate::showwhy::Mem {
 }
 
 /// Nothing shown yet. (showwhy.ts fresh)
-pub fn fresh() -> crate::showwhy::ShowWhyStats {
+fn fresh() -> crate::showwhy::ShowWhyStats {
     ShowWhyStats { waves: 0, squeezes: 0, fists: 0, ways: 0, lines: 0, holds: 0 }
 }
 
 /// This seat's state, made if there is none: the row itself. (showwhy.ts stateOf)
-pub fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::showwhy::State {
+fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::showwhy::State {
     let (key, t) = (crate::seats::view_key(g, &crate::seats::here(g)), g.time);
     g.m.showwhy.states.get_or_insert_with(key, || State { stats: fresh(), after_you_t: -100.0, keep_say_t: -100.0, line_say_t: -100.0, t })
 }
@@ -56,7 +56,7 @@ fn st_row(g: &mut Game, pl: PlayerId) -> &mut crate::showwhy::State {
 }
 
 /// Distance on the floor. (showwhy.ts flat)
-pub fn flat(a: V3, b: V3) -> f64 {
+fn flat(a: V3, b: V3) -> f64 {
     m::hyp2(a[0] - b[0], a[2] - b[2])
 }
 
@@ -67,12 +67,12 @@ pub fn reset_show_why(g: &mut crate::game::Game) {
 }
 
 /// One row of the log, which keeps its last 120 to 200. (showwhy.ts note)
-pub fn note(g: &mut crate::game::Game, pl: PlayerId, gd: GuardId, why: crate::showwhy::Why, signal: Option<crate::character::SignalKind>, line: Option<&str>) {
+fn note(g: &mut crate::game::Game, pl: PlayerId, gd: GuardId, why: crate::showwhy::Why, signal: Option<crate::character::SignalKind>, line: Option<&str>) {
     let st = st_row(g, pl);
 }
 
 /// His words are over him this frame, asked of the bubble's clock. (showwhy.ts speaking)
-pub fn speaking(g: &crate::game::Game, gd: GuardId) -> bool {
+fn speaking(g: &crate::game::Game, gd: GuardId) -> bool {
     match &g.gd[gd].bubble {
         Some(b) => g.time >= b.t && g.time - b.t <= b.dur,
         None => false,
@@ -80,7 +80,7 @@ pub fn speaking(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// His line through the game's own say; false where it did not land (a man with no voice). (showwhy.ts say)
-pub fn say(g: &mut crate::game::Game, pl: PlayerId, gd: GuardId, why: crate::showwhy::Why, text: &str) -> bool {
+fn say(g: &mut crate::game::Game, pl: PlayerId, gd: GuardId, why: crate::showwhy::Why, text: &str) -> bool {
     crate::game::game_say(g, gd, text, None, None, None);
     if g.gd[gd].bubble.as_ref().map(|b| b.text.as_str()) != Some(text) {
         return false;
@@ -91,7 +91,7 @@ pub fn say(g: &mut crate::game::Game, pl: PlayerId, gd: GuardId, why: crate::sho
 }
 
 /// His free hand's signal, and its row in the log. (showwhy.ts sign)
-pub fn sign(g: &mut crate::game::Game, pl: PlayerId, gd: GuardId, why: crate::showwhy::Why, kind: crate::character::SignalKind, side: Option<f64>) {
+fn sign(g: &mut crate::game::Game, pl: PlayerId, gd: GuardId, why: crate::showwhy::Why, kind: crate::character::SignalKind, side: Option<f64>) {
     let side = side.unwrap_or(1.0);
     let c = g.gd[gd].ch;
     crate::character::anim_signal(g, c, kind, Some(side));
@@ -105,7 +105,7 @@ fn op_tgt(g: &Game, gd: GuardId) -> Option<GuardId> {
 }
 
 /// The player is in this man's line: the room fight held his round this frame for the player, no mate is nearer in it, and no fire hold has the round anyway. (showwhy.ts masked)
-pub fn masked(g: &mut crate::game::Game, gd: GuardId) -> bool {
+fn masked(g: &mut crate::game::Game, gd: GuardId) -> bool {
     if g.pl[g.player].down {
         return false;
     }
@@ -137,7 +137,7 @@ pub fn masked(g: &mut crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// A mate stands in this man's line to `to` nearer to him than the player does. (showwhy.ts mateNearer)
-pub fn mate_nearer(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, to: V3) -> bool {
+fn mate_nearer(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId, to: V3) -> bool {
     let c = g.ch[g.gd[gd].ch].pos;
     let pl = g.ch[g.pl[seat.player].ch].pos;
     let dx = to[0] - c[0];
@@ -167,7 +167,7 @@ pub fn mate_nearer(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: Guar
 }
 
 /// The side of his line to his man the player stands on: 1 his left, -1 his right. (showwhy.ts lineSide)
-pub fn line_side(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> f64 {
+fn line_side(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> f64 {
     let h = op_tgt(g, gd);
     let c = g.ch[g.gd[gd].ch].pos;
     let pl = g.ch[g.pl[seat.player].ch].pos;
@@ -186,7 +186,7 @@ pub fn line_side(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardI
 }
 
 /// A mate has "you're in my line." up as this rule's right now. (showwhy.ts lineSaidBy)
-pub fn line_said_by(g: &crate::game::Game, but: GuardId) -> bool {
+fn line_said_by(g: &crate::game::Game, but: GuardId) -> bool {
     let mut i = 0;
     while i < g.guards.len() {
         let o = g.guards[i];
@@ -206,7 +206,7 @@ pub fn line_said_by(g: &crate::game::Game, but: GuardId) -> bool {
 }
 
 /// A door order that is made and waiting on something that is not its own next step. (showwhy.ts waits)
-pub fn waits(g: &mut crate::game::Game, op: DoorOpId) -> bool {
+fn waits(g: &mut crate::game::Game, op: DoorOpId) -> bool {
     let r = &g.tab.doortools_door_op[op];
     if r.word.is_some() || r.hold == 2.0 {
         return false;
@@ -220,7 +220,7 @@ pub fn waits(g: &mut crate::game::Game, op: DoorOpId) -> bool {
 }
 
 /// This man of the order is on his mark with his hands his own. (showwhy.ts standsFree)
-pub fn stands_free(g: &crate::game::Game, seat: &crate::seats::SeatRef, op: DoorOpId, gd: GuardId) -> bool {
+fn stands_free(g: &crate::game::Game, seat: &crate::seats::SeatRef, op: DoorOpId, gd: GuardId) -> bool {
     if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].script.is_none() || crate::control::man::blind(g, gd) {
         return false;
     }
@@ -239,7 +239,7 @@ pub fn stands_free(g: &crate::game::Game, seat: &crate::seats::SeatRef, op: Door
 }
 
 /// A mate of the order in reach of his hand ahead of him, nearer the door and in front of his chest. (showwhy.ts manAhead)
-pub fn man_ahead(g: &crate::game::Game, op: DoorOpId, gd: GuardId) -> bool {
+fn man_ahead(g: &crate::game::Game, op: DoorOpId, gd: GuardId) -> bool {
     let reach = g.k.showwhy.squeeze_reach;
     let c = g.gd[gd].ch;
     let (pos, yaw) = (g.ch[c].pos, g.ch[c].body_yaw);
@@ -262,7 +262,7 @@ pub fn man_ahead(g: &crate::game::Game, op: DoorOpId, gd: GuardId) -> bool {
 }
 
 /// STACK: the squeezes up the file of each order made and waiting, then the lead's fist. (showwhy.ts stacks)
-pub fn stacks(g: &mut crate::game::Game, pl: PlayerId) {
+fn stacks(g: &mut crate::game::Game, pl: PlayerId) {
     let k = g.k.showwhy;
     let t = g.time;
     let mut i = 0;
@@ -584,7 +584,7 @@ pub fn show_why_tick(g: &mut crate::game::Game) {
 }
 
 /// A line for this man to say when he can; two at the most wait. (showwhy.ts owe)
-pub fn owe(m: &mut crate::showwhy::Mem, text: &str, why: crate::showwhy::Why, by: f64) {
+fn owe(m: &mut crate::showwhy::Mem, text: &str, why: crate::showwhy::Why, by: f64) {
     if m.owed.len() < 2 && !m.owed.iter().any(|o| o.text == text) {
         m.owed.push(Owed { text: String::from(text), why, by });
     }

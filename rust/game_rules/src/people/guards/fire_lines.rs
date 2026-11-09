@@ -70,7 +70,7 @@ pub fn point_in_view(g: &mut crate::game::Game, gd: GuardId, p: V3, range: Optio
 }
 
 /// A light going out that this man's eye has a line to: the fixture, or the floor under it. No cone. (guards.ts lightOutSeen)
-pub fn light_out_seen(g: &mut crate::game::Game, gd: GuardId, e: crate::guards::LightOutSeenE) -> bool {
+pub(super) fn light_out_seen(g: &mut crate::game::Game, gd: GuardId, e: crate::guards::LightOutSeenE) -> bool {
     let c = g.gd[gd].ch;
     let eye = bone_or(g, c, crate::character::Bone::Head, 1.65);
     let src: V3 = match e.from { Some(f) => f, None => [e.pos[0], 2.4, e.pos[2]] };
@@ -103,7 +103,7 @@ pub fn witness_kill(g: &mut crate::game::Game, victim: GuardId, how: crate::game
 }
 
 /// What took a man over the alert line just now. (guards.ts alertCause)
-pub fn alert_cause(g: &crate::game::Game, gd: GuardId, seen: bool) -> crate::guards::AlertCause {
+pub(super) fn alert_cause(g: &crate::game::Game, gd: GuardId, seen: bool) -> crate::guards::AlertCause {
     if seen || g.time - g.gd[gd].last_seen_t < 0.5 { return crate::guards::AlertCause::Sight; }
     if g.gd[gd].witness.heard.last_t >= g.time - 1e-6 { return crate::guards::AlertCause::Sound; }
     if g.time - g.gd[gd].sight_t < 1.0 { return crate::guards::AlertCause::Sight; }
@@ -141,7 +141,7 @@ pub fn door_tamper(g: &crate::game::Game, d: DoorId) -> Option<crate::guards::Do
 // ---------------------------------------------------------------- a found body: the floor's short script
 
 /// Where a man stops by a body: `stand` metres short of it, a free cell he can walk to with the body in view. (guards.ts coverSpot)
-pub fn cover_spot(g: &mut crate::game::Game, gd: GuardId, bp: V3, stand: f64) -> V3 {
+fn cover_spot(g: &mut crate::game::Game, gd: GuardId, bp: V3, stand: f64) -> V3 {
     let from = g.ch[g.gd[gd].ch].pos;
     let reach = crate::scene_collision::nav_grid_find_path(g, from, bp, None, None);
     let foot: V3 = match reach.as_ref().and_then(|r| r.last()) { Some(w) => *w, None => v3::copy(from) };
@@ -168,7 +168,7 @@ pub fn cover_spot(g: &mut crate::game::Game, gd: GuardId, bp: V3, stand: f64) ->
 }
 
 /// Where a man widens out to from a body: his arm of a fan dealt round it; None = he lets it go where he stands. (guards.ts fanSpot)
-pub fn fan_spot(g: &mut crate::game::Game, gd: GuardId, b: GuardId, bp: V3) -> Option<V3> {
+fn fan_spot(g: &mut crate::game::Game, gd: GuardId, b: GuardId, bp: V3) -> Option<V3> {
     let from = g.ch[g.gd[gd].ch].pos;
     let k = g.gd[b].body_fan;
     g.gd[b].body_fan = k + 1.0;
@@ -253,7 +253,7 @@ pub fn reset_chase(g: &mut crate::game::Game, gd: GuardId) {
 }
 
 /// One frame of a man's part in the found-body script: his move speed and aim point, or None when it no longer applies. (guards.ts bodyAftermath)
-pub fn body_aftermath(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<crate::guards::BodyAftermath> {
+pub(super) fn body_aftermath(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<crate::guards::BodyAftermath> {
     use crate::game::{GuardBodyDutyRole as Role, GuardBodyDutyStage as Stage};
     let d0 = g.gd[gd].body_duty.unwrap();
     let (b, role, stage, c) = (d0.body, d0.role, d0.stage, g.gd[gd].ch);
@@ -385,7 +385,7 @@ pub fn body_aftermath(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option
 }
 
 /// The fix a man is left with the frame Sam goes out of sight: led 0.9 s along his way, as far as the floor is open. (guards.ts leadFix)
-pub fn lead_fix(g: &mut crate::game::Game, from: V3, vel: V3) -> V3 {
+pub(super) fn lead_fix(g: &mut crate::game::Game, from: V3, vel: V3) -> V3 {
     let p: V3 = [from[0], 0.0, from[2]];
     let (vx, vz) = (vel[0], vel[2]);
     let sp = m::hyp2(vx, vz);
@@ -438,7 +438,7 @@ pub fn clear_shot(g: &mut crate::game::Game, c_2: CharId, to: V3) -> bool {
 }
 
 /// A pinned man's one question: his side's rounds have nothing for a pane, and standing glass is the first thing on the line. (guards.ts paneFirst)
-pub fn pane_first(g: &mut crate::game::Game, c_2: CharId, to: V3) -> bool {
+pub(super) fn pane_first(g: &mut crate::game::Game, c_2: CharId, to: V3) -> bool {
     if crate::glasspen::shot_energy(g, c_2, None) != Some(0.0) { return false; }
     let from = shot_origin(g, c_2);
     let d = v3::sub(to, from);
@@ -455,7 +455,7 @@ pub fn pane_first(g: &mut crate::game::Game, c_2: CharId, to: V3) -> bool {
 // ---------------------------------------------------------------- muzzle discipline
 
 /// Where a colleague stands against the aim segment: how far along, his signed offset, his 3D distance, the clearance he is owed. (guards.ts lineGeom)
-pub fn line_geom(g: &crate::game::Game, from: V3, to: V3, o: GuardId) -> Option<crate::guards::LineGeom> {
+fn line_geom(g: &crate::game::Game, from: V3, to: V3, o: GuardId) -> Option<crate::guards::LineGeom> {
     let c = g.gd[o].ch;
     let h = hips_of(g, c);
     let y0 = g.ch[c].pos[1] + 0.05;
@@ -566,7 +566,7 @@ pub fn muzzle_check(g: &mut crate::game::Game, gd: GuardId, to: Option<V3>, dt: 
 }
 
 /// In a fight, the side-step that opens his line round colleague `o`: under way, none from here, or nobody to step round. (guards.ts lineStep)
-pub fn line_step(g: &mut crate::game::Game, gd: GuardId, aim_at: V3, o: Option<GuardId>, dt: f64) -> crate::guards::LineStep {
+pub(super) fn line_step(g: &mut crate::game::Game, gd: GuardId, aim_at: V3, o: Option<GuardId>, dt: f64) -> crate::guards::LineStep {
     let c = g.gd[gd].ch;
     if let Some(ob) = o {
         if g.time - g.gd[gd].line_bark_t > LINE_BARK_SECS && g.time - g.gd[ob].line_bark_t > LINE_BARK_SECS {

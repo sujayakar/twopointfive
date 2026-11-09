@@ -21,7 +21,7 @@ struct Given {
 }
 
 /// The side (Doors.side's sign) of the closed leaf a floor point is on, 0 on the leaf's own line.   (doorswing.ts sideOf)
-pub fn side_of(g: &mut crate::game::Game, d: DoorId, x: f64, z: f64) -> f64 {
+fn side_of(g: &mut crate::game::Game, d: DoorId, x: f64, z: f64) -> f64 {
     let c = g.dr[d].def.closed_dir;
     let ux = m::cos(c);
     let uz = m::sin(c);
@@ -40,12 +40,12 @@ pub fn side_of(g: &mut crate::game::Game, d: DoorId, x: f64, z: f64) -> f64 {
 }
 
 /// A rectangle's middle.   (doorswing.ts mid)
-pub fn mid(r: crate::doorswing::Rect) -> [f64; 2] {
+fn mid(r: crate::doorswing::Rect) -> [f64; 2] {
     [(r.x0 + r.x1) / 2.0, (r.z0 + r.z1) / 2.0]
 }
 
 /// A rectangle's area.   (doorswing.ts area)
-pub fn area(r: crate::doorswing::Rect) -> f64 {
+fn area(r: crate::doorswing::Rect) -> f64 {
     m::abs((r.x1 - r.x0) * (r.z1 - r.z0))
 }
 
@@ -87,7 +87,7 @@ fn roof_points(boxes: &[BoxNumbers], def: &crate::doors::DoorDef, s: f64) -> f64
 }
 
 /// How many of ROOF_PTS points just off face `s` of a door have a roof over them.   (doorswing.ts roofOver)
-pub fn roof_over(g: &crate::game::Game, d: DoorId, s: f64) -> f64 {
+fn roof_over(g: &crate::game::Game, d: DoorId, s: f64) -> f64 {
     let list = g.col.boxes.clone();
     let boxes: Vec<BoxNumbers> = list.iter().map(|&b| seam_box_numbers(g, b)).collect();
     roof_points(&boxes, &g.dr[d].def, s)
@@ -107,7 +107,7 @@ fn outside_side(p: f64, mi: f64) -> f64 {
 }
 
 /// The open-air side of an outside door, 0 for one not marked `exterior`, or roofed on both faces or neither.   (doorswing.ts outsideOf)
-pub fn outside_of(g: &crate::game::Game, d: DoorId) -> f64 {
+fn outside_of(g: &crate::game::Game, d: DoorId) -> f64 {
     if !g.dr[d].def.exterior.unwrap_or(false) {
         return 0.0;
     }
@@ -151,7 +151,7 @@ fn floors_flood(comp: &mut [i32], sizes: &mut Vec<f64>, wall: &[u8], w: usize, h
 }
 
 /// The nav cells either face of every door opens on with every doorway shut: per door, the cells reachable off each face.   (doorswing.ts floors)
-pub fn floors(g: &mut crate::game::Game) -> JsMap<DoorId, crate::doorswing::FloorsValue> {
+fn floors(g: &mut crate::game::Game) -> JsMap<DoorId, crate::doorswing::FloorsValue> {
     let (wf, hf, cs) = (g.col.nav.w, g.col.nav.h, g.col.nav.cell);
     let (w, h) = (wf as usize, hf as usize);
     let mut wall = g.col.nav.blocked.clone();
@@ -260,7 +260,7 @@ fn leaf_flood(g: &mut Game, known: &mut [i8], n_all: usize, na: usize, at: [f64;
 }
 
 /// How much floor on face `s` of a door (m²) a man reaches the doorway from with no leaf there and not with the leaf open on that face; −1 = nowhere to stand at the doorway.   (doorswing.ts leafCut)
-pub fn leaf_cut(g: &mut crate::game::Game, d: DoorId, s: f64) -> f64 {
+fn leaf_cut(g: &mut crate::game::Game, d: DoorId, s: f64) -> f64 {
     let stop = if s > 0.0 { g.dr[d].max_auth } else { -g.dr[d].min_auth };
     if stop < 0.9 {
         return 0.0;
@@ -339,7 +339,7 @@ pub fn leaf_cut(g: &mut crate::game::Game, d: DoorId, s: f64) -> f64 {
 }
 
 /// Whether a leaf swung open on face `s`, as far as it rests, meets nothing of the level on its way.   (doorswing.ts leafSwings)
-pub fn leaf_swings(g: &mut crate::game::Game, d: DoorId, s: f64) -> bool {
+fn leaf_swings(g: &mut crate::game::Game, d: DoorId, s: f64) -> bool {
     let stop = m::min(if s > 0.0 { g.dr[d].max_auth } else { -g.dr[d].min_auth }, LEAF_REST);
     let c = g.dr[d].def.closed_dir;
     let w = g.dr[d].def.width;

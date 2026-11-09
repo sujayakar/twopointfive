@@ -27,19 +27,19 @@ pub fn flame_of(g: &crate::game::Game, def: &crate::weapons::WeaponDef) -> crate
 }
 
 /// A palm under a handguard, fingers wrapped across it; `z`: how far down the bore the wrist is.   (gunlook.ts under)
-pub fn under(z: f64, x: Option<f64>, y: Option<f64>) -> crate::gunlook::LongModelGripL {
+fn under(z: f64, x: Option<f64>, y: Option<f64>) -> crate::gunlook::LongModelGripL {
     let x = x.unwrap_or(0.099);
     let y = y.unwrap_or(-0.059);
     LongModelGripL { off: [x, y, z], fingers: [-0.48, -0.11, 0.19], back: [0.45, -0.85, -0.25] }
 }
 
 /// A long gun's model by its id; None: the group draws its own parts.   (gunlook.ts longModel)
-pub fn long_model(g: &crate::game::Game, id_2: Option<crate::weapons::GunModelId>) -> Option<crate::gunlook::LongModel> {
+pub(super) fn long_model(g: &crate::game::Game, id_2: Option<crate::weapons::GunModelId>) -> Option<crate::gunlook::LongModel> {
     long_row(id_2?)
 }
 
 /// A hand gun's model by its id.   (gunlook.ts pistolModel)
-pub fn pistol_model(g: &crate::game::Game, id_2: Option<crate::weapons::GunModelId>) -> Option<crate::gunlook::PistolModel> {
+pub(super) fn pistol_model(g: &crate::game::Game, id_2: Option<crate::weapons::GunModelId>) -> Option<crate::gunlook::PistolModel> {
     pistol_row(id_2?)
 }
 

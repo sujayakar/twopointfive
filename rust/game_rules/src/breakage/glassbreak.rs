@@ -119,7 +119,7 @@ pub fn glass_break_asking<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game
 }
 
 /// a question or a rule of the module's, over this game's block and the copy of its box world as it stands: `fn_` gets the block's slot and the world's, and asks `::sim::panes_*` under the context set here (glassbreak.ts GlassBreak.ask)
-pub fn glass_break_ask<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, fn_: &mut dyn FnMut(&mut crate::game::Game, f64, f64) -> T) -> T {
+fn glass_break_ask<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, fn_: &mut dyn FnMut(&mut crate::game::Game, f64, f64) -> T) -> T {
     crate::scene_collision::window(g, &mut |g| {
         crate::scene_collision::rules_statics(g);
         if !crate::scene_collision::standing(g) { panic!("glass: the box world's copy will not stand for the rule: rust/sim/src/panes.rs has nothing to ask"); }
@@ -171,7 +171,7 @@ pub fn glass_break_stood(g: &mut crate::game::Game) {
 }
 
 /// metres on the plan from pane b to the nearest door's opening; Infinity with no door (glassbreak.ts GlassBreak.doorGap)
-pub fn glass_break_door_gap(g: &mut crate::game::Game, b: BoxId) -> f64 {
+fn glass_break_door_gap(g: &mut crate::game::Game, b: BoxId) -> f64 {
     let (yaw, bc, bh) = { let r = seam_box(g, b); (r.yaw, r.c, r.h) };
     let cs = m::cos(yaw); let sn = m::sin(yaw); let wide = bh[0] >= bh[2]; let hu = m::max(bh[0], bh[2]);
     let ax = if wide { cs } else { sn }; let az = if wide { -sn } else { cs };
@@ -187,7 +187,7 @@ pub fn glass_break_door_gap(g: &mut crate::game::Game, b: BoxId) -> f64 {
 }
 
 /// what the last call let go, handed on in the order it went; the list is read whole first, since what is told of a fragment may ask the module anything (glassbreak.ts GlassBreak.drain)
-pub fn glass_break_drain(g: &mut crate::game::Game) {
+fn glass_break_drain(g: &mut crate::game::Game) {
     let n = ::sim::panes::out_n();
     if n == 0 { return; }
     let mut list: Vec<GlassBreakLetGoF> = Vec::with_capacity(n);
@@ -232,7 +232,7 @@ pub fn glass_break_drain(g: &mut crate::game::Game) {
 }
 
 /// a fragment the rule let go, told to the game: its one way out (glassbreak.ts GlassBreak.letGo)
-pub fn glass_break_let_go(g: &mut crate::game::Game, f: &crate::glassbreak::GlassBreakLetGoF) {
+fn glass_break_let_go(g: &mut crate::game::Game, f: &crate::glassbreak::GlassBreakLetGoF) {
     let key = f.key;
     let v = glass_break_geom(g, f.bi);
     if f.heard {
@@ -250,20 +250,20 @@ pub fn glass_break_let_go(g: &mut crate::game::Game, f: &crate::glassbreak::Glas
 }
 
 /// a pane's frame, for what the host still makes of a fragment (glassbreak.ts GlassBreak.geom)
-pub fn glass_break_geom(g: &mut crate::game::Game, bi: f64) -> crate::glassbreak::PaneFrame {
+fn glass_break_geom(g: &mut crate::game::Game, bi: f64) -> crate::glassbreak::PaneFrame {
     let box_ = box_at(g, bi).unwrap();
     let st = row_at(g, bi);
     PaneFrame { key: st.key as f64, u_axis: if st.u_axis == 0 { 0.0 } else { 2.0 }, ht: st.ht, box_ }
 }
 
 /// pane-local (u, v) → world (glassbreak.ts GlassBreak.world)
-pub fn glass_break_world(g: &mut crate::game::Game, v: crate::glassbreak::PaneFrame, u: f64, v_2: f64, w: Option<f64>) -> V3 {
+fn glass_break_world(g: &mut crate::game::Game, v: crate::glassbreak::PaneFrame, u: f64, v_2: f64, w: Option<f64>) -> V3 {
     let (yaw, c) = { let b = seam_box(g, v.box_); (b.yaw, b.c) };
     world_on(yaw, c, v.u_axis, u, v_2, w.unwrap_or(0.0))
 }
 
 /// world → pane-local (u, v) (glassbreak.ts GlassBreak.uv)
-pub fn glass_break_uv(g: &mut crate::game::Game, v: crate::glassbreak::PaneFrame, x: V3) -> [f64; 2] {
+fn glass_break_uv(g: &mut crate::game::Game, v: crate::glassbreak::PaneFrame, x: V3) -> [f64; 2] {
     let (yaw, c) = { let b = seam_box(g, v.box_); (b.yaw, b.c) };
     uv_on(yaw, c, v.u_axis, x)
 }
@@ -288,7 +288,7 @@ fn normal_on(yaw: f64, u_axis: f64) -> V3 {
 }
 
 /// no shards consumer attached: thin Debris boxes over the fragment and a burst of pale chips (glassbreak.ts GlassBreak.standIn)
-pub fn glass_break_stand_in(g: &mut crate::game::Game, v: crate::glassbreak::PaneFrame, f: &crate::glassbreak::GlassFragment, key: f64, bi: f64) {
+fn glass_break_stand_in(g: &mut crate::game::Game, v: crate::glassbreak::PaneFrame, f: &crate::glassbreak::GlassFragment, key: f64, bi: f64) {
     let mut uv = Vec::with_capacity(f.outline.len());
     for p in &f.outline { uv.push(glass_break_uv(g, v, *p)); }
     let cen = gp_poly_area(&uv).cen;
@@ -523,7 +523,7 @@ pub fn glass_break_update(g: &mut crate::game::Game, dt: f64) {
 }
 
 /// a wind source through each shot-out exterior pane, its speed each frame the storm at that face times the open share (glassbreak.ts GlassBreak.updateGusts)
-pub fn glass_break_update_gusts(g: &mut crate::game::Game) {
+fn glass_break_update_gusts(g: &mut crate::game::Game) {
     let swv = crate::wind::wind_storm_wind(g);
     let sw = swv.map(|s| [s[0], s[2]]);
     let storm_speed = match sw { Some(s) => m::hyp2(s[0], s[1]), None => 0.0 };
@@ -588,7 +588,7 @@ fn seed_mix_gust(key: f64) -> f64 { (js::to_i32(0x61A55 as f64) ^ m::imul(js::to
 
 // ---------------------------------------------------------------- queries
 /// nothing of a pane's is in the block: the panes part's first word, `used` (glassbreak.ts GlassBreak.untouched; `panes_untouched` takes no slot)
-pub fn glass_break_untouched(g: &crate::game::Game) -> bool {
+fn glass_break_untouched(g: &crate::game::Game) -> bool {
     ::sim::state::state_read(g.sim).panes.used == 0
 }
 
@@ -608,7 +608,7 @@ pub fn glass_break_open_sig(g: &mut crate::game::Game) -> f64 {
 }
 
 /// open fraction of pane bi by area, 0 = whole (glassbreak.ts GlassBreak.openFraction)
-pub fn glass_break_open_fraction(g: &mut crate::game::Game, bi: f64) -> f64 {
+fn glass_break_open_fraction(g: &mut crate::game::Game, bi: f64) -> f64 {
     if glass_break_untouched(g) { 0.0 } else { ::sim::panes::open_fraction(g.sim, js::to_u32(bi)) }
 }
 
@@ -633,7 +633,7 @@ pub fn glass_break_pane_info(g: &mut crate::game::Game, bi: f64) -> Option<crate
 }
 
 /// the panes that have been touched, as a tool or the picture reads them (a copy, made when asked; nothing here is kept) (glassbreak.ts GlassBreak.panes)
-pub fn glass_break_panes(g: &mut crate::game::Game) -> JsMap<crate::Num, crate::glassbreak::PaneState> {
+fn glass_break_panes(g: &mut crate::game::Game) -> JsMap<crate::Num, crate::glassbreak::PaneState> {
     let mut out = JsMap::new();
     if glass_break_untouched(g) { return out; }
     let s = g.sim as f64;
@@ -648,7 +648,7 @@ pub fn glass_break_panes(g: &mut crate::game::Game) -> JsMap<crate::Num, crate::
 }
 
 /// a pane as a tool holds it: the pane as it stands when asked (glassbreak.ts GlassBreak.handle; a value here, no Proxy: see the notes)
-pub fn glass_break_handle(g: &mut crate::game::Game, bi: f64) -> crate::glassbreak::PaneState {
+fn glass_break_handle(g: &mut crate::game::Game, bi: f64) -> crate::glassbreak::PaneState {
     let s = g.sim;
     let r = ::sim::panes::row_index(s, js::to_u32(bi));
     assert!(r >= 0, "glass: pane {} has no row", bi);
@@ -656,7 +656,7 @@ pub fn glass_break_handle(g: &mut crate::game::Game, bi: f64) -> crate::glassbre
 }
 
 /// row r of the module, read out as the TypeScript's PaneState (glassbreak.ts GlassBreak.rowState)
-pub fn glass_break_row_state(g: &mut crate::game::Game, s: f64, r: f64) -> crate::glassbreak::PaneState {
+fn glass_break_row_state(g: &mut crate::game::Game, s: f64, r: f64) -> crate::glassbreak::PaneState {
     let s = s as usize;
     let st = *::sim::panes::row_ref(s, r as usize);   // (a read: the row's words as they stand, and no reference held over what comes next)
     let flags = st.w[GW_FLAGS as usize];
@@ -709,7 +709,7 @@ pub fn glass_break_row_state(g: &mut crate::game::Game, s: f64, r: f64) -> crate
 }
 
 /// the record for the renderer, GB_RECORD_ROWS vec4 rows: reads the pane, writes nothing of it (glassbreak.ts GlassBreak.fill)
-pub fn glass_break_fill(g: &mut crate::game::Game, bi: f64, dst: &mut Vec<f32>, off: f64) -> bool {
+fn glass_break_fill(g: &mut crate::game::Game, bi: f64, dst: &mut Vec<f32>, off: f64) -> bool {
     let s = g.sim;
     let r = ::sim::panes::row_index(s, js::to_u32(bi));
     if r < 0 { return false; }
@@ -784,7 +784,7 @@ pub fn glass_break_reset(g: &mut crate::game::Game) {
 }
 
 /// row r's static (glassbreak.ts s0Bi)
-pub fn s0_bi(g: &mut crate::game::Game, s: f64, r: f64) -> f64 {
+fn s0_bi(g: &mut crate::game::Game, s: f64, r: f64) -> f64 {
     ::sim::panes::row_ref(s as usize, r as usize).w[0] as f64
 }
 

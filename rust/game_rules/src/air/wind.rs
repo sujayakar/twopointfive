@@ -23,7 +23,7 @@ const CUT_K: f64 = 8.0;
 const CORE_K: f64 = 9.0;
 
 /// A number of the field's shape, read off the module once. (wind.ts shape)
-pub fn shape(g: &mut crate::game::Game, i: f64) -> f64 {
+fn shape(g: &mut crate::game::Game, i: f64) -> f64 {
     if g.m.wind.shape.is_none() {
         g.m.wind.shape = Some(::sim::wind::SHAPE.to_vec());
     }
@@ -36,22 +36,22 @@ pub fn wind_of(g: &crate::game::Game) -> f64 {
 }
 
 /// A diffuser's air at p, m/s: rust/sim's. (wind.ts jetVel)
-pub fn jet_vel(pos: V3, dir: V3, speed: f64, reach: f64, tan_spread: f64, r0: f64, d_max: f64, floor_y: f64, p: V3, out: Option<&mut V3>) -> V3 {
+fn jet_vel(pos: V3, dir: V3, speed: f64, reach: f64, tan_spread: f64, r0: f64, d_max: f64, floor_y: f64, p: V3, out: Option<&mut V3>) -> V3 {
     put(out, ::sim::wind::jet_vel(pos, dir, speed, reach, tan_spread, r0, d_max, floor_y, p))
 }
 
 /// (wind.ts inRect)
-pub fn in_rect(x: f64, z: f64, r: &[f64]) -> bool {
+fn in_rect(x: f64, z: f64, r: &[f64]) -> bool {
     x > r[0] && z > r[1] && x < r[2] && z < r[3]
 }
 
 /// The storm's air at p: rust/sim's. (wind.ts stormVel)
-pub fn storm_vel(wind: V3, interior: &[f64], annex: &[f64], p: V3, out: Option<&mut V3>) -> V3 {
+fn storm_vel(wind: V3, interior: &[f64], annex: &[f64], p: V3, out: Option<&mut V3>) -> V3 {
     put(out, ::sim::wind::storm_vel(wind, interior, annex, p))
 }
 
 /// The storm's air roof by roof, the first four of `roofs`: rust/sim's. (wind.ts stormVelRoofs)
-pub fn storm_vel_roofs(wind: V3, roofs: &[Vec<f64>], p: V3, out: Option<&mut V3>) -> V3 {
+fn storm_vel_roofs(wind: V3, roofs: &[Vec<f64>], p: V3, out: Option<&mut V3>) -> V3 {
     let n = core::cmp::min(roofs.len(), 4);
     let mut flat = [0.0; 16];
     for i in 0..n {
@@ -66,12 +66,12 @@ pub fn storm_vel_roofs(wind: V3, roofs: &[Vec<f64>], p: V3, out: Option<&mut V3>
 }
 
 /// Smooth value noise in [−1, 1] at x, per seed: rust/sim's. The seed crosses as a u32, as it does into the module. (wind.ts vnoise)
-pub fn vnoise(seed: f64, x: f64) -> f64 {
+fn vnoise(seed: f64, x: f64) -> f64 {
     ::sim::wind::vnoise(js::to_u32(seed), x)
 }
 
 /// Whether a vent's own cycle has it blowing at game time `t`. (wind.ts ventDue)
-pub fn vent_due(v: &crate::scene_level::VentDef, t: f64) -> bool {
+fn vent_due(v: &crate::scene_level::VentDef, t: f64) -> bool {
     let period = match v.period {
         Some(p) if p > 0.0 => p,
         _ => return true,
@@ -186,7 +186,7 @@ pub fn wind_new(g: &mut crate::game::Game) -> crate::wind::Wind {
 }
 
 /// The gust through an exterior door: a jet from just outside the frame, chest height, along `inward`. (wind.ts Wind.doorSource)
-pub fn wind_door_source(g: &mut crate::game::Game, d: DoorId, inward: V3) -> WindWindSourceId {
+fn wind_door_source(g: &mut crate::game::Game, d: DoorId, inward: V3) -> WindWindSourceId {
     let fc = g.dr[d].frame_centre;
     let reach = g.k.wind.door_reach;
     let d_max = shape(g, CUT_K) * reach;
@@ -254,7 +254,7 @@ fn under_any(roofs: &[[f64; 4]], x: f64, z: f64) -> bool {
 }
 
 /// Weather kinds: the footprints the storm's air keeps out of, and which way every exterior door's gust blows. `None` = the office's two. (wind.ts Wind.reroof)
-pub fn wind_reroof(g: &mut crate::game::Game, roofs: Option<&[[f64; 4]]>, own: Option<bool>) {
+pub(super) fn wind_reroof(g: &mut crate::game::Game, roofs: Option<&[[f64; 4]]>, own: Option<bool>) {
     // weather.ts:240 `wind?.reroof`: before the constructor there is no Wind; here a blank one, whose `storm` names no row. A real one holds at least the storm.
     if g.wind.all.is_empty() {
         return;
@@ -331,14 +331,14 @@ pub fn wind_reroof(g: &mut crate::game::Game, roofs: Option<&[[f64; 4]]>, own: O
 }
 
 /// The storm record says whether the one field outdoors is on, and carries the roofs it blows between. (wind.ts Wind.syncField)
-pub fn wind_sync_field(g: &mut crate::game::Game) {
+fn wind_sync_field(g: &mut crate::game::Game) {
     let st = g.wind.storm;
     g.tab.wind_wind_source[st].field = Some(true);
     g.tab.wind_wind_source[st].roofs = wind_field_roofs(g);
 }
 
 /// The roofs the storm blows between one by one, where the switch is up and the level has three or four of its own. (wind.ts Wind.fieldRoofs)
-pub fn wind_field_roofs(g: &crate::game::Game) -> Option<Vec<Vec<f64>>> {
+fn wind_field_roofs(g: &crate::game::Game) -> Option<Vec<Vec<f64>>> {
     match &g.wind.lv_roofs {
         Some(r) if r.len() > 2 => Some(r.clone()),
         _ => None,
@@ -346,7 +346,7 @@ pub fn wind_field_roofs(g: &crate::game::Game) -> Option<Vec<Vec<f64>>> {
 }
 
 /// The share 0‥1 of its own vector the storm's field has at ground point (x, z) under the roofs in force. (wind.ts Wind.stormShare)
-pub fn wind_storm_share(g: &mut crate::game::Game, x: f64, z: f64) -> f64 {
+fn wind_storm_share(g: &mut crate::game::Game, x: f64, z: f64) -> f64 {
     let roofs = g.tab.wind_wind_source[g.wind.storm].roofs.clone();
     wind_share_under(g, x, z, roofs.as_deref())
 }
@@ -382,7 +382,7 @@ pub fn wind_storm_drift(g: &mut crate::game::Game) -> Option<crate::scene_collis
 }
 
 /// Does the weather blow at all. (wind.ts Wind.blows)
-pub fn wind_blows(g: &crate::game::Game) -> bool {
+fn wind_blows(g: &crate::game::Game) -> bool {
     if !crate::weather::weather_enabled(g) {
         return false;
     }
@@ -517,13 +517,13 @@ pub fn wind_update(g: &mut crate::game::Game, dt: f64) {
 }
 
 /// The air's velocity at p this frame, m/s: the sum over every active source. (wind.ts Wind.at)
-pub fn wind_at(g: &crate::game::Game, p: V3, out: Option<&mut V3>) -> V3 {
+pub(super) fn wind_at(g: &crate::game::Game, p: V3, out: Option<&mut V3>) -> V3 {
     let sum = wind_sum(g, p);
     put(out, sum)
 }
 
 /// The sum itself, of the game as it stands.
-pub fn wind_sum(g: &crate::game::Game, p: V3) -> V3 {
+pub(super) fn wind_sum(g: &crate::game::Game, p: V3) -> V3 {
     let mut sum: V3 = [0.0, 0.0, 0.0];
     for &id in g.wind.active.iter() {
         let s = &g.tab.wind_wind_source[id];
@@ -561,7 +561,7 @@ pub fn wind_fresh(g: &mut crate::game::Game) {
 }
 
 /// One line per source for the panel. (wind.ts Wind.describe)
-pub fn wind_describe(g: &crate::game::Game) -> Vec<String> {
+fn wind_describe(g: &crate::game::Game) -> Vec<String> {
     g.wind
         .all
         .iter()

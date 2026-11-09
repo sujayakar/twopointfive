@@ -5,7 +5,7 @@ use crate::ids::*;
 use crate::m;
 
 /// Is the rule live for this man: not while he is down, nor under the puppet's strings.   (sprintdoor.ts live)
-pub fn live(g: &mut crate::game::Game, pl: crate::sprintdoor::LivePl) -> bool {
+fn live(g: &mut crate::game::Game, pl: crate::sprintdoor::LivePl) -> bool {
     !pl.down && g.puppet.is_none()
 }
 
@@ -97,7 +97,7 @@ pub fn sprint_door_pace(g: &mut crate::game::Game, pl: crate::sprintdoor::DoorSt
 }
 
 /// Is the turn of his shoulder into a leaf (or his head coming back off it) still running.   (sprintdoor.ts sprintDoorTurning)
-pub fn sprint_door_turning(g: &crate::game::Game, pl: crate::sprintdoor::DoorStamps, now: Option<f64>) -> bool {
+fn sprint_door_turning(g: &crate::game::Game, pl: crate::sprintdoor::DoorStamps, now: Option<f64>) -> bool {
     let now = now.unwrap_or(g.time);
     g.k.sprintdoor.lean_secs > 0.0 && now - pl.door_bash_at < g.k.sprintdoor.lean_secs + SETTLE
 }

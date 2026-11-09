@@ -8,7 +8,7 @@ use crate::v3::{self, V3};
 use crate::game::GuardState as St;
 use crate::character::UpperMode;
 
-pub fn patrol(g: &mut Game, gd: GuardId, dt: f64, s: &Sensed) -> Acts {
+pub(in crate::people) fn patrol(g: &mut Game, gd: GuardId, dt: f64, s: &Sensed) -> Acts {
     let &Sensed { c, route, staff, lvl, dist, .. } = s;
     let Acts { mut move_speed, mut upper, .. } = Acts::still();
     let target = g.tab.route[route].points.get(g.gd[gd].wp).copied();

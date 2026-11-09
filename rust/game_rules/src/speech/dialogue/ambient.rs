@@ -13,12 +13,12 @@ fn ambient_fresh() -> AmbientState {
 }
 
 /// The game's ambient state, made if none: the row itself. (dialogue.ts ambientState)
-pub fn ambient_state<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::dialogue::AmbientState {
+fn ambient_state<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::dialogue::AmbientState {
     g.m.dialogue.ambient_by_game.get_or_insert_with(ambient_fresh)
 }
 
 /// Is the floor one the pairs may talk on? (dialogue.ts ambientLive)
-pub fn ambient_live(g: &crate::game::Game) -> bool {
+fn ambient_live(g: &crate::game::Game) -> bool {
     if !g.ai_enabled || g.aside || g.puppet.is_some() { return false; }
     if crate::guards::escalation_of(g) != 0.0 { return false; }
     if g.alarm.episode { return false; }
@@ -28,7 +28,7 @@ pub fn ambient_live(g: &crate::game::Game) -> bool {
 }
 
 /// A calm patrolling staff man with nothing on his hands or mind, not talking, not held by a script. (dialogue.ts chatty)
-pub fn chatty(g: &crate::game::Game, x: GuardId) -> bool {
+fn chatty(g: &crate::game::Game, x: GuardId) -> bool {
     let time = g.time;
     let m = &g.gd[x];
     let calm = m.team == crate::teams::Team::Guard && m.unit.is_none() && m.state == crate::game::GuardState::Patrol
@@ -41,14 +41,14 @@ pub fn chatty(g: &crate::game::Game, x: GuardId) -> bool {
 }
 
 /// Still fit to keep talking (the hold flag is ours by now). (dialogue.ts stillChatty)
-pub fn still_chatty(g: &crate::game::Game, x: GuardId) -> bool {
+fn still_chatty(g: &crate::game::Game, x: GuardId) -> bool {
     let m = &g.gd[x];
     m.state == crate::game::GuardState::Patrol && m.held.is_none() && m.script.is_none() && m.task.is_none()
         && m.body_duty.is_none() && m.awareness < 0.3 && g.guards.contains(&x)
 }
 
 /// A conversation over: the men's holds back as they were, the cooldown from now. (dialogue.ts endAmbient)
-pub fn end_ambient(g: &mut crate::game::Game) {
+fn end_ambient(g: &mut crate::game::Game) {
     let time = g.time;
     let s = ambient_state(g);
     let Some(r) = s.run.take() else { return; };
@@ -66,7 +66,7 @@ pub fn ambient_restart(g: &mut crate::game::Game) {
 }
 
 /// The line of a pair as it will be said: its `own` wording off the office, else its text. (dialogue.ts pairSaid)
-pub fn pair_said(l: &crate::dialogue::PairTalkLinesItem, own: bool) -> String {
+fn pair_said(l: &crate::dialogue::PairTalkLinesItem, own: bool) -> String {
     if own { l.own.as_ref().unwrap_or(&l.text).clone() } else { l.text.clone() }
 }
 

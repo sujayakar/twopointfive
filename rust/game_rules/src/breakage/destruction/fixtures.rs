@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 /// A broken cell's dust: the puff now if the caps allow, else it waits in the burst queue. No dice.   (destruction.ts cellDust)
-pub fn destruction_cell_dust(g: &mut crate::game::Game, p: V3, n: V3, scale: f64, surf: crate::scene_materials::Surf) {
+pub(in crate::breakage) fn destruction_cell_dust(g: &mut crate::game::Game, p: V3, n: V3, scale: f64, surf: crate::scene_materials::Surf) {
     if chaos_of(g) <= 0.0 { return; }
     let r0 = g.stats.destruction.destr_puffs_refused;
     if destruction_dust_puff(g, p, n, scale, surf) { return; }
@@ -20,7 +20,7 @@ pub fn destruction_cell_dust(g: &mut crate::game::Game, p: V3, n: V3, scale: f64
 }
 
 /// A lot of dust from one event: `count` puffs within `spread` of `at`, queued for the frames ahead; the dice move whether or not the queue has room.   (destruction.ts dustBurst)
-pub fn destruction_dust_burst(g: &mut crate::game::Game, at: V3, n: V3, count: f64, scale: f64, surf: crate::scene_materials::Surf, spread: Option<f64>) {
+pub(super) fn destruction_dust_burst(g: &mut crate::game::Game, at: V3, n: V3, count: f64, scale: f64, surf: crate::scene_materials::Surf, spread: Option<f64>) {
     let spread = spread.unwrap_or(0.5);
     if chaos_of(g) <= 0.0 { return; }
     let nn = v3::normalize(n);
@@ -45,7 +45,7 @@ pub fn destruction_dust_burst(g: &mut crate::game::Game, at: V3, n: V3, count: f
 }
 
 /// Small statics near the hit come off the desk.   (destruction.ts clutterNear)
-pub fn destruction_clutter_near(g: &mut crate::game::Game, hit_p: V3, dir: V3, chaos: f64, who: f64) {
+pub(super) fn destruction_clutter_near(g: &mut crate::game::Game, hit_p: V3, dir: V3, chaos: f64, who: f64) {
     let mut list: Vec<Destructible> = Vec::new();
     let near = destruction_near(g, hit_p, &mut list);
     for d in near.iter() {
@@ -61,7 +61,7 @@ pub fn destruction_clutter_near(g: &mut crate::game::Game, hit_p: V3, dir: V3, c
 }
 
 /// Hide the static and hand its box to the debris pool with a shove along `dirn`; over the pool's cap it becomes a burst of chips. Its group rides on the same slot.   (destruction.ts knockOff)
-pub fn destruction_knock_off(g: &mut crate::game::Game, d: &crate::destruction::Destructible, dirn: V3, chaos: f64, kind: crate::debris::ChunkKind, who: Option<f64>) -> bool {
+pub(super) fn destruction_knock_off(g: &mut crate::game::Game, d: &crate::destruction::Destructible, dirn: V3, chaos: f64, kind: crate::debris::ChunkKind, who: Option<f64>) -> bool {
     let who = who.unwrap_or(crate::consts::NOBODY_ID);
     if g.destr.hidden.has(crate::Num(d.i)) || !destruction_take(g, DestructionTakeK::Knock) { return false; }
     let b = d.box_;
@@ -222,7 +222,7 @@ pub fn destruction_tile_drop(g: &mut crate::game::Game, p: V3, chaos: f64, force
 }
 
 /// A fixture a stray round, a blast or a shaken ceiling can put out: a lit, interactive lamp or panel, not one already dead or one a fire holds.   (destruction.ts fixtureLive)
-pub fn destruction_fixture_live(g: &crate::game::Game, t: FixtureId) -> bool {
+pub(super) fn destruction_fixture_live(g: &crate::game::Game, t: FixtureId) -> bool {
     use crate::sim_lightshome::{fixture_broken, fixture_factor, fixture_on, FixtureKind};
     !fixture_broken(g, t)
         && g.tab.sim_lightshome_fixture[t].interactive
@@ -232,7 +232,7 @@ pub fn destruction_fixture_live(g: &crate::game::Game, t: FixtureId) -> bool {
 }
 
 /// Put `t` out: its broken bit, the glass down, counted against the encounter's cap (`force`: a blast ignores the gap, not the cap). Whether a light went.   (destruction.ts killFixture)
-pub fn destruction_kill_fixture(g: &mut crate::game::Game, t: FixtureId, from: V3, why: &str, force: Option<bool>) -> bool {
+pub(super) fn destruction_kill_fixture(g: &mut crate::game::Game, t: FixtureId, from: V3, why: &str, force: Option<bool>) -> bool {
     let force = force.unwrap_or(false);
     if g.destr.fixture_count >= g.k.chaos.loud.fixtures_per_encounter || (!force && g.time - g.destr.last_fixture_t < g.k.chaos.loud.fixture_gap_secs) {
         g.stats.destruction.destr_fixtures_refused += 1;

@@ -20,7 +20,7 @@ fn found_count(g: &Game) -> f64 {
 }
 
 /// The radio's row for this game, restarted on a fresh run: every beat may sound again, and the edges start from where the floor stands.   (dialogue.ts radioState)
-pub fn radio_state<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::dialogue::RadioState {
+fn radio_state<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::dialogue::RadioState {
     if g.m.dialogue.radio_by_game.is_none() {
         g.m.dialogue.radio_by_game = Some(crate::dialogue::RadioState { run: None, done: JsSet::new(), queue: Vec::new(), reply: None, last_at: -100.0, esc: 0.0, blackout: false, found: 0.0 });
     }
@@ -44,7 +44,7 @@ pub fn radio_state<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::dialogue:
 }
 
 /// The run is really the player's and still going, Sam is on his feet, and it is the night she talks him through.   (dialogue.ts radioLive)
-pub fn radio_live(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
+fn radio_live(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
     let s = g.mission.stage;
     !g.aside && g.puppet.is_none() && g.ai_enabled
         && s != crate::game::MissionStage::Done && s != crate::game::MissionStage::Failed
@@ -54,7 +54,7 @@ pub fn radio_live(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
 }
 
 /// Nobody is fighting, and Sam's mouth and hands are free.   (dialogue.ts radioClear)
-pub fn radio_clear(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
+fn radio_clear(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
     !g.guards.iter().any(|&x| g.gd[x].state == crate::game::GuardState::Alert)
         && g.pl[seat.player].holding.is_none()
         && g.pl[seat.player].takedown.is_none()
@@ -96,7 +96,7 @@ pub fn handler_beat(g: &mut crate::game::Game, beat: crate::dialogue::HandlerBea
 }
 
 /// Once a frame: the edges she reacts to, queued beats coming due, and his reply when its moment comes.   (dialogue.ts tickRadio)
-pub fn tick_radio(g: &mut crate::game::Game) {
+pub(super) fn tick_radio(g: &mut crate::game::Game) {
     radio_state(g);
     let esc = crate::guards::escalation_of(g);
     if esc > row(g).esc {

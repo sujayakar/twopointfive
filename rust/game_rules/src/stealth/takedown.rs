@@ -9,7 +9,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{vec, vec::Vec};
 
 /// Which move a blow is, by the side it comes from and the hand that does it. (takedown.ts blowStyle)
-pub fn blow_style(kind: Option<crate::close::CloseKind>, lethal: bool) -> crate::character::BlowStyle {
+fn blow_style(kind: Option<crate::close::CloseKind>, lethal: bool) -> crate::character::BlowStyle {
     use crate::character::BlowStyle;
     use crate::close::CloseKind;
     let rear = kind.is_none() || kind == Some(CloseKind::Behind) || kind == Some(CloseKind::Seat);
@@ -23,7 +23,7 @@ pub fn blow_style(kind: Option<crate::close::CloseKind>, lethal: bool) -> crate:
 }
 
 /// How the man a blow lands on goes down. (takedown.ts fallStyle)
-pub fn fall_style(style: crate::character::BlowStyle) -> crate::character::FallStyle {
+fn fall_style(style: crate::character::BlowStyle) -> crate::character::FallStyle {
     use crate::character::{BlowStyle, FallStyle};
     if style == BlowStyle::Chop {
         FallStyle::Fold
@@ -73,7 +73,7 @@ fn marks_of(by_pos: V3, by_yaw: f64, vic_pos: V3, vic_yaw: f64, neck: Option<V3>
 }
 
 /// No headroom over him: a crouched Sam does not rise into the blow; everybody else stands. (takedown.ts mayRise)
-pub fn may_rise(g: &mut crate::game::Game, by: CharId) -> bool {
+fn may_rise(g: &mut crate::game::Game, by: CharId) -> bool {
     let p = g.player;
     !(by == g.pl[p].ch && g.pl[p].crouch && !crate::player::can_stand(g))
 }
@@ -97,7 +97,7 @@ pub fn take_begin(g: &mut crate::game::Game, by: CharId, gd: GuardId, kind: Opti
 }
 
 /// How far a fall wants clear floor, by its style and which way: direction, metres. (takedown.ts fallWay)
-pub fn fall_way(g: &crate::game::Game, vic: CharId, from: Option<V3>, style: crate::character::FallStyle) -> (V3, f64) {
+fn fall_way(g: &crate::game::Game, vic: CharId, from: Option<V3>, style: crate::character::FallStyle) -> (V3, f64) {
     fall_way_of(g.ch[vic].pos, g.ch[vic].body_yaw, from, style)
 }
 
@@ -119,7 +119,7 @@ fn fall_way_of(p: V3, yaw: f64, from: Option<V3>, style: crate::character::FallS
 }
 
 /// A fall is asked for: its style, where the man who did it stands, and whether the level has room for it. (takedown.ts setFall)
-pub fn set_fall(g: &mut crate::game::Game, vic: CharId, style: crate::character::FallStyle, by: Option<CharId>, ahead: Option<f64>) {
+fn set_fall(g: &mut crate::game::Game, vic: CharId, style: crate::character::FallStyle, by: Option<CharId>, ahead: Option<f64>) {
     use crate::character::FallStyle;
     let ahead = ahead.unwrap_or(0.0);
     let from = by.map(|b| v3::copy(g.ch[b].pos));

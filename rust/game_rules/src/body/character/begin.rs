@@ -168,7 +168,7 @@ fn throw_by_read(lo: f64, full: f64, toss_fast: f64, dist: f64, speed: Option<f6
 // ---- the part
 
 /// the pose under every look-only arm layer that showed this frame; none when none showed   (character.ts underPose)
-pub fn anim_under_pose(g: &mut crate::game::Game, c: CharId) -> Option<crate::anim_skeleton::Pose> {
+pub(super) fn anim_under_pose(g: &mut crate::game::Game, c: CharId) -> Option<crate::anim_skeleton::Pose> {
     let (a, h) = match (g.ch[c].anim.arms_pre, g.ch[c].anim.hand_pre) {
         (Some(a), Some(h)) => (a, h),
         (a, h) => return a.or(h),
@@ -191,7 +191,7 @@ pub fn anim_under_pose(g: &mut crate::game::Game, c: CharId) -> Option<crate::an
 }
 
 /// the animator of a rig: its poses, clips, masks, and everything measured off the clips; then his phase off the game's die   (character.ts CharacterAnimator)
-pub fn anim_new(g: &mut crate::game::Game, ch: RigId) -> crate::character::Anim {
+pub(super) fn anim_new(g: &mut crate::game::Game, ch: RigId) -> crate::character::Anim {
     let mut a = crate::character::Anim::blank();
     a.rig = ch;
     a.poses = crate::anim_skeleton::pose_set_new(g, crate::character::ANIM_POSES);
@@ -427,7 +427,7 @@ pub fn anim_new(g: &mut crate::game::Game, ch: RigId) -> crate::character::Anim 
 }
 
 /// the idle and life clocks set off per figure, deterministically, so a room does not breathe in step   (character.ts desync)
-pub fn anim_desync(g: &mut crate::game::Game, c: CharId, seed: f64) {
+pub(super) fn anim_desync(g: &mut crate::game::Game, c: CharId, seed: f64) {
     let a = &mut g.ch[c].anim;
     a.idle_t = desync_hash(seed, 1.0) * 20.0;
     a.life.breath = desync_hash(seed, 2.0) * 6.28;
@@ -535,7 +535,7 @@ pub fn anim_toss_item(g: &mut crate::game::Game, c: CharId, release: Option<f64>
 }
 
 /// a world direction, flattened, in the figure's un-twisted model frame   (character.ts flatModel)
-pub fn anim_flat_model(g: &crate::game::Game, c: CharId, w: V3, fb: V3) -> V3 {
+pub(super) fn anim_flat_model(g: &crate::game::Game, c: CharId, w: V3, fb: V3) -> V3 {
     let d = anim_to_model_d(g, c, [w[0], 0.0, w[2]]);
     let l = m::hyp2(d[0], d[2]);
     if l > 1e-4 { [d[0] / l, 0.0, d[2] / l] } else { fb }
@@ -616,7 +616,7 @@ pub fn anim_reload(g: &mut crate::game::Game, c: CharId, dur: Option<f64>, beat:
 }
 
 /// the hand's keys off a weapon's beat   (character.ts rlBeat)
-pub fn anim_rl_beat(g: &mut crate::game::Game, c: CharId, b: crate::character::ReloadBeat) {
+pub(super) fn anim_rl_beat(g: &mut crate::game::Game, c: CharId, b: crate::character::ReloadBeat) {
     rl_beat_keys(&mut g.ch[c].anim.rl_b, &b);
 }
 
@@ -719,7 +719,7 @@ pub fn anim_nv_cancel(g: &mut crate::game::Game, c: CharId) {
 }
 
 /// the errand under way has the rifle in it   (character.ts kitRifle)
-pub fn anim_kit_rifle(g: &crate::game::Game, c: CharId) -> bool {
+pub(super) fn anim_kit_rifle(g: &crate::game::Game, c: CharId) -> bool {
     use crate::character::KitItem as Kit;
     match &g.ch[c].anim.kit {
         Some(k) => k.from == Some(Kit::Rifle) || k.to == Some(Kit::Rifle),

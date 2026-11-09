@@ -58,7 +58,7 @@ fn gaze_from(head_x: f64, head_z: f64, body_yaw: f64, aim: Option<GazeAim>) -> V
 }
 
 /// FOG.eyes as the count the game uses: from five to the room the renderer has; a row that is no number is five.   (fogofwar.ts fogEyeCount)
-pub fn fog_eye_count(v: f64) -> f64 {
+pub(super) fn fog_eye_count(v: f64) -> f64 {
     if v.is_nan() { FOG_EYES_WAS } else { m::max(FOG_EYES_WAS, m::min(crate::render_fogofwar::FOG_EYES, m::floor(v))) }
 }
 

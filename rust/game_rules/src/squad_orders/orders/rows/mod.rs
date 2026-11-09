@@ -88,10 +88,10 @@ pub fn list(g: &mut Game, r: &'static Row, data: OrderDef) -> OrdersOrderDefId {
 }
 
 /// take the order's row off the menu
-pub fn unlist(g: &mut Game, r: &Row) { crate::orders::squad_orders_unregister(g, r.id) }
+pub(in crate::squad_orders) fn unlist(g: &mut Game, r: &Row) { crate::orders::squad_orders_unregister(g, r.id) }
 
 /// Hand a man his task under this order: `a` with the order's own id (whatever `a.order` held).
-pub fn assign(g: &mut Game, r: &Row, gd: GuardId, a: crate::orders::SquadOrdersAssignA) {
+pub(in crate::squad_orders) fn assign(g: &mut Game, r: &Row, gd: GuardId, a: crate::orders::SquadOrdersAssignA) {
     crate::orders::squad_orders_assign(g, gd, &crate::orders::SquadOrdersAssignA { order: String::from(r.id), ..a });
 }
 
@@ -101,15 +101,15 @@ pub fn frame(g: &mut Game) {
 }
 
 /// the point of the floor an order's target names
-pub fn at(t: &OrderTarget) -> crate::v3::V3 {
+pub(in crate::squad_orders) fn at(t: &OrderTarget) -> crate::v3::V3 {
     match t { OrderTarget::Floor(x) => x.at, OrderTarget::Door(x) => x.at, OrderTarget::None(x) => x.at, OrderTarget::Foe(x) => x.at }
 }
 
 /// `issue` of a row that only opens a page: `give` refuses such a row before it comes to this
-pub fn opens_a_page(_g: &mut Game, _men: &[GuardId], _t: &OrderTarget, _o: Option<&GiveOpts>) -> Option<String> { None }
+fn opens_a_page(_g: &mut Game, _men: &[GuardId], _t: &OrderTarget, _o: Option<&GiveOpts>) -> Option<String> { None }
 
 /// `valid` from a word for why not: none is valid
-pub fn plain_valid(w: Option<String>) -> Result<(), Option<String>> {
+fn plain_valid(w: Option<String>) -> Result<(), Option<String>> {
     match w { Some(w) => Err(Some(w)), None => Ok(()) }
 }
 

@@ -52,7 +52,7 @@ pub fn squad_smoke_stage(g: &mut crate::game::Game, cans: f64) {
 }
 
 /// Where a can thrown from `from` on `sol` comes to rest on open floor: its landing and the run of its bounces. (squadsmoke.ts squadSmokeRest)
-pub fn squad_smoke_rest(from: V3, sol: &crate::throwables::ThrowSolution, roll_k: Option<f64>) -> V3 {
+fn squad_smoke_rest(from: V3, sol: &crate::throwables::ThrowSolution, roll_k: Option<f64>) -> V3 {
     let roll_k = match roll_k { Some(r) => r, None => squadsmoke().roll_k };
     let v = sol.v0;
     let l = sol.land;
@@ -61,7 +61,7 @@ pub fn squad_smoke_rest(from: V3, sol: &crate::throwables::ThrowSolution, roll_k
 }
 
 /// Nothing between a can down at `a` and the spot `b` for its run along the floor. (squadsmoke.ts runClear)
-pub fn run_clear(g: &mut crate::game::Game, a: V3, b: V3) -> bool {
+fn run_clear(g: &mut crate::game::Game, a: V3, b: V3) -> bool {
     let d = v3::dist_xz(a, b);
     if d < 0.05 { return true; }
     let rd: V3 = [(b[0] - a[0]) / d, 0.0, (b[2] - a[2]) / d];
@@ -79,7 +79,7 @@ pub fn run_clear(g: &mut crate::game::Game, a: V3, b: V3) -> bool {
 }
 
 /// Has this man a hand for a throw right now. (squadsmoke.ts squadHandFree)
-pub fn squad_hand_free(g: &crate::game::Game, gd: GuardId) -> bool {
+pub(super) fn squad_hand_free(g: &crate::game::Game, gd: GuardId) -> bool {
     let c = g.gd[gd].ch;
     !(g.gd[gd].state == crate::game::GuardState::Dead
         || g.ch[c].anim.lockpick
@@ -95,7 +95,7 @@ fn rest_of(g: &mut Game, from: V3, s: &crate::throwables::ThrowSolution, roll_k:
 }
 
 /// One man's throw to a spot: the hand it leaves, the arc that brings the thing to REST on the spot, where it rests. None: he has none. (squadsmoke.ts squadArcTo)
-pub fn squad_arc_to(g: &mut crate::game::Game, gd: GuardId, at: V3, roll_k: Option<f64>, stood: Option<V3>) -> Option<crate::squadsmoke::SquadArcTo> {
+pub(super) fn squad_arc_to(g: &mut crate::game::Game, gd: GuardId, at: V3, roll_k: Option<f64>, stood: Option<V3>) -> Option<crate::squadsmoke::SquadArcTo> {
     let t = squadsmoke();
     let roll_k = match roll_k { Some(r) => r, None => t.roll_k };
     let to: V3 = [at[0], at[1] + 0.05, at[2]];
@@ -123,7 +123,7 @@ pub fn squad_arc_to(g: &mut crate::game::Game, gd: GuardId, at: V3, roll_k: Opti
 }
 
 /// The man of `men` who would throw it, with his throw: the nearest to the spot with an arc to rest on it. (squadsmoke.ts squadSmokeThrower)
-pub fn squad_smoke_thrower(g: &mut crate::game::Game, men: &[GuardId], at: V3) -> Option<crate::squadsmoke::SquadSmokeThrower> {
+pub(super) fn squad_smoke_thrower(g: &mut crate::game::Game, men: &[GuardId], at: V3) -> Option<crate::squadsmoke::SquadSmokeThrower> {
     let again = squadsmoke().again_secs;
     let key = crate::seats::view_key(g, &crate::seats::here(g));
     let mut order: Vec<GuardId> = men.to_vec();
@@ -144,7 +144,7 @@ pub fn squad_smoke_thrower(g: &mut crate::game::Game, men: &[GuardId], at: V3) -
 }
 
 /// The order's row on the menu: its functions are orders/rows/smokethere.rs, its `issue` the body below. (squadsmoke.ts row)
-pub fn row(g: &mut crate::game::Game) -> OrdersOrderDefId {
+fn row(g: &mut crate::game::Game) -> OrdersOrderDefId {
     let def = crate::orders::rows::def(&crate::orders::rows::smokethere::ORDER, crate::orders::OrderDef {
         hot_key: Some(squadsmoke().order_key),
         targets: vec![crate::orders::TargetKind::Floor],

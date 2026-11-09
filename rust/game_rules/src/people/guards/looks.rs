@@ -35,7 +35,7 @@ fn net_quiet(g: &mut Game, gd: GuardId, dt: f64, eyes_on_foe: bool) -> Option<La
 }
 
 /// every look of the list laid over what his behaviour decided
-pub fn lay(g: &mut Game, gd: GuardId, dt: f64, eyes_on_foe: bool, acts: &mut Acts) {
+pub(super) fn lay(g: &mut Game, gd: GuardId, dt: f64, eyes_on_foe: bool, acts: &mut Acts) {
     for l in LOOKS {
         if let Some(laid) = (l.ask)(g, gd, dt, eyes_on_foe) {
             if laid.aim.is_some() { acts.aim_at = laid.aim; }

@@ -15,7 +15,7 @@ pub fn throwables_new(g: &crate::game::Game, st: Option<crate::Opaque>) -> crate
 }
 
 /// Closest hit among statics + door leaves and props.   (throwables.ts Throwables.ray)
-pub fn throwables_ray(g: &mut crate::game::Game, ro: V3, rd: V3, tmax: f64) -> Option<crate::throwables::ThrowablesRay> {
+fn throwables_ray(g: &mut crate::game::Game, ro: V3, rd: V3, tmax: f64) -> Option<crate::throwables::ThrowablesRay> {
     let st = crate::scene_collision::raycast(g, ro, rd, tmax);
     let ph = crate::props::prop_system_raycast(g, ro, rd, match &st { Some(s) => s.t, None => tmax });
     if let Some(ph) = ph {
@@ -25,7 +25,7 @@ pub fn throwables_ray(g: &mut crate::game::Game, ro: V3, rd: V3, tmax: f64) -> O
 }
 
 /// The rows are the list: where `items` is not the list the rows were last laid in, what left it leaves with its numbers and the rows are laid anew.   (throwables.ts Throwables.sync)
-pub fn throwables_sync(g: &mut crate::game::Game) {
+fn throwables_sync(g: &mut crate::game::Game) {
     if g.items.items == g.items.rows {
         return;
     }
@@ -219,7 +219,7 @@ pub fn throwables_update(g: &mut crate::game::Game, dt: f64) {
 }
 
 /// The box world's copy stood for the walk, with the game's own leaves and the furniture in it. In Rust the walk is always the module's: nothing to decide, nothing to hand back.   (throwables.ts Throwables.world)
-pub fn throwables_world(g: &mut crate::game::Game) {
+fn throwables_world(g: &mut crate::game::Game) {
     let dyn_ = g.col.dynamic_boxes.clone();
     crate::scene_collision::rules_world(g, &dyn_);
     debug_assert!(crate::scene_collision::rules_panes(g) >= 0.0, "the pane's rule is not the module's to ask");
@@ -244,7 +244,7 @@ fn ev_get(i: usize) -> f64 {
 }
 
 /// The module's walk from row `from` down: the hand-over written, the walk asked, the tallies kept, what it listed copied onto `ev`. → the row it hands back, or −1.   (throwables.ts Throwables.walkThere)
-pub fn throwables_walk_there(g: &mut crate::game::Game, dt: f64, from: f64, ev: &mut Vec<f64>) -> f64 {
+fn throwables_walk_there(g: &mut crate::game::Game, dt: f64, from: f64, ev: &mut Vec<f64>) -> f64 {
     let ask = crate::scene_collision::rules_panes(g);
     debug_assert!(ask >= 0.0, "the pane's rule is not the module's to ask");
     let bog = crate::snow_bog::snow_bog_may(g);
@@ -296,7 +296,7 @@ pub fn throwables_walk_there(g: &mut crate::game::Game, dt: f64, from: f64, ev: 
 }
 
 /// What the steps listed, done in the order it was listed: a bounce said by the item's own callback, a share of momentum to a thing of furniture, an item whose time is up taken out.   (throwables.ts Throwables.say)
-pub fn throwables_say(g: &mut crate::game::Game, e: &[f64]) {
+fn throwables_say(g: &mut crate::game::Game, e: &[f64]) {
     if e.is_empty() {
         return;
     }
@@ -500,7 +500,7 @@ pub fn throwables_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
 }
 
 /// A canister that is still something: its fuse not yet gone, or (smoke) gone and still venting.   (throwables.ts liveCan)
-pub fn live_can(g: &mut crate::game::Game, x: ItemId) -> bool {
+fn live_can(g: &mut crate::game::Game, x: ItemId) -> bool {
     let k = item_kind(g, x);
     (k == ItemKind::Smoke || k == ItemKind::Flash || k == ItemKind::Frag) && (!item_fired(g, x) || item_emit_t(g, x) > 0.0)
 }

@@ -6,7 +6,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{format, vec, vec::Vec};
 
 /// The blows a big tool's layer reads at the record's clock: the last that has landed and the next coming, at most two.   (character.ts blowsNear)
-pub fn blows_near(b: &crate::character::BlowsNearB) -> Vec<f64> {
+pub(super) fn blows_near(b: &crate::character::BlowsNearB) -> Vec<f64> {
     let (mut prev, mut next) = (f64::NEG_INFINITY, f64::INFINITY);
     for &blow in &b.blows {
         if blow <= b.t { prev = m::max(prev, blow); } else if !(b.end >= 0.0 && blow > b.end) { next = m::min(next, blow); }
@@ -18,7 +18,7 @@ pub fn blows_near(b: &crate::character::BlowsNearB) -> Vec<f64> {
 }
 
 /// The game's own key tables against what a layer of the module is handed, said by name as an animator is made.   (character.ts layerTablesFit)
-pub fn layer_tables_fit() {
+pub(super) fn layer_tables_fit() {
     let cross_jab = knife_blow();
     let blows: [(&str, usize); 4] = [("cross", cross_jab.cross.keys.len()), ("jab", cross_jab.jab.keys.len()), ("slash", knife_slash().keys.len()), ("back", knife_back().keys.len())];
     for (k, n) in blows {
@@ -36,7 +36,7 @@ pub fn layer_tables_fit() {
 }
 
 /// A swing's tables as the module's layer is handed them, by name and in its order: eleven of numbers, then six of vectors. A table the underhand lacks is the overhand's (`T[n] ?? THR[n]`).   (character.ts throwTables)
-pub fn throw_tables(low: bool) -> crate::character::ThrowTables {
+pub(super) fn throw_tables(low: bool) -> crate::character::ThrowTables {
     let t = thr();
     if !low {
         return ThrowTables {
@@ -130,7 +130,7 @@ pub fn big_off(b: crate::character::BigOffB) -> bool {
 }
 
 /// Where a ray enters a vertical column; -1 for a miss, an origin inside it, or beyond tmax. (character.ts columnEntry)
-pub fn column_entry(ro: V3, rd: V3, tmax: f64, cx: f64, cz: f64, r: f64, bot: f64, top: f64) -> f64 {
+pub(super) fn column_entry(ro: V3, rd: V3, tmax: f64, cx: f64, cz: f64, r: f64, bot: f64, top: f64) -> f64 {
     let ox = ro[0] - cx;
     let oz = ro[2] - cz;
     let a = rd[0] * rd[0] + rd[2] * rd[2];
@@ -168,13 +168,13 @@ pub fn anim_act_shown(g: &crate::game::Game, c: CharId) -> f64 {
 }
 
 /// A MOVES reaction has the trunk and head this frame. (character.ts CharacterAnimator.mvBusy)
-pub fn anim_mv_busy(g: &crate::game::Game, c: CharId) -> bool {
+pub(super) fn anim_mv_busy(g: &crate::game::Game, c: CharId) -> bool {
     let m = &g.ch[c].anim.mvs;
     m.fl_t >= 0.0 || m.st_t >= 0.0 || m.ht_t >= 0.0 || m.dz.x > 0.0 || m.cf.x > 0.0
 }
 
 /// A MOVES reaction that also has his arms: all of them but a soft duck. (character.ts CharacterAnimator.mvHands)
-pub fn anim_mv_hands(g: &crate::game::Game, c: CharId) -> bool {
+pub(super) fn anim_mv_hands(g: &crate::game::Game, c: CharId) -> bool {
     let m = &g.ch[c].anim.mvs;
     (m.fl_t >= 0.0 && !m.fl_soft) || m.st_t >= 0.0 || m.ht_t >= 0.0 || m.dz.x > 0.0 || m.cf.x > 0.0
 }

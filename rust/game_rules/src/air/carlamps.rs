@@ -14,7 +14,7 @@ struct Cand { i: usize, s: usize }
 fn seam_box_row<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 /// What each generator writes for a lamp. (carlamps.ts sigs)
-pub fn sigs() -> Vec<crate::carlamps::LampSig> {
+fn sigs() -> Vec<crate::carlamps::LampSig> {
     let p = crate::scene_gwot_palette::gwot_palette();
     let (white, red) = (p.plastic_white, p.truck_red);
     vec![
@@ -28,18 +28,18 @@ pub fn sigs() -> Vec<crate::carlamps::LampSig> {
 }
 
 /// Three channels within `eps`, each. (carlamps.ts near3)
-pub fn near3(a: &[f64], b: &[f64], eps: f64) -> bool {
+fn near3(a: &[f64], b: &[f64], eps: f64) -> bool {
     m::abs(a[0] - b[0]) <= eps && m::abs(a[1] - b[1]) <= eps && m::abs(a[2] - b[2]) <= eps
 }
 
 /// The box glows at all. (carlamps.ts glows)
-pub fn glows(g: &mut crate::game::Game, b: BoxId) -> bool {
+fn glows(g: &mut crate::game::Game, b: BoxId) -> bool {
     let e = seam_box_row(g, b).emissive;
     e[0] > 0.0 || e[1] > 0.0 || e[2] > 0.0
 }
 
 /// The box is this generator's lamp: size, then glow or paint. (carlamps.ts fits)
-pub fn fits(g: &mut crate::game::Game, b: BoxId, s: crate::carlamps::LampSig) -> bool {
+fn fits(g: &mut crate::game::Game, b: BoxId, s: crate::carlamps::LampSig) -> bool {
     let (rot, h, glow, albedo) = { let x = seam_box_row(g, b); (x.rot, x.h, x.emissive, x.albedo) };
     if rot.is_some() || !near3(&h, &s.h, g.k.carlamps.fit) { return false; }
     if let Some(emissive) = s.emissive { return near3(&glow, &emissive, g.k.carlamps.tone); }
@@ -124,7 +124,7 @@ pub fn dead_lamp(g: &crate::game::Game, t: FixtureId) -> bool {
 }
 
 /// A broken lamp's box painted dark, a whole one as the level has it (`lens`): every frame, from the target's own `broken` bit. (carlamps.ts carLampPaint)
-pub fn car_lamp_paint(g: &mut crate::game::Game, t: FixtureId) {
+pub(super) fn car_lamp_paint(g: &mut crate::game::Game, t: FixtureId) {
     let f = &g.tab.sim_lightshome_fixture[t];
     let (Some(lens), Some(&i)) = (f.lens, f.boxes.first()) else { return };
     let Some(&b) = g.engine.world.statics.get(i as usize) else { return };

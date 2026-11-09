@@ -7,7 +7,7 @@ use crate::v3;
 /// what his eyes have of his man: whether they have him this frame, how far he is, and his body
 pub struct Eyes { pub seen: bool, pub dist: f64, pub body: Option<CharId> }
 
-pub fn eyes(g: &mut Game, gd: GuardId, dt: f64, staff: bool) -> Eyes {
+pub(in crate::people) fn eyes(g: &mut Game, gd: GuardId, dt: f64, staff: bool) -> Eyes {
     let mut seen = false;
     if staff && crate::teams::is_hostile(g, crate::teams::Team::Guard, crate::teams::Team::Operative) {
         acquire_foe(g, gd);

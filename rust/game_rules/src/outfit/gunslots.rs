@@ -12,12 +12,12 @@ fn weapon_row(g: &Game, w: crate::weapons::WeaponId) -> &crate::weapons::WeaponD
 }
 
 /// The check's break path is tooling: BREAK is false in the game. (gunslots.ts gunsBroken)
-pub fn guns_broken() -> bool {
+pub(super) fn guns_broken() -> bool {
     BREAK
 }
 
 /// The pick of that id, or None. (gunslots.ts gunPick)
-pub fn gun_pick(id_2: &str) -> Option<crate::gunslots::GunPick> {
+fn gun_pick(id_2: &str) -> Option<crate::gunslots::GunPick> {
     picks().into_iter().find(|p| p.id == id_2)
 }
 
@@ -34,7 +34,7 @@ pub fn gun_picks(g: &crate::game::Game, slot: crate::gunslots::GunSlot) -> Vec<S
 }
 
 /// The weapons.ts row a pick is on a card with / without the suppressor; the other one where it cannot be had that way or is not enabled. GUNSLOTS.bare is settled true. (gunslots.ts pickRow)
-pub fn pick_row(g: &crate::game::Game, id_2: &str, suppressed: bool) -> Option<crate::weapons::WeaponId> {
+pub(super) fn pick_row(g: &crate::game::Game, id_2: &str, suppressed: bool) -> Option<crate::weapons::WeaponId> {
     let p = gun_pick(id_2)?;
     let order = if suppressed { [p.can, p.bare] } else { [p.bare, p.can] };
     order.into_iter().flatten().find(|&w| weapon_row(g, w).enabled)
@@ -51,7 +51,7 @@ pub fn pick_word(g: &crate::game::Game, id_2: &str, suppressed: Option<bool>) ->
 }
 
 /// Which of the card's gun drawings stands for a pick, by its row's class; None: none carried. (gunslots.ts pickIcon)
-pub fn pick_icon(g: &crate::game::Game, id_2: &str) -> Option<crate::kit::KitWeapon> {
+pub(super) fn pick_icon(g: &crate::game::Game, id_2: &str) -> Option<crate::kit::KitWeapon> {
     let w = match pick_row(g, id_2, true) {
         Some(w) => w,
         None => pick_row(g, id_2, false)?,
@@ -64,7 +64,7 @@ pub fn pick_icon(g: &crate::game::Game, id_2: &str) -> Option<crate::kit::KitWea
 }
 
 /// kit.ts kitStage: he is handed the gun that is not in his hands (None: the pistol alone is his whole kit). GUNSLOTS.on is settled true. (gunslots.ts sideStage)
-pub fn side_stage(g: &mut crate::game::Game, gd: GuardId, row: Option<crate::weapons::WeaponId>) {
+pub(super) fn side_stage(g: &mut crate::game::Game, gd: GuardId, row: Option<crate::weapons::WeaponId>) {
     g.gd[gd].second = None;
     let Some(row) = row else { return };
     if !weapon_row(g, row).enabled { return; }
@@ -77,7 +77,7 @@ pub fn side_stage(g: &mut crate::game::Game, gd: GuardId, row: Option<crate::wea
 }
 
 /// The gun in his hands and the one that is not change places; the row is dealt off his route every frame, so the route is written. (gunslots.ts swap)
-pub fn swap(g: &mut crate::game::Game, gd: GuardId) {
+fn swap(g: &mut crate::game::Game, gd: GuardId) {
     let s = g.gd[gd].second.unwrap();
     let was = g.gd[gd].weapon;
     let c = g.gd[gd].ch;

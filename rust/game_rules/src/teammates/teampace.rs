@@ -6,7 +6,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 
 /// this teammate's pace is the rule's this frame   (teampace.ts teamSlow)
-pub fn team_slow(g: &crate::game::Game, gd: GuardId) -> bool {
+fn team_slow(g: &crate::game::Game, gd: GuardId) -> bool {
     crate::guards::team_paced(g, gd)
 }
 
@@ -47,7 +47,7 @@ fn toward(s: V3, vx: f64, vz: f64, v: f64, pace_cos: f64, x: f64, z: f64) -> boo
 }
 
 /// THIS teammate's walk this frame, m/s: paced on the player   (teampace.ts teamWalkOf)
-pub fn team_walk_of(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> f64 {
+fn team_walk_of(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId) -> f64 {
     let slow = team_walk(g);
     if !g.k.teampace.pacing { return slow; }
     let own = g.tune.player_walk;
@@ -72,12 +72,12 @@ pub fn team_walk_of(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: Gua
 }
 
 /// he is one of the quiet: no run of his own, none behind the player   (teampace.ts quiet)
-pub fn quiet(g: &mut crate::game::Game, gd: GuardId) -> bool {
+fn quiet(g: &mut crate::game::Game, gd: GuardId) -> bool {
     crate::sneak::sneaking(g, gd) || crate::unseen::under_unseen(g, gd) || crate::silent::under_silence(g, gd)
 }
 
 /// is this reason a run   (teampace.ts isRun)
-pub fn is_run(why: crate::teampace::LeaveWhy) -> bool {
+fn is_run(why: crate::teampace::LeaveWhy) -> bool {
     why != LeaveWhy::Close && why != LeaveWhy::Fight
 }
 
@@ -93,7 +93,7 @@ fn run_word(why: LeaveWhy) -> Option<RunWhy> {
 }
 
 /// leave to go faster than the walk for `secs` more than this frame. False = none   (teampace.ts teamLeave)
-pub fn team_leave(g: &mut crate::game::Game, gd: GuardId, why: crate::teampace::LeaveWhy, top: f64, secs: Option<f64>) -> bool {
+fn team_leave(g: &mut crate::game::Game, gd: GuardId, why: crate::teampace::LeaveWhy, top: f64, secs: Option<f64>) -> bool {
     let secs = secs.unwrap_or(0.0);
     if !team_slow(g, gd) { return false; }
     if is_run(why) {
@@ -108,7 +108,7 @@ pub fn team_leave(g: &mut crate::game::Game, gd: GuardId, why: crate::teampace::
 }
 
 /// his leave, if it still runs   (teampace.ts live)
-pub fn live(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::teampace::Leave> {
+fn live(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::teampace::Leave> {
     match g.m.teampace.leave.get(gd).copied() {
         Some(l) if g.time <= l.until => Some(l),
         _ => None,
@@ -116,7 +116,7 @@ pub fn live(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::teampace::L
 }
 
 /// the fight has his legs: a man in his sights, or one lost `fightSecs` ago   (teampace.ts fighting)
-pub fn fighting(g: &crate::game::Game, gd: GuardId) -> bool {
+fn fighting(g: &crate::game::Game, gd: GuardId) -> bool {
     match crate::roomfight::room_fight_op_of(g, gd) {
         Some(o) => g.tab.roomfight_op[o].tgt.is_some() || g.time - g.tab.roomfight_op[o].lost_at < g.k.teampace.fight_secs,
         None => false,
@@ -124,7 +124,7 @@ pub fn fighting(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// he may run from the grenade he is leaving   (teampace.ts blastRun)
-pub fn blast_run(g: &crate::game::Game, gd: GuardId) -> bool {
+fn blast_run(g: &crate::game::Game, gd: GuardId) -> bool {
     !crate::condition::is_hurt(g, crate::condition::Man::Guard(gd), None)
 }
 
@@ -184,7 +184,7 @@ pub fn team_ran(g: &mut crate::game::Game, gd: GuardId) {
 }
 
 /// seconds since he last had a reason to run (infinity: never, or the rule is off)   (teampace.ts teamRunAgo)
-pub fn team_run_ago(g: &crate::game::Game, gd: GuardId) -> f64 {
+fn team_run_ago(g: &crate::game::Game, gd: GuardId) -> f64 {
     match g.m.teampace.reason_t.get(gd).copied() {
         Some(t) if !(t > g.time) => g.time - t,
         _ => m::INF,
@@ -244,7 +244,7 @@ pub fn team_fight(g: &mut crate::game::Game, gd: GuardId, secs: Option<f64>) {
 }
 
 /// A RUN TO COVER, the question itself. `running` = asked of a man already on the leg   (teampace.ts teamDashNow)
-pub fn team_dash_now(g: &mut crate::game::Game, gd: GuardId, to: V3, d: f64, least: Option<f64>, running: Option<bool>) -> bool {
+fn team_dash_now(g: &mut crate::game::Game, gd: GuardId, to: V3, d: f64, least: Option<f64>, running: Option<bool>) -> bool {
     let least = least.unwrap_or(g.k.teampace.dash_m);
     let running = running.unwrap_or(false);
     if !team_slow(g, gd) { return false; }

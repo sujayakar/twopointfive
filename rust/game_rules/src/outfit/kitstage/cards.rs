@@ -58,7 +58,7 @@ fn moved(a: &MemberKit, b: &MemberKit) -> Vec<&'static str> {
 const COUNTS: [&str; 8] = ["bangs", "frags", "smoke", "charges", "walls", "cams", "shells", "rings"];
 
 /// the cards are written (the caller's) and how many come (`size`: asked, where the mission's men are not its own). WHAT MOVED is written live; what cannot be is staged again under the dissolve.
-pub fn told(g: &mut Game, st: &mut KitStage, size: Option<u32>) {
+pub(super) fn told(g: &mut Game, st: &mut KitStage, size: Option<u32>) {
     let was = core::mem::replace(&mut st.a.cards, g.m.kit.kit.members.clone());
     let team = crate::scenario_run::team_of(g);
     st.a.hi = thing(g, &st.field, st.who);
@@ -110,7 +110,7 @@ pub fn told(g: &mut Game, st: &mut KitStage, size: Option<u32>) {
     if play.is_some() { pick(st, play); }
 }
 /// whose card is open and the row under its highlight: another card's man walks to the head of the file, the same men; another tile plays at once
-pub fn opened(g: &mut Game, st: &mut KitStage, who: u32, field: &str) {
+pub(super) fn opened(g: &mut Game, st: &mut KitStage, who: u32, field: &str) {
     st.want = who;
     st.field = alloc::string::String::from(field);
     let changed = open_card(g, st);

@@ -19,7 +19,7 @@ pub fn fog_of_war_lamp_lit(g: &crate::game::Game, t: FixtureId) -> bool {
 }
 
 /// The fixture as the team last saw it: first met = as it stands; it comes up to date the frame it differs and the team has a look at it.   (fogofwar.ts FogOfWar.lampKnown)
-pub fn fog_of_war_lamp_known(g: &mut crate::game::Game, t: FixtureId, lit: bool) -> bool {
+pub(super) fn fog_of_war_lamp_known(g: &mut crate::game::Game, t: FixtureId, lit: bool) -> bool {
     let rec = g.fog_of_war.lamp_recs.get(t).copied();
     let stale = match rec { None => true, Some(r) => r != lit && fog_of_war_lamp_seen(g, t) };
     if stale {
@@ -30,13 +30,13 @@ pub fn fog_of_war_lamp_known(g: &mut crate::game::Game, t: FixtureId, lit: bool)
 }
 
 /// Is the floor at (x, z) in the lit part of the picture: some eye has it.   (fogofwar.ts FogOfWar.spotSeen)
-pub fn fog_of_war_spot_seen(g: &mut crate::game::Game, x: f64, z: f64) -> bool {
+pub(super) fn fog_of_war_spot_seen(g: &mut crate::game::Game, x: f64, z: f64) -> bool {
     g.fog_of_war.thing_stats.tests += 1.0;
     fog_of_war_ground_look(g, x, z) == 2.0
 }
 
 /// `spot_seen`'s walk: 2 = an eye has the spot, 1 = in an eye's field and every such eye's line stopped, 0 = in no eye's field.   (fogofwar.ts FogOfWar.groundLook)
-pub fn fog_of_war_ground_look(g: &mut crate::game::Game, x: f64, z: f64) -> f64 {
+fn fog_of_war_ground_look(g: &mut crate::game::Game, x: f64, z: f64) -> f64 {
     let mut r = 0.0;
     let mut i = 0;
     while i < g.fog_of_war.eyes.len() {
@@ -56,7 +56,7 @@ pub fn fog_of_war_ground_look(g: &mut crate::game::Game, x: f64, z: f64) -> f64 
 }
 
 /// A one-frame box's spot, asked once per half-metre square a frame.   (fogofwar.ts FogOfWar.cellSeenAt)
-pub fn fog_of_war_cell_seen_at(g: &mut crate::game::Game, x: f64, z: f64) -> bool {
+fn fog_of_war_cell_seen_at(g: &mut crate::game::Game, x: f64, z: f64) -> bool {
     let k = (m::floor(x * 2.0) + 4096.0) * 16384.0 + m::floor(z * 2.0) + 4096.0;
     if let Some(&v) = g.fog_of_war.cell_seen.get(crate::Num(k)) { return v; }
     let v = fog_of_war_spot_seen(g, x, z);
@@ -65,7 +65,7 @@ pub fn fog_of_war_cell_seen_at(g: &mut crate::game::Game, x: f64, z: f64) -> boo
 }
 
 /// A thing is seen where its middle is, or a long one at either end of its long side.   (fogofwar.ts FogOfWar.thingSeen)
-pub fn fog_of_war_thing_seen(g: &mut crate::game::Game, x: f64, z: f64, ox: f64, oz: f64) -> bool {
+fn fog_of_war_thing_seen(g: &mut crate::game::Game, x: f64, z: f64, ox: f64, oz: f64) -> bool {
     fog_of_war_spot_seen(g, x, z)
         || ((ox != 0.0 || oz != 0.0) && (fog_of_war_spot_seen(g, x + ox, z + oz) || fog_of_war_spot_seen(g, x - ox, z - oz)))
 }
@@ -82,7 +82,7 @@ fn long_side(h: V3, yaw: f64, best: f64) -> Option<(f64, f64, f64)> {
 }
 
 /// The long side of boxes i‥j of a list into `span_x` / `span_z`: its biggest box's long axis in plan, 15 cm in from the ends; 0, 0 under 0.9 m long.   (fogofwar.ts FogOfWar.span)
-pub fn fog_of_war_span(g: &mut crate::game::Game, list: &[AnyBoxId], i: f64, j: f64) {
+fn fog_of_war_span(g: &mut crate::game::Game, list: &[AnyBoxId], i: f64, j: f64) {
     let mut best = 0.45;
     g.fog_of_war.span_x = 0.0;
     g.fog_of_war.span_z = 0.0;
@@ -338,7 +338,7 @@ pub fn fog_of_war_drawn(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// Is the squad shooting at him: a teammate's aimed round went at him inside FOG.squadFireSecs.   (fogofwar.ts FogOfWar.firedOn)
-pub fn fog_of_war_fired_on(g: &crate::game::Game, gd: GuardId) -> bool {
+pub(super) fn fog_of_war_fired_on(g: &crate::game::Game, gd: GuardId) -> bool {
     match g.fog_of_war.fired_at.get(gd) {
         Some(&t) => g.fog_of_war.fire_clock - t < g.k.fog.squad_fire_secs,
         None => false,
@@ -370,7 +370,7 @@ pub fn fog_of_war_hides(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// The rule is live: the fog on, and the full picture's block filled.   (fogofwar.ts FogOfWar.oursOn)
-pub fn fog_of_war_ours_on(g: &crate::game::Game) -> bool {
+fn fog_of_war_ours_on(g: &crate::game::Game) -> bool {
     fog_of_war_active(g) && g.fog_of_war.live
 }
 

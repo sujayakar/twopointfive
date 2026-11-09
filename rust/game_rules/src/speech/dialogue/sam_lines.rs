@@ -11,12 +11,12 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 type Eligible = (crate::dialogue::SamLine, String, f64);
 
 /// Sam's memory of his own lines, made on first asking: the row itself.   (dialogue.ts samMemoryOf)
-pub fn sam_memory_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::dialogue::SamMemory {
+pub(super) fn sam_memory_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::dialogue::SamMemory {
     g.m.dialogue.sam_mem_by_game.get_or_insert_with(|| crate::dialogue::SamMemory { said: JsMap::new(), last: None })
 }
 
 /// What the man would give at the coming exchange as things stand, or None.   (dialogue.ts peekGive)
-pub fn peek_give(g: &mut crate::game::Game, ctx: &mut crate::dialogue::DialogueCtx, talk: GameTalkId) -> Option<crate::dialogue::IntelKind> {
+pub(super) fn peek_give(g: &mut crate::game::Game, ctx: &mut crate::dialogue::DialogueCtx, talk: GameTalkId) -> Option<crate::dialogue::IntelKind> {
     let stage_n = g.tab.game_talk[talk].stage + 1.0;
     let s = stage_key_of(stage_n);
     let sc = live_script(g, ctx, talk, stage_n);
@@ -29,7 +29,7 @@ pub fn peek_give(g: &mut crate::game::Game, ctx: &mut crate::dialogue::DialogueC
 }
 
 /// The category for the exchange at stage s.   (dialogue.ts samStageOf)
-pub fn sam_stage_of(s: crate::dialogue::StageKey, gives: bool) -> crate::dialogue::SamStage {
+fn sam_stage_of(s: crate::dialogue::StageKey, gives: bool) -> crate::dialogue::SamStage {
     use crate::dialogue::SamStage;
     if is_stage(s, 1.0) { return SamStage::Open; }
     if gives { return SamStage::Ask; }
@@ -39,7 +39,7 @@ pub fn sam_stage_of(s: crate::dialogue::StageKey, gives: bool) -> crate::dialogu
 }
 
 /// Sam's facts for SAM_NEEDS, off the man's context plus the hold's variant. CLOSE.noKnife is settled on: `knife` is never true.   (dialogue.ts samFacts)
-pub fn sam_facts(g: &crate::game::Game, ctx: &crate::dialogue::DialogueCtx, variant: crate::character::HoldVariant) -> JsMap<crate::dialogue::SamNeed, bool> {
+fn sam_facts(g: &crate::game::Game, ctx: &crate::dialogue::DialogueCtx, variant: crate::character::HoldVariant) -> JsMap<crate::dialogue::SamNeed, bool> {
     use crate::character::HoldVariant;
     use crate::dialogue::SamNeed;
     let f = &ctx.facts;
@@ -58,7 +58,7 @@ pub fn sam_facts(g: &crate::game::Game, ctx: &crate::dialogue::DialogueCtx, vari
 }
 
 /// Does this line fit the man and the moment.   (dialogue.ts samLineFits)
-pub fn sam_line_fits(l: &crate::dialogue::SamLine, ctx: &crate::dialogue::DialogueCtx, facts: &JsMap<crate::dialogue::SamNeed, bool>) -> bool {
+fn sam_line_fits(l: &crate::dialogue::SamLine, ctx: &crate::dialogue::DialogueCtx, facts: &JsMap<crate::dialogue::SamNeed, bool>) -> bool {
     if let Some(t) = l.t { if t != ctx.t { return false; } }
     if let Some(k) = l.k { if k != ctx.k { return false; } }
     match &l.needs {
@@ -69,7 +69,7 @@ pub fn sam_line_fits(l: &crate::dialogue::SamLine, ctx: &crate::dialogue::Dialog
 
 /// The chooser both of Sam's picks share: the first tier with anything fresh, else anything that fits (never the very last line again while there is
 /// another); a weighted draw; the choice written to the memory.   (dialogue.ts chooseSamLine)
-pub fn choose_sam_line(g: &mut crate::game::Game, tiers: &[Vec<crate::dialogue::SamLine>], ctx: &crate::dialogue::DialogueCtx, facts: &JsMap<crate::dialogue::SamNeed, bool>, mem: Option<&mut crate::dialogue::SamMemory>, rnd: &mut dyn FnMut(&mut crate::game::Game) -> f64) -> Option<crate::dialogue::ChooseSamLine> {
+fn choose_sam_line(g: &mut crate::game::Game, tiers: &[Vec<crate::dialogue::SamLine>], ctx: &crate::dialogue::DialogueCtx, facts: &JsMap<crate::dialogue::SamNeed, bool>, mem: Option<&mut crate::dialogue::SamMemory>, rnd: &mut dyn FnMut(&mut crate::game::Game) -> f64) -> Option<crate::dialogue::ChooseSamLine> {
     let mut mem = mem;
     let mut pool: Vec<Eligible> = Vec::new();
     let mut fresh = false;
@@ -99,7 +99,7 @@ pub fn choose_sam_line(g: &mut crate::game::Game, tiers: &[Vec<crate::dialogue::
 }
 
 /// Sam's line for the coming exchange: the script's beat if a script is live, else the category's pool (the 'q' tier first when the man is about to give).   (dialogue.ts pickSamLine)
-pub fn pick_sam_line(g: &mut crate::game::Game, ctx: &mut crate::dialogue::DialogueCtx, talk: GameTalkId, variant: crate::character::HoldVariant, mem: Option<&mut crate::dialogue::SamMemory>, rnd: &mut dyn FnMut(&mut crate::game::Game) -> f64) -> crate::dialogue::SamPick {
+fn pick_sam_line(g: &mut crate::game::Game, ctx: &mut crate::dialogue::DialogueCtx, talk: GameTalkId, variant: crate::character::HoldVariant, mem: Option<&mut crate::dialogue::SamMemory>, rnd: &mut dyn FnMut(&mut crate::game::Game) -> f64) -> crate::dialogue::SamPick {
     use crate::dialogue::{SamLineS, SamPick};
     let mut mem = mem;
     let stage_n = g.tab.game_talk[talk].stage + 1.0;

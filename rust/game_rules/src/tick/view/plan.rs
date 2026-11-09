@@ -335,7 +335,7 @@ fn same_wait(a: &PlanDoor, b: &PlanDoor) -> bool {
 }
 
 /// the plan on the floor, about the seat it is handed: its own whole, then each other player's (a wait both plans list is on the page once, as the seat's own)
-pub fn plan_view(g: &Game, seat: &SeatRef) -> PlanView {
+pub(super) fn plan_view(g: &Game, seat: &SeatRef) -> PlanView {
     let own = seat_plan(g, seat, For { own: true, reading: false });
     let mut others = Vec::new();
     if g.seats.len() > 1 && g.k.plan.others > 0.0 {

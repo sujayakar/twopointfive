@@ -3,9 +3,9 @@ use crate::game::Game;
 use crate::ids::*;
 
 /// INVENTED (MenStore.enter): a row for a new man, the lowest free one, its generation counted
-pub fn man_enter(g: &crate::game::Game) -> u32 { let m = &mut ::sim::state::state(g.sim).men; for r in 0..::sim::men::ROWS { if m.gen[r] & 1 == 0 { m.gen[r] += 1; return r as u32; } } panic!("a game of more than {} men: levelfit.ts menHeld says a game cannot hold that many", ::sim::men::ROWS) }
+fn man_enter(g: &crate::game::Game) -> u32 { let m = &mut ::sim::state::state(g.sim).men; for r in 0..::sim::men::ROWS { if m.gen[r] & 1 == 0 { m.gen[r] += 1; return r as u32; } } panic!("a game of more than {} men: levelfit.ts menHeld says a game cannot hold that many", ::sim::men::ROWS) }
 /// INVENTED (MenStore.leave): his row is free again, and zeros
-pub fn man_leave(g: &crate::game::Game, r: u32) { let m = &mut ::sim::state::state(g.sim).men; let r = r as usize; assert!(m.gen[r] & 1 == 1, "row {} of the men left twice", r); m.since[r] = 0.0; m.owner[r] = 0; m.rank[r] = 0; m.reason[r] = 0; m.gen[r] += 1; }
+fn man_leave(g: &crate::game::Game, r: u32) { let m = &mut ::sim::state::state(g.sim).men; let r = r as usize; assert!(m.gen[r] & 1 == 1, "row {} of the men left twice", r); m.since[r] = 0.0; m.owner[r] = 0; m.rank[r] = 0; m.reason[r] = 0; m.gen[r] += 1; }
 /// INVENTED (store.ts standMan): a Character's row, as he is made in a game
 pub fn stand_man(g: &mut crate::game::Game, c: CharId) { let r = man_enter(g); let ch = &mut g.ch[c]; ch.man_row = r; ch.man_kept = None; }
 /// INVENTED (store.ts manLeaves): HE HAS LEFT THE GAME: his row is free, and he reads his numbers as they stood. guards.ts:2940, :3522, civilians.ts:207, game.ts:1496 call it

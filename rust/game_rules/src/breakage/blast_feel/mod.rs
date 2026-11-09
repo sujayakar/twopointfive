@@ -24,7 +24,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::vec::Vec;
 
 /// The kick's strength as this machine last left it: the host's storage. Here only "asked". (src/game/blastFeel.ts:84 loadFeel)
-pub fn load_feel(g: &mut crate::game::Game) { g.m.blast_feel.loaded = true; }
+fn load_feel(g: &mut crate::game::Game) { g.m.blast_feel.loaded = true; }
 
 /// this view's state, made on first ask (src/game/blastFeel.ts:93 stateOf)
 fn state_mut(g: &mut Game) -> &mut State {
@@ -33,7 +33,7 @@ fn state_mut(g: &mut Game) -> &mut State {
 }
 
 /// This module's own dice: a counter of its own through a hash. (src/game/blastFeel.ts:95 hashU)
-pub fn hash_u(n: f64) -> f64 {
+fn hash_u(n: f64) -> f64 {
     let mut x = (m::imul(js::to_i32(n) ^ 0x51ed270b, 0x85ebca6bu32 as i32)) as u32;
     x ^= x >> 15;
     x = m::imul(x as i32, 0xc2b2ae35u32 as i32) as u32;
@@ -41,18 +41,18 @@ pub fn hash_u(n: f64) -> f64 {
     x as f64
 }
 /// (src/game/blastFeel.ts:96 dice)
-pub fn dice(s: &mut crate::blast_feel::State) -> f64 { let n = s.serial; s.serial += 1.0; hash_u(n) / 4294967296.0 }
+fn dice(s: &mut crate::blast_feel::State) -> f64 { let n = s.serial; s.serial += 1.0; hash_u(n) / 4294967296.0 }
 
 /// DESTRUCTION.on && FEEL.on && chaosOf(g) > 0 (src/game/blastFeel.ts:98 live)
-pub fn live(g: &mut crate::game::Game) -> bool { g.m.blast_feel.feel.on && crate::destruction::chaos_of(g) > 0.0 }
+fn live(g: &mut crate::game::Game) -> bool { g.m.blast_feel.feel.on && crate::destruction::chaos_of(g) > 0.0 }
 /// (src/game/blastFeel.ts:99 thick)
-pub fn thick(g: &crate::game::Game, w: &crate::wallcharge::WallSpot) -> f64 { let h = g.tab.boxes[w.box_].h; 2.0 * (if w.along_x { h[2] } else { h[0] }) }
+fn thick(g: &crate::game::Game, w: &crate::wallcharge::WallSpot) -> f64 { let h = g.tab.boxes[w.box_].h; 2.0 * (if w.along_x { h[2] } else { h[0] }) }
 /// (src/game/blastFeel.ts:100 near)
-pub fn near(a: V3, b: V3, m: f64) -> bool { m::abs(a[0] - b[0]) + m::abs(a[1] - b[1]) + m::abs(a[2] - b[2]) < m }
+fn near(a: V3, b: V3, m: f64) -> bool { m::abs(a[0] - b[0]) + m::abs(a[1] - b[1]) + m::abs(a[2] - b[2]) < m }
 /// Where a wall charge's borrowed stun burst stands. (src/game/blastFeel.ts:102 burstAt)
-pub fn burst_at(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> V3 { let y = 0.5 + crate::effects::bang().height; crate::wallcharge::wall_pt(g, w, 0.0, 0.15, Some(y)) }
+fn burst_at(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> V3 { let y = 0.5 + crate::effects::bang().height; crate::wallcharge::wall_pt(g, w, 0.0, 0.15, Some(y)) }
 /// Is the wall open at the charge (the blast made its hole)? One segment through it at the slab's height. (src/game/blastFeel.ts:104 holed)
-pub fn holed(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> bool {
+fn holed(g: &mut crate::game::Game, w: &crate::wallcharge::WallSpot) -> bool {
     let (h, th) = (g.k.wallcharge.height, thick(g, w));
     let (a, b) = (crate::wallcharge::wall_pt(g, w, 0.0, 0.12, Some(h)), crate::wallcharge::wall_pt(g, w, 0.0, -(th + 0.12), Some(h)));
     !crate::scene_collision::solid_blocked(g, a, b, None)
@@ -65,7 +65,7 @@ pub fn wall_report(g: &mut crate::game::Game, at: V3) -> bool {
 }
 
 /// (src/game/blastFeel.ts:110 wallReportOf)
-pub fn wall_report_of(g: &mut crate::game::Game, at: V3) -> bool {
+fn wall_report_of(g: &mut crate::game::Game, at: V3) -> bool {
     if !live(g) { return false; }
     let key = crate::seats::view_key(g, &crate::seats::here(g));
     let Some(seen) = g.m.blast_feel.state.get(key).map(|s| s.seen.clone()) else { return false; };
@@ -98,7 +98,7 @@ pub fn blast_feel_tick(g: &mut crate::game::Game, cam: CameraId) {
 }
 
 /// (src/game/blastFeel.ts:130 blastFeelTickRaw)
-pub fn blast_feel_tick_raw(g: &mut crate::game::Game, cam: CameraId) {
+fn blast_feel_tick_raw(g: &mut crate::game::Game, cam: CameraId) {
     let key = crate::seats::view_key(g, &crate::seats::here(g));
     // (`g.wallCharge` is always there in the Rust game)
     if !live(g) {
@@ -125,7 +125,7 @@ pub fn blast_feel_tick_raw(g: &mut crate::game::Game, cam: CameraId) {
 
 /// THE KICK this frame: every live blast's snap away from it, ringing down: metres to add to the look-at for the render (None: none).
 /// (src/game/blastFeel.ts:146 kickOf)
-pub fn kick_of(g: &mut crate::game::Game, pl: PlayerId, cam: CameraId) -> Option<V3> {
+fn kick_of(g: &mut crate::game::Game, pl: PlayerId, cam: CameraId) -> Option<V3> {
     let f = g.m.blast_feel.feel.clone(); let time = g.time;
     let (target, forward) = { let c = &g.tab.camera[cam]; (c.target, c.forward) };
     let s = g.m.blast_feel.state.get_mut(pl)?;
@@ -150,7 +150,7 @@ pub fn kick_of(g: &mut crate::game::Game, pl: PlayerId, cam: CameraId) -> Option
 
 /// THE REPORT: crack, thump and patter from the blast, the crack thinner the further it has come; close to it, a second ring in the ears.
 /// (src/game/blastFeel.ts:162 report)
-pub fn report(g: &mut crate::game::Game, pl: PlayerId, at: V3) {
+fn report(g: &mut crate::game::Game, pl: PlayerId, at: V3) {
     let k = g.m.blast_feel.feel.sound;
     let c = g.pl[pl].ch;
     let ear = match g.ch[c].bones.get(crate::character::Bone::Head) { Some(p) => *p, None => v3::add(g.ch[c].pos, [0.0, 1.6, 0.0]) };
