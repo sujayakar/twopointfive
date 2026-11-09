@@ -458,9 +458,6 @@ fn call_say(g: &mut Game, gd: GuardId, h: GuardId, kind: crate::fogofwar::FogOfW
     crate::cues::cues_call(g, gd, &text);
 }
 
-/// `+x.toFixed(2)`, for the QA's log only.
-fn to_fixed2(x: f64) -> f64 { js::to_fixed(x, 2).parse().unwrap_or(x) }
-
 /// What the cone hides is called: a contact from a teammate's eyes, else a step in his ears. Under cones or own eyes only (hard). (FogOfWar.tellCalls)
 pub fn fog_of_war_tell_calls(g: &mut crate::game::Game, dt: f64) {
     g.fog_of_war.call_clock += dt;
@@ -783,11 +780,4 @@ mod tests {
         ] { assert_eq!(key_of_mkey(&g, k), want, "mkey {}", k); }
     }
 
-    /// `+x.toFixed(2)`: a tie goes up, as the language has it, not to even.
-    #[test]
-    fn to_fixed2_rounds_as_the_log_shows() {
-        assert_eq!(to_fixed2(12.3456), 12.35);
-        assert_eq!(to_fixed2(3.0), 3.0);
-        assert_eq!(to_fixed2(0.125), 0.13);
-    }
 }
