@@ -112,6 +112,8 @@ pub fn breaks() -> Vec<(String, &'static str, &'static str)> {
         (format!("play {}", held_run), "aside", "where"), (format!("play {}", held_run), "round", "rounds"), (format!("play {}", held_run), "door", "door"), (format!("play {}", held_run), "order", "order"), (format!("play {}", held_run), "die", "die"),
         // (a word that moved with no figure: this row passes, and says so)
         (format!("play {}", held_run), "word", "only the words moved"),
+        // (the panes want a level with panes; the rest stand on any)
+        (format!("play {}", run_name(4)), "glass", "glass"), (format!("play {}", held_run), "lamps", "lamp"), (format!("play {}", held_run), "smoke", "smoke"), (format!("play {}", held_run), "destroyed", "destroyed"),
         (format!("again {}", run), "second", "the second run"),
         (format!("save {}", run), "block", "put back, parts"),
         (format!("load {}", run), "block", "loaded into"),
@@ -212,7 +214,7 @@ fn start_row(name: &str, id: &str, seats: u32, pins: &Pins, f: Flags) {
     if f.pin {
         match &refused {
             Some(why) => println!("pin\tstart\t{}\trefused\t{}", col, why),
-            None => { let mut track = Track::default(); track.second(&p.g); println!("pin\tstart\t{}\tparts\t{}", col, parts_line(&first)); println!("pin\tseries\t{}\t{}", col, hex(&track.words)); println!("pin\tfigures\t{}\t{}\t{}", col, track.names.join(","), track.digits().join(" ")); }
+            None => { let mut track = Track::default(); track.second(&p.g); println!("pin\tstart\t{}\tparts\t{}", col, parts_line(&first)); println!("pin\tseries\t{}\t{}", col, hex(&track.words)); }
         }
         return say(name, t.elapsed().as_secs_f64(), &[], "");
     }
@@ -227,7 +229,7 @@ fn start_row(name: &str, id: &str, seats: u32, pins: &Pins, f: Flags) {
             track.second(&p.g);
             if f.breaks("pin") { track.words[0] ^= 1; }
             let said = moved_parts(m, &by_name(&first));
-            if pins.series.get(&col) != Some(&track.words) { fail.push(format!("the start moved: {} (pins.txt)", pins.figures_moved(&col, 0, &track.names, &track.digits()))); }
+            if pins.series.get(&col) != Some(&track.words) { fail.push(format!("the start moved: {} (pins.txt)", if said.is_empty() { String::from("no part, and a figure") } else { said.clone() })); }
             else if !said.is_empty() { note = format!("only the words moved ({})", said); }
         }
     }
@@ -295,6 +297,10 @@ fn plant(p: &mut Play, f: Flags) {
     if f.breaks("door") { let d = p.g.doors.list[0]; let a = game::doors::door_angle(&p.g, d); game::doors::door_set_angle(&mut p.g, d, a + 0.1); }
     if f.breaks("order") { let (s, g) = (p.g.seats[0], p.g.guards.clone()); let a = g.iter().find_map(|&m| game::orders::squad_orders_of(&p.g, &game::seats::seat(&p.g, s), m)).expect("a man under an order"); p.g.tab.orders_assignment[a].order = String::from("planted"); }
     if f.breaks("die") { game::math_dice::sim_random(&mut p.g); }
+    if f.breaks("glass") { let bi = game::glass::glass_panes(&mut p.g)[0] as u32; let panes = sim::panes::pn(p.g.sim); let h = panes.add_hole_row(bi); panes.hole(h).n = 1; }
+    if f.breaks("lamps") { sim::state::state(p.g.sim).lights.bits[0] ^= sim::lights::T_ON; }
+    if f.breaks("smoke") { let c = p.g.ch[p.g.gd[man].ch].pos; game::smoke_types::smoke_system_like_emit(&mut p.g, &game::smoke_types::SmokeEmitter { pos: [c[0], 0.2, c[2]], dir: [0.0, 1.0, 0.0], speed: 1.9, radius: 0.2, density: 95.0, temperature: 1.6, ttl: 20.0, ..Default::default() }); }
+    if f.breaks("destroyed") { let b = p.g.engine.world.statics[0]; p.g.tab.boxes[b].flags = 3.0; }
 }
 
 /// a moment of a run, what a host keeps beside it, and every frame's words of the seconds after it

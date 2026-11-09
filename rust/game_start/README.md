@@ -345,13 +345,16 @@ debug build records the same bytes. `gate pin start` touches only the columns na
 
 **What a pin is: the figures.** A whole-state word cannot say that play stood when a part only changes shape, so the pin of `start`, `play`, `seats` and
 `played` is a word of `game_start::figures`: what play is, as plain numbers read by what they mean (the die; each man by his character id: where, facing,
-up or down and by whom, state, what he holds and its rounds, his order; each seat the same; the doors; what is destroyed; the alarm, the mission and its
-tally; what is in the air and on the floor; the shots). A row whose figures moved FAILS and names them (`play moved from second 6: man 22 where, door 3`,
-by a hex digit of each figure a second, kept beside the word for all but `played`, which says its line instead). A row whose figures stand and whose parts
-moved PASSES and says `only the words moved (parts …)`; the last line counts those rows and the exit is 0. `gate pin` says each move as `PLAY` or `WORDS`,
-so a commit can. The parts are kept beside: for a start as they stood, for a series at its last second. `lines` has a line a series a reader can read: who
-is up, the rounds, the orders. Breaks: a man 1 cm aside, a round, a door's angle, a man's order and the die each go red by name, and a word moved with no
-figure is the words line.
+up or down and by whom, state, what he holds and its rounds, his order; each seat the same, and the light meter the player reads; the doors; each pane that
+has been touched by its box's number: gone or not, open pieces, damage, holes; each lamp by its number: its switch, shot or not, out with the mains, what
+it burns; the smoke: the emitters, and each brick that holds any by its place in plan, with its amount; what is destroyed: how many statics stand, each
+hidden or cut by its place in the level, the wall skins out; the alarm, the mission and its tally; what is in the air and on the floor; the shots). A row
+whose figures moved FAILS and names them (`play moved from second 6: man 22 where, door 3`, by a hex digit of each figure a second, kept beside the word
+for `play` and `seats`; `played` says its line instead, and a start names the parts that moved). A row whose figures stand and whose parts moved PASSES and
+says `only the words moved (parts …)`; the last line counts those rows and the exit is 0. `gate pin` says each move as `PLAY` or `WORDS`, so a commit can.
+The parts are kept beside: for a start as they stood, for a series at its last second. `lines` has a line a series a reader can read: who is up, the
+rounds, the orders. Breaks: a man 1 cm aside, a round, a door's angle, a man's order, the die, a hole in a pane, a lamp's switch, a smoke emitter and a
+hidden static each go red by name, and a word moved with no figure is the words line.
 
 - **A commit that moves a pin says why.** A move nobody meant is a fault, and the row's line says where to look: `hold keep` on the build before and
   `hold check` on this one name the part and the frame.
