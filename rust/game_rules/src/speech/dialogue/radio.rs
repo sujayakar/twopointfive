@@ -79,7 +79,6 @@ pub fn handler_beat(g: &mut crate::game::Game, beat: crate::dialogue::HandlerBea
     if pool.is_empty() { return false; }
     let dealt = crate::math_dice::hash_str(&alloc::format!("{}|{}", beat.as_str(), js::num_str(m::round(g.mission.t0 * 10.0))));
     let l = &pool[js::rem(dealt, pool.len() as f64) as usize];
-    let rack = js::num_str(g.level.errand.index + 1.0);
     let own = !crate::dialogue::is_office(g);
     let h_now = l.h_now.as_deref().unwrap_or(&l.h);
     let h = if own { l.h_own.as_deref().unwrap_or(h_now) } else { h_now };
@@ -87,10 +86,10 @@ pub fn handler_beat(g: &mut crate::game::Game, beat: crate::dialogue::HandlerBea
     let r = row(g);
     r.done.add(beat);
     r.last_at = now;
-    crate::cues::cues_radio(g, &alloc::format!("{} \u{25B8} {}", crate::dialogue::HANDLER_TAG, h.replace("{rack}", &rack)));
+    crate::cues::cues_radio(g, &alloc::format!("{} \u{25B8} {}", crate::dialogue::HANDLER_TAG, h));
     crate::audio_iface::game_audio_like_play(g, "radio", None, Some(0.3), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.12 }));
     let at = g.time + crate::dialogue::RADIO_REPLY_SECS;
-    row(g).reply = Some(crate::dialogue::RadioStateReply { at, text: s.replace("{rack}", &rack) });
+    row(g).reply = Some(crate::dialogue::RadioStateReply { at, text: String::from(s) });
     true
 }
 
