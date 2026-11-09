@@ -4,7 +4,7 @@
   {
    "key": "walkAhead",
    "contract": "One seat's man is walked through records the game has not had, on a copy of him (seats::with_seat, game::game_aside): when it returns the game is as it was. What it leaves behind is scratch of the collision and box-mirror walks, which no tick reads before writing: the state words col, alone_own, m.scene_box_mirror and m.scene_collision.",
-   "check": "tools/qa/seats-check.ts `twin`: two firefights with a look for both seats before every tick, the whole game's state words read before and after the looks of every tenth tick; none but the four scratch parts may differ. SEATS_BREAK=look must fail it."
+   "check": "rust/game_start/tests/coop.rs a_look_ahead_is_where_the_game_then_has_him_and_writes_nothing: the machine that looks holds every part of the game as the one that does not."
   }
  ]
 }
