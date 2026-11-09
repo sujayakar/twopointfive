@@ -11,14 +11,11 @@
 //   PORT=5321 [CLOUD_PORT=3217] node tools/qa/cloudfatal-page.cjs        (a dev server on PORT: PORT=5321 bun run tools/serve.ts)
 // Nothing here is a machine that really has no adapter, a real GPU or the real service. Exit 0 = every check passed, 1 = one failed.
 //   CLOUDFATAL_BREAK=1: every page runs under ?cloudstats=0 — must FAIL.
-const { chromium } = require('/opt/node-tools/node_modules/playwright');
+const PAGE = require('./page.cjs').page({ name: 'cloudfatal-page' }), { check, note: log } = PAGE;
 const path = require('node:path'), cp = require('node:child_process');
-const PORT = process.env.PORT || 5199, CPORT = Number(process.env.CLOUD_PORT) || 3217, ROOT = path.resolve(__dirname, '../..'), ONLY = process.env.CLOUDFATAL_ONLY || '';
+const CPORT = Number(process.env.CLOUD_PORT) || 3217, ROOT = path.resolve(__dirname, '../..'), ONLY = process.env.CLOUDFATAL_ONLY || '';
 const BREAK = process.env.CLOUDFATAL_BREAK === '1' ? '&cloudstats=0' : '', NAV = Math.max(60000, Number(process.env.NAV_MS) || 480000);
-const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
 const CLOUD = `http://127.0.0.1:${CPORT}`, KEY = 'page-check-key', BUILT = 'https://built-in.example';
-const T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a);
-let red = 0; const check = (ok, what) => { console.log(`${ok ? '- PASS' : '- FAIL'} — ${what}`); if (!ok) red++; };
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const admin = async (fn, args) => { const r = await fetch(`${CLOUD}/api/query`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Convex ${KEY}` }, body: JSON.stringify({ path: fn, format: 'convex_encoded_json', args: [args] }) }); const j = await r.json(); if (j.status !== 'success') throw new Error(`${fn}: ${JSON.stringify(j).slice(0, 200)}`); return j.value; };
 const heard = async () => JSON.stringify((await (await fetch(`${CLOUD}/__stats`)).json()).calls);
@@ -27,9 +24,8 @@ const until = async (f, ms = 15000) => { const t = Date.now(); for (;;) { const 
 (async () => {
   const standin = cp.spawn('bun', ['run', 'test/standin.ts', String(CPORT)], { cwd: path.join(ROOT, 'cloud'), env: { ...process.env, STANDIN_KEY: KEY }, stdio: 'ignore' });
   for (let i = 0; i < 50; i++) { try { await heard(); break; } catch { await sleep(200); } }
-  const browser = await chromium.launch({ headless: true, channel: 'chromium', args: FLAGS });
   const profile = async (built = true) => {
-    const ctx = await browser.newContext({ viewport: { width: 1000, height: 640 }, deviceScaleFactor: 1 });
+    const ctx = await PAGE.context({ size: [1000, 640] });
     if (built) {
       await ctx.addInitScript(() => { window.__TPS_CLOUD__ = 'https://built-in.example'; });
       await ctx.route(BUILT + '/**', async route => {
@@ -49,11 +45,11 @@ const until = async (f, ms = 15000) => { const t = Date.now(); for (;;) { const 
     const card = () => page.evaluate(() => { const el = document.getElementById('fatal'), n = el?.querySelector('.cloudnote'), r = n?.getBoundingClientRect();
       return { up: el?.style.display === 'flex', text: (el?.innerText ?? '').slice(0, 200), line: n?.textContent ?? '', first: !!n && el.firstElementChild === n,
         top: !!n && !!r && document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2) === n, told: localStorage.getItem('twopointsix.cloud.told'), pid: localStorage.getItem('twopointsix.cloud.pid') }; });
-    const dead = async (words) => { await page.goto(`http://localhost:${PORT}/?paused&quality=low&mute&stub=none${words}${BREAK}`, { waitUntil: 'load' }); await page.waitForFunction(() => document.getElementById('fatal')?.style.display === 'flex', null, { timeout: 60000 }); };
+    const dead = async (words) => { await page.goto(PAGE.url(`paused&quality=low&mute&stub=none${words}${BREAK}`), { waitUntil: 'load' }); await page.waitForFunction(() => document.getElementById('fatal')?.style.display === 'flex', null, { timeout: 60000 }); };
     return { ctx, page, card, dead };
   };
   try {
-    const commit = (await (await fetch(`http://localhost:${PORT}/qa/commit`)).text()).trim();
+    const commit = (await (await fetch(`http://localhost:${PAGE.port}/qa/commit`)).text()).trim();
     // ---- 1. a fresh browser: the line on the card, nothing before it has been read, then the two records
     const A = await profile(), before = await heard();
     await A.dead(''); await sleep(1700);   // (the commit's wait is a second and a half at most; the line needs two seconds in view after it)
@@ -80,7 +76,7 @@ const until = async (f, ms = 15000) => { const t = Date.now(); for (;;) { const 
     // ---- 4. a page that booted, then threw
     if (ONLY !== 'card') {
       const C = await profile(); log('booting the game…');
-      await C.page.goto(`http://localhost:${PORT}/?paused&quality=verylow&mute&roomclear${BREAK}`, { waitUntil: 'load', timeout: NAV });
+      await C.page.goto(PAGE.url(`paused&quality=verylow&mute&roomclear${BREAK}`), { waitUntil: 'load', timeout: NAV });
       const up = await C.page.evaluate(async () => { await window.__ready; const e = window.__engine; e.render = () => {}; try { window.__draw.smoke.params.enabled = false; } catch { /* */ }
         window.__draw.run(0); await window.__runFrames(120, 1 / 60, []); return { sid: window.__cloud?.sid ?? null, fatal: document.getElementById('fatal')?.style.display === 'flex' }; });
       await C.page.evaluate(() => { setTimeout(() => { throw new Error('page check: thrown on purpose'); }, 0); });
@@ -92,6 +88,6 @@ const until = async (f, ms = 15000) => { const t = Date.now(); for (;;) { const 
       await C.ctx.close();
     }
   } catch (e) { check(false, `the check itself threw: ${String(e && e.stack || e).slice(0, 400)}`); }
-  await browser.close(); try { standin.kill(); } catch { /* */ }
-  console.log(red ? `\n${red} FAILED` : '\nall pass'); process.exit(red ? 1 : 0);
+  await PAGE.close(); try { standin.kill(); } catch { /* */ }
+  await PAGE.end(PAGE.fails ? `\n${PAGE.fails} FAILED` : '\nall pass');
 })();

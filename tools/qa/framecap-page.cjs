@@ -7,17 +7,13 @@
 // were not taken and why. What it cannot: a GPU's picture, or what a capture costs a frame there.
 // Exit 0 = both captures landed and read back, the window's has the g-buffer, the lit picture and a history among at least 20 targets, each the window's size
 // on its own grid, the picture's target is not empty, and no GPU error was raised; 1 otherwise.
-const { chromium } = require('/opt/node-tools/node_modules/playwright');
+const PAGE = require('./page.cjs').page({ name: 'framecap-page' }), { check, note: log } = PAGE;
 const fs = require('fs'), path = require('path'), { spawnSync } = require('child_process');
-const PORT = process.env.PORT || 5199, ROOT = process.env.ROOT || process.cwd(), Q = process.env.URL || 'look&roomclear&squad4&levelFile=pass.json&hud&hour=midday&weather=clear';
-const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
-const T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a);
-let red = 0; const check = (ok, w) => { console.log(`${ok ? '- PASS' : '- FAIL'} — ${w}`); if (!ok) red++; };
+const ROOT = process.env.ROOT || process.cwd(), Q = process.env.URL || 'look&roomclear&squad4&levelFile=pass.json&hud&hour=midday&weather=clear';
 (async () => {
-  const browser = await chromium.launch({ args: FLAGS }), page = await browser.newPage({ viewport: { width: 640, height: 400 } });
-  page.on('pageerror', e => log('PAGEERROR', String(e).slice(0, 300))); const info = []; page.on('console', m => { if (/^\[framecap\]/.test(m.text())) { info.push(m.text()); log(m.text().slice(0, 400)); } });
+  const { page, go } = await PAGE.open({ size: [640, 400], errors: { console: false, say: true } }); const info = []; page.on('console', m => { if (/^\[framecap\]/.test(m.text())) { info.push(m.text()); log(m.text().slice(0, 400)); } });
   try {
-    await page.goto(`http://localhost:${PORT}/?${Q}&seed=1&paused&mute&quality=high`, { waitUntil: 'commit' });
+    await go(`${Q}&seed=1&paused&mute&quality=high`, { waitUntil: 'commit' });
     await page.waitForFunction(() => !!window.__ready, null, { timeout: 240000 }); page.setDefaultTimeout(0);
     await page.evaluate(async () => { await window.__ready; try { window.__draw.run(0); } catch { } const E = window.__engine;
       window.__gpuErrs = []; E.device.addEventListener('uncapturederror', e => { window.__gpuErrs.push(String(e.error && e.error.message).slice(0, 300)); });
@@ -48,6 +44,5 @@ let red = 0; const check = (ok, w) => { console.log(`${ok ? '- PASS' : '- FAIL'}
     const not = (/NOT TAKEN\n([\s\S]*)$/.exec(rep[0]) || [])[1] || ''; console.log('not taken:\n' + (not || '  nothing'));
     console.log(`reports: ${files.map(f => f && f.replace(/\.tpscap\.gz$/, '/report.txt')).join('  ')}`);
   } catch (e) { check(false, `the page run failed: ${String(e).slice(0, 300)}`); }
-  await browser.close().catch(() => { });
-  console.log(red ? `=== framecap-page: FAILED (${red}) ===` : '=== framecap-page: ALL PASS ==='); process.exit(red ? 1 : 0);
+  await PAGE.end(PAGE.fails ? `=== framecap-page: FAILED (${PAGE.fails}) ===` : '=== framecap-page: ALL PASS ===');
 })();
