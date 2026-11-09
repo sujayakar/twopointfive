@@ -53,7 +53,7 @@ export const radiator: ObjectKind = { name: 'radiator', title: 'Cast iron radiat
       p.drum([PIPE, HUB / 2 + 0.002, 0], 0.0150, HUB / 2, M.paint!, ENAMEL); p.drum([BACK, HUB / 2 + 0.002, 0], 0.0145, HUB / 2, M.paint!, ENAMEL); along(p, X1 - 0.01, PIPE + 0.016, HUB, 0.021, M.brass!, ONE); along(p, BACK - 0.012, X0 + 0.01, HUB, 0.021, M.brass!, ONE); p.drum([BACK, HUB + 0.032, 0], 0.0150, 0.024, M.brass!, ONE); p.drum([PIPE, HUB + 0.045, 0], 0.013, 0.026, M.brass!, ONE); knob(p, 0.038);
     } },
     { shape: 'pieces', error: 0.045, less: 'sections: one block, the valve one post', put(p) {
-      slab(p, (X0 + X1) / 2, (X1 - X0) / 2 - 0.002, mul(ENAMEL, 0.87), M.plaster!, 0.006); feet(p, 1.15); p.drum([PIPE, 0.125, 0], 0.021, 0.125, M.paint!, [0.52, 0.46, 0.33]); p.drum([BACK, 0.105, 0], 0.017, 0.105, M.paint!, [0.64, 0.58, 0.38]); along(p, BACK, PIPE, HUB, 0.019, M.brass!, ONE);
+      slab(p, (X0 + X1) / 2, (X1 - X0) / 2 - 0.002, mul(ENAMEL, 0.89), M.plaster!, 0.006); feet(p, 1.15); p.drum([PIPE, 0.125, 0], 0.021, 0.125, M.paint!, [0.52, 0.46, 0.33]); p.drum([BACK, 0.105, 0], 0.017, 0.105, M.paint!, [0.64, 0.58, 0.38]); along(p, BACK, PIPE, HUB, 0.019, M.brass!, ONE);
     } },
   ],
 }) };
