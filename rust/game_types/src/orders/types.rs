@@ -533,7 +533,7 @@ pub struct AIM {
     pub upper: crate::character::UpperMode,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub enum SquadOrdersMenSel {
     Num(f64),
     Guard(GuardId),

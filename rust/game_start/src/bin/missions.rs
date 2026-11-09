@@ -10,7 +10,7 @@
 //! WHAT A ROW SAYS, summed over the seeds: the squad's men up at the end of those staged · enemies left of those staged · floors cleared · when the first of the squad
 //! fell (median, and in how many runs) · when the floor was clear (median) · rounds fired by each side · magazine changes begun by each side · how long open ways onto floor nobody has been on were within 4 m of
 //! a man of the squad, and how much of that a gun of theirs was on them (a second a way) · the enemy man-seconds each
-//! rule of the list had a man. Eight seeds of the thirteen at both difficulties (208 runs) are three minutes on four cores.
+//! rule of the list had a man. Eight seeds of the room clears of the mission list at both difficulties (thirteen: 208 runs) are three minutes on four cores.
 //!
 //! WHAT IT DOES NOT SAY: anything of stealth, of Sam's own gun, of a rescue, or of what a commander who waits and looks would meet. On one seed a floor is a coin toss:
 //! read eight, and read the sums first.
@@ -18,10 +18,9 @@ use game::game::GuardState;
 use game::ids::GuardId;
 use game::orders::Who;
 use game::teams::Team;
-use game_start::play::{dist, Opts, Play};
+use game_start::play::{dist, room_clear_files, Opts, Play};
 use std::collections::BTreeMap;
 
-const LEVELS: [&str; 13] = ["barracks", "block", "compound", "defuse", "depot", "floodlit", "glasshouse", "hall", "killhouse", "mousehole", "office", "pass", "records"];
 /// an order every so many frames, the first half a second in
 const ORDER_EVERY: usize = 300;
 const ORDER_FIRST: usize = 30;
@@ -151,8 +150,9 @@ fn main() {
         }
         i += 1;
     }
-    if levels.is_empty() { levels = LEVELS.iter().map(|l| l.to_string()).collect(); }
-    for l in &levels { if !LEVELS.contains(&l.as_str()) { fail(&format!("no mission '{l}' ({})", LEVELS.join(" "))); } }
+    let every: Vec<String> = room_clear_files().iter().map(|f| f.trim_end_matches(".json").to_string()).collect();
+    if levels.is_empty() { levels = every.clone(); }
+    for l in &levels { if !every.contains(l) { fail(&format!("no mission '{l}' ({})", every.join(" "))); } }
     if one {
         let runs: Vec<Run> = seeds.iter().map(|&s| play(&levels[0], both[0], s, secs)).collect();
         println!("{}", row(&levels[0], both[0], &runs));

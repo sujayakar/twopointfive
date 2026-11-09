@@ -18,6 +18,14 @@ static ONE_GAME: Mutex<()> = Mutex::new(());
 std::thread_local! { static HOLDS: std::cell::Cell<bool> = const { std::cell::Cell::new(false) }; }
 static CHARACTER: OnceLock<files::CharacterFiles> = OnceLock::new();
 
+/// the level file of every room clear of the game's mission list, each once, by name: a new row is here with nothing to write
+pub fn room_clear_files() -> Vec<String> {
+    let mut files: Vec<String> = game::scene_scenario_list::scenarios().into_iter().filter(|e| e.kind == game::scene_scenarios::ScenarioEntryKind::Roomclear).map(|e| e.level.unwrap_or_else(|| String::from("office.json"))).collect();
+    files.sort();
+    files.dedup();
+    files
+}
+
 /// the host's frame rate: a tick is a sixtieth of a second
 pub const DT: f64 = 1.0 / 60.0;
 

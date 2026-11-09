@@ -251,10 +251,10 @@ line says what was not compared. A name that is a part of neither build is refus
 ## Missions: what a change of play does (`src/bin/missions.rs`)
 
 `cargo run --release --bin missions > before.tsv` on the tree before a change of play, the same to `after.tsv` on the tree after it, then
-`… --bin missions -- diff before.tsv after.tsv`: the room clears of `LEVELS` as the page stands them, standard and hard, over several seeds, under a
+`… --bin missions -- diff before.tsv after.tsv`: every room clear of the list as the page stands it, standard and hard, over several seeds, under a
 commander who gives the squad the same orders on every build. A row says who was up at the end, when the first man fell, when the floor was clear, the
-rounds and reloads of each side and how long each rule of the list had an enemy. The file's head says what it does not see: stealth, Sam's gun, the
-rescues, a commander who waits. `hold` says whether a build is the same game; this says what the other game came to.
+rounds and reloads of each side and how long each rule of the list had an enemy. The file's head says what it does not see. `hold` says whether a
+build is the same game; this says what the other game came to.
 
 `src/bin/blastcost.rs` prices the tick of a wall blast against a quiet tick, natively.
 
@@ -270,7 +270,7 @@ gate save            # only rows whose name starts with a word: `gate start`, `g
 gate pin [ROW…]      # record the pins again and say which moved; nothing moved = the file is as it was, byte for byte
 gate breaks          # each row of the breaks' table plays unbroken and must PASS, then each break must FAIL in its check's own words. Exit 0 = all did
 gate long            # the quick kind, then the rows a merge has no time for (`played`, `lesson`, `level …`)
-gate list            # the rows
+gate list            # the rows, then the missions no run plays
 gate tests [BINARY [TEST]]   # the whole native test set: no part of the quick kind
 ```
 
