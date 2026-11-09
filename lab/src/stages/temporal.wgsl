@@ -6,6 +6,7 @@ var<workgroup> tile: array<vec4f, 144>;                            // this group
 @compute @workgroup_size(8, 8) fn main(@builtin(global_invocation_id) id: vec3u, @builtin(local_invocation_id) lid: vec3u, @builtin(local_invocation_index) li: u32) {
   let dim = textureDimensions(outH); let t0 = vec2i(id.xy) - vec2i(lid.xy) - 2; for (var i = li; i < 144u; i += 64u) { tile[i] = textureLoad(cur, clamp(t0 + vec2i(i32(i % 12u), i32(i / 12u)), vec2i(0), vec2i(dim) - 1), 0); } workgroupBarrier();
   if (id.x >= dim.x || id.y >= dim.y) { return; }
+  //2 let now2 = textureLoad(cur2, id.xy, 0); textureStore(outH2, id.xy, now2); var h2 = vec4f(0.0); var o2 = now2;
   let rdim = vec2f(frame.size.xy); let full = min(id.xy * u32(DIV), vec2u(rdim) - 1u); let rd = pxRay(full); let p = unpackPx(textureLoad(surf, full, 0), rd); let at = (lid.y + 2u) * 12u + lid.x + 2u; let c = tile[at];
   if (p.sky && NARROW == 0 && airAt2(vec2u(id.xy)).x <= 0.0) { textureStore(outH, id.xy, c); textureStore(outM, id.xy, vec4f(0.0)); return; }
   if (NARROW == 1 && c.a < 0.0) { textureStore(outH, id.xy, c); textureStore(outM, id.xy, vec4f(0.0)); return; }
@@ -28,6 +29,7 @@ var<workgroup> tile: array<vec4f, 144>;                            // this group
     var ok = abs(dot(was - p.x, p.ng)) < 0.006 * p.t + 0.02 && dot(o.ng, p.ng) > 0.7; if (aux.w > 0.5) { ok = abs(o.t - p.t) < 0.25 && dot(o.ng, p.ng) > 0.4; } if (p.leaf) { ok = o.leaf && abs(o.t - p.t) < 0.5; } if (NARROW == 1 && front) { ok = true; } if (floats) { ok = o.t > ad - 0.25; }
     if (AIR == 1) { let was2 = airWas(vec2u(q)); let th = max(was2.y, ad2.y); if (th > 0.04) { let want = distance(frame.camPos.xyz + rd * select(p.t, ad, floats), frame.prevPos.xyz); ok = ok && abs(was2.x - want) < 0.06 * want + 0.35 && min(was2.y, ad2.y) > 0.3 * th; } }       /* what was seen of the air there was as far off, and as thick: or it is other air */
     if (!ok) { continue; } let v = textureLoad(hist, q, 0); let pm = textureLoad(momPrev, q, 0); if (bad4(v) || bad4(pm)) { continue; } if (NARROW == 1 && v.a < 0.0) { continue; } let kv = said(v) * w; h += v * kv; hw += kv; mo += pm * w; ws += w;
+    //2 let v2 = textureLoad(hist2, q, 0); if (!bad4(v2)) { h2 += v2 * w; }
   }
   var n = 0.0; var o = c1; var mom = vec4f(lum(c1.rgb), lum(c1.rgb) * lum(c1.rgb), 0.0, 0.0); if (NARROW == 0) { mom.w = c.a * c.a; }
   if (ws > 0.02) {
@@ -38,9 +40,11 @@ var<workgroup> tile: array<vec4f, 144>;                            // this group
     // light that is rarely found (a small bright window) is in none of most frames' neighbours: what it has varied by over time is let stand, or the dark would be darker than it is
     if (KIND == 0 && AIR == 0) { let sdh = sqrt(max(mo.y - mo.x * mo.x, 0.0)); e += vec4f(sdh * select(1.6, 1.0 * dull, NARROW == 1) * @tune.leash * smoothstep(4.0, 16.0, n)); } let hc = clamp(h, m1 - e, m1 + e); let moved = select(length((hc - h).rgb) / (length(e.rgb) + 1e-4), length((hc - h).xyw) / (length(e.xyw) + 1e-4), KIND == 1); n *= 1.0 / (1.0 + moved * 0.35);
     var k = 1.0 / (n + 1.0); o = mix(hc, c1, k); mom = vec4f(mix(mo.x, mom.x, max(k, 0.06)), mix(mo.y, mom.y, max(k, 0.06)), 0.0, mix(mo.w, mom.w, max(k, 0.06)));
+    //2 o2 = mix(h2 / ws, now2, k);
     if (NARROW == 1) { o.a = mix(h.a, c.a, max(k, 0.2)); }
     if (KIND == 1) { o = select(o, c, c < vec4f(0.0)); if (p.leaf) { o.w = c.w; } }     // (the sun on a leaf is known without noise, and goes with that leaf's own tilt: not mixed with what other leaves here saw)
   }
   mom.z = n + 1.0;
+  //2 textureStore(outH2, id.xy, o2);
   textureStore(outH, id.xy, o); textureStore(outM, id.xy, mom);
 }
