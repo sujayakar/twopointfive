@@ -1,0 +1,70 @@
+[
+{
+"name": "k1-street realtime",
+"w": 1280,
+"h": 720,
+"dist": 27,
+"look": [
+0.5,
+1,
+-1.0
+],
+"yaw": 0.5,
+"pitch": 0.72,
+"hour": 22.2,
+"cut": 2.5,
+"tick": 300,
+"method": "realtime"
+},
+{
+"name": "k1-street onerule",
+"w": 1280,
+"h": 720,
+"dist": 27,
+"look": [
+0.5,
+1,
+-1.0
+],
+"yaw": 0.5,
+"pitch": 0.72,
+"hour": 22.2,
+"cut": 2.5,
+"tick": 300,
+"method": "onerule"
+},
+{
+"name": "k2-store realtime",
+"w": 1280,
+"h": 720,
+"dist": 14,
+"look": [
+-1.5,
+0.8,
+-5
+],
+"yaw": 0.4,
+"pitch": 0.75,
+"hour": 22.2,
+"cut": 2.5,
+"tick": 300,
+"method": "realtime"
+},
+{
+"name": "k2-store onerule",
+"w": 1280,
+"h": 720,
+"dist": 14,
+"look": [
+-1.5,
+0.8,
+-5
+],
+"yaw": 0.4,
+"pitch": 0.75,
+"hour": 22.2,
+"cut": 2.5,
+"tick": 300,
+"method": "onerule"
+}
+]
