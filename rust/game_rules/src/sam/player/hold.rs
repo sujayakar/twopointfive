@@ -692,8 +692,8 @@ fn say_after(g: &mut crate::game::Game) {
     say_over_sam(g, &a.text, time);
 }
 
-/// A remark of Sam's up over him: bubble, murmur, log. (sayAfter, and the pistol line in swapHold)
-fn say_over_sam(g: &mut Game, text: &str, time: f64) {
+/// A remark of Sam's up over him: bubble, murmur, log. (sayAfter, the pistol line in swapHold, a code he has learnt)
+pub fn say_over_sam(g: &mut Game, text: &str, time: f64) {
     let p = g.player;
     let c = g.pl[p].ch;
     g.pl[p].bubble = Some(crate::game::PlayerBubble { text: String::from(text), t: time, dur: sam_beat(js_len(text)), radio: false });

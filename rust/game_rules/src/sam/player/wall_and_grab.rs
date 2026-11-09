@@ -323,8 +323,8 @@ fn wall_take_back(g: &mut Game, p: PlayerId, c: CharId, firm: bool, dir: f64, ba
     let u_real = pos[0] * t[0] + pos[2] * t[2] - w0.lean_off.unwrap_or(0.0);
     let off_real = pos[0] * n[0] + pos[2] * n[2] - base;
     if u_real < u_lo - 0.25 || u_real > u_hi + 0.25 || off_real > WALL_SHOVE_OFF {
-        crate::game::game_msg(g, if w0.seated { "pushed off the wall" } else { "can't get to the wall here" });
-        if w0.seated { wall_voice(g, w0, false); }
+        if w0.seated { crate::game::game_msg(g, "pushed off the wall"); wall_voice(g, w0, false); }
+        else { crate::interact::refuse(g, p, Some(crate::view::ThingKind::Wall), "can't get to that wall"); }
         release_wall(g);
         return false;
     }

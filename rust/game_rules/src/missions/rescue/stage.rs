@@ -152,7 +152,7 @@ pub fn rescue_bounds(g: &crate::game::Game) -> Option<crate::scene_scenarios::Re
 }
 
 /// The room the side door is taken from. (rescue.ts Rescue.fromBounds)
-pub(super) fn rescue_from_bounds(g: &crate::game::Game) -> Option<crate::scene_scenarios::Rect> {
+pub fn rescue_from_bounds(g: &crate::game::Game) -> Option<crate::scene_scenarios::Rect> {
     let s = rescue_data(g)?;
     let f = s.side.as_ref()?.from.as_ref()?;
     match f.bounds { Some(b) => Some(b), None => clear_plan_bounds(g, &f.door) }

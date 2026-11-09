@@ -81,7 +81,7 @@ solo card. `big_used` counts the big slot. `kit_alone` makes the charges Sam's o
 `load_worn` makes the two scores, read against his issue.
 
 **The rows.** `build_interactables` lists what he can do, `update_interact` makes E a tap or the ring (`whistle_wedge` the last wedge), and a tap with
-no row says why (`empty_thing`). A row performed is `g.act`.
+no row says why (`empty_thing`). So does any other press that did nothing, the trigger, a slot key on a wall and the wall key among them (`refuse`). A row performed is `g.act`.
 
 **His own charges.** `door_tools_sam_rows` and `wall_charge_sam_rows` offer them, `door_tools_sam_tick` and `wall_charge_sam_tick` run the job,
 `update_work_plant` plants him. `sam_stow_tick` puts the gun away first, and the job's clock waits on `sam_stowing`. A step, a sprint or a click ends

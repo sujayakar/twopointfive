@@ -406,9 +406,8 @@ pub(super) fn door_tools_tick_set(g: &mut crate::game::Game) {
             if let Some(i) = g.door_tools.set.iter().position(|x| *x == c) { g.door_tools.set.remove(i); }
             door_tools_refund(g, DoorToolsRefundWhat::Charge);
             if by_sam(g, c) { g.door_tools.sam_spent = m::max(0.0, g.door_tools.sam_spent - 1.0); }
-            let words = crate::orders::door_words(g, d);
-            let text = if gone { alloc::format!("the {} is off its hinges, so the charge came off with it", words) } else { alloc::format!("the {} came open, so the charge came off", words) };
-            crate::game::game_msg(g, &text);
+            let setter = crate::orders::squad_orders_men(g, &crate::seats::here(g), None, None).into_iter().find(|&m| g.gd[m].callsign == g.tab.doortools_set_charge[c].by);
+            crate::squadnet::team_says(g, setter, if gone { "that door's off its hinges. charge is off." } else { "that door came open. charge is off." });
             let what = alloc::format!("charge off {}: the door {}", g.dr[d].def.name, if gone { "is gone" } else { "opened" });
             door_tools_note(g, &what);
             continue;
