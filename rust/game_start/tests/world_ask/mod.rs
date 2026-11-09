@@ -3,6 +3,7 @@
 #![allow(dead_code)]
 use game::ids::*;
 use game_start::json::{self, Json};
+use game_start::moment::Moment;
 use game_start::play::{Opts, Play};
 use game_start::scene::Scene;
 
@@ -406,8 +407,6 @@ impl YardAsk for Play {
 const CROUCH_KEY: &str = "KeyC";
 
 /// Furniture, and a game kept
-#[derive(Clone)]
-pub struct Kept { g: Box<game::game::Game>, block: Vec<u8> }
 
 pub trait FurnAsk {
     /// a blast at a point, by Sam's hand, as a wall charge is told it: `power` Some(0) is one of no strength for the wall. How many walls it holed.
@@ -423,9 +422,9 @@ pub trait FurnAsk {
     /// every static's flags, every prop's pose and presence, the walk grid: one line a part, to compare
     fn level_as_it_stands(&self) -> [String; 3];
     /// the game kept whole, as a host keeps it
-    fn keep(&self) -> Kept;
+    fn keep(&self) -> Moment;
     /// and put back
-    fn put_back(&mut self, k: &Kept);
+    fn put_back(&mut self, k: &Moment);
 }
 
 impl FurnAsk for Play {
@@ -455,13 +454,8 @@ impl FurnAsk for Play {
         let nav: u64 = self.g.col.nav.blocked.iter().fold(7u64, |h, b| h.wrapping_mul(31).wrapping_add(*b as u64));
         [flags.join(","), props.join(" "), format!("{nav}")]
     }
-    fn keep(&self) -> Kept { Kept { g: self.g.clone(), block: game_start::block::bytes(self.g.sim).to_vec() } }
-    fn put_back(&mut self, k: &Kept) {
-        unsafe { std::ptr::copy_nonoverlapping(k.block.as_ptr(), sim::state::addr(self.g.sim) as *mut u8, k.block.len()); }
-        self.g = k.g.clone();
-        game::scene_collision::unstand(&mut self.g);
-        game::scene_collision::stands(&mut self.g);
-    }
+    fn keep(&self) -> Moment { Moment::of(&self.g) }
+    fn put_back(&mut self, k: &Moment) { self.g = k.stands(self.g.sim); }
 }
 
 /// The net
