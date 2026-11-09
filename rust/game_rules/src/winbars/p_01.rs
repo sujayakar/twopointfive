@@ -136,7 +136,7 @@ pub fn break_bar(g: &mut crate::game::Game, index: f64, at: V3, dir: V3, who: f6
     if !taken { return false; }
     let flags = seam_box(g, b).flags;
     seam_box(g, b).flags = bor(flags, HIDE);
-    changed(g, b);
+    changed(g);
     g.stats.winbars.broken += 1;
     if cause == BreakBarCause::Round { g.stats.winbars.by_round += 1; } else { g.stats.winbars.by_blast += 1; }
 
@@ -220,12 +220,11 @@ pub fn break_bar(g: &mut crate::game::Game, index: f64, at: V3, dir: V3, who: f6
     true
 }
 
-/// The level changed where bar `b` stands: whoever keeps an answer about the level's boxes asks again.   (winbars.ts changed)
-pub fn changed(g: &mut crate::game::Game, b: BoxId) {
+/// The level changed where a bar stood: whoever keeps an answer about the level's boxes asks again.   (winbars.ts changed)
+pub fn changed(g: &mut crate::game::Game) {
     g.engine.world.geom_serial += 1.0;
     crate::scene_collision::wrote(g);
     crate::scene_collision::sound_paths_invalidate(g);
-    let (c, h) = { let r = seam_box(g, b); (r.c, r.h) };
 }
 
 /// The blasts' list: every standing bar with a point of its length inside the radius and nothing solid between goes, thrown out from the blast.   (winbars.ts barsBlast)
@@ -258,7 +257,7 @@ pub fn reset_bars(g: &mut crate::game::Game) {
     for k in 0..::sim::panes::bars_gone(s) as usize {
         if let Some(b) = box_of(g, ::sim::panes::bar_gone(s, k) as f64) {
             seam_box(g, b).flags = ::sim::panes::bar_flags(s, k) as f64;
-            changed(g, b);
+            changed(g);
         }
     }
     ::sim::panes::bars_clear(s);

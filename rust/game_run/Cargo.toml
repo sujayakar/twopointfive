@@ -9,7 +9,6 @@ publish = false
 
 [dependencies]
 game = { path = "../game_rules", package = "game_rules" }
-sim = { path = "../sim" }
 game_start = { path = "../game_start", default-features = false }
 
 [dev-dependencies]

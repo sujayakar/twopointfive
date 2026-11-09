@@ -21,6 +21,7 @@ export async function fetchFace(say: (line: string) => void): Promise<Fetched> {
   const t1 = performance.now(); let bytes: number, mod: WebAssembly.Module;
   if (typeof WebAssembly.compileStreaming === 'function' && (res.headers.get('content-type') ?? '').startsWith('application/wasm')) { bytes = Number(res.headers.get('content-length') ?? 0); mod = await WebAssembly.compileStreaming(res); }
   else { const b = await res.arrayBuffer(); bytes = b.byteLength; mod = await WebAssembly.compile(b); }
-  const inst = await WebAssembly.instantiate(mod);
+  // (a module of other sources may want what this page does not hand it)
+  const inst = await WebAssembly.instantiate(mod).catch((e: unknown) => { throw new FaceError(`The game's module is of other sources than this page (${String((e as Error)?.message ?? e)}): tools/blitz/face-build.ts builds it.`); });
   return { exports: inst.exports, bytes, fetchMs: t1 - t0, compileMs: performance.now() - t1, name: (res.headers.get('etag') ?? res.headers.get('last-modified') ?? '').replace(/^W\//, '').replace(/"/g, '') };
 }

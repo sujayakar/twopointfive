@@ -183,9 +183,11 @@ pub const VIEW: u32 = 4;
 pub const SAVES: u32 = 8;
 #[no_mangle]
 pub extern "C" fn face_step(h: u32, dt: f64, flags: u32) {
+    // (asked inside and refused outside the call that holds the game, so that a tick with no record loses the call and not the game)
+    let Some(cmds) = with(h, |x| x.cmds.take()) else { panic!("face_step: nobody handed the tick a record (face_hand, face_record)") };
     with(h, |x| {
-        let cmds = x.cmds.take().expect("face_step: nobody handed the tick a record (face_hand, face_record)");
         game::game::game_step_seats(&mut x.g, dt, &cmds);
+        saves::dealt(&x.g);
         if flags & VIEW != 0 { game_run::view(&mut x.g); }
         if flags & SAVES != 0 { saves::saves(h, x, dt); }
     });

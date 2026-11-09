@@ -191,7 +191,6 @@ pub mod render_particles;
 pub mod render_passes;
 pub mod render_place_field;
 pub mod render_reach;
-pub mod render_reach_keep;
 pub mod render_sdfrig;
 pub mod render_snow_field;
 pub mod render_steps;

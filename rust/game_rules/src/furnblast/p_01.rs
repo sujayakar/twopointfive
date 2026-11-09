@@ -369,7 +369,7 @@ fn fixed_in(g: &mut Game, at: V3, k: f64, who: f64, origins: &[V3], budget: &mut
         let c: V3 = [(grp.a.x0 + grp.a.x1) / 2.0, (grp.a.y0 + grp.a.y1) / 2.0, (grp.a.z0 + grp.a.z1) / 2.0];
         crate::destruction::destruction_cell_dust(g, c, [0.0, 1.0, 0.0], 1.2, grp.surf);
         if solid == 0 { continue; }
-        // one model: sound's routes, the smoke's obstacles, the nav cells, and the AI's feed
+        // one model: sound's routes, the nav cells, and the AI's feed
         crate::scene_collision::sound_paths_invalidate(g);
         let ch = crate::scene_collision::nav_grid_rebake(g, rx0, rz0, rx1, rz1);
         let mut opened: Vec<f64> = Vec::new(); let mut x = 0; while x < ch.len() { if ch[x + 1] == 0.0 { opened.push(ch[x]); } x += 2; }

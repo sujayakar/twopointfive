@@ -70,14 +70,7 @@ pub fn sim_scratch_len() -> usize {
     SCRATCH_LEN
 }
 
-macro_rules! export1 {
-    ($($name:ident => $f:path),* $(,)?) => { $( #[no_mangle] pub extern "C" fn $name(x: f64) -> f64 { $f(x) } )* };
-}
-export1! {
-    maths_sin => maths::sin, maths_cos => maths::cos, maths_tan => maths::tan, maths_asin => maths::asin, maths_acos => maths::acos, maths_atan => maths::atan,
-    maths_exp => maths::exp, maths_log => maths::log, maths_log2 => maths::log2, maths_log10 => maths::log10, maths_tanh => maths::tanh,
-}
-// ---- the box world's copy (world.rs: written by src/scene/boxMirror.ts) and the line tests through it (lines.rs)
+// ---- the box world's copy (world.rs) and the line tests through it (lines.rs)
 /// how many rows a table holds
 pub fn world_cap(table: u32) -> usize {
     world::cap(table)
@@ -125,16 +118,6 @@ pub fn glass_open(w: usize, bi: u32, x: f64, y: f64, z: f64) -> u32 {
     let o = world::world(w);
     ((bi as usize) < world::MAX_BOXES && glass::open(o, bi as usize, x, y, z)) as u32
 }
-// ---- a circle against the box world (collide.rs)
-// ---- the fog of war's sight pass (fog.rs)
-// ---- the knobs and the rig's named nodes that Rust code reads (knobs.rs), and the animator's layers that have moved (layers.rs)
-// A LAYER (layers.rs) is asked as a question of a pose is (skeleton.rs): 0 = not a pose, or a role with no node · else it ran (bit 0), and a bit above for
-// all of the run-forward bones on the bench being current (bit 1) and for each list of nodes it ran forward there (from bit 2).
-// ---- posing on the bench (skeleton.rs: the host writes a question's pose there, asks, and reads the answer back)
-// A QUESTION OF A POSE says where the pose is (skeleton.rs): `g` = 0xffffffff → place `at` of the bench · else game `g`'s pool, the pose starting at single
-// `at` of the part. 1 = done · 0 = not a pose (or not a node), nothing written.
-// ---- the clips a pose is sampled from (clips.rs: a character file's animations, copied in once by src/anim/skeleton.ts)
-// ---- the poses a game keeps (poses.rs)
 // ---- the game's state in the module (state.rs: a block a game, bound to a slot by its host)
 /// a block's length in bytes
 pub fn state_len() -> usize {
@@ -164,7 +147,6 @@ pub fn state_part(i: usize, what: u32) -> usize {
     }
 }
 
-// ---- the game's own die (dice.rs)
 // ---- the level's lights (lights.rs: fixtures, the mains, the lamps they feed, a camera's and a tripwire's machine, in the game's block)
 /// how many a part holds, how long it is, where a column is (lights.rs cap)
 pub fn lights_cap(table: u32) -> usize {
@@ -198,10 +180,6 @@ pub fn doors_cap(table: u32) -> usize {
 pub fn props_cap(table: u32) -> usize {
     props::cap(table)
 }
-// ---- a leaf off its hinges, in the air (slabs.rs: each slab's state in the game's block, its door's facts handed in)
-// ---- what is thrown or dropped (items.rs: each thing's state in the game's block, the pool walked in one call)
-// ---- what falls and what it leaves (falls.rs: the landings the simulation has scheduled, a list a kind of thing, and the glass lying on the floor, in the
-// game's block). `l` is the list; one the module does not have is answered as nothing.
 // ---- the senses (sight.rs, light.rs, bricks.rs, hear.rs, nav.rs): what a man sees, how lit he is, what the smoke hides, how a sound reaches him
 /// the scratch, for an answer of more than one number (one thread, and nothing else holds it across a call)
 #[inline(always)]
@@ -222,7 +200,7 @@ pub fn nav_cap(table: u32) -> usize {
 }
 // ---- the game's own smoke on the coarse grid (bricks.rs): its state is a part of the game's block (state.rs), so a call names the block's slot `g`;
 // one that reads the tables made from the state names the block's `stamp` too (`state::stamp`), and a step the box world `w` it is
-// taken over and that copy's number `copy` (src/scene/boxMirror.ts)
+// taken over and that copy's number `copy`
 /// a static of box world `w` was written inside this rectangle of the plan: the faces near it are asked again at the next step
 pub fn grid_dirty(w: usize, x0: f64, z0: f64, x1: f64, z1: f64) {
     bricks::dirty(w, x0, z0, x1, z1)

@@ -22,6 +22,12 @@ thread_local! {
     /// the games the save controller keeps, by the game they are of and its key: here and not with the game, so a game lost to a panic leaves them
     static SHELF: RefCell<BTreeMap<(u32, String), Shelved>> = const { RefCell::new(BTreeMap::new()) };
 }
+thread_local! {
+    /// the serials dealt in this module: what a lost game told its host of after the save it stands again from is not dealt twice
+    static DEALT: std::cell::Cell<u32> = const { std::cell::Cell::new(0) };
+}
+/// a step was taken
+pub fn dealt(g: &Game) { DEALT.with(|d| d.set(d.get().max(g.serial_next))); }
 /// the key of a run's first step
 const START: &str = "start";
 
@@ -98,6 +104,7 @@ pub extern "C" fn face_recover(h: u32, newest: u32) -> u32 {
     // (a game that still stands under the lost number would share the slot: it is let go, and what is kept of it is not)
     super::GAMES.with(|v| if let Some(x) = v.borrow_mut().get_mut((h as usize).wrapping_sub(1)) { *x = None; });
     let mut g = e.kept.laid(e.kept.game.sim);
+    g.serial_next = g.serial_next.max(DEALT.with(|d| d.get()));
     game::scene_collision::unstand(&mut g);   // (whatever rows its copy says it wrote were another moment's)
     let n = super::put(super::Held::new(g));
     SHELF.with(|s| { let mut s = s.borrow_mut(); for (key, _) in &of { if let Some(e) = s.remove(&(h, key.clone())) { s.insert((n, key.clone()), e); } } });

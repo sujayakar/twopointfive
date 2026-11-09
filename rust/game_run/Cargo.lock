@@ -29,7 +29,6 @@ version = "0.1.0"
 dependencies = [
  "game_rules",
  "game_start",
- "sim",
 ]
 
 [[package]]
