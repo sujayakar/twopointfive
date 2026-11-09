@@ -976,7 +976,7 @@ pub(super) fn last_man(g: &mut crate::game::Game, d: RoomfightDefId) {
             let o = op_gd(g, i);
             let (ot, oc) = (g.gd[o].team, g.gd[o].ch);
             if crate::condition::down(g, g.gd[o].ch) || !crate::teams::is_hostile(g, team, ot) || flat(g.ch[oc].pos, g.ch[c_ch].pos) > 14.0 { continue; }
-            let vis = crate::guards::can_see_char(g, gd, oc, false);
+            let vis = crate::guards::can_see_char(g, gd, oc);
             if vis.visible && crate::guards::sight_gain_on(g, gd, o, vis.dist) > 0.0 { seen += 1; }
         }
         if seen >= 2 { why = Some(HookedWhy::Seen); }

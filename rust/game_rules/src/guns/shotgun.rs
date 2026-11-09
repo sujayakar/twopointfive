@@ -28,14 +28,14 @@ pub(super) fn pellet_end(s: &mut crate::shotgun::Shell, index: f64, t: f64, at: 
 }
 
 /// One pull of a shotgun's trigger: every pellet through fireWeapon, then what the pattern as a whole did.
-pub(super) fn fire_shell(g: &mut crate::game::Game, shooter: CharId, target: V3, is_player: bool, o: &crate::combat::FireOpts, def: &crate::weapons::WeaponDef) {
+pub(super) fn fire_shell(g: &mut crate::game::Game, shooter: CharId, target: V3, o: &crate::combat::FireOpts, def: &crate::weapons::WeaponDef) {
     let p = def.pellets.unwrap();
     let mut shell = crate::shotgun::Shell { def: def.clone(), i: 0.0, dir: None, men: JsMap::new(), ends: Vec::new(), glass: JsMap::new(), late: Vec::new() };
     g.stats.shotgun.shells += 1;
     g.stats.shotgun.pellets += p.n as i32;
     let muzzle = v3::copy(g.ch[shooter].muzzle);
     let first = crate::combat::FireOpts { spread: o.spread, weapon: Some(def.clone()), steady: o.steady, blind: o.blind };
-    crate::combat::fire_pellet(g, shooter, target, is_player, &first, &mut shell);
+    crate::combat::fire_pellet(g, shooter, target, &first, &mut shell);
     let d0 = match shell.dir { Some(d) => d, None => v3::normalize(v3::sub(target, muzzle)) };
     let ax = v3::normalize(v3::cross(d0, if m::abs(d0[1]) < 0.95 { [0.0, 1.0, 0.0] } else { [1.0, 0.0, 0.0] }));
     let ay = v3::cross(ax, d0);
@@ -48,7 +48,7 @@ pub(super) fn fire_shell(g: &mut crate::game::Game, shooter: CharId, target: V3,
         let y = r * m::sin(a);
         let dir = v3::normalize([d0[0] + ax[0] * x + ay[0] * y, d0[1] + ax[1] * x + ay[1] * y, d0[2] + ax[2] * x + ay[2] * y]);
         let rest = crate::combat::FireOpts { spread: Some(0.0), weapon: Some(def.clone()), steady: Some(true), blind: o.blind };
-        crate::combat::fire_pellet(g, shooter, v3::mad(muzzle, dir, 30.0), is_player, &rest, &mut shell);
+        crate::combat::fire_pellet(g, shooter, v3::mad(muzzle, dir, 30.0), &rest, &mut shell);
         i += 1.0;
     }
     let mut l = 0;
@@ -100,7 +100,7 @@ pub(super) fn fire_shell(g: &mut crate::game::Game, shooter: CharId, target: V3,
                 let id = g.ch[shooter].id;
                 if !crate::doors::doors_kick_in(g, d, muzzle, id, Some(true)) { continue; }
                 g.stats.shotgun.locks += 1;
-                if is_player {
+                if crate::character::is_player(g, shooter) {
                     crate::chronicle::chron_door(g, crate::chronicle::ChronDoorKind::DoorKicked, d);
                 }
             }

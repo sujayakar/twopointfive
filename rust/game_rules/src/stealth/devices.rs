@@ -178,7 +178,7 @@ pub fn update_camera(g: &mut crate::game::Game, c_2: CameraRtId, dt: f64, live: 
         let c = g.pl[pl].ch;
         let chest = bone_or(g, c, crate::character::Bone::Chest, [0.0, 1.1, 0.0]);
         let air = crate::sense::clear_between(g, d.pos, chest);
-        let vis = crate::guards::eye_contact(g, e, c, true, false, air, None);
+        let vis = crate::guards::eye_contact(g, e, c, false, air, None);
         if !vis.visible { continue; }
         let got = lens_gain(g, &crate::seats::seat(g, crate::seats::seat_of_man(g, pl)), vis.dist, range, air);
         if !seen || got > gain { (pc, seen, gain) = (c, true, got); }

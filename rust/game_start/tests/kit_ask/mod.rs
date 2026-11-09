@@ -429,7 +429,7 @@ impl KitAsk for Play {
     fn sam_round_at(&mut self, at: [f64; 3]) {
         let c = self.g.pl[self.g.player].ch;
         let o = game::combat::FireOpts { steady: Some(true), spread: Some(0.0), ..game::combat::FireOpts::default() };
-        game::combat::fire_weapon(&mut self.g, c, at, true, Some(&o));
+        game::combat::fire_weapon(&mut self.g, c, at, Some(&o));
     }
 
     fn sam_a_ghost(&mut self) { self.g.player_invisible = true; }

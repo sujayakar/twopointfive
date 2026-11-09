@@ -520,7 +520,7 @@ fn perceive_here(g: &mut crate::game::Game, m: GuardId, dt: f64) -> bool {
             i += 1;
             if crate::condition::down(g, g.gd[o].ch) || g.gd[o].civ.is_some() || !crate::teams::hostile_to(g, m, g.gd[o].team) || crate::rails::rails_down(g, o) { continue; }
             let oc = g.gd[o].ch;
-            let vo = crate::guards::can_see_char(g, m, oc, false);
+            let vo = crate::guards::can_see_char(g, m, oc);
             if !vo.visible { continue; }
             let rate = crate::guards::sight_gain_on(g, m, o, vo.dist);
             if rate <= 0.05 { continue; }

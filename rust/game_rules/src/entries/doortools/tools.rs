@@ -685,7 +685,7 @@ pub(super) fn door_tools_gun_step(g: &mut crate::game::Game, op: DoorOpId) {
     }
     let lock = crate::doors::door_locked(g, d) && crate::doors::door_latched(g, d);
     if !(kit && crate::bigkit::big_broken()) {
-        crate::combat::fire_weapon(g, c, gun.at, false, Some(&crate::combat::FireOpts { steady: Some(true), spread: Some(0.0), ..Default::default() }));
+        crate::combat::fire_weapon(g, c, gun.at, Some(&crate::combat::FireOpts { steady: Some(true), spread: Some(0.0), ..Default::default() }));
         if !lock && gun.shut == Some(true) && !is_open(g, d) {
             let (from, who) = (g.ch[c].pos, g.ch[c].id);
             crate::doors::doors_kick_in(g, d, from, who, Some(true));

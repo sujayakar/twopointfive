@@ -321,7 +321,7 @@ impl StealthAsk for Play {
     }
     fn eyes_take_in(&mut self, h: GuardId, m: GuardId) -> bool {
         let c = self.g.gd[m].ch;
-        let v = game::guards::can_see_char(&mut self.g, h, c, false);
+        let v = game::guards::can_see_char(&mut self.g, h, c);
         v.visible && game::guards::sight_gain_on(&mut self.g, h, m, v.dist) > 0.05
     }
     fn free_near(&self, at: [f64; 2], r: f64) -> [f64; 2] {

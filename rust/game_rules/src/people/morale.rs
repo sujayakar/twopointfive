@@ -258,7 +258,7 @@ pub fn morale_man_down(g: &mut crate::game::Game, victim: GuardId) {
         i += 1;
         if gd == victim || !ours(g, gd) || g.staged.leads(gd) || training_of(g, gd) != TrainingOf::Green || leader_of(g, gd) != Some(victim) { continue; }
         mind(g, gd).leader_down = true;
-        if crate::control::man::blind(g, gd) || !crate::guards::can_see_char(g, gd, vc, false).visible { continue; }
+        if crate::control::man::blind(g, gd) || !crate::guards::can_see_char(g, gd, vc).visible { continue; }
         let n = nerved(g, g.k.morale.leader_shock);
         let cap = g.k.morale.shock_cap;
         let r = g.m.morale.state_of.get_mut(gd).unwrap();
@@ -405,7 +405,7 @@ fn seen_by(g: &mut crate::game::Game, gd: GuardId, hole: Option<V3>) -> Vec<Char
         if !visible {
             if let Some(e) = e {
                 let seat = crate::seats::faced_view(g, gd);
-                let v = crate::seats::with_seat(g, seat, &mut |g: &mut Game| crate::guards::eye_contact(g, e, pc, true, false, smoke, None));
+                let v = crate::seats::with_seat(g, seat, &mut |g: &mut Game| crate::guards::eye_contact(g, e, pc, false, smoke, None));
                 visible = v.visible; dist = v.dist;
             }
         }
@@ -418,11 +418,11 @@ fn seen_by(g: &mut crate::game::Game, gd: GuardId, hole: Option<V3>) -> Vec<Char
         let ot = g.gd[o].team;
         if crate::condition::down(g, g.gd[o].ch) || !crate::teams::is_hostile(g, team, ot) { continue; }
         let oc = g.gd[o].ch;
-        let v = crate::guards::can_see_char(g, gd, oc, false);
+        let v = crate::guards::can_see_char(g, gd, oc);
         let (mut visible, mut dist) = (v.visible, v.dist);
         if !visible {
             if let Some(e) = e {
-                let v = crate::guards::eye_contact(g, e, oc, false, false, smoke, None);
+                let v = crate::guards::eye_contact(g, e, oc, false, smoke, None);
                 visible = v.visible; dist = v.dist;
             }
         }
@@ -537,7 +537,7 @@ fn round(g: &mut crate::game::Game, gd: GuardId, dt: f64, every: f64, of: crate:
     let w = g.gd[gd].weapon;
     if !crate::weapons::firearm_fire(g, w) { return false; }
     let spread = g.k.morale.spread;
-    crate::combat::fire_weapon(g, c, at, false, Some(&crate::combat::FireOpts { steady: Some(true), spread: Some(spread), blind: Some(true), ..crate::combat::FireOpts::default() }));
+    crate::combat::fire_weapon(g, c, at, Some(&crate::combat::FireOpts { steady: Some(true), spread: Some(spread), blind: Some(true), ..crate::combat::FireOpts::default() }));
     let r = g.m.morale.state_of.get_mut(gd).unwrap();
     r.rounds -= 1.0;
     r.next = every;

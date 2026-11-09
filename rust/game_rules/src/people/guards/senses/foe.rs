@@ -17,7 +17,7 @@ pub(in crate::people) fn eyes(g: &mut Game, gd: GuardId, dt: f64, staff: bool) -
     let fc = crate::teams::foe_char(g, gd);
     let (visible, dist) = match (&f, fc) {
         (Some(crate::game::Foe::Player), _) => { let v = can_see(g, gd); (v.visible, v.dist) }
-        (Some(_), Some(fch)) => { let v = can_see_char(g, gd, fch, false); (v.visible, v.dist) }
+        (Some(_), Some(fch)) => { let v = can_see_char(g, gd, fch); (v.visible, v.dist) }
         _ => { let v = no_sight(); (v.visible, v.dist) }
     };
     if let (true, Some(fch)) = (visible, fc) {
