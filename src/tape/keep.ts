@@ -1,11 +1,12 @@
 // EVERY RUN IS KEPT: the tape of the run being played (handtape.ts) goes to this browser's store of kept runs (tape/keepstore.ts) a piece at a time as it grows, nothing pressed, and is
 // read back whole from there. A piece is bytes of the tape and where in it they go, so a run whose page was killed is kept up to its last piece.
-import type { KeepHead, KeepSource } from './keeper';
+import type { KeepSource } from './keeper';
+import type { KeptHead } from './kept';
 import { bodyText, type KeptStore } from './keepstore';
 import type { HandTape } from './handtape';
 
 /** a visit's head, where its tape is one of hands */
-export interface HandsHead extends KeepHead { game: 'twopointsix'; hands: number; seed: number; userAgent?: string }
+export interface HandsHead extends KeptHead { game: 'twopointsix'; hands: number; seed: number }
 interface Line { k?: string; sid?: string; from?: number; b?: string }
 
 const CHUNK = 0x8000;
