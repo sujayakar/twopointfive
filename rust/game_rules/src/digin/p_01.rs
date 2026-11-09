@@ -455,28 +455,7 @@ pub fn wants_deep(g: &Game, d: RoomfightDefId, r: &crate::digin::RoomSt) -> bool
 
 /// The room fight's own 'move' mode, by his script's legs. (digin.ts move)
 pub fn move_(g: &mut Game, d: RoomfightDefId, goal: V3, speed: f64) {
-    let gd = g.tab.roomfight_def[d].gd;
-    let c = g.gd[gd].ch;
-    let pos = g.ch[c].pos;
-    let row = &mut g.tab.roomfight_def[d];
-    row.mode = crate::roomfight::DefMode::Move;
-    row.move_kind = crate::roomfight::DefMoveKind::Fallback;
-    row.came_by = None;
-    row.move_t = 0.0;
-    row.stall_at = pos;
-    row.stall_t = 0.0;
-    crate::control::set_pinned(g, gd, false, "digin");
-    crate::squad::order(g, gd, crate::squad::OrderPatch {
-        goal: Some(Some(goal)),
-        speed: Some(Some(speed)),
-        face: Some(None),
-        strafe: Some(Some(false)),
-        aim_at: Some(None),
-        upper: Some(Some(crate::character::UpperMode::Aim)),
-        stance: Some(Some(crate::character::Stance::None)),
-        crouch: Some(Some(false)),
-        ..Default::default()
-    });
+    crate::roomfight::send(g, d, crate::roomfight::Leg::to(goal, speed), "digin");
 }
 
 /// The fear he keeps on his door. (digin.ts fear)

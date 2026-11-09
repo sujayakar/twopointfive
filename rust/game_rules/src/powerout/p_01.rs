@@ -83,10 +83,7 @@ pub fn loud_heard(g: &crate::game::Game, gd: GuardId) -> f64 {
     h.shots + h.kick + h.bang
 }
 
-/// his row in the room fight. (powerout.ts defOf)
-pub fn def_of(g: &crate::game::Game, gd: GuardId) -> Option<RoomfightDefId> {
-    g.fight.defs.iter().copied().find(|&d| g.tab.roomfight_def[d].gd == gd)
-}
+pub use crate::roomfight::def_of;
 
 /// the rule's men: the room fight's defenders on the other side from the player, in live play. (powerout.ts ruled)
 pub fn ruled(g: &crate::game::Game) -> Vec<RoomfightDefId> {
@@ -322,6 +319,11 @@ pub fn settle(g: &mut crate::game::Game, m: &crate::powerout::Man, d: RoomfightD
     calm_back(g, d, m.calm.as_ref().unwrap(), word);
 }
 
+/// the post in a kept calm
+fn held_of(c: &crate::powerout::Calm) -> crate::roomfight::Held {
+    crate::roomfight::Held { hold: c.hold, pinned: c.pinned, station: c.station, home: c.home, room: c.room, ev: c.ev.clone(), watch: c.watch, want: c.want, pt: c.pt }
+}
+
 /// a man back on the post he left, as `calm_of` read it there; `wary`: he is not calmed down again. (powerout.ts calmBack)
 pub fn calm_back(g: &mut crate::game::Game, d: RoomfightDefId, c_2: &crate::powerout::Calm, wary: bool) {
     let gd = g.tab.roomfight_def[d].gd;
@@ -330,27 +332,7 @@ pub fn calm_back(g: &mut crate::game::Game, d: RoomfightDefId, c_2: &crate::powe
         crate::squad::end_guard_script(g, gd, Some(state));
     }
     crate::mind::set(g, gd, if wary { m::min(0.45, m::max(c_2.awareness, 0.35)) } else { c_2.awareness }, "powerout");
-    crate::control::set_hold(g, gd, c_2.hold, "powerout");
-    crate::control::set_pinned(g, gd, c_2.pinned, "powerout");
-    let state: String = g.gd[gd].state.as_str().into();
-    let seen = g.gd[gd].last_seen_t;
-    let row = &mut g.tab.roomfight_def[d];
-    row.mode = crate::roomfight::DefMode::Hold;
-    row.station = c_2.station;
-    row.home = c_2.home;
-    row.room = c_2.room;
-    row.ev = c_2.ev.clone();
-    row.watch = c_2.watch;
-    row.want = c_2.want;
-    row.glance_until = -1.0;
-    row.fix_keep = -1.0;
-    row.rally_at = m::NAN;
-    row.last_state = state;
-    row.last_seen = seen;
-    // (D.pt moved in place: a fix that IS it moves with it. Then `cover(gd, D.pt)`, whose other branch is the fix made that object: the Def has the stamp, cover has no Def)
-    let pt = c_2.pt;
-    crate::roomfight::def_move_pt(g, d, pt);
-    crate::belief::cover(g, gd, pt);
+    crate::roomfight::back_on(g, d, held_of(c_2), "powerout");
 }
 
 // ---------------------------------------------------------------- the trip
