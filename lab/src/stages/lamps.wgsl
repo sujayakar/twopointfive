@@ -27,7 +27,7 @@ const SUN_LAMP = 255u;
   W.x = W0; let lampsW = W0 + select(fw, 0.0, fi == SUN_LAMP); var v = vec4f(-1.0, -1.0, -1.0, 0.0); let o0 = 0.003 * (1.0 + p.t * 0.02);
   for (var k = 0u; k < 6u; k++) { let torch = k == 2u || k > 3u; let t = select(0u, k - 3u, k > 3u);
     var l = SUN_LAMP; if (k == 0u) { l = fi; if (fw <= 0.0 || fw < 0.02 * (W0 + W.y)) { continue; } }
-    else if (k == 1u) { if (pick.x < 0) { continue; } l = u32(pick.x); if (W0 < 0.02 * fw || W0 < 0.02 * W.y) { v.x = max(v.w, 0.0); continue; } }     /* (what is lost beside the first, or a torch) */
+    else if (k == 1u) { if (pick.x < 0) { continue; } l = u32(pick.x); if (W0 < 0.02 * fw * v.w || W0 < 0.02 * W.y) { continue; } }     /* (what is lost beside the first where that is seen, or a torch) */
     else if (torch) { if (W.y < 0.01 * lampsW || ti[t] < 0 || tw[t] < 0.03 * tw.x) { continue; } l = u32(ti[t]); }
     else { if (pick.z < 0 || WC < 0.01 * (lampsW * lum(p.albedo) * 0.32 + 2e-4)) { continue; } l = u32(pick.z); }
     var d: vec3f; var far = 400.0; let sun = l == SUN_LAMP; let fine = ((u32(FINE) >> select(select(k, 2u, torch), 0u, sun)) & 1u) != 0u || (p.leaf && k == 0u && !sun); leafMode = select(2u, 0u, fine); noLeaves = sun && !fine;
