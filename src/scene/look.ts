@@ -9,7 +9,7 @@ import type { BoxStuff } from './boxes';
 export const LOOK = {
   on: false,
   /** THE SNEAKING SUIT (the maintainer, 10-10: "sam should also be in a black sneaking suit in stealth missions (probs not loud ones)"): with the look on, Sam —
-   *  and the partner of a quiet mission as two — wears a black suit with no helmet and no carrier on every mission that is not a squad's loud one (game/cast.ts
+   *  and the partner of a quiet mission as two — wears a black suit with no helmet and no carrier on every mission that is not a squad's loud one (rust/game_rules/src/cast
    *  sneakSuit: the parts; render/charMaterials.ts SNEAK_SUIT: the cloth). False (`?suit=0`) = the operators' issue dress on every mission, as the look first shipped.
    *  Nothing with the look off. Looks only. */
   suit: true,
@@ -17,7 +17,7 @@ export const LOOK = {
 
 /** WHICH MISSION THE MEN ARE DRESSED FOR, where it is not the scenario that is up: the Rust game's `scene_look.suit_asked` (a picture staged as a room clear for a quiet mission, rust/game_start/src/kit_stage.rs
  *  dress), carried to this name by the state bridge as any module's word is (tools/blitz/schema.json). 'quiet' = Sam and the staged team in the suit, null = no mission (Sam alone in it), undefined = the scenario
- *  decides (game/cast.ts sneakSuit reads this first). Nothing on this page writes it. Looks only. */
+ *  decides (rust/game_rules/src/cast sneak_suit reads this first). Nothing on this page writes it. Looks only. */
 let suitAsked: 'quiet' | null | undefined;
 /** the mission asked for (undefined: none asked — the game's own scenario decides) */
 export function suitAs(): 'quiet' | null | undefined { return suitAsked; }
@@ -25,7 +25,7 @@ export function suitAs(): 'quiet' | null | undefined { return suitAsked; }
 /** THE MEN'S DRESS FOLLOWS THE PLACE (the maintainer, 10-10: "middle eastern enemies also don't make sense for the office level"): the look's cast and colour
  *  tables — local dress for the defenders, tan issue for the operators — are for the look's places. On the OFFICE family (the bundled office, relief, the texel
  *  variants) the men are dressed as they were before the look: the first cast file and its tables, and of its defenders only the ones dressed for a building
- *  (game/cast.ts officeDress: no straw hat, no bandolier). The sneaking suit is the look's on every level (LOOK.suit). Not a knob: it is a fact of the level the
+ *  (rust/game_rules/src/cast office_dress: no straw hat, no bandolier). The sneaking suit is the look's on every level (LOOK.suit). Not a knob: it is a fact of the level the
  *  PAGE booted on, said once at boot (main.ts, before the cast is fetched); everything headless leaves it true, so `LOOK.on` alone still means the look's dress there.
  *  Looks only. */
 let lookPlace = true;

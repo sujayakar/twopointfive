@@ -2,7 +2,7 @@
 // WAY IN. A district clinic the size of a house: three small rooms in a row off ONE lit corridor, and at the corridor's end a duty room whose men look down its
 // whole length through a glass hatch. Every held room's door opens off that corridor, so every stack on a door stands lit in the post's lane. The rooms share
 // thin partitions and the building's north wall is blank and stands on a dark yard: the squad is issued wall charges for the run (scenarios.roomClear.wallCharges,
-// game/issue.ts) and makes its own doors — the outer wall into the ward, then partition by partition down the row, into the duty room from its side, behind the
+// rust/game_rules/src/issue) and makes its own doors — the outer wall into the ward, then partition by partition down the row, into the duty room from its side, behind the
 // guns that are on the corridor.
 //   ward        1 man. Cots down the west wall, the nurse's table. The north wall (outside: the dark yard) is the first hole.
 //   exam room   3 men, lit: the couch, the doctor's desk, a screen on its feet. Shares a partition with the ward and with the store.
@@ -59,7 +59,7 @@ export const MOUSEHOLE_START: Vec3 = [12.0, 0, 3.4];
 
 /** THE ROOM CLEAR on this level. Nine men: ward 1, exam room 3, store 2, duty room 3, each room a section of its own that stays home. The room men stand
  *  across their rooms from the doors they fear, 2.7 m off the blank north wall (past the 2 m a wall charge knocks a man down at). `wallCharges`: what the
- *  squad is issued for the run whatever its cards carry (game/issue.ts) — four walls on the route and one spare.
+ *  squad is issued for the run whatever its cards carry (rust/game_rules/src/issue) — four walls on the route and one spare.
  *  THE MEN ARE PLACED BY HAND: the room clear's own placement (seed 0, first staging) stands each room's first `garrison` marks IN FILE ORDER, so the order of
  *  each `marks` list below is the placement — moving a mark up or down the list changes who stands.
  *  THE PROBLEM IN ONE SENTENCE: a gun behind a hatch owns the lit corridor every door opens on, and the room he sits in is deeper than a flash reaches.
@@ -70,7 +70,7 @@ export const MOUSEHOLE_STRUCTURE: StructureData = {
   name: 'clinic',
   maxMen: 9,
   wallCharges: 5,
-  // each room is its own section and stays in it: when the first room is hit the rest shut, wedge and cover their corridor doors (game/enemysquads.ts)
+  // each room is its own section and stays in it: when the first room is hit the rest shut, wedge and cover their corridor doors (rust/game_rules/src/enemysquads)
   squads: [
     { id: 'ward', name: 'Ward', rooms: ['ward'], barricade: ['ward'], mayLeave: false },
     { id: 'exam', name: 'Exam', rooms: ['exam'], barricade: ['exam'], mayLeave: false },
@@ -197,7 +197,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
   const ext = C.concrete;
   K.wallX(k, 7, 8.88, 33.12, EXT, ext);                                               // north: blank, on the dark yard — the first hole
   K.wallX(k, 19, 8.88, 33.12, EXT, ext, [win(11.6, 13.6), win(19.0, 21.0)]);          // south: the corridor's two windows onto the lot. A metre clear of the duty room's door, so the camera's own side of the building does not hide that doorway
-  K.wallZ(k, 9, 7.12, 18.88, EXT, ext, [K.doorAt(k, 'front', 'z', 9, 16.35, { exterior: true })]);   // west: the front door off the porch, unlocked. A DOOR, not an arch: the corridor is then a room of its own to the squad's books (game/cleared.ts), and a squad that has not been in it is never sent to stand in it (the wall charge's stand-off marks keep to floor the squad holds)
+  K.wallZ(k, 9, 7.12, 18.88, EXT, ext, [K.doorAt(k, 'front', 'z', 9, 16.35, { exterior: true })]);   // west: the front door off the porch, unlocked. A DOOR, not an arch: the corridor is then a room of its own to the squad's books (rust/game_rules/src/cleared), and a squad that has not been in it is never sent to stand in it (the wall charge's stand-off marks keep to floor the squad holds)
   K.wallZ(k, 33, 7.12, 18.88, EXT, ext, [K.doorAt(k, 'fire_exit', 'z', 33, 8.6, { exterior: true, steel: true, locked: true })]);   // east: the duty room's fire exit — steel, locked on its inside face (from the east side it opens to a hand: the second way in)
   K.grp(k, 'walls.interior');
   const iw = C.wall;
@@ -329,7 +329,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
     // the one mission thread, for whoever plays the level outside a scenario: reach the duty room, pull the radio's drive, leave by the fire exit
     mission: { serverRoom: { ...MOUSEHOLE_ROOMS.post.bounds }, entryDoor: 'post', rack: { index: 1, front: rackFront, halfW: 0.33 }, exfilDoor: 'fire_exit', exfilX: 33.6, exfilZ: 9.2 },
   });
-  // ---------------- what is underfoot (game/floor.ts: which footstep sounds, and how far it carries to their ears) — the slabs under 'ground' and 'floors'
+  // ---------------- what is underfoot (rust/game_rules/src/floor: which footstep sounds, and how far it carries to their ears) — the slabs under 'ground' and 'floors'
   // above, rect for rect. `building` is the whole world so the plan is all zones (first match wins): outside every zone is the lot's asphalt.
   const surfaces: SurfacesData = {
     building: { x0: 0, x1: 40, z0: 0, z1: 28 }, grassEdge: 0, inside: 'asphalt', outside: 'asphalt', verge: 'asphalt',

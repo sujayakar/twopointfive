@@ -329,7 +329,7 @@ preferences, etc." No accounts; nothing multiplayer.
   keeps a stored promise from being unhandled while its caller has the same rejection (the cut build, the particles' build, the boot's
   early promises: the red card has those); a readback that fails every frame after a lost device (`gpu/timer.ts`, the particles', the
   light meter's); a browser guard (no window, no IndexedDB commit, no CompressionStream, no Navigation API, a refused clipboard); a dev
-  server or shot server that is not there; the benchmark's card closed before its upload answered. A report in `src/game/journal.ts` is
+  server or shot server that is not there; the benchmark's card closed before its upload answered. A report in `rust/game_rules/src/journal` is
   the catch's only statement and hands over no game state: the reporter reads none, rolls no die and reads no clock. THE REPLAY PAGES are wired
   by the next bullet. Checked headless on both stands: `cloud-check` (107), `splitrays-check` (its pin turned),
   `replaybuf-probes` (121), `replaykeep-probes` (74, `REPLAYLEFT_BREAK=1` red), `gate.sh journal`, `probes.ts cardreplay`, `pipequeue`,
@@ -365,7 +365,7 @@ preferences, etc." No accounts; nothing multiplayer.
   `run` record, while all three exfiltrations had theirs). `Telemetry.frame` writes a `run` when the stage word it is handed moves into
   `done` or `failed`, and the page handed it `game.mission.stage`: only the STEALTH mission moves that word into an end. A house taken, a
   rescue, a night breach won and a team wiped end by their own rules and leave it where it was. The page now hands in
-  `endStage(game.mission.stage, game.verdict.result)` (`src/cloud/telemetry.ts`): the verdict's end where a run has one (`game/verdict.ts`
+  `endStage(game.mission.stage, game.verdict.result)` (`src/cloud/telemetry.ts`): the verdict's end where a run has one (`rust/game_rules/src/verdict`
   knows every kind's), else the mission's word. The record gained `over`, the verdict in brief (`kind`, `won`, `word`, `why`, `secs`,
   `approach`, `void` = a cheat was on, `clean`, `lost` of `of`, `foesDown` of `foesOf`, `hostagesAlive` of `hostagesOf`), and one end is one
   record: a word that moves from an end to the other end (a mission failed whose verdict then says won) writes nothing more. On a

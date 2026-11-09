@@ -150,7 +150,7 @@ export function buildLookPanel(panel: Panel, engine: Engine, fps: () => number, 
   const hold = btn(row(cmp, 'plain boxes'), 'hold', 'the page as the game draws it today, while this is held'); let held = false; hold.addEventListener('pointerdown', () => { held = true; plain(true); }); for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) hold.addEventListener(ev, () => { if (!held) return; held = false; if (!stayPlain) plain(false); });   // (only a hold that began here ends here: the sweep's plain row is not ended by a pointer passing over)
   panel.toggleBox(cmp, 'stay plain', () => stayPlain, v => { stayPlain = v; plain(v); }, 'the boxes stay plain until this is put off');
   // THE SUN AND THE MOON (the maintainer, 10-23: "do we model a sun at all for dawn/midday? i think that's a big reason why it looks flat. and perhaps we should also
-  // model a moon on night levels (and can configure it)"). Both are there: the hour's sun (game/hours.ts), which a snow level's cloud leaves 9 % of, and the level's
+  // model a moon on night levels (and can configure it)"). Both are there: the hour's sun (rust/game_rules/src/hours), which a snow level's cloud leaves 9 % of, and the level's
   // moon, which the pass has at 0.06. These rows set them for the visit: Sun = the share of the hour's own sun that comes through (it then stands
   // against the cloud), Moon / height / bearing = the level's moon (`SkyTurns`: the page's own way to them). The page shows what it has: a row follows the hour and the level.
   if (sky) {

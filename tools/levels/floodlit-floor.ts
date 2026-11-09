@@ -271,7 +271,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
     sky: { zenith: [0.007, 0.012, 0.024], horizon: [0.018, 0.024, 0.039] },   // (overcast as its moon is: see the head)
     mission: { serverRoom: { ...FLOODLIT_ROOMS.store.bounds }, entryDoor: 'store', rack: { index: 0, front: rackFront, halfW: 0.33 }, exfilDoor: 'foot_gate', exfilX: 3.5, exfilZ: 21.8, exfilOut: [-1, 0] },
   });
-  // ---------------- what is underfoot (game/floor.ts: which footstep sounds, and how far it carries to their ears) — the slabs under 'ground' and 'floors'
+  // ---------------- what is underfoot (rust/game_rules/src/floor: which footstep sounds, and how far it carries to their ears) — the slabs under 'ground' and 'floors'
   // above. `building` is the whole world so the plan is all zones (first match wins). The yard's packed earth, the shed's floor and the ground outside the
   // wall are 'asphalt' (the nearest the six have to earth); the building stands on a concrete slab ('stone') with lino laid in the hall.
   const surfaces: SurfacesData = {

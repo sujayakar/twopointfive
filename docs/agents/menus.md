@@ -116,7 +116,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **The way in**: the title's Play opens the one starting page (`src/ui/startpage.ts`; the older start card and its short list of rows were removed 2026-11-07; `src/scene/picks.ts PICKS` still orders the page's first missions, carries `?pick=<id>` and the pause card's 'Next'). On the page a row's Team & kit is the **Loadout** (`src/ui/loadout.ts` + `src/ui/kitCard.ts`; `?loadout=<mission id>`), and Deploy is a PAGE LOAD of the mission's URL. An address that names a mission and draws no load brief (`?paused`, `?loadbrief=0`) boots behind the title's head and the status line with no buttons; a mission refused at boot opens the title with the refusal on it, and Options closed with the no-AI cheat off loads the page again. CHECKS: `probes.ts picker-card`, `missions-screen`; `tools/qa/startpage-look.cjs`, `loadbrief-page.cjs` on the software adapter. SEEN: on the software adapter only; never seen on a GPU, nobody has played it.
 
 <!-- was CLAUDE.md lines 759–770 -->
-- **The debrief = the chronicle** (`rust/game_rules/src/chronicle`, `Game.chronicle`, replaced by `restartEncounter`; `src/game/chronicle.ts` keeps only its record's shape and the two tables the knob registry reads): a capped timeline `events[]` of `{ t (mission
+- **The debrief = the chronicle** (`rust/game_rules/src/chronicle`, `Game.chronicle`, replaced by `restartEncounter`; `rust/game_rules/src/chronicle` keeps only its record's shape and the two tables the knob registry reads): a capped timeline `events[]` of `{ t (mission
   clock), kind, room, pos, data }` — kinds `objective spotted contact heard lost calm alarm radio shot lightShot ocp blackout thrown grab interrogated keyTaken ko kill
   bodyFound doorKicked lockPicked hit down checkpoint` — Sam's PATH sampled every 0.5 s (flat Float32Array, thins itself at PATH_CAP), and the counters MissionStats
   lacks (`counts`). Written by ONE-LINE hooks at the true sites (guards.ts hearingCheck ×5 / the alert transition / dropToSearch / the search's end / raiseEscalation +
@@ -163,7 +163,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 
 <!-- added 2026-10-13, after the cut -->
 - **THE RECAP'S RECORD IS THE RUST TICK'S (2026-11-07).** `rust/game_rules/src/deathrecap` keeps who of ours fell, to whom, from where, with what, the floor's last seconds and what the squad knows of a man lost (`Game.recap`; only `lost_live` is on the wire), last in the tick, with `rust/game_start/tests/recap.rs` holding each rule. A kept game has none of it: a load starts it over. The bullet below is the rules as they were written and the page's side of them.
-- **The down card says who shot you, and from where** (the death recap goal, 'Every death explains itself'; `rust/game_rules/src/deathrecap`, kept by the tick and read through `face_debrief_view`; `src/ui/recap.ts` draws it; `src/game/deathrecap.ts` keeps `RECAP`, the record's shape and what the squad block reads; step 1 = commit
+- **The down card says who shot you, and from where** (the death recap goal, 'Every death explains itself'; `rust/game_rules/src/deathrecap`, kept by the tick and read through `face_debrief_view`; `src/ui/recap.ts` draws it; `rust/game_rules/src/deathrecap` keeps `RECAP`, the record's shape and what the squad block reads; step 1 = commit
   456c2e1b, in the build since 8d2c2785; its page is rebuild/death-recap/read-first.md): when Sam goes down the down
   card has a small plan above the route map — the man who shot him in the menu's orange with his name, the line of the round with an arrowhead, Sam as a white cross, a faint wedge for where
   he was looking — and under it the man's name, his gun, the distance. The same record is kept for every teammate and hostage who goes down (rounds, fragmentation bursts, a hostage shot by
@@ -197,7 +197,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   so a row added to the table or taken off it moves nothing) — ALL PASS on both stands, `UNPLAYED_BREAK=1` fails on both. `missions-list`'s order line holds the switch off (it pins the order before this). LOOKED AT:
   `tools/qa/unplayed-page.cjs` on the software adapter at 1280 x 720 (classes, order, computed opacity, the list's rule; no page
   error) and stills taken with no GPU at all; the page script also holds the open group's cards to the SAME BOXES with the switch on and off. Never seen on a GPU, nobody has played with it.
-- **Every run ends on a verdict** (`src/game/verdict.ts`, `Game.verdict`, ticked in `Game.step` after the scenarios; `VERDICT {on, winSecs, lossSecs}` in the knob registry,
+- **Every run ends on a verdict** (`rust/game_rules/src/verdict`, `Game.verdict`, ticked in `Game.step` after the scenarios; `VERDICT {on, winSecs, lossSecs}` in the knob registry,
   settled on; READS ONLY — it moves no run's digest). A TRY starts at the par clock's rule (the first order logged, Sam
   1 m off his mark, a round or a throw); `ended()` names each mission kind's end (CLEAR / RESCUED / OUT · DOWN / WIPED / LOST / GOT AWAY /
   FAILED); `result: RunVerdict` = word, clock, a row per man (path, where he fell, the defenders he dropped), the way a WON run was won — `Approach` doors / walls / dark /
@@ -255,7 +255,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   three do: its own address, `block-squads.json` and `?loadout=block-squads` hold (its `ways` now name the rebuilt floor's two starts, the same as `block-four`'s: the two files
   share them). The cut changes no check on the level file: what is red on the rebuilt block floor is the floor's (docs/agents/levels.md), not this row's. `?offlist=0` draws it again. `probes.ts offlist` and
   `tools/qa/unplayed-page.cjs` name the four. Checked headless and on the real page with the software adapter; never seen on a GPU.
-- **A partner's men are on Sam's stealth card** (`src/game/teamtally.ts`, `TEAMTALLY.on`; the maintainer's yes 15:33Z 10-13 to the quiet levels page's call 35. ON in the
+- **A partner's men are on Sam's stealth card** (`rust/game_rules/src/teamtally`, `TEAMTALLY.on`; the maintainer's yes 15:33Z 10-13 to the quiet levels page's call 35. ON in the
   page — `?noteamtally` (or `?teamtally=0`) = only the player's own are counted, as it was; OFF in the module and on the frozen stand, `TPS_TEAMTALLY=1` there;
   `FROZEN_HOLDS`, `standup.ts`, `standEnv.ts`, `knobs.ts` + `JOURNAL_KNOBS`, `journal.ts applyKnobs`: a file without the row replays off): `combat.ts killGuard` prices
   a man only when `by === 'player'`, and the partner's round (combat.ts, `'guard'` + `killerId`), his ordered takedown (`pairorders.ts`, no `killerId`) and his own
@@ -301,7 +301,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   page is selected and no text field has the keys; the two go by the LETTER on the key, `kitCard.ts clipKey`, the screen's other keys by their place);
   the mouse has two buttons, Copy and Paste, at the end of the card's sets line (`.kc-clip`, not `.kc-set`: the sets are still three). The desk
   holds the one copied card for the page's life (`rust/game_run/src/desk.rs`: nothing in the game reads it, so it is no knob table and no journal row). THE
-  PASTE IS `src/game/kit.ts kitPaste(i, card)` (`kitPastePeek` = the same, nothing written): every ROW of the man's own card takes the copied card's
+  PASTE IS `rust/game_rules/src/kit kit_paste(i, card)` (`kitPastePeek` = the same, nothing written): every ROW of the man's own card takes the copied card's
   value where his row offers it, a count over his row's most comes down to it, a row that cannot show the copied value at all keeps what it had (a
   teammate's wall charge onto you with your own charges off: your big slot is left alone; your cans as one of four splits with the pouches rule off), a field his card has no row for is never
   written, and `cardWhy` is asked as for a set: so a pasted card is one his own tiles could have made, and a paste the squad has no room for (a table
@@ -370,7 +370,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   should have different gear screen stuff i think. be creative!"; his shot showed the quiet set's guns tile reading 'GLOCK 19 ONLY' beside a bare pistol).
   THIS IS ONE PART OF THAT ASK, the guns tile's; nothing in it asks whether the mission is quiet, and the rest of the ask belongs to the screen's picture
   and panel. Both of your guns wear a suppressor (`weapons.ts suppressed`, drawn so in the game), and nothing drawn on the card showed it. Now
-  `game/kit.ts kitGunCan(i, m)` (the gun in his hands is a suppressed one: both of yours whatever the card's `suppressed` field holds, a teammate's by his
+  `rust/game_rules/src/kit kitGunCan(i, m)` (the gun in his hands is a suppressed one: both of yours whatever the card's `suppressed` field holds, a teammate's by his
   Suppressor row, never the shotgun) puts the can on the gun's drawing (`ui/kitIcons.ts GUN_CAN`, `kitIcon(field, value, can)` / `gunIcon(weapon, can)`:
   the tube on the muzzle, one dark band where it screws on) in the three places a gun is drawn, all asked through `ui/kitCard.ts gunCanOf`: the guns
   tile, the roster's chip (`.lo-ics`, the drawing the one start page shows) and the roster's gun over its words (`.lo-gun`, the loadout's screen of its own). Your
@@ -384,7 +384,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   carries a frag (`setCard` builds it on the issued card). Never seen on a GPU; nobody has played it.
 
 - **The squad's kit is dealt over the men who come** (2026-10-18; the maintainer, over Team & kit on The pass with a team of four as issued: "as
-  issued still has blue team pretty empty"). The issued kit (`src/game/kit.ts ISSUED`) and every named squad kit (`src/game/slots.json` loadouts) are
+  issued still has blue team pretty empty"). The issued kit (`rust/game_rules/src/kit ISSUED`) and every named squad kit (`src/game/slots.json` loadouts) are
   written down as the FIRST TWO teammates carry them, so that a pair, a three and a four add up the same; with three or four coming the others stood
   on the roster with a gun and `pouches 0 / 4`. No level deals a kit: the table is one for every mission (a level changes it only by
   `scenarios.issue.members`, today the long hall's alone, or by `scenarios.roomClear.wallCharges`), so the fault was on every squad mission at +3 and
@@ -460,7 +460,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   frames, one seed: the same digest on as off; a pair and one man count what they counted; the long hall, whose block names nobody since the shield left the game, counts the same;
   60,000 seeded presses (eight seeds, sizes stepped) left no stored or worn card outside the rule on either stand. Never seen on a GPU; nobody has
   played it.
-- **The gear screen is a tree, the same for every man** (`src/game/kittree.ts KITTREE`, `kit.ts buildRowsTree`, `ui/kitCard.ts`, `kit/card.rs`; the
+- **The gear screen is a tree, the same for every man** (`rust/game_rules/src/kittree KITTREE`, `kit.ts buildRowsTree`, `ui/kitCard.ts`, `kit/card.rs`; the
   maintainer on Team & kit, 10-19: "have some way of distinguishing different guns (some stats?), attachments like silencer should be per gun", "should
   be symmetric between self and teammates (e.g. 40mm should work for squad)", "sponge should show up, should only be part of stealth builds by default",
   "ideally rifle attachments should be hierarchical under the rifle", "weird that we have both per person defaults (as issued, quiet set, etc.) and
@@ -547,7 +547,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   beats as data — the row a card sits by, its words for the step as it stands, what counts as done, the key it is remembered under, the word on the
   head, `auto` = played unasked), and the one played unasked is the plan written for one mission, the tutorial's squad mission ('A harder fight',
   `tut-squad`): the first the player walks into with the four, after the mission that had him throw each grenade by hand, on a street with what a kit
-  is chosen for. Its row is the one lesson NOT played with the kit as issued (`game/kit.ts ISSUE.picked`, `docs/agents/missions.md`), so its cards are
+  is chosen for. Its row is the one lesson NOT played with the kit as issued (`rust/game_rules/src/kit ISSUE.picked`, `docs/agents/missions.md`), so its cards are
   on the step. THE BEATS, each a small card beside ONE lit row, the rest of the step dimmed and still live, the keys put on the lit row, gone when its
   thing is DONE or on its 'Next': **Plan it first** (the map opened and put back — large, it names the street's rooms, the machine gun and the locked
   hall as words pinned on the sheet, `.kb-pin`, placed through the sheet's own projection: `planArt.ts sheetView`, `missions.ts sheetSpots`; and the
@@ -1067,7 +1067,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **A mission that leans loud is not graded as a sneak (10-22, `VERDICT.loudCard`).** The maintainer, off the solo tutorial's end card ('ASSAULT 14'
   on a won fight): 'weird that we show a score (and a low one) for loud missions'. The stealth game's rating prices every man shot and every time
   he was seen; a row of the list whose `lean` is `'loud'` but whose kind is the stealth game's (`tut-solo`, `train-kit` today) ended on that card.
-  `game/verdict.ts loudRow(g)` = the key up, a quiet mission up, and its row leans loud. The game is not told the page's `levelFile`, so the row
+  `rust/game_rules/src/verdict loud_row(g)` = the key up, a quiet mission up, and its row leans loud. The game is not told the page's `levelFile`, so the row
   is found off the level's own name (`rowFile`: `<name>.json`). `chronicle.ts
   debriefOf` carries it as `Debrief.scored` and `Debrief.grade` ('GHOST 94', '' when not scored). Not scored: the card (`ui/debrief.ts`, class
   `db-loud`, which nothing styles) builds no rating word, no score, no line of what was docked, no badges, and the sneak's cells (seen, alarms,
@@ -1082,7 +1082,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   file, a recording with and without the key, mission.ts's two lines) and a block of `debrief-dom` (the card on a fake DOM, key up and down, counts that would tone every cell);
   `LOUDCARD_BREAK=1` fails both on both stands. NEVER SEEN ON A GPU; nobody has played to the card since. Left as it was: the stealth game's
   cells and timeline still stand on a loud row's card (a loud card of its own would be new work).
-- **A row with its own hour or weather draws no Hour or Weather row** (2026-10-22; `src/game/rowset.ts` `rowHour` / `rowWeather`, `ROWSET.on`,
+- **A row with its own hour or weather draws no Hour or Weather row** (2026-10-22; `rust/game_rules/src/rowset` `rowHour` / `rowWeather`, `ROWSET.on`,
   `?rowset=0`; the rule and its check are in `missions.md`, "A mission row can name its own hour and weather"). What does not apply is not drawn: H and J
   do nothing on such a row, the start page's Setup rail follows (it already skips a row that is not drawn). A row that names only
   one keeps the other row, whose note reads the mission's own for the hidden one. Its LINK is any row's link: the visitor's Hour and Weather picks stay
@@ -1098,7 +1098,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   number is untouched: the stand-up, the picks probe and the levers still count on it. THE WORDS
   are changed in the data and have no switch (a wording change, like the writing guide's): the rows that said a head count say the place instead
   (`scene/scenarioList.ts`: the pair's break room, the block's squads, the warehouse, the compound, the barracks, the kill house; `scene/picks.ts`
-  the warehouse's line), Hard's sentence names no number of guards (`game/difficulty.ts`), and the kit lesson's first card no longer says the band "shows who holds the
+  the warehouse's line), Hard's sentence names no number of guards (`rust/game_rules/src/difficulty`), and the kit lesson's first card no longer says the band "shows who holds the
   floor": it sends the player to the map, where the job is read (`ui/kitGuide.ts`; true in a short window too, where the band has no room for the job). KEPT ON PURPOSE: a smaller number that is the puzzle's premise ("two sentries who watch each
   other", "a gunman waits in one of them"), every Training and tutorial row (the number is the exercise; the lessons' own steps are their
   owners'), and the end-of-run card's "N of M down" (after the fact). NOT TOUCHED, and claimed to their owners: what the enemy SAYS during a
@@ -1118,7 +1118,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 
 - **Tab shows the objectives and the squad** (2026-10-23; `ui/tabcard.ts`, `main.ts tabKey`, `index.html #tabcard`; the maintainer, with
   the corner panel cut down to what the two keys do: "if you don't have a menu open, tab opens up an objectives modal that also has your squad
-  equipment?"). With nothing to back out of (Tab is the back key first: `game/backkey.ts`; the card also stays down over anything `game.backable()`
+  equipment?"). With nothing to back out of (Tab is the back key first: `rust/game_rules/src/backkey`; the card also stays down over anything `game.backable()`
   names where `?tabback=0` has the back key off) and no menu open, Tab HOLDS THE GAME (`main.ts frozen`, as a pausing card does) on a card in the
   middle of the screen: the OBJECTIVE under its own word with the par or clock at the right, its sentence, and where it lists (`objectiveList`,
   only under the word 'objective': a room clear's rooms) each thing with a tick (taken), an arrow (the one being called) or a ring (to do); the
@@ -1157,19 +1157,19 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   compound, registry, warehouse, depot, barracks-day, solo; the barracks' "next" is the solo night). THE SWITCH is the cut rows' own, `OFFLIST_UI.on`:
   `?offlist=0` draws the row again (the short list's row does not come back with it); off in the module and in every harness, so every list probe still
   pins the whole table. NOTHING IS DELETED, and little could be: the row, its address `?nightbreach`, `?loadout=night-breach`, its picture and its
-  `scenarios.nightBreach` block stay; `game/nightbreach.ts` is the staging the room clear and the rescue are built on (the team, the pairs, the stack);
+  `scenarios.nightBreach` block stay; `rust/game_rules/src/nightbreach` is the staging the room clear and the rescue are built on (the team, the pairs, the stack);
   about a hundred files under `tools/` stage the one-room fight by its id (moves, wounds, kit, restart, the co-op and threshold fixtures), and a kept run
   or a recording of it still loads. WHAT STILL NAMES IT TO A PLAYER, left as it was (not this step's): the Hard difficulty's long line
-  (`game/difficulty.ts`: "On the night breach the defenders are drilled…"), and the debugger's section 'Room fight staging (night breach · every room
+  (`rust/game_rules/src/difficulty`: "On the night breach the defenders are drilled…"), and the debugger's section 'Room fight staging (night breach · every room
   clear)' with its start button. The Raids tile's picture is its first listed mission's, as it always was. CHECK: `probes.ts offlist` (the table's cut
   rows are the five named, and line 6, new: no row of the short list starts a cut row; `OFFLIST_BREAK=1` fails it), both stands; the real page by
   `PORT=<port> node tools/qa/unplayed-page.cjs` (no adapter under it: 31 cards, none the night breach's; 36 under `?offlist=0`; no page error) and its
   still of the Raids group, six cards. `startpage-look.cjs` and the verify
   notes list six. Nobody has opened the page on a GPU since.
-- **Options offers no dead order who control** (10-25; `src/ui/options.ts` the who row). It follows the squad's rule and has no switch of its own: `game/cmdring.ts` `wholeSquad` (the maintainer, 10-24: "quick Q mode should always do the whole squad. you should only be able to issue commands to parts of the squad in plan mode"; `?wholesquad=0`). THE WHO ROW on Options ▸ Controls ("Who takes the next order", key id `KeyT`, a dashed cap since Q and F became the squad's only keys) is not listed while it has no key: there is no cap to put a dead key on. A row the player gave a key earlier stays his to see and move, and its small words say the key does nothing now (the list is built again when the row loses its key: Reset, Backspace on its cap). CHECK: `PORT=<dev server> node tools/qa/tabwho-page.cjs` (Options ▸ Controls on the real page: no row, a hand-bound row, the row under `?wholesquad=0`; `TABWHO_BREAK=1` must fail). SEEN: the Controls tab in headless Chromium with no adapter. NOT SEEN: a GPU, a played game.
+- **Options offers no dead order who control** (10-25; `src/ui/options.ts` the who row). It follows the squad's rule and has no switch of its own: `rust/game_rules/src/cmdring` `wholeSquad` (the maintainer, 10-24: "quick Q mode should always do the whole squad. you should only be able to issue commands to parts of the squad in plan mode"; `?wholesquad=0`). THE WHO ROW on Options ▸ Controls ("Who takes the next order", key id `KeyT`, a dashed cap since Q and F became the squad's only keys) is not listed while it has no key: there is no cap to put a dead key on. A row the player gave a key earlier stays his to see and move, and its small words say the key does nothing now (the list is built again when the row loses its key: Reset, Backspace on its cap). CHECK: `PORT=<dev server> node tools/qa/tabwho-page.cjs` (Options ▸ Controls on the real page: no row, a hand-bound row, the row under `?wholesquad=0`; `TABWHO_BREAK=1` must fail). SEEN: the Controls tab in headless Chromium with no adapter. NOT SEEN: a GPU, a played game.
 - **The menus name no plan mode, and the Controls list says the squad's keys as the page has them** (10-26; `src/ui/options.ts` `squadRows`,
   `listNow`). The maintainer, 10-26: "let's remove plan mode and update the tutorials accordingly". No switch of its own: it follows
-  `game/cmdring.ts` `only` (`?qonly=0`: the Squad rows as they were) and `goals` (`?goals=0`: no row for a part of the squad, the "Plan mode
+  `rust/game_rules/src/cmdring` `only` (`?qonly=0`: the Squad rows as they were) and `goals` (`?goals=0`: no row for a part of the squad, the "Plan mode
   circles" row back, the who row's plan mode words back); both are off on the frozen stand. (With plan mode out of the game
   altogether, the squad's own change, `?goals=0` brings neither of those back: a hand-bound who key then says every order goes to the whole squad.
   Both checks below pass on either build.) OPTIONS ▸ CONTROLS, Squad, on the page's own board is

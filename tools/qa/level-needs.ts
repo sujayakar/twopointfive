@@ -39,7 +39,7 @@
 //   moon        one directional light, in `exterior` (the hour's sun goes in at its place)
 //   doorway     no painted band or other wall decal runs across a doorway
 //   roof        no DRAWN slab at ceiling height (the camera cannot see the room under it), and no more roofs than the rain reads (four)
-//   response    a level has a response team only where its file says so (scenarios.response, game/qrf.ts). With the block: its `why` is a sentence,
+//   response    a level has a response team only where its file says so (scenarios.response, rust/game_rules/src/qrf). With the block: its `why` is a sentence,
 //               and a row of the level is one the block answers (a NOTE if none). Without: the level is in NOBODY_COMES
 //               below with its reason, or it has not answered (a NOTE). In both is a FAIL. Not asked of a lesson. The block against the built floor,
 //               and a call played through, are rust/game_start/tests/response_team.rs's
@@ -98,7 +98,7 @@ const read = (name: string): LevelFile => { let L = FILES.get(name); if (!L) FIL
 export const rowsOf = (name: string): Row[] => (ALL_MISSIONS as Row[]).filter(e => (e.level ?? 'office.json') === `${name}.json`);
 /** the generator a file names (meta.generator), as a path in the tree */
 const generatorOf = (L: LevelFile) => L.meta?.generator?.match(/[\w./-]+\.ts/)?.[0] ?? null;
-/** the slabs in the rain's roof band (game/weather.ts roofsOf: underside from 0.25 m under the ceiling's height, top no more than 0.45 m over it, 0.9 m
+/** the slabs in the rain's roof band (rust/game_rules/src/weather roofs_of: underside from 0.25 m under the ceiling's height, top no more than 0.45 m over it, 0.9 m
  *  across both ways) */
 const roofBand = (L: LevelFile) => L.boxes.filter(b => b.c[1] - b.h[1] >= WORLD.ceilingY - 0.25 && b.c[1] + b.h[1] <= WORLD.ceilingY + 0.45 && b.h[0] >= 0.45 && b.h[2] >= 0.45);
 
@@ -423,7 +423,7 @@ export function ask(name: string, L: LevelFile, rows: Row[], T: Tables): Line[] 
     if (R) { const why = typeof R.why === 'string' ? R.why.trim() : '', raid = !!R.raid;
       say('response', why.length > WHY_MIN, `a response team comes here (${typeof R.team === 'string' ? R.team : 'no `team` word'}; it answers ${raid ? 'a squad\'s room clear and nothing else' : 'a quiet night gone loud'}): ${why.length > WHY_MIN ? 'the file says why' : `its \`why\` is not a sentence (over ${WHY_MIN} characters)`}`);
       if (none !== undefined) say('response', false, `NOBODY_COMES says nobody comes here ('${none}') and the file carries a response block: one of the two is stale`);
-      // (game/qrf.ts live(): a raid block is called only inside a squad's clear that is no rescue; any other only outside every squad mission — the office's plain night is no row)
+      // (rust/game_rules/src/qrf live(): a raid block is called only inside a squad's clear that is no rescue; any other only outside every squad mission — the office's plain night is no row)
       if (!(raid ? rows.some(e => e.kind === 'nightbreach' || e.kind === 'roomclear') : name === 'office' || rows.some(e => e.kind === 'quiet')))
         say('response', 'note', `the block answers ${raid ? 'a squad\'s room clear' : 'a quiet night gone loud'} and no row of this level is one (${rows.map(e => `${e.id}: ${e.kind}`).join(', ')}): nobody would ever be called`);
  }

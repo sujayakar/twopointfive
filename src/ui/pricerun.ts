@@ -422,7 +422,7 @@ async function price(c: Carry, i: number, loc: Location, view: ReturnType<typeof
   // THE SCRIPTED STEPS, one a display frame, every one drawn, no more frames with the GPU than the page's own pacer keeps there: to `until` of the game's
   // clock (the steps taken). The play before the held picture and the run-up to the running read are the same steps
   const dev = w.__engine?.device, room = w.__pace?.().flight ?? PRICE.flight, flying: Promise<unknown>[] = [];
-  /** the game's fixed step, a second (host/loop.ts FIXEDSTEP.hz): what a scripted step of the play and of the running turn is */
+  /** the game's fixed step, a second (src/host/drawpage.ts FIXEDSTEP.hz): what a scripted step of the play and of the running turn is */
   const STEP_HZ = 60;
   // (… and a wait for the GPU's queue has a limit, as every wait here has: a frame the queue never answers for is gone on without, PRICE.capS)
   const landedOr = (p: Promise<unknown> | undefined): Promise<unknown> => Promise.race([p, new Promise(r => setTimeout(r, PRICE.capS * 1000))]);

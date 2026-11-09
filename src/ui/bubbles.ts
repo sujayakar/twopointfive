@@ -89,7 +89,7 @@ export class Bubbles implements BubblesLike {
       el.style.display = 'block'; el.style.left = `${Math.round(x)}px`; el.style.top = `${Math.round(y - (1 - aIn) * 6)}px`; el.style.opacity = a.toFixed(2);
       return true;
     };
-    // A TEAMMATE'S LINE FROM OFF THE SCREEN (game/squadnet.ts): drawn at the edge of the view on the side he is on (`net.edge` — off: a short way out
+    // A TEAMMATE'S LINE FROM OFF THE SCREEN (rust/game_rules/src/squadnet): drawn at the edge of the view on the side he is on (`net.edge` — off: a short way out
     // from you on that side), under his name, with an arrow his way: `line` = the words with his name. Where you are not on the screen yourself (the
     // plan's camera, a tutorial's, a man watched) the way to him is laid from the middle of the view instead. netplace.ts says where, and
     // keeps it off the lines already drawn this frame and the HUD's cards; at the edge it is kept off your own figure and the objective's mark too.

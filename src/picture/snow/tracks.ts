@@ -332,7 +332,7 @@ function pressMessy(T: Stamp, TC: Stamp, cx: number, cz: number, ux: number, uz:
   }
 }
 
-/** how a crater is shaped (game/snowBlast.ts SNOWBLAST hands its own numbers in: this file knows the bytes, that one the blast) */
+/** how a crater is shaped (rust/game_rules/src/snow_blast SNOWBLAST hands its own numbers in: this file knows the bytes, that one the blast) */
 export interface CraterLook { lobe: number; rag: number; floor: number; rim: number; rays: number; rayLen: number; rayWide: number; clods: number; clodFar: number; clodR: number }
 /** A BLAST'S CRATER at (cx, cz), its pan `r0` m across the middle (snowBlast.ts; the maintainer, 10-15: "grenades/he don't seem to really affect snow"). In the
  *  prints' own byte, read by the shader as a print is: THE PAN — snow blown out down to a churned floor, its edge thrown into lobes and broken into lumps, a bank

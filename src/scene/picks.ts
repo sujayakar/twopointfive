@@ -11,7 +11,7 @@
 // an older run's settings do not, and neither does a mission's own switch (a visitor's `?pair` is not carried into a pick). What a machine keeps in the Tab panel beyond the difficulty (the team feel rows, a stored pair switch) is the player's and is not pinned. `?pick=<id>` (or its place on the list, `?pick=3`) alone is a link that stays right when a row's settings change: main.ts
 // answers it with one redirect to pickHref.
 //
-// THE ONE CHOICE A ROW OFFERS IS STANDARD OR HARD (the maintainer, 10-08: no switches 'other than easy/hard'; the names are the build's own, game/difficulty.ts):
+// THE ONE CHOICE A ROW OFFERS IS STANDARD OR HARD (the maintainer, 10-08: no switches 'other than easy/hard'; the names are the build's own, rust/game_rules/src/difficulty):
 // every other setting is this table's. A row opens on its own difficulty (pickDifficulty); the other one is the same
 // URL with the other `difficulty=` on it (pickHref's last argument). Both read back as the same pick (pickOfQuery), so 'next' and the quit work on either,
 // and 'next' carries a difficulty the player chose over the row's own on to the row after.
@@ -35,7 +35,7 @@ export interface Pick {
   squad?: SquadSize;
   /** the defenders the row opens on (absent = standard; the solo night has no switch). The other one is a click away on the same row */
   difficulty?: Difficulty;
-  /** RESERVED, NOT READ YET: a kit for this entry, by the name the loadout will give it. Kit is kept per machine today (game/loadout.ts) and is on no URL,
+  /** RESERVED, NOT READ YET: a kit for this entry, by the name the loadout will give it. Kit is kept per machine today (rust/game_rules/src/loadout) and is on no URL,
    *  so no row sets this and nothing reads it (tools/qa/picks-probes.ts holds that no row does until pickHref carries it) */
   loadout?: string;
 }

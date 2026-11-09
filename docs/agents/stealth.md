@@ -21,7 +21,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   off and the rest of the fog's `FROZEN_HOLDS` rows): the frozen stand is every frozen digest's ground, so they are not retired; the page
   runs none of them. Each principle's own bullet, with its switch and check, is below (`FOG.air`, `FOG.ours`, `FOG.thin`, `FOG.eyes`,
   `FOG.kept`, `FOG.filed`, `FOG.tracks`).
-- **Fog of war as a cone, on hard** (`src/game/fogofwar.ts`, 10-10; the maintainer: "fog of war being 360 degrees around the players isn't quite realistic. it really should just be the
+- **Fog of war as a cone, on hard** (`rust/game_rules/src/fogofwar`, 10-10; the maintainer: "fog of war being 360 degrees around the players isn't quite realistic. it really should just be the
   cone they're looking at" — "the status quo is fine for normal difficulty"; page rebuild/fog-cone/read-first.md): `FOG.cone` (off = the fog all round every eye, the base by
   run digest) makes each of the fog's eyes a wedge of `FOG.coneDeg` 120 about his GAZE (`gazeOf(c)`: the head, eased onto the aim with a long gun in the shoulder) plus `coneNearM` 1.5 m all round;
   `inField` is the one CPU test (`seen / drawn / hidden` read it), fogofwar.wgsl's `fowSeen` the picture's (the wedge test before the ray; `coneSoftDeg` / `coneNearSoftM` = a soft edge, picture
@@ -52,7 +52,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   fixed light (`soft.w`, exposure divided out) instead of the live frame dimmed — no lamp, weapon light, flash, smoke or particle shows in fog; never seen on a GPU. NOT HELD:
   edits to the static level made unseen (decals, a wall or pane coming apart, a fixture's lamp with flat off). QA `probes.ts fog-things` (in family `fog`; its leak watch counts
   box moves in the handed list out of the team's sight: 0 with the rule, thousands without).
-- **A quiet mission can be played under the fog of war** (`src/game/quietfog.ts`, `QUIETFOG.on`: ON in the page — `?quietfog=0` = the lever greyed on a quiet row and no rung read, as it was —
+- **A quiet mission can be played under the fog of war** (`rust/game_rules/src/quietfog`, `QUIETFOG.on`: ON in the page — `?quietfog=0` = the lever greyed on a quiet row and no rung read, as it was —
   OFF in the module and on the frozen stand, `TPS_QUIETFOG=1`; a `FROZEN_HOLDS` row, in the knob registry and a journal's tables, a recording from before the key replays with it off; no Tab
   row). The maintainer, 10-11: "stealth missions don't have fog of war" · "i think we should make it part of the fog of war difficulty slider" · "will need to playtest a bunch". On a QUIET
   mission's row (not a Training lesson's) the mission sheet's and the loadout's fog lever is live and has one more rung at the bottom, OFF — every guard shown, the game as it was
@@ -77,7 +77,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `QUIETFOG_BREAK=1` must fail): the query rule, the store and the links, the real screens on a fake DOM, a run alone (bazaar) and as two (quiet-yard) at each rung, over a kept squad lever,
   the sheet opened while a rung is held, no rung = the same digest, a checkpoint saved under the fog alone. A TRIPWIRE UNDER THE FOG SENSES THE FLOOR AS IT STANDS (devices sense in a quiet mission; they do not in a squad's): while `g.fogOfWar.active`, devices.ts `updateLaser` takes the sensor's reach (`LaserRt.sense`) off `g.col.raycast` + the props — statics and leaves where they stand — and the DRAWN beam (`cut`) is left as it was (the picture's boxes, and props and men where they stand); no fog = one reach, as it was (not asked there: loose debris and a dropped item). KNOWN, each for the playtest: on a rung a guard out of the fog's eyes who notices the player shows no bubble and no marker (cones and own eyes play much harder than a squad mission's); a checkpoint does not carry the fog's memory (a load re-primes: for a moment the floor is as it stands); wall devices (cameras, tripwire
   emitters) are handed to the picture in the fog as they always were. Never seen on a GPU, never played by anybody.
-- **Sticky cameras + the three ways to see in stealth** (`src/game/stickycam.ts`; `STICKY.on` — ON in the page, `?nosticky` = no card row, no load on any rifle, no eye; OFF in the module and
+- **Sticky cameras + the three ways to see in stealth** (`rust/game_rules/src/stickycam`; `STICKY.on` — ON in the page, `?nosticky` = no card row, no load on any rifle, no eye; OFF in the module and
   on the frozen stand, `TPS_STICKY=1`; a `FROZEN_HOLDS` row, in the knob registry and a journal's tables, a recording from before the table replays with it off; with none carried on = off by
   run digest). The maintainer, 10-12: "i think we do really need to figure out if you get omniscience in stealth levels or not … maybe a limited number of sticky cameras or something like
   that would work". THE THREE WAYS, each a link of the same quiet mission (since 10-13, his pick — the bullet above): the fog and cameras (NO KEY: the default, `STICKY.issue` 2 on the rifle) ·
@@ -151,7 +151,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   taken only where the page already stands in the link's fog (`scenarioRun.ts sameFog`) — off a plain page the solo night under the fog is a load of
   `?solo`. NOT touched: a page stood up plain (the floor under the title, a showcase, a harness game with no link staged) has no fog, as before; the
   guards, their eyes, their numbers and the level. Neighbours' files touched, each a line or three: `scenarioRun.ts` (quietLike, sameFog),
-  `ui/loadout.ts`, `ui/missions.ts`, `game/loadout.ts` (the note's words). Switch: ON in the page (`?solofog=0`), OFF in the module and on the frozen stand (`TPS_SOLOFOG=1`); rides the
+  `ui/loadout.ts`, `ui/missions.ts`, `rust/game_rules/src/loadout` (the note's words). Switch: ON in the page (`?solofog=0`), OFF in the module and on the frozen stand (`TPS_SOLOFOG=1`); rides the
   QUIETFOG table in a recording, one from before the key replays with it off; Tab row 'cam ▸ solo night fog'. Checks: `bun run tools/qa/probes.ts solo-fog` (family `solofog`,
   `tools/qa/solofog-check.ts`, `SOLOFOG_BREAK=1` exits 1) and the real page `tools/qa/solofog-page.cjs` (the start page's rail and the
   kit tiles; then `?solo` in play on the software adapter). 13 verdicts now, a restart among them. On the frozen stand `TPS_SOLOFOG=1` alone raises
@@ -161,13 +161,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (1) `?solo&levelFile=<level>` is read as a solo night too and gets the fog, though the mission list has no such
   row. (2) Alone, the rung 'own eyes' plays as 'cones' does. (3) `tools/qa/solo-night.ts`, the tour and the soak play a game stood up PLAIN: their
   tallies, on either stand, are of the solo night with every guard shown, not of the page's fogged one. (5) The kit note reads 'Alone on the office
-  floor.' under the fog (`game/loadout.ts noteOf`), its old second half where it is off. Measured on the bundled office, one seed, both stands. Never
+  floor.' under the fog (`rust/game_rules/src/loadout note_of`), its old second half where it is off. Measured on the bundled office, one seed, both stands. Never
   seen on a GPU and never played: whether the office night is fair under the fog with two cameras and a wand is unmeasured (the quiet missions were
   measured with `tools/qa/sticky-cover.ts`; the solo night was not).
   AFTER THE STEP: a squad mix kept on the machine (the three levers) no longer says its line ("Your own mix, kept on this machine: …") under the lever
   rows of the solo night's or a quiet mission's Team & kit screen: none of it acts there and its fog word read against the quiet fog's row
   (`ui/loadout.ts paintLevers`, the kit card's file; words on a screen only, no switch). `levers-screens` holds it on both stands; red on the tree before.
-- **How much you're told is a fourth difficulty lever, and a squad mission's fog can be put off** (`src/game/told.ts` TOLD; 10-23, from the maintainer's
+- **How much you're told is a fourth difficulty lever, and a squad mission's fog can be put off** (`rust/game_rules/src/told` TOLD; 10-23, from the maintainer's
   "how do we communicate friendly and enemy AI state to the player (especially on easier difficulties)"). What was there: every setting only took signs
   away (the fog's cones, own eyes), and the last-seen mark (`fogofwar::fog_of_war_last_seen`, `game.view.marks.seen`, the fading '(?)' `ui/overlay.ts` draws) was built and at 0 s
   (`FOG.lastSeen`). THE LEVER: `You're told`, three rungs from the easiest, GUIDED · STANDARD · BARE, a fourth row under Enemy kit on the mission sheet,
@@ -223,7 +223,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   sender told apart; none in the air, none with no fog; the same digest; the stands' row and the journal. `STICKY_BREAK=1` exits 1 on both stands.
   `tools/qa/sticky-page.cjs` counts the `.cammark` elements on the real page (software adapter). NOBODY HAS SEEN IT ON A GPU OR PLAYED IT: the size and
   colour of the lens mark are a first guess, and whether the camera's own block reads under the fog's dim without the mark is not known.
-- **A peek round the end of a wall lifts the fog of war** (`PEEKSIGHT`, `src/game/peeksight.ts peekEye`, one line in `fogofwar.ts update` where the player's
+- **A peek round the end of a wall lifts the fog of war** (`PEEKSIGHT`, `rust/game_rules/src/peeksight peek_eye`, one line in `fogofwar.ts update` where the player's
   eye is listed: `wandEye ?? peekEye ?? own`). From play (the police post, quiet, hard, the fog's cones): "peeking around a door … should let you see down the
   hallway". What was there: the wall hold's peek (`player.ts moveOnWall`, `Player.wall.peek`) moves the camera's look-at and cranes the neck, the man stays on
   the wall, and the fog's eye for him stayed over his feet looking off the wall into his own room, so the camera showed a hallway under the fog. The rule:
@@ -260,7 +260,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   Space (`input.pressed.add`). Probes: `probes.ts selector` (rows / input / sustained / noise, frozen against the old held-key build).
 
 <!-- was CLAUDE.md lines 1886–1928 -->
-- **Devices** (`src/game/devices.ts`, `Game.devices`, LevelData `devices[]` — docs/level-format.md *Devices*): wall CAMERAS see Sam through the guards' own
+- **Devices** (`rust/game_rules/src/devices`, `Game.devices`, LevelData `devices[]` — docs/level-format.md *Devices*): wall CAMERAS see Sam through the guards' own
   eye test (`guards.ts eyeContact` — canSeeChar's body factored out; `GUARD_EYE` = the man's numbers, a lens adds `vHalfDeg`) and HIS light meter (`lensGain`:
   sightGain's light × distance × crouch × smoke, no motion / keen / hunt terms); an integrator of lit-seconds → control's radio + the nearest calm man sent
   (`sendToLook`: `GuardTask 'device'`) at `tune.cameraSuspicionSecs`, the floor up a step (`raiseEscalation` cause `'device'`, fix broadcast) at
@@ -273,7 +273,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   server room's SIDE door (the front door keeps key / pick / kick — guard-key, dialogue and debrief probes are frozen on it), a shin beam across the corridor at
   x 14.5, a chest beam across the storage doorway (corridor face — a beam ENDS at the first solid thing in it, leaves included, for the picture and the sensor alike). QA: `probes.ts devices` (camera / keypad / laser / editor / vision — the last a frozen digest of the guards' own canSee
   off main), the soak's device invariants; editor tools C / K / J + `__ed.device`.
-- **The wall hold's feel pass + the rifle stack** (`src/game/wallsnap.ts` = the table `WALLSNAP` and its arithmetic, nothing of the game imported; the hold itself is player.ts
+- **The wall hold's feel pass + the rifle stack** (`rust/game_rules/src/wallsnap` = the table `WALLSNAP` and its arithmetic, nothing of the game imported; the hold itself is player.ts
   `findWall / wallSnap / moveOnWall / releaseWall`, the pose character.ts `wallBody / stanceBody`; `WALLSNAP.on` ON in the page — `?nowallsnap`, Tab ▸ Sandbox 'wall snap: feel
   pass + rifle stack' and 'wall snap: the rifle stacks' (ROW TAKEN OFF THE PANEL 2026-11-07, its switch ruled settled: menus.md), `__wallsnap` = the live table — OFF in the frozen harness, `TPS_WALLSNAP=1`; off = the hold as it was: no feel-pass field
   on `Player.wall`, the animator's channels at rest). QUIET (hands empty / the pistol): the take runs one clock sized to the job (`wsTakeSecs`: 0.12‥0.30 s by glide and turn),
@@ -470,7 +470,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   so his empty right fist comes up — it was his empty left before.
 
 <!-- was CLAUDE.md lines 2486–2549 -->
-- **A guard has one attention, and it can be taken** (`src/game/attention.ts`, table `ATTENTION`; `ATTENTION.on` — ON in the page, `?noattention` = the
+- **A guard has one attention, and it can be taken** (`rust/game_rules/src/attention`, table `ATTENTION`; `ATTENTION.on` — ON in the page, `?noattention` = the
   build as it was; OFF in the module and on the frozen stand, `TPS_ATTENTION=1`; a `FROZEN_HOLDS` row, in `JOURNAL_KNOBS`, `applyKnobs` puts it off for a
   recording from before the key; the maintainer, 10-13: "we can try to play with some mechanics where guards' attention could be redirected elsewhere (e.g.
   apollo robbins psychology stuff) but we should make sure it's legible and fun"). WHAT TAKES IT: a small thing that makes a CALM man look (`able`: patrol or
@@ -509,7 +509,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   PLAYED IT and the marks have NEVER BEEN SEEN ON A GPU (the page was driven on the software adapter only): every number is a first guess, the amber and
   the line weights are guesses, the lines are placeholders. Not built: a pocket noisemaker without the rifle, a partner's whistle on order, needs trips
   (coffee, a smoke) as holds — page `rebuild/guards-attention/read-first.md`.
-- **Closer than ever = the close-in mode near a man** (`src/game/close.ts`, `Game`-keyed state in a WeakMap, `__close`; `CLOSE.on` — ON in the page (`?noclose`), OFF in
+- **Closer than ever = the close-in mode near a man** (`rust/game_rules/src/close`, `Game`-keyed state in a WeakMap, `__close`; `CLOSE.on` — ON in the page (`?noclose`), OFF in
   the module and on the frozen harness stand (`TPS_CLOSE=1`; one of `FROZEN_HOLDS`' rows, in the knob registry and a journal's tables; off = the build as it was by run digest, and
   nothing of it runs under a show: `closeLive(g)` = on ∧ !touring). The maintainer's spec (10-09): the animation changes on entering the mode, the character changes again in melee
   reach (he REACHES for his knife — never draws it), melee from all angles, the grab only from behind, and the sneak holds its pose when movement stops. THE MODE (`closeMode`,
@@ -529,7 +529,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (`CLOSE.marks`) are gone: the row was settled off, and the HUD's drawing of them is deleted. Tab ▸ 'Closer than ever' section. NOT saved in checkpoints (the mode's hysteresis and the held gait's clock restart on a load). QA:
   `probes.ts close` (14 probes incl. close-off (deleted 2026-11-06 with the off side: qa.md) = the switch off is the build, close-duo = beside a partner under `PAIRUP`; rides all-quick), `bun run tools/qa/ready-pose-probes.ts
   poses | ease | identity | knife | creep | gait | strips --out DIR` (the animator alone: identity hash = the base's with nothing asked).
-- **Close-up takedowns as moves** (`src/game/takedown.ts` = the game's half, `character.ts` `BLOW` / `TAKEN` / `KNIFE_SLASH` + `blow() / taken() / takePre / blowTrunk / blowArms /
+- **Close-up takedowns as moves** (`rust/game_rules/src/takedown` = the game's half, `character.ts` `BLOW` / `TAKEN` / `KNIFE_SLASH` + `blow() / taken() / takePre / blowTrunk / blowArms /
   takenLayer` = the poses, `Character.fallAs / breathe` + `guideStep / breathFrame` = the fall and the breath; `TAKEDOWN.on` — ON in the page, `?notakedown` = every takedown as it
   was; OFF in the module and on the frozen stand, `TPS_TAKEDOWN=1`; a `FROZEN_HOLDS` row, in the knob registry and a journal's tables, a recording from before the table replays
   with it off; halves `blow / victim / fall / partner / breathe / lower`; Tab ▸ Player & weapons ▸ 'Takedowns (the blow, the fall, out cold)'). The maintainer, 10-12, with three clips of
@@ -575,7 +575,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   Sam still 54 % down 0.2 s after a kill, 68 % 0.4 s after a choke, up in 0.9 / 1.8 s, 21 % / none walking; both halves off = commit efccd497 bone for bone (0 over 267, 300
   and 568 frames, both stands). NO CLIP shows a kill from a hold: the pose is our own, off the knife from behind. Seen only as stick-figure strips on the software path
   (`--move grab-kill,choke-beats,grab-choke`), never on a GPU, never played; the viewer's hold page has the phase (`kill`) with both halves shown.
-- **Stealth poses = the crouch, the creep and the look under a door posed against the reference** (`src/game/stealthpose.ts` = the table `STEALTHPOSE`, a LEAF nothing of the
+- **Stealth poses = the crouch, the creep and the look under a door posed against the reference** (`rust/game_rules/src/stealthpose` = the table `STEALTHPOSE`, a LEAF nothing of the
   game is imported into; `character.ts stealthLayer / stealthPicture`, numbers `STEALTH`;
   `STEALTHPOSE.on` — ON in the page, `?nostealthpose` = every pose as it was; OFF in the module and on the frozen stand, `TPS_STEALTHPOSE=1`; a `FROZEN_HOLDS` row, in the knob
   registry and a journal's tables, a recording from before the table replays with it off; halves `idle / walk / rise / creep / cable` + `nod` (below); Tab ▸ Player & weapons ▸ 'Stealth poses
@@ -595,7 +595,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   stick-figure strips and numbers only — never seen on the mesh or a GPU.
 
 <!-- was CLAUDE.md lines 2611–2635 -->
-- **The optical wand = a look under a shut door, as a piece of YOUR kit** (`src/game/wand.ts`; `WAND.on` — ON in the page, `?nowand` = no row on the card and no door offers the look;
+- **The optical wand = a look under a shut door, as a piece of YOUR kit** (`rust/game_rules/src/wand`; `WAND.on` — ON in the page, `?nowand` = no row on the card and no door offers the look;
   OFF in the module and on the frozen stand, `TPS_WAND=1`; a `FROZEN_HOLDS` row, in the knob registry and a journal's tables — a recording from before the table replays with it off; with
   nobody carrying one, on = off by run digest). The maintainer, 10-11: "maybe we can add the optical wand/cable as prep? what's actually realistic here?" · "yeah let's add it to kit".
   KIT: `MemberKit.wand` (your card only: a row 'Optical wand' after the 40 mm row, kit.ts `wandRow()`; slots.json tool `wand`, ONE pouch, max 1 — the issued card is exactly full, so
@@ -619,7 +619,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   in all-quick; `wand-kit`, and the walk `tools/qa/cards-page.ts` (the 'no use here' tile on the solo night, the plain one on a squad mission, the quiet mission's following its fog lever) also under `kit`, `wand-look` under `fog`; both stands; `WAND_BREAK=1` must fail; `wand-doors` = the lens beyond the leaf and in the open on every door face
   of every squad and quiet level), `PORT=<dev server> node tools/qa/wand-page.cjs [outDir]` (the real page on the software adapter: the card's row, the door's row, the look, `?nowand`). Page:
   rebuild/optical-wand/read-first.md. Never seen on a GPU.
-- **A teammate looks under a shut door with the wand, ON YOUR ORDER** (`src/game/wandorder.ts`; `WAND.mate`, a key of the wand's own table — ON in the page, `?nowandmate` = only you
+- **A teammate looks under a shut door with the wand, ON YOUR ORDER** (`rust/game_rules/src/wandorder`; `WAND.mate`, a key of the wand's own table — ON in the page, `?nowandmate` = only you
   carry one, as it was; OFF in the module and on the frozen stand, `TPS_WANDMATE=1`; a `FROZEN_HOLDS` row, the word in `STAND_ENV`, and a recording from before the key replays with it
   off: journal.ts; needs `WAND.on`; with no teammate carrying one, on = off by run digest — the check holds it). The maintainer, 10-16, asked whether a teammate may carry the wand and
   look first: "a, but yeah you have to order it". SO IT IS ONE ORDER AND NOTHING ELSE: no teammate ever decides to use a wand, no door tool has him look first, no drill asks for it.
@@ -665,7 +665,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   adapter) `ONLY=play node tools/qa/wand-page.cjs` times it: the lens through 24 frames after the Space, no ring on the row and no bar in the panel on any of them; `ONLY=slow`
   is the same page under `?nowandquick`, the 1.5 s feed with its ring. Never seen on a GPU and never
   played by anybody: whether the lens coming up as the squat lands reads right is a call for an eye (the two sliders are there for it).
-- **In a hold: left click the knife, right click the choke** (`CLOSE.heldClicks`, a key of `src/game/close.ts`'s table beside `lethal` and its OWN switch — it does not wait on
+- **In a hold: left click the knife, right click the choke** (`CLOSE.heldClicks`, a key of `rust/game_rules/src/close`'s table beside `lethal` and its OWN switch — it does not wait on
   `CLOSE.on`; ON in the page, `?noheldclicks` = neither click does anything in the arm hold, as it was; OFF in the module and on the frozen stand, `TPS_HELDCLICKS=1` raises it
   there, `TPS_PROFILE=shipped TPS_HELDCLICKS=0` holds it off on the shipped one; a `FROZEN_HOLDS` row, the word in `STAND_ENV`, a Tab toggle under 'Closer than ever', and
   `journal.ts applyKnobs` replays a recording whose CLOSE row has no such key with it off). Where: `player.ts updateHold`, the ARM hold only (the knife at his throat), phase
@@ -706,7 +706,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   built. Not tested: a sight edge inside a lit room, smoke, a muzzle flash, anything moving. On the shipped stand the `fog` family has 16 red lines
   (fog-sight, fog-smoke, fog-rules, fog-cone, squadfire) at the build head 28532d5e with or without this. Never seen on a GPU, never played.
 - **The fog is lit as the team last knew it (`FOG.lit`, 10-14; the maintainer: "fog of war looks very flat" · "would be nice for it to have some RT lighting,
-  maybe just based on last known state or something").** Rule 4f of `src/game/fogofwar.ts`, over the bullet above: with the fog's own light on (`FOG.flat` > 0)
+  maybe just based on last known state or something").** Rule 4f of `rust/game_rules/src/fogofwar`, over the bullet above: with the fog's own light on (`FOG.flat` > 0)
   an unseen pixel is still the G-buffer paint alone, but the light on it is TRACED IN THE FOG PASS (`shaders/fogofwar.wgsl fowLit`) from a list the fog itself
   makes (`litBlock` → `FogFrame.lights`, a 3 KB uniform of ≤ `FOG_LIGHTS` 48 records in the scene's own Light layout — `render/lights.ts packLight`, now the one
   packer for `upload()` too; the pass never reads the live `lights`): every fixture of the level that carries light (`g.targets` with `light` / `areaLights`: a
@@ -735,7 +735,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the maintainer's. NOT HELD (as before): decals and wall damage made unseen; a fixture's emissive glow card other than an area panel's face is dark in the fog.
 - **The fog gets the full picture, less what the team should not see (`FOG.full`, 10-14; the maintainer after looking at the lit fog on the pass at night:
   "fog of war still looks really bad. we should find a way to have it get the full visual pass but just hide things (like flashlights) that shouldn't be
-  visible to the player").** Rule 4g of `src/game/fogofwar.ts`, IN FRONT OF the two bullets above (they are now what `?fogfull=0` draws, and what is drawn
+  visible to the player").** Rule 4g of `rust/game_rules/src/fogofwar`, IN FRONT OF the two bullets above (they are now what `?fogfull=0` draws, and what is drawn
   until the sight table below is live). An unseen pixel is the LIVE FRAME dimmed (`dim` 0.4; greyed too until 10-15, `desat` 0.75 — now 0, the bullet after this one: every pass, its bounce, soft
   shadows, air) and what must not show there is cut WHERE IT IS MADE: (1) THE SIGHT TABLE — `render/fogofwar.ts FogSight`, `shaders/fogsight.wgsl`: at the
   head of the frame one 32 × 5-group compute pass writes, for each eye, how far its level ray goes along each of 2048 bearings (`occludedTBoxes`, the fog
@@ -808,7 +808,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   software adapter. ALSO: `shaders/fogsight.wgsl` now asks each bearing's ray again short of its answer until nothing stands nearer — the grid walk answers
   with the nearest box of the first CELL with a hit, and a long wall registered there could win over a pillar a cell on (a review's find; the light classes
   read the same table, so their line is truer by it too). THE ENGINE REPLAY SHOWS A TAPE UNDER THE PAGE'S OWN FOG LOOK (`FOG_PAGE` and
-  `FogOfWar.pageLook()` in `game/fogofwar.ts`: `desat` and `edge` alone, put over the tape's tables for three fog frames each time `replay/engineplay.ts`
+  `FogOfWar.pageLook()` in `rust/game_rules/src/fogofwar`: `desat` and `edge` alone, put over the tape's tables for three fog frames each time `replay/engineplay.ts`
   asks — as it takes the frame, after its first tables, and after any FOG table row of the tape's; the Tab rows are the viewer's after that. A LEAN, said
   first on the page: his shots were of a replay, and a tape from before would otherwise keep the grey and the hard line for ever. Nobody else calls it:
   play, the kit page's viewer and the harness keep what the knobs say, and a tape replays in the harness as recorded. A tape from before `FOG.full` has no
@@ -932,7 +932,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   a pane of glass and the other slabs of the same round thing are not beside it) and NOT A DOOR'S (nothing within `DOOR_NEAR` 0.3 m of a door's shut
   leaf: a jamb or a stop passed would open every shut door — the first version of this did exactly that, by size alone, and a review caught it). A
   breached partition's bare studs are marked as they are made (`wallbreak.ts`). The mark is inert until read: (a) THE SQUAD'S LINES, every eye's line
-  in `game/fogofwar.ts` through `sightBlocked` (to a man, a body, a spot, a door, a lamp), pass marked statics; (b) THE PICTURE's fog eye passes them
+  in `rust/game_rules/src/fogofwar` through `sightBlocked` (to a man, a body, a spot, a door, a lamp), pass marked statics; (b) THE PICTURE's fog eye passes them
   too — which boxes, as a bit a box index in the sight table (`FogFrame.thinBits` → `FogSightT.thin`, written to the table and to the stand-in the
   table's own pass reads) — and passes what a man CARRIES (any owned box: another man's gun, a tracer's streak; the squad's lines never met those).
   One test, `common.wgsl fogThinBox`, asked only of a box a ray has already hit, live only while the private `fogEyeThin` is raised by the fog's own
@@ -958,7 +958,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   that sent was "drawn, blind" (`STICKY_STATS.blind`), and in the tutorial's sky seat the lookout and a step's own eye fought for the last place. NOW the
   ROOM is seven (`FOG_EYES` 7: the fog pass's block, the sight table — 58 KB of the 64 KB a uniform block may be, so seven is the most at 2048 bearings —
   and `fogofwar.wgsl`, `fogsight.wgsl`, `common.wgsl FogSightT`; the passes walk only the live eyes — the sight table's pass dispatches the live rows,
-  not the room) and HOW MANY ARE USED is the row: `FOG.eyes`, read where the list is made (`game/fogofwar.ts update`) through `fogEyeCount`, the one
+  not the room) and HOW MANY ARE USED is the row: `FOG.eyes`, read where the list is made (`rust/game_rules/src/fogofwar update`) through `fogEyeCount`, the one
   clamp the list, the address and the checks share (under five is five, over seven is seven, no number is five). The order is as it was: Sam (or his lens), the
   living teammates in list order, the newest sending camera(s), then the tutorial frame's lookout and step eye (`RAILS.eyeFirst` still puts a step's eye
   in the last place when the places are full). NOT the picture alone: an eye more is a man more the squad may have seen (`seen()`), so a run with a
@@ -1097,7 +1097,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   anything on a GPU, so not the found prints as a picture; a found trail in a played run (in the four headless runs no kept mark was FOUND:
   the fight ended before the team looked at that snow again, so finding rests on the stand-in lines, the one staged look and the page
   drive); the cost on the maintainer's machine (the pace's numbers are this box's).
-- **A held man drops his gun** (`HOLD.dropGun`, the table in `src/game/character.ts`; the rule is `player.ts startGrab`; ON in the page, `?nogundrop` puts it
+- **A held man drops his gun** (`HOLD.dropGun`, the table in `rust/game_rules/src/character`; the rule is `player.ts startGrab`; ON in the page, `?nogundrop` puts it
   off; OFF in the module and on the frozen stand, `TPS_HOLDDROP=1`; a `FROZEN_HOLDS` row; a recording from before the key replays with it off). The maintainer,
   10-15, of a rifleman in his arm with the rifle up in his fist: "held enemies should drop their gun". As the arm goes round, the weapon in his hand (rifle or
   drawn pistol) is knocked out of it by the dying hand's own road (`combat.ts dropFromHand`, quietly) and lies on the floor like any dropped gun; `Guard.gunLostAt`
@@ -1116,7 +1116,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   fight does NOT own them (its switch off, the sandbox's AI off, a director run) the night mission turned every calm defender to his mark each frame, the man
   in the arm too: his chest stayed on the mark while Sam turned, up to 171 degrees off. On = a held man is skipped there. Check: `probes.ts holdturn` (family
   `grab`; `HOLDTURN_BREAK=1` fails): a half circle each way and a flick, rule off 171.6 degrees off, rule on 0.0. NOT SEEN on a GPU.
-- **Wall switches** (`LIGHTSWITCH`, `src/game/lightswitch.ts`; ON in the page, `?lightswitch=0` puts it off; OFF in the module and on the frozen stand,
+- **Wall switches** (`LIGHTSWITCH`, `rust/game_rules/src/lightswitch`; ON in the page, `?lightswitch=0` puts it off; OFF in the module and on the frozen stand,
   `TPS_LIGHTSWITCH=1`; a `FROZEN_HOLDS` row; in the knob registry and the journal — a recording from before the table replays with none; a Tab row,
   'light switches'). The maintainer, 10-19: "we should have light switches for rooms!" · "probably don't want to go TOO ham on this but it should feel good".
   No level file carries one: the plates are found from the level as it stands — on the room's own wall beside each door (the latch side first, 0.85 m past
@@ -1141,7 +1141,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   shows a dark room's switch, the hand at the plate, and how a room reads going dark are all unseen. `tools/qa/lightswitch-page.cjs` boots the real page on
   the software adapter, on and with `?lightswitch=0`. Not built: a teammate sent to a switch on an order; a defender on a mark leaving it for the switch; a
   switch for rooms whose only lights no plate found (the office lobby's circuit; two rooms of 176 across the levels keep a circuit with no plate).
-- **A parked vehicle's lamps can be shot out** (`CARLAMPS`, `src/game/carlamps.ts`, 10-19; the maintainer, from a play test: "taillights in cars
+- **A parked vehicle's lamps can be shot out** (`CARLAMPS`, `rust/game_rules/src/carlamps`, 10-19; the maintainer, from a play test: "taillights in cars
   should be able to be shot up, and headlights and all that"). ON in the page, `?carlamps=0` puts it off; OFF in the module and on the frozen stand,
   `TPS_CARLAMPS=1`; a `FROZEN_HOLDS` row; in the knob registry and the journal. THE SWITCH IS READ ONCE, WHEN THE GAME IS BUILT: the stand writes
   its word before `new Game` (standup.ts), a recording from before the table has it put down before its level is stood up (`carLampsTape`, called
@@ -1213,7 +1213,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   harness. One staging, no seeds, and no line stages a low man (the neck bar is read from the code alone). Pictures: `close-stills.ts --scene stops-crouch` with and without `--set '{"CLOSE":{"handsLow":false}}'`. WHAT IT COSTS:
   crouched, nothing on Sam's body now says "the grab is on" before he presses; the row says it. NOT MENDED: the grab still takes him from the crouch to
   upright against the man's back in about 0.12 s. Seen only as CPU mesh stills; never in the page, never on a GPU.
-- **The stalk: the last three metres to a man's back are one held click (`STALK`, `src/game/stalk.ts`).** The maintainer's design, 10-23: "when you're close
+- **The stalk: the last three metres to a man's back are one held click (`STALK`, `rust/game_rules/src/stalk`).** The maintainer's design, 10-23: "when you're close
   enough to an enemy (like entering the closer than ever state) you can click and hold on an enemy and sam will creep toward him · click, let go to stop, and
   click again to continue · the game also controls the trajectory and speed and makes things smooth. it ends with you grabbing him · you get kicked out of the
   mode if he gets too far away, turns around, goes through a door in a way that doesn't make sense", and then "we should get rid of E to grab then. lmb is the
@@ -1239,7 +1239,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   cannot be stalked (nor grabbed before it); the creep makes the crouch's own footfalls and moves under their eyes as any crouched Sam does. NOT DONE: the
   pose does not yet change over the creep (the arm comes up at the grab, as before); nothing at a corner. Driven in the real page on the software adapter
   (`tools/qa/stalk-page.cjs`); never played by a person, never seen on a GPU.
-- **No knife (`CLOSE.noKnife`, `src/game/close.ts`).** The maintainer, 10-23: "remove the knife, only rmb for non lethal CQC when nothing equipped … then we
+- **No knife (`CLOSE.noKnife`, `rust/game_rules/src/close`).** The maintainer, 10-23: "remove the knife, only rmb for non lethal CQC when nothing equipped … then we
   also remove the knife from interrogation. you can still select nothing equipped or the pistol, but there's only rmb to choke out". With the key up and the
   close-in mode on (never under a show: `closeBare`): empty hands, the LEFT click is no blow (behind a man it is the stalk's) and the RIGHT click is the
   knockout from any side, whatever `CLOSE.lethal` says; with a man in the arm (`CLOSE.heldClicks`) the left click does nothing and the right click chokes;

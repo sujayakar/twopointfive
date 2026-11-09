@@ -7,7 +7,7 @@
 // THE PLAYER IS NOBODY ON THE FLOOR: he is over the squad, and all he has is the view and the squad's command key. So everything here is laid out to be read
 // from above, with room for four men wherever four men are sent: a road long enough to look down, a gateway three metres wide, a yard nine metres deep, rooms
 // seven metres deep with their doors on the walls the view looks at, and two metres of plain wall on each side of every door.
-// FOUR BEATS, one new thing at a time (game/rails.ts locks the rest; its script, cut with the mission, staged the fire):
+// FOUR BEATS, one new thing at a time (rust/game_rules/src/rails locks the rest; its script, cut with the mission, staged the fire):
 //   the road      the squad is behind its two pickups under fire from the roadblock at the tunnel's mouth. Turn the view, zoom it, shift it; then the
 //                 command key on the yard takes the squad through the gate under its own smoke, and the roadblock comes for the gate.
 //   indoors       what is behind a door is not known until it opens (the fog of war is on from the first step). The command key on a door stacks them; the
@@ -174,7 +174,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   const zones: SurfacesData['zones'] = [];
 
   // ================================================================ SNOW: the pieces ====
-  // (what each is to a man — scene/collision.ts: a static blocks feet and the nav grid only where it stands over 0.2 m — is said at the head of
+  // (what each is to a man — rust/game_rules/src/scene_collision: a static blocks feet and the nav grid only where it stands over 0.2 m — is said at the head of
   //  tools/levels/pass.ts, whose pieces these are: ground and cleared earth are thin solid slabs; paths, ruts and slush are decals; a DRIFT tops out under
   //  0.2 m and is waded; a BANK stands over it and stops feet; a CAP is a decal on the top of a thing)
   const lay = (x0: number, z0: number, x1: number, z1: number, m: Mat, y = 0.004) => add({ c: [(x0 + x1) / 2, y / 2, (z0 + z1) / 2], h: [Math.abs(x1 - x0) / 2, y / 2, Math.abs(z1 - z0) / 2], ...m });
@@ -503,7 +503,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   const brk = add({ c: [BREAKER[0], 1.35, 11.665], h: [0.28, 0.36, 0.045], albedo: PANEL_GREY, name: 'mains_box' });
   const brkLed = add({ c: [BREAKER[0] - 0.18, 1.62, 11.715], h: [0.015, 0.015, 0.01], ...M.plasticBlack, emissive: [0.3, 4, 0.6], flags: BoxFlag.NoShadow });
   add({ c: [BREAKER[0] + 0.16, 2.3, 11.64], h: [0.02, 0.6, 0.02], albedo: drawnAs('sheet', [0.3, 0.31, 0.32]) });
-  // ---- THE EMERGENCY BEACONS: red, on a battery, turning only while the mains are out (game/lighting.ts). Four of the five are out of doors, on brackets a
+  // ---- THE EMERGENCY BEACONS: red, on a battery, turning only while the mains are out (rust/game_rules/src/lighting). Four of the five are out of doors, on brackets a
   // man can see from above: the light a blackout is known by here is red sweeping over snow ----
   grp('beacons');
   const beacons: Level['beacons'] = [];
@@ -590,7 +590,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     // the stealth mission's three places, because the level format wants them (the room clear stands the mission still): the store, a point on its back wall, the tea room's door
     mission: { serverRoom: { ...STORE }, entryDoor: 'store', rack: { index: 0, front: [27.0, 1.0, 4.6], halfW: 0.3 }, exfilDoor: 'tea', exfilX: DOOR.tea, exfilZ: 12.1, exfilOut: [0, 1] },
   };
-  // ---- what is underfoot (game/floor.ts; the six it has): fresh snow is 'grass' (the soft, quiet one); the road, the trodden paths and cleared earth are
+  // ---- what is underfoot (rust/game_rules/src/floor; the six it has): fresh snow is 'grass' (the soft, quiet one); the road, the trodden paths and cleared earth are
   // 'asphalt'; the rooms' beaten earth and slab are 'stone', the rugs 'carpet'. First match wins: rugs, rooms, then the yard's hard patches
   const surfaces: SurfacesData = {
     building: { x0: 0, x1: 40, z0: 0, z1: 28 }, grassEdge: 0, inside: 'grass', outside: 'grass', verge: 'grass',

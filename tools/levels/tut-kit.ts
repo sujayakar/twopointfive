@@ -150,7 +150,7 @@ const BUNK: Rect = { x0: FRONT_X, x1: NPART_X, z0: YARD.z0, z1: ROOM_Z0 }, FUEL:
 /** a room's floor inside its walls */
 const inner = (R: Rect): Rect => ({ x0: R.x0 + 0.12, x1: R.x1 - 0.12, z0: R.z0 + 0.12, z1: R.z1 - 0.12 });
 
-/** HIS KIT is what every squad's leader is issued (game/kit.ts, the pouches rule: four pouches a man): one smoke, one stun grenade, one frag and one
+/** HIS KIT is what every squad's leader is issued (rust/game_rules/src/kit, the pouches rule: four pouches a man): one smoke, one stun grenade, one frag and one
  *  grenade for the launcher. The door charge comes out of the squad's bag. The card is named here, with nothing added, for one reason: a mission that
  *  names his card writes his counts (kitIssue), so the launcher comes up on its grenade. Without the block a tutorial's page leaves him as a Player is
  *  built, the tube on five sponge rounds no line here teaches. A card with spares is over the rule with a squad on the floor and is cut back to this at
@@ -449,7 +449,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       { id: 'tab', line: 'Press [Tab] to close it, like any menu', done: { is: 'flag', flag: 'ownRing', value: false } },
       { id: 'charge', line: 'Hold [Space] on the door again and pick the charge', done: { is: 'any', of: [{ is: 'door', door: 'shop', state: 'charged' }, { is: 'door', door: 'shop', state: 'open' }] }, at: SHOP_DOOR },
       { id: 'back', line: 'Stand clear with your back to the wall beside the door', done: { is: 'any', of: [{ is: 'near', at: BACK, r: 0.6 }, { is: 'door', door: 'shop', state: 'open' }] }, at: BACK },
-      // (`blowLine`: his own charge is a row of his own actions where that rule is on — game/ownblow.ts — and stood clear it is the only row, so a tap gives it)
+      // (`blowLine`: his own charge is a row of his own actions where that rule is on — rust/game_rules/src/ownblow — and stood clear it is the only row, so a tap gives it)
       { id: 'blow', line: 'Press [F] to blow the door', blowLine: 'Press [Space] to blow the door', done: { is: 'door', door: 'shop', state: 'open' }, settle: 0.6, at: SHOP_DOOR },
       { id: 'shop', line: 'Lean in and shoot the guard inside', done: DOWN(N.shop), settle: 1.5, at: [SHOP_MAN[0], 1.0, SHOP_MAN[2]] },
       // THE STORE: a stun grenade through a doorway (the store's doorway has no leaf and stands in line with the shop's door, so a man who throws from

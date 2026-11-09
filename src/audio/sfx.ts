@@ -7,14 +7,14 @@ export type SfxName =
   | 'doorCreak' | 'doorBang' | 'doorLatch' | 'doorBash' | 'doorRattle' | 'lockPick' | 'lockOpen' | 'lockBreak' | 'powerDown' | 'powerUp' | 'stunBang' | 'earRing' | 'propScrape' | 'propThud'
   | 'grabScuffle' | 'chokeStrain' | 'chokeLimp' | 'whipThud' | 'shove' | 'murmur' | 'heldProtest' | 'whistle'
   | 'stairDoor' | 'stairBoots' | 'casingTink' | 'thunderNear' | 'thunderFar' | 'glassCrack' | 'glassTinkle' | 'glassShatter' | 'glassCrunch'
-  | 'padBeep' | 'padOpen' | 'alarmChirp'   // devices (game/devices.ts): a keypad key, the pad accepting the code, a tripwire's emitter chirping as it reports
-  | 'wallCrack' | 'wallThump' | 'wallDebris'   // a wall charge going off (game/blastFeel.ts)
-  | 'wallOn' | 'wallOff'   // the player's back landing on a wall and his stepping off it (game/wallsnap.ts `voice`)
+  | 'padBeep' | 'padOpen' | 'alarmChirp'   // devices (rust/game_rules/src/devices): a keypad key, the pad accepting the code, a tripwire's emitter chirping as it reports
+  | 'wallCrack' | 'wallThump' | 'wallDebris'   // a wall charge going off (rust/game_rules/src/blast_feel)
+  | 'wallOn' | 'wallOff'   // the player's back landing on a wall and his stepping off it (rust/game_rules/src/wallsnap `voice`)
   | 'grabCatch' | 'gunStrip' | 'gunDown'   // the grab as three beats: the catch, the gun twisted out of his hand, the gun let down onto the floor
-  | 'mk12Suppressed' | 'mp7Suppressed' | 'mk46Report' | 'm1014Report' | 'm870Report' | 'hk45Suppressed' | 'g18Report'   // the guns a card's two slots offer, each its own report (game/gunlook.ts), and the pump gun's
-  | 'beltCoverUp' | 'beltBoxOff' | 'beltBoxOn' | 'beltLay' | 'beltCoverDown' | 'chargeLmg' | 'shellIn' | 'boltDrop'   // how they are fed: a belt under a feed cover, shells one at a time (game/gunreload.ts)
-  | 'chairRoll'   // a chair coasting on its castors (game/props.ts CASTOR): looped between ROLL_LOOP's two marks for as long as it rolls
-  | 'fireBed' | 'fireCrack';   // an open fire (game/fire.ts): its low bed, looped between FIRE_LOOP's two marks for as long as it burns, and one crack of the wood
+  | 'mk12Suppressed' | 'mp7Suppressed' | 'mk46Report' | 'm1014Report' | 'm870Report' | 'hk45Suppressed' | 'g18Report'   // the guns a card's two slots offer, each its own report (rust/game_rules/src/gunlook), and the pump gun's
+  | 'beltCoverUp' | 'beltBoxOff' | 'beltBoxOn' | 'beltLay' | 'beltCoverDown' | 'chargeLmg' | 'shellIn' | 'boltDrop'   // how they are fed: a belt under a feed cover, shells one at a time (rust/game_rules/src/gunreload)
+  | 'chairRoll'   // a chair coasting on its castors (rust/game_rules/src/props CASTOR): looped between ROLL_LOOP's two marks for as long as it rolls
+  | 'fireBed' | 'fireCrack';   // an open fire (rust/game_rules/src/fire): its low bed, looped between FIRE_LOOP's two marks for as long as it burns, and one crack of the wood
 
 type Gen = (t: number, i: number, sr: number, rnd: () => number, state: Float32Array) => number;
 
@@ -67,7 +67,7 @@ export const HEARD: Partial<Record<SfxName, number>> = {
   // (the guns of the two slots and their feeding: no table before them to keep a level from — each set by hand against the four reports and the handling voices above:
   //  the two shotguns a little over the bare pistol, the belt gun and the Glock 18 a little under it (their rounds stack), the MP7 and the HK45 under every other gun)
   mk12Suppressed: 0.118, mp7Suppressed: 0.086, mk46Report: 0.268, m1014Report: 0.31, m870Report: 0.3, hk45Suppressed: 0.08, g18Report: 0.268,
-  fireBed: 0.03, fireCrack: 0.075,   // (an open fire, game/fire.ts: set by hand under a footstep on a hard floor — the bed is a thing you notice when you stop, a crack turns no head)
+  fireBed: 0.03, fireCrack: 0.075,   // (an open fire, rust/game_rules/src/fire: set by hand under a footstep on a hard floor — the bed is a thing you notice when you stop, a crack turns no head)
   beltCoverUp: 0.09, beltBoxOff: 0.075, beltBoxOn: 0.11, beltLay: 0.09, beltCoverDown: 0.15, chargeLmg: 0.17, shellIn: 0.105, boltDrop: 0.18,
   // (the grab's three beats: no table before them either — set by hand against the hold's voices at the gains they are played at (0.5, 0.45, 0.4): the catch about
   //  as loud as the scuffle it stands in for and under the whip, the strip and the knock each under the catch. The takes he picked on 10-24 were made to these
@@ -115,7 +115,7 @@ export function voiced(ctx: SfxContext, as: number, dur: number, seed: number, f
  *  chair coasts (audio.ts `follow`). Played once from its start — the listening page, the lanes' 'again' — it comes up over the first mark's length and dies away after
  *  the second. */
 export const ROLL_LOOP = { start: 0.12, end: 2.12 };
-/** the stretch of the open fire's bed that repeats while it burns (game/fire.ts): long, so that nothing in it is heard coming round */
+/** the stretch of the open fire's bed that repeats while it burns (rust/game_rules/src/fire): long, so that nothing in it is heard coming round */
 export const FIRE_LOOP = { start: 0.12, end: 7.12 };
 /** a steady take cut to that shape: the stretch between the marks is `raw` from 0.1 s with its first quarter second crossed (equal power) with what follows its end, so
  *  its last sample runs into its first; ahead of it the stretch's own tail coming up, after it the stretch's own head going down. A take too short for that (every other
@@ -226,7 +226,7 @@ export function buildSfx(ctx: SfxContext): Record<SfxName, SfxBuffer> {
       v.ring(0.032, [[420, 0.03, 1], [980, 0.02, 0.7], [2100, 0.012, 0.4]], 0.001, 0.4, 0.3, d); v.ring(0.068, BOLT, 0.0004, 0.6, 0.5, d);
       v.add(c, 0.5); v.add(d); peakTo(v.out); v.drive(1.2);
     }),
-    // ---- THE GUNS A CARD'S TWO SLOTS OFFER (game/gunlook.ts: each row's own voice, read with that switch on). FIRST TAKES, written blind: nobody has heard one.
+    // ---- THE GUNS A CARD'S TWO SLOTS OFFER (rust/game_rules/src/gunlook: each row's own voice, read with that switch on). FIRST TAKES, written blind: nobody has heard one.
     // Mk 12: the same 5.56 as the rifle above from eighteen inches of barrel through a longer can — the powder is burnt before the baffles get it, so less gas hisses
     // out and what is left is lower, rounder and longer: a 'thump' with a chest to it, both of the can's colours an octave-third down, the round's crack off the walls
     // a little later (it leaves faster), the rifle buffer bottoming 38 ms in and the bolt home at 82. One at a time, 0.3 s apart.
@@ -377,7 +377,7 @@ export function buildSfx(ctx: SfxContext): Record<SfxName, SfxBuffer> {
         if (k < 2) knock(v, at + 0.004 + 0.003 * v.u(), 1800, 5000, 0.0015, 0.1 * a); }
       v.hiss(0.262, 200, 1400, 0.004, 0.02, 0.2);
     }),
-    // ---- A BELT UNDER A FEED COVER, SHELLS ONE AT A TIME (game/gunreload.ts plays these by name). FIRST TAKES, written blind: nobody has heard one.
+    // ---- A BELT UNDER A FEED COVER, SHELLS ONE AT A TIME (rust/game_rules/src/gunreload plays these by name). FIRST TAKES, written blind: nobody has heard one.
     // the feed cover up: its two latches pressed (two ticks a hundredth apart), the cover swung up on its hinge with the feed pawls hanging loose in it, and the
     // hollow sheet-steel knock of it stopping upright
     beltCoverUp: make(ctx, 'beltCoverUp', 0.42, 3229, v => {
@@ -456,7 +456,7 @@ export function buildSfx(ctx: SfxContext): Record<SfxName, SfxBuffer> {
       v.ring(0, [[82 * j, 0.06, 1], [141 * j, 0.04, 0.5]], 0.004, 0.25);                                // the slab under it
       v.hiss(0.07 + 0.01 * v.u(), 120, 1500, 0.006, 0.02, 0.5); v.hiss(0.075, 2200, 6500, 0.012, 0.03, 0.09);
     }),
-    // a spent case on lino (game/particleFx.ts casingFx): brass rings high and inharmonic, every mode a close PAIR beating against itself, and each hop wakes a
+    // a spent case on lino (rust/game_rules/src/particle_fx casing_fx): brass rings high and inharmonic, every mode a close PAIR beating against itself, and each hop wakes a
     // different mix of them — four hops, smaller and closer. Played quiet: it is the detail under the report, not an event (and not one the guards hear: the shot was)
     casingTink: make(ctx, 'casingTink', 0.3, 71, v => {
       const at = [0, 0.1, 0.16, 0.195], amp = [1, 0.45, 0.22, 0.12];
@@ -553,7 +553,7 @@ export function buildSfx(ctx: SfxContext): Record<SfxName, SfxBuffer> {
       knock(v, 0.23, 350, 1900, 0.006, 0.22); knock(v, 0.262, 500, 2400, 0.004, 0.1);
       v.drive(1.2);
     }),
-    // ---- the response team's way in (game/qrf.ts): the west stair door — a steel fire door on a crash bar — thrown open against its stop in a bare concrete stairwell,
+    // ---- the response team's way in (rust/game_rules/src/qrf): the west stair door — a steel fire door on a crash bar — thrown open against its stop in a bare concrete stairwell,
     //      and the boots coming up that stairwell heard through it just before. The door: the bar's two clacks, the leaf off the stop, the steel skin ringing (ten
     //      modes between 68 Hz and 1.5 kHz, each with a twin a hundredth above it: sheet steel beats), the stairwell's flutter and most of a second of it throwing
     //      the sound back. Also played, pitched up and quieter, under a boot that rings off it (doors.ts 'clang').
@@ -581,14 +581,14 @@ export function buildSfx(ctx: SfxContext): Record<SfxName, SfxBuffer> {
       for (let k = 0; k < 9; k++) { const f = 3200 + ((k * 977) % 2600), d = 0.07 + (k % 3) * 0.04; v.ring(0.01 + ((k * 0.6180339) % 1) * 0.35, [[f, d, 0.6], [f * 1.593, d * 0.7, 0.3], [f * 2.37, d * 0.5, 0.12]], 0.0003, 0.18, 0.4); }
       v.hiss(0.02, 2500, 11000, 0.02, 0.2, 0.05);
     }),
-    // a round into laminated glazing (game/glass.ts glassHit): the smack of the impact — a hard broadband tick with the pane's own short knock under it — then a short
+    // a round into laminated glazing (rust/game_rules/src/glass glass_hit): the smack of the impact — a hard broadband tick with the pane's own short knock under it — then a short
     // bright crackle as the star runs out from the hole (a dozen tiny pings over 0.2 s, thinning) and a whisper of falling grit. No crash: the pane holds.
     glassCrack: make(ctx, 'glassCrack', 0.45, 151, v => {
       v.hiss(0, 800, 14000, 0.0002, 0.006, 1.0); v.hiss(0, 150, 2500, 0.0006, 0.02, 0.6); v.ring(0, [[190, 0.04, 1], [420, 0.025, 0.6], [900, 0.012, 0.4]], 0.001, 0.3);
       for (let k = 0; k < 12; k++) { const f = 3100 + ((k * 1237) % 5200), d = 0.035 + (k % 3) * 0.025; v.ring(0.004 + ((k * 0.6180339) % 1) ** 1.4 * 0.2, [[f, d, 0.6], [f * 1.47, d * 0.7, 0.3]], 0.0002, 0.13 - 0.007 * k, 0.5); }
       v.hiss(0.02, 3000, 12000, 0.02, 0.12, 0.05); v.drive(1.4);
     }),
-    // BROKEN GLASS after it lets go (game/shards.ts). glassTinkle: three pieces landing on a hard floor — each its own four modes, and each BOUNCING: the same piece
+    // BROKEN GLASS after it lets go (rust/game_rules/src/shards). glassTinkle: three pieces landing on a hard floor — each its own four modes, and each BOUNCING: the same piece
     // heard again at the same pitches, sooner and quieter each time, a click at every touch. Played at rate 0.55‥1.4 by size.
     glassTinkle: make(ctx, 'glassTinkle', 0.5, 157, v => {
       const R = [1, 1.5, 2.5, 3.8], T = [0.04, 0.025, 0.015, 0.009];
@@ -613,7 +613,7 @@ export function buildSfx(ctx: SfxContext): Record<SfxName, SfxBuffer> {
     }),
     // 'no': a switch, and two short pips from a beeper driven off its own note (thin, flat) — the OCP not charged, nothing to use it on, a keypad refusing a code
     deny: make(ctx, 'deny', 0.25, 79, v => { v.ring(0, [[900, 0.006, 0.6], [2400, 0.005, 1], [4100, 0.004, 0.8]], 0.0003, 0.3, 0.5); v.piezo(0.012, 0.035, 1900, 1, 2730, 8); v.piezo(0.087, 0.035, 1900, 1, 2730, 8); }),
-    // devices (game/devices.ts). A keypad key: the key bottoming on the pad and its beeper for 55 ms. The pad taking the code: two beeps (the same beeper: it has one
+    // devices (rust/game_rules/src/devices). A keypad key: the key bottoming on the pad and its beeper for 55 ms. The pad taking the code: two beeps (the same beeper: it has one
     // note), then the electric strike letting go and buzzing while it is held. A tripwire reporting: the emitter's two-tone chirp (2.4 / 3.1 kHz alternating at
     // 18 Hz) for a third of a second, steady and then cut; it is a tell for the player standing at it, the floor hears the radio, not this.
     padBeep: make(ctx, 'padBeep', 0.08, 227, v => { v.ring(0, [[450, 0.015, 1], [1100, 0.01, 0.7], [2300, 0.006, 0.4]], 0.002, 0.3); v.piezo(0.01, 0.055, 2730, 1, 2730, 8); }),
@@ -740,7 +740,7 @@ export function buildSfx(ctx: SfxContext): Record<SfxName, SfxBuffer> {
       for (let t = 0.01; t < 2.58; t += 0.022 + 0.05 * v.u()) knock(v, t, 900, 3200, 0.0015 + 0.0015 * v.u(), 0.035 + 0.05 * v.u());
       for (let t = 0.15; t < 2.5; t += 0.28 + 0.3 * v.u()) knock(v, t, 500, 1500, 0.006, 0.07 + 0.07 * v.u());
     }))),
-    // an open fire in a drum (game/fire.ts): the bed — the draught's low breath, the flames' flutter over it, the wood ticking now and then — STEADY from end to end and cut to its
+    // an open fire in a drum (rust/game_rules/src/fire): the bed — the draught's low breath, the flames' flutter over it, the wood ticking now and then — STEADY from end to end and cut to its
     // own long loop (FIRE_LOOP); and one crack of the wood: a hard snap, the split's two or three smaller ones behind it, a little of the drum's own ring
     fireBed: lazy(() => rollLoop(ctx, make(ctx, 'fireBed', 7.6, 223, v => {
       const r = v.layer(); v.hiss(0, 45, 260, 0.03, 200, 1.0, r);
@@ -804,7 +804,7 @@ export function buildSfx(ctx: SfxContext): Record<SfxName, SfxBuffer> {
       }
       return palms + cloth + scuff;
     }, 193),
-    // his back onto the plaster (game/wallsnap.ts `voice`, the player's ears only): the shoulder blades and the pack meet the wall (a soft knock, its weight between
+    // his back onto the plaster (rust/game_rules/src/wallsnap `voice`, the player's ears only): the shoulder blades and the pack meet the wall (a soft knock, its weight between
     // 100 and 500 Hz so a laptop's speakers carry it), the jacket presses flat and then settles as he sinks a little (two brushes of cloth), and the webbing ticks twice
     wallOn: render(ctx, 0.42, (t, _i, sr, rnd, st) => {
       const n = rnd(); st[6] += (95 + 45 * Math.exp(-t / 0.03)) / sr;
@@ -850,7 +850,7 @@ export function buildSfx(ctx: SfxContext): Record<SfxName, SfxBuffer> {
       for (let k = 0; k < 3; k++) knock(v, 0.07 + 0.045 * k + 0.012 * v.u(), 800, 2800, 0.0025, 0.13 / (k + 1));
       v.hiss(0.06, 250, 1100, 0.02, 0.026, 0.07);
     }),
-    // Sam's low whistle (V, game/whistle.ts): two short lip-whistled notes, the second a shade over a minor third down (1.1 kHz for 140 ms, a 40 ms breath, 0.9 kHz
+    // Sam's low whistle (V, rust/game_rules/src/whistle): two short lip-whistled notes, the second a shade over a minor third down (1.1 kHz for 140 ms, a 40 ms breath, 0.9 kHz
     // for 170 ms), each scooped into from a touch flat the way a mouth finds a pitch and rounded off rather than cut, a whisper of second harmonic, and the breath
     // that makes it round the note (band noise about the pitch, loudest on the attacks) — phase-accumulated so the glide is exact at any rate. Quiet by design
     // (peak ~0.3, played at WHISTLE.gain): a sound for the man six metres off, not the floor.
@@ -863,7 +863,7 @@ export function buildSfx(ctx: SfxContext): Record<SfxName, SfxBuffer> {
       const n = rnd(); const breath = (lp(n, st, 0, 0.3) - lp(n, st, 1, 0.07));
       return (tone * 0.26 + breath * (0.05 + 0.12 * atk)) * a;
     }, 223),
-    // thunder (game/weather.ts plays it distance / 343 s after the stroke, low-passed and slowed further with every kilometre). A channel kilometres long and
+    // thunder (rust/game_rules/src/weather plays it distance / 343 s after the stroke, low-passed and slowed further with every kilometre). A channel kilometres long and
     // crooked arrives over seconds: NEAR — the tearing-cloth crackle of the nearest few hundred metres of it (sparse impulses over a bright hiss, gone in a
     // third of a second), the clap (broadband, fast, a second smaller one behind it), then the roll: brown noise through two poles near 190 Hz, kneaded by
     // three slow beats against each other so it surges and sags the way thunder does, four seconds of it. FAR — no crackle, the clap dulled to a thump, the
@@ -878,7 +878,7 @@ export function buildSfx(ctx: SfxContext): Record<SfxName, SfxBuffer> {
       const rumble = rum * roll * (env(t, 0.3, 2.3) + 0.2 * env(t, 1.6, 1.6));
       return Math.tanh((tear * 0.45 + clap * 1.7 + rumble * 1.4) * 1.25) * 0.95;
     }, 401),
-    // ---- a WALL CHARGE going off (game/blastFeel.ts plays the three together in place of the stun can's report it used to borrow, each a little later and the crack thinner
+    // ---- a WALL CHARGE going off (rust/game_rules/src/blast_feel plays the three together in place of the stun can's report it used to borrow, each a little later and the crack thinner
     //      the further off the listener is). CRACK: the detonation front — a few milliseconds of everything, a hard mid body, three slaps off the room's walls inside a
     //      tenth of a second and half a second of the room ringing down; no steel in it (the can's ring is the can's). THUMP: what is felt — a sine that dives from 105 Hz to
     //      27, the floor answering a beat behind it, the pressure wave's whump, and a rumble (brown noise through two poles near 100 Hz, kneaded so it rolls) that takes

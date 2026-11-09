@@ -20,7 +20,7 @@
 // EVERY FORM HERE IS `old`: a pressed panel, a pane, a moulding — never a fresh break.
 // WHAT A RAY MEETS LESS OF: the body's corners (up to 0.24 m of the nose, 0.16 m of the tail: the car's; a pickup's 0.22 and 0.1), a bonnet's shoulders, the glass above the waist, which leans in
 // by up to 0.42 m at the roof of a car, and a roof's overhang. A LORRY'S TILT KEEPS ITS EAVES ABOVE A MAN'S HEAD (its bow is 0.15 m, to 1.8 m: the pass's
-// yard is laid out on what the lorry hides). A lamp keeps its place, half size and paint (game/carlamps.ts finds it by those).
+// yard is laid out on what the lorry hides). A lamp keeps its place, half size and paint (rust/game_rules/src/carlamps finds it by those).
 // NO TWO FACES IN ONE PLANE: under a roof the glass and the posts stop 4 mm short of it (a bowed roof is thin at its edge, and what reached up into it showed
 // through it there: the maintainer's "some z sorting issues on the blue car roof posts"); a hub stands 4 mm proud of its tyre.
 // Nothing here has been seen on a GPU.
@@ -35,7 +35,7 @@ import { saidAs, madeOf } from './stuff';
 export const carCoat = (paint: readonly number[]): Vec3 => saidAs('carpaint', paint);
 export const coated = <T extends { albedo: readonly number[] }>(m: T): T => ({ ...m, albedo: carCoat(m.albedo) });
 /** WHAT A CAR SAYS IT IS MADE OF, whatever colour it is handed: its coat car paint, its windows glass — SOLID glass, nothing is modelled behind them; a round
- *  cracks it and it stands (game/particleFx.ts HITSTUFF) — and its tyres rubber. The plain car's three paints (officeGen.ts car, levelKit.ts car). */
+ *  cracks it and it stands (rust/game_rules/src/particle_fx HITSTUFF) — and its tyres rubber. The plain car's three paints (officeGen.ts car, levelKit.ts car). */
 export const carSays = (body: readonly number[], black: readonly number[]) => ({ paint: carCoat(body), glass: madeOf('glass', [0.07, 0.08, 0.1]), tyre: saidAs('rubber', black) });
 /** a paint as a kit hands it (its Mat) */
 export type CarPaint = { albedo: Vec3; rough?: number; metal?: boolean };

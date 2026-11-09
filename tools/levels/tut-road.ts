@@ -95,7 +95,7 @@ export const LANE_Z = 16.7, BAGS_END: Vec3 = [26.7, 0, LANE_Z];
 /** against the roadblock's wall (step 'cover'), and the end of it he leans round */
 export const COVER: Vec3 = [28.6, 0, 16.2], CORNER_E: Vec3 = [RB_WALL.x1, 1.2, COVER_Z + 0.1];
 /** the man on the gun, in his nest under the rock: more behind the roadblock's wall than beside it, as a man leaning round its end sees him (a man
- *  who can already be seen from the wall has nobody to lean out for: game/wallsnap.ts wsSeenDeg) */
+ *  who can already be seen from the wall has nobody to lean out for: rust/game_rules/src/wallsnap ws_seen_deg) */
 export const GUNNER: Vec3 = [31.6, 0, 11.2];
 /** THE LAST THREE wait outside the upper gate and come in by it: their marks are the script's (levels/tut-road.script.ts LAST_OUT, LAST_MEN) */
 export { LAST_OUT, LAST_MEN };
@@ -113,7 +113,7 @@ export const FRAME: Record<string, { allow?: string[]; deny?: string[]; cue?: st
   watch: { cue: 'gate', checkpoint: 'the gun' }, radio: { cue: 'open' },
 };
 
-/** HIS KIT (game/kit.ts kitIssue): the rifle and its magazines. Nothing to throw, nothing to set, nothing under the barrel: every one of those is a later
+/** HIS KIT (rust/game_rules/src/kit kit_issue): the rifle and its magazines. Nothing to throw, nothing to set, nothing under the barrel: every one of those is a later
  *  mission's first line */
 export const ISSUE: IssueData = { members: { '0': { weapon: 'rifle', smoke: 0, bangs: 0, frags: 0, shells: 0, charges: 0 } } };
 
@@ -282,7 +282,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   G.lay(VAN_AT.x, VAN_AT.z, VAN_AT.yaw, VS.tops.load, -0.5, 0, 1.95, 1.95 + 0.03, 1.1, 0.75, S.snow);   // a dusting on its box: it has not stood long
   G.crates(6.4, 17.9, 0.5, 2); G.jerryCan(3.4, 17.4, 0.7, 'jerryYellow'); G.jerryCan(5.9, 18.6, -0.4); add({ c: [3.0, 0.07, 16.2], h: [0.3, 0.07, 0.22], yaw: 0.6, ...M.olive });   // what came off it when it stopped
   grp('convoy.escort');
-  // its escort, off the road's line and burning: the fire lights the wall he runs to. (A light named 'brazier…' is an open fire: game/fire.ts gives it a
+  // its escort, off the road's line and burning: the fire lights the wall he runs to. (A light named 'brazier…' is an open fire: rust/game_rules/src/fire gives it a
   // flame, embers, smoke and a flicker. The glowing plate is its mouth)
   const ESCORT = { x: 8.5, z: 17.5, yaw: 0.5 };
   G.pickup(ESCORT.x, ESCORT.z, ESCORT.yaw, 'truckTan', { load: 'none' });
@@ -317,7 +317,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // ---- THE HUT, inside: where the post's two men sit out a watch ----
   grp('hut.room');
   // THE PLANK WALL: the back room, where the watch sleeps, is boarded off from the front one: boards on a rail, a way through at its end with no door.
-  // Wood this thin does not stop a rifle round (game/wallpen.ts), and the man behind it is the lesson of that
+  // Wood this thin does not stop a rifle round (rust/game_rules/src/wallpen), and the man behind it is the lesson of that
   add({ c: [PLANKS.x, 1.15, (PLANKS.z0 + PLANKS.z1) / 2], h: [0.03, 1.15, (PLANKS.z1 - PLANKS.z0) / 2], ...M.ply });
   for (const y of [0.5, 1.6]) add({ c: [PLANKS.x - 0.036, y, (PLANKS.z0 + PLANKS.z1) / 2], h: [0.006, 0.05, (PLANKS.z1 - PLANKS.z0) / 2], ...M.woodGrey, flags: DECAL });   // its two rails, on the front room's face
   G.table(19.1, 10.25, 1.4, 0.66, 0, 'ply'); add({ c: [18.8, 0.87, 10.2], h: [0.2, 0.12, 0.13], ...M.olive }); add({ c: [19.4, 0.79, 10.3], h: [0.08, 0.04, 0.06], ...M.plasticBlack });   // the table, the set's charger, a handset
@@ -459,9 +459,9 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       // the wall and INTO it: a hand that only knows 'walk' pushes at the corner and stays where it is (found on the real page, with real keys)
       { id: 'off', line: 'Move away from the wall to step off it', done: { is: 'flag', flag: 'wall', value: false } },
       // THE HUT'S DOOR: full auto has a use at once, and the reload comes after a magazine has really been fired. The leaf goes on the twelfth rifle round
-      // (game/doorblast.ts DOORSHOT); where that rule is off, or his rounds find the jambs, the twentieth round he fires on this line ends it and the
+      // (rust/game_rules/src/doorblast DOORSHOT); where that rule is off, or his rounds find the jambs, the twentieth round he fires on this line ends it and the
       // level's script throws the door open as the next line comes up (cue 'way'), so the way on never hangs on a switch. The reload's line waits for the
-      // gun to be FULL again, and a gun he ran dry has already started its own reload (game/autoreload.ts): the line is then being done, and goes by when it is
+      // gun to be FULL again, and a gun he ran dry has already started its own reload (rust/game_rules/src/autoreload): the line is then being done, and goes by when it is
       { id: 'inner', line: 'Go through the gate to the hut\'s wooden door', done: { is: 'near', at: [HUT.x0 - 0.9, 0, HUT_DOOR_Z], r: 1.5 }, at: [HUT.x0, 1.1, HUT_DOOR_Z] },
       { id: 'door', line: 'Hold the left mouse button to shoot the wooden door until it breaks', done: { is: 'any', of: [{ is: 'door', door: 'hut', state: 'open' }, { is: 'did', what: 'event:shot', n: 20 }] }, settle: 1, at: [HUT.x0, 1.1, HUT_DOOR_Z] },
       { id: 'reload', line: 'Press [R] to reload', done: { is: 'loaded' }, settle: 0.8 },
@@ -509,7 +509,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     ],
     mission: { serverRoom: { ...NEST }, entryDoor: 'hut', rack: { index: 0, front, halfW: 0.3 }, exfilDoor: 'gate', exfilX: EXIT.x, exfilZ: EXIT.z, exfilOut: EXIT.out },
   };
-  // what is underfoot (game/floor.ts): fresh snow is 'grass' (the soft, quiet one); the road, the trodden paths and cleared earth are 'asphalt'; the hut's slab is 'stone'
+  // what is underfoot (rust/game_rules/src/floor): fresh snow is 'grass' (the soft, quiet one); the road, the trodden paths and cleared earth are 'asphalt'; the hut's slab is 'stone'
   const surfaces: SurfacesData = { building: { x0: 0, x1: 40, z0: 0, z1: 28 }, grassEdge: 0, inside: 'grass', outside: 'grass', verge: 'grass',
     zones: [{ id: 'hut_felt', mat: 'carpet', x0: 17.7, z0: 11.55, x1: 19.7, z1: 12.85 }, ...zones, { id: 'road', mat: 'asphalt', x0: 0, z0: ROAD.z0 + 1.0, x1: 40, z1: ROAD.z1 - 0.9 }] };
   // THE SCRIPT'S FIRE POINTS, held to this floor: its rounds are real, and a wall moved here with the points left where they were is a round into a place a

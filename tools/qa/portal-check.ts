@@ -348,7 +348,7 @@ export async function portalCheck(): Promise<boolean> {
   // along the wall. Held here against a sum over the opening's own points (80 a side, nothing in the way) at eight kinds of face (a floor, a table top, a wall
   // facing the opening, faces that lean and tilt along the wall, a diagonal wall, a side wall), 0.4 to 12 m in and to 6 m either side of four openings (a
   // door, a window, a glass wall, a long strip of high glass), wherever the light is at least a two-hundredth of the brightest floor, UNDER THE MOST
-  // UNEVEN SKY AN HOUR HAS (game/hours.ts: dusk's horizon is 2.28 times its zenith by luminance; a night's 2.03, midday's 1.70, a grey day's 1.07). The
+  // UNEVEN SKY AN HOUR HAS (rust/game_rules/src/hours: dusk's horizon is 2.28 times its zenith by luminance; a night's 2.03, midday's 1.70, a grey day's 1.07). The
   // error goes as the sky's unevenness. WHAT THE HALVES BOUGHT is said by the numbers and not hidden: in three pieces the mean error is about a
   // hundredth of a place's own light where five had half that, nineteen places in twenty are under a twentieth where five had a fortieth.
   // PORTALPIECES_BREAK=1 = the sky as ONE piece with no cut at its ramp's end, asked of this line alone: five times the error, and the line fails

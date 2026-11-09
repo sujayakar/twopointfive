@@ -154,7 +154,7 @@ export const QUIET: QuietData = {
     { name: 'the road', sam: [35.2, 0, 27.1], samYaw: -Math.PI / 2, mate: [36.4, 0, 27.2] },
   ],
   spots: [
-    { place: 'the comms hut', area: R.comms, door: 'comms', holder: 'the middle rack', rackIndex: 0, front: [16.0, 1.0, 9.77], halfW: 0.4, wired: true },   // (on the station's network: pulled, it drops off a board and a man is sent — game/takecheck.ts; a safe and a locker tell nobody)
+    { place: 'the comms hut', area: R.comms, door: 'comms', holder: 'the middle rack', rackIndex: 0, front: [16.0, 1.0, 9.77], halfW: 0.4, wired: true },   // (on the station's network: pulled, it drops off a board and a man is sent — rust/game_rules/src/takecheck; a safe and a locker tell nobody)
     { place: 'the ops room', area: R.ops, door: 'ops', holder: 'the safe', rackIndex: 1, front: [25.9, 1.0, 9.77], halfW: 0.3 },
     { place: 'the bunk hut', area: R.bunk, door: 'bunk', holder: 'the steel locker', rackIndex: 2, front: [4.77, 1.0, 6.5], halfW: 0.3 },
   ],
@@ -403,11 +403,11 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     playerSpawn: [START.sam[0], 0, START.sam[2]],
     routes: RELAY_ROUTES.map(r => ({ ...r, points: r.points.map(p => [...p] as Vec3), wait: [...r.wait] })), chokepoints: [], clearPlans: [],
     sky: { zenith: [0.012, 0.02, 0.045], horizon: [0.04, 0.045, 0.07] },
-    // the level's own mission in the shape every level file carries: spots[0] and exits[0], as game/quiet.ts writes a deal
+    // the level's own mission in the shape every level file carries: spots[0] and exits[0], as rust/game_rules/src/quiet writes a deal
     mission: { serverRoom: { ...SPOT.area }, entryDoor: SPOT.door, rack: { index: SPOT.rackIndex, front: [...SPOT.front] as Vec3, halfW: SPOT.halfW }, exfilDoor: EXIT.door, exfilX: EXIT.x, exfilZ: EXIT.z, exfilOut: [EXIT.out[0], EXIT.out[1]] },
   };
 
-  // ---------------- what is underfoot (game/floor.ts): the six materials have no word for earth: 'asphalt' for dirt and gravel, 'stone' for a slab or a
+  // ---------------- what is underfoot (rust/game_rules/src/floor): the six materials have no word for earth: 'asphalt' for dirt and gravel, 'stone' for a slab or a
   //                  beaten floor, 'carpet' for the bunk hut's felt ----------------
   const surfaces: SurfacesData = {
     building: { x0: 4, x1: 36, z0: 4, z1: 24 }, grassEdge: 0, inside: 'asphalt', outside: 'asphalt', verge: 'asphalt',
@@ -454,7 +454,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     lamps: [{ id: 'kv_bulb', kind: 'point', pos: [4.75, 2.2, 11.8], dir: [0, -1, 0], color: [1, 0.62, 0.22], intensity: 13, range: 7, innerDeg: 0, outerDeg: 180, group: 'kv', enabled: true, volumetric: 0.05, radius: 0.06, mains: false, fixture: 'kv_fix' }],
   };
   const kitView: KitViewData = { ways: [{ door: 'gate_w', ref: [1.8, 16.6], side: -1, add: kitAdd }] };
-  // what a row calls the four ways through the wall (scenarios.doorNames — game/doornames.ts; no bearing in a name): by what is outside or just inside each
+  // what a row calls the four ways through the wall (scenarios.doorNames — rust/game_rules/src/doornames; no bearing in a name): by what is outside or just inside each
   const doorNames = [{ door: 'gate_s', name: 'wicket' }, { door: 'gate_w', name: 'track gate' }, { door: 'gate_n', name: 'back strip gate' }, { door: 'gate_e', name: 'dish gate' }];
   return { level, scenarios: { quiet: QUIET, kitView, doorNames }, groups: trace.groups, surfaces };
 }

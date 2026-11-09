@@ -238,7 +238,7 @@ stays dark. These are guidelines, not misses like the rest of this page: each sa
 (drawn on the software renderer), read from the code, or is judgement. None of it has been seen on a GPU.
 
 - **Judge the light at the hour the mission plays at.** A mission row's own hour and weather are written over the
-  link (`src/game/rowset.ts`; `?rowset=0` is the link as written), so a level's file may be a night nobody plays. Open
+  link (`rust/game_rules/src/rowset`; `?rowset=0` is the link as written), so a level's file may be a night nobody plays. Open
   it as its row does, and read which lights are lit: the photocell has every `exterior` lamp out at midday and under
   overcast. **seen** the first account of that flat yard blamed two floodlights at its gates. They were out: the
   row plays at midday.
@@ -248,7 +248,7 @@ stays dark. These are guidelines, not misses like the rest of this page: each sa
   height for long shadows where the mission lets you. A level that has to play at midday gets its shape from paint
   and ground instead (below, and `ground`). **seen** the plan tutorial's yard at its midday is a pale wash, with or
   without materials on its walls; the same frame at dusk has long shadows and walls that hold below white. **read**
-  `src/game/hours.ts`. **By eye.**
+  `rust/game_rules/src/hours`. **By eye.**
 - **`key` · One key light a court, from one side.** Never two lights of like strength facing each other across the
   same ground: each lights what the other shadows. A second light on that ground is a fill at a quarter of the key or
   less, or it belongs to another court. Judgement, not seen: the plan tutorial's file has two of the kit's floodlights
@@ -317,7 +317,7 @@ stays dark. These are guidelines, not misses like the rest of this page: each sa
   roamer's line. **seen** a start on the road in front of the glass, in six marks' sight.
 - **The headless light meter has no moon and no bounce.** A mark "dark" headless can be 57 % lit on the page. Hide marks
   stand in a moon shadow; measure with `--moon` where a tool has it, and say "never seen on a GPU".
-- **Snow is a level's own weather**, by name in `src/game/weatherKinds.ts SNOW_LEVELS`, its snow in the file; banks stay off
+- **Snow is a level's own weather**, by name in `rust/game_rules/src/weather_kinds SNOW_LEVELS`, its snow in the file; banks stay off
   doors. The maintainer: "curate snow levels and have the art be custom".
 
 ## 6. The mission in the file
@@ -377,7 +377,7 @@ stays dark. These are guidelines, not misses like the rest of this page: each sa
 
 ## 7. The team and its kit
 
-- **A level does not deal the squad's kit.** There is one issue for the whole game (`src/game/kit.ts`, a card a man by his
+- **A level does not deal the squad's kit.** There is one issue for the whole game (`rust/game_rules/src/kit`, a card a man by his
   place in the team). A level changes it in two places only: `scenarios.issue.members` and `roomClear.wallCharges`. So what
   your team carries is that table plus those two fields, at EVERY size the row offers. **seen** "as issued still has blue
   team pretty empty": the squad's stuns, charges and frags rode on the first two teammates, so at three and four the blue

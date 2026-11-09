@@ -83,11 +83,11 @@ export class Engine {
   /** SHARP DIRECT this frame (settings.sharpDirect ∧ TAAU ∧ no debug view ∧ internal ≠ output — resize decides), the OUTPUT frame block (the same bytes with screen = the output size: frame.ts writeFrameOut)
    *  and its scene group, group 0 of every pass that runs at the output size then */
   sharpOn = false; frameBufOut: GPUBuffer; frameDataOut = new ArrayBuffer(FRAME_BYTES); sceneBGOut: GPUBindGroup | null = null;
-  /** FOG OF WAR (game/fogofwar.ts fills it every frame; main.ts hands the game's object over once): null / `on` false = no pass, the frame as it was */
+  /** FOG OF WAR (rust/game_rules/src/fogofwar fills it every frame; main.ts hands the game's object over once): null / `on` false = no pass, the frame as it was */
   fogFrame: FogFrame | null = null;
-  /** THE OPEN FIRES to draw this frame (game/fire.ts writes the list every update; empty = none): the composite adds each one's flame, coals and the smoke off its tips (passes.setFires; its embers are particles) */
+  /** THE OPEN FIRES to draw this frame (rust/game_rules/src/fire writes the list every update; empty = none): the composite adds each one's flame, coals and the smoke off its tips (passes.setFires; its embers are particles) */
   fires: FireRecord[] = [];
-  /** the look's numbers every fire is drawn with (game/fire.ts fireDraws; fire.wgsl FireLook's twelve, in order); null = none said yet */
+  /** the look's numbers every fire is drawn with (rust/game_rules/src/fire fireDraws; fire.wgsl FireLook's twelve, in order); null = none said yet */
   fireLook: number[] | null = null;
   /** which of the frame's boxes are thin lines (a laser's beam, a tracer's streak) and which of those the air shows, with its bead; null = none said (the host's word) */
   beams: { is(b: Box): boolean; airOf(b: Box): Box | null | undefined; /** the boxes to look among (absent = the frame's own) */ list?: Box[] } | null = null;
@@ -100,7 +100,7 @@ export class Engine {
   dummyStorage: GPUBuffer;
   smoke: SmokeBinding;
   settings: RenderSettings = defaultSettings();
-  /** what the weather wants drawn in the outdoor air this frame (game/weather.ts writes it before render; all zero = nothing, the default) */
+  /** what the weather wants drawn in the outdoor air this frame (rust/game_rules/src/weather writes it before render; all zero = nothing, the default) */
   weather: WeatherFrame = noWeather();
   /** the view's look-at point as of the last render() (the smoke solver spends its pool by distance from it — smoke.ts sparse.viewBias / farCells) */
   viewFocus: Vec3 = [0, 0, 0];
@@ -128,7 +128,7 @@ export class Engine {
   taaResets = 0; lastTaaReset = '';
   /** THE LOOK PROTOTYPE's loose snow in the air (render/powderField.ts: the powder the wind picks up and a boot kicks, carried by `air` below, drawn by the
    *  composite). Built the first frame the look page has lying snow, an air field and either row up; dropped when any of those goes (the rows at 0, the air
-   *  field replaced). Picture only. game/snowFx.ts files the kicks into it. */
+   *  field replaced). Picture only. rust/game_rules/src/snow_fx files the kicks into it. */
   powder: PowderField | null = null; private powderAir: unknown = null;
   /** THE LOOK PROTOTYPE's place field (render/placeField.ts: one level of light a room, which the One exposure row shows every place by): built with the
    *  engine and kept; null on a device that cannot make it */
@@ -147,7 +147,7 @@ export class Engine {
   /** … and the one map of the level both read (placeField.ts PlaceMap); which tables each frame block was last sent (WallSides.made; −1 = never) */
   readonly placeMap = new PlaceMap(); private sidesSent = -1; private sidesSentOut = -1;
   place: PlaceField | null = null; private placeWas: PlaceField | null = null; private placeDead = false;
-  /** THE LOOK PROTOTYPE's eye (render/placeField.ts: the place field's own, eased on the GPU): `snap` = it takes its next reading outright and the field is solved to rest first (the first frame, a restart: game/airSim.ts says; a still sets it by hand). Picture only. */
+  /** THE LOOK PROTOTYPE's eye (render/placeField.ts: the place field's own, eased on the GPU): `snap` = it takes its next reading outright and the field is solved to rest first (the first frame, a restart: rust/game_rules/src/air_sim says; a still sets it by hand). Picture only. */
   lookEye = { snap: true };
   /** this frame's shadeCfg and eyeCfg as the frame was handed them (a tool's and the debugger's: tools/qa/look-sheet.cjs prints them beside each still) */
   lookShadeCfg: [number, number, number, number] | undefined = undefined; lookEyeCfg: [number, number, number, number] | undefined = undefined;
@@ -178,7 +178,7 @@ export class Engine {
     this.drawWait.calm = PLAN_PACE.calm;
     return { plan: on ? { left: Infinity, ms: PLAN_PACE.ms } : WHOLE, wait: on ? this.drawWait : null };
   }
-  /** THE LEVEL IS ANOTHER STATE OF ITSELF (a restart, a save put back: host/api.ts): what the planners have in hand was of the state before, so it is
+  /** THE LEVEL IS ANOTHER STATE OF ITSELF (a restart, a save put back: rust/game_rules/src/host_api): what the planners have in hand was of the state before, so it is
    *  given up, and for a few drawn frames every plan is made at once, as on a page's first frames. Not for a change of light or weather: the level
    *  stands, and a job in hand is still of it. */
   startPlansOver(): void { this.planFresh = LOOK_OPENINGS.settle + 2; this.wallSides.drop(); this.openJob.drop(); }
@@ -441,10 +441,10 @@ export class Engine {
   get decalsOn(): boolean { return this.settings.decals && !!this.decals && this.decals.count > 0; }
   /** Attach the GPU particle system (or null): its passes join the frame from the next render() while settings.gpuParticles is on. */
   setParticles(p: Particles | null) { this.particles = p; }
-  /** THE AIR OVER THE FLOOR (render/airField.ts; game/airSim.ts feeds it): the wind as a small fluid simulation over the level's floor plan — walls, furniture
+  /** THE AIR OVER THE FLOOR (render/airField.ts; rust/game_rules/src/air_sim feeds it): the wind as a small fluid simulation over the level's floor plan — walls, furniture
    *  and door leaves stand in it, the storm and the vents drive it. Read by the particle step (the blown snow's grains and wisps) and by nothing else: a picture
    *  only. main.ts attaches one on every level (`?air=0`: none — null = the engine as it was); the game hands over, once a frame, the ambient wind (`airWind`,
-   *  m/s along x and z, the gust on it) and whether to run at all (`airOn`: game/airSim.ts AIR_SIM.on, live — a perf sweep can flip it mid-take). STEPPED ON
+   *  m/s along x and z, the gust on it) and whether to run at all (`airOn`: rust/game_rules/src/air_sim AIR_SIM.on, live — a perf sweep can flip it mid-take). STEPPED ON
    *  ITS OWN CLOCK, not once a drawn frame (settings.airSim, live; settings.airEvery): when at least 0.8 of `airEvery` sixtieths of a second have gone by since the last step (a 120 Hz page steps every
    *  other frame, a 30 Hz one once a frame by the solver's own 1/30 s bound), in ONE compute pass timed as 'air' (per-cell work: it does not shrink with the
    *  render scale). */
@@ -452,7 +452,7 @@ export class Engine {
   airWind: [number, number] = [0, 0];
   airOn = false;
   private airAcc = 0;
-  /** Is the GPU particle path live this frame? (the setting ∧ a Particles attached) — what game/particleFx.ts routes the effect sites by */
+  /** Is the GPU particle path live this frame? (the setting ∧ a Particles attached) — what rust/game_rules/src/particle_fx routes the effect sites by */
   get particlesOn(): boolean { return this.settings.gpuParticles && !!this.particles; }
 
   /** A new cascade grid (a preset with another probe density, the Tab panel's 'rebuild cache'). WORLD-SPACE cache: what a (re)started instance does about its empty / stale contents
@@ -493,7 +493,7 @@ export class Engine {
    *  day grid swapped in at night: seven frames of the wrong bounce and the wrong light-meter reading — review R10.1). Not for screen events — resize / scale / checkerboard /
    *  divisor flips leave the world cache valid and must not call this. */
   invalidateWorldCache() { this.rc.invalidateWorld(); for (const parked of this.rcPark.values()) parked.invalidateWorld(); }
-  /** The LEVEL was put back to its start under the picture (game/cleanrestart.ts: a restart — lamps that were out burn, holed walls stand, the eye is somewhere else): the
+  /** The LEVEL was put back to its start under the picture (rust/game_rules/src/cleanrestart: a restart — lamps that were out burn, holed walls stand, the eye is somewhere else): the
    *  screen histories, the reservoirs, the haze volume's history and the radiance cache all still hold the level as it stood, 'wrong wholesale'. Each starts from
    *  nothing, as on a boot's first frame, so the fresh level is not blended in over the frames after. */
   restartPicture(why = 'level restarted') { this.passes.restartHistories(why); this.invalidateWorldCache(); this.startPlansOver(); }   // (restartHistories clears the resolve's history and the reservoirs with the rest)
@@ -550,7 +550,7 @@ export class Engine {
     this.passes.setSharp(sharp);
     this.passes.setGbaa(!!this.settings.gbaa && this.settings.taau && this.settings.debugView === 0 && (sharp || this.settings.taauPhases <= 0));   // GBAA: on the TAAU path only (its blend sits between the composite and the resolve; the debug views and the FXAA chain bypass it), and only on a 1 : 1 raster it can own — sharp direct live, or the jitter off — never under the jittered upscale (that is C4: measured softer than main)
     this.passes.setOutlineCopy(!!this.outline?.on && this.settings.debugView === 0);   // THE OUTLINE BY THE PICTURE (render/outline.ts): a copy of the composite for it to read, kept only while its rows ask
-    this.passes.fogFrame = this.fogFrame; this.passes.setFog(!!this.fogFrame?.on && this.settings.debugView === 0);   // FOG OF WAR (game/fogofwar.ts): its pass exists only while the game's switch is on (hdr takes the storage + copy usages then), and never under a debug view
+    this.passes.fogFrame = this.fogFrame; this.passes.setFog(!!this.fogFrame?.on && this.settings.debugView === 0);   // FOG OF WAR (rust/game_rules/src/fogofwar): its pass exists only while the game's switch is on (hdr takes the storage + copy usages then), and never under a debug view
     this.passes.setSceneCopy(!!this.settings.particleRain && !!this.particles);   // PARTICLE RAIN v2: keep a copy of the composite for the rain streaks to refract (GBAA's own when GBAA is on; else one the particles fill before their splat) — off = nothing kept
     if (w !== this.width || h !== this.height || ow !== this.outWidth || oh !== this.outHeight || this.passes.stale || sharp !== this.sharpOn) {   // (stale: TAAU / GBAA switched — the output- or composite-size set is rebuilt even at an unchanged size)
       this.width = w; this.height = h; this.outWidth = ow; this.outHeight = oh; this.sharpOn = sharp;
@@ -654,7 +654,7 @@ export class Engine {
       this.world.hidePrimary = this.passes.setBeams((refl || air) && this.beams ? this.beams.list ?? this.world.dynamics : null, this.beams?.is ?? NO_BEAM, this.viewFocus, { reflect: refl, air: air ? this.beams?.airOf ?? null : null, A, rain: this.weather.rain, wet: S.wetMirror && S.rtReflect ? 2 : 0, coats: Math.max(0, Math.min(1, lookConfig.pressed)) });
     }   // (lasers / tracers in the reflections: ≤ 8 segments in a small uniform; none = a zero count, the pass as it was)
     this.passes.setFireLook(this.fireLook);
-    this.passes.setFires(this.settings.debugView === 0 ? this.fires : null);   // the open fires' flames (game/fire.ts), behind the beams in the same uniform
+    this.passes.setFires(this.settings.debugView === 0 ? this.fires : null);   // the open fires' flames (rust/game_rules/src/fire), behind the beams in the same uniform
     this.passes.setRt(this.settings.rtReflect, this.settings.rtReflectDiv);   // (likewise before resize: the reflection targets' divisor — pooled + re-made on change like the gather's — and the switch that first allocates them at all)
     this.resize();
     cam.aspect = this.width / this.height;
@@ -680,7 +680,7 @@ export class Engine {
       const jump = v3.dist(cam.pos, this.prevCamPos), turn = v3.dot(cam.forward, this.prevCamFwd);
       if (jump > 2.5 || turn < 0.866) { cutNow = true; if (taauOn) this.resetTaa(jump > 2.5 ? `cut (${jump.toFixed(1)} m)` : 'cut (turn)'); else this.passes.dropRestirBeliefs(); }   // (resetTaa drops the ReSTIR tiles' light beliefs too; without TAAU that is all a cut needs from here)
     }
-    { // INFRARED LIGHTS (lights.ts LightSet.ir, game/irlight.ts): in the list only while this frame's picture is the tube's — post.wgsl's own swap. The frame the
+    { // INFRARED LIGHTS (lights.ts LightSet.ir, rust/game_rules/src/irlight): in the list only while this frame's picture is the tube's — post.wgsl's own swap. The frame the
       // tube comes off, every screen history still holds rooms lit by them (the resolve's, the direct light's, the bounce's, the reflections', the reservoirs' —
       // in a tube frame they are steady lights like any torch): 'wrong wholesale', the case passes.restartHistories names — so no bare-eyed frame shows what only a tube saw.
       const tube = this.settings.nvAmount > 0.5;

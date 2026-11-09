@@ -1,5 +1,5 @@
 // The OFFICE's scenario data (src/scene/scenarios.ts LevelScenarios): what the night breach, the room clear and the hostage rescue take from this level — the
-// tables that lived in game/nightbreach.ts, roomclear.ts, rescue.ts and rescueflow.ts, moved here number for number. THE OFFICE GENERATOR'S INPUT, and nobody
+// tables that lived in rust/game_rules/src/nightbreach, roomclear.ts, rescue.ts and rescueflow.ts, moved here number for number. THE OFFICE GENERATOR'S INPUT, and nobody
 // else's: scene/officeGen.ts puts the block on the Level it builds and tools/level-export.ts writes it into levels/office.json, where the game, the page and
 // every tool read it as they read any level's (as tools/levels/<name>.ts holds another level's). Change a number here, then run the export.
 // Plain literals and type-only imports: nothing here is built from another module's exports.
@@ -107,7 +107,7 @@ const RESCUE: RescueData = {
  *  room's, past the last man). Everything else is measured (rust/game_start/src/kit_plan.rs). */
 const KIT_VIEW: KitViewData = { ways: [{ door: 'server', ref: [17.6, 11.1], hide: ['box_0120', 'box_0121', 'box_0380', 'box_0390'], slots: [null, null, null, [15.0, 11.56, 90]], roomLights: 1, pane: false }] };
 
-/** THE RESPONSE TEAM (game/qrf.ts, RESPONSE.on): the building's own. The marks are qrf.ts QRF_MARKS number for number — the landing behind the steel stair
+/** THE RESPONSE TEAM (rust/game_rules/src/qrf, RESPONSE.on): the building's own. The marks are qrf.ts QRF_MARKS number for number — the landing behind the steel stair
  *  door, the fan just inside it, the four outside posts of the lot and where the gate's own men are stood up — and the words are the lines the office always
  *  had. One way in: the floor has one stair. A run is dealt three or four men, a minute to a minute and a half out. */
 const RESPONSE: ResponseData = {
@@ -126,7 +126,7 @@ const RESPONSE: ResponseData = {
   outside: [[38.6, 0, 26.6], [37.4, 0, 26.9], [38.8, 0, 25.4], [37.2, 0, 25.6]],
 };
 
-/** WHAT THE BREAK ROOM'S TWO INSIDE DOORS ARE CALLED on the squad's rows (game/doornames.ts, WORDS.doors): their ids end in a bearing and the HUD has no
+/** WHAT THE BREAK ROOM'S TWO INSIDE DOORS ARE CALLED on the squad's rows (rust/game_rules/src/doornames, WORDS.doors): their ids end in a bearing and the HUD has no
  *  compass, so each is named by what it is taken from, as another level's doors are */
 const DOOR_NAMES = [{ door: 'breakroom_n', name: 'corridor-side break room door' }, { door: 'breakroom_w', name: 'cubicles-side break room door' }];
 /** WHERE A PERSON STANDS TO USE EACH THING ON THE FLOOR, as named marks (scene/level.ts Level.marks; attached at load beside the scenarios). Nothing in
@@ -154,7 +154,7 @@ export const OFFICE_MARKS: MarkDef[] = [
   { name: 'van', pos: [27.7, 0, 26.4] },
 ];
 
-/** HOW THE OFFICE IS WALKED BY THE PEOPLE WHO WORK IN IT (scene/ways.ts: the look's page wears its floors by the ways field). The level's own ways are the
+/** HOW THE OFFICE IS WALKED BY THE PEOPLE WHO WORK IN IT (rust/game_rules/src/scene_ways: the look's page wears its floors by the ways field). The level's own ways are the
  *  night shift's three routes, each team's start to its rooms, and the three outer doors door to door: nobody had said how a desk, the printer, the coffee
  *  or a car is reached, the conference room's door had no way through it, and the plain night's own start had none leaving it. A weight is how many ways a
  *  row counts as beside one lap of a patrol (1). THE DAY: everybody comes up the west stair and signs in; each of the sixteen desks is reached from the

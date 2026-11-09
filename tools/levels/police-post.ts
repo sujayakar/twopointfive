@@ -114,7 +114,7 @@ export const POST_ROOMS: Record<'cells' | 'armoury' | 'radio' | 'office' | 'corr
 const R = POST_ROOMS;
 /** the level's own names for the floor no spot is in (scenarios.places: a radio line, a checkpoint row and the debrief say WHERE by these — rooms first,
  *  then the yards; a point in two is the first listed). THE MAST and THE IMPOUND are the two a man would say on the radio. */
-/** what a row calls the doors (scenarios.doorNames — game/doornames.ts; no bearing in a name): the level lists no rooms, so the gates are named by what is behind them
+/** what a row calls the doors (scenarios.doorNames — rust/game_rules/src/doornames; no bearing in a name): the level lists no rooms, so the gates are named by what is behind them
  *  (the impound's as RESPONSE names it) and the outbuildings' and the block's own outside doors by what they are */
 const DOOR_NAMES = [{ door: 'gate_e', name: 'impound gate' }, { door: 'gate_n', name: 'motor pool gate' }, { door: 'gate_w', name: 'side yard gate' }, { door: 'side_e', name: 'corridor end door' }, { door: 'store_e', name: 'store back door' }, { door: 'shed_e', name: 'generator shed door' }, { door: 'hut_w', name: 'gate hut door' }, { door: 'yard_sw', name: 'forecourt to side yard door' }];
 const PLACES = { areas: [
@@ -193,7 +193,7 @@ export const QUIET: QuietData = {
 /** QUIET_VARIANT=spot,patrolSet,start — CHECKING ONLY: that deal, with level.routes cut down to the one set, written to levels/police-post-v<spot><set><start>.json
  *  (a scratch file, not committed) so the scripted player can be run against one deal. Unset = the committed file: spot 0, start 0, all six routes. */
 const VARIANT = process.env.QUIET_VARIANT ? process.env.QUIET_VARIANT.split(',').map(x => Number(x) || 0) : null;
-/** scenarios.response (game/qrf.ts, rust/game_start/tests/response_team.rs): WHO COMES WHEN THIS PLACE GOES LOUD, and by which gate. Every mark is outside the wall or a
+/** scenarios.response (rust/game_rules/src/qrf, rust/game_start/tests/response_team.rs): WHO COMES WHEN THIS PLACE GOES LOUD, and by which gate. Every mark is outside the wall or a
  *  stride inside it; yaws are Character yaws (forward = [sin, 0, cos]: Math.PI looks up the plan, toward the building). */
 export const RESPONSE: ResponseData = {
   why: 'A district post with a radio room and an army picket down the road: shots here are heard on a net somebody answers, and the picket walks in by a gate.',
@@ -501,7 +501,7 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
   const THICK = new Set(['front', 'side_e', 'store_e', 'shed_e', 'hut_w', 'yard_sw']);
   for (const d of doorDefs) doorFrame(THICK.has(d.name) ? { ...d, exterior: true } : d);
 
-  // ---------------- devices (game/devices.ts): two cameras and the keypad ----------------
+  // ---------------- devices (rust/game_rules/src/devices): two cameras and the keypad ----------------
   const devices: DeviceDef[] = [
     // over the front door, looking south across the forecourt at the main gate and panning: the lit way in is watched; the west yard and the back never are
     { kind: 'camera', name: 'cam_yard', pos: [16.9, 2.75, 18.68], yaw: 0.35, pitch: -0.35, sweep: [-1.2, 0.6], sweepPeriod: 12, fovDeg: 60, range: 11, mains: true },
@@ -512,7 +512,7 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
   ];
 
   // ---------------- the terminal (the last boxes of the post itself, so that nothing above takes a new number) ----------------
-  // the post's one terminal, on the footlocker between the cots (game/doze.ts: a man with a short wait in this room sits to it — the chair is the lived-in room's —
+  // the post's one terminal, on the footlocker between the cots (rust/game_rules/src/doze: a man with a short wait in this room sits to it — the chair is the lived-in room's —
   // switches it on, and off again when he gets up). BUILT OFF: the room is as dark as it was until somebody is at it. On the mains like everything else here.
   grp('bunk');
   K.monitor(22.95, 18.18, Math.PI, false, 0.4, true, true);
@@ -764,7 +764,7 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
     mission: { serverRoom: { ...SPOT.area }, entryDoor: SPOT.door, rack: { index: SPOT.rackIndex, front: [...SPOT.front], halfW: SPOT.halfW }, exfilDoor: EXIT.door, exfilX: EXIT.x + 0.6, exfilZ: EXIT.z, exfilOut: [...EXIT.out] },
   };
 
-  // ---------------- what is underfoot (game/floor.ts: which step sounds, and how far it carries to their ears) ----------------
+  // ---------------- what is underfoot (rust/game_rules/src/floor: which step sounds, and how far it carries to their ears) ----------------
   // The yard is packed earth ('asphalt' is the nearest of the six). The building's beaten floor is 'lino'; the CORRIDOR is poured concrete — 'stone', the
   // loudest floor there is, on the short way: a walking step carries 5.2 m along it — and the commander's rug and the bunk room's are 'carpet' (2 m).
   const surfaces: SurfacesData = {

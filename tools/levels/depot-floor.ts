@@ -92,7 +92,7 @@ export const DEPOT_ROOMS: Record<'duty' | 'a' | 'wash' | 'battery' | 'generator'
   aerials: { x0: 29.62, x1: 35.88, z0: 4.12, z1: 14.88 },
 };
 
-/** THE DEPOT'S RESPONSE TEAM (scene/scenarios.ts ResponseData; game/qrf.ts RESPONSE.raid — rust/game_start/tests/response_team.rs stands every mark on the
+/** THE DEPOT'S RESPONSE TEAM (scene/scenarios.ts ResponseData; rust/game_rules/src/qrf RESPONSE.raid — rust/game_start/tests/response_team.rs stands every mark on the
  *  built floor). A raid's team: it stands with the defenders. WHY HERE: the signals hut is this level's one problem already — the answer the floor is cut for
  *  is round the back to the hut and the mains — and a motor pool's trucks are out on the road with an escort the hut talks to. So the hut is also what
  *  calls: gunfire its men hear, and a few seconds to say so, brings the escort back to one of the depot's own two gates. The hut taken first, nobody calls. */
