@@ -35,7 +35,7 @@ pub enum LessonTestKind {
     Mate { area: Option<crate::scene_scenarios::Rect>, at: Option<V3>, r: Option<f64>, by: Option<f64>, away: Option<f64> },
     Pair { what: String, n: Option<f64> },
     Cue { name: String },
-    View { turned: Option<f64>, zoomed: Option<f64>, panned: Option<f64> },
+    View { turned: Option<f64>, zoomed: Option<f64> },
     Squad { area: crate::scene_scenarios::Rect, n: Option<f64> },
     Stacks { doors: Vec<String>, n: Option<f64>, set: bool },
     Watching { at: V3, r: Option<f64>, n: Option<f64> },
@@ -434,7 +434,6 @@ pub struct RailsData {
     pub respawn: Option<f64>,
     pub fog: Option<bool>,
     pub waits: Option<crate::scene_scenarios::RailsDataWaits>,
-    pub sky: Option<crate::scene_scenarios::RailsDataSky>,
     pub lasers: Option<bool>,
     pub orders: Option<Vec<String>>,
     pub flat_ring: Option<bool>,
@@ -444,21 +443,6 @@ pub struct RailsData {
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct RailsDataWaits {
     pub low: Option<bool>,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct RailsDataSky {
-    pub park: V3,
-    pub reach: Option<f64>,
-    pub eye: Option<crate::scene_scenarios::RailsDataSkyEye>,
-    pub low: Option<bool>,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct RailsDataSkyEye {
-    pub at: V3,
-    pub yaw: f64,
-    pub fov: Option<f64>,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -754,7 +738,6 @@ pub struct ScenarioEntry {
     pub squad: f64,
     pub group: Option<crate::scene_scenarios::MissionGroup>,
     pub only: Option<String>,
-    pub packs: Option<crate::scene_scenarios::ScenarioEntryPacks>,
     pub level: Option<String>,
     pub hour: Option<crate::hours::HourId>,
     pub weather: Option<crate::scene_scenarios::ScenarioEntryWeather>,
@@ -809,11 +792,6 @@ impl MissionGroup {
             MissionGroup::QuietTwo => "quiet-two",
         }
     }
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct ScenarioEntryPacks {
-    pub frags: Option<f64>,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]

@@ -2375,13 +2375,7 @@ pub struct NoshoveK {
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct RailsK {
-    pub pan_speed: f64,
-    pub pan_reach: f64,
     pub snap_px: f64,
-    pub keep: f64,
-    pub keep_speed: f64,
-    pub keep_deep: f64,
-    pub keep_up: f64,
     pub way_m: f64,
     pub after_secs: f64,
     pub after_max: f64,
@@ -4899,7 +4893,7 @@ pub fn page_noshove() -> NoshoveK {
 }
 
 pub fn page_rails() -> RailsK {
-    crate::knobs::RailsK { pan_speed: 11.0, pan_reach: 16.0, snap_px: 40.0, keep: 0.21, keep_speed: 9.0, keep_deep: 0.79, keep_up: 0.39, way_m: 6.0, after_secs: 8.0, after_max: 45.0, line_clear: true, mark_clear: true, card_beat_secs: 1.2, card_quiet: 2.0, card_max: 9.0, spare_secs: 6.0 }
+    crate::knobs::RailsK { snap_px: 40.0, way_m: 6.0, after_secs: 8.0, after_max: 45.0, line_clear: true, mark_clear: true, card_beat_secs: 1.2, card_quiet: 2.0, card_max: 9.0, spare_secs: 6.0 }
 }
 
 pub fn page_doorforce() -> DoorforceK {

@@ -129,8 +129,6 @@ pub struct RailsView {
     pub teaches_hold: bool,
     /// no teammate shows an aiming laser on this mission
     pub no_lasers: bool,
-    /// nobody on the floor is the player: where the view looks. (None: he is on the floor)
-    pub sky: Option<V3>,
 }
 
 /// the lesson that is live on the mission that is up
@@ -721,8 +719,6 @@ pub struct CardRow {
     pub changed: bool,
     /// he carries it and the mission has no use for it
     pub idle: bool,
-    /// how many of it the mission hands him, where that is more than he carries
-    pub lent: f64,
     /// why the step to the value before (after) is refused; empty: it is not
     pub less: String,
     pub more: String,
@@ -740,7 +736,7 @@ pub struct CardRow {
     /// the guns the slot could hold
     pub picks: Vec<crate::view::CardPick>,
 }
-impl Default for CardRow { fn default() -> Self { CardRow { field: String::new(), label: String::new(), kind: CardKind::Count, value: String::new(), n: 0.0, word: String::new(), note: String::new(), cost: String::new(), under: String::new(), look: false, none: false, fixed: false, changed: false, idle: false, lent: 0.0, less: String::new(), more: String::new(), can: false, icon: String::new(), noise: 0.0, takes: None, would: None, bars: Vec::new(), picks: Vec::new() } } }
+impl Default for CardRow { fn default() -> Self { CardRow { field: String::new(), label: String::new(), kind: CardKind::Count, value: String::new(), n: 0.0, word: String::new(), note: String::new(), cost: String::new(), under: String::new(), look: false, none: false, fixed: false, changed: false, idle: false, less: String::new(), more: String::new(), can: false, icon: String::new(), noise: 0.0, takes: None, would: None, bars: Vec::new(), picks: Vec::new() } } }
 
 /// pouches, full and in all
 #[derive(Clone, Copy, Debug, Default, ToBytes)]
@@ -938,8 +934,6 @@ pub struct StartRow {
     pub unplayed: bool,
     /// cut from the lists (its own address still finds it)
     pub off_list: bool,
-    /// the player packs for it, though it is a lesson
-    pub packs: bool,
     /// it is played with the kit as issued
     pub as_issued: bool,
     pub lesson: bool,
