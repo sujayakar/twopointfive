@@ -54,9 +54,9 @@ async function page() {
   buttons('freeze', ['Each frame', 'Held'], () => RASTER.freeze ? 1 : 0, i => { RASTER.freeze = i === 1; }); slider('rays', () => ui.rays, v => { ui.rays = v; }, v => v === 0 ? 'finest' : `${v.toFixed(2)} x`); slider('hour', () => ui.hour, v => { ui.hour = v; }, v => `${Math.floor(v)}:${String(Math.floor(v % 1 * 60)).padStart(2, '0')}`);
   const setRef = (on: boolean) => { if (ui.busy || on === ui.ref) return; ui.ref = on; ui.busy = true; void lab.use(on ? ref : rt).catch(e => { showError(String(e)); ui.ref = !on; return lab.use(on ? rt : ref); }).finally(() => { ui.busy = false; paint(); }); }; buttons('ref', ['Real time', 'Path traced'], () => ui.ref ? 1 : 0, i => setRef(i === 1));
   // ---- measured here: the same two tables as tools/meshcard.cjs rate
-  $('measure').onclick = () => { if (!measuring && !ui.busy) void measure(); };
+  $('measure').onclick = () => { if (!measuring) void measure(); };
   async function measure() {
-    measuring = ui.busy = true; const out = $('out'), was = { ...RASTER }, cam = { ...c.want, look: [...c.want.look] as [number, number, number], fov: c.fov }, lines: string[] = [`${lab.gpu.info || navigator.userAgent}`, `${(m.list.reduce((a, l) => a + l.packed.triangles, 0) / 1e6).toFixed(1)} M triangles of ${m.list.length} meshes in ${(m.data.byteLength / 1e6).toFixed(0)} MB, made in ${(tMade / 1000).toFixed(1)} s`]; out.hidden = false; const say = (l: string) => { lines.push(l); out.textContent = lines.join('\n'); };
+    measuring = true; while (ui.busy) await wait(); ui.busy = true; const out = $('out'), was = { ...RASTER }, cam = { ...c.want, look: [...c.want.look] as [number, number, number], fov: c.fov }, lines: string[] = [`${lab.gpu.info || navigator.userAgent}`, `${(m.list.reduce((a, l) => a + l.packed.triangles, 0) / 1e6).toFixed(1)} M triangles of ${m.list.length} meshes in ${(m.data.byteLength / 1e6).toFixed(0)} MB, made in ${(tMade / 1000).toFixed(1)} s`]; out.hidden = false; const say = (l: string) => { lines.push(l); out.textContent = lines.join('\n'); };
     if (!lab.gpu.timestamps) say('This browser gives no GPU times: nothing to measure.');
     else for (const [w, h] of [[1920, 1080]] as const) {
       lab.resize([w, h], [w, h]); await lab.use(raster); lab.smooth = false;
