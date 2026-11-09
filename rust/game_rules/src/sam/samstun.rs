@@ -5,11 +5,11 @@ use crate::ids::*;
 use crate::m;
 use crate::v3::{self, Quat, V3};
 
-/// Can a stun show on the player at all: up, no puppet's strings.
+/// Can a stun show on the player at all: up.
 fn live(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { live_of(g, seat.player) }
 /// …of one man
 fn live_of(g: &crate::game::Game, p: PlayerId) -> bool {
-    !crate::condition::down(g, g.pl[p].ch) && g.puppet.is_none()
+    !crate::condition::down(g, g.pl[p].ch)
 }
 
 /// Fold the player for `secs`; `dir` = the way the blow came from → him.

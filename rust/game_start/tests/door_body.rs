@@ -14,7 +14,8 @@ fn opened_on(sam: [f64; 2], seed: u32) -> (Option<f64>, f64) {
     for o in p.g.guards.clone().into_iter().skip(1) { let m = &mut p.g.gd[o]; (m.hold, m.pinned, p.g.cond[m.ch].blind_until) = (true, true, 1e9); }
     p.sam_put(sam);
     let at = p.sam_at();
-    p.g.puppet = Some(game::game::GamePuppet { goal: Some([at[0], 0.0, at[1]]), aim: Some([27.5, 1.2, 11.3]), ..game::game::GamePuppet::default() });
+    p.walk_keys_to(Some(at));
+    p.g.hand_at = Some([27.5, 1.2, 11.3]);
     let c = p.g.gd[gd].ch;
     let (x, z) = (27.5, 11.3);
     p.g.ch[c].pos = [x, 0.0, z];

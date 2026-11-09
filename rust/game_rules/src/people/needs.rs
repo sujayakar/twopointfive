@@ -161,7 +161,6 @@ fn needs_live(g: &crate::game::Game) -> bool {
     g.tune.needs
         && g.ai_enabled
         && !g.aside
-        && g.puppet.is_none()
         && g.qrf.state == crate::qrf::QrfState::Idle
         && !crate::seats::all_down(g)
 }
@@ -198,7 +197,7 @@ fn interrupt_of(g: &crate::game::Game, gd: GuardId) -> Option<String> {
     if !g.ai_enabled {
         return Some(key("AI off"));
     }
-    if g.aside || g.puppet.is_some() {
+    if g.aside {
         return Some(key("nobody plays"));
     }
     if g.qrf.state != crate::qrf::QrfState::Idle {

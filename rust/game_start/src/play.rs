@@ -85,6 +85,8 @@ pub struct Play {
     spoke: Vec<(GuardId, f64, String)>,
     /// where the hand's cursor points in the world, kept there as the camera moves (None: where the host left it). The host's and no part of the game: whoever puts a game back puts this back too
     pub cursor: Option<[f64; 3]>,
+    /// where his walk keys take him (None: nobody holds them)
+    pub legs: Option<[f64; 2]>,
     /// the game's own words where the address's mission was refused (`Opts.may_refuse`)
     pub refused: Option<String>,
     _one: MutexGuard<'static, ()>,
@@ -101,7 +103,7 @@ fn start_by(data: &Json, room_clear: bool, link: Option<&str>, o: &Opts) -> Play
     let Stood { mut game, host, refused, .. } = stand::stand(data, ch.assets(), &StartOpts { seed: o.seed, seats: o.seats, scenario, link: link.map(String::from), dress: o.dress, may_refuse: o.may_refuse, ..Default::default() });
     game.out.clear();
     HOLDS.with(|h| h.set(true));   // (only once a Play exists to put it down: a stand that panicked holds nothing)
-    let mut p = Play { g: game, host, frames: 0, told: Vec::new(), said: Vec::new(), sounds: Vec::new(), end_cards: Vec::new(), ended: false, smoke: Vec::new(), cursor: None, refused, spoke: Vec::new(), _one: one };
+    let mut p = Play { g: game, host, frames: 0, told: Vec::new(), said: Vec::new(), sounds: Vec::new(), end_cards: Vec::new(), ended: false, smoke: Vec::new(), cursor: None, legs: None, refused, spoke: Vec::new(), _one: one };
     p.hear();
     p
 }
@@ -138,6 +140,7 @@ impl Play {
             let (sx, sy, front) = game::camera::follow_camera_project(&mut self.g, self.host.cam, at, w, h, None, None);
             if front { self.g.tab.input[self.host.input].mouse_x = sx; self.g.tab.input[self.host.input].mouse_y = sy; }
         }
+        self.hold_legs();
         stand::step(&mut self.g, &self.host, DT);
         let asked = game::savestate::control::asked(&self.g.out);
         let told = game::savestate::control::after_step(&mut self.g, DT, asked);
@@ -275,6 +278,15 @@ impl Play {
     pub fn point_at(&mut self, at: [f64; 2]) { self.cursor = Some([at[0], 1.2, at[1]]); }
     /// The same, at any height: the cursor is laid on that point of the world, and the ray from the camera goes through it to whatever it meets first.
     pub fn cursor_on(&mut self, at: [f64; 3]) { self.cursor = Some(at); }
+    /// His walk keys toward `to` from here on, as a hand holds them, until he is within a hand's breadth or they are let go of (None).
+    pub fn walk_keys_to(&mut self, to: Option<[f64; 2]>) { self.legs = to; if to.is_none() { for key in game::player::WALK_KEYS { self.key_up(key); } } }
+    /// …held for the tick to come
+    pub fn hold_legs(&mut self) {
+        let Some(to) = self.legs else { return };
+        let (p, f) = (self.g.ch[self.g.pl[self.g.player].ch].pos, self.g.tab.camera[self.host.cam].forward);
+        let held = if dist([p[0], p[2]], to) > 0.1 { game::player::walk_keys(p, to, f) } else { [false; 4] };
+        for (on, key) in held.into_iter().zip(game::player::WALK_KEYS) { let i = &mut self.g.tab.input[self.host.input]; if on { i.keys.add(String::from(key)); } else { i.keys.delete(String::from(key)); } }
+    }
     /// A mouse button goes down and stays down.
     pub fn press(&mut self, b: Button) { let i = &mut self.g.tab.input[self.host.input]; i.buttons = ((i.buttons as u32) | b as u32) as f64; i.clicked = ((i.clicked as u32) | b as u32) as f64; }
     /// …and comes up.

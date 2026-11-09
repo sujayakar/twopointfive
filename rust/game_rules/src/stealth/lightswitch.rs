@@ -276,7 +276,7 @@ pub fn switch_lit(g: &crate::game::Game, sw: &crate::lightswitch::WallSwitch) ->
 fn plants(g: &crate::game::Game, by: CharId) -> bool {
     let Some(s) = crate::seats::seat_of_char(g, Some(by)) else { return false };
     let pl = crate::cmd::seat_man(g, s);
-    g.puppet.is_none() && g.pl[pl].wall.is_none()
+    g.pl[pl].wall.is_none()
 }
 
 /// The time his turn to the plate and his step in to it take.

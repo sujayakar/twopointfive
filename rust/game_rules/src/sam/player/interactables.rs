@@ -515,12 +515,11 @@ pub(super) fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: 
             it.guard = Some(gd);
             let mut verbs: Vec<crate::game::Interactable> = Vec::new();
             if reach && !busy {
-                let lift = g.puppet.is_none();
                 if dragging {
                     let carrying = g.pl[pl].haul.as_ref().map_or(false, |h| h.carry.is_some());
                     verbs.push(row(&it, crate::game::Verb::Drop, if carrying { "put him down" } else { "let go of him" }, "sprinting drops him"));
                 } else if !dragging_any {
-                    verbs.push(row(&it, crate::game::Verb::Drag, if lift { "pick him up" } else { "drag him off" }, ""));
+                    verbs.push(row(&it, crate::game::Verb::Drag, "pick him up", ""));
                 }
             }
             offer(&mut list, &mut things, it, verbs);
@@ -652,10 +651,6 @@ pub(super) fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: 
             rows = out;
         }
     }
-    if crate::game::player_list_open(g, pl) && rows.iter().any(|r| r.verb.is_some() && r.running != Some(true)) {
-        let c = cancel_row(g, &crate::seats::here(g));
-        rows.push(c);
-    }
     g.interactables = list;
     // The highlight rides the list by key: on the same row if it is still there, else back to the top. A running verb's row is not carried over.
     let mut key = String::new();
@@ -717,15 +712,6 @@ pub fn pick_hover(g: &mut crate::game::Game) {
         _ => None,
     };
     g.hover = best;
-}
-
-/// the selector's bottom row while it is open: letting go of Space on it does nothing
-pub(in crate::sam) fn cancel_row(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> crate::game::Interactable {
-    let p = g.ch[g.pl[seat.player].ch].pos;
-    let mut it = mark(crate::game::InteractableKind::Cancel, [p[0], 1.3, p[2]], String::from("cancel"), String::from("let go here — nothing happens"), true, false);
-    it.verb = Some(crate::game::Verb::Cancel);
-    it.running = Some(false);
-    it
 }
 
 /// how far a thing is from him, as its reach is measured: a door by its leaf or its doorway's centre, whichever is nearer
@@ -843,7 +829,6 @@ pub fn cancel_actions(g: &mut crate::game::Game) {
     crate::hands::hands_cancel(g);
     g.pl[pl].sel.down_t = -1.0;
     g.pl[pl].sel.open = false;
-    g.pl[pl].sel.moved = false;
     g.pl[pl].sel.ring = None;
     g.ch[c].anim.door_push = None;
     throw_off(g, pl);

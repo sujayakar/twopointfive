@@ -45,8 +45,7 @@ fn bearing_of(g: &crate::game::Game, gd: GuardId, p: &[f64]) -> f64 {
 /// Are Sam's hands free for it at all: empty, and nothing else has him.
 fn hands(g: &mut crate::game::Game) -> bool {
     let me = g.player;
-    g.puppet.is_none()
-        && g.pl[me].holstered
+    g.pl[me].holstered
         && !crate::condition::down(g, g.pl[me].ch)
         && g.pl[me].holding.is_none()
         && g.pl[me].takedown.is_none()
@@ -55,7 +54,6 @@ fn hands(g: &mut crate::game::Game) -> bool {
         && g.pl[me].picking.is_none()
         && g.pl[me].wanding.is_none()
         && g.pl[me].wall.is_none()
-        && !crate::game::player_list_open(g, me)
         && able(g, &crate::seats::here(g))
 }
 
@@ -159,7 +157,6 @@ fn corner_gate(g: &mut crate::game::Game) -> bool {
     };
     !(kind == Some(crate::player::WallHoldKind::Stack)
         || drawn
-        || g.puppet.is_some()
         || !g.pl[me].holstered
         || crate::condition::down(g, g.pl[me].ch)
         || g.pl[me].holding.is_some()
@@ -168,7 +165,6 @@ fn corner_gate(g: &mut crate::game::Game) -> bool {
         || g.pl[me].kick.is_some()
         || g.pl[me].picking.is_some()
         || g.pl[me].wanding.is_some()
-        || crate::game::player_list_open(g, me)
         || !able(g, &crate::seats::here(g))
         || shut(g)
         || (g.pl[me].crouch && !crate::player::can_stand(g)))

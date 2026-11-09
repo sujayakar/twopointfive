@@ -399,36 +399,21 @@ pub(super) fn update_hold(g: &mut crate::game::Game, dt: f64, input: InputId, ca
         if phase_after == Ph::Held {
             let basis = crate::camera::follow_camera_planar_basis(g, cam);
             let (fwd, right) = (basis.fwd, basis.right);
-            if !crate::game::player_list_open(g, p) {
-                if crate::input::input_down(g, input, "KeyW") {
-                    mx += fwd[0];
-                    mz += fwd[2];
-                }
-                if crate::input::input_down(g, input, "KeyS") {
-                    mx -= fwd[0];
-                    mz -= fwd[2];
-                }
-                if crate::input::input_down(g, input, "KeyD") {
-                    mx += right[0];
-                    mz += right[2];
-                }
-                if crate::input::input_down(g, input, "KeyA") {
-                    mx -= right[0];
-                    mz -= right[2];
-                }
+            if crate::input::input_down(g, input, "KeyW") {
+                mx += fwd[0];
+                mz += fwd[2];
             }
-            if let Some(puppet) = &g.puppet {
-                mx = 0.0;
-                mz = 0.0;
-                if let Some(gl) = puppet.goal {
-                    let dx = gl[0] - g.ch[c].pos[0];
-                    let dz = gl[2] - g.ch[c].pos[2];
-                    let dl = m::hyp2(dx, dz);
-                    if dl > 0.1 {
-                        mx = dx / dl;
-                        mz = dz / dl;
-                    }
-                }
+            if crate::input::input_down(g, input, "KeyS") {
+                mx -= fwd[0];
+                mz -= fwd[2];
+            }
+            if crate::input::input_down(g, input, "KeyD") {
+                mx += right[0];
+                mz += right[2];
+            }
+            if crate::input::input_down(g, input, "KeyA") {
+                mx -= right[0];
+                mz -= right[2];
             }
         }
         let ml = m::hyp2(mx, mz);
@@ -438,8 +423,7 @@ pub(super) fn update_hold(g: &mut crate::game::Game, dt: f64, input: InputId, ca
         }
         let f = crate::character::character_forward(g, c);
         let back = ml > 0.0 && mx * f[0] + mz * f[2] < -0.3; // into the rear half: hauling him backwards
-        let walk = g.puppet.as_ref().and_then(|x| x.walk).unwrap_or(1.0);
-        let pace_in = if ml == 0.0 { 0.0 } else { (if back { HOLD_PACE_BACK } else { HOLD_PACE }) * g.pl[p].pace * walk };
+        let pace_in = if ml == 0.0 { 0.0 } else { (if back { HOLD_PACE_BACK } else { HOLD_PACE }) * g.pl[p].pace };
         let max_speed = crate::kitload::sam_load_pace(g, g.pl[g.player].ch, pace_in, None);
         g.pl[p].speed_sm = v3::damp(g.pl[p].speed_sm, max_speed, if max_speed > g.pl[p].speed_sm { 6.0 } else { 12.0 }, dt);
         if ml > 0.0 {

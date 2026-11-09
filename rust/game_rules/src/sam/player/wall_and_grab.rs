@@ -431,7 +431,7 @@ pub(super) fn move_on_wall(g: &mut crate::game::Game, dt: f64, cam: CameraId, mx
     let want = if dir == block_dir {
         0.0
     } else {
-        dir * (if crouch { g.tune.player_crouch } else { WALL_PACE }) * g.puppet.as_ref().and_then(|s| s.walk).unwrap_or(1.0)
+        dir * (if crouch { g.tune.player_crouch } else { WALL_PACE })
     };
     {
         let w = w!(g, p);

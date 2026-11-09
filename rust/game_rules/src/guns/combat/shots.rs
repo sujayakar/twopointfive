@@ -286,8 +286,7 @@ fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, o: &c
     let pellets = def.pellets;
     let who = g.ch[shooter].id;
 
-    let ff_on = crate::friendlyfire::ff_live(g);
-    let ff_ours = ff_on && (is_player || crate::friendlyfire::ff_side(g, sg));
+    let ff_ours = (is_player || crate::friendlyfire::ff_side(g, sg));
     if ff_ours && !is_player && pel.is_none() {
         let wide = if steady { 0.0 } else { ai_wide(g, &crate::seats::here(g), sg, shooter, &def) };
         let cone = match &pellets { Some(p) => p.cone * 2.0, None => 0.0 };
@@ -425,7 +424,7 @@ fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, o: &c
             i += 1;
             let team = g.gd[gd].team;
             let own = !crate::teams::is_hostile(g, crate::teams::Team::Player, team);
-            if Some(gd) == held || (own && !(ff_on && crate::friendlyfire::ff_body(g, gd))) { continue; }
+            if Some(gd) == held || (own && !(crate::friendlyfire::ff_body(g, gd))) { continue; }
             let c = g.gd[gd].ch;
             let t = scan(g, &f, t_hit, c, own);
             if t >= 0.0 && t < t_hit { t_hit = t; hit_guard = Some(gd); }
@@ -610,7 +609,7 @@ fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, o: &c
         if player_hit || own_hit { crate::friendlyfire::ff_note(g, sg, is_player, player_hit); }
     }
     let hit_c = hit_guard.map(|h| g.gd[h].ch);
-    if ff_on && is_player && lead { crate::friendlyfire::ff_past(g, muzzle, hit_p, hit_c); }
+    if is_player && lead { crate::friendlyfire::ff_past(g, muzzle, hit_p, hit_c); }
     let victim = if player_hit { Some(g.pl[hit_view].ch) } else { hit_c };
     let was_down = if player_hit { crate::condition::down(g, g.pl[hit_view].ch) } else { match hit_guard { Some(h) => crate::condition::down(g, g.gd[h].ch), None => false } };
     crate::deathrecap::recap_round(g, victim, was_down, shooter, muzzle, hit_p, &def, o.blind);

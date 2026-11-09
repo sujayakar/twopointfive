@@ -405,8 +405,7 @@ pub(super) fn wall_step_off(g: &mut crate::game::Game, mx: f64, mz: f64, ml: f64
     if ml > 0.0 {
         if -(mx * w.n[0] + mz * w.n[2]) < 0.5 {
             let pace = if g.pl[pl].crouch { crouch_pace(g) } else { g.tune.player_walk };
-            let walk = match &g.puppet { Some(p) => p.walk.unwrap_or(1.0), None => 1.0 };
-            g.pl[pl].speed_sm = m::max(m::abs(w.v), 0.8 * pace * g.pl[pl].pace * walk);
+            g.pl[pl].speed_sm = m::max(m::abs(w.v), 0.8 * pace * g.pl[pl].pace);
         }
     } else if how == WallStepOffHow::Q {
         let push = g.k.wallsnap.off_push;
@@ -509,7 +508,7 @@ pub(super) fn wall_press(g: &mut crate::game::Game, dt: f64, input: InputId, cam
         if p.n.is_some() && !p.held { p.held = true; p.dx = mx; p.dz = mz; p.until = now + press_again; }
         if p.n.is_some() && (ml <= 0.0 || mx * p.dx + mz * p.dz < m::cos(press_turn * v3::DEG)) { p.n = None; }
     }
-    let face = if ml > 0.0 && g.puppet.is_none() { press_face(g, mx, mz) } else { None };
+    let face = if ml > 0.0 { press_face(g, mx, mz) } else { None };
     let (latch_n, until) = { let p = g.m.player.ws_press.get(pl).unwrap(); (p.n, p.until) };
     let face = match face {
         Some(f) if !latch_n.map_or(false, |n| f.n[0] * n[0] + f.n[2] * n[2] > 0.9 || now < until) => f,

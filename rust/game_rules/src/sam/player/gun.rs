@@ -215,7 +215,7 @@ pub(super) fn man_aim(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: G
 
 /// the level aim holds this frame: no script holds his aim
 pub(super) fn level_on(g: &crate::game::Game) -> bool {
-    match &g.puppet { Some(p) => p.aim.is_none(), None => true }
+    g.hand_at.is_none()
 }
 
 /// the point his fire sites send a round at with nothing under the reticle

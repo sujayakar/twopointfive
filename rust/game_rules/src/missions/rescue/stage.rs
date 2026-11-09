@@ -202,7 +202,6 @@ fn rescue_can_start(g: &crate::game::Game) -> Option<String> {
     if let Some(run) = g.director.run {
         if !g.tab.director_run[run].ended { return Some(format!("the level script's program '{}' is running", g.tab.director_run[run].name)); }
     }
-    if g.puppet.is_some() { return Some(String::from("nobody is playing")); }
     if crate::nightbreach::night_breach_up(g) {
         return Some(String::from(if crate::roomclear::room_clear_scenario_active(g) { "the room clear is staged" } else { "the night breach is staged" }));
     }

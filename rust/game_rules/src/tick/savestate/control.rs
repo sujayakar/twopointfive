@@ -33,7 +33,7 @@ fn rank(s: MissionStage) -> u32 { match s { MissionStage::Infiltrate => 0, Missi
 
 /// Why the game cannot be kept right now; `authored` = a tutorial's own checkpoint, taken whatever is on the floor.
 pub fn run_no(g: &Game, seat: &crate::seats::SeatRef, authored: bool) -> Option<String> {
-    if g.aside || g.puppet.is_some() { return Some(String::from("nobody is playing")); }
+    if g.aside { return Some(String::from("nobody is playing")); }
     if g.seats.len() > 1 { return Some(String::from("two players (a checkpoint holds one player today)")); }
     if crate::condition::down(g, g.pl[seat.player].ch) { return Some(String::from("the player is down")); }
     if matches!(g.mission.stage, MissionStage::Failed | MissionStage::Done) { return Some(format!("the run is over ({}) \u{2014} nothing to come back to", g.mission.stage.as_str())); }
@@ -540,7 +540,6 @@ pub fn put_back(g: &mut Game, key: &str, was: Abandoned) -> String {
         s.open = false;
         s.ring = None;
         s.down_t = -1.0;
-        s.moved = false;
         g.pl[pl].near_sel = 0;
     }
     g.pl[pl].setup = None;

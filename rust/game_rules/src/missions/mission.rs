@@ -10,7 +10,7 @@ use alloc::{format, string::String, vec::Vec};
 /// Live: a run is on and it really is the player playing.
 pub fn mission_live(g: &crate::game::Game) -> bool {
     let s = g.mission.stage;
-    !g.aside && g.puppet.is_none() && s != crate::game::MissionStage::Done && s != crate::game::MissionStage::Failed
+    !g.aside && s != crate::game::MissionStage::Done && s != crate::game::MissionStage::Failed
 }
 
 /// One more of a counted thing on the run's card, if the run is live.
@@ -60,7 +60,7 @@ fn out_now(g: &crate::game::Game, p: V3) -> bool { g.level.errand.exits.iter().a
 /// The mission's stage machine: infiltrate, drive, exfil, and the run's counts.
 pub fn update_mission(g: &mut crate::game::Game, dt: f64, input: InputId) {
     use crate::game::{GuardState, InteractableKind, MissionStage, Verb};
-    if g.aside || g.puppet.is_some() {
+    if g.aside {
         g.mission.drive_t = -1.0;
         return;
     }
