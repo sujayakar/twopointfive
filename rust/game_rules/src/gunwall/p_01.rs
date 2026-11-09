@@ -38,11 +38,6 @@ pub fn fight_on(g: &mut crate::game::Game) -> bool {
     g.time < f.until
 }
 
-/// A showcase has the floor (the tour, a Director showcase). (gunwall.ts showing)
-pub fn showing(g: &crate::game::Game) -> bool {
-    g.touring || crate::director::director_showing(g)
-}
-
 /// His frame on `yaw`: forward, right, the gun shoulder over his feet, how crouched (0..1). (gunwall.ts frame)
 pub fn frame(g: &mut crate::game::Game, c_2: CharId, yaw: f64) -> crate::gunwall::Frame {
     let (s, co) = (m::sin(yaw), m::cos(yaw));
@@ -135,7 +130,6 @@ pub fn panel(g: &mut crate::game::Game, a: V3, b: V3) -> bool {
 /// A panel on a → b as a round sees one (a static or a leaf standing shut), and not a pane rounds go through. (gunwall.ts woodBetween)
 pub fn wood_between(q: &mut impl crate::ask::Asker, a: V3, b: V3) -> bool {
     if !crate::combat::solid_between(q, a, b) { return false; }
-    if !crate::glasspen::glass_pen_live(q.game()) { return true; }
     let d = v3::sub(b, a);
     let l = v3::len(d);
     let h = if l > 1e-3 { q.ray(a, v3::scale(d, 1.0 / l), l) } else { None };
@@ -251,7 +245,7 @@ pub fn gun_walled(g: &mut crate::game::Game, c_2: CharId, up: Option<crate::gunw
         track(g, c_2);
         let was = row(g, c_2).low;
         let low = match up {
-            Some(up) if !showing(g) => walled_now(g, c_2, up, to, dt, hot, deep),
+            Some(up) => walled_now(g, c_2, up, to, dt, hot, deep),
             _ => false,
         };
         let r = row(g, c_2);
@@ -323,10 +317,6 @@ fn pose_one(g: &mut Game, c: CharId, yaw: f64, reach0: f64, span: f64, w: &mut f
 /// The low carriages pulled in by the room they have: `gunWall` for this frame. (gunwall.ts gunWallPose)
 pub fn gun_wall_pose(g: &mut crate::game::Game, c_2: CharId) {
     let c = c_2;
-    if showing(g) {
-        if g.ch[c].anim.gun_wall != 0.0 { g.ch[c].anim.gun_wall = 0.0; }
-        return;
-    }
     let stance = g.ch[c].anim.stance;
     let carry = match g.ch[c].anim.long_stance {
         Some(ls) => ls,

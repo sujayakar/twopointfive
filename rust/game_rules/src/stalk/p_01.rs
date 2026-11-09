@@ -43,8 +43,7 @@ pub fn bearing_of(g: &crate::game::Game, gd: GuardId, p: &[f64]) -> f64 {
 /// Are Sam's hands free for it at all: empty, and nothing else has him. (stalk.ts hands)
 pub fn hands(g: &mut crate::game::Game) -> bool {
     let me = g.player;
-    crate::close::close_live(g)
-        && g.puppet.is_none()
+    g.puppet.is_none()
         && g.pl[me].holstered
         && !g.pl[me].down
         && g.pl[me].holding.is_none()
@@ -159,7 +158,6 @@ pub fn corner_gate(g: &mut crate::game::Game) -> bool {
     };
     !(kind == Some(crate::player::WallHoldKind::Stack)
         || drawn
-        || !crate::close::close_live(g)
         || g.puppet.is_some()
         || !g.pl[me].holstered
         || g.pl[me].down
@@ -494,14 +492,6 @@ pub fn stalk_wait(g: &mut crate::game::Game) -> Option<crate::stalk::StalkWait> 
 /// He waits at a corner this frame: what the tick found, as the view is told it. (stalk.ts stalkWait, whose man and reach are his body's alone)
 pub fn stalk_waits(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
     g.pl[seat.player].wall.is_some() && g.m.stalk.state.get(seat.player).map_or(false, |r| r.wait == Some(true) && g.time - r.t <= 0.1)
-}
-
-/// A man is being stalked, or the stalk has just become a grab: this frame's left click is no blow. (stalk.ts stalkHas)
-pub fn stalk_has(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
-    match g.m.stalk.state.get(seat.player) {
-        Some(s) => s.t == g.time && (s.on.is_some() || s.grab.is_some()),
-        None => false,
-    }
 }
 
 /// The man the stalk reached this frame: the grab to take now. (stalk.ts stalkGrab)

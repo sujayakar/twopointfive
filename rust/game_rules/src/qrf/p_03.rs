@@ -607,7 +607,7 @@ pub fn maybe_perimeter(g: &mut crate::game::Game) {
     let mut down = 0usize;
     for i in 0..g.guards.len() {
         let x = g.guards[i];
-        if g.gd[x].team == crate::teams::Team::Guard && g.gd[x].state == crate::game::GuardState::Dead && (!net_rule(g) || g.gd[x].found) { down += 1; }   // (RESPONSE.net: men they have FOUND down, not men who are)
+        if g.gd[x].team == crate::teams::Team::Guard && g.gd[x].state == crate::game::GuardState::Dead && (g.gd[x].found) { down += 1; }   // (RESPONSE.net: men they have FOUND down, not men who are)
     }
     let why = if g.qrf.lost > 0.0 {
         Some(String::from("one of ours down"))

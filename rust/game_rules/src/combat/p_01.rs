@@ -99,17 +99,11 @@ fn st_of(h: crate::scene_collision::Raycast) -> crate::glasspen::RoundPathSt {
 }
 
 /// `fly` of fireWeapon: the same flight over panes and thin things alike, from what st0 is at this call.
-fn fly(g: &mut Game, wall_live: bool, pen_live: bool, muzzle: V3, dir: V3, e_muzzle: f64, st0: Option<crate::glasspen::RoundPathSt>, arm_panes: f64) -> Option<Pen> {
-    if wall_live {
-        return crate::wallpen::thin_path(g, muzzle, dir, 60.0, e_muzzle, Some(st0), Some(arm_panes)).map(|p| Pen {
-            path: crate::glasspen::RoundPath { segs: p.segs, cross: p.cross, st: p.st, len: p.len },
-            walls: Some(p.walls),
-        });
-    }
-    if pen_live {
-        return crate::glasspen::round_path(g, muzzle, dir, 60.0, e_muzzle, Some(st0), Some(arm_panes)).map(|p| Pen { path: p, walls: None });
-    }
-    None
+fn fly(g: &mut Game, muzzle: V3, dir: V3, e_muzzle: f64, st0: Option<crate::glasspen::RoundPathSt>, arm_panes: f64) -> Option<Pen> {
+    crate::wallpen::thin_path(g, muzzle, dir, 60.0, e_muzzle, Some(st0), Some(arm_panes)).map(|p| Pen {
+        path: crate::glasspen::RoundPath { segs: p.segs, cross: p.cross, st: p.st, len: p.len },
+        walls: Some(p.walls),
+    })
 }
 
 /// A Shell handed on as the ShellGlass it is in the TypeScript: its `glass` is lent for the call and comes back with what the call wrote.
@@ -363,14 +357,11 @@ pub fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, i
     let mut st0 = crate::scene_collision::raycast(g, muzzle, dir, t_hit).map(st_of);
     if let Some(s) = st0 { t_hit = s.t; }
     let mut st = st0;
-    let pen_live = crate::glasspen::glass_pen_live(g);
-    let wall_live = crate::wallpen::wall_pen_live(g);
-    let e0 = if pen_live || wall_live { crate::glasspen::round_energy(g, def.id) } else { 1.0 };
+    let e0 = crate::glasspen::round_energy(g, def.id);
     let mut e_k = 1.0;
     let mut through = arm_through(g, shooter);
-    let bar_live = crate::winbars::bars_live(g);
     let mut bars: Option<Vec<crate::winbars::BarMet>> = None;
-    if through && bar_live {
+    if through {
         if let Some(a) = across_arm(g, shooter) {
             if crate::winbars::bar_at(g, a.index) {
                 let met = crate::winbars::bar_meet(g, a.index, 0.0, a.at, dir);
@@ -384,13 +375,13 @@ pub fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, i
     }
     let mut e_muzzle = e0;
     let mut arm_panes = 0.0;
-    if through && pen_live {
+    if through {
         let arm = with_glass(&mut pel, |sh| crate::glasspen::arm_through_glass(g, shooter, dir, e0, sh));
         if let Some(arm) = arm { through = false; e_muzzle = arm.e; arm_panes = arm.panes; }
     }
     if through { t_hit = 0.0; }
-    let mut pen = if through { None } else { fly(g, wall_live, pen_live, muzzle, dir, e_muzzle, st0, arm_panes) };
-    if bar_live && !through {
+    let mut pen = if through { None } else { fly(g, muzzle, dir, e_muzzle, st0, arm_panes) };
+    if !through {
         let mut n = match &bars { Some(b) => b.len() as f64, None => 0.0 };
         while n < g.k.winbars.per_round {
             let stop = match &pen { Some(p) => p.path.st, None => st0 };
@@ -401,7 +392,7 @@ pub fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, i
             let met = crate::winbars::bar_meet(g, stop.index, stop.t, at, d);
             bars.get_or_insert_with(Vec::new).push(met);
             st0 = crate::scene_collision::raycast(g, muzzle, dir, 60.0).map(st_of);
-            pen = fly(g, wall_live, pen_live, muzzle, dir, e_muzzle, st0, arm_panes);
+            pen = fly(g, muzzle, dir, e_muzzle, st0, arm_panes);
             n += 1.0;
         }
         if bars.is_some() { st = st0; t_hit = match st0 { Some(s) => s.t, None => 60.0 }; }
@@ -409,7 +400,7 @@ pub fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, i
     if let Some(p) = &pen { t_hit = p.path.len; st = p.path.st; }
     let arm_at = if through && pel.is_some() { across_arm(g, shooter) } else { None };
     match arm_at {
-        Some(a) if pen_live => {
+        Some(a) => {
             if a.index < 1e6 { with_glass(&mut pel, |sh| spent_in_pane(g, a.index, a.at, dir, e0, who, sh)); }
         }
         _ => { if through && lead { glass_across_arm(g, shooter, dir); } }
@@ -515,16 +506,12 @@ pub fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, i
     // (st, stopped there: the round's end is in that static, not a man, not the panel at the muzzle)
     let st_stop = st.filter(|s| m::abs(t_hit - s.t) < 1e-6);
     let bare_stop = hit_guard.is_none() && !player_hit && !through;
-    if wall_live && bare_stop { if let Some(s) = st_stop { crate::wallpen::spent_in_wall(g, s.index); } }
-    if bare_stop && (pen_live || third) {
+    if bare_stop { if let Some(s) = st_stop { crate::wallpen::spent_in_wall(g, s.index); } }
+    if bare_stop {
         if let Some(s) = st_stop {
             if s.index < 1e6 {
-                if pen_live {
-                    let e = match &pen { Some(p) => seg_at(&p.path, t_hit).e, None => e_muzzle };
-                    with_glass(&mut pel, |sh| spent_in_pane(g, s.index, hit_p, dir, e, who, sh));
-                } else {
-                    crate::glass::glass_hit(g, s.index, hit_p, Some(dir), who, None, None);
-                }
+                let e = match &pen { Some(p) => seg_at(&p.path, t_hit).e, None => e_muzzle };
+                with_glass(&mut pel, |sh| spent_in_pane(g, s.index, hit_p, dir, e, who, sh));
             }
         }
     }
@@ -542,7 +529,7 @@ pub fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, i
     }
     match (&pen, &ph) {
         (Some(p), Some(h)) => { e_k = seg_at(&p.path, h.t).e / e0; }
-        _ => { if pen_live { e_k = e_muzzle / e0; } }
+        _ => { { e_k = e_muzzle / e0; } }
     }
     // (ph, in front of where the round stopped: not a prop standing behind the body it stopped in)
     let ph_met = ph.filter(|h| h.t <= t_hit + 1e-3);
@@ -647,94 +634,48 @@ pub fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, i
     }
     // lights: a shot that meets a fixture breaks it
     if is_player {
-        let legs: Option<Vec<crate::aimcost::RoundLeg>> = if g.touring {
-            None
-        } else {
-            match &pen {
-                None => Some(vec![crate::aimcost::RoundLeg { o: muzzle, d: flown, end: t_hit }]),
-                Some(p) => Some(p.path.segs.iter().filter(|s| s.t0 <= t_hit).map(|s| crate::aimcost::RoundLeg { o: s.o, d: s.d, end: m::min(s.len, t_hit - s.t0) }).collect()),
-            }
+        let legs: Vec<crate::aimcost::RoundLeg> = match &pen {
+            None => vec![crate::aimcost::RoundLeg { o: muzzle, d: flown, end: t_hit }],
+            Some(p) => p.path.segs.iter().filter(|s| s.t0 <= t_hit).map(|s| crate::aimcost::RoundLeg { o: s.o, d: s.d, end: m::min(s.len, t_hit - s.t0) }).collect(),
         };
-        if let Some(legs) = legs {
-            let st_ix = match st_stop { Some(s) => s.index, None => -1.0 };
-            if st_ix >= 0.0 {
-                let mut i = 0;
-                while i < g.targets.len() {
-                    let t = g.targets[i];
-                    i += 1;
-                    if crate::fire::fire_holds(g, t) && crate::fire::fire_struck(g, t, hit_p, st_ix) {
-                        crate::fire::fire_stir(g, t);
-                        break;
-                    }
-                }
-            }
-            let mut got: Option<FixtureId> = None;
-            if st_ix >= 0.0 {
-                let mut i = 0;
-                while i < g.targets.len() {
-                    let t = g.targets[i];
-                    i += 1;
-                    if lamp_live(g, t) && lamp_own(g, t).contains(&st_ix) { got = Some(t); break; }
-                }
-            }
-            if got.is_none() {
-                let mut i = 0;
-                while i < g.targets.len() {
-                    let t = g.targets[i];
-                    i += 1;
-                    let pos = g.tab.sim_lightshome_fixture[t].pos;
-                    if !lamp_live(g, t) || crate::aimcost::legs_near(pos, &legs) > 3.0 { continue; }
-                    let kind = g.tab.sim_lightshome_fixture[t].kind;
-                    let slack = if kind == FixtureKind::Breaker { 0.08 } else { 0.3 };
-                    let boxes: Vec<Option<BoxId>> = lamp_own(g, t).iter().map(|&b| g.engine.world.statics.get(b as usize).copied()).collect();
-                    let bare = if kind == FixtureKind::Device { g.k.aimcost.bare_device } else { g.k.aimcost.bare };
-                    let tight = m::min(slack, g.k.aimcost.slack);
-                    if crate::aimcost::lamp_struck(g, pos, &boxes, false, &legs, Some(bare), Some(tight)) { got = Some(t); break; }
-                    if near_lamp(g, t, &legs, slack) { g.stats.aimcost.lamp_near += 1; }
-                }
-            }
-            if let Some(t) = got { g.stats.aimcost.lamp_hits += 1; shoot_out(g, t, muzzle); }
-        } else {
-            // a show on the stage: the old near-is-a-hit loop
+        let st_ix = match st_stop { Some(s) => s.index, None => -1.0 };
+        if st_ix >= 0.0 {
             let mut i = 0;
             while i < g.targets.len() {
                 let t = g.targets[i];
                 i += 1;
-                if crate::sim_lightshome::fixture_broken(g, t) || !g.tab.sim_lightshome_fixture[t].interactive
-                    || crate::sim_lightshome::fixture_factor(g, t) <= 0.0 && !crate::sim_lightshome::fixture_on(g, t) && !crate::carlamps::lamp_glass(g, t) { continue; }
-                if crate::fire::fire_holds(g, t) {
-                    if let Some(s) = st_stop { if crate::fire::fire_struck(g, t, hit_p, s.index) { crate::fire::fire_stir(g, t); } }
-                    continue;
+                if crate::fire::fire_holds(g, t) && crate::fire::fire_struck(g, t, hit_p, st_ix) {
+                    crate::fire::fire_stir(g, t);
+                    break;
                 }
-                let pos = g.tab.sim_lightshome_fixture[t].pos;
-                let kind = g.tab.sim_lightshome_fixture[t].kind;
-                let slack = if kind == FixtureKind::Breaker { 0.08 } else { 0.3 };
-                let mut dist = -1.0;
-                match &pen {
-                    None => {
-                        let to_t = v3::sub(pos, muzzle);
-                        let depth = v3::dot(to_t, flown);
-                        if depth > t_hit + slack { continue; }
-                        let along = v3::clamp(depth, 0.0, t_hit);
-                        dist = v3::len(v3::sub(to_t, v3::scale(flown, along)));
-                    }
-                    Some(p) => {
-                        for s in &p.path.segs {
-                            if s.t0 > t_hit { break; }
-                            let end = m::min(s.len, t_hit - s.t0);
-                            let to_t = v3::sub(pos, s.o);
-                            let depth = v3::dot(to_t, s.d);
-                            if depth > end + slack { continue; }
-                            let d = v3::len(v3::sub(to_t, v3::scale(s.d, v3::clamp(depth, 0.0, end))));
-                            if dist < 0.0 || d < dist { dist = d; }
-                        }
-                        if dist < 0.0 { continue; }
-                    }
-                }
-                let rad = if crate::carlamps::lamp_glass(g, t) { 0.2 } else if kind == FixtureKind::Emissive { 0.45 } else if kind == FixtureKind::Breaker { 0.4 } else { 0.3 };
-                if dist < rad { shoot_out(g, t, muzzle); break; }
             }
         }
+        let mut got: Option<FixtureId> = None;
+        if st_ix >= 0.0 {
+            let mut i = 0;
+            while i < g.targets.len() {
+                let t = g.targets[i];
+                i += 1;
+                if lamp_live(g, t) && lamp_own(g, t).contains(&st_ix) { got = Some(t); break; }
+            }
+        }
+        if got.is_none() {
+            let mut i = 0;
+            while i < g.targets.len() {
+                let t = g.targets[i];
+                i += 1;
+                let pos = g.tab.sim_lightshome_fixture[t].pos;
+                if !lamp_live(g, t) || crate::aimcost::legs_near(pos, &legs) > 3.0 { continue; }
+                let kind = g.tab.sim_lightshome_fixture[t].kind;
+                let slack = if kind == FixtureKind::Breaker { 0.08 } else { 0.3 };
+                let boxes: Vec<Option<BoxId>> = lamp_own(g, t).iter().map(|&b| g.engine.world.statics.get(b as usize).copied()).collect();
+                let bare = if kind == FixtureKind::Device { g.k.aimcost.bare_device } else { g.k.aimcost.bare };
+                let tight = m::min(slack, g.k.aimcost.slack);
+                if crate::aimcost::lamp_struck(g, pos, &boxes, false, &legs, Some(bare), Some(tight)) { got = Some(t); break; }
+                if near_lamp(g, t, &legs, slack) { g.stats.aimcost.lamp_near += 1; }
+            }
+        }
+        if let Some(t) = got { g.stats.aimcost.lamp_hits += 1; shoot_out(g, t, muzzle); }
     } else if !through {
         let ix = st_stop.map(|s| s.index);
         match &pen {

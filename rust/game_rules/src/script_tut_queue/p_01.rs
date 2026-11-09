@@ -64,7 +64,7 @@ pub fn tut_queue_define(m: &mut crate::director::Manifest) -> Result<crate::scri
         crate::director::program_on_start(p, "gates");
         crate::director::program_beat(p, "gates", &crate::scene_level::LevelScriptFn::TutQueue, None)?;
         Ok(())
-    }, None)?;
+    })?;
 
     Ok(crate::script_tut_queue::TutQueueVars {
         front: Some(front),

@@ -187,7 +187,7 @@ fn cook_met(g: &mut Game, r: DirectorRunId) -> Result<bool, String> {
 
 /// (levels/tut-team.script.ts: `script(D)`) the define pass: the loadout, the three doors, the response team off, the one program.
 pub fn tut_team_define(m: &mut crate::director::Manifest) -> Result<crate::script_tut_team::TutTeamVars, String> {
-    let rifle = crate::director::manifest_loadout(m, "roadblock", crate::director::LoadoutSpec { team: crate::teams::Team::Hostile, weapon: Some(crate::weapons::WeaponId::Akms), tint: None, tint2: None, light: Some(false), trained: None, god: None });
+    let rifle = crate::director::manifest_loadout(m, "roadblock", crate::director::LoadoutSpec { team: crate::teams::Team::Hostile, weapon: Some(crate::weapons::WeaponId::Akms), tint: None, tint2: None, light: Some(false), trained: None });
     let yaw = -crate::m::PI / 2.0;
     let pass_door = crate::director::manifest_door(m, "pass");
     let kitchen_door = crate::director::manifest_door(m, "kitchen");
@@ -209,9 +209,7 @@ pub fn tut_team_define(m: &mut crate::director::Manifest) -> Result<crate::scrip
                 crate::director::program_beat(p, name, &crate::scene_level::LevelScriptFn::TutTeam, None)?;
             }
             Ok(())
-        },
-        None,
-    )?;
+        })?;
     Ok(crate::script_tut_team::TutTeamVars { rifle: Some(rifle), yaw, pass_door: Some(pass_door), kitchen_door: Some(kitchen_door), bunk_door: Some(bunk_door) })
 }
 

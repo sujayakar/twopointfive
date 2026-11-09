@@ -202,7 +202,7 @@ pub fn game_door_contact(g: &mut crate::game::Game) -> Option<crate::doors::Door
     if g.pl[pl].down { return None; }
     let run = crate::sprintdoor::sprint_door_run(g, pl);
     // (DOORWAY.solid, DOORWAY.oneWay: both true on the page)
-    let solid = g.puppet.is_none() && !g.touring;
+    let solid = g.puppet.is_none();
     Some(crate::doors::DoorContact {
         pos: g.ch[pc].pos, radius: 0.34, bash: g.pl[pl].sprinting, who: g.ch[pc].id, quiet: g.pl[pl].crouch && !g.pl[pl].dash,
         keys: Some(g.pl[pl].keys.clone()), run, solid: Some(solid), vel: Some(g.ch[pc].vel), ..crate::doors::DoorContact::default()
@@ -273,9 +273,6 @@ pub fn game_door_acts(g: &mut crate::game::Game, dt: f64, input: InputId) {
     // the grab and the takedown, with one gate
     {
         let free = g.pl[pl].takedown.is_none() && !g.pl[pl].down && g.pl[pl].holding.is_none() && !crate::samstun::sam_staggered(g, &crate::seats::here(g), None) && g.pl[pl].breaker_move.is_none();
-        let bare = crate::close::close_bare(g);
-        let two = crate::close::close_lethal(g) && !bare;
-        let knife = !bare && crate::input::input_lmb_hit(g, input) && !crate::stalk::stalk_has(g, &crate::seats::here(g));
         let in_reach: Option<Interactable> = if g.pl[pl].holstered { click_row(g, &crate::seats::here(g)) } else { None };
         let reach_guard: Option<GuardId> = in_reach.as_ref().and_then(|r| r.guard);
         let choke_on = match reach_guard {
@@ -285,12 +282,12 @@ pub fn game_door_acts(g: &mut crate::game::Game, dt: f64, input: InputId) {
             }
             _ => false,
         };
-        let rmb_on = (two || bare) && g.pl[pl].holstered && free;
+        let rmb_on = g.pl[pl].holstered && free;
         let rmb_down = crate::input::input_rmb(g, input);
         let rmb_hit = crate::input::input_rmb_hit(g, input);
         let dropped = crate::input::input_hit(g, input, "Blur") || crate::input::input_hit(g, input, "Paused");
         let rb = crate::close::close_rmb(g, rmb_on, rmb_down, rmb_hit, dt, in_reach.is_some(), choke_on, dropped);
-        let blow = knife || ((two || bare) && rb.is_some());
+        let blow = rb.is_some();
         let clicked: Option<Interactable> = if blow { in_reach } else { None };
         let via_click: Option<GuardId> = clicked.as_ref().and_then(|c| c.guard);
         let clicked_close = clicked.as_ref().and_then(|c| c.close);
@@ -313,9 +310,8 @@ pub fn game_door_acts(g: &mut crate::game::Game, dt: f64, input: InputId) {
                 }
             }
         } else if let (Some(vc), true) = (via_click, free) {
-            let lethal = two && knife && g.gd[vc].civ.is_none();
-            let loud = !knife && rb == Some(crate::close::CloseRmb::Tap) && choke_on;
-            crate::player::start_takedown(g, vc, clicked_close, Some(lethal), Some(loud));
+            let loud = rb == Some(crate::close::CloseRmb::Tap) && choke_on;
+            crate::player::start_takedown(g, vc, clicked_close, Some(false), Some(loud));
         } else if let (Some(InteractableKind::Guard), Some(Verb::Grab), Some(ag), true) = (kind, verb, act_guard, free) {
             let keyed = crate::stalk::stalk_key_can(g, ag);
             crate::player::start_grab(g, ag, act_close);

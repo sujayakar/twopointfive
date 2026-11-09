@@ -557,18 +557,14 @@ pub fn start_takedown(g: &mut crate::game::Game, gd: GuardId, way: Option<crate:
     if g.gd[gd].state == crate::game::GuardState::Dead || g.pl[p].down { return; }
     let c = g.pl[p].ch;
     let gc = g.gd[gd].ch;
-    let kind: Option<crate::close::CloseKind> = if crate::close::close_live(g) {
-        Some(match way {
+    let kind: Option<crate::close::CloseKind> = { Some(match way {
             Some(way) => way,
             None => {
                 let pos = g.ch[c].pos;
                 let o = crate::close::close_at(g, gd, &pos[..]);
                 crate::close::close_kind_of(Some(&o))
             }
-        })
-    } else {
-        None
-    };
+        }) };
     let side_on = kind.is_some() && kind != Some(crate::close::CloseKind::Behind);
     let from = if side_on {
         let (a, b) = (g.ch[c].pos, g.ch[gc].pos);
@@ -658,10 +654,8 @@ pub fn update_takedown(g: &mut crate::game::Game, dt: f64) {
         let was_alert = g.gd[gd].state == crate::game::GuardState::Alert;
         let noise = if let Some(kind) = td.kind {
             crate::close::close_noise(g, kind, yes(td.alert))
-        } else if crate::close::close_live(g) {
-            crate::close::close_noise(g, crate::close::CloseKind::Behind, was_alert)
         } else {
-            0.3
+            crate::close::close_noise(g, crate::close::CloseKind::Behind, was_alert)
         };
         let level = noise + (if yes(td.loud) { g.k.close.rmb_loud } else { 0.0 });
         if td.kind.is_some() && crate::close::close_seated(g, gd) { crate::close::close_unseat(g, gd, None); }
@@ -710,18 +704,14 @@ pub fn start_grab(g: &mut crate::game::Game, gd: GuardId, way: Option<crate::clo
     let p = g.player;
     let c = g.pl[p].ch;
     let gc = g.gd[gd].ch;
-    let kind: Option<crate::close::CloseKind> = if crate::close::close_live(g) {
-        Some(match way {
+    let kind: Option<crate::close::CloseKind> = { Some(match way {
             Some(way) => way,
             None => {
                 let pos = g.ch[c].pos;
                 let o = crate::close::close_at(g, gd, &pos[..]);
                 crate::close::close_kind_of(Some(&o))
             }
-        })
-    } else {
-        None
-    };
+        }) };
     let (a, b) = (g.ch[c].pos, g.ch[gc].pos);
     let b0 = if kind.is_some() { v3::wrap_angle(m::atan2(a[0] - b[0], a[2] - b[2]) - g.ch[gc].body_yaw) } else { 0.0 };
     let r0 = m::hyp2(a[0] - b[0], a[2] - b[2]);

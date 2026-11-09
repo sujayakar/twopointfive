@@ -7,12 +7,12 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// Is the rule running: nobody's show on the stage; a show's rounds are its script's. (friendlyfire.ts ffLive)
+/// Is the rule running: no puppet.
 pub fn ff_live(g: &crate::game::Game) -> bool {
-    !g.touring && !crate::director::director_showing(g) && !g.puppet.is_some()
+    !g.puppet.is_some()
 }
 
-/// A man of Sam's own side whose body a round of that side can find: living, on his feet, not a show's cast. (friendlyfire.ts ffBody)
+/// A man of Sam's own side whose body a round of that side can find: living, on his feet. (friendlyfire.ts ffBody)
 pub fn ff_body(g: &crate::game::Game, gd: GuardId) -> bool {
     let c = g.gd[gd].ch;
     if !(g.gd[gd].state != crate::game::GuardState::Dead && g.ch[c].alive && !g.gd[gd].god && !g.gd[gd].civ.is_some()) {
@@ -53,7 +53,7 @@ pub fn friend_in_cone(g: &mut crate::game::Game, self_: GuardId, muzzle: V3, to:
     };
     let self_ch = g.gd[self_].ch;
     let energy = crate::glasspen::shot_energy(g, self_ch, Some(w));
-    let thin = if crate::wallpen::wall_pen_live(g) { crate::glasspen::round_energy(g, w) } else { -1.0 };
+    let thin = crate::glasspen::round_energy(g, w);
     let mut past = f64::INFINITY; // how far along the line a friend still counts: all the way, unless the round is sure to stop in the man it is for
     if let Some(on) = on {
         if g.ch[on].alive {

@@ -62,7 +62,7 @@ pub fn legs_own(g: &mut crate::game::Game) -> bool {
     let pl = g.player;
     let busy = g.pl[pl].down || g.pl[pl].takedown.is_some() || g.pl[pl].holding.is_some() || g.pl[pl].kick.is_some() || g.pl[pl].picking.is_some()
         || g.pl[pl].wanding.is_some() || g.pl[pl].coding.is_some() || g.pl[pl].wall.is_some() || g.pl[pl].dragging.is_some() || g.pl[pl].haul.is_some()
-        || g.pl[pl].door_move.is_some() || g.puppet.is_some() || g.touring;
+        || g.pl[pl].door_move.is_some() || g.puppet.is_some();
     !(busy || crate::handwork::sam_work(g).is_some() || crate::stalk::stalk_on(g, &crate::seats::here(g)).is_some() || crate::rails::rails_allowed(g).is_some())
 }
 
@@ -97,7 +97,7 @@ pub fn crouch_key(g: &mut crate::game::Game, m: &mut crate::player::Legs) -> boo
 
 /// His stance for this stride: Shift and a direction stands him up to run, or keeps him down and quick; a body in his hands sets it.   (player.ts sprintStance)
 pub fn sprint_stance(g: &mut crate::game::Game, m: &mut crate::player::Legs, want_sprint: bool, stalk: bool) {
-    let dashes = g.puppet.is_none() && !g.touring;
+    let dashes = g.puppet.is_none();
     if want_sprint && m.crouch && can_stand_at(g, m.char.pos) && !dashes { m.crouch = false; }
     let dragging = m.dragging.is_some();
     if dragging { m.crouch = crate::hands::haul_crouch(g); }
@@ -136,7 +136,7 @@ pub fn gun_raised(g: &crate::game::Game, pl: PlayerId, now: Option<f64>, m: Opti
 /// The way a leaf he is pushing open turns him: square into its face, unless the gun is up or it merely rests on him.   (player.ts leafFacing)
 pub fn leaf_facing(dp: Option<&crate::player::LeafFacingDp>, aiming: bool) -> Option<f64> {
     let dp = dp?;
-    if dp.w >= 1.0 && !aiming && !dp.hold_only.unwrap_or(false) { Some(m::atan2(-dp.n[0], -dp.n[2])) } else { None }
+    if dp.w >= 1.0 && !aiming { Some(m::atan2(-dp.n[0], -dp.n[2])) } else { None }
 }
 
 /// A sprint's facing: gun down, the body follows the run and the aim is the body's. Returns the shoulder's turn into a door just run open.   (player.ts sprintFacing)
@@ -418,7 +418,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
     let keys_on = down(g, input, "KeyW") || down(g, input, "KeyA") || down(g, input, "KeyS") || down(g, input, "KeyD");
     let sprint_key = !crate::condition::is_hurt(g, crate::condition::Man::Player(pl), None) && shift_down(g, input) && keys_on;
     if hit(g, input, "KeyR") || (crate::game::player_pistol_up(g, pl) && crate::autoreload::auto_reload_due(g, pl, gun)) || (crate::game::player_rifle_up(g, pl) && crate::autoreload::auto_reload_due(g, pl, rifle)) {
-        let sprinting = sprint_key && !wall_ran_on(g, pl, input) && !(g.pl[pl].crouch && g.puppet.is_none() && !g.touring);
+        let sprinting = sprint_key && !wall_ran_on(g, pl, input) && !(g.pl[pl].crouch && g.puppet.is_none());
         reload_in_hand(g, Some(sprinting), None);
     }
     // movement input: none while the selector is open
@@ -618,7 +618,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
             let d = dp.as_ref().unwrap();
             Some(m::atan2(d.p[0] - g.ch[c].pos[0], d.p[2] - g.ch[c].pos[2]))
         } else {
-            let leaf = dp.as_ref().map(|d| crate::player::LeafFacingDp { w: d.w, n: d.n.to_vec(), hold_only: d.hold_only });
+            let leaf = dp.as_ref().map(|d| crate::player::LeafFacingDp { w: d.w, n: d.n.to_vec() });
             leaf_facing(leaf.as_ref(), aiming)
         };
         own_legs(g, pl, |g, m| hips_turn(m, speed, aiming, stalk.is_some(), into_door, by_hand, dt));
@@ -974,11 +974,9 @@ mod tests {
 
     #[test]
     fn leaf_facing_turns_only_for_a_leaf_that_pushes() {
-        let dp = crate::player::LeafFacingDp { w: 1.0, n: vec![0.3, 0.0, -0.95], hold_only: None };
+        let dp = crate::player::LeafFacingDp { w: 1.0, n: vec![0.3, 0.0, -0.95] };
         assert_eq!(leaf_facing(Some(&dp), false).unwrap().to_bits(), 0xbfd39384f94e28a0);
         assert_eq!(leaf_facing(Some(&dp), true), None);
         assert_eq!(leaf_facing(None, false), None);
-        let rests = crate::player::LeafFacingDp { w: 1.0, n: vec![0.3, 0.0, -0.95], hold_only: Some(true) };
-        assert_eq!(leaf_facing(Some(&rests), false), None);
     }
 }

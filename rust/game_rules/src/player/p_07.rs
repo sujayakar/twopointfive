@@ -241,7 +241,7 @@ pub fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: f64, my
                 format!("{}{}", verb, if tk.settled { "" } else { " — cuts in" })
             };
             rows.push(row(&base, crate::game::Verb::Question, &ask, ""));
-            let clicks = if !g.touring { "RMB  choke him out  ·  " } else { "" };
+            let clicks = "RMB  choke him out  ·  ";
             rows.push(row(&base, crate::game::Verb::Choke, "choke him out — quiet", &format!("{}1  draw — gun to his head", clicks)));
         }
         let mut held_marker = base.clone();
@@ -432,53 +432,7 @@ pub fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: f64, my
             gi += 1;
             if g.gd[gd].state == crate::game::GuardState::Dead || g.pl[pl].takedown.is_some() { continue; }
             if g.gd[gd].team == crate::teams::Team::Operative || crate::fogofwar::fog_of_war_hidden(g, gd) { continue; }
-            if crate::close::close_live(g) {
-                crate::close::close_rows(g, gd, &p, busy, row_cb!(crate::close::CloseRowsRowOver), offer_cb!(list, things));
-                continue;
-            }
-            let gc = g.gd[gd].ch;
-            let gp = g.ch[gc].pos;
-            let (dx, dz) = (p[0] - gp[0], p[2] - gp[2]);
-            let dd = m::hyp2(dx, dz);
-            if dd < 2.4 {
-                let behind = m::cos(v3::wrap_angle(m::atan2(dx, dz) - g.ch[gc].body_yaw)) < -0.25;
-                let alert = g.gd[gd].state == crate::game::GuardState::Alert;
-                let could = dd < 1.05
-                    && behind
-                    && !alert
-                    && !sprinting
-                    && !crate::scene_collision::solid_blocked(g, [p[0], 1.0, p[2]], [gp[0], 1.0, gp[2]], None)
-                    && !crate::scene_collision::segment_blocked_dynamic(g, [p[0], 1.0, p[2]], [gp[0], 1.0, gp[2]], None);
-                let headroom = !could || !crouch || can_stand(g);
-                let can = could && headroom;
-                let line1 = if alert { "guard · alert" } else if behind { "guard" } else { "guard · facing you" };
-                let line2 = if alert {
-                    "not while he's onto you"
-                } else if !behind {
-                    "get behind him"
-                } else if sprinting {
-                    "stop sprinting"
-                } else if !could {
-                    "get closer"
-                } else {
-                    "no room to stand up behind him here"
-                };
-                let mut it = mark(crate::game::InteractableKind::Guard, v3::add(gp, [0.0, 1.35, 0.0]), String::from(line1), String::from(line2), can, false);
-                it.guard = Some(gd);
-                let mut verbs: Vec<crate::game::Interactable> = Vec::new();
-                if can && !busy {
-                    verbs.push(if g.pl[pl].holstered {
-                        row(&it, crate::game::Verb::Grab, "grab him", "LMB  takedown — silent")
-                    } else if grab_variant(g, &crate::seats::here(g)) == crate::character::HoldVariant::Gun {
-                        row(&it, crate::game::Verb::Grab, "grab him — pistol to his head", "E  holster for the LMB takedown")
-                    } else if crate::game::player_rifle_up(g, pl) {
-                        row(&it, crate::game::Verb::Grab, "grab him — the rifle goes on your back", "E  sling it for the LMB takedown")
-                    } else {
-                        row(&it, crate::game::Verb::Grab, "grab him", "E  holster for the LMB takedown")
-                    });
-                }
-                offer(&mut list, &mut things, it, verbs);
-            }
+            crate::close::close_rows(g, gd, &p, busy, row_cb!(crate::close::CloseRowsRowOver), offer_cb!(list, things));
         }
         for gd in crate::civilians::civilian_bodies(g) {
             if g.pl[pl].takedown.is_some() || crate::fogofwar::fog_of_war_hidden(g, gd) { continue; }
@@ -489,7 +443,7 @@ pub fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: f64, my
             let (dx, dz) = (p[0] - gp[0], p[2] - gp[2]);
             let dd = m::hyp2(dx, dz);
             if dd >= 2.4 { continue; }
-            let cg = if crate::close::close_live(g) { Some(crate::close::close_civ_gate(g, gd, &p)) } else { None };
+            let cg = Some(crate::close::close_civ_gate(g, gd, &p));
             let cst = g.cv[cv].state;
             let behind = match &cg {
                 Some(c) => c.behind,
@@ -574,7 +528,7 @@ pub fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: f64, my
         }
         // the mission's rack while the drive is still in it
         let drive_t = g.mission.drive_t;
-        if g.mission.stage == crate::game::MissionStage::Drive && (!g.quiet_utility || g.mission_in_tour) {
+        if g.mission.stage == crate::game::MissionStage::Drive {
             let reach = crate::mission::rack_dist(g, p) < crate::consts::DRIVE_REACH && !dragging_any && !sprinting && g.pl[pl].takedown.is_none();
             let qw = crate::quiet::quiet_words(g);
             let line1 = match &qw {
@@ -673,7 +627,7 @@ pub fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: f64, my
                 flat0
             };
             // (close.ts: a man's strike-only line has no verb: it sits under the rows Space can do)
-            let hint: Vec<crate::game::Interactable> = if crate::close::close_live(g) { flat.iter().filter(|r| r.verb.is_none()).take(1).cloned().collect() } else { Vec::new() };
+            let hint: Vec<crate::game::Interactable> = flat.iter().filter(|r| r.verb.is_none()).take(1).cloned().collect();
             // (owncharge.ts, bigkit.ts, stickycam.ts: one row each past the MAX_NEAR)
             let is_door = |r: &crate::game::Interactable| r.kind == crate::game::InteractableKind::Door;
             let is_charge = |r: &crate::game::Interactable| is_door(r) && r.verb == Some(crate::game::Verb::Charge);
@@ -927,7 +881,7 @@ fn settle(g: &mut Game, q: &mut V3) -> bool {
     !crate::scene_collision::collide_circle(g, &mut t, r, 0.05, 2.2, Some(1.0)) || v3::dist_xz(t, *q) < 0.005
 }
 
-/// Sandbox / tour / harness: stand the player at p, free of anything he was in the middle of   (player.ts teleportPlayer)
+/// Sandbox / harness: stand the player at p, free of anything he was in the middle of   (player.ts teleportPlayer)
 pub fn teleport_player(g: &mut crate::game::Game, p: V3) {
     let pl = g.player;
     if g.pl[pl].down { return; }

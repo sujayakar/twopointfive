@@ -165,8 +165,7 @@ pub fn deal(g: &mut crate::game::Game, gd: GuardId) {
 pub fn needs_live(g: &crate::game::Game) -> bool {
     g.tune.needs
         && g.ai_enabled
-        && !g.quiet_utility
-        && !g.touring
+        && !g.aside
         && g.puppet.is_none()
         && !crate::lighting::is_daylight(g)
         && g.qrf.state == crate::qrf::QrfState::Idle
@@ -205,8 +204,8 @@ pub fn interrupt_of(g: &crate::game::Game, gd: GuardId) -> Option<String> {
     if !g.ai_enabled {
         return Some(key("AI off"));
     }
-    if g.quiet_utility || g.touring || g.puppet.is_some() {
-        return Some(key("the tour"));
+    if g.aside || g.puppet.is_some() {
+        return Some(key("nobody plays"));
     }
     if crate::lighting::is_daylight(g) {
         return Some(key("daylight"));

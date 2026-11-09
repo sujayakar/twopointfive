@@ -170,8 +170,8 @@ pub fn phone_call(g: &mut crate::game::Game, gd: GuardId) {
         let line = own.or(lines.guide.control.get(key.clone())).or(lines.control.get(key)).cloned().unwrap_or_default();
         control(g, gd, &line);
     }
-    let sent = if g.quiet_utility { None } else { crate::devices::send_to_look(g, pos, "civilian") };
-    if armed && !g.quiet_utility {
+    let sent = crate::devices::send_to_look(g, pos, "civilian");
+    if armed {
         g.alarm.pos[0] = pos[0]; g.alarm.pos[1] = 0.0; g.alarm.pos[2] = pos[2]; g.alarm.placed = true;
         later(g, 1.4, &LaterP { kind: PendKind::Escalate, cv: gd, o: sent, ..LaterP::default() });
     }
@@ -501,7 +501,7 @@ pub fn civilian_down(g: &mut crate::game::Game, gd: GuardId, dir: V3, quiet: boo
             crate::chronicle::chronicle_n(g, ChronKind::CivilianKO, ChronCountKey::CivKO, Some(&d), Some(pos));
         }
         if dead && g.tune.civilian_kill_fails && crate::mission::mission_live(g) {
-            let at = if g.mission_in_tour { -1.0 } else { g.time + crate::mission::DOWN_CARD_SECS };
+            let at = g.time + crate::mission::DOWN_CARD_SECS;
             g.mission.stage = MissionStage::Failed; g.mission.drive_t = -1.0; g.mission.down_card_at = at;
             let text = format!("MISSION FAILED — you killed {}, the {}. press Enter to restart", name, label);
             crate::game::game_msg(g, &text);
@@ -705,12 +705,10 @@ pub fn found_down(g: &mut crate::game::Game, cv: GuardId, o: GuardId) {
         crate::mind::raise(g, other, 0.45, "civilians");
         if g.gd[other].task.is_none() && g.gd[other].state != GuardState::Alert { crate::mind::fix(g, other, Some(body), "civilians"); }
     }
-    if !g.quiet_utility {
-        g.alarm.pos[0] = body[0]; g.alarm.pos[1] = 0.0; g.alarm.pos[2] = body[2]; g.alarm.placed = true;
-        let lvl = escalation_of(g);
-        later(g, 1.4, &LaterP { kind: PendKind::BodyEsc, cv, o: Some(o), dead: Some(dead), lvl: Some(lvl), ..LaterP::default() });
-        if dead { later(g, 4.5, &LaterP { kind: PendKind::Outrage, cv, o: None, ..LaterP::default() }); }
-    }
+    g.alarm.pos[0] = body[0]; g.alarm.pos[1] = 0.0; g.alarm.pos[2] = body[2]; g.alarm.placed = true;
+    let lvl = escalation_of(g);
+    later(g, 1.4, &LaterP { kind: PendKind::BodyEsc, cv, o: Some(o), dead: Some(dead), lvl: Some(lvl), ..LaterP::default() });
+    if dead { later(g, 4.5, &LaterP { kind: PendKind::Outrage, cv, o: None, ..LaterP::default() }); }
     let text = format!("found {} by {}", if dead { "DEAD" } else { "out cold" }, g.gd[o].callsign);
     log(g, cv, &text);
 }
@@ -819,7 +817,7 @@ pub fn civ_panic(g: &mut crate::game::Game, gd: Option<GuardId>, what: Option<cr
     let what = what.unwrap_or(CivPanicWhat::Panic);
     let Some(gd) = gd else { return String::from("no such civilian"); };
     let Some(cid) = g.gd[gd].civ else { return String::from("no such civilian"); };
-    if !civilians_on_floor(g) { return String::from("not now (the tour / daylight)"); }
+    if !civilians_on_floor(g) { return String::from("not now (daylight)"); }
     let name = g.cv[cid].name.clone();
     if g.gd[gd].state == GuardState::Dead { return format!("{} is down", name); }
     if g.gd[gd].held.is_some() { return format!("{} is in your arm", name); }

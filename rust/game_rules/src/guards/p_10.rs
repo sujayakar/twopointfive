@@ -250,7 +250,7 @@ pub fn lockdown_doors(g: &mut crate::game::Game, gd: GuardId, calm: Option<bool>
         let barred = if calm {
             !(def_locked || def_exterior) || def_closer == Some(false)
         } else {
-            def_exterior && !(crate::doors::doors_stay(g) && def_closer != Some(false))
+            def_exterior && !(def_closer != Some(false))
         };
         if barred || g.time - crate::doors::door_guard_t(g, d) < 12.0 || crate::doors::door_quiet_t(g, d) < 0.6 { continue; }
         let angle = crate::doors::door_angle(g, d);

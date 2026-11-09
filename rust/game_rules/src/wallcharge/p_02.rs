@@ -836,7 +836,7 @@ pub fn wall_charge_behind_of(g: &crate::game::Game, seat: &crate::seats::SeatRef
     let mut out = Vec::new();
     {
         let p = sam_pos(g, seat);
-        if !g.pl[seat.player].down && g.puppet.is_none() && !g.touring && wall_off(g, &w, p) < -t / 2.0 && flat(p, at) < stun_m && lined(g, &w, t, p) { out.push(String::from("you")); }
+        if !g.pl[seat.player].down && g.puppet.is_none() && wall_off(g, &w, p) < -t / 2.0 && flat(p, at) < stun_m && lined(g, &w, t, p) { out.push(String::from("you")); }
     }
     for gd in crate::orders::squad_orders_men(g, seat, None, None) {
         let p = man_pos(g, gd);

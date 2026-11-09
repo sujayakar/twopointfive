@@ -69,9 +69,6 @@ fn scatter(seed: f64, a: f64, d: V3) -> V3 {
 
 // ---------------------------------------------------------------- the skeleton's functions
 
-/// The one gate: no showcase running. (wallpen.ts wallPenLive)
-pub fn wall_pen_live(g: &crate::game::Game) -> bool { !g.touring }
-
 /// The thin level axis of a box in the world. (wallpen.ts thinN)
 pub fn thin_n(g: &mut crate::game::Game, b: BoxId) -> V3 {
     let bx = seam_box(g, b);
@@ -235,7 +232,6 @@ pub fn thin_path(g: &mut crate::game::Game, from: V3, dir: V3, range: f64, energ
         None => crate::scene_collision::raycast(g, from, dir, range).map(hit_of),
     };
     if hit.is_none() { return None; }
-    let glass = crate::glasspen::glass_pen_live(g);
     let mut segs: Option<Vec<crate::glasspen::RoundSeg>> = None;
     let mut cross: Vec<crate::glasspen::PaneCross> = Vec::new();
     let mut walls: Vec<WallCross> = Vec::new();
@@ -250,7 +246,7 @@ pub fn thin_path(g: &mut crate::game::Game, from: V3, dir: V3, range: f64, energ
         let mut w: Option<WallCross> = None;
         let sheet = static_at(g, h.index);
         if h.index < 1e6 && crate::glass::is_sheet(g, sheet) {
-            if glass { x = crate::glasspen::pane_crossing(g, h.index, o, d, h.t, e, nth0 + cross.len() as f64); }
+            x = crate::glasspen::pane_crossing(g, h.index, o, d, h.t, e, nth0 + cross.len() as f64);
         } else if (walls.len() as f64) < g.k.wallpen.max_things {
             w = crossing(g, h.index, o, d, h.t, h.n, e);
         }
@@ -318,13 +314,9 @@ pub fn commit_walls(g: &mut crate::game::Game, walls: &[crate::wallpen::WallCros
     }
 }
 
-/// The men's gate: the rule live. (wallpen.ts wallMenLive)
-pub fn wall_men_live(g: &crate::game::Game) -> bool { wall_pen_live(g) }
-
 /// Would a round of `energy` from `from` get to `to`: Clear, a ThinLine through thin things, or None. Reads only. (wallpen.ts thinLine)
 pub fn thin_line(g: &mut crate::game::Game, from: V3, to: V3, energy: f64, short: Option<f64>, first: Option<crate::wallpen::ThinLineFirst>) -> Option<crate::wallpen::ThinLine2> {
     let short = short.unwrap_or(0.3);
-    if !wall_pen_live(g) { return None; }
     let d = v3::sub(to, from);
     let l = v3::len(d);
     let reach = l - short;
@@ -355,7 +347,6 @@ pub fn top_energy(g: &crate::game::Game) -> f64 {
 pub fn flight_len(g: &mut crate::game::Game, from: V3, dir: V3, range: f64, energy: f64) -> f64 {
     let Some(first) = crate::scene_collision::raycast(g, from, dir, range) else { return range };
     let first_t = first.t;
-    if !wall_pen_live(g) { return first_t; }
     match thin_path(g, from, dir, range, energy, Some(Some(hit_of(first))), None) {
         Some(p) => p.len,
         None => first_t,

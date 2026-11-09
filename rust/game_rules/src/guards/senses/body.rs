@@ -47,13 +47,11 @@ pub fn body(g: &mut Game, gd: GuardId, c: CharId, staff: bool, lvl: f64) {
             let line = words(g, o, n, cold);
             crate::game::game_say(g, gd, &line, Some(true), None, None);
             crate::audio_iface::game_audio_like_play(g, "radio", Some(eye), Some(0.9), None);
-            if !g.quiet_utility {
-                g.alarm.pos[0] = body[0]; g.alarm.pos[1] = 0.0; g.alarm.pos[2] = body[2]; g.alarm.placed = true;
-                let to = if lvl >= 1.0 || g.alarm.episode { 2.0 } else { 1.0 };
-                raise_escalation(g, to, Some(gd), Some(crate::guards::RaiseEscalationCause::Body), Some(before > 0));
-                g.gd[gd].task = None;
-                g.gd[gd].body_duty = Some(crate::game::GuardBodyDuty { body: o, role: crate::game::GuardBodyDutyRole::Finder, stage: crate::game::GuardBodyDutyStage::To, t: 0.0, t0: g.time, spot: None });
-            }
+            g.alarm.pos[0] = body[0]; g.alarm.pos[1] = 0.0; g.alarm.pos[2] = body[2]; g.alarm.placed = true;
+            let to = if lvl >= 1.0 || g.alarm.episode { 2.0 } else { 1.0 };
+            raise_escalation(g, to, Some(gd), Some(crate::guards::RaiseEscalationCause::Body), Some(before > 0));
+            g.gd[gd].task = None;
+            g.gd[gd].body_duty = Some(crate::game::GuardBodyDuty { body: o, role: crate::game::GuardBodyDutyRole::Finder, stage: crate::game::GuardBodyDutyStage::To, t: 0.0, t0: g.time, spot: None });
             let mut i = 0;
             while i < g.guards.len() {
                 let other = g.guards[i];
@@ -66,7 +64,7 @@ pub fn body(g: &mut Game, gd: GuardId, c: CharId, staff: bool, lvl: f64) {
                 if g.gd[other].task.is_some() { continue; }
                 crate::belief::word(g, other, body);
                 let x = &g.gd[other];
-                if !g.quiet_utility && !x.hold && x.held.is_none() && x.body_duty.is_none() && (x.state == St::Patrol || x.state == St::Suspicious || x.script.is_some()) {
+                if !x.hold && x.held.is_none() && x.body_duty.is_none() && (x.state == St::Patrol || x.state == St::Suspicious || x.script.is_some()) {
                     g.gd[other].body_duty = Some(crate::game::GuardBodyDuty { body: o, role: crate::game::GuardBodyDutyRole::Called, stage: crate::game::GuardBodyDutyStage::To, t: 0.0, t0: t, spot: None });
                 }
             }

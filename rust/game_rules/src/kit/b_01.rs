@@ -35,9 +35,9 @@ fn can_slot(thing: KitThing, key: &str, name: &str, count: f64, up: bool) -> Kit
     KitSlot { thing, key: String::from(key), name: String::from(name), count, spent: count <= 0.0, up, ..KitSlot::default() }
 }
 
-/// the big slot's row: what he carries (none on a tour, which shows no kit of its own), and whether a door in reach offers it
+/// the big slot's row: what he carries and whether a door in reach offers it
 fn big_view(g: &Game, seat: &crate::seats::SeatRef) -> Option<KitBig> {
-    if !g.k.bigslot.on || g.touring { return None; }
+    if !g.k.bigslot.on { return None; }
     let name = match g.pl[seat.player].big_kit { BigKit::Shotgun => "breaching shotgun", BigKit::Hammer => "hammer", BigKit::None => return None };
     let offered = seat.nearby.iter().any(|r| r.kind == InteractableKind::Door && matches!(r.verb, Some(Verb::Breach | Verb::Hammer)));
     Some(KitBig { name: String::from(name), place: String::from("at a shut door"), offered })

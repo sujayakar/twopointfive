@@ -147,9 +147,6 @@ pub fn close_at(g: &mut crate::game::Game, gd: GuardId, p: &[f64]) -> crate::clo
     o
 }
 
-/// The two-button blow is live: no show running. (close.ts closeLethal)
-pub fn close_lethal(g: &crate::game::Game) -> bool { !g.touring }
-
 /// The right button, tapped or held, once a frame. (close.ts closeRmb)
 pub fn close_rmb(g: &mut crate::game::Game, on: bool, down: bool, hit: bool, dt: f64, near: bool, choke: bool, dropped: bool) -> Option<crate::close::CloseRmb> {
     use crate::close::CloseRmb as R;
@@ -177,12 +174,6 @@ pub fn close_rmb(g: &mut crate::game::Game, on: bool, down: bool, hit: bool, dt:
     }
     None
 }
-
-/// There is no knife: no show running. (close.ts closeBare)
-pub fn close_bare(g: &crate::game::Game) -> bool { !g.touring }
-
-/// The windows are live: no show running. (close.ts closeLive)
-pub fn close_live(g: &crate::game::Game) -> bool { !g.touring }
 
 /// A blow landed: the tally. (close.ts closeBlow)
 pub fn close_blow(g: &mut crate::game::Game, lethal: bool) { g.stats.close.blows[if lethal { 0 } else { 1 }] += 1; }
@@ -222,37 +213,27 @@ pub fn close_rows(g: &mut crate::game::Game, gd: GuardId, p: &[f64], busy: bool,
         let is_civ = g.gd[gd].civ.is_some();
         let empty = g.pl[pl].holstered;
         let gun = crate::player::grab_variant(g, &crate::seats::here(g)) == crate::character::HoldVariant::Gun;
-        let bare = close_bare(g);
-        let two = close_lethal(g) || bare;
         let rmb = !(crate::rails::rails_hushes(g, "alt") && crate::rails::rails_hushes(g, "menu"));
         let away = !crate::rails::rails_hushes(g, "hands");
-        let choke = if rmb && o.grab && !is_civ && (bare || close_lethal(g)) && crate::rails::rails_offers(g, "grab") { "  ·  RMB  hold to choke him" } else { "" };
+        let choke = if rmb && o.grab && !is_civ && crate::rails::rails_offers(g, "grab") { "  ·  RMB  hold to choke him" } else { "" };
         let rifle_up = crate::game::player_rifle_up(g, pl);
         let sling = if rifle_up { "sling it" } else { "holster" };
         let click: String = if !o.strike {
             String::new()
         } else if !empty {
-            if away && (rmb || !bare) {
-                let what: String = if bare { String::from("knockout") } else if two { String::from("knife / the knockout") } else { format!("LMB {}", if kind == K::Behind || kind == K::Seat { "takedown" } else { "strike" }) };
+            if away && (rmb) {
+                let what: String = String::from("knockout");
                 format!("E  {} for the {}", sling, what)
             } else { String::new() }
-        } else if (two && sneak) || bare {
-            if rmb { format!("RMB  knock him out{}", choke) } else { String::new() }
-        } else if two {
-            if rmb { format!("LMB  knife — lethal  ·  RMB  knock him out{}", choke) } else { String::from("LMB  knife — lethal") }
-        } else if kind == K::Behind {
-            String::from("LMB  takedown — silent")
-        } else if kind == K::Seat {
-            String::from("LMB  put him out where he sits — silent")
-        } else if kind == K::Side {
-            String::from("LMB  strike — quiet")
+        } else if rmb {
+            format!("RMB  knock him out{}", choke)
         } else {
-            String::from("LMB  strike — he gets a sound out")
+            String::new()
         };
         let only = crate::stalk::stalk_click_only(g) && !is_civ;
         if o.grab && only {
             let line2 = if empty {
-                if two && o.strike && rmb { format!("LMB  hold to grab him  ·  RMB  knock him out{}", choke) } else { String::from("LMB  hold to grab him") }
+                if o.strike && rmb { format!("LMB  hold to grab him  ·  RMB  knock him out{}", choke) } else { String::from("LMB  hold to grab him") }
             } else {
                 format!("E  {}, then hold LMB to grab him", sling)
             };
@@ -311,7 +292,6 @@ pub fn close_ready(g: &mut crate::game::Game) -> Option<crate::close::CloseReady
     use crate::character::{Bone, ReadyKind};
     use crate::close::{CloseKind as K, CloseReady};
     let pl = g.player;
-    if g.touring { return None; }
     let now = g.time;
     let o = { let s = state_of(g); if s.t == now { s.best.clone() } else { None } };
     let o = match o { Some(o) if o.can => o, _ => return None };
@@ -336,7 +316,7 @@ pub fn close_ready(g: &mut crate::game::Game) -> Option<crate::close::CloseReady
 /// Who holds the mode now: the nearest living man in range with nothing solid between. (close.ts modeNow)
 pub fn mode_now(g: &mut crate::game::Game, pl: PlayerId) -> Option<GuardId> {
     g.m.close.state.get_or_insert_with(pl, fresh_state).mode_d = m::INF;
-    if g.touring || g.pl[pl].down || g.pl[pl].holding.is_some() || g.pl[pl].dragging.is_some() || g.pl[pl].kick.is_some() || g.pl[pl].picking.is_some() || g.pl[pl].wanding.is_some()
+    if g.pl[pl].down || g.pl[pl].holding.is_some() || g.pl[pl].dragging.is_some() || g.pl[pl].kick.is_some() || g.pl[pl].picking.is_some() || g.pl[pl].wanding.is_some()
         || crate::game::player_rifle_up(g, pl) || g.pl[pl].sprinting || g.pl[pl].wall.is_some() { return None; }
     if crate::handwork::sam_work(g).is_some() || g.pl[pl].coding.is_some() { return None; }
     let c = g.pl[pl].ch;
@@ -389,7 +369,7 @@ pub fn close_tick(g: &mut crate::game::Game) {
         an.rise = 0.0;
         an.low = 0.0;
     }
-    let cw = if r.is_none() && close_bare(g) { crate::stalk::stalk_wait(g) } else { None };
+    let cw = if r.is_none() { crate::stalk::stalk_wait(g) } else { None };
     if let Some(cw) = cw {
         let an = &mut g.ch[c].anim;
         an.ready = Some(ReadyKind::Grab);
@@ -411,10 +391,8 @@ pub fn close_tick(g: &mut crate::game::Game) {
     }
     {
         let has_h = g.pl[pl].holding.is_some();
-        let bare = close_bare(g);
-        g.ch[c].anim.hands_down = if bare { g.k.stalk.low_hands } else { 0.0 };
-        let bare = close_bare(g);
-        let wide = if bare && !has_h {
+        g.ch[c].anim.hands_down = g.k.stalk.low_hands;
+        let wide = if !has_h {
             m::min(1.0, g.ch[c].anim.low / m::max(0.05, g.k.stalk.wide_by))
         } else { 0.0 };
         g.ch[c].anim.wide = wide;
@@ -453,7 +431,6 @@ pub fn close_tick(g: &mut crate::game::Game) {
 
 /// The dark: how much of the build's near-sight floor this man has for Sam right now. (close.ts closeNearK)
 pub fn close_near_k(g: &mut crate::game::Game, gd: GuardId, dist: f64) -> f64 {
-    if g.touring { return 1.0; }
     let st = g.gd[gd].state;
     if st == crate::game::GuardState::Alert || st == crate::game::GuardState::Search || dist < g.k.close.touch_m { return 1.0; }
     let k = v3::smoothstep(g.k.close.dark_at, g.k.close.lit_at, g.pl[g.player].visibility);

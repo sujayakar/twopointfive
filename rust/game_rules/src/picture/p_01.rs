@@ -487,7 +487,7 @@ pub fn picture_tell(g: &mut crate::game::Game, gd: GuardId, who: crate::picture:
 
 /// once a frame, after everybody has moved (picture.ts pictureTick)
 pub fn picture_tick(g: &mut crate::game::Game, _dt: f64) {
-    if !g.ai_enabled || g.touring {
+    if !g.ai_enabled {
         return;
     }
     state_of(g);

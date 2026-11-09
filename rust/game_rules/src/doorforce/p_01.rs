@@ -27,8 +27,8 @@ fn clear_walk(g: &mut Game, gd: GuardId) {
     o.path_goal_orbit = false;
 }
 
-/// The rule is up: the AI runs and no tour has the stage. (doorforce.ts live)
-pub fn live(g: &mut crate::game::Game) -> bool { g.ai_enabled && !g.touring }
+/// The rule is up: the AI runs. (doorforce.ts live)
+pub fn live(g: &mut crate::game::Game) -> bool { g.ai_enabled }
 
 /// The game's state, made if absent, every belief forgotten if the clock went back (a load). (doorforce.ts stateOf)
 pub fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::doorforce::State {
@@ -334,7 +334,7 @@ fn round_through(g: &mut Game, gd: GuardId, def: crate::weapons::WeaponId, from:
 pub fn round_for(g: &mut crate::game::Game, gd: GuardId, b: &mut crate::doorforce::Belief) -> Option<V3> {
     let kf = g.k.doorforce;
     let d = b.door;
-    if g.dr[d].def.steel == Some(true) || !crate::wallpen::wall_men_live(g) { return None; }
+    if g.dr[d].def.steel == Some(true) { return None; }
     let c = g.gd[gd].ch;
     let from = crate::guards::shot_origin(g, c);
     let def = g.fa[g.gd[gd].weapon].def;
@@ -600,7 +600,6 @@ mod tests {
     fn game() -> &'static mut Game {
         let g = Box::leak(Box::new(Game::blank()));
         g.ai_enabled = true;
-        g.touring = false;
         g
     }
 

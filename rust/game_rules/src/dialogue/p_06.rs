@@ -19,7 +19,7 @@ pub fn ambient_state<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::dialogu
 
 /// Is the floor one the pairs may talk on? (dialogue.ts ambientLive)
 pub fn ambient_live(g: &crate::game::Game) -> bool {
-    if !g.ai_enabled || g.quiet_utility || g.puppet.is_some() || g.touring { return false; }
+    if !g.ai_enabled || g.aside || g.puppet.is_some() { return false; }
     if crate::guards::escalation_of(g) != 0.0 { return false; }
     if g.alarm.episode { return false; }
     if crate::sim_lightshome::mains_active(g) { return false; }

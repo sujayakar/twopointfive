@@ -119,7 +119,7 @@ fn walk_records(g: &mut Game, seat: SeatId, pl: PlayerId, ch: CharId, cmds: &[cr
                 m.char.aim_yaw = crate::player::aim_ease(m.char.aim_yaw, [dx, 0.0, dz], dt);
             }
             let aiming = crate::player::gun_raised(g, pl, Some(now), Some(crate::player::GunRaisedM { sprinting: m.sprinting }));
-            let dp = g.ch[ch].anim.door_push.as_ref().map(|d| crate::player::LeafFacingDp { w: d.w, n: d.n.to_vec(), hold_only: d.hold_only });
+            let dp = g.ch[ch].anim.door_push.as_ref().map(|d| crate::player::LeafFacingDp { w: d.w, n: d.n.to_vec() });
             let into_door = crate::player::leaf_facing(dp.as_ref(), aiming);
             let speed = m::hyp2(m.char.vel[0], m.char.vel[2]);
             crate::player::hips_turn(m, speed, aiming, false, into_door, false, dt);

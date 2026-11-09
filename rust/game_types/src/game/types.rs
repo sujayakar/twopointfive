@@ -480,7 +480,6 @@ pub struct Game {
     pub props: crate::props::PropSystem,
     pub use_door: Option<DoorId>,
     pub reach_interior: Option<Vec<u8>>,
-    pub touring: bool,
     pub hover: Option<crate::game::Interactable>,
     pub interactables: Vec<crate::game::Interactable>,
     pub nearby: Vec<crate::game::Interactable>,
@@ -563,8 +562,8 @@ pub struct Game {
     pub level: crate::scene_level::Level,
     pub rig: RigId,
     pub smoke: crate::smoke_types::SmokeSystemLike,
-    pub quiet_utility: bool,
-    pub mission_in_tour: bool,
+    /// nobody plays and the floor is looked at (the title's reel): no run is kept, counted or spoken to
+    pub aside: bool,
     /// (the host's camera: in no bytes)
     #[bytes(skip)]
     pub view_proj: Option<crate::game::GameViewProj>,
@@ -689,7 +688,6 @@ impl Game {
             props: crate::props::PropSystem::blank(),
             use_door: None,
             reach_interior: None,
-            touring: false,
             hover: None,
             interactables: Vec::new(),
             nearby: Vec::new(),
@@ -759,8 +757,7 @@ impl Game {
             level: crate::scene_level::Level::default(),
             rig: RigId(0),
             smoke: crate::smoke_types::SmokeSystemLike::default(),
-            quiet_utility: false,
-            mission_in_tour: false,
+            aside: false,
             view_proj: None,
             rolls: Vec::new(),
             roll_seq: 0.0,
@@ -949,7 +946,6 @@ pub struct GameDoorHandRecsValue {
     pub t0: f64,
     pub crack: bool,
     pub hand: f64,
-    pub hold_only: Option<bool>,
     pub move_: Option<bool>,
 }
 
@@ -2171,7 +2167,6 @@ pub struct Mods {
     pub shotgun: crate::shotgun::ShotgunMod,
     pub player: crate::player::PlayerMod,
     pub close: crate::close::CloseMod,
-    pub takedown: crate::takedown::TakedownMod,
     pub spotted: crate::spotted::SpottedMod,
     pub pairorders: crate::pairorders::PairordersMod,
     pub pairup: crate::pairup::PairupMod,
@@ -2312,7 +2307,6 @@ impl Mods {
             shotgun: crate::shotgun::ShotgunMod::blank(),
             player: crate::player::PlayerMod::blank(),
             close: crate::close::CloseMod::blank(),
-            takedown: crate::takedown::TakedownMod::blank(),
             spotted: crate::spotted::SpottedMod::blank(),
             pairorders: crate::pairorders::PairordersMod::blank(),
             pairup: crate::pairup::PairupMod::blank(),

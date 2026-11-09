@@ -151,7 +151,7 @@ pub fn update_qrf(g: &mut crate::game::Game, dt: f64) {
         if g.qrf.state == QrfState::Deployed && g.time - g.qrf.deployed_at > SETTLE_IN_SECS { let t = g.time; g.qrf.shots_since.push(t); }
     }
     while !g.qrf.shots_since.is_empty() && g.time - g.qrf.shots_since[0] > GUNFIGHT_WINDOW { g.qrf.shots_since.remove(0); }
-    if net_rule(g) && g.ai_enabled && has_response(g) { read_net(g); }
+    if g.ai_enabled && has_response(g) { read_net(g); }
     if g.qrf.state == QrfState::Idle {
         if !g.tune.qrf || !live(g) || !g.tune.qrf_silent { g.qrf.silent_at = -1.0; g.qrf.silent_said = false; }
         if !g.tune.qrf || !live(g) { return; }
@@ -169,7 +169,6 @@ pub fn update_qrf(g: &mut crate::game::Game, dt: f64) {
         return;
     }
     // the telegraph (runs on under anything; nothing new is SAID under its flag)
-    let quiet = g.quiet_utility || g.touring;
     let mk = marks_of(g);
     let own = mk.is_some();
     if g.qrf.state == QrfState::Requested && g.time - g.qrf.requested_at >= ANSWER_SECS {
@@ -179,13 +178,13 @@ pub fn update_qrf(g: &mut crate::game::Game, dt: f64) {
         let secs = m::round(g.qrf.arrive_at - g.time);
         let (n, secs) = (js::num_str(n), js::num_str(secs));
         let silent = g.qrf.reason == Some(QrfReason::Silent);
-        if !quiet && !own {
+        if !own {
             let text = if silent { format!("all stations — QRF is rolling to two-six: {} men, west stairwell, {} seconds", n, secs) }
                 else { format!("copy two-six. QRF is rolling — {} men, west stairwell, {} seconds. lock down and hold what you've got", n, secs) };
             control(g, &text);
-        } else if !quiet {
+        } else {
             let mk = mk.as_ref().unwrap();
-            let said = if net_rule(g) { format!(" {}.", brief(g)) } else { String::new() };
+            let said = format!(" {}.", brief(g));
             let text = if silent { format!("all stations — {} is rolling to {}: {} men, by {}, {} seconds.{}", mk.team, mk.site, n, mk.name, secs, said) }
                 else { format!("copy {}. {} is rolling — {} men, by {}, {} seconds.{} lock down and hold what you've got", mk.site, mk.team, n, mk.name, secs, said) };
             control(g, &text);
@@ -194,7 +193,7 @@ pub fn update_qrf(g: &mut crate::game::Game, dt: f64) {
     }
     if (g.qrf.state == QrfState::Inbound || g.qrf.state == QrfState::Requested) && !g.qrf.said30 && g.qrf.arrive_at - g.time <= CALL30 {
         g.qrf.said30 = true;
-        if g.qrf.arrive_at - g.qrf.requested_at > CALL30 + 5.0 && !quiet {
+        if g.qrf.arrive_at - g.qrf.requested_at > CALL30 + 5.0 {
             let silent = g.qrf.reason == Some(QrfReason::Silent);
             let text = match mk.as_ref() {
                 None => if silent { String::from("all stations — QRF is thirty seconds out from two-six, coming up the west stairs") }
@@ -206,11 +205,11 @@ pub fn update_qrf(g: &mut crate::game::Game, dt: f64) {
             note(g, "thirty");
         }
     }
-    if (g.qrf.state == QrfState::Inbound || g.qrf.state == QrfState::Requested) && g.qrf.arrive_at - g.time <= CALL10 { arriving(g, quiet); }
-    if g.qrf.state == QrfState::Arriving && g.time >= g.qrf.arrive_at { deploy(g, quiet); }
+    if (g.qrf.state == QrfState::Inbound || g.qrf.state == QrfState::Requested) && g.qrf.arrive_at - g.time <= CALL10 { arriving(g); }
+    if g.qrf.state == QrfState::Arriving && g.time >= g.qrf.arrive_at { deploy(g); }
     if g.qrf.state == QrfState::Deployed && !g.qrf.everyone_said && g.time - g.qrf.deployed_at > 4.5 {
         g.qrf.everyone_said = true;
-        if !quiet && !g.qrf.men.is_empty() {
+        if !g.qrf.men.is_empty() {
             let text = match mk.as_ref() {
                 None => String::from("all stations — that's the response team on your floor, and that's everyone we've got tonight. make it count"),
                 Some(mk) => format!("all stations — that's {} with you now, and that's everyone we've got tonight. make it count", mk.team),
@@ -222,11 +221,11 @@ pub fn update_qrf(g: &mut crate::game::Game, dt: f64) {
 }
 
 /// T−10: the men exist from here, stood at the muster, the lead's word on the net.   (qrf.ts arriving)
-pub fn arriving(g: &mut crate::game::Game, quiet: bool) {
+pub fn arriving(g: &mut crate::game::Game) {
     use crate::qrf::{Phase, QrfState};
     g.qrf.state = QrfState::Arriving;
     g.qrf.said10 = true;
-    re_deal(g, quiet);
+    re_deal(g);
     let mk = marks_of(g).unwrap();
     let want = if g.qrf.size > 0.0 { g.qrf.size } else { v3::clamp(m::round(g.tune.qrf_size), 2.0, 4.0) };
     let room = room_for(g);
@@ -273,20 +272,16 @@ pub fn arriving(g: &mut crate::game::Game, quiet: bool) {
     if count == 0 {
         g.qrf.state = QrfState::Deployed;
         g.qrf.deployed_at = g.time;
-        if !quiet {
-            let text = crate::words::wg(g, &format!("{} — {} is held up, nobody's coming. you're on your own", mk.site, mk.team), &format!("{} — {} is held up, nobody is coming. you are on your own", mk.site, mk.team));
-            control(g, &text);
-        }
+        let text = crate::words::wg(g, &format!("{} — {} is held up, nobody's coming. you're on your own", mk.site, mk.team), &format!("{} — {} is held up, nobody is coming. you are on your own", mk.site, mk.team));
+        control(g, &text);
         note(g, "nobody");
         return;
     }
     if mk.stairs { crate::audio_iface::game_audio_like_play(g, "stairBoots", Some([mk.muster[0][0], 0.3, mk.muster[0][2]]), Some(0.75), None); }
-    if !quiet {
-        let clear = match word(&mk.clear) { Some(c) => format!(" {},", c), None => String::new() };
-        let lead = g.qrf.men[0];
-        let text = format!("{} at {} — {} of us, ten seconds.{} check your fire", mk.tag, mk.name, count, clear);
-        radio(g, Some(lead), &text);
-    }
+    let clear = match word(&mk.clear) { Some(c) => format!(" {},", c), None => String::new() };
+    let lead = g.qrf.men[0];
+    let text = format!("{} at {} — {} of us, ten seconds.{} check your fire", mk.tag, mk.name, count, clear);
+    radio(g, Some(lead), &text);
     let what = format!("ten:{}", count);
     note(g, &what);
     g.qrf.phase = Phase::Landing;
@@ -294,7 +289,7 @@ pub fn arriving(g: &mut crate::game::Game, quiet: bool) {
 }
 
 /// Ten seconds out: an enemy now stands at the dealt way's muster: another clear way is taken, and control says so.   (qrf.ts reDeal)
-pub fn re_deal(g: &mut crate::game::Game, quiet: bool) {
+pub fn re_deal(g: &mut crate::game::Game) {
     let r = match response_of(g) { Some(r) => r, None => return };
     if r.ways.len() < 2 { return; }
     let way = g.qrf.way as usize;
@@ -306,16 +301,14 @@ pub fn re_deal(g: &mut crate::game::Game, quiet: bool) {
     let other = match other { Some(i) => i, None => return };
     g.qrf.way = other as f64;
     let mk = marks_of(g).unwrap();
-    if !quiet {
-        let text = format!("{} — change of plan: {} is {}", mk.site, mk.team, mk.coming);
-        control(g, &text);
-    }
+    let text = format!("{} — change of plan: {} is {}", mk.site, mk.team, mk.coming);
+    control(g, &text);
     let what = format!("re-dealt:way {}", other);
     note(g, &what);
 }
 
 /// T: the bar goes down, the leaf is thrown open off its real hinge, and they file in.   (qrf.ts deploy)
-pub fn deploy(g: &mut crate::game::Game, quiet: bool) {
+pub fn deploy(g: &mut crate::game::Game) {
     g.qrf.state = crate::qrf::QrfState::Deployed;
     g.qrf.deployed_at = g.time;
     g.qrf.phase = crate::qrf::Phase::File;
@@ -331,10 +324,8 @@ pub fn deploy(g: &mut crate::game::Game, quiet: bool) {
         g.mission.stats.qrf_at = g.mission.stats.elapsed;
         g.mission.stats.qrf_who = Some(mk.team.clone());
     }
-    if !quiet {
-        let text = format!("{} {} — {} in by {}, moving as one element", mk.tag, mk.at, alive(g).len(), mk.name);
-        radio(g, lead, &text);
-    }
+    let text = format!("{} {} — {} in by {}, moving as one element", mk.tag, mk.at, alive(g).len(), mk.name);
+    radio(g, lead, &text);
     note(g, "door");
 }
 
@@ -382,7 +373,7 @@ pub fn tick_men(g: &mut crate::game::Game, dt: f64) {
         g.gd[x].task = None;
     }
     // DOORSTAY: the last man through pulls the stair door to, once they are all on the floor and clear of it
-    if g.qrf.state == crate::qrf::QrfState::Deployed && !g.qrf.door_pulled && crate::doors::doors_stay(g) && g.time - g.qrf.deployed_at > 1.5 {
+    if g.qrf.state == crate::qrf::QrfState::Deployed && !g.qrf.door_pulled && g.time - g.qrf.deployed_at > 1.5 {
         let mk = marks_of(g);
         let d = match mk.as_ref() { Some(k) => marks_door(g, k), None => None };
         let up = alive(g);
@@ -424,8 +415,7 @@ pub fn tick_men(g: &mut crate::game::Game, dt: f64) {
             let no_door = marks_of(g).map_or(true, |k| word(&k.door).is_none());
             if no_door {
                 note(g, "seen-at-the-muster");
-                let quiet = g.quiet_utility || g.touring;
-                deploy(g, quiet);
+                deploy(g);
                 to_fight(g, &el, seer);
             }
         }
@@ -696,7 +686,7 @@ pub fn pick_target(g: &mut crate::game::Game, el: &mut Vec<GuardId>, fresh: bool
     use crate::qrf::{Phase, Target, TargetKind};
     let bf = fix_of(g);
     if let Some(b) = bf {
-        if (fresh && !(net_rule(g) && g.qrf.fix.is_some() && b.t < g.qrf.fix_t - 1e-6)) || g.qrf.fix.is_none() || b.t > g.qrf.fix_t {
+        if (fresh && !(g.qrf.fix.is_some() && b.t < g.qrf.fix_t - 1e-6)) || g.qrf.fix.is_none() || b.t > g.qrf.fix_t {
             g.qrf.fix = Some(b.pos);
             g.qrf.fix_t = m::max(g.qrf.fix_t, b.t);
         }
@@ -780,11 +770,11 @@ pub fn pick_target(g: &mut crate::game::Game, el: &mut Vec<GuardId>, fresh: bool
         format!("element moving — {}, by the {}", next.room, said)
     } else if sweep {
         if bf.is_some() { format!("nothing here — element moving on, {}", next.room) } else { format!("nothing on the net — element sweeping, {}", next.room) }
-    } else if net_rule(g) && bf.is_none() {
+    } else if bf.is_none() {
         let name = marks_of(g).map_or(String::from("the door"), |k| k.name);
         format!("nothing on the net — element clearing from {}", name)
     } else {
-        format!("element moving — {}, on the last {}", next.room, if net_rule(g) { "word" } else { "fix" })
+        format!("element moving — {}, on the last {}", next.room, "word")
     };
     radio(g, Some(lead), &text);
     let what = format!("target:{}:{}{}", next.kind.as_str(), next.room, if sweep { ":sweep" } else { "" });

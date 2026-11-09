@@ -203,7 +203,7 @@ pub fn doors_kick_in(g: &mut crate::game::Game, d: DoorId, from: V3, who: f64, l
         let vel = -doors_side(g, d, from) * 9.0;
         door_set_vel(g, d, vel);
         door_set_since_bash(g, d, 0.0);
-        if doors_throws(g) && { let dir = m::sign(door_vel(g, d)); doors_opening(g, d, dir) } {
+        if { let dir = m::sign(door_vel(g, d)); doors_opening(g, d, dir) } {
             let vel = door_vel(g, d);
             doors_driven(g, d, who, vel, crate::doors::DoorDriveKind::Boot, false, 0.0);
         }

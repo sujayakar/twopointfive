@@ -121,7 +121,6 @@ pub fn director_beat_spawn(g: &mut crate::game::Game, r: DirectorRunId, b: Direc
     let gd = crate::guards::spawn_unit(g, &crate::guards::UnitOpts { team: spec.team, pos: [p[0], 0.0, p[2]], yaw: Some(yaw), weapon: spec.weapon, tint: spec.tint, tint2: spec.tint2, name: callsign.map(String::from), light: lit, budget, ..Default::default() })?;
     if lit == Some(false) { let l = g.gd[gd].flashlight; g.tab.light[l].enabled = false; } // dark from the first frame
     if spec.trained == Some(true) { g.gd[gd].trained = true; }
-    if spec.god == Some(true) && g.tab.director_run[r].show.is_some() { g.gd[gd].god = true; } // (only a SHOWCASE run's cast can carry the net)
     let ref_ = unit_ref_of(g, gd);
     g.tab.director_run[r].units.set(crate::Num(ref_.id), UnitRec { gd });
     touch(g, b, &ref_);
@@ -136,10 +135,7 @@ pub fn director_beat_spawn(g: &mut crate::game::Game, r: DirectorRunId, b: Direc
 }
 /// c.unit (director.ts:917)
 pub fn director_beat_unit(g: &crate::game::Game, r: DirectorRunId, callsign: &str) -> Option<crate::director::UnitRef> {
-    let mut found = g.guards.iter().copied().find(|x| g.gd[*x].callsign == callsign);
-    if found.is_none() {
-        if let Some(benched) = g.tab.director_run[r].show.as_ref().and_then(|s| s.benched.as_ref()) { found = benched.iter().copied().find(|x| g.gd[*x].callsign == callsign); }
-    }
+    let found = g.guards.iter().copied().find(|x| g.gd[*x].callsign == callsign);
     found.map(|gd| unit_ref_of(g, gd))
 }
 /// c.rout (director.ts:922)
@@ -151,7 +147,6 @@ pub fn director_beat_rout(g: &mut crate::game::Game, r: DirectorRunId, b: Direct
     if !crate::runner::runner_break(g, gd) { return Ok(false); } // (asked while he is still in this beat's hand: refused, he is exactly as he was)
     if g.gd[gd].script.is_some() { crate::squad::end_guard_script(g, gd, Some(crate::squad::EndGuardScriptState::Alert)); }
     crate::control::set_hold(g, gd, false, "director");
-    director_show_man(g, gd, false);
     g.tab.director_live_beat[b].touched.delete(crate::Num(u.id));
     push(g, b, DirectorPushRowKind::Note, format!("rout {}", u.callsign), None);
     Ok(true)
@@ -162,13 +157,12 @@ pub fn director_beat_release(g: &mut crate::game::Game, r: DirectorRunId, b: Dir
     let gd = director_guard_of(g, r, u)?;
     if g.gd[gd].script.is_some() { crate::squad::end_guard_script(g, gd, Some(state)); }
     crate::control::set_hold(g, gd, false, "director");
-    director_show_man(g, gd, false);
     g.tab.director_live_beat[b].touched.delete(crate::Num(u.id));
     push(g, b, DirectorPushRowKind::Note, format!("release {}", u.callsign), Some(obj(vec![("state", text(state.as_str()))])));
     Ok(())
 }
 
-// ---- speech (ts 956). c.say('sam', …) is showcase-only: not translated
+// ---- speech
 /// c.say of a man (director.ts:962)
 pub fn director_beat_say(g: &mut crate::game::Game, r: DirectorRunId, b: DirectorLiveBeatId, u: &crate::director::UnitRef, line: &str, radio: Option<bool>) -> Result<(), String> {
     let radio = radio.unwrap_or(false);

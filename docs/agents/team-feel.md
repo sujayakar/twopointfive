@@ -116,8 +116,8 @@ when its own men are down.
 **Known rooms.** `cleared_rooms_mark` runs off everyone's feet. `cleared_rooms_dear_for` prices the cells of unknown rooms for a route, bar his own
 and his mark's, and `seen_way` in `rust/game_rules/src/orders/p_07.rs` adds `seen_price`.
 
-**Cover fire** (`cover_op`) is for a man with nobody in sight: `choose` picks a place and a piece, and `cover_lane` and `round_held` can hold it. It
-is live only with cover that breaks (`chew_live`) or walls that take rounds (`wall_men_live`).
+**Cover fire** (`cover_op`) is for a man with nobody in sight: `choose` picks a place and a piece, and `cover_lane` and `round_held` can hold it. A
+piece is chewed only where cover breaks (`chew_live`).
 
 **Why** (`show_why_tick`): masked by Sam, a wave and "you're in my line." (`masked`, one voice: `line_said_by`); a stack waiting, squeezes up the file
 then the lead's fist (`stacks`); "after you."; "I'm hit."; "I can't keep up."; "I've got this door.".

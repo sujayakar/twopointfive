@@ -7,31 +7,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// Whether a half of the takedowns shows: every switch is settled on, only a show turns them off. (takedown.ts live)
-pub fn live(g: &mut crate::game::Game, half: crate::takedown::Half) -> bool {
-    !g.touring
-}
-
-/// How much of the choke's lowering the hold's two poses show. (takedown.ts takeLower)
-pub fn take_lower(g: &mut crate::game::Game) -> f64 {
-    if live(g, Half::Lower) { 1.0 } else { 0.0 }
-}
-
-/// Whether the hold's poses show the kill as a move. (takedown.ts takeKill)
-pub fn take_kill(g: &mut crate::game::Game) -> bool {
-    live(g, Half::Kill)
-}
-
-/// Whether the hold's poses show the choke's beats. (takedown.ts takeBeats)
-pub fn take_beats(g: &mut crate::game::Game) -> bool {
-    live(g, Half::ChokeBeats)
-}
-
-/// Whether the hold's poses show the choke's haul. (takedown.ts takeHaul)
-pub fn take_haul(g: &mut crate::game::Game) -> bool {
-    live(g, Half::Haul)
-}
-
 /// Which move a blow is, by the side it comes from and the hand that does it. (takedown.ts blowStyle)
 pub fn blow_style(kind: Option<crate::close::CloseKind>, lethal: bool) -> crate::character::BlowStyle {
     use crate::character::BlowStyle;
@@ -105,14 +80,12 @@ pub fn may_rise(g: &mut crate::game::Game, by: CharId) -> bool {
 /// Sam's blow begins: his move by the side and the hand, and what the man does before it lands. (takedown.ts takeBegin)
 pub fn take_begin(g: &mut crate::game::Game, by: CharId, gd: GuardId, kind: Option<crate::close::CloseKind>, lethal: bool) {
     use crate::character::{BlowLive, BlowOpts, BlowStyle, TakenStyle};
-    if !live(g, Half::Blow) { return; }
     let style = blow_style(kind, lethal);
     let vic = g.gd[gd].ch;
     let (at, at2) = marks(g, by, vic, style);
     let opts = BlowOpts { hit: None, end: None, live: Some(BlowLive { by, vic, style }), rise: Some(may_rise(g, by)), tail: Some(true) };
     crate::character::anim_blow(g, by, style, at, at2, Some(&opts));
     g.stats.takedown.blows += 1;
-    if !live(g, Half::Victim) { return; }
     if style == BlowStyle::Mouth {
         crate::character::anim_taken(g, vic, TakenStyle::Arch, Some(0.12));
     } else if style == BlowStyle::Chop {
@@ -193,11 +166,9 @@ fn fits(g: &mut Game, p: V3, d: V3, a: f64, touch: &mut Vec<i32>) -> bool {
 pub fn take_fall(g: &mut crate::game::Game, gd: GuardId, kind: Option<crate::close::CloseKind>, lethal: bool, how: Option<crate::takedown::TakeFallHow>) {
     use crate::character::FallStyle;
     use crate::close::CloseKind;
-    if !live(g, Half::Fall) { return; }
-    let led = if how == Some(TakeFallHow::Kill) && !live(g, Half::Kill) { None } else { how };
-    let style = if led == Some(TakeFallHow::Choke) {
+    let style = if how == Some(TakeFallHow::Choke) {
         FallStyle::Sink
-    } else if led == Some(TakeFallHow::Whip) || led == Some(TakeFallHow::Kill) {
+    } else if how == Some(TakeFallHow::Whip) || how == Some(TakeFallHow::Kill) {
         FallStyle::Fold
     } else if kind == Some(CloseKind::Seat) {
         FallStyle::Slump
@@ -206,14 +177,13 @@ pub fn take_fall(g: &mut crate::game::Game, gd: GuardId, kind: Option<crate::clo
     };
     let vic = g.gd[gd].ch;
     let by = g.pl[g.player].ch;
-    let ahead = if led == Some(TakeFallHow::Choke) { g.k.hold.lay_ahead } else { 0.0 };
+    let ahead = if how == Some(TakeFallHow::Choke) { g.k.hold.lay_ahead } else { 0.0 };
     set_fall(g, vic, style, Some(by), Some(ahead));
 }
 
 /// The partner's hands go on: the chop from behind, the palm from the front. (takedown.ts partnerBegin)
 pub fn partner_begin(g: &mut crate::game::Game, mate: GuardId, foe: GuardId, front: bool) {
     use crate::character::{BlowLive, BlowOpts, BlowStyle, TakenStyle};
-    if !live(g, Half::Partner) { return; }
     let style = if front { BlowStyle::Palm } else { BlowStyle::Chop };
     let (by, vic) = (g.gd[mate].ch, g.gd[foe].ch);
     let (at, at2) = marks(g, by, vic, style);
@@ -226,10 +196,8 @@ pub fn partner_begin(g: &mut crate::game::Game, mate: GuardId, foe: GuardId, fro
     };
     crate::character::anim_blow(g, by, style, at, at2, Some(&opts));
     g.stats.takedown.partner += 1;
-    if live(g, Half::Victim) {
-        let delay = g.k.takedown.partner_hit;
-        crate::character::anim_taken(g, vic, if front { TakenStyle::Snap } else { TakenStyle::Hunch }, Some(delay));
-    }
+    let delay = g.k.takedown.partner_hit;
+    crate::character::anim_taken(g, vic, if front { TakenStyle::Snap } else { TakenStyle::Hunch }, Some(delay));
 }
 
 /// The partner's hands are called off before the man is out: both moves let go of, eased. (takedown.ts partnerCancel)
@@ -242,7 +210,6 @@ pub fn partner_cancel(g: &mut crate::game::Game, mate: GuardId, foe: GuardId) {
 /// The man goes down by the partner's move, before their killGuard. (takedown.ts partnerFall)
 pub fn partner_fall(g: &mut crate::game::Game, foe: GuardId, front: bool, mate: Option<GuardId>) {
     use crate::character::FallStyle;
-    if !live(g, Half::Partner) || !live(g, Half::Fall) { return; }
     let vic = g.gd[foe].ch;
     let by = mate.map(|who| g.gd[who].ch);
     set_fall(g, vic, if front { FallStyle::Topple } else { FallStyle::Fold }, by, None);
@@ -250,30 +217,26 @@ pub fn partner_fall(g: &mut crate::game::Game, foe: GuardId, front: bool, mate: 
 
 /// Once a frame: the hold's fallback words, and who breathes: every man and civilian out cold. (takedown.ts takedownTick)
 pub fn takedown_tick(g: &mut crate::game::Game) {
-    g.m.character.hold_show.kill = live(g, Half::Kill);
-    g.m.character.hold_show.beats = live(g, Half::ChokeBeats);
-    let on = live(g, Half::Breathe);
-    if !on && !g.m.takedown.breathing { return; }
+    g.m.character.hold_show.kill = true;
+    g.m.character.hold_show.beats = true;
     let mut n: i32 = 0;
     for i in 0..g.guards.len() {
         let gd = g.guards[i];
-        breathe_each(g, gd, on, &mut n);
+        breathe_each(g, gd, &mut n);
     }
     for i in 0..g.civilians.len() {
         let gd = g.civilians[i];
-        breathe_each(g, gd, on, &mut n);
+        breathe_each(g, gd, &mut n);
     }
-    g.m.takedown.breathing = n != 0;
     g.stats.takedown.breathing = n;
 }
 
 /// One man's breath: on while he lies out cold, let go otherwise. (takedown.ts takedownTick's each)
-fn breathe_each(g: &mut Game, gd: GuardId, on: bool, n: &mut i32) {
+fn breathe_each(g: &mut Game, gd: GuardId, n: &mut i32) {
     use crate::game::{DownKind, GuardState};
     let c = g.gd[gd].ch;
     let down_kind = g.gd[gd].down_kind;
-    if on
-        && g.ch[c].ragdoll.is_some()
+    if g.ch[c].ragdoll.is_some()
         && g.gd[gd].state == GuardState::Dead
         && (down_kind == Some(DownKind::Struck) || down_kind == Some(DownKind::Choked))
     {
@@ -353,9 +316,9 @@ mod tests {
         (g.gd.push(row), c)
     }
 
-    /// Who breathes: out cold and flat, guard or civilian; not the dead, not one still falling. A show lets every one go, once, and then costs nothing.
+    /// Who breathes: out cold and flat, guard or civilian; not the dead, not one still falling.
     #[test]
-    fn the_out_cold_breathe_and_a_show_lets_them_go() {
+    fn the_out_cold_breathe() {
         use crate::game::{DownKind, GuardState};
         let mut g = Game::blank();
         let (struck, c_struck) = man(&mut g, GuardState::Dead, Some(DownKind::Struck), true);
@@ -370,18 +333,7 @@ mod tests {
         assert!(g.ch[c_falling].breathe.is_none() && g.ch[c_killed].breathe.is_none());
         assert_eq!(g.ch[c_struck].breathe.unwrap().breath_hz.to_bits(), g.k.takedown.breath_hz.to_bits());
         assert_eq!(g.stats.takedown.breathing, 2);
-        assert!(g.m.takedown.breathing && g.m.character.hold_show.kill && g.m.character.hold_show.beats);
-
-        g.touring = true;
-        takedown_tick(&mut g);
-        assert!(g.ch[c_struck].breathe.is_none() && g.ch[c_choked].breathe.is_none());
-        assert_eq!(g.stats.takedown.breathing, 0);
-        assert!(!g.m.takedown.breathing && !g.m.character.hold_show.kill && !g.m.character.hold_show.beats);
-
-        // Nobody breathing and the switch off: the walk is not taken, so a breath set by hand stays.
-        g.ch[c_struck].breathe = Some(crate::character::CharacterBreathe { breath_hz: 1.0, breath_rise: 1.0, breath_in: 1.0 });
-        takedown_tick(&mut g);
-        assert!(g.ch[c_struck].breathe.is_some());
+        assert!(g.m.character.hold_show.kill && g.m.character.hold_show.beats);
     }
 
     #[test]

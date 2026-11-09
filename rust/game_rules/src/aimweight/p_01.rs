@@ -10,7 +10,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 /// May his aim be weighed now. `AIMWEIGHT.on` is settled on.   (aimweight.ts can)
 pub fn can(g: &mut Game) -> bool {
     let pl = g.player;
-    g.puppet.is_none() && !g.touring && !g.pl[pl].down
+    g.puppet.is_none() && !g.pl[pl].down
 }
 
 /// Does his aim have weight right now.   (aimweight.ts aimWeighs)

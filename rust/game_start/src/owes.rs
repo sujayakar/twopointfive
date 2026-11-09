@@ -172,7 +172,7 @@ impl Owes {
         if e != 0.0 && e != 1.0 && e != 2.0 { self.fault("alarm", "the floor", t, format!("level {}", e)); }
         if e == 0.0 && clock != -1.0 { self.fault("alarm", "the floor", t, format!("level 0 with a clock at {}", clock)); }
         if e > 0.0 && !(clock > 0.0) { self.fault("alarm", "the floor", t, format!("level {} with no clock", e)); }
-        if e < 2.0 && !g.quiet_utility { for &gd in &g.guards { if g.gd[gd].state != GuardState::Dead && (g.gd[gd].leader.is_some() || g.gd[gd].post.is_some()) { let w = g.gd[gd].callsign.clone(); self.fault("lockdown duty", &w, t, format!("a leader or a post at level {}", e)); } } }
+        if e < 2.0 { for &gd in &g.guards { if g.gd[gd].state != GuardState::Dead && (g.gd[gd].leader.is_some() || g.gd[gd].post.is_some()) { let w = g.gd[gd].callsign.clone(); self.fault("lockdown duty", &w, t, format!("a leader or a post at level {}", e)); } } }
     }
     fn tracers_owe(&mut self, g: &Game, t: f64) {
         let pool = &g.tracers;

@@ -7,9 +7,9 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// Is the rule live for this man: not while he is down, nor under a show or the puppet's strings.   (sprintdoor.ts live)
+/// Is the rule live for this man: not while he is down, nor under the puppet's strings.   (sprintdoor.ts live)
 pub fn live(g: &mut crate::game::Game, pl: crate::sprintdoor::LivePl) -> bool {
-    !pl.down && g.puppet.is_none() && !g.touring
+    !pl.down && g.puppet.is_none()
 }
 
 /// What his door contact carries this frame: the rule's numbers while he is at a sprint, nothing otherwise.   (sprintdoor.ts sprintDoorRun)

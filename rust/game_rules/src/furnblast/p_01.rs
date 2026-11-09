@@ -194,7 +194,6 @@ pub fn furniture_stands(g: &mut crate::game::Game, m: FurnblastMemberId) -> bool
 fn any_stands(g: &mut Game, members: &[FurnblastMemberId]) -> bool { for &mi in members { if furniture_stands(g, mi) { return true; } } false }
 /// what a blast would take first, asked before it goes off and reading only (furnblast.ts Furniture.firstToGo)
 pub fn furniture_first_to_go(g: &mut crate::game::Game, at: V3, src: crate::furnblast::BlastSource) -> Option<crate::furnblast::BlastFirst> {
-    if g.destr.show_chaos.is_some() { return None; }
     let k = g.k.furn.k.get(src).copied().unwrap_or(1.0); if !(k > 0.0) { return None; }
     let apart_m = g.k.furn.apart_m * k; let shatter_m = g.k.furn.shatter_m * k;
     let apart_max_vol = g.k.furn.root.apart_max_vol;
@@ -285,7 +284,7 @@ pub fn furniture_exposed_box(g: &mut crate::game::Game, origins: &[V3], a: crate
 // ---------------------------------------------------------------- the blast
 /// a charge went off at `at`: throws and breaks what it reaches (furnblast.ts Furniture.blast)
 pub fn furniture_blast(g: &mut crate::game::Game, at: V3, src: crate::furnblast::BlastSource, who: f64, chaos: f64) {
-    if !(chaos > 0.0) || g.destr.show_chaos.is_some() { return; }
+    if !(chaos > 0.0) { return; }
     let k = g.k.furn.k.get(src).copied().unwrap_or(1.0); if !(k > 0.0) { return; }
     if let Some(l) = g.destr.furn.last { if l.t == g.time && m::hyp2(at[0] - l.at[0], at[2] - l.at[2]) <= g.k.furn.merge_m && k <= l.k { g.stats.furnblast.merged += 1; return; } }
     g.destr.furn.last = Some(FurnitureLast { t: g.time, at: v3::copy(at), k }); g.stats.furnblast.blasts += 1;
@@ -638,7 +637,6 @@ pub fn furniture_mouth_mine(g: &mut crate::game::Game, i: f64, b: BoxId, a: crat
 /// would mouth() take static `i` from `r`, a hole not blown yet? Reading only (furnblast.ts Furniture.mouthWouldTake)
 pub fn furniture_mouth_would_take(g: &mut crate::game::Game, i: f64, r: [f64; 4], depth: Option<f64>) -> bool {
     let depth = depth.unwrap_or(0.0);
-    if g.destr.show_chaos.is_some() { return false; }
     let n = m::min(g.col.boxes.len() as f64, g.destr.walls.authored) as usize;
     let b = match box_at(g, i) { Some(b) => b, None => return false };
     if i >= n as f64 || is_piece(g, b) { return false; }

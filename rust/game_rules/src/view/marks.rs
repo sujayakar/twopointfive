@@ -78,9 +78,7 @@ pub fn marks_view(g: &Game, seat: &crate::seats::SeatRef) -> MarksView {
         ManMark { man: g.ch[g.gd[gd].ch].id, text, tone, civ, hidden: crate::fogofwar::fog_of_war_hides(g, gd), debug }
     };
     let mut men: Vec<ManMark> = g.guards.iter().map(|&gd| row(gd, false)).collect();
-    if !g.touring && !g.quiet_utility {
-        men.extend(g.civilians.iter().filter(|&&cv| g.gd[cv].civ.map_or(false, |c| g.cv[c].state != crate::civilians::CivState::Gone)).map(|&cv| row(cv, true)));
-    }
+    men.extend(g.civilians.iter().filter(|&&cv| g.gd[cv].civ.map_or(false, |c| g.cv[c].state != crate::civilians::CivState::Gone)).map(|&cv| row(cv, true)));
     let stalk = crate::stalk::stalk_on(g, seat).map(|gd| g.ch[g.gd[gd].ch].id);
     MarksView {
         men,

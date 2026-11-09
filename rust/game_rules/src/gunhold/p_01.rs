@@ -19,11 +19,6 @@ pub fn gun_hold_stats<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::gunhol
     g.m.gunhold.stats_of.as_mut().expect("a game holds its gun-hold counters from the start")
 }
 
-/// Is the rule running now: never under a show or quiet utility. (gunhold.ts live)
-pub fn live(g: &mut crate::game::Game) -> bool {
-    !g.touring && !g.quiet_utility
-}
-
 /// Distance on the floor. (gunhold.ts flat)
 pub fn flat(a: V3, b: V3) -> f64 {
     m::hyp2(a[0] - b[0], a[2] - b[2])
@@ -56,9 +51,6 @@ fn return_known(g: &mut Game, key: u32, k: Known) {
 
 /// This man has the pair in his eyes this frame: what his side knows of the hold is brought up to it. (gunhold.ts gunHoldSee)
 pub fn gun_hold_see(g: &mut crate::game::Game, gd: GuardId, p: crate::guards::Pair) {
-    if !live(g) {
-        return;
-    }
     let (variant, phase, shot_t) = match g.pl[g.player].holding.as_ref() {
         Some(h) => (h.variant, h.phase, h.shot_t),
         None => return,
@@ -112,9 +104,6 @@ pub fn learn_shot(g: &mut crate::game::Game, k: &mut crate::gunhold::Known, shot
 
 /// Is this man's standoff one the rule has (the pistol known in the hold, a part dealt him): the keys of the hold's Known and of his St. (gunhold.ts partOf)
 pub fn part_of(g: &mut crate::game::Game, gd: GuardId) -> Option<(u32, GuardsStandoffId)> {
-    if !live(g) {
-        return None;
-    }
     let s = g.gd[gd].standoff?;
     let (held, key) = g.pl[g.player].holding.as_ref().map(|h| (h.g, h.serial))?;
     if held != g.tab.guards_standoff[s].pair {
@@ -165,7 +154,7 @@ pub fn standoff_on_feet(g: &mut crate::game::Game, gd: GuardId) -> bool {
 
 /// Is the clean line at Sam's back this man's to use: Sam has fired from behind the man, and the man is no civilian. (gunhold.ts gunHoldFree)
 pub fn gun_hold_free(g: &mut crate::game::Game, p: crate::guards::Pair) -> bool {
-    if !live(g) || g.gd[p.held].team == crate::teams::Team::Civilian {
+    if g.gd[p.held].team == crate::teams::Team::Civilian {
         return false;
     }
     let key = p.key;
@@ -674,9 +663,6 @@ fn next_peek(g: &mut Game, who: crate::dice::Who, now: f64) -> f64 {
 
 /// This man's feet while the pistol is known in the hold; None = the ring as ever. (gunhold.ts gunHoldFeet)
 pub fn gun_hold_feet(g: &mut crate::game::Game, gd: GuardId, dt: f64, p: crate::guards::Pair, s: GuardsStandoffId, fs: crate::gunhold::GunHoldFeetFs) -> Option<crate::gunhold::GunHoldFeet> {
-    if !live(g) {
-        return None;
-    }
     let key = p.key;
     let mut k = lend_known(g, key)?;
     let r = feet(g, gd, dt, &p, s, fs, &mut k);

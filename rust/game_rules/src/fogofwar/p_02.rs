@@ -53,19 +53,14 @@ pub fn fog_through(g: &crate::game::Game) -> f64 {
     (js::to_i32(f.glass) | js::to_i32(f.thin)) as f64
 }
 
-/// A level's script puts a man in the picture, or takes him out. (FogOfWar.show)
-pub fn fog_of_war_show(g: &mut crate::game::Game, gd: GuardId, on: bool) {
-    if on { g.fog_of_war.shown.add(gd); } else { g.fog_of_war.shown.delete(gd); }
-}
-
 /// `blank` is the field initialisers, and the TypeScript's constructor only keeps `g`. (FogOfWar constructor)
 pub fn fog_of_war_new(g: &crate::game::Game) -> crate::fogofwar::FogOfWar {
     crate::fogofwar::FogOfWar::blank()
 }
 
-/// The switch, and no show running. (FogOfWar.active)
+/// The switch, and somebody plays.
 pub fn fog_of_war_active(g: &crate::game::Game) -> bool {
-    g.fog_of_war.on && !g.touring && !g.quiet_utility
+    g.fog_of_war.on && !g.aside
 }
 
 /// Is this man on the team whose sight it is. (FogOfWar.onTeam)
@@ -349,11 +344,10 @@ fn judge(g: &mut crate::game::Game, gd: GuardId, lines: &JsMap<GuardId, bool>, v
             }
         }
     }
-    let shown = g.fog_of_war.shown.has(gd);
     let (now, linger, p) = (g.time, g.k.fog.linger, g.ch[g.gd[gd].ch].pos);
     let r = g.fog_of_war.recs.get_mut(gd).unwrap();
     r.framed = Some(framed);
-    if dead && (seen || fired || framed || shown || (since >= 0.0 && since < m::max(linger, 0.5))) { r.body = true; }
+    if dead && (seen || fired || framed || (since >= 0.0 && since < m::max(linger, 0.5))) { r.body = true; }
     r.seen = seen;
     if seen {
         r.t = now;
@@ -529,7 +523,7 @@ pub fn fog_of_war_reset(g: &mut crate::game::Game) {
     crate::fogofwar::picture::reset(g);
     let f = &mut g.fog_of_war;
     f.lamp_recs.clear(); f.door_recs.clear(); f.doors_held = 0.0; f.thing_recs.clear(); f.props_loaded = false; f.loaded = false; f.our_landed.clear(); f.thing_since = -1.0;
-    f.recs = JsMap::new(); f.frame_no = 0.0; f.hidden_chars.clear(); f.fired_n = JsMap::new(); f.fired_at = JsMap::new(); f.shown = JsSet::new(); f.fire_clock = 0.0;
+    f.recs = JsMap::new(); f.frame_no = 0.0; f.hidden_chars.clear(); f.fired_n = JsMap::new(); f.fired_at = JsMap::new(); f.fire_clock = 0.0;
     f.call_clock = 0.0; f.last_call = -1e9; f.called_t = JsMap::new(); f.known_t = JsMap::new(); f.told_step = JsMap::new(); f.call_n = 0.0; f.call_log = Vec::new(); f.call_stats = crate::fogofwar::FogOfWarCallStats { contact: 0.0, heard: 0.0 };
 }
 

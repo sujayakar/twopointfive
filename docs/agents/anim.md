@@ -69,7 +69,7 @@ pose under them (`anim_under_pose`), so the game reads joints with `character_jo
 
 **The turn.** Between a man's updates `body_yaw` and `aim_yaw` hold the weighed yaws. `character_turn_begin`, at the head of `update_guard`, puts his AI's wish back. Then
 `character_turn_weigh` steps body and gun toward the wish with acceleration, a top speed and a brake (`k.turn`, `handling_of`, `anim.trained`). It is on for the guards list but
-a held man or a show. Sam and civilians have no turn.
+a held man. Sam and civilians have no turn.
 
 **The long gun.** A set of springs toward one of `LongStance` (`long_targets`). `anim_long_body` sets the trunk and `anim_long_arms` puts both hands on the grip. A pistol's
 reload is its clip. A long gun plays none: `anim_reload_carry` brings the gun and head round and `anim_reload_arm` works the support hand, by `reload_at` where the game deals it.

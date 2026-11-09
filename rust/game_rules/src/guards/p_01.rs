@@ -123,44 +123,42 @@ pub fn colleague_fire_pos(g: &mut crate::game::Game, gd: GuardId, e: crate::guar
     }
     let player_pos = g.ch[g.pl[g.player].ch].pos;
     if let Some(s) = sh {
-        if !g.touring {
-            let who: Option<Who> = match g.gd[s].foe {
-                Some(crate::game::Foe::Guard(f)) => Some(Who::Guard(f)),
-                Some(crate::game::Foe::Player) => Some(Who::Player),
-                None => {
-                    if g.gd[s].team == crate::teams::Team::Guard { Some(Who::Player) } else { None }
+        let who: Option<Who> = match g.gd[s].foe {
+            Some(crate::game::Foe::Guard(f)) => Some(Who::Guard(f)),
+            Some(crate::game::Foe::Player) => Some(Who::Player),
+            None => {
+                if g.gd[s].team == crate::teams::Team::Guard { Some(Who::Player) } else { None }
+            }
+        };
+        if let Some(who) = who {
+            if let Some(i) = crate::picture::idea_of(g, s, who) {
+                let tr = match who {
+                    Who::Player => player_pos,
+                    Who::Guard(f) => g.ch[g.gd[f].ch].pos,
+                };
+                let mine = crate::picture::idea_of(g, gd, who);
+                g.stats.picture.shot_placed += 1;
+                if m::hyp2(i.at[0] - tr[0], i.at[2] - tr[2]) >= 1.0 {
+                    g.stats.picture.shot_off += 1;
                 }
-            };
-            if let Some(who) = who {
-                if let Some(i) = crate::picture::idea_of(g, s, who) {
-                    let tr = match who {
-                        Who::Player => player_pos,
-                        Who::Guard(f) => g.ch[g.gd[f].ch].pos,
-                    };
-                    let mine = crate::picture::idea_of(g, gd, who);
-                    g.stats.picture.shot_placed += 1;
-                    if m::hyp2(i.at[0] - tr[0], i.at[2] - tr[2]) >= 1.0 {
-                        g.stats.picture.shot_off += 1;
-                    }
-                    let own = match &mine {
-                        Some(mi) => mi.t >= i.t,
-                        None => false,
-                    };
-                    if g.gd[gd].last_known.is_some() && (i.lost || own || g.gd[gd].fix_t >= i.t) {
-                        g.stats.picture.shot_kept += 1;
-                        return None;
-                    }
-                    let w = if own { mine.unwrap() } else { i };
-                    if own {
-                        g.stats.picture.shot_kept += 1;
-                    } else if !i.lost {
-                        let age = g.time - i.t;
-                        crate::picture::picture_tell(g, gd, who, i.at, Some(age));
-                    }
-                    g.gd[gd].fix_ref = Some([w.at[0], 0.0, w.at[2]]);
-                    g.gd[gd].fix_t = w.t;
-                    return Some([w.at[0], 0.0, w.at[2]]);
+                let own = match &mine {
+                    Some(mi) => mi.t >= i.t,
+                    None => false,
+                };
+                if g.gd[gd].last_known.is_some() && (i.lost || own || g.gd[gd].fix_t >= i.t) {
+                    g.stats.picture.shot_kept += 1;
+                    return None;
                 }
+                let w = if own { mine.unwrap() } else { i };
+                if own {
+                    g.stats.picture.shot_kept += 1;
+                } else if !i.lost {
+                    let age = g.time - i.t;
+                    crate::picture::picture_tell(g, gd, who, i.at, Some(age));
+                }
+                g.gd[gd].fix_ref = Some([w.at[0], 0.0, w.at[2]]);
+                g.gd[gd].fix_t = w.t;
+                return Some([w.at[0], 0.0, w.at[2]]);
             }
         }
     }

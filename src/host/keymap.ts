@@ -78,7 +78,7 @@ export const KEY_ACTS: KeyAct[] = [
 /** the empty hands' slot (rust/game_types/src/handslot): a row only while the slot is on (the header's note). Off, it is on no list and the 0 key is anybody's */
 const SLOT_ACT = act('0', 'Digit0'), WITH_SLOT = [...KEY_ACTS, SLOT_ACT];
 /** the page's own: never a row's key (Esc the pause, Enter the checkpoint, Tab the way back, the arrows the highlight, the F row the browser's and the
- *  recorders', the modifiers the camera's and the browser's, P [ ] the showcase's and the exposure's, Caps Lock a key some boards only ever press) */
+ *  recorders', the modifiers the camera's and the browser's, [ ] the exposure's, Caps Lock a key some boards only ever press) */
 const FIXED = /^(Escape|Enter|NumpadEnter|Tab|Arrow(Up|Down|Left|Right)|F\d{1,2}|(Control|Alt|Meta|OS)(Left|Right)?|KeyP|BracketLeft|BracketRight|CapsLock|ContextMenu|NumLock|ScrollLock|Pause|PrintScreen|Unidentified|)$/;
 export const KEYMAP = { /** false = the build's own keys, whatever is kept: the module's own stand (a tool, the editor, the viewer), and the page's under `?keybinds=0` */ on: false,
   /** the wall hold's row has no key in the build (the header's note). false = it is on Q: the module's own stand, and the page's under `?qfree=0` */ qFree: false,

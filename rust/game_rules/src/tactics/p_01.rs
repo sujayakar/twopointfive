@@ -64,9 +64,9 @@ pub fn stuns_of(g: &mut crate::game::Game, gd: GuardId) -> f64 {
     match g.m.tactics.kit.get(gd) { Some(k) => k.stuns, None => 0.0 }
 }
 
-/// Is any of it live: the switch on, not the tour, the AI on. (tactics.ts tacticsOn)
+/// Is any of it live: the switch on, the AI on. (tactics.ts tacticsOn)
 pub fn tactics_on(g: &crate::game::Game) -> bool {
-    g.tune.tactics && !g.quiet_utility && g.ai_enabled
+    g.tune.tactics && g.ai_enabled
 }
 
 /// Distance over the floor. (tactics.ts flat)
