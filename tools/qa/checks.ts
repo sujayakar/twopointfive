@@ -27,7 +27,7 @@ const ROWS: readonly Row[] = [
 ];
 /** check files no row runs, each with who runs it */
 const BY_HAND: Readonly<Record<string, string>> = {
-  'cloud-check.ts': 'the backend\'s packages', 'lobby-check.ts': 'the backend\'s packages', 'mp-control-check.ts': 'the backend\'s packages', 'mpserver-check.ts': 'three processes, minutes', 'seats-check.ts': 'two players, minutes', 'teams-check.ts': 'co-op\'s',
+  'cloud-check.ts': 'the backend\'s packages', 'lobby-check.ts': 'the backend\'s packages', 'mp-control-check.ts': 'the backend\'s packages', 'mpserver-check.ts': 'three processes, minutes',
   'knobs-check.ts': 'the gate',
   'lesson-check.ts': 'the level skill',
   'samestart-check.ts': 'the level skill',
