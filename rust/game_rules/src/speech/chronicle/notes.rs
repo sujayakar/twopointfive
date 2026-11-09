@@ -422,7 +422,7 @@ pub fn chron_shot(g: &mut crate::game::Game, weapon: &str, hit_guard: Option<Gua
         let mut bd = SHOT_NEAR_M;
         for i in 0..g.guards.len() {
             let gd = g.guards[i];
-            if g.gd[gd].state == crate::game::GuardState::Dead { continue; }
+            if crate::condition::down(g, g.gd[gd].ch) { continue; }
             let c = g.gd[gd].ch;
             let at = match g.ch[c].bones.get(crate::character::Bone::Chest) { Some(b) => *b, None => g.ch[c].pos };
             let d = v3::dist(at, hit_p);
@@ -573,7 +573,7 @@ pub fn chron_hit(g: &mut crate::game::Game, by: Option<&str>) -> Option<crate::c
     if g.chronicle.counts.down || !crate::mission::mission_live(g) { return None; }
     let by = by.unwrap_or("");
     let pl = g.player;
-    if g.pl[pl].down {
+    if crate::condition::down(g, g.pl[pl].ch) {
         g.chronicle.counts.down = true;
         g.chronicle.counts.down_by = String::from(by);
         return live_row(g, ChronKind::Down, row_data(vec![("by", tx(by))]), None);
@@ -617,7 +617,7 @@ fn run_counts(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> crate::chr
         seen: s.spotted, seen_up: n.seen_up, alarms: s.alerts, esc1: n.esc1, esc2: n.esc2, bodies: s.bodies,
         kills: s.kills, kos: s.knockouts, shots: s.shots, shots_near_men: n.shots_near_men, lights_shot: n.lights_shot, ocps: n.ocps,
         kicked: n.kicked, picked: n.picked, keys: s.keys, intel: n.intel, questioned: c.questioned.len() as f64, roster,
-        hits: n.hits, down: n.down || (g.pl[seat.player].down && st != MissionStage::Done), loads: n.loads, thrown: n.thrown, grabs: n.grabs, dropped: c.dropped, devices: n.devices,
+        hits: n.hits, down: n.down || (crate::condition::down(g, g.pl[seat.player].ch) && st != MissionStage::Done), loads: n.loads, thrown: n.thrown, grabs: n.grabs, dropped: c.dropped, devices: n.devices,
         civ_seen: n.civ_seen, civ_reported: n.civ_reported, civ_complied: n.civ_complied, civ_ko: n.civ_ko, civ_killed: n.civ_killed,
     }
 }

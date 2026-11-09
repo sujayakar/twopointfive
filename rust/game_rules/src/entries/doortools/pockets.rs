@@ -17,7 +17,7 @@ fn calls(g: &Game, men: &[GuardId]) -> String {
 }
 /// `men.filter(m => m.state !== 'dead')`
 fn alive(g: &Game, men: &[GuardId]) -> Vec<GuardId> {
-    men.iter().copied().filter(|&m| g.gd[m].state != crate::game::GuardState::Dead).collect()
+    men.iter().copied().filter(|&m| !crate::condition::down(g, g.gd[m].ch)).collect()
 }
 /// `[...new Set(words)].join(' + ')`: first sight's order
 fn uniq_plus(words: Vec<String>) -> String {
@@ -422,7 +422,7 @@ pub(super) fn door_tools_step_in(g: &mut crate::game::Game, op: DoorOpId) {
         let able: Vec<GuardId> = jamb
             .iter()
             .copied()
-            .filter(|&m| g.gd[m].state != crate::game::GuardState::Dead && (Some(m) != threw || m == lead) && (m == lead || !last_stack || v3::dist_xz(pos_of(g, m), fc) < reach))
+            .filter(|&m| !crate::condition::down(g, g.gd[m].ch) && (Some(m) != threw || m == lead) && (m == lead || !last_stack || v3::dist_xz(pos_of(g, m), fc) < reach))
             .collect();
         let able = crate::gunroles::gun_first(g, &able);
         let f = door_tools_seen_most(g, lead, &able, at);

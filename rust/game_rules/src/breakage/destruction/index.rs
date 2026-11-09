@@ -511,12 +511,12 @@ fn destruction_bodies(g: &Game, out: &mut Vec<crate::debris::FootMan>) {
 fn destruction_on_foot(g: &crate::game::Game) -> Vec<CharId> {
     let mut men: Vec<CharId> = crate::seats::men_up(g).into_iter().map(|pl| g.pl[pl].ch).collect();
     for gd in g.guards.iter() {
-        if g.gd[*gd].state != crate::game::GuardState::Dead {
+        if !crate::condition::down(g, g.gd[*gd].ch) {
             men.push(g.gd[*gd].ch);
         }
     }
     for cv in crate::civilians::civilians_shown(g) {
-        if g.gd[cv].state != crate::game::GuardState::Dead && !crate::civilians::civilian_seated(g, cv) {
+        if !crate::condition::down(g, g.gd[cv].ch) && !crate::civilians::civilian_seated(g, cv) {
             men.push(g.gd[cv].ch);
         }
     }

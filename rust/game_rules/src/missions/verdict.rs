@@ -36,7 +36,7 @@ pub(crate) fn ended(g: &crate::game::Game) -> Option<(bool, &'static str, String
     let kind = crate::scenario_run::active_scenario(g);
     let roomclear = kind == Some(K::Roomclear);
     let mut all_down = true;
-    for i in 0..g.seats.len() { let s = g.seats[i]; let p = crate::cmd::seat_man(g, s); if !g.pl[p].down { all_down = false; break; } }
+    for i in 0..g.seats.len() { let s = g.seats[i]; let p = crate::cmd::seat_man(g, s); if !crate::condition::down(g, g.pl[p].ch) { all_down = false; break; } }
     if all_down {
         let by = &g.chronicle.counts.down_by;
         return Some((false, "DOWN", if by.is_empty() { String::new() } else { alloc::format!("by {}", by) }));
@@ -51,7 +51,7 @@ pub(crate) fn ended(g: &crate::game::Game) -> Option<(bool, &'static str, String
     }
     if kind == Some(K::Nightbreach) {
         let h = &g.night_breach.hostiles;
-        if !h.is_empty() && h.iter().all(|&x| g.gd[x].state == crate::game::GuardState::Dead || g.gd[x].fled) { return Some((true, "CLEAR", String::new())); }
+        if !h.is_empty() && h.iter().all(|&x| crate::condition::down(g, g.gd[x].ch) || g.gd[x].fled) { return Some((true, "CLEAR", String::new())); }
         return if g.mission.stage == crate::game::MissionStage::Failed { Some((false, "FAILED", String::new())) } else { None };
     }
     match g.mission.stage { crate::game::MissionStage::Done => Some((true, "OUT", String::new())), crate::game::MissionStage::Failed => Some((false, "FAILED", String::new())), _ => None }
@@ -199,7 +199,7 @@ fn watch(g: &mut Game) {
         let c = match (pl, gd) { (Some(pl), _) => g.pl[pl].ch, (None, Some(gd)) => g.gd[gd].ch, (None, None) => continue };
         let pos = g.ch[c].pos;
         let p = g.ch[c].bones.get(crate::character::Bone::Hips).copied().unwrap_or(pos);
-        let down = match pl { Some(pl) => g.pl[pl].down, None => g.gd[gd.unwrap()].state == crate::game::GuardState::Dead };
+        let down = match pl { Some(pl) => crate::condition::down(g, g.pl[pl].ch), None => crate::condition::down(g, g.gd[gd.unwrap()].ch) };
         if down {
             let state = match pl {
                 Some(_) => ManState::Dead,
@@ -245,7 +245,7 @@ fn close(g: &mut Game, end: (bool, &'static str, String)) {
     let secs = secs(g);
     let men: Vec<VerdictMan> = g.verdict.tracks.values().map(|t| VerdictMan { id: t.id, name: t.name.clone(), tone: t.tone, human: t.human, state: t.state, down_at: t.down_at, down_room: t.down_room.clone(), down_by: t.down_by.clone(), down_pos: t.down_pos, drops: t.drops.clone(), path: t.path.clone() }).collect();
     let lost = men.iter().filter(|x| x.state != ManState::Up).count() as f64;
-    let foes_down = g.verdict.foes.iter().filter(|&h| g.gd[h].state == crate::game::GuardState::Dead).count() as f64;
+    let foes_down = g.verdict.foes.iter().filter(|&h| crate::condition::down(g, g.gd[h].ch)).count() as f64;
     let hostages = if kind == Some(K::Rescue) { g.rescue.result.as_ref().map(|r| RunVerdictHostages { alive: r.hostages, of: g.rescue.hostages.len() as f64 }) } else { None };
     let (won, word, why) = end;
     let res = RunVerdict {
@@ -259,7 +259,7 @@ fn close(g: &mut Game, end: (bool, &'static str, String)) {
     };
     // the stealth mission raises its own card (the exfil, a player down); every other end is this module's to announce
     let stage = g.mission.stage;
-    let all_down = { let mut a = true; for i in 0..g.seats.len() { let p = crate::cmd::seat_man(g, g.seats[i]); if !g.pl[p].down { a = false; break; } } a };
+    let all_down = { let mut a = true; for i in 0..g.seats.len() { let p = crate::cmd::seat_man(g, g.seats[i]); if !crate::condition::down(g, g.pl[p].ch) { a = false; break; } } a };
     let own = stage == crate::game::MissionStage::Done || (stage == crate::game::MissionStage::Failed && g.mission.down_card_at > 0.0) || (stage != crate::game::MissionStage::Failed && all_down);
     g.verdict.card_at = if own { -1.0 } else { g.time + if won { g.k.verdict.win_secs } else { g.k.verdict.loss_secs } };
     g.verdict.res = Some(res);

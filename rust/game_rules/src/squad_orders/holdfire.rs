@@ -30,7 +30,7 @@ fn mate(g: &crate::game::Game, gd: GuardId) -> bool {
 /// The squad's living men.
 fn living(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<GuardId> {
     let mut men = crate::orders::squad_orders_squad(g, seat);
-    men.retain(|&gd| g.gd[gd].state != crate::game::GuardState::Dead);
+    men.retain(|&gd| !crate::condition::down(g, g.gd[gd].ch));
     men
 }
 
@@ -237,7 +237,7 @@ pub fn hold_fire_holds_target(g: &mut crate::game::Game, gd: GuardId) -> bool {
         Some(h) => h,
         None => return false,
     };
-    if g.gd[h].state == crate::game::GuardState::Dead {
+    if crate::condition::down(g, g.gd[h].ch) {
         return false;
     }
     let noticed = g.k.silent.noticed;

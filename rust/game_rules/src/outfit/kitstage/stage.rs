@@ -45,7 +45,7 @@ fn staged_way_of(g: &Game, asks_none: bool) -> Way {
 /// the way a game stood from a link stages: its index, or none (no mission started)
 pub fn staged_way(g: &Game, asks_none: bool) -> Option<usize> { let w = staged_way_of(g, asks_none); if w.active { Some(w.way) } else { None } }
 
-fn ops(g: &Game) -> Vec<GuardId> { crate::scenario_run::team_of(g).into_iter().filter(|&x| g.gd[x].state != GuardState::Dead).collect() }
+fn ops(g: &Game) -> Vec<GuardId> { crate::scenario_run::team_of(g).into_iter().filter(|&x| !crate::condition::down(g, g.gd[x].ch)).collect() }
 
 /// EVERYBODY WHO IS NOT THE TEAM, far off, dark, held, calm and deaf, the level's devices inert, and the alarm a stray noise placed dropped while the floor is at 0. A blast is made inside the step, so the mark
 /// on a man's ears is set past any number an event can get, and renewed here. Answers what it had to put right: men found roused, the alarm's marks dropped.
@@ -66,7 +66,7 @@ fn park(g: &mut Game) -> (u32, u32) {
         g.gd[x].heard_up_to = DEAF;
         crate::mind::set(g, x, 0.0, "kitstage");
         crate::mind::fix_keep(g, x, None, "kitstage");
-        if g.gd[x].state != GuardState::Dead {
+        if !crate::condition::down(g, g.gd[x].ch) {
             if g.gd[x].state != GuardState::Patrol { men += 1; }
             crate::mind::set_state(g, x, GuardState::Patrol, "kitstage");
         }
@@ -695,7 +695,7 @@ pub fn before(g: &mut Game, cmd: &mut PlayerCmd) {
     // (the page has laid its copy over the picture, or has been given half a second to: the room staged again, now)
     if let Some(t0) = st.veil_asked { if st.veil_laid || g.time - t0 >= 0.5 { st.due = true; } }
     let pl = g.player;
-    if st.still && !st.none && (g.pl[pl].down || st.order.iter().any(|&x| g.gd[x].state == GuardState::Dead) || staged_way_of(g, st.asks_none).ended) { st.due = true; }
+    if st.still && !st.none && (crate::condition::down(g, g.pl[pl].ch) || st.order.iter().any(|&x| crate::condition::down(g, g.gd[x].ch)) || staged_way_of(g, st.asks_none).ended) { st.due = true; }
     if st.due { g.kit_stage = Some(st); restage(g); st = match take(g) { Some(s) => s, None => return }; }
     if st.none { g.kit_stage = Some(st); return; }
     let (men, alarms) = park(g);

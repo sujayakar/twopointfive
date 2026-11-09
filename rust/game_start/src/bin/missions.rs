@@ -77,7 +77,7 @@ fn play(level: &str, hard: bool, seed: u32, secs: f64) -> Run {
             if now.0 && !reloading { r.reloads[side] += 1; }
             if now.1 > fired { r.rounds[side] += now.1 - fired; }
             was.insert(m.0, now);
-            if side == 1 && p.g.gd[m].state != GuardState::Dead { if let Some(rule) = p.rule(m) { *r.had.entry(rule.to_string()).or_default() += 1.0 / 60.0; } }
+            if side == 1 && !game::condition::down(&p.g, p.g.gd[m].ch) { if let Some(rule) = p.rule(m) { *r.had.entry(rule.to_string()).or_default() += 1.0 / 60.0; } }
         }
         if f % WAYS_EVERY == 0 { for (_, on) in p.watched(WAYS_M) { r.ways[0] += WAYS_EVERY as f64 / 60.0; if on { r.ways[1] += WAYS_EVERY as f64 / 60.0; } } }
         if r.clear.is_none() && enemies(&p).into_iter().all(|m| !p.up(m)) { r.clear = Some(t); }

@@ -46,8 +46,8 @@ struct OnFloor { ch: CharId, down: bool, gd: Option<GuardId>, pl: Option<PlayerI
 
 fn on_floor(g: &Game) -> Vec<OnFloor> {
     let mut out = Vec::with_capacity(g.guards.len() + g.seats.len() + 8);
-    for pl in crate::seats::men(g) { out.push(OnFloor { ch: g.pl[pl].ch, down: g.pl[pl].down, gd: None, pl: Some(pl) }); }
-    let guard = |g: &Game, gd: GuardId| OnFloor { ch: g.gd[gd].ch, down: g.gd[gd].state == GuardState::Dead, gd: Some(gd), pl: None };
+    for pl in crate::seats::men(g) { out.push(OnFloor { ch: g.pl[pl].ch, down: crate::condition::down(g, g.pl[pl].ch), gd: None, pl: Some(pl) }); }
+    let guard = |g: &Game, gd: GuardId| OnFloor { ch: g.gd[gd].ch, down: crate::condition::down(g, g.gd[gd].ch), gd: Some(gd), pl: None };
     for &gd in g.guards.iter() { out.push(guard(g, gd)); }
     for gd in crate::civilians::civilians_shown(g) { out.push(guard(g, gd)); }
     out
@@ -55,7 +55,7 @@ fn on_floor(g: &Game) -> Vec<OnFloor> {
 
 fn xz(p: V3) -> [f64; 2] { [p[0], p[2]] }
 fn head_of(g: &Game, c: CharId) -> V3 { match g.ch[c].bones.get(Bone::Head) { Some(h) => *h, None => v3::add(g.ch[c].pos, [0.0, 1.65, 0.0]) } }
-fn squad_up(g: &Game, gd: GuardId) -> bool { g.gd[gd].unit.is_some() && g.gd[gd].team == crate::teams::Team::Operative && g.gd[gd].state != GuardState::Dead }
+fn squad_up(g: &Game, gd: GuardId) -> bool { g.gd[gd].unit.is_some() && g.gd[gd].team == crate::teams::Team::Operative && !crate::condition::down(g, g.gd[gd].ch) }
 
 /// the man, as a take names him
 fn recap_man(g: &Game, man: OnFloor) -> RecapMan {
@@ -315,7 +315,7 @@ fn heard(g: &mut Game, src: V3) -> bool {
 /// did this player's man see him go down: a line, and where the fog is a cone (hard) inside the wedge he looks down or at his shoulder
 fn player_sees(g: &mut Game, pl: PlayerId, at: [f64; 2]) -> bool {
     let c = g.pl[pl].ch;
-    if g.pl[pl].down || crate::condition::is_blind(g, g.pl[pl].ch) || !line_to(g, c, at) { return false; }
+    if crate::condition::down(g, g.pl[pl].ch) || crate::condition::is_blind(g, g.pl[pl].ch) || !line_to(g, c, at) { return false; }
     if !g.k.fog.cone { return true; }
     let p = g.ch[c].pos;
     let (dx, dz) = (at[0] - p[0], at[1] - p[2]);
@@ -361,8 +361,8 @@ fn witness(g: &mut Game) {
         }
         if age < k.live_beat { continue; }
         let by = g.recap.lost[i].saw.filter(|&gd| squad_up(g, gd));   // (a witness who has gone down himself since tells nobody)
-        let pl_down = g.pl[pl].down;
-        let player_saw = g.recap.lost[i].players_saw.iter().any(|&p| !g.pl[p].down);   // (…and a player who has gone down since tells nobody either)
+        let pl_down = crate::condition::down(g, g.pl[pl].ch);
+        let player_saw = g.recap.lost[i].players_saw.iter().any(|&p| !crate::condition::down(g, g.pl[p].ch));   // (…and a player who has gone down since tells nobody either)
         if by.is_none() && !player_saw && !g.recap.lost[i].heard {
             if age > k.live_saw_secs { g.recap.lost[i].done = true; }
             continue;

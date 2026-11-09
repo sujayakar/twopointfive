@@ -13,7 +13,6 @@ fn flat(a: V3, b: V3) -> f64 { v3::dist_xz(a, b) }
 fn pos_of(g: &Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }
 fn player_pos(g: &Game, seat: &crate::seats::SeatRef) -> V3 { g.ch[g.pl[seat.player].ch].pos }
 fn char_id(g: &Game, gd: GuardId) -> f64 { g.ch[g.gd[gd].ch].id }
-fn is_dead(g: &Game, gd: GuardId) -> bool { g.gd[gd].state == crate::game::GuardState::Dead }
 fn is_op(g: &Game, gd: GuardId) -> bool { g.gd[gd].team == crate::teams::Team::Operative }
 fn breaches_of(g: &Game) -> Vec<WallreactBreachId> { g.m.wallreact.wall_react.breaches.clone() }
 fn say(g: &mut Game, gd: GuardId, text: &str) { crate::game::game_say(g, gd, text, None, None) }
@@ -193,7 +192,7 @@ fn wall_react_take(g: &mut Game, row: &crate::wallbreak::LevelChange) {
     let mut asked: JsSet<GuardId> = JsSet::new();
     let near = g.k.wallreact.near_m;
     for gd in g.guards.clone() {
-        if !is_dead(g, gd) && !take_own(g, gd, row) && rect_dist(pos_of(g, gd), row.rect) <= near { take_ask(g, row, b, &mut asked, gd); }
+        if !crate::condition::down(g, g.gd[gd].ch) && !take_own(g, gd, row) && rect_dist(pos_of(g, gd), row.rect) <= near { take_ask(g, row, b, &mut asked, gd); }
     }
     for it in wall_react_posts(g) {
         if take_own(g, it.gd, row) { continue; }
@@ -241,7 +240,7 @@ fn wall_react_sweep(g: &mut Game) {
     let retry = g.k.wallreact.retry_secs;
     for b in breaches_of(g) {
         for gd in g.tab.wallreact_breach[b].men.keys() {
-            if is_dead(g, gd) { continue; }
+            if crate::condition::down(g, g.gd[gd].ch) { continue; }
             if let Some(d) = crate::roomfight::def_of(g, gd) {
                 let row = &g.tab.roomfight_def[d];
                 if row.mode == crate::roomfight::DefMode::Hold && g.time - row.moved_at > retry {
@@ -385,7 +384,7 @@ fn wall_react_unflood(g: &mut Game) {
     g.fight.room_of_cell.clear();
     for d in g.fight.defs.clone() {
         let gd = g.tab.roomfight_def[d].gd;
-        let at = if is_dead(g, gd) { g.tab.roomfight_def[d].station } else { pos_of(g, gd) };
+        let at = if crate::condition::down(g, g.gd[gd].ch) { g.tab.roomfight_def[d].station } else { pos_of(g, gd) };
         let room = crate::roomfight::room_fight_room_at(g, at);
         let ev = match room { Some(r) => vec![0.0; g.tab.roomfight_room[r].entries.len()], None => Vec::new() };
         let row = &mut g.tab.roomfight_def[d];
@@ -615,7 +614,7 @@ fn wall_react_heard(g: &mut Game, b: WallreactBreachId, row: &crate::wallbreak::
     }
     if known { wall_react_ops_know(g, b, if ours { "the player made it" } else { "the player heard it" }); }
     for gd in g.guards.clone() {
-        if is_dead(g, gd) { continue; }
+        if crate::condition::down(g, g.gd[gd].ch) { continue; }
         let made = char_id(g, gd) == row.who;
         if !made {
             let head = wall_react_head(g, &crate::seats::here(g), WallReactHeadGd::Guard(gd));
@@ -641,13 +640,13 @@ pub fn wall_react_notice(g: &mut Game) {
             let mut saw = false;
             for pl in crate::seats::men(g) {
                 let (pos, yaw) = { let c = &g.ch[g.pl[pl].ch]; (c.pos, c.aim_yaw) };
-                if !g.pl[pl].down && wall_react_sees(g, b, pos, Some(yaw)) { saw = true; break; }
+                if !crate::condition::down(g, g.pl[pl].ch) && wall_react_sees(g, b, pos, Some(yaw)) { saw = true; break; }
             }
             if saw {
                 wall_react_ops_know(g, b, "the player saw it");
             } else {
                 for gd in g.guards.clone() {
-                    if g.gd[gd].team != Team::Operative || is_dead(g, gd) || crate::condition::is_blind(g, g.gd[gd].ch) { continue; }
+                    if g.gd[gd].team != Team::Operative || crate::condition::down(g, g.gd[gd].ch) || crate::condition::is_blind(g, g.gd[gd].ch) { continue; }
                     let (pos, yaw) = { let c = &g.ch[g.gd[gd].ch]; (c.pos, c.aim_yaw) };
                     if !wall_react_sees(g, b, pos, Some(yaw)) { continue; }
                     let by = format!("{} saw it", g.gd[gd].callsign);
@@ -661,7 +660,7 @@ pub fn wall_react_notice(g: &mut Game) {
         }
         for gd in g.guards.clone() {
             let team = g.gd[gd].team;
-            if is_dead(g, gd) || team == Team::Operative || team == Team::Civilian || g.tab.wallreact_breach[b].men.has(gd) || crate::condition::is_blind(g, g.gd[gd].ch) { continue; }
+            if crate::condition::down(g, g.gd[gd].ch) || team == Team::Operative || team == Team::Civilian || g.tab.wallreact_breach[b].men.has(gd) || crate::condition::is_blind(g, g.gd[gd].ch) { continue; }
             let (pos, yaw) = { let c = &g.ch[g.gd[gd].ch]; (c.pos, c.aim_yaw) };
             if wall_react_sees(g, b, pos, Some(yaw)) { wall_react_man_knows(g, b, gd, WallReactManKnowsHow::Saw); }
         }
@@ -672,10 +671,10 @@ pub fn wall_react_notice(g: &mut Game) {
             let t = g.tab.wallreact_breach[b].tell[i];
             if now < t.at { continue; }
             g.tab.wallreact_breach[b].tell.remove(i);
-            if g.gd[t.by].state == GuardState::Dead { continue; }
+            if crate::condition::down(g, g.gd[t.by].ch) { continue; }
             let tell_m = g.k.wallreact.tell_m;
             for gd in g.guards.clone() {
-                if gd == t.by || is_dead(g, gd) || g.gd[gd].team != g.gd[t.by].team || g.tab.wallreact_breach[b].men.has(gd) { continue; }
+                if gd == t.by || crate::condition::down(g, g.gd[gd].ch) || g.gd[gd].team != g.gd[t.by].team || g.tab.wallreact_breach[b].men.has(gd) { continue; }
                 if flat(pos_of(g, gd), pos_of(g, t.by)) >= tell_m { continue; }
                 let (from, to) = (wall_react_head(g, &crate::seats::here(g), WallReactHeadGd::Guard(t.by)), wall_react_head(g, &crate::seats::here(g), WallReactHeadGd::Guard(gd)));
                 if crate::scene_collision::sound_paths_propagate(g, from, to, None).path_len < tell_m { wall_react_man_knows(g, b, gd, WallReactManKnowsHow::Told); }
@@ -730,7 +729,7 @@ fn wall_react_evidence(g: &mut Game, dt: f64) {
     let (forget, ev_seen, ev_fire) = (g.k.wallreact.forget, g.k.wallreact.ev_seen, g.k.wallreact.ev_fire);
     // (each walk deletes only the entry it stands on: a copy of the keys is the same walk)
     for gd in g.m.wallreact.wall_react.minds.keys() {
-        if is_dead(g, gd) {
+        if crate::condition::down(g, g.gd[gd].ch) {
             g.m.wallreact.wall_react.minds.delete(gd);
             g.m.wallreact.wall_react.watching.delete(gd);
             continue;
@@ -790,7 +789,7 @@ fn wall_react_look(g: &mut Game, gd: GuardId, pt: &mut V3) {
         if !mi.line { continue; }
         let mut mates = 0.0;
         for (o, w) in g.m.wallreact.wall_react.watching.iter() {
-            if o != gd && *w == b && !is_dead(g, o) { mates += 1.0; }
+            if o != gd && *w == b && !crate::condition::down(g, g.gd[o].ch) { mates += 1.0; }
         }
         let (k, walk) = (&g.k.wallreact, g.tab.wallreact_breach[b].walk);
         let s = mi.ev + (if walk { k.hole_base } else { k.port_base }) - k.crowd * mates + (if Some(b) == had { k.sticky } else { 0.0 }) + (if now - mi.t < k.fresh_secs && now >= mi.t { k.fresh } else { 0.0 });
@@ -816,7 +815,7 @@ fn wall_react_posts(g: &mut Game) -> Vec<WallReactPostsItem> {
     let mut out = Vec::new();
     if !crate::seats::team_active(g) { return out; }
     for gd in crate::seats::team_men(g, &crate::seats::here(g)) {
-        if is_dead(g, gd) { continue; }
+        if crate::condition::down(g, g.gd[gd].ch) { continue; }
         if let Some(a) = crate::seats::order_of(g, gd) {
             if g.tab.orders_assignment[a].post.is_some() { out.push(WallReactPostsItem { gd, a }); }
         }
@@ -826,11 +825,11 @@ fn wall_react_posts(g: &mut Game) -> Vec<WallReactPostsItem> {
 
 fn wall_react_char_of(g: &Game, id_2: f64) -> Option<WallReactCharOf> {
     if let Some(pl) = crate::seats::man_by_id(g, id_2) {
-        if g.pl[pl].down { return None; }
+        if crate::condition::down(g, g.pl[pl].ch) { return None; }
         return Some(WallReactCharOf { pos: g.ch[g.pl[pl].ch].pos, team: crate::teams::Team::Player });
     }
     let found = g.guards.iter().copied().find(|x| g.ch[g.gd[*x].ch].id == id_2)?;
-    if is_dead(g, found) { return None; }
+    if crate::condition::down(g, g.gd[found].ch) { return None; }
     Some(WallReactCharOf { pos: pos_of(g, found), team: g.gd[found].team })
 }
 
@@ -891,11 +890,11 @@ fn wall_react_beyond(g: &mut Game, gd: GuardId, b: WallreactBreachId, at: V3) ->
     if is_op(g, gd) {
         if crate::cleared::cleared_rooms_room_at(g, far) != 0.0 && crate::cleared::cleared_rooms_known_at(g, far) { return None; }
         let squad = crate::seats::team_squad(g, &crate::seats::here(g));
-        if squad.iter().any(|x| *x != gd && !is_dead(g, *x) && over(pos_of(g, *x))) || crate::seats::men(g).into_iter().any(|pl| !g.pl[pl].down && over(g.ch[g.pl[pl].ch].pos)) { return None; }
+        if squad.iter().any(|x| *x != gd && !crate::condition::down(g, g.gd[*x].ch) && over(pos_of(g, *x))) || crate::seats::men(g).into_iter().any(|pl| !crate::condition::down(g, g.pl[pl].ch) && over(g.ch[g.pl[pl].ch].pos)) { return None; }
     } else {
         let team = g.gd[gd].team;
         for x in g.guards.iter().copied() {
-            if x != gd && !is_dead(g, x) && g.gd[x].team == team && over(pos_of(g, x)) { return None; }
+            if x != gd && !crate::condition::down(g, g.gd[x].ch) && g.gd[x].team == team && over(pos_of(g, x)) { return None; }
         }
     }
     Some(far)
@@ -1097,7 +1096,7 @@ fn wall_react_reconsider1(g: &mut Game, p: &mut Pend) -> (WallReactReconsider10,
     use crate::teams::Team;
     use WallReactReconsider10 as R;
     let gd = p.gd;
-    if is_dead(g, gd) { return (R::Fine, String::from("dead")); }
+    if crate::condition::down(g, g.gd[gd].ch) { return (R::Fine, String::from("dead")); }
     let man = &g.gd[gd];
     if crate::condition::is_blind(g, man.ch) || crate::condition::is_folded(g, man.ch) || man.held.is_some() { return (R::Later, String::from("blind, staggered or held")); }
     if let Some(mv) = g.m.wallreact.wall_react.moved_t.get(gd).copied() {
@@ -1117,7 +1116,7 @@ fn wall_react_reconsider1(g: &mut Game, p: &mut Pend) -> (WallReactReconsider10,
         WallReactAsks::Arm1(q) => q,
     };
     let (threat, pb) = (q.threat, q.x.b);
-    let others: Vec<V3> = g.guards.iter().copied().filter(|o| *o != gd && !is_dead(g, *o)).map(|o| pos_of(g, o)).collect();
+    let others: Vec<V3> = g.guards.iter().copied().filter(|o| *o != gd && !crate::condition::down(g, g.gd[*o].ch)).map(|o| pos_of(g, o)).collect();
     if let Some(d) = crate::roomfight::def_of(g, gd) {
         let mode = g.tab.roomfight_def[d].mode;
         if mode != DefMode::Hold {
@@ -1206,7 +1205,7 @@ fn wall_react_op_move(g: &mut Game, p: &mut Pend) -> WallReactOpMove {
     let taken: Vec<V3> = crate::seats::with_seat(g, v, &mut |g| {
         let mut taken = vec![player_pos(g, &crate::seats::here(g))];
         for m in crate::orders::squad_orders_squad(g, &crate::seats::here(g)) {
-            if m == gd || is_dead(g, m) { continue; }
+            if m == gd || crate::condition::down(g, g.gd[m].ch) { continue; }
             taken.push(pos_of(g, m));
             if let Some(b) = crate::orders::squad_orders_of(g, &crate::seats::here(g), m) {
                 if let Some(q) = g.tab.orders_assignment[b].post { taken.push(q); }

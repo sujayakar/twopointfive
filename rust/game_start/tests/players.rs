@@ -86,11 +86,11 @@ fn a_mans_hue_is_the_same_on_both_screens() {
         let of = |hue: u32| a.iter().filter(|r| r.1 == hue).count();
         assert_eq!((of(1), of(2)), (2, 2), "seed {seed}: a pair of each hue: {a:?}");
         let second = man(&p, 1);
-        p.g.pl[second].down = true;
+        p.g.cond[p.g.pl[second].ch].down = true;
         assert!(!found(&mut p, 0).contains(&(id(&p, 1), 3)) && found(&mut p, 0).len() == 5, "seed {seed}: the second player is down");
         assert_eq!(found(&mut p, 1)[0], (id(&p, 1), 3), "seed {seed}: on his own screen he is where he lies");
         let first = man(&p, 0);
-        p.g.pl[first].down = true;
+        p.g.cond[p.g.pl[first].ch].down = true;
         assert!(found(&mut p, 0).is_empty() && found(&mut p, 1).is_empty(), "seed {seed}: both are down");
     }
 }
@@ -107,7 +107,7 @@ fn a_fight_of_two_is_one_fight_on_both_machines() {
             p.sam_unhurt();
             let theirs = p.g.tab.cmd_seat[p.g.seats[1]].cam;
             game::camera::follow_camera_rotate(&mut p.g, theirs, 1.3);
-            let up = |p: &Play| p.g.guards.iter().filter(|&&m| p.g.gd[m].team == Team::Hostile && p.g.gd[m].state != game::game::GuardState::Dead).count();
+            let up = |p: &Play| p.g.guards.iter().filter(|&&m| p.g.gd[m].team == Team::Hostile && !game::condition::down(&p.g, p.g.gd[m].ch)).count();
             let (had, mut rows, mut rounds) = (up(&p), Vec::new(), 0.0f64);
             for k in 0..1500usize {
                 if k == 60 || k == 780 { let x = if k == 60 { 11.5 } else { 27.5 }; p.seat_stands(0, [x, 12.5]); p.seat_stands(1, [x, 9.5]); }

@@ -9,13 +9,13 @@ use crate::v3::{self, Quat, V3};
 fn live(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { live_of(g, seat.player) }
 /// …of one man
 fn live_of(g: &crate::game::Game, p: PlayerId) -> bool {
-    !g.pl[p].down && g.puppet.is_none()
+    !crate::condition::down(g, g.pl[p].ch) && g.puppet.is_none()
 }
 
 /// Fold the player for `secs`; `dir` = the way the blow came from → him.
 pub fn stagger_player(g: &mut crate::game::Game, secs: f64, dir: V3) {
     let (p, c) = (g.player, g.pl[g.player].ch);
-    if !(secs > 0.0) || g.pl[p].down { return; }
+    if !(secs > 0.0) || crate::condition::down(g, g.pl[p].ch) { return; }
     crate::condition::fold(g, c, secs);
     crate::condition::rattle(g, c);
     crate::character::anim_hit_from(g, c, Some(dir));
@@ -45,7 +45,7 @@ pub fn fold_cancels(g: &mut crate::game::Game) {
 /// Blind the player for `secs` by a flash at `at`.
 pub fn dazzle_player(g: &mut crate::game::Game, secs: f64, at: V3) {
     let (p, c) = (g.player, g.pl[g.player].ch);
-    if !(secs > 0.0) || g.pl[p].down { return; }
+    if !(secs > 0.0) || crate::condition::down(g, g.pl[p].ch) { return; }
     crate::condition::blind(g, c, secs, Some(at));
     let along = v3::sub(g.ch[c].pos, at);
     crate::character::anim_hit_from(g, c, Some(along));
@@ -123,7 +123,7 @@ mod tests {
         assert!(sam_staggered(&g, &crate::seats::here(&g), None));
         assert_eq!(sam_blind(&g, &crate::seats::here(&g), None), 1.0);
         assert!(!sam_staggered(&g, &crate::seats::here(&g), Some(12.0)));   // the clock asked of, not the game's
-        g.pl[p].down = true;
+        g.cond[g.pl[p].ch].down = true;
         assert!(!sam_staggered(&g, &crate::seats::here(&g), None));
         assert_eq!(sam_blind(&g, &crate::seats::here(&g), None), 0.0);
     }
@@ -147,7 +147,7 @@ mod tests {
         stagger_player(&mut g, 0.0, [1.0, 0.0, 0.0]);
         dazzle_player(&mut g, f64::NAN, [1.0, 0.0, 0.0]);
         assert_eq!((g.cond[g.pl[p].ch].fold_until, g.cond[g.pl[p].ch].blind_until), (-1.0, -1.0));
-        g.pl[p].down = true;
+        g.cond[g.pl[p].ch].down = true;
         stagger_player(&mut g, 2.0, [1.0, 0.0, 0.0]);
         dazzle_player(&mut g, 2.0, [1.0, 0.0, 0.0]);
         assert_eq!((g.cond[g.pl[p].ch].fold_until, g.cond[g.pl[p].ch].blind_until), (-1.0, -1.0));

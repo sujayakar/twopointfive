@@ -28,7 +28,7 @@ fn legs_of(g: &Game, pl: PlayerId) -> crate::player::Legs {
         char: crate::player::LegsChar { pos: c.pos, vel: c.vel, body_yaw: c.body_yaw, aim_yaw: c.aim_yaw },
         safe: p.safe, crouch: p.crouch, sprinting: p.sprinting, dash: p.dash, backpedal: p.backpedal, speed_sm: p.speed_sm, pace: p.pace,
         dragging: p.dragging, haul: p.haul, shoved: p.shoved, shoved_t: p.shoved_t, shoved_from: p.shoved_from,
-        down: p.down, door_rip_until: p.door_rip_until, door_bash_at: p.door_bash_at, door_bash_lean: p.door_bash_lean,
+        down: g.cond[p.ch].down, door_rip_until: p.door_rip_until, door_bash_at: p.door_bash_at, door_bash_lean: p.door_bash_lean,
     }
 }
 /// A call on the player's legs: lent to it as a Legs, and what the Legs lines write put back. Only those fields: what a callee
@@ -58,7 +58,7 @@ fn collide_legs(g: &mut Game, m: &mut crate::player::Legs, y1: f64) {
 /// Is what moves him this tick his walk keys and nothing else. Asked, nothing written.
 pub fn legs_own(g: &mut crate::game::Game) -> bool {
     let pl = g.player;
-    let busy = g.pl[pl].down || g.pl[pl].takedown.is_some() || g.pl[pl].holding.is_some() || g.pl[pl].kick.is_some() || g.pl[pl].picking.is_some()
+    let busy = crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].takedown.is_some() || g.pl[pl].holding.is_some() || g.pl[pl].kick.is_some() || g.pl[pl].picking.is_some()
         || g.pl[pl].wanding.is_some() || g.pl[pl].coding.is_some() || g.pl[pl].wall.is_some() || g.pl[pl].dragging.is_some() || g.pl[pl].haul.is_some()
         || g.pl[pl].door_move.is_some() || g.puppet.is_some();
     !(busy || crate::handwork::sam_work(g).is_some() || crate::stalk::stalk_on(g, &crate::seats::here(g)).is_some() || crate::rails::rails_allowed(g).is_some())
@@ -205,7 +205,7 @@ fn cursor_pitch(g: &Game, seat: &crate::seats::SeatRef, pl: PlayerId, c: CharId,
 fn shot_target(g: &Game, seat: &crate::seats::SeatRef) -> V3 {
     let pt = g.puppet.as_ref().and_then(|p| p.target);
     if let Some(t) = pt {
-        if g.gd[t].state != crate::game::GuardState::Dead { return v3::add(g.ch[g.gd[t].ch].pos, [0.0, 1.25, 0.0]); }
+        if !crate::condition::down(g, g.gd[t].ch) { return v3::add(g.ch[g.gd[t].ch].pos, [0.0, 1.25, 0.0]); }
     }
     if let Some(t) = seat.aim_target { return v3::copy(g.tab.sim_lightshome_fixture[t].pos); }
     if let Some(gd) = seat.aim_guard {
@@ -239,9 +239,9 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
     crate::aimweight::aim_weigh_begin(g, pl);
     crate::noshove::no_shove_begin(g, None);
     let launch_was = g.pl[pl].launch_held; g.pl[pl].launch_held = None;
-    if hit(g, input, "Enter") && (g.pl[pl].down || g.mission.stage == crate::game::MissionStage::Failed || shift_down(g, input)) {
+    if hit(g, input, "Enter") && (crate::condition::down(g, g.pl[pl].ch) || g.mission.stage == crate::game::MissionStage::Failed || shift_down(g, input)) {
         let shift = shift_down(g, input);
-        let ck = if !shift && g.pl[pl].down { let e = g.mission.stats.elapsed; crate::savestate::checkpoints_newest(g, Some(true), Some(e)) } else { None };
+        let ck = if !shift && crate::condition::down(g, g.pl[pl].ch) { let e = g.mission.stats.elapsed; crate::savestate::checkpoints_newest(g, Some(true), Some(e)) } else { None };
         if let Some(ck) = ck {
             if crate::savestate::checkpoints_is_this_run(g, &ck) {
                 if crate::savestate::checkpoints_load_in_step(g, &ck.key).is_none() { return; }
@@ -253,7 +253,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
     crate::stealthfeed::stealth_feed(g);
     crate::bigkit::sam_big_tail_tick(g, dt);
     crate::workstow::sam_stow_tick(g, &mut stow_holster);
-    if g.pl[pl].down {
+    if crate::condition::down(g, g.pl[pl].ch) {
         if g.pl[pl].wanding.is_some() { crate::wand::wand_drop(g, pl); }
         if g.pl[pl].kit_was.is_some() || crate::character::anim_kit_busy(g, c) { crate::kitanim::kit_tick(g, None); }
         release_wall(g);

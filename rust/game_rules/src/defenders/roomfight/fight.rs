@@ -55,7 +55,7 @@ pub fn lamp_glare(g: &mut crate::game::Game, eye: CharId, o: GuardId) -> f64 {
     if !g.fight.live { return 0.0; }
     let l = g.gd[o].flashlight;
     let light = &g.tab.light[l];
-    if !light.enabled || !(light.intensity > 0.0) || g.gd[o].state == crate::game::GuardState::Dead { return 0.0; }
+    if !light.enabled || !(light.intensity > 0.0) || crate::condition::down(g, g.gd[o].ch) { return 0.0; }
     let (pos, dir, range, outer_deg) = (light.pos, light.dir, light.range, light.outer_deg);
     let e = eye_of(g, eye);
     let (dx, dy, dz) = (e[0] - pos[0], e[1] - pos[1], e[2] - pos[2]);
@@ -156,7 +156,7 @@ pub fn room_fight_contact(g: &crate::game::Game, gd: GuardId) -> bool {
     let now = g.time;
     let Some(o) = op_of(g, gd) else { return false; };
     for (h, meter) in g.tab.roomfight_op[o].meters.iter() {
-        if g.gd[h].state != crate::game::GuardState::Dead && now - meter.seen_t < 0.3 { return true; }
+        if !crate::condition::down(g, g.gd[h].ch) && now - meter.seen_t < 0.3 { return true; }
     }
     false
 }
@@ -173,7 +173,7 @@ pub fn room_fight_seen_by(g: &crate::game::Game, h: GuardId) -> Vec<GuardId> {
     for &id in g.fight.ops.iter() {
         let o = &g.tab.roomfight_op[id];
         let man = &g.gd[o.gd];
-        if man.state == crate::game::GuardState::Dead { continue; }
+        if g.cond[man.ch].down { continue; }
         let by_meter = match o.meters.get(h) { Some(meter) => t - meter.seen_t < 0.3, None => false };
         let by_own_eyes = man.script.is_none()
             && matches!(man.foe, Some(crate::game::Foe::Guard(f)) if f == h)
@@ -190,7 +190,6 @@ pub(super) fn seg_blocked(g: &mut Game, a: V3, b: V3) -> bool { crate::scene_col
 
 pub(super) fn pos_of(g: &Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }
 
-pub(super) fn is_dead(g: &Game, gd: GuardId) -> bool { g.gd[gd].state == crate::game::GuardState::Dead }
 
 /// a man off `g.guards` by his body's number (`g.guards.find(x => x.char.id === e.who)`)
 pub(super) fn guard_by_char_id(g: &Game, who: Option<f64>) -> Option<GuardId> { let w = who?; g.guards.iter().copied().find(|&x| g.ch[g.gd[x].ch].id == w) }
@@ -222,7 +221,7 @@ pub fn room_fight_tick(g: &mut crate::game::Game, dt: f64) {
     let mut gi = 0;
     while gi < g.guards.len() {
         let x = g.guards[gi]; gi += 1;
-        if g.gd[x].unit.is_none() || is_dead(g, x) { continue; }
+        if g.gd[x].unit.is_none() || crate::condition::down(g, g.gd[x].ch) { continue; }
         if g.gd[x].team == crate::teams::Team::Hostile && g.gd[x].hold && def_of(g, x).is_none() { let a = room_fight_adopt(g, x); g.fight.defs.push(a); }
         else if g.gd[x].team == crate::teams::Team::Operative && op_id(g, x).is_none() { let o = room_fight_new_op(g, x); g.fight.ops.push(o); }
     }
@@ -237,7 +236,7 @@ pub fn room_fight_tick(g: &mut crate::game::Game, dt: f64) {
         g.fight.heard_ev.add(key);
         for i in 0..g.fight.ops.len() {
             let o = g.fight.ops[i]; let og = g.tab.roomfight_op[o].gd;
-            if !is_dead(g, og) && v3::dist(e.pos, pos_of(g, og)) <= (if e.kind == crate::director::EventKind::Kick { 40.0 } else { 80.0 }) && e.time > g.tab.roomfight_op[o].hot_t { g.tab.roomfight_op[o].hot_t = e.time; }
+            if !crate::condition::down(g, g.gd[og].ch) && v3::dist(e.pos, pos_of(g, og)) <= (if e.kind == crate::director::EventKind::Kick { 40.0 } else { 80.0 }) && e.time > g.tab.roomfight_op[o].hot_t { g.tab.roomfight_op[o].hot_t = e.time; }
         }
         if e.kind == crate::director::EventKind::GuardShot {
             if let Some(w) = guard_by_char_id(g, e.who) { if g.gd[w].team == crate::teams::Team::Hostile {
@@ -249,7 +248,7 @@ pub fn room_fight_tick(g: &mut crate::game::Game, dt: f64) {
     while !g.fight.reports.is_empty() && g.time - g.fight.reports[0].t > 2.0 { g.fight.reports.remove(0); }
     for (k, d) in g.fight.defs.clone().into_iter().enumerate() {
         let gd = g.tab.roomfight_def[d].gd;
-        if !is_dead(g, gd) { room_fight_tick_def(g, d, dt, k as f64); }
+        if !crate::condition::down(g, g.gd[gd].ch) { room_fight_tick_def(g, d, dt, k as f64); }
     }
     let mut i = 0;
     while i < g.fight.ops.len() { let o = g.fight.ops[i]; i += 1; room_fight_tick_op(g, o, dt); }
@@ -265,7 +264,7 @@ pub(super) fn hear_step(g: &mut Game, key: u32, e: crate::game::GameEvent) {
     let (mut near, mut nd, mut from): (Option<RoomfightOpId>, f64, V3) = (None, f64::INFINITY, e.pos);
     for i in 0..g.fight.ops.len() {
         let o = g.fight.ops[i]; let og = g.tab.roomfight_op[o].gd; let oc = g.gd[og].ch;
-        if is_dead(g, og) || v3::dist(e.pos, g.ch[oc].pos) > 9.0 { continue; }
+        if crate::condition::down(g, g.gd[og].ch) || v3::dist(e.pos, g.ch[oc].pos) > 9.0 { continue; }
         let pr = crate::weather::hear_path(g, v3::add(e.pos, [0.0, 1.0, 0.0]), v3::add(g.ch[oc].pos, [0.0, 1.5, 0.0]), None);
         if !(pr.carry > 0.5 && e.level.unwrap_or(0.3) * v3::clamp(1.0 - pr.path_len / 9.0, 0.0, 1.0) * pr.carry > 0.12) { continue; }
         g.tab.roomfight_op[o].step_t = e.time;
@@ -287,7 +286,7 @@ pub(super) fn hear_door(g: &mut Game, key: u32, e: crate::game::GameEvent) {
     let (mut free, mut post, mut post_at, mut post_turn): (i32, Option<RoomfightOpId>, Option<V3>, f64) = (0, None, None, f64::INFINITY);
     for i in 0..g.fight.ops.len() {
         let o = g.fight.ops[i]; let og = g.tab.roomfight_op[o].gd; let oc = g.gd[og].ch; let op = g.ch[oc].pos; let d = flat(fc, op);
-        if is_dead(g, og) || d > 9.0 || d < 0.5 { continue; }
+        if crate::condition::down(g, g.gd[og].ch) || d > 9.0 || d < 0.5 { continue; }
         if let Some(b) = g.tab.roomfight_op[o].door_by { if b.door == dr && e.time - b.t < 0.6 { continue; } }
         let k = 0.35 / d; let at: V3 = [fc[0] + (op[0] - fc[0]) * k, 1.1, fc[2] + (op[2] - fc[2]) * k];
         let pr = crate::weather::hear_path(g, at, v3::add(op, [0.0, 1.5, 0.0]), None);
@@ -318,8 +317,8 @@ fn room_fight_stop(g: &mut crate::game::Game) {
     }
     for d in g.fight.defs.clone() {
         let (gd, mode, pinned0) = { let D = &g.tab.roomfight_def[d]; (D.gd, D.mode, D.pinned0) };
-        if mode == DefMode::Move && g.gd[gd].script.is_some() && !is_dead(g, gd) { crate::squad::end_guard_script(g, gd, Some(crate::squad::EndGuardScriptState::Alert)); }
-        if mode == DefMode::Free && !is_dead(g, gd) { crate::control::set_hold(g, gd, true, "roomfight"); }
+        if mode == DefMode::Move && g.gd[gd].script.is_some() && !crate::condition::down(g, g.gd[gd].ch) { crate::squad::end_guard_script(g, gd, Some(crate::squad::EndGuardScriptState::Alert)); }
+        if mode == DefMode::Free && !crate::condition::down(g, g.gd[gd].ch) { crate::control::set_hold(g, gd, true, "roomfight"); }
         crate::control::set_pinned(g, gd, pinned0, "roomfight");
     }
     for d in g.fight.defs.clone() { let gd = g.tab.roomfight_def[d].gd; g.gd[gd].skill = None; }
@@ -344,7 +343,9 @@ mod tests {
     }
 
     fn man(g: &mut Game, state: crate::game::GuardState) -> GuardId {
-        let mut m = crate::game::Guard::new(CharId(0), String::new(), Some(crate::teams::Team::Operative), RouteId(0), 0, LightId(0), JsSet::new(), FirearmId(0), [0.0; 3], 0.0, GameTalkId(0));
+        let c = crate::character::man_new(g, crate::character::Character::blank());
+        g.cond[c].down = state == crate::game::GuardState::Dead;
+        let mut m = crate::game::Guard::new(c, String::new(), Some(crate::teams::Team::Operative), RouteId(0), 0, LightId(0), JsSet::new(), FirearmId(0), [0.0; 3], 0.0, GameTalkId(0));
         m.state = state;
         g.gd.push(m)
     }
@@ -393,7 +394,7 @@ mod tests {
         assert_eq!(room_fight_seen_by(&mut g, h), vec![by_meter, by_eyes]);
         assert!(room_fight_team_sees(&mut g, h) && !room_fight_team_sees(&mut g, gone));
         assert!(room_fight_contact(&mut g, by_meter) && !room_fight_contact(&mut g, stale));
-        g.gd[h].state = crate::game::GuardState::Dead;
+        g.cond[g.gd[h].ch].down = true;
         assert!(!room_fight_contact(&mut g, by_meter));
     }
 
@@ -422,9 +423,9 @@ mod tests {
         g.tab.light[l].intensity = 0.0;
         assert_eq!(lamp_glare(&mut g, eye, o), 0.0);
         g.tab.light[l].intensity = 1.0;
-        g.gd[o].state = crate::game::GuardState::Dead;
+        g.cond[g.gd[o].ch].down = true;
         assert_eq!(lamp_glare(&mut g, eye, o), 0.0);
-        g.gd[o].state = crate::game::GuardState::Patrol;
+        g.cond[g.gd[o].ch].down = false;
         g.fight.live = false;
         assert_eq!(lamp_glare(&mut g, eye, o), 0.0);
     }

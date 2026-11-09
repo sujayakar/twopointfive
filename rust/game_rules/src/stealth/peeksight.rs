@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 pub(super) fn peek_eye(g: &mut crate::game::Game, own: crate::fogofwar::FogEye) -> Option<crate::fogofwar::FogEye> {
     let pl = g.player;
     let w = g.pl[pl].wall?;
-    if !(w.peek > 0.0) || g.pl[pl].down { return None; }
+    if !(w.peek > 0.0) || crate::condition::down(g, g.pl[pl].ch) { return None; }
     let (out, off, turn_deg) = (g.k.peeksight.out, g.k.peeksight.off, g.k.peeksight.turn_deg);
     let e = ease(w.peek);
     let (s, t, n) = (w.peek_dir, w.along, w.n);

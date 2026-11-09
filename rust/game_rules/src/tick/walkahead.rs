@@ -35,7 +35,7 @@ fn walk_in_view(g: &mut Game, seat: SeatId, cmds: &[crate::cmd::PlayerCmd], dt: 
         shoved: [0.0, 0.0],
         shoved_t: -1.0,
         shoved_from: [0.0, 0.0],
-        down: g.pl[pl].down,
+        down: crate::condition::down(g, g.pl[pl].ch),
         door_rip_until: g.pl[pl].door_rip_until,
         door_bash_at: g.pl[pl].door_bash_at,
         door_bash_lean: g.pl[pl].door_bash_lean,

@@ -202,7 +202,7 @@ fn in_room(g: &mut crate::game::Game, t: RoomfightRoomId, p: V3) -> bool {
 fn team_stands(g: &mut crate::game::Game, r: RoomfightRoomId) -> bool {
     for i in 0..g.fight.ops.len() {
         let o = op_gd(g, i);
-        if g.gd[o].state != crate::game::GuardState::Dead && in_room(g, r, pos_of(g, o)) { return true; }
+        if !crate::condition::down(g, g.gd[o].ch) && in_room(g, r, pos_of(g, o)) { return true; }
     }
     for pl in crate::seats::men_left(g) { let p = g.ch[g.pl[pl].ch].pos; if in_room(g, r, p) { return true; } }
     false
@@ -327,7 +327,7 @@ pub(super) fn learn(g: &mut crate::game::Game) {
         let mut any = false;
         for i in 0..g.fight.ops.len() {
             let o = op_gd(g, i);
-            if g.gd[o].state != crate::game::GuardState::Dead { let p = pos_of(g, o); if bang_by(g, room, c, p) { any = true; break; } }
+            if !crate::condition::down(g, g.gd[o].ch) { let p = pos_of(g, o); if bang_by(g, room, c, p) { any = true; break; } }
         }
         if !any { for pl in crate::seats::men_left(g) { let p = g.ch[g.pl[pl].ch].pos; if bang_by(g, room, c, p) { any = true; break; } } }
         if !any { state_of(g).stats.stun_empty += 1.0; }
@@ -369,7 +369,7 @@ fn team_boots(g: &mut crate::game::Game, gd: GuardId) -> Option<V3> {
         let o = op_gd(g, i);
         let op = pos_of(g, o);
         let speed = g.gd[o].speed;
-        if g.gd[o].state == crate::game::GuardState::Dead || speed < 0.5 || v3::dist(op, here) > 9.0 { continue; }
+        if crate::condition::down(g, g.gd[o].ch) || speed < 0.5 || v3::dist(op, here) > 9.0 { continue; }
         let pr = crate::weather::hear_path(g, v3::add(op, [0.0, 1.0, 0.0]), ear, None);
         let l = crate::teampace::team_tread(g, o, speed, 0.4) * v3::clamp(1.0 - pr.path_len / 9.0, 0.0, 1.0) * pr.carry;
         if l > bl { bl = l; best = Some(pr.via); }   // where it comes to him FROM: the doorway it spills through, the man himself only with nothing between
@@ -643,7 +643,7 @@ pub(super) fn tick_press(g: &mut crate::game::Game, p: &mut crate::pressure::Pre
     let mut team_in = false;
     for i in 0..g.fight.ops.len() {
         let o = op_gd(g, i);
-        if g.gd[o].state != crate::game::GuardState::Dead {
+        if !crate::condition::down(g, g.gd[o].ch) {
             let c = cell_of(g, pos_of(g, o));
             if in_cells(g, p.room, c) { team_in = true; break; }
         }
@@ -975,7 +975,7 @@ pub(super) fn last_man(g: &mut crate::game::Game, d: RoomfightDefId) {
         for i in 0..g.fight.ops.len() {
             let o = op_gd(g, i);
             let (ot, oc) = (g.gd[o].team, g.gd[o].ch);
-            if g.gd[o].state == crate::game::GuardState::Dead || !crate::teams::is_hostile(g, team, ot) || flat(g.ch[oc].pos, g.ch[c_ch].pos) > 14.0 { continue; }
+            if crate::condition::down(g, g.gd[o].ch) || !crate::teams::is_hostile(g, team, ot) || flat(g.ch[oc].pos, g.ch[c_ch].pos) > 14.0 { continue; }
             let vis = crate::guards::can_see_char(g, gd, oc, false);
             if vis.visible && crate::guards::sight_gain_on(g, gd, o, vis.dist) > 0.0 { seen += 1; }
         }

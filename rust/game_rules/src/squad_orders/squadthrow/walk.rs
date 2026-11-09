@@ -228,7 +228,7 @@ pub(in crate::squad_orders) fn squad_hand_back(g: &mut crate::game::Game, w: &mu
     let c = g.gd[gd].ch;
     let p = g.ch[c].pos;
     let b = if back { w.back.clone() } else { None };
-    if g.gd[gd].state == crate::game::GuardState::Dead || crate::orders::squad_orders_of(g, &crate::seats::here(g), gd) != w.a {
+    if crate::condition::down(g, g.gd[gd].ch) || crate::orders::squad_orders_of(g, &crate::seats::here(g), gd) != w.a {
         return;
     }
     crate::orders::squad_orders_new_group(g);
@@ -244,7 +244,7 @@ pub(in crate::squad_orders) fn squad_hand_back(g: &mut crate::game::Game, w: &mu
         if !crate::orders::rows::id_is(&b.order, crate::orders::Is::Holds) && !w.mates.is_empty() {
             let mut any = false;
             for m in w.mates.iter().copied() {
-                if g.gd[m].state != crate::game::GuardState::Dead {
+                if !crate::condition::down(g, g.gd[m].ch) {
                     if let Some(o) = crate::orders::squad_orders_of(g, &crate::seats::here(g), m) {
                         if g.tab.orders_assignment[o].order == b.order {
                             any = true;
@@ -544,7 +544,7 @@ pub fn squad_throw_key(g: &mut crate::game::Game, input: InputId) -> bool {
                 Some(w) => w.a,
                 None => continue,
             };
-            if g.gd[gd].state == crate::game::GuardState::Dead || crate::orders::squad_orders_of(g, &crate::seats::here(g), gd) != w_a {
+            if crate::condition::down(g, g.gd[gd].ch) || crate::orders::squad_orders_of(g, &crate::seats::here(g), gd) != w_a {
                 g.m.squadthrow.states.get_mut(key).unwrap().walks.delete(gd);
             } else if !g.k.squadthrow.on {
                 let w = g.m.squadthrow.states.get_mut(key).unwrap().walks.delete(gd);

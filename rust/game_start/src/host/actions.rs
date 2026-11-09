@@ -66,8 +66,8 @@ fn shuffled<T>(mut a: Vec<T>, die: &mut game::dice::Die) -> Vec<T> {
 fn extra_spots(g: &mut Game, n: usize) -> Vec<Spot> {
     let mut die = game::math_dice::mulberry32(0x57E55 as f64);
     let mut taken: Vec<[f64; 3]> = vec![g.ch[g.pl[g.player].ch].pos];
-    taken.extend(g.guards.iter().filter(|&&x| g.gd[x].state != GuardState::Dead).map(|&x| g.ch[g.gd[x].ch].pos));
-    taken.extend(g.civilians.iter().filter(|&&x| g.gd[x].state != GuardState::Dead).map(|&x| g.ch[g.gd[x].ch].pos));
+    taken.extend(g.guards.iter().filter(|&&x| !game::condition::down(g, g.gd[x].ch)).map(|&x| g.ch[g.gd[x].ch].pos));
+    taken.extend(g.civilians.iter().filter(|&&x| !game::condition::down(g, g.gd[x].ch)).map(|&x| g.ch[g.gd[x].ch].pos));
     let mut out: Vec<Spot> = Vec::new();
     if game::roomclear::room_clear_scenario_active(g) {
         let rooms: Vec<_> = g.room_clear.rooms.iter().map(|r| r.def.clone()).collect();

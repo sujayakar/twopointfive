@@ -86,7 +86,7 @@ fn deg_apart(a: f64, b: f64) -> f64 {
 /// A free man the tactics may move: alive, in the list, not held / choreographed / on his marks / pinned, not in the standoff.
 pub(super) fn free_man(g: &crate::game::Game, gd: GuardId) -> bool {
     let o = &g.gd[gd];
-    o.state != crate::game::GuardState::Dead && g.guards.contains(&gd) && o.held.is_none() && o.script.is_none() && !o.hold && !o.pinned && o.standoff.is_none()
+    !g.cond[o.ch].down && g.guards.contains(&gd) && o.held.is_none() && o.script.is_none() && !o.hold && !o.pinned && o.standoff.is_none()
 }
 
 /// Eyes on his man lately: he is fighting or chasing by sight, not working a fix.
@@ -373,7 +373,7 @@ pub fn tactics_man_down(g: &mut crate::game::Game, victim: GuardId) {
         let o = g.guards[i];
         i += 1;
         if o != victim
-            && g.gd[o].state != crate::game::GuardState::Dead
+            && !crate::condition::down(g, g.gd[o].ch)
             && g.gd[o].team == team
             && g.gd[o].held.is_none()
             && !crate::control::man::blind(g, o)
@@ -442,7 +442,7 @@ pub(super) fn scan_rounds(g: &mut crate::game::Game) {
                 oi += 1;
                 let team = g.gd[o].team;
                 if !crate::teams::is_hostile(g, shooter, team) || g.gd[o].held.is_some() { continue; }
-                if g.gd[o].state == crate::game::GuardState::Dead && !(g.gd[o].died_at >= e.time - 1e-6) { continue; }
+                if crate::condition::down(g, g.gd[o].ch) && !(g.gd[o].died_at >= e.time - 1e-6) { continue; }
                 if dist_to_segment(pos_of(g, o), x.at, to) <= ROUND_AT_M {
                     mark_danger(g, d, team, crate::tactics::DangerWhy::Rounds, None);
                 }
@@ -462,7 +462,7 @@ fn dist_to_segment(p: V3, a: V3, b: V3) -> f64 {
 
 /// The per-cell multiplier this man's plan pays from here to `goal`, or None = plain A*.
 pub fn tactics_penalty(g: &mut crate::game::Game, gd: GuardId, goal: V3) -> Option<crate::tactics::TacticsPenalty> {
-    if !tactics_on(g) || g.gd[gd].script.is_some() || g.gd[gd].state == crate::game::GuardState::Dead { return None; }
+    if !tactics_on(g) || g.gd[gd].script.is_some() || crate::condition::down(g, g.gd[gd].ch) { return None; }
     let role = s(g).roles.get(gd).copied();
     let avoid = role.and_then(|r| g.tab.tactics_role[r].avoid.clone());
     let team = g.gd[gd].team;
@@ -706,7 +706,7 @@ pub(super) fn end_plan(g: &mut crate::game::Game, plan: TacticsPlanId, why: &str
         let r = g.tab.tactics_plan[plan].roles.get(m).copied();
         if s(g).roles.get(m).copied() != r { continue; }
         s(g).roles.delete(m);
-        if reset_men && g.gd[m].state != crate::game::GuardState::Dead {
+        if reset_men && !crate::condition::down(g, g.gd[m].ch) {
             fresh_leg(g, m);
             crate::guards::reset_chase(g, m);
         }

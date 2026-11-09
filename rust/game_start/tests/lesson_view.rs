@@ -241,7 +241,7 @@ fn in_a_game_of_two_each_hud_is_told_of_its_own_seat() {
 
         // the second man down: the run is over for him alone
         let him = game::seats::seat(&p.g, s).player;
-        p.g.pl[him].down = true;
+        p.g.cond[p.g.pl[him].ch].down = true;
         let (a, b) = (p.view_of(0).lesson.unwrap(), p.view_of(1).lesson.unwrap());
         assert!(b.over && frame_of(&b).prompt.is_none(), "seed {}: {:?}", seed, b);
         assert!(!a.over && frame_of(&a).prompt.is_some(), "seed {}: {:?}", seed, a);

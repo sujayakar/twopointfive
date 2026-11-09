@@ -31,7 +31,7 @@ fn dark_foe_ruled(g: &crate::game::Game, gd: GuardId) -> bool {
         Some(u) if u.light => return false,
         Some(_) => {}
     }
-    if g.gd[gd].state == crate::game::GuardState::Dead { return false; }
+    if crate::condition::down(g, g.gd[gd].ch) { return false; }
     let c = g.gd[gd].ch;
     if !g.ch[c].alive { return false; }
     let team = g.gd[gd].team;
@@ -101,7 +101,7 @@ fn has_word(g: &mut crate::game::Game, gd: GuardId) -> bool {
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        if o == gd || g.gd[o].team != team || g.gd[o].state == crate::game::GuardState::Dead { continue; }
+        if o == gd || g.gd[o].team != team || crate::condition::down(g, g.gd[o].ch) { continue; }
         if !g.m.darkfoe.state_of.get(o).map_or(false, |s| s.knows) || !dark_foe_lit(g, o) { continue; }
         if !g.tab.light[g.gd[o].flashlight].enabled { continue; }
         let oc = g.gd[o].ch;
@@ -225,7 +225,7 @@ fn free(g: &mut Game, d: RoomfightDefId, threat: V3, far: f64, p: V3) -> bool {
     }
     if !(v3::dist_xz(p, threat) >= far) { return false; }
     !g.guards.iter().any(|&o| {
-        if o == gd || g.gd[o].state == crate::game::GuardState::Dead { return false; }
+        if o == gd || crate::condition::down(g, g.gd[o].ch) { return false; }
         let sent = g.m.darkfoe.state_of.get(o).and_then(|s| s.to);
         v3::dist_xz(g.ch[g.gd[o].ch].pos, p) < 0.9 || sent.map_or(false, |t| v3::dist_xz(t, p) < 0.9)
     })
@@ -264,7 +264,7 @@ fn dark_foe_spot(g: &mut crate::game::Game, d: RoomfightDefId) -> Option<crate::
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        if o == gd || g.gd[o].team != team || g.gd[o].state == crate::game::GuardState::Dead || !dark_foe_lit(g, o) { continue; }
+        if o == gd || g.gd[o].team != team || crate::condition::down(g, g.gd[o].ch) || !dark_foe_lit(g, o) { continue; }
         if !g.tab.light[g.gd[o].flashlight].enabled { continue; }
         let oc = g.gd[o].ch;
         let op = g.ch[oc].pos;

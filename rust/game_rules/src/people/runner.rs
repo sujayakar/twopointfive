@@ -58,7 +58,7 @@ fn head_of(g: &crate::game::Game, c_2: CharId) -> V3 {
 /// a living defender or a man of the night staff: never a civilian, an operative, a body
 fn ours(g: &crate::game::Game, gd: GuardId) -> bool {
     let o = &g.gd[gd];
-    o.state != crate::game::GuardState::Dead && o.civ.is_none() && (o.team == crate::teams::Team::Hostile || o.team == crate::teams::Team::Guard)
+    !g.cond[o.ch].down && o.civ.is_none() && (o.team == crate::teams::Team::Hostile || o.team == crate::teams::Team::Guard)
 }
 
 /// nobody's to take: the hostage rescue's cast and the response team
@@ -96,7 +96,7 @@ pub fn foes(g: &crate::game::Game, gd: GuardId) -> Vec<crate::runner::Foe> {
         let o = g.guards[i];
         i += 1;
         let ot = g.gd[o].team;
-        if g.gd[o].state != crate::game::GuardState::Dead && crate::teams::is_hostile(g, team, ot) {
+        if !crate::condition::down(g, g.gd[o].ch) && crate::teams::is_hostile(g, team, ot) {
             let c = g.gd[o].ch;
             out.push(foe_at(g, c, crate::picture::Who::Guard(o)));
         }
@@ -121,7 +121,7 @@ fn close_foe(g: &mut crate::game::Game, gd: GuardId) -> Option<CharId> {
     let mut bd = g.k.runner.close_m;
     let p = crate::seats::faced_man(g, gd);
     let team = g.gd[gd].team;
-    if crate::teams::is_hostile(g, team, crate::teams::Team::Player) && !g.pl[p].down && !g.player_invisible {
+    if crate::teams::is_hostile(g, team, crate::teams::Team::Player) && !crate::condition::down(g, g.pl[p].ch) && !g.player_invisible {
         let vis = crate::guards::can_see(g, gd);
         if vis.visible && vis.dist <= bd && crate::guards::sight_gain(g, gd, vis.dist) > 0.25 {
             best = Some(g.pl[p].ch);
@@ -133,7 +133,7 @@ fn close_foe(g: &mut crate::game::Game, gd: GuardId) -> Option<CharId> {
         let o = g.guards[i];
         i += 1;
         let ot = g.gd[o].team;
-        if g.gd[o].state == crate::game::GuardState::Dead || !crate::teams::is_hostile(g, team, ot) { continue; }
+        if crate::condition::down(g, g.gd[o].ch) || !crate::teams::is_hostile(g, team, ot) { continue; }
         let c = g.gd[o].ch;
         let vis = crate::guards::can_see_char(g, gd, c, false);
         if vis.visible && vis.dist <= bd && crate::guards::sight_gain_on(g, gd, o, vis.dist) > 0.25 {
@@ -604,7 +604,7 @@ pub fn runner_tick(g: &mut crate::game::Game, dt: f64) {
         let gd = g.guards[i];
         if let Some(r) = g.m.runner.state_of.get_mut(gd) {
             r.drive = false;
-            if g.gd[gd].state != crate::game::GuardState::Dead { step(g, gd, dt); }
+            if !crate::condition::down(g, g.gd[gd].ch) { step(g, gd, dt); }
             continue;
         }
         if !(ripe(g, gd) || lost(g, gd)) { continue; }

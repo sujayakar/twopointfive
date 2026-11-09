@@ -99,7 +99,7 @@ pub fn settle_player(g: &mut crate::game::Game) {
     let pl = g.player;
     let p = g.ch[g.pl[pl].ch].pos;
     let still = match g.pl[pl].safe { Some(s) => s[0] == p[0] && s[2] == p[2], None => false };
-    if g.pl[pl].down || still { return; }
+    if crate::condition::down(g, g.pl[pl].ch) || still { return; }
     let y1 = if g.pl[pl].crouch { 1.0 } else { 1.7 };
     collide_player(g, y1);
 }
@@ -241,7 +241,7 @@ pub(super) fn pose_gun_light(g: &mut crate::game::Game) {
     let pistol_up = crate::game::player_pistol_up(g, pl);
     let rifle_up = crate::game::player_rifle_up(g, pl);
     let enabled = ((pistol_up && g.fa[pistol].light_on) || (rifle_up && g.fa[rifle].light_on))
-        && !g.pl[pl].sprinting && !g.ch[c].anim.hide_held_item && !g.pl[pl].down && crate::kitanim::kit_gun_up(g, &crate::seats::here(g));
+        && !g.pl[pl].sprinting && !g.ch[c].anim.hide_held_item && !crate::condition::down(g, g.pl[pl].ch) && crate::kitanim::kit_gun_up(g, &crate::seats::here(g));
     g.tab.light[l].enabled = enabled;
     if enabled {
         let (lens, dir) = if rifle_up {

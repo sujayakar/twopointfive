@@ -48,7 +48,7 @@ fn detonate_stun_raw(g: &mut crate::game::Game, it: ItemId, borrowed: bool, sam:
             Some(h) => *h,
             None => v3::add(g.ch[c].pos, [0.0, 1.6, 0.0]),
         };
-        if !g.pl[ears].down && v3::dist(eye, at) < b.dazzle_radius && !seg(g, v3::add(at, [0.0, 0.3, 0.0]), eye) {
+        if !crate::condition::down(g, g.pl[ears].ch) && v3::dist(eye, at) < b.dazzle_radius && !seg(g, v3::add(at, [0.0, 0.3, 0.0]), eye) {
             crate::audio_iface::game_audio_like_play(g, "earRing", None, Some(v3::clamp(1.2 - v3::dist(eye, at) / b.dazzle_radius, 0.25, 0.8)), None);
         }
     }
@@ -92,7 +92,7 @@ fn detonate_stun_raw(g: &mut crate::game::Game, it: ItemId, borrowed: bool, sam:
     let spare = sam.and_then(|s| s.spare).unwrap_or(false);
     crate::seats::each_seat(g, &mut |g: &mut Game| {
         let c = g.pl[g.player].ch;
-        if borrowed || !crate::effects::flags().dazzle || g.pl[g.player].down || g.puppet.is_some() { return; }
+        if borrowed || !crate::effects::flags().dazzle || crate::condition::down(g, g.pl[g.player].ch) || g.puppet.is_some() { return; }
         let Some((secs, fold)) = flash.takes(g, c, squad(sam_side), spare, g.k.samstun.own_seen) else { return };
         if !(secs > 0.0) { return; }
         crate::samstun::dazzle_player(g, secs, at);

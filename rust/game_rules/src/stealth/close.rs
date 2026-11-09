@@ -95,7 +95,7 @@ pub(super) fn clear_between(g: &mut crate::game::Game, p: &[f64], q: &[f64]) -> 
 
 /// May anything be done to him at all by Sam's hands.
 pub fn close_subject(g: &crate::game::Game, gd: GuardId) -> bool {
-    if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].held.is_some() { return false; }
+    if crate::condition::down(g, g.gd[gd].ch) || g.gd[gd].held.is_some() { return false; }
     if g.gd[gd].team == crate::teams::Team::Operative || crate::fogofwar::fog_of_war_hidden(g, gd) { return false; }
     if g.gd[gd].civ.is_some() && crate::rescue::rescue_is_hostage(g, gd) { return false; }
     true
@@ -295,7 +295,7 @@ fn close_ready(g: &mut crate::game::Game) -> Option<crate::close::CloseReady> {
     let now = g.time;
     let o = { let s = state_of(g); if s.t == now { s.best.clone() } else { None } };
     let o = match o { Some(o) if o.can => o, _ => return None };
-    if g.pl[pl].down || g.pl[pl].holding.is_some() || g.pl[pl].takedown.is_some() || g.pl[pl].dragging.is_some() || g.pl[pl].kick.is_some() || g.pl[pl].picking.is_some() || g.pl[pl].wanding.is_some()
+    if crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].holding.is_some() || g.pl[pl].takedown.is_some() || g.pl[pl].dragging.is_some() || g.pl[pl].kick.is_some() || g.pl[pl].picking.is_some() || g.pl[pl].wanding.is_some()
         || crate::game::player_rifle_up(g, pl) || (crate::game::player_canister_sel(g, pl).is_some() && !g.pl[pl].holstered) { return None; }
     if crate::handwork::sam_work(g).is_some() || g.pl[pl].coding.is_some() { return None; }
     if g.pl[pl].wall.is_some() { return None; }
@@ -316,7 +316,7 @@ fn close_ready(g: &mut crate::game::Game) -> Option<crate::close::CloseReady> {
 /// Who holds the mode now: the nearest living man in range with nothing solid between.
 fn mode_now(g: &mut crate::game::Game, pl: PlayerId) -> Option<GuardId> {
     g.m.close.state.get_or_insert_with(pl, fresh_state).mode_d = m::INF;
-    if g.pl[pl].down || g.pl[pl].holding.is_some() || g.pl[pl].dragging.is_some() || g.pl[pl].kick.is_some() || g.pl[pl].picking.is_some() || g.pl[pl].wanding.is_some()
+    if crate::condition::down(g, g.pl[pl].ch) || g.pl[pl].holding.is_some() || g.pl[pl].dragging.is_some() || g.pl[pl].kick.is_some() || g.pl[pl].picking.is_some() || g.pl[pl].wanding.is_some()
         || crate::game::player_rifle_up(g, pl) || g.pl[pl].sprinting || g.pl[pl].wall.is_some() { return None; }
     if crate::handwork::sam_work(g).is_some() || g.pl[pl].coding.is_some() { return None; }
     let c = g.pl[pl].ch;
@@ -476,7 +476,7 @@ fn calm(g: &mut crate::game::Game, gd: GuardId) -> bool {
 
 /// Sit a calm staff man down on a mark; false if he cannot be sat.
 pub fn close_seat(g: &mut crate::game::Game, gd: GuardId, at: Option<&[f64]>, face: Option<f64>) -> bool {
-    if g.gd[gd].civ.is_some() || g.gd[gd].unit.is_some() || g.gd[gd].state == crate::game::GuardState::Dead || !calm(g, gd) { return false; }
+    if g.gd[gd].civ.is_some() || g.gd[gd].unit.is_some() || crate::condition::down(g, g.gd[gd].ch) || !calm(g, gd) { return false; }
     let prev = seated_of(g).get(gd).copied();
     if prev.is_some() && at.is_none() { return true; }
     let c = g.gd[gd].ch;
@@ -502,7 +502,7 @@ pub fn close_unseat(g: &mut crate::game::Game, gd: GuardId, back: Option<bool>) 
     crate::control::set_hold(g, gd, st.hold, "close");
     let c = g.gd[gd].ch;
     if g.ch[c].anim.act.as_ref().map_or(false, |a| a.clip == sit_clip().clip) { g.ch[c].anim.act = None; }
-    if back && st.down && g.gd[gd].state != crate::game::GuardState::Dead {
+    if back && st.down && !crate::condition::down(g, g.gd[gd].ch) {
         g.ch[c].pos[0] = st.at[0];
         g.ch[c].pos[2] = st.at[2];
     }

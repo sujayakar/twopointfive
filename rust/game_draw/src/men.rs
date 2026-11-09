@@ -210,7 +210,7 @@ fn shown(g: &Game, bared: bool) -> Vec<CharId> {
     let mut drawn = if bared { all } else { game::fogofwar::fog_of_war_filter(g, &all) };
     // (more men than have a mesh of their own to throw a shadow by: the men down give up their places first)
     if drawn.len() > 8 && (g.night_breach.active || g.rescue.active) {
-        let down = |c: &CharId| g.guards.iter().any(|&gd| g.gd[gd].ch == *c && g.gd[gd].state == GuardState::Dead);
+        let down = |c: &CharId| g.guards.iter().any(|&gd| g.gd[gd].ch == *c && game::condition::down(g, g.gd[gd].ch));
         drawn.sort_by_key(down);
     }
     drawn

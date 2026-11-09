@@ -26,7 +26,7 @@ pub fn entry_points_tick(g: &mut crate::game::Game) {
     if g.entry.last >= 0.0 && m::abs(g.time - g.entry.last) < 0.25 { return; }
     g.entry.last = g.time;
     for gd in crate::seats::team_men(g, &crate::seats::here(g)) {
-        if g.gd[gd].state != crate::game::GuardState::Dead {
+        if !crate::condition::down(g, g.gd[gd].ch) {
             let c = g.gd[gd].ch;
             let p = g.ch[c].pos;
             entry_points_mark(g, p);

@@ -4,7 +4,7 @@ use crate::game::Game;
 pub fn stealth_feed(g: &mut crate::game::Game) {
     let pl = g.player;
     let c = g.pl[pl].ch;
-    if g.puppet.is_some() || g.pl[pl].down {
+    if g.puppet.is_some() || crate::condition::down(g, g.pl[pl].ch) {
         g.ch[c].anim.stealth = None;
         return;
     }

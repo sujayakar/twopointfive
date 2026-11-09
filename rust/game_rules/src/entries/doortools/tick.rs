@@ -34,15 +34,12 @@ fn sam_pos(g: &Game, seat: &crate::seats::SeatRef) -> V3 {
     let c = g.pl[seat.player].ch;
     g.ch[c].pos
 }
-fn is_dead(g: &Game, gd: GuardId) -> bool {
-    g.gd[gd].state == crate::game::GuardState::Dead
-}
 fn callsigns(g: &Game, men: &[GuardId]) -> String {
     let names: Vec<String> = men.iter().map(|&m| g.gd[m].callsign.clone()).collect();
     names.join(", ")
 }
 fn alive(g: &Game, men: &[GuardId]) -> Vec<GuardId> {
-    men.iter().copied().filter(|&m| g.gd[m].state != crate::game::GuardState::Dead).collect()
+    men.iter().copied().filter(|&m| !crate::condition::down(g, g.gd[m].ch)).collect()
 }
 fn any_shared(a: &[GuardId], b: &[GuardId]) -> bool {
     a.iter().any(|m| b.contains(m))
@@ -123,7 +120,7 @@ fn door_tools_can_reach(g: &mut crate::game::Game, d: DoorId, side: f64, p: V3) 
 }
 /// Sam himself beyond the door, in a stun can's reach
 pub(super) fn door_tools_sam_behind(g: &mut crate::game::Game, d: DoorId, side: f64) -> bool {
-    if g.pl[g.player].down {
+    if crate::condition::down(g, g.pl[g.player].ch) {
         return false;
     }
     if !crate::orders::squad_orders_sams(g, &crate::seats::here(g)) {
@@ -207,7 +204,7 @@ pub(super) fn door_tools_stacks_of(g: &crate::game::Game, seat: &crate::seats::S
     let mut by: JsMap<DoorId, [Vec<GuardId>; 2]> = JsMap::new();
     for &gd in men {
         let Some(a) = crate::orders::squad_orders_of(g, seat, gd) else { continue };
-        if g.gd[gd].state == crate::game::GuardState::Dead {
+        if crate::condition::down(g, g.gd[gd].ch) {
             continue;
         }
         let A = &g.tab.orders_assignment[a];
@@ -1205,7 +1202,7 @@ pub fn door_tools_input(g: &mut crate::game::Game, input: InputId) {
     if !crate::input::input_hit(g, input, &key) {
         return;
     }
-    if g.pl[g.player].down {
+    if crate::condition::down(g, g.pl[g.player].ch) {
         let set = g.door_tools.set.clone();
         if set.into_iter().any(|c| door_tools_key_is(g, &crate::seats::here(g), c)) {
             press_off(g, input, &key);
@@ -1428,7 +1425,7 @@ pub fn door_tools_tick(g: &mut crate::game::Game) {
 fn tick_op(g: &mut Game, op: DoorOpId) {
     let mut men = Vec::new();
     for gd in dop!(g, op).men.clone() {
-        if is_dead(g, gd) {
+        if crate::condition::down(g, g.gd[gd].ch) {
             continue;
         }
         // (`S.of(gd) === op.mine.get(gd)`: null is never undefined, so a man with neither is off the order)

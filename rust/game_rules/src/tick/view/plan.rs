@@ -17,7 +17,6 @@ use alloc::{string::String, vec::Vec};
 struct For { own: bool, reading: bool }
 
 fn flat(a: V3, b: V3) -> f64 { v3::dist_xz(a, b) }
-fn alive(g: &Game, gd: GuardId) -> bool { g.gd[gd].state != GuardState::Dead }
 fn floor(p: V3) -> V3 { [p[0], 0.0, p[2]] }
 fn id_of(g: &Game, gd: GuardId) -> f64 { g.ch[g.gd[gd].ch].id }
 
@@ -85,7 +84,7 @@ fn waits_on_key(g: &Game, seat: &SeatRef, paired: bool, out: &mut Vec<PlanDoor>)
     let (s, t) = (seat.orders, seat.door_tools);
     let big = crate::orders::squad_orders_big(g, seat);
     let sam = g.ch[g.pl[seat.player].ch].pos;
-    let up = !g.pl[seat.player].down;
+    let up = !crate::condition::down(g, g.pl[seat.player].ch);
     let addr = crate::doortools::door_tools_word_men(g, seat);
     let f = key_cap(&g.k.doortools.blow_key);
     let squad = crate::orders::squad_orders_squad(g, seat);
@@ -95,7 +94,7 @@ fn waits_on_key(g: &Game, seat: &SeatRef, paired: bool, out: &mut Vec<PlanDoor>)
         if op.word.is_some() { continue; }
         let held = op.thr.is_some() && op.phase == Phase::Thr;
         if held || (big && (op.on_word || matches!(op.phase, Phase::Held | Phase::Armed | Phase::Standoff | Phase::Place))) {
-            let men: Vec<GuardId> = op.men.iter().copied().filter(|&m| alive(g, m)).collect();
+            let men: Vec<GuardId> = op.men.iter().copied().filter(|&m| !crate::condition::down(g, g.gd[m].ch)).collect();
             let why = if held { WaitWhy::Thr } else if op.kind == crate::doortools::DoorToolKind::Charge { WaitWhy::Charge } else { WaitWhy::Tool };
             let word = men.iter().any(|m| addr.contains(m));
             let e = put(&mut by, op.door, &men, why, word);
@@ -106,7 +105,7 @@ fn waits_on_key(g: &Game, seat: &SeatRef, paired: bool, out: &mut Vec<PlanDoor>)
         for &gd in squad.iter() {
             let Some(a) = crate::orders::squad_orders_of(g, seat, gd) else { continue };
             let a = &g.tab.orders_assignment[a];
-            if alive(g, gd) && crate::orders::rows::id_is(&a.order, crate::orders::Is::Stacks) && a.post.is_some() && a.there.starts_with("stacked") {
+            if !crate::condition::down(g, g.gd[gd].ch) && crate::orders::rows::id_is(&a.order, crate::orders::Is::Stacks) && a.post.is_some() && a.there.starts_with("stacked") {
                 if let Some(d) = a.door { put(&mut by, d, &[gd], WaitWhy::Stack, addr.contains(&gd)); }
             }
         }
@@ -118,7 +117,7 @@ fn waits_on_key(g: &Game, seat: &SeatRef, paired: bool, out: &mut Vec<PlanDoor>)
     // (a charge of his own that the squad is not at waits on HIS key, not this one)
     let t_set: Vec<ChargeId> = t.set.iter().copied().filter(|&c| crate::doortools::door_tools_key_is(g, seat, c)).collect();
     let w_set: Vec<WallChargeId> = seat.wall_charge.set.iter().copied().filter(|&c| crate::wallcharge::wall_charge_key_is(g, seat, c)).collect();
-    let charge_men = |by_name: &str| -> Vec<GuardId> { squad.iter().copied().filter(|&m| alive(g, m) && g.gd[m].callsign == by_name).collect() };
+    let charge_men = |by_name: &str| -> Vec<GuardId> { squad.iter().copied().filter(|&m| !crate::condition::down(g, g.gd[m].ch) && g.gd[m].callsign == by_name).collect() };
     for &c in &t_set {
         let sc = &g.tab.doortools_set_charge[c];
         put(&mut by, sc.door, &charge_men(&sc.by), WaitWhy::Charge, false).set = Some(c);
@@ -127,7 +126,7 @@ fn waits_on_key(g: &Game, seat: &SeatRef, paired: bool, out: &mut Vec<PlanDoor>)
     let drill_ops: Vec<GuardId> = crate::nightbreach::night_breach_drill_ops(g);
     if nb {
         if let Some(d) = g.night_breach.drill.as_ref().and_then(|x| crate::doors::doors_by_name(g, &x.plan.door)) {
-            let men: Vec<GuardId> = drill_ops.iter().copied().filter(|&m| alive(g, m)).collect();
+            let men: Vec<GuardId> = drill_ops.iter().copied().filter(|&m| !crate::condition::down(g, g.gd[m].ch)).collect();
             put(&mut by, d, &men, WaitWhy::Drill, false).drill = true;
         }
     }
@@ -138,7 +137,7 @@ fn waits_on_key(g: &Game, seat: &SeatRef, paired: bool, out: &mut Vec<PlanDoor>)
                 for e in entry.ops.iter() {
                     if e.ended.is_some() { continue; }
                     let op = &g.tab.doortools_door_op[e.op];
-                    let men: Vec<GuardId> = op.men.iter().copied().filter(|&m| alive(g, m)).collect();
+                    let men: Vec<GuardId> = op.men.iter().copied().filter(|&m| !crate::condition::down(g, g.gd[m].ch)).collect();
                     put(&mut by, op.door, &men, WaitWhy::Stack, false).gate = true;
                 }
             }
@@ -180,7 +179,7 @@ fn waits_on_key(g: &Game, seat: &SeatRef, paired: bool, out: &mut Vec<PlanDoor>)
         let drill_now = if any_word { drill_ops.iter().any(|m| addr.contains(m)) } else { t_set.is_empty() && w_set.is_empty() };   // (the drill reads the key after them)
         // (every man of it on his place, his feet there: a gun still coming round does not put the cap out, and none taken off it by a fight)
         let set = |men: &[GuardId]| men.iter().all(|&m| {
-            if !alive(g, m) { return true; }
+            if crate::condition::down(g, g.gd[m].ch) { return true; }
             let Some(a) = crate::orders::squad_orders_of(g, seat, m) else { return true };
             let a = &g.tab.orders_assignment[a];
             a.yield_t < 0.0 && (a.arrived || a.post.is_none_or(|p| flat(g.ch[g.gd[m].ch].pos, p) < 0.5))
@@ -264,7 +263,7 @@ fn seat_plan(g: &Game, seat: &SeatRef, who: For) -> SeatPlan {
     let squad = crate::orders::squad_orders_squad(g, seat);
     for &gd in squad.iter() {
         let m = &g.gd[gd];
-        if m.state == GuardState::Dead { continue; }
+        if g.cond[m.ch].down { continue; }
         let Some(aid) = crate::orders::squad_orders_of(g, seat, gd) else { continue };
         let a = &g.tab.orders_assignment[aid];
         let Some(post) = a.post else { continue };
@@ -313,7 +312,7 @@ fn seat_plan(g: &Game, seat: &SeatRef, who: For) -> SeatPlan {
     for t in throws_view(g, seat) {
         if t.kind == ThrowKind::Shell || t.points.len() < 2 || (t.preview && !who.own) { continue; }
         let Some(&gd) = squad.iter().find(|&&m| id_of(g, m) == t.man) else { continue };
-        if !alive(g, gd) { continue; }
+        if crate::condition::down(g, g.gd[gd].ch) { continue; }
         let walk = match &t.walk { Some(w) if w.len() > 1 => w.iter().map(|&q| floor(q)).collect(), _ => Vec::new() };
         let end = t.points[t.points.len() - 1];
         let mut arc = t.points.clone();
@@ -322,8 +321,8 @@ fn seat_plan(g: &Game, seat: &SeatRef, who: For) -> SeatPlan {
     }
     if who.own {
         if let Some(menu) = &s.menu {
-            for &gd in menu.men.iter() { if alive(g, gd) { out.who.push(PlanWho { man: id_of(g, gd), at: floor(g.ch[g.gd[gd].ch].pos), tone: tone_of(g, paired, gd) }); } }
-            if !g.pl[seat.player].down { out.you = Some(floor(g.ch[g.pl[seat.player].ch].pos)); }
+            for &gd in menu.men.iter() { if !crate::condition::down(g, g.gd[gd].ch) { out.who.push(PlanWho { man: id_of(g, gd), at: floor(g.ch[g.gd[gd].ch].pos), tone: tone_of(g, paired, gd) }); } }
+            if !crate::condition::down(g, g.pl[seat.player].ch) { out.you = Some(floor(g.ch[g.pl[seat.player].ch].pos)); }
         }
     }
     out

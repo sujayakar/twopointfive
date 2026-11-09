@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 /// May his aim be weighed now. `AIMWEIGHT.on` is settled on.
 fn can(g: &mut Game) -> bool {
     let pl = g.player;
-    g.puppet.is_none() && !g.pl[pl].down
+    g.puppet.is_none() && !crate::condition::down(g, g.pl[pl].ch)
 }
 
 /// Does his aim have weight right now.

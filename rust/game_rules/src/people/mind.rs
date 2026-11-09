@@ -80,10 +80,11 @@ pub fn set(g: &mut Game, gd: GuardId, to: f64, by: &'static str) {
     write(g, gd, was, to, by);
 }
 
-/// His state. (Dead is his life and not his mind; it is written here until life has a record of its own.)
+/// His state. A man who is dead is down (`Cond`), and that is where it is asked.
 pub fn set_state(g: &mut Game, gd: GuardId, to: GuardState, by: &'static str) {
     let was = g.gd[gd].state;
     g.gd[gd].state = to;
+    if to == GuardState::Dead { g.cond[g.gd[gd].ch].down = true; }
     if was == to { return; }
     let now = g.time;
     let n = crate::control::state_mut(g).mind.at(gd);

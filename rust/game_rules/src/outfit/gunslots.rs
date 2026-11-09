@@ -108,7 +108,7 @@ pub fn side_out_alert(g: &mut crate::game::Game, gd: GuardId) -> bool {
 pub fn side_out(g: &mut crate::game::Game, gd: GuardId, dist: f64) -> bool {
     let Some(s) = g.gd[gd].second else { return false };
     if s.out || !js::truthy(crate::weapons::firearm_rounds_ready(g, s.gun)) { return false; }
-    if g.gd[gd].slung.as_ref().map_or(false, |l| l.out) || g.gd[gd].big_out.is_some() || g.gd[gd].state == crate::game::GuardState::Dead || !(dist <= g.k.gunslots.near) { return false; }
+    if g.gd[gd].slung.as_ref().map_or(false, |l| l.out) || g.gd[gd].big_out.is_some() || crate::condition::down(g, g.gd[gd].ch) || !(dist <= g.k.gunslots.near) { return false; }
     swap(g, gd);
     let (now, out) = (g.time, g.k.gunslots.out);
     let w = g.gd[gd].weapon;
@@ -142,7 +142,7 @@ pub fn side_locked(g: &crate::game::Game, gd: GuardId) -> bool {
 /// The long gun he let go of hangs down his front: its rig, while the sidearm is out.
 pub fn side_hung(g: &crate::game::Game, gd: GuardId) -> Option<crate::gunslots::SideHung> {
     let s = g.gd[gd].second?;
-    if !s.out || g.gd[gd].state == crate::game::GuardState::Dead { return None; }
+    if !s.out || crate::condition::down(g, g.gd[gd].ch) { return None; }
     let def = g.fa[s.gun].def;
     match weapon_row(g, def).rig {
         crate::weapons::WeaponDefRig::Carbine => Some(SideHung::Carbine),
@@ -155,7 +155,7 @@ pub fn side_hung(g: &crate::game::Game, gd: GuardId) -> Option<crate::gunslots::
 pub fn side_tick(g: &mut crate::game::Game, gd: GuardId, dt: Option<f64>) {
     let dt = dt.unwrap_or(0.0);
     let Some(s) = g.gd[gd].second else { return };
-    if g.gd[gd].state == crate::game::GuardState::Dead { return; }
+    if crate::condition::down(g, g.gd[gd].ch) { return; }
     if !s.out {
         if dt > 0.0 && g.time < s.lock {
             let w = g.gd[gd].weapon;

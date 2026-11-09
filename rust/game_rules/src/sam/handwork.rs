@@ -212,7 +212,7 @@ pub fn breaker_tick(g: &mut crate::game::Game, dt: f64) {
     let Some(mut mv) = g.pl[pl].breaker_move else { return };
     let bp = g.level.breaker.pos;
     let c = g.pl[pl].ch;
-    if g.pl[pl].down
+    if crate::condition::down(g, g.pl[pl].ch)
         || g.pl[pl].holding.is_some()
         || g.pl[pl].takedown.is_some()
         || g.pl[pl].dragging.is_some()
@@ -343,7 +343,7 @@ pub fn work_props(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<AnyBoxId
 
 /// A line that goes over the net: his hand goes to the handset for about as long as the line stands.
 pub fn radio_hand(g: &mut crate::game::Game, gd: GuardId, secs: f64) {
-    if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].civ.is_some() { return; }
+    if crate::condition::down(g, g.gd[gd].ch) || g.gd[gd].civ.is_some() { return; }
     g.stats.handwork.radio += 1;
     let c = g.gd[gd].ch;
     let secs = m::min(g.k.handwork.radio_max, m::max(g.k.handwork.radio_min, secs * g.k.handwork.radio_k));
@@ -354,7 +354,7 @@ pub fn radio_hand(g: &mut crate::game::Game, gd: GuardId, secs: f64) {
 
 /// Once a frame per man before anybody is posed: what the rule has in his gun hand; the animator makes a move of a change.
 pub fn swap_feed(g: &mut crate::game::Game, gd: GuardId, held: Option<crate::handwork::SwapFeedHeld>, plain: bool) {
-    if !plain || g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].held.is_some() { return; }
+    if !plain || crate::condition::down(g, g.gd[gd].ch) || g.gd[gd].held.is_some() { return; }
     let c = g.gd[gd].ch;
     g.ch[c].anim.swap_lag = crate::character::swap().lag * js::rem(g.ch[c].id * 0.6180339887, 1.0);
     let si = crate::character::anim_swap_info(g, c);

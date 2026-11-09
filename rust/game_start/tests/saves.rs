@@ -71,7 +71,7 @@ fn the_ring_rolls_and_a_man_down_saves_nothing() {
     assert_eq!(control::timeline(&h.p.g).len(), n);
     assert_eq!(h.saved.last().unwrap(), "manual.0", "past the ring's end the oldest goes");
     let pl = h.p.g.player;
-    h.p.g.pl[pl].down = true;
+    h.p.g.cond[h.p.g.pl[pl].ch].down = true;
     let before = h.saved.len();
     control::ask_save(&mut h.p.g);
     match control::tick(&mut h.p.g, 1.0 / 60.0) { Some(Do::Say(words)) => assert!(words.starts_with("not saved: "), "{words}"), _ => panic!("a man down was saved, or nothing was said") }

@@ -77,9 +77,9 @@ pub fn foe_down(g: &crate::game::Game, gd: GuardId) -> bool {
     match g.gd[gd].foe {
         Some(crate::game::Foe::Player) => {
             let p = crate::seats::faced_man(g, gd);
-            g.pl[p].down
+            crate::condition::down(g, g.pl[p].ch)
         }
-        Some(crate::game::Foe::Guard(f)) => g.gd[f].state == crate::game::GuardState::Dead,
+        Some(crate::game::Foe::Guard(f)) => crate::condition::down(g, g.gd[f].ch),
         None => false,
     }
 }

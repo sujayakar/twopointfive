@@ -106,7 +106,7 @@ fn op_tgt(g: &Game, gd: GuardId) -> Option<GuardId> {
 
 /// The player is in this man's line: the room fight held his round this frame for the player, no mate is nearer in it, and no fire hold has the round anyway.
 fn masked(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    if g.pl[g.player].down {
+    if crate::condition::down(g, g.pl[g.player].ch) {
         return false;
     }
     let o = match crate::roomfight::room_fight_op_of(g, gd) {
@@ -118,7 +118,7 @@ fn masked(g: &mut crate::game::Game, gd: GuardId) -> bool {
         None => return false,
     };
     let r = &g.tab.roomfight_op[o];
-    if g.gd[h].state == crate::game::GuardState::Dead
+    if crate::condition::down(g, g.gd[h].ch)
         || !(r.line_t > 0.0)
         || !matches!(r.line_by, Some(crate::roomfight::OpLineBy::Player))
         || g.time - r.line_at > 0.1
@@ -152,7 +152,7 @@ fn mate_nearer(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardId,
     let team = g.gd[gd].team;
     let half = g.k.showwhy.mate_half;
     for &o in &g.guards {
-        if o == gd || g.gd[o].state == crate::game::GuardState::Dead || g.gd[o].team != team {
+        if o == gd || crate::condition::down(g, g.gd[o].ch) || g.gd[o].team != team {
             continue;
         }
         let op = g.ch[g.gd[o].ch].pos;
@@ -191,7 +191,7 @@ fn line_said_by(g: &crate::game::Game, but: GuardId) -> bool {
     while i < g.guards.len() {
         let o = g.guards[i];
         i += 1;
-        if o == but || g.gd[o].state == crate::game::GuardState::Dead {
+        if o == but || crate::condition::down(g, g.gd[o].ch) {
             continue;
         }
         let up = match (g.m.showwhy.mem.get(o), &g.gd[o].bubble) {
@@ -221,7 +221,7 @@ fn waits(g: &mut crate::game::Game, op: DoorOpId) -> bool {
 
 /// This man of the order is on his mark with his hands his own.
 fn stands_free(g: &crate::game::Game, seat: &crate::seats::SeatRef, op: DoorOpId, gd: GuardId) -> bool {
-    if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].script.is_none() || crate::control::man::blind(g, gd) {
+    if crate::condition::down(g, g.gd[gd].ch) || g.gd[gd].script.is_none() || crate::control::man::blind(g, gd) {
         return false;
     }
     let a = match crate::orders::squad_orders_of(g, seat, gd) {
@@ -246,7 +246,7 @@ fn man_ahead(g: &crate::game::Game, op: DoorOpId, gd: GuardId) -> bool {
     let door = g.dr[g.tab.doortools_door_op[op].door].frame_centre;
     let d0 = flat(pos, door);
     for &o in &g.tab.doortools_door_op[op].men {
-        if o == gd || g.gd[o].state == crate::game::GuardState::Dead {
+        if o == gd || crate::condition::down(g, g.gd[o].ch) {
             continue;
         }
         let o_pos = g.ch[g.gd[o].ch].pos;
@@ -303,7 +303,7 @@ fn stacks(g: &mut crate::game::Game, pl: PlayerId) {
             // the last man first (the distance is read once a man: the comparer's own numbers, nothing moves during the sort)
             let mut file: Vec<(GuardId, f64)> = Vec::new();
             for &man in &g.tab.doortools_door_op[op].men {
-                if man != lead && g.gd[man].state != crate::game::GuardState::Dead {
+                if man != lead && !crate::condition::down(g, g.gd[man].ch) {
                     file.push((man, flat(g.ch[g.gd[man].ch].pos, door)));
                 }
             }
@@ -378,7 +378,7 @@ pub fn show_why_tick(g: &mut crate::game::Game) {
     while i < g.guards.len() {
         let gd = g.guards[i];
         i += 1;
-        if !crate::orders::squad_orders_mine(g, &crate::seats::here(g), gd) || g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].script.is_none() || g.gd[gd].held.is_some() {
+        if !crate::orders::squad_orders_mine(g, &crate::seats::here(g), gd) || crate::condition::down(g, g.gd[gd].ch) || g.gd[gd].script.is_none() || g.gd[gd].held.is_some() {
             continue;
         }
         // a man no order of the player's poses is his drill's
@@ -457,7 +457,7 @@ pub fn show_why_tick(g: &mut crate::game::Game) {
         // ---- DOOR (never in a fight)
         let pc = g.pl[pl].ch;
         let held_now = !g.tab.orders_assignment[a].arrived
-            && !g.pl[pl].down
+            && !crate::condition::down(g, g.pl[pl].ch)
             && crate::doorway::doorway_held_by(g, gd).as_deref() == Some("Player")
             && m::hyp2(g.ch[pc].vel[0], g.ch[pc].vel[2]) < 0.6
             && op_tgt(g, gd).is_none()
@@ -509,7 +509,7 @@ pub fn show_why_tick(g: &mut crate::game::Game) {
                 && (lag_n as f64) < k.lag_max
                 && t >= lag_t
                 && g.pl[pl].sprinting
-                && !g.pl[pl].down
+                && !crate::condition::down(g, g.pl[pl].ch)
                 && flat(g.ch[c].pos, g.ch[pc].pos) > k.lag_m
             {
                 owe(g.m.showwhy.mem.get_mut(gd).unwrap(), LINE_LAG, Why::Hurt, t + 3.0);

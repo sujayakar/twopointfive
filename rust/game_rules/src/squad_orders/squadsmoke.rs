@@ -81,7 +81,7 @@ fn run_clear(g: &mut crate::game::Game, a: V3, b: V3) -> bool {
 /// Has this man a hand for a throw right now.
 pub(super) fn squad_hand_free(g: &crate::game::Game, gd: GuardId) -> bool {
     let c = g.gd[gd].ch;
-    !(g.gd[gd].state == crate::game::GuardState::Dead
+    !(crate::condition::down(g, g.gd[gd].ch)
         || g.ch[c].anim.lockpick
         || crate::control::man::staggered(g, gd)
         || crate::control::man::blind(g, gd))

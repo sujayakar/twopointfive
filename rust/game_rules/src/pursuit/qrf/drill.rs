@@ -515,7 +515,7 @@ pub(super) fn phase_fight(g: &mut crate::game::Game, el: &mut Vec<GuardId>) {
     for i in 0..g.qrf.men.len() {
         let man = g.qrf.men[i];
         contact_t = m::max(contact_t, g.gd[man].last_seen_t);
-        if g.gd[man].state != crate::game::GuardState::Dead { contact_t = m::max(contact_t, g.gd[man].witness.heard.last_shot_t); }
+        if !crate::condition::down(g, g.gd[man].ch) { contact_t = m::max(contact_t, g.gd[man].witness.heard.last_shot_t); }
     }
     let seeing = el.iter().any(|&man| g.gd[man].saw_player_this_frame || g.gd[man].saw_foe_this_frame);
     // a man the chase has dropped to the search while it is still warm goes straight back on the freshest fix (no 'CONTACT!': he never left it)
@@ -606,7 +606,7 @@ pub(super) fn maybe_perimeter(g: &mut crate::game::Game) {
     let mut down = 0usize;
     for i in 0..g.guards.len() {
         let x = g.guards[i];
-        if g.gd[x].team == crate::teams::Team::Guard && g.gd[x].state == crate::game::GuardState::Dead && (g.gd[x].found) { down += 1; }   // (RESPONSE.net: men they have FOUND down, not men who are)
+        if g.gd[x].team == crate::teams::Team::Guard && crate::condition::down(g, g.gd[x].ch) && (g.gd[x].found) { down += 1; }   // (RESPONSE.net: men they have FOUND down, not men who are)
     }
     let why = if g.qrf.lost > 0.0 {
         Some(String::from("one of ours down"))
@@ -729,7 +729,7 @@ pub(super) fn tick_perimeter(g: &mut crate::game::Game, dt: f64) {
         let idx = i;
         i += 1;
         let (gd, post) = { let row = &g.qrf.perim.as_ref().unwrap().men[idx]; (row.gd, row.post.clone()) };
-        if g.gd[gd].state == crate::game::GuardState::Dead { continue; }
+        if crate::condition::down(g, g.gd[gd].ch) { continue; }
         if g.gd[gd].held.is_some() { continue; }   // in Sam's arm: off the script and off his own eyes, not re-ordered to the post from under the arm
         if g.gd[gd].script.is_some() {
             if g.qrf.perim.as_ref().unwrap().men[idx].arrived_at < 0.0 && (man_arrived(g, gd) || (flat(man_pos(g, gd), post.pos) < 0.7 && g.gd[gd].speed < 0.2)) {
@@ -786,14 +786,14 @@ pub(super) fn tick_perimeter(g: &mut crate::game::Game, dt: f64) {
     }
     if g.qrf.perim.as_ref().unwrap().state == PerimeterState::Called {
         let (n, eta_at) = { let p = g.qrf.perim.as_ref().unwrap(); (p.men.len(), p.eta_at) };
-        let all_set = n > 0 && g.qrf.perim.as_ref().unwrap().men.iter().all(|p| g.gd[p.gd].state == crate::game::GuardState::Dead || p.arrived_at >= 0.0);
+        let all_set = n > 0 && g.qrf.perim.as_ref().unwrap().men.iter().all(|p| crate::condition::down(g, g.gd[p.gd].ch) || p.arrived_at >= 0.0);
         if all_set || g.time > eta_at + 10.0 {
             let now = g.time;
             let p = g.qrf.perim.as_mut().unwrap();
             p.state = PerimeterState::Set;
             p.set_at = now;
             let up: Vec<(GuardId, String)> = g.qrf.perim.as_ref().unwrap().men.iter()
-                .filter(|p| g.gd[p.gd].state != crate::game::GuardState::Dead && p.arrived_at >= 0.0)
+                .filter(|p| !crate::condition::down(g, g.gd[p.gd].ch) && p.arrived_at >= 0.0)
                 .map(|p| (p.gd, p.post.name.clone())).collect();
             if let Some(first) = up.first() {
                 let names: Vec<String> = up.iter().map(|u| u.1.clone()).collect();

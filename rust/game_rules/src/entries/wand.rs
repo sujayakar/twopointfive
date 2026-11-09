@@ -73,7 +73,7 @@ fn turned(pan: f64, l: crate::wand::WandLens, aim: V3, max: f64, pan_rate: f64, 
 pub fn wand_eye(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<crate::fogofwar::FogEye> {
     let pl = seat.player;
     let w = g.pl[pl].wanding?;
-    if !w.live || g.pl[pl].down { return None; }
+    if !w.live || crate::condition::down(g, g.pl[pl].ch) { return None; }
     let l = wand_lens(g, w.door, w.side);
     let a = l.yaw + w.pan;
     let fov = wand_fov(g);

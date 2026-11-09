@@ -21,7 +21,7 @@ pub(super) fn team_starts_fallen_in(g: &mut crate::game::Game, men: &[GuardId]) 
 
 /// The pass over one seat's squad: the part of teamStartsFallenIn that a seat's view runs.
 fn fall_in_here(g: &mut Game, men: &[GuardId]) -> f64 {
-    let up: Vec<GuardId> = men.iter().copied().filter(|&m| g.gd[m].state != crate::game::GuardState::Dead).collect();
+    let up: Vec<GuardId> = men.iter().copied().filter(|&m| !crate::condition::down(g, g.gd[m].ch)).collect();
     if up.is_empty() { return 0.0; }
     let def = match g.orders.defs.iter().copied().find(|&d| g.tab.orders_order_def[d].id == crate::orders::rows::fallin::ORDER.id) {
         Some(d) => d,
