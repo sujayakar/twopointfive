@@ -6,6 +6,7 @@
 //!
 //! WHAT IS NOT STATE and is made again (`Plan`, a set a slot of the blocks, as bricks.rs's tables): which cells are roofed and the lists walked over them are the roofs',
 //! and which edges a leaf stands across is the leaves'. Whose a slot's set is goes by the block's stamp (src/sim/state.ts SimState.stamp).
+use crate::knobs::tune;
 use crate::knobs::{k, AIRDUST_DIFFUSE, AIRDUST_RECHECK_SECS, AIRDUST_SETTLE, AIRDUST_STEP};
 use crate::lines;
 use crate::maths::{cos, hypot2, sin};
@@ -125,7 +126,7 @@ pub struct Said {
 /// the fixed step in use (airDust.ts stepSecs): held to what the explicit scheme and a frame can take
 #[inline]
 fn step_secs() -> f64 {
-    let h = k(AIRDUST_STEP);
+    let h = tune().airdust.step;
     if h >= 1.0 / 240.0 && h <= 0.1 {
         h
     } else {
@@ -201,7 +202,7 @@ impl Air {
         if n == 0 {
             return;
         }
-        let per = js_min(n as f64, js_max(1.0, js_ceil(n as f64 * h / js_max(0.25, or_zero(k(AIRDUST_RECHECK_SECS)))))) as usize;
+        let per = js_min(n as f64, js_max(1.0, js_ceil(n as f64 * h / js_max(0.25, or_zero(tune().airdust.recheck_secs))))) as usize;
         let mut cur = self.cur as usize;
         for _ in 0..per {
             let e = p.edges[cur] as usize;
@@ -273,8 +274,8 @@ impl Air {
     fn step_once(&mut self, p: &Plan, dt: f64, open_out: &mut f64) -> f64 {
         let next = unsafe { &mut *core::ptr::addr_of_mut!(NEXT) };
         let leak = self.leak;
-        let ks = js_min(0.2, js_max(0.0, or_zero(k(AIRDUST_DIFFUSE))) * dt / (AIR_CELL * AIR_CELL));
-        let r = js_min(0.5, js_max(0.0, or_zero(k(AIRDUST_SETTLE))) * dt);
+        let ks = js_min(0.2, js_max(0.0, or_zero(tune().airdust.diffuse)) * dt / (AIR_CELL * AIR_CELL));
+        let r = js_min(0.5, js_max(0.0, or_zero(tune().airdust.settle)) * dt);
         let (mut moved, mut open) = (0.0, 0.0);
         let n = self.n_cells as usize;
         for q in 0..n {

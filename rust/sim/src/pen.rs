@@ -60,7 +60,7 @@ fn sheet_box(c: &Ctx, bi: usize) -> Option<&'static [f64]> {
 /// glasspen.ts nearHole
 fn near_hole(g: usize, bi: u32, p: [f64; 3]) -> bool {
     let ps = crate::panes::pn(g);
-    let r = k(PEN_HOLE_R);
+    let r = tune().glasspen.hole_r;
     let r2 = r * r;
     for h in 0..ps.nh as usize {
         let row = ps.hole(h);
@@ -79,7 +79,7 @@ fn near_hole(g: usize, bi: u32, p: [f64; 3]) -> bool {
 /// glasspen.ts paneToll: what sheet `bi` takes from a round of energy `e` meeting it at `at` flying `d` (unit), the `nth` pane of its flight; None: the round is spent in it
 pub fn pane_toll(c: &Ctx, bi: u32, at: [f64; 3], d: [f64; 3], e: f64, nth: usize) -> Option<Toll> {
     let b = sheet_box(c, bi as usize)?;
-    if nth as f64 >= js_min(MAX_CROSS as f64, k(PEN_MAX_PANES)) {
+    if nth as f64 >= js_min(MAX_CROSS as f64, tune().glasspen.max_panes) {
         return None;
     }
     let (cs, sn) = (b[R_COS], b[R_SIN]);
@@ -89,7 +89,7 @@ pub fn pane_toll(c: &Ctx, bi: u32, at: [f64; 3], d: [f64; 3], e: f64, nth: usize
         n = [n[0] * -1.0, n[1] * -1.0, n[2] * -1.0];
         co = -co;
     }
-    if co < k(PEN_GRAZE_COS) {
+    if co < tune().glasspen.graze_cos {
         return None;
     }
     let hole = near_hole(c.g, bi, at);
@@ -102,9 +102,9 @@ pub fn pane_toll(c: &Ctx, bi: u32, at: [f64; 3], d: [f64; 3], e: f64, nth: usize
         LAMINATED => PEN_COST_L,
         _ => PEN_COST_A,
     });
-    let take = cost * (2.0 * js_min(b[R_H], b[R_H + 2]) / k(PEN_REF_THICK)) * js_min(k(PEN_OBLIQUE_MAX), 1.0 / co) * (if hole { k(PEN_HOLE_K) } else { 1.0 });
+    let take = cost * (2.0 * js_min(b[R_H], b[R_H + 2]) / tune().glasspen.ref_thick) * js_min(tune().glasspen.oblique_max, 1.0 / co) * (if hole { tune().glasspen.hole_k } else { 1.0 });
     let e_out = e - take;
-    if e_out < k(PEN_MIN_ENERGY) {
+    if e_out < tune().glasspen.min_energy {
         return None;
     }
     Some(Toll { ty, n, cos: co, take, e_out, hole })
@@ -143,7 +143,7 @@ fn born_in(c: &Ctx, p: [f64; 3], d: [f64; 3], me: u32) -> i32 {
 }
 /// glasspen.ts deflect: the turn, toward the normal by the slant's share, plus the hashed scatter
 fn deflect(b: &[f64], at: [f64; 3], d: [f64; 3], t: &Toll, e_in: f64) -> [f64; 3] {
-    let a = k(PEN_DEFLECT_DEG) * PI / 180.0 * clamp(t.take / js_max(e_in, 1e-6), 0.0, 1.0);
+    let a = tune().glasspen.deflect_deg * PI / 180.0 * clamp(t.take / js_max(e_in, 1e-6), 0.0, 1.0);
     if a < 1e-6 {
         return d;
     }
@@ -159,7 +159,7 @@ fn deflect(b: &[f64], at: [f64; 3], d: [f64; 3], t: &Toll, e_in: f64) -> [f64; 3
     let mut out = [d[0] + (e1[0] * cos(phi) + e2[0] * sin(phi)) * r, d[1] + (e1[1] * cos(phi) + e2[1] * sin(phi)) * r, d[2] + (e1[2] * cos(phi) + e2[2] * sin(phi)) * r];
     let si = sqrt(js_max(0.0, 1.0 - t.cos * t.cos));
     if si > 1e-4 {
-        let kk = tan(a * k(PEN_BEND_K) * si) / si;
+        let kk = tan(a * tune().glasspen.bend_k * si) / si;
         let (px, py, pz) = (t.n[0] - d[0] * t.cos, t.n[1] - d[1] * t.cos, t.n[2] - d[2] * t.cos);
         out = [out[0] + px * kk, out[1] + py * kk, out[2] + pz * kk];
     }
@@ -385,7 +385,7 @@ pub fn add_hole(g: usize, bi: u32, p: [f64; 3]) {
     let ps = crate::panes::pn(g);
     ps.stand();
     let row = panes_hole_row(g, bi);
-    let cap = js_min(panes::HOLE_PTS as f64, k(PEN_HOLES)) as usize;
+    let cap = js_min(panes::HOLE_PTS as f64, tune().glasspen.holes) as usize;
     let h = ps.hole(row);
     if h.n as usize >= cap {
         h.p.copy_within(3..3 * cap, 0);
