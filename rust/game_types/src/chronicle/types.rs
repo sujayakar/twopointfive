@@ -1,10 +1,9 @@
-//! The types of `chronicle`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `chronicle`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: ChronEvent, src/game/chronicle.ts:85)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct ChronEvent {
     pub t: f64,
     pub kind: crate::chronicle::ChronKind,
@@ -12,24 +11,10 @@ pub struct ChronEvent {
     pub pos: V3,
     pub data: JsMap<String, Option<crate::chronicle::ChronEventDataValue>>,
 }
-impl ChronEvent {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ChronEvent {
-            t: 0.0,
-            kind: crate::chronicle::ChronKind::Down,
-            room: String::new(),
-            pos: [0.0; 3],
-            data: JsMap::new(),
-        }
-    }
-}
-impl Default for ChronEvent { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
 pub enum ChronKind {
-    Down,
+    #[default] Down,
     Shot,
     Blackout,
     Heard,
@@ -109,7 +94,6 @@ impl ChronKind {
     }
 }
 
-/// (TypeScript: a union)
 #[derive(Clone, Debug, ToBytes)]
 pub enum ChronEventDataValue {
     Text(String),
@@ -117,8 +101,7 @@ pub enum ChronEventDataValue {
     Bool(bool),
 }
 
-/// (TypeScript: ChronCounts, src/game/chronicle.ts:105)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct ChronCounts {
     pub seen_up: f64,
     pub esc1: f64,
@@ -147,42 +130,7 @@ pub struct ChronCounts {
     pub saves: f64,
     pub loads: f64,
 }
-impl ChronCounts {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ChronCounts {
-            seen_up: 0.0,
-            esc1: 0.0,
-            esc2: 0.0,
-            shots_near_men: 0.0,
-            lights_shot: 0.0,
-            ocps: 0.0,
-            blackouts: 0.0,
-            kicked: 0.0,
-            picked: 0.0,
-            intel: 0.0,
-            thrown: 0.0,
-            grabs: 0.0,
-            contacts: 0.0,
-            heard: 0.0,
-            radio: 0.0,
-            civ_seen: 0.0,
-            civ_reported: 0.0,
-            civ_complied: 0.0,
-            civ_ko: 0.0,
-            civ_killed: 0.0,
-            devices: 0.0,
-            hits: 0.0,
-            down: false,
-            down_by: String::new(),
-            saves: 0.0,
-            loads: 0.0,
-        }
-    }
-}
-impl Default for ChronCounts { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Chronicle, src/game/chronicle.ts:118)
 #[derive(Clone, Debug, ToBytes)]
 pub struct Chronicle {
     pub events: Vec<crate::chronicle::ChronEvent>,
@@ -197,7 +145,7 @@ pub struct Chronicle {
     pub heard_no_row: JsSet<u32>,
 }
 impl Chronicle {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         Chronicle {
             events: Vec::new(),
@@ -215,7 +163,6 @@ impl Chronicle {
 }
 impl Default for Chronicle { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: a union)
 #[derive(Clone, Debug)]
 pub enum ChronDataValue {
     Text(String),
@@ -223,7 +170,6 @@ pub enum ChronDataValue {
     Bool(bool),
 }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum ChronCountKey {
     Heard,
@@ -282,8 +228,7 @@ impl ChronCountKey {
     }
 }
 
-/// (TypeScript: RunCounts, src/game/chronicle.ts:325)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct RunCounts {
     pub elapsed: f64,
     pub stage: String,
@@ -322,91 +267,22 @@ pub struct RunCounts {
     pub civ_ko: f64,
     pub civ_killed: f64,
 }
-impl RunCounts {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RunCounts {
-            elapsed: 0.0,
-            stage: String::new(),
-            done: false,
-            failed: false,
-            sandbox: false,
-            blackout: false,
-            seen: 0.0,
-            seen_up: 0.0,
-            alarms: 0.0,
-            esc1: 0.0,
-            esc2: 0.0,
-            bodies: 0.0,
-            kills: 0.0,
-            kos: 0.0,
-            shots: 0.0,
-            shots_near_men: 0.0,
-            lights_shot: 0.0,
-            ocps: 0.0,
-            kicked: 0.0,
-            picked: 0.0,
-            keys: 0.0,
-            intel: 0.0,
-            questioned: 0.0,
-            roster: 0.0,
-            hits: 0.0,
-            down: false,
-            loads: 0.0,
-            thrown: 0.0,
-            grabs: 0.0,
-            dropped: 0.0,
-            devices: 0.0,
-            civ_seen: 0.0,
-            civ_reported: 0.0,
-            civ_complied: 0.0,
-            civ_ko: 0.0,
-            civ_killed: 0.0,
-        }
-    }
-}
-impl Default for RunCounts { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: ScoreLine, src/game/chronicle.ts:364)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct ScoreLine {
     pub label: String,
     pub pts: f64,
 }
-impl ScoreLine {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ScoreLine {
-            label: String::new(),
-            pts: 0.0,
-        }
-    }
-}
-impl Default for ScoreLine { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Badge, src/game/chronicle.ts:403)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct Badge {
     pub id: String,
     pub name: String,
     pub on: bool,
     pub hint: String,
 }
-impl Badge {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Badge {
-            id: String::new(),
-            name: String::new(),
-            on: false,
-            hint: String::new(),
-        }
-    }
-}
-impl Default for Badge { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Debrief, src/game/chronicle.ts:425)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct Debrief {
     pub counts: crate::chronicle::RunCounts,
     pub score: f64,
@@ -419,29 +295,10 @@ pub struct Debrief {
     pub scored: bool,
     pub grade: String,
 }
-impl Debrief {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Debrief {
-            counts: crate::chronicle::RunCounts::zeroed(),
-            score: 0.0,
-            lines: Vec::new(),
-            rating: String::new(),
-            blurb: String::new(),
-            badges: Vec::new(),
-            summary: String::new(),
-            state: crate::chronicle::DebriefState::Down,
-            scored: false,
-            grade: String::new(),
-        }
-    }
-}
-impl Default for Debrief { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum DebriefState {
-    Down,
+    #[default] Down,
     Done,
     Sofar,
 }
@@ -455,8 +312,7 @@ impl DebriefState {
     }
 }
 
-/// (TypeScript: inline at src/game/chronicle.ts:27 ROOMS, src/game/chronicle.ts:27)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct ROOMSItem {
     pub name: String,
     pub x0: f64,
@@ -464,41 +320,15 @@ pub struct ROOMSItem {
     pub z0: f64,
     pub z1: f64,
 }
-impl ROOMSItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ROOMSItem {
-            name: String::new(),
-            x0: 0.0,
-            x1: 0.0,
-            z0: 0.0,
-            z1: 0.0,
-        }
-    }
-}
-impl Default for ROOMSItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/chronicle.ts:392 BANDS, src/game/chronicle.ts:392)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct BANDSItem {
     pub min: f64,
     pub word: String,
     pub blurb: String,
 }
-impl BANDSItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BANDSItem {
-            min: 0.0,
-            word: String::new(),
-            blurb: String::new(),
-        }
-    }
-}
-impl Default for BANDSItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/chronicle.ts:507 PIN, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct PIN {
     pub down: Option<crate::chronicle::PINDown>,
     pub shot: Option<crate::chronicle::PINDown>,
@@ -537,72 +367,15 @@ pub struct PIN {
     pub code_entered: Option<crate::chronicle::PINDown>,
     pub checkpoint: Option<crate::chronicle::PINDown>,
 }
-impl PIN {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PIN {
-            down: None,
-            shot: None,
-            blackout: None,
-            heard: None,
-            objective: None,
-            grab: None,
-            ocp: None,
-            thrown: None,
-            radio: None,
-            spotted: None,
-            contact: None,
-            lost: None,
-            calm: None,
-            alarm: None,
-            light_shot: None,
-            interrogated: None,
-            key_taken: None,
-            ko: None,
-            kill: None,
-            body_found: None,
-            door_kicked: None,
-            lock_picked: None,
-            hit: None,
-            need_break: None,
-            civilian_spotted: None,
-            civilian_reported: None,
-            civilian_complied: None,
-            civilian_ko: None,
-            civilian_killed: None,
-            camera_spotted: None,
-            camera_alarm: None,
-            laser_tripped: None,
-            device_down: None,
-            code_learned: None,
-            code_entered: None,
-            checkpoint: None,
-        }
-    }
-}
-impl Default for PIN { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at PIN.down, src/game/chronicle.ts:507)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct PINDown {
     pub glyph: String,
     pub cls: String,
     pub label: String,
 }
-impl PINDown {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PINDown {
-            glyph: String::new(),
-            cls: String::new(),
-            label: String::new(),
-        }
-    }
-}
-impl Default for PINDown { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/chronicle.ts:38 roomsOf ->, src/game/chronicle.ts:38)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct RoomsOfItem {
     pub name: String,
     pub x0: f64,
@@ -610,21 +383,7 @@ pub struct RoomsOfItem {
     pub z0: f64,
     pub z1: f64,
 }
-impl RoomsOfItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RoomsOfItem {
-            name: String::new(),
-            x0: 0.0,
-            x1: 0.0,
-            z0: 0.0,
-            z1: 0.0,
-        }
-    }
-}
-impl Default for RoomsOfItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: a union)
 #[derive(Clone, Debug)]
 pub enum IsChatterDataValue {
     Text(String),
@@ -632,7 +391,6 @@ pub enum IsChatterDataValue {
     Bool(bool),
 }
 
-/// (TypeScript: a union)
 #[derive(Clone, Debug)]
 pub enum ChronicleAddDataValue {
     Text(String),
@@ -640,66 +398,28 @@ pub enum ChronicleAddDataValue {
     Bool(bool),
 }
 
-/// (TypeScript: a union)
 #[derive(Clone, Debug)]
 pub enum ChronicleRecentKey {
     Text(String),
     Num(f64),
 }
 
-/// (TypeScript: inline at src/game/chronicle.ts:146 heardRow(e), src/game/chronicle.ts:146 heardRow(e))
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct ChronicleHeardRowE {
 }
-impl ChronicleHeardRowE {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ChronicleHeardRowE {
-        }
-    }
-}
-impl Default for ChronicleHeardRowE { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/chronicle.ts:147 bindHeard(e), src/game/chronicle.ts:147 bindHeard(e))
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct ChronicleBindHeardE {
 }
-impl ChronicleBindHeardE {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ChronicleBindHeardE {
-        }
-    }
-}
-impl Default for ChronicleBindHeardE { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/chronicle.ts:148 heardCounted(e), src/game/chronicle.ts:148 heardCounted(e))
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct ChronicleHeardCountedE {
 }
-impl ChronicleHeardCountedE {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ChronicleHeardCountedE {
-        }
-    }
-}
-impl Default for ChronicleHeardCountedE { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/chronicle.ts:149 markHeardCounted(e), src/game/chronicle.ts:149 markHeardCounted(e))
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct ChronicleMarkHeardCountedE {
 }
-impl ChronicleMarkHeardCountedE {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ChronicleMarkHeardCountedE {
-        }
-    }
-}
-impl Default for ChronicleMarkHeardCountedE { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: a union)
 #[derive(Clone, Debug)]
 pub enum ChronicleDataValue {
     Text(String),
@@ -707,7 +427,6 @@ pub enum ChronicleDataValue {
     Bool(bool),
 }
 
-/// (TypeScript: a union)
 #[derive(Clone, Debug)]
 pub enum ChronicleNDataValue {
     Text(String),
@@ -715,24 +434,12 @@ pub enum ChronicleNDataValue {
     Bool(bool),
 }
 
-/// (TypeScript: inline at src/game/chronicle.ts:276 fixtureName(tg), src/game/chronicle.ts:276)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct FixtureNameTg {
     pub name: String,
     pub group: String,
 }
-impl FixtureNameTg {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FixtureNameTg {
-            name: String::new(),
-            group: String::new(),
-        }
-    }
-}
-impl Default for FixtureNameTg { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum ChronDoorKind {
     DoorKicked,
@@ -747,7 +454,6 @@ impl ChronDoorKind {
     }
 }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum ChronCheckpointWhat {
     Save,
@@ -762,41 +468,18 @@ impl ChronCheckpointWhat {
     }
 }
 
-/// (TypeScript: inline at src/game/chronicle.ts:366 stealthScore ->, src/game/chronicle.ts:366)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct StealthScore {
     pub score: f64,
     pub lines: Vec<crate::chronicle::ScoreLine>,
 }
-impl StealthScore {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StealthScore {
-            score: 0.0,
-            lines: Vec::new(),
-        }
-    }
-}
-impl Default for StealthScore { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/chronicle.ts:398 ratingOf ->, src/game/chronicle.ts:398)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct RatingOf {
     pub word: String,
     pub blurb: String,
 }
-impl RatingOf {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RatingOf {
-            word: String::new(),
-            blurb: String::new(),
-        }
-    }
-}
-impl Default for RatingOf { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum SummaryLineState {
     Down,

@@ -875,7 +875,7 @@ mod tests {
     use super::*;
 
     fn card(smoke: f64, bangs: f64) -> MemberKit {
-        let mut m = MemberKit::zeroed();
+        let mut m = MemberKit::default();
         m.smoke = smoke;
         m.bangs = bangs;
         m

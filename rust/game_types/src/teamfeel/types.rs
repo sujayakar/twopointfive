@@ -1,4 +1,4 @@
-//! The types of `teamfeel`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `teamfeel`.
 #![allow(unused_imports)]
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
@@ -10,7 +10,6 @@ pub enum FeelValue {
     Flag { v: bool },
 }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum FeelName {
     PAIR,

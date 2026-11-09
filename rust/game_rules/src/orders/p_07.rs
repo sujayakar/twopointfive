@@ -943,7 +943,7 @@ pub fn squad_orders_walk_send(g: &mut crate::game::Game, gd: GuardId, t: crate::
         going: String::from("moving"),
         there: String::from("moving"),
         tries: Some(Tries { door: t.door, side: t.side, post: t.post, at: v3::copy(at), on: assign_to_on(on) }),
-        ..SquadOrdersAssignA::zeroed()
+        ..SquadOrdersAssignA::default()
     };
     squad_orders_assign(g, gd, &a);
 }

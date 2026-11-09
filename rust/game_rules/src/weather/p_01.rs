@@ -437,7 +437,7 @@ pub fn weather_strike(g: &mut crate::game::Game, opts: Option<crate::weather::We
     let light = g.tab.light.push(crate::render_lights::RtLight {
         name: String::from("lightning"), group: String::from("weather"), kind: 2.0, pos: [0.0, 0.0, 0.0], dir, color: v3::copy(flash_color()), intensity: 0.0, range: 1e6, inner_deg: 0.0, outer_deg: 0.0,
         radius: 0.006, volumetric: 1.3, owner: 0.0, enabled: true, fixture_box: -1.0, flicker: 0.0, ttl: -1.0, age: 0.0, peak_intensity: peak, transient: Some(true),
-        ..crate::render_lights::RtLight::zeroed()   // (every field the literal leaves absent)
+        ..crate::render_lights::RtLight::default()   // (every field the literal leaves absent)
     });
     crate::render_lights::light_set_add(g, light);
     g.weather.flash = Some(Flash { light, stroke, t: 0.0, peak, dir, bearing, dist_km });

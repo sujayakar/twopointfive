@@ -1,9 +1,8 @@
-//! The types of `break_table`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `break_table`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: Breaks, src/game/breakTable.ts:335)
 #[derive(Clone, Debug, ToBytes)]
 pub struct Breaks {
     pub counter: f64,
@@ -13,7 +12,7 @@ pub struct Breaks {
     pub kink_t: f64,
 }
 impl Breaks {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         Breaks {
             counter: 1.0,
@@ -38,25 +37,14 @@ pub struct Inside {
     pub framed: bool,
 }
 
-/// (TypeScript: inline at src/game/breakTable.ts:529 Breaks.look, src/game/breakTable.ts:529)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct BreaksLook {
     pub on: bool,
 }
-impl BreaksLook {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BreaksLook {
-            on: false,
-        }
-    }
-}
-impl Default for BreaksLook { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum Mat {
-    Carpet,
+    #[default] Carpet,
     Tile,
     Metal,
     Glass,
@@ -96,7 +84,6 @@ impl Mat {
     }
 }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum Shape {
     Panel,
@@ -119,10 +106,9 @@ impl Shape {
     }
 }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum Split {
-    Along,
+    #[default] Along,
     Across,
     Diag,
 }
@@ -136,7 +122,6 @@ impl Split {
     }
 }
 
-/// (TypeScript: BreakRow, src/game/breakTable.ts:37)
 #[derive(Clone, Debug)]
 pub struct BreakRow {
     pub core: Option<V3>,
@@ -158,9 +143,8 @@ pub struct BreakRow {
     pub level: f64,
     pub mark: f64,
 }
-impl BreakRow {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
+impl Default for BreakRow {
+    fn default() -> Self {
         BreakRow {
             core: None,
             pale: None,
@@ -172,7 +156,7 @@ impl BreakRow {
             tears: [0.0; 2],
             ragged: None,
             again: None,
-            small: crate::break_table::BreakRowSmall::zeroed(),
+            small: crate::break_table::BreakRowSmall::default(),
             dust: 0.0,
             sparks: 0.0,
             puff: 0.0,
@@ -182,29 +166,15 @@ impl BreakRow {
         }
     }
 }
-impl Default for BreakRow { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/breakTable.ts:44 BreakRow.ragged, src/game/breakTable.ts:44)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct BreakRowRagged {
     pub deg: [f64; 2],
     pub bite: f64,
     pub grain: Option<bool>,
 }
-impl BreakRowRagged {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BreakRowRagged {
-            deg: [0.0; 2],
-            bite: 0.0,
-            grain: None,
-        }
-    }
-}
-impl Default for BreakRowRagged { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/breakTable.ts:47 BreakRow.again, src/game/breakTable.ts:47)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct BreakRowAgain {
     pub land: f64,
     pub kick: f64,
@@ -212,81 +182,30 @@ pub struct BreakRowAgain {
     pub chips: f64,
     pub chance: Option<f64>,
 }
-impl BreakRowAgain {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BreakRowAgain {
-            land: 0.0,
-            kick: 0.0,
-            how: crate::break_table::Split::Along,
-            chips: 0.0,
-            chance: None,
-        }
-    }
-}
-impl Default for BreakRowAgain { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/breakTable.ts:49 BreakRow.small, src/game/breakTable.ts:49)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct BreakRowSmall {
     pub n: f64,
     pub size: [f64; 2],
     pub aspect: [f64; 2],
 }
-impl BreakRowSmall {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BreakRowSmall {
-            n: 0.0,
-            size: [0.0; 2],
-            aspect: [0.0; 2],
-        }
-    }
-}
-impl Default for BreakRowSmall { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: BreakMeta, src/game/breakTable.ts:150)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct BreakMeta {
     pub mat: crate::break_table::Mat,
     pub gen_: f64,
     pub paint: V3,
     pub fixed: Option<bool>,
 }
-impl BreakMeta {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BreakMeta {
-            mat: crate::break_table::Mat::Carpet,
-            gen_: 0.0,
-            paint: [0.0; 3],
-            fixed: None,
-        }
-    }
-}
-impl Default for BreakMeta { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Shaped, src/game/breakTable.ts:228)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Shaped {
     pub off: V3,
     pub h: V3,
     pub cut: Option<Vec<crate::scene_cut::CutPlane>>,
 }
-impl Shaped {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Shaped {
-            off: [0.0; 3],
-            h: [0.0; 3],
-            cut: None,
-        }
-    }
-}
-impl Default for Shaped { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: OpenFace, src/game/breakTable.ts:261)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct OpenFace {
     pub axis: f64,
     pub sign: f64,
@@ -295,44 +214,16 @@ pub struct OpenFace {
     pub lo: Option<f64>,
     pub head: Option<f64>,
 }
-impl OpenFace {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        OpenFace {
-            axis: 0.0,
-            sign: 0.0,
-            lat: Vec::new(),
-            seed: 0.0,
-            lo: None,
-            head: None,
-        }
-    }
-}
-impl Default for OpenFace { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: ShedBudget, src/game/breakTable.ts:332)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct ShedBudget {
     pub chunks: f64,
     pub heap: Option<f64>,
     pub from: Option<V3>,
     pub per: Option<f64>,
 }
-impl ShedBudget {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ShedBudget {
-            chunks: 0.0,
-            heap: None,
-            from: None,
-            per: None,
-        }
-    }
-}
-impl Default for ShedBudget { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: CellGrid, src/game/breakTable.ts:333)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct CellGrid {
     pub id: f64,
     pub surf: crate::scene_materials::Surf,
@@ -344,94 +235,32 @@ pub struct CellGrid {
     pub n_open: Option<f64>,
     pub box_: BoxId,
 }
-impl CellGrid {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CellGrid {
-            id: 0.0,
-            surf: crate::scene_materials::Surf::Carpet,
-            nx: 0.0,
-            ny: 0.0,
-            nz: 0.0,
-            yb: Vec::new(),
-            open: Vec::new(),
-            n_open: None,
-            box_: BoxId(0),
-        }
-    }
-}
-impl Default for CellGrid { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/breakTable.ts:139 matOf(box), src/game/breakTable.ts:139)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct MatOfBox {
     pub does: Option<String>,
 }
-impl MatOfBox {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        MatOfBox {
-            does: None,
-        }
-    }
-}
-impl Default for MatOfBox { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/breakTable.ts:351 share ->, src/game/breakTable.ts:351)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct BreaksShare {
     pub thrown: f64,
     pub heap: f64,
     pub furniture: f64,
 }
-impl BreaksShare {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BreaksShare {
-            thrown: 0.0,
-            heap: 0.0,
-            furniture: 0.0,
-        }
-    }
-}
-impl Default for BreaksShare { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/breakTable.ts:361 lands ->, src/game/breakTable.ts:361)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct BreaksLands {
     pub level: f64,
     pub dust: f64,
 }
-impl BreaksLands {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BreaksLands {
-            level: 0.0,
-            dust: 0.0,
-        }
-    }
-}
-impl Default for BreaksLands { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/breakTable.ts:612 shedCell ->, src/game/breakTable.ts:612)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct BreaksShedCell {
     pub thrown: f64,
     pub refused: f64,
 }
-impl BreaksShedCell {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BreaksShedCell {
-            thrown: 0.0,
-            refused: 0.0,
-        }
-    }
-}
-impl Default for BreaksShedCell { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/breakTable.ts:722 studs ->, src/game/breakTable.ts:722)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct BreaksStudsItem {
     pub c: V3,
     pub h: V3,
@@ -440,20 +269,6 @@ pub struct BreaksStudsItem {
     pub metal: bool,
     pub does: crate::scene_materials::DoesWord,
 }
-impl BreaksStudsItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BreaksStudsItem {
-            c: [0.0; 3],
-            h: [0.0; 3],
-            albedo: [0.0; 3],
-            rough: 0.0,
-            metal: false,
-            does: crate::scene_materials::DoesWord::Snow,
-        }
-    }
-}
-impl Default for BreaksStudsItem { fn default() -> Self { Self::zeroed() } }
 
 /// the counters this module keeps for the checks
 #[derive(Clone, Debug, Default)]

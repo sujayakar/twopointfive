@@ -136,7 +136,7 @@ pub fn drip(g: &mut crate::game::Game, c_2: CharId) {
         vadd: Some(vel),
         owner: Some(id),
         color: Some([0.42, 0.47, 0.55]),
-        ..crate::render_particles::EmitOpts::zeroed()
+        ..crate::render_particles::EmitOpts::default()
     });
     g.stats.wet.drips += 1;
 }
@@ -171,7 +171,7 @@ pub fn wet_footfall(g: &mut crate::game::Game, left_hint: bool) {
         param: Some(k),
         look: Some(true),
         seed: Some(seed as f64),
-        ..crate::render_decals::DecalOpts::zeroed()
+        ..crate::render_decals::DecalOpts::default()
     }));
 }
 

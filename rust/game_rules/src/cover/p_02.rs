@@ -66,7 +66,7 @@ pub fn cover_reset(g: &mut Game) {
     c.live = Vec::new();
     c.men = Vec::new();
     c.deal_at = 0.0;
-    c.stats = CoverStats::zeroed();
+    c.stats = CoverStats::default();
     c.log.clear();
 }
 

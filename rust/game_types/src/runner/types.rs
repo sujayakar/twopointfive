@@ -1,12 +1,11 @@
-//! The types of `runner`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `runner`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum RunPhase {
-    Low,
+    #[default] Low,
     Out,
     Gone,
     Mates,
@@ -24,8 +23,7 @@ impl RunPhase {
     }
 }
 
-/// (TypeScript: Run, src/game/runner.ts:99)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Run {
     pub phase: crate::runner::RunPhase,
     pub t: f64,
@@ -46,34 +44,7 @@ pub struct Run {
     pub drive_t: f64,
     pub script: crate::game::GuardScript,
 }
-impl Run {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Run {
-            phase: crate::runner::RunPhase::Low,
-            t: 0.0,
-            from: [0.0; 3],
-            goal: None,
-            mate: None,
-            told: 0.0,
-            unseen: 0.0,
-            at: [0.0; 3],
-            stall: 0.0,
-            is_out: false,
-            tries: 0.0,
-            plan: 0.0,
-            face: None,
-            bold: false,
-            bare: false,
-            drive: false,
-            drive_t: 0.0,
-            script: crate::game::GuardScript::zeroed(),
-        }
-    }
-}
-impl Default for Run { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub enum LineKind {
     Done,
@@ -88,16 +59,14 @@ impl LineKind {
     }
 }
 
-/// (TypeScript: Foe, src/game/runner.ts:136)
 #[derive(Clone, Copy, Debug)]
 pub struct Foe {
     pub pos: V3,
     pub eye: V3,
     pub who: crate::picture::Who,
 }
-impl Foe {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
+impl Default for Foe {
+    fn default() -> Self {
         Foe {
             pos: [0.0; 3],
             eye: [0.0; 3],
@@ -105,82 +74,34 @@ impl Foe {
         }
     }
 }
-impl Default for Foe { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: RunnerSnap, src/game/runner.ts:418)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct RunnerSnap {
     pub men: Vec<Option<Vec<f64>>>,
 }
-impl RunnerSnap {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RunnerSnap {
-            men: Vec::new(),
-        }
-    }
-}
-impl Default for RunnerSnap { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/runner.ts:108 LINES, src/game/runner.ts:108)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct LINESValue {
     pub say: Vec<String>,
     pub he: Option<Vec<String>>,
     pub they: Option<Vec<String>>,
 }
-impl LINESValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LINESValue {
-            say: Vec::new(),
-            he: None,
-            they: None,
-        }
-    }
-}
-impl Default for LINESValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/runner.ts:216 flood ->, src/game/runner.ts:216)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Flood {
     pub out: Option<V3>,
     pub hidden: bool,
     pub corner: V3,
     pub shied: bool,
 }
-impl Flood {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Flood {
-            out: None,
-            hidden: false,
-            corner: [0.0; 3],
-            shied: false,
-        }
-    }
-}
-impl Default for Flood { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/runner.ts:291 planOut(F), src/game/runner.ts:291)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct PlanOutF {
     pub out: Option<V3>,
     pub shied: bool,
 }
-impl PlanOutF {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PlanOutF {
-            out: None,
-            shied: false,
-        }
-    }
-}
-impl Default for PlanOutF { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/runner.ts:409 runnerOf ->, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1597)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RunnerOf {
     pub at: V3,
     pub drive: bool,
@@ -200,31 +121,6 @@ pub struct RunnerOf {
     pub is_out: bool,
     pub bold: bool,
 }
-impl RunnerOf {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RunnerOf {
-            at: [0.0; 3],
-            drive: false,
-            t: 0.0,
-            from: [0.0; 3],
-            phase: crate::runner::RunPhase::Low,
-            plan: 0.0,
-            face: None,
-            goal: None,
-            tries: 0.0,
-            bare: false,
-            told: 0.0,
-            mate: None,
-            drive_t: 0.0,
-            stall: 0.0,
-            unseen: 0.0,
-            is_out: false,
-            bold: false,
-        }
-    }
-}
-impl Default for RunnerOf { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]

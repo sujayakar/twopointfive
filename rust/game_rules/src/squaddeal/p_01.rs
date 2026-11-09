@@ -112,10 +112,10 @@ mod tests {
     use crate::scene_scenarios::{Rect, StructureData, StructureRoom};
 
     fn room(id: &str, x0: f64, x1: f64, z0: f64, z1: f64) -> StructureRoom {
-        StructureRoom { id: String::from(id), name: String::from(id), bounds: Rect { x0, x1, z0, z1 }, ..StructureRoom::zeroed() }
+        StructureRoom { id: String::from(id), name: String::from(id), bounds: Rect { x0, x1, z0, z1 }, ..StructureRoom::default() }
     }
     fn house(rooms: Vec<StructureRoom>) -> StructureData {
-        StructureData { name: String::from("x"), rooms, ..StructureData::zeroed() }
+        StructureData { name: String::from("x"), rooms, ..StructureData::default() }
     }
     fn line() -> Vec<StructureRoom> {
         vec![room("c", 20.0, 30.0, 0.0, 4.0), room("a", 0.0, 10.0, 0.0, 4.0), room("e", 40.0, 50.0, 0.0, 4.0), room("b", 10.0, 20.0, 0.0, 4.0), room("d", 30.0, 40.0, 0.0, 4.0)]

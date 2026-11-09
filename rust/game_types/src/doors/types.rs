@@ -1,10 +1,9 @@
-//! The types of `doors`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `doors`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: DoorDef, src/game/doors.ts:104)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct DoorDef {
     pub name: String,
     pub hinge: [f64; 2],
@@ -24,34 +23,8 @@ pub struct DoorDef {
     pub lock: Option<String>,
     pub steel: Option<bool>,
 }
-impl DoorDef {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DoorDef {
-            name: String::new(),
-            hinge: [0.0; 2],
-            closed_dir: 0.0,
-            width: 0.0,
-            height: None,
-            thickness: None,
-            min_angle: None,
-            max_angle: None,
-            angle: None,
-            swing: None,
-            albedo: None,
-            closer: None,
-            exterior: None,
-            locked: None,
-            key_side: None,
-            lock: None,
-            steel: None,
-        }
-    }
-}
-impl Default for DoorDef { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: DoorDrive, src/game/doors.ts:204)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct DoorDrive {
     pub who: f64,
     pub dir: f64,
@@ -65,30 +38,10 @@ pub struct DoorDrive {
     pub pz: f64,
     pub hit: f64,
 }
-impl DoorDrive {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DoorDrive {
-            who: 0.0,
-            dir: 0.0,
-            kind: crate::doors::DoorDriveKind::Boot,
-            t: 0.0,
-            from: 0.0,
-            quiet: false,
-            side: 0.0,
-            rate: 0.0,
-            px: 0.0,
-            pz: 0.0,
-            hit: 0.0,
-        }
-    }
-}
-impl Default for DoorDrive { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum DoorDriveKind {
-    Boot,
+    #[default] Boot,
     Body,
     Hand,
     Swing,
@@ -104,8 +57,7 @@ impl DoorDriveKind {
     }
 }
 
-/// (TypeScript: DoorStrike, src/game/doors.ts:211)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct DoorStrike {
     pub door: DoorId,
     pub by: f64,
@@ -113,24 +65,10 @@ pub struct DoorStrike {
     pub floor: bool,
     pub dir: [f64; 2],
 }
-impl DoorStrike {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DoorStrike {
-            door: DoorId(0),
-            by: 0.0,
-            tier: crate::doors::DoorStrikeTier::Boot,
-            floor: false,
-            dir: [0.0; 2],
-        }
-    }
-}
-impl Default for DoorStrike { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum DoorStrikeTier {
-    Boot,
+    #[default] Boot,
     Open,
     Slam,
 }
@@ -144,8 +82,7 @@ impl DoorStrikeTier {
     }
 }
 
-/// (TypeScript: DoorContact, src/game/doors.ts:219)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct DoorContact {
     pub pos: V3,
     pub radius: f64,
@@ -168,58 +105,17 @@ pub struct DoorContact {
     pub solid: Option<bool>,
     pub vel: Option<V3>,
 }
-impl DoorContact {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DoorContact {
-            pos: [0.0; 3],
-            radius: 0.0,
-            bash: false,
-            who: 0.0,
-            quiet: false,
-            weak: None,
-            key: None,
-            keys: None,
-            blocked_by: None,
-            hand: None,
-            round: None,
-            run: None,
-            bashed: None,
-            ripped: None,
-            bashed_at: None,
-            struck: None,
-            moved: None,
-            man: None,
-            solid: None,
-            vel: None,
-        }
-    }
-}
-impl Default for DoorContact { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doors.ts:230 DoorContact.run, src/game/doors.ts:230)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct DoorContactRun {
     pub bash: f64,
     pub rip: f64,
     pub rip_level: f64,
 }
-impl DoorContactRun {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DoorContactRun {
-            bash: 0.0,
-            rip: 0.0,
-            rip_level: 0.0,
-        }
-    }
-}
-impl Default for DoorContactRun { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum DoorSound {
-    Creak,
+    #[default] Creak,
     Bang,
     Latch,
     Bash,
@@ -247,8 +143,7 @@ impl DoorSound {
     }
 }
 
-/// (TypeScript: DoorEvent, src/game/doors.ts:244)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct DoorEvent {
     pub door: DoorId,
     pub sound: crate::doors::DoorSound,
@@ -256,22 +151,8 @@ pub struct DoorEvent {
     pub who: f64,
     pub level: f64,
 }
-impl DoorEvent {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DoorEvent {
-            door: DoorId(0),
-            sound: crate::doors::DoorSound::Creak,
-            pos: [0.0; 3],
-            who: 0.0,
-            level: 0.0,
-        }
-    }
-}
-impl Default for DoorEvent { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: SlabSeen, src/game/doors.ts:251)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SlabSeen {
     pub p: [f64; 3],
     pub v: [f64; 3],
@@ -288,36 +169,13 @@ pub struct SlabSeen {
     pub bits: Option<[f64; 4]>,
     pub wedged: Option<f64>,
 }
-impl SlabSeen {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SlabSeen {
-            p: [0.0; 3],
-            v: [0.0; 3],
-            a: 0.0,
-            spin: 0.0,
-            tip: 0.0,
-            tip_v: 0.0,
-            side: 0.0,
-            rest: false,
-            landed: false,
-            who: 0.0,
-            t: 0.0,
-            ang: 0.0,
-            bits: None,
-            wedged: None,
-        }
-    }
-}
-impl Default for SlabSeen { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: SlabRow, src/game/doors.ts:255)
 #[derive(Clone, Copy, Debug)]
 pub struct SlabRow {
     pub door: f64,
 }
 impl SlabRow {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         SlabRow {
             door: 0.0,
@@ -326,13 +184,12 @@ impl SlabRow {
 }
 impl Default for SlabRow { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: DriveCols, src/game/doors.ts:276)
 #[derive(Clone, Copy, Debug)]
 pub struct DriveCols {
     pub i: f64,
 }
 impl DriveCols {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         DriveCols {
             i: 0.0,
@@ -341,7 +198,6 @@ impl DriveCols {
 }
 impl Default for DriveCols { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: Door, src/game/doors.ts:298)
 #[derive(Clone, Debug, ToBytes)]
 pub struct Door {
     pub i: f64,
@@ -362,7 +218,7 @@ pub struct Door {
     pub frame_centre: V3,
 }
 impl Door {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         Door {
             i: 0.0,
@@ -378,7 +234,7 @@ impl Door {
             slab_row: SlabRowId(0),
             leaf_h: [0.0; 3],
             leaf_marks: None,
-            def: crate::doors::DoorDef::zeroed(),
+            def: crate::doors::DoorDef::default(),
             pos_at: [0.0, 1.0, 0.0],
             frame_centre: [0.0; 3],
         }
@@ -386,8 +242,7 @@ impl Door {
 }
 impl Default for Door { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: DoorSwing, src/game/doors.ts:500)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct DoorSwing {
     pub hinge: V3,
     pub handle: V3,
@@ -398,37 +253,11 @@ pub struct DoorSwing {
     pub closed_dir: f64,
     pub one_way: bool,
 }
-impl DoorSwing {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DoorSwing {
-            hinge: [0.0; 3],
-            handle: [0.0; 3],
-            swing: 0.0,
-            into: [0.0; 2],
-            open: 0.0,
-            radius: 0.0,
-            closed_dir: 0.0,
-            one_way: false,
-        }
-    }
-}
-impl Default for DoorSwing { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: DoorsHost, src/game/doors.ts:518)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct DoorsHost {
 }
-impl DoorsHost {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DoorsHost {
-        }
-    }
-}
-impl Default for DoorsHost { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Doors, src/game/doors.ts:528)
 #[derive(Clone, Debug, ToBytes)]
 pub struct Doors {
     pub list: Vec<DoorId>,
@@ -438,7 +267,7 @@ pub struct Doors {
     pub solids: crate::doors::DoorsSolids,
 }
 impl Doors {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         Doors {
             list: Vec::new(),
@@ -451,8 +280,7 @@ impl Doors {
 }
 impl Default for Doors { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: inline at src/game/doors.ts:588 Doors.solids, src/game/doors.ts:588)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct DoorsSolids {
     pub carried: f64,
     pub stopped: f64,
@@ -461,39 +289,13 @@ pub struct DoorsSolids {
     pub held: f64,
     pub aside: f64,
 }
-impl DoorsSolids {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DoorsSolids {
-            carried: 0.0,
-            stopped: 0.0,
-            passed: 0.0,
-            reached: 0.0,
-            held: 0.0,
-            aside: 0.0,
-        }
-    }
-}
-impl Default for DoorsSolids { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doors.ts:81 SIDE_KICK, src/game/doors.ts:81)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SIDEKICK {
     pub past: f64,
     pub out: f64,
 }
-impl SIDEKICK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SIDEKICK {
-            past: 0.0,
-            out: 0.0,
-        }
-    }
-}
-impl Default for SIDEKICK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum SlabRowGK {
     T,
@@ -538,7 +340,6 @@ impl SlabRowGK {
     }
 }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum DriveColsKind {
     Boot,
@@ -557,7 +358,6 @@ impl DriveColsKind {
     }
 }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum DriveColsSetKindV {
     Boot,
@@ -576,26 +376,13 @@ impl DriveColsSetKindV {
     }
 }
 
-/// (TypeScript: inline at src/game/doors.ts:472 poseAt ->, src/game/doors.ts:472)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct DoorPoseAt {
     pub c: V3,
     pub yaw: f64,
     pub handles: [V3; 2],
 }
-impl DoorPoseAt {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DoorPoseAt {
-            c: [0.0; 3],
-            yaw: 0.0,
-            handles: [[0.0; 3]; 2],
-        }
-    }
-}
-impl Default for DoorPoseAt { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum DoorsDrivenKind {
     Boot,
@@ -614,75 +401,30 @@ impl DoorsDrivenKind {
     }
 }
 
-/// (TypeScript: inline at src/game/doors.ts:1071 workSpot ->, src/game/doors.ts:1071)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct DoorsWorkSpot {
     pub pos: V3,
     pub yaw: f64,
 }
-impl DoorsWorkSpot {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DoorsWorkSpot {
-            pos: [0.0; 3],
-            yaw: 0.0,
-        }
-    }
-}
-impl Default for DoorsWorkSpot { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doors.ts:1077 kickSpot ->, src/game/doors.ts:1077)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct DoorsKickSpot {
     pub pos: V3,
     pub yaw: f64,
 }
-impl DoorsKickSpot {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DoorsKickSpot {
-            pos: [0.0; 3],
-            yaw: 0.0,
-        }
-    }
-}
-impl Default for DoorsKickSpot { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doors.ts:1084 kickSpotSide ->, src/game/doors.ts:1084)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct DoorsKickSpotSide {
     pub pos: V3,
     pub yaw: f64,
 }
-impl DoorsKickSpotSide {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DoorsKickSpotSide {
-            pos: [0.0; 3],
-            yaw: 0.0,
-        }
-    }
-}
-impl Default for DoorsKickSpotSide { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doors.ts:1091 frameCoords ->, src/game/doors.ts:1091)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct DoorsFrameCoords {
     pub along: f64,
     pub off: f64,
 }
-impl DoorsFrameCoords {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DoorsFrameCoords {
-            along: 0.0,
-            off: 0.0,
-        }
-    }
-}
-impl Default for DoorsFrameCoords { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum DoorsTornCause {
     Blast,

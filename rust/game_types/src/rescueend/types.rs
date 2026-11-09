@@ -1,9 +1,8 @@
-//! The types of `rescueend`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `rescueend`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: RescueEnd, src/game/rescueend.ts:47)
 #[derive(Clone, Copy, Debug, ToBytes)]
 pub struct RescueEnd {
     pub lead: Option<CharId>,
@@ -11,7 +10,7 @@ pub struct RescueEnd {
     pub clear_at: f64,
 }
 impl RescueEnd {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         RescueEnd {
             lead: None,
@@ -22,27 +21,14 @@ impl RescueEnd {
 }
 impl Default for RescueEnd { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: RescueEndSnap, src/game/rescueend.ts:45)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RescueEndSnap {
     pub lead: Option<f64>,
     pub clear_at: f64,
     pub led: bool,
 }
-impl RescueEndSnap {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RescueEndSnap {
-            lead: None,
-            clear_at: 0.0,
-            led: false,
-        }
-    }
-}
-impl Default for RescueEndSnap { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rescueend.ts:68 rows(row), ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct RescueEndRowsRowOver {
     pub kind: Option<crate::rescueend::RescueEndRowsRowOverKind>,
     pub pos: Option<V3>,
@@ -60,31 +46,7 @@ pub struct RescueEndRowsRowOver {
     pub past: Option<bool>,
     pub framed: Option<bool>,
 }
-impl RescueEndRowsRowOver {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RescueEndRowsRowOver {
-            kind: None,
-            pos: None,
-            line1: None,
-            line2: None,
-            in_reach: None,
-            off: None,
-            progress: None,
-            target: None,
-            door: None,
-            guard: None,
-            verb: None,
-            running: None,
-            close: None,
-            past: None,
-            framed: None,
-        }
-    }
-}
-impl Default for RescueEndRowsRowOver { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum RescueEndRowsRowOverKind {
     Cam,
@@ -119,7 +81,6 @@ impl RescueEndRowsRowOverKind {
     }
 }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum RescueEndWon {
     Out,
@@ -134,25 +95,13 @@ impl RescueEndWon {
     }
 }
 
-/// (TypeScript: inline at src/game/rescueend.ts:106 objective ->, src/game/rescueend.ts:106)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct RescueEndObjective {
     pub text: String,
     pub pos: Option<V3>,
 }
-impl RescueEndObjective {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RescueEndObjective {
-            text: String::new(),
-            pos: None,
-        }
-    }
-}
-impl Default for RescueEndObjective { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rescueend.ts:123 rescueEndRows(row), ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct RescueEndRows2RowOver {
     pub kind: Option<crate::rescueend::RescueEndRows2RowOverKind>,
     pub pos: Option<V3>,
@@ -170,31 +119,7 @@ pub struct RescueEndRows2RowOver {
     pub past: Option<bool>,
     pub framed: Option<bool>,
 }
-impl RescueEndRows2RowOver {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RescueEndRows2RowOver {
-            kind: None,
-            pos: None,
-            line1: None,
-            line2: None,
-            in_reach: None,
-            off: None,
-            progress: None,
-            target: None,
-            door: None,
-            guard: None,
-            verb: None,
-            running: None,
-            close: None,
-            past: None,
-            framed: None,
-        }
-    }
-}
-impl Default for RescueEndRows2RowOver { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum RescueEndRows2RowOverKind {
     Cam,

@@ -212,7 +212,7 @@ pub fn close_rows(g: &mut crate::game::Game, gd: GuardId, p: &[f64], busy: bool,
     if far >= 2.4 {
         if !busy && far < crate::stalk::stalk_begin_m(g) && crate::stalk::stalk_could(g, gd) {
             let line2 = sneak_hint(g);
-            let it = Interactable { kind: InteractableKind::Guard, pos: v3::add(gp, [0.0, 1.35, 0.0]), line1: String::from("guard"), line2, in_reach: false, off: false, guard: Some(gd), ..Interactable::zeroed() };
+            let it = Interactable { kind: InteractableKind::Guard, pos: v3::add(gp, [0.0, 1.35, 0.0]), line1: String::from("guard"), line2, in_reach: false, off: false, guard: Some(gd), ..Interactable::default() };
             offer(g, it, Vec::new());
         }
         return;
@@ -223,7 +223,7 @@ pub fn close_rows(g: &mut crate::game::Game, gd: GuardId, p: &[f64], busy: bool,
     let alert = g.gd[gd].state == crate::game::GuardState::Alert;
     let where_ = match o.win { None => "", Some(w) => match w.kind { K::Front => " · facing you", K::Side => " · side on", _ => "" } };
     let line1 = format!("guard{}{}", if alert { " · alert" } else if seated { " · seated" } else { "" }, if alert { "" } else { where_ });
-    let mut it = Interactable { kind: InteractableKind::Guard, pos: v3::add(gp, [0.0, if seated { 1.05 } else { 1.35 }, 0.0]), line1, line2: o.why.clone(), in_reach: o.can, off: false, guard: Some(gd), close: Some(kind), ..Interactable::zeroed() };
+    let mut it = Interactable { kind: InteractableKind::Guard, pos: v3::add(gp, [0.0, if seated { 1.05 } else { 1.35 }, 0.0]), line1, line2: o.why.clone(), in_reach: o.can, off: false, guard: Some(gd), close: Some(kind), ..Interactable::default() };
     let sneak = !busy && crate::stalk::stalk_could(g, gd);
     if sneak && !o.can { it.line2 = sneak_hint(g); }
     let mut verbs: Vec<Interactable> = Vec::new();
@@ -589,9 +589,9 @@ mod tests {
     #[test]
     fn no_offer_is_from_behind() {
         assert_eq!(close_kind_of(None), K::Behind);
-        let o = crate::close::CloseOffer { win: Some(arc(I::Left, K::Side, 1.0, 0.5, 1.0, false, true)), ..crate::close::CloseOffer::zeroed() };
+        let o = crate::close::CloseOffer { win: Some(arc(I::Left, K::Side, 1.0, 0.5, 1.0, false, true)), ..crate::close::CloseOffer::default() };
         assert_eq!(close_kind_of(Some(&o)), K::Side);
-        assert_eq!(close_kind_of(Some(&crate::close::CloseOffer::zeroed())), K::Behind);
+        assert_eq!(close_kind_of(Some(&crate::close::CloseOffer::default())), K::Behind);
     }
 
     const BITS_ARCS: [(u64, u64, u64); 4] = [

@@ -1,9 +1,8 @@
-//! The types of `squad`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `squad`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: Sweep, src/game/squad.ts:154)
 #[derive(Clone, Debug, ToBytes)]
 pub struct Sweep {
     pub pts: Vec<V3>,
@@ -12,7 +11,7 @@ pub struct Sweep {
     pub active: bool,
 }
 impl Sweep {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         Sweep {
             pts: Vec::new(),
@@ -24,7 +23,6 @@ impl Sweep {
 }
 impl Default for Sweep { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: Clearing, src/game/squad.ts:490)
 #[derive(Clone, Debug, ToBytes)]
 pub struct Clearing {
     pub stage: crate::squad::ClearStage,
@@ -46,7 +44,7 @@ pub struct Clearing {
     pub serial: u32,
 }
 impl Clearing {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         Clearing {
             stage: crate::squad::ClearStage::Muster,
@@ -70,7 +68,6 @@ impl Clearing {
 }
 impl Default for Clearing { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum ClearStage {
     Approach,
@@ -89,7 +86,6 @@ impl ClearStage {
     }
 }
 
-/// (TypeScript: RoomClear, src/game/squad.ts:184)
 #[derive(Clone, Debug, ToBytes)]
 pub struct RoomClear {
     pub phase: crate::squad::RoomClearPhase,
@@ -123,7 +119,7 @@ pub struct RoomClear {
     pub b: Option<GuardId>,
 }
 impl RoomClear {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         RoomClear {
             phase: crate::squad::RoomClearPhase::Stack,
@@ -152,7 +148,7 @@ impl RoomClear {
             rest_b: None,
             wp_a: Vec::new(),
             wp_b: Vec::new(),
-            plan: crate::scene_level::RoomClearPlan::zeroed(),
+            plan: crate::scene_level::RoomClearPlan::default(),
             a: GuardId(0),
             b: None,
         }
@@ -160,7 +156,6 @@ impl RoomClear {
 }
 impl Default for RoomClear { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum RoomClearPhase {
     Search,
@@ -183,65 +178,28 @@ impl RoomClearPhase {
     }
 }
 
-/// (TypeScript: inline at src/game/squad.ts:39 settleWatch, src/game/squad.ts:39)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct SquadModSettleWatchValue {
     pub goal: V3,
     pub best: f64,
     pub t: f64,
 }
-impl SquadModSettleWatchValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SquadModSettleWatchValue {
-            goal: [0.0; 3],
-            best: 0.0,
-            t: 0.0,
-        }
-    }
-}
-impl Default for SquadModSettleWatchValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/squad.ts:42 walkWatch, src/game/squad.ts:42)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct SquadModWalkWatchValue {
     pub x: f64,
     pub z: f64,
     pub t: f64,
 }
-impl SquadModWalkWatchValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SquadModWalkWatchValue {
-            x: 0.0,
-            z: 0.0,
-            t: 0.0,
-        }
-    }
-}
-impl Default for SquadModWalkWatchValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/squad.ts:400 CENTRE_CHECK, src/game/squad.ts:400)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct CENTRECHECK {
     pub corner: f64,
     pub total: f64,
     pub min_leg: f64,
 }
-impl CENTRECHECK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CENTRECHECK {
-            corner: 0.0,
-            total: 0.0,
-            min_leg: 0.0,
-        }
-    }
-}
-impl Default for CENTRECHECK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/squad.ts:423 BODY_LINES, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct BODYLINES {
     pub stack1: Option<String>,
     pub stack2: Option<String>,
@@ -256,29 +214,8 @@ pub struct BODYLINES {
     pub empty2: Option<String>,
     pub radio1: Option<String>,
 }
-impl BODYLINES {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BODYLINES {
-            stack1: None,
-            stack2: None,
-            go2: None,
-            in1: None,
-            side2: None,
-            side1: None,
-            push1: None,
-            under2: None,
-            nothing2: None,
-            corner1: None,
-            empty2: None,
-            radio1: None,
-        }
-    }
-}
-impl Default for BODYLINES { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/squad.ts:429 BODY_LINES_NOW, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct BODYLINESNOW {
     pub stack1: Option<String>,
     pub stack2: Option<String>,
@@ -293,29 +230,8 @@ pub struct BODYLINESNOW {
     pub empty2: Option<String>,
     pub radio1: Option<String>,
 }
-impl BODYLINESNOW {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BODYLINESNOW {
-            stack1: None,
-            stack2: None,
-            go2: None,
-            in1: None,
-            side2: None,
-            side1: None,
-            push1: None,
-            under2: None,
-            nothing2: None,
-            corner1: None,
-            empty2: None,
-            radio1: None,
-        }
-    }
-}
-impl Default for BODYLINESNOW { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/squad.ts:430 BODY_LINES_COLD_NOW, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct BODYLINESCOLDNOW {
     pub stack1: Option<String>,
     pub stack2: Option<String>,
@@ -330,29 +246,8 @@ pub struct BODYLINESCOLDNOW {
     pub empty2: Option<String>,
     pub radio1: Option<String>,
 }
-impl BODYLINESCOLDNOW {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BODYLINESCOLDNOW {
-            stack1: None,
-            stack2: None,
-            go2: None,
-            in1: None,
-            side2: None,
-            side1: None,
-            push1: None,
-            under2: None,
-            nothing2: None,
-            corner1: None,
-            empty2: None,
-            radio1: None,
-        }
-    }
-}
-impl Default for BODYLINESCOLDNOW { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/squad.ts:432 BODY_LINES_COLD, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct BODYLINESCOLD {
     pub stack1: Option<String>,
     pub stack2: Option<String>,
@@ -367,28 +262,7 @@ pub struct BODYLINESCOLD {
     pub empty2: Option<String>,
     pub radio1: Option<String>,
 }
-impl BODYLINESCOLD {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BODYLINESCOLD {
-            stack1: None,
-            stack2: None,
-            go2: None,
-            in1: None,
-            side2: None,
-            side1: None,
-            push1: None,
-            under2: None,
-            nothing2: None,
-            corner1: None,
-            empty2: None,
-            radio1: None,
-        }
-    }
-}
-impl Default for BODYLINESCOLD { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum EndGuardScriptState {
     Patrol,
@@ -407,8 +281,7 @@ impl EndGuardScriptState {
     }
 }
 
-/// (TypeScript: inline at src/game/squad.ts:145 order(patch), ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct OrderPatch {
     pub goal: Option<Option<V3>>,
     pub speed: Option<Option<f64>>,
@@ -430,49 +303,12 @@ pub struct OrderPatch {
     /// INVENTED: true only from a caller that passes a goal it keeps and moves (orders.ts:1519, qrf.ts:828, :851): that one compares by value. goal Some(Some(_)) from anyone else is a new leg, even at the same spot (squad.ts:146)
     pub held: bool,
 }
-impl OrderPatch {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        OrderPatch {
-            goal: None,
-            speed: None,
-            face: None,
-            strafe: None,
-            aim_at: None,
-            stance: None,
-            stack_side: None,
-            crouch: None,
-            lean: None,
-            upper: None,
-            light: None,
-            arrived: None,
-            hot: None,
-            flinch: None,
-            direct: None,
-            smoke: None,
-            over: None,
-            held: false,
-        }
-    }
-}
-impl Default for OrderPatch { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/squad.ts:201 constructor(opts), src/game/squad.ts:201)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RoomClearNewOpts {
     pub live: Option<bool>,
 }
-impl RoomClearNewOpts {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RoomClearNewOpts {
-            live: None,
-        }
-    }
-}
-impl Default for RoomClearNewOpts { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum RoomClearEndState {
     Patrol,
@@ -487,7 +323,6 @@ impl RoomClearEndState {
     }
 }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum RoomClearSayKey {
     Stack1,
@@ -522,8 +357,7 @@ impl RoomClearSayKey {
     }
 }
 
-/// (TypeScript: inline at src/game/squad.ts:248 route(patch), ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RoomClearRoutePatch {
     pub goal: Option<V3>,
     pub speed: Option<f64>,
@@ -543,33 +377,7 @@ pub struct RoomClearRoutePatch {
     pub smoke: Option<bool>,
     pub over: Option<crate::game::GuardScriptOver>,
 }
-impl RoomClearRoutePatch {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RoomClearRoutePatch {
-            goal: None,
-            speed: None,
-            face: None,
-            strafe: None,
-            aim_at: None,
-            stance: None,
-            stack_side: None,
-            crouch: None,
-            lean: None,
-            upper: None,
-            light: None,
-            arrived: None,
-            hot: None,
-            flinch: None,
-            direct: None,
-            smoke: None,
-            over: None,
-        }
-    }
-}
-impl Default for RoomClearRoutePatch { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum Perceive {
     Suspicious,

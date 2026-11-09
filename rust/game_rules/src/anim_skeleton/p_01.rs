@@ -1337,9 +1337,9 @@ mod tests {
     }
 
     fn rig() -> crate::anim_gltf::GltfCharacter {
-        let mut ch = crate::anim_gltf::GltfCharacter::zeroed();
+        let mut ch = crate::anim_gltf::GltfCharacter::default();
         for parent in [-1.0, 0.0, 1.0, 1.0, 3.0] {
-            ch.nodes.push(crate::anim_gltf::GltfNode { parent, t: [0.0; 3], r: [0.0, 0.0, 0.0, 1.0], s: [1.0; 3], ..crate::anim_gltf::GltfNode::zeroed() });
+            ch.nodes.push(crate::anim_gltf::GltfNode { parent, t: [0.0; 3], r: [0.0, 0.0, 0.0, 1.0], s: [1.0; 3], ..crate::anim_gltf::GltfNode::default() });
         }
         ch.order = vec![0.0, 1.0, 2.0, 3.0, 4.0];
         ch.skin.joints = vec![0.0, 1.0, 2.0, 3.0, 4.0];

@@ -108,7 +108,7 @@ mod tests {
 
     #[test]
     fn plain_short_writes_the_old_names_down() {
-        let row = |id: crate::weapons::WeaponId| plain_short(&crate::weapons::WeaponDef { id, short: String::from("own"), ..crate::weapons::WeaponDef::zeroed() });
+        let row = |id: crate::weapons::WeaponId| plain_short(&crate::weapons::WeaponDef { id, short: String::from("own"), ..crate::weapons::WeaponDef::default() });
         assert_eq!(row(crate::weapons::WeaponId::Fn2000), "FN2000");
         assert_eq!(row(crate::weapons::WeaponId::Mk18bare), "FN2000");
         assert_eq!(row(crate::weapons::WeaponId::Fiveseven), "Five-seveN");

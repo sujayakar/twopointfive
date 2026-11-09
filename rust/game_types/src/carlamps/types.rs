@@ -1,10 +1,9 @@
-//! The types of `carlamps`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `carlamps`.
 #![allow(unused_imports)]
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: LampSig, src/game/carlamps.ts:40)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct LampSig {
     pub what: crate::carlamps::LampSigWhat,
     pub h: V3,
@@ -12,24 +11,10 @@ pub struct LampSig {
     pub emissive: Option<V3>,
     pub gap: f64,
 }
-impl LampSig {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LampSig {
-            what: crate::carlamps::LampSigWhat::HeadLamp,
-            h: [0.0; 3],
-            albedo: None,
-            emissive: None,
-            gap: 0.0,
-        }
-    }
-}
-impl Default for LampSig { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum LampSigWhat {
-    HeadLamp,
+    #[default] HeadLamp,
     TailLamp,
 }
 impl LampSigWhat {
@@ -41,29 +26,16 @@ impl LampSigWhat {
     }
 }
 
-/// (TypeScript: FoundLamp, src/game/carlamps.ts:61)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct FoundLamp {
     pub box_: f64,
     pub what: crate::carlamps::FoundLampWhat,
     pub lit: bool,
 }
-impl FoundLamp {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FoundLamp {
-            box_: 0.0,
-            what: crate::carlamps::FoundLampWhat::HeadLamp,
-            lit: false,
-        }
-    }
-}
-impl Default for FoundLamp { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum FoundLampWhat {
-    HeadLamp,
+    #[default] HeadLamp,
     TailLamp,
 }
 impl FoundLampWhat {

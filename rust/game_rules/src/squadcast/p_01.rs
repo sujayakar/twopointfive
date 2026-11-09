@@ -58,7 +58,7 @@ mod tests {
         let mut g = Game::blank();
         g.door_tools.charges = 1.0;
         g.orders.defs = vec![OrdersOrderDefId(1)];
-        let mut cast = SquadCast::zeroed();
+        let mut cast = SquadCast::default();
         cast.tools.charges = 7.0;
         cast.orders.defs = vec![OrdersOrderDefId(2)];
         let got = with_cast(&mut g, &mut cast, &mut |g: &mut Game| {

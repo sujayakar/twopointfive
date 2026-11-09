@@ -1,9 +1,8 @@
-//! The types of `aim`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `aim`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: AimState, src/game/aim.ts:102)
 #[derive(Clone, Debug, ToBytes)]
 pub struct AimState {
     pub track: f64,
@@ -20,7 +19,7 @@ pub struct AimState {
     pub last_shot: Option<crate::aim::AimStateLastShot>,
 }
 impl AimState {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         AimState {
             track: 0.0,
@@ -40,25 +39,13 @@ impl AimState {
 }
 impl Default for AimState { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: inline at src/game/aim.ts:121 AimState.fouled, src/game/aim.ts:121)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct AimStateFouled {
     pub n: f64,
     pub pos: V3,
 }
-impl AimStateFouled {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        AimStateFouled {
-            n: 0.0,
-            pos: [0.0; 3],
-        }
-    }
-}
-impl Default for AimStateFouled { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/aim.ts:124 AimState.lastShot, src/game/aim.ts:124)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct AimStateLastShot {
     pub t: f64,
     pub track: f64,
@@ -70,88 +57,29 @@ pub struct AimStateLastShot {
     pub tgt: f64,
     pub own: f64,
 }
-impl AimStateLastShot {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        AimStateLastShot {
-            t: 0.0,
-            track: 0.0,
-            spread: 0.0,
-            speed: 0.0,
-            gated: false,
-            hands: 0.0,
-            settle: 0.0,
-            tgt: 0.0,
-            own: 0.0,
-        }
-    }
-}
-impl Default for AimStateLastShot { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/aim.ts:145 AIM_HOOKS, src/game/aim.ts:145)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct AIMHOOKS {
 }
-impl AIMHOOKS {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        AIMHOOKS {
-        }
-    }
-}
-impl Default for AIMHOOKS { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/aim.ts:147 AIM_DEBUG, src/game/aim.ts:147)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct AIMDEBUG {
 }
-impl AIMDEBUG {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        AIMDEBUG {
-        }
-    }
-}
-impl Default for AIMDEBUG { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/aim.ts:326 KEPT, src/game/aim.ts:326)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct KEPT {
     pub guard: Vec<String>,
     pub player: Vec<String>,
 }
-impl KEPT {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KEPT {
-            guard: Vec::new(),
-            player: Vec::new(),
-        }
-    }
-}
-impl Default for KEPT { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/aim.ts:199 settleTime(P), src/game/aim.ts:199)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SettleTimeP {
     pub settle_secs: f64,
     pub range_ref: f64,
     pub near_k: f64,
 }
-impl SettleTimeP {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SettleTimeP {
-            settle_secs: 0.0,
-            range_ref: 0.0,
-            near_k: 0.0,
-        }
-    }
-}
-impl Default for SettleTimeP { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/aim.ts:212 guardTerms ->, src/game/aim.ts:219)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct GuardTerms {
     pub hands: f64,
     pub settle: f64,
@@ -160,23 +88,8 @@ pub struct GuardTerms {
     pub speed: f64,
     pub spread: f64,
 }
-impl GuardTerms {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GuardTerms {
-            hands: 0.0,
-            settle: 0.0,
-            tgt: 0.0,
-            own: 0.0,
-            speed: 0.0,
-            spread: 0.0,
-        }
-    }
-}
-impl Default for GuardTerms { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/aim.ts:306 playerAim ->, src/game/aim.ts:306)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct PlayerAim {
     pub spread: f64,
     pub track: f64,
@@ -185,20 +98,6 @@ pub struct PlayerAim {
     pub tgt: f64,
     pub own: f64,
 }
-impl PlayerAim {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PlayerAim {
-            spread: 0.0,
-            track: 0.0,
-            base: 0.0,
-            settle: 0.0,
-            tgt: 0.0,
-            own: 0.0,
-        }
-    }
-}
-impl Default for PlayerAim { fn default() -> Self { Self::zeroed() } }
 
 /// (src/game/aim.ts:29 SNAP_PX)
 pub const SNAP_PX: f64 = 60.0;

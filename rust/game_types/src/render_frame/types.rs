@@ -1,10 +1,9 @@
-//! The types of `render_frame`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `render_frame`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: WeatherFrame, src/render/frame.ts:66)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct WeatherFrame {
     pub rain: f64,
     pub snow: Option<f64>,
@@ -21,106 +20,33 @@ pub struct WeatherFrame {
     pub near_fade: [f64; 4],
     pub phase: Option<[f64; 4]>,
 }
-impl WeatherFrame {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WeatherFrame {
-            rain: 0.0,
-            snow: None,
-            shear_x: 0.0,
-            shear_z: 0.0,
-            wet: 0.0,
-            flash: [0.0; 3],
-            rain_top: 0.0,
-            interior: [0.0; 4],
-            annex: [0.0; 4],
-            roof_c: None,
-            roof_d: None,
-            fog: None,
-            near_fade: [0.0; 4],
-            phase: None,
-        }
-    }
-}
-impl Default for WeatherFrame { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/render/frame.ts:264 reachBinding, src/render/frame.ts:264)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RenderFrameModReachBinding {
     pub storage: bool,
 }
-impl RenderFrameModReachBinding {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RenderFrameModReachBinding {
-            storage: false,
-        }
-    }
-}
-impl Default for RenderFrameModReachBinding { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/render/frame.ts:269 meshBinding, src/render/frame.ts:269)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RenderFrameModMeshBinding {
     pub enabled: bool,
 }
-impl RenderFrameModMeshBinding {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RenderFrameModMeshBinding {
-            enabled: false,
-        }
-    }
-}
-impl Default for RenderFrameModMeshBinding { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/render/frame.ts:280 glassBreakConfig, src/render/frame.ts:280)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RenderFrameModGlassBreakConfig {
     pub on: bool,
 }
-impl RenderFrameModGlassBreakConfig {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RenderFrameModGlassBreakConfig {
-            on: false,
-        }
-    }
-}
-impl Default for RenderFrameModGlassBreakConfig { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/render/frame.ts:284 weatherKindConfig, src/render/frame.ts:284)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RenderFrameModWeatherKindConfig {
     pub on: bool,
 }
-impl RenderFrameModWeatherKindConfig {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RenderFrameModWeatherKindConfig {
-            on: false,
-        }
-    }
-}
-impl Default for RenderFrameModWeatherKindConfig { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/render/frame.ts:289 snowConfig, src/render/frame.ts:289)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RenderFrameModSnowConfig {
     pub on: bool,
 }
-impl RenderFrameModSnowConfig {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RenderFrameModSnowConfig {
-            on: false,
-        }
-    }
-}
-impl Default for RenderFrameModSnowConfig { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/render/frame.ts:294 snowLookConfig, src/render/frame.ts:294)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RenderFrameModSnowLookConfig {
     pub surface: bool,
     pub wisps: bool,
@@ -130,114 +56,38 @@ pub struct RenderFrameModSnowLookConfig {
     pub grains: bool,
     pub under: bool,
 }
-impl RenderFrameModSnowLookConfig {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RenderFrameModSnowLookConfig {
-            surface: false,
-            wisps: false,
-            tracks: false,
-            glow: false,
-            sparkle: false,
-            grains: false,
-            under: false,
-        }
-    }
-}
-impl Default for RenderFrameModSnowLookConfig { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/render/frame.ts:298 weatherEdgeConfig, src/render/frame.ts:298)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RenderFrameModWeatherEdgeConfig {
     pub on: bool,
 }
-impl RenderFrameModWeatherEdgeConfig {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RenderFrameModWeatherEdgeConfig {
-            on: false,
-        }
-    }
-}
-impl Default for RenderFrameModWeatherEdgeConfig { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/render/frame.ts:303 weatherVolConfig, src/render/frame.ts:303)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RenderFrameModWeatherVolConfig {
     pub on: bool,
 }
-impl RenderFrameModWeatherVolConfig {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RenderFrameModWeatherVolConfig {
-            on: false,
-        }
-    }
-}
-impl Default for RenderFrameModWeatherVolConfig { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/render/frame.ts:309 rainShadowConfig, src/render/frame.ts:309)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RenderFrameModRainShadowConfig {
     pub on: bool,
 }
-impl RenderFrameModRainShadowConfig {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RenderFrameModRainShadowConfig {
-            on: false,
-        }
-    }
-}
-impl Default for RenderFrameModRainShadowConfig { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/render/frame.ts:317 rainScaleConfig, src/render/frame.ts:317)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RenderFrameModRainScaleConfig {
     pub on: bool,
 }
-impl RenderFrameModRainScaleConfig {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RenderFrameModRainScaleConfig {
-            on: false,
-        }
-    }
-}
-impl Default for RenderFrameModRainScaleConfig { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/render/frame.ts:323 rainWallsConfig, src/render/frame.ts:323)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RenderFrameModRainWallsConfig {
     pub on: bool,
 }
-impl RenderFrameModRainWallsConfig {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RenderFrameModRainWallsConfig {
-            on: false,
-        }
-    }
-}
-impl Default for RenderFrameModRainWallsConfig { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/render/frame.ts:332 bounceWallsConfig, src/render/frame.ts:332)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RenderFrameModBounceWallsConfig {
     pub on: bool,
 }
-impl RenderFrameModBounceWallsConfig {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RenderFrameModBounceWallsConfig {
-            on: false,
-        }
-    }
-}
-impl Default for RenderFrameModBounceWallsConfig { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/render/frame.ts:351 lookConfig, src/render/frame.ts:351)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RenderFrameModLookConfig {
     pub kept: f64,
     pub pressed: f64,
@@ -272,121 +122,31 @@ pub struct RenderFrameModLookConfig {
     pub grade_s: f64,
     pub grade_sat: f64,
 }
-impl RenderFrameModLookConfig {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RenderFrameModLookConfig {
-            kept: 0.0,
-            pressed: 0.0,
-            bounce: 0.0,
-            air: 0.0,
-            sky: 0.0,
-            shade: 0.0,
-            lamps: 0.0,
-            exposure: None,
-            puffs: 0.0,
-            veil: 0.0,
-            snow: None,
-            eyes: 0.0,
-            eye_at: None,
-            door_gaps: None,
-            night_sky: None,
-            fire_smoke: 0.0,
-            fire_fit: 0.0,
-            long_foot: 0.0,
-            walked: 0.0,
-            fire_snow: 0.0,
-            rooms: 0.0,
-            steady: 0.0,
-            room_bright: 0.0,
-            order: 0.0,
-            dark: 0.0,
-            windows: 0.0,
-            glare: 0.0,
-            grade_exp: 0.0,
-            grade_c: 0.0,
-            grade_h: 0.0,
-            grade_s: 0.0,
-            grade_sat: 0.0,
-        }
-    }
-}
-impl Default for RenderFrameModLookConfig { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/render/frame.ts:364 reflWallsConfig, src/render/frame.ts:364)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RenderFrameModReflWallsConfig {
     pub on: bool,
 }
-impl RenderFrameModReflWallsConfig {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RenderFrameModReflWallsConfig {
-            on: false,
-        }
-    }
-}
-impl Default for RenderFrameModReflWallsConfig { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/render/frame.ts:368 sharpCapConfig, src/render/frame.ts:368)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RenderFrameModSharpCapConfig {
     pub on: bool,
 }
-impl RenderFrameModSharpCapConfig {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RenderFrameModSharpCapConfig {
-            on: false,
-        }
-    }
-}
-impl Default for RenderFrameModSharpCapConfig { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/render/frame.ts:382 sunGlintConfig, src/render/frame.ts:382)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RenderFrameModSunGlintConfig {
     pub on: bool,
 }
-impl RenderFrameModSunGlintConfig {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RenderFrameModSunGlintConfig {
-            on: false,
-        }
-    }
-}
-impl Default for RenderFrameModSunGlintConfig { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/render/frame.ts:390 glintPickConfig, src/render/frame.ts:390)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RenderFrameModGlintPickConfig {
     pub on: bool,
 }
-impl RenderFrameModGlintPickConfig {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RenderFrameModGlintPickConfig {
-            on: false,
-        }
-    }
-}
-impl Default for RenderFrameModGlintPickConfig { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/render/frame.ts:395 highlightConfig, src/render/frame.ts:395)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RenderFrameModHighlightConfig {
     pub reach: f64,
 }
-impl RenderFrameModHighlightConfig {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RenderFrameModHighlightConfig {
-            reach: 0.0,
-        }
-    }
-}
-impl Default for RenderFrameModHighlightConfig { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]

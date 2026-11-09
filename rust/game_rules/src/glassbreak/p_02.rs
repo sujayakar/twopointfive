@@ -594,7 +594,7 @@ pub fn glass_break_update_gusts(g: &mut crate::game::Game) {
                     d_max,
                     bound: crate::smoke_types::WindGpuSourceBound { c: v3::mad(pos, inward, d_max / 2.0), r: m::hyp2(d_max / 2.0, r0 + d_max * tan_spread) + 0.3 },
                     seed: seed_mix_gust(st_key as f64),
-                    ..crate::wind::WindSource::zeroed()
+                    ..crate::wind::WindSource::default()
                 };
                 let id = g.tab.wind_wind_source.push(made);
                 g.wind.all.push(id);
@@ -915,7 +915,7 @@ mod tests {
         g.glass_break.view_of = Some(GlassBreakViewOf { kind: GlassBreakViewOfKind::Counted, from: [1.0, 2.0, 3.0], size: GlassBlastOpts { radius: Some(5.0), power: None, who: None } });
         let v = glass_break_view(&mut g).unwrap();
         assert_eq!((v.kind, v.at.as_slice()), (VIEW_GIVES, &[1.0, 2.0, 3.0, 5.0, 1.0, 1.0][..]));
-        g.glass_break.view_of = Some(GlassBreakViewOf { kind: GlassBreakViewOfKind::Blown, from: [0.0, 0.0, 0.0], size: GlassBlastOpts::zeroed() });
+        g.glass_break.view_of = Some(GlassBreakViewOf { kind: GlassBreakViewOfKind::Blown, from: [0.0, 0.0, 0.0], size: GlassBlastOpts::default() });
         let v = glass_break_view(&mut g).unwrap();
         assert_eq!(v.kind, VIEW_BLOWN);
         assert_eq!(v.at[3], g.k.glassbreak.blast_m);

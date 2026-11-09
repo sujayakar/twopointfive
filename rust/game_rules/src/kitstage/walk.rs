@@ -37,7 +37,7 @@ pub(super) fn away(g: &Game, st: &KitStage) -> bool { st.order.iter().any(|&x| o
 
 /// a teammate to a mark, at a walk, turned to `face`, his gun on `watch` or at the low ready: the squad's own hand-over, which takes him off whatever had him. `strafe`: his chest kept on `face` all the way
 pub(super) fn send(g: &mut Game, x: GuardId, p: V2, face: f64, watch: Option<V3>, pace: f64, strafe: bool, crouch: bool) {
-    let mut a = crate::orders::SquadOrdersAssignA::zeroed();
+    let mut a = crate::orders::SquadOrdersAssignA::default();
     a.order = String::from("cover");
     a.post = Some([p[0], 0.0, p[1]]);
     a.face = Some(face);
@@ -170,12 +170,12 @@ pub(super) fn rotate(g: &mut Game, st: &mut KitStage, who: Option<GuardId>) {
     }
 }
 /// Sam walked to a mark, nothing else asked of him
-pub(super) fn sam_goes(g: &mut Game, p: V2) { g.puppet = Some(GamePuppet { goal: Some(v3(p)), walk: Some(K.sam_walk), ..GamePuppet::zeroed() }); }
-pub(super) fn sam_goes_low(g: &mut Game, p: V2, crouch: bool) { g.puppet = Some(GamePuppet { goal: Some(v3(p)), walk: Some(K.sam_walk), crouch: if crouch { Some(true) } else { None }, ..GamePuppet::zeroed() }); }
+pub(super) fn sam_goes(g: &mut Game, p: V2) { g.puppet = Some(GamePuppet { goal: Some(v3(p)), walk: Some(K.sam_walk), ..GamePuppet::default() }); }
+pub(super) fn sam_goes_low(g: &mut Game, p: V2, crouch: bool) { g.puppet = Some(GamePuppet { goal: Some(v3(p)), walk: Some(K.sam_walk), crouch: if crouch { Some(true) } else { None }, ..GamePuppet::default() }); }
 /// Sam's quiet rows are played from his place: a row cut with him off it left him there for the whole of the next
 pub(super) fn sam_stand(g: &mut Game, st: &KitStage) {
     let c = g.pl[g.player].ch;
-    if flat(g.ch[c].pos, st.sam) > K.on_slot { sam_goes(g, st.sam); } else { g.puppet = Some(GamePuppet::zeroed()); }
+    if flat(g.ch[c].pos, st.sam) > K.on_slot { sam_goes(g, st.sam); } else { g.puppet = Some(GamePuppet::default()); }
 }
 /// the half step a man takes toward the front of the door for a throw or his light: from where he lives, `metres` at most toward the old post
 pub(super) fn step_out(st: &KitStage, b: &Beat, metres: f64) -> V2 {

@@ -1,12 +1,11 @@
-//! The types of `quietfog`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `quietfog`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum QuietRung {
-    Team,
+    #[default] Team,
     Own,
     Off,
     Cones,
@@ -22,95 +21,38 @@ impl QuietRung {
     }
 }
 
-/// (TypeScript: Held, src/game/quietfog.ts:147)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Held {
     pub cone: Option<crate::quietfog::HeldCone>,
     pub own: Option<crate::quietfog::HeldOwn>,
     /// INVENTED: g.serial() where quietFogStart makes the Held (quietfog.ts:159): quietFogAside asks by identity whether the Held it lifted is still the one held (quietfog.ts:179)
     pub serial: u32,
 }
-impl Held {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Held {
-            cone: None,
-            own: None,
-            serial: 0,
-        }
-    }
-}
-impl Default for Held { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/quietfog.ts:147 Held.cone, src/game/quietfog.ts:147)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct HeldCone {
     pub was: Option<bool>,
     pub put: bool,
 }
-impl HeldCone {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HeldCone {
-            was: None,
-            put: false,
-        }
-    }
-}
-impl Default for HeldCone { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/quietfog.ts:147 Held.own, src/game/quietfog.ts:147)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct HeldOwn {
     pub was: bool,
     pub put: bool,
 }
-impl HeldOwn {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HeldOwn {
-            was: false,
-            put: false,
-        }
-    }
-}
-impl Default for HeldOwn { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/quietfog.ts:58 QUIET_RUNGS, src/game/quietfog.ts:58)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct QUIETRUNGSItem {
     pub id: String,
     pub label: String,
     pub words: String,
 }
-impl QUIETRUNGSItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        QUIETRUNGSItem {
-            id: String::new(),
-            label: String::new(),
-            words: String::new(),
-        }
-    }
-}
-impl Default for QUIETRUNGSItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/quietfog.ts:123 quietFogRow(e), src/game/quietfog.ts:123)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct QuietFogRowE {
     pub kind: String,
     pub group: Option<String>,
 }
-impl QuietFogRowE {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        QuietFogRowE {
-            kind: String::new(),
-            group: None,
-        }
-    }
-}
-impl Default for QuietFogRowE { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]

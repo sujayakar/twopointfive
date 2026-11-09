@@ -304,7 +304,7 @@ fn pose(g: &mut Game, gd: GuardId, dt: f64, s: &Sensed, acts: Acts) {
         let loud = crate::floor::tread(g, pos, base, false);
         if !staff {
             let (time, who, serial) = (g.time, g.ch[c].id, g.serial());
-            g.events.push(crate::game::GameEvent { kind: crate::director::EventKind::Step, pos, time, loud: false, level: Some(loud), who: Some(who), serial, ..crate::game::GameEvent::zeroed() });
+            g.events.push(crate::game::GameEvent { kind: crate::director::EventKind::Step, pos, time, loud: false, level: Some(loud), who: Some(who), serial, ..crate::game::GameEvent::default() });
         }
     }
 }

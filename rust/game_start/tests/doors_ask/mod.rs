@@ -534,7 +534,7 @@ impl DoorsAsk for Play {
     }
     fn order_on_word(&mut self, id: &str, at: [f64; 2], who: game::orders::Who) {
         let t = game::orders::squad_orders_target_at(&mut self.g, [at[0], 0.0, at[1]]);
-        let o = game::orders::GiveOpts { on_word: Some(true), ..game::orders::GiveOpts::zeroed() };
+        let o = game::orders::GiveOpts { on_word: Some(true), ..game::orders::GiveOpts::default() };
         if let Some(why) = game::orders::squad_orders_give(&mut self.g, id, Some(&t), Some(who), Some(&o)) { panic!("'{id}' on the word was refused: {why}"); }
     }
     fn op_pods(&self, op: DoorOpId) -> Vec<[f64; 2]> { self.g.tab.doortools_door_op[op].pod.values().map(|p| [p.pos[0], p.pos[2]]).collect() }
@@ -559,7 +559,7 @@ impl DoorsAsk for Play {
         game::props::prop_set_w(&mut self.g, prop, 0.0);
     }
     fn order_floor(&mut self, id: &str, at: [f64; 2], who: game::orders::Who) {
-        let t = game::orders::OrderTarget::Floor(game::orders::OrderTargetFloor { at: [at[0], 0.0, at[1]], ..game::orders::OrderTargetFloor::zeroed() });
+        let t = game::orders::OrderTarget::Floor(game::orders::OrderTargetFloor { at: [at[0], 0.0, at[1]], ..game::orders::OrderTargetFloor::default() });
         if let Some(why) = game::orders::squad_orders_give(&mut self.g, id, Some(&t), Some(who), None) { panic!("'{id}' on the floor at {at:?} was refused: {why}"); }
     }
     fn leaf_tip(&self, d: DoorId) -> [f64; 2] { let f = game::guards::frame_of(&self.g, d); let (c, a) = (self.g.dr[d].def.closed_dir, game::doors::door_angle(&self.g, d)); [f.hx + (c + a).cos() * f.w, f.hz + (c + a).sin() * f.w] }
@@ -580,7 +580,7 @@ impl DoorsAsk for Play {
     fn order_on_face(&mut self, id: &str, d: DoorId, from: [f64; 2]) -> Option<String> {
         let side = self.face(d, from);
         let c = self.frame_at(d);
-        let t = game::orders::OrderTarget::Door(game::orders::OrderTargetDoor { at: [c[0], 0.0, c[1]], door: d, side, ..game::orders::OrderTargetDoor::zeroed() });
+        let t = game::orders::OrderTarget::Door(game::orders::OrderTargetDoor { at: [c[0], 0.0, c[1]], door: d, side, ..game::orders::OrderTargetDoor::default() });
         game::orders::squad_orders_give(&mut self.g, id, Some(&t), Some(game::orders::Who::All), None)
     }
     fn picture_shows_open(&self, d: DoorId) -> bool { !game::fogofwar::fog_of_war_door_held(&self.g, d) }
@@ -636,7 +636,7 @@ impl DoorsAsk for Play {
     fn blind_now(&mut self, gd: GuardId) { self.g.gd[gd].dazzled_until = self.g.time + 9.0; }
     fn order_men(&mut self, id: &str, at: [f64; 2], men: &[GuardId]) -> Option<String> {
         let t = game::orders::squad_orders_target_at(&mut self.g, [at[0], 0.0, at[1]]);
-        let o = game::orders::GiveOpts { men: Some(men.to_vec()), ..game::orders::GiveOpts::zeroed() };
+        let o = game::orders::GiveOpts { men: Some(men.to_vec()), ..game::orders::GiveOpts::default() };
         game::orders::squad_orders_give(&mut self.g, id, Some(&t), None, Some(&o))
     }
     fn script_says(&self, gd: GuardId) -> Option<(Option<game::character::UpperMode>, Option<game::character::Stance>, Option<f64>, bool)> { self.g.gd[gd].script.as_ref().map(|s| (s.upper, s.stance, s.face, s.over.is_some())) }

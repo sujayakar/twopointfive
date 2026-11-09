@@ -669,7 +669,7 @@ mod tests {
 
     #[test]
     fn a_vents_cycle() {
-        let mut v = crate::scene_level::VentDef::zeroed();
+        let mut v = crate::scene_level::VentDef::default();
         assert!(vent_due(&v, 123.0)); // no period: always
         v.period = Some(10.0);
         v.duty = Some(0.5);
@@ -683,7 +683,7 @@ mod tests {
 
     fn with_storm() -> (Game, WindWindSourceId) {
         let mut g = Game::blank();
-        let mut s = WindSource::zeroed();
+        let mut s = WindSource::default();
         s.why = WindWhy::Storm;
         s.kind = WindSourceKind::Storm;
         s.name = String::from("storm");
@@ -707,7 +707,7 @@ mod tests {
     #[test]
     fn a_reroof_writes_the_one_storm_and_takes_out_only_extra() {
         let (mut g, st) = with_storm();
-        let mut door = WindSource::zeroed();
+        let mut door = WindSource::default();
         door.why = WindWhy::Glass;
         door.name = String::from("twin");
         let keep = g.tab.wind_wind_source.push(door.clone());

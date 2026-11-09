@@ -47,7 +47,7 @@ mod tests {
     #[test]
     fn the_moon_goes_where_it_is_told() {
         let mut g = Game::blank();
-        let l = g.tab.light.push(crate::render_lights::RtLight { kind: 2.0, dir: [0.0, -1.0, 0.0], intensity: 0.06, enabled: true, ttl: -1.0, ..crate::render_lights::RtLight::zeroed() });
+        let l = g.tab.light.push(crate::render_lights::RtLight { kind: 2.0, dir: [0.0, -1.0, 0.0], intensity: 0.06, enabled: true, ttl: -1.0, ..crate::render_lights::RtLight::default() });
         g.engine.lights.lights.push(l);
         assert_eq!(moon(&g), Some(l));
         set_moon(&mut g, f64::NAN, 30.0, 90.0);

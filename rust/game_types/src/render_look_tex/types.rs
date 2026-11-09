@@ -1,10 +1,9 @@
-//! The types of `render_look_tex`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `render_look_tex`.
 #![allow(unused_imports)]
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: inline at src/render/lookTex.ts:54 STUFFS, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1597)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct STUFFS {
     pub carpet: crate::render_look_tex::Stuff,
     pub grass: crate::render_look_tex::Stuff,
@@ -37,47 +36,8 @@ pub struct STUFFS {
     pub field_stone: crate::render_look_tex::Stuff,
     pub mud_brick: crate::render_look_tex::Stuff,
 }
-impl STUFFS {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        STUFFS {
-            carpet: crate::render_look_tex::Stuff::zeroed(),
-            grass: crate::render_look_tex::Stuff::zeroed(),
-            metal: crate::render_look_tex::Stuff::zeroed(),
-            wood: crate::render_look_tex::Stuff::zeroed(),
-            plastic: crate::render_look_tex::Stuff::zeroed(),
-            fabric: crate::render_look_tex::Stuff::zeroed(),
-            steel: crate::render_look_tex::Stuff::zeroed(),
-            enamel: crate::render_look_tex::Stuff::zeroed(),
-            tarmac: crate::render_look_tex::Stuff::zeroed(),
-            mud_wall: crate::render_look_tex::Stuff::zeroed(),
-            plaster: crate::render_look_tex::Stuff::zeroed(),
-            block: crate::render_look_tex::Stuff::zeroed(),
-            earth: crate::render_look_tex::Stuff::zeroed(),
-            gravel: crate::render_look_tex::Stuff::zeroed(),
-            slab: crate::render_look_tex::Stuff::zeroed(),
-            sheet: crate::render_look_tex::Stuff::zeroed(),
-            cloth: crate::render_look_tex::Stuff::zeroed(),
-            paint: crate::render_look_tex::Stuff::zeroed(),
-            veneer: crate::render_look_tex::Stuff::zeroed(),
-            carpaint: crate::render_look_tex::Stuff::zeroed(),
-            stucco: crate::render_look_tex::Stuff::zeroed(),
-            skim: crate::render_look_tex::Stuff::zeroed(),
-            gloss_block: crate::render_look_tex::Stuff::zeroed(),
-            board_concrete: crate::render_look_tex::Stuff::zeroed(),
-            cast_panel: crate::render_look_tex::Stuff::zeroed(),
-            paver: crate::render_look_tex::Stuff::zeroed(),
-            brushed: crate::render_look_tex::Stuff::zeroed(),
-            louvre: crate::render_look_tex::Stuff::zeroed(),
-            field_stone: crate::render_look_tex::Stuff::zeroed(),
-            mud_brick: crate::render_look_tex::Stuff::zeroed(),
-        }
-    }
-}
-impl Default for STUFFS { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Stuff, src/render/lookTex.ts:52)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Stuff {
     pub rough: f64,
     pub relief: f64,
@@ -97,52 +57,14 @@ pub struct Stuff {
     pub rolled: Option<f64>,
     pub mirrors: Option<f64>,
 }
-impl Stuff {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Stuff {
-            rough: 0.0,
-            relief: 0.0,
-            built: None,
-            fades: None,
-            soaks: None,
-            worn: None,
-            untiles: None,
-            unit: None,
-            bay: None,
-            runs: None,
-            least: None,
-            under: None,
-            foot: None,
-            ground: None,
-            sheds: None,
-            rolled: None,
-            mirrors: None,
-        }
-    }
-}
-impl Default for Stuff { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/render/lookTex.ts:53 Stuff.under, src/render/lookTex.ts:53)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct StuffUnder {
     pub plinth: String,
     pub core: String,
     pub long: f64,
     pub tall: f64,
 }
-impl StuffUnder {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StuffUnder {
-            plinth: String::new(),
-            core: String::new(),
-            long: 0.0,
-            tall: 0.0,
-        }
-    }
-}
-impl Default for StuffUnder { fn default() -> Self { Self::zeroed() } }
 
 /// (src/render/lookTex.ts:12 LOOK_NAMES: a table nothing writes)
 pub fn look_names() -> [String; 30] { [String::from("mud wall"), String::from("plaster"), String::from("block"), String::from("earth"), String::from("gravel"), String::from("slab"), String::from("wood"), String::from("sheet"), String::from("cloth"), String::from("metal"), String::from("paint"), String::from("veneer"), String::from("plastic"), String::from("fabric"), String::from("steel"), String::from("carpaint"), String::from("stucco"), String::from("skim"), String::from("gloss block"), String::from("board concrete"), String::from("cast panel"), String::from("paver"), String::from("brushed"), String::from("louvre"), String::from("enamel"), String::from("carpet"), String::from("tarmac"), String::from("grass"), String::from("field stone"), String::from("mud brick")] }

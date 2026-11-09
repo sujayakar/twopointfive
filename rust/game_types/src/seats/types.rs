@@ -1,9 +1,8 @@
-//! The types of `seats`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `seats`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum SeatTone {
     You,
@@ -18,8 +17,7 @@ impl SeatTone {
     }
 }
 
-/// (TypeScript: inline at src/game/seats.ts:48 SEAT_ASKS, src/game/seats.ts:48)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct SeatsModSEATASKS {
     pub strict: bool,
     pub shared: bool,
@@ -27,36 +25,12 @@ pub struct SeatsModSEATASKS {
     pub missed: JsSet<String>,
     pub sites: Option<JsMap<String, f64>>,
 }
-impl SeatsModSEATASKS {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SeatsModSEATASKS {
-            strict: false,
-            shared: false,
-            misses: 0.0,
-            missed: JsSet::new(),
-            sites: None,
-        }
-    }
-}
-impl Default for SeatsModSEATASKS { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/seats.ts:212 viewOfBody(c), src/game/seats.ts:212)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct ViewOfBodyC {
     pub id: f64,
 }
-impl ViewOfBodyC {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ViewOfBodyC {
-            id: 0.0,
-        }
-    }
-}
-impl Default for ViewOfBodyC { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: seats.ts SEAT_KEYS: what a seat keeps while another seat is on Game; seats::with_seat swaps it)
 #[derive(Clone, Debug, ToBytes)]
 #[bytes(parts)]
 pub struct SeatSet {
@@ -82,9 +56,8 @@ pub struct SeatSet {
     pub threat_proximity: f64,
     pub torch_on_t: f64,
 }
-impl SeatSet {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
+impl Default for SeatSet {
+    fn default() -> Self {
         SeatSet {
             seat: SeatId(0),
             player: PlayerId(0),
@@ -108,7 +81,6 @@ impl SeatSet {
         }
     }
 }
-impl Default for SeatSet { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]

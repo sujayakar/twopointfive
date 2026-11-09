@@ -1092,7 +1092,7 @@ mod tests {
 
     #[test]
     fn owed_lines_index_the_files_own_list_not_the_enums_order() {
-        let mut n = Mind::zeroed();
+        let mut n = Mind::default();
         owe(&mut n, LineKind::Name, "x", 1.0);
         assert_eq!(n.say, 0.0);
         owe(&mut n, LineKind::Why, "", 1.0);
@@ -1111,7 +1111,7 @@ mod tests {
         assert!(!mine(&mut g, gd));
         assert!(!whipping(&mut g, gd));
         assert!(!g.m.netquiet.state_of.has(gd));
-        g.m.netquiet.state_of.set(gd, Mind::zeroed());
+        g.m.netquiet.state_of.set(gd, Mind::default());
         owe(mind(&mut g, gd), LineKind::Why, "x", 1.4);
         assert_eq!(g.m.netquiet.state_of.get(gd).unwrap().say, 1.0);
         mind(&mut g, gd).last = SAID;

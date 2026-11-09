@@ -1,10 +1,9 @@
-//! The types of `shards`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `shards`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: PaneCrossLike, src/game/shards.ts:51)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct PaneCrossLike {
     pub bi: f64,
     pub type_: crate::glasspen::PaneType,
@@ -14,24 +13,8 @@ pub struct PaneCrossLike {
     pub e_out: f64,
     pub hole: bool,
 }
-impl PaneCrossLike {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PaneCrossLike {
-            bi: 0.0,
-            type_: crate::glasspen::PaneType::Annealed,
-            exit: [0.0; 3],
-            dir_out: [0.0; 3],
-            take: 0.0,
-            e_out: 0.0,
-            hole: false,
-        }
-    }
-}
-impl Default for PaneCrossLike { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: GlassFragmentLike, src/game/shards.ts:52)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct GlassFragmentLike {
     pub pane: f64,
     pub type_: crate::glasspen::PaneType,
@@ -51,36 +34,10 @@ pub struct GlassFragmentLike {
     pub fall: Option<crate::shards::GlassFragmentLikeFall>,
     pub landed: Option<bool>,
 }
-impl GlassFragmentLike {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GlassFragmentLike {
-            pane: 0.0,
-            type_: crate::glasspen::PaneType::Annealed,
-            kind: crate::shards::GlassFragmentLikeKind::Piece,
-            outline: Vec::new(),
-            centre: [0.0; 3],
-            normal: [0.0; 3],
-            thickness: 0.0,
-            area: 0.0,
-            velocity: [0.0; 3],
-            spin: [0.0; 3],
-            tint: [0.0; 3],
-            grain: 0.0,
-            cause: crate::shards::GlassFragmentLikeCause::Blast,
-            who: 0.0,
-            seed: 0.0,
-            fall: None,
-            landed: None,
-        }
-    }
-}
-impl Default for GlassFragmentLike { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum GlassFragmentLikeKind {
-    Piece,
+    #[default] Piece,
     Sheet,
     Dagger,
     Clump,
@@ -96,10 +53,9 @@ impl GlassFragmentLikeKind {
     }
 }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum GlassFragmentLikeCause {
-    Blast,
+    #[default] Blast,
     Hit,
     Dice,
     Support,
@@ -117,40 +73,18 @@ impl GlassFragmentLikeCause {
     }
 }
 
-/// (TypeScript: inline at src/game/shards.ts:63 GlassFragmentLike.fall, src/game/shards.ts:63)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct GlassFragmentLikeFall {
     pub t: f64,
     pub pos: V3,
 }
-impl GlassFragmentLikeFall {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GlassFragmentLikeFall {
-            t: 0.0,
-            pos: [0.0; 3],
-        }
-    }
-}
-impl Default for GlassFragmentLikeFall { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: ShardsTune, src/game/shards.ts:130)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct ShardsTune {
     pub glass_shards: Option<bool>,
 }
-impl ShardsTune {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ShardsTune {
-            glass_shards: None,
-        }
-    }
-}
-impl Default for ShardsTune { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: PlateMeta, src/game/shards.ts:148)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct PlateMeta {
     pub gen_: f64,
     pub area: f64,
@@ -160,24 +94,8 @@ pub struct PlateMeta {
     pub littered: Option<bool>,
     pub poly: Option<Vec<[f64; 2]>>,
 }
-impl PlateMeta {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PlateMeta {
-            gen_: 0.0,
-            area: 0.0,
-            tint: [0.0; 3],
-            type_: crate::glasspen::PaneType::Annealed,
-            seed: 0.0,
-            littered: None,
-            poly: None,
-        }
-    }
-}
-impl Default for PlateMeta { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Pending, src/game/shards.ts:152)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Pending {
     pub t: f64,
     pub pos: V3,
@@ -188,41 +106,13 @@ pub struct Pending {
     pub who: f64,
     pub event: f64,
 }
-impl Pending {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Pending {
-            t: 0.0,
-            pos: [0.0; 3],
-            name: crate::sim_fallshome::FallSound::Empty,
-            gain: 0.0,
-            rate: 0.0,
-            amount: 0.0,
-            who: 0.0,
-            event: 0.0,
-        }
-    }
-}
-impl Default for Pending { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Life, src/game/shards.ts:153)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Life {
     pub t: f64,
     pub n: f64,
 }
-impl Life {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Life {
-            t: 0.0,
-            n: 0.0,
-        }
-    }
-}
-impl Default for Life { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: GlassShards, src/game/shards.ts:158)
 #[derive(Clone, Debug, ToBytes)]
 pub struct GlassShards {
     pub lives: Vec<crate::shards::Life>,
@@ -239,7 +129,7 @@ pub struct GlassShards {
     pub serial: f64,
 }
 impl GlassShards {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         GlassShards {
             lives: Vec::new(),
@@ -259,25 +149,13 @@ impl GlassShards {
 }
 impl Default for GlassShards { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: inline at src/game/shards.ts:165 GlassShards.breaks, src/game/shards.ts:165)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct GlassShardsBreaksItem {
     pub c: DebrisChunkId,
     pub speed: f64,
 }
-impl GlassShardsBreaksItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GlassShardsBreaksItem {
-            c: DebrisChunkId(0),
-            speed: 0.0,
-        }
-    }
-}
-impl Default for GlassShardsBreaksItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/shards.ts:171 GlassShards.deferred, src/game/shards.ts:171)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct GlassShardsDeferredItem {
     pub pos: V3,
     pub dir: V3,
@@ -285,22 +163,8 @@ pub struct GlassShardsDeferredItem {
     pub o: crate::shards::SprayOpts,
     pub seed: f64,
 }
-impl GlassShardsDeferredItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GlassShardsDeferredItem {
-            pos: [0.0; 3],
-            dir: [0.0; 3],
-            count: 0.0,
-            o: crate::shards::SprayOpts::zeroed(),
-            seed: 0.0,
-        }
-    }
-}
-impl Default for GlassShardsDeferredItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: SprayOpts, src/game/shards.ts:674)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct SprayOpts {
     pub speed: f64,
     pub speed_jit: f64,
@@ -316,30 +180,8 @@ pub struct SprayOpts {
     pub vadd: Option<V3>,
     pub color: V3,
 }
-impl SprayOpts {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SprayOpts {
-            speed: 0.0,
-            speed_jit: 0.0,
-            spread: 0.0,
-            life: 0.0,
-            life_jit: 0.0,
-            size: 0.0,
-            size_jit: 0.0,
-            aspect: 0.0,
-            tumble: 0.0,
-            nrm_jit: 0.0,
-            pos_jit: 0.0,
-            vadd: None,
-            color: [0.0; 3],
-        }
-    }
-}
-impl Default for SprayOpts { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/shards.ts:337 cutPlates(fr), src/game/shards.ts:693)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct GlassShardsCutPlatesFr {
     pub u: V3,
     pub v: V3,
@@ -347,89 +189,31 @@ pub struct GlassShardsCutPlatesFr {
     pub lv: f64,
     pub mid: V3,
 }
-impl GlassShardsCutPlatesFr {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GlassShardsCutPlatesFr {
-            u: [0.0; 3],
-            v: [0.0; 3],
-            lu: 0.0,
-            lv: 0.0,
-            mid: [0.0; 3],
-        }
-    }
-}
-impl Default for GlassShardsCutPlatesFr { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/shards.ts:357 plate(cut), src/game/shards.ts:357)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct GlassShardsPlateCut {
     pub cut: Option<Vec<crate::scene_cut::CutPlane>>,
     pub dropped: f64,
 }
-impl GlassShardsPlateCut {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GlassShardsPlateCut {
-            cut: None,
-            dropped: 0.0,
-        }
-    }
-}
-impl Default for GlassShardsPlateCut { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/shards.ts:570 fallOf ->, src/game/shards.ts:570)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct GlassShardsFallOf {
     pub t: f64,
     pub pos: V3,
 }
-impl GlassShardsFallOf {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GlassShardsFallOf {
-            t: 0.0,
-            pos: [0.0; 3],
-        }
-    }
-}
-impl Default for GlassShardsFallOf { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/shards.ts:571 schedule(fall), src/game/shards.ts:571)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct GlassShardsScheduleFall {
     pub t: f64,
     pub pos: V3,
 }
-impl GlassShardsScheduleFall {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GlassShardsScheduleFall {
-            t: 0.0,
-            pos: [0.0; 3],
-        }
-    }
-}
-impl Default for GlassShardsScheduleFall { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/shards.ts:577 landing(fall), src/game/shards.ts:577)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct GlassShardsLandingFall {
     pub t: f64,
     pub pos: V3,
 }
-impl GlassShardsLandingFall {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GlassShardsLandingFall {
-            t: 0.0,
-            pos: [0.0; 3],
-        }
-    }
-}
-impl Default for GlassShardsLandingFall { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum GlassShardsTestKind {
     Piece,
@@ -448,26 +232,13 @@ impl GlassShardsTestKind {
     }
 }
 
-/// (TypeScript: inline at src/game/shards.ts:747 cutPlateBox ->, src/game/shards.ts:747)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct CutPlateBox {
     pub box_: BoxId,
     pub cut: Option<Vec<crate::scene_cut::CutPlane>>,
     pub dropped: f64,
     pub poly: Vec<[f64; 2]>,
 }
-impl CutPlateBox {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CutPlateBox {
-            box_: BoxId(0),
-            cut: None,
-            dropped: 0.0,
-            poly: Vec::new(),
-        }
-    }
-}
-impl Default for CutPlateBox { fn default() -> Self { Self::zeroed() } }
 
 /// the counters this module keeps for the checks
 #[derive(Clone, Debug, Default)]

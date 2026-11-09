@@ -1,64 +1,28 @@
-//! The types of `nightbreach`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `nightbreach`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: BlindBurst, src/game/nightbreach.ts:107)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct BlindBurst {
     pub until: f64,
     pub n: f64,
     pub next: f64,
 }
-impl BlindBurst {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BlindBurst {
-            until: 0.0,
-            n: 0.0,
-            next: 0.0,
-        }
-    }
-}
-impl Default for BlindBurst { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: NightBreachMark, src/game/nightbreach.ts:128)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct NightBreachMark {
     pub pos: V3,
     pub aim_at: V3,
     pub name: Option<String>,
     pub drill: Option<bool>,
 }
-impl NightBreachMark {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        NightBreachMark {
-            pos: [0.0; 3],
-            aim_at: [0.0; 3],
-            name: None,
-            drill: None,
-        }
-    }
-}
-impl Default for NightBreachMark { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: NightBreachLayout, src/game/nightbreach.ts:132)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct NightBreachLayout {
     pub name: String,
 }
-impl NightBreachLayout {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        NightBreachLayout {
-            name: String::new(),
-        }
-    }
-}
-impl Default for NightBreachLayout { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum NightBreachState {
     Clear,
@@ -87,7 +51,6 @@ impl NightBreachState {
     }
 }
 
-/// (TypeScript: NightBreach, src/game/nightbreach.ts:145)
 #[derive(Clone, Debug, ToBytes)]
 pub struct NightBreach {
     pub active: bool,
@@ -111,7 +74,7 @@ pub struct NightBreach {
     pub failure: Option<String>,
 }
 impl NightBreach {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         NightBreach {
             active: false,
@@ -138,46 +101,21 @@ impl NightBreach {
 }
 impl Default for NightBreach { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: inline at src/game/nightbreach.ts:160 NightBreach.log, src/game/nightbreach.ts:160)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct NightBreachLogItem {
     pub t: f64,
     pub what: String,
 }
-impl NightBreachLogItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        NightBreachLogItem {
-            t: 0.0,
-            what: String::new(),
-        }
-    }
-}
-impl Default for NightBreachLogItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/nightbreach.ts:88 SQUAD4, src/game/nightbreach.ts:88)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct SQUAD4Item {
     pub name: String,
     pub pair: crate::game::PairId,
     pub tint: V3,
     pub tint2: V3,
 }
-impl SQUAD4Item {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SQUAD4Item {
-            name: String::new(),
-            pair: crate::game::PairId::Red,
-            tint: [0.0; 3],
-            tint2: [0.0; 3],
-        }
-    }
-}
-impl Default for SQUAD4Item { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/nightbreach.ts:104 BLIND, src/game/nightbreach.ts:104)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct BLIND {
     pub after: f64,
     pub stagger: f64,
@@ -186,22 +124,7 @@ pub struct BLIND {
     pub spread: f64,
     pub low_gun: f64,
 }
-impl BLIND {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BLIND {
-            after: 0.0,
-            stagger: 0.0,
-            rounds: 0.0,
-            every: 0.0,
-            spread: 0.0,
-            low_gun: 0.0,
-        }
-    }
-}
-impl Default for BLIND { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum NightBreachOrder {
     Stack,
@@ -216,22 +139,11 @@ impl NightBreachOrder {
     }
 }
 
-/// (TypeScript: inline at src/game/nightbreach.ts:378 objective ->, src/game/nightbreach.ts:378)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct NightBreachObjective {
     pub text: String,
     pub pos: Option<V3>,
 }
-impl NightBreachObjective {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        NightBreachObjective {
-            text: String::new(),
-            pos: None,
-        }
-    }
-}
-impl Default for NightBreachObjective { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]

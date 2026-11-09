@@ -15,7 +15,7 @@ pub trait Id: Copy + Ord {
 macro_rules! id {
     ($($(#[$m:meta])* $name:ident),* $(,)?) => { $(
         $(#[$m])*
-        #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug)]
+        #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Default)]
         pub struct $name(pub u32);
         impl $crate::ids::Id for $name {
             const NAME: &'static str = stringify!($name);

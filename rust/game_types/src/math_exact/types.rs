@@ -1,10 +1,9 @@
-//! The types of `math_exact`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `math_exact`.
 #![allow(unused_imports)]
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: Maths, src/math/exact.ts:321)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Maths {
     pub sin: crate::FnField,
     pub cos: crate::FnField,
@@ -21,31 +20,8 @@ pub struct Maths {
     pub tanh: crate::FnField,
     pub hypot: crate::FnField,
 }
-impl Maths {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Maths {
-            sin: crate::FnField,
-            cos: crate::FnField,
-            tan: crate::FnField,
-            asin: crate::FnField,
-            acos: crate::FnField,
-            atan: crate::FnField,
-            atan2: crate::FnField,
-            exp: crate::FnField,
-            log: crate::FnField,
-            log2: crate::FnField,
-            log10: crate::FnField,
-            pow: crate::FnField,
-            tanh: crate::FnField,
-            hypot: crate::FnField,
-        }
-    }
-}
-impl Default for Maths { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/math/exact.ts:308 SYS, src/math/exact.ts:308)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SYS {
     pub sin: crate::FnField,
     pub cos: crate::FnField,
@@ -62,41 +38,10 @@ pub struct SYS {
     pub tanh: crate::FnField,
     pub hypot: crate::FnField,
 }
-impl SYS {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SYS {
-            sin: crate::FnField,
-            cos: crate::FnField,
-            tan: crate::FnField,
-            asin: crate::FnField,
-            acos: crate::FnField,
-            atan: crate::FnField,
-            atan2: crate::FnField,
-            exp: crate::FnField,
-            log: crate::FnField,
-            log2: crate::FnField,
-            log10: crate::FnField,
-            pow: crate::FnField,
-            tanh: crate::FnField,
-            hypot: crate::FnField,
-        }
-    }
-}
-impl Default for SYS { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/math/exact.ts:339 EXACT, src/math/exact.ts:339)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct MathExactModEXACT {
 }
-impl MathExactModEXACT {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        MathExactModEXACT {
-        }
-    }
-}
-impl Default for MathExactModEXACT { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]
@@ -119,7 +64,7 @@ impl MathExactMod {
             maths_epoch: 0.0,
             remade: Vec::new(),
             other: None,
-            exact: crate::math_exact::MathExactModEXACT::zeroed(),
+            exact: crate::math_exact::MathExactModEXACT::default(),
         }
     }
 }

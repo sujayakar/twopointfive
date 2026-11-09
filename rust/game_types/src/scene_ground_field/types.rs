@@ -1,28 +1,15 @@
-//! The types of `scene_ground_field`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `scene_ground_field`.
 #![allow(unused_imports)]
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: inline at src/scene/groundField.ts:27 packGroundField(f), src/scene/groundField.ts:27)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct PackGroundFieldF {
     pub mound: Vec<f32>,
     pub w: f64,
     pub h: f64,
     pub slab: f64,
 }
-impl PackGroundFieldF {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PackGroundFieldF {
-            mound: Vec::new(),
-            w: 0.0,
-            h: 0.0,
-            slab: 0.0,
-        }
-    }
-}
-impl Default for PackGroundFieldF { fn default() -> Self { Self::zeroed() } }
 
 /// (src/scene/groundField.ts:17 GH_RES)
 pub const GH_RES: f64 = 10.0;

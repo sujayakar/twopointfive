@@ -390,7 +390,7 @@ mod tests {
     fn a_wall_counts_once_his_back_has_been_on_it_a_beat() {
         let (mut g, pl) = game_with_sam();
         assert!(!on_wall(&mut g, pl));
-        g.pl[pl].wall = Some(crate::player::WallHold::zeroed());
+        g.pl[pl].wall = Some(crate::player::WallHold::default());
         assert!(on_wall(&mut g, pl));   // a hold with no clock counts at once
         let secs = g.k.unseen.wall_secs;
         g.pl[pl].wall.as_mut().unwrap().hit_t = Some(secs - 0.01);
@@ -419,7 +419,7 @@ mod tests {
         let gd = GuardId(0);
         g.time = 5.0;
         assert!(!off_wall(&mut g, gd));   // Sam on no wall
-        g.pl[pl].wall = Some(crate::player::WallHold::zeroed());
+        g.pl[pl].wall = Some(crate::player::WallHold::default());
         assert!(off_wall(&mut g, gd));    // no place dealt
         g.m.unseen.on_wall_at.set(gd, 5.0);
         assert!(!off_wall(&mut g, gd));   // a place dealt this frame

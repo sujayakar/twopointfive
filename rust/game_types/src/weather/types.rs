@@ -1,10 +1,9 @@
-//! The types of `weather`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `weather`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: WeatherSnap, src/game/weather.ts:121)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct WeatherSnap {
     pub kind: Option<crate::weather_kinds::WeatherKind>,
     pub thunder_until: Option<f64>,
@@ -20,69 +19,22 @@ pub struct WeatherSnap {
     pub rng: f64,
     pub stats: crate::weather::WeatherSnapStats,
 }
-impl WeatherSnap {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WeatherSnap {
-            kind: None,
-            thunder_until: None,
-            on: false,
-            storm: 0.0,
-            rain_rate: 0.0,
-            wind: [0.0; 2],
-            wet_gloss: false,
-            wet: 0.0,
-            next_flash_at: 0.0,
-            thunders: Vec::new(),
-            last_bark_t: 0.0,
-            rng: 0.0,
-            stats: crate::weather::WeatherSnapStats::zeroed(),
-        }
-    }
-}
-impl Default for WeatherSnap { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Thunder, src/game/weather.ts:133)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Thunder {
     pub at: f64,
     pub dist_km: f64,
     pub bearing: f64,
     pub loud: f64,
 }
-impl Thunder {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Thunder {
-            at: 0.0,
-            dist_km: 0.0,
-            bearing: 0.0,
-            loud: 0.0,
-        }
-    }
-}
-impl Default for Thunder { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/weather.ts:121 WeatherSnap.stats, src/game/weather.ts:121)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct WeatherSnapStats {
     pub flashes: f64,
     pub thunders: f64,
     pub barks: f64,
 }
-impl WeatherSnapStats {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WeatherSnapStats {
-            flashes: 0.0,
-            thunders: 0.0,
-            barks: 0.0,
-        }
-    }
-}
-impl Default for WeatherSnapStats { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Weather, src/game/weather.ts:135)
 #[derive(Clone, Debug, ToBytes)]
 pub struct Weather {
     pub on: bool,
@@ -106,7 +58,7 @@ pub struct Weather {
     pub lot: Option<BoxId>,
 }
 impl Weather {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         Weather {
             on: true,
@@ -133,8 +85,7 @@ impl Weather {
 }
 impl Default for Weather { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: Flash, src/game/weather.ts:132)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct Flash {
     pub light: LightId,
     pub stroke: crate::weather::Stroke,
@@ -144,79 +95,28 @@ pub struct Flash {
     pub bearing: f64,
     pub dist_km: f64,
 }
-impl Flash {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Flash {
-            light: LightId(0),
-            stroke: crate::weather::Stroke::zeroed(),
-            t: 0.0,
-            peak: 0.0,
-            dir: [0.0; 3],
-            bearing: 0.0,
-            dist_km: 0.0,
-        }
-    }
-}
-impl Default for Flash { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Stroke, src/game/weather.ts:124)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct Stroke {
     pub pulses: Vec<crate::weather::StrokePulsesItem>,
 }
-impl Stroke {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Stroke {
-            pulses: Vec::new(),
-        }
-    }
-}
-impl Default for Stroke { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/weather.ts:124 Stroke.pulses, src/game/weather.ts:124)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct StrokePulsesItem {
     pub t0: f64,
     pub amp: f64,
     pub tau: f64,
 }
-impl StrokePulsesItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StrokePulsesItem {
-            t0: 0.0,
-            amp: 0.0,
-            tau: 0.0,
-        }
-    }
-}
-impl Default for StrokePulsesItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/weather.ts:191 Weather.stats, src/game/weather.ts:191)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct WeatherStats {
     pub flashes: f64,
     pub thunders: f64,
     pub barks: f64,
     pub last_thunder: Option<crate::weather::WeatherStatsLastThunder>,
 }
-impl WeatherStats {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WeatherStats {
-            flashes: 0.0,
-            thunders: 0.0,
-            barks: 0.0,
-            last_thunder: None,
-        }
-    }
-}
-impl Default for WeatherStats { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/weather.ts:191 WeatherStats.lastThunder, src/game/weather.ts:191 WeatherStats.lastThunder)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct WeatherStatsLastThunder {
     pub at: f64,
     pub dist_km: f64,
@@ -226,24 +126,8 @@ pub struct WeatherStatsLastThunder {
     pub name: String,
     pub gain: f64,
 }
-impl WeatherStatsLastThunder {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WeatherStatsLastThunder {
-            at: 0.0,
-            dist_km: 0.0,
-            bearing: 0.0,
-            loud: 0.0,
-            played_at: 0.0,
-            name: String::new(),
-            gain: 0.0,
-        }
-    }
-}
-impl Default for WeatherStatsLastThunder { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/weather.ts:198 Weather.touched, src/game/weather.ts:198)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct WeatherTouchedItem {
     pub box_: BoxId,
     pub albedo: V3,
@@ -251,61 +135,22 @@ pub struct WeatherTouchedItem {
     pub rough: Option<f64>,
     pub aniso: Option<bool>,
 }
-impl WeatherTouchedItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WeatherTouchedItem {
-            box_: BoxId(0),
-            albedo: [0.0; 3],
-            flags: 0.0,
-            rough: None,
-            aniso: None,
-        }
-    }
-}
-impl Default for WeatherTouchedItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/weather.ts:63 LEGACY, src/game/weather.ts:63)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct LEGACY {
     pub storm: f64,
     pub rain: f64,
     pub wind: [f64; 2],
     pub cloud: f64,
 }
-impl LEGACY {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LEGACY {
-            storm: 0.0,
-            rain: 0.0,
-            wind: [0.0; 2],
-            cloud: 0.0,
-        }
-    }
-}
-impl Default for LEGACY { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/weather.ts:332 strike(opts), src/game/weather.ts:332)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct WeatherStrikeOpts {
     pub bearing: Option<f64>,
     pub elev_deg: Option<f64>,
     pub dist_km: Option<f64>,
     pub peak: Option<f64>,
 }
-impl WeatherStrikeOpts {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WeatherStrikeOpts {
-            bearing: None,
-            elev_deg: None,
-            dist_km: None,
-            peak: None,
-        }
-    }
-}
-impl Default for WeatherStrikeOpts { fn default() -> Self { Self::zeroed() } }
 
 /// (src/game/weather.ts:63 LEGACY: a table nothing writes)
 pub fn legacy() -> crate::weather::LEGACY { crate::weather::LEGACY { storm: 0.7, rain: 0.55, wind: [1.1, 0.45], cloud: 0.95 } }

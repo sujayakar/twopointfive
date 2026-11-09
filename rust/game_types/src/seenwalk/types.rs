@@ -1,4 +1,4 @@
-//! The types of `seenwalk`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `seenwalk`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
@@ -9,8 +9,7 @@ pub enum SeenPrice {
     Floor { x0: f64, x1: f64, z0: f64, z1: f64, eyes: Vec<crate::seenwalk::SharedEyesItem> },
 }
 
-/// (TypeScript: Shared, src/game/seenwalk.ts:48)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct Shared {
     pub t: f64,
     pub known: f64,
@@ -18,36 +17,12 @@ pub struct Shared {
     pub eyes: Vec<crate::seenwalk::SharedEyesItem>,
     pub memo: JsMap<crate::Num, f64>,
 }
-impl Shared {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Shared {
-            t: 0.0,
-            known: 0.0,
-            stamp: String::new(),
-            eyes: Vec::new(),
-            memo: JsMap::new(),
-        }
-    }
-}
-impl Default for Shared { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/seenwalk.ts:48 Shared.eyes, src/game/seenwalk.ts:48)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct SharedEyesItem {
     pub x: f64,
     pub z: f64,
 }
-impl SharedEyesItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SharedEyesItem {
-            x: 0.0,
-            z: 0.0,
-        }
-    }
-}
-impl Default for SharedEyesItem { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]

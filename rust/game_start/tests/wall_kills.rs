@@ -127,7 +127,7 @@ fn know(p: &mut Play, list: &[([f64; 2], f64)]) {
     let foes = p.hostiles();
     for &h in &foes { p.g.fog_of_war.recs.delete(h); }
     for (i, &(q, age)) in list.iter().enumerate() {
-        let rec = game::fogofwar::Rec { t: p.g.time - age, at: Some([q[0], 0.0, q[1]]), ..game::fogofwar::Rec::zeroed() };
+        let rec = game::fogofwar::Rec { t: p.g.time - age, at: Some([q[0], 0.0, q[1]]), ..game::fogofwar::Rec::default() };
         p.g.fog_of_war.recs.set(foes[i], rec);
     }
 }

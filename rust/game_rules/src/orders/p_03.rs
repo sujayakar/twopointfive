@@ -1015,7 +1015,7 @@ mod tests {
     #[test]
     fn a_door_menu_works_from_the_mens_face() {
         let d = OrderTargetDoor { at: [1.0, 0.0, 2.0], door: DoorId(3), side: 1.0 };
-        let mut m = Menu::zeroed();
+        let mut m = Menu::default();
         m.target = OrderTarget::Door(d);
         m.men_side = Some(-1.0);
         match menu_target_of(&m) { OrderTarget::Door(x) => assert_eq!(x.side, -1.0), _ => panic!() }

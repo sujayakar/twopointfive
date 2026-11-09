@@ -1,9 +1,8 @@
-//! The types of `pairorders`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `pairorders`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: PairOrders, src/game/pairorders.ts:143)
 #[derive(Clone, Debug, ToBytes)]
 pub struct PairOrders {
     pub jobs: JsMap<GuardId, crate::pairorders::Job>,
@@ -20,7 +19,7 @@ pub struct PairOrders {
     pub lit_cells: JsMap<crate::Num, [f64; 2]>,
 }
 impl PairOrders {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         PairOrders {
             jobs: JsMap::new(),
@@ -40,8 +39,7 @@ impl PairOrders {
 }
 impl Default for PairOrders { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: Job, src/game/pairorders.ts:129)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Job {
     pub foe: GuardId,
     pub mode: crate::pairorders::JobMode,
@@ -67,42 +65,10 @@ pub struct Job {
     pub back_said: Option<bool>,
     pub back_t: Option<f64>,
 }
-impl Job {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Job {
-            foe: GuardId(0),
-            mode: crate::pairorders::JobMode::Mark,
-            go: false,
-            set: false,
-            set_said: false,
-            t0: 0.0,
-            born: 0.0,
-            check_t: 0.0,
-            wait_t: 0.0,
-            heel_t: 0.0,
-            going: false,
-            scuffled: false,
-            was_following: false,
-            handed: None,
-            watcher: None,
-            watch_t: 0.0,
-            seen_t: 0.0,
-            force: false,
-            cue_t: 0.0,
-            cue_by: None,
-            cued: false,
-            back_said: None,
-            back_t: None,
-        }
-    }
-}
-impl Default for Job { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum JobMode {
-    Mark,
+    #[default] Mark,
     Now,
 }
 impl JobMode {
@@ -114,102 +80,42 @@ impl JobMode {
     }
 }
 
-/// (TypeScript: inline at src/game/pairorders.ts:147 PairOrders.glance, src/game/pairorders.ts:147)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct PairOrdersGlanceValue {
     pub on: bool,
     pub end_t: f64,
     pub h0: Option<[f64; 2]>,
 }
-impl PairOrdersGlanceValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PairOrdersGlanceValue {
-            on: false,
-            end_t: 0.0,
-            h0: None,
-        }
-    }
-}
-impl Default for PairOrdersGlanceValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/pairorders.ts:151 PairOrders.dark, src/game/pairorders.ts:151)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct PairOrdersDarkValue {
     pub check_t: f64,
     pub lit_t: f64,
     pub said_t: f64,
 }
-impl PairOrdersDarkValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PairOrdersDarkValue {
-            check_t: 0.0,
-            lit_t: 0.0,
-            said_t: 0.0,
-        }
-    }
-}
-impl Default for PairOrdersDarkValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/pairorders.ts:152 PairOrders.darkMemo, src/game/pairorders.ts:152)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct PairOrdersDarkMemoValue {
     pub t: f64,
     pub spot: Option<V3>,
 }
-impl PairOrdersDarkMemoValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PairOrdersDarkMemoValue {
-            t: 0.0,
-            spot: None,
-        }
-    }
-}
-impl Default for PairOrdersDarkMemoValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/pairorders.ts:154 PairOrders.ways, src/game/pairorders.ts:154)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct PairOrdersWaysValue {
     pub to: V3,
     pub path: Vec<V3>,
     pub t: f64,
 }
-impl PairOrdersWaysValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PairOrdersWaysValue {
-            to: [0.0; 3],
-            path: Vec::new(),
-            t: 0.0,
-        }
-    }
-}
-impl Default for PairOrdersWaysValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/pairorders.ts:113 PAIR_LOG, src/game/pairorders.ts:113)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct PairordersModPAIRLOGItem {
     pub t: f64,
     pub what: String,
     /// INVENTED: g.serial() at the push: lesson.ts:113 holds a row as a cursor by identity
     pub serial: u32,
 }
-impl PairordersModPAIRLOGItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PairordersModPAIRLOGItem {
-            t: 0.0,
-            what: String::new(),
-            serial: 0,
-        }
-    }
-}
-impl Default for PairordersModPAIRLOGItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at quiet jobOf ->, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1597)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct PairOrdersJobOf {
     pub foe: GuardId,
     pub mode: crate::pairorders::PairOrdersJobOfMode,
@@ -235,42 +141,10 @@ pub struct PairOrdersJobOf {
     pub back_said: Option<bool>,
     pub back_t: Option<f64>,
 }
-impl PairOrdersJobOf {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PairOrdersJobOf {
-            foe: GuardId(0),
-            mode: crate::pairorders::PairOrdersJobOfMode::Mark,
-            go: false,
-            set: false,
-            set_said: false,
-            t0: 0.0,
-            born: 0.0,
-            check_t: 0.0,
-            wait_t: 0.0,
-            heel_t: 0.0,
-            going: false,
-            scuffled: false,
-            was_following: false,
-            handed: None,
-            watcher: None,
-            watch_t: 0.0,
-            seen_t: 0.0,
-            force: false,
-            cue_t: 0.0,
-            cue_by: None,
-            cued: false,
-            back_said: None,
-            back_t: None,
-        }
-    }
-}
-impl Default for PairOrdersJobOf { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum PairOrdersJobOfMode {
-    Mark,
+    #[default] Mark,
     Now,
 }
 impl PairOrdersJobOfMode {
@@ -282,7 +156,6 @@ impl PairOrdersJobOfMode {
     }
 }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum PairOrdersMarkBy {
     Row,
@@ -301,24 +174,12 @@ impl PairOrdersMarkBy {
     }
 }
 
-/// (TypeScript: inline at src/game/pairorders.ts:493 stalk ->, src/game/pairorders.ts:493)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct PairOrdersStalk {
     pub path: Vec<V3>,
     pub exposed: bool,
     pub by: Option<GuardId>,
 }
-impl PairOrdersStalk {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PairOrdersStalk {
-            path: Vec::new(),
-            exposed: false,
-            by: None,
-        }
-    }
-}
-impl Default for PairOrdersStalk { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]

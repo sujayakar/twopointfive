@@ -1,14 +1,13 @@
-//! The types of `sim_men_cols`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `sim_men_cols`.
 #![allow(unused_imports)]
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: ManCols, src/sim/men/cols.ts:14)
 #[derive(Clone, Copy, Debug)]
 pub struct ManCols {
 }
 impl ManCols {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         ManCols {
         }
@@ -16,12 +15,11 @@ impl ManCols {
 }
 impl Default for ManCols { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: GuardCols, src/sim/men/cols.ts:26)
 #[derive(Clone, Copy, Debug)]
 pub struct GuardCols {
 }
 impl GuardCols {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         GuardCols {
         }
@@ -29,12 +27,11 @@ impl GuardCols {
 }
 impl Default for GuardCols { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: PlayerCols, src/sim/men/cols.ts:29)
 #[derive(Clone, Copy, Debug)]
 pub struct PlayerCols {
 }
 impl PlayerCols {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         PlayerCols {
         }

@@ -476,7 +476,7 @@ pub fn register_shut_door(g: &mut crate::game::Game) {
         targets: vec![crate::orders::TargetKind::Door],
         ack: Some(vec![String::from("shutting it."), String::from("got the door.")]),
         stands_in: Some(crate::orders::OrderDefStandsIn { for_: String::from(crate::orders::rows::charge::ORDER.id) }),
-        ..crate::orders::OrderDef::zeroed()
+        ..crate::orders::OrderDef::default()
     });
     let id = crate::orders::squad_orders_row(g, def);
     crate::orders::squad_orders_register(g, id, None);

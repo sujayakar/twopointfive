@@ -305,7 +305,7 @@ pub fn gather(g: &mut crate::game::Game, gd: GuardId) -> crate::dialogue::Dialog
     let callsign = g.gd[gd].callsign.clone();
     let idle = r.stage == crate::guards::RollcallStage::Idle;
 
-    let mut tokens = DialogueCtxTokens::zeroed();   // (every field is written below)
+    let mut tokens = DialogueCtxTokens::default();   // (every field is written below)
     let partner_word = partner.map(|x| g.gd[x].callsign.clone());
     tokens.partner = partner_word;
     tokens.victim = w.saw_act.as_ref().map(|x| x.victim.clone()).or_else(|| w.saw_held.as_ref().map(|x| x.who.clone()));
@@ -743,13 +743,13 @@ mod tests {
     }
     #[test]
     fn the_ctx_tables_reach_the_picker() {
-        let mut t = DialogueCtxTokens::zeroed();
+        let mut t = DialogueCtxTokens::default();
         t.saw_where = Some(String::from("the yard"));
         t.pad_door = Some(String::from("the pad door"));
         let tab = ctx_tokens_map(&t);
         assert_eq!(expand("{SawWhere}, {padDoor}", &tab).as_deref(), Some("The yard, the pad door"));
         assert_eq!(expand("{clearRoom}", &tab), None);
-        let mut f = DialogueCtxFacts::zeroed();
+        let mut f = DialogueCtxFacts::default();
         f.office = Some(true);
         f.saw_drop = Some(false);
         assert!(hold_fact(&f, Need::Office));

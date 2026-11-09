@@ -1,10 +1,9 @@
-//! The types of `lightswitch`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `lightswitch`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: WallSwitch, src/game/lightswitch.ts:75)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct WallSwitch {
     pub id: f64,
     pub pos: V3,
@@ -15,25 +14,8 @@ pub struct WallSwitch {
     pub room: f64,
     pub targets: Vec<FixtureId>,
 }
-impl WallSwitch {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WallSwitch {
-            id: 0.0,
-            pos: [0.0; 3],
-            n: [0.0; 3],
-            stand: [0.0; 3],
-            floor: [0.0; 3],
-            door: DoorId(0),
-            room: 0.0,
-            targets: Vec::new(),
-        }
-    }
-}
-impl Default for WallSwitch { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Hand, src/game/lightswitch.ts:88)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct Hand {
     pub c: CharId,
     pub sw: crate::lightswitch::WallSwitch,
@@ -42,44 +24,16 @@ pub struct Hand {
     pub dur: f64,
     pub plant: bool,
 }
-impl Hand {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Hand {
-            c: CharId(0),
-            sw: crate::lightswitch::WallSwitch::zeroed(),
-            at: 0.0,
-            dir: 0.0,
-            dur: 0.0,
-            plant: false,
-        }
-    }
-}
-impl Default for Hand { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: St, src/game/lightswitch.ts:89)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct St {
     pub all: Vec<crate::lightswitch::WallSwitch>,
     pub list: Vec<crate::lightswitch::WallSwitch>,
     pub hands: Vec<crate::lightswitch::Hand>,
     pub serial: f64,
 }
-impl St {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        St {
-            all: Vec::new(),
-            list: Vec::new(),
-            hands: Vec::new(),
-            serial: 0.0,
-        }
-    }
-}
-impl Default for St { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Plate, src/game/lightswitch.ts:120)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Plate {
     pub door: DoorId,
     pub n: V3,
@@ -88,40 +42,14 @@ pub struct Plate {
     pub room: f64,
     pub stand: V3,
 }
-impl Plate {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Plate {
-            door: DoorId(0),
-            n: [0.0; 3],
-            pos: [0.0; 3],
-            floor: [0.0; 3],
-            room: 0.0,
-            stand: [0.0; 3],
-        }
-    }
-}
-impl Default for Plate { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/lightswitch.ts:231 switchHand ->, src/game/lightswitch.ts:231)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SwitchHand {
     pub p: V3,
     pub n: V3,
 }
-impl SwitchHand {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SwitchHand {
-            p: [0.0; 3],
-            n: [0.0; 3],
-        }
-    }
-}
-impl Default for SwitchHand { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/lightswitch.ts:258 switchRows(row), ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct SwitchRowsRowOver {
     pub kind: Option<crate::lightswitch::SwitchRowsRowOverKind>,
     pub pos: Option<V3>,
@@ -139,31 +67,7 @@ pub struct SwitchRowsRowOver {
     pub past: Option<bool>,
     pub framed: Option<bool>,
 }
-impl SwitchRowsRowOver {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SwitchRowsRowOver {
-            kind: None,
-            pos: None,
-            line1: None,
-            line2: None,
-            in_reach: None,
-            off: None,
-            progress: None,
-            target: None,
-            door: None,
-            guard: None,
-            verb: None,
-            running: None,
-            close: None,
-            past: None,
-            framed: None,
-        }
-    }
-}
-impl Default for SwitchRowsRowOver { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum SwitchRowsRowOverKind {
     Cam,

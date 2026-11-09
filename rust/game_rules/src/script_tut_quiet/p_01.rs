@@ -172,7 +172,7 @@ pub fn tut_quiet_night_step(g: &mut crate::game::Game, r: DirectorRunId, b: Dire
                     upper: Some(Some(crate::character::UpperMode::Torch)),
                     light: Some(Some(true)),
                     smoke: Some(Some(false)),
-                    ..crate::director::OrderPatch2::zeroed()
+                    ..crate::director::OrderPatch2::default()
                 })?;
                 let at_gap = crate::director::director_beat_until(crate::director::CondTest::Script { id: TEST_AT_GAP }, Some("he is at the gap"));
                 let (seen, lost) = (met(), gone());
@@ -195,7 +195,7 @@ pub fn tut_quiet_night_step(g: &mut crate::game::Game, r: DirectorRunId, b: Dire
                     continue;
                 }
                 let at = f.at_2.expect("tut-quiet night: at is set before the order");
-                crate::director::director_beat_order(g, r, b, &u, &crate::director::OrderPatch2 { aim_at: Some(Some(crate::director::Place::List(at))), ..crate::director::OrderPatch2::zeroed() })?;
+                crate::director::director_beat_order(g, r, b, &u, &crate::director::OrderPatch2 { aim_at: Some(Some(crate::director::Place::List(at))), ..crate::director::OrderPatch2::default() })?;
                 let wait = crate::director::director_beat_wait(g, r, LOOK_SECS, None)?;
                 let (light, lost) = (lit(), gone());
                 f.at = 4;
@@ -217,7 +217,7 @@ pub fn tut_quiet_night_step(g: &mut crate::game::Game, r: DirectorRunId, b: Dire
                     upper: Some(Some(crate::character::UpperMode::None)),
                     light: Some(Some(true)),
                     smoke: Some(Some(true)),
-                    ..crate::director::OrderPatch2::zeroed()
+                    ..crate::director::OrderPatch2::default()
                 })?;
                 let mut of = vec![crate::director::director_beat_until(crate::director::CondTest::Script { id: TEST_AT_CHAIR }, Some("he is at his chair"))];
                 of.extend(turns(g, r, &u));
@@ -232,7 +232,7 @@ pub fn tut_quiet_night_step(g: &mut crate::game::Game, r: DirectorRunId, b: Dire
                     continue;
                 }
                 let u = f.u.clone().expect("tut-quiet night: u is set at its start");
-                crate::director::director_beat_order(g, r, b, &u, &crate::director::OrderPatch2 { light: Some(Some(false)), ..crate::director::OrderPatch2::zeroed() })?;
+                crate::director::director_beat_order(g, r, b, &u, &crate::director::OrderPatch2 { light: Some(Some(false)), ..crate::director::OrderPatch2::default() })?;
                 let mut of = vec![crate::director::director_beat_wait(g, r, SMOKE_SECS, None)?];
                 of.extend(turns(g, r, &u));
                 f.at = 6;

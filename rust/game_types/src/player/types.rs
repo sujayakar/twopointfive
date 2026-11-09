@@ -1,27 +1,15 @@
-//! The types of `player`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `player`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: WallSnap, src/game/player.ts:1223)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct WallSnap {
     pub hold: Option<crate::player::WallHold>,
     pub press: Option<crate::player::WallSnapPress>,
 }
-impl WallSnap {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WallSnap {
-            hold: None,
-            press: None,
-        }
-    }
-}
-impl Default for WallSnap { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/player.ts:1223 WallSnap.press, src/game/player.ts:1223)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct WallSnapPress {
     pub t: f64,
     pub at: f64,
@@ -31,24 +19,8 @@ pub struct WallSnapPress {
     pub held: bool,
     pub until: f64,
 }
-impl WallSnapPress {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WallSnapPress {
-            t: 0.0,
-            at: 0.0,
-            n: None,
-            dx: 0.0,
-            dz: 0.0,
-            held: false,
-            until: 0.0,
-        }
-    }
-}
-impl Default for WallSnapPress { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Hold, src/game/player.ts:132)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct Hold {
     pub g: GuardId,
     pub variant: crate::character::HoldVariant,
@@ -77,75 +49,19 @@ pub struct Hold {
     /// INVENTED: dealt when a hold starts; a new hold of the same man counts as new
     pub serial: u32,
 }
-impl Hold {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Hold {
-            g: GuardId(0),
-            variant: crate::character::HoldVariant::Gun,
-            phase: crate::character::HoldPhase::Held,
-            t: 0.0,
-            since: 0.0,
-            wind_t: 0.0,
-            swap_t: 0.0,
-            remarked: false,
-            gun_out: 0.0,
-            fire_queued: false,
-            shot_t: 0.0,
-            ask: None,
-            after: None,
-            strip: None,
-            from: None,
-            hit_at: None,
-            yank_m: None,
-            yanked: None,
-            step_e: None,
-            step_m: None,
-            yaw0: None,
-            coil0: None,
-            rmb_choke: None,
-            rmb_t: None,
-            serial: 0,
-        }
-    }
-}
-impl Default for Hold { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/player.ts:132 Hold.ask, src/game/player.ts:132)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct HoldAsk {
     pub t: f64,
     pub dur: f64,
 }
-impl HoldAsk {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HoldAsk {
-            t: 0.0,
-            dur: 0.0,
-        }
-    }
-}
-impl Default for HoldAsk { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/player.ts:132 Hold.after, src/game/player.ts:132)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct HoldAfter {
     pub text: String,
     pub id: String,
 }
-impl HoldAfter {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HoldAfter {
-            text: String::new(),
-            id: String::new(),
-        }
-    }
-}
-impl Default for HoldAfter { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Legs, src/game/player.ts:414)
 #[derive(Clone, Copy, Debug)]
 pub struct Legs {
     pub char: crate::player::LegsChar,
@@ -166,11 +82,10 @@ pub struct Legs {
     pub door_bash_at: f64,
     pub door_bash_lean: f64,
 }
-impl Legs {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
+impl Default for Legs {
+    fn default() -> Self {
         Legs {
-            char: crate::player::LegsChar::zeroed(),
+            char: crate::player::LegsChar::default(),
             safe: None,
             crouch: false,
             sprinting: false,
@@ -190,31 +105,16 @@ impl Legs {
         }
     }
 }
-impl Default for Legs { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/player.ts:415 Legs.char, src/game/player.ts:415)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct LegsChar {
     pub pos: V3,
     pub vel: V3,
     pub body_yaw: f64,
     pub aim_yaw: f64,
 }
-impl LegsChar {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LegsChar {
-            pos: [0.0; 3],
-            vel: [0.0; 3],
-            body_yaw: 0.0,
-            aim_yaw: 0.0,
-        }
-    }
-}
-impl Default for LegsChar { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: WallHold, src/game/player.ts:928)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct WallHold {
     pub n: V3,
     pub along: V3,
@@ -261,59 +161,7 @@ pub struct WallHold {
     /// INVENTED: g.serial() where wallSnap makes the hold (player.ts:1081): unseen.ts:184 and :195 ask by identity whether this is the same take of the wall (State.hold, placed). A copy of the hold keeps it
     pub serial: u32,
 }
-impl WallHold {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WallHold {
-            n: [0.0; 3],
-            along: [0.0; 3],
-            d: 0.0,
-            lo: 0.0,
-            hi: 0.0,
-            open_lo: false,
-            open_hi: false,
-            u: 0.0,
-            v: 0.0,
-            side: 0.0,
-            off: 0.0,
-            away_t: 0.0,
-            settle: 0.0,
-            from: [0.0; 3],
-            block_dir: 0.0,
-            block_t: 0.0,
-            seated: false,
-            drawn: false,
-            at_edge: 0.0,
-            peek: 0.0,
-            peek_dir: 0.0,
-            crouched: false,
-            take_t: None,
-            yaw0: None,
-            yaw_d: None,
-            hit_t: None,
-            kind: None,
-            up: None,
-            lean: None,
-            lean_want: None,
-            lean_dir: None,
-            lean_dwell: None,
-            lean_out_t: None,
-            lean_off: None,
-            lean_more: None,
-            flip_t: None,
-            say_t: None,
-            rise: None,
-            owed: None,
-            cam_along: None,
-            cam: false,
-            ran: None,
-            serial: 0,
-        }
-    }
-}
-impl Default for WallHold { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum WallHoldKind {
     Stack,
@@ -326,7 +174,6 @@ impl WallHoldKind {
     }
 }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum WhKind {
     Stack,
@@ -359,44 +206,20 @@ impl WhKind {
     }
 }
 
-/// (TypeScript: inline at src/game/player.ts:149 DOOR_FIT, src/game/player.ts:149)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct DOORFIT {
     pub lat: [f64; 2],
     pub out: [f64; 2],
 }
-impl DOORFIT {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DOORFIT {
-            lat: [0.0; 2],
-            out: [0.0; 2],
-        }
-    }
-}
-impl Default for DOORFIT { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/player.ts:1135 wsPend, src/game/player.ts:1135)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct PlayerModWsPendValue {
     pub t: f64,
     pub at: f64,
     pub blocked: bool,
 }
-impl PlayerModWsPendValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PlayerModWsPendValue {
-            t: 0.0,
-            at: 0.0,
-            blocked: false,
-        }
-    }
-}
-impl Default for PlayerModWsPendValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/player.ts:1165 wsPress, src/game/player.ts:1165)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct PlayerModWsPressValue {
     pub t: f64,
     pub at: f64,
@@ -406,24 +229,8 @@ pub struct PlayerModWsPressValue {
     pub held: bool,
     pub until: f64,
 }
-impl PlayerModWsPressValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PlayerModWsPressValue {
-            t: 0.0,
-            at: 0.0,
-            n: None,
-            dx: 0.0,
-            dz: 0.0,
-            held: false,
-            until: 0.0,
-        }
-    }
-}
-impl Default for PlayerModWsPressValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/player.ts:1217 WH, src/game/player.ts:1217)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct WH {
     pub n: String,
     pub along: String,
@@ -467,89 +274,18 @@ pub struct WH {
     pub lean_dir: String,
     pub kind: String,
 }
-impl WH {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WH {
-            n: String::new(),
-            along: String::new(),
-            from: String::new(),
-            d: String::new(),
-            lo: String::new(),
-            hi: String::new(),
-            u: String::new(),
-            v: String::new(),
-            off: String::new(),
-            away_t: String::new(),
-            block_t: String::new(),
-            settle: String::new(),
-            peek: String::new(),
-            open_lo: String::new(),
-            open_hi: String::new(),
-            seated: String::new(),
-            drawn: String::new(),
-            crouched: String::new(),
-            side: String::new(),
-            peek_dir: String::new(),
-            block_dir: String::new(),
-            at_edge: String::new(),
-            take_t: String::new(),
-            yaw0: String::new(),
-            yaw_d: String::new(),
-            hit_t: String::new(),
-            ran: String::new(),
-            up: String::new(),
-            lean: String::new(),
-            lean_dwell: String::new(),
-            lean_out_t: String::new(),
-            lean_off: String::new(),
-            lean_more: String::new(),
-            flip_t: String::new(),
-            say_t: String::new(),
-            rise: String::new(),
-            owed: String::new(),
-            cam_along: String::new(),
-            lean_want: String::new(),
-            lean_dir: String::new(),
-            kind: String::new(),
-        }
-    }
-}
-impl Default for WH { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/player.ts:177 collideMan(pl), src/game/player.ts:177)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct CollideManPl {
     pub char: crate::player::CollideManPlChar,
     pub safe: Option<V3>,
 }
-impl CollideManPl {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CollideManPl {
-            char: crate::player::CollideManPlChar::zeroed(),
-            safe: None,
-        }
-    }
-}
-impl Default for CollideManPl { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/player.ts:177 CollideManPl.char, src/game/player.ts:177)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct CollideManPlChar {
     pub pos: V3,
 }
-impl CollideManPlChar {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CollideManPlChar {
-            pos: [0.0; 3],
-        }
-    }
-}
-impl Default for CollideManPlChar { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum ShellBreak {
     Fire,
@@ -564,89 +300,35 @@ impl ShellBreak {
     }
 }
 
-/// (TypeScript: inline at src/game/player.ts:439 strideStep(tap), src/game/player.ts:439)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct StrideStepTap {
     pub speed: f64,
 }
-impl StrideStepTap {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StrideStepTap {
-            speed: 0.0,
-        }
-    }
-}
-impl Default for StrideStepTap { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/player.ts:439 strideStep(stalk), src/game/player.ts:439)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct StrideStepStalk {
     pub pace: f64,
     pub keep: Option<bool>,
 }
-impl StrideStepStalk {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StrideStepStalk {
-            pace: 0.0,
-            keep: None,
-        }
-    }
-}
-impl Default for StrideStepStalk { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/player.ts:454 gunRaised(m), src/game/player.ts:454)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct GunRaisedM {
     pub sprinting: bool,
 }
-impl GunRaisedM {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GunRaisedM {
-            sprinting: false,
-        }
-    }
-}
-impl Default for GunRaisedM { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/player.ts:456 leafFacing(dp), src/game/player.ts:456)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct LeafFacingDp {
     pub w: f64,
     pub n: Vec<f64>,
     pub hold_only: Option<bool>,
 }
-impl LeafFacingDp {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LeafFacingDp {
-            w: 0.0,
-            n: Vec::new(),
-            hold_only: None,
-        }
-    }
-}
-impl Default for LeafFacingDp { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/player.ts:1021 findWall(why), src/game/player.ts:1021)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct FindWallWhy {
     pub blocked: bool,
 }
-impl FindWallWhy {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FindWallWhy {
-            blocked: false,
-        }
-    }
-}
-impl Default for FindWallWhy { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/player.ts:1021 findWall ->, src/game/player.ts:1021)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct FindWall {
     pub n: V3,
     pub t: V3,
@@ -655,37 +337,12 @@ pub struct FindWall {
     pub hi: f64,
     pub u: f64,
 }
-impl FindWall {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FindWall {
-            n: [0.0; 3],
-            t: [0.0; 3],
-            d: 0.0,
-            lo: 0.0,
-            hi: 0.0,
-            u: 0.0,
-        }
-    }
-}
-impl Default for FindWall { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/player.ts:1074 wallSnap(why), src/game/player.ts:1074)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct WallSnapWhy {
     pub blocked: bool,
 }
-impl WallSnapWhy {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WallSnapWhy {
-            blocked: false,
-        }
-    }
-}
-impl Default for WallSnapWhy { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum WallStepOffHow {
     Run,
@@ -702,59 +359,25 @@ impl WallStepOffHow {
     }
 }
 
-/// (TypeScript: inline at src/game/player.ts:1136 wallSnapLater(why), src/game/player.ts:1136)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct WallSnapLaterWhy {
     pub blocked: bool,
 }
-impl WallSnapLaterWhy {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WallSnapLaterWhy {
-            blocked: false,
-        }
-    }
-}
-impl Default for WallSnapLaterWhy { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/player.ts:1168 pressFace ->, src/game/player.ts:1168)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct PressFace {
     pub n: V3,
     pub at: V3,
     pub off: f64,
 }
-impl PressFace {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PressFace {
-            n: [0.0; 3],
-            at: [0.0; 3],
-            off: 0.0,
-        }
-    }
-}
-impl Default for PressFace { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/player.ts:1278 throwRest ->, src/game/player.ts:1278)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct ThrowRest {
     pub at: V3,
     pub path: Vec<V3>,
 }
-impl ThrowRest {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ThrowRest {
-            at: [0.0; 3],
-            path: Vec::new(),
-        }
-    }
-}
-impl Default for ThrowRest { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/player.ts:1909 heldTalk ->, src/game/player.ts:1909)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct HeldTalk {
     pub asking: bool,
     pub sam_up: bool,
@@ -762,21 +385,7 @@ pub struct HeldTalk {
     pub settled: bool,
     pub speaking: bool,
 }
-impl HeldTalk {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HeldTalk {
-            asking: false,
-            sam_up: false,
-            ready: false,
-            settled: false,
-            speaking: false,
-        }
-    }
-}
-impl Default for HeldTalk { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum FreeHeldWhy {
     Shot,
@@ -791,7 +400,6 @@ impl FreeHeldWhy {
     }
 }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum StartKickTool {
     Shotgun,
@@ -806,88 +414,34 @@ impl StartKickTool {
     }
 }
 
-/// (TypeScript: inline at src/game/player.ts:2173 sideKickSpot ->, src/game/player.ts:2173)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SideKickSpot {
     pub pos: V3,
     pub yaw: f64,
 }
-impl SideKickSpot {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SideKickSpot {
-            pos: [0.0; 3],
-            yaw: 0.0,
-        }
-    }
-}
-impl Default for SideKickSpot { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/player.ts:2232 aimLevel(c), src/game/player.ts:2232)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct AimLevelC {
     pub pos: V3,
     pub body_yaw: f64,
 }
-impl AimLevelC {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        AimLevelC {
-            pos: [0.0; 3],
-            body_yaw: 0.0,
-        }
-    }
-}
-impl Default for AimLevelC { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/player.ts:2235 cursorHit(ray), src/game/player.ts:2235)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct CursorHitRay {
     pub ro: V3,
     pub rd: V3,
 }
-impl CursorHitRay {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CursorHitRay {
-            ro: [0.0; 3],
-            rd: [0.0; 3],
-        }
-    }
-}
-impl Default for CursorHitRay { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/player.ts:2236 cursorPoint(ray), src/game/player.ts:2236)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct CursorPointRay {
     pub ro: V3,
     pub rd: V3,
 }
-impl CursorPointRay {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CursorPointRay {
-            ro: [0.0; 3],
-            rd: [0.0; 3],
-        }
-    }
-}
-impl Default for CursorPointRay { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/player.ts:2236 cursorPoint(hit), src/game/player.ts:2236)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct CursorPointHit {
     pub t: f64,
 }
-impl CursorPointHit {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CursorPointHit {
-            t: 0.0,
-        }
-    }
-}
-impl Default for CursorPointHit { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]

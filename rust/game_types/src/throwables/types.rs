@@ -1,4 +1,4 @@
-//! The types of `throwables`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `throwables`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
@@ -17,10 +17,9 @@ pub enum ItemBounce {
     Loaded { kind: crate::throwables::ItemKind },
 }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum ItemKind {
-    Pistol,
+    #[default] Pistol,
     Rifle,
     Ring,
     Smoke,
@@ -46,28 +45,14 @@ impl ItemKind {
     }
 }
 
-/// (TypeScript: ThrowSolution, src/game/throwables.ts:180)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct ThrowSolution {
     pub v0: V3,
     pub t: f64,
     pub points: Vec<V3>,
     pub land: V3,
 }
-impl ThrowSolution {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ThrowSolution {
-            v0: [0.0; 3],
-            t: 0.0,
-            points: Vec::new(),
-            land: [0.0; 3],
-        }
-    }
-}
-impl Default for ThrowSolution { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Throwables, src/game/throwables.ts:203)
 #[derive(Clone, Debug, ToBytes)]
 pub struct Throwables {
     pub items: Vec<ItemId>,
@@ -76,7 +61,7 @@ pub struct Throwables {
     pub serial: f64,
 }
 impl Throwables {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         Throwables {
             items: Vec::new(),
@@ -88,8 +73,7 @@ impl Throwables {
 }
 impl Default for Throwables { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: ItemFields, src/game/throwables.ts:102)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct ItemFields {
     pub kind: crate::throwables::ItemKind,
     pub pos: V3,
@@ -118,42 +102,7 @@ pub struct ItemFields {
     pub clatters: Option<f64>,
     pub carried: Option<bool>,
 }
-impl ItemFields {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ItemFields {
-            kind: crate::throwables::ItemKind::Pistol,
-            pos: [0.0; 3],
-            vel: [0.0; 3],
-            radius: 0.0,
-            restitution: 0.0,
-            friction: 0.0,
-            yaw: 0.0,
-            spin: 0.0,
-            settled: false,
-            age: 0.0,
-            fuse: 0.0,
-            fired: false,
-            life: 0.0,
-            tumble: 0.0,
-            tumble_rate: 0.0,
-            emit_t: 0.0,
-            fill: 0.0,
-            bounces: 0.0,
-            heading: 0.0,
-            who: 0.0,
-            on: None,
-            on_pose: 0.0,
-            serial: 0.0,
-            side: None,
-            clatters: None,
-            carried: None,
-        }
-    }
-}
-impl Default for ItemFields { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Item, src/game/throwables.ts:131)
 #[derive(Clone, Debug, ToBytes)]
 pub struct Item {
     pub r: f64,
@@ -164,7 +113,7 @@ pub struct Item {
     pub hand: Option<bool>,
 }
 impl Item {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         Item {
             r: 0.0,
@@ -178,21 +127,11 @@ impl Item {
 }
 impl Default for Item { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: BogGround, src/game/throwables.ts:201)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct BogGround {
 }
-impl BogGround {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BogGround {
-        }
-    }
-}
-impl Default for BogGround { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/throwables.ts:40 SC20K_ITEM, src/game/throwables.ts:40)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SC20KITEM {
     pub hull: crate::throwables::SC20KITEMHull,
     pub fore: crate::throwables::SC20KITEMFore,
@@ -202,96 +141,34 @@ pub struct SC20KITEM {
     pub polymer: V3,
     pub metal: V3,
 }
-impl SC20KITEM {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SC20KITEM {
-            hull: crate::throwables::SC20KITEMHull::zeroed(),
-            fore: crate::throwables::SC20KITEMFore::zeroed(),
-            mag: crate::throwables::SC20KITEMMag::zeroed(),
-            optic: crate::throwables::SC20KITEMOptic::zeroed(),
-            thick: 0.0,
-            polymer: [0.0; 3],
-            metal: [0.0; 3],
-        }
-    }
-}
-impl Default for SC20KITEM { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/throwables.ts:41 SC20KITEM.hull, src/game/throwables.ts:41)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SC20KITEMHull {
     pub z: f64,
     pub h: [f64; 3],
 }
-impl SC20KITEMHull {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SC20KITEMHull {
-            z: 0.0,
-            h: [0.0; 3],
-        }
-    }
-}
-impl Default for SC20KITEMHull { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/throwables.ts:42 SC20KITEM.fore, src/game/throwables.ts:42)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SC20KITEMFore {
     pub z: f64,
     pub h: [f64; 3],
 }
-impl SC20KITEMFore {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SC20KITEMFore {
-            z: 0.0,
-            h: [0.0; 3],
-        }
-    }
-}
-impl Default for SC20KITEMFore { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/throwables.ts:43 SC20KITEM.mag, src/game/throwables.ts:43)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SC20KITEMMag {
     pub z: f64,
     pub y: f64,
     pub h: [f64; 3],
 }
-impl SC20KITEMMag {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SC20KITEMMag {
-            z: 0.0,
-            y: 0.0,
-            h: [0.0; 3],
-        }
-    }
-}
-impl Default for SC20KITEMMag { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/throwables.ts:44 SC20KITEM.optic, src/game/throwables.ts:44)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SC20KITEMOptic {
     pub z: f64,
     pub y: f64,
     pub h: [f64; 3],
 }
-impl SC20KITEMOptic {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SC20KITEMOptic {
-            z: 0.0,
-            y: 0.0,
-            h: [0.0; 3],
-        }
-    }
-}
-impl Default for SC20KITEMOptic { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/throwables.ts:51 M4_ITEM, src/game/throwables.ts:51)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct M4ITEM {
     pub hull: crate::throwables::M4ITEMHull,
     pub fore: crate::throwables::M4ITEMFore,
@@ -301,115 +178,41 @@ pub struct M4ITEM {
     pub metal: V3,
     pub fore_col: V3,
 }
-impl M4ITEM {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        M4ITEM {
-            hull: crate::throwables::M4ITEMHull::zeroed(),
-            fore: crate::throwables::M4ITEMFore::zeroed(),
-            mag: crate::throwables::M4ITEMMag::zeroed(),
-            optic: crate::throwables::M4ITEMOptic::zeroed(),
-            polymer: [0.0; 3],
-            metal: [0.0; 3],
-            fore_col: [0.0; 3],
-        }
-    }
-}
-impl Default for M4ITEM { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/throwables.ts:52 M4ITEM.hull, src/game/throwables.ts:52)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct M4ITEMHull {
     pub z: f64,
     pub h: [f64; 3],
 }
-impl M4ITEMHull {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        M4ITEMHull {
-            z: 0.0,
-            h: [0.0; 3],
-        }
-    }
-}
-impl Default for M4ITEMHull { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/throwables.ts:53 M4ITEM.fore, src/game/throwables.ts:53)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct M4ITEMFore {
     pub z: f64,
     pub h: [f64; 3],
 }
-impl M4ITEMFore {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        M4ITEMFore {
-            z: 0.0,
-            h: [0.0; 3],
-        }
-    }
-}
-impl Default for M4ITEMFore { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/throwables.ts:54 M4ITEM.mag, src/game/throwables.ts:54)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct M4ITEMMag {
     pub z: f64,
     pub y: f64,
     pub h: [f64; 3],
 }
-impl M4ITEMMag {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        M4ITEMMag {
-            z: 0.0,
-            y: 0.0,
-            h: [0.0; 3],
-        }
-    }
-}
-impl Default for M4ITEMMag { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/throwables.ts:55 M4ITEM.optic, src/game/throwables.ts:55)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct M4ITEMOptic {
     pub z: f64,
     pub y: f64,
     pub h: [f64; 3],
 }
-impl M4ITEMOptic {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        M4ITEMOptic {
-            z: 0.0,
-            y: 0.0,
-            h: [0.0; 3],
-        }
-    }
-}
-impl Default for M4ITEMOptic { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/throwables.ts:59 CAN_ITEM, src/game/throwables.ts:59)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct CANITEM {
     pub radius: f64,
     pub restitution: f64,
     pub friction: f64,
 }
-impl CANITEM {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CANITEM {
-            radius: 0.0,
-            restitution: 0.0,
-            friction: 0.0,
-        }
-    }
-}
-impl Default for CANITEM { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/throwables.ts:63 FRAG_ITEM, src/game/throwables.ts:63)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct FRAGITEM {
     pub radius: f64,
     pub restitution: f64,
@@ -419,24 +222,8 @@ pub struct FRAGITEM {
     pub band: V3,
     pub fuze: V3,
 }
-impl FRAGITEM {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FRAGITEM {
-            radius: 0.0,
-            restitution: 0.0,
-            friction: 0.0,
-            half: [0.0; 3],
-            body: [0.0; 3],
-            band: [0.0; 3],
-            fuze: [0.0; 3],
-        }
-    }
-}
-impl Default for FRAGITEM { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/throwables.ts:65 RING_ITEM, src/game/throwables.ts:65)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RINGITEM {
     pub radius: f64,
     pub restitution: f64,
@@ -445,101 +232,37 @@ pub struct RINGITEM {
     pub half: [f64; 3],
     pub albedo: V3,
 }
-impl RINGITEM {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RINGITEM {
-            radius: 0.0,
-            restitution: 0.0,
-            friction: 0.0,
-            life: 0.0,
-            half: [0.0; 3],
-            albedo: [0.0; 3],
-        }
-    }
-}
-impl Default for RINGITEM { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/throwables.ts:71 SPONGE_ITEM, src/game/throwables.ts:71)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SPONGEITEM {
     pub wide: f64,
     pub nose: crate::throwables::SPONGEITEMNose,
     pub body: crate::throwables::SPONGEITEMBody,
     pub band: crate::throwables::SPONGEITEMBand,
 }
-impl SPONGEITEM {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SPONGEITEM {
-            wide: 0.0,
-            nose: crate::throwables::SPONGEITEMNose::zeroed(),
-            body: crate::throwables::SPONGEITEMBody::zeroed(),
-            band: crate::throwables::SPONGEITEMBand::zeroed(),
-        }
-    }
-}
-impl Default for SPONGEITEM { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/throwables.ts:73 SPONGEITEM.nose, src/game/throwables.ts:73)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SPONGEITEMNose {
     pub z: f64,
     pub h: [f64; 3],
     pub albedo: V3,
 }
-impl SPONGEITEMNose {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SPONGEITEMNose {
-            z: 0.0,
-            h: [0.0; 3],
-            albedo: [0.0; 3],
-        }
-    }
-}
-impl Default for SPONGEITEMNose { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/throwables.ts:74 SPONGEITEM.body, src/game/throwables.ts:74)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SPONGEITEMBody {
     pub z: f64,
     pub h: [f64; 3],
     pub albedo: V3,
 }
-impl SPONGEITEMBody {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SPONGEITEMBody {
-            z: 0.0,
-            h: [0.0; 3],
-            albedo: [0.0; 3],
-        }
-    }
-}
-impl Default for SPONGEITEMBody { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/throwables.ts:75 SPONGEITEM.band, src/game/throwables.ts:75)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SPONGEITEMBand {
     pub z: f64,
     pub h: [f64; 3],
     pub albedo: V3,
 }
-impl SPONGEITEMBand {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SPONGEITEMBand {
-            z: 0.0,
-            h: [0.0; 3],
-            albedo: [0.0; 3],
-        }
-    }
-}
-impl Default for SPONGEITEMBand { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/throwables.ts:85 SHELL_ITEM, src/game/throwables.ts:85)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SHELLITEM {
     pub radius: f64,
     pub restitution: f64,
@@ -549,24 +272,8 @@ pub struct SHELLITEM {
     pub body: V3,
     pub nose: V3,
 }
-impl SHELLITEM {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SHELLITEM {
-            radius: 0.0,
-            restitution: 0.0,
-            friction: 0.0,
-            life: 0.0,
-            half: [0.0; 3],
-            body: [0.0; 3],
-            nose: [0.0; 3],
-        }
-    }
-}
-impl Default for SHELLITEM { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/throwables.ts:91 RIFLE_ITEM, src/game/throwables.ts:91)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RIFLEITEM {
     pub radius: f64,
     pub restitution: f64,
@@ -581,120 +288,41 @@ pub struct RIFLEITEM {
     pub steel: V3,
     pub wood: V3,
 }
-impl RIFLEITEM {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RIFLEITEM {
-            radius: 0.0,
-            restitution: 0.0,
-            friction: 0.0,
-            life: 0.0,
-            prop_share: 0.0,
-            thick: 0.0,
-            receiver: crate::throwables::RIFLEITEMReceiver::zeroed(),
-            fore: crate::throwables::RIFLEITEMFore::zeroed(),
-            mag: crate::throwables::RIFLEITEMMag::zeroed(),
-            stock: crate::throwables::RIFLEITEMStock::zeroed(),
-            steel: [0.0; 3],
-            wood: [0.0; 3],
-        }
-    }
-}
-impl Default for RIFLEITEM { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/throwables.ts:94 RIFLEITEM.receiver, src/game/throwables.ts:94)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RIFLEITEMReceiver {
     pub z: f64,
     pub h: [f64; 3],
 }
-impl RIFLEITEMReceiver {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RIFLEITEMReceiver {
-            z: 0.0,
-            h: [0.0; 3],
-        }
-    }
-}
-impl Default for RIFLEITEMReceiver { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/throwables.ts:95 RIFLEITEM.fore, src/game/throwables.ts:95)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RIFLEITEMFore {
     pub z: f64,
     pub h: [f64; 3],
 }
-impl RIFLEITEMFore {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RIFLEITEMFore {
-            z: 0.0,
-            h: [0.0; 3],
-        }
-    }
-}
-impl Default for RIFLEITEMFore { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/throwables.ts:96 RIFLEITEM.mag, src/game/throwables.ts:96)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RIFLEITEMMag {
     pub z: f64,
     pub y: f64,
     pub h: [f64; 3],
     pub cant: f64,
 }
-impl RIFLEITEMMag {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RIFLEITEMMag {
-            z: 0.0,
-            y: 0.0,
-            h: [0.0; 3],
-            cant: 0.0,
-        }
-    }
-}
-impl Default for RIFLEITEMMag { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/throwables.ts:97 RIFLEITEM.stock, src/game/throwables.ts:97)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RIFLEITEMStock {
     pub z: f64,
     pub h: [f64; 3],
 }
-impl RIFLEITEMStock {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RIFLEITEMStock {
-            z: 0.0,
-            h: [0.0; 3],
-        }
-    }
-}
-impl Default for RIFLEITEMStock { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/throwables.ts:218 ray ->, src/game/throwables.ts:218)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct ThrowablesRay {
     pub t: f64,
     pub n: V3,
     pub prop: Option<PropId>,
 }
-impl ThrowablesRay {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ThrowablesRay {
-            t: 0.0,
-            n: [0.0; 3],
-            prop: None,
-        }
-    }
-}
-impl Default for ThrowablesRay { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/throwables.ts:238 spawn(opts), ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct ThrowablesSpawnOpts {
     pub kind: Option<crate::throwables::ItemKind>,
     pub pos: Option<V3>,
@@ -723,40 +351,6 @@ pub struct ThrowablesSpawnOpts {
     pub clatters: Option<f64>,
     pub carried: Option<bool>,
 }
-impl ThrowablesSpawnOpts {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ThrowablesSpawnOpts {
-            kind: None,
-            pos: None,
-            vel: None,
-            radius: None,
-            restitution: None,
-            friction: None,
-            yaw: None,
-            spin: None,
-            settled: None,
-            age: None,
-            fuse: None,
-            fired: None,
-            life: None,
-            tumble: None,
-            tumble_rate: None,
-            emit_t: None,
-            fill: None,
-            bounces: None,
-            heading: None,
-            who: None,
-            on: None,
-            on_pose: None,
-            serial: None,
-            side: None,
-            clatters: None,
-            carried: None,
-        }
-    }
-}
-impl Default for ThrowablesSpawnOpts { fn default() -> Self { Self::zeroed() } }
 
 /// (src/game/throwables.ts:40 SC20K_ITEM: a table nothing writes)
 pub fn sc20_k_item() -> crate::throwables::SC20KITEM { crate::throwables::SC20KITEM { hull: crate::throwables::SC20KITEMHull { z: -0.06, h: [0.024, 0.04, 0.215] }, fore: crate::throwables::SC20KITEMFore { z: 0.3, h: [0.02, 0.024, 0.155] }, mag: crate::throwables::SC20KITEMMag { z: -0.115, y: -0.1, h: [0.012, 0.06, 0.016] }, optic: crate::throwables::SC20KITEMOptic { z: 0.02, y: 0.06, h: [0.017, 0.02, 0.06] }, thick: 0.024, polymer: [0.045, 0.05, 0.046], metal: [0.026, 0.026, 0.03] } }

@@ -255,7 +255,7 @@ pub fn call(g: &mut game::game::Game, k: usize, rule: &str) -> String {
             let n: Vec<f64> = all[1..].iter().filter_map(|x| x.parse::<f64>().ok()).collect();
             if n.len() != 3 { return format!("  NOTE tick {}: noise_shot takes three numbers: {:?}", k, all); }
             let (time, serial) = (g.time, g.serial());
-            g.events.push(game::game::GameEvent { kind: game::director::EventKind::Shot, pos: [n[0], n[1], n[2]], time, loud: true, level: Some(1.0), who: Some(game::consts::PLAYER_ID), serial, ..game::game::GameEvent::zeroed() });
+            g.events.push(game::game::GameEvent { kind: game::director::EventKind::Shot, pos: [n[0], n[1], n[2]], time, loud: true, level: Some(1.0), who: Some(game::consts::PLAYER_ID), serial, ..game::game::GameEvent::default() });
             format!("  the driver's write before tick {}: a loud round's report at {:?} ({} events)", k, n, g.events.len())
         }
         // (PT_NV=1 with the mains cut: the scripted player puts Sam's goggles down, `g.player.nv = true`)

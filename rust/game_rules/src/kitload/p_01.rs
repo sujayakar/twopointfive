@@ -293,7 +293,7 @@ mod tests {
 
     #[test]
     fn a_cards_count_is_truncated_as_bitor_zero_does() {
-        let mut card = crate::kit::MemberKit::zeroed();
+        let mut card = crate::kit::MemberKit::default();
         card.smoke = 2.9;
         card.cams = -1.5;
         assert_eq!(card_count(&card, "smoke"), 2.0);

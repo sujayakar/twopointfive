@@ -921,7 +921,7 @@ mod tests {
     use super::*;
 
     fn card(charges: f64, bangs: f64, frags: f64, smoke: f64) -> MemberKit {
-        MemberKit { charges, bangs, frags, smoke, ..MemberKit::zeroed() }
+        MemberKit { charges, bangs, frags, smoke, ..MemberKit::default() }
     }
 
     #[test]
