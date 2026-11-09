@@ -486,6 +486,8 @@ pub struct Game {
     pub load: Tab<CharId, Option<crate::kitload::KitWorn>>,
     /// the light on him: what he gives away of himself
     pub shown: Tab<CharId, crate::guards::Shown>,
+    /// how his gun is: how steady his aim, and when he may fire again
+    pub arms: Tab<CharId, crate::aim::Arms>,
     /// the table of these things: never shrinks
     pub dr: Tab<DoorId, crate::doors::Door>,
     /// the table of these things: never shrinks
@@ -693,7 +695,6 @@ pub struct Player {
     pub crouch: bool,
     pub aim_held: bool,
     #[is(-10.0)] pub last_fire_t: f64,
-    pub fire_cd: f64,
     pub backpedal: bool,
     pub sprinting: bool,
     pub dash: bool,
@@ -724,7 +725,6 @@ pub struct Player {
     pub door_kick_tail: bool,
     pub door_head: f64,
     #[is(-1.0)] pub door_head_t: f64,
-    pub aim: crate::aim::AimState,
     pub aimw: crate::aimweight::AimWeight,
     #[is(1.0)] pub hits_left: f64,
     #[is(FirearmId(0))] pub pistol: FirearmId,
@@ -1071,10 +1071,8 @@ pub struct Guard {
     /// guards.ts asks whether the back-off laid it: see path_goal_orbit
     pub path_goal: Option<V3>,
     #[is(FirearmId(0))] pub weapon: FirearmId,
-    #[is(1.0)] pub fire_cd: f64,
     #[is(-1.0)] pub reload_t: f64,
     pub carbine: bool,
-    pub aim: crate::aim::AimState,
     pub react_t: f64,
     pub search_t: f64,
     pub look_phase: f64,
@@ -1302,7 +1300,7 @@ mod tests {
     fn a_new_man_holds_what_the_typescript_gives_him() {
         let g = Guard::blank();
         assert!(matches!(g.foe, Some(Foe::Player)));
-        assert_eq!((g.last_seen_t, g.gun_lost_at, g.torch_lost_at, g.killer_id, g.fire_cd), (-100.0, -1.0, -1.0, -1.0, 1.0));
+        assert_eq!((g.last_seen_t, g.gun_lost_at, g.torch_lost_at, g.killer_id), (-100.0, -1.0, -1.0, -1.0));
         assert_eq!(g.state, GuardState::Patrol);
         assert_eq!(g.beam_dir, [0.0, -0.3, 1.0]);
         assert!(crate::aim::AimState::blank().last_bearing.is_nan());

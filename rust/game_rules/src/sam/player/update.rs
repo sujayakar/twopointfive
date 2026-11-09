@@ -648,16 +648,16 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
     // slot actions
     if g.pl[pl].wall.is_some() && g.k.wallsnap.on { wall_snap_pose(g, dt, aiming); }
     else if g.pl[pl].wall.map_or(false, |w| w.take_t.is_some()) { g.ch[c].anim.wall_take = -1.0; g.ch[c].anim.wall_hit = 0.0; g.ch[c].anim.stack_press = 0.0; g.ch[c].anim.stance_in = 0.0; }
-    g.pl[pl].fire_cd -= dt;
+    g.arms[g.pl[pl].ch].fire_cd -= dt;
     let gun_def = g.fa[gun].def;
     if def_auto(g, gun_def).is_some() { let trigger = gun_up && input_lmb(g, input); crate::weapons::firearm_auto_idle(g, gun, dt, trigger); }
     if gun_up && !g.pl[pl].sprinting && g.pl[pl].dragging.is_none() {
         let auto = firearm_automatic(g, gun);
         let pull = if auto { input_lmb(g, input) || input_lmb_hit(g, input) } else { input_lmb_hit(g, input) };
-        if pull && !walled && g.pl[pl].fire_cd <= (if auto { 1e-4 } else { 0.0 }) && g.pl[pl].equip_t <= 0.0 {
+        if pull && !walled && g.arms[g.pl[pl].ch].fire_cd <= (if auto { 1e-4 } else { 0.0 }) && g.pl[pl].equip_t <= 0.0 {
             let grow = crate::weapons::firearm_auto_spread(g, gun);
             if crate::weapons::firearm_fire(g, gun) {
-                g.pl[pl].fire_cd = if firearm_automatic(g, gun) { def_auto(g, gun_def).unwrap() } else { def_row(g, gun_def).cd };
+                g.arms[g.pl[pl].ch].fire_cd = if firearm_automatic(g, gun) { def_auto(g, gun_def).unwrap() } else { def_row(g, gun_def).cd };
                 g.pl[pl].last_fire_t = g.time;
                 if def_auto(g, gun_def).is_some() { crate::weapons::firearm_auto_fired(g, gun); }
                 let tgt = shot_target(g, &crate::seats::here(g));
@@ -665,7 +665,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
                 let spread = grow + crate::suppression::sam_spread(g, &crate::seats::here(g)) + crate::aim::sam_aim(g);
                 crate::combat::fire_weapon(g, c, at, Some(&crate::combat::FireOpts { spread: Some(spread), ..Default::default() }));
             } else if input_lmb_hit(g, input) {
-                g.pl[pl].fire_cd = 0.25;
+                g.arms[g.pl[pl].ch].fire_cd = 0.25;
                 let muzzle = g.ch[c].muzzle; play(g, "dryFire", Some(muzzle), 0.7);
             }
         }
@@ -680,13 +680,13 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
     { let trigger = rifle_up && input_lmb(g, input); crate::weapons::firearm_auto_idle(g, rifle, dt, trigger); }
     if rifle_up && !g.pl[pl].sprinting {
         let pull = if firearm_automatic(g, rifle) { input_lmb(g, input) || input_lmb_hit(g, input) } else { input_lmb_hit(g, input) };
-        if pull && !walled && g.pl[pl].fire_cd <= 1e-4 && g.pl[pl].equip_t <= 0.0 {
+        if pull && !walled && g.arms[g.pl[pl].ch].fire_cd <= 1e-4 && g.pl[pl].equip_t <= 0.0 {
             let grow = crate::weapons::firearm_auto_spread(g, rifle);
             let broke = if input_lmb_hit(g, input) { shell_break(g) } else { None };
             let rifle_def = g.fa[rifle].def;
-            if broke == Some(crate::player::ShellBreak::Bolt) { g.pl[pl].fire_cd = 0.1; }
+            if broke == Some(crate::player::ShellBreak::Bolt) { g.arms[g.pl[pl].ch].fire_cd = 0.1; }
             else if crate::weapons::firearm_fire(g, rifle) {
-                g.pl[pl].fire_cd = if firearm_automatic(g, rifle) { def_auto(g, rifle_def).unwrap() } else { def_row(g, rifle_def).cd };
+                g.arms[g.pl[pl].ch].fire_cd = if firearm_automatic(g, rifle) { def_auto(g, rifle_def).unwrap() } else { def_row(g, rifle_def).cd };
                 g.pl[pl].last_fire_t = g.time;
                 crate::weapons::firearm_auto_fired(g, rifle);
                 let tgt = shot_target(g, &crate::seats::here(g));
@@ -694,7 +694,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
                 let spread = rifle_spread(g, &crate::seats::here(g), speed) + grow + crate::suppression::sam_spread(g, &crate::seats::here(g)) + crate::aim::sam_aim(g);
                 crate::combat::fire_weapon(g, c, at, Some(&crate::combat::FireOpts { weapon: Some(def_row(g, rifle_def).clone()), spread: Some(spread), ..Default::default() }));
             } else if input_lmb_hit(g, input) {
-                g.pl[pl].fire_cd = 0.25;
+                g.arms[g.pl[pl].ch].fire_cd = 0.25;
                 let muzzle = g.ch[c].muzzle; play(g, "dryFire", Some(muzzle), 0.7);
             }
         }
@@ -738,7 +738,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
                         crate::launcher::fire_ring(g, c, from, at);
                         if !g.infinite_ammo { g.fa[rifle].rings -= 1.0; }
                         g.fa[rifle].ring_cd = g.k.launcher.cd;
-                        g.pl[pl].fire_cd = m::max(g.pl[pl].fire_cd, 0.3);
+                        g.arms[g.pl[pl].ch].fire_cd = m::max(g.arms[g.pl[pl].ch].fire_cd, 0.3);
                     }
                     RifleAttachment::Cam => {
                         crate::stickycam::fire_cam(g, pl, from, at);
@@ -747,14 +747,14 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
                         crate::chronicle::chronicle(g, crate::chronicle::ChronKind::Thrown, Some(&data), None);
                         if !g.infinite_ammo { g.fa[rifle].cams -= 1.0; }
                         g.fa[rifle].ring_cd = g.k.sticky.cd;
-                        g.pl[pl].fire_cd = m::max(g.pl[pl].fire_cd, 0.3);
+                        g.arms[g.pl[pl].ch].fire_cd = m::max(g.arms[g.pl[pl].ch].fire_cd, 0.3);
                     }
                     RifleAttachment::He40 => {
                         crate::he40::fire_shell(g, c, from, at);
                         crate::chronicle::chron_thrown(g, "he40");
                         if !g.infinite_ammo { g.fa[rifle].shells -= 1.0; }
                         g.fa[rifle].ring_cd = g.k.launcher40.cd;
-                        g.pl[pl].fire_cd = m::max(g.pl[pl].fire_cd, 0.4);
+                        g.arms[g.pl[pl].ch].fire_cd = m::max(g.arms[g.pl[pl].ch].fire_cd, 0.4);
                     }
                 }
                 g.pl[pl].last_fire_t = g.time;
@@ -791,7 +791,7 @@ pub fn update_player(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Ca
             Some(Some(crate::character::KitItem::Can)) => g.pl[pl].kit_can == slot_kind,
             Some(_) => false,
         };
-        if input_lmb_hit(g, input) && g.pl[pl].fire_cd <= 0.0 && hold_ok { do_throw(g, &sol, kind); g.pl[pl].fire_cd = 0.6; }
+        if input_lmb_hit(g, input) && g.arms[g.pl[pl].ch].fire_cd <= 0.0 && hold_ok { do_throw(g, &sol, kind); g.arms[g.pl[pl].ch].fire_cd = 0.6; }
     }
     if g.pl[pl].throw_held && !g.pl[pl].sprinting && !stunned {
         let sol = match g.pl[pl].throw_preview.clone() { Some(s) => Some(s), None => prev_preview };

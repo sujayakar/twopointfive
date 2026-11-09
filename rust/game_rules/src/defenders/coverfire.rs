@@ -631,25 +631,25 @@ pub fn cover_blind(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<V3
         m::max(0.0, cw.lay - p.lose_rate * dt)
     };
     set_chew(g, gd, |row| row.lay = lay);
-    g.gd[gd].fire_cd -= dt;
+    g.arms[g.gd[gd].ch].fire_cd -= dt;
     if crate::control::man::changing_magazine(g, gd) { return Some(to); }
     let ok = on && lay >= p.acquire_min - 1e-9;
     let fa = g.gd[gd].weapon;
     let def = g.fa[fa].def;
     if g.m.weapons.weapons.get(def).unwrap().burst.is_some() {
-        let tr = g.gd[gd].aim.track;
-        g.gd[gd].aim.track = lay;
+        let tr = g.arms[g.gd[gd].ch].aim.track;
+        g.arms[g.gd[gd].ch].aim.track = lay;
         crate::guards::burst_trigger(g, gd, dt, to, ok, ok, None);
-        g.gd[gd].aim.track = tr;
+        g.arms[g.gd[gd].ch].aim.track = tr;
     } else if ok
-        && g.gd[gd].fire_cd <= 0.0
+        && g.arms[g.gd[gd].ch].fire_cd <= 0.0
         && !crate::guards::round_past_colleague(g, gd, to, None, None)
         && crate::weapons::firearm_fire(g, fa)
     {
         let mods = crate::suppression::guard_fire_mods(g, gd);
         let w = g.m.weapons.weapons.get(def).unwrap();
         let (r, cd, cd_jitter) = (w.ai_spread, w.cd, w.cd_jitter);
-        g.gd[gd].fire_cd = (cd + crate::dice::draw_of(g, "coverfire::cover_blind#1", gd) * cd_jitter) * mods.gap;
+        g.arms[g.gd[gd].ch].fire_cd = (cd + crate::dice::draw_of(g, "coverfire::cover_blind#1", gd) * cd_jitter) * mods.gap;
         let spread_k = g.gd[gd].skill.as_ref().map_or(1.0, |sk| sk.spread_k);
         let hands = (r.base + m::max(0.0, dist - r.range_from) * r.range_k) * spread_k;
         let opts = if g.tune.aim_model {

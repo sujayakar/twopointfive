@@ -447,7 +447,7 @@ pub fn civilian_comply(g: &mut crate::game::Game) -> bool {
     g.cv[cid].complied = true; g.cv[cid].comply_until = g.time + g.k.civ.comply_min * 60.0;
     let t_id = g.gd[gd].talk;
     g.gd[gd].held = None; g.ch[c].anim.held_pose = None; g.tab.game_talk[t_id].held_since = -1.0; g.gd[gd].speed = 0.0; g.ch[c].vel = [0.0, 0.0, 0.0];
-    g.pl[pl].holding = None; g.ch[pc].anim.hold_pose = None; g.pl[pl].fire_cd = m::max(g.pl[pl].fire_cd, 0.4);
+    g.pl[pl].holding = None; g.ch[pc].anim.hold_pose = None; g.arms[g.pl[pl].ch].fire_cd = m::max(g.arms[g.pl[pl].ch].fire_cd, 0.4);
     later(g, 0.9, &LaterP { kind: PendKind::ComplyLine, cv: gd, o: None, ..LaterP::default() });
     to_cower(g, gd, true);
     let pos = g.ch[c].pos;

@@ -100,7 +100,7 @@ pub fn mate_stow_tick(g: &mut crate::game::Game, gd: GuardId) {
     }
     let hang = stow_hang(g, gd);
     g.ch[c].anim.stowed = hang;
-    g.gd[gd].fire_cd = m::max(g.gd[gd].fire_cd, if up_t < 0.0 { mate_up } else { up_t - now });
+    g.arms[g.gd[gd].ch].fire_cd = m::max(g.arms[g.gd[gd].ch].fire_cd, if up_t < 0.0 { mate_up } else { up_t - now });
 }
 
 /// His gun is drawn out of his hands this frame (hung on its sling, or on his thigh).
@@ -152,13 +152,13 @@ mod tests {
     fn a_mates_job_runs_its_beats() {
         let (mut g, gd, c) = man();
         g.time = 10.0;
-        g.gd[gd].fire_cd = 0.0;
+        g.arms[g.gd[gd].ch].fire_cd = 0.0;
         mate_stow(&mut g, gd);
         assert_eq!(g.stats.workstow.mate_down, 1);
         mate_stow_tick(&mut g, gd);
         assert!(g.ch[c].anim.stowed);
         assert_eq!(g.gd[gd].work_stow.unwrap().fed, false);
-        assert_eq!(g.gd[gd].fire_cd, g.k.workstow.mate_up);
+        assert_eq!(g.arms[g.gd[gd].ch].fire_cd, g.k.workstow.mate_up);
 
         // fed again: the same stow, no second count
         mate_stow(&mut g, gd);
@@ -175,10 +175,10 @@ mod tests {
 
         // past `show` of the way up it is drawn in his hands, with the fire clock still held
         g.time = up - g.k.workstow.mate_up * (1.0 - g.k.workstow.show);
-        g.gd[gd].fire_cd = 0.0;
+        g.arms[g.gd[gd].ch].fire_cd = 0.0;
         mate_stow_tick(&mut g, gd);
         assert!(!g.ch[c].anim.stowed);
-        assert_eq!(g.gd[gd].fire_cd, up - g.time);
+        assert_eq!(g.arms[g.gd[gd].ch].fire_cd, up - g.time);
 
         // up
         g.time = up;

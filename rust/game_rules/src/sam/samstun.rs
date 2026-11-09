@@ -20,7 +20,7 @@ pub fn stagger_player(g: &mut crate::game::Game, secs: f64, dir: V3) {
     crate::condition::rattle(g, c);
     crate::character::anim_hit_from(g, c, Some(dir));
     g.pl[p].hit_flash = 1.0;
-    g.pl[p].fire_cd = m::max(g.pl[p].fire_cd, secs);
+    g.arms[g.pl[p].ch].fire_cd = m::max(g.arms[g.pl[p].ch].fire_cd, secs);
     fold_cancels(g);
     g.stats.samstun.staggered += 1;
 }
@@ -83,7 +83,7 @@ pub(super) fn sam_stun_pose(g: &mut crate::game::Game) {
     let (blind, folded) = crate::condition::stun_pose(g, c, live, at);
     g.pl[p].stun_posed = folded || blind;
     if blind { g.cond[c].sup.v = m::max(g.cond[c].sup.v, man_blind(g, p, None)); }
-    if folded { g.pl[p].fire_cd = m::max(g.pl[p].fire_cd, g.cond[c].fold_until - g.time); }
+    if folded { g.arms[g.pl[p].ch].fire_cd = m::max(g.arms[g.pl[p].ch].fire_cd, g.cond[c].fold_until - g.time); }
 }
 
 #[cfg(test)]
@@ -164,7 +164,7 @@ mod tests {
         assert!(g.pl[p].stun_posed);
         assert_eq!(g.ch[c].anim.clutch, 1.0);
         assert!(g.ch[c].anim.dazzle.is_none());
-        assert_eq!(g.pl[p].fire_cd, 1.5);
+        assert_eq!(g.arms[g.pl[p].ch].fire_cd, 1.5);
         // blind as well: no clutch, turned away from the flash; bun, EXACT on: (11 - 10.7) / 0.5, and the fade above
         g.time = 10.7;
         g.cond[g.pl[p].ch].blind_until = 11.0;

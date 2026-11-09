@@ -316,7 +316,7 @@ pub fn update_suppression(g: &mut crate::game::Game, dt: f64) {
             if was < 1.0 {
                 g.cond[g.gd[gd].ch].sup.flinch_at = g.time;
                 start_from_round(g, gd);
-                g.gd[gd].fire_cd = m::max(g.gd[gd].fire_cd, g.k.suppression.flinch_delay);
+                g.arms[g.gd[gd].ch].fire_cd = m::max(g.arms[g.gd[gd].ch].fire_cd, g.k.suppression.flinch_delay);
                 if band < 2.0 {
                     sup_bark(g, gd, if friendly { SupMoment::Friendly } else { SupMoment::Flinch }, None);
                 }
@@ -461,7 +461,7 @@ pub(super) fn end_displace(g: &mut crate::game::Game, gd: GuardId, why: &str) {
     sup.down_t = 0.0;
     sup.latched = false;
     clear_walk(g, gd);
-    g.gd[gd].fire_cd = m::max(g.gd[gd].fire_cd, delay);
+    g.arms[g.gd[gd].ch].fire_cd = m::max(g.arms[g.gd[gd].ch].fire_cd, delay);
 }
 
 /// May the plain fight close on the player right now, or is he holding the cover he has just reached.
