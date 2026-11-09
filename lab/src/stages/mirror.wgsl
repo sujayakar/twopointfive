@@ -8,7 +8,7 @@
   if (!on) { textureStore(outM, id.xy, vec4f(0.0, 0.0, 0.0, -1.0)); return; }
   rngInit(id.xy, 29u + u32(LAYER) * 13u); let V = -rd; let l = coatDir(s, V, blue2(id.xy, 5u)); leafMode = 2u;
   var d = l.dir; if (dot(d, s.ng) <= 0.005) { d = reflect(d, s.ng); }
-  let o = s.x + s.ng * off; let h = nearest(o, d, 2e-3, 1500.0, 0u, 1e9); var L = vec3f(0.0);
+  let o = s.x + s.ng * off; footSolid(0.0, 0.003 + 1.5 * s.rough * s.rough); let h = nearest(o, d, 2e-3, 1500.0, 0u, 1e9); var L = vec3f(0.0);
   if (h.piece == NOTHING) { L = skyLod(d, s.rough * 5.0); }
   else {
     let q = wetFilm(surfaceAt(o, d, h, 0.004 + h.t * (0.002 + s.rough * s.rough)), 0.2); L = q.glow; if ((h.piece & LEAF_HIT) == 0u && (pieces[h.piece].lamp & 255u) != 255u) { L *= 1.0 - byFormula(s.rough); } let cs = dot(q.n, frame.sunDir.xyz); var V1 = vec3f(0.0); let leaf = (h.piece & LEAF_HIT) != 0u; let c = cacheSmooth(q.x, select(q.ng, vec3f(0.0), leaf));

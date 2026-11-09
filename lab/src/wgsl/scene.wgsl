@@ -17,7 +17,7 @@ struct Frame {
   pool2: vec4f,        // its level, its depth
   weather: vec4f,      // how wet the open ground is, how hard it rains, is there power, the wind's way (rad)
   misc2: vec4f,        // is there smoke, where the blue noise starts in extra, how dense foliage is to rays that see it as fog (1), how hard the wind blows (1)
-  tune: array<vec4f, 8>, more: vec4f,       // how much snow lies, how hard it snows, time since the last frame (s), 0;  // what can be turned while looking (tune.ts)
+  tune: array<vec4f, 8>, more: vec4f, fine: vec4u,       // how much snow lies, how hard it snows, time since the last frame (s), 0; fine: the tree of small things;  // what can be turned while looking (tune.ts)
 };
 struct Piece { r0: vec4f, r1: vec4f, r2: vec4f, half: vec3f, flags: u32, quad: vec4f, mat: u32, tint: u32, planes: u32, lamp: u32 };
 struct Node { mn: vec3f, skip: u32, mx: vec3f, leaf: u32 };
@@ -143,9 +143,11 @@ fn sunMap(x: vec3f) -> vec3f { let b = basis(frame.sunDir.xyz); let d = x - SUN_
 /* 0 = leaf by leaf; 1 = each spray a ball that a ray may stop in; 2 = not in this walk: the foliage is asked for apart, as a medium (folWalk) */
 var<private> leafMode: u32 = 0u; var<private> noLeaves: bool = false;
 // A RAY'S FOOTPRINT: how wide an area its answer will be averaged over. It begins `w` wide and widens by `s` a metre; whatever is smaller than it need not be told apart. Leaves are taken one by one as
-// far as that (leafTo), and as a medium from there on.
-const LEAF_SIZE = 0.06; var<private> footW = 0.0; var<private> footS = 0.0; var<private> leafTo = 0.0;
-fn foot(w: f32, s: f32) { footW = w; footS = s; leafTo = max(0.0, (LEAF_SIZE - w) / max(s, 1e-5)); }
+// far as that (leafTo), and as a medium from there on; small things (a tree of their own) are met as far as that (smallTo), and not beyond.
+const LEAF_SIZE = 0.06; const SMALL = 0.14; var<private> footW = 0.0; var<private> footS = 0.0; var<private> leafTo = 0.0; var<private> smallTo = 1e9;
+fn foot(w: f32, s: f32) { footW = w; footS = s; leafTo = max(0.0, (LEAF_SIZE - w) / max(s, 1e-5)); smallTo = select(max(0.0, (SMALL - w) / max(s, 1e-5)), 1e9, frame.tune[7].w > 0.5); }
+/** the same, where leaves are asked for as a medium from the start */
+fn footSolid(w: f32, s: f32) { foot(w, s); leafTo = 0.0; }
 fn footAt(t: f32) -> f32 { return footW + footS * t; }
 // (a ball's density is its own: half its leaves' area over its size, less for how they clump; with the instance's tint)
 fn ballStay(o: vec3f, d: vec3f, tmin: f32, tmax: f32) -> vec2f { let a = dot(d, d); let b = dot(o, d); let c = dot(o, o) - 1.0; let q = b * b - a * c; if (q <= 0.0) { return vec2f(1.0, 0.0); } let s = sqrt(q); return vec2f(max((-b - s) / a, tmin), min((-b + s) / a, tmax)); }
@@ -156,12 +158,12 @@ fn nearest(ro: vec3f, rd: vec3f, tmin: f32, tmaxIn: f32, skip: u32, cut: f32) ->
   var best = tmaxIn; var id = NOTHING; var code = 0u; let inv = safeInv(rd); let oc = octant(rd);
   var g0 = vec2f(1e30, 0.0); var g1 = vec2f(1e30, 0.0); var gp = NOTHING; var gc = 0u;   // the two nearest panes: (t, tint)
   let t0 = select(tmin, max(tmin, (cut - ro.y) / rd.y), cut < 1e8 && ro.y > cut && rd.y < -1e-5);   // above the section nothing it cuts is there
-  for (var s = 0u; s < 3u; s++) {
-    let per = frame.per[s]; let b0 = frame.node0[s] + oc * frame.step[s]; let pb = frame.piece0[s]; let tm = select(t0, tmin, s == 1u);
+  for (var s = 0u; s < 4u; s++) {
+    let sm = s == 3u; if (sm && smallTo <= tmin) { break; } let per = select(frame.per[s], frame.fine.x, sm); let b0 = select(frame.node0[s] + oc * frame.step[s], frame.fine.y + oc * frame.fine.z, sm); let pb = select(frame.piece0[s], frame.fine.w, sm); let tm = select(t0, tmin, s == 1u || sm);
     var i = 0u;
     while (i < per) {
       walked += 1u; let n = &nodes[b0 + i];
-      if (!boxHit(n, ro, inv, tm, best)) { i = (*n).skip; continue; }
+      if (!boxHit(n, ro, inv, tm, select(best, min(best, smallTo), sm))) { i = (*n).skip; continue; }
       let lf = (*n).leaf; let cnt = lf & 15u; let first = pb + (lf >> 4u);
       for (var j = 0u; j < cnt; j++) {
         let k = first + j; let fl = pieces[k].flags;
@@ -202,12 +204,12 @@ fn nearest(ro: vec3f, rd: vec3f, tmin: f32, tmaxIn: f32, skip: u32, cut: f32) ->
 /** VISIBLE: how much gets through from ro along rd to tmax. Glass tints it, leaves let a little by */
 fn visible(ro: vec3f, rd: vec3f, tmin: f32, tmax: f32) -> vec3f {
   var T = vec3f(1.0); let inv = safeInv(rd); let oc = octant(rd);
-  for (var s = 0u; s < 3u; s++) {
-    let per = frame.per[s]; let b0 = frame.node0[s] + oc * frame.step[s]; let pb = frame.piece0[s];
+  for (var s = 0u; s < 4u; s++) {
+    let sm = s == 3u; if (sm && smallTo <= tmin) { break; } let per = select(frame.per[s], frame.fine.x, sm); let b0 = select(frame.node0[s] + oc * frame.step[s], frame.fine.y + oc * frame.fine.z, sm); let pb = select(frame.piece0[s], frame.fine.w, sm); let lim = select(tmax, min(tmax, smallTo), sm);
     var i = 0u;
     while (i < per) {
       let n = &nodes[b0 + i];
-      if (!boxHit(n, ro, inv, tmin, tmax)) { i = (*n).skip; continue; }
+      if (!boxHit(n, ro, inv, tmin, lim)) { i = (*n).skip; continue; }
       let lf = (*n).leaf; let cnt = lf & 15u; let first = pb + (lf >> 4u);
       for (var j = 0u; j < cnt; j++) {
         let k = first + j; let fl = pieces[k].flags;

@@ -37,8 +37,8 @@ const SUN_LAMP = 255u;
     else if (torch) { if (W.y < 0.01 * lampsW || ti[t] < 0 || tw[t] < 0.03 * tw.x) { continue; } l = u32(ti[t]); }
     else { if (pick.z < 0 || WC < 0.01 * (lampsW * lum(p.albedo) * 0.32 + 2e-4)) { continue; } l = u32(pick.z); }
     var d: vec3f; var far = 400.0; let sun = l == SUN_LAMP; let fine = ((u32(FINE) >> select(select(k, 2u, torch), 0u, sun)) & 1u) != 0u; leafMode = select(2u, 0u, fine); noLeaves = sun && !fine;
-    if (sun) { d = coneDir(frame.sunDir.xyz, frame.sunDir.w, bn); }
-    else { var a: vec4f; if (k == 3u) { a = aimCoat(l, s, -rd, vec2f(b3.y, b2.y)); } else { a = aimSeen(l, p.x, select(vec2f(b2.y, b3.y), vec2f(b3.y, b2.y), torch)); } d = a.xyz; far = a.w - 0.02; }
+    let pw = 2.0 * length(frame.camUp.xyz) / frame.size.y * p.t; if (sun) { d = coneDir(frame.sunDir.xyz, frame.sunDir.w, bn); foot(pw, 2.0 * frame.sunDir.w); }
+    else { var a: vec4f; if (k == 3u) { a = aimCoat(l, s, -rd, vec2f(b3.y, b2.y)); } else { a = aimSeen(l, p.x, select(vec2f(b2.y, b3.y), vec2f(b3.y, b2.y), torch)); } d = a.xyz; far = a.w - 0.02; foot(pw, select(2.0 * lamps[l].area, sqrt(lamps[l].area), lamps[l].kind == 0u) / max(a.w, 0.1)); } leafTo = select(0.0, 1e9, fine);
     var T = 0.0; if (dot(p.ng, d) > 0.0 || p.leaf) { let side = select(-1.0, 1.0, dot(p.ng, d) > 0.0); T = lum(visible(p.x + p.ng * (o0 * side), d, 1e-3, far)); if (T > 0.0 && noLeaves) { T *= leafSun(p.x, p.ng * side, b3); } }
     if (k == 0u) { v.w = T; } else if (torch) { tv += vec2f(T, 1.0) * tw[t]; } else if (k == 1u) { v.x = T; } else { v.z = T; }
   }

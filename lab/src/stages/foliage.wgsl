@@ -6,7 +6,7 @@ fn six(i: u32) -> vec3f { var d = vec3f(0.0); d[i >> 1u] = select(1.0, -1.0, (i 
 @compute @workgroup_size(64) fn main(@builtin(global_invocation_id) id: vec3u) {
   let s = id.x; if (s >= FOL_MANY) { return; } let base = s * 12u; var q: array<u32, 12>; for (var k = 0u; k < 12u; k++) { q[k] = field[base + k]; } var n = f32(q[11]); let x0 = folAt[s].xyz; let st = steady(x0); if (changes.all.y > 0.5) { n = 0.0; }
   { let turn = select(7u, 15u, n > 40.0); if (n > 16.0 && st > 0.9 && (s & turn) != (frame.counts.z & turn)) { return; } }
-  rngKey(s, 203u); leafMode = 2u; byReach = true; let x = x0 + (vec3f(rnd(), rnd(), rnd()) - 0.5) * 0.16; let c0 = clamp(vec3i(floor((x0 - FOL_LO) / FOL_C)), vec3i(0), FOL_N - 1); let col = folColors(folCell(c0));
+  rngKey(s, 203u); leafMode = 2u; footSolid(0.3, 1.0); byReach = true; let x = x0 + (vec3f(rnd(), rnd(), rnd()) - 0.5) * 0.16; let c0 = clamp(vec3i(floor((x0 - FOL_LO) / FOL_C)), vec3i(0), FOL_N - 1); let col = folColors(folCell(c0));
   var sun = 0.0; if (max3(frame.sunE.xyz) > 0.0) { let d = coneDir(frame.sunDir.xyz, frame.sunDir.w, rnd2()); noLeaves = true; sun = lum(visible(x, d, 2e-3, 400.0)); noLeaves = false; if (sun > 0.0) { sun *= folWalk(x + d * REACH_F, d, 60.0, false).T.y; } }
   var lampE = vec3f(0.0); { let l = drawLamp(x, vec3f(0.0)); if (l.x >= 0.0) { let a = aimLamp(u32(l.x), x, rnd2()); let e = a.E * l.y * 0.25; if (max3(e) > 0.0) { lampE = min(e * visible(x, a.dir, 2e-3, a.dist - 0.02), vec3f(300.0)); } } }
   var E: array<vec3f, 6>; var mean = vec3f(0.0); let k1 = 1.0 / (n + 1.0);

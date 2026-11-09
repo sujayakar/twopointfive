@@ -16,7 +16,7 @@ fn oneMore(s: u32) {
   var a = cells[2u * s]; var b = cells[2u * s + 1u]; let x0 = b.xyz; let st = steady(x0); let key = atomicLoad(&keys[s]);
   byReach = true; if (changes.all.y > 0.5) { a.w = min(a.w, 1.0); }
   if (bad4(a) || bad(b.w)) { a = vec4f(0.0); b.w = 0.0; }
-  rngKey(key, 91u); let every = norms[s] == EVERY_WAY; let n = select(octUnpack(norms[s] & 0xfffffffeu), vec3f(0.0), every); leafMode = 2u;
+  rngKey(key, 91u); let every = norms[s] == EVERY_WAY; let n = select(octUnpack(norms[s] & 0xfffffffeu), vec3f(0.0), every); leafMode = 2u; footSolid(CELL, 1.0);
   // a little about its point, so that a cell is the mean of its patch
   let bs = basis(select(n, vec3f(0.0, 1.0, 0.0), every)); let x = x0 + n * 0.012;
   var sun = 0.0; var E = vec3f(0.0); let cs = select(dot(n, frame.sunDir.xyz), 1.0, every);
