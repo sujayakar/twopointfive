@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// Pushes one row on the module's log, keeping the last 200.   (kitanim.ts note)
-pub fn note(g: &mut crate::game::Game, row: crate::kitanim::NoteRow) {
+pub fn note(g: &crate::game::Game, row: crate::kitanim::NoteRow) {
 }
 
 /// The kit's part runs: nothing of it under the tour.   (kitanim.ts live)

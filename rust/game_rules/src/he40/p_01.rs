@@ -55,7 +55,7 @@ pub fn shell_man(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<
 }
 
 /// The living bodies a round stops on, as far as Sam can see them. (he40.ts shellBodies)
-pub fn shell_bodies(g: &mut crate::game::Game) -> Vec<CharId> {
+pub fn shell_bodies(g: &crate::game::Game) -> Vec<CharId> {
     let mut out: Vec<CharId> = Vec::new();
     let mut i = 0;
     while i < g.guards.len() {
