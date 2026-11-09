@@ -9,7 +9,7 @@ export const FINEST = 0.32, LEVELS = 2, BRICK = FINEST * 8, BRICK_WORDS = 588, O
 export function classOf(p: Piece): number {
   if (p.cls !== undefined) return p.cls;
   if (p.flags & (F.GLASS | F.WATER | F.GLOW | F.NOSHADOW | F.FAR | F.MOVES | F.BEND | F.MESH) || (p.lamp ?? -1) >= 0) return 3;
-  const size = [...p.half].sort((a, b) => a - b)[1]! * 2;
+  const e = [...p.half].sort((a, b) => a - b), size = e[1]! * 2; if (size >= FINEST / 2 && e[2]! * 2 >= FINEST * 2) return 3;       /* (a strip of wall over a door, a shelf's board: a sheet, however narrow) */
   return size < FINEST ? 0 : size < FINEST * 2 ? 1 : 3;
 }
 export interface Blocks { lo: V3; n: V3; /** a brick's number + 1, or 0 */ page: Uint32Array; bricks: Uint32Array; /** each cell's corner and level */ cells: Float32Array; /** where each is told of in bricks */ said: Uint32Array; many: number; /** the most that may keep light */ lit: number }

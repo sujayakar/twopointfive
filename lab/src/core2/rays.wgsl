@@ -4,7 +4,8 @@ const CELL_CODE = 0xfffffffeu; const FINEST = 0.32; const BRICK = 2.56;
 var<private> footW = 0.0; var<private> footS = 0.0; var<private> leafTo = 1e9; var<private> smallTo = 1e9;       /* (the last two: for stages written for the first core) */
 var<private> lim = vec4f(1e9);               // how far classes 0, 1, 2, 3 are met as they are
 var<private> blk = vec4f(1e9);               // where levels 0 and 1 of the block begin
-var<private> leafOnly: bool = false; var<private> blkOn: bool = true; var<private> fromCell: u32 = 0xffffffffu;
+var<private> leafOnly: bool = false; var<private> blkOn: bool = true; var<private> blkPast = 0.0;      /* (and how far off the block is not met at all: for leaves' own cells, which know what is near) */
+ var<private> fromCell: u32 = 0xffffffffu;
 /** what the block sent back along the last ray that `nearest` was asked for, and how much came through it (where it is summed, not drawn) */
 var<private> blkL = vec3f(0.0); var<private> blkT = 1.0;
 fn foot(w: f32, s: f32) {
@@ -63,7 +64,7 @@ fn nearest(ro: vec3f, rd: vec3f, tmin: f32, tmaxIn: f32, skip: u32, cut: f32) ->
     } if (!found) { best = solid; } }
   lastLimb = 0u; if (blkOn && footS > 0.0) { let c = carryHit(ro, rd, tmin, best); if (c.y > 0.0) { best = c.x; lastLimb = u32(c.y); id = LEAF_HIT | (lastLimb - 1u); code = CARRY_CODE; } }
   blkL = vec3f(0.0); blkT = 1.0;
-  if (blkOn && footS > 0.0 && min(blk.x, leafTo) < best) { let b = blockWalk(ro, rd, max(tmin, min(blk.x, leafTo)), best, select(1e9, -log(1.0 - rnd()), BLK_DICE), !BLK_DICE); if (b.cell != NOTHING) { lastLimb = 0u; best = b.t; id = LEAF_HIT | b.cell; code = CELL_CODE; } else if (!BLK_DICE) { blkL = b.L; blkT = exp(-b.tau); } }
+  if (blkOn && footS > 0.0 && min(blk.x, leafTo) < best) { let b = blockWalk(ro, rd, max(max(tmin, blkPast), min(blk.x, leafTo)), best, select(1e9, -log(1.0 - rnd()), BLK_DICE), !BLK_DICE); if (b.cell != NOTHING) { lastLimb = 0u; best = b.t; id = LEAF_HIT | b.cell; code = CELL_CODE; } else if (!BLK_DICE) { blkL = b.L; blkT = exp(-b.tau); } }
   var h: Hit; h.t = best; h.piece = id; h.code = code; h.thru = vec3f(1.0); h.gt = g0.x; h.gpiece = gp; h.gcode = gc; if (g0.x >= best) { h.gpiece = NOTHING; }
   if (g0.x < best) { h.thru *= unpackTint(bitcast<u32>(g0.y)); } if (g1.x < best) { h.thru *= unpackTint(bitcast<u32>(g1.y)); }
   return h;
@@ -109,7 +110,7 @@ fn visible(ro: vec3f, rd: vec3f, tmin: f32, tmax: f32) -> vec3f {
       i++;
     } }
   if (blkOn && footS > 0.0 && !leafOnly) { T *= exp(-carryTau(ro, rd, tmin, tmax)); }
-  if (blkOn && footS > 0.0) { let b0 = select(min(blk.x, leafTo), blk.x, noLeaves); if (b0 < tmax && !(leafOnly && noLeaves)) { T *= exp(-blockWalk(ro, rd, max(tmin, b0), tmax, 1e9, false).tau); } }
+  if (blkOn && footS > 0.0) { let b0 = select(min(blk.x, leafTo), blk.x, noLeaves); if (b0 < tmax && !(leafOnly && noLeaves)) { T *= exp(-blockWalk(ro, rd, max(max(tmin, blkPast), b0), tmax, 1e9, false).tau); } }
   if (frame.misc2.x > 0.5) { T *= smokeThrough(ro + rd * tmin, rd, tmax); }
   return T;
 }

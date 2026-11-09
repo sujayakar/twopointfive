@@ -1,5 +1,7 @@
 // LIGHT IN THE CELLS: one more look at each whose turn it is, eight threads a cell: six rays, one about each way its contents may face, as wide as it is; the sun; one lamp. What they meet is read
 // from the light on surfaces and from other cells, so that light goes on from cell to cell. (Its own contents are left out of its rays: a solid begins at its side, leaves count what hides them.)
+/** what is nearer to a leaf than this its own twig has told it of */
+const REACH_F = 0.35;
 fn six(i: u32) -> vec3f { var d = vec3f(0.0); d[i >> 1u] = select(1.0, -1.0, (i & 1u) == 1u); return d; }
 var<workgroup> found: array<vec3f, 64>; var<workgroup> wayTo: array<vec3f, 8>;
 /** a point on the side of a box that faces d */
@@ -12,7 +14,7 @@ fn onSide(at: vec3f, ext: vec3f, d: vec3f) -> vec3f { let m = abs(d * ext); var 
   let st = steady(at.xyz); { let turn = select(3u, 15u, n > 40.0); if (!limb && n > 16.0 && st > 0.9 && (wg.x & turn) != ((frame.counts.z >> 1u) & turn)) { go = false; } }
   let leafy = (r.x >> 24u) > 127u; let S = frame.sunDir.xyz; let sun0 = max3(frame.sunE.xyz) > 0.0; let h = at.w; var out = vec3f(0.0); var way = vec3f(0.0);
   if (go) {
-    rngKey(s * 8u + task, 203u); leafMode = 2u; byReach = true; let x = at.xyz + (vec3f(rnd(), rnd(), rnd()) - 0.5) * ext.xyz * select(0.0, 1.0, leafy);
+    rngKey(s * 8u + task, 203u); leafMode = 2u; byReach = true; blkPast = select(0.0, REACH_F, leafy); let x = at.xyz + (vec3f(rnd(), rnd(), rnd()) - 0.5) * ext.xyz * select(0.0, 1.0, leafy);
     if (task < 6u) {
       let a = six(task); let u = rnd2(); let rr = sqrt(u.x); let bs = basis(a); let d = normalize(bs[0] * (rr * cos(6.2832 * u.y)) + bs[1] * (rr * sin(6.2832 * u.y)) + bs[2] * sqrt(max(1.0 - u.x, 0.0))); var o = x; if (!leafy) { o = onSide(at.xyz, ext.xyz, a * 1e3); }
       foot(h, 1.0); fromCell = cell; fromLimb = select(0u, s - many.x + 1u, limb); let hit = nearest(o, d, 2e-3, 600.0, 0u, 1e9); fromCell = NOTHING; fromLimb = 0u; var L = vec3f(0.0);
