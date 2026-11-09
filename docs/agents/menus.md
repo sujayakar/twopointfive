@@ -152,5 +152,4 @@ Page scripts, on the software adapter: `bun run tools/qa/pages.ts menus` runs `s
 
 No check sees how the kit picture, the reel or the HUD over a real frame look on a GPU.
 
-Known faults: the Options row for F7 says "the last five minutes", while `RunKeep` saves the whole run. `Overlay.setCaption` and `setTimeline`, with the `#caption` and `#timeline`
-layers, have no caller.
+Known fault: `Overlay.setCaption` and `setTimeline`, with the `#caption` and `#timeline` layers, have no caller.
