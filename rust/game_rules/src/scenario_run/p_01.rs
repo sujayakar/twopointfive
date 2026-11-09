@@ -25,7 +25,7 @@ fn capitalised(w: &str) -> String {
 pub fn lesson_level(q: &crate::query::Query) -> bool {
     // A row with no level is `undefined`, which is never `===` the `null` of a query with no levelFile.
     let Some(level_file) = q.get("levelFile") else { return false };
-    crate::scene_scenario_list::lesson_missions().iter().any(|e| e.level.as_deref() == Some(level_file))
+    crate::scene_scenario_list::tutorial_missions().iter().any(|e| e.level.as_deref() == Some(level_file))
 }
 
 /// Fog of war on a page with no scenario up: only if the URL asks.   (scenarioRun.ts plainFog)
@@ -170,7 +170,7 @@ pub fn address_before_game(g: &mut crate::game::Game, q: &mut crate::query::Quer
 /// the Training row whose level an address boots
 fn lesson_of_address(q: &crate::query::Query) -> Option<crate::scene_scenarios::ScenarioEntry> {
     let file = q.get("levelFile")?;
-    crate::scene_scenario_list::lesson_missions().into_iter().find(|e| e.level.as_deref() == Some(file) && e.group == Some(crate::scene_scenarios::MissionGroup::Tutorial))
+    crate::scene_scenario_list::tutorial_missions().into_iter().find(|e| e.level.as_deref() == Some(file))
 }
 
 /// …AND THE DIFFICULTY IT ASKS FOR, before the game is made, on the blank game's own knob tables, as a page reads it: a Training lesson's address reads no lever, as its page
@@ -252,7 +252,7 @@ pub fn running_scenario(g: &crate::game::Game, level_file: Option<&str>, list: O
     let here: Vec<&crate::scene_scenarios::ScenarioEntry> =
         list.iter().filter(|e| e.kind.as_str() == kind.as_str() && e.level.as_deref() == level_file).collect();
     let entry = here.iter().find(|e| e.squad == squad).or(here.first()).map(|e| (*e).clone());
-    let team = crate::scene_scenario_list::team_words(crate::scene_scenario_list::TeamWordsE { squad });
+    let team = crate::loadout::size_words(squad);
     if kind == ActiveScenario::Quiet {
         let title = match &entry {
             Some(e) => e.title.clone(),

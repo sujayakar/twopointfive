@@ -40,7 +40,7 @@ impl Query {
     pub fn number(&self, name: &str) -> Option<f64> { self.get(name).map(crate::js::number_of) }
     /// `parseFloat(q.get(name))` where the name is there (the number the text starts with: `float_of`)
     pub fn float(&self, name: &str) -> Option<f64> { self.get(name).map(crate::js::float_of) }
-    /// the words as text again, a bare flag left bare (`?mute`, not `?mute=`): scene/scenarioList.ts `bare`. No words = the empty text.
+    /// the words as text again, a bare flag left bare (`?mute`, not `?mute=`). No words = the empty text.
     pub fn bare(&self) -> String {
         let mut out = String::new();
         for (k, v) in &self.pairs { out.push(if out.is_empty() { '?' } else { '&' }); encode(k, &mut out); if !v.is_empty() { out.push('='); encode(v, &mut out); } }

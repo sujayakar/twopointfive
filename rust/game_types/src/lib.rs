@@ -268,7 +268,7 @@ pub mod scene_marking_defaults { pub mod types; pub use types::*; }
 pub mod scene_markings { pub mod types; pub use types::*; }
 pub mod scene_materials { pub mod types; pub use types::*; }
 pub mod scene_place_plan { pub mod types; pub use types::*; }
-pub mod scene_scenario_list { pub mod types; pub use types::*; }
+pub mod scene_scenario_list { pub mod types; pub use types::*; pub mod rows; pub use rows::*; }
 pub mod scene_scenarios { pub mod types; pub use types::*; }
 pub mod scene_shapes { pub mod types; pub use types::*; }
 pub mod scene_stuff { pub mod types; pub use types::*; }

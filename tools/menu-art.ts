@@ -17,8 +17,8 @@
 // lamps the level keeps dark included; a door the file gives no angle stands ajar one time in five, by a hash, whichever way it swings and steel or not.
 import { existsSync, readFileSync, writeFileSync, mkdirSync, unlinkSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { ALL_MISSIONS } from '../src/scene/scenarioList';
-import type { ScenarioEntry } from '../src/scene/scenarios';
+import type { MissionRow } from '../src/view/read';
+import { missions } from './desk.ts';
 
 const ROOT = join(import.meta.dir, '..'), DEG = Math.PI / 180, FOV = 28;
 type V3 = [number, number, number];
@@ -243,16 +243,10 @@ function levelOf(file: string): { d: Data; file: string } {
   return { d: JSON.parse(readFileSync(join(ROOT, 'levels', file), 'utf8')) as Data, file };
 }
 
-/** a mission as this tool draws it: a row of the table, or the plain solo night (`scenario` null), under the heading it is listed under */
-interface Mission { id: string; scenario: ScenarioEntry | null; group: string; squad: number }
-function missionList(): Mission[] {
-  const groupOf = (e: ScenarioEntry) => e.group ?? (e.kind === 'quiet' ? (e.squad ? 'quiet-two' : 'quiet-alone') : e.kind === 'rescue' ? 'clock' : 'raids');
-  return [{ id: 'solo-night', scenario: null, group: 'quiet-alone', squad: 0 }, ...ALL_MISSIONS.map(e => ({ id: e.id, scenario: e, group: groupOf(e), squad: e.squad }))];
-}
-async function render(m: Mission, O: Opts): Promise<Cam> {
-  const file = m.scenario?.level ?? 'office.json', { d } = levelOf(file), pin: Pin = { ...(PIN[m.id] ?? {}), ...(O.set[m.id] ?? {}) }, M: Mood = { ...(MOODS[m.group ?? 'raids'] ?? NIGHT), ...pin } as Mood;
+async function render(m: MissionRow, O: Opts): Promise<Cam> {
+  const { d } = levelOf(m.level), pin: Pin = { ...(PIN[m.id] ?? {}), ...(O.set[m.id] ?? {}) }, M: Mood = { ...(MOODS[m.group] ?? NIGHT), ...pin } as Mood;
   const S = new Scene(), lampsAll = (pin.lamps ?? 'all') === 'all'; men.length = 0; spots.length = 0; areas.length = 0; seed = hash(m.id);
-  const sc = d.scenarios ?? {}, kind = m.scenario?.kind;
+  const sc = d.scenarios ?? {}, kind = m.kind === 'solo' ? undefined : m.kind;
   // the level: boxes, door leaves (a few ajar: light through an opening door), furniture
   const lit = new Map<string, number[]>(); for (const s of d.switchables ?? []) if (s.on !== false || lampsAll) for (const id of s.boxes) lit.set(id, s.baseEmissive ?? [8, 7.6, 7]);
   const dark = new Set<string>(); for (const s of d.switchables ?? []) if (s.on === false && !lampsAll) for (const id of s.boxes) dark.add(id);
@@ -436,10 +430,10 @@ async function render(m: Mission, O: Opts): Promise<Cam> {
 if (import.meta.main) {
   const argv = process.argv.slice(2), flag = (k: string, d: string) => { const i = argv.indexOf(k); if (i < 0) return d; const v = argv[i + 1]; argv.splice(i, 2); return v; };
   const size = flag('--size', '760x475').split('x').map(Number), spp = Math.floor(+flag('--spp', '40')) || 40, out = resolve(ROOT, flag('--out', 'public/assets/menu')), jobs = Math.floor(+flag('--jobs', '4')) || 4, set = flag('--set', '{}'), one = flag('--one', '');
-  const O: Opts = { W: size[0], H: size[1], spp, out, set: JSON.parse(set) as Record<string, Pin> }, all = missionList();
+  const O: Opts = { W: size[0], H: size[1], spp, out, set: JSON.parse(set) as Record<string, Pin> }, all = missions();
   if (one) { const m = all.find(x => x.id === one); if (!m) { console.error(`no mission '${one}'`); process.exit(2); } const t0 = Date.now(), c = await render(m, O); console.log(`${one.padEnd(22)} ${((Date.now() - t0) / 1000).toFixed(1).padStart(6)} s   look ${c.look.join(' ')} · yaw ${c.yaw} · pitch ${c.pitch} · dist ${c.dist}`); process.exit(0); }
   const unknown = argv.filter(a => !all.some(m => m.id === a)); if (unknown.length) { console.error(`no mission '${unknown.join("', '")}'. Known: ${all.map(m => m.id).join(' ')}`); process.exit(2); }
-  if (process.env.MENU_ART_LIST) { for (const m of all) console.log(m.id.padEnd(22), (m.group ?? '-').padEnd(12), m.scenario?.kind ?? '-', m.scenario?.level ?? 'office.json', 'squad', m.squad ?? 0); process.exit(0); }
+  if (process.env.MENU_ART_LIST) { for (const m of all) console.log(m.id.padEnd(22), m.group.padEnd(12), m.kind, m.level, 'squad', m.squad); process.exit(0); }
   const prev = (() => { try { return JSON.parse(readFileSync(join(out, 'stills.json'), 'utf8')) as { w?: number; h?: number; stills: Record<string, unknown> }; } catch { return null; } })(), was = prev ? Object.keys(prev.stills) : [];
   // with no mission named a picture already in the folder stands (some were taken from play and cannot be taken again): only what is missing is drawn
   const queue = all.filter(m => argv.length ? argv.includes(m.id) : !existsSync(join(out, `${m.id}.jpg`))).map(m => m.id); let bad = 0;

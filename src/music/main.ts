@@ -1,13 +1,14 @@
 // THE SCORE'S LISTENING PAGE (music.html): every piece of the score (audio/music.ts: the theme, and audio/pieces.ts's newer seven) on one row each, played by the game's own
-// sequencer through the game's own voices and master chain, with the tension under the listener's hand and a keep / cut mark per piece to paste back. No game code is loaded.
+// sequencer through the game's own voices and master chain, with the tension under the listener's hand and a keep / cut mark per piece to paste back. The game's module is asked for its mission list, and nothing else of the game is loaded.
 // The page never deals: the piece picked plays until another is (MUSIC.pieces stays off here; setPiece is by hand).
 // UNDER THE PIECES, THE LEVELS (audio/setlist.ts): one row a level with the two pieces written down for it — the one that opens it, the one that follows — each with its own
 // play button and each a picker: a pairing the listener changes is kept with the marks and comes back in the same pasted line (`records: Paper Walls, Cold Storage`).
 // `window.__music` is the QA hook: `render(piece, x, secs)` plays a piece into an OfflineAudioContext on the same chain and measures what came out.
 import { Music, WebAudioMusicBackend, PIECE_NAMES } from '../audio/music';
 import { PIECES, THEME } from '../audio/pieces';
-import { setlistKey, setlistNames } from '../audio/setlist';
-import { ALL_MISSIONS, pickSearch } from '../scene/scenarioList';
+import { setlistLevel, setlistNames } from '../audio/setlist';
+import { fetchFace } from '../host/face';
+import { Desk, type DeskFace } from '../view/desk';
 import { masterChain } from '../audio/webaudio';
 import { VOLUME_DEFAULTS } from '../audio/mixlaw';
 
@@ -16,15 +17,20 @@ const METRE: Record<number, string> = { 16: '4/4', 12: '12/8' };
 const ROWS = PIECE_NAMES.map((name, i) => { const p = i ? PIECES[i - 1] : THEME; return { name, meta: `${p.bpm} · ${METRE[p.steps] ?? p.steps} · ${p.key}` }; });
 const LS = 'twopointsix.music.marks';
 const LS_LV = 'twopointsix.music.levels';
-/** the levels in the mission list's order, the solo night first: a row per list in setlist.ts (missions that share one share a row, under the first one's title) */
-const LEVELS = (() => { const seen = new Set<string>(), out: { key: string; title: string; names: readonly string[] }[] = [];
-  for (const m of [{ title: 'Solo night', search: '?solo' }, ...ALL_MISSIONS.map(e => ({ title: e.title, search: pickSearch(e) }))]) {
-    const k = setlistKey(m.search), r = setlistNames(k.level, k.kind); if (seen.has(r.key)) continue; seen.add(r.key);
-    out.push({ key: r.key, title: m.title.replace(/, (alone|as two)$/, ''), names: r.names }); }
-  return out; })();
+interface LevelRow { key: string; title: string; names: readonly string[] }
+/** the levels in the mission list's order, the solo night first: a row per list in setlist.ts (missions that share one share a row, under the first one's title). The list is the game's: its module
+ *  is asked, and the rows come up when it has answered */
+const LEVELS: LevelRow[] = [];
+async function askLevels(): Promise<void> {
+  const face = await fetchFace(line => { $('levels').textContent = line; }), seen = new Set<string>();
+  for (const m of new Desk(face.exports as unknown as DeskFace, face.exports.memory as WebAssembly.Memory, () => { /* nothing is pressed here */ }).missions().rows) {
+    const r = setlistNames(setlistLevel(m.level), m.kind === 'solo' ? null : m.kind); if (seen.has(r.key)) continue; seen.add(r.key);
+    LEVELS.push({ key: r.key, title: m.title.replace(/, (alone|as two)$/, ''), names: r.names }); }
+  $('levels').textContent = ''; buildLevels(); paint();
+}
 /** the listener's own pairings, by level key (only the rows changed) */
 const mine: Record<string, string[]> = (() => { try { return JSON.parse(localStorage.getItem(LS_LV) ?? '{}'); } catch { return {}; } })();
-const pair = (l: { key: string; names: readonly string[] }) => [0, 1].map(k => { const n = mine[l.key]?.[k]; return n && PIECE_NAMES.indexOf(n) > 0 ? n : l.names[k]; });
+const pair = (l: LevelRow) => [0, 1].map(k => { const n = mine[l.key]?.[k]; return n && PIECE_NAMES.indexOf(n) > 0 ? n : l.names[k]; });
 
 /** the game's master chain (audio/webaudio.ts masterChain) at the mixer's default level */
 const chain = (ctx: BaseAudioContext) => masterChain(ctx, VOLUME_DEFAULTS.master);
@@ -78,6 +84,15 @@ function build() {
     row.querySelectorAll<HTMLButtonElement>('.mark').forEach(m => m.onclick = () => { const k = m.dataset.mark as 'keep' | 'cut'; if (marks[r.name] === k) delete marks[r.name]; else marks[r.name] = k; try { localStorage.setItem(LS, JSON.stringify(marks)); } catch { /* a private window: the marks last the visit */ } paint(); });
     list.appendChild(row);
   });
+  $<HTMLInputElement>('tension').oninput = () => { if (music) music.intensity = tension(); };
+  $('copy').onclick = () => { const out = $<HTMLTextAreaElement>('out'); const done = () => { $('copy').textContent = 'copied'; setTimeout(() => { $('copy').textContent = 'copy marks'; }, 1200); };
+    const byHand = () => { out.hidden = false; out.select(); };   // (no clipboard here — an http page on a LAN address, an older app view: the marks shown, selected, to copy by hand)
+    try { navigator.clipboard.writeText(out.value).then(done, byHand); } catch { byHand(); } };
+  addEventListener('keydown', e => { if (e.code === 'Space' && playing >= 0 && (e.target === document.body || e.target === document.documentElement)) { e.preventDefault(); play(playing); } });   // (Space on the page stops the music; on a button it is that button's)
+  paint();
+}
+
+function buildLevels() {
   const levels = $('levels'), opts = PIECE_NAMES.slice(1).map(n => `<option>${n}</option>`).join('');
   LEVELS.forEach(l => {
     const row = document.createElement('div'); row.className = 'lrow';
@@ -93,12 +108,6 @@ function build() {
     });
     levels.appendChild(row);
   });
-  $<HTMLInputElement>('tension').oninput = () => { if (music) music.intensity = tension(); };
-  $('copy').onclick = () => { const out = $<HTMLTextAreaElement>('out'); const done = () => { $('copy').textContent = 'copied'; setTimeout(() => { $('copy').textContent = 'copy marks'; }, 1200); };
-    const byHand = () => { out.hidden = false; out.select(); };   // (no clipboard here — an http page on a LAN address, an older app view: the marks shown, selected, to copy by hand)
-    try { navigator.clipboard.writeText(out.value).then(done, byHand); } catch { byHand(); } };
-  addEventListener('keydown', e => { if (e.code === 'Space' && playing >= 0 && (e.target === document.body || e.target === document.documentElement)) { e.preventDefault(); play(playing); } });   // (Space on the page stops the music; on a button it is that button's)
-  paint();
 }
 
 // ---- the QA hook: a piece rendered off line on the same chain, and what came out measured ----
@@ -132,4 +141,5 @@ async function render(i: number, x: number, secs: number, o: { to?: number; at?:
 }
 
 build();
+void askLevels().catch((e: unknown) => { $('levels').textContent = String((e as Error)?.message ?? e); });
 (window as unknown as { __music: unknown }).__music = { names: PIECE_NAMES, rows: ROWS, levels: LEVELS, render, play, state: () => ({ playing, started: !!ctx, running: ctx?.state ?? 'none', notes: music?.notes ?? 0, piece: music?.pieceName ?? null }) };

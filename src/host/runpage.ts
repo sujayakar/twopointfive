@@ -2,7 +2,7 @@
 // (ui/pricerun.ts). Nobody sits at it and what it shows is measured, so it stands down what the page gives a visitor: the load brief (the world would wait behind
 // it), the reload after a lost device (the run must see the card), the sandbox row this machine kept (with "no AI" kept the mission is refused), the look
 // prototype's kit and its fog put down (another scene than the mission's own). ONE question asked in all those places, so a new kind of run adds its word here
-// and is a run's page everywhere at once; and a mission picked from such a page never carries the word on (scene/scenarioList.ts quitSearch).
+// and is a run's page everywhere at once; and a mission picked from such a page never carries the word on (rust/game_rules/src/scene_scenario_list quit_search).
 // A leaf: no imports, so any module may ask it at its top level.
 export const BENCH_RUN_WORD = 'benchrun', PRICE_RUN_WORD = 'pricerun';
 /** the words that ASK for a run: the benchmark's, the pricing run's */
@@ -21,7 +21,5 @@ export const ownPage = (q: URLSearchParams): boolean => q.has(BENCH_WORD) || q.h
  *  of the picture moves with this machine's frame rate and a level stands on the same rows on every run (ui/pricerun.ts ONE RUNG). What the page still asks
  *  here: its sandbox row stands off for the page's whole life. Not the benchmark's scene: what its ladder does with the scene is part of what it reports. */
 export const heldPage = (q: URLSearchParams): boolean => q.has(PRICE_RUN_WORD);
-/** … the two words its address says for that, as the page reads them (ui/quality.ts visit; host/pace.ts giveway) · and their names: a mission picked from a
- *  priced page sheds them with the run's own word (scene/scenarioList.ts quitSearch) */
+/** … the two words its address says for that, as the page reads them (ui/quality.ts visit; host/pace.ts giveway) */
 export const HELD_LADDER_WORD = 'adapt=0', HELD_WINDOW_WORD = 'giveway=0';
-export const HELD_PAGE_WORDS: readonly string[] = [HELD_LADDER_WORD, HELD_WINDOW_WORD].map(w => w.split('=')[0]);

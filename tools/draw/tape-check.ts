@@ -17,7 +17,7 @@ import { Section, View } from '../../src/draw/sections';
 
 const ROOT = resolve(import.meta.dir, '../..'), BREAK = process.env.TAPE_BREAK === '1', args = process.argv.slice(2), at = args.indexOf('--secs'), SECS = at >= 0 ? Number(args[at + 1]) : 30;
 const only = args.filter((a, i) => !a.startsWith('--') && (at < 0 || i !== at + 1));
-const { ALL_MISSIONS, pickSearch } = await import(`${ROOT}/src/scene/scenarioList.ts`);
+const { missionRows } = await import(`${ROOT}/tools/desk.ts`) as typeof import('../desk.ts'), LISTED = missionRows();
 const wasm = faceHere(); if (!wasm) { console.error('tape-check: no module of these sources (tools/blitz/face-build.ts)'); process.exit(1); }
 const module = new WebAssembly.Module(new Uint8Array(readFileSync(wasm)));
 const stand = (): DrawGame => new DrawGame({ exports: new WebAssembly.Instance(module).exports, bytes: 0, fetchMs: 0, compileMs: 0 });
@@ -29,10 +29,10 @@ const die = (s: number) => () => { s = (s + 0x6d2b79f5) | 0; let t = Math.imul(s
 const KEYS = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ShiftLeft', 'KeyC'], DOWN = ['Space', 'KeyB', 'KeyF', 'KeyR', 'Digit1', 'Digit2', 'Digit3', 'Digit4', 'KeyV', 'F5', 'Escape', 'KeyG'];
 
 let fails = 0;
-{ const stray = only.filter(id => !(ALL_MISSIONS as { id: string }[]).some(m => m.id === id)); if (stray.length) { console.error(`tape-check: no mission ${stray.join(', ')}`); process.exit(2); } }
-for (const m of ALL_MISSIONS as { id: string }[]) { if (only.length && !only.includes(m.id)) continue;
+{ const stray = only.filter(id => !LISTED.some(m => m.id === id)); if (stray.length) { console.error(`tape-check: no mission ${stray.join(', ')}`); process.exit(2); } }
+for (const m of LISTED) { if (only.length && !only.includes(m.id)) continue;
   for (const how of ['hands off', 'anything'] as const) {
-    const words: string = pickSearch(m, ''), file = new URLSearchParams(words).get('levelFile') ?? 'office.json', seed = how === 'anything' ? 7 : 5, roll = die(seed + m.id.length);
+    const words = m.link, file = m.level, seed = how === 'anything' ? 7 : 5, roll = die(seed + m.id.length);
     let at = 'the start';
     try {
       // ── played, with a page's questions between its ticks

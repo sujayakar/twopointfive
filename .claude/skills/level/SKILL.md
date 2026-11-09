@@ -167,9 +167,8 @@ floor.
 
 ## 9. What the player reads and hears
 
-- **`mission`: the row, in both lists.** `SCENARIOS` in `src/scene/scenarioList.ts` is what the page draws and what `level-needs.ts` and `kit_levels.rs` read.
-  `scenarios` in `rust/game_types/src/scene_scenario_list/types.rs` is what the game starts and `gate` plays. No check compares them, so write the same row in both,
-  then `gate pin` (only that writes the list of rows). `cargo test -p game_run --test desk` in `rust/` holds the desk.
+- **`mission`: the row, in the one list.** `scenarios` (or `quiet_missions`, `tutorial_missions`) in `rust/game_types/src/scene_scenario_list/rows.rs`. The page, the
+  level tools and the checks ask the game's module for it, so make the module (`bun run tools/blitz/face-build.ts --profile play`), then `gate pin` (only that writes the list of rows). `cargo test -p game_run --test desk` in `rust/` holds the desk.
 - **`row`: every word on it is true to the file:** `title`, `place` (6 to 64 letters), `blurb` (the premise, never the answer; 20 to 140 on a squad row, 160 on a
   quiet one), `defenders`, `lean`, `ways` (one name per start), `squads` exactly when the file has them, and `untuned` until somebody has played it. A group draws
   eight rows at most; `offList` rows do not count. No digit above 5 on a menu. Check: `bun run tools/qa/checks.ts mystery writing`, and "Show, not tell".

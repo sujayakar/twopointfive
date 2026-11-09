@@ -94,7 +94,7 @@ and the material. The mixer picks `footHard` or `footSoft` by `hard` and nudges 
 **The score.** `Music` schedules sixteenths on the audio clock, off its own die. Its `intensity` is `Heard.tension`, 0 to 1: the most roused defender, or what
 the alarm and the mains say; a teammate counts only while he is in a fight of his own. The theme is `Music.tick`. A `Piece` is data plus a `tick`, played
 through `Hands`, with `levels` setting pad, sub and bass by intensity. The kit and strings are rendered once (`struckAt`, `tunedAt`). Which piece:
-`audio.scoreSet`, said once at boot from the address (`setlistOfQuery`: level, then mission kind). Play opens on the list's first piece. After `MUSIC.minutes`
+`audio.scoreSet`, said once at boot from the address (`setlistOf`: level, then the kind the desk says). Play opens on the list's first piece. After `MUSIC.minutes`
 the next takes over at the end of a four-bar phrase while the floor is calm, or at twice that whatever the floor is doing. `audio.scoreMenu` holds the theme
 while the title is up.
 
