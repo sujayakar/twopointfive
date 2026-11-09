@@ -187,7 +187,7 @@ export const enum Sky {
   kept = 24,
   /** f32 */
   markTexel = 25,
-  /** u32: the weather in the open air (render/frame.ts WeatherFrame, in its order) */
+  /** u32: the weather in the open air */
   weather = 26,
   /** f32 */
   rain = 27,
@@ -333,7 +333,7 @@ export const enum Light {
   key = 0,
   /** u32: 0 a point, 1 a spot, 2 the sky's, 3 a panel */
   kind = 1,
-  /** u32: what it is by day (render/photometry.ts lightClass): 0 drawn as it is, 1 a fixture, 2 in a hand, 3 a vehicle's, 4 a flash, 5 a glowing face */
+  /** u32: what it is by day: 0 drawn as it is, 1 a fixture, 2 in a hand, 3 a vehicle's, 4 a flash, 5 a glowing face */
   class = 2,
   /** u32: 1 it burns · 2 transient · 4 broad · 8 a carried spot · 16 infrared · 32 it moves (a hand's, Sam's own) */
   says = 3,
