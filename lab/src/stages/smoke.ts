@@ -47,7 +47,7 @@ const freeCode = `
 const linkCode = `
 @compute @workgroup_size(64) fn main(@builtin(workgroup_id) wg: vec3u, @builtin(local_invocation_index) li: u32) { let at = wg.x + wg.y * 64u; if (at >= M[M_N + 1u] || li >= 27u) { return; } let s = M[M_LIVE + at]; let b = brickOf(M[M_BRICK + s] - 1u); let q = b + vec3i(i32(li) % 3, (i32(li) / 3) % 3, i32(li) / 9) - 1; var n = NONE; if (inPage(q)) { let p = M[M_PAGE + brickIx(q)]; if (p != 0u && p != NONE) { n = p - 1u; } } M[M_NBR + s * 27u + li] = n; }`;
 const facesCode = perBrick(`
-  let born = live && M[M_BORN + s] != 0u; if (born && li < 64u) { G[s * 64u + li] = vec2u(0u); } let x0 = mid(b, vec3i(0)) - 0.5 * H; fineLeaves = false;
+  let born = live && M[M_BORN + s] != 0u; if (born && li < 64u) { G[s * 64u + li] = vec2u(0u); } let x0 = mid(b, vec3i(0)) - 0.5 * H; leafMode = 2u;
   for (var k = li; k < 512u; k += 256u) { let c = cellOf(k); let i = s * 512u + k; var f = 0u; if (live) { f = W[i] & 63u; }
     if (born) { f = 0u; let x = mid(b, c); for (var a = 0u; a < 6u; a++) { if (a > 2u && c[a - 3u] != 0) { continue; } var d = vec3f(0.0); d[a % 3u] = select(1.0, -1.0, a > 2u); let h = nearest(x, d, 0.0, H, 0x4000u | WATER, 1e9); if ((h.piece != 0xffffffffu && (h.piece & LEAF_HIT) == 0u) || h.gt < H) { f |= 1u << a; } } let w0 = windAt(x); let wv = vec2u(pack2x16float(w0.xy), pack2x16float(vec2f(w0.z, 0.0))); Va[i] = wv; Vb[i] = wv; Q[i] = 0.0; Q[i + HALF] = 0.0; }
     sh[k] = f; }
@@ -85,7 +85,7 @@ const pushCode = FETCH + SHUT + perBrick(`
     // bodies and leaves of doors take the air with them
     for (var n = 0u; n < u32(smokeK2.x); n++) { let a = pushes[n * 2u]; let f = pushes[n * 2u + 1u]; let d = length((x - a.xyz) * vec3f(1.0, f.w, 1.0)) / a.w; if (d < 1.0) { v = mix(v, f.xyz, (1.0 - d * d) * (1.0 - exp(-dt * 22.0))); } }
     let rim = min(min(x.x - AT.x, AT.x + f32(PN.x) * 8.0 * H - x.x), min(x.z - AT.z, AT.z + f32(PN.z) * 8.0 * H - x.z)); e.w *= exp(-dt * 4.0 * (1.0 - smoothstep(0.3, 3.0, rim)));
-    e.w *= exp(-dt * (0.013 + out * 0.14)); v *= exp(-dt * 0.2);
+    e.w *= exp(-dt * (0.013 + out * 0.22)); v *= exp(-dt * 0.2);
     for (var n = 0u; n < u32(smokeK.w); n++) { let a = sources[n * 2u]; let f = sources[n * 2u + 1u]; let d = x - a.xyz; let r = length(d); let flame = f.x < 0.0; if (r < a.w) { let q = 1.0 - r / a.w; let sp = hash33(vec3f(floor(x * 9.0)) + floor(frame.misc.x * 20.0)) - 0.5; e.w = min(e.w + abs(f.x) * q * dt, 11.0); let lick = select(1.0, smoothstep(0.30, 0.62, vnoise(x.xz * 7.0 + frame.misc.x * 2.3) * 0.6 + vnoise(x.zx * 13.0 - frame.misc.x * 3.1) * 0.4), flame); heat = select(max(heat, min(heat + f.y * q * dt, 1.0)), min(heat + f.y * q * lick * dt, 11.0), flame); v += (normalize(d + vec3f(0.0, 0.1, 0.0)) * 3.0 + sp * 7.0) * (q * dt * f.z); } }
     v *= min(1.0, (3.4 * H / dt) / max(length(v), 1e-4)); e.w += dt * 1.6 * clamp(heat - 1.0, 0.0, 2.2) * step(1.0, heat); if (e.w < 0.002) { e.w = 0.0; } Va[i] = packV(vec4f(v, e.w)); Q[i + TO] = heat; }
 `, 256, `const HALF = SLOTS_S * 512u;
@@ -114,14 +114,14 @@ const doneCode = `@compute @workgroup_size(64) fn main(@builtin(global_invocatio
 /** light: a point for every eight cells. The sun, one lamp and one way to look; what it finds is kept and mixed */
 const lightCode = FETCH + perBrick(`
   if (!live) { return; } let g = vec3i(i32(li & 3u), i32((li >> 2u) & 3u), i32(li >> 4u)); let gi = s * 64u + li; var d0 = 0.0; for (var k = 0u; k < 8u; k++) { d0 += unpackV(Vb[s * 512u + local(g * 2 + vec3i(i32(k & 1u), i32((k >> 1u) & 1u), i32(k >> 2u)))]).w; } d0 *= 0.125; let was = unpackV(G[gi]); if (d0 < 0.003) { G[gi] = vec2u(0u); G[gi + SLOTS_S * 64u] = vec2u(0u); return; }
-  rngKey(brickIx(b) * 64u + li, 61u); fineLeaves = false; byReach = true; let x = mid(b, g * 2) + vec3f(rnd(), rnd(), rnd()) * H; var L = vec3f(0.0); var now = vec3f(0.0); var d = vec3f(0.0); var far = 400.0;
+  rngKey(brickIx(b) * 64u + li, 61u); leafMode = 2u; byReach = true; let x = mid(b, g * 2) + vec3f(rnd(), rnd(), rnd()) * H; var L = vec3f(0.0); var now = vec3f(0.0); var d = vec3f(0.0); var far = 400.0;
   // (what a torch lends is asked anew each frame and never kept: it moves)
   for (var k = 0u; k < 3u; k++) { var e = vec3f(0.0); if (k == 0u) { if (max3(frame.sunE.xyz) <= 0.0) { continue; } d = coneDir(frame.sunDir.xyz, frame.sunDir.w, rnd2()); e = frame.sunE.xyz; far = 400.0; } else if (k == 1u) { let l = drawLamp(x, vec3f(0.0)); if (l.x < 0.0 || lamps[u32(max(l.x, 0.0))].kind == 2u) { continue; } let q = aimLamp(u32(l.x), x, rnd2()); d = q.dir; far = q.dist - 0.03; e = min(q.E * l.y, vec3f(200.0)); }
     else { var best = 0.0; var who = 0u; for (var m = 0u; m < frame.counts.x; m++) { if (lamps[m].kind != 2u || lamps[m].on <= 0.0) { continue; } let q = aimLamp(m, x, vec2f(0.5)); let w = lum(q.E); if (w > best) { best = w; who = m; } } if (best <= 1e-3) { continue; } let q = aimLamp(who, x, vec2f(0.5)); d = q.dir; far = q.dist - 0.03; e = q.E; }
     if (max3(e) <= 0.0) { continue; } let g0 = e * visible(x, d, 1e-3, far) * (1.0 / (4.0 * PI)); if (k < 2u) { L += g0; } else { now = min(g0, vec3f(200.0)); } }
-  G[gi + SLOTS_S * 64u] = packV(vec4f(now, 1.0)); let u = rnd2(); let z = u.x * 2.0 - 1.0; let r = sqrt(max(1.0 - z * z, 0.0)); d = vec3f(r * cos(6.2832 * u.y), z, r * sin(6.2832 * u.y)); let h = nearest(x, d, 1e-3, 80.0, 0u, 1e9); let sm = smokeSeen(x, d, h.t); var B = vec3f(0.0);
+  G[gi + SLOTS_S * 64u] = packV(vec4f(now, 1.0)); let u = rnd2(); let z = u.x * 2.0 - 1.0; let r = sqrt(max(1.0 - z * z, 0.0)); d = vec3f(r * cos(6.2832 * u.y), z, r * sin(6.2832 * u.y)); let h = nearest(x, d, 1e-3, 80.0, 0u, 1e9); let sm = smokeSeen(x, d, h.t); var B = vec3f(0.0); let fo = folWalk(x, d, h.t, true);
   if (h.piece == 0xffffffffu) { B = skyLod(d, 5.0); } else { let q = surfaceMean(x, d, h); let leaf = (h.piece & LEAF_HIT) != 0u; let own = !leaf && (pieces[h.piece].lamp & 255u) != 255u; B = select(q.glow, vec3f(0.0), own) + sentBack(q, leaf, rnd2(), d); }
-  L += min(B * h.thru * sm.a + sm.rgb, vec3f(40.0)); let m = min(was.w + 1.0, mix(4.0, 24.0, steady(x))); G[gi] = packV(vec4f(mix(was.rgb, min(L, vec3f(200.0)), 1.0 / m), m));
+  L += min(B * h.thru * fo.T * sm.a + sm.rgb + fo.L, vec3f(40.0)); let m = min(was.w + 1.0, mix(4.0, 24.0, steady(x))); G[gi] = packV(vec4f(mix(was.rgb, min(L, vec3f(200.0)), 1.0 / m), m));
 `, 64);
 const publishCode = FETCH + `const HALF = SLOTS_S * 512u;` + perBrick(`
   if (!live) { return; } let blk = vec3i(i32(s & 15u), i32((s >> 4u) & 15u), i32(s >> 8u)) * 10;
@@ -155,7 +155,7 @@ export class Smoke {
     const boxes = lab.building.doors.map(x => x.leaf[0]!), f = new Float32Array(16 * 16); boxes.slice(0, 16).forEach((p, i) => { for (let k = 0; k < 3; k++) { const r = p.rot[k]!; f.set([r[0], r[1], r[2], -(r[0] * p.at[0] + r[1] * p.at[1] + r[2] * p.at[2])], i * 16 + k * 4); } f.set(p.half, i * 16 + 12); }); lab.uniform('smokeDoors', f);
     const s = new Float32Array(16 * 8); let n = 0; for (const q of this.sources) { const age = (lab.tick - q.born) / 60; if (age > q.last || n >= 10) continue; const k = Math.min(1, age / 0.5) * Math.min(1, (q.last - age) / 2); s.set([...q.at, 0.34, 300 * q.rate * k, 1.1 * k, 1.0 * k, 95 * q.rate * k], n++ * 8); }
     for (const q of this.fires) { if (n >= 13) break; s.set([q.at[0], q.at[1] + 0.10, q.at[2], 0.36 * q.size, -0.5, 95, 1.6, 3.0], n++ * 8); }
-    for (const p of steam) { if (n >= 16) break; const k = 0.75 + 0.25 * Math.sin(lab.tick * 0.11 + p.at[0]) * Math.sin(lab.tick * 0.043 + p.at[2]); s.set([p.at[0], p.at[1], p.at[2], p.r, 24 * p.k * k, 5.0, 0.35, 5 * k], n++ * 8); } lab.uniform('smokeSources', s);
+    for (const p of steam) { if (n >= 16) break; const k = 0.75 + 0.25 * Math.sin(lab.tick * 0.11 + p.at[0]) * Math.sin(lab.tick * 0.043 + p.at[2]); s.set([p.at[0], p.at[1], p.at[2], p.r, 8 * p.k * k, 5.0, 0.35, 5 * k], n++ * 8); } lab.uniform('smokeSources', s);
     const ps = new Float32Array(128); let m = 0; for (const q of lab.building.people) for (const [h, rad] of [[0.45, 0.42], [1.25, 0.45]] as const) if (m < 14) ps.set([q.pos[0], q.pos[1] + h, q.pos[2], rad, q.vel[0] * 1.15, 0, q.vel[2] * 1.15, 0.8], m++ * 8); for (const d of lab.building.doors) { const l = d.leaf[0]!, w = lab.prevAt.get(l); if (!w || m >= 16) continue; const v = [0, 1, 2].map(k => (l.at[k]! - w.at[k]!) / this.dt); if (Math.hypot(...v) > 0.05) ps.set([...l.at, 0.75, v[0]!, 0, v[2]!, 0.5], m++ * 8); } lab.uniform('smokePushes', ps); lab.uniform('smokeK2', new Float32Array([m, 0, 0, 0])); lab.uniform('smokeK3', new Float32Array([0, 0, this.flip === 0 ? 1 : 0, 0]));
     lab.uniform('smokeK', new Float32Array([this.dt, this.steps, boxes.length, n]));
   }

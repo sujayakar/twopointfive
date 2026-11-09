@@ -10,7 +10,7 @@ fn airAt(x: vec3f) -> f32 { return frame.misc.w * (0.0015 * @tune.haze * exp(-ma
 fn hg(mu: f32, g: f32) -> f32 { return (1.0 - g * g) / (4.0 * PI * pow(1.0 + g * g - 2.0 * g * mu, 1.5)); }
 @compute @workgroup_size(8, 8) fn main(@builtin(global_invocation_id) id: vec3u) {
   let dim = textureDimensions(outA); if (id.x >= dim.x || id.y >= dim.y) { return; }
-  let full = min(id.xy * 2u, vec2u(frame.size.xy) - 1u); let rd = pxRay(full); let t1 = min(bitcast<f32>(textureLoad(surf, full, 0).x), 260.0); let ro = frame.camPos.xyz; fineLeaves = false; rngInit(id.xy, 41u);
+  let full = min(id.xy * 2u, vec2u(frame.size.xy) - 1u); let rd = pxRay(full); let t1 = min(bitcast<f32>(textureLoad(surf, full, 0).x), 260.0); let ro = frame.camPos.xyz; leafMode = 2u; rngInit(id.xy, 41u);
   let j = blue2(id.xy, 9u); let j2 = blue2(id.xy, 13u); let mu = dot(rd, frame.sunDir.xyz); let amb = skyLod(vec3f(0.0, 1.0, 0.0), 6.0); let tc = clamp(max(0.0, (10.5 - ro.y) / min(rd.y, -1e-3)), 0.0, t1 * 0.999);
   var seen = vec2f(1e-6 * t1, 1e-6); var L = vec3f(0.0); var tau = airAt(ro + rd * tc * 0.6) * tc; { let e = exp(-tau); L += (1.0 - e) * (frame.sunE.xyz * hg(mu, 0.55) + amb * 0.25); }
   // what the steps are: (place, scattering x length)

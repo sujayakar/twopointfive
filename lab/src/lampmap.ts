@@ -12,7 +12,7 @@ fn lampReach(x: vec3f, g: u32) -> vec4f { let q = clamp((x - LM_AT) / LM_SIZE, v
 const mark = `
 @group(1) @binding(0) var<storage, read_write> seen: array<atomic<u32>>;
 @compute @workgroup_size(64) fn main(@builtin(global_invocation_id) id: vec3u) {
-  let i = id.y; if (i >= frame.counts.x) { return; } let l = &lamps[i]; rngKey(id.x, 1000u + i); fineLeaves = false; var o = (*l).at; var d = vec3f(0.0, 1.0, 0.0);
+  let i = id.y; if (i >= frame.counts.x) { return; } let l = &lamps[i]; rngKey(id.x, 1000u + i); leafMode = 2u; var o = (*l).at; var d = vec3f(0.0, 1.0, 0.0);
   let u = rnd2(); let z = u.x * 2.0 - 1.0; let r = sqrt(max(1.0 - z * z, 0.0)); d = vec3f(r * cos(6.2832 * u.y), z, r * sin(6.2832 * u.y));
   if ((*l).kind == 0u) { if (dot(d, (*l).n) < 0.0) { d = -d; } let p = rnd2() * 2.0 - 1.0; o += (*l).u * p.x + (*l).v * p.y + (*l).n * 0.02; } else { o += d * ((*l).area + 0.02); }
   let h = nearest(o, d, 1e-3, 60.0, NOSHADOW | MOVES | WATER, 1e9); let end = min(h.t, 60.0);

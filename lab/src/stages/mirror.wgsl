@@ -6,7 +6,7 @@
   if (LAYER == 1) { on = false; }
   if (LAYER == 1 && f.x != 0u) { let t = bitcast<f32>(f.x); s.x = frame.camPos.xyz + rd * t; s.n = octUnpack(f.y); s.ng = select(s.n, vec3f(0.0, 1.0, 0.0), (f.z >> 24u) == 2u); if (dot(s.n, rd) > 0.0) { s.n = -s.n; s.ng = -s.ng; } s.metal = 0.0; s.f0 = select(0.04, 0.02, (f.z >> 24u) == 2u); s.rough = select(0.015, 0.06, (f.z >> 24u) == 2u); on = true; off = 0.01; }
   if (!on) { textureStore(outM, id.xy, vec4f(0.0, 0.0, 0.0, -1.0)); return; }
-  rngInit(id.xy, 29u + u32(LAYER) * 13u); let V = -rd; let l = coatDir(s, V, blue2(id.xy, 5u)); fineLeaves = false;
+  rngInit(id.xy, 29u + u32(LAYER) * 13u); let V = -rd; let l = coatDir(s, V, blue2(id.xy, 5u)); leafMode = 2u;
   var d = l.dir; if (dot(d, s.ng) <= 0.005) { d = reflect(d, s.ng); }
   let o = s.x + s.ng * off; let h = nearest(o, d, 2e-3, 1500.0, 0u, 1e9); var L = vec3f(0.0);
   if (h.piece == NOTHING) { L = skyLod(d, s.rough * 5.0); }
@@ -17,6 +17,6 @@
     if ((h.piece & LEAF_HIT) == 0u && (pieces[h.piece].flags & WATER) != 0u) { L = skyLod(reflect(d, vec3f(0.0, 1.0, 0.0)), 2.0) * 0.12 + vec3f(0.02, 0.09, 0.1) * lum(frame.sunE.xyz) * 0.2; }
   }
   let sm = smokeSeen(o, d, min(h.t, 80.0)); L = L * sm.a + sm.rgb;
-  L *= h.thru; let m0 = lum(L); L *= min(1.0, 40.0 / max(m0, 1e-4));
+  L *= h.thru; { let fo = folWalk(o, d, min(h.t, 150.0), true); L = L * fo.T + fo.L; } let m0 = lum(L); L *= min(1.0, 40.0 / max(m0, 1e-4));
   textureStore(outM, id.xy, vec4f(L * l.w, select(h.t, 60.0, h.piece == NOTHING)));
 }

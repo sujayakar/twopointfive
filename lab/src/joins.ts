@@ -16,7 +16,7 @@ fn joined(a: vec3f, b: vec3f) -> bool {
 const mark = `
 @group(1) @binding(0) var<storage, read_write> shut: array<u32>;
 @compute @workgroup_size(64) fn main(@builtin(global_invocation_id) id: vec3u) {
-  let w = id.x + id.y * 65536u; if (w >= ${Math.ceil(TOTAL / 8)}u) { return; } var bits = 0u; fineLeaves = false;
+  let w = id.x + id.y * 65536u; if (w >= ${Math.ceil(TOTAL / 8)}u) { return; } var bits = 0u; leafMode = 2u;
   for (var k = 0u; k < 8u; k++) { let i = w * 8u + k; if (i >= ${TOTAL}u) { break; } let c = vec3u(i % ${JN.n[0]}u, (i / ${JN.n[0]}u) % ${JN.n[1]}u, i / ${JN.n[0] * JN.n[1]}u); let x = ${AT} + (vec3f(c) + 0.5) * ${JN.h};
     for (var a = 0u; a < 3u; a++) { var d = vec3f(0.0); d[a] = 1.0; let h = nearest(x, d, 0.0, ${JN.h}, MOVES | WATER, 1e9); if (h.piece != NOTHING && (h.piece & LEAF_HIT) == 0u) { bits |= 1u << (4u * k + a); } } }
   shut[w] = bits;

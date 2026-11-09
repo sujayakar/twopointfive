@@ -1,0 +1,112 @@
+[
+ {
+  "w": 1280,
+  "h": 720,
+  "scale": 0.8,
+  "dist": 9,
+  "hour": 16.4,
+  "look": [
+   8.2,
+   5.4,
+   3.2
+  ],
+  "yaw": 0.62,
+  "pitch": 0.45,
+  "samples": 160,
+  "tick": 420,
+  "method": "realtime",
+  "run": false,
+  "name": "fo-near-rt"
+ },
+ {
+  "w": 1280,
+  "h": 720,
+  "scale": 1,
+  "dist": 9,
+  "hour": 16.4,
+  "look": [
+   8.2,
+   5.4,
+   3.2
+  ],
+  "yaw": 0.62,
+  "pitch": 0.45,
+  "samples": 500,
+  "tick": 420,
+  "method": "reference",
+  "name": "fo-near-ref"
+ },
+ {
+  "w": 1280,
+  "h": 720,
+  "scale": 0.8,
+  "dist": 5,
+  "hour": 16.4,
+  "look": [
+   10.6,
+   5.2,
+   3.6
+  ],
+  "yaw": 0.62,
+  "pitch": 0.35,
+  "samples": 160,
+  "tick": 420,
+  "method": "realtime",
+  "run": false,
+  "name": "fo-tree-rt"
+ },
+ {
+  "w": 1280,
+  "h": 720,
+  "scale": 1,
+  "dist": 5,
+  "hour": 16.4,
+  "look": [
+   10.6,
+   5.2,
+   3.6
+  ],
+  "yaw": 0.62,
+  "pitch": 0.35,
+  "samples": 500,
+  "tick": 420,
+  "method": "reference",
+  "name": "fo-tree-ref"
+ },
+ {
+  "w": 1280,
+  "h": 720,
+  "scale": 0.8,
+  "dist": 12,
+  "hour": 18.6,
+  "look": [
+   8.2,
+   5.2,
+   3.0
+  ],
+  "yaw": 0.62,
+  "pitch": 0.5,
+  "samples": 160,
+  "tick": 420,
+  "method": "realtime",
+  "name": "fo-dusk-rt"
+ },
+ {
+  "w": 1280,
+  "h": 720,
+  "scale": 1,
+  "dist": 12,
+  "hour": 18.6,
+  "look": [
+   8.2,
+   5.2,
+   3.0
+  ],
+  "yaw": 0.62,
+  "pitch": 0.5,
+  "samples": 500,
+  "tick": 420,
+  "method": "reference",
+  "name": "fo-dusk-ref"
+ }
+]

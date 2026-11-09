@@ -1,0 +1,173 @@
+[
+ {
+  "w": 1280,
+  "h": 720,
+  "method": "realtime",
+  "scale": 0.67,
+  "name": "o-a",
+  "yaw": 0.62,
+  "samples": 300,
+  "tick": 420,
+  "doors": 0.8,
+  "fire": [
+   [
+    -0.5,
+    0.02,
+    3.2
+   ]
+  ],
+  "dist": 24,
+  "hour": 23,
+  "cut": 2.55,
+  "look": [
+   1,
+   0.6,
+   1
+  ],
+  "pitch": 0.6,
+  "run": true,
+  "groups": {
+   "atrium": 0.1,
+   "orange": 0,
+   "green": 0.06,
+   "blue": 0.25,
+   "gallery": 0,
+   "studio": 0,
+   "lounge": 0.12,
+   "landing": 0.08,
+   "terrace": 0.5,
+   "pool": 0.35
+  }
+ },
+ {
+  "w": 1280,
+  "h": 720,
+  "method": "realtime",
+  "scale": 0.67,
+  "name": "o-b",
+  "go": true,
+  "yaw": 0.62,
+  "samples": 14,
+  "spin": 0.05,
+  "dist": 24,
+  "hour": 23,
+  "cut": 2.55,
+  "look": [
+   1,
+   0.6,
+   1
+  ],
+  "pitch": 0.6,
+  "run": true,
+  "groups": {
+   "atrium": 0.1,
+   "orange": 0,
+   "green": 0.06,
+   "blue": 0.25,
+   "gallery": 0,
+   "studio": 0,
+   "lounge": 0.12,
+   "landing": 0.08,
+   "terrace": 0.5,
+   "pool": 0.35
+  }
+ },
+ {
+  "w": 1280,
+  "h": 720,
+  "method": "realtime",
+  "scale": 0.67,
+  "name": "o-c",
+  "go": true,
+  "yaw": 1.2,
+  "samples": 1,
+  "spin": 0.05,
+  "dist": 24,
+  "hour": 23,
+  "cut": 2.55,
+  "look": [
+   1,
+   0.6,
+   1
+  ],
+  "pitch": 0.6,
+  "run": true,
+  "groups": {
+   "atrium": 0.1,
+   "orange": 0,
+   "green": 0.06,
+   "blue": 0.25,
+   "gallery": 0,
+   "studio": 0,
+   "lounge": 0.12,
+   "landing": 0.08,
+   "terrace": 0.5,
+   "pool": 0.35
+  }
+ },
+ {
+  "w": 1280,
+  "h": 720,
+  "method": "realtime",
+  "scale": 0.67,
+  "name": "o-d",
+  "go": true,
+  "yaw": 1.2,
+  "samples": 30,
+  "spin": 0.05,
+  "dist": 24,
+  "hour": 23,
+  "cut": 2.55,
+  "look": [
+   1,
+   0.6,
+   1
+  ],
+  "pitch": 0.6,
+  "run": true,
+  "groups": {
+   "atrium": 0.1,
+   "orange": 0,
+   "green": 0.06,
+   "blue": 0.25,
+   "gallery": 0,
+   "studio": 0,
+   "lounge": 0.12,
+   "landing": 0.08,
+   "terrace": 0.5,
+   "pool": 0.35
+  }
+ },
+ {
+  "w": 1280,
+  "h": 720,
+  "method": "realtime",
+  "scale": 0.67,
+  "name": "o-e",
+  "go": true,
+  "yaw": 2.6,
+  "samples": 60,
+  "dist": 24,
+  "hour": 23,
+  "cut": 2.55,
+  "look": [
+   1,
+   0.6,
+   1
+  ],
+  "pitch": 0.6,
+  "run": true,
+  "groups": {
+   "atrium": 0.1,
+   "orange": 0,
+   "green": 0.06,
+   "blue": 0.25,
+   "gallery": 0,
+   "studio": 0,
+   "lounge": 0.12,
+   "landing": 0.08,
+   "terrace": 0.5,
+   "pool": 0.35
+  }
+ }
+]

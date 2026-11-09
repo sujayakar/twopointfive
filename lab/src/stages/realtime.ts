@@ -13,6 +13,8 @@ import surf from './surf.wgsl' with { type: 'text' };
 import lamps from './lamps.wgsl' with { type: 'text' };
 import bounceLib from '../wgsl/bounce.wgsl' with { type: 'text' };
 import waterpx from './waterpx.wgsl' with { type: 'text' };
+import foliage from './foliage.wgsl' with { type: 'text' };
+import { SLOT_ROWS } from '../scene/foliage';
 import gather from './gather.wgsl' with { type: 'text' };
 import mirror from './mirror.wgsl' with { type: 'text' };
 import temporal from './temporal.wgsl' with { type: 'text' };
@@ -97,6 +99,12 @@ export const bilinear: UpscalePart = { name: 'bilinear', stages(g) { g.signal('p
 export const noDenoise: DenoisePart = { name: 'none', stages: ({ signal }) => ({ stages: [], result: signal }) };
 export const taauUp: UpscalePart = { name: 'taau', stages(g) { g.signal('picture', 'rgba16float', 'output', true); return { result: 'picture', stages: [{ name: 'upscale', over: 'output', reads: { color: 'color', 'picture@prev': 'hist', aux: 'auxT', airD: 'airD' }, writes: { outT: 'picture' }, buffers: { taauK: ['taauK', 'vec4f', 'uniform'] }, code: taau }] }; } };
 
+/** the light in the foliage: a look more a slot, then handed to where every ray reads it */
+function foliageStages(lab: Lab, bind: NonNullable<Stage['buffers']>, lib: string): Stage[] {
+  const f = lab.scene.foliage, bytes = f.slots * SLOT_ROWS * 16; lab.buffer('foliage', bytes, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST); lab.buffer('foliageAt', f.at.byteLength, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST); lab.gpu.device.queue.writeBuffer(lab.graph.buffers.get('foliageAt')!, 0, f.at);
+  return [{ name: 'foliage', over: { groups: () => [Math.ceil(f.slots / 64), 1, 1] }, code: signals + lib + bounceLib + foliage, buffers: { ...bind, field: ['foliage', 'array<u32>', 'read_write'], folAt: ['foliageAt', 'array<vec4f>', 'read'] } },
+    { name: 'foliage', over: { groups: () => [1, 1, 1] }, code: '', async make() { return enc => { enc.copyBufferToBuffer(lab.graph.buffers.get('foliage')!, 0, lab.scene.extraBuffer, lab.scene.folSlots * 16, bytes); }; } }];
+}
 /** `edit` changes a stage's text before it is built: for asking what a part of it costs */
 export function realtime(o: { name?: string; cache?: CachePart; denoise?: DenoisePart; upscale?: UpscalePart; edit?: (s: Stage) => Stage } = {}): Method & { glow: string } {
   const cache = o.cache ?? hashCache(), dn = o.denoise ?? svgf, up = o.upscale ?? taauUp; let last = '', lastHour = -1, quiet = 0, fresh = true, prevOn = new Float32Array(64);
@@ -117,7 +125,7 @@ export function realtime(o: { name?: string; cache?: CachePart; denoise?: Denois
         ...looseStages(lab, g), raster,
         S('first hit', surf, 'render', { id: 'idT', idClear: 'idC', depth: 'depthT' }, { outSurf: 'surf', outAux: 'aux', outEmit: 'emit', outFront: 'front' }, { past: ['past', 'array<vec4f>', 'read'], pastLeaves: ['pastLeaves', 'array<vec4f>', 'read'] }),
         S('water', waterpx, 'render', { idClear: 'idC', depth: 'depthT' }, { outSurf: 'surf', outAux: 'aux', outEmit: 'emit', outFront: 'front' }),
-        ...cache.stages, ...lab.smoke.stages(g, c, cache.lib, bounceLib),
+        ...cache.stages, ...foliageStages(lab, c, cache.lib), ...lab.smoke.stages(g, c, cache.lib, bounceLib),
         S('lamps', lamps, 'render', { surf: 'surf', front: 'frontT', sunLeaves: 'sunLeaves' }, { outVis: 'vis', outU: 'lampU', outC: 'lampC', outTone: 'tone' }, {}, { FINE: 4 }),
         S('gather', cache.lib + bounceLib + gather, 'half', { surf: 'surf', front: 'frontT' }, { outE: 'bounce' }, { ...c, hits: ['hits', 'array<vec4u>', 'read_write'] }, { HITS }),
         S('mirror', cache.lib + bounceLib + mirror, 'half', { surf: 'surf', front: 'frontT' }, { outM: 'mirror' }, c, { DIV: 2, LAYER: 0 }),

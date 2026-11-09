@@ -38,6 +38,8 @@ fn relief(kind: u32, p: vec2f, s: f32, fp: f32) -> f32 {
 fn leafThrough(alb: vec3f, grass: bool) -> vec3f { let k = select(1.45 * (1.0 - exp(-20.0 * alb.r)), 1.5, grass || alb.r > alb.g); return alb * vec3f(k, k * 0.96, k * 0.6); }
 /** a leaf sends on less than it gets, both sides together, whatever its tint asks: else a crown of them would light itself */
 fn leafKeeps(all: vec3f) -> f32 { return min(1.0, 0.88 / max(max3(all), 1e-3)); }
+/** how leaves that face every way send a beam on, by the angle between its way and the way out (Ross): back off their faces, forward through them */
+fn leafPhase(q: Surf, rd: vec3f) -> vec3f { let c = dot(frame.sunDir.xyz, rd); let b = acos(clamp(c, -1.0, 1.0)); return max((q.albedo + q.through) * ((sin(b) - b * c) / (3.0 * PI)) + q.through * (c / 3.0), vec3f(0.0)) * (2.0 / PI); }
 fn leafSurf(h: Hit, x: vec3f, rd: vec3f, fp: f32) -> Surf {
   let I = &insts[h.piece & 0x7fffffffu]; if (h.code == NOTHING) { var q: Surf; let t = unpackTint((*I).tint); q.x = x; q.ng = -rd; q.n = -rd; q.albedo = t * t * 1.15; q.through = leafThrough(t * t, ((*I).tint & 0x2000000u) != 0u); let k = leafKeeps(q.albedo + q.through); q.albedo *= k; q.through *= k; q.rough = 1.0; q.f0 = 0.0; q.kind = 14u; q.piece = h.piece; q.flags = MOVES; return q; }
   let b = bitcast<vec4u>(extra[h.code * 2u + 1u]); let ln = octUnpack(b.x);

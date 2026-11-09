@@ -1,7 +1,7 @@
 // TOGETHER: the exact parts times the three signals. Nothing here looks for light.
 fn up(id: vec2u, p: Px) -> vec4f {
   let hd = vec2i(textureDimensions(bounce)); let b = vec2f(id) / 2.0 - 0.25; let q0 = vec2i(floor(b)); let f = b - floor(b); var a = vec4f(0.0); var ws = 0.0;
-  for (var k = 0; k < 4; k++) { let q = clamp(q0 + vec2i(k & 1, k >> 1u), vec2i(0), hd - 1); let fq = min(q * 2, vec2i(frame.size.xy) - 1); let s = unpackPx(textureLoad(surf, fq, 0), pxRay(vec2u(fq))); if (s.sky) { continue; }
+  for (var k = 0; k < 4; k++) { let q = clamp(q0 + vec2i(k & 1, k >> 1u), vec2i(0), hd - 1); let fq = min(q * 2, vec2i(frame.size.xy) - 1); let s = unpackPx(textureLoad(surf, fq, 0), pxRay(vec2u(fq))); if (s.sky || s.leaf != p.leaf) { continue; }
     var w = (select(1.0 - f.x, f.x, (k & 1) == 1) * select(1.0 - f.y, f.y, k > 1) + 0.01); w *= pow(sat(dot(s.n, p.n)), 8.0) * exp(-abs(dot(s.x - p.x, p.ng)) / (0.003 * p.t + 0.01)) + 1e-4; a += textureLoad(bounce, q, 0) * w; ws += w; }
   return a / max(ws, 1e-5);
 }
@@ -20,12 +20,12 @@ fn leafAo(p: Px) -> vec2f { let w = 0.55 * lum(p.albedo) * 1.8; return mix(vec2f
   let rd = pxRay(id.xy); let V = -rd; let f = textureLoad(frontT, id.xy, 0); let p = underWater(unpackPx(textureLoad(surf, id.xy, 0), rd), f, rd); let em = textureLoad(emit, id.xy, 0); var c = em.rgb * part(0u); var mir = vec4f(0.0, 0.0, 0.0, -1.0); if (!p.leaf && (p.rough < asksMirror() || p.metal > 0.5)) { mir = upMirror(mirror, id.xy, p, f, false); }
   if (p.kind == 63u) { c = vec3f(0.0); }
   else if (!p.sky) {
-    let s = pxSurf(p); let vz = max(textureLoad(vis, id.xy, 0), vec4f(0.0)); var b = up(id.xy, p) * @tune.bounce; var ao = vec2f(1.0); if (p.leaf) { ao = leafAo(p); } let nv = max(dot(p.n, V), 0.02); let F = fresnel(coatF0(s), nv); let m = matteOf(s) * (1.0 - lum(F)) / PI; var ma = m * matteSeen(s.kind, s.albedo, nv); let car = isPaint(p.kind); let tv = coatT(nv); if (car) { ma = paintMatte(s.albedo) * (tv * 0.91 / PI); } let L = frame.sunDir.xyz; let cs = dot(p.n, L);
+    let s = pxSurf(p); let vz = max(textureLoad(vis, id.xy, 0), vec4f(0.0)); var b = vec4f(0.0); var bb = vec3f(0.0); var ao = vec2f(1.0); var kept = false; if (p.leaf) { ao = leafAo(p); let e = folLight(p.x, p.n); if (e.w > 0.0) { kept = true; b = vec4f(e.rgb, 0.0); bb = folLight(p.x, -p.n).rgb * @tune.bounce; } } if (!kept) { b = up(id.xy, p); bb = b.rgb * @tune.bounce; } b *= @tune.bounce; let nv = max(dot(p.n, V), 0.02); let F = fresnel(coatF0(s), nv); let m = matteOf(s) * (1.0 - lum(F)) / PI; var ma = m * matteSeen(s.kind, s.albedo, nv); let car = isPaint(p.kind); let tv = coatT(nv); if (car) { ma = paintMatte(s.albedo) * (tv * 0.91 / PI); } let L = frame.sunDir.xyz; let cs = dot(p.n, L);
     var sun = frame.sunE.xyz * vz.a * poolLight(p.x) * part(1u);
     if (cs > 0.0) { if (car) { c += sun * (paintBase(s, V, L) + coatOf(s, V, L, 0.006)); } else { c += sun * (m * cs * roughMatte(s.kind, s.albedo, s.n, V, L) + coatOf(s, V, L, 0.006)); } } else if (p.leaf) { c += sun * s.through * (-cs / PI); }
     let u = textureLoad(lampU, id.xy, 0); let El = u.rgb * vz.x + vec3f(1.06, 0.99, 0.87) * u.a * vz.y; var Cl = vec3f(0.0);
     if (byFormula(p.rough) > 0.0 || car) { let hc = textureLoad(lampC, id.xy, 0); let f0 = select(coatF0(s), flakeF0(s.albedo) * FLAKES, car); Cl = hc.rgb * vz.z + vec3f(1.06, 0.99, 0.87) * f0 / max(lum(f0), 1e-4) * hc.a * vz.y; }
-    c += part(2u) * El * select(ma, (m + s.through / PI) * 0.5, p.leaf) + part(3u) * Cl * select(byFormula(p.rough), tv * 0.91, car); if (car) { c += part(4u) * b.rgb / PI * flakeF0(s.albedo) * (FLAKES * tv * 0.86); } c += part(4u) * b.rgb * select(ma, m * ao.x + s.through / PI * ao.y, p.leaf);
+    c += part(2u) * El * select(ma, (m + s.through / PI) * 0.5, p.leaf) + part(3u) * Cl * select(byFormula(p.rough), tv * 0.91, car); if (car) { c += part(4u) * b.rgb / PI * flakeF0(s.albedo) * (FLAKES * tv * 0.86); } if (p.leaf) { c += part(4u) * (b.rgb * m * ao.x + bb * s.through / PI * ao.y); } else { c += part(4u) * b.rgb * ma; }
     if (mir.a >= 0.0) { let k = 1.0 - smoothstep(asksMirror() - 0.07, asksMirror(), p.rough); let amb = b.rgb / PI * (coatF0(s) + (max(vec3f(1.0 - p.rough), coatF0(s)) - coatF0(s)) * pow(1.0 - nv, 5.0)) * 0.9; c += mix(amb * part(4u), mir.rgb * (part(5u) * @tune.mirror), select(k, 1.0, p.metal > 0.5)); }
     else if (f.x == 0u && p.leaf) { let R = reflect(rd, p.n); let open = sat(lum(b.rgb) / max(lum(skyLod(p.n, 7.0)) * PI, 1e-5)); c += part(4u) * skyLod(R, 4.0) * (open * open * ao.x) * F; }     // a waxy leaf shows the sky, as much of it as reaches here
     else if (f.x == 0u) { c += part(4u) * b.rgb / PI * (coatF0(s) + (max(vec3f(1.0 - p.rough), coatF0(s)) - coatF0(s)) * pow(1.0 - nv, 5.0)) * 0.8; }

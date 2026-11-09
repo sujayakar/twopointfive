@@ -18,7 +18,7 @@ fn leafSun(x: vec3f, n: vec3f, r: vec2f) -> f32 {
   } }
   var v = vec4f(-1.0, -1.0, -1.0, 0.0); let o0 = 0.003 * (1.0 + p.t * 0.02);
   for (var k = 0u; k < 4u; k++) {
-    var d: vec3f; var far = 400.0; fineLeaves = ((u32(FINE) >> k) & 1u) != 0u; noLeaves = k == 0u && !fineLeaves; if (k == 3u && WC < 0.01 * (lum(U) * lum(p.albedo) * 0.32 + 2e-4)) { continue; }
+    var d: vec3f; var far = 400.0; let fine = ((u32(FINE) >> k) & 1u) != 0u; leafMode = select(2u, 0u, fine); noLeaves = k == 0u && !fine; if (k == 3u && WC < 0.01 * (lum(U) * lum(p.albedo) * 0.32 + 2e-4)) { continue; }
     if (k == 0u && lum(frame.sunE.xyz) * select(max(dot(p.n, frame.sunDir.xyz), 0.0), 0.5, p.leaf) < 0.02 * (lum(U) + W.y)) { continue; }     /* (a moon lost in lamplight; and below, a torch) */
     if (k == 2u && W.y < 0.01 * lum(U)) { continue; }
     if (k == 0u) { d = coneDir(frame.sunDir.xyz, frame.sunDir.w, bn); if (max3(frame.sunE.xyz) <= 0.0 || (dot(p.ng, d) <= 0.0 && !p.leaf)) { continue; } }

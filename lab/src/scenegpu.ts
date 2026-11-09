@@ -14,13 +14,14 @@ import { LM } from './lampmap';
 import { LOOSE } from './stages/loose';
 import ltc from './ltc.json';
 import { JOIN_ROWS } from './joins';
+import { growFoliage, SLOT_ROWS, type Foliage } from './scene/foliage';
 
 export class SceneGpu {
   readonly layout: GPUBindGroupLayout; private bg!: GPUBindGroup;
   readonly frame: GPUBuffer; readonly nodes: GPUBuffer; readonly pieces: GPUBuffer; private extra: GPUBuffer; readonly insts: GPUBuffer; readonly lamps: GPUBuffer; private openings: GPUBuffer; private mats: GPUBuffer;
   readonly per: [number, number, number, number]; readonly node0: [number, number, number, number]; readonly piece0: [number, number, number, number]; readonly stepOf: [number, number, number, number]; private moveTree: Bvh | null = null; private moveAge = 0; private instTree: Bvh | null = null; readonly lists: GPUBuffer; readonly leafDraws: { first: number; count: number; leaves: number }[] = []; readonly counts: { pieces: number; moving: number; leaves: number; instances: number };
   private clusterAt: { node: number; per: number; leaf: number }[] = []; private maxMoving: number; private maxInst: number; private nodeData: ArrayBuffer;
-  readonly lampOn: Float32Array; /** where the grid of what is joined starts in extra */ readonly joinRow: number; /** the coarse air */ readonly airRow: number; private airSent = -1; sendAir(a: Air) { if (this.airSent === a.version) return; this.airSent = a.version; this.g.device.queue.writeBuffer(this.extra, this.airRow * 16, a.packed); } openFloor = 1e9; writeExtra(row: number, d: Uint8Array) { this.g.device.queue.writeBuffer(this.extra, row * 16, d.buffer as ArrayBuffer, d.byteOffset, d.byteLength); }
+  readonly lampOn: Float32Array; /** where the grid of what is joined starts in extra */ readonly joinRow: number; /** foliage as a medium, and where its cells and its slots start in extra */ readonly foliage: Foliage; readonly folRow: number; readonly folSlots: number; get extraBuffer() { return this.extra; } /** the coarse air */ readonly airRow: number; private airSent = -1; sendAir(a: Air) { if (this.airSent === a.version) return; this.airSent = a.version; this.g.device.queue.writeBuffer(this.extra, this.airRow * 16, a.packed); } openFloor = 1e9; writeExtra(row: number, d: Uint8Array) { this.g.device.queue.writeBuffer(this.extra, row * 16, d.buffer as ArrayBuffer, d.byteOffset, d.byteLength); }
   /** where the dice's blue noise starts in extra */ readonly noiseAt: number; readonly lampTex: GPUTexture; readonly smokeTex: GPUTexture; readonly smokePage: GPUTexture; /** the one leaf every loose one is */ readonly looseLeaf: number = 0; readonly standing: Piece[];
   constructor(private g: Gpu, readonly world: World, sky: GPUTexture, caustic: GPUTexture, airRowsN = 0) {
     const d = g.device, S = GPUBufferUsage.STORAGE, U = GPUBufferUsage.UNIFORM;
@@ -32,7 +33,7 @@ export class SceneGpu {
     const rows: number[] = [], planeAt = new Map<Piece, number>(), markAt = new Map<Piece, number>(); let row = leafRows;
     layArt([...order, ...world.moving].flatMap(p => p.marks ?? [])); for (const p of [...order, ...world.moving]) { if (p.planes?.length) { planeAt.set(p, row); for (const [n, dd] of p.planes) { rows.push(...n, dd); row++; } } if (p.marks?.length) { markAt.set(p, row); for (const m of p.marks) { const a = artRect(m.art); rows.push(m.at[0], m.at[1], m.size[0], m.size[1], a[0], a[1], a[2], a[3], m.color[0], m.color[1], m.color[2], m.face); row += 3; } } }
     const NZ = 64, na = blueNoise(NZ, 3), nb = blueNoise(NZ, 9); this.noiseAt = leafRows + rows.length / 4; for (let i = 0; i < NZ * NZ; i++) rows.push(na[i]!, nb[i]!); for (let i = 0; i < 256; i++) { const o = i * 6; rows.push(ltc[o]!, ltc[o + 1]!, ltc[o + 2]!, ltc[o + 3]!, ltc[o + 4]!, ltc[o + 5]!, 0, 0); }
-    this.joinRow = leafRows + rows.length / 4; this.airRow = this.joinRow + JOIN_ROWS; const ex = new Float32Array((this.airRow + airRowsN) * 4); let at = 0; for (const p of packed) { ex.set(new Float32Array(p.data), at); at += p.data.byteLength / 4; } ex.set(rows, leafRows * 4);
+    this.joinRow = leafRows + rows.length / 4; this.airRow = this.joinRow + JOIN_ROWS; this.foliage = growFoliage(world); this.folRow = this.airRow + airRowsN; this.folSlots = this.folRow + this.foliage.cells.length / 4; const ex = new Float32Array((this.folSlots + this.foliage.slots * SLOT_ROWS) * 4); new Uint32Array(ex.buffer).set(this.foliage.cells, this.folRow * 4); let at = 0; for (const p of packed) { ex.set(new Float32Array(p.data), at); at += p.data.byteLength / 4; } ex.set(rows, leafRows * 4);
     // bits of packed leaves must survive: copied as words
     { const u = new Uint32Array(ex.buffer); let o = 0; for (const p of packed) { u.set(new Uint32Array(p.data), o); o += p.data.byteLength / 4; } }
     this.extra = buffer(g, 'extra', ex, S);

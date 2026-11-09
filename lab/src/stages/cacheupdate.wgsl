@@ -16,7 +16,7 @@ fn oneMore(s: u32) {
   var a = cells[2u * s]; var b = cells[2u * s + 1u]; let x0 = b.xyz; let st = steady(x0); let key = atomicLoad(&keys[s]);
   byReach = true; if (changes.all.y > 0.5) { a.w = min(a.w, 1.0); }
   if (bad4(a) || bad(b.w)) { a = vec4f(0.0); b.w = 0.0; }
-  rngKey(key, 91u); let every = norms[s] == EVERY_WAY; let n = select(octUnpack(norms[s] & 0xfffffffeu), vec3f(0.0), every); fineLeaves = false;
+  rngKey(key, 91u); let every = norms[s] == EVERY_WAY; let n = select(octUnpack(norms[s] & 0xfffffffeu), vec3f(0.0), every); leafMode = 2u;
   // a little about its point, so that a cell is the mean of its patch
   let bs = basis(select(n, vec3f(0.0, 1.0, 0.0), every)); let x = x0 + n * 0.012;
   var sun = 0.0; var E = vec3f(0.0); let cs = select(dot(n, frame.sunDir.xyz), 1.0, every);
@@ -29,11 +29,11 @@ fn oneMore(s: u32) {
   let ru = rnd2(); let rp = rnd(); var w = vec4f(0.0); if (every) { let z = ru.x * 2.0 - 1.0; let r = sqrt(max(1.0 - z * z, 0.0)); w = vec4f(r * cos(6.2832 * ru.y), z, r * sin(6.2832 * ru.y), PI); } else { w = wideDir(x, n, ru, rp); }
   if (w.w > 0.0) {
     let h = nearest(x, w.xyz, 2e-3, 600.0, NOSHADOW * 0u, 1e9);
-    let sm = smokeSeen(x, w.xyz, min(h.t, 80.0)); E += min(sm.rgb * w.w, vec3f(60.0));
-    if (h.piece == NOTHING) { E += skyLod(w.xyz, 1.0) * h.thru * (w.w * sm.a); }
+    let sm = smokeSeen(x, w.xyz, min(h.t, 80.0)); let fo = folWalk(x, w.xyz, min(h.t, 120.0), true); E += min((sm.rgb * fo.T + fo.L) * w.w, vec3f(60.0));
+    if (h.piece == NOTHING) { E += skyLod(w.xyz, 1.0) * h.thru * fo.T * (w.w * sm.a); }
     else { let q = surfaceMean(x, w.xyz, h); let leaf = (h.piece & LEAF_HIT) != 0u; let own = !leaf && (pieces[h.piece].lamp & 255u) != 255u;
       let L = select(q.glow, vec3f(0.0), own) + sentBack(q, leaf, rnd2(), w.xyz);
-      E += min(L * h.thru * (w.w * sm.a), vec3f(60.0)); }
+      E += min(L * h.thru * fo.T * (w.w * sm.a), vec3f(60.0)); }
   }
   let cap = mix(min(7.0, @tune.keep), @tune.keep, st); let m = min(a.w + 1.0, cap); let k = min(1.0, 2.0 / (m + 1.0));   // later samples weigh more: the first ones were lit by a table that was still dark
  
