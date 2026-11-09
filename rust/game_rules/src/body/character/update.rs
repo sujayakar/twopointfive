@@ -439,7 +439,7 @@ fn anim_update_standing(g: &mut crate::game::Game, c: CharId, dt: f64) {
         }
     }
     // ---- life: breathing, the body's mass, the weight shifting; and the standing foot lock
-    {
+    let feet_w = {
         let body = (1.0 - w_st) * (1.0 - w_hd) * (1.0 - w_he) * (1.0 - w_lp);
         let hard = {
             let a = &g.ch[c].anim;
@@ -450,7 +450,8 @@ fn anim_update_standing(g: &mut crate::game::Game, c: CharId, dt: f64) {
         a.feet.gate = v3::damp(a.feet.gate, if kt >= 0.0 { 0.0 } else { 1.0 }, 12.0, dt);
         let (lg_, fg_) = (body * a.life.gate, body * a.feet.gate);
         anim_life_layer(g, c, dt, s, crouch_pose, lg_, fg_);
-    }
+        fg_
+    };
     // ---- upper body layers
     let a = &mut g.ch[c].anim;
     let mut tgt_relaxed = if a.upper == UpperMode::Relaxed { 1.0 } else { 0.0 };
@@ -884,6 +885,12 @@ fn anim_update_standing(g: &mut crate::game::Game, c: CharId, dt: f64) {
             g.ch[c].anim.nv_a = tip;
             anim_nv_tip(g, c, p_a, tip, None);
         }
+    }
+    // ---- the feet, last of all: over the finished pose, the legs alone, and only where no layer above has them
+    {
+        let a = &g.ch[c].anim;
+        let taken = a.bw.is_some() || a.tk.is_some() || a.sp.as_ref().map_or(false, |sp| sp.pic_on);
+        anim_feet_last(g, c, dt, s, if taken { 0.0 } else { feet_w * (1.0 - w_act) }, 1.0 - w_act);
     }
     crate::anim_skeleton::pose_copy(g, p_shown, p_a);
     let sw_buf = if g.ch[c].anim.sw.shown { g.ch[c].anim.sw_buf } else { None };
