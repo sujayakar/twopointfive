@@ -420,8 +420,6 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let kno
 670 => {  crate::silent::silent_tick(g);  }
 674 => { let a1: InputId = Io::r(&mut i); let a2: CameraId = Io::r(&mut i); let a3: f64 = Io::r(&mut i); crate::rails::rails_gate(g, a1, a2, a3);  }
 677 => { let a1: f64 = Io::r(&mut i); crate::rails::rails_tick(g, a1);  }
-678 => {  crate::rails::rails_put_back(g);  }
-679 => {  crate::rails::rails_resume(g);  }
 682 => { let a1: CharId = Io::r(&mut i); let r = crate::cast::cast_parts(g, a1); r.w(&mut o);  }
 683 => { let a1: Vec<CharId> = Io::r(&mut i); let mut a2: Vec<AnyBoxId> = Io::r(&mut i); let a3: f64 = Io::r(&mut i); crate::stature::drawn_boxes(g, &a1, &mut a2, a3); a2.w(&mut o); }
 684 => { let a1: CharId = Io::r(&mut i); let a2: bool = Io::r(&mut i); let r = crate::combat::firearm_of(g, a1, a2); r.w(&mut o);  }

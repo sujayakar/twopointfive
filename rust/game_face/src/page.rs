@@ -631,6 +631,5 @@ pub unsafe extern "C" fn face_loaded(h: u32, p: *const u8, n: usize, loads: f64,
         g.chronicle.counts.loads = loads;
         g.chronicle.counts.saves = saves;
         let _ = game::chronicle::chron_checkpoint(g, game::chronicle::ChronCheckpointWhat::Load, Some(&label));
-        game::rails::rails_put_back(g);
     });
 }

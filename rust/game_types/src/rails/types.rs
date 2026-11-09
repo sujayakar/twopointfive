@@ -8,7 +8,6 @@ use alloc::{string::String, vec::Vec};
 pub struct Rails {
     pub run: Option<u32>,
     pub answered: f64,
-    pub back: bool,
     pub orders_seen: f64,
     pub sky: crate::rails::RailsSky,
     pub spared: JsMap<crate::Num, f64>,
@@ -32,7 +31,6 @@ impl Rails {
         Rails {
             run: None,
             answered: -1.0,
-            back: false,
             orders_seen: 0.0,
             sky: crate::rails::RailsSky { off: [0.0, 0.0, 0.0], mid: None, mid_t: -1.0, parked: false, was: None, view: None, again: false },
             spared: JsMap::new(),
@@ -379,7 +377,6 @@ pub struct RailsStats {
     pub cues: i32,
     pub starts: i32,
     pub kept: i32,
-    pub put_back: i32,
     pub spared: i32,
 }
 

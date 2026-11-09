@@ -405,7 +405,6 @@ function rosterWanted(g: Game): number { return g.quiet?.active ? g.quiet.patrol
  *  piece. `mem` = the save is kept in memory (canSnap): daylight is in it, and a run the verdict has closed with the stage still live is over too. */
 function runNo(g: Game, mem: boolean, authored = false): string | null {
   if (g.touring || g.quietUtility || g.puppet) return 'a show is running (tour / attract / breach)';
-  if (!authored) { const why = g.director?.blocksSave(); if (why) return why; }   // (an authored checkpoint of a tutorial mission — rails.ts — is taken with its program running: the program is started again when it is put back)   // the level script mid-program (director.ts): its cursor — fired triggers, live beats, units — has no save slice until M3
   if (!mem && isDaylight(g)) return 'daylight is in (the breach variant)';
   if (g.seats.length > 1) return 'two players (a checkpoint holds one player today)';
   if (g.player.down) return 'the player is down';
@@ -974,9 +973,6 @@ export class Checkpoints {
     if (g.view.lesson?.rails) {   // a tutorial mission (rails.ts): its checkpoints are authored — the triggers below, the every-step request and the save by hand all stand down
       this.pending = null; this.hand = false;
       if (this.authored) { const label = this.authored; this.authored = null;
-        // (the level's program is stopped for the take and started again by the frame on the next tick, with this step's cue: a beat is a function half run, which
-        //  no snapshot holds — so what is kept is the floor with no program, exactly what putting it back starts from)
-        const D = g.director; if (D?.run && !D.run.ended) { D.stop(false); g.rails.resume(); }
         this.writeMem(g, 'auto', label, true); }
       return; }
     this.authored = null;
@@ -1125,7 +1121,6 @@ export class Checkpoints {
     this.pending = null; this.lastAuto = null; this.hand = false; this.due = null; this.lastSaveT = g.time;   // (a load counts as a save for the gap, as a file's does)
     pageSay(`checkpoint loaded${e.info.label ? ` — ${e.info.label}` : ''}`);
     this.stats.loads++; this.loadedKey = key; this.flash = { text: 'CHECKPOINT LOADED', t: g.time }; this.note(g, `loaded ${key.replace(KEY_PREFIX, '')}: ${e.info.label || '—'} (from memory)`);
-    g.rails?.putBack();   // (a tutorial mission's program is functions half run, which no snapshot holds: rails.ts starts it again and sends the step's cue again)
     this.onPutBack?.(e.info);
     return null;
   }

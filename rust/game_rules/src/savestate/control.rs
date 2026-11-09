@@ -34,7 +34,6 @@ fn rank(s: MissionStage) -> u32 { match s { MissionStage::Infiltrate => 0, Missi
 /// Why the game cannot be kept right now; `authored` = a tutorial's own checkpoint, taken whatever is on the floor.   (savestate.ts runNo, for a save in memory)
 pub fn run_no(g: &Game, seat: &crate::seats::SeatRef, authored: bool) -> Option<String> {
     if g.touring || g.quiet_utility || g.puppet.is_some() { return Some(String::from("a show is running")); }
-    if !authored { if let Some(r) = g.director.run { let r = &g.tab.director_run[r]; if !r.ended { return Some(format!("the level script's program '{}' is running", r.name)); } } }
     if g.seats.len() > 1 { return Some(String::from("two players (a checkpoint holds one player today)")); }
     if g.pl[seat.player].down { return Some(String::from("the player is down")); }
     if matches!(g.mission.stage, MissionStage::Failed | MissionStage::Done) { return Some(format!("the run is over ({}) \u{2014} nothing to come back to", g.mission.stage.as_str())); }
@@ -327,7 +326,6 @@ pub fn put_back(g: &mut Game, key: &str, was: Abandoned) -> String {
     let t = g.time;
     g.saves.flash = Some(CheckpointsFlash { text: String::from("CHECKPOINT LOADED"), t });
     note(g, format!("loaded {key}"));
-    crate::rails::rails_put_back(g);
     if label.is_empty() { String::from("checkpoint loaded") } else { format!("checkpoint loaded \u{2014} {label}") }
 }
 /// This run's saves, oldest first on the mission's clock: what a card lays out.   (Checkpoints.timeline)
