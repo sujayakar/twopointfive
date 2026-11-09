@@ -5,7 +5,8 @@
 // the late answer's rule off and must fail on its cases alone; PRICERUN_BREAK=run hands the rows over without their running reads and must fail on the
 // running read's cases alone)
 import { PRICE, priceOver, priceOverRun, rowRun, judgeRow, priceReport, priceLeft, priceOverruled, priceLevels, priceLookWords, priceSearch, spansWait, queuedWords, answerOf, lateRows, type PriceFile, type PriceRow, type PriceWin, type PriceRung } from '../../src/ui/pricerun';
-import { quitSearch } from '../../src/scene/scenarioList';
+import { toolDesk } from '../desk.ts';
+const DESK = toolDesk(), quitSearch = (search: string): string => DESK.leave(search);   // (the levels a run walks are the desk's too)
 const WORD = (globalThis as any).process?.env?.PRICERUN_BREAK, BREAK = WORD === '1' || WORD === 'late' || WORD === 'run';
 if (WORD === '1') PRICE.gpuMore = 9; if (WORD === 'late') PRICE.lateMs = 0;
 let red = 0; const check = (ok: boolean, w: string) => { console.log(`${ok ? '- PASS' : '- FAIL'} — ${w}`); if (!ok) red++; };

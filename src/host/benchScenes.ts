@@ -1,4 +1,4 @@
-// THE BENCHMARK'S SCENES — the floors a benchmark run plays, each a mission of the list (scene/scenarioList.ts) on its own level, taken by the hands-off player
+// THE BENCHMARK'S SCENES — the floors a benchmark run plays, each a mission of the list (rust/game_types/src/scene_scenario_list/rows.rs) on its own level, taken by the hands-off player
 // on a seed that names the deal and the dice. Plain data: the page (ui/bench.ts) plays them in this order, one page load each.
 /** a hands-off player's plan */
 export interface HandsOffPlan {
@@ -17,7 +17,7 @@ export interface BenchSceneDef {
   id: string;
   /** what the report calls it */
   name: string;
-  /** the mission played: a room clear row of SCENARIOS */
+  /** the mission played: a room clear row of the list */
   scn: string;
   /** played on Hard */
   hard: boolean;

@@ -103,7 +103,7 @@ a `sweep` is the only way a server is stopped. `localRunner` is the dev server's
   not tell the players apart is not shown.
 - **A worse connection on purpose.** "can you add something to the debug panel to simulate different network conditions?" A page's numbers are its own and last for the
   tab. A lost packet is a hold, never a hole: on a WebSocket the message and every one behind it wait for the resend (`wayMs`).
-- **Two kinds seat two:** `roomclear` and `nightbreach` (`src/scene/seatkinds.ts`). `seats_refuse` refuses the others, whose rules are written around one commander.
+- **Two kinds seat two:** `roomclear` and `nightbreach` (`seats_kind`; a start row says it as `two`). `seats_refuse` refuses the others, whose rules are written around one commander.
 
 ## To change it
 
@@ -111,7 +111,7 @@ a `sweep` is the only way a server is stopped. `localRunner` is the dev server's
 - **A new field in a record:** `WireCmd`, `wireOk`, `recordOf`, `recordTo`, and `RECORD` in `rust/game_face/src/net.rs`, all in one order.
 - **Something per player:** a field of `SeatSet`, in `swap_set`, `set_of_game`, `SeatRef` and both of its makers. A rule that reads it takes `seat: &SeatRef`.
 - **A world rule that says "the player":** ask `men`, `men_up`, `all_down`, `nearest_man` or `faced_man`, or stand the seat with `standing_for`. Add a test to `two_seats.rs`.
-- **A mission for two:** take its rules through for two, then add its kind to both `SEAT_KINDS` and `seat_kinds`.
+- **A mission for two:** take its rules through for two, then add its kind to `seat_kinds`.
 - **Try it on one machine:** `cd cloud && npm ci` once, `bun run dev`, two windows of the page. With no backend, `bun run tools/mp/lan.ts` prints an address for each
   machine. A scripted seat: `bun run tools/mp/bot.ts --key k0`.
 - **Page words:** `?netlag=`, `?netjitter=`, `?netloss=`, `?netpredict=0` are the Network page's rows. `?coop=0` takes co-op off the page.
@@ -171,4 +171,4 @@ lobby asks only for `cloudUrl`. `?cloud=0` is no backend at all for the visit, a
 - The look ahead and a correction judged by two players; how faint the other plan is; the purple, picked by number.
 - A mission ending on a server over the wire; a real socket backing up.
 - Faults: no resync after a word differs, and no reconnect
-  without a reload. `SEAT_KINDS` is written twice.
+  without a reload.
