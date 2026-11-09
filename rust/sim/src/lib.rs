@@ -3,7 +3,7 @@
 //!
 //! What every line in this crate owes the game:
 //!   · one arithmetic. Doubles, and only + − × ÷ √ and what the standard makes exact of them (floor, trunc, abs, comparisons, the bits). Nothing that a
-//!     compiler or a machine may round as it likes: no `f64::sin` and friends (maths.rs has the game's own), no `mul_add`, no fast-math, no `f32` where the
+//!     compiler or a machine may round as it likes: no `f64::sin` and friends (rust/maths has the game's own), no `mul_add`, no fast-math, no `f32` where the
 //!     TypeScript holds a double.
 //!   · one order. Nothing whose order is not written down: no `HashMap` / `HashSet` iteration, no pointer values as keys, no threads.
 //!   · no world outside. No clock, no random source of its own (the game's die is in its block: dice.rs), no files.
@@ -32,7 +32,7 @@ pub mod layers;
 pub mod light;
 pub mod lights;
 pub mod lines;
-pub mod maths;
+pub use ::maths;
 pub mod men;
 pub mod nav;
 pub mod panes;

@@ -20,8 +20,15 @@ name = "game_types"
 version = "0.1.0"
 dependencies = [
  "game_derive",
+ "maths",
  "prim",
- "sim",
+]
+
+[[package]]
+name = "maths"
+version = "0.1.0"
+dependencies = [
+ "prim",
 ]
 
 [[package]]
@@ -32,5 +39,7 @@ version = "0.1.0"
 name = "sim"
 version = "0.1.0"
 dependencies = [
+ "game_types",
+ "maths",
  "prim",
 ]
