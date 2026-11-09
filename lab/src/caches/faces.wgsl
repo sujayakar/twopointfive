@@ -15,9 +15,9 @@ fn texelLight(i: u32, least: f32) -> Cached { var c: Cached; let a = texels[2u *
 fn whose(x: vec3f, n: vec3f) -> u32 { return askPiece; }
 fn held(x: vec3f, n: vec3f, j: vec2f) -> Cached {
   var c: Cached; if (all(n == vec3f(0.0))) { return c; } let slot = whose(x, n); if (slot == NOTHING || faces[3u * slot].y == 0u) { return c; } let r = gridOf(slot, x, n);
-  for (var go = 0u; go < 6u; go++) {                                  // beside it by dice, where it is, then whichever neighbor knows
-    var t = r.g; if (go == 0u) { t += j - 0.5; } else if (go > 1u) { t += select(vec2f(-1.0, 0.0), vec2f(1.0, 0.0), go == 2u); if (go > 3u) { t = r.g + select(vec2f(0.0, -1.0), vec2f(0.0, 1.0), go == 4u); } } let q = vec2u(clamp(t, vec2f(0.0), vec2f(r.n) - 0.5)); let i = r.first + q.y * r.n.x + q.x;
-    if (go == 0u && JOINS && !joined(x + n * 0.08, texelPoint(slot, r.face, texelUv(i)) + n * 0.08)) { continue; } c = texelLight(i, 1.0); if (c.n > 0.0) { return c; }
+  for (var go = 0u; go < 7u; go++) {                                  // beside it by dice, where it is, then whichever neighbor knows and is joined to it; at last its own after all
+    var t = r.g; if (go == 0u) { t += j - 0.5; } else if (go > 1u && go < 6u) { let k = go - 2u; t += select(vec2f(0.0, 1.0), vec2f(1.0, 0.0), k < 2u) * select(-1.0, 1.0, (k & 1u) == 1u); } let q = vec2u(clamp(t, vec2f(0.0), vec2f(r.n) - 0.5)); let i = r.first + q.y * r.n.x + q.x;
+    if (JOINS && go < 6u && !joined(x + n * 0.08, texelPoint(slot, r.face, texelUv(i)) + n * 0.08)) { continue; } c = texelLight(i, 1.0); if (c.n > 0.0) { return c; }
   }
   return c;
 }
