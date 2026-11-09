@@ -35,7 +35,7 @@ pub enum LessonTest {
     Mate { area: Option<crate::scene_scenarios::Rect>, at: Option<V3>, r: Option<f64>, by: Option<f64>, away: Option<f64> },
     Pair { what: String, n: Option<f64> },
     Cue { name: String },
-    View { turned: Option<f64>, zoomed: Option<f64>, panned: Option<f64> },
+    View { turned: Option<f64>, zoomed: Option<f64> },
     Squad { area: crate::scene_scenarios::Rect, n: Option<f64> },
     Stacks { doors: Vec<String>, n: Option<f64>, set: bool },
     Watching { at: V3, r: Option<f64>, n: Option<f64> },

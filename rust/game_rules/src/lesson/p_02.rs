@@ -401,7 +401,7 @@ fn done_test(t: &crate::scene_scenarios::LessonTestKind) -> crate::lesson::Lesso
         K::Mate { area, at, r, by, away } => T::Mate { area: *area, at: *at, r: *r, by: *by, away: *away },
         K::Pair { what, n } => T::Pair { what: what.clone(), n: *n },
         K::Cue { name } => T::Cue { name: name.clone() },
-        K::View { turned, zoomed, panned } => T::View { turned: *turned, zoomed: *zoomed, panned: *panned },
+        K::View { turned, zoomed } => T::View { turned: *turned, zoomed: *zoomed },
         K::Squad { area, n } => T::Squad { area: *area, n: *n },
         K::Stacks { doors, n, set } => T::Stacks { doors: doors.clone(), n: *n, set: *set },
         K::Watching { at, r, n } => T::Watching { at: *at, r: *r, n: *n },

@@ -92,7 +92,6 @@ export class Overlay implements HudLike {
   private alarmEl = document.getElementById('alarm')!; private alarmKey = '';       // alarm stage under it (hidden at calm)
   private blindEl = document.getElementById('blind'); private blindK = 0;             // the white of a stun canister in his eyes (game.view.marks.blind) — absent on a page without the element
   private ckEl = document.getElementById('checkpoint'); private ckKey = '';           // the CHECKPOINT tag (HudPage.saved: the page's save controller, written / loaded) — absent on a page without the element
-  private skyWas = false;
   private railEl: HTMLElement; private railKey = '\0'; private railNote = ''; private objTurn = ''; private railsWas = false; private railRest: Box | null = null; private railRestOf: [string, string, number, number] = ['\0', '', 0, 0]; private railMan = 0; private railLog = ''; private railBoxes: Box[] = [];                           // a tutorial mission's one big line, low in the middle (rust/game_rules/src/rails prompt)
   private card: RailCard;                                                          // a tutorial step's card, up in the middle with the world held (ui/railcard.ts)
   /** a tutorial mission's card is up (host/drawpage.ts holds the world still under it) */
@@ -252,7 +251,6 @@ export class Overlay implements HudLike {
       // (the note is its own piece: it comes and goes under a line that stays put, and the line is shaken once as it comes)
       if (rail && railNote !== this.railNote) { this.railNote = railNote; const n = this.railEl.querySelector?.('.note'), l = this.railEl.querySelector?.('.line') as HTMLElement | null;
         if (n) n.innerHTML = railNote; if (l) { l.classList.remove('nudge'); if (railNote) { void l.offsetWidth; l.classList.add('nudge'); } } }
-      const sky = !!frame?.sky; if (sky !== this.skyWas) { this.skyWas = sky; document.body.classList.toggle('skyseat', sky); }
       const on = !!frame; if (on !== this.railsWas) { this.railsWas = on; document.body.classList.toggle('onrails', on); } }   // (…and on any tutorial mission the place the line points at is marked big: index.html .objmark)
     // …and the line stays clear of your own men (ui/railclear.ts): with the view led up the screen, or in a short window, it lay over the player and his
     // partner. Where it lies is measured once a line (offsets are the layout's: no transform, no animation in them). With a ring up it is at home: the
@@ -286,8 +284,7 @@ export class Overlay implements HudLike {
       const key = src.page.saved;
       if (key !== this.ckKey && this.ckEl) { this.ckKey = key; this.ckEl.className = key ? 'on' : ''; if (key) this.ckEl.innerHTML = `<b></b>${key}`; } }
     const op = V.mission?.pos ?? null;
-    const skySeat = !!frame?.sky;   // (nobody on the floor is the player: the marker is a place to point at, not a walk to it — no fade near it, no metres)
-    const far = op ? v3.distXZ(op, src.at(V.me) ?? op) : 0, od = op ? (skySeat || frame?.arrow ? 99 : far) : 0;   // (…nor near a step's arrow: it is drawn for the last pace, where the diamond would have faded out)
+    const far = op ? v3.distXZ(op, src.at(V.me) ?? op) : 0, od = op ? (frame?.arrow ? 99 : far) : 0;   // (…nor near a step's arrow: it is drawn for the last pace, where the diamond would have faded out)
     const floor = V.stage === 'drive' && hv?.kind !== 'objective' ? 0.35 : 0;   // the rack has no marker of its own: keep a faint diamond on it until the cursor finds it (doors have their own dot / reticle)
     const alpha = op ? Math.max(floor, Math.min(0.9, (od - 1.6) / 1.5)) : 0;
     if (!op || alpha < 0.03 || rail?.watch) this.objMark.style.display = 'none';   // (a line that asks for nothing marks no place to press on)
@@ -307,7 +304,7 @@ export class Overlay implements HudLike {
       if (to) { const [ax, ay, av] = cam.project(op, w, h, EDGE), [bx, by] = cam.project(to, w, h); if (av && Math.hypot(bx - ax, by - ay) > 4) turn = `${(Math.atan2(by - ay, bx - ax) * 180 / Math.PI).toFixed(1)}deg`; }
       el.className = k > 1 ? 'objmark edge' : turn ? 'objmark arrow' : 'objmark'; if (turn !== this.objTurn) { this.objTurn = turn; el.style.setProperty?.('--turn', turn || '0deg'); }
       el.style.left = `${mx0.toFixed(1)}px`; el.style.top = `${my0.toFixed(1)}px`;
-      (el.lastChild as HTMLElement).textContent = skySeat || turn ? '' : `${Math.round(far)}m`;   // (an arrow lies at his feet and says which way, not how far: under it the metres read '99m', the number that keeps it from fading)
+      (el.lastChild as HTMLElement).textContent = turn ? '' : `${Math.round(far)}m`;   // (an arrow lies at his feet and says which way, not how far: under it the metres read '99m', the number that keeps it from fading)
       }
     }
     this.cmdRing.update(V, cam, w, h, tz);

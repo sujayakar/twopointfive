@@ -306,7 +306,6 @@ pub fn rails_tick(g: &mut crate::game::Game, dt: f64) {
         g.rails.fresh = 3.0;
         g.rails.log.clear();
         g.rails.orders_seen = g.orders.log.len() as f64;
-        g.rails.moved = false;
         rails_clean(g);
         rails_start_program(g);
     } else if g.rails.fresh > 0.0 { g.rails.fresh -= 1.0; }
@@ -317,7 +316,6 @@ pub fn rails_tick(g: &mut crate::game::Game, dt: f64) {
     if (g.orders.log.len() as f64) < g.rails.orders_seen { g.rails.orders_seen = g.orders.log.len() as f64; }
     while g.rails.orders_seen < g.orders.log.len() as f64 {
         let o = g.orders.log[g.rails.orders_seen as usize].order.clone();
-        g.rails.moved = true;
         rails_note_given(g, &o);
         crate::director::director_signal(g, &alloc::format!("order:{}", o), None);
         g.rails.orders_seen += 1.0;
@@ -539,7 +537,6 @@ pub fn rails_view(g: &crate::game::Game, seat: &crate::seats::SeatRef, s: &Lesso
         stalk_shut: shuts_of(s, "stalk"),
         teaches_hold: t.map_or(false, |t| word_of(&t.no_tap)),
         no_lasers: rd.lasers == Some(false),
-        sky: None,
     })
 }
 /// the frame's own log (rails.ts Rails.note)
