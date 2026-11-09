@@ -159,8 +159,6 @@ pub fn gun_deal(g: &mut crate::game::Game, men: &[crate::gunroles::DealMan]) -> 
         let short = row(g, o.gun).short.replace(' ', "-");
         said.push(alloc::format!("{} {} ({} m)", g.gd[o.gd].callsign, short, round_text(o.line)));
     }
-    let text = alloc::format!("guns ▸ {}", said.join(" · "));
-    crate::game::game_note(g, &text);
     out
 }
 

@@ -230,7 +230,7 @@ pub fn drop_to_search(g: &mut crate::game::Game, gd: GuardId, bark: Option<&str>
     reset_chase(g, gd);
     clear_path(g, gd);
     if let Some(b) = bark {
-        if !b.is_empty() { crate::game::game_say(g, gd, b, None, None, None); }   // (`if (bark)`: an empty line is no line)
+        if !b.is_empty() { crate::game::game_say(g, gd, b, None, None); }   // (`if (bark)`: an empty line is no line)
     }
     crate::chronicle::chron_lost(g, gd);
 }
@@ -320,7 +320,7 @@ pub(super) fn body_aftermath(g: &mut crate::game::Game, gd: GuardId, dt: f64) ->
                             } else {
                                 "…christ. — stay sharp"
                             };
-                            crate::game::game_say(g, gd, line, None, None, None);
+                            crate::game::game_say(g, gd, line, None, None);
                         }
                     } else {
                         with_duty(g, gd, |d| d.stage = Stage::Fan);
@@ -575,9 +575,9 @@ pub(super) fn line_step(g: &mut crate::game::Game, gd: GuardId, aim_at: V3, o: O
             g.gd[gd].line_bark_t = now;
             let oc = g.gd[ob].ch;
             if m::hyp2(g.ch[oc].vel[0], g.ch[oc].vel[2]) > 0.4 {
-                crate::game::game_say(g, ob, "crossing!", None, None, None);
+                crate::game::game_say(g, ob, "crossing!", None, None);
             } else {
-                crate::game::game_say(g, gd, "move — you're in my line", None, None, None);
+                crate::game::game_say(g, gd, "move — you're in my line", None, None);
             }
         }
     }

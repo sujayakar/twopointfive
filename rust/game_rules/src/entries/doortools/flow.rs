@@ -572,7 +572,7 @@ fn flow_in_body(g: &mut Game, op: DoorOpId, sr: DoortoolsRoomSearchId, men: &[Gu
         if mate.is_some() { g.door_tools.stats.sent_pair += 1.0; }
         if search(g, sr).flow_said != Some(true) {
             search(g, sr).flow_said = Some(true);
-            crate::game::game_say(g, gd, "pushing through.", None, None, None);
+            crate::game::game_say(g, gd, "pushing through.", None, None);
         }
         let with = match mate { Some(x) => format!(" with {}", g.gd[x].callsign), None => String::new() };
         let said = format!("{}:{}{} · {} cells · {} points", if into { "flow" } else { "bound" }, g.gd[gd].callsign, with, part.len(), n0);
@@ -886,7 +886,7 @@ fn enter_go(g: &mut Game, op: DoorOpId, t: f64, queue: Vec<DoorToolsDoneItemQueu
     g.tab.doortools_door_op[op].t0 = t;
     door_tools_beat(g, op, "go");
     let lead = g.tab.doortools_door_op[op].lead;
-    crate::game::game_say(g, lead, "going in.", None, None, None);
+    crate::game::game_say(g, lead, "going in.", None, None);
 }
 
 /// Of two men of one entry by `d`, is one named to go in before the other: `Some(true)` the first of them, `Some(false)` the second, until the man named is over. None: neither is named, or it is not the one entry.
@@ -910,7 +910,7 @@ pub(super) fn door_tools_enter(g: &mut crate::game::Game, op: DoorOpId) {
     let big = crate::orders::squad_orders_big(g, &crate::seats::here(g));
     let pods = door_tools_pods(g, door, side, Some(if n_men > 2 || big { 4.0 } else { n_men as f64 }));
     if pods.is_empty() {
-        crate::game::game_say(g, lead, "no way in.", None, None, None);
+        crate::game::game_say(g, lead, "no way in.", None, None);
         door_tools_end(g, op, "no floor inside");
         return;
     }

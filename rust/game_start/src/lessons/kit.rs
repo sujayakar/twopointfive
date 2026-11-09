@@ -205,7 +205,7 @@ async fn deed(b: &Bot, id: &str) {
             b.wait(0.5).await;
             b.hold_button(RIGHT, b.chest(x), 0.5).await;
             b.wait(1.5).await;
-            if b.ask(|g| g.messages.iter().any(|m| m.text.contains("too close to arm") || m.text.contains("was a dud"))) { b.fail(String::from("the launcher's grenade was a dud from where the line before stood him: the doorway is inside the 8 m it needs to arm")).await; }
+            if b.ask(|g| g.stats.he40.duds > 0) { b.fail(String::from("the launcher's grenade was a dud from where the line before stood him: the doorway is inside the 8 m it needs to arm")).await; }
         }
         // whoever the grenade left: the rifle, from the arch, and after him if he will not come
         "last" => {

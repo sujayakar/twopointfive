@@ -28,7 +28,7 @@ fn is_dead(g: &Game, gd: GuardId) -> bool { g.gd[gd].state == crate::game::Guard
 /// `gd.path = []; gd.pathGoal = null`
 fn clear_path(g: &mut Game, gd: GuardId) { crate::game::guard_set_path(g, gd, Vec::new()); crate::guards::guard_set_path_goal(g, gd, None); }
 /// `g.say(gd, text, true)`
-fn say_net(g: &mut Game, gd: GuardId, text: &str) { crate::game::game_say(g, gd, text, Some(true), None, None); }
+fn say_net(g: &mut Game, gd: GuardId, text: &str) { crate::game::game_say(g, gd, text, Some(true), None); }
 /// `g.col.segmentBlocked(a, b)`
 fn seg_blocked(g: &mut Game, a: V3, b: V3) -> bool { crate::scene_collision::segment_blocked(g, a, b, None, None, None) }
 /// `g.col.solidBlocked(a, b)`
@@ -368,7 +368,7 @@ pub(super) fn plant_short(g: &mut crate::game::Game, gd: GuardId, lane: f64, loo
     s(g).stats.held += 1.0;
     if now - s(g).said_t > 5.0 {
         s(g).said_t = now;
-        crate::game::game_say(g, gd, "holding here — I'm not walking into that!", Some(true), None, None);
+        crate::game::game_say(g, gd, "holding here — I'm not walking into that!", Some(true), None);
     }
     let p = pos_of(g, gd);
     note(g, Some(gd), &format!("lane {}: stops short of it at ({}, {})", js::num_str(lane), js::to_fixed(p[0], 1), js::to_fixed(p[2], 1)));

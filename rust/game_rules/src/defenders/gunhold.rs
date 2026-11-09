@@ -599,7 +599,7 @@ fn bark(g: &mut crate::game::Game, gd: GuardId, k: &mut crate::gunhold::Known, k
     let n = pool.len() as f64;
     let was = &pool[js::rem(m::floor(crate::dice::draw_of(g, "gunhold::bark#1", gd) * n), n) as usize];
     let said = now_of(was);
-    crate::game::game_say(g, gd, &said, Some(radio), None, None);
+    crate::game::game_say(g, gd, &said, Some(radio), None);
     true
 }
 

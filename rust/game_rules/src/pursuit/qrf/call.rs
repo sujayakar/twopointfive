@@ -171,7 +171,7 @@ pub(super) fn note(g: &mut crate::game::Game, what: &str) {
 
 /// Control's voice: a line on the net with nobody in the building saying it.   (qrf.ts control)
 pub(super) fn control(g: &mut crate::game::Game, text: &str) {
-    crate::game::game_msg(g, &alloc::format!("radio: CONTROL — {}", text));
+    crate::cues::cues_radio(g, &alloc::format!("CONTROL — {}", text));
     crate::audio_iface::game_audio_like_play(g, "radio", None, Some(0.55), None);
 }
 
@@ -195,7 +195,7 @@ pub(super) fn door_said(g: &crate::game::Game, name: &str) -> String {
     }
 }
 
-/// A response man's radio line: his bubble, and the net's log line under his callsign.   (qrf.ts radio)
+/// A response man's radio line: his bubble, and the strip's row under his callsign.   (qrf.ts radio)
 pub(super) fn radio(g: &mut crate::game::Game, gd: Option<GuardId>, text: &str) {
     let x = match gd {
         Some(x) if g.gd[x].state != crate::game::GuardState::Dead => x,
@@ -204,8 +204,8 @@ pub(super) fn radio(g: &mut crate::game::Game, gd: Option<GuardId>, text: &str) 
     let dur = crate::guards::bubble_secs(text);
     g.gd[x].bubble = Some(crate::game::GuardBubble { text: String::from(text), t: g.time, dur, radio: true });
     crate::handwork::radio_hand(g, x, dur);
-    let line = alloc::format!("radio: {} — {}", g.gd[x].callsign, text);
-    crate::game::game_msg(g, &line);
+    let line = alloc::format!("{} — {}", g.gd[x].callsign, text);
+    crate::cues::cues_radio(g, &line);
     let c = g.gd[x].ch;
     let at = g.ch[c].bones.get(crate::character::Bone::Head).copied().unwrap_or(g.ch[c].pos);
     crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.7), None);

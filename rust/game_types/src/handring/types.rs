@@ -14,8 +14,6 @@ pub struct EMPTYWHY {
 /// (src/game/handring.ts:89 EMPTY_WORD)
 pub const EMPTY_WORD: &str = "nothing in reach";
 
-/// (src/game/handring.ts:89 EMPTY_AGAIN_SECS)
-pub const EMPTY_AGAIN_SECS: f64 = 3.0;
 
 /// (src/game/handring.ts:89 EMPTY_SHOW_SECS)
 pub const EMPTY_SHOW_SECS: f64 = 1.6;

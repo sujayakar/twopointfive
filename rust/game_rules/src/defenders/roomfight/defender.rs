@@ -295,7 +295,7 @@ fn room_fight_blind(g: &mut crate::game::Game, d: RoomfightDefId, k: f64) {
     if !g.fight.drill_said && room_fight_drilled(g) {
         g.fight.drill_said = true;
         let line = crate::words::wg(g, &"can't see \u{2014} shoot through the doorway!", &"can't see \u{2014} put it down the door!");
-        crate::game::game_say(g, h, line, None, None, None);
+        crate::game::game_say(g, h, line, None, None);
     }
 }
 
@@ -440,19 +440,19 @@ pub fn break_off_said(g: &mut crate::game::Game, d: RoomfightDefId, way: WayOut)
         WayOut::ToSquad(_) => {
             g.fight.stats.fell_back += 1.0;
             room_fight_note(g, Some(gd), "falls back to his squad's rally point");
-            crate::game::game_say(g, gd, "fall back \u{2014} back to the others!", None, None, None);
+            crate::game::game_say(g, gd, "fall back \u{2014} back to the others!", None, None);
         }
         WayOut::By(door, spot) => {
             g.fight.stats.fell_back += 1.0;
             let what = alloc::format!("falls back through {} to {},{}", door_name(g, door), js::to_fixed(spot[0], 1), js::to_fixed(spot[2], 1));
             room_fight_note(g, Some(gd), &what);
             let line = if crate::dice::draw_def(g, "roomfight::room_fight_break_off#1", d) < 0.5 { "fall back \u{2014} fall back!" } else { "they're in \u{2014} get out!" };
-            crate::game::game_say(g, gd, line, None, None, None);
+            crate::game::game_say(g, gd, line, None, None);
         }
         WayOut::ToCover(_) => {
             g.fight.stats.took_cover += 1.0;
             room_fight_note(g, Some(gd), "takes cover");
-            crate::game::game_say(g, gd, "cover \u{2014} get to cover!", None, None, None);
+            crate::game::game_say(g, gd, "cover \u{2014} get to cover!", None, None);
         }
     }
 }
@@ -626,7 +626,7 @@ pub fn room_fight_rallied(g: &mut crate::game::Game, d: RoomfightDefId, at: V3) 
     g.gd[gd].path_goal_orbit = false;
     g.fight.stats.rallied += 1.0;
     room_fight_note(g, Some(gd), "goes to the fight next door");
-    crate::game::game_say(g, gd, "they're hitting the others — move!", None, None, None);
+    crate::game::game_say(g, gd, "they're hitting the others — move!", None, None);
     // the kit lever: a man who goes with a stun charge on him takes the door of the room being hit as the doorway drill
     if g.k.pressure.stuns > 0.0 && !g.k.pressure.on {
         let r = room_fight_room_at(g, at);

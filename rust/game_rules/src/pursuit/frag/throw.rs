@@ -159,7 +159,7 @@ fn tick_man(g: &mut Game, i: usize, it: ItemId, at: V3, eye_at: V3, wise: &crate
     match live!(g, i).knows.get(gd).copied() { Some(k) if g.time >= k => {} _ => return }
     if !live!(g, i).shouted.has(team) && !same_side(live!(g, i).side, team) && !crate::control::man::staggered(g, gd) {
         live!(g, i).shouted.add(team);
-        crate::game::game_say(g, gd, "grenade!", None, None, None);
+        crate::game::game_say(g, gd, "grenade!", None, None);
         g.stats.frag.shouts += 1;
         let mouth = head_of(g, c);
         let mut n = 0;
@@ -362,7 +362,6 @@ fn cue_here(g: &mut crate::game::Game, l: usize, eye_at: V3) {
     if !knows { return; }
     live!(g, l).cued = true;
     g.stats.frag.cues += 1;
-    crate::game::game_msg(g, "GRENADE — get clear");
 }
 
 /// Where a player who has read the cue would go, off the nearest cued grenade with a line to him; None when none.   (frag.ts fragStepOff)
@@ -525,7 +524,7 @@ fn tick_wind(g: &mut Game, ci: usize, gd: GuardId, c: CharId, out: bool) {
         book!(g).last_t = wd.last_t;
         car!(g, ci).try_at = g.time + 2.0;
         let line = crate::words::w(g, &"no — holding it!", &"no — hold it!");
-        crate::game::game_say(g, gd, line, None, None, None);
+        crate::game::game_say(g, gd, line, None, None);
         g.stats.frag.held += 1;
         return;
     }
@@ -612,7 +611,7 @@ fn wind_up(g: &mut crate::game::Game, c_2: usize, head: V3, from: V3, aim: V3, t
     let said = crate::words::w(g, &now, &all);
     let len = said.len() as f64;
     let pick = js::rem(m::floor(hash01(id, k) * len), len) as usize;
-    crate::game::game_say(g, gd, said[pick].as_str(), None, None, None);
+    crate::game::game_say(g, gd, said[pick].as_str(), None, None);
     let mut heard = false;
     for pl in crate::seats::men_up(g) {
         let ph = head_of(g, g.pl[pl].ch);
@@ -620,7 +619,6 @@ fn wind_up(g: &mut crate::game::Game, c_2: usize, head: V3, from: V3, aim: V3, t
         if pr.path_len <= g.k.frag.cue_m * 1.5 && pr.muffle < 0.75 { heard = true; break; }
     }
     if heard {
-        crate::game::game_msg(g, "they're shouting a warning. a grenade is coming");
         g.stats.frag.cues += 1;
     }
     let team = g.gd[gd].team;

@@ -103,7 +103,6 @@ fn finish(g: &mut Game, b: &Burst, rep: &mut BlastReport, gd: GuardId) {
     rep.finished += 1.0;
     if same_side(b.side, team) && js::truthy(b.who) { g.stats.frag.own += 1; }
     let dir = away(b.at, pts[0]);
-    let line = alloc::format!("{} — the {} reached him where he lay", callsign, b.name);
     let fresh = g.gd[gd].died_at == g.time;
     let had = g.gd[gd].down_by == Some(crate::game::DownBy::Player) || (!fresh && crate::teamtally::team_tallied(g, gd));
     g.gd[gd].down_kind = Some(crate::game::DownKind::Shot);
@@ -128,7 +127,6 @@ fn finish(g: &mut Game, b: &Burst, rep: &mut BlastReport, gd: GuardId) {
     }
     let shove = v3::scale(dir, g.k.frag.down_shove * m::max(0.0, 1.0 - j.d / b.wound));
     if let Some(r) = g.ch[c].ragdoll { crate::ragdoll::ragdoll_add_rigid_velocity(g, r, shove, [0.0, 0.0, 0.0]); }
-    crate::game::game_msg(g, &line);
 }
 
 /// One seat's man and the burst. (frag.ts:405 the eachSeat body)
@@ -143,7 +141,6 @@ fn seat_blast(g: &mut Game, b: &Burst, rep: &mut BlastReport) {
     rep.player = Some(r);
     let behind = if r == BlastResult::Stunned { j.behind } else { None };
     rep.hits.push(BlastHit { id, team: crate::teams::Team::Player, exposed: j.e, result: r, behind });
-    let came = if j.behind == Some(BlastHitBehind::Cover) { "the blast broke through your cover" } else { "the blast came through the door" };
     if r == BlastResult::Killed {
         if g.god_mode {
             rep.player = Some(BlastResult::Wounded);
@@ -174,8 +171,6 @@ fn seat_blast(g: &mut Game, b: &Burst, rep: &mut BlastReport) {
         if g.pl[pl].wanding.is_some() { crate::wand::wand_drop(g, pl); g.pl[pl].f_held = true; }
         g.pl[pl].throw_held = false;
         g.pl[pl].pending_throw = None;
-        let line = if rep.player == Some(BlastResult::Stunned) { alloc::format!("the {} — {}, stunned", b.name, came) } else { alloc::format!("the {} — caught in the blast, stunned", b.name) };
-        crate::game::game_msg(g, &line);
         g.stats.frag.sam_stunned += 1;
     }
 }
@@ -319,40 +314,6 @@ pub(super) fn blast_raw(g: &mut crate::game::Game, at: V3, spec: &crate::frag::B
     g.stats.frag.stunned += rep.stunned as i32;
     g.m.frag.frag_log.push(rep.clone());
     if g.m.frag.frag_log.len() > 64 { g.m.frag.frag_log.remove(0); }
-    // the count is for eyes that had a line to it: a room nobody has looked into keeps what it did to itself
-    let mut eyes: Vec<V3> = Vec::new();
-    for pl in crate::seats::men(g) { if !g.pl[pl].down { eyes.push(bone_or(g, g.pl[pl].ch, crate::character::Bone::Head, 1.6)); } }
-    for o in g.guards.clone() { if g.gd[o].team == crate::teams::Team::Operative && g.gd[o].state != crate::game::GuardState::Dead { eyes.push(bone_or(g, g.gd[o].ch, crate::character::Bone::Head, 1.6)); } }
-    let mut seen = false;
-    for &e in &eyes { if v3::dist(e, from) < 30.0 && !crate::scene_collision::segment_blocked(g, e, from, None, None, None) { seen = true; break; } }
-    let folded_men: Vec<GuardId> = if !seen || !js::truthy(rep.stunned) { Vec::new() } else {
-        let (hits, eyes_) = (&rep.hits, &eyes);
-        let torn = Over::but(&b.torn);
-        let mut out: Vec<GuardId> = Vec::new();
-        for o in g.guards.clone() {
-            let c = g.gd[o].ch;
-            let id = g.ch[c].id;
-            if g.gd[o].civ.is_none() && g.gd[o].state != crate::game::GuardState::Dead && hits.iter().any(|h| h.id == id && h.result == BlastResult::Stunned) {
-                let chest = bone_or(g, c, crate::character::Bone::Chest, 1.2);
-                let mut any = false;
-                for &e in eyes_ { if !crate::scene_collision::segment_blocked_over(g, &torn, e, chest, None, None) { any = true; break; } }
-                if any { out.push(o); }
-            }
-        }
-        out
-    };
-    let folded = folded_men.len();
-    let by_cover = folded_men.iter().any(|&o| { let id = g.ch[g.gd[o].ch].id; rep.hits.iter().any(|h| h.id == id && h.behind == Some(BlastHitBehind::Cover)) });
-    let behind = if by_cover { "what it broke" } else { "the door" };
-    let tail: String = if !seen { String::from("out of sight") } else {
-        let down = rep.killed - rep.finished;
-        let mut s = if js::truthy(down) { alloc::format!("{} down", down) } else { String::from("nobody down") };
-        if js::truthy(rep.wounded) { s.push_str(&alloc::format!(", {} hit", rep.wounded)); }
-        if folded != 0 { s.push_str(&alloc::format!(", {} stunned behind {}", folded, behind)); }
-        s
-    };
-    let line = alloc::format!("{}{} — {}", if side == crate::teams::Team::Hostile { "their " } else { "" }, b.name, tail);
-    crate::game::game_msg(g, &line);
     rep
 }
 

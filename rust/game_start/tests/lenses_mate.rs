@@ -15,7 +15,7 @@ fn carried(s: u32) -> (Play, GuardId, GuardId) {
         let bangs = p.g.m.kit.kit.members[1].bangs;
         assert!(game::kit::kit_set(&mut p.g, 1.0, KitField::Bangs, &KitValue::Num((bangs - 1.0).max(0.0))) && game::kit::kit_set(&mut p.g, 1.0, KitField::Wand, &KitValue::Bool(true)));
     }
-    assert!(game::savestate::control::restart(&mut p.g, None));
+    assert!(game::savestate::control::restart(&mut p.g));
     p.sam_unhurt();
     p.g.k.fog.own = false;
     p.g.k.fog.last_seen = 0.0;

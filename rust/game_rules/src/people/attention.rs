@@ -39,7 +39,7 @@ pub fn attention_lines() -> Vec<String> {
 }
 
 /// `g.say(gd, text)` with the rest of its arguments left out.
-fn say(g: &mut Game, gd: GuardId, text: &str) { crate::game::game_say(g, gd, text, None, None, None); }
+fn say(g: &mut Game, gd: GuardId, text: &str) { crate::game::game_say(g, gd, text, None, None); }
 
 /// A line from a pool, never the one he used last. One die. (attention.ts line)
 fn line(g: &mut crate::game::Game, gd: GuardId, pool: &[String]) {

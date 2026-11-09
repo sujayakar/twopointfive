@@ -202,10 +202,9 @@ fn spoken(g: &mut crate::game::Game, p: V3) -> crate::laststand::Spoken {
     Spoken { id, the: r.name, at, spot }
 }
 
-/// a line on their net: the log row, the strip's row, the list the checks read (laststand.ts voice)
+/// a line on their net: the strip's row, the list the checks read (laststand.ts voice)
 fn voice(g: &mut crate::game::Game, gd: GuardId, kind: crate::laststand::LineKind, text: &str, cls: f64) {
     let callsign = g.gd[gd].callsign.clone();
-    crate::game::game_msg(g, &alloc::format!("{} (radio): {}", callsign, text));
     crate::cues::cues_net(g, gd, text, cls);
     let st = st_of(g);
     st.said.push(LastStandSaid { who: callsign, text: String::from(text) });

@@ -79,7 +79,7 @@ pub(super) fn throw_it(g: &mut crate::game::Game, gd: GuardId, arc: &crate::squa
     };
     g.tab.item[it].on_bounce = Some(crate::throwables::ItemBounce::Can);
     crate::character::anim_toss_item(g, c, Some(crate::character::TOSS_QUICK));
-    crate::game::game_say(g, gd, if kind == SquadThrowKind::Frag { "frag out!" } else { "bang out!" }, None, None, None);
+    crate::game::game_say(g, gd, if kind == SquadThrowKind::Frag { "frag out!" } else { "bang out!" }, None, None);
     let text = format!("{} · {} out", g.gd[gd].callsign, if kind == SquadThrowKind::Frag { "frag" } else { "bang" });
     let t = g.time;
     g.m.squadthrow.states.get_mut(key).unwrap().shown = Some(StateShown { t, text });
@@ -165,7 +165,7 @@ pub(super) fn start_walk(g: &mut crate::game::Game, th: &mut crate::squadthrow::
         s.walks.set(gd, w);
         s.plans.clear();
     }
-    crate::game::game_say(g, gd, "moving to throw.", None, None, None);
+    crate::game::game_say(g, gd, "moving to throw.", None, None);
     squad_log_row(g, gd, row_of(kind).as_str(), at);
     g.stats.squadthrow.walks += 1;
 }
@@ -287,7 +287,7 @@ pub(in crate::squad_orders) fn squad_hand_back(g: &mut crate::game::Game, w: &mu
 /// the walk is over: his word if any, off the list, handed back (walkTick's `end`)
 fn end_walk(g: &mut Game, key: PlayerId, gd: GuardId, line: Option<&str>) {
     if let Some(l) = line {
-        crate::game::game_say(g, gd, l, None, None, None);
+        crate::game::game_say(g, gd, l, None, None);
         g.stats.squadthrow.gave_up += 1;
     }
     let w = g.m.squadthrow.states.get_mut(key).and_then(|s| s.walks.delete(gd));
