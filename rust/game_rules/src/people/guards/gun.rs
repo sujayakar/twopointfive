@@ -264,7 +264,7 @@ pub(super) fn acquire_foe(g: &mut crate::game::Game, gd: GuardId) {
             }
             mine = crate::condition::down(g, g.gd[cur].ch) && g.gd[cur].killer_id == g.ch[g.gd[gd].ch].id && g.gd[gd].state == GuardState::Alert;
             crate::mind::foe(g, gd, None, "guards");
-            crate::aim::aim_state_clear(&mut g.gd[gd].aim);
+            crate::aim::aim_state_clear(&mut g.arms[g.gd[gd].ch].aim);
             lost_man = true;
         }
     }
@@ -291,7 +291,7 @@ pub(super) fn acquire_foe(g: &mut crate::game::Game, gd: GuardId) {
     if let Some(b) = best {
         if g.gd[gd].foe != Some(b) {
             crate::mind::foe(g, gd, Some(b), "guards");
-            crate::aim::aim_state_clear(&mut g.gd[gd].aim);
+            crate::aim::aim_state_clear(&mut g.arms[g.gd[gd].ch].aim);
             if mine { crate::game::game_say(g, gd, if op { "he's down — next." } else { "got him!" }, None, None); }
             return;
         }
@@ -489,7 +489,7 @@ fn burst_end(g: &mut Game, gd: GuardId, w: FirearmId, cd: f64) {
         Some(b) => g.time - b.t,
         None => 0.0,
     };
-    g.gd[gd].fire_cd = m::max(g.gd[gd].fire_cd, cd - since);
+    g.arms[g.gd[gd].ch].fire_cd = m::max(g.arms[g.gd[gd].ch].fire_cd, cd - since);
 }
 
 /// The trigger of a row with a BurstSpec, asked once a frame at the alert branch's fire site.
@@ -505,7 +505,7 @@ pub fn burst_trigger(g: &mut crate::game::Game, gd: GuardId, dt: f64, aim_at: V3
         if g.time - b.t > dt * 1.5 + 1e-6 { burst_end(g, gd, w, BURST_BROKEN_CD); }
     }
     if g.fa[w].burst.is_none() {
-        if !start_ok || g.gd[gd].fire_cd > 0.0 || round_past_colleague(g, gd, aim_at, except, None) { return; }
+        if !start_ok || g.arms[g.gd[gd].ch].fire_cd > 0.0 || round_past_colleague(g, gd, aim_at, except, None) { return; }
         let n = v3::clamp(spec.min + m::floor(crate::dice::draw_of(g, "guards::burst_trigger#1", gd) * (spec.max - spec.min + 1.0)), spec.min, spec.max);
         let mut off: Option<V3> = None;
         let opening = g.fa[w].bursts == 0.0 || g.time - g.fa[w].last_burst_t > SUPPRESS_FIRST_LAPSE;

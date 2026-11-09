@@ -480,7 +480,7 @@ pub(super) fn to_fight(g: &mut crate::game::Game, el: &[GuardId], seer: GuardId)
         crate::belief::word(g, man, known);
         let react = if is_seer { 0.12 } else { 0.2 + crate::dice::draw_of(g, "qrf::to_fight#1", seer) * 0.25 };
         g.gd[man].react_t = react;
-        g.gd[man].fire_cd = m::max(g.gd[man].fire_cd, 0.35);
+        g.arms[g.gd[man].ch].fire_cd = m::max(g.arms[g.gd[man].ch].fire_cd, 0.35);
         g.gd[man].search_t = 0.0;
         crate::mind::foe(g, man, Some(g.gd[seer].foe.unwrap_or(crate::game::Foe::Player)), "qrf");
         crate::guards::reset_chase(g, man);
@@ -758,7 +758,7 @@ pub(super) fn tick_perimeter(g: &mut crate::game::Game, dt: f64) {
                 crate::mind::set_state(g, gd, crate::game::GuardState::Alert, "qrf");
                 crate::mind::set(g, gd, 1.0, "qrf");
                 g.gd[gd].react_t = 0.35;
-                g.gd[gd].fire_cd = m::max(g.gd[gd].fire_cd, 0.4);
+                g.arms[g.gd[gd].ch].fire_cd = m::max(g.arms[g.gd[gd].ch].fire_cd, 0.4);
                 crate::guards::reset_chase(g, gd);
                 g.qrf.perim.as_mut().unwrap().men[idx].fighting = true;
                 g.gd[gd].witness.alerted_by = Some(crate::game::WitnessAlertedBy::Sight);

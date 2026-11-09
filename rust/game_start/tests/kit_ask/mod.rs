@@ -403,12 +403,12 @@ impl KitAsk for Play {
         let sam = self.sam_at();
         let t0 = self.g.time;
         let m = &mut self.g.gd[gd];
-        (m.state, m.awareness, m.react_t, m.fire_cd, m.last_known, m.last_seen_t, self.g.cond[m.ch].blind_until, m.pinned, m.hold, m.foe) =
+        (m.state, m.awareness, m.react_t, self.g.arms[m.ch].fire_cd, m.last_known, m.last_seen_t, self.g.cond[m.ch].blind_until, m.pinned, m.hold, m.foe) =
             (GuardState::Alert, 1.0, react, 0.3, Some([sam[0], 0.0, sam[1]]), t0 - seen_ago, -1.0, false, false, Some(Foe::Player));
         m.path.clear();
         m.path_goal = None;
     }
-    fn gun_comes_round_at_once(&mut self, gd: GuardId) { self.g.gd[gd].fire_cd = 0.0; }
+    fn gun_comes_round_at_once(&mut self, gd: GuardId) { self.g.arms[self.g.gd[gd].ch].fire_cd = 0.0; }
     fn leaf_left_at(&mut self, d: DoorId, angle: f64) {
         use game::doors::*;
         door_set_angle(&mut self.g, d, angle);
