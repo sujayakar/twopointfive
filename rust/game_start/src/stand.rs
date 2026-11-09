@@ -4,7 +4,7 @@
 //!   the block of rust/sim the game stands in, zeroed under the layout's word   (sim/state.ts SimState.born)
 //!   the character's rows                                                       (anim/gltf.ts; `gltf.rs`)
 //!   the host: an empty box world and light set, the picture's settings         (host/stub.ts)
-//!   the level file read                                                        (scene/levelLoad.ts; `level.rs`)
+//!   the level file read                                                        (tools/levels/lib/levelLoad.ts; `level.rs`)
 //!   the level's marks, its statics into the world, its lights into the set     (standup.ts populateHost; `passes.rs`)
 //!   the die, seeded: the men's construction dice are its first draws           (standup.ts: newDice, useDice)
 //!   the Game's constructor                                                     (game.ts; `game_new`)
