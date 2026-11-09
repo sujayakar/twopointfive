@@ -18,8 +18,9 @@ import { torchStages, torchCode, torchView, torchLeaves } from './torches';
 import airlight from './airlight.wgsl' with { type: 'text' };
 import haze from './haze.wgsl' with { type: 'text' };
 import type { Place } from '../scene/place';
-import foliage from './foliage.wgsl' with { type: 'text' };
-import { SLOT_ROWS } from '../scene/foliage';
+import cellsCode from './cells.wgsl' with { type: 'text' };
+import smokeMean from './smokemean.wgsl' with { type: 'text' };
+import { lightRow, smokeRow, SMOKE_ROWS } from '../scene/blocks';
 import gather from './gather.wgsl' with { type: 'text' };
 import mirror from './mirror.wgsl' with { type: 'text' };
 import temporal from './temporal.wgsl' with { type: 'text' };
@@ -111,15 +112,20 @@ function airLightStages(lab: Lab, bind: NonNullable<Stage['buffers']>, lib: stri
   const p = lab.building.place, g = airGrid(p), many = g.n[0]! * g.n[1]! * g.n[2]!, groups = Math.ceil(many / 64); lab.buffer('airKept', many * 16); if (!lab.graph.signals.has('airLight')) lab.graph.bind('airLight', lab.gpu.device.createTexture({ label: 'air light', dimension: '3d', size: g.n as [number, number, number], format: 'rgba16float', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.COPY_SRC }));
   return [{ name: 'air light', over: { groups: () => [Math.min(65535, groups), Math.ceil(groups / 65535), 1] }, code: signals + airLightCode(p) + lib + bounceLib + airlight, buffers: { ...bind, kept: ['airKept', 'array<vec4u>', 'read_write'] }, writes: { outLight: 'airLight' } }];
 }
-/** the light in the foliage: a look more a slot, then handed to where every ray reads it */
-function foliageStages(lab: Lab, bind: NonNullable<Stage['buffers']>, lib: string): Stage[] {
-  const f = lab.scene.foliage, bytes = f.slots * SLOT_ROWS * 16; lab.buffer('foliage', bytes, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST); lab.buffer('foliageAt', f.at.byteLength, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST); lab.gpu.device.queue.writeBuffer(lab.graph.buffers.get('foliageAt')!, 0, f.at);
-  return [{ name: 'foliage', over: { groups: () => [Math.ceil(f.slots / 64), 1, 1] }, code: signals + lib + bounceLib + foliage, buffers: { ...bind, field: ['foliage', 'array<u32>', 'read_write'], folAt: ['foliageAt', 'array<vec4f>', 'read'] } },
-    { name: 'foliage', over: { groups: () => [1, 1, 1] }, code: '', async make() { return enc => { enc.copyBufferToBuffer(lab.graph.buffers.get('foliage')!, 0, lab.scene.extraBuffer, lab.scene.folSlots * 16, bytes); }; } }];
+/** the light in the cells: one more look at some, then handed to where every ray reads it. `go`: is it their turn this frame? */
+function cellStages(lab: Lab, bind: NonNullable<Stage['buffers']>, lib: string, go: () => boolean): Stage[] {
+  const { many, at } = lab.litCells, bytes = Math.max(1, many) * 48, b = lab.scene.blocks, RW = GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST; lab.buffer('cellLight', bytes, RW); lab.buffer('cellsAt', Math.max(32, at.byteLength), GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST); lab.gpu.device.queue.writeBuffer(lab.graph.buffers.get('cellsAt')!, 0, at); lab.uniform('cellsMany', new Uint32Array([many, 0, 0, 0]));
+  return [{ name: 'cells', over: { groups: () => [Math.ceil(many / 8), 1, 1] }, when: () => many > 0 && go(), code: signals + lib + bounceLib + cellsCode, buffers: { ...bind, field: ['cellLight', 'array<u32>', 'read_write'], places: ['cellsAt', 'array<vec4f>', 'read'], many: ['cellsMany', 'vec4u', 'uniform'] } },
+    { name: 'cells', over: { groups: () => [1, 1, 1] }, code: '', async make() { return enc => { if (many && go()) enc.copyBufferToBuffer(lab.graph.buffers.get('cellLight')!, 0, lab.scene.extraBuffer, lightRow(b, lab.scene.blockRow) * 16, many * 48); }; } }];
+}
+/** a brick of smoke as one cell, for rays wider than it */
+function smokeMeanStages(lab: Lab): Stage[] {
+  const when = () => lab.smoke.on; lab.buffer('smokeMean', SMOKE_ROWS * 16, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST);
+  return [{ name: 'smoke mean', over: { groups: () => [SMOKE_ROWS, 1, 1] }, when, code: smokeMean, buffers: { mean: ['smokeMean', 'array<vec4f>', 'read_write'] } }, { name: 'smoke mean', over: { groups: () => [1, 1, 1] }, code: '', async make() { return enc => { if (when()) enc.copyBufferToBuffer(lab.graph.buffers.get('smokeMean')!, 0, lab.scene.extraBuffer, smokeRow(lab.scene.blocks, lab.scene.blockRow) * 16, SMOKE_ROWS * 16); }; } }];
 }
 /** `edit` changes a stage's text before it is built: for asking what a part of it costs */
 export function realtime(o: { name?: string; cache?: CachePart; denoise?: DenoisePart; upscale?: UpscalePart; edit?: (s: Stage) => Stage } = {}): Method & { glow: string } {
-  const cache = o.cache ?? hashCache(), dn = o.denoise ?? svgf, up = o.upscale ?? taauUp; let last = '', lastHour = -1, quiet = 0, fresh = true, prevOn = new Float32Array(64);
+  const cache = o.cache ?? hashCache(), dn = o.denoise ?? svgf, up = o.upscale ?? taauUp; let last = '', lastHour = -1, quiet = 0, fresh = true, prevOn = new Float32Array(64), turn = 0, since = 0, light = '', beat = 0;
   const m: Method & { glow: string; warm?: Promise<void> } = {
     name: o.name ?? 'realtime', result: 'picture', glow: 'rt',
     signals(g, lab) {
@@ -137,7 +143,7 @@ export function realtime(o: { name?: string; cache?: CachePart; denoise?: Denois
         ...looseStages(lab, g), raster,
         S('first hit', surf, 'render', { id: 'idT', idClear: 'idC', depth: 'depthT' }, { outSurf: 'surf', outAux: 'aux', outEmit: 'emit', outFront: 'front' }, { past: ['past', 'array<vec4f>', 'read'], pastLeaves: ['pastLeaves', 'array<vec4f>', 'read'] }),
         S('water', waterpx, 'render', { idClear: 'idC', depth: 'depthT' }, { outSurf: 'surf', outAux: 'aux', outEmit: 'emit', outFront: 'front' }),
-        ...cache.stages, ...foliageStages(lab, c, cache.lib), ...lab.smoke.stages(g, c, cache.lib, bounceLib),
+        ...cache.stages, ...cellStages(lab, c, cache.lib, () => turn === 0), ...lab.smoke.stages(g, c, cache.lib, bounceLib), ...smokeMeanStages(lab),
         ...sightStages(lab), S('lamps', torchView + torchLeaves + lamps, 'render', { surf: 'surf', front: 'frontT', sunLeaves: 'sunLeaves', torchLeaves: 'torchTex' }, { outVis: 'vis', outU: 'lampU', outC: 'lampC', outTone: 'tone' }, { torchK: ['torchK', 'array<vec4u, 7>', 'uniform'] }, { FINE: 4 }),
         S('gather', cache.lib + bounceLib + gather, 'half', { surf: 'surf', front: 'frontT' }, { outE: 'bounce', outV: 'bounceV' }, { ...c, hits: ['hits', 'array<vec4u>', 'read_write'] }, { HITS }),
         S('mirror', cache.lib + bounceLib + mirror, 'half', { surf: 'surf', front: 'frontT' }, { outM: 'mirror' }, c, { DIV: 2, LAYER: 0 }),
@@ -153,6 +159,8 @@ export function realtime(o: { name?: string; cache?: CachePart; denoise?: Denois
     },
     frame(lab) {
       rainKnobs(lab); lab.smoke.frame();
+      // cells look every fourth frame (what a look costs is mostly waiting), every one while the light changes: doors, lamps, the hour
+      { const now = [lab.lampsMode, lab.hour.toFixed(2), ...lab.building.doors.map(d => d.open.toFixed(2)), ...[...lab.scene.lampOn].map((v, i) => lab.building.world.lamps[i]?.kind === 'spot' ? 0 : v.toFixed(1))].join(); if (now !== light || fresh) { light = now; since = 0; } else since++; turn = since < 60 ? 0 : (turn + 1) % 4; if (turn === 0) beat++; lab.uniform('cellsMany', new Uint32Array([lab.litCells.many, beat, 0, 0])); }
       // where each moving piece was; and what changed
       const mv = lab.building.world.moving, f = new Float32Array(mv.length * 16); for (const p of mv) { const s = lab.slots.get(p); if (s === undefined) continue; const q = lab.prevAt.get(p) ?? p, o = (s - lab.scene.piece0[2]) * 16; f.set(q.at, o); f.set(q.rot[0], o + 4); f.set(q.rot[1], o + 8); f.set(q.rot[2], o + 12); } if (mv.length) lab.gpu.device.queue.writeBuffer(lab.graph.buffers.get('past')!, 0, f);
       const ch = new Float32Array(36); let n = 0; for (const d of lab.building.doors) if (Math.abs(d.want - d.open) > 1e-3 && n < 8) { ch.set([d.hinge[0], d.hinge[1] + 1, d.hinge[2], 7.5], n * 4); n++; }

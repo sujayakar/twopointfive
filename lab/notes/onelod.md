@@ -1,10 +1,10 @@
 # The second core: one rule for how much detail a ray meets (measured 9 November)
 
-Code: src/core2 (rays.wgsl, blocks.ts, measure.ts, kept.wgsl, cells.wgsl, smoke.wgsl, carry.*, onerule.ts), methods `onerule` (the picture) and `onelin` (as plain light). `card.cjs <views> --against` sets methods against the reference; `ruleNref` are path tracers that obey the rule alone.
+It is the only core since 9 November, without limbs; the first one and the studies that weighed the two are in the history (f9fb7c0). Code: wgsl/rays.wgsl, wgsl/kept.wgsl, scene/blocks.ts, blockmap.ts, stages/cells.wgsl. `card.cjs <views> --against` sets methods against the reference; `ruleNref` are path tracers that obey the rule alone.
 
 The rule: a ray is f(t) = w + s t wide, shifted by one die a ray. Solids have three classes: gone for rays wider than 0.32 m, than 0.64 m, or never (what is long and flat, whatever its size: it may part one room from another). What has gone, and every leaf, is in the world's cells (0.32 and 0.64 m): thickness along x y z, a tight box, six colors, and kept light (eight threads a look: six rays, the sun, one lamp).
 
-Verdict, 1280 x 720, one box a scene, `realtime` against `onerule`
+Verdict, 1280 x 720, one box a scene, the first core against this one
 
 | | first | second |
 |---|---|---|

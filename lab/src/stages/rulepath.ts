@@ -1,7 +1,6 @@
 // The path tracer with only the rays after its first hit obeying the rule: what the rule itself costs in truth, with nothing kept and nothing filtered.
-import { pathTracer } from '../stages/path';
+import { pathTracer } from './path';
 import type { Method, Lab } from '../lab';
-import { secondCore } from './core';
 /** `s`: how fast a bounce ray widens. `direct`: shadow rays at what the eye sees obey it too */
 export function ruled(s: number, o: { cells?: boolean; only?: string } = {}) {
   return (code: string) => {
@@ -18,11 +17,7 @@ export function ruled(s: number, o: { cells?: boolean; only?: string } = {}) {
   };
 }
 function swap(code: string, a: string, b: string) { if (!code.includes(a)) throw new Error('the reference has no ' + a); return code.replace(a, () => b); }
-export const rulePath = (name: string, edit: (c: string) => string, second: boolean): Method => {
-  const m = pathTracer({ bounces: 40, name, edit }); if (!second) return m; const was = m.stages; m.core2 = true;
-  m.stages = function (lab: Lab) { return was.call(this, lab).map(s => s.name === 'reference' ? { ...s, core: p => secondCore(p) } : s); }; return m;
-};
+export const rulePath = (name: string, edit: (c: string) => string): Method => { const m = pathTracer({ bounces: 40, name, edit }), was = m.stages; m.stages = function (lab: Lab) { return was.call(this, lab).map(s => s.name === 'reference' ? { ...s, dice: true } : s); }; return m; };
 export const ruleMethods: Record<string, () => Method> = {
-  same2ref: () => rulePath('same2ref', ruled(0.00001, { cells: false }), true),
-  ...Object.fromEntries([1, 0.5, 0.25, 0.125, 0.0625].flatMap(s => [[`rule${s}ref`, () => rulePath(`rule${s}ref`, ruled(s), true)], [`gone${s}ref`, () => rulePath(`gone${s}ref`, ruled(s, { cells: false }), true)]])),
+  ...Object.fromEntries([1, 0.5, 0.25, 0.125, 0.0625].flatMap(s => [[`rule${s}ref`, () => rulePath(`rule${s}ref`, ruled(s))], [`gone${s}ref`, () => rulePath(`gone${s}ref`, ruled(s, { cells: false }))]])),
 };

@@ -20,22 +20,16 @@ fn cellSent(cell: u32, r: vec4u, k: vec3f, rd: vec3f) -> vec3f {
 }
 /** the cell of 0.32 m at a place in steps of it, or 0 */
 fn cellAt(c: vec3i) -> u32 { let b = vec3i(floor(vec3f(c) * 0.125)) - vec3i(floor(BLK_LO / BRICK + 0.5)); if (any(b < vec3i(0)) || any(b >= BLK_N)) { return 0u; } let p = blkWord(BLK_PAGE, u32(b.x + BLK_N.x * (b.y + BLK_N.y * b.z))) & 0x7fffffffu; if (p == 0u) { return 0u; } let q = vec3u(c & vec3i(7)); let c2 = blkWord(BLK_BRICKS, (p - 1u) * 588u + q.x + 8u * (q.y + 8u * q.z)); return select(c2, 0u, c2 >= 0x80000000u); }
-fn folWalk(ro: vec3f, rd: vec3f, t1: f32, lit: bool) -> Fol {
-  var o: Fol; if (lit) { o.L = blkL; o.T = vec3f(blkT); return o; }            /* (what nearest has found on its way) */
-  let was = blk; blk = vec4f(0.0, 1e9, 1e9, 1e9); let hid = noLeaves; noLeaves = false; o.T = exp(-vec3f(1.0, 0.86, 1.1) * blockWalk(ro, rd, 0.0, t1, 1e9, false).tau); blk = was; noLeaves = hid; return o;
-}
-/** what the limb that the last ray stopped in sends back along it */
-fn limbSent(rd: vec3f) -> vec3f { let slot = frameLit() + lastLimb; let q0 = keptRow(slot, 0u); let q1 = keptRow(slot, 1u); let q2 = keptRow(slot, 2u); let w = rd * rd; return keptSix(q0, q1, q2, 0u, rd.x < 0.0) * w.x + keptSix(q0, q1, q2, 1u, rd.y < 0.0) * w.y + keptSix(q0, q1, q2, 2u, rd.z < 0.0) * w.z; }
-/** how many cells keep light: limbs come after them */
-fn frameLit() -> u32 { return bitcast<u32>(extra[BLK_CARRY].y); }
+/** what nearest has found of the block on its way: what it sent, and how much came through */
+fn blkSeen() -> Fol { var o: Fol; o.L = blkL; o.T = vec3f(blkT); return o; }
 fn leafCell(x: vec3f) -> u32 { let c = cellAt(vec3i(floor(x / 0.32))); if (c == 0u || (bitcast<vec4u>(extra[BLK_CELLS + (c - 1u) * 2u]).x >> 31u) == 0u) { return 0u; } return c; }
 /** what a leaf at x sends back along a ray that met it: as its cell does */
-fn folBack(x: vec3f, rd: vec3f) -> vec3f { if (lastLimb > 0u) { return limbSent(rd); } let c = leafCell(x); if (c == 0u) { return vec3f(0.0); } return cellSent(c, bitcast<vec4u>(extra[BLK_CELLS + (c - 1u) * 2u]), rd, rd); }
+fn folBack(x: vec3f, rd: vec3f) -> vec3f { let c = leafCell(x); if (c == 0u) { return vec3f(0.0); } return cellSent(c, bitcast<vec4u>(extra[BLK_CELLS + (c - 1u) * 2u]), rd, rd); }
 /** the same, the sun's own apart */
-fn folJ(x: vec3f, rd: vec3f) -> vec3f { if (lastLimb > 0u) { return limbSent(rd); } let c = leafCell(x); if (c == 0u) { return vec3f(0.0); } let slot = cellSlot(bitcast<vec4u>(extra[BLK_CELLS + (c - 1u) * 2u])); if (slot == 0u) { return vec3f(0.0); } let q = keptRow(slot, 0u); return vec3f(unpack2x16float(q.x), unpack2x16float(q.y).x); }
+fn folJ(x: vec3f) -> vec3f { let c = leafCell(x); if (c == 0u) { return vec3f(0.0); } let slot = cellSlot(bitcast<vec4u>(extra[BLK_CELLS + (c - 1u) * 2u])); if (slot == 0u) { return vec3f(0.0); } let q = keptRow(slot, 0u); return vec3f(unpack2x16float(q.x), unpack2x16float(q.y).x); }
 // (the eight cells round the last place asked about: where their light is, how much each counts, their leaves' color)
 var<private> roundAt = vec3f(1e9); var<private> roundSlot: array<u32, 8>; var<private> roundW: array<f32, 8>; var<private> roundG = vec3f(0.0); var<private> roundSum = 0.0;
-fn look(x: vec3f) {
+fn leafRound(x: vec3f) {
   if (all(x == roundAt)) { return; } roundAt = x; let g = x / 0.32 - 0.5; let b = vec3i(floor(g)); let f = g - floor(g); roundSum = 0.0; roundG = vec3f(0.0); var lastB = vec3i(2147483647); var p = 0u;
   for (var k = 0; k < 8; k++) {
     roundSlot[k] = 0u; let d = vec3i(k & 1, (k >> 1) & 1, k >> 2); let c = b + d; let br = vec3i(floor(vec3f(c) * 0.125)) - vec3i(floor(BLK_LO / BRICK + 0.5)); if (any(br < vec3i(0)) || any(br >= BLK_N)) { continue; } if (any(br != lastB)) { lastB = br; p = blkWord(BLK_PAGE, u32(br.x + BLK_N.x * (br.y + BLK_N.y * br.z))); } if ((p >> 31u) == 0u) { continue; }
@@ -45,7 +39,7 @@ fn look(x: vec3f) {
 }
 /** the light (all but the sun and the lamps) that lands on a leaf at x from the side n looks to; w = is there any kept. open: how much of that side its own twig leaves open; the rest sees that twig's leaves */
 fn folLight(x: vec3f, n: vec3f, open: f32) -> vec4f {
-  look(x); if (roundSum <= 0.0) { return vec4f(0.0); } var E = vec3f(0.0); let n2 = n * n;
+  leafRound(x); if (roundSum <= 0.0) { return vec4f(0.0); } var E = vec3f(0.0); let n2 = n * n;
   for (var k = 0; k < 8; k++) { let slot = roundSlot[k]; if (slot == 0u) { continue; } let q0 = keptRow(slot, 0u); let q1 = keptRow(slot, 1u); let q2 = keptRow(slot, 2u); E += (keptSix(q0, q1, q2, 0u, n.x > 0.0) * n2.x + keptSix(q0, q1, q2, 1u, n.y > 0.0) * n2.y + keptSix(q0, q1, q2, 2u, n.z > 0.0) * n2.z) * roundW[k]; }
   return vec4f(E / roundSum * open + roundG / roundSum * (1.0 - open), 1.0);
 }

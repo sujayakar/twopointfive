@@ -40,8 +40,19 @@ fn leafThrough(alb: vec3f, grass: bool) -> vec3f { let k = select(1.45 * (1.0 - 
 fn leafKeeps(all: vec3f) -> f32 { return min(1.0, 0.88 / max(max3(all), 1e-3)); }
 /** how leaves that face every way send a beam on, by the angle between its way and the way out (Ross): back off their faces, forward through them */
 fn leafPhase(q: Surf, rd: vec3f) -> vec3f { let c = dot(frame.sunDir.xyz, rd); let b = acos(clamp(c, -1.0, 1.0)); return max((q.albedo + q.through) * ((sin(b) - b * c) / (3.0 * PI)) + q.through * (c / 3.0), vec3f(0.0)) * (2.0 / PI); }
+/** what a ray that stopped in a cell finds there: one facet of its contents, drawn as they face the ray (an ellipsoid's facets), with their color from that side */
+fn cellSurf(h: Hit, x: vec3f, rd: vec3f) -> Surf {
+  let cell = h.piece & 0x7fffffffu; let r = bitcast<vec4u>(extra[BLK_CELLS + (cell - 1u) * 2u]); let r2 = bitcast<vec4u>(extra[BLK_CELLS + (cell - 1u) * 2u + 1u]); let B = cellBox(r, vec3f(0.0), 1.0); let sg = max(B.sigma, vec3f(1e-3) * max3(B.sigma)); var s: Surf;
+  let q = normalize(sg * rd); let u = rnd2(); let k = sqrt(u.x); let m = basis(-q) * vec3f(k * cos(6.2831853 * u.y), k * sin(6.2831853 * u.y), sqrt(max(1.0 - u.x, 0.0))); s.n = normalize(sg * m); s.ng = s.n; s.x = x;
+  let n2 = s.n * s.n; var c = vec3f(0.0); let words = array<u32, 3>(r.w, r2.x, r2.y);
+  for (var i = 0u; i < 3u; i++) { let w = (words[i] >> select(0u, 16u, s.n[i] > 0.0)) & 0xffffu; let v = vec3f(f32(w & 31u) / 31.0, f32((w >> 5u) & 63u) / 63.0, f32(w >> 11u) / 31.0); c += v * v * n2[i]; }
+  s.albedo = c; s.through = vec3f(0.0); s.rough = 1.0; s.f0 = 0.0; s.metal = 0.0; s.glow = vec3f(0.0); s.kind = 0u; s.piece = h.piece; s.flags = 0u; s.ao = vec2f(1.0); fromCell = cell;
+  if (rnd() < cellShare(r)) { s.through = leafThrough(c, ((r.y >> 24u) & 1u) != 0u); let keep = leafKeeps(c + s.through); s.albedo *= keep; s.through *= keep; s.kind = 14u; fromCell = NOTHING; }
+  return s;
+}
 fn leafSurf(h: Hit, x: vec3f, rd: vec3f, fp: f32) -> Surf {
-  let I = &insts[h.piece & 0x7fffffffu]; if (h.code == NOTHING) { var q: Surf; let t = unpackTint((*I).tint); q.x = x; q.ng = -rd; q.n = -rd; q.albedo = t * t * 1.15; q.through = leafThrough(t * t, ((*I).tint & 0x2000000u) != 0u); let k = leafKeeps(q.albedo + q.through); q.albedo *= k; q.through *= k; q.rough = 1.0; q.f0 = 0.0; q.kind = 14u; q.piece = h.piece; q.flags = MOVES; return q; }
+  if (h.code == CELL_CODE) { return cellSurf(h, x, rd); }
+  let I = &insts[h.piece & 0x7fffffffu];
   let b = bitcast<vec4u>(extra[h.code * 2u + 1u]); let ln = octUnpack(b.x);
   // where on the leaf: u along the rib, v across (−1‥1 at its edges). Its blade domes to each side of the rib, its tip droops and its edge waves; what a pixel can not
   // hold of that is roughness

@@ -1,7 +1,11 @@
-// THE SECOND CORE'S RAYS: one rule. A ray is f(t) = w + s t wide; what is smaller than that is met as part of the world's block, the rest as it is. Things leave in three steps (classes), and
-// the block's level follows, so each stretch of a ray has one level: exact · cells of 0.32 m, with class 0 and the leaves gone · 0.64, class 1 gone.
+// THE TWO RAY QUERIES, by one rule. A ray is f(t) = w + s t wide: so wide an area its answer will be averaged over. What is smaller than that is met as part of the world's block (blocks.ts), the
+// rest as it is. Things leave in two steps (classes), and the block's level follows, so each stretch of a ray has one level: exact · cells of 0.32 m, with class 0 and the leaves gone · 0.64, class 1 gone.
 const CELL_CODE = 0xfffffffeu; const FINEST = 0.32; const BRICK = 2.56;
-var<private> footW = 0.0; var<private> footS = 0.0; var<private> leafTo = 1e9; var<private> smallTo = 1e9;       /* (the last two: for stages written for the first core) */
+/** does a ray stop at one cell, drawn (the path tracer that obeys the rule), or is what cells send it summed? */
+const BLK_DICE = false;
+/** leaves: 0 one by one (as far as leafTo), 2 not but by the rule. noLeaves: somebody else asks for them (the sun's and the torches' pictures) */
+var<private> leafMode: u32 = 0u; var<private> noLeaves: bool = false;
+var<private> footW = 0.0; var<private> footS = 0.0; var<private> leafTo = 1e9;
 var<private> lim = vec4f(1e9);               // how far classes 0, 1, 2, 3 are met as they are
 var<private> blk = vec4f(1e9);               // where levels 0 and 1 of the block begin
 var<private> leafOnly: bool = false; var<private> blkOn: bool = true; var<private> blkPast = 0.0;      /* (and how far off the block is not met at all: for leaves' own cells, which know what is near) */
@@ -10,31 +14,32 @@ var<private> leafOnly: bool = false; var<private> blkOn: bool = true; var<privat
 var<private> blkL = vec3f(0.0); var<private> blkT = 1.0;
 fn foot(w: f32, s: f32) {
   footW = w; footS = s; leafOnly = false; if (s <= 0.0) { lim = vec4f(1e9); blk = vec4f(1e9); leafTo = 1e9; return; }
-  let g = FINEST * 0.70710678 * exp2(rnd() - 0.5); let t = max((vec4f(1.0, 2.0, 4.0, 8.0) * g - w) / s, vec4f(0.0)); blk = t; lim = vec4f(t.xy, 1e9, 1e9); leafTo = t.x * LEAF_NEAR; smallTo = 1e9;
+  let g = FINEST * 0.70710678 * exp2(rnd() - 0.5); let t = max((vec4f(1.0, 2.0, 4.0, 8.0) * g - w) / s, vec4f(0.0)); blk = t; lim = vec4f(t.xy, 1e9, 1e9); leafTo = select(0.0, t.x, BLK_DICE);     /* (one by one near by cost three to eight milliseconds and gained nothing) */
 }
-fn footSolid(w: f32, s: f32) { foot(w, s); }
 /** for a ray whose edges are looked at (a lamp's own shadow): solids as they are (what is small as far as it shows), and only leaves by the cells */
 fn footSharp(w: f32, s: f32) { foot(w, s); lim = vec4f(lim.x, 1e9, 1e9, 1e9); leafTo = 0.0; leafOnly = true; }
 fn footAt(t: f32) -> f32 { return footW + footS * t; }
+/** boxes looked at by the last rays (nothing reads it but the panel) */
 var<private> walked: u32 = 0u;
 fn classOf(fl: u32) -> u32 { return fl >> 30u; }
 /** how far a class is met as it is */
-fn reach(c: u32) -> f32 { return select(select(lim.w, lim.y, c == 1u), lim.x, c == 0u); }
+fn classTo(c: u32) -> f32 { return select(select(lim.w, lim.y, c == 1u), lim.x, c == 0u); }
 
+/** NEAREST: what is out there. `cut` < 1e8 is the camera's section; `skip` = flags a ray does not meet. Glass is passed, and what it lets through is in thru */
 fn nearest(ro: vec3f, rd: vec3f, tmin: f32, tmaxIn: f32, skip: u32, cut: f32) -> Hit {
   var best = tmaxIn; var id = NOTHING; var code = 0u; let inv = safeInv(rd); let oc = octant(rd);
   var g0 = vec2f(1e30, 0.0); var g1 = vec2f(1e30, 0.0); var gp = NOTHING; var gc = 0u;
   let t0 = select(tmin, max(tmin, (cut - ro.y) / rd.y), cut < 1e8 && ro.y > cut && rd.y < -1e-5);
-  for (var s = 0u; s < 4u; s++) {
-    let sm = s == 3u; let per = select(frame.per[s], frame.fine.x, sm); let b0 = select(frame.node0[s] + oc * frame.step[s], frame.fine.y + oc * frame.fine.z, sm); let pb = select(frame.piece0[s], frame.fine.w, sm); let tm = select(t0, tmin, s == 1u || sm);
+  for (var s = 0u; s < 3u; s++) {
+    let per = frame.per[s]; let b0 = frame.node0[s] + oc * frame.step[s]; let pb = frame.piece0[s]; let tm = select(t0, tmin, s == 1u);
     var i = 0u;
     while (i < per) {
       walked += 1u; let n = &nodes[b0 + i]; let lf = (*n).leaf; let cnt = lf & 15u;
-      let far = select(best, min(best, reach((lf >> 4u) & 3u)), cnt == 0u);      /* (a node knows the biggest class under it) */
+      let far = select(best, min(best, classTo((lf >> 4u) & 3u)), cnt == 0u);      /* (a node knows the biggest class under it) */
       if (!boxHit(n, ro, inv, tm, far)) { i = (*n).skip; continue; }
       let first = pb + (lf >> 4u);
       for (var j = 0u; j < cnt; j++) {
-        let k = first + j; let fl = pieces[k].flags; let to = min(best, reach(classOf(fl)));
+        let k = first + j; let fl = pieces[k].flags; let to = min(best, classTo(classOf(fl)));
         if ((fl & skip) != 0u || to <= tmin) { continue; }
         if (meet(k, ro, rd, tmin, to, cut)) {
           if ((fl & GLASS) != 0u) { let g = vec2f(hT, bitcast<f32>(pieces[k].tint | 0x3f000000u)); if (hT < g0.x) { g1 = g0; g0 = g; gp = k; gc = hCode; } else if (hT < g1.x) { g1 = g; } continue; }
@@ -44,7 +49,7 @@ fn nearest(ro: vec3f, rd: vec3f, tmin: f32, tmaxIn: f32, skip: u32, cut: f32) ->
       i++;
     }
   }
-  if ((leafMode != 2u || footS > 0.0) && leafTo > tmin) { let per = frame.per.w; let b0 = frame.node0.w + oc * frame.step.w; var i = 0u; let solid = best; best = min(best, leafTo); var found = false;
+  if (leafMode == 0u && leafTo > tmin) { let per = frame.per.w; let b0 = frame.node0.w + oc * frame.step.w; var i = 0u; let solid = best; best = min(best, leafTo); var found = false;
     while (i < per) {
       walked += 1u; let n = &nodes[b0 + i];
       if (!boxHit(n, ro, inv, tmin, best)) { i = (*n).skip; continue; }
@@ -64,24 +69,24 @@ fn nearest(ro: vec3f, rd: vec3f, tmin: f32, tmaxIn: f32, skip: u32, cut: f32) ->
       }
       i++;
     } if (!found) { best = solid; } }
-  lastLimb = 0u; if (blkOn && footS > 0.0) { let c = carryHit(ro, rd, tmin, best); if (c.y > 0.0) { best = c.x; lastLimb = u32(c.y); id = LEAF_HIT | (lastLimb - 1u); code = CARRY_CODE; } }
   blkL = vec3f(0.0); blkT = 1.0;
-  if (blkOn && footS > 0.0 && min(blk.x, leafTo) < best) { let b = blockWalk(ro, rd, max(max(tmin, blkPast), min(blk.x, leafTo)), best, select(1e9, -log(1.0 - rnd()), BLK_DICE), !BLK_DICE); if (b.cell != NOTHING) { lastLimb = 0u; best = b.t; id = LEAF_HIT | b.cell; code = CELL_CODE; } else if (!BLK_DICE) { blkL = b.L; blkT = exp(-b.tau); } }
+  if (blkOn && footS > 0.0 && min(blk.x, leafTo) < best) { let b = blockWalk(ro, rd, max(max(tmin, blkPast), min(blk.x, leafTo)), best, select(1e9, -log(1.0 - rnd()), BLK_DICE), !BLK_DICE); if (b.cell != NOTHING) { best = b.t; id = LEAF_HIT | b.cell; code = CELL_CODE; } else if (!BLK_DICE) { blkL = b.L; blkT = exp(-b.tau); } }
   var h: Hit; h.t = best; h.piece = id; h.code = code; h.thru = vec3f(1.0); h.gt = g0.x; h.gpiece = gp; h.gcode = gc; if (g0.x >= best) { h.gpiece = NOTHING; }
   if (g0.x < best) { h.thru *= unpackTint(bitcast<u32>(g0.y)); } if (g1.x < best) { h.thru *= unpackTint(bitcast<u32>(g1.y)); }
   return h;
 }
+/** VISIBLE: how much gets through from ro along rd to tmax. Glass tints it, a leaf stops it */
 fn visible(ro: vec3f, rd: vec3f, tmin: f32, tmax: f32) -> vec3f {
   var T = vec3f(1.0); let inv = safeInv(rd); let oc = octant(rd);
-  for (var s = 0u; s < 4u; s++) {
-    let sm = s == 3u; let per = select(frame.per[s], frame.fine.x, sm); let b0 = select(frame.node0[s] + oc * frame.step[s], frame.fine.y + oc * frame.fine.z, sm); let pb = select(frame.piece0[s], frame.fine.w, sm);
+  for (var s = 0u; s < 3u; s++) {
+    let per = frame.per[s]; let b0 = frame.node0[s] + oc * frame.step[s]; let pb = frame.piece0[s];
     var i = 0u;
     while (i < per) {
-      let n = &nodes[b0 + i]; let lf = (*n).leaf; let cnt = lf & 15u; let far = select(tmax, min(tmax, reach((lf >> 4u) & 3u)), cnt == 0u);
+      let n = &nodes[b0 + i]; let lf = (*n).leaf; let cnt = lf & 15u; let far = select(tmax, min(tmax, classTo((lf >> 4u) & 3u)), cnt == 0u);
       if (!boxHit(n, ro, inv, tmin, far)) { i = (*n).skip; continue; }
       let first = pb + (lf >> 4u);
       for (var j = 0u; j < cnt; j++) {
-        let k = first + j; let fl = pieces[k].flags; let to = min(tmax, reach(classOf(fl)));
+        let k = first + j; let fl = pieces[k].flags; let to = min(tmax, classTo(classOf(fl)));
         if ((fl & NOSHADOW) != 0u || to <= tmin) { continue; }
         if (meet(k, ro, rd, tmin, to, 1e9)) {
           if ((fl & (GLASS | WATER)) != 0u) { T *= select(vec3f(0.62, 0.86, 0.9), unpackTint(pieces[k].tint), (fl & GLASS) != 0u); continue; }
@@ -91,7 +96,7 @@ fn visible(ro: vec3f, rd: vec3f, tmin: f32, tmax: f32) -> vec3f {
       i++;
     }
   }
-  if (!noLeaves && (leafMode != 2u || footS > 0.0) && leafTo > tmin) { let per = frame.per.w; let b0 = frame.node0.w + oc * frame.step.w; var i = 0u; let lmax = min(tmax, leafTo);
+  if (!noLeaves && leafMode == 0u && leafTo > tmin) { let per = frame.per.w; let b0 = frame.node0.w + oc * frame.step.w; var i = 0u; let lmax = min(tmax, leafTo);
     while (i < per) {
       let n = &nodes[b0 + i];
       if (!boxHit(n, ro, inv, tmin, lmax)) { i = (*n).skip; continue; }
@@ -111,7 +116,6 @@ fn visible(ro: vec3f, rd: vec3f, tmin: f32, tmax: f32) -> vec3f {
       }
       i++;
     } }
-  if (blkOn && footS > 0.0 && !leafOnly) { T *= exp(-carryTau(ro, rd, tmin, tmax)); }
   if (blkOn && footS > 0.0) { let b0 = select(min(blk.x, leafTo), blk.x, noLeaves); if (b0 < tmax && !(leafOnly && noLeaves)) { T *= exp(-blockWalk(ro, rd, max(max(tmin, blkPast), b0), tmax, 1e9, false).tau); } }
   if (frame.misc2.x > 0.5) { T *= smokeThrough(ro + rd * tmin, rd, tmax); }
   return T;

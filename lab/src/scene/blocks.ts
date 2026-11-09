@@ -1,13 +1,11 @@
 // THE WORLD'S BLOCK: what a ray meets of things smaller than it is wide. Sparse cells of 0.32 and 0.64 m (wider ones held two sides of a wall, and leaked); a cell holds how thick its contents stand along x, y and z, a tight box
-// round them, and their color from six sides. Level h holds what is smaller than h (and every leaf). Found once, by rays through the cells' own contents (measure.ts).
+// round them, and their color from six sides. Level h holds what is smaller than h (and every leaf). Found once, by rays through the cells' own contents (blockmap.ts).
 import { type V3, add, apply, mul, cross } from '../math';
-import { type World, type Piece, boundsOf, F } from '../scene/world';
-import { PEOPLE, LIMBS, CARRY_ROWS } from './carry';
+import { type World, type Piece, boundsOf, F } from './world';
 
 export const FINEST = 0.32, LEVELS = 2, BRICK = FINEST * 8, BRICK_WORDS = 588, OFFSET = [0, 512, 576, 584], CELL_ROWS = 2, LIGHT_ROWS = 3, /** a brick of smoke each */ SMOKE_ROWS = 3072;
 /** how big a thing is to a ray: its middle extent (a wire is thin, a wall is not). 0, 1: gone once a ray is 0.32, 0.64 m wide; 3: always there, for it may part one room from another */
 export function classOf(p: Piece): number {
-  if (p.cls !== undefined) return p.cls;
   if (p.flags & (F.GLASS | F.WATER | F.GLOW | F.NOSHADOW | F.FAR | F.MOVES | F.BEND | F.MESH) || (p.lamp ?? -1) >= 0) return 3;
   const e = [...p.half].sort((a, b) => a - b), size = e[1]! * 2; if (size >= FINEST / 2 && e[2]! * 2 >= FINEST * 2) return 3;       /* (a strip of wall over a door, a shelf's board: a sheet, however narrow) */
   return size < FINEST ? 0 : size < FINEST * 2 ? 1 : 3;
@@ -40,13 +38,12 @@ export function layBlocks(w: World): Blocks {
   }
   return { lo: mul(lo, BRICK), n, page, bricks, cells: Float32Array.from(cells), said: Uint32Array.from(said), many: cells.length / 4 };
 }
-export const blockRows = (b: Blocks) => b.page.length / 4 + b.bricks.length / 4 + Math.max(1, b.many) * CELL_ROWS + (b.many + PEOPLE * LIMBS) * LIGHT_ROWS + SMOKE_ROWS + CARRY_ROWS;
+export const blockRows = (b: Blocks) => b.page.length / 4 + b.bricks.length / 4 + Math.max(1, b.many) * CELL_ROWS + b.many * LIGHT_ROWS + SMOKE_ROWS;
 /** where they lie in extra, for the shaders */
 export function blockCode(b: Blocks, row: number): string {
   const page = row, bricks = page + b.page.length / 4, cells = bricks + b.bricks.length / 4, f = (v: number) => v.toFixed(4);
-  return `const BLK_LO = vec3f(${b.lo.map(f).join(', ')}); const BLK_N = vec3i(${b.n.join(', ')}); const BLK_PAGE = ${page}u; const BLK_BRICKS = ${bricks}u; const BLK_CELLS = ${cells}u; const BLK_MANY = ${b.many}u; const BLK_LIGHT = ${lightRow(b, row)}u; const BLK_SMOKE = ${smokeRow(b, row)}u; const BLK_CARRY = ${carryRow(b, row)}u;\n`;
+  return `const BLK_LO = vec3f(${b.lo.map(f).join(', ')}); const BLK_N = vec3i(${b.n.join(', ')}); const BLK_PAGE = ${page}u; const BLK_BRICKS = ${bricks}u; const BLK_CELLS = ${cells}u; const BLK_MANY = ${b.many}u; const BLK_LIGHT = ${lightRow(b, row)}u; const BLK_SMOKE = ${smokeRow(b, row)}u;\n`;
 }
 export const cellRow = (b: Blocks, row: number) => row + b.page.length / 4 + b.bricks.length / 4;
 export const lightRow = (b: Blocks, row: number) => cellRow(b, row) + Math.max(1, b.many) * CELL_ROWS;
-export const smokeRow = (b: Blocks, row: number) => lightRow(b, row) + (b.many + PEOPLE * LIMBS) * LIGHT_ROWS;
-export const carryRow = (b: Blocks, row: number) => smokeRow(b, row) + SMOKE_ROWS;
+export const smokeRow = (b: Blocks, row: number) => lightRow(b, row) + b.many * LIGHT_ROWS;

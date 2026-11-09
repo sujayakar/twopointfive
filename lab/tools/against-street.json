@@ -1,14 +1,12 @@
 [
 {
-"w": 1280,
-"h": 720,
+"w": 960,
+"h": 540,
 "tick": 300,
 "samples": 300,
 "methods": [
-"realtime",
-"onerule",
 "denlin",
-"onelin"
+"realtime"
 ],
 "paths": 900,
 "name": "street night",
@@ -24,15 +22,13 @@
 "cut": 2.5
 },
 {
-"w": 1280,
-"h": 720,
+"w": 960,
+"h": 540,
 "tick": 300,
 "samples": 300,
 "methods": [
-"realtime",
-"onerule",
 "denlin",
-"onelin"
+"realtime"
 ],
 "paths": 900,
 "name": "street day",
@@ -48,15 +44,13 @@
 "cut": 2.5
 },
 {
-"w": 1280,
-"h": 720,
+"w": 960,
+"h": 540,
 "tick": 300,
 "samples": 300,
 "methods": [
-"realtime",
-"onerule",
 "denlin",
-"onelin"
+"realtime"
 ],
 "paths": 900,
 "name": "street dusk",
@@ -72,15 +66,13 @@
 "cut": 2.5
 },
 {
-"w": 1280,
-"h": 720,
+"w": 960,
+"h": 540,
 "tick": 300,
 "samples": 300,
 "methods": [
-"realtime",
-"onerule",
 "denlin",
-"onelin"
+"realtime"
 ],
 "paths": 900,
 "name": "store night",
@@ -96,15 +88,13 @@
 "cut": 2.5
 },
 {
-"w": 1280,
-"h": 720,
+"w": 960,
+"h": 540,
 "tick": 300,
 "samples": 300,
 "methods": [
-"realtime",
-"onerule",
 "denlin",
-"onelin"
+"realtime"
 ],
 "paths": 900,
 "name": "shelf",

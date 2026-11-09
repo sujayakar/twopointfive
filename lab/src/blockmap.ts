@@ -1,8 +1,7 @@
 // Rays through every cell of the block, from all six sides, see what stands in it: how much they meet, what color it is, how tightly it can be boxed, how much of it is leaves.
-import type { Lab } from '../lab';
-import { buffer, readBuffer } from '../gpu';
-import { cellRow, FINEST } from './blocks';
-import { secondCore } from './core';
+import type { Lab } from './lab';
+import { buffer, readBuffer } from './gpu';
+import { cellRow, FINEST } from './scene/blocks';
 
 const code = (grid: number) => `
 @group(1) @binding(0) var<storage, read> places: array<vec4f>; @group(1) @binding(1) var<storage, read_write> made: array<u32>; @group(1) @binding(2) var<uniform> most: vec4u;
@@ -41,12 +40,12 @@ var<workgroup> firstHit: atomic<u32>; var<workgroup> refAt: vec3f; var<workgroup
   for (var k = 0u; k < 8u; k++) { made[cell * 8u + k] = out[k]; }
 }`;
 /** `most`: rays a side of each cell, squared; eight is as many as there are threads */
-export async function measureBlocks(lab: Lab, most8 = 8): Promise<string> {
+export async function mapBlocks(lab: Lab, most8 = 8): Promise<string> {
   const grid = Math.min(8, most8);
   const { scene, gpu } = lab, B = scene.blocks, d = gpu.device, C = GPUShaderStage.COMPUTE; if (!B.many) return 'no cells';
   const places = buffer(gpu, 'cells at', B.cells, GPUBufferUsage.STORAGE), made = buffer(gpu, 'cells made', B.many * 32, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC), most = buffer(gpu, 'cells many', new Uint32Array([B.many, 0, 0, 0]), GPUBufferUsage.UNIFORM), t0 = performance.now();
   const l1 = d.createBindGroupLayout({ entries: [{ binding: 0, visibility: C, buffer: { type: 'read-only-storage' } }, { binding: 1, visibility: C, buffer: { type: 'storage' } }, { binding: 2, visibility: C, buffer: { type: 'uniform' } }] });
-  const module = d.createShaderModule({ label: 'cells', code: secondCore(lab.graph.prelude()) + code(grid) }), bad = (await module.getCompilationInfo()).messages.filter(m => m.type === 'error'); if (bad.length) throw new Error(bad.map(m => `cells:${m.lineNum}:${m.linePos} ${m.message}`).slice(0, 5).join('\n'));
+  const module = d.createShaderModule({ label: 'cells', code: lab.graph.prelude() + code(grid) }), bad = (await module.getCompilationInfo()).messages.filter(m => m.type === 'error'); if (bad.length) throw new Error(bad.map(m => `cells:${m.lineNum}:${m.linePos} ${m.message}`).slice(0, 5).join('\n'));
   const pipe = await d.createComputePipelineAsync({ label: 'cells', layout: d.createPipelineLayout({ bindGroupLayouts: [scene.layout, l1] }), compute: { module, entryPoint: 'main' } }), bg = d.createBindGroup({ layout: l1, entries: [{ binding: 0, resource: { buffer: places } }, { binding: 1, resource: { buffer: made } }, { binding: 2, resource: { buffer: most } }] });
   const e = d.createCommandEncoder(), p = e.beginComputePass(); p.setPipeline(pipe); p.setBindGroup(0, scene.group()); p.setBindGroup(1, bg); p.dispatchWorkgroups(Math.min(32768, B.many), Math.ceil(B.many / 32768)); p.end(); d.queue.submit([e.finish()]);
   const r = new Uint32Array(await readBuffer(gpu, made)); for (const b of [places, made, most]) b.destroy();

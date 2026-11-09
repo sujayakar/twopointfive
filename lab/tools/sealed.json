@@ -5,8 +5,7 @@
 "tick": 600,
 "samples": 400,
 "methods": [
-"denlin",
-"onelin"
+"denlin"
 ],
 "paths": 700,
 "name": "sealed",
@@ -41,8 +40,7 @@
 "tick": 600,
 "samples": 400,
 "methods": [
-"denlin",
-"onelin"
+"denlin"
 ],
 "paths": 700,
 "name": "lit by day beside it",

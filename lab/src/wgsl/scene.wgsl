@@ -1,4 +1,4 @@
-// What every stage shares: the frame, the scene's buffers, a random stream, and the two ray queries.
+// What every stage shares: the frame, the scene's buffers, a random stream, and how a ray meets one piece or one leaf. (The two ray queries: rays.wgsl.)
 struct Frame {
   camPos: vec4f, camRight: vec4f, camUp: vec4f, camFwd: vec4f,     // right and up are scaled by tan(fov / 2); right by the aspect too
   prevPos: vec4f, prevRight: vec4f, prevUp: vec4f, prevFwd: vec4f,
@@ -16,8 +16,8 @@ struct Frame {
   pool: vec4f,         // the water: x0 z0 x1 z1
   pool2: vec4f,        // its level, its depth
   weather: vec4f,      // how wet the open ground is, how hard it rains, is there power, the wind's way (rad)
-  misc2: vec4f,        // is there smoke, where the blue noise starts in extra, how dense foliage is to rays that see it as fog (1), how hard the wind blows (1)
-  tune: array<vec4f, 8>, more: vec4f, fine: vec4u,       // how much snow lies, how hard it snows, time since the last frame (s), 0; fine: the tree of small things;  // what can be turned while looking (tune.ts)
+  misc2: vec4f,        // is there smoke, where the blue noise starts in extra, 0, how hard the wind blows (1)
+  tune: array<vec4f, 8>, more: vec4f,       // how much snow lies, how hard it snows, time since the last frame (s), 0;  // what can be turned while looking (tune.ts)
 };
 struct Piece { r0: vec4f, r1: vec4f, r2: vec4f, half: vec3f, flags: u32, quad: vec4f, mat: u32, tint: u32, planes: u32, lamp: u32 };
 struct Node { mn: vec3f, skip: u32, mx: vec3f, leaf: u32 };
@@ -141,115 +141,6 @@ fn meetLeaf(k: u32, ro: vec3f, rd: vec3f, tmin: f32, tmax: f32) -> f32 {
 
 /** where a point is in the sun's map of the leaves: 0‥1, 0‥1, and how far along (1 = toward the sun) */
 fn sunMap(x: vec3f) -> vec3f { let b = basis(frame.sunDir.xyz); let d = x - SUN_AT; return vec3f(dot(d, b[0]) / SUN_WIDE + 0.5, dot(d, b[1]) / SUN_WIDE + 0.5, dot(d, frame.sunDir.xyz) / 80.0 + 0.5); }
-/** leaves one by one, or as a ball of them: a medium. Rays from what the camera sees take them one by one; the rest do not need to */
-/* 0 = leaf by leaf; 1 = each spray a ball that a ray may stop in; 2 = not in this walk: the foliage is asked for apart, as a medium (folWalk) */
-var<private> leafMode: u32 = 0u; var<private> noLeaves: bool = false;
-// A RAY'S FOOTPRINT: how wide an area its answer will be averaged over. It begins `w` wide and widens by `s` a metre; whatever is smaller than it need not be told apart. Leaves are taken one by one as
-// far as that (leafTo), and as a medium from there on; small things (a tree of their own) are met as far as that (smallTo), and not beyond.
-const LEAF_SIZE = 0.06; const SMALL = 0.14; var<private> footW = 0.0; var<private> footS = 0.0; var<private> leafTo = 0.0; var<private> smallTo = 1e9;
-fn foot(w: f32, s: f32) { footW = w; footS = s; leafTo = max(0.0, (LEAF_SIZE - w) / max(s, 1e-5)); smallTo = select(max(0.0, (SMALL - w) / max(s, 1e-5)), 1e9, frame.tune[7].w > 0.5); }
-/** the same, where leaves are asked for as a medium from the start */
-fn footSolid(w: f32, s: f32) { foot(w, s); leafTo = 0.0; }
-fn footAt(t: f32) -> f32 { return footW + footS * t; }
-// (a ball's density is its own: half its leaves' area over its size, less for how they clump; with the instance's tint)
-fn ballStay(o: vec3f, d: vec3f, tmin: f32, tmax: f32) -> vec2f { let a = dot(d, d); let b = dot(o, d); let c = dot(o, o) - 1.0; let q = b * b - a * c; if (q <= 0.0) { return vec2f(1.0, 0.0); } let s = sqrt(q); return vec2f(max((-b - s) / a, tmin), min((-b + s) / a, tmax)); }
-/** NEAREST: what is out there. `cut` < 1e8 is the camera's section; `skip` = flags a ray does not meet. Glass is passed, and what it lets through is in thru */
-/** boxes looked at by the last rays (nothing reads it but the panel) */
-var<private> walked: u32 = 0u;
-fn nearest(ro: vec3f, rd: vec3f, tmin: f32, tmaxIn: f32, skip: u32, cut: f32) -> Hit {
-  var best = tmaxIn; var id = NOTHING; var code = 0u; let inv = safeInv(rd); let oc = octant(rd);
-  var g0 = vec2f(1e30, 0.0); var g1 = vec2f(1e30, 0.0); var gp = NOTHING; var gc = 0u;   // the two nearest panes: (t, tint)
-  let t0 = select(tmin, max(tmin, (cut - ro.y) / rd.y), cut < 1e8 && ro.y > cut && rd.y < -1e-5);   // above the section nothing it cuts is there
-  for (var s = 0u; s < 4u; s++) {
-    let sm = s == 3u; if (sm && smallTo <= tmin) { break; } let per = select(frame.per[s], frame.fine.x, sm); let b0 = select(frame.node0[s] + oc * frame.step[s], frame.fine.y + oc * frame.fine.z, sm); let pb = select(frame.piece0[s], frame.fine.w, sm); let tm = select(t0, tmin, s == 1u || sm);
-    var i = 0u;
-    while (i < per) {
-      walked += 1u; let n = &nodes[b0 + i];
-      if (!boxHit(n, ro, inv, tm, select(best, min(best, smallTo), sm))) { i = (*n).skip; continue; }
-      let lf = (*n).leaf; let cnt = lf & 15u; let first = pb + (lf >> 4u);
-      for (var j = 0u; j < cnt; j++) {
-        let k = first + j; let fl = pieces[k].flags;
-        if ((fl & skip) != 0u) { continue; }
-        if (meet(k, ro, rd, tmin, best, cut)) {
-          if ((fl & GLASS) != 0u) { let g = vec2f(hT, bitcast<f32>(pieces[k].tint | 0x3f000000u)); if (hT < g0.x) { g1 = g0; g0 = g; gp = k; gc = hCode; } else if (hT < g1.x) { g1 = g; } continue; }
-          best = hT; id = k; code = hCode;
-        }
-      }
-      i++;
-    }
-  }
-  if (leafMode < 2u || leafTo > tmin) { let per = frame.per.w; let b0 = frame.node0.w + oc * frame.step.w; var i = 0u; let solid = best; if (leafMode == 2u) { best = min(best, leafTo); }
-    while (i < per) {
-      walked += 1u; let n = &nodes[b0 + i];
-      if (!boxHit(n, ro, inv, tmin, best)) { i = (*n).skip; continue; }
-      let lf = (*n).leaf;
-      if ((lf & 15u) != 0u) {
-        let k = lf >> 4u; let I = &insts[k]; let lc = select(cut, 1e9, ((*I).tint & 0x1000000u) != 0u && cut > OPEN_FLOOR);      // (what grows out of doors the section leaves whole)
-        let o = vec3f(dot((*I).r0.xyz, ro) + (*I).r0.w, dot((*I).r1.xyz, ro) + (*I).r1.w, dot((*I).r2.xyz, ro) + (*I).r2.w);
-        let d = vec3f(dot((*I).r0.xyz, rd), dot((*I).r1.xyz, rd), dot((*I).r2.xyz, rd));      // (scaled: t is the world's)
-        if (leafMode == 1u) { let tuft = ((*I).tint & 0x2000000u) != 0u; let sigma = f32((*I).tint >> 26u) / 16.0 * frame.misc2.z; let bd = select(d, d / 0.85, tuft); let st = ballStay(select(o, (o - vec3f(0.0, 0.8, 0.0)) / 0.85, tuft), bd, tmin, best); let t = st.x - log(1.0 - rnd()) / (sigma * length(bd)); if (st.y > st.x && t < st.y && ro.y + rd.y * t < lc) { best = t; id = LEAF_HIT | k; code = NOTHING; } i++; continue; }
-        let inv2 = safeInv(d); let q0 = (*I).node + octant(d) * (*I).per; var q = 0u; let qn = (*I).per;
-        while (q < qn) {
-          walked += 1u; let m = &nodes[q0 + q];
-          if (!boxHit(m, o, inv2, tmin, best)) { q = (*m).skip; continue; }
-          let l2 = (*m).leaf; let c2 = l2 & 15u;
-          for (var j = 0u; j < c2; j++) { let w = (*I).leaf + (l2 >> 4u) + j; let t = meetLeaf(w, o, d, tmin, best); if (t > 0.0 && ro.y + rd.y * t < lc) { best = t; id = LEAF_HIT | k; code = w; } }
-          q++;
-        }
-      }
-      i++;
-    } if ((id & LEAF_HIT) == 0u || id == NOTHING) { best = solid; } }
-  var h: Hit; h.t = best; h.piece = id; h.code = code; h.thru = vec3f(1.0); h.gt = g0.x; h.gpiece = gp; h.gcode = gc; if (g0.x >= best) { h.gpiece = NOTHING; }
-  if (g0.x < best) { h.thru *= unpackTint(bitcast<u32>(g0.y)); } if (g1.x < best) { h.thru *= unpackTint(bitcast<u32>(g1.y)); }
-  return h;
-}
-/** VISIBLE: how much gets through from ro along rd to tmax. Glass tints it, a leaf stops it */
-fn visible(ro: vec3f, rd: vec3f, tmin: f32, tmax: f32) -> vec3f {
-  var T = vec3f(1.0); let inv = safeInv(rd); let oc = octant(rd);
-  for (var s = 0u; s < 4u; s++) {
-    let sm = s == 3u; if (sm && smallTo <= tmin) { break; } let per = select(frame.per[s], frame.fine.x, sm); let b0 = select(frame.node0[s] + oc * frame.step[s], frame.fine.y + oc * frame.fine.z, sm); let pb = select(frame.piece0[s], frame.fine.w, sm); let lim = select(tmax, min(tmax, smallTo), sm);
-    var i = 0u;
-    while (i < per) {
-      let n = &nodes[b0 + i];
-      if (!boxHit(n, ro, inv, tmin, lim)) { i = (*n).skip; continue; }
-      let lf = (*n).leaf; let cnt = lf & 15u; let first = pb + (lf >> 4u);
-      for (var j = 0u; j < cnt; j++) {
-        let k = first + j; let fl = pieces[k].flags;
-        if ((fl & NOSHADOW) != 0u) { continue; }
-        if (meet(k, ro, rd, tmin, tmax, 1e9)) {
-          if ((fl & (GLASS | WATER)) != 0u) { T *= select(vec3f(0.62, 0.86, 0.9), unpackTint(pieces[k].tint), (fl & GLASS) != 0u); continue; }
-          return vec3f(0.0);
-        }
-      }
-      i++;
-    }
-  }
-  if (!noLeaves && leafMode == 2u && tmax > leafTo) { T *= folWalk(ro + rd * leafTo, rd, tmax - leafTo, false).T; }
-  if (!noLeaves && (leafMode < 2u || leafTo > tmin)) { let per = frame.per.w; let b0 = frame.node0.w + oc * frame.step.w; var i = 0u; let lmax = select(tmax, min(tmax, leafTo), leafMode == 2u);
-    while (i < per) {
-      let n = &nodes[b0 + i];
-      if (!boxHit(n, ro, inv, tmin, lmax)) { i = (*n).skip; continue; }
-      let lf = (*n).leaf;
-      if ((lf & 15u) != 0u) {
-        let k = lf >> 4u; let I = &insts[k];
-        let o = vec3f(dot((*I).r0.xyz, ro) + (*I).r0.w, dot((*I).r1.xyz, ro) + (*I).r1.w, dot((*I).r2.xyz, ro) + (*I).r2.w);
-        let d = vec3f(dot((*I).r0.xyz, rd), dot((*I).r1.xyz, rd), dot((*I).r2.xyz, rd));
-        if (leafMode == 1u) { let tuft = ((*I).tint & 0x2000000u) != 0u; let sigma = f32((*I).tint >> 26u) / 16.0 * frame.misc2.z; let bd = select(d, d / 0.85, tuft); let st = ballStay(select(o, (o - vec3f(0.0, 0.8, 0.0)) / 0.85, tuft), bd, tmin, lmax); if (st.y > st.x) { T *= exp(-vec3f(1.0, 0.86, 1.1) * sigma * (st.y - st.x) * length(bd)); if (T.y < 0.02) { return vec3f(0.0); } } i++; continue; }
-        let inv2 = safeInv(d); let q0 = (*I).node + octant(d) * (*I).per; var q = 0u; let qn = (*I).per;
-        while (q < qn) {
-          walked += 1u; let m = &nodes[q0 + q];
-          if (!boxHit(m, o, inv2, tmin, lmax)) { q = (*m).skip; continue; }
-          let l2 = (*m).leaf; let c2 = l2 & 15u;
-          for (var j = 0u; j < c2; j++) { if (meetLeaf((*I).leaf + (l2 >> 4u) + j, o, d, tmin, lmax) > 0.0) { return vec3f(0.0); } }     /* (what a leaf lets by is scattered by it, and found by paths that go through it: not counted here as well) */
-          q++;
-        }
-      }
-      i++;
-    } }
-  if (frame.misc2.x > 0.5) { T *= smokeThrough(ro + rd * tmin, rd, tmax); }
-  return T;
-}
-
 // ================================================================ smoke
 const SM_AT = vec3f(-24.0, -0.16, -19.2); const SM_SIZE = vec3f(48.0, 15.36, 38.4); const SM_BRICK = 0.64;
 fn smokeSlot(x: vec3f) -> u32 { let c = vec3i(floor((x - SM_AT) / SM_BRICK)); if (any(c < vec3i(0)) || any(c >= vec3i(75, 24, 60))) { return 0u; } return textureLoad(smokePage, c, 0).x; }
@@ -258,14 +149,20 @@ fn smokeIn(p: u32, x: vec3f) -> vec4f { let s = p - 1u; let l = fract((x - SM_AT
 fn smokeAt(x: vec3f) -> vec4f { let p = smokeSlot(x); if (p == 0u) { return vec4f(0.0); } return smokeIn(p, x); }
 /** where a ray is in the grid */
 fn smokeSpan(ro: vec3f, rd: vec3f, t1: f32) -> vec2f { let inv = safeInv(rd); let a = (SM_AT - ro) * inv; let b = (SM_AT + SM_SIZE - ro) * inv; return vec2f(max(max3(min(a, b)), 0.0), min(min3(max(a, b)), t1)); }
-/** what a ray that is blurred anyway sees of it on its way to t1: light, and how much gets through. Six looks */
-fn smokeSeen(ro: vec3f, rd: vec3f, t1: f32) -> vec4f {
-  if (frame.misc2.x < 0.5) { return vec4f(0.0, 0.0, 0.0, 1.0); } let s = smokeSpan(ro, rd, t1); if (s.y <= s.x) { return vec4f(0.0, 0.0, 0.0, 1.0); } var T = 1.0; var L = vec3f(0.0); let len = (s.y - s.x) / 49.0;     // (seven looks, close together where the ray begins and wider apart as it goes)
-  for (var i = 0u; i < 7u; i++) { let a = f32(i); let dt = len * (2.0 * a + 1.0); let x = ro + rd * (s.x + len * (a * a + a + 0.5)); let p = smokeSlot(x); if (p == 0u) { continue; } let v = smokeIn(p, x); let e = exp(-v.w * dt); L += select(v.rgb, vec3f(0.0), max3(v.rgb) > 24.0) * (T * (1.0 - e)); T *= e; }     /* (a flame lights by its lamp: rays that are blurred see only its smoke) */
-  return vec4f(L, T);
+/** smoke by the same rule: in steps half as long as the ray is wide there, from the cells of 8 cm where it is narrow, from a whole brick's mean where it is wider than one. Light, and how much gets through */
+fn smokeWalk(ro: vec3f, rd: vec3f, t1: f32, lit: bool) -> vec4f {
+  var o = vec4f(0.0, 0.0, 0.0, 1.0); if (frame.misc2.x < 0.5) { return o; } let s = smokeSpan(ro, rd, t1); if (s.y <= s.x) { return o; } let inv = safeInv(rd); let ahead = select(vec3f(0.0), vec3f(1.0), rd > vec3f(0.0)); var t = s.x + 1e-3; var tau = 0.0;
+  for (var i = 0u; i < 96u; i++) {
+    if (t >= s.y || tau > 5.0) { break; } let x = ro + rd * t; let f = footAt(t);
+    if (smokeSlot(x) == 0u) { let e = (SM_AT + (floor((x - SM_AT) / SM_BRICK) + ahead) * SM_BRICK - ro) * inv; t = max(max(min3(e), t) + 2e-3, t + 0.25 * f); continue; }
+    let dt = min(max(0.12, 0.5 * f), s.y - t); let y = x + rd * (0.5 * dt); let p = smokeSlot(y);
+    if (p != 0u) { var v: vec4f; if (f > SM_BRICK) { v = extra[BLK_SMOKE + p - 1u]; } else { v = smokeIn(p, y); if (max3(v.rgb) > 24.0) { v = vec4f(0.0, 0.0, 0.0, v.w); } } let d = v.w * dt; if (lit) { o = vec4f(o.rgb + v.rgb * (exp(-tau) * (1.0 - exp(-d))), 1.0); } tau += d; }      /* (a flame lights by its lamp: rays that are blurred see only its smoke) */
+    t += dt;
+  }
+  o.w = exp(-tau); return o;
 }
-fn smokeThrough(ro: vec3f, rd: vec3f, t1: f32) -> f32 {
-  if (frame.misc2.x < 0.5) { return 1.0; } let s = smokeSpan(ro, rd, t1); if (s.y <= s.x) { return 1.0; } var a = 0.0; let len = (s.y - s.x) / 100.0; for (var i = 0u; i < 10u; i++) { let k = f32(i); let x = ro + rd * (s.x + len * (k * k + k + 0.5)); let p = smokeSlot(x); if (p != 0u) { a += smokeIn(p, x).w * (2.0 * k + 1.0); } } return exp(-a * len); }
+fn smokeSeen(ro: vec3f, rd: vec3f, t1: f32) -> vec4f { return smokeWalk(ro, rd, t1, true); }
+fn smokeThrough(ro: vec3f, rd: vec3f, t1: f32) -> f32 { return smokeWalk(ro, rd, t1, false).w; }
 /** the camera's ray through a point of the picture (0‥1, y down) */
 fn camRay(uv: vec2f) -> vec3f { let p = uv * 2.0 - 1.0; return normalize(frame.camFwd.xyz + frame.camRight.xyz * p.x - frame.camUp.xyz * p.y); }
 /** where a world point is in the picture, now or last frame (z = its distance along the view; <= 0 behind) */

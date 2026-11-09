@@ -13,7 +13,7 @@ export function buildBvh(items: Bounds[], leaf = 2, octants = 8, cls?: number[])
   let total = 0;
   const make = (first: number, count: number): Node => {
     total++;
-    const { mn, mx } = bound(first, count), node: Node = { mn, mx, axis: 0, first, count, cls: 0 }; if (cls) for (let i = first; i < first + count; i++) node.cls = Math.max(node.cls, cls[order[i]!]!);
+    const { mn, mx } = bound(first, count), node: Node = { mn, mx, axis: 0, first, count, cls: cls ? 0 : 3 }; if (cls) for (let i = first; i < first + count; i++) node.cls = Math.max(node.cls, cls[order[i]!]!);
     if (count <= leaf) return node;
     let best = Infinity, axis = -1, split = 0, lo = 0, scale = 0;
     for (let k = 0; k < 3; k++) {

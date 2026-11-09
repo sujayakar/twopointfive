@@ -1,7 +1,7 @@
 // THE WORLD, as data: pieces, leaf clusters, lamps, openings, marks. Nothing here knows about the GPU.
 import { type V3, type Rot, ID, add, mul, apply, norm, cross, sub } from '../math';
 import { buildBvh, type Bounds, type Bvh } from '../bvh';
-import { classOf } from '../core2/blocks';
+import { classOf } from './blocks';
 
 /** what a piece is to a ray */
 export const F = { GLASS: 1 << 8, WATER: 1 << 9, CUT: 1 << 10, GLOW: 1 << 11, NOSHADOW: 1 << 12, QUAD: 1 << 13, MOVES: 1 << 14, FAR: 1 << 15, /** grows on the terrace, out of doors: the section leaves it whole, or hides it whole when the terrace itself is hidden */ OPEN: 1 << 28, /** a plate of a cloth: its normal runs from corner to corner */ BEND: 1 << 29, /** triangles: what it is stands in the rows at `mesh` (quad's first is its scale) */ MESH: 1 << 6 } as const;
@@ -16,7 +16,6 @@ export interface Piece {
   /** what moves it, by name */ rig?: string;
   /** of triangles: its object's row (mesh/pack.ts) */ mesh?: number;
   /** a plate of a cloth: how its normal leans at (−x −y) (+x −y) (−x +y) (+x +y), and where its middle is on the cloth */ bend?: number[]; cell?: [number, number];
-  /** up to what width a ray meets it as it is (blocks.ts: classOf), where something stands for it after that */ cls?: number;
 }
 /** a sign painted on one face: rect in metres about the face's middle, a cell of the atlas, a color */
 export interface Mark { face: number; at: [number, number]; size: [number, number]; art: string; color: V3; turn?: number }

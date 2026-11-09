@@ -6,7 +6,7 @@
 "samples": 300,
 "methods": [
 "denlin",
-"onelin"
+"realtime"
 ],
 "paths": 900,
 "name": "smoke night",
@@ -40,7 +40,7 @@
 "samples": 300,
 "methods": [
 "denlin",
-"onelin"
+"realtime"
 ],
 "paths": 900,
 "name": "smoke day",

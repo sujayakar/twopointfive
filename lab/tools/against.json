@@ -1,16 +1,12 @@
 [
 {
-"w": 1280,
-"h": 720,
+"w": 960,
+"h": 540,
 "tick": 600,
 "samples": 300,
 "methods": [
-"realtime",
-"onerule",
-"onerays",
 "denlin",
-"onelin",
-"leafrays"
+"realtime"
 ],
 "paths": 900,
 "name": "garden",
@@ -24,17 +20,13 @@
 "pitch": 0.7
 },
 {
-"w": 1280,
-"h": 720,
+"w": 960,
+"h": 540,
 "tick": 600,
 "samples": 300,
 "methods": [
-"realtime",
-"onerule",
-"onerays",
 "denlin",
-"onelin",
-"leafrays"
+"realtime"
 ],
 "paths": 900,
 "name": "roof day",
@@ -42,17 +34,13 @@
 "hour": 16.0
 },
 {
-"w": 1280,
-"h": 720,
+"w": 960,
+"h": 540,
 "tick": 600,
 "samples": 300,
 "methods": [
-"realtime",
-"onerule",
-"onerays",
 "denlin",
-"onelin",
-"leafrays"
+"realtime"
 ],
 "paths": 900,
 "name": "roof dusk",
@@ -62,17 +50,13 @@
 "pitch": 0.62
 },
 {
-"w": 1280,
-"h": 720,
+"w": 960,
+"h": 540,
 "tick": 600,
 "samples": 300,
 "methods": [
-"realtime",
-"onerule",
-"onerays",
 "denlin",
-"onelin",
-"leafrays"
+"realtime"
 ],
 "paths": 900,
 "name": "roof night",
@@ -85,17 +69,13 @@
 ]
 },
 {
-"w": 1280,
-"h": 720,
+"w": 960,
+"h": 540,
 "tick": 600,
 "samples": 300,
 "methods": [
-"realtime",
-"onerule",
-"onerays",
 "denlin",
-"onelin",
-"leafrays"
+"realtime"
 ],
 "paths": 900,
 "name": "ground day",
@@ -110,17 +90,13 @@
 "doors": 0.8
 },
 {
-"w": 1280,
-"h": 720,
+"w": 960,
+"h": 540,
 "tick": 600,
 "samples": 300,
 "methods": [
-"realtime",
-"onerule",
-"onerays",
 "denlin",
-"onelin",
-"leafrays"
+"realtime"
 ],
 "paths": 900,
 "name": "ground night",

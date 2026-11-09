@@ -3,7 +3,6 @@
 import { type V3, type Rot, ID, add, sub, mul, dot, cross, len, norm, mix, clamp, rotY, rotX, rotZ, compose, apply, smooth } from '../math';
 import { World, F, type Piece } from './world';
 import { M, C } from './materials';
-import { partClass } from '../core2/carry';
 
 /** a damped spring: pos, speed */
 class Spring { v = 0; constructor(public x = 0) {} step(to: number, hz: number, damp: number, dt: number) { const w = hz * 6.2832, a = w * w * (to - this.x) - 2 * damp * w * this.v; this.v += a * dt; this.x += this.v * dt; return this.x; } }
@@ -25,10 +24,9 @@ export class Person {
     if (opts.torch) this.torch = w.lamp({ kind: 'spot', at: [0, 1, 0], u: [0.025, 0, 0], v: [0, 0, 1], radiance: [38000, 35800, 31000], cos: 0.915, name: 'torch', on: 0, night: true });
   }
   private home(side: number, ahead: number): V3 { const c = Math.cos(this.yaw), s = Math.sin(this.yaw); return [this.pos[0] + side * 0.098 * c + s * ahead, this.pos[1], this.pos[2] - side * 0.098 * s + c * ahead]; }
-  part(name: string) { return this.ix.get(name); }
   // ---- what he is made of
   private build() {
-    const P = (name: string, half: V3, mat: number, tint: V3, shape?: 'ell' | 'cyl' | [number, number], planes?: [V3, number][]) => { let quad: Piece['quad']; if (shape === 'ell') quad = [1 / half[0] ** 2, 1 / half[1] ** 2, 1 / half[2] ** 2, 0]; else if (shape === 'cyl') quad = [1 / half[0] ** 2, 0, 1 / half[2] ** 2, 0]; else if (shape) { const [ra, rb] = shape, r0 = (ra + rb) / 2, k = (rb - ra) / (2 * half[1]); quad = [1 / r0 ** 2, -(k * k) / r0 ** 2, 1 / r0 ** 2, -2 * k / r0]; } const p = this.w.add({ at: [0, -100, 0], half, mat, tint, flags: F.MOVES | F.CUT, cls: partClass(name), ...(quad ? { quad } : {}), ...(planes ? { planes } : {}) }); this.body.push(p); this.ix.set(name, p); return p; };
+    const P = (name: string, half: V3, mat: number, tint: V3, shape?: 'ell' | 'cyl' | [number, number], planes?: [V3, number][]) => { let quad: Piece['quad']; if (shape === 'ell') quad = [1 / half[0] ** 2, 1 / half[1] ** 2, 1 / half[2] ** 2, 0]; else if (shape === 'cyl') quad = [1 / half[0] ** 2, 0, 1 / half[2] ** 2, 0]; else if (shape) { const [ra, rb] = shape, r0 = (ra + rb) / 2, k = (rb - ra) / (2 * half[1]); quad = [1 / r0 ** 2, -(k * k) / r0 ** 2, 1 / r0 ** 2, -2 * k / r0]; } const p = this.w.add({ at: [0, -100, 0], half, mat, tint, flags: F.MOVES | F.CUT, ...(quad ? { quad } : {}), ...(planes ? { planes } : {}) }); this.body.push(p); this.ix.set(name, p); return p; };
     const suit: V3 = [0.60, 0.615, 0.65], dark: V3 = [0.36, 0.365, 0.385], web: V3 = [0.46, 0.47, 0.49], acc = this.color, cl = M.cloth!, pl = M.plastic!, rb = M.rubber!;
     // trunk: a jacket over ribs, narrowing to the belt; the seat and hips below it
     P('pelvis', [0.162, 0.125, 0.122], cl, suit, 'ell'); P('seat', [0.142, 0.11, 0.105], cl, suit, 'ell'); P('belly', [0.165, 0.17, 0.118], cl, suit, [0.15, 0.18]); P('chest', [0.196, 0.20, 0.138], cl, suit, 'ell'); P('yoke', [0.185, 0.085, 0.105], cl, suit, 'ell'); P('neck', [0.07, 0.07, 0.07], cl, dark, [0.068, 0.056]); P('collar', [0.088, 0.032, 0.09], cl, dark, 'ell');
