@@ -1,10 +1,9 @@
-//! The types of `scene_boxes`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `scene_boxes`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: PlanBox, src/scene/boxes.ts:58)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct PlanBox {
     pub c: V3,
     pub h: V3,
@@ -14,39 +13,13 @@ pub struct PlanBox {
     pub cut: Option<crate::scene_boxes::PlanBoxCut>,
     pub round: Option<bool>,
 }
-impl PlanBox {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PlanBox {
-            c: [0.0; 3],
-            h: [0.0; 3],
-            yaw: 0.0,
-            flags: 0.0,
-            rot: None,
-            cut: None,
-            round: None,
-        }
-    }
-}
-impl Default for PlanBox { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/boxes.ts:58 PlanBox.cut, src/scene/boxes.ts:58)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct PlanBoxCut {
     pub length: f64,
 }
-impl PlanBoxCut {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PlanBoxCut {
-            length: 0.0,
-        }
-    }
-}
-impl Default for PlanBoxCut { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Box, src/scene/boxes.ts:65)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct Box {
     pub c: V3,
     pub h: V3,
@@ -85,52 +58,7 @@ pub struct Box {
     pub of: Option<f64>,
     pub dress: Option<bool>,
 }
-impl Box {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Box {
-            c: [0.0; 3],
-            h: [0.0; 3],
-            yaw: 0.0,
-            albedo: [0.0; 3],
-            emissive: [0.0; 3],
-            flags: 0.0,
-            owner: 0.0,
-            cut_height: 0.0,
-            wet_k: None,
-            rot: None,
-            dc: None,
-            dh: None,
-            name: None,
-            rough: None,
-            metal: None,
-            stuff: None,
-            does: None,
-            aniso: None,
-            marks: None,
-            mark_gain: None,
-            fog_emit: None,
-            fog_mark: None,
-            mkey: None,
-            cut: None,
-            cut_core: None,
-            cut_glass: None,
-            cut_round: None,
-            cut_arc: None,
-            cut_old: None,
-            cut_core_stuff: None,
-            round: None,
-            shape: None,
-            shaped: None,
-            piece: None,
-            of: None,
-            dress: None,
-        }
-    }
-}
-impl Default for Box { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: BoxWorld, src/scene/boxes.ts:261)
 #[derive(Clone, Debug, ToBytes)]
 pub struct BoxWorld {
     pub statics: Vec<BoxId>,
@@ -227,7 +155,7 @@ pub struct BoxWorld {
     pub glass_open: Option<crate::scene_collision::PaneRule>,
 }
 impl BoxWorld {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         BoxWorld {
             statics: Vec::new(),
@@ -269,40 +197,18 @@ impl BoxWorld {
 }
 impl Default for BoxWorld { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: inline at src/scene/boxes.ts:270 BoxWorld.undrawn, src/scene/boxes.ts:270)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct BoxWorldUndrawn {
 }
-impl BoxWorldUndrawn {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BoxWorldUndrawn {
-        }
-    }
-}
-impl Default for BoxWorldUndrawn { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/boxes.ts:279 BoxWorld.mkeyStats, src/scene/boxes.ts:279)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct BoxWorldMkeyStats {
     pub matched: f64,
     pub fresh: f64,
     pub unkeyed: f64,
 }
-impl BoxWorldMkeyStats {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BoxWorldMkeyStats {
-            matched: 0.0,
-            fresh: 0.0,
-            unkeyed: 0.0,
-        }
-    }
-}
-impl Default for BoxWorldMkeyStats { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/boxes.ts:295 BoxWorld.gridStats, src/scene/boxes.ts:295)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct BoxWorldGridStats {
     pub cells: f64,
     pub empty: f64,
@@ -310,96 +216,35 @@ pub struct BoxWorldGridStats {
     pub max_per_cell: f64,
     pub slack: f64,
 }
-impl BoxWorldGridStats {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BoxWorldGridStats {
-            cells: 0.0,
-            empty: 0.0,
-            mean_skip: 0.0,
-            max_per_cell: 0.0,
-            slack: 0.0,
-        }
-    }
-}
-impl Default for BoxWorldGridStats { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/boxes.ts:321 BoxWorld.glassScratch, src/scene/boxes.ts:321)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct BoxWorldGlassScratchItem {
     pub i: f64,
     pub d: f64,
 }
-impl BoxWorldGlassScratchItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BoxWorldGlassScratchItem {
-            i: 0.0,
-            d: 0.0,
-        }
-    }
-}
-impl Default for BoxWorldGlassScratchItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/boxes.ts:361 BoxWorld.rig, src/scene/boxes.ts:361)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct BoxWorldRig {
     pub r0: Vec<f32>,
     pub r1: Vec<f32>,
     pub k_pad: f64,
     pub by_owner: Option<JsMap<crate::Num, crate::scene_boxes::BoxWorldRigByOwnerValue>>,
 }
-impl BoxWorldRig {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BoxWorldRig {
-            r0: Vec::new(),
-            r1: Vec::new(),
-            k_pad: 0.0,
-            by_owner: None,
-        }
-    }
-}
-impl Default for BoxWorldRig { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/boxes.ts:361 BoxWorldRig.byOwner, src/scene/boxes.ts:361)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct BoxWorldRigByOwnerValue {
     pub r0: Vec<f32>,
     pub r1: Vec<f32>,
     pub pad: Option<f64>,
 }
-impl BoxWorldRigByOwnerValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BoxWorldRigByOwnerValue {
-            r0: Vec::new(),
-            r1: Vec::new(),
-            pad: None,
-        }
-    }
-}
-impl Default for BoxWorldRigByOwnerValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/boxes.ts:413 BoxWorld.gridBuilds, src/scene/boxes.ts:413)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct BoxWorldGridBuilds {
     pub built: f64,
     pub kept: f64,
 }
-impl BoxWorldGridBuilds {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BoxWorldGridBuilds {
-            built: 0.0,
-            kept: 0.0,
-        }
-    }
-}
-impl Default for BoxWorldGridBuilds { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/boxes.ts:451 BoxWorld.markByKey, src/scene/boxes.ts:451)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct BoxWorldMarkByKeyValue {
     pub slot: f64,
     pub n: f64,
@@ -410,25 +255,8 @@ pub struct BoxWorldMarkByKeyValue {
     pub base: V3,
     pub h: V3,
 }
-impl BoxWorldMarkByKeyValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BoxWorldMarkByKeyValue {
-            slot: 0.0,
-            n: 0.0,
-            rows: 0.0,
-            sec: [0.0; 3],
-            any_emit: false,
-            marks: Vec::new(),
-            base: [0.0; 3],
-            h: [0.0; 3],
-        }
-    }
-}
-impl Default for BoxWorldMarkByKeyValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/boxes.ts:452 BoxWorld.markOfBox, src/scene/boxes.ts:452)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct BoxWorldMarkOfBoxValue {
     pub key: String,
     pub slot: f64,
@@ -438,24 +266,8 @@ pub struct BoxWorldMarkOfBoxValue {
     pub a2: f64,
     pub marks: Vec<crate::scene_markings::MarkingDef>,
 }
-impl BoxWorldMarkOfBoxValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BoxWorldMarkOfBoxValue {
-            key: String::new(),
-            slot: 0.0,
-            sec: [0.0; 3],
-            a0: 0.0,
-            a1: 0.0,
-            a2: 0.0,
-            marks: Vec::new(),
-        }
-    }
-}
-impl Default for BoxWorldMarkOfBoxValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/boxes.ts:453 BoxWorld.markStatsInfo, src/scene/boxes.ts:453)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct BoxWorldMarkStatsInfo {
     pub lists: f64,
     pub records: f64,
@@ -464,23 +276,8 @@ pub struct BoxWorldMarkStatsInfo {
     pub dropped: f64,
     pub uploads: f64,
 }
-impl BoxWorldMarkStatsInfo {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BoxWorldMarkStatsInfo {
-            lists: 0.0,
-            records: 0.0,
-            rows: 0.0,
-            boxes: 0.0,
-            dropped: 0.0,
-            uploads: 0.0,
-        }
-    }
-}
-impl Default for BoxWorldMarkStatsInfo { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/boxes.ts:13 BoxFlag, src/scene/boxes.ts:13)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct BoxFlag {
     pub no_primary: f64,
     pub no_shadow: f64,
@@ -495,29 +292,8 @@ pub struct BoxFlag {
     pub thin: f64,
     pub bar: f64,
 }
-impl BoxFlag {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BoxFlag {
-            no_primary: 0.0,
-            no_shadow: 0.0,
-            cutaway: 0.0,
-            dynamic: 0.0,
-            emissive: 0.0,
-            area_lit: 0.0,
-            rot: 0.0,
-            gloss: 0.0,
-            sound_seal: 0.0,
-            glass: 0.0,
-            thin: 0.0,
-            bar: 0.0,
-        }
-    }
-}
-impl Default for BoxFlag { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/boxes.ts:176 MKEY, src/scene/boxes.ts:176)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct MKEY {
     pub door: f64,
     pub prop: f64,
@@ -530,27 +306,8 @@ pub struct MKEY {
     pub look: f64,
     pub skin: f64,
 }
-impl MKEY {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        MKEY {
-            door: 0.0,
-            prop: 0.0,
-            item: 0.0,
-            rig: 0.0,
-            device: 0.0,
-            ring: 0.0,
-            test: 0.0,
-            debris: 0.0,
-            look: 0.0,
-            skin: 0.0,
-        }
-    }
-}
-impl Default for MKEY { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/boxes.ts:196 makeBox(p), src/scene/boxes.ts:196 makeBox(p))
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct MakeBoxP {
     pub c: V3,
     pub h: V3,
@@ -589,104 +346,26 @@ pub struct MakeBoxP {
     pub of: Option<f64>,
     pub dress: Option<bool>,
 }
-impl MakeBoxP {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        MakeBoxP {
-            c: [0.0; 3],
-            h: [0.0; 3],
-            yaw: None,
-            albedo: None,
-            emissive: None,
-            flags: None,
-            owner: None,
-            cut_height: None,
-            wet_k: None,
-            rot: None,
-            dc: None,
-            dh: None,
-            name: None,
-            rough: None,
-            metal: None,
-            stuff: None,
-            does: None,
-            aniso: None,
-            marks: None,
-            mark_gain: None,
-            fog_emit: None,
-            fog_mark: None,
-            mkey: None,
-            cut: None,
-            cut_core: None,
-            cut_glass: None,
-            cut_round: None,
-            cut_arc: None,
-            cut_old: None,
-            cut_core_stuff: None,
-            round: None,
-            shape: None,
-            shaped: None,
-            piece: None,
-            of: None,
-            dress: None,
-        }
-    }
-}
-impl Default for MakeBoxP { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/boxes.ts:212 wordOf(b), src/scene/boxes.ts:212)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct WordOfB {
     pub stuff: Option<crate::scene_stuff::BoxStuff>,
     pub does: Option<crate::scene_materials::DoesWord>,
 }
-impl WordOfB {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WordOfB {
-            stuff: None,
-            does: None,
-        }
-    }
-}
-impl Default for WordOfB { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/boxes.ts:212 wordOf ->, src/scene/boxes.ts:212)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct WordOf {
     pub stuff: Option<crate::scene_stuff::BoxStuff>,
     pub does: Option<crate::scene_materials::DoesWord>,
 }
-impl WordOf {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WordOf {
-            stuff: None,
-            does: None,
-        }
-    }
-}
-impl Default for WordOf { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/boxes.ts:219 solidGlassBox(b), src/scene/boxes.ts:219)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SolidGlassBoxB {
     pub stuff: Option<crate::scene_stuff::BoxStuff>,
     pub flags: f64,
 }
-impl SolidGlassBoxB {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SolidGlassBoxB {
-            stuff: None,
-            flags: 0.0,
-        }
-    }
-}
-impl Default for SolidGlassBoxB { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/boxes.ts:530 packList(ent), src/scene/boxes.ts:530)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct BoxWorldPackListEnt {
     pub slot: f64,
     pub n: f64,
@@ -696,115 +375,43 @@ pub struct BoxWorldPackListEnt {
     pub base: V3,
     pub h: V3,
 }
-impl BoxWorldPackListEnt {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BoxWorldPackListEnt {
-            slot: 0.0,
-            n: 0.0,
-            sec: [0.0; 3],
-            any_emit: false,
-            marks: Vec::new(),
-            base: [0.0; 3],
-            h: [0.0; 3],
-        }
-    }
-}
-impl Default for BoxWorldPackListEnt { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: a union)
 #[derive(Clone, Debug)]
 pub enum BoxWorldAddCharacterCapsulesAlbedo {
     List(V3),
     Array(Vec<V3>),
 }
 
-/// (TypeScript: inline at src/scene/boxes.ts:1066 raycast ->, src/scene/boxes.ts:1066)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct BoxWorldRaycast {
     pub t: f64,
     pub index: f64,
     pub n: V3,
 }
-impl BoxWorldRaycast {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BoxWorldRaycast {
-            t: 0.0,
-            index: 0.0,
-            n: [0.0; 3],
-        }
-    }
-}
-impl Default for BoxWorldRaycast { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/boxes.ts:1144 rayBox ->, src/scene/boxes.ts:1144)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RayBox {
     pub t: f64,
     pub n: V3,
 }
-impl RayBox {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RayBox {
-            t: 0.0,
-            n: [0.0; 3],
-        }
-    }
-}
-impl Default for RayBox { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/boxes.ts:1170 rayBoxRot ->, src/scene/boxes.ts:1170)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RayBoxRot {
     pub t: f64,
     pub n: V3,
 }
-impl RayBoxRot {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RayBoxRot {
-            t: 0.0,
-            n: [0.0; 3],
-        }
-    }
-}
-impl Default for RayBoxRot { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/boxes.ts:1191 rayBoxCut ->, src/scene/boxes.ts:1191)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RayBoxCut {
     pub t: f64,
     pub n: V3,
 }
-impl RayBoxCut {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RayBoxCut {
-            t: 0.0,
-            n: [0.0; 3],
-        }
-    }
-}
-impl Default for RayBoxCut { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/boxes.ts:1221 rayBoxRound ->, src/scene/boxes.ts:1221)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RayBoxRound {
     pub t: f64,
     pub n: V3,
 }
-impl RayBoxRound {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RayBoxRound {
-            t: 0.0,
-            n: [0.0; 3],
-        }
-    }
-}
-impl Default for RayBoxRound { fn default() -> Self { Self::zeroed() } }
 
 /// (src/scene/boxes.ts:303 BOX_WORLD_MAX_CAST)
 pub const BOX_WORLD_MAX_CAST: f64 = 16.0;

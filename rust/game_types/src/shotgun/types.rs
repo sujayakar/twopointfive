@@ -1,4 +1,4 @@
-//! The types of `shotgun`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `shotgun`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
@@ -10,8 +10,7 @@ pub enum ShellLate {
     SamHit { hit_view: PlayerId, sg: Option<GuardId>, dir: V3, hit_p: V3 },
 }
 
-/// (TypeScript: Shell, src/game/shotgun.ts:61)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Shell {
     pub def: crate::weapons::WeaponDef,
     pub i: f64,
@@ -21,80 +20,28 @@ pub struct Shell {
     pub glass: JsMap<crate::Num, Vec<f64>>,
     pub late: Vec<crate::shotgun::ShellLate>,
 }
-impl Shell {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Shell {
-            def: crate::weapons::WeaponDef::zeroed(),
-            i: 0.0,
-            dir: None,
-            men: JsMap::new(),
-            ends: Vec::new(),
-            glass: JsMap::new(),
-            late: Vec::new(),
-        }
-    }
-}
-impl Default for Shell { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at quiet Shell.men, src/game/shotgun.ts:64)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct ShellMenValue {
     pub n: f64,
     pub near: f64,
     pub dir: V3,
     pub down: bool,
 }
-impl ShellMenValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ShellMenValue {
-            n: 0.0,
-            near: 0.0,
-            dir: [0.0; 3],
-            down: false,
-        }
-    }
-}
-impl Default for ShellMenValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/shotgun.ts:65 Shell.ends, src/game/shotgun.ts:65)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct ShellEndsItem {
     pub index: f64,
     pub t: f64,
     pub at: V3,
 }
-impl ShellEndsItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ShellEndsItem {
-            index: 0.0,
-            t: 0.0,
-            at: [0.0; 3],
-        }
-    }
-}
-impl Default for ShellEndsItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/shotgun.ts:38 SHOTGUN_LAST, src/game/shotgun.ts:38)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct ShotgunModSHOTGUNLAST {
     pub ends: Vec<crate::shotgun::ShellEndsItem>,
     pub glass: JsMap<crate::Num, Vec<f64>>,
 }
-impl ShotgunModSHOTGUNLAST {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ShotgunModSHOTGUNLAST {
-            ends: Vec::new(),
-            glass: JsMap::new(),
-        }
-    }
-}
-impl Default for ShotgunModSHOTGUNLAST { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum BreachSpotClose {
     Shotgun,
@@ -109,8 +56,7 @@ impl BreachSpotClose {
     }
 }
 
-/// (TypeScript: inline at src/game/shotgun.ts:136 breachSpot ->, src/game/shotgun.ts:136)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct BreachSpot {
     pub pos: V3,
     pub yaw: f64,
@@ -118,19 +64,6 @@ pub struct BreachSpot {
     pub beside: bool,
     pub own: bool,
 }
-impl BreachSpot {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BreachSpot {
-            pos: [0.0; 3],
-            yaw: 0.0,
-            at: [0.0; 3],
-            beside: false,
-            own: false,
-        }
-    }
-}
-impl Default for BreachSpot { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]

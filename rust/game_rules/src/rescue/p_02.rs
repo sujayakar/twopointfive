@@ -1138,7 +1138,7 @@ mod tests {
     }
     fn man_on(g: &mut Game, crew: DefCrew, look: Option<V3>) -> GuardId {
         let h = GuardId(1);
-        g.rescue.defs.set(h, Def { crew, look, ..Def::zeroed() });
+        g.rescue.defs.set(h, Def { crew, look, ..Def::default() });
         h
     }
 

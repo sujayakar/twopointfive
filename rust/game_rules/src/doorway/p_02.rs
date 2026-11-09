@@ -237,7 +237,7 @@ mod tests {
         let gd = GuardId(0);
         assert!(!door_gate_stopped(&mut g, gd));
         assert_eq!(doorway_held_by(&mut g, gd), None);
-        let mut st = St::zeroed();
+        let mut st = St::default();
         st.t = 10.0;
         st.held_t = 1.0;
         st.by = Some(String::from("Player"));

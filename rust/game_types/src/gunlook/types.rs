@@ -1,12 +1,11 @@
-//! The types of `gunlook`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `gunlook`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum ModelCol {
-    Lens,
+    #[default] Lens,
     Metal,
     Torch,
     Shell,
@@ -34,27 +33,14 @@ impl ModelCol {
     }
 }
 
-/// (TypeScript: ModelPart, src/game/gunlook.ts:59)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct ModelPart {
     pub s: crate::gunlook::Seg,
     pub col: crate::gunlook::ModelCol,
     pub is: Option<crate::gunlook::ModelPartIs>,
 }
-impl ModelPart {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ModelPart {
-            s: crate::gunlook::Seg::zeroed(),
-            col: crate::gunlook::ModelCol::Lens,
-            is: None,
-        }
-    }
-}
-impl Default for ModelPart { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Seg, src/game/gunlook.ts:68)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Seg {
     pub l0: f64,
     pub l1: f64,
@@ -62,38 +48,13 @@ pub struct Seg {
     pub tall: f64,
     pub adj: Option<crate::gunlook::SegAdj>,
 }
-impl Seg {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Seg {
-            l0: 0.0,
-            l1: 0.0,
-            thick: 0.0,
-            tall: 0.0,
-            adj: None,
-        }
-    }
-}
-impl Default for Seg { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/gunlook.ts:68 Seg.adj, src/game/gunlook.ts:68)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SegAdj {
     pub off: V3,
     pub rot: V3,
 }
-impl SegAdj {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SegAdj {
-            off: [0.0; 3],
-            rot: [0.0; 3],
-        }
-    }
-}
-impl Default for SegAdj { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum ModelPartIs {
     Lens,
@@ -112,8 +73,7 @@ impl ModelPartIs {
     }
 }
 
-/// (TypeScript: LongModel, src/game/gunlook.ts:64)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct LongModel {
     pub parts: Vec<crate::gunlook::ModelPart>,
     pub ahead: f64,
@@ -123,43 +83,15 @@ pub struct LongModel {
     pub lens: Option<crate::gunlook::Seg>,
     pub lens_ahead: Option<f64>,
 }
-impl LongModel {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LongModel {
-            parts: Vec::new(),
-            ahead: 0.0,
-            grip_l: crate::gunlook::LongModelGripL::zeroed(),
-            post: false,
-            hinge: None,
-            lens: None,
-            lens_ahead: None,
-        }
-    }
-}
-impl Default for LongModel { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/gunlook.ts:64 LongModel.gripL, src/game/gunlook.ts:64)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct LongModelGripL {
     pub off: V3,
     pub fingers: V3,
     pub back: V3,
 }
-impl LongModelGripL {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LongModelGripL {
-            off: [0.0; 3],
-            fingers: [0.0; 3],
-            back: [0.0; 3],
-        }
-    }
-}
-impl Default for LongModelGripL { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: PistolModel, src/game/gunlook.ts:67)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct PistolModel {
     pub slide: crate::gunlook::Seg,
     pub grip: crate::gunlook::Seg,
@@ -168,23 +100,8 @@ pub struct PistolModel {
     pub frame: crate::gunlook::ModelCol,
     pub can_col: Option<crate::gunlook::ModelCol>,
 }
-impl PistolModel {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PistolModel {
-            slide: crate::gunlook::Seg::zeroed(),
-            grip: crate::gunlook::Seg::zeroed(),
-            can: None,
-            mag: None,
-            frame: crate::gunlook::ModelCol::Lens,
-            can_col: None,
-        }
-    }
-}
-impl Default for PistolModel { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: GunLook, src/game/gunlook.ts:196)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct GunLook {
     pub hand: Option<crate::weapons::GunModelId>,
     pub long: Option<crate::weapons::GunModelId>,
@@ -192,22 +109,8 @@ pub struct GunLook {
     pub bare_long: Option<bool>,
     pub bare_side: Option<bool>,
 }
-impl GunLook {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GunLook {
-            hand: None,
-            long: None,
-            side: None,
-            bare_long: None,
-            bare_side: None,
-        }
-    }
-}
-impl Default for GunLook { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/gunlook.ts:42 MODEL_POINTS, src/game/gunlook.ts:42)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct MODELPOINTSValue {
     pub well: V3,
     pub cover: Option<V3>,
@@ -216,23 +119,8 @@ pub struct MODELPOINTSValue {
     pub port: Option<V3>,
     pub saddle: Option<V3>,
 }
-impl MODELPOINTSValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        MODELPOINTSValue {
-            well: [0.0; 3],
-            cover: None,
-            box_: None,
-            charge: None,
-            port: None,
-            saddle: None,
-        }
-    }
-}
-impl Default for MODELPOINTSValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/gunlook.ts:83 LONG_MODELS, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct LONGMODELS {
     pub m870: Option<crate::gunlook::LongModel>,
     pub mk12: Option<crate::gunlook::LongModel>,
@@ -242,24 +130,8 @@ pub struct LONGMODELS {
     pub hk45: Option<crate::gunlook::LongModel>,
     pub g18: Option<crate::gunlook::LongModel>,
 }
-impl LONGMODELS {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LONGMODELS {
-            m870: None,
-            mk12: None,
-            mp7: None,
-            mk46: None,
-            m1014: None,
-            hk45: None,
-            g18: None,
-        }
-    }
-}
-impl Default for LONGMODELS { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/gunlook.ts:182 PISTOL_MODELS, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct PISTOLMODELS {
     pub m870: Option<crate::gunlook::PistolModel>,
     pub mk12: Option<crate::gunlook::PistolModel>,
@@ -269,21 +141,6 @@ pub struct PISTOLMODELS {
     pub hk45: Option<crate::gunlook::PistolModel>,
     pub g18: Option<crate::gunlook::PistolModel>,
 }
-impl PISTOLMODELS {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PISTOLMODELS {
-            m870: None,
-            mk12: None,
-            mp7: None,
-            mk46: None,
-            m1014: None,
-            hk45: None,
-            g18: None,
-        }
-    }
-}
-impl Default for PISTOLMODELS { fn default() -> Self { Self::zeroed() } }
 
 /// (src/game/gunlook.ts:24 SHELLS_BREAK)
 pub const SHELLS_BREAK: bool = false;

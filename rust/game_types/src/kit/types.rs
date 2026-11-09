@@ -1,4 +1,4 @@
-//! The types of `kit`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `kit`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
@@ -13,8 +13,7 @@ pub enum KitRowGet {
     SlotCan { slot: crate::gunslots::GunSlot },
 }
 
-/// (TypeScript: SlotTable, src/game/kit.ts:248)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct SlotTable {
     pub v: f64,
     pub pouches: Vec<f64>,
@@ -24,24 +23,8 @@ pub struct SlotTable {
     pub unknown: Vec<String>,
     pub loadouts: Vec<crate::kit::SlotLoadout>,
 }
-impl SlotTable {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SlotTable {
-            v: 0.0,
-            pouches: Vec::new(),
-            big: Vec::new(),
-            squad: None,
-            items: JsMap::new(),
-            unknown: Vec::new(),
-            loadouts: Vec::new(),
-        }
-    }
-}
-impl Default for SlotTable { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: SlotItem, src/game/kit.ts:242)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct SlotItem {
     pub id: String,
     pub pouches: f64,
@@ -50,23 +33,8 @@ pub struct SlotItem {
     pub big: Option<bool>,
     pub holds: Option<f64>,
 }
-impl SlotItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SlotItem {
-            id: String::new(),
-            pouches: 0.0,
-            max: Vec::new(),
-            squad_max: None,
-            big: None,
-            holds: None,
-        }
-    }
-}
-impl Default for SlotItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: SlotLoadout, src/game/kit.ts:245)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct SlotLoadout {
     pub id: String,
     pub name: String,
@@ -74,24 +42,10 @@ pub struct SlotLoadout {
     pub cards: Vec<JsMap<String, crate::kit::KitValue>>,
     pub missing: Vec<String>,
 }
-impl SlotLoadout {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SlotLoadout {
-            id: String::new(),
-            name: String::new(),
-            counts: Vec::new(),
-            cards: Vec::new(),
-            missing: Vec::new(),
-        }
-    }
-}
-impl Default for SlotLoadout { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum KitWeapon {
-    Pistol,
+    #[default] Pistol,
     Rifle,
     Shotgun,
 }
@@ -105,10 +59,9 @@ impl KitWeapon {
     }
 }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum BigKit {
-    Shotgun,
+    #[default] Shotgun,
     None,
     Hammer,
 }
@@ -122,7 +75,6 @@ impl BigKit {
     }
 }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum BigPick {
     Shotgun,
@@ -141,10 +93,9 @@ impl BigPick {
     }
 }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum SuitId {
-    Issued,
+    #[default] Issued,
     Black,
     Grey,
     Navy,
@@ -168,10 +119,9 @@ impl SuitId {
     }
 }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum TrimId {
-    Red,
+    #[default] Red,
     Blue,
     Issued,
     Black,
@@ -193,7 +143,6 @@ impl TrimId {
     }
 }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum CanMix {
     Smoke,
@@ -212,8 +161,7 @@ impl CanMix {
     }
 }
 
-/// (TypeScript: MemberKit, src/game/kit.ts:87)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct MemberKit {
     pub weapon: crate::kit::KitWeapon,
     pub suppressed: bool,
@@ -236,58 +184,17 @@ pub struct MemberKit {
     pub side_can: bool,
     pub rings: f64,
 }
-impl MemberKit {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        MemberKit {
-            weapon: crate::kit::KitWeapon::Pistol,
-            suppressed: false,
-            light: false,
-            nvg: false,
-            bangs: 0.0,
-            charges: 0.0,
-            smoke: 0.0,
-            frags: 0.0,
-            walls: 0.0,
-            shells: 0.0,
-            suit: crate::kit::SuitId::Issued,
-            trim: crate::kit::TrimId::Red,
-            wand: false,
-            cams: 0.0,
-            bare: None,
-            big: crate::kit::BigKit::Shotgun,
-            primary: String::new(),
-            secondary: String::new(),
-            side_can: false,
-            rings: 0.0,
-        }
-    }
-}
-impl Default for MemberKit { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: KitHand, src/game/kit.ts:170)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct KitHand {
     pub rings: f64,
     pub cams: f64,
     pub wand: bool,
 }
-impl KitHand {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitHand {
-            rings: 0.0,
-            cams: 0.0,
-            wand: false,
-        }
-    }
-}
-impl Default for KitHand { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum KitField {
-    Smoke,
+    #[default] Smoke,
     Light,
     Wand,
     Bangs,
@@ -337,7 +244,6 @@ impl KitField {
     }
 }
 
-/// (TypeScript: a union)
 #[derive(Clone, Debug, ToBytes)]
 pub enum KitValue {
     Text(String),
@@ -345,8 +251,7 @@ pub enum KitValue {
     Bool(bool),
 }
 
-/// (TypeScript: KitRow, src/game/kit.ts:744)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct KitRow {
     pub field: crate::kit::KitField,
     pub label: String,
@@ -357,21 +262,7 @@ pub struct KitRow {
     #[bytes(skip)]
     pub get: Option<crate::kit::KitRowGet>,
 }
-impl KitRow {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitRow {
-            field: crate::kit::KitField::Smoke,
-            label: String::new(),
-            values: Vec::new(),
-            item: None,
-            get: None,
-        }
-    }
-}
-impl Default for KitRow { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum KitPreset {
     Quiet,
@@ -388,241 +279,94 @@ impl KitPreset {
     }
 }
 
-/// (TypeScript: Store, src/game/kit.ts:1072)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Store {
 }
-impl Store {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Store {
-        }
-    }
-}
-impl Default for Store { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/kit.ts:158 BUILT, src/game/kit.ts:158)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct BUILT {
     pub smoke: f64,
     pub bangs: f64,
     pub frags: f64,
     pub shells: f64,
 }
-impl BUILT {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BUILT {
-            smoke: 0.0,
-            bangs: 0.0,
-            frags: 0.0,
-            shells: 0.0,
-        }
-    }
-}
-impl Default for BUILT { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/kit.ts:175 KIT, src/game/kit.ts:175)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct KitModKIT {
     pub on: bool,
     pub members: Vec<crate::kit::MemberKit>,
 }
-impl KitModKIT {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitModKIT {
-            on: false,
-            members: Vec::new(),
-        }
-    }
-}
-impl Default for KitModKIT { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/kit.ts:178 SUITS, src/game/kit.ts:178)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct SUITSValue {
     pub label: String,
     pub tint: V3,
 }
-impl SUITSValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SUITSValue {
-            label: String::new(),
-            tint: [0.0; 3],
-        }
-    }
-}
-impl Default for SUITSValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/kit.ts:187 TRIMS, src/game/kit.ts:187)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct TRIMSValue {
     pub label: String,
     pub tint: V3,
 }
-impl TRIMSValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        TRIMSValue {
-            label: String::new(),
-            tint: [0.0; 3],
-        }
-    }
-}
-impl Default for TRIMSValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/kit.ts:197 CAN_MIXES, src/game/kit.ts:197)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct CANMIXESValue {
     pub label: String,
     pub smoke: f64,
     pub stun: f64,
 }
-impl CANMIXESValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CANMIXESValue {
-            label: String::new(),
-            smoke: 0.0,
-            stun: 0.0,
-        }
-    }
-}
-impl Default for CANMIXESValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/kit.ts:797 YOU_GUNS_CAN, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct YOUGUNSCAN {
     pub pistol: Option<String>,
     pub rifle: Option<String>,
     pub shotgun: Option<String>,
 }
-impl YOUGUNSCAN {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        YOUGUNSCAN {
-            pistol: None,
-            rifle: None,
-            shotgun: None,
-        }
-    }
-}
-impl Default for YOUGUNSCAN { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/kit.ts:1007 KIT_PRESETS, src/game/kit.ts:1007)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct KITPRESETSItem {
     pub id: String,
     pub label: String,
     pub line: String,
 }
-impl KITPRESETSItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KITPRESETSItem {
-            id: String::new(),
-            label: String::new(),
-            line: String::new(),
-        }
-    }
-}
-impl Default for KITPRESETSItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: a union)
 #[derive(Clone, Copy, Debug, ToBytes)]
 pub enum KitModIssuing {
     Bool(bool),
     Own,
 }
 
-/// (TypeScript: inline at src/game/kit.ts:1180 lessonRow, src/game/kit.ts:1180)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct KitModLessonRow {
     pub packs: Option<crate::kit::KitModLessonRowPacks>,
 }
-impl KitModLessonRow {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitModLessonRow {
-            packs: None,
-        }
-    }
-}
-impl Default for KitModLessonRow { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/kit.ts:1180 KitModLessonRow.packs, src/game/kit.ts:1180)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct KitModLessonRowPacks {
     pub frags: Option<f64>,
 }
-impl KitModLessonRowPacks {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitModLessonRowPacks {
-            frags: None,
-        }
-    }
-}
-impl Default for KitModLessonRowPacks { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/kit.ts:1203 kept0, src/game/kit.ts:1203)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct KitModKept0 {
     pub charges: Option<f64>,
     pub walls: Option<f64>,
 }
-impl KitModKept0 {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitModKept0 {
-            charges: None,
-            walls: None,
-        }
-    }
-}
-impl Default for KitModKept0 { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/kit.ts:1222 manOf, src/game/kit.ts:1222)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct KitModManOfValue {
     pub i: f64,
     pub kit: crate::kit::MemberKit,
     /// the card in a line, as he was staged with it: a HUD is told it each tick. Off the wire: a whole game read in says it again (`kit::kit_words_again`)
     pub words: String,
 }
-impl KitModManOfValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitModManOfValue {
-            i: 0.0,
-            kit: crate::kit::MemberKit::zeroed(),
-            words: String::new(),
-        }
-    }
-}
-impl Default for KitModManOfValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/kit.ts:1225 KIT_STAGED, src/game/kit.ts:1225)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct KitModKITSTAGED {
     pub n: f64,
     pub ops: Vec<GuardId>,
 }
-impl KitModKITSTAGED {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitModKITSTAGED {
-            n: 0.0,
-            ops: Vec::new(),
-        }
-    }
-}
-impl Default for KitModKITSTAGED { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/kit.ts:1239 issuedPlayer, src/game/kit.ts:1239)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct KitModIssuedPlayerValue {
     pub rifle: bool,
     pub gun: FirearmId,
@@ -639,47 +383,13 @@ pub struct KitModIssuedPlayerValue {
     pub tint: V3,
     pub tint2: V3,
 }
-impl KitModIssuedPlayerValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitModIssuedPlayerValue {
-            rifle: false,
-            gun: FirearmId(0),
-            side: FirearmId(0),
-            slot: crate::game::SlotKind::Pistol,
-            smoke: 0.0,
-            stun: 0.0,
-            frags: 0.0,
-            shells: 0.0,
-            rings: 0.0,
-            wand: false,
-            big: crate::kit::BigKit::Shotgun,
-            cams: 0.0,
-            tint: [0.0; 3],
-            tint2: [0.0; 3],
-        }
-    }
-}
-impl Default for KitModIssuedPlayerValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/kit.ts:1242 youBare, src/game/kit.ts:1242)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct KitModYouBareValue {
     pub light: bool,
     pub nvg: bool,
 }
-impl KitModYouBareValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitModYouBareValue {
-            light: false,
-            nvg: false,
-        }
-    }
-}
-impl Default for KitModYouBareValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum KindOf {
     You,
@@ -694,77 +404,34 @@ impl KindOf {
     }
 }
 
-/// (TypeScript: inline at src/game/kit.ts:427 stealthKept ->, src/game/kit.ts:427)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct StealthKept {
     pub stealth: Option<crate::kit::MemberKit>,
 }
-impl StealthKept {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StealthKept {
-            stealth: None,
-        }
-    }
-}
-impl Default for StealthKept { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/kit.ts:455 dealTable ->, src/game/kit.ts:455)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct DealTable {
     pub kits: Vec<Vec<crate::kit::MemberKit>>,
     pub words: JsSet<String>,
 }
-impl DealTable {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DealTable {
-            kits: Vec::new(),
-            words: JsSet::new(),
-        }
-    }
-}
-impl Default for DealTable { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: a union)
 #[derive(Clone, Debug)]
 pub enum SlotsCheck {
     Arm0(crate::kit::SlotsCheckArm0),
     Arm1(crate::kit::SlotsCheckArm1),
 }
 
-/// (TypeScript: inline at src/game/kit.ts:579 slotsCheck ->, src/game/kit.ts:579)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct SlotsCheckArm0 {
     pub table: crate::kit::SlotTable,
 }
-impl SlotsCheckArm0 {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SlotsCheckArm0 {
-            table: crate::kit::SlotTable::zeroed(),
-        }
-    }
-}
-impl Default for SlotsCheckArm0 { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/kit.ts:579 slotsCheck ->, src/game/kit.ts:579)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct SlotsCheckArm1 {
     pub why: String,
 }
-impl SlotsCheckArm1 {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SlotsCheckArm1 {
-            why: String::new(),
-        }
-    }
-}
-impl Default for SlotsCheckArm1 { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/kit.ts:622 kitCost ->, src/game/kit.ts:622)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct KitCost {
     pub used: f64,
     pub total: f64,
@@ -772,143 +439,59 @@ pub struct KitCost {
     pub lines: Vec<crate::kit::KitCostLinesItem>,
     pub big: Option<crate::kit::KitCostBig>,
 }
-impl KitCost {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitCost {
-            used: 0.0,
-            total: 0.0,
-            free: 0.0,
-            lines: Vec::new(),
-            big: None,
-        }
-    }
-}
-impl Default for KitCost { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/kit.ts:622 KitCost.lines, src/game/kit.ts:622)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct KitCostLinesItem {
     pub item: String,
     pub n: f64,
     pub pouches: f64,
 }
-impl KitCostLinesItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitCostLinesItem {
-            item: String::new(),
-            n: 0.0,
-            pouches: 0.0,
-        }
-    }
-}
-impl Default for KitCostLinesItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/kit.ts:622 KitCost.big, src/game/kit.ts:622)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct KitCostBig {
     pub used: f64,
     pub total: f64,
 }
-impl KitCostBig {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitCostBig {
-            used: 0.0,
-            total: 0.0,
-        }
-    }
-}
-impl Default for KitCostBig { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/kit.ts:628 squadCost ->, src/game/kit.ts:628)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SquadCost {
     pub used: f64,
     pub total: f64,
     pub free: f64,
 }
-impl SquadCost {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SquadCost {
-            used: 0.0,
-            total: 0.0,
-            free: 0.0,
-        }
-    }
-}
-impl Default for SquadCost { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: a union)
 #[derive(Clone, Debug)]
 pub enum LoadoutCards {
     Text(String),
     Array(Vec<crate::kit::MemberKit>),
 }
 
-/// (TypeScript: inline at src/game/kit.ts:727 kitLoadouts ->, src/game/kit.ts:727)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct KitLoadoutsItem {
     pub id: String,
     pub name: String,
 }
-impl KitLoadoutsItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitLoadoutsItem {
-            id: String::new(),
-            name: String::new(),
-        }
-    }
-}
-impl Default for KitLoadoutsItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/kit.ts:926 kitRowCost ->, src/game/kit.ts:926)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct KitRowCost {
     pub pouches: f64,
     pub rate: String,
 }
-impl KitRowCost {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitRowCost {
-            pouches: 0.0,
-            rate: String::new(),
-        }
-    }
-}
-impl Default for KitRowCost { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/kit.ts:932 kitName ->, src/game/kit.ts:932)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct KitName {
     pub title: String,
     pub sub: String,
 }
-impl KitName {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitName {
-            title: String::new(),
-            sub: String::new(),
-        }
-    }
-}
-impl Default for KitName { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/kit.ts:964 kitPeek ->, src/game/kit.ts:964)
 #[derive(Clone, Debug)]
 pub struct KitPeek {
     pub value: crate::kit::KitValue,
     pub why: String,
     pub passed: String,
 }
-impl KitPeek {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
+impl Default for KitPeek {
+    fn default() -> Self {
         KitPeek {
             value: crate::kit::KitValue::Text(String::new()),
             why: String::new(),
@@ -916,18 +499,15 @@ impl KitPeek {
         }
     }
 }
-impl Default for KitPeek { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/kit.ts:965 peek ->, src/game/kit.ts:965)
 #[derive(Clone, Debug)]
 pub struct Peek {
     pub value: crate::kit::KitValue,
     pub why: String,
     pub passed: String,
 }
-impl Peek {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
+impl Default for Peek {
+    fn default() -> Self {
         Peek {
             value: crate::kit::KitValue::Text(String::new()),
             why: String::new(),
@@ -935,9 +515,7 @@ impl Peek {
         }
     }
 }
-impl Default for Peek { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/kit.ts:980 kitTry ->, src/game/kit.ts:980)
 #[derive(Clone, Debug)]
 pub struct KitTry {
     pub ok: bool,
@@ -945,9 +523,8 @@ pub struct KitTry {
     pub why: String,
     pub passed: String,
 }
-impl KitTry {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
+impl Default for KitTry {
+    fn default() -> Self {
         KitTry {
             ok: false,
             value: crate::kit::KitValue::Text(String::new()),
@@ -956,205 +533,75 @@ impl KitTry {
         }
     }
 }
-impl Default for KitTry { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/kit.ts:1017 kitPreset ->, src/game/kit.ts:1017)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct KitPreset2 {
     pub ok: bool,
     pub why: String,
 }
-impl KitPreset2 {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitPreset2 {
-            ok: false,
-            why: String::new(),
-        }
-    }
-}
-impl Default for KitPreset2 { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/kit.ts:1055 kitPastePeek ->, src/game/kit.ts:1055)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct KitPastePeek {
     pub card: crate::kit::MemberKit,
     pub changed: Vec<crate::kit::KitField>,
     pub why: String,
 }
-impl KitPastePeek {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitPastePeek {
-            card: crate::kit::MemberKit::zeroed(),
-            changed: Vec::new(),
-            why: String::new(),
-        }
-    }
-}
-impl Default for KitPastePeek { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/kit.ts:1056 pastePeek ->, src/game/kit.ts:1056)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct PastePeek {
     pub card: crate::kit::MemberKit,
     pub changed: Vec<crate::kit::KitField>,
     pub why: String,
 }
-impl PastePeek {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PastePeek {
-            card: crate::kit::MemberKit::zeroed(),
-            changed: Vec::new(),
-            why: String::new(),
-        }
-    }
-}
-impl Default for PastePeek { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/kit.ts:1061 kitPaste ->, src/game/kit.ts:1061)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct KitPaste {
     pub ok: bool,
     pub why: String,
     pub changed: Vec<crate::kit::KitField>,
 }
-impl KitPaste {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitPaste {
-            ok: false,
-            why: String::new(),
-            changed: Vec::new(),
-        }
-    }
-}
-impl Default for KitPaste { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/kit.ts:1173 kitPacks(e), src/game/kit.ts:1173)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct KitPacksE {
     pub packs: Option<crate::kit::KitModLessonRowPacks>,
 }
-impl KitPacksE {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitPacksE {
-            packs: None,
-        }
-    }
-}
-impl Default for KitPacksE { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/kit.ts:1181 kitLessonPage(row), src/game/kit.ts:1181)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct KitLessonPageRow {
     pub packs: Option<crate::kit::KitLessonPageRowPacks>,
 }
-impl KitLessonPageRow {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitLessonPageRow {
-            packs: None,
-        }
-    }
-}
-impl Default for KitLessonPageRow { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/kit.ts:1181 KitLessonPageRow.packs, src/game/kit.ts:1181)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct KitLessonPageRowPacks {
     pub frags: Option<f64>,
 }
-impl KitLessonPageRowPacks {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitLessonPageRowPacks {
-            frags: None,
-        }
-    }
-}
-impl Default for KitLessonPageRowPacks { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/kit.ts:1212 keptNow ->, src/game/kit.ts:1212)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct KeptNow {
     pub charges: Option<f64>,
     pub walls: Option<f64>,
 }
-impl KeptNow {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KeptNow {
-            charges: None,
-            walls: None,
-        }
-    }
-}
-impl Default for KeptNow { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/kit.ts:1243 kitYouLight(pl), src/game/kit.ts:1243 kitYouLight(pl))
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct KitYouLightPl {
 }
-impl KitYouLightPl {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitYouLightPl {
-        }
-    }
-}
-impl Default for KitYouLightPl { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/kit.ts:1244 kitYouNvg(pl), src/game/kit.ts:1244 kitYouNvg(pl))
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct KitYouNvgPl {
 }
-impl KitYouNvgPl {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitYouNvgPl {
-        }
-    }
-}
-impl Default for KitYouNvgPl { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/kit.ts:1378 kitPool(issued), src/game/kit.ts:1378)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct KitPoolIssued {
     pub bangs: f64,
     pub charges: f64,
 }
-impl KitPoolIssued {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitPoolIssued {
-            bangs: 0.0,
-            charges: 0.0,
-        }
-    }
-}
-impl Default for KitPoolIssued { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/kit.ts:1378 kitPool ->, src/game/kit.ts:1378)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct KitPool {
     pub bangs: f64,
     pub charges: f64,
     pub frags: f64,
 }
-impl KitPool {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitPool {
-            bangs: 0.0,
-            charges: 0.0,
-            frags: 0.0,
-        }
-    }
-}
-impl Default for KitPool { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]

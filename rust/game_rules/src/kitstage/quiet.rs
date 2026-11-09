@@ -144,7 +144,7 @@ pub(super) fn lean_tick(g: &mut Game, st: &mut KitStage, b: &mut Beat) -> Step {
             b.marks.push("lean");
             if b.mark_t.is_nan() { b.mark_t = g.time; }
             to(g, b, "hold");
-            g.puppet = Some(GamePuppet::zeroed());
+            g.puppet = Some(GamePuppet::default());
             Step::On
         }
         "hold" => { if el < QK.lean_secs { return Step::On; } to(g, b, "back"); sam_goes(g, st.sam); Step::On }

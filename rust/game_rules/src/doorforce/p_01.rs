@@ -38,7 +38,7 @@ pub fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::doorforce::S
     s
 }
 
-/// A new man's row, with the literal's numbers (not `Man::zeroed`: served and cfT start long ago). (doorforce.ts manOf)
+/// A new man's row, with the literal's numbers (not `Man::default`: served and cfT start long ago). (doorforce.ts manOf)
 fn new_man() -> Man {
     Man { beliefs: JsMap::new(), saw: None, on: None, kick: None, rest: JsMap::new(), served: -1e9, cf_t: -1e9 }
 }
@@ -689,7 +689,7 @@ mod tests {
         let b = *man_of(g, gd).beliefs.get(d).unwrap();
         let row = man_of(g, gd);
         row.kick = Some(Kick { door: d, spot: [0.0; 3], yaw: 0.0, phase: KickPhase::Walk, t0: 0.0, set_t: 0.0 });
-        row.on = Some(Stand { door: d, ..Stand::zeroed() });
+        row.on = Some(Stand { door: d, ..Stand::default() });
         state_of(g).kickers.set(d, gd);
         g.gd[gd].path = vec![[1.0, 0.0, 1.0]];
         crate::guards::guard_set_path_goal(g, gd, Some([1.0, 0.0, 1.0]));

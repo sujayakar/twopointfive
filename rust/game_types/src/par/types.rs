@@ -4,9 +4,9 @@ use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (on the wire: its word in small letters)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum Medal {
-    None,
+    #[default] None,
     Gold,
     Silver,
     Bronze,
@@ -23,7 +23,7 @@ impl Medal {
 }
 
 /// a finished run against its par
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct ParResult {
     pub secs: f64,
     pub lost: f64,
@@ -35,58 +35,21 @@ pub struct ParResult {
     pub next: Option<crate::par::ParResultNext>,
     pub line: String,
 }
-impl ParResult {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ParResult {
-            secs: 0.0,
-            lost: 0.0,
-            of: 0.0,
-            penalty: 0.0,
-            total: 0.0,
-            shown: 0.0,
-            medal: crate::par::Medal::None,
-            next: None,
-            line: String::new(),
-        }
-    }
-}
-impl Default for ParResult { fn default() -> Self { Self::zeroed() } }
 
 /// the medal above the one earned, its bar, and how many whole seconds faster it needed
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct ParResultNext {
     pub medal: crate::par::Medal,
     pub bar: f64,
     pub short: f64,
 }
-impl ParResultNext {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ParResultNext {
-            medal: crate::par::Medal::None,
-            bar: 0.0,
-            short: 0.0,
-        }
-    }
-}
-impl Default for ParResultNext { fn default() -> Self { Self::zeroed() } }
 
 /// A seat's mark as the clock was armed: where its man stood, and the last order on its log then (by the row's serial: the log is cut from the front).
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct ParMark {
     pub origin: V3,
     pub order0: Option<u32>,
 }
-impl ParMark {
-    pub fn zeroed() -> Self {
-        ParMark {
-            origin: [0.0, 0.0, 0.0],
-            order0: None,
-        }
-    }
-}
-impl Default for ParMark { fn default() -> Self { Self::zeroed() } }
 
 /// THE PAR CLOCK'S RECORD: the game's own, written by the tick (`par::par_tick`), and all of it on the wire: the page draws `live`, `t0` and `res`,
 /// and a game stood again from a page's copy takes the clock up where it was.

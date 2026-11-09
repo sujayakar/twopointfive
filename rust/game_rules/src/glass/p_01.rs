@@ -104,7 +104,7 @@ pub fn pane_normal(g: &mut crate::game::Game, b: BoxId) -> V3 {
 /// files a pane's crash for the floor's ears, heard from both its faces (glass.ts glassEvent)
 pub fn glass_event(g: &mut crate::game::Game, b: BoxId, at: V3, level: f64, who: f64) {
     let serial = g.serial();
-    let mut e = crate::game::GameEvent { kind: crate::director::EventKind::Glass, pos: [at[0], 0.0, at[2]], time: g.time, loud: true, level: Some(level), who: Some(who), serial, ..crate::game::GameEvent::zeroed() };
+    let mut e = crate::game::GameEvent { kind: crate::director::EventKind::Glass, pos: [at[0], 0.0, at[2]], time: g.time, loud: true, level: Some(level), who: Some(who), serial, ..crate::game::GameEvent::default() };
     let n = pane_normal(g, b);
     let (c, h) = { let row = seam_box(g, b); (row.c, row.h) };
     let off = v3::dot(v3::sub(at, c), n);
@@ -402,7 +402,7 @@ mod tests {
     #[test]
     fn an_event_of_another_kind_is_not_looked_at() {
         let mut g = Game::blank();
-        let e = crate::game::GameEvent { kind: crate::director::EventKind::Glass, serial: 7, ..crate::game::GameEvent::zeroed() };
+        let e = crate::game::GameEvent { kind: crate::director::EventKind::Glass, serial: 7, ..crate::game::GameEvent::default() };
         g.events.push(e);
         update_glass(&mut g);
         assert!(!glass_state(&mut g).seen.has(7));

@@ -1,4 +1,4 @@
-//! The types of `lanes`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `lanes`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
@@ -11,8 +11,7 @@ pub enum LanePenalty {
     Base { base: crate::tactics::TacticsPenalty },
 }
 
-/// (TypeScript: Lane, src/game/lanes.ts:158)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct Lane {
     pub id: f64,
     pub from: V3,
@@ -48,86 +47,21 @@ pub struct Lane {
     pub frag_at: f64,
     pub e: f64,
 }
-impl Lane {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Lane {
-            id: 0.0,
-            from: [0.0; 3],
-            at: [0.0; 3],
-            dx: 0.0,
-            dz: 0.0,
-            t0: 0.0,
-            last_t: 0.0,
-            until: 0.0,
-            weight: 0.0,
-            downs: 0.0,
-            known: false,
-            known_at: 0.0,
-            look_at: 0.0,
-            guns: Vec::new(),
-            saw: JsMap::new(),
-            knowers: JsSet::new(),
-            cells: None,
-            wedges: Vec::new(),
-            re: None,
-            who: JsSet::new(),
-            moved: JsSet::new(),
-            round_at: 0.0,
-            stun_at: 0.0,
-            push_until: 0.0,
-            can: None,
-            peek_at: 0.0,
-            peek_n: 0.0,
-            peek_part: 0.0,
-            pin_at: 0.0,
-            pin_n: 0.0,
-            pin_by: 0.0,
-            frag_at: 0.0,
-            e: 0.0,
-        }
-    }
-}
-impl Default for Lane { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/lanes.ts:174 Lane.re, src/game/lanes.ts:174)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct LaneRe {
     pub set: JsSet<crate::Num>,
     pub i: f64,
 }
-impl LaneRe {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LaneRe {
-            set: JsSet::new(),
-            i: 0.0,
-        }
-    }
-}
-impl Default for LaneRe { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/lanes.ts:177 Lane.can, src/game/lanes.ts:177)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct LaneCan {
     pub who: f64,
     pub t: f64,
     pub land: V3,
 }
-impl LaneCan {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LaneCan {
-            who: 0.0,
-            t: 0.0,
-            land: [0.0; 3],
-        }
-    }
-}
-impl Default for LaneCan { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Flank, src/game/lanes.ts:189)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Flank {
     pub lane: f64,
     pub phase: crate::lanes::FlankPhase,
@@ -135,24 +69,10 @@ pub struct Flank {
     pub t: f64,
     pub n: f64,
 }
-impl Flank {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Flank {
-            lane: 0.0,
-            phase: crate::lanes::FlankPhase::Set,
-            at: [0.0; 3],
-            t: 0.0,
-            n: 0.0,
-        }
-    }
-}
-impl Default for Flank { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum FlankPhase {
-    Set,
+    #[default] Set,
     Go,
     Walk,
 }
@@ -166,8 +86,7 @@ impl FlankPhase {
     }
 }
 
-/// (TypeScript: Peek, src/game/lanes.ts:190)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Peek {
     pub lane: f64,
     pub phase: crate::lanes::PeekPhase,
@@ -180,29 +99,10 @@ pub struct Peek {
     pub fire: Option<crate::lanes::PeekFire>,
     pub frag: Option<crate::lanes::PeekFrag>,
 }
-impl Peek {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Peek {
-            lane: 0.0,
-            phase: crate::lanes::PeekPhase::Out,
-            t: 0.0,
-            home: [0.0; 3],
-            look: [0.0; 3],
-            to: [0.0; 3],
-            line_t: 0.0,
-            eye: None,
-            fire: None,
-            frag: None,
-        }
-    }
-}
-impl Default for Peek { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum PeekPhase {
-    Out,
+    #[default] Out,
     Back,
 }
 impl PeekPhase {
@@ -214,8 +114,7 @@ impl PeekPhase {
     }
 }
 
-/// (TypeScript: inline at src/game/lanes.ts:192 Peek.fire, src/game/lanes.ts:192)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct PeekFire {
     pub n: f64,
     pub t: f64,
@@ -223,22 +122,8 @@ pub struct PeekFire {
     pub saw: bool,
     pub line_t: f64,
 }
-impl PeekFire {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PeekFire {
-            n: 0.0,
-            t: 0.0,
-            next: 0.0,
-            saw: false,
-            line_t: 0.0,
-        }
-    }
-}
-impl Default for PeekFire { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/lanes.ts:194 Peek.frag, src/game/lanes.ts:194)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct PeekFrag {
     pub at: Option<V3>,
     pub k: f64,
@@ -250,26 +135,8 @@ pub struct PeekFrag {
     pub until: f64,
     pub had: f64,
 }
-impl PeekFrag {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PeekFrag {
-            at: None,
-            k: 0.0,
-            next: 0.0,
-            walk: false,
-            going: false,
-            edge: false,
-            own: false,
-            until: 0.0,
-            had: 0.0,
-        }
-    }
-}
-impl Default for PeekFrag { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: State, src/game/lanes.ts:195)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct State {
     pub lanes: Vec<LanesLaneId>,
     pub serial: f64,
@@ -299,61 +166,14 @@ pub struct State {
     pub frag_no: JsMap<GuardId, crate::lanes::StateFragNoValue>,
     pub near: Vec<crate::lanes::StateNearItem>,
 }
-impl State {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        State {
-            lanes: Vec::new(),
-            serial: 0.0,
-            mask: None,
-            ver: 0.0,
-            own: JsMap::new(),
-            seen: JsSet::new(),
-            banged: JsSet::new(),
-            push: JsMap::new(),
-            flank: JsMap::new(),
-            flank_of: JsMap::new(),
-            dropped: JsSet::new(),
-            fail_t: JsMap::new(),
-            skip: false,
-            held: JsMap::new(),
-            cans: Vec::new(),
-            roll: 0.0,
-            due: Vec::new(),
-            look: JsMap::new(),
-            post: JsMap::new(),
-            back_t: JsMap::new(),
-            said_t: 0.0,
-            t: 0.0,
-            tick_t: 0.0,
-            stats: crate::lanes::StateStats::zeroed(),
-            peek: JsMap::new(),
-            frag_no: JsMap::new(),
-            near: Vec::new(),
-        }
-    }
-}
-impl Default for State { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/lanes.ts:199 State.own, src/game/lanes.ts:199)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct StateOwnValue {
     pub ver: f64,
     pub m: Vec<u8>,
 }
-impl StateOwnValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StateOwnValue {
-            ver: 0.0,
-            m: Vec::new(),
-        }
-    }
-}
-impl Default for StateOwnValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/lanes.ts:202 State.held, src/game/lanes.ts:202)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct StateHeldValue {
     pub lane: f64,
     pub t: f64,
@@ -361,41 +181,15 @@ pub struct StateHeldValue {
     pub aimed: bool,
     pub at: V3,
 }
-impl StateHeldValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StateHeldValue {
-            lane: 0.0,
-            t: 0.0,
-            look: [0.0; 3],
-            aimed: false,
-            at: [0.0; 3],
-        }
-    }
-}
-impl Default for StateHeldValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/lanes.ts:202 State.due, src/game/lanes.ts:202)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct StateDueItem {
     pub gd: GuardId,
     pub lane: f64,
     pub look: V3,
 }
-impl StateDueItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StateDueItem {
-            gd: GuardId(0),
-            lane: 0.0,
-            look: [0.0; 3],
-        }
-    }
-}
-impl Default for StateDueItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/lanes.ts:203 State.stats, src/game/lanes.ts:203)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct StateStats {
     pub lanes: f64,
     pub known: f64,
@@ -420,56 +214,14 @@ pub struct StateStats {
     pub frag_lost: f64,
     pub frag_kept: f64,
 }
-impl StateStats {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StateStats {
-            lanes: 0.0,
-            known: 0.0,
-            unknown: 0.0,
-            held: 0.0,
-            rerouted: 0.0,
-            backed_out: 0.0,
-            round: 0.0,
-            stuns: 0.0,
-            pushes: 0.0,
-            lapsed: 0.0,
-            peeks: 0.0,
-            peek_there: 0.0,
-            peek_clear: 0.0,
-            peek_lost: 0.0,
-            pins: 0.0,
-            pin_rounds: 0.0,
-            pin_lost: 0.0,
-            sets: 0.0,
-            goes: 0.0,
-            frags: 0.0,
-            frag_lost: 0.0,
-            frag_kept: 0.0,
-        }
-    }
-}
-impl Default for StateStats { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/lanes.ts:209 State.fragNo, src/game/lanes.ts:209)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct StateFragNoValue {
     pub lane: f64,
     pub at: V3,
 }
-impl StateFragNoValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StateFragNoValue {
-            lane: 0.0,
-            at: [0.0; 3],
-        }
-    }
-}
-impl Default for StateFragNoValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/lanes.ts:211 State.near, src/game/lanes.ts:211)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct StateNearItem {
     pub gd: GuardId,
     pub from: V3,
@@ -477,39 +229,14 @@ pub struct StateNearItem {
     pub who: f64,
     pub t: f64,
 }
-impl StateNearItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StateNearItem {
-            gd: GuardId(0),
-            from: [0.0; 3],
-            at: [0.0; 3],
-            who: 0.0,
-            t: 0.0,
-        }
-    }
-}
-impl Default for StateNearItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: LanesSave, src/game/lanes.ts:999)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct LanesSave {
     pub serial: f64,
     pub lanes: Vec<crate::lanes::LanesSaveLanesItem>,
 }
-impl LanesSave {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LanesSave {
-            serial: 0.0,
-            lanes: Vec::new(),
-        }
-    }
-}
-impl Default for LanesSave { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/lanes.ts:999 LanesSave.lanes, src/game/lanes.ts:999)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct LanesSaveLanesItem {
     pub id: f64,
     pub from: Vec<f64>,
@@ -532,61 +259,20 @@ pub struct LanesSaveLanesItem {
     pub frag_at: Option<f64>,
     pub e: Option<f64>,
 }
-impl LanesSaveLanesItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LanesSaveLanesItem {
-            id: 0.0,
-            from: Vec::new(),
-            at: Vec::new(),
-            t0: 0.0,
-            last_t: 0.0,
-            until: 0.0,
-            weight: 0.0,
-            downs: 0.0,
-            known: false,
-            known_at: 0.0,
-            guns: Vec::new(),
-            wedges: Vec::new(),
-            round_at: 0.0,
-            stun_at: 0.0,
-            who: None,
-            peek_at: None,
-            peek_n: None,
-            peek_part: None,
-            frag_at: None,
-            e: None,
-        }
-    }
-}
-impl Default for LanesSaveLanesItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/lanes.ts:606 stepper ->, src/game/lanes.ts:606)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Stepper {
     pub gd: GuardId,
     pub to: V3,
 }
-impl Stepper {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Stepper {
-            gd: GuardId(0),
-            to: [0.0; 3],
-        }
-    }
-}
-impl Default for Stepper { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: a union)
 #[derive(Clone, Copy, Debug)]
 pub enum FragPlace {
     List(V3),
     Edge,
 }
 
-/// (TypeScript: inline at src/game/lanes.ts:995 lanesList ->, src/game/lanes.ts:995)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct LanesListItem {
     pub id: f64,
     pub from: V3,
@@ -598,23 +284,6 @@ pub struct LanesListItem {
     pub until: f64,
     pub push_until: f64,
 }
-impl LanesListItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LanesListItem {
-            id: 0.0,
-            from: [0.0; 3],
-            at: [0.0; 3],
-            known: false,
-            weight: 0.0,
-            downs: 0.0,
-            cells: 0.0,
-            until: 0.0,
-            push_until: 0.0,
-        }
-    }
-}
-impl Default for LanesListItem { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]

@@ -1,10 +1,9 @@
-//! The types of `startle`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `startle`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: St, src/game/startle.ts:44)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct St {
     pub calm_t: f64,
     pub calm_torch: bool,
@@ -23,45 +22,11 @@ pub struct St {
     pub ref_t: f64,
     pub script: Option<crate::game::GuardScript>,
 }
-impl St {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        St {
-            calm_t: 0.0,
-            calm_torch: false,
-            by_sight: false,
-            at: 0.0,
-            until: 0.0,
-            toward: [0.0; 3],
-            pre: false,
-            torch: false,
-            choose: false,
-            call: false,
-            draw_until: 0.0,
-            run: None,
-            run_at: 0.0,
-            ref_: None,
-            ref_t: 0.0,
-            script: None,
-        }
-    }
-}
-impl Default for St { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: StartleSnap, src/game/startle.ts:156)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct StartleSnap {
     pub men: Vec<Option<Vec<f64>>>,
 }
-impl StartleSnap {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StartleSnap {
-            men: Vec::new(),
-        }
-    }
-}
-impl Default for StartleSnap { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]

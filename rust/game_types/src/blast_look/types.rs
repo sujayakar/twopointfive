@@ -1,29 +1,16 @@
-//! The types of `blast_look`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `blast_look`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: Seen, src/game/blastLook.ts:148)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Seen {
     pub c: WallChargeId,
     pub t0: f64,
     pub run: f64,
 }
-impl Seen {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Seen {
-            c: WallChargeId(0),
-            t0: 0.0,
-            run: 0.0,
-        }
-    }
-}
-impl Default for Seen { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: State, src/game/blastLook.ts:149)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct State {
     pub seen: Vec<crate::blast_look::Seen>,
     pub queue: Vec<crate::blast_look::StateQueueItem>,
@@ -31,39 +18,14 @@ pub struct State {
     pub first: bool,
     pub last: f64,
 }
-impl State {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        State {
-            seen: Vec::new(),
-            queue: Vec::new(),
-            serial: 0.0,
-            first: false,
-            last: 0.0,
-        }
-    }
-}
-impl Default for State { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/blastLook.ts:149 State.queue, src/game/blastLook.ts:149)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct StateQueueItem {
     pub at: f64,
     pub run: crate::FnField,
 }
-impl StateQueueItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StateQueueItem {
-            at: 0.0,
-            run: crate::FnField,
-        }
-    }
-}
-impl Default for StateQueueItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Fan, src/game/blastLook.ts:301)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Fan {
     pub count: Vec<f64>,
     pub speed: Vec<f64>,
@@ -77,49 +39,16 @@ pub struct Fan {
     pub after: Option<f64>,
     pub aspect: Option<f64>,
 }
-impl Fan {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Fan {
-            count: Vec::new(),
-            speed: Vec::new(),
-            jit: 0.0,
-            cone: Vec::new(),
-            tilt: 0.0,
-            life: 0.0,
-            life_jit: 0.0,
-            size: 0.0,
-            size_jit: 0.0,
-            after: None,
-            aspect: None,
-        }
-    }
-}
-impl Default for Fan { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/blastLook.ts:57 BLAST, src/game/blastLook.ts:57)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct BLAST {
     pub on: bool,
     pub stun: bool,
     pub door: bool,
     pub glow: bool,
 }
-impl BLAST {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BLAST {
-            on: false,
-            stun: false,
-            door: false,
-            glow: false,
-        }
-    }
-}
-impl Default for BLAST { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/blastLook.ts:69 CHARGE_LOOK, src/game/blastLook.ts:69)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct CHARGELOOK {
     pub frame_half: f64,
     pub frame_lo: f64,
@@ -147,63 +76,16 @@ pub struct CHARGELOOK {
     pub led: f64,
     pub led_on: V3,
 }
-impl CHARGELOOK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CHARGELOOK {
-            frame_half: 0.0,
-            frame_lo: 0.0,
-            frame_hi: 0.0,
-            strip: 0.0,
-            proud: 0.0,
-            strip_albedo: [0.0; 3],
-            lamp: 0.0,
-            blink_every: 0.0,
-            blink_on: 0.0,
-            lamp_on: [0.0; 3],
-            lamp_off: [0.0; 3],
-            lamp_spill: 0.0,
-            led_spill: 0.0,
-            tape: 0.0,
-            wire_tape: 0.0,
-            wire: 0.0,
-            wire_px: 0.0,
-            wire_max: 0.0,
-            run: [0.0; 3],
-            short: 0.0,
-            wire_albedo: [0.0; 3],
-            reel: [0.0; 3],
-            reel_albedo: [0.0; 3],
-            led: 0.0,
-            led_on: [0.0; 3],
-        }
-    }
-}
-impl Default for CHARGELOOK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/blastLook.ts:92 REF, src/game/blastLook.ts:92)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct REF {
     pub sparks: f64,
     pub speed: f64,
     pub life: f64,
     pub size: f64,
 }
-impl REF {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        REF {
-            sparks: 0.0,
-            speed: 0.0,
-            life: 0.0,
-            size: 0.0,
-        }
-    }
-}
-impl Default for REF { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/blastLook.ts:98 WALL_BLAST, src/game/blastLook.ts:98)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct WALLBLAST {
     pub jet: crate::blast_look::WALLBLASTJet,
     pub core: crate::blast_look::WALLBLASTCore,
@@ -212,23 +94,8 @@ pub struct WALLBLAST {
     pub chips: crate::blast_look::WALLBLASTChips,
     pub dust: crate::blast_look::WALLBLASTDust,
 }
-impl WALLBLAST {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WALLBLAST {
-            jet: crate::blast_look::WALLBLASTJet::zeroed(),
-            core: crate::blast_look::WALLBLASTCore::zeroed(),
-            shower: crate::blast_look::WALLBLASTShower::zeroed(),
-            embers: crate::blast_look::WALLBLASTEmbers::zeroed(),
-            chips: crate::blast_look::WALLBLASTChips::zeroed(),
-            dust: crate::blast_look::WALLBLASTDust::zeroed(),
-        }
-    }
-}
-impl Default for WALLBLAST { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/blastLook.ts:99 WALLBLAST.jet, src/game/blastLook.ts:99)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct WALLBLASTJet {
     pub count: Vec<f64>,
     pub speed: Vec<f64>,
@@ -240,26 +107,8 @@ pub struct WALLBLASTJet {
     pub size: f64,
     pub size_jit: f64,
 }
-impl WALLBLASTJet {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WALLBLASTJet {
-            count: Vec::new(),
-            speed: Vec::new(),
-            jit: 0.0,
-            cone: Vec::new(),
-            tilt: 0.0,
-            life: 0.0,
-            life_jit: 0.0,
-            size: 0.0,
-            size_jit: 0.0,
-        }
-    }
-}
-impl Default for WALLBLASTJet { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/blastLook.ts:102 WALLBLAST.core, src/game/blastLook.ts:102)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct WALLBLASTCore {
     pub count: Vec<f64>,
     pub speed: Vec<f64>,
@@ -271,26 +120,8 @@ pub struct WALLBLASTCore {
     pub size: f64,
     pub size_jit: f64,
 }
-impl WALLBLASTCore {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WALLBLASTCore {
-            count: Vec::new(),
-            speed: Vec::new(),
-            jit: 0.0,
-            cone: Vec::new(),
-            tilt: 0.0,
-            life: 0.0,
-            life_jit: 0.0,
-            size: 0.0,
-            size_jit: 0.0,
-        }
-    }
-}
-impl Default for WALLBLASTCore { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/blastLook.ts:103 WALLBLAST.shower, src/game/blastLook.ts:103)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct WALLBLASTShower {
     pub count: Vec<f64>,
     pub speed: Vec<f64>,
@@ -303,27 +134,8 @@ pub struct WALLBLASTShower {
     pub size_jit: f64,
     pub after: f64,
 }
-impl WALLBLASTShower {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WALLBLASTShower {
-            count: Vec::new(),
-            speed: Vec::new(),
-            jit: 0.0,
-            cone: Vec::new(),
-            tilt: 0.0,
-            life: 0.0,
-            life_jit: 0.0,
-            size: 0.0,
-            size_jit: 0.0,
-            after: 0.0,
-        }
-    }
-}
-impl Default for WALLBLASTShower { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/blastLook.ts:104 WALLBLAST.embers, src/game/blastLook.ts:104)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct WALLBLASTEmbers {
     pub count: Vec<f64>,
     pub speed: Vec<f64>,
@@ -336,27 +148,8 @@ pub struct WALLBLASTEmbers {
     pub size_jit: f64,
     pub after: f64,
 }
-impl WALLBLASTEmbers {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WALLBLASTEmbers {
-            count: Vec::new(),
-            speed: Vec::new(),
-            jit: 0.0,
-            cone: Vec::new(),
-            tilt: 0.0,
-            life: 0.0,
-            life_jit: 0.0,
-            size: 0.0,
-            size_jit: 0.0,
-            after: 0.0,
-        }
-    }
-}
-impl Default for WALLBLASTEmbers { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/blastLook.ts:106 WALLBLAST.chips, src/game/blastLook.ts:106)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct WALLBLASTChips {
     pub count: Vec<f64>,
     pub speed: Vec<f64>,
@@ -370,28 +163,8 @@ pub struct WALLBLASTChips {
     pub aspect: f64,
     pub after: f64,
 }
-impl WALLBLASTChips {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WALLBLASTChips {
-            count: Vec::new(),
-            speed: Vec::new(),
-            jit: 0.0,
-            cone: Vec::new(),
-            tilt: 0.0,
-            life: 0.0,
-            life_jit: 0.0,
-            size: 0.0,
-            size_jit: 0.0,
-            aspect: 0.0,
-            after: 0.0,
-        }
-    }
-}
-impl Default for WALLBLASTChips { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/blastLook.ts:108 WALLBLAST.dust, src/game/blastLook.ts:108)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct WALLBLASTDust {
     pub count: Vec<f64>,
     pub speed: Vec<f64>,
@@ -403,41 +176,13 @@ pub struct WALLBLASTDust {
     pub size: f64,
     pub size_jit: f64,
 }
-impl WALLBLASTDust {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WALLBLASTDust {
-            count: Vec::new(),
-            speed: Vec::new(),
-            jit: 0.0,
-            cone: Vec::new(),
-            tilt: 0.0,
-            life: 0.0,
-            life_jit: 0.0,
-            size: 0.0,
-            size_jit: 0.0,
-        }
-    }
-}
-impl Default for WALLBLASTDust { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/blastLook.ts:112 WALL_FLASH, src/game/blastLook.ts:112)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct WALLFLASH {
     pub color: V3,
 }
-impl WALLFLASH {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WALLFLASH {
-            color: [0.0; 3],
-        }
-    }
-}
-impl Default for WALLFLASH { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/blastLook.ts:116 AFTERGLOW, src/game/blastLook.ts:116)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct AFTERGLOW {
     pub after: f64,
     pub intensity: f64,
@@ -447,45 +192,16 @@ pub struct AFTERGLOW {
     pub y: f64,
     pub color: V3,
 }
-impl AFTERGLOW {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        AFTERGLOW {
-            after: 0.0,
-            intensity: 0.0,
-            ttl: 0.0,
-            range: 0.0,
-            radius: 0.0,
-            y: 0.0,
-            color: [0.0; 3],
-        }
-    }
-}
-impl Default for AFTERGLOW { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/blastLook.ts:119 STUN_SPARKS, src/game/blastLook.ts:119)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct STUNSPARKS {
     pub lobes: crate::blast_look::STUNSPARKSLobes,
     pub fan: crate::blast_look::STUNSPARKSFan,
     pub fountain: crate::blast_look::STUNSPARKSFountain,
     pub embers: crate::blast_look::STUNSPARKSEmbers,
 }
-impl STUNSPARKS {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        STUNSPARKS {
-            lobes: crate::blast_look::STUNSPARKSLobes::zeroed(),
-            fan: crate::blast_look::STUNSPARKSFan::zeroed(),
-            fountain: crate::blast_look::STUNSPARKSFountain::zeroed(),
-            embers: crate::blast_look::STUNSPARKSEmbers::zeroed(),
-        }
-    }
-}
-impl Default for STUNSPARKS { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/blastLook.ts:121 STUNSPARKS.lobes, src/game/blastLook.ts:121)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct STUNSPARKSLobes {
     pub count: f64,
     pub speed: f64,
@@ -498,27 +214,8 @@ pub struct STUNSPARKSLobes {
     pub size: f64,
     pub size_jit: f64,
 }
-impl STUNSPARKSLobes {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        STUNSPARKSLobes {
-            count: 0.0,
-            speed: 0.0,
-            jit: 0.0,
-            cone: 0.0,
-            fan: 0.0,
-            rise: 0.0,
-            life: 0.0,
-            life_jit: 0.0,
-            size: 0.0,
-            size_jit: 0.0,
-        }
-    }
-}
-impl Default for STUNSPARKSLobes { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/blastLook.ts:122 STUNSPARKS.fan, src/game/blastLook.ts:122)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct STUNSPARKSFan {
     pub count: f64,
     pub speed: f64,
@@ -530,26 +227,8 @@ pub struct STUNSPARKSFan {
     pub size: f64,
     pub size_jit: f64,
 }
-impl STUNSPARKSFan {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        STUNSPARKSFan {
-            count: 0.0,
-            speed: 0.0,
-            jit: 0.0,
-            lift: 0.0,
-            spread: 0.0,
-            life: 0.0,
-            life_jit: 0.0,
-            size: 0.0,
-            size_jit: 0.0,
-        }
-    }
-}
-impl Default for STUNSPARKSFan { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/blastLook.ts:123 STUNSPARKS.fountain, src/game/blastLook.ts:123)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct STUNSPARKSFountain {
     pub count: f64,
     pub speed: f64,
@@ -561,26 +240,8 @@ pub struct STUNSPARKSFountain {
     pub size: f64,
     pub size_jit: f64,
 }
-impl STUNSPARKSFountain {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        STUNSPARKSFountain {
-            count: 0.0,
-            speed: 0.0,
-            jit: 0.0,
-            spread: 0.0,
-            lift: 0.0,
-            life: 0.0,
-            life_jit: 0.0,
-            size: 0.0,
-            size_jit: 0.0,
-        }
-    }
-}
-impl Default for STUNSPARKSFountain { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/blastLook.ts:124 STUNSPARKS.embers, src/game/blastLook.ts:124)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct STUNSPARKSEmbers {
     pub count: f64,
     pub speed: f64,
@@ -592,26 +253,8 @@ pub struct STUNSPARKSEmbers {
     pub size: f64,
     pub size_jit: f64,
 }
-impl STUNSPARKSEmbers {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        STUNSPARKSEmbers {
-            count: 0.0,
-            speed: 0.0,
-            jit: 0.0,
-            spread: 0.0,
-            lift: 0.0,
-            life: 0.0,
-            life_jit: 0.0,
-            size: 0.0,
-            size_jit: 0.0,
-        }
-    }
-}
-impl Default for STUNSPARKSEmbers { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/blastLook.ts:135 DOOR_SPARKS, src/game/blastLook.ts:135)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct DOORSPARKS {
     pub jet: crate::blast_look::DOORSPARKSJet,
     pub skitter: crate::blast_look::DOORSPARKSSkitter,
@@ -620,23 +263,8 @@ pub struct DOORSPARKS {
     pub ahead: f64,
     pub lead: f64,
 }
-impl DOORSPARKS {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DOORSPARKS {
-            jet: crate::blast_look::DOORSPARKSJet::zeroed(),
-            skitter: crate::blast_look::DOORSPARKSSkitter::zeroed(),
-            back: crate::blast_look::DOORSPARKSBack::zeroed(),
-            fountain: 0.0,
-            ahead: 0.0,
-            lead: 0.0,
-        }
-    }
-}
-impl Default for DOORSPARKS { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/blastLook.ts:136 DOORSPARKS.jet, src/game/blastLook.ts:136)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct DOORSPARKSJet {
     pub count: f64,
     pub speed: f64,
@@ -648,26 +276,8 @@ pub struct DOORSPARKSJet {
     pub size: f64,
     pub size_jit: f64,
 }
-impl DOORSPARKSJet {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DOORSPARKSJet {
-            count: 0.0,
-            speed: 0.0,
-            jit: 0.0,
-            cone: 0.0,
-            tilt: 0.0,
-            life: 0.0,
-            life_jit: 0.0,
-            size: 0.0,
-            size_jit: 0.0,
-        }
-    }
-}
-impl Default for DOORSPARKSJet { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/blastLook.ts:137 DOORSPARKS.skitter, src/game/blastLook.ts:137)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct DOORSPARKSSkitter {
     pub count: f64,
     pub speed: f64,
@@ -679,26 +289,8 @@ pub struct DOORSPARKSSkitter {
     pub size: f64,
     pub size_jit: f64,
 }
-impl DOORSPARKSSkitter {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DOORSPARKSSkitter {
-            count: 0.0,
-            speed: 0.0,
-            jit: 0.0,
-            cone: 0.0,
-            tilt: 0.0,
-            life: 0.0,
-            life_jit: 0.0,
-            size: 0.0,
-            size_jit: 0.0,
-        }
-    }
-}
-impl Default for DOORSPARKSSkitter { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/blastLook.ts:138 DOORSPARKS.back, src/game/blastLook.ts:138)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct DOORSPARKSBack {
     pub count: f64,
     pub speed: f64,
@@ -710,82 +302,28 @@ pub struct DOORSPARKSBack {
     pub size: f64,
     pub size_jit: f64,
 }
-impl DOORSPARKSBack {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DOORSPARKSBack {
-            count: 0.0,
-            speed: 0.0,
-            jit: 0.0,
-            cone: 0.0,
-            tilt: 0.0,
-            life: 0.0,
-            life_jit: 0.0,
-            size: 0.0,
-            size_jit: 0.0,
-        }
-    }
-}
-impl Default for DOORSPARKSBack { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/blastLook.ts:268 doorChargeAt ->, src/game/blastLook.ts:268)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct DoorChargeAt {
     pub into: V3,
     pub from: V3,
     pub rest: V3,
 }
-impl DoorChargeAt {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DoorChargeAt {
-            into: [0.0; 3],
-            from: [0.0; 3],
-            rest: [0.0; 3],
-        }
-    }
-}
-impl Default for DoorChargeAt { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/blastLook.ts:280 doorBlast(D), src/game/blastLook.ts:280)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct DoorBlastD {
     pub into: V3,
     pub from: V3,
     pub rest: V3,
 }
-impl DoorBlastD {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DoorBlastD {
-            into: [0.0; 3],
-            from: [0.0; 3],
-            rest: [0.0; 3],
-        }
-    }
-}
-impl Default for DoorBlastD { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/blastLook.ts:287 burstOf(k), src/game/blastLook.ts:299)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct BurstOfK {
     pub n: f64,
     pub v: f64,
     pub l: f64,
     pub s: f64,
 }
-impl BurstOfK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BurstOfK {
-            n: 0.0,
-            v: 0.0,
-            l: 0.0,
-            s: 0.0,
-        }
-    }
-}
-impl Default for BurstOfK { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]

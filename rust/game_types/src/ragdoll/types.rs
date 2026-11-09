@@ -1,26 +1,14 @@
-//! The types of `ragdoll`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `ragdoll`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: RagdollWorld, src/game/ragdoll.ts:17)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct RagdollWorld {
     pub boxes: Vec<BoxId>,
     pub dynamic_boxes: Vec<BoxId>,
 }
-impl RagdollWorld {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RagdollWorld {
-            boxes: Vec::new(),
-            dynamic_boxes: Vec::new(),
-        }
-    }
-}
-impl Default for RagdollWorld { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Ragdoll, src/game/ragdoll.ts:57)
 #[derive(Clone, Debug, ToBytes)]
 pub struct Ragdoll {
     pub x: Vec<f64>,
@@ -65,7 +53,7 @@ pub struct Ragdoll {
     pub world: bool,
 }
 impl Ragdoll {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         Ragdoll {
             x: alloc::vec![0.0; 48],
@@ -113,8 +101,7 @@ impl Ragdoll {
 }
 impl Default for Ragdoll { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: inline at src/game/ragdoll.ts:24 RAG, src/game/ragdoll.ts:24)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RAG {
     pub pelvis: f64,
     pub spine: f64,
@@ -133,30 +120,6 @@ pub struct RAG {
     pub ank_l: f64,
     pub ank_r: f64,
 }
-impl RAG {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RAG {
-            pelvis: 0.0,
-            spine: 0.0,
-            neck: 0.0,
-            head: 0.0,
-            sho_l: 0.0,
-            sho_r: 0.0,
-            elb_l: 0.0,
-            elb_r: 0.0,
-            hand_l: 0.0,
-            hand_r: 0.0,
-            hip_l: 0.0,
-            hip_r: 0.0,
-            knee_l: 0.0,
-            knee_r: 0.0,
-            ank_l: 0.0,
-            ank_r: 0.0,
-        }
-    }
-}
-impl Default for RAG { fn default() -> Self { Self::zeroed() } }
 
 /// (src/game/ragdoll.ts:24 RAG: a table nothing writes)
 pub fn rag() -> crate::ragdoll::RAG { crate::ragdoll::RAG { pelvis: 0.0, spine: 1.0, neck: 2.0, head: 3.0, sho_l: 4.0, sho_r: 5.0, elb_l: 6.0, elb_r: 7.0, hand_l: 8.0, hand_r: 9.0, hip_l: 10.0, hip_r: 11.0, knee_l: 12.0, knee_r: 13.0, ank_l: 14.0, ank_r: 15.0 } }

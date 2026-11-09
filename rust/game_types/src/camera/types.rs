@@ -1,9 +1,8 @@
-//! The types of `camera`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `camera`.
 #![allow(unused_imports)]
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: FollowCamera, src/game/camera.ts:7)
 #[derive(Clone, Copy, Debug)]
 pub struct FollowCamera {
     pub target: V3,
@@ -39,7 +38,7 @@ pub struct FollowCamera {
     pub desired_serial: u32,
 }
 impl FollowCamera {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         FollowCamera {
             target: [10.0, 0.0, 15.0],
@@ -77,144 +76,57 @@ impl FollowCamera {
 }
 impl Default for FollowCamera { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: inline at src/game/camera.ts:26 FollowCamera.pin, src/game/camera.ts:26)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct FollowCameraPin {
     pub look: V3,
     pub yaw: f64,
     pub pitch: f64,
     pub dist: f64,
 }
-impl FollowCameraPin {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FollowCameraPin {
-            look: [0.0; 3],
-            yaw: 0.0,
-            pitch: 0.0,
-            dist: 0.0,
-        }
-    }
-}
-impl Default for FollowCameraPin { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/camera.ts:28 FollowCamera.beforePin, src/game/camera.ts:28)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct FollowCameraBeforePin {
     pub yaw: f64,
     pub pitch: f64,
     pub distance: f64,
     pub desired_distance: f64,
 }
-impl FollowCameraBeforePin {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FollowCameraBeforePin {
-            yaw: 0.0,
-            pitch: 0.0,
-            distance: 0.0,
-            desired_distance: 0.0,
-        }
-    }
-}
-impl Default for FollowCameraBeforePin { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/camera.ts:75 FollowCamera.drawHeld, src/game/camera.ts:75)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct FollowCameraDrawHeld {
     pub target: V3,
     pub yaw: f64,
     pub pitch: f64,
     pub distance: f64,
 }
-impl FollowCameraDrawHeld {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FollowCameraDrawHeld {
-            target: [0.0; 3],
-            yaw: 0.0,
-            pitch: 0.0,
-            distance: 0.0,
-        }
-    }
-}
-impl Default for FollowCameraDrawHeld { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/camera.ts:33 setPin(p), src/game/camera.ts:33)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct FollowCameraSetPinP {
     pub look: V3,
     pub yaw: f64,
     pub pitch: f64,
     pub dist: f64,
 }
-impl FollowCameraSetPinP {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FollowCameraSetPinP {
-            look: [0.0; 3],
-            yaw: 0.0,
-            pitch: 0.0,
-            dist: 0.0,
-        }
-    }
-}
-impl Default for FollowCameraSetPinP { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/camera.ts:76 drawIn(p), src/game/camera.ts:76)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct FollowCameraDrawInP {
     pub target: V3,
     pub yaw: f64,
     pub pitch: f64,
     pub distance: f64,
 }
-impl FollowCameraDrawInP {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FollowCameraDrawInP {
-            target: [0.0; 3],
-            yaw: 0.0,
-            pitch: 0.0,
-            distance: 0.0,
-        }
-    }
-}
-impl Default for FollowCameraDrawInP { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/camera.ts:135 ray ->, src/game/camera.ts:135)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct FollowCameraRay {
     pub ro: V3,
     pub rd: V3,
 }
-impl FollowCameraRay {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FollowCameraRay {
-            ro: [0.0; 3],
-            rd: [0.0; 3],
-        }
-    }
-}
-impl Default for FollowCameraRay { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/camera.ts:149 planarBasis ->, src/game/camera.ts:149)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct FollowCameraPlanarBasis {
     pub fwd: V3,
     pub right: V3,
 }
-impl FollowCameraPlanarBasis {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FollowCameraPlanarBasis {
-            fwd: [0.0; 3],
-            right: [0.0; 3],
-        }
-    }
-}
-impl Default for FollowCameraPlanarBasis { fn default() -> Self { Self::zeroed() } }
 
 /// (src/game/camera.ts:5 PIN_PITCH_MAX)
 pub const PIN_PITCH_MAX: f64 = 1.5533430342749532;

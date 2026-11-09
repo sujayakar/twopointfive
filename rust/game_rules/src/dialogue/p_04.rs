@@ -192,12 +192,12 @@ mod tests {
     use super::*;
 
     fn ctx(k: Knowledge, t: crate::game::Temperament) -> DialogueCtx {
-        DialogueCtx { k, t, ..DialogueCtx::zeroed() }
+        DialogueCtx { k, t, ..DialogueCtx::default() }
     }
     fn beat(pairs: &[(&str, &str)]) -> Beat {
         let mut by = JsMap::new();
         for (key, text) in pairs { by.set(String::from(*key), String::from(*text)); }
-        Beat { him: Him::Arm1(by), ..Beat::zeroed() }
+        Beat { him: Him::Arm1(by), ..Beat::default() }
     }
 
     #[test]
@@ -216,7 +216,7 @@ mod tests {
     #[test]
     fn a_plain_line_is_for_everyone() {
         let c = ctx(Knowledge::Saw, crate::game::Temperament::Steady);
-        let b = Beat { him: Him::Text(String::from("line")), ..Beat::zeroed() };
+        let b = Beat { him: Him::Text(String::from("line")), ..Beat::default() };
         let (text, k) = him_raw(&b, &c).unwrap();
         assert_eq!((text.as_str(), k.as_str()), ("line", "*"));
     }
@@ -244,7 +244,7 @@ mod tests {
 
     #[test]
     fn a_stage_reaches_its_beat() {
-        let mut sc = Script::zeroed();
+        let mut sc = Script::default();
         sc.beats._1.sam = String::from("one");
         sc.beats._2.sam = String::from("two");
         sc.beats._3.sam = String::from("three");

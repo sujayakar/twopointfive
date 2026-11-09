@@ -1,10 +1,9 @@
-//! The types of `scene_marking_defaults`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `scene_marking_defaults`.
 #![allow(unused_imports)]
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: inline at src/scene/markingDefaults.ts:19 MK, src/scene/markingDefaults.ts:19)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct MK {
     pub tape: V3,
     pub ink: V3,
@@ -21,31 +20,8 @@ pub struct MK {
     pub led_glass: V3,
     pub screen_off: V3,
 }
-impl MK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        MK {
-            tape: [0.0; 3],
-            ink: [0.0; 3],
-            label: [0.0; 3],
-            text_grey: [0.0; 3],
-            marker_blue: [0.0; 3],
-            marker_red: [0.0; 3],
-            marker_green: [0.0; 3],
-            key_deck: [0.0; 3],
-            key_cap: [0.0; 3],
-            steel: [0.0; 3],
-            led_green: [0.0; 3],
-            led_amber: [0.0; 3],
-            led_glass: [0.0; 3],
-            screen_off: [0.0; 3],
-        }
-    }
-}
-impl Default for MK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/markingDefaults.ts:31 P, src/scene/markingDefaults.ts:31)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct P {
     pub tape: crate::scene_markings::MarkPal,
     pub ink: crate::scene_markings::MarkPal,
@@ -53,19 +29,6 @@ pub struct P {
     pub grey: crate::scene_markings::MarkPal,
     pub steel: crate::scene_markings::MarkPal,
 }
-impl P {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        P {
-            tape: crate::scene_markings::MarkPal::zeroed(),
-            ink: crate::scene_markings::MarkPal::zeroed(),
-            label: crate::scene_markings::MarkPal::zeroed(),
-            grey: crate::scene_markings::MarkPal::zeroed(),
-            steel: crate::scene_markings::MarkPal::zeroed(),
-        }
-    }
-}
-impl Default for P { fn default() -> Self { Self::zeroed() } }
 
 /// (src/scene/markingDefaults.ts:11 T)
 pub const T: f64 = 0.025;

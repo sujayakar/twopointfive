@@ -40,7 +40,7 @@ pub fn look_keyed(g: &crate::game::Game, b: AnyBoxId) -> bool {
 
 /// boxOf's value, before it has a place in the table
 fn box_value(c: V3, h: V3, yaw: f64, albedo: V3, emissive: V3, flags: f64, owner: f64, rot: Option<Quat>, name: Option<String>) -> Bx {
-    Bx { c, h, yaw, albedo, emissive, flags, owner, cut_height: 1e6, rot, name, ..Bx::zeroed() }
+    Bx { c, h, yaw, albedo, emissive, flags, owner, cut_height: 1e6, rot, name, ..Bx::default() }
 }
 
 /// Is this piece of trim drawn: while the box that says it is. (boxes.ts trimDrawn)

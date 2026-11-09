@@ -93,7 +93,7 @@ pub fn wall_charge_reset(g: &mut crate::game::Game) {
     g.wall_charge.carried = n;
     g.wall_charge.brought = n;
     g.wall_charge.log = Vec::new();
-    g.wall_charge.stats = WallChargeStats::zeroed();
+    g.wall_charge.stats = WallChargeStats::default();
     g.wall_charge.last_blow = None;
     g.wall_charge.walks = None;
     g.wall_charge.keep.asks = 0.0;

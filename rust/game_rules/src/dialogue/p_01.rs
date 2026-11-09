@@ -635,7 +635,7 @@ mod tests {
     #[test]
     fn said_text_takes_the_first_that_applies() {
         let l = SaidTextL { text: st("t"), now: Some(st("n")), away: Some(st("a")), bare: Some(st("b")), guide: Some(st("g")) };
-        let mut ctx = DialogueCtx::zeroed();
+        let mut ctx = DialogueCtx::default();
         assert_eq!(said_of(&l, &ctx), "a");
         ctx.facts.office = Some(false);
         assert_eq!(said_of(&l, &ctx), "a");

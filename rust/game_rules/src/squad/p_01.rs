@@ -319,7 +319,7 @@ pub fn order(g: &mut crate::game::Game, gd: GuardId, patch: crate::squad::OrderP
 
     if g.gd[gd].script.is_none() {
         let serial = g.serial();   // (the one place a man's own script is made: doorpath.ts:178 asks by identity whether it is still his)
-        g.gd[gd].script = Some(crate::game::GuardScript { serial, ..crate::game::GuardScript::zeroed() });
+        g.gd[gd].script = Some(crate::game::GuardScript { serial, ..crate::game::GuardScript::default() });
     }
     if let Some(goal) = patch.goal {
         let had = g.gd[gd].script.as_ref().unwrap().goal;

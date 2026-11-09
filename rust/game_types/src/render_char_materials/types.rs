@@ -1,12 +1,11 @@
-//! The types of `render_char_materials`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `render_char_materials`.
 #![allow(unused_imports)]
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, Default)]
 pub enum CharSlot {
-    Boot,
+    #[default] Boot,
     ClothPlain,
     Skin,
     ClothUniform,
@@ -36,8 +35,7 @@ impl CharSlot {
     }
 }
 
-/// (TypeScript: CharSlotData, src/render/charMaterials.ts:45)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct CharSlotData {
     pub slot: Vec<u8>,
     pub cavity: Vec<f32>,
@@ -46,40 +44,14 @@ pub struct CharSlotData {
     pub area: Vec<f32>,
     pub unmatched: Vec<String>,
 }
-impl CharSlotData {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CharSlotData {
-            slot: Vec::new(),
-            cavity: Vec::new(),
-            authored: false,
-            cap_weights: Vec::new(),
-            area: Vec::new(),
-            unmatched: Vec::new(),
-        }
-    }
-}
-impl Default for CharSlotData { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: SlotWeights, src/render/charMaterials.ts:61)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct SlotWeights {
     pub area: Vec<f32>,
     pub cap_weights: Vec<f32>,
 }
-impl SlotWeights {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SlotWeights {
-            area: Vec::new(),
-            cap_weights: Vec::new(),
-        }
-    }
-}
-impl Default for SlotWeights { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: SlotMat, src/render/charMaterials.ts:218)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct SlotMat {
     pub albedo: Option<V3>,
     pub src: Option<crate::render_char_materials::SlotMatSrc>,
@@ -93,27 +65,7 @@ pub struct SlotMat {
     pub grime: f64,
     pub wear: f64,
 }
-impl SlotMat {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SlotMat {
-            albedo: None,
-            src: None,
-            k: None,
-            mix: None,
-            pick: None,
-            rough: 0.0,
-            spec: 0.0,
-            metal: None,
-            soak: 0.0,
-            grime: 0.0,
-            wear: 0.0,
-        }
-    }
-}
-impl Default for SlotMat { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum SlotMatSrc {
     Tint,
@@ -128,23 +80,12 @@ impl SlotMatSrc {
     }
 }
 
-/// (TypeScript: SlotAlias, src/render/charMaterials.ts:219)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SlotAlias {
     pub as_: crate::render_char_materials::CharSlot,
 }
-impl SlotAlias {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SlotAlias {
-            as_: crate::render_char_materials::CharSlot::Boot,
-        }
-    }
-}
-impl Default for SlotAlias { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: SideTable, src/render/charMaterials.ts:220)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct SideTable {
     pub slots: JsMap<crate::render_char_materials::CharSlot, crate::render_char_materials::SideTableSlotsValue>,
     pub grime: crate::render_char_materials::SideTableGrime,
@@ -152,50 +93,22 @@ pub struct SideTable {
     pub ridge: f64,
     pub stand_in: Option<crate::render_char_materials::SideTableStandIn>,
 }
-impl SideTable {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SideTable {
-            slots: JsMap::new(),
-            grime: crate::render_char_materials::SideTableGrime::zeroed(),
-            cavity: 0.0,
-            ridge: 0.0,
-            stand_in: None,
-        }
-    }
-}
-impl Default for SideTable { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: a union)
 #[derive(Clone, Debug)]
 pub enum SideTableSlotsValue {
     SlotMat(crate::render_char_materials::SlotMat),
     SlotAlias(crate::render_char_materials::SlotAlias),
 }
 
-/// (TypeScript: inline at src/render/charMaterials.ts:223 SideTable.grime, src/render/charMaterials.ts:223)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SideTableGrime {
     pub color: V3,
     pub height: f64,
     pub band: f64,
     pub k: f64,
 }
-impl SideTableGrime {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SideTableGrime {
-            color: [0.0; 3],
-            height: 0.0,
-            band: 0.0,
-            k: 0.0,
-        }
-    }
-}
-impl Default for SideTableGrime { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/render/charMaterials.ts:228 SideTable.standIn, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SideTableStandIn {
     pub boot: Option<crate::render_char_materials::CharSlot>,
     pub cloth_plain: Option<crate::render_char_materials::CharSlot>,
@@ -209,80 +122,26 @@ pub struct SideTableStandIn {
     pub accent: Option<crate::render_char_materials::CharSlot>,
     pub eye: Option<crate::render_char_materials::CharSlot>,
 }
-impl SideTableStandIn {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SideTableStandIn {
-            boot: None,
-            cloth_plain: None,
-            skin: None,
-            cloth_uniform: None,
-            webbing: None,
-            helmet: None,
-            metal_dark: None,
-            rubber: None,
-            lens: None,
-            accent: None,
-            eye: None,
-        }
-    }
-}
-impl Default for SideTableStandIn { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/render/charMaterials.ts:345 CHAR_MATS_LOOK, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct RenderCharMaterialsModCHARMATSLOOK {
     pub civilian: Option<crate::render_char_materials::SideTable>,
     pub operator: Option<crate::render_char_materials::SideTable>,
     pub defender: Option<crate::render_char_materials::SideTable>,
     pub responder: Option<crate::render_char_materials::SideTable>,
 }
-impl RenderCharMaterialsModCHARMATSLOOK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RenderCharMaterialsModCHARMATSLOOK {
-            civilian: None,
-            operator: None,
-            defender: None,
-            responder: None,
-        }
-    }
-}
-impl Default for RenderCharMaterialsModCHARMATSLOOK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/render/charMaterials.ts:425 orderOf, src/render/charMaterials.ts:425)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RenderCharMaterialsModOrderOfValue {
     pub ver: f64,
     pub bits: f64,
 }
-impl RenderCharMaterialsModOrderOfValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RenderCharMaterialsModOrderOfValue {
-            ver: 0.0,
-            bits: 0.0,
-        }
-    }
-}
-impl Default for RenderCharMaterialsModOrderOfValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/render/charMaterials.ts:411 resolveSlot ->, src/render/charMaterials.ts:411)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct ResolveSlot {
     pub name: crate::render_char_materials::CharSlot,
     pub m: crate::render_char_materials::SlotMat,
 }
-impl ResolveSlot {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ResolveSlot {
-            name: crate::render_char_materials::CharSlot::Boot,
-            m: crate::render_char_materials::SlotMat::zeroed(),
-        }
-    }
-}
-impl Default for ResolveSlot { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]
@@ -305,8 +164,8 @@ impl RenderCharMaterialsMod {
         RenderCharMaterialsMod {
             cache: JsMap::new(),
             char_mats: JsMap::new(),
-            char_mats_look: crate::render_char_materials::RenderCharMaterialsModCHARMATSLOOK::zeroed(),
-            sneak_suit: crate::render_char_materials::SideTable::zeroed(),
+            char_mats_look: crate::render_char_materials::RenderCharMaterialsModCHARMATSLOOK::default(),
+            sneak_suit: crate::render_char_materials::SideTable::default(),
             order_of: JsMap::new(),
             mats_version: 1.0,
         }

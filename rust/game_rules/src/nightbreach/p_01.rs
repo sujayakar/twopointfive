@@ -749,7 +749,7 @@ mod tests {
         let start = TeamStart { sam: [0.0; 3], sam_yaw: 0.0, ops: Some(vec![[1.0, 0.0, 1.0], [2.0, 0.0, 2.0]]), ops_yaw: None };
         assert_eq!(mark_of(None, None, Some(&start), 1), Ok([2.0, 0.0, 2.0]));
         assert_eq!(mark_of(None, None, Some(&start), 2), Err(String::from("no mark for teammate 3 (the level's team start, or its breach plan)")));
-        let mut plan = crate::scene_level::BreachPlan::zeroed();
+        let mut plan = crate::scene_level::BreachPlan::default();
         plan.stack = [[3.0, 0.0, 3.0], [4.0, 0.0, 4.0]];
         assert_eq!(mark_of(None, Some(&plan), Some(&start), 0), Ok([3.0, 0.0, 3.0]));
         plan.from = Some([[5.0, 0.0, 5.0], [6.0, 0.0, 6.0]]);
@@ -775,7 +775,7 @@ mod tests {
         let bl = crate::nightbreach::blind();
         let mut man = crate::game::Guard::blank();
         man.dazzled_until = 3.0;
-        man.held = Some(crate::game::GuardHeld::zeroed());   // (cover at :114 is another part's: in Sam's arm it is not asked)
+        man.held = Some(crate::game::GuardHeld::default());   // (cover at :114 is another part's: in Sam's arm it is not asked)
         let h = g.gd.push(man);
         g.time = 1.0;
         let mut b = BlindBurst { until: -1.0, n: 5.0, next: 0.0 };

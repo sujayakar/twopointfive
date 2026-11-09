@@ -1,10 +1,9 @@
-//! The types of `render_gbuffer`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `render_gbuffer`.
 #![allow(unused_imports)]
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: SkinnedDrawable, src/render/gbuffer.ts:92)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SkinnedDrawable {
     pub vertex_buf: crate::Opaque,
     pub joint_buf: crate::Opaque,
@@ -18,30 +17,10 @@ pub struct SkinnedDrawable {
     pub char_mats: crate::Opaque,
     pub instance_count: f64,
 }
-impl SkinnedDrawable {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SkinnedDrawable {
-            vertex_buf: crate::Opaque,
-            joint_buf: crate::Opaque,
-            joints_format: crate::render_gbuffer::SkinnedDrawableJointsFormat::Float16,
-            index_buf: crate::Opaque,
-            index_count: 0.0,
-            index_format: crate::render_gbuffer::SkinnedDrawableIndexFormat::Uint16,
-            joint_mats: crate::Opaque,
-            char_insts: crate::Opaque,
-            slot_buf: crate::Opaque,
-            char_mats: crate::Opaque,
-            instance_count: 0.0,
-        }
-    }
-}
-impl Default for SkinnedDrawable { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum SkinnedDrawableJointsFormat {
-    Float16,
+    #[default] Float16,
     Float16x2,
     Float16x4,
     Float32,
@@ -131,10 +110,9 @@ impl SkinnedDrawableJointsFormat {
     }
 }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum SkinnedDrawableIndexFormat {
-    Uint16,
+    #[default] Uint16,
     Uint32,
 }
 impl SkinnedDrawableIndexFormat {

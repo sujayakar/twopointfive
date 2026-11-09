@@ -244,7 +244,7 @@ mod tests {
     #[test]
     fn far_known_reads_the_other_side_and_reset_forgets() {
         let mut g = Game::blank();
-        let o = g.tab.cover_opening.push(crate::cover::Opening { at: [1.0, 0.0, 2.0], n: [0.0, 1.0], half: 0.5, ..crate::cover::Opening::zeroed() });
+        let o = g.tab.cover_opening.push(crate::cover::Opening { at: [1.0, 0.0, 2.0], n: [0.0, 1.0], half: 0.5, ..crate::cover::Opening::default() });
         let (plus, minus): (V3, V3) = ([1.0, 0.0, 3.0], [1.0, 0.0, 1.0]);
         assert!(!entry_points_far_known(&mut g, o, plus));
         g.entry.been.set(o, 1.0);

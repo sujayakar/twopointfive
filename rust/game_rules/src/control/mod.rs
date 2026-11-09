@@ -477,7 +477,7 @@ mod tests {
         g.gd[gd].callsign = String::from("Alvarez");
         g.time = 5.0;
         assert!(grant_body(&mut g, gd, 0.016).is_none());
-        let mut row = crate::morale::Mind::zeroed();
+        let mut row = crate::morale::Mind::default();
         row.act = crate::morale::MoraleAct::Hold;
         row.drive = true; row.drive_t = 5.0; row.script.speed = Some(2.5);
         g.m.morale.state_of.set(gd, row);

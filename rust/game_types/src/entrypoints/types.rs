@@ -1,10 +1,9 @@
-//! The types of `entrypoints`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `entrypoints`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: Pod, src/game/entrypoints.ts:64)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Pod {
     pub pos: V3,
     pub face: f64,
@@ -12,20 +11,7 @@ pub struct Pod {
     /// INVENTED: this point was moved off an opening or swapped in (entrypoints.ts:163, :170), read by dealt for the tallies (:172)
     pub moved: bool,
 }
-impl Pod {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Pod {
-            pos: [0.0; 3],
-            face: 0.0,
-            watch: None,
-            moved: false,
-        }
-    }
-}
-impl Default for Pod { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: EntryPoints, src/game/entrypoints.ts:67)
 #[derive(Clone, Debug, ToBytes)]
 pub struct EntryPoints {
     pub been: JsMap<CoverOpeningId, f64>,
@@ -34,7 +20,7 @@ pub struct EntryPoints {
     pub log: Vec<String>,
 }
 impl EntryPoints {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         EntryPoints {
             been: JsMap::new(),
@@ -46,26 +32,13 @@ impl EntryPoints {
 }
 impl Default for EntryPoints { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: inline at src/game/entrypoints.ts:73 EntryPoints.stats, src/game/entrypoints.ts:73)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct EntryPointsStats {
     pub pods: f64,
     pub risky: f64,
     pub moved: f64,
     pub kept: f64,
 }
-impl EntryPointsStats {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        EntryPointsStats {
-            pods: 0.0,
-            risky: 0.0,
-            moved: 0.0,
-            kept: 0.0,
-        }
-    }
-}
-impl Default for EntryPointsStats { fn default() -> Self { Self::zeroed() } }
 
 /// (src/game/entrypoints.ts:65 EYE)
 pub const EYE: f64 = 1.55;

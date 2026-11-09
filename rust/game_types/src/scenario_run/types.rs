@@ -1,47 +1,32 @@
-//! The types of `scenario_run`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `scenario_run`.
 #![allow(unused_imports)]
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: a union)
 #[derive(Clone, Debug)]
 pub enum SameFogA {
     Text(String),
     URLSearchParams(crate::query::Query),
 }
 
-/// (TypeScript: a union)
 #[derive(Clone, Debug)]
 pub enum SameFogB {
     Text(String),
     URLSearchParams(crate::query::Query),
 }
 
-/// (TypeScript: a union)
 #[derive(Clone, Debug)]
 pub enum StartFromQuerySearch {
     Text(String),
     URLSearchParams(crate::query::Query),
 }
 
-/// (TypeScript: inline at src/game/scenarioRun.ts:63 startFromQuery ->, src/game/scenarioRun.ts:63)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct StartFromQuery {
     pub spec: Option<crate::scene_scenario_list::ScenarioSpec>,
     pub why: Option<String>,
 }
-impl StartFromQuery {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StartFromQuery {
-            spec: None,
-            why: None,
-        }
-    }
-}
-impl Default for StartFromQuery { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum ActiveScenario {
     Nightbreach,
@@ -60,8 +45,7 @@ impl ActiveScenario {
     }
 }
 
-/// (TypeScript: inline at src/game/scenarioRun.ts:92 runningScenario ->, src/game/scenarioRun.ts:92)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct RunningScenario {
     pub kind: crate::scenario_run::RunningScenarioKind,
     pub squad: f64,
@@ -70,25 +54,10 @@ pub struct RunningScenario {
     pub team: String,
     pub saves: Option<bool>,
 }
-impl RunningScenario {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RunningScenario {
-            kind: crate::scenario_run::RunningScenarioKind::Nightbreach,
-            squad: 0.0,
-            entry: None,
-            title: String::new(),
-            team: String::new(),
-            saves: None,
-        }
-    }
-}
-impl Default for RunningScenario { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum RunningScenarioKind {
-    Nightbreach,
+    #[default] Nightbreach,
     Roomclear,
     Rescue,
     Quiet,
@@ -104,7 +73,6 @@ impl RunningScenarioKind {
     }
 }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum QuitScenario {
     Nightbreach,

@@ -374,7 +374,7 @@ mod tests {
     /// a lamp on a fixture, with no box hung on it
     fn stand() -> (crate::game::Game, FixtureId, LightId) {
         let mut g = crate::game::Game::blank();
-        let l = g.tab.light.push(crate::render_lights::RtLight::zeroed());
+        let l = g.tab.light.push(crate::render_lights::RtLight::default());
         let mut f = crate::sim_lightshome::Fixture::blank();
         f.pos = [1.0, 2.0, 3.0];
         f.light = Some(l);
@@ -433,11 +433,11 @@ mod tests_need_box_rows {
     /// a lamp on a fixture, its box the world's first static
     fn stand() -> (crate::game::Game, FixtureId) {
         let mut g = crate::game::Game::blank();
-        let l = g.tab.light.push(crate::render_lights::RtLight::zeroed());
+        let l = g.tab.light.push(crate::render_lights::RtLight::default());
         let mut f = crate::sim_lightshome::Fixture::blank();
         f.pos = [1.0, 2.0, 3.0];
         f.light = Some(l);
-        let mut b = crate::scene_boxes::Box::zeroed();
+        let mut b = crate::scene_boxes::Box::default();
         b.c = [1.0, 2.0, 3.0];
         b.h = [0.5, 0.1, 0.25];
         let id = g.tab.boxes.push(b);
@@ -458,7 +458,7 @@ mod tests_need_box_rows {
     #[test]
     fn a_round_strikes_the_drum_under_its_mouth() {
         let (mut g, t) = stand();
-        let mut drum = crate::scene_boxes::Box::zeroed();
+        let mut drum = crate::scene_boxes::Box::default();
         drum.c = [1.0, 1.0, 3.0];
         let id = g.tab.boxes.push(drum);
         g.engine.world.statics.push(id);

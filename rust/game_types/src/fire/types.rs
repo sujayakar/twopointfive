@@ -1,10 +1,9 @@
-//! The types of `fire`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `fire`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: FireStats, src/game/fire.ts:156)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct FireStats {
     pub fires: f64,
     pub lit: f64,
@@ -15,25 +14,8 @@ pub struct FireStats {
     pub sum: f64,
     pub n: f64,
 }
-impl FireStats {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FireStats {
-            fires: 0.0,
-            lit: 0.0,
-            frames: 0.0,
-            cracks: 0.0,
-            lo: 0.0,
-            hi: 0.0,
-            sum: 0.0,
-            n: 0.0,
-        }
-    }
-}
-impl Default for FireStats { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: FireShown, src/game/fire.ts:222)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct FireShown {
     pub n: f64,
     pub time: f64,
@@ -49,29 +31,8 @@ pub struct FireShown {
     /// INVENTED by a review: see the proposals
     pub serial: u32,
 }
-impl FireShown {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FireShown {
-            n: 0.0,
-            time: 0.0,
-            stir: None,
-            stir_at: None,
-            bed: Vec::new(),
-            smoke: Vec::new(),
-            smokes: 0.0,
-            beds: 0.0,
-            ember: Vec::new(),
-            embers: 0.0,
-            soot_mix: None,
-            serial: 0,
-        }
-    }
-}
-impl Default for FireShown { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/fire.ts:167 FIRE_LOOK_SMOKE, src/game/fire.ts:167)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct FIRELOOKSMOKE {
     pub up: f64,
     pub radius: f64,
@@ -95,38 +56,8 @@ pub struct FIRELOOKSMOKE {
     pub ember_fog: bool,
     pub snow: crate::fire::FIRELOOKSMOKESnow,
 }
-impl FIRELOOKSMOKE {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FIRELOOKSMOKE {
-            up: 0.0,
-            radius: 0.0,
-            density: 0.0,
-            puff_every: 0.0,
-            puff_secs: 0.0,
-            puff_up: 0.0,
-            puff_radius: 0.0,
-            puff_off: 0.0,
-            puff_density: 0.0,
-            puff_temp: 0.0,
-            puff_speed: 0.0,
-            puff_push: 0.0,
-            puff_expand: 0.0,
-            soot: [0.0; 3],
-            soot_ease: 0.0,
-            ember_up: 0.0,
-            ember_spread: 0.0,
-            ember_jit: 0.0,
-            ember_speed: 0.0,
-            ember_fog: false,
-            snow: crate::fire::FIRELOOKSMOKESnow::zeroed(),
-        }
-    }
-}
-impl Default for FIRELOOKSMOKE { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/fire.ts:198 FIRELOOKSMOKE.snow, src/game/fire.ts:198)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct FIRELOOKSMOKESnow {
     pub speed: f64,
     pub reach: f64,
@@ -134,22 +65,8 @@ pub struct FIRELOOKSMOKESnow {
     pub mouth: f64,
     pub top: f64,
 }
-impl FIRELOOKSMOKESnow {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FIRELOOKSMOKESnow {
-            speed: 0.0,
-            reach: 0.0,
-            spread: 0.0,
-            mouth: 0.0,
-            top: 0.0,
-        }
-    }
-}
-impl Default for FIRELOOKSMOKESnow { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at quiet fireShown ->, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1597)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct FireShown2 {
     pub n: f64,
     pub time: f64,
@@ -165,83 +82,27 @@ pub struct FireShown2 {
     /// INVENTED by a review: see the proposals
     pub serial: u32,
 }
-impl FireShown2 {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FireShown2 {
-            n: 0.0,
-            time: 0.0,
-            stir: None,
-            stir_at: None,
-            bed: Vec::new(),
-            smoke: Vec::new(),
-            smokes: 0.0,
-            beds: 0.0,
-            ember: Vec::new(),
-            embers: 0.0,
-            soot_mix: None,
-            serial: 0,
-        }
-    }
-}
-impl Default for FireShown2 { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/fire.ts:247 firePops ->, src/game/fire.ts:247)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct FirePopsItem {
     pub at: f64,
     pub hard: f64,
     pub seed: f64,
 }
-impl FirePopsItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FirePopsItem {
-            at: 0.0,
-            hard: 0.0,
-            seed: 0.0,
-        }
-    }
-}
-impl Default for FirePopsItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/fire.ts:269 mouthOf ->, src/game/fire.ts:269)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct MouthOf {
     pub pos: V3,
     pub r: f64,
     pub lid: f64,
 }
-impl MouthOf {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        MouthOf {
-            pos: [0.0; 3],
-            r: 0.0,
-            lid: 0.0,
-        }
-    }
-}
-impl Default for MouthOf { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/fire.ts:279 windAt ->, src/game/fire.ts:279)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct WindAt {
     pub wv: V3,
     pub wl: f64,
     pub wind: [f64; 2],
 }
-impl WindAt {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WindAt {
-            wv: [0.0; 3],
-            wl: 0.0,
-            wind: [0.0; 2],
-        }
-    }
-}
-impl Default for WindAt { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]

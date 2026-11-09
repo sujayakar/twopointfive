@@ -121,7 +121,7 @@ fn stand_extra(g: &mut Game, n: f64) {
     let (light, budget) = (g.k.nightbreach.def_lights, game::guards::MAX_SKINNED - g.civilians.len() as f64);
     for s in spots {
         let name = format!("Extra {}", serial + stood + 1);
-        let o = game::guards::UnitOpts { team: Team::Hostile, pos: s.pos, yaw: Some(m::atan2(s.aim_at[0] - s.pos[0], s.aim_at[2] - s.pos[2])), name: Some(name.clone()), light: Some(light), budget: Some(budget), ..game::guards::UnitOpts::zeroed() };
+        let o = game::guards::UnitOpts { team: Team::Hostile, pos: s.pos, yaw: Some(m::atan2(s.aim_at[0] - s.pos[0], s.aim_at[2] - s.pos[2])), name: Some(name.clone()), light: Some(light), budget: Some(budget), ..game::guards::UnitOpts::default() };
         let gd = match game::guards::spawn_unit(g, &o) { Ok(gd) => gd, Err(e) => { why = Some(String::from(e.trim_start_matches("spawnUnit: ").split(" — ").next().unwrap_or(""))); break; } };
         g.gd[gd].hold = true; g.gd[gd].pinned = true;
         if g.night_breach.active { game::nightbreach::night_breach_adopt(g, gd, &game::nightbreach::NightBreachMark { pos: s.pos, aim_at: s.aim_at, name: Some(name.clone()), drill: Some(false) }); }

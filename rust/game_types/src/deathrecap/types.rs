@@ -3,9 +3,9 @@
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{collections::VecDeque, string::String, vec::Vec};
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum RecapCause {
-    Blast,
+    #[default] Blast,
     Round,
     Other,
     Unknown,
@@ -22,28 +22,17 @@ impl RecapCause {
 }
 
 /// one man of a run, as a take names him
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct RecapMan {
     pub id: f64,
     pub name: String,
     pub side: String,
     pub kind: crate::deathrecap::RecapManKind,
 }
-impl RecapMan {
-    pub fn zeroed() -> Self {
-        RecapMan {
-            id: 0.0,
-            name: String::new(),
-            side: String::new(),
-            kind: crate::deathrecap::RecapManKind::Player,
-        }
-    }
-}
-impl Default for RecapMan { fn default() -> Self { Self::zeroed() } }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum RecapManKind {
-    Player,
+    #[default] Player,
     Civ,
     Man,
 }
@@ -58,7 +47,7 @@ impl RecapManKind {
 }
 
 /// One of ours going down. Plan coordinates [x, z], metres; `gaze` in radians, 0 = +z (the aim yaw he had the sample before he fell).
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct RecapDeath {
     pub t: f64,
     pub victim: f64,
@@ -83,36 +72,9 @@ pub struct RecapDeath {
     /// recap may not move
     pub serial: u32,
 }
-impl RecapDeath {
-    pub fn zeroed() -> Self {
-        RecapDeath {
-            t: 0.0,
-            victim: 0.0,
-            name: String::new(),
-            side: String::new(),
-            player: false,
-            at: [0.0; 2],
-            gaze: 0.0,
-            cause: crate::deathrecap::RecapCause::Blast,
-            by: 0.0,
-            by_name: String::new(),
-            by_side: String::new(),
-            by_at: None,
-            from: None,
-            to: [0.0; 2],
-            weapon: String::new(),
-            dist: 0.0,
-            off: 0.0,
-            blind: false,
-            loud: false,
-            serial: 0,
-        }
-    }
-}
-impl Default for RecapDeath { fn default() -> Self { Self::zeroed() } }
 
 /// a round, or a burst. `at` = the shooter's feet
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct RecapShot {
     pub t: f64,
     pub kind: crate::deathrecap::RecapShotKind,
@@ -123,25 +85,10 @@ pub struct RecapShot {
     pub weapon: Option<String>,
     pub loud: Option<bool>,
 }
-impl RecapShot {
-    pub fn zeroed() -> Self {
-        RecapShot {
-            t: 0.0,
-            kind: crate::deathrecap::RecapShotKind::Blast,
-            who: 0.0,
-            from: [0.0; 2],
-            to: None,
-            at: None,
-            weapon: None,
-            loud: None,
-        }
-    }
-}
-impl Default for RecapShot { fn default() -> Self { Self::zeroed() } }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum RecapShotKind {
-    Blast,
+    #[default] Blast,
     Bang,
     Round,
 }
@@ -157,27 +104,16 @@ impl RecapShotKind {
 
 /// One sample of the floor. men: MAN_STRIDE floats a man = id, x, z, aim yaw, bits (1 down, 2 roused: alert or searching, 4 crouched). doors: 2 a door = the
 /// leaf's direction (NaN = off its hinges).
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct RecapFrame {
     pub t: f64,
     pub n: f64,
     pub men: Vec<f32>,
     pub doors: Vec<f32>,
 }
-impl RecapFrame {
-    pub fn zeroed() -> Self {
-        RecapFrame {
-            t: 0.0,
-            n: 0.0,
-            men: Vec::new(),
-            doors: Vec::new(),
-        }
-    }
-}
-impl Default for RecapFrame { fn default() -> Self { Self::zeroed() } }
 
 /// A death with its own last seconds: frames from `t0` to `t1` (the death at `death.t`), the rounds and blasts in them, every one of ours lost in them.
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct RecapTake {
     pub death: crate::deathrecap::RecapDeath,
     pub t0: f64,
@@ -188,42 +124,18 @@ pub struct RecapTake {
     pub shots: Vec<crate::deathrecap::RecapShot>,
     pub deaths: Vec<crate::deathrecap::RecapDeath>,
 }
-impl RecapTake {
-    pub fn zeroed() -> Self {
-        RecapTake {
-            death: crate::deathrecap::RecapDeath::zeroed(),
-            t0: 0.0,
-            t1: 0.0,
-            cast: Vec::new(),
-            doors: Vec::new(),
-            frames: Vec::new(),
-            shots: Vec::new(),
-            deaths: Vec::new(),
-        }
-    }
-}
-impl Default for RecapTake { fn default() -> Self { Self::zeroed() } }
 
 /// where a door hangs
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct RecapDoor {
     pub hinge: [f64; 2],
     pub width: f64,
 }
-impl RecapDoor {
-    pub fn zeroed() -> Self {
-        RecapDoor {
-            hinge: [0.0; 2],
-            width: 0.0,
-        }
-    }
-}
-impl Default for RecapDoor { fn default() -> Self { Self::zeroed() } }
 
 /// One of the squad lost while the run is on, as much as the squad knows: `from` = the way off him to where the round (the blast) came from, a unit vector on
 /// the plan to the nearest EIGHTH of the compass: a direction, never a place, and never fine enough to lay a ruler along. None until the squad has it
 /// (`known_at`), and for good when nobody still up saw him go down or heard it.
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct LostMan {
     pub id: f64,
     pub name: String,
@@ -232,19 +144,6 @@ pub struct LostMan {
     pub from: Option<[f64; 2]>,
     pub known_at: f64,
 }
-impl LostMan {
-    pub fn zeroed() -> Self {
-        LostMan {
-            id: 0.0,
-            name: String::new(),
-            t: 0.0,
-            at: [0.0; 2],
-            from: None,
-            known_at: 0.0,
-        }
-    }
-}
-impl Default for LostMan { fn default() -> Self { Self::zeroed() } }
 
 /// What the record keeps of a man lost beside `Recap.lost_live[i]`, the same man as the squad knows him: the way it came from (handed over as `from` only when the
 /// squad has it), whether ears had it, who had a line to him as he went down (the first teammate; every player), and `done` once that is settled either way.
@@ -258,7 +157,7 @@ pub struct Lost {
 }
 
 /// the last round into a man who was up
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct Round {
     pub t: f64,
     pub by: f64,
@@ -269,21 +168,6 @@ pub struct Round {
     pub blind: bool,
     pub loud: bool,
 }
-impl Round {
-    pub fn zeroed() -> Self {
-        Round {
-            t: 0.0,
-            by: 0.0,
-            by_at: [0.0; 2],
-            from: [0.0; 2],
-            to: [0.0; 2],
-            weapon: String::new(),
-            blind: false,
-            loud: false,
-        }
-    }
-}
-impl Default for Round { fn default() -> Self { Self::zeroed() } }
 
 /// a death whose last second has not run yet, and when it will have
 #[derive(Clone, Debug, ToBytes)]

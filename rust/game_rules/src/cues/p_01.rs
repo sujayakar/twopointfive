@@ -336,10 +336,10 @@ pub fn cues_reset(g: &mut crate::game::Game) {
     g.cues.said.clear();
     g.cues.class_t.clear();
     g.cues.squad_t.clear();
-    g.cues.kind_t = CuesKindT::zeroed();
+    g.cues.kind_t = CuesKindT::default();
     g.cues.squelch_due = false;
     g.cues.stats = new_stats();
-    g.cues.kinds = CuesKinds::zeroed();
+    g.cues.kinds = CuesKinds::default();
     g.cues.log.clear();
 }
 
@@ -1093,11 +1093,11 @@ mod tests {
 
     #[test]
     fn a_kinds_clock_and_tally_are_its_own() {
-        let mut v = CuesKindT::zeroed();
+        let mut v = CuesKindT::default();
         *kind_t_of(&mut v, CueKind::StayOurs) = Some(1.0);
         assert_eq!(v.stay, None);
         assert_eq!(v.stay_ours, Some(1.0));
-        let mut k = CuesKinds::zeroed();
+        let mut k = CuesKinds::default();
         *kinds_of(&mut k, CueKind::Surprised) = Some(2.0);
         assert_eq!(k.surprised, Some(2.0));
         assert_eq!(k.squad_quiet, None);

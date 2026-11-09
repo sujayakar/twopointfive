@@ -74,7 +74,7 @@ pub fn tracers_new(g: &mut crate::game::Game, params: Option<crate::tracers::Tra
             ttl: LAMP_TTL,
             age: 0.0,
             peak_intensity: 0.0,
-            ..crate::render_lights::RtLight::zeroed() // every optional field of the literal is absent
+            ..crate::render_lights::RtLight::default() // every optional field of the literal is absent
         });
         this.pool.push(Tracer {
             alive: false,
@@ -273,7 +273,7 @@ mod tests {
 
     /// A box made for a test: the fields `streak_box_p` gives, in a table of the test's own, since the skeleton has none yet.
     pub(super) fn made(p: &crate::scene_boxes::MakeBoxP) -> BoxId {
-        let mut b = crate::scene_boxes::Box::zeroed();
+        let mut b = crate::scene_boxes::Box::default();
         b.c = p.c; b.h = p.h; b.albedo = p.albedo.unwrap(); b.emissive = p.emissive.unwrap(); b.flags = p.flags.unwrap();
         let row = Box::into_raw(Box::new(b));
         ROWS.with(|r| { let mut r = r.borrow_mut(); r.push(row); BoxId((r.len() - 1) as u32) })
@@ -294,7 +294,7 @@ mod tests {
         g.tracers = Tracers::blank();
         g.tracers.params.max_lights = 0.0;
         for i in 0..n {
-            let mut t = Tracer::zeroed();
+            let mut t = Tracer::default();
             t.lamp = LightId(i);
             t.box_ = made(&streak_box_p());
             g.tracers.pool.push(t);
@@ -380,7 +380,7 @@ mod tests {
     #[test]
     fn the_light_rides_the_head() { on_a_big_stack(|| {
         let mut g = game(1);
-        let lamp = g.tab.light.push(crate::render_lights::RtLight::zeroed());
+        let lamp = g.tab.light.push(crate::render_lights::RtLight::default());
         g.tracers.pool[0].lamp = lamp;
         tracers_spawn(&mut g, [1.0, 2.0, 3.0], [0.0, 0.0, 1.0], 50.0, TracerImpact::None, [1.0; 3], 0.0);
         g.tracers.pool[0].light = Some(lamp); // lit by hand: light_set_add is a stub here

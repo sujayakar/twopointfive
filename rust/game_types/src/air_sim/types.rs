@@ -1,10 +1,9 @@
-//! The types of `air_sim`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `air_sim`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: AirSimStats, src/game/airSim.ts:48)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct AirSimStats {
     pub active: bool,
     pub why: String,
@@ -21,48 +20,14 @@ pub struct AirSimStats {
     pub speed: f64,
     pub calm: f64,
 }
-impl AirSimStats {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        AirSimStats {
-            active: false,
-            why: String::new(),
-            w: 0.0,
-            h: 0.0,
-            solid: 0.0,
-            roofed: 0.0,
-            open: 0.0,
-            leaves: 0.0,
-            rebuilt: 0.0,
-            restamped: 0.0,
-            sources: 0.0,
-            wind: [0.0; 2],
-            speed: 0.0,
-            calm: 0.0,
-        }
-    }
-}
-impl Default for AirSimStats { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: AirHandle, src/game/airSim.ts:50)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct AirHandle {
     pub w: f64,
     pub h: f64,
 }
-impl AirHandle {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        AirHandle {
-            w: 0.0,
-            h: 0.0,
-        }
-    }
-}
-impl Default for AirHandle { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: AirState, src/game/airSim.ts:52)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct AirState {
     pub w: f64,
     pub h: f64,
@@ -81,33 +46,8 @@ pub struct AirState {
     pub stats: crate::air_sim::AirSimStats,
     pub puffs: Vec<crate::air_sim::AirStatePuffsItem>,
 }
-impl AirState {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        AirState {
-            w: 0.0,
-            h: 0.0,
-            base: Vec::new(),
-            mask: Vec::new(),
-            roof: Vec::new(),
-            key: 0.0,
-            leaf_key: 0.0,
-            sent: false,
-            last_t: 0.0,
-            quiet: 0.0,
-            fresh: false,
-            want: false,
-            src: Vec::new(),
-            cand: Vec::new(),
-            stats: crate::air_sim::AirSimStats::zeroed(),
-            puffs: Vec::new(),
-        }
-    }
-}
-impl Default for AirState { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/airSim.ts:54 AirState.puffs, src/game/airSim.ts:54)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct AirStatePuffsItem {
     pub x: f64,
     pub z: f64,
@@ -117,21 +57,6 @@ pub struct AirStatePuffsItem {
     pub t: f64,
     pub secs: f64,
 }
-impl AirStatePuffsItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        AirStatePuffsItem {
-            x: 0.0,
-            z: 0.0,
-            out: 0.0,
-            sigma: 0.0,
-            rate: 0.0,
-            t: 0.0,
-            secs: 0.0,
-        }
-    }
-}
-impl Default for AirStatePuffsItem { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]

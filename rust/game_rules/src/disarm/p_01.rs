@@ -282,7 +282,7 @@ mod tests {
 
     #[test]
     fn pose_tells_the_clock_and_the_hand() {
-        let s = Strip { t: 0.25, at: [1.0, 2.0, 3.0], ..Strip::zeroed() };
+        let s = Strip { t: 0.25, at: [1.0, 2.0, 3.0], ..Strip::default() };
         let p = disarm_pose(s);
         assert_eq!(p.t.to_bits(), 0.25f64.to_bits());
         assert_eq!(p.at, Some([1.0, 2.0, 3.0]));
@@ -296,7 +296,7 @@ mod tests {
             let mut g = Game::blank();
             g.k.hold.strip.take = 0.3; g.k.hold.strip.drop = 0.6;
             g.k.hold.first.take = 0.1; g.k.hold.first.drop = 0.25;
-            let s = Strip { t: 0.0, ..Strip::zeroed() };
+            let s = Strip { t: 0.0, ..Strip::default() };
             assert!(!leads(&mut g, None));
             assert!(!leads(&mut g, Some(Strip { rap: true, ..s })));
             assert!(leads(&mut g, Some(s)));

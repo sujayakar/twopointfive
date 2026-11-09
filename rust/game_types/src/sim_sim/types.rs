@@ -1,38 +1,18 @@
-//! The types of `sim_sim`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `sim_sim`.
 #![allow(unused_imports)]
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: SimExports, src/sim/sim.ts:24)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SimExports {
     pub memory: crate::Opaque,
 }
-impl SimExports {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SimExports {
-            memory: crate::Opaque,
-        }
-    }
-}
-impl Default for SimExports { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/sim/sim.ts:321 RUST, src/sim/sim.ts:321)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SimSimModRUST {
 }
-impl SimSimModRUST {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SimSimModRUST {
-        }
-    }
-}
-impl Default for SimSimModRUST { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/sim/sim.ts:355 FELL, src/sim/sim.ts:355)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct SimSimModFELL {
     pub on: bool,
     pub hard: bool,
@@ -41,22 +21,7 @@ pub struct SimSimModFELL {
     pub red: bool,
     pub reds: JsMap<String, f64>,
 }
-impl SimSimModFELL {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SimSimModFELL {
-            on: false,
-            hard: false,
-            who: 0.0,
-            n: JsMap::new(),
-            red: false,
-            reds: JsMap::new(),
-        }
-    }
-}
-impl Default for SimSimModFELL { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: a union)
 #[derive(Clone, Copy, Debug)]
 pub enum ArrayBufferLike {
     ArrayBuffer(crate::Opaque),
@@ -134,7 +99,7 @@ impl SimSimMod {
             slabs_on: true,
             items_on: true,
             rays_on: true,
-            rust: crate::sim_sim::SimSimModRUST::zeroed(),
+            rust: crate::sim_sim::SimSimModRUST::default(),
             fell: crate::sim_sim::SimSimModFELL { on: false, hard: false, who: 0.0, n: JsMap::new(), red: false, reds: JsMap::new() },
         }
     }

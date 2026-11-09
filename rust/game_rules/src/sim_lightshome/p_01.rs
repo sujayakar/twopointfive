@@ -538,7 +538,7 @@ mod tests {
     extern crate std;
 
     fn def(on: bool, kind: FixtureDefKind) -> FixtureDef {
-        FixtureDef { on, kind, disabled_until: -1.0, factor: 0.5, stagger: 0.25, base_intensity: 7.0, mains: true, ..FixtureDef::zeroed() }
+        FixtureDef { on, kind, disabled_until: -1.0, factor: 0.5, stagger: 0.25, base_intensity: 7.0, mains: true, ..FixtureDef::default() }
     }
 
     /// what this file writes and reads of the columns, on one slot of its own (one test: a slot's block is one game's)
@@ -605,7 +605,7 @@ mod tests {
 
     /// a lamp of the list, as a level's lights hang it
     fn lamp(g: &mut Game, name: &str, on: bool) -> LightId {
-        let mut l = crate::render_lights::RtLight::zeroed();
+        let mut l = crate::render_lights::RtLight::default();
         l.name = String::from(name);
         l.enabled = on;
         l.ttl = -1.0;
@@ -630,7 +630,7 @@ mod tests {
             g.tab.light[spot].peak_intensity = 9.0;
             g.tab.light[own].pos = [1.0, 2.0, 3.0];
             g.tab.light[own].intensity = 5.0;
-            g.tab.light[own].steady = Some(crate::render_lights::RtLightSteady { intensity: 4.0, pos: [6.0, 7.0, 8.0], radius: 0.5, ..crate::render_lights::RtLightSteady::zeroed() });
+            g.tab.light[own].steady = Some(crate::render_lights::RtLightSteady { intensity: 4.0, pos: [6.0, 7.0, 8.0], radius: 0.5, ..crate::render_lights::RtLightSteady::default() });
 
             let a = light_home_add(g, &FixtureDef { light: Some(own), ..def(true, FixtureDefKind::Analytic) });
             let b = light_home_add(g, &FixtureDef { group: String::from("monitors"), area_lights: Some(vec![FixtureDefAreaLightsItem { light: panel, base: 2.5 }]), ..def(true, FixtureDefKind::Emissive) });

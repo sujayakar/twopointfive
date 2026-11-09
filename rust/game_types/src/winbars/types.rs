@@ -1,25 +1,14 @@
-//! The types of `winbars`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `winbars`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: BarState, src/game/winbars.ts:63)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct BarState {
     pub met: Vec<crate::winbars::BarMet>,
 }
-impl BarState {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BarState {
-            met: Vec::new(),
-        }
-    }
-}
-impl Default for BarState { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: BarMet, src/game/winbars.ts:87)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct BarMet {
     pub index: f64,
     pub t: f64,
@@ -27,38 +16,13 @@ pub struct BarMet {
     pub dir: V3,
     pub flags: f64,
 }
-impl BarMet {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BarMet {
-            index: 0.0,
-            t: 0.0,
-            at: [0.0; 3],
-            dir: [0.0; 3],
-            flags: 0.0,
-        }
-    }
-}
-impl Default for BarMet { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: BarsSave, src/game/winbars.ts:164)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct BarsSave {
     pub v: f64,
     pub s: Vec<f64>,
 }
-impl BarsSave {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BarsSave {
-            v: 0.0,
-            s: Vec::new(),
-        }
-    }
-}
-impl Default for BarsSave { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum BreakBarCause {
     Blast,

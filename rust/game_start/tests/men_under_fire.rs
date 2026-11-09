@@ -107,7 +107,7 @@ fn the_hut(s: u32, training: Training) -> (Play, GuardId, [f64; 3], [f64; 2]) {
     let hole = game::doortools::door_pt(&p.g, d, w / 2.0, p.g.k.he40.standoff + 0.03, -inside, Some(1.0 - p.g.k.frag.lift));
     (p, t, hole, [spot[0], spot[2]])
 }
-fn shell(p: &mut Play, hole: [f64; 3]) { let who = p.g.ch[p.g.pl[p.g.player].ch].id; game::frag::blast(&mut p.g, hole, &game::frag::BlastSpec { who, name: Some(String::from("40 mm grenade")), ..game::frag::BlastSpec::zeroed() }); }
+fn shell(p: &mut Play, hole: [f64; 3]) { let who = p.g.ch[p.g.pl[p.g.player].ch].id; game::frag::blast(&mut p.g, hole, &game::frag::BlastSpec { who, name: Some(String::from("40 mm grenade")), ..game::frag::BlastSpec::default() }); }
 
 /// THE RULE: a blast shakes the men it does not hurt, and green men and steady men differently: alone with the lamps burning and the 40 mm on his door a green man is broken; a steady man is not. Alive, either.
 /// A FAILURE MEANS: training counts for nothing, or a blast is only its damage.

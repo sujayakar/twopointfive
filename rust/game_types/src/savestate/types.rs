@@ -1,10 +1,9 @@
-//! The types of `savestate`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `savestate`.
 #![allow(unused_imports)]
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: FirearmSnap, src/game/savestate.ts:173)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct FirearmSnap {
     pub id: crate::weapons::WeaponId,
     pub chamber: f64,
@@ -15,25 +14,8 @@ pub struct FirearmSnap {
     pub bursts: f64,
     pub last_burst_t: f64,
 }
-impl FirearmSnap {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FirearmSnap {
-            id: crate::weapons::WeaponId::Fiveseven,
-            chamber: 0.0,
-            mag: None,
-            spare: Vec::new(),
-            shots_fired: 0.0,
-            mode: crate::weapons::FireMode::Semi,
-            bursts: 0.0,
-            last_burst_t: 0.0,
-        }
-    }
-}
-impl Default for FirearmSnap { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: PlayerSnap, src/game/savestate.ts:174)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct PlayerSnap {
     pub pos: [f64; 3],
     pub body_yaw: f64,
@@ -84,86 +66,16 @@ pub struct PlayerSnap {
     pub wet: [f64; 3],
     pub bubble: Option<crate::savestate::Bubble>,
 }
-impl PlayerSnap {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PlayerSnap {
-            pos: [0.0; 3],
-            body_yaw: 0.0,
-            aim_yaw: 0.0,
-            aim_pitch: 0.0,
-            crouch: false,
-            holstered: false,
-            slot: crate::game::SlotKind::Pistol,
-            throw_kind: crate::game::ThrowKind::Smoke,
-            canisters: 0.0,
-            flashbangs: 0.0,
-            frags: None,
-            wand: None,
-            big_kit: None,
-            kit_load: None,
-            own: None,
-            pistol: crate::savestate::PlayerSnapPistol::zeroed(),
-            rifle: crate::savestate::PlayerSnapRifle::zeroed(),
-            cams: None,
-            cam_seq: None,
-            ocp_charge: 0.0,
-            has_rifle: false,
-            rifle_gone: false,
-            ocp_hinted: false,
-            equip_t: 0.0,
-            held_gait: None,
-            close_on: None,
-            rip_u: None,
-            bash_at: None,
-            bash_lean: None,
-            stag_u: None,
-            hurt_at: None,
-            daz_u: None,
-            daz_at: None,
-            aw: None,
-            keys: Vec::new(),
-            codes: Vec::new(),
-            hits_left: 0.0,
-            nv: false,
-            pace: 0.0,
-            last_fire_t: 0.0,
-            fire_cd: 0.0,
-            noise: 0.0,
-            visibility: 0.0,
-            step_phase: 0.0,
-            step_travel: None,
-            anim_phase: 0.0,
-            wet: [0.0; 3],
-            bubble: None,
-        }
-    }
-}
-impl Default for PlayerSnap { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: OwnCharges, src/game/savestate.ts:462)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct OwnCharges {
     pub charges: f64,
     pub walls: Option<f64>,
     pub doors: Option<Vec<[f64; 2]>>,
     pub spent: Option<f64>,
 }
-impl OwnCharges {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        OwnCharges {
-            charges: 0.0,
-            walls: None,
-            doors: None,
-            spent: None,
-        }
-    }
-}
-impl Default for OwnCharges { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/savestate.ts:184 PlayerSnap.pistol, src/game/savestate.ts:184 PlayerSnap.pistol)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct PlayerSnapPistol {
     pub id: crate::weapons::WeaponId,
     pub chamber: f64,
@@ -175,26 +87,8 @@ pub struct PlayerSnapPistol {
     pub last_burst_t: f64,
     pub light_on: bool,
 }
-impl PlayerSnapPistol {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PlayerSnapPistol {
-            id: crate::weapons::WeaponId::Fiveseven,
-            chamber: 0.0,
-            mag: None,
-            spare: Vec::new(),
-            shots_fired: 0.0,
-            mode: crate::weapons::FireMode::Semi,
-            bursts: 0.0,
-            last_burst_t: 0.0,
-            light_on: false,
-        }
-    }
-}
-impl Default for PlayerSnapPistol { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/savestate.ts:184 PlayerSnap.rifle, src/game/savestate.ts:184 PlayerSnap.rifle)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct PlayerSnapRifle {
     pub id: crate::weapons::WeaponId,
     pub chamber: f64,
@@ -212,79 +106,30 @@ pub struct PlayerSnapRifle {
     pub shells: Option<f64>,
     pub cams: Option<f64>,
 }
-impl PlayerSnapRifle {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PlayerSnapRifle {
-            id: crate::weapons::WeaponId::Fiveseven,
-            chamber: 0.0,
-            mag: None,
-            spare: Vec::new(),
-            shots_fired: 0.0,
-            mode: crate::weapons::FireMode::Semi,
-            bursts: 0.0,
-            last_burst_t: 0.0,
-            light_on: false,
-            att_idx: 0.0,
-            rings: 0.0,
-            ring_cd: 0.0,
-            gun: None,
-            shells: None,
-            cams: None,
-        }
-    }
-}
-impl Default for PlayerSnapRifle { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Bubble, src/game/savestate.ts:193)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Bubble {
     pub text: String,
     pub t: f64,
     pub dur: f64,
     pub radio: bool,
 }
-impl Bubble {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Bubble {
-            text: String::new(),
-            t: 0.0,
-            dur: 0.0,
-            radio: false,
-        }
-    }
-}
-impl Default for Bubble { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: a union)
 #[derive(Clone, Copy, Debug)]
 pub enum TaskSnap {
     Arm0(crate::savestate::TaskSnapArm0),
     CheckOn(crate::savestate::TaskSnapCheckOn),
 }
 
-/// (TypeScript: inline at src/game/savestate.ts:194 TaskSnap, src/game/savestate.ts:194)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct TaskSnapArm0 {
     pub kind: crate::savestate::TaskSnapArm0Kind,
     pub pos: [f64; 3],
 }
-impl TaskSnapArm0 {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        TaskSnapArm0 {
-            kind: crate::savestate::TaskSnapArm0Kind::Breaker,
-            pos: [0.0; 3],
-        }
-    }
-}
-impl Default for TaskSnapArm0 { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum TaskSnapArm0Kind {
-    Breaker,
+    #[default] Breaker,
     Device,
     Rack,
 }
@@ -298,8 +143,7 @@ impl TaskSnapArm0Kind {
     }
 }
 
-/// (TypeScript: inline at src/game/savestate.ts:194 TaskSnap, src/game/savestate.ts:194)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct TaskSnapCheckOn {
     pub pos: [f64; 3],
     pub who: f64,
@@ -307,22 +151,8 @@ pub struct TaskSnapCheckOn {
     pub left: f64,
     pub t0: f64,
 }
-impl TaskSnapCheckOn {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        TaskSnapCheckOn {
-            pos: [0.0; 3],
-            who: 0.0,
-            wp: 0.0,
-            left: 0.0,
-            t0: 0.0,
-        }
-    }
-}
-impl Default for TaskSnapCheckOn { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: TalkSnap, src/game/savestate.ts:195)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct TalkSnap {
     pub stage: f64,
     pub presses: f64,
@@ -334,47 +164,16 @@ pub struct TalkSnap {
     pub abort_t: f64,
     pub script: Option<String>,
 }
-impl TalkSnap {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        TalkSnap {
-            stage: 0.0,
-            presses: 0.0,
-            said: Vec::new(),
-            said_n: Vec::new(),
-            given: Vec::new(),
-            last_t: 0.0,
-            held_since: 0.0,
-            abort_t: 0.0,
-            script: None,
-        }
-    }
-}
-impl Default for TalkSnap { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: RagSnap, src/game/savestate.ts:196)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct RagSnap {
     pub x: Vec<f64>,
     pub rot: [f64; 4],
     pub sleeping: bool,
     pub own: Option<bool>,
 }
-impl RagSnap {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RagSnap {
-            x: Vec::new(),
-            rot: [0.0; 4],
-            sleeping: false,
-            own: None,
-        }
-    }
-}
-impl Default for RagSnap { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: GuardSnap, src/game/savestate.ts:197)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct GuardSnap {
     pub id: f64,
     pub route_i: f64,
@@ -474,114 +273,8 @@ pub struct GuardSnap {
     pub wet: [f64; 3],
     pub rag: Option<crate::savestate::RagSnap>,
 }
-impl GuardSnap {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GuardSnap {
-            id: 0.0,
-            route_i: 0.0,
-            callsign: String::new(),
-            state: crate::game::GuardState::Patrol,
-            pos: [0.0; 3],
-            vel: [0.0; 3],
-            body_yaw: 0.0,
-            aim_yaw: 0.0,
-            aim_pitch: 0.0,
-            crouch: 0.0,
-            anim_phase: 0.0,
-            turn: None,
-            wp: 0.0,
-            wait: 0.0,
-            awareness: 0.0,
-            last_known: None,
-            last_seen_t: 0.0,
-            found: false,
-            down_kind: None,
-            down_by: None,
-            keys: Vec::new(),
-            missed_at: 0.0,
-            missing_raised: false,
-            muzzle_down: false,
-            muzzle_clear_t: 0.0,
-            muzzle_eval_t: 0.0,
-            line_bark_t: 0.0,
-            line_in_t: 0.0,
-            leader_seen_t: 0.0,
-            leader_seen_pos: [0.0; 3],
-            leader_still_t: 0.0,
-            body_visits: 0.0,
-            body_visit_t: 0.0,
-            body_remarked: false,
-            body_closed: false,
-            body_fan: 0.0,
-            body_duty: None,
-            dropped: 0.0,
-            gun_lost_at: 0.0,
-            torch_lost_at: 0.0,
-            light_lit_at_loss: false,
-            light_dead_until: 0.0,
-            flashlight_on: false,
-            sweep: 0.0,
-            beam_dir: [0.0; 3],
-            path: Vec::new(),
-            path_i: 0.0,
-            repath_t: 0.0,
-            path_goal: None,
-            weapon: crate::savestate::FirearmSnap::zeroed(),
-            fire_cd: 0.0,
-            react_t: 0.0,
-            search_t: 0.0,
-            look_phase: 0.0,
-            speed: 0.0,
-            step_phase: 0.0,
-            heard_up_to: 0.0,
-            died_at: 0.0,
-            dazzled_until: 0.0,
-            stagger_until: 0.0,
-            hurt_at: None,
-            door_down_u: None,
-            last_pos: [0.0; 3],
-            stuck_t: 0.0,
-            stuck_n: 0.0,
-            killer_id: 0.0,
-            saw_body_t: 0.0,
-            alert_best: 0.0,
-            alert_stall_t: 0.0,
-            alert_ref: None,
-            chase_t: 0.0,
-            shot_blocked_t: 0.0,
-            sight_pos: [0.0; 3],
-            sight_vel: [0.0; 3],
-            sight_t: 0.0,
-            led_t: 0.0,
-            fix_t: 0.0,
-            fix_ref: None,
-            led_at: None,
-            word_t: None,
-            pie_last: 0.0,
-            pie_last_t: 0.0,
-            pie_prev: None,
-            pie_prev_t: 0.0,
-            stall_ref: None,
-            stall_t: 0.0,
-            task: None,
-            drawn: false,
-            leader: 0.0,
-            follow_t: 0.0,
-            follow_goal: [0.0; 3],
-            post: None,
-            witness: crate::game::Witness::zeroed(),
-            talk: crate::savestate::TalkSnap::zeroed(),
-            bubble: None,
-            wet: [0.0; 3],
-            rag: None,
-        }
-    }
-}
-impl Default for GuardSnap { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/savestate.ts:210 GuardSnap.bodyDuty, src/game/savestate.ts:210)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct GuardSnapBodyDuty {
     pub body: f64,
     pub role: crate::savestate::GuardSnapBodyDutyRole,
@@ -590,25 +283,10 @@ pub struct GuardSnapBodyDuty {
     pub t0: f64,
     pub spot: Option<[f64; 3]>,
 }
-impl GuardSnapBodyDuty {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GuardSnapBodyDuty {
-            body: 0.0,
-            role: crate::savestate::GuardSnapBodyDutyRole::Finder,
-            stage: crate::savestate::GuardSnapBodyDutyStage::Fan,
-            t: 0.0,
-            t0: 0.0,
-            spot: None,
-        }
-    }
-}
-impl Default for GuardSnapBodyDuty { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum GuardSnapBodyDutyRole {
-    Finder,
+    #[default] Finder,
     Called,
 }
 impl GuardSnapBodyDutyRole {
@@ -620,10 +298,9 @@ impl GuardSnapBodyDutyRole {
     }
 }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum GuardSnapBodyDutyStage {
-    Fan,
+    #[default] Fan,
     To,
     Cover,
 }
@@ -637,8 +314,7 @@ impl GuardSnapBodyDutyStage {
     }
 }
 
-/// (TypeScript: ItemSnap, src/game/savestate.ts:225)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct ItemSnap {
     pub kind: crate::throwables::ItemKind,
     pub pos: [f64; 3],
@@ -657,33 +333,8 @@ pub struct ItemSnap {
     pub restitution: f64,
     pub friction: f64,
 }
-impl ItemSnap {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ItemSnap {
-            kind: crate::throwables::ItemKind::Pistol,
-            pos: [0.0; 3],
-            yaw: 0.0,
-            tumble: 0.0,
-            heading: 0.0,
-            fill: 0.0,
-            life: 0.0,
-            age: 0.0,
-            fired: false,
-            emit_t: 0.0,
-            who: 0.0,
-            on: 0.0,
-            on_pose: 0.0,
-            radius: 0.0,
-            restitution: 0.0,
-            friction: 0.0,
-        }
-    }
-}
-impl Default for ItemSnap { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: DoorSnap, src/game/savestate.ts:226)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct DoorSnap {
     pub name: String,
     pub angle: f64,
@@ -713,44 +364,8 @@ pub struct DoorSnap {
     pub off: Option<crate::doorblast::SlabSnap>,
     pub drive: Option<crate::doors::DoorDrive>,
 }
-impl DoorSnap {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DoorSnap {
-            name: String::new(),
-            angle: 0.0,
-            vel: 0.0,
-            quiet_t: 0.0,
-            latched: false,
-            last_who: 0.0,
-            since_bash: 0.0,
-            closing: false,
-            locked: false,
-            lock_broken: false,
-            noticed: false,
-            noticed_t: 0.0,
-            pick: 0.0,
-            pick_idle: 0.0,
-            pick_clock: 0.0,
-            pick_n: 0.0,
-            guard_t: 0.0,
-            creak_armed: false,
-            pull_t: None,
-            press_t: None,
-            solid_t: None,
-            open_t: None,
-            passers: None,
-            swept: None,
-            shot: None,
-            off: None,
-            drive: None,
-        }
-    }
-}
-impl Default for DoorSnap { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: PropSnap, src/game/savestate.ts:227)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct PropSnap {
     pub x: f64,
     pub z: f64,
@@ -764,28 +379,8 @@ pub struct PropSnap {
     pub noise_t: f64,
     pub push_t: f64,
 }
-impl PropSnap {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PropSnap {
-            x: 0.0,
-            z: 0.0,
-            yaw: 0.0,
-            vx: 0.0,
-            vz: 0.0,
-            w: 0.0,
-            asleep: false,
-            idle: 0.0,
-            last_who: 0.0,
-            noise_t: 0.0,
-            push_t: 0.0,
-        }
-    }
-}
-impl Default for PropSnap { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: TargetSnap, src/game/savestate.ts:228)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct TargetSnap {
     pub name: String,
     pub on: bool,
@@ -793,22 +388,8 @@ pub struct TargetSnap {
     pub disabled_until: f64,
     pub hand: Option<f64>,
 }
-impl TargetSnap {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        TargetSnap {
-            name: String::new(),
-            on: false,
-            broken: false,
-            disabled_until: 0.0,
-            hand: None,
-        }
-    }
-}
-impl Default for TargetSnap { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: DecalSnap, src/game/savestate.ts:231)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct DecalSnap {
     pub kind: crate::render_decals::DecalKind,
     pub pos: [f64; 3],
@@ -823,29 +404,8 @@ pub struct DecalSnap {
     pub part: Option<f64>,
     pub look: Option<f64>,
 }
-impl DecalSnap {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DecalSnap {
-            kind: crate::render_decals::DecalKind::Bullet,
-            pos: [0.0; 3],
-            n: [0.0; 3],
-            t: [0.0; 3],
-            radius: 0.0,
-            param: 0.0,
-            seed: 0.0,
-            pane: None,
-            door: None,
-            prop: None,
-            part: None,
-            look: None,
-        }
-    }
-}
-impl Default for DecalSnap { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: ChronSnap, src/game/savestate.ts:232)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct ChronSnap {
     pub events: Vec<crate::chronicle::ChronEvent>,
     pub dropped: f64,
@@ -856,25 +416,8 @@ pub struct ChronSnap {
     pub path_every: f64,
     pub path_next: f64,
 }
-impl ChronSnap {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ChronSnap {
-            events: Vec::new(),
-            dropped: 0.0,
-            counts: crate::chronicle::ChronCounts::zeroed(),
-            questioned: Vec::new(),
-            path: Vec::new(),
-            path_n: 0.0,
-            path_every: 0.0,
-            path_next: 0.0,
-        }
-    }
-}
-impl Default for ChronSnap { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: RollcallSnap, src/game/savestate.ts:233)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RollcallSnap {
     pub next_at: f64,
     pub stage: crate::savestate::RollcallSnapStage,
@@ -884,26 +427,10 @@ pub struct RollcallSnap {
     pub answered: bool,
     pub checks: f64,
 }
-impl RollcallSnap {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RollcallSnap {
-            next_at: 0.0,
-            stage: crate::savestate::RollcallSnapStage::Idle,
-            t0: 0.0,
-            caller: 0.0,
-            missing: 0.0,
-            answered: false,
-            checks: 0.0,
-        }
-    }
-}
-impl Default for RollcallSnap { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum RollcallSnapStage {
-    Idle,
+    #[default] Idle,
     Called,
     Asked,
 }
@@ -917,8 +444,7 @@ impl RollcallSnapStage {
     }
 }
 
-/// (TypeScript: AutosaveSnap, src/game/savestate.ts:234)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct AutosaveSnap {
     pub run_id: String,
     pub visited: Vec<String>,
@@ -926,22 +452,8 @@ pub struct AutosaveSnap {
     pub last_save_t: f64,
     pub body_from: Option<[f64; 3]>,
 }
-impl AutosaveSnap {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        AutosaveSnap {
-            run_id: String::new(),
-            visited: Vec::new(),
-            quiet_t: 0.0,
-            last_save_t: 0.0,
-            body_from: None,
-        }
-    }
-}
-impl Default for AutosaveSnap { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: SaveState, src/game/savestate.ts:235)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct SaveState {
     pub v: f64,
     pub saved_at: f64,
@@ -1015,90 +527,10 @@ pub struct SaveState {
     pub hour: Option<crate::savestate::SaveStateHour>,
     pub forced: Vec<String>,
 }
-impl SaveState {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SaveState {
-            v: 0.0,
-            saved_at: 0.0,
-            label: String::new(),
-            kind: crate::savestate::SaveStateKind::Auto,
-            level: crate::savestate::SaveStateLevel::zeroed(),
-            mission_t: 0.0,
-            stage: crate::game::MissionStage::Drive,
-            run_id: String::new(),
-            time: 0.0,
-            event_seq: 0.0,
-            fx_seed: 0.0,
-            ocp_cooldown: 0.0,
-            called_in: false,
-            stood_down: false,
-            breaker_fix_t: 0.0,
-            last_sting_t: 0.0,
-            escalation: 0.0,
-            escalation_t: 0.0,
-            alarm: crate::savestate::SaveStateAlarm::zeroed(),
-            cleared_at: Vec::new(),
-            clear_rooms: 0.0,
-            blackout: crate::savestate::SaveStateBlackout::zeroed(),
-            flags: crate::savestate::SaveStateFlags::zeroed(),
-            fog: None,
-            quiet: None,
-            lesson: None,
-            player: crate::savestate::PlayerSnap::zeroed(),
-            guards: Vec::new(),
-            items: Vec::new(),
-            doors: Vec::new(),
-            props: Vec::new(),
-            props_time: 0.0,
-            targets: Vec::new(),
-            devices: None,
-            mission: crate::game::Mission::zeroed(),
-            chronicle: crate::savestate::ChronSnap::zeroed(),
-            events: Vec::new(),
-            messages: Vec::new(),
-            rollcall: crate::savestate::RollcallSnap::zeroed(),
-            needs: crate::needs::NeedsSnap::zeroed(),
-            whistle: crate::whistle::WhistleSnap::zeroed(),
-            tactics: crate::tactics::TacticsSnap::zeroed(),
-            dialogue: crate::dialogue::DialogueSnap::zeroed(),
-            weather: None,
-            qrf: crate::savestate::SaveStateQrf::zeroed(),
-            civilians: None,
-            walls: None,
-            lanes: None,
-            furn: None,
-            bars: None,
-            air: None,
-            decals: Vec::new(),
-            autosave: crate::savestate::AutosaveSnap::zeroed(),
-            glass_pen: None,
-            gun_wall: None,
-            wall_hold: None,
-            calm_torch: None,
-            doze: None,
-            morale: None,
-            runner: None,
-            startle: None,
-            flinch: None,
-            darkdoor: None,
-            net_quiet: None,
-            power_out: None,
-            rescue_check: None,
-            attention: None,
-            picture: None,
-            dice: None,
-            hour: None,
-            forced: Vec::new(),
-        }
-    }
-}
-impl Default for SaveState { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum SaveStateKind {
-    Auto,
+    #[default] Auto,
     Manual,
     Harness,
 }
@@ -1112,29 +544,15 @@ impl SaveStateKind {
     }
 }
 
-/// (TypeScript: inline at src/game/savestate.ts:237 SaveState.level, src/game/savestate.ts:237)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct SaveStateLevel {
     pub fp: String,
     pub boxes: f64,
     pub routes: f64,
     pub doors: f64,
 }
-impl SaveStateLevel {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SaveStateLevel {
-            fp: String::new(),
-            boxes: 0.0,
-            routes: 0.0,
-            doors: 0.0,
-        }
-    }
-}
-impl Default for SaveStateLevel { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/savestate.ts:241 SaveState.alarm, src/game/savestate.ts:241)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SaveStateAlarm {
     pub episode: bool,
     pub pos: [f64; 3],
@@ -1142,22 +560,8 @@ pub struct SaveStateAlarm {
     pub apart_t: f64,
     pub raised_at: f64,
 }
-impl SaveStateAlarm {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SaveStateAlarm {
-            episode: false,
-            pos: [0.0; 3],
-            placed: false,
-            apart_t: 0.0,
-            raised_at: 0.0,
-        }
-    }
-}
-impl Default for SaveStateAlarm { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/savestate.ts:242 SaveState.blackout, src/game/savestate.ts:242)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SaveStateBlackout {
     pub active: bool,
     pub until: Option<f64>,
@@ -1165,135 +569,49 @@ pub struct SaveStateBlackout {
     pub permanent: bool,
     pub restored_at: f64,
 }
-impl SaveStateBlackout {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SaveStateBlackout {
-            active: false,
-            until: None,
-            since: 0.0,
-            permanent: false,
-            restored_at: 0.0,
-        }
-    }
-}
-impl Default for SaveStateBlackout { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/savestate.ts:243 SaveState.flags, src/game/savestate.ts:243)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SaveStateFlags {
     pub ai_enabled: bool,
     pub god_mode: bool,
     pub infinite_ammo: bool,
     pub player_invisible: bool,
 }
-impl SaveStateFlags {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SaveStateFlags {
-            ai_enabled: false,
-            god_mode: false,
-            infinite_ammo: false,
-            player_invisible: false,
-        }
-    }
-}
-impl Default for SaveStateFlags { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/savestate.ts:262 SaveState.messages, src/game/savestate.ts:262)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct SaveStateMessagesItem {
     pub text: String,
     pub t: f64,
 }
-impl SaveStateMessagesItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SaveStateMessagesItem {
-            text: String::new(),
-            t: 0.0,
-        }
-    }
-}
-impl Default for SaveStateMessagesItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/savestate.ts:263 SaveState.qrf, src/game/savestate.ts:263)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct SaveStateQrf {
     pub loud_t: f64,
     pub word: Option<Vec<crate::qrf::ResponseWordSnap>>,
 }
-impl SaveStateQrf {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SaveStateQrf {
-            loud_t: 0.0,
-            word: None,
-        }
-    }
-}
-impl Default for SaveStateQrf { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/savestate.ts:310 SaveState.dice, src/game/savestate.ts:310)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SaveStateDice {
     pub s: f64,
     pub n: f64,
     pub seed: f64,
 }
-impl SaveStateDice {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SaveStateDice {
-            s: 0.0,
-            n: 0.0,
-            seed: 0.0,
-        }
-    }
-}
-impl Default for SaveStateDice { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/savestate.ts:313 SaveState.hour, src/game/savestate.ts:313)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SaveStateHour {
     pub id: crate::hours::HourId,
     pub sun: f64,
     pub given: Option<bool>,
 }
-impl SaveStateHour {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SaveStateHour {
-            id: crate::hours::HourId::Overcast,
-            sun: 0.0,
-            given: None,
-        }
-    }
-}
-impl Default for SaveStateHour { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: SaveOpts, src/game/savestate.ts:506)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct SaveOpts {
     pub label: Option<String>,
     pub kind: Option<crate::savestate::SaveOptsKind>,
     pub force: Option<bool>,
     pub run_id: Option<String>,
 }
-impl SaveOpts {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SaveOpts {
-            label: None,
-            kind: None,
-            force: None,
-            run_id: None,
-        }
-    }
-}
-impl Default for SaveOpts { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum SaveOptsKind {
     Auto,
@@ -1310,21 +628,11 @@ impl SaveOptsKind {
     }
 }
 
-/// (TypeScript: SaveStore, src/game/savestate.ts:861)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SaveStore {
 }
-impl SaveStore {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SaveStore {
-        }
-    }
-}
-impl Default for SaveStore { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: SlotInfo, src/game/savestate.ts:870)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct SlotInfo {
     pub key: String,
     pub slot: crate::savestate::SlotInfoSlot,
@@ -1339,31 +647,10 @@ pub struct SlotInfo {
     pub regret: Option<String>,
     pub mem: Option<bool>,
 }
-impl SlotInfo {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SlotInfo {
-            key: String::new(),
-            slot: crate::savestate::SlotInfoSlot::Auto,
-            n: 0.0,
-            label: String::new(),
-            kind: crate::savestate::SlotInfoKind::Auto,
-            saved_at: 0.0,
-            mission_t: 0.0,
-            stage: String::new(),
-            run_id: String::new(),
-            bytes: 0.0,
-            regret: None,
-            mem: None,
-        }
-    }
-}
-impl Default for SlotInfo { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum SlotInfoSlot {
-    Auto,
+    #[default] Auto,
     Manual,
 }
 impl SlotInfoSlot {
@@ -1375,10 +662,9 @@ impl SlotInfoSlot {
     }
 }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum SlotInfoKind {
-    Auto,
+    #[default] Auto,
     Manual,
     Harness,
 }
@@ -1392,31 +678,19 @@ impl SlotInfoKind {
     }
 }
 
-/// (TypeScript: MemSave, src/game/savestate.ts:872)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct MemSave {
     pub info: crate::savestate::SlotInfo,
     pub pic: Option<String>,
 }
-impl MemSave {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        MemSave {
-            info: crate::savestate::SlotInfo::zeroed(),
-            pic: None,
-        }
-    }
-}
-impl Default for MemSave { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: MemShelf, src/game/savestate.ts:878)
 #[derive(Clone, Debug)]
 pub struct MemShelf {
     pub m: JsMap<String, crate::savestate::MemSave>,
     pub warmed: f64,
 }
 impl MemShelf {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         MemShelf {
             m: JsMap::new(),
@@ -1426,27 +700,14 @@ impl MemShelf {
 }
 impl Default for MemShelf { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: SlotIndex, src/game/savestate.ts:891)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct SlotIndex {
     pub v: f64,
     pub next: f64,
     pub slots: JsMap<String, crate::savestate::SlotInfo>,
 }
-impl SlotIndex {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SlotIndex {
-            v: 0.0,
-            next: 0.0,
-            slots: JsMap::new(),
-        }
-    }
-}
-impl Default for SlotIndex { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: SaveResult, src/game/savestate.ts:892)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct SaveResult {
     pub ok: bool,
     pub why: Option<String>,
@@ -1454,21 +715,7 @@ pub struct SaveResult {
     pub bytes: Option<f64>,
     pub state: Option<crate::savestate::SaveState>,
 }
-impl SaveResult {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SaveResult {
-            ok: false,
-            why: None,
-            info: None,
-            bytes: None,
-            state: None,
-        }
-    }
-}
-impl Default for SaveResult { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Checkpoints, src/game/savestate.ts:907)
 #[derive(Clone, Debug)]
 pub struct Checkpoints {
     pub enabled: bool,
@@ -1495,7 +742,7 @@ pub struct Checkpoints {
     pub authored: Option<String>,
 }
 impl Checkpoints {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         Checkpoints {
             enabled: true,
@@ -1525,61 +772,26 @@ impl Checkpoints {
 }
 impl Default for Checkpoints { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: inline at src/game/savestate.ts:916 Checkpoints.pending, src/game/savestate.ts:916)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct CheckpointsPending {
     pub why: String,
     pub label: String,
     pub at: f64,
 }
-impl CheckpointsPending {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CheckpointsPending {
-            why: String::new(),
-            label: String::new(),
-            at: 0.0,
-        }
-    }
-}
-impl Default for CheckpointsPending { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/savestate.ts:918 Checkpoints.flash, src/game/savestate.ts:918)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct CheckpointsFlash {
     pub text: String,
     pub t: f64,
 }
-impl CheckpointsFlash {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CheckpointsFlash {
-            text: String::new(),
-            t: 0.0,
-        }
-    }
-}
-impl Default for CheckpointsFlash { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/savestate.ts:920 Checkpoints.log, src/game/savestate.ts:920)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct CheckpointsLogItem {
     pub t: f64,
     pub what: String,
 }
-impl CheckpointsLogItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CheckpointsLogItem {
-            t: 0.0,
-            what: String::new(),
-        }
-    }
-}
-impl Default for CheckpointsLogItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/savestate.ts:921 Checkpoints.stats, src/game/savestate.ts:921)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct CheckpointsStats {
     pub requests: f64,
     pub autosaves: f64,
@@ -1591,104 +803,34 @@ pub struct CheckpointsStats {
     pub deferred_frames: f64,
     pub regretted: f64,
 }
-impl CheckpointsStats {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CheckpointsStats {
-            requests: 0.0,
-            autosaves: 0.0,
-            manual: 0.0,
-            harness: 0.0,
-            loads: 0.0,
-            dropped: 0.0,
-            refused: 0.0,
-            deferred_frames: 0.0,
-            regretted: 0.0,
-        }
-    }
-}
-impl Default for CheckpointsStats { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at quiet Checkpoints.missionRef, quiet Checkpoints.missionRef)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct CheckpointsMissionRef {
 }
-impl CheckpointsMissionRef {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CheckpointsMissionRef {
-        }
-    }
-}
-impl Default for CheckpointsMissionRef { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at quiet Checkpoints.dragRef, quiet Checkpoints.dragRef)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct CheckpointsDragRef {
 }
-impl CheckpointsDragRef {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CheckpointsDragRef {
-        }
-    }
-}
-impl Default for CheckpointsDragRef { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/savestate.ts:926 Checkpoints.lastAuto, src/game/savestate.ts:926)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct CheckpointsLastAuto {
     pub key: String,
     pub t: f64,
 }
-impl CheckpointsLastAuto {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CheckpointsLastAuto {
-            key: String::new(),
-            t: 0.0,
-        }
-    }
-}
-impl Default for CheckpointsLastAuto { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/savestate.ts:405 fpCache, src/game/savestate.ts:405)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct SavestateModFpCacheValue {
     pub st: f64,
     pub fp: crate::savestate::SaveStateLevel,
 }
-impl SavestateModFpCacheValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SavestateModFpCacheValue {
-            st: 0.0,
-            fp: crate::savestate::SaveStateLevel::zeroed(),
-        }
-    }
-}
-impl Default for SavestateModFpCacheValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/savestate.ts:900 SNAPS, src/game/savestate.ts:900)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SavestateModSNAPS {
     pub own: bool,
     pub take: crate::FnField,
     pub put: crate::FnField,
 }
-impl SavestateModSNAPS {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SavestateModSNAPS {
-            own: false,
-            take: crate::FnField,
-            put: crate::FnField,
-        }
-    }
-}
-impl Default for SavestateModSNAPS { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum KeyMemSlot {
     Auto,
@@ -1703,67 +845,26 @@ impl KeyMemSlot {
     }
 }
 
-/// (TypeScript: inline at src/game/savestate.ts:464 ownCharges ->, src/game/savestate.ts:464)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct OwnCharges2 {
     pub own: Option<crate::savestate::OwnCharges>,
 }
-impl OwnCharges2 {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        OwnCharges2 {
-            own: None,
-        }
-    }
-}
-impl Default for OwnCharges2 { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/savestate.ts:670 loadState(opts), src/game/savestate.ts:670)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct LoadStateOpts {
     pub label: Option<String>,
 }
-impl LoadStateOpts {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LoadStateOpts {
-            label: None,
-        }
-    }
-}
-impl Default for LoadStateOpts { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/savestate.ts:689 applyState(opts), src/game/savestate.ts:689)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct ApplyStateOpts {
     pub label: Option<String>,
 }
-impl ApplyStateOpts {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ApplyStateOpts {
-            label: None,
-        }
-    }
-}
-impl Default for ApplyStateOpts { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/savestate.ts:869 memoryStore ->, src/game/savestate.ts:869 memoryStore ->)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct MemoryStore {
     pub map: JsMap<String, String>,
 }
-impl MemoryStore {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        MemoryStore {
-            map: JsMap::new(),
-        }
-    }
-}
-impl Default for MemoryStore { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum CheckpointsWriteSlot {
     Auto,
@@ -1780,7 +881,6 @@ impl CheckpointsWriteSlot {
     }
 }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum CheckpointsWriteMemSlot {
     Auto,
@@ -1795,7 +895,6 @@ impl CheckpointsWriteMemSlot {
     }
 }
 
-/// (TypeScript: a union)
 #[derive(Clone, Debug)]
 pub enum CheckpointsLoadFrom {
     Text(String),
@@ -1816,7 +915,7 @@ impl SavestateMod {
     pub fn blank() -> Self {
         SavestateMod {
             fp_cache: JsMap::new(),
-            snaps: crate::savestate::SavestateModSNAPS::zeroed(),
+            snaps: crate::savestate::SavestateModSNAPS::default(),
             run_serial: 0.0,
         }
     }
@@ -1838,7 +937,7 @@ pub fn key_manual() -> String { String::from("twopointsix.save.manual") }
 pub const KEY_AUTOSAVE_ON: &str = "twopointsix.autosave";
 
 /// (src/game/savestate.ts:863 localStore: a table nothing writes)
-pub fn local_store() -> crate::savestate::SaveStore { crate::savestate::SaveStore::zeroed() }
+pub fn local_store() -> crate::savestate::SaveStore { crate::savestate::SaveStore::default() }
 
 /// (src/game/savestate.ts:1221 STAGE_RANK: a table nothing writes)
 pub fn stage_rank() -> JsMap<String, f64> { { let mut t = JsMap::new(); t.set(String::from("infiltrate"), 0.0); t.set(String::from("drive"), 1.0); t.set(String::from("exfil"), 2.0); t.set(String::from("done"), 3.0); t.set(String::from("failed"), 3.0); t } }

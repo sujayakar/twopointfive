@@ -607,7 +607,7 @@ mod tests {
 
     #[test]
     fn rate_cap_reads_its_own_knob_live() {
-        let mut k = crate::knobs::ChaosK::zeroed();
+        let mut k = crate::knobs::ChaosK::default();
         k.papers_per_sec = 1.0;
         k.puffs_per_sec = 5.0;
         let mut c = rate_cap_new(RateCapN::Paper);

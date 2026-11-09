@@ -1,9 +1,8 @@
-//! The types of `gunwall`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `gunwall`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum GunUp {
     Port,
@@ -18,8 +17,7 @@ impl GunUp {
     }
 }
 
-/// (TypeScript: Hold, src/game/gunwall.ts:52)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Hold {
     pub x: f64,
     pub z: f64,
@@ -32,26 +30,8 @@ pub struct Hold {
     /// INVENTED: dealt when a hold starts; a new hold of the same man counts as new
     pub serial: u32,
 }
-impl Hold {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Hold {
-            x: 0.0,
-            z: 0.0,
-            yaw: 0.0,
-            pitch: 0.0,
-            sh: 0.0,
-            a: [0.0; 3],
-            b: [0.0; 3],
-            hot: false,
-            serial: 0,
-        }
-    }
-}
-impl Default for Hold { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: St, src/game/gunwall.ts:53)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct St {
     pub low: bool,
     pub t: f64,
@@ -65,112 +45,37 @@ pub struct St {
     pub vx: f64,
     pub vz: f64,
 }
-impl St {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        St {
-            low: false,
-            t: 0.0,
-            mine: false,
-            hold: None,
-            wood: 0.0,
-            rose: false,
-            px: 0.0,
-            pz: 0.0,
-            vt: 0.0,
-            vx: 0.0,
-            vz: 0.0,
-        }
-    }
-}
-impl Default for St { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/gunwall.ts:72 FIGHT, src/game/gunwall.ts:72)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct GunwallModFIGHTValue {
     pub t: f64,
     pub until: f64,
 }
-impl GunwallModFIGHTValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GunwallModFIGHTValue {
-            t: 0.0,
-            until: 0.0,
-        }
-    }
-}
-impl Default for GunwallModFIGHTValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/gunwall.ts:135 gunWallModel, src/game/gunwall.ts:135)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct GunWallModel {
     pub tuck_reach: f64,
 }
-impl GunWallModel {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GunWallModel {
-            tuck_reach: 0.0,
-        }
-    }
-}
-impl Default for GunWallModel { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/gunwall.ts:86 frame ->, src/game/gunwall.ts:89)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Frame {
     pub f: V3,
     pub r: V3,
     pub sh: f64,
     pub k: f64,
 }
-impl Frame {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Frame {
-            f: [0.0; 3],
-            r: [0.0; 3],
-            sh: 0.0,
-            k: 0.0,
-        }
-    }
-}
-impl Default for Frame { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/gunwall.ts:91 at(F), src/game/gunwall.ts:91)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct AtF {
     pub f: V3,
     pub r: V3,
 }
-impl AtF {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        AtF {
-            f: [0.0; 3],
-            r: [0.0; 3],
-        }
-    }
-}
-impl Default for AtF { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/gunwall.ts:108 raisedLine ->, src/game/gunwall.ts:108)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RaisedLine {
     pub a: V3,
     pub b: V3,
 }
-impl RaisedLine {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RaisedLine {
-            a: [0.0; 3],
-            b: [0.0; 3],
-        }
-    }
-}
-impl Default for RaisedLine { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]

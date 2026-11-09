@@ -1,4 +1,4 @@
-//! The types of `enemysquads`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `enemysquads`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
@@ -19,7 +19,6 @@ pub enum DrillAtRow {
     Row { drill_net: Option<bool>, net_k: Option<f64>, reinforce_k: Option<f64>, drill_own: Option<bool>, own_up: Option<f64>, drill_back: Option<bool>, back_beat: Option<f64> },
 }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum SquadChoice {
     Barricade,
@@ -36,10 +35,9 @@ impl SquadChoice {
     }
 }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum SquadState {
-    Down,
+    #[default] Down,
     Contact,
     Hold,
     Alerted,
@@ -61,31 +59,17 @@ impl SquadState {
     }
 }
 
-/// (TypeScript: Fix, src/game/enemysquads.ts:245)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Fix {
     pub at: V3,
     pub t: f64,
     pub ally: Option<EnemysquadsSquadId>,
     pub by: crate::enemysquads::FixBy,
 }
-impl Fix {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Fix {
-            at: [0.0; 3],
-            t: 0.0,
-            ally: None,
-            by: crate::enemysquads::FixBy::Ears,
-        }
-    }
-}
-impl Default for Fix { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum FixBy {
-    Ears,
+    #[default] Ears,
     Net,
 }
 impl FixBy {
@@ -97,8 +81,7 @@ impl FixBy {
     }
 }
 
-/// (TypeScript: Sent, src/game/enemysquads.ts:246)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct Sent {
     pub gd: GuardId,
     pub role: crate::enemysquads::SentRole,
@@ -119,37 +102,10 @@ pub struct Sent {
     pub gone_t: Option<f64>,
     pub back: Option<bool>,
 }
-impl Sent {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Sent {
-            gd: GuardId(0),
-            role: crate::enemysquads::SentRole::Look,
-            phase: crate::enemysquads::SentPhase::Set,
-            hold: None,
-            spot: None,
-            door: None,
-            fix_at: [0.0; 3],
-            tries: 0.0,
-            step_t: 0.0,
-            t0: 0.0,
-            there: None,
-            way: None,
-            aim: None,
-            set_t: None,
-            from: [0.0; 3],
-            ally: None,
-            gone_t: None,
-            back: None,
-        }
-    }
-}
-impl Default for Sent { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum SentRole {
-    Look,
+    #[default] Look,
     Flank,
     Help,
     Reinforce,
@@ -165,10 +121,9 @@ impl SentRole {
     }
 }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum SentPhase {
-    Set,
+    #[default] Set,
     Run,
     Loose,
 }
@@ -182,31 +137,17 @@ impl SentPhase {
     }
 }
 
-/// (TypeScript: SquadEvent, src/game/enemysquads.ts:248)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct SquadEvent {
     pub t: f64,
     pub what: crate::enemysquads::SquadEventWhat,
     pub n: f64,
     pub why: String,
 }
-impl SquadEvent {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SquadEvent {
-            t: 0.0,
-            what: crate::enemysquads::SquadEventWhat::Down,
-            n: 0.0,
-            why: String::new(),
-        }
-    }
-}
-impl Default for SquadEvent { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum SquadEventWhat {
-    Down,
+    #[default] Down,
     Back,
     Contact,
     Lost,
@@ -272,8 +213,7 @@ impl SquadEventWhat {
     }
 }
 
-/// (TypeScript: Check, src/game/enemysquads.ts:252)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct Check {
     pub next_at: f64,
     pub stage: crate::enemysquads::CheckStage,
@@ -297,40 +237,10 @@ pub struct Check {
     pub by_ear: bool,
     pub tick_t: f64,
 }
-impl Check {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Check {
-            next_at: 0.0,
-            stage: crate::enemysquads::CheckStage::Idle,
-            t0: 0.0,
-            caller: None,
-            who: None,
-            silent: Vec::new(),
-            known: JsSet::new(),
-            looked: JsSet::new(),
-            look: Vec::new(),
-            n: 0.0,
-            die: crate::math_dice::Die::zeroed(),
-            cut: None,
-            beat: None,
-            late: None,
-            promised: None,
-            afield: None,
-            out: None,
-            asked: None,
-            net_out: None,
-            by_ear: false,
-            tick_t: 0.0,
-        }
-    }
-}
-impl Default for Check { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum CheckStage {
-    Idle,
+    #[default] Idle,
     Called,
     Asked,
 }
@@ -344,8 +254,7 @@ impl CheckStage {
     }
 }
 
-/// (TypeScript: Quiet, src/game/enemysquads.ts:254)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct Quiet {
     pub gd: GuardId,
     pub at: V3,
@@ -354,23 +263,8 @@ pub struct Quiet {
     pub held: bool,
     pub small0: JsMap<GuardId, f64>,
 }
-impl Quiet {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Quiet {
-            gd: GuardId(0),
-            at: [0.0; 3],
-            t: 0.0,
-            heard: false,
-            held: false,
-            small0: JsMap::new(),
-        }
-    }
-}
-impl Default for Quiet { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Looker, src/game/enemysquads.ts:256)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct Looker {
     pub gd: GuardId,
     pub who: GuardId,
@@ -388,32 +282,8 @@ pub struct Looker {
     pub stops: Option<Vec<V3>>,
     pub n: Option<f64>,
 }
-impl Looker {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Looker {
-            gd: GuardId(0),
-            who: GuardId(0),
-            spot: [0.0; 3],
-            from: [0.0; 3],
-            back: false,
-            tries: 0.0,
-            step_t: 0.0,
-            t0: 0.0,
-            news0: 0.0,
-            look_t: None,
-            calm: crate::enemysquads::Calm::zeroed(),
-            about: None,
-            all: None,
-            stops: None,
-            n: None,
-        }
-    }
-}
-impl Default for Looker { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Calm, src/game/enemysquads.ts:261)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct Calm {
     pub state: crate::game::GuardState,
     pub awareness: f64,
@@ -427,64 +297,21 @@ pub struct Calm {
     pub want: f64,
     pub pt: V3,
 }
-impl Calm {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Calm {
-            state: crate::game::GuardState::Patrol,
-            awareness: 0.0,
-            hold: false,
-            pinned: false,
-            station: [0.0; 3],
-            home: [0.0; 3],
-            room: None,
-            ev: Vec::new(),
-            watch: 0.0,
-            want: 0.0,
-            pt: [0.0; 3],
-        }
-    }
-}
-impl Default for Calm { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/enemysquads.ts:252 Check.cut, src/game/enemysquads.ts:252)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct CheckCutItem {
     pub who: GuardId,
     pub at: f64,
 }
-impl CheckCutItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CheckCutItem {
-            who: GuardId(0),
-            at: 0.0,
-        }
-    }
-}
-impl Default for CheckCutItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/enemysquads.ts:252 Check.netOut, src/game/enemysquads.ts:252)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct CheckNetOutValue {
     pub about: EnemysquadsSquadId,
     pub at: V3,
     pub t: f64,
 }
-impl CheckNetOutValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CheckNetOutValue {
-            about: EnemysquadsSquadId(0),
-            at: [0.0; 3],
-            t: 0.0,
-        }
-    }
-}
-impl Default for CheckNetOutValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Call, src/game/enemysquads.ts:260)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct Call {
     pub by: GuardId,
     pub t0: f64,
@@ -494,24 +321,8 @@ pub struct Call {
     pub body: Option<GuardId>,
     pub eyes: bool,
 }
-impl Call {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Call {
-            by: GuardId(0),
-            t0: 0.0,
-            end: 0.0,
-            at: [0.0; 3],
-            room: None,
-            body: None,
-            eyes: false,
-        }
-    }
-}
-impl Default for Call { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Squad, src/game/enemysquads.ts:262)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct Squad {
     pub def: crate::scene_scenarios::SquadData,
     pub name: String,
@@ -544,85 +355,22 @@ pub struct Squad {
     pub due: Vec<crate::enemysquads::SquadDueItem>,
     pub events: Vec<crate::enemysquads::SquadEvent>,
 }
-impl Squad {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Squad {
-            def: crate::scene_scenarios::SquadData::zeroed(),
-            name: String::new(),
-            rooms: Vec::new(),
-            men: Vec::new(),
-            barricade: JsSet::new(),
-            state: crate::enemysquads::SquadState::Down,
-            state0: None,
-            fix: None,
-            news_t: 0.0,
-            decide_at: 0.0,
-            decided_at: 0.0,
-            contact_t: 0.0,
-            called_t: 0.0,
-            called_room: None,
-            fallen: JsSet::new(),
-            ready: false,
-            own_said: None,
-            stayed: None,
-            hit_room: None,
-            rc: None,
-            calls: None,
-            call_die: None,
-            hung: None,
-            trouble: None,
-            wary: None,
-            ask_die: None,
-            sent: Vec::new(),
-            went: Vec::new(),
-            due: Vec::new(),
-            events: Vec::new(),
-        }
-    }
-}
-impl Default for Squad { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/enemysquads.ts:272 Squad.hung, src/game/enemysquads.ts:272)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct SquadHungItem {
     pub who: GuardId,
     pub t: f64,
 }
-impl SquadHungItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SquadHungItem {
-            who: GuardId(0),
-            t: 0.0,
-        }
-    }
-}
-impl Default for SquadHungItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/enemysquads.ts:275 Squad.due, src/game/enemysquads.ts:275)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct SquadDueItem {
     pub gd: GuardId,
     pub at: V3,
     pub t: f64,
     pub room: Option<crate::scene_scenarios::StructureRoom>,
 }
-impl SquadDueItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SquadDueItem {
-            gd: GuardId(0),
-            at: [0.0; 3],
-            t: 0.0,
-            room: None,
-        }
-    }
-}
-impl Default for SquadDueItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: State, src/game/enemysquads.ts:277)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct State {
     pub stay_ask: Option<bool>,
     pub s: crate::scene_scenarios::StructureData,
@@ -632,45 +380,16 @@ pub struct State {
     pub nc: Option<crate::enemysquads::NetCheck>,
     pub word: Option<crate::enemysquads::StateWord>,
 }
-impl State {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        State {
-            stay_ask: None,
-            s: crate::scene_scenarios::StructureData::zeroed(),
-            squads: Vec::new(),
-            of: JsMap::new(),
-            net: Vec::new(),
-            nc: None,
-            word: None,
-        }
-    }
-}
-impl Default for State { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/enemysquads.ts:277 State.net, src/game/enemysquads.ts:277)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct StateNetItem {
     pub t: f64,
     pub squad: EnemysquadsSquadId,
     pub at: V3,
     pub door: Option<DoorId>,
 }
-impl StateNetItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StateNetItem {
-            t: 0.0,
-            squad: EnemysquadsSquadId(0),
-            at: [0.0; 3],
-            door: None,
-        }
-    }
-}
-impl Default for StateNetItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: NetCheck, src/game/enemysquads.ts:280)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct NetCheck {
     pub next_at: f64,
     pub stage: crate::enemysquads::NetCheckStage,
@@ -684,30 +403,10 @@ pub struct NetCheck {
     pub die: crate::math_dice::Die,
     pub tick_t: f64,
 }
-impl NetCheck {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        NetCheck {
-            next_at: 0.0,
-            stage: crate::enemysquads::NetCheckStage::Idle,
-            t0: 0.0,
-            caller: None,
-            about: None,
-            done: JsSet::new(),
-            tried: JsMap::new(),
-            queried: JsMap::new(),
-            say: Vec::new(),
-            die: crate::math_dice::Die::zeroed(),
-            tick_t: 0.0,
-        }
-    }
-}
-impl Default for NetCheck { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum NetCheckStage {
-    Idle,
+    #[default] Idle,
     Called,
     Asked,
 }
@@ -721,29 +420,15 @@ impl NetCheckStage {
     }
 }
 
-/// (TypeScript: inline at src/game/enemysquads.ts:280 NetCheck.say, src/game/enemysquads.ts:280)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct NetCheckSayItem {
     pub t: f64,
     pub gd: GuardId,
     pub text: String,
     pub cls: Option<f64>,
 }
-impl NetCheckSayItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        NetCheckSayItem {
-            t: 0.0,
-            gd: GuardId(0),
-            text: String::new(),
-            cls: None,
-        }
-    }
-}
-impl Default for NetCheckSayItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/enemysquads.ts:277 State.word, src/game/enemysquads.ts:277)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct StateWord {
     pub t: f64,
     pub at: V3,
@@ -753,24 +438,8 @@ pub struct StateWord {
     pub out: Option<Vec<GuardId>>,
     pub call: Option<crate::enemysquads::StateWordCall>,
 }
-impl StateWord {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StateWord {
-            t: 0.0,
-            at: [0.0; 3],
-            done: 0.0,
-            said_t: 0.0,
-            lost: false,
-            out: None,
-            call: None,
-        }
-    }
-}
-impl Default for StateWord { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/enemysquads.ts:277 StateWord.call, src/game/enemysquads.ts:277)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct StateWordCall {
     pub q: EnemysquadsSquadId,
     pub go: Vec<RoomfightDefId>,
@@ -778,22 +447,8 @@ pub struct StateWordCall {
     pub go_t: f64,
     pub w: f64,
 }
-impl StateWordCall {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StateWordCall {
-            q: EnemysquadsSquadId(0),
-            go: Vec::new(),
-            at: [0.0; 3],
-            go_t: 0.0,
-            w: 0.0,
-        }
-    }
-}
-impl Default for StateWordCall { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Way, src/game/enemysquads.ts:446)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Way {
     pub spot: V3,
     pub door: Option<DoorId>,
@@ -801,38 +456,13 @@ pub struct Way {
     pub path: Option<Vec<V3>>,
     pub aim: Option<V3>,
 }
-impl Way {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Way {
-            spot: [0.0; 3],
-            door: None,
-            l: 0.0,
-            path: None,
-            aim: None,
-        }
-    }
-}
-impl Default for Way { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Known, src/game/enemysquads.ts:496)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Known {
     pub p: V3,
     pub firm: bool,
 }
-impl Known {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Known {
-            p: [0.0; 3],
-            firm: false,
-        }
-    }
-}
-impl Default for Known { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: RoundCtx, src/game/enemysquads.ts:512)
 #[derive(Clone, Debug, ToBytes)]
 pub struct RoundCtx {
     pub t: f64,
@@ -849,9 +479,8 @@ pub struct RoundCtx {
     pub cost: JsMap<crate::Num, f64>,
     pub held: JsMap<crate::Num, RoomfightRoomId>,
 }
-impl RoundCtx {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
+impl Default for RoundCtx {
+    fn default() -> Self {
         RoundCtx {
             t: 0.0,
             t_2: RoomfightRoomId(0),
@@ -865,10 +494,8 @@ impl RoundCtx {
         }
     }
 }
-impl Default for RoundCtx { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: SquadReport, src/game/enemysquads.ts:1526)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct SquadReport {
     pub id: String,
     pub name: String,
@@ -878,97 +505,34 @@ pub struct SquadReport {
     pub out: f64,
     pub events: Vec<crate::enemysquads::SquadEvent>,
 }
-impl SquadReport {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SquadReport {
-            id: String::new(),
-            name: String::new(),
-            men: 0.0,
-            up: 0.0,
-            state: String::new(),
-            out: 0.0,
-            events: Vec::new(),
-        }
-    }
-}
-impl Default for SquadReport { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/enemysquads.ts:879 BANGS, src/game/enemysquads.ts:879)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct EnemysquadsModBANGSValue {
     pub n: f64,
     pub t: f64,
     pub read: f64,
 }
-impl EnemysquadsModBANGSValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        EnemysquadsModBANGSValue {
-            n: 0.0,
-            t: 0.0,
-            read: 0.0,
-        }
-    }
-}
-impl Default for EnemysquadsModBANGSValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/enemysquads.ts:329 grown ->, src/game/enemysquads.ts:329)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Grown {
     pub x0: f64,
     pub x1: f64,
     pub z0: f64,
     pub z1: f64,
 }
-impl Grown {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Grown {
-            x0: 0.0,
-            x1: 0.0,
-            z0: 0.0,
-            z1: 0.0,
-        }
-    }
-}
-impl Default for Grown { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/enemysquads.ts:379 squadOf ->, src/game/enemysquads.ts:379)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct SquadOf {
     pub def: crate::scene_scenarios::SquadData,
     pub men: Vec<GuardId>,
 }
-impl SquadOf {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SquadOf {
-            def: crate::scene_scenarios::SquadData::zeroed(),
-            men: Vec::new(),
-        }
-    }
-}
-impl Default for SquadOf { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/enemysquads.ts:554 wayRound2(says), src/game/enemysquads.ts:554)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct WayRound2Says {
     pub limit: Option<f64>,
     pub best: Option<f64>,
 }
-impl WayRound2Says {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WayRound2Says {
-            limit: None,
-            best: None,
-        }
-    }
-}
-impl Default for WayRound2Says { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum EventWhat {
     Down,
@@ -1037,74 +601,30 @@ impl EventWhat {
     }
 }
 
-/// (TypeScript: inline at src/game/enemysquads.ts:619 stayKey(room), src/game/enemysquads.ts:619)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct StayKeyRoom {
     pub name: String,
 }
-impl StayKeyRoom {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StayKeyRoom {
-            name: String::new(),
-        }
-    }
-}
-impl Default for StayKeyRoom { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/enemysquads.ts:719 contact(words), src/game/enemysquads.ts:719)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct ContactWords {
     pub say: String,
     pub why: String,
 }
-impl ContactWords {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ContactWords {
-            say: String::new(),
-            why: String::new(),
-        }
-    }
-}
-impl Default for ContactWords { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/enemysquads.ts:752 movedOn ->, src/game/enemysquads.ts:752)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct MovedOn {
     pub at: V3,
     pub pair: Vec<GuardId>,
 }
-impl MovedOn {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        MovedOn {
-            at: [0.0; 3],
-            pair: Vec::new(),
-        }
-    }
-}
-impl Default for MovedOn { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/enemysquads.ts:892 radioCheck ->, src/game/enemysquads.ts:892)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct RadioCheck {
     pub at: V3,
     pub room: Option<crate::scene_scenarios::StructureRoom>,
 }
-impl RadioCheck {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RadioCheck {
-            at: [0.0; 3],
-            room: None,
-        }
-    }
-}
-impl Default for RadioCheck { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/enemysquads.ts:1249 squadCalls ->, src/game/enemysquads.ts:1249)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct SquadCallsItem {
     pub squad: String,
     pub by: GuardId,
@@ -1112,39 +632,14 @@ pub struct SquadCallsItem {
     pub end: f64,
     pub body: Option<GuardId>,
 }
-impl SquadCallsItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SquadCallsItem {
-            squad: String::new(),
-            by: GuardId(0),
-            t0: 0.0,
-            end: 0.0,
-            body: None,
-        }
-    }
-}
-impl Default for SquadCallsItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/enemysquads.ts:1272 netSend ->, src/game/enemysquads.ts:1272)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct NetSend {
     pub q: EnemysquadsSquadId,
     pub go: Vec<RoomfightDefId>,
 }
-impl NetSend {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        NetSend {
-            q: EnemysquadsSquadId(0),
-            go: Vec::new(),
-        }
-    }
-}
-impl Default for NetSend { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/enemysquads.ts:1543 squadWaysRound ->, src/game/enemysquads.ts:1543)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct SquadWaysRoundItem {
     pub squad: String,
     pub man: String,
@@ -1158,25 +653,6 @@ pub struct SquadWaysRoundItem {
     pub limit: Option<f64>,
     pub best: Option<f64>,
 }
-impl SquadWaysRoundItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SquadWaysRoundItem {
-            squad: String::new(),
-            man: String::new(),
-            from: String::new(),
-            room: String::new(),
-            door: String::new(),
-            hold: false,
-            team: false,
-            way: None,
-            l: 0.0,
-            limit: None,
-            best: None,
-        }
-    }
-}
-impl Default for SquadWaysRoundItem { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]

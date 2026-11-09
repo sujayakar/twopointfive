@@ -159,7 +159,7 @@ fn smoke_one(g: &mut Game, gd: GuardId, c: CharId, dt: f64, mn: &mut Man, t: &mu
                 pos: tip, dir: [0.0, 1.0, 0.0], speed: b.speed, radius: b.radius, min_voxels: Some(b.cells), density: b.density, temperature: b.temp, ttl: THREAD_EVERY, age: 0.0,
                 kind: crate::smoke_types::SmokeEmitterKind::Breath, push: Some(b.push), jitter: Some(b.jitter), lattice: Some(crate::smoke_types::SmokeEmitterLattice::Fine),
                 confined: Some(true), look: Some(true), track_vel: Some(true), tint: Some(k.color), track: Some(crate::effects::Track::Cigarette { by: c }),
-                ..crate::smoke_types::SmokeEmitter::zeroed()
+                ..crate::smoke_types::SmokeEmitter::default()
             });
         }
     }
@@ -181,7 +181,7 @@ fn smoke_one(g: &mut Game, gd: GuardId, c: CharId, dt: f64, mn: &mut Man, t: &mu
                 density: b.density, temperature: b.temp, ttl: k.out, age: 0.0, kind: crate::smoke_types::SmokeEmitterKind::Breath, push: Some(b.push), expand: Some(b.expand),
                 attack: Some(b.attack), jitter: Some(b.jitter), lattice: Some(crate::smoke_types::SmokeEmitterLattice::Fine), confined: Some(true), look: Some(true), track_vel: Some(true),
                 tint: Some(k.color), track: None,
-                ..crate::smoke_types::SmokeEmitter::zeroed()
+                ..crate::smoke_types::SmokeEmitter::default()
             });
         }
     }

@@ -1,4 +1,4 @@
-//! The types of `qrf`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `qrf`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
@@ -10,8 +10,7 @@ pub enum StoredTuneRow {
     Num { v: f64 },
 }
 
-/// (TypeScript: Marks, src/game/qrf.ts:115)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct Marks {
     pub door: Option<String>,
     pub name: String,
@@ -28,30 +27,7 @@ pub struct Marks {
     pub team: String,
     pub tag: String,
 }
-impl Marks {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Marks {
-            door: None,
-            name: String::new(),
-            muster: Vec::new(),
-            entry: Vec::new(),
-            entry_face: Vec::new(),
-            coming: String::new(),
-            clear: None,
-            stairs: false,
-            posts: Vec::new(),
-            outside: Vec::new(),
-            site: String::new(),
-            at: String::new(),
-            team: String::new(),
-            tag: String::new(),
-        }
-    }
-}
-impl Default for Marks { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum QrfState {
     Idle,
@@ -72,7 +48,6 @@ impl QrfState {
     }
 }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum QrfReason {
     Gunfire,
@@ -91,7 +66,6 @@ impl QrfReason {
     }
 }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum Phase {
     Bang,
@@ -128,8 +102,7 @@ impl Phase {
     }
 }
 
-/// (TypeScript: Target, src/game/qrf.ts:198)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct Target {
     pub kind: crate::qrf::TargetKind,
     pub plan: Option<crate::scene_level::RoomClearPlan>,
@@ -137,24 +110,10 @@ pub struct Target {
     pub pos: V3,
     pub word: Option<f64>,
 }
-impl Target {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Target {
-            kind: crate::qrf::TargetKind::Room,
-            plan: None,
-            room: String::new(),
-            pos: [0.0; 3],
-            word: None,
-        }
-    }
-}
-impl Default for Target { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum TargetKind {
-    Room,
+    #[default] Room,
     Point,
 }
 impl TargetKind {
@@ -166,8 +125,7 @@ impl TargetKind {
     }
 }
 
-/// (TypeScript: Perimeter, src/game/qrf.ts:200)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct Perimeter {
     pub state: crate::qrf::PerimeterState,
     pub called_at: f64,
@@ -177,26 +135,10 @@ pub struct Perimeter {
     pub spawned: f64,
     pub peeled: f64,
 }
-impl Perimeter {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Perimeter {
-            state: crate::qrf::PerimeterState::Set,
-            called_at: 0.0,
-            eta_at: 0.0,
-            set_at: 0.0,
-            men: Vec::new(),
-            spawned: 0.0,
-            peeled: 0.0,
-        }
-    }
-}
-impl Default for Perimeter { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum PerimeterState {
-    Set,
+    #[default] Set,
     Called,
 }
 impl PerimeterState {
@@ -208,28 +150,14 @@ impl PerimeterState {
     }
 }
 
-/// (TypeScript: inline at src/game/qrf.ts:200 Perimeter.men, src/game/qrf.ts:200)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct PerimeterMenItem {
     pub gd: GuardId,
     pub post: crate::scene_scenarios::ResponsePost,
     pub arrived_at: f64,
     pub fighting: bool,
 }
-impl PerimeterMenItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PerimeterMenItem {
-            gd: GuardId(0),
-            post: crate::scene_scenarios::ResponsePost::zeroed(),
-            arrived_at: 0.0,
-            fighting: false,
-        }
-    }
-}
-impl Default for PerimeterMenItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Qrf, src/game/qrf.ts:203)
 #[derive(Clone, Debug, ToBytes)]
 pub struct Qrf {
     pub state: crate::qrf::QrfState,
@@ -296,7 +224,7 @@ pub struct Qrf {
     pub word_t: f64,
 }
 impl Qrf {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         Qrf {
             state: crate::qrf::QrfState::Idle,
@@ -366,89 +294,40 @@ impl Qrf {
 }
 impl Default for Qrf { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: inline at src/game/qrf.ts:223 Qrf.log, src/game/qrf.ts:223)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct QrfLogItem {
     pub t: f64,
     pub what: String,
 }
-impl QrfLogItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        QrfLogItem {
-            t: 0.0,
-            what: String::new(),
-        }
-    }
-}
-impl Default for QrfLogItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/qrf.ts:240 Qrf.spent, src/game/qrf.ts:240)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct QrfSpent {
     pub room: String,
     pub fix_t: f64,
 }
-impl QrfSpent {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        QrfSpent {
-            room: String::new(),
-            fix_t: 0.0,
-        }
-    }
-}
-impl Default for QrfSpent { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: a union)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum QrfWordKey {
     Guard(GuardId),
     Player,
 }
 
-/// (TypeScript: inline at src/game/qrf.ts:248 Qrf.word, src/game/qrf.ts:248)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct QrfWordValue {
     pub at: V3,
     pub t: f64,
     pub how: String,
 }
-impl QrfWordValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        QrfWordValue {
-            at: [0.0; 3],
-            t: 0.0,
-            how: String::new(),
-        }
-    }
-}
-impl Default for QrfWordValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: ResponseWordSnap, src/game/qrf.ts:364)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct ResponseWordSnap {
     pub who: f64,
     pub at: V3,
     pub age: f64,
     pub how: String,
 }
-impl ResponseWordSnap {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ResponseWordSnap {
-            who: 0.0,
-            at: [0.0; 3],
-            age: 0.0,
-            how: String::new(),
-        }
-    }
-}
-impl Default for ResponseWordSnap { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/qrf.ts:71 QRF_MARKS, src/game/qrf.ts:71)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct QRFMARKS {
     pub door: String,
     pub landing: Vec<V3>,
@@ -457,44 +336,16 @@ pub struct QRFMARKS {
     pub posts: Vec<crate::qrf::QRFMARKSPostsItem>,
     pub outside_spawn: Vec<V3>,
 }
-impl QRFMARKS {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        QRFMARKS {
-            door: String::new(),
-            landing: Vec::new(),
-            entry: Vec::new(),
-            entry_face: Vec::new(),
-            posts: Vec::new(),
-            outside_spawn: Vec::new(),
-        }
-    }
-}
-impl Default for QRFMARKS { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/qrf.ts:81 QRFMARKS.posts, src/game/qrf.ts:82)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct QRFMARKSPostsItem {
     pub name: String,
     pub pos: V3,
     pub yaw: f64,
     pub sweep: Vec<V3>,
 }
-impl QRFMARKSPostsItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        QRFMARKSPostsItem {
-            name: String::new(),
-            pos: [0.0; 3],
-            yaw: 0.0,
-            sweep: Vec::new(),
-        }
-    }
-}
-impl Default for QRFMARKSPostsItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/qrf.ts:280 QRF_TUNE_DEFAULTS, src/game/qrf.ts:280)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct QRFTUNEDEFAULTS {
     pub qrf: bool,
     pub qrf_eta: f64,
@@ -505,24 +356,7 @@ pub struct QRFTUNEDEFAULTS {
     pub qrf_silent: bool,
     pub qrf_squad: bool,
 }
-impl QRFTUNEDEFAULTS {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        QRFTUNEDEFAULTS {
-            qrf: false,
-            qrf_eta: 0.0,
-            qrf_size: 0.0,
-            perimeter: false,
-            perimeter_eta: 0.0,
-            perimeter_size: 0.0,
-            qrf_silent: false,
-            qrf_squad: false,
-        }
-    }
-}
-impl Default for QRFTUNEDEFAULTS { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum SideOfTeam {
     Guard,
@@ -537,172 +371,69 @@ impl SideOfTeam {
     }
 }
 
-/// (TypeScript: a union)
 #[derive(Clone, Copy, Debug)]
 pub enum BudgetOf {
     Arm0(crate::qrf::BudgetOfArm0),
     Arm1(crate::qrf::BudgetOfArm1),
 }
 
-/// (TypeScript: inline at src/game/qrf.ts:156 budgetOf ->, src/game/qrf.ts:156)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct BudgetOfArm0 {
     pub budget: f64,
 }
-impl BudgetOfArm0 {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BudgetOfArm0 {
-            budget: 0.0,
-        }
-    }
-}
-impl Default for BudgetOfArm0 { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/qrf.ts:156 budgetOf ->, src/game/qrf.ts:156)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct BudgetOfArm1 {
     pub budget: Option<()>,
 }
-impl BudgetOfArm1 {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BudgetOfArm1 {
-            budget: None,
-        }
-    }
-}
-impl Default for BudgetOfArm1 { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/qrf.ts:321 bestFix ->, src/game/qrf.ts:321)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct BestFix {
     pub pos: V3,
     pub t: f64,
 }
-impl BestFix {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BestFix {
-            pos: [0.0; 3],
-            t: 0.0,
-        }
-    }
-}
-impl Default for BestFix { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/qrf.ts:350 netWord ->, src/game/qrf.ts:350)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct NetWord {
     pub pos: V3,
     pub t: f64,
     pub n: f64,
 }
-impl NetWord {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        NetWord {
-            pos: [0.0; 3],
-            t: 0.0,
-            n: 0.0,
-        }
-    }
-}
-impl Default for NetWord { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/qrf.ts:357 fixOf ->, src/game/qrf.ts:357)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct FixOf {
     pub pos: V3,
     pub t: f64,
 }
-impl FixOf {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FixOf {
-            pos: [0.0; 3],
-            t: 0.0,
-        }
-    }
-}
-impl Default for FixOf { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/qrf.ts:427 responseWords ->, src/game/qrf.ts:427)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct ResponseWords {
     pub site: String,
     pub at: String,
     pub team: String,
 }
-impl ResponseWords {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ResponseWords {
-            site: String::new(),
-            at: String::new(),
-            team: String::new(),
-        }
-    }
-}
-impl Default for ResponseWords { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/qrf.ts:432 dealt ->, src/game/qrf.ts:432)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Dealt {
     pub way: f64,
     pub men: f64,
     pub eta: f64,
 }
-impl Dealt {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Dealt {
-            way: 0.0,
-            men: 0.0,
-            eta: 0.0,
-        }
-    }
-}
-impl Default for Dealt { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/qrf.ts:780 sweepPlaces ->, src/game/qrf.ts:780)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct SweepPlacesItem {
     pub name: String,
     pub pos: V3,
 }
-impl SweepPlacesItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SweepPlacesItem {
-            name: String::new(),
-            pos: [0.0; 3],
-        }
-    }
-}
-impl Default for SweepPlacesItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/qrf.ts:987 flowLegs ->, src/game/qrf.ts:987)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct FlowLegs {
     pub pts: Vec<V3>,
     pub face: f64,
     pub aim: V3,
 }
-impl FlowLegs {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FlowLegs {
-            pts: Vec::new(),
-            face: 0.0,
-            aim: [0.0; 3],
-        }
-    }
-}
-impl Default for FlowLegs { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/qrf.ts:1111 route(patch), ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RoutePatch {
     pub goal: Option<V3>,
     pub speed: Option<f64>,
@@ -722,31 +453,6 @@ pub struct RoutePatch {
     pub smoke: Option<bool>,
     pub over: Option<crate::game::GuardScriptOver>,
 }
-impl RoutePatch {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RoutePatch {
-            goal: None,
-            speed: None,
-            face: None,
-            strafe: None,
-            aim_at: None,
-            stance: None,
-            stack_side: None,
-            crouch: None,
-            lean: None,
-            upper: None,
-            light: None,
-            arrived: None,
-            hot: None,
-            flinch: None,
-            direct: None,
-            smoke: None,
-            over: None,
-        }
-    }
-}
-impl Default for RoutePatch { fn default() -> Self { Self::zeroed() } }
 
 /// (src/game/qrf.ts:71 QRF_MARKS: a table nothing writes)
 pub fn qrf_marks() -> crate::qrf::QRFMARKS { crate::qrf::QRFMARKS { door: String::from("stairwell"), landing: alloc::vec![[3.1, 0.0, 11.25], [2.25, 0.0, 11.25], [3.1, 0.0, 10.3], [2.25, 0.0, 10.3]], entry: alloc::vec![[6.7, 0.0, 11.2], [5.9, 0.0, 10.55], [5.9, 0.0, 11.8], [5.4, 0.0, 11.25]], entry_face: alloc::vec![1.5707963267948966, 2.4, 0.75, 1.5707963267948966], posts: alloc::vec![crate::qrf::QRFMARKSPostsItem { name: String::from("fire exit"), pos: [38.9, 0.0, 24.2], yaw: -2.48, sweep: alloc::vec![[36.15, 1.0, 19.9], [36.15, 1.0, 21.5]] }, crate::qrf::QRFMARKSPostsItem { name: String::from("break-room door"), pos: [27.4, 0.0, 25.7], yaw: 1.95, sweep: alloc::vec![[30.9, 1.0, 24.15], [32.4, 1.0, 24.15]] }, crate::qrf::QRFMARKSPostsItem { name: String::from("lobby front"), pos: [2.3, 0.0, 20.6], yaw: 1.5707963267948966, sweep: alloc::vec![[3.9, 1.0, 17.6], [3.9, 1.0, 22.4]] }, crate::qrf::QRFMARKSPostsItem { name: String::from("south lot"), pos: [17.4, 0.0, 26.4], yaw: 3.141592653589793, sweep: alloc::vec![[14.5, 1.2, 24.15], [23.5, 1.2, 24.15]] }], outside_spawn: alloc::vec![[38.6, 0.0, 26.6], [37.4, 0.0, 26.9], [38.8, 0.0, 25.4], [37.2, 0.0, 25.6]] } }

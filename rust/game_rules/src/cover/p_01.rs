@@ -165,7 +165,7 @@ twin false true calls 2 cf655555555546be";
 
     #[test]
     fn gaps_match_the_typescript_bits() {
-        let mut k = crate::knobs::CoverK::zeroed();
+        let mut k = crate::knobs::CoverK::default();
         (k.gap_cells, k.through_rows, k.alcove_rows, k.bridge) = (3.0, 3.0, 3.0, 3.0);
         let mut out: Vec<String> = Vec::new();
         for &(name, cell, rows) in GRIDS {

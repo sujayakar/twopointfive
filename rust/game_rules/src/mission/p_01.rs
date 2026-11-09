@@ -258,7 +258,7 @@ pub fn drive_pulled(g: &mut crate::game::Game) {
         level: Some(0.35),
         who: Some(who),
         serial,
-        ..crate::game::GameEvent::zeroed()
+        ..crate::game::GameEvent::default()
     });
     g.pl[pl].noise = m::max(g.pl[pl].noise, 0.35);
     if let Some(w) = &w {

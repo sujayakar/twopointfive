@@ -1,46 +1,23 @@
-//! The types of `planmode`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `planmode`.
 #![allow(unused_imports)]
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: inline at src/game/planmode.ts:26 goalParts ->, src/game/planmode.ts:26)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct GoalParts {
     pub idle: Vec<GuardId>,
     pub groups: Vec<Vec<GuardId>>,
 }
-impl GoalParts {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GoalParts {
-            idle: Vec::new(),
-            groups: Vec::new(),
-        }
-    }
-}
-impl Default for GoalParts { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/planmode.ts:40 goalMen ->, src/game/planmode.ts:40)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct GoalMen {
     pub men: Vec<GuardId>,
     pub how: crate::planmode::GoalMenHow,
 }
-impl GoalMen {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GoalMen {
-            men: Vec::new(),
-            how: crate::planmode::GoalMenHow::All,
-        }
-    }
-}
-impl Default for GoalMen { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum GoalMenHow {
-    All,
+    #[default] All,
     Idle,
     His,
     Same,
