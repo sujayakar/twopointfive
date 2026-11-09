@@ -3,7 +3,7 @@
 //!   face_hand(h, seat, p, pn, keys, n) WHAT A PLAYER DID, for the next step: `HAND` numbers (`pn` bytes; src/draw/hand.ts says them in the same order) and his keys' codes as
 //!                                      text, those held and, after a line feed, those that went down. A seat nobody hands is as it last was, with
 //!                                      nothing pressed.
-//!   face_commands(h, p, n) -> 1 | 0    WHAT A PLAYER OR A PANEL DID THAT IS NOT INPUT, before a step: the typed list (game_run::command), done in its order.
+//!   face_commands(h, p, n) -> 1 | 0    WHAT A PLAYER OR A PANEL DID THAT IS NOT INPUT, before a step: the typed list (game_start::host::command), done in its order.
 //!                                      0 = a number no command has (said at face_out)
 //!   face_hands_off(h, seat, p, n) · face_hands_said(h) · face_hands_trace(h)   nobody's hands are on a seat (game_start hands_off): his plan, how he stands, his timeline
 
@@ -49,7 +49,7 @@ pub unsafe extern "C" fn face_hand(h: u32, seat: usize, p: *const f64, pn: usize
 pub unsafe extern "C" fn face_commands(h: u32, p: *const u8, n: usize) -> u32 {
     let b = super::bytes(p, n);
     // (a restart done between two ticks: the picture of the game before it is not blended into this one's)
-    match super::with(h, |x| { let done = game_run::command::apply(&mut x.g, b); if x.g.restart_cut { x.drawn.cut(); } done }) { Ok(()) => 1, Err(why) => { super::out(why.into_bytes()); 0 } }
+    match super::with(h, |x| { let done = game_start::host::command::apply(&mut x.g, b); if x.g.restart_cut { x.drawn.cut(); } done }) { Ok(()) => 1, Err(why) => { super::out(why.into_bytes()); 0 } }
 }
 /// NOBODY'S HANDS ARE ON A SEAT (game_start hands_off): the hands it is handed from here are his own. `p`, `n`: his plan, a word a line: the seed, the seconds he plays, 1 to throw the breaker
 /// first, then doors by name to take first. An empty plan: the seat is the host's again.

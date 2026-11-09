@@ -2,6 +2,7 @@
 //! same bytes. A command is declared here once (`commands!`); the page's writer of it is made from the declaration by `bun run tools/draw/gen.ts`.
 //!
 //! The bytes: a command's number (u32), then its fields in order, little end first: u32, i32, f64, or text as its length (u32) and its bytes.
+use alloc::{format, string::String, vec::Vec};
 use game::game::Game;
 use game::savestate::control as saves;
 
@@ -100,9 +101,9 @@ commands! {
     /// the fog of war's cone, whatever the level says, for a visit
     16 FogCone { on: u32 } = |g, on| game::difficulty::set_cone_visit(g, Some(on != 0));
     /// one knob, by its name (knobs.rs); a name no knob has is nothing
-    17 Knob { name: &str, value: f64 } = |g, name, value| { let _ = crate::knobs::set(g, name, value); };
+    17 Knob { name: &str, value: f64 } = |g, name, value| { let _ = super::knobs::set(g, name, value); };
     /// the cards as the player's machine keeps them (before a game is made: what its men are staged in)
-    18 Kit { kept: &str } = |g, kept| crate::kept::read(g, kept);
+    18 Kit { kept: &str } = |g, kept| super::kept::read(g, kept);
     /// the rung a quiet mission is played under, as this machine keeps it (a word that is no rung is nothing)
     19 QuietFog { rung: &str } = |g, rung| game::quietfog::quiet_fog_kept(g, rung);
     /// the cameras a quiet mission hands out, as this machine keeps them
@@ -124,7 +125,7 @@ commands! {
     /// the level's moon: its strength, its height and bearing in degrees (a number that is none leaves it)
     26 Moon { k: f64, elev: f64, bearing: f64 } = |g, k, elev, bearing| game::hours::turns::set_moon(g, k, elev, bearing);
     /// the kit picture: the team's cards (as Kit's text) and how many come (under 0: as it stands), staged again
-    30 KitStageCards { kept: &str, size: i32 } = |g, kept, size| { crate::kept::read(g, kept); game::kitstage::cards(g, size); };
+    30 KitStageCards { kept: &str, size: i32 } = |g, kept, size| { super::kept::read(g, kept); game::kitstage::cards(g, size); };
     /// whose card is open (0 the player) and the row under its highlight
     31 KitStageOpen { who: u32, field: &str } = |g, who, field| game::kitstage::open(g, who, field);
     /// where the picture's men should sit in the view: its shape, then their middle, their share of its height and width and a man's, the door's line and the edges it is hung between, and the column's top and
@@ -137,7 +138,7 @@ commands! {
     /// the kit picture: the page has shown its first picture: the acts may begin
     34 KitStageShown {} = |g| game::kitstage::shown(g);
     /// one of the panel's actions, by its name (actions.rs), with what its row picked
-    35 Act { name: &str, value: f64, word: &str } = |g, name, value, word| crate::actions::act(g, name, value, word);
+    35 Act { name: &str, value: f64, word: &str } = |g, name, value, word| super::actions::act(g, name, value, word);
     /// an address's words, on what stands no game yet: the desk, whose kit rules read the numbers they turn
-    36 Words { text: &str } = |g, text| crate::words::apply(g, text);
+    36 Words { text: &str } = |g, text| super::words::apply(g, text);
 }

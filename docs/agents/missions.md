@@ -19,7 +19,7 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | module | what it does |
 |---|---|
 | `scene_scenario_list/` | an address read (`spec_of`), a row's link (`pick_search`), the short list (`PICKS`) |
-| `start_list/` | the rows in their groups, a mission's sheet and settings, as the desk (`rust/game_run/src/desk.rs`) answers the page |
+| `start_list/` | the rows in their groups, a mission's sheet and settings, as the desk (`rust/game_start/src/host/desk.rs`) answers the page |
 | `scenario_run/` | the one way from an address to a staged game; what is up; quit |
 | `roomclear/`, `squaddeal/` | rooms, marks and the two ends; squads cut along a house whose file names none |
 | `nightbreach/`, `breach/` | the staging a room clear stands on; F's drill |
@@ -127,7 +127,7 @@ teammates. Only `office.json` has that plan. Elsewhere every teammate is the ord
 
 ## What holds it
 
-Native tests in `rust/game_start/tests/` (`rust/game_run/tests/` if marked):
+Native tests in `rust/game_start/tests/`:
 
 | file | what it holds |
 |---|---|
@@ -139,7 +139,7 @@ Native tests in `rust/game_start/tests/` (`rust/game_run/tests/` if marked):
 | `response_team.rs`, `last_men.rs` | what calls the team and its clock; when the last few count as down |
 | `restarts.rs`, `endcard.rs`, `debrief.rs` | a restart equals a fresh staging; the end card comes once, with its record |
 | `does_and_stages.rs`, `owes.rs`, `hands_off.rs` | every file that names a mission stages it; what a whole run owes; a room clear with nobody at the keys |
-| `desk.rs`, `program_moment.rs` (game_run) | the list and sheet as the page has them; a checkpoint in the middle of a beat changes nothing |
+| `desk.rs`, `program_moment.rs` | the list and sheet as the page has them; a checkpoint in the middle of a beat changes nothing |
 
 `gate long` adds a `played` row for each staged mission and a `lesson` row for each tutorial; the quick `gate` has `par` and `start` rows. `missions` plays the room clears under a dull commander, and
 `missions diff BEFORE AFTER` compares builds. `levels second-way`, `stands`, `walked` and `stacks` ask what a level owes. Checks: `mystery-check.ts`, `writing-check.ts`. Page scripts:

@@ -27,7 +27,7 @@ pub fn parts(b: &[u8]) -> Result<Vec<&[u8]>, String> {
     Ok(out)
 }
 
-/// STAND A GAME FROM WHAT A HOST HANDED. `host` does the host's commands and its address's words to the game before anything is read (the host's lists: game_run `command`, `words`). `o.link` is the handed address's words (what `o` held of it is not read). A run of bytes that is not a
+/// STAND A GAME FROM WHAT A HOST HANDED. `host` does the host's commands and its address's words to the game before anything is read (the host's lists: `host::command`, `host::words`). `o.link` is the handed address's words (what `o` held of it is not read). A run of bytes that is not a
 /// start's, a text that is not text, or a level file that does not read stops with its reason, as `stand` does for a file it does not carry.
 pub fn stand_handed(b: &[u8], o: &StartOpts, host: &mut dyn FnMut(&mut game::game::Game, &str, &[u8])) -> Stood {
     let p = parts(b).unwrap_or_else(|e| panic!("a start was handed bytes that are not a start's: {}", e));

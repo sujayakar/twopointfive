@@ -49,9 +49,9 @@ for (const [name, mod, en, doc] of WORDS) { const text = readFileSync(join(ROOT,
 /** a declared thing's fields, each by how it is written */
 const fieldsOf = (list: string, of: string): { name: string; k: string }[] => list.split(',').map(x => x.trim()).filter(Boolean).map(x => { const [name, ty] = x.split(':').map(y => y.trim()); const k = ({ u32: 'u32', i32: 'i32', f64: 'f64', '&str': 'text' } as Record<string, string>)[ty] ?? die(`${of}: ${ty}`); return { name: camel(name), k }; });
 // ---- what goes the other way: the commands' writer, from their declaration
-const COMMANDS = join(ROOT, 'src/draw/commands.ts'), C: string[] = ['// Written by tools/draw/gen.ts from rust/game_run/src/command.rs. To change a command, change it there.', "import { Writer } from './writer';", '',
+const COMMANDS = join(ROOT, 'src/draw/commands.ts'), C: string[] = ['// Written by tools/draw/gen.ts from rust/game_start/src/host/command.rs. To change a command, change it there.', "import { Writer } from './writer';", '',
   '/** what a player or a panel does that is not input, in its order, until a step takes it */', 'export class Commands extends Writer {'];
-{ const src = (readFileSync(join(ROOT, 'rust/game_run/src/command.rs'), 'utf8').match(/^commands! \{\n([\s\S]*?)^\}/m) ?? die('no commands! in command.rs'))[1]; let doc = '', n = 0;
+{ const src = (readFileSync(join(ROOT, 'rust/game_start/src/host/command.rs'), 'utf8').match(/^commands! \{\n([\s\S]*?)^\}/m) ?? die('no commands! in command.rs'))[1]; let doc = '', n = 0;
   for (const l of src.split('\n')) { const t = l.trim(); if (t.startsWith('///')) { doc = t.replace(/^\/\/\/ ?/, ''); continue; }
     const m = t.match(/^(\d+) (\w+) \{([^}]*)\} = /); if (!m) continue; if (Number(m[1]) < n) die(`commands!: ${m[2]} says ${m[1]}, and the numbers only go up`); n = Number(m[1]) + 1;
     const F = fieldsOf(m[3], m[2]);
@@ -59,13 +59,13 @@ const COMMANDS = join(ROOT, 'src/draw/commands.ts'), C: string[] = ['// Written 
   C.push('}', ''); }
 // ---- what a page asks the desk, from its declaration: the answers' readers are the view's (src/view/read.ts, views.ts)
 const ASKS = join(ROOT, 'src/draw/asks.ts'), A: string[] = [], answers = new Set<string>(); let answersWord = false, answersNumber = false;
-{ const src = (readFileSync(join(ROOT, 'rust/game_run/src/desk.rs'), 'utf8').match(/^asks! \{\n([\s\S]*?)^\}/m) ?? die('no asks! in desk.rs'))[1]; let doc = '', n = 0;
+{ const src = (readFileSync(join(ROOT, 'rust/game_start/src/host/desk.rs'), 'utf8').match(/^asks! \{\n([\s\S]*?)^\}/m) ?? die('no asks! in desk.rs'))[1]; let doc = '', n = 0;
   for (const l of src.split('\n')) { const t = l.trim(); if (t.startsWith('///')) { doc = t.replace(/^\/\/\/ ?/, ''); continue; }
     const m = t.match(/^(\d+) (\w+) \{([^}]*)\} -> (\w+) = /); if (!m) continue; if (Number(m[1]) !== n++) die(`asks!: ${m[2]} says ${m[1]}`);
     const F = fieldsOf(m[3], m[2]), word = m[4] === 'String', num = m[4] === 'u32'; if (word) answersWord = true; else if (num) answersNumber = true; else answers.add(m[4]);
     A.push(`  /** ${doc} */`, `  ${m[2][0].toLowerCase()}${m[2].slice(1)}(${F.map(f => `${f.name}: ${f.k === 'text' ? 'string' : 'number'}`).join(', ')}): ${word ? 'string' : num ? 'number' : m[4]} { this.u32(${m[1]});${F.map(f => ` this.${f.k}(${f.name});`).join('')} return ${m[4] === 'Pressed' ? 'this.told(' : ''}${word ? 'readWord' : num ? 'readNumber' : `read${m[4]}`}(this.answer(this.take()))${m[4] === 'Pressed' ? ')' : ''}; }`); doc = ''; }
   const names = [...answers].sort();
-  A.unshift('// Written by tools/draw/gen.ts from rust/game_run/src/desk.rs. To change an ask, change it there.', "import { Writer } from './writer';", `import { ${names.map(x => `read${x}`).join(', ')}, ${names.map(x => `type ${x}`).join(', ')} } from '../view/read';`, '', ...(answersWord ? ['/** an answer that is one word: its length, then its bytes */', 'const readWord = (b: Uint8Array): string => new TextDecoder().decode(b.subarray(4));', ''] : []), ...(answersNumber ? ['/** an answer that is one number */', 'const readNumber = (b: Uint8Array): number => new DataView(b.buffer, b.byteOffset, b.byteLength).getUint32(0, true);', ''] : []),
+  A.unshift('// Written by tools/draw/gen.ts from rust/game_start/src/host/desk.rs. To change an ask, change it there.', "import { Writer } from './writer';", `import { ${names.map(x => `read${x}`).join(', ')}, ${names.map(x => `type ${x}`).join(', ')} } from '../view/read';`, '', ...(answersWord ? ['/** an answer that is one word: its length, then its bytes */', 'const readWord = (b: Uint8Array): string => new TextDecoder().decode(b.subarray(4));', ''] : []), ...(answersNumber ? ['/** an answer that is one number */', 'const readNumber = (b: Uint8Array): number => new DataView(b.buffer, b.byteOffset, b.byteLength).getUint32(0, true);', ''] : []),
     '/** what the cards before a game show and press; `answer` is the module\'s, to the bytes of an ask */', 'export class Asks extends Writer {', '  constructor(private readonly answer: (asked: Uint8Array) => Uint8Array) { super(); }', '  /** a press, as it went */', '  protected told(p: Pressed): Pressed { return p; }');
   A.push('}', ''); }
 const files: [string, string][] = [[OUT, L.join('\n') + '\n'], [COMMANDS, C.join('\n')], [ASKS, A.join('\n')], [join(ROOT, 'src/view/read.ts'), viewReader(ROOT, die)]];

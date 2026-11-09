@@ -110,7 +110,7 @@ Playwright's clicks hang on the software adapter: click by script.
 | `?seed=7`, `?quality=verylow`, `?mute`, `?hud` | the die (no word, a random one); a fixed preset; silence; the numbers on screen |
 | `?hard`, `?nofow`, `?noweather`, `?hour=` | difficulty; no fog of war; no weather; the hour |
 | `?cards=0`, `?loadbrief=0`, `?nokit`, `?noreplay`, `?cloud=0`, `?downloads=1` | no card waits; no brief; not this machine's kit cards; no tape; nothing sent; files also download |
-| `?knob.doorthrow.kick_secs=3` | any number of the rules, by name. The short words are `WORDS` in `rust/game_run/src/words.rs` |
+| `?knob.doorthrow.kick_secs=3` | any number of the rules, by name. The short words are `WORDS` in `rust/game_start/src/host/words.rs` |
 | `?playtape=`, `?at=`, `?bench` | a tape's page and the tick to seek to; the benchmark |
 | `?keeppage=0`, `?keeppage=1` | the shell that keeps the GPU device. A driven or `?paused` page is whole. A player's Chrome has the game in the frame `kept-page`, hooks on its `contentWindow` |
 

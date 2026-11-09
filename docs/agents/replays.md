@@ -118,7 +118,7 @@ hand numbers, or another character file (`other` in `handtape.ts`).
 
 ## To change it
 
-- **Anything that changes the game from the page:** a command (`src/draw/commands.ts`, `rust/game_run/src/command.rs`), which is on the tape by
+- **Anything that changes the game from the page:** a command (`src/draw/commands.ts`, `rust/game_start/src/host/command.rs`), which is on the tape by
   itself. A call that changes the game any other way makes every walk part.
 - **State:** a field reachable from `Game`, so that a clone and `state_words` have it, or a column of the block. A field left out of the hash says so
   with `#[bytes(skip)]`. A new `static mut` in `rust/sim` or `rust/prim` needs its row in `rust-rules-check.ts`.

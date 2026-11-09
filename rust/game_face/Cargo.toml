@@ -21,9 +21,7 @@ game = { path = "../game_rules", package = "game_rules" }
 sim = { path = "../sim" }
 # (what the picture is told)
 game_draw = { path = "../game_draw" }
-# (its library alone: what a host does round a step, the same lines the native runner calls)
-game_run = { path = "../game_run" }
-# (the game's own start, with none of its readers of this repository's files: a host hands the level's text and the character's bytes in)
+# (the game's own start and what a host does round a step, with none of its readers of this repository's files: a host hands the level's text and the character's bytes in)
 game_start = { path = "../game_start", default-features = false }
 
 [profile.dev]
