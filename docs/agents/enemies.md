@@ -32,7 +32,7 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | `gunhold.rs`, `gunroles.rs`, `frag/` (`frag_throw_tick`) | Sam's pistol in a hold; who carries which gun; their grenades |
 | `qrf/`, `squadcast.rs` | the response team, and its room drill by the squad's own code |
 | `needs.rs`, `doze.rs`, `smokebreak.rs` | men at their ease |
-| `civilians/`, `rescuecheck.rs`, `rescueflush.rs` | civilians and hostages; a rescue's men checking in and coming for the hostages |
+| `civilians/`, `rescueflush.rs` | civilians and hostages; a rescue's men coming for the hostages |
 
 The start card's difficulty row is `difficulty_row` in `start_list/`.
 
@@ -69,8 +69,10 @@ it takes him. That order is why a squad's man is not the press's.
 `DrillAtK` (rows of `SquadsK`) hold what is one map's own. `training_of` reads the mix off `morale_at`: at standard a band's first man is steady and
 the rest green; at hard only the last of three or more is green. A squad's `training` comes first.
 
-**Squads.** `squads_stage` makes them from the level's `SquadData`, or from rooms when a room clear names none (`squad_deal`). After a thinking beat
-`decide` picks `Barricade`, `Flank` or `Help` by the situation, with no die. Those who stay dig in (`digs_in`). Hard here is `squad_drill`: longer
+**Squads.** `squads_stage` makes them from the level's `SquadData`, or from rooms when a room clear names none (`squad_deal`). A rescue's men and the
+night breach's are cut by the rooms they stand in (`squads_by_rooms`), trained; men a mission leads itself
+(`leads`: with the hostages, or on the captor's word) are nobody else's. After a thinking beat `decide` picks `Barricade`, `Flank` or `Help`,
+with no die. Those who stay dig in (`digs_in`). Hard here is `squad_drill`: longer
 beats, so a pair is set while the team goes in (`drill_net`), and a pair sent to look when it goes quiet (`look_out`). Men called to a room of theirs
 are there together (`TOGETHER_SECS`), and one alone stays on his door when nobody of theirs is up in it (`tick_due`). `radio_check` finds a drop
 nobody saw; where all squads stay, they still miss a silent room (`stay_ask_here`).
@@ -163,7 +165,7 @@ Native tests in `rust/game_start/tests/`:
 | `attention.rs`, `night_men.rs`, `men_at_rest.rs`, `smoke_break.rs` | calm men: a far glimpse, a missed man, sleep, trips, smoke |
 | `darkness.rs`, `dark_rooms.rs` | the search; the dark door, lamps, the breaker |
 | `men_under_fire.rs`, `blind.rs`, `cover.rs`, `net_quiet.rs`, `last_men.rs` | nerve, cover, the quiet net, the last few |
-| `squads.rs`, `squads_radio.rs`, `come_together.rs`, `hard.rs`, `kept.rs`, `owner.rs` | squads, Hard by address, the tasker list |
+| `squads.rs`, `squads_radio.rs`, `come_together.rs`, `garrison.rs`, `hard.rs`, `kept.rs`, `owner.rs` | squads, Hard by address, the tasker list |
 | `pursuit.rs`, `held_doorforce.rs`, `held_fragtheirs.rs`, `standoff_held.rs` | two on a fix, a shut door, grenades, a man in Sam's arm |
 | `response_team.rs`, `civilians_held.rs` | what calls the team and its one wave; a civilian |
 

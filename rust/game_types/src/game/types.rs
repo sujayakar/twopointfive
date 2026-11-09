@@ -1493,7 +1493,6 @@ pub struct Mods {
     pub startle: crate::startle::StartleMod,
     pub flinch: crate::flinch::FlinchMod,
     pub rescue: crate::rescue::RescueMod,
-    pub rescuecheck: crate::rescuecheck::RescuecheckMod,
     pub seenwalk: crate::seenwalk::SeenwalkMod,
     pub wet: crate::wet::WetMod,
     pub he40: crate::he40::He40Mod,

@@ -527,7 +527,6 @@ pub fn room_clear_scenario_tick(g: &mut crate::game::Game, _dt: f64) {
     if g.staged.rooms.is_empty() || g.staged.foes.len() != g.room_clear.placement.len() {
         return;
     }
-    crate::enemysquads::squads_tick(g);
     let live: Vec<GuardId> = g.staged.foes.iter().copied().filter(|h| holds(g, *h)).collect();
     let mut i = 0;
     while i < g.staged.rooms.len() {

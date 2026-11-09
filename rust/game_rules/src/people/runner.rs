@@ -63,7 +63,7 @@ fn ours(g: &crate::game::Game, gd: GuardId) -> bool {
 
 /// nobody's to take: the men a mission leads itself and the response team
 fn spoken(g: &crate::game::Game, gd: GuardId) -> bool {
-    g.staged.leads(gd) || crate::qrf::qrf_owns(g, gd)
+    crate::mission::leads(g, gd) || crate::qrf::qrf_owns(g, gd)
 }
 
 /// may the sequence start on him this frame

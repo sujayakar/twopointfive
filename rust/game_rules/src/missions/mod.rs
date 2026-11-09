@@ -10,7 +10,6 @@ pub mod quiet;
 pub mod quietfog;
 pub mod rails;
 pub mod rescue;
-pub mod rescuecheck;
 pub mod rescueend;
 pub mod rescueflow;
 pub mod rescueflush;

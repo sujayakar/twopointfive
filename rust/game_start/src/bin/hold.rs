@@ -41,7 +41,7 @@ use game_start::parts;
 use game_start::play::{Opts, Play};
 use std::io::{Read, Write};
 
-/// What is played with no name given: thirteen room clears, and the missions of the list whose men are not a room clear's (the rescues and the night breach, whose defenders are in no squad, and four quiet nights)
+/// What is played with no name given: thirteen room clears, and the missions of the list whose men are not a room clear's (the rescues and the night breach, and four quiet nights)
 const DEFAULT_LEVELS: [&str; 21] = ["barracks:clear", "block:clear", "compound:clear", "defuse:clear", "depot:clear", "floodlit:clear", "glasshouse:clear",
     "hall:clear", "killhouse:clear", "mousehole:clear", "records:clear", "pass:clear", "snatch:clear",
     "hostage-rescue", "rescue-consulate", "rescue-registry", "night-breach", "bazaar-quiet", "lights-out-two", "quiet-crossing-two", "police-post-quiet"];
