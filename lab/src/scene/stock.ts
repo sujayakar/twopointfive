@@ -17,6 +17,9 @@ export class Shelver {
   constructor(private w: World) {}
   private at(p: V3, yaw: number) { const r = rotY(yaw); return { P: (x: number, y: number, z: number): V3 => add(p, apply(r, [x, y, z])), r }; }
   one(p: Product, o: V3, yaw: number) {
+    const from = this.w.pieces.length; this.make(p, o, yaw); for (let i = from; i < this.w.pieces.length; i++) this.w.pieces[i]!.rig = 'stock:' + this.count;
+  }
+  private make(p: Product, o: V3, yaw: number) {
     this.count++; const w = this.w, { P, r } = this.at(o, yaw), cut = { flags: F.CUT }, X = p.wide / 2, Y = p.high / 2, Z = p.deep / 2, col = p.col, art = 'p' + p.art, lab = (wd: number, hg: number, face = 5, y = 0, x = 0): Mark => ({ face, at: [x, y], size: [wd, hg], art, color: [1, 1, 1] }), white: V3 = [0.95, 0.95, 0.94];
     const round = (y: number, rr: number, h: number, mat: number, tint: V3, marks?: Mark[]) => w.cylinder(P(0, y, 0), rr, h, mat, { rot: r, tint, ...cut, ...(marks ? { marks } : {}) }), box = (c: V3, h: V3, mat: number, tint: V3, more: Partial<Piece> = {}) => w.add({ at: P(...c), half: h, rot: r, mat, tint, ...cut, ...more });
     switch (p.kind) {

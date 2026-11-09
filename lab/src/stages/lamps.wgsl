@@ -19,6 +19,8 @@ fn leafSun(x: vec3f, n: vec3f, r: vec2f) -> f32 {
   var v = vec4f(-1.0, -1.0, -1.0, 0.0); let o0 = 0.003 * (1.0 + p.t * 0.02);
   for (var k = 0u; k < 4u; k++) {
     var d: vec3f; var far = 400.0; fineLeaves = ((u32(FINE) >> k) & 1u) != 0u; noLeaves = k == 0u && !fineLeaves; if (k == 3u && WC < 0.01 * (lum(U) * lum(p.albedo) * 0.32 + 2e-4)) { continue; }
+    if (k == 0u && lum(frame.sunE.xyz) * select(max(dot(p.n, frame.sunDir.xyz), 0.0), 0.5, p.leaf) < 0.02 * (lum(U) + W.y)) { continue; }     /* (a moon lost in lamplight; and below, a torch) */
+    if (k == 2u && W.y < 0.01 * lum(U)) { continue; }
     if (k == 0u) { d = coneDir(frame.sunDir.xyz, frame.sunDir.w, bn); if (max3(frame.sunE.xyz) <= 0.0 || (dot(p.ng, d) <= 0.0 && !p.leaf)) { continue; } }
     else { let l = pick[k - 1u]; if (l < 0) { continue; } var a: vec4f; if (k == 3u) { a = aimCoat(u32(l), s, -rd, vec2f(b3.y, b2.y)); } else { a = aimSeen(u32(l), p.x, select(vec2f(b2.y, b3.y), vec2f(b3.y, b2.y), k == 2u)); } d = a.xyz; far = a.w - 0.02; if (dot(p.ng, d) <= 0.0 && !p.leaf) { v[k - 1u] = 0.0; continue; } }
     let T = lum(visible(p.x + p.ng * select(-o0, o0, dot(p.ng, d) > 0.0), d, 1e-3, far)); if (k == 0u) { v.w = T; if (T > 0.0 && noLeaves) { v.w = T * leafSun(p.x, p.ng * select(-1.0, 1.0, dot(p.ng, d) > 0.0), b3); } } else { v[k - 1u] = T; }

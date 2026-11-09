@@ -8,6 +8,7 @@ import { Camera } from './camera';
 import { makeBuilding, poseDoor, type Building } from './scene/building';
 import type { Piece } from './scene/world';
 import { makeStreet } from './scene/street';
+import { strain, type Strain } from './scene/strain';
 import { placeCode } from './scene/place';
 import { type V3, clamp, norm } from './math';
 import math from './wgsl/math.wgsl' with { type: 'text' };
@@ -30,8 +31,8 @@ export class Lab {
   tick = 0; frameNo = 0; seed = 0; hour = 15.2; hourNow!: Hour; level = 0; cut = 1e9; wantCut = 1e9; knobs = [0, 0, 0, 0]; lampsMode: 'auto' | 'on' | 'off' = 'auto'; wind: V3 = norm([1, 0, 0.35]); exposure = 0; paused = false;
   private prev: ReturnType<Camera['frame']> | null = null; prevAt = new Map<Piece, { at: V3; rot: Piece['rot'] }>(); slots = new Map<Piece, number>(); jitter: [number, number] = [0, 0]; private prevJitter: [number, number] = [0, 0];
   methods = new Map<string, { m: Method; stages: Stage[] }>(); current = ''; doorsAuto = false; torch: { on: boolean; at: V3; dir: V3 } | null = null; jittered = true; haze = 1; rain = 0; rainNow = 0; wet = 0; steam = 1; lampGroup: Record<string, number> = {}; dense = 1; readonly tune = defaults(); readonly smoke = new Smoke(this); readonly lampOff = new Set<number>();
-  async open(canvas: HTMLCanvasElement | null, scene = 'rooftop') {
-    this.gpu = await openGpu(canvas); this.building = (SCENES[scene] ?? SCENES.rooftop!)(); for (let i = 0; i < 3; i++) this.building.world.lamps.push({ kind: 'sphere', at: [0, -60, 0], u: [0.2, 0, 0], v: [0, 0, 0], radiance: [330, 125, 27], name: 'fire', on: 0 }); this.near = new Near(this.building.world.pieces); this.leaves = this.building.doors.flatMap(d => d.leaf); this.sky = new Sky(this.gpu); await this.sky.init();
+  async open(canvas: HTMLCanvasElement | null, scene = 'rooftop', load: Strain | null = null) {
+    this.gpu = await openGpu(canvas); this.building = (SCENES[scene] ?? SCENES.rooftop!)(); if (load) strain(this.building, load); for (let i = 0; i < 3; i++) this.building.world.lamps.push({ kind: 'sphere', at: [0, -60, 0], u: [0.2, 0, 0], v: [0, 0, 0], radiance: [330, 125, 27], name: 'fire', on: 0 }); this.near = new Near(this.building.world.pieces); this.leaves = this.building.doors.flatMap(d => d.leaf); this.sky = new Sky(this.gpu); await this.sky.init();
     this.water = new Water(this.gpu); await this.water.init(); this.scene = new SceneGpu(this.gpu, this.building.world, this.sky.tex, this.water.tex);
     this.graph = new Graph(this.gpu, () => math + '\n' + placeCode(this.building.place) + sceneCode + '\n' + wavesCode + '\n' + lampMapCode + joinCode + '\n' + surfaceCode + '\n', { layout: this.scene.layout, group: this.scene.group });
     this.scene.openFloor = this.building.place.openFloor; this.pose(); for (const p of this.building.world.moving) this.prevAt.set(p, { at: p.at, rot: p.rot });
