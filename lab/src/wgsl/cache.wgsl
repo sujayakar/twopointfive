@@ -45,10 +45,10 @@ struct Cached { E: vec3f, sun: f32, n: f32 };
 /** what lands at x, facing n. `j` spreads the lookups over neighbouring cells, so that blocks blend; far or young falls back on the coarse cells */
 fn cacheRead(x: vec3f, n: vec3f, j: vec2f) -> Cached {
   let every = all(n == vec3f(0.0)); let b = basis(select(n, vec3f(0.0, 1.0, 0.0), every)); let o = x + (b[0] * (j.x - 0.5) + b[1] * (j.y - 0.5) + b[2] * select(0.0, fract(j.x * 7.31 + j.y * 3.17) - 0.5, every)) * CELL; var c: Cached;
-  for (var level = 0u; level < 2u; level++) {
-    var s = NOTHING; if (level == 0u && joined(x + n * 0.08, o + n * 0.08)) { s = cacheEntry(o, n, 0u).x; } else { s = cacheEntry(x, n, level).x; } if (s == NOTHING) { continue; }
-    let a = cells[2u * s]; if (bad4(a)) { continue; } if (a.w < select(1.0, 3.0, level == 0u)) { if (level == 0u) { continue; } }
-    c.E = a.xyz; c.n = a.w; c.sun = finite(cells[2u * s + 1u].w, 1.0); if (a.w > 0.0) { return c; }
+  for (var go = 0u; go < 3u; go++) {                                  // beside it, where it is, and only then the coarse one, which spans more than it should
+    let level = select(0u, 1u, go == 2u); if (go == 0u && !joined(x + n * 0.08, o + n * 0.08)) { continue; } let s = cacheEntry(select(x, o, go == 0u), n, level).x; if (s == NOTHING) { continue; }
+    let a = cells[2u * s]; if (bad4(a) || a.w < select(1.0, 3.0, level == 0u)) { continue; }
+    c.E = a.xyz; c.n = a.w; c.sun = finite(cells[2u * s + 1u].w, 1.0); return c;
   }
   c.n = 0.0; return c;
 }

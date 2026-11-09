@@ -8,7 +8,7 @@ export const KNOBS = {
   glow: K(12, 'Glow', 0, 0.3, 0.028), glowWide: K(13, 'Glow width', 0, 1, 0.5), key: K(14, 'Exposure, stops', -6, 2, -2.1), detail: K(15, 'Fine contrast', 0.4, 2, 1.12),
   high: K(16, 'How much the lights keep', 0.1, 1.2, 0.55), low: K(17, 'How much the shadows keep', 0.1, 1.2, 0.78), contrast: K(18, 'Curve contrast', 0.8, 2.4, 1.45), toe: K(19, 'Toe', 1, 2.6, 1.6),
   color: K(20, 'Color', -0.6, 1.4, 0.38), hue: K(21, 'Hue held', 0, 1, 0.65), vignette: K(22, 'Vignette', 0, 1, 0.3), mirror: K(23, 'Mirror strength (1 is true)', 0, 3, 1),
-  clarity: K(30, 'Clarity', 0.4, 2.4, 1.15), wide: K(28, 'How fast a bounce ray widens (m a m)', 0.02, 100, 0.5), fine: K(29, 'Kept light is read when the ray is wider than (cells)', 0, 2, 0.5),
+  clarity: K(30, 'Clarity', 0.4, 2.4, 1.15), wide: K(28, 'How fast a bounce ray widens (m a m)', 0.02, 100, 0.5), fine: K(29, 'Kept light is read when the ray is wider than (cells)', 0, 2, 0),
   dark: K(24, 'How dark the night may look', 0, 1, 0.6),
 } satisfies Record<string, Knob>;
 /** a level's look at an hour: what it adds to the knobs */
