@@ -1,14 +1,14 @@
 //! HOLD: is this build the same game as that one? Natively, with no page, no TypeScript and no wire (README.md, "Hold").
 //!
-//!   hold keep DIR [--hand NAME|FILE]… [--seed N]… [--secs N] [LEVEL[:clear]]…     play, and keep what the game was after every frame
+//!   hold keep DIR [--hand NAME|FILE]… [--seed N]… [--secs N] [LEVEL[:clear]|MISSION]…     play, and keep what the game was after every frame
 //!   hold check DIR [--but PART,…]                                                 play the same again on this build, and compare
 //!   hold draw DIR [as keep]                                                       play, DRAW every frame, and say what it cost and whether it changed anything
 //!
-//! `keep` stands each level by the Rust start (`:clear` starts a room clear on it), plays it for N seconds (90) under each HAND and each
+//! `keep` stands each level by the Rust start (`:clear` starts a room clear on it; a mission's id of the game's list stands that mission), plays it for N seconds (90) under each HAND and each
 //! seed (1), and writes for every frame the state's words (game::state_words: every part of the game that a host does not hand in)
 //! and a hash of each part of rust/sim's block, folded to one number, and one byte of each part. `check` builds nothing: it reads DIR's list of runs and its copies of the hands, plays
 //! them on the build it is, and says for each run `the same after every frame`, or the first FRAME that differs and the PARTS that differ
-//! in it by their names. Exit 0 only if every run is the same. With no level named: the 24 of DEFAULT_LEVELS (14 as room clears); with no hand: every hand
+//! in it by their names. Exit 0 only if every run is the same. With no level named: the 21 of DEFAULT_LEVELS (13 as room clears); with no hand: every hand
 //! of `hands/`. A run is a process of its own (a game is one a process), four at a time.
 //!
 //! A HAND is a small file of what is done to the game from outside, a line each (hands/*.hand; `#` starts a comment):
@@ -41,15 +41,25 @@ use game_start::parts;
 use game_start::play::{Opts, Play};
 use std::io::{Read, Write};
 
+/// What is played with no name given: thirteen room clears, and the missions of the list whose men are not a room clear's (the rescues and the night breach, whose defenders are in no squad, and four quiet nights)
 const DEFAULT_LEVELS: [&str; 21] = ["barracks:clear", "block:clear", "compound:clear", "defuse:clear", "depot:clear", "floodlit:clear", "glasshouse:clear",
     "hall:clear", "killhouse:clear", "mousehole:clear", "records:clear", "pass:clear", "snatch:clear",
-    "office", "consulate", "registry", "bazaar", "lights-out", "crossing", "police-post", "library-hall"];
+    "hostage-rescue", "rescue-consulate", "rescue-registry", "night-breach", "bazaar-quiet", "lights-out-two", "quiet-crossing-two", "police-post-quiet"];
 const MAGIC: &[u8; 8] = b"hold 2\n\0";
 
 struct Run { level: String, clear: bool, hand: String, seed: u32, secs: f64 }
 impl Run {
     fn tag(&self) -> String { format!("{}{}.{}.{}", self.level, if self.clear { "-clear" } else { "" }, self.hand, self.seed) }
     fn line(&self) -> String { format!("{} {} {} {} {}", self.level, if self.clear { "clear" } else { "plain" }, self.hand, self.seed, self.secs) }
+    /// stood: a mission of the game's list by its id, on its own link as a click on its row stands it; or a level by its name, its room clear with it if it says so
+    fn stand(&self) -> Play {
+        let o = Opts { seed: self.seed, ..Default::default() };
+        if let Some(e) = game::scene_scenario_list::all_missions().iter().find(|e| e.id == self.level) {
+            return Play::mission(e.level.as_deref().unwrap_or("office.json"), &game::scene_scenario_list::pick_search(e, ""), &o);
+        }
+        let file = if self.level.ends_with(".json") || std::path::Path::new(&self.level).exists() { self.level.clone() } else { format!("{}.json", self.level) };
+        Play::level(&file, self.clear, &o)
+    }
     fn of(line: &str) -> Run { let w: Vec<&str> = line.split_whitespace().collect(); Run { level: w[0].into(), clear: w[1] == "clear", hand: w[2].into(), seed: w[3].parse().unwrap(), secs: w[4].parse().unwrap() } }
 }
 
@@ -72,8 +82,7 @@ const DRAWN: [(&str, u32); 13] = [("fog", game_draw::want::fog), ("view", game_d
 fn drawn(dir: &str, r: &Run) -> Result<String, String> {
     let frames = (r.secs * 60.0).round() as usize;
     let hand = read_hand(&std::fs::read_to_string(format!("{}/{}.hand", dir, r.hand)).map_err(|e| format!("{}/{}.hand: {}", dir, r.hand, e))?, frames);
-    let file_of = if r.level.ends_with(".json") || std::path::Path::new(&r.level).exists() { r.level.clone() } else { format!("{}.json", r.level) };
-    let mut p = Play::level(&file_of, r.clear, &Opts { seed: r.seed, ..Default::default() });
+    let mut p = r.stand();
     p.g.god_mode = hand.unhurt;
     p.g.fog_of_war.on = r.clear;
     let mut d: Vec<game_draw::Drawn> = DRAWN.iter().map(|_| Default::default()).collect();
@@ -149,8 +158,7 @@ fn one(dir: &str, r: &Run, check: bool, but: &[String]) -> Result<String, String
         f.write_all(MAGIC).unwrap(); f.write_all(&(n as u32).to_le_bytes()).unwrap(); f.write_all(&(blob.len() as u32).to_le_bytes()).unwrap(); f.write_all(blob.as_bytes()).unwrap();
         Some(f)
     };
-    let file_of = if r.level.ends_with(".json") || std::path::Path::new(&r.level).exists() { r.level.clone() } else { format!("{}.json", r.level) };
-    let mut p = Play::level(&file_of, r.clear, &Opts { seed: r.seed, ..Default::default() });
+    let mut p = r.stand();
     p.g.god_mode = hand.unhurt;
     let (mut w, mut words, mut row) = (game::bytes::W::new(), Vec::new(), vec![0u8; 8 + n]);
     let (mut next, mut done, mut undone) = (0usize, 0usize, 0usize);
@@ -187,7 +195,7 @@ fn one(dir: &str, r: &Run, check: bool, but: &[String]) -> Result<String, String
 
 fn main() {
     let a: Vec<String> = std::env::args().collect();
-    let usage = || -> ! { eprintln!("hold keep DIR [--hand NAME|FILE]… [--seed N]… [--secs N] [LEVEL[:clear]]…\nhold check DIR [--but PART,…]\nhold draw DIR [as keep]"); std::process::exit(64) };
+    let usage = || -> ! { eprintln!("hold keep DIR [--hand NAME|FILE]… [--seed N]… [--secs N] [LEVEL[:clear]|MISSION]…\nhold check DIR [--but PART,…]\nhold draw DIR [as keep]"); std::process::exit(64) };
     let (Some(verb), Some(dir)) = (a.get(1).map(|s| s.as_str()), a.get(2)) else { usage() };
     // (a child of this tool: one run, in a process of its own)
     if verb == "one" {

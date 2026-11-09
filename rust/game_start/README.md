@@ -210,8 +210,8 @@ cargo run --release --bin hold -- draw /tmp/drawn       # play, draw every frame
 and one byte of each part. `check` reads the folder's own list of runs and its copies of the hands, plays them on the build it is, and says of each run
 `the same after every frame`, or the first frame that differs and the names of the parts that differ in it (`FIRST DIFFERS AT FRAME 2181 (36.35 s) in
 guards, chars, dice`). It exits 0 only if every run is the same. Levels, hands, seeds and the length are arguments
-(`keep DIR --hand push --seed 1 --seed 2 --secs 60 depot:clear office`); with none it is `DEFAULT_LEVELS` (a `:clear` starts a room clear) by every
-hand by seed 1. A run is a process of its own, four at a time. Fewer hands make it shorter: `--hand push --hand bangs --hand rest`.
+(`keep DIR --hand push --seed 1 --seed 2 --secs 60 depot:clear office`); with none it is `DEFAULT_LEVELS` (a `:clear` starts a room clear, a
+mission's id that mission) by every hand by seed 1. A run is a process of its own, four at a time. Fewer hands: `--hand push --hand bangs`.
 
 `draw` keeps nothing but the hands it plays, in a folder of its own. After every frame it makes every section of what the picture is told
 (`rust/game_draw`), as a host does that draws at twice the tick's rate, and once a second it holds the game's own words to what they were before.
@@ -251,10 +251,10 @@ line says what was not compared. A name that is a part of neither build is refus
 ## Missions: what a change of play does (`src/bin/missions.rs`)
 
 `cargo run --release --bin missions > before.tsv` on the tree before a change of play, the same to `after.tsv` on the tree after it, then
-`… --bin missions -- diff before.tsv after.tsv`: the room clears of `LEVELS` as the page stands them, standard and hard, over several seeds, under a
+`… --bin missions -- diff before.tsv after.tsv`: the room clears and rescues of `LEVELS` as the page stands them, standard and hard, over several seeds, under a
 commander who gives the squad the same orders on every build. A row says who was up at the end, when the first man fell, when the floor was clear, the
-rounds and reloads of each side and how long each rule of the list had an enemy. The file's head says what it does not see: stealth, Sam's gun, the
-rescues, a commander who waits. `hold` says whether a build is the same game; this says what the other game came to.
+rounds and reloads of each side and how long each rule of the list had an enemy. The file's head says what it does not see: stealth, Sam's gun, a
+commander who waits. `hold` says whether a build is the same game; this says what the other game came to.
 
 `src/bin/blastcost.rs` prices the tick of a wall blast against a quiet tick, natively.
 
