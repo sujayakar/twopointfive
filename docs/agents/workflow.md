@@ -78,7 +78,7 @@ preferences, etc." No accounts; nothing multiplayer.
   seq -1, and its pieces, each the gzip member the browser packed, cut at 512 KB), `telemetry` (small records). WHAT A PAGE MAY CALL is
   public (`prefs:hello|get|put`, `tapes:put|have`, `telemetry:put`) — a page has no secret — and every argument is bounded
   (`limits.ts`); READING BACK OUT is internal (`tapes:list|chunks`, `telemetry:list`, `prefs:players`): a deploy key's, by
-  `bun run tools/cloud/pull.ts` (→ a hand-over file `tools/qa/replay-dump.ts` and `/replay` read, `telemetry.ndjson`, `players.json`),
+  `bun run tools/cloud/pull.ts` (→ a hand-over file `tools/qa/replay-dump.ts` reads, `telemetry.ndjson`, `players.json`),
   `npx convex run`, or the dashboard. A visit is its browser's: another id cannot write into it or ask what is kept of it.
 - **The page's side** = `src/cloud/` (no game code imported; `main.ts` boots it once after the replay key and calls `cloud.frame(rawDt, live, stage, gpuMs)`: numbers, no object a frame):
   `cloud.ts` (the address, who the browser is, whether it sends, the boot, `window.__cloud`), `tapes.ts` (`TapeSync`: a SYNC of the kept

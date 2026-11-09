@@ -5,7 +5,7 @@
 // deployment's key with no address given is enough: the key names its deployment (tools/cloud/local.ts keyUrl).
 // Into --out (default ./cloud-pull):
 //   twopointsix-cloud-<stamp>-<n>-visits.ndjson.gz   every visit's tape, in the browser's own hand-over format (src/tape/kept.ts: gzip members end to end) —
-//                                                    `bun run tools/qa/replay-dump.ts <that file>` unpacks it, the /replay page opens it; what the players
+//                                                    `bun run tools/qa/replay-dump.ts <that file>` unpacks it (each visit's tape, the file `?playtape=` plays); what the players
 //                                                    wrote on their replays (notes, the F7 shelf's saved windows) rides in it as the browser's file had it
 //   telemetry.ndjson                                 the records, one a line, oldest first
 //   players.json                                     the browsers seen
