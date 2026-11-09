@@ -8,6 +8,7 @@ use crate::js;
 use crate::loadout::{self, entry_of, kit_as_issued, LoadoutEntry};
 use crate::query::{after_mark, Query};
 use crate::quietfog::{self, QuietRung};
+use crate::roomclear;
 use crate::scene_scenario_list::{self as list, all_missions, Pick, SOLO_ID, SOLO_KEY, SCENARIO_KEYS};
 use crate::scenario_run;
 use crate::scene_scenarios::{MissionGroup, ScenarioEntry, ScenarioEntryKind};
@@ -190,8 +191,8 @@ pub struct Sitting {
     /// the picks made on the page, each for the address it was made on
     hour_pick: Option<(String, HourId)>,
     weather_pick: Option<(String, Option<WeatherKind>)>,
-    /// the way in picked per mission: absent or 0 the level's own start, k >= 2 its k-th, -1 dealt
-    ways: Vec<(String, f64)>,
+    /// the way in picked per mission, as the way taken: absent or 0 the level's own start, k its k-th other
+    ways: Vec<(String, usize)>,
     /// the lever words the machine's commands said, in their order: what it keeps, then what the address says over it
     said: Vec<(String, String)>,
     /// the address those words were said on (the first asked)
@@ -208,28 +209,21 @@ impl Default for Sitting {
 
 fn lever_key(word: &str) -> Option<LeverKey> { [LeverKey::Fog, LeverKey::Ai, LeverKey::Kit, LeverKey::Told].into_iter().find(|k| k.as_str() == word) }
 
-/// Which way in an address asks for: 0 the level's own, k its k-th, -1 dealt.
-fn way_of_link(ways: usize, word: Option<&str>) -> f64 {
-    let Some(w) = word.filter(|w| !w.is_empty() && ways > 0) else { return 0.0 };
-    if w == "any" { return -1.0; }
-    if !w.bytes().all(|c| c.is_ascii_digit()) { return 0.0; }
-    let n = js::number_of(w);
-    if n >= 2.0 { crate::m::min(n, ways as f64) } else { 0.0 }
-}
+/// Which way in a mission with `ways` of them takes on an address's word.
+fn way_of_link(ways: usize, word: Option<&str>) -> usize { roomclear::way_taken(roomclear::way_asked(word), ways) }
 
 /// The way in on a link: the page's own taken off, then this row's; nothing for the level's own start.
-fn way_search(href: &str, way: f64) -> String {
+fn way_search(href: &str, way: usize) -> String {
     let mut split = href.split('?');
     let path = split.next().unwrap_or("");
     let mut keys: Vec<String> = split.next().unwrap_or("").split('&').filter(|k| !k.is_empty() && *k != "way" && !k.starts_with("way=")).map(String::from).collect();
-    if way < 0.0 { keys.push(String::from("way=any")); } else if way > 1.0 { keys.push(format!("way={}", js::num_str(way))); }
+    if way > 0 { keys.push(format!("way={}", way + 1)); }
     if keys.is_empty() { String::from(path) } else { format!("{}?{}", path, keys.join("&")) }
 }
 
-fn way_note(m: &Mission, way: f64) -> String {
+fn way_note(m: &Mission, way: usize) -> String {
     String::from(if m.ways().is_none() { "this mission has one way in" }
-        else if way < 0.0 { "the game picks one for you each time, along with where the defenders start" }
-        else if way > 1.0 { "this side has a different first room, so plan it again" }
+        else if way > 0 { "this side has a different first room, so plan it again" }
         else { "the level was built around this way in" })
 }
 
@@ -269,10 +263,9 @@ impl Sitting {
     }
 
     /// The way a mission goes in by.
-    fn way_of(&self, m: &Mission) -> f64 {
-        if m.ways().is_none() { return 0.0; }
-        let w = self.ways.iter().find(|(id, _)| *id == m.id).map_or(0.0, |x| x.1);
-        if w < 0.0 { 0.0 } else { w }
+    fn way_of(&self, m: &Mission) -> usize {
+        if m.ways().is_none() { return 0; }
+        self.ways.iter().find(|(id, _)| *id == m.id).map_or(0, |x| x.1)
     }
 
     /// The link a row has.
@@ -421,12 +414,7 @@ impl Sitting {
 
     fn way_row(&self, m: &Mission) -> Setting {
         let y = self.way_of(m);
-        let mut choices: Vec<SettingChoice> = m.ways().unwrap_or(&[]).iter().enumerate().map(|(k, w)| {
-            let v = if k == 0 { 0.0 } else { k as f64 + 1.0 };
-            choice(&js::num_str((k + 1) as f64), w, String::new(), y == v, true)
-        }).collect();
-        // (dealt is offered only while missions may start different ways: they all start the same way now)
-        choices.push(choice("any", "Dealt", String::new(), false, false));
+        let choices: Vec<SettingChoice> = m.ways().unwrap_or(&[]).iter().enumerate().map(|(k, w)| choice(&js::num_str((k + 1) as f64), w, String::new(), y == k, true)).collect();
         let shown = m.ways().is_some();
         Setting { key: String::from("way"), label: String::from("Way in"), live: shown, shown, moved: false, note: way_note(m, y), choices }
     }
@@ -467,8 +455,7 @@ impl Sitting {
                 Some(Vec::new())
             }
             "way" => {
-                let n = js::number_of(to);
-                let v = if n >= 2.0 { n } else { 0.0 };
+                let v = way_of_link(m.ways().map_or(0, |w| w.len()), Some(to));
                 match self.ways.iter_mut().find(|x| x.0 == m.id) { Some(x) => x.1 = v, None => self.ways.push((m.id.clone(), v)) }
                 Some(Vec::new())
             }
@@ -603,8 +590,8 @@ pub fn brief_of(search: &str) -> BriefView {
         level: String::from(m.level().unwrap_or("office.json")),
         scene: e.and_then(|e| e.scene.clone()).unwrap_or_default(),
         teaches: e.and_then(|e| e.teaches.clone()).unwrap_or_default(),
-        // (dealt is marked on no one way: the level's own)
-        way: crate::m::max(way_of_link(m.ways().map_or(0, |w| w.len()), q.get("way")), 0.0),
+        // (0 the level's own, N its Nth, as the page's map sheet has it)
+        way: match way_of_link(m.ways().map_or(0, |w| w.len()), q.get("way")) { 0 => 0.0, k => (k + 1) as f64 },
     }
 }
 

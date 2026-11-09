@@ -280,9 +280,10 @@ once for all of them. A word on the command line picks long rows as it picks any
 
 The rows, each with what it holds and then its breaks:
 
-- **`start <id>, one player` · `, two players`:** every row of `all_missions`, twice. The start is the pinned start, part by part, or the same refusal in
+- **`start <id>, one player` · `, two players`:** every row of `all_missions`, twice, and `start compound-four, way 2`, whose link picks that way in and which stands on it.
+  The start is the pinned start, part by part, or the same refusal in
   the same words. A second start in one process is the first: 5 s idle, every part each half second, then the mission before it on the list stood and run
-  2 s, then the mission again, the same. Breaks: `pin` a word of the pin made wrong · `second` the second start's seed is one more.
+  2 s, then the mission again, the same. Breaks: `pin` a word of the pin made wrong · `second` the second start's seed is one more · `first` (the way's row) its link loses its word.
 - **`play <run>`:** 40 s under a hand: one word a second (every part folded as `hold` folds them) against the pin. Red if a line of the hand never
   happens on that floor, with the game's reason. Breaks: `pin` a word of the series made wrong · `silent` a line is said to have never happened.
 - **`again <run>`:** the run stood and played twice more in one process, 10 s of the next run on the list between the two: the same word every second.

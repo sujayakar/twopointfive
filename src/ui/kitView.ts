@@ -17,8 +17,7 @@
 //
 // NOBODY STANDS IN FOR THE PICTURE (the maintainer, 10-20): the column WAITS EMPTY until the window's first `ready` (`data-kv-wait` on #missions), and is EMPTY for good (`data-kv-none`), the element dropped and the
 // query marked for this page's life, when the window says `none` (a refused device, a failed fetch, a moment that threw) or its load errors. THE WAIT HAS NO CLOCK: a second game that takes long to come up (a cold
-// shader cache, a slow adapter) is waited for however long that is. The second game lives only while it can show: it is dropped too when the mission picked has no block, the way in is dealt (its die would deal
-// another door than Deploy's: the query carries no seed), or the window goes under 720 px; it is kept across the Mission step. Under 720 px the column is not laid out at all.
+// shader cache, a slow adapter) is waited for however long that is. The second game lives only while it can show: it is dropped too when the mission picked has no block or the window goes under 720 px; it is kept across the Mission step. Under 720 px the column is not laid out at all.
 //
 // LAYOUT: every rule is in the one block below; ONE root class, `kv-on`, is on #missions only while the picture is shown (the iframe's own rules stand without it: it must be laid out, though unseen, for its page to
 // draw at all). The iframe is the LAST child of `.mbody`, absolutely placed behind the sheet and anchored left, KIT_VIEW_PLACE.wide columns wide; the figure's column is the clear window onto it: the men in its left
@@ -68,7 +67,7 @@ const CSS = `
 function styles() { if (document.getElementById?.('kitview-css')) return; const s = document.createElement('style'); s.id = 'kitview-css'; s.textContent = CSS; (document.head ?? document.body)?.appendChild?.(s); }
 
 /** what the page asks to be shown: the loadout's own query (what Deploy would load), the mission's kind and level file, the way in as the PAGE has it
- *  (ui/missions.ts MissionsScreen.way: 0 = the level's own, N = the Nth, −1 = dealt), the team's size */
+ *  (ui/missions.ts MissionsScreen.way: 0 = the level's own, N = the Nth), the team's size */
 export interface KitViewAsk { search: string; kind: string; level?: string; way: number; squad: number;
   /** each place's card as the team wears it, as a kept text ('' for a man who stays): TeamView.men's `worn` */
   worn: string[];
@@ -158,9 +157,9 @@ export function mountKitView(root: HTMLElement, body: HTMLElement, column: HTMLE
       quietAsk = KIT_VIEW.quiet && !q.has('kitloud') && kitViewQuietKind(q) !== null;
       if (W === undefined) { ways.set(lv, null); void kitViewWays(ask.level).then(w => w, () => [] as boolean[]).then(w => { ways.set(lv, w); again(); }); }
       if (W == null) { hide(); drop(); root.setAttribute('data-kv-wait', ''); return; }   // (asked, not yet answered — the plan's own fetch, a moment: the column waits empty)
-      // the way in as the page's own row has it; one past the level's ways is the game's to fold (any of them must then have a picture); a dealt one is no picture
-      const way = ask.way < 0 ? -1 : ask.way ? ask.way - 1 : 0;
-      if (!W || failed.has(k) || way < 0 || !(way < W.length ? W[way] : W.length > 0 && W.every(Boolean))) { hide(); drop(); root.setAttribute('data-kv-none', ''); return; }   // (no picture to be had here: the column is empty — nobody stands in)
+      // the way in as the page's own row has it; one past the level's ways is the game's to fold (any of them must then have a picture)
+      const way = ask.way ? ask.way - 1 : 0;
+      if (!W || failed.has(k) || !(way < W.length ? W[way] : W.length > 0 && W.every(Boolean))) { hide(); drop(); root.setAttribute('data-kv-none', ''); return; }   // (no picture to be had here: the column is empty — nobody stands in)
       squadNow = ask.squad; wornNow = ask.worn; paused = false;
       sel = JSON.stringify({ who: ask.member ?? 0, field: ask.field ?? null });
       if (!frame || k !== key) {   // another mission, way in, hour …: a new element, on exactly what Deploy would load
