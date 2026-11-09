@@ -79,12 +79,12 @@ pub(super) fn rescue_clock(g: &mut crate::game::Game, dt: f64) {
             crate::weapons::firearm_fire(g, weapon);
         }
         let pl = g.player;
-        let ops = g.rescue.ops.clone();
+        let ops = g.staged.team.clone();
         let up_before = standing(g, &ops).len();
         let flash = g.pl[pl].hit_flash;
         let down = g.pl[pl].down;
         crate::combat::fire_weapon(g, c, chest, false, Some(&crate::combat::FireOpts { steady: Some(true), spread: Some(0.01), ..Default::default() }));
-        let ops = g.rescue.ops.clone();
+        let ops = g.staged.team.clone();
         let took = g.pl[pl].down != down || g.pl[pl].hit_flash > flash || standing(g, &ops).len() < up_before;
         rescue_end_act(g);
         if let Some(aim) = rescue_data(g).map(|d| d.room.door_aim) {
@@ -97,7 +97,7 @@ pub(super) fn rescue_clock(g: &mut crate::game::Game, dt: f64) {
         g.rescue.executed.add(v);
         let dir = v3::normalize(v3::sub(chest, g.ch[c].muzzle));
         crate::combat::kill_guard(g, v, dir, Some(false), Some(crate::game::DownKind::Shot), Some(crate::game::DownBy::Guard), None);
-        let o = g.rescue.hostages.iter().copied().find(|&h| h != v && g.gd[h].state != crate::game::GuardState::Dead);
+        let o = g.staged.captives.iter().copied().find(|&h| h != v && g.gd[h].state != crate::game::GuardState::Dead);
         if let Some(o) = o { crate::civilians::hostage_say(g, o, crate::dialogue::HostageMoment::Shot, Some(v)); }
         g.rescue.murmur_at = g.time + 6.0;
         g.rescue.resolve = m::max(0.0, 1.0 - g.k.rescue.second_hostage_secs / g.rescue.resolve_secs);
@@ -127,7 +127,7 @@ pub(super) fn rescue_clock(g: &mut crate::game::Game, dt: f64) {
         crate::game::game_say(g, cap, line, None, None, None);
     }
     if g.rescue.resolve >= 1.0 {
-        let hs = g.rescue.hostages.clone();
+        let hs = g.staged.captives.clone();
         let alive = standing(g, &hs);
         if alive.is_empty() { return; }
         let mine = crate::rescueflush::rescue_flush_victims(g, cap, &alive);
@@ -201,8 +201,8 @@ fn rescue_set_step(g: &mut crate::game::Game, s: crate::rescue::RescueStep) {
 pub(super) fn rescue_outcome(g: &mut crate::game::Game) {
     if rescue_over(g) { return; }
     let mut i = 0;
-    while i < g.rescue.hostages.len() {
-        let h = g.rescue.hostages[i];
+    while i < g.staged.captives.len() {
+        let h = g.staged.captives[i];
         i += 1;
         if g.gd[h].state != crate::game::GuardState::Dead || g.rescue.counted.has(h) { continue; }
         g.rescue.counted.add(h);
@@ -211,7 +211,7 @@ pub(super) fn rescue_outcome(g: &mut crate::game::Game) {
         if g.rescue.executed.has(h) {
             rescue_note(g, &alloc::format!("executed:{}", callsign));
             crate::game::game_msg(g, &alloc::format!("{} has been shot", name));
-        } else if g.rescue.hostiles.iter().any(|&x| g.ch[g.gd[x].ch].id == g.gd[h].killer_id) {
+        } else if g.staged.foes.iter().any(|&x| g.ch[g.gd[x].ch].id == g.gd[h].killer_id) {
             rescue_note(g, &alloc::format!("killed:{}", callsign));
             crate::game::game_msg(g, &alloc::format!("{} has been killed", name));
         } else {
@@ -220,7 +220,7 @@ pub(super) fn rescue_outcome(g: &mut crate::game::Game) {
             return;
         }
     }
-    let hs = g.rescue.hostages.clone();
+    let hs = g.staged.captives.clone();
     let alive = standing(g, &hs).len();
     if alive == 0 {
         rescue_end(g, RescueEndState::Lost, if hs.len() == 2 { "both hostages are dead" } else if hs.len() == 1 { "the hostage is dead" } else { "every hostage is dead" });
@@ -230,9 +230,9 @@ pub(super) fn rescue_outcome(g: &mut crate::game::Game) {
     if g.pl[pl].down { rescue_end(g, RescueEndState::Lost, "you are down"); return; }
     let b = room(g);
     let pad = if g.rescue.secured_at.is_nan() { 0.0 } else { 0.4 };
-    let theirs = g.rescue.hostiles.iter().any(|&h| g.gd[h].state != crate::game::GuardState::Dead && g.gd[h].held.is_none() && crate::squad::in_bounds(g.ch[g.gd[h].ch].pos, b, None));
+    let theirs = g.staged.foes.iter().any(|&h| g.gd[h].state != crate::game::GuardState::Dead && g.gd[h].held.is_none() && crate::squad::in_bounds(g.ch[g.gd[h].ch].pos, b, None));
     let ours = (!g.pl[pl].down && crate::squad::in_bounds(g.ch[g.pl[pl].ch].pos, b, Some(pad)))
-        || g.rescue.ops.iter().any(|&o| g.gd[o].state != crate::game::GuardState::Dead && crate::squad::in_bounds(g.ch[g.gd[o].ch].pos, b, Some(pad)));
+        || g.staged.team.iter().any(|&o| g.gd[o].state != crate::game::GuardState::Dead && crate::squad::in_bounds(g.ch[g.gd[o].ch].pos, b, Some(pad)));
     if let Some(how) = crate::rescueend::rescue_end_won(g) {
         let why = if how == crate::rescueend::RescueEndWon::Out {
             alloc::format!("{} of {} hostages out", alive, hs.len())
@@ -242,7 +242,7 @@ pub(super) fn rescue_outcome(g: &mut crate::game::Game) {
         rescue_end(g, RescueEndState::Rescued, &why);
         return;
     }
-    let kept = !g.rescue.secured_at.is_nan() && (!theirs || !g.rescue.hostages.iter().any(|&h| g.gd[h].state != crate::game::GuardState::Dead && crate::squad::in_bounds(g.ch[g.gd[h].ch].pos, b, None)));
+    let kept = !g.rescue.secured_at.is_nan() && (!theirs || !g.staged.captives.iter().any(|&h| g.gd[h].state != crate::game::GuardState::Dead && crate::squad::in_bounds(g.ch[g.gd[h].ch].pos, b, None)));
     if (!theirs && ours) || kept {
         if g.rescue.secured_at.is_nan() {
             g.rescue.secured_at = g.time;
@@ -250,7 +250,7 @@ pub(super) fn rescue_outcome(g: &mut crate::game::Game) {
             crate::game::game_msg(g, "hostage room secured. now bring them out or clear the building");
             if !g.rescue.said.has(String::from("h:secured")) {
                 g.rescue.said.add(String::from("h:secured"));
-                let h = g.rescue.hostages.iter().copied().find(|&x| g.gd[x].state != crate::game::GuardState::Dead);
+                let h = g.staged.captives.iter().copied().find(|&x| g.gd[x].state != crate::game::GuardState::Dead);
                 if let Some(h) = h {
                     if crate::civilians::hostage_say(g, h, crate::dialogue::HostageMoment::Secured, None) { g.rescue.ack_at = g.time + 2.4; }
                 }
@@ -266,12 +266,12 @@ pub(super) fn rescue_outcome(g: &mut crate::game::Game) {
 /// the hostages' voices: one low line at a time across the room, off no game die   (rescue.ts Rescue.voices)
 pub(super) fn rescue_voices(g: &mut crate::game::Game) {
     let b = room(g);
-    let hs = g.rescue.hostages.clone();
+    let hs = g.staged.captives.clone();
     let alive = standing(g, &hs);
     if !g.rescue.ack_at.is_nan() && g.time >= g.rescue.ack_at {
         g.rescue.ack_at = f64::NAN;
         if !alive.is_empty() && !g.rescue.secured_at.is_nan() {
-            let there: Vec<GuardId> = g.rescue.ops.iter().copied().filter(|&o| g.gd[o].state != crate::game::GuardState::Dead && crate::squad::in_bounds(g.ch[g.gd[o].ch].pos, b, Some(0.4))).collect();
+            let there: Vec<GuardId> = g.staged.team.iter().copied().filter(|&o| g.gd[o].state != crate::game::GuardState::Dead && crate::squad::in_bounds(g.ch[g.gd[o].ch].pos, b, Some(0.4))).collect();
             let quiet = there.iter().copied().find(|&o| !g.gd[o].bubble.as_ref().map_or(false, |u| g.time - u.t < u.dur));
             if let Some(by) = quiet.or(there.first().copied()) {
                 let team = crate::dialogue::hostage_lines_table().team;
@@ -315,7 +315,7 @@ fn next_voice(g: &mut Game, alive: &[GuardId]) -> GuardId {
 /// the run's end: the result kept, the act let go, the card's line   (rescue.ts Rescue.end)
 fn rescue_end(g: &mut crate::game::Game, state: crate::rescue::RescueEndState, why: &str) {
     let lost = state == RescueEndState::Lost;
-    let ops = g.rescue.ops.clone();
+    let ops = g.staged.team.clone();
     let team = (if g.pl[g.player].down { 0 } else { 1 }) + standing(g, &ops).len();
     let secs = if g.rescue.t0.is_nan() { 0.0 } else { (if g.rescue.secured_at.is_nan() || lost { g.time } else { g.rescue.secured_at }) - g.rescue.t0 };
     let timed = if g.rescue.t0.is_nan() {
@@ -325,14 +325,15 @@ fn rescue_end(g: &mut crate::game::Game, state: crate::rescue::RescueEndState, w
     } else {
         alloc::format!("room secured {} s after the clock started", js::to_fixed(secs, 0))
     };
-    let hs = g.rescue.hostages.clone();
+    let hs = g.staged.captives.clone();
     let left = standing(g, &hs).len();
     let grade = if lost { RescueResultGrade::Failed } else if left == hs.len() { RescueResultGrade::Clean } else { RescueResultGrade::Costly };
+    g.staged.over = true;
+    g.staged.saved = Some(left as f64);
     g.rescue.result = Some(RescueResult {
         state: if lost { RescueResultState::Lost } else { RescueResultState::Rescued },
         grade,
         why: String::from(why),
-        hostages: left as f64,
     });
     rescue_end_act(g);
     if lost { rescue_note(g, &alloc::format!("lost:{}", why)); } else { rescue_note(g, "rescued"); }
@@ -344,9 +345,14 @@ fn rescue_end(g: &mut crate::game::Game, state: crate::rescue::RescueEndState, w
     crate::game::game_msg(g, &line);
 }
 
+/// How it ended, for the run's card.
+pub fn rescue_ended(g: &crate::game::Game) -> Option<(bool, &'static str, String)> {
+    g.rescue.result.as_ref().map(|r| if r.state == RescueResultState::Rescued { (true, "RESCUED", r.why.clone()) } else { (false, "LOST", r.why.clone()) })
+}
+
 /// where it stands, in one word   (rescue.ts Rescue.state)
 pub fn rescue_state(g: &crate::game::Game) -> crate::rescue::RescueState {
-    if !g.rescue.active { return RescueState::Off; }
+    if !crate::rescue::rescue_up(g) { return RescueState::Off; }
     if let Some(r) = &g.rescue.result {
         return match r.state {
             RescueResultState::Lost => RescueState::Lost,
@@ -359,7 +365,7 @@ pub fn rescue_state(g: &crate::game::Game) -> crate::rescue::RescueState {
 
 /// the HUD's objective line and marker while it is up: the room, and how far the captor's clock has got, never in seconds
 pub(in crate::missions) fn rescue_objective(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<crate::rescue::RescueObjective> {
-    if !g.rescue.active { return None; }
+    if !crate::rescue::rescue_up(g) { return None; }
     let pos: Option<V3> = rescue_bounds(g).map(|r| [(r.x0 + r.x1) / 2.0, 0.0, (r.z0 + r.z1) / 2.0]);
     if let Some(r) = g.rescue.result.clone() {
         let text = if r.state == RescueResultState::Rescued {
@@ -369,7 +375,7 @@ pub(in crate::missions) fn rescue_objective(g: &crate::game::Game, seat: &crate:
         };
         return Some(RescueObjective { text, pos: None });
     }
-    let hs = g.rescue.hostages.clone();
+    let hs = g.staged.captives.clone();
     let alive = standing(g, &hs).len();
     if !g.rescue.secured_at.is_nan() || g.rescue.ending.lead.is_some() {
         let o = crate::rescueend::rescue_end_objective(g, seat);

@@ -48,13 +48,11 @@ fn friend_in_sams_line(g: &mut crate::game::Game, c_2: CharId) -> Option<GuardId
         i += 1;
         if !crate::teams::hostile_to(g, o, crate::teams::HostileToO::Player) { ask(g, o, &mut line); }
     }
-    if g.rescue.active {
-        let mut i = 0;
-        while i < g.civilians.len() {
-            let o = g.civilians[i];
-            i += 1;
-            if crate::rescue::rescue_is_hostage(g, o) { ask(g, o, &mut line); }
-        }
+    let mut i = 0;
+    while i < g.civilians.len() {
+        let o = g.civilians[i];
+        i += 1;
+        if g.staged.captives.contains(&o) { ask(g, o, &mut line); }
     }
     line.best
 }

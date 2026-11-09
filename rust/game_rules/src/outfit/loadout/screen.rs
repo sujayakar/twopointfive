@@ -1,6 +1,6 @@
 //! What a mission can be played with, as the screen before it asks (loadout.ts squadChoices, noteOf, rosterOf, the notes of a kit that is not yours).
 use crate::game::{Game, PairId};
-use crate::scene_scenarios::{MissionGroup, ScenarioEntry, ScenarioEntryKind};
+use crate::scene_scenarios::{MissionGroup, ScenarioEntry, MissionKind};
 use alloc::{format, string::String, vec::Vec};
 
 /// The kinds of mission the screen prepares: a scenario's, or the plain night, which stages nobody.
@@ -24,10 +24,10 @@ const SOLO_ID: &str = "solo-night";
 impl From<ScenarioEntry> for LoadoutEntry {
     fn from(e: ScenarioEntry) -> LoadoutEntry {
         let kind = match e.kind {
-            ScenarioEntryKind::Nightbreach => LoadoutKind::Nightbreach,
-            ScenarioEntryKind::Roomclear => LoadoutKind::Roomclear,
-            ScenarioEntryKind::Rescue => LoadoutKind::Rescue,
-            ScenarioEntryKind::Quiet => LoadoutKind::Quiet,
+            MissionKind::Nightbreach => LoadoutKind::Nightbreach,
+            MissionKind::Roomclear => LoadoutKind::Roomclear,
+            MissionKind::Rescue => LoadoutKind::Rescue,
+            MissionKind::Quiet => LoadoutKind::Quiet,
         };
         LoadoutEntry { id: e.id, kind, squad: e.squad, level: e.level, group: e.group, only: e.only }
     }

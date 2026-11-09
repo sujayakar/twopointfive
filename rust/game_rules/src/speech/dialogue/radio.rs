@@ -49,7 +49,7 @@ fn radio_live(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
     !g.aside && g.puppet.is_none() && g.ai_enabled
         && s != crate::game::MissionStage::Done && s != crate::game::MissionStage::Failed
         && !g.pl[seat.player].down
-        && !(g.night_breach.active || g.rescue.active)
+        && !g.staged.facts.fight
         && crate::dialogue::is_office(g)
 }
 

@@ -422,7 +422,7 @@ fn update_one(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     let cower_now = g.cv[cv].state == CivState::Cower;
     let led = g.cv[cv].lead.is_some();
     let bound = if cower_now && move_ == 0.0 && !led {
-            if crate::rescue::rescue_is_hostage(g, gd) { 1.0 }
+            if g.staged.captives.contains(&gd) { 1.0 }
             else if g.cv[cv].complied && g.time < g.cv[cv].comply_until { 2.0 } else { 0.0 }
         } else { 0.0 };
     g.ch[c].anim.bound = bound;

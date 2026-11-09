@@ -383,6 +383,7 @@ pub struct Game {
     pub event_seq: f64,
     pub messages: Vec<crate::game::GameMessagesItem>,
     #[is(crate::game::Mission { t0: 0.0, stage: crate::game::MissionStage::Infiltrate, drive_t: -1.0, pulled: false, alarm_on: false, sweep_at: -1.0, spotted_t: -100.0, down_card_at: -1.0, hands_on: false, serial: 0, stats: crate::game::MissionStats { qrf_at: -1.0, ..crate::game::MissionStats::default() } })] pub mission: crate::game::Mission,
+    pub staged: crate::mission::Staged,
     pub chronicle: crate::chronicle::Chronicle,
     pub qrf: crate::qrf::Qrf,
     pub devices: crate::devices::Devices,

@@ -378,7 +378,7 @@ fn step_toss(g: &mut Game, op: DoorOpId, cx: &Cx) {
     }
     let dname = g.dr[d].def.name.clone();
     if frag {
-        let hostages = g.rescue.hostages.clone().iter().any(|&h| alive(g, h));
+        let hostages = !crate::mission::captives_up(g).is_empty();
         let men = o!(g, op).men.clone();
         let who = if hostages { Some(String::from("hostages")) } else { door_tools_frag_behind(g, d, side, &men) };
         if let Some(who) = who {
@@ -560,9 +560,8 @@ fn step_wait(g: &mut Game, op: DoorOpId) {
 
 /// the room's id and name, of the mission's own rooms, at a point (`roomOf` in the entry's end)
 fn room_of(g: &Game, p: V3) -> Option<(String, String)> {
-    if !crate::roomclear::room_clear_scenario_active(g) { return None; }
-    let at = crate::roomclear::room_clear_scenario_room_at(g, p);
-    g.room_clear.rooms.iter().find(|r| Some(&r.def.id) == at.as_ref()).map(|r| (r.def.id.clone(), r.def.name.clone()))
+    if g.staged.rooms.is_empty() { return None; }
+    g.level.room_at(p).map(|r| (r.id.clone(), r.name.clone()))
 }
 
 /// through the frame: corners, sectors, the floor looked over; then the order is called
@@ -706,7 +705,7 @@ fn step_enter(g: &mut Game, op: DoorOpId, cx: &Cx) {
         for x in g.guards.clone() {
             if alive(g, x) && g.gd[x].team == crate::teams::Team::Hostile && !crate::runner::runner_nobody(g, x) {
                 let xp = pos_of(g, x);
-                if crate::roomclear::room_clear_scenario_room_at(g, xp).as_ref() == Some(&id) { ins.push(x); }
+                if g.level.room_at(xp).is_some_and(|r| r.id == id) { ins.push(x); }
             }
         }
         let seen = ins.iter().any(|&x| crate::autopilot::in_sight(g, x));
@@ -1220,7 +1219,7 @@ fn step_pocket(g: &mut Game, op: DoorOpId, cx: &Cx) {
         thr!(g, op).shut_t = None;
     }
     let shared_word = match o!(g, op).word { Some(wd) => g.door_tools.ops.iter().any(|&x| x != op && o!(g, x).word == Some(wd)), None => false };
-    if !tr(thr!(g, op).hand_done) && !tr(o!(g, op).last_stack) && !tr(o!(g, op).last_hold) && !crate::rescue::rescue_last_warning(g, d) && !shared_word {
+    if !tr(thr!(g, op).hand_done) && !tr(o!(g, op).last_stack) && !tr(o!(g, op).last_hold) && !crate::mission::last_warning(g, d) && !shared_word {
         let lead_now = o!(g, op).lead;
         let wait = g.k.doortools.thr_hand_wait;
         let mut h = if th != lead_now && door_tools_thr_at(g, op, th) { Some(th) } else {

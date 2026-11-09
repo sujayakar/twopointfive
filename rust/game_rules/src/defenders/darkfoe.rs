@@ -36,7 +36,7 @@ fn dark_foe_ruled(g: &crate::game::Game, gd: GuardId) -> bool {
     if !g.ch[c].alive { return false; }
     let team = g.gd[gd].team;
     crate::teams::is_hostile(g, team, crate::teams::Team::Player)
-        && !crate::rescue::rescue_crew_hides(g, gd)
+        && !crate::mission::lies_in_wait(g, gd)
 }
 
 /// His lamp burns by this rule this frame: a read, nothing counted.   (darkfoe.ts darkFoeLit)
@@ -309,7 +309,7 @@ fn dark_foe_kept(g: &mut crate::game::Game, gd: GuardId, d: Option<RoomfightDefI
     }
     if crate::gunroles::gun_keeps_post(g, gd) { return Some(String::from("his gun keeps its post")); }
     if crate::pressure::press_keeps_home(g, d, Some(false)) { return Some(String::from("kept home by the press")); }
-    if crate::rescue::rescue_captor(g) == Some(gd) { return Some(String::from("the captor")); }
+    if crate::mission::captor(g) == Some(gd) { return Some(String::from("the captor")); }
     None
 }
 

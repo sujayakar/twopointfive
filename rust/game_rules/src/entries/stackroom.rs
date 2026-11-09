@@ -274,7 +274,7 @@ fn clear_of_props(g: &Game, q: V3) -> bool {
     for n in 0..g.props.props.len() {
         let pr = g.props.props[n];
         let p = &g.tab.props_prop[pr];
-        let gap = crate::roomclear::prop_gap(crate::roomclear::PropGapP { home: p.home, hx: p.hx, hz: p.hz }, q);
+        let gap = crate::props::prop_gap(p.home, p.hx, p.hz, q);
         if gap < 0.3 { return false; }
     }
     true

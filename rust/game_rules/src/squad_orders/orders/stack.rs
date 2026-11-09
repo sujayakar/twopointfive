@@ -627,7 +627,7 @@ fn taken_at(g: &Game, seat: &crate::seats::SeatRef, d: DoorId, men: &[GuardId], 
 fn prop_by(g: &Game, p: V3) -> bool {
     g.props.props.iter().any(|pr| {
         let row = &g.tab.props_prop[*pr];
-        crate::roomclear::prop_gap(crate::roomclear::PropGapP { home: row.home, hx: row.hx, hz: row.hz }, p) < 0.3
+        crate::props::prop_gap(row.home, row.hx, row.hz, p) < 0.3
     })
 }
 

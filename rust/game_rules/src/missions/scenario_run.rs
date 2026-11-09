@@ -1,5 +1,6 @@
 pub use ::game_types::scenario_run::types;
 pub use types::*;
+use crate::scene_scenarios::MissionKind;
 use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
@@ -9,15 +10,6 @@ use alloc::{string::String, vec::Vec};
 /// A scenario's name in the player's words, by its kind's word.   (scenarioRun.ts WORDS, the skeleton's `words()`)
 fn word(kind: &str) -> String {
     words().get(String::from(kind)).cloned().expect("a scenario kind with no word")
-}
-
-/// `w[0].toUpperCase() + w.slice(1)`; every word of WORDS starts with an ASCII letter.
-fn capitalised(w: &str) -> String {
-    let mut s = String::from(w);
-    if let Some(first) = s.get_mut(0..1) {
-        first.make_ascii_uppercase();
-    }
-    s
 }
 
 /// The query's level is a Training lesson's.   (scenarioRun.ts lessonLevel)
@@ -35,7 +27,7 @@ fn plain_fog(q: &crate::query::Query) -> bool {
 /// The link is one the quiet fog reads: a quiet mission's, or the solo night's own.   (scenarioRun.ts quietLike)
 fn quiet_like(g: &crate::game::Game, q: &crate::query::Query) -> bool {
     match crate::scene_scenario_list::spec_of(q) {
-        Some(s) => s.kind == crate::scene_scenario_list::ScenarioSpecKind::Quiet,
+        Some(s) => s.kind == crate::scene_scenarios::MissionKind::Quiet,
         None => crate::quietfog::solo_fog_link(g, q),
     }
 }
@@ -73,7 +65,8 @@ pub(super) fn fog_of_link(g: &crate::game::Game, q: &crate::query::Query) -> boo
     if q.has("nofow") || q.has("nofogofwar") {
         return false;
     }
-    use crate::scene_scenario_list::{kind_of, ScenarioSpecKind as Kind};
+    use crate::scene_scenario_list::kind_of;
+    use crate::scene_scenarios::MissionKind as Kind;
     q.has("fow")
         || q.has("fogofwar")
         || matches!(kind_of(q), Some(Kind::Roomclear | Kind::Rescue))
@@ -82,24 +75,24 @@ pub(super) fn fog_of_link(g: &crate::game::Game, q: &crate::query::Query) -> boo
 
 /// Stage `spec` on this game: the squad's size on the knob the staging reads, then the scenario's own start. Its refusal, or None.   (scenarioRun.ts startScenario)
 pub fn start_scenario(g: &mut crate::game::Game, spec: &crate::scene_scenario_list::ScenarioSpec) -> Option<String> {
-    if spec.kind != crate::scene_scenario_list::ScenarioSpecKind::Roomclear {
+    if spec.kind != crate::scene_scenarios::MissionKind::Roomclear {
         crate::difficulty::difficulty_here(g, "");
     }
     match spec.kind {
-        crate::scene_scenario_list::ScenarioSpecKind::Quiet => {}
-        crate::scene_scenario_list::ScenarioSpecKind::Rescue => g.k.rescue.squad = spec.squad,
-        crate::scene_scenario_list::ScenarioSpecKind::Nightbreach | crate::scene_scenario_list::ScenarioSpecKind::Roomclear => g.k.nightbreach.squad = spec.squad,
+        crate::scene_scenarios::MissionKind::Quiet => {}
+        crate::scene_scenarios::MissionKind::Rescue => g.k.rescue.squad = spec.squad,
+        crate::scene_scenarios::MissionKind::Nightbreach | crate::scene_scenarios::MissionKind::Roomclear => g.k.nightbreach.squad = spec.squad,
     }
     let why = match crate::seats::seats_refuse(g, spec.kind.as_str()) {
         Some(w) => Some(w),
         None => match spec.kind {
-            crate::scene_scenario_list::ScenarioSpecKind::Quiet => {
+            crate::scene_scenarios::MissionKind::Quiet => {
                 let partner = if js::truthy(spec.squad) { 1.0 } else { 0.0 };
                 crate::quiet::quiet_mission_start(g, spec.seed, Some(partner))
             }
-            crate::scene_scenario_list::ScenarioSpecKind::Roomclear => crate::roomclear::room_clear_scenario_start(g, spec.seed),
-            crate::scene_scenario_list::ScenarioSpecKind::Nightbreach => crate::nightbreach::night_breach_start(g, None),
-            crate::scene_scenario_list::ScenarioSpecKind::Rescue => crate::rescue::rescue_start(g),
+            crate::scene_scenarios::MissionKind::Roomclear => crate::roomclear::room_clear_scenario_start(g, spec.seed),
+            crate::scene_scenarios::MissionKind::Nightbreach => crate::nightbreach::night_breach_start(g, None),
+            crate::scene_scenarios::MissionKind::Rescue => crate::rescue::rescue_start(g),
         },
     };
     if let Some(w) = &why {
@@ -183,70 +176,16 @@ pub fn start_at_address(g: &mut crate::game::Game, q: &crate::query::Query) -> c
     // (?noweather: the level's own storm off from the start, as the page puts it off once its game is stood)
     if q.has("noweather") { crate::weather::weather_set_enabled_2(g, false); }
     let r = start_from_query(g, &StartFromQuerySearch::URLSearchParams(q.clone()));
-    let solo = q.has("solo") || !g.quiet.active;
+    let solo = q.has("solo") || !g.staged.facts.unseen;
     crate::kit::kit_solo_if(g, solo);
     r
 }
 
-/// Which scenario is up on this game right now; the room clear is asked first, being the night breach on its own layout.   (scenarioRun.ts activeScenario)
-pub fn active_scenario(g: &crate::game::Game) -> Option<crate::scenario_run::ActiveScenario> {
-    if crate::roomclear::room_clear_scenario_active(g) {
-        Some(ActiveScenario::Roomclear)
-    } else if g.night_breach.active {
-        Some(ActiveScenario::Nightbreach)
-    } else if g.rescue.active {
-        Some(ActiveScenario::Rescue)
-    } else if g.quiet.active {
-        Some(ActiveScenario::Quiet)
-    } else {
-        None
-    }
-}
-
-/// The teammates the scenario that is up has staged, dead or alive: a copy of its list.   (scenarioRun.ts teamOf)
-pub fn team_of(g: &crate::game::Game) -> Vec<GuardId> {
-    if g.rescue.active {
-        g.rescue.ops.clone()
-    } else if g.night_breach.active {
-        g.night_breach.ops.clone()
-    } else if g.quiet.active {
-        g.quiet.ops.clone()
-    } else {
-        Vec::new()
-    }
-}
-
-fn running_kind(kind: ActiveScenario) -> RunningScenarioKind {
-    match kind {
-        ActiveScenario::Nightbreach => RunningScenarioKind::Nightbreach,
-        ActiveScenario::Roomclear => RunningScenarioKind::Roomclear,
-        ActiveScenario::Rescue => RunningScenarioKind::Rescue,
-        ActiveScenario::Quiet => RunningScenarioKind::Quiet,
-    }
-}
-
-/// The scenario that is up, in the picker's words. None: none is up.   (scenarioRun.ts runningScenario)
-pub(super) fn running_scenario(g: &crate::game::Game, level_file: Option<&str>, list: Option<&[crate::scene_scenarios::ScenarioEntry]>) -> Option<crate::scenario_run::RunningScenario> {
-    let kind = active_scenario(g)?;
-    let squad = if kind == ActiveScenario::Quiet { g.quiet.squad } else { m::min(4.0, team_of(g).len() as f64) };
-    let all;
-    let list = match list {
-        Some(l) => l,
-        None => {
-            all = crate::scene_scenario_list::all_missions();
-            &all[..]
-        }
-    };
-    let here: Vec<&crate::scene_scenarios::ScenarioEntry> =
-        list.iter().filter(|e| e.kind.as_str() == kind.as_str() && e.level.as_deref() == level_file).collect();
-    let entry = here.iter().find(|e| e.squad == squad).or(here.first()).map(|e| (*e).clone());
-    let team = crate::loadout::size_words(squad);
-    if kind == ActiveScenario::Quiet {
-        return Some(RunningScenario { kind: running_kind(kind), entry });
-    }
-    let title = match &entry {
-        Some(e) => e.title.clone(),
-        None => capitalised(&word(kind.as_str())),
-    };
-    Some(RunningScenario { kind: running_kind(kind), entry })
+/// The row of the mission list the mission that is up is of: its kind on this level's file, at its size where one is. None: none is up, or no row has it.
+pub fn running_row(g: &crate::game::Game, level_file: Option<&str>) -> Option<crate::scene_scenarios::ScenarioEntry> {
+    let kind = g.staged.up?;
+    let squad = m::min(4.0, g.staged.team.len() as f64);
+    let mut here = crate::scene_scenario_list::all_missions().into_iter().filter(|e| e.kind == kind && e.level.as_deref() == level_file).peekable();
+    let first = here.peek().cloned();
+    here.find(|e| e.squad == squad).or(first)
 }

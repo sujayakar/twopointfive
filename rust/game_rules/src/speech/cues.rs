@@ -711,7 +711,7 @@ pub fn cues_tick(g: &mut crate::game::Game) {
             if cues_cue(g, gd, CueKind::Cover, Some(&at_vars(&at))) || cues_kind_busy(g, CueKind::Cover) { cues_man(g, gd).covered = true; }
         } else if state == crate::game::GuardState::Alert && hold && still && sight > g.k.cues.still_secs && t - cues_man(g, gd).alert_t > g.k.cues.still_secs
             && t - g.gd[gd].witness.heard.last_shot_t > g.k.cues.still_quiet && t - cues_man(g, gd).again_t > g.k.cues.again_secs
-            && !(on_player && faced_down(g).is_some()) && !crate::rescue::rescue_crew_hides(g, gd)
+            && !(on_player && faced_down(g).is_some()) && !crate::mission::lies_in_wait(g, gd)
         {
             let p = g.ch[c].pos;
             let at = cues_at(g, p);

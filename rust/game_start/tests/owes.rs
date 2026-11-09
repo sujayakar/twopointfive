@@ -73,7 +73,7 @@ fn every_run_owes() {
             owes::played_out(&mut p, &mut l, 700.0, &mut o);
             let end = format!("{:.1} s, {}", l.me.t(), l.why().unwrap_or_else(|| String::from("ended")));
             held(&e.id, o, end);
-        } else if matches!(e.kind, game::scene_scenarios::ScenarioEntryKind::Roomclear | game::scene_scenarios::ScenarioEntryKind::Nightbreach | game::scene_scenarios::ScenarioEntryKind::Rescue) {
+        } else if matches!(e.kind, game::scene_scenarios::MissionKind::Roomclear | game::scene_scenarios::MissionKind::Nightbreach | game::scene_scenarios::MissionKind::Rescue) {
             let mut p = stand(&e.id);
             let mut h = HandsOff::new(p.g.seats[0], Plan { seed: 9, cap: 240.0, ..Default::default() });
             owes::played_out(&mut p, &mut h, 245.0, &mut o);

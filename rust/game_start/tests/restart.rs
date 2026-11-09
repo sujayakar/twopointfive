@@ -76,7 +76,7 @@ fn shift_enter_starts_it_over_as_the_step_ends() {
 #[test]
 fn the_key_on_the_first_step_restarts_once() {
     let mut p = pass();
-    let (active, chars) = (game::scenario_run::active_scenario(&p.g), p.g.ch.len());
+    let (active, chars) = (p.g.staged.up, p.g.ch.len());
     p.key_down("ShiftLeft");
     p.key_down("Enter");
     p.frame();
@@ -86,7 +86,7 @@ fn the_key_on_the_first_step_restarts_once() {
     assert!(p.g.time > 0.4, "the clock did not go on: {}", p.g.time);
     p.run(2.0);
     assert!(control::restart(&mut p.g, None));
-    assert_eq!((game::scenario_run::active_scenario(&p.g), p.g.ch.len()), (active, chars), "the mission did not stand again");
+    assert_eq!((p.g.staged.up, p.g.ch.len()), (active, chars), "the mission did not stand again");
     assert!(p.g.time < 0.1, "the clock did not start over: {}", p.g.time);
 }
 
@@ -96,11 +96,11 @@ fn the_key_on_the_first_step_restarts_once() {
 fn a_switch_set_in_a_try_does_not_stop_the_mission_coming_back() {
     let mut p = pass();
     p.run(0.5);
-    let (active, guards) = (game::scenario_run::active_scenario(&p.g), p.g.guards.len());
+    let (active, guards) = (p.g.staged.up, p.g.guards.len());
     p.g.ai_enabled = false;
     p.g.tune.teams = false;
     assert!(control::restart(&mut p.g, None));
-    assert_eq!((game::scenario_run::active_scenario(&p.g), p.g.guards.len()), (active, guards), "the mission did not stand again");
+    assert_eq!((p.g.staged.up, p.g.guards.len()), (active, guards), "the mission did not stand again");
     assert!(!p.g.ai_enabled && !p.g.tune.teams, "the switches went back with the game");
 }
 
@@ -181,12 +181,12 @@ fn every_kind_of_mission_starts_over_as_it_started() {
         let mut p = Play::mission(file, link, &Opts { seed: 3, dress: true, ..Default::default() });
         p.run(1.0);
         let count = |p: &Play| (p.g.guards.len(), p.mates().len(), p.g.civilians.len(), p.g.ch.len(), p.g.doors.list.len(), p.g.engine.world.statics.len(), p.g.engine.lights.lights.len(), p.g.tab.camera.len());
-        let (first, active, host) = (count(&p), game::scenario_run::active_scenario(&p.g), (p.g.host_cam, p.g.host_input));
+        let (first, active, host) = (count(&p), p.g.staged.up, (p.g.host_cam, p.g.host_input));
         assert!(active.is_some(), "{link}: no mission is up");
         p.run(2.0);
         for tries in 1..=2 {
             assert!(control::restart(&mut p.g, None));
-            assert_eq!(game::scenario_run::active_scenario(&p.g), active, "{link}: try {tries}");
+            assert_eq!(p.g.staged.up, active, "{link}: try {tries}");
             p.run(1.0);
             assert_eq!(count(&p), first, "{link}: try {tries}: (guards, mates, civilians, characters, doors, statics, lights, cameras)");
             assert_eq!((p.g.host_cam, p.g.host_input), host, "{link}: try {tries}");

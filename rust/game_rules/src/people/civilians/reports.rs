@@ -295,7 +295,7 @@ pub(super) fn cower(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> crate::c
         g.ch[c].body_yaw = v3::approach_angle(g.ch[c].body_yaw, away_yaw, 2.0 * dt);
         g.ch[c].anim.look_yaw_extra = m::sin(g.time * 1.7 + g.ch[c].id) * 0.5;
     }
-    if !crate::rescue::rescue_is_hostage(g, gd) && g.time >= g.cv[cid].whimper_at && g.time - g.cv[cid].state_at < 70.0 {
+    if !g.staged.captives.contains(&gd) && g.time >= g.cv[cid].whimper_at && g.time - g.cv[cid].state_at < 70.0 {
         let roll = g.cv[cid].dice.roll();
         g.cv[cid].whimper_at = g.time + 7.0 + roll * 7.0;
         let up = match &g.gd[gd].bubble { Some(b) => g.time - b.t < b.dur, None => false };
@@ -478,7 +478,7 @@ pub fn civilian_down(g: &mut crate::game::Game, gd: GuardId, dir: V3, quiet: boo
     g.ch[c].anim.act = None; g.cv[cid].target = None; g.cv[cid].report_to = None;
     crate::character::character_ragdollize(g, c, true, dir, quiet);
     let dead = how == DownKind::Shot;
-    let hostage = crate::rescue::rescue_is_hostage(g, gd);
+    let hostage = g.staged.captives.contains(&gd);
     let (name, label, her) = (g.cv[cid].name.clone(), g.cv[cid].label.clone(), g.cv[cid].her.clone());
     if by == DownBy::Player {
         if dead {

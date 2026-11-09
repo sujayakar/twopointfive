@@ -79,7 +79,7 @@ async fn word(b: &Bot, doors: &[&str], room: &str) {
     b.press("KeyF", 3).await;
     b.ticks(6).await;
     let t0 = b.t();
-    let r = b.ask(|g| g.room_clear.rooms.iter().find(|r| r.def.id == room).map(|r| [r.def.bounds.x0, r.def.bounds.x1, r.def.bounds.z0, r.def.bounds.z1]));
+    let r = b.ask(|g| g.staged.rooms.iter().find(|r| r.def.id == room).map(|r| [r.def.bounds.x0, r.def.bounds.x1, r.def.bounds.z0, r.def.bounds.z1]));
     let inside = |m: GuardId| r.is_some_and(|r| { let p = b.man_at(m); p[0] > r[0] + 0.2 && p[0] < r[1] - 0.2 && p[2] > r[2] + 0.2 && p[2] < r[3] - 0.2 });
     let daz0: Vec<(GuardId, f64)> = b.squad().into_iter().map(|m| (m, b.ask(|g| g.gd[m].dazzled_until))).collect();
     let (mut in_at, mut hit): (Vec<Option<f64>>, Vec<String>) = (doors.iter().map(|_| None).collect(), Vec::new());

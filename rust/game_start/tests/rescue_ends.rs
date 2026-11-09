@@ -78,5 +78,5 @@ fn a_room_taken_quietly_starts_no_clock() {
     let (after, gap) = (p.g.k.rescueflush.after_secs, p.g.k.rescueflush.gap_secs);
     p.hostage_room_falls(false);
     p.run(after + gap + 2.0);
-    assert!(p.rescue_lines("flush:").is_empty() && p.hostages_up().len() == p.g.rescue.hostages.len(), "without a sound: {:?}, {} of {} hostages", p.rescue_lines("flush:"), p.hostages_up().len(), p.g.rescue.hostages.len());
+    assert!(p.rescue_lines("flush:").is_empty() && p.hostages_up().len() == p.g.staged.captives.len(), "without a sound: {:?}, {} of {} hostages", p.rescue_lines("flush:"), p.hostages_up().len(), p.g.staged.captives.len());
 }

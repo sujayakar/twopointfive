@@ -809,12 +809,10 @@ fn sweep_places(g: &crate::game::Game) -> Vec<crate::qrf::SweepPlacesItem> {
                 return sw.iter().map(|p| SweepPlacesItem { name: p.name.clone(), pos: p.pos }).collect();
             }
         }
-        if let Some(q) = s.quiet.as_ref() {
-            for r in &q.spots { out.push(SweepPlacesItem { name: r.place.clone(), pos: mid(&r.area) }); }
-        }
     }
+    for r in g.level.spots() { out.push(SweepPlacesItem { name: r.place.clone(), pos: mid(&r.area) }); }
     if raid(g) {
-        let rooms = g.room_clear.rooms.clone();
+        let rooms = g.staged.rooms.clone();
         for r in &rooms {
             let mut held = false;
             for &h in &r.defenders {
