@@ -25,7 +25,7 @@ export interface SmokeParams {
   /** density × of CANISTER smoke as it is let out, and of everything else — muzzle gas, impact / destruction dust puffs (08-13, the maintainer: at the plumes' 1.6× 'there's way too much that
    *  shows up on bullet impact') */
   densityScale: number; fxDensityScale: number;
-  /** how fast the coarse lattice is bent toward the game's own smoke (smoke.wgsl THE GAME'S SMOKE): × the square of the difference in what a metre and a half of it hides, a second. 0 = not at all */
+  /** how fast the coarse lattice is bent toward the game's own smoke (smoke.wgsl THE GAME'S SMOKE): × the difference in what a metre and a half of it hides, a second. 0 = not at all */
   bend: number;
   /** …and how hard it is drawn toward where the game has more of it, m²/s² */
   pull: number;
@@ -40,7 +40,7 @@ export interface SmokeParams {
    *  between two steps you SEE nothing in it has moved more than this (½: 3.1 cm on the coarse lattice). 0 = never waits in sight. Out of sight the allowance is `sparse.farCells`. */
   calmCells: number;
 }
-export const defaultSmokeParams = (): SmokeParams => ({ buoyancy: 1.6, weight: 0.03, vortConf: 4.0, velDamp: 0.3, densDecay: 0.14, tempDecay: 1.2, turbulence: 2.5, stirConf: 2.0, densityScale: 1.3, fxDensityScale: 1.0, bend: 3, pull: 6, enabled: true, canisterDensity: 95, canisterDuration: 32, canisterRadius: 0.2, canisterTemp: 1.6, canisterSpeed: 1.9, expansion: true, rbIters: 4, omega: 1.7, frozen: false, calmCells: 0.5 });
+export const defaultSmokeParams = (): SmokeParams => ({ buoyancy: 1.6, weight: 0.03, vortConf: 4.0, velDamp: 0.3, densDecay: 0.14, tempDecay: 1.2, turbulence: 2.5, stirConf: 2.0, densityScale: 1.3, fxDensityScale: 1.0, bend: 1.5, pull: 6, enabled: true, canisterDensity: 95, canisterDuration: 32, canisterRadius: 0.2, canisterTemp: 1.6, canisterSpeed: 1.9, expansion: true, rbIters: 4, omega: 1.7, frozen: false, calmCells: 0.5 });
 
 const MAX_EMITTERS = 64, EMITTER_WORDS = 16;
 const SP_HEADER_WORDS = 44, SP_LEVEL_WORDS = 16, SP_DIRTY_WORDS = 64, SP_WINDB_WORDS = 32;
