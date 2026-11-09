@@ -168,12 +168,19 @@ pub fn room_name(g: &crate::game::Game, p: V3) -> String {
     if rect_holds(&building, p) { return String::from("the back offices"); }
     String::from("the car park")
 }
-/// (dialogue.ts routeName)
+/// the one named place every point of a walk is in
+fn place_kept_to(g: &Game, points: &[V3]) -> Option<String> {
+    let rects = level_rects(g)?;
+    let (first, at) = place_among(&rects, *points.first()?);
+    if at.d > 0.0 || points.iter().any(|p| { let (i, o) = place_among(&rects, *p); i != first || o.d > 0.0 }) { return None; }
+    Some(at.rect.name)
+}
+/// What a man calls his route: the level's own place, where it keeps to one, else its name in words.
 pub fn route_name(g: &crate::game::Game, route_i: f64) -> String {
     let route = if route_i >= 0.0 && m::floor(route_i) == route_i { g.level.routes.get(route_i as usize).copied() } else { None };
+    if let Some(one) = route.and_then(|r| place_kept_to(g, &g.tab.route[r].points)) { return one; }
     let n = match route { Some(r) => g.tab.route[r].name.clone(), None => String::from("route") };
     if let Some(s) = route_names().get(n.clone()) { return s.clone(); }
-    if let Some(Some(s)) = route_names_guide().get(n.clone()) { return s.clone(); }
     if let Some(s) = route_names_now().get(n.clone()) { return s.clone(); }
     alloc::format!("the {}", n.replace('_', " "))
 }
