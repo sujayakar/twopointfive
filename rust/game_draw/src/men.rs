@@ -69,6 +69,8 @@ pub struct Men {
     /// drawn with the fog off: everybody
     pub bared: bool,
     pub swaps: Swaps,
+    /// the page says no man is drawn wet, whatever the rain has done to him
+    pub dry_look: bool,
     pub men: Vec<Man>,
     pub insts: Vec<Inst>,
     pub bones: Vec<Bones>,
@@ -112,7 +114,7 @@ impl Men {
         let (side, suit) = dress(g, id);
         let s = game::stature::stature_of(g, id);
         let f3 = |v: [f64; 3]| v.map(|x| x as f32);
-        let wet = g.engine.settings.wet_chars && (c.wet > 0.0 || c.beads > 0.0);
+        let wet = !self.dry_look && (c.wet > 0.0 || c.beads > 0.0);
         let caps = game::character::character_capsules(g, id);
         let x = |p: [f64; 3]| -> [f64; 3] { if s == 1.0 { p } else { core::array::from_fn(|k| c.pos[k] + (p[k] - c.pos[k]) * s) } };
         let at = self.men.len();
@@ -122,7 +124,7 @@ impl Men {
         self.heads.push(f3(head));
         self.men.push(Man {
             id: c.id as u32, side: side as u32, suit: suit as u32, parts: c.parts as u32, alive: c.alive as u32, tint: f3(c.tint), tint2: f3(c.tint2), stature: s as f32,
-            dry: if g.engine.settings.wet_chars && c.wet > 0.0 { 1.0 - 0.35 * c.wet } else { 1.0 } as f32, at: f3(c.pos), feet: f3(c.pos), head: f3(head), bound: [bc[0] as f32, bc[1] as f32, bc[2] as f32, (b[3] * s) as f32],
+            dry: if !self.dry_look && c.wet > 0.0 { 1.0 - 0.35 * c.wet } else { 1.0 } as f32, at: f3(c.pos), feet: f3(c.pos), head: f3(head), bound: [bc[0] as f32, bc[1] as f32, bc[2] as f32, (b[3] * s) as f32],
         });
         self.bounds.push(self.men[at].bound);
         // ---- his instance

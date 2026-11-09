@@ -503,9 +503,6 @@ pub struct Game {
     pub fx: Vec<crate::game::GameFxItem>,
     pub sparks: crate::sparks::Sparks,
     pub tracers: crate::tracers::Tracers,
-    /// (the picture's: in no bytes)
-    #[bytes(skip)]
-    pub decals: crate::render_decals::Decals,
     pub weather: crate::weather::Weather,
     pub fx_seed: f64,
     pub ocp_cooldown: f64,
@@ -713,7 +710,6 @@ impl Game {
             fx: Vec::new(),
             sparks: crate::sparks::Sparks { pool: alloc::vec![crate::sparks::Spark { pos: [0.0, -10.0, 0.0], vel: [0.0, 0.0, 0.0], age: 0.0, life: 0.0, alive: false, gen_: 0.0 }; 96], live: 0.0, params: crate::sparks::SparkParams { gravity: 16.0, drag: 1.6, hold: 0.15, brightness: 2.6, max_live: 96.0, emissive: 25.0, thickness: 0.002, shutter: 0.017, min_streak: 0.02, collide: true } },
             tracers: crate::tracers::Tracers::blank(),
-            decals: crate::render_decals::Decals::blank(),
             weather: crate::weather::Weather::blank(),
             fx_seed: 1.0,
             ocp_cooldown: 0.0,
