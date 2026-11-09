@@ -22,6 +22,9 @@
 //!   `TakeCover`    asked in the fight, after his senses and his state (`Stage::Cover`): he gets down where he is or goes crouched to a
 //!                  spot, his gun lowered toward the danger, no round fired, his hands free to change magazine (update_guard's `alert`,
 //!                  its first test). `TakeCover::down()` and `TakeCover::to(spot, pace)` are the two ways to say it.
+//!   `LeavePost`    asked at his post in a room fight, once he has looked and reacted, where he can see (`Stage::Post`, roomfight/defender.rs): he
+//!                  leaves it, on a leg or on his own hunt. It is something he does once, so nobody is recorded as having him for it: on the
+//!                  leg, his script has him.
 //! The type of `propose` is the stage, so a rule cannot answer out of its stage. Dead and held men are recorded from update_guard's
 //! `incapable`.
 //!
@@ -39,7 +42,7 @@ use alloc::{format, string::String, vec::Vec};
 
 /// where in a man's frame a rule is asked
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
-pub enum Stage { Body, Cover }
+pub enum Stage { Body, Cover, Post }
 
 /// what a rule asks of a man's body for a tick
 #[derive(Clone, Copy, Debug)]
@@ -48,7 +51,13 @@ pub enum Intent {
     Script(GuardScript),
     /// he takes cover in the fight
     Cover(TakeCover),
+    /// he leaves his post
+    Leave(LeavePost),
 }
+
+/// A defender at his post in a room fight leaves it: on a leg to a place, or off on the fight's own hunt (roomfight/post.rs).
+#[derive(Clone, Copy, Debug)]
+pub enum LeavePost { On(crate::roomfight::Leg), Loose }
 
 /// A man taking cover in a fight: down where he stands or off to a spot, crouched, his gun lowered toward the danger; he fires no round and
 /// his hands may change magazine.
@@ -86,9 +95,13 @@ impl Ask for TakeCover {
     const STAGE: Stage = Stage::Cover;
     fn intent(self) -> Intent { Intent::Cover(self) }
 }
+impl Ask for LeavePost {
+    const STAGE: Stage = Stage::Post;
+    fn intent(self) -> Intent { Intent::Leave(self) }
+}
 impl Intent {
     /// the stage this intent is an answer at
-    pub fn stage(&self) -> Stage { match self { Intent::Script(_) => Stage::Body, Intent::Cover(_) => Stage::Cover } }
+    pub fn stage(&self) -> Stage { match self { Intent::Script(_) => Stage::Body, Intent::Cover(_) => Stage::Cover, Intent::Leave(_) => Stage::Post } }
 }
 
 /// A RULE, as its file writes it (this file's head says what each part is for)
@@ -111,6 +124,8 @@ pub enum Outcome {
     Arrived,
     GoingNowhere,
     Moving,
+    /// of `LeavePost`: he is off it
+    Left,
 }
 
 /// a rule as the list holds it: its line of `rules!` and its `Reaction`, as plain functions
@@ -157,13 +172,16 @@ macro_rules! rules {
     };
 }
 
-// THE LIST. The order of the lines is the rank. (Which stage a rule is asked at is its `Ask`; the first four hand him a script, `duck` cover.)
+// THE LIST. The order of the lines is the rank. (Which stage a rule is asked at is its `Ask`: the first four hand him a script, `duck` cover, `lost` and `rally` take
+// him off his post.)
 rules! {
     frag: "a live grenade";
     runner: "broke and ran";
     morale: "shaken by a blast";
     startle: "startled";
     duck: "head down under fire";
+    lost: "his room is lost";
+    rally: "a fight next door";
 }
 // a man's record of who said no is a bit a rule
 const _: () = assert!(RULES.len() <= 32, "Control.declined is 32 bits: widen it before the list holds a 33rd rule");
@@ -283,6 +301,11 @@ pub fn grant_body(g: &mut Game, gd: GuardId, dt: f64) -> Option<(RuleId, GuardSc
 /// the arbiter over the game's list, in his fight: the rule that has him and the cover he takes
 pub fn grant_cover(g: &mut Game, gd: GuardId, dt: f64) -> Option<(RuleId, TakeCover)> {
     match grant_from(g, gd, dt, Stage::Cover, RULES)? { (r, Intent::Cover(c)) => Some((r, c)), _ => None }
+}
+
+/// the arbiter over the game's list, at his post in a room fight: the rule that takes him off it and how he goes
+pub fn grant_post(g: &mut Game, gd: GuardId, dt: f64) -> Option<(RuleId, LeavePost)> {
+    match grant_from(g, gd, dt, Stage::Post, RULES)? { (r, Intent::Leave(l)) => Some((r, l)), _ => None }
 }
 
 /// WRITE THE RECORD: `to` has every channel of him this tick. Once a tick a man. A rule that had him and no longer does is told (`lost`).
