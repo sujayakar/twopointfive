@@ -11,7 +11,6 @@ pub(in crate::tick) fn game_new(g: &mut crate::game::Game, ch: RigId, opts: Opti
     let level = g.level.clone();   // (read below while `g` is lent; no writer of the level's fields stands in the constructor)
     g.rig = ch;
     g.light_home = crate::fixtures::LightHome::blank();
-    g.falls = crate::sim_fallshome::fall_store_new(g, crate::Opaque);
     // level.boxes and col.boxes are one list in the TypeScript: here g.col.boxes, as the caller left it. `ids[i]` is what `level.boxes[i]` names
     let ids: Vec<BoxId> = g.col.boxes.clone();
     if let Some(over) = crate::levelfit::level_over(g, &level_counts_of(&level, &ids)) { panic!("{}", over); }

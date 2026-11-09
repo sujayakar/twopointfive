@@ -60,15 +60,16 @@ pub fn glass_break_asking<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game
         let dynamic = g.col.dynamic_boxes.clone();
         let set = crate::scene_box_mirror::box_mirror_leaves(g, &dynamic);
         if set == -2.0 { panic!("glass: more leaves than a list of the module holds"); }
-        let mut cx = Ctx { g: g.sim, w: g.col.mirror.slot as usize, set: set as i32, now: g.time, shards: crate::shards::shards_live(g), gravity: crate::shard_model::shard().gravity, out: Vec::new(), wrote: false };
+        let mut cx = Ctx { g: g.sim, w: g.col.mirror.slot as usize, set: set as i32, now: g.time, shards: crate::shards::shards_live(g), gravity: crate::shard_model::shard().gravity, out: Vec::new(), landings: Vec::new(), wrote: false };
         let r = fn_(g, &mut cx);
         wrote(g, &mut cx);
         r
     })
 }
-/// a static's kind moved under the rule: the copy is told
+/// what the rule did to the game, carried over: a static's kind moved, and the copy is told; what will come down is on the falls' list
 fn wrote(g: &mut crate::game::Game, cx: &mut Ctx) {
     if core::mem::take(&mut cx.wrote) { crate::scene_collision::wrote(g); }
+    for l in cx.landings.drain(..) { crate::falls::schedule(&mut g.falls, crate::falls::FallKind::Glass, l, g.k.shards.pending_max); }
 }
 
 /// the level's sheets of glass for the copy of its box world: each its static, how far it stands on the plan from the nearest door's opening, which face has the sky
@@ -123,6 +124,7 @@ fn glass_break_door_gap(g: &mut crate::game::Game, b: BoxId) -> f64 {
 
 /// what the last call let go, handed on in the order it went; the list is taken whole first, since what is told of a fragment may ask the panes anything
 fn glass_break_drain(g: &mut crate::game::Game, cx: &mut Ctx) {
+    wrote(g, cx);
     if cx.out.is_empty() { return; }
     let list: Vec<crate::glassbreak::Fragment> = core::mem::take(&mut cx.out).into_iter().map(|l| {
         let v = glass_break_geom(g, l.f.bi);

@@ -38,8 +38,8 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | `scene_cut.rs` | planes that shave a box, for a ragged end or a torn piece |
 | `scene_materials.rs`, `scene_stuff.rs` | `does_of` and `BoxStuff`, the two words a box says |
 
-What is kept in the game's block is in `rust/sim/src/`: `panes.rs`, `glass.rs`, `pattern.rs`, `pen.rs` for glass and bars; `falls.rs` for landings and
-litter; `slabs.rs` for a leaf in the air (`doors.md`). The page's half: `src/render/decals.ts`, `src/render/particles.ts`, `src/draw/marks.ts`,
+What is kept in the game's block is in `rust/sim/src/`: `panes.rs`, `glass.rs`, `pattern.rs`, `pen.rs` for glass and bars; `slabs.rs` for a leaf in the air
+(`doors.md`). Landings and litter are `g.falls`, with their rules in `rust/sim/src/falls.rs`. The page's half: `src/render/decals.ts`, `src/render/particles.ts`, `src/draw/marks.ts`,
 `rust/game_draw/src/marks.rs`, `src/scene/cut.ts`. `blastcost` (`rust/game_start/src/bin/blastcost.rs`) times a blast's tick.
 
 ## How it works
@@ -95,8 +95,8 @@ opened, and a thing needs a line from one of them (`furniture_exposed_box`). Fix
 `apart_m` (`furn_break_row`); props are thrown inside `throw_m`. `FurnKMouth` clears a hole's way, whoever owns what stands there.
 `furniture_hung_goes` tears boards hung under a charge.
 
-**Pieces.** `debris_spawn` first calls `debris_thrown`: `flight_of` says where it comes down and `fall_store_schedule` keeps the landing in the game's
-falls. `debris_landings` tells the floor when it is due. The pool (`DEBRIS_CAP`) then tumbles what is drawn. Full, it takes the smallest resting
+**Pieces.** `debris_spawn` first calls `debris_thrown`: `flight_of` says where it comes down and the landing is kept in `g.falls`.
+`debris_landings` tells the floor when it is due. The pool (`DEBRIS_CAP`) then tumbles what is drawn. Full, it takes the smallest resting
 piece's slot (`breaks_pick`); with all in the air it refuses. `debris_feet` shoves rubble. `destruction_bodies` keeps a piece off a man down;
 `way_off` slides it the shortest free way clear of all of him.
 

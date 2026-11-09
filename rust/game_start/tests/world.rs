@@ -304,17 +304,17 @@ fn a_game_kept_with_glass_in_the_air_plays_on_as_it_did() {
             if game::scene_collision::nav_grid_is_blocked(&p.g, from[0], from[1]) { continue; }
             p.sam_put(from);
             p.run(0.2);
-            for _ in 0..12 { game::combat::fire_weapon(&mut p.g, c, [at[0], 1.2, at[2]], None); p.run(0.1); if game::sim_fallshome::fall_store_waiting(&p.g) > 0.0 { fell = true; break 'panes; } }
+            for _ in 0..12 { game::combat::fire_weapon(&mut p.g, c, [at[0], 1.2, at[2]], None); p.run(0.1); if p.g.falls.glass.waiting.len() > 0 { fell = true; break 'panes; } }
         }
     }
     assert!(fell, "the staging is wrong: twelve rounds and no glass in the air");
-    let waiting = game::sim_fallshome::fall_store_waiting(&p.g);
+    let waiting = p.g.falls.glass.waiting.len();
     let kept = game::savestate::control::Moment::of(&p.g);
     let mut first = Vec::new();
     for _ in 0..120 { p.frame(); first.push(p.words()); }
-    assert!(game::sim_fallshome::fall_store_waiting(&p.g) != waiting, "the staging is wrong: nothing landed in two seconds");
+    assert!(p.g.falls.glass.waiting.len() != waiting, "the staging is wrong: nothing landed in two seconds");
     p.g = kept.stands(p.g.sim);
-    assert_eq!(game::sim_fallshome::fall_store_waiting(&p.g), waiting, "put back: the landings waiting");
+    assert_eq!(p.g.falls.glass.waiting.len(), waiting, "put back: the landings waiting");
     for (k, want) in first.iter().enumerate() {
         p.frame();
         let got = p.words();

@@ -60,7 +60,7 @@ pub fn glass_shards_new(_g: &crate::game::Game) -> crate::shards::GlassShards {
 pub(in crate::breakage) fn glass_shards_release(g: &mut crate::game::Game, f: &crate::glassbreak::Fragment) -> bool {
     use crate::glasspen::PaneType;
     use crate::glassbreak::{FragmentCause as Cause, FragmentKind as Kind};
-    use crate::sim_fallshome::FallSound;
+    use crate::falls::FallSound;
     if !shards_live(g) { return false; }
     g.stats.shards.fragments += 1;
     let e = match f.cause { Cause::Hit => 1.0, Cause::Blast => 1.5, Cause::Dice | Cause::Rake => 0.5, Cause::Support => 0.25 };
@@ -485,7 +485,7 @@ pub fn glass_shards_crossed(g: &mut crate::game::Game, x: crate::shards::PaneCro
     let want = m::round(g.k.shards.exit_fines * k);
     let n = glass_shards_budget(g, want);
     let (fine_life, fine_size) = (g.k.shards.fine_life, g.k.shards.fine_size);
-    let sound = crate::sim_fallshome::FallSound::GlassTinkle;
+    let sound = crate::falls::FallSound::GlassTinkle;
     {
         if want <= 0.0 { return true; }
         let d = v3::normalize(x.dir_out);
@@ -564,20 +564,20 @@ fn glass_shards_fall_of(g: &mut crate::game::Game, c_2: V3, v: V3) -> crate::sha
     GlassShardsFallOf { t: r.t, pos: r.pos }
 }
 
-/// A landing filed in the game's fall store.
-fn glass_shards_schedule(g: &mut crate::game::Game, fall: crate::shards::GlassShardsScheduleFall, name: crate::sim_fallshome::FallSound, gain: f64, rate: f64, amount: f64, who: f64, event: Option<bool>) {
+/// A landing put on the game's falls.
+fn glass_shards_schedule(g: &mut crate::game::Game, fall: crate::shards::GlassShardsScheduleFall, name: crate::falls::FallSound, gain: f64, rate: f64, amount: f64, who: f64, event: Option<bool>) {
     let event = event.unwrap_or(true);
     let t = g.time + fall.t;
     let cap = g.k.shards.pending_max;
-    let word = if event { crate::sim_fallshome::FALL_IF_SOUNDED } else { crate::sim_fallshome::FALL_UNHEARD };
-    crate::sim_fallshome::fall_store_schedule(g, t, fall.pos[0], fall.pos[1], fall.pos[2], name, gain, rate, amount, who, word, 0.0, cap, None, None);
+    let told = if event { crate::falls::FallTold::IfItSounds } else { crate::falls::FallTold::Never };
+    crate::falls::schedule(&mut g.falls, crate::falls::FallKind::Glass, crate::falls::Landing { t, pos: fall.pos, sound: name, gain, rate, amount, who, told, level: 0.0, dust: 0.0 }, cap);
 }
 
 /// By the fall: a fragment's one landing, the floor told whatever the ear gets.
 fn glass_shards_landing(g: &mut crate::game::Game, fall: crate::shards::GlassShardsLandingFall, gain: f64, rate: f64, amount: f64, who: f64) {
     let t = g.time + fall.t;
     let cap = g.k.shards.pending_max;
-    crate::sim_fallshome::fall_store_schedule(g, t, fall.pos[0], fall.pos[1], fall.pos[2], crate::sim_fallshome::FallSound::GlassTinkle, gain, rate, amount, who, crate::sim_fallshome::FALL_HEARD, 0.0, cap, None, None);
+    crate::falls::schedule(&mut g.falls, crate::falls::FallKind::Glass, crate::falls::Landing { t, pos: fall.pos, sound: crate::falls::FallSound::GlassTinkle, gain, rate, amount, who, told: crate::falls::FallTold::Always, level: 0.0, dust: 0.0 }, cap);
 }
 
 /// A voice, inside the frame's cap and the voice's gap; a merged landing thickens the next.
@@ -605,9 +605,9 @@ fn glass_shards_sound(g: &mut crate::game::Game, name: &str, pos: V3, gain: f64,
 
 /// A footfall on litter crunches, is louder, and grinds the glass down. Elsewhere `level` back untouched.
 pub fn glass_shards_step(g: &mut crate::game::Game, pos: V3, level: f64) -> f64 {
-    if !crate::sim_fallshome::fall_store_any(g) || !shards_live(g) { return level; }
+    if !crate::falls::any_glass(&g.falls) || !shards_live(g) { return level; }
     let (full, grind, gain, add) = (g.k.shards.crunch_full, g.k.shards.grind, g.k.shards.crunch_gain, g.k.shards.crunch_add);
-    let r = crate::sim_fallshome::fall_store_step(g, pos[0], pos[2], level, full, grind, gain, add);
+    let r = crate::falls::step(&mut g.falls, pos[0], pos[2], level, full, grind, gain, add);
     let k = r.k;
     if k == 0.0 { return level; }
     g.stats.shards.crunches += 1;
@@ -620,7 +620,7 @@ pub fn glass_shards_step(g: &mut crate::game::Game, pos: V3, level: f64) -> f64 
 /// Per frame: waiting records, the live estimate, breaks, landings due.
 pub fn glass_shards_update(g: &mut crate::game::Game, _dt: f64) {
     if !shards_live(g) {
-        if js::truthy(crate::sim_fallshome::fall_store_waiting(g)) { crate::sim_fallshome::fall_store_clear(g, Some(true), None); }
+        crate::falls::clear_waiting(&mut g.falls, crate::falls::FallKind::Glass);
         g.shards.deferred.clear();
         g.shards.deferred_n = 0.0;
         g.shards.breaks.clear();
@@ -630,7 +630,7 @@ pub fn glass_shards_update(g: &mut crate::game::Game, _dt: f64) {
         g.shards.deferred_n -= e.count;
         glass_shards_send(g, e.pos, e.dir, e.count, e.o, e.seed);
     }
-    if !js::truthy(crate::sim_fallshome::fall_store_waiting(g)) && g.shards.lives.is_empty() && g.shards.breaks.is_empty() {
+    if g.falls.glass.waiting.is_empty() && g.shards.lives.is_empty() && g.shards.breaks.is_empty() {
         g.shards.recs_this_frame = 0.0;
         g.shards.sounds_this_frame = 0.0;
         return;
@@ -647,8 +647,8 @@ pub fn glass_shards_update(g: &mut crate::game::Game, _dt: f64) {
         for it in b { glass_shards_shatter(g, it.c, it.speed); }
     }
     let (level, gap) = (g.k.shards.level, g.k.shards.event_gap);
-    for p in crate::sim_fallshome::fall_store_due(g, now, level, gap, None) {
-        glass_shards_sound(g, p.name.as_str(), p.pos, p.gain, p.rate);
+    for p in crate::falls::due(&mut g.falls, crate::falls::FallKind::Glass, now, level, gap) {
+        glass_shards_sound(g, p.sound.as_str(), p.pos, p.gain, p.rate);
         if p.heard {
             g.stats.shards.events += 1;
             let serial = g.serial();
@@ -671,7 +671,7 @@ pub fn glass_shards_reset(g: &mut crate::game::Game) {
 pub fn glass_shards_clear(g: &mut crate::game::Game) {
     g.shards.sound_at = JsMap::new();
     g.shards.sound_owed = JsMap::new();
-    crate::sim_fallshome::fall_store_clear(g, None, None);
+    crate::falls::clear(&mut g.falls, crate::falls::FallKind::Glass);
     g.shards.deferred.clear();
     g.shards.deferred_n = 0.0;
     g.shards.lives.clear();
