@@ -345,7 +345,7 @@ stays dark. These are guidelines, not misses like the rest of this page: each sa
   squad's room clear and nothing else; one without answers a quiet night gone loud and no squad mission, so give the
   level a row its block answers. A level whose idea is that nobody comes carries no block and says so: a line in
   `NOBODY_COMES` (`tools/qa/level-needs.ts`: the level, and why in a few words), and its name with the reason in the
-  response team's write-up (`docs/agents/enemies.md`). A look twin carries its plain file's block. **seen** the office's
+  response team's write-up (`docs/agents/enemies.md`). **seen** the office's
   stairwell team by constant on every floor; the maintainer: "let's make it part of the level design and always make
   sense (ideally w.r.t. the concept/design of the level) and not all levels should have it". **check** the need (a block
   has its `why`, a twin the same block, a row it answers; no block and no line in the table is a NOTE; both is a FAIL);
@@ -399,7 +399,7 @@ stays dark. These are guidelines, not misses like the rest of this page: each sa
   says so. **check** `levels second-way <name>` counts the walls where it issues charges.
 - **The sizes it offers are sizes it was laid out for**: a row built for one size says `only`. Who carries the floor's
   grenades follows room order.
-- **The Team & kit picture** is the level's own `scenarios.kitView` block, the same to the byte in a look twin; name boxes
+- **The Team & kit picture** is the level's own `scenarios.kitView` block; name boxes
   by group, not by a generated `box_NNNN` id. Where a `hide` list does name box ids, whoever shifts the level's box ids
   builds that list again from the generator's box range in the same step (other typed lists are left): a generated id names
   whatever box now holds that number. Every way's picture stands at a door the squad's tools can work: a door with a

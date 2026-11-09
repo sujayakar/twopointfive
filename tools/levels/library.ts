@@ -6,7 +6,7 @@
 //   bun run tools/levels/library.ts --pictures DIR  a PNG of each piece (DIR/<kit>.<piece>.png), drawn from its boxes (libraryDraw.ts)
 //   bun run tools/levels/library.ts --json FILE     everything below as data (a gallery page and the dressing tasks' tables read it)
 // HOW IT KNOWS. A kit hands its pieces out through src/scene/library.ts `pieces(kit, fns)`; with a watcher set, each piece laid is told. So this file
-//   1. builds EVERY generator under tools/levels with the watcher on (and runs a look file's `finish` on what its plain generator built): which piece each
+//   1. builds EVERY generator under tools/levels with the watcher on (and runs a generator's `finish` on what its `build` built): which piece each
 //      level lays, how often, and with what arguments;
 //   2. takes for each piece the call a SHOWROOM makes (tools/levels/gwot-yard.ts stands the look's kit, levels/library-hall.json the older kits'), else the first
 //      call any level makes, and lays that one call alone in a fresh kit: the boxes, loose parts and lamps it adds are the piece — its size, what it costs,
@@ -74,13 +74,12 @@ const levels: string[] = [], unbuilt: { level: string; why: string }[] = [], bui
 for (const f of readdirSync(HERE).filter(f => f.endsWith('.ts')).sort()) {
   if (!/^export (?:function|const) build\b/m.test(readFileSync(resolve(HERE, f), 'utf8'))) continue;   // (a file with no build() is a kit or a tool: importing export.ts would run it)
   const gen = await import(resolve(HERE, f)), name = basename(f, '.ts');
-  // A SKINNED LEVEL (`<name>.ts`) builds with its floor's generator (`<name>-floor.ts`), which is counted under the floor's name; what the skin lays itself is
-  // its `finish` (the skin's rugs, skirts and patches, its own dressing), run here on a level built unheard
+  // a generator's `finish` is its skin (the rugs, skirts and patches, its own dressing): what it lays counts with what `build` lays, under the level's one name
   const look = typeof gen.finish === 'function';
-  building = look ? '' : name; open.length = 0;
+  building = name; open.length = 0;
   try {
     const built = gen.build();
-    if (look) { if (built.scenarios) built.level.scenarios = built.scenarios; building = name; gen.finish(built.level, built.groups); }   // (the file's own block first, as export.ts hands it over)
+    if (look) { if (built.scenarios) built.level.scenarios = built.scenarios; gen.finish(built.level, built.groups); }   // (the file's own block first, as export.ts hands it over)
     levels.push(name); builtBoxes.set(name, built.level.boxes);
   } catch (e) { unbuilt.push({ level: name, why: firstLine(e) }); }
 }
@@ -89,9 +88,6 @@ building = ''; for (const k of KITS) k.stand();                   // a kit no ge
 watchPieces(null);
 levels.sort();
 const onList = new Set(ALL_MISSIONS.filter(s => !s.offList).map(s => (s.level ?? 'office.json').replace(/\.json$/, '')));
-/** a level file's name as its generator's (the two differ for one level) */
-const fileOf = (level: string) => level.replace(/-floor$/, '');
-
 // ------------------------------------------------------------------ paints: every colour that has a name, by its numbers ----
 const key = (a: Vec3) => a.map(v => Number(v).toFixed(4)).join(',');
 interface PaintRow { table: string; name: string; albedo: Vec3; rough?: number; metal?: boolean; sim?: string; surface?: string }
@@ -403,10 +399,10 @@ function usesPage(): string {
   const L: string[] = [], played = levels.filter(l => !SHOWROOMS.includes(l));
   const kitsOf = (level: string) => KITS.filter(k => catalogue.some(p => p.kit === k.name && level in p.uses)).map(k => k.name);
   L.push('# The library: which level lays which piece', '', 'Written by `bun run tools/levels/library.ts --uses FILE`. A piece laid from inside another piece is counted as the outer one;',
-    'a skinned level (`<name>`) is counted for what its own finish step lays on top of its floor (`<name>-floor`). The four levels built on `src/scene/levelKit.ts`',
+    'a skinned level counts what its floor lays and what its finish step lays on top. The four levels built on `src/scene/levelKit.ts`',
     '(defuse, floodlit, mousehole, records) lay the office\'s pieces through plain functions no kit hands out, so those calls are not counted.', '',
     '## The generators', '', '| Level | On the mission list | Kits it lays from | Pieces laid |', '|---|---|---|---|');
-  for (const l of played) L.push(`| ${l} | ${onList.has(fileOf(l)) ? 'yes' : ''} | ${kitsOf(l).join(', ')} | ${catalogue.reduce((n, p) => n + (p.uses[l] ?? 0), 0)} |`);
+  for (const l of played) L.push(`| ${l} | ${onList.has(l) ? 'yes' : ''} | ${kitsOf(l).join(', ')} | ${catalogue.reduce((n, p) => n + (p.uses[l] ?? 0), 0)} |`);
   L.push('', '## The pieces', '', '| Piece | Levels | Laid |', '|---|---|---|');
   for (const p of catalogue) { const ls = usesOf(p); L.push(`| ${p.id} | ${ls.length ? `${ls.length}: ${ls.map(l => `${l} ${p.uses[l]}`).join(', ')}` : 'a showroom only'} | ${ls.reduce((n, l) => n + p.uses[l], 0)} |`); }
   L.push('');
@@ -417,7 +413,7 @@ function usesPage(): string {
 const text = page(), OUT = resolve(ROOT, PAGE);
 const pictures = valueOf('--pictures'), json = valueOf('--json'), uses = valueOf('--uses');
 if (pictures) { mkdirSync(pictures, { recursive: true }); for (const p of catalogue) if (p.boxes.length) writeFileSync(resolve(pictures, `${p.id}.png`), encodePng(drawBoxes(p.boxes), 240, 180)); }
-if (json) writeFileSync(json, JSON.stringify({ showrooms: SHOWROOMS, levels: levels.map(l => ({ level: l, onList: onList.has(fileOf(l)) })), kits: KITS.map(k => ({ name: k.name, file: k.file })),
+if (json) writeFileSync(json, JSON.stringify({ showrooms: SHOWROOMS, levels: levels.map(l => ({ level: l, onList: onList.has(l) })), kits: KITS.map(k => ({ name: k.name, file: k.file })),
   pieces: catalogue.map(({ boxes: _boxes, rows: _rows, ...p }) => ({ ...p, toAMan: toAMan(p as Piece), cost: costOf(p as Piece) })), paints: PAINT_TABLES, problems }, null, 1));
 if (uses) writeFileSync(uses, usesPage());
 if (flag('--write')) { writeFileSync(OUT, text); console.log(`wrote ${PAGE}`); }
