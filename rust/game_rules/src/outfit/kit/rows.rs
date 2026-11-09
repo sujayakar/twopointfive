@@ -860,11 +860,13 @@ mod tests {
         m
     }
 
+    /// A FAILURE MEANS: the setup's row names a split a card does not hold.
     #[test]
     fn a_card_is_a_split_only_on_both_counts() {
         assert_eq!(mix_of(&card(4.0, 2.0)), Some(CanMix::Issued));
         assert_eq!(mix_of(&card(2.0, 4.0)), Some(CanMix::Stun));
-        assert_eq!(mix_of(&card(1.0, 1.0)), None);
+        assert_eq!(mix_of(&card(4.0, 1.0)), None);
+        assert_eq!(mix_of(&card(1.0, 2.0)), None);
     }
 
 }

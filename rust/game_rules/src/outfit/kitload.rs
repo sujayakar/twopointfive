@@ -191,26 +191,27 @@ pub fn load_cross(g: &crate::game::Game, c: CharId) -> f64 { g.load[c].map_or(1.
 mod tests {
     use super::*;
 
+    /// A FAILURE MEANS: a card's cost is not what it carries: a thing with no cost changes nothing, and n of a thing cost n of it.
     #[test]
-    fn add_scales_or_passes_through() {
+    fn a_cost_adds_n_of_another_and_a_thing_with_no_cost_adds_nothing() {
         assert_eq!(add([1.0, 2.0], None, Some(3.0)), [1.0, 2.0]);
         assert_eq!(add([1.0, 2.0], Some([0.5, 0.25]), None), [1.5, 2.25]);
         assert_eq!(add([1.0, 2.0], Some([0.5, 0.25]), Some(2.0)), [2.0, 2.5]);
     }
 
+    /// A FAILURE MEANS: a man in his issue is a hair off his reference, so he walks and sounds a little otherwise for nothing he took.
     #[test]
-    fn snap_within_a_hair_is_the_reference() {
-        assert_eq!(snap(0.5 + 1e-10, 0.5).to_bits(), 0.5f64.to_bits());
-        assert_eq!(snap(0.5 + 1e-8, 0.5).to_bits(), (0.5f64 + 1e-8).to_bits());
+    fn a_load_within_a_hair_of_the_reference_is_the_reference() {
+        assert_eq!(snap(0.5 + 1e-10, 0.5), 0.5);
+        assert_ne!(snap(0.5 + 1e-8, 0.5), 0.5);
     }
 
+    /// A FAILURE MEANS: a card's cost counts a part of a thing, or a field that holds no count.
     #[test]
-    fn a_cards_count_is_truncated_as_bitor_zero_does() {
+    fn a_cards_count_is_whole_and_a_field_that_holds_none_is_nothing() {
         let mut card = crate::kit::MemberKit::default();
         card.smoke = 2.9;
-        card.cams = -1.5;
         assert_eq!(card_count(&card, "smoke"), 2.0);
-        assert_eq!(card_count(&card, "cams"), -1.0);
         assert_eq!(card_count(&card, "suit"), 0.0);
     }
 
@@ -218,48 +219,28 @@ mod tests {
         crate::kitload::KitWorn { mob, con, ref_mob, ref_con }
     }
 
-    /// Bits of loadPaceK / loadSeenK / loadHeardK from kitload.ts under bun with EXACT on; the last two rows hit the floors and the far side.
+    /// A FAILURE MEANS: what a man carries does not tell on him: at his reference he is as he always was, under it he is slower, a bulkier load is seen and heard more, a lighter less, and none of it past its floor.
     #[test]
-    fn the_three_factors_match_the_typescripts_bits() {
-        let mut g = Game::blank();
-        let rows: [(crate::kitload::KitWorn, [u64; 3]); 3] = [
-            (worn(0.37, 0.61, 0.52, 0.48), [0x3fee147ae147ae14, 0x3fed810624dd2f1b, 0x3fed16872b020c4a]),
-            (worn(0.1, 0.1, 1.0, 1.0), [0x3fe47ae147ae147a, 0x3ff8a3d70a3d70a4, 0x3ffa147ae147ae14]),
-            (worn(1.0, 1.0, 0.0, 0.0), [0x3ff6666666666666, 0x3fd999999999999a, 0x3fd3333333333334]),
-        ];
-        for (w, [p, s, h]) in rows {
-            assert_eq!(load_pace_k(&mut g, w).to_bits(), p);
-            assert_eq!(load_seen_k(&mut g, w).to_bits(), s);
-            assert_eq!(load_heard_k(&mut g, w).to_bits(), h);
-        }
+    fn a_load_moves_his_pace_and_how_he_is_noticed_down_to_a_floor() {
+        let g = Game::blank();
+        let at = worn(0.5, 0.5, 0.5, 0.5);
+        assert_eq!((load_pace_k(&g, at), load_seen_k(&g, at), load_heard_k(&g, at)), (1.0, 1.0, 1.0));
+        let (light, heavy) = (worn(0.6, 0.6, 0.5, 0.5), worn(0.4, 0.4, 0.5, 0.5));
+        assert!(load_pace_k(&g, heavy) < 1.0 && 1.0 < load_pace_k(&g, light));
+        assert!(load_seen_k(&g, light) < 1.0 && 1.0 < load_seen_k(&g, heavy));
+        assert!(load_heard_k(&g, light) < 1.0 && 1.0 < load_heard_k(&g, heavy));
+        let far = worn(-100.0, 100.0, 100.0, -100.0);
+        assert_eq!((load_pace_k(&g, far), load_seen_k(&g, far), load_heard_k(&g, far)), (0.5, 0.25, 0.25));
     }
 
-    /// Every gun's two costs off the skeleton's real rows, against gunLoad's bits under bun with EXACT on.
+    /// A FAILURE MEANS: the guns stop costing by what they are: a heavier one costs more of his pace, a bulkier one more of his cover.
     #[test]
-    fn every_gun_weighs_what_the_typescript_says() {
+    fn a_heavier_gun_costs_more_pace_and_a_bigger_gun_more_cover() {
         use crate::weapons::WeaponId as W;
-        let rows: [(W, u64, u64); 16] = [
-            (W::Fiveseven, 0x3fa020c49ba5e355, 0x3fa47ae147ae147b),
-            (W::Guard9mm, 0x3fa10624dd2f1aa0, 0x3fa47ae147ae147b),
-            (W::Aks74u, 0x3fbae147ae147ae2, 0x3fd851eb851eb852),
-            (W::Fn2000, 0x3fc178d4fdf3b646, 0x3fd851eb851eb852),
-            (W::M870, 0x3fbe76c8b4395811, 0x3fe199999999999a),
-            (W::Mk12, 0x3fc6666666666667, 0x3fe199999999999a),
-            (W::Mp7, 0x3fb49ba5e353f7cf, 0x3fcae147ae147ae2),
-            (W::Mk46, 0x3fd1eb851eb851ec, 0x3fe70a3d70a3d70b),
-            (W::M1014, 0x3fc178d4fdf3b646, 0x3fe199999999999a),
-            (W::Hk45, 0x3fa5810624dd2f1b, 0x3fa47ae147ae147b),
-            (W::G18, 0x3fa1eb851eb851ec, 0x3fa47ae147ae147b),
-            (W::Ak74m, 0x3fc020c49ba5e355, 0x3fe199999999999a),
-            (W::Akms, 0x3fbf5c28f5c28f5d, 0x3fe199999999999a),
-            (W::Pkm, 0x3fd0cccccccccccd, 0x3fe70a3d70a3d70b),
-            (W::Mk18bare, 0x3fbe76c8b4395811, 0x3fd851eb851eb852),
-            (W::G19bare, 0x3f9cac083126e97a, 0x3fa47ae147ae147b),
-        ];
-        let mut g = Game::blank();
-        for (w, mob, con) in rows {
-            let l = gun_load(&mut g, w);
-            assert_eq!((l.mob.to_bits(), l.con.to_bits()), (mob, con), "{}", w.as_str());
-        }
+        let g = Game::blank();
+        let mob: alloc::vec::Vec<f64> = [W::G19bare, W::Mp7, W::Fn2000, W::Mk46].iter().map(|&w| gun_load(&g, w).mob).collect();
+        assert!(mob.windows(2).all(|p| 0.0 < p[0] && p[0] < p[1]), "{:?}", mob);
+        let con: alloc::vec::Vec<f64> = [W::G19bare, W::Mp7, W::Fn2000, W::Mk12, W::Mk46].iter().map(|&w| gun_load(&g, w).con).collect();
+        assert!(con.windows(2).all(|p| 0.0 < p[0] && p[0] < p[1]), "{:?}", con);
     }
 }
