@@ -12,7 +12,7 @@
 //   · THE SET IS DERIVED, never kept: the step that is up says it all, so a checkpoint put back or a snapshot holds nothing of it.
 //   · A CUE. A step's `cue` is sent to the level's script (director.ts, its play program 'tutorial') as the signal `lesson:<cue>` the tick the step
 //     comes up; the lesson test `{ is: 'cue', name }` is true once the program has raised `done:<name>`. The program is started here when the run
-//     starts, after a restart, and after a checkpoint is put back (with that checkpoint's own cue sent again: a beat starts clean from its cue).
+//     starts, and after a restart.
 //     Every order the player gives reaches the program too, as the signal `order:<id>`.
 //   · AUTHORED CHECKPOINTS. A step's `checkpoint` asks for one save the tick it comes up (savestate.ts Checkpoints.keep: kept in memory, whatever is on
 //     the floor), and on a rails level those are the only saves: the every-step request and the floor's own triggers stand down.
@@ -108,7 +108,7 @@ export const RAILS = { on: false,
   flatRing: false,
   /** seconds a spared teammate is given when the level names none */
   spareSecs: 6 };
-export const RAILS_STATS = { dropped: 0, cues: 0, starts: 0, kept: 0, putBack: 0, spared: 0 };
+export const RAILS_STATS = { dropped: 0, cues: 0, starts: 0, kept: 0, spared: 0 };
 
 /** an action → the key codes it owns (the game's own codes: host/keymap.ts moves keys, never codes), its mouse buttons (bits of Input.buttons) and the wheel */
 interface Act { keys?: string[]; buttons?: number; wheel?: boolean }
@@ -193,7 +193,7 @@ export function railsFaults(L: LessonData): string[] {
 
 /** THE FRAME'S RECORD on the page's copy, as the bridge fills it from the Rust game. Nothing here decides anything: what a HUD is told is `game.view.lesson`. */
 export class Rails {
-  run: unknown = null; answered = -1; back = false; ordersSeen = 0;
+  run: unknown = null; answered = -1; ordersSeen = 0;
   /** the sky seat: the view's own shift about the squad, the eased point it rides, and whether the player has been parked for this run */
   sky = { off: [0, 0, 0] as Vec3, mid: null as Vec3 | null, midT: -1, parked: false, was: null as { invisible: boolean } | null, view: null as { yaw: number; pitch: number; dist: number } | null, again: false };
   /** teammates spared a down: the game's clock each is back on his feet at, by character id */
@@ -221,11 +221,6 @@ export class Rails {
     this.sky.again = false;
   }
 
-  /** a checkpoint of this run was put back (savestate.ts loadMem, after every object is as it stood): the program's beats are functions half run, which no
-   *  snapshot holds — it is started again, and the step's cue sent again, on the next tick */
-  putBack() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Rails.putBack', this, []); if (__r !== RUST_PASS) return __r as any; } } if (!this.g.view.lesson?.rails) return; this.back = true; RAILS_STATS.putBack++; }
-  /** an authored checkpoint was just taken with the program stopped for it (savestate.ts): started again on the next tick, the step's cue with it */
-  resume() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Rails.resume', this, []); if (__r !== RUST_PASS) return __r as any; } } if (this.g.view.lesson?.rails) this.back = true; }
 
   /** is this man on his knee right now, spared */
   isSpared(gd: Guard): boolean { const t = this.spared.get(gd.char.id); return t !== undefined && this.g.time < t; }
