@@ -75,7 +75,7 @@ fn pall_near(g: &mut Game, px: f64, y: f64, pz: f64, r: f64) -> Vec<[f64; 2]> {
 // ------------------------------------------------------------------ the translation
 
 /// A round stopped at `hit_p`: decals, a screen killed, paper, bursts and dust, knock-offs, tiles, what lies about, and the wall's share.   (destruction.ts round)
-#[doc(hidden)] pub fn destruction_round__body(g: &mut crate::game::Game, shooter: CharId, hit_p: V3, dir: V3, hit: &crate::destruction::DestructionRoundHit, def: &crate::weapons::WeaponDef) {
+pub fn destruction_round(g: &mut crate::game::Game, shooter: CharId, hit_p: V3, dir: V3, hit: &crate::destruction::DestructionRoundHit, def: &crate::weapons::WeaponDef) {
     let chaos = chaos_of(g);
     if chaos <= 0.0 { return; }
     if hit.index.is_none() && hit.prop.is_none() { return; }
@@ -299,7 +299,7 @@ pub fn destruction_break_fixture_box(g: &mut crate::game::Game, i: f64) {
 }
 
 /// A charge went off at `at`: heat, the desk cleared, papers up, the tile down, dust off the ceiling, what lies about thrown again.   (destruction.ts bang)
-#[doc(hidden)] pub fn destruction_bang__body(g: &mut crate::game::Game, at: V3, who: Option<f64>, power: Option<f64>, stun: Option<bool>) {
+pub fn destruction_bang(g: &mut crate::game::Game, at: V3, who: Option<f64>, power: Option<f64>, stun: Option<bool>) {
     let mut who = who.unwrap_or(crate::consts::NOBODY_ID);
     let power = power.unwrap_or(1.0);
     let stun = stun.unwrap_or(false);
@@ -564,8 +564,6 @@ pub fn destruction_hide(g: &mut crate::game::Game, d: &crate::destruction::Destr
         }
     }
     crate::scene_collision::wrote(g);
-    let (c, h) = { let x = seam_box(g, b); (x.c, x.h) };
-    crate::smoke_types::smoke_system_like_obstacles_changed(g, c, m::hyp3(h[0], h[1], h[2]) + 0.6);
 }
 
 /// The escalated material burst on top of impactFx's, scaled by E and the rifle factor: what flies is the picture's, by what the box says it is made of.   (destruction.ts burst)
@@ -646,7 +644,7 @@ pub fn destruction_pall_hash(g: &crate::game::Game, at: V3, k: f64) -> f64 {
 }
 
 /// One emitter of a pall into the solver; whether it was asked. Mirrored out of a blocked place, pushed off what stands by, tightened where it has no room.   (destruction.ts pallEmit)
-#[doc(hidden)] pub fn destruction_pall_emit__body(g: &mut crate::game::Game, r: crate::destruction::DestructionPallEmitR, from: V3, pos: V3, dir: V3, j: f64, tint: V3, gain: Option<f64>) -> bool {
+pub fn destruction_pall_emit(g: &mut crate::game::Game, r: crate::destruction::DestructionPallEmitR, from: V3, pos: V3, dir: V3, j: f64, tint: V3, gain: Option<f64>) -> bool {
     let gain = gain.unwrap_or(1.0);
     let k = g.k.chaos.pall;
     if crate::smoke_types::smoke_system_like_budget(g) < k.slack {
@@ -751,35 +749,6 @@ pub fn destruction_pall_burst(g: &mut crate::game::Game, at: V3, size: Option<f6
         let dust = crate::particle_fx::emit_dust(g, [c[0], c[1] + 0.2, c[2]], [0.0, 1.0, 0.0], m::round(b.dust * s), crate::render_particles::EmitOpts { shape: Some(crate::render_particles::EmitShape::Puff), speed: b.dust_speed, speed_jit: Some(0.8), lift: Some(0.18), life: b.dust_life, life_jit: Some(0.35), size: b.dust_size, size_jit: Some(0.4), pos_jit: Some(0.5 * s), color: Some(v3::scale(tint, 0.75)), ..Default::default() });
         g.stats.destruction.pall_dust += dust as i32;
     }
-}
-
-
-#[doc(hidden)] pub fn destruction_bang(g: &mut crate::game::Game, at: V3, who: Option<f64>, power: Option<f64>, stun: Option<bool>) {
-    use crate::io::Io;
-    if g.taps & (1u64 << 3) == 0 { return destruction_bang__body(g, at, who, power, stun); }
-    let mut o = crate::io::W::new(); at.w(&mut o); who.w(&mut o); power.w(&mut o); stun.w(&mut o);
-    destruction_bang__body(g, at, who, power, stun);
-    crate::out_events::push_tap(g, 3, &o.b, &[]);
-}
-
-
-#[doc(hidden)] pub fn destruction_round(g: &mut crate::game::Game, shooter: CharId, hit_p: V3, dir: V3, hit: &crate::destruction::DestructionRoundHit, def: &crate::weapons::WeaponDef) {
-    use crate::io::Io;
-    if g.taps & (1u64 << 4) == 0 { return destruction_round__body(g, shooter, hit_p, dir, hit, def); }
-    let mut o = crate::io::W::new(); shooter.w(&mut o); hit_p.w(&mut o); dir.w(&mut o); hit.w(&mut o); def.id.w(&mut o);
-    destruction_round__body(g, shooter, hit_p, dir, hit, def);
-    crate::out_events::push_tap(g, 4, &o.b, &[]);
-}
-
-
-#[doc(hidden)] pub fn destruction_pall_emit(g: &mut crate::game::Game, r: crate::destruction::DestructionPallEmitR, from: V3, pos: V3, dir: V3, j: f64, tint: V3, gain: Option<f64>) -> bool {
-    use crate::io::Io;
-    if g.taps & (1u64 << 5) == 0 { return destruction_pall_emit__body(g, r, from, pos, dir, j, tint, gain); }
-    let mut o = crate::io::W::new(); r.w(&mut o); from.w(&mut o); pos.w(&mut o); dir.w(&mut o); j.w(&mut o); tint.w(&mut o); gain.w(&mut o);
-    let r = destruction_pall_emit__body(g, r, from, pos, dir, j, tint, gain);
-    let mut a = crate::io::W::new(); r.w(&mut a);
-    crate::out_events::push_tap(g, 5, &o.b, &a.b);
-    r
 }
 
 #[cfg(test)]

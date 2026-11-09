@@ -266,7 +266,7 @@ pub struct ShardsStats {
 }
 
 /// (src/game/shards.ts:128 SHARDS_DEFAULTS: a table nothing writes)
-pub fn shards_defaults() -> crate::knobs::ShardsK { crate::knobs::page_shards() }
+pub fn shards_defaults() -> crate::knobs::ShardsK { crate::knobs::ShardsK::page() }
 
 /// (src/game/shards.ts:131 LS_KEY)
 pub const LS_KEY: &str = "twopointsix.shards";

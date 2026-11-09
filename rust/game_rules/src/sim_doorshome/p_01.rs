@@ -24,7 +24,7 @@ pub fn door_io(g: &mut crate::game::Game) -> crate::sim_doorshome::DoorIo {
     let x = crate::sim_sim::sim();
     if module_disagrees() {
         panic!(
-            "the Rust module keeps {} doors of {} columns and src/sim/doorshome.ts {} of {}: bun run tools/sim/build.ts",
+            "rust/sim keeps {} doors of {} columns and the rules {} of {}",
             ::sim::doors::cap(0), ::sim::doors::cap(5), DOOR_CAP, DOOR_COLS
         );
     }

@@ -15,15 +15,11 @@
 // GPU=1: the pause card (held to its own cut words at 1280 × 720, where the factor is 1) and the options over it at the three sizes; the kit, meters and objective inside the window; the ring over the same point of the
 // picture whatever the size.
 // exit 0 = every line PASS with no page error · 1 = otherwise. Layout only: nothing here has been seen on a GPU, and no picture is judged.
-const { chromium } = require('/opt/node-tools/node_modules/playwright');
+const { page: pageRun, NOISE, NO_GPU } = require('./page.cjs'), PAGE = pageRun({ name: 'textsize-page' }), { check, note: log } = PAGE, PORT = PAGE.port;
 const fs = require('fs'), path = require('path');
-const PORT = process.env.PORT || 5199, WAS = process.env.WAS || '', GPU = process.env.GPU === '1', BREAK = process.env.TEXTSIZE_BREAK === '1', QUALITY = process.env.QUALITY || 'verylow', SIZES = process.env.SIZES || '', outDir = process.argv[2] || '';
-const GPU_FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
-const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage textures \(5\) in the Compute stage/;
-const T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a);
+const WAS = process.env.WAS || '', GPU = process.env.GPU === '1', BREAK = process.env.TEXTSIZE_BREAK === '1', QUALITY = process.env.QUALITY || 'verylow', SIZES = process.env.SIZES || '', outDir = process.argv[2] || '';
 if (outDir) fs.mkdirSync(outDir, { recursive: true });
-const report = { checks: [], errors: [] };
-const check = (ok, label, detail = '') => { report.checks.push({ ok: !!ok, label, detail }); console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}${detail ? `\n    ${detail}` : ''}`); };
+const report = { checks: PAGE.lines, errors: [] };
 const Q = (more = '') => `paused&quality=${QUALITY}&mute${BREAK || more === 'off' ? '&textsize=0' : ''}${more && more !== 'off' ? '&' + more : ''}`;
 // the factor with nothing chosen is written out again here (the window over 1920 × 1080, 1 to 3); a step's is asked of the page's own table (`__textsize.want`,
 // which tools/qa/textsize-check.ts holds to written numbers)
@@ -72,19 +68,14 @@ const MEDIA = () => { const kept = window.__textsize?.on ? window.__textsize.med
 const RECTS = (sel) => [...document.querySelectorAll(sel)].flatMap(root => [...root.querySelectorAll('*')].filter(e => [...e.childNodes].some(n => n.nodeType === 3 && n.textContent.trim()) && !e.closest('.op-row[data-text]')).map(e => { const b = e.getBoundingClientRect(); return `${String(e.className).split(' ')[0] || e.tagName}:${e.textContent.trim().slice(0, 12)}:${b.left.toFixed(1)},${b.top.toFixed(1)},${b.width.toFixed(1)},${b.height.toFixed(1)}:${getComputedStyle(e).fontSize}`; }));
 const says = list => list.length ? list.slice(0, 6).map(c => `${c.cls} '${c.txt}' ${c.why}`).join(' · ') + (list.length > 6 ? ` · and ${list.length - 6} more` : '') : 'none';
 
-function watch(page, name, gpu) {
-  page.on('pageerror', e => { if (!gpu && /WebGPU|adapter/i.test(String(e))) return; report.errors.push(`${name}: ${String(e).slice(0, 300)}`); log('PAGE ERROR', String(e).slice(0, 200)); });
-  page.on('console', m => { if (m.type() !== 'error') return; const t = m.text(); if (NOISE.test(t) || /Failed to load resource|Failed to fetch/.test(t) || (!gpu && /WebGPU|adapter/i.test(t))) return; report.errors.push(`${name}: ${t.slice(0, 300)}`); log('console error', t.slice(0, 200)); });
-}
+const watching = (name, gpu) => ({ into: report.errors, as: `${name}: `, say: true, thrown: gpu ? undefined : /WebGPU|adapter/i, skip: [NOISE, /Failed to load resource|Failed to fetch/, ...(gpu ? [] : [/WebGPU|adapter/i])] });
 const still = (page, name) => outDir ? page.screenshot({ path: path.join(outDir, name), timeout: 60000 }).then(() => true, e => { log('no still', name, String(e).split('\n')[0].slice(0, 100)); return false; }) : Promise.resolve(false);
 
 /** one window: boot the page with no adapter and walk the screens */
 async function screens(browser, W, H, dpr, opt = {}) {
   const tag = `${W}×${H}${dpr !== 1 ? ` at ${dpr} device pixels` : ''}${opt.step != null ? `, step ${opt.step}` : ''}`, name = `${W}x${H}${dpr !== 1 ? `@${dpr}` : ''}${opt.step != null ? `-s${opt.step}` : ''}`;
-  const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: dpr });
-  await ctx.addInitScript(([step]) => { addEventListener('DOMContentLoaded', () => { const s = document.createElement('style'); s.textContent = '#fatal { display: none !important; }'; document.head.appendChild(s); }); try { if (step != null && !sessionStorage.getItem('ts-set')) { sessionStorage.setItem('ts-set', '1'); if (step === 1) localStorage.removeItem('twopointsix.textsize'); else localStorage.setItem('twopointsix.textsize', String(step)); } } catch { /* */ } }, [opt.step ?? null]);
-  const page = await ctx.newPage(); watch(page, name, false);
-  const boot = async () => { await page.goto(`http://localhost:${PORT}/?${Q()}`, { waitUntil: 'domcontentloaded', timeout: 180000 }); await page.waitForSelector('#menu .actions button', { timeout: 60000 }); await page.waitForTimeout(600); };
+  const { context: ctx, page } = await PAGE.open({ browser, size: [W, H], dpr, fatalOff: true, errors: watching(name, false), init: [[([step]) => { try { if (step != null && !sessionStorage.getItem('ts-set')) { sessionStorage.setItem('ts-set', '1'); if (step === 1) localStorage.removeItem('twopointsix.textsize'); else localStorage.setItem('twopointsix.textsize', String(step)); } } catch { /* */ } }, [opt.step ?? null]]] });
+  const boot = async () => { await page.goto(PAGE.url(Q()), { waitUntil: 'domcontentloaded', timeout: 180000 }); await page.waitForSelector('#menu .actions button', { timeout: 60000 }); await page.waitForTimeout(600); };
   await boot();
   const want = opt.step == null ? autoFor(W, H) : await wantOf(page, W, H, opt.step), s = await page.evaluate(STATE);
   check(s.on && s.cls && near(s.zoom, want) && near(parseFloat(s.tz), want) && s.layers.some(([id]) => id === 'menu') && s.layers.every(([, z]) => near(z, want)), `${tag}: the factor is the window's (${want}) and every layer on the screen is drawn at it`,
@@ -123,11 +114,9 @@ async function screens(browser, W, H, dpr, opt = {}) {
 
 /** the setting: the keys, the row, the kept choice */
 async function setting(browser) {
-  const W = 3840, H = 2160, ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1 });
-  await ctx.addInitScript(() => { addEventListener('DOMContentLoaded', () => { const s = document.createElement('style'); s.textContent = '#fatal { display: none !important; }'; document.head.appendChild(s); });
-    window.__seen = []; addEventListener('keydown', e => window.__seen.push(['key', e.key, e.ctrlKey || e.metaKey, e.defaultPrevented])); addEventListener('wheel', e => window.__seen.push(['wheel', e.deltaY, e.ctrlKey, e.defaultPrevented]), { passive: true }); });
-  const page = await ctx.newPage(); watch(page, 'setting', false);
-  const boot = async () => { await page.goto(`http://localhost:${PORT}/?${Q()}`, { waitUntil: 'domcontentloaded', timeout: 180000 }); await page.waitForSelector('#menu .actions button', { timeout: 60000 }); await page.waitForTimeout(500); };
+  const W = 3840, H = 2160, { context: ctx, page } = await PAGE.open({ browser, size: [W, H], fatalOff: true, errors: watching('setting', false), init: [() => {
+    window.__seen = []; addEventListener('keydown', e => window.__seen.push(['key', e.key, e.ctrlKey || e.metaKey, e.defaultPrevented])); addEventListener('wheel', e => window.__seen.push(['wheel', e.deltaY, e.ctrlKey, e.defaultPrevented]), { passive: true }); }] });
+  const boot = async () => { await page.goto(PAGE.url(Q()), { waitUntil: 'domcontentloaded', timeout: 180000 }); await page.waitForSelector('#menu .actions button', { timeout: 60000 }); await page.waitForTimeout(500); };
   await boot(); await page.evaluate(() => localStorage.removeItem('twopointsix.textsize')); await boot();
   const z = async () => (await page.evaluate(STATE)), { n: N, base: BASE } = await tableOf(page), LAST = N - 1, zoomFor = (w, h, i) => i === BASE ? autoFor(w, h) : wantOf(page, w, h, i);
   let at = BASE; const then = d => at = d === 0 ? BASE : Math.max(0, Math.min(LAST, at + d)), E = [then(1), then(1), then(1), then(1), then(-1), then(0)];
@@ -159,16 +148,14 @@ async function setting(browser) {
 
 /** ?textsize=0: the page as it was */
 async function off(browser) {
-  const W = 3840, H = 2160, mk = async port => { const ctx = await browser.newContext({ viewport: { width: W, height: H }, deviceScaleFactor: 1 });
-    await ctx.addInitScript(() => { addEventListener('DOMContentLoaded', () => { const s = document.createElement('style'); s.textContent = '#fatal { display: none !important; }'; document.head.appendChild(s); }); window.__seen = []; addEventListener('keydown', e => window.__seen.push([e.key, e.defaultPrevented])); try { localStorage.setItem('twopointsix.textsize', '4'); } catch { /* */ } });
-    const page = await ctx.newPage(); watch(page, `off:${port}`, false);
-    await page.goto(`http://localhost:${port}/?${Q('off')}`, { waitUntil: 'domcontentloaded', timeout: 180000 }); await page.waitForSelector('#menu .actions button', { timeout: 60000 }); await page.waitForTimeout(600);
+  const W = 3840, H = 2160, mk = async port => { const { context: ctx, page } = await PAGE.open({ browser, size: [W, H], fatalOff: true, errors: watching(`off:${port}`, false), init: [() => { window.__seen = []; addEventListener('keydown', e => window.__seen.push([e.key, e.defaultPrevented])); try { localStorage.setItem('twopointsix.textsize', '4'); } catch { /* */ } }] });
+    await page.goto(PAGE.url(Q('off'), port), { waitUntil: 'domcontentloaded', timeout: 180000 }); await page.waitForSelector('#menu .actions button', { timeout: 60000 }); await page.waitForTimeout(600);
     const title = await page.evaluate(RECTS, '#menu'), s = await page.evaluate(STATE), t1 = await page.evaluate(() => getComputedStyle(document.querySelector('#menu .t1')).fontSize);
     await page.keyboard.press('Control+Equal'); const keys = await page.evaluate(() => window.__seen.filter(x => x[0] === '='));
     await page.click('#menu .actions button.primary'); await page.waitForSelector('#missions.one.on', { timeout: 20000 }); await page.waitForTimeout(1500);
     await page.click('#missions .msec[data-head="Raids"]'); await page.waitForTimeout(400);
     const list = await page.evaluate(RECTS, '#missions'), media = await page.evaluate(MEDIA); if (port === PORT) await still(page, `missions-${W}x${H}-off.png`);
-    await page.goto(`http://localhost:${port}/?${Q('off')}`, { waitUntil: 'domcontentloaded' }); await page.waitForSelector('#menu .actions button', { timeout: 60000 }); await page.waitForTimeout(400);
+    await page.goto(PAGE.url(Q('off'), port), { waitUntil: 'domcontentloaded' }); await page.waitForSelector('#menu .actions button', { timeout: 60000 }); await page.waitForTimeout(400);
     await page.evaluate(() => [...document.querySelectorAll('#menu .actions button')].find(b => /^Options/.test(b.textContent))?.click()); await page.waitForSelector('#options.on', { timeout: 10000 });
     await page.click('#options .op-tab[data-tab="controls"]'); await page.waitForTimeout(200); const opts = await page.evaluate(RECTS, '#options');
     await page.click('#options .op-tab[data-tab="graphics"]'); await page.waitForTimeout(200); const hasRow = await page.evaluate(() => [...document.querySelectorAll('#options .op-label')].some(x => x.textContent === 'Text size'));
@@ -186,10 +173,9 @@ async function off(browser) {
 
 /** GPU=1: the pause card and the fight screen, one boot on the software adapter */
 async function fight() {
-  const browser = await chromium.launch({ headless: true, channel: 'chromium', args: GPU_FLAGS });
-  const ctx = await browser.newContext({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 }), page = await ctx.newPage(); watch(page, 'fight', true);
+  const browser = await PAGE.launch(), { page } = await PAGE.open({ browser, errors: watching('fight', true) });
   log('booting the solo night on the software adapter (minutes)');
-  await page.goto(`http://localhost:${PORT}/?solo&${Q()}`, { waitUntil: 'domcontentloaded', timeout: 180000 });
+  await page.goto(PAGE.url(`solo&${Q()}`), { waitUntil: 'domcontentloaded', timeout: 180000 });
   const fatal = await page.evaluate(async () => { await window.__ready; window.__testVisible = true; return document.getElementById('fatal')?.textContent || ''; }).catch(e => String(e));
   if (fatal) { report.errors.push('fight: ' + fatal.slice(0, 300)); await browser.close(); return; }
   log('ready');
@@ -234,7 +220,7 @@ async function fight() {
 }
 
 (async () => {
-  const browser = await chromium.launch({ headless: true, args: ['--disable-gpu'] });
+  const browser = await PAGE.launch({ flags: NO_GPU });
   if (SIZES) { for (const t of SIZES.split(',')) { const m = /^(\d+)x(\d+)(?:@([\d.]+))?(?::(\d))?$/.exec(t.trim()); if (m) await screens(browser, +m[1], +m[2], +(m[3] ?? 1), m[4] ? { step: +m[4] } : {}); } }
   else {
     for (const [W, H, dpr] of [[3840, 2160, 1], [2560, 1440, 1], [1280, 720, 1], [2560, 1440, 1.5], [1920, 1080, 2]]) await screens(browser, W, H, dpr);
@@ -247,6 +233,5 @@ async function fight() {
   const bad = report.checks.filter(c => !c.ok).length;
   if (report.errors.length) console.log(`PAGE ERRORS (${report.errors.length}):\n  ${[...new Set(report.errors)].slice(0, 8).join('\n  ')}`);
   if (outDir) fs.writeFileSync(path.join(outDir, 'report.json'), JSON.stringify(report, null, 1));
-  console.log(`=== textsize-page: ${bad || report.errors.length ? `FAIL (${bad} of ${report.checks.length} lines${report.errors.length ? `, ${report.errors.length} page errors` : ''})` : `ALL PASS (${report.checks.length} lines)`}${GPU ? '' : ' · the pause card and the fight screen need GPU=1'} ===`);
-  process.exit(bad || report.errors.length ? 1 : 0);
+  await PAGE.end(`=== textsize-page: ${bad || report.errors.length ? `FAIL (${bad} of ${report.checks.length} lines${report.errors.length ? `, ${report.errors.length} page errors` : ''})` : `ALL PASS (${report.checks.length} lines)`}${GPU ? '' : ' · the pause card and the fight screen need GPU=1'} ===`, bad || report.errors.length ? 1 : 0);
 })().catch(e => { console.error('FAILED', e); process.exit(1); });

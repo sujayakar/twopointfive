@@ -657,7 +657,7 @@ mod tests {
     /// The TypeScript's own results for checkCmd (generated under bun with EXACT on), the lens's working taken from its answer: rebuild is a stub in this crate.
     #[test]
     fn check_matches_the_typescript() {
-        let l = crate::knobs::page_cmdcheck();
+        let l = crate::knobs::CmdcheckK::page();
         for (name, raw, near, want, want_fixed) in cases() {
             let (mut c, mut fixed, whole) = check_fields(&l, raw, near);
             if near.is_some() || !whole {

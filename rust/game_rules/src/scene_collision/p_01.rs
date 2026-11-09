@@ -768,7 +768,7 @@ fn line(g: &mut Game, over: &Over, a: V3, b: V3, shrink: f64, through: f64, pane
 }
 
 /// is a→b blocked by a static or a leaf; `through` = the flags it passes (glass by default: the line of sight). (collision.ts StaticCollision.segmentBlocked)
-#[doc(hidden)] pub fn segment_blocked__body(g: &mut crate::game::Game, a: V3, b: V3, shrink: Option<f64>, through: Option<f64>, panes: Option<&mut Vec<crate::scene_collision::SegmentBlockedPanesItem>>) -> bool {
+pub fn segment_blocked(g: &mut crate::game::Game, a: V3, b: V3, shrink: Option<f64>, through: Option<f64>, panes: Option<&mut Vec<crate::scene_collision::SegmentBlockedPanesItem>>) -> bool {
     if alone(g) {
         let r = segment_blocked_ask(g, a, b, shrink, through, panes);
         crate::scene_box_mirror::box_mirror_shut(g);
@@ -1478,17 +1478,6 @@ pub fn nav_grid_walkable(g: &crate::game::Game, a: V3, b: V3) -> bool {
 /// (collision.ts clampi)
 pub fn clampi(x: f64, a: f64, b: f64) -> f64 {
     if x < a { a } else if x > b { b } else { x }
-}
-
-
-#[doc(hidden)] pub fn segment_blocked(g: &mut crate::game::Game, a: V3, b: V3, shrink: Option<f64>, through: Option<f64>, panes: Option<&mut Vec<crate::scene_collision::SegmentBlockedPanesItem>>) -> bool {
-    use crate::io::Io;
-    if g.taps & (1u64 << 17) == 0 { return segment_blocked__body(g, a, b, shrink, through, panes); }
-    let mut o = crate::io::W::new(); a.w(&mut o); b.w(&mut o); shrink.w(&mut o); through.w(&mut o);
-    let r = segment_blocked__body(g, a, b, shrink, through, panes);
-    let mut a = crate::io::W::new(); r.w(&mut a);
-    crate::out_events::push_tap(g, 17, &o.b, &a.b);
-    r
 }
 
 #[cfg(test)]

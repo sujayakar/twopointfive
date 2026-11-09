@@ -66,8 +66,9 @@ pub struct Play {
     /// every sound the game told its host to play (`audio.play`: its name, when, and where it was, None for a sound with no place). Footsteps
     /// are another call of the host's and are not kept.
     pub sounds: Vec<Sound>,
-    /// when the game told its host to open the end card, on the game's clock
+    /// when the end card came due (what a page opens it on: game_draw `ended`), on the game's clock
     pub end_cards: Vec<f64>,
+    ended: bool,
     /// every smoke event the game told its host of, in order: what it wants of the host's solver
     pub smoke: Vec<game::out_events::OutEvent>,
     /// each man's last bubble heard: when it was said, and its words
@@ -90,7 +91,7 @@ fn start_by(data: &Json, room_clear: bool, link: Option<&str>, o: &Opts) -> Play
     let Stood { mut game, host, refused, .. } = stand::stand(data, ch.assets(), &StartOpts { seed: o.seed, seats: o.seats, scenario, link: link.map(String::from), dress: o.dress, may_refuse: o.may_refuse, ..Default::default() });
     game.out.clear();
     HOLDS.with(|h| h.set(true));   // (only once a Play exists to put it down: a stand that panicked holds nothing)
-    let mut p = Play { g: game, host, frames: 0, said: Vec::new(), sounds: Vec::new(), end_cards: Vec::new(), smoke: Vec::new(), cursor: None, refused, spoke: Vec::new(), _one: one };
+    let mut p = Play { g: game, host, frames: 0, said: Vec::new(), sounds: Vec::new(), end_cards: Vec::new(), ended: false, smoke: Vec::new(), cursor: None, refused, spoke: Vec::new(), _one: one };
     p.hear();
     p
 }
@@ -135,11 +136,13 @@ impl Play {
         for e in out {
             match e {
                 E::GameAudioLikePlay(p) => self.sounds.push(Sound { t, name: p.name.clone(), at: p.pos }),
-                E::EndCard => self.end_cards.push(t),
                 E::SmokeSystemLikeEmit(_) | E::SmokeSystemLikePush(_) | E::SmokeSystemLikeRound(_) => self.smoke.push(e),
                 _ => {}
             }
         }
+        let ended = game_draw::view::ended(&self.g) != 0;
+        if ended && !self.ended { self.end_cards.push(t); }
+        self.ended = ended;
         self.hear();
     }
     /// every man's bubble that is new since the last frame goes on `said`
@@ -171,12 +174,63 @@ impl Play {
     }
     /// the game steps on every seat's command, on a machine that shows the seat `shown`
     pub fn net_step(&mut self, cmds: &[game::cmd::PlayerCmd], shown: usize) {
+        self.net_tick(cmds, shown);
+        self.g.out.clear();
+    }
+    /// … with what the step told its host still on the game
+    fn net_tick(&mut self, cmds: &[game::cmd::PlayerCmd], shown: usize) {
         let seats = self.g.seats.clone();
         game::seats::show_seat(&mut self.g, seats[shown]);
         game::game::game_step_seats(&mut self.g, DT, cmds);
         game::seats::show_seat(&mut self.g, seats[0]);
-        self.g.out.clear();
         self.frames += 1;
+    }
+    /// WHAT THE PAGE DOES WITH A TICK'S CHECKPOINTS (rust/game_face page::saves), as far as the play goes: what the tick asked of the controller, and a checkpoint taken. Nothing is kept: nobody here goes back.
+    fn host_saves(&mut self) {
+        use game::out_events::OutEvent as E;
+        use game::savestate::control::{self, Do};
+        let asked: Vec<E> = self.g.out.iter().filter(|e| matches!(e, E::CheckpointsKeep(_) | E::CheckpointsRequest(_))).cloned().collect();
+        for e in asked { match e { E::CheckpointsKeep(e) => control::keep(&mut self.g, &e.label), E::CheckpointsRequest(e) => control::request(&mut self.g, &e.why, &e.label), _ => {} } }
+        if let Some(Do::Keep { label, .. }) = control::tick(&mut self.g, DT) { let _ = game::chronicle::chron_checkpoint(&mut self.g, game::chronicle::ChronCheckpointWhat::Save, Some(&label)); }
+    }
+    /// what a host does round a step with hands on its seats: each seat's camera after its man, the end of its input's frame
+    pub fn lens_and_keys(&mut self) {
+        for s in self.g.seats.clone() {
+            let (input, cam) = (self.g.tab.cmd_seat[s].input, self.g.tab.cmd_seat[s].cam);
+            let (follow, aim) = game::seats::with_seat(&mut self.g, s, &mut |g| (game::game::game_follow_pos(g, None), g.aim_point));
+            game::camera::follow_camera_update(&mut self.g, cam, DT, follow, Some(aim));
+            game::input::input_end_frame(&mut self.g, input);
+        }
+    }
+    /// ONE TICK WITH A SCRIPT'S HANDS ON THE FIRST SEAT, by the road the page's own goes with hands on a seat (face_hand, face_step): each seat sampled, his hand written over the first seat's
+    /// with the box world's copy standing for his questions, the game stepped on them, its checkpoints, the cameras after their men.
+    pub fn played_by(&mut self, script: &mut dyn crate::player::Script) {
+        self.lens_of(script, 0);
+        let mut cmds = self.net_sample();
+        self.hand_by(script, &mut cmds[0]);
+        self.net_tick(&cmds, 0);
+        self.host_saves();
+        self.g.out.clear();
+        self.hear();
+        self.lens_and_keys();
+    }
+    /// his hand over what the host sampled for his seat, with the box world's copy standing for his questions
+    pub fn hand_by(&mut self, script: &mut dyn crate::player::Script, cmd: &mut game::cmd::PlayerCmd) {
+        if game::ask::WorldAsk::try_of(&self.g).is_err() { game::scene_collision::stands(&mut self.g); }
+        game::scene_box_mirror::box_mirror_things(&mut self.g);
+        script.hand(&self.g, cmd, DT);
+    }
+    /// the view of the seat turned and pulled back as he asked since his last hand
+    pub fn lens_of(&mut self, script: &mut dyn crate::player::Script, seat: usize) {
+        let [yaw, zoom] = script.lens();
+        let cam = self.g.tab.cmd_seat[self.g.seats[seat]].cam;
+        if yaw != 0.0 { game::camera::follow_camera_rotate(&mut self.g, cam, yaw); }
+        if zoom != 0.0 { game::camera::follow_camera_zoom(&mut self.g, cam, zoom); }
+    }
+    /// … until he has nothing more to do, for at most `secs`: did he get there
+    pub fn played_out(&mut self, script: &mut dyn crate::player::Script, secs: f64) -> bool {
+        for _ in 0..(secs * 60.0).round() as usize { if script.over() { return true; } self.played_by(script); }
+        script.over()
     }
     /// Every part of the game's state, a word a part (`parts::names` names them), rust/sim's block with the rest: what two machines of one game must agree on.
     pub fn words(&mut self) -> Vec<u32> {

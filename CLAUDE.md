@@ -19,8 +19,8 @@ bun run dev            # tools/serve.ts → http://localhost:5173 (game at /, /s
 bun run build          # tools/build.ts → dist/
 bun run typecheck      # src/      ← before every commit (no vendor/typescript in a cloud checkout: a system `tsc --noEmit -p tsconfig.json`)
 bun run typecheck:qa   # tools/qa (its own tsconfig)
-(cd rust/game_start && cargo test)                        # the game's rules: rust/game_start/README.md says how to write one; no check of the game is written in TypeScript
-(cd rust/game_start && cargo run --release --bin gate)    # what a build is held to, natively (`gate pin`, `gate breaks`; README.md there)
+(cd rust/game_start && cargo run --profile gate --bin gate -- tests [BINARY [TEST]])   # the whole native test set; the game's rules: rust/game_start/README.md says how to write one; no check of the game is written in TypeScript
+(cd rust/game_start && cargo run --profile gate --bin gate)    # what a build is held to, natively (`gate pin`, `gate breaks`; README.md there)
 bun run tools/qa/checks.ts [group|name … --list]          # the picture, the shaders' texts, the page, the menus, the sounds, the level files: a minute
 bun run tools/qa/pages.ts [group|name …]                  # the real page in a browser on the software adapter, one script at a time
 ```
@@ -120,7 +120,7 @@ happened when; the live queue is outside the repo.
   process and its environment, the page as a client (`?net=`), the lobby (host or join a co-op game, `?join=`), their checks.
 - `rust.md` — the game in Rust: its crates and their build, what Rust code owes the game, the view, the worlds it asks, and how it was
   moved out of TypeScript.
-- `ai-architecture.md` — the AI's design: a man's records, assignment and control, `rust/game/src/control/` (the list of rules, adding one).
+- `ai-architecture.md` — the AI's design: a man's records, assignment and control, `rust/game_rules/src/control/` (the list of rules, adding one).
 - `sounds.md` — the game's sound table, sound lanes on the engine replay, takes, tuning, the score and its pieces.
 - `writing.md` — how player text is written: the rules above at length, by kind of text (prompt, card, list row, menu, radio line),
   with before and after pairs from the game.

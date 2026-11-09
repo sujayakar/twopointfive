@@ -1,4 +1,4 @@
-// THE GWOT PALETTE — the default look's colours and finishes by name (tools/levels/lib/gwotKit.ts builds with them; scene/look.ts is the switch).
+// THE GWOT PALETTE — the default look's colours and finishes by name (tools/levels/lib/gwotKit.ts builds with them).
 // WHAT EACH ONE IS TO A ROUND AND A BLAST IS SAID, NOT READ OFF IT: a row's name says what a box of it does (scene/stuff.ts PAINT_DOES, a word of the table
 // of materials), the kit puts that word on the box (Box.does), and the rules read the box. `gwotAs(name, does)` is the same paint, to the eye exactly,
 // on a thing that does something else: a mud PARTITION ('plasterboard': a charge cuts it) beside a mud SHELL ('concrete').

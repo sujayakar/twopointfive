@@ -63,47 +63,87 @@ start lights-out-two, two players
 play night-breach doors
 play depot-four bangs
 play compound-four doors
-play glasshouse-four kit
+play mousehole-four kit
+play glasshouse-four push
 play killhouse-four push
-play bazaar-quiet push
+play bazaar-quiet fires
 play rescue-registry push
 play pass-four bangs
+play tut-pair pair
 again night-breach doors
 again depot-four bangs
 again compound-four doors
-again glasshouse-four kit
+again mousehole-four kit
+again glasshouse-four push
 again killhouse-four push
-again bazaar-quiet push
+again bazaar-quiet fires
 again rescue-registry push
 again pass-four bangs
+again tut-pair pair
 save night-breach doors
 save depot-four bangs
 save compound-four doors
-save glasshouse-four kit
+save mousehole-four kit
+save glasshouse-four push
 save killhouse-four push
-save bazaar-quiet push
+save bazaar-quiet fires
 save rescue-registry push
 save pass-four bangs
+save tut-pair pair
 load night-breach doors
 load depot-four bangs
 load compound-four doors
-load glasshouse-four kit
+load mousehole-four kit
+load glasshouse-four push
 load killhouse-four push
-load bazaar-quiet push
+load bazaar-quiet fires
 load rescue-registry push
 load pass-four bangs
+load tut-pair pair
 draw night-breach doors
 draw depot-four bangs
 draw compound-four doors
-draw glasshouse-four kit
+draw mousehole-four kit
+draw glasshouse-four push
 draw killhouse-four push
-draw bazaar-quiet push
+draw bazaar-quiet fires
 draw rescue-registry push
 draw pass-four bangs
+draw tut-pair pair
 seats room-clear-four
 seats compound-four
 seats depot-four
 par killhouse-four
+played night-breach
+played room-clear-pair
+played room-clear-four
+played hostage-rescue
+played records-pair
+played depot-four
+played block-four
+played warehouse-four
+played compound-four
+played barracks-four
+played rescue-registry
+played rescue-consulate
+played floodlit-four
+played killhouse-four
+played mousehole-four
+played hall-four
+played glasshouse-four
+played pass-four
+lesson tut-road
+lesson tut-team
+lesson tut-kit
+lesson tut-queue
+lesson tut-quiet
+lesson tut-pair
+lesson tut-road, reading each line
+lesson tut-team, reading each line
+lesson tut-kit, reading each line
+lesson tut-queue, reading each line
+lesson tut-quiet, reading each line
+lesson tut-pair, reading each line
 starts
 refused tut-road/2 it takes one player today
 refused tut-quiet/2 it takes one player today
@@ -441,14 +481,53 @@ sim.smoke 811c9dc5
 sim.poses 997f461a 95ce36df d6f781d6 c6c68b9a 8e028857 5f792276 29f3d013 bdc8b9e3 679339b3 5dfd3493 fd6a8742 be33e573 1d74961a 95ce36df d6f781d6 c9cf24d7 be33e573 1d74961a 95ce36df d6f781d6 5f792276 29f3d013 7af32257 afa491d3 7af32257 afa491d3 7af32257 afa491d3 c9cf24d7 e18c7b43 ae565a13 f9ca25d2 c6c68b9a 8e028857 d78373b7 cb620556 ae565a13 f9ca25d2 ae565a13 f9ca25d2 5f792276 29f3d013 fd27cbaa 2b9f6c23 bdc8b9e3 56fcb402 4208876a e7128466
 sim.panes 811c9dc5
 series
-play night-breach doors: e69b9a02 22ad9f78 0e6cd6c3 88854fb3 3083083c ccc96ec6 d651c2e3 56dd98e5 a61bc284 559686e3 edb32a92 ff6953aa 0360714f 71d06d15 d4fadf0e 3297a5bf cba18c31 8caf7df7 2a8f4757 29cdef3a 0e6643db f5b5b02f ef4dddce ee6afca9 9e8ef058 a80bc956 2d12c9ae e93be3fb 7a325595 5a71c359 484adae0 b380b38f f35133f4 a9b653ff 33fec359 442bac6b 4584ee63 7f1b6e5e 97a53b3a f8f009ab
+play night-breach doors: e69b9a02 22ad9f78 0e6cd6c3 88854fb3 3083083c ccc96ec6 d651c2e3 56dd98e5 86a0ef12 738b71ba 49de4e0e 35959328 aaaa3c3a 05727f4e a1e8b576 d7511306 36baaead 5a4423f1 1cd64fe4 8782e996 af66bd51 b36c1e42 8dd65076 be2c0f65 d57bbf3b ccdb9f57 1d4f80a3 ae52cec1 c8f2c7a3 7a71621e 10055a56 21359a5d 1dd980ca 42bf03fd dc9d3b23 6cc2afad ffa26aad 2b29e541 8e4abffa dd7bc65d
 play depot-four bangs: 4e9e164e 45efa47a b957e1c3 8d409b82 f17cbd22 e7d4890b 33e5bd7f ec0e1204 7bb415ec f31a1fa8 5d4b4fa3 8f8fb280 337c7694 e28f3d8f c58c8e26 412bfa44 0810ab28 bea9976f 7f9ec142 e75d67fc c60d6b87 3914a0da ab66da63 4f5fcd66 4ecb599e ca616bea 926c6bfa 7c617795 1f1418bf cb201c43 cfc2bc37 beec6799 e9ea4b7d 493c0c16 00ff506a 62e54e35 230aaf0e 4d8caf19 189fa8c7 b9cb0c63
-play compound-four doors: 13525de3 2aa3b34c 3e3cce55 09ebfd65 2f2ef76b 1f2b4508 1fe4eeff 77f41080 5a04f76e 5364b76d 7767e1f0 82945fc3 0544c164 09764964 f5b54bd1 d747d3c5 dd53ea6c ff414d7f 9a9458a7 ffb4487f 7a10c937 dc262be1 61927abc 98dd1489 6e7d8f6c 1841d23a 25f61aa6 2a167611 20f2e913 04a419c1 48c494bb 0c7d5656 714c0d5f 3d01c978 f1c8886d c6195304 c5dbc6e4 88e4f925 13bc0118 d2fe6ef1
-play glasshouse-four kit: 3915be12 f3cf8c2c c9a5ad02 fc51b8b0 2d4d9c41 a6852324 ed1b2b74 e8df0b2c 17903075 fe4d097b e6381203 df83e7d8 c6281ce2 50e19875 f33cc223 83804e3f 2c4a0716 07cb0447 04519861 214e7b74 a88baef1 f53fe37f 36b0e985 9c5005a2 120bf7d6 4940965f b16645f4 a6014b91 d5aa49a9 e00a1569 f6746d20 e4a979ed 45efabde 4346a40f f636959a ee32a251 bcf386f8 09749f69 fc8286c4 332bfe5e
+play compound-four doors: 13525de3 2aa3b34c 3e3cce55 09ebfd65 2f2ef76b 1f2b4508 1fe4eeff 77f41080 0571a381 1e7ea242 de717dfb 9cfd604c 6a95ae97 ceec6c76 3195935e f46eca1f 85ef5451 52dcd9cb b4210d7b 4571247d 76044656 bf9db012 3b9c1243 270c8248 c7ddf29b 853c5d10 726bcf1c debae877 5dd6b0a3 f9ea050b c836a304 9fe33d14 564fc88a f0b45ebe 1234f157 5fb209da a4e5517f 14b15ecf 1b80eee2 25b7bdf3
+play mousehole-four kit: e2c75688 07e903bd a3062c64 189929d9 bc4aaf82 a5ec9b26 1b27f568 98d65f9e 89d15fe1 f242cf8a 6fa07d0c 445fbc67 8f17356d 2c249e7f f3648da1 4864e755 92cf4af2 366c6d4d 69b80e81 0a94d17c f342d438 bb7f29ba 7f7a887c 0a46cfa1 b94975cf f28a44d4 68660d1a 78b48d67 6aaf918a 2ea6346c 3b493dd2 a33722b7 eaf5ba39 62e87773 645afb6b c1e6d45d 9b576c21 afa2d6d0 7d3715a9 db5699b2
+play glasshouse-four push: 3915be12 3c23d8f1 22b28c5e fab7c57e 90c46ee3 3bdb742f 22c9229e bc9c4176 ef00970f 189d87f6 a465c5d7 1f8dae3d 88066caf 57986534 f573bfd8 fb26f892 4c2d8c75 db6e6abe 4f2ba606 55f00c23 ce17b421 d48a022e 0a1fdc7b bfd64eb1 b8c5210e fd1bbb3b a214a9ef 190803d9 512734d7 a99b54eb 4b36a983 9eca53dc 37805e33 a96ea3b5 6d9f8a50 ad4a22bb d9f75156 b92cdc0e 347c9944 bb97cea5
 play killhouse-four push: 03cd1f6e a14a15e0 7bf909d1 59b089a5 0d3b9483 7fb4f87d 033f7a9b 3d22b96c 66e0a558 56e3a950 0e655bba b5cdfc4a cce21d47 9b6a6b14 3db11c22 22f92a42 8eda2f17 3c2b936d 4448e236 c9e5d254 6bd0f7c2 16e9179f efb0aa89 83cccd45 51414c74 be8dafab 524f383c a2669fb9 f6f0b434 b0158aa9 db6d387c 1551a8f4 6589f57c 8a42c64b 0656abe7 891110e0 44f9b77a 1ced6042 9458180a 4d6cdf34
-play bazaar-quiet push: 0a177b9e 97ddd6fb 1884d940 03207ad9 77b55b15 ae073471 fb03854f eb5836d8 37fb2fa6 907cb9e6 d24dd682 6aa3eecb 6a99f116 6a6397ab 041dbec5 6383b356 39f79873 58a7da29 aab3fce1 d1365768 3099cacb 864eedbe ee84916a b45ba299 3c8a02bc 7ff6ae56 9777471e edae5584 5b52fbb3 24f2ea61 5d3659d2 7265fa62 5a1db68b 46ab0e38 445216d9 b50b9f3e d4f0262e f98caa1c f3ea124e c7fb4315
+play bazaar-quiet fires: 0a177b9e 97ddd6fb 1884d940 03207ad9 77b55b15 ae073471 fb03854f eb5836d8 37fb2fa6 907cb9e6 d24dd682 6aa3eecb 6a99f116 6a6397ab 041dbec5 6383b356 39f79873 58a7da29 aab3fce1 d1365768 3099cacb 864eedbe ee84916a b45ba299 3c8a02bc 7ff6ae56 9777471e edae5584 5b52fbb3 24f2ea61 5d3659d2 7265fa62 5a1db68b 46ab0e38 445216d9 b50b9f3e d4f0262e f98caa1c f3ea124e c7fb4315
 play rescue-registry push: 7c5fbe2f df7e1b3e bfb2e17d 9d6074b3 94ea647b 570cdd50 f01ca474 8edec417 e2c6c2de d71728eb 1e6b147c 3d1e5997 9dcac332 6ab62caf 9af9202f 42c89db5 27907cf9 146968bc 9c7cb002 59ab743d 1a41153e 25afe212 6455b51a ea2d12b9 3ea4d5f9 73675780 a2634687 bee111ea 6ee2e530 38216ec8 af92a30a b39d9a35 6fad0f54 e8a862fc 8d04e8b6 6d55ae03 ecb12ccc 9f52fc7a 6f1f9216 a4a69b08
 play pass-four bangs: d7527801 8fd283de b06af4d2 281ba7af 4e30d22c 9e8d06b8 325ffbbb a8826e7e 5b43b319 f47b319c e8c55879 8cf11631 7fe7b721 17d9f521 80d751c0 de719978 3e67d10d cd239070 0cdcc5c1 17c4ab27 109365a5 979503bd 388a6883 1c028aed e80134e8 25b6ac61 c32d8443 042ebedc 50d93232 993fff23 bfab0275 f55f6401 31d6756a 838d0444 65156b7d 59cfca67 b80e07c3 65e7e560 f07ca589 d9e98410
-seats room-clear-four: 5b5fd9fa cadafa09 2946bb7f 580c88ec f104aaf8 2a1e572f 01cc49a3 677d2b6f 032b7a61 85746df7 877e0ae2 abf87022 164a32f8 bd6c8ec7 6f7b3afd 5249f82e e57dd947 c095fca1 af237bfa af8ce580 f8fdf3b3 317b8a5d 1e99e5d2 719ee468 3fa9df8a a60143c5 06cacde2 d8f27bac 10337303 80f37163
-seats compound-four: 80817587 20597f5e 7d0ed371 46ad62e3 fe94f94a decb2c7f fe6591d1 4b5bf134 3262c302 0b1d075e ebf98456 b0799039 c0f05c7a e3bb880a fd1f4054 d90c6c44 4808ff82 ce706d09 141f865d c5ca2d53 9df4705b 67c6a020 15025a94 2707ea03 1b587bc7 ff0c9eee 72c54126 f378b825 e70494a9 5f871925
-seats depot-four: 7a2e1661 b079eeee ca876fc4 e39470e7 10740c00 34e37825 93711508 b05679b9 d5c2e362 da0d627c 818d1d7c 0d5ed86f 67e6494c f92c0c51 e2bfcba7 6b7dc3fc 9f8fa3dd d8c260b4 b2f27705 a06a52a8 e8f1b5c5 b630e3f3 c8d0748c 42976f8f afa10208 c9c99a1a e2030643 bb4542f0 e7e3d2c5 44caf37a
+play tut-pair pair: c9dcc5bf c824c116 b6ce69c5 673b9ae4 13470168 87e7bd7e aff8a01a 9ba0eca2 a6100fa2 4527a597 3cb41b7e 808ad5fd 9c806463 108b596a ef8fb2aa 0f10f64a ea5fc74e 45830927 20503497 cda48f00 ee46e787 5c4d846e 28223af8 04319122 3f812509 3ee967ed 160fb276 297a86c6 8135305f af36ead3 5342a845 6efd8f4d 82226f78 71a79f76 46ef8c5c 8953bec1 9f26b76e f37b6f07 bbafc1fe 0626a143
+seats room-clear-four: 23b6fee6 5b1f83d9 27c9db0a 19cd9ddf d23e89cb 897b5eb0 cd474b19 97a4f62d a46b727f ca79f0d4 baf5a8e0 38f655fb 4ef4e20e e57a5973 a6bf416d 0c05df70 2236e183 61123713 ae29b446 1997e803 a328e395 9e7923d4 69faec9f 418ff2da 6ed6b103 83e5337d 40783086 1d1c4c33 d2538ffe 8146726f
+seats compound-four: 03e0b684 5d1dc9d8 41faa706 0c8768a5 3e3a84f8 6e779158 481b7b88 f700a746 d2a5278d b073ad25 b14df211 20ffa1b9 c0aa3d0e bcabb94c 16b1fc5d b72b2fd5 d6e6a4ce f4d9bddf 920c68a1 286dd44a ff358872 9dcac247 01fc0d67 dcbd298b 51021386 64e8ad05 da131902 ab178df5 1cfa5a31 f5576d66
+seats depot-four: 7994fbd5 02cfb713 e914d0ec d0a71ad1 1bb79c4b 0467cb2b 07c92204 7748c757 1eb029bf 18c8e36f 6a97e8e7 7f77ff92 7b5be3e1 d9321f45 064065c7 ed33b9c7 b901602f bc4b993d fa193070 a3930933 c75323fc 58023b3a 1b0322f9 7ef8d20d 0aaed0dc 18053b17 78e6d7f8 76b13c2b af486066 11b4772a
+played night-breach: 5261c875 7c679c84 3d51ff15 fe72d036 21a71f91 817cb042 30cfdd81 9fe3fe31 12038634 8b842090 7f15dbeb 0bcb9706 88a30cda 2b82fec5 477a3d21 a4feca5e 75933570 81077fa5 e1021c99 5899c782 28bc523d
+played room-clear-pair: 7961806e 07562616 4eac9597 51872380 178e87d6 c644e93b 26aa2503 66aa0452 d044612d 7450760e ef89a37e f58e5065 ba4862d9 abb2b57a 7f9514ea 732b656e e61f1aa2 15bfb21c 9a797f59 fed85141 b8100920 f1806a2c 4cadb244 b262123a cd253d83 b0316228 5fb7ab1d 1a70eb51 c5d58a4d 827fb02f 51ac3788 37e9f1a6 7d7a52d4 ef0edacf 0f19c700 c6791579 1684f5ec b9cb23e7
+played room-clear-four: 9e68bcb7 783b06ee f8d1929c c1e07626 51dd022a bb426395 a711a4a0 2469aabf 0d72d310 a0b24b6f af650e0c 1101fcf6 dcf1080c 69c827c6 276de819 0803bdb6 3d113e69 05f27c00 5d45a882 49ebef9a 443121eb 584bef4f 314c01c7 eda34ce3 b82ba6fe 1e6fd9d3 d3649cd5 b7127d33 71785404 4fa782e0 92713b3a 7e0b7888 16d08f6d 3212b997 ad6df66a 3ebfd1b6 b4ba82f8 0e7f1730 38c706ad 3c32cec9 d3c74b3d f66f6efe b0f259be c614559e 37ca7294 e7913d40 fc554769 3a74869f 58425262 9fcbc785 b1d95d19 82111c9c be0cb017 a3597b24 94b1fdc3 773a9f2b 1f8ec6db f957cc2d 32dce407 deab3189 e33d7671 38039de0 898f893d 1f882aed 0c90624d 81e68fb6 68aa2e27 10f84f2d 781c2e97 f594aad8 12c290b4 e47d3a18 6e01f114 b7a856b2 bbd2cb0b 8d7ec923
+played hostage-rescue: 2fe82b76 754f34c8 9c4adc96 0a90c800 0df9a111 9a328c9f 3b05ec7c 2a2f8831 f1a08a2b d504cd5f 92f96efb ef82fd26 7a66e6e5 71bf8c11 c2605e12 6c027e63 0310ea28 993dcd10 db9a7b10 b113d88a 9d22a20c 4d90c531 cc4e9a89 2d5afcd9 036bc3c5 86f9cc7b aa758ffc 87e045d7 a527b713 a7b555a4 1ddccbdc 4f3c81bf 227ac343 dd001560 d99c8a2a 11a5ff65 a8875a33 3dc29fb0 15ffec85 c7e6f354 639adf9d f7da154e f1878b80 dae328f9 2c27865c 45c2479b b2a5b1e3 504e1fe0 1f3a3485 0542b407 4e5c708f ab45caee 48d9807e 0452f3e7 a2b55079 04c52b78 11df9a56 d5ee6bc8 7d2932db 3a089adb 54de630e
+played records-pair: d932ff16 3cde6e76 0ccafe7a 32ab8773 efca2ea6 324146be 4226b96f 208adb8d 9e01aec1 489716bf 8c7019aa 3eda9941 d728ab63 d561577e 44ba7763 8fd79501 c0c425a2 6fadf97f 80dc8b2a cc0c55fe b057c5f1 94170df6 d7662ab5 8beea651 0051c59d b4006008 f86aba8f 02d8d27d f52b171d a22a6c6a a7d1f04b 793dfd8b 92343a20 c2ec5366 98b8475d be549eeb df65c07c be8ca5a1 bae33b48 d6e600e7 5d09488c d1f60216 b5c3f7be 461341ff 91091c6b 75d82ea6 3a03b772 36c855d7 9b72861a ecec2f7e 5c67b596 8697d764 7007bde4 240efdff 59b5c214 7080ecdc d80c2f66 5dfb432d 067f1c5e 4937a0e0 54bdea78 7638c1e6 5936a7fe fbc12aaa 141a252e f90d1700 e7488bf1 79d514da ccd4562f 723472ad 465d01a8 30ef033c d32d0840 20dbfae4 ebcc10a3 331fb016 2ebe36d8 f4bb607e 53f47c00 76cc9f2d f8dae160 5d835d09 f14a7830 fef1a1ef 70cf7767 753f5007 3b110cf4 4c69f7f1 51db1269 d90e9a2b ccf581a9 2c4878ff 6428f2e9 7d4c9a31 60f01ffb 60c0b0f1 93600ca1 1913339c c5243b3b 31dfd74c
+played depot-four: 929b9711 c836b399 7035741c 6a3e36ae 179a163a 73e64445 2f5cb224 a1a5ad0b a640830e 98526380 e59d4924 7c7f0567 b5d65d57 ded45e73 2152c7fd 3f645439 be0cc388 4ba50089 8f931986 42aa97d5 bcd5db40 e6bb7f1a b73028cf 989dac56 7e6d7d33 3c31e178 f18dc667 ae90a908 aed4a25e bb6e9df2 c6422490 17912780 7673af8e fe617326 96caa81b d2f4eda7 45b180bd d04cf8dc 11b04432 20f1a0b4 d787c0c3 7b477018 7892c586 f78a2cf9 1c0813af c0535e40 4067ca9b 1f193a05 cd586179 3b0a2688 722b6e02 daf9aefc 89c8b759 6aa29cbe f31952b3 f25dadbe 3b19b5d9 6d90abce b00d7b16 1e37a106 f100fc60 f3534f63 5e540ec2 23202bf8 2a988cd9 d7cf5838 aa598215 b7609cbf 1fb434e9 602d532e 08765232 315cc1ae 3cc166f5 dd9412fe 32498fce 5dad73d8 ed27eee7 5f8398e0 ceba5dde f7d1f95e 89d2b1e7 556cc544 bbea365f ab69dc84 53106dfa 6a8f57a3 5b248838 cc26e170 5c96b7c1 9feb2d20 13254043 05e8a044
+played block-four: d48197f1 8d130bb9 58330a1c 97ecde10 bb632623 591da279 70a9f009 12fdcefc 66b1a828 6968132e 552026de a53ff567 c53b2010 331ad32a c0e24729 1bbc1762 238dc670 789cb77a 9eb1b767 96233c8b a184f3c2 90204a86 2955488c 622af86f 57577202 8fdb5b89 3e4fce29 eba120d6 8173dea6 cf5a0591 47b2c9da a096ff94 1cfc18c5 bb3ed6c7 d8cef215 c8a8a9b6 7d01c5a7 950f0edb ae141cdf 54387112 05176533 a7338e17 ce60c8c2 1ac636ab f3786b14 808e3b38 8777f744 7edd2364 64c47748 f31de4c7 bf219d29 92d0544e 20cc05ee 77fcfe26 22903978 1b96b2c6 c703f5cf 30db5550 a17942e8 e73fea75 dcbfc4a1 2c2fd17d 72b7c506 0478e5f7 2b6a7b76 34887a15 8e00736d 3edf9914 6479f5e1 4022dc23 59486ec5 befa1b50 7b8b982c a86cbdc2 90d73885 a1ba28a0 d320504e 7be6a11d 8160dd6b 8f278711 dfe96de8 f2ce2e9a f7473829 9c3ab977 7bbc3766 2da2dcdc b8c1bb4d 8da7bd0f 27fa56b1 90fe7506 d7070ffb 00d44be6 0bfe45ce 34e243a3 a4109484 ec0ec209 8ace738b 3ab75113
+played warehouse-four: 8e3ab467 c7ec255f 925773c1 34fb7829 87ebfa29 a2e0f0ff 1242f377 89ef2baf 9722aac2 93813e39 45759cd3 bf71a499 e6ed88da 148aa180 475e5bae 6bad6a49 0e536462 067fac74 507c57ab ecd3a909 3f6272d3 fd6e2dfb 9bc22074 46b10ba7 073b7a7c 6507361b 35a90e3f 2452a2cc 71e4a49f df18a07c 0070ecc1 4489781b b8b7aa5e 8d6216bd d12e9853 c06c4896 1cf49562 cce17f8e 730f9988 05f302ef bd88f3e5 019a438f 9b15f283 7a509e81 4f08f293 009110a1 cf5a39f4 1bb50024 c89ecce6 fded1ca7 1f5d4623 5cdf4b80 77059f6d d2291d10 34c66294 f9d03294 141d1113 96fc2dd8 88852427 f7a09e11 198bada6 f9e19281 5e8dbf29 f3da5c81 6cd9f1b5 31d2af3f 146b46e3 1a80b228 55cbf0be 941d3b34 dc553eb8 4f8e9ef3 e862df0e 28bbe843 ed07a614 9ff005fc
+played compound-four: 7a50aec4 54d882e6 29e04296 e27a8e94 72439bfb 9b18f92f fd5306d7 e91ca1b1 c18d5c89 ca522bcd 2fa873ad 48600506 741c908d eb3d26c7 c144ef74 d324259d 5ce41814 962be389 e3a14b99 a413ab9b f519b89b 3e245358 c938f30e 79adf4a9 19d5de46 caaa99ca ad335f7d 545bcffe dca3d48c b843719e ee651c55 8f06a410 19765395 5a3f02c3 39e4cbd5 9451c0f1 678d2131 e011c28b 17452b28 203a8736 2299014a 3affb026 49297170 8d56cf99 1e97569b bbf223b8 c8bd11a8 731a2941 678afea8 b85356c7 127cdd93 2117d4d9 a0ec90ca 3b32ae17 da914c99 d9bb2eb5 814f4788 0a9310af 3c6a37da f2a073bb 3693f84e 70d7be6d 5c87e3aa 477283a6 3c6e574c 715a907a 479dfcb6 230d5fbb a0dc3596 7d8e73a9 7c7d6cc1 75659518 54140986 88560630 78423424 dd9f7b81 ba78b135 f009f23f b2dfbb4b ec17a013 5c1b93c0 c060d669 a0781ee7 33f10eaf 29eb2963 de6cc3a5 47b62256 ef21c2d5 f3380ad1 b5d9f23c 7acc8935 6a740942 c453d820 2eae2f8d 06906268 097c2b22 1178f924 353f7892 8e817d47 4595b2fb 52cb1b1c 63dd894e daa5af25 78aabd64 4ff00e41 42ca4db2 59d72c72 4a0c9744 217f8f03 cc989c41 ebe54828 ae47660a 064a9303 3afe1603 263d4610 cce1bbf6 5b2c143b 3f1e7669 8ce82505 adfac745 d1c19aab c5e0f0e2 d2169321 298b0465 267edb08 c8ff340e 74cf6d39 5ee86b46 3159903c b66a7f3d f8c6f66c 8a7a2c29 e167f150 a7deded7 94956260 e5d86775 09224529 66ddb556 47bc8530 90f2dbbd 48b104be 4186008d 95dca916 aa2d2cc6 e7b198fa c24b42b5 0c07c713 b397eeaf 3eaabe31 22371921 c7858fae c7a63b27 7f2a2fbc bbdaf76d 8f486b40 939e4d96 705b8696 ecead1d7 b535bcf0 338fc32b 9eeaa341 5e767075 cc063c28 35511477 183c5bc4 a28a5cf8
+played barracks-four: 33de98c4 cb07468a 3308983a 68aa404c 2e55b99d 40444ea7 0a3a11ec 22db94ef 5c0a9724 f2bd1f88 3ae3b5bb 80ff922c 848fd391 758516de a7725d8d a281fee5 e0deb354 264513e2 7ff76ab9 8fcee95a d2188675 c903bf3b ecb1c3df 73babfae e4c4ff7b 4f63f6e6 1c6ff639 3950c875 e54a08ae c04cc9ca 6e176ad9 1034a924 bb5248ab 411f2023 f4195c66 195db5c6 6914fadf 652b3f7a 881b9be4 b2713242 2b82f665 f7f780eb 29c6962e 8ca3ca52 1c103c82 211a1ba6 d97611bf 8e60891d 2f819a95 486df9c6 bb3f8fc6 90af48d2 3b41b60e 2ba3b656 a682fe28 a36457bc 036eae9a 686922b4 8f72d372 0354cbb6 f79b496b 30940270 97d61a4d 4dde8ac7 11090c99 07278efa 6c7843cd 6988a742 e38530d4 256605aa fab8cc77 94f8c0ce a971c97c 5def7530 82632297 07c664fb e26b6359 8811f422 82606960 1738716a 74862d16 ed0446d3 302ec090 cee19cbc e8d2939f 5bbcb409 c9c4ef99 8af2efaf f9dcc52e 40338b48 2b801dd9 ccbeb0f6 f1a824d4 d7ff833b 1391e352 cab9fbdd e9b35821 4bcf4cf7 c3961ddc 82ae1d34 e55d8824 ee97033d 086b5c98 9c3c5e4b 0b213840 86df2c6c 135975f8 cd725091 b22cf7f9 8ea47ca8 5781fa34 59b68868 08ac1998 77f18dff 26c6a99e 41ddf637 58b522c4 77a0a230 4d079770 1b10e4c0 c42867d1 a3a7c49d 7990985d 2a812cc8 28111aea 92d01ca1 79061fb1 d6f37beb da9329d2 ef8eb63b c52c9dca
+played rescue-registry: 13ca34d8 4a4c06db 7e57a65e 5021b604 661b21f8 3225cd6c 6af2e709 c5a46362 5814bb74 8a5a109c 272abbc1 e75ef42a e9677c15 5a6117fd 229d01e2 a9ce1d5d d904fe78 4575d299 b44d1ca5 9f5c75eb 0923bd61 cf7ad8b7 f7be7e4a 1682129e 33decdb2 80d02022 f346cad0 29ff1944 e131bd2d efd0651b 70dedb67 5c258740 dcbb5676 9dff6455 a70e52c4 bb73d785 825edb1d 04d43afa 0fb772c4 36a9825f 52ccf115 76c23ba1 01a74c4b fe591014 e273493e cfbf6c8e c94aeca3 4bbe8c28 840de212 18b03ba3 3ecad8c7 40417f1b c0eac037 781009b5 93368514 f73d2355 bd02df7a 662cc522
+played rescue-consulate: c53fad76 ce94818f 83e2986c 7866927c fcf554f7 f7c550bc 62e27eb9 fc52e673 ab3c6b9a 657145ee 27b0df54 c7fc8589 25c9a5c7 3a7bd387 cfbbb3a8 e21b4e36 c02b7bde 968dd5ea 81e4893d 88cfdd48 202ddcc9 40c668dd 396a7183 64c41907 1ca63f5d 7467ccea 5154084c 88ea9e37 f7859791 8723e840 069ba119 de3ed206 6af430a2 fa6aa5ae 6cee9650 e98f41bc 7a39207d 1005d28f 15d1f0e4 ddb6137e 55cf867a 9b5c08cc acf7723d 49ac005c 0a232eff 7524c304 8e710172 6a7c1795 15e4c40b b106c3e4 f59ff0e2 e2bdcea6 7e9c84b1 c9b1833e 864b5952 d4f4d6c0 f04d6894 9eb476d7 162163d0 0bd11acb 71ce33b6 13c6ee94 7f6bdd2b 069b65cb 42bce9e0 63804db5 acee305a c3b28f1b 6e716f9d abf06d36 6574b3e2 08aaeac1 ae4aba1e 3a45aa6d 9ff5bf07
+played floodlit-four: f83e2458 afba41d7 44a311a8 2326aba9 4618241f 145dfef6 2ff49bea 13613096 0e976ffe 1093a4e5 af63e335 5cc3bb77 b2dd67f1 99921e60 680079af 38cf5a1d 6a7e2183 46de0d60 c7575be2 9e5f52dc 84dfa457 0e235f74 267b1aaa a36bbdb8 5c50cfa3 cad7d7f4 f54dd62a e6d3d2d9 f539a752 01371dd3 a856c122 40f77487 2764f081 9cc59850 47a3d7d1 3b6468a8 c4daa2e1 cf03356c 0a5aafc2 96ac7d60 821c7354 51957e1c 9638d851 c2e3052d abb4bbaa 2d7c3769 f5b5bfd5 c2efad40 874e27b8 89f30f0e 1ea19f24 f5516264 da24e1bd 234e0818 94904f97 0a5d6ccc 2cc3a0f0 b339c1a7 0583c743 708e9a4d 67fe571d 0ee3a4b9 2e0cb6e9 37473a71 f5bcb2ed f88f3cce 4ef530b9 589a9b39 65242024 ebce2331 409196b7 911e9432 0d61e9c8 f4d175e9 0e11accb 327ccbfc f4a9b705 c74fbf7a e6cb9bd9 e448edce
+played killhouse-four: c5bae6fa 18acad5c 43fa4451 13188abb 13bd3c3c 04ef1d96 708c3eb7 057d9dda 8c045f44 63099292 e2500221 8ce9ca94 751f1312 873099eb 39b11515 fb198b4f 6646cb89 27e5bcf5 4abf8ce9 d3dbb099 df68b531 b0d7e328 ed05989a 25402a7c 561124cf 9462cbbd 502028dc 343acd26 f73a47c3 aaa9c98a 14c121ad 6d7b910a 099ab1e6 6ca90ba2 c12b7c38 e34e2e5f 04122765 b7aaf3d6 4f6e3a12 f64b7ea6 4d384bc1 99d98954 da607619 20d9b422 a0a0c10f cd3fb873 faf34a47 980be29a bcb08611 c8f9bd71 b9a978a6 66c271df 5864a67b 2f799b98 031d1163 9ac3c498 28c42faf da45b2e8 d43eed69 e561e01d 97563e69 b02bc4ea b23775ff 70529bd5 ca851be9 2705a907 57ce6b3b 529cfd15 96e15fa0 e61f2ee6
+played mousehole-four: ac8474d3 04f711be b723f395 0b448214 03826e26 c39660b8 eb9949ee 83083dd7 b92ed573 163a120d de8d9c61 e9e53121 5f81f600 82459890 c5a1c976 31fcf019 4a295c7d 182097af 239e252e 38fdd4ec 83a3db3a 40077624 1d797382 e057568d 7f84a44d e753244d 7bb48699 98d95e74 d0a2e3ba c6eaaf4d fb5cc626 c4f4aafb f3bf2dd0 5800a30d d388d6bf 1f2719c9 8c5572c1 26270230 941ccd0c e8588b1e 2737713e 8d6eb2b8 d28e89e1 22654440 e47aa149 01934bee 09b50a58 8088a2bf b829829b d7982837 b7a8f7a8 308dc128 88ad0233 150c0a98 a3c2a6c9 6dcb46dd c345770f f00f5086 1bacb506 55068a84 7f352874 bb7f95a1 aca0e3b1 5ab9b3df 2049edc3 4b80bb4f af59bdb5 c552f9d6 2df9fc8e a1eb2998 f2ee5b65 77df335f 108c9256 e48d8cfd a3417126 ad15c2c7 9b2165b2 62bbdf6a f72cca59 634d977d 5ea56cf6 d9eb9b12 4d9d7f90 a52fd582 cc063fef e23c35a5 ee061b7d 42c81a7a e70418a8 fa4a6759 9ef2153f bb370286 dbf41324 a0d5e334 fe32aa46 9a83ac2b 441121a5 fa454eb5 a14d3e79 c2505942 6fa88237 1378a2cb 18f2d0b2 3250716b 448087aa 7c0c9ad2 85cb737d 66800c9b 2cceb256 cfc491ae 08c169a9 edab66be e4e9f133 47245155 560a8fac 4a8c5036 7759aa79 86ce8be1 1553fa8b 3f87f9b6 150fb52d
+played hall-four: c95f499b 0054752b 8ae65623 20af805a 66a68dec 9880fc45 d43c5140 7bee1e03 1749aab9 64de34cd 1793a513 4ae08ad0 1ad50fb2 7bdc24fc 29bd1ac7 3900a9d4 0754ff04 5358283a c952f8c1 c048bd79 ce219cd3 1bb8aeb7 a2c1f53c ed5fa5ba c892ad13 67fe0f07 e211624f 8e7d60b5 936fddc6 35325482 e493c4c1 ff49023f cccc6a81 ef28c0c0 734246dd c70c0f73 9cee429b ac951374 ce7fa3ca cfd137ae e03e696a acd39c4c ab5a507c 66f81adb 15a05514 e8502b36 ddc6e70f 0fa642e4 21a8c54c 50c3665d 886d4017 2151567c 56ad9463 d7b77973 072b6707 31205adb 5532214f 074f11bc 2f89cc95 7fa27547 8613b07d a214cdbe 3ab963a5 c98160e3 78a3e037 566a0255 88307d51 9b1a9a68 02f1ba61 5b8dbb5a fbb512d7 7c0b3a87 34b3a5dc 282e3b21 5567bdb7 6508ddb1 b8502148
+played glasshouse-four: 70b0b7e8 008ea164 9fc962ee 7147ebdc ba9d3ec2 b4fb92f5 80f5e29b 1cd0e3c4 b6e9da67 a6e7df4f 916b33fe 8d959881 eea5dbc3 be1e7ea3 55c5f4af 936e9ce6 7613deff 7138b40e 38582eff 5de92da1 f6344c62 0f7558e2 77fb7469 0dda596c a5eb78a7 7298900b dbed2f1c dc8dc0ef 972e71dc 97541472 47a4e1ee c037bac0 9c9866e6 d840f0d7 36302c6c 27050271 0ab8f265 6f3dd771 9daa45d1 235d9372 815c0fe4
+played pass-four: ac987da7 fbf970e3 1c84382d 31e27394 f5e017b3 e45084a7 8e596fbd da87d8fa abda85bb d8f07368 95e6a0dd 3ede69c7 87e4314d 8d5e2afa c465afc5 227ed76d dff7c895 e879bdb3 e95adc57 d50d4103 d08a14bc 92bf10f9 93a834b1 4f224a3c c4dd602c c954fcc8 7c774db5 148f2021 e2fb5a0e 4f808102 1b7e42b0 ab33268c c94dae88 bcda964d 74cfed5b ef2124c1 080a448f 698c8df3 dd9562e7 9482bc96 abfd9a29 21ee79eb 34f1b580 3d8eb00b 1935c367 c7be353e fd4897fc 0926311d 9c315bed 79407fbd 400a5ee4 d0c88eef 7627a3d0 294db881 0d013cd6 acb227b3 9418807e eb2e2207 ba5f4cfa e0b12524 6c917457 c5788c74
+lines
+played night-breach: taken 21.5 s · Sam up · 2 of 2 up · 3 down · 2 orders · friendly 0 · stuck 0 · overlap 0
+played room-clear-pair: taken 38.0 s · Sam up · 1 of 2 up · 5 down · 4 orders · friendly 0 · stuck 0 · overlap 0
+played room-clear-four: taken 76.8 s · Sam up · 0 of 4 up · 5 down · 4 orders · friendly 0 · stuck 0 · overlap 0
+played hostage-rescue: taken 62.0 s · Sam up · 2 of 2 up · 3 down · 1 orders · friendly 0 · stuck 0 · overlap 0
+played records-pair: taken 100.2 s · Sam up · 0 of 2 up · 5 down · 7 orders · friendly 0 · stuck 0 · overlap 0
+played depot-four: taken 92.2 s · Sam up · 1 of 4 up · 7 down · 5 orders · friendly 0 · stuck 0 · overlap 0
+played block-four: taken 98.9 s · Sam up · 0 of 4 up · 8 down · 4 orders · friendly 0 · stuck 0 · overlap 0
+played warehouse-four: taken 76.3 s · Sam up · 0 of 4 up · 11 down · 2 orders · friendly 0 · stuck 0 · overlap 0
+played compound-four: taken 166.1 s · Sam up · 3 of 4 up · 11 down · 7 orders · friendly 0 · stuck 0 · overlap 0
+played barracks-four: taken 131.4 s · Sam up · 0 of 4 up · 10 down · 4 orders · friendly 0 · stuck 0 · overlap 0
+played rescue-registry: taken 58.1 s · Sam up · 2 of 2 up · 3 down · 3 orders · friendly 0 · stuck 0 · overlap 0
+played rescue-consulate: taken 75.2 s · Sam up · 3 of 4 up · 6 down · 3 orders · friendly 0 · stuck 0 · overlap 0
+played floodlit-four: taken 80.3 s · Sam up · 2 of 4 up · 6 down · 6 orders · friendly 0 · stuck 0 · overlap 0
+played killhouse-four: taken 71.0 s · Sam up · 0 of 4 up · 6 down · 3 orders · no medal · friendly 0 · stuck 0 · overlap 0
+played mousehole-four: taken 121.2 s · Sam up · 0 of 4 up · 9 down · 5 orders · friendly 0 · stuck 0 · overlap 0
+played hall-four: taken 77.6 s · Sam up · 2 of 4 up · 7 down · 4 orders · friendly 0 · stuck 0 · overlap 0
+played glasshouse-four: taken 41.2 s · Sam up · 3 of 4 up · 7 down · 3 orders · friendly 0 · stuck 0 · overlap 0
+played pass-four: taken 62.0 s · Sam up · 3 of 4 up · 8 down · 4 orders · friendly 0 · stuck 0 · overlap 0

@@ -1,11 +1,7 @@
 // WHERE THE GAME JUMPS, THE DRAWN SMOKE IS THE GAME'S IN THE FIRST FRAME: the page on the software adapter, its solver stepped by hand. A smoke can is thrown and nobody draws it; a save, a load, a load under a
 // card (no time goes by), a restart, and the run's tape sought on and back. After each, what is drawn is read back and averaged over the game's own cells. Never a GPU's judgement of how it looks.
 //   PORT=<a dev server> node tools/draw/smokejump-page.cjs      exit 0 = every check passed, 1 = a FAIL, 2 = the script died · JUMP_BREAK=1 = the page never takes the smoke whole: it must fail
-const { chromium } = (() => { try { return require('playwright'); } catch { return require('/opt/node-tools/node_modules/playwright'); } })();
-const PORT = process.env.PORT || 5199, BREAK = process.env.JUMP_BREAK === '1';
-const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog', '--no-sandbox'];
-let fails = 0;
-const check = (ok, what, got) => { console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}${got === undefined ? '' : `   (${JSON.stringify(got)})`}`); if (!ok) fails++; };
+const PAGE = require('../qa/page.cjs').page({ name: 'smokejump-page', detail: 'json' }), { check } = PAGE, BREAK = process.env.JUMP_BREAK === '1';
 /** in the page: a tick nobody draws, a frame of the solver alone, and what is drawn against what the game handed over */
 const hands = broken => {
   const D = window.__draw, E = D.engine, S = D.smoke, dev = E.device;
@@ -35,12 +31,9 @@ const hands = broken => {
 };
 const whole = r => r.game > 20 && r.off < 0.04 && r.bare === 0 && Math.abs(r.drawn / r.game - 1) < 0.05 && r.shown > 0;
 (async () => {
-  const browser = await chromium.launch({ headless: true, executablePath: process.env.CHROMIUM || '/usr/bin/chromium', args: FLAGS }), ctx = await browser.newContext({ viewport: { width: 160, height: 90 }, deviceScaleFactor: 1 });
+  const context = await PAGE.context({ size: [160, 90] });
   const open = async words => {
-    const page = await ctx.newPage(), errors = []; page.setDefaultTimeout(900000);
-    page.on('pageerror', x => errors.push(String(x && x.stack || x).slice(0, 500)));
-    page.on('console', m => { const t = m.text(); if (m.type() === 'error' || /Invalid|error:/.test(t)) errors.push(t.slice(0, 300)); });
-    await page.goto(`http://localhost:${PORT}/?${words}`, { timeout: 600000 });
+    const { page, errors, go } = await PAGE.open({ context, timeout: 900000, errors: { also: /Invalid|error:/ } }); await go(words, { timeout: 600000 });
     await page.waitForFunction(() => !!window.__ready && !!window.__draw, null, { timeout: 900000 }); await page.evaluate(() => window.__ready); await page.evaluate(hands, BREAK);
     return { page, errors };
   };
@@ -69,7 +62,5 @@ const whole = r => r.game > 20 && r.off < 0.04 && r.bare === 0 && Math.abs(r.dra
   await P.page.evaluate(() => { const d = window.__draw; d.run(1, [], 'last'); });
   for (const [to, words] of [[run.ticks - 30, 'on'], [run.ticks - 90, 'back']]) { const r = await seek(to); check(Math.abs(r.at - to) <= 2 && whole(r) && r.cans.length === 1, `a place sought ${words} on the run's tape has the whole of the smoke there, and its can`, r); }
   check(P.errors.length === 0, 'the tape: nothing threw', P.errors.slice(0, 4));
-  await browser.close();
-  console.log(fails ? `=== smokejump-page: ${fails} FAILED ===` : '=== smokejump-page: all pass ===');
-  process.exit(fails ? 1 : 0);
+  await PAGE.end();
 })().catch(e => { console.error(e); process.exit(2); });

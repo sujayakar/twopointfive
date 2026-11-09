@@ -16,7 +16,7 @@ const OUT = resolve(process.env.OUT ?? './look-out');
 mkdirSync(OUT, { recursive: true });
 type V3 = [number, number, number];
 
-const { LOOK } = await import(`${REPO}/src/scene/look.ts`); LOOK.on = process.env.TPS_LOOK !== '0';   // (as the page opens: the look is up)
+const { setLookPlace } = await import(`${REPO}/src/scene/look.ts`); setLookPlace(process.env.TPS_LOOK !== '0');   // (TPS_LOOK=0: the office's dress)
 const { loadGltfCharacter, loadGltfCast, castFile, castSide } = await import(`${REPO}/src/anim/gltf.ts`);
 const CM = await import(`${REPO}/src/render/charMaterials.ts`);
 const notes: string[] = [];

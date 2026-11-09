@@ -325,8 +325,8 @@ export const CHAR_MATS: Record<CharSide, SideTable> = {
     standIn: { accent: 'cloth_plain' },
   },
 };
-/** THE LOOK'S TABLES (scene/look.ts LOOK, 2010s GWOT; the meshes are cast-gwot.gltf, tools/chars/README.md 'The look'): a SECOND set of rows for the two sides the look
- *  re-dresses, read in place of CHAR_MATS' while the switch is on (charMatsOf). The responders' and the civilians' rows are CHAR_MATS' own under either look.
+/** THE LOOK'S TABLES (scene/look.ts, 2010s GWOT; the meshes are cast-gwot.gltf, tools/chars/README.md 'The look'): a SECOND set of rows for the two sides the look
+ *  re-dresses, read in place of CHAR_MATS' where the men wear the look's dress (charMatsOf). The responders' and the civilians' rows are CHAR_MATS' own under either look.
  *  Flat colours, as ever: a camouflage pattern is its AVERAGE (a khaki-olive tan), never a texture.
  *  OPERATORS: one tan-and-olive issue (each man's suit tint keeps a fifth of the cloth, so the loadout's uniform and the pairs' warm / cool suits still tell), a
  *  ranger-green carrier, pouches, belt and packs and a ranger-green helmet on it, coyote boots, tan-brown gloves and pads; the MARKING is the pair's colour dusted with
@@ -378,7 +378,7 @@ export const CHAR_MATS_LOOK: Partial<Record<CharSide, SideTable>> = {
     standIn: { accent: 'cloth_plain', lens: 'skin' },
   },
 };
-/** THE SNEAKING SUIT (scene/look.ts LOOK.suit; who wears it and when: rust/game_rules/src/cast sneak_suit — Sam, and a quiet mission's partner, on a mission that is not a squad's
+/** THE SNEAKING SUIT (who wears it and when: rust/game_rules/src/cast sneak_suit — Sam, and a quiet mission's partner, on a mission that is not a squad's
  *  loud one): an operator's THIRD set of rows. The cast has no part of its own for it (32 of 32 are dealt), so it is the operator's own suit part — uniform, vest and
  *  boots — drawn without the helmet and the back kit (rust/game_rules/src/cast cast_parts) and shaded here as one matt black: cloth, rig, boots and gloves within a third of a stop of
  *  each other, the rig told from the cloth by its finish alone (harder, a little glossier), so under a lamp he reads as a man in a suit with a harness and in the
@@ -402,7 +402,7 @@ export const SNEAK_SUIT: SideTable = {
   grime: { color: [0.2, 0.175, 0.135], height: 0.06, band: 0.16, k: 0.3 }, cavity: 0.42, ridge: 0.3,
   standIn: { cloth_plain: 'cloth_uniform', accent: 'cloth_plain' },
 };
-/** the table a side is drawn from NOW: the look's while its switch is on and it has one for the side, else CHAR_MATS' — and for an operator in the sneaking suit
+/** the table a side is drawn from NOW: the look's where the men wear its dress and it has one for the side, else CHAR_MATS' — and for an operator in the sneaking suit
  *  (`suit`: the caller's word, rust/game_rules/src/cast sneak_suit) the suit's */
 export function charMatsOf(side: CharSide, suit = false): SideTable { return suit && side === 'operator' ? SNEAK_SUIT : (lookDress() && CHAR_MATS_LOOK[side]) || CHAR_MATS[side]; }
 /** the tables as shipped (the panel's reset; `resetCharMats`) */
@@ -427,7 +427,7 @@ export function slotPick(side: CharSide, slot: CharSlot, id: number, standIn = f
 export function resetCharMats() { const s = JSON.parse(SHIPPED) as typeof CHAR_MATS; for (const k of Object.keys(s) as CharSide[]) CHAR_MATS[k] = s[k]; const l = JSON.parse(SHIPPED_LOOK) as typeof CHAR_MATS_LOOK; for (const k of Object.keys(l) as CharSide[]) CHAR_MATS_LOOK[k] = l[k]; Object.assign(SNEAK_SUIT, JSON.parse(SHIPPED_SUIT) as SideTable); matsVersion++; }
 /** bumped whenever a table is edited by a tool, so cached palettes are rebuilt (bumpCharMats) */
 let matsVersion = 1;
-export function charMatsVersion() { return matsVersion * 2 + (lookDress() ? 1 : 0); }   // (the look switch is part of the version: a palette cached under one look is rebuilt under the other)
+export function charMatsVersion() { return matsVersion * 2 + (lookDress() ? 1 : 0); }   // (the place's dress is part of the version: a palette cached under one is rebuilt under the other)
 
 /** a stable per-man die for slot `salt` (never Math.random: the same man wears the same shirt every boot) */
 function die(id: number, salt: number): number { let h = (Math.imul(id | 0, 0x9E3779B1) ^ Math.imul(salt + 1, 0x85EBCA6B)) >>> 0; h ^= h >>> 15; h = Math.imul(h, 0x2C1B3C6D); h ^= h >>> 12; h = Math.imul(h, 0x297A2D39); h ^= h >>> 15; return (h >>> 0) / 4294967296; }

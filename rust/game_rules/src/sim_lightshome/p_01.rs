@@ -48,7 +48,7 @@ fn lamp_row(g: &Game, l: LightId) -> Option<usize> {
 pub fn columns(g: &crate::game::Game) {
     let (cols, caps) = (light_cols().len(), light_caps());
     if rs::cap(14) != cols || rs::cap(0) as f64 != caps.targets || rs::cap(1) as f64 != caps.rows || rs::cap(2) as f64 != caps.beacons || rs::cap(3) as f64 != caps.cameras || rs::cap(4) as f64 != caps.lasers {
-        panic!("the Rust module lays the lights out as {} columns and src/sim/lightshome.ts as {}: bun run tools/sim/build.ts", rs::cap(14), cols);
+        panic!("rust/sim lays the lights out as {} columns and the rules as {}", rs::cap(14), cols);
     }
 }
 

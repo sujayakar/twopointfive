@@ -678,7 +678,7 @@ impl EnemysquadsMod {
 }
 
 /// (src/game/enemysquads.ts:231 SQUADS_DEFAULTS: a table nothing writes)
-pub fn squads_defaults() -> crate::knobs::SquadsK { crate::knobs::page_squads() }
+pub fn squads_defaults() -> crate::knobs::SquadsK { crate::knobs::SquadsK::page() }
 
 /// (src/game/enemysquads.ts:613 COUNT: a table nothing writes)
 pub fn count() -> Vec<String> { alloc::vec![String::from("nobody"), String::from("one"), String::from("two"), String::from("three"), String::from("four")] }

@@ -285,7 +285,7 @@ impl LaststandMod {
 }
 
 /// (src/game/laststand.ts:91 LASTSTAND_DEFAULTS: a table nothing writes)
-pub fn laststand_defaults() -> crate::knobs::LaststandK { crate::knobs::page_laststand() }
+pub fn laststand_defaults() -> crate::knobs::LaststandK { crate::knobs::LaststandK::page() }
 
 /// (src/game/laststand.ts:92 LS)
 pub const LS: &str = "twopointsix.laststand";

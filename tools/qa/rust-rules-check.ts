@@ -15,7 +15,7 @@ let red = 0; const line = (bad: string[], what: string, good: string): void => {
 /** WHICH SIDE OF THE LINE EACH CRATE UNDER rust/ IS ON. 'gameplay': it decides the game, runs on the server, and is bound to one arithmetic. 'dressing': it only makes the picture, and may round as the machine
  *  likes. 'both': exact by the standard and stateless, so either side may link it. A crate with no row here is red: nothing joins without saying which it is. */
 type Side = 'gameplay' | 'dressing' | 'both';
-const SIDES: Record<string, Side> = { prim: 'both', sim: 'gameplay', dress: 'dressing', game_derive: 'both', game_types: 'gameplay', game_wire: 'gameplay', game_rules: 'gameplay', game: 'gameplay', game_draw: 'gameplay', game_run: 'gameplay', game_start: 'gameplay', game_face: 'gameplay' };   // (game_derive: what a type says of itself, made as it compiles · game: the simulation's tick as Rust · game_run: what a host does round a step · game_start: the game's own start, a level file's text in and a Game out · game_face: the module the page loads under ?rust=1 — tools/blitz/FACE.md)
+const SIDES: Record<string, Side> = { prim: 'both', sim: 'gameplay', game_derive: 'both', game_types: 'gameplay', game_rules: 'gameplay', game_draw: 'gameplay', game_run: 'gameplay', game_start: 'gameplay', game_face: 'gameplay' };   // (game_derive: what a type says of itself, made as it compiles · game_rules: the tick · game_run: what a host does round a step · game_start: the game's own start, a level file's text in and a Game out · game_face: the module a host loads)
 /** what a line of rust/sim may not say */
 const RULES: readonly { re: RegExp; why: string; but?: string }[] = [
   { re: /\.(sin|cos|tan|asin|acos|atan|atan2|sin_cos|sinh|cosh|tanh|asinh|acosh|atanh|exp|exp2|exp_m1|ln|ln_1p|log|log2|log10|powf|powi|cbrt|hypot)\s*\(/, why: 'a rounded function of the standard library: the game has its own (maths.rs), the same bits as the TypeScript and on every machine' },
@@ -124,7 +124,7 @@ if (BREAK) sim.push({ at: 'rust/sim/src/planted.rs:1', file: 'sim/src/planted.rs
   rows.forEach((r, i) => { f[0] = Number(`1e${min + i}`); if (u[0] !== r) bad.push(`1e${min + i} is not the double the language reads`); });
   if (min !== -323 || rows.length !== 632) bad.push(`${rows.length} powers from 1e${min}: 632 from 1e-323 are the ones a double holds`);
   line(bad, 'powers: rust/sim/src/pow10.rs is the language\'s own', `${rows.length} powers`); }
-const L = links(); if (BREAK) L.planted = ['dress', 'sim'];
+const L = links(); if (BREAK) L.planted = ['outside', 'sim'];
 { const bad: string[] = [];
   for (const [c, deps] of Object.entries(L)) {
     const side = SIDES[c]; if (!side) { bad.push(`the crate ${c} has no side: say in SIDES whether it is gameplay, dressing or both (a crate from outside has none)`); continue; }

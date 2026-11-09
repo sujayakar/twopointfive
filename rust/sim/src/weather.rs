@@ -7,16 +7,12 @@
 //! (weatherKinds.ts: authored numbers handed in when a kind is set); the lot's soaked box (a Box of the host's, which a round's material still reads); a man's
 //! place, head and coat (fields of TypeScript objects, handed over as a call's numbers until the men's columns land); the hour (hours.ts: last, on the lamps' table).
 use crate::air::Air;
-use crate::knobs::{k, AIRDUST_DIFFUSE, AIRDUST_RECHECK_SECS, AIRDUST_SETTLE, AIRDUST_STEP, SNOWBOG_BANK, SNOWBOG_OLD, SNOWBOG_PACKED, SNOWBOG_TOP, WET_BEAD_RUNOFF, WET_DRY_PER_SEC, WET_SOAK_PER_SEC, WX_RAIN_K, WX_ROOF_BED, WX_THUNDER_K, WX_THUNDER_LOUD, WX_THUNDER_SECS};
+use crate::knobs::{k, WET_BEAD_RUNOFF, WET_DRY_PER_SEC, WET_SOAK_PER_SEC, WX_RAIN_K, WX_ROOF_BED, WX_THUNDER_K, WX_THUNDER_LOUD, WX_THUNDER_SECS};
 use crate::lines;
 use crate::maths::{exp, hypot2, hypot3, pow};
 use crate::state::state;
 use crate::world::{clamp, js_abs, js_ceil, js_max, js_min};
 use core::mem::size_of;
-
-/// EVERY KNOB THE WEATHER'S RULES READ (here, air.rs, snow.rs): what a question asked outside a tick has handed over first (game/rustknobs.ts WX_KNOBS; tools/qa/weather-ident.ts reads
-/// these files and is red on a `k(..)` that is not named here)
-pub const READS: [usize; 16] = [AIRDUST_DIFFUSE, AIRDUST_RECHECK_SECS, AIRDUST_SETTLE, AIRDUST_STEP, SNOWBOG_BANK, SNOWBOG_OLD, SNOWBOG_PACKED, SNOWBOG_TOP, WET_BEAD_RUNOFF, WET_DRY_PER_SEC, WET_SOAK_PER_SEC, WX_RAIN_K, WX_ROOF_BED, WX_THUNDER_K, WX_THUNDER_LOUD, WX_THUNDER_SECS];
 
 /// the roofs a table holds (roofsOf's four biggest: the level's own, or the office's two)
 pub const ROOFS: usize = crate::items::MAX_ROOFS;

@@ -10,15 +10,10 @@
 //   node tools/qa/nogpu-page.cjs        env: PORT (the dev server's, default 5199) · NOGPU_ONLY=card = steps 1 to 3 alone (seconds; step 4 boots the game)
 // Nothing here is a machine that really has no adapter, and no real card is ever asked. Exit 0 = every check passed, 1 = one failed or a page did not boot.
 //   NOGPU_BREAK=1: every page runs under ?gpuask=0 — must FAIL.
-const { chromium } = require('/opt/node-tools/node_modules/playwright');
-const PORT = process.env.PORT || 5199, BREAK = process.env.NOGPU_BREAK === '1' ? '&gpuask=0' : '', ONLY = process.env.NOGPU_ONLY || '';
-const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
-const T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a);
-let red = 0; const check = (ok, what) => { console.log(`${ok ? '- PASS' : '- FAIL'} — ${what}`); if (!ok) red++; };
+const { page: pageRun, NOT_THE_PAGE } = require('./page.cjs'), PAGE = pageRun({ name: 'nogpu-page' }), { check, note: log } = PAGE;
+const BREAK = process.env.NOGPU_BREAK === '1' ? '&gpuask=0' : '', ONLY = process.env.NOGPU_ONLY || '';
 (async () => {
-  const browser = await chromium.launch({ headless: true, channel: 'chromium', args: FLAGS });
-  const ctx = await browser.newContext({ viewport: { width: 1000, height: 640 }, deviceScaleFactor: 1, acceptDownloads: true, permissions: ['clipboard-read', 'clipboard-write'] });
-  await ctx.addInitScript(() => {
+  const { page, errors: errs, ready } = await PAGE.open({ size: [1000, 640], options: { acceptDownloads: true, permissions: ['clipboard-read', 'clipboard-write'] }, errors: { skipAt: NOT_THE_PAGE }, init: [() => {
     window.__testVisible = true;
     const how = new URLSearchParams(location.search).get('stub'); if (!how || !navigator.gpu) return;
     const real = navigator.gpu.requestAdapter.bind(navigator.gpu); window.__asked = [];
@@ -26,16 +21,14 @@ let red = 0; const check = (ok, what) => { console.log(`${ok ? '- PASS' : '- FAI
       if (how === 'none') return Promise.resolve(o?.forceFallbackAdapter ? real(o) : null).then(a => a);
       if (how === 'first') return o?.powerPreference ? Promise.resolve(null) : real(o);
       return real(o); };
-  });
-  const page = await ctx.newPage();
-  const errs = [], infos = []; page.on('pageerror', e => errs.push(String(e).slice(0, 300)));
-  page.on('console', m => { if (m.type() === 'info') infos.push(m.text().slice(0, 300)); if (m.type() !== 'error') return; const at = m.location().url || ''; if (!(/\/favicon\.ico$/.test(at) || /^http:\/\/localhost:5174\//.test(at))) errs.push(m.text().slice(0, 300)); });
+  }] });
+  const infos = []; page.on('console', m => { if (m.type() === 'info') infos.push(m.text().slice(0, 300)); });
   const downloads = []; page.on('download', d => downloads.push(d));
   const cardOf = () => page.evaluate(() => { const el = document.getElementById('fatal'); const b = el?.querySelector('button'); const r = b?.getBoundingClientRect();
     return { up: el?.style.display === 'flex', text: el?.innerText ?? '', kids: el?.children.length ?? 0, button: b?.textContent ?? '', top: b && r ? document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2) === b : false, asked: window.__asked ?? [], fits: el ? el.scrollHeight <= el.clientHeight + 1 : false }; });
 
   // 1. no card from either ask
-  await page.goto(`http://localhost:${PORT}/?paused&quality=low&mute&stub=none${BREAK}`, { waitUntil: 'load' });
+  await page.goto(PAGE.url(`paused&quality=low&mute&stub=none${BREAK}`), { waitUntil: 'load' });
   await page.waitForFunction(() => document.getElementById('fatal')?.style.display === 'flex', null, { timeout: 60000 });
   let c = await cardOf(); log('card:\n' + c.text);
   check(c.up && c.text.startsWith("The game couldn't start.") && c.kids === 3, 'the card is up with its words, the lines and a button');
@@ -49,26 +42,26 @@ let red = 0; const check = (ok, what) => { console.log(`${ok ? '- PASS' : '- FAI
   check(only.length === 0, `no other error on the page (${only.length}${only.length ? ': ' + only[0] : ''})`);
   // 2. the switch off: the one line, as it was
   errs.length = 0;
-  await page.goto(`http://localhost:${PORT}/?paused&quality=low&mute&stub=none&gpuask=0`, { waitUntil: 'load' });
+  await page.goto(PAGE.url('paused&quality=low&mute&stub=none&gpuask=0'), { waitUntil: 'load' });
   await page.waitForFunction(() => document.getElementById('fatal')?.style.display === 'flex', null, { timeout: 60000 });
   c = await cardOf();
   check(c.up && c.kids === 0 && /^Error: No WebGPU adapter available\./.test(c.text) && c.asked.join() === 'fast', `?gpuask=0: one ask and the old card (${c.asked.join()} · ${c.text.slice(0, 60).replace(/\n/g, ' ')})`);
   // 3. first ask empty: on this box the second answers with the software adapter, which is not a start
-  await page.goto(`http://localhost:${PORT}/?paused&quality=low&mute&stub=first${BREAK}`, { waitUntil: 'load' });
+  await page.goto(PAGE.url(`paused&quality=low&mute&stub=first${BREAK}`), { waitUntil: 'load' });
   await page.waitForFunction(() => document.getElementById('fatal')?.style.display === 'flex' || !!window.__engine, null, { timeout: 120000 }).catch(() => {});
   c = await cardOf(); log('first-empty card:\n' + c.text.slice(0, 700));
   check(c.up ? /asked for any card: .*software adapter/.test(c.text) && c.asked.join() === 'fast,any' : infos.some(l => /came back empty/.test(l)), c.up ? "an empty first ask, a software second: the card, with that adapter named" : 'an empty first ask, a card from the second: the game starts on it');
-  if (ONLY === 'card') { await browser.close(); console.log(red ? `${red} FAILED` : 'all pass'); process.exit(red ? 1 : 0); }
+  if (ONLY === 'card') await PAGE.end(PAGE.fails ? `${PAGE.fails} FAILED` : 'all pass');
   // 4. a plain boot, and a take through the door
   errs.length = 0;
   await page.setViewportSize({ width: 320, height: 180 });
-  await page.goto(`http://localhost:${PORT}/?paused&quality=low&mute&cloud=0${BREAK}`, { waitUntil: 'commit' });   // (cloud=0: nobody listens at the door, whatever backend this dev server runs)
-  await page.waitForFunction(() => !!window.__ready, null, { timeout: 1500000 }); await page.evaluate(async () => { await window.__ready; }); log('ready');
+  await page.goto(PAGE.url(`paused&quality=low&mute&cloud=0${BREAK}`), { waitUntil: 'commit' });   // (cloud=0: nobody listens at the door, whatever backend this dev server runs)
+  await ready(); log('ready');
   check(await page.evaluate(() => document.getElementById('fatal')?.style.display !== 'flex'), 'a plain boot puts no card up');
   await page.evaluate(() => { window.__menu?.close?.(); window.__perfrec.start('door check'); window.__runFrames(6); window.__perfrec.stop(); });
   await page.waitForTimeout(3000);
   const take = await page.evaluate(() => { const D = window.__lastPerfDump; return { went: window.__perfrec.lastSent, ok: !!D && D.version === 1 && Array.isArray(D.frames) && Array.isArray(D.events), frames: D?.frames?.length ?? -1 }; });
   check(downloads.length === 0 && take.ok && take.went === false, `the take was made (${take.frames} frames), no file was downloaded (${downloads.length}), and with nobody listening the recorder knows it wasn't sent (${take.went})`);
   check(!errs.length, `no page or console error (${errs.length}${errs.length ? ': ' + errs[0] : ''})`);
-  await browser.close(); console.log(red ? `${red} FAILED` : 'all pass'); process.exit(red ? 1 : 0);
+  await PAGE.end(PAGE.fails ? `${PAGE.fails} FAILED` : 'all pass');
 })().catch(e => { console.log('- FAIL — the script died: ' + String(e).slice(0, 400)); process.exit(1); });

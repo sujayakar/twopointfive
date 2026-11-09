@@ -1,11 +1,10 @@
 //! A MOMENT OF A GAME, whole: where a walk of a tape may come back to. It is the game as it stood and everything this module holds of it (its saves, what was said), so
-//! what is handed over again from there plays the same run. A save put back (page.rs `back`) is another thing: it goes on from now, and no serial is dealt twice.
-use crate::page::{hold, shelf_of, shelf_put, Kept, Shelved};
+//! what is handed over again from there plays the same run. A save put back (saves.rs `back`) is another thing: it goes on from now, and no serial is dealt twice.
+use crate::saves::{hold, shelf_of, shelf_put, Shelved};
 use game_start::moment::Moment as Whole;
 use std::cell::RefCell;
-use std::rc::Rc;
 
-struct Moment { of: u32, game: Whole, shelf: Vec<(String, Shelved, Rc<Kept>)>, said: Vec<String> }
+struct Moment { of: u32, game: Whole, shelf: Vec<(String, Shelved)>, said: Vec<String> }
 
 thread_local! {
     /// the moments held, by number less one
@@ -29,9 +28,8 @@ pub extern "C" fn face_moment_back(h: u32, k: u32) -> u32 {
         super::with(h, |x| { let g = m.game.laid(x.g.sim); hold(x, g); x.hands = None; });
         (m.shelf.clone(), m.said.clone())
     })) else { return 0 };
-    shelf_put(h, &shelf);
+    shelf_put(h, shelf);
     super::with(h, |x| x.said = said);
-    crate::memo::forget(h);
     1
 }
 #[no_mangle]

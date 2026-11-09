@@ -192,7 +192,7 @@ impl GunholdMod {
 }
 
 /// (src/game/gunhold.ts:76 GUNHOLD_DEFAULTS: a table nothing writes)
-pub fn gunhold_defaults() -> crate::knobs::GunholdK { crate::knobs::page_gunhold() }
+pub fn gunhold_defaults() -> crate::knobs::GunholdK { crate::knobs::GunholdK::page() }
 
 /// (src/game/gunhold.ts:90 GUNHOLD_DEBUG: a table nothing writes)
 pub fn gunhold_debug() -> crate::gunhold::GUNHOLDDEBUG { crate::gunhold::GUNHOLDDEBUG {  } }

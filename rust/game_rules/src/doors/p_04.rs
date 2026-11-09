@@ -12,7 +12,7 @@ fn emit(g: &mut Game, d: DoorId, sound: crate::doors::DoorSound, pos: V3, who: f
     door_event(g, crate::doors::DoorEvent { door: d, sound, pos, who, level });
 }
 /// (the `emit` the Game hands the doors, game.ts:1195; a tool's replacement of `doors.emit` fires by its tap)
-#[doc(hidden)] pub fn door_event__body(g: &mut Game, e: crate::doors::DoorEvent) {
+pub fn door_event(g: &mut Game, e: crate::doors::DoorEvent) {
     crate::game::game_on_door_event(g, e);
 }
 
@@ -214,7 +214,7 @@ pub fn doors_kick_in(g: &mut crate::game::Game, d: DoorId, from: V3, who: f64, l
 }
 
 /// The doors' side of a blast: the leaves it took off. The Game's `blaster`, called by name (game.ts:1206).   (doors.ts Doors.blast)
-#[doc(hidden)] pub fn doors_blast__body(g: &mut crate::game::Game, at: V3, tear_m: f64, who: f64) -> Vec<DoorId> {
+pub fn doors_blast(g: &mut crate::game::Game, at: V3, tear_m: f64, who: f64) -> Vec<DoorId> {
     crate::doorblast::door_blast(g, at, tear_m, who)
 }
 
@@ -323,25 +323,6 @@ pub fn doors_boxes(g: &crate::game::Game, out: &mut Vec<AnyBoxId>) {
 /// Leaf boxes, for registering as dynamic occluders with the collision layer.   (doors.ts Doors.leafBoxes)
 pub fn doors_leaf_boxes(g: &crate::game::Game) -> Vec<BoxId> {
     g.doors.list.iter().map(|d| g.dr[*d].box_).collect()
-}
-
-#[doc(hidden)] pub fn doors_blast(g: &mut crate::game::Game, at: V3, tear_m: f64, who: f64) -> Vec<DoorId> {
-    use crate::io::Io;
-    if g.taps & (1u64 << 7) == 0 { return doors_blast__body(g, at, tear_m, who); }
-    let mut o = crate::io::W::new(); at.w(&mut o); tear_m.w(&mut o); who.w(&mut o);
-    let r = doors_blast__body(g, at, tear_m, who);
-    let mut a = crate::io::W::new(); r.w(&mut a);
-    crate::out_events::push_tap(g, 7, &o.b, &a.b);
-    r
-}
-
-
-#[doc(hidden)] pub fn door_event(g: &mut Game, e: crate::doors::DoorEvent) {
-    use crate::io::Io;
-    if g.taps & (1u64 << 8) == 0 { return door_event__body(g, e); }
-    let mut o = crate::io::W::new(); e.w(&mut o);
-    door_event__body(g, e);
-    crate::out_events::push_tap(g, 8, &o.b, &[]);
 }
 
 #[cfg(test)]

@@ -17,7 +17,7 @@ import { CAST_FILE, CAST_FILE_LOOK, castUrlFor, loadCharacterSet } from '../anim
 import { CharacterRenderer } from '../anim/characters';
 import { COATFINISH, SOLIDGLASS } from '../scene/stuff';
 import { MARKING_TEXEL } from '../scene/markings';
-import { LOOK, lookKeptOf, placeOfQuery, setLookPlace } from '../scene/look';
+import { lookKeptOf, placeOfQuery, setLookPlace } from '../scene/look';
 import { Input } from './input';
 import { FollowCamera } from './camera';
 import { FIXEDSTEP, planTicks } from './fixedstep';
@@ -148,7 +148,7 @@ async function main(): Promise<void> {
   let refused: string | null = null; if (q.has('bench') && !q.has(BENCH_RUN_KEY)) { refused = benchBegin(false); if (refused === null) return; console.info(`benchmark: ${refused}`); }
   if (priceLevelsPage(q)) return;
   gameKeysBoot(q, walkInNow); bootTextSize(q, kitPicture);
-  LOOK.on = true; setLookPlace(placeOfQuery(q));
+  setLookPlace(placeOfQuery(q));
   const name = coop?.start.file ?? (/^[\w.-]+\.json$/.test(q.get('levelFile') ?? '') ? q.get('levelFile')! : 'office.json'), at = (p: string) => new URL(p, document.baseURI).href;
 
   SFX_TABLE.was = q.has('oldsounds'); SFX_TABLE.redone = q.has('newsounds'); if (q.has('bench') || q.has(BENCH_RUN_KEY)) SFX_WARM.on = false; else if (!q.has('mute')) warmSfx();   // (the sounds, a voice at a time in idle moments)
@@ -158,7 +158,7 @@ async function main(): Promise<void> {
   const chP = loadCharacterSet(at('assets/ual/AnimationLibrary_Godot_Standard.gltf'), castUrlFor(location.search, document.baseURI)); chP.then(() => boot.span('gltf', tBoot), () => { /* awaited below */ });
   const tFiles = performance.now(), filesP = Promise.all([tape ? new Uint8Array(0) : coop ? bytesOf(`levels/${name}`) : levelBytes(name).then(b => { boot.span('level', tFiles); return b; }), bytesOf(at('assets/ual/AnimationLibrary_Godot_Standard.gltf')), bytesOf(at('assets/ual/AnimationLibrary_Godot_Standard.bin')), bytesOf(at(`assets/chars/${CAST_FILE}`)), bytesOf(at(`assets/chars/${CAST_FILE_LOOK}`))]); filesP.catch(() => { /* awaited below */ });
   boot.expose();
-  const face = await fetchFace(say, () => { throw new Error('the game asked a die the page never hands in'); }); MODULE.name = face.name ?? '';
+  const face = await fetchFace(say); MODULE.name = face.name ?? '';
   // THE DESK: the cards before a game ask the module, and what a press keeps goes in this machine's store, where the next page's start reads it
   { const C = new Commands(); setDesk(new Desk(face.exports as unknown as DeskFace, face.exports.memory as WebAssembly.Memory, (key, text) => { try { if (text) localStorage.setItem(key, text); else localStorage.removeItem(key); } catch { /* no store: nothing is kept */ } }));
     C.words(location.search); machineBefore(q, name, C); desk().do(C); }

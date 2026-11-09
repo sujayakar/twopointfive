@@ -370,7 +370,7 @@ pub struct WallbreakStats {
 }
 
 /// (src/game/wallbreak.ts:81 WALLS_DEFAULTS: a table nothing writes)
-pub fn walls_defaults() -> crate::knobs::WallsK { crate::knobs::page_walls() }
+pub fn walls_defaults() -> crate::knobs::WallsK { crate::knobs::WallsK::page() }
 
 /// (src/game/wallbreak.ts:162 HIDE)
 pub const HIDE: f64 = 3.0;

@@ -1,4 +1,4 @@
-//! A MAN WHO CANNOT SEE GOES NOWHERE (rust/game/src/guards/p_07.rs, the cover branch of `alert`).
+//! A MAN WHO CANNOT SEE GOES NOWHERE (rust/game_rules/src/guards/p_07.rs, the cover branch of `alert`).
 //!
 //! What this holds. A sentry in a yard has rounds put past him until the suppression rule sends him to cover round the end of a wall. A flash
 //! lands at his feet as he is sent. Before the mend he walked the 2.25 m to his spot with his eyes gone, because neither the rule nor the
