@@ -1,0 +1,47 @@
+[
+{
+"w": 640,
+"h": 360,
+"tick": 600,
+"samples": 400,
+"methods": [
+"denlin",
+"onelin"
+],
+"paths": 700,
+"name": "sealed",
+"dist": 9,
+"hour": 15.0,
+"cut": 2.55,
+"look": [
+-8,
+0.8,
+-4
+],
+"lamps": "off",
+"doors": 0,
+"maps": true
+},
+{
+"w": 640,
+"h": 360,
+"tick": 600,
+"samples": 400,
+"methods": [
+"denlin",
+"onelin"
+],
+"paths": 300,
+"name": "open",
+"dist": 9,
+"hour": 15.0,
+"cut": 2.55,
+"look": [
+-8,
+0.8,
+-4
+],
+"lamps": "on",
+"doors": 0
+}
+]
