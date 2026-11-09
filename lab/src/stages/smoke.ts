@@ -139,8 +139,8 @@ export class Smoke {
   constructor(private lab: Lab) {}
   /** a canister where it lies: it burns for `last` seconds */
   drop(at: V3, last = 14, rate = 1) { this.on = true; this.sources.push({ at: [at[0], Math.max(at[1], 0.05) + 0.14, at[2]], born: this.lab.tick, last, rate }); if (this.sources.length > 10) this.sources.shift(); }
-  /** a breath of it */
-  puff(at: V3, rate: number) { this.on = true; this.sources.push({ at: [...at], born: this.lab.tick, last: 2.12, rate: rate * 0.35 }); if (this.sources.length > 10) this.sources.shift(); }
+  /** a breath of it: a shot's, or what it strikes off a wall */
+  puff(at: V3, r: number, rate: number) { this.on = true; this.puffs.push({ at: [...at], born: this.lab.tick, r, rate }); if (this.puffs.length > 3) this.puffs.shift(); } private puffs: { at: V3; born: number; r: number; rate: number }[] = [];
   clear() { this.sources = []; this.fires = []; this.fresh = true; }
   /** fires: each feeds the bricks hot gas and lights the room by a lamp that moves as it flickers */
   fires: { at: V3; size: number }[] = [];
@@ -156,6 +156,7 @@ export class Smoke {
     const key = lab.building.doors.map(x => x.open.toFixed(3)).join(); this.faceNow = key !== this.doorKey; this.doorKey = key; void this.faceNow;
     const boxes = lab.building.doors.map(x => x.leaf[0]!), f = new Float32Array(16 * 16); boxes.slice(0, 16).forEach((p, i) => { for (let k = 0; k < 3; k++) { const r = p.rot[k]!; f.set([r[0], r[1], r[2], -(r[0] * p.at[0] + r[1] * p.at[1] + r[2] * p.at[2])], i * 16 + k * 4); } f.set(p.half, i * 16 + 12); }); lab.uniform('smokeDoors', f);
     const s = new Float32Array(16 * 8); let n = 0; for (const q of this.sources) { const age = (lab.tick - q.born) / 60; if (age > q.last || n >= 10) continue; const k = Math.min(1, age / 0.5) * Math.min(1, (q.last - age) / 2); s.set([...q.at, 0.34, 300 * q.rate * k, 1.1 * k, 1.0 * k, 95 * q.rate * k], n++ * 8); }
+    this.puffs = this.puffs.filter(q => lab.tick - q.born < 9); for (const q of this.puffs) { if (n >= 13) break; s.set([...q.at, q.r, q.rate, 0.5, 0.6, q.rate * 0.05], n++ * 8); }
     for (const q of this.fires) { if (n >= 13) break; s.set([q.at[0], q.at[1] + 0.10, q.at[2], 0.36 * q.size, -0.5, 95, 1.6, 3.0], n++ * 8); }
     for (const p of steam) { if (n >= 16) break; const k = 0.75 + 0.25 * Math.sin(lab.tick * 0.11 + p.at[0]) * Math.sin(lab.tick * 0.043 + p.at[2]); s.set([p.at[0], p.at[1], p.at[2], p.r, 8 * p.k * k, 5.0, 0.35, 5 * k], n++ * 8); } lab.uniform('smokeSources', s);
     const ps = new Float32Array(128); let m = 0; for (const q of lab.building.people) for (const [h, rad] of [[0.45, 0.42], [1.25, 0.45]] as const) if (m < 14) ps.set([q.pos[0], q.pos[1] + h, q.pos[2], rad, q.vel[0] * 1.15, 0, q.vel[2] * 1.15, 0.8], m++ * 8); for (const d of lab.building.doors) { const l = d.leaf[0]!, w = lab.prevAt.get(l); if (!w || m >= 16) continue; const v = [0, 1, 2].map(k => (l.at[k]! - w.at[k]!) / this.dt); if (Math.hypot(...v) > 0.05) ps.set([...l.at, 0.75, v[0]!, 0, v[2]!, 0.5], m++ * 8); } lab.uniform('smokePushes', ps); lab.uniform('smokeK2', new Float32Array([m, 0, 0, 0])); lab.uniform('smokeK3', new Float32Array([0, 0, this.flip === 0 ? 1 : 0, 0]));

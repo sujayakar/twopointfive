@@ -64,7 +64,7 @@ export function packPiece(p: Piece, f: Float32Array, u: Uint32Array, o: number, 
   u[o + 21] = (q(t[0]) | (q(t[1]) << 8) | (q(t[2]) << 16)) >>> 0;
   u[o + 22] = p.cell ? (Math.round((p.cell[0] + 32) * 1000) | (Math.round((p.cell[1] + 32) * 1000) << 16)) >>> 0 : planeAt >>> 0; u[o + 23] = (((p.lamp ?? -1) & 0xff) | ((p.seed ?? 0) << 8)) >>> 0;
 }
-/** HOW OPEN each side of each leaf is, next to the fog its cluster is to a bounce: what its own neighbours keep from it, which no fog can tell. Found once */
+/** HOW OPEN each side of each leaf is: how much of what it faces its own twig's leaves leave to be seen. Found once */
 export function ownShade(c: Cluster): [number, number][] {
   const L = c.leaves, n = L.length, far = 0.9, dirs: V3[] = [], K = 14; for (let i = 0; i < K; i++) { const u = (i + 0.5) / K, a = i * 2.39996, s = Math.sqrt(u); dirs.push([s * Math.cos(a), s * Math.sin(a), Math.sqrt(1 - u)]); }
   const wide = (l: Leaf) => l.wood ? 0.022 : c.kind === 1 ? 0.06 : 0.46, side = L.map(l => cross(l.n, l.t)); let area = 0; for (const l of L) if (!l.wood) area += l.size * l.size * 4 * wide(l) * (2 / 3); const sigma = c.kind === 1 ? 1.3 : 0.5 * area / 4.19 * 0.75;
@@ -73,7 +73,7 @@ export function ownShade(c: Cluster): [number, number][] {
       for (let j = 0; j < n; j++) { if (j === i) continue; const m = L[j]!, e: V3 = [m.at[0] - o[0], m.at[1] - o[1], m.at[2] - o[2]], b = e[0] * d[0] + e[1] * d[1] + e[2] * d[2]; if (b < -m.size || b > far + m.size) continue; const r2 = e[0] * e[0] + e[1] * e[1] + e[2] * e[2] - b * b; if (r2 > m.size * m.size) continue;
         const den = m.n[0] * d[0] + m.n[1] * d[1] + m.n[2] * d[2]; if (Math.abs(den) < 1e-5) continue; const t = (m.n[0] * e[0] + m.n[1] * e[1] + m.n[2] * e[2]) / den; if (t < 1e-3 || t > far) continue; const q: V3 = [o[0] + d[0] * t - m.at[0], o[1] + d[1] * t - m.at[1], o[2] + d[2] * t - m.at[2]], u = (q[0] * m.t[0] + q[1] * m.t[1] + q[2] * m.t[2]) / m.size; if (Math.abs(u) >= 1) continue; const s = side[j]!, v = (q[0] * s[0] + q[1] * s[1] + q[2] * s[2]) / m.size; if (Math.abs(v) < wide(m) * (1 - u * u) * (1 + 0.35 * u)) { open = 0; break; } }
       seen += open; const bb = o[0] * d[0] + o[1] * d[1] + o[2] * d[2], cc = o[0] * o[0] + o[1] * o[1] + o[2] * o[2] - 1, h = bb * bb - cc; fog += h > 0 ? Math.exp(-sigma * Math.min(far, Math.max(0, -bb + Math.sqrt(h)))) : 1; }
-    out[f] = Math.max(0.04, Math.min(1, seen / Math.max(fog, 1e-3))); } return out; });
+    out[f] = Math.max(0.02, seen / K); } return out; });
 }
 /** leaves as the shaders read them: centre + size, normal and long axis packed, tone */
 export function packCluster(c: Cluster): { bvh: Bvh; data: ArrayBuffer } {

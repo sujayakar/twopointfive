@@ -13,14 +13,12 @@ fn upMirror(mirror: texture_2d<f32>, id: vec2u, p: Px, f: vec4u, front: bool) ->
     a += m * w; ws += w; }
   if (ws <= 0.0) { return vec4f(0.0, 0.0, 0.0, -1.0); } return a / ws;
 }
-/** how much of the light round a leaf reaches its two sides, past its own neighbours (which send some on themselves) */
-fn leafAo(p: Px) -> vec2f { let w = 0.55 * lum(p.albedo) * 1.8; return mix(vec2f(1.0), p.ao / (1.0 - (1.0 - p.ao) * min(w, 0.6)), 0.6); }   /* (six tenths: a blocker is not black, and sends on what its own side gets) */
 @compute @workgroup_size(8, 8) fn main(@builtin(global_invocation_id) id: vec3u) {
   let dim = vec2u(frame.size.xy); if (id.x >= dim.x || id.y >= dim.y) { return; }
   let rd = pxRay(id.xy); let V = -rd; let f = textureLoad(frontT, id.xy, 0); let p = underWater(unpackPx(textureLoad(surf, id.xy, 0), rd), f, rd); let em = textureLoad(emit, id.xy, 0); var c = em.rgb * part(0u); var mir = vec4f(0.0, 0.0, 0.0, -1.0); if (!p.leaf && (p.rough < asksMirror() || p.metal > 0.5)) { mir = upMirror(mirror, id.xy, p, f, false); }
   if (p.kind == 63u) { c = vec3f(0.0); }
   else if (!p.sky) {
-    let s = pxSurf(p); let vz = max(textureLoad(vis, id.xy, 0), vec4f(0.0)); var b = vec4f(0.0); var bb = vec3f(0.0); var ao = vec2f(1.0); var kept = false; if (p.leaf) { ao = leafAo(p); let e = folLight(p.x, p.n); if (e.w > 0.0) { kept = true; b = vec4f(e.rgb, 0.0); bb = folLight(p.x, -p.n).rgb * @tune.bounce; } } if (!kept) { b = up(id.xy, p); bb = b.rgb * @tune.bounce; } b *= @tune.bounce; let nv = max(dot(p.n, V), 0.02); let F = fresnel(coatF0(s), nv); let m = matteOf(s) * (1.0 - lum(F)) / PI; var ma = m * matteSeen(s.kind, s.albedo, nv); let car = isPaint(p.kind); let tv = coatT(nv); if (car) { ma = paintMatte(s.albedo) * (tv * 0.91 / PI); } let L = frame.sunDir.xyz; let cs = dot(p.n, L);
+    let s = pxSurf(p); let vz = max(textureLoad(vis, id.xy, 0), vec4f(0.0)); var b = vec4f(0.0); var bb = vec3f(0.0); var ao = vec2f(1.0); var kept = false; if (p.leaf) { let e = folLight(p.x, p.n, p.ao.x); if (e.w > 0.0) { kept = true; b = vec4f(e.rgb, 0.0); bb = folLight(p.x, -p.n, p.ao.y).rgb * @tune.bounce; } } if (!kept) { b = up(id.xy, p); bb = b.rgb * @tune.bounce; } b *= @tune.bounce; let nv = max(dot(p.n, V), 0.02); let F = fresnel(coatF0(s), nv); let m = matteOf(s) * (1.0 - lum(F)) / PI; var ma = m * matteSeen(s.kind, s.albedo, nv); let car = isPaint(p.kind); let tv = coatT(nv); if (car) { ma = paintMatte(s.albedo) * (tv * 0.91 / PI); } let L = frame.sunDir.xyz; let cs = dot(p.n, L);
     var sun = frame.sunE.xyz * vz.a * poolLight(p.x) * part(1u);
     if (cs > 0.0) { if (car) { c += sun * (paintBase(s, V, L) + coatOf(s, V, L, 0.006)); } else { c += sun * (m * cs * roughMatte(s.kind, s.albedo, s.n, V, L) + coatOf(s, V, L, 0.006)); } } else if (p.leaf) { c += sun * s.through * (-cs / PI); }
     let u = textureLoad(lampU, id.xy, 0); let El = u.rgb * vz.x + vec3f(1.06, 0.99, 0.87) * u.a * vz.y; var Cl = vec3f(0.0);

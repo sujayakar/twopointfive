@@ -25,6 +25,8 @@ fn leafVertex(vi: u32, at: u32, inst: u32) -> V {
   let k = dot((*I).r0.xyz, (*I).r0.xyz); let d = l - vec3f((*I).r0.w, (*I).r1.w, (*I).r2.w); o.w = ((*I).r0.xyz * d.x + (*I).r1.xyz * d.y + (*I).r2.xyz * d.z) / k; return o;
 }
 @vertex fn vsLeaf(@builtin(vertex_index) vi: u32, @builtin(instance_index) ii: u32) -> V { var v = leafVertex(vi % 6u, vi / 6u, lists[ii]); if (v.w.y < frame.misc.y || ((insts[lists[ii]].tint & 0x1000000u) != 0u && frame.misc.y > OPEN_FLOOR)) { v.p = clipOf(v.w); } return v; }
-@fragment fn fsLeaf(v: V) -> @location(0) u32 { if (abs(v.uv.y) > (1.0 - v.uv.x * v.uv.x) * (1.0 + 0.35 * v.uv.x)) { discard; } return v.id; }
+/** leaves between the eye and the character thin out, so that it is seen under a tree */
+fn inTheWay(w: vec3f, at: vec2f) -> bool { let me = vec3f(frame.tune[6].y, frame.tune[6].z, frame.tune[6].w); if (me.y < -500.0) { return false; } let a = me - frame.camPos.xyz; let l = length(a); let d = a / l; let v = w - frame.camPos.xyz; let t = dot(v, d); if (t > l - 0.5 || w.y < me.y - 0.6) { return false; } let off = length(v - d * t); let k = 1.0 - smoothstep(0.7, 2.1, off); return fract(52.9829189 * fract(dot(at + f32(frame.counts.z & 63u) * 5.588238, vec2f(0.06711056, 0.00583715)))) < k * 0.96; }
+@fragment fn fsLeaf(v: V) -> @location(0) u32 { if (inTheWay(v.w, v.p.xy)) { discard; } if (abs(v.uv.y) > (1.0 - v.uv.x * v.uv.x) * (1.0 + 0.35 * v.uv.x)) { discard; } return v.id; }
 /** the leaves again, as the sun sees them: four corners each, of the same area */
 @vertex fn vsSun(@builtin(vertex_index) vi: u32, @builtin(instance_index) ii: u32) -> @builtin(position) vec4f { let v = leafVertex(6u + (vi & 3u), vi >> 2u, lists[ii]); let q = sunMap(v.w); return vec4f(q.xy * 2.0 - 1.0, q.z, 1.0); }

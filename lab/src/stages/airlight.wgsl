@@ -16,5 +16,5 @@
     let l = &lamps[m]; if ((*l).on <= 0.0 || (*l).kind == 0u || (inside && (*l).kind != 2u)) { continue; } let d = mid - (*l).at; let r2 = dot(d, d); if (r2 > 324.0 || ((*l).kind == 1u && r2 > 20.0)) { continue; } if ((*l).kind == 2u) { let r = sqrt(r2); if (dot(d, (*l).n) < r * ((*l).cone - 0.25 * AL_H / max(r, 0.3))) { continue; } }
     let a = aimLamp(m, mid, vec2f(0.5)); let e = a.E * (1.0 / (4.0 * PI)); if (max3(e) < 2e-3) { continue; } T += min(e, vec3f(20.0)) * lum(visible(mid, a.dir, 1e-3, a.dist - 0.06));
   }
-  textureStore(outLight, c, vec4f(select(vec3f(0.0), J.rgb, inside) + T, select(1.0, J.a, inside)));
+  textureStore(outLight, c, vec4f(select(vec3f(0.0), J.rgb, inside) + T * select(1.0, 1.0 + @tune.beams / max(@tune.dust, 1e-3), inside), select(1.0, J.a, inside)));
 }
