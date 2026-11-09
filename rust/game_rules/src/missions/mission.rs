@@ -62,19 +62,8 @@ fn nearest(g: &crate::game::Game, p: V3, may: impl Fn(&crate::scene_scenarios::Q
     best
 }
 
-/// Out through the mission's exit, or any exit of a quiet mission.
-fn out_now(g: &crate::game::Game, p: V3) -> bool {
-    if g.staged.facts.unseen { return g.level.errand.exits.iter().any(|x| crate::quiet::out_through(x, p)); }
-    g.level.errand.exits.first().is_some_and(|x| out_plain(x.x, x.z, Some(x.out), p))
-}
-
-/// outNow's arm for the level's one exit: past its point going its way, or east past its x; inside its frame.
-fn out_plain(exfil_x: f64, exfil_z: f64, exfil_out: Option<[f64; 2]>, p: V3) -> bool {
-    if let Some(o) = exfil_out {
-        return (p[0] - exfil_x) * o[0] + (p[2] - exfil_z) * o[1] > 0.0 && m::abs((p[0] - exfil_x) * o[1] - (p[2] - exfil_z) * o[0]) < 1.8;
-    }
-    p[0] > exfil_x && m::abs(p[2] - exfil_z) < 1.8
-}
+/// Out through one of the errand's ways out.
+fn out_now(g: &crate::game::Game, p: V3) -> bool { g.level.errand.exits.iter().any(|x| crate::quiet::out_through(x, p)) }
 
 /// The mission's stage machine: infiltrate, drive, exfil, and the run's counts.
 pub fn update_mission(g: &mut crate::game::Game, dt: f64, input: InputId) {
@@ -401,17 +390,6 @@ mod tests {
         let (front, half_w) = ([3.7, 0.0, -2.3], 0.45);
         assert_eq!(rack_dist_plain(front, half_w, [5.1, 0.0, -1.9]).to_bits(), 0x3ff07e0f66afed04);
         assert_eq!(rack_dist_plain(front, half_w, [3.8, 0.0, 4.4]).to_bits(), 0x401acccccccccccd);
-    }
-
-    #[test]
-    fn out_now_goes_by_the_exits_own_way_out() {
-        assert!(out_plain(10.0, 2.0, None, [10.5, 0.0, 3.0]));
-        assert!(!out_plain(10.0, 2.0, None, [9.5, 0.0, 3.0]));
-        assert!(!out_plain(10.0, 2.0, None, [10.5, 0.0, 3.9]));
-        let o = Some([0.0, 1.0]);
-        assert!(out_plain(10.0, 2.0, o, [10.5, 0.0, 3.0]));
-        assert!(!out_plain(10.0, 2.0, o, [12.0, 0.0, 3.0]));
-        assert!(!out_plain(10.0, 2.0, o, [10.5, 0.0, 1.0]));
     }
 
     #[test]
