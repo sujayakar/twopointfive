@@ -5,7 +5,6 @@
 //! cross). Asked here the game does what the rule says, and a failure below is the game's and not a staging's.
 use game::game::{DownBy, DownKind};
 use game::orders::OrderTarget;
-use game::out_events::OutEvent;
 use game_start::play::{dist, Opts, Play};
 use game_start::scene::{Axis, Scene};
 
@@ -13,43 +12,41 @@ fn hostile_down(p: &mut Play) { for gd in p.g.guards.clone() { if p.g.gd[gd].tea
 
 // ---------------------------------------------------------------- a round into a wall
 
-/// THE RULE: a round through a thin wall tells the host of one mark on its far face and one where it went in, the far face first, and then the wall's wear
-/// at that same place in its count (the page's wear look takes the round's newest mark there). So a wall crossed is two marks, not one and not five.
-/// A FAILURE MEANS: the marks a player sees on a wall no longer come in the order the wear look reads them, or a round leaves more than it owes.
+/// THE RULE: a round through a thin wall leaves one mark on its far face and one where it went in, the far face first, and the wall's wear takes the one where it went in. So a wall crossed is two
+/// marks, not one and not five.
+/// A FAILURE MEANS: the marks a player sees on a wall no longer come in the order the wear reads them, or a round leaves more than it owes.
 #[test]
 fn a_round_through_a_wall_leaves_the_far_hole_then_the_mark_it_wears() {
+    use game::render_decals::{mark_set, DecalKind, Mark};
     let mut p = Play::level("office.json", false, &Opts { seed: 8201, ..Default::default() });
     p.g.god_mode = true;
     p.run(0.1);
     p.sam_put([21.5, 11.4]);
     p.run(0.5);
-    p.g.out.clear();
-    let crossed0 = p.g.stats.wallpen.crossed;
-    let c = p.g.pl[p.g.player].ch;
-    game::combat::fire_weapon(&mut p.g, c, [24.0, 1.2, 10.0], true, None);
-    let crossed = (p.g.stats.wallpen.crossed - crossed0) as usize;
+    // a round fired between two ticks: the marks the next one lays of it, in their order
+    let fired = |p: &mut Play, at: [f64; 3]| -> (Vec<Mark>, usize) {
+        let (c, had, crossed) = (p.g.pl[p.g.player].ch, mark_set(&p.g).map_or(0, |s| s.serial), p.g.stats.wallpen.crossed);
+        game::combat::fire_weapon(&mut p.g, c, at, true, None);
+        let crossed = (p.g.stats.wallpen.crossed - crossed) as usize;
+        p.frame();
+        (mark_set(&p.g).map_or(Vec::new(), |s| s.list.iter().filter(|m| m.serial > had && matches!(m.kind, DecalKind::Bullet | DecalKind::Damage)).copied().collect()), crossed)
+    };
+    let (marks, crossed) = fired(&mut p, [24.0, 1.2, 10.0]);
     assert!(crossed > 0, "the staging is wrong: the round crossed no wall");
-    let marks: Vec<_> = p.g.out.iter().enumerate().filter_map(|(i, e)| if let OutEvent::BulletMark(m) = e { Some((i, m.hit_p, m.n)) } else { None }).collect();
-    let wears: Vec<_> = p.g.out.iter().enumerate().filter_map(|(i, e)| if let OutEvent::WallWearRound(w) = e { Some((i, w.hit_p)) } else { None }).collect();
     assert!(marks.len() == 2 * crossed || marks.len() == 2 * crossed + 1, "{} walls crossed and {} marks", crossed, marks.len());
-    assert_eq!(wears.len(), crossed, "each wall crossed counts the round");
-    let from = p.g.ch[c].muzzle;
+    let from = p.g.ch[p.g.pl[p.g.player].ch].muzzle;
     let along = |q: [f64; 3]| (q[0] - from[0]) * (24.0 - from[0]) + (q[2] - from[2]) * (10.0 - from[2]);
-    for (k, (pair, wear)) in marks.chunks(2).zip(&wears).enumerate() {
+    let worn: Vec<u32> = mark_set(&p.g).unwrap().wear.cells.iter().flat_map(|c| c.1.clone()).collect();
+    for (k, pair) in marks.chunks_exact(2).take(crossed).enumerate() {
         let (far, went_in) = (pair[0], pair[1]);
-        assert!(along(far.1) > along(went_in.1), "wall {k}: the mark told first is not the far face's");
-        assert!(far.2[0] * went_in.2[0] + far.2[1] * went_in.2[1] + far.2[2] * went_in.2[2] < -0.99, "wall {k}: the two marks face opposite ways");
-        assert!(went_in.0 < wear.0, "wall {k}: the wear comes after the mark it takes");
-        let gap = ((went_in.1[0] - wear.1[0]).powi(2) + (went_in.1[1] - wear.1[1]).powi(2) + (went_in.1[2] - wear.1[2]).powi(2)).sqrt();
-        assert!(gap < 0.01, "wall {k}: the wear is counted {gap} m from the mark it takes");
+        assert!(along(far.pos) > along(went_in.pos), "wall {k}: the mark told first is not the far face's");
+        assert!(far.n[0] * went_in.n[0] + far.n[1] * went_in.n[1] + far.n[2] * went_in.n[2] < -0.99, "wall {k}: the two marks face opposite ways");
+        assert!(worn.contains(&went_in.serial) && !worn.contains(&far.serial), "wall {k}: the wear takes the mark where it went in");
     }
     // the control: a round stopped by something too thick to cross is one mark and no far hole, and nothing is counted crossed
-    p.g.out.clear();
-    let crossed1 = p.g.stats.wallpen.crossed;
     let at = p.sam_at();
-    game::combat::fire_weapon(&mut p.g, c, [at[0] + 1.0, 0.0, at[1]], true, None);   // (the floor a metre off)
-    let n = p.g.out.iter().filter(|e| matches!(e, OutEvent::BulletMark(_))).count();
-    assert_eq!((n, p.g.stats.wallpen.crossed - crossed1), (1, 0), "into the floor: marks, walls crossed");
+    let (marks, crossed) = fired(&mut p, [at[0] + 1.0, 0.0, at[1]]);   // (the floor a metre off)
+    assert_eq!((marks.len(), crossed), (1, 0), "into the floor: marks, walls crossed");
 }
 
 // ---------------------------------------------------------------- the squad's words

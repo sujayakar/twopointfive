@@ -9,7 +9,7 @@ use crate::render_decals::{mark_asked, Ask};
 
 
 /// (src/game/wallwear.ts:58 WallWear.round)
-pub fn wall_wear_round(g: &mut crate::game::Game, box_: BoxId, surf: crate::scene_materials::Surf, key: f64, counted: f64, frac: f64, hit_p: V3, dir: V3) { let e = OutWallWearRound { box_, surf, key, counted, frac, hit_p, dir }; let ours = g.fog_of_war.filing_ours; mark_asked(g, Ask::Round(e.clone(), ours)); g.out.push(OutEvent::WallWearRound(e)); }
+pub fn wall_wear_round(g: &mut crate::game::Game, box_: BoxId, surf: crate::scene_materials::Surf, key: f64, counted: f64, frac: f64, hit_p: V3, dir: V3) { let e = OutWallWearRound { box_, surf, key, counted, frac, hit_p, dir }; let ours = g.fog_of_war.filing_ours; mark_asked(g, Ask::Round(e, ours)); }
 
 /// (src/game/wallwear.ts:88 WallWear.reset)
-pub fn wall_wear_reset(g: &mut crate::game::Game) { mark_asked(g, Ask::Reset); g.out.push(OutEvent::WallWearReset); }
+pub fn wall_wear_reset(g: &mut crate::game::Game) { mark_asked(g, Ask::Reset); }

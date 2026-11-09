@@ -226,7 +226,6 @@ pub fn changed(g: &mut crate::game::Game, b: BoxId) {
     crate::scene_collision::wrote(g);
     crate::scene_collision::sound_paths_invalidate(g);
     let (c, h) = { let r = seam_box(g, b); (r.c, r.h) };
-    crate::smoke_types::smoke_system_like_obstacles_changed(g, c, m::hyp3(h[0], h[1], h[2]) + 0.6);
 }
 
 /// The blasts' list: every standing bar with a point of its length inside the radius and nothing solid between goes, thrown out from the blast.   (winbars.ts barsBlast)

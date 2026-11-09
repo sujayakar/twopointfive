@@ -66,8 +66,9 @@ pub struct Play {
     /// every sound the game told its host to play (`audio.play`: its name, when, and where it was, None for a sound with no place). Footsteps
     /// are another call of the host's and are not kept.
     pub sounds: Vec<Sound>,
-    /// when the game told its host to open the end card, on the game's clock
+    /// when the end card came due (what a page opens it on: game_draw `ended`), on the game's clock
     pub end_cards: Vec<f64>,
+    ended: bool,
     /// every smoke event the game told its host of, in order: what it wants of the host's solver
     pub smoke: Vec<game::out_events::OutEvent>,
     /// each man's last bubble heard: when it was said, and its words
@@ -90,7 +91,7 @@ fn start_by(data: &Json, room_clear: bool, link: Option<&str>, o: &Opts) -> Play
     let Stood { mut game, host, refused, .. } = stand::stand(data, ch.assets(), &StartOpts { seed: o.seed, seats: o.seats, scenario, link: link.map(String::from), dress: o.dress, may_refuse: o.may_refuse, ..Default::default() });
     game.out.clear();
     HOLDS.with(|h| h.set(true));   // (only once a Play exists to put it down: a stand that panicked holds nothing)
-    let mut p = Play { g: game, host, frames: 0, said: Vec::new(), sounds: Vec::new(), end_cards: Vec::new(), smoke: Vec::new(), cursor: None, refused, spoke: Vec::new(), _one: one };
+    let mut p = Play { g: game, host, frames: 0, said: Vec::new(), sounds: Vec::new(), end_cards: Vec::new(), ended: false, smoke: Vec::new(), cursor: None, refused, spoke: Vec::new(), _one: one };
     p.hear();
     p
 }
@@ -135,11 +136,13 @@ impl Play {
         for e in out {
             match e {
                 E::GameAudioLikePlay(p) => self.sounds.push(Sound { t, name: p.name.clone(), at: p.pos }),
-                E::EndCard => self.end_cards.push(t),
                 E::SmokeSystemLikeEmit(_) | E::SmokeSystemLikePush(_) | E::SmokeSystemLikeRound(_) => self.smoke.push(e),
                 _ => {}
             }
         }
+        let ended = game_draw::view::ended(&self.g) != 0;
+        if ended && !self.ended { self.end_cards.push(t); }
+        self.ended = ended;
         self.hear();
     }
     /// every man's bubble that is new since the last frame goes on `said`

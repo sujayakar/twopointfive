@@ -505,7 +505,6 @@ pub fn wall_break_open_cells(g: &mut crate::game::Game, b: WallbreakBreakableId,
     wall_break_settle(g, b, AABB { x0, x1, z0, z1, y0: 0.0, y1: 0.0 }, dir, who, quiet, &mut rects);
     // one model: the routes sound took, the smoke's obstacles, the nav cells, the lights' reach
     crate::scene_collision::sound_paths_invalidate(g);
-    crate::smoke_types::smoke_system_like_obstacles_changed(g, pos, m::hyp2(x1 - x0, z1 - z0) / 2.0 + 1.5);
     let mut opened: Vec<f64> = Vec::new();
     for r in &rects {
         let ch = crate::scene_collision::nav_grid_rebake(g, r[0], r[1], r[2], r[3]);
@@ -516,7 +515,6 @@ pub fn wall_break_open_cells(g: &mut crate::game::Game, b: WallbreakBreakableId,
     if b_kind == BKind::Wall {
         let pace = &g.m.destruction_switch.blast_pace;
         let hold = if pace.on { pace.reach_hold } else { -1.0 };
-        crate::render_reach_keep::reach_keep_changed(g, Some([x0, z0, x1, z1]), Some(hold));
     }
     if is_hard(&g.tab.wallbreak_breakable[b]) { for &c in &opened { g.destr.walls.shell_gaps.add(crate::Num(c)); } }
     g.stats.wallbreak.nav_opened += opened.len() as i32;
