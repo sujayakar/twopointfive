@@ -1,6 +1,6 @@
 # The wire's table
 
-The Rust game owns its types: each module's `types.rs`, `knobs.rs` and `ids.rs`, and the bodies, are source you edit by hand. A state only
+The Rust game owns its types: each module's `types.rs`, `knobs/` and `ids.rs`, and the bodies, are source you edit by hand. A state only
 Rust uses needs nothing here. This folder is only about what the page reads of the game.
 
 - `tools/blitz/schema.json` says how each carried type is written, `fields.json` says which fields go every tick, which go to the page and

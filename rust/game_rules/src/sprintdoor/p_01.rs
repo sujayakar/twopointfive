@@ -151,7 +151,7 @@ mod tests {
     fn lean_matches_the_typescript() {
         big_stack(|| {
         let mut g = Game::blank();
-        g.k.sprintdoor = crate::knobs::page_sprintdoor();
+        g.k.sprintdoor = crate::knobs::SprintdoorK::page();
         let rows: [(f64, f64, u64); 5] = [
             (10.1, -1.0, 0xbfc4bc6a7ef9db3e),
             (10.17, 1.0, 0x3fa797cc39ffd61a),
@@ -171,7 +171,7 @@ mod tests {
 
     fn stage() -> (Game, PlayerId, CharId, DoorId) {
         let mut g = Game::blank();
-        g.k.sprintdoor = crate::knobs::page_sprintdoor();
+        g.k.sprintdoor = crate::knobs::SprintdoorK::page();
         g.time = 12.5;
         g.tune.player_sprint = 5.6;
         let mut ch = crate::character::Character::blank();

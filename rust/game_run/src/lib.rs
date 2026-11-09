@@ -19,7 +19,6 @@ pub mod knobs;
 pub mod words;
 
 pub mod shown;
-mod knobs_list;
 use game::ids::Id;
 use game::io::Io;
 

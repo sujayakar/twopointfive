@@ -1095,7 +1095,7 @@ fn main() {
         let leaf_set: HashSet<&str> = leaves.iter().map(|l| l.0.as_str()).collect();
         for p in lay.game_files(&root) {
             let name = p.file_name().and_then(|n| n.to_str()).unwrap_or("");
-            if body_paths.contains(&p) || matches!(name, "knobs.rs" | "io.rs" | "puppet.rs" | "call_gen.rs") {
+            if body_paths.contains(&p) || p.starts_with(root.join(lay.knobs.parent().unwrap())) || matches!(name, "io.rs" | "puppet.rs" | "call_gen.rs") {
                 continue;
             }
             let Ok(t) = std::fs::read_to_string(&p) else { continue };
