@@ -76,8 +76,9 @@ const MAX_TRACE: f32 = 14.0;   // cells a backtrace may span: two bricks less th
 // what is drawn of it, finer and livelier than the simulation could afford, so it is BENT TOWARD THE GRID ALL THE TIME, ONE WAY, A LITTLE AT A TIME: x ← step(x) + (1 − e^(−dt·rate)) · P(y − C·x). y = the
 // grid's cells (the page hands them over as they lie: rust/game_draw/src/smoke.rs) · C = the mean over a brick's air (K_MEAN): A COARSE BRICK IS ONE CELL OF THE GRID, half a metre, so C is one sum a brick
 // · P = the correction spread over the brick's cells, shaded into the bricks next door where the grid says the way is open, so nothing is drawn of the half metres. Everything finer than a brick is left alone.
-//   · HOW FAST goes by how much it matters to an eye: `bend` × the square of the difference in what a metre and a half of it hides. Two opaque clouds are one and a small difference is let be (it is the
-//     solver's to look as it likes within it: billows), a cloud one side lacks is mended at once.
+//   · HOW FAST goes by how much it matters to an eye: `bend` × the difference in what a metre and a half of it hides. Two opaque clouds are one (what they differ in is the solver's, to look as it likes: billows), a
+//     cloud one side lacks is mended in a second, and the last of a gap closes too: by the square of the difference a thin edge never filled, and men could not see through smoke nobody was shown.
+//   · IT THINS BY THE GAME'S LAW, which is in what the grid holds: what is drawn of the game's smoke thins of itself only where there is more of it than that. By both, a cloud was half the game's as it went.
 //   · IT GOES THERE FIRST: smoke is drawn toward where the game has more of it (`pull`, along the difference's gradient; K_PULL), so a cloud rolls out to where it should be and what is left to mend is little.
 //   · TOO MUCH is thinned where it stands, its thin parts first; TOO LITTLE is thickened where it stands, its thick parts first, so billows stay billows; where there is next to none it comes up out of the air in wisps (bendTo; no haze is laid between billows).
 //   · ONLY THE GAME'S SMOKE is measured and bent. A source the game does not hold (a breath, a fire's plume, gun gas) says so in the first byte of its K word, and that share of a cell is nobody's here.
@@ -858,7 +859,7 @@ fn lumps(p: vec3f) -> f32 {
 }
 /** the game's smoke in a cell, bent: `g` of it stands there, the grid holds h.x about it and h.y is drawn. The mean over a brick moves by the share of the way the rate says, whatever is in its cells. */
 fn bendTo(g: f32, h: vec2f, P: vec3f, dt: f32) -> f32 {
-  let o = bentThrough(h.x, 1.5) - bentThrough(h.y, 1.5); let a = select(1.0 - exp(-sp.bend * o * o * dt), 1.0, sp.whole > 0.0);
+  let o = bentThrough(h.x, 1.5) - bentThrough(h.y, 1.5); let a = select(1.0 - exp(-sp.bend * abs(o) * dt), 1.0, sp.whole > 0.0);
   let d = h.x - h.y;
   let thick = 2.0 * g / max(g + h.y, 1e-6);   // (1 where a cell holds what the brick does, toward 2 in its billows, 0 in its gaps)
   if (d <= 0.0) { return g * max(1.0 + a * d / max(h.y, 1e-6) * (2.0 - thick), 0.0); }
@@ -918,7 +919,10 @@ fn injectDecay(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_id) 
     var kd = vec4f(0.0); if (kinds) { kd = unpack4x8unorm(V[V_CURL + i].x); }
     // (the pool's soft ceiling: as it fills, THIN smoke goes faster — the body of a plume is untouched, its faint skirts give their bricks back)
     var faint = 1.0 - smoothstep(0.0, thin, v.x);
-    v.x *= exp(-(sp.densDecay + extra * faint) * k.dt);
+    var h = vec2f(-1.0, 0.0); if (bent) { h = bentHere(c); }
+    let thins = exp(-(sp.densDecay + extra * faint) * k.dt); var mine = thins;
+    if (h.x > 0.0) { mine = exp(-(sp.densDecay * mix(1.0, smoothstep(0.95, 1.1, h.y / h.x), smoothstep(0.1 * least, 0.5 * least, h.x)) + extra * faint) * k.dt); }   // (IT THINS BY THE GAME'S LAW, above; what the grid has next to none of goes as ever)
+    if (kinds) { let own = v.x * kd.x * thins; v.x = own + v.x * (1.0 - kd.x) * mine; kd.x = own / max(v.x, 1e-6); } else { v.x *= mine; }
     v.y *= exp(-(sp.tempDecay + cool * faint) * k.dt);
     let Pw = worldP(k, c); var fed = false;
     for (var w = 0u; w < 2u; w++) {
@@ -937,7 +941,6 @@ fn injectDecay(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_id) 
     }
     var held = false;
     if (bent) {
-      let h = bentHere(c);
       if (h.x >= 0.0) {
         let own = v.x * kd.x; let had = v.x; let g = bendTo(v.x - own, h, Pw, k.dt); v.x = own + g; held = h.x > 0.5 * least;
         if (kinds) { kd = vec4f(own / max(v.x, 1e-6), mix(kd.yzw, dye, clamp((v.x - had) / max(v.x, 1e-6), 0.0, 1.0))); }   // (what comes up comes up of the game's color)
