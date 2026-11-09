@@ -39,7 +39,7 @@ export interface StructureRoom {
  *  NO breach plan must give it, with the teammates' marks — there the room clear has no F drill: every teammate is the order menu's from the first frame. */
 export interface StructureData { name: string; team?: TeamStart; rooms: StructureRoom[];
   /** OTHER WAYS IN: more places the team may start, each a whole start with the teammates' marks (`team` is way in 1, these are 2, 3, …). Nothing stands on one
-   *  unless the run asks: `ROOMCLEAR.way` pins one (the mission sheet's Way in row, `?way=N`) or asks for a dealt one (`?way=any`: rust/game_rules/src/roomclear). Only beside a `team`; each is held
+   *  unless the run asks: the mission sheet's Way in row puts `?way=N` on its link (rust/game_rules/src/roomclear way_asked). Only beside a `team`; each is held
    *  to the rules `team` is (checkStructure: free floor, a way on foot to every teammate's mark and into every room). */
   starts?: TeamStart[];
   /** a bigger floor for the four-man squad: the most defenders this structure may hold ALIVE AT ONCE (absent = five; at most eleven — Sam, the four and eleven
@@ -328,7 +328,7 @@ export interface IssueCard { weapon?: 'rifle' | 'pistol' | 'shotgun'; suppressed
 export interface IssueData { members: { [place: string]: IssueCard } }
 /** THE KIT VIEW (rust/game_rules/src/kitstage — the Team & kit step shows the team as picked, stood at the mission's own way-in door, drawn by the page that draws
  *  a game it does not hold, opened `?…&kitview`): where the men stand and how the camera looks, per WAY IN. `ways` is indexed as the team starts are — [0] the
- *  structure's own `team`, [k] its `starts[k − 1]` (rust/game_rules/src/roomclear RoomClearScenario.way). A way needs only its `door` (a door id): the slots, the camera and the
+ *  structure's own `team`, [k] its `starts[k − 1]` (rust/game_rules/src/roomclear way_taken). A way needs only its `door` (a door id): the slots, the camera and the
  *  lamps are worked out from the door's frame and the side the team starts on; every other key lays an authored value over that. Picture only: no rule of the
  *  game reads this block, and a level without it shows an empty column there. */
 export interface KitViewLamp {

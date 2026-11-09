@@ -311,7 +311,7 @@ The rooms to take (`roomclear/`, `roomfight/`).
 
 - `name` text. The structure's name.
 - `team` team start, two `ops` at least; default the night breach's start, which needs `plans.breach`.
-- `starts` list of team starts; default none. Other ways in, beside a `team`: way 1 is `team`, way 2 the first of these. `?way=` picks one, and any deals one.
+- `starts` list of team starts; default none. Other ways in, beside a `team`: way 1 is `team`, way 2 the first of these. `?way=` picks one.
 - `maxMen` whole number 1 to `SQUAD_MAX_MEN`; default five. The most defenders alive at once.
 - `wayOut` true or false; default false. On Hard, the men a lost room draws hold one of its doors from back off it (`pressure/`).
 - `digIn` true or false; default true. False: this floor's men never brace a door, take cover or set a gun on a door (`roomfight/`).

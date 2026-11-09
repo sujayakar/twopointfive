@@ -805,7 +805,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   const roomClear: StructureData = {
     name: 'the compound', maxMen: 11,
     team: TEAM,
-    // THE OTHER WAY IN (`starts`: stood on only when a run asks — the mission sheet's Way in row, ?way=2, or ?way=any for a dealt one): outside the NORTH gate, along the wall east of
+    // THE OTHER WAY IN (`starts`: stood on only when a run asks — the mission sheet's Way in row, ?way=2): outside the NORTH gate, along the wall east of
     // it. That gate is dark too, and opens on the strip behind the house: the pantry's back door ahead, the shed down the wall to the right, the yard's lamp behind
     starts: [{ sam: [27.0, 0, 2.2], samYaw: -Math.PI / 2, ops: [[28.4, 0, 1.6], [28.4, 0, 2.8], [29.6, 0, 1.6], [29.6, 0, 2.8]], opsYaw: -Math.PI / 2 }],
     rooms: [
