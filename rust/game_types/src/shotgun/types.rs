@@ -1,6 +1,6 @@
 //! The types of `shotgun`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// a man this shell puts down, settled once the whole pattern has flown: combat.ts fireWeaponRaw's two blocks, run by fire_shell
@@ -59,7 +59,7 @@ impl ShellMenValue {
 impl Default for ShellMenValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/shotgun.ts:65 Shell.ends, src/game/shotgun.ts:65)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ShellEndsItem {
     pub index: f64,
     pub t: f64,
@@ -78,7 +78,7 @@ impl ShellEndsItem {
 impl Default for ShellEndsItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/shotgun.ts:38 SHOTGUN_LAST, src/game/shotgun.ts:38)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct ShotgunModSHOTGUNLAST {
     pub ends: Vec<crate::shotgun::ShellEndsItem>,
     pub glass: JsMap<crate::Num, Vec<f64>>,
@@ -133,7 +133,7 @@ impl BreachSpot {
 impl Default for BreachSpot { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct ShotgunMod {
     /// (src/game/shotgun.ts:38 SHOTGUN_LAST)
     pub shotgun_last: crate::shotgun::ShotgunModSHOTGUNLAST,

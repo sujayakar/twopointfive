@@ -1,6 +1,6 @@
 //! The types of `squadthrow`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// a throw search's test: a frag thrown so catches nobody of ours; a stun always passes (squadthrow.ts Lob.clean)
@@ -11,7 +11,7 @@ pub enum LobClean {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum SquadThrowKind {
     Frag,
     Stun,
@@ -26,7 +26,7 @@ impl SquadThrowKind {
 }
 
 /// (TypeScript: Arc, src/game/squadthrow.ts:119)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Arc {
     pub from: V3,
     pub sol: crate::throwables::ThrowSolution,
@@ -45,7 +45,7 @@ impl Arc {
 impl Default for Arc { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: SquadThrower, src/game/squadthrow.ts:121)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SquadThrower {
     pub from: V3,
     pub sol: crate::throwables::ThrowSolution,
@@ -68,7 +68,7 @@ impl SquadThrower {
 impl Default for SquadThrower { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Walk, src/game/squadthrow.ts:124)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Walk {
     pub kind: crate::squadthrow::SquadThrowKind,
     pub at: V3,
@@ -121,7 +121,7 @@ impl Walk {
 impl Default for Walk { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/squadthrow.ts:128 Walk.back, src/game/squadthrow.ts:128 Walk.back)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct WalkBack {
     pub post: Option<V3>,
     pub going: String,
@@ -255,7 +255,7 @@ impl Lent {
 impl Default for Lent { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/squadthrow.ts:128 Lent.back, src/game/squadthrow.ts:128 Lent.back)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct LentBack {
     pub post: Option<V3>,
     pub going: String,
@@ -362,7 +362,7 @@ impl LentBack {
 impl Default for LentBack { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Scratch, src/game/squadthrow.ts:129)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Scratch {
     pub n: f64,
     pub gen_: f64,
@@ -389,7 +389,7 @@ impl Scratch {
 impl Default for Scratch { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: State, src/game/squadthrow.ts:130)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct State {
     pub last: JsMap<GuardId, f64>,
     pub shown: Option<crate::squadthrow::StateShown>,
@@ -414,7 +414,7 @@ impl Default for State { fn default() -> Self { Self::zeroed() } }
 
 /// THE SQUAD'S THROW AT A SPOT, and everything anybody is shown or told of it: the menu's row, its refusal, its warning, the picture, and the order
 /// given are all read off one of these (squadthrow/plan.rs).
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct ThrowPlan {
     pub at: V3,
     /// the men it was asked of
@@ -434,7 +434,7 @@ pub struct ThrowPlan {
 }
 
 /// (TypeScript: inline at src/game/squadthrow.ts:130 State.shown, src/game/squadthrow.ts:130)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct StateShown {
     pub t: f64,
     pub text: String,
@@ -563,7 +563,7 @@ impl SquadThrowKeptOrdersR {
 impl Default for SquadThrowKeptOrdersR { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/squadthrow.ts:138 SquadThrowKept.duck, src/game/squadthrow.ts:201)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SquadThrowKeptDuck {
     pub gd: GuardId,
     pub t: f64,
@@ -588,7 +588,7 @@ impl SquadThrowKeptDuck {
 impl Default for SquadThrowKeptDuck { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/squadthrow.ts:201 SquadThrowKeptDuck.m, src/game/frag.ts:699)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SquadThrowKeptDuckM {
     pub stay: Vec<V3>,
     pub go: Vec<V3>,
@@ -642,7 +642,7 @@ impl Default for LobLim { fn default() -> Self { Self::zeroed() } }
 
 
 /// (TypeScript: inline at src/game/squadthrow.ts:159 SQUADTHROW_LOG, src/game/squadthrow.ts:159)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SquadthrowModSQUADTHROWLOGItem {
     pub t: f64,
     pub kind: crate::squadthrow::SquadThrowKind,
@@ -826,7 +826,7 @@ impl FragCatchesBurst {
 impl Default for FragCatchesBurst { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SquadthrowMod {
     /// (src/game/squadthrow.ts:133 states)
     pub states: JsMap<PlayerId, crate::squadthrow::State>,

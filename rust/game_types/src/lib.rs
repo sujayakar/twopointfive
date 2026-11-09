@@ -2,6 +2,9 @@
 #![no_std]
 #![allow(dead_code, unused_variables, unused_imports, non_snake_case, non_camel_case_types, non_upper_case_globals, unused_mut)]
 extern crate alloc;
+extern crate self as game_types;   // (what a derive writes names this crate from inside it too)
+use crate::bytes::ToBytes;
+pub mod bytes;
 pub mod ids;
 pub mod js;
 pub mod query;
@@ -13,16 +16,16 @@ pub mod knobs;
 pub use v3::{Quat, V3};
 pub const M4_IDENTITY: v3::m4::Mat4 = [1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 0.0, 1.0];
 /// a type a hand decision has yet to name (see the STOP list)
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, ToBytes)]
 pub struct Opaque;
 /// a function stored in a field, until a hand decision makes it an enum
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, ToBytes)]
 pub struct FnField;
 /// an object used as a key, until a hand decision gives it an ID
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash, ToBytes)]
 pub struct ObjKey(pub u32);
 /// a number used as a key of a Map
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, ToBytes)]
 pub struct Num(pub f64);
 impl Num {
     /// the key this number is, as the language's Map has it: -0 is 0, and every NaN is one NaN

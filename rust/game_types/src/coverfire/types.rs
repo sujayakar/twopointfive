@@ -1,10 +1,10 @@
 //! The types of `coverfire`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: Know, src/game/coverfire.ts:92)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Know {
     pub who: crate::game::Foe,
     pub at: V3,
@@ -36,7 +36,7 @@ pub enum Who {
 }
 
 /// (TypeScript: Chew, src/game/coverfire.ts:94)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Chew {
     pub id: f64,
     pub kind: String,
@@ -87,7 +87,7 @@ impl Chew {
 impl Default for Chew { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Man, src/game/coverfire.ts:95)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Man {
     pub know: Vec<crate::coverfire::Know>,
     pub chew: Option<crate::coverfire::Chew>,
@@ -110,7 +110,7 @@ impl Man {
 impl Default for Man { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/coverfire.ts:95 Man.no, src/game/coverfire.ts:95)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ManNo {
     pub id: f64,
     pub until: f64,
@@ -127,7 +127,7 @@ impl ManNo {
 impl Default for ManNo { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: State, src/game/coverfire.ts:96)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct State {
     pub last_t: f64,
     pub men: JsMap<GuardId, crate::coverfire::Man>,
@@ -156,7 +156,7 @@ impl State {
 impl Default for State { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/coverfire.ts:96 State.stats, src/game/coverfire.ts:82)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct StateStats {
     pub chews: f64,
     pub shots: f64,
@@ -195,7 +195,7 @@ impl StateStats {
 impl Default for StateStats { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/coverfire.ts:96 State.byId, src/game/coverfire.ts:96)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct StateByIdValue {
     pub landed: f64,
     pub gave: f64,
@@ -335,7 +335,7 @@ impl CoverfireOn {
 impl Default for CoverfireOn { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct CoverfireMod {
     /// (src/game/coverfire.ts:83 COVERFIRE_LOG)
     pub coverfire_log: Vec<String>,

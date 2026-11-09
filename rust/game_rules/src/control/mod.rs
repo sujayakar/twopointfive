@@ -31,6 +31,7 @@
 //!
 //! A body has three channels (`Channel`): legs, aim, hands. Every intent here takes all three; the record is kept by channel so that a rule
 //! which wants only one (the fight wants aim while an order has his legs) can be granted it without a change of shape.
+use crate::bytes::{ToBytes, W};
 use crate::game::{Game, GuardScript};
 use crate::ids::*;
 use crate::V3;
@@ -55,7 +56,7 @@ pub enum Intent {
 
 /// A man taking cover in a fight: down where he stands or off to a spot, crouched, his gun lowered toward the danger; he fires no round and
 /// his hands may change magazine.
-#[derive(Clone, Copy, PartialEq, Debug)]
+#[derive(Clone, Copy, PartialEq, Debug, ToBytes)]
 pub struct TakeCover {
     /// where to go; `None`: get down where he stands
     pub to: Option<V3>,
@@ -96,7 +97,7 @@ impl Intent {
 
 /// A RULE, as its file writes it (this file's head says what each part is for)
 pub trait Reaction {
-    type Row: Default + Clone + core::fmt::Debug;
+    type Row: Default + Clone + core::fmt::Debug + ToBytes;
     type Ask: Ask;
     fn transition(_g: &mut Game, _gd: GuardId, _dt: f64) {}
     fn propose(g: &Game, gd: GuardId) -> Option<Self::Ask>;
@@ -130,6 +131,7 @@ pub struct Listed {
 /// a rule's own row for each man, by his id: made by `Default` when first asked for
 #[derive(Clone, Debug, Default)]
 pub struct PerMan<T> { rows: Vec<T> }
+impl<T: ToBytes> ToBytes for PerMan<T> { fn w(&self, o: &mut W) { self.rows.w(o) } }
 impl<T: Default + Clone> PerMan<T> {
     pub fn at(&mut self, gd: GuardId) -> &mut T {
         let i = gd.ix();
@@ -149,10 +151,10 @@ macro_rules! rules {
         $(pub mod $m;)*
         /// a rule, by its file's name
         #[allow(non_camel_case_types)]
-        #[derive(Clone, Copy, PartialEq, Eq, Debug)]
+        #[derive(Clone, Copy, PartialEq, Eq, Debug, ToBytes)]
         pub enum RuleId { $($m),* }
         /// every rule's rows
-        #[derive(Clone, Debug, Default)]
+        #[derive(Clone, Debug, Default, ToBytes)]
         pub struct Rows { $(pub $m: PerMan<<$m::Rule as Reaction>::Row>,)* }
         pub const RULES: &[Listed] = &[$(Listed {
             id: RuleId::$m, name: $name, stage: <<$m::Rule as Reaction>::Ask as Ask>::STAGE,
@@ -176,7 +178,7 @@ pub mod man;
 
 /// who can have a man, strongest first. The rules stand between `Held` and `Script` in the list's own order, but for the rules of
 /// `Stage::Cover`, which are asked of a man nobody above `Own` has.
-#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, ToBytes)]
 pub enum Holder {
     /// dead: nothing moves him
     Dead,
@@ -191,7 +193,7 @@ pub enum Holder {
 }
 
 /// one man's record: who has each channel, since when, and which rules were asked and said no this tick
-#[derive(Clone, Copy, PartialEq, Debug)]
+#[derive(Clone, Copy, PartialEq, Debug, ToBytes)]
 pub struct Control {
     /// by `Channel as usize`
     pub holder: [Holder; 3],
@@ -210,7 +212,7 @@ impl Control {
 /// man that two dozen modules write. They are written through `set_hold` and `set_pinned`, which note the writer: the module that last
 /// CHANGED the flag, and when. Nothing in the tick reads the note; it is for `control_line`, and it is where a post will come to be given
 /// and released by rank.
-#[derive(Clone, Copy, PartialEq, Debug, Default)]
+#[derive(Clone, Copy, PartialEq, Debug, Default, ToBytes)]
 pub struct PostNote {
     pub hold_by: &'static str,
     pub hold_since: f64,
@@ -239,7 +241,7 @@ pub fn set_pinned(g: &mut Game, gd: GuardId, on: bool, by: &'static str) {
 }
 
 /// every man's record and every rule's rows
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, ToBytes)]
 pub struct ControlState {
     men: Vec<Option<Control>>,
     /// the rules' own rows a man

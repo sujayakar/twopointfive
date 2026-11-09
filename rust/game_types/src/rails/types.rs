@@ -1,10 +1,10 @@
 //! The types of `rails`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: Rails, src/game/rails.ts:215)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Rails {
     pub run: Option<u32>,
     pub answered: f64,
@@ -68,7 +68,7 @@ impl RailsRun {
 impl Default for RailsRun { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/rails.ts:225 Rails.sky, src/game/rails.ts:225)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct RailsSky {
     pub off: V3,
     pub mid: Option<V3>,
@@ -95,7 +95,7 @@ impl RailsSky {
 impl Default for RailsSky { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/rails.ts:225 RailsSky.was, src/game/rails.ts:225)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct RailsSkyWas {
     pub invisible: bool,
 }
@@ -110,7 +110,7 @@ impl RailsSkyWas {
 impl Default for RailsSkyWas { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/rails.ts:225 RailsSky.view, src/game/rails.ts:225)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct RailsSkyView {
     pub yaw: f64,
     pub pitch: f64,
@@ -129,7 +129,7 @@ impl RailsSkyView {
 impl Default for RailsSkyView { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/rails.ts:411 Rails.stepLook, src/game/rails.ts:411)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct RailsStepLook {
     pub i: f64,
     pub eye: crate::fogofwar::FogEye,

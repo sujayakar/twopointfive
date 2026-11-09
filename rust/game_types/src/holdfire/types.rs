@@ -1,10 +1,10 @@
 //! The types of `holdfire`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum LiftWhy {
     Shot,
     Order,
@@ -21,7 +21,7 @@ impl LiftWhy {
 }
 
 /// (TypeScript: State, src/game/holdfire.ts:72)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct State {
     pub lift_t: f64,
     pub why: Option<crate::holdfire::LiftWhy>,
@@ -44,7 +44,7 @@ impl State {
 impl Default for State { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/holdfire.ts:70 HOLDFIRE_LOG, src/game/holdfire.ts:70)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct HoldfireModHOLDFIRELOGItem {
     pub t: f64,
     pub why: crate::holdfire::LiftWhy,
@@ -86,7 +86,7 @@ impl HoldFireOrderO {
 impl Default for HoldFireOrderO { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct HoldfireMod {
     /// (src/game/holdfire.ts:70 HOLDFIRE_LOG)
     pub holdfire_log: Vec<crate::holdfire::HoldfireModHOLDFIRELOGItem>,

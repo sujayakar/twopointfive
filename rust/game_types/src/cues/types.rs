@@ -1,6 +1,6 @@
 //! The types of `cues`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: words)
@@ -51,7 +51,7 @@ impl CueKind {
 }
 
 /// (TypeScript: CueRow, src/game/cues.ts:132)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct CueRow {
     pub t: f64,
     pub text: String,
@@ -74,7 +74,7 @@ impl CueRow {
 impl Default for CueRow { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Bubble, src/game/cues.ts:137)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Bubble {
     pub text: String,
     pub t: f64,
@@ -95,7 +95,7 @@ impl Bubble {
 impl Default for Bubble { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Man, src/game/cues.ts:138)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Man {
     pub state: crate::game::GuardState,
     pub alert_t: f64,
@@ -130,7 +130,7 @@ impl Man {
 impl Default for Man { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum ManMoved {
     Cover,
     Fallback,
@@ -145,7 +145,7 @@ impl ManMoved {
 }
 
 /// (TypeScript: Cues, src/game/cues.ts:144)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Cues {
     pub rows: Vec<crate::cues::CueRow>,
     pub stats: crate::cues::CuesStats,
@@ -194,7 +194,7 @@ impl Cues {
 impl Default for Cues { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: inline at src/game/cues.ts:147 Cues.stats, src/game/cues.ts:139)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct CuesStats {
     pub heard: f64,
     pub heard_drawn: f64,
@@ -235,7 +235,7 @@ impl CuesStats {
 impl Default for CuesStats { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/cues.ts:149 Cues.kinds, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct CuesKinds {
     pub stay: Option<f64>,
     pub calm: Option<f64>,
@@ -284,7 +284,7 @@ impl CuesKinds {
 impl Default for CuesKinds { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/cues.ts:150 Cues.log, src/game/cues.ts:150)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct CuesLogItem {
     pub t: f64,
     pub who: String,
@@ -311,7 +311,7 @@ impl CuesLogItem {
 impl Default for CuesLogItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum CuesLogItemKind {
     Heard,
     Stay,
@@ -364,7 +364,7 @@ impl CuesLogItemKind {
 }
 
 /// (TypeScript: inline at src/game/cues.ts:153 Cues.kindT, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct CuesKindT {
     pub stay: Option<f64>,
     pub calm: Option<f64>,
@@ -413,7 +413,7 @@ impl CuesKindT {
 impl Default for CuesKindT { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/cues.ts:155 Cues.heardRow, src/game/cues.ts:155)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct CuesHeardRow {
     pub t: f64,
     pub text: String,
@@ -430,7 +430,7 @@ impl CuesHeardRow {
 impl Default for CuesHeardRow { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/cues.ts:157 Cues.heardLog, src/game/cues.ts:157)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct CuesHeardLogItem {
     pub t: f64,
     pub text: String,

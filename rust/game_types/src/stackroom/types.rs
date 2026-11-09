@@ -1,6 +1,6 @@
 //! The types of `stackroom`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// what stackRoomBookKeep took, to put the room rule's book back once after an ask made only to be looked at (stackroom.ts:92). Forget: there was no book, so drop it. Back: forget the floors and doorway cells read since; floors marks which faces of which doors had been read (a floor is never rewritten once read, so marking is the same as the TypeScript's copied pairs, without cloning every Floor's W*H cells on each trial). sig and doors: if the book no longer has them it was rebuilt during the ask, and the TypeScript's restored old book would be rebuilt empty at the next bookOf, so set books to None
@@ -11,7 +11,7 @@ pub enum StackRoomBookKeep {
 }
 
 /// (TypeScript: Floor, src/game/stackroom.ts:85)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Floor {
     pub seed: f64,
     pub dist: Vec<i16>,
@@ -30,7 +30,7 @@ impl Floor {
 impl Default for Floor { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Book, src/game/stackroom.ts:86)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Book {
     pub sig: f64,
     pub doors: f64,
@@ -117,7 +117,7 @@ impl StackRoomProbe {
 impl Default for StackRoomProbe { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct StackroomMod {
     /// (src/game/stackroom.ts:87 books)
     pub books: Option<crate::stackroom::Book>,

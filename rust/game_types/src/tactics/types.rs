@@ -1,6 +1,6 @@
 //! The types of `tactics`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// a man's price list for nav.findPath, fixed when asked: a cell of his side's dangerous doorways costs door_mult, a cell of his flank's avoid-set at least CORRIDOR_COST, any other 1 (tactics.ts tacticsPenalty)
@@ -33,7 +33,7 @@ impl TacticsTune {
 impl Default for TacticsTune { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum RoleKind {
     Second,
     Presser,
@@ -50,7 +50,7 @@ impl RoleKind {
 }
 
 /// (TypeScript: Role, src/game/tactics.ts:104)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Role {
     pub kind: crate::tactics::RoleKind,
     pub plan: TacticsPlanId,
@@ -95,7 +95,7 @@ impl Role {
 impl Default for Role { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Plan, src/game/tactics.ts:116)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Plan {
     pub id: f64,
     pub team: crate::teams::Team,
@@ -142,7 +142,7 @@ impl Plan {
 impl Default for Plan { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum PlanPhase {
     Push,
     Approach,
@@ -159,7 +159,7 @@ impl PlanPhase {
 }
 
 /// (TypeScript: Lone, src/game/tactics.ts:123)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Lone {
     pub fix: V3,
     pub hold_at: Option<V3>,
@@ -188,7 +188,7 @@ impl Lone {
 impl Default for Lone { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum DangerWhy {
     Body,
     Drop,
@@ -207,7 +207,7 @@ impl DangerWhy {
 }
 
 /// (TypeScript: DangerRec, src/game/tactics.ts:125)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct DangerRec {
     pub door: DoorId,
     pub team: crate::teams::Team,
@@ -240,7 +240,7 @@ impl DangerRec {
 impl Default for DangerRec { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum GatePhase {
     Slice,
     Bang,
@@ -269,7 +269,7 @@ impl GatePhase {
 }
 
 /// (TypeScript: Gate, src/game/tactics.ts:127)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Gate {
     pub door: DoorId,
     pub rec: TacticsDangerRecId,
@@ -352,7 +352,7 @@ impl Gate {
 impl Default for Gate { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum GateRole {
     Lead,
     Second,
@@ -367,7 +367,7 @@ impl GateRole {
 }
 
 /// (TypeScript: inline at quiet Gate.hs, src/game/tactics.ts:138)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct GateHs {
     pub pos: V3,
     pub yaw: f64,
@@ -384,7 +384,7 @@ impl GateHs {
 impl Default for GateHs { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum GateAction {
     Slice,
     Toss,
@@ -399,7 +399,7 @@ impl GateAction {
 }
 
 /// (TypeScript: TState, src/game/tactics.ts:142)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct TState {
     pub plans: Vec<TacticsPlanId>,
     pub roles: JsMap<GuardId, TacticsRoleId>,
@@ -526,7 +526,7 @@ impl TACTICSDEFAULTS {
 impl Default for TACTICSDEFAULTS { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/tactics.ts:156 kit, src/game/tactics.ts:156)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct TacticsModKitValue {
     pub stuns: f64,
 }
@@ -654,7 +654,7 @@ impl TacticsLook {
 impl Default for TacticsLook { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct TacticsMod {
     /// (src/game/tactics.ts:149 states)
     pub states: Option<crate::tactics::TState>,

@@ -1,10 +1,10 @@
 //! The types of `doors`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: DoorDef, src/game/doors.ts:104)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct DoorDef {
     pub name: String,
     pub hinge: [f64; 2],
@@ -342,7 +342,7 @@ impl DriveCols {
 impl Default for DriveCols { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: Door, src/game/doors.ts:298)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Door {
     pub i: f64,
     pub key_side: f64,
@@ -429,7 +429,7 @@ impl DoorsHost {
 impl Default for DoorsHost { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Doors, src/game/doors.ts:528)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Doors {
     pub list: Vec<DoorId>,
     pub store: crate::sim_doorshome::DoorStore,
@@ -452,7 +452,7 @@ impl Doors {
 impl Default for Doors { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: inline at src/game/doors.ts:588 Doors.solids, src/game/doors.ts:588)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct DoorsSolids {
     pub carried: f64,
     pub stopped: f64,

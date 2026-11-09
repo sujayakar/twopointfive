@@ -1,0 +1,11 @@
+# What a type of the game says of itself, made from its declaration as it compiles. It depends on nothing, and no game runs it.
+[workspace]
+
+[package]
+name = "game_derive"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+proc-macro = true

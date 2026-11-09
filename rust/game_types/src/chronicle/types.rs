@@ -1,10 +1,10 @@
 //! The types of `chronicle`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: ChronEvent, src/game/chronicle.ts:85)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct ChronEvent {
     pub t: f64,
     pub kind: crate::chronicle::ChronKind,
@@ -27,7 +27,7 @@ impl ChronEvent {
 impl Default for ChronEvent { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum ChronKind {
     Down,
     Shot,
@@ -110,7 +110,7 @@ impl ChronKind {
 }
 
 /// (TypeScript: a union)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub enum ChronEventDataValue {
     Text(String),
     Num(f64),
@@ -118,7 +118,7 @@ pub enum ChronEventDataValue {
 }
 
 /// (TypeScript: ChronCounts, src/game/chronicle.ts:105)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct ChronCounts {
     pub seen_up: f64,
     pub esc1: f64,
@@ -183,7 +183,7 @@ impl ChronCounts {
 impl Default for ChronCounts { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Chronicle, src/game/chronicle.ts:118)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Chronicle {
     pub events: Vec<crate::chronicle::ChronEvent>,
     pub dropped: f64,
@@ -283,7 +283,7 @@ impl ChronCountKey {
 }
 
 /// (TypeScript: RunCounts, src/game/chronicle.ts:325)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct RunCounts {
     pub elapsed: f64,
     pub stage: String,
@@ -368,7 +368,7 @@ impl RunCounts {
 impl Default for RunCounts { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: ScoreLine, src/game/chronicle.ts:364)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct ScoreLine {
     pub label: String,
     pub pts: f64,
@@ -385,7 +385,7 @@ impl ScoreLine {
 impl Default for ScoreLine { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Badge, src/game/chronicle.ts:403)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Badge {
     pub id: String,
     pub name: String,
@@ -406,7 +406,7 @@ impl Badge {
 impl Default for Badge { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Debrief, src/game/chronicle.ts:425)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Debrief {
     pub counts: crate::chronicle::RunCounts,
     pub score: f64,
@@ -439,7 +439,7 @@ impl Debrief {
 impl Default for Debrief { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum DebriefState {
     Down,
     Done,
@@ -814,7 +814,7 @@ impl SummaryLineState {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct ChronicleMod {
     /// (src/game/chronicle.ts:90 CHATTER)
     pub chatter: JsSet<crate::chronicle::ChronKind>,

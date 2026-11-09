@@ -1,10 +1,10 @@
 //! The types of `glasspen`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum PaneType {
     Annealed,
     Laminated,
@@ -21,7 +21,7 @@ impl PaneType {
 }
 
 /// (TypeScript: PenState, src/game/glasspen.ts:151)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct PenState {
     pub log: Vec<String>,
     pub rev: f64,
@@ -256,7 +256,7 @@ impl ShotPassesPanesItem {
 impl Default for ShotPassesPanesItem { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct GlasspenMod {
     /// (src/game/glasspen.ts:152 states)
     pub states: Option<crate::glasspen::PenState>,

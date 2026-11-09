@@ -1,6 +1,6 @@
 //! The types of `scene_boxes`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: PlanBox, src/scene/boxes.ts:58)
@@ -46,7 +46,7 @@ impl PlanBoxCut {
 impl Default for PlanBoxCut { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Box, src/scene/boxes.ts:65)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Box {
     pub c: V3,
     pub h: V3,
@@ -131,40 +131,98 @@ impl Box {
 impl Default for Box { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: BoxWorld, src/scene/boxes.ts:261)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct BoxWorld {
     pub statics: Vec<BoxId>,
     pub dynamics: Vec<AnyBoxId>,
+    /// (the picture's: in no bytes)
+    #[bytes(skip)]
     pub undrawn: Option<crate::scene_boxes::BoxWorldUndrawn>,
+    /// (the picture's: in no bytes)
+    #[bytes(skip)]
     pub motion_ids: bool,
     pub max_boxes: f64,
+    /// (the picture's: in no bytes)
+    #[bytes(skip)]
     pub geo_f32: Vec<f32>,
+    /// (the picture's: in no bytes)
+    #[bytes(skip)]
     pub geo_u32: Vec<u32>,
+    /// (the picture's: in no bytes)
+    #[bytes(skip)]
     pub mat_data: Vec<f32>,
+    /// (holds nothing: in no bytes)
+    #[bytes(skip)]
     pub geo_buf: crate::Opaque,
+    /// (holds nothing: in no bytes)
+    #[bytes(skip)]
     pub mat_buf: crate::Opaque,
+    /// (the picture's: in no bytes)
+    #[bytes(skip)]
     pub cell_start: Vec<u32>,
+    /// (the picture's: in no bytes)
+    #[bytes(skip)]
     pub items: Vec<u32>,
+    /// (holds nothing: in no bytes)
+    #[bytes(skip)]
     pub cell_buf: crate::Opaque,
+    /// (holds nothing: in no bytes)
+    #[bytes(skip)]
     pub item_buf: crate::Opaque,
+    /// (the picture's: in no bytes)
+    #[bytes(skip)]
     pub globals: Vec<f64>,
+    /// (holds nothing: in no bytes)
+    #[bytes(skip)]
     pub info_buf: crate::Opaque,
+    /// (the picture's: in no bytes)
+    #[bytes(skip)]
     pub info_data: Vec<u32>,
+    /// (the picture's: in no bytes)
+    #[bytes(skip)]
     pub visible_sent: Vec<u32>,
+    /// (the picture's: in no bytes)
+    #[bytes(skip)]
     pub capsule_data: Vec<f32>,
+    /// (the picture's: in no bytes)
+    #[bytes(skip)]
     pub capsule_count: f64,
+    /// (the picture's: in no bytes)
+    #[bytes(skip)]
     pub char_count: f64,
+    /// (holds nothing: in no bytes)
+    #[bytes(skip)]
     pub capsule_buf: crate::Opaque,
+    /// (the picture's: in no bytes)
+    #[bytes(skip)]
     pub rig: Option<crate::scene_boxes::BoxWorldRig>,
+    /// (the picture's: in no bytes)
+    #[bytes(skip)]
     pub visible: Vec<u32>,
+    /// (holds nothing: in no bytes)
+    #[bytes(skip)]
     pub visible_buf: crate::Opaque,
     pub geom_serial: f64,
+    /// (the picture's: in no bytes)
+    #[bytes(skip)]
     pub marking_texel: f64,
+    /// (the picture's: in no bytes)
+    #[bytes(skip)]
     pub cut_on: bool,
+    /// (the picture's: in no bytes)
+    #[bytes(skip)]
     pub cut_data: Vec<f32>,
+    /// (the picture's: in no bytes)
+    #[bytes(skip)]
     pub cut_split: f64,
+    /// (the picture's: in no bytes)
+    #[bytes(skip)]
     pub visible_cut_traced: f64,
+    /// (the picture's: in no bytes)
+    #[bytes(skip)]
     pub cut_traced: f64,
+    /// (holds nothing: in no bytes)
+    #[bytes(skip)]
     pub device: crate::Opaque,
     pub glass_open: Option<crate::scene_collision::PaneRule>,
 }

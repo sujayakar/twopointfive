@@ -1,10 +1,10 @@
 //! The types of `breach`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: BreachDrill, src/game/breach.ts:74)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct BreachDrill {
     pub phase: crate::breach::Phase,
     pub t_stack: f64,
@@ -87,7 +87,7 @@ impl BreachDrill {
 impl Default for BreachDrill { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum Phase {
     Clear,
     Bang,
@@ -118,7 +118,7 @@ impl Phase {
 }
 
 /// (TypeScript: inline at src/game/breach.ts:77 BreachDrill.beats, src/game/breach.ts:77)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct BreachDrillBeatsItem {
     pub t: f64,
     pub what: String,
@@ -135,7 +135,7 @@ impl BreachDrillBeatsItem {
 impl Default for BreachDrillBeatsItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: OpFlow, src/game/breach.ts:64)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct OpFlow {
     pub st: crate::breach::FlowSt,
     pub t0: f64,
@@ -176,7 +176,7 @@ impl OpFlow {
 impl Default for OpFlow { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum FlowSt {
     Hold,
     Wait,
@@ -197,7 +197,7 @@ impl FlowSt {
 }
 
 /// (TypeScript: BreachLive, src/game/breach.ts:53)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct BreachLive {
     pub orders: f64,
     pub lights: bool,

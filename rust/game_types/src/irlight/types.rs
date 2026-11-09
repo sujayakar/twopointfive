@@ -1,10 +1,10 @@
 //! The types of `irlight`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: Need, src/game/irlight.ts:113)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Need {
     pub read_t: f64,
     pub dark_t: f64,
@@ -27,7 +27,7 @@ impl Need {
 impl Default for Need { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Kit, src/game/irlight.ts:114)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Kit {
     pub sam: Option<LightId>,
     pub more: JsMap<crate::Num, LightId>,
@@ -52,7 +52,7 @@ impl Kit {
 impl Default for Kit { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/irlight.ts:114 Kit.seen, src/game/irlight.ts:114)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct KitSeenValue {
     pub t: f64,
     pub e: f64,
@@ -69,7 +69,7 @@ impl KitSeenValue {
 impl Default for KitSeenValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/irlight.ts:116 Kit.near, src/game/irlight.ts:116)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct KitNearValue {
     pub t: f64,
     pub k: f64,
@@ -105,7 +105,7 @@ impl IrLightState {
 impl Default for IrLightState { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct IrlightMod {
     /// (src/game/irlight.ts:117 kits)
     pub kits: Option<crate::irlight::Kit>,

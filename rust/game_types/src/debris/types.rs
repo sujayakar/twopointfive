@@ -1,10 +1,10 @@
 //! The types of `debris`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: FootBook, src/game/debris.ts:57)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct FootBook {
     pub shoves: f64,
     pub stats: crate::debris::FootBookStats,
@@ -21,7 +21,7 @@ impl FootBook {
 impl Default for FootBook { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/debris.ts:57 FootBook.stats, src/game/debris.ts:57)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct FootBookStats {
     pub kicked: f64,
     pub off_man: f64,
@@ -42,7 +42,7 @@ impl FootBookStats {
 impl Default for FootBookStats { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Debris, src/game/debris.ts:81)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Debris {
     pub list: Vec<DebrisChunkId>,
     pub serial: f64,
@@ -77,7 +77,7 @@ impl Debris {
 impl Default for Debris { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: inline at src/game/debris.ts:85 Debris.stats, src/game/debris.ts:85)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct DebrisStats {
     pub spawned: f64,
     pub refused: f64,
@@ -106,7 +106,7 @@ impl DebrisStats {
 impl Default for DebrisStats { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/debris.ts:341 Debris.feetStats, src/game/debris.ts:341)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct DebrisFeetStats {
     pub kicked: f64,
     pub off_man: f64,
@@ -127,7 +127,7 @@ impl DebrisFeetStats {
 impl Default for DebrisFeetStats { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum ChunkKind {
     Tile,
     Shard,
@@ -150,7 +150,7 @@ impl ChunkKind {
 }
 
 /// (TypeScript: Chunk, src/game/debris.ts:25)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Chunk {
     pub kind: crate::debris::ChunkKind,
     pub box_: AnyBoxId,
@@ -211,7 +211,7 @@ impl Chunk {
 impl Default for Chunk { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/debris.ts:30 Chunk.sfx, src/game/debris.ts:30)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct ChunkSfxItem {
     pub name: String,
     pub rate: f64,
@@ -230,7 +230,7 @@ impl ChunkSfxItem {
 impl Default for ChunkSfxItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/debris.ts:38 Chunk.contact, src/game/debris.ts:38)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ChunkContact {
     pub keep_floor: f64,
     pub keep_wall: f64,

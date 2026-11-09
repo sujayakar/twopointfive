@@ -1,6 +1,6 @@
 //! The types of `flinch`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: FlinchSnap, src/game/flinch.ts:114)
@@ -19,7 +19,7 @@ impl FlinchSnap {
 impl Default for FlinchSnap { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/flinch.ts:51 stateOf, src/game/flinch.ts:51)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct FlinchModStateOfValue {
     pub under: f64,
     pub at: f64,
@@ -36,7 +36,7 @@ impl FlinchModStateOfValue {
 impl Default for FlinchModStateOfValue { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct FlinchMod {
     /// (src/game/flinch.ts:51 stateOf)
     pub state_of: JsMap<GuardId, crate::flinch::FlinchModStateOfValue>,

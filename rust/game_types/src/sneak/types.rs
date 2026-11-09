@@ -1,10 +1,10 @@
 //! The types of `sneak`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum Why {
     Door,
     Near,
@@ -25,7 +25,7 @@ impl Why {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum Mode {
     Cross,
     Back,
@@ -46,7 +46,7 @@ impl Mode {
 }
 
 /// (TypeScript: Crumb, src/game/sneak.ts:170)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Crumb {
     pub p: V3,
     pub lit: f64,
@@ -67,7 +67,7 @@ impl Crumb {
 impl Default for Crumb { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Man, src/game/sneak.ts:176)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Man {
     pub i: f64,
     pub t: f64,
@@ -122,7 +122,7 @@ impl Man {
 impl Default for Man { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/sneak.ts:181 Man.mem, src/game/sneak.ts:181)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ManMem {
     pub h: GuardId,
     pub a: f64,
@@ -143,7 +143,7 @@ impl ManMem {
 impl Default for ManMem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: State, src/game/sneak.ts:192)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct State {
     pub trail: Vec<crate::sneak::Crumb>,
     pub off: f64,
@@ -244,7 +244,7 @@ impl Feet {
 impl Default for Feet { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/sneak.ts:154 SNEAK_LOG, src/game/sneak.ts:154)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SneakModSNEAKLOGItem {
     pub t: f64,
     pub who: String,
@@ -393,7 +393,7 @@ impl LINESNOWNag {
 impl Default for LINESNOWNag { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/sneak.ts:188 leafT, src/game/sneak.ts:188)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct SneakModLeafTValue {
     pub a: f64,
     pub t: f64,
@@ -410,7 +410,7 @@ impl SneakModLeafTValue {
 impl Default for SneakModLeafTValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/sneak.ts:199 liveAt, src/game/sneak.ts:199)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct SneakModLiveAtValue {
     pub t: f64,
     pub v: bool,
@@ -427,7 +427,7 @@ impl SneakModLiveAtValue {
 impl Default for SneakModLiveAtValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/sneak.ts:325 keptLines, src/game/sneak.ts:325)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SneakModKeptLinesValue {
     pub x: f64,
     pub z: f64,
@@ -465,7 +465,7 @@ impl LeafMovedD {
 impl Default for LeafMovedD { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SneakMod {
     /// (src/game/sneak.ts:154 SNEAK_LOG)
     pub sneak_log: Vec<crate::sneak::SneakModSNEAKLOGItem>,

@@ -1,10 +1,10 @@
 //! The types of `darkfoe`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: FoeState, src/game/darkfoe.ts:76)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct FoeState {
     pub knows: bool,
     pub word: bool,
@@ -91,7 +91,7 @@ impl DarkFoeOf {
 impl Default for DarkFoeOf { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct DarkfoeMod {
     /// (src/game/darkfoe.ts:77 stateOf)
     pub state_of: JsMap<GuardId, crate::darkfoe::FoeState>,

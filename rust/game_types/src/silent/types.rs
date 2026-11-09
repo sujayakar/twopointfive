@@ -1,10 +1,10 @@
 //! The types of `silent`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum By {
     Start,
     Order,
@@ -23,7 +23,7 @@ impl By {
 }
 
 /// (TypeScript: State, src/game/silent.ts:109)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct State {
     pub cast: Vec<GuardId>,
     pub silent: bool,
@@ -48,7 +48,7 @@ impl State {
 impl Default for State { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/silent.ts:112 SILENT_LOG, src/game/silent.ts:112)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct SilentModSILENTLOGItem {
     pub t: f64,
     pub to: crate::silent::SilentModSILENTLOGItemTo,
@@ -67,7 +67,7 @@ impl SilentModSILENTLOGItem {
 impl Default for SilentModSILENTLOGItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum SilentModSILENTLOGItemTo {
     Silent,
     Loud,
@@ -82,7 +82,7 @@ impl SilentModSILENTLOGItemTo {
 }
 
 /// (TypeScript: inline at src/game/silent.ts:233 seats, src/game/silent.ts:233)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct SilentModSeatsValue {
     pub on: bool,
     pub go_digit: bool,
@@ -114,7 +114,7 @@ impl SilentBoot {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SilentMod {
     /// (src/game/silent.ts:110 states)
     pub states: JsMap<PlayerId, crate::silent::State>,

@@ -1,10 +1,10 @@
 //! The types of `netquietfeed`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: NetFeed, src/game/netquietfeed.ts:12)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct NetFeed {
     pub what: crate::netquietfeed::NetFeedWhat,
     pub by: Option<GuardId>,
@@ -25,7 +25,7 @@ impl NetFeed {
 impl Default for NetFeed { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum NetFeedWhat {
     Body,
     Asked,
@@ -40,7 +40,7 @@ impl NetFeedWhat {
 }
 
 /// (TypeScript: inline at src/game/netquietfeed.ts:10 NETFEED, src/game/netquietfeed.ts:10)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct NetquietfeedModNETFEED {
     pub live: bool,
 }
@@ -55,7 +55,7 @@ impl NetquietfeedModNETFEED {
 impl Default for NetquietfeedModNETFEED { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct NetquietfeedMod {
     /// (src/game/netquietfeed.ts:10 NETFEED)
     pub netfeed: crate::netquietfeed::NetquietfeedModNETFEED,

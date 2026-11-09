@@ -1,10 +1,10 @@
 //! The types of `startle`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: St, src/game/startle.ts:44)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct St {
     pub calm_t: f64,
     pub calm_torch: bool,
@@ -64,7 +64,7 @@ impl StartleSnap {
 impl Default for StartleSnap { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct StartleMod {
     /// (src/game/startle.ts:64 stateOf)
     pub state_of: JsMap<GuardId, crate::startle::St>,

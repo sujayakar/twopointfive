@@ -1,6 +1,6 @@
 //! The types of `irlaser`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: words)
@@ -19,7 +19,7 @@ impl LaserBand {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct IrlaserMod {
     /// (src/game/irlaser.ts:73 viewTube)
     pub view_tube: Option<bool>,

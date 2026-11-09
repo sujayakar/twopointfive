@@ -1,10 +1,10 @@
 //! The types of `air_sim`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: AirSimStats, src/game/airSim.ts:48)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct AirSimStats {
     pub active: bool,
     pub why: String,
@@ -62,7 +62,7 @@ impl AirHandle {
 impl Default for AirHandle { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: AirState, src/game/airSim.ts:52)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct AirState {
     pub w: f64,
     pub h: f64,
@@ -107,7 +107,7 @@ impl AirState {
 impl Default for AirState { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/airSim.ts:54 AirState.puffs, src/game/airSim.ts:54)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AirStatePuffsItem {
     pub x: f64,
     pub z: f64,
@@ -134,7 +134,7 @@ impl AirStatePuffsItem {
 impl Default for AirStatePuffsItem { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct AirSimMod {
     /// (src/game/airSim.ts:55 states)
     pub states: Option<crate::air_sim::AirState>,

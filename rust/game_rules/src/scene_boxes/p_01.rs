@@ -194,6 +194,8 @@ fn footprint_of(b: &Bx) -> [f64; 2] {
 /// brought up as a tick opens. A game with none, or a grid of fewer statics than stand, asks the rest one by one and has the same answers.
 #[derive(Clone, Debug)]
 pub struct RayGrid { start: Vec<u32>, items: Vec<u32>, globals: Vec<f64>, n: f64, shape: Vec<f64>, fill: Vec<u32>, ranges: Vec<i32>, pub builds: u32 }
+/// (made from the statics: in no bytes)
+impl crate::bytes::ToBytes for RayGrid { fn w(&self, _: &mut crate::bytes::W) {} }
 impl Default for RayGrid {
     fn default() -> Self {
         let wd = crate::scene_world::world();

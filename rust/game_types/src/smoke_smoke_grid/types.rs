@@ -1,6 +1,6 @@
 //! The types of `smoke_smoke_grid`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: SmokeLevel, src/smoke/smokeGrid.ts:17)
@@ -62,7 +62,7 @@ impl SmokeGrid {
 impl Default for SmokeGrid { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/smoke/smokeGrid.ts:6 smokeGridConfig, src/smoke/smokeGrid.ts:6)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct SmokeSmokeGridModSmokeGridConfig {
     pub cap: f64,
     pub voxel: [f64; 2],
@@ -83,7 +83,7 @@ impl SmokeSmokeGridModSmokeGridConfig {
 impl Default for SmokeSmokeGridModSmokeGridConfig { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SmokeSmokeGridMod {
     /// (src/smoke/smokeGrid.ts:6 smokeGridConfig)
     pub smoke_grid_config: crate::smoke_smoke_grid::SmokeSmokeGridModSmokeGridConfig,

@@ -1,9 +1,9 @@
 //! The types of `deathrecap`: every death explains itself (rust/game_rules/src/deathrecap).
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{collections::VecDeque, string::String, vec::Vec};
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum RecapCause {
     Blast,
     Round,
@@ -22,7 +22,7 @@ impl RecapCause {
 }
 
 /// one man of a run, as a take names him
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct RecapMan {
     pub id: f64,
     pub name: String,
@@ -41,7 +41,7 @@ impl RecapMan {
 }
 impl Default for RecapMan { fn default() -> Self { Self::zeroed() } }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum RecapManKind {
     Player,
     Civ,
@@ -58,7 +58,7 @@ impl RecapManKind {
 }
 
 /// One of ours going down. Plan coordinates [x, z], metres; `gaze` in radians, 0 = +z (the aim yaw he had the sample before he fell).
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct RecapDeath {
     pub t: f64,
     pub victim: f64,
@@ -112,7 +112,7 @@ impl RecapDeath {
 impl Default for RecapDeath { fn default() -> Self { Self::zeroed() } }
 
 /// a round, or a burst. `at` = the shooter's feet
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct RecapShot {
     pub t: f64,
     pub kind: crate::deathrecap::RecapShotKind,
@@ -139,7 +139,7 @@ impl RecapShot {
 }
 impl Default for RecapShot { fn default() -> Self { Self::zeroed() } }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum RecapShotKind {
     Blast,
     Bang,
@@ -157,7 +157,7 @@ impl RecapShotKind {
 
 /// One sample of the floor. men: MAN_STRIDE floats a man = id, x, z, aim yaw, bits (1 down, 2 roused: alert or searching, 4 crouched). doors: 2 a door = the
 /// leaf's direction (NaN = off its hinges).
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct RecapFrame {
     pub t: f64,
     pub n: f64,
@@ -177,7 +177,7 @@ impl RecapFrame {
 impl Default for RecapFrame { fn default() -> Self { Self::zeroed() } }
 
 /// A death with its own last seconds: frames from `t0` to `t1` (the death at `death.t`), the rounds and blasts in them, every one of ours lost in them.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct RecapTake {
     pub death: crate::deathrecap::RecapDeath,
     pub t0: f64,
@@ -205,7 +205,7 @@ impl RecapTake {
 impl Default for RecapTake { fn default() -> Self { Self::zeroed() } }
 
 /// where a door hangs
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct RecapDoor {
     pub hinge: [f64; 2],
     pub width: f64,
@@ -223,7 +223,7 @@ impl Default for RecapDoor { fn default() -> Self { Self::zeroed() } }
 /// One of the squad lost while the run is on, as much as the squad knows: `from` = the way off him to where the round (the blast) came from, a unit vector on
 /// the plan to the nearest EIGHTH of the compass: a direction, never a place, and never fine enough to lay a ruler along. None until the squad has it
 /// (`known_at`), and for good when nobody still up saw him go down or heard it.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct LostMan {
     pub id: f64,
     pub name: String,
@@ -248,7 +248,7 @@ impl Default for LostMan { fn default() -> Self { Self::zeroed() } }
 
 /// What the record keeps of a man lost beside `Recap.lost_live[i]`, the same man as the squad knows him: the way it came from (handed over as `from` only when the
 /// squad has it), whether ears had it, who had a line to him as he went down (the first teammate; every player), and `done` once that is settled either way.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Lost {
     pub src: Option<[f64; 2]>,
     pub heard: bool,
@@ -258,7 +258,7 @@ pub struct Lost {
 }
 
 /// the last round into a man who was up
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Round {
     pub t: f64,
     pub by: f64,
@@ -286,14 +286,14 @@ impl Round {
 impl Default for Round { fn default() -> Self { Self::zeroed() } }
 
 /// a death whose last second has not run yet, and when it will have
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct RecapDue {
     pub death: crate::deathrecap::RecapDeath,
     pub at: f64,
 }
 
 /// What the end card may show: the takes, and the one it opens on (the last player to go down, else the last of ours).
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, ToBytes)]
 pub struct DeathRecap {
     pub takes: Vec<crate::deathrecap::RecapTake>,
     pub main: f64,
@@ -302,7 +302,7 @@ pub struct DeathRecap {
 /// THE RECAP'S RECORD: the game's own, written by the tick (`deathrecap::recap_tick`) and by a round landing (`recap_round`), fresh with every mission. Only
 /// `lost_live` is on the wire: the rest is handed out once, to the end card. A kept game has none of it (`recap_left_behind`), so a load starts it over: a load is a run
 /// in which that death has not happened.
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Recap {
     /// the mission this record is of, by its serial
     pub run: Option<u32>,

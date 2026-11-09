@@ -1,6 +1,6 @@
 //! The types of `orders`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// what marksKeep took, to put back once: the makers' counters, the room rule's book, the leaf's answer (orders.ts marksKeep). Not kept past the one trial.
@@ -20,7 +20,7 @@ pub enum PropPenalty {
 }
 
 /// (TypeScript: StackPost, src/game/orders.ts:366)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct StackPost {
     pub pos: V3,
     pub face: f64,
@@ -43,7 +43,7 @@ impl StackPost {
 impl Default for StackPost { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: SquadOrders, src/game/orders.ts:531)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SquadOrders {
     pub knobs: crate::knobs::OrdersK,
     pub defs: Vec<OrdersOrderDefId>,
@@ -152,7 +152,7 @@ impl SquadOrders {
 impl Default for SquadOrders { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: SquadOwner, src/game/orders.ts:486)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SquadOwner {
     pub name: String,
 }
@@ -167,7 +167,7 @@ impl SquadOwner {
 impl Default for SquadOwner { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/orders.ts:540 SquadOrders.posture, src/game/orders.ts:540)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct SquadOrdersPosture {
 }
 impl SquadOrdersPosture {
@@ -180,7 +180,7 @@ impl SquadOrdersPosture {
 impl Default for SquadOrdersPosture { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/orders.ts:543 SquadOrders.people, src/game/orders.ts:543)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct SquadOrdersPeople {
 }
 impl SquadOrdersPeople {
@@ -193,7 +193,7 @@ impl SquadOrdersPeople {
 impl Default for SquadOrdersPeople { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: a union)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub enum Who {
     Num(f64),
     All,
@@ -202,7 +202,7 @@ pub enum Who {
 }
 
 /// (TypeScript: Menu, src/game/orders.ts:506)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Menu {
     pub target: crate::orders::OrderTarget,
     pub men: Vec<GuardId>,
@@ -251,7 +251,7 @@ impl Menu {
 impl Default for Menu { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: a union)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub enum OrderTarget {
     Floor(crate::orders::OrderTargetFloor),
     Door(crate::orders::OrderTargetDoor),
@@ -260,7 +260,7 @@ pub enum OrderTarget {
 }
 
 /// (TypeScript: inline at src/game/orders.ts:506 Menu.target, src/game/orders.ts:352)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct OrderTargetFloor {
     pub at: V3,
     pub wall: Option<crate::wallcharge::WallSpot>,
@@ -282,7 +282,7 @@ impl OrderTargetFloor {
 impl Default for OrderTargetFloor { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/orders.ts:506 Menu.target, src/game/orders.ts:353)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct OrderTargetDoor {
     pub at: V3,
     pub door: DoorId,
@@ -301,7 +301,7 @@ impl OrderTargetDoor {
 impl Default for OrderTargetDoor { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/orders.ts:506 Menu.target, src/game/orders.ts:354)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct OrderTargetNone {
     pub at: V3,
     pub man: Option<GuardId>,
@@ -318,7 +318,7 @@ impl OrderTargetNone {
 impl Default for OrderTargetNone { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/orders.ts:506 Menu.target, src/game/orders.ts:356)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct OrderTargetFoe {
     pub at: V3,
     pub foe: GuardId,
@@ -335,7 +335,7 @@ impl OrderTargetFoe {
 impl Default for OrderTargetFoe { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/orders.ts:549 SquadOrders.cmdPress, src/game/orders.ts:549)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SquadOrdersCmdPress {
     pub t0: f64,
     pub t: crate::orders::OrderTarget,
@@ -354,7 +354,7 @@ impl SquadOrdersCmdPress {
 impl Default for SquadOrdersCmdPress { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/orders.ts:551 SquadOrders.tapWas, src/game/orders.ts:551)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SquadOrdersTapWas {
     pub at: f64,
     pub t: crate::orders::OrderTarget,
@@ -375,7 +375,7 @@ impl SquadOrdersTapWas {
 impl Default for SquadOrdersTapWas { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/orders.ts:553 SquadOrders.log, src/game/orders.ts:553)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SquadOrdersLogItem {
     pub t: f64,
     pub order: String,
@@ -403,7 +403,7 @@ impl SquadOrdersLogItem {
 impl Default for SquadOrdersLogItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/orders.ts:560 SquadOrders.shows, src/game/orders.ts:560)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SquadOrdersShowsItem {
     pub t: f64,
     pub who: Vec<String>,
@@ -420,7 +420,7 @@ impl SquadOrdersShowsItem {
 impl Default for SquadOrdersShowsItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/orders.ts:566 SquadOrders.view, src/game/orders.ts:566)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct SquadOrdersView {
     pub input: Option<InputId>,
     pub cam: Option<CameraId>,
@@ -439,7 +439,7 @@ impl SquadOrdersView {
 impl Default for SquadOrdersView { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/orders.ts:577 SquadOrders.doorMarks, src/game/orders.ts:577)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SquadOrdersDoorMarksItem {
     pub door: DoorId,
     pub side: f64,
@@ -460,7 +460,7 @@ impl SquadOrdersDoorMarksItem {
 impl Default for SquadOrdersDoorMarksItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: OtherCast, src/game/orders.ts:484)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct OtherCast {
     pub team: crate::teams::Team,
     pub ring: JsSet<String>,
@@ -477,7 +477,7 @@ impl OtherCast {
 impl Default for OtherCast { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/orders.ts:1554 SquadOrders.asideMem, src/game/orders.ts:1554)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct SquadOrdersAsideMemValue {
     pub q: V3,
     pub t: f64,
@@ -498,7 +498,7 @@ impl SquadOrdersAsideMemValue {
 impl Default for SquadOrdersAsideMemValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/orders.ts:1570 SquadOrders.backFix, src/game/orders.ts:1570)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct SquadOrdersBackFixValue {
     pub plain: f64,
     pub path: f64,
@@ -515,7 +515,7 @@ impl SquadOrdersBackFixValue {
 impl Default for SquadOrdersBackFixValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/orders.ts:1591 SquadOrders.restOf, src/game/orders.ts:1591)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct SquadOrdersRestOfValue {
     pub x: f64,
     pub z: f64,
@@ -546,7 +546,7 @@ impl SquadOrdersRestOfValue {
 impl Default for SquadOrdersRestOfValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/orders.ts:1616 SquadOrders.heldOf, src/game/orders.ts:1616)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct SquadOrdersHeldOfValue {
     pub last: f64,
     pub total: f64,
@@ -563,7 +563,7 @@ impl SquadOrdersHeldOfValue {
 impl Default for SquadOrdersHeldOfValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/orders.ts:1627 SquadOrders.shortOf, src/game/orders.ts:1627)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct SquadOrdersShortOfValue {
     pub x: f64,
     pub z: f64,
@@ -584,7 +584,7 @@ impl SquadOrdersShortOfValue {
 impl Default for SquadOrdersShortOfValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/orders.ts:1668 SquadOrders.apartOf, src/game/orders.ts:1668)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct SquadOrdersApartOfValue {
     pub at: V3,
     pub q: Option<V3>,
@@ -607,7 +607,7 @@ impl SquadOrdersApartOfValue {
 impl Default for SquadOrdersApartOfValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/orders.ts:2127 SquadOrders.worked, src/game/orders.ts:2127)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SquadOrdersWorkedValueItem {
     pub jambless: bool,
     pub marks: Vec<crate::orders::SquadOrdersWorkedValueItemMarksItem>,
@@ -624,7 +624,7 @@ impl SquadOrdersWorkedValueItem {
 impl Default for SquadOrdersWorkedValueItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/orders.ts:2127 SquadOrdersWorkedValueItem.marks, src/game/orders.ts:2127)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct SquadOrdersWorkedValueItemMarksItem {
     pub pos: V3,
     pub walk: f64,
@@ -643,7 +643,7 @@ impl SquadOrdersWorkedValueItemMarksItem {
 impl Default for SquadOrdersWorkedValueItemMarksItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/orders.ts:2486 SquadOrders.reached, src/game/orders.ts:2486)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SquadOrdersReachedValue {
     pub t: f64,
     pub why: Option<String>,
@@ -662,7 +662,7 @@ impl SquadOrdersReachedValue {
 impl Default for SquadOrdersReachedValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/orders.ts:2486 SquadOrdersReachedValue.lock, src/game/orders.ts:2486)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct SquadOrdersReachedValueLock {
     pub door: DoorId,
     pub side: f64,
@@ -679,7 +679,7 @@ impl SquadOrdersReachedValueLock {
 impl Default for SquadOrdersReachedValueLock { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum TargetKind {
     None,
     Door,
@@ -717,10 +717,12 @@ impl GiveOpts {
 impl Default for GiveOpts { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: OrderDef, src/game/orders.ts:369)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct OrderDef {
     pub id: String,
     /// what it does: its label, who it is for, what it asks and hands out (orders/rows/)
+    /// (code: in no bytes)
+    #[bytes(skip)]
     pub row: &'static crate::orders::Row,
     pub targets: Vec<crate::orders::TargetKind>,
     pub key: Option<f64>,
@@ -768,7 +770,7 @@ pub enum OrderDefLabel {
 }
 
 /// (TypeScript: inline at src/game/orders.ts:418 OrderDef.standsIn, src/game/orders.ts:418)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct OrderDefStandsIn {
     pub for_: String,
 }
@@ -783,7 +785,7 @@ impl OrderDefStandsIn {
 impl Default for OrderDefStandsIn { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Assignment, src/game/orders.ts:428)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Assignment {
     pub order: String,
     pub t0: f64,
@@ -1033,7 +1035,7 @@ impl FightLease {
 impl Default for FightLease { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/orders.ts:529 FOLLOW_WORD, src/game/orders.ts:529)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct OrdersModFOLLOWWORDValue {
     pub on: bool,
     pub out_t: f64,
@@ -1803,7 +1805,7 @@ impl FarOff {
 impl Default for FarOff { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct OrdersMod {
     /// (src/game/orders.ts:529 FOLLOW_WORD)
     pub follow_word: JsMap<OrdersAssignmentId, crate::orders::OrdersModFOLLOWWORDValue>,
@@ -1962,7 +1964,7 @@ impl core::fmt::Debug for Row {
 }
 
 /// WHAT THE SQUAD'S PANEL SAYS OF A SEAT BESIDE ITS MENU: kept by the tick, read by whoever draws it (orders/shown.rs).
-#[derive(Clone, Debug, Default, PartialEq)]
+#[derive(Clone, Debug, Default, PartialEq, ToBytes)]
 pub struct Shown {
     /// the quick key's line for what the seat's cursor is on: the row it would give, and what it is on. None: a menu is up, or the key gives nothing there
     pub quick: Option<String>,
