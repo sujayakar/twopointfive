@@ -141,7 +141,7 @@ fn meetLeaf(k: u32, ro: vec3f, rd: vec3f, tmin: f32, tmax: f32) -> f32 {
 fn sunMap(x: vec3f) -> vec3f { let b = basis(frame.sunDir.xyz); let d = x - SUN_AT; return vec3f(dot(d, b[0]) / SUN_WIDE + 0.5, dot(d, b[1]) / SUN_WIDE + 0.5, dot(d, frame.sunDir.xyz) / 80.0 + 0.5); }
 /** leaves one by one, or as a ball of them: a medium. Rays from what the camera sees take them one by one; the rest do not need to */
 /* 0 = leaf by leaf; 1 = each spray a ball that a ray may stop in; 2 = not in this walk: the foliage is asked for apart, as a medium (folWalk) */
-var<private> leafMode: u32 = 0u; var<private> noLeaves: bool = false;
+var<private> leafMode: u32 = 0u; var<private> noLeaves: bool = false; var<private> leafLet = vec3f(0.1, 0.16, 0.03);   /* what a leaf lets straight through a shadow ray */
 // A RAY'S FOOTPRINT: how wide an area its answer will be averaged over. It begins `w` wide and widens by `s` a metre; whatever is smaller than it need not be told apart. Leaves are taken one by one as
 // far as that (leafTo), and as a medium from there on; small things (a tree of their own) are met as far as that (smallTo), and not beyond.
 const LEAF_SIZE = 0.06; const SMALL = 0.14; var<private> footW = 0.0; var<private> footS = 0.0; var<private> leafTo = 0.0; var<private> smallTo = 1e9;
@@ -238,7 +238,7 @@ fn visible(ro: vec3f, rd: vec3f, tmin: f32, tmax: f32) -> vec3f {
           walked += 1u; let m = &nodes[q0 + q];
           if (!boxHit(m, o, inv2, tmin, lmax)) { q = (*m).skip; continue; }
           let l2 = (*m).leaf; let c2 = l2 & 15u;
-          for (var j = 0u; j < c2; j++) { if (meetLeaf((*I).leaf + (l2 >> 4u) + j, o, d, tmin, lmax) > 0.0) { T *= vec3f(0.1, 0.16, 0.03); if (T.y < 0.02) { return vec3f(0.0); } } }
+          for (var j = 0u; j < c2; j++) { if (meetLeaf((*I).leaf + (l2 >> 4u) + j, o, d, tmin, lmax) > 0.0) { T *= leafLet; if (T.y < 0.02) { return vec3f(0.0); } } }
           q++;
         }
       }

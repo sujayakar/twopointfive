@@ -15,6 +15,8 @@ import { placeCode } from './scene/place';
 import { Sway } from './sway';
 import { skyMap, skyCode, tread, TROD } from './scene/skymap';
 import { foliageCode } from './scene/foliage';
+import { blockCode } from './core2/blocks';
+import { measureBlocks } from './core2/measure';
 import { Air, airCode, airRows, BREEZE } from './scene/air';
 import { type V3, clamp, norm } from './math';
 import math from './wgsl/math.wgsl' with { type: 'text' };
@@ -31,18 +33,19 @@ import { mapJoins, joinCode } from './joins';
 
 export const TICK = 1 / 60;
 export const SCENES: Record<string, () => Building> = { rooftop: makeBuilding, street: makeStreet, forest: makeForest, pass: makePass };
-export interface Method { name: string; signals(g: Graph, lab: Lab): void; stages(lab: Lab): Stage[]; frame?(lab: Lab): void; result: string; reset?(lab: Lab): void; prepare?(lab: Lab): Promise<void> }
+export interface Method { name: string; signals(g: Graph, lab: Lab): void; stages(lab: Lab): Stage[]; frame?(lab: Lab): void; result: string; reset?(lab: Lab): void; prepare?(lab: Lab): Promise<void>; /** it needs the second core's cells */ core2?: boolean }
 
 export class Lab {
   gpu!: Gpu; graph!: Graph; scene!: SceneGpu; sky!: Sky; water!: Water; camera = new Camera(); building!: Building;
   /** is what the character cannot see drawn as remembered? */ fog = false;
   tick = 0; frameNo = 0; seed = 0; hour = 15.2; hourNow!: Hour; level = 0; cut = 1e9; wantCut = 1e9; knobs = [0, 0, 0, 0]; lampsMode: 'auto' | 'on' | 'off' = 'auto'; wind: V3 = norm([1, 0, 0.35]); exposure = 0; paused = false;
   private prev: ReturnType<Camera['frame']> | null = null; prevAt = new Map<Piece, { at: V3; rot: Piece['rot'] }>(); slots = new Map<Piece, number>(); jitter: [number, number] = [0, 0]; private prevJitter: [number, number] = [0, 0];
+  /** the second core's cells, once found */ measured = '';
   methods = new Map<string, { m: Method; stages: Stage[] }>(); current = ''; doorsAuto = false; torch: { on: boolean; at: V3; dir: V3 } | null = null; jittered = true; haze = 1; /** how much of the moon there is, and is there power */ moon = 1; mains = true; /** how much snow lies, and how hard it falls */ snow = 0; /** what lies with none falling */ lies = 0; snowfall = 0; snowNow = 0; readonly trod = new Uint8Array(TROD.n[0] * TROD.n[1]); rain = 0; rainNow = 0; wet = 0; steam = 1; lampGroup: Record<string, number> = {}; dense = 1; readonly tune = defaults(); readonly smoke = new Smoke(this); readonly lampOff = new Set<number>();
   async open(canvas: HTMLCanvasElement | null, scene = 'rooftop', load: Strain | null = null) {
     this.gpu = await openGpu(canvas); this.building = (SCENES[scene] ?? SCENES.rooftop!)(); if (load) strain(this.building, load); for (let i = 0; i < 3; i++) this.building.world.lamps.push({ kind: 'sphere', at: [0, -60, 0], u: [0.2, 0, 0], v: [0, 0, 0], radiance: [330, 125, 27], name: 'fire', on: 0 }); this.building.world.lamps.push({ kind: 'sphere', at: [0, -60, 0], u: [0.05, 0, 0], v: [0, 0, 0], radiance: [16000, 11000, 5600], name: 'flash', on: 0 }); this.air = new Air(this.building.place, this.building.world, this.building.doors); this.near = new Near(this.building.world.pieces); this.leaves = this.building.doors.flatMap(d => d.leaf); this.sky = new Sky(this.gpu); await this.sky.init();
     this.ripples = new Ripples(this.building.pool, this.building.poolTop); this.building.bodies.ripples = this.ripples; this.water = new Water(this.gpu, this.ripples); await this.water.init(); this.scene = new SceneGpu(this.gpu, this.building.world, this.sky.tex, this.water.tex, airRows(this.air.cells), skyMap(this.building.solid, this.building.world.moving), rippleRows(this.ripples));
-    this.graph = new Graph(this.gpu, () => math + '\n' + placeCode(this.building.place) + airCode(this.air) + sceneCode + foliageCode(this.scene.foliage, this.scene.folRow, this.scene.folSlots) + skyCode(this.scene.skyRow, this.scene.trodRow) + rippleCode(this.ripples, `extra[${this.scene.ripRow}u + (i >> 2u)][i & 3u]`, 'frame.more.w') + '\n' + wavesCode + '\n' + lampMapCode + joinCode + '\n' + surfaceCode + '\n', { layout: this.scene.layout, group: this.scene.group });
+    this.graph = new Graph(this.gpu, () => math + '\n' + placeCode(this.building.place) + airCode(this.air) + blockCode(this.scene.blocks, this.scene.blockRow) + sceneCode + foliageCode(this.scene.foliage, this.scene.folRow, this.scene.folSlots) + skyCode(this.scene.skyRow, this.scene.trodRow) + rippleCode(this.ripples, `extra[${this.scene.ripRow}u + (i >> 2u)][i & 3u]`, 'frame.more.w') + '\n' + wavesCode + '\n' + lampMapCode + joinCode + '\n' + surfaceCode + '\n', { layout: this.scene.layout, group: this.scene.group });
     this.graph.buffers.set('pastLeaves', this.scene.pastLeaves); this.scene.openFloor = this.building.place.openFloor; { const t = this.building.player.body.torch; if (t >= 0) { this.building.world.lamps[t]!.at = [0, -60, 0]; this.scene.lampOn[t] = 0; } } this.pose(); for (const p of this.building.world.moving) this.prevAt.set(p, { at: p.at, rot: p.rot });
   }
   /** in the page: what moves is drawn between its last two ticks (alpha), and the camera goes by the clock, so that motion is even at any frame rate. A run leaves this off */
@@ -62,6 +65,7 @@ export class Lab {
   project(x: V3): [number, number] | null { const c = this.camera.frame(this.graph.output[0] / this.graph.output[1]), v: V3 = [x[0] - c.pos[0], x[1] - c.pos[1], x[2] - c.pos[2]], d = (a: ArrayLike<number>) => v[0] * a[0]! + v[1] * a[1]! + v[2] * a[2]!, q = (a: ArrayLike<number>) => a[0]! ** 2 + a[1]! ** 2 + a[2]! ** 2, z = d(c.fwd); if (z < 0.1) return null; return [d(c.right) / q(c.right) / z * 0.5 + 0.5, 0.5 - d(c.up) / q(c.up) / z * 0.5]; }
   async use(m: Method) {
     if (!this.mapped) { this.mapped = true; this.send(); this.prev = null; await mapLamps(this); await mapJoins(this); await this.sway.init(this, this.scene.instRest, this.scene.instData, this.scene.pastLeaves); }
+    if (m.core2 && !this.measured) { this.measured = await measureBlocks(this, (globalThis as { GRID?: number }).GRID ?? 8); console.log(this.measured); }
     if (!this.methods.has(m.name)) { m.signals(this.graph, this); await m.prepare?.(this); const stages = m.stages(this); await this.graph.build(stages); this.methods.set(m.name, { m, stages }); }
     this.current = m.name; m.reset?.(this); return m;
   }

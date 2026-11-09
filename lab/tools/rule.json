@@ -1,0 +1,134 @@
+[
+{
+"w": 640,
+"h": 360,
+"tick": 600,
+"samples": 1,
+"methods": [
+"reference",
+"straightref",
+"same2ref",
+"rule1ref",
+"rule0.5ref",
+"rule0.25ref",
+"rule0.125ref",
+"gone0.5ref",
+"gone0.25ref"
+],
+"paths": 1200,
+"name": "garden",
+"dist": 22,
+"hour": 14.0,
+"look": [
+8,
+4,
+1.5
+],
+"pitch": 0.7
+},
+{
+"w": 640,
+"h": 360,
+"tick": 600,
+"samples": 1,
+"methods": [
+"reference",
+"straightref",
+"same2ref",
+"rule1ref",
+"rule0.5ref",
+"rule0.25ref",
+"rule0.125ref",
+"gone0.5ref",
+"gone0.25ref"
+],
+"paths": 1200,
+"name": "tree",
+"dist": 6,
+"hour": 16.4,
+"look": [
+10.6,
+5.2,
+3.6
+],
+"yaw": 0.62,
+"pitch": 0.35
+},
+{
+"w": 640,
+"h": 360,
+"tick": 600,
+"samples": 1,
+"methods": [
+"reference",
+"straightref",
+"same2ref",
+"rule1ref",
+"rule0.5ref",
+"rule0.25ref",
+"rule0.125ref",
+"gone0.5ref",
+"gone0.25ref"
+],
+"paths": 1200,
+"name": "roof day",
+"dist": 50,
+"hour": 16.0
+},
+{
+"w": 640,
+"h": 360,
+"tick": 600,
+"samples": 1,
+"methods": [
+"reference",
+"straightref",
+"same2ref",
+"rule1ref",
+"rule0.5ref",
+"rule0.25ref",
+"rule0.125ref",
+"gone0.5ref",
+"gone0.25ref"
+],
+"paths": 1200,
+"name": "ground day",
+"dist": 34,
+"hour": 15.0,
+"cut": 2.55,
+"look": [
+0,
+0.6,
+0
+],
+"doors": 0.8
+},
+{
+"w": 640,
+"h": 360,
+"tick": 600,
+"samples": 1,
+"methods": [
+"reference",
+"straightref",
+"same2ref",
+"rule1ref",
+"rule0.5ref",
+"rule0.25ref",
+"rule0.125ref",
+"gone0.5ref",
+"gone0.25ref"
+],
+"paths": 1200,
+"name": "ground night",
+"dist": 30,
+"hour": 21.5,
+"cut": 2.55,
+"look": [
+0,
+0.6,
+0
+],
+"doors": 0.8
+}
+]
