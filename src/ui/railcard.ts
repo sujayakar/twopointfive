@@ -1,4 +1,4 @@
-// A TUTORIAL MISSION'S CARD — a lesson step's `explain` (scene/scenarios.ts LessonStep; the view's `lesson.rails.card`).
+// A TUTORIAL MISSION'S CARD — a lesson step's `explain` (tools/levels/lib/scenarios.ts LessonStep; the view's `lesson.rails.card`).
 //
 // The maintainer, playing the squad mission, 10-22: "i think this needs more explanation for the systems. maybe even a modal that pauses the game and
 // explains it. like 'You can shoot through windows, and it's often safer to clear a room from the outside rather than going in immediately' and then the

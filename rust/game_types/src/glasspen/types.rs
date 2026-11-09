@@ -26,16 +26,6 @@ pub struct PenState {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct PaneToll {
-    pub type_: crate::glasspen::PaneType,
-    pub n: V3,
-    pub cos: f64,
-    pub take: f64,
-    pub e_out: f64,
-    pub hole: bool,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct PaneCross {
     pub bi: f64,
     pub t: f64,
@@ -79,13 +69,6 @@ pub struct RoundPathSt {
     pub n: V3,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct StaticHit2 {
-    pub t: f64,
-    pub index: f64,
-    pub n: V3,
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct ShellGlass {
     pub glass: JsMap<crate::Num, Vec<f64>>,
@@ -97,26 +80,11 @@ pub enum ShellMark {
     More,
     First,
 }
-impl ShellMark {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            ShellMark::Join => "join",
-            ShellMark::More => "more",
-            ShellMark::First => "first",
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct ArmThroughGlass {
     pub e: f64,
     pub panes: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct ShotPassesPanesItem {
-    pub bi: f64,
-    pub t: f64,
 }
 
 /// the state this module keeps at its top level
@@ -145,12 +113,6 @@ pub struct GlasspenStats {
     pub shot_refused: i32,
     pub shell_joined: i32,
 }
-
-/// (src/game/glasspen.ts:110 OFF_WORD)
-pub const OFF_WORD: &str = "/^(0|off|false|no)$/i";
-
-/// (src/game/glasspen.ts:114 LS_KEY)
-pub const LS_KEY: &str = "twopointsix.glasspen";
 
 /// (src/game/glasspen.ts:186 PANE_TYPES: a table nothing writes)
 pub fn pane_types() -> Vec<String> { alloc::vec![String::from("annealed"), String::from("tempered"), String::from("laminated")] }

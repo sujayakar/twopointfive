@@ -114,8 +114,8 @@ room clear structure lists. Failing both, `door_words` says the id's words throu
 - **Office things are said only in the office.** `is_office` asks for the office's routes. Elsewhere `away` and `own` rows name the level's own places.
 - **The handler is the office's.** "the 'subtle was twenty years ago' text with the handler keeps popping up -- should be confined to just the office level and honestly a bit
   stale anyways". `radio_live` is false anywhere else. A beat also waits for `radio_clear`: nobody alert and Sam's hands free. His answer is dropped if he cannot give it.
-- **No compass word in a door's name,** and no two doors of a level said the same, the office and the lessons aside. The office's response team keeps "west stairwell" (`qrf/p_02.rs`).
-  A route's name can still hold a bearing (`route_names_now`): only door names are held to this.
+- **No compass word in a door's or a route's name,** and no two doors of a level said the same, the office and the lessons aside. A route is said by the level's place it keeps to
+  (`route_name`), else by its own words. The office's response team keeps "west stairwell" (`qrf/p_02.rs`).
 - **On a defender's net "they" is the team.** So the hostages are named: "the hostages are gone — they're moving them! cut them off!" (`rescueflush/`).
 - **One can, a word for each place.** A squad's rows and mouths say bang ("bang out!", "no bangs left."). Where kit is picked or held it is "stun canister", and a lesson says
   "stun grenade". A mission's blurb and `combat/` say flashbang. A new line takes the word of the place it stands in.
@@ -145,7 +145,7 @@ Native tests in `rust/game_start/tests/`, and each module's own tests, by `gate 
 | file | what it holds |
 |---|---|
 | `radio.rs` | a line as the scene says it, its tone, the strip's ranking, each HUD told its own in a game of two |
-| `held_words.rs` | no count in a row, no order row past digit five, no door said by a compass word |
+| `held_words.rs` | no count in a row, no order row past digit five, no door and no route said by a compass word |
 | `net_quiet.rs` | calls that get worse, the last line only for the last man |
 | `squads_radio.rs` | a drop found by a radio check, nobody walking out at a noise |
 | `civilians_held.rs` | a held civilian talks, told to stay down she stays, and she tells the first man who finds her |
@@ -159,5 +159,4 @@ holds the HUD to importing nothing of the game.
 ## Not seen
 
 How often lines come in a fight was read in tests, not felt. No check sees a bubble or the strip on a GPU.
-Spoken lines have no lint: a line over length, a banned word in a mouth or a bad token shows only by reading the table. `MAX_CHARS`, `AIM_CHARS` and `originality_blocklist` stand for
-that, and nothing reads them. Much that is written to the player through `game_msg` reaches no screen.
+Spoken lines have no lint: a line over length, a banned word in a mouth or a bad token shows only by reading the table. Much that is written to the player through `game_msg` reaches no screen.

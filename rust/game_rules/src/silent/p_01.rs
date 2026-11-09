@@ -30,7 +30,6 @@ pub fn squad_silent(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool
 
 /// put the squad in silent or take it out   (silent.ts setSilent)
 pub fn set_silent(g: &mut crate::game::Game, on: bool, by: Option<crate::silent::By>) {
-    let by = by.unwrap_or(By::Api);
     let key = crate::seats::view_key(g, &crate::seats::here(g));
     if !g.m.silent.states.has(key) {
         let cast = cast_of(g, &crate::seats::here(g));
@@ -42,9 +41,6 @@ pub fn set_silent(g: &mut crate::game::Game, on: bool, by: Option<crate::silent:
     if s.silent == on { return; }
     s.silent = on; s.since = now; s.hot = false; s.was = Some(false); s.booted = None;
     if on { g.stats.silent.silent += 1; } else { g.stats.silent.loud += 1; }
-    let to = if on { SilentModSILENTLOGItemTo::Silent } else { SilentModSILENTLOGItemTo::Loud };
-    g.m.silent.silent_log.push(SilentModSILENTLOGItem { t: now, to, by });
-    if g.m.silent.silent_log.len() > 100 { g.m.silent.silent_log.drain(0..50); }
 }
 
 /// this teammate is under the silent posture this frame   (silent.ts underSilence)
@@ -219,7 +215,6 @@ pub fn row_whole_squad(g: &mut crate::game::Game, _men: &[GuardId], _t: &crate::
 /// the posture's two rows on the menu: made anew at each call, as the TypeScript's literals are   (silent.ts rows)
 pub fn rows(g: &mut crate::game::Game) -> [OrdersOrderDefId; 2] {
     let silent = crate::orders::squad_orders_row(g, crate::orders::rows::def(&crate::orders::rows::silent::ORDER, crate::orders::OrderDef {
-        head: Some(String::from(HEAD)),
         targets: targets(),
         listed: listed(),
         free: Some(true),
@@ -227,7 +222,6 @@ pub fn rows(g: &mut crate::game::Game) -> [OrdersOrderDefId; 2] {
         ..Default::default()
     }));
     let loud = crate::orders::squad_orders_row(g, crate::orders::rows::def(&crate::orders::rows::loud::ORDER, crate::orders::OrderDef {
-        head: Some(String::from(HEAD)),
         targets: targets(),
         listed: listed(),
         free: Some(true),
@@ -279,15 +273,6 @@ pub fn posture_word(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Opti
     }
     let w = crate::unseen::unseen_word(g, seat);
     Some(loud_word(w.as_deref()))
-}
-/// `posture.mark`   (silent.ts:248): what the posture's seam should call
-pub fn posture_mark(g: &crate::game::Game, seat: &crate::seats::SeatRef, def: OrdersOrderDefId) -> &'static str {
-    if squad_silent(g, seat) && crate::orders::rows::id_is(&g.tab.orders_order_def[def].id, crate::orders::Is::Loud) { " · LOUD" } else { "" }
-}
-/// `posture.given`   (silent.ts:249): what the posture's seam should call
-pub fn posture_given(g: &mut crate::game::Game, def: OrdersOrderDefId) {
-    let loud = crate::orders::rows::id_is(&g.tab.orders_order_def[def].id, crate::orders::Is::Loud);
-    silent_tool(g, loud);
 }
 fn seam_posture(g: &mut Game) -> crate::orders::SquadOrdersPosture { crate::orders::SquadOrdersPosture {} }   // (the one maker of a posture is this module: a posture that is Some IS these three functions, and p_orders_03 calls silent_tool on that reading)
 

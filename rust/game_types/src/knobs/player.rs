@@ -2,7 +2,7 @@
 use crate::bytes::ToBytes;
 use game_derive::Knobs;
 
-/// Sam's hands on the FN2000 (docs/internal/sc20k-design.md §5; combat.ts fireWeapon's `spread`: ± half of it per axis on the unit direction): a shouldered long gun
+/// Sam's hands on the FN2000 (combat.ts fireWeapon's `spread`: ± half of it per axis on the unit direction): a shouldered long gun
 ///  standing still, on the move (any ground speed over `moveAt`), × crouched, × braced on the foregrip — which he now ALWAYS is with it in the hands (Player.braced:
 ///  no brace input any more, so braceK is simply the rifle's in-hand steadiness and `still` × braceK the cone a standing round is drawn with) — then + the AUTO string's
 ///  own growth off the row (weapons.ts AutoSpec) and + his suppression's (suppression.ts samSpread), as the pistol's rounds get. The pistol stays dead-on.

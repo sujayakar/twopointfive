@@ -230,7 +230,7 @@ pub fn door_ahead(g: &crate::game::Game, gd: GuardId) -> Option<crate::doorway::
             if flat(pos, g.dr[d].frame_centre) > reach + g.dr[d].def.width { continue; }
             let Some(x) = crate::guards::crosses_door(g, a, b, d) else { continue };
             let dist = run + flat(a, x.at);
-            if dist <= reach && best.map_or(true, |b| dist < b.dist) { best = Some(DoorAhead { d, side: x.side, at: x.at, dist }); }
+            if dist <= reach && best.map_or(true, |b| dist < b.dist) { best = Some(DoorAhead { d, side: x.side, dist }); }
         }
         if best.is_some() { return best; }
         run += flat(a, b);
@@ -397,7 +397,7 @@ pub fn doorway_gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64)
     }
     let (spot, door, side) = { let s = st!(g, gd); (s.spot, s.door, s.side) };
     let x = match (spot, door) {
-        (Some(_), Some(d)) => { let fc = g.dr[d].frame_centre; Some(DoorAhead { d, side, at: fc, dist: flat(pos, fc) }) }
+        (Some(_), Some(d)) => { let fc = g.dr[d].frame_centre; Some(DoorAhead { d, side, dist: flat(pos, fc) }) }
         _ => door_ahead(g, gd),
     };
     let waiting = spot.is_some();

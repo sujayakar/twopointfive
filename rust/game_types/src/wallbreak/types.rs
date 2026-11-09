@@ -50,13 +50,10 @@ pub struct LevelChange {
     pub kind: crate::wallbreak::LevelChangeKind,
     pub cause: crate::wallbreak::LevelChangeCause,
     pub id: f64,
-    pub name: Option<String>,
     pub pos: V3,
     pub rect: [f64; 4],
     pub opened: Vec<f64>,
     pub walkable: bool,
-    pub sight: bool,
-    pub dead: bool,
     pub who: f64,
 }
 
@@ -144,13 +141,6 @@ pub struct Breakable {
     pub hard: Option<bool>,
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct WallsSave {
-    pub v: f64,
-    pub b: Vec<(f64, String, Vec<f64>, Option<f64>)>,
-    pub h: Option<Vec<[f64; 2]>>,
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct AABB {
     pub x0: f64,
@@ -172,12 +162,6 @@ pub struct WallBreak {
     pub hidden: JsMap<crate::Num, f64>,
     pub counter: f64,
     pub dirty: bool,
-    /// (scratch, read by nobody who did not just write it: in no bytes)
-    #[bytes(skip)]
-    pub scratch: Vec<i32>,
-    /// (scratch, read by nobody who did not just write it: in no bytes)
-    #[bytes(skip)]
-    pub scratch2: Vec<i32>,
     pub fixture_boxes: JsSet<crate::Num>,
     pub ghosts: Vec<f64>,
     pub wear: crate::wallwear::WallWear,
@@ -200,8 +184,6 @@ impl WallBreak {
             hidden: JsMap::new(),
             counter: 1.0,
             dirty: false,
-            scratch: alloc::vec![0; 96],
-            scratch2: alloc::vec![0; 96],
             fixture_boxes: JsSet::new(),
             ghosts: Vec::new(),
             wear: crate::wallwear::WallWear::blank(),
@@ -224,20 +206,9 @@ pub struct WallBreakHungNow {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct WallBreakInventory {
-    pub walls: f64,
-    pub cover: f64,
-    pub wall_m: f64,
-    pub pieces: f64,
-    pub hidden: f64,
-    pub touched: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct WallBreakBreakableAt {
     pub id: f64,
     pub kind: crate::wallbreak::BKind,
-    pub surf: crate::scene_materials::Surf,
     pub open: f64,
     pub cells: f64,
     pub hard: Option<bool>,
@@ -259,76 +230,22 @@ pub struct WallBreakRectBox {
     pub h: V3,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum WallBreakOpenCellsCause {
-    Blast,
-    Fire,
-    Load,
-    Reset,
-    Collapse,
-}
-impl WallBreakOpenCellsCause {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            WallBreakOpenCellsCause::Blast => "blast",
-            WallBreakOpenCellsCause::Fire => "fire",
-            WallBreakOpenCellsCause::Load => "load",
-            WallBreakOpenCellsCause::Reset => "reset",
-            WallBreakOpenCellsCause::Collapse => "collapse",
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct WallBreakRazeBudget {
-    pub chunks: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct WallBreakRazeInBudget {
-    pub chunks: f64,
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct WallBreakNoteC {
-    pub dead: bool,
     pub kind: crate::wallbreak::LevelChangeKind,
     pub cause: crate::wallbreak::LevelChangeCause,
-    pub name: Option<String>,
     pub who: f64,
     pub pos: V3,
     pub id: f64,
-    pub sight: bool,
     pub rect: [f64; 4],
     pub opened: Vec<f64>,
     pub walkable: bool,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum WallBreakNoteCCause {
-    Blast,
-    Fire,
-    Load,
-    Reset,
-    Collapse,
-}
-impl WallBreakNoteCCause {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            WallBreakNoteCCause::Blast => "blast",
-            WallBreakNoteCCause::Fire => "fire",
-            WallBreakNoteCCause::Load => "load",
-            WallBreakNoteCCause::Reset => "reset",
-            WallBreakNoteCCause::Collapse => "collapse",
-        }
-    }
 }
 
 #[derive(Clone, Debug, Default)]
 pub struct WallBreakPlanBlastItem {
     pub b: WallbreakBreakableId,
     pub cells: Vec<f64>,
-    pub d: f64,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -368,9 +285,6 @@ pub struct WallbreakStats {
     pub chunks_demoted: i32,
     pub nav_opened: i32,
 }
-
-/// (src/game/wallbreak.ts:81 WALLS_DEFAULTS: a table nothing writes)
-pub fn walls_defaults() -> crate::knobs::WallsK { crate::knobs::WallsK::page() }
 
 /// (src/game/wallbreak.ts:162 HIDE)
 pub const HIDE: f64 = 3.0;

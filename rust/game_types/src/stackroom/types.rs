@@ -26,16 +26,6 @@ pub struct Book {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct StackViewFixMenItem {
-    pub char: crate::stackroom::StackViewFixMenItemChar,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct StackViewFixMenItemChar {
-    pub pos: V3,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct NextRoom {
     pub pos: V3,
     pub face: f64,
@@ -44,8 +34,6 @@ pub struct NextRoom {
 #[derive(Clone, Copy, Debug, Default)]
 pub struct StackRoomProbe {
     pub floor: bool,
-    pub cells: f64,
-    pub seed: Option<V3>,
 }
 
 /// the state this module keeps at its top level

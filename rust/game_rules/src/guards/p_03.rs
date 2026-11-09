@@ -50,7 +50,6 @@ pub fn pair_of(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Option<cr
         key,
         held,
         sam,
-        held_axis,
         centre: v3::lerp3(sam, held_axis, 0.5),
         facing: g.ch[pc].body_yaw,
         aim: [sam[0], pc_pos[1] + STANDOFF_AIM_Y, sam[2]],
@@ -207,7 +206,6 @@ pub fn standoff_perceive(g: &mut crate::game::Game, gd: GuardId, dt: Option<f64>
         let side = pick_side(g, gd, p);
         let s = g.tab.guards_standoff.push(crate::guards::Standoff {
             pair: p.held,
-            since: now,
             side,
             way: 0.0,
             orbit_goal: None,
@@ -225,7 +223,7 @@ pub fn standoff_perceive(g: &mut crate::game::Game, gd: GuardId, dt: Option<f64>
         g.gd[gd].standoff = Some(s);
         let who = g.gd[p.held].callsign.clone();
         let me = &mut g.gd[gd];
-        me.witness.saw_held = Some(crate::game::WitnessSawHeld { who, t: now });
+        me.witness.saw_held = Some(crate::game::WitnessSawHeld { who });
         me.fire_cd = m::max(me.fire_cd, 0.8);
         me.path = Vec::new();
         me.path_serial = me.path_serial.wrapping_add(1);
@@ -398,7 +396,7 @@ pub fn flank_shot(g: &mut crate::game::Game, gd: GuardId, p: crate::guards::Pair
         && dist <= STANDOFF_FIRE_MAX_M
         && dist >= STANDOFF_MIN_M - 0.6
         && clear_shot(g, c, to);
-    crate::guards::FlankShot { ok, rear, clear, dist }
+    crate::guards::FlankShot { ok, rear }
 }
 
 /// STANDOFF_LINES, a moment's lines for one temperament.

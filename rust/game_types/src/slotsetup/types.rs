@@ -62,5 +62,3 @@ pub const OWN_SLACK: f64 = 0.05;
 /// (src/game/slotsetup.ts:83 STALE)
 pub const STALE: f64 = 0.2;
 
-/// (src/game/slotsetup.ts:85 BREAK)
-pub const BREAK: bool = false;

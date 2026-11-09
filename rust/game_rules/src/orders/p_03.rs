@@ -430,7 +430,7 @@ pub fn squad_orders_give(g: &mut crate::game::Game, id_2: &str, t: Option<&crate
             OrderTarget::None(_) => String::from("none"),
         };
         let serial = g.serial();
-        let item = SquadOrdersLogItem { t: g.time, order: String::from(id_2), who: men.iter().map(|&gd| g.gd[gd].callsign.clone()).collect(), target, auto: None, laid: None, serial };
+        let item = SquadOrdersLogItem { t: g.time, order: String::from(id_2), who: men.iter().map(|&gd| g.gd[gd].callsign.clone()).collect(), target, auto: None, serial };
         g.orders.log.push(item);
     }
     if g.orders.log.len() > 200 { g.orders.log.drain(0..50); }

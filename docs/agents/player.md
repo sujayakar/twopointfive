@@ -35,13 +35,13 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | `slotsetup/` | the setup a gun's digit opens |
 | `launcher/`, `he40/`, `shotgun/` | the sponge round; the 40 mm; a shell's pellets and a lock taken with them |
 | `throwables/`, `throwplan/`, `frag/` | things in the air and `throwables_solve`; a flight asked ahead; the frag, `blast`, `throw_reach` |
-| `kit/`, `kitload/`, `kittree/`, `loadout/`, `issue/`, `gear/` | the card (`kit_player`); the two scores; lent rounds; a mission's size; a level's wall charges; the issued kit's words |
+| `kit/`, `kitload/`, `loadout/`, `issue/`, `gear/` | the card (`kit_player`); the two scores; a mission's size; a level's wall charges; the issued kit's words |
 | `bigkit/`, `packside/`, `inhand/` | hammer and breaching shotgun, Sam's beat with them; what stands where on a pack; what sits where in a hand |
 | `hands/`, `handwork/`, `workstow/`, `workthings/` | bodies and a leaf by hand; a hand on a thing; the gun put away for a job; a teammate's jobs |
 | `handslot/`, `handring/` | the empty-hands key; the ring |
 | `friends/`, `friendlyfire/`, `fireline/` | ring and low ready; rounds among friends; a teammate waiting out Sam's lane of fire |
 | `condition/`, `samstun/`, `flinch/`, `deathrecap/` | hurt; folded and blind; a man ducking at a round; the record of a death |
-| `ownblow/`, `sandbox/`, `cleanrestart/` | Sam's own charge as his own row; the cheats' flags; the restart's counters |
+| `ownblow/`, `cleanrestart/` | Sam's own charge as his own row; the restart's counters |
 | `camera/` | the follow camera and the rays off it |
 
 The page's half: `src/host/keymap.ts` (which key gives which code), `src/host/camera.ts`, `src/host/sandbox.ts`, `src/ui/handbox.ts` (kit column),
@@ -101,7 +101,7 @@ killed is the same, wounded calls `condition_hurt`, wounded or stunned sets `sta
 
 ## Rules that hold
 
-- **One round.** Every row's `damage` is `OneShot`. Nothing is harder by hit points.
+- **One round.** No gun's row has a damage of its own. Nothing is harder by hit points.
 - **Two gears, no dial.** "let's start by just removing the pace wheel entirely with the faster crouch sneak": `wheel_pace` does nothing.
 - **The sprint is the standing man's.** "we can make sprint when crouching a really fast crouch walk, but you have to stand up to sprint properly". A
   hurt man does neither.

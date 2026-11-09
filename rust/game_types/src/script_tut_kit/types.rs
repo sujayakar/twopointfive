@@ -25,14 +25,6 @@ pub struct TutKitGunFrame {
     pub i: f64,
     /// mode: a yield separates its declaration from a use
     pub mode: Option<String>,
-    /// at: a yield separates its declaration from a use
-    pub at_2: [f64; 3],
-    /// at: a yield separates its declaration from a use
-    pub at_3: [f64; 3],
-    /// pts: a yield separates its declaration from a use
-    pub pts: Vec<[f64; 3]>,
-    /// at: a yield separates its declaration from a use
-    pub at_4: [f64; 3],
 }
 
 /// (levels/tut-kit.script.ts:102-102) the beat 'bags': where it stands, and what lives across a yield
@@ -63,8 +55,6 @@ pub struct TutKitShopFrame {
     pub at: u16,
     /// u: a yield separates its declaration from a use
     pub u: Option<crate::director::UnitRef>,
-    /// r: a yield separates its declaration from a use
-    pub r: Option<crate::director::CondResult>,
 }
 
 /// (levels/tut-kit.script.ts:118-126) the beat 'room': where it stands, and what lives across a yield
@@ -74,10 +64,6 @@ pub struct TutKitRoomFrame {
     pub at: u16,
     /// pair: a yield separates its declaration from a use
     pub pair: Vec<crate::director::UnitRef>,
-    /// r: a yield separates its declaration from a use
-    pub r: Option<crate::director::CondResult>,
-    /// r2: a yield separates its declaration from a use
-    pub r2: Option<crate::director::CondResult>,
 }
 
 /// (levels/tut-kit.script.ts:131-131) the beat 'loose': where it stands, and what lives across a yield
@@ -96,14 +82,8 @@ pub struct TutKitTrucksFrame {
     pub two: Vec<crate::script_tut_kit::TutKitTrucksTwo>,
     /// all: a yield separates its declaration from a use
     pub all: f64,
-    /// m: a yield separates its declaration from a use
-    pub m: Option<crate::script_tut_kit::TutKitTrucksM>,
     /// i: a yield separates its declaration from a use
     pub i: f64,
-    /// shots: a yield separates its declaration from a use
-    pub shots: Vec<crate::director::Cond>,
-    /// m: a yield separates its declaration from a use
-    pub m_2: Option<crate::script_tut_kit::TutKitTrucksM>,
 }
 
 /// (levels/tut-kit.script.ts:153-153) the beat 'call': where it stands, and what lives across a yield
@@ -195,8 +175,6 @@ pub struct TutKitRoomHelperFrame {
     pub box_: Option<crate::script_tut_kit::TutKitRoomHelperBox>,
     /// held: a yield separates its declaration from a use
     pub held: Vec<crate::director::UnitRef>,
-    /// r: a yield separates its declaration from a use
-    pub r: Option<crate::director::CondResult>,
 }
 
 /// (levels/tut-kit.script.ts) what the define pass names and a beat reads: the script's and its programs' locals. Its closures are your private fns: aim, men, radio
@@ -227,13 +205,6 @@ pub struct TutKitRoomHelperBox {
 /// an inline shape of the script
 #[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutKitTrucksTwo {
-    pub k: f64,
-    pub u: Option<crate::director::UnitRef>,
-}
-
-/// an inline shape of the script
-#[derive(Clone, Debug, Default, ToBytes)]
-pub struct TutKitTrucksM {
     pub k: f64,
     pub u: Option<crate::director::UnitRef>,
 }

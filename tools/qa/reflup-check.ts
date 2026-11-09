@@ -8,7 +8,7 @@
 // by its bilinear weight × how near its own surface is to the pixel's (a bell over the depth's difference) × how like its stored normal is, with the
 // plain fetch left in the blend at a hundred-thousandth for the pixel none of the four is like.
 // WHAT THIS CAN AND CANNOT SAY. No shader runs here. Line 1 holds the composite's weights BY THEIR TEXT. Line 2 is the weights' arithmetic
-// on pixels at a jamb, a sill and a bevel, with the numbers line 1 holds in the text. What the picture looks like is the page's to show (docs/agents/render.md).
+// on pixels at a jamb, a sill and a bevel, with the numbers line 1 holds in the text. What the picture looks like is the page's to show.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { ROOT } from './here.ts';

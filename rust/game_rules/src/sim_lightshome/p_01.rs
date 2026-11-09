@@ -68,13 +68,11 @@ pub fn fixture_new(g: &mut crate::game::Game, i: f64, st: crate::Opaque, def: &c
         light: def.light,
         boxes: def.boxes.clone(),
         base_emissive: def.base_emissive,
-        fluorescent_flicker: def.fluorescent_flicker,
         mains: def.mains,
         interactive: def.interactive,
         area_lights: def.area_lights.as_ref().map(|v| v.iter().map(|a| FixtureAreaLightsItem { light: a.light, base: a.base }).collect()),
         lens: def.lens,
         i,
-        st,
     })
 }
 
@@ -262,10 +260,9 @@ pub fn light_home_new(g: &crate::game::Game, st: crate::Opaque) -> crate::sim_li
         panic!("two stores of the lights over one game's block: a part of a block is one store's");
     }
     head.homes |= bit;
-    let mains = Mains { st };
     let fresh = light_in().fresh;
     light_home_in(g, fresh, None, None, None, None, None);
-    LightHome { mains, lamps: Vec::new(), st }
+    LightHome { lamps: Vec::new(), st }
 }
 
 /// A fixture more (the level as it is built). (lightshome.ts LightHome.add)

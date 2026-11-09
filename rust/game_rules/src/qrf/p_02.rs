@@ -571,7 +571,7 @@ fn perceive_here(g: &mut crate::game::Game, m: GuardId, dt: f64) -> bool {
             g.gd[m].saw_body_t = t;
             let victim = g.gd[o].callsign.clone();
             let breathing = crate::game::is_breathing(g, o);
-            g.gd[m].witness.saw_body = Some(crate::game::WitnessSawBody { victim: victim.clone(), t, breathing });
+            g.gd[m].witness.saw_body = Some(crate::game::WitnessSawBody { victim: victim.clone(), breathing });
             let mc = g.gd[m].ch;
             let eye = match g.ch[mc].bones.get(crate::character::Bone::Head) { Some(&b) => b, None => v3::add(g.ch[mc].pos, [0.0, 1.65, 0.0]) };
             let bp = crate::guards::body_pos(g, o);
@@ -627,9 +627,8 @@ pub fn man_down(g: &mut crate::game::Game) {
         let callsign = g.gd[d].callsign.clone();
         if let Some(s) = sp {
             if !g.gd[d].found { g.gd[d].found = true; crate::mission::tally(g, crate::mission::TallyK::Bodies); }
-            let t = g.time;
             let breathing = crate::game::is_breathing(g, d);
-            g.gd[s].witness.saw_body = Some(crate::game::WitnessSawBody { victim: callsign.clone(), t, breathing });
+            g.gd[s].witness.saw_body = Some(crate::game::WitnessSawBody { victim: callsign.clone(), breathing });
             let room = crate::dialogue::room_name(g, bp);
             let him = if g.gd[d].down_by == Some(crate::game::DownBy::Player) { " it's him — on me!" } else { "" };
             let text = format!("man down — {} is hit, {}!{}", callsign, room, him);

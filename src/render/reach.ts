@@ -22,8 +22,8 @@
 //    line threading the shared corner of two diagonal wall sub-cells slips through.
 // But the receiving cell is SAMPLED, not covered: five looks per 1 m cell (its centre and four corner sub-cells, SUBS, on the 1/16 m
 // raster), reached if ANY look sees ANY source point. A light that gets into a cell only across a strip lying between those five points
-// is level 0 there — dropped outright by direct / directIrradiance / gloss, a hard cut at that cell's edge. The review (docs/internal/
-// review-2026-08-08.md #17) counted 36 such cells over lights × cells with an exact 3D raycast, nearly all dim ceiling panels two doorways
+// is level 0 there — dropped outright by direct / directIrradiance / gloss, a hard cut at that cell's edge. The review of
+// 08-08 counted 36 such cells over lights × cells with an exact 3D raycast, nearly all dim ceiling panels two doorways
 // off (worst ~40 % of the local unshadowed score at three cells by panel_cubicles_11; the beacons 13–18 % of theirs in a blackout). The
 // one-cell dilation ring (REACH_OPTS.ring) keeps every one of them at level 1 — but on this level 47 % of each mask's footprint was then
 // ring-only 'maybe' cells, a far light pickable in one cell and known-dark in the next, which drew the server racks' green halo as arcs on

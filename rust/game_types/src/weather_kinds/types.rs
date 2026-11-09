@@ -62,9 +62,6 @@ impl WeatherKindsMod {
     }
 }
 
-/// (src/game/weatherKinds.ts:16 MAX_ROOFS)
-pub const MAX_ROOFS: f64 = 4.0;
-
 /// (src/game/weatherKinds.ts:19 WEATHER_KINDS: a table nothing writes)
 pub fn weather_kinds() -> Vec<String> { alloc::vec![String::from("clear"), String::from("overcast"), String::from("rain"), String::from("downpour"), String::from("fog"), String::from("dust")] }
 

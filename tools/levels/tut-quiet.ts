@@ -80,7 +80,7 @@
 // WHAT IS KEPT FROM THE FIRST BUILD, to the centimetre: the shop's walls and doors, the low walls, both lamps, the beams, the box, the pad, the safe and
 // every mark the lesson and its scripted player name (TQ). What is new is the place they stand in.
 import type { Vec3 } from '../../src/math/vec';
-import type { IssueData, LessonData, LevelScenarios, QuietData, Rect } from '../../src/scene/scenarios';
+import type { IssueData, LessonData, LevelScenarios, QuietData, Rect } from './lib/scenarios';
 import type { DeviceDef, Level, LevelDoorDef } from './lib/level';
 import type { SurfacesData } from './lib/levelData';
 import { BoxFlag } from '../../src/scene/boxes';

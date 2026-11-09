@@ -37,9 +37,9 @@ export const KIND_ID: Record<PKind, number> = { spark: 0, debris: 1, dust: 2, ca
 export const KIND_RING: Record<PKind, 0 | 1 | 2> = { spark: 0, dust: 0, debris: 1, casing: 1, sheet: 1, rain: 2, shard: 1 };
 export const P_CAP = 16384;
 export const RINGS: readonly { start: number; size: number }[] = [{ start: 0, size: 6144 }, { start: 6144, size: 10240 }];
-/** the RAIN ring (EXPERIMENT exp/particle-rain, rust/game_rules/src/rain_fx): slots P_CAP ‥ P_CAP + RAIN_CAP past the two gameplay rings — its window rides in the emit block's TAIL (particles_common.wgsl EmitBlock.rainWin) so the
+/** the RAIN ring (EXPERIMENT exp/particle-rain, src/picture/rain.ts): slots P_CAP ‥ P_CAP + RAIN_CAP past the two gameplay rings — its window rides in the emit block's TAIL (particles_common.wgsl EmitBlock.rainWin) so the
  *  header, the records and both gameplay windows are laid out exactly as they were. A drop's slot is held for its filed life + slack (≈ 1.23 s; a drip off a lamp head ≈ 1.8 s, and the FIFO
- *  retires in order) while it is in the air ~0.73 s, so N alive need 1.7‥2.5 N slots: 16384 hold ~5900 with the drips on, ~8900 without (rust/game_rules/src/rain_fx clamps its target to the ring); +1.25 MB of pool. */
+ *  retires in order) while it is in the air ~0.73 s, so N alive need 1.7‥2.5 N slots: 16384 hold ~5900 with the drips on, ~8900 without (src/picture/rain.ts clamps its target to the ring); +1.25 MB of pool. */
 export const RAIN_CAP = 16384;
 export const RAIN_RING = { start: P_CAP, size: RAIN_CAP } as const;
 /** rain births a frame (its own budget, apart from settings.particleBirths: a downpour is a steady 100‥250 a frame, dealt AFTER every gameplay record and never queued — what does not fit this frame is simply not born) */
@@ -64,11 +64,11 @@ const P_BYTES = 80, HDR_BYTES = 64;   // (P_BYTES = struct Particle in particles
  *  records (uploaded only on frames that carry any) · the TAIL (the rain ring's Window, 4 u32 — EmitBlock.rainWin — + the rain LOOK rows rainCfg‥rainCfgF, 6 × vec4f: EmitBlock's last members,
  *  their own small upload). KP_FLOAT / KI_FLOAT = the kind rows' / the impulse-response rows' first float in the block. */
 export const REC_BYTES = 112, BLOCK_HDR_BYTES = 48 + P_KINDS.length * 48, KP_FLOAT = 12, KI_FLOAT = 12 + P_KINDS.length * 8, IMP_BYTES = 64, IMP_OFFSET = BLOCK_HDR_BYTES + MAX_EMITS * REC_BYTES, BLOCK_TAIL_AT = IMP_OFFSET + MAX_IMPULSES * IMP_BYTES, BLOCK_TAIL_BYTES = 16 + 6 * 16, BLOCK_BYTES = BLOCK_TAIL_AT + BLOCK_TAIL_BYTES;
-/** PARTICLE RAIN v2 — the LOOK the rain kind's kernels read off the block's tail (rust/game_rules/src/rain_fx PRAIN mirrors into it every frame; particles_common.wgsl rainCfg‥rainCfgF words them).
+/** PARTICLE RAIN v2 — the LOOK the rain kind's kernels read off the block's tail (src/picture/rain.ts PRAIN mirrors into it every frame; particles_common.wgsl rainCfg‥rainCfgF words them).
  *  Shading: iso / fwdK / fwdG (the drop's phase), glintK / glintRough / glintCap (the strand glint and its bound), gain, tailKeep; the splat: refract (0 = off) / refractReachM / refractTaps /
  *  refractClamp / refractDepth / refractPaint (0‥1: how much of the picture a read taken beside the streak keeps; 1 = all of it, as it was; 0 = its light only), lenJit / brightJit / minPx; the wind: windK (× the air on a drop), sheetAmp / sheetLen + the sheets' running offset bandOffX / Z (m, ∫ air dt). */
 export interface RainLook { iso: number; fwdK: number; fwdG: number; glintK: number; glintRough: number; glintCap: number; gain: number; tailKeep: number; refract: number; refractReachM: number; refractTaps: number; refractClamp: number; refractDepth: number; refractPaint: number; lenJit: number; brightJit: number; minPx: number; maxPx: number; boostCap: number; nearFadeM: number; beadAmp: number; windK: number; sheetAmp: number; sheetLen: number; bandOffX: number; bandOffZ: number; }
-export const RAIN_LOOK_DEFAULTS: Readonly<RainLook> = Object.freeze({ iso: 1, fwdK: 0, fwdG: 0.8, glintK: 0, glintRough: 0.08, glintCap: 12, gain: 1, tailKeep: 0, refract: 0, refractReachM: 6, refractTaps: 3, refractClamp: 6, refractDepth: 0.3, refractPaint: 1, lenJit: 0, brightJit: 0, minPx: 0.75, maxPx: 64, boostCap: 1, nearFadeM: 2, beadAmp: 0, windK: 1, sheetAmp: 0, sheetLen: 7, bandOffX: 0, bandOffZ: 0 });   // (= v1's look until rust/game_rules/src/rain_fx writes PRAIN over it: iso 1, no lobe, no glint, no refraction, no spread, no width ceiling, the 2 m near fade)
+export const RAIN_LOOK_DEFAULTS: Readonly<RainLook> = Object.freeze({ iso: 1, fwdK: 0, fwdG: 0.8, glintK: 0, glintRough: 0.08, glintCap: 12, gain: 1, tailKeep: 0, refract: 0, refractReachM: 6, refractTaps: 3, refractClamp: 6, refractDepth: 0.3, refractPaint: 1, lenJit: 0, brightJit: 0, minPx: 0.75, maxPx: 64, boostCap: 1, nearFadeM: 2, beadAmp: 0, windK: 1, sheetAmp: 0, sheetLen: 7, bandOffX: 0, bandOffZ: 0 });   // (= v1's look until src/picture/rain.ts writes PRAIN over it: iso 1, no lobe, no glint, no refraction, no spread, no width ceiling, the 2 m near fade)
 
 /** Per-kind numbers (shaders/particles_common.wgsl k0 / k1), live from the panel. holdOrFade: SPARK = fraction of life held white-hot before the fall to red;
  *  others = seconds of fade-out at the end of life. shutterOrGrowth: streak kinds = seconds of motion one streak shows; DUST = growth factor of the radius over
@@ -86,7 +86,7 @@ export const KIND_DEFAULTS: Record<PKind, KindParams> = {
   dust:   { gravity: 0.35, drag: 6.0, restitution: 0.5, keep: 1.0,  sleepV: 0.05, holdOrFade: 1.3,  shutterOrGrowth: 0.6,   brightOrOpacity: 0.3 },   // (drag 6: a puff of dust decelerates in centimetres, it does not sail; growth / opacity = rust/game_rules/src/particle_fx DUST_LOOK's 08-12 defaults)   // (restitution / keep / sleepV / holdOrFade = the puff's LOOK: wrap, ambient ×, fade-in s, softness × — rust/game_rules/src/particle_fx DUST_LOOK)
   casing: { gravity: 9.8, drag: 0.45, restitution: 0.42, keep: 0.72, sleepV: 0.4, holdOrFade: 4.0,  shutterOrGrowth: 0.008, brightOrOpacity: 1 },
   sheet:  { gravity: SHEET.gravity, drag: SHEET.KT, restitution: SHEET.KN_LIN, keep: SHEET.KN_Q, sleepV: SHEET.sleepV, holdOrFade: SHEET.fade, shutterOrGrowth: SHEET.FLUT, brightOrOpacity: SHEET.TRANS },
-  rain:   { gravity: 9.8, drag: 9.8 / 9.0, restitution: 6, keep: 0.06, sleepV: 0.2, holdOrFade: 0.09, shutterOrGrowth: 1 / 30, brightOrOpacity: 1 },   // (restitution = the reactivity ×, mirrored from settings.particleRainReact by rust/game_rules/src/rain_fx; brightOrOpacity likewise from particleRainBright)
+  rain:   { gravity: 9.8, drag: 9.8 / 9.0, restitution: 6, keep: 0.06, sleepV: 0.2, holdOrFade: 0.09, shutterOrGrowth: 1 / 30, brightOrOpacity: 1 },   // (restitution = the reactivity ×, mirrored from settings.particleRainReact by src/picture/rain.ts; brightOrOpacity likewise from particleRainBright)
   shard:  { gravity: SHARD.gravity, drag: SHARD.drag, restitution: SHARD.restitution, keep: SHARD.keep, sleepV: SHARD.sleepV, holdOrFade: SHARD.fade, shutterOrGrowth: SHARD.ROUGH, brightOrOpacity: SHARD.SCATTER },   // a fragment of a broken pane (rust/game_rules/src/shards; render/shardModel.ts is the reference): drag = 1/s at the reference centimetre, shutterOrGrowth = the glint lobe's roughness, brightOrOpacity = the body's diffuse scatter
 };
 
@@ -98,8 +98,8 @@ const SHAPE_ID: Record<EmitShape, number> = { cone: 0, burst: 1, ring: 2, puff: 
  *  aspect = length ÷ width (a SHEET's shape — 1.41 A4, 1.29 letter, 1 a post-it — or a splinter's elongation; default 1), tumble = SHEET initial angular rate cap
  *  (rad/s), nrmJit = SHEET normal scatter (0 = born lying flat, 1 = any way up; default 0.35); seed = the record's seed by hand (the rain recycler deals its own, so a downpour
  *  never advances the serial the gameplay effects hash — their births stay byte for byte what they were without it). */
-export interface EmitOpts { shape?: EmitShape; speed: number; spread?: number; life: number; size: number; speedJit?: number; lifeJit?: number; sizeJit?: number; lift?: number; radius?: number; posJit?: number; vadd?: Vec3; owner?: number; color?: Vec3; /** RAIN-KIND records only: the colour word's top byte, 0‥255 (255 unsaid) — a wisp of snow's look (rust/game_rules/src/snow_fx wispLookByte) */ top?: number; aspect?: number; tumble?: number; nrmJit?: number; seed?: number;
-  /** DUST only: STEAM (rust/game_rules/src/snow_breath) — a puff filed with this (0‥1, under 1) is warm breath: its peak opacity × this, and it rises instead of settling. It rides
+export interface EmitOpts { shape?: EmitShape; speed: number; spread?: number; life: number; size: number; speedJit?: number; lifeJit?: number; sizeJit?: number; lift?: number; radius?: number; posJit?: number; vadd?: Vec3; owner?: number; color?: Vec3; /** RAIN-KIND records only: the colour word's top byte, 0‥255 (255 unsaid) — a wisp of snow's look (src/picture/snow/fx.ts wispLookByte) */ top?: number; aspect?: number; tumble?: number; nrmJit?: number; seed?: number;
+  /** DUST only: STEAM (src/picture/snow/breath.ts) — a puff filed with this (0‥1, under 1) is warm breath: its peak opacity × this, and it rises instead of settling. It rides
    *  the colour word's top byte, 255 on every other record (shaders: `steamOf`); left out = the puff as it always was */
   steam?: number;
   /** SPARK only: an EMBER off an open fire (rust/game_rules/src/fire) — a spark filed with this (0‥1, under 1: × its light) rides the hot air up and goes with the wind where a
@@ -189,13 +189,13 @@ export class Particles {
   private rainQueue: EmitRec[] = []; private rainHead = 0; private rainTail = 0; private rainFifo: { expire: number; end: number }[] = [];
   private rainWin: [number, number, number, number] = [RAIN_RING.start, RAIN_RING.size, 0, 0]; private rainTailBuf = new ArrayBuffer(BLOCK_TAIL_BYTES); private rainTailU = new Uint32Array(this.rainTailBuf); private rainTailF = new Float32Array(this.rainTailBuf); private rainTailLive = false;
   rainStats: RainStats = { live: 0, born: 0, records: 0, droppedRecs: 0, droppedBirths: 0, emitted: 0 };
-  /** the rain kind's LOOK (v2): rust/game_rules/src/rain_fx writes PRAIN into it every frame; packed into the block's tail behind the rain window while the ring holds anything */
+  /** the rain kind's LOOK (v2): src/picture/rain.ts writes PRAIN into it every frame; packed into the block's tail behind the rain window while the ring holds anything */
   rainLook: RainLook = { ...RAIN_LOOK_DEFAULTS };
   /** what the rain splat refracted through last frame: 'gbaa' = the composite's own copy (GBAA keeps hdrCopy a frame behind: free), 'copy' = an explicit hdr → copy before the splat (GBAA off: ~0.1 ms),
    *  'none' = nothing bound (refraction off, or no copy texture) — the panel's word */
   rainSceneCopy: 'gbaa' | 'copy' | 'none' = 'none';
   private sceneDummy: GPUTexture; private sceneDummyView: GPUTextureView; private sceneSamp: GPUSampler;
-  /** SNOW GRAINS (rust/game_rules/src/snow_fx updateGrains; particles.wgsl grainStep): the air they ride — render/airField.ts's field, handed over by whoever built it (null = the
+  /** SNOW GRAINS (src/picture/snow/fx.ts updateGrains; particles.wgsl grainStep): the air they ride — render/airField.ts's field, handed over by whoever built it (null = the
    *  1×1 stand-in: still air) — and their eight numbers, written to the GPU when they change: [0] the wind's speed with no gust on it (m/s: what the pick-up is
    *  measured against), [1] the radius about the view's middle they live in (m), [2] a grain's weight, [3] × the light a flake would show, [4] the small eddies'
    *  share of the air's speed, [5] × the field's lift, [6] × the field's velocity = the blown snow's speed, [7] 1 = there is a field to read. Nothing here is read by shaders built without SNOW_GRAINS. */
@@ -384,7 +384,7 @@ export class Particles {
       born += e.count; n++; this.stats.emitted += e.count; this.rateAcc += e.count;
     }
     this.queue = waiting;   // (non-sparks first, then sparks, each in arrival order — what the next frame deals from)
-    // ---- the RAIN ring (experiment, rust/game_rules/src/rain_fx): dealt strictly AFTER the gameplay records above, into whatever record slots the frame has left, from its own birth budget
+    // ---- the RAIN ring (experiment, src/picture/rain.ts): dealt strictly AFTER the gameplay records above, into whatever record slots the frame has left, from its own birth budget
     // (RAIN_MAX_BIRTHS) and its own ring — so a downpour can neither delay a case / a chip / a stun charge's fragments (they never see it) nor be delayed by them: what
     // does not fit this frame is not born (a drop born a frame late is only a drop fewer). Its `first` indices continue the frame's birth numbering (one emit dispatch).
     let rainBorn = 0, rainRecs = 0;

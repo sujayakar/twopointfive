@@ -44,7 +44,6 @@ pub struct WallCross {
     pub n_out: V3,
     pub into: f64,
     pub stuff: crate::wallpen::ThinStuff,
-    pub take: f64,
     pub e_out: f64,
     pub thru: f64,
 }
@@ -58,34 +57,16 @@ pub struct ThinPath {
     pub len: f64,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct StaticHit2 {
-    pub t: f64,
-    pub index: f64,
-    pub n: V3,
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct ThinLine {
     pub walls: Vec<crate::wallpen::WallCross>,
     pub panes: f64,
-    pub e: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct WALLPENHOOKS {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct ThingAt {
     pub b: BoxId,
     pub stuff: crate::wallpen::ThinStuff,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct ThinThing {
-    pub stuff: crate::wallpen::ThinStuff,
-    pub thick: f64,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -125,9 +106,6 @@ pub struct WallpenStats {
     pub through: i32,
     pub harder: i32,
 }
-
-/// (src/game/wallpen.ts:84 WALLPEN_HOOKS: a table nothing writes)
-pub fn wallpen_hooks() -> crate::wallpen::WALLPENHOOKS { crate::wallpen::WALLPENHOOKS {  } }
 
 /// (src/game/wallpen.ts:169 EXIT_EPS)
 pub const EXIT_EPS: f64 = 0.001;

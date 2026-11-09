@@ -38,78 +38,12 @@ pub enum AutoPickWhy {
     Known,
     Word,
 }
-impl AutoPickWhy {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            AutoPickWhy::Set => "set",
-            AutoPickWhy::Blow => "blow",
-            AutoPickWhy::Contact => "contact",
-            AutoPickWhy::Pending => "pending",
-            AutoPickWhy::Unknown => "unknown",
-            AutoPickWhy::Shut => "shut",
-            AutoPickWhy::First => "first",
-            AutoPickWhy::Silent => "silent",
-            AutoPickWhy::Known => "known",
-            AutoPickWhy::Word => "word",
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug)]
-pub enum DoorTarget {
-    Arm0,
-    Door(crate::autopilot::DoorTargetDoor),
-    Arm2,
-    Arm3,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct DoorTargetDoor {
-    pub at: V3,
-    pub door: DoorId,
-    pub side: f64,
-}
 
 #[derive(Clone, Debug, Default)]
 pub struct AutoEntries {
     pub ids: Vec<String>,
     pub why: crate::autopilot::AutoPickWhy,
     pub kept: Option<bool>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum AutoEntriesWhy {
-    Set,
-    Blow,
-    Contact,
-    Pending,
-    Unknown,
-    Shut,
-    First,
-    Silent,
-    Known,
-    Word,
-}
-impl AutoEntriesWhy {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            AutoEntriesWhy::Set => "set",
-            AutoEntriesWhy::Blow => "blow",
-            AutoEntriesWhy::Contact => "contact",
-            AutoEntriesWhy::Pending => "pending",
-            AutoEntriesWhy::Unknown => "unknown",
-            AutoEntriesWhy::Shut => "shut",
-            AutoEntriesWhy::First => "first",
-            AutoEntriesWhy::Silent => "silent",
-            AutoEntriesWhy::Known => "known",
-            AutoEntriesWhy::Word => "word",
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct ShowSecsOfRow {
-    pub auto: Option<bool>,
 }
 
 /// the counters this module keeps for the checks

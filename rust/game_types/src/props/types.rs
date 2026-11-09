@@ -31,28 +31,11 @@ pub enum PropEventSound {
     Scrape,
     Roll,
 }
-impl PropEventSound {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            PropEventSound::Thud => "thud",
-            PropEventSound::Scrape => "scrape",
-            PropEventSound::Roll => "roll",
-        }
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum PropEventRoll {
     Start,
     Stop,
-}
-impl PropEventRoll {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            PropEventRoll::Start => "start",
-            PropEventRoll::Stop => "stop",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -123,7 +106,7 @@ impl PropSystem {
             store: crate::sim_propshome::PropStore::blank(),
             enabled: true,
             friction_scale: 1.0,
-            stats: crate::props::PropSystemStats { awake: 0.0, ms: 0.0 },
+            stats: crate::props::PropSystemStats { awake: 0.0 },
             by_box: JsMap::new(),
             muted: true,
             said: Vec::new(),
@@ -137,9 +120,6 @@ impl Default for PropSystem { fn default() -> Self { Self::blank() } }
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct PropSystemStats {
     pub awake: f64,
-    /// (scratch, read by nobody who did not just write it: in no bytes)
-    #[bytes(skip)]
-    pub ms: f64,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -172,14 +152,6 @@ pub enum PropSystemNoiseSound {
     Thud,
     Scrape,
 }
-impl PropSystemNoiseSound {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            PropSystemNoiseSound::Thud => "thud",
-            PropSystemNoiseSound::Scrape => "scrape",
-        }
-    }
-}
 
 #[derive(Clone, Debug, Default)]
 pub struct PropSystemThere {
@@ -202,23 +174,3 @@ pub const MAX_V: f64 = 5.0;
 /// (src/game/props.ts:47 MAX_W)
 pub const MAX_W: f64 = 9.0;
 
-/// (src/game/props.ts:48 SLEEP_V)
-pub const SLEEP_V: f64 = 0.04;
-
-/// (src/game/props.ts:48 SLEEP_W)
-pub const SLEEP_W: f64 = 0.06;
-
-/// (src/game/props.ts:48 SLEEP_T)
-pub const SLEEP_T: f64 = 0.3;
-
-/// (src/game/props.ts:49 DOOR_GUIDE)
-pub const DOOR_GUIDE: f64 = 1.2;
-
-/// (src/game/props.ts:50 SETTLE_PASSES)
-pub const SETTLE_PASSES: f64 = 12.0;
-
-/// (src/game/props.ts:51 Y_MIN)
-pub const Y_MIN: f64 = 0.04;
-
-/// (src/game/props.ts:53 NEAR)
-pub const NEAR: f64 = 256.0;

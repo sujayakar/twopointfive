@@ -44,16 +44,6 @@ pub fn flat(a: V3, b: V3) -> f64 {
     m::hyp2(a[0] - b[0], a[2] - b[2])
 }
 
-/// both switches: settled on the page (netquiet.ts live)
-pub fn live(g: &mut crate::game::Game) -> bool {
-    true
-}
-
-/// live, and the check's breakage is never set by the game (netquiet.ts fed)
-pub fn fed(g: &mut crate::game::Game) -> bool {
-    true
-}
-
 /// the loud noises his ears have counted (netquiet.ts loudOf)
 pub fn loud_of(g: &crate::game::Game, gd: GuardId) -> f64 {
     let h = &g.gd[gd].witness.heard;
@@ -166,11 +156,7 @@ pub fn speak(g: &mut crate::game::Game, gd: GuardId, kind: crate::netquiet::Line
     n.bark = 0.0;
     n.last_kind = kind_index(kind);
     g.stats.netquiet.lines += 1;
-    let (id, t) = (id_of(g, gd), g.time);
-    g.m.netquiet.netquiet_log.push(NetquietModNETQUIETLOGItem { id, t, kind, text, radio });
-    if g.m.netquiet.netquiet_log.len() > 64 {
-        g.m.netquiet.netquiet_log.remove(0);
-    }
+    let id = id_of(g, gd);
 }
 
 /// is anybody of his side up on the whole net, the men in `but` aside (netquiet.ts netUp)

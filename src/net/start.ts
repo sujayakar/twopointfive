@@ -1,6 +1,5 @@
 // A NETWORKED GAME'S START: what every machine of it hands the game's own start (rust/game_start), so that they stand one game. The server says it in its
 // welcome; the character's files are the build's, and every machine of a game is of one build.
-import { specOfQuery } from '../scene/scenarioList';
 
 /** `file`: the level's file (one of levels/) · `words`: the address's words, and nothing of any machine's own address · the die · how many seats · `commands`: what
  *  the host has set before the game is made (src/draw/commands.ts' bytes as base64; '' = nothing: the words say it all) */
@@ -15,7 +14,6 @@ export function startWhy(s: unknown): string {
   if (!x || typeof x !== 'object') return 'the welcome carries no start';
   if (!levelName(x.file)) return `${String(x.file).slice(0, 60)} is not the name of a level file`;
   if (typeof x.words !== 'string' || x.words.length > 2048) return 'the start\'s words are not an address\'s';
-  if (!specOfQuery(x.words)) return `the words ${x.words.slice(0, 60)} name no mission`;
   if (!Number.isInteger(x.seed) || x.seed < 0 || x.seed > 0xFFFFFFFF) return 'the start\'s die is not a whole number of 32 bits';
   if (x.seats !== 1 && x.seats !== 2) return `a game has one seat or two, not ${String(x.seats)}`;
   if (typeof x.commands !== 'string' || x.commands.length > 65536 || !BASE64.test(x.commands)) return 'the start\'s commands are not bytes';

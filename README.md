@@ -57,12 +57,15 @@ Every run you play is kept as a replay. `F7` saves it right away, `Shift+F7` wat
 
 | | |
 |---|---|
-| `/?bench`, or Extras ▸ Benchmark on the title | hands off, a few minutes: three floors played by the game itself (night snow, a block with the lights out, a storm), then every quality level and heavy feature timed on your machine. It ends on a short text to copy (your GPU, load times, frames a second) with no file saved. A build with a backend also sends the numbers to the developer, which you can turn off in Options; a build with none sends nothing |
+| `/?bench`, or Extras ▸ Benchmark on the title | hands off, a few minutes: three floors played by the game itself, then every quality level timed |
 | `cargo test -p game_start` (in `rust/`) | the game's rules, asked of the game itself |
 | `bun run tools/qa/checks.ts` | the picture's code, the page, the menus, the sounds and the level files, without a GPU |
 | `bun run qa` | typecheck, the checks above, and `gate`: every mission stood and a few played, each held to its pins (`rust/game_start/README.md`, "The gate") |
 
-`bun run typecheck` and `bun run qa` expect a TypeScript compiler unpacked at `vendor/typescript`, which is not in the repo.
+The benchmark ends on a short text to copy (your GPU, load times, frames a second) and saves no file. A build with a backend also sends the
+numbers to the developer, which you can turn off in Options; a build with none sends nothing.
+
+`bun run typecheck` and `bun run qa` expect a TypeScript compiler unpacked in the vendor folder, which is not in the repo.
 Any recent `tsc` does the typecheck: `tsc --noEmit -p tsconfig.json`.
 
 ## Layout

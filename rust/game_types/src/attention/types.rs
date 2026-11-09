@@ -88,101 +88,15 @@ pub struct MemLent {
     pub noises: f64,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct AttentionMark {
-    pub gd: GuardId,
-    pub from: V3,
-    pub at: V3,
-    pub left: f64,
-    pub mode: crate::attention::HoldMode,
-    pub kind: crate::attention::DrawKind,
-    pub ending: bool,
-    pub worn: bool,
-    pub walking: bool,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct AttentionWayKept {
-    pub key: String,
-    pub t: f64,
-    pub from: V3,
-    pub pts: Option<Vec<V3>>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct AttentionWayStore {
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct AttentionSnapItem {
-    pub hold: Option<crate::attention::AttentionSnapItemHold>,
-    pub takes: Vec<f64>,
-    pub told: f64,
-    pub line: Option<f64>,
-    pub heard: Option<f64>,
-    pub lent_off: Option<f64>,
-    pub series: Option<bool>,
-    pub lent: Option<crate::attention::AttentionSnapItemLent>,
-    pub tick: Option<f64>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct AttentionSnapItemHold {
-    pub kind: crate::attention::DrawKind,
-    pub at: V3,
-    pub yaw: Option<f64>,
-    pub ears: f64,
-    pub told: bool,
-    pub mode: crate::attention::HoldMode,
-    pub glimpse: f64,
-    pub secs: f64,
-    pub full: f64,
-    pub nth: f64,
-    pub noises: f64,
-    pub age: f64,
-    pub left: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct AttentionSnapItemLent {
-    pub at: V3,
-    pub age: f64,
-    pub ears: f64,
-    pub noises: f64,
-}
-
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct AttentionModATTENTIONLOGItem {
-    pub t: f64,
-    pub who: String,
     pub what: String,
-    pub kind: crate::attention::DrawKind,
     pub secs: f64,
-    pub nth: i32,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct LogH {
-    pub kind: crate::attention::DrawKind,
     pub secs: f64,
-    pub nth: i32,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct AttentionOf {
-    pub at: V3,
-    pub kind: crate::attention::DrawKind,
-    pub mode: crate::attention::HoldMode,
-    pub t0: f64,
-    pub secs: f64,
-    pub until: f64,
-    pub full: f64,
-    pub glimpse: f64,
-    pub told: bool,
-    pub nth: f64,
-    pub ears: f64,
-    pub noises: f64,
-    pub yaw: Option<f64>,
 }
 
 #[derive(Clone, Copy, Debug, Default)]

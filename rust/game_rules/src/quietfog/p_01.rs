@@ -195,7 +195,7 @@ pub fn quiet_fog_start(g: &mut crate::game::Game, q: &crate::query::Query, rung:
     quiet_fog_end(g);
     if rung == QuietRung::Off { return; }
     let serial = g.serial();
-    g.m.quietfog.held = Some(Held { cone: None, own: None, serial });
+    g.m.quietfog.held = Some(Held { cone: None, own: None });
     if !q.has("fogcone") {
         let put = rung != QuietRung::Team;
         let was = crate::difficulty::cone_visit_now(g);
@@ -270,11 +270,11 @@ mod tests {
     fn a_row_moved_by_hand_stays_and_is_the_rungs_no_more() {
         let mut g = Game::blank();
         g.k.fog.own = true;
-        let mut h = Held { cone: None, own: Some(HeldOwn { was: false, put: true }), serial: 0 };
+        let mut h = Held { cone: None, own: Some(HeldOwn { was: false, put: true }) };
         lift(&mut g, &mut h);
         assert!(!g.k.fog.own);
         assert!(h.own.is_some());
-        let mut h = Held { cone: None, own: Some(HeldOwn { was: true, put: true }), serial: 0 };
+        let mut h = Held { cone: None, own: Some(HeldOwn { was: true, put: true }) };
         lift(&mut g, &mut h);
         assert!(!g.k.fog.own);
         assert!(h.own.is_none());

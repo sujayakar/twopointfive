@@ -42,7 +42,7 @@
 //                                     wood, a wooden crate) the cap is to the wall engine what every decal on a broken piece is (rust/game_rules/src/wallbreak `ghosts`).
 import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef } from './lib/level';
-import type { KitViewData, LevelScenarios, Rect, StructureData } from '../../src/scene/scenarios';
+import type { KitViewData, LevelScenarios, Rect, StructureData } from './lib/scenarios';
 import type { SurfacesData } from './lib/levelData';
 import { officeKit, normalize3 as norm, type GeneratorTrace } from './lib/officeGen';
 import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, type GwotOpening } from './lib/gwotKit';
@@ -73,7 +73,7 @@ const YARD_W: Vec3 = [12.7, 1.1, 16.2], YARD_E: Vec3 = [22.4, 1.1, 16.6], GATE_S
 const TEA_IN: Vec3 = [17.25, 1.1, 10.9], PASS_W: Vec3 = [21.9, 1.1, 6.75], PASS_E: Vec3 = [22.1, 1.1, 6.75], BACK_IN: Vec3 = [25.25, 1.1, 5.2], KITCHEN_IN: Vec3 = [25.25, 1.1, 10.9];
 const STORE_W: Vec3 = [27.9, 1.1, 8.25], STORE_E: Vec3 = [28.1, 1.1, 8.25], INNER_N: Vec3 = [32.25, 1.1, 10.9], INNER_S: Vec3 = [32.25, 1.1, 11.2], BUNK_IN: Vec3 = [28.2, 1.1, 13.75];
 
-/** THE ROOM CLEAR (scene/scenarios.ts StructureData). Eight men: the tea room 3, the kitchen 2, the store 1, the bunk room 2.
+/** THE ROOM CLEAR (lib/scenarios.ts StructureData). Eight men: the tea room 3, the kitchen 2, the store 1, the bunk room 2.
  *  THE HAND PLACEMENT (rust/game_rules/src/roomclear place_defenders: seed 0 / attempt 1 = each room's first `garrison` marks IN FILE ORDER; the page deals it on every try).
  *  The problem, in one sentence: the yard between the lorry and the doors is white, lit and watched through glass from two sides.
  *  · THE GATE is the one hole in the wall and it is lit, but THE LORRY stands 2.6 m inside it, between it and the tea room's two windows: a team comes in
@@ -133,7 +133,7 @@ export const PASS_STRUCTURE: StructureData = {
     { id: 'lines', name: 'Lines', rooms: ['store', 'bunk'], rally: [30.2, 0, 15.8], barricade: ['bunk'] },
   ],
 };
-/** THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest): a bespoke set for both ways in — the compound's mud wall
+/** THE TEAM & KIT PICTURE (lib/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest): a bespoke set for both ways in — the compound's mud wall
  *  on the road, the wicket in the truck gate under its one lamp, the lorry behind the wall, snow on everything. The level's own two starts stand in the open dark
  *  with no door near them; the set is what the place looks like from the road. */
 const PASS_KITVIEW: KitViewData = {

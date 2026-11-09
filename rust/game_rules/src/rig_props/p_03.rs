@@ -117,11 +117,11 @@ pub fn sc20k_frame(g: &mut crate::game::Game, c_2: CharId, s: crate::rig_props::
     if where_ == Sc20kFrameWhere::Hand {
         let hand = hand_or_muzzle(g, c_2);
         let fr = pistol_frame(g, c_2, hand, PistolFrameP { adj: s.adj }, None);
-        return Sc20kFrame { parent: fr.hand_f, g: fr.g };
+        return Sc20kFrame { g: fr.g };
     }
     if !front {
         if let Some(side) = pack_side(g, c_2, PackSideWhat::Rifle, None) {
-            return Sc20kFrame { parent: side, g: side };
+            return Sc20kFrame { g: side };
         }
     }
     let p = if front { sling_front() } else { s.slung };
@@ -132,7 +132,7 @@ pub fn sc20k_frame(g: &mut crate::game::Game, c_2: CharId, s: crate::rig_props::
     x = v3::normalize(x);
     x = rot_axis(x, z, p.roll * m::PI / 180.0);
     let base = Frame { o, x, y: v3::cross(z, x), z };
-    Sc20kFrame { parent: base, g: apply_adj(base, p.adj) }
+    Sc20kFrame { g: apply_adj(base, p.adj) }
 }
 
 /// The can's place as a bare barrel: the same length to the same muzzle, a finger thick. (rigProps.ts bareBarrel)
@@ -150,7 +150,6 @@ pub fn sc20k_boxes(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<AnyBoxI
     let slung = where_ == Sc20kBoxesWhere::Slung;
     stamp_owner(g, c_2);
     let fr = sc20k_frame(g, c_2, s, if slung { Sc20kFrameWhere::Slung } else { Sc20kFrameWhere::Hand }, Some(front), rest);
-    let parent = fr.parent;
     let mut gf = fr.g;
     let hand = bone(g, c_2, crate::character::Bone::HandR);
     match (kit, slung, hand) {
@@ -173,13 +172,7 @@ pub fn sc20k_boxes(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<AnyBoxI
     let furn = if is_m4 { if black { col.polymer } else { col.fde } } else { col.polymer };
     let metal = if is_m4 { col.anodised } else { col.dark_metal };
     if let Some(sink) = meta.as_deref_mut() {
-        let label = match (is_m4, slung) {
-            (true, true) => "M4 (slung across the back)",
-            (true, false) => "M4 (group + weapon light)",
-            (false, true) => "SC-20K (slung across the back)",
-            (false, false) => "SC-20K (group + weapon light)",
-        };
-        sink.push(RigNodeMeta { path: String::from(if slung { "sc20k.slung" } else { "sc20k" }), label: String::from(label), depth: 1.0, parent, frame: gf, box_start: out.len() as f64, box_count: if is_m4 { M4_BOXES } else { 11.0 } });
+        sink.push(RigNodeMeta {  });
     }
     let (hull, butt, mag, fore, rail, optic) = match m {
         Some(mm) => (mm.hull, mm.butt, mm.mag, mm.fore, mm.rail, mm.optic),
@@ -204,9 +197,7 @@ pub fn sc20k_boxes(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<AnyBoxI
     }
     if !slung {
         if let Some(sink) = meta.as_deref_mut() {
-            let off = s.grip_l.off;
-            let o = v3::mad(v3::mad(v3::mad(gf.o, gf.x, off[0]), gf.y, off[1]), gf.z, off[2]);
-            sink.push(RigNodeMeta { path: String::from("sc20k.gripL"), label: String::from("support hand grip point (arrows only)"), depth: 2.0, parent: gf, frame: Frame { o, ..gf }, box_start: out.len() as f64, box_count: 0.0 });
+            sink.push(RigNodeMeta {  });
         }
     }
 }
@@ -297,7 +288,7 @@ pub fn carbine_light_pose(g: &crate::game::Game, c_2: CharId, rig: Option<crate:
     let hand = hand_or_muzzle(g, c_2);
     let fr = carbine_frame(g, c_2, hand, cb).g;
     let l = apply_adj(fr, cb.lens.adj);
-    CarbineLightPose { pos: v3::mad(l.o, l.z, cb.light_ahead), dir: fr.z }
+    CarbineLightPose { pos: v3::mad(l.o, l.z, cb.light_ahead) }
 }
 
 /// The player's rail light: its position and direction are the gun's. (rigProps.ts rigLightPose)
@@ -490,7 +481,7 @@ pub fn big_boxes(g: &mut crate::game::Game, c_2: CharId, kind: crate::rig_props:
         return;
     }
     if let Some(sink) = meta.as_deref_mut() {
-        sink.push(RigNodeMeta { path: String::from("big.hammer"), label: String::from("dynamic hammer (big slot)"), depth: 1.0, parent: on_back, frame: gf, box_start: out.len() as f64, box_count: 2.0 });
+        sink.push(RigNodeMeta {  });
     }
     let (table, col) = (bigrig(), crate::rig_props::col());
     seg_at(g, out, gf, table.hammer.handle, None, col.haft, no_glow(), None, Some(""), Some(""), Some(0.0), Some(BIG_TAG));

@@ -18,7 +18,7 @@
 // THE FOUR LIVED KITS' PIECES ARE LIVED THINGS (lib/lived.ts): the tail of the lists, left out with the switch off.
 import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef } from './lib/level';
-import type { LevelScenarios, Rect } from '../../src/scene/scenarios';
+import type { LevelScenarios, Rect } from './lib/scenarios';
 import type { SurfacesData } from './lib/levelData';
 import { officeKit, normalize3 as norm, OFFICE_PALETTE, type GeneratorTrace } from './lib/officeGen';
 import { gwotKit, gwotOfOffice, GWOT_MATERIALS, type GwotMat } from './lib/gwotKit';

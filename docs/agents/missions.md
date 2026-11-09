@@ -31,9 +31,10 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | `lesson/`, `rails/` | a tutorial's steps and tests; the frame over them: which keys work, the view, what is said |
 | `director/`, `script_tut_*/` | level scripts, and the six that exist |
 
-The table of missions is `scenarios`, `quiet_missions`, `tutorial_missions` and `lesson_missions` in `rust/game_types/src/scene_scenario_list/types.rs`. **The page holds a
-second copy:** `src/scene/scenarioList.ts` and `src/scene/picks.ts`, which co-op and the tools read. A level's mission data is its file's `scenarios`
-block (`LevelScenarios`). Page half: `src/ui/missions.ts`, `startpage.ts`, `verdictCard.ts`, `parBest.ts`, `railcard.ts`. The tutorials' scripted players: `rust/game_start/src/lessons/`.
+The table of missions is `scenarios`, `quiet_missions` and `tutorial_missions` in `rust/game_types/src/scene_scenario_list/rows.rs`, and there is no other: the page asks the desk
+(`missions` every row, `kind` what an address starts, `pick` where a short-list name alone goes, `leave`, `brief`), and a tool asks the same desk through `tools/desk.ts`. A level's
+mission data is its file's `scenarios` block (`LevelScenarios`). Page half: `src/ui/missions.ts`, `startpage.ts`, `verdictCard.ts`, `parBest.ts`, `railcard.ts`. The tutorials'
+scripted players: `rust/game_start/src/lessons/`.
 
 ## How it works
 
@@ -79,7 +80,9 @@ carries the quiet deal, the lesson's step and a script's place in its beat.
 
 **Deals and ways in.** Every try starts the same. `k.roomclear.seed` is 0, which `place_defenders` reads as each room's first `garrison` marks in file order; `?roomclear=3` shuffles them off that
 seed. A rescue stands its first roamer marks. A quiet mission with no pin takes the first of each list; `?quiet=3` deals off that number (`quiet_mission_deal_one`). `squad_deal` cuts a house
-with no `squads` block by head count (`k.squaddeal`), never on a lesson. A way in is an entry of `starts`; the staging reads `k.roomclear.way` (and see **Not seen**).
+with no `squads` block by head count (`k.squaddeal`), never on a lesson. A way in is an entry of `starts`. The link's `way=N`
+picks one: none, 1, or no number is the level's own, past the last is the last. One reader (`roomclear` `way_asked`, `way_taken`) serves the staging, the sheet and the kit picture; only a room
+clear has ways. `g.stood.way` keeps it through a restart. `tests/way_in.rs` stands every way from the sheet's link.
 
 **Par** (`ParData`, `scenarios.par`; only `killhouse.json` has one). `par_tick` starts on the first order, a stride of `PAR_START_M` off the mark, or a round, and stops at the room clear's own
 end; only a taken house gets a time. Each teammate down adds `loss_secs`, and the medal is judged in whole seconds, as shown.
@@ -114,10 +117,10 @@ teammates. Only `office.json` has that plan. Elsewhere every teammate is the ord
 ## To change it
 
 - **A number:** `rust/game_types/src/knobs/` (`roomclear.rs`, `rescue.rs`, `rescueend.rs`, `rails.rs`, `squaddeal.rs`), or `?knob.rescue.resolve_secs=40`. Medal times: the level.
-- **A new mission of a kind that exists:** follow the `level` skill: a generator in `tools/levels/`, `tools/levels/export.ts`, the `scenarios` block. Then the row **in both tables**, by hand, as
-  nothing compares them, and `bun run tools/qa/level-needs.ts <name>`. A room clear also goes in `LEVELS` in `rust/game_start/src/bin/missions.rs`. The gate's `played` rows find it themselves.
-- **Cut one:** `offList` in both tables. A level whose mission's own rules left stays a plain room clear, as `snatch.json` is.
-- **A new kind:** `ScenarioEntryKind` and `ScenarioSpecKind`, `kind_of`, `SCENARIO_KEYS` (both sides), `start_scenario`, `active_scenario`, `quit_scenario`, an arm in `ended` and in `objective`,
+- **A new mission of a kind that exists:** follow the `level` skill: a generator in `tools/levels/`, `tools/levels/export.ts`, the `scenarios` block. Then the row in
+  `rows.rs`, the module made, and `bun run tools/qa/level-needs.ts <name>`. A room clear also goes in `LEVELS` in `rust/game_start/src/bin/missions.rs`. The gate's `played` rows find it themselves.
+- **Cut one:** `off_list` on its row. A level whose mission's own rules left stays a plain room clear, as `snatch.json` is.
+- **A new kind:** `ScenarioEntryKind` and `ScenarioSpecKind`, `kind_of`, `SCENARIO_KEYS`, `start_scenario`, `active_scenario`, an arm in `ended` and in `objective`,
   a tick line in `step_seats_on_first`, and its staging at the end of `game_restart_encounter`.
 - **A tutorial step:** the level's generator (`tools/levels/tut-road.ts` and its like), then its deed in the scripted player (`road.rs`). A new kind of test is an arm of `LessonTest` and `test_ok`.
 - **A new script:** a `script_tut_*/` folder, an arm of `LevelScriptFn`, `level_script_of`, `beat_frame_new` and `beat_next`.
@@ -144,9 +147,7 @@ Native tests in `rust/game_start/tests/` (`rust/game_run/tests/` if marked):
 
 ## Not seen
 
-- **The Way in row reaches no game.** The sheet puts `way=2` on the link, and nothing writes `k.roomclear.way` from it; only `?knob.roomclear.way=2` does. So, by reading the code, a run stands on the
-  first way whatever the player picks. `kit_stage.rs` can't tell. Nobody has run this in a browser.
-- **Left over:** `fresh_seed_of`, `fresh_way_of` and `g.room_clear.fresh` decide nothing. `rails.sky` is on no level. The Director's show path (`director_enter_show`) has no script. `set_daylight` is
+- **The other ways in** have stood only natively: nobody has played one on a GPU.
+- **Left over:** `fresh_seed_of` and `g.room_clear.fresh` decide nothing. `rails.sky` is on no level. The Director's show path (`director_enter_show`) has no script. `set_daylight` is
   only ever called to turn daylight off, so `level.daylight` is never seen.
-- **The two tables** agree today, by nothing but care.
 - Most rows carry `untuned`. The tutorials are checked mostly by the scripted player, not by hand on a GPU.

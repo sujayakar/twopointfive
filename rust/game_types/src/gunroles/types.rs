@@ -50,24 +50,6 @@ pub struct ROLE {
     pub g19bare: Option<String>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum UseOnKey {
-    Post,
-    Entry,
-    Lanes,
-    Strings,
-}
-impl UseOnKey {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            UseOnKey::Post => "post",
-            UseOnKey::Entry => "entry",
-            UseOnKey::Lanes => "lanes",
-            UseOnKey::Strings => "strings",
-        }
-    }
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct GunDealItem {
     pub gd: GuardId,
@@ -86,9 +68,6 @@ pub struct GunrolesStats {
     pub last: i32,
     pub posts: i32,
 }
-
-/// (src/game/gunroles.ts:63 BREAK)
-pub const BREAK: bool = false;
 
 /// (src/game/gunroles.ts:69 ROLE: a table nothing writes)
 pub fn role() -> crate::gunroles::ROLE { crate::gunroles::ROLE { fiveseven: None, guard9mm: None, aks74u: None, ak74m: None, akms: None, fn2000: None, m870: None, mk12: Some(String::from("reach")), mp7: Some(String::from("room")), mk46: Some(String::from("belt")), m1014: Some(String::from("room")), hk45: None, g18: None, pkm: Some(String::from("belt")), mk18bare: None, g19bare: None } }

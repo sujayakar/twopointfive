@@ -25,12 +25,6 @@ impl Default for Know {
     }
 }
 
-#[derive(Clone, Copy, Debug, Hash)]
-pub enum Who {
-    Guard(GuardId),
-    Player,
-}
-
 #[derive(Clone, Debug, ToBytes)]
 pub struct Chew {
     pub id: f64,
@@ -99,7 +93,6 @@ pub struct State {
     pub last_t: f64,
     pub men: JsMap<GuardId, crate::coverfire::Man>,
     pub serial: f64,
-    pub base: JsMap<String, f64>,
     pub stats: crate::coverfire::StateStats,
     pub by_id: JsMap<crate::Num, crate::coverfire::StateByIdValue>,
     pub said_t: f64,
@@ -131,7 +124,6 @@ pub struct StateByIdValue {
 
 #[derive(Clone, Debug, Default)]
 pub struct Ask {
-    pub index: f64,
     pub id: f64,
     pub kind: String,
     pub hit: V3,
@@ -155,31 +147,6 @@ pub enum BumpK {
     DefChews,
     ThruShots,
 }
-impl BumpK {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            BumpK::Thru => "thru",
-            BumpK::Shots => "shots",
-            BumpK::Calls => "calls",
-            BumpK::Landed => "landed",
-            BumpK::Opened => "opened",
-            BumpK::Chews => "chews",
-            BumpK::GaveUp => "gaveUp",
-            BumpK::HeldFriend => "heldFriend",
-            BumpK::HeldSilent => "heldSilent",
-            BumpK::Walked => "walked",
-            BumpK::OpChews => "opChews",
-            BumpK::DefChews => "defChews",
-            BumpK::ThruShots => "thruShots",
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug)]
-pub enum KnownWho {
-    Guard(GuardId),
-    Player,
-}
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct KnownItem {
@@ -193,19 +160,10 @@ pub enum Ask2 {
     Ask(crate::coverfire::Ask),
 }
 
-#[derive(Clone, Copy, Debug)]
-pub enum CoverSeenWho {
-    Guard(GuardId),
-    Player,
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct CoverfireOn {
-    pub id: f64,
     pub kind: String,
     pub fired: f64,
-    pub want: f64,
-    pub to: V3,
 }
 
 /// the state this module keeps at its top level
@@ -245,9 +203,6 @@ pub struct CoverfireStats {
     pub thru: i32,
     pub thru_shots: i32,
 }
-
-/// (src/game/coverfire.ts:79 COVERFIRE_DEFAULTS: a table nothing writes)
-pub fn coverfire_defaults() -> crate::knobs::CoverfireK { crate::knobs::CoverfireK::page() }
 
 /// (src/game/coverfire.ts:87 ZERO: a table nothing writes)
 pub fn zero() -> crate::coverfire::StateStats { crate::coverfire::StateStats { chews: 0.0, shots: 0.0, landed: 0.0, opened: 0.0, gave_up: 0.0, held_friend: 0.0, held_silent: 0.0, calls: 0.0, walked: 0.0, op_chews: 0.0, def_chews: 0.0, thru: 0.0, thru_shots: 0.0 } }

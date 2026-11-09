@@ -142,7 +142,7 @@ pub fn lay_opened(g: &mut Game, rect: [f64; 4]) {
 /// The debris pool took a resting chunk's slot: the crushed mark of it where it lay.
 pub fn lay_evicted(g: &mut Game, c: &crate::out_events::OutMessEvicted) {
     if !on(g) { return; }
-    let (K, R) = (g.k.chaos.mess, g.k.chaos.mess.rubble);
+    let R = g.k.chaos.mess.rubble;
     let long = m::max(c.h[0], m::max(c.h[1], c.h[2]));
     if long < R.least { return; }
     let (x, z, rad) = (c.c[0], c.c[2], m::max(R.min, m::min(R.max, long * R.grow)));

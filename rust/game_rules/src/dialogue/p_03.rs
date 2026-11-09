@@ -95,7 +95,7 @@ pub fn choose_sam_line(g: &mut crate::game::Game, tiers: &[Vec<crate::dialogue::
         m.said.set(chosen.0.id.clone(), ctx.time);
         m.last = Some(chosen.0.id.clone());
     }
-    Some(crate::dialogue::ChooseSamLine { l: chosen.0, text: chosen.1, fresh })
+    Some(crate::dialogue::ChooseSamLine { text: chosen.1 })
 }
 
 /// Sam's line for the coming exchange: the script's beat if a script is live, else the category's pool (the 'q' tier first when the man is about to give).   (dialogue.ts pickSamLine)
@@ -119,7 +119,7 @@ pub fn pick_sam_line(g: &mut crate::game::Game, ctx: &mut crate::dialogue::Dialo
         if let Some(text) = expand(&line, &tokens).filter(|t| !t.is_empty() && js_len(t) <= crate::dialogue::SAM_MAX_CHARS) {
             let id = alloc::format!("S:{}:{}{}", sc.id, stage_word(s), if asks { "?" } else { "" });
             if let Some(m) = mem.as_deref_mut() { m.said.set(id.clone(), ctx.time); m.last = Some(id.clone()); }
-            return SamPick { text, id, s: cat, q, stage: s, fresh: true, script: Some(sc.id.clone()) };
+            return SamPick { text };
         }
     }
     let tiers: Vec<Vec<crate::dialogue::SamLine>> = match q {
@@ -132,8 +132,8 @@ pub fn pick_sam_line(g: &mut crate::game::Game, ctx: &mut crate::dialogue::Dialo
     let facts = sam_facts(g, ctx, variant);
     let c = choose_sam_line(g, &tiers, ctx, &facts, mem, rnd);
     match c {
-        Some(c) => SamPick { text: c.text, id: c.l.id, s: cat, q, stage: s, fresh: c.fresh, script: None },
-        None => SamPick { text: String::from("…"), id: String::from("-"), s: cat, q, stage: s, fresh: false, script: None },
+        Some(c) => SamPick { text: c.text },
+        None => SamPick { text: String::from("…") },
     }
 }
 
@@ -160,7 +160,7 @@ pub fn sam_key_line_for(g: &mut crate::game::Game, gd: GuardId, variant: crate::
     let mut mem = sam_memory_lend(g);
     let c = choose_sam_line(g, &tiers, &ctx, &facts, Some(&mut mem), rnd);
     *sam_memory_of(g) = mem;
-    c.map(|c| crate::dialogue::SamKeyLineFor { text: c.text, id: c.l.id })
+    c.map(|c| crate::dialogue::SamKeyLineFor { text: c.text })
 }
 
 /// One of Sam's pistol openers as a remark, for the moment he draws on a man already in his arm. Nobody answers it.   (dialogue.ts samRemarkFor)
@@ -174,7 +174,7 @@ pub fn sam_remark_for(g: &mut crate::game::Game, gd: GuardId, rnd: Option<&mut d
     let mut mem = sam_memory_lend(g);
     let c = choose_sam_line(g, &tiers, &ctx, &facts, Some(&mut mem), rnd);
     *sam_memory_of(g) = mem;
-    c.map(|c| crate::dialogue::SamRemarkFor { text: c.text, id: c.l.id })
+    c.map(|c| crate::dialogue::SamRemarkFor { text: c.text })
 }
 
 /// The hold's script if it is still live at this exchange: `sc0 && stageN <= 4 && scriptLive(sc0, ctx) ? sc0 : null`, written twice in the TypeScript (:945, :993).

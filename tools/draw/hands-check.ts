@@ -5,6 +5,7 @@
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { faceHere } from '../blitz/face-build.ts';
+import { toolDesk } from '../desk.ts';
 import { characterFiles } from '../blitz/start-pack.ts';
 import { DrawGame } from '../../src/host/drawgame';
 import { sampleHand } from '../../src/draw/hand';
@@ -16,6 +17,7 @@ import { Section, View } from '../../src/draw/sections';
 const ROOT = resolve(import.meta.dir, '../..'), BREAK = process.env.HANDS_BREAK === '1', args = process.argv.slice(2), trace = args.includes('--trace'), at = args.indexOf('--seeds');
 const seeds = at >= 0 ? args[at + 1].split(',').map(Number) : null, only = args.filter((a, i) => !a.startsWith('--') && (at < 0 || i !== at + 1));
 const wasm = faceHere(); if (!wasm) { console.error('hands-check: no module of these sources (tools/blitz/face-build.ts)'); process.exit(1); }
+toolDesk();   // (a scene's mission is the desk's to name)
 const instance = new WebAssembly.Instance(new WebAssembly.Module(new Uint8Array(readFileSync(wasm))));
 const [mannequin, mannequinBin, cast, castLook] = characterFiles(ROOT);
 const bytes = (f: string): Uint8Array => new Uint8Array(readFileSync(resolve(ROOT, 'levels', f)));

@@ -16,8 +16,6 @@ pub struct DayState {
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct DayStateBlackout {
-    pub active: bool,
-    pub permanent: bool,
     pub until: f64,
     pub since: f64,
 }
@@ -44,14 +42,6 @@ impl SetBlackoutCause {
 pub enum LightEventCause {
     Shot,
     Ocp,
-}
-impl LightEventCause {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            LightEventCause::Shot => "shot",
-            LightEventCause::Ocp => "ocp",
-        }
-    }
 }
 
 /// the state this module keeps at its top level

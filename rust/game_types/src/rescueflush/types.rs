@@ -53,21 +53,3 @@ impl Goal {
     }
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct RescueFlushSnap {
-    pub fell_at: f64,
-    pub next_at: f64,
-    pub gone_at: f64,
-    pub count: f64,
-    pub sent: Vec<crate::rescueflush::RescueFlushSnapSentItem>,
-    pub barred: Vec<f64>,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct RescueFlushSnapSentItem {
-    pub id: f64,
-    pub at: f64,
-    pub n: f64,
-    pub goal: crate::rescueflush::Goal,
-    pub via: Vec<Vec<f64>>,
-}

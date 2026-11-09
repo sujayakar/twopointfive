@@ -23,8 +23,3 @@ pub fn part_hashes(slot: usize) -> Vec<u32> {
         h
     }).collect()
 }
-/// the parts in which two slots' blocks differ, by their place in the parts' list: the bytes themselves compared
-pub fn parts_that_differ(a: usize, b: usize) -> Vec<usize> {
-    let (x, y) = (bytes(a), bytes(b));
-    (0..sim::state::PARTS.len()).filter(|&i| { let p = &sim::state::PARTS[i]; x[p.off..p.off + p.len] != y[p.off..p.off + p.len] }).collect()
-}

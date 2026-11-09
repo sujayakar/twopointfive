@@ -1,4 +1,4 @@
-// The per-character SDF RIG (docs/internal/sdf-characters.md is the record). Every mannequin's 15 shadow / reflection proxies — the segments
+// The per-character SDF RIG (docs/agents/render-light.md, "Men in rays"). Every mannequin's 15 shadow / reflection proxies — the segments
 // Character.capsules() builds off the skeleton each frame, in that order — are ROUND CONES (tapered capsules: radius r0 at end a, r1 at end b) whose
 // radii are LEAST-SQUARES FITTED to the glTF mesh once at load: for each slot, the bind-pose vertices dominated by its joints (JOINTS below) are
 // projected onto its bind-pose segment and ρ ≈ r0·(1 − u) + r1·u is solved (a vertex past an end fits that end's cap radius), the residual per slot

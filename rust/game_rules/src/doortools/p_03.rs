@@ -504,9 +504,6 @@ pub fn door_tools_held_plain(g: &crate::game::Game, seat: &crate::seats::SeatRef
 
 /// a line of the order log (doortools.ts DoorTools.note)
 pub fn door_tools_note(g: &mut crate::game::Game, what: &str) {
-    let t = g.time;
-    g.door_tools.log.push(crate::doortools::DoorToolsLogItem { t, what: String::from(what) });
-    if g.door_tools.log.len() > 300 { g.door_tools.log.drain(0..100); }
 }
 
 /// a beat of an order, and its line in the log (doortools.ts DoorTools.beat)

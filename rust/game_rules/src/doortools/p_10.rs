@@ -410,7 +410,7 @@ pub fn door_tools_shallow_pods(g: &mut crate::game::Game, d: DoorId, side: f64, 
 /// The step in: the men off the jambs first, each to the shallow point that is the least walk, then the rest in their turn; from here the op
 /// is in 'enter'. (doortools.ts DoorTools.stepIn)
 pub fn door_tools_step_in(g: &mut crate::game::Game, op: DoorOpId) {
-    let (reach, second, thr_in) = (g.k.doortools.throw_reach, g.k.doortools.second, g.k.doortools.thr_in);
+    let (reach, thr_in) = (g.k.doortools.throw_reach, g.k.doortools.thr_in);
     let t = g.time;
     let d = g.tab.doortools_door_op[op].door;
     let fc = g.dr[d].frame_centre;
@@ -480,7 +480,7 @@ pub fn door_tools_step_in(g: &mut crate::game::Game, op: DoorOpId) {
     let queue: Vec<DoorToolsDoneItemQueueItem> = in_men
         .iter()
         .enumerate()
-        .map(|(i, &gd)| DoorToolsDoneItemQueueItem { gd, at: t + i as f64 * second, pod: deal.get(gd).copied().unwrap_or(pods[0]) })
+        .map(|(i, &gd)| DoorToolsDoneItemQueueItem { gd, pod: deal.get(gd).copied().unwrap_or(pods[0]) })
         .collect();
     let o = &mut g.tab.doortools_door_op[op];
     o.rear.clear();

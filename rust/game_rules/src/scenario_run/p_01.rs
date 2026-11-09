@@ -25,7 +25,7 @@ fn capitalised(w: &str) -> String {
 pub fn lesson_level(q: &crate::query::Query) -> bool {
     // A row with no level is `undefined`, which is never `===` the `null` of a query with no levelFile.
     let Some(level_file) = q.get("levelFile") else { return false };
-    crate::scene_scenario_list::lesson_missions().iter().any(|e| e.level.as_deref() == Some(level_file))
+    crate::scene_scenario_list::tutorial_missions().iter().any(|e| e.level.as_deref() == Some(level_file))
 }
 
 /// Fog of war on a page with no scenario up: only if the URL asks.   (scenarioRun.ts plainFog)
@@ -74,12 +74,10 @@ pub fn fog_of_link(g: &crate::game::Game, q: &crate::query::Query) -> bool {
     if q.has("nofow") || q.has("nofogofwar") {
         return false;
     }
-    let four = q.has("squad4") && !q.has("nightbreach") && !q.has("rescue") && !q.has("quiet");
+    use crate::scene_scenario_list::{kind_of, ScenarioSpecKind as Kind};
     q.has("fow")
         || q.has("fogofwar")
-        || q.has("roomclear")
-        || q.has("rescue")
-        || four
+        || matches!(kind_of(q), Some(Kind::Roomclear | Kind::Rescue))
         || quiet_rung_of_query(g, q) != crate::quietfog::QuietRung::Off
 }
 
@@ -147,7 +145,7 @@ pub fn start_from_query(g: &mut crate::game::Game, search: &crate::scenario_run:
         g.k.rescue.squad = 2.0;
     }
     crate::kit::kit_solo_stand(g, Some(spec.is_none()));
-    StartFromQuery { spec, why }
+    StartFromQuery { why }
 }
 
 /// A MISSION'S ADDRESS IS READ IN TWO PLACES by whoever starts a game from one. BEFORE THE GAME IS MADE, on the blank game: the mission row's own
@@ -157,21 +155,20 @@ pub fn start_from_query(g: &mut crate::game::Game, search: &crate::scenario_run:
 pub fn address_before_game(g: &mut crate::game::Game, q: &mut crate::query::Query) -> Option<crate::weather_kinds::WeatherKind> {
     crate::rowset::row_settings(g, q);
     // (a Training level's stagings wear what its lesson asks: kit.ts kitLessonPage)
-    let lesson = lesson_of_address(q).map(|e| crate::kit::KitLessonPageRow { packs: e.packs.map(|p| crate::kit::KitLessonPageRowPacks { frags: p.frags }) });
-    crate::kit::kit_lesson_page(g, lesson);
+    crate::kit::kit_lesson_page(g, lesson_of_address(q).is_some());
     // (weatherKinds.ts weatherAsked, then snowLevelOfQuery: a level built for snow is in snow whatever the address said)
     let snow = q.get("levelFile").and_then(|f| f.strip_suffix(".json")).map_or(false, |n| crate::weather_kinds::snow_level(g, Some(n)));
     let kind = if snow { Some(crate::weather_kinds::WeatherKind::Snow) } else { crate::weather_kinds::weather_of(q) };
     // (hours.ts hourAsked: the visit's hour, which the stand lays over the level once the game is made)
     let sun = q.float("sun").filter(|s| s.is_finite());
-    g.stood = crate::game::StoodWith { weather: kind, locked: true, hour: crate::hours::hour_id_of(q.get("hour")), sun: sun.map_or(1.0, |s| s.clamp(0.0, 1.0)), sun_given: sun.is_some(), dry: !q.has("noweather"), solo_stand: false };
+    g.stood = crate::game::StoodWith { weather: kind, locked: true, hour: crate::hours::hour_id_of(q.get("hour")), sun: sun.map_or(1.0, |s| s.clamp(0.0, 1.0)), sun_given: sun.is_some(), dry: !q.has("noweather"), solo_stand: false, way: crate::roomclear::way_of_address(q) };
     kind
 }
 
 /// the Training row whose level an address boots
 fn lesson_of_address(q: &crate::query::Query) -> Option<crate::scene_scenarios::ScenarioEntry> {
     let file = q.get("levelFile")?;
-    crate::scene_scenario_list::lesson_missions().into_iter().find(|e| e.level.as_deref() == Some(file) && e.group == Some(crate::scene_scenarios::MissionGroup::Tutorial))
+    crate::scene_scenario_list::tutorial_missions().into_iter().find(|e| e.level.as_deref() == Some(file))
 }
 
 /// …AND THE DIFFICULTY IT ASKS FOR, before the game is made, on the blank game's own knob tables, as a page reads it: a Training lesson's address reads no lever, as its page
@@ -229,15 +226,6 @@ fn running_kind(kind: ActiveScenario) -> RunningScenarioKind {
     }
 }
 
-fn quit_kind(kind: ActiveScenario) -> QuitScenario {
-    match kind {
-        ActiveScenario::Nightbreach => QuitScenario::Nightbreach,
-        ActiveScenario::Roomclear => QuitScenario::Roomclear,
-        ActiveScenario::Rescue => QuitScenario::Rescue,
-        ActiveScenario::Quiet => QuitScenario::Quiet,
-    }
-}
-
 /// The scenario that is up, in the picker's words. None: none is up.   (scenarioRun.ts runningScenario)
 pub fn running_scenario(g: &crate::game::Game, level_file: Option<&str>, list: Option<&[crate::scene_scenarios::ScenarioEntry]>) -> Option<crate::scenario_run::RunningScenario> {
     let kind = active_scenario(g)?;
@@ -253,42 +241,14 @@ pub fn running_scenario(g: &crate::game::Game, level_file: Option<&str>, list: O
     let here: Vec<&crate::scene_scenarios::ScenarioEntry> =
         list.iter().filter(|e| e.kind.as_str() == kind.as_str() && e.level.as_deref() == level_file).collect();
     let entry = here.iter().find(|e| e.squad == squad).or(here.first()).map(|e| (*e).clone());
-    let team = crate::scene_scenario_list::team_words(crate::scene_scenario_list::TeamWordsE { squad });
+    let team = crate::loadout::size_words(squad);
     if kind == ActiveScenario::Quiet {
-        let title = match &entry {
-            Some(e) => e.title.clone(),
-            None => String::from("Quiet mission"),
-        };
-        return Some(RunningScenario { kind: running_kind(kind), squad, entry, title, team, saves: Some(!js::truthy(squad)) });
+        return Some(RunningScenario { kind: running_kind(kind), entry });
     }
     let title = match &entry {
         Some(e) => e.title.clone(),
         None => capitalised(&word(kind.as_str())),
     };
-    Some(RunningScenario { kind: running_kind(kind), squad, entry, title, team, saves: None })
-}
-
-/// Quit whichever scenario is up, back to the floor the start card sits over. What was stopped, or None.   (scenarioRun.ts quitScenario)
-pub fn quit_scenario(g: &mut crate::game::Game, fog: Option<bool>) -> Option<crate::scenario_run::QuitScenario> {
-    let fog = fog.unwrap_or(false);
-    let was = active_scenario(g);
-    if was.is_some() {
-        crate::stickycam::sticky_visit_set(g, 0.0);
-    }
-    match was {
-        Some(ActiveScenario::Roomclear) => crate::roomclear::room_clear_scenario_stop(g),
-        Some(ActiveScenario::Nightbreach) => crate::nightbreach::night_breach_stop(g),
-        Some(ActiveScenario::Rescue) => crate::rescue::rescue_stop(g),
-        Some(ActiveScenario::Quiet) => crate::quiet::quiet_mission_stop(g),
-        None => {}
-    }
-    if was.is_some() {
-        g.k.nightbreach.squad = 2.0;
-        g.k.rescue.squad = 2.0;
-        g.fog_of_war.on = fog;
-        crate::quietfog::quiet_fog_end(g);
-        crate::stickycam::sticky_visit_set(g, 0.0);
-    }
-    was.map(quit_kind)
+    Some(RunningScenario { kind: running_kind(kind), entry })
 }
 

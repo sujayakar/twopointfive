@@ -65,7 +65,7 @@
 // GPU time is the union of, and `render`, the render passes that union leaves out because a render pass's timestamps are not to be trusted on Metal (the
 // first real records had them on top, at twice the frame). An adapter with no timestamp queries has no `gpu`.
 // NOTHING ELSE: no key pressed, no name, no address — but a visit's record is keyed to the browser's random id and is, taken together, close to a
-// fingerprint of the machine. What of it is kept is the maintainer's choice (docs/agents/workflow.md). Records wait in a short queue and go up every `secs`, and as the page is hidden.
+// fingerprint of the machine. What of it is kept is the maintainer's choice. Records wait in a short queue and go up every `secs`, and as the page is hidden.
 // No game code is imported: the page hands in closures (cloud.ts).
 import type { Wire } from './wire';
 

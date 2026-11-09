@@ -31,7 +31,6 @@ words!(stuff_word, BoxStuff, [Carpet, Grass, Rubber, Metal, Glass, Wood, Plastic
 words!(does_word, DoesWord, [Snow, Carpet, Lino, Stone, Grass, Wood, Plastic, Concrete, Fabric, Steel, Enamel, Tarmac, Casing, Screen, UnnamedDark, Plasterboard, Partition, Ceiling, Laminate, Pane, DarkCarpet, Card, Frame, Plant, PackedSnow, OldSnow, Unnamed, UnnamedGrey, UnnamedLight, UnnamedLightGrey, UnnamedPale, UnnamedPaleGrey, DarkPlastic, GreyPlastic, DarkGlass]);
 words!(prop_kind, game::scene_level_data::PropKindName, [Cardboard, Plant, Chair, Bin]);
 words!(weapon_word, game::weapons::WeaponId, [Fiveseven, Guard9mm, Aks74u, Ak74m, Akms, Fn2000, M870, Mk12, Mp7, Mk46, M1014, Hk45, G18, Pkm, Mk18bare, G19bare]);
-words!(volume_kind, VolumeDefKind, [Trigger, Hide, Utility]);
 
 
 /// the box flags a file may say, as the bits of `Box.flags` (levelData.ts FLAG_BITS)
@@ -270,10 +269,10 @@ fn read(g: &mut Game, data: &Json, dressing: bool, lived: bool) -> (Loaded, Vec<
     level.player_spawn = v3(data.get("mission").get("playerSpawn"), "mission.playerSpawn");
     level.routes = routes; level.chokepoints = Some(chokepoints); level.clear_plans = Some(records.clear_plans);
     if !data.get("volumes").items().is_empty() {
-        level.volumes = Some(data.get("volumes").items().iter().map(|v| VolumeDef { name: text(v.get("id"), "a volume's id"), kind: volume_kind(v.get("kind").str().unwrap_or("")).expect("a volume's kind"), c: v3(v.get("c"), "a volume's c"), h: v3(v.get("h"), "a volume's h"), yaw: v.get("yaw").num() }).collect());
+        level.volumes = Some(data.get("volumes").items().iter().map(|v| { v.skip(&["kind"]); VolumeDef { name: text(v.get("id"), "a volume's id"), c: v3(v.get("c"), "a volume's c"), h: v3(v.get("h"), "a volume's h"), yaw: v.get("yaw").num() } }).collect());
     }
     if !data.get("marks").items().is_empty() {
-        level.marks = Some(data.get("marks").items().iter().map(|m| MarkDef { name: text(m.get("id"), "a mark's id"), pos: v3(m.get("pos"), "a mark's pos"), yaw: m.get("yaw").num() }).collect());
+        level.marks = Some(data.get("marks").items().iter().map(|m| { m.skip(&["yaw"]); MarkDef { name: text(m.get("id"), "a mark's id"), pos: v3(m.get("pos"), "a mark's pos") } }).collect());
     }
     level.sky = LevelSky { zenith: v3(data.get("sky").get("zenith"), "sky.zenith"), horizon: v3(data.get("sky").get("horizon"), "sky.horizon") };
     level.mission = game::quiet::QuietMissionAuthoredMission {
@@ -284,7 +283,7 @@ fn read(g: &mut Game, data: &Json, dressing: bool, lived: bool) -> (Loaded, Vec<
     };
     level.mark_texel = data.get("meta").get("markTexel").num();
     level.kept = data.get("meta").get("kept").num();
-    // the scenarios' block and the footsteps' map: the runtime structs verbatim (scene/scenarios.ts), each record as the game's own type (records.rs)
+    // the scenarios' block and the footsteps' map: the runtime structs verbatim (tools/levels/lib/scenarios.ts), each record as the game's own type (records.rs)
     level.scenarios = records.scenarios; level.surfaces = records.surfaces;
     level.script = game::director::level_script_of(&name);   // (a level that carries a script: scene/levelScripts.ts, by the file's name)
     g.level = level;

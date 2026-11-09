@@ -1,5 +1,5 @@
 // THE MIRROR AND THE HIGHLIGHTS ARE TWO TERMS IN TWO TARGETS: the check behind reflect.wgsl outHi, common.wgsl RT_HI_FADE / rtHiFade and composite.wgsl
-// upsampleHi (docs/agents/render.md has the rule at length).
+// upsampleHi (docs/agents/render-light.md, "Reflections").
 //   bun run tools/qa/checks.ts highlights
 //   HIGHLIGHTS_BREAK=1     the highlights faded as the mirror is, at its cut-off, by a pixel's own roughness: must FAIL
 //   PORTALMIRROR_BREAK=1   a ray that leaves by a lit opening brings its sky back whole, as it did: must FAIL

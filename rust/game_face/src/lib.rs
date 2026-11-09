@@ -14,7 +14,7 @@
 //!   face_start(p, n, slot, seed, seats, flags) -> h   a game from a level file's text, the address's words, the character's files and the host's commands (game_start `handed`)
 //!   face_drop(h) · face_slot(h) -> slot       the game and its slot are free again · which of rust/sim's slots it stands in
 //!   face_show_seat(h, seat)                   which seat this machine shows
-//!   face_step(h, dt, flags)                   ONE TICK of every seat on what was handed (hand.rs, net.rs). Flags: 4 VIEW, the host's view of a level on rails · 8 SAVES, the save controller's turn
+//!   face_step(h, dt, flags)                   ONE TICK of every seat on what was handed (hand.rs, net.rs). Flags: 8 SAVES, the save controller's turn
 //!   face_out_clear(h)                         the host has taken what the tick told it
 //!
 //! two games held to each other
@@ -179,7 +179,6 @@ pub extern "C" fn face_slot(h: u32) -> usize {
 pub extern "C" fn face_show_seat(h: u32, seat: u32) {
     with(h, |x| { let s = x.g.seats[seat as usize]; game::seats::show_seat(&mut x.g, s); });
 }
-pub const VIEW: u32 = 4;
 pub const SAVES: u32 = 8;
 #[no_mangle]
 pub extern "C" fn face_step(h: u32, dt: f64, flags: u32) {
@@ -188,7 +187,6 @@ pub extern "C" fn face_step(h: u32, dt: f64, flags: u32) {
     with(h, |x| {
         game::game::game_step_seats(&mut x.g, dt, &cmds);
         saves::dealt(&x.g);
-        if flags & VIEW != 0 { game_run::view(&mut x.g); }
         if flags & SAVES != 0 { saves::saves(h, x, dt); }
     });
 }

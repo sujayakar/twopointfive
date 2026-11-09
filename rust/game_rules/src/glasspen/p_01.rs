@@ -108,15 +108,6 @@ pub fn shot_energy(g: &mut crate::game::Game, c_2: CharId, def: Option<crate::we
     Some(match def { Some(d) => round_energy(g, d), None => round_energy_of(g, c_2) })
 }
 
-/// the pane's type, the fracture model's own word for it (glasspen.ts paneType)
-pub fn pane_type(g: &mut crate::game::Game, b: BoxId, bi: Option<f64>) -> crate::glasspen::PaneType {
-    let bi = match bi { Some(i) => i, None => g.col.boxes.iter().position(|&x| x == b).map_or(-1.0, |i| i as f64) };
-    match crate::glassbreak::glass_break_type_of_pane(g, bi) {
-        Some(t) => t,
-        None => crate::glassbreak::glass_break_type_of(g, b, None),
-    }
-}
-
 // ---------------------------------------------------------------- holes: the module's; here only the count of changes and the log
 
 /// this game's log and count of changes, made if none yet: the row itself (glasspen.ts stateOf)
@@ -146,16 +137,6 @@ pub fn add_hole(g: &mut crate::game::Game, bi: f64, p: V3) {
 }
 
 // ---------------------------------------------------------------- the toll
-
-/// what sheet `bi` takes from a round of energy `e` meeting it at `at` flying `d`, or None: spent in it (glasspen.ts paneToll)
-pub fn pane_toll(g: &mut crate::game::Game, bi: f64, at: V3, d: V3, e: f64, nth: Option<f64>) -> Option<crate::glasspen::PaneToll> {
-    let nth = nth.unwrap_or(0.0);
-    crate::glassbreak::glass_break_asking(g, &mut |_g: &mut Game, _s: f64, _w: f64| -> Option<PaneToll> {
-        if ::sim::pen_toll(js::to_u32(bi), at[0], at[1], at[2], d[0], d[1], d[2], e, nth as usize) == 0 { return None; }
-        let m = scratch();
-        Some(PaneToll { type_: pane_type_word(m[0]), n: [m[1], m[2], m[3]], cos: m[4], take: m[5], e_out: m[6], hole: m[7] != 0.0 })
-    })
-}
 
 /// a crossing as the module lists it (rust/sim/src/pen.rs write_cross; glasspen.ts crossAt)
 pub fn cross_at(m: &[f64], o: f64, into: f64) -> crate::glasspen::PaneCross {

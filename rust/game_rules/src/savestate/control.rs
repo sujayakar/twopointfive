@@ -24,8 +24,7 @@ pub enum Do {
 fn key_of(slot: SlotInfoSlot, i: usize) -> String { format!("{}.{}", if slot == SlotInfoSlot::Auto { "auto" } else { "manual" }, i) }
 fn ring(g: &Game, slot: SlotInfoSlot) -> usize { (if slot == SlotInfoSlot::Auto { g.k.savetimeline.auto } else { g.k.savetimeline.manual }) as usize }
 fn note(g: &mut Game, what: String) {
-    let t = g.time;
-    g.saves.log.push(CheckpointsLogItem { t, what });
+    g.saves.log.push(CheckpointsLogItem {  });
     if g.saves.log.len() > 40 { g.saves.log.remove(0); }
 }
 fn here(g: &mut Game) -> String { let p = g.ch[g.pl[g.player].ch].pos; crate::chronicle::room_of(g, p) }
@@ -270,9 +269,8 @@ fn write(g: &mut Game, slot: SlotInfoSlot, label: &str, authored: bool) -> Optio
     let key = key_of(slot, n);
     // (which came after which: no clock of the machine's is in a game)
     let saved_at = g.saves.shelf.m.values().map(|e| e.info.saved_at).fold(0.0, crate::m::max) + 1.0;
-    let kind = if slot == SlotInfoSlot::Auto { SlotInfoKind::Auto } else { SlotInfoKind::Manual };
-    let info = SlotInfo { key: key.clone(), slot, n: n as f64, label: String::from(label), kind, saved_at, mission_t: g.mission.stats.elapsed, stage: String::from(g.mission.stage.as_str()), run_id: g.saves.run_id.clone(), bytes: 0.0, regret: None, mem: Some(true) };
-    g.saves.shelf.m.set(key.clone(), MemSave { info, pic: None });
+    let info = SlotInfo { key: key.clone(), slot, label: String::from(label), saved_at, mission_t: g.mission.stats.elapsed, run_id: g.saves.run_id.clone(), regret: None };
+    g.saves.shelf.m.set(key.clone(), MemSave { info });
     g.saves.last_save_t = g.time;
     g.saves.quiet_t = 0.0;
     let t = g.time;

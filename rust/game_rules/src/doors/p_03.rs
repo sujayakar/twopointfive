@@ -176,12 +176,6 @@ pub fn doors_handles(g: &mut crate::game::Game, d: DoorId, yaw: f64, x1: f64, z1
     b.yaw = yaw;
 }
 
-/// The doors' step: the twin's one call. The hand-over must already be written.   (doors.ts Doors.updateHere)
-pub fn doors_update_here(g: &mut crate::game::Game, dt: f64, contacts: &[crate::doors::DoorContact]) {
-    let w = g.col.mirror.slot as usize;
-    let _ = ::sim::doors::update(g.sim, w);
-}
-
 /// Hold-to-crack: ease a near-closed leaf open silently, up to `max_angle`.   (doors.ts Doors.crack)
 pub fn doors_crack(g: &mut crate::game::Game, d: DoorId, from: V3, who: f64, dt: f64, keys: Option<&JsSet<String>>, rate: Option<f64>, max_angle: Option<f64>) {
     let rate = rate.unwrap_or(0.55);

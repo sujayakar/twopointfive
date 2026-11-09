@@ -8,11 +8,12 @@ use crate::js;
 use crate::loadout::{self, entry_of, kit_as_issued, LoadoutEntry};
 use crate::query::{after_mark, Query};
 use crate::quietfog::{self, QuietRung};
+use crate::roomclear;
 use crate::scene_scenario_list::{self as list, all_missions, Pick, SOLO_ID, SOLO_KEY, SCENARIO_KEYS};
 use crate::scenario_run;
 use crate::scene_scenarios::{MissionGroup, ScenarioEntry, ScenarioEntryKind};
 use crate::ui_missions::Lean;
-use crate::view::{BriefView, KeptText, Setting, SettingChoice, SheetView, ShortView, StartRow, StartView};
+use crate::view::{BriefView, KeptText, MissionRow, MissionsView, Setting, SettingChoice, SheetView, ShortView, StartRow, StartView};
 use crate::weather_kinds::{self, WeatherKind};
 use alloc::{format, string::String, vec, vec::Vec};
 
@@ -22,17 +23,17 @@ const KEPT_LEVERS: &str = difficulty::LS_LEVERS;
 const KEPT_FOG: &str = quietfog::LS;
 const KEPT_CAMS: &str = quietfog::LS_CAMS;
 
-/// The groups of the list, in the order the page draws them: id, title, line.   (scenarios.ts MISSION_GROUPS)
+/// The groups of the list, in the order the page draws them: id, title, line.
 const GROUPS: [(MissionGroup, &str, &str); 6] = [
     (MissionGroup::Tutorial, "Tutorial", "The game, a mission at a time"),
-    (MissionGroup::Raids, "Raids", "Small buildings, up to seven defenders"),
-    (MissionGroup::Strongholds, "Strongholds", "Eight to eleven defenders"),
+    (MissionGroup::Raids, "Raids", "Small buildings"),
+    (MissionGroup::Strongholds, "Strongholds", "Big buildings"),
     (MissionGroup::Clock, "On the clock", "A hostage or a par time"),
     (MissionGroup::QuietAlone, "Quiet, alone", "Light, noise and cameras"),
     (MissionGroup::QuietTwo, "Quiet, as two", "You and one partner, silent from the start"),
 ];
 
-/// One row of the list: a mission of the table, or the plain solo night (no entry).   (missions.ts Mission)
+/// One row of the list: a mission of the table, or the plain solo night (no entry).
 #[derive(Clone, Debug)]
 pub struct Mission {
     pub id: String,
@@ -51,13 +52,13 @@ impl Mission {
     fn ways(&self) -> Option<&[String]> { self.entry.as_ref().and_then(|e| e.ways.as_deref()) }
     fn is_quiet(&self) -> bool { self.entry.as_ref().is_some_and(|e| e.kind == ScenarioEntryKind::Quiet) }
     fn lesson(&self) -> bool { self.entry.as_ref().is_some_and(lesson_row) }
-    /// the lever is live on it with a bottom rung of its own: a quiet mission that is no lesson, and the solo night   (quietfog.ts quietFogRow, soloFogRow)
+    /// the lever is live on it with a bottom rung of its own: a quiet mission that is no lesson, and the solo night
     fn quiet_row(&self) -> bool { self.entry.as_ref().map_or(true, |e| e.kind == ScenarioEntryKind::Quiet && !lesson_row(e)) }
-    /// Standard | Hard changes something on it: a squad scenario's defenders read it   (missions.ts diffLive)
+    /// Standard | Hard changes something on it: a squad scenario's defenders read it
     fn diff_live(&self) -> bool { self.entry.is_some() && !self.is_quiet() }
-    /// a level built for snow has its own weather: no row is drawn for it and its link carries none   (missions.ts ownWx)
+    /// a level built for snow has its own weather: no row is drawn for it and its link carries none
     fn own_weather(&self, g: &Game) -> bool { weather_kinds::snow_level(g, self.level().map(|l| l.strip_suffix(".json").unwrap_or(l))) }
-    /// the hour and the weather a row is always started in   (rowset.ts rowHour, rowWeather)
+    /// the hour and the weather a row is always started in
     fn row_hour(&self) -> Option<HourId> { self.entry.as_ref().filter(|e| row_own(e)).and_then(|e| e.hour) }
     fn row_weather(&self) -> Option<WeatherKind> {
         let w = self.entry.as_ref().filter(|e| row_own(e)).and_then(|e| e.weather)?;
@@ -70,7 +71,7 @@ impl Mission {
 fn lesson_row(e: &ScenarioEntry) -> bool { e.group == Some(MissionGroup::Tutorial) }
 fn row_own(e: &ScenarioEntry) -> bool { e.level.as_deref().is_some_and(|l| !l.is_empty()) && (e.hour.is_some() || e.weather.is_some()) }
 
-/// The plain night, alone: not a scenario, no word but `?solo`.   (missions.ts SOLO_NIGHT)
+/// The plain night, alone: not a scenario, no word but `?solo`.
 fn solo_night() -> Mission {
     Mission {
         id: String::from(SOLO_ID), title: String::from("Solo night"), entry: None, squad: 0.0, group: MissionGroup::QuietAlone, place: String::from("The office, after dark"),
@@ -79,7 +80,7 @@ fn solo_night() -> Mission {
     }
 }
 
-/// The heading a row is under: its own, else by what it is, so that every row is under exactly one.   (missions.ts groupOf)
+/// The heading a row is under: its own, else by what it is, so that every row is under exactly one.
 fn group_of(e: &ScenarioEntry) -> MissionGroup {
     e.group.unwrap_or(match e.kind {
         ScenarioEntryKind::Quiet => if e.squad != 0.0 { MissionGroup::QuietTwo } else { MissionGroup::QuietAlone },
@@ -98,17 +99,17 @@ fn mission_of(e: ScenarioEntry) -> Mission {
     Mission { id: e.id.clone(), title: e.title.clone(), squad: e.squad, group: group_of(&e), place, blurb: e.blurb.clone().unwrap_or_default(), lean, untuned: e.untuned == Some(true), entry: Some(e) }
 }
 
-/// What the level is called on the sheet.   (scenarioList.ts levelWords)
+/// What the level is called on the sheet.
 fn level_words(file: &str) -> String { String::from(file.strip_suffix(".json").unwrap_or(file)) }
 
 fn lean_words(l: Lean) -> &'static str { match l { Lean::Quiet => "quiet", Lean::Loud => "loud", Lean::Either => "quiet or loud" } }
 
 fn group_rank(g: MissionGroup) -> usize { GROUPS.iter().position(|x| x.0 == g).unwrap_or(GROUPS.len()) }
 
-/// It runs and nobody has balanced it, and the short list does not name it.   (missions.ts unplayed)
+/// It runs and nobody has balanced it, and the short list does not name it.
 fn unplayed(m: &Mission) -> bool { m.untuned && !list::on_short_list(&m.id) }
 
-/// The whole list in its groups: inside a group the solo night first, then the tables' order, each group's unplayed rows after its others.   (missions.ts missionList)
+/// The whole list in its groups: inside a group the solo night first, then the tables' order, each group's unplayed rows after its others.
 pub fn mission_list() -> Vec<Mission> {
     let mut all = vec![solo_night()];
     all.extend(all_missions().into_iter().map(mission_of));
@@ -122,7 +123,7 @@ pub fn mission_by_id(id: &str) -> Option<Mission> {
     all_missions().into_iter().find(|e| e.id == id).map(mission_of)
 }
 
-/// The row of `rows` an address boots.   (missions.ts missionOfQuery)
+/// The row of `rows` an address boots.
 fn mission_of_query<'a>(search: &str, rows: &'a [Mission]) -> Option<&'a Mission> {
     let q = Query::parse(search);
     let e = list::entry_of_query(&q, rows.iter().filter_map(|m| m.entry.as_ref()));
@@ -131,12 +132,36 @@ fn mission_of_query<'a>(search: &str, rows: &'a [Mission]) -> Option<&'a Mission
     None
 }
 
+/// Every mission there is, as its row says it.
+pub fn missions_view() -> MissionsView {
+    let mut all = vec![solo_night()];
+    all.extend(all_missions().into_iter().map(mission_of));
+    MissionsView { rows: all.into_iter().map(|m| {
+        let (kind, group, level) = (String::from(m.kind_word()), String::from(m.group.as_str()), String::from(m.level().unwrap_or("office.json")));
+        let link = m.entry.as_ref().map_or_else(|| format!("?{SOLO_KEY}"), list::scenario_query);
+        let line = list::pick_of_mission(&m.id).map_or(String::new(), |p| String::from(p.line));
+        // (the solo night is no row: its place is the list's own)
+        let e = m.entry.unwrap_or_else(|| ScenarioEntry { place: Some(m.place), ..ScenarioEntry::default() });
+        MissionRow {
+            id: m.id, title: m.title, kind, squad: m.squad, group, level, blurb: m.blurb, untuned: m.untuned, line, link,
+            hour: e.hour.map_or(String::new(), |h| String::from(h.as_str())), place: e.place.unwrap_or_default(),
+            scene: e.scene.unwrap_or_default(), teaches: e.teaches.unwrap_or_default(), only: e.only.unwrap_or_default(),
+            defenders: e.defenders.unwrap_or(0.0), squads: e.squads == Some(true), ways: e.ways.unwrap_or_default(), off_list: e.off_list == Some(true),
+        }
+    }).collect() }
+}
+
+/// The kind of mission an address starts ('' none), on the list or not.
+pub fn kind_of_address(search: &str) -> String {
+    list::spec_of(&Query::parse(search)).map_or(String::new(), |s| String::from(s.kind.as_str()))
+}
+
 /// The id of the mission an address starts, over every mission there is ('' none).
 pub fn mission_of_address(search: &str) -> String {
     mission_of_query(search, &mission_list()).map_or(String::new(), |m| m.id.clone())
 }
 
-/// The rows a visit draws: the lists without the rows cut from them but the one it names, the short list's missions first in their groups, in play order.   (missions.ts listedMissions, startpage.ts startPageList)
+/// The rows a visit draws: the lists without the rows cut from them but the one it names, the short list's missions first in their groups, in play order.
 fn start_rows(keep: &str, every: bool) -> Vec<Mission> {
     let mut rows: Vec<Mission> = mission_list().into_iter().filter(|m| every || !m.entry.as_ref().is_some_and(|e| e.off_list == Some(true)) || m.id == keep).collect();
     let play_order = |m: &Mission| list::PICKS.iter().position(|p| p.mission == m.id).unwrap_or(list::PICKS.len());
@@ -166,8 +191,8 @@ pub struct Sitting {
     /// the picks made on the page, each for the address it was made on
     hour_pick: Option<(String, HourId)>,
     weather_pick: Option<(String, Option<WeatherKind>)>,
-    /// the way in picked per mission: absent or 0 the level's own start, k >= 2 its k-th, -1 dealt
-    ways: Vec<(String, f64)>,
+    /// the way in picked per mission, as the way taken: absent or 0 the level's own start, k its k-th other
+    ways: Vec<(String, usize)>,
     /// the lever words the machine's commands said, in their order: what it keeps, then what the address says over it
     said: Vec<(String, String)>,
     /// the address those words were said on (the first asked)
@@ -184,28 +209,21 @@ impl Default for Sitting {
 
 fn lever_key(word: &str) -> Option<LeverKey> { [LeverKey::Fog, LeverKey::Ai, LeverKey::Kit, LeverKey::Told].into_iter().find(|k| k.as_str() == word) }
 
-/// Which way in an address asks for: 0 the level's own, k its k-th, -1 dealt.   (missions.ts wayOfLink)
-fn way_of_link(ways: usize, word: Option<&str>) -> f64 {
-    let Some(w) = word.filter(|w| !w.is_empty() && ways > 0) else { return 0.0 };
-    if w == "any" { return -1.0; }
-    if !w.bytes().all(|c| c.is_ascii_digit()) { return 0.0; }
-    let n = js::number_of(w);
-    if n >= 2.0 { crate::m::min(n, ways as f64) } else { 0.0 }
-}
+/// Which way in a mission with `ways` of them takes on an address's word.
+fn way_of_link(ways: usize, word: Option<&str>) -> usize { roomclear::way_taken(roomclear::way_asked(word), ways) }
 
-/// The way in on a link: the page's own taken off, then this row's; nothing for the level's own start.   (missions.ts waySearch)
-fn way_search(href: &str, way: f64) -> String {
+/// The way in on a link: the page's own taken off, then this row's; nothing for the level's own start.
+fn way_search(href: &str, way: usize) -> String {
     let mut split = href.split('?');
     let path = split.next().unwrap_or("");
     let mut keys: Vec<String> = split.next().unwrap_or("").split('&').filter(|k| !k.is_empty() && *k != "way" && !k.starts_with("way=")).map(String::from).collect();
-    if way < 0.0 { keys.push(String::from("way=any")); } else if way > 1.0 { keys.push(format!("way={}", js::num_str(way))); }
+    if way > 0 { keys.push(format!("way={}", way + 1)); }
     if keys.is_empty() { String::from(path) } else { format!("{}?{}", path, keys.join("&")) }
 }
 
-fn way_note(m: &Mission, way: f64) -> String {
+fn way_note(m: &Mission, way: usize) -> String {
     String::from(if m.ways().is_none() { "this mission has one way in" }
-        else if way < 0.0 { "the game picks one for you each time, along with where the defenders start" }
-        else if way > 1.0 { "this side has a different first room, so plan it again" }
+        else if way > 0 { "this side has a different first room, so plan it again" }
         else { "the level was built around this way in" })
 }
 
@@ -225,7 +243,7 @@ impl Sitting {
         kept.iter().filter_map(|(k, r)| Some((lever_key(k)?, r.as_str()))).filter(|(k, r)| difficulty::is_rung(g, *k, Some(r))).collect()
     }
 
-    /// This machine keeps the levers as they stand: the page a link loads reads them back, and the link need not carry them.   (difficulty.ts leversKept)
+    /// This machine keeps the levers as they stand: the page a link loads reads them back, and the link need not carry them.
     fn levers_stored(&self, g: &Game) -> bool {
         if self.stored.is_some() { return true; }
         let kept = self.kept_said(g);
@@ -244,14 +262,13 @@ impl Sitting {
         order
     }
 
-    /// The way a mission goes in by.   (missions.ts wayOf: a link that came in with way=any is the level's own)
-    fn way_of(&self, m: &Mission) -> f64 {
-        if m.ways().is_none() { return 0.0; }
-        let w = self.ways.iter().find(|(id, _)| *id == m.id).map_or(0.0, |x| x.1);
-        if w < 0.0 { 0.0 } else { w }
+    /// The way a mission goes in by.
+    fn way_of(&self, m: &Mission) -> usize {
+        if m.ways().is_none() { return 0; }
+        self.ways.iter().find(|(id, _)| *id == m.id).map_or(0, |x| x.1)
     }
 
-    /// The link a row has.   (missions.ts hrefOf, missionHref)
+    /// The link a row has.
     fn href_of(&self, g: &mut Game, m: &Mission) -> String {
         let kept = self.levers_stored(g);
         let href = match &m.entry {
@@ -271,7 +288,7 @@ impl Sitting {
         match difficulty::difficulty_now(g) { DifficultyNow::Standard => Some(Difficulty::Standard), DifficultyNow::Hard => Some(Difficulty::Hard), DifficultyNow::Custom => None }
     }
 
-    /// The settings are the short list's for this mission: its pick, else none.   (startpage.ts asPick)
+    /// The settings are the short list's for this mission: its pick, else none.
     fn as_pick(&self, g: &mut Game, m: &Mission) -> Option<Pick> {
         let p = list::pick_of_mission(&m.id)?;
         // (every level there is may be its row's: the row's link names the one it is at)
@@ -281,7 +298,7 @@ impl Sitting {
         if href.contains("?way=") || href.contains("&way=") { None } else { Some(p) }
     }
 
-    /// The link a mission's team is deployed by, without its size: the short list's own where the settings are still its own.   (startpage.ts baseOf)
+    /// The link a mission's team is deployed by, without its size: the short list's own where the settings are still its own.
     pub fn base_of(&self, g: &mut Game, m: &Mission) -> String {
         let Some(p) = self.as_pick(g, m) else { return self.href_of(g, m) };
         let level = if list::pick_entry(&p).is_some() { self.level_word(g) } else { None };
@@ -290,7 +307,7 @@ impl Sitting {
         difficulty::levers_href_kept(g, &h, kept)
     }
 
-    /// The link Deploy loads at a size, from `base` (empty: the mission's own).   (loadout.ts S.search)
+    /// The link Deploy loads at a size, from `base` (empty: the mission's own).
     pub fn deploy_link(&self, g: &mut Game, id: &str, base: &str, size: f64) -> String {
         let Some(m) = mission_by_id(id) else { return String::new() };
         let base = if base.is_empty() { self.base_of(g, &m) } else { String::from(base) };
@@ -300,7 +317,7 @@ impl Sitting {
         loadout::squad_search(&quietfog::quiet_fog_href(g, &href, quiet), size, m.squad)
     }
 
-    /// The link a mission's kit is read by, as it would deploy now: whatever size comes, its fog and its cameras are the same.   (loadout.ts noFog, lentOf)
+    /// The link a mission's kit is read by, as it would deploy now: whatever size comes, its fog and its cameras are the same.
     pub fn fog_link(&self, g: &mut Game, id: &str) -> String {
         let Some(m) = mission_by_id(id) else { return String::new() };
         let base = self.base_of(g, &m);
@@ -308,7 +325,7 @@ impl Sitting {
         quietfog::quiet_fog_href(g, &base, quiet)
     }
 
-    /// The visitor's address is this from now on: what it says of the hour, the weather and the way in, unless picked already for the same address.   (missions.ts openMissions)
+    /// The visitor's address is this from now on: what it says of the hour, the weather and the way in, unless picked already for the same address.
     pub fn start(&mut self, g: &mut Game, page: &str) -> StartView {
         if self.booted.is_none() { self.booted = Some(String::from(page)); }
         self.page = String::from(page);
@@ -349,9 +366,9 @@ impl Sitting {
             team_tag: String::from(loadout::size_tag(m.squad)),
             unplayed: unplayed(m),
             off_list: e.is_some_and(|e| e.off_list == Some(true)),
-            packs: e.is_some_and(|e| e.packs.is_some()),
-            as_issued: loadout.as_ref().is_some_and(|l| kit_as_issued(g, l)),
+            as_issued: loadout.as_ref().is_some_and(kit_as_issued),
             lesson: m.lesson(),
+            two: e.is_some_and(|e| crate::seats::seats_kind(e.kind.as_str()) && e.only.is_none()) && !m.lesson(),
             ways: m.ways().map_or(Vec::new(), |w| w.to_vec()),
             pick: pick.map_or(String::new(), |p| String::from(p.id)),
             line: pick.map_or(String::new(), |p| String::from(p.line)),
@@ -365,7 +382,7 @@ impl Sitting {
         m.entry.as_ref().filter(|e| e.kind == ScenarioEntryKind::Roomclear).map_or(String::new(), |e| difficulty::structure_of_level(e.level.as_deref()))
     }
 
-    /// The rows of settings of one mission, in the sheet's order.   (missions.ts paint, levers.ts paint)
+    /// The rows of settings of one mission, in the sheet's order.
     pub fn sheet(&self, g: &mut Game, id: &str) -> SheetView {
         let Some(m) = mission_by_id(id) else { return SheetView::default() };
         let link = self.href_of(g, &m);
@@ -397,12 +414,7 @@ impl Sitting {
 
     fn way_row(&self, m: &Mission) -> Setting {
         let y = self.way_of(m);
-        let mut choices: Vec<SettingChoice> = m.ways().unwrap_or(&[]).iter().enumerate().map(|(k, w)| {
-            let v = if k == 0 { 0.0 } else { k as f64 + 1.0 };
-            choice(&js::num_str((k + 1) as f64), w, String::new(), y == v, true)
-        }).collect();
-        // (dealt is offered only while missions may start different ways: they all start the same way now)
-        choices.push(choice("any", "Dealt", String::new(), false, false));
+        let choices: Vec<SettingChoice> = m.ways().unwrap_or(&[]).iter().enumerate().map(|(k, w)| choice(&js::num_str((k + 1) as f64), w, String::new(), y == k, true)).collect();
         let shown = m.ways().is_some();
         Setting { key: String::from("way"), label: String::from("Way in"), live: shown, shown, moved: false, note: way_note(m, y), choices }
     }
@@ -443,8 +455,7 @@ impl Sitting {
                 Some(Vec::new())
             }
             "way" => {
-                let n = js::number_of(to);
-                let v = if n >= 2.0 { n } else { 0.0 };
+                let v = way_of_link(m.ways().map_or(0, |w| w.len()), Some(to));
                 match self.ways.iter_mut().find(|x| x.0 == m.id) { Some(x) => x.1 = v, None => self.ways.push((m.id.clone(), v)) }
                 Some(Vec::new())
             }
@@ -464,7 +475,7 @@ impl Sitting {
         }
     }
 
-    /// What the pause and end cards say of the row after the one the address is, and the page load that starts it.   (ui/picks.ts nextPickOf)
+    /// What the pause and end cards say of the row after the one the address is, and the page load that starts it.
     pub fn short_view(&self, g: &Game, search: &str) -> ShortView {
         let Some((now, next, carried)) = list::pick_after(search) else { return ShortView::default() };
         let mut v = ShortView { now: String::from(now.id), now_scenario: list::pick_entry(&now).is_some(), ..ShortView::default() };
@@ -483,7 +494,7 @@ impl Sitting {
     }
 }
 
-/// Standard | Hard, greyed where the pick changes nothing.   (missions.ts paint)
+/// Standard | Hard, greyed where the pick changes nothing.
 fn difficulty_row(g: &Game, m: &Mission) -> Setting {
     let now = difficulty::difficulty_now(g);
     let level = match now { DifficultyNow::Standard => DifficultyWordsLevel::Standard, DifficultyNow::Hard => DifficultyWordsLevel::Hard, DifficultyNow::Custom => DifficultyWordsLevel::Custom };
@@ -498,10 +509,10 @@ fn difficulty_row(g: &Game, m: &Mission) -> Setting {
     }
 }
 
-/// The cameras' one line: the note under the row while it is lit, and its button's title.   (levers.ts camWords)
+/// The cameras' one line: the note under the row while it is lit, and its button's title.
 const CAM_WORDS: &str = "The last one you put on a wall is one more eye in the fog. An optical wand for doors comes with them.";
 
-/// The levers under it, each with the line of its lit rung; on a quiet row the fog's is the quiet pick's, with the cameras' row right under it.   (levers.ts paint, and missions.ts for what is live)
+/// The levers under it, each with the line of its lit rung; on a quiet row the fog's is the quiet pick's, with the cameras' row right under it.
 fn lever_rows(g: &mut Game, m: &Mission, link: &str, out: &mut Vec<Setting>) {
     let quiet = m.quiet_row();
     // (the fog of war is up on a room clear and a rescue; a lesson is taught on the level as it is, and reads no lever)
@@ -544,7 +555,7 @@ fn lever_rows(g: &mut Game, m: &Mission, link: &str, out: &mut Vec<Setting>) {
     }
 }
 
-/// A row of the short list's link ('' where the row is none): `hard` -1 the row's own difficulty, 0 standard, 1 hard.   (picks.ts pickHref)
+/// A row of the short list's link ('' where the row is none): `hard` -1 the row's own difficulty, 0 standard, 1 hard.
 pub fn short_link(id: &str, search: &str, hard: i32) -> String {
     let Some(p) = list::pick_by_id(id) else { return String::new() };
     let d = match hard { 0 => Some(Difficulty::Standard), 1 => Some(Difficulty::Hard), _ => None };
@@ -552,7 +563,7 @@ pub fn short_link(id: &str, search: &str, hard: i32) -> String {
 }
 
 /// What a page says of the mission its address starts, while it loads: that mission's own row, the team as this address deploys it. A row deployed at a size no row of its kind has is the row of
-/// that kind on that level; nothing where the address names no mission of the list, or picks its level by `level=` (a level being built is played the moment it loads).   (loadbrief.ts briefOfQuery)
+/// that kind on that level; nothing where the address names no mission of the list, or picks its level by `level=` (a level being built is played the moment it loads).
 pub fn brief_of(search: &str) -> BriefView {
     let q = Query::parse(search);
     if q.has("level") { return BriefView::default(); }
@@ -579,13 +590,13 @@ pub fn brief_of(search: &str) -> BriefView {
         level: String::from(m.level().unwrap_or("office.json")),
         scene: e.and_then(|e| e.scene.clone()).unwrap_or_default(),
         teaches: e.and_then(|e| e.teaches.clone()).unwrap_or_default(),
-        // (dealt is marked on no one way: the level's own)
-        way: crate::m::max(way_of_link(m.ways().map_or(0, |w| w.len()), q.get("way")), 0.0),
+        // (0 the level's own, N its Nth, as the page's map sheet has it)
+        way: match way_of_link(m.ways().map_or(0, |w| w.len()), q.get("way")) { 0 => 0.0, k => (k + 1) as f64 },
     }
 }
 
 /// The link Deploy would load starts what a page at this address already stands: the plain night, at its hour, in its weather, in the same fog, with nothing else asked of the page. So the start
-/// is no page load.   (loadout.ts deploy, scenarioRun.ts sameFog)
+/// is no page load.
 pub fn same_start(g: &Game, link: &str, page: &str) -> bool {
     let (a, b) = (Query::parse(link), Query::parse(page));
     let fog = |q: &Query| (scenario_run::fog_of_query(g, q), scenario_run::quiet_rung_of_query(g, q), scenario_run::quiet_cams_of_link(g, q));

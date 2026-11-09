@@ -236,31 +236,6 @@ fn file_kind(k: CueKind) -> CuesFileKind {
         CueKind::Surprised => CuesFileKind::Surprised,
     }
 }
-fn log_kind(k: CuesFileKind) -> CuesLogItemKind {
-    match k {
-        CuesFileKind::Heard => CuesLogItemKind::Heard,
-        CuesFileKind::Stay => CuesLogItemKind::Stay,
-        CuesFileKind::Calm => CuesLogItemKind::Calm,
-        CuesFileKind::Cover => CuesLogItemKind::Cover,
-        CuesFileKind::Call => CuesLogItemKind::Call,
-        CuesFileKind::Flinch => CuesLogItemKind::Flinch,
-        CuesFileKind::Still => CuesLogItemKind::Still,
-        CuesFileKind::Help => CuesLogItemKind::Help,
-        CuesFileKind::StayOurs => CuesLogItemKind::StayOurs,
-        CuesFileKind::HuntOver => CuesLogItemKind::HuntOver,
-        CuesFileKind::FellBack => CuesLogItemKind::FellBack,
-        CuesFileKind::Planted => CuesLogItemKind::Planted,
-        CuesFileKind::PinnedIn => CuesLogItemKind::PinnedIn,
-        CuesFileKind::SquadHears => CuesLogItemKind::SquadHears,
-        CuesFileKind::SquadCopies => CuesLogItemKind::SquadCopies,
-        CuesFileKind::SquadWaits => CuesLogItemKind::SquadWaits,
-        CuesFileKind::SquadCopiesWaits => CuesLogItemKind::SquadCopiesWaits,
-        CuesFileKind::SquadStays => CuesLogItemKind::SquadStays,
-        CuesFileKind::SquadQuiet => CuesLogItemKind::SquadQuiet,
-        CuesFileKind::Surprised => CuesLogItemKind::Surprised,
-        CuesFileKind::Raw => CuesLogItemKind::Raw,
-    }
-}
 
 // ---------------------------------------------------------------- the functions of the module
 
@@ -326,7 +301,6 @@ pub fn cues_new(g: &crate::game::Game) -> crate::cues::Cues {
 /// The encounter is another one (a restart, a checkpoint loaded: the clock may have gone back).   (cues.ts Cues.reset)
 pub fn cues_reset(g: &mut crate::game::Game) {
     g.cues.heard_row = None;
-    g.cues.heard_log.clear();
     g.cues.heard_said.clear();
     g.cues.shout_t = None;
     g.cues.rows.clear();
@@ -352,7 +326,7 @@ fn prune_rows(g: &mut Game) {
 /// `done` of `file`: tally, log, answer.
 fn file_done(g: &mut Game, t: f64, text: &str, cls: f64, who: &str, kind: CuesFileKind, drawn: bool, why: &str) -> bool {
     if drawn { g.cues.stats.drawn[cls as usize] += 1.0; }
-    g.cues.log.push(CuesLogItem { t: fixed2(t), who: String::from(who), text: String::from(text), cls, kind: log_kind(kind), drawn, why: String::from(why) });
+    g.cues.log.push(CuesLogItem { why: String::from(why) });
     if g.cues.log.len() > 400 { g.cues.log.drain(0..100); }
     drawn
 }
@@ -411,7 +385,7 @@ pub fn cues_file(g: &mut crate::game::Game, text: &str, cls: f64, who: &str, kin
         g.cues.stats.bumped += 1.0;
     }
     if cls > 0.0 { g.cues.squelch_due = true; }   // (a row that arrives is heard arriving: tick, once a frame)
-    g.cues.rows.push(CueRow { t, text: String::from(text), cls, rank, who: String::from(who) });
+    g.cues.rows.push(CueRow { t, text: String::from(text), cls, rank });
     g.cues.said.set(String::from(words), t);
     sparse_set(&mut g.cues.class_t, c, t);
     if squad { sparse_set(&mut g.cues.squad_t, c, t); }
@@ -482,8 +456,6 @@ pub fn cues_ears(g: &mut crate::game::Game) -> Vec<V3> {
 
 /// `done` of `overheard`.
 fn heard_done(g: &mut Game, t: f64, text: &str, why: &str) -> bool {
-    g.cues.heard_log.push(CuesHeardLogItem { t: fixed2(t), text: String::from(text), drawn: why.is_empty(), why: String::from(why) });
-    if g.cues.heard_log.len() > 200 { g.cues.heard_log.drain(0..50); }
     why.is_empty()
 }
 
@@ -539,7 +511,7 @@ pub fn cues_adopt(g: &mut crate::game::Game, msgs: &[crate::cues::CuesAdoptMsgsI
     g.cues.heard_row = None;
     let radio: Vec<&crate::cues::CuesAdoptMsgsItem> = msgs.iter().filter(|m| m.text.starts_with("radio: ")).collect();
     let from = tail_from(radio.len(), g.k.cues.rows);
-    g.cues.rows = radio[from..].iter().map(|m| CueRow { t: m.t, text: String::from(&m.text[7..]), cls: 0.0, rank: 1.0, who: String::new() }).collect();
+    g.cues.rows = radio[from..].iter().map(|m| CueRow { t: m.t, text: String::from(&m.text[7..]), cls: 0.0, rank: 1.0 }).collect();
 }
 
 /// A word over a man and nothing else: the bubble, no strip row, no class clock: nothing the net's own lines wait on (the recap's side call)
@@ -1063,7 +1035,7 @@ mod tests {
         fn strip(g: &mut Game) -> Vec<(String, f64)> { radio_rows(g).into_iter().map(|r| (alloc::format!("{}: {}", if r.kind == crate::view::RadioKind::Heard { "heard" } else { "radio" }, r.text), g.time - r.age)).collect() }
         fn want(v: &[(&str, f64)]) -> Vec<(String, f64)> { v.iter().map(|r| (String::from(r.0), r.1)).collect() }
         assert_eq!(strip(g), want(&[("radio: c", 15.0), ("radio: d", 16.0)]));
-        let row = |t: f64, text: &str| CueRow { t, text: String::from(text), cls: 1.0, rank: 3.0, who: String::new() };
+        let row = |t: f64, text: &str| CueRow { t, text: String::from(text), cls: 1.0, rank: 3.0 };
         g.cues.rows = vec![row(14.0, "p"), row(18.0, "q"), row(21.0, "future")];
         g.cues.heard_row = Some(CuesHeardRow { t: 16.0, text: String::from("find them!") });
         assert_eq!(strip(g), want(&[("radio: p", 14.0), ("heard: find them!", 16.0), ("radio: q", 18.0)]));

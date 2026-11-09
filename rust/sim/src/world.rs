@@ -2,7 +2,7 @@
 //! StaticCollision), laid out flat for the systems here that ask it things: the line tests (lines.rs) and the circle against the boxes (collide.rs).
 //!
 //! WHOSE IT IS. While the rules that move a box are TypeScript, a box is a TypeScript object and THAT is the truth: what stands here is a copy, written by
-//! src/scene/boxMirror.ts and proven against the objects at the start of every tick (docs/agents/rust.md, "the box world's copy"). Nothing here is state of
+//! src/scene/boxMirror.ts and proven against the objects at the start of every tick (docs/agents/rust.md). Nothing here is state of
 //! the game: a copy that is thrown away is made again from the objects.
 //!
 //! No allocation: every table is a fixed size, so the module's memory never grows and a view the TypeScript side holds over it never dies. A level too big for
@@ -268,34 +268,7 @@ impl Over<'_> {
     }
 }
 
-/// WHERE A TABLE OF WORLD `w` IS in the module's memory (a byte address), for the side that writes the copy (3, 9, 12 and 13 are its question's scratch)
-pub fn addr(w: usize, table: u32) -> usize {
-    let o = world(w);
-    match table {
-        0 => o.rec.as_ptr() as usize,
-        1 => o.leaf.as_ptr() as usize,
-        2 => o.cut.as_ptr() as usize,
-        3 => asking(w).pane_t.as_ptr() as usize,
-        4 => o.flags.as_ptr() as usize,
-        5 => o.leaf_flags.as_ptr() as usize,
-        6 => o.start.as_ptr() as usize,
-        7 => o.items.as_ptr() as usize,
-        8 => o.tilted.as_ptr() as usize,
-        9 => asking(w).pane_bi.as_ptr() as usize,
-        12 => asking(w).pt.as_ptr() as usize,
-        13 => asking(w).list.as_ptr() as usize,
-        14 => o.thing.as_ptr() as usize,
-        15 => o.thing_live.as_ptr() as usize,
-        16 => o.glass.as_ptr() as usize,
-        17 => o.glass_w.as_ptr() as usize,
-        18 => o.glass_of.as_ptr() as usize,
-        19 => o.view.as_ptr() as usize,
-        20 => o.view_bi.as_ptr() as usize,
-        21 => o.snow.as_ptr() as usize,
-        _ => 0,
-    }
-}
-/// how much a table holds, by the same numbers (rows, not bytes)
+/// how much a table holds, by its number (rows, not bytes)
 pub fn cap(table: u32) -> usize {
     match table {
         0 => MAX_BOXES,

@@ -10,16 +10,6 @@ pub enum RecapCause {
     Other,
     Unknown,
 }
-impl RecapCause {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RecapCause::Blast => "blast",
-            RecapCause::Round => "round",
-            RecapCause::Other => "other",
-            RecapCause::Unknown => "unknown",
-        }
-    }
-}
 
 /// one man of a run, as a take names him
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -35,15 +25,6 @@ pub enum RecapManKind {
     #[default] Player,
     Civ,
     Man,
-}
-impl RecapManKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RecapManKind::Player => "player",
-            RecapManKind::Civ => "civ",
-            RecapManKind::Man => "man",
-        }
-    }
 }
 
 /// One of ours going down. Plan coordinates [x, z], metres; `gaze` in radians, 0 = +z (the aim yaw he had the sample before he fell).
@@ -92,15 +73,6 @@ pub enum RecapShotKind {
     Bang,
     Round,
 }
-impl RecapShotKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RecapShotKind::Blast => "blast",
-            RecapShotKind::Bang => "bang",
-            RecapShotKind::Round => "round",
-        }
-    }
-}
 
 /// One sample of the floor. men: MAN_STRIDE floats a man = id, x, z, aim yaw, bits (1 down, 2 roused: alert or searching, 4 crouched). doors: 2 a door = the
 /// leaf's direction (NaN = off its hinges).
@@ -138,7 +110,6 @@ pub struct RecapDoor {
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct LostMan {
     pub id: f64,
-    pub name: String,
     pub t: f64,
     pub at: [f64; 2],
     pub from: Option<[f64; 2]>,

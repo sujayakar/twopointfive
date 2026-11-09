@@ -30,7 +30,7 @@ import { KIT_PALETTE } from './lib/levelKit';
 import { gwotKit, gwotOfOffice } from './lib/gwotKit';
 import { GWOT_PALETTE, GWOT_FINISH, GWOT_SURFACE, SNOW_PALETTE, ROUGH_CLOTH, type GwotMat, type SnowMat } from '../../src/scene/gwotPalette';
 import { doesOfName } from '../../src/scene/stuff';
-import { ALL_MISSIONS } from '../../src/scene/scenarioList';
+import { missionRows } from '../desk.ts';
 import { encodePng } from '../qa/png';
 import { livedKit, LIVED_PAINT } from './livedKit';
 import { livedPieces, INK } from './livedPieces';
@@ -87,7 +87,7 @@ building = 'office'; open.length = 0; builtBoxes.set('office', buildOfficeProced
 building = ''; for (const k of KITS) k.stand();                   // a kit no generator stood up still says its pieces
 watchPieces(null);
 levels.sort();
-const onList = new Set(ALL_MISSIONS.filter(s => !s.offList).map(s => (s.level ?? 'office.json').replace(/\.json$/, '')));
+const onList = new Set(missionRows().filter(s => !s.offList).map(s => s.level.replace(/\.json$/, '')));
 // ------------------------------------------------------------------ paints: every colour that has a name, by its numbers ----
 const key = (a: Vec3) => a.map(v => Number(v).toFixed(4)).join(',');
 interface PaintRow { table: string; name: string; albedo: Vec3; rough?: number; metal?: boolean; sim?: string; surface?: string }

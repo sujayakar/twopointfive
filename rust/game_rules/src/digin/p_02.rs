@@ -500,7 +500,7 @@ fn tick_man(g: &mut Game, d: RoomfightDefId, m: &mut Man) {
         let shout_m = g.k.digin.shout_m;
         let heard = heard_by(g, pos, shout_m).is_some();              // (he says it out loud into his radio: a cue only to a team within earshot of HIM)
         state_of(g).called.add(gd);
-        state_of(g).fix = Some(StFix { at: pos, t: now, room: my_room, heard });
+        state_of(g).fix = Some(StFix { at: pos, t: now, room: my_room });
         g.stats.digin.radio += 1;
         let pool = crate::words::w(g, &["contact! they're here. hold your rooms!", "they're on us. watch your doors!"], &["contact! they're inside. hold your rooms!", "they're in here. watch your doors!"]);
         let line = one_of(g, crate::dice::Who::Def(d), &pool);
@@ -919,7 +919,7 @@ pub fn dig_in_reset(g: &mut crate::game::Game) {
     g.m.digin.states = None;
     g.stats.digin = DiginStats::default();
     g.m.digin.digin_log.clear();
-    g.m.digin.digin_shut = DiginModDIGINSHUT { home: 0.0, held: 0.0, again: 0.0, more: 0.0, left: 0.0 };
+    g.m.digin.digin_shut = DiginModDIGINSHUT {  };
 }
 
 #[cfg(test)]

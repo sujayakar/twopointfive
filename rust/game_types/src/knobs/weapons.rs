@@ -2,7 +2,7 @@
 use crate::bytes::ToBytes;
 use game_derive::Knobs;
 
-/// The ring-airfoil launcher's numbers (docs/internal/sc20k-design.md §5; launcher.ts flies them): how many Sam brings (spent, never retrieved — no scavenging of
+/// The ring-airfoil launcher's numbers (launcher.ts flies them): how many Sam brings (spent, never retrieved — no scavenging of
 ///  anything), and the seconds the launcher takes to hand-cycle between two rings. The rest of the ring — its speed, its arc, what a head or a hip does with it —
 ///  lives with its flight in launcher.ts RING.
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]

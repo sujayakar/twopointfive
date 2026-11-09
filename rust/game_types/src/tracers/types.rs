@@ -50,15 +50,6 @@ pub enum TracerImpact {
     Solid,
     Flesh,
 }
-impl TracerImpact {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            TracerImpact::None => "none",
-            TracerImpact::Solid => "solid",
-            TracerImpact::Flesh => "flesh",
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct TracersParams {
@@ -80,10 +71,6 @@ pub struct TracersParams {
     pub ember_ttl: f64,
     pub max_live: f64,
     pub max_lights: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct SparkSink {
 }
 
 /// (src/game/tracers.ts:56 LAMP_TTL)

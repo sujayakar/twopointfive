@@ -70,14 +70,6 @@ pub enum JobKind {
     #[default] Cover,
     Corridor,
 }
-impl JobKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            JobKind::Cover => "cover",
-            JobKind::Corridor => "corridor",
-        }
-    }
-}
 
 #[derive(Clone, Debug, ToBytes)]
 pub struct RescueFlow {
@@ -167,35 +159,9 @@ pub struct RescueFlowCameIn {
     pub t: f64,
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct RescueFlowJobOf {
-    pub kind: crate::rescueflow::RescueFlowJobOfKind,
-    pub opening: String,
-    pub queued: Vec<String>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-pub enum RescueFlowJobOfKind {
-    #[default] Cover,
-    Corridor,
-}
-impl RescueFlowJobOfKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RescueFlowJobOfKind::Cover => "cover",
-            RescueFlowJobOfKind::Corridor => "corridor",
-        }
-    }
-}
-
-/// (src/game/rescueflow.ts:47 FLOW: a table nothing writes)
-pub fn flow() -> crate::rescueflow::RescueFlowKnobs { crate::rescueflow::RescueFlowKnobs { abreast: 0.6, unpass: 2.0, past: 1.5, max_cover: 2.5, give_up: 7.0, want_secs: 6.0, hot_hold: 6.0, hot_secs: 20.0, hot_empty: 0.6, look_share: 0.6, look_secs: 10.0, clear_share: 0.7, clear_secs: 25.0, eye_m: 16.0, sense_hz: 6.0, sample_y: 0.9, hold_secs: 3.0, wait_m: 9.0, glow: 1.0 } }
-
 /// (src/game/rescueflow.ts:68 COLOUR: a table nothing writes)
 pub fn colour() -> JsMap<String, V3> { { let mut t = JsMap::new(); t.set(String::from("unknown"), [1.0, 0.55, 0.08]); t.set(String::from("looked"), [0.6, 0.62, 0.5]); t.set(String::from("hot"), [2.6, 0.12, 0.05]); t.set(String::from("held"), [0.12, 0.5, 1.6]); t.set(String::from("cleared"), [0.1, 1.0, 0.3]); t } }
 
 /// (src/game/rescueflow.ts:69 EYE)
 pub const EYE: f64 = 1.55;
 
-/// (src/game/rescueflow.ts:70 NO_ROUTE: a table nothing writes)
-pub fn no_route() -> Vec<crate::scene_scenarios::RouteOpening> { Vec::new() }

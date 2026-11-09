@@ -31,22 +31,22 @@ pub fn manifest_mark(m: &mut crate::director::Manifest, id: &str, pos: Option<V3
         };
         m.marks.set(id.into(), ManifestMarksValue { pos, yaw });
     }
-    MarkRef { kind: MarkRefKind::Mark, id: id.into() }
+    MarkRef { id: id.into() }
 }
 /// D.volume.   (director.ts:296)
 pub fn manifest_volume(m: &mut crate::director::Manifest, id: &str) -> crate::director::VolumeRef {
     m.volumes.add(id.into());
-    VolumeRef { kind: VolumeRefKind::Volume, id: id.into() }
+    VolumeRef { id: id.into() }
 }
 /// D.door.   (director.ts:298)
 pub fn manifest_door(m: &mut crate::director::Manifest, id: &str) -> crate::director::DoorRef {
     m.doors.add(id.into());
-    DoorRef { kind: DoorRefKind::Door, id: id.into() }
+    DoorRef { id: id.into() }
 }
 /// D.loadout.   (director.ts:301)
 pub fn manifest_loadout(m: &mut crate::director::Manifest, id: &str, spec: crate::director::LoadoutSpec) -> crate::director::LoadoutRef {
     m.loadouts.set(id.into(), spec);
-    LoadoutRef { kind: LoadoutRefKind::Loadout, id: id.into() }
+    LoadoutRef { id: id.into() }
 }
 /// D.program: Err = declared twice, or the body's Err; the row goes in the manifest after the body.   (director.ts:304-318)
 pub fn manifest_program(m: &mut crate::director::Manifest, name: &str, body: &mut dyn FnMut(&mut crate::director::ProgramDef) -> Result<(), String>, opts: Option<crate::director::ProgramOpts>) -> Result<(), String> {
@@ -264,13 +264,13 @@ mod tests {
     fn d_light_group(manifest: &mut Manifest, id: &str) { manifest.groups.add(id.into()); }
     fn d_variant(manifest: &mut Manifest, id: VariantRefId) { manifest.variants.add(id.as_str().into()); }
     fn d_expect_order(manifest: &mut Manifest, program: &str, beats: &[String]) {
-        manifest.expects.push(ManifestExpectsItem { kind: ManifestExpectsItemKind::Order, program: Some(program.into()), beats: Some(beats.to_vec()), ..ManifestExpectsItem::default() });
+        manifest.expects.push(ManifestExpectsItem { kind: ManifestExpectsItemKind::Order, program: Some(program.into()), ..ManifestExpectsItem::default() });
     }
     fn d_expect_within(manifest: &mut Manifest, program: &str, a: &str, b: &str, max: f64) {
-        manifest.expects.push(ManifestExpectsItem { kind: ManifestExpectsItemKind::Within, program: Some(program.into()), a: Some(a.into()), b: Some(b.into()), max: Some(max), ..ManifestExpectsItem::default() });
+        manifest.expects.push(ManifestExpectsItem { kind: ManifestExpectsItemKind::Within, program: Some(program.into()), max: Some(max), ..ManifestExpectsItem::default() });
     }
     fn d_expect_never(manifest: &mut Manifest, what: &str) {
-        manifest.expects.push(ManifestExpectsItem { kind: ManifestExpectsItemKind::Never, what: Some(what.into()), ..ManifestExpectsItem::default() });
+        manifest.expects.push(ManifestExpectsItem { kind: ManifestExpectsItemKind::Never, ..ManifestExpectsItem::default() });
     }
     fn p_after(program: &mut ProgramDef, secs: f64, beat: &str) {
         program.triggers.push(TriggerDef { kind: TriggerDefKind::After, beat: beat.into(), secs: Some(secs), ..TriggerDef::default() });
@@ -279,7 +279,7 @@ mod tests {
         program.triggers.push(TriggerDef { kind: TriggerDefKind::Event, beat: beat.into(), event: Some(event), ..TriggerDef::default() });
     }
     fn p_on_enter(program: &mut ProgramDef, v: &VolumeRef, beat: &str) {
-        program.triggers.push(TriggerDef { kind: TriggerDefKind::Enter, beat: beat.into(), volume: Some(v.id.clone()), who: Some(TriggerDefWho::Sam), once: Some(true), ..TriggerDef::default() });
+        program.triggers.push(TriggerDef { kind: TriggerDefKind::Enter, beat: beat.into(), volume: Some(v.id.clone()), who: Some(TriggerDefWho::Sam), ..TriggerDef::default() });
     }
     fn p_when(program: &mut ProgramDef, beat: &str) {
         program.triggers.push(TriggerDef { kind: TriggerDefKind::When, beat: beat.into(), label: Some("when".into()), ..TriggerDef::default() });
@@ -361,7 +361,7 @@ mod tests {
         p_after(&mut p, 1.5, "nobeat");
         p_on_event(&mut p, EventKind::Shot, "nobeat2");
         program_on_signal(&mut p, "sg", "nobeat3");
-        p_on_enter(&mut p, &VolumeRef { kind: VolumeRefKind::Volume, id: "vv".into() }, "nobeat4");
+        p_on_enter(&mut p, &VolumeRef { id: "vv".into() }, "nobeat4");
         p_when(&mut p, "nobeat5");
         program_beat(&mut p, "x", &crate::scene_level::LevelScriptFn::TutTeam, None).unwrap();
         for _ in 0..33 { p_when(&mut p, "x"); }

@@ -385,7 +385,7 @@ pub fn door_tools_sam_tick(g: &mut crate::game::Game) {
     g.pl[pl].charging = None;
     if !door_tools_take(g, DoorToolsTakeWhat::Charge) { crate::game::game_msg(g, "no charges left"); return; }
     g.door_tools.sam_spent += 1.0;
-    let row = SetCharge { door: d, side: s.side, t: g.time, by: String::from(crate::ownblow::SAM_BY) };
+    let row = SetCharge { door: d, side: s.side, by: String::from(crate::ownblow::SAM_BY) };
     let id = g.tab.doortools_set_charge.push(row);
     g.door_tools.set.push(id);
     let at = crate::doors::door_pos(g, d);

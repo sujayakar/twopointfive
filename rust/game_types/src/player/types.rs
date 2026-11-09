@@ -3,23 +3,6 @@
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Debug, Default)]
-pub struct WallSnap {
-    pub hold: Option<crate::player::WallHold>,
-    pub press: Option<crate::player::WallSnapPress>,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct WallSnapPress {
-    pub t: f64,
-    pub at: f64,
-    pub n: Option<Vec<f64>>,
-    pub dx: f64,
-    pub dz: f64,
-    pub held: bool,
-    pub until: f64,
-}
-
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct Hold {
     pub g: GuardId,
@@ -59,7 +42,6 @@ pub struct HoldAsk {
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct HoldAfter {
     pub text: String,
-    pub id: String,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -166,45 +148,6 @@ pub struct WallHold {
 pub enum WallHoldKind {
     Stack,
 }
-impl WallHoldKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            WallHoldKind::Stack => "stack",
-        }
-    }
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum WhKind {
-    Stack,
-    Unit,
-    Bool,
-    Vec,
-    Num,
-    Opt,
-    Optbool,
-    Sign,
-    Sign0,
-    Optsign,
-    Derived,
-}
-impl WhKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            WhKind::Stack => "stack",
-            WhKind::Unit => "unit",
-            WhKind::Bool => "bool",
-            WhKind::Vec => "vec",
-            WhKind::Num => "num",
-            WhKind::Opt => "opt",
-            WhKind::Optbool => "optbool",
-            WhKind::Sign => "sign",
-            WhKind::Sign0 => "sign0",
-            WhKind::Optsign => "optsign",
-            WhKind::Derived => "derived",
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct DOORFIT {
@@ -230,51 +173,6 @@ pub struct PlayerModWsPressValue {
     pub until: f64,
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct WH {
-    pub n: String,
-    pub along: String,
-    pub from: String,
-    pub d: String,
-    pub lo: String,
-    pub hi: String,
-    pub u: String,
-    pub v: String,
-    pub off: String,
-    pub away_t: String,
-    pub block_t: String,
-    pub settle: String,
-    pub peek: String,
-    pub open_lo: String,
-    pub open_hi: String,
-    pub seated: String,
-    pub drawn: String,
-    pub crouched: String,
-    pub side: String,
-    pub peek_dir: String,
-    pub block_dir: String,
-    pub at_edge: String,
-    pub take_t: String,
-    pub yaw0: String,
-    pub yaw_d: String,
-    pub hit_t: String,
-    pub ran: String,
-    pub up: String,
-    pub lean: String,
-    pub lean_dwell: String,
-    pub lean_out_t: String,
-    pub lean_off: String,
-    pub lean_more: String,
-    pub flip_t: String,
-    pub say_t: String,
-    pub rise: String,
-    pub owed: String,
-    pub cam_along: String,
-    pub lean_want: String,
-    pub lean_dir: String,
-    pub kind: String,
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct CollideManPl {
     pub char: crate::player::CollideManPlChar,
@@ -290,19 +188,6 @@ pub struct CollideManPlChar {
 pub enum ShellBreak {
     Fire,
     Bolt,
-}
-impl ShellBreak {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            ShellBreak::Fire => "fire",
-            ShellBreak::Bolt => "bolt",
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct StrideStepTap {
-    pub speed: f64,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -349,15 +234,6 @@ pub enum WallStepOffHow {
     Q,
     Away,
 }
-impl WallStepOffHow {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            WallStepOffHow::Run => "run",
-            WallStepOffHow::Q => "q",
-            WallStepOffHow::Away => "away",
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct WallSnapLaterWhy {
@@ -391,27 +267,11 @@ pub enum FreeHeldWhy {
     Shot,
     Cancel,
 }
-impl FreeHeldWhy {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            FreeHeldWhy::Shot => "shot",
-            FreeHeldWhy::Cancel => "cancel",
-        }
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum StartKickTool {
     Shotgun,
     Hammer,
-}
-impl StartKickTool {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            StartKickTool::Shotgun => "shotgun",
-            StartKickTool::Hammer => "hammer",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -517,12 +377,6 @@ pub fn door_fit() -> crate::player::DOORFIT { crate::player::DOORFIT { lat: [0.1
 /// (src/game/player.ts:167 SWEEP_STEP)
 pub const SWEEP_STEP: f64 = 0.2;
 
-/// (src/game/player.ts:219 PACE_MIN)
-pub const PACE_MIN: f64 = 0.35;
-
-/// (src/game/player.ts:219 PACE_STEP)
-pub const PACE_STEP: f64 = 0.13;
-
 /// (src/game/player.ts:261 RIFLE_EQUIP_SECS)
 pub const RIFLE_EQUIP_SECS: f64 = 0.45;
 
@@ -591,9 +445,6 @@ pub const WALL_PEEK_SECS: f64 = 0.3;
 
 /// (src/game/player.ts:992 PROP_BODY_R)
 pub const PROP_BODY_R: f64 = 0.3;
-
-/// (src/game/player.ts:1217 WH: a table nothing writes)
-pub fn wh() -> crate::player::WH { crate::player::WH { n: String::from("vec"), along: String::from("derived"), from: String::from("vec"), d: String::from("num"), lo: String::from("num"), hi: String::from("num"), u: String::from("num"), v: String::from("num"), off: String::from("num"), away_t: String::from("num"), block_t: String::from("num"), settle: String::from("unit"), peek: String::from("unit"), open_lo: String::from("bool"), open_hi: String::from("bool"), seated: String::from("bool"), drawn: String::from("bool"), crouched: String::from("bool"), side: String::from("sign"), peek_dir: String::from("sign"), block_dir: String::from("sign0"), at_edge: String::from("sign0"), take_t: String::from("opt"), yaw0: String::from("opt"), yaw_d: String::from("opt"), hit_t: String::from("opt"), ran: String::from("opt"), up: String::from("opt"), lean: String::from("opt"), lean_dwell: String::from("opt"), lean_out_t: String::from("opt"), lean_off: String::from("opt"), lean_more: String::from("opt"), flip_t: String::from("opt"), say_t: String::from("opt"), rise: String::from("opt"), owed: String::from("opt"), cam_along: String::from("opt"), lean_want: String::from("optbool"), lean_dir: String::from("optsign"), kind: String::from("stack") } }
 
 /// (src/game/player.ts:1382 LEAN_CHEST)
 pub const LEAN_CHEST: f64 = 1.2;

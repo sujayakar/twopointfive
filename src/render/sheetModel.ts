@@ -55,5 +55,5 @@ export const IMP_RESPONSE = {
   dust:   { gain: 0.7,  upK: 0.3, vMax: 3.0, wake: 0 },      // a puff is shoved along by the air (it never sleeps)
   casing: { gain: 0.3,  upK: 0.5, vMax: 3.5, wake: 0.3 },    // brass is heavy for its size: a short hop, a roll, the twinkle of it turning
   sheet:  { gain: 1.0,  upK: 1.0, vMax: 6.0, wake: 0.12 },   // THE reference kind: strength is quoted as a sheet's Δv at the centre
-  rain:   { gain: 0,    upK: 0,   vMax: 0,   wake: 0 },      // ignored like the spark: a rain drop (rust/game_rules/src/rain_fx) is gone before a push could show, and the impulses leave its ring alone
+  rain:   { gain: 0,    upK: 0,   vMax: 0,   wake: 0 },      // ignored like the spark: a rain drop (src/picture/rain.ts) is gone before a push could show, and the impulses leave its ring alone
 } satisfies Record<string, ImpulseResponse>;

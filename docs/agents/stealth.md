@@ -48,7 +48,7 @@ A new effect asks whose it is. The place is live: walls, weather, a lamp's glow,
 `fog_of_war_doing`). Everybody else stands as the team last saw him.
 
 **The pass.** `fog_of_war_pass`, late in the tick, while `fog_of_war_active`. The eyes, in order: each seat's man (or his wand's lens or peek), living
-teammates not blind, live stuck cameras, then a tutorial's eye (`rails_eye`, `rails_step_eye`), up to `fog_eye_count` and never past `FOG_EYES`. Under
+teammates not blind, live stuck cameras, then a tutorial step's eye (`rails_step_eye`), up to `fog_eye_count` and never past `FOG_EYES`. Under
 `k.fog.own` a teammate counts only by an ordered lens. Each man off the team is asked of them all (`fog_of_war_sees`, smoke by `smoke_between`) and
 `judge` writes his `Rec`.
 
@@ -93,7 +93,8 @@ reach. Only the rear grabs, and not an alert man; every window strikes. `close_r
 
 **The stalk.** `stalk_step` takes Sam's feet while the left button stays down on a man whose back he is behind: toward `station_m` behind him at the
 man's speed and a little. `out_of` ends it; `stalk_grab` hands on the grab. On a wall the held button is a wait (`corner_gate`, `corner_man`) and
-takes the man who comes past. Off a wall the `Grab` row works too; on one `stalk_click_only` leaves only the button.
+takes the man who comes past. Off a wall the `Grab` row ends it as well; on one, where the wait ends
+by itself, the button is the grab (`stalk_click_only`).
 
 **The hold.** `update_hold` runs `HoldPhase`: the gun comes out first (`disarm_begin`, `disarm_tick`), then `Held`, where `ask_held` and `answer_held`
 question him, `Choke` runs to `choke_out`, and `swap_hold` brings the pistol up for `Whip` or a round past him. `free_held` ends it.

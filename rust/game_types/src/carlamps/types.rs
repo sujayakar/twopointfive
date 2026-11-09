@@ -17,14 +17,6 @@ pub enum LampSigWhat {
     #[default] HeadLamp,
     TailLamp,
 }
-impl LampSigWhat {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            LampSigWhat::HeadLamp => "head lamp",
-            LampSigWhat::TailLamp => "tail lamp",
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct FoundLamp {

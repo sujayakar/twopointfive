@@ -6,7 +6,7 @@
 //   Tab       does nothing to the panel; the game is handed the press (Input.pressed) and the browser's focus does not move
 //   node tools/qa/panel-keys.cjs      env: PORT (the dev server's, default 5199) · QUALITY (default verylow)      exit 0 = every check passed, 1 = a FAIL, 2 = the script died
 const PAGE = require('./page.cjs').page({ name: 'panel-keys', detail: 'fail' }), { check, note: log } = PAGE;
-const KEY = 'Backslash';   // the debugger's key on the page's board: backslash while empty hands are the slot on backtick (rust/game_rules/src/handslot; under ?handslot=0 it is Backquote)
+const KEY = 'Backslash';   // the debugger's key on the page's board: backslash while empty hands are the slot on backtick (rust/game_types/src/handslot; under ?handslot=0 it is Backquote)
 const QUALITY = process.env.QUALITY || 'verylow';
 
 (async () => {

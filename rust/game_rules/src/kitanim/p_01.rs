@@ -9,15 +9,6 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// Pushes one row on the module's log, keeping the last 200.   (kitanim.ts note)
 pub fn note(g: &mut crate::game::Game, row: crate::kitanim::NoteRow) {
-    let what = match row.what {
-        crate::kitanim::NoteRowWhat::Reload => crate::kitanim::KitanimModKITANIMLOGItemWhat::Reload,
-        crate::kitanim::NoteRowWhat::Swap => crate::kitanim::KitanimModKITANIMLOGItemWhat::Swap,
-    };
-    let t = g.time;
-    g.m.kitanim.kitanim_log.push(crate::kitanim::KitanimModKITANIMLOGItem { t, what, from: row.from, to: row.to, kind: row.kind, secs: row.secs });
-    if g.m.kitanim.kitanim_log.len() > 200 {
-        g.m.kitanim.kitanim_log.remove(0);
-    }
 }
 
 /// The kit's part runs: nothing of it under the tour.   (kitanim.ts live)
@@ -102,7 +93,7 @@ fn hands_off_c(g: &crate::game::Game, c: CharId) -> bool {
 
 /// The part of the big tool's record `bigOff` reads.
 fn big_off_of(b: &crate::character::AnimBigTool) -> crate::character::BigOffB {
-    crate::character::BigOffB { t: b.t, equip: b.equip, stow: b.stow, end: b.end, snug: b.snug }
+    crate::character::BigOffB { t: b.t, equip: b.equip, stow: b.stow, end: b.end }
 }
 
 /// What the game's own rules put in Sam's right hand this frame.   (kitanim.ts kitInHand)
@@ -292,7 +283,7 @@ pub fn kit_tick(g: &mut crate::game::Game, late: Option<bool>) {
         if let Some(it) = cur {
             *g.stats.kitanim.draws.get_or_insert_with(it, || 0) += 1;
         }
-        note(g, crate::kitanim::NoteRow { what: crate::kitanim::NoteRowWhat::Swap, from: was, to: cur, kind: None, secs });
+        note(g, crate::kitanim::NoteRow {  });
     }
     g.pl[p].kit_was = Some(cur);
 }
@@ -504,7 +495,7 @@ fn reload_plan(t: &BeatTable, row_dur: f64, long: bool, keeps: bool, racks: bool
 /// A reload began on a kitReload plan: counted.   (kitanim.ts kitReloadNote)
 pub fn kit_reload_note(g: &mut crate::game::Game, kind: crate::kitanim::ReloadKind, secs: f64) {
     *g.stats.kitanim.reloads.get_or_insert_with(kind, || 0) += 1;
-    note(g, crate::kitanim::NoteRow { what: crate::kitanim::NoteRowWhat::Reload, kind: Some(kind), from: None, to: None, secs });
+    note(g, crate::kitanim::NoteRow {  });
 }
 
 #[cfg(test)]

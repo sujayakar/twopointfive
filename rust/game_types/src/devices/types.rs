@@ -5,7 +5,6 @@ use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct CameraDef2 {
-    pub kind: crate::devices::CameraDef2Kind,
     pub name: String,
     pub pos: V3,
     pub yaw: f64,
@@ -18,21 +17,8 @@ pub struct CameraDef2 {
     pub mains: Option<bool>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
-pub enum CameraDef2Kind {
-    #[default] Camera,
-}
-impl CameraDef2Kind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            CameraDef2Kind::Camera => "camera",
-        }
-    }
-}
-
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct KeypadDef2 {
-    pub kind: crate::devices::KeypadDef2Kind,
     pub name: String,
     pub pos: V3,
     pub yaw: f64,
@@ -40,39 +26,14 @@ pub struct KeypadDef2 {
     pub code: String,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
-pub enum KeypadDef2Kind {
-    #[default] Keypad,
-}
-impl KeypadDef2Kind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            KeypadDef2Kind::Keypad => "keypad",
-        }
-    }
-}
-
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct LaserDef2 {
-    pub kind: crate::devices::LaserDef2Kind,
     pub name: String,
     pub from: V3,
     pub to: V3,
     pub group: Option<String>,
     pub mains: Option<bool>,
     pub alarm: Option<crate::devices::LaserDef2Alarm>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
-pub enum LaserDef2Kind {
-    #[default] Laser,
-}
-impl LaserDef2Kind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            LaserDef2Kind::Laser => "laser",
-        }
-    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
@@ -118,7 +79,6 @@ impl Default for CameraRt { fn default() -> Self { Self::blank() } }
 #[derive(Clone, Debug, ToBytes)]
 pub struct LaserRt {
     pub def: crate::devices::LaserDef2,
-    pub index: f64,
     pub target: FixtureId,
     pub dir: V3,
     pub len: f64,
@@ -132,7 +92,6 @@ impl LaserRt {
     pub fn blank() -> Self {
         LaserRt {
             def: crate::devices::LaserDef2::default(),
-            index: 0.0,
             target: FixtureId(0),
             dir: [0.0; 3],
             len: 0.0,
@@ -152,64 +111,6 @@ pub struct KeypadRt {
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct DeviceLogRow {
-    pub seq: f64,
-    pub t: f64,
-    pub device: String,
-    pub what: crate::devices::DeviceLogRowWhat,
-    pub where_: String,
-    pub sent: Option<String>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
-pub enum DeviceLogRowWhat {
-    #[default] Dead,
-    Code,
-    Alarm,
-    Trip,
-    Suspicion,
-    Deny,
-    Overheard,
-}
-impl DeviceLogRowWhat {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DeviceLogRowWhat::Dead => "dead",
-            DeviceLogRowWhat::Code => "code",
-            DeviceLogRowWhat::Alarm => "alarm",
-            DeviceLogRowWhat::Trip => "trip",
-            DeviceLogRowWhat::Suspicion => "suspicion",
-            DeviceLogRowWhat::Deny => "deny",
-            DeviceLogRowWhat::Overheard => "overheard",
-        }
-    }
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct DevicesSnap {
-    pub cameras: Vec<crate::devices::DevicesSnapCamerasItem>,
-    pub lasers: Vec<crate::devices::DevicesSnapLasersItem>,
-    pub log: Vec<crate::devices::DeviceLogRow>,
-    pub radio_count: f64,
-    pub seq: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct DevicesSnapCamerasItem {
-    pub yaw: f64,
-    pub phase: f64,
-    pub seen: f64,
-    pub state: crate::sim_lightshome::CameraState,
-    pub reported_at: f64,
-    pub last_seen: Option<V3>,
-    pub dead_called: bool,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct DevicesSnapLasersItem {
-    pub last_trip_at: f64,
-    pub trips: f64,
-    pub dead_called: bool,
-    pub held: bool,
 }
 
 #[derive(Clone, Debug, ToBytes)]
@@ -254,45 +155,8 @@ pub struct ERRAND {
     pub react_t: f64,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct DEVICETUNEDEFAULTS {
-    pub devices: bool,
-    pub lasers: bool,
-    pub camera_suspicion_secs: f64,
-    pub camera_alarm_secs: f64,
-    pub device_cones: bool,
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct DevicesNoteR {
-    pub device: String,
-    pub what: crate::devices::DevicesNoteRWhat,
-    pub sent: Option<String>,
-    pub where_: String,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-pub enum DevicesNoteRWhat {
-    #[default] Dead,
-    Code,
-    Alarm,
-    Trip,
-    Suspicion,
-    Deny,
-    Overheard,
-}
-impl DevicesNoteRWhat {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DevicesNoteRWhat::Dead => "dead",
-            DevicesNoteRWhat::Code => "code",
-            DevicesNoteRWhat::Alarm => "alarm",
-            DevicesNoteRWhat::Trip => "trip",
-            DevicesNoteRWhat::Suspicion => "suspicion",
-            DevicesNoteRWhat::Deny => "deny",
-            DevicesNoteRWhat::Overheard => "overheard",
-        }
-    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -303,18 +167,6 @@ pub enum ChronDeviceKind {
     DeviceDown,
     CodeLearned,
     CodeEntered,
-}
-impl ChronDeviceKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            ChronDeviceKind::CameraSpotted => "cameraSpotted",
-            ChronDeviceKind::CameraAlarm => "cameraAlarm",
-            ChronDeviceKind::LaserTripped => "laserTripped",
-            ChronDeviceKind::DeviceDown => "deviceDown",
-            ChronDeviceKind::CodeLearned => "codeLearned",
-            ChronDeviceKind::CodeEntered => "codeEntered",
-        }
-    }
 }
 
 #[derive(Clone, Debug)]
@@ -395,8 +247,3 @@ pub fn red() -> V3 { [5.0, 0.3, 0.15] }
 /// (src/game/devices.ts:366 AMBER: a table nothing writes)
 pub fn amber() -> V3 { [5.0, 2.4, 0.2] }
 
-/// (src/game/devices.ts:406 LS_KEY)
-pub const LS_KEY: &str = "twopointsix.devices";
-
-/// (src/game/devices.ts:407 DEVICE_TUNE_DEFAULTS: a table nothing writes)
-pub fn device_tune_defaults() -> crate::devices::DEVICETUNEDEFAULTS { crate::devices::DEVICETUNEDEFAULTS { devices: true, lasers: true, camera_suspicion_secs: 0.8, camera_alarm_secs: 2.0, device_cones: true } }

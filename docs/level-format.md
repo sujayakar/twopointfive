@@ -9,7 +9,7 @@ and why they look as they do is `docs/agents/levels.md`; what a mission does wit
 | where | what it does |
 |---|---|
 | `tools/levels/lib/levelData.ts` | the schema: `KEYS`, `validateLevelData`, `serializeLevelData`. The export refuses a file it faults |
-| `src/scene/levelRows.ts`, `src/scene/scenarios.ts` | the TypeScript types of a box, door and light, and of the `scenarios` block |
+| `tools/levels/lib/levelRows.ts`, `tools/levels/lib/scenarios.ts` | the TypeScript types of a box, door and light, and of the `scenarios` block |
 | `tools/levels/lib/levelLoad.ts` | `levelToData` writes a file from a generator's `Level`; `loadLevel` reads it back for the tools |
 | `rust/game_start/src/level.rs` | the game's reader, `load`: boxes, props, lights, doors, routes and the small records |
 | `rust/game_start/src/records.rs` | a line for each record the game keeps as its own type (`scenarios`, `surfaces`, `plans`, `devices` and others) |
@@ -311,7 +311,7 @@ The rooms to take (`roomclear/`, `roomfight/`).
 
 - `name` text. The structure's name.
 - `team` team start, two `ops` at least; default the night breach's start, which needs `plans.breach`.
-- `starts` list of team starts; default none. Other ways in, beside a `team`: way 1 is `team`, way 2 the first of these. `?way=` picks one, and any deals one.
+- `starts` list of team starts; default none. Other ways in, beside a `team`: way 1 is `team`, way 2 the first of these. `?way=` picks one.
 - `maxMen` whole number 1 to `SQUAD_MAX_MEN`; default five. The most defenders alive at once.
 - `wayOut` true or false; default false. On Hard, the men a lost room draws hold one of its doors from back off it (`pressure/`).
 - `digIn` true or false; default true. False: this floor's men never brace a door, take cover or set a gun on a door (`roomfight/`).
@@ -402,8 +402,7 @@ On a level with `rails` only:
 `rails`:
 
 - `allow` list of actions (`rails/`). Every other key is dropped. `respawn` seconds at least 0; default he goes down: a teammate spends so long on a knee instead. `fog` true or false.
-- `waits` record of `low`; default they fall in at once. The squad holds where the mission stood it until a step allows the order key; `low` is on a knee. Not with `sky`.
-- `sky` record: `park` V3 (where the player is parked), `reach` number (how far the walk keys shift the view; default `k.rails.pan_reach`), `eye` as a step's, `low`. Nobody on the floor is the player.
+- `waits` record of `low`; default they fall in at once. The squad holds where the mission stood it until a step allows the order key; `low` is on a knee.
 - `lasers` false: no teammate shows an aiming laser. `flatRing` true: the squad's ring is one flat ring.
 - `orders` list of order ids; default all: what the squad's menu lists. `rows` list of verbs; default all: what Space offers.
 
@@ -437,7 +436,7 @@ A test is a record whose `is` says its kind, and `passes` runs it. Where it says
 | mate | `area`, `at`, `r` (default 1.5), `by`, `away` | the partner is there, and within `by` or past `away` of Sam |
 | pair | `what`, `n` | the pair's log has so many rows that start so |
 | cue | `name` | the script has cued it |
-| view | `turned`, `zoomed`, `panned` | the view has turned, zoomed or panned so far |
+| view | `turned`, `zoomed` | the view has turned or zoomed so far |
 | squad | `area`, `n` (default all) | so many of the squad are there |
 | stacks | `doors`, `n`, `set` | so many stand on each of those doors |
 | watching | `at`, `r` (default 3), `n` | so many teammates watch that point |
@@ -512,7 +511,8 @@ mark, a route's first point, a room's id or name, a place, or `spawn`.
 
 ## How to add a member
 
-1. Its type in `tools/levels/lib/levelData.ts` (or `src/scene/levelRows.ts`, `src/scene/scenarios.ts`), its name in `KEYS` or in the block's own list in `validateLevelData`, and its limits there.
+1. Its type in `tools/levels/lib/levelData.ts` (or `tools/levels/lib/levelRows.ts`, `tools/levels/lib/scenarios.ts`), its name in `KEYS` or in the block's
+   own list in `validateLevelData`, and its limits there.
 2. Both directions in `tools/levels/lib/levelLoad.ts`, where the record is not carried as written.
 3. The field in its type under `rust/game_types/src/`, and its line in `rust/game_start/src/records.rs` or `level.rs`. A member with no line stops the start.
 4. Its reader in the rules, its line on this page, then `bun run tools/levels/export.ts <name>` for each level and `bun run tools/qa/level-needs.ts <name> --run`.

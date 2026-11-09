@@ -14,8 +14,6 @@ macro_rules! asg { ($g:expr, $a:expr) => { $g.tab.orders_assignment[$a] } }
 
 fn pos_of(g: &Game, h: GuardId) -> V3 { g.ch[g.gd[h].ch].pos }
 fn floor_of(p: V3) -> V3 { [p[0], 0.0, p[2]] }
-/// ?pairorders and the harness's PAIRORDERS: host work, the address word writes g.k.pair.on before the game runs; nothing for the sim to do   (pairorders.ts flags)
-pub fn flags(g: &mut Game) {}
 
 /// a man's name in a line, or 'that man'   (pairorders.ts nameOf)
 pub fn name_of(g: &Game, h: GuardId) -> String {
@@ -151,9 +149,8 @@ pub fn pair_orders_rear(g: &Game, h: GuardId, p: V3, mostly: Option<bool>) -> bo
 
 /// a row of the log the probes and a lesson read; capped   (PairOrders.note)
 pub fn pair_orders_note(g: &mut Game, what: &str) {
-    let t = g.time;
     let serial = g.serial();
-    g.m.pairorders.pair_log.push(crate::pairorders::PairordersModPAIRLOGItem { t, what: String::from(what), serial });
+    g.m.pairorders.pair_log.push(crate::pairorders::PairordersModPAIRLOGItem { what: String::from(what), serial });
     if g.m.pairorders.pair_log.len() > 200 { g.m.pairorders.pair_log.drain(0..50); }
 }
 
@@ -311,7 +308,7 @@ pub fn pair_orders_rows(g: &mut Game) -> Vec<OrdersOrderDefId> {
 pub fn pair_orders_go_row(g: &mut Game) -> OrdersOrderDefId {
     use crate::orders::rows;
     crate::orders::squad_orders_row(g, rows::def(&rows::pairgo::ORDER, crate::orders::OrderDef {
-        head: Some(String::from(crate::orders::WORD_HEAD)), hot_key: Some(String::from("KeyF")), free: Some(true),
+        hot_key: Some(String::from("KeyF")), free: Some(true),
         targets: vec![crate::orders::TargetKind::Floor, crate::orders::TargetKind::Door, crate::orders::TargetKind::None, crate::orders::TargetKind::Foe],
         ..Default::default()
     }))

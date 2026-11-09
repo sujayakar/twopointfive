@@ -36,6 +36,6 @@ pub struct GlasspenK {
     #[k(3.0)] pub stack_eyes: f64,
     #[k(1.0)] pub stack_energy: f64,
     #[k(0.75)] pub stack_least_k: f64,
-    /// our energy → the fracture model's impact unit (its 1 = one pistol round square on: rebuild/glass/fracture.md)
+    /// our energy → the fracture model's impact unit (its 1 = one pistol round square on)
     #[k(2.0)] pub fracture_k: f64,
 }

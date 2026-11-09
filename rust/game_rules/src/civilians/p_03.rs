@@ -8,7 +8,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 use crate::character::{AnimAct, Bone, HoldPhase};
 use crate::chronicle::{ChronCountKey, ChronKind, ChronicleDataValue, ChronicleNDataValue};
-use crate::dialogue::{Band, DialoguePick, DialoguePickLineK, DialoguePickWidened, IntelKind, Knowledge, StageKey};
+use crate::dialogue::{Band, DialoguePick, DialoguePickWidened, IntelKind, Knowledge, StageKey};
 use crate::game::{DownBy, DownKind, GuardState, MissionStage, PlayerBubble, Temperament, WitnessCalledToBody, WitnessSawBody};
 use crate::guards::{body_pos, escalation_of, follow_path, go_to, point_in_view, say};
 use crate::scene_level::{CivilianDefKind, CivilianTask};
@@ -349,9 +349,8 @@ pub fn civilian_grabbed(g: &mut crate::game::Game, gd: GuardId) {
 /// the fields every answer of hers shares (the TypeScript's `base`)
 fn answer_base(cell: &str, text: String, id: &str, stage: StageKey, stage_n: f64, kind: Option<IntelKind>) -> DialoguePick {
     DialoguePick {
-        text, id: String::from(id), kind, stage, stage_n, cell: String::from(cell),
-        k: Knowledge::Saw, band: Band::High, t: Temperament::Nervy, line_k: DialoguePickLineK::Empty, widened: DialoguePickWidened::Empty,
-        after: None, script: None, shape: None,
+        text, id: String::from(id), kind, stage_n,
+        after: None,
     }
 }
 
@@ -432,7 +431,7 @@ pub fn civilian_sam_line(g: &mut crate::game::Game, gd: GuardId) -> crate::civil
     let lines = crate::dialogue::civ_lines();
     let pool: Vec<String> = if away(g) { lines.sam_ask.iter().map(|t| if t.contains("on this floor") { lines.own.sam_ask.clone() } else { t.clone() }).collect() } else { lines.sam_ask.clone() };
     let text = pick(g, gd, &pool);
-    CivilianSamLine { text, id: String::from("sam:civ") }
+    CivilianSamLine { text }
 }
 
 /// 'stay down, stay quiet': she is let go where she stands, told (civilians.ts civilianComply)
@@ -683,8 +682,7 @@ pub fn found_down(g: &mut crate::game::Game, cv: GuardId, o: GuardId) {
     let name = g.cv[cid].name.clone();
     let d = data_c(vec![("who", Dv::T(name.clone())), ("by", Dv::T(g.gd[o].callsign.clone())), ("breathing", Dv::B(!dead)), ("civilian", Dv::B(true))]);
     crate::chronicle::chronicle(g, ChronKind::BodyFound, Some(&d), Some(body));
-    let now = g.time;
-    g.gd[o].witness.saw_body = Some(WitnessSawBody { victim: name.clone(), t: now, breathing: !dead });
+    g.gd[o].witness.saw_body = Some(WitnessSawBody { victim: name.clone(), breathing: !dead });
     if g.gd[o].script.is_none() {
         crate::mind::raise(g, o, 0.7, "civilians"); crate::belief::word(g, o, body);
         g.gd[o].react_t = 1.2; g.gd[o].body_duty = None; g.gd[o].task = None;
@@ -702,7 +700,7 @@ pub fn found_down(g: &mut crate::game::Game, cv: GuardId, o: GuardId) {
     while i < g.guards.len() {
         let other = g.guards[i]; i += 1;
         if other == o || g.gd[other].state == GuardState::Dead || g.gd[other].team != Team::Guard || g.gd[other].held.is_some() { continue; }
-        g.gd[other].witness.called_to_body = Some(WitnessCalledToBody { victim: name.clone(), t: now, breathing: !dead });
+        g.gd[other].witness.called_to_body = Some(WitnessCalledToBody { victim: name.clone(), breathing: !dead });
         if g.gd[other].script.is_some() { continue; }
         crate::mind::raise(g, other, 0.45, "civilians");
         if g.gd[other].task.is_none() && g.gd[other].state != GuardState::Alert { crate::mind::fix(g, other, Some(body), "civilians"); }
@@ -816,17 +814,6 @@ pub fn evacuation_check(g: &mut crate::game::Game) {
     }
 }
 
-/// the switch and the fail rule, kept on the machine: the browser's storage is the host's, and with no storage the TypeScript's own try does nothing (civilians.ts saveCivTune)
-pub fn save_civ_tune(g: &crate::game::Game) {}
-
-
-/// the switch flipped live (civilians.ts setCivilians)
-pub fn set_civilians(g: &mut crate::game::Game, on: bool) {
-    g.tune.civilians = on;
-    save_civ_tune(g);
-    reset_civilians(g);
-}
-
 /// the panel's and the probes' buttons: frighten one now, or send her to a phone (civilians.ts civPanic)
 pub fn civ_panic(g: &mut crate::game::Game, gd: Option<GuardId>, what: Option<crate::civilians::CivPanicWhat>) -> String {
     let what = what.unwrap_or(CivPanicWhat::Panic);
@@ -859,30 +846,6 @@ pub fn civ_panic(g: &mut crate::game::Game, gd: Option<GuardId>, what: Option<cr
     if st != CivState::Work && st != CivState::Startled && st != CivState::Cower { return format!("{} is already {}", name, st.as_str()); }
     to_alarmed(g, gd, CivCause::Panel, pp, false);
     format!("{} panics (as if she had seen you where you stand)", name)
-}
-
-/// a check of the spots and every civilian's marks against the level: free nav cells, every spot reachable (civilians.ts checkCivSpots)
-pub fn check_civ_spots(g: &mut crate::game::Game) -> Vec<String> {
-    use crate::scene_collision::{nav_grid_find_path, nav_grid_is_blocked};
-    let mut errs: Vec<String> = Vec::new();
-    let found = civ_spots(g);
-    let spots: Vec<CivSpot> = found.phones.into_iter().chain(found.exits).collect();
-    for s in &spots {
-        if nav_grid_is_blocked(g, s.pos[0], s.pos[2]) { errs.push(format!("{} ({}, {}) is not a free nav cell", s.name, js::num_str(s.pos[0]), js::num_str(s.pos[2]))); }
-    }
-    let defs = g.level.civilians.clone().unwrap_or_default();
-    for def in &defs {
-        for (i, p) in def.points.iter().enumerate() {
-            if nav_grid_is_blocked(g, p[0], p[2]) { errs.push(format!("{} mark {} ({}, {}) is not a free nav cell", def.name, i, js::num_str(p[0]), js::num_str(p[2]))); }
-        }
-        for s in &spots {
-            if nav_grid_find_path(g, def.points[0], s.pos, Some(6000.0), None).is_none() { errs.push(format!("{} cannot reach {} from her first mark", def.name, s.name)); }
-        }
-        for i in 1..def.points.len() {
-            if nav_grid_find_path(g, def.points[i - 1], def.points[i], Some(6000.0), None).is_none() { errs.push(format!("{}: no path mark {} → {}", def.name, i - 1, i)); }
-        }
-    }
-    errs
 }
 
 #[cfg(test)]

@@ -101,7 +101,6 @@ pub fn anim_swap_info(g: &crate::game::Game, c: CharId) -> crate::character::Ani
     let s = &g.ch[c].anim.sw;
     crate::character::AnimSwapInfo {
         a: if s.t < 0.0 { -1.0 } else { s.t / s.dur },
-        to: s.to,
         pending: s.wait >= 0.0,
     }
 }

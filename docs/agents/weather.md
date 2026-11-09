@@ -32,7 +32,7 @@ In `rust/game_rules/src/`, with types and numbers under the same names in `rust/
 | `fire/` | an open fire: lamp, flicker, coals, cracks, embers, plume, hot air |
 | `moths/` | moths round the lit yard lamps; dress |
 | `snow_bog/`, `render_snow_field/` | how deep snow takes a thing that lands; which box is lying snow, by its word |
-| `snow_blast/`, `snow_tracks/`, `snow_marks/` | only what is told to the picture |
+| `snow_blast/`, `snow_marks/` | only what is told to the picture |
 | `dress/` | the rows a host with no picture puts down (`DressModDRESS`) |
 
 Hot loops are in `rust/sim/src/`: `weather.rs` (the table `Weather`), `air.rs`, `wind.rs`, `snow.rs`, `bog_of` in `items.rs`, `glow.rs`.

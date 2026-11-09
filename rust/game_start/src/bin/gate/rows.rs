@@ -57,7 +57,7 @@ impl Flags {
 }
 
 #[derive(Clone, PartialEq, Debug)]
-pub enum Job { Start(String, u32), Run(usize), Seats(String), Par(String), Played(String), Lesson(String, f64) }
+pub enum Job { Start(String, u32, u32), Run(usize), Seats(String), Par(String), Played(String), Lesson(String, f64) }
 impl Job {
     /// which is started first, the longest kinds before the others: the lower, the sooner
     pub fn rank(&self) -> u32 { match self { Job::Run(_) => 0, Job::Seats(_) => 1, Job::Par(_) | Job::Played(_) | Job::Lesson(..) => 2, Job::Start(..) => 3 } }
@@ -68,7 +68,7 @@ pub struct Row { pub name: String, pub job: Job }
 impl Row {
     pub fn pinned(&self) -> bool { self.column().is_some() || self.series().is_some() }
     /// its column of the pins' starts
-    pub fn column(&self) -> Option<String> { match &self.job { Job::Start(id, seats) => Some(column(id, *seats)), _ => None } }
+    pub fn column(&self) -> Option<String> { match &self.job { Job::Start(id, seats, way) => Some(if *way == 0 { column(id, *seats) } else { format!("{}/way{}", column(id, *seats), way) }), _ => None } }
     /// its line of the pins' series
     pub fn series(&self) -> Option<String> { match &self.job { Job::Run(_) if self.name.starts_with("play ") => Some(self.name.clone()), Job::Seats(_) | Job::Played(_) => Some(self.name.clone()), _ => None } }
     /// its line of the pins' words
@@ -77,6 +77,9 @@ impl Row {
 fn column(id: &str, seats: u32) -> String { format!("{}/{}", id, seats) }
 fn run_name(k: usize) -> String { format!("{} {}", RUNS[k].0, RUNS[k].1) }
 fn start_name(id: &str, seats: u32) -> String { format!("start {}, {}", id, if seats == 1 { "one player" } else { "two players" }) }
+/// the mission whose second way in has a row of its own: the words a link says it by are the whole of the difference
+const WAY_ROW: (&str, u32) = ("compound-four", 2);
+fn way_row_name() -> String { format!("start {}, way {}", WAY_ROW.0, WAY_ROW.1) }
 fn file_of(e: &ScenarioEntry) -> String { e.level.clone().unwrap_or_else(|| String::from("office.json")) }
 fn has_par(e: &ScenarioEntry) -> bool { let t = files::level_text(&file_of(e)); t.contains("\"par\"") && json::parse(&t).is_ok_and(|d| d.get("scenarios").has("par")) }
 
@@ -84,7 +87,8 @@ fn has_par(e: &ScenarioEntry) -> bool { let t = files::level_text(&file_of(e)); 
 pub fn all() -> Vec<Row> {
     let list = all_missions();
     let mut out = Vec::new();
-    for e in &list { for seats in [1, 2] { out.push(Row { name: start_name(&e.id, seats), job: Job::Start(e.id.clone(), seats) }); } }
+    for e in &list { for seats in [1, 2] { out.push(Row { name: start_name(&e.id, seats), job: Job::Start(e.id.clone(), seats, 0) }); } }
+    out.push(Row { name: way_row_name(), job: Job::Start(String::from(WAY_ROW.0), 1, WAY_ROW.1) });
     for kind in ["play", "again", "save", "load", "draw"] { for k in 0..RUNS.len() { out.push(Row { name: format!("{} {}", kind, run_name(k)), job: Job::Run(k) }); } }
     for id in SEATS { out.push(Row { name: format!("seats {}", id), job: Job::Seats(id.to_string()) }); }
     for e in list.iter().filter(|e| has_par(e)) { out.push(Row { name: format!("par {}", e.id), job: Job::Par(e.id.clone()) }); }
@@ -106,7 +110,7 @@ pub fn breaks() -> Vec<(String, &'static str, &'static str)> {
     let start = start_name("tut-road", 1);
     let (seats, par) = (format!("seats {}", SEATS[0]), String::from("par killhouse-four"));
     vec![
-        (start.clone(), "pin", "the start moved"), (start, "second", "a second start"),
+        (start.clone(), "pin", "the start moved"), (start, "second", "a second start"), (way_row_name(), "first", "stands on way"),
         (format!("play {}", run), "pin", "moved from second"), (format!("play {}", run), "silent", "never happens"),
         // (what a player sees: the figures may not be blind to any of it. On the kill house, whose squad is under an order by then)
         (format!("play {}", held_run), "aside", "where"), (format!("play {}", held_run), "round", "rounds"), (format!("play {}", held_run), "door", "door"), (format!("play {}", held_run), "order", "order"), (format!("play {}", held_run), "die", "die"),
@@ -132,7 +136,7 @@ pub fn one(names: &[String], f: Flags) {
     let mine: Vec<&Row> = names.iter().map(|n| rows.iter().find(|r| &r.name == n).unwrap_or_else(|| panic!("no row is called '{}'", n))).collect();
     let pins = Pins::read_file();
     match &mine[0].job {
-        Job::Start(id, seats) => start_row(&mine[0].name, id, *seats, &pins, f),
+        Job::Start(id, seats, way) => start_row(&mine[0].name, id, *seats, *way, mine[0].column().unwrap(), &pins, f),
         Job::Run(k) => run_rows(*k, &mine.iter().map(|r| r.name.split(' ').next().unwrap()).collect::<Vec<_>>(), &pins, f),
         Job::Seats(id) => seats_row(&mine[0].name, id, &pins, f),
         Job::Par(id) => par_row(&mine[0].name, id, f),
@@ -204,11 +208,14 @@ pub fn held(name: &str, track: &Track, end: &[u32], line: Option<&str>, pins: &P
 // ---- start
 
 /// THE START IS THE PINNED START, AND A SECOND START IN ONE PROCESS IS THE FIRST.
-/// BREAKS: `pin` a word of the pin made wrong · `second` the second start's seed is one more.
-fn start_row(name: &str, id: &str, seats: u32, pins: &Pins, f: Flags) {
+/// `way`: the word its link says (0: none): the game stands on that way, and all the rest holds of it.
+/// BREAKS: `pin` a word of the pin made wrong · `second` the second start's seed is one more · `first` the link of a way's row loses its word.
+fn start_row(name: &str, id: &str, seats: u32, way: u32, col: String, pins: &Pins, f: Flags) {
     let t = Instant::now();
-    let (e, col) = (mission(id), column(id, seats));
-    let mut p = stand(&e, SEED, seats);
+    let e = mission(id);
+    let link = if way == 0 || f.breaks("first") { pick_search(&e, "") } else { format!("{}&way={}", pick_search(&e, ""), way) };
+    let stand = |seed: u32| Play::mission(&file_of(&e), &link, &opts(seed, seats));
+    let mut p = stand(SEED);
     let refused = p.refused.as_deref().map(clean);
     let first = p.words();
     if f.pin {
@@ -219,6 +226,7 @@ fn start_row(name: &str, id: &str, seats: u32, pins: &Pins, f: Flags) {
         return say(name, t.elapsed().as_secs_f64(), &[], "");
     }
     let (mut fail, mut note) = (Vec::new(), String::new());
+    if way > 0 && p.way_taken() + 1 != way as usize { fail.push(format!("its link asks for way {}, and it stands on way {}", way, p.way_taken() + 1)); }
     match (pins.starts.get(&col), &refused) {
         (None, _) => fail.push(String::from("no pin: `gate pin` records it")),
         (Some(Start::Refused(a)), Some(b)) => if a != b { fail.push(format!("refused in other words: pinned '{}', now '{}' (pins.txt)", a, b)); },
@@ -241,7 +249,7 @@ fn start_row(name: &str, id: &str, seats: u32, pins: &Pins, f: Flags) {
     let (other, mut q) = before_it(&e, seats);
     q.run(OTHER_SECS as f64);
     drop(q);
-    let mut again = stand(&e, if f.breaks("second") { SEED + 1 } else { SEED }, seats);
+    let mut again = stand(if f.breaks("second") { SEED + 1 } else { SEED });
     let names = parts::names();
     let second = again.words();
     if second != first { fail.push(format!("a second start in one process, after {}, is another start in {}", other.id, named(&parts::differ(&names, &first, &second)))); }

@@ -73,36 +73,6 @@ impl Throwables {
 }
 impl Default for Throwables { fn default() -> Self { Self::blank() } }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct ItemFields {
-    pub kind: crate::throwables::ItemKind,
-    pub pos: V3,
-    pub vel: V3,
-    pub radius: f64,
-    pub restitution: f64,
-    pub friction: f64,
-    pub yaw: f64,
-    pub spin: f64,
-    pub settled: bool,
-    pub age: f64,
-    pub fuse: f64,
-    pub fired: bool,
-    pub life: f64,
-    pub tumble: f64,
-    pub tumble_rate: f64,
-    pub emit_t: f64,
-    pub fill: f64,
-    pub bounces: f64,
-    pub heading: f64,
-    pub who: f64,
-    pub on: Option<PropId>,
-    pub on_pose: f64,
-    pub serial: f64,
-    pub side: Option<crate::teams::Team>,
-    pub clatters: Option<f64>,
-    pub carried: Option<bool>,
-}
-
 #[derive(Clone, Debug, ToBytes)]
 pub struct Item {
     pub r: f64,
@@ -128,44 +98,9 @@ impl Item {
 impl Default for Item { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct BogGround {
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct SC20KITEM {
-    pub hull: crate::throwables::SC20KITEMHull,
-    pub fore: crate::throwables::SC20KITEMFore,
-    pub mag: crate::throwables::SC20KITEMMag,
-    pub optic: crate::throwables::SC20KITEMOptic,
     pub thick: f64,
-    pub polymer: V3,
     pub metal: V3,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct SC20KITEMHull {
-    pub z: f64,
-    pub h: [f64; 3],
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct SC20KITEMFore {
-    pub z: f64,
-    pub h: [f64; 3],
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct SC20KITEMMag {
-    pub z: f64,
-    pub y: f64,
-    pub h: [f64; 3],
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct SC20KITEMOptic {
-    pub z: f64,
-    pub y: f64,
-    pub h: [f64; 3],
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -229,8 +164,6 @@ pub struct RINGITEM {
     pub restitution: f64,
     pub friction: f64,
     pub life: f64,
-    pub half: [f64; 3],
-    pub albedo: V3,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -278,7 +211,6 @@ pub struct RIFLEITEM {
     pub radius: f64,
     pub restitution: f64,
     pub friction: f64,
-    pub life: f64,
     pub prop_share: f64,
     pub thick: f64,
     pub receiver: crate::throwables::RIFLEITEMReceiver,
@@ -318,8 +250,6 @@ pub struct RIFLEITEMStock {
 #[derive(Clone, Copy, Debug, Default)]
 pub struct ThrowablesRay {
     pub t: f64,
-    pub n: V3,
-    pub prop: Option<PropId>,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -353,7 +283,7 @@ pub struct ThrowablesSpawnOpts {
 }
 
 /// (src/game/throwables.ts:40 SC20K_ITEM: a table nothing writes)
-pub fn sc20_k_item() -> crate::throwables::SC20KITEM { crate::throwables::SC20KITEM { hull: crate::throwables::SC20KITEMHull { z: -0.06, h: [0.024, 0.04, 0.215] }, fore: crate::throwables::SC20KITEMFore { z: 0.3, h: [0.02, 0.024, 0.155] }, mag: crate::throwables::SC20KITEMMag { z: -0.115, y: -0.1, h: [0.012, 0.06, 0.016] }, optic: crate::throwables::SC20KITEMOptic { z: 0.02, y: 0.06, h: [0.017, 0.02, 0.06] }, thick: 0.024, polymer: [0.045, 0.05, 0.046], metal: [0.026, 0.026, 0.03] } }
+pub fn sc20_k_item() -> crate::throwables::SC20KITEM { crate::throwables::SC20KITEM { thick: 0.024, metal: [0.026, 0.026, 0.03] } }
 
 /// (src/game/throwables.ts:51 M4_ITEM: a table nothing writes)
 pub fn m4_item() -> crate::throwables::M4ITEM { crate::throwables::M4ITEM { hull: crate::throwables::M4ITEMHull { z: -0.09, h: [0.017, 0.034, 0.2] }, fore: crate::throwables::M4ITEMFore { z: 0.285, h: [0.023, 0.021, 0.17] }, mag: crate::throwables::M4ITEMMag { z: 0.085, y: -0.095, h: [0.011, 0.065, 0.028] }, optic: crate::throwables::M4ITEMOptic { z: 0.035, y: 0.052, h: [0.016, 0.02, 0.035] }, polymer: [0.03, 0.03, 0.033], metal: [0.03, 0.03, 0.033], fore_col: [0.2, 0.155, 0.1] } }
@@ -365,7 +295,7 @@ pub fn can_item() -> crate::throwables::CANITEM { crate::throwables::CANITEM { r
 pub fn frag_item() -> crate::throwables::FRAGITEM { crate::throwables::FRAGITEM { radius: 0.04, restitution: 0.3, friction: 0.45, half: [0.032, 0.032, 0.038], body: [0.13, 0.17, 0.08], band: [0.75, 0.62, 0.1], fuze: [0.3, 0.3, 0.28] } }
 
 /// (src/game/throwables.ts:65 RING_ITEM: a table nothing writes)
-pub fn ring_item() -> crate::throwables::RINGITEM { crate::throwables::RINGITEM { radius: 0.03, restitution: 0.3, friction: 0.6, life: 60.0, half: [0.03, 0.006, 0.007], albedo: [0.42, 0.4, 0.36] } }
+pub fn ring_item() -> crate::throwables::RINGITEM { crate::throwables::RINGITEM { radius: 0.03, restitution: 0.3, friction: 0.6, life: 60.0 } }
 
 /// (src/game/throwables.ts:71 SPONGE_ITEM: a table nothing writes)
 pub fn sponge_item() -> crate::throwables::SPONGEITEM { crate::throwables::SPONGEITEM { wide: 0.023, nose: crate::throwables::SPONGEITEMNose { z: 0.019, h: [0.022, 0.022, 0.019], albedo: [0.07, 0.24, 0.62] }, body: crate::throwables::SPONGEITEMBody { z: -0.014, h: [0.021, 0.021, 0.014], albedo: [0.05, 0.05, 0.055] }, band: crate::throwables::SPONGEITEMBand { z: -0.033, h: [0.023, 0.023, 0.005], albedo: [0.3, 0.3, 0.31] } } }
@@ -374,7 +304,7 @@ pub fn sponge_item() -> crate::throwables::SPONGEITEM { crate::throwables::SPONG
 pub fn shell_item() -> crate::throwables::SHELLITEM { crate::throwables::SHELLITEM { radius: 0.035, restitution: 0.22, friction: 0.5, life: 120.0, half: [0.02, 0.02, 0.05], body: [0.42, 0.43, 0.4], nose: [0.72, 0.55, 0.12] } }
 
 /// (src/game/throwables.ts:91 RIFLE_ITEM: a table nothing writes)
-pub fn rifle_item() -> crate::throwables::RIFLEITEM { crate::throwables::RIFLEITEM { radius: 0.06, restitution: 0.18, friction: 0.55, life: 240.0, prop_share: 0.3, thick: 0.02, receiver: crate::throwables::RIFLEITEMReceiver { z: -0.02, h: [0.018, 0.03, 0.13] }, fore: crate::throwables::RIFLEITEMFore { z: 0.24, h: [0.02, 0.022, 0.13] }, mag: crate::throwables::RIFLEITEMMag { z: 0.06, y: -0.075, h: [0.013, 0.05, 0.03], cant: 0.35 }, stock: crate::throwables::RIFLEITEMStock { z: -0.27, h: [0.008, 0.026, 0.12] }, steel: [0.05, 0.05, 0.055], wood: [0.2, 0.085, 0.05] } }
+pub fn rifle_item() -> crate::throwables::RIFLEITEM { crate::throwables::RIFLEITEM { radius: 0.06, restitution: 0.18, friction: 0.55, prop_share: 0.3, thick: 0.02, receiver: crate::throwables::RIFLEITEMReceiver { z: -0.02, h: [0.018, 0.03, 0.13] }, fore: crate::throwables::RIFLEITEMFore { z: 0.24, h: [0.02, 0.022, 0.13] }, mag: crate::throwables::RIFLEITEMMag { z: 0.06, y: -0.075, h: [0.013, 0.05, 0.03], cant: 0.35 }, stock: crate::throwables::RIFLEITEMStock { z: -0.27, h: [0.008, 0.026, 0.12] }, steel: [0.05, 0.05, 0.055], wood: [0.2, 0.085, 0.05] } }
 
 /// (src/game/throwables.ts:182 GRAVITY)
 pub const GRAVITY: f64 = 9.81;

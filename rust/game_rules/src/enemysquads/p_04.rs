@@ -703,7 +703,7 @@ fn tick_contact(g: &mut Game, q: EnemysquadsSquadId) {
             let s = &mut g.tab.enemysquads_squad[q];
             s.state = SquadState::Down;
             s.due.clear();
-            s.events.push(SquadEvent { t, what: SquadEventWhat::Down, n: 0.0, why: String::from("every man of it is down") });
+            s.events.push(SquadEvent { t, what: SquadEventWhat::Down });
             let what = format!("{} down", s.name);
             note(g, None, &what);
         }
@@ -719,7 +719,6 @@ fn tick_contact(g: &mut Game, q: EnemysquadsSquadId) {
         let mine = room_of(g, q, p0, Some(1.0));
         let (d, mine) = match (d, mine) { (Some(d), Some(r)) => (d, r), _ => continue };
         if g.time - g.gd[m].last_seen_t < 1.0 && (noticed(g, m) || glimpse(g, q, m)) {
-            let pt = g.tab.roomfight_def[d].pt;
             let p = match crate::belief::eyes_fix_def(g, m, d) { Some(k) => k, None => pos_of(g, m) };
             let r = match room_of(g, q, p, Some(0.75)) { Some(r) => r, None => mine };
             if !(noticed(g, m) && key_up(g, q, m, p, Some(&r), None)) { at = Some(p); room = Some(r); break; }

@@ -51,7 +51,7 @@ fn walk_in_view(g: &mut Game, seat: SeatId, cmds: &[crate::cmd::PlayerCmd], dt: 
         for i in 0..n { p[i] = g.ch[ch].pos; }
     }
     let f = crate::game::game_follow_pos(g, Some(m.char.pos));
-    Ahead { pos: m.char.pos, vel: m.char.vel, aim_yaw: m.char.aim_yaw, body_yaw: m.char.body_yaw, crouch: m.crouch, follow: f, aim, free }
+    Ahead { pos: m.char.pos, aim_yaw: m.char.aim_yaw, follow: f, aim, free }
 }
 
 /// The closure handed to Game.aside: every record, walked on `m`. (walkahead.ts:49 to 78)

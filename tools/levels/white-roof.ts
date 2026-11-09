@@ -30,7 +30,7 @@
 //   bun run tools/levels/export.ts white-roof [--check]     → levels/white-roof.json
 //   page: ?look&solo&levelFile=white-roof.json&hour=midday
 import type { Level, LevelDoorDef } from './lib/level';
-import type { LevelScenarios, Rect } from '../../src/scene/scenarios';
+import type { LevelScenarios, Rect } from './lib/scenarios';
 import type { SurfacesData } from './lib/levelData';
 import { officeKit, normalize3 as norm, type GeneratorTrace } from './lib/officeGen';
 import { gwotKit, gwotOfOffice, GWOT_MATERIALS } from './lib/gwotKit';
@@ -224,7 +224,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   grp('lights');
   G.tube(8.8, 11.0, false, 'service'); G.tube(8.8, 13.4, false, 'service'); G.tube(14.2, 11.0, false, 'lounge'); G.tube(14.2, 13.4, false, 'lounge');
   // (THE TUBES ARE THE ROOMS' LIGHT, each a light of its own, as in every level of the kit. A point lamp of 60 hung between each pair as well until 11-05: over twice the
-  // kit's bulb, it put 1.75 times the night's white on the floor under it before any bounce, and a night shows a lit room at the night's own exposure. docs/agents/levels.md)
+  // kit's bulb, it put 1.75 times the night's white on the floor under it before any bounce, and a night shows a lit room at the night's own exposure.)
   grp('exterior.lamps');
   G.floodLight(18.5, 22.8, [0.3, -1], 'flood_deck', true);
   lights.push({ kind: 'dir', pos: [0, 0, 0], dir: norm([0.5, -0.5, -0.7]), color: [0.55, 0.7, 1.0], intensity: 0.9, range: 1e6, innerDeg: 0, outerDeg: 0, name: 'moon', group: 'exterior', enabled: true, volumetric: 0, radius: 0.009, mains: false });

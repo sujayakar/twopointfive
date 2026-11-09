@@ -15,11 +15,6 @@ fn posed_chars(g: &mut Game) -> Vec<CharId> {
     out
 }
 
-/// every character the game poses: the players' men, the shift, the civilians   (posehome.ts:31 eachPosed)
-pub fn each_posed(g: &mut crate::game::Game, f: &mut dyn FnMut(&mut crate::game::Game, PoseSetId)) {
-    for c in posed_chars(g) { let s = g.ch[c].anim.poses; f(g, s); }
-}
-
 /// Every handle on a pose one character keeps besides his set's own list: his animator's stages and buffers, and his ragdoll's pose.
 /// A handle is a COPY of a place in the pool (the TypeScript's is the pose object, whose place is written in it), so whatever moves a pose rewrites these.
 fn handles(ch: &mut crate::character::Character, f: &mut dyn FnMut(&mut Pose)) {
@@ -139,7 +134,6 @@ pub fn pose_home_tend(g: &mut crate::game::Game) {
         if !home || g.tab.pose_set[s].stray != 0.0 { come_home(g, c); crate::anim_skeleton::pose_set_in(g, s); }
     }
 }
-
 
 // ---- THE STAGE (anim/skeleton.ts stageOpen / stageShut)
 //

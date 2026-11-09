@@ -4,18 +4,6 @@ use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug)]
-pub enum SameFogA {
-    Text(String),
-    URLSearchParams(crate::query::Query),
-}
-
-#[derive(Clone, Debug)]
-pub enum SameFogB {
-    Text(String),
-    URLSearchParams(crate::query::Query),
-}
-
-#[derive(Clone, Debug)]
 pub enum StartFromQuerySearch {
     Text(String),
     URLSearchParams(crate::query::Query),
@@ -23,7 +11,6 @@ pub enum StartFromQuerySearch {
 
 #[derive(Clone, Debug, Default)]
 pub struct StartFromQuery {
-    pub spec: Option<crate::scene_scenario_list::ScenarioSpec>,
     pub why: Option<String>,
 }
 
@@ -48,11 +35,7 @@ impl ActiveScenario {
 #[derive(Clone, Debug, Default)]
 pub struct RunningScenario {
     pub kind: crate::scenario_run::RunningScenarioKind,
-    pub squad: f64,
     pub entry: Option<crate::scene_scenarios::ScenarioEntry>,
-    pub title: String,
-    pub team: String,
-    pub saves: Option<bool>,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
@@ -61,34 +44,6 @@ pub enum RunningScenarioKind {
     Roomclear,
     Rescue,
     Quiet,
-}
-impl RunningScenarioKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RunningScenarioKind::Nightbreach => "nightbreach",
-            RunningScenarioKind::Roomclear => "roomclear",
-            RunningScenarioKind::Rescue => "rescue",
-            RunningScenarioKind::Quiet => "quiet",
-        }
-    }
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum QuitScenario {
-    Nightbreach,
-    Roomclear,
-    Rescue,
-    Quiet,
-}
-impl QuitScenario {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            QuitScenario::Nightbreach => "nightbreach",
-            QuitScenario::Roomclear => "roomclear",
-            QuitScenario::Rescue => "rescue",
-            QuitScenario::Quiet => "quiet",
-        }
-    }
 }
 
 /// (src/game/scenarioRun.ts:18 WORDS: a table nothing writes)

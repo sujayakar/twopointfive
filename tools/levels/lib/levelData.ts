@@ -20,12 +20,12 @@
 //     sums like (x0 + x1) / 2.
 //   - versioned: `version` is bumped on any breaking change; the loader refuses versions it does not know.
 import type { Vec3 } from '../../../src/math/vec';
-import { AUTHORED_FLAGS, type BoxData, type DoorData, type FlagName, type LightData, type ShapeData, type ShapePieceData } from '../../../src/scene/levelRows';
+import { AUTHORED_FLAGS, type BoxData, type DoorData, type FlagName, type LightData, type ShapeData, type ShapePieceData } from './levelRows';
 export { AUTHORED_FLAGS, type BoxData, type DoorData, type FlagName, type LightData, type ShapeData, type ShapePieceData };
 import type { WeaponId } from './level';
 import type { RoomClearPlan, BreachPlan, CivilianTask } from './level';
-import type { LevelScenarios } from '../../../src/scene/scenarios';
-import { SQUAD_MAX_MEN, QUIET_MAX_ROUTES } from '../../../src/scene/scenarios';
+import type { LevelScenarios } from './scenarios';
+import { SQUAD_MAX_MEN, QUIET_MAX_ROUTES } from './scenarios';
 import { CIVILIAN_TASKS } from './level';
 import { BoxFlag, type Box } from '../../../src/scene/boxes';
 import { MarkingDef, MAX_MARKS_PER_BOX, MARKING_TEXEL, markingErrors } from '../../../src/scene/markings';
@@ -58,7 +58,7 @@ export type Rect = { x0: number; x1: number; z0: number; z1: number };
 /** One storey. v1 has exactly one (y 0, ceiling 3); lane G2 adds a mezzanine: boxes / doors / props / volumes name the floor they belong to. */
 export interface FloorData { id: string; name?: string; /** world Y of the walkable surface */ y: number; /** ceiling height above y (WORLD.ceilingY today) */ ceiling: number; }
 /** A named paint: linear diffuse albedo. Boxes and prop parts reference materials by key OR carry an inline albedo (one-offs). `rough` / `metal` = the FINISH the
- *  ray-traced reflection pass reads (boxes.ts Box.rough / metal; docs/internal/claude-md-renderer-systems.md): GGX roughness 0‥1 (absent = matte, ROUGH_DEFAULT: no ray is
+ *  ray-traced reflection pass reads (boxes.ts Box.rough / metal): GGX roughness 0‥1 (absent = matte, ROUGH_DEFAULT: no ray is
  *  spent) and bare metal (F0 = albedo). A box may override either (BoxData.rough / metal). Old files carry neither and load exactly as before.
  *  `stuff` = WHAT THE PAINT IS MADE OF (scene/stuff.ts: a material of the look, 'plain', 'waits', or the two a round's hit reads, 'glass' and 'rubber'): every box and prop's part that wears the row is that,
  *  unless it says its own (BoxData.stuff). Absent = plain. The look's alone: no rule of the game reads it.
@@ -169,7 +169,7 @@ export interface LevelData {
   sky: SkyData;
   daylight?: DaylightData;
   plans: { roomClear: RoomClearPlanData[]; breach?: BreachPlanData };
-  /** what the playtest scenarios take from this level (scene/scenarios.ts — the RUNTIME structs verbatim, like the plans: door names are door ids). Optional:
+  /** what the playtest scenarios take from this level (lib/scenarios.ts — the RUNTIME structs verbatim, like the plans: door names are door ids). Optional:
    *  a level without the block stages none of them */
   scenarios?: LevelScenarios;
 }
@@ -196,7 +196,7 @@ export const KEYS = {
   mission: ['playerSpawn', 'objectives'], reach: ['id', 'kind', 'area', 'door'], drive: ['id', 'kind', 'rackIndex', 'front', 'halfW'], exfil: ['id', 'kind', 'door', 'x', 'z', 'out'],
   breaker: ['pos', 'panel', 'led', 'fumble'], beacon: ['id', 'pos', 'box'], sky: ['zenith', 'horizon'], daylight: ['sun', 'sky', 'groupsOn', 'groupsOff', 'lightsOff', 'haze', 'exposure'],
   plans: ['roomClear', 'breach'],   // (the container only — what is INSIDE a plan is generic, see canonBlob)
-  scenarios: ['nightBreach', 'roomClear', 'rescue', 'places', 'quiet', 'lesson', 'par', 'issue', 'kitView', 'response', 'doorNames', 'walked'],   // (the container only, likewise: what is inside is scene/scenarios.ts's, carried as written)
+  scenarios: ['nightBreach', 'roomClear', 'rescue', 'places', 'quiet', 'lesson', 'par', 'issue', 'kitView', 'response', 'doorNames', 'walked'],   // (the container only, likewise: what is inside is lib/scenarios.ts's, carried as written)
 } as const;
 /** the keys a shape's piece (BoxData.shape.with) may carry beside its form, in the order they are written. ITS OWN LIST, read by hand in three places
  *  (levelLoad.ts loadLevel and levelToData, canonShape below): a key a box gains for its paint is added here and there together, or a piece would be allowed
@@ -209,7 +209,7 @@ const isVec = (v: unknown, n = 3): boolean => Array.isArray(v) && v.length === n
 const isStr = (v: unknown): v is string => typeof v === 'string' && v.length > 0;
 /** a unit vector on the floor, [dx, dz] */
 const isUnit2 = (v: unknown): boolean => Array.isArray(v) && v.length === 2 && isNum(v[0]) && isNum(v[1]) && Math.abs(Math.hypot(v[0], v[1]) - 1) < 1e-3;
-/** the keys of a squad record and of its `arrive` (scene/scenarios.ts SquadData — the rest of a scenario block is carried as written; a squad's refs are checked) */
+/** the keys of a squad record and of its `arrive` (lib/scenarios.ts SquadData — the rest of a scenario block is carried as written; a squad's refs are checked) */
 const SQUAD_KEYS = ['id', 'name', 'rooms', 'rally', 'barricade', 'mayLeave', 'training', 'arrive'] as const, SQUAD_ARRIVE_KEYS = ['door', 'spawn', 'men'] as const;
 const isRect = (r: any): boolean => !!r && isNum(r.x0) && isNum(r.x1) && isNum(r.z0) && isNum(r.z1) && r.x0 <= r.x1 && r.z0 <= r.z1;
 
@@ -564,7 +564,7 @@ export function validateLevelData(d: LevelData): string[] {
             const ds = recs(`${rw}.doors`, r.doors); ds.forEach((x: any, j) => { doorOk(`${rw}.doors[${j}]`, x?.id); if (!isStr(x?.from)) err(`${rw}.doors[${j}]`, 'from'); });
             recs(`${rw}.marks`, r.marks).forEach((m: any, j) => { markOk(`${rw}.marks[${j}]`, m); if (!ds.some((x: any) => x?.id === m?.watch)) err(`${rw}.marks[${j}]`, `watches '${show(m?.watch)}', no door of this room`); });
           });
-          // squads (scene/scenarios.ts SquadData; the page's rules as far as the file alone can say them — standable floor and the way on foot are checkStructure's)
+          // squads (lib/scenarios.ts SquadData; the page's rules as far as the file alone can say them — standable floor and the way on foot are checkStructure's)
           if (R.maxMen !== undefined && !(Number.isInteger(R.maxMen) && R.maxMen >= 1 && R.maxMen <= SQUAD_MAX_MEN)) err(w, `maxMen: a whole number of men, at most ${SQUAD_MAX_MEN}`);
           if (R.wallCharges !== undefined && !(Number.isInteger(R.wallCharges) && R.wallCharges >= 1 && R.wallCharges <= 9)) err(w, 'wallCharges: a whole number of wall charges, 1 to 9');
           if (R.squads !== undefined) {
@@ -616,7 +616,7 @@ export function validateLevelData(d: LevelData): string[] {
           }
         }
       }
-      if (S.quiet !== undefined) {   // (scene/scenarios.ts QuietData: what the file alone can say — free floor, the ways on foot and first sight are rust/game_rules/src/quiet check_quiet's)
+      if (S.quiet !== undefined) {   // (lib/scenarios.ts QuietData: what the file alone can say — free floor, the ways on foot and first sight are rust/game_rules/src/quiet check_quiet's)
         const Q = S.quiet, w = 'scenarios.quiet';
         if (!isObj(Q)) err(w, 'must be an object');
         else {
@@ -645,13 +645,13 @@ export function validateLevelData(d: LevelData): string[] {
           for (const k of ['phones', 'wayouts'] as const) if (Q[k] !== undefined) recs(`${w}.${k}`, Q[k]).forEach((o, i) => standOk(`${w}.${k}[${i}]`, o, false));
         }
       }
-      if (S.lesson !== undefined) {   // (scene/scenarios.ts LessonData: the shapes only — what each test kind wants and whether its doors, lights and areas exist is rust/game_rules/src/lesson checkLesson's, against the built floor)
+      if (S.lesson !== undefined) {   // (lib/scenarios.ts LessonData: the shapes only — what each test kind wants and whether its doors, lights and areas exist is rust/game_rules/src/lesson checkLesson's, against the built floor)
         const L = S.lesson, w = 'scenarios.lesson';
         if (!isObj(L)) err(w, 'must be an object');
         else {
           known(w, L, ['title', 'steps', 'rails']);
           if (!isStr(L.title)) err(`${w}.title`, 'a non-empty string');
-          if (L.rails !== undefined) { const R = L.rails as any; if (!isObj(R)) err(`${w}.rails`, 'must be an object'); else { known(`${w}.rails`, R, ['allow', 'respawn', 'fog', 'sky', 'waits', 'rows', 'orders', 'lasers', 'flatRing']); if (R.flatRing !== undefined && typeof R.flatRing !== 'boolean') err(`${w}.rails.flatRing`, 'true or false'); if (R.lasers !== undefined && typeof R.lasers !== 'boolean') err(`${w}.rails.lasers`, 'true or false'); if (!Array.isArray(R.allow)) err(`${w}.rails.allow`, 'a list of actions'); if (R.rows !== undefined && !(Array.isArray(R.rows) && R.rows.every(isStr))) err(`${w}.rails.rows`, 'a list of verbs'); if (R.respawn !== undefined && !(isNum(R.respawn) && R.respawn >= 0)) err(`${w}.rails.respawn`, 'seconds ≥ 0'); if (R.sky !== undefined && !(isObj(R.sky) && isVec(R.sky.park))) err(`${w}.rails.sky`, '{ park: Vec3, reach? }'); } }   // (rust/game_rules/src/rails: the action names are checked against the built floor by checkLesson)
+          if (L.rails !== undefined) { const R = L.rails as any; if (!isObj(R)) err(`${w}.rails`, 'must be an object'); else { known(`${w}.rails`, R, ['allow', 'respawn', 'fog', 'waits', 'rows', 'orders', 'lasers', 'flatRing']); if (R.flatRing !== undefined && typeof R.flatRing !== 'boolean') err(`${w}.rails.flatRing`, 'true or false'); if (R.lasers !== undefined && typeof R.lasers !== 'boolean') err(`${w}.rails.lasers`, 'true or false'); if (!Array.isArray(R.allow)) err(`${w}.rails.allow`, 'a list of actions'); if (R.rows !== undefined && !(Array.isArray(R.rows) && R.rows.every(isStr))) err(`${w}.rails.rows`, 'a list of verbs'); if (R.respawn !== undefined && !(isNum(R.respawn) && R.respawn >= 0)) err(`${w}.rails.respawn`, 'seconds ≥ 0'); } }   // (rust/game_rules/src/rails: the action names are checked against the built floor by checkLesson)
           const steps = recs(`${w}.steps`, L.steps); if (!steps.length) err(w, 'steps: at least one');
           const ids = new Set<unknown>();
           steps.forEach((t: any, i) => { const tw = `${w}.steps[${i}]`; if (!isObj(t)) return; known(tw, t, ['id', 'line', 'setupLine', 'ringLine', 'blowLine', 'menuLine', 'pageLine', 'flatLine', 'done', 'hold', 'settle', 'at', 'atMan', 'allow', 'deny', 'cue', 'checkpoint', 'fog', 'noTap', 'eye', 'onWay', 'explain', 'toward', 'after']);
@@ -672,7 +672,7 @@ export function validateLevelData(d: LevelData): string[] {
             if (t.hold !== undefined && !(isNum(t.hold) && t.hold >= 0)) err(`${tw}.hold`, 'seconds ≥ 0'); if (t.at !== undefined && !isVec(t.at)) err(`${tw}.at`, 'Vec3'); });
         }
       }
-      if (S.par !== undefined) {   // (scene/scenarios.ts ParData: a room clear against a clock — rust/game_rules/src/par)
+      if (S.par !== undefined) {   // (lib/scenarios.ts ParData: a room clear against a clock — rust/game_rules/src/par)
         const P = S.par, w = 'scenarios.par';
         if (!isObj(P)) err(w, 'must be an object');
         else {
@@ -682,7 +682,7 @@ export function validateLevelData(d: LevelData): string[] {
           if (S.roomClear === undefined) err(w, 'a par stands over a room clear: the level has no scenarios.roomClear');
         }
       }
-      if (S.issue !== undefined) {   // (scene/scenarios.ts IssueData: kit this level hands the squad — rust/game_rules/src/kit kit_issue)
+      if (S.issue !== undefined) {   // (lib/scenarios.ts IssueData: kit this level hands the squad — rust/game_rules/src/kit kit_issue)
         const I = S.issue, w = 'scenarios.issue', BOOLS = ['suppressed', 'light', 'nvg'], NUMS = ['bangs', 'charges', 'smoke', 'frags', 'walls', 'shells'];
         if (!isObj(I) || !isObj(I.members)) err(w, 'must be an object { members: { <place>: { … } } }');
         else {
@@ -704,7 +704,7 @@ export function validateLevelData(d: LevelData): string[] {
             for (const n of NUMS) if (c[n] !== undefined && !(Number.isInteger(c[n]) && c[n] >= 0 && c[n] <= 9)) err(`${cw}.${n}`, 'a whole number 0‥9'); }
         }
       }
-      if (S.kitView !== undefined) {   // (scene/scenarios.ts KitViewData: the Team & kit picture of the team at the way-in door, rust/game_rules/src/kitstage; whether a place is free floor is the planner's to say, tools/qa/kitview-plan.ts)
+      if (S.kitView !== undefined) {   // (lib/scenarios.ts KitViewData: the Team & kit picture of the team at the way-in door, rust/game_rules/src/kitstage; whether a place is free floor is the planner's to say, tools/qa/kitview-plan.ts)
         const K = S.kitView, w = 'scenarios.kitView', nWays = isObj(S.roomClear) && S.roomClear.team !== undefined ? 1 + (Array.isArray(S.roomClear.starts) ? S.roomClear.starts.length : 0) : 1;
         if (!isObj(K)) err(w, 'must be an object');
         else {
@@ -769,7 +769,7 @@ export function validateLevelData(d: LevelData): string[] {
             if (y.roomLights !== undefined && !(isNum(y.roomLights) && y.roomLights >= 0)) err(`${yw}.roomLights`, 'a number, 0 or more'); });
         }
       }
-      if (S.doorNames !== undefined) {   // (scene/scenarios.ts: what a door is called where its id cannot say it — rust/game_rules/src/doornames)
+      if (S.doorNames !== undefined) {   // (lib/scenarios.ts: what a door is called where its id cannot say it — rust/game_rules/src/doornames)
         const w = 'scenarios.doorNames', seen = new Set<string>();
         if (!Array.isArray(S.doorNames)) err(w, 'must be an array of { door, name }');
         else S.doorNames.forEach((r: any, i: number) => { const rw = `${w}[${i}]`;
@@ -778,7 +778,7 @@ export function validateLevelData(d: LevelData): string[] {
           if (isStr(r.door)) { if (seen.has(r.door)) err(`${rw}.door`, `door '${r.door}' is named twice`); seen.add(r.door); }
           if (!isStr(r.name) || !r.name.trim() || r.name.length > 40) err(`${rw}.name`, 'must be a name of 1 to 40 characters'); });
       }
-      if (S.walked !== undefined) {   // (scene/scenarios.ts: ways the level is walked that nothing else in it says — rust/game_draw/src/traffic.rs; a name the level does not have walks nothing and is the level's lint's to say)
+      if (S.walked !== undefined) {   // (lib/scenarios.ts: ways the level is walked that nothing else in it says — rust/game_draw/src/traffic.rs; a name the level does not have walks nothing and is the level's lint's to say)
         const w = 'scenarios.walked';
         if (!Array.isArray(S.walked)) err(w, 'must be an array of { from, to, weight? }');
         else S.walked.forEach((r: any, i: number) => { const rw = `${w}[${i}]`;
@@ -787,7 +787,7 @@ export function validateLevelData(d: LevelData): string[] {
           for (const k of ['from', 'to'] as const) if (!isStr(r[k]) || !r[k].trim() || r[k].length > 64) err(`${rw}.${k}`, 'must be a name of 1 to 64 characters');   // (as long as an id may be: the editor's rename writes a door's or a route's new id here)
           if (r.weight !== undefined && !(isNum(r.weight) && r.weight > 0 && r.weight <= 8)) err(`${rw}.weight`, 'must be a number over 0, at most 8'); });
       }
-      if (S.response !== undefined) {   // (scene/scenarios.ts ResponseData: what the file alone can say — free floor and the walks in are rust/game_rules/src/qrf checkResponse's)
+      if (S.response !== undefined) {   // (lib/scenarios.ts ResponseData: what the file alone can say — free floor and the walks in are rust/game_rules/src/qrf checkResponse's)
         const R = S.response, w = 'scenarios.response';
         if (!isObj(R)) err(w, 'must be an object');
         else {
@@ -817,7 +817,7 @@ export function validateLevelData(d: LevelData): string[] {
           }
         }
       }
-      if (S.places !== undefined) {   // (scene/scenarios.ts PlacesData: the floor nobody holds, by name — words only)
+      if (S.places !== undefined) {   // (lib/scenarios.ts PlacesData: the floor nobody holds, by name — words only)
         if (!isObj(S.places)) err('scenarios.places', 'must be an object');
         else recs('scenarios.places.areas', S.places.areas).forEach((a: any, i) => { if (!isStr(a?.name)) err(`scenarios.places.areas[${i}].name`, 'a non-empty string'); if (!isRect(a?.bounds)) err(`scenarios.places.areas[${i}].bounds`, 'rect'); });
       }
@@ -958,7 +958,7 @@ export function canonicalLevelData(d: LevelData): LevelData {
     sky: pick(d.sky, KEYS.sky),
     ...(d.daylight ? { daylight: { ...pick(d.daylight, KEYS.daylight), sun: canonLight(d.daylight.sun), sky: pick(d.daylight.sky, KEYS.sky) } } : {}),
     plans: { roomClear: d.plans.roomClear.map(canonPlan), ...(d.plans.breach ? { breach: canonPlan(d.plans.breach) } : {}) },
-    ...(d.scenarios ? { scenarios: { ...pick(d.scenarios, KEYS.scenarios) } } : {}),   // (the three in KEYS order; inside each, the keys as written — scene/scenarios.ts is their shape)
+    ...(d.scenarios ? { scenarios: { ...pick(d.scenarios, KEYS.scenarios) } } : {}),   // (the three in KEYS order; inside each, the keys as written — lib/scenarios.ts is their shape)
   };
 }
 

@@ -23,21 +23,12 @@ pub struct GunPick {
     pub slot: crate::gunslots::GunSlot,
     pub can: Option<crate::weapons::WeaponId>,
     pub bare: Option<crate::weapons::WeaponId>,
-    pub bare_was: Option<crate::weapons::WeaponId>,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum SideHung {
     Carbine,
     Sc20k,
-}
-impl SideHung {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SideHung::Carbine => "carbine",
-            SideHung::Sc20k => "sc20k",
-        }
-    }
 }
 
 /// the counters this module keeps for the checks
@@ -55,7 +46,7 @@ pub const BREAK: bool = false;
 pub const SEEN_SECS: f64 = 0.5;
 
 /// (src/game/gunslots.ts:46 PICKS: a table nothing writes)
-pub fn picks() -> Vec<crate::gunslots::GunPick> { alloc::vec![crate::gunslots::GunPick { id: String::from("mk18"), slot: crate::gunslots::GunSlot::Primary, can: Some(crate::weapons::WeaponId::Fn2000), bare: Some(crate::weapons::WeaponId::Mk18bare), bare_was: Some(crate::weapons::WeaponId::Aks74u) }, crate::gunslots::GunPick { id: String::from("mk12"), slot: crate::gunslots::GunSlot::Primary, can: Some(crate::weapons::WeaponId::Mk12), bare: None, bare_was: None }, crate::gunslots::GunPick { id: String::from("mp7"), slot: crate::gunslots::GunSlot::Primary, can: Some(crate::weapons::WeaponId::Mp7), bare: None, bare_was: None }, crate::gunslots::GunPick { id: String::from("mk46"), slot: crate::gunslots::GunSlot::Primary, can: None, bare: Some(crate::weapons::WeaponId::Mk46), bare_was: None }, crate::gunslots::GunPick { id: String::from("m1014"), slot: crate::gunslots::GunSlot::Primary, can: None, bare: Some(crate::weapons::WeaponId::M1014), bare_was: None }, crate::gunslots::GunPick { id: String::from("g19"), slot: crate::gunslots::GunSlot::Secondary, can: Some(crate::weapons::WeaponId::Fiveseven), bare: Some(crate::weapons::WeaponId::G19bare), bare_was: Some(crate::weapons::WeaponId::Guard9mm) }, crate::gunslots::GunPick { id: String::from("hk45"), slot: crate::gunslots::GunSlot::Secondary, can: Some(crate::weapons::WeaponId::Hk45), bare: None, bare_was: None }, crate::gunslots::GunPick { id: String::from("g18"), slot: crate::gunslots::GunSlot::Secondary, can: None, bare: Some(crate::weapons::WeaponId::G18), bare_was: None }] }
+pub fn picks() -> Vec<crate::gunslots::GunPick> { alloc::vec![crate::gunslots::GunPick { id: String::from("mk18"), slot: crate::gunslots::GunSlot::Primary, can: Some(crate::weapons::WeaponId::Fn2000), bare: Some(crate::weapons::WeaponId::Mk18bare) }, crate::gunslots::GunPick { id: String::from("mk12"), slot: crate::gunslots::GunSlot::Primary, can: Some(crate::weapons::WeaponId::Mk12), bare: None }, crate::gunslots::GunPick { id: String::from("mp7"), slot: crate::gunslots::GunSlot::Primary, can: Some(crate::weapons::WeaponId::Mp7), bare: None }, crate::gunslots::GunPick { id: String::from("mk46"), slot: crate::gunslots::GunSlot::Primary, can: None, bare: Some(crate::weapons::WeaponId::Mk46) }, crate::gunslots::GunPick { id: String::from("m1014"), slot: crate::gunslots::GunSlot::Primary, can: None, bare: Some(crate::weapons::WeaponId::M1014) }, crate::gunslots::GunPick { id: String::from("g19"), slot: crate::gunslots::GunSlot::Secondary, can: Some(crate::weapons::WeaponId::Fiveseven), bare: Some(crate::weapons::WeaponId::G19bare) }, crate::gunslots::GunPick { id: String::from("hk45"), slot: crate::gunslots::GunSlot::Secondary, can: Some(crate::weapons::WeaponId::Hk45), bare: None }, crate::gunslots::GunPick { id: String::from("g18"), slot: crate::gunslots::GunSlot::Secondary, can: None, bare: Some(crate::weapons::WeaponId::G18) }] }
 
 /// (src/game/gunslots.ts:57 NO_PRIMARY)
 pub const NO_PRIMARY: &str = "none";

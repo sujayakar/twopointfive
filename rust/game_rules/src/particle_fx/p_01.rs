@@ -7,9 +7,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-
 // ---------------------------------------------------------------- dust: every puff goes through one table
-
 
 /// THE dust emit: the site's numbers times the table; the count rounded, never below 1 where a site asked for any. (particleFx.ts emitDust)
 pub fn emit_dust(g: &mut crate::game::Game, pos: V3, dir: V3, count: f64, o: crate::render_particles::EmitOpts) -> f64 {
@@ -390,43 +388,6 @@ pub fn clear_particle_fx(g: &mut crate::game::Game) {
 /// QA: the cases waiting to be heard. (particleFx.ts pendingTinks)
 pub fn pending_tinks(g: &mut crate::game::Game) -> Vec<crate::particle_fx::PendingTinksItem> {
     state_of(g).tinks.iter().map(|k| crate::particle_fx::PendingTinksItem { t: k.t, pos: k.pos }).collect()
-}
-
-/// Panel: what the sites throw, without firing anything. (particleFx.ts testBurst)
-pub fn test_burst(g: &mut crate::game::Game, kind: crate::particle_fx::TestBurstKind, at: V3) -> f64 {
-    use crate::particle_fx::TestBurstKind as K;
-    let pfx = g.m.particle_fx.pfx;
-    let up: V3 = [0.0, 1.0, 0.0];
-    let p = v3::add(at, [0.0, 0.05, 0.0]);
-    match kind {
-        K::Sheets => crate::render_particles::particles_emit(g, crate::render_particles::PKind::Sheet, v3::add(at, [0.0, 0.35, 0.0]), up, 40.0, Emit {
-            shape: Some(crate::render_particles::EmitShape::Burst), spread: Some(0.2), lift: Some(0.35), speed: 3.2, speed_jit: Some(0.7), life: 60.0, life_jit: Some(0.2), size: 0.21, size_jit: Some(0.15), aspect: Some(1.41), tumble: Some(7.0), nrm_jit: Some(0.5), pos_jit: Some(0.25), color: Some([0.86, 0.86, 0.82]), ..Emit::default()
-        }),
-        K::Sparks => crate::render_particles::particles_emit(g, crate::render_particles::PKind::Spark, p, up, 60.0, Emit {
-            speed: 5.0, speed_jit: Some(0.6), spread: Some(1.1), life: 0.5, life_jit: Some(0.4), size: pfx.spark_size, ..Emit::default()
-        }),
-        K::Debris => crate::render_particles::particles_emit(g, crate::render_particles::PKind::Debris, p, up, 40.0, Emit {
-            speed: 3.0, speed_jit: Some(0.7), spread: Some(1.2), life: pfx.chip_life, life_jit: Some(0.3), size: pfx.chip_size, size_jit: Some(0.5), color: Some([0.8, 0.78, 0.74]), ..Emit::default()
-        }),
-        K::Dust => emit_dust(g, v3::add(at, [0.0, 0.12, 0.0]), up, 12.0, Emit {
-            shape: Some(crate::render_particles::EmitShape::Puff), speed: 0.9, speed_jit: Some(0.5), lift: Some(0.2), life: 1.6, life_jit: Some(0.3), size: 0.15, size_jit: Some(0.35), pos_jit: Some(0.1), color: Some([0.75, 0.73, 0.7]), ..Emit::default()
-        }),
-        K::Casings => {
-            let mut n = 0.0;
-            for i in 0..15 {
-                let a = i as f64 * 0.9;
-                let color = if i % 3 == 0 { crate::particle_fx::lacquered_steel() } else { crate::particle_fx::brass() };
-                n += crate::render_particles::particles_emit(g, crate::render_particles::PKind::Casing, v3::add(at, [0.0, 0.25, 0.0]), [m::cos(a), 1.6, m::sin(a)], 1.0, Emit {
-                    speed: 2.5, speed_jit: Some(0.4), spread: Some(0.4), life: pfx.casing_life, life_jit: Some(0.1), size: 0.0095, size_jit: Some(0.0), color: Some(color), ..Emit::default()
-                });
-            }
-            n
-        }
-        K::Bang => {
-            bang_fx(g, v3::add(at, [0.0, crate::effects::bang().height, 0.0]));
-            pfx.bang_sparks + pfx.bang_ring + pfx.bang_puff
-        }
-    }
 }
 
 /// `b.…` of a box. Skeleton 5 keeps `g.col.boxes: Vec<BoxId>` and no table of Box rows, while the index says `g.col.boxes[id].albedo`; once there is a table the body is the row.

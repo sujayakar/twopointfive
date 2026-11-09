@@ -1,7 +1,7 @@
 // KIT-YARD: the map kit's own throwaway — NOT a level to play for its own sake, and not in the start card's table. A walled yard with two small buildings,
 // two gates and three rooms to take, there so that levels stands and tools/qa/map-plan.ts have a map that is none of the office's shell to be
 // proved on: outside doors as ways in, a team that starts outside the wall, open ground between the buildings, and a `squads` block in the format of
-// rebuild/enemy-squads/squad-format.md (two squads that hold rooms and one that arrives later by the south gate).
+// docs/level-format.md (two squads that hold rooms and one that arrives later by the south gate).
 //
 //        x 8  10          17          24                 32
 //   z 6  ┌────┬───────────┬───────────┬──────────────────┐
@@ -16,7 +16,7 @@
 // editor groups; `bun run tools/levels/export.ts <name>` writes levels/<name>.json; `levels stands <name>` says whether it holds.
 import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef } from './lib/level';
-import type { LevelScenarios, Rect, StructureData } from '../../src/scene/scenarios';
+import type { LevelScenarios, Rect, StructureData } from './lib/scenarios';
 import type { SurfacesData } from './lib/levelData';
 import { officeKit, normalize3 as norm, OFFICE_PALETTE, type GeneratorTrace } from './lib/officeGen';
 import { WORLD } from '../../src/scene/world';
@@ -142,7 +142,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
           { pos: [28.4, 0, 19.0], watch: 's_w', aimAt: [22.16, 1.1, 19.0] },
         ] },
     ],
-    // (rebuild/enemy-squads/squad-format.md: the game at this commit does not read it; levels stands holds it to its rules, map-plan.ts draws it)
+    // (docs/level-format.md: the game at this commit does not read it; levels stands holds it to its rules, map-plan.ts draws it)
     squads: [
       { id: 'north', name: 'North', rooms: ['bunks', 'radio'], rally: [19.6, 0, 8.6] },
       { id: 'store', name: 'Store', rooms: ['store'], rally: [26.4, 0, 19.2], barricade: ['s_w'], mayLeave: false },

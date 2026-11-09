@@ -20,13 +20,13 @@ pub fn mem<'g>(g: &'g mut crate::game::Game, gd: GuardId) -> &'g mut crate::atte
 
 /// The last few endings, for the check. (attention.ts log)
 pub fn log(g: &mut crate::game::Game, gd: GuardId, what: &str, h: crate::attention::LogH) {
-    let item = AttentionModATTENTIONLOGItem { t: g.time, who: g.gd[gd].callsign.clone(), what: String::from(what), kind: h.kind, secs: h.secs, nth: h.nth };
+    let item = AttentionModATTENTIONLOGItem { what: String::from(what), secs: h.secs };
     let list = &mut g.m.attention.attention_log;
     list.push(item);
     if list.len() > 48 { list.remove(0); }
 }
 
-fn log_h(h: &Hold) -> LogH { LogH { kind: h.kind, secs: h.secs, nth: h.nth } }
+fn log_h(h: &Hold) -> LogH { LogH { secs: h.secs } }
 
 /// Every line of this file's pools, for the words check. (attention.ts attentionLines)
 pub fn attention_lines() -> Vec<String> {
@@ -346,7 +346,7 @@ pub fn attention_tick(g: &mut crate::game::Game, gd: GuardId) {
                 g.gd[gd].path_goal = None; g.gd[gd].path_goal_orbit = false;   // (guard_set_path_goal's rule, for the row in hand)
                 g.gd[gd].stall_ref = None;
                 g.stats.attention.spent += 1;
-                log(g, gd, "spent", LogH { kind: cand.kind, secs: 0.0, nth });
+                log(g, gd, "spent", LogH { secs: 0.0 });
                 line(g, gd, &if foe_lines { spent_foe() } else { spent() });
                 return;
             }
@@ -657,7 +657,7 @@ mod tests {
     #[test]
     fn the_log_keeps_the_last_48() {
         let (mut g, gd) = game();
-        for i in 0..50 { log(&mut g, gd, "x", LogH { kind: DrawKind::Noise, secs: i as f64, nth: 1 }); }
+        for i in 0..50 { log(&mut g, gd, "x", LogH { secs: i as f64 }); }
         assert_eq!(g.m.attention.attention_log.len(), 48);
         assert_eq!(g.m.attention.attention_log[0].secs, 2.0);
     }

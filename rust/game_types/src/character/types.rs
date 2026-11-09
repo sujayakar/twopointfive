@@ -116,8 +116,6 @@ pub struct AnimNodes {
     pub shin_r: usize,
     pub foot_r: usize,
     pub toe_r: usize,
-    pub shoulder_l: usize,
-    pub shoulder_r: usize,
     pub middle1_r: usize,
     pub middle1_l: usize,
 }
@@ -128,16 +126,6 @@ pub enum UpperMode {
     Torch,
     Aim,
     Relaxed,
-}
-impl UpperMode {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            UpperMode::None => "none",
-            UpperMode::Torch => "torch",
-            UpperMode::Aim => "aim",
-            UpperMode::Relaxed => "relaxed",
-        }
-    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
@@ -217,14 +205,6 @@ pub enum StrikeKind {
     Cross,
     Jab,
 }
-impl StrikeKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            StrikeKind::Cross => "cross",
-            StrikeKind::Jab => "jab",
-        }
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum BlowStyle {
@@ -253,17 +233,6 @@ pub enum FallStyle {
     Sink,
     Cut,
     Slump,
-}
-impl FallStyle {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            FallStyle::Fold => "fold",
-            FallStyle::Topple => "topple",
-            FallStyle::Sink => "sink",
-            FallStyle::Cut => "cut",
-            FallStyle::Slump => "slump",
-        }
-    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
@@ -324,14 +293,6 @@ impl HoldPhase {
 pub enum HoldVariant {
     #[default] Gun,
     Arm,
-}
-impl HoldVariant {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            HoldVariant::Gun => "gun",
-            HoldVariant::Arm => "arm",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -421,14 +382,6 @@ pub enum CarryKind2 {
     Torch,
     Weapon,
 }
-impl CarryKind2 {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            CarryKind2::Torch => "torch",
-            CarryKind2::Weapon => "weapon",
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct HaulPose {
@@ -517,15 +470,6 @@ pub struct MvGait {
     pub g: f64,
     pub u: f64,
     pub st: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct ReadyHand {
-    pub pole: V3,
-    pub fing: V3,
-    pub back: V3,
-    pub curl: f64,
-    pub thumb: f64,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -658,7 +602,6 @@ pub struct Anim {
     pub big_at_back: f64,
     pub big_grab: f64,
     pub hold_gun_side: bool,
-    pub raw_clip: Option<crate::character::AnimRawClip>,
     pub act: Option<crate::character::AnimAct>,
     pub slump: f64,
     pub slump_w: f64,
@@ -967,7 +910,6 @@ impl Anim {
             big_at_back: 0.0,
             big_grab: 0.0,
             hold_gun_side: false,
-            raw_clip: None,
             act: None,
             slump: 0.0,
             slump_w: 0.0,
@@ -1260,14 +1202,6 @@ pub enum AnimCarry {
     Torch,
     Weapon,
 }
-impl AnimCarry {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            AnimCarry::Torch => "torch",
-            AnimCarry::Weapon => "weapon",
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct AnimLongGrip {
@@ -1294,27 +1228,11 @@ pub enum AnimBigToolKind {
     #[default] Shotgun,
     Hammer,
 }
-impl AnimBigToolKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            AnimBigToolKind::Shotgun => "shotgun",
-            AnimBigToolKind::Hammer => "hammer",
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct AnimBigSide {
     pub o: V3,
     pub z: V3,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct AnimRawClip {
-    pub clip: ClipId,
-    pub time: f64,
-    pub rate: f64,
-    pub loop_: bool,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -1553,48 +1471,6 @@ pub struct AnimSw {
     pub belt: f64,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum AnimSwCur {
-    Torch,
-    Weapon,
-}
-impl AnimSwCur {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            AnimSwCur::Torch => "torch",
-            AnimSwCur::Weapon => "weapon",
-        }
-    }
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum AnimSwFrom {
-    Torch,
-    Weapon,
-}
-impl AnimSwFrom {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            AnimSwFrom::Torch => "torch",
-            AnimSwFrom::Weapon => "weapon",
-        }
-    }
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum AnimSwTo {
-    Torch,
-    Weapon,
-}
-impl AnimSwTo {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            AnimSwTo::Torch => "torch",
-            AnimSwTo::Weapon => "weapon",
-        }
-    }
-}
-
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct AnimRx {
     pub left: f64,
@@ -1763,14 +1639,6 @@ pub enum AnimKickLeg {
     Left,
     Right,
 }
-impl AnimKickLeg {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            AnimKickLeg::Left => "left",
-            AnimKickLeg::Right => "right",
-        }
-    }
-}
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct AnimHn {
@@ -1789,64 +1657,6 @@ pub struct AnimHn {
     pub off: f64,
     pub fired: f64,
     pub gun: f64,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum AnimNodesKey {
-    Spine2,
-    Hips,
-    Head,
-    UpperArmR,
-    UpperArmL,
-    HandL,
-    HandR,
-    FootL,
-    FootR,
-    ToeL,
-    ToeR,
-    ForearmL,
-    ForearmR,
-    ThighL,
-    ShinL,
-    ThighR,
-    ShinR,
-    Neck,
-    Spine1,
-    Spine3,
-    ShoulderL,
-    ShoulderR,
-    Middle1R,
-    Middle1L,
-}
-impl AnimNodesKey {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            AnimNodesKey::Spine2 => "spine2",
-            AnimNodesKey::Hips => "hips",
-            AnimNodesKey::Head => "head",
-            AnimNodesKey::UpperArmR => "upperArmR",
-            AnimNodesKey::UpperArmL => "upperArmL",
-            AnimNodesKey::HandL => "handL",
-            AnimNodesKey::HandR => "handR",
-            AnimNodesKey::FootL => "footL",
-            AnimNodesKey::FootR => "footR",
-            AnimNodesKey::ToeL => "toeL",
-            AnimNodesKey::ToeR => "toeR",
-            AnimNodesKey::ForearmL => "forearmL",
-            AnimNodesKey::ForearmR => "forearmR",
-            AnimNodesKey::ThighL => "thighL",
-            AnimNodesKey::ShinL => "shinL",
-            AnimNodesKey::ThighR => "thighR",
-            AnimNodesKey::ShinR => "shinR",
-            AnimNodesKey::Neck => "neck",
-            AnimNodesKey::Spine1 => "spine1",
-            AnimNodesKey::Spine3 => "spine3",
-            AnimNodesKey::ShoulderL => "shoulderL",
-            AnimNodesKey::ShoulderR => "shoulderR",
-            AnimNodesKey::Middle1R => "middle1R",
-            AnimNodesKey::Middle1L => "middle1L",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -1874,20 +1684,6 @@ pub struct AnimHdIdle {
     pub long: bool,
     pub crouch: f64,
     pub carry: Option<Option<crate::character::AnimCarry>>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum AnimHdIdleCarry {
-    Torch,
-    Weapon,
-}
-impl AnimHdIdleCarry {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            AnimHdIdleCarry::Torch => "torch",
-            AnimHdIdleCarry::Weapon => "weapon",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -2146,18 +1942,6 @@ pub struct SWAP {
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct HOLDPOLISHUP {
-    pub lay_ahead: f64,
-    pub dip: f64,
-    pub back: f64,
-    pub m: f64,
-    pub twist: f64,
-    pub side: f64,
-    pub tip: f64,
-    pub arch: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct HOLDPOLISHDOWN {
     pub lay_ahead: f64,
     pub dip: f64,
     pub back: f64,
@@ -2486,14 +2270,6 @@ pub struct LONGRELOADBox {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct LONGRELOADBack {
-    pub at: V3,
-    pub pitch: f64,
-    pub aim_k: f64,
-    pub yaw: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct LONGRELOADHead {
     pub yaw: f64,
     pub pitch: f64,
@@ -2515,10 +2291,6 @@ pub struct LC {
     pub head_roll: f64,
     pub elbow_r: f64,
     pub elbow_l: f64,
-    pub pole_w: f64,
-    pub sway: f64,
-    pub anchor: f64,
-    pub steady: f64,
     pub count: f64,
 }
 
@@ -2555,10 +2327,6 @@ pub struct CharacterModLONGSTEADY {
     pub run_yaw: f64,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct FOLDWITH {
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct HAND {
     pub can: crate::character::HANDCan,
@@ -2583,16 +2351,6 @@ pub struct HAND {
 pub struct HANDCan {
     pub curl: Vec<f64>,
     pub thumb: f64,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct WOUNDPOSEValue {
-    pub clip: String,
-    pub rate: f64,
-    pub hold: [f64; 2],
-    pub breath: f64,
-    pub in_: f64,
-    pub head: f64,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -2621,16 +2379,6 @@ pub struct MV2Reload {
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct MV2ReloadBox {
-    pub mag: V3,
-    pub strip: V3,
-    pub handle: V3,
-    pub pull: V3,
-    pub hf: V3,
-    pub hb: V3,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct MV2ReloadBack {
     pub mag: V3,
     pub strip: V3,
     pub handle: V3,
@@ -2732,37 +2480,6 @@ pub struct MV2Dip {
     pub lane: Vec<f64>,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct TURNFEEL {
-    pub light: crate::character::TURNFEELLight,
-    pub medium: crate::character::TURNFEELMedium,
-    pub heavy: crate::character::TURNFEELHeavy,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct TURNFEELLight {
-    pub aim: f64,
-    pub aim_acc: f64,
-    pub body: f64,
-    pub body_acc: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct TURNFEELMedium {
-    pub aim: f64,
-    pub aim_acc: f64,
-    pub body: f64,
-    pub body_acc: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct TURNFEELHeavy {
-    pub aim: f64,
-    pub aim_acc: f64,
-    pub body: f64,
-    pub body_acc: f64,
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct MVSTARTLE {
     pub amp: [f64; 2],
@@ -2827,21 +2544,6 @@ pub struct KNIFEBLOW {
 #[derive(Clone, Debug, Default)]
 pub struct KNIFEBLOWCross {
     pub end: f64,
-    pub hit: f64,
-    pub keys: Vec<crate::character::BlowKey>,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct KNIFESLASH {
-    pub end: f64,
-    pub hit: f64,
-    pub keys: Vec<crate::character::BlowKey>,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct KNIFEBACK {
-    pub end: f64,
-    pub hit: f64,
     pub keys: Vec<crate::character::BlowKey>,
 }
 
@@ -2867,7 +2569,6 @@ pub struct BLOWLegs {
     pub straight: f64,
     pub up: f64,
     pub fwd: f64,
-    pub out: f64,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -2998,36 +2699,6 @@ pub struct READYBAREWay {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct READYBAREWAS {
-    pub l: crate::character::READYBAREWASL,
-    pub r: crate::character::READYBAREWASR,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct READYBAREWASL {
-    pub pole: V3,
-    pub fing: V3,
-    pub curl: f64,
-    pub spread: f64,
-    pub back: V3,
-    pub thumb: f64,
-    pub frac: f64,
-    pub dy: f64,
-    pub r: [f64; 2],
-    pub short: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct READYBAREWASR {
-    pub at: V3,
-    pub pole: V3,
-    pub fing: V3,
-    pub curl: f64,
-    pub back: V3,
-    pub thumb: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
 pub struct READYUP {
     pub over: [f64; 2],
     pub rise: f64,
@@ -3054,24 +2725,6 @@ pub struct SMOKEARM {
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct RD {
-    pub l: f64,
-    pub r: f64,
-    pub l_pole: f64,
-    pub r_pole: f64,
-    pub l_fing: f64,
-    pub l_back: f64,
-    pub r_fing: f64,
-    pub r_back: f64,
-    pub lean: f64,
-    pub blade: f64,
-    pub w_r: f64,
-    pub l_curl: f64,
-    pub l_thumb: f64,
-    pub l_spread: f64,
-    pub r_curl: f64,
-    pub r_thumb: f64,
-    pub clav: f64,
-    pub into: f64,
     pub up: f64,
 }
 
@@ -3115,14 +2768,12 @@ pub struct THRLOW {
 
 #[derive(Clone, Debug, Default)]
 pub struct BIGMOVE {
-    pub hide: f64,
     pub grab: f64,
     pub take: Vec<f64>,
     pub join: Vec<f64>,
     pub put: f64,
     pub put_at: f64,
     pub unjoin: f64,
-    pub show: f64,
     pub snug: crate::character::BIGMOVESnug,
     pub arc: V3,
     pub wait: V3,
@@ -3240,29 +2891,6 @@ pub enum MvOnK {
     EntryEyes,
     SteadyRun,
 }
-impl MvOnK {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            MvOnK::Reload => "reload",
-            MvOnK::Fold => "fold",
-            MvOnK::Steady => "steady",
-            MvOnK::On => "on",
-            MvOnK::Entry => "entry",
-            MvOnK::Flinch => "flinch",
-            MvOnK::Fall => "fall",
-            MvOnK::Toss => "toss",
-            MvOnK::Squeeze => "squeeze",
-            MvOnK::Snap => "snap",
-            MvOnK::Recoil => "recoil",
-            MvOnK::Dazzle => "dazzle",
-            MvOnK::Gait => "gait",
-            MvOnK::Bound => "bound",
-            MvOnK::Clutch => "clutch",
-            MvOnK::EntryEyes => "entryEyes",
-            MvOnK::SteadyRun => "steadyRun",
-        }
-    }
-}
 
 #[derive(Clone, Debug, Default)]
 pub struct BlowsNearB {
@@ -3282,14 +2910,6 @@ pub enum BigReboundKind {
     Shotgun,
     Hammer,
 }
-impl BigReboundKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            BigReboundKind::Shotgun => "shotgun",
-            BigReboundKind::Hammer => "hammer",
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct BigOffB {
@@ -3297,7 +2917,6 @@ pub struct BigOffB {
     pub equip: f64,
     pub stow: f64,
     pub end: f64,
-    pub snug: Option<bool>,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -3326,22 +2945,6 @@ pub struct AnimFeedClock {
     pub fresh: f64,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum AnimThrowRead {
-    Short,
-    Toss,
-    Full,
-}
-impl AnimThrowRead {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            AnimThrowRead::Short => "short",
-            AnimThrowRead::Toss => "toss",
-            AnimThrowRead::Full => "full",
-        }
-    }
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct AnimKickDoorOpts {
     pub leg: Option<crate::character::AnimKickDoorOptsLeg>,
@@ -3351,28 +2954,6 @@ pub struct AnimKickDoorOpts {
 pub enum AnimKickDoorOptsLeg {
     Left,
     Right,
-}
-impl AnimKickDoorOptsLeg {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            AnimKickDoorOptsLeg::Left => "left",
-            AnimKickDoorOptsLeg::Right => "right",
-        }
-    }
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum AnimKickingLeg {
-    Left,
-    Right,
-}
-impl AnimKickingLeg {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            AnimKickingLeg::Left => "left",
-            AnimKickingLeg::Right => "right",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -3414,23 +2995,10 @@ pub struct AnimTakenLayerAskT {
     pub off: f64,
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct AnimKnifePoseK {
-    pub end: f64,
-    pub keys: Vec<crate::character::BlowKey>,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct AnimKnifePoseAskK {
-    pub end: f64,
-    pub keys: Vec<crate::character::BlowKey>,
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct AnimDoorHands {
     pub l: f64,
     pub r: f64,
-    pub right: bool,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -3441,53 +3009,10 @@ pub struct AnimWorkInfo {
     pub two: bool,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum AnimSwapHeldRule {
-    Torch,
-    Weapon,
-}
-impl AnimSwapHeldRule {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            AnimSwapHeldRule::Torch => "torch",
-            AnimSwapHeldRule::Weapon => "weapon",
-        }
-    }
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum AnimSwapHeld {
-    Torch,
-    Weapon,
-}
-impl AnimSwapHeld {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            AnimSwapHeld::Torch => "torch",
-            AnimSwapHeld::Weapon => "weapon",
-        }
-    }
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct AnimSwapInfo {
     pub a: f64,
-    pub to: Option<crate::character::AnimCarry>,
     pub pending: bool,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum AnimSwapInfoTo {
-    Torch,
-    Weapon,
-}
-impl AnimSwapInfoTo {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            AnimSwapInfoTo::Torch => "torch",
-            AnimSwapInfoTo::Weapon => "weapon",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -3516,13 +3041,6 @@ pub struct CharacterChestFrame {
     pub left: V3,
     pub up: V3,
     pub fwd: V3,
-}
-
-#[derive(Clone, Copy, Debug)]
-pub enum CharacterInHandWordCur {
-    Pistol,
-    Torch(crate::inhand::InHandWordTorch),
-    Long(crate::inhand::InHandWordLong),
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -3558,9 +3076,6 @@ impl CharacterMod {
     }
 }
 
-/// (src/game/character.ts:28 LONG_STANCES: a table nothing writes)
-pub fn long_stances() -> Vec<crate::character::LongStance> { alloc::vec![crate::character::LongStance::PatrolLong, crate::character::LongStance::LowLong, crate::character::LongStance::Shoulder, crate::character::LongStance::PortLong] }
-
 /// (src/game/character.ts:81 WORK: a table nothing writes)
 pub fn work() -> crate::character::WORK { crate::character::WORK { key_lead: 0.2, tip_len: 0.215, hover: 0.022, key_off: 0.03, lever: 0.035 } }
 
@@ -3579,20 +3094,11 @@ pub const SWAP_RATE: f64 = 14.0;
 /// (src/game/character.ts:336 HOLD_POLISH_UP: a table nothing writes)
 pub fn hold_polish_up() -> crate::character::HOLDPOLISHUP { crate::character::HOLDPOLISHUP { lay_ahead: 0.9, dip: 0.06, back: 0.035, m: 0.014, twist: 2.4, side: 7.0, tip: 8.0, arch: -5.0 } }
 
-/// (src/game/character.ts:337 HOLD_POLISH_DOWN: a table nothing writes)
-pub fn hold_polish_down() -> crate::character::HOLDPOLISHDOWN { crate::character::HOLDPOLISHDOWN { lay_ahead: 0.0, dip: 0.0, back: 0.0, m: 0.0, twist: 0.0, side: 0.0, tip: 0.0, arch: -11.0 } }
-
-/// (src/game/character.ts:354 defaultAnimParams: a table nothing writes)
-pub fn default_anim_params() -> crate::character::AnimParams { crate::character::AnimParams { walk_speed: 1.06, jog_speed: 3.3, crouch_speed: 0.72, sprint_speed: 4.7 } }
-
 /// (src/game/character.ts:357 BLEND: a table nothing writes)
 pub fn blend() -> crate::character::BLEND { crate::character::BLEND { walk_in0: 0.12, walk_in1: 0.55, walk_top: 1.6, jog_at: 2.7 } }
 
 /// (src/game/character.ts:359 BOB: a table nothing writes)
 pub fn bob() -> crate::character::BOB { crate::character::BOB { keep: 0.55 } }
-
-/// (src/game/character.ts:360 BOB_KEEP)
-pub const BOB_KEEP: f64 = 0.55;
 
 /// (src/game/character.ts:363 RUN_WARP: a table nothing writes)
 pub fn run_warp() -> crate::character::RUNWARP { crate::character::RUNWARP { stride: 0.62 } }
@@ -3673,7 +3179,7 @@ pub fn long_crouch() -> JsMap<String, crate::character::LongShape> { crate::char
 pub fn long_reload() -> crate::character::LONGRELOAD { crate::character::LONGRELOAD { box_: crate::character::LONGRELOADBox { at: [-0.15, -0.075, 0.19], pitch: 20.0, aim_k: 0.0, yaw: 12.0 }, back: crate::character::LONGRELOADBox { at: [-0.16, -0.06, 0.21], pitch: 12.0, aim_k: 0.0, yaw: 4.0 }, head: crate::character::LONGRELOADHead { yaw: -10.0, pitch: 22.0, roll: 0.0 }, in_: 0.35, out: 0.35, end: 0.06, head_in: 0.3, head_out: 0.3, rate: 8.0 } }
 
 /// (src/game/character.ts:674 LC: a table nothing writes)
-pub fn lc() -> crate::character::LC { crate::character::LC { side: 0.0, up: 1.0, fwd: 2.0, pitch: 3.0, aim_k: 4.0, yaw: 5.0, blade: 6.0, lean: 7.0, head_yaw: 8.0, head_pitch: 9.0, head_roll: 10.0, elbow_r: 11.0, elbow_l: 14.0, pole_w: 17.0, sway: 18.0, anchor: 19.0, steady: 20.0, count: 21.0 } }
+pub fn lc() -> crate::character::LC { crate::character::LC { side: 0.0, up: 1.0, fwd: 2.0, pitch: 3.0, aim_k: 4.0, yaw: 5.0, blade: 6.0, lean: 7.0, head_yaw: 8.0, head_pitch: 9.0, head_roll: 10.0, elbow_r: 11.0, elbow_l: 14.0, count: 21.0 } }
 
 /// (src/game/character.ts:681 WALL_TUCK: a table nothing writes)
 pub fn wall_tuck() -> crate::character::WALLTUCK { crate::character::WALLTUCK { long: crate::character::WALLTUCKLong { side: -0.165, up: -0.245, fwd: 0.185, pitch: -76.0, yaw: 15.0, aim_k: 0.0, elbow_r: [-0.75, -1.0, -0.45], elbow_l: [0.6, -1.0, -0.25] }, pistol: crate::character::WALLTUCKPistol { fwd: 0.2, up: -0.19, pitch: -70.0, tuck: 0.8 }, over: 0.12 } }
@@ -3681,26 +3187,11 @@ pub fn wall_tuck() -> crate::character::WALLTUCK { crate::character::WALLTUCK { 
 /// (src/game/character.ts:724 LONG_KICK_BACK)
 pub const LONG_KICK_BACK: f64 = 0.03;
 
-/// (src/game/character.ts:785 FOLD_WITH: a table nothing writes)
-pub fn fold_with() -> crate::character::FOLDWITH { crate::character::FOLDWITH {} }
-
 /// (src/game/character.ts:802 HAND: a table nothing writes)
 pub fn hand() -> crate::character::HAND { crate::character::HAND { can: crate::character::HANDCan { curl: alloc::vec![0.56, 0.58, 0.62, 0.68], thumb: 0.3 }, curl: alloc::vec![0.3, 0.35, 0.41, 0.48], thumb: 0.38, thumb_in: 34.0, thumb_bend: 15.0, thumb_close: 10.0, thumb_own: 1.0, spread: -0.15, vary: 0.05, side_vary: 0.035, finger_vary: 0.025, far: 45.0, trig: alloc::vec![6.0, 10.0, 6.0], trig_spread: 6.0, trig_trained: 0.6, trig_hold: 0.7 } }
 
-/// (src/game/character.ts:822 WOUND_POSE: a table nothing writes)
-pub fn wound_pose() -> JsMap<String, crate::character::WOUNDPOSEValue> { { let mut t = JsMap::new(); t.set(String::from("knee"), crate::character::WOUNDPOSEValue { clip: String::from("Fixing_Kneeling"), rate: 1.15, hold: [0.86, 1.0], breath: 1.6, in_: 0.14, head: 14.0 }); t.set(String::from("back"), crate::character::WOUNDPOSEValue { clip: String::from("Death01"), rate: 1.0, hold: [1.42, 1.54], breath: 1.3, in_: 0.12, head: 44.0 }); t } }
-
-/// (src/game/character.ts:827 WOUND_AT: a table nothing writes)
-pub fn wound_at() -> V3 { [-0.05, 0.03, 0.15] }
-
 /// (src/game/character.ts:833 MV2: a table nothing writes)
 pub fn mv2() -> crate::character::MV2 { crate::character::MV2 { reload: crate::character::MV2Reload { box_: crate::character::MV2ReloadBox { mag: [0.085, -0.17, 0.125], strip: [0.09, -0.26, 0.15], handle: [0.05, -0.08, 0.07], pull: [0.05, -0.08, -0.03], hf: [-0.7, 0.6, 0.1], hb: [0.5, -0.5, 0.6] }, back: crate::character::MV2ReloadBox { mag: [0.085, -0.15, -0.115], strip: [0.09, -0.23, -0.17], handle: [0.1, 0.01, 0.17], pull: [0.1, 0.01, 0.08], hf: [-0.9, 0.1, 0.3], hb: [0.0, 1.0, 0.0] }, pouch: [[0.15, 0.04, 0.215], [0.1, -0.03, 0.195]], pole: [0.7, -0.6, -0.25], pole_w: 0.7, fumble: 0.055, tap: 0.11, flare: crate::character::MV2ReloadFlare { off: [0.12, 0.12, -0.03], tap: [0.13, 0.04, 0.0], pole: [1.0, 0.35, -0.2] }, fling: 0.06, rate: 14.0 }, bound: crate::character::MV2Bound { rate: 6.0, back: crate::character::MV2BoundBack { up: 0.07, out: 0.045, behind: 0.15, curl: alloc::vec![0.64, 0.7, 0.76, 0.82], thumb: 0.7 }, head: crate::character::MV2BoundHead { up: 0.2, out: 0.095, behind: 0.065, elbow: -0.2, curl: alloc::vec![0.28, 0.32, 0.36, 0.4], knuckle: alloc::vec![16.0, 5.0], thumb: 0.3 } }, clutch: crate::character::MV2Clutch { rate: 7.0, at: [-0.14, 0.12, 0.12], pole: [1.0, -0.05, -0.35], fold: crate::character::MV2ClutchFold { rate: 6.0, pitch: 24.0, pitch_too: 34.0, head: 20.0, drop: 0.05, sway: 3.0, hz: 1.0 } }, hurt: crate::character::MV2Hurt { rate: 4.0, pitch: 11.0, lean: 8.0, head: 9.0, head_brace: 0.5, drop: 0.025, sway: 1.5, hz: 0.45, brace: 0.7, step_pitch: 5.0, step_roll: 10.0, step_yaw: 5.0, step_head: 4.0, step_drop: 0.04, step_side: 0.06, arm: 1.0 }, shaken: crate::character::MV2Shaken { rate_in: 12.0, rate_out: 3.0, pitch: 11.0, head: 18.0, drop: 0.1, brace: 0.75 }, dip: crate::character::MV2Dip { pitch: -36.0, down: 0.035, back: 0.02, rate_in: 13.0, rate_out: 9.0, lane: alloc::vec![0.25, 1.9, 0.34] } } }
-
-/// (src/game/character.ts:881 TURN_FEEL: a table nothing writes)
-pub fn turn_feel_table() -> crate::character::TURNFEEL { crate::character::TURNFEEL { light: crate::character::TURNFEELLight { aim: 11.0, aim_acc: 150.0, body: 7.0, body_acc: 60.0 }, medium: crate::character::TURNFEELMedium { aim: 8.75, aim_acc: 75.0, body: 6.0, body_acc: 40.0 }, heavy: crate::character::TURNFEELHeavy { aim: 7.0, aim_acc: 50.0, body: 5.0, body_acc: 30.0 } } }
-
-/// (src/game/character.ts:912 MV_NONE: a table nothing writes)
-pub fn mv_none() -> crate::character::MvGait { crate::character::MvGait { live: false, g: 0.0, u: 0.0, st: 0.0 } }
 
 /// (src/game/character.ts:958 TOSS_RELEASE)
 pub const TOSS_RELEASE: f64 = 0.14;
@@ -3757,16 +3248,16 @@ pub fn ready() -> JsMap<String, crate::character::ReadyShape> { { let mut t = Js
 pub fn reach() -> crate::character::REACH { crate::character::REACH { in_: 0.3, out: 0.32, pole: [-1.0, 0.0, -0.1], pole_up: alloc::vec![0.35, 0.5], curl: alloc::vec![0.62, 0.68, 0.72, 0.76], thumb: 0.6 } }
 
 /// (src/game/character.ts:1064 KNIFE_BLOW: a table nothing writes)
-pub fn knife_blow() -> crate::character::KNIFEBLOW { crate::character::KNIFEBLOW { snap: 0.16, t_clear: 0.06, clear: [0.14, 0.05], az: 0.7, reach: 0.96, fade: 0.12, cross: crate::character::KNIFEBLOWCross { end: 0.6, hit: 0.27, keys: alloc::vec![crate::character::BlowKey { t: 0.16, at: [0.27, 0.0, 0.3], blade: [0.1, 0.9, 0.5], fing: [0.7, 0.1, 0.6], pole: [-0.5, -0.8, 0.1] }, crate::character::BlowKey { t: 0.27, at: [-0.05, 0.03, 0.5], blade: [-0.1, 0.8, 0.6], fing: [0.2, 0.0, 1.0], pole: [-0.7, -0.7, 0.0] }, crate::character::BlowKey { t: 0.36, at: [-0.22, -0.06, 0.36], blade: [-0.4, 0.8, 0.45], fing: [-0.2, -0.1, 1.0], pole: [-0.8, -0.6, -0.1] }] }, jab: crate::character::KNIFEBLOWCross { end: 0.52, hit: 0.24, keys: alloc::vec![crate::character::BlowKey { t: 0.15, at: [-0.02, -0.32, 0.08], blade: [0.0, 0.5, 1.0], fing: [0.05, -0.5, 0.8], pole: [-0.5, -0.3, -0.8] }, crate::character::BlowKey { t: 0.24, at: [0.12, -0.2, 0.56], blade: [0.0, 1.0, 0.8], fing: [0.2, 0.1, 1.0], pole: [-0.6, -0.8, -0.1] }, crate::character::BlowKey { t: 0.33, at: [0.0, -0.28, 0.2], blade: [0.0, 0.6, 1.0], fing: [0.05, -0.4, 0.9], pole: [-0.5, -0.5, -0.7] }] } } }
+pub fn knife_blow() -> crate::character::KNIFEBLOW { crate::character::KNIFEBLOW { snap: 0.16, t_clear: 0.06, clear: [0.14, 0.05], az: 0.7, reach: 0.96, fade: 0.12, cross: crate::character::KNIFEBLOWCross { end: 0.6, keys: alloc::vec![crate::character::BlowKey { t: 0.16, at: [0.27, 0.0, 0.3], blade: [0.1, 0.9, 0.5], fing: [0.7, 0.1, 0.6], pole: [-0.5, -0.8, 0.1] }, crate::character::BlowKey { t: 0.27, at: [-0.05, 0.03, 0.5], blade: [-0.1, 0.8, 0.6], fing: [0.2, 0.0, 1.0], pole: [-0.7, -0.7, 0.0] }, crate::character::BlowKey { t: 0.36, at: [-0.22, -0.06, 0.36], blade: [-0.4, 0.8, 0.45], fing: [-0.2, -0.1, 1.0], pole: [-0.8, -0.6, -0.1] }] }, jab: crate::character::KNIFEBLOWCross { end: 0.52, keys: alloc::vec![crate::character::BlowKey { t: 0.15, at: [-0.02, -0.32, 0.08], blade: [0.0, 0.5, 1.0], fing: [0.05, -0.5, 0.8], pole: [-0.5, -0.3, -0.8] }, crate::character::BlowKey { t: 0.24, at: [0.12, -0.2, 0.56], blade: [0.0, 1.0, 0.8], fing: [0.2, 0.1, 1.0], pole: [-0.6, -0.8, -0.1] }, crate::character::BlowKey { t: 0.33, at: [0.0, -0.28, 0.2], blade: [0.0, 0.6, 1.0], fing: [0.05, -0.4, 0.9], pole: [-0.5, -0.5, -0.7] }] } } }
 
 /// (src/game/character.ts:1077 KNIFE_SLASH: a table nothing writes)
-pub fn knife_slash() -> crate::character::KNIFEBLOWCross { crate::character::KNIFEBLOWCross { end: 0.52, hit: 0.24, keys: alloc::vec![crate::character::BlowKey { t: 0.14, at: [0.3, -0.38, 0.12], blade: [-0.3, 0.6, 0.7], fing: [0.6, -0.3, 0.6], pole: [-0.3, -0.6, -0.6] }, crate::character::BlowKey { t: 0.24, at: [0.1, -0.08, 0.62], blade: [-0.6, 0.5, 0.6], fing: [0.1, 0.0, 1.0], pole: [-0.7, -0.6, 0.0] }, crate::character::BlowKey { t: 0.34, at: [-0.46, 0.3, 0.3], blade: [-0.8, 0.5, 0.2], fing: [-0.7, 0.3, 0.6], pole: [-0.8, -0.5, -0.2] }, crate::character::BlowKey { t: 0.42, at: [-0.46, 0.28, 0.28], blade: [-0.8, 0.5, 0.2], fing: [-0.7, 0.3, 0.6], pole: [-0.8, -0.5, -0.2] }] } }
+pub fn knife_slash() -> crate::character::KNIFEBLOWCross { crate::character::KNIFEBLOWCross { end: 0.52, keys: alloc::vec![crate::character::BlowKey { t: 0.14, at: [0.3, -0.38, 0.12], blade: [-0.3, 0.6, 0.7], fing: [0.6, -0.3, 0.6], pole: [-0.3, -0.6, -0.6] }, crate::character::BlowKey { t: 0.24, at: [0.1, -0.08, 0.62], blade: [-0.6, 0.5, 0.6], fing: [0.1, 0.0, 1.0], pole: [-0.7, -0.6, 0.0] }, crate::character::BlowKey { t: 0.34, at: [-0.46, 0.3, 0.3], blade: [-0.8, 0.5, 0.2], fing: [-0.7, 0.3, 0.6], pole: [-0.8, -0.5, -0.2] }, crate::character::BlowKey { t: 0.42, at: [-0.46, 0.28, 0.28], blade: [-0.8, 0.5, 0.2], fing: [-0.7, 0.3, 0.6], pole: [-0.8, -0.5, -0.2] }] } }
 
 /// (src/game/character.ts:1084 KNIFE_BACK: a table nothing writes)
-pub fn knife_back() -> crate::character::KNIFEBLOWCross { crate::character::KNIFEBLOWCross { end: 0.6, hit: 0.27, keys: alloc::vec![crate::character::BlowKey { t: 0.15, at: [-0.02, -0.4, -0.04], blade: [0.0, 0.25, 1.0], fing: [0.0, -1.0, 0.25], pole: [-0.4, 0.0, -1.0] }, crate::character::BlowKey { t: 0.27, at: [0.08, -0.34, 0.33], blade: [0.0, 0.2, 1.0], fing: [0.0, -0.9, 0.35], pole: [-0.4, -0.2, -1.0] }, crate::character::BlowKey { t: 0.44, at: [0.08, -0.36, 0.31], blade: [0.0, 0.2, 1.0], fing: [0.0, -0.9, 0.35], pole: [-0.4, -0.2, -1.0] }] } }
+pub fn knife_back() -> crate::character::KNIFEBLOWCross { crate::character::KNIFEBLOWCross { end: 0.6, keys: alloc::vec![crate::character::BlowKey { t: 0.15, at: [-0.02, -0.4, -0.04], blade: [0.0, 0.25, 1.0], fing: [0.0, -1.0, 0.25], pole: [-0.4, 0.0, -1.0] }, crate::character::BlowKey { t: 0.27, at: [0.08, -0.34, 0.33], blade: [0.0, 0.2, 1.0], fing: [0.0, -0.9, 0.35], pole: [-0.4, -0.2, -1.0] }, crate::character::BlowKey { t: 0.44, at: [0.08, -0.36, 0.31], blade: [0.0, 0.2, 1.0], fing: [0.0, -0.9, 0.35], pole: [-0.4, -0.2, -1.0] }] } }
 
 /// (src/game/character.ts:1091 BLOW: a table nothing writes)
-pub fn blow() -> crate::character::BLOW { crate::character::BLOW { rise: { let mut t = JsMap::new(); t.set(String::from("chop"), 0.85); t.set(String::from("palm"), 0.6); t.set(String::from("mouth"), 0.9); t.set(String::from("sweep"), 0.8); t.set(String::from("slash"), 0.7); t }, clip: { let mut t = JsMap::new(); t.set(String::from("chop"), 0.25); t.set(String::from("palm"), 0.35); t.set(String::from("mouth"), 1.0); t.set(String::from("sweep"), 1.0); t.set(String::from("slash"), 1.0); t }, reach: 0.98, fist: alloc::vec![0.92, 0.95, 0.95, 0.95], open: alloc::vec![0.08, 0.06, 0.08, 0.12], loose: alloc::vec![0.25, 0.3, 0.3, 0.35], cup: alloc::vec![0.35, 0.35, 0.4, 0.45], legs: crate::character::BLOWLegs { gap: 0.2, lift: 0.05, straight: 0.985, up: 0.4, fwd: 0.6, out: 0.4 }, tail: 1.0, sink: { let mut t = JsMap::new(); t.set(String::from("chop"), 0.8); t.set(String::from("palm"), 0.6); t.set(String::from("mouth"), 1.0); t.set(String::from("sweep"), 0.75); t.set(String::from("slash"), 0.75); t }, walk: alloc::vec![0.4, 1.5] } }
+pub fn blow() -> crate::character::BLOW { crate::character::BLOW { rise: { let mut t = JsMap::new(); t.set(String::from("chop"), 0.85); t.set(String::from("palm"), 0.6); t.set(String::from("mouth"), 0.9); t.set(String::from("sweep"), 0.8); t.set(String::from("slash"), 0.7); t }, clip: { let mut t = JsMap::new(); t.set(String::from("chop"), 0.25); t.set(String::from("palm"), 0.35); t.set(String::from("mouth"), 1.0); t.set(String::from("sweep"), 1.0); t.set(String::from("slash"), 1.0); t }, reach: 0.98, fist: alloc::vec![0.92, 0.95, 0.95, 0.95], open: alloc::vec![0.08, 0.06, 0.08, 0.12], loose: alloc::vec![0.25, 0.3, 0.3, 0.35], cup: alloc::vec![0.35, 0.35, 0.4, 0.45], legs: crate::character::BLOWLegs { gap: 0.2, lift: 0.05, straight: 0.985, up: 0.4, fwd: 0.6 }, tail: 1.0, sink: { let mut t = JsMap::new(); t.set(String::from("chop"), 0.8); t.set(String::from("palm"), 0.6); t.set(String::from("mouth"), 1.0); t.set(String::from("sweep"), 0.75); t.set(String::from("slash"), 0.75); t }, walk: alloc::vec![0.4, 1.5] } }
 
 /// (src/game/character.ts:1102 TAKEN: a table nothing writes)
 pub fn taken() -> crate::character::TAKEN { crate::character::TAKEN { sag: { let mut t = JsMap::new(); t.set(String::from("arch"), 0.1); t.set(String::from("hunch"), 0.65); t.set(String::from("snap"), 0.15); t }, secs: 1.0 } }
@@ -3813,9 +3304,6 @@ pub fn ready_az() -> [f64; 2] { [0.5, 0.9] }
 /// (src/game/character.ts:1175 READY_BARE: a table nothing writes)
 pub fn ready_bare() -> crate::character::READYBARE { crate::character::READYBARE { l: crate::character::READYBAREL { pole: [0.32, -0.93, -0.2], fing: [-0.2, 0.3, 1.0], back: [0.8, 0.55, -0.1], curl: 0.1, thumb: 0.28, spread: 0.05, frac: 0.9, dy: 0.3, r: [0.4, 0.54], short: 0.32 }, r: crate::character::READYBARER { at: [0.1, -0.3, 0.2], pole: [-0.4, -0.9, -0.25], fing: [0.15, 0.2, 1.0], back: [-0.85, 0.5, 0.0], curl: 0.14, thumb: 0.3 }, way: crate::character::READYBAREWay { by: 0.4, low: -0.2, near: 0.32, lift: [0.3, 1.0], right: [0.62, 0.97], rate: 12.0, drop: 14.0 }, out: [0.25, 0.8], out_r: 0.3 } }
 
-/// (src/game/character.ts:1193 READY_BARE_WAS: a table nothing writes)
-pub fn ready_bare_was() -> crate::character::READYBAREWAS { crate::character::READYBAREWAS { l: crate::character::READYBAREWASL { pole: [0.5, -0.85, -0.2], fing: [-0.2, 0.12, 1.0], curl: 0.3, spread: 0.12, back: [0.8, 0.55, -0.1], thumb: 0.28, frac: 0.9, dy: 0.3, r: [0.4, 0.54], short: 0.32 }, r: crate::character::READYBAREWASR { at: [0.07, 0.0, 0.4], pole: [-0.5, -0.85, -0.25], fing: [0.15, 0.05, 1.0], curl: 0.34, back: [-0.85, 0.5, 0.0], thumb: 0.3 } } }
-
 /// (src/game/character.ts:1202 READY_UP: a table nothing writes)
 pub fn ready_up() -> crate::character::READYUP { crate::character::READYUP { over: [0.25, 0.45], rise: 38.0, look: 0.5, dy: 0.36, r: [0.32, 0.42], fing: 0.3, slow: 0.8, rate: 6.0 } }
 
@@ -3823,7 +3311,7 @@ pub fn ready_up() -> crate::character::READYUP { crate::character::READYUP { ove
 pub fn smokearm() -> crate::character::SMOKEARM { crate::character::SMOKEARM { at: [0.075, -0.15, 0.125], fingers: [-0.55, 0.8, -0.1], back: [0.35, 0.1, 0.9], pole: [0.7, -0.6, 0.35], shrug: 5.0, curl: [0.3, 0.34, 0.6, 0.66], thumb: 0.3, rate: 1.9, away: 3.0 } }
 
 /// (src/game/character.ts:1277 RD: a table nothing writes)
-pub fn rd() -> crate::character::RD { crate::character::RD { l: 0.0, r: 3.0, l_pole: 6.0, r_pole: 9.0, l_fing: 12.0, l_back: 15.0, r_fing: 18.0, r_back: 21.0, lean: 24.0, blade: 25.0, w_r: 26.0, l_curl: 27.0, l_thumb: 28.0, l_spread: 29.0, r_curl: 30.0, r_thumb: 31.0, clav: 32.0, into: 33.0, up: 35.0 } }
+pub fn rd() -> crate::character::RD { crate::character::RD { up: 35.0 } }
 
 /// (src/game/character.ts:1277 RD_N)
 pub const RD_N: f64 = 36.0;
@@ -3833,9 +3321,6 @@ pub const THROW_DUR: f64 = 0.75;
 
 /// (src/game/character.ts:1283 THROW_RELEASE)
 pub const THROW_RELEASE: f64 = 0.28;
-
-/// (src/game/character.ts:1284 THROW_TOP)
-pub const THROW_TOP: f64 = 0.165;
 
 /// (src/game/character.ts:1288 THR: a table nothing writes)
 pub fn thr() -> crate::character::THR { crate::character::THR { chest_yaw: alloc::vec![[0.0, 0.0], [0.07, -9.0], [0.165, -26.0], [0.19, -25.0], [0.225, -14.0], [0.26, -3.0], [0.3, 6.0], [0.36, 10.0], [0.48, 7.0], [0.62, 2.0], [0.75, 0.0]], pelvis_yaw: alloc::vec![[0.0, 0.0], [0.07, -3.5], [0.145, -9.0], [0.17, -8.0], [0.21, 1.0], [0.25, 6.5], [0.31, 8.0], [0.44, 6.0], [0.6, 1.5], [0.75, 0.0]], pitch: alloc::vec![[0.0, 0.0], [0.165, -4.0], [0.28, 4.0], [0.38, 9.0], [0.48, 7.0], [0.62, 2.0], [0.75, 0.0]], roll: alloc::vec![[0.0, 0.0], [0.165, 3.0], [0.28, -7.0], [0.38, -8.0], [0.48, -4.0], [0.66, 0.0], [0.75, 0.0]], pel_x: alloc::vec![[0.0, 0.0], [0.165, -0.02], [0.3, 0.025], [0.48, 0.02], [0.7, 0.0], [0.75, 0.0]], pel_y: alloc::vec![[0.0, 0.0], [0.165, -0.015], [0.28, -0.01], [0.4, -0.02], [0.58, -0.008], [0.75, 0.0]], pel_z: alloc::vec![[0.0, 0.0], [0.165, -0.03], [0.28, 0.02], [0.39, 0.045], [0.54, 0.03], [0.75, 0.0]], clav_up: alloc::vec![[0.0, 0.0], [0.165, 9.0], [0.28, 7.0], [0.4, 3.0], [0.62, 0.0], [0.75, 0.0]], clav_fwd: alloc::vec![[0.0, 0.0], [0.165, -4.0], [0.28, 5.0], [0.39, 8.0], [0.54, 3.0], [0.7, 0.0], [0.75, 0.0]], hand_r: alloc::vec![(0.165, alloc::vec![-0.19, 0.21, -0.2]), (0.205, alloc::vec![-0.21, 0.27, -0.1]), (0.245, alloc::vec![-0.16, 0.27, 0.14]), (0.28, alloc::vec![-0.06, 0.16, 0.42]), (0.31, alloc::vec![0.06, -0.08, 0.47]), (0.37, alloc::vec![0.13, -0.27, 0.37]), (0.44, alloc::vec![0.16, -0.35, 0.28]), (0.5, alloc::vec![0.14, -0.38, 0.29])], swiv_r: alloc::vec![[0.0, -62.0], [0.06, -103.0], [0.125, -166.0], [0.165, -176.0], [0.205, -149.0], [0.245, -184.6], [0.28, -184.6], [0.31, -232.9], [0.37, -240.9], [0.44, -234.7], [0.5, -214.4], [0.62, -105.4], [0.75, -62.0]], fing_r: alloc::vec![(0.0, alloc::vec![0.0, -1.0, 0.15]), (0.07, alloc::vec![-0.1, -0.75, -0.65]), (0.115, alloc::vec![0.0, 0.6, -0.8]), (0.165, alloc::vec![0.15, 1.0, -0.35]), (0.23, alloc::vec![0.1, 1.0, -0.5]), (0.28, alloc::vec![0.05, 0.75, 0.65]), (0.32, alloc::vec![0.1, -0.35, 0.95]), (0.38, alloc::vec![0.3, -0.75, 0.6]), (0.48, alloc::vec![0.25, -1.0, 0.25]), (0.62, alloc::vec![0.05, -1.0, 0.0]), (0.75, alloc::vec![0.0, -1.0, 0.15])], back_r: alloc::vec![(0.0, alloc::vec![-1.0, 0.0, 0.0]), (0.07, alloc::vec![-1.0, 0.1, -0.2]), (0.115, alloc::vec![-0.8, -0.1, -0.6]), (0.165, alloc::vec![-0.3, -0.3, -1.0]), (0.23, alloc::vec![-0.4, -0.4, -0.9]), (0.28, alloc::vec![-0.2, 0.5, -0.8]), (0.32, alloc::vec![-0.3, 0.9, 0.3]), (0.38, alloc::vec![-0.6, 0.5, 0.6]), (0.48, alloc::vec![-0.7, 0.1, 0.7]), (0.62, alloc::vec![-1.0, 0.0, 0.2]), (0.75, alloc::vec![-1.0, 0.0, 0.0])], hand_l: alloc::vec![(0.17, alloc::vec![0.1, -0.06, 0.44]), (0.24, alloc::vec![0.1, -0.12, 0.38]), (0.31, alloc::vec![0.06, -0.28, 0.22]), (0.4, alloc::vec![0.05, -0.33, 0.18]), (0.52, alloc::vec![0.07, -0.4, 0.13])], swiv_l: alloc::vec![[0.0, 83.0], [0.09, 136.5], [0.17, 149.2], [0.24, 156.6], [0.31, 142.0], [0.4, 134.9], [0.52, 123.3], [0.63, 106.8], [0.75, 83.0]], fing_l: alloc::vec![(0.0, alloc::vec![0.0, -1.0, 0.15]), (0.09, alloc::vec![0.1, -0.4, 0.9]), (0.17, alloc::vec![0.05, 0.15, 1.0]), (0.25, alloc::vec![0.1, 0.35, 0.9]), (0.33, alloc::vec![0.15, 0.6, 0.8]), (0.52, alloc::vec![0.1, 0.3, 0.9]), (0.63, alloc::vec![0.1, -0.7, 0.6]), (0.75, alloc::vec![0.0, -1.0, 0.15])], back_l: alloc::vec![(0.0, alloc::vec![1.0, 0.0, 0.0]), (0.09, alloc::vec![0.5, 0.8, 0.3]), (0.17, alloc::vec![0.3, 1.0, -0.1]), (0.25, alloc::vec![0.7, 0.7, -0.2]), (0.33, alloc::vec![1.0, 0.1, -0.3]), (0.52, alloc::vec![1.0, 0.2, -0.2]), (0.63, alloc::vec![1.0, 0.2, 0.0]), (0.75, alloc::vec![1.0, 0.0, 0.0])] } }
@@ -3853,7 +3338,7 @@ pub fn toss_hang() -> V3 { [0.1, -0.47, -0.02] }
 pub fn thr_low() -> crate::character::THRLOW { crate::character::THRLOW { chest_yaw: alloc::vec![[0.0, 0.0], [0.05, -4.0], [0.1, -9.0], [0.17, -5.0], [0.25, 1.0], [0.36, 5.0], [0.55, 2.0], [0.75, 0.0]], pelvis_yaw: alloc::vec![[0.0, 0.0], [0.09, -4.0], [0.16, -1.0], [0.24, 2.0], [0.4, 3.0], [0.6, 0.5], [0.75, 0.0]], pitch: alloc::vec![[0.0, 0.0], [0.11, 9.0], [0.2, 7.0], [0.29, 1.0], [0.4, -2.0], [0.6, 0.0], [0.75, 0.0]], roll: alloc::vec![[0.0, 0.0], [0.1, 3.0], [0.22, 2.0], [0.45, 0.0], [0.75, 0.0]], pel_x: alloc::vec![[0.0, 0.0], [0.1, -0.012], [0.28, 0.012], [0.5, 0.006], [0.75, 0.0]], pel_y: alloc::vec![[0.0, 0.0], [0.12, -0.045], [0.2, -0.035], [0.31, 0.0], [0.42, 0.005], [0.6, 0.0], [0.75, 0.0]], pel_z: alloc::vec![[0.0, 0.0], [0.1, -0.015], [0.28, 0.03], [0.5, 0.015], [0.75, 0.0]], clav_up: alloc::vec![[0.0, 0.0], [0.1, -3.0], [0.3, 5.0], [0.6, 0.0], [0.75, 0.0]], clav_fwd: alloc::vec![[0.0, 0.0], [0.1, -5.0], [0.28, 6.0], [0.5, 2.0], [0.75, 0.0]], hand_r: alloc::vec![(0.1, alloc::vec![-0.13, -0.41, -0.32]), (0.165, alloc::vec![-0.1, -0.53, -0.02]), (0.225, alloc::vec![-0.07, -0.36, 0.37]), (0.28, alloc::vec![-0.05, -0.08, 0.5]), (0.34, alloc::vec![-0.04, -0.06, 0.52]), (0.46, alloc::vec![-0.04, -0.08, 0.49])], swiv_r: alloc::vec![[0.0, -62.0], [0.1, -78.8], [0.165, -82.2], [0.225, -107.2], [0.28, -121.9], [0.34, -122.7], [0.46, -121.7], [0.62, -84.0], [0.75, -62.0]], fing_r: alloc::vec![(0.0, alloc::vec![0.0, -1.0, 0.15]), (0.06, alloc::vec![0.0, -0.95, -0.3]), (0.1, alloc::vec![-0.1, -0.8, -0.6]), (0.165, alloc::vec![0.0, -1.0, 0.0]), (0.225, alloc::vec![0.0, -0.7, 0.7]), (0.28, alloc::vec![0.0, -0.1, 1.0]), (0.34, alloc::vec![0.0, 0.2, 1.0]), (0.46, alloc::vec![0.0, 0.1, 1.0]), (0.62, alloc::vec![0.0, -0.8, 0.55]), (0.75, alloc::vec![0.0, -1.0, 0.15])], back_r: alloc::vec![(0.0, alloc::vec![-1.0, 0.0, 0.0]), (0.06, alloc::vec![-1.0, 0.0, -0.1]), (0.1, alloc::vec![-0.9, 0.1, -0.4]), (0.165, alloc::vec![-0.6, -0.1, -0.8]), (0.225, alloc::vec![-0.35, -0.7, -0.6]), (0.28, alloc::vec![-0.25, -0.95, -0.1]), (0.34, alloc::vec![-0.25, -0.95, 0.15]), (0.46, alloc::vec![-0.4, -0.9, 0.1]), (0.62, alloc::vec![-0.9, -0.3, 0.0]), (0.75, alloc::vec![-1.0, 0.0, 0.0])] } }
 
 /// (src/game/character.ts:1381 BIGMOVE: a table nothing writes)
-pub fn bigmove() -> crate::character::BIGMOVE { crate::character::BIGMOVE { hide: 0.28, grab: 0.5, take: alloc::vec![0.47, 0.82], join: alloc::vec![0.65, 0.96], put: 0.58, put_at: 0.45, unjoin: 0.28, show: 0.85, snug: crate::character::BIGMOVESnug { hide: 0.06, take: alloc::vec![0.44, 0.56], put_at: 0.8, show: 0.94 }, arc: [-0.16, 0.12, 0.04], wait: [-0.1, -0.34, 0.2], hammer: crate::character::BIGMOVEHammer { ready: crate::character::BIGMOVEHammerReady { g: [0.06, -0.1, 0.34], d: [-0.42, 0.9, -0.1] }, wound: crate::character::BIGMOVEHammerWound { g: [-0.12, 0.2, -0.05], d: [-0.45, 0.3, -0.84] }, over: crate::character::BIGMOVEHammerOver { g: [0.04, 0.14, 0.24], d: [-0.08, 0.93, 0.36] }, grab_at: 0.1, raise: 0.6, swing: 0.38, swing_min: 0.1, swing_max: 0.2, rebound: 0.25, settle: 0.5, butt: [0.18, 0.05, 0.18], far: [0.6, 1.1], wound_body: crate::character::BIGMOVEHammerWoundBody { yaw: -50.0, pel_yaw: -17.0, pitch: -7.0, back: 0.09, side: -0.03 }, blow_body: crate::character::BIGMOVEHammerBlowBody { yaw: 16.0, pel_yaw: 7.0, pitch: 15.0, pitch_far: 11.0, fwd: 0.07, fwd_far: 0.08, drop: 0.03 }, face: 1.0, drop: 0.035, stance: crate::character::BIGMOVEHammerStance { l: [0.06, 0.07], r: [-0.07, -0.1], lift: 0.025 } }, shotgun: crate::character::BIGMOVEShotgun { pocket: [0.035, -0.05, 0.06], yaw: -22.0, pel_yaw: -10.0, pitch: 6.0, kick: 0.08, climb: 12.0, kick_in: 0.04, kick_out: 0.13, kick_pitch: -6.0, shove: 0.035 }, fist: alloc::vec![0.74, 0.8, 0.84, 0.88], open: alloc::vec![0.26, 0.3, 0.34, 0.38] } }
+pub fn bigmove() -> crate::character::BIGMOVE { crate::character::BIGMOVE { grab: 0.5, take: alloc::vec![0.47, 0.82], join: alloc::vec![0.65, 0.96], put: 0.58, put_at: 0.45, unjoin: 0.28, snug: crate::character::BIGMOVESnug { hide: 0.06, take: alloc::vec![0.44, 0.56], put_at: 0.8, show: 0.94 }, arc: [-0.16, 0.12, 0.04], wait: [-0.1, -0.34, 0.2], hammer: crate::character::BIGMOVEHammer { ready: crate::character::BIGMOVEHammerReady { g: [0.06, -0.1, 0.34], d: [-0.42, 0.9, -0.1] }, wound: crate::character::BIGMOVEHammerWound { g: [-0.12, 0.2, -0.05], d: [-0.45, 0.3, -0.84] }, over: crate::character::BIGMOVEHammerOver { g: [0.04, 0.14, 0.24], d: [-0.08, 0.93, 0.36] }, grab_at: 0.1, raise: 0.6, swing: 0.38, swing_min: 0.1, swing_max: 0.2, rebound: 0.25, settle: 0.5, butt: [0.18, 0.05, 0.18], far: [0.6, 1.1], wound_body: crate::character::BIGMOVEHammerWoundBody { yaw: -50.0, pel_yaw: -17.0, pitch: -7.0, back: 0.09, side: -0.03 }, blow_body: crate::character::BIGMOVEHammerBlowBody { yaw: 16.0, pel_yaw: 7.0, pitch: 15.0, pitch_far: 11.0, fwd: 0.07, fwd_far: 0.08, drop: 0.03 }, face: 1.0, drop: 0.035, stance: crate::character::BIGMOVEHammerStance { l: [0.06, 0.07], r: [-0.07, -0.1], lift: 0.025 } }, shotgun: crate::character::BIGMOVEShotgun { pocket: [0.035, -0.05, 0.06], yaw: -22.0, pel_yaw: -10.0, pitch: 6.0, kick: 0.08, climb: 12.0, kick_in: 0.04, kick_out: 0.13, kick_pitch: -6.0, shove: 0.035 }, fist: alloc::vec![0.74, 0.8, 0.84, 0.88], open: alloc::vec![0.26, 0.3, 0.34, 0.38] } }
 
 /// (src/game/character.ts:1426 ANIM_POSES)
 pub const ANIM_POSES: f64 = 13.0;
@@ -3861,17 +3346,6 @@ pub const ANIM_POSES: f64 = 13.0;
 /// (src/game/character.ts:4262 RAG_LIMBS: a table nothing writes)
 pub fn rag_limbs() -> Vec<(String, f64, f64, f64)> { alloc::vec![(String::from("thighL"), -1.0, 10.0, 12.0), (String::from("shinL"), 0.0, 12.0, 14.0), (String::from("thighR"), -1.0, 11.0, 13.0), (String::from("shinR"), 2.0, 13.0, 15.0), (String::from("upperArmL"), -1.0, 4.0, 6.0), (String::from("forearmL"), 4.0, 6.0, 8.0), (String::from("upperArmR"), -1.0, 5.0, 7.0), (String::from("forearmR"), 6.0, 7.0, 9.0), (String::from("neck"), -1.0, 2.0, 3.0)] }
 
-/// (src/game/character.ts:4268 RAG_BONE: a table nothing writes)
-pub fn rag_bone() -> JsMap<String, String> { { let mut t = JsMap::new(); t.set(String::from("pelvis"), String::from("hips")); t.set(String::from("spine"), String::from("spine2")); t.set(String::from("neck"), String::from("neck")); t.set(String::from("head"), String::from("head")); t.set(String::from("shoL"), String::from("upperArmL")); t.set(String::from("shoR"), String::from("upperArmR")); t.set(String::from("elbL"), String::from("forearmL")); t.set(String::from("elbR"), String::from("forearmR")); t.set(String::from("handL"), String::from("handL")); t.set(String::from("handR"), String::from("handR")); t.set(String::from("hipL"), String::from("thighL")); t.set(String::from("hipR"), String::from("thighR")); t.set(String::from("kneeL"), String::from("shinL")); t.set(String::from("kneeR"), String::from("shinR")); t.set(String::from("ankL"), String::from("footL")); t.set(String::from("ankR"), String::from("footR")); t } }
-
 /// (src/game/character.ts:4269 RAG_BONES: a table nothing writes)
 pub fn rag_bones() -> Vec<crate::character::Bone> { alloc::vec![crate::character::Bone::Hips, crate::character::Bone::Spine2, crate::character::Bone::Neck, crate::character::Bone::Head, crate::character::Bone::UpperArmL, crate::character::Bone::UpperArmR, crate::character::Bone::ForearmL, crate::character::Bone::ForearmR, crate::character::Bone::HandL, crate::character::Bone::HandR, crate::character::Bone::ThighL, crate::character::Bone::ThighR, crate::character::Bone::ShinL, crate::character::Bone::ShinR, crate::character::Bone::FootL, crate::character::Bone::FootR] }
 
-impl Character {
-    /// (character.ts Character's constructor, up to what needs the rig: rest_chest_inv, rest_head_inv, the hand frames, anim and skel are the part's to fill from the rig)
-    pub fn new(rig: RigId, who: Who, id: f64, tint: V3, tint2: V3, pos: V3, yaw: f64) -> Self {
-        let mut c = Character::blank();
-        c.rig = rig; c.who = who; c.id = id; c.tint = tint; c.tint2 = tint2; c.pos = pos; c.body_yaw = yaw; c.aim_yaw = yaw;
-        c
-    }
-}

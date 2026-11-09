@@ -55,12 +55,7 @@ pub fn at(p: V3, y: f64) -> V3 { [p[0], y, p[2]] }
 
 /// A line in the file's log, capped, and in the fight's. (digin.ts log)
 pub fn log(g: &mut Game, gd: Option<GuardId>, what: &str) {
-    let who = match gd {
-        Some(id) => g.gd[id].callsign.clone(),
-        None => String::from("-"),
-    };
-    let t = g.time;
-    g.m.digin.digin_log.push(crate::digin::DiginModDIGINLOGItem { t, who, what: String::from(what) });
+    g.m.digin.digin_log.push(crate::digin::DiginModDIGINLOGItem { what: String::from(what) });
     if g.m.digin.digin_log.len() > 400 {
         g.m.digin.digin_log.drain(0..150);
     }
@@ -97,7 +92,7 @@ pub fn heard_by(g: &mut Game, src: V3, reach_m: f64) -> Option<crate::digin::Hea
         let p = crate::weather::hear_path(g, at(src, 1.2), l.head, None);
         if p.path_len < reach_m * p.carry && p.path_len < bd {
             bd = p.path_len;
-            best = Some(crate::digin::HeardBy { gd: l.gd });
+            best = Some(crate::digin::HeardBy {  });
         }
     }
     best

@@ -17,8 +17,7 @@
 // THE BREAKER takes the lamps, the counting room's bulb, both gate lenses and the court's beam (the strongroom's lens and the north beam are on batteries),
 // and PLAYED it is no answer for a quiet player: it hangs in the lit lane the shack's man stands in, every man comes up wary
 // the moment it goes, the nearest has it back in within seconds, and while it is out the emergency beacon on the north wall sweeps the dark north strip.
-// The page is rebuild/missions/new/vault.md in the project files.
-import type { QuietData } from '../../src/scene/scenarios';
+import type { QuietData } from './lib/scenarios';
 import type { DeviceDef } from './lib/level';
 import { BoxFlag } from '../../src/scene/boxes';
 import { GWOT_MATERIALS } from './lib/gwotKit';
@@ -164,7 +163,7 @@ export function build() {
   const out = T.finish({
     spawn: [5.2, 0, 14.0], routes,
     mission: { serverRoom: { ...STRONG }, entryDoor: 'strongroom', rack: { index: 0, front, halfW: 0.35 }, exfilDoor: 'gate_w', exfilX: EXIT_W.x, exfilZ: EXIT_W.z, exfilOut: EXIT_W.out },
-    // THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest): the counting house's own front door from the yard, under
+    // THE TEAM & KIT PICTURE (lib/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest): the counting house's own front door from the yard, under
     // its lens, the counting room behind the wall (from the west gate the picture's column holds a bare wall: the house is five metres in). Out of the
     // picture, by the ids the export gives them: the porch lamp (its pole and head stand in the camera's line) and the bike parked where the file forms.
     // The counting room's bulb is left lit (the picture puts a level's own lights out): without it the room behind the wall is a black hole.

@@ -8,7 +8,6 @@ pub struct RoomWay {
     pub o: CoverOpeningId,
     pub in_n: [f64; 2],
     pub beyond: V3,
-    pub far: f64,
     pub far_known: bool,
     pub shut: bool,
     pub locked: bool,
@@ -17,9 +16,6 @@ pub struct RoomWay {
 
 #[derive(Clone, Debug, Default)]
 pub struct RoomRead {
-    pub at: V3,
-    pub room: f64,
-    pub known: bool,
     pub cells: Vec<f64>,
     pub steps: JsMap<crate::Num, f64>,
     pub ways: Vec<crate::roomread::RoomWay>,

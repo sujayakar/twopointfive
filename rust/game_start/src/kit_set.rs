@@ -25,6 +25,7 @@ use crate::json::{self, Json};
 use crate::kit_plan::{self, Planned, Way, PlanBox, PlanOpts, PlanSet, V2, V3};
 use game::kitstage::KIT_PLAN;
 use game::query::Query;
+use game::scene_scenario_list::{kind_of, ScenarioSpecKind};
 
 /// the stand-ins' names and numbers (the head)
 pub struct KitSetNumbers {
@@ -43,18 +44,11 @@ fn js_trim(s: &str) -> &str {
     s.trim_matches(white)
 }
 
-/// THE WAY the page will stage, as the game folds the link's `way`: absent / 1 = the level's own (0), N = its Nth, one past the last = the last; 'any' (a dealt way: no picture) = 0.
-pub fn way_of_query(way: Option<&str>, data: &Json) -> usize {
-    let r = data.get("scenarios").get("roomClear");
-    let n = if truthy(r.get("team")) { 1.0 + r.get("starts").items().len() as f64 } else { 1.0 };
-    let w = match way { Some(t) if !t.is_empty() && t.bytes().all(|c| c.is_ascii_digit()) => t.parse::<f64>().unwrap_or(0.0), _ => 0.0 };
-    if w >= 1.0 { (m::min(n, w) - 1.0) as usize } else { 0 }
-}
-/// THE WAY THE PICTURE STAGES, off the whole link: only a room clear stands its team on a way in of its own. A rescue, the night breach, a quiet mission and the solo night have the level's one start:
-/// way 0, whatever `way` the link still carries (a rescue's link with `way=2` laid the second way's pieces under a picture staged on the first).
+/// THE WAY THE PICTURE STAGES, off the whole link: the one the game takes, by the game's own reader, on this level file.
 pub fn way_of_link(q: &Query, data: &Json) -> usize {
-    let room_clear = q.has("roomclear") || (q.has("squad4") && !["nightbreach", "rescue", "quiet"].iter().any(|k| q.has(k)));
-    if room_clear { way_of_query(q.get("way"), data) } else { 0 }
+    let r = data.get("scenarios").get("roomClear");
+    let ways = if truthy(r.get("team")) { 1 + r.get("starts").items().len() } else { 1 };
+    game::roomclear::way_taken(game::roomclear::way_of_address(q), ways)
 }
 /// the set a way names
 #[derive(Clone, Copy, Debug)]
@@ -73,10 +67,9 @@ pub fn set_of(data: &Json, way: usize) -> Option<SetOf<'_>> {
 /// is Sam and two, so those two say their size outright. A copy: the page's own query is not written to.
 pub fn set_query(q: &Query) -> Query {
     let mut o = q.clone();
-    let loud = ["roomclear", "nightbreach", "rescue"].iter().any(|k| q.has(k));
-    let quiet = !loud && q.has("quiet");
-    let none = !loud && !quiet && !q.has("squad4");
-    if quiet || none {
+    let kind = kind_of(q);
+    let quiet = kind == Some(ScenarioSpecKind::Quiet);
+    if quiet || kind.is_none() {
         let t = js_trim(q.get("squad").unwrap_or(""));
         let n = if quiet && t.len() == 1 && matches!(t.as_bytes()[0], b'1'..=b'4') { "1" } else { "0" };
         o.delete("squad4");
@@ -92,10 +85,7 @@ pub enum QuietKind { Quiet, Solo }
 /// WHICH QUIET KIND a mission's link is: a quiet mission, alone or as two; a link that names no mission (the solo night); none: a loud one. Read off the link and never off the scenario that is up: a set
 /// way's picture is staged as a room clear (`set_query` strips the words), so the game's own quiet is off there.
 pub fn quiet_kind(q: &Query) -> Option<QuietKind> {
-    let loud = ["roomclear", "nightbreach", "rescue"].iter().any(|k| q.has(k));
-    let quiet = !loud && q.has("quiet");
-    let none = !loud && !quiet && !q.has("squad4");
-    if quiet { Some(QuietKind::Quiet) } else if none { Some(QuietKind::Solo) } else { None }
+    match kind_of(q) { Some(ScenarioSpecKind::Quiet) => Some(QuietKind::Quiet), None => Some(QuietKind::Solo), Some(_) => None }
 }
 /// what a set's men wear: `suit` the sneaking suit's word (none: Sam alone in it, as the plain night has him), `sling` where the rifle goes
 #[derive(Clone, Copy, Debug, PartialEq)]

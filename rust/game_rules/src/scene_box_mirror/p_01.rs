@@ -192,20 +192,6 @@ fn planes_put(cuts: &mut [f64], mut p: usize, b: &SBox) {
     }
 }
 
-/// is row `o` (flags at `fi`) box b as it stands, a memory that holds rows and planes together.   (boxMirror.ts same)
-pub fn same(g: &mut crate::game::Game, m: &[f64], fl: &[u32], o: f64, fi: f64, b: BoxId, kind: f64, cut0: f64) -> bool {
-    row_same(m, o as usize, fl[fi as usize], m, cut0 as usize, seam_box(g, b), kind)
-}
-
-/// write box b into row `o`, its cut record into record `cut_row`, a memory that holds rows and planes together.   (boxMirror.ts put)
-pub fn put(g: &mut crate::game::Game, m: &mut Vec<f64>, fl: &mut Vec<u32>, o: f64, fi: f64, b: BoxId, kind: f64, cut0: f64, cut_row: f64) {
-    let x = seam_box(g, b);
-    row_put(m, o as usize, &mut fl[fi as usize], x, kind, cut_row);
-    if (kind as u32) & K_CUT_ != 0 {
-        planes_put(m, cut0 as usize + (cut_row * CUT_ROW) as usize, x);
-    }
-}
-
 /// what a box sends back of the light on it, of 255
 fn back_of(b: &SBox) -> u8 { (v3::clamp(crate::hours::lum(b.albedo), 0.0, 1.0) * 255.0) as u8 }
 /// static `i`'s row in world `w` is box b: the row of the statics' table, the planes in the cut table.
@@ -347,7 +333,7 @@ pub fn box_mirror_open(g: &mut crate::game::Game, boxes: &[BoxId], cells: &[Vec<
     box_mirror_statics(g, boxes, all);
     sim::world_shape(s, w as u32, h as u32, cs, boxes.len() as u32, g.col.mirror.n_tilted as u32);
     // (cells and tiltedAt are held by reference there and read at `again` as they then stand: here they are read from g.col at `again`, and only the numbers kept)
-    g.col.mirror.grid_of = Some(BoxMirrorGridOf { cells: Vec::new(), tilted_at: Vec::new(), w, h, cs });
+    g.col.mirror.grid_of = Some(BoxMirrorGridOf { w, h, cs });
     box_mirror_panes(g);
     let x = &mut g.col.mirror;
     x.own_at = -1.0;
