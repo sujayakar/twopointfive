@@ -26,7 +26,7 @@ fn hidden(x: vec3f, r: f32, prev: bool) -> bool {
 fn slotOut(l: Local, cluster: u32, second: bool) {
   let s = atomicAdd(&n[N_SLOTS], 1u); if (s >= meshK.most) { atomicStore(&n[N_FULL], 1u); return; } let a = mrow(l.mesh); let b = mrow(l.mesh + 1u); let rec = mrowU(bitcast<u32>(b.w) + cluster); let tris = mrowU(l.mesh + 2u).x + cluster * 32u;
   let o = outward(l, a.xyz); let X = outward(l, a.xyz + vec3f(b.x * 65536.0, 0.0, 0.0)) - o; let Y = outward(l, a.xyz + vec3f(0.0, b.y * 65536.0, 0.0)) - o; let Z = outward(l, a.xyz + vec3f(0.0, 0.0, b.z * 65536.0)) - o;
-  slots[s * 4u] = vec4f(X / 65536.0, o.x); slots[s * 4u + 1u] = vec4f(Y / 65536.0, o.y); slots[s * 4u + 2u] = vec4f(Z / 65536.0, o.z); slots[s * 4u + 3u] = bitcast<vec4f>(vec4u(rec.x, tris, (l.piece << 10u) | l.child, (cluster << 8u) | rec.y)); atomicAdd(&n[N_TRIS], rec.y);
+  slots[s * 4u] = vec4f(X / 65536.0, o.x); slots[s * 4u + 1u] = vec4f(Y / 65536.0, o.y); slots[s * 4u + 2u] = vec4f(Z / 65536.0, o.z); slots[s * 4u + 3u] = bitcast<vec4f>(vec4u(rec.x, tris, (l.piece << 11u) | l.child, (cluster << 8u) | rec.y)); atomicAdd(&n[N_TRIS], rec.y);
 }
 /** a child of every placed object, its mesh's top put on the list */
 @compute @workgroup_size(64) fn seed(@builtin(global_invocation_id) id: vec3u) {
@@ -34,12 +34,12 @@ fn slotOut(l: Local, cluster: u32, second: bool) {
   // which level of the object: its coarsest that is not seen to be one
   let d = max(distance(frame.camPos.xyz, x) - r, 0.02); var may = meshK.tau * (2.0 * length(frame.camUp.xyz) / frame.size.y) * d / sc; if (meshK.fixed > 0.0) { may = meshK.fixed / sc; } var li = head.x - 1u; loop { if (li == 0u || mrow(oh + 3u + li).x <= may) { break; } li -= 1u; }
   let lv = mrowU(oh + 3u + li); if (id.x >= lv.w) { return; } let child = lv.z + id.x; let l = localOf(k, child); let b = mrow(l.mesh + 3u); let cx = outward(l, b.xyz); let cr = b.w * l.scale; if (!inside(cx, cr)) { return; }
-  let m = mrowU(l.mesh + 2u); let i = atomicAdd(&n[0], 1u); if (i >= meshK.queue) { atomicStore(&n[N_FULL], 1u); return; } listB[i] = vec2u((k << 10u) | child, (m.y << 4u) | m.z);
+  let m = mrowU(l.mesh + 2u); let i = atomicAdd(&n[0], 1u); if (i >= meshK.queue) { atomicStore(&n[N_FULL], 1u); return; } listB[i] = vec2u((k << 11u) | child, (m.y << 4u) | m.z);
 }
 @compute @workgroup_size(64) fn round(@builtin(global_invocation_id) id: vec3u, @builtin(num_workgroups) groups: vec3u) {
   let count = min(atomicLoad(&n[meshK.round]), meshK.queue) * 8u;
   for (var i = id.x; i < count; i += groups.x * 64u) {
-    let q = listA[i >> 3u]; let many = q.y & 15u; if ((i & 7u) >= many) { continue; } let at = (q.y >> 4u) + (i & 7u) * 5u; let l = localOf(q.x >> 10u, q.x & 1023u);
+    let q = listA[i >> 3u]; let many = q.y & 15u; if ((i & 7u) >= many) { continue; } let at = (q.y >> 4u) + (i & 7u) * 5u; let l = localOf(q.x >> 11u, q.x & 2047u);
     let e = mrow(at + 2u); let lod = mrow(at + 1u); if (!shown(l, e.x, lod)) { continue; } let kids = bitcast<vec4u>(e).w; let b = mrow(at); let x = outward(l, b.xyz); let r = b.w * l.scale; if (!inside(x, r)) { continue; }
     if (kids != 0u) { let j = atomicAdd(&n[meshK.round + 1u], 1u); if (j >= meshK.queue) { atomicStore(&n[N_FULL], 1u); continue; } listB[j] = vec2u(q.x, (bitcast<vec4u>(e).z << 4u) | kids); continue; }
     if (shown(l, e.y, mrow(at + 3u))) { continue; }
@@ -50,5 +50,5 @@ fn slotOut(l: Local, cluster: u32, second: bool) {
 }
 /** what last frame's depth hid, asked again of this frame's */
 @compute @workgroup_size(64) fn second(@builtin(global_invocation_id) id: vec3u, @builtin(num_workgroups) groups: vec3u) {
-  let count = min(atomicLoad(&n[N_HID]), meshK.most); for (var i = id.x; i < count; i += groups.x * 64u) { let q = again[i]; let l = localOf(q.x >> 10u, q.x & 1023u); let b = mrow(q.z); if (hidden(outward(l, b.xyz), b.w * l.scale, false)) { continue; } slotOut(l, q.y, true); }
+  let count = min(atomicLoad(&n[N_HID]), meshK.most); for (var i = id.x; i < count; i += groups.x * 64u) { let q = again[i]; let l = localOf(q.x >> 11u, q.x & 2047u); let b = mrow(q.z); if (hidden(outward(l, b.xyz), b.w * l.scale, false)) { continue; } slotOut(l, q.y, true); }
 }

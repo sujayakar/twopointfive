@@ -8,7 +8,7 @@ import pickCode from './meshpick.wgsl' with { type: 'text' };
 import drawCode from './meshdraw.wgsl' with { type: 'text' };
 
 /** turned while looking: pixels of error; or a fixed error in metres; what is left out; how corners are fetched */
-export const RASTER = { tau: 1, fixed: 0, cone: true, hide: true, share: true, /** only the heroes, for measuring */ heroes: false, /** what was picked stays, wherever the camera goes */ freeze: false };
+export const RASTER = { tau: 0.5, fixed: 0, cone: true, hide: true, share: true, /** only the heroes, for measuring */ heroes: false, /** what was picked stays, wherever the camera goes */ freeze: false };
 const QUEUE = 1 << 19, MOST = 1 << 17, INDICES = 1 << 24, GROUPS = 256;
 /** indices of what was picked (expand), and what is to be drawn of it (say): first all that was seen at once, then what the second look found */
 const shareCode = `@group(1) @binding(0) var<storage, read> slots: array<vec4f>;
@@ -84,5 +84,5 @@ export function withMeshes<M extends Method>(m: M): M {
   return m;
 }
 const firstHit = (code: string) => { const at = '  } else if (a != 0u) {\n'; if (code.split(at).length !== 2) throw new Error('first hit has changed'); return code.replace(at, `  } else if ((a & 0x40000000u) != 0u) {
-    let r = bitcast<vec4u>(meshSlots[((a >> 7u) & 0x7fffffu) * 4u + 3u]); h.piece = r.z >> 10u; h.code = MESH_HIT | ((r.z & 1023u) << mrowU(pieces[h.piece].planes).y) | ((r.w >> 8u) << 7u) | (a & 127u); h.t = 0.25 / (textureLoad(depthT, id.xy, 0) * dot(rd, frame.camFwd.xyz));
+    let r = bitcast<vec4u>(meshSlots[((a >> 7u) & 0x7fffffu) * 4u + 3u]); h.piece = r.z >> 11u; h.code = MESH_HIT | ((r.z & 2047u) << mrowU(pieces[h.piece].planes).y) | ((r.w >> 8u) << 7u) | (a & 127u); h.t = 0.25 / (textureLoad(depthT, id.xy, 0) * dot(rd, frame.camFwd.xyz));
 ` + at); };

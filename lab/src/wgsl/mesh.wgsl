@@ -16,7 +16,7 @@ var<private> meshError = 0.0; var<private> meshFoot = 0.0; var<private> meshLeve
 /** and so many levels coarser than that: for the seam's study */
 var<private> meshMore = 0u;
 /** how wide the ray's answer is there, in metres that a level may be off */
-fn meshWide(t: f32) -> f32 { return max(meshError, (meshFoot + frame.knobs.y) * footAt(t)); }
+fn meshWide(t: f32) -> f32 { return max(max(meshError, frame.knobs.x), (meshFoot + frame.knobs.y) * footAt(t)); }
 /** as far as this a ray does not meet the backs of triangles: it began under them, on a finer level */
 var<private> meshBack = 0.0;
 /** unless told otherwise that is a few times what the level it meets is off */
@@ -72,7 +72,9 @@ fn meshSurf(ro: vec3f, rd: vec3f, h: Hit, fp: f32) -> Surf {
   let v0 = mrowU(i0); let v1 = mrowU(i1); let v2 = mrowU(i2); let ln = normalize(octUnpack(v0.z) * w + octUnpack(v1.z) * u + octUnpack(v2.z) * v); let col = unpack4x8unorm(v0.w) * w + unpack4x8unorm(v1.w) * u + unpack4x8unorm(v2.w) * v; let spread = (f32(v0.y >> 16u) * w + f32(v1.y >> 16u) * u + f32(v2.y >> 16u) * v) / 65535.0;
   let cs = bitcast<f32>(c3.z); var s: Surf; s.x = x; s.piece = k; s.flags = (*p).flags & ~15u; s.kind = m.kind; s.through = vec3f(0.0); s.glow = vec3f(0.0); s.metal = m.metal; s.f0 = m.f0;
   s.ng = normalize(toWorld(k, c0.xyz * gn.x + c1.xyz * gn.y + c2.xyz * gn.z)); s.n = normalize(toWorld(k, c0.xyz * ln.x + c1.xyz * ln.y + c2.xyz * ln.z)); if (dot(s.ng, rd) > 0.0) { s.ng = -s.ng; s.n = -s.n; }
-  let tp = unpackTint((*p).tint); let tc = unpackTint(c3.y); var base = m.base * tp * tp * tc * tc * col.rgb * col.rgb;
+  // (which side a light is on is asked of the smooth surface, not of the facet: else facets near the sun's edge go dark one by one)
+  s.ng = s.n;
+  let tp = unpackTint((*p).tint); let tc = unpackTint(c3.y); var base = m.base * tp * tp * tc * tc * col.rgb * col.rgb * (0.72 + 0.28 * col.a);
   // under what triangles hold: the stone's own grain, two sizes of it
   var rough2 = m.rough * m.rough + 2.0 * spread; let grain = 1.0 - smoothstep(0.00008, 0.0006, fp);
   if (grain > 0.0) { let q = l * cs * (*p).quad.x; let f = 1600.0; let e = 0.5 / f; let g0 = vnoise3(q * f) + 0.5 * vnoise3(q * f * 2.7 + 5.0) * shows(f * 2.7, fp); let gx = vnoise3((q + vec3f(e, 0.0, 0.0)) * f); let gy = vnoise3((q + vec3f(0.0, e, 0.0)) * f); let gz = vnoise3((q + vec3f(0.0, 0.0, e)) * f); let lg = (vec3f(gx, gy, gz) - vnoise3(q * f)) * (0.45 * grain); s.n = normalize(s.n - normalize(toWorld(k, c0.xyz * lg.x + c1.xyz * lg.y + c2.xyz * lg.z) + s.n * 1e-6) * length(lg)); if (dot(s.n, s.ng) < 0.05) { s.n = normalize(s.n + s.ng * 0.3); } base *= 1.0 + 0.16 * grain * (g0 - 0.75); }

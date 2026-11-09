@@ -1,5 +1,6 @@
 // FEWER TRIANGLES, by pulling edges together where that moves the surface least (quadric error, Garland and Heckbert). Vertices that are locked stay where they are, so that what
 // lies beside this patch still fits it. The error that comes back is in metres.
+// What is lost of the LOOK counts too: a spot of another color, or a bump, as wide as the edge and so strong, is as bad as so many metres of distance. The raster goes by both, rays by distance alone.
 // A vertex carries means over the surface it stands for: its normal (the mean vector), its color, and how much normals that are gone spread about the one that is left.
 
 /** vertices, growing: every level of a mesh adds its own */
@@ -12,6 +13,8 @@ export class Pool {
 
 /** a patch is left as it is from where a collapse costs so many times (squared) what the cheap quarter did: one hard place must not spoil all that stands above it */
 const DEAR = 9;
+/** metres of error a metre of edge, for a color off by 1 and a normal off by a radian */
+const COLOR = 0.6, NORMAL = 0.25;
 const PULL = 1e-3;                                                  // how hard a vertex is held near its edge's middle, against the planes: keeps flats even
 
 /** scratch for one patch at a time, kept between patches */
@@ -21,11 +24,11 @@ export class Simplifier {
   private ver = new Int32Array(0); private gone = new Uint8Array(0); private locked = new Uint8Array(0); private was = new Int32Array(0); private moved = new Uint8Array(0);
   private T = new Int32Array(0); private dead = new Uint8Array(0); private rings: Int32Array[] = []; private ringN = new Int32Array(0);
   private heapKey = new Float64Array(0); private heapA = new Int32Array(0); private heapB = new Int32Array(0); private heapVA = new Int32Array(0); private heapVB = new Int32Array(0); private heapN = 0;
-  private at = new Float64Array(3); private near = new Int32Array(64);
+  private at = new Float64Array(3); /** what a vertex says that its neighbors do not, as error a metre of edge; and the last cost's part that is distance */ private O = new Float64Array(0); private geo = 0; private near = new Int32Array(64);
 
   private room(tris: number) {
     if (tris <= this.cap) return; this.cap = tris * 2; const v = this.cap * 3;
-    this.V = new Float64Array(v * 3); this.Q = new Float64Array(v * 11); this.N = new Float64Array(v * 3); this.C = new Float64Array(v * 4); this.S = new Float64Array(v);
+    this.V = new Float64Array(v * 3); this.Q = new Float64Array(v * 11); this.N = new Float64Array(v * 3); this.C = new Float64Array(v * 4); this.S = new Float64Array(v); this.O = new Float64Array(v);
     this.ver = new Int32Array(v); this.gone = new Uint8Array(v); this.locked = new Uint8Array(v); this.was = new Int32Array(v); this.moved = new Uint8Array(v); this.ringN = new Int32Array(v);
     this.T = new Int32Array(this.cap * 3); this.dead = new Uint8Array(this.cap);
   }
@@ -65,7 +68,7 @@ export class Simplifier {
     at[0] = x; at[1] = y; at[2] = z;
     const q = xx * x * x + yy * y * y + zz * z * z + 2 * (xy * x * y + xz * x * z + yz * y * z) + 2 * (bx * x + by * y + bz * z) + c;
     const e = (V[A]! - V[B]!) ** 2 + (V[A + 1]! - V[B + 1]!) ** 2 + (V[A + 2]! - V[B + 2]!) ** 2;
-    return Math.max(0, q / w) + 1e-6 * e;                           // (on a flat the short edges go first)
+    this.geo = Math.max(0, q / w); const o = Math.max(la ? 0 : this.O[a]!, lb ? 0 : this.O[b]!); return this.geo + (1e-6 + o * o) * e;                           // (on a flat the short edges go first)
   }
   /** would moving v to `at` turn a triangle over (those with `other` in them go away)? */
   private turns(v: number, other: number): boolean {
@@ -93,9 +96,9 @@ export class Simplifier {
 
   /**
    * `tri`: vertex ids of the pool. `isLocked(v)`: vertices that others share. Simplifies to about `target` triangles; new vertices join the pool.
-   * Returns the triangles left and the root mean square distance (metres) of the worst place.
+   * Returns the triangles left and, of the worst place, the error as it is seen and the distance alone (metres, root mean square over what lies round it).
    */
-  run(tri: Uint32Array, pool: Pool, isLocked: (v: number) => boolean, target: number): { tri: Uint32Array; error: number } {
+  run(tri: Uint32Array, pool: Pool, isLocked: (v: number) => boolean, target: number): { tri: Uint32Array; error: number; apart: number } {
     const nt = tri.length / 3; this.room(nt); if (this.mark.length < pool.n) { const cap = Math.max(pool.n * 2, 1024); this.mark = new Int32Array(cap); this.localOf = new Int32Array(cap); this.stamp = 0; }
     this.stamp++; const { V, Q, N, C, S, T, was, locked, ver, gone, moved, dead } = this; let nv = 0, cx = 0, cy = 0, cz = 0;
     for (let i = 0; i < 3 && i < tri.length; i++) { const p = tri[i]! * 3; cx += pool.pos[p]! / 3; cy += pool.pos[p + 1]! / 3; cz += pool.pos[p + 2]! / 3; }
@@ -124,11 +127,12 @@ export class Simplifier {
       const ex = V[B]! - V[A]!, ey = V[B + 1]! - V[A + 1]!, ez = V[B + 2]! - V[A + 2]!; let x = ey * nz - ez * ny, y = ez * nx - ex * nz, z = ex * ny - ey * nx; const l = Math.hypot(x, y, z); if (l < 1e-20) continue; x /= l; y /= l; z /= l; const w = (ex * ex + ey * ey + ez * ez), d = -(x * V[A]! + y * V[A + 1]! + z * V[A + 2]!);
       for (const v of [a, b]) { const q = v * 11; Q[q]! += w * x * x; Q[q + 1]! += w * x * y; Q[q + 2]! += w * x * z; Q[q + 3]! += w * y * y; Q[q + 4]! += w * y * z; Q[q + 5]! += w * z * z; Q[q + 6]! += w * d * x; Q[q + 7]! += w * d * y; Q[q + 8]! += w * d * z; Q[q + 9]! += w * d * d; }
     }
+    for (let v = 0; v < nv; v++) this.O[v] = locked[v] ? 0 : this.says(v);
     this.heapN = 0; for (const key of edgeN.keys()) { const a = Math.floor(key / nv), b = key % nv, c = this.cost(a, b); if (c < Infinity) this.push(c, a, b); }
-    let left = nt, worst = 0, plain = Infinity; const third = nt * 0.72;       // (what a quarter of them cost says what is dear)
+    let left = nt, worst = 0, off = 0, plain = Infinity; const third = nt * 0.72;       // (what a quarter of them cost says what is dear)
     while (left > target && this.heapN > 0) {
       this.pop(); const s = this.heapN, a = this.heapA[s]!, b = this.heapB[s]!; if (gone[a] || gone[b] || ver[a] !== this.heapVA[s] || ver[b] !== this.heapVB[s]) continue;
-      const key = this.heapKey[s]!, keep = locked[b] ? b : a, drop = keep === a ? b : a; if (this.cost(a, b) === Infinity) continue;
+      const key = this.heapKey[s]!, keep = locked[b] ? b : a, drop = keep === a ? b : a; if (this.cost(a, b) === Infinity) continue; const apart = this.geo;
       if (left <= third) { if (plain === Infinity) plain = worst; if (key > plain * DEAR) break; }
       // one hole more or less would be made where the two have other than two neighbors in common
       let shared = 0, faces = 0; { const n = this.round(a, 0), mine = this.near.slice(0, n), m = this.round(b, 0); for (let i = 0; i < n; i++) for (let j = 0; j < m; j++) if (mine[i] === this.near[j]) shared++; const r = this.rings[a]!; for (let i = 0; i < this.ringN[a]!; i++) { const t = r[i]!; if (!dead[t] && (T[t * 3] === b || T[t * 3 + 1] === b || T[t * 3 + 2] === b)) faces++; } }
@@ -139,16 +143,21 @@ export class Simplifier {
       const wa = Q[keep * 11 + 10]!, wb = Q[drop * 11 + 10]!, w = wa + wb; const la = this.odd(keep), lb = this.odd(drop);
       S[keep] = (wa * (S[keep]! + (locked[keep] ? 0 : la)) + wb * (S[drop]! + lb)) / w;
       if (!locked[keep]) { for (let k = 0; k < 3; k++) { N[keep * 3 + k] = (wa * N[keep * 3 + k]! + wb * N[drop * 3 + k]!) / w; } for (let k = 0; k < 4; k++) C[keep * 4 + k] = (wa * C[keep * 4 + k]! + wb * C[drop * 4 + k]!) / w; const l = Math.hypot(N[keep * 3]!, N[keep * 3 + 1]!, N[keep * 3 + 2]!) || 1; for (let k = 0; k < 3; k++) N[keep * 3 + k]! /= l; V[keep * 3] = X; V[keep * 3 + 1] = Y; V[keep * 3 + 2] = Z; moved[keep] = 1; } else S[keep] = pool.spread[was[keep]!]!;
-      for (let k = 0; k < 11; k++) Q[keep * 11 + k]! += Q[drop * 11 + k]!;
+      this.O[keep] = Math.max(this.O[keep]!, this.O[drop]!); for (let k = 0; k < 11; k++) Q[keep * 11 + k]! += Q[drop * 11 + k]!;
       const r = this.rings[drop]!, n = this.ringN[drop]!; gone[drop] = 1;
       for (let i = 0; i < n; i++) { const t = r[i]!; if (dead[t]) continue; let has = false; for (let k = 0; k < 3; k++) if (T[t * 3 + k] === keep) has = true; if (has) { dead[t] = 1; left--; continue; } for (let k = 0; k < 3; k++) if (T[t * 3 + k] === drop) T[t * 3 + k] = keep; this.addRing(keep, t); }
       { const q = this.rings[keep]!; let m = 0; for (let i = 0; i < this.ringN[keep]!; i++) if (!dead[q[i]!]) q[m++] = q[i]!; this.ringN[keep] = m; }
-      ver[keep]!++; if (key > worst) worst = key;
+      ver[keep]!++; if (key > worst) worst = key; if (apart > off) off = apart;
       const m = this.round(keep, 0), ring = this.near.slice(0, m); for (let i = 0; i < m; i++) { const c = this.cost(keep, ring[i]!); if (c < Infinity) this.push(c, keep, ring[i]!); }
     }
     const out = new Uint32Array(left * 3), to = new Int32Array(nv).fill(-1); let o = 0;
     for (let t = 0; t < nt; t++) { if (dead[t]) continue; for (let k = 0; k < 3; k++) { const l = T[t * 3 + k]!; let g = to[l]!; if (g < 0) { if (!moved[l]) g = was[l]!; else { g = pool.add(); pool.pos[g * 3] = V[l * 3]! + cx; pool.pos[g * 3 + 1] = V[l * 3 + 1]! + cy; pool.pos[g * 3 + 2] = V[l * 3 + 2]! + cz; for (let q = 0; q < 3; q++) pool.nrm[g * 3 + q] = N[l * 3 + q]!; for (let q = 0; q < 4; q++) pool.col[g * 4 + q] = C[l * 4 + q]!; pool.spread[g] = S[l]!; } to[l] = g; } out[o++] = g; } }
-    return { tri: out, error: Math.sqrt(worst) };
+    return { tri: out, error: Math.sqrt(worst), apart: Math.sqrt(off) };
+  }
+  /** what it says that its neighbors do not: of color, and of the way it faces */
+  private says(v: number): number {
+    const n = this.round(v, 0), C = this.C; if (n < 3) return 0; let c = 0; for (let k = 0; k < 3; k++) { let m = 0; for (let i = 0; i < n; i++) m += C[this.near[i]! * 4 + k]!; c = Math.max(c, Math.abs(m / n - C[v * 4 + k]!)); }
+    return COLOR * c / 255 + NORMAL * Math.sqrt(2 * this.odd(v));
   }
   /** how far a vertex's normal is from what its neighbors' would make of it (1 − cos) */
   private odd(v: number): number {

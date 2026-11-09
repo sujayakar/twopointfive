@@ -8,7 +8,7 @@ export const CLUSTER = 128, VERTS = 256, GROUP = 12;
 export type Ball = { x: number; y: number; z: number; r: number };
 export interface Cluster {
   /** vertex ids of the pool, three a triangle */ tri: Uint32Array;
-  /** its own error and the ball that is judged by; the same of the group it was simplified in (Infinity: nothing is coarser) */ error: number; ball: Ball; parentError: number; parentBall: Ball;
+  /** how far it stands off the finest, metres */ apart: number; /** its own error, as it is seen, and the ball that is judged by; the same of the group it was simplified in (Infinity: nothing is coarser) */ error: number; ball: Ball; parentError: number; parentBall: Ball;
   /** what it fills */ bound: Ball; level: number;
 }
 export interface Dag { pool: Pool; clusters: Cluster[]; levels: number; /** of the finest */ triangles: number }
@@ -49,7 +49,7 @@ function cutUp(pool: Pool, tri: Uint32Array, turn: number): Uint32Array[] {
 export function buildDag(m: Mesh, least = 24): Dag {
   const nv = m.pos.length / 3, pool = new Pool(nv * 2 + 64); pool.n = nv; pool.pos.set(m.pos); pool.nrm.set(m.nrm); for (let i = 0; i < nv * 4; i++) pool.col[i] = m.col[i]!;
   const simp = new Simplifier(), clusters: Cluster[] = [], none: Ball = { x: 0, y: 0, z: 0, r: 0 };
-  let live: Cluster[] = cutUp(pool, m.tri, 0.31).map(tri => { const b = ballOf(pool, tri); return { tri, error: 0, ball: b, parentError: Infinity, parentBall: none, bound: b, level: 0 }; }); clusters.push(...live);
+  let live: Cluster[] = cutUp(pool, m.tri, 0.31).map(tri => { const b = ballOf(pool, tri); return { tri, apart: 0, error: 0, ball: b, parentError: Infinity, parentBall: none, bound: b, level: 0 }; }); clusters.push(...live);
   let owner = new Int32Array(0), level = 0;
   for (;;) {
     const total = live.reduce((a, c) => a + c.tri.length / 3, 0); if (total <= least || level > 40) break; level++;
@@ -62,9 +62,9 @@ export function buildDag(m: Mesh, least = 24): Dag {
       const of = [...ids].map(i => live[i]!); let n = 0; for (const c of of) n += c.tri.length; const all = new Uint32Array(n); n = 0; for (const c of of) { all.set(c.tri, n); n += c.tri.length; }
       const was = all.length / 3, o = owner, s = simp.run(all, pool, v => o[v] === -2, Math.max(Math.min(least, was >> 1), was >> 1)), now = s.tri.length / 3;
       if (now > was * 0.85) { next.push(...of); continue; }           // it would not go: perhaps in other company, next time
-      made++; const worst = Math.max(...of.map(c => c.error)), error = Math.max(worst * 1.0001, Math.hypot(worst, s.error)) + 1e-9, ball = around(of.map(c => c.ball));
+      made++; const worst = Math.max(...of.map(c => c.error)), apart = Math.hypot(Math.max(...of.map(c => c.apart)), s.apart), error = Math.max(worst * 1.0001, Math.hypot(worst, s.error)) + 1e-9, ball = around(of.map(c => c.ball));
       for (const c of of) { c.parentError = error; c.parentBall = ball; }
-      for (const tri of cutUp(pool, s.tri, level * 1.3 + 0.2)) { const c: Cluster = { tri, error, ball, parentError: Infinity, parentBall: none, bound: ballOf(pool, tri), level }; next.push(c); clusters.push(c); }
+      for (const tri of cutUp(pool, s.tri, level * 1.3 + 0.2)) { const c: Cluster = { tri, apart, error, ball, parentError: Infinity, parentBall: none, bound: ballOf(pool, tri), level }; next.push(c); clusters.push(c); }
     }
     live = next; if (!made) break;
   }

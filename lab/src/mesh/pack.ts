@@ -103,10 +103,10 @@ export function packMesh(s: Store, d: Dag): Packed {
   // ---- levels for rays: cuts at a half, a quarter … of the triangles, each a tree over its clusters, whose own small trees are shared
   const index = new Map(d.clusters.map((c, i) => [c, i])), levels: Level[] = [];
   for (let k = 0; k < RATIOS; k++) {
-    const e = k === 0 ? 0 : errorFor(d, d.triangles / 2 ** k); if (k > 0 && e <= levels[levels.length - 1]!.error) continue; const cs = cutAt(d, e), tris = cs.reduce((a, c) => a + c.tri.length / 3, 0); if (k > 0 && tris > levels[levels.length - 1]!.triangles * 0.8) continue;
+    const e = k === 0 ? 0 : errorFor(d, d.triangles / 2 ** k); const cs = cutAt(d, e), tris = cs.reduce((a, c) => a + c.tri.length / 3, 0); if (k > 0 && tris > levels[levels.length - 1]!.triangles * 0.8) continue;
     const at = cs.map(c => index.get(c)!), boxes = new Float64Array(cs.length * 6); at.forEach((c, i) => boxes.set(subBox[c]!, i * 6)); const tr = tree(boxes, cs.length, 1), root = lay(s, tr.root, 'ray trees', f => sub[at[tr.order[f]!]!]!);
     let sp = 0, sn = 0; for (const c of cs) for (const v of c.tri) { sp += P.spread[v]!; sn++; }
-    levels.push({ error: e, triangles: tris, spread: sp / sn, root });
+    levels.push({ error: Math.max(...cs.map(c => c.apart)), triangles: tris, spread: sp / sn, root });
   }
   const h = header * 4, whole = around(d.clusters.filter(c => c.level === 0).map(c => c.bound)); s.f.set(mn, h); s.u[h + 3] = levels.length; s.f.set(st, h + 4); s.u[h + 7] = s.base + rec; s.u[h + 8] = s.base + idx; s.u[h + 9] = s.base + top; s.u[h + 10] = tops.length; s.u[h + 11] = n; s.f.set([whole.x, whole.y, whole.z, whole.r], h + 12);
   levels.forEach((l, i) => { s.f[h + 16 + i * 4] = l.error; s.u[h + 17 + i * 4] = l.root; s.u[h + 18 + i * 4] = l.triangles; s.f[h + 19 + i * 4] = l.spread; });
