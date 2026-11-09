@@ -23,7 +23,7 @@ import surfaceCode from './wgsl/surface.wgsl' with { type: 'text' };
 import { Ripples, rippleCode, rippleRows } from './scene/waves';
 import wavesCode from './wgsl/waves.wgsl' with { type: 'text' };
 import { Water } from './water';
-import { defaults } from './tune';
+import { defaults, graded } from './tune';
 import { Smoke } from './stages/smoke';
 import { Near } from './scene/near';
 import { mapLamps, lampMapCode } from './lampmap';
@@ -112,9 +112,10 @@ export class Lab {
     v(c.pos); v(c.right); v(c.up); v(c.fwd); v(p.pos); v(p.right); v(p.up); v(p.fwd); v(h.sun, h.radius); v(h.sunE, 1);
     f.set([rw, rh, ow, oh], o); o += 4; f.set([this.jitter[0], this.jitter[1], this.prevJitter[0], this.prevJitter[1]], o); o += 4; f.set([this.time, this.cut, this.exposure, h.haze * this.haze], o); o += 4; f.set([this.knobs[0]!, this.knobs[1]!, this.scene.joinRow, h.night * 2.2 * (this.mains ? 1 : 0)], o); o += 4;
     this.slots = (this.scene.sendAir(this.air), this.scene.sendRipples(this.ripples), this.scene.moved()); this.scene.cull(c, this.cut); this.scene.sendLamps();
-    u.set([Math.min(64, b.world.lamps.length), Math.min(32, b.world.openings.length), this.frameNo, this.seed], o); o += 4; u.set(this.scene.per, o); o += 4; u.set(this.scene.node0, o); o += 4; u.set(this.scene.stepOf, o); o += 4; u.set(this.scene.piece0, o); o += 4; f.set(b.pool, o); o += 4; f.set([b.poolTop, b.poolDeep, this.gone, this.scene.airRow], o); o += 4; f.set([this.wet, this.rainNow, this.mains ? 1 : 0, Math.atan2(this.air.way[2], this.air.way[0])], o); o += 4; f.set([this.smoke.on ? 1 : 0, this.scene.noiseAt, this.dense, this.air.strength], o); o += 4; { const me = b.player.body.pos; this.tune.set(this.playing ? [me[0], me[1] + 1.0, me[2]] : [0, -999, 0], 25); } f.set(this.tune, o); f.set([this.snow, this.snowNow, Math.max(0, Math.min(0.1, this.time - this.drawnAt)), this.ripples.live ? 1 : 0], o + 32); this.drawnAt = this.time;
+    u.set([Math.min(64, b.world.lamps.length), Math.min(32, b.world.openings.length), this.frameNo, this.seed], o); o += 4; u.set(this.scene.per, o); o += 4; u.set(this.scene.node0, o); o += 4; u.set(this.scene.stepOf, o); o += 4; u.set(this.scene.piece0, o); o += 4; f.set(b.pool, o); o += 4; f.set([b.poolTop, b.poolDeep, this.gone, this.scene.airRow], o); o += 4; f.set([this.wet, this.rainNow, this.mains ? 1 : 0, Math.atan2(this.air.way[2], this.air.way[0])], o); o += 4; f.set([this.smoke.on ? 1 : 0, this.scene.noiseAt, this.dense, this.air.strength], o); o += 4; { const me = b.player.body.pos; this.tune.set(this.playing ? [me[0], me[1] + 1.0, me[2]] : [0, -999, 0], 25); } f.set(this.look(), o); f.set([this.snow, this.snowNow, Math.max(0, Math.min(0.1, this.time - this.drawnAt)), this.ripples.live ? 1 : 0], o + 32); this.drawnAt = this.time;
     this.gpu.device.queue.writeBuffer(this.scene.frame, 0, f); this.prev = c; this.prevJitter = this.jitter;
   }
+  /** the knobs as they are now: the level's look at this hour, on what is turned */ look(): Float32Array { const f = this.looked; f.set(this.tune); graded(this.building.place.grade, this.hour, f); return f; } private looked = new Float32Array(32);
   sendMs = 0; private drawnAt = 0;
   /** draw one frame with the current method; `then` may add its own passes (the canvas) */
   draw(then?: (e: GPUCommandEncoder, result: GPUTexture) => void) {

@@ -16,15 +16,15 @@ fn shown(c0: vec3f) -> vec3f {
   let y0 = dot(c0, vec3f(0.2126, 0.7152, 0.0722)); let mx = max(c0.r, max(c0.g, c0.b)); let sat = (mx - min(c0.r, min(c0.g, c0.b))) / max(mx, 1e-4); let c = max(vec3f(0.0), y0 + (c0 - y0) * (1.0 + @tune.color * (1.0 - 0.6 * sat)));
   let y = max(strong(c), 1e-6); var h = c * (film(vec3f(y)).x / y); let hm = max(h.r, max(h.g, h.b)); if (hm > 1.0) { h = 0.5 * h / hm + 0.5 * min(h, vec3f(1.0)); } return mix(film(c), h, @tune.hue);
 }
-/** stops to add: l = this point's stops, base = the base's here (a, b of the guided filter, about the measure A) */
-fn stops(l: f32, A: f32, ab: vec2f) -> f32 { let d = ab.x * (l - A) + ab.y; let out = @tune.key + A * 0.1 - @tune.dark * max(0.0, -5.0 - A) + select(-log(1.0 - 0.05 * min(d, 0.0)) * (@tune.low / 0.05), log(1.0 + 0.10 * max(d, 0.0)) * (@tune.high / 0.10), d > 0.0) + (l - A - d) * @tune.detail; return out - l; }
+/** stops to add: l = this point's stops; ab, cd = the broad base and the middling one here (of the guided filters, about the measure A). What lies between the two is clarity's, what is finer is detail's */
+fn stops(l: f32, A: f32, ab: vec2f, cd: vec2f) -> f32 { let d = ab.x * (l - A) + ab.y; let mid = cd.x * (l - A) + cd.y - d; let out = @tune.key + A * 0.1 - @tune.dark * max(0.0, -5.0 - A) + select(-log(1.0 - 0.05 * min(d, 0.0)) * (@tune.low / 0.05), log(1.0 + 0.10 * max(d, 0.0)) * (@tune.high / 0.10), d > 0.0) + mid * @tune.clarity + (l - A - d - mid) * @tune.detail; return out - l; }
 `;
-const R = 14, BASE: Size = [160, 90];
+const R = 14, BASE: Size = [160, 90], R2 = 5, MID: Size = [320, 180];
 export function exposeStages(lab: Lab, g: Graph, picture: string, small: string, pre: string): Stage[] {
   lab.buffer('exposure', 16); const E: Stage['buffers'] = { e: ['exposure', 'array<f32, 4>', 'read'] }, n = (k: string) => `${pre}Base${k}`;
-  for (const k of ['0', '1', '2', '3', '']) g.signal(n(k), 'rgba16float', BASE);
-  const box = (from: string, to: string, dx: number, dy: number, then: string): Stage => ({ name: 'base', over: BASE, reads: { [from]: 'src' }, writes: { outT: to }, code: `
-@compute @workgroup_size(8, 8) fn main(@builtin(global_invocation_id) id: vec3u) { let d = vec2i(textureDimensions(outT)); if (any(vec2i(id.xy) >= d)) { return; } var m = vec4f(0.0); for (var i = -${R}; i <= ${R}; i++) { m += textureLoad(src, clamp(vec2i(id.xy) + vec2i(i * ${dx}, i * ${dy}), vec2i(0), d - 1), 0); } m /= ${2 * R + 1}.0; ${then} textureStore(outT, id.xy, m); }` });
+  for (const k of ['0', '1', '2', '3', '']) { g.signal(n(k), 'rgba16float', BASE); g.signal(n('M' + k), 'rgba16float', MID); }
+  const box = (from: string, to: string, dx: number, dy: number, then: string, over: Size = BASE, r = R): Stage => ({ name: 'base', over, reads: { [from]: 'src' }, writes: { outT: to }, code: `
+@compute @workgroup_size(8, 8) fn main(@builtin(global_invocation_id) id: vec3u) { let d = vec2i(textureDimensions(outT)); if (any(vec2i(id.xy) >= d)) { return; } var m = vec4f(0.0); for (var i = -${r}; i <= ${r}; i++) { m += textureLoad(src, clamp(vec2i(id.xy) + vec2i(i * ${dx}, i * ${dy}), vec2i(0), d - 1), 0); } m /= ${2 * r + 1}.0; ${then} textureStore(outT, id.xy, m); }` });
   void picture;
   return [
     { name: 'meter', over: { groups: () => [1, 1, 1] }, reads: { [small]: 'src' }, buffers: { e: ['exposure', 'array<f32, 4>', 'read_write'], k: ['exposeK', 'vec4f', 'uniform'] }, code: CURVE + `
@@ -40,6 +40,9 @@ fn sum(i: u32, v: vec2f) -> vec2f { workgroupBarrier(); s[i] = v; workgroupBarri
     { name: 'base', over: BASE, reads: { [small]: 'src' }, writes: { outT: n('0') }, buffers: E, code: CURVE + `
 @compute @workgroup_size(8, 8) fn main(@builtin(global_invocation_id) id: vec3u) { let d = vec2f(textureDimensions(outT)); if (any(vec2f(id.xy) >= d)) { return; } var m = vec2f(0.0); for (var y = 0; y < 3; y++) { for (var x = 0; x < 3; x++) { let l = log2(clamp(strong(textureSampleLevel(src, linSamp, (vec2f(id.xy) + (vec2f(f32(x), f32(y)) + 0.5) / 3.0) / d, 0.0).xyz), 1e-5, 1e4)) - e[0]; m += vec2f(l, l * l); } } textureStore(outT, id.xy, vec4f(m / 9.0, 0.0, 1.0)); }` },
     box(n('0'), n('1'), 1, 0, ''), box(n('1'), n('2'), 0, 1, 'let v = max(m.y - m.x * m.x, 0.0); let a = v / (v + 0.5); m = vec4f(a, m.x * (1.0 - a), 0.0, 1.0);'), box(n('2'), n('3'), 1, 0, ''), box(n('3'), n(''), 0, 1, ''),
+    { name: 'base', over: MID, reads: { [small]: 'src' }, writes: { outT: n('M0') }, buffers: E, code: CURVE + `
+@compute @workgroup_size(8, 8) fn main(@builtin(global_invocation_id) id: vec3u) { let d = vec2f(textureDimensions(outT)); if (any(vec2f(id.xy) >= d)) { return; } var m = vec2f(0.0); for (var y = 0; y < 3; y++) { for (var x = 0; x < 3; x++) { let l = log2(clamp(strong(textureSampleLevel(src, linSamp, (vec2f(id.xy) + (vec2f(f32(x), f32(y)) + 0.5) / 3.0) / d, 0.0).xyz), 1e-5, 1e4)) - e[0]; m += vec2f(l, l * l); } } textureStore(outT, id.xy, vec4f(m / 9.0, 0.0, 1.0)); }` },
+    box(n('M0'), n('M1'), 1, 0, '', MID, R2), box(n('M1'), n('M2'), 0, 1, 'let v = max(m.y - m.x * m.x, 0.0); let a = v / (v + 0.35); m = vec4f(a, m.x * (1.0 - a), 0.0, 1.0);', MID, R2), box(n('M2'), n('M3'), 1, 0, '', MID, R2), box(n('M3'), n('M'), 0, 1, '', MID, R2),
   ];
 }
 /** stops added in all, snap */

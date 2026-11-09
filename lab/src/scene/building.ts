@@ -271,7 +271,7 @@ export function poseDoor(d: Door) {
   const a = d.yaw + (d.slide ? 0 : d.swing * d.open * 1.75), rt: Rot = rotY(a), at = d.slide ? add(d.hinge, mul(d.slide, d.open)) : d.hinge; d.leaf.forEach((p, i) => { const l = d.local[i]!; p.at = add(at, apply(rt, l.at)); p.rot = rt; p.half = l.half; });
 }
 const PLACE: Place = {
-  name: 'rooftop', title: 'ROOFTOP', rooms: [[-12, -0.5, -8, 12, 3.3, 8], [-12, 3.3, -8, 4, 6.7, 8]], openFloor: 3.5, sunAt: [4, 4, 0], sunSize: 30,
+  name: 'rooftop', title: 'ROOFTOP', grade: [{ hour: 1, clarity: 0.10, contrast: 0.05 }, { hour: 6.2, clarity: 0.30, color: 0.06 }, { hour: 9, clarity: 0.22 }, { hour: 13, clarity: 0.28, contrast: 0.04, high: 0.05 }, { hour: 16.5, clarity: 0.25 }, { hour: 19, clarity: 0.35, color: 0.08 }, { hour: 21, clarity: 0.18, contrast: 0.05 }], rooms: [[-12, -0.5, -8, 12, 3.3, 8], [-12, 3.3, -8, 4, 6.7, 8]], openFloor: 3.5, sunAt: [4, 4, 0], sunSize: 30,
   start: { hour: 16.4, look: [1.5, 3, 0.5], yaw: 0.62, pitch: 0.86, dist: 50, level: 0, wet: 0, rain: 0, steam: 1 }, floors: [3.42, 3.42, 0.02], pan: [18, 14],
   legs: [{ name: 'roof', look: [1, 3, 0], dist: 52, level: 0 }, { name: 'garden', look: [7.5, 3.6, 0.5], dist: 32, level: 0 }, { name: 'upper floor', look: [-4, 3.4, -1], dist: 38, level: 1 }, { name: 'ground near', look: [2, 0.6, 0], dist: 30, level: 2 }, { name: 'ground', look: [0, 0.6, 0], dist: 46, level: 2 }],
   groups: ['atrium', 'orange', 'green', 'blue', 'gallery', 'studio', 'lounge'], quiet: { hour: 23, groups: { atrium: 0.10, orange: 0, green: 0.06, blue: 0.25, gallery: 0, studio: 0, lounge: 0.12, landing: 0.08, terrace: 0.5, pool: 0.35 } },
