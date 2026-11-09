@@ -62,7 +62,7 @@ export async function splitraysCheck(): Promise<boolean> {
   // ---- what a load compiles (the size tool, a run of its own)
   const tmp = mkdtempSync(join(tmpdir(), 'splitrays-'));
   try {
-    const f = join(tmp, 'page.json'), r = Bun.spawn(['bun', 'run', `${ROOT}/tools/qa/shaderinline-check.ts`, '--json', f], { env: { ...process.env, SHADERINLINE_BREAK: undefined }, stdout: 'pipe', stderr: 'ignore' }), text = await new Response(r.stdout).text(), green = await r.exited === 0;
+    const f = join(tmp, 'page.json'), r = Bun.spawn(['bun', 'run', `${ROOT}/tools/qa/shaders-check.ts`, 'inline', '--json', f], { env: { ...process.env, SHADERINLINE_BREAK: undefined }, stdout: 'pipe', stderr: 'ignore' }), text = await new Response(r.stdout).text(), green = await r.exited === 0;
     let j: Sizes | null = null; try { j = JSON.parse(readFileSync(f, 'utf8')) as Sizes; } catch { /* no file: the line says so */ }
     const KB = (n: number) => `${Math.round(n / 1024)} KB`, gathers = (re: RegExp) => (j?.kernels ?? []).filter(k => re.test(k.module) && k.setting !== 'title');   // (the size tool's file carries the title's kernels after the page's own: one page is counted here)
     const old = gathers(/^fgatherS?$/), own = gathers(/^gatherSplit/), pipes = own.flatMap(k => k.pipelines).sort().join(' ');

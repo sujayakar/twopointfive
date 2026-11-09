@@ -3,7 +3,7 @@
 // size ("Stack size limit exceeded"). Nothing reports it: the pipeline is made, the page boots with no error, and the GPU process dies of a null routine the first
 // time the pass is dispatched ("WebGPU device lost: A valid external Instance reference no longer exists."). The final gather has stood within a hundredth of
 // that limit for a long time, so a few lines added to anything it calls is enough. This is a limit of the adapter the cloud tests on, not of a GPU, but what
-// grows the frame is the same pasted size a Windows shader compiler pays for (tools/qa/shaderinline-check.ts).
+// grows the frame is the same pasted size a Windows shader compiler pays for (tools/qa/shaders-check.ts inline).
 //
 // What it does: loads the page (the look page by default) only as far as its shader modules and compute pipeline descriptors, which takes seconds, and keeps
 // their texts AS THE PAGE MAKES THEM (tools/qa/wgsl-dump.ts's stand-in leaves page switches down and its texts are smaller). Then, a kernel at a time, in a
