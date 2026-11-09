@@ -188,9 +188,9 @@ floor.
 
 - **Run the checks:** `level-needs.ts <name> --run`, `levels stacks <mission>`, `gate "start <row>"`, and the row's other `gate` rows.
 - **Read a change of play side by side.** `missions --seeds 1-8 <level> > after.tsv` (`--bin missions`), then `missions diff before.tsv after.tsv`. Read eight seeds,
-  and the sums first. A row is never a claim about how hard a mission is. It asks only the names in `LEVELS` in `missions.rs`, so add a new room clear there.
-- **Some lists name their levels by hand** (`RUNS` and `SEATS` in `rows.rs`, `coop.rs`, `kit_stage.rs`). A new level is in none until added: `git grep -n "depot"`
-  shows where one is.
+  and the sums first. A row is never a claim about how hard a mission is. It asks every room clear of the mission list, so a new row is in.
+- **Some lists are chosen cases** (`RUNS` and `SEATS` in `rows.rs`, the table in `kit_stage.rs`). A new level is in none until added: `gate list` ends with the missions no run and no seats
+  row plays, and `kit_levels.rs` holds every level with a kit picture.
 - **Boot the real page once** on the mission's address, with no console or GPU errors (`.claude/skills/verify/SKILL.md`). `startpage-look.cjs` walks every row
   through its loadout, and `play-check.ts` starts every mission on the module. Say "never seen on a GPU" of what was not.
 
