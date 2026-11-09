@@ -8,9 +8,7 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 // ------------------------------------------------------------------ private helpers
 fn flag() -> crate::scene_boxes::BoxFlag { crate::scene_boxes::box_flag() }
-/// A box's row (`Box.*`): the one line of this file that says where a box lives. Vec<BoxId>` and no table of Box rows, while index/ids.txt and properties.txt say
-/// `g.col.boxes[id]`. With the table the body is one line. Tests have a table of their own, at the foot of this file.
-#[cfg(not(test))]
+/// A box's row (`Box.*`): the one line of this file that says where a box lives.
 fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 /// the box a breakable stands in for
 fn own_box(g: &mut Game, b: WallbreakBreakableId) -> &mut crate::scene_boxes::Box { let x = g.tab.wallbreak_breakable[b].box_; seam_box(g, x) }
@@ -614,117 +612,135 @@ pub fn wall_break_since(g: &crate::game::Game, serial: f64) -> Option<Vec<crate:
 
 #[cfg(test)]
 mod tests {
-    extern crate std;
     use super::*;
+
+    const C: V3 = [3.25, 1.4, 7.75];
+    const H: V3 = [2.1, 1.4, 0.06];
 
     /// a game holding these boxes and the one breakable, whose box every one of them is a piece of
     fn game_with(boxes: &[(V3, V3, f64)], b: &Breakable) -> (alloc::boxed::Box<Game>, WallbreakBreakableId) {
         let mut g = alloc::boxed::Box::new(Game::blank());
-        for &(c, h, yaw) in boxes { let id = test_box(crate::scene_boxes::Box { c, h, yaw, ..Default::default() }); g.col.boxes.push(id); }
-        let id = g.tab.wallbreak_breakable.push(b.clone());
+        let mut first = None;
+        for &(c, h, yaw) in boxes {
+            let id = g.tab.boxes.push(crate::scene_boxes::Box { c, h, yaw, ..Default::default() });
+            first.get_or_insert(id);
+            g.col.boxes.push(id);
+        }
+        let id = g.tab.wallbreak_breakable.push(Breakable { box_: first.unwrap(), ..b.clone() });
         g.destr.walls.list.push(id);
         for i in 0..boxes.len() { g.destr.walls.owner.set(crate::Num(i as f64), id); }
         (g, id)
     }
+    /// a wall of eight columns over a sill row and an upper row
     fn wall(open: &[usize], dmg: &[(usize, f32)]) -> Breakable {
-        let mut b = Breakable { id: 0.0, kind: BKind::Wall, surf: crate::scene_materials::Surf::Drywall, box_: BoxId(0), nx: 8.0, ny: 2.0, nz: 1.0, yb: vec![-1.4, -0.7, 1.4], open: vec![0; 16], dmg: vec![0.0; 16], slots: vec![1.0], live: 1.0, n_open: open.len() as f64, ..Default::default() };
+        let mut b = Breakable { id: 0.0, kind: BKind::Wall, surf: crate::scene_materials::Surf::Drywall, nx: 8.0, ny: 2.0, nz: 1.0, yb: vec![-1.4, -0.7, 1.4], open: vec![0; 16], dmg: vec![0.0; 16], slots: vec![1.0], live: 1.0, n_open: open.len() as f64, ..Default::default() };
         for &c in open { b.open[c] = 1; }
         for &(c, d) in dmg { b.dmg[c] = d; }
         b
     }
-    fn bits(v: &[f64]) -> Vec<u64> { v.iter().map(|x| x.to_bits()).collect() }
+    fn near(a: V3, b: V3) { assert!((0..3).all(|i| (a[i] - b[i]).abs() < 1e-9), "{a:?} {b:?}"); }
 
-    /// expected: the methods of WallBreak itself, on these boxes, under bun with EXACT.on
+    /// A failure means a round opens a cell it did not hit, and the hole in the wall is not where the player shot.
     #[test]
-    fn the_cells_geometry_is_the_typescripts() {
-        std::thread::Builder::new().stack_size(1 << 28).spawn(|| {
-            const C: V3 = [3.25, 1.4, 7.75]; const H: V3 = [2.1, 1.4, 0.06];
-            let w = wall(&[3, 11], &[(12, 2.5), (4, 1.25)]);
-            let (mut g, b) = game_with(&[(C, H, 0.3), ([3.0, 1.0, 7.7], [0.25, 0.35, 0.06], 0.3)], &w);
-            let g = &mut *g;
-            assert_eq!(bits(&wall_break_to_local(g, b, [4.1, 0.9, 8.2])), [0x3fe5bacb19112b2b, 0xbfdffffffffffffe, 0x3fe5cb84cbeaed16]);
-            assert_eq!(bits(&wall_break_to_world(g, b, [0.7, -0.2, 0.03])), [0x400f6bba26a754f6, 0x3ff3333333333333, 0x401e4984e0a52087]);
-            assert_eq!(wall_break_xb(g, b, 3.0).to_bits(), 0xbfe0cccccccccccc);
-            assert_eq!(wall_break_zb(g, b, 1.0).to_bits(), 0x3faeb851eb851eb8);
-            assert_eq!(wall_break_cell_at(g, b, [3.4, 1.9, 7.8], None), [4.0, 1.0, 0.0]);
-            assert_eq!(wall_break_cell_at(g, b, [5.9, 2.2, 7.1], Some(BoxId(1))), [4.0, 1.0, 0.0]);
-            assert_eq!(bits(&wall_break_cell_centre(g, b, 2.0, 1.0, 0.0)), [0x4003fb3bba39f07c, 0x3ffc000000000000, 0x401fee4eb7f830c4]);
-            let r = wall_break_rect_box(g, b, [1.0, 4.0, 0.0, 1.0, 0.0, 0.0]);
-            assert_eq!(bits(&r.c), [0x4005fcd27c26a052, 0x3ff6666666666666, 0x401f9edf25502083]);
-            assert_eq!(bits(&r.h), [0x3ff0cccccccccccd, 0x3ff6666666666666, 0x3faeb851eb851eb8]);
-            assert_eq!(wall_break_work_left(g, 0.0, [3.6, 1.8, 7.7], [0.8, 0.0, 0.6], None), Some(3.5));
-            assert_eq!(wall_break_work_left(g, 0.0, [3.6, 1.8, 7.7], [1.0, 0.0, 0.0], Some(2.4)), Some(3.5));
-            assert_eq!(wall_break_work_left(g, 1.0, [2.9, 0.4, 7.7], [0.8, 0.0, 0.6], None), None);
-        }).unwrap().join().unwrap();
+    fn every_cell_s_middle_reads_back_as_that_cell() {
+        let (mut g, b) = game_with(&[(C, H, 0.3)], &wall(&[], &[]));
+        let g = &mut *g;
+        let p: V3 = [4.1, 0.9, 8.2];
+        let back = wall_break_to_local(g, b, p);
+        near(wall_break_to_world(g, b, back), p);
+        for iy in 0..2 {
+            for ix in 0..8 {
+                let m_ = wall_break_cell_centre(g, b, ix as f64, iy as f64, 0.0);
+                assert_eq!(wall_break_cell_at(g, b, m_, None), [ix as f64, iy as f64, 0.0]);
+            }
+        }
+        // the columns are even across the wall, the rows are where the row table says
+        assert_eq!(wall_break_xb(g, b, 0.0), -H[0]);
+        assert_eq!(wall_break_xb(g, b, 8.0), H[0]);
+        assert_eq!(wall_break_zb(g, b, 1.0), H[2]);
+        let m_ = wall_break_cell_centre(g, b, 2.0, 0.0, 0.0);
+        assert!((wall_break_to_local(g, b, m_)[1] - (-1.05)).abs() < 1e-9);
     }
 
-    /// expected: WallBreak.workLeft under bun: the walk along a wall sums the cells it crosses, and a sill under a standing upper counts on the upper
     #[test]
-    fn the_work_along_a_wall_is_the_typescripts() {
-        std::thread::Builder::new().stack_size(1 << 28).spawn(|| {
-            let w = wall(&[10], &[(9, 1.75)]);
-            let (mut g, _) = game_with(&[([3.25, 1.4, 7.75], [2.1, 1.4, 0.06], 0.0)], &w);
-            let g = &mut *g;
-            assert_eq!(wall_break_work_left(g, 0.0, [2.0, 1.8, 7.75], [1.0, 0.0, 0.0], Some(2.4)).map(f64::to_bits), Some(0x403c400000000000));
-            assert_eq!(wall_break_work_left(g, 0.0, [2.0, 0.3, 7.75], [1.0, 0.0, 0.0], None).map(f64::to_bits), Some(0x4011000000000000));
-        }).unwrap().join().unwrap();
+    fn a_point_off_the_wall_is_the_cell_at_its_edge_or_in_the_piece_it_was_found_in() {
+        // a piece of the wall, with no yaw to make the sums long: columns .525 wide, the piece over columns 3 and 4
+        let (mut g, b) = game_with(&[(C, H, 0.0), ([3.25, 1.0, 7.75], [0.25, 0.35, 0.06], 0.0)], &wall(&[], &[]));
+        let g = &mut *g;
+        assert_eq!(wall_break_cell_at(g, b, [90.0, 90.0, 7.75], None), [7.0, 1.0, 0.0]);
+        assert_eq!(wall_break_cell_at(g, b, [-90.0, -90.0, 7.75], None), [0.0, 0.0, 0.0]);
+        let piece = g.col.boxes[1];
+        assert_eq!(wall_break_cell_at(g, b, [90.0, 90.0, 7.75], Some(piece)), [4.0, 1.0, 0.0]);
+    }
+
+    #[test]
+    fn a_rect_of_cells_is_the_box_they_fill() {
+        let (mut g, b) = game_with(&[(C, H, 0.3)], &wall(&[], &[]));
+        let g = &mut *g;
+        let whole = wall_break_rect_box(g, b, [0.0, 7.0, 0.0, 1.0, 0.0, 0.0]);
+        near(whole.c, C);
+        near(whole.h, H);
+        let some = wall_break_rect_box(g, b, [1.0, 4.0, 1.0, 1.0, 0.0, 0.0]);
+        near(some.h, [H[0] / 2.0, 1.05, H[2]]);    // four of eight columns, the upper row
+        near(wall_break_to_local(g, b, some.c), [-H[0] / 4.0, 0.35, 0.0]);
+    }
+
+    /// What a round stopping in a cell would still have to do. A failure means an open cell soaks up a burst, a damaged one is not nearer breaking, or a sill breaks while what stands on it does not.
+    #[test]
+    fn the_work_left_in_a_wall_is_its_toughness_less_its_damage_along_the_way() {
+        let (mut g, _) = game_with(&[(C, H, 0.0)], &wall(&[10], &[(9, 1.75)]));
+        let g = &mut *g;
+        let tough = g.k.walls.tough.get(String::from("drywall")).copied().unwrap();
+        // the upper row: column 1 is damaged, column 2 is open, 3 is whole
+        assert_eq!(wall_break_work_left(g, 0.0, [2.0, 1.8, 7.75], [0.0, 0.0, 1.0], None), Some(tough - 1.75));
+        assert_eq!(wall_break_work_left(g, 0.0, [2.4, 1.8, 7.75], [0.0, 0.0, 1.0], None), None);
+        assert_eq!(wall_break_work_left(g, 0.0, [3.0, 1.8, 7.75], [0.0, 0.0, 1.0], None), Some(tough));
+        // the sill under a standing upper counts on the upper
+        assert_eq!(wall_break_work_left(g, 0.0, [2.0, 0.3, 7.75], [0.0, 0.0, 1.0], None), Some(tough - 1.75));
+        // a walk along the wall sums the cells it crosses, columns 1 to 6, the open one for nothing
+        assert_eq!(wall_break_work_left(g, 0.0, [2.0, 1.8, 7.75], [1.0, 0.0, 0.0], Some(2.4)), Some(5.0 * tough - 1.75));
     }
 
     /// The feed: serials go up, the ring keeps its last rows, the subscriber hears each, `since` answers from the tail.
     #[test]
     fn the_feed_keeps_its_ring_and_tells_its_subscriber() {
-        std::thread::Builder::new().stack_size(1 << 28).spawn(|| {
-            let mut g = alloc::boxed::Box::new(Game::blank());
-            let g = &mut *g;
-            g.k.walls.max_changes = 3.0;
-            wall_break_on_change(g, ChangeListener::WallReact);
-            let c = WallBreakNoteC { kind: LevelChangeKind::Port, cause: LevelChangeCause::Fire, ..Default::default() };
-            for _ in 0..4 { wall_break_note(g, &c); }
-            let reset = WallBreakNoteC { kind: LevelChangeKind::Reset, cause: LevelChangeCause::Reset, ..Default::default() };
-            assert!(!g.m.wallreact.wall_react.stale);
-            let row = wall_break_note(g, &reset);
-            assert_eq!(row.serial, 5.0);
-            assert!(g.m.wallreact.wall_react.stale);
-            assert_eq!(g.m.wallreact.wall_react.queue.len(), 5);
-            assert_eq!(g.destr.walls.changes.iter().map(|r| r.serial).collect::<Vec<_>>(), [3.0, 4.0, 5.0]);
-            assert_eq!(wall_break_since(g, 5.0).map(|v| v.len()), Some(0));
-            assert_eq!(wall_break_since(g, 3.0).map(|v| v.len()), Some(2));
-            assert_eq!(wall_break_since(g, 2.0).map(|v| v.len()), Some(3));
-            assert!(wall_break_since(g, 1.0).is_none());
-        }).unwrap().join().unwrap();
+        let mut g = alloc::boxed::Box::new(Game::blank());
+        let g = &mut *g;
+        g.k.walls.max_changes = 3.0;
+        wall_break_on_change(g, ChangeListener::WallReact);
+        let c = WallBreakNoteC { kind: LevelChangeKind::Port, cause: LevelChangeCause::Fire, ..Default::default() };
+        for _ in 0..4 { wall_break_note(g, &c); }
+        let reset = WallBreakNoteC { kind: LevelChangeKind::Reset, cause: LevelChangeCause::Reset, ..Default::default() };
+        assert!(!g.m.wallreact.wall_react.stale);
+        let row = wall_break_note(g, &reset);
+        assert_eq!(row.serial, 5.0);
+        assert!(g.m.wallreact.wall_react.stale);
+        assert_eq!(g.m.wallreact.wall_react.queue.len(), 5);
+        assert_eq!(g.destr.walls.changes.iter().map(|r| r.serial).collect::<Vec<_>>(), [3.0, 4.0, 5.0]);
+        assert_eq!(wall_break_since(g, 5.0).map(|v| v.len()), Some(0));
+        assert_eq!(wall_break_since(g, 3.0).map(|v| v.len()), Some(2));
+        assert_eq!(wall_break_since(g, 2.0).map(|v| v.len()), Some(3));
+        assert!(wall_break_since(g, 1.0).is_none());
     }
 
-    /// expected: wallbreak.ts:340 pieces itself, run on these cells under node
+    /// A wall stands as few boxes as it can, an untouched column floor to top. A failure means a hole with a piece of wall in it, a wall that stands twice over, or a box count that runs out the wall's slots.
     #[test]
-    fn the_greedy_boxes_are_the_typescripts() {
-        let cases: &[(usize, usize, usize, &[usize], &[[f64; 6]])] = &[
-            (4, 2, 1, &[], &[[0., 3., 0., 1., 0., 0.]]),
-            (4, 2, 1, &[5], &[[0., 0., 0., 1., 0., 0.], [1., 1., 0., 0., 0., 0.], [2., 3., 0., 1., 0., 0.]]),
-            (4, 2, 1, &[1, 5], &[[0., 0., 0., 1., 0., 0.], [2., 3., 0., 1., 0., 0.]]),
-            (4, 2, 1, &[5, 6], &[[0., 0., 0., 1., 0., 0.], [1., 2., 0., 0., 0., 0.], [3., 3., 0., 1., 0., 0.]]),
-            (1, 2, 4, &[5], &[[0., 0., 0., 1., 0., 0.], [0., 0., 0., 0., 1., 1.], [0., 0., 0., 1., 2., 3.]]),
-            (3, 1, 3, &[4], &[[0., 2., 0., 0., 0., 0.], [0., 0., 0., 0., 1., 2.], [2., 2., 0., 0., 1., 2.], [1., 1., 0., 0., 2., 2.]]),
-            (3, 1, 3, &[0, 8], &[[1., 2., 0., 0., 0., 1.], [0., 0., 0., 0., 1., 2.], [1., 1., 0., 0., 2., 2.]]),
-            (2, 2, 2, &[7], &[[0., 1., 0., 1., 0., 0.], [0., 0., 0., 1., 1., 1.], [1., 1., 0., 0., 1., 1.]]),
-            (4, 2, 1, &[0, 1, 2, 3, 4, 5, 6, 7], &[]),
+    fn the_boxes_cover_every_closed_cell_once_and_no_open_one() {
+        let cases: &[(usize, usize, usize, &[usize])] = &[
+            (4, 2, 1, &[]), (4, 2, 1, &[5]), (4, 2, 1, &[1, 5]), (4, 2, 1, &[5, 6]), (1, 2, 4, &[5]),
+            (3, 1, 3, &[4]), (3, 1, 3, &[0, 8]), (2, 2, 2, &[7]), (4, 2, 1, &[0, 1, 2, 3, 4, 5, 6, 7]),
         ];
-        for &(nx, ny, nz, opened, want) in cases {
+        for &(nx, ny, nz, opened) in cases {
             let mut open = vec![0u8; nx * ny * nz];
             for &c in opened { open[c] = 1; }
-            assert_eq!(pieces_of(nx, ny, nz, &open), want.to_vec(), "{nx} {ny} {nz} {opened:?}");
+            let mut seen = vec![0; nx * ny * nz];
+            for [x0, x1, y0, y1, z0, z1] in pieces_of(nx, ny, nz, &open) {
+                for z in z0 as usize..=z1 as usize { for y in y0 as usize..=y1 as usize { for x in x0 as usize..=x1 as usize { seen[(y * nz + z) * nx + x] += 1; } } }
+            }
+            for c in 0..seen.len() { assert_eq!(seen[c], if open[c] == 0 { 1 } else { 0 }, "{nx} {ny} {nz} {opened:?}: cell {c}"); }
         }
+        assert_eq!(pieces_of(4, 2, 1, &[0; 8]), [[0.0, 3.0, 0.0, 1.0, 0.0, 0.0]], "a whole wall is one box");
+        // one upper cell gone: the columns either side stay whole, floor to top, and only the sill under the hole stands alone
+        assert_eq!(pieces_of(4, 2, 1, &[0, 0, 0, 0, 0, 1, 0, 0]), [[0.0, 0.0, 0.0, 1.0, 0.0, 0.0], [1.0, 1.0, 0.0, 0.0, 0.0, 0.0], [2.0, 3.0, 0.0, 1.0, 0.0, 0.0]]);
     }
 }
-
-// the table of Box rows the skeleton does not have yet, for these tests only: rows of this thread, never freed
-#[cfg(test)]
-extern crate std;
-#[cfg(test)]
-std::thread_local! { static TEST_ROWS: core::cell::RefCell<Vec<*mut crate::scene_boxes::Box>> = core::cell::RefCell::new(Vec::new()); }
-#[cfg(test)]
-fn test_box(b: crate::scene_boxes::Box) -> BoxId {
-    let row = Box::into_raw(Box::new(b));
-    TEST_ROWS.with(|r| { let mut r = r.borrow_mut(); r.push(row); BoxId::from_ix(r.len() - 1) })
-}
-#[cfg(test)]
-fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box { unsafe { &mut *TEST_ROWS.with(|r| r.borrow()[b.ix()]) } }

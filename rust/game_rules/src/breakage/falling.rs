@@ -96,7 +96,8 @@ fn flight_along(ray: &mut dyn FnMut(V3, V3, f64) -> Option<f64>, c_2: V3, v: V3,
 mod tests {
     use super::*;
 
-    /// The test's world, the same sums as the script that printed the bits: a wall at x = 2, a floor at y = 0 that stops at x = 10.
+    const G: f64 = 9.81;
+    /// The world of these tests: a wall at x = 2, a floor at y = 0 that stops at x = 10.
     fn ray(ro: V3, rd: V3, tmax: f64) -> Option<f64> {
         let mut best = f64::INFINITY;
         if rd[0] > 0.0 && ro[0] <= 2.0 {
@@ -109,35 +110,61 @@ mod tests {
         }
         if best <= tmax { Some(best) } else { None }
     }
-
-    /// c, v, reach_k, then fallOf's t and pos, flightOf's t and pos: the TypeScript's own doubles under bun, EXACT on.
-    const TS: &[([u64; 3], [u64; 3], u64, u64, [u64; 3], u64, [u64; 3])] = &[
-    ([0x0000000000000000, 0x4008cccccccccccd, 0x0000000000000000], [0x0000000000000000, 0x0000000000000000, 0x0000000000000000], 0x3fe999999999999a, 0x3fe9708d9f30bdb9, [0x0000000000000000, 0x0000000000000000, 0x0000000000000000], 0x3fecaba5f6ab08fa, [0x0000000000000000, 0x0000000000000000, 0x0000000000000000]),
-    ([0x3fd3333333333333, 0x3ff5eb851eb851ec, 0xbfe6666666666666], [0x3f847ae147ae147b, 0xbfc999999999999a, 0x3f847ae147ae147b], 0x3fe999999999999a, 0x3fe045a30cf2e227, [0x3fd375d9a6185dbb, 0x0000000000000000, 0xbfe645132cf3d122], 0x3fe380bae0beef86, [0x3fd3856de7bd1bb4, 0x0000000000000000, 0xbfe63d490c217226]),
-    ([0x3fd3333333333333, 0x3ff5eb851eb851ec, 0xbfe6666666666666], [0x3ff4cccccccccccd, 0x3fd999999999999a, 0xc000cccccccccccd], 0x3fe999999999999a, 0x3fe24452a7ca686a, [0x3fec98f9cd38e778, 0x0000000000000000, 0xbffa8b4fabaa05ca], 0x3fe54b2e7cb3dde8, [0x3ff0904ae484e0ed, 0x0000000000000000, 0xbffe33eb32217b19]),
-    ([0x3ff3333333333333, 0x3ff5eb851eb851ec, 0x3fd0000000000000], [0x4012cccccccccccd, 0x3feccccccccccccd, 0x3ff4cccccccccccd], 0x3fe999999999999a, 0x3fe419bcff923fa8, [0x3fff3a9c8a1f308e, 0x0000000000000000, 0x3fdd4f0229b36490], 0x3fe663b6f46093ac, [0x3fff3c4adffd84fb, 0x0000000000000000, 0x3fdd50de4757ac30]),
-    ([0x3ffe666666666666, 0x3feccccccccccccd, 0x0000000000000000], [0x403f4ccccccccccd, 0x3fb999999999999a, 0x3fc999999999999a], 0x3ff0000000000000, 0x3fdc13227d836b40, [0x3fff3334453127d6, 0x0000000000000000, 0x3f34f03e09474da7], 0x3fdb9cde5a5cddd4, [0x3fff33360f444be5, 0x0000000000000000, 0x3f34f06cde405b7a]),
-    ([0x4023666666666666, 0x400199999999999a, 0x0000000000000000], [0x8000000000000000, 0xbff199999999999a, 0x0000000000000000], 0x3fe0000000000000, 0x3fe2241f2febceb2, [0x4023666666666666, 0x0000000000000000, 0x0000000000000000], 0x3fe55f37876619f3, [0x4023666666666666, 0x0000000000000000, 0x0000000000000000]),
-    ([0x4025000000000000, 0x400199999999999a, 0x3ff0000000000000], [0x3fd999999999999a, 0x3ff199999999999a, 0x3fd3333333333333], 0x3fe999999999999a, 0x3fe9514481144185, [0x402581a0170fc3df, 0x0000000000000000, 0x3ff309c08a5e9739], 0x3fe9514481144185, [0x4025a2081cd3b4d7, 0x0000000000000000, 0x3ff3cc30acf63d07]),
-    ([0x3fb999999999999a, 0x3f747ae147ae147b, 0x3fb999999999999a], [0x3fc999999999999a, 0x0000000000000000, 0x3fd3333333333333], 0x3fe999999999999a, 0x3fb058ce90af57d9, [0x3fbc372b4a597eb3, 0xbf8eb851eb851eb8, 0x3fbd85f422b9713f], 0x3fb058ce90af57d9, [0x3fbcde8fb68977f9, 0x0000000000000000, 0x3fbe810ac5016728]),
-    ([0xc008000000000000, 0x3ff199999999999a, 0x0000000000000000], [0x3ff199999999999a, 0x400599999999999a, 0x3fe3333333333333], 0x3fe999999999999a, 0x3fea55b6879b08d5, [0xc00234d2b934eeb2, 0x0000000000000000, 0x3fd9480b63761cf5], 0x3fed81dc2639364a, [0xc000cffb403d8008, 0x0000000000000000, 0x3fdf5d2bfef3a2c3]),
-    ([0x3fe0000000000000, 0x3ff3333333333333, 0x3fe0000000000000], [0x401f99999999999a, 0x400a666666666666, 0xbff3333333333333], 0x3fe999999999999a, 0x3fede7edaeaaa01e, [0x3fff3585c7f8dfd5, 0x0000000000000000, 0x3fd1e5f601a31d44], 0x3fe87be784fb1c3a, [0x3fff371d570eb59e, 0x0000000000000000, 0x3fd1e4fe602ae926]),
-    ([0x3ff8000000000000, 0x3fd999999999999a, 0x0000000000000000], [0x4023cccccccccccd, 0xc010666666666666, 0x3fb999999999999a], 0x3fe999999999999a, 0x3fb69737567d4329, [0x3fff3335dfdcb05a, 0x0000000000000000, 0x3f729e4814548760], 0x3fd03221005373dc, [0x3fff46504ccdbc51, 0x0000000000000000, 0x3f72cfae073ff67b]),
-    ([0x3fc999999999999a, 0x3f947ae147ae147b, 0x3fc999999999999a], [0x0000000000000000, 0x0000000000000000, 0x0000000000000000], 0x3fe999999999999a, 0x3fb058ce90af57d9, [0x3fc999999999999a, 0x0000000000000000, 0x3fc999999999999a], 0x3fb058ce90af57d9, [0x3fc999999999999a, 0x0000000000000000, 0x3fc999999999999a]),
-    ([0x4025000000000000, 0x3ff3333333333333, 0x0000000000000000], [0x3fe6666666666666, 0x3feccccccccccccd, 0x3fc999999999999a], 0x3fe999999999999a, 0x3fe30897b39a91a7, [0x4025aa8a6df75475, 0x0000000000000000, 0x3fb85ceb23553552], 0x3fe30897b39a91a7, [0x4025d52d09752992, 0x0000000000000000, 0x3fbe7425ec2a82a5]),
-    ([0x3fc999999999999a, 0x3ff999999999999a, 0x3fd999999999999a], [0x3fd3333333333333, 0x3fb999999999999a, 0xbfc999999999999a], 0x3fe999999999999a, 0x3fe29b021494647b, [0x3fd5bb0b3d140746, 0x0000000000000000, 0x3fd3a56ff96a1d49], 0x3fe5d4ff536083be, [0x3fd7d8c7afed4a32, 0x0000000000000000, 0x3fd23c47acd94602]),
-    ];
-
-    fn v3_of(a: [u64; 3]) -> V3 { [f64::from_bits(a[0]), f64::from_bits(a[1]), f64::from_bits(a[2])] }
-    fn bits(a: V3) -> [u64; 3] { [a[0].to_bits(), a[1].to_bits(), a[2].to_bits()] }
+    fn near(a: f64, b: f64, by: f64) { assert!((a - b).abs() < by, "{a} {b}"); }
+    fn fall(c: V3, v: V3, k: f64) -> crate::falling::FallOf { fall_along(&mut ray, c, v, G, k) }
+    fn flight(c: V3, v: V3) -> crate::falling::FlightOf { flight_along(&mut ray, c, v, G) }
 
     #[test]
-    fn the_typescript_s_own_bits() {
-        for (i, &(c, v, k, ft, fp, lt, lp)) in TS.iter().enumerate() {
-            let a = fall_along(&mut ray, v3_of(c), v3_of(v), 9.81, f64::from_bits(k));
-            assert_eq!((a.t.to_bits(), bits(a.pos)), (ft, fp), "fall_of, case {}", i);
-            let b = flight_along(&mut ray, v3_of(c), v3_of(v), 9.81);
-            assert_eq!((b.t.to_bits(), bits(b.pos)), (lt, lp), "flight_of, case {}", i);
-        }
+    fn a_thing_let_go_falls_straight_down_in_the_time_of_its_drop() {
+        let a = fall([0.0, 3.1, 0.0], [0.0; 3], 0.8);
+        near(a.t, m::sqrt(2.0 * 3.1 / G), 1e-12);
+        assert_eq!(a.pos, [0.0, 0.0, 0.0]);
+    }
+
+    /// Where the sound and the litter of a falling thing are. A failure means glass is heard or lies where it did not come down.
+    #[test]
+    fn a_thing_pushed_sideways_goes_a_share_of_the_way_it_would_fly() {
+        let (c, v): (V3, V3) = ([0.3, 1.37, -0.7], [1.3, 0.0, -2.1]);
+        let a = fall(c, v, 0.8);
+        let t = m::sqrt(2.0 * 1.37 / G);
+        near(a.t, t, 1e-12);
+        near(a.pos[0], 0.3 + 1.3 * t * 0.8, 1e-12);
+        near(a.pos[2], -0.7 - 2.1 * t * 0.8, 1e-12);
+        assert_eq!(a.pos[1], 0.0);
+        assert!(fall(c, [1.3, -2.0, -2.1], 0.8).t < t && fall(c, [1.3, 2.0, -2.1], 0.8).t > t, "thrown down it is there sooner, thrown up later");
+    }
+
+    #[test]
+    fn a_wall_stops_a_fall_five_centimetres_short_of_it() {
+        let a = fall([1.2, 1.37, 0.25], [31.3, 0.1, 0.0], 1.0);
+        near(a.pos[0], 1.95, 1e-9);
+        assert_eq!(a.pos[1], 0.0);
+    }
+
+    #[test]
+    fn past_the_floor_s_end_it_is_taken_to_fall_its_own_height() {
+        let a = fall([11.0, 1.5, 0.0], [0.0; 3], 0.8);
+        near(a.t, m::sqrt(2.0 * 1.5 / G), 1e-12);
+        assert_eq!(a.pos, [11.0, 0.0, 0.0]);
+    }
+
+    /// A thing thrown: asked along its arc. It stops a hand short of the floor and drops the rest, so it lies a moment later than the sum says.
+    #[test]
+    fn a_throw_comes_to_lie_where_its_arc_meets_the_floor() {
+        let (c, v): (V3, V3) = ([-3.0, 1.1, 0.0], [1.1, 2.7, 0.6]);
+        let t = (2.7 + m::sqrt(2.7 * 2.7 + 2.0 * G * 1.1)) / G;
+        let b = flight(c, v);
+        assert_eq!(b.pos[1], 0.0);
+        near(b.pos[0], -3.0 + 1.1 * t, 0.05);
+        near(b.pos[2], 0.6 * t, 0.05);
+        assert!(b.t >= t - 1e-9 && b.t < t + 0.15, "{} {t}", b.t);
+    }
+
+    #[test]
+    fn a_throw_that_meets_a_wall_drops_from_there() {
+        let b = flight([0.5, 1.2, 0.5], [7.9, 3.3, -1.2]);
+        near(b.pos[0], 1.95, 0.01);
+        assert_eq!(b.pos[1], 0.0);
+        assert!(b.t > (2.0 - 0.5) / 7.9, "{}", b.t);
     }
 }

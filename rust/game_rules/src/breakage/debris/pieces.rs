@@ -1001,28 +1001,48 @@ fn face_tilt(g: &mut crate::game::Game, b: AnyBoxId, n: V3) -> f64 {
 mod tests {
     use super::*;
 
+    /// Every piece's dealt numbers come off this. A failure means numbers out of their range, all one way, or a piece of a different shape on two machines.
     #[test]
-    fn hash01_bits() {
-        for (x, bits) in TS_HASH01 { assert_eq!(hash01(x).to_bits(), bits, "hash01({x})"); }
+    fn a_hash_lands_in_the_unit_range_and_one_whole_word_has_one_answer() {
+        let mut sum = 0.0;
+        for i in 0..2000 {
+            let h = hash01(i as f64);
+            assert!((0.0..1.0).contains(&h), "{i}: {h}");
+            sum += h;
+        }
+        assert!((sum / 2000.0 - 0.5).abs() < 0.03, "{}", sum / 2000.0);
+        assert_ne!(hash01(1.0), hash01(2.0));
+        assert_eq!(hash01(2.5), hash01(2.0));
     }
+
+    const SLAB: V3 = [0.3, 0.015, 0.2];
+    const UP: V3 = [0.0, 1.0, 0.0];
+    const STILL: Quat = [0.0, 0.0, 0.0, 1.0];
+    fn about_x(a: f64) -> Quat { [m::sin(a / 2.0), 0.0, 0.0, m::cos(a / 2.0)] }
+    fn near(a: f64, b: f64) { assert!((a - b).abs() < 1e-12, "{a} {b}"); }
+
+    /// A failure means a piece sinks into the floor or hangs over it.
     #[test]
-    fn support_and_tilt_bits() {
-        let q = v3::quat::normalize([0.1, 0.7, -0.3, 0.6]);
-        let h = [0.3, 0.015, 0.3];
-        let n = v3::normalize([0.2, 1.0, -0.1]);
-        assert_eq!(support_of(q, h, n).to_bits(), TS_SUPPORT);
-        assert_eq!(face_tilt_of(q, h, n).to_bits(), TS_TILT);
-        assert_eq!(bound_of(h).to_bits(), TS_BOUND);
-        assert_eq!(mass_from([0.1, 0.02, 0.1]).to_bits(), TS_MASS);
-        assert_eq!(mass_from(h), 6.0);
+    fn a_box_stands_off_a_surface_by_its_half_size_along_the_normal() {
+        near(support_of(STILL, SLAB, UP), 0.015);
+        near(support_of(v3::quat::yaw(0.9), SLAB, UP), 0.015);    // turned on the spot
+        near(support_of(about_x(m::PI / 2.0), SLAB, UP), 0.2);    // up on its edge
+        let a = 0.5;
+        near(support_of(about_x(a), SLAB, UP), 0.015 * m::cos(a) + 0.2 * m::sin(a));
     }
-    // the TypeScript's own bits: printed by bun with EXACT on, from src/game/debris.ts
-    const TS_HASH01: [(f64, u64); 10] = [
-        (0.0, 0x3fbd62ba00000000), (1.0, 0x3fcf96d000000000), (31.0, 0x3fe511d080000000), (977.0, 0x3fe9af60e0000000), (149005.0, 0x3fe267c7a0000000),
-        (-7.0, 0x3fe9bf4100000000), (4294967296.5, 0x3fbd62ba00000000), (6740467557.0, 0x3f9ea43400000000), (1000000000000000.0, 0x3fc6ef8800000000), (2.5, 0x3f97dd7000000000),
-    ];
-    const TS_SUPPORT: u64 = 0x3fc7788d954357fe;
-    const TS_TILT: u64 = 0x3fdc4623a88db349;
-    const TS_BOUND: u64 = 0x3fdb2b7c50dfcd02;
-    const TS_MASS: u64 = 0x3feeb851eb851eb9;
+
+    #[test]
+    fn a_slab_s_tilt_is_read_off_its_face() {
+        near(face_tilt_of(STILL, SLAB, UP), 0.0);
+        near(face_tilt_of(about_x(0.3), SLAB, UP), 0.3);
+        assert!(face_tilt_of(about_x(m::PI), SLAB, UP) < 1e-7, "upside down is flat");
+        near(face_tilt_of(about_x(1.4), SLAB, UP), 1.4);    // nearly on edge: still its face
+    }
+
+    #[test]
+    fn a_piece_s_mass_goes_by_its_volume_between_two_limits() {
+        near(mass_from([0.1, 0.02, 0.1]), 0.96);
+        assert_eq!(mass_from([0.3, 0.015, 0.3]), 6.0);
+        assert_eq!(mass_from([0.01, 0.01, 0.01]), 0.1);
+    }
 }

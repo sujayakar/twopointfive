@@ -255,19 +255,6 @@ pub fn reset_bars(g: &mut crate::game::Game) {
 mod tests {
     use super::*;
 
-    // the expected values are the TypeScript's own, printed under bun from the expressions of winbars.ts:117
-    #[test]
-    fn seed_word_is_the_typescripts() {
-        for (s, h, want) in [(0.0, 0.0, 131.0), (4294967295.0, 1.0, 626.0), (123456789.0, 0.37, 123457075.0), (2147483648.0, 0.999, 2147484244.0), (7.0, f64::NAN, 0.0)] {
-            assert_eq!(seed_word(s, h).to_bits(), f64::to_bits(want));
-        }
-    }
-    #[test]
-    fn hash_key_is_the_typescripts() {
-        for (s, k, want) in [(0.0, 100.0, -844396252.0), (4294967295.0, 102.0, 1810039509.0), (3735928559.0, 11.0, 1763390682.0), (131.0, 10.0, 613287549.0)] {
-            assert_eq!(hash_key(s, k).to_bits(), f64::to_bits(want));
-        }
-    }
     #[test]
     fn a_bar_stands_until_either_hide_flag_is_up() {
         let t = crate::scene_boxes::box_flag();

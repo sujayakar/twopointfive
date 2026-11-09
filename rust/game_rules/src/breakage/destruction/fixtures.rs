@@ -330,9 +330,9 @@ fn seam_box(g: &mut Game, b: BoxId) -> &mut crate::scene_boxes::Box { &mut g.tab
 mod tests {
     use super::*;
 
-    /// Math.round(-0.3) is -0 and Math.floor(-0) is -0, and `${-0}` is "0": the square must be one key either way.
+    /// A tile that has dropped stays dropped: a square by the wall is one key, whichever side of nought it rounds from.
     #[test]
-    fn a_tile_key_has_no_negative_zero() {
+    fn a_tile_s_square_is_one_key_either_side_of_nought() {
         assert_eq!(tile_key(-0.0, 0.0), "0,0");
         assert_eq!(tile_key(-3.0, 12.0), "-3,12");
     }
