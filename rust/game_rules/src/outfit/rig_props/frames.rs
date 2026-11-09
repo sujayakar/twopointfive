@@ -1,4 +1,3 @@
-//! src/game/rigProps.ts lines 1 to 419
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,7 +6,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// Frame from an origin, an 'along' axis and an up hint; falls back when the axis is (anti)parallel to the hint. (rigProps.ts frameFrom)
+/// Frame from an origin, an 'along' axis and an up hint; falls back when the axis is (anti)parallel to the hint.
 pub(super) fn frame_from(o: V3, along: V3, up_hint: Option<V3>) -> crate::rig_props::Frame {
     let up_hint = up_hint.unwrap_or([0.0, 1.0, 0.0]);
     let z = v3::normalize(along);
@@ -20,12 +19,12 @@ pub(super) fn frame_from(o: V3, along: V3, up_hint: Option<V3>) -> crate::rig_pr
     Frame { o: v3::copy(o), x, y, z }
 }
 
-/// `v` turned `ang` about `axis`; a turn under a millionth of a radian leaves it as it is. (rigProps.ts rotAxis)
+/// `v` turned `ang` about `axis`; a turn under a millionth of a radian leaves it as it is.
 pub(super) fn rot_axis(v: V3, axis: V3, ang: f64) -> V3 {
     if m::abs(ang) < 1e-6 { v } else { v3::quat::rotate(v3::quat::axis_angle(axis, ang), v) }
 }
 
-/// Child frame: the parent moved by adj.off along its axes, turned by adj.rot (degrees about the parent's x, then y, then z). (rigProps.ts applyAdj)
+/// Child frame: the parent moved by adj.off along its axes, turned by adj.rot (degrees about the parent's x, then y, then z).
 pub(super) fn apply_adj(f: crate::rig_props::Frame, adj: Option<crate::rig_props::Adj>) -> crate::rig_props::Frame {
     let adj = match adj {
         Some(a) => a,
@@ -64,17 +63,17 @@ pub(super) fn apply_adj(f: crate::rig_props::Frame, adj: Option<crate::rig_props
     Frame { o, x, y, z }
 }
 
-/// A new all-zero adjustment. (rigProps.ts ZERO_ADJ)
+/// A new all-zero adjustment.
 fn zero_adj() -> crate::rig_props::Adj {
     Adj { off: [0.0, 0.0, 0.0], rot: [0.0, 0.0, 0.0] }
 }
 
-/// A character's id as the word on his boxes. (rigProps.ts `c.id & 0xff`)
+/// A character's id as the word on his boxes.
 fn owner_of(g: &mut Game, c: CharId) -> f64 {
     (js::to_i32(g.ch[c].id) & 0xff) as f64
 }
 
-/// A bound hostage's wrist tie: one pale strap round both wrists while they are crossed. (rigProps.ts wristTieBoxes)
+/// A bound hostage's wrist tie: one pale strap round both wrists while they are crossed.
 pub fn wrist_tie_boxes(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<AnyBoxId>) {
     let (Some(a), Some(b)) = (g.ch[c_2].bones.get(crate::character::Bone::HandL).copied(), g.ch[c_2].bones.get(crate::character::Bone::HandR).copied()) else { return };
     let d = v3::sub(b, a);
@@ -100,14 +99,14 @@ pub fn wrist_tie_boxes(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<Any
     out.push(made.into());
 }
 
-/// One stick part as a box laid along its frame's z, after the part's own adjustment in the group frame. (rigProps.ts seg)
+/// One stick part as a box laid along its frame's z, after the part's own adjustment in the group frame.
 pub(super) fn seg(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>, g_2: crate::rig_props::Frame, s: crate::rig_props::Seg, albedo: V3, emissive: Option<V3>, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>, path: Option<&str>, label: Option<&str>, depth: Option<f64>, name: Option<&str>) {
     let adj = s.adj;
     let emissive = emissive.unwrap_or([0.0, 0.0, 0.0]);
     seg_at(g, out, g_2, s, adj, albedo, emissive, meta, path, label, depth, name);
 }
 
-/// seg() with the part's adjustment handed in. (rigProps.ts segAt)
+/// seg() with the part's adjustment handed in.
 pub(super) fn seg_at(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>, g_2: crate::rig_props::Frame, s: crate::rig_props::Seg, adj: Option<crate::rig_props::Adj>, albedo: V3, emissive: V3, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>, path: Option<&str>, label: Option<&str>, depth: Option<f64>, name: Option<&str>) {
     let f = if adj.is_some() { apply_adj(g_2, adj) } else { g_2 };
     let dir = f.z;
@@ -137,7 +136,7 @@ pub(super) fn seg_at(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>, g_2: cr
     out.push(made.into());
 }
 
-/// Flattened head 'forward'; the body's heading when the head looks nearly straight up or down. (rigProps.ts headFlatForward)
+/// Flattened head 'forward'; the body's heading when the head looks nearly straight up or down.
 fn head_flat_forward(g: &crate::game::Game, c_2: CharId) -> V3 {
     let hd = crate::character::character_head_dir(g, c_2);
     let flat = m::hyp2(hd[0], hd[2]);
@@ -164,7 +163,7 @@ fn goggle_part(g: &mut Game, c: V3, h: V3, yaw: f64, albedo: V3, flags: f64, own
     })
 }
 
-/// The goggles: two tubes on a bridge, down over the eyes or flipped up on the forehead, `k` part way between. (rigProps.ts gogglesBoxes)
+/// The goggles: two tubes on a bridge, down over the eyes or flipped up on the forehead, `k` part way between.
 pub fn goggles_boxes(g: &mut crate::game::Game, c_2: CharId, nv: bool, out: &mut Vec<AnyBoxId>, g_2: crate::rig_props::RigGoggles, meta: Option<&mut Vec<crate::rig_props::RigNodeMeta>>, k: Option<f64>) {
     let mut meta = meta;
     let Some(head) = g.ch[c_2].bones.get(crate::character::Bone::Head).copied() else { return };
@@ -225,54 +224,70 @@ pub fn goggles_boxes(g: &mut crate::game::Game, c_2: CharId, nv: bool, out: &mut
 mod tests {
     use super::*;
 
-    /// The doubles of the TypeScript under EXACT.on (bun), o x y z of each frame.
-    const TS: &[(&str, &[u64])] = &[
-        ("ff1", &[0x3ff4000000000000, 0x3fe0000000000000, 0xc00e000000000000, 0x3febb7cad58b0cfa, 0x0000000000000000, 0xbfdffb73e2b422a8, 0x3fd846ea53ce662e, 0x3fe4d4fd401ca14e, 0x3fe50a428ce6144b, 0x3fd4d207698e3c71, 0xbfe84a5dfb25f12e, 0x3fe20b5bc1e1abda]),
-        ("ff2", &[0x3ff4000000000000, 0x3fe0000000000000, 0xc00e000000000000, 0x3febed80c09bac70, 0x3f8784a2515aac30, 0xbfdf3c27940c6ca4, 0x3fd74b9ce3ddc0f9, 0x3fe4d428d4525c18, 0x3fe551a2523dabb3, 0x3fd4d207698e3c71, 0xbfe84a5dfb25f12e, 0x3fe20b5bc1e1abda]),
-        ("ff_par", &[0x0000000000000000, 0x3ff0000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x3ff0000000000000, 0x3ff0000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x3ff0000000000000, 0x0000000000000000]),
-        ("ff_anti", &[0x0000000000000000, 0x3ff0000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0xbff0000000000000, 0x3ff0000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0xbff0000000000000, 0x0000000000000000]),
-        ("aj_none", &[0x3ff4000000000000, 0x3fe0000000000000, 0xc00e000000000000, 0x3febed80c09bac70, 0x3f8784a2515aac30, 0xbfdf3c27940c6ca4, 0x3fd74b9ce3ddc0f9, 0x3fe4d428d4525c18, 0x3fe551a2523dabb3, 0x3fd4d207698e3c71, 0xbfe84a5dfb25f12e, 0x3fe20b5bc1e1abda]),
-        ("aj_grip", &[0x3ff41ed7fbba6e72, 0x3fdc923839e0b355, 0xc00de700fa9d2a46, 0x3febed80c09bac70, 0x3f8784a2515aac30, 0xbfdf3c27940c6ca4, 0x3fc9349a2339995a, 0xbfed89bf183397d4, 0x3fd52589dc18fa6e, 0xbfdc96cd697e2239, 0xbfd89b353421690e, 0xbfe9d9fa8c1cd78e]),
-        ("aj_all", &[0x3ff4c8bc9d06020e, 0x3fe369b61ad18f90, 0xc00dc976d4d6a04e, 0xbfc22d13daa9f4f0, 0x3fe4bff7d334aa41, 0x3fe7eee162b75e33, 0xbfef38f68a8e33d6, 0xbfcc09af65cf0a68, 0x3f73175aa6d27c00, 0x3fc55b4c93867d6e, 0xbfe75498c23cc024, 0x3fe53db6feba0592]),
-        ("aj_tiny", &[0x3ff4000000000000, 0x3fe0000000000000, 0xc00e000000000000, 0x3febed80c09bac70, 0x3f8784a2515aac30, 0xbfdf3c27940c6ca4, 0x3fd74b9ce3ddc0f9, 0x3fe4d428d4525c18, 0x3fe551a2523dabb3, 0x3fd4d207698e3c71, 0xbfe84a5dfb25f12e, 0x3fe20b5bc1e1abda]),
-        ("aj_zero", &[0x3ff4000000000000, 0x3fe0000000000000, 0xc00e000000000000, 0x3febed80c09bac70, 0x3f8784a2515aac30, 0xbfdf3c27940c6ca4, 0x3fd74b9ce3ddc0f9, 0x3fe4d428d4525c18, 0x3fe551a2523dabb3, 0x3fd4d207698e3c71, 0xbfe84a5dfb25f12e, 0x3fe20b5bc1e1abda]),
-        ("rot", &[0x3fe5b24e9fcf66d9, 0x3f9813704b834e60, 0xbfe62a0e3b5ead70]),
-    ];
-
-    fn want(name: &str) -> &'static [u64] {
-        TS.iter().find(|c| c.0 == name).unwrap().1
-    }
-    fn same_frame(name: &str, f: Frame) {
-        let got: Vec<u64> = [f.o, f.x, f.y, f.z].iter().flatten().map(|x| x.to_bits()).collect();
-        assert_eq!(got.as_slice(), want(name), "{name}");
+    fn near(a: V3, b: V3) -> bool { v3::len(v3::sub(a, b)) < 1e-9 }
+    /// three unit axes at right angles, right-handed: anything else shears a gun or a hand off its model
+    fn is_a_frame(f: Frame) {
+        for a in [f.x, f.y, f.z] { assert!((v3::len(a) - 1.0).abs() < 1e-9, "{:?}", f); }
+        assert!(v3::dot(f.x, f.y).abs() < 1e-9 && v3::dot(f.y, f.z).abs() < 1e-9 && v3::dot(f.x, f.z).abs() < 1e-9, "{:?}", f);
+        assert!(near(v3::cross(f.y, f.z), f.x), "{:?}", f);
     }
     const O: V3 = [1.25, 0.5, -3.75];
     const A1: V3 = [0.3, -0.7, 0.52];
     const UP: V3 = [0.1, 0.9, 0.2];
 
+    /// A FAILURE MEANS: a gun or a limb is drawn skewed, or rolled off the way it is meant to lean.
     #[test]
-    fn frame_from_has_the_typescripts_bits() {
-        same_frame("ff1", frame_from(O, A1, None));
-        same_frame("ff2", frame_from(O, A1, Some(UP)));
-        same_frame("ff_par", frame_from([0.0, 1.0, 0.0], [0.0, 2.0, 0.0], None));
-        same_frame("ff_anti", frame_from([0.0, 1.0, 0.0], [0.0, -2.0, 0.0], Some([0.0, 1.0, 0.0])));
+    fn a_frame_lies_along_its_axis_and_leans_to_its_up() {
+        for (along, up) in [(A1, None), (A1, Some(UP))] {
+            let f = frame_from(O, along, up);
+            is_a_frame(f);
+            assert_eq!(f.o, O);
+            assert!(near(f.z, v3::normalize(along)));
+            assert!(v3::dot(f.y, up.unwrap_or([0.0, 1.0, 0.0])) > 0.0);
+        }
     }
 
+    /// A FAILURE MEANS: a gun held straight up or down turns to NaN and vanishes.
     #[test]
-    fn apply_adj_has_the_typescripts_bits() {
+    fn an_axis_along_its_up_still_makes_a_frame() {
+        is_a_frame(frame_from([0.0, 1.0, 0.0], [0.0, 2.0, 0.0], None));
+        is_a_frame(frame_from([0.0, 1.0, 0.0], [0.0, -2.0, 0.0], Some([0.0, 1.0, 0.0])));
+    }
+
+    /// A FAILURE MEANS: a tuned adjustment moves the model along the world and not along the thing it sits on, or turns it the wrong way, or shears it.
+    #[test]
+    fn an_adjustment_moves_and_turns_a_frame_in_its_own_axes() {
         let base = frame_from(O, A1, Some(UP));
-        same_frame("aj_none", apply_adj(base, None));
-        same_frame("aj_grip", apply_adj(base, rig().pistol.grip.adj));
-        same_frame("aj_all", apply_adj(base, Some(Adj { off: [0.031, 0.105, -0.05], rot: [-8.6, 6.7, 119.0] })));
-        same_frame("aj_tiny", apply_adj(base, Some(Adj { off: [0.0, 0.0, 0.0], rot: [1e-5, 0.0, 0.0] })));
-        same_frame("aj_zero", apply_adj(base, Some(zero_adj())));
+        let moved = apply_adj(base, Some(Adj { off: [0.1, 0.2, -0.3], rot: [0.0, 0.0, 0.0] }));
+        assert!(near(moved.o, v3::add(v3::add(v3::add(O, v3::scale(base.x, 0.1)), v3::scale(base.y, 0.2)), v3::scale(base.z, -0.3))));
+        assert!(near(moved.x, base.x) && near(moved.z, base.z));
+        let roll = apply_adj(base, Some(Adj { off: [0.0; 3], rot: [0.0, 0.0, 90.0] }));
+        assert!(near(roll.z, base.z) && near(roll.x, base.y));
+        let pitch = apply_adj(base, Some(Adj { off: [0.0; 3], rot: [90.0, 0.0, 0.0] }));
+        assert!(near(pitch.x, base.x) && near(pitch.y, base.z));
+        let yaw = apply_adj(base, Some(Adj { off: [0.0; 3], rot: [0.0, 90.0, 0.0] }));
+        assert!(near(yaw.y, base.y) && near(yaw.z, base.x));
+        is_a_frame(apply_adj(base, Some(Adj { off: [0.031, 0.105, -0.05], rot: [-8.6, 6.7, 119.0] })));
     }
 
+    /// A FAILURE MEANS: a model with no adjustment moves at all.
     #[test]
-    fn rot_axis_turns_or_leaves() {
+    fn no_adjustment_and_a_nothing_of_one_leave_a_frame_as_it_is() {
+        let base = frame_from(O, A1, Some(UP));
+        for adj in [None, Some(zero_adj()), Some(Adj { off: [0.0; 3], rot: [1e-5, 0.0, 0.0] })] {
+            let f = apply_adj(base, adj);
+            assert_eq!((f.o, f.x, f.y, f.z), (base.o, base.x, base.y, base.z));
+        }
+    }
+
+    /// A FAILURE MEANS: a turn changes a limb's length, does not leave its own axis be, or runs the wrong way.
+    #[test]
+    fn a_turn_keeps_a_length_and_leaves_its_axis_alone() {
         let v: V3 = [0.2, 0.3, -0.9];
-        let got: Vec<u64> = rot_axis(v, [0.0, 0.6, 0.8], -0.75).iter().map(|x| x.to_bits()).collect();
-        assert_eq!(got.as_slice(), want("rot"));
-        assert_eq!(rot_axis(v, [0.0, 0.6, 0.8], 5e-7), v);
+        let axis: V3 = [0.0, 0.6, 0.8];
+        assert!((v3::len(rot_axis(v, axis, -0.75)) - v3::len(v)).abs() < 1e-9);
+        assert!(near(rot_axis(axis, axis, -0.75), axis));
+        assert!(near(rot_axis([1.0, 0.0, 0.0], [0.0, 0.0, 1.0], m::PI / 2.0), [0.0, 1.0, 0.0]));
+        assert_eq!(rot_axis(v, axis, 5e-7), v);
     }
 }

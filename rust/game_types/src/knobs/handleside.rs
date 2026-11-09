@@ -15,7 +15,7 @@ pub struct HandleK {
     #[k(1.5)] pub far_reach: f64,
     /// PUSH: the line a walker goes through the opening on — metres in from the latch jamb; he squares up to it `pushOff` off the leaf and goes on to
     ///  `pushThru` beyond the frame — and inside `thruAt` m of the line his feet are put ON it, `thruOff` off the leaf, before he goes through (a walk's own
-    ///  corner-cutting crossed the hinge half). `pushIn` 0.33 since the doors are real size (scene/doorSize.ts; 0.42 at the 1.16 m leaves): hard by the latch
+    ///  corner-cutting crossed the hinge half). `pushIn` 0.33 since the doors are real size: hard by the latch
     ///  stop, because a man who comes to that line from the latch jamb — where he pulled the leaf from — overshoots it a hand toward the leaf, and a leaf
     ///  standing square on a side wall's stop is the one thing in the opening he must not touch. A man who STANDS to shove it (a door order's lead) stands `standIn` in from the jamb, `standOff` off the leaf
     #[k(0.33)] pub push_in: f64,
@@ -29,7 +29,7 @@ pub struct HandleK {
     #[k(0.34)] pub body: f64,
     #[k(0.1)] pub slack: f64,
     #[k(0.05)] pub near: f64,
-    /// … he turns to the handle (this long at most), pulls (doors.ts pull), and walks on when the leaf stands `clear` rad open, has stopped, or after `wait` s; a leaf standing
+    /// … he turns to the handle (this long at most), pulls, and walks on when the leaf stands `clear` rad open, has stopped, or after `wait` s; a leaf standing
     ///  `clear` open on that face wants no hand. `press`: seconds a man leaning on a leaf from that face, with no walk to its handle, takes to pull it as before
     #[k(0.35)] pub turn: f64,
     #[k(1.05)] pub clear: f64,

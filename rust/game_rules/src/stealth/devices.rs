@@ -29,22 +29,22 @@ fn opt_text(s: &Option<String>) -> Option<ChronDeviceDataValue> { s.as_ref().map
 fn bits_or(a: f64, b: f64) -> f64 { (js::to_i32(a) | js::to_i32(b)) as f64 }
 
 // ---------------------------------------------------------------- runtime records
-/// A camera of the level: its machine is rust/sim's row `slot`.   (devices.ts CameraRt)
+/// A camera of the level: its machine is rust/sim's row `slot`.
 fn camera_rt_new(g: &mut crate::game::Game, slot: f64, st: crate::Opaque, def: &crate::devices::CameraDef2, index: f64, target: FixtureId, cone: LightId) -> CameraRtId {
     g.tab.devices_camera_rt.push(CameraRt { def: def.clone(), index, target, cone, slot, st })
 }
-/// A tripwire of the level: its machine is rust/sim's row `slot`.   (devices.ts LaserRt)
+/// A tripwire of the level: its machine is rust/sim's row `slot`.
 fn laser_rt_new(g: &mut crate::game::Game, slot: f64, st: crate::Opaque, def: &crate::devices::LaserDef2, index: f64, target: FixtureId, dir: V3, len: f64) -> LaserRtId {
     g.tab.devices_laser_rt.push(LaserRt { def: def.clone(), target, dir, len, slot, st })
 }
-/// Append a report to the capped log with its sequence number.   (devices.ts Devices.note)
+/// Append a report to the capped log with its sequence number.
 fn devices_note(g: &mut crate::game::Game, r: &crate::devices::DevicesNoteR) {
     g.devices.seq += 1.0;
     let row = DeviceLogRow {  };
     g.devices.log.push(row);
     if g.devices.log.len() > 48 { let over = g.devices.log.len() - 48; g.devices.log.drain(0..over); }
 }
-/// The level's cameras, tripwires and keypads from its list; cameras and emitters join the light targets.   (devices.ts Devices.constructor)
+/// The level's cameras, tripwires and keypads from its list; cameras and emitters join the light targets.
 pub fn devices_new(g: &mut crate::game::Game) -> crate::devices::Devices {
     let mut this = Devices::blank();
     let defs = g.level.devices.clone().unwrap_or_default();
@@ -98,15 +98,15 @@ pub fn devices_new(g: &mut crate::game::Game) -> crate::devices::Devices {
     }
     this
 }
-/// The keypad on this door, if it is a keypad door.   (devices.ts Devices.padOf)
+/// The keypad on this door, if it is a keypad door.
 pub fn devices_pad_of(g: &crate::game::Game, d: DoorId) -> Option<crate::devices::KeypadRt> {
     g.devices.pad_by_door.get(d).cloned()
 }
-/// `speaker` has just said the code of `lock_id` aloud.   (devices.ts Devices.overhearSaid)
+/// `speaker` has just said the code of `lock_id` aloud.
 pub fn devices_overhear_said(g: &mut crate::game::Game, speaker: GuardId, lock_id: &str) -> bool {
     overhear(g, speaker, lock_id)
 }
-/// The keypad whose door stands nearest a floor point.   (devices.ts Devices.padNear)
+/// The keypad whose door stands nearest a floor point.
 pub fn devices_pad_near(g: &crate::game::Game, p: V3) -> Option<crate::devices::KeypadRt> {
     let mut best: Option<usize> = None;
     let mut bd = f64::INFINITY;
@@ -116,7 +116,7 @@ pub fn devices_pad_near(g: &crate::game::Game, p: V3) -> Option<crate::devices::
     }
     best.map(|i| g.devices.keypads[i].clone())
 }
-/// A fresh encounter: integrators, states, trip clocks, the log (`seq` runs on).   (devices.ts Devices.reset)
+/// A fresh encounter: integrators, states, trip clocks, the log (`seq` runs on).
 pub fn devices_reset(g: &mut crate::game::Game) {
     for c in g.devices.cameras.clone() {
         let yaw = g.tab.devices_camera_rt[c].def.yaw;
@@ -127,15 +127,15 @@ pub fn devices_reset(g: &mut crate::game::Game) {
     g.devices.radio_count = 0.0;
 }
 
-/// Powered, unbroken, not knocked out: the device works this frame.   (devices.ts alive)
+/// Powered, unbroken, not knocked out: the device works this frame.
 fn alive(g: &crate::game::Game, t: FixtureId) -> bool {
     crate::sim_lightshome::fixture_factor(g, t) > 0.05 && !crate::sim_lightshome::fixture_broken(g, t)
 }
-/// Live play: devices sense.   (devices.ts sensing)
+/// Live play: devices sense.
 fn sensing(g: &crate::game::Game) -> bool {
     g.ai_enabled && g.tune.devices && !g.night_breach.active && !g.rescue.active
 }
-/// Lit-seconds per second a camera's integrator fills at.   (devices.ts lensGain)
+/// Lit-seconds per second a camera's integrator fills at.
 fn lens_gain(g: &crate::game::Game, seat: &crate::seats::SeatRef, dist: f64, range: f64, smoke_trans: f64) -> f64 {
     let pl = seat.player;
     let light = g.pl[pl].visibility;
@@ -143,19 +143,19 @@ fn lens_gain(g: &crate::game::Game, seat: &crate::seats::SeatRef, dist: f64, ran
     let crouch = if g.pl[pl].crouch { 0.75 } else { 1.0 };
     m::pow(light, 1.5) * dist_f * crouch * v3::clamp((smoke_trans - 0.3) / 0.5, 0.0, 1.0) * crate::kitload::load_seen(g, seat, crate::kitload::LoadSeenWho::Player)
 }
-/// The lens's look direction at yaw / pitch.   (devices.ts lensDir)
+/// The lens's look direction at yaw / pitch.
 pub fn lens_dir(yaw: f64, pitch: f64) -> V3 {
     let cp = m::cos(pitch);
     [m::sin(yaw) * cp, m::sin(pitch), m::cos(yaw) * cp]
 }
-/// Pan the cameras, run their pictures, run the beams, key the code being entered.   (devices.ts updateDevices)
+/// Pan the cameras, run their pictures, run the beams, key the code being entered.
 pub fn update_devices(g: &mut crate::game::Game, dt: f64) {
     let live = sensing(g);
     for c in g.devices.cameras.clone() { update_camera(g, c, dt, live); }
     for l in g.devices.lasers.clone() { let on = live && g.tune.lasers; update_laser(g, l, dt, on); }
     crate::seats::each_seat(g, &mut |v: &mut Game| update_coding(v, dt));
 }
-/// One camera's frame: the pan, the feed dropping, the picture, what it does about it.   (devices.ts updateCamera)
+/// One camera's frame: the pan, the feed dropping, the picture, what it does about it.
 pub fn update_camera(g: &mut crate::game::Game, c_2: CameraRtId, dt: f64, live: bool) {
     let c = c_2;
     let d = g.tab.devices_camera_rt[c].def.clone();
@@ -188,7 +188,7 @@ pub fn update_camera(g: &mut crate::game::Game, c_2: CameraRtId, dt: f64, live: 
     if has(r, bit.suspect) { camera_suspect(g, c); }
     if has(r, bit.alarm) { camera_alarm(g, c); }
 }
-/// The picture has movement: a man sent, the radio, the debrief.   (devices.ts cameraSuspect)
+/// The picture has movement: a man sent, the radio, the debrief.
 fn camera_suspect(g: &mut crate::game::Game, c_2: CameraRtId) {
     let c = c_2;
     let index = g.tab.devices_camera_rt[c].index;
@@ -203,7 +203,7 @@ fn camera_suspect(g: &mut crate::game::Game, c_2: CameraRtId) {
     chron_device(g, ChronDeviceKind::CameraSpotted, &row, Some(seen));
     devices_note(g, &DevicesNoteR {  });
 }
-/// The picture has him: the floor's fix, everybody sharp, the floor up a step.   (devices.ts cameraAlarm)
+/// The picture has him: the floor's fix, everybody sharp, the floor up a step.
 fn camera_alarm(g: &mut crate::game::Game, c_2: CameraRtId) {
     let c = c_2;
     let index = g.tab.devices_camera_rt[c].index;
@@ -238,7 +238,7 @@ fn camera_alarm(g: &mut crate::game::Game, c_2: CameraRtId) {
     devices_note(g, &DevicesNoteR {  });
 }
 
-/// One beam's frame: where it ends, what breaks it, the trip.   (devices.ts updateLaser)
+/// One beam's frame: where it ends, what breaks it, the trip.
 fn update_laser(g: &mut crate::game::Game, l: LaserRtId, dt: f64, live: bool) {
     let d = g.tab.devices_laser_rt[l].def.clone();
     let (slot, dir, len) = (g.tab.devices_laser_rt[l].slot, g.tab.devices_laser_rt[l].dir, g.tab.devices_laser_rt[l].len);
@@ -308,7 +308,7 @@ fn update_laser(g: &mut crate::game::Game, l: LaserRtId, dt: f64, live: bool) {
         laser_trip(g, l, who.unwrap(), by, at.unwrap());
     }
 }
-/// Does any capsule of `c` cross the beam a→b: the point on the beam where it does.   (devices.ts bodyBreaks)
+/// Does any capsule of `c` cross the beam a→b: the point on the beam where it does.
 fn body_breaks(g: &crate::game::Game, c_2: CharId, a: V3, b: V3) -> Option<V3> {
     let h = match g.ch[c_2].bones.get(crate::character::Bone::Hips) { Some(h) => *h, None => return None };
     let along = v3::clamp(((h[0] - a[0]) * (b[0] - a[0]) + (h[2] - a[2]) * (b[2] - a[2])) / m::max(1e-6, m::pow(v3::dist_xz(a, b), 2.0)), 0.0, 1.0);
@@ -320,7 +320,7 @@ fn body_breaks(g: &crate::game::Game, c_2: CharId, a: V3, b: V3) -> Option<V3> {
     }
     None
 }
-/// A beam broken: the chirp, the radio, a man sent, by the beam's level.   (devices.ts laserTrip)
+/// A beam broken: the chirp, the radio, a man sent, by the beam's level.
 fn laser_trip(g: &mut crate::game::Game, l: LaserRtId, who: &str, by: Option<PlayerId>, at: V3) {
     let d = g.tab.devices_laser_rt[l].def.clone();
     let where_ = crate::chronicle::room_of(g, at);
@@ -347,7 +347,7 @@ fn laser_trip(g: &mut crate::game::Game, l: LaserRtId, who: &str, by: Option<Pla
     chron_device(g, ChronDeviceKind::LaserTripped, &row, Some(at));
     devices_note(g, &DevicesNoteR {  });
 }
-/// A camera or an emitter shot dead: control loses the feed and sends the nearest calm man to look at it.   (devices.ts deviceDown)
+/// A camera or an emitter shot dead: control loses the feed and sends the nearest calm man to look at it.
 fn device_down(g: &mut crate::game::Game, name: &str, spoken: &str, pos: V3) {
     let seed = g.fx_seed;
     g.fx_seed += 1.0;
@@ -362,7 +362,7 @@ fn device_down(g: &mut crate::game::Game, name: &str, spoken: &str, pos: V3) {
     let where_ = crate::chronicle::room_of(g, floor);
     devices_note(g, &DevicesNoteR {  });
 }
-/// The nearest calm, free staff man is sent to `pos` on control's word: a task that survives the suspicion decay.   (devices.ts sendToLook)
+/// The nearest calm, free staff man is sent to `pos` on control's word: a task that survives the suspicion decay.
 pub fn send_to_look(g: &mut crate::game::Game, pos: V3, what: &str) -> Option<GuardId> {
     let goal = match crate::scene_collision::nav_grid_nearest_free_point(g, pos[0], pos[2]) { Some(p) => p, None => v3::copy(pos) };
     let mut best: Option<GuardId> = None;
@@ -386,15 +386,15 @@ pub fn send_to_look(g: &mut crate::game::Game, pos: V3, what: &str) -> Option<Gu
         g.gd[id].path_goal = None;
         g.gd[id].path_goal_orbit = false;
     }
-    crate::game::game_say(g, id, "copy, control — on my way", Some(true), None, None);
+    crate::game::game_say(g, id, "copy, control — on my way", Some(true), None);
     let c = g.gd[id].ch;
     let at = match g.ch[c].bones.get(crate::character::Bone::Head) { Some(p) => *p, None => g.ch[c].pos };
     crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.5), None);
     Some(id)
 }
-/// Control's voice on the net.   (devices.ts control)
+/// Control's voice on the net.
 fn control(g: &mut crate::game::Game, text: &str) {
-    crate::game::game_msg(g, &format!("radio: CONTROL — {}", text));
+    crate::cues::cues_radio(g, &format!("CONTROL — {}", text));
     crate::audio_iface::game_audio_like_play(g, "radio", None, Some(0.55), None);
     g.devices.radio_count += 1.0;
     let mut row: JsMap<String, Option<crate::chronicle::ChronicleDataValue>> = JsMap::new();
@@ -402,7 +402,7 @@ fn control(g: &mut crate::game::Game, text: &str) {
     row.set(String::from("text"), Some(crate::chronicle::ChronicleDataValue::Text(String::from(text))));
     crate::chronicle::chronicle(g, crate::chronicle::ChronKind::Radio, Some(&row), None);
 }
-/// The debrief's rows, through the mission's own live gate.   (devices.ts chronDevice)
+/// The debrief's rows, through the mission's own live gate.
 fn chron_device(g: &mut crate::game::Game, kind: crate::devices::ChronDeviceKind, data: &JsMap<String, Option<crate::devices::ChronDeviceDataValue>>, pos: Option<V3>) -> Option<crate::chronicle::ChronEvent> {
     use crate::chronicle::{ChronKind, ChronicleDataValue as V, ChronicleNDataValue as N};
     let k = match kind {
@@ -429,19 +429,19 @@ fn chron_device(g: &mut crate::game::Game, kind: crate::devices::ChronDeviceKind
 }
 
 // ---------------------------------------------------------------- keypads
-/// The player learns the code of lock `lock_id`; whether it was news.   (devices.ts learnCode)
+/// The player learns the code of lock `lock_id`; whether it was news.
 pub fn learn_code(g: &mut crate::game::Game, lock_id: &str, how: crate::devices::LearnCodeHow, from: Option<GuardId>) -> bool {
     let pl = g.player;
     if g.pl[pl].codes.has(String::from(lock_id)) { return false; }
     let k = match g.devices.keypads.iter().find(|k| k.def.name == lock_id) { Some(k) => k.clone(), None => return false };
     g.pl[pl].codes.add(String::from(lock_id));
     let sign = callsign_of(g, from);
-    let who = match how {
-        LearnCodeHow::Told => format!("{} gave up", match &sign { Some(s) => s.as_str(), None => "he" }),
-        LearnCodeHow::Overheard => String::from("overheard"),
-    };
     let door_says = pad_door_name(g, &k);
-    crate::game::game_msg(g, &format!("{} the {} code — {}", who, door_says, spell(&k.def.code)));
+    // (not with a man in his arm: Sam's bubble holds back the next question, and the man's own answer has just said it)
+    if g.pl[pl].holding.is_none() {
+        let time = g.time;
+        crate::player::say_over_sam(g, &format!("got the {} code.", door_says), time);
+    }
     let door_name = g.dr[k.door].def.name.clone();
     let row = data(&[("door", text(&door_name)), ("how", text(how.as_str())), ("from", opt_text(&sign))]);
     let at = from.map(|f| g.ch[g.gd[f].ch].pos);
@@ -451,7 +451,7 @@ pub fn learn_code(g: &mut crate::game::Game, lock_id: &str, how: crate::devices:
     devices_note(g, &DevicesNoteR {  });
     true
 }
-/// A man has just said the code aloud: the player learns it iff it carried to him; whether he now knows it.   (devices.ts overhear)
+/// A man has just said the code aloud: the player learns it iff it carried to him; whether he now knows it.
 fn overhear(g: &mut crate::game::Game, speaker: GuardId, lock_id: &str) -> bool {
     let mut any = false;
     crate::seats::each_seat(g, &mut |g| { if overhear_here(g, speaker, lock_id, any) { any = true; } });
@@ -469,7 +469,7 @@ fn overhear_here(g: &mut crate::game::Game, speaker: GuardId, lock_id: &str, tol
     if told { g.pl[pl].codes.add(String::from(lock_id)); return true; }
     learn_code(g, lock_id, LearnCodeHow::Overheard, Some(speaker)) || g.pl[pl].codes.has(String::from(lock_id))
 }
-/// The digits as said ('7-3-9-1').   (devices.ts spell)
+/// The digits as said ('7-3-9-1').
 pub fn spell(code: &str) -> String {
     let mut out = String::new();
     for (i, ch) in code.chars().enumerate() {
@@ -478,12 +478,12 @@ pub fn spell(code: &str) -> String {
     }
     out
 }
-/// What a pad's door is called on the HUD.   (devices.ts padDoorName)
+/// What a pad's door is called on the HUD.
 pub fn pad_door_name(g: &crate::game::Game, k: &crate::devices::KeypadRt) -> String {
     let name = &g.dr[k.door].def.name;
     if name == "server_manager" { String::from("side door") } else { format!("{} door", name.replace('_', " ")) }
 }
-/// Is `d` a keypad door locked against the player where he stands, and does he know its code.   (devices.ts padState)
+/// Is `d` a keypad door locked against the player where he stands, and does he know its code.
 pub fn pad_state(g: &crate::game::Game, seat: &crate::seats::SeatRef, d: DoorId, from: V3) -> Option<crate::devices::PadState> {
     let pad = devices_pad_of(g, d)?;
     if !crate::doors::doors_locked_out(g, d, from, None) { return None; }
@@ -491,7 +491,7 @@ pub fn pad_state(g: &crate::game::Game, seat: &crate::seats::SeatRef, d: DoorId,
     let known = g.pl[pl].codes.has(g.dr[d].lock_id.clone());
     Some(PadState { pad, known })
 }
-/// The 'code' row: start keying it in. HANDWORK settled on: every key beeps under his finger (pad_hands), no first beep here.   (devices.ts startCoding)
+/// The 'code' row: start keying it in. HANDWORK settled on: every key beeps under his finger (pad_hands), no first beep here.
 pub fn start_coding(g: &mut crate::game::Game, d: DoorId) -> bool {
     let pl = g.player;
     let here = g.ch[g.pl[pl].ch].pos;
@@ -507,7 +507,7 @@ pub fn start_coding(g: &mut crate::game::Game, d: DoorId) -> bool {
     p.hand_wait = 0.0;
     true
 }
-/// The 'nocode' row: a deny tone at the plate, a hair on the meters, a word.   (devices.ts denyPad)
+/// The 'nocode' row: a deny tone at the plate, a hair on the meters, a word.
 pub fn deny_pad(g: &mut crate::game::Game, d: DoorId) {
     let k = match devices_pad_of(g, d) { Some(k) => k, None => return };
     crate::audio_iface::game_audio_like_play(g, "deny", Some(k.def.pos), Some(0.45), None);
@@ -516,20 +516,18 @@ pub fn deny_pad(g: &mut crate::game::Game, d: DoorId) {
     let (time, who, serial) = (g.time, g.ch[c].id, g.serial());
     g.events.push(crate::game::GameEvent { kind: crate::director::EventKind::Door, pos: [k.def.pos[0], 0.0, k.def.pos[2]], time, loud: false, level: Some(DENY_LEVEL), who: Some(who), serial, ..crate::game::GameEvent::default() });
     g.pl[pl].noise = m::max(g.pl[pl].noise, DENY_LEVEL);
-    let door_says = pad_door_name(g, &k);
-    crate::game::game_msg(g, &format!("the {} pad needs a code you don't have, but somebody on this floor knows it", door_says));
     let here = g.ch[c].pos;
     let where_ = crate::chronicle::room_of(g, here);
     devices_note(g, &DevicesNoteR {  });
 }
-/// Break off keying.   (devices.ts stopCoding)
+/// Break off keying.
 pub fn stop_coding(g: &mut crate::game::Game) {
     let pl = g.player;
     if g.pl[pl].coding.is_none() { return; }
     g.pl[pl].coding = None;
     g.pl[pl].code_t = 0.0;
 }
-/// Once a frame: the code going in, the door on the last key; broken off if he leaves or the door stops being against him.   (devices.ts updateCoding)
+/// Once a frame: the code going in, the door on the last key; broken off if he leaves or the door stops being against him.
 fn update_coding(g: &mut crate::game::Game, dt: f64) {
     let pl = g.player;
     let d = match g.pl[pl].coding { Some(d) => d, None => return };
@@ -556,8 +554,6 @@ fn update_coding(g: &mut crate::game::Game, dt: f64) {
     keys.add(g.dr[d].lock_id.clone());
     let who = g.ch[g.pl[pl].ch].id;
     crate::doors::doors_use(g, d, p, who, Some(&keys));
-    let door_says = pad_door_name(g, &k);
-    crate::game::game_msg(g, &format!("{} — the {} takes it", spell(&k.def.code), door_says));
     let door_name = g.dr[d].def.name.clone();
     let row = data(&[("door", text(&door_name))]);
     let centre = g.dr[d].frame_centre;
@@ -567,14 +563,14 @@ fn update_coding(g: &mut crate::game::Game, dt: f64) {
 }
 
 // ---------------------------------------------------------------- the boxes of the devices (a rule reads them: world.raycast takes a camera's body and bracket; see notes)
-/// The devices' boxes into the frame's list, keyed by ordinal.   (devices.ts deviceBoxes)
+/// The devices' boxes into the frame's list, keyed by ordinal.
 pub fn device_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     let n0 = out.len();
     device_boxes_raw(g, out);
     let base = crate::scene_boxes::mkey().device;
     for k in n0..out.len() { seam_set_mkey(g, out[k], base + (k - n0) as f64); }
 }
-/// A camera's bracket, body, lens and LED; a pad's plate, keys and LED; a beam's housings, LED and line.   (devices.ts deviceBoxesRaw)
+/// A camera's bracket, body, lens and LED; a pad's plate, keys and LED; a beam's housings, LED and line.
 fn device_boxes_raw(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     use crate::scene_boxes::{make_box_frame as make_box, MakeBoxP};   // (every box here is pushed straight onto the frame's list)
     let fl = crate::scene_boxes::box_flag();
@@ -628,7 +624,7 @@ fn device_boxes_raw(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
 
 // ---------------------------------------------------------------- the panel's knobs (their storage is the host's: lights.md trap 12)
 // ---------------------------------------------------------------- geometry
-/// Closest points between segments p and b: the distance and the point on b.   (devices.ts segSegClosest)
+/// Closest points between segments p and b: the distance and the point on b.
 pub fn seg_seg_closest(p0: V3, p1: V3, b0: V3, b1: V3) -> crate::devices::SegSegClosest {
     let (d1, d2, r) = (v3::sub(p1, p0), v3::sub(b1, b0), v3::sub(p0, b0));
     let (a, e, f) = (v3::dot(d1, d1), v3::dot(d2, d2), v3::dot(d2, r));
@@ -669,39 +665,63 @@ pub fn seg_seg_closest(p0: V3, p1: V3, b0: V3, b1: V3) -> crate::devices::SegSeg
 #[cfg(test)]
 mod tests {
     use super::*;
-    fn b(x: u64) -> f64 { f64::from_bits(x) }
-    fn v(a: [u64; 3]) -> V3 { [b(a[0]), b(a[1]), b(a[2])] }
-    /// the TypeScript's own bits (bun, EXACT.on) for segSegClosest: both degenerate ends, both clamps, the interior
+
+    fn near(a: f64, b: f64) -> bool { (a - b).abs() < 1e-12 }
+    fn near3(a: V3, b: V3) -> bool { v3::dist(a, b) < 1e-12 }
+
+    /// A laser is broken by how near its beam comes to a man's limb: on lines that pass each other, that is where they cross over.
     #[test]
-    fn seg_seg_closest_bits() {
-        let rows: &[([u64; 12], u64, [u64; 3])] = &[
-            ([0x3fd3333333333333, 0x3ff199999999999a, 0xc00599999999999a, 0x3ffe666666666666, 0x3fd999999999999a, 0x400a666666666666, 0xbffb333333333333, 0x3feccccccccccccd, 0x3fc999999999999a, 0x400199999999999a, 0x3ff4cccccccccccd, 0x3fe6666666666666], 0x3fdde6f64ace9ee3, [0x3ff1845888329deb, 0x3ff2fc81dc14f200, 0x3fe1ddab0c9ac367]),
-            ([0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x3ff0000000000000, 0x4000000000000000, 0x4008000000000000, 0x3ff0000000000000, 0x4000000000000000, 0x4008000000000000], 0x400deeea11683f48, [0x3ff0000000000000, 0x4000000000000000, 0x4008000000000000]),
-            ([0x3fb999999999999a, 0x3fc999999999999a, 0x3fd3333333333333, 0x3fb999999999999a, 0x3fc999999999999a, 0x3fd3333333333333, 0xbff0000000000000, 0x3fe0000000000000, 0x3fd0000000000000, 0x4010000000000000, 0x3fe8000000000000, 0x3fc0000000000000], 0x3fd73896fd98220d, [0x3fb4936122ee4ba0, 0x3fe1ba856837e3ac, 0x3fcc8af52f9038a8]),
-            ([0xbff0000000000000, 0x3fe0000000000000, 0x3fd0000000000000, 0x4010000000000000, 0x3fe8000000000000, 0x3fc0000000000000, 0x3fb999999999999a, 0x3fc999999999999a, 0x3fd3333333333333, 0x3fb999999999999a, 0x3fc999999999999a, 0x3fd3333333333333], 0x3fd73896fd98220d, [0x3fb999999999999a, 0x3fc999999999999a, 0x3fd3333333333333]),
-            ([0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x3ff0000000000000, 0x0000000000000000, 0x0000000000000000, 0x0000000000000000, 0x3ff0000000000000, 0x0000000000000000, 0x3ff0000000000000, 0x3ff0000000000000, 0x0000000000000000], 0x3ff0000000000000, [0x0000000000000000, 0x3ff0000000000000, 0x0000000000000000]),
-            ([0x4014000000000000, 0x3ff0000000000000, 0x4014000000000000, 0x4018000000000000, 0x3ff0000000000000, 0x4016000000000000, 0x0000000000000000, 0x3ff0000000000000, 0x0000000000000000, 0x3ff0000000000000, 0x3ff0000000000000, 0x3fc999999999999a], 0x4018fe2812a529ee, [0x3ff0000000000000, 0x3ff0000000000000, 0x3fc999999999999a]),
-            ([0xc014000000000000, 0x3ff0000000000000, 0xc014000000000000, 0xc018000000000000, 0x3ff0000000000000, 0xc016000000000000, 0x0000000000000000, 0x3ff0000000000000, 0x0000000000000000, 0x3ff0000000000000, 0x3ff0000000000000, 0x3fc999999999999a], 0x401c48c6001f0ac0, [0x0000000000000000, 0x3ff0000000000000, 0x0000000000000000]),
-            ([0x3fd5555555555555, 0x3fe5555555555555, 0x3fc2492492492492, 0x3ff4924924924925, 0x3fbc71c71c71c71c, 0x3ffaaaaaaaaaaaab, 0x3feb13b13b13b13b, 0xbfc6969696969697, 0x3fb999999999999a, 0x3fc999999999999a, 0x3fd79435e50d7943, 0xbfe9611a7b9611a8], 0x3fe8cfdc3a074f36, [0x3fe0c962285d3dc4, 0x3fb83e9a25d9c5c2, 0xbfd60bcc76863110]),
-        ];
-        for (i, d, on) in rows {
-            let r = seg_seg_closest(v([i[0], i[1], i[2]]), v([i[3], i[4], i[5]]), v([i[6], i[7], i[8]]), v([i[9], i[10], i[11]]));
-            assert_eq!(r.dist.to_bits(), *d);
-            assert_eq!([r.on_b[0].to_bits(), r.on_b[1].to_bits(), r.on_b[2].to_bits()], *on);
-        }
+    fn the_nearest_points_of_two_crossing_lines_are_where_they_cross() {
+        let r = seg_seg_closest([-1.0, 0.0, 0.0], [1.0, 0.0, 0.0], [0.0, -1.0, 2.0], [0.0, 1.0, 2.0]);
+        assert!(near(r.dist, 2.0));
+        assert!(near3(r.on_b, [0.0, 0.0, 2.0]));
     }
+
+    /// Off the end of either line, the end is the nearest it has.
     #[test]
-    fn lens_dir_bits() {
-        let rows: &[(u64, u64, [u64; 3])] = &[
-            (0x3fe6666666666666, 0xbfd6666666666666, [0x3fe35d799669bc02, 0xbfd5f209a5390a8b, 0x3fe6fdb8bda90d24]),
-            (0xc000cccccccccccd, 0x3fc999999999999a, [0xbfeb1274263933bd, 0x3fc96dff233dd2bc, 0xbfdfaa8573ca52b8]),
-            (0x4008000000000000, 0xbff199999999999a, [0x3fb0630e90ddbe73, 0xbfec84c54c2d6338, 0xbfdcbd588d04503c]),
-        ];
-        for (y, p, o) in rows {
-            let r = lens_dir(b(*y), b(*p));
-            assert_eq!([r[0].to_bits(), r[1].to_bits(), r[2].to_bits()], *o);
-        }
+    fn the_nearest_point_stops_at_the_ends_of_the_line() {
+        // the second line lies beyond the first's end, in line with it
+        let r = seg_seg_closest([0.0; 3], [1.0, 0.0, 0.0], [3.0, 0.0, 0.0], [5.0, 0.0, 0.0]);
+        assert!(near(r.dist, 2.0));
+        assert!(near3(r.on_b, [3.0, 0.0, 0.0]));
+        let r = seg_seg_closest([0.0; 3], [1.0, 0.0, 0.0], [-5.0, 0.0, 0.0], [-3.0, 0.0, 0.0]);
+        assert!(near(r.dist, 3.0));
+        assert!(near3(r.on_b, [-3.0, 0.0, 0.0]));
+        // the second line stops short of the first: its own end is the nearest it has
+        let r = seg_seg_closest([5.0, 1.0, 5.0], [6.0, 1.0, 5.5], [0.0, 1.0, 0.0], [1.0, 1.0, 0.2]);
+        assert!(near3(r.on_b, [1.0, 1.0, 0.2]));
     }
+
+    /// Two level lines one above the other are a metre apart wherever they are measured; a line of no length is a point; the distance does not depend on which line is asked about first.
     #[test]
-    fn spell_digits() { assert_eq!(spell("7391"), "7-3-9-1"); }
+    fn parallel_lines_and_points_have_a_distance_too() {
+        let r = seg_seg_closest([0.0; 3], [1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [1.0, 1.0, 0.0]);
+        assert!(near(r.dist, 1.0));
+        assert!(near(r.on_b[1], 1.0));
+        let (p, q): (V3, V3) = ([0.1, 0.2, 0.3], [1.0, 2.0, 3.0]);
+        let r = seg_seg_closest(p, p, q, q);
+        assert!(near(r.dist, v3::dist(p, q)));
+        assert_eq!(r.on_b, q);
+        let r = seg_seg_closest([0.0; 3], [0.0; 3], [1.0, 2.0, 3.0], [1.0, 2.0, 3.0]);
+        assert_eq!(r.on_b, [1.0, 2.0, 3.0]);
+        let a = seg_seg_closest(p, p, [-1.0, 0.5, 0.25], [4.0, 0.75, 0.125]);
+        let b = seg_seg_closest([-1.0, 0.5, 0.25], [4.0, 0.75, 0.125], p, p);
+        assert!(near(a.dist, b.dist));
+        assert_eq!(b.on_b, p);
+    }
+
+    /// A camera's lens looks where its yaw and pitch say, in the game's axes: yaw 0 is +z, a quarter turn is +x, pitch is up.
+    #[test]
+    fn a_lens_looks_by_its_yaw_and_pitch() {
+        assert!(near3(lens_dir(0.0, 0.0), [0.0, 0.0, 1.0]));
+        assert!(near3(lens_dir(m::PI / 2.0, 0.0), [1.0, 0.0, 0.0]));
+        assert!(near3(lens_dir(1.3, m::PI / 2.0), [0.0, 1.0, 0.0]));
+        let d = lens_dir(0.7, -0.35);
+        assert!(near(v3::len(d), 1.0));
+        assert!(d[1] < 0.0 && near(m::atan2(d[0], d[2]), 0.7));
+    }
+
+    /// A code is read out digit by digit.
+    #[test]
+    fn a_code_is_spelled_digit_by_digit() { assert_eq!(spell("7391"), "7-3-9-1"); }
 }

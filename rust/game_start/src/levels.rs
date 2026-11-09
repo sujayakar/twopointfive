@@ -771,7 +771,7 @@ fn rain(levels: &[String]) -> Verdicts {
     let mut v = Verdicts::default();
     let levels: Vec<String> = if levels.is_empty() { every_level() } else { levels.to_vec() };
     let wd = game::scene_world::world();
-    let ceiling = 3.0;   // (src/scene/world.ts WORLD.ceilingY)
+    let ceiling = 3.0;
     let (mut walls, mut faces, mut inners) = (0, 0, 0);
     for level in &levels {
         let mut p = Play::level(&format!("{level}.json"), false, &Opts { dress: true, ..Default::default() });

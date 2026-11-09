@@ -9,7 +9,7 @@ use game_derive::Knobs;
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct HardK {
     #[k(0.0)] pub reach_m: f64,
-    /// `stuns` 0: stun charges a defender carries (pressure.ts `PRESSURE.stuns`). None in the build's hard; The block's hard gives one each — `HARD_AT` below
+    /// `stuns` 0: stun charges a defender carries. None in the build's hard; The block's hard gives one each — `HARD_AT` below
     #[k(0.0)] pub stuns: f64,
 }
 

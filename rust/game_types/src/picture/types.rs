@@ -3,7 +3,7 @@
 use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// exposedAt asked of many spots at one moment: the man's height asked at, and each live idea (a copy) with its weight, heaviest first, and the places its man may have walked to once first asked (picture.ts exposureAsker)
+/// exposedAt asked of many spots at one moment: the man's height asked at, and each live idea (a copy) with its weight, heaviest first, and the places its man may have walked to once first asked
 #[derive(Clone, Debug)]
 pub enum ExposureAsker {
     Ideas { h: f64, rows: Vec<(crate::picture::Idea, f64, Option<Vec<V3>>)> },
@@ -111,9 +111,7 @@ pub struct PictureStep {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct PictureMod {
-    /// (src/game/picture.ts:118 STATES)
     pub states: Option<crate::picture::State>,
-    /// (src/game/picture.ts:291 VIEWING)
     pub viewing: bool,
 }
 

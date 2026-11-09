@@ -153,81 +153,55 @@ pub struct FogOfWarSighting {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct FogofwarMod {
-    /// (src/game/fogofwar.ts:355 THING_PASS)
     #[is({ let mut s = JsSet::new(); s.add(crate::Num(1.0)); s.add(crate::Num(4.0)); s.add(crate::Num(5.0)); s })] pub thing_pass: JsSet<crate::Num>,
 }
 
-/// (src/game/fogofwar.ts:321 GAZE_SIGHTS: a table nothing writes)
 pub fn gaze_sights() -> Vec<f64> { alloc::vec![0.7, 0.866] }
 
-/// (src/game/fogofwar.ts:323 COS_FRONT)
 pub const COS_FRONT: f64 = 0.7071067811865476;
 
-/// (src/game/fogofwar.ts:323 COS_BEHIND)
 pub const COS_BEHIND: f64 = -0.5;
 
-/// (src/game/fogofwar.ts:325 CALL_EVERY)
 pub const CALL_EVERY: f64 = 6.0;
 
-/// (src/game/fogofwar.ts:335 FOG_EYES_WAS)
 pub const FOG_EYES_WAS: f64 = 5.0;
 
-/// (src/game/fogofwar.ts:350 DOOR_EPS)
 pub const DOOR_EPS: f64 = 0.01;
 
-/// (src/game/fogofwar.ts:354 THING_BITS: a table nothing writes)
 pub fn thing_bits() -> Vec<f64> { alloc::vec![0.0, 0.0, 4.0, 3.0] }
 
-/// (src/game/fogofwar.ts:356 THING_TEST)
 pub const THING_TEST: f64 = 7.0;
 
-/// (src/game/fogofwar.ts:360 FIXTURE_LO)
 pub const FIXTURE_LO: f64 = 20480.0;
 
-/// (src/game/fogofwar.ts:360 FIXTURE_HI)
 pub const FIXTURE_HI: f64 = 28672.0;
 
-/// (src/game/fogofwar.ts:360 FIXTURE_BODY)
 pub const FIXTURE_BODY: f64 = 6.0;
 
-/// (src/game/fogofwar.ts:371 THING_EPS)
 pub const THING_EPS: f64 = 0.001;
 
-/// (src/game/fogofwar.ts:371 THING_PRIME)
 pub const THING_PRIME: f64 = 30.0;
 
-/// (src/game/fogofwar.ts:371 THING_EVERY)
 pub const THING_EVERY: f64 = 3.0;
 
-/// (src/game/fogofwar.ts:371 THING_CAP)
 pub const THING_CAP: f64 = 768.0;
 
-/// (src/game/fogofwar.ts:381 PROP_SYS)
 pub const PROP_SYS: f64 = 2.0;
 
-/// (src/game/fogofwar.ts:406 EYE_STAND)
 pub const EYE_STAND: f64 = 1.55;
 
-/// (src/game/fogofwar.ts:406 EYE_CROUCH)
 pub const EYE_CROUCH: f64 = 0.95;
 
-/// (src/game/fogofwar.ts:412 DEG)
 pub const DEG: f64 = 0.017453292519943295;
 
-/// (src/game/fogofwar.ts:414 DARK: a table nothing writes)
 pub fn dark() -> [f64; 3] { [0.0, 0.0, 0.0] }
 
-/// (src/game/fogofwar.ts:416 FACE_HOLD)
 pub const FACE_HOLD: f64 = 0.98;
 
-/// (src/game/fogofwar.ts:418 DOOR_F: a table nothing writes)
 pub fn door_f() -> Vec<f64> { alloc::vec![0.95, 0.6, 0.25] }
 
-/// (src/game/fogofwar.ts:418 DOOR_Y: a table nothing writes)
 pub fn door_y() -> Vec<f64> { alloc::vec![1.0, 1.8] }
 
-/// (src/game/fogofwar.ts:422 IN_ORDER)
 pub const IN_ORDER: f64 = 106181136.0;
 
-/// (src/game/fogofwar.ts:422 ONE_EYE)
 pub const ONE_EYE: f64 = 268435456.0;

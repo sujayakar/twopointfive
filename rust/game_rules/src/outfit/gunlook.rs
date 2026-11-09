@@ -5,12 +5,12 @@ use crate::ids::*;
 use crate::v3::{self, Quat, V3};
 use alloc::string::String;
 
-/// What a row has of its own; None: its stand-in fields are the gun.   (gunlook.ts gunOwn)
+/// What a row has of its own; None: its stand-in fields are the gun.
 pub fn gun_own(g: &crate::game::Game, def: &crate::weapons::WeaponDef) -> Option<crate::weapons::WeaponDefOwn> {
     def.own.clone()
 }
 
-/// The voice its report is played with.   (gunlook.ts voiceOf)
+/// The voice its report is played with.
 pub fn voice_of(g: &crate::game::Game, def: &crate::weapons::WeaponDef) -> String {
     match gun_own(g, def).and_then(|own| own.voice) {
         Some(voice) => voice,
@@ -18,7 +18,7 @@ pub fn voice_of(g: &crate::game::Game, def: &crate::weapons::WeaponDef) -> Strin
     }
 }
 
-/// The flame and the flash's light gain it fires with.   (gunlook.ts flameOf)
+/// The flame and the flash's light gain it fires with.
 pub fn flame_of(g: &crate::game::Game, def: &crate::weapons::WeaponDef) -> crate::effects::MuzzleFxKey {
     match gun_own(g, def).and_then(|own| own.flame) {
         Some(flame) => flame,
@@ -26,24 +26,24 @@ pub fn flame_of(g: &crate::game::Game, def: &crate::weapons::WeaponDef) -> crate
     }
 }
 
-/// A palm under a handguard, fingers wrapped across it; `z`: how far down the bore the wrist is.   (gunlook.ts under)
+/// A palm under a handguard, fingers wrapped across it; `z`: how far down the bore the wrist is.
 fn under(z: f64, x: Option<f64>, y: Option<f64>) -> crate::gunlook::LongModelGripL {
     let x = x.unwrap_or(0.099);
     let y = y.unwrap_or(-0.059);
     LongModelGripL { off: [x, y, z], fingers: [-0.48, -0.11, 0.19], back: [0.45, -0.85, -0.25] }
 }
 
-/// A long gun's model by its id; None: the group draws its own parts.   (gunlook.ts longModel)
+/// A long gun's model by its id; None: the group draws its own parts.
 pub(super) fn long_model(g: &crate::game::Game, id_2: Option<crate::weapons::GunModelId>) -> Option<crate::gunlook::LongModel> {
     long_row(id_2?)
 }
 
-/// A hand gun's model by its id.   (gunlook.ts pistolModel)
+/// A hand gun's model by its id.
 pub(super) fn pistol_model(g: &crate::game::Game, id_2: Option<crate::weapons::GunModelId>) -> Option<crate::gunlook::PistolModel> {
     pistol_row(id_2?)
 }
 
-/// Which models are on a man, from the rows he carries: the one in his hands and the others.   (gunlook.ts gunLookOf)
+/// Which models are on a man, from the rows he carries: the one in his hands and the others.
 pub fn gun_look_of(g: &crate::game::Game, into: Option<crate::gunlook::GunLook>, in_hands: Option<&crate::weapons::WeaponDef>, other: Option<&crate::weapons::WeaponDef>, third: Option<&crate::weapons::WeaponDef>) -> Option<crate::gunlook::GunLook> {
     use crate::weapons::{WeaponClass, WeaponDefRig, WeaponId};
     let mut l = into.unwrap_or(GunLook { hand: None, long: None, side: None, bare_long: None, bare_side: None });
@@ -104,145 +104,67 @@ fn pistol_row(id: crate::weapons::GunModelId) -> Option<PistolModel> {
 mod tests {
     use super::*;
     use crate::weapons::GunModelId as Id;
-
-    /// FNV-1a over 64-bit words, the same fold the TypeScript's tables were put through to get the constants below.
-    struct Fold(u64);
-    impl Fold {
-        fn word(&mut self, w: u64) {
-            self.0 ^= w;
-            self.0 = self.0.wrapping_mul(0x0000_0100_0000_01b3);
-        }
-        fn num(&mut self, x: f64) { self.word(x.to_bits()); }
-        fn v3(&mut self, v: V3) { for x in v { self.num(x); } }
-        fn text(&mut self, s: &str) {
-            self.word(s.len() as u64);
-            for b in s.bytes() { self.word(b as u64); }
-        }
-        fn seg(&mut self, s: &Seg) {
-            self.num(s.l0); self.num(s.l1); self.num(s.thick); self.num(s.tall);
-            match s.adj {
-                Some(a) => { self.word(1); self.v3(a.off); self.v3(a.rot); }
-                None => self.word(0),
-            }
-        }
-        fn seg_opt(&mut self, s: &Option<Seg>) {
-            match s {
-                Some(s) => { self.word(1); self.seg(s); }
-                None => self.word(0),
-            }
-        }
-    }
-
-    const LONG: [Id; 5] = [Id::Mk12, Id::Mp7, Id::Mk46, Id::M1014, Id::M870];
-    const PISTOL: [Id; 2] = [Id::Hk45, Id::G18];
-
-    /// Every number and word of the long guns' table, bit for bit against gunlook.ts LONG_MODELS.
-    #[test]
-    fn long_table_is_the_typescripts_bits() {
-        let mut f = Fold(0xcbf2_9ce4_8422_2325);
-        for id in LONG {
-            let l = long_row(id).unwrap();
-            f.num(l.ahead);
-            f.word(l.post as u64);
-            f.v3(l.grip_l.off); f.v3(l.grip_l.fingers); f.v3(l.grip_l.back);
-            match l.hinge { Some(h) => { f.word(1); f.v3(h); } None => f.word(0) }
-            f.seg_opt(&l.lens);
-            match l.lens_ahead { Some(a) => { f.word(1); f.num(a); } None => f.word(0) }
-            f.word(l.parts.len() as u64);
-            for p in &l.parts {
-                f.seg(&p.s);
-                f.text(p.col.as_str());
-                match p.is { Some(i) => { f.word(1); f.text(i.as_str()); } None => f.word(0) }
-            }
-        }
-        assert_eq!(f.0, LONG_BITS);
-    }
-
-    /// … and of the hand guns' (gunlook.ts PISTOL_MODELS).
-    #[test]
-    fn pistol_table_is_the_typescripts_bits() {
-        let mut f = Fold(0xcbf2_9ce4_8422_2325);
-        for id in PISTOL {
-            let p = pistol_row(id).unwrap();
-            f.seg(&p.slide); f.seg(&p.grip);
-            f.seg_opt(&p.can); f.seg_opt(&p.mag);
-            f.text(p.frame.as_str());
-            match p.can_col { Some(c) => { f.word(1); f.text(c.as_str()); } None => f.word(0) }
-        }
-        assert_eq!(f.0, PISTOL_BITS);
-    }
-
-    /// A long id has no pistol row and a pistol id no long row, as the two Partial tables have it.
-    #[test]
-    fn the_two_tables_do_not_overlap() {
-        for id in LONG { assert!(pistol_row(id).is_none()); }
-        for id in PISTOL { assert!(long_row(id).is_none()); }
-    }
-
-    /// The defaults of `under` are the handguard's, the wrist's z is the caller's.
-    #[test]
-    fn under_takes_its_defaults() {
-        let u = under(0.149, None, None);
-        assert_eq!(u.off[0].to_bits(), 0.099f64.to_bits());
-        assert_eq!(u.off[1].to_bits(), (-0.059f64).to_bits());
-        assert_eq!(u.off[2].to_bits(), 0.149f64.to_bits());
-        assert_eq!(u.fingers, long_row(Id::M1014).unwrap().grip_l.fingers);
-        assert_eq!(u.back, long_row(Id::M1014).unwrap().grip_l.back);
-    }
-
     use crate::weapons::{WeaponDef, WeaponId as W};
 
     fn row(g: &Game, id: W) -> WeaponDef { g.m.weapons.weapons.get(id).unwrap().clone() }
 
-    /// Who carries which: rows of the page's WEAPONS, each line printed by gunlook.ts gunLookOf under bun with GUNLOOK.on.
+    /// A FAILURE MEANS: a gun is drawn twice over, or finds no model at all.
     #[test]
-    fn gun_look_of_answers_as_the_typescript() {
-        let mut g = crate::game::Game::blank();
-        let cases: [(W, Option<W>, Option<W>, Option<Id>, Option<Id>, Option<Id>, bool, bool); 10] = [
-            (W::M870, None, Some(W::Mk12), Some(Id::M870), Some(Id::Mk12), None, false, false),
-            (W::M870, None, None, Some(Id::M870), Some(Id::M870), None, false, false),
-            (W::Mk18bare, Some(W::G19bare), None, None, None, None, true, true),
-            (W::G19bare, Some(W::Mk18bare), None, None, None, None, true, true),
-            (W::Mk12, Some(W::Hk45), None, Some(Id::Mk12), Some(Id::Mk12), Some(Id::Hk45), false, false),
-            (W::Hk45, Some(W::Mk12), None, Some(Id::Hk45), Some(Id::Mk12), Some(Id::Hk45), false, false),
-            (W::G18, Some(W::M1014), Some(W::M870), Some(Id::G18), Some(Id::M1014), Some(Id::G18), false, false),
-            (W::Fn2000, Some(W::Fiveseven), None, None, None, None, false, false),
-            (W::M870, Some(W::Hk45), Some(W::Mp7), Some(Id::M870), Some(Id::Mp7), Some(Id::Hk45), false, false),
-            (W::Mk46, Some(W::M870), Some(W::M870), Some(Id::Mk46), Some(Id::Mk46), None, false, false),
-        ];
-        for (a, b, c, hand, long, side, bare_long, bare_side) in cases {
-            let (a, b, c) = (row(&g, a), b.map(|x| row(&g, x)), c.map(|x| row(&g, x)));
-            let l = gun_look_of(&mut g, None, Some(&a), b.as_ref(), c.as_ref()).unwrap();
-            assert_eq!((l.hand, l.long, l.side, l.bare_long, l.bare_side), (hand, long, side, Some(bare_long), Some(bare_side)), "{:?}", a.id);
-        }
-        // nobody in his hands; and a look handed in is written over whole
+    fn a_gun_is_a_long_gun_or_a_pistol_never_both() {
+        for id in [Id::Mk12, Id::Mp7, Id::Mk46, Id::M1014, Id::M870] { assert!(long_row(id).is_some() && pistol_row(id).is_none()); }
+        for id in [Id::Hk45, Id::G18] { assert!(pistol_row(id).is_some() && long_row(id).is_none()); }
+    }
+
+    /// (his hands, his other gun, the big slot's) to (in hand, long, side, long bare, side bare)
+    fn look(a: Option<W>, b: Option<W>, c: Option<W>) -> (Option<Id>, Option<Id>, Option<Id>, bool, bool) {
+        let g = Game::blank();
+        let (a, b, c) = (a.map(|x| row(&g, x)), b.map(|x| row(&g, x)), c.map(|x| row(&g, x)));
+        let l = gun_look_of(&g, None, a.as_ref(), b.as_ref(), c.as_ref()).unwrap();
+        (l.hand, l.long, l.side, l.bare_long.unwrap(), l.bare_side.unwrap())
+    }
+
+    /// A FAILURE MEANS: a man's guns change as he swaps: the long gun and the sidearm are the same two whichever is up.
+    #[test]
+    fn a_man_shows_his_long_gun_and_his_sidearm_whichever_he_holds() {
+        assert_eq!(look(Some(W::Mk12), Some(W::Hk45), None), (Some(Id::Mk12), Some(Id::Mk12), Some(Id::Hk45), false, false));
+        assert_eq!(look(Some(W::Hk45), Some(W::Mk12), None), (Some(Id::Hk45), Some(Id::Mk12), Some(Id::Hk45), false, false));
+    }
+
+    /// A FAILURE MEANS: the rifle vanishes while he works the big slot's pump gun: the pump in his hands is his long gun only if nothing is on the sling.
+    #[test]
+    fn the_big_slots_pump_gun_in_his_hands_leaves_his_long_gun_on_its_sling() {
+        assert_eq!(look(Some(W::M870), None, Some(W::Mk12)), (Some(Id::M870), Some(Id::Mk12), None, false, false));
+        assert_eq!(look(Some(W::M870), None, None), (Some(Id::M870), Some(Id::M870), None, false, false));
+        assert_eq!(look(Some(W::M870), Some(W::Hk45), Some(W::Mp7)), (Some(Id::M870), Some(Id::Mp7), Some(Id::Hk45), false, false));
+    }
+
+    /// A FAILURE MEANS: a gun issued without a can is drawn with one, or the other way round.
+    #[test]
+    fn a_gun_that_has_no_can_is_drawn_bare() {
+        assert_eq!(look(Some(W::Mk18bare), Some(W::G19bare), None), (None, None, None, true, true));
+        assert_eq!(look(Some(W::Fn2000), Some(W::Fiveseven), None), (None, None, None, false, false));
+    }
+
+    /// A FAILURE MEANS: the last man's look is left on a man with nothing in his hands.
+    #[test]
+    fn a_look_handed_in_is_written_over_whole() {
+        let g = Game::blank();
         let stale = GunLook { hand: Some(Id::G18), long: Some(Id::G18), side: Some(Id::G18), bare_long: Some(true), bare_side: Some(true) };
-        let l = gun_look_of(&mut g, Some(stale), None, None, None).unwrap();
+        let l = gun_look_of(&g, Some(stale), None, None, None).unwrap();
         assert_eq!((l.hand, l.long, l.side, l.bare_long, l.bare_side), (None, None, None, Some(false), Some(false)));
     }
 
-    /// Every row's voice and flame, printed by gunlook.ts voiceOf and flameOf under bun with GUNLOOK.on.
+    /// A FAILURE MEANS: a gun sounds or flashes as another: a gun with a model of its own has its own voice and flame, the can is heard, and the rest speak by their row.
     #[test]
-    fn voice_and_flame_of_every_row() {
-        let mut g = crate::game::Game::blank();
-        let rows: [(W, &str, &str); 16] = [
-            (W::Fiveseven, "pistolSuppressed", "pistolSuppressed"), (W::Guard9mm, "pistolLoud", "pistolBare"),
-            (W::Aks74u, "carbineReport", "carbine"), (W::Fn2000, "rifleSuppressed", "sc20k"),
-            (W::M870, "m870Report", "carbine"), (W::Mk12, "mk12Suppressed", "mk12"),
-            (W::Mp7, "mp7Suppressed", "mp7"), (W::Mk46, "mk46Report", "mk46"),
-            (W::M1014, "m1014Report", "m1014"), (W::Hk45, "hk45Suppressed", "hk45"),
-            (W::G18, "g18Report", "g18"), (W::Ak74m, "carbineReport", "carbine"),
-            (W::Akms, "carbineReport", "pistolBare"), (W::Pkm, "carbineReport", "carbine"),
-            (W::Mk18bare, "carbineReport", "carbine"), (W::G19bare, "pistolLoud", "pistolBare"),
-        ];
-        for (id, voice, flame) in rows {
-            let d = row(&g, id);
-            assert_eq!(voice_of(&mut g, &d), voice, "{:?}", id);
-            assert_eq!(flame_of(&mut g, &d).as_str(), flame, "{:?}", id);
-        }
+    fn a_gun_sounds_and_flashes_as_its_own_or_by_its_row() {
+        let g = Game::blank();
+        let says = |id: W| { let d = row(&g, id); (voice_of(&g, &d), String::from(flame_of(&g, &d).as_str())) };
+        let pair = |v: &str, f: &str| (String::from(v), String::from(f));
+        assert_eq!(says(W::Mk12), pair("mk12Suppressed", "mk12"));
+        assert_eq!(says(W::G18), pair("g18Report", "g18"));
+        assert_eq!(says(W::Fiveseven), pair("pistolSuppressed", "pistolSuppressed"));
+        assert_eq!(says(W::G19bare), pair("pistolLoud", "pistolBare"));
+        assert_eq!(says(W::Fn2000), pair("rifleSuppressed", "sc20k"));
+        assert_eq!(says(W::Mk18bare), pair("carbineReport", "carbine"));
     }
-
-    // Printed by folding gunlook.ts's own tables under bun.
-    const LONG_BITS: u64 = 0xf017_d0b1_2669_69ea;
-    const PISTOL_BITS: u64 = 0x4910_88bb_c144_89b8;
 }

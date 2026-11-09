@@ -30,8 +30,8 @@ saves. The hand and the tick are in `overview.md`; a game over a wire is `net.md
 | `src/tape/module.ts` | which module this page plays, and `otherModule` |
 | `src/ui/replays.ts`, `src/cloud/tapes.ts` | the list on the title; a hosted build sends what the store holds to its backend |
 | `src/host/fixedstep.ts` | whole ticks a frame: `planTicks` |
-| `rust/sim/src/dice.rs`, `rust/game_rules/src/tick/dice.rs` | the game's die, and its keyed draws |
-| `rust/sim/src/maths.rs`, `rust/prim/` | the game's own sin, cos and the rest; the few operations exact by the standard |
+| `rust/maths/src/dice.rs`, `rust/game_rules/src/tick/dice.rs` | the game's die, and its keyed draws |
+| `rust/maths/`, `rust/prim/` | the game's own sin, cos and the rest; the few operations exact by the standard |
 | `rust/game_face/src/moment.rs` | `face_moment`, `face_moment_back`: a moment for a walk, with the shelf and what was said |
 | `rust/game_face/src/saves.rs` | a host's turn of the controller, and `face_recover` after a panic |
 | `savestate/` (`control.rs`) | when a save is made, under which name, what happens when one goes back; `Moment`: the game as a value and its block; `restart` |

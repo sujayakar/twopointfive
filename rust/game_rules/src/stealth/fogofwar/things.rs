@@ -1,4 +1,3 @@
-//! src/game/fogofwar.ts lines 806 to 1156
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -10,7 +9,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 /// A box's row. Every box read or written in this file goes through here, so this one body is all that changes when the table of Box rows is back.
 fn bx<'g>(g: &'g mut Game, b: impl Into<AnyBoxId>) -> &'g mut crate::scene_boxes::Box { &mut g.tab[b.into()] }
 
-/// Is the fixture lit, as it stands.   (fogofwar.ts FogOfWar.lampLit)
+/// Is the fixture lit, as it stands.
 pub fn fog_of_war_lamp_lit(g: &crate::game::Game, t: FixtureId) -> bool {
     let on = crate::sim_lightshome::fixture_on(g, t);
     let broken = crate::sim_lightshome::fixture_broken(g, t);
@@ -18,7 +17,7 @@ pub fn fog_of_war_lamp_lit(g: &crate::game::Game, t: FixtureId) -> bool {
     on && !broken && !(until > 0.0 && g.time < until)
 }
 
-/// The fixture as the team last saw it: first met = as it stands; it comes up to date the frame it differs and the team has a look at it.   (fogofwar.ts FogOfWar.lampKnown)
+/// The fixture as the team last saw it: first met = as it stands; it comes up to date the frame it differs and the team has a look at it.
 pub(super) fn fog_of_war_lamp_known(g: &mut crate::game::Game, t: FixtureId, lit: bool) -> bool {
     let rec = g.fog_of_war.lamp_recs.get(t).copied();
     let stale = match rec { None => true, Some(r) => r != lit && fog_of_war_lamp_seen(g, t) };
@@ -29,13 +28,13 @@ pub(super) fn fog_of_war_lamp_known(g: &mut crate::game::Game, t: FixtureId, lit
     rec.unwrap()
 }
 
-/// Is the floor at (x, z) in the lit part of the picture: some eye has it.   (fogofwar.ts FogOfWar.spotSeen)
+/// Is the floor at (x, z) in the lit part of the picture: some eye has it.
 pub(super) fn fog_of_war_spot_seen(g: &mut crate::game::Game, x: f64, z: f64) -> bool {
     g.fog_of_war.thing_stats.tests += 1.0;
     fog_of_war_ground_look(g, x, z) == 2.0
 }
 
-/// `spot_seen`'s walk: 2 = an eye has the spot, 1 = in an eye's field and every such eye's line stopped, 0 = in no eye's field.   (fogofwar.ts FogOfWar.groundLook)
+/// `spot_seen`'s walk: 2 = an eye has the spot, 1 = in an eye's field and every such eye's line stopped, 0 = in no eye's field.
 fn fog_of_war_ground_look(g: &mut crate::game::Game, x: f64, z: f64) -> f64 {
     let mut r = 0.0;
     let mut i = 0;
@@ -55,7 +54,7 @@ fn fog_of_war_ground_look(g: &mut crate::game::Game, x: f64, z: f64) -> f64 {
     r
 }
 
-/// A one-frame box's spot, asked once per half-metre square a frame.   (fogofwar.ts FogOfWar.cellSeenAt)
+/// A one-frame box's spot, asked once per half-metre square a frame.
 fn fog_of_war_cell_seen_at(g: &mut crate::game::Game, x: f64, z: f64) -> bool {
     let k = (m::floor(x * 2.0) + 4096.0) * 16384.0 + m::floor(z * 2.0) + 4096.0;
     if let Some(&v) = g.fog_of_war.cell_seen.get(crate::Num(k)) { return v; }
@@ -64,13 +63,13 @@ fn fog_of_war_cell_seen_at(g: &mut crate::game::Game, x: f64, z: f64) -> bool {
     v
 }
 
-/// A thing is seen where its middle is, or a long one at either end of its long side.   (fogofwar.ts FogOfWar.thingSeen)
+/// A thing is seen where its middle is, or a long one at either end of its long side.
 fn fog_of_war_thing_seen(g: &mut crate::game::Game, x: f64, z: f64, ox: f64, oz: f64) -> bool {
     fog_of_war_spot_seen(g, x, z)
         || ((ox != 0.0 || oz != 0.0) && (fog_of_war_spot_seen(g, x + ox, z + oz) || fog_of_war_spot_seen(g, x - ox, z - oz)))
 }
 
-/// One box's long side against the best so far: None = no longer than it; else its length and its axis in plan, 15 cm in from the ends.   (fogofwar.ts FogOfWar.span)
+/// One box's long side against the best so far: None = no longer than it; else its length and its axis in plan, 15 cm in from the ends.
 fn long_side(h: V3, yaw: f64, best: f64) -> Option<(f64, f64, f64)> {
     let along_x = h[0] >= h[2];
     let l = if along_x { h[0] } else { h[2] };
@@ -81,7 +80,7 @@ fn long_side(h: V3, yaw: f64, best: f64) -> Option<(f64, f64, f64)> {
     Some(if along_x { (l, cs, -sn) } else { (l, sn, cs) })
 }
 
-/// The long side of boxes i‥j of a list into `span_x` / `span_z`: its biggest box's long axis in plan, 15 cm in from the ends; 0, 0 under 0.9 m long.   (fogofwar.ts FogOfWar.span)
+/// The long side of boxes i‥j of a list into `span_x` / `span_z`: its biggest box's long axis in plan, 15 cm in from the ends; 0, 0 under 0.9 m long.
 fn fog_of_war_span(g: &mut crate::game::Game, list: &[AnyBoxId], i: f64, j: f64) {
     let mut best = 0.45;
     g.fog_of_war.span_x = 0.0;
@@ -99,7 +98,7 @@ fn fog_of_war_span(g: &mut crate::game::Game, list: &[AnyBoxId], i: f64, j: f64)
     }
 }
 
-/// `take` of `things`: the picture has boxes i‥j of the list as they stand.   (fogofwar.ts FogOfWar.things `take`)
+/// `take` of `things`: the picture has boxes i‥j of the list as they stand.
 fn thing_take(g: &mut Game, tk: f64, list: &[AnyBoxId], i: usize, j: usize, (x, z, ox, oz): (f64, f64, f64, f64), f: f64, moving: bool) {
     if !g.fog_of_war.thing_recs.has(crate::Num(tk)) {
         g.fog_of_war.thing_recs.set(crate::Num(tk), ThingRec { ghost: Vec::new(), x, z, ox, oz, f, moving, held: false });
@@ -124,7 +123,7 @@ fn thing_take(g: &mut Game, tk: f64, list: &[AnyBoxId], i: usize, j: usize, (x, 
     r.held = false;
 }
 
-/// Do boxes i‥j stand where the record's copies do?   (fogofwar.ts FogOfWar.things `same`)
+/// Do boxes i‥j stand where the record's copies do?
 fn thing_same(g: &mut Game, list: &[AnyBoxId], i: usize, j: usize, ghost: &[FrameBoxId]) -> bool {
     if ghost.len() != j - i { return false; }
     let mut k = i;
@@ -140,7 +139,7 @@ fn thing_same(g: &mut Game, list: &[AnyBoxId], i: usize, j: usize, ghost: &[Fram
     true
 }
 
-/// The team's own rubble on its first way down, for `things`: the frame's keys into `our_chunks`, the ones at rest into `our_landed`.   (fogofwar.ts FogOfWar.things, FOG.ours)
+/// The team's own rubble on its first way down, for `things`: the frame's keys into `our_chunks`, the ones at rest into `our_landed`.
 fn things_ours(g: &mut Game, ours: bool, prime: bool) {
     if g.fog_of_war.our_chunks.len() > 0 { g.fog_of_war.our_chunks.clear(); }
     let list = if ours && !prime { g.destr.debris.list.clone() } else { Vec::new() };
@@ -172,7 +171,7 @@ fn things_ours(g: &mut Game, ours: bool, prime: bool) {
     }
 }
 
-/// The picture's list of loose things, rewritten thing by thing: live where the team sees the floor it is on; out of sight, the copy where it was last seen at rest, or nothing. Hands back the list as it now stands.   (fogofwar.ts FogOfWar.things)
+/// The picture's list of loose things, rewritten thing by thing: live where the team sees the floor it is on; out of sight, the copy where it was last seen at rest, or nothing. Hands back the list as it now stands.
 pub fn fog_of_war_things(g: &mut crate::game::Game, list: &mut Vec<AnyBoxId>) -> Vec<AnyBoxId> {
     g.fog_of_war.thing_stats.held = 0.0;
     g.fog_of_war.thing_stats.out = 0.0;
@@ -311,13 +310,13 @@ pub fn fog_of_war_things(g: &mut crate::game::Game, list: &mut Vec<AnyBoxId>) ->
     list.clone()
 }
 
-/// Does anybody on the team see him, as of this frame's update. True for the team, and for everybody while the fog is off.   (fogofwar.ts FogOfWar.seen)
+/// Does anybody on the team see him, as of this frame's update. True for the team, and for everybody while the fog is off.
 pub fn fog_of_war_seen(g: &crate::game::Game, gd: GuardId) -> bool {
     if !fog_of_war_active(g) || fog_of_war_on_team(g, gd) { return true; }
     g.fog_of_war.recs.get(gd).map_or(false, |r| r.seen)
 }
 
-/// Where the team last had him and how long ago; null = never.   (fogofwar.ts FogOfWar.sighting)
+/// Where the team last had him and how long ago; null = never.
 pub fn fog_of_war_sighting(g: &crate::game::Game, gd: GuardId) -> Option<crate::fogofwar::FogOfWarSighting> {
     let c = g.gd[gd].ch;
     if !fog_of_war_active(g) { return Some(FogOfWarSighting { at: g.ch[c].pos, age: 0.0 }); }
@@ -328,7 +327,7 @@ pub fn fog_of_war_sighting(g: &crate::game::Game, gd: GuardId) -> Option<crate::
     Some(FogOfWarSighting { at, age: g.time - r.t })
 }
 
-/// Is he in the picture: seen, seen a moment ago, fired on by the squad, or a body the team has seen.   (fogofwar.ts FogOfWar.drawn)
+/// Is he in the picture: seen, seen a moment ago, fired on by the squad, or a body the team has seen.
 pub fn fog_of_war_drawn(g: &crate::game::Game, gd: GuardId) -> bool {
     if !fog_of_war_active(g) || fog_of_war_on_team(g, gd) { return true; }
     let r = match g.fog_of_war.recs.get(gd).copied() { Some(r) => r, None => return false };
@@ -337,7 +336,7 @@ pub fn fog_of_war_drawn(g: &crate::game::Game, gd: GuardId) -> bool {
     (since >= 0.0 && since < g.k.fog.linger) || fog_of_war_fired_on(g, gd) || r.framed == Some(true)
 }
 
-/// Is the squad shooting at him: a teammate's aimed round went at him inside FOG.squadFireSecs.   (fogofwar.ts FogOfWar.firedOn)
+/// Is the squad shooting at him: a teammate's aimed round went at him inside FOG.squadFireSecs.
 pub(super) fn fog_of_war_fired_on(g: &crate::game::Game, gd: GuardId) -> bool {
     match g.fog_of_war.fired_at.get(gd) {
         Some(&t) => g.fog_of_war.fire_clock - t < g.k.fog.squad_fire_secs,
@@ -345,9 +344,9 @@ pub(super) fn fog_of_war_fired_on(g: &crate::game::Game, gd: GuardId) -> bool {
     }
 }
 
-/// Left out of the picture this frame; false for everybody while the fog is off.   (fogofwar.ts FogOfWar.hidden)
+/// Left out of the picture this frame; false for everybody while the fog is off.
 pub fn fog_of_war_hidden(g: &crate::game::Game, gd: GuardId) -> bool { fog_of_war_hides(g, gd) }
-/// The last sightings: each living enemy out of the picture now, and in it recently enough: where he stood, and how long ago. Nobody's AI reads it. (fogofwar.ts FogOfWar.lastSeen)
+/// The last sightings: each living enemy out of the picture now, and in it recently enough: where he stood, and how long ago. Nobody's AI reads it.
 pub fn fog_of_war_last_seen(g: &crate::game::Game) -> Vec<crate::view::SeenMark> {
     let told = match crate::told::told_now(g) { crate::told::ToldRung::Guided => m::max(0.0, g.k.told.guided), crate::told::ToldRung::Standard => m::max(0.0, g.k.told.standard), _ => 0.0 };
     let secs = if g.k.fog.last_seen > 0.0 { g.k.fog.last_seen } else { told };
@@ -369,18 +368,18 @@ pub fn fog_of_war_hides(g: &crate::game::Game, gd: GuardId) -> bool {
     g.fog_of_war.hidden_chars.len() > 0 && g.fog_of_war.hidden_chars.has(g.gd[gd].ch)
 }
 
-/// The rule is live: the fog on, and the full picture's block filled.   (fogofwar.ts FogOfWar.oursOn)
+/// The rule is live: the fog on, and the full picture's block filled.
 fn fog_of_war_ours_on(g: &crate::game::Game) -> bool {
     fog_of_war_active(g) && g.fog_of_war.live
 }
 
-/// Is what `who` does the team's own to see, off the list of the team `full_block` filled.   (fogofwar.ts FogOfWar.oursId)
+/// Is what `who` does the team's own to see, off the list of the team `full_block` filled.
 pub fn fog_of_war_ours_id(g: &crate::game::Game, who: Option<f64>) -> bool {
     let w = match who { Some(w) if js::truthy(w) => w, _ => return false };
     fog_of_war_ours_on(g) && g.engine.lights.fog_team.owners.has(crate::Num(w))
 }
 
-/// A light `who` made without carrying it takes its doer's fog class.   (fogofwar.ts FogOfWar.lightBy)
+/// A light `who` made without carrying it takes its doer's fog class.
 pub fn fog_of_war_light_by(g: &mut crate::game::Game, l: LightId, who: Option<f64>) -> LightId {
     if let Some(w) = who {
         if js::truthy(w) { g.tab.light[l].fog_by = Some(w); }
@@ -388,7 +387,7 @@ pub fn fog_of_war_light_by(g: &mut crate::game::Game, l: LightId, who: Option<f6
     l
 }
 
-/// What is filed from here to `done` is `who`'s doing. Returns what `done` puts back (−1: nothing).   (fogofwar.ts FogOfWar.begin)
+/// What is filed from here to `done` is `who`'s doing. Returns what `done` puts back (−1: nothing).
 pub fn fog_of_war_begin(g: &mut crate::game::Game, who: Option<f64>) -> f64 {
     if !who.map_or(false, js::truthy) { return -1.0; }
     let was = g.fog_of_war.filing_ours;
@@ -397,13 +396,13 @@ pub fn fog_of_war_begin(g: &mut crate::game::Game, who: Option<f64>) -> f64 {
     if was { 1.0 } else { 0.0 }
 }
 
-/// Puts back what `begin` returned.   (fogofwar.ts FogOfWar.done)
+/// Puts back what `begin` returned.
 pub fn fog_of_war_done(g: &mut crate::game::Game, was: f64) {
     if was < 0.0 { return; }
     g.fog_of_war.filing_ours = was == 1.0;
 }
 
-/// `begin` / `done` round `fn_`.   (fogofwar.ts FogOfWar.doing)
+/// `begin` / `done` round `fn_`.
 pub fn fog_of_war_doing<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, who: Option<f64>, fn_: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T {
     let was = fog_of_war_begin(g, who);
     let out = fn_(g);
@@ -411,12 +410,12 @@ pub fn fog_of_war_doing<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, 
     out
 }
 
-/// The rest of this doing is not shown; the `done` that closes it puts the mark back.   (fogofwar.ts FogOfWar.hush)
+/// The rest of this doing is not shown; the `done` that closes it puts the mark back.
 pub fn fog_of_war_hush(g: &mut crate::game::Game) {
     g.fog_of_war.filing_ours = false;
 }
 
-/// What a hidden man puts into the air is not filed: true = `c` is out of the picture.   (fogofwar.ts FogOfWar.airHides)
+/// What a hidden man puts into the air is not filed: true = `c` is out of the picture.
 pub fn fog_of_war_air_hides(g: &crate::game::Game, c_2: CharId) -> bool {
     g.fog_of_war.live && g.fog_of_war.hidden_chars.len() > 0 && g.fog_of_war.hidden_chars.has(c_2)
 }
@@ -427,32 +426,43 @@ mod tests {
 
     fn game() -> alloc::boxed::Box<Game> { alloc::boxed::Box::new(Game::blank()) }
 
-    /// The bits of span's arithmetic, printed by the TypeScript's own formula under EXACT.
-    #[test]
-    fn span_is_the_typescripts_bits() {
-        let cases: [(&[(V3, f64)], u64, u64); 3] = [
-            (&[([1.2, 0.5, 0.3], 0.7), ([0.2, 0.5, 2.05], -1.3)], 0xbffd4acb93ae7660, 0x3fe04390d6282ef4),
-            (&[([0.4, 0.1, 0.45], 2.0)], 0, 0),
-            (&[([0.9, 0.1, 0.2], 1.1)], 0x3fd5c5ca051588cd, 0xbfe56393f9220a6a),
-        ];
-        for (rows, x, z) in cases {
-            let (mut best, mut sx, mut sz) = (0.45, 0.0f64, 0.0f64);
-            for &(h, yaw) in rows {
-                if let Some((l, a, b)) = long_side(h, yaw, best) { best = l; sx = a; sz = b; }
-            }
-            assert_eq!(sx.to_bits(), x);
-            assert_eq!(sz.to_bits(), z);
-        }
+    fn spans(rows: &[(V3, f64)]) -> (f64, f64) {
+        let mut g = game();
+        let list: Vec<AnyBoxId> = rows.iter().map(|&(h, yaw)| {
+            let b = g.tab.boxes.push(crate::scene_boxes::Box { h, yaw, ..crate::scene_boxes::Box::default() });
+            AnyBoxId::from(b)
+        }).collect();
+        fog_of_war_span(&mut g, &list, 0.0, list.len() as f64);
+        (g.fog_of_war.span_x, g.fog_of_war.span_z)
     }
 
-    /// A half-metre square is asked once a frame: the second ask takes no test, and the key is the TypeScript's.
+    /// A long thing is seen from either end of its biggest box's long side, 15 cm in from the ends. One under 0.9 m long is seen by its middle alone.
+    #[test]
+    fn a_long_thing_is_seen_by_its_long_side() {
+        assert_eq!(spans(&[([1.2, 0.5, 0.3], 0.0)]), (1.05, -0.0));
+        assert_eq!(spans(&[([0.3, 0.5, 1.2], 0.0)]), (0.0, 1.05));
+        assert_eq!(spans(&[([0.4, 0.1, 0.45], 2.0)]), (0.0, 0.0));
+        let (x, z) = spans(&[([0.9, 0.1, 0.2], 1.1)]);
+        assert!((m::hyp2(x, z) - 0.75).abs() < 1e-12, "turned with the box, and just as long");
+        assert!(x > 0.0 && z < 0.0);
+        // of two boxes, the longer's, in whichever order they come
+        let (a, b) = (([1.2, 0.5, 0.3], 0.0), ([0.2, 0.5, 2.05], 0.0));
+        assert_eq!(spans(&[a, b]), (0.0, 1.9));
+        assert_eq!(spans(&[b, a]), (0.0, 1.9));
+    }
+
+    /// A half-metre square is asked once a frame: another point of the same square takes no test, and a neighbour in either direction is a square of its own.
     #[test]
     fn a_cell_is_asked_once() {
         let mut g = game();
         assert!(!fog_of_war_cell_seen_at(&mut g, -3.3, 7.9));
         assert!(!fog_of_war_cell_seen_at(&mut g, -3.3, 7.9));
+        assert!(!fog_of_war_cell_seen_at(&mut g, -3.2, 7.6));
         assert_eq!(g.fog_of_war.thing_stats.tests, 1.0);
-        assert!(g.fog_of_war.cell_seen.has(crate::Num(f64::from_bits(0x418ff28078000000))));
+        assert!(!fog_of_war_cell_seen_at(&mut g, -3.6, 7.9));
+        assert_eq!(g.fog_of_war.thing_stats.tests, 2.0);
+        assert!(!fog_of_war_cell_seen_at(&mut g, -3.3, 8.1));
+        assert_eq!(g.fog_of_war.thing_stats.tests, 3.0);
     }
 
     /// The men the fog leaves out are not on the list to draw; the rest keep the order they were given.

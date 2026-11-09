@@ -3,7 +3,7 @@ pub use types::*;
 use crate::m;
 use alloc::{vec, vec::Vec};
 
-/// V8's two-term length: scaled by the largest, squares Kahan-summed. (hyp.ts kahan2)
+/// V8's two-term length: scaled by the largest, squares Kahan-summed.
 fn kahan2(a: f64, b: f64) -> f64 {
     let (x, y) = (m::abs(a), m::abs(b));
     let mut max = 0.0;
@@ -21,7 +21,7 @@ fn kahan2(a: f64, b: f64) -> f64 {
     m::sqrt(sum) * max
 }
 
-/// V8's three-term length. (hyp.ts kahan3)
+/// V8's three-term length.
 fn kahan3(a: f64, b: f64, c_2: f64) -> f64 {
     let (x, y, z) = (m::abs(a), m::abs(b), m::abs(c_2));
     let mut max = 0.0;
@@ -41,7 +41,7 @@ fn kahan3(a: f64, b: f64, c_2: f64) -> f64 {
     m::sqrt(sum) * max
 }
 
-/// V8's four-term length. (hyp.ts kahan4)
+/// V8's four-term length.
 fn kahan4(a: f64, b: f64, c_2: f64, d: f64) -> f64 {
     let (x, y, z, w) = (m::abs(a), m::abs(b), m::abs(c_2), m::abs(d));
     let mut max = 0.0;
@@ -63,7 +63,7 @@ fn kahan4(a: f64, b: f64, c_2: f64, d: f64) -> f64 {
     m::sqrt(sum) * max
 }
 
-/// JavaScriptCore's two-term length: scaled by the largest, squares summed in order. (hyp.ts scaled2)
+/// JavaScriptCore's two-term length: scaled by the largest, squares summed in order.
 fn scaled2(a: f64, b: f64) -> f64 {
     let (x, y) = (m::abs(a), m::abs(b));
     if x == INF || y == INF { return INF; }
@@ -76,7 +76,7 @@ fn scaled2(a: f64, b: f64) -> f64 {
     m::sqrt(0.0 + p * p + q * q) * max
 }
 
-/// JavaScriptCore's three-term length. (hyp.ts scaled3)
+/// JavaScriptCore's three-term length.
 fn scaled3(a: f64, b: f64, c_2: f64) -> f64 {
     let (x, y, z) = (m::abs(a), m::abs(b), m::abs(c_2));
     if x == INF || y == INF || z == INF { return INF; }
@@ -90,7 +90,7 @@ fn scaled3(a: f64, b: f64, c_2: f64) -> f64 {
     m::sqrt(0.0 + p * p + q * q + r * r) * max
 }
 
-/// JavaScriptCore's four-term length. (hyp.ts scaled4)
+/// JavaScriptCore's four-term length.
 fn scaled4(a: f64, b: f64, c_2: f64, d: f64) -> f64 {
     let (x, y, z, w) = (m::abs(a), m::abs(b), m::abs(c_2), m::abs(d));
     if x == INF || y == INF || z == INF || w == INF { return INF; }
@@ -105,7 +105,7 @@ fn scaled4(a: f64, b: f64, c_2: f64, d: f64) -> f64 {
     m::sqrt(0.0 + p * p + q * q + r * r + t * t) * max
 }
 
-/// The stream's next draw in [0, 1): the closure `r` of `sample`. (hyp.ts:82)
+/// The stream's next draw in [0, 1): the closure `r` of `sample`.
 fn sample_r(s: &mut u32) -> f64 {
     *s = s.wrapping_add(0x6D2B79F5);
     let mut t = *s;
@@ -115,7 +115,7 @@ fn sample_r(s: &mut u32) -> f64 {
     (t ^ (t >> 14)) as f64 / 4294967296.0
 }
 
-/// The trial's inputs: a fixed stream over the magnitudes lengths take and the ones they do not. (hyp.ts sample)
+/// The trial's inputs: a fixed stream over the magnitudes lengths take and the ones they do not.
 fn sample(n: f64) -> Vec<f64> {
     let mut s: u32 = 0x9e3779b9;
     let odd: [f64; 19] = [
@@ -148,12 +148,12 @@ fn sample(n: f64) -> Vec<f64> {
     out
 }
 
-/// The same number, zeros by sign; NaN is NaN. (hyp.ts same)
+/// The same number, zeros by sign; NaN is NaN.
 fn same(a: f64, b: f64) -> bool {
     if a == b { a != 0.0 || 1.0 / a == 1.0 / b } else { a != a && b != b }
 }
 
-/// The Kahan sum for any number of terms: what `Math.hypot` becomes under the game's own maths. (hyp.ts kahanN)
+/// The Kahan sum for any number of terms: what `Math.hypot` becomes under the game's own maths.
 fn kahan_n(v: &[f64]) -> f64 {
     let n = v.len();
     if n == 2 { return kahan2(v[0], v[1]); }

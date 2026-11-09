@@ -1,4 +1,3 @@
-//! src/game/game.ts lines 1864 to 2126
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -13,7 +12,7 @@ fn bone_or(g: &Game, c: CharId, b: crate::character::Bone, up: f64) -> V3 {
     match g.ch[c].bones.get(b) { Some(p) => *p, None => v3::add(g.ch[c].pos, [0.0, up, 0.0]) }
 }
 
-/// the one thing here the simulation reads: what each man wears, dealt in the order he is drawn. The renderer's half (`draw`) is the picture's, not translated   (game.ts drawMen)
+/// the one thing here the simulation reads: what each man wears, dealt in the order he is drawn. The renderer's half (`draw`) is the picture's, not translated
 pub(super) fn game_draw_men(g: &mut crate::game::Game, all: &[CharId], statured: bool, draw: Option<bool>) {
     crate::scene_boxes::box_world_reset_capsules(g);
     let mut drawn = crate::fogofwar::fog_of_war_filter(g, all);
@@ -33,7 +32,7 @@ pub(super) fn game_draw_men(g: &mut crate::game::Game, all: &[CharId], statured:
     crate::anim_characters::character_renderer_finish(g, 0.0);
 }
 
-/// what each guard's line to the man he faces has of smoke and weather on it, and how lit each seat's man is   (game.ts lightMeter)
+/// what each guard's line to the man he faces has of smoke and weather on it, and how lit each seat's man is
 pub(super) fn game_light_meter(g: &mut crate::game::Game, dt: f64) {
     use crate::character::Bone;
     let seats = g.seats.clone(); let one = seats.len() == 1;
@@ -50,7 +49,7 @@ pub(super) fn game_light_meter(g: &mut crate::game::Game, dt: f64) {
     for &s in seats.iter() { crate::seats::with_seat(g, s, &mut |g| game_meter_read(g, dt)); }
 }
 
-/// a seat's half of lightMeter, over its view: the light on its man, eased into his visibility   (game.ts meterRead)
+/// a seat's half of lightMeter, over its view: the light on its man, eased into his visibility
 fn game_meter_read(g: &mut crate::game::Game, dt: f64) {
     let pl = g.player;
     let [stands, e] = crate::guards::light_on(g, g.pl[pl].ch);
@@ -61,7 +60,7 @@ fn game_meter_read(g: &mut crate::game::Game, dt: f64) {
     g.pl[pl].visibility = if was.is_finite() { v3::damp(was, to, 6.0, dt) } else { to };
 }
 
-/// put the highlight on the row of `kind` (the one whose verb is `verb`, if given) in this frame's list; false if none is on offer   (game.ts selectVerb)
+/// put the highlight on the row of `kind` (the one whose verb is `verb`, if given) in this frame's list; false if none is on offer
 pub fn game_select_verb(g: &mut crate::game::Game, kind: crate::game::InteractableKind, verb: Option<crate::game::Verb>) -> bool {
     let at = g.nearby.iter().position(|r| r.kind == kind && (verb.is_none() || r.verb == verb));
     let Some(i) = at else { return false; };
@@ -70,12 +69,12 @@ pub fn game_select_verb(g: &mut crate::game::Game, kind: crate::game::Interactab
     true
 }
 
-/// Esc, before the pause menu gets it: true = used here   (game.ts escape)
+/// Esc, before the pause menu gets it: true = used here
 pub fn game_escape(g: &mut crate::game::Game) -> bool {
     crate::orders::squad_orders_escape(g) || crate::player::launch_cancel(g) || crate::interact::escape_interact(g) || crate::slotsetup::slot_setup_shut(g)
 }
 
-/// the light meter's mapping, irradiance → 0‥1 visibility   (game.ts visibilityOf)
+/// the light meter's mapping, irradiance → 0‥1 visibility
 pub fn game_visibility_of(g: &crate::game::Game, e: f64) -> f64 {
     visibility_sum(g.tune.vis_slope, g.tune.vis_floor, e)
 }
@@ -84,7 +83,7 @@ fn visibility_sum(slope: f64, floor: f64, e: f64) -> f64 {
     v3::clamp(slope * m::log(m::max(e, 1e-5) / floor), 0.0, 1.0)
 }
 
-/// the leaves' step and everything round it: who touches them, what they did to whom   (game.ts updateDoors)
+/// the leaves' step and everything round it: who touches them, what they did to whom
 pub(super) fn game_update_doors(g: &mut crate::game::Game, dt: f64) {
     use crate::character::Bone;
     use crate::doors::DoorContact;
@@ -196,7 +195,7 @@ pub(super) fn game_update_doors(g: &mut crate::game::Game, dt: f64) {
     }
 }
 
-/// a seat's half of updateDoors, run over its view: the player's own contact on the leaves this frame (none: he is down)   (game.ts doorContact)
+/// a seat's half of updateDoors, run over its view: the player's own contact on the leaves this frame (none: he is down)
 fn game_door_contact(g: &mut crate::game::Game) -> Option<crate::doors::DoorContact> {
     let pl = g.player; let pc = g.pl[pl].ch;
     if g.pl[pl].down { return None; }
@@ -210,7 +209,7 @@ fn game_door_contact(g: &mut crate::game::Game) -> Option<crate::doors::DoorCont
 }
 
 
-/// the row a click with empty hands is on: the first guard in reach who is no hostage (game.ts:2192)
+/// the row a click with empty hands is on: the first guard in reach who is no hostage
 fn click_row(g: &Game, seat: &crate::seats::SeatRef) -> Option<Interactable> {
     let mut i = 0;
     while i < seat.nearby.len() {
@@ -226,7 +225,7 @@ fn click_row(g: &Game, seat: &crate::seats::SeatRef) -> Option<Interactable> {
     None
 }
 
-/// the way in is read where he stands: Hold.from, off his body now (game.ts:2197)
+/// the way in is read where he stands: Hold.from, off his body now
 fn hold_from_here(g: &mut Game, pl: PlayerId) {
     let c = g.pl[pl].ch;
     let p = g.ch[c].pos;
@@ -238,7 +237,7 @@ fn holds(g: &Game, pl: PlayerId, gd: GuardId) -> bool {
     match g.pl[pl].holding.as_ref() { Some(h) => h.g == gd, None => false }
 }
 
-/// this frame's verb of his, done (game.ts Game.doorActs)
+/// this frame's verb of his, done
 fn game_door_acts(g: &mut crate::game::Game, dt: f64, input: InputId) {
     let pl = g.player;
     let pc = g.pl[pl].ch;
@@ -349,16 +348,10 @@ fn game_door_acts(g: &mut crate::game::Game, dt: f64, input: InputId) {
                 if crate::doors::doors_locked_out(g, d, pos, Some(&keys)) { crate::player::start_picking(g, d); }
             }
             Some(Verb::Kick) => {
-                if crate::doors::doors_boot_holds(g, d, pos) {
-                    crate::game::game_msg(g, "it opens toward you, so a kick won't move it");
-                } else {
-                    crate::player::start_kick(g, d, None, None);
-                }
+                if !crate::doors::doors_boot_holds(g, d, pos) { crate::player::start_kick(g, d, None, None); }
             }
             Some(Verb::Rattle) => {
                 crate::doors::doors_rattle(g, d, id, None);
-                let steel = g.dr[d].def.steel.unwrap_or(false);
-                crate::game::game_msg(g, if steel { "the stair door is bolted from the landing side with no keyhole on this side, so it's not your way out tonight" } else { "it's locked. pick it (quiet, slow) or kick it in (loud)" });
             }
             Some(Verb::Code) => { crate::devices::start_coding(g, d); }
             Some(Verb::Nocode) => crate::devices::deny_pad(g, d),
@@ -389,7 +382,6 @@ fn game_door_acts(g: &mut crate::game::Game, dt: f64, input: InputId) {
                 g.pl[pl].ease_stall_t += dt;
                 if g.pl[pl].ease_stall_t > 0.5 {
                     g.pl[pl].easing = None;
-                    crate::game::game_msg(g, "it won't go any further");
                 }
             } else {
                 g.pl[pl].ease_stall_t = 0.0;
@@ -400,7 +392,7 @@ fn game_door_acts(g: &mut crate::game::Game, dt: f64, input: InputId) {
     if g.pl[pl].door_move.is_some() { crate::hands::door_move_tick(g, dt); }
 }
 
-/// what the leaves did to him once they have swung (game.ts Game.doorAfter)
+/// what the leaves did to him once they have swung
 fn game_door_after(g: &mut crate::game::Game, own: Option<&mut crate::doors::DoorContact>, bx: f64, bz: f64) {
     let own: Option<&crate::doors::DoorContact> = own.as_deref();
     let pl = g.player;

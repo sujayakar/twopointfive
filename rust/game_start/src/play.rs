@@ -38,7 +38,7 @@ pub struct Opts {
     pub squad: u32,
     /// how many players (1 or 2): each has a seat, his own man and his share of the squad. The hand's keys and cursor are the first seat's.
     pub seats: u32,
-    /// THE ROWS THAT ONLY DRESS THE PICTURE (game/dress.ts DRESS), as a page has them: the debris pool tumbling a break's pieces, above all. Off (the default) as
+    /// THE ROWS THAT ONLY DRESS THE PICTURE, as a page has them: the debris pool tumbling a break's pieces, above all. Off (the default) as
     /// on any host that draws nothing: a thrown piece is then only its one landing told to the floor, and the pool stays empty.
     pub dress: bool,
     /// a mission the game refuses is said (`Play.refused`) and no stop
@@ -422,8 +422,6 @@ impl Play {
     }
     /// …and what another player's HUD is told (0 = the first)
     pub fn view_of(&self, seat: usize) -> game::view::TickView { game::view::tick_view(&self.g, &game::seats::seat(&self.g, self.g.seats[seat])) }
-    /// the lines on the game's log now, oldest first (it keeps the last five)
-    pub fn log(&self) -> Vec<&str> { self.g.messages.iter().map(|m| m.text.as_str()).collect() }
     /// how the room clear ended and when, on the game's clock (None: it is on)
     pub fn room_clear_end(&self) -> Option<(game::roomclear::RoomClearEnd, f64)> { self.g.room_clear.end.map(|e| (e, self.g.room_clear.end_at)) }
     /// the men of the other side who are up

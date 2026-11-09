@@ -41,8 +41,6 @@ pub struct RoomClearScenario {
     pub pair_said: bool,
     pub entry_said: bool,
     pub team_said: bool,
-    pub clear_due: Vec<crate::scene_scenarios::StructureRoom>,
-    #[is(f64::NAN)] pub clear_at: f64,
     #[is(crate::nightbreach::NightBreachLayout { name: String::from("room clear") })] pub layout: crate::nightbreach::NightBreachLayout,
 }
 
@@ -80,8 +78,5 @@ pub struct RoomClearScenarioObjective {
     pub pos: Option<V3>,
 }
 
-/// (src/game/roomclear.ts:106 MARK_CLEAR_M)
 pub const MARK_CLEAR_M: f64 = 0.45;
 
-/// (src/game/roomclear.ts:212 CLEAR_SAY_SECS)
-pub const CLEAR_SAY_SECS: f64 = 0.6;

@@ -12,15 +12,15 @@ pub const ORDER: Row = Row {
     ..Row::new("cover", label, issue)
 };
 
-/// 'cover'.label (orders.ts:605)
+/// 'cover'.label
 fn label(_g: &mut Game, t: &OrderTarget) -> String {
     String::from(if matches!(t, OrderTarget::Door(_)) { "cover this door" } else { "cover that way" })
 }
-/// 'cover'.can (orders.ts:606)
+/// 'cover'.can
 fn can(g: &mut Game, gd: GuardId, t: &OrderTarget) -> Option<String> {
     if squad_orders_has_line(g, gd, t) { None } else { Some(String::from("no line from here.")) }
 }
-/// 'cover'.issue (orders.ts:606)
+/// 'cover'.issue
 fn issue(g: &mut Game, men: &[GuardId], t: &OrderTarget, o: Option<&GiveOpts>) -> Option<String> {
     let t_at = rows::at(t);
     let watch: V3 = [t_at[0], 1.1, t_at[2]];

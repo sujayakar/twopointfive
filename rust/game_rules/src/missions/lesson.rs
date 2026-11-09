@@ -33,7 +33,7 @@ fn replace_all(line: &str, mut at: impl FnMut(&[u8], usize) -> Option<(usize, St
 fn replace_words(line: &str, word: &str, with: &str) -> String {
     replace_all(line, |b, i| { if !boundary(b, i) { return None; } let end = lit(b, i, word)?; if boundary(b, end) { Some((end, String::from(with))) } else { None } })
 }
-/// a line that names the knife, while there is none: the right click's knockout is the blow (lesson.ts bareLine)
+/// a line that names the knife, while there is none: the right click's knockout is the blow
 fn bare_line(line: &str) -> String {
     let s = replace_words(line, "Right click to knock him out, or left click to use the knife", "Right-click to knock him out");
     let s = replace_words(&s, "left click to knife him", "right-click to knock him out");
@@ -61,7 +61,7 @@ fn token_say(row: usize, who: &str, held: bool, bare: bool) -> String {
     }
 }
 
-/// the first letter lower-cased (lesson.ts lower)
+/// the first letter lower-cased
 fn lower(name: &str) -> String {
     let mut c = name.chars();
     match c.next() {
@@ -71,7 +71,7 @@ fn lower(name: &str) -> String {
     }
 }
 
-/// is this name (the words between the braces, either capital) one lessonLine writes out? (lesson.ts lessonToken)
+/// is this name (the words between the braces, either capital) one lessonLine writes out?
 pub fn lesson_token(name: &str) -> bool {
     let n = lower(name);
     // /^[A-Za-z]+(?: [A-Za-z']+)*$/
@@ -81,7 +81,7 @@ pub fn lesson_token(name: &str) -> bool {
     match (0..4).find_map(|row| token_hit(row, &n)) { Some(who) => !who.split(' ').any(|w| w == "from"), None => false }
 }
 
-/// a line's tokens written out; on the page `held` is false and `bare` true when not given (lesson.ts tokenLine)
+/// a line's tokens written out; on the page `held` is false and `bare` true when not given
 fn token_line(line: &str, held: Option<bool>, bare: Option<bool>) -> String {
     // (held = stalkClickOnly() with NO game: STALK.on && STALK.only && !STALK.key, false on the page · bare = CLOSE.on && CLOSE.noKnife, true on it)
     let (held, bare) = (held.unwrap_or(false), bare.unwrap_or(true));
@@ -105,7 +105,7 @@ fn token_line(line: &str, held: Option<bool>, bare: Option<bool>) -> String {
     })
 }
 
-/// a step's line as the HUD's row says it now; the rails' frame reads it too, so it is no picture-only code here (lesson.ts lessonLine)
+/// a step's line as the HUD's row says it now; the rails' frame reads it too, so it is no picture-only code here
 pub fn lesson_line(g: &crate::game::Game, written: &str) -> String { line_on_page(written, g.k.cmdring.wedges) }
 /// …with the ring's wedges read
 fn line_on_page(written: &str, wedges: f64) -> String {
@@ -117,20 +117,19 @@ fn line_on_page(written: &str, wedges: f64) -> String {
 
 // ---- the tests
 
-/// the first row of a front-trimmed log that came after `last`, the logs' rows given by serial; 0: `last` is gone, or there was none (lesson.ts after)
+/// the first row of a front-trimmed log that came after `last`, the logs' rows given by serial; 0: `last` is gone, or there was none
 fn after(log: &[u32], last: Option<u32>) -> usize {
     let mut k = log.len();
     while k > 0 && Some(log[k - 1]) != last { k -= 1; }
     k
 }
 
-/// (lesson.ts inside)
 fn inside(r: crate::scene_scenarios::Rect, p: V3) -> bool { p[0] > r.x0 && p[0] < r.x1 && p[2] > r.z0 && p[2] < r.z1 }
 
-/// the player a lesson is taught to, one seat today (lesson.ts who)
+/// the player a lesson is taught to, one seat today
 fn who(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> PlayerId { seat.player }
 
-/// the door a teammate is on a plain 'stack up' on, by name; None: none (lesson.ts onStack)
+/// the door a teammate is on a plain 'stack up' on, by name; None: none
 fn on_stack(g: &crate::game::Game, seat: &crate::seats::SeatRef, m: GuardId) -> Option<String> {
     let a = crate::orders::squad_orders_of(g, seat, m)?;
     if !crate::orders::rows::is(g, a, crate::orders::Is::Stacks) { return None; }
@@ -138,16 +137,16 @@ fn on_stack(g: &crate::game::Game, seat: &crate::seats::SeatRef, m: GuardId) -> 
     Some(g.dr[d].def.name.clone())
 }
 
-/// a man no longer on his feet: dead, or out cold (lesson.ts downed)
+/// a man no longer on his feet: dead, or out cold
 fn downed(g: &crate::game::Game, x: GuardId) -> bool { g.gd[x].state == crate::game::GuardState::Dead }
 
-/// a teammate on his feet (lesson.ts:127, 269)
+/// a teammate on his feet
 fn operative_up(g: &Game, x: GuardId) -> bool { g.gd[x].unit.is_some() && g.gd[x].team == crate::teams::Team::Operative && g.gd[x].state != crate::game::GuardState::Dead }
 
-/// the one partner of a quiet pair: the first operative unit on his feet (lesson.ts partnerOf)
+/// the one partner of a quiet pair: the first operative unit on his feet
 fn partner_of(g: &crate::game::Game) -> Option<GuardId> { g.guards.iter().copied().find(|&x| operative_up(g, x)) }
 
-/// is `v` within the record's below and above; a kind with neither field has nothing to refuse (lesson.ts band)
+/// is `v` within the record's below and above; a kind with neither field has nothing to refuse
 fn band(v: f64, t: &crate::lesson::LessonTest) -> bool {
     let (LessonTest::Meter { below, above, .. } | LessonTest::Pace { below, above }) = t else { return true };
     below.map_or(true, |b| v < b) && above.map_or(true, |a| v > a)
@@ -310,14 +309,14 @@ fn ok_threw(g: &mut Game, k: Option<&str>, quick: bool, area: Option<crate::scen
     }
     false
 }
-/// his own smoke can venting in `a`, on the floor no longer than `since` (lesson.ts:231)
+/// his own smoke can venting in `a`, on the floor no longer than `since`
 fn lying_can(g: &mut Game, a: crate::scene_scenarios::Rect, k: Option<&str>, since: f64) -> bool {
     use crate::throwables::{item_age, item_fired, item_kind, item_pos, item_who, ItemKind};
     if k == Some("flash") || k == Some("frag") { return false; }
     let (me, items) = (g.ch[g.pl[g.player].ch].id, g.items.items.clone());
     items.iter().any(|&x| item_kind(g, x) == ItemKind::Smoke && item_fired(g, x) && item_who(g, x) == me && item_age(g, x) <= since && inside(a, item_pos(g, x)))
 }
-/// a bang of that kind in `a` this frame, not a charge's (lesson.ts:232)
+/// a bang of that kind in `a` this frame, not a charge's
 fn bang_in(g: &Game, a: crate::scene_scenarios::Rect, k: Option<&str>) -> bool {
     if k == Some("smoke") { return false; }
     g.events.iter().any(|e| e.kind == crate::director::EventKind::Bang && !e.charge.unwrap_or(false) && (k.is_none() || (k == Some("frag")) == e.frag.unwrap_or(false)) && inside(a, e.pos))
@@ -411,27 +410,8 @@ fn ok_watching(g: &Game, seat: &crate::seats::SeatRef, a: V3, r: Option<f64>, n:
 
 /// lesson.ts num of a number
 fn finite(v: f64) -> bool { v.is_finite() }
-/// a row's `below` and `above` (lesson.ts bandCheck)
-fn band_check(t: &crate::lesson::LessonTest) -> Option<String> {
-    let (below, above) = match t { LessonTest::Pace { below, above } | LessonTest::Meter { below, above, .. } => (*below, *above), _ => (None, None) };
-    let bad = |v: Option<f64>| v.map_or(false, |v| !finite(v));
-    if (below.is_none() && above.is_none()) || bad(below) || bad(above) { Some(String::from("below and / or above: numbers")) } else { None }
-}
 
-/// a kind's word (`t.is`)
-fn kind_word(t: &LessonTest) -> &'static str {
-    use LessonTest as T;
-    match t {
-        T::In { .. } => "in", T::Near { .. } => "near", T::Flag { .. } => "flag", T::Slot { .. } => "slot", T::Pace { .. } => "pace", T::Meter { .. } => "meter",
-        T::Stage { .. } => "stage", T::Door { .. } => "door", T::Target { .. } => "target", T::Men { .. } => "men", T::Did { .. } => "did", T::Downed { .. } => "downed",
-        T::Body { .. } => "body", T::Calm { .. } => "calm", T::Loaded => "loaded", T::Reload => "reload", T::Launcher { .. } => "launcher", T::Burst { .. } => "burst",
-        T::Threw { .. } => "threw", T::OrderTo { .. } => "orderTo", T::StackOn { .. } => "stackOn", T::PairsOn { .. } => "pairsOn", T::Word { .. } => "word", T::Taken { .. } => "taken",
-        T::Following => "following", T::Mate { .. } => "mate", T::Pair { .. } => "pair", T::Cue { .. } => "cue", T::View { .. } => "view", T::Squad { .. } => "squad",
-        T::Stacks { .. } => "stacks", T::Watching { .. } => "watching", T::All { .. } => "all", T::Any { .. } => "any",
-    }
-}
 
-/// lesson.ts FLAGS
 fn flag_of(g: &mut Game, flag: LessonFlag) -> bool {
     use LessonFlag as F;
     match flag {
@@ -463,52 +443,43 @@ fn flag_of(g: &mut Game, flag: LessonFlag) -> bool {
     }
 }
 
-/// the flags a `flag` test can read off the player and the team's posture, each true while it holds (lesson.ts FLAGS)
+/// the flags a `flag` test can read off the player and the team's posture, each true while it holds
 pub mod flags {
     use super::*;
 
-    /// (lesson.ts FLAGS.crouch)
     pub fn crouch(g: &mut crate::game::Game) -> bool { g.pl[g.player].crouch }
-    /// (lesson.ts FLAGS.sprint)
     pub fn sprint(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { g.pl[seat.player].sprinting }
-    /// back to a wall (lesson.ts FLAGS.wall)
+    /// back to a wall
     pub fn wall(g: &mut crate::game::Game) -> bool { g.pl[g.player].wall.is_some() }
-    /// …and leaning out of its open end (lesson.ts FLAGS.peek)
+    /// …and leaning out of its open end
     pub fn peek(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { g.pl[seat.player].wall.as_ref().map_or(0.0, |w| w.peek) > 0.5 }
-    /// out round a wall's open end, whichever hold (lesson.ts FLAGS.lean)
+    /// out round a wall's open end, whichever hold
     pub fn lean(g: &mut crate::game::Game) -> bool {
         let Some(w) = g.pl[g.player].wall.as_ref() else { return false };
         w.lean.unwrap_or(0.0) > 0.5 || (w.kind != Some(crate::player::WallHoldKind::Stack) && w.peek > 0.5)
     }
-    /// (lesson.ts FLAGS.nv)
     pub fn nv(g: &mut crate::game::Game) -> bool { g.pl[g.player].nv }
-    /// the weapon light of the gun in hand (lesson.ts FLAGS.light)
+    /// the weapon light of the gun in hand
     pub fn light(g: &mut crate::game::Game) -> bool {
         let p = g.player;
         let (pistol, rifle) = (g.pl[p].pistol, g.pl[p].rifle);
         (crate::game::player_pistol_up(g, p) && g.fa[pistol].light_on) || (crate::game::player_rifle_up(g, p) && g.fa[rifle].light_on)
     }
-    /// (lesson.ts FLAGS.holstered)
     pub fn holstered(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { g.pl[seat.player].holstered }
-    /// a gun in the hands (lesson.ts FLAGS.gun)
+    /// a gun in the hands
     pub fn gun(g: &mut crate::game::Game) -> bool { let p = g.player; crate::game::player_gun_in_hand(g, p).is_some() }
-    /// (lesson.ts FLAGS.ringsOut)
     pub fn rings_out(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { g.fa[g.pl[seat.player].rifle].rings <= 0.0 }
-    /// (lesson.ts FLAGS.shellsOut)
     pub fn shells_out(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { g.fa[g.pl[seat.player].rifle].shells <= 0.0 }
-    /// (lesson.ts FLAGS.auto)
     pub fn auto(g: &mut crate::game::Game) -> bool { g.fa[g.pl[g.player].rifle].mode != crate::weapons::FireMode::Semi }
-    /// the setup of the gun in his hands is up; SLOTSETUP.on is settled true (lesson.ts FLAGS.setup)
+    /// the setup of the gun in his hands is up; SLOTSETUP.on is settled true
     pub fn setup(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { crate::slotsetup::slot_setup_open(g, seat) }
-    /// (lesson.ts FLAGS.setupShut)
     pub fn setup_shut(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { !crate::slotsetup::slot_setup_open(g, seat) }
-    /// (lesson.ts FLAGS.dragging)
     pub fn dragging(g: &mut crate::game::Game) -> bool { g.pl[g.player].dragging.is_some() }
-    /// the mains are off (lesson.ts FLAGS.dark)
+    /// the mains are off
     pub fn dark(g: &mut crate::game::Game) -> bool { crate::sim_lightshome::mains_active(g) }
-    /// a wall charge is on a wall, waiting on the trigger (lesson.ts FLAGS.chargeSet)
+    /// a wall charge is on a wall, waiting on the trigger
     pub fn charge_set(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { !seat.wall_charge.set.is_empty() }
-    /// …on the wall the step's mark is on (a step with none: any wall), with nobody of the squad inside its reach (lesson.ts FLAGS.chargeClear)
+    /// …on the wall the step's mark is on (a step with none: any wall), with nobody of the squad inside its reach
     pub fn charge_clear(g: &mut crate::game::Game) -> bool {
         let c = g.wall_charge.set.first().copied();
         let at = crate::lesson::lesson_step(g).and_then(|step| step.at);
@@ -519,19 +490,17 @@ pub mod flags {
         let p = crate::wallcharge::wall_pt(g, &wall, 0.0, 0.0, None);
         (if wall.along_x { m::abs(p[2] - at[2]) } else { m::abs(p[0] - at[0]) }) < 0.4 && m::hyp2(p[0] - at[0], p[2] - at[2]) < 4.0
     }
-    /// …and one has made its hole this run (lesson.ts FLAGS.wallBlown)
+    /// …and one has made its hole this run
     pub fn wall_blown(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { seat.wall_charge.stats.holes > 0.0 }
-    /// a man in his arm (lesson.ts FLAGS.holding)
+    /// a man in his arm
     pub fn holding(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { g.pl[seat.player].holding.is_some() }
-    /// (lesson.ts FLAGS.picking)
     pub fn picking(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { g.pl[seat.player].picking.is_some() }
-    /// (lesson.ts FLAGS.coding)
     pub fn coding(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { g.pl[seat.player].coding.is_some() }
-    /// the order menu is up (lesson.ts FLAGS.menu)
+    /// the order menu is up
     pub fn menu(g: &mut crate::game::Game) -> bool { g.orders.menu.is_some() }
-    /// his own ring is up, with or without a key down (lesson.ts FLAGS.ownRing)
+    /// his own ring is up, with or without a key down
     pub fn own_ring(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { let sel = &g.pl[seat.player].sel; sel.open && sel.ring.is_some() }
-    /// the squad's posture is SILENT (lesson.ts FLAGS.silent)
+    /// the squad's posture is SILENT
     pub fn silent(g: &mut crate::game::Game) -> bool { crate::silent::squad_silent(g, &crate::seats::here(g)) }
 }
 
@@ -539,91 +508,55 @@ pub mod flags {
 mod tests {
     use super::*;
 
-    /// the TypeScript's own answers (lesson.ts:35-78 run under bun, with the page's values)
-    static LOWER: &[(&str, &str)] = &[("Grab", "grab"), ("grab", "grab"), ("", ""), ("É1", "é1"), ("𐐀x", "𐐀x")];
-    static BARE: &[(&str, &str)] = &[
-        ("V whistles the cook out. Then hide at once, at the mark", "V whistles the cook out. Then hide at once, at the mark"),
-        ("Hold Space, wheel to kick, let go", "Hold Space, wheel to kick, let go"),
-        ("xV whistles and V whistlesy but V whistles.", "xV whistles and V whistlesy but V whistles."),
-        ("Right click to knock him out, or left click to use the knife", "Right-click to knock him out"),
-        ("Stay low so he doesn't hear you, then left click to knife him", "Stay low so he doesn't hear you, then right-click to knock him out"),
-        ("When the guard comes through, step in and left-click to kill him with the knife", "When the guard comes through, step in and right-click to knock him out"),
-        ("Press [Space] behind him to grab him, press Space behind the near guard to grab him.", "Press [Space] behind him to grab him, press Space behind the near guard to grab him."),
-        ("press [Space to grab him now; Press Space] to grab him; Express Space to grab him; press Space to grab himself", "press [Space to grab him now; Press Space] to grab him; Express Space to grab him; press Space to grab himself"),
-        ("When he lights up, creep in and {grab him from behind}. {Take him out} if he turns, or {knock him out}. {Grab him} now. {open the door}", "When he lights up, creep in and {grab him from behind}. {Take him out} if he turns, or {knock him out}. {Grab him} now. {open the door}"),
-        ("{Grab the near guard from behind}, then {grab yours}. {grab from behind} {knock out} {grab o'neil} ▸ {grab  him} {Grab him from the left} {} {1x} {grab him", "{Grab the near guard from behind}, then {grab yours}. {grab from behind} {knock out} {grab o'neil} ▸ {grab  him} {Grab him from the left} {} {1x} {grab him"),
-        ("training ▸ — {take the cook’s man out}", "training ▸ — {take the cook’s man out}"),
-    ];
-    static TOKEN: &[(&str, bool, bool, &str)] = &[
-        ("V whistles the cook out. Then hide at once, at the mark", false, false, "V whistles the cook out. Then hide at once, at the mark"),
-        ("V whistles the cook out. Then hide at once, at the mark", false, true, "V whistles the cook out. Then hide at once, at the mark"),
-        ("V whistles the cook out. Then hide at once, at the mark", true, false, "V whistles the cook out. Then hide at once, at the mark"),
-        ("V whistles the cook out. Then hide at once, at the mark", true, true, "V whistles the cook out. Then hide at once, at the mark"),
-        ("Hold Space, wheel to kick, let go", false, false, "Hold Space, wheel to kick, let go"),
-        ("Hold Space, wheel to kick, let go", false, true, "Hold Space, wheel to kick, let go"),
-        ("Hold Space, wheel to kick, let go", true, false, "Hold Space, wheel to kick, let go"),
-        ("Hold Space, wheel to kick, let go", true, true, "Hold Space, wheel to kick, let go"),
-        ("xV whistles and V whistlesy but V whistles.", false, false, "xV whistles and V whistlesy but V whistles."),
-        ("xV whistles and V whistlesy but V whistles.", false, true, "xV whistles and V whistlesy but V whistles."),
-        ("xV whistles and V whistlesy but V whistles.", true, false, "xV whistles and V whistlesy but V whistles."),
-        ("xV whistles and V whistlesy but V whistles.", true, true, "xV whistles and V whistlesy but V whistles."),
-        ("Right click to knock him out, or left click to use the knife", false, false, "Right click to knock him out, or left click to use the knife"),
-        ("Right click to knock him out, or left click to use the knife", false, true, "Right click to knock him out, or left click to use the knife"),
-        ("Right click to knock him out, or left click to use the knife", true, false, "Right click to knock him out, or left click to use the knife"),
-        ("Right click to knock him out, or left click to use the knife", true, true, "Right click to knock him out, or left click to use the knife"),
-        ("Stay low so he doesn't hear you, then left click to knife him", false, false, "Stay low so he doesn't hear you, then left click to knife him"),
-        ("Stay low so he doesn't hear you, then left click to knife him", false, true, "Stay low so he doesn't hear you, then left click to knife him"),
-        ("Stay low so he doesn't hear you, then left click to knife him", true, false, "Stay low so he doesn't hear you, then left click to knife him"),
-        ("Stay low so he doesn't hear you, then left click to knife him", true, true, "Stay low so he doesn't hear you, then left click to knife him"),
-        ("When the guard comes through, step in and left-click to kill him with the knife", false, false, "When the guard comes through, step in and left-click to kill him with the knife"),
-        ("When the guard comes through, step in and left-click to kill him with the knife", false, true, "When the guard comes through, step in and left-click to kill him with the knife"),
-        ("When the guard comes through, step in and left-click to kill him with the knife", true, false, "When the guard comes through, step in and left-click to kill him with the knife"),
-        ("When the guard comes through, step in and left-click to kill him with the knife", true, true, "When the guard comes through, step in and left-click to kill him with the knife"),
-        ("Press [Space] behind him to grab him, press Space behind the near guard to grab him.", false, false, "Press [Space] behind him to grab him, press Space behind the near guard to grab him."),
-        ("Press [Space] behind him to grab him, press Space behind the near guard to grab him.", false, true, "Press [Space] behind him to grab him, press Space behind the near guard to grab him."),
-        ("Press [Space] behind him to grab him, press Space behind the near guard to grab him.", true, false, "Press [Space] behind him to grab him, press Space behind the near guard to grab him."),
-        ("Press [Space] behind him to grab him, press Space behind the near guard to grab him.", true, true, "Press [Space] behind him to grab him, press Space behind the near guard to grab him."),
-        ("press [Space to grab him now; Press Space] to grab him; Express Space to grab him; press Space to grab himself", false, false, "press [Space to grab him now; Press Space] to grab him; Express Space to grab him; press Space to grab himself"),
-        ("press [Space to grab him now; Press Space] to grab him; Express Space to grab him; press Space to grab himself", false, true, "press [Space to grab him now; Press Space] to grab him; Express Space to grab him; press Space to grab himself"),
-        ("press [Space to grab him now; Press Space] to grab him; Express Space to grab him; press Space to grab himself", true, false, "press [Space to grab him now; Press Space] to grab him; Express Space to grab him; press Space to grab himself"),
-        ("press [Space to grab him now; Press Space] to grab him; Express Space to grab him; press Space to grab himself", true, true, "press [Space to grab him now; Press Space] to grab him; Express Space to grab him; press Space to grab himself"),
-        ("When he lights up, creep in and {grab him from behind}. {Take him out} if he turns, or {knock him out}. {Grab him} now. {open the door}", false, false, "When he lights up, creep in and press [Space] behind him to grab him. Left-click to knife him if he turns, or right-click to knock him out, or left-click to use the knife. Press [Space] to grab him now. {open the door}"),
-        ("When he lights up, creep in and {grab him from behind}. {Take him out} if he turns, or {knock him out}. {Grab him} now. {open the door}", false, true, "When he lights up, creep in and press [Space] behind him to grab him. Right-click to knock him out if he turns, or right-click to knock him out. Press [Space] to grab him now. {open the door}"),
-        ("When he lights up, creep in and {grab him from behind}. {Take him out} if he turns, or {knock him out}. {Grab him} now. {open the door}", true, false, "When he lights up, creep in and hold left click on him from behind to grab him. Left-click to knife him if he turns, or right-click to knock him out, or left-click to use the knife. Hold left click on him to grab him now. {open the door}"),
-        ("When he lights up, creep in and {grab him from behind}. {Take him out} if he turns, or {knock him out}. {Grab him} now. {open the door}", true, true, "When he lights up, creep in and hold left click on him from behind to grab him. Right-click to knock him out if he turns, or right-click to knock him out. Hold left click on him to grab him now. {open the door}"),
-        ("{Grab the near guard from behind}, then {grab yours}. {grab from behind} {knock out} {grab o'neil} ▸ {grab  him} {Grab him from the left} {} {1x} {grab him", false, false, "Press [Space] behind the near guard to grab him, then press [Space] to grab yours. {grab from behind} {knock out} press [Space] to grab o'neil ▸ {grab  him} {Grab him from the left} {} {1x} {grab him"),
-        ("{Grab the near guard from behind}, then {grab yours}. {grab from behind} {knock out} {grab o'neil} ▸ {grab  him} {Grab him from the left} {} {1x} {grab him", false, true, "Press [Space] behind the near guard to grab him, then press [Space] to grab yours. {grab from behind} {knock out} press [Space] to grab o'neil ▸ {grab  him} {Grab him from the left} {} {1x} {grab him"),
-        ("{Grab the near guard from behind}, then {grab yours}. {grab from behind} {knock out} {grab o'neil} ▸ {grab  him} {Grab him from the left} {} {1x} {grab him", true, false, "Hold left click on the near guard from behind to grab him, then hold left click on yours to grab him. {grab from behind} {knock out} hold left click on o'neil to grab him ▸ {grab  him} {Grab him from the left} {} {1x} {grab him"),
-        ("{Grab the near guard from behind}, then {grab yours}. {grab from behind} {knock out} {grab o'neil} ▸ {grab  him} {Grab him from the left} {} {1x} {grab him", true, true, "Hold left click on the near guard from behind to grab him, then hold left click on yours to grab him. {grab from behind} {knock out} hold left click on o'neil to grab him ▸ {grab  him} {Grab him from the left} {} {1x} {grab him"),
-        ("training ▸ — {take the cook’s man out}", false, false, "training ▸ — {take the cook’s man out}"),
-        ("training ▸ — {take the cook’s man out}", false, true, "training ▸ — {take the cook’s man out}"),
-        ("training ▸ — {take the cook’s man out}", true, false, "training ▸ — {take the cook’s man out}"),
-        ("training ▸ — {take the cook’s man out}", true, true, "training ▸ — {take the cook’s man out}"),
-    ];
-    static LINE: &[(&str, &str)] = &[
-        ("V whistles the cook out. Then hide at once, at the mark", "Space held, then 5, whistles the cook out. Then hide at once, at the mark"),
-        ("Hold Space, wheel to kick, let go", "Hold Space, then 2 kicks it"),
-        ("xV whistles and V whistlesy but V whistles.", "xV whistles and V whistlesy but Space held, then 5, whistles."),
-        ("Right click to knock him out, or left click to use the knife", "Right-click to knock him out"),
-        ("Stay low so he doesn't hear you, then left click to knife him", "Stay low so he doesn't hear you, then right-click to knock him out"),
-        ("When the guard comes through, step in and left-click to kill him with the knife", "When the guard comes through, step in and right-click to knock him out"),
-        ("Press [Space] behind him to grab him, press Space behind the near guard to grab him.", "Press [Space] behind him to grab him, press Space behind the near guard to grab him."),
-        ("press [Space to grab him now; Press Space] to grab him; Express Space to grab him; press Space to grab himself", "press [Space to grab him now; Press Space] to grab him; Express Space to grab him; press Space to grab himself"),
-        ("When he lights up, creep in and {grab him from behind}. {Take him out} if he turns, or {knock him out}. {Grab him} now. {open the door}", "When he lights up, creep in and press [Space] behind him to grab him. Right-click to knock him out if he turns, or right-click to knock him out. Press [Space] to grab him now. {open the door}"),
-        ("{Grab the near guard from behind}, then {grab yours}. {grab from behind} {knock out} {grab o'neil} ▸ {grab  him} {Grab him from the left} {} {1x} {grab him", "Press [Space] behind the near guard to grab him, then press [Space] to grab yours. {grab from behind} {knock out} press [Space] to grab o'neil ▸ {grab  him} {Grab him from the left} {} {1x} {grab him"),
-        ("training ▸ — {take the cook’s man out}", "training ▸ — {take the cook’s man out}"),
-    ];
-    static NAMES: &[(&str, bool)] = &[("grab him", true), ("Grab him", true), ("grab him from behind", true), ("Grab The Near Guard From Behind", true), ("knock him out", true), ("take him out", true), ("Take yours out", true), ("open the door", false), ("grab from behind", false), ("grab him from the left", false), ("grab", false), ("grab ", false), ("", false), ("knock out", false), ("take o'neil out", true), ("'grab him", false), ("grab  him", false), ("hi", false), ("grab\nhim", false), ("Éa", false)];
+    /// A FAILURE MEANS: a player is told to use a knife the game does not give him. Whole words only: a longer word that holds the phrase is left alone.
     #[test]
-    fn lower_as_the_typescript() { for (a, b) in LOWER { assert_eq!(lower(a), *b); } }
+    fn a_line_that_names_the_knife_says_the_knockout() {
+        assert_eq!(bare_line("Right click to knock him out, or left click to use the knife"), "Right-click to knock him out");
+        assert_eq!(bare_line("Stay low, then left click to knife him"), "Stay low, then right-click to knock him out");
+        assert_eq!(bare_line("Step in and left-click to kill him with the knife"), "Step in and right-click to knock him out");
+        assert_eq!(bare_line("Hold left click to knife himself"), "Hold left click to knife himself");
+        assert_eq!(bare_line("Hold Space, wheel to kick, let go"), "Hold Space, wheel to kick, let go");
+    }
+
+    /// A FAILURE MEANS: a line asks for a key that does not do it: a move's token is written out as the keys stand, keeping the capital its author gave it.
     #[test]
-    fn bare_line_as_the_typescript() { for (a, b) in BARE { assert_eq!(bare_line(a), *b); } }
+    fn a_token_is_written_out_as_the_keys_stand() {
+        let (key, click) = ((Some(false), Some(true)), (Some(true), Some(true)));
+        assert_eq!(token_line("Now {grab him}.", key.0, key.1), "Now press [Space] to grab him.");
+        assert_eq!(token_line("{Grab him from behind}.", key.0, key.1), "Press [Space] behind him to grab him.");
+        assert_eq!(token_line("{grab him}", click.0, click.1), "hold left click on him to grab him");
+        assert_eq!(token_line("{Grab the near guard from behind}", click.0, click.1), "Hold left click on the near guard from behind to grab him");
+        // with a knife to hand the blows say so; with none, each is the knockout
+        assert_eq!(token_line("{knock him out}", Some(false), Some(false)), "right-click to knock him out, or left-click to use the knife");
+        assert_eq!(token_line("{take him out}", Some(false), Some(false)), "left-click to knife him");
+        assert_eq!(token_line("{take him out}", Some(false), Some(true)), "right-click to knock him out");
+        assert_eq!(token_line("{knock o'neil out}", Some(false), Some(true)), "right-click to knock o'neil out");
+        // what is no token is left as it was written
+        for line in ["{open the door}", "{grab him", "{grab him from the left}", "{1x}", "no braces"] {
+            assert_eq!(token_line(line, Some(false), Some(true)), line);
+        }
+    }
+
+    /// The line the HUD shows: tokens out, no knife, and the hand ring's own keys for the whistle and the kick.
     #[test]
-    fn token_line_as_the_typescript() { for (a, h, b, c) in TOKEN { assert_eq!(token_line(a, Some(*h), Some(*b)), *c); } }
+    fn the_line_on_the_page_names_the_rings_keys() {
+        assert_eq!(line_on_page("V whistles the cook out", 5.0), "Space held, then 5, whistles the cook out");
+        assert_eq!(line_on_page("xV whistles but V whistlesy", 5.0), "xV whistles but V whistlesy");
+        assert_eq!(line_on_page("Hold Space, wheel to kick, let go", 5.0), "Hold Space, then 2 kicks it");
+        assert_eq!(line_on_page("{Take him out} if he turns", 5.0), "Right-click to knock him out if he turns");
+    }
+
+    /// The level's check reads this: a token in a line that is no move's stands out as a brace on the player's screen, so it must be refused, and a real one let by.
     #[test]
-    fn the_page_line_as_the_typescript() { for (a, b) in LINE { assert_eq!(line_on_page(a, 5.0), *b); } }
-    #[test]
-    fn names_as_the_typescript() { for (a, b) in NAMES { assert_eq!(lesson_token(a), *b, "{}", a); } }
+    fn a_token_names_a_move_and_nothing_else() {
+        for name in ["grab him", "Grab him", "grab him from behind", "Grab The Near Guard From Behind", "knock him out", "take him out", "Take yours out", "take o'neil out"] {
+            assert!(lesson_token(name), "{}", name);
+        }
+        for name in ["open the door", "grab from behind", "grab him from the left", "grab", "grab ", "", "knock out", "'grab him", "grab  him", "grab\nhim", "\u{c9}a"] {
+            assert!(!lesson_token(name), "{}", name);
+        }
+    }
+
     #[test]
     fn after_finds_the_row_past_last() {
         assert_eq!(after(&[4, 7, 9], Some(7)), 2);
@@ -632,26 +565,25 @@ mod tests {
         assert_eq!(after(&[4, 7, 9], None), 0);
         assert_eq!(after(&[], None), 0);
     }
+
+    /// A meter's band is open at both ends; a kind with no band has nothing to refuse.
     #[test]
-    fn band_reads_the_meter_only() {
+    fn a_band_is_open_at_its_ends() {
         let meter = |below, above| LessonTest::Meter { which: LessonMeter::Noise, below, above };
         assert!(band(0.5, &meter(Some(1.0), Some(0.0))) && !band(1.0, &meter(Some(1.0), None)) && !band(0.0, &meter(None, Some(0.0))));
         assert!(band(9.0, &LessonTest::Loaded));
-        assert!(band_check(&meter(None, None)).is_some() && band_check(&meter(Some(f64::NAN), None)).is_some() && band_check(&meter(Some(1.0), None)).is_none());
         let pace = |below, above| LessonTest::Pace { below, above };
         assert!(band(0.5, &pace(Some(1.0), None)) && !band(1.5, &pace(Some(1.0), None)));
-        assert!(band_check(&pace(None, None)).is_some() && band_check(&pace(None, Some(0.5))).is_none());
-        assert!(band_check(&LessonTest::Loaded).is_some());   // (t.below and t.above are undefined on any other kind)
     }
+
+    /// A step that waits on a stage passes once the mission is at it or beyond: the stages run in order, and a failed run is on none of them.
     #[test]
-    fn the_skeletons_tables_say_what_the_typescript_says() {
-        // (the lists in lesson.ts testFault's messages, run under bun)
-        let kinds = [LessonTest::Pace { below: None, above: None }, LessonTest::Loaded, LessonTest::Following, LessonTest::Cue { name: String::new() }, LessonTest::All { of: Vec::new() }];
-        for k in &kinds { assert!(lesson_tests().has(String::from(kind_word(k)))); }
-        assert_eq!(stage_index("infiltrate"), 0);
-        assert_eq!(stage_index("done"), 3);
+    fn the_stages_run_in_order_and_failed_is_none_of_them() {
+        let at: Vec<i32> = ["infiltrate", "drive", "exfil", "done"].iter().map(|s| stage_index(s)).collect();
+        assert_eq!(at, [0, 1, 2, 3]);
         assert_eq!(stage_index("failed"), -1);
     }
+
     #[test]
     fn inside_is_open_at_its_edges() {
         let r = crate::scene_scenarios::Rect { x0: 0.0, x1: 1.0, z0: 0.0, z1: 1.0 };
@@ -659,12 +591,12 @@ mod tests {
     }
 }
 
-/// A new lesson: nothing done, no run yet.   (lesson.ts Lesson.constructor)
+/// A new lesson: nothing done, no run yet.
 pub fn lesson_new(g: &crate::game::Game) -> crate::lesson::Lesson {
     crate::lesson::Lesson::blank()
 }
 
-/// The lesson in force (None: not live).   (lesson.ts Lesson.data)
+/// The lesson in force (None: not live).
 pub fn lesson_data(g: &crate::game::Game) -> Option<&crate::scene_scenarios::LessonData> {
     let on_rails = match g.level.scenarios.as_ref().and_then(|s| s.lesson.as_ref()) {
         Some(l) if !l.steps.is_empty() => l.rails.is_some(),
@@ -680,24 +612,24 @@ pub fn lesson_data(g: &crate::game::Game) -> Option<&crate::scene_scenarios::Les
     }
 }
 
-/// The step that is up for the mission that is running: a fresh run is on its first step.   (lesson.ts Lesson.at)
+/// The step that is up for the mission that is running: a fresh run is on its first step.
 fn lesson_at(g: &crate::game::Game) -> f64 {
     if run_is_mission(g) { g.lesson.i } else { 0.0 }
 }
 
-/// The index of the step that is up for the mission that is running.   (lesson.ts Lesson.index)
+/// The index of the step that is up for the mission that is running.
 pub fn lesson_index(g: &crate::game::Game) -> f64 {
     lesson_at(g)
 }
 
-/// The step that is up, if any.   (lesson.ts Lesson.step)
+/// The step that is up, if any.
 pub fn lesson_step(g: &crate::game::Game) -> Option<crate::scene_scenarios::LessonStep> {
     let l = lesson_data(g)?;
     let at = lesson_at(g);
     l.steps.get(at as usize).cloned()
 }
 
-/// Once a frame, after updateMission: counts the frame's deeds, asks the step's test, moves on when it is done and settled.   (lesson.ts Lesson.tick)
+/// Once a frame, after updateMission: counts the frame's deeds, asks the step's test, moves on when it is done and settled.
 pub fn lesson_tick(g: &mut crate::game::Game, dt: f64) {
     // (the list is shared, so it stands beside `g` with no copy: nothing writes a level's lesson)
     if lesson_data(g).is_none() { return; }
@@ -757,7 +689,7 @@ pub fn lesson_tick(g: &mut crate::game::Game, dt: f64) {
     }
 }
 
-/// The step is done: the next comes up, and a checkpoint is asked for unless the level is on rails.   (lesson.ts Lesson.advance)
+/// The step is done: the next comes up, and a checkpoint is asked for unless the level is on rails.
 fn lesson_advance(g: &mut crate::game::Game, l: &crate::scene_scenarios::LessonData, t: &crate::scene_scenarios::LessonStep) {
     let now = g.time;
     g.lesson.done_at.set(t.id.clone(), now);
@@ -777,7 +709,7 @@ fn lesson_advance(g: &mut crate::game::Game, l: &crate::scene_scenarios::LessonD
     crate::savestate::checkpoints_request(g, "lesson", &label);
 }
 
-/// What a step that has just come up has seen: nothing, counted from now.   (lesson.ts Lesson.fresh)
+/// What a step that has just come up has seen: nothing, counted from now.
 fn lesson_fresh(g: &crate::game::Game, seat: &crate::seats::SeatRef, back: Option<f64>) -> crate::lesson::StepSeen {
     let back = back.unwrap_or(0.0);
     let ev = g.chronicle.events.len() as f64;
@@ -806,7 +738,7 @@ fn lesson_fresh(g: &crate::game::Game, seat: &crate::seats::SeatRef, back: Optio
     }
 }
 
-/// This frame's deeds into the step's counts.   (lesson.ts Lesson.count)
+/// This frame's deeds into the step's counts.
 fn lesson_count(g: &crate::game::Game, seat: &crate::seats::SeatRef, s: &mut crate::lesson::StepSeen) {
     let cam = g.tab.cmd_seat[seat.id].cam;
     if js::truthy(g.rails.fresh) {
@@ -876,7 +808,7 @@ fn lesson_count(g: &crate::game::Game, seat: &crate::seats::SeatRef, s: &mut cra
     }
 }
 
-/// The run is over, whichever scenario it was.   (lesson.ts Lesson.over)
+/// The run is over, whichever scenario it was.
 pub(super) fn lesson_over(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
     let stage = g.mission.stage;
     stage == crate::game::MissionStage::Failed
@@ -885,7 +817,7 @@ pub(super) fn lesson_over(g: &crate::game::Game, seat: &crate::seats::SeatRef) -
         || (crate::roomclear::room_clear_scenario_active(g) && g.room_clear.end.is_some())
 }
 
-/// The step's deed is done and the moment is playing out: its own `settle`, or the beat before the next step's card.   (lesson.ts Lesson.settling)
+/// The step's deed is done and the moment is playing out: its own `settle`, or the beat before the next step's card.
 pub fn lesson_settling(g: &crate::game::Game) -> bool {
     run_is_mission(g) && g.lesson.seen.as_ref().map_or(false, |s| s.done_t.is_some() && s.done_i == Some(g.lesson.i))
 }
@@ -949,7 +881,7 @@ pub fn lesson_objective(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> 
     Some(crate::lesson::LessonObjective { text, pos })
 }
 
-/// One line of the lesson's own log, kept to its last rows.   (lesson.ts Lesson.note)
+/// One line of the lesson's own log, kept to its last rows.
 fn lesson_note(g: &mut crate::game::Game, s: &str) {
     let row = format!("{} {}", js::to_fixed(g.time, 2), s);
     g.lesson.log.push(row);
@@ -958,7 +890,7 @@ fn lesson_note(g: &mut crate::game::Game, s: &str) {
     }
 }
 
-/// A step's line as the keys stand.   (lesson.ts lineOf)
+/// A step's line as the keys stand.
 pub fn line_of(g: &crate::game::Game, t: &crate::scene_scenarios::LessonStep) -> String {
     let line = filled(&t.blow_line).or(filled(&t.ring_line)).or(filled(&t.setup_line)).unwrap_or(t.line.as_str());
     String::from(line)
@@ -970,7 +902,7 @@ fn who_down(g: &Game, seat: &crate::seats::SeatRef) -> bool {
     g.pl[p].down
 }
 
-/// One more of a deed, by its key.   (lesson.ts Lesson.count `add`)
+/// One more of a deed, by its key.
 fn add(s: &mut crate::lesson::StepSeen, k: String) {
     let n = s.n.get(k.clone()).copied().unwrap_or(0.0);
     s.n.set(k, n + 1.0);
@@ -981,7 +913,7 @@ fn filled(o: &Option<String>) -> Option<&str> {
     o.as_deref().filter(|s| !s.is_empty())
 }
 
-/// `this.run === g.mission`: the same run, by the Mission's serial.   (lesson.ts:320, 330, 348)
+/// `this.run === g.mission`: the same run, by the Mission's serial.
 fn run_is_mission(g: &Game) -> bool {
     g.lesson.run == Some(g.mission.serial)
 }

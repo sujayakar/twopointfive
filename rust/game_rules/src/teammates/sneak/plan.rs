@@ -1,4 +1,3 @@
-//! src/game/sneak.ts lines 414 to 645
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -34,7 +33,7 @@ fn said_nag(g: &Game, why: Why) -> String {
     crate::words::wg(g, &n, &w)
 }
 
-/// Sam's trail, a crumb every 0.4 m (once a frame, whoever asks first).   (sneak.ts track)
+/// Sam's trail, a crumb every 0.4 m (once a frame, whoever asks first).
 fn track(g: &mut crate::game::Game) {
     let now = g.time;
     let c = g.pl[g.player].ch;
@@ -69,7 +68,7 @@ fn track(g: &mut crate::game::Game) {
     }
 }
 
-/// Once a tick with a squad under orders: Sam's trail is kept while the squad sneaks. False: not sneaking, and what was kept is dropped.   (sneak.ts sneakTick)
+/// Once a tick with a squad under orders: Sam's trail is kept while the squad sneaks. False: not sneaking, and what was kept is dropped.
 pub fn sneak_tick(g: &mut crate::game::Game) -> bool {
     if !g.k.sneak.on { return false; }
     if !sneak_live(g) {
@@ -727,7 +726,7 @@ fn follow(g: &mut Game, s: &mut State, man: &mut Man, gd: GuardId, back: f64, sa
     Feet { goal: Some(goal), speed: low_pace(g, v, low_now && man.mode != Mode::Cross), crouch: low_now, must: None }
 }
 
-/// The sneaking follower's feet this frame. None: he is the build's own follower.   (sneak.ts sneakFollow)
+/// The sneaking follower's feet this frame. None: he is the build's own follower.
 pub fn sneak_follow(g: &mut crate::game::Game, gd: GuardId, back: f64, sam_v: f64, stopped: bool, speed0: f64) -> Option<crate::sneak::Feet> {
     if !g.k.sneak.on || !mate(g, gd) { return None; }
     if !sneak_tick(g) { return None; }
@@ -766,7 +765,7 @@ pub fn sneak_follow(g: &mut crate::game::Game, gd: GuardId, back: f64, sam_v: f6
     Some(feet)
 }
 
-/// Right after the order is written: the way to this frame's goal is Sam's own crumbs, not the nav grid's cells.   (sneak.ts sneakWay)
+/// Right after the order is written: the way to this frame's goal is Sam's own crumbs, not the nav grid's cells.
 pub fn sneak_way(g: &mut crate::game::Game, gd: GuardId, goal: V3) {
     if !g.k.sneak.on { return; }
     let has_way = match g.m.sneak.states.as_ref().and_then(|s| s.men.get(gd)) {
@@ -784,7 +783,7 @@ pub fn sneak_way(g: &mut crate::game::Game, gd: GuardId, goal: V3) {
     g.gd[gd].repath_t = 0.0;
 }
 
-/// His words over the net. False only when ONE VOICE kept it back (the line is still owed).   (sneak.ts cue)
+/// His words over the net. False only when ONE VOICE kept it back (the line is still owed).
 fn cue(g: &mut crate::game::Game, gd: GuardId, m: &mut crate::sneak::Man, line: &str, force: Option<bool>) -> bool {
     let force = force.unwrap_or(false);
     if line.is_empty() || (!force && g.time - m.cue_t < g.k.sneak.cue_gap && g.time >= m.cue_t) { return true; }
@@ -794,7 +793,7 @@ fn cue(g: &mut crate::game::Game, gd: GuardId, m: &mut crate::sneak::Man, line: 
     }
     m.cue_t = g.time;
     g.stats.sneak.cues += 1;
-    crate::game::game_say(g, gd, line, None, None, None);
+    crate::game::game_say(g, gd, line, None, None);
     true
 }
 

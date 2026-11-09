@@ -156,7 +156,7 @@ pub(super) fn beat_test(g: &mut crate::game::Game, r: DirectorRunId, b: Director
     out
 }
 
-/// INVENTED: what q.door answers (director.ts:127, :849); `swing` is D.swing, DOORWAY.oneWay being settled true on the page
+/// INVENTED: what q.door answers; `swing` is D.swing, DOORWAY.oneWay being settled true on the page
 #[derive(Clone, Copy, Debug)]
 pub struct QueryDoor { pub angle: f64, pub open: bool, pub latched: bool, pub locked: bool, pub broken: bool, pub swing: f64 }
 

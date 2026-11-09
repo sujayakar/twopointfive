@@ -16,7 +16,7 @@ fn mem_at(g: &mut Game, c: CharId) -> crate::wet::WetMem {
     *g.m.wet.mem.get(c).unwrap()
 }
 
-/// how high his head is, as the rule reads it (wet.ts headOf)
+/// how high his head is, as the rule reads it
 fn head_at(g: &Game, c: CharId) -> f64 {
     let ch = &g.ch[c];
     let head = ch.bones.get(crate::character::Bone::Head).map(|b| b[1]);
@@ -25,11 +25,10 @@ fn head_at(g: &Game, c: CharId) -> f64 {
 
 /// Once a tick, after the weather has written this tick's rain: soak / dry everybody. The rule is rust/sim's `weather::wet_step`, a man's coat handed in and
 /// back. A man's coat is the picture's, but the call is the game's: it stands the rule's copy of the box world (`rule_open`), asks the roofs and may cast the
-/// sky's rays, and what it leaves on the copy the next rule finds. Sam's drips and prints after it (samAftermath) tell the host. (src/game/wet.ts:96 updateWetness)
+/// sky's rays, and what it leaves on the copy the next rule finds. Sam's drips and prints after it (samAftermath) tell the host.
 pub fn update_wetness(g: &mut crate::game::Game, dt: f64) {
     if dt <= 0.0 { return; }
     crate::weather::weather_roofs_now(g);
-    if !g.m.rustknobs.rust_knobs.tick { crate::rustknobs::knobs_to_rust(g); } // WX_KNOBS.here
     crate::scene_collision::rule(g, &mut |g: &mut Game| {
         crate::scene_collision::rule_open(g);
         let (w, set, ask) = (g.col.mirror.slot as usize, g.col.mirror.rule_set as i32, g.col.mirror.rule_panes as u32);
@@ -47,7 +46,7 @@ pub fn update_wetness(g: &mut crate::game::Game, dt: f64) {
             coat[::sim::weather::M_LINE] = ch.wet_line;
             coat[::sim::weather::M_SKY_T] = mem.sky_t;
             coat[::sim::weather::M_OPEN] = if mem.open { 1.0 } else { 0.0 };
-            ::sim::weather::wet_step(::sim::weather::of(g.sim), w, set, ask, g.time, dt, ch.pos[0], ch.pos[2], head, &mut coat);
+            ::sim::weather::wet_step(::sim::weather::of(g.sim), w, set, ask, g.time, dt, ch.pos[0], ch.pos[2], head, &mut coat, &g.k);
             if coat[::sim::weather::M_ASKED] != 0.0 { g.stats.wet.sky_tests += 1; }
             let ch = &mut g.ch[c];
             ch.wet = coat[::sim::weather::M_WET];
@@ -62,7 +61,7 @@ pub fn update_wetness(g: &mut crate::game::Game, dt: f64) {
     crate::seats::each_seat(g, &mut |v: &mut Game| sam_aftermath(v, dt));
 }
 
-/// is `c` standing under the open sky: the module's rule, his sky's memory handed in and back (it holds a quarter of a second a man). (src/game/wet.ts:75 openSky)
+/// is `c` standing under the open sky: the module's rule, his sky's memory handed in and back (it holds a quarter of a second a man).
 fn open_sky_of(g: &mut Game, c: CharId) -> bool {
     let mem = mem_at(g, c);
     crate::weather::weather_roofs_now(g);
@@ -72,7 +71,7 @@ fn open_sky_of(g: &mut Game, c: CharId) -> bool {
         let head = head_at(g, c);
         let (mut sky_t, mut open) = (mem.sky_t, if mem.open { 1.0 } else { 0.0 });
         let (x, z) = (g.ch[c].pos[0], g.ch[c].pos[2]);
-        let (is_open, asked) = ::sim::weather::open_sky(::sim::weather::of(g.sim), w, set, ask, g.time, x, z, head, &mut sky_t, &mut open);
+        let (is_open, asked) = ::sim::weather::open_sky(::sim::weather::of(g.sim), w, set, ask, g.time, x, z, head, &mut sky_t, &mut open, &g.k);
         if asked { g.stats.wet.sky_tests += 1; }
         let m = g.m.wet.mem.get_mut(c).unwrap();
         m.sky_t = sky_t;
@@ -82,7 +81,7 @@ fn open_sky_of(g: &mut Game, c: CharId) -> bool {
 }
 
 /// Sam indoors after the rain: his print budget and his drip clock. The drops themselves are GPU particles (`drip` below: nothing with no particle
-/// system), but the ask of the sky is the rule's and moves his sky's memory, which the next soak reads. (src/game/wet.ts:115 samAftermath)
+/// system), but the ask of the sky is the rule's and moves his sky's memory, which the next soak reads.
 fn sam_aftermath(g: &mut crate::game::Game, dt: f64) {
     let pl = g.player;
     let c = g.pl[pl].ch;
@@ -108,10 +107,10 @@ fn sam_aftermath(g: &mut crate::game::Game, dt: f64) {
     }
 }
 
-/// where a drop leaves him, dealt in turn (wet.ts DRIP_FROM)
+/// where a drop leaves him, dealt in turn
 const DRIP_FROM: [crate::character::Bone; 5] = [crate::character::Bone::HandL, crate::character::Bone::HandR, crate::character::Bone::Head, crate::character::Bone::Hips, crate::character::Bone::Hips];
 
-/// One drop off him: from a hand, the chin or the hem of the jacket. With no particle system nothing moves, as in the TypeScript. (src/game/wet.ts:129 drip)
+/// One drop off him: from a hand, the chin or the hem of the jacket. With no particle system nothing moves, as in the TypeScript.
 fn drip(g: &mut crate::game::Game, c_2: CharId) {
     let n = g.m.wet.drip_n;
     g.m.wet.drip_n = n + 1.0;
@@ -138,7 +137,7 @@ fn drip(g: &mut crate::game::Game, c_2: CharId) {
 }
 
 /// A footfall of Sam's: if he has come in wet, a print under the foot that landed, fainter each step. The foot ahead along his motion wins over `left_hint`
-/// whenever he is moving. (src/game/wet.ts:139 wetFootfall)
+/// whenever he is moving.
 pub fn wet_footfall(g: &mut crate::game::Game, left_hint: bool) {
     use crate::character::Bone;
     let pl = g.player;

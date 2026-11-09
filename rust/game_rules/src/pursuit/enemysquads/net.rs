@@ -1,4 +1,3 @@
-//! src/game/enemysquads.ts lines 1141 to 1536
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -39,13 +38,12 @@ fn fit_man(g: &Game, q: EnemysquadsSquadId, but: Option<GuardId>) -> Option<Guar
     None
 }
 
-/// `STATES.get(g)!`, for a function the skeleton has reach it by its path: read, and let go before the next call that takes g
 fn the_state(g: &Game) -> &State { g.m.enemysquads.states.as_ref().unwrap() }
 /// `st.nc!` (netCheck's N)
 fn net_of(g: &Game) -> &NetCheck { the_state(g).nc.as_ref().unwrap() }
 fn net_mut(g: &mut Game) -> &mut NetCheck { g.m.enemysquads.states.as_mut().unwrap().nc.as_mut().unwrap() }
 
-/// a man has something only he knows: on a quiet floor he keys up. true = the squad is not told this frame; false = the floor is not quiet   (enemysquads.ts keyUp)
+/// a man has something only he knows: on a quiet floor he keys up. true = the squad is not told this frame; false = the floor is not quiet
 pub(super) fn key_up(g: &mut crate::game::Game, q: EnemysquadsSquadId, m: GuardId, at: V3, room: Option<&crate::scene_scenarios::StructureRoom>, body: Option<GuardId>) -> bool {
     if !call_quiet(g, q) { return false; }
     if !fit(g, m) { return true; }
@@ -74,7 +72,7 @@ pub(super) fn key_up(g: &mut crate::game::Game, q: EnemysquadsSquadId, m: GuardI
     true
 }
 
-/// is a man of the squad on the air about this mate's body   (enemysquads.ts callAbout)
+/// is a man of the squad on the air about this mate's body
 pub(super) fn call_about(g: &crate::game::Game, q: EnemysquadsSquadId, body: GuardId) -> bool {
     match &g.tab.enemysquads_squad[q].calls {
         Some(l) => l.iter().any(|c| c.body == Some(body)),
@@ -82,7 +80,7 @@ pub(super) fn call_about(g: &crate::game::Game, q: EnemysquadsSquadId, body: Gua
     }
 }
 
-/// a caller dropped, taken, blinded or reeling is cut off: his call is gone   (enemysquads.ts callsCut)
+/// a caller dropped, taken, blinded or reeling is cut off: his call is gone
 fn calls_cut(g: &mut crate::game::Game, q: EnemysquadsSquadId) {
     let mut i = g.tab.enemysquads_squad[q].calls.as_ref().unwrap().len();
     while i > 0 {
@@ -128,7 +126,7 @@ fn calls_cut(g: &mut crate::game::Game, q: EnemysquadsSquadId) {
     }
 }
 
-/// the mates of a man whose call broke off, he being off the net: filed where he is and asked for by name. '' = nobody asks   (enemysquads.ts cutAsk)
+/// the mates of a man whose call broke off, he being off the net: filed where he is and asked for by name. '' = nobody asks
 fn cut_ask(g: &mut crate::game::Game, q: EnemysquadsSquadId, m: GuardId) -> String {
     let [lo, hi] = g.k.squads.call_cut_ask;
     let check_ask = g.k.squads.check_ask;
@@ -197,14 +195,14 @@ fn cut_ask(g: &mut crate::game::Game, q: EnemysquadsSquadId, m: GuardId) -> Stri
     format!(" — heard to break off: he is asked for by name once {}", till)
 }
 
-/// off the net, and nobody knows or has given up on him   (enemysquads.ts owedOf)
+/// off the net, and nobody knows or has given up on him
 pub(super) fn owed_of(g: &crate::game::Game, who: GuardId, q: EnemysquadsSquadId) -> bool {
     if !crate::guards::off_net(g, who) { return false; }
     let c = g.tab.enemysquads_squad[q].rc.as_ref().unwrap();
     !c.known.has(who) && !c.looked.has(who)
 }
 
-/// one whose call broke off while he reeled and who has gone off the net since is asked for after all   (enemysquads.ts callsHung)
+/// one whose call broke off while he reeled and who has gone off the net since is asked for after all
 fn calls_hung(g: &mut crate::game::Game, q: EnemysquadsSquadId) {
     let mut i = g.tab.enemysquads_squad[q].hung.as_ref().unwrap().len();
     while i > 0 {
@@ -225,7 +223,7 @@ fn calls_hung(g: &mut crate::game::Game, q: EnemysquadsSquadId) {
     }
 }
 
-/// the first call to end, or every call once the floor is loud, is the squad's: returned for the caller to make the contact   (enemysquads.ts callsTick)
+/// the first call to end, or every call once the floor is loud, is the squad's: returned for the caller to make the contact
 fn calls_tick(g: &mut crate::game::Game, q: EnemysquadsSquadId, busy: bool) -> Option<crate::enemysquads::Call> {
     if busy { g.tab.enemysquads_squad[q].calls.as_mut().unwrap().clear(); return None; }
     let loud = !call_quiet(g, q);
@@ -252,7 +250,7 @@ fn calls_tick(g: &mut crate::game::Game, q: EnemysquadsSquadId, busy: bool) -> O
     Some(done)
 }
 
-/// every squad has heard that one of them is not answering: stood to, counting its own men oftener   (enemysquads.ts netWary)
+/// every squad has heard that one of them is not answering: stood to, counting its own men oftener
 fn net_wary(g: &mut crate::game::Game, about: &str) {
     let squads = the_state(g).squads.clone();
     for q in squads {
@@ -267,7 +265,7 @@ fn net_wary(g: &mut crate::game::Game, about: &str) {
     }
 }
 
-/// a man of squad X has been seen down by a man of another squad, and it is on the net   (enemysquads.ts seenTo)
+/// a man of squad X has been seen down by a man of another squad, and it is on the net
 pub(super) fn seen_to(g: &mut crate::game::Game, x: EnemysquadsSquadId, body: GuardId) {
     if let Some(rc) = g.tab.enemysquads_squad[x].rc.as_mut() { rc.known.add(body); }
     if !answers(g, x) {
@@ -276,7 +274,7 @@ pub(super) fn seen_to(g: &mut crate::game::Game, x: EnemysquadsSquadId, body: Gu
     g.tab.enemysquads_squad[x].trouble = None;
 }
 
-/// a line said a breath after the one it answers   (enemysquads.ts netSay)
+/// a line said a breath after the one it answers
 fn net_say(g: &mut crate::game::Game, after: f64, gd: GuardId, text: &str, cls: Option<f64>) {
     let t = g.time + after;
     if let Some(nc) = g.m.enemysquads.states.as_mut().and_then(|st| st.nc.as_mut()) {
@@ -286,7 +284,7 @@ fn net_say(g: &mut crate::game::Game, after: f64, gd: GuardId, text: &str, cls: 
     }
 }
 
-/// men a squad has asked for or sent, with no answer and no end heard   (enemysquads.ts waitsOn)
+/// men a squad has asked for or sent, with no answer and no end heard
 fn waits_on(g: &crate::game::Game, q: EnemysquadsSquadId) -> Vec<GuardId> {
     let mut out = Vec::new();
     if g.tab.enemysquads_squad[q].rc.is_none() { return out; }
@@ -317,7 +315,7 @@ fn own_trouble(g: &Game, q: EnemysquadsSquadId) -> bool {
     false
 }
 
-/// men of the nearest squad that can spare them set off for squad X's posts; None = nobody anywhere can go   (enemysquads.ts netSend)
+/// men of the nearest squad that can spare them set off for squad X's posts; None = nobody anywhere can go
 fn net_send(g: &mut crate::game::Game, x: EnemysquadsSquadId, who: GuardId, stops: &[V3], all: bool) -> Option<crate::enemysquads::NetSend> {
     let at = stops[0];
     let mut best: Option<(EnemysquadsSquadId, Vec<RoomfightDefId>, f64)> = None;
@@ -438,7 +436,7 @@ fn ask_for(g: &mut Game, x: EnemysquadsSquadId, by: GuardId, why: &str) {
     event(g, q, SquadEventWhat::NetAsks, why, Some(by));
 }
 
-/// the net's roll call of the squads, the question after a squad's trouble, the ask by name, and the men who go   (enemysquads.ts netCheck)
+/// the net's roll call of the squads, the question after a squad's trouble, the ask by name, and the men who go
 fn net_check(g: &mut crate::game::Game) {
     if the_state(g).nc.is_none() {
         let first = the_state(g).squads[0];
@@ -640,7 +638,7 @@ fn nc_stage_asked(g: &mut Game) {
     let b = nc_beat(g); nc_idle(g, b);
 }
 
-/// a squad's men by its name, the fallen among them   (enemysquads.ts squadMen)
+/// a squad's men by its name, the fallen among them
 pub fn squad_men(g: &crate::game::Game, name: &str) -> Vec<GuardId> {
     if let Some(st) = g.m.enemysquads.states.as_ref() {
         for &q in st.squads.iter() {
@@ -675,7 +673,7 @@ fn sent_home(g: &mut Game, q: EnemysquadsSquadId, i: usize) {
     }
 }
 
-/// every squad's contact, news, choice and men on the move, once a frame   (enemysquads.ts squadsTick)
+/// every squad's contact, news, choice and men on the move, once a frame
 pub fn squads_tick(g: &mut crate::game::Game) {
     let squads = match g.m.enemysquads.states.as_ref() { Some(st) => st.squads.clone(), None => return };
     if g.fight.defs.is_empty() { return; }
@@ -789,7 +787,7 @@ fn tick_due(g: &mut Game, q: EnemysquadsSquadId, men: &[GuardId]) {
                 if said.map_or(true, |t| !js::truthy(t) || g.time - t > 20.0) {
                     g.tab.enemysquads_squad[q].own_said = Some(g.time);
                     let text = format!("{}: {}'s {} — stay on your doors, make them come!", name_of(g, q), l.name, if up_in > 0 { "hit" } else { "gone" });
-                    crate::game::game_say(g, due.gd, &text, Some(true), None, None);
+                    crate::game::game_say(g, due.gd, &text, Some(true), None);
                 }
                 let key = stay_key(g, due.gd, &StayKeyRoom { name: l.name.clone() });
                 g.tab.enemysquads_squad[q].stayed.get_or_insert_with(JsSet::new).add(key);
@@ -807,7 +805,7 @@ fn tick_due(g: &mut Game, q: EnemysquadsSquadId, men: &[GuardId]) {
         let way = crate::dialogue::way_name(g, a, b, lost.as_ref().map(|l| l.name.as_str()));
         let way = match way { Some(w) if !w.is_empty() => format!(" {}", w), _ => String::new() };
         let text = format!("{}: coming to you{} — hold on!", name_of(g, q), way);
-        crate::game::game_say(g, due.gd, &text, Some(true), None, None);
+        crate::game::game_say(g, due.gd, &text, Some(true), None);
         let why = format!("{} goes to the squad's room under attack", sign_of(g, due.gd));
         event(g, q, SquadEventWhat::Reinforce, &why, Some(due.gd));
     }
@@ -933,7 +931,7 @@ fn tick_sent(g: &mut Game, q: EnemysquadsSquadId, i: usize) {
         let mate_back = g.tab.enemysquads_squad[q].sent.iter().enumerate().any(|(j, x)| j != i && x.role == SentRole::Look && x.back == Some(true));
         if !mate_back {
             let text = format!("{}: no sign of them — back on our doors!", name_of(g, q));
-            crate::game::game_say(g, gd, &text, Some(true), None, None);
+            crate::game::game_say(g, gd, &text, Some(true), None);
             let why = format!("{} and his mate found nothing where the team was last put, {} s after the word", sign_of(g, gd), js::to_fixed(g.time - s.t0, 1));
             event(g, q, SquadEventWhat::Back, &why, Some(gd));
         }
@@ -1014,7 +1012,7 @@ fn tick_run(g: &mut Game, q: EnemysquadsSquadId, i: usize, s: Sent, d: Roomfight
             g.tab.enemysquads_squad[q].sent[i].there = Some(t);
             let got = crate::words::wg(g, &"we've got", &"we have");
             let text = format!("{}: in position — {} the door!", name, got);
-            crate::game::game_say(g, gd, &text, Some(true), None, None);
+            crate::game::game_say(g, gd, &text, Some(true), None);
             let why = format!("{}{}, {} s after the word", sign, dn.as_ref().map_or(String::new(), |n| format!(" holding {}", n)), since);
             event(g, q, SquadEventWhat::InPosition, &why, Some(gd));
         } else {
@@ -1028,7 +1026,7 @@ fn tick_run(g: &mut Game, q: EnemysquadsSquadId, i: usize, s: Sent, d: Roomfight
     if there && !seen {
         g.tab.enemysquads_squad[q].sent[i].there = Some(g.time);
         let text = format!("{}: in position — on them!", name);
-        crate::game::game_say(g, gd, &text, Some(true), None, None);
+        crate::game::game_say(g, gd, &text, Some(true), None);
         let why = format!("{}{}, {} s after the word", sign, dn.as_ref().map_or(String::new(), |n| format!(" at {}", n)), since);
         event(g, q, SquadEventWhat::InPosition, &why, Some(gd));
     } else if s.role == SentRole::Flank {

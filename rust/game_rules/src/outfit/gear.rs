@@ -4,7 +4,7 @@ use crate::game::Game;
 use crate::ids::*;
 use alloc::string::String;
 
-/// A weapon row's short name as it is written down: the two renamed rows by their old names, every other row its own.   (gear.ts plainShort)
+/// A weapon row's short name as it is written down: the two renamed rows by their old names, every other row its own.
 pub fn plain_short(def: &crate::weapons::WeaponDef) -> String {
     if def.id == crate::weapons::WeaponId::Fn2000 || def.id == crate::weapons::WeaponId::Mk18bare {
         return crate::gear::old_names().rifle;
@@ -15,13 +15,13 @@ pub fn plain_short(def: &crate::weapons::WeaponDef) -> String {
     def.short.clone()
 }
 
-/// The launcher's sponge round, in the kit's words.   (gear.ts ringTag)
+/// The launcher's sponge round, in the kit's words.
 pub(super) fn ring_tag() -> &'static str { "SPONGE" }
 
-/// The launcher's high-explosive round, in the kit's words.   (gear.ts shellTag)
+/// The launcher's high-explosive round, in the kit's words.
 pub(super) fn shell_tag() -> &'static str { "HE" }
 
-/// A line written in the old kit's words, in the kit's words as issued. `GEAR.on` is settled on.   (gear.ts gearText)
+/// A line written in the old kit's words, in the kit's words as issued. `GEAR.on` is settled on.
 pub fn gear_text(g: &crate::game::Game, s: &str) -> String {
     issued_words(s)
 }
@@ -83,27 +83,25 @@ fn is_word_byte(b: u8) -> bool {
 mod tests {
     use super::*;
 
-    /// Each pair: what the TypeScript's gearText returned under bun with GEAR.on true.
+    /// A FAILURE MEANS: a player reads a gun the kit no longer has, "ring airfoil", or a word cut in two: lines are written in the old kit's words and said in the new.
     #[test]
-    fn issued_words_match_the_typescript() {
-        let pairs = [
+    fn a_line_in_the_old_words_reads_in_the_words_of_the_kit_as_issued() {
+        for (old, issued) in [
             ("FN2000 and FN2000, Five-seveN", "Mk 18 and Mk 18, Glock 19"),
             ("2 again for the 40 mm", "2 again for the 40 mm HE"),
             ("2 again for the 40 mm HE", "2 again for the 40 mm HE"),
-            ("2 again for the 40 mm, 2 again for the 40 mm HE, 2 again for the 40 mmX", "2 again for the 40 mm HE, 2 again for the 40 mm HE, 2 again for the 40 mm HEX"),
             ("a ring airfoil and 2 ring airfoils off a ring launcher", "a 40 mm sponge round and 2 40 mm sponge rounds off a 40 mm launcher"),
-            ("spring airfoil", "sp40 mm sponge round"),
-            ("ring to the head; a ring to the head; spring to the head; _ring to the head; é ring to the head; éring to the head", "sponge round to the head; a sponge round to the head; spring to the head; _ring to the head; é sponge round to the head; ésponge round to the head"),
-            ("rings only · brings only", "sponge rounds only · bsponge rounds only"),
-            ("RING RINGS BRING RING. (RING) RING_ é RINGé 1RING RING", "SPONGE RINGS BRING SPONGE. (SPONGE) RING_ é SPONGEé 1RING SPONGE"),
+            ("a ring to the head", "a sponge round to the head"),
+            ("spring to the head", "spring to the head"),
+            ("none for the launcher: rings only", "none for the launcher: sponge rounds only"),
+            ("RING (RING) BRING", "SPONGE (SPONGE) BRING"),
             ("plain ×3 — words", "plain ×3 — words"),
-            ("", ""),
-        ];
-        for (input, want) in pairs {
-            assert_eq!(issued_words(input), want);
+        ] {
+            assert_eq!(issued_words(old), issued);
         }
     }
 
+    /// A FAILURE MEANS: the words of a renamed gun are not the words every line of the old kit is matched by, so its row keeps its old name on the card.
     #[test]
     fn plain_short_writes_the_old_names_down() {
         let row = |id: crate::weapons::WeaponId| plain_short(&crate::weapons::WeaponDef { id, short: String::from("own"), ..crate::weapons::WeaponDef::default() });

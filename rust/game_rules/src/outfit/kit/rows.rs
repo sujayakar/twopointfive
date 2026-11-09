@@ -1,4 +1,3 @@
-//! src/game/kit.ts lines 770 to 1138
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -31,7 +30,7 @@ fn row(field: KitField, label: &str, item: Option<&str>, values: Vec<KitValue>) 
     KitRow { field, label: String::from(label), values, item: item.map(String::from), get: None }
 }
 
-/// `cansRow` as the rows hold it: the skeleton's table has every field but its `get` (kit.ts:808).
+/// `cansRow` as the rows hold it: the skeleton's table has every field but its `get`.
 fn cans_row_read() -> KitRow {
     KitRow { get: Some(KitRowGet::Mix), ..cans_row() }
 }
@@ -69,7 +68,7 @@ pub(super) fn value_text(v: &KitValue) -> String {
     }
 }
 
-/// OWN_MAX[k][mate ? 1 : 0] (kit.ts:270).
+/// OWN_MAX[k][mate ? 1 : 0].
 fn own_most(k: &str, mate: bool) -> f64 {
     own_max().get(String::from(k)).expect("OWN_MAX prices every row's thing")[if mate { 1 } else { 0 }]
 }
@@ -79,7 +78,7 @@ fn slot_pick(m: &MemberKit, slot: crate::gunslots::GunSlot) -> &str {
     match slot { crate::gunslots::GunSlot::Primary => &m.primary, crate::gunslots::GunSlot::Secondary => &m.secondary }
 }
 
-/// SLOT_AMOUNT[item](m) (kit.ts:252): a row's `item` is always one of its keys.
+/// SLOT_AMOUNT[item](m): a row's `item` is always one of its keys.
 fn amount_of(g: &mut Game, item: &str, m: &MemberKit) -> f64 {
     match item {
         "smoke" => slot_amount::smoke(m),
@@ -97,8 +96,8 @@ fn amount_of(g: &mut Game, item: &str, m: &MemberKit) -> f64 {
     }
 }
 
-/// `row.word(v)` (kit.ts KitRow.word): the closures are gone from a row, and its field and the card's owner decide which one it was. A gun slot's is
-/// the tree's (kit.ts:916): KITTREE.on is settled on, and the two rows are only ever built with the big slot on.
+/// `row.word(v)`: the closures are gone from a row, and its field and the card's owner decide which one it was. A gun slot's is
+/// the tree's: KITTREE.on is settled on, and the two rows are only ever built with the big slot on.
 pub(super) fn row_word(g: &Game, i: f64, r: &KitRow, v: &KitValue) -> String {
     match r.field {
         KitField::Weapon if i == 0.0 => {
@@ -136,7 +135,7 @@ pub(super) fn row_word(g: &Game, i: f64, r: &KitRow, v: &KitValue) -> String {
     }
 }
 
-/// `row.fixed?.(m)` (kit.ts:905): why a suppressor's row cannot be stepped, '' = it can. Only the tree's two suppressor rows have one.
+/// `row.fixed?.(m)`: why a suppressor's row cannot be stepped, '' = it can. Only the tree's two suppressor rows have one.
 pub(super) fn row_fixed(g: &Game, r: &KitRow, m: &MemberKit) -> String {
     let slot = match r.field {
         KitField::SideCan => crate::gunslots::GunSlot::Secondary,
@@ -161,7 +160,7 @@ fn row_get_member(g: &mut Game, r: &KitRow, at: usize) -> KitValue {
 
 // ---- the rows
 
-/// Your two counted canister rows, the pouches rule on.   (kit.ts youCanRows)
+/// Your two counted canister rows, the pouches rule on.
 fn you_can_rows(g: &crate::game::Game) -> Vec<crate::kit::KitRow> {
     let smoke = slot_max(g, "smoke", 0.0, SMOKE_MAX);
     let bangs = slot_max(g, "bangs", 0.0, STUN_MAX);
@@ -171,7 +170,7 @@ fn you_can_rows(g: &crate::game::Game) -> Vec<crate::kit::KitRow> {
     ]
 }
 
-/// The split of six a card's two canister counts are, if they are one.   (kit.ts mixOf)
+/// The split of six a card's two canister counts are, if they are one.
 pub(super) fn mix_of(m: &crate::kit::MemberKit) -> Option<crate::kit::CanMix> {
     let table = can_mixes();
     for k in [CanMix::Issued, CanMix::Smoke, CanMix::Even, CanMix::Stun] {   // (the table's own order)
@@ -181,7 +180,7 @@ pub(super) fn mix_of(m: &crate::kit::MemberKit) -> Option<crate::kit::CanMix> {
     None
 }
 
-/// The charges' rows of a card.   (kit.ts chargeRows)
+/// The charges' rows of a card.
 fn charge_rows(g: &crate::game::Game, i: f64) -> Vec<crate::kit::KitRow> {
     let mut rows = Vec::new();
     if charge_row(g, i) {
@@ -195,7 +194,7 @@ fn charge_rows(g: &crate::game::Game, i: f64) -> Vec<crate::kit::KitRow> {
     rows
 }
 
-/// The big slot's row offers this thing to member i (the `can` of kit.ts bigRow).
+/// The big slot's row offers this thing to member i.
 fn big_can(g: &Game, k: &str, i: f64) -> bool {
     let at = i as usize;
     let on = g.k.slots.on;
@@ -207,7 +206,7 @@ fn big_can(g: &Game, k: &str, i: f64) -> bool {
     most > 0.0 && (!on || g.k.slots.table.big.get(at).copied().unwrap_or(1.0) > 0.0)
 }
 
-/// The big slot's one row, the last of a man's card.   (kit.ts bigRow)
+/// The big slot's one row, the last of a man's card.
 fn big_row(g: &mut crate::game::Game, i: f64) -> crate::kit::KitRow {
     let mut values = vec![text_value("none")];
     if big_can(g, "shotgun", i) { values.push(text_value("shotgun")); }
@@ -216,7 +215,7 @@ fn big_row(g: &mut crate::game::Game, i: f64) -> crate::kit::KitRow {
     KitRow { get: Some(KitRowGet::Big), ..row(KitField::Big, "Big slot", None, values) }
 }
 
-/// A card's rows, top to bottom. KITTREE.on and GUNSLOTS.on are settled on: with the big slot on, the card is the tree.   (kit.ts buildRows)
+/// A card's rows, top to bottom. KITTREE.on and GUNSLOTS.on are settled on: with the big slot on, the card is the tree.
 fn build_rows(g: &mut crate::game::Game, i: f64) -> Vec<crate::kit::KitRow> {
     if g.k.bigslot.on { return build_rows_tree(g, i); }
     if i == 0.0 {
@@ -257,7 +256,7 @@ fn build_rows(g: &mut crate::game::Game, i: f64) -> Vec<crate::kit::KitRow> {
     rows
 }
 
-/// The rows with the big slot on: the build before's, asked with the switch held off for the call.   (kit.ts buildRowsBig)
+/// The rows with the big slot on: the build before's, asked with the switch held off for the call.
 fn build_rows_big(g: &mut crate::game::Game, i: f64) -> Vec<crate::kit::KitRow> {
     g.k.bigslot.on = false;
     let mut rows = build_rows(g, i);
@@ -273,7 +272,7 @@ fn build_rows_big(g: &mut crate::game::Game, i: f64) -> Vec<crate::kit::KitRow> 
     rows
 }
 
-/// The big slot's card with its one gun row parted in two.   (kit.ts buildRowsGuns)
+/// The big slot's card with its one gun row parted in two.
 fn build_rows_guns(g: &mut crate::game::Game, i: f64) -> Vec<crate::kit::KitRow> {
     let picks_primary = crate::gunslots::gun_picks(g, crate::gunslots::GunSlot::Primary);
     let primary = KitRow { field: KitField::Primary, label: String::from("Primary"), values: picks_primary.into_iter().map(KitValue::Text).collect(), item: None, get: Some(KitRowGet::Primary) };
@@ -291,12 +290,12 @@ fn build_rows_guns(g: &mut crate::game::Game, i: f64) -> Vec<crate::kit::KitRow>
     out
 }
 
-/// The first row of `base` for a field (the `by` of kit.ts buildRowsTree).
+/// The first row of `base` for a field.
 fn by(base: &[KitRow], f: KitField) -> Option<KitRow> {
     base.iter().find(|r| r.field == f).cloned()
 }
 
-/// A suppressor's row under its gun (the `canRow` of kit.ts buildRowsTree).
+/// A suppressor's row under its gun.
 fn can_row(slot: crate::gunslots::GunSlot) -> KitRow {
     let field = match slot {
         crate::gunslots::GunSlot::Primary => KitField::Suppressed,
@@ -305,7 +304,7 @@ fn can_row(slot: crate::gunslots::GunSlot) -> KitRow {
     KitRow { field, label: String::from("Suppressor"), values: flags(true), item: None, get: Some(KitRowGet::SlotCan { slot }) }
 }
 
-/// A launcher's load: a most of none is no row (the `tube` of kit.ts buildRowsTree).
+/// A launcher's load: a most of none is no row.
 fn tube(r: Option<KitRow>) -> Vec<KitRow> {
     match r {
         Some(r) if r.values.len() > 1 => vec![r],
@@ -313,7 +312,7 @@ fn tube(r: Option<KitRow>) -> Vec<KitRow> {
     }
 }
 
-/// One list for every man: each gun with what rides on it, what fills the pouches, what is worn, the big slot.   (kit.ts buildRowsTree)
+/// One list for every man: each gun with what rides on it, what fills the pouches, what is worn, the big slot.
 fn build_rows_tree(g: &mut crate::game::Game, i: f64) -> Vec<crate::kit::KitRow> {
     let base = build_rows_guns(g, i);
     let you = i == 0.0;
@@ -347,9 +346,9 @@ fn build_rows_tree(g: &mut crate::game::Game, i: f64) -> Vec<crate::kit::KitRow>
     out
 }
 
-/// The rows of member i's card, top to bottom; built once per member and per way the rules stand.   (kit.ts kitRows)
+/// The rows of member i's card, top to bottom; built once per member and per way the rules stand.
 pub fn kit_rows(g: &mut crate::game::Game, i: f64) -> Vec<crate::kit::KitRow> {
-    // (THE KEY AS THE TYPESCRIPT SPELLS IT, every part in its place (kit.ts:923): the map is carried over a start with the TypeScript's keys, and a key
+    // (THE KEY AS THE TYPESCRIPT SPELLS IT, every part in its place: the map is carried over a start with the TypeScript's keys, and a key
     //  spelled shorter never met those rows, so the first ask after a start built each member's rows a second time under a second key)
     let (guns, tree, shells) = (guns_on(g), tree_up(g), mate_shells(g));
     let key = alloc::format!("{}:{}:{}:{}:{}:{}:{}:{}:{}:{}:{}", i, g.k.slots.on, true, true, true, true, true, g.k.bigslot.on, guns, tree, shells);
@@ -359,7 +358,7 @@ pub fn kit_rows(g: &mut crate::game::Game, i: f64) -> Vec<crate::kit::KitRow> {
     r
 }
 
-/// What a row costs member i's pouches as his card stands, and its rate in plain words; null for a row that is no pouch.   (kit.ts kitRowCost)
+/// What a row costs member i's pouches as his card stands, and its rate in plain words; null for a row that is no pouch.
 pub(super) fn kit_row_cost(g: &mut crate::game::Game, i: f64, r: &crate::kit::KitRow, m: Option<&crate::kit::MemberKit>) -> Option<crate::kit::KitRowCost> {
     let m = match m { Some(c) => c.clone(), None => kit_shown(g, i) };
     let item = r.item.as_ref()?;
@@ -391,7 +390,7 @@ fn plural(n: f64) -> &'static str {
     if n == 1.0 { "" } else { "s" }
 }
 
-/// A gun by its pick's name, 'bare' after one whose suppressor the card has taken off (the `gun` of kit.ts kitWords).
+/// A gun by its pick's name, 'bare' after one whose suppressor the card has taken off.
 fn gun_words(g: &Game, m: &MemberKit, slot: crate::gunslots::GunSlot) -> String {
     let id = slot_pick(m, slot);
     let word = crate::gunslots::pick_word(g, id, None);
@@ -400,7 +399,7 @@ fn gun_words(g: &Game, m: &MemberKit, slot: crate::gunslots::GunSlot) -> String 
     alloc::format!("{}{}", name, if bare { " bare" } else { "" })
 }
 
-/// The card's guns in the tree's words (the `guns` of kit.ts kitWords).
+/// The card's guns in the tree's words.
 fn guns_words(g: &Game, m: &MemberKit) -> String {
     if m.weapon == KitWeapon::Pistol {
         return alloc::format!("{} only", gun_words(g, m, crate::gunslots::GunSlot::Secondary));
@@ -422,7 +421,7 @@ fn gun_short_words(g: &Game, w: crate::weapons::WeaponId) -> String {
     crate::gear::gear_text(g, &short)
 }
 
-/// A card in a line.   (kit.ts kitWords)
+/// A card in a line.
 pub(super) fn kit_words(g: &mut crate::game::Game, i: f64, m: Option<&crate::kit::MemberKit>) -> String {
     let m = match m { Some(c) => c.clone(), None => kit_shown(g, i) };
     kit_card_words(g, i, &m)
@@ -495,7 +494,7 @@ pub fn kit_card_words(g: &crate::game::Game, i: f64, m: &crate::kit::MemberKit) 
     ], " · ")
 }
 
-/// The big slot's shotgun or hammer of a card's line.   (kit.ts bigWords)
+/// The big slot's shotgun or hammer of a card's line.
 fn big_words(g: &crate::game::Game, m: &crate::kit::MemberKit) -> String {
     if g.k.bigslot.on && !js::truthy(m.walls) && m.big != BigKit::None {
         return big_word().get(String::from(m.big.as_str())).cloned().unwrap_or_default();
@@ -503,20 +502,20 @@ fn big_words(g: &crate::game::Game, m: &crate::kit::MemberKit) -> String {
     String::new()
 }
 
-/// The wall charges of a card's line.   (kit.ts wallWords)
+/// The wall charges of a card's line.
 fn wall_words(g: &crate::game::Game, i: f64, m: &crate::kit::MemberKit) -> String {
     if !(js::truthy(m.walls) && wall_row(g, i)) { return String::new(); }
     if m.walls == 1.0 { String::from("wall charge") } else { alloc::format!("{} wall charges", m.walls) }
 }
 
-/// Member i's card differs from what he is issued (only the rows his card has).   (kit.ts kitChanged)
+/// Member i's card differs from what he is issued (only the rows his card has).
 pub(super) fn kit_changed(g: &mut crate::game::Game, i: f64) -> bool {
     let mut m = kit_shown(g, i);
     let mut d = kit_issued_shown(g, i, None);
     kit_rows(g, i).iter().any(|r| row_has(g, r, &m) && { let (a, b) = (row_get(g, r, &mut m), row_get(g, r, &mut d)); !same_value(&a, &b) })
 }
 
-/// Why member i's card with one row set to `v` is refused, or null: it fits.   (kit.ts overWhy)
+/// Why member i's card with one row set to `v` is refused, or null: it fits.
 fn over_why(g: &mut crate::game::Game, i: f64, row: &crate::kit::KitRow, v: &crate::kit::KitValue) -> Option<String> {
     if !g.k.slots.on { return None; }
     let mut m = g.m.kit.kit.members[i as usize].clone();
@@ -524,7 +523,7 @@ fn over_why(g: &mut crate::game::Game, i: f64, row: &crate::kit::KitRow, v: &cra
     card_why(g, i, &m)
 }
 
-/// A row of member i's card by its key: your canister rows of the other way the rule stands too.   (kit.ts rowOf)
+/// A row of member i's card by its key: your canister rows of the other way the rule stands too.
 fn row_of(g: &mut crate::game::Game, i: f64, field: crate::kit::KitField) -> Option<crate::kit::KitRow> {
     if let Some(r) = kit_rows(g, i).into_iter().find(|r| r.field == field) { return Some(r); }
     if i != 0.0 { return None; }
@@ -533,13 +532,13 @@ fn row_of(g: &mut crate::game::Game, i: f64, field: crate::kit::KitField) -> Opt
     other.into_iter().find(|r| r.field == field)
 }
 
-/// What a step of one row of member i's card would do, nothing written, as his card is worn.   (kit.ts kitPeek)
+/// What a step of one row of member i's card would do, nothing written, as his card is worn.
 pub fn kit_peek(g: &mut crate::game::Game, i: f64, field: crate::kit::KitField, dir: f64) -> crate::kit::KitPeek {
     let p = on_worn(g, i, &mut |g: &mut Game| peek(g, i, field, dir), None);
     KitPeek { value: p.value, why: p.why }
 }
 
-/// A step of one row: the value it lands on, wrapping; or `why` and the value as it stands.   (kit.ts peek)
+/// A step of one row: the value it lands on, wrapping; or `why` and the value as it stands.
 fn peek(g: &mut crate::game::Game, i: f64, field: crate::kit::KitField, dir: f64) -> crate::kit::Peek {
     let row = match row_of(g, i, field) {
         Some(r) => r,
@@ -571,7 +570,7 @@ fn peek(g: &mut crate::game::Game, i: f64, field: crate::kit::KitField, dir: f64
     Peek { value: cur, why, passed: String::new() }
 }
 
-/// Step one row of member i's card; kept. `ok` false: refused (`why`), nothing written.   (kit.ts kitTry)
+/// Step one row of member i's card; kept. `ok` false: refused (`why`), nothing written.
 pub fn kit_try(g: &mut crate::game::Game, i: f64, field: crate::kit::KitField, dir: f64) -> crate::kit::KitTry {
     on_worn(g, i, &mut |g: &mut Game| {
         let p = peek(g, i, field, dir);
@@ -591,12 +590,11 @@ fn write_row(g: &mut Game, i: f64, row: &KitRow, v: &KitValue) {
     g.m.kit.kit_note[at] = String::new();
 }
 
-/// Set one row outright; refused for a value the row does not offer, or one his pouches have no room for.   (kit.ts kitSet)
+/// Set one row outright; refused for a value the row does not offer, or one his pouches have no room for.
 pub fn kit_set(g: &mut crate::game::Game, i: f64, field: crate::kit::KitField, v: &crate::kit::KitValue) -> bool {
     on_worn(g, i, &mut |g: &mut Game| set_row(g, i, field, v), Some(&mut |_g: &mut Game, ok: bool| ok))
 }
 
-/// (kit.ts setRow)
 fn set_row(g: &mut crate::game::Game, i: f64, field: crate::kit::KitField, v: &crate::kit::KitValue) -> bool {
     let at = i as usize;
     let is_word = |w: &str| matches!(v, KitValue::Text(s) if s == w);
@@ -633,13 +631,13 @@ fn table_in_force(g: &Game) -> Option<SlotTable> {
     if g.k.slots.on { Some(g.k.slots.table.clone()) } else { None }
 }
 
-/// Member i's card as a set makes it.   (kit.ts kitPresetCard)
+/// Member i's card as a set makes it.
 fn kit_preset_card(g: &mut crate::game::Game, i: f64, p: crate::kit::KitPreset) -> crate::kit::MemberKit {
     let t = table_in_force(g);
     set_card(g, i, p, t.as_ref())
 }
 
-/// Put a set on member i's card; kept. `ok` false: refused (`why`), nothing written.   (kit.ts kitPreset)
+/// Put a set on member i's card; kept. `ok` false: refused (`why`), nothing written.
 pub fn kit_preset(g: &mut crate::game::Game, i: f64, p: crate::kit::KitPreset) -> crate::kit::KitPreset2 {
     on_worn(g, i, &mut |g: &mut Game| {
         let c = kit_preset_card(g, i, p);
@@ -652,7 +650,7 @@ pub fn kit_preset(g: &mut crate::game::Game, i: f64, p: crate::kit::KitPreset) -
     }, Some(&mut |_g: &mut Game, r: KitPreset2| r.ok))
 }
 
-/// Why a press of a set on member i's card would be refused as the cards stand ('' = it would be taken).   (kit.ts kitPresetWhy)
+/// Why a press of a set on member i's card would be refused as the cards stand ('' = it would be taken).
 pub(super) fn kit_preset_why(g: &mut crate::game::Game, i: f64, p: crate::kit::KitPreset) -> String {
     on_worn(g, i, &mut |g: &mut Game| {
         let c = kit_preset_card(g, i, p);
@@ -660,7 +658,7 @@ pub(super) fn kit_preset_why(g: &mut crate::game::Game, i: f64, p: crate::kit::K
     }, None)
 }
 
-/// Which set member i's card is, if it is exactly one.   (kit.ts kitPresetOf)
+/// Which set member i's card is, if it is exactly one.
 pub(super) fn kit_preset_of(g: &mut crate::game::Game, i: f64) -> Option<crate::kit::KitPreset> {
     let mut m = kit_shown(g, i);
     for p in [KitPreset::Issued, KitPreset::Quiet, KitPreset::Loud] {   // (KIT_PRESETS' order)
@@ -671,7 +669,7 @@ pub(super) fn kit_preset_of(g: &mut crate::game::Game, i: f64) -> Option<crate::
     None
 }
 
-/// Member i's card as another man's card makes it: each row of his own takes the copied value where it offers it, a count over his row's most comes down.   (kit.ts kitPasteCard)
+/// Member i's card as another man's card makes it: each row of his own takes the copied value where it offers it, a count over his row's most comes down.
 fn kit_paste_card(g: &mut crate::game::Game, i: f64, from: &crate::kit::MemberKit) -> crate::kit::MemberKit {
     let mut m = kit_shown(g, i);
     let mut from = from.clone();   // (a read may home its picks: the caller's card is not ours to write)
@@ -700,13 +698,13 @@ fn moved_rows(g: &Game, rows: &[KitRow], a: &mut MemberKit, b: &mut MemberKit) -
         .collect()
 }
 
-/// What a paste would do, nothing written, as his card is worn.   (kit.ts kitPastePeek)
+/// What a paste would do, nothing written, as his card is worn.
 pub(super) fn kit_paste_peek(g: &mut crate::game::Game, i: f64, from: &crate::kit::MemberKit) -> crate::kit::KitPastePeek {
     let p = on_worn(g, i, &mut |g: &mut Game| paste_peek(g, i, from), None);
     KitPastePeek { changed: p.changed, why: p.why }
 }
 
-/// The card a paste would make, the rows of his it would move, why it would be refused ('' = taken).   (kit.ts pastePeek)
+/// The card a paste would make, the rows of his it would move, why it would be refused ('' = taken).
 fn paste_peek(g: &mut crate::game::Game, i: f64, from: &crate::kit::MemberKit) -> crate::kit::PastePeek {
     let mut card = kit_paste_card(g, i, from);
     let rows = kit_rows(g, i);
@@ -717,7 +715,7 @@ fn paste_peek(g: &mut crate::game::Game, i: f64, from: &crate::kit::MemberKit) -
     PastePeek { card, changed, why }
 }
 
-/// Paste a copied card onto member i's; kept, in one write of his card. `ok` false: refused (`why`), nothing written.   (kit.ts kitPaste)
+/// Paste a copied card onto member i's; kept, in one write of his card. `ok` false: refused (`why`), nothing written.
 pub fn kit_paste(g: &mut crate::game::Game, i: f64, from: &crate::kit::MemberKit) -> crate::kit::KitPaste {
     on_worn(g, i, &mut |g: &mut Game| {
         let p = paste_peek(g, i, from);
@@ -731,7 +729,7 @@ pub fn kit_paste(g: &mut crate::game::Game, i: f64, from: &crate::kit::MemberKit
     }, Some(&mut |_g: &mut Game, r: KitPaste| r.ok && !r.changed.is_empty()))
 }
 
-/// Member i already wears a copied card: a paste of it would move no row of his.   (kit.ts kitWears)
+/// Member i already wears a copied card: a paste of it would move no row of his.
 pub(super) fn kit_wears(g: &mut crate::game::Game, i: f64, from: &crate::kit::MemberKit) -> bool {
     kit_paste_peek(g, i, from).changed.is_empty()
 }
@@ -764,7 +762,7 @@ fn put_field(card: &mut MemberKit, field: KitField, v: &KitValue) {
     }
 }
 
-/// A stored (or hand-typed) card made safe: every field one of its row's values, anything else the issued one.   (kit.ts kitSanitize)
+/// A stored (or hand-typed) card made safe: every field one of its row's values, anything else the issued one.
 pub fn kit_sanitize(g: &mut crate::game::Game, i: f64, raw: Option<&JsMap<String, crate::kit::KitValue>>) -> crate::kit::MemberKit {
     let mut card = kit_default(g, i);
     let Some(raw) = raw else { return card; };
@@ -862,11 +860,13 @@ mod tests {
         m
     }
 
+    /// A FAILURE MEANS: the setup's row names a split a card does not hold.
     #[test]
     fn a_card_is_a_split_only_on_both_counts() {
         assert_eq!(mix_of(&card(4.0, 2.0)), Some(CanMix::Issued));
         assert_eq!(mix_of(&card(2.0, 4.0)), Some(CanMix::Stun));
-        assert_eq!(mix_of(&card(1.0, 1.0)), None);
+        assert_eq!(mix_of(&card(4.0, 1.0)), None);
+        assert_eq!(mix_of(&card(1.0, 2.0)), None);
     }
 
 }

@@ -13,7 +13,7 @@ use game::js::JsMap;
 #[derive(Clone, Copy)]
 pub struct GltfFile<'a> { pub text: &'a str, pub bin: Option<&'a [u8]> }
 
-/// the material slots a cast face is assigned to (gltf.ts SLOT_NAMES: the order is the id)
+/// the material slots a cast face is assigned to
 pub const SLOT_NAMES: [&str; 11] = ["skin", "cloth_uniform", "cloth_plain", "webbing", "boot", "helmet", "metal_dark", "rubber", "lens", "accent", "eye"];
 pub const CAST_PART_STEP: f64 = 16.0;
 pub const CAST_MAX_PARTS: usize = 32;
@@ -83,7 +83,6 @@ fn v3_or(v: &Json, d: [f64; 3]) -> [f64; 3] { v.v3().unwrap_or(d) }
 /// what the mannequin's file gives, before any row is made: a cast shares everything of it but the mesh
 struct Base { nodes: Vec<GltfNode>, order: Vec<f64>, skin: SkinData, mesh: MeshData, clips: Vec<Clip>, node_by_name: JsMap<String, f64> }
 
-/// (gltf.ts loadGltfCharacter)
 fn load_base(f: GltfFile) -> Base {
     let o = open(f);
     let g = &o.g;
@@ -173,7 +172,7 @@ fn load_base(f: GltfFile) -> Base {
     Base { nodes, order, skin, mesh: md, clips, node_by_name }
 }
 
-/// THE CAST's mesh and its parts and variants, over the mannequin's skeleton (gltf.ts loadGltfCast). Refuses anything off the file's contract.
+/// THE CAST's mesh and its parts and variants, over the mannequin's skeleton. Refuses anything off the file's contract.
 fn load_cast(f: GltfFile, base: &Base) -> (MeshData, Vec<String>, Vec<CastVariant>) {
     let o = open(f);
     let g = &o.g;

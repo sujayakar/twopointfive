@@ -32,11 +32,11 @@ fn a_quiet_mission_plays_to_its_end_by_each_way_out() {
         p.until(12.0, |p| p.g.mission.pulled).unwrap_or_else(|| panic!("exit {k}: 12 s and the thing is not taken"));
         p.sam_put(p.free_near([exit.x - exit.out[0], exit.z - exit.out[1]], 0.8));
         p.run(0.5);
+        assert!(p.objective().contains(&exit.name), "exit {k}: the objective names '{}': {}", exit.name, p.objective());
         assert_ne!(p.mission_stage(), Stage::Done, "exit {k}: done a stride short of the line");
         let past = game::quiet::exit_point(&exit, Some(0.9));
         p.sam_put([past[0], past[2]]);
         p.until(2.0, |p| p.mission_stage() == Stage::Done).unwrap_or_else(|| panic!("exit {k}: past '{}' and not done", exit.name));
-        assert!(p.log().iter().any(|l| l.contains(&exit.name)), "exit {k}: the last word names '{}': {:?}", exit.name, p.log());
     }
 }
 

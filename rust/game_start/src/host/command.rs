@@ -49,7 +49,8 @@ commands! {
     /// the view is this man's, by his place in the list; under 0 the player's own
     5 Spectate { who: i32 } = |g, who| g.spectate = who as f64;
     /// the mission from its start
-    6 Restart { said: &str } = |g, said| game::game::game_restart(g, if said.is_empty() { None } else { Some(said) });
+    // (the word is a tape's: no rule reads it)
+    6 Restart { said: &str } = |g, said| { let _ = said; game::game::game_restart(g) };
     /// a save by hand, as the next step ends
     7 Save {} = |g| saves::ask_save(g);
     /// a save goes back, as the next step ends, by its key (one that will not is said then)
@@ -67,7 +68,7 @@ commands! {
     /// encounter back
     21 Aside { on: u32, x: f64, z: f64 } = |g, on, x, z| {
         (g.aside, g.player_invisible) = (on != 0, on != 0);
-        if on == 0 { game::game::game_restart(g, None); }
+        if on == 0 { game::game::game_restart(g); }
         else { game::game::game_clear_aftermath(g); game::game::game_teleport_player(g, [x, 0.0, z]); }
     };
     /// what each man is thinking is said over him (and the meters' raw numbers with it)

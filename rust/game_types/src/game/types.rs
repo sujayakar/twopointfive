@@ -29,7 +29,7 @@ pub struct GuardScript {
     pub direct: Option<bool>,
     pub smoke: Option<bool>,
     pub over: Option<crate::game::GuardScriptOver>,
-    /// INVENTED: g.serial() at the one place a man's own script is made (squad.ts:145 order, when he has none). DoorPath.after asks by identity whether the script it lent to is still his (doorpath.ts:178). A lent script (frag, runner, morale, startle) stays 0: guards.ts:2143-2146 put his own back before anything can read it here
+    /// INVENTED: g.serial() at the one place a man's own script is made (squad.ts:145 order, when he has none). DoorPath.after asks by identity whether the script it lent to is still his. A lent script (frag, runner, morale, startle) stays 0: guards.ts:2143-2146 put his own back before anything can read it here
     pub serial: u32,
 }
 
@@ -229,7 +229,7 @@ pub struct Mission {
     pub down_card_at: f64,
     pub hands_on: bool,
     pub stats: crate::game::MissionStats,
-    /// INVENTED: g.serial() where g.mission is written whole (game.ts:1638, savestate.ts:812, demo.ts:152, 190, 313, 331): dialogue.ts:1717 and lesson.ts:320 ask "the same run?" by identity
+    /// INVENTED: g.serial() where g.mission is written whole: dialogue.ts:1717 and lesson.ts:320 ask "the same run?" by identity
     pub serial: u32,
 }
 
@@ -280,7 +280,7 @@ pub enum GameEventCause {
     Ocp,
 }
 
-/// What a game was stood with (src/game/stood.ts): its own record, set once at the stand, and the one rules read
+/// What a game was stood with: its own record, set once at the stand, and the one rules read
 #[derive(Clone, Copy, Debug, PartialEq, ToBytes)]
 pub struct StoodWith {
     /// the weather the game is born in, None the level's own
@@ -381,7 +381,6 @@ pub struct Game {
     pub ocp_cooldown: f64,
     #[is(-100.0)] pub last_sting_t: f64,
     pub event_seq: f64,
-    pub messages: Vec<crate::game::GameMessagesItem>,
     #[is(crate::game::Mission { t0: 0.0, stage: crate::game::MissionStage::Infiltrate, drive_t: -1.0, pulled: false, alarm_on: false, sweep_at: -1.0, spotted_t: -100.0, down_card_at: -1.0, hands_on: false, serial: 0, stats: crate::game::MissionStats { qrf_at: -1.0, ..crate::game::MissionStats::default() } })] pub mission: crate::game::Mission,
     pub chronicle: crate::chronicle::Chronicle,
     pub qrf: crate::qrf::Qrf,
@@ -393,7 +392,7 @@ pub struct Game {
     pub glass_break: crate::glassbreak::GlassBreak,
     pub shards: crate::shards::GlassShards,
     pub director: crate::director::Director,
-    /// THE HOST'S OWN CAMERA AND KEYS, handed to the game once, at its stand, by every host alike (game.ts hostCam; the native start: game_start `host_new`).
+    /// THE HOST'S OWN CAMERA AND KEYS, handed to the game once, at its stand, by every host alike.
     /// The host's: on the wire's hosts-own list, in no state word. Named here for what reaches for them: a level script's show, a rails level's first
     /// view, the view's matrix between two ticks.
     /// (a machine's own: in no bytes)
@@ -553,14 +552,6 @@ pub struct GameBeaconsItem {
 pub struct GameFxItem {
     pub box_: FrameBoxId,
     pub ttl: f64,
-}
-
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct GameMessagesItem {
-    pub text: String,
-    pub t: f64,
-    /// INVENTED by a review: see the proposals
-    pub serial: u32,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -757,7 +748,6 @@ pub struct Player {
     #[is(-1.0)] pub kit_owed: f64,
     pub kit_owed_for: Option<crate::game::PlayerKitOwedFor>,
     pub sling_rest: Option<crate::game::PlayerSlingRest>,
-    pub ocp_hinted: bool,
     #[is(true)] pub holstered: bool,
     pub keys: JsSet<String>,
     pub codes: JsSet<String>,
@@ -767,7 +757,7 @@ pub struct Player {
     pub hand_wait: f64,
     pub near_sel: i32,
     #[is(String::from(""))] pub near_key: String,
-    #[is(crate::game::PlayerSel { down_t: -1.0, open: false, moved: false, wheel_acc: 0.0, run_key: String::from(""), move_latch: 0.0, word: String::from(""), word_t: -1000000000.0, file_t: -1000000000.0, ring: None })] pub sel: crate::game::PlayerSel,
+    #[is(crate::game::PlayerSel { down_t: -1.0, open: false, moved: false, wheel_acc: 0.0, run_key: String::from(""), move_latch: 0.0, word: String::from(""), word_t: -1000000000.0, word_kind: None, ring: None })] pub sel: crate::game::PlayerSel,
     #[is(1.0)] pub pace: f64,
     pub nv: bool,
     pub nv_amount: f64,
@@ -874,7 +864,8 @@ pub struct PlayerSel {
     pub move_latch: f64,
     pub word: String,
     pub word_t: f64,
-    pub file_t: f64,
+    /// the word is why a press did nothing (`interact::refuse`), and this is what it is about. None: an empty tap's, which the view reads off what he stands beside
+    pub word_kind: Option<crate::view::ThingKind>,
     pub ring: Option<crate::game::PlayerSelRing>,
 }
 
@@ -1152,7 +1143,7 @@ pub struct Guard {
     pub fix_stamp: u32,
     /// INVENTED: bumped by every whole replacement of path
     pub path_serial: u32,
-    /// INVENTED: path_goal is the very point the standoff laid (guards.ts)
+    /// INVENTED: path_goal is the very point the standoff laid
     pub path_goal_orbit: bool,
 }
 
@@ -1290,26 +1281,20 @@ pub enum GameLightEventCause {
     Ocp,
 }
 
-/// (src/game/game.ts:341 PLAYER_MAX_HITS)
 pub const PLAYER_MAX_HITS: f64 = 1.0;
 
-/// (src/game/game.ts:42 MARK_LIGHT_MIN_I0)
 pub const MARK_LIGHT_MIN_I0: f64 = 0.05;
 
-/// (src/game/game.ts:296 BODY_DOOR_PARTICLES: a table nothing writes)
 pub fn body_door_particles() -> Vec<f64> { alloc::vec![0.0, 1.0, 3.0, 12.0, 13.0, 14.0, 15.0] }
 
-/// (src/game/game.ts:508 CALLSIGNS: a table nothing writes)
 pub fn callsigns() -> Vec<String> { alloc::vec![String::from("Kowalski"), String::from("Novak"), String::from("Reyes"), String::from("Okafor"), String::from("Lindqvist"), String::from("Brandt"), String::from("Marsh")] }
 
-/// (src/game/game.ts:516 TEMPERAMENT: a table nothing writes)
 pub fn temperament() -> &'static [(&'static str, crate::game::Temperament)] { &[("Kowalski", crate::game::Temperament::Steady), ("Novak", crate::game::Temperament::Nervy), ("Reyes", crate::game::Temperament::Hard), ("Okafor", crate::game::Temperament::Steady), ("Lindqvist", crate::game::Temperament::Nervy), ("Brandt", crate::game::Temperament::Hard), ("Marsh", crate::game::Temperament::Steady)] }
 
-/// (src/game/game.ts:778 ROLL_VOICE: a table nothing writes)
 pub fn roll_voice() -> crate::game::ROLLVOICE { crate::game::ROLLVOICE { gain: 0.5, full_v: 2.5, min_v: 0.12, grace: 0.5 } }
 
 impl Guard {
-    /// (game.ts Guard's constructor) look_phase: simRandom() * 10, DRAWN BEFORE his Character is made, as the field initialiser runs first. foe goes None for a side not hostile to the player. His body's muzzle_ahead is the weapon's row: the caller sets it, as the constructor does
+    ///  look_phase: simRandom() * 10, DRAWN BEFORE his Character is made, as the field initialiser runs first. foe goes None for a side not hostile to the player. His body's muzzle_ahead is the weapon's row: the caller sets it, as the constructor does
     pub fn new(ch: CharId, callsign: String, team: Option<crate::teams::Team>, route: RouteId, route_i: i32, flashlight: LightId, keys: JsSet<String>, weapon: FirearmId, pos: V3, look_phase: f64, talk: GameTalkId) -> Self {
         let mut g = Guard::blank();
         g.ch = ch; g.look_phase = look_phase; g.last_pos = pos; g.route_i = route_i; g.route = route; g.flashlight = flashlight; g.callsign = callsign;
@@ -1343,7 +1328,7 @@ mod tests {
     }
 }
 impl Player {
-    /// (game.ts Player's constructor) His body's muzzle_ahead is the pistol's row: the caller sets it. pistol and rifle are made by weapons.ts's rows, which this blank cannot read
+    ///  His body's muzzle_ahead is the pistol's row: the caller sets it. pistol and rifle are made by weapons.ts's rows, which this blank cannot read
     pub fn new(ch: CharId, has_rifle: bool, pistol: FirearmId, rifle: FirearmId) -> Self {
         let mut p = Player::blank();
         p.ch = ch; p.has_rifle = has_rifle; p.pistol = pistol; p.rifle = rifle;
@@ -1534,9 +1519,6 @@ pub struct Mods {
     pub cmd: crate::cmd::CmdMod,
     pub fireline: crate::fireline::FirelineMod,
     pub doorforce: crate::doorforce::DoorforceMod,
-    /// (where rust/sim's rows lie in this process, and counts: in no bytes)
-    #[bytes(skip)]
-    pub rustknobs: crate::rustknobs::RustknobsMod,
     pub glassbreak: crate::glassbreak::GlassbreakMod,
     pub glass: crate::glass::GlassMod,
     pub wallpen: crate::wallpen::WallpenMod,

@@ -7,7 +7,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{string::String, vec, vec::Vec};
 
-/// A row's turn weight: its own `handling`, else its class's, else a carbine's. (weapons.ts handlingOf)
+/// A row's turn weight: its own `handling`, else its class's, else a carbine's.
 pub fn handling_of(def: &crate::weapons::WeaponDef) -> f64 {
     if let Some(h) = def.handling { return h; }
     let table = crate::weapons::handling_by_class();
@@ -22,7 +22,7 @@ mod tests {
 
     fn table_row(id: WeaponId) -> WeaponDef { WeaponsMod::blank().weapons.get(id).unwrap().clone() }
 
-    /// weapons.ts:345: the row's own number, then its class's; `??` lets a 0 stand.
+    /// The row's own number, then its class's; a 0 on the row stands.
     #[test]
     fn handling_reads_the_row_then_the_class() {
         assert_eq!(handling_of(&table_row(WeaponId::Fn2000)), 0.8);
@@ -42,10 +42,10 @@ fn row(g: &mut Game, def: WeaponId) -> &WeaponDef { g.m.weapons.weapons.get(def)
 /// `g.audio.play(sfx, at, vol)`: no options
 fn play(g: &mut Game, sfx: &str, at: V3, vol: f64) { crate::audio_iface::game_audio_like_play(g, sfx, Some(at), Some(vol), None) }
 
-/// `g.audio.play(sfx, at, vol, { rate })` (player.ts reloadInHand's rifle callbacks)
+/// `g.audio.play(sfx, at, vol, { rate })`
 fn play_rate(g: &mut Game, sfx: &str, at: V3, vol: f64, rate: f64) { crate::audio_iface::game_audio_like_play(g, sfx, Some(at), Some(vol), Some(&crate::audio_iface::PlayOpts::Rate { rate })) }
 
-// ---- what a reload tells its owner: the two callers' callbacks (player.ts reloadInHand) ----
+// ---- what a reload tells its owner: the two callers' callbacks ----
 
 /// `ev.magOut(rounds, dropped)`
 fn ev_mag_out(g: &mut Game, id: FirearmId, dropped: bool) {
@@ -128,19 +128,19 @@ fn ev_rack(g: &mut Game, id: FirearmId) {
 
 // ---- Firearm ----
 
-/// a shell at a time is how the reload under way (or the beat planned) puts its rounds in (weapons.ts Firearm.shellFed)
+/// a shell at a time is how the reload under way (or the beat planned) puts its rounds in
 pub fn firearm_shell_fed(g: &crate::game::Game, id: FirearmId) -> bool {
     g.fa[id].shell_t.is_some()
 }
 
-/// the beat the reload under way (or the next plain one) runs on (weapons.ts Firearm.reloadRow)
+/// the beat the reload under way (or the next plain one) runs on
 pub fn firearm_reload_row(g: &mut crate::game::Game, id: FirearmId) -> crate::weapons::WeaponDefReload {
     if let Some(b) = g.fa[id].beat { return b; }
     let def = g.fa[id].def;
     row(g, def).reload
 }
 
-/// a row being carried: loaded its way, its spares full, the selector on the first mode. A data-only row throws (weapons.ts Firearm.constructor)
+/// a row being carried: loaded its way, its spares full, the selector on the first mode. A data-only row throws
 pub fn firearm_new(g: &mut crate::game::Game, def: &crate::weapons::WeaponDef) -> FirearmId {
     if !def.enabled {
         panic!("weapons: '{}' is a data-only row (docs/internal/sc20k-design.md §10) — nothing may carry it until its lane switches it on", def.id.as_str());
@@ -154,7 +154,7 @@ pub fn firearm_new(g: &mut crate::game::Game, def: &crate::weapons::WeaponDef) -
     g.fa.push(fa)
 }
 
-/// Z: the selector to its next position; ends any AUTO string; returns the new mode (weapons.ts Firearm.cycleMode)
+/// Z: the selector to its next position; ends any AUTO string; returns the new mode
 pub fn firearm_cycle_mode(g: &mut crate::game::Game, id: FirearmId) -> crate::weapons::FireMode {
     let def = g.fa[id].def;
     let modes = row(g, def).modes.clone();
@@ -167,14 +167,14 @@ pub fn firearm_cycle_mode(g: &mut crate::game::Game, id: FirearmId) -> crate::we
     fa.mode
 }
 
-/// automatic under a held trigger right now (weapons.ts Firearm.automatic)
+/// automatic under a held trigger right now
 pub fn firearm_automatic(g: &mut crate::game::Game, id: FirearmId) -> bool {
     if g.fa[id].mode != FireMode::Auto { return false; }
     let def = g.fa[id].def;
     row(g, def).auto.is_some()
 }
 
-/// the extra cone the NEXT round of the current AUTO string is drawn with (weapons.ts Firearm.autoSpread)
+/// the extra cone the NEXT round of the current AUTO string is drawn with
 pub fn firearm_auto_spread(g: &mut crate::game::Game, id: FirearmId) -> f64 {
     let def = g.fa[id].def;
     let auto = row(g, def).auto;
@@ -184,14 +184,14 @@ pub fn firearm_auto_spread(g: &mut crate::game::Game, id: FirearmId) -> f64 {
     }
 }
 
-/// book one round of the string (weapons.ts Firearm.autoFired)
+/// book one round of the string
 pub fn firearm_auto_fired(g: &mut crate::game::Game, id: FirearmId) {
     let fa = &mut g.fa[id];
     fa.auto_idx += 1.0;
     fa.auto_since = 0.0;
 }
 
-/// let the string lapse once the trigger has been up auto.resetAfter (weapons.ts Firearm.autoIdle)
+/// let the string lapse once the trigger has been up auto.resetAfter
 pub fn firearm_auto_idle(g: &mut crate::game::Game, id: FirearmId, dt: f64, trigger_down: bool) {
     g.fa[id].auto_since += dt;
     if trigger_down { return; }
@@ -200,23 +200,21 @@ pub fn firearm_auto_idle(g: &mut crate::game::Game, id: FirearmId, dt: f64, trig
     if g.fa[id].auto_since > reset_after { g.fa[id].auto_idx = 0.0; }
 }
 
-/// never runs out of spares (weapons.ts Firearm.bottomless)
+/// never runs out of spares
 pub(super) fn firearm_bottomless(g: &mut crate::game::Game, id: FirearmId) -> bool {
     let def = g.fa[id].def;
     !row(g, def).spare_mags.is_finite()
 }
 
-/// (weapons.ts Firearm.reloading)
 pub fn firearm_reloading(g: &crate::game::Game, id: FirearmId) -> bool {
     g.fa[id].reload_t >= 0.0
 }
 
-/// (weapons.ts Firearm.roundsReady)
 pub fn firearm_rounds_ready(g: &crate::game::Game, id: FirearmId) -> f64 {
     g.fa[id].chamber + g.fa[id].mag.unwrap_or(0.0)
 }
 
-/// rounds gone since the gun was last full (weapons.ts Firearm.spent)
+/// rounds gone since the gun was last full
 pub fn firearm_spent(g: &mut crate::game::Game, id: FirearmId) -> f64 {
     let def = g.fa[id].def;
     let cap = row(g, def).mag_capacity;
@@ -224,19 +222,18 @@ pub fn firearm_spent(g: &mut crate::game::Game, id: FirearmId) -> f64 {
     cap + (if top_up { 1.0 } else { 0.0 }) - firearm_rounds_ready(g, id)
 }
 
-/// (weapons.ts Firearm.canFire)
 pub fn firearm_can_fire(g: &crate::game::Game, id: FirearmId) -> bool {
     (g.fa[id].chamber == 1.0 || (g.fa[id].infinite && g.fa[id].mag.is_some())) && !firearm_reloading(g, id)
 }
 
-/// fullest-first view of the spare mags (weapons.ts Firearm.spareSorted)
+/// fullest-first view of the spare mags
 pub fn firearm_spare_sorted(g: &crate::game::Game, id: FirearmId) -> Vec<f64> {
     let mut v = g.fa[id].spare.clone();
     js::sort_by(&mut v, |a, b| *b - *a);
     v
 }
 
-/// one round gone, the next cycled up; false = it would not fire (weapons.ts Firearm.fire)
+/// one round gone, the next cycled up; false = it would not fire
 pub fn firearm_fire(g: &mut crate::game::Game, id: FirearmId) -> bool {
     if !firearm_can_fire(g, id) { return false; }
     let fa = &mut g.fa[id];
@@ -253,7 +250,7 @@ pub fn firearm_fire(g: &mut crate::game::Game, id: FirearmId) -> bool {
     true
 }
 
-/// the most a seated magazine may hold right now by the row's rule (weapons.ts Firearm.magRoom)
+/// the most a seated magazine may hold right now by the row's rule
 pub fn firearm_mag_room(g: &mut crate::game::Game, id: FirearmId) -> f64 {
     let def = g.fa[id].def;
     let cap = row(g, def).mag_capacity;
@@ -261,7 +258,7 @@ pub fn firearm_mag_room(g: &mut crate::game::Game, id: FirearmId) -> f64 {
     cap - (if top_up { 0.0 } else { g.fa[id].chamber })
 }
 
-/// begin a reload if it makes sense; false if refused (weapons.ts Firearm.startReload)
+/// begin a reload if it makes sense; false if refused
 pub fn firearm_start_reload(g: &mut crate::game::Game, id: FirearmId, ev: Option<&crate::weapons::ReloadEvents>, beat: Option<crate::weapons::WeaponDefReload>, cues: Option<&[f64]>, shells: Option<&crate::weapons::FirearmStartReloadShells>) -> bool {
     if firearm_reloading(g, id) { return false; }
     let ev = ev.cloned().unwrap_or(ReloadEvents::None);
@@ -295,13 +292,11 @@ pub fn firearm_start_reload(g: &mut crate::game::Game, id: FirearmId, ev: Option
     true
 }
 
-/// (weapons.ts Firearm.cancelReload)
 pub fn firearm_cancel_reload(g: &mut crate::game::Game, id: FirearmId) {
     let fa = &mut g.fa[id];
     fa.reload_t = -1.0; fa.stage = 0.0; fa.beat = None; fa.cues = None; fa.shell_t = None;
 }
 
-/// (weapons.ts Firearm.planShells)
 fn firearm_plan_shells(g: &mut crate::game::Game, id: FirearmId, times: &[f64], port: bool) {
     let fa = &mut g.fa[id];
     let tube = *fa.mag.get_or_insert(0.0);
@@ -313,13 +308,13 @@ fn firearm_plan_shells(g: &mut crate::game::Game, id: FirearmId, times: &[f64], 
     fa.feed_pull = fa.chamber == 0.0 && !fa.shell_port;
 }
 
-/// a man whose reload is a beat of his own feeds a shell at a time on `row` (weapons.ts Firearm.planFeed)
+/// a man whose reload is a beat of his own feeds a shell at a time on `row`
 pub(super) fn firearm_plan_feed(g: &mut crate::game::Game, id: FirearmId, row: crate::weapons::WeaponDefReload, times: &[f64], port: bool) {
     g.fa[id].beat = Some(row);
     firearm_plan_shells(g, id, times, port);
 }
 
-/// his beat has come to `t` seconds: the shells due by then are in the gun (weapons.ts Firearm.feedTo)
+/// his beat has come to `t` seconds: the shells due by then are in the gun
 pub(super) fn firearm_feed_to(g: &mut crate::game::Game, id: FirearmId, t: f64, free: Option<bool>) {
     let free = free.unwrap_or(true);
     loop {
@@ -332,7 +327,7 @@ pub(super) fn firearm_feed_to(g: &mut crate::game::Game, id: FirearmId, t: f64, 
     }
 }
 
-/// one shell into the gun, out of the fewest loose ones he carries; false: no room, or none left (weapons.ts Firearm.feedShell)
+/// one shell into the gun, out of the fewest loose ones he carries; false: no room, or none left
 fn firearm_feed_shell(g: &mut crate::game::Game, id: FirearmId, port: Option<bool>, free: Option<bool>) -> bool {
     let (port, free) = (port.unwrap_or(false), free.unwrap_or(false));
     let def = g.fa[id].def;
@@ -359,7 +354,7 @@ fn firearm_feed_shell(g: &mut crate::game::Game, id: FirearmId, port: Option<boo
     true
 }
 
-/// a full magazine seated and a round chambered, any reload or burst forgotten (weapons.ts Firearm.rearm)
+/// a full magazine seated and a round chambered, any reload or burst forgotten
 pub fn firearm_rearm(g: &mut crate::game::Game, id: FirearmId) {
     firearm_cancel_reload(g, id);
     let def = g.fa[id].def;
@@ -372,7 +367,7 @@ pub fn firearm_rearm(g: &mut crate::game::Game, id: FirearmId) {
     fa.mag = Some(cap - if top_up { 0.0 } else { 1.0 });
 }
 
-/// the staged reload's clock: out, in, rack, done, each once (weapons.ts Firearm.update)
+/// the staged reload's clock: out, in, rack, done, each once
 pub fn firearm_update(g: &mut crate::game::Game, id: FirearmId, dt: f64) {
     if !firearm_reloading(g, id) { return; }
     g.fa[id].reload_t += dt;
@@ -445,7 +440,7 @@ pub fn firearm_update(g: &mut crate::game::Game, id: FirearmId, dt: f64) {
 
 // ---- Pistol and Rifle: rows of g.fa ----
 
-/// Sam's sidearm: the Five-seveN row unless a card picks another (weapons.ts Pistol.constructor)
+/// Sam's sidearm: the Five-seveN row unless a card picks another
 pub fn pistol_new(g: &mut crate::game::Game, def: Option<&crate::weapons::WeaponDef>) -> FirearmId {
     let id = match def {
         Some(d) => firearm_new(g, d),
@@ -455,7 +450,7 @@ pub fn pistol_new(g: &mut crate::game::Game, def: Option<&crate::weapons::Weapon
     id
 }
 
-/// Sam's FN2000 row, its loads from the launcher's tables; nothing under a barrel with pellets or `launcher: false` (weapons.ts Rifle.constructor)
+/// Sam's FN2000 row, its loads from the launcher's tables; nothing under a barrel with pellets or `launcher: false`
 pub fn rifle_new(g: &mut crate::game::Game, def: Option<&crate::weapons::WeaponDef>) -> FirearmId {
     let fn2000;
     let def = match def {
@@ -481,13 +476,13 @@ pub fn rifle_new(g: &mut crate::game::Game, def: Option<&crate::weapons::WeaponD
     id
 }
 
-/// the attachment the right button fires now (weapons.ts Rifle.attachment)
+/// the attachment the right button fires now
 pub fn rifle_attachment(g: &crate::game::Game, id: FirearmId) -> Option<crate::weapons::RifleAttachment> {
     let fa = &g.fa[id];
     if fa.att_idx >= 0 { fa.attachments.get(fa.att_idx as usize).copied() } else { None }
 }
 
-/// rounds left of an attachment (weapons.ts Rifle.left)
+/// rounds left of an attachment
 pub fn rifle_left(g: &crate::game::Game, id: FirearmId, a: crate::weapons::RifleAttachment) -> f64 {
     let fa = &g.fa[id];
     match a {
@@ -497,7 +492,7 @@ pub fn rifle_left(g: &crate::game::Game, id: FirearmId, a: crate::weapons::Rifle
     }
 }
 
-/// the next attachment goes on the right button, the last back to the first (weapons.ts Rifle.cycleAttachment)
+/// the next attachment goes on the right button, the last back to the first
 pub fn rifle_cycle_attachment(g: &mut crate::game::Game, id: FirearmId) -> Option<crate::weapons::RifleAttachment> {
     let fa = &mut g.fa[id];
     let n = fa.attachments.len() as i32;
@@ -507,19 +502,17 @@ pub fn rifle_cycle_attachment(g: &mut crate::game::Game, id: FirearmId) -> Optio
 
 // ---- Ocp ----
 
-/// (weapons.ts Ocp.ready)
 pub fn ocp_ready(this: &crate::weapons::Ocp) -> bool {
     this.charge >= this.cost - 1e-3
 }
 
-/// spends the whole charge; false if not ready (weapons.ts Ocp.use)
+/// spends the whole charge; false if not ready
 pub fn ocp_use(this: &mut crate::weapons::Ocp) -> bool {
     if !ocp_ready(this) { return false; }
     this.charge = 0.0;
     true
 }
 
-/// (weapons.ts Ocp.update)
 pub fn ocp_update(this: &mut crate::weapons::Ocp, dt: f64) {
     this.charge = m::min(1.0, this.charge + dt * this.recharge_per_sec);
 }
@@ -527,8 +520,6 @@ pub fn ocp_update(this: &mut crate::weapons::Ocp, dt: f64) {
 #[cfg(test)]
 mod tests_2 {
     use super::*;
-
-    // Every expected value below was printed by the TypeScript classes under bun, with GEAR.on and RELOAD.lastMag at the page's true.
 
     fn st(g: &Game, id: FirearmId) -> (f64, Option<f64>, Vec<f64>, f64, f64, bool, bool, bool) {
         let f = &g.fa[id];

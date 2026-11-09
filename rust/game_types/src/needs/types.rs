@@ -94,9 +94,7 @@ pub struct DeparturePoint {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct NeedsMod {
-    /// (src/game/needs.ts:111 memOf)
     pub mem_of: JsMap<GuardId, crate::needs::NeedMem>,
-    /// (src/game/needs.ts:121 floorOf)
     pub floor_of: Option<crate::needs::NeedsModFloorOfValue>,
 }
 
@@ -116,30 +114,21 @@ pub struct NeedsStats {
     pub stuck: i32,
 }
 
-/// (src/game/needs.ts:35 NEED_KINDS: a table nothing writes)
 pub fn need_kinds() -> Vec<crate::needs::NeedKind> { alloc::vec![crate::needs::NeedKind::Coffee, crate::needs::NeedKind::Smoke, crate::needs::NeedKind::Water, crate::needs::NeedKind::Stretch] }
 
-/// (src/game/needs.ts:39 NEED_SPOTS: a table nothing writes)
 pub fn need_spots() -> JsMap<String, crate::needs::NeedSpot> { { let mut t = JsMap::new(); t.set(String::from("coffee"), crate::needs::NeedSpot { name: String::from("the break-room counter"), pos: [34.6, 0.0, 14.4], face: 1.5707963267948966, loop_: None }); t.set(String::from("smoke"), crate::needs::NeedSpot { name: String::from("outside the fire exit"), pos: [37.6, 0.0, 22.4], face: 1.1, loop_: None }); t.set(String::from("water"), crate::needs::NeedSpot { name: String::from("the water cooler"), pos: [26.9, 0.0, 22.8], face: 0.7853981633974483, loop_: None }); t.set(String::from("stretch"), crate::needs::NeedSpot { name: String::from("the lobby"), pos: [8.4, 0.0, 17.0], face: 0.0, loop_: Some(alloc::vec![[10.8, 0.0, 18.6], [9.6, 0.0, 21.4], [7.4, 0.0, 22.8], [5.4, 0.0, 18.4], [8.4, 0.0, 17.0]]) }); t } }
 
-/// (src/game/needs.ts:85 FILL_MIN: a table nothing writes)
 pub fn fill_min() -> JsMap<String, [f64; 2]> { { let mut t = JsMap::new(); t.set(String::from("coffee"), [6.0, 9.0]); t.set(String::from("smoke"), [8.0, 12.0]); t.set(String::from("water"), [6.0, 10.0]); t.set(String::from("stretch"), [5.0, 7.0]); t } }
 
-/// (src/game/needs.ts:86 LEVEL0: a table nothing writes)
 pub fn level0() -> Vec<f64> { alloc::vec![0.3, 0.7] }
 
-/// (src/game/needs.ts:88 LEVEL_CAP)
 pub const LEVEL_CAP: f64 = 1.5;
 
-/// (src/game/needs.ts:88 CALM_AWARENESS)
 pub const CALM_AWARENESS: f64 = 0.3;
 
-/// (src/game/needs.ts:88 SCHEDULE_AWARENESS)
 pub const SCHEDULE_AWARENESS: f64 = 0.15;
 
-/// (src/game/needs.ts:90 GLANCE_AT)
 pub const GLANCE_AT: f64 = 1.1;
 
-/// (src/game/needs.ts:90 GLANCE_SECS)
 pub const GLANCE_SECS: f64 = 2.2;
 

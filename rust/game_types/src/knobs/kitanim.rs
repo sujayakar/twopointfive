@@ -26,7 +26,7 @@ pub struct KitanimK {
     /// the magazine changes, in seconds on the weapon's clock — written for the pistol's 1.6 s row and the rifle's 2.4 s row and scaled to whatever row the gun in
     ///  hand has. out = the old magazine leaves the gun · keep = it is in the dump pouch (tactical only) · in_ = the fresh one is seated · rack = slide / handle
     pub beats: KitanimKBeats,
-    /// m to the close-in mode's man at which closeness is 1 (the knife's reach); it is 0 at the mode's own edge (close.ts CLOSE.modeM)
+    /// m to the close-in mode's man at which closeness is 1 (the knife's reach); it is 0 at the mode's own edge
     #[k(1.1)] pub close_near: f64,
 }
 

@@ -1,4 +1,4 @@
-//! The team as it would go on a mission, as the screen before it shows it (src/ui/loadout.ts: paint, drawSlots, worn), and what a screen's presses do to the
+//! The team as it would go on a mission, as the screen before it shows it, and what a screen's presses do to the
 //! cards. A read takes `&mut Game` only because the helpers do: it leaves the cards as they were.
 use super::*;
 use crate::game::Game;
@@ -49,14 +49,14 @@ pub fn team_card_for(g: &Game, f: &TeamFor) -> CardFor {
     CardFor { no_fog: !crate::scenario_run::fog_of_query(g, &f.link) }
 }
 
-/// The stealth card's kit, where it stands for yours.   (loadout.ts syncHand; kit.ts kitStealthHand)
+/// The stealth card's kit, where it stands for yours.
 pub fn team_hand(g: &Game, f: &TeamFor) -> Option<KitHand> {
     if !cards_on(g, Some(f)) || !matches!(f.entry.kind, LoadoutKind::Quiet | LoadoutKind::Solo) { return None; }
     let cams = link_cams(g, f);
     Some(KitHand { rings: g.k.kittree.lend, cams, wand: cams > 0.0 })
 }
 
-/// The size a mission opens on: the one that stands if it can take it, else its own, else the first it can.   (loadout.ts openLoadout)
+/// The size a mission opens on: the one that stands if it can take it, else its own, else the first it can.
 pub fn team_opens_on(e: &LoadoutEntry, size: f64) -> f64 {
     let c = squad_choices(e);
     if c.iter().any(|x| x.n == size && x.ok) { return size; }
@@ -64,7 +64,7 @@ pub fn team_opens_on(e: &LoadoutEntry, size: f64) -> f64 {
     c.iter().find(|x| x.ok).map_or(e.squad, |x| x.n)
 }
 
-/// How many come, or why not.   (loadout.ts setSquad)
+/// How many come, or why not.
 pub fn team_size(g: &mut Game, f: Option<&TeamFor>, n: f64) -> String {
     let choices = f.map_or_else(any_size, |f| squad_choices(&f.entry));
     let Some(c) = choices.iter().find(|c| c.n == n) else { return format!("no team of {}", js::num_str(n)) };
@@ -73,10 +73,10 @@ pub fn team_size(g: &mut Game, f: Option<&TeamFor>, n: f64) -> String {
     String::new()
 }
 
-/// Who a named kit goes on: a man going alone wears it himself, a team on all five cards.   (loadout.ts alone)
+/// Who a named kit goes on: a man going alone wears it himself, a team on all five cards.
 fn alone(g: &Game) -> Option<f64> { if g.m.kit.team == 0.0 { Some(0.0) } else { None } }
 
-/// A named kit put on, or why not.   (loadout.ts putKit)
+/// A named kit put on, or why not.
 pub fn team_named(g: &mut Game, id: &str) -> Option<String> {
     let only = alone(g);
     kit_loadout(g, id, only)
@@ -100,7 +100,7 @@ fn issue_words(c: &IssueCard) -> String {
     parts.into_iter().flatten().collect::<Vec<_>>().join(" · ")
 }
 
-/// Who the mission hands the shotgun.   (loadout.ts issueWho)
+/// Who the mission hands the shotgun.
 fn issue_who(cards: &JsMap<String, IssueCard>, size: f64) -> String {
     let men = roster_of(size);
     let mut who = Vec::new();
@@ -112,7 +112,7 @@ fn issue_who(cards: &JsMap<String, IssueCard>, size: f64) -> String {
     who.join(", ")
 }
 
-/// The note line.   (loadout.ts paint)
+/// The note line.
 fn note_line(g: &Game, f: Option<&TeamFor>, c: &SquadChoice, size: f64) -> String {
     let said = if !c.note.is_empty() { c.note.as_str() } else if c.own { "This mission's own team." } else { "" };
     let Some(f) = f else { return String::from(said) };
@@ -121,7 +121,7 @@ fn note_line(g: &Game, f: Option<&TeamFor>, c: &SquadChoice, size: f64) -> Strin
     String::from(said)
 }
 
-/// What is carried between them.   (loadout.ts paint)
+/// What is carried between them.
 fn pool_line(g: &mut Game, f: Option<&TeamFor>, size: f64) -> String {
     let issued = f.map_or(0.0, |f| f.walls);
     let walls_word = |n: f64| format!("{} wall charge{}", js::num_str(n), if n == 1.0 { "" } else { "s" });
@@ -141,7 +141,7 @@ fn pool_line(g: &mut Game, f: Option<&TeamFor>, size: f64) -> String {
     line
 }
 
-/// The kind of drawing the gun of a weapon row is.   (loadout.ts gunIconOf)
+/// The kind of drawing the gun of a weapon row is.
 fn gun_kind(g: &Game, w: crate::weapons::WeaponId) -> &'static str {
     match g.m.weapons.weapons.get(w).expect("a card's row").cls {
         WeaponClass::Pistol => "pistol",
@@ -150,7 +150,7 @@ fn gun_kind(g: &Game, w: crate::weapons::WeaponId) -> &'static str {
     }
 }
 
-/// A chip of what a man carries, for one of his rows: what the row's value is on his chip, under the row his chip draws it by.   (loadout.ts drawSlots, `.lo-ics`)
+/// A chip of what a man carries, for one of his rows: what the row's value is on his chip, under the row his chip draws it by.
 fn thing_of(g: &Game, r: &KitRow, m: &MemberKit) -> Option<TeamThing> {
     let count = |n: f64| if n == 0.0 { None } else { Some(TeamThing { field: String::from(r.field.as_str()), value: js::num_str(n), label: r.label.clone(), n, can: false, icon: String::new() }) };
     match r.field {
@@ -177,7 +177,7 @@ fn thing_of(g: &Game, r: &KitRow, m: &MemberKit) -> Option<TeamThing> {
     }
 }
 
-/// The five places as the screen draws them, with no worn card yet.   (loadout.ts drawSlots, nameOf)
+/// The five places as the screen draws them, with no worn card yet.
 fn men_of(g: &mut Game, f: Option<&TeamFor>, size: f64, clip: Option<&MemberKit>) -> Vec<TeamMan> {
     let (men, all) = (roster_of(size), roster_of(4.0));
     let on = cards_on(g, f);
@@ -221,7 +221,7 @@ fn men_of(g: &mut Game, f: Option<&TeamFor>, size: f64, clip: Option<&MemberKit>
     out
 }
 
-/// The team as it would go; the worn cards come apart (`team_worn`: a card is kept in a form only the machine's side knows). Changes nothing.   (loadout.ts paint, drawSlots)
+/// The team as it would go; the worn cards come apart (`team_worn`: a card is kept in a form only the machine's side knows). Changes nothing.
 pub fn team_view(g: &mut Game, f: Option<&TeamFor>, clip: Option<&MemberKit>) -> TeamView {
     let size = kit_team(g, None);
     let choices = f.map_or_else(any_size, |f| squad_choices(&f.entry));
@@ -259,7 +259,7 @@ pub fn team_view(g: &mut Game, f: Option<&TeamFor>, clip: Option<&MemberKit>) ->
 }
 
 /// The card each man who comes will be staged with: his kept card as the team wears it, or the issue card with the mission's fields over it, and what the mission hands you over
-/// that where there is no card of yours to stand for it. None: he stays behind. Changes nothing.   (loadout.ts worn)
+/// that where there is no card of yours to stand for it. None: he stays behind. Changes nothing.
 pub fn team_worn(g: &mut Game, f: Option<&TeamFor>) -> Vec<Option<MemberKit>> {
     let size = kit_team(g, None);
     let worn = match f.filter(|f| f.issued_only(g)) {

@@ -10,7 +10,7 @@ pub(super) fn ff_live(g: &crate::game::Game) -> bool {
     !g.puppet.is_some()
 }
 
-/// A man of Sam's own side whose body a round of that side can find: living, on his feet. (friendlyfire.ts ffBody)
+/// A man of Sam's own side whose body a round of that side can find: living, on his feet.
 pub(super) fn ff_body(g: &crate::game::Game, gd: GuardId) -> bool {
     let c = g.gd[gd].ch;
     if !(g.gd[gd].state != crate::game::GuardState::Dead && g.ch[c].alive && !g.gd[gd].god && !g.gd[gd].civ.is_some()) {
@@ -20,7 +20,7 @@ pub(super) fn ff_body(g: &crate::game::Game, gd: GuardId) -> bool {
     !crate::teams::is_hostile(g, crate::teams::Team::Player, team)
 }
 
-/// Is this shooter's side Sam's: an operative, never the night staff or a defender. (friendlyfire.ts ffSide)
+/// Is this shooter's side Sam's: an operative, never the night staff or a defender.
 pub(super) fn ff_side(g: &crate::game::Game, sg: Option<GuardId>) -> bool {
     let Some(sg) = sg else { return false };
     if g.gd[sg].civ.is_some() {
@@ -30,7 +30,7 @@ pub(super) fn ff_side(g: &crate::game::Game, sg: Option<GuardId>) -> bool {
     !crate::teams::is_hostile(g, team, crate::teams::Team::Player) && !crate::teams::is_hostile(g, crate::teams::Team::Player, team)
 }
 
-/// THE CARE: the friend nearest the muzzle that a round from `muzzle` at `to`, thrown as wide as `spread` can throw it, could reach. (friendlyfire.ts friendInCone)
+/// THE CARE: the friend nearest the muzzle that a round from `muzzle` at `to`, thrown as wide as `spread` can throw it, could reach.
 pub fn friend_in_cone(g: &mut crate::game::Game, self_: GuardId, muzzle: V3, to: V3, spread: f64, def: Option<crate::weapons::WeaponId>, on: Option<CharId>) -> Option<crate::friendlyfire::FriendInCone> {
     if !ff_live(g) || !ff_side(g, Some(self_)) {
         return None;
@@ -82,7 +82,7 @@ pub fn friend_in_cone(g: &mut crate::game::Game, self_: GuardId, muzzle: V3, to:
     best
 }
 
-/// The closure `ask` of friendInCone: is this man nearer along the line than the best so far, in the cone and not behind anything solid. (friendlyfire.ts friendInCone)
+/// The closure `ask` of friendInCone: is this man nearer along the line than the best so far, in the cone and not behind anything solid.
 #[allow(clippy::too_many_arguments)]
 fn ask(g: &mut Game, c: CharId, who: crate::friendlyfire::FriendInCone, muzzle: V3, dx: f64, dz: f64, rise: f64, k: f64, past: f64, energy: Option<f64>, thin: f64, best: &mut Option<crate::friendlyfire::FriendInCone>, bt: &mut f64) {
     let pos = g.ch[c].pos;
@@ -126,12 +126,12 @@ fn ask(g: &mut Game, c: CharId, who: crate::friendlyfire::FriendInCone, muzzle: 
     *best = Some(who);
 }
 
-/// The closure `reaches` of friendInCone: level geometry only, less what the round goes through. (friendlyfire.ts friendInCone)
+/// The closure `reaches` of friendInCone: level geometry only, less what the round goes through.
 fn reaches(g: &mut Game, muzzle: V3, p: V3, energy: Option<f64>, thin: f64) -> bool {
     !crate::scene_collision::shot_blocked(g, muzzle, p, Some(0.02), energy) || (thin >= 0.0 && crate::wallpen::thin_line(g, muzzle, p, thin, None, None).is_some())
 }
 
-/// A teammate's round about to be born with a friend in its cone: not pressed. (friendlyfire.ts ffUnpressed)
+/// A teammate's round about to be born with a friend in its cone: not pressed.
 pub(super) fn ff_unpressed(g: &mut crate::game::Game, sg: Option<GuardId>, muzzle: V3, to: V3, spread: f64, def: &crate::weapons::WeaponDef) -> bool {
     let Some(sg) = sg else { return false };
     let b = def.pellets.as_ref().and_then(|p| p.breach);
@@ -148,7 +148,7 @@ pub(super) fn ff_unpressed(g: &mut crate::game::Game, sg: Option<GuardId>, muzzl
     true
 }
 
-/// The PLAYER's round flown from `from` to where it stopped: every standing teammate it went close past says so. (friendlyfire.ts ffPast)
+/// The PLAYER's round flown from `from` to where it stopped: every standing teammate it went close past says so.
 pub(super) fn ff_past(g: &mut crate::game::Game, from: V3, to: V3, into: Option<CharId>) {
     let dx = to[0] - from[0];
     let dy = to[1] - from[1];
@@ -184,12 +184,12 @@ pub(super) fn ff_past(g: &mut crate::game::Game, from: V3, to: V3, into: Option<
     }
 }
 
-/// The room fight's gate held a round for a friend in the cone that its own lane did not hold. (friendlyfire.ts ffHeld)
+/// The room fight's gate held a round for a friend in the cone that its own lane did not hold.
 pub fn ff_held(g: &mut crate::game::Game) {
     g.stats.friendlyfire.held += 1;
 }
 
-/// A round of Sam's side has gone into a man of Sam's side: counted. (friendlyfire.ts ffNote)
+/// A round of Sam's side has gone into a man of Sam's side: counted.
 pub(super) fn ff_note(g: &mut crate::game::Game, sg: Option<GuardId>, is_player: bool, into_sam: bool) {
     let s = &mut g.stats.friendlyfire;
     if is_player {

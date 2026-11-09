@@ -65,10 +65,10 @@ pub struct DoormannersK {
     ///  `planeDeg` of the door's own wall line (never less than half a metre of it: neither face is 'away from them') covered floor on EITHER face will do —
     ///  the face the half-plane calls theirs only ever under cover
     #[k(30.0)] pub plane_deg: f64,
-    /// REST (orders.ts restClear): a fall-in follower is not left standing in a frame's strip or where a leaf swings — with Sam stopped, a place the file's
+    /// REST: a fall-in follower is not left standing in a frame's strip or where a leaf swings — with Sam stopped, a place the file's
     ///  half-metre slack has left in one is given up for his place on the trail (or the nearest clear floor), and a man who has stood `restSecs` in one short
-    ///  of his place steps to the nearest clear floor (within `clearM`) and waits there. MARKS (orders.ts stackPosts): the stack marks
-    ///  of the men who are not at a jamb are moved off strips and swings the same way; PODS (doortools.ts offSwing, `podClear`, ships OFF): so are the points men are
+    ///  of his place steps to the nearest clear floor (within `clearM`) and waits there. MARKS: the stack marks
+    ///  of the men who are not at a jamb are moved off strips and swings the same way; PODS: so are the points men are
     ///  left on after an entry — measured on the barracks it loses the entry (11 runs won of 12 → 4: a corner point behind an open leaf is cover). SHORT (orders.ts
     ///  restShort): a man who cannot get to his mark does not give it up standing in a strip or a swing, and the
     ///  seconds the PASS gate holds him (`heldCap` of them an order) are not counted toward 'stuck'. Each off = as it was

@@ -5,18 +5,18 @@ use crate::ids::*;
 use crate::m;
 use crate::v3::{self, Quat, V3};
 
-/// May his aim be weighed now. `AIMWEIGHT.on` is settled on.   (aimweight.ts can)
+/// May his aim be weighed now. `AIMWEIGHT.on` is settled on.
 fn can(g: &mut Game) -> bool {
     let pl = g.player;
     g.puppet.is_none() && !g.pl[pl].down
 }
 
-/// Does his aim have weight right now.   (aimweight.ts aimWeighs)
+/// Does his aim have weight right now.
 pub fn aim_weighs(g: &mut Game) -> bool {
     can(g)
 }
 
-/// The top rate his gun's heading turns at, rad/s, by what is in his hands.   (aimweight.ts aimTop)
+/// The top rate his gun's heading turns at, rad/s, by what is in his hands.
 pub fn aim_top(g: &Game, pl: PlayerId) -> f64 {
     let gun = crate::game::player_gun_in_hand(g, pl);
     let scale = match gun {
@@ -26,7 +26,7 @@ pub fn aim_top(g: &Game, pl: PlayerId) -> f64 {
     m::max(0.5, g.k.aimweight.rate * scale)
 }
 
-/// The swing's arithmetic: what is still left to turn; `vel` carried on. `smooth` is `AIMWEIGHT.smooth`.   (aimweight.ts aimSwing, its working)
+/// The swing's arithmetic: what is still left to turn; `vel` carried on. `smooth` is `AIMWEIGHT.smooth`.
 fn swing(smooth: f64, vel: &mut f64, err: f64, top: f64, dt: f64) -> f64 {
     let mut err = err;
     let t = m::max(1e-3, smooth);
@@ -55,12 +55,12 @@ fn swing(smooth: f64, vel: &mut f64, err: f64, top: f64, dt: f64) -> f64 {
     err
 }
 
-/// THE SWING: a heading `err` off the cursor's bearing, turning at `w.vel`, stepped `dt` on: what is still left to turn.   (aimweight.ts aimSwing)
+/// THE SWING: a heading `err` off the cursor's bearing, turning at `w.vel`, stepped `dt` on: what is still left to turn.
 pub fn aim_swing(g: &Game, w: &mut AimSwingW, err: f64, top: f64, dt: f64) -> f64 {
     swing(g.k.aimweight.smooth, &mut w.vel, err, top, dt)
 }
 
-/// First thing in the player's update: this frame has not weighed his aim yet.   (aimweight.ts aimWeighBegin)
+/// First thing in the player's update: this frame has not weighed his aim yet.
 pub(super) fn aim_weigh_begin(g: &mut Game, pl: PlayerId) {
     let w = &mut g.pl[pl].aimw;
     w.was = w.live;
@@ -70,7 +70,7 @@ pub(super) fn aim_weigh_begin(g: &mut Game, pl: PlayerId) {
     w.err = 0.0;
 }
 
-/// The plain aim branch's step: turn `aim_yaw` toward the cursor's bearing. False = not weighing (the caller keeps its own ease).   (aimweight.ts aimWeighTurn)
+/// The plain aim branch's step: turn `aim_yaw` toward the cursor's bearing. False = not weighing (the caller keeps its own ease).
 pub(super) fn aim_weigh_turn(g: &mut Game, dt: f64) -> bool {
     if !can(g) {
         return false;
@@ -117,7 +117,7 @@ pub(super) fn aim_weigh_turn(g: &mut Game, dt: f64) -> bool {
     true
 }
 
-/// What leaves the gun goes where the gun points: `tgt` as it is while on the cursor, else turned about him by what is left to swing.   (aimweight.ts aimWeighShot)
+/// What leaves the gun goes where the gun points: `tgt` as it is while on the cursor, else turned about him by what is left to swing.
 pub(super) fn aim_weigh_shot(g: &mut Game, tgt: V3) -> V3 {
     let pl = g.player;
     let w = g.pl[pl].aimw;
@@ -134,7 +134,7 @@ pub(super) fn aim_weigh_shot(g: &mut Game, tgt: V3) -> V3 {
     [pos[0] + dx * cs - dz * sn, tgt[1], pos[2] + dz * cs + dx * sn]
 }
 
-/// The launcher's release: true = send it now; a load let go of mid-swing waits up to `launch_wait`.   (aimweight.ts aimWeighLaunch)
+/// The launcher's release: true = send it now; a load let go of mid-swing waits up to `launch_wait`.
 pub(super) fn aim_weigh_launch(g: &mut Game, dt: f64, up: bool) -> bool {
     let pl = g.player;
     let wait = g.k.aimweight.launch_wait;
@@ -155,7 +155,7 @@ pub(super) fn aim_weigh_launch(g: &mut Game, dt: f64, up: bool) -> bool {
     false
 }
 
-/// A load owed on a frame the gun is down: the wait's clock runs on. True = still owed.   (aimweight.ts aimWeighLaunchKeep)
+/// A load owed on a frame the gun is down: the wait's clock runs on. True = still owed.
 pub(super) fn aim_weigh_launch_keep(g: &mut Game, pl: PlayerId, dt: f64) -> bool {
     let wait = g.k.aimweight.launch_wait;
     let w = &mut g.pl[pl].aimw;
@@ -170,7 +170,7 @@ pub(super) fn aim_weigh_launch_keep(g: &mut Game, pl: PlayerId, dt: f64) -> bool
     true
 }
 
-/// Where the gun points: the circle's world point. None when nothing is weighing his aim (the circle is the cursor's). (aimweight.ts aimGunPoint)
+/// Where the gun points: the circle's world point. None when nothing is weighing his aim (the circle is the cursor's).
 pub fn aim_gun_point(g: &Game, seat: &crate::seats::SeatRef) -> Option<V3> {
     let pl = &g.pl[seat.player];
     let w = &pl.aimw;
@@ -179,7 +179,7 @@ pub fn aim_gun_point(g: &Game, seat: &crate::seats::SeatRef) -> Option<V3> {
     let c = &g.ch[pl.ch];
     Some([c.pos[0] + m::sin(c.aim_yaw) * w.r, w.y, c.pos[2] + m::cos(c.aim_yaw) * w.r])
 }
-/// Is the circle on the cursor (true when nothing is weighing his aim). (aimweight.ts aimGunOn)
+/// Is the circle on the cursor (true when nothing is weighing his aim).
 pub fn aim_gun_on(g: &Game, pl: PlayerId) -> bool {
     let w = &g.pl[pl].aimw;
     !w.live || w.on
@@ -189,25 +189,36 @@ pub fn aim_gun_on(g: &Game, pl: PlayerId) -> bool {
 mod tests {
     use super::swing;
 
-    /// The TypeScript's own bits (bun, EXACT.on, AIMWEIGHT.smooth 0.05): vel, err, top, dt in; vel, left out.
-    const CASES: [[u64; 6]; 7] = [
-        [0x0000000000000000, 0x4004000000000000, 0x4026000000000000, 0x3f91111111111111, 0x401fb53fc5789426, 0x400359ea72f45940],
-        [0x4008000000000000, 0xbff3333333333333, 0x402199999999999a, 0x3f81111111111111, 0xc005ef201dfeb7a1, 0xbff32c68826334ef],
-        [0xc01c000000000000, 0x3fd999999999999a, 0x402b800000000000, 0x3f7c71c71c71c71c, 0xbfdda013d8220f83, 0x3fdb225356d4b942],
-        [0x0000000000000000, 0x3f40624dd2f1a9fc, 0x4026000000000000, 0x3f91111111111111, 0x0000000000000000, 0x0000000000000000],
-        [0x0000000000000000, 0x4008000000000000, 0x4026000000000000, 0x3fe0000000000000, 0x0000000000000000, 0x0000000000000000],
-        [0x0000000000000000, 0x0000000000000000, 0x4026000000000000, 0x3f91111111111111, 0x0000000000000000, 0x0000000000000000],
-        [0x4034000000000000, 0xc008cccccccccccd, 0x3fe0000000000000, 0x3fa1111111111111, 0x3fe8d9869fa8879b, 0xc00a835ff8b0d050],
-    ];
+
+    const FRAME: f64 = 1.0 / 60.0;
+
+    /// A failure means the aim feels different: a gun that overshoots, never lands, swings one way faster than the other, or turns at another rate on another machine's frame rate.
+    #[test]
+    fn a_swing_closes_the_gap_and_lands_dead_on_it() {
+        let (mut vel, top) = (0.0, 11.0);
+        let left = swing(0.05, &mut vel, 2.5, top, FRAME);
+        assert!(left > 0.0 && left < 2.5 && vel > 0.0, "the first frame starts it: {left}, {vel}");
+        let mut vel = 0.0;
+        assert_eq!((swing(0.05, &mut vel, 3.0, top, 0.5), vel), (0.0, 0.0), "a long frame gets there and stops");
+        let mut vel = 0.0;
+        assert_eq!((swing(0.05, &mut vel, 5e-4, top, FRAME), vel), (0.0, 0.0), "a sliver left, moving slowly, is there");
+        let mut vel = 0.0;
+        assert_eq!((swing(0.05, &mut vel, 0.0, top, FRAME), vel), (0.0, 0.0), "no gap: nothing moves");
+    }
 
     #[test]
-    fn swing_matches_the_typescript_bits() {
-        for c in CASES {
-            let f = f64::from_bits;
-            let mut vel = f(c[0]);
-            let left = swing(0.05, &mut vel, f(c[1]), f(c[2]), f(c[3]));
-            assert_eq!(vel.to_bits(), c[4], "vel of {:x?}", c);
-            assert_eq!(left.to_bits(), c[5], "left of {:x?}", c);
-        }
+    fn a_swing_is_the_same_either_way_and_at_any_frame_rate_and_held_to_its_top_speed() {
+        let (mut a, mut b) = (0.0, 0.0);
+        let (l, r) = (swing(0.05, &mut a, 2.5, 11.0, FRAME), swing(0.05, &mut b, -2.5, 11.0, FRAME));
+        assert!((l + r).abs() < 1e-12 && (a + b).abs() < 1e-12, "{l} {r} {a} {b}");
+        let mut once = 0.0;
+        let one = swing(0.05, &mut once, 2.5, 11.0, FRAME);
+        let mut twice = 0.0;
+        let half = swing(0.05, &mut twice, 2.5, 11.0, FRAME / 2.0);
+        let two = swing(0.05, &mut twice, half, 11.0, FRAME / 2.0);
+        assert!((one - two).abs() < 1e-9 && (once - twice).abs() < 1e-9, "{one} {two}");
+        let after = |top: f64| { let (mut vel, mut left) = (0.0, 2.5); for _ in 0..15 { left = swing(0.05, &mut vel, left, top, FRAME); } left };
+        assert!(after(1.0) > after(11.0) + 0.5, "{} {}", after(1.0), after(11.0));
+        assert!(2.5 - after(1.0) < 0.3, "a quarter of a second at 1 rad/s covers about a quarter radian: {}", after(1.0));
     }
 }

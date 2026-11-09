@@ -106,7 +106,7 @@ pub(in crate::people) fn alert(g: &mut Game, gd: GuardId, dt: f64, s: &Sensed) -
             if g.gd[gd].search_t > 4.0 && !g.called_in && staff {
                 g.called_in = true;
                 let line = if !crate::dialogue::is_office(g) { "target is down. send someone over." } else { "target is down. send someone up." };
-                crate::game::game_say(g, gd, line, Some(true), None, None);
+                crate::game::game_say(g, gd, line, Some(true), None);
                 let at = head_or_pos(g, c);
                 crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.5), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.95 }));
             }

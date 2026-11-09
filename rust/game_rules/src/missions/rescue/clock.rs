@@ -1,4 +1,3 @@
-//! src/game/rescue.ts lines 899 to 1061
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -13,7 +12,7 @@ fn pos_of(g: &mut Game, gd: GuardId) -> V3 {
     g.ch[c].pos
 }
 
-/// where a round at this man goes: his chest bone, else above his feet   (rescue.ts:907, 932)
+/// where a round at this man goes: his chest bone, else above his feet
 fn chest_of(g: &Game, gd: GuardId) -> V3 {
     let c = g.gd[gd].ch;
     match g.ch[c].bones.get(crate::character::Bone::Chest).copied() {
@@ -45,7 +44,7 @@ fn hostage_name(g: &Game, h: GuardId) -> String {
     }
 }
 
-/// the state endGuardScript is handed for a man taken off his script in place: his own, a dead man's being 'patrol'   (rescue.ts:938)
+/// the state endGuardScript is handed for a man taken off his script in place: his own, a dead man's being 'patrol'
 fn script_end_state(s: crate::game::GuardState) -> crate::squad::EndGuardScriptState {
     match s {
         crate::game::GuardState::Dead | crate::game::GuardState::Patrol => crate::squad::EndGuardScriptState::Patrol,
@@ -55,7 +54,7 @@ fn script_end_state(s: crate::game::GuardState) -> crate::squad::EndGuardScriptS
     }
 }
 
-/// the captor's clock, and the act it ends in: his gun on a hostage, the round, the next man's turn   (rescue.ts Rescue.clock)
+/// the captor's clock, and the act it ends in: his gun on a hostage, the round, the next man's turn
 pub(super) fn rescue_clock(g: &mut crate::game::Game, dt: f64) {
     if g.rescue.t0.is_nan() || rescue_over(g) { return; }
     if let Some(a) = g.rescue.act.clone() {
@@ -124,7 +123,7 @@ pub(super) fn rescue_clock(g: &mut crate::game::Game, dt: f64) {
             RescueStep::Counting => "I'm counting! back off!",
             _ => "stay out! I'll do it!",
         };
-        crate::game::game_say(g, cap, line, None, None, None);
+        crate::game::game_say(g, cap, line, None, None);
     }
     if g.rescue.resolve >= 1.0 {
         let hs = g.rescue.hostages.clone();
@@ -162,12 +161,12 @@ pub(super) fn rescue_clock(g: &mut crate::game::Game, dt: f64) {
         });
         g.rescue.act = Some(RescueAct { by: cap, victim: v, at: g.time + g.k.rescue.aim_secs, def, hold: held });
         rescue_note(g, "act");
-        crate::game::game_say(g, cap, "that's it — time's up!", None, None, None);
+        crate::game::game_say(g, cap, "that's it — time's up!", None, None);
         crate::civilians::hostage_say(g, v, crate::dialogue::HostageMoment::Aimed, None);
     }
 }
 
-/// the act is over, one way or the other: the man off the scenario's script and back on the room fight's roster as it had him   (rescue.ts Rescue.endAct)
+/// the act is over, one way or the other: the man off the scenario's script and back on the room fight's roster as it had him
 fn rescue_end_act(g: &mut crate::game::Game) {
     let a = match g.rescue.act.take() {
         Some(a) => a,
@@ -185,19 +184,14 @@ fn rescue_end_act(g: &mut crate::game::Game) {
     }
 }
 
-/// the captor's clock moves to a step: noted, and two of the steps told to the player   (rescue.ts Rescue.setStep)
+/// the captor's clock moves to a step: noted, and two of the steps told to the player
 fn rescue_set_step(g: &mut crate::game::Game, s: crate::rescue::RescueStep) {
     if s == g.rescue.step { return; }
     g.rescue.step = s;
     rescue_note(g, &alloc::format!("step:{}", s.as_str()));
-    if s == RescueStep::Counting {
-        crate::game::game_msg(g, "the captor is counting down");
-    } else if s == RescueStep::AboutTo {
-        crate::game::game_msg(g, "the captor is about to shoot a hostage");
-    }
 }
 
-/// the hostages' count, the room secured and held, the run's end   (rescue.ts Rescue.outcome)
+/// the hostages' count, the room secured and held, the run's end
 pub(super) fn rescue_outcome(g: &mut crate::game::Game) {
     if rescue_over(g) { return; }
     let mut i = 0;
@@ -210,10 +204,8 @@ pub(super) fn rescue_outcome(g: &mut crate::game::Game) {
         let name = hostage_name(g, h);
         if g.rescue.executed.has(h) {
             rescue_note(g, &alloc::format!("executed:{}", callsign));
-            crate::game::game_msg(g, &alloc::format!("{} has been shot", name));
         } else if g.rescue.hostiles.iter().any(|&x| g.ch[g.gd[x].ch].id == g.gd[h].killer_id) {
             rescue_note(g, &alloc::format!("killed:{}", callsign));
-            crate::game::game_msg(g, &alloc::format!("{} has been killed", name));
         } else {
             rescue_note(g, &alloc::format!("teamfire:{}", callsign));
             rescue_end(g, RescueEndState::Lost, &alloc::format!("{} was hit by your own fire", name));
@@ -247,7 +239,6 @@ pub(super) fn rescue_outcome(g: &mut crate::game::Game) {
         if g.rescue.secured_at.is_nan() {
             g.rescue.secured_at = g.time;
             rescue_note(g, "secured");
-            crate::game::game_msg(g, "hostage room secured. now bring them out or clear the building");
             if !g.rescue.said.has(String::from("h:secured")) {
                 g.rescue.said.add(String::from("h:secured"));
                 let h = g.rescue.hostages.iter().copied().find(|&x| g.gd[x].state != crate::game::GuardState::Dead);
@@ -259,11 +250,10 @@ pub(super) fn rescue_outcome(g: &mut crate::game::Game) {
     } else if !g.rescue.secured_at.is_nan() {
         g.rescue.secured_at = f64::NAN;
         rescue_note(g, "unsecured");
-        crate::game::game_msg(g, if theirs { "contact in the hostage room, so it isn't yours yet" } else { "nobody is holding the hostage room" });
     }
 }
 
-/// the hostages' voices: one low line at a time across the room, off no game die   (rescue.ts Rescue.voices)
+/// the hostages' voices: one low line at a time across the room, off no game die
 pub(super) fn rescue_voices(g: &mut crate::game::Game) {
     let b = room(g);
     let hs = g.rescue.hostages.clone();
@@ -276,7 +266,7 @@ pub(super) fn rescue_voices(g: &mut crate::game::Game) {
             if let Some(by) = quiet.or(there.first().copied()) {
                 let team = crate::dialogue::hostage_lines_table().team;
                 let line = js::rem(g.rescue.staged, team.len() as f64) as usize;
-                crate::game::game_say(g, by, &team[line], None, None, None);
+                crate::game::game_say(g, by, &team[line], None, None);
             }
         }
     }
@@ -312,19 +302,9 @@ fn next_voice(g: &mut Game, alive: &[GuardId]) -> GuardId {
     alive[js::rem(n, alive.len() as f64) as usize]
 }
 
-/// the run's end: the result kept, the act let go, the card's line   (rescue.ts Rescue.end)
+/// the run's end: the result kept, the act let go, the card's line
 fn rescue_end(g: &mut crate::game::Game, state: crate::rescue::RescueEndState, why: &str) {
     let lost = state == RescueEndState::Lost;
-    let ops = g.rescue.ops.clone();
-    let team = (if g.pl[g.player].down { 0 } else { 1 }) + standing(g, &ops).len();
-    let secs = if g.rescue.t0.is_nan() { 0.0 } else { (if g.rescue.secured_at.is_nan() || lost { g.time } else { g.rescue.secured_at }) - g.rescue.t0 };
-    let timed = if g.rescue.t0.is_nan() {
-        String::from("room secured before anybody knew")
-    } else if g.rescue.secured_at.is_nan() && !lost {
-        alloc::format!("{} s after the clock started", js::to_fixed(secs, 0))
-    } else {
-        alloc::format!("room secured {} s after the clock started", js::to_fixed(secs, 0))
-    };
     let hs = g.rescue.hostages.clone();
     let left = standing(g, &hs).len();
     let grade = if lost { RescueResultGrade::Failed } else if left == hs.len() { RescueResultGrade::Clean } else { RescueResultGrade::Costly };
@@ -336,15 +316,9 @@ fn rescue_end(g: &mut crate::game::Game, state: crate::rescue::RescueEndState, w
     });
     rescue_end_act(g);
     if lost { rescue_note(g, &alloc::format!("lost:{}", why)); } else { rescue_note(g, "rescued"); }
-    let line = if lost {
-        alloc::format!("FAILED — {}. press Shift+Enter to restart", why)
-    } else {
-        alloc::format!("{} — {} · team {}/{} up · {}. press Shift+Enter to restart", if grade == RescueResultGrade::Clean { "CLEAN" } else { "COSTLY" }, why, team, 1 + ops.len(), timed)
-    };
-    crate::game::game_msg(g, &line);
 }
 
-/// where it stands, in one word   (rescue.ts Rescue.state)
+/// where it stands, in one word
 pub fn rescue_state(g: &crate::game::Game) -> crate::rescue::RescueState {
     if !g.rescue.active { return RescueState::Off; }
     if let Some(r) = &g.rescue.result {

@@ -16,9 +16,7 @@ pub struct RoofsCountedBoxesItem {
     pub h: Vec<f64>,
 }
 
-/// (src/sim/weatherhome.ts:8 WX: a table nothing writes)
 pub fn wx() -> crate::sim_weatherhome::WX { crate::sim_weatherhome::WX { storm: 1.0, roofs: 13.0, air_acc: 22.0 } }
 
-/// (src/sim/weatherhome.ts:11 WX_BIT)
 pub const WX_BIT: f64 = 1024.0;
 

@@ -44,9 +44,7 @@ pub struct FireLineFeet {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct FirelineMod {
-    /// (src/game/fireline.ts:79 states)
     pub states: JsMap<GuardId, crate::fireline::St>,
-    /// (src/game/fireline.ts:83 fired)
     pub fired: JsMap<PlayerId, crate::fireline::Fired>,
 }
 

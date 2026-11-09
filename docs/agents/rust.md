@@ -10,14 +10,15 @@ The same start and inputs make the same game to the bit on every host.
 
 ## Where the code is
 
-Each crate is its own cargo workspace and target folder, but `prim` and `sim` share `rust/Cargo.toml`.
+Each crate is its own cargo workspace and target folder.
 
 | crate | is | it links |
 |---|---|---|
 | `rust/prim/` | √, floor and trunc, exact by the standard | nothing |
-| `rust/sim/` | hot loops on columns, each game's block. `no_std` | `prim` |
+| `rust/maths/` | the game's own maths and its die. `no_std` | `prim` |
 | `rust/game_derive/` | the `ToBytes` and `Knobs` derives | nothing |
-| `rust/game_types/` | every module's types, `Game`, ids, `m`, `js`, `dice`, knob tables. `no_std`, no rules | `sim`, `prim`, `game_derive` |
+| `rust/game_types/` | every module's types, `Game`, ids, `m`, `js`, `dice`, knob tables. `no_std`, no rules | `maths`, `prim`, `game_derive` |
+| `rust/sim/` | hot loops, over records and columns; each game's block. `no_std` | `game_types`, `maths`, `prim` |
 | `rust/game_rules/` | the rules; its crate name is `game`. `no_std` | `game_types`, `sim`, `prim` |
 | `rust/game_draw/` | what the picture is told. `no_std` | `game`, `sim` |
 | `rust/game_start/` | a game from a level file, a host's work round a step (`src/host/`); tests, `gate`, `hold`, `levels`, `missions` | `game`, `sim`, `game_draw` under `std` |
@@ -28,9 +29,9 @@ Each crate is its own cargo workspace and target folder, but `prim` and `sim` sh
 ### What holds determinism
 
 - **The compiler.** A `no_std` crate cannot name a hash map, a thread, a clock or a file.
-- **`tools/qa/rust-rules-check.ts`, over `rust/sim` and `rust/prim` only.** No rounded float method, no `mul_add`, nothing relaxed, no cell or atomic,
+- **`tools/qa/rust-rules-check.ts`, over `rust/sim`, `rust/maths` and `rust/prim` only.** No rounded float method, no `mul_add`, nothing relaxed, no cell or atomic,
   no `std::`, and each `static mut` has a row in `STATICS`. In `rust/game_rules` and `rust/game_types` only the reader holds this.
-- **`m::`.** `m::sin`, `m::atan2`, `m::hyp2`, `m::pow` and the rest are the game's own, from + − × ÷ and √ (`rust/sim/src/maths.rs`), because a
+- **`m::`.** `m::sin`, `m::atan2`, `m::hyp2`, `m::pow` and the rest are the game's own, from + − × ÷ and √ (`rust/maths/`), because a
   library's sine differs by machine. `m::min` and `m::max` fix the answers for NaN and −0. Write these, never a method on `f64`. Do not tidy
   arithmetic that runs: `(a - b) - c` is not `a - (b + c)`.
 - **`js::`.** `JsMap` and `JsSet` walk keys in the order first set, and that order is play. `js::sort_by` is stable. `js::to_i32`, `js::truthy` and
@@ -150,7 +151,7 @@ and neither side may link the other. Inside the rules:
   (`game_start/src/block.rs`). A new `static mut` needs its `STATICS` row, saying STATE, SCRATCH, COPY or TALLY.
 - **A knob:** `#[k(value)] pub name: f64` in its table. A new table is a file in `knobs/` with `#[derive(Clone, Copy, Debug, ToBytes, Knobs)]`, a
   `mod` line and a `Knobs` field in `knobs/mod.rs`. A slider is a `ROWS` line in `shown.rs`; an address word, only if asked for, a `WORDS` line in
-  `game_start/src/host/words.rs`. A number `rust/sim` reads is also a line in `sim/src/knobs.rs` and in `knobs_to_rust`.
+  `game_start/src/host/words.rs`. A loop of `rust/sim` takes the tables (`tune: &Knobs`) and reads it by its name.
 - **A table of things:** a row in `id!`, a `Tab` field in `Tabs` and in `Tabs::blank`.
 - **A question:** the walk in `rust/sim`; a `&mut Game` form and a shared form (`line_shared`) in `scene_collision.rs`; a method on `WorldAsk`,
   and on `Asker` if a rule needs one body; a call in `game_face/src/ask.rs` and `src/draw/ask.ts` if the page asks it.
@@ -170,7 +171,7 @@ The rules were machine-translated from TypeScript. None of these is a pattern fo
 | `f64` for counts and kinds (`box_count`) | Match it in a field others read. A new type uses `bool`, `u32`, an enum, an id. Mending one moves pins: its own commit |
 | `JsMap`, `JsSet` | Keep them: the walk's order is play. Use a `Tab` or `Vec` where ids are dense. Swap one only if the pins hold |
 | `Option<f64>` arguments, `js::truthy(x)`, `js::or(x, d)` | Match when calling. A new function takes plain arguments and compares |
-| `c_2`, `g_2`, `weather_set_wet_2`, `GameMessagesItem`, `DressModDRESS` | Rename when you are there. A part's field name is a line in the pins: `gate pin` |
+| `c_2`, `g_2`, `weather_set_wet_2`, `DressModDRESS` | Rename when you are there. A part's field name is a line in the pins: `gate pin` |
 | `&mut Game` on a function that only reads | `tools/fold/readers.sh --soften`, or by hand. A new one takes `&Game` |
 | comments that cite a deleted file, "the TypeScript", or "ON in the page" | Trust the statements. Mend a false comment when you are in the file |
 | `Opaque`, `FnField`, a `todo!()` body in `render_*/`, a module of only types | Call none: `todo!()` panics. The crates `#![allow(dead_code)]`, so use the fold tool |

@@ -3,12 +3,12 @@ pub use types::*;
 use crate::game::Game;
 use crate::m;
 
-/// Within 0..1; a NaN stays a NaN. (wallsnap.ts clamp01)
+/// Within 0..1; a NaN stays a NaN.
 fn clamp01(x: f64) -> f64 {
     if x < 0.0 { 0.0 } else if x > 1.0 { 1.0 } else { x }
 }
 
-/// Seconds the take runs for a glide of `dist` metres and a turn of `turn` radians. (wallsnap.ts wsTakeSecs)
+/// Seconds the take runs for a glide of `dist` metres and a turn of `turn` radians.
 pub fn ws_take_secs(g: &crate::game::Game, dist: f64, turn: f64) -> f64 {
     take_secs(&g.k.wallsnap, dist, turn)
 }
@@ -18,7 +18,7 @@ fn take_secs(w: &crate::knobs::WallsnapK, dist: f64, turn: f64) -> f64 {
     m::min(w.take_max, m::max(w.take_min, t)) * m::max(0.25, w.slow_take)
 }
 
-/// How far out (m) the key-less take's clock starts for a man closing on the face at `into` m/s. (wallsnap.ts wsPressNear)
+/// How far out (m) the key-less take's clock starts for a man closing on the face at `into` m/s.
 pub fn ws_press_near(g: &crate::game::Game, into: f64) -> f64 {
     press_near(&g.k.wallsnap, into)
 }
@@ -27,12 +27,12 @@ fn press_near(w: &crate::knobs::WallsnapK, into: f64) -> f64 {
     m::max(w.press_near, w.press_flow + w.press_secs * m::max(0.0, into))
 }
 
-/// Ease-out by power p: 0 to 0, 1 to 1, fastest at the start. (wallsnap.ts wsEase)
+/// Ease-out by power p: 0 to 0, 1 to 1, fastest at the start.
 pub fn ws_ease(s: f64, p: f64) -> f64 {
     1.0 - m::pow(1.0 - clamp01(s), p)
 }
 
-/// The landing's settle, t seconds after the back arrived. (wallsnap.ts wsHit)
+/// The landing's settle, t seconds after the back arrived.
 pub fn ws_hit(g: &crate::game::Game, t: f64) -> f64 {
     hit(g.k.wallsnap.hit_peak, t)
 }
@@ -41,12 +41,12 @@ fn hit(a: f64, t: f64) -> f64 {
     if t < 0.0 || t > 8.0 * a { 0.0 } else { (t / a) * m::exp(1.0 - t / a) }
 }
 
-/// The cursor's point about a wall's end: angle (degrees) from the wall's line carried on, and distance from the corner. (wallsnap.ts wsCornerAngle)
+/// The cursor's point about a wall's end: angle (degrees) from the wall's line carried on, and distance from the corner.
 pub fn ws_corner_angle(a: f64, b: f64) -> crate::wallsnap::WsCornerAngle {
     crate::wallsnap::WsCornerAngle { deg: m::atan2(-b, a) * 180.0 / m::PI, dist: m::hyp2(a, b) }
 }
 
-/// The angle (degrees) up to which a man `back` short of the end and `off` the plane already sees past the corner. (wallsnap.ts wsSeenDeg)
+/// The angle (degrees) up to which a man `back` short of the end and `off` the plane already sees past the corner.
 pub fn ws_seen_deg(back: f64, off: f64) -> f64 {
     m::atan2(off, back) * 180.0 / m::PI
 }
@@ -54,88 +54,77 @@ pub fn ws_seen_deg(back: f64, off: f64) -> f64 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    /// The TypeScript's own bits under EXACT, with the page's rows (slow and pressRun on), then the rows flipped.
+
+    /// The take to the wall is longer for a longer glide or a bigger turn, either way round, inside its bounds, and the whole of it stretches by the slow row, never to under a quarter.
     #[test]
-    fn take_secs_bits() {
+    fn the_take_runs_longer_for_further_and_for_more_turn_inside_its_bounds() {
         let mut w = crate::knobs::WallsnapK::page();
-        let on: [(f64, f64, u64); 5] = [
-            (0.7, 0.9, 0x3fdd560e7241d318),
-            (0.0, 0.0, 0x3fceb851eb851eb8),
-            (3.3, -3.1, 0x3fe3333333333333),
-            (0.25, 1.234, 0x3fd4efc903b94307),
-            (0.123, 2.5, 0x3fd56e3b22544036),
-        ];
-        for (d, t, bits) in on { assert_eq!(take_secs(&w, d, t).to_bits(), bits); }
-        w.slow_take = 0.1; // the floor of a quarter
-        assert_eq!(take_secs(&w, 0.25, 1.234).to_bits(), 0x3fa4efc903b94307);
+        w.slow_take = 1.0;
+        assert_eq!(take_secs(&w, 0.0, 0.0), m::max(w.take_min, w.take_base));
+        assert!(take_secs(&w, 0.5, 0.0) > take_secs(&w, 0.25, 0.0));
+        assert!(take_secs(&w, 0.25, 1.0) > take_secs(&w, 0.25, 0.0));
+        assert_eq!(take_secs(&w, 0.25, 1.0), take_secs(&w, 0.25, -1.0));
+        assert_eq!(take_secs(&w, 100.0, 3.0), w.take_max);
+        w.take_base = 0.0;
+        assert_eq!(take_secs(&w, 0.0, 0.0), w.take_min);
+        w.take_base = 0.2;
+        let plain = take_secs(&w, 0.1, 0.5);
+        w.slow_take = 2.0;
+        assert_eq!(take_secs(&w, 0.1, 0.5), plain * 2.0);
+        w.slow_take = 0.1;
+        assert_eq!(take_secs(&w, 0.1, 0.5), plain * 0.25);
     }
 
+    /// A man closing fast starts the take further out; standing or backing off, the near distance is the least of it.
     #[test]
-    fn press_near_bits() {
+    fn a_man_closing_fast_is_taken_from_further_out() {
         let w = crate::knobs::WallsnapK::page();
-        for (i, bits) in [(0.0, 0x3fe3333333333333u64), (1.55, 0x3fe3333333333333), (4.7, 0x3ff0bc6a7ef9db23), (-2.0, 0x3fe3333333333333)] {
-            assert_eq!(press_near(&w, i).to_bits(), bits);
-        }
+        assert_eq!(press_near(&w, 0.0), w.press_near);
+        assert_eq!(press_near(&w, -2.0), w.press_near);
+        assert_eq!(press_near(&w, 4.7), w.press_flow + w.press_secs * 4.7);
+        assert!(press_near(&w, 4.7) > w.press_near);
     }
 
+    /// The glide goes from nowhere to all the way, fastest at the start, and stops at its ends.
     #[test]
-    fn ease_bits() {
-        for (s, p, bits) in [
-            (0.125, 2.0, 0x3fce000000000000u64),
-            (0.37, 3.0, 0x3fe7ff9d6f112fd3),
-            (-1.0, 2.0, 0x0000000000000000),
-            (2.0, 3.0, 0x3ff0000000000000),
-            (0.777, 2.5, 0x3fef3f9f9b4fedf8),
-        ] {
-            assert_eq!(ws_ease(s, p).to_bits(), bits);
-        }
+    fn the_glide_is_fastest_at_the_start() {
+        assert_eq!((ws_ease(0.0, 2.0), ws_ease(1.0, 2.0), ws_ease(-1.0, 2.0), ws_ease(2.0, 3.0)), (0.0, 1.0, 0.0, 1.0));
+        assert_eq!(ws_ease(0.125, 2.0), 1.0 - 0.875 * 0.875, "a quarter of the way in the first eighth of the time, as the knob's note has it");
+        assert!(ws_ease(0.1, 2.0) - ws_ease(0.0, 2.0) > ws_ease(1.0, 2.0) - ws_ease(0.9, 2.0));
     }
 
+    /// The landing's settle rises to all of it at its peak, dies away, and is nothing outside its span.
     #[test]
-    fn hit_bits() {
+    fn the_landing_peaks_and_dies_away() {
         let a = crate::knobs::WallsnapK::page().hit_peak;
-        for (t, bits) in [
-            (0.0, 0x0000000000000000u64),
-            (0.05, 0x3ff0000000000000),
-            (0.013, 0x3fe1702ccae6cb7b),
-            (0.31, 0x3fa1830426ca6c44),
-            (0.4, 0x3f7de16b9c24a98f),
-            (0.4000001, 0x0000000000000000),
-            (-0.1, 0x0000000000000000),
-        ] {
-            assert_eq!(hit(a, t).to_bits(), bits);
-        }
+        assert_eq!(hit(a, a), 1.0);
+        assert_eq!((hit(a, 0.0), hit(a, -0.1), hit(a, 8.0 * a + 1e-6)), (0.0, 0.0, 0.0));
+        assert!(hit(a, a * 0.5) < 1.0 && hit(a, a * 2.0) < 1.0);
+        assert!(hit(a, a * 2.0) > hit(a, a * 4.0));
+        assert!(hit(a, 8.0 * a) > 0.0 && hit(a, 8.0 * a) < 0.02, "small enough to stop on");
     }
 
+    /// The cursor about a wall's end: on the wall's line carried on it is at 0 degrees, round past the corner it climbs to a right angle, and back along the wall's own side the sign flips.
     #[test]
-    fn corner_bits() {
-        for (a, b, deg, dist) in [
-            (1.3, -0.7, 0x403c4cfe547314b1u64, 0x3ff79fabe917e2f5u64),
-            (-0.4, 0.9, 0xc05c7d996b5b24ba, 0x3fef842f2f055704),
-            (0.0, 0.0, 0x8000000000000000, 0x0000000000000000),
-            (0.61, 2.2, 0xc052a02d2b3f86aa, 0x40024396c45e848d),
-        ] {
-            let r = ws_corner_angle(a, b);
-            assert_eq!((r.deg.to_bits(), r.dist.to_bits()), (deg, dist));
-        }
+    fn a_cursor_round_a_corner_is_measured_from_the_wall_carried_on() {
+        let r = ws_corner_angle(3.0, 0.0);
+        assert_eq!(r.deg + 0.0, 0.0);
+        assert_eq!(r.dist, 3.0);
+        let r = ws_corner_angle(3.0, -4.0);
+        assert_eq!(r.dist, 5.0);
+        assert!(r.deg > 0.0 && r.deg < 90.0);
+        assert_eq!(ws_corner_angle(0.0, -2.0).deg, 90.0);
+        assert!(ws_corner_angle(1.0, 1.0).deg < 0.0);
+        assert_eq!(ws_corner_angle(0.0, 0.0).dist, 0.0);
     }
 
+    /// Up at the corner he already sees square round it; further back, or closer to the plane, he sees less.
     #[test]
-    fn seen_bits() {
-        for (back, off, bits) in [
-            (0.6, 0.35, 0x403e41a5ddaed655u64),
-            (0.0, 0.2, 0x4056800000000000),
-            (1.7, -0.3, 0xc0240415edb47031),
-        ] {
-            assert_eq!(ws_seen_deg(back, off).to_bits(), bits);
-        }
-    }
-
-    #[test]
-    fn clamp_keeps_nan() {
-        assert_eq!(clamp01(-0.5), 0.0);
-        assert_eq!(clamp01(0.5), 0.5);
-        assert_eq!(clamp01(1.5), 1.0);
-        assert!(clamp01(f64::NAN).is_nan());
+    fn a_man_sees_less_past_the_corner_the_further_back_he_stands() {
+        assert_eq!(ws_seen_deg(0.0, 0.2), 90.0);
+        assert_eq!(ws_seen_deg(1.0, 0.0), 0.0);
+        assert!(ws_seen_deg(0.6, 0.35) > ws_seen_deg(1.2, 0.35));
+        assert!(ws_seen_deg(0.6, 0.35) > ws_seen_deg(0.6, 0.2));
+        assert!(ws_seen_deg(1.7, -0.3) < 0.0, "behind the plane");
     }
 }

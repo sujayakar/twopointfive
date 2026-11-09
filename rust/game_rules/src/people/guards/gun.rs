@@ -1,4 +1,3 @@
-//! src/game/guards.ts lines 2542 to 2914
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -17,21 +16,21 @@ fn lend<'a, 'b>(s: &'a mut Option<&'b mut (dyn FnMut(&mut Game, f64) -> bool + '
     }
 }
 
-/// A gun's row, as a copy: a call on it lends g beside it. Nothing here writes a row. (guards.ts w.def)
+/// A gun's row, as a copy: a call on it lends g beside it. Nothing here writes a row.
 fn def_row(g: &Game, w: FirearmId) -> crate::weapons::WeaponDef {
     g.m.weapons.weapons.get(g.fa[w].def).unwrap().clone()
 }
 
 // ------------------------------------------------------------ the guards' collision
 
-/// g.col.collideCircle(c.pos, c.radius, 0.2, 1.5, iterations): moves c.pos in place. (guards.ts:2570, 2585, 2594)
+/// g.col.collideCircle(c.pos, c.radius, 0.2, 1.5, iterations): moves c.pos in place.
 fn push_out(g: &mut Game, c: CharId, iterations: Option<f64>) {
     let (mut p, r) = (g.ch[c].pos, g.ch[c].radius);
     crate::scene_collision::collide_circle(g, &mut p, r, 0.2, 1.5, iterations);
     g.ch[c].pos = p;
 }
 
-/// The bottom of updateGuard: the statics swept and pushed out, the colleagues' capped shove, the statics again for the shove. (guards.ts collideGuard)
+/// The bottom of updateGuard: the statics swept and pushed out, the colleagues' capped shove, the statics again for the shove.
 pub(super) fn collide_guard(g: &mut crate::game::Game, gd: GuardId, p0x: f64, p0z: f64) {
     let c = g.gd[gd].ch;
     // (1) statics, swept from the frame's start (or the snap's spot)
@@ -63,7 +62,7 @@ pub(super) fn collide_guard(g: &mut crate::game::Game, gd: GuardId, p0x: f64, p0
     push_out(g, c, None);
 }
 
-/// Walks a body from (fx, fz) to where its pos says in strides with a two-pass push-out after each, when that is more than one stride. (guards.ts sweepStatics)
+/// Walks a body from (fx, fz) to where its pos says in strides with a two-pass push-out after each, when that is more than one stride.
 fn sweep_statics(g: &mut crate::game::Game, c_2: CharId, fx: f64, fz: f64) {
     let c = c_2;
     let (tx, tz) = (g.ch[c].pos[0], g.ch[c].pos[2]);
@@ -141,7 +140,7 @@ fn light_in(g: &mut crate::game::Game, p: V3, skip_owner: Option<&mut dyn FnMut(
     (if leave == 0.0 { m::max(direct + f.mean, f.best) } else { direct }, Some(f.place))
 }
 
-/// Is this lamp, one no fixture feeds, one of a light question's. The level's own lamps have these gates in the module (light.rs `row`). (guards.ts lampAsked)
+/// Is this lamp, one no fixture feeds, one of a light question's. The level's own lamps have these gates in the module (light.rs `row`).
 fn lamp_asked(g: &mut crate::game::Game, l: LightId, skip_owner: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>, steady_only: bool) -> bool {
     if !g.tab.light[l].enabled || g.tab.light[l].intensity <= 0.0 || g.tab.light[l].kind == 2.0 { return false; }
     if let Some(f) = skip_owner {
@@ -151,14 +150,14 @@ fn lamp_asked(g: &mut crate::game::Game, l: LightId, skip_owner: Option<&mut dyn
     !(steady_only && (g.tab.light[l].ttl >= 0.0 || g.tab.light[l].transient.unwrap_or(false)))
 }
 
-/// What a light question says of the level's own lamps: this game's rows, less the passing ones and each as its steady self to who asks what the place lights, less what the asker leaves out. (guards.ts rowsOf)
+/// What a light question says of the level's own lamps: this game's rows, less the passing ones and each as its steady self to who asks what the place lights, less what the asker leaves out.
 fn rows_of(g: &mut crate::game::Game, steady_only: bool, leave: f64) -> crate::scene_collision::LampRows {
     let st = crate::sim_lightshome::light_home_block(g);
     let leave = if steady_only { (js::to_i32(leave) | js::to_i32(crate::sim_lightshome::row_bit().passing)) as f64 } else { leave };
     crate::scene_collision::LampRows { leave, steady: steady_only }
 }
 
-/// A light question's own lamps written to the module, in the list's order, each with how many of the level's rows stand before it; the rows themselves are the module's to read. False = no question stands and the table is full. (guards.ts writeLamps)
+/// A light question's own lamps written to the module, in the list's order, each with how many of the level's rows stand before it; the rows themselves are the module's to read. False = no question stands and the table is full.
 fn write_lamps(g: &mut crate::game::Game, p: Option<V3>, skip_owner: Option<&mut dyn FnMut(&mut crate::game::Game, f64) -> bool>, steady_only: bool) -> bool {
     let mut skip_owner = skip_owner;
     let exposure = crate::hours::exposure(g);
@@ -187,7 +186,7 @@ fn write_lamps(g: &mut crate::game::Game, p: Option<V3>, skip_owner: Option<&mut
     true
 }
 
-/// The lamps the light that comes round is swept from: writes the few of nobody's fixture and answers with how the rows are read. Bool(false) = more of those than the module's table holds. (guards.ts steadyLamps)
+/// The lamps the light that comes round is swept from: writes the few of nobody's fixture and answers with how the rows are read. Bool(false) = more of those than the module's table holds.
 pub fn steady_lamps(g: &mut crate::game::Game) -> crate::guards::SteadyLamps {
     if !write_lamps(g, None, Some(&mut |_g: &mut Game, _owner: f64| true), true) { return crate::guards::SteadyLamps::Bool(false); }
     crate::guards::SteadyLamps::LampRows(rows_of(g, true, 0.0))
@@ -211,7 +210,7 @@ pub fn light_on(g: &mut crate::game::Game, c: CharId) -> [f64; 2] {
     let (b, pb) = light_at(g, head, None, None, None);
     [m::max(a, b), m::max(a * eyes_at(g, pa), b * eyes_at(g, pb))]
 }
-/// The light meter of a man some AI side can be hostile to, eased at Sam's rate into his visibility. (guards.ts unitLightMeter)
+/// The light meter of a man some AI side can be hostile to, eased at Sam's rate into his visibility.
 pub(super) fn unit_light_meter(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     let c = g.gd[gd].ch;
     let [stands, e] = light_on(g, c);
@@ -223,7 +222,7 @@ pub(super) fn unit_light_meter(g: &mut crate::game::Game, gd: GuardId, dt: f64) 
 
 // ------------------------------------------------------------ a unit's foe
 
-/// The closure of acquireFoe: one enemy looked at; the most salient is kept. (guards.ts:2705 consider)
+/// The closure of acquireFoe: one enemy looked at; the most salient is kept.
 fn consider(g: &mut Game, gd: GuardId, f: crate::game::Foe, ch: CharId, best: &mut Option<crate::game::Foe>, best_rate: &mut f64, cur_visible: &mut bool) {
     let rate = match f {
         crate::game::Foe::Player => {
@@ -244,7 +243,7 @@ fn consider(g: &mut Game, gd: GuardId, f: crate::game::Foe, ch: CharId, best: &m
     }
 }
 
-/// A unit's foe this frame: off a man who is gone, then on the most salient enemy he can see; a fight his eyes have won ends here. (guards.ts acquireFoe)
+/// A unit's foe this frame: off a man who is gone, then on the most salient enemy he can see; a fight his eyes have won ends here.
 pub(super) fn acquire_foe(g: &mut crate::game::Game, gd: GuardId) {
     use crate::game::{Foe, GuardState};
     use crate::teams::Team;
@@ -293,7 +292,7 @@ pub(super) fn acquire_foe(g: &mut crate::game::Game, gd: GuardId) {
         if g.gd[gd].foe != Some(b) {
             crate::mind::foe(g, gd, Some(b), "guards");
             crate::aim::aim_state_clear(&mut g.gd[gd].aim);
-            if mine { crate::game::game_say(g, gd, if op { "he's down — next." } else { "got him!" }, None, None, None); }
+            if mine { crate::game::game_say(g, gd, if op { "he's down — next." } else { "got him!" }, None, None); }
             return;
         }
     }
@@ -301,7 +300,7 @@ pub(super) fn acquire_foe(g: &mut crate::game::Game, gd: GuardId) {
         // a staff man: the man he dropped is one of two intruders, and the other is still on his floor
         crate::mind::foe(g, gd, Some(Foe::Player), "guards");
         g.gd[gd].last_seen_t = m::min(g.gd[gd].last_seen_t, g.time - 0.5);
-        if mine { crate::game::game_say(g, gd, "got him!", None, None, None); }
+        if mine { crate::game::game_say(g, gd, "got him!", None, None); }
     } else if lost_man && best.is_none() && (g.gd[gd].state == GuardState::Alert || g.gd[gd].state == GuardState::Search) {
         // the man he was fighting is down and no other enemy is in his sight: he comes off the alert to a wary look round
         crate::mind::set_state(g, gd, GuardState::Suspicious, "guards");
@@ -316,16 +315,16 @@ pub(super) fn acquire_foe(g: &mut crate::game::Game, gd: GuardId) {
         let said = left || floor_called_clear(g, gd, team);
         if mine {
             let text = if op { if said { "he's down." } else { "he's down — clear." } } else if said { "got him!" } else { "got him — that's all of them." };
-            crate::game::game_say(g, gd, text, None, None, None);
+            crate::game::game_say(g, gd, text, None, None);
         } else if !said && !knee {
-            crate::game::game_say(g, gd, if op { "clear." } else { "that's all of them." }, None, None, None);
+            crate::game::game_say(g, gd, if op { "clear." } else { "that's all of them." }, None, None);
         }
     } else if mine {
-        crate::game::game_say(g, gd, if op { "he's down." } else { "got him!" }, None, None, None);
+        crate::game::game_say(g, gd, if op { "he's down." } else { "got him!" }, None, None);
     }
 }
 
-/// Nobody calls a floor clear with an enemy still up on it. (guards.ts:2729, WORDS.on settled on)
+/// Nobody calls a floor clear with an enemy still up on it.
 fn enemy_up_on_floor(g: &Game, seat: &crate::seats::SeatRef, team: crate::teams::Team) -> bool {
     let mut i = 0;
     while i < g.guards.len() {
@@ -338,7 +337,7 @@ fn enemy_up_on_floor(g: &Game, seat: &crate::seats::SeatRef, team: crate::teams:
     crate::teams::is_hostile(g, team, crate::teams::Team::Player) && !g.pl[seat.player].down
 }
 
-/// One of his side said it in the last three seconds. (guards.ts:2730)
+/// One of his side said it in the last three seconds.
 fn floor_called_clear(g: &Game, gd: GuardId, team: crate::teams::Team) -> bool {
     g.guards.iter().any(|&o| {
         if o == gd || g.gd[o].team != team { return false; }
@@ -351,7 +350,7 @@ fn floor_called_clear(g: &Game, gd: GuardId, team: crate::teams::Team) -> bool {
 
 // ------------------------------------------------------------ the right hand
 
-/// Which rig is in his hands. (guards.ts rigOf)
+/// Which rig is in his hands.
 pub fn rig_of(g: &crate::game::Game, gd: GuardId) -> crate::guards::RigOf {
     use crate::weapons::WeaponDefRig;
     let def = g.fa[g.gd[gd].weapon].def;
@@ -365,7 +364,7 @@ pub fn rig_of(g: &crate::game::Game, gd: GuardId) -> crate::guards::RigOf {
     }
 }
 
-/// Which long gun that is; None = the sidearm. (guards.ts longRigOf)
+/// Which long gun that is; None = the sidearm.
 pub fn long_rig_of(g: &crate::game::Game, gd: GuardId) -> Option<crate::guards::LongRigOf> {
     match rig_of(g, gd) {
         crate::guards::RigOf::Pistol => None,
@@ -374,7 +373,7 @@ pub fn long_rig_of(g: &crate::game::Game, gd: GuardId) -> Option<crate::guards::
     }
 }
 
-/// What his state has him carry in the gun hand. (guards.ts handCarry)
+/// What his state has him carry in the gun hand.
 pub fn hand_carry(g: &crate::game::Game, gd: GuardId) -> crate::guards::HandCarry {
     use crate::game::GuardState;
     let torch = crate::startle::startle_torch(g, gd)
@@ -385,7 +384,7 @@ pub fn hand_carry(g: &crate::game::Game, gd: GuardId) -> crate::guards::HandCarr
     if torch { crate::guards::HandCarry::Torch } else { crate::guards::HandCarry::Weapon }
 }
 
-/// A living man has the gun knocked out of his hand at the grab again: off the floor and in his fist. (guards.ts gunBack)
+/// A living man has the gun knocked out of his hand at the grab again: off the floor and in his fist.
 pub fn gun_back(g: &mut crate::game::Game, gd: GuardId) {
     let dropped = g.gd[gd].dropped;
     if let Some(d) = dropped {
@@ -399,7 +398,7 @@ pub fn gun_back(g: &mut crate::game::Game, gd: GuardId) {
     g.gd[gd].gun_lost_at = -1.0;
 }
 
-/// What is physically in the hand. (guards.ts inHand)
+/// What is physically in the hand.
 pub fn in_hand(g: &crate::game::Game, gd: GuardId) -> Option<crate::guards::InHand> {
     if g.gd[gd].fled { return None; }
     if g.gd[gd].gun_lost_at >= 0.0 { return None; }
@@ -412,11 +411,11 @@ pub fn in_hand(g: &crate::game::Game, gd: GuardId) -> Option<crate::guards::InHa
     }
 }
 
-/// The magazine is empty: he stands there changing it, says so, and the clack plays at him. (guards.ts startReloadBeat)
+/// The magazine is empty: he stands there changing it, says so, and the clack plays at him.
 pub fn start_reload_beat(g: &mut crate::game::Game, gd: GuardId) {
     if g.gd[gd].second.is_some() && crate::gunslots::side_out_alert(g, gd) { return; }
     begin_reload(g, gd);
-    crate::game::game_say(g, gd, "reloading!", None, None, None);
+    crate::game::game_say(g, gd, "reloading!", None, None);
 }
 /// HIS MAGAZINE COMES OUT: the one way a man begins a change of magazine, whichever side he is on. His hands go on with it from here (`frame.rs hands`); he says his own word.
 pub fn begin_reload(g: &mut crate::game::Game, gd: GuardId) {
@@ -434,7 +433,7 @@ pub fn begin_reload(g: &mut crate::game::Game, gd: GuardId) {
     }
 }
 
-/// Counted down each frame he could otherwise fire; a staged row lets the empty go as the beat crosses `out`. (guards.ts tickReloadBeat)
+/// Counted down each frame he could otherwise fire; a staged row lets the empty go as the beat crosses `out`.
 pub(super) fn tick_reload_beat(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     let w = g.gd[gd].weapon;
     let rr = crate::weapons::firearm_reload_row(g, w);
@@ -471,7 +470,7 @@ pub(super) fn tick_reload_beat(g: &mut crate::game::Game, gd: GuardId, dt: f64) 
 
 // ------------------------------------------------------------ rifles: the burst trigger
 
-/// The closure of burstTrigger: the burst ends, and the beat to the next runs from its last serviced frame. (guards.ts:2809 end)
+/// The closure of burstTrigger: the burst ends, and the beat to the next runs from its last serviced frame.
 /// The burst he is firing, if he is firing one, is broken off: the next waits its moment.
 pub(in crate::people) fn burst_broken(g: &mut Game, gd: GuardId) {
     let w = g.gd[gd].weapon;
@@ -493,7 +492,7 @@ fn burst_end(g: &mut Game, gd: GuardId, w: FirearmId, cd: f64) {
     g.gd[gd].fire_cd = m::max(g.gd[gd].fire_cd, cd - since);
 }
 
-/// The trigger of a row with a BurstSpec, asked once a frame at the alert branch's fire site. (guards.ts burstTrigger)
+/// The trigger of a row with a BurstSpec, asked once a frame at the alert branch's fire site.
 pub fn burst_trigger(g: &mut crate::game::Game, gd: GuardId, dt: f64, aim_at: V3, start_ok: bool, round_ok: bool, except: Option<GuardId>) {
     let w = g.gd[gd].weapon;
     let def = g.fa[w].def;
@@ -582,7 +581,7 @@ pub fn burst_trigger(g: &mut crate::game::Game, gd: GuardId, dt: f64, aim_at: V3
     }
 }
 
-/// His light posed for the frame; a burning lens carried through a wall lights from this side of it. (guards.ts attachFlashlight)
+/// His light posed for the frame; a burning lens carried through a wall lights from this side of it.
 pub fn attach_flashlight(g: &mut crate::game::Game, gd: GuardId, dt: Option<f64>) {
     let dt = dt.unwrap_or(1.0 / 60.0);
     let held = pose_flashlight(g, gd, dt);
@@ -603,7 +602,7 @@ fn weapon_rig_is_pistol(g: &Game, gd: GuardId) -> bool {
     matches!(g.m.weapons.weapons.get(def), Some(d) if d.rig == crate::weapons::WeaponDefRig::Pistol)
 }
 
-/// The light at its lens, its beam and whether it burns; returns what the lens hangs off. (guards.ts poseFlashlight)
+/// The light at its lens, its beam and whether it burns; returns what the lens hangs off.
 fn pose_flashlight(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<V3> {
     use crate::character::Bone;
     use crate::game::GuardState;
@@ -696,7 +695,7 @@ fn pose_flashlight(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<V3
     held
 }
 
-/// A light on the floor `t` seconds after it fell: a couple of sputters, then dark. (guards.ts:2876, 2884)
+/// A light on the floor `t` seconds after it fell: a couple of sputters, then dark.
 fn sputter(g: &mut Game, fl: LightId, t: f64) {
     let row = &mut g.tab.light[fl];
     row.enabled = t < 0.9 && (t < 0.35 || m::sin(t * 60.0) > 0.3);
@@ -705,7 +704,7 @@ fn sputter(g: &mut Game, fl: LightId, t: f64) {
 
 // ------------------------------------------------------------ on a screen, and a man's line
 
-/// On a player's screen: with two, on either's. (guards.ts onScreen)
+/// On a player's screen: with two, on either's.
 pub fn on_screen(g: &mut crate::game::Game, p: V3) -> bool {
     if g.seats.len() > 1 {
         let seats = g.seats.clone();
@@ -734,7 +733,7 @@ fn in_view_of(vp: impl Fn(usize) -> f64, p: V3) -> bool {
     x > -0.92 && x < 0.92 && y > -0.9 && y < 0.9
 }
 
-/// How long a line stands over a man's head, by its length (the language's: UTF-16 units). (guards.ts bubbleSecs)
+/// How long a line stands over a man's head, by its length (the language's: UTF-16 units).
 pub fn bubble_secs(text: &str) -> f64 {
     m::min(4.0, m::max(2.0, 1.5 + text.encode_utf16().count() as f64 * 0.055))
 }

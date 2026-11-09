@@ -7,43 +7,43 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{format, string::String, vec, vec::Vec};
 
-/// What a new State holds: the TypeScript's own literal. (close.ts stateOf)
+/// What a new State holds: the TypeScript's own literal.
 fn fresh_state() -> crate::close::State {
     crate::close::State { t: -1.0, best: None, mode: None, mode_d: m::INF, rmb_t: -1.0 }
 }
 
-/// The log of what was taken, the debugger's. (close.ts note)
+/// The log of what was taken, the debugger's.
 fn note(g: &crate::game::Game, gd: GuardId, what: crate::close::NoteWhat, kind: Option<crate::close::CloseKind>, bearing: Option<f64>, dist: Option<f64>) {
 }
 
-/// The men sat down, made if none yet: the table itself. (close.ts seatedOf)
+/// The men sat down, made if none yet: the table itself.
 fn seated_of(g: &mut crate::game::Game) -> &mut JsMap<GuardId, crate::close::Seat> {
     g.m.close.seated.get_or_insert_with(JsMap::new)
 }
 
-/// This seat's close-in state, made if none yet: the row itself. (close.ts stateOf)
+/// This seat's close-in state, made if none yet: the row itself.
 fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::close::State {
     let p = g.player;
     g.m.close.state.get_or_insert_with(p, fresh_state)
 }
 
-/// One window, with its arc's cosine. (close.ts arc)
+/// One window, with its arc's cosine.
 fn arc(id_2: crate::close::CloseId, kind: crate::close::CloseKind, mid: f64, half: f64, reach: f64, grab: bool, strike: bool) -> crate::close::CloseWindow {
     crate::close::CloseWindow { id: id_2, kind, mid, half, cos_half: m::cos(half), reach, grab, strike }
 }
 
-/// Has he a seat at all, down in it or on his way. (close.ts closeHasSeat)
+/// Has he a seat at all, down in it or on his way.
 pub fn close_has_seat(g: &crate::game::Game, gd: GuardId) -> bool {
     g.m.close.seated.as_ref().map_or(false, |m| m.has(gd))
 }
 
-/// Is this man sitting. (close.ts closeSeated)
+/// Is this man sitting.
 pub fn close_seated(g: &crate::game::Game, gd: GuardId) -> bool {
     if g.gd[gd].civ.is_some() { return crate::civilians::civilian_seated(g, gd); }
     g.m.close.seated.as_ref().and_then(|s| s.get(gd)).map_or(false, |st| st.down)
 }
 
-/// The windows round one man as he is now. (close.ts closeWindows)
+/// The windows round one man as he is now.
 fn close_windows(g: &crate::game::Game, gd: GuardId) -> Vec<crate::close::CloseWindow> {
     use crate::close::{CloseId as I, CloseKind as K};
     let r = g.k.close.reach;
@@ -73,7 +73,7 @@ fn close_windows(g: &crate::game::Game, gd: GuardId) -> Vec<crate::close::CloseW
     out
 }
 
-/// The window a bearing falls in; the rear arc goes by the build's own cosine. (close.ts windowAt)
+/// The window a bearing falls in; the rear arc goes by the build's own cosine.
 fn window_at(wins: &[crate::close::CloseWindow], b: f64) -> Option<crate::close::CloseWindow> {
     let cb = m::cos(b);
     for w in wins {
@@ -86,14 +86,14 @@ fn window_at(wins: &[crate::close::CloseWindow], b: f64) -> Option<crate::close:
     None
 }
 
-/// Nothing solid and no door leaf between two bodies at chest height. (close.ts clearBetween)
+/// Nothing solid and no door leaf between two bodies at chest height.
 pub(super) fn clear_between(g: &mut crate::game::Game, p: &[f64], q: &[f64]) -> bool {
     let a: V3 = [p[0], 1.0, p[2]];
     let b: V3 = [q[0], 1.0, q[2]];
     !crate::scene_collision::solid_blocked(g, a, b, None) && !crate::scene_collision::segment_blocked_dynamic(g, a, b, None)
 }
 
-/// May anything be done to him at all by Sam's hands. (close.ts closeSubject)
+/// May anything be done to him at all by Sam's hands.
 pub fn close_subject(g: &crate::game::Game, gd: GuardId) -> bool {
     if g.gd[gd].state == crate::game::GuardState::Dead || g.gd[gd].held.is_some() { return false; }
     if g.gd[gd].team == crate::teams::Team::Operative || crate::fogofwar::fog_of_war_hidden(g, gd) { return false; }
@@ -101,7 +101,7 @@ pub fn close_subject(g: &crate::game::Game, gd: GuardId) -> bool {
     true
 }
 
-/// What Sam could do to this man from `p`: the one test the rows, the click and the ready pose share. (close.ts closeAt)
+/// What Sam could do to this man from `p`: the one test the rows, the click and the ready pose share.
 pub fn close_at(g: &mut crate::game::Game, gd: GuardId, p: &[f64]) -> crate::close::CloseOffer {
     use crate::civilians::CivState;
     let pl = g.player;
@@ -147,7 +147,7 @@ pub fn close_at(g: &mut crate::game::Game, gd: GuardId, p: &[f64]) -> crate::clo
     o
 }
 
-/// The right button, tapped or held, once a frame. (close.ts closeRmb)
+/// The right button, tapped or held, once a frame.
 pub fn close_rmb(g: &mut crate::game::Game, on: bool, down: bool, hit: bool, dt: f64, near: bool, choke: bool, dropped: bool) -> Option<crate::close::CloseRmb> {
     use crate::close::CloseRmb as R;
     let tap_secs = g.k.close.rmb_tap_secs;
@@ -175,15 +175,15 @@ pub fn close_rmb(g: &mut crate::game::Game, on: bool, down: bool, hit: bool, dt:
     None
 }
 
-/// A blow landed: the tally. (close.ts closeBlow)
+/// A blow landed: the tally.
 pub fn close_blow(g: &mut crate::game::Game, lethal: bool) { g.stats.close.blows[if lethal { 0 } else { 1 }] += 1; }
 
-/// The way in an offer was made by; none is from behind. (close.ts closeKindOf)
+/// The way in an offer was made by; none is from behind.
 pub fn close_kind_of(o: Option<&crate::close::CloseOffer>) -> crate::close::CloseKind {
     match o.and_then(|o| o.win) { Some(w) => w.kind, None => crate::close::CloseKind::Behind }
 }
 
-/// One staff man's marker and rows. (close.ts closeRows)
+/// One staff man's marker and rows.
 pub fn close_rows(g: &mut crate::game::Game, gd: GuardId, p: &[f64], busy: bool, row: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, crate::game::Verb, String, Option<String>, Option<crate::close::CloseRowsRowOver>) -> crate::game::Interactable, offer: &mut dyn FnMut(&mut crate::game::Game, crate::game::Interactable, Vec<crate::game::Interactable>)) {
     use crate::close::CloseKind as K;
     use crate::game::{Interactable, InteractableKind};
@@ -254,12 +254,12 @@ pub fn close_rows(g: &mut crate::game::Game, gd: GuardId, p: &[f64], busy: bool,
     offer(g, it, verbs);
 }
 
-/// The line that says what the held click does. (close.ts sneakHint)
+/// The line that says what the held click does.
 fn sneak_hint(g: &crate::game::Game) -> String {
     String::from("LMB  hold to sneak up on him")
 }
 
-/// This frame's best offer: the nearest man Sam could do something to. (close.ts noteBest)
+/// This frame's best offer: the nearest man Sam could do something to.
 fn note_best(g: &mut crate::game::Game, o: &crate::close::CloseOffer) {
     let now = g.time;
     let s = state_of(g);
@@ -267,7 +267,7 @@ fn note_best(g: &mut crate::game::Game, o: &crate::close::CloseOffer) {
     if s.best.as_ref().map_or(true, |b| o.dist < b.dist) { s.best = Some(o.clone()); }
 }
 
-/// A civilian's gate with the windows on: is Sam in her window, and near enough. (close.ts closeCivGate)
+/// A civilian's gate with the windows on: is Sam in her window, and near enough.
 pub fn close_civ_gate(g: &crate::game::Game, gd: GuardId, p: &[f64]) -> crate::close::CloseCivGate {
     let c = g.gd[gd].ch;
     let gp = g.ch[c].pos;
@@ -281,13 +281,13 @@ pub fn close_civ_gate(g: &crate::game::Game, gd: GuardId, p: &[f64]) -> crate::c
     }
 }
 
-/// A civilian Sam could take right now, for the ready pose. (close.ts closeCivOffer)
+/// A civilian Sam could take right now, for the ready pose.
 pub fn close_civ_offer(g: &mut crate::game::Game, gd: GuardId, p: &[f64]) {
     let o = close_at(g, gd, p);
     if o.can { note_best(g, &o); }
 }
 
-/// Sam's body says he is in reach: which pose, and what the hand is going for. (close.ts closeReady)
+/// Sam's body says he is in reach: which pose, and what the hand is going for.
 fn close_ready(g: &mut crate::game::Game) -> Option<crate::close::CloseReady> {
     use crate::character::{Bone, ReadyKind};
     use crate::close::{CloseKind as K, CloseReady};
@@ -313,7 +313,7 @@ fn close_ready(g: &mut crate::game::Game) -> Option<crate::close::CloseReady> {
     Some(CloseReady { kind: if kind == K::Seat { ReadyKind::Seat } else { ReadyKind::Grab }, at })
 }
 
-/// Who holds the mode now: the nearest living man in range with nothing solid between. (close.ts modeNow)
+/// Who holds the mode now: the nearest living man in range with nothing solid between.
 fn mode_now(g: &mut crate::game::Game, pl: PlayerId) -> Option<GuardId> {
     g.m.close.state.get_or_insert_with(pl, fresh_state).mode_d = m::INF;
     if g.pl[pl].down || g.pl[pl].holding.is_some() || g.pl[pl].dragging.is_some() || g.pl[pl].kick.is_some() || g.pl[pl].picking.is_some() || g.pl[pl].wanding.is_some()
@@ -340,7 +340,7 @@ fn mode_now(g: &mut crate::game::Game, pl: PlayerId) -> Option<GuardId> {
     best
 }
 
-/// Once a frame after the rows are built: the poses and the mode of Sam's body. (close.ts closeTick)
+/// Once a frame after the rows are built: the poses and the mode of Sam's body.
 pub fn close_tick(g: &mut crate::game::Game) {
     use crate::character::{Bone, HoldPhase, ReadyKind};
     let pl = g.player;
@@ -429,7 +429,7 @@ pub fn close_tick(g: &mut crate::game::Game) {
     }
 }
 
-/// The dark: how much of the build's near-sight floor this man has for Sam right now. (close.ts closeNearK)
+/// The dark: how much of the build's near-sight floor this man has for Sam right now.
 pub fn close_near_k(g: &mut crate::game::Game, gd: GuardId, dist: f64) -> f64 {
     let st = g.gd[gd].state;
     if st == crate::game::GuardState::Alert || st == crate::game::GuardState::Search || dist < g.k.close.touch_m { return 1.0; }
@@ -438,7 +438,7 @@ pub fn close_near_k(g: &mut crate::game::Game, gd: GuardId, dist: f64) -> f64 {
     k
 }
 
-/// Where Sam stands to strike, on his own bearing off the man, and the way he faces. (close.ts closeStation)
+/// Where Sam stands to strike, on his own bearing off the man, and the way he faces.
 pub fn close_station(g: &crate::game::Game, gd: GuardId, kind: crate::close::CloseKind, bearing: f64) -> crate::close::CloseStation {
     let c = g.gd[gd].ch;
     let gp = g.ch[c].pos;
@@ -448,7 +448,7 @@ pub fn close_station(g: &crate::game::Game, gd: GuardId, kind: crate::close::Clo
     crate::close::CloseStation { pos }
 }
 
-/// The fall's hearing level for a way in, and his shout if he was onto Sam. (close.ts closeNoise)
+/// The fall's hearing level for a way in, and his shout if he was onto Sam.
 pub fn close_noise(g: &crate::game::Game, kind: crate::close::CloseKind, was_alert: bool) -> f64 {
     let n = g.k.close.noise;
     let base = match kind {
@@ -460,7 +460,7 @@ pub fn close_noise(g: &crate::game::Game, kind: crate::close::CloseKind, was_ale
     base + (if was_alert { g.k.close.alert_noise } else { 0.0 })
 }
 
-/// The tallies of what a take or a grab made. (close.ts closeTook)
+/// The tallies of what a take or a grab made.
 pub fn close_took(g: &mut crate::game::Game, gd: GuardId, what: crate::close::CloseTookWhat, kind: crate::close::CloseKind, bearing: f64, dist: f64) {
     // the tallies' rows are in CLOSE_STATS's written order, which is CloseKind's
     match what { crate::close::CloseTookWhat::Take => g.stats.close.takes[kind as usize] += 1, crate::close::CloseTookWhat::Grab => g.stats.close.grabs[kind as usize] += 1 }
@@ -468,13 +468,13 @@ pub fn close_took(g: &mut crate::game::Game, gd: GuardId, what: crate::close::Cl
     note(g, gd, what, Some(kind), Some(bearing), Some(dist));
 }
 
-/// A man calm enough to sit. (close.ts calm)
+/// A man calm enough to sit.
 fn calm(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let m = &g.gd[gd];
     m.state == crate::game::GuardState::Patrol && m.awareness < 0.3 && m.held.is_none() && m.script.is_none()
 }
 
-/// Sit a calm staff man down on a mark; false if he cannot be sat. (close.ts closeSeat)
+/// Sit a calm staff man down on a mark; false if he cannot be sat.
 pub fn close_seat(g: &mut crate::game::Game, gd: GuardId, at: Option<&[f64]>, face: Option<f64>) -> bool {
     if g.gd[gd].civ.is_some() || g.gd[gd].unit.is_some() || g.gd[gd].state == crate::game::GuardState::Dead || !calm(g, gd) { return false; }
     let prev = seated_of(g).get(gd).copied();
@@ -494,7 +494,7 @@ pub fn close_seat(g: &mut crate::game::Game, gd: GuardId, at: Option<&[f64]>, fa
     true
 }
 
-/// Up out of the chair, his hold flag as it was. (close.ts closeUnseat)
+/// Up out of the chair, his hold flag as it was.
 pub fn close_unseat(g: &mut crate::game::Game, gd: GuardId, back: Option<bool>) {
     let back = back.unwrap_or(false);
     let st = match seated_of(g).get(gd).copied() { Some(st) => st, None => return };
@@ -514,44 +514,71 @@ pub fn close_unseat(g: &mut crate::game::Game, gd: GuardId, back: Option<bool>) 
 mod tests {
     use super::*;
     use crate::close::{CloseId as I, CloseKind as K};
+    use alloc::boxed::Box;
 
-    /// The standing staff man's table of close_windows, at the page's numbers.
-    fn standing() -> Vec<crate::close::CloseWindow> {
-        let rear_half = m::acos(-BEHIND_COS);
-        let rear = m::PI - rear_half;
-        let front = v3::clamp(50.0, 10.0, 100.0) * DEGR;
-        let mid = (front + rear) / 2.0;
-        let half = (rear - front) / 2.0;
-        vec![
-            arc(I::Behind, K::Behind, m::PI, rear_half, 1.05, true, true),
-            arc(I::Left, K::Side, mid, half, 0.95, false, true),
-            arc(I::Right, K::Side, -mid, half, 0.95, false, true),
-            arc(I::Front, K::Front, 0.0, front, 0.85, false, true),
-        ]
+    fn a_man() -> (Box<Game>, GuardId) {
+        let mut g = Box::new(Game::blank());
+        let c = g.ch.push(crate::character::Character::blank());
+        let mut row = crate::game::Guard::blank();
+        row.ch = c;
+        let gd = g.gd.push(row);
+        (g, gd)
+    }
+    fn id_at(w: &[crate::close::CloseWindow], b: f64) -> I { window_at(w, b).unwrap().id }
+
+    /// Whichever way Sam comes at a standing man, he is in one of the four windows, the sides mirror each other, and the windows meet where the knobs say.
+    #[test]
+    fn a_standing_man_has_a_window_on_every_side() {
+        let (g, gd) = a_man();
+        let w = close_windows(&g, gd);
+        let mut b = -3.2;
+        while b < 3.2 {
+            let at = window_at(&w, b).unwrap();
+            let other = window_at(&w, -b).unwrap();
+            assert_eq!(at.kind, other.kind, "bearing {} is not the mirror of {}", b, -b);
+            b += 0.05;
+        }
+        let front = g.k.close.side_from_deg * DEGR;
+        assert_eq!(id_at(&w, 0.0), I::Front);
+        assert_eq!(id_at(&w, front - 0.01), I::Front);
+        assert_eq!(id_at(&w, -(front - 0.01)), I::Front);
+        assert_eq!(id_at(&w, front + 0.01), I::Left);
+        assert_eq!(id_at(&w, -(front + 0.01)), I::Right);
+        let rear = m::acos(BEHIND_COS);
+        assert_eq!(id_at(&w, rear - 0.01), I::Left);
+        assert_eq!(id_at(&w, -(rear - 0.01)), I::Right);
+        assert_eq!(id_at(&w, rear + 0.01), I::Behind);
+        assert_eq!(id_at(&w, -(rear + 0.01)), I::Behind);
+        assert_eq!(id_at(&w, m::PI), I::Behind);
     }
 
+    /// He is grabbed only from behind, and struck from anywhere, at each side's own reach.
     #[test]
-    fn the_arcs_bits_are_the_typescripts() {
-        let w = standing();
-        // bun, EXACT.on, close.ts's own expressions
-        let want: [(u64, u64, u64); 4] = BITS_ARCS;
-        for (i, (mid, half, cos_half)) in want.iter().enumerate() {
-            assert_eq!(w[i].mid.to_bits(), *mid, "mid {}", i);
-            assert_eq!(w[i].half.to_bits(), *half, "half {}", i);
-            assert_eq!(w[i].cos_half.to_bits(), *cos_half, "cosHalf {}", i);
+    fn only_from_behind_is_he_grabbed() {
+        let (g, gd) = a_man();
+        let w = close_windows(&g, gd);
+        let r = g.k.close.reach;
+        for x in &w {
+            assert!(x.strike);
+            assert_eq!(x.grab, x.id == I::Behind, "{:?}", x.id);
+            assert_eq!(x.reach, match x.kind { K::Behind => r.behind, K::Side => r.side, _ => r.front });
         }
     }
 
+    /// A man sitting down has no sides: the rear is his seat's, the rest is his front.
     #[test]
-    fn every_bearing_falls_in_the_typescripts_window() {
-        let w = standing();
-        // one letter per bearing from -3.2 by 0.05: windowAt under bun, EXACT.on
-        let want = WINDOWS_SWEEP.as_bytes();
-        for (i, c) in want.iter().enumerate() {
-            let b = -3.2 + 0.05 * (i as f64);
-            let got = match window_at(&w, b) { Some(x) => x.id.as_str().as_bytes()[0], None => b'-' };
-            assert_eq!(got, *c, "bearing {}", b);
-        }
+    fn a_seated_man_has_a_seat_behind_and_a_front_all_the_way_round_to_it() {
+        let (mut g, gd) = a_man();
+        let mut seated = JsMap::new();
+        seated.set(gd, crate::close::Seat { at: [0.0; 3], face: 0.0, hold: false, down: true });
+        g.m.close.seated = Some(seated);
+        let w = close_windows(&g, gd);
+        assert_eq!(w.len(), 2);
+        let rear = m::acos(BEHIND_COS);
+        assert_eq!(window_at(&w, m::PI).unwrap().kind, K::Seat);
+        assert_eq!(window_at(&w, rear + 0.01).unwrap().kind, K::Seat);
+        assert_eq!(window_at(&w, rear - 0.01).unwrap().kind, K::Front);
+        assert_eq!(window_at(&w, -(rear - 0.01)).unwrap().kind, K::Front);
     }
 
     #[test]
@@ -561,17 +588,9 @@ mod tests {
         assert_eq!(close_kind_of(Some(&o)), K::Side);
         assert_eq!(close_kind_of(Some(&crate::close::CloseOffer::default())), K::Behind);
     }
-
-    const BITS_ARCS: [(u64, u64, u64); 4] = [
-        (0x400921fb54442d18, 0x3ff51700e0c14b25, 0x3fd0000000000000),
-        (0x3ff591b27b4bccf0, 0x3fde6d0d31ed086d, 0x3fec73907aaf881c),
-        (0xbff591b27b4bccf0, 0x3fde6d0d31ed086d, 0x3fec73907aaf881c),
-        (0x0, 0x3febecde5da115a9, 0x3fe491b7523c161d),
-    ];
-    const WINDOWS_SWEEP: &str = "bbbbbbbbbbbbbbbbbbbbbbbbbbbbrrrrrrrrrrrrrrrrrrrffffffffffffffffffffffffffffffffffflllllllllllllllllllbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
 }
 
-/// Once a frame before the guards: the seated men kept on their marks while calm, stood up when not.   (close.ts closeSeatTick)
+/// Once a frame before the guards: the seated men kept on their marks while calm, stood up when not.
 pub fn close_seat_tick(g: &mut crate::game::Game, dt: f64) {
     match &g.m.close.seated {
         Some(seated) if !seated.is_empty() => {}
@@ -610,7 +629,7 @@ pub fn close_seat_tick(g: &mut crate::game::Game, dt: f64) {
     }
 }
 
-/// Everybody up, this seat's close-in memory gone.   (close.ts closeReset)
+/// Everybody up, this seat's close-in memory gone.
 pub fn close_reset(g: &mut crate::game::Game) {
     let seated = g.m.close.seated.as_ref().map(|seated| seated.keys()).unwrap_or_default();
     for gd in seated {

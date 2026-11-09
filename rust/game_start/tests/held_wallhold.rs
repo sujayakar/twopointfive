@@ -31,7 +31,7 @@ fn q_takes_a_wall_and_refuses_a_desk_a_leaf_and_open_floor() {
         ("the corridor's north wall", [20.0, 10.7], [0.0, 1.0]), ("the corridor's south wall", [18.0, 11.5], [0.0, -1.0]), ("a cubicle's end panel", [13.5, 15.2], [-1.0, 0.0]),
         ("the racks' fronts", [16.3, 7.8], [0.0, 1.0]), ("the conference glazing", [12.0, 10.7], [0.0, 1.0]), ("the break room's partition", [28.7, 21.0], [1.0, 0.0]),
     ] {
-        let got = q_at(&mut p, at).unwrap_or_else(|| panic!("{what}: Q took nothing: {:?}", p.log()));
+        let got = q_at(&mut p, at).unwrap_or_else(|| panic!("{what}: Q took nothing: {:?}", p.view().empty.map(|e| e.word)));
         assert!(dist(got, n) < 0.01, "{what}: his back is to {got:?}, not {n:?}");
     }
     for (what, at) in [("the manager's desk", [28.0, 6.3]), ("the reception counter", [8.2, 16.2]), ("the kitchen counter", [34.6, 15.0]), ("the server door's leaf", [17.6, 10.6]), ("open floor", [19.9, 18.0])] {

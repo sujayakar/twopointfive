@@ -5,14 +5,14 @@ use crate::ids::*;
 use crate::m;
 use crate::v3::{self, Quat, V3};
 
-/// Can a stun show on the player at all: up, no puppet's strings.   (samstun.ts live)
+/// Can a stun show on the player at all: up, no puppet's strings.
 fn live(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { live_of(g, seat.player) }
 /// …of one man
 fn live_of(g: &crate::game::Game, p: PlayerId) -> bool {
     !g.pl[p].down && g.puppet.is_none()
 }
 
-/// Fold the player for `secs`; `dir` = the way the blow came from → him.   (samstun.ts staggerPlayer)
+/// Fold the player for `secs`; `dir` = the way the blow came from → him.
 pub fn stagger_player(g: &mut crate::game::Game, secs: f64, dir: V3) {
     let p = g.player;
     if !(secs > 0.0) || g.pl[p].down { return; }
@@ -27,7 +27,7 @@ pub fn stagger_player(g: &mut crate::game::Game, secs: f64, dir: V3) {
     g.stats.samstun.staggered += 1;
 }
 
-/// What a fold takes out of his hands: a can wound up goes back on the belt, a quick throw is dropped, every sustained verb stops.   (samstun.ts foldCancels)
+/// What a fold takes out of his hands: a can wound up goes back on the belt, a quick throw is dropped, every sustained verb stops.
 pub fn fold_cancels(g: &mut crate::game::Game) {
     let p = g.player;
     if let Some(k) = g.pl[p].pending_throw.as_ref().map(|t| t.kind) {
@@ -44,7 +44,7 @@ pub fn fold_cancels(g: &mut crate::game::Game) {
     while i < 6 && crate::interact::cancel_sustained(g) { i += 1; } // one verb a call
 }
 
-/// Blind the player for `secs` by a flash at `at`.   (samstun.ts dazzlePlayer)
+/// Blind the player for `secs` by a flash at `at`.
 pub fn dazzle_player(g: &mut crate::game::Game, secs: f64, at: V3) {
     let p = g.player;
     if !(secs > 0.0) || g.pl[p].down { return; }
@@ -57,7 +57,7 @@ pub fn dazzle_player(g: &mut crate::game::Game, secs: f64, at: V3) {
     g.stats.samstun.dazzled += 1;
 }
 
-/// Is he folded right now (rooted, gun down, no round)? `now`: the clock asked of.   (samstun.ts samStaggered)
+/// Is he folded right now (rooted, gun down, no round)? `now`: the clock asked of.
 pub fn sam_staggered(g: &crate::game::Game, seat: &crate::seats::SeatRef, now: Option<f64>) -> bool {
     let now = now.unwrap_or(g.time);
     if !live(g, &crate::seats::here(g)) { return false; }
@@ -65,7 +65,7 @@ pub fn sam_staggered(g: &crate::game::Game, seat: &crate::seats::SeatRef, now: O
     now < g.pl[p].stagger_until
 }
 
-/// How blind he is right now: 1 for the body of a dazzle, easing to 0 over its last `fade` seconds.   (samstun.ts samBlind)
+/// How blind he is right now: 1 for the body of a dazzle, easing to 0 over its last `fade` seconds.
 pub(super) fn sam_blind(g: &crate::game::Game, seat: &crate::seats::SeatRef, now: Option<f64>) -> f64 { man_blind(g, seat.player, now) }
 /// …of one man
 pub fn man_blind(g: &crate::game::Game, p: PlayerId, now: Option<f64>) -> f64 {
@@ -75,12 +75,12 @@ pub fn man_blind(g: &crate::game::Game, p: PlayerId, now: Option<f64>) -> f64 {
     if left <= 0.0 { 0.0 } else { v3::clamp(left / m::max(0.05, g.k.samstun.fade), 0.0, 1.0) }
 }
 
-/// May his feet move? A dazzle does not root him on the page (SAMSTUN.blindRoots).   (samstun.ts samRooted)
+/// May his feet move? A dazzle does not root him on the page (SAMSTUN.blindRoots).
 pub fn sam_rooted(g: &crate::game::Game, seat: &crate::seats::SeatRef, now: Option<f64>) -> bool {
     sam_staggered(g, seat, now)
 }
 
-/// Once a frame right after the down test: what the two states show on him and keep true while they run.   (samstun.ts samStunPose)
+/// Once a frame right after the down test: what the two states show on him and keep true while they run.
 pub(super) fn sam_stun_pose(g: &mut crate::game::Game) {
     let p = g.player;
     let c = g.pl[p].ch;
@@ -117,17 +117,19 @@ mod tests {
         g
     }
 
+    /// A failure means the blind screen drops off at once or never clears: he is wholly blind until the last of it, then it eases to nothing at the end.
     #[test]
-    fn the_fade_keeps_the_typescripts_bits() {
+    fn a_dazzle_is_whole_then_fades_over_its_last_moments() {
         let mut g = game();
         let p = g.player;
         g.pl[p].dazzled_until = 11.0;
-        // bun, EXACT on: clamp((11 - 10.7) / Math.max(0.05, 0.6), 0, 1)
-        assert_eq!(sam_blind(&g, &crate::seats::here(&g), Some(10.7)).to_bits(), 0x3fe000000000000b);
-        // (11 - 10.97) / Math.max(0.05, 0.6)
-        assert_eq!(sam_blind(&g, &crate::seats::here(&g), Some(10.97)).to_bits(), 0x3fa9999999999900);
-        assert_eq!(sam_blind(&g, &crate::seats::here(&g), Some(11.0)), 0.0);
-        assert_eq!(sam_blind(&g, &crate::seats::here(&g), Some(1.0)), 1.0);
+        let fade = g.k.samstun.fade;
+        let blind = |g: &Game, now| sam_blind(g, &crate::seats::here(g), Some(now));
+        assert_eq!(blind(&g, 1.0), 1.0);
+        assert_eq!(blind(&g, 11.0 - fade - 0.01), 1.0);
+        assert!((blind(&g, 11.0 - fade / 2.0) - 0.5).abs() < 1e-9);
+        assert!(blind(&g, 10.97) > 0.0 && blind(&g, 10.97) < 0.1);
+        assert_eq!(blind(&g, 11.0), 0.0);
     }
 
     #[test]
@@ -181,7 +183,7 @@ mod tests {
         assert_eq!(g.ch[c].anim.clutch, 1.0);
         assert!(g.ch[c].anim.dazzle.is_none());
         assert_eq!(g.pl[p].fire_cd, 1.5);
-        // blind as well: no clutch, turned away from the flash; bun, EXACT on: (11 - 10.7) / 0.5, and the fade above
+        // blind as well: no clutch, turned away from the flash, and his nerve goes with the blindness
         g.time = 10.7;
         g.pl[p].dazzled_until = 11.0;
         g.pl[p].dazzled_at = Some([1.0, 2.0, 3.0]);
@@ -189,8 +191,8 @@ mod tests {
         assert_eq!(g.ch[c].anim.clutch, 0.0);
         let dz = g.ch[c].anim.dazzle.expect("a dazzle");
         assert_eq!(dz.from, [1.0, 2.0, 3.0]);
-        assert_eq!(dz.k.to_bits(), 0x3fe3333333333340);
-        assert_eq!(g.pl[p].sup.v.to_bits(), 0x3fe000000000000b);
+        assert!((dz.k - 0.3 / 0.5).abs() < 1e-9, "the turn eases off over the last half second: {}", dz.k);
+        assert!((g.pl[p].sup.v - sam_blind(&g, &crate::seats::here(&g), None)).abs() < 1e-12);
         // both run out: all of it comes off
         g.time = 20.0;
         sam_stun_pose(&mut g);

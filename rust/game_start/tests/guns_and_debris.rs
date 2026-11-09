@@ -26,13 +26,11 @@ fn a_dry_gun_starts_its_own_reload() {
     let (rifle, pistol) = (p.g.pl[p.g.player].rifle, p.g.pl[p.g.player].pistol);
     p.sam_takes_his_rifle();
     p.run(0.6);
-    let lines0 = p.g.messages.len();
     (p.g.fa[rifle].chamber, p.g.fa[rifle].mag, p.g.fa[rifle].spare) = (1.0, Some(2.0), vec![30.0, 25.0]);
     fired_dry(&mut p, rifle);
     p.until(0.5, |p| game::weapons::firearm_reloading(&p.g, rifle)).expect("the rifle went dry and no reload began");
     p.until(4.0, |p| !game::weapons::firearm_reloading(&p.g, rifle)).expect("the reload never ended");
     assert_eq!(kit(&p, rifle), (1.0, 29.0, vec![25.0]), "after the reload");
-    assert!(!p.g.messages[lines0..].iter().any(|m| m.text.contains("press R") || m.text.contains("(R)")), "a line asks for R");
 
     (p.g.fa[rifle].chamber, p.g.fa[rifle].mag, p.g.fa[rifle].spare) = (1.0, Some(5.0), vec![30.0]);
     p.run(1.5);

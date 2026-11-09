@@ -3,7 +3,7 @@
 use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// a step's done-test, the one enum of it: one arm a row of LESSON_TESTS (lesson.ts:167-282), read whole from a level file's `{ is: '<kind>', … }` (game_start `records.rs`), each word typed: a word no type holds refuses the level
+/// a step's done-test, the one enum of it: one arm a row of LESSON_TESTS, read whole from a level file's `{ is: '<kind>', … }` (game_start `records.rs`), each word typed: a word no type holds refuses the level
 #[derive(Clone, Debug, ToBytes)]
 pub enum LessonTest {
     In { area: crate::scene_scenarios::Rect },
@@ -72,10 +72,6 @@ pub struct StepSeen {
     pub done_i: Option<f64>,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct TestKind {
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct LessonObjective {
     pub text: String,
@@ -90,7 +86,6 @@ pub struct LessonStats {
     pub finished: i32,
 }
 
-/// (src/game/lesson.ts:39 WHEEL_RING)
 pub const WHEEL_RING: &str = "Hold Space, then 2 kicks it";
 
 /// what a `door` test asks of a door
@@ -105,7 +100,7 @@ pub enum LessonMeter { Noise, Light }
 impl LessonMeter {
     pub const fn as_str(self) -> &'static str { match self { LessonMeter::Noise => "noise", LessonMeter::Light => "light" } }
 }
-/// how a `downed` test asks a man to be put down (lesson.ts HOWS)
+/// how a `downed` test asks a man to be put down
 #[derive(Clone, Copy, Debug, PartialEq, Eq, ToBytes)]
 pub enum LessonHow { Takedown, Choke, Whip, Ring, Knife }
 impl LessonHow {
@@ -117,19 +112,15 @@ pub enum LessonThrown { Smoke, Flash, Frag, He40, Cam }
 impl LessonThrown {
     pub const fn as_str(self) -> &'static str { match self { LessonThrown::Smoke => "smoke", LessonThrown::Flash => "flash", LessonThrown::Frag => "frag", LessonThrown::He40 => "he40", LessonThrown::Cam => "cam" } }
 }
-/// the word of the pair's log a `pair` test waits for (lesson.ts PAIR_WHATS)
+/// the word of the pair's log a `pair` test waits for
 #[derive(Clone, Copy, Debug, PartialEq, Eq, ToBytes)]
 pub enum LessonPairWhat { Mark, Now, Set, Go, GoF, GoHands, Down }
 impl LessonPairWhat {
     pub const fn as_str(self) -> &'static str { match self { LessonPairWhat::Mark => "mark", LessonPairWhat::Now => "now", LessonPairWhat::Set => "set", LessonPairWhat::Go => "go", LessonPairWhat::GoF => "go:F", LessonPairWhat::GoHands => "go:hands", LessonPairWhat::Down => "down" } }
 }
-/// a flag a `flag` test can read off the player and the team's posture (lesson.ts FLAGS)
+/// a flag a `flag` test can read off the player and the team's posture
 #[derive(Clone, Copy, Debug, PartialEq, Eq, ToBytes)]
 pub enum LessonFlag { Crouch, Sprint, Wall, Peek, Lean, Nv, Light, Holstered, Gun, RingsOut, ShellsOut, Auto, Setup, SetupShut, Dragging, Dark, ChargeSet, ChargeClear, WallBlown, Holding, Picking, Coding, Menu, OwnRing, Silent }
 
-/// (src/game/lesson.ts:165 LESSON_TESTS: a table nothing writes)
-pub fn lesson_tests() -> JsMap<String, crate::lesson::TestKind> { { let mut t = JsMap::new(); t.set(String::from("in"), crate::lesson::TestKind {  }); t.set(String::from("near"), crate::lesson::TestKind {  }); t.set(String::from("flag"), crate::lesson::TestKind {  }); t.set(String::from("slot"), crate::lesson::TestKind {  }); t.set(String::from("pace"), crate::lesson::TestKind {  }); t.set(String::from("meter"), crate::lesson::TestKind {  }); t.set(String::from("stage"), crate::lesson::TestKind {  }); t.set(String::from("door"), crate::lesson::TestKind {  }); t.set(String::from("target"), crate::lesson::TestKind {  }); t.set(String::from("men"), crate::lesson::TestKind {  }); t.set(String::from("did"), crate::lesson::TestKind {  }); t.set(String::from("downed"), crate::lesson::TestKind {  }); t.set(String::from("body"), crate::lesson::TestKind {  }); t.set(String::from("calm"), crate::lesson::TestKind {  }); t.set(String::from("loaded"), crate::lesson::TestKind {  }); t.set(String::from("reload"), crate::lesson::TestKind {  }); t.set(String::from("launcher"), crate::lesson::TestKind {  }); t.set(String::from("burst"), crate::lesson::TestKind {  }); t.set(String::from("threw"), crate::lesson::TestKind {  }); t.set(String::from("orderTo"), crate::lesson::TestKind {  }); t.set(String::from("stackOn"), crate::lesson::TestKind {  }); t.set(String::from("pairsOn"), crate::lesson::TestKind {  }); t.set(String::from("word"), crate::lesson::TestKind {  }); t.set(String::from("taken"), crate::lesson::TestKind {  }); t.set(String::from("following"), crate::lesson::TestKind {  }); t.set(String::from("mate"), crate::lesson::TestKind {  }); t.set(String::from("pair"), crate::lesson::TestKind {  }); t.set(String::from("cue"), crate::lesson::TestKind {  }); t.set(String::from("view"), crate::lesson::TestKind {  }); t.set(String::from("squad"), crate::lesson::TestKind {  }); t.set(String::from("stacks"), crate::lesson::TestKind {  }); t.set(String::from("watching"), crate::lesson::TestKind {  }); t.set(String::from("all"), crate::lesson::TestKind {  }); t.set(String::from("any"), crate::lesson::TestKind {  }); t } }
-
-/// (src/game/lesson.ts:284 STAGES: a table nothing writes)
 pub fn stages() -> Vec<String> { alloc::vec![String::from("infiltrate"), String::from("drive"), String::from("exfil"), String::from("done")] }
 

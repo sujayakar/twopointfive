@@ -6,7 +6,7 @@ use crate::ids::*;
 use alloc::vec::Vec;
 
 /// Sam's laser is on: a scenario's team on the floor, his goggles down, a gun in his hands and up at the aim, hands not on a lock or round a man, not
-/// down.   (irlaser.ts samLaserOn)
+/// down.
 fn sam_laser_on(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
     let pl = seat.player;
     if !crate::roomfight::fight_live(g) || !g.pl[pl].nv { return false; }
@@ -20,7 +20,7 @@ fn sam_laser_on(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
 
 /// Sam's own infrared laser, muzzle to whatever it meets, in the tube's picture only (combat.ts handProps asks, right after his rig).
 /// NOT a boundary no-op, though it draws: its line and its dot are two boxes of the FRAME'S LIST, which the fog of war, the listing of the box world and
-/// every table numbered by reach count. Left empty, a goggled player's frame was two boxes short from the moment his gun came up.   (irlaser.ts samLaserBoxes)
+/// every table numbered by reach count. Left empty, a goggled player's frame was two boxes short from the moment his gun came up.
 pub fn sam_laser_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     if !sam_laser_on(g, &crate::seats::here(g)) || !ir_viewer(g) { return; }
     let c = g.pl[g.player].ch;
@@ -28,7 +28,7 @@ pub fn sam_laser_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
 }
 
 /// The infrared lines the players really have on, for a viewer's picture through a tube the run's own picture did not have: the very rule a step draws them by, asked as
-/// if the picture were the tube's.   (combat.ts irBeams)
+/// if the picture were the tube's.
 pub fn ir_beams(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     let was = g.m.irlaser.view_tube.replace(true);
     for s in g.seats.clone() { crate::seats::with_seat(g, s, &mut |g| sam_laser_boxes(g, out)); }
@@ -36,7 +36,7 @@ pub fn ir_beams(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
 }
 
 /// The mark "this box is an infrared line the step drew for its own tube": the set beside the boxes that a picture with the tube off leaves out by
-/// (`ir_made`). It goes when the box's row is freed (`ir_forget`).   (irlaser.ts:78 irNote)
+/// (`ir_made`). It goes when the box's row is freed (`ir_forget`).
 pub fn ir_note(g: &mut crate::game::Game, b: AnyBoxId) -> AnyBoxId { g.m.irlaser.ir_made.add(b); b }
 /// A box's row is free again: the mark of the box that stood in it goes with it.
 pub fn ir_forget(g: &mut crate::game::Game, b: AnyBoxId) { if !g.m.irlaser.ir_made.is_empty() { g.m.irlaser.ir_made.delete(b); } }

@@ -1,4 +1,3 @@
-//! src/game/destruction.ts lines 386 to 764
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -9,7 +8,6 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 // ------------------------------------------------------------------ what the skeleton does not reach yet (BODY.md: seams)
 
-/// A box's row, `g.col.boxes[id]` as index/properties.txt has it: skeleton 5 has no table of Box rows (`StaticCollision.boxes` is `Vec<BoxId>`)
 fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 // ------------------------------------------------------------------ small helpers of this part
@@ -31,7 +29,7 @@ fn box_at(len: usize, i: f64) -> Option<usize> {
 /// a row of LANE_MARK
 fn lane(name: &str) -> LaneMark { *lane_mark().get(String::from(name)).unwrap() }
 
-/// `for (const fn of [...this.blastListeners]) fn(ev)`, one of them; what a subscriber adds to `ev.res` stays in the event   (glassbreak.ts:219, winbars.ts:80, snowBlast.ts:119)
+/// `for (const fn of [...this.blastListeners]) fn(ev)`, one of them; what a subscriber adds to `ev.res` stays in the event
 fn tell_listener(g: &mut Game, l: &BlastListener, ev: &mut crate::wallbreak::BlastEvent) {
     match l {
         BlastListener::Glass => {
@@ -43,7 +41,7 @@ fn tell_listener(g: &mut Game, l: &BlastListener, ev: &mut crate::wallbreak::Bla
     }
 }
 
-/// the chunk a knocked thing becomes: binder and clutter are themselves, anything else a housing (destruction.ts:506)
+/// the chunk a knocked thing becomes: binder and clutter are themselves, anything else a housing
 fn chunk_of(kind: DKind) -> crate::debris::ChunkKind {
     match kind {
         DKind::Binder => crate::debris::ChunkKind::Binder,
@@ -54,7 +52,7 @@ fn chunk_of(kind: DKind) -> crate::debris::ChunkKind {
 
 fn item_at(g: &Game, i: f64) -> Option<Destructible> { g.destr.items.get(crate::Num(i)).cloned() }
 
-/// the word pallHash hands to hash01 (destruction.ts:716)
+/// the word pallHash hands to hash01
 fn pall_hash_word(at: V3, time: f64, k: f64) -> u32 {
     let a = m::imul(js::to_i32(m::round(at[0] * 64.0)), 73856093);
     let b = m::imul(js::to_i32(m::round(at[2] * 64.0)), 19349663);
@@ -74,7 +72,7 @@ fn pall_near(g: &mut Game, px: f64, y: f64, pz: f64, r: f64) -> Vec<[f64; 2]> {
 
 // ------------------------------------------------------------------ the translation
 
-/// A round stopped at `hit_p`: decals, a screen killed, paper, bursts and dust, knock-offs, tiles, what lies about, and the wall's share.   (destruction.ts round)
+/// A round stopped at `hit_p`: decals, a screen killed, paper, bursts and dust, knock-offs, tiles, what lies about, and the wall's share.
 pub fn destruction_round(g: &mut crate::game::Game, shooter: CharId, hit_p: V3, dir: V3, hit: &crate::destruction::DestructionRoundHit, def: &crate::weapons::WeaponDef) {
     let chaos = chaos_of(g);
     if chaos <= 0.0 { return; }
@@ -182,14 +180,14 @@ pub fn destruction_round(g: &mut crate::game::Game, shooter: CharId, hit_p: V3, 
     }
 }
 
-/// THE BLAST ENTRY POINT: what any charge or grenade calls to break the level where it went off.   (destruction.ts blast)
+/// THE BLAST ENTRY POINT: what any charge or grenade calls to break the level where it went off.
 pub fn destruction_blast(g: &mut crate::game::Game, at: V3, opts: Option<crate::wallbreak::BlastOpts>) -> crate::wallbreak::BlastResult {
     let opts = opts.unwrap_or_default();
     let who = opts.who;
     crate::scene_collision::window(g, &mut |g: &mut Game| crate::fogofwar::fog_of_war_doing(g, who, &mut |g: &mut Game| destruction_blast_raw(g, at, opts)))
 }
 
-/// The call list, the doors, the walls and cover, the furniture, then the lane's bang and pall.   (destruction.ts blastRaw)
+/// The call list, the doors, the walls and cover, the furniture, then the lane's bang and pall.
 fn destruction_blast_raw(g: &mut crate::game::Game, at: V3, opts: crate::wallbreak::BlastOpts) -> crate::wallbreak::BlastResult {
     let chaos = chaos_of(g);
     let mut res = crate::wallbreak::BlastResult { walls: 0.0, cover: 0.0, doors: 0.0, panes: 0.0, opened: 0.0, serial: g.destr.walls.serial };
@@ -223,7 +221,7 @@ fn destruction_blast_raw(g: &mut crate::game::Game, at: V3, opts: crate::wallbre
     res
 }
 
-/// The door leaves a blast here would take off their hinges; nothing is touched.   (destruction.ts doorsFor)
+/// The door leaves a blast here would take off their hinges; nothing is touched.
 pub fn destruction_doors_for(g: &mut crate::game::Game, at: V3, opts: Option<crate::destruction::DestructionDoorsForOpts>) -> Vec<DoorId> {
     let opts = opts.unwrap_or_default();
     if chaos_of(g) <= 0.0 { return Vec::new(); }
@@ -231,7 +229,7 @@ pub fn destruction_doors_for(g: &mut crate::game::Game, at: V3, opts: Option<cra
     crate::doorblast::door_blast_reach(g, at, tear).into_iter().map(|x| x.d).collect()
 }
 
-/// The walls and cover a blast here would open; nothing is touched.   (destruction.ts wallsFor)
+/// The walls and cover a blast here would open; nothing is touched.
 pub fn destruction_walls_for(g: &mut crate::game::Game, at: V3, opts: Option<crate::destruction::DestructionWallsForOpts>) -> Vec<crate::wallbreak::WallOpening> {
     let opts = opts.unwrap_or_default();
     if chaos_of(g) <= 0.0 || !crate::wallbreak::wall_break_on(g) { return Vec::new(); }
@@ -239,26 +237,26 @@ pub fn destruction_walls_for(g: &mut crate::game::Game, at: V3, opts: Option<cra
     crate::wallbreak::wall_break_would_open(g, at, Some(ask))
 }
 
-/// Furniture under a blast, for a charge that does not come through blast().   (destruction.ts furnBlast)
+/// Furniture under a blast, for a charge that does not come through blast().
 pub fn destruction_furn_blast(g: &mut crate::game::Game, at: V3, src: crate::furnblast::BlastSource, who: Option<f64>) {
     let who = who.unwrap_or(crate::consts::NOBODY_ID);
     let chaos = chaos_of(g);
     if chaos > 0.0 { crate::furnblast::furniture_blast(g, at, src, who, chaos); }
 }
 
-/// The flags static `i` was authored with if this lane has hidden it, else None.   (destruction.ts flags0)
+/// The flags static `i` was authored with if this lane has hidden it, else None.
 pub(in crate::breakage) fn destruction_flags0(g: &mut crate::game::Game, i: f64) -> Option<f64> {
     if let Some(&f) = g.destr.hidden.get(crate::Num(i)) { return Some(f); }
     if let Some(f) = crate::wallbreak::wall_break_flags0(g, i) { return Some(f); }
     crate::winbars::bar_flags0(g, i)
 }
 
-/// Be told of every blast. (The TypeScript's unsubscribe has no caller and no skeleton.)   (destruction.ts onBlast)
+/// Be told of every blast. (The TypeScript's unsubscribe has no caller and no skeleton.)
 pub(in crate::breakage) fn destruction_on_blast(g: &mut crate::game::Game, fn_: crate::destruction::BlastListener) {
     g.destr.blast_listeners.push(fn_);
 }
 
-/// Static `i` has lost what it stood on / hung from: a stack scatters, a screen dies, clutter drops. False = not one of ours.   (destruction.ts dropItem)
+/// Static `i` has lost what it stood on / hung from: a stack scatters, a screen dies, clutter drops. False = not one of ours.
 pub(in crate::breakage) fn destruction_drop_item(g: &mut crate::game::Game, i: f64, dirn: V3, who: Option<f64>, quiet: Option<bool>) -> bool {
     let who = who.unwrap_or(crate::consts::NOBODY_ID);
     let quiet = quiet.unwrap_or(false);
@@ -283,7 +281,7 @@ pub(in crate::breakage) fn destruction_drop_item(g: &mut crate::game::Game, i: f
     true
 }
 
-/// A light fixture's box that fell with its wall or desk: its light goes with it.   (destruction.ts breakFixtureBox)
+/// A light fixture's box that fell with its wall or desk: its light goes with it.
 pub(in crate::breakage) fn destruction_break_fixture_box(g: &mut crate::game::Game, i: f64) {
     let mut at = 0;
     while at < g.targets.len() {
@@ -298,7 +296,7 @@ pub(in crate::breakage) fn destruction_break_fixture_box(g: &mut crate::game::Ga
     }
 }
 
-/// A charge went off at `at`: heat, the desk cleared, papers up, the tile down, dust off the ceiling, what lies about thrown again.   (destruction.ts bang)
+/// A charge went off at `at`: heat, the desk cleared, papers up, the tile down, dust off the ceiling, what lies about thrown again.
 pub fn destruction_bang(g: &mut crate::game::Game, at: V3, who: Option<f64>, power: Option<f64>, stun: Option<bool>) {
     let mut who = who.unwrap_or(crate::consts::NOBODY_ID);
     let power = power.unwrap_or(1.0);
@@ -380,7 +378,7 @@ pub fn destruction_bang(g: &mut crate::game::Game, at: V3, who: Option<f64>, pow
     destruction_bang_impulse(g, at, eye, chaos, who);
 }
 
-/// The blast's push on what already lies about.   (destruction.ts bangImpulse)
+/// The blast's push on what already lies about.
 fn destruction_bang_impulse(g: &mut crate::game::Game, at: V3, eye: V3, chaos: f64, who: f64) {
     if !impulses_on(g) { return; }
     let b = g.k.chaos.imp.bang;
@@ -393,7 +391,7 @@ fn destruction_bang_impulse(g: &mut crate::game::Game, at: V3, eye: V3, chaos: f
     g.stats.destruction.destr_debris_kicked += kicked as i32;
 }
 
-/// A round stopped in a face of normal `n`: what lies beside the hole jumps and scoots along the round's travel.   (destruction.ts impactImpulse)
+/// A round stopped in a face of normal `n`: what lies beside the hole jumps and scoots along the round's travel.
 fn destruction_impact_impulse(g: &mut crate::game::Game, hit_p: V3, dir: V3, n: V3, chaos: f64, who: f64) {
     if !impulses_on(g) { return; }
     let i = g.k.chaos.imp.impact;
@@ -410,7 +408,7 @@ fn destruction_impact_impulse(g: &mut crate::game::Game, hit_p: V3, dir: V3, n: 
     }
 }
 
-/// A thump on the floor at `pos`: the litter within a stride twitches.   (destruction.ts thud)
+/// A thump on the floor at `pos`: the litter within a stride twitches.
 pub fn destruction_thud(g: &mut crate::game::Game, pos: V3, scale: Option<f64>, who: Option<f64>) {
     let scale = scale.unwrap_or(1.0);
     if !impulses_on(g) { return; }
@@ -433,7 +431,7 @@ pub fn destruction_thud(g: &mut crate::game::Game, pos: V3, scale: Option<f64>, 
     }
 }
 
-/// The mark a round leaves by material; the dice and the bucket move whether decals are drawn or not.   (destruction.ts damageDecal)
+/// The mark a round leaves by material; the dice and the bucket move whether decals are drawn or not.
 fn destruction_damage_decal(g: &mut crate::game::Game, p: V3, n: V3, surf: crate::scene_materials::Surf, box_: BoxId, dynamic: bool, rifle: bool, item: Option<&crate::destruction::Destructible>) {
     let is_crack = matches!(item, Some(it) if it.kind == DKind::Screen || it.kind == DKind::Tv);   // (`m === LANE_MARK.crack`)
     let mut mark = if is_crack { lane("crack") } else if surf == crate::scene_materials::Surf::Metal { lane("dent") } else if surf == crate::scene_materials::Surf::Fabric { lane("shred") } else { return; };
@@ -460,7 +458,7 @@ fn destruction_damage_decal(g: &mut crate::game::Game, p: V3, n: V3, surf: crate
     crate::render_decals::decals_add(g, crate::render_decals::DecalKind::Damage, p, n, Some(mark.r[i] * (0.85 + 0.3 * rj)), Some(crate::render_decals::DecalOpts { param: Some(mark.look + m::min(0.999, mark.s[i])), clamp_to: Some(box_), attach, ..Default::default() }));
 }
 
-/// A lit screen's light target out, remembered for reset(). True = a light went out.   (destruction.ts breakTarget)
+/// A lit screen's light target out, remembered for reset(). True = a light went out.
 pub(super) fn destruction_break_target(g: &mut crate::game::Game, t: FixtureId) -> bool {
     if crate::sim_lightshome::fixture_broken(g, t) { return false; }
     let was_lit = g.tab.sim_lightshome_fixture[t].interactive && (crate::sim_lightshome::fixture_on(g, t) || crate::sim_lightshome::fixture_factor(g, t) > 0.0);
@@ -470,7 +468,7 @@ pub(super) fn destruction_break_target(g: &mut crate::game::Game, t: FixtureId) 
     was_lit
 }
 
-/// A monitor or TV that took a round: dead, a fizz of sparks.   (destruction.ts killScreen)
+/// A monitor or TV that took a round: dead, a fizz of sparks.
 fn destruction_kill_screen(g: &mut crate::game::Game, item: &crate::destruction::Destructible, hit_p: V3, n: V3, by_player: bool) {
     if let Some(t) = item.target {
         if !crate::sim_lightshome::fixture_broken(g, t) {
@@ -482,7 +480,6 @@ fn destruction_kill_screen(g: &mut crate::game::Game, item: &crate::destruction:
                 let name = g.tab.sim_lightshome_fixture[t].name.clone();
                 dlog(g, &alloc::format!("screen {} shot dead", name));
                 if by_player {
-                    crate::game::game_msg(g, &alloc::format!("shot out {}", name));
                     crate::chronicle::chron_light_shot(g, t);
                 }
             }
@@ -492,7 +489,7 @@ fn destruction_kill_screen(g: &mut crate::game::Game, item: &crate::destruction:
     crate::render_particles::particles_emit(g, crate::render_particles::PKind::Spark, v3::mad(hit_p, n, 0.02), v3::normalize(v3::add(n, [0.0, 0.3, 0.0])), if item.target.is_some() { 22.0 } else { 8.0 }, crate::render_particles::EmitOpts { speed: 3.5, speed_jit: Some(0.7), spread: Some(1.2), life: 0.45, life_jit: Some(0.5), size: 0.0028, ..Default::default() });
 }
 
-/// Paper stacks within reach of the hit, or whose column of air the round passed through, become sheets.   (destruction.ts papersNear)
+/// Paper stacks within reach of the hit, or whose column of air the round passed through, become sheets.
 fn destruction_papers_near(g: &mut crate::game::Game, hit_p: V3, dir: V3, e: f64, chaos: f64, k: f64, seg_len: f64) {
     let mut list: Vec<Destructible> = Vec::new();
     for d in destruction_near(g, hit_p, &mut list) {
@@ -516,7 +513,7 @@ fn destruction_papers_near(g: &mut crate::game::Game, hit_p: V3, dir: V3, e: f64
     }
 }
 
-/// Hide the stack's box and throw its sheets.   (destruction.ts convertPaper)
+/// Hide the stack's box and throw its sheets.
 pub fn destruction_convert_paper(g: &mut crate::game::Game, d: &crate::destruction::Destructible, dirn: V3, speed: f64, chaos: f64) -> bool {
     if g.destr.hidden.has(crate::Num(d.i)) || !destruction_take(g, DestructionTakeK::Paper) { return false; }
     destruction_hide(g, d);
@@ -534,7 +531,7 @@ pub fn destruction_convert_paper(g: &mut crate::game::Game, d: &crate::destructi
     true
 }
 
-/// Take the thing out of the picture and the shadows, and tell the smoke its obstacle field is stale there.   (destruction.ts hide)
+/// Take the thing out of the picture and the shadows, and tell the smoke its obstacle field is stale there.
 pub(super) fn destruction_hide(g: &mut crate::game::Game, d: &crate::destruction::Destructible) {
     let bits = hidden_bits();
     let b = g.col.boxes[d.i as usize];
@@ -552,7 +549,7 @@ pub(super) fn destruction_hide(g: &mut crate::game::Game, d: &crate::destruction
     crate::scene_collision::wrote(g);
 }
 
-/// The escalated material burst on top of impactFx's, scaled by E and the rifle factor: what flies is the picture's, by what the box says it is made of.   (destruction.ts burst)
+/// The escalated material burst on top of impactFx's, scaled by E and the rifle factor: what flies is the picture's, by what the box says it is made of.
 fn destruction_burst(g: &mut crate::game::Game, hit_p: V3, dir: V3, n: V3, surf: crate::scene_materials::Surf, albedo: V3, e: f64, k: f64, owner: f64, hit: Option<crate::destruction::DestructionBurstHit>) {
     g.stats.destruction.destr_bursts += 1;
     let (mut surf, mut albedo) = (surf, albedo);
@@ -590,7 +587,7 @@ fn destruction_burst(g: &mut crate::game::Game, hit_p: V3, dir: V3, n: V3, surf:
     }
 }
 
-/// A cold short cloud of dust into the smoke solver at `p`. Returns whether it went.   (destruction.ts dustPuff)
+/// A cold short cloud of dust into the smoke solver at `p`. Returns whether it went.
 pub fn destruction_dust_puff(g: &mut crate::game::Game, p: V3, n: V3, scale: f64, surf: crate::scene_materials::Surf) -> bool {
     if g.destr.puffs_this_frame >= g.k.chaos.puffs_per_frame || crate::smoke_types::smoke_system_like_budget(g) < 4.0 || !destruction_take(g, DestructionTakeK::Puff) {
         g.stats.destruction.destr_puffs_refused += 1;
@@ -608,7 +605,7 @@ pub fn destruction_dust_puff(g: &mut crate::game::Game, p: V3, n: V3, scale: f64
     true
 }
 
-/// May one more pall go now? Counts it when it may. `always`: the wall charge's, never refused, still counted.   (destruction.ts pallTake)
+/// May one more pall go now? Counts it when it may. `always`: the wall charge's, never refused, still counted.
 fn destruction_pall_take(g: &mut crate::game::Game, always: Option<bool>) -> bool {
     let always = always.unwrap_or(false);
     if chaos_of(g) <= 0.0 { return false; }
@@ -624,12 +621,12 @@ fn destruction_pall_take(g: &mut crate::game::Game, always: Option<bool>) -> boo
     true
 }
 
-/// The pall's dice: a hash of the place, the moment and `k`; none of the lane's own are drawn.   (destruction.ts pallHash)
+/// The pall's dice: a hash of the place, the moment and `k`; none of the lane's own are drawn.
 fn destruction_pall_hash(g: &crate::game::Game, at: V3, k: f64) -> f64 {
     crate::debris::hash01(pall_hash_word(at, g.time, k) as f64)
 }
 
-/// One emitter of a pall into the solver; whether it was asked. Mirrored out of a blocked place, pushed off what stands by, tightened where it has no room.   (destruction.ts pallEmit)
+/// One emitter of a pall into the solver; whether it was asked. Mirrored out of a blocked place, pushed off what stands by, tightened where it has no room.
 fn destruction_pall_emit(g: &mut crate::game::Game, r: crate::destruction::DestructionPallEmitR, from: V3, pos: V3, dir: V3, j: f64, tint: V3, gain: Option<f64>) -> bool {
     let gain = gain.unwrap_or(1.0);
     let k = g.k.chaos.pall;
@@ -672,7 +669,7 @@ fn destruction_pall_emit(g: &mut crate::game::Game, r: crate::destruction::Destr
     true
 }
 
-/// A wall charge's pall: `p` on the wall's face at the floor, `n` off it, `t` along it; the far side's part only if a way was opened.   (destruction.ts pallWall)
+/// A wall charge's pall: `p` on the wall's face at the floor, `n` off it, `t` along it; the far side's part only if a way was opened.
 pub fn destruction_pall_wall(g: &mut crate::game::Game, p: V3, n: V3, t: V3, thick: f64, through: bool, surf: Option<crate::scene_materials::Surf>, gain: Option<f64>) {
     let surf = surf.unwrap_or(crate::scene_materials::Surf::Drywall);
     let gain = gain.unwrap_or(1.0);
@@ -706,7 +703,7 @@ pub fn destruction_pall_wall(g: &mut crate::game::Game, p: V3, n: V3, t: V3, thi
     }
 }
 
-/// A burst's pall: the dust it kicks up in a ring round `at` and the smoke over it; `size` 1 = the hand grenade's.   (destruction.ts pallBurst)
+/// A burst's pall: the dust it kicks up in a ring round `at` and the smoke over it; `size` 1 = the hand grenade's.
 fn destruction_pall_burst(g: &mut crate::game::Game, at: V3, size: Option<f64>) {
     let size = size.unwrap_or(1.0);
     if !destruction_pall_take(g, None) { return; }

@@ -61,5 +61,4 @@ pub struct AutopilotStats {
     pub again: i32,
 }
 
-/// (src/game/autopilot.ts:70 RESTACK_LINES: a table nothing writes)
 pub fn restack_lines() -> Vec<String> { alloc::vec![String::from("stacked up."), String::from("we're ready to go.")] }

@@ -1,4 +1,3 @@
-//! src/game/orders.ts lines 1098 to 1354
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -94,7 +93,7 @@ fn away(g: &mut Game) {
     g.orders.cmd_ring = None;
 }
 
-/// THE RING'S INPUT, ahead of the menu's own: the frame's order input is the ring's if true. (orders.ts ringInput)
+/// THE RING'S INPUT, ahead of the menu's own: the frame's order input is the ring's if true.
 pub(super) fn squad_orders_ring_input(g: &mut crate::game::Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View) -> bool {
     if g.orders.cmd_ring.is_some() && g.orders.menu.is_none() { g.orders.cmd_ring = None; }
     let key = g.k.cmdring.key.clone();
@@ -316,7 +315,7 @@ pub(super) fn squad_orders_ring_input(g: &mut crate::game::Game, input: InputId,
     true
 }
 
-/// A digit a ring carries went down this frame. (orders.ts ringDigit)
+/// A digit a ring carries went down this frame.
 fn squad_orders_ring_digit(g: &crate::game::Game, input: InputId) -> bool {
     let mut d = 1.0;
     while d <= g.k.cmdring.wedges {
@@ -326,7 +325,7 @@ fn squad_orders_ring_digit(g: &crate::game::Game, input: InputId) -> bool {
     false
 }
 
-/// The order menu put up on `t` as a ring at the cursor (false: no menu opened there). (orders.ts ringUp)
+/// The order menu put up on `t` as a ring at the cursor (false: no menu opened there).
 fn squad_orders_ring_up(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, input: InputId, canvas: crate::host_hud::View, t0: f64, cam: Option<CameraId>, g_2: Option<&crate::orders::SquadOrdersRingUpG>) -> bool {
     let flat = squad_orders_flat_ring(g);
     if !squad_orders_open(g, Some(t), Some(flat), g_2.map(|p| p.men.as_slice())) { return false; }
@@ -364,13 +363,13 @@ fn goal_part_or_nobody(g: &mut Game, t: &OrderTarget, add: bool) -> Option<Optio
 }
 
 /// Shift with the key: the men a tap of it on `t` would have sent; the ring is theirs. `None` = null (nobody is free: said, no ring) ·
-/// `Some(None)` = undefined (the ring it always was) · `Some(Some(_))` = the men the ring is for. (orders.ts goalPart)
+/// `Some(None)` = undefined (the ring it always was) · `Some(Some(_))` = the men the ring is for.
 fn squad_orders_goal_part(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, add: bool) -> Option<Option<crate::orders::SquadOrdersGoalPart>> {
     if !add || !crate::planmode::goal_ring_on(g, &crate::seats::here(g)) { return Some(None); }
     let men = match crate::planmode::goal_men(g, t) {
         Some(men) => men,
         None => {
-            crate::game::game_msg(g, crate::planmode::GOAL_NONE);
+            crate::interact::say_why(g, None, crate::view::ThingKind::Wall, crate::planmode::GOAL_NONE, crate::planmode::GOAL_NONE.trim_end_matches('.'));
             g.stats.planmode.none += 1;
             return None;
         }
@@ -383,17 +382,17 @@ fn squad_orders_goal_part(g: &mut crate::game::Game, t: &crate::orders::OrderTar
     })
 }
 
-/// The ring's key would open a ring now. (orders.ts ringFree)
+/// The ring's key would open a ring now.
 fn squad_orders_ring_free(g: &crate::game::Game, seat: &crate::seats::SeatRef, input: InputId) -> bool {
     !crate::planmode::goal_shift(g, seat, input) && squad_orders_back_free(g, seat)
 }
 
-/// The ring's key is free: no menu up and nothing the key backs out of instead. (orders.ts backFree)
+/// The ring's key is free: no menu up and nothing the key backs out of instead.
 pub(in crate::squad_orders) fn squad_orders_back_free(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
     seat.orders.menu.is_none() && g.pl[seat.player].launch_held.is_none() && !crate::interact::hands_busy(g, seat)
 }
 
-/// The menu's own highlight follows the lit wedge. (orders.ts ringSel)
+/// The menu's own highlight follows the lit wedge.
 fn squad_orders_ring_sel(g: &mut crate::game::Game) {
     let r = match (&g.orders.menu, g.orders.cmd_ring) {
         (Some(_), Some(r)) if js::truthy(r.lit) => r,
@@ -404,7 +403,7 @@ fn squad_orders_ring_sel(g: &mut crate::game::Game) {
 }
 
 /// The open menu's rows by wedge: its page's own, or on 'more' the rest of them from wedge 1. A function of the menu's record: the tick's wedges and a HUD's are the same over the
-/// same words (`menu.words`, `menu.quick`: orders/words.rs). (orders.ts seats)
+/// same words (`menu.words`, `menu.quick`: orders/words.rs).
 pub fn squad_orders_seats(g: &crate::game::Game, m: &crate::orders::Menu, r: Option<crate::cmdring::RingState>) -> crate::orders::SquadOrdersSeats {
     let word_key = g.k.orders.wait_alt.clone();
     let flat = m.flat.unwrap_or(false);
@@ -453,7 +452,7 @@ fn flat_row(g: &Game, id: OrdersOrderDefId) -> crate::cmdring::FlatRow {
     crate::cmdring::FlatRow { id: g.tab.orders_order_def[id].id.clone(), hot_key: s.hot_key, opens: s.opens, free: s.free, targets: s.targets, listed: s.listed }
 }
 
-/// A tap's order on `t`: nothing where a tutorial step teaches the key held; a second tap in the same place is 'fall in'. (orders.ts tapGive)
+/// A tap's order on `t`: nothing where a tutorial step teaches the key held; a second tap in the same place is 'fall in'.
 pub(super) fn squad_orders_tap_give(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, input: InputId, goal: Option<bool>) {
     // (a tap ON HIMSELF is never stopped: the key on himself always calls them back, and it is the way out when a step that teaches the hold finds nobody free)
     let on_himself = matches!(t, OrderTarget::None(OrderTargetNone { man: None, .. }));
@@ -485,12 +484,12 @@ pub(super) fn squad_orders_tap_give(g: &mut crate::game::Game, t: &crate::orders
     crate::autopilot::auto_quick(g, t);
 }
 
-/// CMDRING.twice is asked here: the ring's key, and on a tutorial mission only from a step that lists it. (orders.ts twiceOn)
+/// CMDRING.twice is asked here: the ring's key, and on a tutorial mission only from a step that lists it.
 pub fn squad_orders_twice_on(g: &crate::game::Game) -> bool {
     g.k.cmdring.twice && !crate::rails::rails_locks(g, "twice")
 }
 
-/// Every teammate falls in; not said twice over a 'fall in' the first tap gave them all. (orders.ts allIn)
+/// Every teammate falls in; not said twice over a 'fall in' the first tap gave them all.
 fn squad_orders_all_in(g: &mut crate::game::Game) {
     let men = squad_orders_men(g, &crate::seats::here(g), Some(SquadOrdersMenSel::All), None);
     let t = at_sam(g, &crate::seats::here(g));
@@ -507,12 +506,12 @@ fn squad_orders_all_in(g: &mut crate::game::Game) {
     squad_orders_give(g, crate::orders::rows::fallin::ORDER.id, Some(&t), None, Some(&opts_men(men, None)));
 }
 
-/// The quick key's words for the HUD and the ring's first wedge. (orders.ts quickWords)
+/// The quick key's words for the HUD and the ring's first wedge.
 fn squad_orders_quick_words(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, p: Option<&crate::autopilot::AutoPick>) -> Option<String> {
     crate::autopilot::auto_hint(g, t, p)
 }
 
-/// … for the open menu's first wedge; for a ring of a part of the squad, what those men would do. (orders.ts menuQuick)
+/// … for the open menu's first wedge; for a ring of a part of the squad, what those men would do.
 pub(super) fn squad_orders_menu_quick(g: &mut crate::game::Game, m: &crate::orders::Menu) -> Option<String> {
     if m.part.is_some() {
         let p = crate::autopilot::auto_pick(g, &crate::seats::here(g), &m.target, Some(false), Some(&m.men));
@@ -522,7 +521,7 @@ pub(super) fn squad_orders_menu_quick(g: &mut crate::game::Game, m: &crate::orde
     }
 }
 
-/// The man of the squad the cursor is on, or whose feet are nearest it on the screen (his place on the roster; -1: nobody). (orders.ts manAt)
+/// The man of the squad the cursor is on, or whose feet are nearest it on the screen (his place on the roster; -1: nobody).
 fn squad_orders_man_at(g: &mut crate::game::Game, input: InputId, cam: CameraId, canvas: crate::host_hud::View) -> f64 {
     let squad = squad_orders_squad(g, &crate::seats::here(g));
     let t = squad_orders_target_under(g, input, cam, canvas);
@@ -546,7 +545,7 @@ fn squad_orders_man_at(g: &mut crate::game::Game, input: InputId, cam: CameraId,
     best
 }
 
-/// The digits the ring has a wedge on, a bit each (0: no ring). All the game reads of a ring's picture. (orders.ts ringKeys)
+/// The digits the ring has a wedge on, a bit each (0: no ring). All the game reads of a ring's picture.
 fn squad_orders_ring_keys(g: &mut crate::game::Game) -> f64 {
     let (r, menu) = match (g.orders.cmd_ring, g.orders.menu.clone()) {
         (Some(r), Some(menu)) => (r, menu),
@@ -567,7 +566,7 @@ fn squad_orders_ring_keys(g: &mut crate::game::Game) -> f64 {
     keys as f64
 }
 
-/// The roster as it stands; a new cast starts clean. (orders.ts sync)
+/// The roster as it stands; a new cast starts clean.
 pub(super) fn squad_orders_sync(g: &mut crate::game::Game) -> Vec<GuardId> {
     let mut i = 0;
     let mut same = true;
@@ -604,12 +603,12 @@ pub(super) fn squad_orders_sync(g: &mut crate::game::Game) -> Vec<GuardId> {
     g.orders.roster.clone()
 }
 
-/// Sam is standing. (orders.ts samStopped)
+/// Sam is standing.
 pub fn squad_orders_sam_stopped(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
     seat.orders.sam_v <= 0.3
 }
 
-/// A man's order goes, and with it the pin the fight seam put on him. (orders.ts drop)
+/// A man's order goes, and with it the pin the fight seam put on him.
 pub(super) fn squad_orders_drop(g: &mut crate::game::Game, gd: GuardId) {
     g.orders.asg.delete(gd);
     if g.orders.ours.delete(gd) { crate::control::set_pinned(g, gd, false, "orders"); }

@@ -6,12 +6,12 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{string::String, vec, vec::Vec};
 
-/// Is the rule running: a round of the player's is a round to his own men. (fireline.ts live)
+/// Is the rule running: a round of the player's is a round to his own men.
 fn live(g: &mut crate::game::Game) -> bool {
     crate::friendlyfire::ff_live(g)
 }
 
-/// Once a frame before the men are posed: is the player firing, by the rounds counted off the gun in his hands. (fireline.ts fireLineTick)
+/// Once a frame before the men are posed: is the player firing, by the rounds counted off the gun in his hands.
 pub fn fire_line_tick(g: &mut crate::game::Game) {
     let pl = g.player;
     let gun = crate::game::player_gun_in_hand(g, pl);
@@ -50,7 +50,7 @@ pub fn fire_line_tick(g: &mut crate::game::Game) {
     }
 }
 
-/// The lane of the player's fire this frame, or None: he is not firing. (fireline.ts laneOf)
+/// The lane of the player's fire this frame, or None: he is not firing.
 fn lane_of(g: &mut crate::game::Game) -> Option<crate::fireline::Lane> {
     let pl = g.player;
     let c = g.pl[pl].ch;
@@ -72,7 +72,7 @@ fn lane_of(g: &mut crate::game::Game) -> Option<crate::fireline::Lane> {
     Some(Lane { m: muzzle, dx, dz, back, k, half, energy, thin })
 }
 
-/// Is this point of floor inside the lane by its shape alone. (fireline.ts inShape)
+/// Is this point of floor inside the lane by its shape alone.
 fn in_shape(g: &crate::game::Game, l: crate::fireline::Lane, x: f64, z: f64, more: Option<f64>) -> bool {
     let more = more.unwrap_or(0.0);
     let rx = x - l.m[0];
@@ -81,12 +81,12 @@ fn in_shape(g: &crate::game::Game, l: crate::fireline::Lane, x: f64, z: f64, mor
     a > l.back - more && a < g.k.fireline.reach_m && m::abs(rx * l.dz - rz * l.dx) <= l.half + more + m::max(0.0, a) * l.k
 }
 
-/// Would a round of this lane reach the point. (the closure `reaches` of fireline.ts inLane)
+/// Would a round of this lane reach the point.
 fn reaches(g: &mut Game, l: Lane, p: V3) -> bool {
     !crate::scene_collision::shot_blocked(g, l.m, p, Some(0.02), l.energy) || (l.thin >= 0.0 && crate::wallpen::thin_line(g, l.m, p, l.thin, None, None).is_some())
 }
 
-/// Would a round reach a man standing here: his chest, or either edge of his column. (fireline.ts inLane)
+/// Would a round reach a man standing here: his chest, or either edge of his column.
 fn in_lane(g: &mut crate::game::Game, l: crate::fireline::Lane, x: f64, z: f64, more: Option<f64>) -> bool {
     if !in_shape(g, l, x, z, more) {
         return false;
@@ -94,7 +94,7 @@ fn in_lane(g: &mut crate::game::Game, l: crate::fireline::Lane, x: f64, z: f64, 
     reaches(g, l, [x, 1.2, z]) || reaches(g, l, [x + l.dz * 0.25, 1.2, z - l.dx * 0.25]) || reaches(g, l, [x - l.dz * 0.25, 1.2, z + l.dx * 0.25])
 }
 
-/// How far along the polyline `from` → `pts` (at most `far` of it) the walk first stands where `hit` says; infinity = nowhere. (fireline.ts along)
+/// How far along the polyline `from` → `pts` (at most `far` of it) the walk first stands where `hit` says; infinity = nowhere.
 fn along(from: V3, pts: &[V3], far: f64, hit: &mut dyn FnMut(f64, f64) -> bool) -> f64 {
     let (mut ax, mut az, mut gone) = (from[0], from[2], 0.0);
     for b in pts {
@@ -122,17 +122,17 @@ fn along(from: V3, pts: &[V3], far: f64, hit: &mut dyn FnMut(f64, f64) -> bool) 
     f64::INFINITY
 }
 
-/// Where the walk first comes into the lane. (fireline.ts crossAt)
+/// Where the walk first comes into the lane.
 fn cross_at(g: &mut crate::game::Game, l: crate::fireline::Lane, from: V3, pts: &[V3], far: f64, more: Option<f64>) -> f64 {
     along(from, pts, far, &mut |x, z| in_lane(g, l, x, z, more))
 }
 
-/// Where the walk first stands in a doorway. (fireline.ts doorAt)
+/// Where the walk first stands in a doorway.
 fn door_at(g: &mut crate::game::Game, from: V3, pts: &[V3], far: f64) -> f64 {
     along(from, pts, far, &mut |x, z| in_doorway(g, x, z))
 }
 
-/// Is this point of floor in a door's opening. (fireline.ts inDoorway)
+/// Is this point of floor in a door's opening.
 fn in_doorway(g: &crate::game::Game, x: f64, z: f64) -> bool {
     let mut i = 0;
     while i < g.doors.list.len() {
@@ -149,7 +149,7 @@ fn in_doorway(g: &crate::game::Game, x: f64, z: f64) -> bool {
     false
 }
 
-/// The corners of the walk he is on to `goal`: the runner's own path while it is for that goal, else the straight leg if short, else None. (fireline.ts walkOf)
+/// The corners of the walk he is on to `goal`: the runner's own path while it is for that goal, else the straight leg if short, else None.
 fn walk_of(g: &crate::game::Game, gd: GuardId, goal: V3) -> Option<Vec<V3>> {
     let p = g.ch[g.gd[gd].ch].pos;
     if let Some(pg) = g.gd[gd].path_goal {
@@ -162,13 +162,13 @@ fn walk_of(g: &crate::game::Game, gd: GuardId, goal: V3) -> Option<Vec<V3>> {
     if m::hyp2(goal[0] - p[0], goal[2] - p[2]) <= 2.0 { Some(vec![goal]) } else { None }
 }
 
-/// Would waiting leave him standing in an enemy's line, as far as he knows. (fireline.ts inEnemyLine)
+/// Would waiting leave him standing in an enemy's line, as far as he knows.
 fn in_enemy_line(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let p = g.ch[g.gd[gd].ch].pos;
     crate::picture::exposed_at(g, gd, p, None) > 0.0
 }
 
-/// The length of a walk from `from` through `pts`. (the closure `len` of fireline.ts wayRound)
+/// The length of a walk from `from` through `pts`.
 fn walk_len(from: V3, pts: &[V3]) -> f64 {
     let (mut s, mut a) = (0.0, from);
     for b in pts {
@@ -178,7 +178,7 @@ fn walk_len(from: V3, pts: &[V3]) -> f64 {
     s
 }
 
-/// A way to `goal` that keeps out of the lane, no more than `wayMoreM` longer than the way across, or None. (fireline.ts wayRound)
+/// A way to `goal` that keeps out of the lane, no more than `wayMoreM` longer than the way across, or None.
 fn way_round(g: &mut crate::game::Game, gd: GuardId, l: crate::fireline::Lane, goal: V3) -> Option<Vec<V3>> {
     let cs = g.col.nav.cell;
     let p = g.ch[g.gd[gd].ch].pos;
@@ -207,14 +207,14 @@ fn way_round(g: &mut crate::game::Game, gd: GuardId, l: crate::fireline::Lane, g
     Some(way)
 }
 
-/// The rule lets go of him: his wait, if any, is forgotten. The caller returns None. (fireline.ts end)
+/// The rule lets go of him: his wait, if any, is forgotten. The caller returns None.
 fn end(g: &mut crate::game::Game, gd: GuardId, st: Option<&crate::fireline::St>) {
     if st.is_some() {
         g.m.fireline.states.delete(gd);
     }
 }
 
-/// He stands: the wait's seconds counted as they pass. (fireline.ts hold)
+/// He stands: the wait's seconds counted as they pass.
 fn hold(g: &mut crate::game::Game, gd: GuardId) -> crate::fireline::FireLineFeet {
     let t = g.time;
     g.stats.fireline.held_s += m::min(0.1, m::max(0.0, t - g.m.fireline.states.get(gd).unwrap().t));
@@ -228,7 +228,7 @@ fn hold_row(g: &mut Game, gd: GuardId, s: St) -> Option<FireLineFeet> {
     Some(hold(g, gd))
 }
 
-/// Is he on a door order past the stack. (fireline.ts:185)
+/// Is he on a door order past the stack.
 fn past_the_stack(g: &Game, seat: &crate::seats::SeatRef, gd: GuardId) -> bool {
     seat.door_tools.ops.iter().any(|&o| {
         let op = &g.tab.doortools_door_op[o];
@@ -236,12 +236,12 @@ fn past_the_stack(g: &Game, seat: &crate::seats::SeatRef, gd: GuardId) -> bool {
     })
 }
 
-/// Is he on a wall charge. (fireline.ts:186)
+/// Is he on a wall charge.
 fn on_wall_charge(g: &Game, seat: &crate::seats::SeatRef, gd: GuardId) -> bool {
     seat.wall_charge.ops.iter().any(|&o| g.tab.wallcharge_wall_op[o].men.contains(&gd))
 }
 
-/// His feet while the player fires down a lane his walk would cross: speed 0 = wait where he stands, `goal` = the next corner of a way round, None = the order's own legs. (fireline.ts fireLineFeet)
+/// His feet while the player fires down a lane his walk would cross: speed 0 = wait where he stands, `goal` = the next corner of a way round, None = the order's own legs.
 pub fn fire_line_feet(g: &mut crate::game::Game, gd: GuardId, goal: Option<V3>, speed: f64, mine: bool) -> Option<crate::fireline::FireLineFeet> {
     // `st` is a copy of his row: every path that keeps the wait writes it back by the key before it returns (nothing called in between reads the table).
     let mut st: Option<St> = g.m.fireline.states.get(gd).cloned();
@@ -359,7 +359,7 @@ pub fn fire_line_feet(g: &mut crate::game::Game, gd: GuardId, goal: Option<V3>, 
     s.go_t = -1.0;
     if !s.said && g.time - s.since >= g.k.fireline.cue_s {
         s.said = true;
-        crate::game::game_say(g, gd, "your line — holding.", None, None, None);
+        crate::game::game_say(g, gd, "your line — holding.", None, None);
         g.stats.fireline.cues += 1;
     }
     // The ceiling: then a look for a way round, and again every `againS` (the men of a squad that stopped together do not all look on one frame).
@@ -379,7 +379,7 @@ pub fn fire_line_feet(g: &mut crate::game::Game, gd: GuardId, goal: Option<V3>, 
     hold_row(g, gd, s)
 }
 
-/// Is this rule holding him where he stands: nobody calls him stuck. (fireline.ts fireLineLive)
+/// Is this rule holding him where he stands: nobody calls him stuck.
 pub fn fire_line_live(g: &crate::game::Game, gd: GuardId) -> bool {
     match g.m.fireline.states.get(gd) {
         Some(st) => st.way.is_none() && st.go_t < 0.0 && g.time >= st.t && g.time - st.t <= 0.25,
@@ -391,24 +391,53 @@ pub fn fire_line_live(g: &crate::game::Game, gd: GuardId) -> bool {
 mod tests {
     use super::*;
 
-    /// The bits, the hits and the last point asked, against fireline.ts `along` under bun with EXACT.on.
-    fn run(far: f64, f: &dyn Fn(f64, f64) -> bool) -> (u64, i32, u64, u64) {
-        let from = [0.1, 0.0, 0.3];
-        let pts = [[1.7, 0.0, 2.9], [1.7, 0.0, 2.9], [-3.3, 0.0, 4.4]];
-        let (mut calls, mut lx, mut lz) = (0, 0.0f64, 0.0f64);
-        let s = along(from, &pts, far, &mut |x, z| {
-            calls += 1;
-            lx = x;
-            lz = z;
-            f(x, z)
+    /// The walk's answer and every point it asked about.
+    fn walk(pts: &[V3], far: f64, hit: &dyn Fn(f64, f64) -> bool) -> (f64, Vec<(f64, f64)>) {
+        let mut asked = Vec::new();
+        let s = along([0.0; 3], pts, far, &mut |x, z| {
+            asked.push((x, z));
+            hit(x, z)
         });
-        (s.to_bits(), calls, lx.to_bits(), lz.to_bits())
+        (s, asked)
+    }
+    const CORNER: [V3; 2] = [[10.0, 0.0, 0.0], [10.0, 0.0, 10.0]];
+
+    /// A doorway or a lane is never stepped over: the path is asked about every 20 cm at most, right to its end.
+    #[test]
+    fn the_walk_misses_nothing_on_the_way() {
+        let (s, asked) = walk(&CORNER, f64::INFINITY, &|_, _| false);
+        assert_eq!(s, f64::INFINITY);
+        let mut was = (0.0, 0.0);
+        for &(x, z) in &asked {
+            assert!(m::hyp2(x - was.0, z - was.1) <= 0.2 + 1e-9, "a step from {:?} to {:?}", was, (x, z));
+            was = (x, z);
+        }
+        assert_eq!(was, (10.0, 10.0));
     }
 
+    /// The answer is how far along the first point that answers is, the legs behind it counted, and nothing past it is asked.
     #[test]
-    fn along_matches_the_typescripts_bits() {
-        assert_eq!(run(f64::INFINITY, &|x, _| x < -1.0), (0x4017cfd2d1826696, 31, 0xbff13e93e93e93e9, 0x400dddddddddddde));
-        assert_eq!(run(f64::INFINITY, &|_, _| false), (0x7ff0000000000000, 43, 0xc00a666666666666, 0x401199999999999a));
-        assert_eq!(run(1.0, &|_, _| false), (0x7ff0000000000000, 5, 0x3fe3333333333333, 0x3ff1cccccccccccd));
+    fn the_walk_stops_at_the_first_point_that_answers() {
+        let (s, asked) = walk(&CORNER, f64::INFINITY, &|x, _| x >= 3.0);
+        assert!(s >= 3.0 && s <= 3.2 + 1e-9, "{s}");
+        assert_eq!(asked.last().unwrap().0, s);
+        let (s, _) = walk(&CORNER, f64::INFINITY, &|_, z| z >= 2.0);
+        assert!(s >= 12.0 && s <= 12.2 + 1e-9, "{s}");
+    }
+
+    /// Past `far` the walk has found nothing, even where something would answer.
+    #[test]
+    fn the_walk_goes_no_further_than_it_was_told() {
+        let (s, asked) = walk(&CORNER, 1.0, &|x, _| x >= 5.0);
+        assert_eq!(s, f64::INFINITY);
+        assert!(asked.iter().all(|p| p.0 <= 1.0), "{:?}", asked.last());
+    }
+
+    /// A point given twice, or one straight overhead, is no length of floor.
+    #[test]
+    fn a_leg_with_no_floor_in_it_is_no_step() {
+        let plain = walk(&CORNER, f64::INFINITY, &|_, _| false).1;
+        let again = walk(&[[0.0, 5.0, 0.0], CORNER[0], CORNER[0], CORNER[1]], f64::INFINITY, &|_, _| false).1;
+        assert_eq!(again, plain);
     }
 }

@@ -7,7 +7,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::string::String;
 
-/// Back to nothing; `last_shot` stays, as in the TypeScript. (aim.ts AimState.clear)
+/// Back to nothing; `last_shot` stays, as in the TypeScript.
 pub fn aim_state_clear(this: &mut crate::aim::AimState) {
     this.track = 0.0;
     this.tgt_key = String::new();
@@ -22,7 +22,7 @@ pub fn aim_state_clear(this: &mut crate::aim::AimState) {
     this.left_track = 0.0;
 }
 
-/// Remember the feet: `speed_sm` eased toward the ground speed over tau; `hold` feeds the remembered feet. (aim.ts feedFeet)
+/// Remember the feet: `speed_sm` eased toward the ground speed over tau; `hold` feeds the remembered feet.
 fn feed_feet(g: &mut crate::game::Game, a: &mut crate::aim::AimState, speed: f64, dt: f64, tau: f64, hold: Option<f64>) {
     let hold = hold.unwrap_or(speed);
     a.speed_sm += (speed - a.speed_sm) * (1.0 - m::exp(-dt / m::max(tau, 1e-3)));
@@ -32,13 +32,13 @@ fn feed_feet(g: &mut crate::game::Game, a: &mut crate::aim::AimState, speed: f64
     a.move_sm = crate::aimcost::feet_hold(g, a.move_sm, hold, dt);
 }
 
-/// What the feet term reads for this shooter right now, m/s. (aim.ts feetOf)
+/// What the feet term reads for this shooter right now, m/s.
 fn feet_of(g: &crate::game::Game, a: &crate::aim::AimState, vel: &[f64], steady_pace: f64) -> f64 {
     let f = m::max(m::hyp2(vel[0], vel[2]), a.speed_sm - steady_pace);
     m::max(f, a.move_sm) * g.k.aimcost.move_k
 }
 
-/// Feed one frame of the target into the bookkeeping; true if the bearing jumped. (aim.ts feedTarget)
+/// Feed one frame of the target into the bookkeeping; true if the bearing jumped.
 fn feed_target(a: &mut crate::aim::AimState, from: V3, at: V3, vel: &[f64], dt: f64, jump_deg: f64, tau: f64) -> bool {
     let dx = at[0] - from[0];
     let dz = at[2] - from[2];
@@ -59,7 +59,7 @@ fn feed_target(a: &mut crate::aim::AimState, from: V3, at: V3, vel: &[f64], dt: 
     jumped
 }
 
-/// Once a frame per living, free, unscripted guard: the bearing to his foe, its rate, and the track. (aim.ts trackGuard)
+/// Once a frame per living, free, unscripted guard: the bearing to his foe, its rate, and the track.
 pub fn track_guard(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     let p = g.k.aim.guard;
     let c = g.gd[gd].ch;
@@ -133,17 +133,17 @@ pub fn track_guard(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     }
 }
 
-/// Seconds to settle fully at this range. (aim.ts settleTime)
+/// Seconds to settle fully at this range.
 pub fn settle_time(p: crate::aim::SettleTimeP, dist: f64) -> f64 {
     m::max(p.settle_secs, 1e-3) * v3::clamp(dist / m::max(p.range_ref, 0.1), p.near_k, 1.0)
 }
 
-/// The first-shot gate; true with the model off. (aim.ts aimReady)
+/// The first-shot gate; true with the model off.
 pub fn aim_ready(g: &crate::game::Game, gd: GuardId) -> bool {
     !g.tune.aim_model || g.gd[gd].aim.track >= g.k.aim.guard.acquire_min - 1e-9
 }
 
-/// The standoff's flank round: are the feet he remembers still enough? (aim.ts feetSettled)
+/// The standoff's flank round: are the feet he remembers still enough?
 pub fn feet_settled(g: &crate::game::Game, gd: GuardId) -> bool {
     g.gd[gd].aim.move_sm <= g.k.aimcost.flank_at
 }
@@ -161,7 +161,7 @@ fn foe_or_player(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: GuardI
     }
 }
 
-/// The terms of a guard's cone under the model. (aim.ts guardTerms)
+/// The terms of a guard's cone under the model.
 fn guard_terms(g: &mut crate::game::Game, gd: GuardId, extra: f64) -> crate::aim::GuardTerms {
     let p = g.k.aim.guard;
     let c = g.gd[gd].ch;
@@ -182,7 +182,7 @@ fn guard_terms(g: &mut crate::game::Game, gd: GuardId, extra: f64) -> crate::aim
     crate::aim::GuardTerms { spread: hands * settle + tgt + own + extra }
 }
 
-/// What to hand fireWeapon for this guard's round; stamps `last_shot`. (aim.ts guardRound)
+/// What to hand fireWeapon for this guard's round; stamps `last_shot`.
 pub fn guard_round(g: &mut crate::game::Game, gd: GuardId, extra: f64, gated: Option<bool>) -> crate::combat::FireOpts {
     if !g.tune.aim_model {
         return crate::combat::FireOpts { spread: Some(extra), ..Default::default() };
@@ -193,7 +193,7 @@ pub fn guard_round(g: &mut crate::game::Game, gd: GuardId, extra: f64, gated: Op
     crate::combat::FireOpts { spread: Some(t.spread), steady: Some(true), ..Default::default() }
 }
 
-/// The whole cone a guard's round is drawn from. (aim.ts handsCone)
+/// The whole cone a guard's round is drawn from.
 pub fn hands_cone(g: &mut crate::game::Game, gd: GuardId, extra: f64) -> f64 {
     if !g.tune.aim_model {
         let s = ai_spread_of(g, gd);
@@ -204,7 +204,7 @@ pub fn hands_cone(g: &mut crate::game::Game, gd: GuardId, extra: f64) -> f64 {
     guard_terms(g, gd, extra).spread
 }
 
-/// Stop to shoot: true when the caller should brake him to a standstill. (aim.ts aimBrake)
+/// Stop to shoot: true when the caller should brake him to a standstill.
 pub fn aim_brake(g: &mut crate::game::Game, gd: GuardId, dist: f64, blocked: bool) -> bool {
     let p = g.k.aim.guard;
     let w = g.gd[gd].weapon;
@@ -213,7 +213,7 @@ pub fn aim_brake(g: &mut crate::game::Game, gd: GuardId, dist: f64, blocked: boo
     brake
 }
 
-/// Fed the round this guard has just let go: count it if it went into the frame on his half of the line. (aim.ts noteBore)
+/// Fed the round this guard has just let go: count it if it went into the frame on his half of the line.
 pub fn note_bore(g: &mut crate::game::Game, gd: GuardId, aim_at: V3) {
     if !g.tune.aim_model {
         return;
@@ -239,7 +239,7 @@ pub fn note_bore(g: &mut crate::game::Game, gd: GuardId, aim_at: V3) {
     }
 }
 
-/// Two rounds running into the frame from where he stands: that spot is no line. (aim.ts boreFouled)
+/// Two rounds running into the frame from where he stands: that spot is no line.
 pub fn bore_fouled(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let f = match g.gd[gd].aim.fouled {
         Some(f) if g.tune.aim_model => f,
@@ -252,7 +252,7 @@ pub fn bore_fouled(g: &mut crate::game::Game, gd: GuardId) -> bool {
     f.n >= 2.0
 }
 
-/// Once a frame: Sam's track on what is under the reticle, its caps, and that man's rate across his view. (aim.ts trackPlayer)
+/// Once a frame: Sam's track on what is under the reticle, its caps, and that man's rate across his view.
 pub fn track_player(g: &mut crate::game::Game, dt: f64) {
     let pl = g.player;
     let p = g.k.aim.player;
@@ -335,12 +335,12 @@ pub fn track_player(g: &mut crate::game::Game, dt: f64) {
     a.track = m::min(cap, a.track + rate * dt);
 }
 
-/// He has you lined up: his track is past the aim model's first-shot gate. (aim.ts guardAcquired)
+/// He has you lined up: his track is past the aim model's first-shot gate.
 pub fn guard_acquired(g: &crate::game::Game, gd: GuardId) -> bool {
     g.tune.aim_model && g.gd[gd].state == crate::game::GuardState::Alert && g.gd[gd].aim.track >= g.k.aim.guard.acquire_min - 1e-9
 }
 
-/// Sam's cone under the model and his track: nothing with the model off or under the puppet. (aim.ts playerAim)
+/// Sam's cone under the model and his track: nothing with the model off or under the puppet.
 pub fn player_aim(g: &crate::game::Game, pl: PlayerId) -> crate::aim::PlayerAim {
     if !g.tune.aim_model || g.puppet.is_some() {
         return crate::aim::PlayerAim { spread: 0.0, track: 1.0, base: 0.0, settle: 1.0, tgt: 0.0, own: 0.0 };
@@ -359,7 +359,7 @@ pub fn player_aim(g: &crate::game::Game, pl: PlayerId) -> crate::aim::PlayerAim 
     crate::aim::PlayerAim { spread: (base * settle + tgt) * kk + own * v3::lerp(kk, 1.0, v3::clamp(1.0 - g.k.aimcost.brace_feet, 0.0, 1.0)), track, base, settle, tgt, own }
 }
 
-/// The one term Sam's fire sites add to their spread; stamps `last_shot`. (aim.ts samAim)
+/// The one term Sam's fire sites add to their spread; stamps `last_shot`.
 pub(super) fn sam_aim(g: &mut crate::game::Game) -> f64 {
     let pl = g.player;
     let r = player_aim(g, pl);
@@ -375,33 +375,35 @@ pub(super) fn sam_aim(g: &mut crate::game::Game) -> f64 {
 mod tests {
     use super::*;
 
-    /// The TypeScript's own feedTarget under EXACT, run on one AimState in sequence: first frame, a step, a jump, a zero tau, a tiny range, other knobs.
+    /// A failure means a man's lead on a moving target is wrong: a shooter holds off for one who crosses his sights, not for one who walks straight at him, and starts over when the target jumps.
     #[test]
-    fn feed_target_keeps_the_typescript_s_bits() {
+    fn the_bearing_rate_rises_for_a_man_who_crosses_and_a_jump_is_a_new_target() {
         let mut a = crate::aim::AimState::blank();
-        let steps: [(V3, V3, V3, f64, f64, f64, bool, u64, u64); 6] = [
-            ([0.0, 0.0, 0.0], [3.0, 0.0, 7.0], [1.2, 0.0, -0.4], 1.0 / 60.0, 25.0, 0.15, false, 0x3fd9e9bf3d20dc70, 0x3f91d2da973e52f0),
-            ([0.1, 0.0, 0.0], [3.05, 1.0, 7.02], [1.2, 0.0, -0.4], 1.0 / 60.0, 25.0, 0.15, false, 0x3fd975e93acd59a5, 0x3fa0e48fa7ebbb08),
-            ([0.2, 0.0, 0.1], [-5.0, 1.0, -2.0], [4.7, 0.0, 0.3], 1.0 / 120.0, 25.0, 0.15, true, 0xbfff461946fe9f2c, 0x0000000000000000),
-            ([0.2, 0.0, 0.1], [-5.01, 1.0, -2.03], [4.7, 0.0, 0.3], 1.0 / 120.0, 25.0, 0.0, false, 0xbfff579de4a1f697, 0x3fd10fe0ec0632ec),
-            ([1.0, 0.0, 1.0], [1.0005, 0.0, 1.0002], [2.0, 0.0, 3.0], 1.0 / 60.0, 25.0, 0.15, true, 0x3ff30b6d796a4da8, 0x0000000000000000),
-            ([1.0, 0.0, 1.0], [1.3, 0.0, 1.1], [0.3, 0.0, 0.3], 0.25, 18.0, 0.3, false, 0x3ff3fc176b7a855f, 0x3fcb7688e78f7a1f),
-        ];
-        for (from, at, vel, dt, jump, tau, jumped, brg, rate) in steps {
-            assert_eq!(feed_target(&mut a, from, at, &vel, dt, jump, tau), jumped);
-            assert_eq!(a.last_bearing.to_bits(), brg);
-            assert_eq!(a.bearing_rate.to_bits(), rate);
-        }
+        let (from, ahead): (V3, V3) = ([0.0; 3], [0.0, 0.0, 5.0]);
+        assert!(!feed_target(&mut a, from, ahead, &[0.0, 0.0, 2.0], 1.0 / 60.0, 25.0, 0.15));
+        assert_eq!(a.bearing_rate, 0.0, "walking straight at the shooter");
+        assert!(!feed_target(&mut a, from, ahead, &[2.0, 0.0, 0.0], 1.0 / 60.0, 25.0, 0.15));
+        let eased = a.bearing_rate;
+        assert!(eased > 0.0 && eased < 0.4, "crossing at 2 m/s at 5 m eases up toward 0.4 rad/s: {eased}");
+        assert!(!feed_target(&mut a, from, ahead, &[2.0, 0.0, 0.0], 1.0 / 60.0, 25.0, 0.0));
+        assert!((a.bearing_rate - 0.4).abs() < 1e-6, "with no easing it is there at once: {}", a.bearing_rate);
+        assert!(feed_target(&mut a, from, [-5.0, 0.0, -2.0], &[2.0, 0.0, 0.0], 1.0 / 60.0, 25.0, 0.15));
+        assert_eq!(a.bearing_rate, 0.0, "a jump past the limit starts the rate over");
+        // at no range to speak of nothing crosses
+        assert!(!feed_target(&mut a, from, [-5e-4, 0.0, -2e-4], &[2.0, 0.0, 0.0], 1.0 / 60.0, 25.0, 0.0));
+        assert_eq!(a.bearing_rate, 0.0);
     }
 
-    /// The TypeScript's own settleTime under EXACT: inside the range, at the floor, past it, and with the knobs at nothing.
+    /// A man settles quicker on a near target, down to a floor; at the range of reference and past it he takes the whole time, and never no time at all.
     #[test]
-    fn settle_time_keeps_the_typescript_s_bits() {
+    fn a_near_target_settles_quicker_down_to_a_floor() {
         let p = |settle_secs, range_ref, near_k| crate::aim::SettleTimeP { settle_secs, range_ref, near_k };
-        assert_eq!(settle_time(p(1.3, 8.0, 0.25), 5.3).to_bits(), 0x3feb8f5c28f5c28f);
-        assert_eq!(settle_time(p(1.3, 8.0, 0.25), 0.7).to_bits(), 0x3fd4cccccccccccd);
-        assert_eq!(settle_time(p(0.8, 8.0, 0.25), 12.0).to_bits(), 0x3fe999999999999a);
-        assert_eq!(settle_time(p(0.0, 0.0, 0.25), 3.3).to_bits(), 0x3f50624dd2f1a9fc);
+        let near = |a: f64, b: f64| assert!((a - b).abs() < 1e-12, "{a} {b}");
+        near(settle_time(p(1.2, 8.0, 0.25), 8.0), 1.2);
+        near(settle_time(p(1.2, 8.0, 0.25), 20.0), 1.2);
+        near(settle_time(p(1.2, 8.0, 0.25), 4.0), 0.6);
+        near(settle_time(p(1.2, 8.0, 0.25), 0.1), 0.3);
+        assert!(settle_time(p(0.0, 0.0, 0.25), 3.3) > 0.0);
     }
 
     /// clear() empties everything but the last round's record.

@@ -1,4 +1,3 @@
-//! src/game/doortools.ts lines 3695 to 3856
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -61,7 +60,7 @@ fn fled_names(g: &Game, op: DoorOpId) -> String {
 }
 
 /// Once a tick for an order whose door is still to be opened: who ran from a grenade and is not back, and true when the order does not move
-/// this tick. (doortools.ts DoorTools.fragStep)
+/// this tick.
 pub(super) fn door_tools_frag_step(g: &mut crate::game::Game, op: DoorOpId) -> bool {
     let t = g.time;
     let o = &mut g.tab.doortools_door_op[op];
@@ -119,21 +118,21 @@ pub(super) fn door_tools_frag_step(g: &mut crate::game::Game, op: DoorOpId) -> b
         let o = &g.tab.doortools_door_op[op];
         let f = o.fled.as_ref().unwrap();
         let who = o.men.iter().copied().find(|&m| !f.has(m)).unwrap_or(o.lead);
-        crate::game::game_say(g, who, "hold — back on the door.", None, None, None);
+        crate::game::game_say(g, who, "hold — back on the door.", None, None);
     }
     true
 }
 
 // ---------------------------------------------------------------- the threshold: who throws, what is lit, where a can goes
 
-/// Is he at the door, on the order's side of it. (doortools.ts DoorTools.thrAt)
+/// Is he at the door, on the order's side of it.
 pub(super) fn door_tools_thr_at(g: &mut crate::game::Game, op: DoorOpId, m: GuardId) -> bool {
     let (d, side) = (g.tab.doortools_door_op[op].door, g.tab.doortools_door_op[op].side);
     let p = pos_of(g, m);
     v3::dist_xz(p, g.dr[d].frame_centre) < g.k.doortools.throw_reach && off_of(g, d, p, side) > 0.0
 }
 
-/// The one order of men a can is thrown by; with `hand`, the hand a can may leave right now, or none. (doortools.ts DoorTools.thrPick)
+/// The one order of men a can is thrown by; with `hand`, the hand a can may leave right now, or none.
 pub(super) fn door_tools_thr_pick(g: &mut crate::game::Game, op: DoorOpId, hand: bool, fit: Option<&mut dyn FnMut(&mut crate::game::Game, GuardId) -> bool>) -> Option<GuardId> {
     let mut fit = fit;
     let reach = g.k.doortools.throw_reach;
@@ -188,7 +187,7 @@ fn thr_pick_fit(g: &mut Game, fit: &mut Option<&mut dyn FnMut(&mut Game, GuardId
     }
 }
 
-/// Is this cell of the room lit by the place itself (asked once a cell an order). (doortools.ts DoorTools.thrLitCell)
+/// Is this cell of the room lit by the place itself (asked once a cell an order).
 pub(super) fn door_tools_thr_lit_cell(g: &mut crate::game::Game, t_key: DoorOpId, sr: DoortoolsRoomSearchId, i: f64) -> bool {
     let i = i as usize;
     let (n, q) = (g.tab.doortools_room_search[sr].pts.len(), g.tab.doortools_room_search[sr].pts[i]);
@@ -203,7 +202,7 @@ pub(super) fn door_tools_thr_lit_cell(g: &mut crate::game::Game, t_key: DoorOpId
     c == 1
 }
 
-/// Does this cell show a standing man through the goggles by the place's own light (asked once a cell an order). (doortools.ts DoorTools.thrTubeCell)
+/// Does this cell show a standing man through the goggles by the place's own light (asked once a cell an order).
 pub(super) fn door_tools_thr_tube_cell(g: &mut crate::game::Game, t_key: DoorOpId, sr: DoortoolsRoomSearchId, i: f64) -> bool {
     let i = i as usize;
     let (n, q) = (g.tab.doortools_room_search[sr].pts.len(), g.tab.doortools_room_search[sr].pts[i]);
@@ -217,7 +216,7 @@ pub(super) fn door_tools_thr_tube_cell(g: &mut crate::game::Game, t_key: DoorOpI
     c == 1
 }
 
-/// Where a can leaves the hand: in the opening's span at the thrower's end, a forearm outside the frame line. (doortools.ts DoorTools.handAt)
+/// Where a can leaves the hand: in the opening's span at the thrower's end, a forearm outside the frame line.
 pub(super) fn door_tools_hand_at(g: &mut crate::game::Game, op: DoorOpId, th: GuardId) -> V3 {
     let (d, side) = (g.tab.doortools_door_op[op].door, g.tab.doortools_door_op[op].side);
     let w = g.dr[d].def.width;
@@ -227,7 +226,6 @@ pub(super) fn door_tools_hand_at(g: &mut crate::game::Game, op: DoorOpId, th: Gu
 }
 
 /// The blind pocket worth a can: the point in the room whose burst has a line to the most floor nobody has seen; none when too little is left.
-/// (doortools.ts DoorTools.pocketOf)
 pub(super) fn door_tools_pocket_of(g: &mut crate::game::Game, op: DoorOpId, th: GuardId) -> Option<crate::doortools::DoorToolsPocketOf> {
     let (thr_pocket, thr_throw_m, thr_flash_m, air_h) = (g.k.doortools.thr_pocket, g.k.doortools.thr_throw_m, g.k.doortools.thr_flash_m, g.k.doortools.air_h);
     let cell = g.col.nav.cell;
@@ -292,7 +290,6 @@ pub(super) fn door_tools_pocket_of(g: &mut crate::game::Game, op: DoorOpId, th: 
 }
 
 /// A can of the stage's has gone off: the floor its burst had a line to is no pocket any more; the next one's turn, or the count to the step in.
-/// (doortools.ts DoorTools.thrBanged)
 pub(super) fn door_tools_thr_banged(g: &mut crate::game::Game, op: DoorOpId) {
     let (thr_flash_m, thr_next) = (g.k.doortools.thr_flash_m, g.k.doortools.thr_next);
     let at = g.tab.doortools_door_op[op].bang_at;
@@ -348,7 +345,7 @@ fn shallow_fits(g: &mut Game, d: DoorId, mid: V3, out: &[crate::entrypoints::Pod
 }
 
 /// The shallow points a threshold stage steps in to, by the door's own geometry: to either hand hard on the entry wall, then a little deeper,
-/// then down the middle, none more than 2.5 m inside; the entry's own points where no floor like that exists. (doortools.ts DoorTools.shallowPods)
+/// then down the middle, none more than 2.5 m inside; the entry's own points where no floor like that exists.
 pub fn door_tools_shallow_pods(g: &mut crate::game::Game, d: DoorId, side: f64, n: Option<f64>) -> Vec<crate::entrypoints::Pod> {
     let n = n.unwrap_or(2.0);
     let w = g.dr[d].def.width;
@@ -408,7 +405,7 @@ pub fn door_tools_shallow_pods(g: &mut crate::game::Game, d: DoorId, side: f64, 
 }
 
 /// The step in: the men off the jambs first, each to the shallow point that is the least walk, then the rest in their turn; from here the op
-/// is in 'enter'. (doortools.ts DoorTools.stepIn)
+/// is in 'enter'.
 pub(super) fn door_tools_step_in(g: &mut crate::game::Game, op: DoorOpId) {
     let (reach, thr_in) = (g.k.doortools.throw_reach, g.k.doortools.thr_in);
     let t = g.time;
@@ -445,7 +442,7 @@ pub(super) fn door_tools_step_in(g: &mut crate::game::Game, op: DoorOpId) {
     let (jamb, t_pods) = (thr.jamb.clone(), thr.pods.clone());
     let pods: Vec<crate::entrypoints::Pod> = if crate::orders::squad_orders_big(g, &crate::seats::here(g)) && men.len() <= 2 { door_tools_pods_apart(g, op, &t_pods, men.len() as f64) } else { t_pods };
     if pods.is_empty() {
-        crate::game::game_say(g, lead, "no way in.", None, None, None);
+        crate::game::game_say(g, lead, "no way in.", None, None);
         door_tools_end(g, op, "no floor inside");
         return;
     }
@@ -490,12 +487,12 @@ pub(super) fn door_tools_step_in(g: &mut crate::game::Game, op: DoorOpId) {
     let lead = o.lead;
     let what = format!("step in · {}", calls(g, &in_men));
     door_tools_beat(g, op, &what);
-    crate::game::game_say(g, lead, "stepping in.", None, None, None);
+    crate::game::game_say(g, lead, "stepping in.", None, None);
 }
 
 // ---------------------------------------------------------------- the HUD, the console
 
-/// The squad's HUD block: what is left, and a charge waiting for the trigger. (doortools.ts DoorTools.hudNotes)
+/// The squad's HUD block: what is left, and a charge waiting for the trigger.
 pub fn door_tools_hud_notes(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<String> {
     let mut out = vec![format!("charges {} · bangs {}", seat.door_tools.charges, seat.door_tools.bangs)];
     let f = blow_letter(g);
@@ -557,7 +554,6 @@ pub fn door_tools_hud_notes(g: &crate::game::Game, seat: &crate::seats::SeatRef)
 }
 
 /// What hudNotes and a door's heading say that the corner panel would otherwise lose, each as a key and what a press of it does now.
-/// (doortools.ts DoorTools.cornerNotes)
 pub fn door_tools_corner_notes(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<crate::view::Note> {
     use crate::view::Note;
     let mut out: Vec<Note> = Vec::new();
@@ -591,7 +587,7 @@ pub fn door_tools_corner_notes(g: &crate::game::Game, seat: &crate::seats::SeatR
     out
 }
 
-/// The word, while somebody is waiting on it: the key that gives it, to whom; with the orders going to somebody else, who is waiting (a set charge is left out of that: it has its own line, and its own key). (doortools.ts DoorTools.wordNote)
+/// The word, while somebody is waiting on it: the key that gives it, to whom; with the orders going to somebody else, who is waiting (a set charge is left out of that: it has its own line, and its own key).
 pub fn door_tools_word_note(g: &Game, seat: &crate::seats::SeatRef) -> Vec<crate::view::Note> {
     use crate::view::Note;
     let f = blow_letter(g);

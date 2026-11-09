@@ -3,7 +3,7 @@
 //!
 //! `tick` runs once after every step, on the frame as it now stands. Autosaves and saves by hand are two rings, neither of which pushes the other out; a run's saves are
 //! its own, and a fresh run starts with none. F5 is read off the step's own record. A run is the mission that is up (`Mission.serial`). The books are the game's own `saves`, and go back with a game put
-//! back, but for what belongs to the host and to the run as it is NOW: the shelf, the counts, the log and the switch.   (src/game/savestate.ts Checkpoints)
+//! back, but for what belongs to the host and to the run as it is NOW: the shelf, the counts, the log and the switch.
 use super::*;
 use crate::game::{Game, GuardState, MissionStage};
 use crate::ids::*;
@@ -31,7 +31,7 @@ fn note(g: &mut Game, what: String) {
 fn here(g: &mut Game) -> String { let p = g.ch[g.pl[g.player].ch].pos; crate::chronicle::room_of(g, p) }
 fn rank(s: MissionStage) -> u32 { match s { MissionStage::Infiltrate => 0, MissionStage::Drive => 1, MissionStage::Exfil => 2, MissionStage::Done | MissionStage::Failed => 3 } }
 
-/// Why the game cannot be kept right now; `authored` = a tutorial's own checkpoint, taken whatever is on the floor.   (savestate.ts runNo, for a save in memory)
+/// Why the game cannot be kept right now; `authored` = a tutorial's own checkpoint, taken whatever is on the floor.
 pub fn run_no(g: &Game, seat: &crate::seats::SeatRef, authored: bool) -> Option<String> {
     if g.aside || g.puppet.is_some() { return Some(String::from("nobody is playing")); }
     if g.seats.len() > 1 { return Some(String::from("two players (a checkpoint holds one player today)")); }
@@ -44,7 +44,7 @@ pub fn run_no(g: &Game, seat: &crate::seats::SeatRef, authored: bool) -> Option<
     None
 }
 
-/// Somebody who is no guard is about to bring the floor up.   (civilians.ts civilianCompromise)
+/// Somebody who is no guard is about to bring the floor up.
 fn civilian_compromise(g: &mut Game) -> Option<String> {
     use crate::civilians::{CivCause, CivState, PendKind};
     if !crate::civilians::civilians_on_floor(g) { return None; }
@@ -63,7 +63,7 @@ fn civilian_compromise(g: &mut Game) -> Option<String> {
     Some(format!("word of {} is about to move the floor", g.gd[who].callsign))
 }
 
-/// With no team on the floor: what is in the air, in a man's hands or on its way down is waited out, as it was when such a save was a file.   (savestate.ts canSave)
+/// With no team on the floor: what is in the air, in a man's hands or on its way down is waited out, as it was when such a save was a file.
 fn unsettled(g: &mut Game) -> Option<String> {
     if g.clearing.is_some() { return Some(String::from("the lockdown pair is clearing rooms")); }
     if let Some(&x) = g.guards.iter().find(|&&x| g.gd[x].script.is_some() && g.gd[x].state != GuardState::Dead) { return Some(format!("{} is scripted", g.gd[x].callsign)); }
@@ -79,7 +79,7 @@ fn unsettled(g: &mut Game) -> Option<String> {
     if !g.rings.is_empty() || !g.shells.is_empty() || crate::stickycam::sticky_flying(g, &crate::seats::here(g)) { return Some(String::from("a round or a camera is in flight")); }
     None
 }
-/// what his hands or his feet are in the middle of   (savestate.ts playerBusy)
+/// what his hands or his feet are in the middle of
 fn busy(g: &Game, seat: &crate::seats::SeatRef) -> Option<&'static str> {
     let p = &g.pl[seat.player];
     let a = &g.ch[p.ch].anim;
@@ -416,9 +416,9 @@ impl Survivors {
     }
 }
 /// A step asks for the mission over (Enter once down, Shift+Enter): the step ends first, as a load in a step does
-pub fn ask_restart(g: &mut Game, said: Option<&str>) { g.saves.again = Some(String::from(said.unwrap_or(""))); }
+pub fn ask_restart(g: &mut Game) { g.saves.again = true; }
 /// THE MISSION OVER, from outside a step: the level stands again and the men are stood on it by the stand's own lines, with what an evening keeps; a new run, the view cut to the fresh man. False where the game keeps no level (it has lost its place among the stands held)
-pub fn restart(g: &mut Game, said: Option<&str>) -> bool {
+pub fn restart(g: &mut Game) -> bool {
     let (slot, of) = (g.sim, stood(g));
     let Some(first) = held(of).first.clone() else { return false };
     let was = Survivors::of(g);
@@ -429,13 +429,12 @@ pub fn restart(g: &mut Game, said: Option<&str>) -> bool {
     new.serial_next = new.serial_next.max(g.serial_next);
     core::mem::swap(g, &mut *new);
     was.write_under(g);
-    // (a mission that started once and refuses now leaves the plain floor, as a refused start does, and says so)
-    if let Some(why) = crate::standing::stand_men(g, &first.men) { crate::game::game_msg(g, &why); }
+    // (a mission that started once and refuses now leaves the plain floor, as a refused start does)
+    let _ = crate::standing::stand_men(g, &first.men);
     crate::scene_collision::light_ready(g);
     was.write_over(g);
     g.mission.serial = g.serial();
     assert!((g.host_cam, g.host_input) == host, "the men's lines made the host's rows elsewhere than the first time");
-    if let Some(s) = said { if !s.is_empty() { crate::game::game_msg(g, s); } }
     crate::game::game_cut_to_men(g);
     g.restart_cut = true;
     g.stats.cleanrestart.restarts += 1;
@@ -464,8 +463,7 @@ fn keep_start(g: &mut Game) {
 }
 /// a step's end: a restart it asked for is made
 fn restart_asked(g: &mut Game) -> bool {
-    let Some(said) = g.saves.again.take() else { return false };
-    restart(g, Some(&said))
+    core::mem::take(&mut g.saves.again) && restart(g)
 }
 /// a step's end with the controller off (a tape walked): the run's first step is kept, and a restart it asked for is made
 pub fn restart_turn(g: &mut Game) -> bool {

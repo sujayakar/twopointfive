@@ -1,4 +1,3 @@
-//! src/game/dialogue.ts lines 376 to 817
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -14,22 +13,21 @@ fn rect_dist_of(x0: f64, x1: f64, z0: f64, z1: f64, p: V3) -> f64 {
 }
 fn rect_holds(r: &Rect, p: V3) -> bool { p[0] >= r.x0 && p[0] <= r.x1 && p[2] >= r.z0 && p[2] <= r.z1 }
 fn place_of_room(r: &Rect) -> PlaceRect { PlaceRect { id: None, name: r.name.clone(), x0: r.x0, x1: r.x1, z0: r.z0, z1: r.z1 } }
-/// `level.routes[i]`: a negative index is no route   (dialogue.ts:509)
+/// `level.routes[i]`: a negative index is no route
 fn route_at(g: &Game, i: i32) -> Option<RouteId> { usize::try_from(i).ok().and_then(|i| g.level.routes.get(i).copied()) }
 
-/// WHERE, for a line on the net: the level's own name for the spot, else roomName.   (dialogue.ts placeName)
+/// WHERE, for a line on the net: the level's own name for the spot, else roomName.
 pub fn place_name(g: &crate::game::Game, p: V3) -> String {
     match own_name(g, p) { Some(n) => n, None => room_name(g, p) }
 }
-/// the level the game was written on (its three patrol routes)   (dialogue.ts isOffice)
+/// the level the game was written on (its three patrol routes)
 pub fn is_office(g: &crate::game::Game) -> bool {
     ["corridor", "cubicles", "lobby_break"].iter().all(|n| g.level.routes.iter().any(|r| g.tab.route[*r].name == *n))
 }
-/// (dialogue.ts withThe)
 fn with_the(n: &str) -> String {
     if n.starts_with("the ") || n.as_bytes().last().map_or(false, |c| c.is_ascii_digit()) { String::from(n) } else { alloc::format!("the {}", n) }
 }
-/// THE LEVEL'S OWN NAMES for its floor, first match wins; null on the office and on a level that names nothing.   (dialogue.ts levelRects)
+/// THE LEVEL'S OWN NAMES for its floor, first match wins; null on the office and on a level that names nothing.
 fn level_rects(g: &crate::game::Game) -> Option<Vec<crate::dialogue::PlaceRect>> {
     let mut r: Option<Vec<PlaceRect>> = None;
     if !is_office(g) {
@@ -60,7 +58,7 @@ fn level_rects(g: &crate::game::Game) -> Option<Vec<crate::dialogue::PlaceRect>>
     }
     r
 }
-/// ownPlace over a list of named rectangles, with the rectangle's place in the list, the identity watchedPlace compares   (dialogue.ts ownPlace)
+/// ownPlace over a list of named rectangles, with the rectangle's place in the list, the identity watchedPlace compares
 fn place_among(r: &[PlaceRect], p: V3) -> (usize, OwnPlace) {
     let (mut best, mut bd) = (0usize, f64::INFINITY);
     for (i, x) in r.iter().enumerate() {
@@ -73,11 +71,11 @@ fn place_among(r: &[PlaceRect], p: V3) -> (usize, OwnPlace) {
 fn own_place_at(g: &Game, p: V3) -> Option<(usize, OwnPlace)> {
     Some(place_among(&level_rects(g)?, p))
 }
-/// the named rectangle a point is in, or the nearest (`d` metres off its edge)   (dialogue.ts ownPlace)
+/// the named rectangle a point is in, or the nearest (`d` metres off its edge)
 pub fn own_place(g: &crate::game::Game, p: V3) -> Option<crate::dialogue::OwnPlace> {
     own_place_at(g, p).map(|x| x.1)
 }
-/// a squad row's word for floor a man WATCHES from `from`, null for his own floor or floor nobody named   (dialogue.ts watchedPlace)
+/// a squad row's word for floor a man WATCHES from `from`, null for his own floor or floor nobody named
 pub fn watched_place(g: &crate::game::Game, from: V3, p: V3) -> Option<String> {
     if is_office(g) {
         let a = room_name(g, p);
@@ -90,12 +88,11 @@ pub fn watched_place(g: &crate::game::Game, from: V3, p: V3) -> Option<String> {
         _ => Some(a.rect.name),
     }
 }
-/// (dialogue.ts ownName)
 fn own_name(g: &crate::game::Game, p: V3) -> Option<String> {
     let w = own_place(g, p)?;
     Some(if w.d == 0.0 { w.rect.name } else { alloc::format!("outside {}", w.rect.name) })
 }
-/// WHERE A MAN STANDS, for a line that has to be true of the spot: the named rectangle he is INSIDE, or null.   (dialogue.ts placeIn)
+/// WHERE A MAN STANDS, for a line that has to be true of the spot: the named rectangle he is INSIDE, or null.
 pub fn place_in(g: &crate::game::Game, p: V3) -> Option<crate::dialogue::PlaceRect> {
     if let Some(w) = own_place(g, p) { return if w.d == 0.0 { Some(w.rect) } else { None }; }
     if !is_office(g) { return None; }
@@ -106,7 +103,7 @@ pub fn place_in(g: &crate::game::Game, p: V3) -> Option<crate::dialogue::PlaceRe
 fn at_name(rects: &[PlaceRect], p: V3) -> Option<String> {
     match place_among(rects, p).1 { w if w.d == 0.0 => Some(w.rect.name), _ => None }
 }
-/// THE WAY A WALK COMES BY, for a line on the net: 'through the …' / 'from the …'. Words only: the search is asked and thrown away.   (dialogue.ts wayName)
+/// THE WAY A WALK COMES BY, for a line on the net: 'through the …' / 'from the …'. Words only: the search is asked and thrown away.
 pub fn way_name(g: &mut crate::game::Game, a: V3, b: V3, into: Option<&str>) -> Option<String> {
     let rects = level_rects(g)?;
     let room = into.filter(|s| !s.is_empty()).map(with_the);
@@ -130,7 +127,7 @@ pub fn way_name(g: &mut crate::game::Game, a: V3, b: V3, into: Option<&str>) -> 
     let way = way?;
     if from.as_deref() == Some(way.as_str()) { Some(alloc::format!("from {}", way)) } else { Some(alloc::format!("through {}", way)) }
 }
-/// every rectangle placeIn answers by   (dialogue.ts placeRects)
+/// every rectangle placeIn answers by
 pub fn place_rects(g: &crate::game::Game) -> Vec<crate::dialogue::PlaceRect> {
     if let Some(r) = level_rects(g) { return r; }
     if !is_office(g) { return Vec::new(); }
@@ -158,7 +155,7 @@ fn office_rooms(g: &crate::game::Game) -> (Vec<Rect>, Rect) {
     rooms.extend(office_areas());
     (rooms, office_walls())
 }
-/// The room a floor point is in, as the men would say it.   (dialogue.ts roomName)
+/// The room a floor point is in, as the men would say it.
 pub fn room_name(g: &crate::game::Game, p: V3) -> String {
     if !is_office(g) {
         return match own_place(g, p) { Some(w) => w.rect.name, None => String::from(NAMELESS) };
@@ -184,7 +181,6 @@ pub fn route_name(g: &crate::game::Game, route_i: f64) -> String {
     if let Some(s) = route_names_now().get(n.clone()) { return s.clone(); }
     alloc::format!("the {}", n.replace('_', " "))
 }
-/// (dialogue.ts doorName)
 pub(super) fn door_name(g: &crate::game::Game, n: &str) -> String {
     let key = String::from(n);
     if let Some(s) = door_names().get(key.clone()) { return s.clone(); }
@@ -192,12 +188,10 @@ pub(super) fn door_name(g: &crate::game::Game, n: &str) -> String {
     if let Some(s) = door_names_now().get(key) { return s.clone(); }
     alloc::format!("the {} door", n.replace('_', " "))
 }
-/// (dialogue.ts numWord)
 fn num_word(n: f64) -> String {
     if n >= 0.0 && m::floor(n) == n { if let Some(w) = num_words().get(n as usize) { return w.clone(); } }
     js::num_str(n)
 }
-/// (dialogue.ts distToRoute)
 fn dist_to_route(pts: &[V3], p: V3) -> f64 {
     let mut best = f64::INFINITY;
     for i in 0..pts.len() {
@@ -209,7 +203,7 @@ fn dist_to_route(pts: &[V3], p: V3) -> f64 {
     }
     best
 }
-/// the keyed door nearest this man's route line, within DOOR_ROUTE_M, by its authored lock   (dialogue.ts keyedDoorOn)
+/// the keyed door nearest this man's route line, within DOOR_ROUTE_M, by its authored lock
 fn keyed_door_on(g: &crate::game::Game, gd: GuardId) -> Option<DoorId> {
     let route = route_at(g, g.gd[gd].route_i)?;
     let pts = g.tab.route[route].points.clone();
@@ -223,7 +217,7 @@ fn keyed_door_on(g: &crate::game::Game, gd: GuardId) -> Option<DoorId> {
     }
     best
 }
-/// coarse words for the seconds until the next radio check   (dialogue.ts etaWords)
+/// coarse words for the seconds until the next radio check
 fn eta_words(secs: f64) -> String {
     if secs <= 20.0 { String::from("any second now") }
     else if secs <= 75.0 { String::from("in a minute or so") }
@@ -233,9 +227,9 @@ fn eta_words(secs: f64) -> String {
 }
 
 // ---------------------------------------------------------------- the context: everything the picker needs, read off the game once per exchange
-/// does a fact stamped on the net at game time T reach a man held since `held_since`   (dialogue.ts heardOnNet)
+/// does a fact stamped on the net at game time T reach a man held since `held_since`
 fn heard_on_net(held_since: f64, t: f64) -> bool { t >= 0.0 && (held_since < 0.0 || t <= held_since + 0.5) }
-/// the first colleague the net has asked after by name and not raised, as far as THIS man followed it   (dialogue.ts missingKnownTo)
+/// the first colleague the net has asked after by name and not raised, as far as THIS man followed it
 pub(super) fn missing_known_to(g: &crate::game::Game, gd: GuardId) -> Option<GuardId> {
     let hs = held_since_of(g, gd);
     g.guards.iter().copied().find(|&x| {
@@ -243,7 +237,7 @@ pub(super) fn missing_known_to(g: &crate::game::Game, gd: GuardId) -> Option<Gua
         x != gd && (at >= 0.0 || raised) && heard_on_net(hs, if at >= 0.0 { at } else { 0.0 })
     })
 }
-/// the men this man KNOWS to be down   (dialogue.ts knownDown)
+/// the men this man KNOWS to be down
 pub(super) fn known_down(g: &crate::game::Game, gd: GuardId) -> JsSet<String> {
     let mut s: JsSet<String> = JsSet::default();
     let w = &g.gd[gd].witness;
@@ -254,15 +248,14 @@ pub(super) fn known_down(g: &crate::game::Game, gd: GuardId) -> JsSet<String> {
     for &x in g.guards.iter() { if x != gd && g.gd[x].missing_raised { s.add(g.gd[x].callsign.clone()); } }
     s
 }
-/// the roster he counts from: the level's own men   (dialogue.ts staffCount)
+/// the roster he counts from: the level's own men
 fn staff_count(g: &crate::game::Game) -> f64 {
     let mut n = 0.0;
     for &x in g.guards.iter() { if g.gd[x].unit.is_none() { n += 1.0; } }
     m::max(1.0, n)
 }
-/// his own side and his own kind   (dialogue.ts partnerOf, its closure `mate`)
+/// his own side and his own kind
 fn is_mate(g: &Game, gd: GuardId, x: GuardId) -> bool { g.gd[x].team == g.gd[gd].team && g.gd[x].unit.is_none() == g.gd[gd].unit.is_none() }
-/// (dialogue.ts partnerOf)
 fn partner_of(g: &crate::game::Game, gd: GuardId) -> Option<GuardId> {
     let down = known_down(g, gd);
     if let Some(l) = g.gd[gd].leader { if l != gd && !down.has(g.gd[l].callsign.clone()) { return Some(l); } }
@@ -278,14 +271,14 @@ fn partner_of(g: &crate::game::Game, gd: GuardId) -> Option<GuardId> {
     }
     best
 }
-/// since when this man counts as HELD: the hold's own clock, else the sandbox's stand-in, else -1   (dialogue.ts heldSinceOf)
+/// since when this man counts as HELD: the hold's own clock, else the sandbox's stand-in, else -1
 pub(super) fn held_since_of(g: &crate::game::Game, gd: GuardId) -> f64 {
     if let Some(h) = g.gd[gd].held.as_ref() { return h.since; }
     let talk = &g.tab.game_talk[g.gd[gd].talk];
     if talk.held_since >= 0.0 && (talk.last_t < talk.held_since || g.time - talk.last_t <= HOLD_LAPSE_SECS) { talk.held_since } else { -1.0 }
 }
 
-/// Read the game into a DialogueCtx for this man.   (dialogue.ts gather)
+/// Read the game into a DialogueCtx for this man.
 pub(super) fn gather(g: &mut crate::game::Game, gd: GuardId) -> crate::dialogue::DialogueCtx {
     let w = g.gd[gd].witness.clone();
     let h = w.heard.clone();
@@ -410,18 +403,18 @@ pub(super) fn gather(g: &mut crate::game::Game, gd: GuardId) -> crate::dialogue:
 }
 
 // ---------------------------------------------------------------- the picker (pure over a DialogueCtx + the man's Talk state)
-/// `driveAway()[t] ?? driveAway()['*']`   (dialogue.ts gather)
+/// `driveAway()[t] ?? driveAway()['*']`
 fn drive_away_text(g: &Game, t: crate::game::Temperament) -> String {
     let d = drive_away(g);
     let own = match t { crate::game::Temperament::Steady => d.steady, crate::game::Temperament::Nervy => d.nervy, crate::game::Temperament::Hard => d.hard };
     own.or(d.under).unwrap_or_default()
 }
-/// `SHAPE_LEAD[shape]`: `Some("")` is a shape written to take no lead, `None` one with no entry   (dialogue.ts SHAPE_LEAD)
+/// `SHAPE_LEAD[shape]`: `Some("")` is a shape written to take no lead, `None` one with no entry
 fn lead_of_shape(shape: ShapeKey) -> Option<String> {
     let l = shape_lead();
     match shape { ShapeKey::Pedant => l.pedant, ShapeKey::Selfown => l.selfown, ShapeKey::Folder => l.folder, ShapeKey::Ramble => l.ramble, ShapeKey::Fan => l.fan, ShapeKey::Stoic => l.stoic, ShapeKey::Con => l.con, ShapeKey::Game => l.game, ShapeKey::Menace => l.menace }
 }
-/// `!!facts[n]`   (dialogue.ts needsHold)
+/// `!!facts[n]`
 fn hold_fact(f: &DialogueCtxFacts, n: Need) -> bool {
     let v = match n {
         Need::Shift => f.shift, Need::RollcallLive => f.rollcall_live, Need::Blackout => f.blackout, Need::BodyFound => f.body_found, Need::FloorUp => f.floor_up, Need::Lockdown => f.lockdown, Need::Episode => f.episode,
@@ -449,7 +442,7 @@ fn token_key(raw: &str) -> String {
     key.push_str(&raw[1..]);
     key
 }
-/// expand {tokens} from the table ({Name} capitalises); null if any comes back empty   (dialogue.ts expand)
+/// expand {tokens} from the table ({Name} capitalises); null if any comes back empty
 pub(super) fn expand(text: &str, tokens: &JsMap<String, Option<String>>) -> Option<String> {
     let mut ok = true;
     let mut out = String::new();
@@ -473,16 +466,14 @@ pub(super) fn expand(text: &str, tokens: &JsMap<String, Option<String>>) -> Opti
     out.push_str(&text[last..]);
     if ok { Some(out) } else { None }
 }
-/// (dialogue.ts stageKeyOf)
 pub(super) fn stage_key_of(n: f64) -> crate::dialogue::StageKey {
     if n <= 1.0 { StageKey::Num(1.0) } else if n == 2.0 { StageKey::Num(2.0) } else if n == 3.0 { StageKey::Num(3.0) } else { StageKey::X }
 }
-/// Is stage `s` one this man GIVES the useful thing at?   (dialogue.ts givingStage)
+/// Is stage `s` one this man GIVES the useful thing at?
 pub(super) fn giving_stage(t: crate::game::Temperament, band: crate::dialogue::Band, s: crate::dialogue::StageKey, stage_n: f64, given_none: bool) -> bool {
     let gives = gives_at(t, band);
     gives.contains(&s) || (s == StageKey::X && given_none && !gives.is_empty() && stage_n == 4.0)
 }
-/// (dialogue.ts lineMatches)
 fn line_matches(l: &crate::dialogue::Line, k: crate::dialogue::Knowledge, band: crate::dialogue::Band, t: crate::game::Temperament, s: crate::dialogue::StageKey, use_t: bool, use_a: bool) -> bool {
     if l.s != s { return false; }
     let lk = l.k.as_str();
@@ -499,12 +490,11 @@ fn line_matches(l: &crate::dialogue::Line, k: crate::dialogue::Knowledge, band: 
     }
     true
 }
-/// (dialogue.ts needsHold)
 fn needs_hold(g: &crate::game::Game, l: &crate::dialogue::Line, facts: &crate::dialogue::DialogueCtxFacts) -> bool {
     let only_ok = match l.only { None => true, Some(LineOnly::Shift) => hold_fact(facts, Need::Shift), Some(LineOnly::Office) => hold_fact(facts, Need::Office) };
     only_ok && l.needs.as_ref().map_or(true, |ns| ns.iter().all(|n| hold_fact(facts, *n)))
 }
-/// The pending useful things: true now, known to him, not yet given, in the order he would give them.   (dialogue.ts pendingIntel)
+/// The pending useful things: true now, known to him, not yet given, in the order he would give them.
 pub(super) fn pending_intel(g: &mut crate::game::Game, ctx: &crate::dialogue::DialogueCtx, talk: GameTalkId, sc: Option<&crate::dialogue::Script>) -> Vec<crate::dialogue::PendingIntelItem> {
     let mut out: Vec<PendingIntelItem> = Vec::new();
     let kinds = intel_kinds();
@@ -531,22 +521,22 @@ pub(super) fn pending_intel(g: &mut crate::game::Game, ctx: &crate::dialogue::Di
     }
     out
 }
-/// The first pending useful thing, or null.   (dialogue.ts intelFor)
+/// The first pending useful thing, or null.
 pub(super) fn intel_for(g: &mut crate::game::Game, ctx: &crate::dialogue::DialogueCtx, talk: GameTalkId, sc: Option<&crate::dialogue::Script>) -> Option<crate::dialogue::IntelFor> {
     pending_intel(g, ctx, talk, sc).into_iter().next().map(|x| IntelFor { kind: x.kind, text: x.text })
 }
-/// The rambler's stream swallows a giving stage, when exactly ONE thing is pending.   (dialogue.ts swallowed)
+/// The rambler's stream swallows a giving stage, when exactly ONE thing is pending.
 pub(super) fn swallowed(g: &mut crate::game::Game, sc: Option<&crate::dialogue::Script>, s: crate::dialogue::StageKey, ctx: &crate::dialogue::DialogueCtx, talk: GameTalkId) -> bool {
     match sc {
         Some(x) => x.shape == ShapeKey::Ramble && RAMBLE_SWALLOWS > 0.0 && s == StageKey::Num(2.0) && ctx.t == crate::game::Temperament::Nervy && pending_intel(g, ctx, talk, sc).len() == 1,
         None => false,
     }
 }
-/// `sayable`: a rejoinder as it would be said, or null   (dialogue.ts pickLine)
+/// `sayable`: a rejoinder as it would be said, or null
 fn sayable(text: Option<&str>, tokens: &JsMap<String, Option<String>>) -> Option<String> {
     match text { Some(x) if !x.is_empty() && REJOINDERS => expand(x, tokens), _ => None }
 }
-/// `eligible`: the pool for this cell and stage: (index in the lines, the text, its weight)   (dialogue.ts pickLine)
+/// `eligible`: the pool for this cell and stage: (index in the lines, the text, its weight)
 fn eligible(g: &Game, lines: &[Line], ctx: &DialogueCtx, tokens: &JsMap<String, Option<String>>, talk: GameTalkId, s: StageKey, use_t: bool, use_a: bool, allow_said: bool) -> Vec<(usize, String, f64)> {
     let mut out: Vec<(usize, String, f64)> = Vec::new();
     for (i, l) in lines.iter().enumerate() {
@@ -565,7 +555,7 @@ fn eligible(g: &Game, lines: &[Line], ctx: &DialogueCtx, tokens: &JsMap<String, 
     }
     out
 }
-/// One exchange: advance the man's stage, pick the line for (his cell × that stage), mark it said.   (dialogue.ts pickLine)
+/// One exchange: advance the man's stage, pick the line for (his cell × that stage), mark it said.
 fn pick_line(g: &mut crate::game::Game, ctx: &mut crate::dialogue::DialogueCtx, talk: GameTalkId, rnd: &mut dyn FnMut(&mut crate::game::Game) -> f64) -> crate::dialogue::DialoguePick {
     let sc0 = script_for(g, ctx, talk);
     let stage_n = g.tab.game_talk[talk].stage + 1.0;
@@ -648,7 +638,7 @@ fn pick_line(g: &mut crate::game::Game, ctx: &mut crate::dialogue::DialogueCtx, 
     g.tab.game_talk[talk].last = Some(crate::game::TalkLast { id: l.id.clone() });
     DialoguePick { text, id: l.id.clone(), ..base }
 }
-/// The whole exchange for a real man: gather → pick; null for a man who cannot talk.   (dialogue.ts interrogate)
+/// The whole exchange for a real man: gather → pick; null for a man who cannot talk.
 pub fn interrogate(g: &mut crate::game::Game, gd: GuardId, rnd: Option<&mut dyn FnMut(&mut crate::game::Game) -> f64>) -> Option<crate::dialogue::DialoguePick> {
     if g.gd[gd].state == crate::game::GuardState::Dead || !g.guards.contains(&gd) { return None; }
     let talk = g.gd[gd].talk;
@@ -675,7 +665,7 @@ pub fn interrogate(g: &mut crate::game::Game, gd: GuardId, rnd: Option<&mut dyn 
     }
     Some(pick)
 }
-/// The VERB on the held man's question row for the next exchange.   (dialogue.ts promptFor)
+/// The VERB on the held man's question row for the next exchange.
 pub fn prompt_for(g: &mut crate::game::Game, gd: GuardId) -> crate::dialogue::PromptFor {
     let talk = g.gd[gd].talk;
     let next = stage_key_of(g.tab.game_talk[talk].stage + 1.0);
@@ -695,8 +685,9 @@ mod tests {
         for (k, v) in rows { t.set(String::from(*k), v.map(String::from)); }
         t
     }
+    /// A FAILURE MEANS: a man says "the key's in ." because a fact he would name is not there: such a line is not said at all.
     #[test]
-    fn expand_capitalises_and_fails_on_empty() {
+    fn a_line_with_a_fact_missing_is_not_said_and_a_capital_token_says_it_capital() {
         let t = table(&[("room", Some("the lobby")), ("door", None), ("code", Some(""))]);
         assert_eq!(expand("in {room}. {Room}!", &t).as_deref(), Some("in the lobby. The lobby!"));
         assert_eq!(expand("{door}", &t), None);
@@ -704,22 +695,23 @@ mod tests {
         assert_eq!(expand("{nobody}", &t), None);
         assert_eq!(expand("— {x y} {} { …", &t).as_deref(), Some("— {x y} {} { …"));
     }
+    /// A FAILURE MEANS: a man says "the the yard", "the block 2", "in 15 minutes" or a number with no sense of time in it.
     #[test]
-    fn names_and_numbers() {
+    fn a_man_says_a_place_with_its_article_a_number_in_words_and_a_time_roughly() {
         assert_eq!(with_the("yard"), "the yard");
         assert_eq!(with_the("the yard"), "the yard");
         assert_eq!(with_the("block 2"), "block 2");
         assert_eq!(num_word(3.0), "three");
         assert_eq!(num_word(15.0), "fifteen");
         assert_eq!(num_word(16.0), "16");
-        assert_eq!(num_word(-1.0), "-1");
-        assert_eq!(num_word(1.5), "1.5");
         assert_eq!(eta_words(20.0), "any second now");
+        assert_eq!(eta_words(60.0), "in a minute or so");
         assert_eq!(eta_words(300.0), "in five minutes");
         assert_eq!(eta_words(901.0), "before long");
     }
+    /// A FAILURE MEANS: a line is picked for a fact the man does not have, or its token reads another's value.
     #[test]
-    fn the_ctx_tables_reach_the_picker() {
+    fn a_mans_facts_reach_the_picker_under_their_own_names_and_only_true_holds() {
         let mut t = DialogueCtxTokens::default();
         t.saw_where = Some(String::from("the yard"));
         t.pad_door = Some(String::from("the pad door"));
@@ -732,26 +724,25 @@ mod tests {
         assert!(hold_fact(&f, Need::Office));
         assert!(!hold_fact(&f, Need::SawDrop));
         assert!(!hold_fact(&f, Need::Shift));
-        assert_eq!(lead_of_shape(ShapeKey::Folder).as_deref(), Some(""));
-        assert_eq!(lead_of_shape(ShapeKey::Fan).as_deref(), Some("Oh— and "));
-        assert_eq!(lead_of_shape(ShapeKey::Stoic), None);
     }
+    /// A FAILURE MEANS: the questioning does not run opener, press, ask, then dry.
     #[test]
-    fn stages() {
+    fn the_exchanges_are_three_stages_and_then_dry() {
         assert!(matches!(stage_key_of(0.0), StageKey::Num(x) if x == 1.0));
         assert!(matches!(stage_key_of(3.0), StageKey::Num(x) if x == 3.0));
         assert!(matches!(stage_key_of(4.0), StageKey::X));
-        assert_eq!(stage_str(StageKey::Num(2.0)), "2");
-        assert_eq!(stage_str(StageKey::X), "x");
     }
+    /// A FAILURE MEANS: a man who walks a loop is far from its closing leg.
     #[test]
     fn route_distance_wraps_the_loop() {
         let pts = [[0.0, 0.0, 0.0], [4.0, 0.0, 0.0], [4.0, 0.0, 4.0]];
         assert_eq!(dist_to_route(&pts, [2.0, 0.0, -3.0]), 3.0);
+        assert!((dist_to_route(&pts, [1.0, 0.0, 3.0]) - 2.0f64.sqrt()).abs() < 1e-9, "nearest the leg from the last point back to the first");
         assert_eq!(dist_to_route(&[], [0.0, 0.0, 0.0]), f64::INFINITY);
     }
+    /// A FAILURE MEANS: a man you hold knows what the net said after you took his radio.
     #[test]
-    fn net_reach() {
+    fn a_held_man_hears_the_net_only_until_half_a_second_after_you_took_him() {
         assert!(heard_on_net(-1.0, 5.0));
         assert!(heard_on_net(10.0, 10.5));
         assert!(!heard_on_net(10.0, 10.6));

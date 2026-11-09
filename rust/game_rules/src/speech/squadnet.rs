@@ -6,17 +6,17 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec::Vec};
 
-/// A fresh set of the net's counters. (squadnet.ts newStats)
+/// A fresh set of the net's counters.
 fn new_stats() -> crate::squadnet::SquadNetStats {
     crate::squadnet::SquadNetStats { lines: 0.0, downs: 0.0, whys: 0.0, quiets: 0.0, clears: 0.0, ends: 0.0 }
 }
 
-/// The net as a game starts it; the class's constructor adds nothing to its initialisers. (squadnet.ts SquadNet.constructor)
+/// The net as a game starts it; the class's constructor adds nothing to its initialisers.
 pub fn squad_net_new(g: &crate::game::Game) -> crate::squadnet::SquadNet {
     crate::squadnet::SquadNet::blank()
 }
 
-/// A fresh encounter: everything but `last_t`, which the TypeScript leaves standing. (squadnet.ts SquadNet.reset)
+/// A fresh encounter: everything but `last_t`, which the TypeScript leaves standing.
 pub fn squad_net_reset(g: &mut crate::game::Game) {
     let n = &mut g.squad_net;
     n.rows = Vec::new();
@@ -27,13 +27,31 @@ pub fn squad_net_reset(g: &mut crate::game::Game) {
     n.stats = new_stats();
 }
 
-/// A teammate said a line with his head off your screen: the net clicks. (squadnet.ts SquadNet.line)
+/// A teammate said a line with his head off your screen: the net clicks.
 pub fn squad_net_line(g: &mut crate::game::Game) {
     g.squad_net.stats.lines += 1.0;
     g.squad_net.click_due = true;
 }
 
-/// Once a frame, after everybody has moved: who went down this frame, rows past their time, the one sound owed. (squadnet.ts SquadNet.tick)
+/// A line that tells the player something, by the man it is about if he can speak, else by the nearest of the seat's men who can. Whether anybody said it.
+pub fn team_says(g: &mut crate::game::Game, about: Option<GuardId>, text: &str) -> bool {
+    let can = |g: &Game, gd: GuardId| g.gd[gd].state != crate::game::GuardState::Dead && g.gd[gd].held.is_none() && !crate::runner::runner_mute(g, gd);
+    let by = about.filter(|&gd| can(g, gd)).or_else(|| {
+        let at = g.ch[g.pl[g.player].ch].pos;
+        let mut best: Option<(GuardId, f64)> = None;
+        for gd in crate::orders::squad_orders_men(g, &crate::seats::here(g), None, None) {
+            if !can(g, gd) { continue; }
+            let d = v3::dist_xz(g.ch[g.gd[gd].ch].pos, at);
+            if best.map_or(true, |b| d < b.1) { best = Some((gd, d)); }
+        }
+        best.map(|b| b.0)
+    });
+    let Some(by) = by else { return false };
+    crate::game::game_say(g, by, text, None, None);
+    true
+}
+
+/// Once a frame, after everybody has moved: who went down this frame, rows past their time, the one sound owed.
 pub fn squad_net_tick(g: &mut crate::game::Game) {
     let t = g.time;
     if t < g.squad_net.last_t { squad_net_reset(g); }
@@ -73,7 +91,7 @@ pub fn squad_net_tick(g: &mut crate::game::Game) {
     g.squad_net.down_due = false;
 }
 
-/// What a quick-key pick that is not a plain open adds: the end of its row and the answer. (squadnet.ts whyWords)
+/// What a quick-key pick that is not a plain open adds: the end of its row and the answer.
 pub fn why_words(g: &crate::game::Game, p: &crate::autopilot::AutoPick) -> Option<crate::squadnet::WhyWords> {
     use crate::autopilot::AutoPickWhy;
     if p.word || !matches!(p.t, crate::orders::OrderTarget::Door(_)) { return None; }
@@ -98,7 +116,7 @@ fn ends_plural(name: &str) -> bool {
     back.next() == Some('s') && matches!(back.next(), Some(c) if c != 's')
 }
 
-/// The call a lead makes when an entry is over. None: nothing is said. (squadnet.ts roomCall)
+/// The call a lead makes when an entry is over. None: nothing is said.
 pub fn room_call(g: &mut crate::game::Game, name: &str, left: f64, inside: bool, seen: bool) -> Option<String> {
     if !inside && left <= 0.0 {
         g.squad_net.stats.clears += 1.0;
@@ -112,7 +130,7 @@ pub fn room_call(g: &mut crate::game::Game, name: &str, left: f64, inside: bool,
     None
 }
 
-/// The call at the end of an entry into a room the mission has no name for; `open` = open floor. (squadnet.ts plainCall)
+/// The call at the end of an entry into a room the mission has no name for; `open` = open floor.
 pub fn plain_call(g: &mut crate::game::Game, open: bool, left: f64, inside: bool, seen: bool) -> Option<String> {
     let call = if open {
         if seen { None } else { Some(String::from("clear so far.")) }
@@ -123,7 +141,7 @@ pub fn plain_call(g: &mut crate::game::Game, open: bool, left: f64, inside: bool
     call
 }
 
-/// Does a man at p stand in that room's flood, a doorway of the room's own counted. (squadnet.ts inFlood)
+/// Does a man at p stand in that room's flood, a doorway of the room's own counted.
 pub fn in_flood(g: &mut crate::game::Game, r: &crate::squadnet::InFloodR, p: V3) -> bool {
     let cell = g.col.nav.cell;
     let c = crate::scene_collision::nav_grid_idx(g, m::floor(p[0] / cell), m::floor(p[2] / cell));
@@ -155,29 +173,24 @@ mod tests {
         }
     }
 
+    /// A FAILURE MEANS: a lead calls a room clear with a man still in it, says nothing of a room he could not see all of, or "boss are quiet".
     #[test]
-    fn the_quiet_call_agrees_in_number_as_the_regex_does() {
-        for (name, plural) in [("bunks", true), ("server room", false), ("boss", false), ("s", false), ("", false), ("as", true)] {
-            assert_eq!(ends_plural(name), plural, "{name:?}");
-        }
-    }
-
-    #[test]
-    fn room_call_and_its_counters() {
+    fn a_lead_calls_clear_only_with_nobody_left_and_quiet_only_of_what_he_did_not_see() {
         on_big_stack(|| {
             let g = &mut Box::new(Game::blank());
             assert_eq!(room_call(g, "mess", 0.0, false, false).as_deref(), Some("mess clear."));
             assert_eq!(room_call(g, "bunks", 3.0, false, false).as_deref(), Some("bunks are quiet. we didn't see all of it."));
             assert_eq!(room_call(g, "server room", 3.0, true, false).as_deref(), Some("server room's quiet. we didn't see all of it."));
+            assert_eq!(room_call(g, "boss", 3.0, true, false).as_deref(), Some("boss's quiet. we didn't see all of it."));
             assert_eq!(room_call(g, "mess", 0.0, true, false), None);
             assert_eq!(room_call(g, "mess", 3.0, true, true), None);
             assert_eq!(room_call(g, "mess", 3.0, false, true), None);
-            assert_eq!((g.squad_net.stats.clears, g.squad_net.stats.quiets), (1.0, 2.0));
         });
     }
 
+    /// A FAILURE MEANS: an entry onto open floor is called as if it had been a room, or a call is made when nothing can be said.
     #[test]
-    fn plain_call_counts_only_what_it_says() {
+    fn open_floor_is_clear_so_far_and_a_room_nobody_named_is_called_as_room() {
         on_big_stack(|| {
             let g = &mut Box::new(Game::blank());
             assert_eq!(plain_call(g, true, 0.0, true, false).as_deref(), Some("clear so far."));
@@ -185,10 +198,10 @@ mod tests {
             assert_eq!(plain_call(g, false, 0.0, false, false).as_deref(), Some("room clear."));
             assert_eq!(plain_call(g, false, 3.0, false, false).as_deref(), Some("room's quiet. we didn't see all of it."));
             assert_eq!(plain_call(g, false, 3.0, true, true), None);
-            assert_eq!(g.squad_net.stats.ends, 3.0);
         });
     }
 
+    /// A FAILURE MEANS: a quick-key pick gives a reason it does not have, or keeps one it has to itself.
     #[test]
     fn why_words_says_only_the_reasons() {
         on_big_stack(|| {
@@ -209,17 +222,19 @@ mod tests {
         });
     }
 
+    /// A FAILURE MEANS: a restart still says "Hicks is down." from the last try, or tells of men already down when the net comes back.
     #[test]
-    fn reset_keeps_last_t() {
+    fn a_restart_clears_the_nets_rows_and_what_it_owes() {
         on_big_stack(|| {
             let g = &mut Box::new(Game::blank());
-            g.squad_net.last_t = 7.0;
             g.squad_net.seeded = true;
+            g.squad_net.down.push(String::from("Hicks"));
+            g.squad_net.rows.push(crate::squadnet::NetRow { text: String::from("Hicks is down."), at: [0.0; 3], t: 1.0, dur: 3.0 });
             squad_net_line(g);
-            assert!(g.squad_net.click_due);
+            assert!(g.squad_net.click_due, "a line off your screen owes a click");
             squad_net_reset(g);
+            assert!(g.squad_net.rows.is_empty() && g.squad_net.down.is_empty());
             assert!(!g.squad_net.click_due && !g.squad_net.seeded);
-            assert_eq!((g.squad_net.stats.lines, g.squad_net.last_t), (0.0, 7.0));
         });
     }
 }

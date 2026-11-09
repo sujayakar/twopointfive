@@ -23,11 +23,8 @@ pub struct DISARMGAIN {
     pub long: f64,
 }
 
-/// (src/game/disarm.ts:39 DISARM_GAIN: a table nothing writes)
 pub fn disarm_gain() -> crate::disarm::DISARMGAIN { crate::disarm::DISARMGAIN { catch: 0.5, strip: 0.45, down: 0.4, long: 0.8 } }
 
-/// (src/game/disarm.ts:41 LIFE)
 pub const LIFE: f64 = 240.0;
 
-/// (src/game/disarm.ts:42 DEG)
 pub const DEG: f64 = 0.017453292519943295;

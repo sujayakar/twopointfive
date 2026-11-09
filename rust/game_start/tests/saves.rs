@@ -53,7 +53,7 @@ fn a_restart_begins_with_no_saves() {
     h.run(0.5);
     control::ask_save(&mut h.p.g);
     h.frame();
-    game::game::game_restart(&mut h.p.g, None);
+    game::game::game_restart(&mut h.p.g);
     h.run(0.2);
     assert!(control::timeline(&h.p.g).is_empty(), "the fresh run has the old one's save");
     assert!(control::ask_load(&mut h.p.g, "manual.0").is_some(), "and it can be loaded");

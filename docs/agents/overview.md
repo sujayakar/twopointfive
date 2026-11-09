@@ -70,7 +70,7 @@ Never seen on a GPU.
 | `rust/game_start/src/host/` | what a host does round a step: commands, the panel's knobs, the cards before a game, address words (`words.rs`) |
 | `rust/game_start/` | a game from a level file, and the native tests, the gate and the level tool |
 | `rust/game_face/` | the module's face: the calls a host makes, with each file's own calls at its head |
-| `rust/game_derive/`, `rust/prim/` | a declaration's bytes and knobs, and the four operations the core library lacks |
+| `rust/game_derive/`, `rust/maths/`, `rust/prim/` | a declaration's bytes, knobs, words and start; the game's own maths and die; the four operations the core library lacks |
 
 The rules are eighteen systems, a folder of `rust/game_rules/src/` each. Code names a module with no system (`crate::doors`), and what no other
 system calls is not `pub`:

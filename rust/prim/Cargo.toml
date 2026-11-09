@@ -1,3 +1,6 @@
+# The operations the core library lacks, each exact by the standard (src/lib.rs).
+[workspace]
+
 [package]
 name = "prim"
 version = "0.1.0"

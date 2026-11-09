@@ -6,7 +6,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{string::String, vec, vec::Vec};
 
 /// markFromRect with the painter `c => c.fill(1)`, through marking: a rect in metres snapped inward onto the lattice, every cell palette entry 1; None if the
-/// snapped rect is empty. A private fn because the skeleton's mark_from_rect hands its painter the canvas by value, so a fill could not reach the rows.   (markings.ts markFromRect)
+/// snapped rect is empty. A private fn because the skeleton's mark_from_rect hands its painter the canvas by value, so a fill could not reach the rows.
 fn filled_rect(face: crate::scene_markings::MarkFace, res: crate::scene_markings::MarkRes, rect: [f64; 4], pal: crate::scene_markings::MarkPal, base: f64) -> Option<crate::scene_markings::MarkingDef> {
     let t = base * *crate::scene_markings::res_k().get(String::from(res.as_str())).unwrap();
     let eps = 1e-7;
@@ -24,7 +24,7 @@ fn filled_rect(face: crate::scene_markings::MarkFace, res: crate::scene_markings
     })
 }
 
-/// DOOR LEAF: kick plates along the bottom of both big faces, a push plate by the latch edge on +z.   (markingDefaults.ts doorLeafMarks)
+/// DOOR LEAF: kick plates along the bottom of both big faces, a push plate by the latch edge on +z.
 pub fn door_leaf_marks(h: V3, t: Option<f64>) -> Vec<crate::scene_markings::MarkingDef> {
     use crate::scene_markings::{MarkFace, MarkRes};
     let t = t.unwrap_or(T);

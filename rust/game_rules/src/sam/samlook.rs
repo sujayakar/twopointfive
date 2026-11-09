@@ -6,37 +6,37 @@ use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
 
-/// This seat's row, made if it is missing.   (samlook.ts stateOf)
+/// This seat's row, made if it is missing.
 fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::samlook::St {
     let pl = g.player;
     g.m.samlook.state.get_or_insert_with(pl, || St { on: None })
 }
 
-/// Smoothstep from `a` to `b`.   (samlook.ts smooth)
+/// Smoothstep from `a` to `b`.
 fn smooth(a: f64, b: f64, x: f64) -> f64 {
     let t = m::max(0.0, m::min(1.0, (x - a) / (b - a)));
     t * t * (3.0 - 2.0 * t)
 }
 
-/// An angle brought into -pi..pi.   (samlook.ts wrap)
+/// An angle brought into -pi..pi.
 fn wrap(a: f64) -> f64 {
     m::atan2(m::sin(a), m::cos(a))
 }
 
-/// His head is his own to turn.   (samlook.ts free)
+/// His head is his own to turn.
 fn free(g: &mut crate::game::Game) -> bool {
     let pl = &g.pl[g.player];
     !pl.down && !pl.sprinting && pl.holding.is_none() && pl.takedown.is_none() && pl.kick.is_none() && pl.picking.is_none() && pl.wanding.is_none() && pl.coding.is_none() && pl.wall.is_none() && pl.dragging.is_none() && pl.door_move.is_none() && pl.breaker_move.is_none() && g.puppet.is_none() && g.ch[pl.ch].anim.upper != crate::character::UpperMode::Aim
 }
 
-/// A man who is onto him, or has him in view this moment with his notice risen.   (samlook.ts samLookNoticed)
+/// A man who is onto him, or has him in view this moment with his notice risen.
 fn sam_look_noticed(g: &crate::game::Game, gd: GuardId) -> bool {
     use crate::game::GuardState;
     let man = &g.gd[gd];
     man.state == GuardState::Alert || man.state == GuardState::Search || man.state == GuardState::Suspicious || (man.awareness > 0.08 && g.time - man.sight_t < 0.4)
 }
 
-/// Metres to a man his head could go to (infinity: not one); `deg` how far round from his aim, 180 anywhere.   (samlook.ts reach)
+/// Metres to a man his head could go to (infinity: not one); `deg` how far round from his aim, 180 anywhere.
 fn reach(g: &mut crate::game::Game, gd: GuardId, max_m: f64, deg: f64) -> f64 {
     if !crate::close::close_subject(g, gd) { return f64::INFINITY; }
     let c = g.pl[g.player].ch;
@@ -51,7 +51,7 @@ fn reach(g: &mut crate::game::Game, gd: GuardId, max_m: f64, deg: f64) -> f64 {
     d
 }
 
-/// Picks the man his head is on this frame and remembers him.   (samlook.ts pick)
+/// Picks the man his head is on this frame and remembers him.
 fn pick(g: &mut crate::game::Game) -> Option<GuardId> {
     let was = state_of(g).on;
     if !free(g) {
@@ -82,7 +82,7 @@ fn pick(g: &mut crate::game::Game) -> Option<GuardId> {
     best
 }
 
-/// How much room one man asks of him: 0 past `slipFrom`, for a man onto him, and behind a man's back.   (samlook.ts slipOf)
+/// How much room one man asks of him: 0 past `slipFrom`, for a man onto him, and behind a man's back.
 fn slip_of(g: &mut crate::game::Game, gd: GuardId) -> f64 {
     if g.gd[gd].state == crate::game::GuardState::Alert { return 0.0; }
     let slip_from = g.k.samlook.slip_from;
@@ -96,12 +96,12 @@ fn slip_of(g: &mut crate::game::Game, gd: GuardId) -> f64 {
     (1.0 - smooth(k.slip_by, k.slip_from, d)) * smooth(k.back_cos[0], k.back_cos[1], nose)
 }
 
-/// The slip's three conditions.   (samlook.ts slips)
+/// The slip's three conditions.
 fn slips(g: &mut crate::game::Game) -> bool {
     free(g) && g.pl[g.player].crouch && g.pl[g.player].holstered
 }
 
-/// The slip as the animator is handed it: the most any man asks, the lean left of it, and where they pull him.   (samlook.ts slipNow)
+/// The slip as the animator is handed it: the most any man asks, the lean left of it, and where they pull him.
 fn slip_now(g: &mut crate::game::Game) -> Option<crate::samlook::SlipNow> {
     if !slips(g) { return None; }
     let p = g.ch[g.pl[g.player].ch].pos;
@@ -126,13 +126,13 @@ fn slip_now(g: &mut crate::game::Game) -> Option<crate::samlook::SlipNow> {
     Some(SlipNow { k: top, lean: m::min(1.0, l / top), at: [p[0] + vx * u, p[1] + 1.1, p[2] + vz * u] })
 }
 
-/// A point `up` metres over a man's feet.   (samlook.ts headOf)
+/// A point `up` metres over a man's feet.
 fn head_of(g: &crate::game::Game, gd: GuardId, up: f64) -> V3 {
     let q = g.ch[g.gd[gd].ch].pos;
     [q[0], q[1] + up, q[2]]
 }
 
-/// Once a step, after the player's own update: what his animator is handed for the next frame's pose.   (samlook.ts samLookStep)
+/// Once a step, after the player's own update: what his animator is handed for the next frame's pose.
 pub fn sam_look_step(g: &mut crate::game::Game) {
     let c = g.pl[g.player].ch;
     let an = &mut g.ch[c].anim;
@@ -171,32 +171,23 @@ pub fn sam_look_step(g: &mut crate::game::Game) {
 mod tests {
     use super::*;
 
-    /// The TypeScript's own bits, under EXACT.on.
+    /// What a guard makes of a man goes by this ramp: nothing short of it, all past it, and only ever up between.
     #[test]
-    fn smooth_matches_the_typescript() {
-        for (a, b, x, bits) in [
-            (1.2, 2.6, 1.7, 0x3fd2a8ad278e8dcdu64),
-            (1.2, 2.6, 0.3, 0x0000000000000000),
-            (1.2, 2.6, 9.0, 0x3ff0000000000000),
-            (-0.45, -0.1, -0.3137, 0x3fd58ee4de63e278),
-            (5.5, 8.0, 6.123456789, 0x3fc3e9435f4062f6),
-        ] {
-            assert_eq!(smooth(a, b, x).to_bits(), bits);
-        }
-        assert!(smooth(5.6, 5.6, 5.6).is_nan());
+    fn the_ramp_is_flat_past_both_ends_and_rises_between() {
+        assert_eq!((smooth(1.2, 2.6, 0.3), smooth(1.2, 2.6, 9.0)), (0.0, 1.0));
+        assert!((smooth(1.0, 3.0, 2.0) - 0.5).abs() < 1e-12);
+        assert!(smooth(1.0, 3.0, 1.2) < 0.05, "it starts gently: {}", smooth(1.0, 3.0, 1.2));
+        assert!(smooth(1.0, 3.0, 1.5) < smooth(1.0, 3.0, 2.5));
+        assert!(smooth(-0.45, -0.1, -0.3) > 0.0 && smooth(-0.45, -0.1, -0.3) < 1.0);
     }
 
     #[test]
-    fn wrap_matches_the_typescript() {
-        for (a, bits) in [
-            (0.1, 0x3fb999999999999au64),
-            (3.5, 0xc00643f6a8885a30),
-            (-7.25, 0xbfeef0255dde973d),
-            (100.125, 0xbfd9fb54442d1848),
-            (m::PI, 0x400921fb54442d18),
-            (-m::PI, 0xc00921fb54442d18),
-        ] {
-            assert_eq!(wrap(a).to_bits(), bits);
+    fn an_angle_comes_back_inside_half_a_turn_the_same_way_it_points() {
+        for a in [0.1, 3.5, -7.25, 100.125, m::PI, -m::PI] {
+            let w = wrap(a);
+            assert!(w.abs() <= m::PI, "{a}: {w}");
+            assert!((m::sin(w) - m::sin(a)).abs() < 1e-9 && (m::cos(w) - m::cos(a)).abs() < 1e-9, "{a}: {w}");
         }
+        assert!((wrap(0.1) - 0.1).abs() < 1e-12);
     }
 }

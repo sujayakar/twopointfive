@@ -117,7 +117,7 @@ pub struct RailsView {
     pub arrow: Option<V3>,
     /// the player's own men on the floor, by their characters' ids: the big line keeps clear of them
     pub line_men: Vec<f64>,
-    /// the actions that work now (rails.ts ACTS). An action not here is locked, and the HUD names no key of it
+    /// the actions that work now. An action not here is locked, and the HUD names no key of it
     pub open: Vec<String>,
     /// the verbs the interaction key offers rows of. (None: every row)
     pub rows: Option<Vec<String>>,

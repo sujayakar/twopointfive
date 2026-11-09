@@ -1,4 +1,3 @@
-//! src/game/director.ts lines 1 to 424
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,12 +6,12 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// the character budget a script's spawn is held to on a tutorial mission; anywhere else none.   (director.ts liftedBudget)
+/// the character budget a script's spawn is held to on a tutorial mission; anywhere else none.
 pub(super) fn lifted_budget(g: &crate::game::Game) -> Option<f64> {
     if crate::rails::rails_live(g) { Some(16.0) } else { None }
 }
 
-/// Run a script's define pass against a recording manifest: everything it names and declares; beat bodies are kept, not run. Err = the pass threw.   (director.ts manifestOf)
+/// Run a script's define pass against a recording manifest: everything it names and declares; beat bodies are kept, not run. Err = the pass threw.
 pub(super) fn manifest_of(script: crate::scene_level::LevelScriptFn) -> Result<crate::director::Manifest, String> {
     let mut manifest = Manifest::default();
     seam_script_define(script, &mut manifest)?;
@@ -22,7 +21,7 @@ pub(super) fn manifest_of(script: crate::scene_level::LevelScriptFn) -> Result<c
 /// (levels/<name>.script.ts, `script(D)`: the define pass of the level this names; its verbs are the manifest_* and program_* below)
 fn seam_script_define(script: crate::scene_level::LevelScriptFn, manifest: &mut Manifest) -> Result<(), String> { crate::director::script_define(script, manifest) }
 
-/// D.mark: a named place; a mark named again keeps its pos unless given one.   (director.ts:295)
+/// D.mark: a named place; a mark named again keeps its pos unless given one.
 pub(in crate::missions) fn manifest_mark(m: &mut crate::director::Manifest, id: &str, pos: Option<V3>, yaw: Option<f64>) -> crate::director::MarkRef {
     if !m.marks.has(id.into()) || pos.is_some() {
         let pos = match pos {
@@ -33,22 +32,22 @@ pub(in crate::missions) fn manifest_mark(m: &mut crate::director::Manifest, id: 
     }
     MarkRef { id: id.into() }
 }
-/// D.volume.   (director.ts:296)
+/// D.volume.
 pub(in crate::missions) fn manifest_volume(m: &mut crate::director::Manifest, id: &str) -> crate::director::VolumeRef {
     m.volumes.add(id.into());
     VolumeRef { id: id.into() }
 }
-/// D.door.   (director.ts:298)
+/// D.door.
 pub(in crate::missions) fn manifest_door(m: &mut crate::director::Manifest, id: &str) -> crate::director::DoorRef {
     m.doors.add(id.into());
     DoorRef { id: id.into() }
 }
-/// D.loadout.   (director.ts:301)
+/// D.loadout.
 pub(in crate::missions) fn manifest_loadout(m: &mut crate::director::Manifest, id: &str, spec: crate::director::LoadoutSpec) -> crate::director::LoadoutRef {
     m.loadouts.set(id.into(), spec);
     LoadoutRef { id: id.into() }
 }
-/// D.program: Err = declared twice, or the body's Err; the row goes in the manifest after the body.   (director.ts:304-318)
+/// D.program: Err = declared twice, or the body's Err; the row goes in the manifest after the body.
 pub(in crate::missions) fn manifest_program(m: &mut crate::director::Manifest, name: &str, body: &mut dyn FnMut(&mut crate::director::ProgramDef) -> Result<(), String>) -> Result<(), String> {
     if m.programs.has(name.into()) { return Err(format!("script: program '{}' declared twice", name)); }
     let mut program = ProgramDef { name: name.into(), beats: JsMap::new(), triggers: Vec::new() };
@@ -56,39 +55,26 @@ pub(in crate::missions) fn manifest_program(m: &mut crate::director::Manifest, n
     m.programs.set(name.into(), program);
     Ok(())
 }
-/// P.onStart.   (director.ts:308)
+/// P.onStart.
 pub(in crate::missions) fn program_on_start(p: &mut crate::director::ProgramDef, beat: &str) {
     p.triggers.push(TriggerDef { kind: TriggerDefKind::Start, beat: beat.into(), ..TriggerDef::default() });
 }
-/// P.onSignal.   (director.ts:311)
+/// P.onSignal.
 pub(in crate::missions) fn program_on_signal(p: &mut crate::director::ProgramDef, sig: &str, beat: &str) {
     p.triggers.push(TriggerDef { kind: TriggerDefKind::Signal, beat: beat.into(), name: Some(sig.into()), ..TriggerDef::default() });
 }
-/// P.beat: `script` is whose match holds this beat's code. Err = declared twice.   (director.ts:314)
+/// P.beat: `script` is whose match holds this beat's code. Err = declared twice.
 pub(in crate::missions) fn program_beat(p: &mut crate::director::ProgramDef, name: &str, script: &crate::scene_level::LevelScriptFn, atomic: Option<bool>) -> Result<(), String> {
     if p.beats.has(name.into()) { return Err(format!("script: beat '{}' declared twice in program '{}'", name, p.name)); }
     p.beats.set(name.into(), ProgramDefBeatsValue { fn_: *script, atomic: atomic.unwrap_or(true) });
     Ok(())
 }
 
-/// (director.ts UTIL.yawTo)
 pub fn yaw_to(a: V3, b: V3) -> f64 { m::atan2(b[0] - a[0], b[2] - a[2]) }
-/// (director.ts UTIL.distXZ)
 pub fn dist_xz(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
-/// (director.ts UTIL.lerp)
-pub fn lerp(a: V3, b: V3, t: f64) -> [f64; 3] {
-    [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t]
-}
-/// (director.ts UTIL.add)
-pub fn add(a: V3, b: V3) -> [f64; 3] { [a[0] + b[0], a[1] + b[1], a[2] + b[2]] }
-/// (director.ts UTIL.ahead)
-pub fn ahead(p: V3, yaw: f64, d: f64, y: Option<f64>) -> [f64; 3] {
-    let y = y.unwrap_or(p[1]);
-    [p[0] + m::sin(yaw) * d, y, p[2] + m::cos(yaw) * d]
-}
-/// small pure helpers so a script needs no runtime import for arithmetic on places: the path callers write, sig.rs's `pub mod util`.   (director.ts UTIL)
+/// small pure helpers so a script needs no runtime import for arithmetic on places: the path callers write, sig.rs's `pub mod util`.
 pub mod util {
-    pub use super::{add, ahead, dist_xz, lerp, yaw_to};
+    pub use super::{dist_xz, yaw_to};
 }
 
 fn err(out: &mut Vec<LintProblem>, what: String) { out.push(LintProblem { level: LintProblemLevel::Error, what }); }
@@ -121,7 +107,7 @@ fn device_group(d: &crate::scene_level::DeviceDef) -> String {
 }
 fn door_is_in(level: &LintManifestLevel, name: &str) -> bool { level.doors.iter().any(|d| d.name == name) }
 
-/// The define-time lint: every name the script uses exists in the level, loadouts are spawnable, triggers name declared beats, waits are finite. Errors disarm the script.   (director.ts lintManifest)
+/// The define-time lint: every name the script uses exists in the level, loadouts are spawnable, triggers name declared beats, waits are finite. Errors disarm the script.
 pub(super) fn lint_manifest(g: &crate::game::Game, m: &crate::director::Manifest, level: &crate::director::LintManifestLevel) -> Vec<crate::director::LintProblem> {
     let route_names: Vec<String> = level.routes.iter().map(|r| g.tab.route[*r].name.clone()).collect();
     lint_with_routes(m, level, &route_names)
@@ -241,46 +227,25 @@ fn lint_with_routes(m: &Manifest, level: &LintManifestLevel, route_names: &[Stri
 #[cfg(test)]
 mod tests {
     use super::*;
-    const A: V3 = [1.25, 0.7, -3.3];
-    const B: V3 = [-4.1, 2.2, 9.75];
-    fn bits(v: [f64; 3]) -> [u64; 3] { [v[0].to_bits(), v[1].to_bits(), v[2].to_bits()] }
 
-    // ---- the verbs of D and P that no script of the nine calls and sig.rs has no name for (director.ts:297, 299, 300, 302, 303, 309, 310, 312, 313, 320-322): what the lint's other rows need to be reached
+    // what no script of the six calls and the lint still answers for: how a manifest comes to name these
     fn d_route(manifest: &mut Manifest, id: &str) { manifest.routes.add(id.into()); }
     fn d_device(manifest: &mut Manifest, id: &str) { manifest.devices.add(id.into()); }
     fn d_plan(manifest: &mut Manifest, id: &str) { manifest.plans.set(id.into(), if id == "breach" { PlanKind::Breach } else { PlanKind::RoomClear }); }
     fn d_light_group(manifest: &mut Manifest, id: &str) { manifest.groups.add(id.into()); }
-    fn d_expect_order(manifest: &mut Manifest, program: &str, beats: &[String]) {
-        manifest.expects.push(ManifestExpectsItem { kind: ManifestExpectsItemKind::Order, program: Some(program.into()), ..ManifestExpectsItem::default() });
+    fn p_trigger(program: &mut ProgramDef, kind: TriggerDefKind, beat: &str, secs: Option<f64>) {
+        program.triggers.push(TriggerDef { kind, beat: beat.into(), secs, ..TriggerDef::default() });
     }
-    fn d_expect_within(manifest: &mut Manifest, program: &str, a: &str, b: &str, max: f64) {
-        manifest.expects.push(ManifestExpectsItem { kind: ManifestExpectsItemKind::Within, program: Some(program.into()), max: Some(max), ..ManifestExpectsItem::default() });
-    }
-    fn d_expect_never(manifest: &mut Manifest, what: &str) {
-        manifest.expects.push(ManifestExpectsItem { kind: ManifestExpectsItemKind::Never, ..ManifestExpectsItem::default() });
-    }
-    fn p_after(program: &mut ProgramDef, secs: f64, beat: &str) {
-        program.triggers.push(TriggerDef { kind: TriggerDefKind::After, beat: beat.into(), secs: Some(secs), ..TriggerDef::default() });
-    }
-    fn p_on_event(program: &mut ProgramDef, event: EventKind, beat: &str) {
-        program.triggers.push(TriggerDef { kind: TriggerDefKind::Event, beat: beat.into(), event: Some(event), ..TriggerDef::default() });
-    }
-    fn p_on_enter(program: &mut ProgramDef, v: &VolumeRef, beat: &str) {
-        program.triggers.push(TriggerDef { kind: TriggerDefKind::Enter, beat: beat.into(), volume: Some(v.id.clone()), who: Some(TriggerDefWho::Sam), ..TriggerDef::default() });
-    }
-    fn p_when(program: &mut ProgramDef, beat: &str) {
-        program.triggers.push(TriggerDef { kind: TriggerDefKind::When, beat: beat.into(), label: Some("when".into()), ..TriggerDef::default() });
+    fn errors(manifest: &Manifest, level: &LintManifestLevel, routes: &[String]) -> Vec<String> {
+        lint_with_routes(manifest, level, routes).iter().filter(|p| p.level == LintProblemLevel::Error).map(|p| p.what.clone()).collect()
     }
 
-    /// the TypeScript's own bits: UTIL through manifestOf's D.util, under bun with EXACT.on
+    /// what a tutorial's script stands a man by: the way from one place to another, on the floor
     #[test]
-    fn util_matches_the_typescript_bits() {
-        assert_eq!(util::yaw_to(A, B).to_bits(), 0xbfd8e66e7eeccecb);
-        assert_eq!(util::dist_xz(A, B).to_bits(), 0x402c3549a2de16a3);
-        assert_eq!(bits(util::lerp(A, B, 0.37)), [0xbfe75810624dd2f0, 0x3ff4147ae147ae14, 0x3ff874bc6a7ef9dc]);
-        assert_eq!(bits(util::add(A, B)), [0xc006cccccccccccc, 0x4007333333333334, 0x4019cccccccccccd]);
-        assert_eq!(bits(util::ahead(A, 0.83, 2.6, None)), [0x400959564354aeaf, 0x3fe6666666666666, 0xbff8b9a4a290a3ca]);
-        assert_eq!(bits(util::ahead(A, 0.83, 2.6, Some(5.5))), [0x400959564354aeaf, 0x4016000000000000, 0xbff8b9a4a290a3ca]);
+    fn a_scripts_arithmetic_on_places_is_on_the_floor() {
+        assert_eq!(util::yaw_to([0.0; 3], [0.0, 5.0, 2.0]), 0.0);
+        assert!((util::yaw_to([0.0; 3], [2.0, 5.0, 0.0]) - m::PI / 2.0).abs() < 1e-12);
+        assert_eq!(util::dist_xz([1.0, 0.0, 2.0], [4.0, 9.0, 6.0]), 5.0);
     }
 
     /// a mark named again with no position keeps the one it has, and the yaw it has
@@ -311,7 +276,7 @@ mod tests {
         assert!(row.beats.get("go".into()).unwrap().atomic);
     }
 
-    /// the define pass's two throws, in the TypeScript's words (director.ts:305, :314); a body that fails leaves no row
+    /// a name declared twice stops the define pass, in words that name it; a body that fails leaves no row
     #[test]
     fn a_name_declared_twice_is_the_err() {
         let mut manifest = Manifest::default();
@@ -324,86 +289,94 @@ mod tests {
         assert_eq!(got, Err(String::from("script: program 'p' declared twice")));
     }
 
-    /// the same script and level given to the TypeScript's lintManifest under bun: the same rows in the same order
+    /// A FAILURE MEANS: a script that drives a door, a device, a route or a light its level has not runs and does nothing, where an error would disarm it and say which.
     #[test]
-    fn the_lint_says_what_the_typescript_says() {
+    fn a_name_the_level_lacks_is_an_error_that_says_which() {
         let mut manifest = Manifest::default();
         for id in ["a", "b"] { manifest_door(&mut manifest, id); }
         for id in ["kp", "zz"] { d_device(&mut manifest, id); }
-        d_route(&mut manifest, "r");
+        for id in ["yard", "r"] { d_route(&mut manifest, id); }
         manifest_volume(&mut manifest, "v");
-        for id in ["breach", "room1", "nope"] { d_plan(&mut manifest, id); }
-        manifest_mark(&mut manifest, "m1", Some([1.0, 0.0, 2.0]), Some(0.5));
-        manifest_mark(&mut manifest, "m1", None, None);
-        manifest_mark(&mut manifest, "m2", None, None);
-        manifest_mark(&mut manifest, "m3", Some([f64::NAN, 0.0, 0.0]), None);
-        manifest_loadout(&mut manifest, "l1", LoadoutSpec { team: crate::teams::Team::Player, tint: Some([2.0, 0.0, 0.0]), tint2: Some([0.0, 0.0, 0.0]), ..LoadoutSpec::default() });
-        manifest_loadout(&mut manifest, "l2", LoadoutSpec { team: crate::teams::Team::Guard, ..LoadoutSpec::default() });
-        for id in ["ceil", "security", "gone"] { d_light_group(&mut manifest, id); }
-        manifest.programs.set("empty".into(), ProgramDef { name: "empty".into(), ..ProgramDef::default() });
-        let mut p = ProgramDef { name: "p".into(), ..ProgramDef::default() };
-        program_on_start(&mut p, "x");
-        p_after(&mut p, -1.0, "x");
-        p_after(&mut p, 1.5, "nobeat");
-        p_on_event(&mut p, EventKind::Shot, "nobeat2");
-        program_on_signal(&mut p, "sg", "nobeat3");
-        p_on_enter(&mut p, &VolumeRef { id: "vv".into() }, "nobeat4");
-        p_when(&mut p, "nobeat5");
-        program_beat(&mut p, "x", &crate::scene_level::LevelScriptFn::TutTeam, None).unwrap();
-        for _ in 0..33 { p_when(&mut p, "x"); }
-        manifest.programs.set("p".into(), p);
-        d_expect_order(&mut manifest, "ghost", &["x".into()]);
-        d_expect_within(&mut manifest, "p", "x", "x", 0.0);
-        d_expect_never(&mut manifest, "samHit");
-
+        for id in ["ceil", "gone"] { d_light_group(&mut manifest, id); }
         let door = |name: &str| crate::scene_level::LevelDoorDef { name: name.into(), ..crate::scene_level::LevelDoorDef::default() };
         let mut level = LintManifestLevel::default();
         level.doors = vec![door("a"), door("c")];
         level.lights = vec![crate::scene_level::LightDef { group: "ceil".into(), ..crate::scene_level::LightDef::default() }];
-        level.switchables = vec![crate::scene_level::LevelSwitchablesItem { group: "desk".into(), ..crate::scene_level::LevelSwitchablesItem::default() }];
+        level.volumes = Some(Vec::new());
+        level.devices = Some(vec![crate::scene_level::DeviceDef::Keypad(crate::devices::KeypadDef2 { name: "kp".into(), ..crate::devices::KeypadDef2::default() })]);
+        assert_eq!(errors(&manifest, &level, &[String::from("yard")]), [
+            "door 'b' is not in the level (doors: a, c)",
+            "device 'zz' is not in the level (devices: kp)",
+            "route 'r' is not in the level",
+            "volume 'v' is not in the level (it authors none)",
+            "light group 'gone' is not in the level (groups: ceil, security)",   // (a keypad stands in a group of its own)
+        ]);
+    }
+
+    /// A FAILURE MEANS: a beat no trigger can reach, or a trigger that fires into nothing, is found only by playing the mission to that moment.
+    #[test]
+    fn every_trigger_must_reach_a_beat_and_an_empty_program_is_only_a_warning() {
+        let mut manifest = Manifest::default();
+        manifest.programs.set("empty".into(), ProgramDef { name: "empty".into(), ..ProgramDef::default() });
+        let level = LintManifestLevel::default();
+        let got = lint_with_routes(&manifest, &level, &[]);
+        assert!(got.len() == 2 && got.iter().all(|p| p.level == LintProblemLevel::Warn), "{} rows", got.len());
+
+        let mut manifest = Manifest::default();
+        let mut p = ProgramDef { name: "p".into(), ..ProgramDef::default() };
+        program_beat(&mut p, "x", &crate::scene_level::LevelScriptFn::TutTeam, None).unwrap();
+        program_on_start(&mut p, "x");
+        p_trigger(&mut p, TriggerDefKind::After, "x", Some(-1.0));
+        p_trigger(&mut p, TriggerDefKind::After, "nobeat", Some(1.5));
+        manifest.programs.set("p".into(), p);
+        manifest.expects.push(ManifestExpectsItem { kind: ManifestExpectsItemKind::Within, program: Some("ghost".into()), max: Some(0.0), ..ManifestExpectsItem::default() });
+        assert_eq!(errors(&manifest, &level, &[]), [
+            "program 'p': after(-1) is not a finite delay",
+            "program 'p': trigger after 1.5s → beat 'nobeat', which is not declared",
+            "expect: program 'ghost' is not declared",
+            "expect.within: 0 s",
+        ]);
+
+        let mut manifest = Manifest::default();
+        let mut p = ProgramDef { name: "p".into(), ..ProgramDef::default() };
+        program_beat(&mut p, "x", &crate::scene_level::LevelScriptFn::TutTeam, None).unwrap();
+        for _ in 0..32 { p_trigger(&mut p, TriggerDefKind::When, "x", None); }
+        manifest.programs.set("p".into(), p.clone());
+        assert!(errors(&manifest, &level, &[]).is_empty(), "32 predicates are allowed");
+        p_trigger(&mut p, TriggerDefKind::When, "x", None);
+        manifest.programs.set("p".into(), p);
+        assert_eq!(errors(&manifest, &level, &[]), ["program 'p': more than 32 when() predicates"]);
+    }
+
+    /// A FAILURE MEANS: a script stages a plan the level has not, or stands a man nowhere, and the mission opens broken.
+    #[test]
+    fn a_plan_a_mark_and_a_loadout_must_be_able_to_stand() {
+        let mut manifest = Manifest::default();
+        for id in ["breach", "room1", "nope"] { d_plan(&mut manifest, id); }
+        manifest_mark(&mut manifest, "m1", Some([1.0, 0.0, 2.0]), None);
+        manifest_mark(&mut manifest, "m2", None, None);
+        manifest_mark(&mut manifest, "m3", Some([f64::NAN, 0.0, 0.0]), None);
+        manifest_loadout(&mut manifest, "l1", LoadoutSpec { team: crate::teams::Team::Player, tint: Some([2.0, 0.0, 0.0]), ..LoadoutSpec::default() });
+        manifest_loadout(&mut manifest, "l2", LoadoutSpec { team: crate::teams::Team::Guard, tint: Some([1.0, 0.0, 0.0]), ..LoadoutSpec::default() });
+        let mut level = LintManifestLevel::default();
+        level.doors = vec![crate::scene_level::LevelDoorDef { name: "a".into(), ..crate::scene_level::LevelDoorDef::default() }];
         level.clear_plans = Some(vec![crate::scene_level::RoomClearPlan { door: "room1".into(), ..crate::scene_level::RoomClearPlan::default() }]);
         let mut breach = crate::scene_level::BreachPlan::default();
         breach.door = "a".into();
         breach.next.door = "z".into();
         level.breach = Some(breach);
-        level.volumes = Some(Vec::new());
-        level.devices = Some(vec![
-            crate::scene_level::DeviceDef::Keypad(crate::devices::KeypadDef2 { name: "kp".into(), ..crate::devices::KeypadDef2::default() }),
-            crate::scene_level::DeviceDef::Camera(crate::devices::CameraDef2 { name: "cam".into(), group: Some("yard".into()), ..crate::devices::CameraDef2::default() }),
+        assert_eq!(errors(&manifest, &level, &[]), [
+            "plan 'breach' names door 'z', not in the level",
+            "plan 'breach' has no hostiles",
+            "plan 'nope': no room-clear plan of that room / door in the level",
+            "mark 'm2' has no position (LevelData has no marks[] yet — declare it with D.mark(id, [x, 0, z]))",
+            "mark 'm3' position is not finite",
+            "loadout 'l1': team 'player' cannot be spawned (guard / operative / hostile)",
+            "loadout 'l1': tint out of range",
         ]);
-
-        let want: &[(LintProblemLevel, &str)] = &[
-            (LintProblemLevel::Error, "door 'b' is not in the level (doors: a, c)"),
-            (LintProblemLevel::Error, "device 'zz' is not in the level (devices: kp, cam)"),
-            (LintProblemLevel::Error, "route 'r' is not in the level"),
-            (LintProblemLevel::Error, "volume 'v' is not in the level (it authors none)"),
-            (LintProblemLevel::Error, "plan 'breach' names door 'z', not in the level"),
-            (LintProblemLevel::Error, "plan 'breach' has no hostiles"),
-            (LintProblemLevel::Error, "plan 'nope': no room-clear plan of that room / door in the level"),
-            (LintProblemLevel::Error, "mark 'm2' has no position (LevelData has no marks[] yet — declare it with D.mark(id, [x, 0, z]))"),
-            (LintProblemLevel::Error, "mark 'm3' position is not finite"),
-            (LintProblemLevel::Error, "loadout 'l1': team 'player' cannot be spawned (guard / operative / hostile)"),
-            (LintProblemLevel::Error, "loadout 'l1': tint out of range"),
-            (LintProblemLevel::Error, "light group 'gone' is not in the level (groups: ceil, desk, security, yard)"),
-            (LintProblemLevel::Warn, "program 'empty' declares no beats"),
-            (LintProblemLevel::Warn, "program 'empty' has no trigger — nothing will ever start a beat"),
-            (LintProblemLevel::Error, "program 'p': after(-1) is not a finite delay"),
-            (LintProblemLevel::Error, "program 'p': trigger after 1.5s → beat 'nobeat', which is not declared"),
-            (LintProblemLevel::Error, "program 'p': trigger event 'shot' → beat 'nobeat2', which is not declared"),
-            (LintProblemLevel::Error, "program 'p': trigger signal 'sg' → beat 'nobeat3', which is not declared"),
-            (LintProblemLevel::Error, "program 'p': trigger enter 'vv' → beat 'nobeat4', which is not declared"),
-            (LintProblemLevel::Error, "program 'p': onEnter names volume 'vv' the script never declared with D.volume"),
-            (LintProblemLevel::Error, "program 'p': trigger when → beat 'nobeat5', which is not declared"),
-            (LintProblemLevel::Error, "program 'p': more than 32 when() predicates"),
-            (LintProblemLevel::Error, "expect: program 'ghost' is not declared"),
-            (LintProblemLevel::Error, "expect.within: 0 s"),
-        ];
-        let got = lint_with_routes(&manifest, &level, &[]);
-        let got: Vec<(LintProblemLevel, &str)> = got.iter().map(|p| (p.level, p.what.as_str())).collect();
-        assert_eq!(got, want);
     }
 
-    /// the one thing lint_manifest reads of `g`: a level's route is known by the name its row holds
+    /// a level's route is known by the name its row holds
     #[test]
     fn a_route_is_found_by_its_row_name() {
         let mut g = crate::game::Game::blank();

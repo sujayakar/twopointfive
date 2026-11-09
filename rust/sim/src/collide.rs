@@ -4,7 +4,7 @@
 //! STATEMENT FOR STATEMENT, as lines.rs is: the same cells in the same order, a box met once a pass, the same pushes added in the same order — a body pushed
 //! out of two boxes ends where the TypeScript leaves it, to the bit. tools/qa/rust-check.ts holds the two together.
 //!
-//! What is not here: whether a broken pane can be walked through (game/glassbreak.ts) is a rule of the TypeScript's; the copy carries its answer for each
+//! What is not here: whether a broken pane can be walked through is a rule of the TypeScript's; the copy carries its answer for each
 //! pane as it stood when the copy was last compared (K_WALK), and the rule says so when it changes one.
 
 use crate::world::*;
@@ -111,7 +111,7 @@ pub fn circle(w: usize, px: f64, pz: f64, r: f64, y0: f64, y1: f64, iterations: 
     touched as u32
 }
 
-/// collision.ts gather: the statics filed under the rectangle [x0, x1] × [z0, z1] that overlap [y0, y1], once each, into `list` — as many as `cap` (the
+/// The statics filed under the rectangle [x0, x1] × [z0, z1] that overlap [y0, y1], once each, into `list` — as many as `cap` (the
 /// host's own list's length). Returns how many.
 pub fn gather(w: usize, x0: f64, z0: f64, x1: f64, z1: f64, y0: f64, y1: f64, cap: usize) -> usize {
     let (o, s) = (world_read(w), asking(w));

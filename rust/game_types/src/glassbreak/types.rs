@@ -178,123 +178,83 @@ pub struct GlassBreakPaneInfo {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct GlassbreakMod {
-    /// (src/game/glassbreak.ts:193 GB_HOST)
     #[is(crate::glassbreak::GlassbreakModGBHOST { shards: 0.0, chips: 0.0, refused: 0.0, hooked: 0.0 })] pub gb_host: crate::glassbreak::GlassbreakModGBHOST,
 }
 
-/// (src/game/glassbreak.ts:195 TALLY_AT: a table nothing writes)
 pub fn tally_at() -> crate::glassbreak::TALLYAT { crate::glassbreak::TALLYAT { panes: Some(0.0), dropped: Some(4.0), impacts: Some(1.0), sites: Some(2.0), runs: Some(3.0), shards: None, diced: Some(5.0), clumps: Some(6.0), sheets: Some(7.0), blasts: Some(8.0), thinks: Some(9.0), raked: Some(10.0) } }
 
-/// (src/game/glassbreak.ts:200 GB_HEADER_ROWS)
 pub const GB_HEADER_ROWS: f64 = 4.0;
 
-/// (src/game/glassbreak.ts:200 GB_SITE_ROWS)
 pub const GB_SITE_ROWS: f64 = 4.0;
 
-/// (src/game/glassbreak.ts:207 NO_TYPE)
 pub const NO_TYPE: f64 = 9.0;
 
-/// (src/game/glassbreak.ts:207 NO_OVER)
 pub const NO_OVER: f64 = 3.0;
 
-/// (src/game/glassbreak.ts:207 SKY_UNKNOWN)
 pub const SKY_UNKNOWN: f64 = 2.0;
 
-/// (src/game/glassbreak.ts:209 OUT_LEN)
 pub const OUT_LEN: f64 = 32.0;
 
-/// (src/game/glassbreak.ts:209 O_PANE)
 pub const O_PANE: f64 = 0.0;
 
-/// (src/game/glassbreak.ts:209 O_TYPE)
 pub const O_TYPE: f64 = 1.0;
 
-/// (src/game/glassbreak.ts:209 O_KIND)
 pub const O_KIND: f64 = 2.0;
 
-/// (src/game/glassbreak.ts:209 O_PTS)
 pub const O_PTS: f64 = 3.0;
 
-/// (src/game/glassbreak.ts:209 O_NPTS)
 pub const O_NPTS: f64 = 4.0;
 
-/// (src/game/glassbreak.ts:209 O_CX)
 pub const O_CX: f64 = 5.0;
 
-/// (src/game/glassbreak.ts:209 O_NX)
 pub const O_NX: f64 = 8.0;
 
-/// (src/game/glassbreak.ts:209 O_THICK)
 pub const O_THICK: f64 = 11.0;
 
-/// (src/game/glassbreak.ts:209 O_AREA)
 pub const O_AREA: f64 = 12.0;
 
-/// (src/game/glassbreak.ts:209 O_VX)
 pub const O_VX: f64 = 13.0;
 
-/// (src/game/glassbreak.ts:209 O_SX)
 pub const O_SX: f64 = 16.0;
 
-/// (src/game/glassbreak.ts:209 O_GRAIN)
 pub const O_GRAIN: f64 = 19.0;
 
-/// (src/game/glassbreak.ts:209 O_CAUSE)
 pub const O_CAUSE: f64 = 20.0;
 
-/// (src/game/glassbreak.ts:209 O_WHO)
 pub const O_WHO: f64 = 21.0;
 
-/// (src/game/glassbreak.ts:209 O_SEED)
 pub const O_SEED: f64 = 22.0;
 
-/// (src/game/glassbreak.ts:209 O_KEY)
 pub const O_KEY: f64 = 23.0;
 
-/// (src/game/glassbreak.ts:209 O_HEARD)
 pub const O_HEARD: f64 = 24.0;
 
-/// (src/game/glassbreak.ts:209 O_FALL_T)
 pub const O_FALL_T: f64 = 25.0;
 
-/// (src/game/glassbreak.ts:209 O_FALL_X)
 pub const O_FALL_X: f64 = 26.0;
 
-/// (src/game/glassbreak.ts:209 O_LANDED)
 pub const O_LANDED: f64 = 29.0;
 
-/// (src/game/glassbreak.ts:216 GW_COLS)
 pub const GW_COLS: f64 = 2.0;
 
-/// (src/game/glassbreak.ts:216 GW_ROWS)
 pub const GW_ROWS: f64 = 3.0;
 
-/// (src/game/glassbreak.ts:216 GW_DSEED)
 pub const GW_DSEED: f64 = 4.0;
 
-/// (src/game/glassbreak.ts:216 GW_N)
 pub const GW_N: f64 = 5.0;
 
-/// (src/game/glassbreak.ts:216 GW_SEED)
 pub const GW_SEED: f64 = 13.0;
 
-/// (src/game/glassbreak.ts:216 GW_OPEN)
 pub const GW_OPEN: f64 = 21.0;
 
-/// (src/game/glassbreak.ts:216 GW_FLAGS)
 pub const GW_FLAGS: f64 = 1.0;
 
-/// (src/game/glassbreak.ts:216 G_GONE)
 pub const G_GONE: f64 = 1.0;
 
-/// (src/game/glassbreak.ts:216 G_DICE)
 pub const G_DICE: f64 = 2.0;
 
-/// (src/game/glassbreak.ts:216 G_RUN)
 pub const G_RUN: f64 = 4.0;
 
-/// (src/game/glassbreak.ts:216 G_SITE)
 pub const G_SITE: f64 = 9.0;
 
-/// (src/game/glassbreak.ts:216 G_DICE_AT)
 pub const G_DICE_AT: f64 = 72.0;

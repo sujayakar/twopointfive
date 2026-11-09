@@ -1,18 +1,17 @@
-//! src/game/combat.ts lines 664 to 757
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, string::String, vec, vec::Vec};
+use alloc::vec::Vec;
 
-/// Seconds a stun can sits after it lands: FLASH.fuse in a room fight, else the night game's.   (combat.ts flashFuse)
+/// Seconds a stun can sits after it lands: FLASH.fuse in a room fight, else the night game's.
 pub fn flash_fuse(g: &crate::game::Game) -> f64 {
     if crate::roomfight::fight_live(g) { g.k.flash.fuse } else { crate::effects::bang().fuse }
 }
 
-/// The stun can goes off, as its thrower's doing.   (combat.ts detonateStun)
+/// The stun can goes off, as its thrower's doing.
 pub fn detonate_stun(g: &mut crate::game::Game, it: ItemId, borrowed: Option<bool>, sam: Option<crate::combat::DetonateStunSam>) {
     let borrowed = borrowed.unwrap_or(false);
     let raw = sam.map(|s| crate::combat::DetonateStunRawSam { side: s.side, spare: s.spare });
@@ -20,7 +19,7 @@ pub fn detonate_stun(g: &mut crate::game::Game, it: ItemId, borrowed: Option<boo
     crate::fogofwar::fog_of_war_doing(g, Some(who), &mut |g: &mut Game| detonate_stun_raw(g, it, borrowed, raw));
 }
 
-/// The burst, the flash and the bang, then who it blinds and folds: the guards, then every seat's man.   (combat.ts detonateStunRaw)
+/// The burst, the flash and the bang, then who it blinds and folds: the guards, then every seat's man.
 fn detonate_stun_raw(g: &mut crate::game::Game, it: ItemId, borrowed: bool, sam: Option<crate::combat::DetonateStunRawSam>) {
     let b = crate::effects::bang();
     let p = crate::throwables::item_pos(g, it);
@@ -63,7 +62,6 @@ fn detonate_stun_raw(g: &mut crate::game::Game, it: ItemId, borrowed: bool, sam:
         serial,
         ..crate::game::GameEvent::default()
     });
-    let mut n: i32 = 0;
     let entry = crate::roomfight::fight_live(g);
     let side: crate::teams::Team = match g.tab.item[it].side {
         Some(s) => s,
@@ -127,7 +125,6 @@ fn detonate_stun_raw(g: &mut crate::game::Game, it: ItemId, borrowed: bool, sam:
             g.gd[gd].dazzled_at = Some(at);
             let along = v3::sub(g.ch[c].pos, at);
             crate::character::anim_hit_from(g, c, Some(along));
-            n += 1;
         }
     }
     let sam_side: crate::teams::Team = sam.and_then(|s| s.side).unwrap_or(side);
@@ -186,24 +183,11 @@ fn detonate_stun_raw(g: &mut crate::game::Game, it: ItemId, borrowed: bool, sam:
         }
         if !told {
             told = true;
-            let text: String = if side == crate::teams::Team::Hostile {
-                if n != 0 { alloc::format!("their stun charge — {} dazzled", n) } else { String::from("their stun charge went off") }
-            } else if n != 0 {
-                alloc::format!("flashbang — {} guard{} dazzled", n, if n > 1 { "s" } else { "" })
-            } else {
-                String::from("flashbang went off")
-            };
-            crate::game::game_msg(g, &text);
-        }
-        if sam_secs > 0.0 {
-            let by = if sam_side == crate::teams::Team::Player || sam_side == crate::teams::Team::Operative { "a flashbang" } else { "their stun charge" };
-            let text = alloc::format!("{} blinded you", by);
-            crate::game::game_msg(g, &text);
         }
     });
 }
 
-/// Sandbox / panel: an armed can dropped at `p` as if just landed, thrown from where the player stands.   (combat.ts dropThrowable)
+/// Sandbox / panel: an armed can dropped at `p` as if just landed, thrown from where the player stands.
 pub fn drop_throwable(g: &mut crate::game::Game, kind: crate::game::ThrowKind, p: V3) {
     let c = g.pl[g.player].ch;
     let from = g.ch[c].pos;

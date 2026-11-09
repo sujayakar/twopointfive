@@ -4,12 +4,12 @@ use crate::game::Game;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
 
-/// The way wedge `key` of `n` points, in radians; 1 is up, clockwise. (ringlone.ts wedgeMid)
+/// The way wedge `key` of `n` points, in radians; 1 is up, clockwise.
 fn wedge_mid(key: f64, n: f64) -> f64 {
     (-90.0 + (key - 1.0) * 360.0 / n) * m::PI / 180.0
 }
 
-/// The digit of a ring with one row, from the bits of the digits that have a wedge; 0 = the wheel, or no ring. (ringlone.ts loneKey)
+/// The digit of a ring with one row, from the bits of the digits that have a wedge; 0 = the wheel, or no ring.
 pub fn lone_key(g: &mut crate::game::Game, keys: &mut dyn FnMut(&mut crate::game::Game) -> f64) -> f64 {
     let k = keys(g);
     lone_digit(k)
@@ -20,7 +20,7 @@ fn lone_digit(k: f64) -> f64 {
     if k > 0.0 && js::to_i32(k) & js::to_i32(k - 1.0) == 0 { (31 - m::clz32(js::to_u32(k)) as i32) as f64 } else { 0.0 }
 }
 
-/// The box of wedge `key`'s pill on a wheel of `n`, its words `text_w` px wide: over the middle for a wedge pointing up or down, else out to its side. (ringlone.ts boxOf)
+/// The box of wedge `key`'s pill on a wheel of `n`, its words `text_w` px wide: over the middle for a wedge pointing up or down, else out to its side.
 fn box_of(key: f64, n: f64, text_w: f64, tall: Option<bool>) -> crate::ringlone::BoxOf {
     let tall = tall.unwrap_or(false);
     let l = crate::ringlone::lone();
@@ -46,13 +46,13 @@ fn box_of(key: f64, n: f64, text_w: f64, tall: Option<bool>) -> crate::ringlone:
     }
 }
 
-/// The place the game reads for wedge `key`'s pill: the longest pill's box, two lines tall. (ringlone.ts pillBox)
+/// The place the game reads for wedge `key`'s pill: the longest pill's box, two lines tall.
 fn pill_box(g: &crate::game::Game, key: f64, n: f64) -> crate::ringlone::BoxOf {
     let l = crate::ringlone::lone();
     box_of(key, n, l.max * l.char, Some(true))
 }
 
-/// Is a point of the ring's own px (from its middle) on the place of wedge `key`'s pill. (ringlone.ts onPill)
+/// Is a point of the ring's own px (from its middle) on the place of wedge `key`'s pill.
 pub(super) fn on_pill(g: &crate::game::Game, key: f64, n: f64, x: f64, y: f64) -> bool {
     let p = pill_box(g, key, n);
     x >= p.x0 && x <= p.x1 && y >= p.y0 && y <= p.y1

@@ -14,7 +14,7 @@ pub struct FirelineK {
     #[k(1.5)] pub pace_k: f64,
     /// s: a lane that comes back this soon after it lapsed on a waiting man is the same wait (no second word; the ceiling's clock kept)
     #[k(2.5)] pub lapse_s: f64,
-    /// the widest a round of his is thrown (combat.ts fireWeapon's `spread`): the rifle on the move, a string's growth and the aim model's cone on top
+    /// the widest a round of his is thrown: the rifle on the move, a string's growth and the aim model's cone on top
     #[k(0.06)] pub spread: f64,
     /// m: room either side of the round's lane on top of a body's (FRIENDLYFIRE.bodyM) — he stops clear of it, not on its edge
     #[k(0.25)] pub clear_m: f64,

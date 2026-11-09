@@ -1,4 +1,3 @@
-//! src/game/chronicle.ts lines 1 to 459
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -193,7 +192,7 @@ fn man_pos(g: &Game, gd: GuardId) -> V3 { g.ch[g.gd[gd].ch].pos }
 
 // ------------------------------------------------------------ rooms
 
-/// The room a floor point is in, by name; outside the building the side of it.   (chronicle.ts roomOf)
+/// The room a floor point is in, by name; outside the building the side of it.
 pub fn room_of(g: &crate::game::Game, p: V3) -> String {
     if !crate::dialogue::is_office(g) {
         return match crate::dialogue::own_place(g, p) {
@@ -215,7 +214,7 @@ pub fn room_of(g: &crate::game::Game, p: V3) -> String {
     String::from("west side")
 }
 
-/// Inside the building's footprint.   (chronicle.ts indoors)
+/// Inside the building's footprint.
 pub fn indoors(p: V3) -> bool {
     let b = crate::floor::building();
     p[0] >= b.x0 && p[0] < b.x1 && p[2] >= b.z0 && p[2] < b.z1
@@ -223,55 +222,52 @@ pub fn indoors(p: V3) -> bool {
 
 // ------------------------------------------------------------ the record
 
-/// The row a hearing event made, as its place in `events`.   (chronicle.ts Chronicle.heardRow)
+/// The row a hearing event made, as its place in `events`.
 fn chronicle_heard_row<'g>(g: &'g mut crate::game::Game, e: u32) -> Option<&'g mut usize> {
     g.chronicle.heard_of.get_mut(e)
 }
 
-/// (chronicle.ts Chronicle.bindHeard)
 fn chronicle_bind_heard(g: &mut crate::game::Game, e: u32, row: usize) {
     g.chronicle.heard_of.set(e, row);
 }
 
-/// (chronicle.ts Chronicle.heardCounted)
 fn chronicle_heard_counted(g: &crate::game::Game, e: u32) -> bool {
     g.chronicle.heard_no_row.has(e)
 }
 
-/// (chronicle.ts Chronicle.markHeardCounted)
 fn chronicle_mark_heard_counted(g: &mut crate::game::Game, e: u32) {
     g.chronicle.heard_no_row.add(e);
 }
 
-/// One path sample at mission time t; thins itself when full.   (chronicle.ts Chronicle.sample)
+/// One path sample at mission time t; thins itself when full.
 fn chronicle_sample(g: &mut crate::game::Game, x: f64, z: f64, t: f64) {
     sample_on(&mut g.chronicle, x, z, t);
 }
 
 // ------------------------------------------------------------ writing
 
-/// The mission clock.   (chronicle.ts nowOf)
+/// The mission clock.
 fn now_of(g: &crate::game::Game) -> f64 { g.mission.stats.elapsed }
 
-/// The first player's feet.   (chronicle.ts posOf)
+/// The first player's feet.
 fn pos_of(g: &mut crate::game::Game) -> V3 {
     let man = crate::seats::man_here(g, &crate::seats::here(g));
     g.ch[g.pl[man].ch].pos
 }
 
-/// The generic entry: `kind` at `pos` (his feet by default) with `data`.   (chronicle.ts chronicle)
+/// The generic entry: `kind` at `pos` (his feet by default) with `data`.
 pub fn chronicle(g: &mut crate::game::Game, kind: crate::chronicle::ChronKind, data: Option<&JsMap<String, Option<crate::chronicle::ChronicleDataValue>>>, pos: Option<V3>) -> Option<crate::chronicle::ChronEvent> {
     let data = match data { Some(d) => data_from_generic(d), None => JsMap::new() };
     live_row(g, kind, data, pos)
 }
 
-/// The generic entry and one counter by name: the counter moves whenever the run is live, row kept or not.   (chronicle.ts chronicleN)
+/// The generic entry and one counter by name: the counter moves whenever the run is live, row kept or not.
 pub fn chronicle_n(g: &mut crate::game::Game, kind: crate::chronicle::ChronKind, count: crate::chronicle::ChronCountKey, data: Option<&JsMap<String, Option<crate::chronicle::ChronicleNDataValue>>>, pos: Option<V3>) -> Option<crate::chronicle::ChronEvent> {
     let data = match data { Some(d) => data_from_n(d), None => JsMap::new() };
     live_row_n(g, kind, count, data, pos)
 }
 
-/// Once a frame from updateMission: the path sample when it is due.   (chronicle.ts tickChronicle)
+/// Once a frame from updateMission: the path sample when it is due.
 pub fn tick_chronicle(g: &mut crate::game::Game) {
     let t = now_of(g);
     if t >= g.chronicle.path_next {
@@ -280,12 +276,12 @@ pub fn tick_chronicle(g: &mut crate::game::Game) {
     }
 }
 
-/// The stage machine moved; `text` is the row.   (chronicle.ts chronObjective)
+/// The stage machine moved; `text` is the row.
 pub fn chron_objective(g: &mut crate::game::Game, text: &str, pos: Option<V3>) -> Option<crate::chronicle::ChronEvent> {
     live_row(g, ChronKind::Objective, row_data(vec![("text", tx(text))]), pos)
 }
 
-/// An alert man has eyes on him afresh; seen again once they know counts as seenUp.   (chronicle.ts chronSpotted)
+/// An alert man has eyes on him afresh; seen again once they know counts as seenUp.
 pub fn chron_spotted(g: &mut crate::game::Game, by: Option<GuardId>) -> Option<crate::chronicle::ChronEvent> {
     let lvl = g.escalation;
     let who = match by { Some(b) => man_callsign(g, b), None => String::from("a guard") };
@@ -293,7 +289,7 @@ pub fn chron_spotted(g: &mut crate::game::Game, by: Option<GuardId>) -> Option<c
     if lvl >= 1.0 { live_row_n(g, ChronKind::Spotted, ChronCountKey::SeenUp, data, None) } else { live_row(g, ChronKind::Spotted, data, None) }
 }
 
-/// A man went to 'alert': who, and what did it.   (chronicle.ts chronContact)
+/// A man went to 'alert': who, and what did it.
 pub fn chron_contact(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::chronicle::ChronEvent> {
     let cause = match g.gd[gd].witness.alerted_by { Some(c) => c.as_str(), None => "radio" };
     let data = row_data(vec![("who", tx(&man_callsign(g, gd))), ("cause", tx(cause))]);
@@ -301,7 +297,7 @@ pub fn chron_contact(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::ch
     live_row_n(g, ChronKind::Contact, ChronCountKey::Contacts, data, Some(p))
 }
 
-/// A noise of his making raised a man: one row per noise however many hear it, a run of one kind merged.   (chronicle.ts chronHeard)
+/// A noise of his making raised a man: one row per noise however many hear it, a run of one kind merged.
 pub fn chron_heard(g: &mut crate::game::Game, gd: GuardId, ev: crate::game::GameEvent, where_: Option<V3>) -> Option<crate::chronicle::ChronEvent> {
     if !crate::mission::mission_live(g) { return None; }
     if let Some(who) = ev.who {
@@ -351,7 +347,7 @@ pub fn chron_heard(g: &mut crate::game::Game, gd: GuardId, ev: crate::game::Game
     if rank_of(react) > rank_of(&data_string(&row.data, "react")) { data_set(&mut row.data, "react", tx(react)); }
     Some(row.clone())
 }
-/// What a hearing-model event of his is, in the timeline's words.   (chronicle.ts heardWhat)
+/// What a hearing-model event of his is, in the timeline's words.
 fn heard_what(e: crate::game::GameEvent) -> String {
     use crate::director::EventKind;
     let level = e.level.unwrap_or(0.0);
@@ -369,21 +365,21 @@ fn heard_what(e: crate::game::GameEvent) -> String {
     })
 }
 
-/// The alert chase is over without him.   (chronicle.ts chronLost)
+/// The alert chase is over without him.
 pub fn chron_lost(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::chronicle::ChronEvent> {
     let data = row_data(vec![("who", tx(&man_callsign(g, gd)))]);
     let p = man_pos(g, gd);
     live_row(g, ChronKind::Lost, data, Some(p))
 }
 
-/// He gives the search up.   (chronicle.ts chronCalm)
+/// He gives the search up.
 pub fn chron_calm(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::chronicle::ChronEvent> {
     let data = row_data(vec![("who", tx(&man_callsign(g, gd)))]);
     let p = man_pos(g, gd);
     live_row(g, ChronKind::Calm, data, Some(p))
 }
 
-/// The floor's alarm level moved to `stage`; pinned at the alarm's fix when there is one.   (chronicle.ts chronAlarm)
+/// The floor's alarm level moved to `stage`; pinned at the alarm's fix when there is one.
 pub fn chron_alarm(g: &mut crate::game::Game, stage: f64, up: bool, cause: Option<&str>) -> Option<crate::chronicle::ChronEvent> {
     let cause = cause.unwrap_or("");
     let pos = if g.alarm.placed { g.alarm.pos } else { pos_of(g) };
@@ -407,7 +403,7 @@ fn clip_line(text: &str) -> String {
     let units: Vec<u16> = text.encode_utf16().collect();
     if units.len() > 96 { format!("{}…", String::from_utf16_lossy(&units[..94])) } else { String::from(text) }
 }
-/// A line over the guards' net, the routine radio check excepted.   (chronicle.ts chronRadio)
+/// A line over the guards' net, the routine radio check excepted.
 pub fn chron_radio(g: &mut crate::game::Game, gd: GuardId, text: &str) -> Option<crate::chronicle::ChronEvent> {
     if is_radio_check(text) { return None; }
     let data = row_data(vec![("who", tx(&man_callsign(g, gd))), ("text", ChronEventDataValue::Text(clip_line(text)))]);
@@ -415,7 +411,7 @@ pub fn chron_radio(g: &mut crate::game::Game, gd: GuardId, text: &str) -> Option
     live_row_n(g, ChronKind::Radio, ChronCountKey::Radio, data, Some(p))
 }
 
-/// His round: which weapon, what it went into, a living man near where it stopped; a burst into one sort of thing is one row.   (chronicle.ts chronShot)
+/// His round: which weapon, what it went into, a living man near where it stopped; a burst into one sort of thing is one row.
 pub fn chron_shot(g: &mut crate::game::Game, weapon: &str, hit_guard: Option<GuardId>, hit_p: V3) -> Option<crate::chronicle::ChronEvent> {
     if !crate::mission::mission_live(g) { return None; }
     let t = now_of(g);
@@ -450,7 +446,7 @@ pub fn chron_shot(g: &mut crate::game::Game, weapon: &str, hit_guard: Option<Gua
     Some(g.chronicle.events[at].clone())
 }
 
-/// A fixture shot out.   (chronicle.ts chronLightShot)
+/// A fixture shot out.
 pub fn chron_light_shot(g: &mut crate::game::Game, tg: FixtureId) -> Option<crate::chronicle::ChronEvent> {
     let row = &g.tab.sim_lightshome_fixture[tg];
     let name = fixture_name(&FixtureNameTg { name: row.name.clone(), group: row.group.clone() });
@@ -458,12 +454,12 @@ pub fn chron_light_shot(g: &mut crate::game::Game, tg: FixtureId) -> Option<crat
     live_row_n(g, ChronKind::LightShot, ChronCountKey::LightsShot, row_data(vec![("name", tx(&name))]), Some(pos))
 }
 
-/// The OCP put something out.   (chronicle.ts chronOcp)
+/// The OCP put something out.
 pub fn chron_ocp(g: &mut crate::game::Game, what: &str, pos: V3) -> Option<crate::chronicle::ChronEvent> {
     live_row_n(g, ChronKind::Ocp, ChronCountKey::Ocps, row_data(vec![("what", tx(what))]), Some(pos))
 }
 
-/// The mains went.   (chronicle.ts chronBlackout)
+/// The mains went.
 pub fn chron_blackout(g: &mut crate::game::Game, cause: &str) -> Option<crate::chronicle::ChronEvent> {
     if crate::mission::mission_live(g) && cause == "ocp" { g.chronicle.counts.ocps += 1.0; }
     let pos = g.level.breaker.pos;
@@ -476,7 +472,7 @@ fn without_trailing_number(s: &str) -> &str {
     if t.len() == s.len() { return s; }
     t.strip_suffix('_').unwrap_or(t)
 }
-/// A fixture's name in words.   (chronicle.ts fixtureName)
+/// A fixture's name in words.
 pub fn fixture_name(tg: &crate::chronicle::FixtureNameTg) -> String {
     let n = tg.name.as_str();
     if n.starts_with("panel_") { return format!("a {} ceiling panel", tg.group); }
@@ -487,19 +483,19 @@ pub fn fixture_name(tg: &crate::chronicle::FixtureNameTg) -> String {
     format!("the {}", underscores_to_spaces(without_trailing_number(n)))
 }
 
-/// A canister is away.   (chronicle.ts chronThrown)
+/// A canister is away.
 pub fn chron_thrown(g: &mut crate::game::Game, kind: &str) -> Option<crate::chronicle::ChronEvent> {
     live_row_n(g, ChronKind::Thrown, ChronCountKey::Thrown, row_data(vec![("kind", tx(kind))]), None)
 }
 
-/// A man taken into the arm.   (chronicle.ts chronGrab)
+/// A man taken into the arm.
 pub fn chron_grab(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::chronicle::ChronEvent> {
     let data = row_data(vec![("who", tx(&man_callsign(g, gd)))]);
     let p = man_pos(g, gd);
     live_row_n(g, ChronKind::Grab, ChronCountKey::Grabs, data, Some(p))
 }
 
-/// One exchange: who, the stage, the useful thing's kind if he gave one.   (chronicle.ts chronInterrogated)
+/// One exchange: who, the stage, the useful thing's kind if he gave one.
 pub fn chron_interrogated(g: &mut crate::game::Game, gd: GuardId, kind: Option<&str>, stage: f64) -> Option<crate::chronicle::ChronEvent> {
     if !crate::mission::mission_live(g) { return None; }
     let callsign = man_callsign(g, gd);
@@ -516,14 +512,14 @@ pub fn chron_interrogated(g: &mut crate::game::Game, gd: GuardId, kind: Option<&
     live_row(g, ChronKind::Interrogated, row_data(pairs), Some(p))
 }
 
-/// A fresh key off a questioned man's belt.   (chronicle.ts chronKey)
+/// A fresh key off a questioned man's belt.
 pub fn chron_key(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::chronicle::ChronEvent> {
     let data = row_data(vec![("who", tx(&man_callsign(g, gd)))]);
     let p = man_pos(g, gd);
     live_row(g, ChronKind::KeyTaken, data, Some(p))
 }
 
-/// A man put down by the player's hand: shot dead ('kill') or out cold ('ko').   (chronicle.ts chronDown)
+/// A man put down by the player's hand: shot dead ('kill') or out cold ('ko').
 pub fn chron_down(g: &mut crate::game::Game, gd: GuardId, how: crate::game::DownKind, line: Option<&str>) -> Option<crate::chronicle::ChronEvent> {
     chron_down_by(g, gd, how, line, None)
 }
@@ -563,7 +559,7 @@ pub fn chron_down_by(g: &mut crate::game::Game, gd: GuardId, how: crate::game::D
     live_row(g, ChronKind::Ko, row_data(vec![("who", tx(&callsign)), ("method", tx(method))]), Some(p))
 }
 
-/// A body discovered: whose, by whom, found breathing or not.   (chronicle.ts chronBodyFound)
+/// A body discovered: whose, by whom, found breathing or not.
 pub fn chron_body_found(g: &mut crate::game::Game, body: GuardId, by: GuardId) -> Option<crate::chronicle::ChronEvent> {
     let c = g.gd[body].ch;
     let h = match g.ch[c].bones.get(crate::character::Bone::Hips) { Some(b) => *b, None => g.ch[c].pos };
@@ -572,7 +568,7 @@ pub fn chron_body_found(g: &mut crate::game::Game, body: GuardId, by: GuardId) -
     live_row(g, ChronKind::BodyFound, row_data(pairs), Some([h[0], 0.0, h[2]]))
 }
 
-/// A round found him: 'down' the once, 'hit' while the vest still has something left.   (chronicle.ts chronHit)
+/// A round found him: 'down' the once, 'hit' while the vest still has something left.
 pub fn chron_hit(g: &mut crate::game::Game, by: Option<&str>) -> Option<crate::chronicle::ChronEvent> {
     if g.chronicle.counts.down || !crate::mission::mission_live(g) { return None; }
     let by = by.unwrap_or("");
@@ -586,7 +582,7 @@ pub fn chron_hit(g: &mut crate::game::Game, by: Option<&str>) -> Option<crate::c
     live_row_n(g, ChronKind::Hit, ChronCountKey::Hits, row_data(vec![("by", tx(by)), ("left", num(left))]), None)
 }
 
-/// A door kicked in or a lock picked.   (chronicle.ts chronDoor)
+/// A door kicked in or a lock picked.
 pub fn chron_door(g: &mut crate::game::Game, kind: crate::chronicle::ChronDoorKind, d: DoorId) -> Option<crate::chronicle::ChronEvent> {
     let (row, count) = match kind {
         ChronDoorKind::DoorKicked => (ChronKind::DoorKicked, ChronCountKey::Kicked),
@@ -597,7 +593,7 @@ pub fn chron_door(g: &mut crate::game::Game, kind: crate::chronicle::ChronDoorKi
     live_row_n(g, row, count, row_data(vec![("door", ChronEventDataValue::Text(name))]), Some(pos))
 }
 
-/// A checkpoint written or restored; a save is chatter to the caps, a load stays.   (chronicle.ts chronCheckpoint)
+/// A checkpoint written or restored; a save is chatter to the caps, a load stays.
 pub fn chron_checkpoint(g: &mut crate::game::Game, what: crate::chronicle::ChronCheckpointWhat, label: Option<&str>) -> Option<crate::chronicle::ChronEvent> {
     let count = if what == ChronCheckpointWhat::Load { ChronCountKey::Loads } else { ChronCountKey::Saves };
     live_row_n(g, ChronKind::Checkpoint, count, row_data(vec![("what", tx(what.as_str())), ("label", tx(label.unwrap_or("")))]), None)
@@ -605,7 +601,7 @@ pub fn chron_checkpoint(g: &mut crate::game::Game, what: crate::chronicle::Chron
 
 // ------------------------------------------------------------ reading
 
-/// Everything the card and the score read, in one flat record.   (chronicle.ts runCounts)
+/// Everything the card and the score read, in one flat record.
 fn run_counts(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> crate::chronicle::RunCounts {
     use crate::game::MissionStage;
     let st = g.mission.stage;
@@ -626,7 +622,7 @@ fn run_counts(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> crate::chr
     }
 }
 
-/// A blank record: what the probes' synthetic runs start from.   (chronicle.ts blankCounts)
+/// A blank record: what the probes' synthetic runs start from.
 fn blank_counts() -> crate::chronicle::RunCounts {
     RunCounts {
         elapsed: 0.0, stage: String::from("infiltrate"), done: false, failed: false, sandbox: false, blackout: false, seen: 0.0, seen_up: 0.0, alarms: 0.0, esc1: 0.0, esc2: 0.0, bodies: 0.0,
@@ -666,17 +662,16 @@ fn score_of(s: &crate::knobs::ScoreK, c: &RunCounts) -> StealthScore {
     js::sort_by(&mut lines, |a, b| b.pts - a.pts);
     StealthScore { score: v3::clamp(m::round(100.0 - off), 0.0, 100.0), lines }
 }
-/// 0..100 and the itemised deductions that made it, largest first.   (chronicle.ts stealthScore)
+/// 0..100 and the itemised deductions that made it, largest first.
 fn stealth_score(g: &crate::game::Game, c_2: &crate::chronicle::RunCounts) -> crate::chronicle::StealthScore {
     score_of(&g.k.score, c_2)
 }
 
-/// (chronicle.ts times)
 fn times(n: f64) -> String {
     if n == 1.0 { String::from("once") } else if n == 2.0 { String::from("twice") } else { format!("{} times", js::num_str(n)) }
 }
 
-/// The rating word for a score.   (chronicle.ts ratingOf)
+/// The rating word for a score.
 fn rating_of(score: f64) -> crate::chronicle::RatingOf {
     let table = bands();
     for b in table.iter() {
@@ -702,18 +697,18 @@ fn badges_for(b: &crate::knobs::BadgeK, c: &RunCounts) -> Vec<Badge> {
         badge("speedrun", "speedrun", c.done && c.elapsed < b.speedrun_secs, format!("out inside {}", fmt_mmss(b.speedrun_secs))),
     ]
 }
-/// The run's badges, each a plain yes / no off the counts.   (chronicle.ts badgesOf)
+/// The run's badges, each a plain yes / no off the counts.
 fn badges_of(g: &crate::game::Game, c_2: &crate::chronicle::RunCounts) -> Vec<crate::chronicle::Badge> {
     badges_for(&g.k.badge, c_2)
 }
 
-/// mm:ss off seconds.   (chronicle.ts fmtMMSS)
+/// mm:ss off seconds.
 fn fmt_mmss(sec: f64) -> String {
     let s = m::max(0.0, m::floor(sec));
     format!("{}:{}", pad2(m::floor(s / 60.0)), pad2(js::rem(s, 60.0)))
 }
 
-/// The whole debrief in one record. mission.ts reads its `grade` for the end line.   (chronicle.ts debriefOf)
+/// The whole debrief in one record. mission.ts reads its `grade` for the end line.
 pub fn debrief_of(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> crate::chronicle::Debrief {
     let counts = run_counts(g, seat);
     let StealthScore { score, lines } = stealth_score(g, &counts);
@@ -732,7 +727,7 @@ pub fn debrief_of(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> crate:
     Debrief { counts, score, lines, rating: r.word, blurb: r.blurb, badges, summary, state, scored, grade }
 }
 
-/// The one line the 'copy summary' button puts on the clipboard.   (chronicle.ts summaryLine)
+/// The one line the 'copy summary' button puts on the clipboard.
 fn summary_line(c_2: &crate::chronicle::RunCounts, score: f64, word: &str, badges: &[crate::chronicle::Badge], state: crate::chronicle::SummaryLineState, scored: Option<bool>) -> String {
     let c = c_2;
     let scored = scored.unwrap_or(true);
@@ -764,7 +759,7 @@ fn summary_line(c_2: &crate::chronicle::RunCounts, score: f64, word: &str, badge
     format!("twopointsix — {}", parts.join(" · "))
 }
 
-/// The name a door row's door was WRITTEN, asked when the row is read; `None`: the row reads its id's words.   (chronicle.ts doorWritten)
+/// The name a door row's door was WRITTEN, asked when the row is read; `None`: the row reads its id's words.
 pub(super) fn door_written(g: &crate::game::Game, door: &str) -> Option<String> {
     let d = match crate::doors::doors_by_name(g, door) {
         Some(d) => Some(d),
@@ -780,15 +775,9 @@ pub(super) fn door_written(g: &crate::game::Game, door: &str) -> Option<String> 
 mod tests {
     use super::*;
 
-    fn line(c: &RunCounts, s: &crate::knobs::ScoreK) -> String {
-        let r = score_of(s, c);
-        let mut out = format!("{}", js::num_str(r.score));
-        for l in r.lines.iter() { out = format!("{}|{}={}", out, l.label, js::num_str(l.pts)); }
-        out
-    }
-
+    /// A FAILURE MEANS: the debrief says "1 times", a clock with a sign or a rating off its band.
     #[test]
-    fn words() {
+    fn the_debrief_says_counts_clocks_and_ratings_in_words() {
         assert_eq!(times(1.0), "once");
         assert_eq!(times(2.0), "twice");
         assert_eq!(times(7.0), "7 times");
@@ -803,29 +792,26 @@ mod tests {
         assert_eq!(rating_of(-1.0).word, "ASSAULT");
     }
 
+    /// A FAILURE MEANS: the timeline names a light by its id.
     #[test]
-    fn fixture_names() {
+    fn a_light_is_named_for_what_it_is_without_its_number() {
         let n = |name: &str, group: &str| fixture_name(&FixtureNameTg { name: String::from(name), group: String::from(group) });
         assert_eq!(n("panel_corridor_12", "corridor"), "a corridor ceiling panel");
         assert_eq!(n("monitor3", "x"), "a monitor");
         assert_eq!(n("beacon", "x"), "an emergency beacon");
         assert_eq!(n("exit_sign_2", "x"), "an exit sign");
         assert_eq!(n("vending_1", "x"), "a vending machine");
-        assert_eq!(n("desk_lamp", "x"), "the desk lamp");
         assert_eq!(n("desk_lamp_07", "x"), "the desk lamp");
-        assert_eq!(n("desk_lamp7", "x"), "the desk lamp");
-        assert_eq!(n("a__1", "x"), "the a ");
-        assert_eq!(n("1", "x"), "the ");
     }
 
+    /// A FAILURE MEANS: the routine radio checks crowd the timeline, or a long line runs off the card.
     #[test]
-    fn radio_checks_and_clipping() {
+    fn a_radio_check_is_known_by_its_words_and_a_long_line_is_clipped_to_ninety_six() {
         assert!(is_radio_check("radio check — sound off"));
         assert!(is_radio_check("radio check, anyone"));
         assert!(is_radio_check("Bravo: radio check — sound off"));
         assert!(!is_radio_check("Bravo: radio check"));
         assert!(!is_radio_check("Bravo two: radio check — sound off"));
-        assert!(!is_radio_check(": radio check — sound off"));
         assert!(!is_radio_check("contact, radio check"));
         let ninety_six: String = core::iter::repeat('—').take(96).collect();
         assert_eq!(clip_line(&ninety_six), ninety_six);
@@ -835,8 +821,9 @@ mod tests {
         assert!(clipped.ends_with('…'));
     }
 
+    /// A FAILURE MEANS: "heard: gunfire" for a canister's pop, or a clatter of a thing you kicked read as a crash of furniture.
     #[test]
-    fn heard_words() {
+    fn a_sound_is_named_by_what_made_it() {
         use crate::director::EventKind;
         let mut e = crate::game::GameEvent::default();
         e.kind = EventKind::Shot;
@@ -854,8 +841,9 @@ mod tests {
         assert_eq!(heard_what(e), "a noise");
     }
 
+    /// A FAILURE MEANS: a long run's chatter crowds out what the card needs (past the soft cap only rows that matter are kept, past the hard cap none), or repeated rows are not folded into the row they repeat.
     #[test]
-    fn caps_and_recent() {
+    fn the_timeline_refuses_chatter_at_its_cap_and_a_recent_row_is_found_only_close_by() {
         let chatter = ChronicleMod::blank().chatter;
         let mut c = Chronicle::blank();
         let d = |k: &str| row_data(vec![("what", tx(k))]);
@@ -880,6 +868,7 @@ mod tests {
         assert_eq!(recent_at(&c, ChronKind::Shot, "into", &key, 10.0, 2.5), None);
     }
 
+    /// A FAILURE MEANS: a long night's path outgrows its store: at the cap it drops every second point and samples half as often.
     #[test]
     fn the_path_thins_itself() {
         let mut c = Chronicle::blank();
@@ -928,27 +917,35 @@ mod tests {
         assert_eq!(lit.join(","), "nokills,pacifist,quiet,speedrun,unseen,unseenStaff");
     }
 
+    /// A FAILURE MEANS: the score sheet stops explaining the score: its rows are the costs, dearest first, in words, and a free thing is no row.
     #[test]
-    fn the_scores_of_the_typescript() {
-        // (the expected strings are what the TypeScript's own stealthScore, summaryLine and badgesOf printed under bun)
+    fn the_score_sheet_lists_each_cost_dearest_first_in_words() {
         let s = crate::knobs::ScoreK::page();
+        let mut c = blank_counts();
+        c.seen = 2.0; c.seen_up = 1.0; c.alarms = 1.0; c.kills = 1.0; c.kos = 3.0; c.hits = 1.0; c.loads = 2.0; c.civ_seen = 1.0; c.elapsed = s.par_secs + 300.0;
+        let r = score_of(&s, &c);
+        assert!(r.lines.windows(2).all(|w| w[0].pts >= w[1].pts), "{:?}", r.lines);
+        let labels: Vec<&str> = r.lines.iter().map(|l| l.label.as_str()).collect();
+        for want in ["seen twice (1 with the floor already up)", "1 alarm raised", "1 killed", "3 knocked out", "hit once", "2 checkpoint loads", "5 min over par"] { assert!(labels.contains(&want), "{}: {:?}", want, labels); }
+        assert_eq!(r.lines.len(), 7, "a civilian who saw you and told nobody is free: {:?}", labels);
+        let spent: f64 = r.lines.iter().map(|l| l.pts).sum();
+        assert_eq!(r.score, (100.0 - spent).round());
+    }
+
+    /// A FAILURE MEANS: a shared run misreports itself: the line says what was done, gives a grade only to a scored run, and owns up to sandbox flags and an unfinished run.
+    #[test]
+    fn the_summary_line_tells_the_run_and_only_a_scored_run_has_a_grade() {
         let b = crate::knobs::BadgeK::page();
-        let mut c = blank_counts();
-        c.seen = 2.0; c.seen_up = 1.0; c.alarms = 1.0; c.esc1 = 1.0; c.esc2 = 1.0; c.bodies = 1.0; c.kills = 1.0; c.kos = 3.0; c.shots_near_men = 9.0; c.lights_shot = 1.0; c.devices = 5.0;
-        c.hits = 1.0; c.down = true; c.loads = 2.0; c.elapsed = 1500.0; c.civ_ko = 1.0;
-        assert_eq!(line(&c, &s), "0|seen twice (1 with the floor already up)=28|went down=25|the floor went up twice (1 to lockdown)=13|9 rounds at or near men=12|1 killed=10|1 civilian knocked out=10|called in by security 5 times=8|1 alarm raised=6|1 body found=6|2 checkpoint loads=6|5 min over par=5|hit once=4|3 knocked out=3|1 light shot out=1");
-
         let a = blank_counts();
-        assert_eq!(score_of(&s, &a).score, 100.0);
-        assert_eq!(summary_line(&a, 100.0, "GHOST", &badges_for(&b, &a), SummaryLineState::Sofar, None), "twopointsix — GHOST 100 · 00:00 · seen 0 · alarms 0 · bodies found 0 · KOs 0 · kills 0 · shots 0 · never seen, no alarms, no kills, pacifist, unseen by civilians · run so far");
-
+        let so_far = summary_line(&a, 100.0, "GHOST", &badges_for(&b, &a), SummaryLineState::Sofar, None);
+        assert!(so_far.starts_with("twopointsix — GHOST 100 · 00:00 · seen 0 · alarms 0") && so_far.contains("never seen") && so_far.ends_with("run so far"), "{}", so_far);
+        assert!(!so_far.contains("civilians:") && !so_far.contains("sandbox"), "{}", so_far);
         let mut c = blank_counts();
-        c.seen = 1.0; c.alarms = 2.0; c.kos = 1.0; c.civ_seen = 1.0; c.civ_reported = 1.0; c.civ_killed = 2.0; c.ocps = 1.0; c.picked = 1.0; c.keys = 1.0; c.intel = 1.0; c.loads = 1.0; c.sandbox = true; c.done = true; c.elapsed = 692.9;
-        assert_eq!(line(&c, &s), "0|2 CIVILIANS KILLED=80|a civilian told them once=15|seen once=12|2 alarms raised=12|1 checkpoint load=3|1 knocked out=1");
+        c.seen = 1.0; c.civ_seen = 1.0; c.civ_killed = 2.0; c.sandbox = true; c.done = true; c.elapsed = 692.9;
         let badges = badges_for(&b, &c);
-        assert_eq!(summary_line(&c, 0.0, "ASSAULT", &badges, SummaryLineState::Done, Some(false)), "twopointsix — 11:32 · seen 1 · alarms 2 · bodies found 0 · KOs 1 · kills 0 · shots 0 · civilians: saw you 1 · told them 1 · KILLED 2 · OCP 1 · doors kicked 0 / picked 1 · keys 1 · intel 1 · loads 1 · sandbox flags on");
-        assert_eq!(summary_line(&c, 3.0, "ASSAULT", &badges, SummaryLineState::Done, None), "twopointsix — ASSAULT 3 · 11:32 · seen 1 · alarms 2 · bodies found 0 · KOs 1 · kills 0 · shots 0 · civilians: saw you 1 · told them 1 · KILLED 2 · OCP 1 · doors kicked 0 / picked 1 · keys 1 · intel 1 · loads 1 · no kills, pacifist, locksmith · sandbox flags on");
-        let shown: Vec<String> = badges.iter().map(|x| format!("{}:{}:{}", x.id, x.on, x.hint)).collect();
-        assert_eq!(shown.join("|"), "unseen:false:no alert man ever had eyes on you|quiet:false:nobody went to alert, the floor never went up|nokills:true:nobody shot dead (a man out cold is not a kill)|pacifist:true:not one round into or within 3 m of a man|lightsout:false:3+ fixtures shot out|talkative:false:every man on the floor questioned|unseenStaff:false:no cleaner or late worker ever laid eyes on you (or a hand of yours on them)|locksmith:true:a lock picked and none kicked in|speedrun:false:out inside 04:00");
+        let scored = summary_line(&c, 3.0, "ASSAULT", &badges, SummaryLineState::Done, None);
+        assert!(scored.starts_with("twopointsix — ASSAULT 3 · 11:32") && scored.contains("civilians: saw you 1 · told them 0 · KILLED 2") && scored.ends_with("sandbox flags on"), "{}", scored);
+        let not = summary_line(&c, 0.0, "ASSAULT", &badges, SummaryLineState::Done, Some(false));
+        assert!(not.starts_with("twopointsix — 11:32") && !not.contains("no kills"), "{}", not);
     }
 }

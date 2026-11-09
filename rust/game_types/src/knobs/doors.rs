@@ -27,7 +27,6 @@ use game_derive::Knobs;
 ///  second throw — an opened leaf moves and startles him like anyone); a man in somebody's arm. A man with no floor to be moved onto (his back
 ///  to a wall) is struck where he stands and the leaf rests on him.
 ///  `on`: ON in the page (src/host/profile.ts; ?doorthrow=0 = every leaf stops against a standing man, as it did), OFF here and on the harness's frozen stand
-///  (TPS_DOORTHROW=1).
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct DoorthrowK {
     /// s folded and blind: a leaf shouldered open at a run into him · a booted one

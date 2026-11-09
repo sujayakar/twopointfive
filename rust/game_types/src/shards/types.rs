@@ -188,5 +188,4 @@ pub struct ShardsStats {
     pub peak_plates: i32,
 }
 
-/// (src/game/shards.ts:677 EDGE_GREEN: a table nothing writes)
 pub fn edge_green() -> V3 { [0.74, 0.94, 0.86] }

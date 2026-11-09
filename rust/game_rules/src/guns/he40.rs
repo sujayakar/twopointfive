@@ -79,7 +79,7 @@ pub fn shell_bodies(g: &crate::game::Game) -> Vec<CharId> {
     out
 }
 
-/// This round's flight table in the launcher's shape (TypeScript hands HE40 itself to launcher.ts).
+/// This round's flight table in the launcher's shape.
 fn ballistics(g: &Game) -> crate::launcher::Ballistics {
     let k = g.k.he40;
     crate::launcher::Ballistics {
@@ -245,14 +245,6 @@ fn dud(g: &mut crate::game::Game, sh: crate::he40::Shell, at: V3, vel: V3, met: 
             ..Default::default()
         };
         g.events.push(ev);
-    }
-    if crate::seats::is_man_id(g, shooter_id) {
-        let text = alloc::format!(
-            "the 40 mm was a dud because it hit something {} m out, short of the {} m it needs to arm",
-            js::to_fixed(sh.flown, 1),
-            js::num_str(g.k.he40.arm_m)
-        );
-        crate::game::game_msg(g, &text);
     }
     g.stats.he40.duds += 1;
     log_end(g, &crate::he40::ShellEnd { flown: sh.flown, armed: false, met });
@@ -438,7 +430,6 @@ fn dud_hits_character(g: &mut crate::game::Game, r: crate::he40::Shell, c_2: Cha
         None => {
             crate::character::anim_hit(g, c);
             crate::audio_iface::game_audio_like_play(g, "bodyHit", Some(at), Some(0.6), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.9 }));
-            crate::game::game_msg(g, "a 40 mm round in the ribs — unarmed, luckily");
         }
         Some(id) if g.gd[id].civ.is_some() => {
             crate::character::anim_hit(g, c);
@@ -515,15 +506,21 @@ pub fn shell_boxes(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use alloc::boxed::Box;
 
+    fn arc(points: Vec<V3>) -> crate::throwables::ThrowSolution {
+        crate::throwables::ThrowSolution { v0: [0.0; 3], t: 0.0, points, land: [0.0; 3] }
+    }
+
+    /// The round arms by the length of the arc it flew, its bends counted: a shot closer than that is a dud.
     #[test]
-    fn arc_length_matches_the_typescript_bits() {
-        let sol = crate::throwables::ThrowSolution {
-            v0: [0.0; 3],
-            t: 0.0,
-            points: vec![[0.1, 1.5, -2.25], [3.3, 1.2, -7.1], [9.7, 0.4, -11.9]],
-            land: [0.0; 3],
-        };
-        assert_eq!(arc_length(&sol).to_bits(), 0x402bb764c2ed4dde);
+    fn a_round_is_armed_by_the_length_of_its_arc() {
+        assert_eq!(arc_length(&arc(vec![[0.0, 0.0, 0.0], [3.0, 4.0, 0.0], [3.0, 4.0, 12.0]])), 17.0);
+        assert_eq!(arc_length(&arc(vec![[1.0, 2.0, 3.0]])), 0.0);
+        let g = Box::new(Game::blank());
+        let arm = g.k.he40.arm_m;
+        assert!(arc_armed(&g, &arc(vec![[0.0; 3], [arm, 0.0, 0.0]])));
+        assert!(!arc_armed(&g, &arc(vec![[0.0; 3], [arm - 0.01, 0.0, 0.0]])));
+        assert!(arc_armed(&g, &arc(vec![[0.0; 3], [arm * 0.6, 0.0, 0.0], [arm * 0.6, 0.0, arm * 0.6]])), "bent, it is flown further");
     }
 }

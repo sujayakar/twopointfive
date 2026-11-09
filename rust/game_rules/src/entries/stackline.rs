@@ -5,13 +5,13 @@ use crate::ids::*;
 use crate::m;
 use crate::v3::{self, Quat, V3};
 
-/// A leaf that stands open (or is off its hinges): what is beyond it sees through it now.   (stackline.ts stackLineOpen)
+/// A leaf that stands open (or is off its hinges): what is beyond it sees through it now.
 fn stack_line_open(g: &crate::game::Game, d: DoorId) -> bool {
     if crate::doors::door_off(g, d) { return true; }
     !crate::doors::door_latched(g, d) && m::abs(crate::doors::door_angle(g, d)) >= g.k.stackline.ajar
 }
 
-/// Has the floor point `p`, on the face `face` of `d`, a clear chest-height line to the mouth of its opening.   (stackline.ts stackLineSees)
+/// Has the floor point `p`, on the face `face` of `d`, a clear chest-height line to the mouth of its opening.
 fn stack_line_sees(g: &mut crate::game::Game, d: DoorId, p: V3, face: f64) -> bool {
     let kn = g.k.stackline;
     let f = crate::guards::frame_of(g, d);
@@ -27,7 +27,7 @@ fn stack_line_sees(g: &mut crate::game::Game, d: DoorId, p: V3, face: f64) -> bo
     false
 }
 
-/// The pace for a man `left` metres short of his mark: `brisk`, or none unless he is walking up to a stack on a door that stands open with a line to its mouth.   (stackline.ts stackLinePace)
+/// The pace for a man `left` metres short of his mark: `brisk`, or none unless he is walking up to a stack on a door that stands open with a line to its mouth.
 pub fn stack_line_pace(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId, left: f64, brisk: f64) -> Option<f64> {
     let on_mark = g.k.stackline.on_mark;
     let (shy, post) = {

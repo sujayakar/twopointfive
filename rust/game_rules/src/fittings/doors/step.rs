@@ -1,4 +1,3 @@
-//! src/game/doors.ts lines 689 to 1040
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,16 +6,16 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// `doorMem()[at]`: one double of the step's hand-over, where `at` is an index as `door_io` gives them, a byte address / 8.   (doors.ts:694, 722)
+/// `doorMem()[at]`: one double of the step's hand-over, where `at` is an index as `door_io` gives them, a byte address / 8.
 fn mem(at: f64) -> f64 {
     // SAFETY: every `at` here is a table's start from door_io + a column x the table's height + a row within what the step was handed: inside rust/sim's hand-over, a static of doubles.
     unsafe { core::ptr::read((at as usize * 8) as *const f64) }
 }
 
-/// A box's row (`Box.*`, scene/boxes.ts:66). Skeleton 5 has `g.col.boxes: Vec<BoxId>` and no table of Box rows, while the index says `g.col.boxes[id].c`. Once the table is back, the body is that row.   (doors.ts:725)
+/// A box's row. Vec<BoxId>` and no table of Box rows, while the index says `g.col.boxes[id].c`. Once the table is back, the body is that row.
 fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
-/// `DOOR_SOUNDS[n]`: the module's number is a place in that list, and the word is the variant.   (doors.ts:715)
+/// `DOOR_SOUNDS[n]`: the module's number is a place in that list, and the word is the variant.
 fn sound_at(n: f64) -> crate::doors::DoorSound {
     match crate::sim_doorshome::door_sounds()[n as usize].as_str() {
         "creak" => DoorSound::Creak,
@@ -33,7 +32,7 @@ fn sound_at(n: f64) -> crate::doors::DoorSound {
     }
 }
 
-/// `STRIKE_TIERS[n]`, the same way. The Rust enum declares them in another order, so never cast.   (doors.ts:699)
+/// `STRIKE_TIERS[n]`, the same way. The Rust enum declares them in another order, so never cast.
 fn strike_tier_at(n: f64) -> crate::doors::DoorStrikeTier {
     match crate::sim_doorshome::strike_tiers()[n as usize].as_str() {
         "open" => DoorStrikeTier::Open,
@@ -54,7 +53,7 @@ fn mem_copy(from: f64, to: f64) -> Vec<f64> {
     out
 }
 
-/// What the step did taken back: each contact's end and what a leaf did to him, the tallies, each door's noises and then its box.   (doors.ts Doors.takeBack)
+/// What the step did taken back: each contact's end and what a leaf did to him, the tallies, each door's noises and then its box.
 pub(super) fn doors_take_back(g: &mut crate::game::Game, contacts: &mut Vec<crate::doors::DoorContact>, ev: f64) {
     let (dk, dp, dout, de) = (crate::sim_doorshome::dk(), crate::sim_doorshome::dp(), crate::sim_doorshome::do_(), crate::sim_doorshome::de());
     let io = crate::sim_doorshome::door_io(g);
@@ -149,7 +148,7 @@ pub(super) fn doors_take_back(g: &mut crate::game::Game, contacts: &mut Vec<crat
     crate::scene_box_mirror::box_mirror_leaves_turned(g);
 }
 
-/// Door i's box and handles made what the step placed.   (doors.ts Doors.follow)
+/// Door i's box and handles made what the step placed.
 fn doors_follow(g: &mut crate::game::Game, i: f64) {
     let dout = crate::sim_doorshome::do_();
     let io = crate::sim_doorshome::door_io(g);
@@ -165,7 +164,7 @@ fn doors_follow(g: &mut crate::game::Game, i: f64) {
     doors_handles(g, d, yaw, x1, z1, x2, z2);
 }
 
-/// A leaf's two handle boxes placed.   (doors.ts Doors.handles)
+/// A leaf's two handle boxes placed.
 fn doors_handles(g: &mut crate::game::Game, d: DoorId, yaw: f64, x1: f64, z1: f64, x2: f64, z2: f64) {
     let (h0, h1) = (g.dr[d].handle_boxes[0], g.dr[d].handle_boxes[1]);
     let b = seam_box(g, h0);
@@ -176,7 +175,7 @@ fn doors_handles(g: &mut crate::game::Game, d: DoorId, yaw: f64, x1: f64, z1: f6
     b.yaw = yaw;
 }
 
-/// Hold-to-crack: ease a near-closed leaf open silently, up to `max_angle`.   (doors.ts Doors.crack)
+/// Hold-to-crack: ease a near-closed leaf open silently, up to `max_angle`.
 pub fn doors_crack(g: &mut crate::game::Game, d: DoorId, from: V3, who: f64, dt: f64, keys: Option<&JsSet<String>>, rate: Option<f64>, max_angle: Option<f64>) {
     let rate = rate.unwrap_or(0.55);
     let max_angle = max_angle.unwrap_or(0.6);
@@ -205,7 +204,7 @@ pub fn doors_crack(g: &mut crate::game::Game, d: DoorId, from: V3, who: f64, dt:
     }
 }
 
-/// A tap on F: closed, it swings open away from the user; open, it is pulled to; locked against him, the rattle or his key's clack.   (doors.ts Doors.use)
+/// A tap on F: closed, it swings open away from the user; open, it is pulled to; locked against him, the rattle or his key's clack.
 pub fn doors_use(g: &mut crate::game::Game, d: DoorId, from: V3, who: f64, keys: Option<&JsSet<String>>) {
     if door_off(g, d) {
         return;

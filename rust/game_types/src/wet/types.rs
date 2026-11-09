@@ -15,9 +15,7 @@ pub struct WetMem {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct WetMod {
-    /// (src/game/wet.ts:53 mem)
     pub mem: JsMap<CharId, crate::wet::WetMem>,
-    /// (src/game/wet.ts:127 dripN)
     pub drip_n: f64,
 }
 

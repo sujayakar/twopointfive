@@ -1,4 +1,3 @@
-//! src/game/squad.ts lines 1 to 449
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,7 +6,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// The field of a table of the plan's lines (or of BODY_LINES and its kin) that a say key names. (squad.ts `X[key]`)
+/// The field of a table of the plan's lines (or of BODY_LINES and its kin) that a say key names.
 macro_rules! line_of {
     ($t:expr, $k:expr) => {
         match $k {
@@ -58,7 +57,7 @@ fn advance_man(g: &mut Game, id: RoomClearId, second: bool) -> bool {
     planted
 }
 
-/// ALIASING (squad.ts:216, 258, 288): the TypeScript's script holds the drill's own aim vector and the sweep moves it in place. Here the script holds a copy, so
+/// ALIASING: the TypeScript's script holds the drill's own aim vector and the sweep moves it in place. Here the script holds a copy, so
 /// each move of the drill's point is written through to a script still holding the point it had.
 fn aim_moved(g: &mut Game, gd: GuardId, was: V3, now: V3) {
     if let Some(s) = g.gd[gd].script.as_mut() {
@@ -88,12 +87,12 @@ fn on_his_script(g: &Game, gd: GuardId) -> bool {
 
 // ---- the runner
 
-/// The flat distance between two points. (squad.ts flat)
+/// The flat distance between two points.
 pub(super) fn flat(a: V3, b: V3) -> f64 {
     m::hyp2(a[0] - b[0], a[2] - b[2])
 }
 
-/// Side-step / back-pedal along the nav path, the body left on `face`; true once the path is consumed. (squad.ts strafeAlongPath)
+/// Side-step / back-pedal along the nav path, the body left on `face`; true once the path is consumed.
 fn strafe_along_path(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64) -> bool {
     let c = g.gd[gd].ch;
     if crate::handleside::handle_gate(g, gd, dt, speed, Some(true)) { return false; }
@@ -118,7 +117,7 @@ fn strafe_along_path(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64
     true
 }
 
-/// One frame of a man under a script: moved to his goal, gun and eyes on his aim, the animator fed, `arrived` written back. (squad.ts runGuardScript)
+/// One frame of a man under a script: moved to his goal, gun and eyes on his aim, the animator fed, `arrived` written back.
 pub fn run_guard_script(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     // THE SCRIPT IS READ LIVE, as the TypeScript reads its one object: a rule called from here may re-order the man mid-step (followPath's lane gate backs
     // him out with a new order: pressure.ts run), and every read of `s` after that call is of the order as it then stands (the pose's crouch, the gun, the
@@ -288,7 +287,7 @@ pub fn run_guard_script(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     if let Some(sc) = g.gd[gd].script.as_mut() { if sc.serial == s.serial { sc.arrived = Some(arrived); } }   // (the script this step began with: one made since is not this step's to mark)
 }
 
-/// Release a scripted guard back to the AI in a sane state; a man who died under a script is only unhooked. (squad.ts endGuardScript)
+/// Release a scripted guard back to the AI in a sane state; a man who died under a script is only unhooked.
 pub fn end_guard_script(g: &mut crate::game::Game, gd: GuardId, state: Option<crate::squad::EndGuardScriptState>) {
     let state = state.unwrap_or(EndGuardScriptState::Patrol);
     g.gd[gd].script = None;
@@ -313,7 +312,7 @@ pub fn end_guard_script(g: &mut crate::game::Game, gd: GuardId, state: Option<cr
 }
 
 /// Give a scripted guard new orders; a new goal drops his path, stuck timer and settle watch. A goal is a new leg even at the same spot, unless `held`
-/// says the caller keeps it and moves it (then by value). Some(None) is null; None is not in the patch. (squad.ts order)
+/// says the caller keeps it and moves it (then by value). Some(None) is null; None is not in the patch.
 pub fn order(g: &mut crate::game::Game, gd: GuardId, patch: crate::squad::OrderPatch) {
 
     if g.gd[gd].script.is_none() {
@@ -350,7 +349,7 @@ pub fn order(g: &mut crate::game::Game, gd: GuardId, patch: crate::squad::OrderP
     if let Some(x) = patch.over { s.over = x; }
 }
 
-/// Begin a muzzle sweep from wherever the point was. (squad.ts Sweep.start)
+/// Begin a muzzle sweep from wherever the point was.
 pub fn sweep_start(this: &mut crate::squad::Sweep, from: V3, pts: &[V3], t0: f64, dur: f64) {
     let mut all = Vec::with_capacity(pts.len() + 1);
     all.push(v3::copy(from));
@@ -361,7 +360,7 @@ pub fn sweep_start(this: &mut crate::squad::Sweep, from: V3, pts: &[V3], t0: f64
     this.active = pts.len() > 0;
 }
 
-/// The point for time t → out; false once the sweep has finished (out left on the last corner). (squad.ts Sweep.at)
+/// The point for time t → out; false once the sweep has finished (out left on the last corner).
 pub fn sweep_at(this: &mut crate::squad::Sweep, t: f64, out: &mut V3) -> bool {
     if !this.active { return false; }
     let n = this.pts.len() as f64 - 1.0;
@@ -379,7 +378,7 @@ pub fn sweep_at(this: &mut crate::squad::Sweep, t: f64, out: &mut V3) -> bool {
 
 // ---- two-man room clear
 
-/// A pair (or a man alone) clearing a room by a plan. (squad.ts RoomClear.constructor)
+/// A pair (or a man alone) clearing a room by a plan.
 pub(super) fn room_clear_new(g: &mut crate::game::Game, plan: &crate::scene_level::RoomClearPlan, a: GuardId, b: Option<GuardId>, opts: Option<crate::squad::RoomClearNewOpts>) -> RoomClearId {
     let door = crate::doors::doors_by_name(g, &plan.door);
     let next_door = next_door_of(g, plan);
@@ -393,7 +392,7 @@ pub(super) fn room_clear_new(g: &mut crate::game::Game, plan: &crate::scene_leve
     g.tab.squad_room_clear.push(row)
 }
 
-/// Stand the pair on their approach marks (staged) or take them as they come (live), and start them walking into the stack. Restartable. (squad.ts RoomClear.start)
+/// Stand the pair on their approach marks (staged) or take them as they come (live), and start them walking into the stack. Restartable.
 pub(super) fn room_clear_start(g: &mut crate::game::Game, id: RoomClearId) {
     let row = &mut g.tab.squad_room_clear[id];
     row.phase = RoomClearPhase::Stack;
@@ -433,26 +432,25 @@ pub(super) fn room_clear_start(g: &mut crate::game::Game, id: RoomClearId) {
     }
 }
 
-/// False once there is nothing left to drive. (squad.ts RoomClear.intact)
+/// False once there is nothing left to drive.
 pub(super) fn room_clear_intact(g: &crate::game::Game, id: RoomClearId) -> bool {
     let (door, a, b) = (g.tab.squad_room_clear[id].door, g.tab.squad_room_clear[id].a, g.tab.squad_room_clear[id].b);
     door.is_some() && on_his_script(g, a) && match b { None => true, Some(b) => on_his_script(g, b) }
 }
 
-/// Rallied on the door after calling it, or long enough after that a man who cannot make his mark is not waited for. (squad.ts RoomClear.complete)
+/// Rallied on the door after calling it, or long enough after that a man who cannot make his mark is not waited for.
 pub(super) fn room_clear_complete(g: &crate::game::Game, id: RoomClearId) -> bool {
     let row = &g.tab.squad_room_clear[id];
     let tr = row.t_now - row.t_resolve;
     row.phase == RoomClearPhase::Resolve && (tr > 7.5 || (tr > 2.8 && row.done.has(String::from("#formup")) && row.a_home && row.b_home))
 }
 
-/// (squad.ts RoomClear.men)
 fn room_clear_men(g: &crate::game::Game, id: RoomClearId) -> Vec<GuardId> {
     let row = &g.tab.squad_room_clear[id];
     match row.b { Some(b) => vec![row.a, b], None => vec![row.a] }
 }
 
-/// First time only. (squad.ts RoomClear.once)
+/// First time only.
 fn room_clear_once(g: &mut crate::game::Game, id: RoomClearId, key: &str) -> bool {
     let done = &mut g.tab.squad_room_clear[id].done;
     if done.has(String::from(key)) { return false; }
@@ -460,7 +458,7 @@ fn room_clear_once(g: &mut crate::game::Game, id: RoomClearId, key: &str) -> boo
     true
 }
 
-/// The plan's line for this step, once; or, with a found colleague lying near him, the version that does not call the corner empty. (squad.ts RoomClear.say)
+/// The plan's line for this step, once; or, with a found colleague lying near him, the version that does not call the corner empty.
 fn room_clear_say(g: &mut crate::game::Game, id: RoomClearId, key: crate::squad::RoomClearSayKey, gd: GuardId, radio: Option<bool>) {
     let radio = radio.unwrap_or(false);
     if !room_clear_once(g, id, key.as_str()) { return; }
@@ -473,10 +471,10 @@ fn room_clear_say(g: &mut crate::game::Game, id: RoomClearId, key: crate::squad:
         None => None,
     };
     let text = match line { Some(x) => x, None => line_of!(g.tab.squad_room_clear[id].plan.lines.clone(), key) };
-    crate::game::game_say(g, gd, &text, Some(radio), None, None);
+    crate::game::game_say(g, gd, &text, Some(radio), None);
 }
 
-/// A found colleague lying in this room within a few metres of the man, in his plain sight. (squad.ts RoomClear.bodyHere)
+/// A found colleague lying in this room within a few metres of the man, in his plain sight.
 fn room_clear_body_here(g: &mut crate::game::Game, id: RoomClearId, gd: GuardId) -> Option<GuardId> {
     let c = g.gd[gd].ch;
     let p = g.ch[c].pos;
@@ -490,7 +488,7 @@ fn room_clear_body_here(g: &mut crate::game::Game, id: RoomClearId, gd: GuardId)
     if crate::scene_collision::segment_blocked(g, head, [h[0], h[1] + 0.3, h[2]], None, None, None) { None } else { Some(bb) }
 }
 
-/// Pass intermediate waypoints on the fly, keep the last as the goal; true once planted on the last. (squad.ts RoomClear.advance)
+/// Pass intermediate waypoints on the fly, keep the last as the goal; true once planted on the last.
 fn room_clear_advance(g: &mut crate::game::Game, id: RoomClearId, gd: GuardId, wps: &mut Vec<V3>) -> bool {
     let c = g.gd[gd].ch;
     while wps.len() > 1 && flat(g.ch[c].pos, wps[0]) < SETTLE + 0.1 {
@@ -500,12 +498,12 @@ fn room_clear_advance(g: &mut crate::game::Game, id: RoomClearId, gd: GuardId, w
     wps.len() <= 1 && g.gd[gd].script.map_or(false, |s| s.arrived.unwrap_or(false))
 }
 
-/// A point `dist` metres out along a facing from `p`, at height y. (squad.ts RoomClear.ahead)
+/// A point `dist` metres out along a facing from `p`, at height y.
 fn room_clear_ahead(p: V3, yaw: f64, dist: f64, y: f64) -> V3 {
     [p[0] + m::sin(yaw) * dist, y, p[2] + m::cos(yaw) * dist]
 }
 
-/// #1 up and through the door, his muzzle on the middle of the room, then his corner, then his wall. (squad.ts RoomClear.enter)
+/// #1 up and through the door, his muzzle on the middle of the room, then his corner, then his wall.
 fn room_clear_enter(g: &mut crate::game::Game, id: RoomClearId, t: f64) {
     let row = &mut g.tab.squad_room_clear[id];
     row.t_enter = t;
@@ -516,7 +514,7 @@ fn room_clear_enter(g: &mut crate::game::Game, id: RoomClearId, t: f64) {
     g.tab.squad_room_clear[id].rest_a = rest;
 }
 
-/// enterSweep for a drill's own man: `second` picks swB. (squad.ts:264)
+/// enterSweep for a drill's own man: `second` picks swB.
 fn enter_sweep(g: &mut Game, id: RoomClearId, second: bool, aim: V3, list: &[V3], t: f64) -> Option<Vec<V3>> {
     let row = &mut g.tab.squad_room_clear[id];
     let centre = room_centre(&row.plan);
@@ -524,7 +522,7 @@ fn enter_sweep(g: &mut Game, id: RoomClearId, second: bool, aim: V3, list: &[V3]
     if list.len() > 1 { Some(list[1..].to_vec()) } else { None }
 }
 
-/// The keyed breach: the leaf unlatched and shoved hard into the room, and he flows in behind it. (squad.ts RoomClear.shove)
+/// The keyed breach: the leaf unlatched and shoved hard into the room, and he flows in behind it.
 fn room_clear_shove(g: &mut crate::game::Game, id: RoomClearId, t: f64) {
     let row = &g.tab.squad_room_clear[id];
     let (d, fling, a) = (row.door.unwrap(), row.plan.fling, row.a);
@@ -549,7 +547,7 @@ fn room_clear_shove(g: &mut crate::game::Game, id: RoomClearId, t: f64) {
     room_clear_enter(g, id, t);
 }
 
-/// One beat of the drill, on the caller's clock. (squad.ts RoomClear.tick)
+/// One beat of the drill, on the caller's clock.
 pub(super) fn room_clear_tick(g: &mut crate::game::Game, id: RoomClearId, t: f64, dt: f64) {
     let (a, b, door) = { let row = &g.tab.squad_room_clear[id]; (row.a, row.b, row.door) };
     let d = match door { Some(d) => d, None => return };
@@ -781,13 +779,13 @@ pub(super) fn room_clear_tick(g: &mut crate::game::Game, id: RoomClearId, t: f64
     row.b_home = b_in;
 }
 
-/// Seconds for the rest of an entry sweep: what is left of the old three-second sweep, never under minLeg a leg. (squad.ts restSecs)
+/// Seconds for the rest of an entry sweep: what is left of the old three-second sweep, never under minLeg a leg.
 fn rest_secs(rest: &[V3]) -> f64 {
     let c = centre_check();
     m::max(c.min_leg * rest.len() as f64, c.total - c.corner)
 }
 
-/// The middle of the room at muzzle height: the plan's bounds, else the centroid of both men's entry sweeps. (squad.ts roomCentre)
+/// The middle of the room at muzzle height: the plan's bounds, else the centroid of both men's entry sweeps.
 fn room_centre(p: &crate::scene_level::RoomClearPlan) -> V3 {
     if let Some(b) = p.bounds { return [(b.x0 + b.x1) / 2.0, 1.0, (b.z0 + b.z1) / 2.0]; }
     let (mut x, mut z) = (0.0, 0.0);
@@ -796,7 +794,7 @@ fn room_centre(p: &crate::scene_level::RoomClearPlan) -> V3 {
     [x / n, 1.0, z / n]
 }
 
-/// Another door of the room the plan clears, for #2 to hold: the nearest to his point of domination, or None. (squad.ts nextDoorOf)
+/// Another door of the room the plan clears, for #2 to hold: the nearest to his point of domination, or None.
 fn next_door_of(g: &crate::game::Game, p: &crate::scene_level::RoomClearPlan) -> Option<DoorId> {
     let b = p.bounds?;
     let pod = match p.entry[1].last() { Some(x) => *x, None => p.stack[1] };
@@ -813,7 +811,7 @@ fn next_door_of(g: &crate::game::Game, p: &crate::scene_level::RoomClearPlan) ->
     best
 }
 
-/// Break a scripted man off into the AI with something on his mind: patrol for exactly one frame carrying this awareness and fix. (squad.ts breakOff)
+/// Break a scripted man off into the AI with something on his mind: patrol for exactly one frame carrying this awareness and fix.
 pub(super) fn break_off(g: &mut crate::game::Game, gd: GuardId, awareness: f64, last_known: Option<V3>) {
     end_guard_script(g, gd, Some(EndGuardScriptState::Suspicious));
     if g.gd[gd].state == crate::game::GuardState::Dead { return; }

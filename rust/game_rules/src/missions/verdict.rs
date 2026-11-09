@@ -1,5 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-//! src/game/verdict.ts: the verdict's tick. How a run went, worked out by the game itself and LATCHED: the first end wins and stays for that run.
+//! the verdict's tick. How a run went, worked out by the game itself and LATCHED: the first end wins and stays for that run.
 //! It only reads the game outside `g.verdict`: it moves nobody and draws no die, so a play is the same play with or without it.
 
 pub use ::game_types::verdict::types;
@@ -10,14 +10,14 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{format, string::String, vec::Vec};
 
-/// The file a mission row names for the level this game stands on (None: the bundled office). Read back off the level's own name.   (verdict.ts rowFile)
+/// The file a mission row names for the level this game stands on (None: the bundled office). Read back off the level's own name.
 fn row_file(g: &crate::game::Game) -> Option<String> {
     let name = crate::scene_level_load::level_name_of(g)?;
     if name.is_empty() || name == "office" { return None; }
     Some(alloc::format!("{}.json", name))
 }
 
-/// The mission that is up is the stealth game's kind on a row that leans loud: nothing grades that run as a sneak. VERDICT.loudCard is settled ON on the page.   (verdict.ts loudRow)
+/// The mission that is up is the stealth game's kind on a row that leans loud: nothing grades that run as a sneak. VERDICT.loudCard is settled ON on the page.
 pub fn loud_row(g: &crate::game::Game) -> bool {
     let file = row_file(g);
     let run = crate::scenario_run::running_scenario(g, file.as_deref(), None);
@@ -30,7 +30,7 @@ pub fn loud_row(g: &crate::game::Game) -> bool {
     }
 }
 
-/// This tick's end, by the mission kind's own rule (None: still running). The tick asks it and latches the first answer.   (verdict.ts Verdict.ended)
+/// This tick's end, by the mission kind's own rule (None: still running). The tick asks it and latches the first answer.
 pub(crate) fn ended(g: &crate::game::Game) -> Option<(bool, &'static str, String)> {
     use crate::scenario_run::ActiveScenario as K;
     let kind = crate::scenario_run::active_scenario(g);
@@ -57,21 +57,20 @@ pub(crate) fn ended(g: &crate::game::Game) -> Option<(bool, &'static str, String
     match g.mission.stage { crate::game::MissionStage::Done => Some((true, "OUT", String::new())), crate::game::MissionStage::Failed => Some((false, "FAILED", String::new())), _ => None }
 }
 
-/// (verdict.ts:98) a man's walk is at most this many samples, one every half second until it is halved; a hole counts as walked through this near
+///  a man's walk is at most this many samples, one every half second until it is halved; a hole counts as walked through this near
 const PATH_CAP: usize = 1500;
 const PATH_SECS: f64 = 0.5;
 const HOLE_M: f64 = 0.9;
 
 /// A run a verdict can be given on: somebody plays it, and no puppet.
 fn live(g: &Game) -> bool { !g.aside && g.puppet.is_none() }
-/// The try has started: the first order, stride or round has been (or the run was loaded from a checkpoint).   (verdict.ts Verdict.started)
+/// The try has started: the first order, stride or round has been (or the run was loaded from a checkpoint).
 fn started(g: &Game) -> bool { g.verdict.t0.is_finite() }
-/// Seconds since the try started.   (verdict.ts Verdict.secs)
+/// Seconds since the try started.
 fn secs(g: &Game) -> f64 { if started(g) { m::max(0.0, g.time - g.verdict.t0) } else { 0.0 } }
-/// (verdict.ts Verdict.fired)
 fn fired(g: &Game) -> f64 { g.mission.stats.shots + g.chronicle.counts.thrown }
 
-/// The last order anybody gave, off the books' logs, by its row's serial (None: none yet).   (seats.ts lastOrder)
+/// The last order anybody gave, off the books' logs, by its row's serial (None: none yet).
 fn last_order(g: &Game) -> Option<u32> {
     if crate::seats::one_book(g) { return crate::seats::here(g).orders.log.last().map(|e| e.serial); }
     let mut best: Option<(f64, u32)> = None;
@@ -81,7 +80,7 @@ fn last_order(g: &Game) -> Option<u32> {
     best.map(|b| b.1)
 }
 
-/// Is the team in more than one pair.   (seats.ts teamPaired)
+/// Is the team in more than one pair.
 pub fn team_paired(g: &Game, seat: &crate::seats::SeatRef) -> bool {
     if crate::seats::one_book(g) { return crate::orders::squad_orders_paired(g, seat); }
     let (mut red, mut blue) = (false, false);
@@ -92,7 +91,7 @@ pub fn team_paired(g: &Game, seat: &crate::seats::SeatRef) -> bool {
     red && blue
 }
 
-/// Where the room clear stages its team's first man (None: no room clear is up, or its structure names none).   (roomclear.ts startAt)
+/// Where the room clear stages its team's first man (None: no room clear is up, or its structure names none).
 fn start_at(g: &Game) -> Option<V3> {
     if !crate::roomclear::room_clear_scenario_active(g) { return None; }
     let s = crate::roomclear::room_clear_scenario_structure(g)?;
@@ -101,7 +100,7 @@ fn start_at(g: &Game) -> Option<V3> {
     s.team.as_ref().map(|t| t.sam)
 }
 
-/// A new run: everything this module holds of the last one goes.   (verdict.ts Verdict.fresh)
+/// A new run: everything this module holds of the last one goes.
 fn fresh(g: &mut Game, tail: Option<u32>) {
     let men = crate::seats::men(g);
     let origins: Vec<V3> = men.iter().map(|&pl| g.ch[g.pl[pl].ch].pos).collect();
@@ -120,12 +119,11 @@ fn fresh(g: &mut Game, tail: Option<u32>) {
     v.resumed = resumed; v.t0 = t0;
 }
 
-/// (verdict.ts track)
 fn track(id: f64, name: String, tone: Option<crate::host_findme::OutlineHue>, human: bool, gd: Option<GuardId>) -> Track {
     Track { id, name, tone, human, gd, state: ManState::Up, down_at: -1.0, down_room: String::new(), down_by: String::new(), down_pos: None, drops: Vec::new(), path: Vec::new(), every: PATH_SECS, next: 0.0 }
 }
 
-/// The humans of the team, then its AI men: a track each, made the first tick he is seen.   (verdict.ts Verdict.roster)
+/// The humans of the team, then its AI men: a track each, made the first tick he is seen.
 fn roster(g: &mut Game) {
     use crate::host_findme::OutlineHue as Hue;
     for pl in crate::seats::men(g) {
@@ -147,7 +145,7 @@ fn roster(g: &mut Game) {
     }
 }
 
-/// A man put down by hand with no name on it is the partner's where the team has ONE AI man; with more it is nobody's.   (verdict.ts Verdict.onlyMate)
+/// A man put down by hand with no name on it is the partner's where the team has ONE AI man; with more it is nobody's.
 fn only_mate(g: &Game, h: GuardId) -> Option<crate::Num> {
     let x = &g.gd[h];
     if x.killer_id >= 0.0 || x.down_by != Some(crate::game::DownBy::Guard) || x.down_kind == Some(crate::game::DownKind::Shot) { return None; }
@@ -156,7 +154,7 @@ fn only_mate(g: &Game, h: GuardId) -> Option<crate::Num> {
     if n == 1 { one } else { None }
 }
 
-/// This tick read: who is where, who fell, who dropped whom, whether the team has been found, the mains, a hole walked through.   (verdict.ts Verdict.watch)
+/// This tick read: who is where, who fell, who dropped whom, whether the team has been found, the mains, a hole walked through.
 fn watch(g: &mut Game) {
     let now = secs(g);
     // the defenders: every man hostile to the player this run has met
@@ -227,7 +225,7 @@ fn watch(g: &mut Game) {
     }
 }
 
-/// The way a won run was won: quiet, dark, walls, doors, in that order.   (verdict.ts Verdict.approach)
+/// The way a won run was won: quiet, dark, walls, doors, in that order.
 fn approach(g: &Game, kind: Option<crate::scenario_run::ActiveScenario>) -> Approach {
     let (s, n) = (&g.mission.stats, &g.chronicle.counts);
     // a loaded run lost this module's own latches: for the kinds that can be loaded the chronicle says the same, and for the stealth game the
@@ -240,7 +238,7 @@ fn approach(g: &Game, kind: Option<crate::scenario_run::ActiveScenario>) -> Appr
     if g.verdict.through { Approach::Walls } else { Approach::Doors }
 }
 
-/// The run is over: its one verdict is made, and stays.   (verdict.ts Verdict.close)
+/// The run is over: its one verdict is made, and stays.
 fn close(g: &mut Game, end: (bool, &'static str, String)) {
     use crate::scenario_run::ActiveScenario as K;
     let kind = crate::scenario_run::active_scenario(g);
@@ -268,7 +266,7 @@ fn close(g: &mut Game, end: (bool, &'static str, String)) {
 }
 
 /// THE VERDICT'S TICK, after the scenarios, and the mission have had this tick, so every end they wrote is in. The first
-/// end of a run is latched in `g.verdict.res` and nothing after it changes it; a new mission is a new run.   (verdict.ts Verdict.tick)
+/// end of a run is latched in `g.verdict.res` and nothing after it changes it; a new mission is a new run.
 pub fn verdict_tick(g: &mut crate::game::Game) {
     if !live(g) { return; }
     let tail = last_order(g);
@@ -293,7 +291,7 @@ pub fn verdict_tick(g: &mut crate::game::Game) {
 }
 
 /// HOW THE MISSION ENDED, read off the latched record: None while it is being played (and for a run that is not this mission any more), else whether
-/// it was won, the end's word and why. A read; while the answer is None it allocates nothing.   (verdict.ts Verdict.result)
+/// it was won, the end's word and why. A read; while the answer is None it allocates nothing.
 pub fn verdict_ended(g: &crate::game::Game) -> Option<(bool, &str, &str)> {
     if g.verdict.run != Some(g.mission.serial) { return None; }
     g.verdict.res.as_ref().map(|r| (r.won, r.word.as_str(), r.why.as_str()))

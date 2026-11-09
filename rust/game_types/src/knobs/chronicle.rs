@@ -32,7 +32,7 @@ pub struct ScoreK {
     #[k(4.0)] pub hit: f64,
     #[k(25.0)] pub down: f64,
     #[k(3.0)] pub load: f64,
-    /// the civilians (civilians.ts): a report that reached the men (told to one, rung in, control's call after she got out); one put out cold — ten knockouts' worth of a guard's; one KILLED — four kills' worth (and with tune.civilianKillFails the run is over anyway); being merely SEEN by one costs nothing by itself: it is what she then does that costs
+    /// the civilians: a report that reached the men (told to one, rung in, control's call after she got out); one put out cold — ten knockouts' worth of a guard's; one KILLED — four kills' worth (and with tune.civilianKillFails the run is over anyway); being merely SEEN by one costs nothing by itself: it is what she then does that costs
     #[k(15.0)] pub civ_reported: f64,
     #[k(10.0)] pub civ_ko: f64,
     #[k(40.0)] pub civ_killed: f64,

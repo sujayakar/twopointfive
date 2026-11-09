@@ -1,4 +1,4 @@
-//! The hostage rescue's dynamic tempo: what the pair do about the openings Sam runs past, and what is known of each. (rescueflow.ts)
+//! The hostage rescue's dynamic tempo: what the pair do about the openings Sam runs past, and what is known of each.
 
 pub use ::game_types::rescueflow::types;
 pub use types::*;
@@ -27,7 +27,7 @@ fn door_of(g: &Game, o: &crate::scene_scenarios::RouteOpening) -> Option<DoorId>
     }
 }
 
-/// Mark a hostile as known in a region, noting a room newly hot. (rescueflow.ts:164, 170)
+/// Mark a hostile as known in a region, noting a room newly hot.
 fn set_hot(g: &mut Game, r: RescueflowRegionId, h: GuardId, t: f64, at: V3) {
     if !g.tab.rescueflow_region[r].hot.has(h) {
         let note = alloc::format!("flow:hot:{}", g.tab.rescueflow_region[r].id);
@@ -36,22 +36,20 @@ fn set_hot(g: &mut Game, r: RescueflowRegionId, h: GuardId, t: f64, at: V3) {
     g.tab.rescueflow_region[r].hot.set(h, RegionHotValue { t, at: v3::copy(at) });
 }
 
-/// (rescueflow.ts flat)
 fn flat(a: V3, b: V3) -> f64 {
     m::hyp2(a[0] - b[0], a[2] - b[2])
 }
 
-/// The level's route data; None = this level's rescue has no flow. (rescueflow.ts RescueFlow.F)
+/// The level's route data; None = this level's rescue has no flow.
 fn rescue_flow_f(g: &crate::game::Game) -> Option<crate::scene_scenarios::RescueFlowData> {
     crate::rescue::rescue_data(g).and_then(|d| d.flow)
 }
 
-/// (rescueflow.ts RescueFlow.constructor)
 pub(super) fn rescue_flow_new(g: &crate::game::Game) -> crate::rescueflow::RescueFlow {
     RescueFlow::blank()
 }
 
-/// A fresh staging: nothing known, nobody on a job. (rescueflow.ts RescueFlow.reset)
+/// A fresh staging: nothing known, nobody on a job.
 pub(super) fn rescue_flow_reset(g: &mut crate::game::Game) {
     let f = &mut g.rescue.flow;
     f.jobs.clear();
@@ -67,7 +65,7 @@ pub(super) fn rescue_flow_reset(g: &mut crate::game::Game) {
     f.stats = RescueFlowStats::default();
 }
 
-/// Is this assignment one the flow gave. (rescueflow.ts RescueFlow.gave)
+/// Is this assignment one the flow gave.
 pub(super) fn rescue_flow_gave(g: &crate::game::Game, a: Option<OrdersAssignmentId>) -> bool {
     match a {
         Some(a) => g.rescue.flow.mine.has(a),
@@ -75,14 +73,14 @@ pub(super) fn rescue_flow_gave(g: &crate::game::Game, a: Option<OrdersAssignment
     }
 }
 
-/// F has taken these men: their jobs end where they stand. (rescueflow.ts RescueFlow.release)
+/// F has taken these men: their jobs end where they stand.
 pub(super) fn rescue_flow_release(g: &mut crate::game::Game, men: &[GuardId]) {
     for &gd in men {
         g.rescue.flow.jobs.delete(gd);
     }
 }
 
-/// Sample each region's floor and make a row per opening. (rescueflow.ts RescueFlow.build)
+/// Sample each region's floor and make a row per opening.
 fn rescue_flow_build(g: &mut crate::game::Game) {
     let f = rescue_flow_f(g);
     g.rescue.flow.built = true;
@@ -140,7 +138,7 @@ fn rescue_flow_build(g: &mut crate::game::Game) {
     }
 }
 
-/// What of the room can be seen through this opening at all, from the cover mark and three places across its threshold. `k` is not in the table while this runs. (rescueflow.ts RescueFlow.lookable)
+/// What of the room can be seen through this opening at all, from the cover mark and three places across its threshold. `k` is not in the table while this runs.
 fn rescue_flow_lookable(g: &mut crate::game::Game, k: &mut crate::rescueflow::Known) {
     let (mark, at) = (k.o.mark, k.o.at);
     let dz = if k.o.north { 0.7 } else { -0.7 };
@@ -159,7 +157,6 @@ fn rescue_flow_lookable(g: &mut crate::game::Game, k: &mut crate::rescueflow::Kn
     }
 }
 
-/// (rescueflow.ts RescueFlow.open)
 fn rescue_flow_open(g: &crate::game::Game, o: &crate::scene_scenarios::RouteOpening) -> bool {
     match door_of(g, o) {
         None => true,
@@ -167,7 +164,7 @@ fn rescue_flow_open(g: &crate::game::Game, o: &crate::scene_scenarios::RouteOpen
     }
 }
 
-/// The team's eyes this moment: Sam's, and every living operative's who is not blind. (rescueflow.ts RescueFlow.eyes)
+/// The team's eyes this moment: Sam's, and every living operative's who is not blind.
 fn rescue_flow_eyes(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<V3> {
     let mut out: Vec<V3> = Vec::new();
     let pl = seat.player;
@@ -184,7 +181,7 @@ fn rescue_flow_eyes(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<
     out
 }
 
-/// Is this man of theirs seen by the team: the room fight's answer, else the fog's while it is up, else a plain line from any eye to his chest. (rescueflow.ts RescueFlow.sees)
+/// Is this man of theirs seen by the team: the room fight's answer, else the fog's while it is up, else a plain line from any eye to his chest.
 fn rescue_flow_sees(g: &mut crate::game::Game, eyes: &[V3], h: GuardId) -> bool {
     if crate::roomfight::room_fight_team_sees(g, h) {
         return true;
@@ -205,12 +202,11 @@ fn rescue_flow_sees(g: &mut crate::game::Game, eyes: &[V3], h: GuardId) -> bool 
     false
 }
 
-/// (rescueflow.ts RescueFlow.regionAt)
 fn rescue_flow_region_at(g: &crate::game::Game, p: V3) -> Option<RescueflowRegionId> {
     g.rescue.flow.regions.values().copied().find(|&r| in_rect(p, &g.tab.rescueflow_region[r].rect))
 }
 
-/// A few times a second: the floor seen, who of theirs is known where, what each room and opening reads. (rescueflow.ts RescueFlow.sense)
+/// A few times a second: the floor seen, who of theirs is known where, what each room and opening reads.
 fn rescue_flow_sense(g: &mut crate::game::Game) {
     let t = g.time;
     let k = g.rescue.flow.knobs;
@@ -381,15 +377,11 @@ fn rescue_flow_sense(g: &mut crate::game::Game) {
         if state != was {
             let note = alloc::format!("flow:state:{}:{}", g.rescue.flow.known[at].o.id, state.as_str());
             crate::rescue::rescue_note(g, &note);
-            if state == OpenState::Hot {
-                let msg = alloc::format!("contact — {}", g.rescue.flow.known[at].o.name);
-                crate::game::game_msg(g, &msg);
-            }
         }
     }
 }
 
-/// The man posted on this opening: on a mark of his own with his gun on it, the flow's cover or a menu order of Sam's. (rescueflow.ts RescueFlow.holder)
+/// The man posted on this opening: on a mark of his own with his gun on it, the flow's cover or a menu order of Sam's.
 fn rescue_flow_holder(g: &crate::game::Game, seat: &crate::seats::SeatRef, o: &crate::scene_scenarios::RouteOpening) -> Option<GuardId> {
     let mut i = 0;
     while i < g.rescue.ops.len() {
@@ -428,7 +420,7 @@ fn rescue_flow_holder(g: &crate::game::Game, seat: &crate::seats::SeatRef, o: &c
     None
 }
 
-/// Once a frame from Rescue.tick. (rescueflow.ts RescueFlow.tick)
+/// Once a frame from Rescue.tick.
 pub(super) fn rescue_flow_tick(g: &mut crate::game::Game) {
     let k = g.rescue.flow.knobs;
     let f = rescue_flow_f(g);
@@ -564,7 +556,7 @@ pub(super) fn rescue_flow_tick(g: &mut crate::game::Game) {
                 if !said_hot {
                     g.rescue.flow.jobs.get_mut(gd).unwrap().said_hot = true;
                     g.rescue.flow.stats.hot_holds += 1.0;
-                    crate::game::game_say(g, gd, &alloc::format!("contact {} — holding.", side.as_str()), None, None, None);
+                    crate::game::game_say(g, gd, &alloc::format!("contact {} — holding.", side.as_str()), None, None);
                     let note = alloc::format!("flow:hold:{}:{}", g.rescue.flow.jobs.get(gd).unwrap().o.id, g.gd[gd].callsign);
                     crate::rescue::rescue_note(g, &note);
                 }
@@ -578,7 +570,7 @@ pub(super) fn rescue_flow_tick(g: &mut crate::game::Game) {
         let done = if on_t.is_nan() { t - t0 > k.give_up } else { t - on_t >= look && (sam_past || t - on_t >= k.max_cover) };
         if !said_wait && has_chain && on_route && sam[0] - pos[0] > k.wait_m {
             g.rescue.flow.jobs.get_mut(gd).unwrap().said_wait = true;
-            crate::game::game_say(g, gd, "wait one.", None, None, None);
+            crate::game::game_say(g, gd, "wait one.", None, None);
             let note = alloc::format!("flow:wait:{}", g.gd[gd].callsign);
             crate::rescue::rescue_note(g, &note);
         }
@@ -717,14 +709,14 @@ pub(super) fn rescue_flow_tick(g: &mut crate::game::Game) {
             let id = o.id.clone();
             g.rescue.flow.jobs.set(gd, Job { kind: JobKind::Corridor, o, a, t0: t, on_t: f64::NAN, chain: Vec::new(), said_hot: false, said_wait: false, leap: false });
             g.rescue.flow.stats.corridor += 1.0;
-            crate::game::game_say(g, gd, &alloc::format!("{}.", hall.strip_prefix("the ").unwrap_or(&hall)), None, None, None);
+            crate::game::game_say(g, gd, &alloc::format!("{}.", hall.strip_prefix("the ").unwrap_or(&hall)), None, None);
             let note = alloc::format!("flow:corridor:{}:{}", id, g.gd[gd].callsign);
             crate::rescue::rescue_note(g, &note);
         }
     }
 }
 
-/// Nothing for a man to do at it: the room behind it is cleared, or a man Sam posted has it already. (rescueflow.ts RescueFlow.settled)
+/// Nothing for a man to do at it: the room behind it is cleared, or a man Sam posted has it already.
 fn rescue_flow_settled(g: &crate::game::Game, o: &crate::scene_scenarios::RouteOpening) -> bool {
     let Some(k) = g.rescue.flow.known.iter().find(|x| x.o.id == o.id) else { return false };
     if g.tab.rescueflow_region[k.region].cleared {
@@ -736,12 +728,12 @@ fn rescue_flow_settled(g: &crate::game::Game, o: &crate::scene_scenarios::RouteO
     }
 }
 
-/// pairup.ts 'stay': one partner, silent, not found out: the flow sends nobody. (rescueflow.ts RescueFlow.stays)
+/// pairup.ts 'stay': one partner, silent, not found out: the flow sends nobody.
 fn rescue_flow_stays(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
     crate::pairup::pair_up(g, crate::pairup::PairUpRule::Stay) && crate::orders::squad_orders_squad(g, seat).len() == 1 && crate::silent::squad_silent(g, seat) && !crate::silent::silent_compromised(g, seat)
 }
 
-/// The men the flow may send: alive, falling in, not F's, not in a fight, not blind; the LAST in the file first. (rescueflow.ts RescueFlow.free)
+/// The men the flow may send: alive, falling in, not F's, not in a fight, not blind; the LAST in the file first.
 fn rescue_flow_free(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<GuardId> {
     let mut out: Vec<(GuardId, f64)> = Vec::new();
     let mut i = 0;
@@ -764,7 +756,7 @@ fn rescue_flow_free(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<
     out.into_iter().map(|x| x.0).collect()
 }
 
-/// Send a man to cover an opening. (rescueflow.ts RescueFlow.take)
+/// Send a man to cover an opening.
 fn rescue_flow_take(g: &mut crate::game::Game, gd: GuardId, o: &crate::scene_scenarios::RouteOpening, chain: &[crate::scene_scenarios::RouteOpening], said_wait: bool, leap: bool) {
     let door = door_of(g, o);
     crate::orders::squad_orders_new_group(g); // (his own: a 'set.' Sam's last order is waiting to call does not wait on this man's mark)
@@ -790,12 +782,12 @@ fn rescue_flow_take(g: &mut crate::game::Game, gd: GuardId, o: &crate::scene_sce
     let t0 = g.time;
     g.rescue.flow.jobs.set(gd, Job { kind: JobKind::Cover, o: o.clone(), a, t0, on_t: f64::NAN, chain: chain.to_vec(), said_hot: false, said_wait, leap });
     g.rescue.flow.stats.takes += 1.0;
-    crate::game::game_say(g, gd, &o.call, None, None, None);
+    crate::game::game_say(g, gd, &o.call, None, None);
     let note = alloc::format!("flow:take:{}:{}", o.id, g.gd[gd].callsign);
     crate::rescue::rescue_note(g, &note);
 }
 
-/// Back into the file behind Sam, at its tail. (rescueflow.ts RescueFlow.rejoin)
+/// Back into the file behind Sam, at its tail.
 fn rescue_flow_rejoin(g: &mut crate::game::Game, gd: GuardId, words: Option<&str>) {
     g.rescue.flow.jobs.delete(gd);
     crate::orders::squad_orders_new_group(g);
@@ -818,11 +810,10 @@ fn rescue_flow_rejoin(g: &mut crate::game::Game, gd: GuardId, words: Option<&str
         g.rescue.flow.mine.add(a);
     }
     if let Some(w) = words {
-        crate::game::game_say(g, gd, w, None, None, None);
+        crate::game::game_say(g, gd, w, None, None);
     }
 }
 
-/// (rescueflow.ts RescueFlow.dropAll)
 fn rescue_flow_drop_all(g: &mut crate::game::Game, back: bool) {
     for gd in g.rescue.flow.jobs.keys() {
         let Some(j) = g.rescue.flow.jobs.delete(gd) else { continue };
@@ -833,7 +824,7 @@ fn rescue_flow_drop_all(g: &mut crate::game::Game, back: bool) {
     g.rescue.flow.want.clear();
 }
 
-/// The strips: one flat glowing bar on the corridor floor across each opening, in its state's colour (a hot one beats). (rescueflow.ts RescueFlow.boxes)
+/// The strips: one flat glowing bar on the corridor floor across each opening, in its state's colour (a hot one beats).
 fn rescue_flow_boxes(g: &mut crate::game::Game) {
     let flag = crate::scene_boxes::box_flag();
     let flags = (js::to_i32(flag.dynamic) | js::to_i32(flag.no_shadow)) as f64;
@@ -863,7 +854,6 @@ fn rescue_flow_boxes(g: &mut crate::game::Game) {
     }
 }
 
-/// (rescueflow.ts RescueFlow.word)
 fn rescue_flow_word(g: &crate::game::Game, k: &crate::rescueflow::Known) -> String {
     let shut = k.o.kind == crate::scene_scenarios::RouteOpeningKind::Door && !rescue_flow_open(g, &k.o);
     let w = match k.state {
@@ -914,31 +904,8 @@ pub(super) fn rescue_flow_line(g: &crate::game::Game) -> String {
     parts.join(" · ")
 }
 
-/// (rescueflow.ts RescueFlow.summary)
-fn rescue_flow_summary(g: &crate::game::Game) -> String {
-    if g.rescue.flow.known.is_empty() {
-        return String::from("flow: not staged");
-    }
-    let mut jobs: Vec<String> = Vec::new();
-    for (gd, j) in g.rescue.flow.jobs.iter() {
-        let what = if j.kind == JobKind::Corridor { "corridor" } else { j.o.short.as_str() };
-        let more = if !j.chain.is_empty() { alloc::format!(" +{}", j.chain.len()) } else { String::new() };
-        jobs.push(alloc::format!("{} {}{}", g.gd[gd].callsign, what, more));
-    }
-    let jobs = jobs.join(", ");
-    let mut rows: Vec<String> = Vec::new();
-    for at in 0..g.rescue.flow.known.len() {
-        let k = g.rescue.flow.known[at].clone();
-        let word = rescue_flow_word(g, &k);
-        let tail = if g.rescue.flow.passed.has(k.o.id.clone()) { "" } else { " (ahead)" };
-        rows.push(alloc::format!("{} {}{}", k.o.short, word, tail));
-    }
-    let on_it = if !jobs.is_empty() { alloc::format!(" · on it: {}", jobs) } else { String::new() };
-    let s = g.rescue.flow.stats;
-    alloc::format!("openings {}{} · {} covers, {} corridor holds, {} overridden", rows.join(" · "), on_it, s.takes, s.corridor, s.overridden)
-}
 
-/// The marks against the floor: returns what is wrong. (rescueflow.ts RescueFlow.check)
+/// The marks against the floor: returns what is wrong.
 pub(super) fn rescue_flow_check(g: &mut crate::game::Game) -> Vec<String> {
     let mut bad: Vec<String> = Vec::new();
     if rescue_flow_f(g).is_none() {
@@ -985,7 +952,7 @@ mod tests {
         Known { o, region, state: OpenState::Unknown, ..Default::default() }
     }
 
-    /// A write through a Known's region reaches the row the table holds: the two are one Region, as in the TypeScript.
+    /// A write through a Known's region reaches the row the table holds: the two are one Region.
     #[test]
     fn a_known_row_and_the_table_share_one_region() {
         let mut g = Game::blank();
@@ -998,7 +965,7 @@ mod tests {
         assert!(rescue_flow_settled(&mut g, &o));
     }
 
-    /// A man holding it counts only while he is not on one of the flow's own jobs. (rescueflow.ts:303)
+    /// A man holding it counts only while he is not on one of the flow's own jobs.
     #[test]
     fn a_held_opening_is_settled_only_by_a_man_with_no_job() {
         let mut g = Game::blank();
@@ -1012,7 +979,7 @@ mod tests {
         assert!(!rescue_flow_settled(&mut g, &o));
     }
 
-    /// An event is heard once, by its serial, whatever else has the same fields. (rescueflow.ts:167)
+    /// An event is heard once, by its serial, whatever else has the same fields.
     #[test]
     fn sense_hears_each_event_once_by_its_serial() {
         let mut g = Game::blank();
@@ -1028,7 +995,7 @@ mod tests {
         assert_eq!(g.rescue.flow.turn, 1.0);
     }
 
-    /// A row taken out of `known` for sense's calls comes back whole, with what sense worked out written on it. (rescueflow.ts:188-192)
+    /// A row taken out of `known` for sense's calls comes back whole, with what sense worked out written on it.
     #[test]
     fn sense_puts_each_known_row_back_with_its_share() {
         let mut g = Game::blank();
@@ -1047,11 +1014,10 @@ mod tests {
         assert!(row.state == OpenState::Unknown);
     }
 
-    /// The objective line and the summary, against the TypeScript's templates. (rescueflow.ts:358, 363)
+    /// The objective line tells what is known of the openings behind him, and of any hot one ahead of him; nothing yet known says nothing.
     #[test]
-    fn the_line_and_the_summary_say_what_is_known() {
+    fn the_line_says_what_is_known_behind_him_and_what_is_hot_ahead() {
         let mut g = Game::blank();
-        assert_eq!(rescue_flow_summary(&mut g), "flow: not staged");
         assert_eq!(rescue_flow_line(&mut g), "");
         let r = g.tab.rescueflow_region.push(Region::default());
         let mut a = opening("a", "glass", r);
@@ -1063,8 +1029,5 @@ mod tests {
         g.rescue.flow.known = vec![a, b, c];
         g.rescue.flow.passed.add(String::from("a"));
         assert_eq!(rescue_flow_line(&mut g), "behind you ▸ glass clear · ahead ▸ west HOT, held");
-        g.rescue.flow.stats.takes = 3.0;
-        g.rescue.flow.stats.overridden = 1.0;
-        assert_eq!(rescue_flow_summary(&mut g), "openings glass clear · west HOT, held (ahead) · server unknown (ahead) · 3 covers, 0 corridor holds, 1 overridden");
     }
 }

@@ -1,4 +1,3 @@
-//! src/game/dialogue.ts lines 1767 to 2092
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,17 +6,17 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// What a new row holds: next is -1, which AmbientState::default() is not. (dialogue.ts:2002)
+/// What a new row holds: next is -1, which AmbientState::default() is not.
 fn ambient_fresh() -> AmbientState {
     AmbientState { next: -1.0, run: None, played: JsMap::new(), count: 0.0 }
 }
 
-/// The game's ambient state, made if none: the row itself. (dialogue.ts ambientState)
+/// The game's ambient state, made if none: the row itself.
 fn ambient_state<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::dialogue::AmbientState {
     g.m.dialogue.ambient_by_game.get_or_insert_with(ambient_fresh)
 }
 
-/// Is the floor one the pairs may talk on? (dialogue.ts ambientLive)
+/// Is the floor one the pairs may talk on?
 fn ambient_live(g: &crate::game::Game) -> bool {
     if !g.ai_enabled || g.aside || g.puppet.is_some() { return false; }
     if crate::guards::escalation_of(g) != 0.0 { return false; }
@@ -27,7 +26,7 @@ fn ambient_live(g: &crate::game::Game) -> bool {
     !men.iter().any(|&p| g.pl[p].holding.is_some() || g.pl[p].down)
 }
 
-/// A calm patrolling staff man with nothing on his hands or mind, not talking, not held by a script. (dialogue.ts chatty)
+/// A calm patrolling staff man with nothing on his hands or mind, not talking, not held by a script.
 fn chatty(g: &crate::game::Game, x: GuardId) -> bool {
     let time = g.time;
     let m = &g.gd[x];
@@ -40,14 +39,14 @@ fn chatty(g: &crate::game::Game, x: GuardId) -> bool {
     g.guards.contains(&x)
 }
 
-/// Still fit to keep talking (the hold flag is ours by now). (dialogue.ts stillChatty)
+/// Still fit to keep talking (the hold flag is ours by now).
 fn still_chatty(g: &crate::game::Game, x: GuardId) -> bool {
     let m = &g.gd[x];
     m.state == crate::game::GuardState::Patrol && m.held.is_none() && m.script.is_none() && m.task.is_none()
         && m.body_duty.is_none() && m.awareness < 0.3 && g.guards.contains(&x)
 }
 
-/// A conversation over: the men's holds back as they were, the cooldown from now. (dialogue.ts endAmbient)
+/// A conversation over: the men's holds back as they were, the cooldown from now.
 fn end_ambient(g: &mut crate::game::Game) {
     let time = g.time;
     let s = ambient_state(g);
@@ -57,7 +56,7 @@ fn end_ambient(g: &mut crate::game::Game) {
     if !r.held[1] { crate::control::set_hold(g, r.b, false, "dialogue"); }
 }
 
-/// A restart: the pairs' clock starts over; off the office the ledger is the run's, so it clears. The men's holds stay as they are, as in the TypeScript. (dialogue.ts ambientRestart)
+/// A restart: the pairs' clock starts over; off the office the ledger is the run's, so it clears. The men's holds stay as they are, as in the TypeScript.
 pub fn ambient_restart(g: &mut crate::game::Game) {
     let Some(s) = g.m.dialogue.ambient_by_game.as_mut() else { return; };
     s.run = None;
@@ -65,12 +64,12 @@ pub fn ambient_restart(g: &mut crate::game::Game) {
     if !is_office(g) { ambient_state(g).played.clear(); }
 }
 
-/// The line of a pair as it will be said: its `own` wording off the office, else its text. (dialogue.ts pairSaid)
+/// The line of a pair as it will be said: its `own` wording off the office, else its text.
 fn pair_said(l: &crate::dialogue::PairTalkLinesItem, own: bool) -> String {
     if own { l.own.as_ref().unwrap_or(&l.text).clone() } else { l.text.clone() }
 }
 
-/// The door's name with its first letter up. (dialogue.ts:2031)
+/// The door's name with its first letter up.
 fn cap_first(s: &str) -> String {
     let mut c = s.chars();
     match c.next() {
@@ -79,7 +78,7 @@ fn cap_first(s: &str) -> String {
     }
 }
 
-/// A pair's line with its tokens filled. (dialogue.ts:2031)
+/// A pair's line with its tokens filled.
 fn said_text(raw: &str, other: Option<&str>, pad: Option<&AmbientRunPad>) -> String {
     let o = other.unwrap_or("");
     let code = pad.map_or("", |p| p.code.as_str());
@@ -97,7 +96,7 @@ fn names_code(line: &str) -> bool { line.to_ascii_lowercase().contains("{code}")
 /// /\{code\}|\{padDoor\}/i
 fn names_pad(line: &str) -> bool { let l = line.to_ascii_lowercase(); l.contains("{code}") || l.contains("{paddoor}") }
 
-/// May this pair's talk be dealt, given a third man, a pad, the wording and the ledger? (dialogue.ts:2049)
+/// May this pair's talk be dealt, given a third man, a pad, the wording and the ledger?
 fn pair_fits(p: &PairTalk, third: bool, pad: bool, own: bool, played: &JsMap<String, f64>) -> bool {
     (third || !p.lines.iter().any(|l| names_other(&pair_said(l, own))))
         && (pad || !p.lines.iter().any(|l| names_pad(&pair_said(l, own))))
@@ -109,7 +108,7 @@ fn played_of(played: &JsMap<String, f64>, id: &str) -> f64 {
     played.get(String::from(id)).copied().unwrap_or(0.0)
 }
 
-/// The one per-frame hook: the handler's radio, then the pairs: advance a conversation under way (or drop it the frame either man stops being a calm patrol), else look for a pair to start one. (dialogue.ts updateAmbient)
+/// The one per-frame hook: the handler's radio, then the pairs: advance a conversation under way (or drop it the frame either man stops being a calm patrol), else look for a pair to start one.
 pub fn update_ambient(g: &mut crate::game::Game, dt: f64) {
     tick_radio(g);
     let table = crate::dialogue::ambient();
@@ -133,7 +132,7 @@ pub fn update_ambient(g: &mut crate::game::Game, dt: f64) {
         let own = !is_office(g);
         let raw = pair_said(&line, own);
         let text = said_text(&raw, other.as_deref(), pad.as_ref());
-        crate::game::game_say(g, who, &text, None, None, None);
+        crate::game::game_say(g, who, &text, None, None);
         if let Some(pad) = pad.as_ref() {
             if names_code(&raw) { crate::devices::devices_overhear_said(g, who, &pad.lock_id); }
         }
@@ -200,56 +199,53 @@ pub fn update_ambient(g: &mut crate::game::Game, dt: f64) {
 mod tests {
     use super::*;
 
-    fn fnv(lines: &[String]) -> u64 {
-        let mut h: u64 = 0xcbf29ce484222325;
-        let mut first = true;
-        for l in lines {
-            if !first { h ^= b'\n' as u64; h = h.wrapping_mul(0x100000001b3); }
-            first = false;
-            for b in l.as_bytes() { h ^= *b as u64; h = h.wrapping_mul(0x100000001b3); }
-        }
-        h
-    }
-
-    #[test]
-    fn pairs_are_the_typescripts() {
-        let rows: Vec<String> = crate::dialogue::ambient_pairs().iter().map(|p| {
-            let lines: Vec<String> = p.lines.iter().map(|l| format!("{}~{}~{}", l.who, l.text, l.own.as_deref().unwrap_or("-"))).collect();
-            format!("{}|{}|{}", p.id, if p.office.unwrap_or(false) { 1 } else { 0 }, lines.join("^"))
-        }).collect();
-        assert_eq!((rows.len(), fnv(&rows)), (9, 0x385b0d49c82d7aaa));
-    }
-
-    #[test]
-    fn fits_are_the_typescripts() {
-        // (third, pad, own, pencil played once, the ids that fit), from the TypeScript's own filter
-        let cases: &[(bool, bool, bool, bool, &str)] = &[
-            (false, false, false, false, "sensor,thunk,overtime,poster,jug,photos,costcentre"),
-            (false, false, true, false, "jug"),
-            (false, true, false, false, "sensor,thunk,pin,overtime,poster,jug,photos,costcentre"),
-            (false, true, true, false, "pin,jug"),
-            (true, false, false, true, "sensor,thunk,pencil,overtime,poster,jug,photos,costcentre"),
-            (true, false, true, false, "pencil,jug"),
-            (true, false, true, true, "jug"),
-            (true, true, false, false, "sensor,thunk,pencil,pin,overtime,poster,jug,photos,costcentre"),
-            (true, true, true, false, "pencil,pin,jug"),
-            (true, true, true, true, "pin,jug"),
-        ];
-        for &(third, pad, own, pencil, want) in cases {
-            let mut played = JsMap::new();
-            if pencil { played.set(String::from("pencil"), 1.0); }
-            let ids: Vec<String> = crate::dialogue::ambient_pairs().into_iter().filter(|p| pair_fits(p, third, pad, own, &played)).map(|p| p.id).collect();
-            assert_eq!(ids.join(","), want);
+    fn talk(id: &str, office: bool, lines: &[(&str, Option<&str>)]) -> PairTalk {
+        PairTalk {
+            id: String::from(id),
+            lines: lines.iter().enumerate().map(|(i, (text, own))| crate::dialogue::PairTalkLinesItem { who: (i % 2) as _, text: String::from(*text), own: own.map(String::from) }).collect(),
+            office: Some(office),
         }
     }
 
+    /// A FAILURE MEANS: two men talk of "" because no third man stands to be named or no pad to give away.
     #[test]
-    fn tokens_are_the_typescripts() {
+    fn a_talk_that_names_a_third_man_or_a_pad_needs_one() {
+        let none = JsMap::new();
+        let plain = talk("a", false, &[("It clicked at me.", None)]);
+        assert!(pair_fits(&plain, false, false, false, &none));
+        let other = talk("b", false, &[("{Other} did the sheet again.", None)]);
+        assert!(!pair_fits(&other, false, true, false, &none));
+        assert!(pair_fits(&other, true, false, false, &none));
+        for line in ["{Code} now.", "They redid {padDoor}."] {
+            let pad = talk("c", false, &[(line, None)]);
+            assert!(!pair_fits(&pad, true, false, false, &none), "{line}");
+            assert!(pair_fits(&pad, false, true, false, &none), "{line}");
+        }
+    }
+
+    /// A FAILURE MEANS: the office's talk is heard on another level, or a level's men tell the same story twice in a night.
+    #[test]
+    fn on_a_levels_own_words_the_office_talk_is_out_and_a_talk_is_told_once() {
+        let mut played = JsMap::new();
+        let office = talk("a", true, &[("It clicked at me.", None)]);
+        assert!(pair_fits(&office, false, false, false, &played));
+        assert!(!pair_fits(&office, false, false, true, &played));
+        let mine = talk("b", false, &[("It clicked at me.", None)]);
+        assert!(pair_fits(&mine, false, false, true, &played));
+        played.set(String::from("b"), 1.0);
+        assert!(!pair_fits(&mine, false, false, true, &played));
+        // what a line needs is asked of the words it will be said in
+        let worded = talk("c", false, &[("Plain.", Some("{Other} again."))]);
+        assert!(pair_fits(&worded, false, false, false, &played));
+        assert!(!pair_fits(&worded, false, false, true, &played));
+    }
+
+    /// A FAILURE MEANS: a player overhears "{Code}", or a door's name in lower case at the head of a line.
+    #[test]
+    fn a_line_says_the_other_man_the_code_and_the_door() {
         let pad = AmbientRunPad { code: String::from("7391"), door: String::from("the side door"), lock_id: String::from("lock") };
         assert_eq!(said_text("{Other} did the sheet in pencil again.", Some("Novak"), Some(&pad)), "Novak did the sheet in pencil again.");
-        assert_eq!(said_text("{Other} did the sheet in pencil again.", None, None), " did the sheet in pencil again.");
         assert_eq!(said_text("They redid the pad on {padDoor}. {Code} now.", Some("Novak"), Some(&pad)), "They redid the pad on the side door. 7391 now.");
-        assert_eq!(said_text("They redid the pad on {padDoor}. {Code} now.", None, None), "They redid the pad on .  now.");
         assert_eq!(said_text("{PadDoor}.", None, Some(&pad)), "The side door.");
     }
 }

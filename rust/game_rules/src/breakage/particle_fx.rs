@@ -9,7 +9,7 @@ use alloc::{boxed::Box, string::String, vec::Vec};
 
 // ---------------------------------------------------------------- dust: every puff goes through one table
 
-/// THE dust emit: the site's numbers times the table; the count rounded, never below 1 where a site asked for any. (particleFx.ts emitDust)
+/// THE dust emit: the site's numbers times the table; the count rounded, never below 1 where a site asked for any.
 pub(super) fn emit_dust(g: &mut crate::game::Game, pos: V3, dir: V3, count: f64, o: crate::render_particles::EmitOpts) -> f64 {
     match dust_asked(g, count, o) { Some((n, o)) => crate::render_particles::particles_emit(g, crate::render_particles::PKind::Dust, pos, dir, n, o), None => 0.0 }
 }
@@ -43,7 +43,7 @@ fn dust_shipped(k: &crate::particle_fx::ParticleFxModDUST) -> bool {
 
 // ---------------------------------------------------------------- what a hit is made of
 
-/// What a round knocks out of a static: its word's surface, or its word's wet row on the one slab the weather has soaked. (particleFx.ts surfAt)
+/// What a round knocks out of a static: its word's surface, or its word's wet row on the one slab the weather has soaked.
 pub fn surf_at(g: &mut crate::game::Game, b: BoxId) -> crate::scene_materials::Surf {
     let does = seam_box(g, b).does;
     if g.weather.lot == Some(b) {
@@ -53,7 +53,7 @@ pub fn surf_at(g: &mut crate::game::Game, b: BoxId) -> crate::scene_materials::S
     }
 }
 
-/// What `b` says it is, for the picture of a hit; None = the rule is off, it says nothing, its word is not one thing to a round, or it is a pane. (particleFx.ts saidSurf)
+/// What `b` says it is, for the picture of a hit; None = the rule is off, it says nothing, its word is not one thing to a round, or it is a pane.
 pub(super) fn said_surf(g: &mut crate::game::Game, b: Option<BoxId>) -> Option<crate::scene_materials::Surf> {
     let b = b?;
     let stuff = seam_box(g, b).stuff?;
@@ -62,7 +62,7 @@ pub(super) fn said_surf(g: &mut crate::game::Game, b: Option<BoxId>) -> Option<c
 }
 
 /// What a hit looks like: the surface its sparks, chips and dust go by, the colour they are tinted from, and whether it is solid glass. The box's own word first,
-/// then what the hit has always been read by: a prop's kind, a leaf as wood, a pane as glass, what a static does. (particleFx.ts hitLook)
+/// then what the hit has always been read by: a prop's kind, a leaf as wood, a pane as glass, what a static does.
 pub(super) fn hit_look(g: &mut crate::game::Game, hit: crate::particle_fx::HitLookHit) -> crate::particle_fx::HitLook {
     let leaf = hit.prop.is_none() && hit.index.is_some_and(|i| i >= 1e6);
     let st = if hit.prop.is_none() && !leaf { hit.index.and_then(|i| js_ix(g.col.boxes.len(), i)).map(|x| g.col.boxes[x]) } else { None };
@@ -134,7 +134,7 @@ fn js_ix(len: usize, i: f64) -> Option<usize> {
 
 // ---------------------------------------------------------------- the sites
 
-/// A round stopped in something solid: what it knocks out, by what it hit. (particleFx.ts impactFx)
+/// A round stopped in something solid: what it knocks out, by what it hit.
 pub fn impact_fx(g: &mut crate::game::Game, hit_p: V3, dir: V3, hit: crate::particle_fx::ImpactFxHit, def: &crate::weapons::WeaponDef) {
     use crate::particle_fx::{ImpactRecipeChipTint as Chip, ImpactRecipeDustTint as Puff};
     let look = hit_look(g, crate::particle_fx::HitLookHit { index: hit.index, prop: hit.prop, box_: hit.box_ });
@@ -171,7 +171,7 @@ fn impact_row(surf: crate::scene_materials::Surf) -> crate::particle_fx::ImpactR
     *crate::particle_fx::impact().get(String::from(surf.as_str())).unwrap()
 }
 
-/// The muzzle's unburnt powder. (particleFx.ts muzzleSparksFx)
+/// The muzzle's unburnt powder.
 pub fn muzzle_sparks_fx(g: &mut crate::game::Game, muzzle: V3, dir: V3, shooter: CharId) {
     let s = crate::effects::shot();
     if !crate::effects::flags().shot_sparks || s.spark_count <= 0.0 { return; }
@@ -183,7 +183,7 @@ pub fn muzzle_sparks_fx(g: &mut crate::game::Game, muzzle: V3, dir: V3, shooter:
     });
 }
 
-/// The stun charge coming apart: the fragments, a ring of dust along the floor, a puff over the can. (particleFx.ts bangFx)
+/// The stun charge coming apart: the fragments, a ring of dust along the floor, a puff over the can.
 pub fn bang_fx(g: &mut crate::game::Game, at: V3) {
     let s = crate::effects::sparks();
     let pfx = g.m.particle_fx.pfx;
@@ -200,7 +200,7 @@ pub fn bang_fx(g: &mut crate::game::Game, at: V3) {
     });
 }
 
-/// A boot through the lock: plaster dust and splinters off the jamb, blown away from the kicker. (particleFx.ts kickDustFx)
+/// A boot through the lock: plaster dust and splinters off the jamb, blown away from the kicker.
 pub fn kick_dust_fx(g: &mut crate::game::Game, d: DoorId, from: V3) {
     let (hinge, width, cd) = (g.dr[d].def.hinge, g.dr[d].def.width, g.dr[d].def.closed_dir);
     let pfx = g.m.particle_fx.pfx;
@@ -219,7 +219,7 @@ pub fn kick_dust_fx(g: &mut crate::game::Game, d: DoorId, from: V3) {
     });
 }
 
-/// A tube, panel or lamp shot out: pale glass and phosphor raining off it, a puff of powder, a fizz off the ballast. (particleFx.ts fixtureShatterFx)
+/// A tube, panel or lamp shot out: pale glass and phosphor raining off it, a puff of powder, a fizz off the ballast.
 pub fn fixture_shatter_fx(g: &mut crate::game::Game, t: &crate::particle_fx::FixtureShatterFxT, from: V3) {
     let pfx = g.m.particle_fx.pfx;
     let b: Option<BoxId> = t.boxes.first().and_then(|&i| js_ix(g.engine.world.statics.len(), i)).map(|i| g.engine.world.statics[i]);
@@ -243,7 +243,7 @@ pub fn fixture_shatter_fx(g: &mut crate::game::Game, t: &crate::particle_fx::Fix
     });
 }
 
-/// A vehicle's lamp shot out: the lens's own glass, back toward whoever broke it and down, in the lens's colour. (particleFx.ts lensShatterFx)
+/// A vehicle's lamp shot out: the lens's own glass, back toward whoever broke it and down, in the lens's colour.
 pub fn lens_shatter_fx(g: &mut crate::game::Game, t: crate::particle_fx::LensShatterFxT, from: V3) {
     let out = v3::normalize([from[0] - t.pos[0], 0.0, from[2] - t.pos[2]]);
     let l = t.lens.unwrap_or([0.9, 0.9, 0.9]);
@@ -253,7 +253,7 @@ pub fn lens_shatter_fx(g: &mut crate::game::Game, t: crate::particle_fx::LensSha
     });
 }
 
-/// The breaker shot: a hard burst of sparks out of the panel, molten copper dripping, a cough of soot. (particleFx.ts breakerSparkFx)
+/// The breaker shot: a hard burst of sparks out of the panel, molten copper dripping, a cough of soot.
 pub fn breaker_spark_fx(g: &mut crate::game::Game, at: V3, from: V3) {
     let out = v3::normalize([from[0] - at[0], 0.15, from[2] - at[2]]);
     let n = g.m.particle_fx.pfx.breaker_sparks;
@@ -268,7 +268,7 @@ pub fn breaker_spark_fx(g: &mut crate::game::Game, at: V3, from: V3) {
     });
 }
 
-/// A lock kicked through: long splinters of the jamb and the strike plate's screws, a few back past the boot. (particleFx.ts lockSplinterFx)
+/// A lock kicked through: long splinters of the jamb and the strike plate's screws, a few back past the boot.
 pub fn lock_splinter_fx(g: &mut crate::game::Game, d: DoorId, from: V3) {
     let (hinge, width, cd) = (g.dr[d].def.hinge, g.dr[d].def.width, g.dr[d].def.closed_dir);
     let pfx = g.m.particle_fx.pfx;
@@ -287,7 +287,7 @@ pub fn lock_splinter_fx(g: &mut crate::game::Game, d: DoorId, from: V3) {
     });
 }
 
-/// The ring airfoil meeting a wall or a desk: a few sparks off the clack. (particleFx.ts clackFx)
+/// The ring airfoil meeting a wall or a desk: a few sparks off the clack.
 pub fn clack_fx(g: &mut crate::game::Game, at: V3) {
     let pfx = g.m.particle_fx.pfx;
     crate::render_particles::particles_emit(g, crate::render_particles::PKind::Spark, v3::add(at, [0.0, 0.02, 0.0]), [0.0, 1.0, 0.0], pfx.clack_sparks, Emit {
@@ -295,7 +295,7 @@ pub fn clack_fx(g: &mut crate::game::Game, at: V3) {
     });
 }
 
-/// The tracer's ember where it stops in geometry: the same few sparks back off the surface. (particleFx.ts emberFx)
+/// The tracer's ember where it stops in geometry: the same few sparks back off the surface.
 pub fn ember_fx(g: &mut crate::game::Game, at: V3, dir: V3, o: crate::particle_fx::EmberFxO) {
     let size = g.m.particle_fx.pfx.ember_size;
     crate::render_particles::particles_emit(g, crate::render_particles::PKind::Spark, at, dir, o.count, Emit {
@@ -305,7 +305,7 @@ pub fn ember_fx(g: &mut crate::game::Game, at: V3, dir: V3, o: crate::particle_f
 
 // ---------------------------------------------------------------- spent cases
 
-/// The empty a row's gun throws, or None. (particleFx.ts casingOf)
+/// The empty a row's gun throws, or None.
 fn casing_of(g: &crate::game::Game, def: &crate::weapons::WeaponDef) -> Option<crate::particle_fx::CasingSpec> {
     let c = casing_row(def.id)?;
     Some(c)
@@ -335,12 +335,12 @@ fn casing_row(id: crate::weapons::WeaponId) -> Option<crate::particle_fx::Casing
     }
 }
 
-/// The module's row for this game, made if there is none. (particleFx.ts stateOf)
+/// The module's row for this game, made if there is none.
 fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::particle_fx::FxState {
     g.m.particle_fx.state.get_or_insert_with(|| crate::particle_fx::FxState { tinks: Vec::new(), n: 0.0 })
 }
 
-/// One spent case out of the shooter's gun, and the sound of it landing `tink` seconds later where it will roughly come down. (particleFx.ts casingFx)
+/// One spent case out of the shooter's gun, and the sound of it landing `tink` seconds later where it will roughly come down.
 pub fn casing_fx(g: &mut crate::game::Game, shooter: CharId, def: &crate::weapons::WeaponDef) {
     let Some(c) = casing_of(g, def) else { return; };
     let (muzzle, gun_dir, vel, id) = (g.ch[shooter].muzzle, g.ch[shooter].gun_dir, g.ch[shooter].vel, g.ch[shooter].id);
@@ -364,7 +364,7 @@ pub fn casing_fx(g: &mut crate::game::Game, shooter: CharId, def: &crate::weapon
 /// A little spread in pitch, dealt not drawn.
 fn tink_rate(n: f64) -> f64 { 0.9 + js::rem(n * 7.0, 11.0) * 0.03 }
 
-/// Once a frame: the cases due to land are heard landing. (particleFx.ts updateParticleFx)
+/// Once a frame: the cases due to land are heard landing.
 pub fn update_particle_fx(g: &mut crate::game::Game) {
     let mut i = match &g.m.particle_fx.state { Some(st) if !st.tinks.is_empty() => st.tinks.len(), _ => return };
     let gain = g.m.particle_fx.pfx.tink_gain;
@@ -379,18 +379,18 @@ pub fn update_particle_fx(g: &mut crate::game::Game) {
     }
 }
 
-/// Encounter restart: nothing in the air, nothing on the floor, nothing waiting to be heard. (particleFx.ts clearParticleFx)
+/// Encounter restart: nothing in the air, nothing on the floor, nothing waiting to be heard.
 pub fn clear_particle_fx(g: &mut crate::game::Game) {
     if let Some(st) = g.m.particle_fx.state.as_mut() { st.tinks.clear(); }
     crate::render_particles::particles_clear(g);
 }
 
-/// QA: the cases waiting to be heard. (particleFx.ts pendingTinks)
+/// QA: the cases waiting to be heard.
 fn pending_tinks(g: &mut crate::game::Game) -> Vec<crate::particle_fx::PendingTinksItem> {
     state_of(g).tinks.iter().map(|k| crate::particle_fx::PendingTinksItem { t: k.t, pos: k.pos }).collect()
 }
 
-/// `b.…` of a box. Skeleton 5 keeps `g.col.boxes: Vec<BoxId>` and no table of Box rows, while the index says `g.col.boxes[id].albedo`; once there is a table the body is the row.
+/// `b.…` of a box. Vec<BoxId>` and no table of Box rows, while the index says `g.col.boxes[id].albedo`; once there is a table the body is the row.
 fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 
 /// A site's record: fields not written are None, and each site writes speed, life and size.
@@ -476,7 +476,7 @@ mod tests {
         assert_eq!((p.len(), p[0].t), (1, 2.0));
     }
 
-    /// A leaf with no box as wood, nothing as concrete: the paths that reach no box's row. Those that do wait on the table of Box rows (notes.md, ## Skeleton).
+    /// A leaf with no box as wood, nothing as concrete: the paths that reach no box's row.
     #[test]
     fn hit_look_paths() {
         let mut g = crate::game::Game::blank();

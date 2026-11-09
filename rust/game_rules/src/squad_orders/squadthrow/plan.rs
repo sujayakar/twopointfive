@@ -108,7 +108,7 @@ fn keep(g: &mut Game, men: &[GuardId], at: V3, kind: SquadThrowKind, thrower: Op
     p
 }
 
-/// The row's words, with the warning of the plan for this spot. (squadthrow.ts one.label)
+/// The row's words, with the warning of the plan for this spot.
 pub(in crate::squad_orders) fn row_label(g: &mut crate::game::Game, kind: crate::squadthrow::SquadThrowKind, at: V3) -> String {
     let key = crate::seats::view_key(g, &crate::seats::here(g));
     let warn = g.m.squadthrow.states.get(key).and_then(|s| s.plans.get(kind)).filter(|p| p.at == at).and_then(|p| p.warn.clone()).unwrap_or_default();
@@ -116,17 +116,17 @@ pub(in crate::squad_orders) fn row_label(g: &mut crate::game::Game, kind: crate:
     format!("{} there · {} left{}", word(kind).as_str(), n, warn)
 }
 
-/// The order is one man's, the thrower's. (squadthrow.ts one.only)
+/// The order is one man's, the thrower's.
 pub(in crate::squad_orders) fn row_only(g: &mut crate::game::Game, men: &[GuardId], at: V3, kind: crate::squadthrow::SquadThrowKind) -> Vec<GuardId> {
     match plan_for(g, men, at, kind).thrower { Some(th) => vec![th.gd], None => Vec::new() }
 }
 
-/// Err: why not. (squadthrow.ts one.valid)
+/// Err: why not.
 pub(in crate::squad_orders) fn row_valid(g: &mut crate::game::Game, men: &[GuardId], at: V3, kind: crate::squadthrow::SquadThrowKind) -> Result<(), String> {
     match plan_for(g, men, at, kind).refuse { Some(why) => Err(why), None => Ok(()) }
 }
 
-/// Some: the refusal. (squadthrow.ts one.issue)
+/// Some: the refusal.
 pub(in crate::squad_orders) fn row_issue(g: &mut crate::game::Game, men: &[GuardId], t: &crate::orders::OrderTarget, kind: crate::squadthrow::SquadThrowKind) -> Option<String> {
     let at = crate::orders::rows::at(t);
     let p = plan_for(g, men, at, kind);

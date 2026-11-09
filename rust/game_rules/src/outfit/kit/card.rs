@@ -20,7 +20,7 @@ pub struct CardFor {
 
 /// Where the launcher's load is worked from (slotsetup.ts loadKeys; the words of the build's own keys, as player.rs words them).
 const LOAD_KEYS: &str = "press 2, then 2";
-/// Where your light is worked from (slotsetup.ts lightKeys).
+/// Where your light is worked from.
 const LIGHT_KEYS: &str = "its gun's key again, then 3";
 
 /// A key's code as a line says it.
@@ -35,7 +35,7 @@ fn gun_slot(field: KitField) -> Option<GunSlot> {
     }
 }
 
-/// The gun row a row hangs under as the card stands, if any.   (kit.ts KitRow.under)
+/// The gun row a row hangs under as the card stands, if any.
 fn row_under(r: &KitRow, m: &MemberKit) -> Option<GunSlot> {
     match r.field {
         KitField::Suppressed | KitField::Rings | KitField::Shells | KitField::Cams => Some(GunSlot::Primary),
@@ -45,7 +45,7 @@ fn row_under(r: &KitRow, m: &MemberKit) -> Option<GunSlot> {
     }
 }
 
-/// What the value now set changes in the run, in a line.   (kit.ts KitRow.note, the tree's rows)
+/// What the value now set changes in the run, in a line.
 fn row_note(g: &Game, i: f64, r: &KitRow, m: &MemberKit) -> String {
     let you = i == 0.0;
     let pick = |g: &Game, id: &str| crate::gear::gear_text(g, &crate::gunslots::pick_word(g, id, None));
@@ -112,7 +112,7 @@ fn primary_quiet(g: &Game, m: &MemberKit) -> bool {
     g.m.weapons.weapons.get(w).expect("a pick's row").report.level < 1.0
 }
 
-/// The gun of a row wears a suppressor.   (kit.ts kitRowCan, the tree's)
+/// The gun of a row wears a suppressor.
 pub(super) fn kit_row_can(g: &Game, m: &MemberKit, field: KitField) -> bool {
     match field {
         KitField::Primary => m.weapon != KitWeapon::Pistol && kit_slot_can(g, m, GunSlot::Primary),
@@ -121,7 +121,7 @@ pub(super) fn kit_row_can(g: &Game, m: &MemberKit, field: KitField) -> bool {
     }
 }
 
-/// The range at which a gun's cone is half a man wide, in metres: r · spread(r) / 2 = half, the spread opening past `range_from`.   (gunStats.ts reachM)
+/// The range at which a gun's cone is half a man wide, in metres: r · spread(r) / 2 = half, the spread opening past `range_from`.
 fn reach_m(def: &crate::weapons::WeaponDef) -> f64 {
     const HALF: f64 = 0.25;
     let a = &def.ai_spread;
@@ -137,7 +137,7 @@ fn reach_m(def: &crate::weapons::WeaponDef) -> f64 {
     }
 }
 
-/// Rounds out in ten seconds from a full gun, magazine changes and all.   (gunStats.ts rounds)
+/// Rounds out in ten seconds from a full gun, magazine changes and all.
 fn rounds_out(def: &crate::weapons::WeaponDef) -> f64 {
     const SECS: f64 = 10.0;
     let gap = def.auto.as_ref().map_or(def.cd, |a| a.interval);
@@ -155,7 +155,7 @@ fn rounds_out(def: &crate::weapons::WeaponDef) -> f64 {
     n
 }
 
-/// What a gun is good at, each 0 to 1 off its own row: reach, volume, handling, quiet.   (gunStats.ts gunStats)
+/// What a gun is good at, each 0 to 1 off its own row: reach, volume, handling, quiet.
 fn gun_stats(def: &crate::weapons::WeaponDef) -> [f64; 4] {
     let unit = |x: f64| m::min(1.0, m::max(0.0, x));
     [
@@ -166,7 +166,7 @@ fn gun_stats(def: &crate::weapons::WeaponDef) -> [f64; 4] {
     ]
 }
 
-/// How loud a row's thing is when used: 0 none, 1 nearby, 2 the floor hears it, 3 a blast. A count of none still has its step.   (kitNoise.ts kitNoise)
+/// How loud a row's thing is when used: 0 none, 1 nearby, 2 the floor hears it, 3 a blast. A count of none still has its step.
 fn kit_noise(g: &Game, field: KitField, m: &MemberKit) -> f64 {
     let gun = |w: crate::weapons::WeaponId| if g.m.weapons.weapons.get(w).is_some_and(|d| d.report.loud) { 2.0 } else { 1.0 };
     match field {
@@ -184,7 +184,7 @@ fn kit_noise(g: &Game, field: KitField, m: &MemberKit) -> f64 {
     }
 }
 
-/// The value means he carries none of it.   (kitIcons.ts kitIcon's `none`)
+/// The value means he carries none of it.
 fn carries_none(g: &Game, field: KitField, v: &KitValue) -> bool {
     if gun_slot(field).is_some() { return crate::gunslots::pick_icon(g, &value_text(v)).is_none(); }
     match v {
@@ -194,14 +194,14 @@ fn carries_none(g: &Game, field: KitField, v: &KitValue) -> bool {
     }
 }
 
-/// A priced row's cost in the card's words: what a counted row fills and its rate, or the rate alone.   (kitCard.ts costWords)
+/// A priced row's cost in the card's words: what a counted row fills and its rate, or the rate alone.
 fn cost_words(c: &KitRowCost) -> String {
     if !(c.pouches > 0.0 && c.rate.ends_with("each")) { return c.rate.clone(); }
     if c.pouches == 1.0 { return format!("1 pouch · {}", c.rate); }
     format!("{} pouches · {}", js::num_str(c.pouches), c.rate)
 }
 
-/// The rows the card has as it stands, in the order they are drawn: a gun, then what hangs under it.   (kitCard.ts seq)
+/// The rows the card has as it stands, in the order they are drawn: a gun, then what hangs under it.
 fn seq(g: &Game, rows: &[KitRow], m: &MemberKit) -> Vec<KitRow> {
     let mut out = Vec::new();
     for r in rows {
@@ -213,10 +213,10 @@ fn seq(g: &Game, rows: &[KitRow], m: &MemberKit) -> Vec<KitRow> {
     out
 }
 
-/// The kind of gun a pick is drawn as (empty: no gun).   (gunslots.ts pickIcon)
+/// The kind of gun a pick is drawn as (empty: no gun).
 pub(super) fn pick_kind(g: &Game, id: &str) -> String { crate::gunslots::pick_icon(g, id).map_or(String::new(), |k| String::from(k.as_str())) }
 
-/// A gun's picks: every value of its row, tried on a copy of the card.   (kitCard.ts drawDense)
+/// A gun's picks: every value of its row, tried on a copy of the card.
 fn card_picks(g: &mut Game, i: f64, r: &KitRow, m: &MemberKit, now: &KitValue, slot: GunSlot) -> Vec<CardPick> {
     let mut out = Vec::new();
     for v in &r.values {
@@ -291,7 +291,7 @@ fn card_row(g: &mut Game, i: f64, r: &KitRow, m: &mut MemberKit, issued: &mut Me
     }
 }
 
-/// A man's card as it is shown; `clip` is the copied card. Changes nothing.   (kitCard.ts draw, drawDense)
+/// A man's card as it is shown; `clip` is the copied card. Changes nothing.
 pub fn card_view(g: &mut Game, i: f64, clip: Option<&MemberKit>, on: &CardFor) -> CardView {
     let mut m = kit_shown(g, i);
     let mut issued = kit_issued_shown(g, i, None);
@@ -337,7 +337,7 @@ pub fn field_of(word: &str) -> Option<KitField> {
     [Smoke, Light, Wand, Bangs, Frags, Shells, Charges, Cams, Walls, Suit, Bare, Big, Primary, Secondary, SideCan, Rings, Weapon, Suppressed, Nvg, Trim, Cans].into_iter().find(|f| f.as_str() == word)
 }
 
-/// One of a row's values put on the card at once, fitted and refused as a paste is; one that is on already is taken and changes nothing.   (kitCard.ts choose)
+/// One of a row's values put on the card at once, fitted and refused as a paste is; one that is on already is taken and changes nothing.
 pub fn kit_choose(g: &mut Game, i: f64, field: &str, value: &str) -> (bool, String) {
     let Some(r) = kit_rows(g, i).into_iter().find(|r| r.field.as_str() == field) else { return (false, format!("no row {field}")) };
     let Some(v) = r.values.iter().find(|v| value_text(v) == value).cloned() else { return (false, format!("{field} has no {value}")) };
@@ -350,7 +350,7 @@ pub fn kit_choose(g: &mut Game, i: f64, field: &str, value: &str) -> (bool, Stri
     (false, format!("{}: {}", row_word(g, i, &r, &v), p.why))
 }
 
-/// Your four counts as issued the other way the rule stands are as issued.   (kit.ts kitLoad, the COUNTS0 line)
+/// Your four counts as issued the other way the rule stands are as issued.
 pub fn kit_built_home(g: &mut Game) {
     let now = issued_card(g, 0.0);
     let other = if g.k.slots.on {
@@ -365,7 +365,7 @@ pub fn kit_built_home(g: &mut Game) {
     (m.smoke, m.bangs, m.frags, m.shells) = (now.smoke, now.bangs, now.frags, now.shells);
 }
 
-/// What a kept card had to leave behind to fit, in a line for his card; `gunless`: yours, with no long gun. Worded as issued where it is shown.   (kit.ts kitLoad)
+/// What a kept card had to leave behind to fit, in a line for his card; `gunless`: yours, with no long gun. Worded as issued where it is shown.
 pub fn kit_left_words(g: &Game, left: &[String], gunless: bool) -> String {
     let shells = slot_word().get(String::from("shells")).cloned().expect("the launcher's rounds have a word");
     if gunless && left.len() == 1 && left[0].contains(&shells) { return format!("No FN2000 in your saved kit: {} left behind.", left[0]); }

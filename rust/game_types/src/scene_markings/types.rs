@@ -71,27 +71,19 @@ pub struct MarkWorldRect {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct SceneMarkingsMod {
-    /// (src/scene/markings.ts:369 AREA_LIT_MARKS)
     pub area_lit_marks: JsSet<u32>,
 }
 
-/// (src/scene/markings.ts:21 MARKING_TEXEL)
 pub const MARKING_TEXEL: f64 = 0.025;
 
-/// (src/scene/markings.ts:23 MAX_CELLS_W)
 pub const MAX_CELLS_W: f64 = 32.0;
 
-/// (src/scene/markings.ts:23 MAX_CELLS_H)
 pub const MAX_CELLS_H: f64 = 32.0;
 
-/// (src/scene/markings.ts:26 MARK_TABLE_ROWS)
 pub const MARK_TABLE_ROWS: f64 = 6144.0;
 
-/// (src/scene/markings.ts:33 RES_K: a table nothing writes)
 pub fn res_k() -> JsMap<String, f64> { { let mut t = JsMap::new(); t.set(String::from("fine"), 0.5); t.set(String::from("base"), 1.0); t.set(String::from("coarse"), 2.0); t } }
 
-/// (src/scene/markings.ts:50 CELL_CHARS)
 pub const CELL_CHARS: &str = ".abc";
 
-/// (src/scene/markings.ts:53 FACE_AXES: a table nothing writes)
 pub fn face_axes() -> Vec<crate::scene_markings::FACEAXESItem> { alloc::vec![crate::scene_markings::FACEAXESItem { u: [0.0, 0.0, -1.0], v: [0.0, 1.0, 0.0], n: [1.0, 0.0, 0.0] }, crate::scene_markings::FACEAXESItem { u: [0.0, 0.0, 1.0], v: [0.0, 1.0, 0.0], n: [-1.0, 0.0, 0.0] }, crate::scene_markings::FACEAXESItem { u: [1.0, 0.0, 0.0], v: [0.0, 0.0, -1.0], n: [0.0, 1.0, 0.0] }, crate::scene_markings::FACEAXESItem { u: [1.0, 0.0, 0.0], v: [0.0, 0.0, 1.0], n: [0.0, -1.0, 0.0] }, crate::scene_markings::FACEAXESItem { u: [1.0, 0.0, 0.0], v: [0.0, 1.0, 0.0], n: [0.0, 0.0, 1.0] }, crate::scene_markings::FACEAXESItem { u: [-1.0, 0.0, 0.0], v: [0.0, 1.0, 0.0], n: [0.0, 0.0, -1.0] }] }

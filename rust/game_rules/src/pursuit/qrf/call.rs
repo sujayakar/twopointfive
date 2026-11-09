@@ -1,4 +1,3 @@
-//! src/game/qrf.ts lines 1 to 426
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -34,28 +33,28 @@ fn word_key(who: crate::picture::Who) -> crate::qrf::QrfWordKey {
 
 // ---------------------------------------------------------------- the level's own team
 
-/// This level's block, if it has one.   (qrf.ts responseOf)
+/// This level's block, if it has one.
 pub(super) fn response_of(g: &crate::game::Game) -> Option<crate::scene_scenarios::ResponseData> {
     g.level.scenarios.as_ref().and_then(|s| s.response.clone())
 }
 
-/// A squad's room clear under way on a level whose block carries `raid`.   (qrf.ts raid)
+/// A squad's room clear under way on a level whose block carries `raid`.
 pub(super) fn raid(g: &crate::game::Game) -> bool {
     if !g.night_breach.active || g.rescue.active { return false; }
     response_of(g).map_or(false, |r| r.raid.is_some())
 }
 
-/// The raid is over: the room clear ended.   (qrf.ts raidOver)
+/// The raid is over: the room clear ended.
 pub(super) fn raid_over(g: &crate::game::Game) -> bool {
     g.room_clear.end.is_some()
 }
 
-/// The side the team stands on: the shift's, or in a raid the defenders'.   (qrf.ts sideOfTeam)
+/// The side the team stands on: the shift's, or in a raid the defenders'.
 pub(super) fn side_of_team(g: &crate::game::Game) -> crate::qrf::SideOfTeam {
     if raid(g) { crate::qrf::SideOfTeam::Hostile } else { crate::qrf::SideOfTeam::Guard }
 }
 
-/// A raid: the men who can call it in.   (qrf.ts callers)
+/// A raid: the men who can call it in.
 pub(super) fn callers(g: &crate::game::Game) -> Vec<GuardId> {
     let id = response_of(g).and_then(|r| r.raid).and_then(|a| a.room).filter(|s| !s.is_empty());
     let of: Vec<GuardId> = match &id {
@@ -74,7 +73,7 @@ pub(super) fn callers(g: &crate::game::Game) -> Vec<GuardId> {
     out
 }
 
-/// A raid: the caller who heard gunfire and has lived `callSecs` since.   (qrf.ts raidVoice)
+/// A raid: the caller who heard gunfire and has lived `callSecs` since.
 pub(super) fn raid_voice(g: &crate::game::Game) -> Option<GuardId> {
     for x in callers(g) {
         let heard = g.qrf.heard_at.get(x).copied().unwrap_or(f64::INFINITY);
@@ -83,19 +82,19 @@ pub(super) fn raid_voice(g: &crate::game::Game) -> Option<GuardId> {
     None
 }
 
-/// A raid: is the team up, a man of it living?   (qrf.ts responseUp)
+/// A raid: is the team up, a man of it living?
 pub fn response_up(g: &crate::game::Game) -> bool {
     if !raid(g) { return false; }
     if g.qrf.state != crate::qrf::QrfState::Arriving && g.qrf.state != crate::qrf::QrfState::Deployed { return false; }
     g.qrf.men.iter().any(|&m| g.gd[m].state != crate::game::GuardState::Dead && g.guards.contains(&m))
 }
 
-/// The team's name on the net.   (qrf.ts responseTeam)
+/// The team's name on the net.
 pub fn response_team(g: &crate::game::Game) -> String {
     response_of(g).map_or_else(|| String::from("the response team"), |r| r.team)
 }
 
-/// The dealt way of the level's block, as the rest reads it; kept until the way changes.   (qrf.ts marksOf)
+/// The dealt way of the level's block, as the rest reads it; kept until the way changes.
 pub(super) fn marks_of(g: &mut crate::game::Game) -> Option<crate::qrf::Marks> {
     if g.qrf.marks.is_some() && g.qrf.marks_on && g.qrf.marks_way == g.qrf.way { return g.qrf.marks.clone(); }
     let way = g.qrf.way;
@@ -124,7 +123,7 @@ pub(super) fn marks_of(g: &mut crate::game::Game) -> Option<crate::qrf::Marks> {
     made
 }
 
-/// How many more men the floor can be given.   (qrf.ts roomFor)
+/// How many more men the floor can be given.
 pub(super) fn room_for(g: &crate::game::Game) -> f64 {
     let n = (crate::guards::MAX_SKINNED - g.civilians.len() as f64) - crate::seats::seat_count(g) - g.guards.len() as f64;
     if raid(g) {
@@ -134,12 +133,12 @@ pub(super) fn room_for(g: &crate::game::Game) -> f64 {
     }
 }
 
-/// The spawn's character budget.   (qrf.ts budgetOf)
+/// The spawn's character budget.
 pub(super) fn budget_of(g: &crate::game::Game) -> crate::qrf::BudgetOf {
     crate::qrf::BudgetOf::Arm0(crate::qrf::BudgetOfArm0 { budget: crate::guards::MAX_SKINNED - g.civilians.len() as f64 })
 }
 
-/// The most men this level's response may ever have on the floor.   (qrf.ts mostMen)
+/// The most men this level's response may ever have on the floor.
 pub(super) fn most_men(g: &crate::game::Game) -> f64 {
     match response_of(g).and_then(|r| r.men) {
         Some(men) => men[1],
@@ -149,7 +148,7 @@ pub(super) fn most_men(g: &crate::game::Game) -> f64 {
 
 // ---------------------------------------------------------------- class Qrf
 
-/// Does this man belong to the response (element or perimeter)?   (qrf.ts Qrf.owns)
+/// Does this man belong to the response (element or perimeter)?
 pub fn qrf_owns(g: &crate::game::Game, gd: GuardId) -> bool {
     g.qrf.men.contains(&gd) || g.qrf.perim.as_ref().map_or(false, |p| p.men.iter().any(|m| m.gd == gd))
 }
@@ -158,24 +157,24 @@ pub fn qrf_owns(g: &crate::game::Game, gd: GuardId) -> bool {
 
 // ---------------------------------------------------------------- small shared helpers
 
-/// Distance on the floor.   (qrf.ts flat)
+/// Distance on the floor.
 pub(super) fn flat(a: V3, b: V3) -> f64 {
     m::hyp2(a[0] - b[0], a[2] - b[2])
 }
 
-/// A row of the response's log, which keeps its last 150 to 200.   (qrf.ts note)
+/// A row of the response's log, which keeps its last 150 to 200.
 pub(super) fn note(g: &mut crate::game::Game, what: &str) {
     g.qrf.log.push(crate::qrf::QrfLogItem { what: String::from(what) });
     if g.qrf.log.len() > 200 { g.qrf.log.drain(0..50); }
 }
 
-/// Control's voice: a line on the net with nobody in the building saying it.   (qrf.ts control)
+/// Control's voice: a line on the net with nobody in the building saying it.
 pub(super) fn control(g: &mut crate::game::Game, text: &str) {
-    crate::game::game_msg(g, &alloc::format!("radio: CONTROL — {}", text));
+    crate::cues::cues_radio(g, &alloc::format!("CONTROL — {}", text));
     crate::audio_iface::game_audio_like_play(g, "radio", None, Some(0.55), None);
 }
 
-/// Control's voice, with a row in the run's timeline.   (qrf.ts controlRow)
+/// Control's voice, with a row in the run's timeline.
 pub(super) fn control_row(g: &mut crate::game::Game, text: &str) {
     control(g, text);
     let mut data: JsMap<String, Option<crate::chronicle::ChronicleDataValue>> = JsMap::new();
@@ -184,7 +183,7 @@ pub(super) fn control_row(g: &mut crate::game::Game, text: &str) {
     crate::chronicle::chronicle(g, crate::chronicle::ChronKind::Radio, Some(&data), None);
 }
 
-/// A plan's door as the element says it.   (qrf.ts doorSaid)
+/// A plan's door as the element says it.
 pub(super) fn door_said(g: &crate::game::Game, name: &str) -> String {
     let d = crate::doors::doors_by_name(g, name);
     let written = match d { Some(d) => crate::doornames::door_written_name(g, d), None => None };
@@ -195,7 +194,7 @@ pub(super) fn door_said(g: &crate::game::Game, name: &str) -> String {
     }
 }
 
-/// A response man's radio line: his bubble, and the net's log line under his callsign.   (qrf.ts radio)
+/// A response man's radio line: his bubble, and the strip's row under his callsign.
 pub(super) fn radio(g: &mut crate::game::Game, gd: Option<GuardId>, text: &str) {
     let x = match gd {
         Some(x) if g.gd[x].state != crate::game::GuardState::Dead => x,
@@ -204,15 +203,15 @@ pub(super) fn radio(g: &mut crate::game::Game, gd: Option<GuardId>, text: &str) 
     let dur = crate::guards::bubble_secs(text);
     g.gd[x].bubble = Some(crate::game::GuardBubble { text: String::from(text), t: g.time, dur, radio: true });
     crate::handwork::radio_hand(g, x, dur);
-    let line = alloc::format!("radio: {} — {}", g.gd[x].callsign, text);
-    crate::game::game_msg(g, &line);
+    let line = alloc::format!("{} — {}", g.gd[x].callsign, text);
+    crate::cues::cues_radio(g, &line);
     let c = g.gd[x].ch;
     let at = g.ch[c].bones.get(crate::character::Bone::Head).copied().unwrap_or(g.ch[c].pos);
     crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.7), None);
     crate::chronicle::chron_radio(g, x, text);
 }
 
-/// The shift's man best placed to call it in: living, not held, staff, calm for choice.   (qrf.ts staffVoice)
+/// The shift's man best placed to call it in: living, not held, staff, calm for choice.
 fn staff_voice(g: &crate::game::Game) -> Option<GuardId> {
     let mut best = None;
     let mut br = -1;
@@ -225,7 +224,7 @@ fn staff_voice(g: &crate::game::Game) -> Option<GuardId> {
     best
 }
 
-/// The shift's dead who have been found.   (qrf.ts bodiesFound)
+/// The shift's dead who have been found.
 pub(super) fn bodies_found(g: &crate::game::Game) -> f64 {
     let mut n = 0.0;
     for &x in &g.guards {
@@ -235,7 +234,7 @@ pub(super) fn bodies_found(g: &crate::game::Game) -> f64 {
     n
 }
 
-/// The run is Sam's to answer for.   (qrf.ts live)
+/// The run is Sam's to answer for.
 pub(super) fn live(g: &mut crate::game::Game) -> bool {
     if raid(g) {
         return g.ai_enabled && !crate::seats::all_down(g) && has_response(g);
@@ -243,7 +242,7 @@ pub(super) fn live(g: &mut crate::game::Game) -> bool {
     g.ai_enabled && !crate::seats::all_down(g) && !g.night_breach.active && !g.rescue.active && has_response(g)
 }
 
-/// This level has a response team.   (qrf.ts hasResponse)
+/// This level has a response team.
 pub(super) fn has_response(g: &crate::game::Game) -> bool {
     let r = match response_of(g) { Some(r) => r, None => return false };
     if r.raid.is_some() && !raid(g) { return false; }
@@ -256,24 +255,24 @@ pub(super) fn has_response(g: &crate::game::Game) -> bool {
     false
 }
 
-/// For the panel's buttons: is there a way in to stand a team on?   (qrf.ts responseHere)
+/// For the panel's buttons: is there a way in to stand a team on?
 pub(super) fn response_here(g: &crate::game::Game) -> bool {
     has_response(g)
 }
 
-/// The element's living men on the floor.   (qrf.ts alive)
+/// The element's living men on the floor.
 pub(super) fn alive(g: &crate::game::Game) -> Vec<GuardId> {
     g.qrf.men.iter().copied().filter(|&m| g.gd[m].state != crate::game::GuardState::Dead && g.guards.contains(&m)).collect()
 }
 
-/// Is this man on the defenders' net?   (qrf.ts onTheirNet)
+/// Is this man on the defenders' net?
 fn on_their_net(g: &crate::game::Game, x: GuardId) -> bool {
     let side = team_of(side_of_team(g));
     if g.gd[x].team != side || g.gd[x].civ.is_some() || g.gd[x].state == crate::game::GuardState::Dead || g.gd[x].held.is_some() || crate::owner::has(g, x, crate::owner::by::RUNNER) { return false; }
     !raid(g) || g.qrf.men.contains(&x) || callers(g).contains(&x)
 }
 
-/// Control keeps what is said on the net, per enemy, the freshest.   (qrf.ts readNet)
+/// Control keeps what is said on the net, per enemy, the freshest.
 pub(super) fn read_net(g: &mut crate::game::Game) {
     if g.time - g.qrf.word_t < g.k.response.word_secs { return; }
     g.qrf.word_t = g.time;
@@ -296,7 +295,7 @@ pub(super) fn read_net(g: &mut crate::game::Game) {
     }
 }
 
-/// The freshest word on the net, and how many enemies it has heard of.   (qrf.ts netWord)
+/// The freshest word on the net, and how many enemies it has heard of.
 fn net_word(g: &crate::game::Game) -> Option<crate::qrf::NetWord> {
     let mut best: Option<(V3, f64)> = None;
     for w in g.qrf.word.values() {
@@ -306,7 +305,7 @@ fn net_word(g: &crate::game::Game) -> Option<crate::qrf::NetWord> {
     best.map(|(pos, t)| crate::qrf::NetWord { pos, t, n })
 }
 
-/// Where the team believes he is.   (qrf.ts fixOf)
+/// Where the team believes he is.
 pub(super) fn fix_of(g: &crate::game::Game) -> Option<crate::qrf::FixOf> {
     let w = net_word(g).map(|f| crate::qrf::FixOf { pos: f.pos, t: f.t });
     let a = if g.alarm.placed { Some(crate::qrf::FixOf { pos: g.alarm.pos, t: g.alarm.raised_at }) } else { None };
@@ -317,7 +316,7 @@ pub(super) fn fix_of(g: &crate::game::Game) -> Option<crate::qrf::FixOf> {
     }
 }
 
-/// The brief as control gives it with the ETA.   (qrf.ts brief)
+/// The brief as control gives it with the ETA.
 pub(super) fn brief(g: &crate::game::Game) -> String {
     let w = net_word(g);
     let f = match fix_of(g) { Some(f) => f, None => return String::from("no word on where") };
@@ -341,7 +340,7 @@ fn all_men(g: &Game) -> Vec<GuardId> {
     men
 }
 
-/// The response back to a fresh one; the men handed back to their ordinary heads.   (qrf.ts resetQrf)
+/// The response back to a fresh one; the men handed back to their ordinary heads.
 pub fn reset_qrf(g: &mut crate::game::Game) {
     drop_drill(g);
     for m in all_men(g) {
@@ -352,7 +351,7 @@ pub fn reset_qrf(g: &mut crate::game::Game) {
     g.qrf = crate::qrf::Qrf::blank();
 }
 
-/// Ask for the response team; refused on the radio once one has come. Returns whether it was requested now.   (qrf.ts requestQrf)
+/// Ask for the response team; refused on the radio once one has come. Returns whether it was requested now.
 pub fn request_qrf(g: &mut crate::game::Game, reason: crate::qrf::QrfReason) -> bool {
     let m0 = marks_of(g);
     if g.qrf.state != crate::qrf::QrfState::Idle {
@@ -425,7 +424,7 @@ pub fn request_qrf(g: &mut crate::game::Game, reason: crate::qrf::QrfReason) -> 
     true
 }
 
-/// Staging: no enemy of theirs stands within `clearM` of this mark.   (qrf.ts clearOfFoes)
+/// Staging: no enemy of theirs stands within `clearM` of this mark.
 pub fn clear_of_foes(g: &crate::game::Game, p: V3) -> bool {
     let clear_m = g.k.response.clear_m;
     if crate::seats::men_left(g).into_iter().any(|pl| flat(g.ch[g.pl[pl].ch].pos, p) < clear_m) { return false; }
@@ -435,7 +434,7 @@ pub fn clear_of_foes(g: &crate::game::Game, p: V3) -> bool {
     true
 }
 
-/// The radio's words for this level's team, for the lines other modules say of it.   (qrf.ts responseWords)
+/// The radio's words for this level's team, for the lines other modules say of it.
 pub fn response_words(g: &crate::game::Game) -> Option<crate::qrf::ResponseWords> {
     response_of(g).map(|r| crate::qrf::ResponseWords { site: r.site, team: r.team })
 }

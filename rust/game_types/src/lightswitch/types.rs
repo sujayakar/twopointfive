@@ -85,7 +85,6 @@ pub enum SwitchRowsRowOverKind {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct LightswitchMod {
-    /// (src/game/lightswitch.ts:90 states)
     pub states: Option<crate::lightswitch::St>,
 }
 
@@ -99,17 +98,12 @@ pub struct LightswitchStats {
     pub gone: i32,
 }
 
-/// (src/game/lightswitch.ts:121 WALL_TOP)
 pub const WALL_TOP: f64 = 2.2;
 
-/// (src/game/lightswitch.ts:303 PLATE: a table nothing writes)
 pub fn plate() -> V3 { [0.62, 0.6, 0.55] }
 
-/// (src/game/lightswitch.ts:303 ROCKER: a table nothing writes)
 pub fn rocker() -> V3 { [0.74, 0.72, 0.66] }
 
-/// (src/game/lightswitch.ts:303 GLOW: a table nothing writes)
 pub fn glow() -> V3 { [1.6, 0.8, 0.16] }
 
-/// (src/game/lightswitch.ts:304 SW_KEY)
 pub const SW_KEY: f64 = 4194304.0;

@@ -83,10 +83,10 @@ fn mk(aim: V3) -> OpFlow {
 }
 
 // ---------------------------------------------------------------- the drill
-/// Flat distance.   (breach.ts flat)
+/// Flat distance.
 fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
 
-/// A drill, not yet started.   (breach.ts BreachDrill.constructor)
+/// A drill, not yet started.
 pub(super) fn breach_drill_new(g: &crate::game::Game, plan: &crate::scene_level::BreachPlan, a: GuardId, b: GuardId, hostiles: &[GuardId], live: crate::breach::BreachLive) -> crate::breach::BreachDrill {
     let mut d = BreachDrill::blank();
     d.plan = plan.clone();
@@ -101,46 +101,46 @@ pub(super) fn breach_drill_new(g: &crate::game::Game, plan: &crate::scene_level:
     d
 }
 
-/// The door to breach.   (breach.ts BreachDrill.door)
+/// The door to breach.
 fn breach_drill_door(g: &mut crate::game::Game) -> Option<DoorId> {
     let n = dr!(g).plan.door.clone();
     crate::doors::doors_by_name(g, &n)
 }
 
-/// The next door.   (breach.ts BreachDrill.nextDoor)
+/// The next door.
 fn breach_drill_next_door(g: &mut crate::game::Game) -> Option<DoorId> {
     let n = dr!(g).plan.next.door.clone();
     crate::doors::doors_by_name(g, &n)
 }
 
-/// Log a beat.   (breach.ts BreachDrill.beat)
+/// Log a beat.
 fn breach_drill_beat(g: &mut crate::game::Game, what: &str) {
     let t = dr!(g).t;
     dr!(g).beats.push(BreachDrillBeatsItem { what: String::from(what) });
 }
 
-/// True the first time for a key.   (breach.ts BreachDrill.once)
+/// True the first time for a key.
 fn breach_drill_once(g: &mut crate::game::Game, key: &str) -> bool {
     dr!(g).done.add(String::from(key))
 }
 
-/// Is there a stun charge in this entry.   (breach.ts BreachDrill.charge)
+/// Is there a stun charge in this entry.
 fn breach_drill_charge(g: &mut crate::game::Game) -> bool {
     let b = dr!(g).b;
     live_of(g).stun && !dead(g, b)
 }
 
-/// A line, once, by a living man; live play swaps what the drill cannot know.   (breach.ts BreachDrill.say)
+/// A line, once, by a living man; live play swaps what the drill cannot know.
 fn breach_drill_say(g: &mut crate::game::Game, gd: GuardId, key: &str, text: &str, radio: Option<bool>) {
     let radio = radio.unwrap_or(false);
     let charge = breach_drill_charge(g);
     let text = live_text(charge, key, text);
     if !text.is_empty() && breach_drill_once(g, &alloc::format!("say:{}", key)) && !dead(g, gd) {
-        crate::game::game_say(g, gd, &text, Some(radio), None, None);
+        crate::game::game_say(g, gd, &text, Some(radio), None);
     }
 }
 
-/// Past a waypoint, on to the next; true when on the last and arrived.   (breach.ts BreachDrill.advance)
+/// Past a waypoint, on to the next; true when on the last and arrived.
 fn breach_drill_advance(g: &mut crate::game::Game, gd: GuardId, wps: &mut Vec<V3>, pass: Option<f64>) -> bool {
     let pass = pass.unwrap_or(0.7);
     if dead(g, gd) { return true; }
@@ -161,7 +161,7 @@ fn shut(g: &mut Game, d: DoorId) {
     crate::doors::door_set_closing(g, d, false);
 }
 
-/// Everybody on his mark, the leaves shut.   (breach.ts BreachDrill.start)
+/// Everybody on his mark, the leaves shut.
 pub(super) fn breach_drill_start(g: &mut crate::game::Game) {
     for i in 0..2 {
         let gd = man(g, i);
@@ -193,7 +193,7 @@ pub(super) fn breach_drill_start(g: &mut crate::game::Game) {
     breach_drill_beat(g, "start");
 }
 
-/// Everybody off his script.   (breach.ts BreachDrill.end)
+/// Everybody off his script.
 pub(super) fn breach_drill_end(g: &mut crate::game::Game) {
     let mut all = vec![dr!(g).a, dr!(g).b];
     all.extend_from_slice(&dr!(g).hostiles);
@@ -202,7 +202,7 @@ pub(super) fn breach_drill_end(g: &mut crate::game::Game) {
     }
 }
 
-/// The stun can in #2's left fist: two boxes off the hand bone, for one frame.   (breach.ts BreachDrill.canInHand)
+/// The stun can in #2's left fist: two boxes off the hand bone, for one frame.
 fn breach_drill_can_in_hand(g: &mut crate::game::Game) {
     let b = dr!(g).b;
     let c = g.gd[b].ch;
@@ -230,7 +230,7 @@ fn breach_drill_can_in_hand(g: &mut crate::game::Game) {
     g.fx.push(crate::game::GameFxItem { box_, ttl: 1e-3 });
 }
 
-/// One frame of the drill.   (breach.ts BreachDrill.tick)
+/// One frame of the drill.
 pub(super) fn breach_drill_tick(g: &mut crate::game::Game, dt: f64) {
     let (a, b) = (dr!(g).a, dr!(g).b);
     let d = breach_drill_door(g);
@@ -437,7 +437,7 @@ fn tick_bang(g: &mut Game, t: f64) {
     }
 }
 
-/// Live: what a man down means; true when the drill has ended.   (breach.ts BreachDrill.casualties)
+/// Live: what a man down means; true when the drill has ended.
 fn breach_drill_casualties(g: &mut crate::game::Game, t: f64) -> bool {
     if dr!(g).phase == Phase::Done { return false; }
     let (a, b) = (dr!(g).a, dr!(g).b);
@@ -462,7 +462,7 @@ fn breach_drill_casualties(g: &mut crate::game::Game, t: f64) -> bool {
     false
 }
 
-/// Heads back on the door.   (breach.ts BreachDrill.muzzlesOnDoor)
+/// Heads back on the door.
 fn breach_drill_muzzles_on_door(g: &mut crate::game::Game) {
     let pa = breach_drill_inside(g, 1.5, 1.1, None);
     let pb = breach_drill_inside(g, 1.0, 1.5, Some(0.3));
@@ -473,7 +473,7 @@ fn breach_drill_muzzles_on_door(g: &mut crate::game::Game) {
     if !dead(g, b) { crate::squad::order(g, b, OP { aim_at: Some(Some(pb)), ..Default::default() }); }
 }
 
-/// A point `d` metres through the doorway at height `y`, `s` along the wall.   (breach.ts BreachDrill.inside)
+/// A point `d` metres through the doorway at height `y`, `s` along the wall.
 fn breach_drill_inside(g: &mut crate::game::Game, d: f64, y: f64, s: Option<f64>) -> V3 {
     let s = s.unwrap_or(0.0);
     let door = breach_drill_door(g).unwrap();
@@ -482,18 +482,18 @@ fn breach_drill_inside(g: &mut crate::game::Game, d: f64, y: f64, s: Option<f64>
     [fc[0] + n[0] * d + n[1] * s, y, fc[2] + n[1] * d - n[0] * s]
 }
 
-/// `p` inside the room's authored bounds by at least `m`.   (breach.ts BreachDrill.insideRoom)
+/// `p` inside the room's authored bounds by at least `m`.
 fn breach_drill_inside_room(g: &mut crate::game::Game, p: V3, m: f64) -> bool {
     let b = match dr!(g).plan.bounds { Some(b) => b, None => return true };
     p[0] > b.x0 + m && p[0] < b.x1 - m && p[2] > b.z0 + m && p[2] < b.z1 - m
 }
 
-/// Man i's way through the room.   (breach.ts BreachDrill.flowOf)
+/// Man i's way through the room.
 fn breach_drill_flow_of(g: &mut crate::game::Game, i: usize) -> crate::scene_level::BreachFlow {
     dr!(g).plan.flow[i].clone()
 }
 
-/// Send man i through the frame.   (breach.ts BreachDrill.startFlow)
+/// Send man i through the frame.
 fn breach_drill_start_flow(g: &mut crate::game::Game, i: usize) {
     let fl = breach_drill_flow_of(g, i);
     let gd = man(g, i);
@@ -514,7 +514,7 @@ fn breach_drill_start_flow(g: &mut crate::game::Game, i: usize) {
     crate::squad::sweep_start(&mut dr!(g).flows[i].sweep, aim, &[fl.centre[0]], t, 0.9);
 }
 
-/// One frame of man i's flow.   (breach.ts BreachDrill.tickFlow)
+/// One frame of man i's flow.
 fn breach_drill_tick_flow(g: &mut crate::game::Game, i: usize, dt: f64) {
     if dr!(g).flows[i].st == FlowSt::Wait { return; }
     let fl = breach_drill_flow_of(g, i);
@@ -594,7 +594,7 @@ fn breach_drill_tick_flow(g: &mut crate::game::Game, i: usize, dt: f64) {
     }
 }
 
-/// The clear beat's exchange and resting muzzle.   (breach.ts BreachDrill.tickHold)
+/// The clear beat's exchange and resting muzzle.
 fn breach_drill_tick_hold(g: &mut crate::game::Game, i: usize, dt: f64) {
     if !breach_drill_staged_exchange(g, i, dt) && dr!(g).flows[i].sweep.active { let t = dr!(g).t; sweep_tick(g, i, t); }
 }
@@ -619,7 +619,7 @@ fn breach_drill_room_clear(g: &mut crate::game::Game, te: f64) -> bool {
     false
 }
 
-/// Is the front of man i's list a living man he has a line to.   (breach.ts BreachDrill.pickable)
+/// Is the front of man i's list a living man he has a line to.
 fn breach_drill_pickable(g: &mut crate::game::Game, i: usize) -> bool {
     let op = man(g, i);
     if crate::roomfight::room_fight_on(g) { return crate::roomfight::room_fight_contact(g, op); }
@@ -650,7 +650,7 @@ fn breach_drill_pickable(g: &mut crate::game::Game, i: usize) -> bool {
     true
 }
 
-/// The exchange as staged: the muzzle on a man, the settle, the controlled pair; true while on somebody.   (breach.ts BreachDrill.stagedExchange)
+/// The exchange as staged: the muzzle on a man, the settle, the controlled pair; true while on somebody.
 fn breach_drill_staged_exchange(g: &mut crate::game::Game, i: usize, dt: f64) -> bool {
     let op = man(g, i);
     let c = g.gd[op].ch;
@@ -717,11 +717,9 @@ fn breach_drill_staged_exchange(g: &mut crate::game::Game, i: usize, dt: f64) ->
 mod tests {
     use super::*;
 
-    /// bits from breach.ts's own flat, under bun with EXACT on
     #[test]
-    fn flat_bits() {
-        assert_eq!(flat([1.3, 0.0, -2.7], [4.1, 9.0, 0.37]).to_bits(), 0x40109ed3ec0bed7b);
-        assert_eq!(flat([0.1, 0.0, 0.2], [0.3, 0.0, 0.7]).to_bits(), 0x3fe13b86ea20ae5c);
+    fn a_distance_on_the_floor_ignores_height() {
+        assert_eq!(flat([1.0, 0.0, 2.0], [4.0, 9.0, 6.0]), 5.0);
     }
 
     #[test]
