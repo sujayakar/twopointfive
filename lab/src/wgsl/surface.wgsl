@@ -193,7 +193,7 @@ fn aimSeen(i: u32, x: vec3f, u: vec2f) -> vec4f {
 /** the light a lamp lands on a surface at x facing n (n = 0: a leaf, either side) with nothing in the way: exact for a rectangle (its edges' integral) */
 fn lampE(i: u32, x: vec3f, n: vec3f) -> vec3f {
   let l = &lamps[i]; if ((*l).on <= 0.0) { return vec3f(0.0); } let d = (*l).at - x; let dist = length(d); if (dist > (*l).reach) { return vec3f(0.0); } let leaf = all(n == vec3f(0.0));
-  let win = sat(1.0 - pow(dist / (*l).reach, 4.0));
+  let win = sat(1.0 - pow(dist / (*l).reach, 12.0));
   if ((*l).kind != 0u || leaf) { let a = aimLamp(i, x, vec2f(0.5)); let c = dot(n, a.dir); return a.E * select(max(c, 0.0), 0.5, leaf) * win; }
   let face = dot(d, (*l).n); if (face >= 0.0) { return vec3f(0.0); }
   if (dist * dist > 14.0 * (*l).area) { return (*l).radiance * ((*l).on * max(dot(n, d), 0.0) * -face * (*l).area * win / (dist * dist * dist * dist)); }     // (far off, a rectangle is a point: to a hundredth)
@@ -218,7 +218,7 @@ fn lampCoat(i: u32, s: Surf, V: vec3f) -> vec3f {
     if (dot(d0, (*l).n) >= 0.0) { return vec3f(0.0); } let nv = clamp(dot(s.n, V), 1e-3, 1.0); let x = sqrt(1.0 - nv) * 15.0; let y = clamp(s.rough, 0.06, 1.0) * 15.0; let x0 = min(u32(x), 14u); let y0 = min(u32(y), 14u); let fx = x - f32(x0); let fy = y - f32(y0); let at = u32(frame.misc2.y) + 2048u + 2u * (y0 * 16u + x0);
     let m = mix(mix(extra[at], extra[at + 2u], fx), mix(extra[at + 32u], extra[at + 34u], fx), fy); let g = mix(mix(extra[at + 1u], extra[at + 3u], fx), mix(extra[at + 33u], extra[at + 35u], fx), fy).xy;
     var t1 = V - s.n * dot(s.n, V); let tl = length(t1); if (tl < 1e-3) { t1 = basis(s.n)[0]; } else { t1 /= tl; } let t2 = cross(s.n, t1); var q: array<vec3f, 4>; for (var k = 0u; k < 4u; k++) { let c = d0 + (*l).u * select(-1.0, 1.0, k == 1u || k == 2u) + (*l).v * select(-1.0, 1.0, k >= 2u); let e = vec3f(dot(c, t1), dot(c, t2), dot(c, s.n)); q[k] = vec3f(m.x * e.x + m.y * e.z, e.y, m.z * e.x + m.w * e.z); }
-    let f0 = coatF0(s); return (*l).radiance * (f0 * g.x + (1.0 - f0) * g.y) * ((*l).on * quadE(&q) * (0.5 / PI) * sat(1.0 - pow(dist / (*l).reach, 4.0)));
+    let f0 = coatF0(s); return (*l).radiance * (f0 * g.x + (1.0 - f0) * g.y) * ((*l).on * quadE(&q) * (0.5 / PI) * sat(1.0 - pow(dist / (*l).reach, 12.0)));
   }
   let p = aimLamp(i, s.x, vec2f(0.5)); let widen = (*l).area * 0.5 / max(p.dist, 0.2); return min(p.E * coatOf(s, V, p.dir, widen), (*l).radiance * (*l).on * fresnel(coatF0(s), max(dot(s.n, V), 0.02)));
 }

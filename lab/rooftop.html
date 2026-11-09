@@ -749,7 +749,7 @@ fn aimSeen(i: u32, x: vec3f, u: vec2f) -> vec4f {
 /** the light a lamp lands on a surface at x facing n (n = 0: a leaf, either side) with nothing in the way: exact for a rectangle (its edges' integral) */
 fn lampE(i: u32, x: vec3f, n: vec3f) -> vec3f {
   let l = &lamps[i]; if ((*l).on <= 0.0) { return vec3f(0.0); } let d = (*l).at - x; let dist = length(d); if (dist > (*l).reach) { return vec3f(0.0); } let leaf = all(n == vec3f(0.0));
-  let win = sat(1.0 - pow(dist / (*l).reach, 4.0));
+  let win = sat(1.0 - pow(dist / (*l).reach, 12.0));
   if ((*l).kind != 0u || leaf) { let a = aimLamp(i, x, vec2f(0.5)); let c = dot(n, a.dir); return a.E * select(max(c, 0.0), 0.5, leaf) * win; }
   let face = dot(d, (*l).n); if (face >= 0.0) { return vec3f(0.0); }
   if (dist * dist > 14.0 * (*l).area) { return (*l).radiance * ((*l).on * max(dot(n, d), 0.0) * -face * (*l).area * win / (dist * dist * dist * dist)); }     // (far off, a rectangle is a point: to a hundredth)
@@ -774,7 +774,7 @@ fn lampCoat(i: u32, s: Surf, V: vec3f) -> vec3f {
     if (dot(d0, (*l).n) >= 0.0) { return vec3f(0.0); } let nv = clamp(dot(s.n, V), 1e-3, 1.0); let x = sqrt(1.0 - nv) * 15.0; let y = clamp(s.rough, 0.06, 1.0) * 15.0; let x0 = min(u32(x), 14u); let y0 = min(u32(y), 14u); let fx = x - f32(x0); let fy = y - f32(y0); let at = u32(frame.misc2.y) + 2048u + 2u * (y0 * 16u + x0);
     let m = mix(mix(extra[at], extra[at + 2u], fx), mix(extra[at + 32u], extra[at + 34u], fx), fy); let g = mix(mix(extra[at + 1u], extra[at + 3u], fx), mix(extra[at + 33u], extra[at + 35u], fx), fy).xy;
     var t1 = V - s.n * dot(s.n, V); let tl = length(t1); if (tl < 1e-3) { t1 = basis(s.n)[0]; } else { t1 /= tl; } let t2 = cross(s.n, t1); var q: array<vec3f, 4>; for (var k = 0u; k < 4u; k++) { let c = d0 + (*l).u * select(-1.0, 1.0, k == 1u || k == 2u) + (*l).v * select(-1.0, 1.0, k >= 2u); let e = vec3f(dot(c, t1), dot(c, t2), dot(c, s.n)); q[k] = vec3f(m.x * e.x + m.y * e.z, e.y, m.z * e.x + m.w * e.z); }
-    let f0 = coatF0(s); return (*l).radiance * (f0 * g.x + (1.0 - f0) * g.y) * ((*l).on * quadE(&q) * (0.5 / PI) * sat(1.0 - pow(dist / (*l).reach, 4.0)));
+    let f0 = coatF0(s); return (*l).radiance * (f0 * g.x + (1.0 - f0) * g.y) * ((*l).on * quadE(&q) * (0.5 / PI) * sat(1.0 - pow(dist / (*l).reach, 12.0)));
   }
   let p = aimLamp(i, s.x, vec2f(0.5)); let widen = (*l).area * 0.5 / max(p.dist, 0.2); return min(p.E * coatOf(s, V, p.dir, widen), (*l).radiance * (*l).on * fresnel(coatF0(s), max(dot(s.n, V), 0.02)));
 }
@@ -1505,10 +1505,10 @@ fn upMirror(mirror: texture_2d<f32>, id: vec2u, p: Px, f: vec4u, front: bool) ->
     let u = lightAll(lt); let El = u.rgb + vec3f(1.06, 0.99, 0.87) * u.a * vz.y; var Cl = vec3f(0.0);
     if (byFormula(p.rough) > 0.0 || car) { let hc = textureLoad(lampC, id.xy, 0); let f0 = select(coatF0(s), flakeF0(s.albedo) * FLAKES, car); Cl = hc.rgb * vz.z + vec3f(1.06, 0.99, 0.87) * f0 / max(lum(f0), 1e-4) * hc.a * vz.y; }
     c += part(2u) * El * select(ma, (m + s.through / PI) * 0.5, p.leaf) + part(3u) * Cl * select(byFormula(p.rough), tv * 0.91, car); if (car) { c += part(4u) * flat / PI * fromWay(rv, 0.85) * flakeF0(s.albedo) * (FLAKES * tv * 0.86); } if (p.leaf) { c += part(4u) * (b.rgb * m * ao.x + bb * s.through / PI * ao.y); } else { c += part(4u) * b.rgb * ma; }
-    if (mir.a >= 0.0) { let k = 1.0 - smoothstep(asksMirror() - 0.07, asksMirror(), p.rough); let amb = flat / PI * fromWay(rv, 0.75) * (coatF0(s) + (max(vec3f(1.0 - p.rough), coatF0(s)) - coatF0(s)) * pow(1.0 - nv, 5.0)) * 0.9; c += mix(amb * part(4u), mir.rgb * (part(5u) * @tune.mirror), select(k, 1.0, p.metal > 0.5)); }
+    if (mir.a >= 0.0) { let k = 1.0 - smoothstep(asksMirror() - 0.07, asksMirror(), p.rough); let amb = b.rgb / PI * (coatF0(s) + (max(vec3f(1.0 - p.rough), coatF0(s)) - coatF0(s)) * pow(1.0 - nv, 5.0)) * 0.9; c += mix(amb * part(4u), mir.rgb * (part(5u) * @tune.mirror), select(k, 1.0, p.metal > 0.5)); }
     else if (f.x == 0u && kept) { let g = coatF0(s); let r = folLight(p.x, reflect(rd, p.n), p.ao.x); c += part(4u) * @tune.bounce * r.rgb / PI * (g + (max(vec3f(1.0 - p.rough), g) - g) * pow(1.0 - nv, 5.0)); }     // a waxy leaf's broad shine: what comes to it from that way
     else if (f.x == 0u && p.leaf) { let R = reflect(rd, p.n); let open = sat(lum(b.rgb) / max(lum(skyLod(p.n, 7.0)) * PI, 1e-5)); c += part(4u) * skyLod(R, 4.0) * (open * open * ao.x) * F; }     // a waxy leaf shows the sky, as much of it as reaches here
-    else if (f.x == 0u) { c += part(4u) * select(b.rgb, flat * fromWay(rv, 0.7), !kept) / PI * (coatF0(s) + (max(vec3f(1.0 - p.rough), coatF0(s)) - coatF0(s)) * pow(1.0 - nv, 5.0)) * 0.8; }
+    else if (f.x == 0u) { c += part(4u) * b.rgb / PI * (coatF0(s) + (max(vec3f(1.0 - p.rough), coatF0(s)) - coatF0(s)) * pow(1.0 - nv, 5.0)) * 0.8; }
     else { c += part(4u) * b.rgb / PI * coatF0(s) * 0.6; }
   }
   if (f.x != 0u && part(6u) > 0.0) {                                 // the clear layer: what it lets through, and what it shows
