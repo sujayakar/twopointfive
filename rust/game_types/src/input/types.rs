@@ -9,8 +9,6 @@ pub struct Input {
     pub pressed: JsSet<String>,
     pub mouse_x: f64,
     pub mouse_y: f64,
-    pub orbit_dx: f64,
-    pub wheel_ctrl: f64,
     pub buttons: f64,
     pub clicked: f64,
     pub wheel: f64,

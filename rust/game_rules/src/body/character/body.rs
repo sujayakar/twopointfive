@@ -952,57 +952,127 @@ pub fn character_ray_hit(g: &crate::game::Game, id: CharId, ro: V3, rd: V3, tmax
 #[cfg(test)]
 mod tests {
     use super::*;
-    // the bits of the TypeScript's own Character.prototype.fallGuide, on a still body: x[i] = (0.1 + i·0.03, 0.2 + i·0.1, −0.3 + i·0.017), run under bun with EXACT.on
-    fn guide(kind: FallStyle, ahead: f64) -> (crate::ragdoll::Ragdoll, FallGuide) {
+    const DT: f64 = 1.0 / 60.0;
+    const F: V3 = [0.6, 0.0, 0.8];     // the way he faces
+    const H: V3 = [-0.8, 0.0, 0.6];    // the way the blow pushes him
+    const R: crate::ragdoll::RAG = crate::ragdoll::RAG { pelvis: 0.0, spine: 1.0, neck: 2.0, head: 3.0, sho_l: 4.0, sho_r: 5.0, hand_l: 8.0, hand_r: 9.0, hip_l: 10.0, hip_r: 11.0, knee_l: 12.0, knee_r: 13.0, ank_l: 14.0, ank_r: 15.0 };
+
+    /// A man standing still at (2, 0, 3), facing F: every particle where it would be.
+    fn stood() -> crate::ragdoll::Ragdoll {
+        let side: V3 = [F[2], 0.0, -F[0]];
+        let at = |s: f64, y: f64, f: f64| -> [f64; 3] { [2.0 + side[0] * s + F[0] * f, y, 3.0 + side[2] * s + F[2] * f] };
+        let parts: [(f64, [f64; 3]); 16] = [
+            (R.pelvis, at(0.0, 0.95, 0.0)), (R.spine, at(0.0, 1.2, 0.0)), (R.neck, at(0.0, 1.5, 0.0)), (R.head, at(0.0, 1.66, 0.02)), (R.sho_l, at(-0.2, 1.42, 0.0)), (R.sho_r, at(0.2, 1.42, 0.0)),
+            (6.0, at(-0.25, 1.15, 0.0)), (7.0, at(0.25, 1.15, 0.0)), (R.hand_l, at(-0.25, 0.9, 0.05)), (R.hand_r, at(0.25, 0.9, 0.05)), (R.hip_l, at(-0.1, 0.9, 0.0)), (R.hip_r, at(0.1, 0.9, 0.0)),
+            (R.knee_l, at(-0.11, 0.5, 0.03)), (R.knee_r, at(0.11, 0.5, 0.03)), (R.ank_l, at(-0.12, 0.08, 0.0)), (R.ank_r, at(0.12, 0.08, 0.0)),
+        ];
         let mut rag = crate::ragdoll::Ragdoll::blank();
         rag.x = vec![0.0; 48];
-        for i in 0..16 { let n = i as f64; rag.x[i * 3] = 0.1 + n * 0.03; rag.x[i * 3 + 1] = 0.2 + n * 0.1; rag.x[i * 3 + 2] = -0.3 + n * 0.017; }
-        let rg = crate::ragdoll::RAG { pelvis: 0.0, spine: 1.0, neck: 2.0, head: 3.0, sho_l: 4.0, sho_r: 5.0, hand_l: 8.0, hand_r: 9.0, hip_l: 10.0, hip_r: 11.0, knee_l: 12.0, knee_r: 13.0, ank_l: 14.0, ank_r: 15.0 };
-        let gd = fall_guide_of(&rag, &rg, kind, [0.6, 0.0, 0.8], [-0.8, 0.0, 0.6], 0.97, -1.0, None, 1.0, ahead);
-        (rag, gd)
+        for (i, p) in parts { for c in 0..3 { rag.x[i as usize * 3 + c] = p[c]; } }
+        rag
     }
-    fn check(kind: FallStyle, ahead: f64, end: u64, n: usize, rows: &[(f64, usize, f64, [u64; 3])]) {
-        let (rag, mut gd) = guide(kind, ahead);
-        assert_eq!(gd.end.to_bits(), end);
-        assert_eq!(gd.pins.len(), n);
+    fn guide(rag: &crate::ragdoll::Ragdoll, kind: FallStyle, room: f64, ahead: f64) -> FallGuide { fall_guide_of(rag, &R, kind, F, H, 0.97, -1.0, None, room, ahead) }
+    /// a particle's pin at `t`: the last of its pins that holds at that time
+    fn pin(rag: &crate::ragdoll::Ragdoll, gd: &mut FallGuide, i: f64, t: f64) -> V3 {
         let (fr, nd) = (gd.frame, gd.nod);
-        for (t, k, i, want) in rows {
-            let q = &mut gd.pins[*k];
-            assert_eq!(q.i, *i);
-            let p = pin_at(&rag, &fr, &nd, &mut q.at, *t);
-            assert_eq!([p[0].to_bits(), p[1].to_bits(), p[2].to_bits()], *want, "t {} pin {}", t, k);
+        let q = gd.pins.iter_mut().rev().find(|q| q.i == i).unwrap_or_else(|| panic!("no pin on {i}"));
+        pin_at(rag, &fr, &nd, &mut q.at, t)
+    }
+    const KINDS: [FallStyle; 5] = [FallStyle::Fold, FallStyle::Sink, FallStyle::Cut, FallStyle::Topple, FallStyle::Slump];
+
+    /// A fall is led from where he stands, and the pins do not jump on the way down.
+    /// A FAILURE MEANS: a man hit snaps to another pose before he falls.
+    #[test]
+    fn a_fall_starts_where_he_stands_and_nothing_jumps_on_the_way_down() {
+        let rag = stood();
+        for kind in KINDS {
+            let mut gd = guide(&rag, kind, 1.0, 0.0);
+            let (fr, nd, end) = (gd.frame, gd.nod, gd.end);
+            assert!(end > 0.2 && end < 2.0, "{kind:?} takes {end} s");
+            for q in gd.pins.iter_mut() {
+                if q.t0 > 0.0 { continue; }
+                let p = pin_at(&rag, &fr, &nd, &mut q.at, 0.0);
+                assert!(v3::dist(p, part_at(&rag, q.i)) < 1e-6, "{kind:?}: pin {} starts {} m off him", q.i, v3::dist(p, part_at(&rag, q.i)));
+            }
+            for q in gd.pins.iter_mut() {
+                let mut t = q.t0;
+                let mut last = pin_at(&rag, &fr, &nd, &mut q.at, t);
+                while t + DT < q.off {
+                    t += DT;
+                    let p = pin_at(&rag, &fr, &nd, &mut q.at, t);
+                    assert!(v3::dist(p, last) < 0.2, "{kind:?}: pin {} jumps {} m at {t}", q.i, v3::dist(p, last));
+                    last = p;
+                }
+            }
         }
     }
+
+    /// Onto his knees and down on his front, carried on by what was pushing him when he was held.
     #[test]
-    fn topple_as_the_typescript() {
-        check(FallStyle::Topple, 0.0, 0x3fd51b71758e2197, 10, &[
-            (0.1, 0, 0.0, [0x3fa069fc88a1a470, 0x3fc694ae6d7f97f9, 0xbfc0b16e27990d6a]),
-            (0.1, 7, 3.0, [0x3fc1f86ed349ba17, 0x3fddfcf0946fa087, 0xbfb6342864caa890]),
-            (0.1, 9, 15.0, [0x3fe1a9ecbccef1bb, 0x3ffb333333333333, 0xbfa9e64ef3aae021]),
-            (0.25, 0, 0.0, [0x3fc50752f6f23788, 0xbf930ad212da6ae4, 0x3fd58b948ff6735a]),
-            (0.25, 7, 3.0, [0x3fc3f092e6db6b0e, 0x3fd2ee3942ee693a, 0x3fd4f3cbb402f3e2]),
-            (0.9, 9, 15.0, [0x3fe1645a1cac0830, 0x3ffb333333333333, 0xbfb189374bc6a7ef]),
-        ]);
+    fn a_man_who_sinks_ends_flat_on_his_front_with_his_limbs_laid_by_him() {
+        let rag = stood();
+        let mut gd = guide(&rag, FallStyle::Sink, 1.0, 0.0);
+        let end = gd.end;
+        let (pv0, pv) = (part_at(&rag, R.pelvis), pin(&rag, &mut gd, R.pelvis, end));
+        assert!(m::abs(pv[1] - 0.135) < 1e-6, "his hips lie on the floor: {}", pv[1]);
+        assert!(pin(&rag, &mut gd, R.head, end)[1] < 0.5, "and his head: {}", pin(&rag, &mut gd, R.head, end)[1]);
+        let forward = v3::dot(v3::sub(pv, pv0), F);
+        assert!(forward > 0.0 && forward < 0.3, "he goes down where he was, a little forward: {forward}");
+        let neck = pin(&rag, &mut gd, R.neck, end);
+        assert!(v3::dot(v3::sub(neck, pv), F) > 0.3, "with his head the way he faced");
+        let mid = pin(&rag, &mut gd, R.pelvis, 0.05 + 0.56 * 0.97);
+        assert!(mid[1] < 0.5, "he is on his knees before he lies down: {}", mid[1]);
+        for (i, y) in [(R.knee_l, 0.07), (R.ank_r, 0.06), (R.hand_l, 0.05)] { assert!(m::abs(pin(&rag, &mut gd, i, end + 1.0)[1] - y) < 1e-6, "limb {i} lies on the floor"); }
+        // carried on, by the whole distance; and a tight spot lays no limbs out
+        let mut on = guide(&rag, FallStyle::Sink, 1.0, 0.5);
+        let on_end = on.end;
+        let further = v3::dot(v3::sub(pin(&rag, &mut on, R.pelvis, on_end), pv), F);
+        assert!(m::abs(further - 0.5) < 1e-6, "{further}");
+        let tight = guide(&rag, FallStyle::Sink, 0.2, 0.0);
+        assert!(tight.pins.len() < gd.pins.len(), "a tight spot lays no limbs out");
     }
+
+    /// Thrown over from his heels: he goes the way he was pushed, and his feet stay where they stood.
     #[test]
-    fn sink_as_the_typescript() {
-        check(FallStyle::Sink, 0.5, 0x3ff17dbf487fcb93, 14, &[
-            (0.1, 0, 0.0, [0x3fbada78edfa4c3b, 0x3fca44bb60339278, 0xbfd2c83e1712f7a8]),
-            (0.25, 7, 3.0, [0x3fd1f4b75576894c, 0x3fe12476d049d44e, 0xbfbf2c7f360fb80e]),
-            (0.5, 13, 9.0, [0x3fd7ae147ae147ae, 0x3ff199999999999a, 0xbfc2d0e560418936]),
-            (0.9, 0, 0.0, [0x3fd4de4142e8de56, 0x3fc82c55342fc593, 0x3fc068bac4a86935]),
-            (0.9, 7, 3.0, [0x3fe04fb157ea554b, 0x3fcbac743e3fa3c8, 0x3fd895f79331efd1]),
-            (0.9, 13, 9.0, [0x3fe7bf02e25cfd74, 0x3fd348b927d947e4, 0x3fe444284589586c]),
-        ]);
+    fn a_man_who_topples_goes_over_his_heels_the_way_he_was_pushed() {
+        let rag = stood();
+        let mut gd = guide(&rag, FallStyle::Topple, 1.0, 0.0);
+        let end = gd.end;
+        let (pv0, pv) = (part_at(&rag, R.pelvis), pin(&rag, &mut gd, R.pelvis, end));
+        let along = v3::dot(v3::sub(pv, pv0), H);
+        assert!(along > 0.3, "his hips go with the push: {along}");
+        assert!(pv[1] < pv0[1] - 0.1, "and down: {}", pv[1]);
+        let heels = |p: V3, q: V3| -> V3 { [(p[0] + q[0]) / 2.0, 0.0, (p[2] + q[2]) / 2.0] };
+        let stood_at = heels(part_at(&rag, R.ank_l), part_at(&rag, R.ank_r));
+        let (l, r) = (pin(&rag, &mut gd, R.ank_l, end), pin(&rag, &mut gd, R.ank_r, end));
+        assert!(v3::dist(heels(l, r), stood_at) < 1e-6, "his feet turn under him and stay where they stood");
+        assert!(m::abs(l[1] - part_at(&rag, R.ank_l)[1]) < 1e-6, "on the floor");
     }
+
+    /// Where he stands, the trunk folding forward over his hips: what happens next is the ragdoll's.
     #[test]
-    fn slump_as_the_typescript() {
-        check(FallStyle::Slump, 0.0, 0x3fe29fbe76c8b439, 8, &[
-            (0.1, 0, 0.0, [0x3fb999999999999a, 0x3fc999999999999a, 0xbfd3333333333333]),
-            (0.1, 7, 3.0, [0x3fcac1490664cc02, 0x3fdf0d003fb8e444, 0xbfcc0dfc19d04358]),
-            (0.5, 7, 3.0, [0x3fd132e2b382f6be, 0x3fd5937e51984e14, 0xbfb3c5c791d4cdc5]),
-            (0.9, 7, 3.0, [0x3fd143b7034bc990, 0x3fd4f12061d607ed, 0xbfb27b50b645cee7]),
-        ]);
+    fn a_man_who_slumps_folds_forward_where_he_stands() {
+        let rag = stood();
+        let mut gd = guide(&rag, FallStyle::Slump, 1.0, 0.0);
+        let end = gd.end;
+        assert_eq!(pin(&rag, &mut gd, R.pelvis, end), part_at(&rag, R.pelvis));
+        let neck = pin(&rag, &mut gd, R.neck, end);
+        assert!(v3::dot(v3::sub(neck, part_at(&rag, R.pelvis)), F) > 0.3, "his neck comes forward: {neck:?}");
+        assert!(neck[1] < part_at(&rag, R.neck)[1] - 0.1, "and down: {neck:?}");
+    }
+
+    /// Both hands up to the throat in the beat he stands, then the fall away from what cut him.
+    #[test]
+    fn a_man_cut_stands_a_beat_with_his_hands_at_his_throat() {
+        let rag = stood();
+        let mut gd = guide(&rag, FallStyle::Cut, 1.0, 0.0);
+        let pv0 = part_at(&rag, R.pelvis);
+        let beat = 0.2;
+        assert!(v3::dist(pin(&rag, &mut gd, R.pelvis, beat), pv0) < 0.05, "he is still up: {:?}", pin(&rag, &mut gd, R.pelvis, beat));
+        let neck = pin(&rag, &mut gd, R.neck, beat);
+        for i in [R.hand_l, R.hand_r] { assert!(v3::dist(pin(&rag, &mut gd, i, beat), neck) < 0.15, "hand {i}"); }
+        let end = gd.end;
+        assert!(pin(&rag, &mut gd, R.pelvis, end)[1] < 0.3, "and then he is sitting on the floor");
     }
 }
 

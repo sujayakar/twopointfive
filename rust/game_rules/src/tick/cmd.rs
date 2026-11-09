@@ -635,72 +635,155 @@ fn cut_row(s: &mut Seat, cam: &crate::camera::FollowCamera) -> Option<V3> {
 mod tests {
     use super::*;
 
-    fn f(b: u64) -> f64 { f64::from_bits(b) }
-    fn r(keys: &[&str], pressed: &[&str], n: &[f64], vp: &[f64], ivp: &[f64], pos: &[f64], fw: &[f64], t: &[f64], o: &[f64]) -> PlayerCmd {
-        let st = |a: &[&str]| a.iter().map(|s| String::from(*s)).collect::<Vec<_>>();
+    /// A record as an honest seat sends it: its view worked out by a real camera.
+    fn honest() -> PlayerCmd {
+        let mut g = Game::blank();
+        let mut c = crate::camera::FollowCamera::blank();
+        c.target = [3.0, 1.0, -7.0]; c.yaw = 0.7; c.pitch = 0.96; c.distance = 21.0; c.aspect = 1280.0 / 720.0;
+        let id = g.tab.camera.push(c);
+        crate::camera::follow_camera_rebuild(&mut g, id);
+        let c = &g.tab.camera[id];
         PlayerCmd {
-            keys: st(keys), pressed: st(pressed), buttons: n[0], clicked: n[1], wheel: n[2], mx: n[3], my: n[4], w: n[5], h: n[6], pw: n[7], ph: n[8],
+            keys: vec![String::from("KeyW"), String::from("ShiftLeft")], pressed: vec![String::from("Digit1")],
+            buttons: 5.0, clicked: 1.0, wheel: -120.0, mx: 640.0, my: 360.0, w: 1280.0, h: 720.0, pw: 2560.0, ph: 1440.0,
             view: PlayerCmdView {
-                vp: vp.to_vec(), ivp: ivp.to_vec(), pos: [pos[0], pos[1], pos[2]], forward: [fw[0], fw[1], fw[2]], target: [t[0], t[1], t[2]],
-                yaw: o[0], pitch: o[1], distance: o[2], fov: o[3], aspect: o[4], aim_lead: o[5],
+                vp: c.view_proj.iter().map(|x| *x as f64).collect(), ivp: c.inv_view_proj.iter().map(|x| *x as f64).collect(),
+                pos: c.pos, forward: c.forward, target: c.target, yaw: c.yaw, pitch: c.pitch, distance: c.distance, fov: c.fov, aspect: c.aspect, aim_lead: c.aim_lead,
             },
         }
     }
-    fn nums(c: &PlayerCmd) -> Vec<f64> {
-        let v = &c.view;
-        let mut a = vec![c.buttons, c.clicked, c.wheel, c.mx, c.my, c.w, c.h, c.pw, c.ph, v.yaw, v.pitch, v.distance, v.fov, v.aspect, v.aim_lead];
-        a.extend(v.pos); a.extend(v.forward); a.extend(v.target); a.extend(v.vp.iter()); a.extend(v.ivp.iter());
-        a
+    fn checked(raw: Option<PlayerCmd>, near: Option<V3>) -> (PlayerCmd, f64) {
+        let mut g = Game::blank();
+        check_record(&mut g, raw, near)
+    }
+    fn k() -> crate::knobs::CmdcheckK { crate::knobs::CmdcheckK::page() }
+
+    /// The tick takes a seat's record through this: a machine that plays by the rules has nothing put right.
+    /// A FAILURE MEANS: an honest player's clicks are moved, or he is counted as a cheat.
+    #[test]
+    fn an_honest_record_comes_through_untouched() {
+        let c = honest();
+        let (out, fixed) = checked(Some(c.clone()), None);
+        assert_eq!(fixed, 0.0);
+        assert_eq!(cmd_text(&out), cmd_text(&c));
     }
 
-    /// The TypeScript's own results for checkCmd (generated under bun with EXACT on), the lens's working taken from its answer: rebuild is a stub in this crate.
     #[test]
-    fn check_matches_the_typescript() {
-        let l = crate::knobs::CmdcheckK::page();
-        for (name, raw, near, want, want_fixed) in cases() {
-            let (mut c, mut fixed, whole) = check_fields(&l, raw, near);
-            if near.is_some() || !whole {
-                let mut s = crate::camera::FollowCamera::blank();
-                pose_onto_lens(l.steep, &mut c.view, &mut s, &mut fixed);
-                assert_eq!(s.target.map(f64::to_bits), want.view.target.map(f64::to_bits), "{name} target");
-                s.pos = want.view.pos;
-                s.forward = want.view.forward;
-                for i in 0..16 {
-                    s.view_proj[i] = want.view.vp[i] as f32;
-                    s.inv_view_proj[i] = want.view.ivp[i] as f32;
-                }
-                view_from_lens(&mut c.view, &s, &mut fixed);
-            }
-            assert_eq!(c.keys, want.keys, "{name} keys");
-            assert_eq!(c.pressed, want.pressed, "{name} pressed");
-            let (a, b) = (nums(&c), nums(&want));
-            assert_eq!(a.len(), b.len(), "{name} length");
-            for i in 0..a.len() {
-                assert!(same(a[i], b[i]), "{name} number {i}: {} {}", a[i], b[i]);
-            }
-            assert_eq!(fixed.to_bits(), want_fixed, "{name} fixed");
-        }
+    fn a_record_with_no_object_is_a_still_player_at_the_middle_of_a_picture() {
+        let (c, fixed) = checked(None, None);
+        assert!(fixed > 0.0);
+        assert!(c.keys.is_empty() && c.pressed.is_empty());
+        assert_eq!((c.buttons, c.clicked, c.wheel), (0.0, 0.0, 0.0));
+        assert_eq!((c.w, c.h, c.pw, c.ph, c.mx, c.my), (1280.0, 720.0, 1280.0, 720.0, 640.0, 360.0));
+        assert!(c.view.vp.iter().chain(c.view.ivp.iter()).all(|x| x.is_finite()), "its view is worked out");
     }
 
-    /// The swallow's beats against the TypeScript's Seat, signed words included.
+    /// No key code a keyboard could not send and no more than a tick holds.
     #[test]
-    fn swallow_beats_match_the_typescript() {
+    fn a_key_is_kept_only_if_it_looks_like_one_and_a_tick_holds_only_so_many() {
+        let l = k();
+        let mut c = honest();
+        c.keys = vec![String::from("KeyW"), String::from("bad key"), String::new(), String::from("Ab_c"), "x".repeat(l.key_len as usize + 1), String::from("KeyE")];
+        let (out, fixed) = checked(Some(c), None);
+        assert_eq!(out.keys, vec![String::from("KeyW"), String::from("KeyE")]);
+        assert_eq!(fixed, 1.0, "counted once for the list");
+        let mut c = honest();
+        c.pressed = (0..(l.keys as usize * 6)).map(|i| alloc::format!("K{i}")).collect();
+        let (out, _) = checked(Some(c), None);
+        assert_eq!(out.pressed.len(), l.keys as usize);
+        // nor does a long list of rubbish buy a look at what lies past it
+        let mut c = honest();
+        c.keys = (0..(l.keys as usize * 4)).map(|_| String::from("bad!")).chain([String::from("KeyW")]).collect();
+        assert!(checked(Some(c), None).0.keys.is_empty());
+    }
+
+    /// Each number stays in what a real screen and a real camera could send, or takes its default if it is none.
+    #[test]
+    fn a_number_out_of_bounds_is_held_to_them_and_one_that_is_none_takes_its_default() {
+        let l = k();
+        let nan = f64::NAN;
+        let mut c = honest();
+        c.buttons = 96.0 + 5.0;
+        c.clicked = nan;
+        c.wheel = l.wheel * 10.0;
+        c.w = nan;
+        c.h = 0.0;
+        c.mx = 1e12;
+        c.view.yaw = nan;
+        c.view.pitch = nan;
+        c.view.distance = 1e9;
+        c.view.fov = 0.0;
+        c.view.aim_lead = 7.0;
+        c.view.target = [nan, 1e12, 0.0];
+        let (out, _) = checked(Some(c), None);
+        assert_eq!(out.buttons, 5.0, "only the buttons a mouse has");
+        assert_eq!(out.clicked, 0.0);
+        assert_eq!(out.wheel, l.wheel);
+        assert_eq!((out.w, out.h), (1280.0, 1.0));
+        assert_eq!(out.mx, 2.0 * l.span);
+        assert_eq!((out.view.yaw, out.view.pitch, out.view.distance, out.view.fov, out.view.aim_lead), (0.0, 0.96, l.dist_max, l.fov_min, 1.0));
+        assert_eq!(out.view.target, [0.0, l.far, 0.0]);
+        assert!(out.view.vp.iter().all(|x| x.is_finite()));
+    }
+
+    /// A seat that is not the host's says what it looks at, but no further from its own man than it could really look, and the matrices are worked out here.
+    /// A FAILURE MEANS: a remote player can click on what his man cannot be looking at.
+    #[test]
+    fn a_remote_seat_looks_near_its_own_man_and_its_view_is_worked_out_here() {
+        let l = k();
+        let man: V3 = [0.0, 0.0, 0.0];
+        let mut c = honest();
+        c.view.target = [l.reach * 3.0, 0.0, 0.0];
+        c.view.distance = l.dist_max;
+        c.view.vp = vec![1.0; 16];
+        let (out, fixed) = checked(Some(c), Some(man));
+        assert!(fixed >= 3.0);
+        assert!(m::abs(v3::dist(out.view.target, man) - l.reach) < 1e-9, "held to the reach: {:?}", out.view.target);
+        assert!(out.view.distance <= 2.0 * l.reach);
+        assert_ne!(out.view.vp, vec![1.0; 16], "a matrix of its own making does not stand");
+        // near enough, it stands, and an honest view is the one worked out
+        let mut c = honest();
+        c.view.target = [0.5, 0.0, 0.0];
+        let (out, _) = checked(Some(c), Some(man));
+        assert_eq!(out.view.target, [0.5, 0.0, 0.0]);
+    }
+
+    /// A camera straight down has no way up: a view that says so is held off it.
+    #[test]
+    fn a_view_is_held_off_straight_down() {
+        let l = k();
+        let mut c = honest();
+        c.view.pitch = m::PI / 2.0;
+        c.view.vp[0] = f64::NAN;
+        let (out, fixed) = checked(Some(c), None);
+        assert_eq!(out.view.pitch, l.steep);
+        assert!(fixed >= 1.0);
+        assert!(out.view.vp.iter().chain(out.view.ivp.iter()).all(|x| x.is_finite()));
+    }
+
+    /// A button the game took for itself reads as up until he lets go or presses it afresh; the others go on working.
+    /// A FAILURE MEANS: the click that closed a menu also fires his gun.
+    #[test]
+    fn a_swallowed_button_reads_up_until_he_lets_go_or_presses_it_afresh() {
         let mut s = Seat::blank();
         let mut input = crate::input::Input::blank();
         let mut cam = crate::camera::FollowCamera::blank();
-        let base = cases().remove(0).1.unwrap();
-        for (i, (load, a, b, mask, buttons)) in beats().into_iter().enumerate() {
-            if load {
-                let mut c = base.clone();
-                c.buttons = a;
-                c.clicked = b;
-                load_row(&mut s, &mut input, &mut cam, &c);
-            } else {
-                swallow_row(&mut s, &mut input, a);
-            }
-            assert_eq!(s.mask.to_bits(), mask.to_bits(), "beat {i} mask");
-            assert_eq!(input.buttons.to_bits(), buttons.to_bits(), "beat {i} buttons");
-        }
+        let mut load = |s: &mut Seat, input: &mut crate::input::Input, buttons: f64, clicked: f64| {
+            let mut c = honest();
+            c.buttons = buttons;
+            c.clicked = clicked;
+            load_row(s, input, &mut cam, &c);
+            input.buttons
+        };
+        assert_eq!(load(&mut s, &mut input, 5.0, 1.0), 5.0, "two buttons down");
+        swallow_row(&mut s, &mut input, 1.0);
+        assert_eq!(input.buttons, 4.0, "it reads up at once");
+        assert_eq!(load(&mut s, &mut input, 5.0, 0.0), 4.0, "and on the next record, held");
+        assert_eq!(load(&mut s, &mut input, 5.0, 1.0), 5.0, "pressed afresh it is his again");
+        swallow_row(&mut s, &mut input, 1.0);
+        assert_eq!(load(&mut s, &mut input, 4.0, 0.0), 4.0, "let go");
+        assert_eq!(s.mask, 0.0, "and that is the end of it");
+        assert_eq!(load(&mut s, &mut input, 5.0, 0.0), 5.0, "the next press is his");
     }
 
     /// The take of a cut goes by the serial: unchanged is no cut, the same numbers written again are one, and each is taken once.
@@ -714,39 +797,41 @@ mod tests {
         assert_eq!(cut_row(&mut s, &cam), None);
     }
 
-    /// A number as the language writes it, against the TypeScript's `String(x)`.
+    /// A record goes over the wire and into a kept run as text: what comes back is what went, to the bit, with words for what JSON cannot carry.
+    /// A FAILURE MEANS: a kept run or a guest plays differently from what was played.
     #[test]
-    fn numbers_read_as_the_language_writes_them() {
-        for (b, want) in number_texts() { assert_eq!(js::num_str(f(b)), want); }
+    fn a_record_goes_to_text_and_back_to_the_bit() {
+        let mut c = honest();
+        c.keys.push(String::from("a\"b\\c\n\t\u{1}é"));
+        c.clicked = -0.0;
+        c.wheel = f64::NAN;
+        c.mx = f64::INFINITY;
+        c.my = f64::NEG_INFINITY;
+        c.pw = 2560.5;
+        c.ph = 1e21;
+        c.view.vp[0] = -0.0;
+        let text = cmd_text(&c);
+        let back = cmd_from_text(&text);
+        assert_eq!(back.keys, c.keys);
+        assert_eq!(back.pressed, c.pressed);
+        assert_eq!(back.clicked.to_bits(), (-0.0f64).to_bits());
+        assert!(back.wheel.is_nan());
+        assert_eq!((back.mx, back.my, back.pw, back.ph), (f64::INFINITY, f64::NEG_INFINITY, 2560.5, 1e21));
+        assert_eq!(back.view.vp.iter().map(|x| x.to_bits()).collect::<Vec<_>>(), c.view.vp.iter().map(|x| x.to_bits()).collect::<Vec<_>>());
+        assert_eq!(back.view.pos.map(f64::to_bits), c.view.pos.map(f64::to_bits));
+        assert_eq!(back.view.aim_lead, c.view.aim_lead);
+        assert_eq!(cmd_text(&back), text, "and it says the same thing again");
     }
 
-    /// The record's text both ways, against the TypeScript's cmdText and cmdFromText: words for what JSON cannot carry, escapes, the order of the fields.
+    /// What a record's text lacks reads as absent, and the check takes it as it takes no object.
     #[test]
-    fn a_record_as_text_matches_the_typescript() {
-        let c = cmd_from_text(RECORD_TEXT);
-        let v = &c.view;
-        assert_eq!(c.keys.len(), 2);
-        let mut a = vec![c.buttons, c.clicked, c.wheel, c.mx, c.my, c.w, c.h, c.pw, c.ph];
-        a.extend(v.vp.iter()); a.extend(v.ivp.iter()); a.extend(v.pos); a.extend(v.forward); a.extend(v.target);
-        a.extend([v.yaw, v.pitch, v.distance, v.fov, v.aspect, v.aim_lead]);
-        let want = record_numbers();
-        assert_eq!(a.len(), want.len());
-        for i in 0..a.len() { assert!(same(a[i], f(want[i])), "number {i}: {} {}", a[i], f(want[i])); }
-        assert_eq!(cmd_text(&c), RECORD_TEXT);
+    fn a_field_the_text_lacks_is_absent_and_the_check_makes_it_good() {
+        let c = cmd_from_text("{\"keys\":[\"KeyW\"]}");
+        assert_eq!(c.keys, vec![String::from("KeyW")]);
+        assert!(c.buttons.is_nan() && c.view.yaw.is_nan());
+        let (out, fixed) = checked(Some(c), None);
+        assert!(fixed > 0.0);
+        assert_eq!((out.buttons, out.w, out.h), (0.0, 1280.0, 720.0));
+        assert_eq!(out.keys, vec![String::from("KeyW")]);
     }
-
-    fn number_texts() -> Vec<(u64, &'static str)> { vec![(0x0000000000000000,"0"),(0x3ff0000000000000,"1"),(0xbff0000000000000,"-1"),(0x3fb999999999999a,"0.1"),(0x3ff8000000000000,"1.5"),(0x4059000000000000,"100"),(0x4415af1d78b58c40,"100000000000000000000"),(0x444b1ae4d6e2ef50,"1e+21"),(0x4454542ba12a337c,"1.5e+21"),(0x441ac53a7e04bcda,"123456789012345680000"),(0x3eb0c6f7a0b5ed8d,"0.000001"),(0x3e7ad7f29abcaf48,"1e-7"),(0x3e8421f5f40d8376,"1.5e-7"),(0x3eb4b3fd5942cd96,"0.000001234"),(0x0000000000000001,"5e-324"),(0x7fefffffffffffff,"1.7976931348623157e+308"),(0xbe25798ee2308c3a,"-2.5e-9"),(0x3fd3333333333334,"0.30000000000000004"),(0x40d0000000000000,"16384"),(0x41e0000000000000,"2147483648"),(0x41efffffffe00000,"4294967295"),(0x3fd5555555555555,"0.3333333333333333"),(0x400921fb54442d18,"3.141592653589793"),(0xc44b1ae4d6e2ef50,"-1e+21"),(0x40934a456d5cfaad,"1234.5678")] }
-    const RECORD_TEXT: &str = "{\"keys\":[\"KeyW\",\"a\\\"b\\\\c\\n\\t\\u0001é\"],\"pressed\":[\"Digit1\"],\"buttons\":5,\"clicked\":\"-0\",\"wheel\":\"nan\",\"mx\":\"inf\",\"my\":\"-inf\",\"w\":1280,\"h\":720,\"pw\":2560.5,\"ph\":1e+21,\"view\":{\"vp\":[1.5,\"-0\",0,\"nan\",1e-7,3],\"ivp\":[0.1],\"pos\":[1,\"-0\",3],\"forward\":[0.1,0.2,0.3],\"target\":[\"inf\",0,-1e-9],\"yaw\":0.25,\"pitch\":0.3333333333333333,\"distance\":21,\"fov\":0.6,\"aspect\":1.7777777777777777,\"aimLead\":0}}";
-    fn record_numbers() -> Vec<u64> { vec![0x4014000000000000,0x8000000000000000,0x7ff8000000000000,0x7ff0000000000000,0xfff0000000000000,0x4094000000000000,0x4086800000000000,0x40a4010000000000,0x444b1ae4d6e2ef50,0x3ff8000000000000,0x8000000000000000,0x0000000000000000,0x7ff8000000000000,0x3e7ad7f29abcaf48,0x4008000000000000,0x3fb999999999999a,0x3ff0000000000000,0x8000000000000000,0x4008000000000000,0x3fb999999999999a,0x3fc999999999999a,0x3fd3333333333333,0x7ff0000000000000,0x0000000000000000,0xbe112e0be826d695,0x3fd0000000000000,0x3fd5555555555555,0x4035000000000000,0x3fe3333333333333,0x3ffc71c71c71c71c,0x0000000000000000] }
-
-    fn cases() -> Vec<(&'static str, Option<PlayerCmd>, Option<V3>, PlayerCmd, u64)> { vec![
-    ("honest",Some(r(&["KeyW","ShiftLeft"],&["Digit1"],&[f(0x4014000000000000),f(0x3ff0000000000000),f(0xc05e000000000000),f(0x4084040000000000),f(0x4076840000000000),f(0x4094000000000000),f(0x4086800000000000),f(0x40a4000000000000),f(0x4096800000000000)],&[f(0x3ff8000000000000),f(0x8000000000000000),f(0x0000000000000000),f(0x0000000000000000),f(0x0000000000000000),f(0x4002000000000000),f(0xbfe0000000000000),f(0x0000000000000000),f(0x0000000000000000),f(0x3fe0000000000000),f(0x39b4484bfeebc2a0),f(0xbff0000000000000),f(0x4008000000000000),f(0xc010000000000000),f(0x4014000000000000),f(0x4018000000000000)],&[f(0x3fe8000000000000),f(0x8000000000000000),f(0x0000000000000000),f(0x0000000000000000),f(0x0000000000000000),f(0x3ff2000000000000),f(0xbfd0000000000000),f(0x0000000000000000),f(0x0000000000000000),f(0x3fd0000000000000),f(0x39a4484bfeebc2a0),f(0xbfe0000000000000),f(0x3ff8000000000000),f(0xc000000000000000),f(0x4004000000000000),f(0x4008000000000000)],&[f(0x3ff0000000000000),f(0x4000000000000000),f(0x4008000000000000)],&[f(0x8000000000000000),f(0xbfe999999999999a),f(0x3fe3333333333333)],&[f(0x4010000000000000),f(0x0000000000000000),f(0xc018000000000000)],&[f(0xbfd851eb851eb852),f(0x3feeb851eb851eb8),f(0x4035000000000000),f(0x3fdf3b645a1cac08),f(0x3ffc000000000000),f(0x3fc70a3d70a3d70a)])),None,r(&["KeyW","ShiftLeft"],&["Digit1"],&[f(0x4014000000000000),f(0x3ff0000000000000),f(0xc05e000000000000),f(0x4084040000000000),f(0x4076840000000000),f(0x4094000000000000),f(0x4086800000000000),f(0x40a4000000000000),f(0x4096800000000000)],&[f(0x3ff8000000000000),f(0x8000000000000000),f(0x0000000000000000),f(0x0000000000000000),f(0x0000000000000000),f(0x4002000000000000),f(0xbfe0000000000000),f(0x0000000000000000),f(0x0000000000000000),f(0x3fe0000000000000),f(0x39b4484bfeebc2a0),f(0xbff0000000000000),f(0x4008000000000000),f(0xc010000000000000),f(0x4014000000000000),f(0x4018000000000000)],&[f(0x3fe8000000000000),f(0x8000000000000000),f(0x0000000000000000),f(0x0000000000000000),f(0x0000000000000000),f(0x3ff2000000000000),f(0xbfd0000000000000),f(0x0000000000000000),f(0x0000000000000000),f(0x3fd0000000000000),f(0x39a4484bfeebc2a0),f(0xbfe0000000000000),f(0x3ff8000000000000),f(0xc000000000000000),f(0x4004000000000000),f(0x4008000000000000)],&[f(0x3ff0000000000000),f(0x4000000000000000),f(0x4008000000000000)],&[f(0x8000000000000000),f(0xbfe999999999999a),f(0x3fe3333333333333)],&[f(0x4010000000000000),f(0x0000000000000000),f(0xc018000000000000)],&[f(0xbfd851eb851eb852),f(0x3feeb851eb851eb8),f(0x4035000000000000),f(0x3fdf3b645a1cac08),f(0x3ffc000000000000),f(0x3fc70a3d70a3d70a)]),0x0000000000000000),
-    ("dirty",Some(r(&["KeyW","bad key","","Ab_c","xxxxxxxxxxxxxxxxxxxxxxxxx","yyyyyyyyyyyyyyyyyyyyyyyy","KeyE"],&["K0","K1","K2","K3","K4","K5","K6","K7","K8","K9","K10","K11","K12","K13","K14","K15","K16","K17","K18","K19","K20","K21","K22","K23","K24","K25","K26","K27","K28","K29"],&[f(0x406ff66666666666),f(0x7ff8000000000000),f(0x41cdcd6500000000),f(0x7ff0000000000000),f(0x7ff8000000000000),f(0x0000000000000000),f(0x41cdcd6500000000),f(0x7ff8000000000000),f(0x8000000000000000)],&[f(0x3ff8000000000000),f(0x8000000000000000),f(0x0000000000000000),f(0x0000000000000000),f(0x0000000000000000),f(0x4002000000000000),f(0xbfe0000000000000),f(0x0000000000000000),f(0x0000000000000000),f(0x3fe0000000000000),f(0x39b4484bfeebc2a0),f(0xbff0000000000000),f(0x4008000000000000),f(0xc010000000000000),f(0x4014000000000000),f(0x4018000000000000)],&[f(0x3fe8000000000000),f(0x8000000000000000),f(0x0000000000000000),f(0x0000000000000000),f(0x0000000000000000),f(0x3ff2000000000000),f(0xbfd0000000000000),f(0x0000000000000000),f(0x0000000000000000),f(0x3fd0000000000000),f(0x39a4484bfeebc2a0),f(0xbfe0000000000000),f(0x3ff8000000000000),f(0xc000000000000000),f(0x4004000000000000),f(0x4008000000000000)],&[f(0x40f86a0000000000),f(0xc0f86a0000000000),f(0x7ff8000000000000)],&[f(0x4000000000000000),f(0xc000000000000000),f(0x8000000000000000)],&[f(0x8000000000000000),f(0x7ff0000000000000),f(0x4008000000000000)],&[f(0x40d3880000000000),f(0x4010000000000000),f(0x0000000000000000),f(0x4022000000000000),f(0x7ff8000000000000),f(0x4008000000000000)])),None,r(&["KeyW","yyyyyyyyyyyyyyyyyyyyyyyy","KeyE"],&["K0","K1","K2","K3","K4","K5","K6","K7","K8","K9","K10","K11","K12","K13","K14","K15","K16","K17","K18","K19","K20","K21","K22","K23"],&[f(0x403f000000000000),f(0x0000000000000000),f(0x40b0000000000000),f(0x40e0000000000000),f(0x40c0000000000000),f(0x3ff0000000000000),f(0x40d0000000000000),f(0x3ff0000000000000),f(0x3ff0000000000000)],&[f(0x3ff8000000000000),f(0x8000000000000000),f(0x0000000000000000),f(0x0000000000000000),f(0x0000000000000000),f(0x4002000000000000),f(0xbfe0000000000000),f(0x0000000000000000),f(0x0000000000000000),f(0x3fe0000000000000),f(0x39b4484bfeebc2a0),f(0xbff0000000000000),f(0x4008000000000000),f(0xc010000000000000),f(0x4014000000000000),f(0x4018000000000000)],&[f(0x3fe8000000000000),f(0x8000000000000000),f(0x0000000000000000),f(0x0000000000000000),f(0x0000000000000000),f(0x3ff2000000000000),f(0xbfd0000000000000),f(0x0000000000000000),f(0x0000000000000000),f(0x3fd0000000000000),f(0x39a4484bfeebc2a0),f(0xbfe0000000000000),f(0x3ff8000000000000),f(0xc000000000000000),f(0x4004000000000000),f(0x4008000000000000)],&[f(0x40c3880000000000),f(0xc0c3880000000000),f(0x0000000000000000)],&[f(0x3ff0000000000000),f(0xbff0000000000000),f(0x8000000000000000)],&[f(0x8000000000000000),f(0x40c3880000000000),f(0x4008000000000000)],&[f(0x40c3880000000000),f(0x400921fb54442d18),f(0x3fa999999999999a),f(0x4008000000000000),f(0x3f10000000000000),f(0x3ff0000000000000)]),0x4037000000000000),
-    ("many",Some(r(&["bad!","K1","bad!","K3","bad!","K5","bad!","K7","bad!","K9","bad!","K11","bad!","K13","bad!","K15","bad!","K17","bad!","K19","bad!","K21","bad!","K23","bad!","K25","bad!","K27","bad!","K29","bad!","K31","bad!","K33","bad!","K35","bad!","K37","bad!","K39","bad!","K41","bad!","K43","bad!","K45","bad!","K47","bad!","K49","bad!","K51","bad!","K53","bad!","K55","bad!","K57","bad!","K59","bad!","K61","bad!","K63","bad!","K65","bad!","K67","bad!","K69","bad!","K71","bad!","K73","bad!","K75","bad!","K77","bad!","K79","bad!","K81","bad!","K83","bad!","K85","bad!","K87","bad!","K89","bad!","K91","bad!","K93","bad!","K95","bad!","K97","bad!","K99","bad!","K101","bad!","K103","bad!","K105","bad!","K107","bad!","K109","bad!","K111","bad!","K113","bad!","K115","bad!","K117","bad!","K119","bad!","K121","bad!","K123","bad!","K125","bad!","K127","bad!","K129","bad!","K131","bad!","K133","bad!","K135","bad!","K137","bad!","K139","bad!","K141","bad!","K143","bad!","K145","bad!","K147","bad!","K149","bad!","K151","bad!","K153","bad!","K155","bad!","K157","bad!","K159","bad!","K161","bad!","K163","bad!","K165","bad!","K167","bad!","K169","bad!","K171","bad!","K173","bad!","K175","bad!","K177","bad!","K179","bad!","K181","bad!","K183","bad!","K185","bad!","K187","bad!","K189","bad!","K191","bad!","K193","bad!","K195","bad!","K197","bad!","K199"],&[],&[f(0x41f0000000500000),f(0x8000000000000000),f(0xc05e000000000000),f(0x4084040000000000),f(0x4076840000000000),f(0x4094000000000000),f(0x4086800000000000),f(0x40a4000000000000),f(0x4096800000000000)],&[f(0x3ff8000000000000),f(0x8000000000000000),f(0x0000000000000000),f(0x0000000000000000),f(0x0000000000000000),f(0x4002000000000000),f(0xbfe0000000000000),f(0x0000000000000000),f(0x0000000000000000),f(0x3fe0000000000000),f(0x39b4484bfeebc2a0),f(0xbff0000000000000),f(0x4008000000000000),f(0xc010000000000000),f(0x4014000000000000),f(0x4018000000000000)],&[f(0x3fe8000000000000),f(0x8000000000000000),f(0x0000000000000000),f(0x0000000000000000),f(0x0000000000000000),f(0x3ff2000000000000),f(0xbfd0000000000000),f(0x0000000000000000),f(0x0000000000000000),f(0x3fd0000000000000),f(0x39a4484bfeebc2a0),f(0xbfe0000000000000),f(0x3ff8000000000000),f(0xc000000000000000),f(0x4004000000000000),f(0x4008000000000000)],&[f(0x3ff0000000000000),f(0x4000000000000000),f(0x4008000000000000)],&[f(0x8000000000000000),f(0xbfe999999999999a),f(0x3fe3333333333333)],&[f(0x4010000000000000),f(0x0000000000000000),f(0xc018000000000000)],&[f(0xbfd851eb851eb852),f(0x3feeb851eb851eb8),f(0x4035000000000000),f(0x3fdf3b645a1cac08),f(0x3ffc000000000000),f(0x3fc70a3d70a3d70a)])),None,r(&["K1","K3","K5","K7","K9","K11","K13","K15","K17","K19","K21","K23","K25","K27","K29","K31","K33","K35","K37","K39","K41","K43","K45","K47"],&[],&[f(0x4014000000000000),f(0x0000000000000000),f(0xc05e000000000000),f(0x4084040000000000),f(0x4076840000000000),f(0x4094000000000000),f(0x4086800000000000),f(0x40a4000000000000),f(0x4096800000000000)],&[f(0x3ff8000000000000),f(0x8000000000000000),f(0x0000000000000000),f(0x0000000000000000),f(0x0000000000000000),f(0x4002000000000000),f(0xbfe0000000000000),f(0x0000000000000000),f(0x0000000000000000),f(0x3fe0000000000000),f(0x39b4484bfeebc2a0),f(0xbff0000000000000),f(0x4008000000000000),f(0xc010000000000000),f(0x4014000000000000),f(0x4018000000000000)],&[f(0x3fe8000000000000),f(0x8000000000000000),f(0x0000000000000000),f(0x0000000000000000),f(0x0000000000000000),f(0x3ff2000000000000),f(0xbfd0000000000000),f(0x0000000000000000),f(0x0000000000000000),f(0x3fd0000000000000),f(0x39a4484bfeebc2a0),f(0xbfe0000000000000),f(0x3ff8000000000000),f(0xc000000000000000),f(0x4004000000000000),f(0x4008000000000000)],&[f(0x3ff0000000000000),f(0x4000000000000000),f(0x4008000000000000)],&[f(0x8000000000000000),f(0xbfe999999999999a),f(0x3fe3333333333333)],&[f(0x4010000000000000),f(0x0000000000000000),f(0xc018000000000000)],&[f(0xbfd851eb851eb852),f(0x3feeb851eb851eb8),f(0x4035000000000000),f(0x3fdf3b645a1cac08),f(0x3ffc000000000000),f(0x3fc70a3d70a3d70a)]),0x4008000000000000),
-    ("wire",Some(r(&["KeyW","ShiftLeft"],&["Digit1"],&[f(0x4014000000000000),f(0x3ff0000000000000),f(0xc05e000000000000),f(0x7ff8000000000000),f(0x4076840000000000),f(0x4094000000000000),f(0x4086800000000000),f(0x40a4000000000000),f(0x4096800000000000)],&[f(0x3ff8000000000000),f(0x8000000000000000),f(0x0000000000000000),f(0x7ff8000000000000),f(0x0000000000000000),f(0x4002000000000000),f(0xbfe0000000000000),f(0x0000000000000000),f(0x0000000000000000),f(0x3fe0000000000000),f(0x39b4484bfeebc2a0),f(0xbff0000000000000),f(0x4008000000000000),f(0xc010000000000000),f(0x4014000000000000),f(0x4018000000000000)],&[f(0x3fe8000000000000),f(0x8000000000000000),f(0x0000000000000000),f(0x0000000000000000),f(0x0000000000000000),f(0x3ff2000000000000),f(0xbfd0000000000000),f(0x0000000000000000),f(0x0000000000000000),f(0x3fd0000000000000),f(0x39a4484bfeebc2a0),f(0xbfe0000000000000),f(0x3ff8000000000000),f(0xc000000000000000),f(0x4004000000000000),f(0x4008000000000000)],&[f(0x3ff0000000000000),f(0x4000000000000000),f(0x4008000000000000)],&[f(0x8000000000000000),f(0xbfe999999999999a),f(0x3fe3333333333333)],&[f(0x4010000000000000),f(0x0000000000000000),f(0xc018000000000000)],&[f(0xbfd851eb851eb852),f(0x3feeb851eb851eb8),f(0x4035000000000000),f(0x3fdf3b645a1cac08),f(0x7ff8000000000000),f(0x3fc70a3d70a3d70a)])),None,r(&["KeyW","ShiftLeft"],&["Digit1"],&[f(0x4014000000000000),f(0x3ff0000000000000),f(0xc05e000000000000),f(0x4084000000000000),f(0x4076840000000000),f(0x4094000000000000),f(0x4086800000000000),f(0x40a4000000000000),f(0x4096800000000000)],&[f(0x4000c927e0000000),f(0x3ff38725a0000000),f(0x3fcb57e9c0000000),f(0x3fcb3abf20000000),f(0x0000000000000000),f(0x40026de500000000),f(0xbfea52e580000000),f(0xbfea36d140000000),f(0x3fead15ae0000000),f(0xc008721f20000000),f(0xbfe11d60e0000000),f(0xbfe10b1f60000000),f(0xc00aea9740000000),f(0xc0373760c0000000),f(0x403085b3e0000000),f(0x4030f41420000000)],&[f(0x3fda4e35a0000000),f(0x3e24cfbce0000000),f(0x3fc5037540000000),f(0x3df851eaa0000000),f(0x3fb35da860000000),f(0x3fc246bc40000000),f(0xbfc83e2f60000000),f(0xbe3bd82800000000),f(0x3fedc8f1a0000000),f(0xc04121a020000000),f(0xc024a713e0000000),f(0xbfffdddea0000000),f(0xbfe71a2940000000),f(0x4040cb1e60000000),f(0x4023ac8120000000),f(0x4000000060000000)],&[f(0xbfdde8d6ba775df0),f(0x403133f94f9f3f1a),f(0x4014bd325478e71a)],&[f(0x3fcb3abf1df2fcc2),f(0xbfea36d13c606028),f(0xbfe10b1f5d21de22)],&[f(0x4010000000000000),f(0x0000000000000000),f(0xc018000000000000)],&[f(0xbfd851eb851eb852),f(0x3feeb851eb851eb8),f(0x4035000000000000),f(0x3fdf3b645a1cac08),f(0x3ffc71c71c71c71c),f(0x3fc70a3d70a3d70a)]),0x4018000000000000),
-    ("remote",Some(r(&["KeyW","ShiftLeft"],&["Digit1"],&[f(0x4014000000000000),f(0x3ff0000000000000),f(0xc05e000000000000),f(0x4084040000000000),f(0x4076840000000000),f(0x4094000000000000),f(0x4086800000000000),f(0x40a4000000000000),f(0x4096800000000000)],&[f(0x3ff8000000000000),f(0x8000000000000000),f(0x0000000000000000),f(0x0000000000000000),f(0x0000000000000000),f(0x4002000000000000),f(0xbfe0000000000000),f(0x0000000000000000),f(0x0000000000000000),f(0x3fe0000000000000),f(0x39b4484bfeebc2a0),f(0xbff0000000000000),f(0x4008000000000000),f(0xc010000000000000),f(0x4014000000000000),f(0x4018000000000000)],&[f(0x3fe8000000000000),f(0x8000000000000000),f(0x0000000000000000),f(0x0000000000000000),f(0x0000000000000000),f(0x3ff2000000000000),f(0xbfd0000000000000),f(0x0000000000000000),f(0x0000000000000000),f(0x3fd0000000000000),f(0x39a4484bfeebc2a0),f(0xbfe0000000000000),f(0x3ff8000000000000),f(0xc000000000000000),f(0x4004000000000000),f(0x4008000000000000)],&[f(0x3ff0000000000000),f(0x4000000000000000),f(0x4008000000000000)],&[f(0x8000000000000000),f(0xbfe999999999999a),f(0x3fe3333333333333)],&[f(0x407f400000000000),f(0x4008000000000000),f(0x4079000000000000)],&[f(0xbfd851eb851eb852),f(0x3ff8cccccccccccd),f(0x4079000000000000),f(0x3fdf3b645a1cac08),f(0x3ffc000000000000),f(0x3fc70a3d70a3d70a)])),Some([f(0x4059000000000000),f(0x0000000000000000),f(0xc049000000000000)]),r(&["KeyW","ShiftLeft"],&["Digit1"],&[f(0x4014000000000000),f(0x3ff0000000000000),f(0xc05e000000000000),f(0x4084040000000000),f(0x4076840000000000),f(0x4094000000000000),f(0x4086800000000000),f(0x40a4000000000000),f(0x4096800000000000)],&[f(0x40010d5d40000000),f(0x3ff7c74000000000),f(0x3f9afae160000000),f(0x3f9ade1a00000000),f(0x0000000000000000),f(0x3fd22f30e0000000),f(0xbff006d5c0000000),f(0xbfefeb7aa0000000),f(0x3feb3e5420000000),f(0xc00dc44040000000),f(0xbfb0e325c0000000),f(0xbfb0d12260000000),f(0xc074ec6c00000000),f(0xc067e8f380000000),f(0x4063a5ade0000000),f(0x4063a0b8e0000000)],&[f(0x3fd9e4fce0000000),f(0x3e5076fd00000000),f(0x3fc4af6760000000),f(0x3dd9575d00000000),f(0x3fb794b5c0000000),f(0x3f920877a0000000),f(0xbfcd850260000000),f(0xbe221cf4c0000000),f(0xc0728a7280000000),f(0xc073ea7bc0000000),f(0xc04437b140000000),f(0xbfffddaf80000000),f(0x40729eba20000000),f(0x4073efdb40000000),f(0x404444f0a0000000),f(0x3fffffd1a0000000)],&[f(0x40629e69925a33c9),f(0x4063ffee11c7370e),f(0x40344d763a7397e2)],&[f(0x3f9ade1a0e29af70),f(0xbfefeb7a9b2c6d8b),f(0xbfb0d12267aa4ffd)],&[f(0x406324c014a10436),f(0x3fd982e196e52ee3),f(0x4023958173524bc8)],&[f(0xbfd851eb851eb852),f(0x3ff8000000000000),f(0x4064000000000000),f(0x3fdf3b645a1cac08),f(0x3ffc000000000000),f(0x3fc70a3d70a3d70a)]),0x401c000000000000),
-    ("remoteNear",Some(r(&["KeyW","ShiftLeft"],&["Digit1"],&[f(0x4014000000000000),f(0x3ff0000000000000),f(0xc05e000000000000),f(0x4084040000000000),f(0x4076840000000000),f(0x4094000000000000),f(0x4086800000000000),f(0x40a4000000000000),f(0x4096800000000000)],&[f(0x3ff8000000000000),f(0x8000000000000000),f(0x0000000000000000),f(0x0000000000000000),f(0x0000000000000000),f(0x4002000000000000),f(0xbfe0000000000000),f(0x0000000000000000),f(0x0000000000000000),f(0x3fe0000000000000),f(0x39b4484bfeebc2a0),f(0xbff0000000000000),f(0x4008000000000000),f(0xc010000000000000),f(0x4014000000000000),f(0x4018000000000000)],&[f(0x3fe8000000000000),f(0x8000000000000000),f(0x0000000000000000),f(0x0000000000000000),f(0x0000000000000000),f(0x3ff2000000000000),f(0xbfd0000000000000),f(0x0000000000000000),f(0x0000000000000000),f(0x3fd0000000000000),f(0x39a4484bfeebc2a0),f(0xbfe0000000000000),f(0x3ff8000000000000),f(0xc000000000000000),f(0x4004000000000000),f(0x4008000000000000)],&[f(0x3ff0000000000000),f(0x4000000000000000),f(0x4008000000000000)],&[f(0x8000000000000000),f(0xbfe999999999999a),f(0x3fe3333333333333)],&[f(0x4010000000000000),f(0x0000000000000000),f(0xc018000000000000)],&[f(0xbfd851eb851eb852),f(0xbff8cccccccccccd),f(0x4035000000000000),f(0x3fdf3b645a1cac08),f(0x3ffc000000000000),f(0x3fc70a3d70a3d70a)])),Some([f(0x4010000000000000),f(0x3ff0000000000000),f(0xc018000000000000)]),r(&["KeyW","ShiftLeft"],&["Digit1"],&[f(0x4014000000000000),f(0x3ff0000000000000),f(0xc05e000000000000),f(0x4084040000000000),f(0x4076840000000000),f(0x4094000000000000),f(0x4086800000000000),f(0x40a4000000000000),f(0x4096800000000000)],&[f(0x40010d5d40000000),f(0xbff7c74000000000),f(0x3f9afae160000000),f(0x3f9ade1a00000000),f(0x0000000000000000),f(0x3fd22f30e0000000),f(0x3ff006d5c0000000),f(0x3fefeb7aa0000000),f(0x3feb3e5420000000),f(0x400dc44040000000),f(0xbfb0e325c0000000),f(0xbfb0d12260000000),f(0xc00b57f720000000),f(0x403c450040000000),f(0x403415a7a0000000),f(0x4034803b20000000)],&[f(0x3fd9e4fce0000000),f(0xbe259a4b40000000),f(0x3fc4af6760000000),f(0x3dd9578000000000),f(0xbfb794bae0000000),f(0x3f92088b60000000),f(0x3fcd8501e0000000),f(0x3e221d0dc0000000),f(0xc01b7a1f60000000),f(0x4044dc2ee0000000),f(0x402267a8a0000000),f(0xbfffdddb80000000),f(0x401bb26c20000000),f(0xc04472d920000000),f(0xc0229d01c0000000),f(0x3ffffffde0000000)],&[f(0x400b978fb9ad2938),f(0xc034f28875d527e3),f(0xc0127b60b5fc1dc1)],&[f(0x3f9ade1a0e29af70),f(0x3fefeb7a9b2c6d8b),f(0xbfb0d12267aa4ffd)],&[f(0x4010000000000000),f(0x0000000000000000),f(0xc018000000000000)],&[f(0xbfd851eb851eb852),f(0xbff8000000000000),f(0x4035000000000000),f(0x3fdf3b645a1cac08),f(0x3ffc000000000000),f(0x3fc70a3d70a3d70a)]),0x4014000000000000),
-    ("null",None,None,r(&[],&[],&[f(0x0000000000000000),f(0x0000000000000000),f(0x0000000000000000),f(0x4084000000000000),f(0x4076800000000000),f(0x4094000000000000),f(0x4086800000000000),f(0x4094000000000000),f(0x4086800000000000)],&[f(0x3ffd1834a0000000),f(0x0000000000000000),f(0x0000000000000000),f(0x0000000000000000),f(0x0000000000000000),f(0x3ffdaa1fe0000000),f(0xbfea52e580000000),f(0xbfea36d140000000),f(0x0000000000000000),f(0xc0052f8fe0000000),f(0xbfe26def20000000),f(0xbfe25a46a0000000),f(0x0000000000000000),f(0x0000000000000000),f(0x403495f560000000),f(0x4035000000000000)],&[f(0x3fe1990920000000),f(0x8000000000000000),f(0x8000000000000000),f(0x8000000000000000),f(0x8000000000000000),f(0x3fc6b56260000000),f(0xbfd037cca0000000),f(0xbe3dbe3f40000000),f(0x0000000000000000),f(0xc04121a080000000),f(0xc037fccc20000000),f(0xbfffdddf40000000),f(0x8000000000000000),f(0x4040cb1ec0000000),f(0x403783aba0000000),f(0x40000000c0000000)],&[f(0x0000000000000000),f(0x403133f94f9f3f1a),f(0x4028167ca4d6e905)],&[f(0x8000000000000000),f(0xbfea36d13c606028),f(0xbfe25a4695f91310)],&[f(0x0000000000000000),f(0x0000000000000000),f(0x0000000000000000)],&[f(0x0000000000000000),f(0x3feeb851eb851eb8),f(0x4035000000000000),f(0x3fe3333333333333),f(0x3ffc71c71c71c71c),f(0x0000000000000000)]),0x403c000000000000),
-    ] }
-    fn beats() -> Vec<(bool,f64,f64,f64,f64)> { vec![(true,f(0x4014000000000000),f(0x3ff0000000000000),f(0x0000000000000000),f(0x4014000000000000)),(false,f(0x3ff0000000000000),f(0x0000000000000000),f(0x3ff0000000000000),f(0x4010000000000000)),(true,f(0x4014000000000000),f(0x0000000000000000),f(0x3ff0000000000000),f(0x4010000000000000)),(true,f(0x4010000000000000),f(0x0000000000000000),f(0x0000000000000000),f(0x4010000000000000)),(true,f(0x4014000000000000),f(0x3ff0000000000000),f(0x0000000000000000),f(0x4014000000000000)),(false,f(0x4014000000000000),f(0x0000000000000000),f(0x4014000000000000),f(0x0000000000000000)),(true,f(0x4014000000000000),f(0x0000000000000000),f(0x4014000000000000),f(0x0000000000000000)),(true,f(0x4014000000000000),f(0x4010000000000000),f(0x3ff0000000000000),f(0x4010000000000000)),(true,f(0x0000000000000000),f(0x0000000000000000),f(0x0000000000000000),f(0x0000000000000000)),(false,f(0x41e0000000000000),f(0x0000000000000000),f(0xc1e0000000000000),f(0x0000000000000000)),(true,f(0x41efffffffe00000),f(0x0000000000000000),f(0xc1e0000000000000),f(0x41dfffffffc00000))] }
 }

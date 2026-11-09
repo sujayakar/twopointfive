@@ -1419,17 +1419,6 @@ pub struct SWAP {
     pub lag: f64,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct HOLDPOLISHUP {
-    pub lay_ahead: f64,
-    pub dip: f64,
-    pub back: f64,
-    pub m: f64,
-    pub twist: f64,
-    pub side: f64,
-    pub tip: f64,
-    pub arch: f64,
-}
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct CharacterModHOLDSHOW {
@@ -2538,7 +2527,6 @@ pub const WHIP_THRU: f64 = 0.14;
 
 pub const SWAP_RATE: f64 = 14.0;
 
-pub fn hold_polish_up() -> crate::character::HOLDPOLISHUP { crate::character::HOLDPOLISHUP { lay_ahead: 0.9, dip: 0.06, back: 0.035, m: 0.014, twist: 2.4, side: 7.0, tip: 8.0, arch: -5.0 } }
 
 pub fn blend() -> crate::character::BLEND { crate::character::BLEND { walk_in0: 0.12, walk_in1: 0.55, walk_top: 1.6, jog_at: 2.7 } }
 

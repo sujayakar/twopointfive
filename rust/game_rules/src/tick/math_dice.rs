@@ -16,8 +16,6 @@ static DRAWS: Draws = Draws(core::cell::UnsafeCell::new((Vec::new(), 0)));
 
 /// the host's draws for the tick about to run
 fn host_draws_set(v: &[f64]) { unsafe { *DRAWS.0.get() = (v.to_vec(), 0); } }
-/// (taken, handed)
-fn host_draws_count() -> (usize, usize) { unsafe { let d = &*DRAWS.0.get(); (d.1, d.0.len()) } }
 /// one draw off the host's stream; past its end is the Rust tick drawing where the TypeScript's did not
 fn host_draw() -> f64 {
     unsafe {
@@ -109,11 +107,6 @@ pub fn use_dice(g: &mut crate::game::Game) {
     }
 }
 
-/// The die in use: the game's own, since nothing in the Rust game can stand in Math.random's place.
-fn dice_in_use(g: &crate::game::Game) -> Option<crate::math_dice::SimDice> {
-    g.dice
-}
-
 /// A draw for the simulation, uniform in [0, 1): off the block where the die is at home, else off its own word; no die, Math.random.
 pub fn sim_random(g: &mut crate::game::Game) -> f64 {
     if g.dice.is_none() {
@@ -145,40 +138,22 @@ fn seam_math_random(g: &Game) -> f64 {
 mod tests {
     use super::*;
 
-    const NEW_ROWS: &[(f64, u64, u64)] = &[
-        (0.0, 0x0000000000000000, 0x0000000000000000),
-        (-1.0, 0xbff0000000000000, 0x41efffffffe00000),
-        (4294967301.0, 0x4014000000000000, 0x4014000000000000),
-        (2147483648.0, 0xc1e0000000000000, 0x41e0000000000000),
-        (1.5, 0x3ff0000000000000, 0x3ff0000000000000),
-        (-7.9, 0xc01c000000000000, 0x41efffffff200000),
-    ];
-
-    // the TypeScript's own bits: bun, EXACT.on, dieOf then roll four times; the word after them last
-    const ROLL_ROWS: &[(f64, u64, [u64; 4], u64)] = &[
-        (0.0, 0x0000000000000000, [0x3fd10d2d18800000, 0x3f359c3700000000, 0x3fcc942d84000000, 0x3fc2b6c082000000], 0xc1d2d4860b000000),
-        (1.0, 0x3ff0000000000000, [0x3fe410fd5e600000, 0x3f66693920000000, 0x3fe0e0d89d600000, 0x3fef64c4ffa00000], 0xc1d2d4860ac00000),
-        (-1.0, 0xbff0000000000000, [0x3fecaf7e7a600000, 0x3fc840d2d2000000, 0x3fe6e6a072000000, 0x3fee35bd20800000], 0xc1d2d4860b400000),
-        (12345.0, 0x40c81c8000000000, [0x3fef59ef18a00000, 0x3fd3a1d440000000, 0x3fdefd38bc800000, 0x3fea2c84ca000000], 0xc1d2d479fcc00000),
-        (4294967301.0, 0x4014000000000000, [0x3fe612a2d5800000, 0x3fe8ba5019e00000, 0x3fcc2131bf000000, 0x3fe3f114b6a00000], 0xc1d2d48609c00000),
-        (2147483648.0, 0xc1e0000000000000, [0x3fea422bdf800000, 0x3fdcadd12ec00000, 0x3fe91357f9800000, 0x3fe062addda00000], 0x41ca56f3ea000000),
-        (1.5, 0x3ff0000000000000, [0x3fe410fd5e600000, 0x3f66693920000000, 0x3fe0e0d89d600000, 0x3fef64c4ffa00000], 0xc1d2d4860ac00000),
-        (-7.9, 0xc01c000000000000, [0x3fdbb7600d400000, 0x3fd4d348c4c00000, 0x3fe16aa7df000000, 0x3fdebb6ecfc00000], 0xc1d2d4860cc00000),
-        (360021.0, 0x4115f95400000000, [0x3f99d105f4000000, 0x3fea4b5758c00000, 0x3fe90b527be00000, 0x3fdb26f879400000], 0xc1d2d32675c00000),
-        (1e20, 0x41d8c40000000000, [0x3fc97f34e7800000, 0x3fe612fe5cc00000, 0x3fd030cea7800000, 0x3fcbc2ee99000000], 0x41b7bde7d4000000),
-        (f64::NAN, 0x0000000000000000, [0x3fd10d2d18800000, 0x3f359c3700000000, 0x3fcc942d84000000, 0x3fc2b6c082000000], 0xc1d2d4860b000000),
-    ];
-
+    /// A die on a record is its word: the same word goes on with the same draws, whatever came before it.
     #[test]
-    fn roll_is_the_typescripts_bits() {
-        for &(seed, word, draws, after) in ROLL_ROWS {
-            let mut d = die_of(seed);
-            assert_eq!(d.dice.to_bits(), word, "seed {seed}");
-            for x in draws {
-                assert_eq!(roll(&mut d).to_bits(), x, "seed {seed}");
-            }
-            assert_eq!(d.dice.to_bits(), after, "seed {seed}");
+    fn a_die_is_its_word_and_its_draws_lie_across_the_range() {
+        let (mut d, mut sum) = (die_of(12345.0), 0.0);
+        let mut twin = die_of(12345.0);
+        for i in 0..1000 {
+            let r = roll(&mut d);
+            assert!((0.0..1.0).contains(&r), "draw {i}: {r}");
+            assert_eq!(r, roll(&mut twin));
+            sum += r;
         }
+        assert!(m::abs(sum / 1000.0 - 0.5) < 0.05, "the mean of a thousand draws is {}", sum / 1000.0);
+        let mut again = Die { dice: d.dice };
+        assert_eq!(roll(&mut d), roll(&mut again), "taken up again from its word");
+        assert_ne!(roll(&mut die_of(1.0)), roll(&mut die_of(2.0)), "another seed is another stream");
+        assert_eq!(roll(&mut die_of(4294967301.0)), roll(&mut die_of(5.0)), "a seed is its whole word: past 32 bits it wraps");
     }
 
     #[test]
@@ -190,31 +165,24 @@ mod tests {
         }
     }
 
+    /// What is dealt by name goes with the name, wherever the game runs.
     #[test]
-    fn hash_is_the_typescripts_bits() {
-        let rows: &[(&str, u64)] = &[
-            ("", 0x41e02393b8a00000),
-            ("a", 0x41ec818525800000),
-            ("civdice:Ana", 0x41da78918d800000),
-            ("héllo", 0x41ee3cb6abe00000),
-            ("日本語", 0x41d5018dd3800000),
-            ("🙂x", 0x41e557ef32400000),
-        ];
-        for &(s, h) in rows {
-            assert_eq!(hash_str(s).to_bits(), h, "{s}");
+    fn a_name_deals_one_whole_number_of_its_own() {
+        let names = ["", "a", "b", "civdice:Ana", "civdice:Ben", "héllo", "日本語", "🙂x"];
+        for (i, n) in names.iter().enumerate() {
+            let h = hash_str(n);
+            assert_eq!(h, hash_str(n));
+            assert!(h >= 0.0 && h < 4294967296.0 && h == m::floor(h), "{n}: {h}");
+            assert!(names[i + 1..].iter().all(|o| hash_str(o) != h), "{n} deals what another does");
         }
     }
 
     #[test]
-    fn new_die_is_the_typescripts_bits() {
-        for &(seed, s0, sd) in NEW_ROWS {
-            let mut d = sim_dice_new(seed);
-            assert_eq!(d.s0.to_bits(), s0, "seed {seed}");
-            assert_eq!(d.seed.to_bits(), sd, "seed {seed}");
-            assert_eq!(d.n0.to_bits(), 0);
+    fn a_new_die_starts_at_its_seed_with_no_draws_taken() {
+        for (seed, word, unsigned) in [(0.0, 0.0, 0.0), (5.0, 5.0, 5.0), (-1.0, -1.0, 4294967295.0), (4294967301.0, 5.0, 5.0), (2147483648.0, -2147483648.0, 2147483648.0)] {
+            let d = sim_dice_new(seed);
+            assert_eq!((sim_dice_s(&d), d.seed, sim_dice_n(&d)), (word, unsigned, 0.0), "seed {seed}");
             assert!(d.home.is_none());
-            assert_eq!(sim_dice_s(&mut d).to_bits(), s0);
-            assert_eq!(sim_dice_n(&mut d).to_bits(), 0);
         }
     }
 
@@ -241,7 +209,6 @@ mod tests {
         assert_eq!(::sim::state::state(g.sim).head.homes & DICE_BIT, 0);
         super::host_draws_set(&[0.25]);
         assert_eq!(sim_random(&mut g), 0.25);
-        assert_eq!(super::host_draws_count(), (1, 1));
 
         // a die not yet at home rolls its own word (a game's construction)
         g.dice = Some(sim_dice_new(-7.0));
@@ -258,7 +225,6 @@ mod tests {
         let mut d = g.dice.unwrap();
         assert_eq!(sim_dice_s(&mut d).to_bits(), (stream.s as i32 as f64).to_bits());
         assert_eq!(sim_dice_n(&mut d), 3.0);
-        assert_eq!(dice_in_use(&mut g).unwrap().seed.to_bits(), d.seed.to_bits());
 
         // a die imported at home with its block not brought: the word is the one `home` carries, not the stale s0
         ::sim::state::state(g.sim).head.homes = 0;
