@@ -402,7 +402,7 @@ fn seats_row(name: &str, id: &str, pins: &Pins, f: Flags) {
         if i == SEATS_MOMENT.0 * 60 { moment = Some(Moment::of(&p.g)); }
         if !f.breaks("idle") { for k in 0..2 { p.lens_of(&mut players[k], k); } }
         let mut cmds = p.net_sample();
-        if !f.breaks("idle") { for k in 0..2 { p.hand_of(&mut players[k], &mut cmds[k]); } }
+        if !f.breaks("idle") { for k in 0..2 { p.hand_by(&mut players[k], &mut cmds[k]); } }
         if (&cmds[0].keys, &cmds[0].pressed, cmds[0].buttons) == (&cmds[1].keys, &cmds[1].pressed, cmds[1].buttons) { same_hands += 1; }
         let text = [game::cmd::cmd_text(&cmds[0]), game::cmd::cmd_text(&cmds[1])];
         let back: Vec<PlayerCmd> = text.iter().map(|x| game::cmd::cmd_from_text(x)).collect();

@@ -207,7 +207,7 @@ impl Play {
     pub fn played_by(&mut self, script: &mut dyn crate::player::Script) {
         self.lens_of(script, 0);
         let mut cmds = self.net_sample();
-        self.hand_of(script, &mut cmds[0]);
+        self.hand_by(script, &mut cmds[0]);
         self.net_tick(&cmds, 0);
         self.host_saves();
         self.g.out.clear();
@@ -215,7 +215,7 @@ impl Play {
         self.lens_and_keys();
     }
     /// his hand over what the host sampled for his seat, with the box world's copy standing for his questions
-    pub fn hand_of(&mut self, script: &mut dyn crate::player::Script, cmd: &mut game::cmd::PlayerCmd) {
+    pub fn hand_by(&mut self, script: &mut dyn crate::player::Script, cmd: &mut game::cmd::PlayerCmd) {
         if game::ask::WorldAsk::try_of(&self.g).is_err() { game::scene_collision::stands(&mut self.g); }
         game::scene_box_mirror::box_mirror_things(&mut self.g);
         script.hand(&self.g, cmd, DT);
