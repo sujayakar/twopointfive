@@ -1,10 +1,10 @@
 //! The types of `fire`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: FireStats, src/game/fire.ts:156)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct FireStats {
     pub fires: f64,
     pub lit: f64,
@@ -45,11 +45,7 @@ pub struct FireShown {
     pub beds: f64,
     pub ember: Vec<f64>,
     pub embers: f64,
-    pub gas: Vec<f64>,
-    pub gas_mix: Vec<f64>,
-    pub gases: f64,
     pub soot_mix: Option<Vec<f64>>,
-    pub kept: Option<f64>,
     /// INVENTED by a review: see the proposals
     pub serial: u32,
 }
@@ -67,11 +63,7 @@ impl FireShown {
             beds: 0.0,
             ember: Vec::new(),
             embers: 0.0,
-            gas: Vec::new(),
-            gas_mix: Vec::new(),
-            gases: 0.0,
             soot_mix: None,
-            kept: None,
             serial: 0,
         }
     }
@@ -169,11 +161,7 @@ pub struct FireShown2 {
     pub beds: f64,
     pub ember: Vec<f64>,
     pub embers: f64,
-    pub gas: Vec<f64>,
-    pub gas_mix: Vec<f64>,
-    pub gases: f64,
     pub soot_mix: Option<Vec<f64>>,
-    pub kept: Option<f64>,
     /// INVENTED by a review: see the proposals
     pub serial: u32,
 }
@@ -191,11 +179,7 @@ impl FireShown2 {
             beds: 0.0,
             ember: Vec::new(),
             embers: 0.0,
-            gas: Vec::new(),
-            gas_mix: Vec::new(),
-            gases: 0.0,
             soot_mix: None,
-            kept: None,
             serial: 0,
         }
     }
@@ -260,7 +244,7 @@ impl WindAt {
 impl Default for WindAt { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct FireMod {
     /// (src/game/fire.ts:223 states)
     pub states: Option<crate::fire::FireStats>,

@@ -13,7 +13,7 @@
 //! box beyond its yawed footprint, as the grid itself, and the PICTURE: the camera here is the worked-out pin BEFORE the page's frame slides and scales it, so `occluders` is what stands
 //! in THAT line.
 //!
-//! EVERY NUMBER IS THE TYPESCRIPT'S TO THE BIT (tools/blitz/kitplan-diff.ts): the order of every sum is the original's, do not tidy the arithmetic.
+//! THE ORDER OF EVERY SUM IS KEPT: the staged places and lamps are numbers a kept run or a picture's compare may read to the bit; do not tidy the arithmetic.
 use alloc::borrow::Cow;
 use alloc::collections::BTreeSet;
 use alloc::format;

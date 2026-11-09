@@ -1,4 +1,4 @@
-// A GAME OF TWO ON THE PAGE THAT DRAWS (host/drawnet.ts), with no page and no socket: the server's core and a second player stand the module's game (tools/mp/modstand.ts), the first player is the page's own half over
+// A GAME OF TWO ON THE PAGE THAT DRAWS (host/drawnet.ts), with no page and no socket: the server's core and a second player stand the module's game (tools/mp/stand.ts), the first player is the page's own half over
 // a door with a wire of a check's, on a clock of a check's. The words of the whole game are the server's at every word tick, through a restart, a stretch asleep and bunched ticks; his man is drawn where the
 // look ahead has him, stands still where nothing was confirmed, and is blended over every tick of a walk.
 //   bun run tools/draw/net-check.ts        exit 0 · 1
@@ -7,15 +7,18 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { faceHere } from '../blitz/face-build.ts';
 import { characterFiles } from '../blitz/start-pack.ts';
-import { freshStart, standStart } from '../mp/modstand.ts';
+import { freshStart, standStart } from '../mp/stand.ts';
+import { drawEnd } from '../../src/host/drawend';
 import { DrawGame } from '../../src/host/drawgame';
+import { sampleHand } from '../../src/draw/hand';
 import { DrawNet } from '../../src/host/drawnet';
+import { shownAs } from '../../src/host/myname';
 import { NetDoor } from '../../src/net/door';
 import { FORESEE } from '../../src/net/foresee';
 import { NetClient } from '../../src/net/client';
 import { NetServer, type Conn } from '../../src/net/server';
 import { FIRST, type WireCmd } from '../../src/net/wire';
-import { FollowCamera } from '../../src/game/camera';
+import { FollowCamera } from '../../src/host/camera';
 import { Man, Section, View } from '../../src/draw/sections';
 
 const ROOT = resolve(import.meta.dir, '../..'), BREAK = process.env.NET_BREAK === '1';
@@ -29,7 +32,7 @@ const server = new NetServer({ now: () => now, step: c => S.step(c), word: () =>
 const joined = (c: NetClient, keep: { conn: Conn | null }): void => { keep.conn = { send: t => { later(() => c.message(t, now)); return 1; }, close: () => { /* */ } }; };
 
 // ---- the second player
-const B = await standStart(start), bWire = { conn: null as Conn | null }, b = new NetClient(t => later(() => server.message(bWire.conn!, t)), { game: 'g', build: '', key: 'b' }); joined(b, bWire);
+const B = await standStart(start), bWire = { conn: null as Conn | null }, b = new NetClient(t => later(() => server.message(bWire.conn!, t)), { game: 'g', build: '', key: 'b', name: 'Grace' }); joined(b, bWire);
 B.show(1);
 
 // ---- the first: the page's half
@@ -37,10 +40,13 @@ const wasm = faceHere(); if (!wasm) { console.error('net-check: no module of the
 const instance = new WebAssembly.Instance(new WebAssembly.Module(new Uint8Array(readFileSync(wasm))), { env: { face_roll: () => { throw new Error('the game asked a die'); } } });
 const [mannequin, mannequinBin, cast, castLook] = characterFiles(ROOT);
 const game = new DrawGame({ exports: instance.exports, bytes: 0, fetchMs: 0, compileMs: 0 }), D = game.drawn, aWire = { conn: null as Conn | null };
-const door = new NetDoor('', 'g', 'a', ''); (door as unknown as { ws: unknown }).ws = { readyState: 1, send: (t: string) => later(() => server.message(aWire.conn!, t)), close: () => { /* */ } }; joined(door.client, aWire);
+const door = new NetDoor('', 'g', 'a', 'Ada'); (door as unknown as { ws: unknown }).ws = { readyState: 1, send: (t: string) => later(() => server.message(aWire.conn!, t)), close: () => { /* */ } }; joined(door.client, aWire);
 FORESEE.on = true;
 let deaf = 0; const net = new DrawNet(door, start, game, () => { deaf++; });
 net.start({ level: new Uint8Array(readFileSync(resolve(ROOT, 'levels', start.file))), mannequin, mannequinBin, cast, castLook });
+// (the ticks the page plays and throws away before the first, as a page does: the server's game and the second player's are played none, and every word below must still be theirs)
+{ const eye = new FollowCamera(), none = new Set<string>(), walk = new Set(['KeyW']), o = D.at[Section.view] + View.follow; eye.target = [D.f[o], D.f[o + 1], D.f[o + 2]]; eye.rebuild();
+  await game.warm(36, (N, i) => sampleHand(N, { keys: i >= 12 ? walk : none, pressed: none, buttons: i >= 24 ? 1 : 0, clicked: 0, wheel: 0, mouseX: 640, mouseY: 300 }, eye, { clientWidth: 1280, clientHeight: 720, width: 1280, height: 720 }), async () => { /* */ }); }
 if (BREAK) { const n = (net as unknown as { net: { step(c: WireCmd[]): void; ticks: number } }).net, step = n.step.bind(n); n.step = c => step(n.ticks === 200 ? [{ ...c[0], k: ['KeyS'] }, c[1]] : c); }
 
 const cam = new FollowCamera(), canvas = { clientWidth: 1280, clientHeight: 720, width: 1280, height: 720 }, input = { keys: new Set<string>(), pressed: new Set<string>(), buttons: 0, clicked: 0, wheel: 0, mouseX: 640, mouseY: 300 };
@@ -88,5 +94,8 @@ line(spreads > 5 && spread < 0.02, 'two ticks in one of the page\'s are blended 
   line(!c.bad && deaf === 1 && level === 1 && !door.far && c.wordsOk > ok && seen - was < game.ticks - ticks, 'a page that slept catches up over ticks nobody sees, and is level again', `${game.ticks - ticks} ticks, ${seen - was} of them seen`); }
 // his hands off under a card
 { input.keys.add('KeyW'); run(30); off = true; run(20); const p = game.view().me, a = game.at(p)!; run(30); const z = game.at(p)!; line(far([a[0], a[2]], [z[0], z[2]]) < 0.02 && !c.bad, 'under a card his hands are off, and the game goes on', `${walked} ticks seen in all before it`); }
+// what a card calls the players
+{ const E = drawEnd(game, {} as never, c.names), own = [1, 2, 3].map(n => E.name(0, `Player ${n}`)), mate = E.name(0, 'Grey'), twin = shownAs('Player 1', ['Ada', 'ada']), posed = shownAs('Player 1', ['player 2', 'Grace']), one = shownAs('Player', ['Ada']);
+  line(own.join() === 'Ada,Grace,Player 3' && mate === 'Grey' && twin === 'Player 1' && posed === 'Player 1' && one === 'Ada', 'a card calls a player what he picked, over the game\'s own word for his seat; a name that tells nobody apart is not used', `${own.join(', ')} \u00b7 ${mate} \u00b7 ${twin} \u00b7 ${posed} \u00b7 ${one}`); }
 console.log(fails ? `=== net: ${fails} FAILED ===` : '=== net: ALL PASS ===');
 process.exit(fails ? 1 : 0);

@@ -1,10 +1,11 @@
 // Write a level file from its generator: tools/levels/<name>.ts exports build() → { level, scenarios?, groups, surfaces? } (a Level made with src/scene/officeGen.ts
-// officeKit or src/scene/levelKit.ts, and the scenario data that goes in the file's `scenarios` block) and optionally NAME, NOTES, MATERIALS, PALETTE, DRESS_AS and finish.
-// Here the doors are fitted (doorSize.ts), the loud levels dressed (dress.ts) after the lived-in tail, the floor's flats put in order (flatLayers.ts) and a look
-// file's skin run (finish); then Level → level data → validate → canonical text → parse → load, and the loaded Level must be the generator's, field for field, or
-// nothing is written. A level with a tools/levels/<name>-gwot.ts beside it is exported / checked together with that look file.
+// officeKit or src/scene/levelKit.ts, and the scenario data that goes in the file's `scenarios` block) and optionally NAME, NOTES, MATERIALS, PALETTE and finish.
+// Here the doors are fitted (doorSize.ts), the loud levels dressed (dress.ts) after the lived-in tail, the floor's flats put in order (flatLayers.ts) and the
+// skin run (finish); then Level → level data → validate → canonical text → parse → load, and the loaded Level must be the generator's, field for field, or
+// nothing is written.
 //   bun run tools/levels/export.ts <name>            write levels/<name>.json (prints counts, size, digest)
 //   bun run tools/levels/export.ts <name> --check    write nothing; exit 1 if levels/<name>.json is missing or differs from what the generator gives now
+//   bun run tools/levels/export.ts <name> --floor <dir>   write <dir>/<name>.json, the level with its skin left out, for the checks that hold a skin to paint (./floors.ts)
 import { basename, resolve } from 'node:path';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 const ROOT = resolve(import.meta.dir, '../..');
@@ -16,17 +17,18 @@ const { DOES_DEFAULT } = await import(`${ROOT}/src/scene/materials.ts`);
 const { validateLevelData, serializeLevelData, parseLevelData, levelDataDigest, structuralDiff, canonicalLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
 
-const argv = process.argv.slice(2), name = argv.find(a => !a.startsWith('--')), CHECK = argv.includes('--check');
+const argv = process.argv.slice(2), floorAt = argv.indexOf('--floor'), FLOOR_TO = floorAt >= 0 ? argv[floorAt + 1] : null, name = argv.find((a, i) => !a.startsWith('--') && (floorAt < 0 || i !== floorAt + 1)), CHECK = argv.includes('--check');
 if (!name || !/^[\w-]+$/.test(name) || !existsSync(resolve(import.meta.dir, `${name}.ts`))) { console.error(`usage: bun run tools/levels/export.ts <name> [--check]   (a generator tools/levels/<name>.ts)`); process.exit(2); }
+if (name.endsWith('-floor')) { console.error(`export: ${name} is what the skin in tools/levels/${name.replace(/-floor$/, '')}.ts builds on, and has no file of its own: export that`); process.exit(2); }
 const gen = await import(resolve(import.meta.dir, `${name}.ts`));
-const OUT = resolve(ROOT, `levels/${gen.NAME ?? name}.json`);
+const OUT = FLOOR_TO ? resolve(FLOOR_TO, `${gen.NAME ?? name}.json`) : resolve(ROOT, `levels/${gen.NAME ?? name}.json`);
 
 const { level, scenarios, groups, surfaces } = gen.build();
 { const { fitDoors, fitWaysOut } = await import(`${ROOT}/src/scene/doorSize.ts`);
   fitDoors(level.doors);   // every leaf the real door of its slot (doorSize.ts — a generator that frames a COPY of a def leaves the level's own unfitted)
   fitWaysOut(level, scenarios?.quiet); }   // … and a way out that names a door goes through the door as fitted
 // DRESSING (tools/levels/dress.ts): the loud levels get things to wreck, appended LAST under their own group — which the loader leaves out with the destruction switch off
-// (game/destructionSwitch.ts), so the switch is raised here for the reload check below: the file must reproduce the DRESSED level.
+// (scene/dressing.ts), so the switch is raised here for the reload check below: the file must reproduce the DRESSED level.
 // LIVED-IN ROOMS (src/scene/lived.ts): what furnishes a room — boxes in group 'lived.<room>', props / lights / fixtures named 'lived.…' — is left out by the loader with
 // its switch off, and off must be the level as it was. So: the lived things are the TAIL of each of the generator's lists (nothing kept comes after one, so no kept
 // index moves and a fixture's box references stay true), nothing kept names a lived box, and the dressing below is dealt as if they were not there (the same
@@ -53,29 +55,24 @@ const dressBare = (dressLevel: (l: unknown, g: string[]) => { added: number; sur
   if (hit.length) throw new Error(`lived things stand in the dressing (${hit.length}): ${hit.slice(0, 6).join(' · ')} — the dressing is dealt as if the furniture were not there; move them off the surfaces it dresses`);
   return st; };
 const nGen = level.boxes.length;   // (the generator's own boxes + its lived things: what follows is the dressing)
-{ const { DESTRUCTION } = await import(`${ROOT}/src/game/destructionSwitch.ts`); DESTRUCTION.on = true;
+{ const { DESTRUCTION } = await import(`${ROOT}/src/scene/dressing.ts`); DESTRUCTION.on = true;
   const { dressLevel, LOUD_LEVELS } = await import('./dress.ts');
-  if (LOUD_LEVELS.some((l: { gen: string }) => l.gen === (gen.DRESS_AS ?? name)) && !argv.includes('--bare')) { const st = dressBare(dressLevel); console.log(`dressing: ${st.added} boxes on ${st.surfaces} surfaces — ${Object.entries(st.by).map(([k, n]) => `${n} ${k}`).join(', ')}`); } }   // (surfaces: the footstep map — game/floor.ts; a generator that gives none gets the office's)
+  if (LOUD_LEVELS.some((l: { gen: string }) => l.gen === name) && !argv.includes('--bare')) { const st = dressBare(dressLevel); console.log(`dressing: ${st.added} boxes on ${st.surfaces} surfaces — ${Object.entries(st.by).map(([k, n]) => `${n} ${k}`).join(', ')}`); } }   // (surfaces: the footstep map — game/floor.ts; a generator that gives none gets the office's)
 if (groups.length !== level.boxes.length) throw new Error(`trace: ${groups.length} groups for ${level.boxes.length} boxes`);
 // THE FLOOR IN ORDER (tools/levels/flatLayers.ts layFloor): two ground finishes or floor decals of different paint that overlap never share a plane — the picture
 // cannot order them (each pixel of the overlap went to either). Swept in tiers, so the level with its lived things or its dressing left out is the same level;
-// before the look's skin, so both files of a level carry the same boxes. Nothing is moved down; a solid finish grows 0.7 mm thicker, a decal is lifted.
+// before the skin. Nothing is moved down; a solid finish grows 0.7 mm thicker, a decal is lifted.
 { const { layLevelFloor } = await import('./flatLayers.ts'); const { BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`);
   const n = layLevelFloor(level.boxes, livedFrom.boxes, nGen, BoxFlag);
   if (n) console.log(`floor: ${n} flat${n > 1 ? 's' : ''} raised to draw in order`); }
-// HOW KEPT THE PLACE IS, a generator's `KEPT` export, 0‥1: the file's meta.kept (docs/level-format.md). A look's second file is the same PLACE in other
-// clothes, so it takes the word of the level it dresses (`DRESS_AS`) unless it says its own: the page draws the look's file, and a word said once in the
-// plain generator would otherwise never reach a picture (tools/levels/keptWord.ts, the one writing of the rule).
-{ const { generatorKept } = await import('./keptWord.ts'); const kept = await generatorKept(gen, n => import(resolve(import.meta.dir, `${n}.ts`)));
-  if (kept !== undefined) level.kept = kept; }
+// HOW KEPT THE PLACE IS, a generator's `KEPT` export, 0‥1: the file's meta.kept (docs/level-format.md).
+if (gen.KEPT !== undefined) level.kept = gen.KEPT;
 if (scenarios) level.scenarios = scenarios;   // (an ordinary, enumerable field: the file's own block — levelToData writes it)
 // WHAT EACH BOX DOES (src/scene/materials.ts, Box.does): a box whose maker said no word is given the word its colour had under the old rule
-// (tools/levels/doesWas.ts, frozen) HERE, before the look's skin repaints anything: the level and its look twin are one simulation, and a box in other
-// clothes does what it did. Once more after the skin, for what the skin added.
+// (tools/levels/doesWas.ts, frozen) HERE, before the skin repaints anything: a box in other clothes does what it did. Once more after the skin, for what the skin added.
 stampDoes(level);
-// THE LOOK'S SECOND FILE (tools/levels/gwotSkin.ts): a generator that exports `finish` changes the dressed level's clothes here — it exports `DRESS_AS` = the
-// generator whose level it is, so the dressing above is that level's, box for box
-if (gen.finish) { const n0 = level.boxes.length; const st = gen.finish(level, groups); if (st) console.log(`look: ${st.repainted} boxes repainted, ${st.kept} kept, ${st.decals} decals, ${st.props} props — ${Object.entries(st.by as Record<string, number>).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([k, n]) => `${n} ${k}`).join(', ')}${st.relaid === undefined ? '' : ` — ${st.relaid} flat decals raised to draw in order, the highest top at ${((st.flatTop ?? 0) * 1000).toFixed(2)} mm, ${st.surfaced} now over a flat of the level`}`); if (groups.length !== level.boxes.length) throw new Error(`finish: ${groups.length} groups for ${level.boxes.length} boxes (from ${n0})`); }
+// THE SKIN (tools/levels/gwotSkin.ts): a generator that exports `finish` changes the dressed level's clothes here
+if (gen.finish && !FLOOR_TO) { const n0 = level.boxes.length; const st = gen.finish(level, groups); if (st) console.log(`look: ${st.repainted} boxes repainted, ${st.kept} kept, ${st.decals} decals, ${st.props} props — ${Object.entries(st.by as Record<string, number>).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([k, n]) => `${n} ${k}`).join(', ')}${st.relaid === undefined ? '' : ` — ${st.relaid} flat decals raised to draw in order, the highest top at ${((st.flatTop ?? 0) * 1000).toFixed(2)} mm, ${st.surfaced} now over a flat of the level`}`); if (groups.length !== level.boxes.length) throw new Error(`finish: ${groups.length} groups for ${level.boxes.length} boxes (from ${n0})`); }
 stampDoes(level);
 const materials: Record<string, { albedo: [number, number, number]; rough?: number; metal?: boolean; stuff?: string; does?: string }> = {};
 /** what a paint's row says its boxes do: what the paint's NAME says (scene/stuff.ts PAINT_DOES, as a kit words a box of it), else, for a row of a
@@ -119,28 +116,16 @@ if (CHECK) {
   if (cur !== text) { console.error(`--check: ${OUT} ${cur === null ? 'does not exist' : 'is STALE'} — run bun run tools/levels/export.ts ${name}`); process.exit(1); }
   console.log(`--check: ${OUT} is up to date`);
 } else { writeFileSync(OUT, text); console.log(`wrote ${OUT}`); }
-// IN STEP: a level that has a file in the default look (tools/levels/<name>-gwot.ts — the same boxes in other paint, src/scene/look.ts) is exported / checked
-// with it, so the two never drift apart (tools/qa/look-check.ts compares them box for box).
-if (existsSync(resolve(import.meta.dir, `${name}-gwot.ts`))) { const p = Bun.spawnSync(['bun', 'run', import.meta.path, `${name}-gwot`, ...argv.filter(a => a.startsWith('--'))], { stdout: 'inherit', stderr: 'inherit', env: process.env }); if (p.exitCode !== 0) process.exit(p.exitCode ?? 1); }
-// ANOTHER WAY IN: a level that stands a room clear or a rescue is asked the second-way rule the day it is written: whatever its defenders wedge, every
-// room with men in it is still reached without a charge (tools/qa/second-way-check.ts, on the shipped stand). The file is written either way. THE RULE
-// IS ABOUT A LEVEL A SQUAD MISSION PLAYS (any row of scenarioList.ts ALL_MISSIONS that is not a quiet one: the missions, the lessons, the rows off the
-// list), so a red check
-// FAILS THE EXPORT of such a level and is a NOTE on any other: a test yard or a showroom stands a team to try things on and no player is ever shut out
-// of it, and a level in the making reads here what it will owe the day it has a row. SECONDWAY=0 in front skips the question.
-if (!CHECK && !name.endsWith('-gwot') && (data.scenarios?.roomClear || data.scenarios?.rescue) && process.env.SECONDWAY !== '0') {
-  const { ALL_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`), played = (ALL_MISSIONS as { kind: string; level?: string }[]).some(e => e.kind !== 'quiet' && (e.level ?? 'office.json') === basename(OUT));   // (every row a squad plays: the lessons' and the rows off the list with the rest)
-  const p = Bun.spawnSync(['bun', 'run', resolve(import.meta.dir, '../qa/second-way-check.ts'), basename(OUT)], { stdout: 'pipe', stderr: 'pipe', env: { ...process.env, TPS_PROFILE: 'shipped' } });
-  if (p.exitCode === 1 && played) { console.error(`second way in: FAILED on ${basename(OUT)} (the file is written)\n${p.stdout.toString()}${p.stderr.toString()}`); process.exit(1); }
-  if (p.exitCode === 1) console.log(`  second way in: A NOTE, not a failure: no squad mission on the list plays ${basename(OUT)}, and the day one does this fails its export\n${p.stdout.toString().split('\n').filter(l => /NO WAY IN|FAIL —/.test(l)).map(l => `    ${l.trim()}`).join('\n')}`);
-  else console.log(p.exitCode === 0 ? '  second way in: every room they can shut has another way in' : `  second way in: NOT ASKED (${p.stderr.toString().trim().split('\n').pop() ?? 'the check did not run'})`);
-}
-// A DEFENDER SEES WHAT HE WATCHES: the same day, every man the file stands with a `pos` and an `aimAt` is asked for his line and for the ground he watches,
-// against the level's own count file (tools/qa/marksight-check.ts, on the shipped stand; the look twin with it). The file is written either way; a red check
-// fails the export: something was stood in a man's view, or a level new to the check has no count file yet (the check's --write, once on each stand).
-// MARKSIGHT=0 in front skips it for a level still in the making.
-if (!CHECK && !name.endsWith('-gwot') && process.env.MARKSIGHT !== '0') {
-  const twin = OUT.replace(/\.json$/, '-gwot.json'), p = Bun.spawnSync(['bun', 'run', resolve(import.meta.dir, '../qa/marksight-check.ts'), basename(OUT), ...(existsSync(twin) ? [basename(twin)] : [])], { stdout: 'pipe', stderr: 'pipe', env: { ...process.env, TPS_PROFILE: 'shipped' } });
-  if (p.exitCode === 1) { console.error(`a defender sees what he watches: FAILED on ${basename(OUT)} (the file is written)\n${p.stdout.toString()}${p.stderr.toString()}`); process.exit(1); }
-  console.log(p.exitCode === 0 ? '  marks\' sight: no man the file stands sees less than its count file says (or it stands none)' : `  marks' sight: NOT ASKED (${p.stderr.toString().trim().split('\n').pop() ?? 'the check did not run'})`);
+// WHAT A LEVEL OWES WHOEVER PLAYS IT, asked of the game the day it is written (rust/game_start/src/bin/levels.rs; the file is written either way). ANOTHER WAY IN: whatever its defenders
+// wedge, every room with men in it is still reached without a charge. The rule is about a level A SQUAD MISSION PLAYS (any row of scenarioList.ts ALL_MISSIONS that is not a quiet one), so a
+// red answer fails the export of such a level and is a note on any other. A DEFENDER SEES WHAT HE WATCHES: a red answer fails the export (something was stood in a man's view, or the level
+// has no count file yet: `levels sight <name> --write`). LEVELASK=0 in front skips both for a level still in the making.
+if (!CHECK && !FLOOR_TO && process.env.LEVELASK !== '0') {
+  const { ALL_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`), played = (ALL_MISSIONS as { kind: string; level?: string }[]).some(e => e.kind !== 'quiet' && (e.level ?? 'office.json') === basename(OUT));   // (every list: a lesson's yard is played too)
+  const ask = (question: string): { code: number; text: string } => { try { const p = Bun.spawnSync(['cargo', 'run', '--release', '--quiet', '--bin', 'levels', '--', question, basename(OUT)], { cwd: `${ROOT}/rust/game_start`, stdout: 'pipe', stderr: 'pipe' }); return { code: p.exitCode, text: `${p.stdout}${p.exitCode ? p.stderr : ''}`.trim() }; } catch (e) { return { code: -1, text: String((e as Error).message) }; } };
+  const asked = (question: string, what: string, fails: boolean): void => { const a = ask(question);
+    if (a.code === 0) console.log(`  ${what}: yes`); else if (a.code !== 1 || !a.text.includes('FAIL')) console.log(`  ${what}: NOT ASKED (${a.text.split('\n').pop() || 'the tool did not run'})`);
+    else if (fails) { console.error(`${what}: NO, on ${basename(OUT)} (the file is written)\n${a.text}`); process.exit(1); } else console.log(`  ${what}: NO, A NOTE and not a failure: no squad mission on the list plays ${basename(OUT)}, and the day one does this fails its export\n${a.text}`); };
+  if (data.scenarios?.roomClear || data.scenarios?.rescue) asked('second-way', 'every room they can shut has another way in', played);
+  asked('sight', 'every defender sees what he watches', true);
 }

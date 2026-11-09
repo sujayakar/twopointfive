@@ -1,6 +1,6 @@
 //! The types of `pairup`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: words)
@@ -54,7 +54,7 @@ impl PAIRUPDEFAULTS {
 impl Default for PAIRUPDEFAULTS { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/pairup.ts:72 PAIR_HELD, src/game/pairup.ts:72)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct PairupModPAIRHELD {
     pub row: Option<bool>,
 }
@@ -69,7 +69,7 @@ impl PairupModPAIRHELD {
 impl Default for PairupModPAIRHELD { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct PairupMod {
     /// (src/game/pairup.ts:72 PAIR_HELD)
     pub pair_held: crate::pairup::PairupModPAIRHELD,

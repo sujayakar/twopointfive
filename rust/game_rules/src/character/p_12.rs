@@ -167,7 +167,7 @@ pub fn character_update(g: &mut crate::game::Game, id: CharId, dt: f64) {
 /// The turn, the animator, the skeleton and what is read off it. (Character.updateStanding)
 pub fn character_update_standing(g: &mut crate::game::Game, id: CharId, dt: f64) {
     if g.ch[id].ragdoll.is_some() { character_update_ragdoll(g, id, dt); return; }
-    if g.ch[id].turn.on && dt > 0.0 && g.ch[id].anim.wound.is_none() { character_turn_weigh(g, id, dt); }
+    if g.ch[id].turn.on && dt > 0.0 { character_turn_weigh(g, id, dt); }
     else {
         let (jump, lead_rate) = (g.k.turn.jump, g.k.turn.lead_rate);
         let c = &mut g.ch[id];

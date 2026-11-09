@@ -147,7 +147,7 @@ pub fn rails_tap_off(g: &mut crate::game::Game) -> bool {
 pub fn rails_teaches_hold(g: &crate::game::Game) -> bool {
     rails_at(g).map_or(false, |s| step_at(s.l, s.i).map_or(false, |t| word_of(&t.no_tap)))
 }
-/// a run begun or a checkpoint put back (rails.ts Rails.clean)
+/// a run begun (rails.ts Rails.clean)
 pub fn rails_clean(g: &mut crate::game::Game) {
     let r = &mut g.rails;
     r.tap_t = -1e9; r.way_nv = -1.0; r.step_look = None; r.gave_step = -1.0; r.gave = 0.0; r.gave0 = -1e9; r.gave_t = r.gave0; r.act_t = -1e9;
@@ -218,7 +218,7 @@ pub fn rails_gate(g: &mut crate::game::Game, input: InputId, cam: CameraId, dt: 
         wheel = wheel || act.wheel.unwrap_or(false);
     }
     let walk = walk_keys();
-    let menu_up = g.orders.menu.is_some() && (has(&a, "menu") || has(&a, "ring"));
+    let menu_up = g.orders.menu.is_some() && (has(&a, "menu") || has(&a, "ring") || has(&a, "ringPart"));
     let (shift, enter) = {
         let i = &g.tab.input[input];
         (i.keys.has(String::from("ShiftLeft")) || i.keys.has(String::from("ShiftRight")),
@@ -259,7 +259,8 @@ pub fn rails_gate(g: &mut crate::game::Game, input: InputId, cam: CameraId, dt: 
                 if i.pressed.has(kb()) || i.keys.has(kb()) { i.keys.delete(String::from("ShiftLeft")); i.keys.delete(String::from("ShiftRight")); }
             }
         }
-        if !has(&a, "ring") && !i.pressed.has(kb()) { i.keys.delete(kb()); }
+        // (`ringPart`: only with Shift down. Else the key is seen let go, so the press is a tap, which on a `noTap` step gives nothing and shows the note)
+        if !has(&a, "ring") && !(has(&a, "ringPart") && shift) && !i.pressed.has(kb()) { i.keys.delete(kb()); }
     }
     let clicked = js::to_i32(i.clicked);
     if clicked & !buttons != 0 { dropped += 1; }
@@ -332,7 +333,7 @@ pub fn rails_tick(g: &mut crate::game::Game, dt: f64) {
     };
     if g.rails.run != Some(g.mission.serial) {
         g.rails.run = Some(g.mission.serial);
-        g.rails.answered = -1.0; g.rails.back = false; g.rails.spared.clear();
+        g.rails.answered = -1.0; g.rails.spared.clear();
         if g.rails.sky.parked { rails_unpark(g); }
         g.rails.sky.again = true; g.rails.fresh = 3.0; g.rails.lookout = None;
         g.rails.sky.off = [0.0, 0.0, 0.0]; g.rails.sky.mid = None; g.rails.sky.mid_t = -1.0;
@@ -340,20 +341,11 @@ pub fn rails_tick(g: &mut crate::game::Game, dt: f64) {
         g.rails.orders_seen = g.orders.log.len() as f64;
         g.rails.moved = false;
         rails_clean(g);
-        rails_start_program(g, "start");
+        rails_start_program(g);
     } else if g.rails.fresh > 0.0 { g.rails.fresh -= 1.0; }
-    if g.rails.back {
-        g.rails.back = false;
-        rails_clean(g);
-        let first = s.l.steps.iter().position(|t| names(&t.allow, "order")).map_or(-1.0, |k| k as f64);
-        g.rails.moved = s.i > first;
-        rails_start_program(g, "checkpoint");
-        g.rails.answered = -1.0;
-        rails_answer(g, &s, true);
-    }
     let rd = s.l.rails.as_ref().unwrap();
     if rails_sky_on(g) && !g.rails.sky.parked { rails_park(g, rd); }
-    if g.rails.answered != s.i { rails_answer(g, &s, false); }
+    if g.rails.answered != s.i { rails_answer(g, &s); }
     // (RAILS.cardBeat: the last moment of HIS fight is kept up to date wherever a card ahead waits for one to go quiet)
     if s.l.steps.iter().enumerate().any(|(k, t)| (k as f64) > s.i && t.explain.as_ref().map_or(false, |e| e.quiet.unwrap_or(false))) { rails_fight(g); }
     // every order the player gives is told to the level's program
@@ -408,7 +400,7 @@ pub fn rails_tick(g: &mut crate::game::Game, dt: f64) {
     }
 }
 /// the step that is up, answered once: its fog, its cue, its checkpoint (rails.ts Rails.answer)
-pub fn rails_answer(g: &mut crate::game::Game, s: &crate::rails::RailsLesson, again: bool) {
+pub fn rails_answer(g: &mut crate::game::Game, s: &crate::rails::RailsLesson) {
     g.rails.answered = s.i;
     let mut fog = s.l.rails.as_ref().unwrap().fog;
     let mut k = 0;
@@ -426,36 +418,26 @@ pub fn rails_answer(g: &mut crate::game::Game, s: &crate::rails::RailsLesson, ag
     if let Some(cue) = t.cue.as_ref().filter(|c| !c.is_empty()) {
         crate::director::director_signal(g, &alloc::format!("lesson:{}", cue), None);
         g.stats.rails.cues += 1;
-        rails_note(g, &alloc::format!("cue '{}'{}", cue, if again { " (again)" } else { "" }));
+        rails_note(g, &alloc::format!("cue '{}'", cue));
     }
-    if !again {
-        if let Some(cp) = t.checkpoint.as_ref().filter(|c| !c.is_empty()) {
-            crate::savestate::checkpoints_keep(g, cp);
-            g.stats.rails.kept += 1;
-            rails_note(g, &alloc::format!("checkpoint asked: {}", cp));
-        }
+    if let Some(cp) = t.checkpoint.as_ref().filter(|c| !c.is_empty()) {
+        crate::savestate::checkpoints_keep(g, cp);
+        g.stats.rails.kept += 1;
+        rails_note(g, &alloc::format!("checkpoint asked: {}", cp));
     }
 }
 /// (rails.ts Rails.startProgram)
-pub fn rails_start_program(g: &mut crate::game::Game, why: &str) {
+pub fn rails_start_program(g: &mut crate::game::Game) {
     if !crate::director::director_programs(g).iter().any(|x| x == "tutorial") { return; }
     if g.director.run.map_or(false, |r| !g.tab.director_run[r].ended) { crate::director::director_stop(g, Some(false)); }
     let no = crate::director::director_start(g, "tutorial", None);
     g.stats.rails.starts += 1;
     let line = match no.filter(|n| !n.is_empty()) {
-        Some(n) => alloc::format!("the level's program did not start ({}): {}", why, n),
-        None => alloc::format!("the level's program started ({})", why),
+        Some(n) => alloc::format!("the level's program did not start: {}", n),
+        None => String::from("the level's program started"),
     };
     rails_note(g, &line);
 }
-/// a checkpoint of this run was put back (rails.ts Rails.putBack)
-pub fn rails_put_back(g: &mut crate::game::Game) {
-    if !rails_live(g) { return; }
-    g.rails.back = true;
-    g.stats.rails.put_back += 1;
-}
-/// an authored checkpoint was taken with the program stopped for it (rails.ts Rails.resume)
-pub fn rails_resume(g: &mut crate::game::Game) { if rails_live(g) { g.rails.back = true; } }
 /// has the level's program said this beat has played out (rails.ts Rails.cued)
 pub fn rails_cued(g: &crate::game::Game, name: &str) -> bool { crate::director::director_signalled(g, &alloc::format!("done:{}", name)) }
 /// is the mission still on its steps (rails.ts Rails.holdsEnd)
@@ -661,7 +643,7 @@ fn rails_prompt(g: &crate::game::Game, seat: &crate::seats::SeatRef, s: &LessonA
     let gave_here = g.rails.gave_step == s.i && js::truthy(g.rails.gave);
     let (n, of_n) = (i as u32 + 1, of as u32);
     // (the step's deed is done and it settles before the next step's card: what its men are doing, or nothing. Never a line that asks for a key)
-    if up && g.k.rails.card_beat && s.l.steps.get(i + 1).map_or(false, |x| x.explain.is_some()) && lesson_settling(g) {
+    if up && s.l.steps.get(i + 1).map_or(false, |x| x.explain.is_some()) && lesson_settling(g) {
         let w = if cue { step_line() } else if gave_here { t.after.as_ref().and_then(said_now).map_or(String::new(), |l| lesson_line(g, &l)) } else { String::new() };
         return Some(crate::view::RailPrompt { line: if names_key(&w) { String::new() } else { w }, n, of: of_n, note: None, watch: true });
     }

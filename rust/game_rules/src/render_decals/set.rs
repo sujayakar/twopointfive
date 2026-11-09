@@ -96,6 +96,9 @@ pub struct MarkSet {
     in_tick: u32,
 }
 
+/// (the picture's: in no bytes)
+impl crate::bytes::ToBytes for MarkSet { fn w(&self, _: &mut crate::bytes::W) {} }
+
 /// the marks of a game
 pub fn mark_set(g: &Game) -> Option<&MarkSet> { g.mark_set.get() }
 pub fn mark_set_mut(g: &mut Game) -> &mut MarkSet { g.mark_set.at() }

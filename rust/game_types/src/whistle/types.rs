@@ -1,10 +1,10 @@
 //! The types of `whistle`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: WhistleMem, src/game/whistle.ts:76)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct WhistleMem {
     pub responded_at: f64,
     pub responses: f64,
@@ -39,7 +39,7 @@ impl WhistleMem {
 impl Default for WhistleMem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Blower, src/game/whistle.ts:100)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Blower {
     pub ready_at: f64,
     pub blown: f64,
@@ -58,7 +58,7 @@ impl Blower {
 impl Default for Blower { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Heard, src/game/whistle.ts:128)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Heard {
     pub d: f64,
     pub at: V3,
@@ -79,7 +79,7 @@ impl Heard {
 impl Default for Heard { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Resolution, src/game/whistle.ts:129)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Resolution {
     pub hearers: JsMap<GuardId, crate::whistle::Heard>,
     pub responder: Option<GuardId>,
@@ -117,7 +117,7 @@ impl WhistleSnap {
 impl Default for WhistleSnap { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/whistle.ts:132 WHISTLE_LOG, src/game/whistle.ts:132)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct WhistleModWHISTLELOGItem {
     pub t: f64,
     pub pos: V3,
@@ -209,7 +209,7 @@ impl PickKey {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct WhistleMod {
     /// (src/game/whistle.ts:88 memOf)
     pub mem_of: JsMap<GuardId, crate::whistle::WhistleMem>,

@@ -1,6 +1,6 @@
 //! The types of `quiet`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: QuietSnap, src/game/quiet.ts:49)
@@ -23,7 +23,7 @@ impl QuietSnap {
 impl Default for QuietSnap { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: QuietDeal, src/game/quiet.ts:47)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct QuietDeal {
     pub start: f64,
     pub spot: f64,
@@ -42,7 +42,7 @@ impl QuietDeal {
 impl Default for QuietDeal { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: QuietMission, src/game/quiet.ts:73)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct QuietMission {
     pub active: bool,
     pub ops: Vec<GuardId>,
@@ -87,7 +87,7 @@ impl QuietMission {
 impl Default for QuietMission { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: inline at src/game/quiet.ts:85 QuietMission.authored, src/game/quiet.ts:85)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct QuietMissionAuthored {
     pub spawn: V3,
     pub mission: crate::quiet::QuietMissionAuthoredMission,
@@ -104,7 +104,7 @@ impl QuietMissionAuthored {
 impl Default for QuietMissionAuthored { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/quiet.ts:85 QuietMissionAuthored.mission, src/scene/level.ts:197)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct QuietMissionAuthoredMission {
     pub server_room: crate::quiet::QuietMissionAuthoredMissionServerRoom,
     pub entry_door: String,
@@ -131,7 +131,7 @@ impl QuietMissionAuthoredMission {
 impl Default for QuietMissionAuthoredMission { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/scene/level.ts:197 QuietMissionAuthoredMission.serverRoom, src/scene/level.ts:197)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct QuietMissionAuthoredMissionServerRoom {
     pub x0: f64,
     pub x1: f64,
@@ -152,7 +152,7 @@ impl QuietMissionAuthoredMissionServerRoom {
 impl Default for QuietMissionAuthoredMissionServerRoom { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/scene/level.ts:197 QuietMissionAuthoredMission.rack, src/scene/level.ts:197)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct QuietMissionAuthoredMissionRack {
     pub index: f64,
     pub front: V3,
@@ -171,7 +171,7 @@ impl QuietMissionAuthoredMissionRack {
 impl Default for QuietMissionAuthoredMissionRack { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Held, src/game/quiet.ts:61)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Held {
     pub pairup: bool,
     pub pair: bool,
@@ -261,7 +261,7 @@ impl QuietWords {
 impl Default for QuietWords { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct QuietMod {
     /// (src/game/quiet.ts:60 holder)
     pub holder: bool,

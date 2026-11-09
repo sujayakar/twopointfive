@@ -1,10 +1,10 @@
 //! The types of `anim_gltf`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: GltfNode, src/anim/gltf.ts:5)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct GltfNode {
     pub name: String,
     pub parent: f64,
@@ -29,7 +29,7 @@ impl GltfNode {
 impl Default for GltfNode { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Track, src/anim/gltf.ts:6)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Track {
     pub node: f64,
     pub path: f64,
@@ -52,7 +52,7 @@ impl Track {
 impl Default for Track { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Clip, src/anim/gltf.ts:10)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Clip {
     pub name: String,
     pub duration: f64,
@@ -71,7 +71,7 @@ impl Clip {
 impl Default for Clip { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: SkinData, src/anim/gltf.ts:11)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SkinData {
     pub joints: Vec<f64>,
     pub inverse_bind: Vec<f32>,
@@ -88,7 +88,7 @@ impl SkinData {
 impl Default for SkinData { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: MeshData, src/anim/gltf.ts:12)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct MeshData {
     pub positions: Vec<f32>,
     pub normals: Vec<f32>,
@@ -127,14 +127,14 @@ impl MeshData {
 impl Default for MeshData { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: a union)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub enum MeshDataJoints {
     Uint16Array(Vec<u16>),
     Uint8Array(Vec<u8>),
 }
 
 /// (TypeScript: CastVariant, src/anim/gltf.ts:23)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct CastVariant {
     pub name: String,
     pub side: crate::anim_gltf::CastSide,
@@ -157,7 +157,7 @@ impl CastVariant {
 impl Default for CastVariant { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum CastSide {
     Civilian,
     Operator,
@@ -176,7 +176,7 @@ impl CastSide {
 }
 
 /// (TypeScript: CastInfo, src/anim/gltf.ts:25)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct CastInfo {
     pub parts: Vec<String>,
     pub part_tris: Vec<f64>,
@@ -195,7 +195,7 @@ impl CastInfo {
 impl Default for CastInfo { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: GltfCharacter, src/anim/gltf.ts:26)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct GltfCharacter {
     pub nodes: Vec<crate::anim_gltf::GltfNode>,
     pub order: Vec<f64>,
@@ -224,7 +224,7 @@ impl GltfCharacter {
 impl Default for GltfCharacter { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/anim/gltf.ts:33 nvgBits, src/anim/gltf.ts:33)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AnimGltfModNvgBitsValue {
     pub up: f64,
     pub down: f64,
@@ -241,7 +241,7 @@ impl AnimGltfModNvgBitsValue {
 impl Default for AnimGltfModNvgBitsValue { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct AnimGltfMod {
     /// (src/anim/gltf.ts:33 nvgBits)
     pub nvg_bits: JsMap<AnimGltfCastInfoId, crate::anim_gltf::AnimGltfModNvgBitsValue>,

@@ -1,5 +1,5 @@
-// A TAPE OF A RUN (src/tape/handtape.ts), with no page: missions played on the module as draw.html plays them, by a hands-off player and by a hand that does anything, with
-// saves, a load, a restart, knobs turned and every question a page asks between two ticks, and each tape walked on another game that is asked nothing: the die, the parts and the
+// A TAPE OF A RUN (src/tape/handtape.ts), with no page: missions played on the module as the page plays them, by a hands-off player and by a hand that does anything, with
+// saves, a load, a restart, knobs turned, the panel's actions, an address's words and every question a page asks between two ticks, and each tape walked on another game that is asked nothing: the die, the parts and the
 // whole state are what they were at every mark and at the end. The size is said.
 //   bun run tools/draw/tape-check.ts [mission id…] [--secs 30]      exit 0 · 1 and each that parted, with the tick · 2 no such mission
 //   TAPE_BREAK=1 …      one step of the tape is not walked: every walk must part
@@ -12,18 +12,18 @@ import { DrawGame, type Start } from '../../src/host/drawgame';
 import { HAND, sampleHand } from '../../src/draw/hand';
 import { DrawPlay } from '../../src/host/drawplay';
 import { HandTape, MARKS } from '../../src/tape/handtape';
-import { FollowCamera } from '../../src/game/camera';
+import { FollowCamera } from '../../src/host/camera';
 import { Section, View } from '../../src/draw/sections';
 
 const ROOT = resolve(import.meta.dir, '../..'), BREAK = process.env.TAPE_BREAK === '1', args = process.argv.slice(2), at = args.indexOf('--secs'), SECS = at >= 0 ? Number(args[at + 1]) : 30;
 const only = args.filter((a, i) => !a.startsWith('--') && (at < 0 || i !== at + 1));
-const { ALL_MISSIONS, pickSearch } = await import(`${ROOT}/src/scene/scenarioList.ts`), { lookLevelFile, LOOK } = await import(`${ROOT}/src/scene/look.ts`);
+const { ALL_MISSIONS, pickSearch } = await import(`${ROOT}/src/scene/scenarioList.ts`), { LOOK } = await import(`${ROOT}/src/scene/look.ts`);
 LOOK.on = true;
 const wasm = faceHere(); if (!wasm) { console.error('tape-check: no module of these sources (tools/blitz/face-build.ts)'); process.exit(1); }
 const module = new WebAssembly.Module(new Uint8Array(readFileSync(wasm)));
 const stand = (): DrawGame => new DrawGame({ exports: new WebAssembly.Instance(module, { env: { face_roll: () => { throw new Error('the game asked a die'); } } }).exports, bytes: 0, fetchMs: 0, compileMs: 0 });
 const [mannequin, mannequinBin, cast, castLook] = characterFiles(ROOT);
-const bytes = (f: string): Uint8Array => { try { return new Uint8Array(readFileSync(resolve(ROOT, 'levels', lookLevelFile(f)))); } catch { return new Uint8Array(readFileSync(resolve(ROOT, 'levels', f))); } };
+const bytes = (f: string): Uint8Array => new Uint8Array(readFileSync(resolve(ROOT, 'levels', f)));
 
 /** a die of the check's own */
 const die = (s: number) => () => { s = (s + 0x6d2b79f5) | 0; let t = Math.imul(s ^ (s >>> 15), 1 | s); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
@@ -38,7 +38,7 @@ for (const m of ALL_MISSIONS as { id: string }[]) { if (only.length && !only.inc
     try {
       // ── played, with a page's questions between its ticks
       const g = stand(), D = g.drawn, cam = new FollowCamera(), input = { keys: new Set<string>(), pressed: new Set<string>(), buttons: 0, clicked: 0, wheel: 0, mouseX: 640, mouseY: 360 }, canvas = { clientWidth: 1280, clientHeight: 720, width: 1280, height: 720 };
-      const T = g.tape = new HandTape(HAND.count), S: Start = { level: bytes(file), words, mannequin, mannequinBin, cast, castLook, seed, named: { level: file, build: 'this' } };
+      const T = g.tape = new HandTape(HAND.count), S: Start = { level: bytes(file), words: how === 'anything' ? `${words}&qtwice=0&firelean=0` : words, mannequin, mannequinBin, cast, castLook, seed, named: { level: file, build: 'this' } };
       if (how === 'anything') g.commands.difficulty(1);
       g.start(S);
       const follow = (): [number, number, number] => { const o = D.at[Section.view] + View.follow; return [D.f[o], D.f[o + 1], D.f[o + 2]]; };
@@ -52,6 +52,7 @@ for (const m of ALL_MISSIONS as { id: string }[]) { if (only.length && !only.inc
           if (roll() < 0.1) { input.mouseX = roll() * 1280; input.mouseY = roll() * 720; }
           if (roll() < 0.03) { input.buttons = input.buttons ? 0 : 1 + Math.floor(roll() * 3); if (input.buttons & 1) input.clicked = 1; }
           if (i === 900) g.commands.load('manual.0'); if (i === 1500) { g.commands.restart(''); g.tell(); } if (i === 300) g.commands.unseen(1);
+          if (i === 600) { g.turn('wet.prints', 3); g.commands.act('soak', 0, ''); g.commands.act('extra', 2, ''); g.commands.act('nerve', 0, 'brittle'); }
         } else if (i === 400) g.commands.save(); else if (i === 1200) g.commands.load('manual.0');
         g.step(1 / 60, sampleHand(g.numbersOf(), input, cam, canvas));
         input.pressed.clear(); input.clicked = 0; const o = D.at[Section.view] + View.aim; cam.step(1 / 60, follow(), [D.f[o], D.f[o + 1], D.f[o + 2]]);

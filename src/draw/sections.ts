@@ -1,7 +1,7 @@
 // Written by tools/draw/gen.ts from rust/game_draw. To change a section, change it there.
 
 /** the stamp of the sections this was made from: a module of another stamp is refused (drawn.ts) */
-export const LAYOUT = 4217857405;
+export const LAYOUT = 2503851926;
 /** what a host may ask for: what is made together is asked for together */
 export const enum Want { fog = 1, view = 2, sky = 4, boxes = 8, lights = 16, men = 32, doorways = 64, rims = 128, events = 256, fires = 512, decals = 1024, air = 2048, levelLook = 4096, snow = 8192, smoke = 16384, all = 32767 }
 /** each section's place in the table the module answers with */
@@ -517,7 +517,7 @@ export const enum AirPush {
   tick = 0,
   /** u32 */
   serial = 1,
-  /** u32: 0 at a point, 1 along a line, 2 by a standing body, 3 a jet, 4 outward */
+  /** u32: 0 at a point, 1 along a line, 2 by a standing body, 3 a jet, 4 outward, 5 a round's path, 6 a walking man's stride */
   shape = 2,
   /** f32 × 3 */
   pos = 3,
@@ -553,7 +553,7 @@ export const enum SmokeSource {
   push = 3,
   /** u32: what it rides, if anything (`anchors`; 0: it stays) */
   anchor = 4,
-  /** u32: 1 the picture's alone · 2 gone when what it rides is · 4 its ride's direction is the smoke's velocity */
+  /** u32: 1 the picture's alone · 2 gone when what it rides is · 4 its ride's direction is the smoke's velocity · 8 the men see through it too · 16 a fire's, for the preset that sheds those */
   says = 5,
   /** u32 */
   lattice = 6,
@@ -745,14 +745,12 @@ export const enum FireTable {
   lean = 20,
   /** f32 × 12: its smoke: on, up, radius, cells, density, temp, speed, push, jitter, every, view_r, lean */
   smoke = 21,
-  /** f32 × 13: the flame as gas: on, up, radius, cells, density, temp, speed, push, jitter, every, view_r, keep, ease */
-  gas = 33,
   /** f32 × 14: one column: up, radius, density, soot_ease, puff_every, puff_secs, puff_up, puff_radius, puff_off, puff_density, puff_temp, puff_speed, puff_push, puff_expand */
-  column = 46,
+  column = 33,
   /** f32 × 3 */
-  soot = 60,
+  soot = 47,
   /** words a row */
-  row = 63,
+  row = 50,
 }
 
 /** who a record is, in the same order: the id of what made it (its tick; the arm in the top byte and its place among that tick's) */

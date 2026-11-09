@@ -1,10 +1,10 @@
 //! The types of `doortools`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// the step onto the diagonals, kept until the first can's burst has run dry (doortools.ts toThreshold's `out`)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub enum ThresholdOut {
     Step { lead: GuardId, f: Option<crate::doortools::DoorToolsThrFar>, sl: crate::doortools::DoorToolsDoneItemSliceValue, sf: Option<crate::doortools::DoorToolsDoneItemSliceValue>, light: bool, name: String },
 }
@@ -15,7 +15,7 @@ pub enum Walks {
 }
 
 /// (TypeScript: DoorTools, src/game/doortools.ts:771)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct DoorTools {
     pub charges: f64,
     pub bangs: f64,
@@ -225,7 +225,7 @@ impl DoorToolsDoneItem {
 impl Default for DoorToolsDoneItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum DoorToolKind {
     Charge,
     Outside,
@@ -246,7 +246,7 @@ impl DoorToolKind {
 }
 
 /// (TypeScript: inline at src/game/doortools.ts:637 DoorToolsDoneItem.lane, src/game/doortools.ts:637)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct DoorToolsDoneItemLane {
     pub gd: GuardId,
     pub door: DoorId,
@@ -269,7 +269,7 @@ impl DoorToolsDoneItemLane {
 impl Default for DoorToolsDoneItemLane { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/doortools.ts:637 DoorToolsDoneItemLane.back, src/game/doortools.ts:637 DoorToolsDoneItemLane.back)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct DoorToolsDoneItemLaneBack {
     pub post: Option<V3>,
     pub going: String,
@@ -376,7 +376,7 @@ impl DoorToolsDoneItemLaneBack {
 impl Default for DoorToolsDoneItemLaneBack { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/orders.ts:437 DoorToolsDoneItemLaneBack.move, src/game/orders.ts:437)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct DoorToolsDoneItemLaneBackMove {
     pub stance: crate::character::Stance,
     pub upper: crate::character::UpperMode,
@@ -393,7 +393,7 @@ impl DoorToolsDoneItemLaneBackMove {
 impl Default for DoorToolsDoneItemLaneBackMove { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/orders.ts:480 DoorToolsDoneItemLaneBack.tries, src/game/orders.ts:480)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct DoorToolsDoneItemLaneBackTries {
     pub door: DoorId,
     pub side: f64,
@@ -416,7 +416,7 @@ impl DoorToolsDoneItemLaneBackTries {
 impl Default for DoorToolsDoneItemLaneBackTries { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/orders.ts:480 DoorToolsDoneItemLaneBackTries.on, src/game/orders.ts:480 DoorToolsDoneItemLaneBackTries.on)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct DoorToolsDoneItemLaneBackTriesOn {
     pub post: Option<V3>,
     pub going: String,
@@ -523,7 +523,7 @@ impl DoorToolsDoneItemLaneBackTriesOn {
 impl Default for DoorToolsDoneItemLaneBackTriesOn { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum Phase {
     Slice,
     Kick,
@@ -562,7 +562,7 @@ impl Phase {
 }
 
 /// (TypeScript: inline at src/game/doortools.ts:655 DoorToolsDoneItem.kick, src/game/doortools.ts:655)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct DoorToolsDoneItemKick {
     pub pos: V3,
     pub yaw: f64,
@@ -599,7 +599,7 @@ impl DoorToolsDoneItemKick {
 impl Default for DoorToolsDoneItemKick { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/doortools.ts:655 DoorToolsDoneItemKick.gun, src/game/doortools.ts:655)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct DoorToolsDoneItemKickGun {
     pub by: GuardId,
     pub at: V3,
@@ -628,7 +628,7 @@ impl DoorToolsDoneItemKickGun {
 impl Default for DoorToolsDoneItemKickGun { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/doortools.ts:664 DoorToolsDoneItem.queue, src/game/doortools.ts:664)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct DoorToolsDoneItemQueueItem {
     pub gd: GuardId,
     pub at: f64,
@@ -647,7 +647,7 @@ impl DoorToolsDoneItemQueueItem {
 impl Default for DoorToolsDoneItemQueueItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/doortools.ts:670 DoorToolsDoneItem.slice, src/game/doortools.ts:670)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct DoorToolsDoneItemSliceValue {
     pub pts: Vec<V3>,
     pub looks: Vec<Vec<V3>>,
@@ -674,7 +674,7 @@ impl DoorToolsDoneItemSliceValue {
 impl Default for DoorToolsDoneItemSliceValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/doortools.ts:670 DoorToolsDoneItemSliceValue.pie, src/game/doortools.ts:670)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct DoorToolsDoneItemSliceValuePie {
     pub eyes: Vec<V3>,
     pub lean: f64,
@@ -713,7 +713,7 @@ impl DoorToolsDoneItemSliceValuePie {
 impl Default for DoorToolsDoneItemSliceValuePie { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/doortools.ts:675 DoorToolsDoneItem.corner, src/game/doortools.ts:675)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct DoorToolsDoneItemCornerValue {
     pub pts: Vec<V3>,
     pub i: f64,
@@ -738,7 +738,7 @@ impl DoorToolsDoneItemCornerValue {
 impl Default for DoorToolsDoneItemCornerValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/doortools.ts:679 DoorToolsDoneItem.aim, src/game/doortools.ts:679)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct DoorToolsDoneItemAim {
     pub at: V3,
     pub from: V3,
@@ -755,7 +755,7 @@ impl DoorToolsDoneItemAim {
 impl Default for DoorToolsDoneItemAim { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/doortools.ts:679 DoorToolsDoneItem.pass, src/game/doortools.ts:679)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct DoorToolsDoneItemPass {
     pub to: V3,
     pub v0: V3,
@@ -774,7 +774,7 @@ impl DoorToolsDoneItemPass {
 impl Default for DoorToolsDoneItemPass { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/doortools.ts:680 DoorToolsDoneItem.beats, src/game/doortools.ts:680)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct DoorToolsDoneItemBeatsItem {
     pub t: f64,
     pub what: String,
@@ -791,7 +791,7 @@ impl DoorToolsDoneItemBeatsItem {
 impl Default for DoorToolsDoneItemBeatsItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Threshold, src/game/doortools.ts:712)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Threshold {
     pub jamb: Vec<GuardId>,
     pub pods: Vec<crate::entrypoints::Pod>,
@@ -878,7 +878,7 @@ impl Threshold {
 impl Default for Threshold { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum ThresholdFirst {
     Burst,
     Can,
@@ -895,7 +895,7 @@ impl ThresholdFirst {
 }
 
 /// (TypeScript: inline at src/game/doortools.ts:689 DoorToolsDoneItem.thrPre, src/game/doortools.ts:689)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct DoorToolsDoneItemThrPre {
     pub far: GuardId,
     pub t: f64,
@@ -912,7 +912,7 @@ impl DoorToolsDoneItemThrPre {
 impl Default for DoorToolsDoneItemThrPre { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/doortools.ts:695 DoorToolsDoneItem.other, src/game/doortools.ts:695)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct DoorToolsDoneItemOtherValue {
     pub gd: GuardId,
     pub w: V3,
@@ -929,7 +929,7 @@ impl DoorToolsDoneItemOtherValue {
 impl Default for DoorToolsDoneItemOtherValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/doortools.ts:698 DoorToolsDoneItem.threat, src/game/doortools.ts:698)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct DoorToolsDoneItemThreat {
     pub known: Vec<DoortoolsKnownThreatId>,
     pub ev_t: f64,
@@ -967,7 +967,7 @@ impl DoorToolsDoneItemThreatRoom {
 impl Default for DoorToolsDoneItemThreatRoom { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: ThreatWatch, src/game/doortools.ts:704)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ThreatWatch {
     pub th: DoortoolsKnownThreatId,
     pub lead: Option<GuardId>,
@@ -998,7 +998,7 @@ impl ThreatWatch {
 impl Default for ThreatWatch { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/doortools.ts:782 DoorTools.log, src/game/doortools.ts:782)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct DoorToolsLogItem {
     pub t: f64,
     pub what: String,
@@ -1015,7 +1015,7 @@ impl DoorToolsLogItem {
 impl Default for DoorToolsLogItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/doortools.ts:783 DoorTools.stats, src/game/doortools.ts:783)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct DoorToolsStats {
     pub orders: f64,
     pub opened: f64,
@@ -1086,7 +1086,7 @@ impl DoorToolsStats {
 impl Default for DoorToolsStats { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/doortools.ts:790 DoorTools.led, src/game/doortools.ts:790)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct DoorToolsLed {
     pub entries: f64,
     pub by_seen: f64,
@@ -1116,7 +1116,7 @@ impl DoorToolsSamOf {
 impl Default for DoorToolsSamOf { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/doortools.ts:2793 DoorTools.held, src/game/doortools.ts:2793)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct DoorToolsHeldValue {
     pub a: OrdersAssignmentId,
     pub face: f64,
@@ -1143,7 +1143,7 @@ impl DoorToolsHeldValue {
 impl Default for DoorToolsHeldValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Word, src/game/doortools.ts:618)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Word {
     pub t0: f64,
     pub go1: f64,
@@ -1162,7 +1162,7 @@ impl Word {
 impl Default for Word { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: DoorOp, src/game/doortools.ts:624)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct DoorOp {
     pub kind: crate::doortools::DoorToolKind,
     pub door: DoorId,
@@ -1298,7 +1298,7 @@ impl DoorOp {
 impl Default for DoorOp { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: KnownThreat, src/game/doortools.ts:701)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct KnownThreat {
     pub at: V3,
     pub t: f64,
@@ -1319,7 +1319,7 @@ impl KnownThreat {
 impl Default for KnownThreat { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum KnownThreatHow {
     Shot,
     Seen,
@@ -1334,7 +1334,7 @@ impl KnownThreatHow {
 }
 
 /// (TypeScript: RoomSearch, src/game/doortools.ts:741)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct RoomSearch {
     pub room: RoomfightRoomId,
     pub pts: Vec<V3>,
@@ -1379,7 +1379,7 @@ impl RoomSearch {
 impl Default for RoomSearch { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/doortools.ts:741 RoomSearch.los, src/game/doortools.ts:741)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct RoomSearchLosValue {
     pub at: V3,
     pub ok: Vec<i8>,
@@ -1396,7 +1396,7 @@ impl RoomSearchLosValue {
 impl Default for RoomSearchLosValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: DoorGate, src/game/doortools.ts:745)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct DoorGate {
     pub ops: Vec<DoorOpId>,
     pub go: bool,
@@ -1415,7 +1415,7 @@ impl DoorGate {
 impl Default for DoorGate { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: SetCharge, src/game/doortools.ts:747)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SetCharge {
     pub door: DoorId,
     pub side: f64,
@@ -1457,7 +1457,7 @@ impl PIEGUN {
 impl Default for PIEGUN { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/doortools.ts:761 SKY, src/game/doortools.ts:761)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct DoortoolsModSKYValue {
     pub n: f64,
     pub open: bool,
@@ -2213,7 +2213,7 @@ impl DoorToolsThrSpot {
 impl Default for DoorToolsThrSpot { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/doortools.ts:3472 thrFar ->, src/game/doortools.ts:3472)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct DoorToolsThrFar {
     pub far: GuardId,
     pub fs: f64,
@@ -2249,7 +2249,7 @@ impl DoorToolsPocketOf {
 impl Default for DoorToolsPocketOf { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct DoortoolsMod {
     /// (src/game/doortools.ts:761 SKY)
     pub sky: JsMap<RoomfightRoomId, crate::doortools::DoortoolsModSKYValue>,

@@ -1,6 +1,6 @@
 //! The types of `effects`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// what a smoke source rides, read live each time it is asked: a shot's two off the shooter's body (combat.ts fireWeaponRaw), a blast's trail off its spark (sparks.ts tracker: answers nothing once the spark dies or its slot is reused)
@@ -9,6 +9,8 @@ pub enum Track {
     Muzzle { by: CharId },
     EjectPort { by: CharId },
     Spark { slot: usize, gen_: f64 },
+    /// the lit end of a man's cigarette, while he smokes and is seen
+    Cigarette { by: CharId },
 }
 
 /// (TypeScript: FxLight, src/game/effects.ts:36)
@@ -60,7 +62,7 @@ impl MuzzleFx {
 impl Default for MuzzleFx { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum MuzzleFxKey {
     Mk12,
     Mp7,

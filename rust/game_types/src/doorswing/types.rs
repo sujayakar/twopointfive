@@ -1,10 +1,10 @@
 //! The types of `doorswing`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: SwingDeal, src/game/doorswing.ts:31)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SwingDeal {
     pub door: String,
     pub swing: f64,
@@ -29,7 +29,7 @@ impl SwingDeal {
 impl Default for SwingDeal { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum SwingWhy {
     Mission,
     Floor,

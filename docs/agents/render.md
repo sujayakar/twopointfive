@@ -81,7 +81,7 @@ no smoke reads 14 to 17. The vault read as 60 until a smoke can was let off, the
 counts, the queue's answer timed from a page script (wrap the INSTANCE's `device.queue.submit` and `onSubmittedWorkDone`: the page keeps its own
 queue's methods, the prototype's are not called), and leaving one thing out of the frame at a time. Not the particles, their draw, the wind, the main
 thread (3 ms) or the picture's size: the solver, and of it only THE ABOUT TWENTY `dispatchWorkgroupsIndirect` CALLS A FRAME (per-brick kernels by a
-GPU-written count). The same kernels dispatched directly keep 60. THE GAME'S PAGE NOW OPENS ON THE WHOLE POOL (`main.ts` sets `sparse.indirect` by
+GPU-written count). The same kernels dispatched directly keep 60. THE GAME'S PAGE NOW OPENS ON THE WHOLE POOL (`src/host/pictureopens.ts` sets `sparse.indirect` by
 `smoke/dispatch.ts pageIndirect`; `smoke.ts encode` asks `byGpuCount`): a per-brick kernel is dispatched directly over all 4,096 workgroups. A
 workgroup past the step's own list returns at its guard, which is how the pool has always gone from `directAt` of it stepping, so the smoke is the
 same to the bit and no kernel runs that did not. The dispatches of fixed size are as they were; one pipeline set, the call is picked at encode time.
@@ -301,8 +301,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   or `?aim=`) the page draws at that rate: `paceEvery(displayHz, target)` = floor(hz / target + edge) display frames go to one drawn frame. Every second
   at 120, 144 and 165 Hz, every third at 180, every fourth at 240; every one at 60 to 116, at an aim of the display's own rate (`?aim=120` on a 120 Hz
   display draws every frame), at 'as now', with the ladder off (a pinned preset with Options ▸ Hold frame rate off), and while the page measures the
-  machine (`quality.calibrating`, `bench.active`, `perfsweep.active`: no rate is held there; a benchmark and a sweep still wait for the GPU, below). Never under `?kitview`, which
-  has its own pacer. Only a frame that comes EARLY is passed over (`ts - lastWorked < (every - slack) · period`, on the frame callback's own stamps): one
+  machine (`quality.calibrating`, `bench.active`, `perfsweep.active`: no rate is held there; a benchmark and a sweep still wait for the GPU, below). Only a frame that comes EARLY is passed over (`ts - lastWorked < (every - slack) · period`, on the frame callback's own stamps): one
   that is due or late is always worked, so a machine that cannot hold the pace is never slowed further and a late frame moves the beat. It sits in
   `main.ts frame()` before the time is taken (the step takes the real time since the last WORKED frame, and the ladder samples that gap, so it reads a
   paced 120 Hz display as it reads a 60 Hz one, the case it was built on). THE DISPLAY'S PERIOD is the pacer's own reading off every callback's stamp
@@ -344,8 +343,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   is under the share already and nothing changes; work that fills the frame is drawn about every second frame while nobody is at the window (11 ms of
   GPU work: 30 a second on a 60 Hz display, 40 on a 120 Hz one), and the frame the focus comes back is worked at once. The window somebody is at is
   never held by it. Not while the page measures the machine (`quality.calibrating`, a benchmark, a sweep) or records a take (`perfrec.recording`).
-  Under `?kitview` too (the kit picture is a live window of its own, whose pacer knows nothing of who looks; the game's pacer holds no rate there and
-  only gives way). THE MEASURE of a frame's work is the GPU's own timing of its passes (`engine.timer.unionMs(GPU_RENDER_PASSES)`, the ladder's number)
+  THE MEASURE of a frame's work is the GPU's own timing of its passes (`engine.timer.unionMs(GPU_RENDER_PASSES)`, the ladder's number)
   and never more than the queue's answer took; with no timings it is the answer alone, which also counts the other windows' work ahead in the queue, so
   there a window beside a busy one gives more than half. The wait runs from the last worked frame's own stamp (`begun`), which a stall does not forget.
   WHO IS AT IT (`main.ts attended`): `window.top.document.hasFocus()`, asked of the top window because the game's page is a frame of the kept page and
@@ -358,7 +356,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   answer was read too, in a bare page with a frame: the frame's own document never has the focus, its top's follows the window in front). With the
   rule: the second's two asks took 23 s and 7 s (most of it behind the three frames the first had handed over before it was told) and it was ready in
   196 s; the first drew 17 frames meanwhile and passed 154 display frames over, with no error on either page. With `?giveway=0`: 37 s and 164 s, and
-  not ready four minutes in. Not run: `kitview-page.cjs` (with somebody at the window the pacer's call under `?kitview` holds no rate, waits for no frame and
+  not ready four minutes in. Not run: the kit picture's page check, since gone (with somebody at the window the pacer's call there held no rate, waited for no frame and
   passes nothing over, read off the code). KNOWN LIMITS: a
   window somebody IS at keeps the GPU as full as its work makes it (two frames with it at the most since the next bullet, where it was as many as the
   browser took), so a second window opened while the first keeps the focus, or the first clicked back into while the second starts, still waits behind
@@ -385,9 +383,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   (uneven: gaps of 8 and 17 ms mixed, at 11 ms of work) and the build draws the even 60 the ladder holds. `?pace=0` with the rule on is the look page's
   `&pace` to the letter; `?aim=120` holds 120. Which of the two he wants under 8 ms of work is his to say; it was said to him. A FRAME HELD FOR THE GPU
   IS THE MACHINE'S OWN PACE: the ladder and the visit's records read its gap (`held`, not `gave`). Not during the boot's calibration by itself
-  (`room` 0, frames go as they always did); a benchmark and a sweep wait since 11-04 (`pageRoom`, further down); on while a take is recorded. NOT under `?kitview`: the
-  kit picture's own pacer reads how late its frames come and steps down to an even pace by that, and a frame held here after that pacer had taken it
-  would hide the lateness from it (a window of it nobody is at still gives way). THE QUEUE IS ASKED once for every frame that DREW
+  (`room` 0, frames go as they always did); a benchmark and a sweep wait since 11-04 (`pageRoom`, further down); on while a take is recorded. THE QUEUE IS ASKED once for every frame that DREW
   (`behind.drawn`): a card that hides the picture hands the GPU nothing and asks nothing. The visit's records ask the same queue the same thing on
   some of the same frames (`cloud.ts lagAsk`); the two are not one asker yet. A FRAME THE QUEUE NEVER ANSWERS FOR is given up after `lost` (10 s) and
   the page goes on without it (`__pace().lost`): held at its limit for good by one lost answer, a window would be a frozen picture with no card. Ten
@@ -409,8 +405,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   one build on two such boxes agreed on GPU time to 2 % on eight lines of nine and disagreed on their sweep rows (mesh shadows off 'gave back'
   1.1 ms on one and cost 0.6 on the other). With the wait a measuring page is at most two frames ahead of the GPU, as a player's is, and where
   the card keeps up nothing is held. A benchmark's own calibration waits with it, so a run opens with no pile behind it; only the boot's
-  calibration by itself (a second and a half that counts frames as they come: on the software adapter the wait would stretch it without end) and
-  `?kitview` still say room 0. The even pace and giving way stay off while measuring, as before. A result says what it ran under (`wait`; absent
+  calibration by itself (a second and a half that counts frames as they come: on the software adapter the wait would stretch it without end) still says room 0. The even pace and giving way stay off while measuring, as before. A result says what it ran under (`wait`; absent
   = from before). WHAT THIS CHANGES ELSEWHERE: a benchmark's frame rate is now the pace a player's page gets, so on a fast display where the
   queue answers late it can read under what the card could do (the limit named above, for play), and on a slow headless card a scene runs in
   slow motion against its wall-clock cap as it does on a slow machine with a display. On an adapter slower than five seconds a frame the wait
@@ -802,7 +797,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   own). ANOTHER PAGE of the site asked for in the frame (the replay viewer, the workbench, the listening pages) is loaded by the TAB (the frame stops the
   load with the Navigation API and the tab makes it; without that API the shell sees the frame land there and follows): such a page has the address bar
   to itself, and coming back to the game from it is a new shell and one more compile. The keys are the frame's own window's (`KEPT.shelled`,
-  `game/input.ts`: no sink text box as in somebody else's frame, so F7, F8 and a paste into a field work as on a whole page). A browser that will
+  `host/input.ts`: no sink text box as in somebody else's frame, so F7, F8 and a paste into a field work as on a whole page). A browser that will
   not draw into a frame's canvas with its parent's device throws at `configure`: that load and the ones after open their own device (`Keeper.refused`, one
   warning record `gpu.keep.refused`). **The load's record** gets `kept` (which load on this page: 1 = the one that compiled, 2 and up = a start on the kept
   page; absent = a plain page), `made` { pipelines, modules, asked, and on kept 2+ the first labels compiled }, counted up to the boot's own end
@@ -1129,7 +1124,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   **Off:** `?firstframe=0`, or the row in Options (kept off). A load as it was is now THREE words: `?compactshaders=0&splitrays=0&firstframe=0`.
   **WHERE IT STARTS OFF:** the harness (both stands, as before; `TPS_FIRSTFRAME=1` raises it) and A BROWSER A SCRIPT DRIVES (`navigator.webdriver`, so every
   page tool): some forty tools poll for a hook and begin at once, and their first picture and first timing must be the settings' own. A tool that wants the
-  player's start asks for it (`?firstframe=1`) and waits on `__ready`. The Team & kit picture (`?kitview`, a still drawn once) and the workbench (debug views,
+  player's start asks for it (`?firstframe=1`) and waits on `__ready`. The Team & kit picture (`?kitview`, host/drawpage.ts) and the workbench (debug views,
   no stand-in) lower `PIPE_QUEUE.later` before they build, whatever the row says. **What moved with it:** (1) `window.__started` is the moment the card is
   live; a script's `__ready` waits for the later set too (`gpu/device.ts laterIdle`, a tick after the count reaches 0) and `__boot.marks.laterReady` is when
   it was in (`docs/agents/qa.md`). (2) The benchmark waits while `Engine.standsIn` (`ui/bench.ts standing`, 180 s in all on a page; past that its lines are
@@ -1410,33 +1405,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   solver, the maintainer's pick and the next step, is what makes the smoke real; until then `plume` is a slider and `?fireplume=0` a word).
   A recording from before `FIRE.look` replays with no shimmer, no drawn smoke and no embers.
   NEVER SEEN ON A GPU: the look was set on the software adapter's stills (`tools/qa/fire-lab.cjs`, which now emulates the bloom and the tone curve: `LOOK='k=v,…'`).
-  THE FLAME AS GAS (`FIRE.gas`, OFF in the page until it has been seen: `?firegas=1`, and a row in the fire lab; 2026-10-23, the maintainer on a card asking
-  how much of the flame should be real fluid sim: "Drive it from our 3D smoke solver", then "i'm curious how far we can push our existing smoke solver.
-  curious if we can make the finer cells work well with our existing brick stuff"). A fire within `viewR` 12 m of the view files a second look-only source
-  every half second on the solver's FINE lattice (2.2 cm cells, the breath's and the gun gas's, the same brick pool; `lattice: 'fine'`) at the coals: HEAT
-  with next to no smoke in it (`temp` 22, `density` 0.3 a second, leaving at 1.8 m/s). The solver lifts it by its own buoyancy, curls it and leans it in the wind, and the
-  picture draws the flame from that heat (`fire.wgsl fireFlameG` through `composite.wgsl fireGas` = `smoke_read.wgsl spgFineHot`): white-hot at `ref`, no
-  flame under `lo` of it, the noise only tearing the skin finer than a cell. A fire's record carries how far it has eased to its gas (`FireRecord.gas`, the
-  host's book), so a fire far from the view, on a preset that sheds fire smoke or with no solver is the flame of noise; while it is gas the drawn smoke is
-  off. TWO CHANGES TO THE SOLVER (`src/smoke`, no thread's own: the last change there was the breath's, 10-20), both nothing while the switch is off:
-  (1) HOT GAS ON THE FINE LATTICE IS KEPT — `sparse.fineKeep` (0 = no such rule, the solver as it was; the uniform's spare word): the fine lattice fades
-  gas under `thinBelow` 0.25 and the heat in it at up to 3 /s (THE FINE LATTICE LETS GO), which made the first gas flame (drawn from density) a lick whose
-  length hung on how dense it was and which lost its lift and lay over 45° in the yard's 0.7 m/s; with the rule a cell hotter than `fineKeep` is not thin
-  and cools only at the solver's own 1.2 /s, so the flame's height is its cooling time. The fire raises it (`SmokeSystemLike.keepHot`, `FIRE.gas.keep` 0.8)
-  while a fire's flame is gas and puts it back to 0; WHILE IT IS UP gun gas and breath that hot linger as long too (nobody has measured how hot they run).
-  (2) A FINE BRICK'S HEAT IS PUBLISHED in its atlas texel's last channel (`publish`; nobody read that channel of a fine brick: `smoke_read.wgsl` is the
-  atlas's only reader and takes `.x` of a fine brick), always, switch or no switch: a brick that holds heat and no density was already kept and published
-  (its box counts either), so the page and the marches see what they saw. WHAT THE GAS IS TO THE GAME: its little density is the solver's own, so in the
-  page a sight line through the flame loses what that smoke takes (thin by design; `density` is a lab slider), and the headless stands have no solver.
-  FIRST CUT, kept in the log (d0e94537): the flame drawn from the fine lattice's DENSITY with no solver change; measured in the page (software adapter,
-  lines asked of the game's sensors): the published gas ran about a fifth of the source's `density` at the heart, 0.8 a second was a half-metre lick and
-  1.6 a metre and a half, the pool read 787 to 896 bricks three seconds in. CHECK: the fire check's `gas` line (heat sources as the table says, the solver
-  told to keep hot gas and told to stop, the record's share, none without a solver or put off, an old recording off). IN THE PAGE (software adapter, the
-  pass, the storm 0.5 m/s at the drum, five stills): a white heart, orange body, red tip, no haze; one streamer about a metre and a half long that the wind
-  leans some 45° and curls (one streamer, not a field of tongues: one soft source, two-centimetre cells); a sensor's line through its heart keeps 0.90 of
-  its light, every other line through the flame 0.97 or more; the pool 802 bricks three seconds in (275 fine) and 1,374 six seconds in with `temp` 22
-  (445 fine; the pass's own cold smoke and the fire's coarse plume are in those). A gas flame is marched 56 steps (40 and 16 more) in a cylinder up to 0.8 m wider than the
-  noise's (`fireGasWide`), so it costs half as much again a pixel over more pixels: not timed. NEVER SEEN ON A GPU, never seen moving.
+  THE FLAME AS GAS (`FIRE.gas`, `?firegas=1`, a second source on the solver's fine lattice, tried 2026-10-23 and never on in the page) left the tree 2026-11-08: the flame is the noise's.
   UNDER THE FOG OF WAR A FIRE IS DRAWN AS THE TEAM LAST SAW IT (`FIRE.fog`, on; `?firefog=0`; a recording from before the key replays with it
   off; 2026-10-23, the maintainer, playing the pass in plan mode on hard: "weird that fire doesn't show up in fog of war … I think we should at least show
   everything in the environment visible at the start of the level all the time?"). The first cut hid the flame over ground the fog hides, by the fog's rule for
@@ -1462,7 +1431,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   wind at the drum, a plume fifteen seconds old; the light each line keeps, a line starts to count smoke under 0.8): across the plume at 1.3, 1.5 and 1.7 m, over
   the drum and 0.8 and 2 m downwind, 1.00 every one; at 1.9 m 0.94 over the drum, 1.00 downwind; ALONG the wind (2 m upwind to 6 m down) 0.98 at 1.3 m, 1.00 at
   1.6 m, 0.92 at 1.9 m; overhead 0.55 at 2.6 m and 0.23 at 3.4 m (the smoke is there); with `?fire=0` every one of them 1.00. ONE wind, one level, open sky: a fire
-  under a low roof or in still air may pool lower, and nobody measured that. `?firesmoke=0` (`FIRE.smoke.on`) is the fire with no smoke.
+  under a low roof or in still air may pool lower, and nobody measured that. The look panel's fire smoke row at 0 is the fire with no smoke.
   THE SOUND: `fireBed` (a 7 s loop held as a follow voice, handed on every 12 s, asked again when a fire is lit again) and `fireCrack` with each pop — the mixer's
   alone, no event: nobody in the game hears a fire.
   WHAT IT COSTS, by the model and timed on no GPU: no light is added. The flame, coals and embers run in the composite, which every preset draws as its compute twin
@@ -1479,7 +1448,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   stepped (497, 942, 1,119, 1,216 at 5, 10, 15 and 20 s, against 110 to 140 with the fire off) and the DRAWN page's pool read 2,242 fifteen seconds in against 901 with
   the fire off (the pass's own cold-weather smoke), so about 1,300 bricks: by the solver's own figures on the maintainer's Mac (0.39 µs a stepping brick, and 0.43
   ms for being awake at all on a level where nothing else smokes) 0.5 ms on the pass and about 0.95 ms where the fire is the only smoke. The plume was still
-  growing slowly at twenty seconds. `?firesmoke=0` is the same fire without it, to weigh that on a GPU. BY PRESET, and the
+  growing slowly at twenty seconds. The look panel's fire smoke row at 0 is the same fire without it, to weigh that on a GPU. BY PRESET, and the
   one rung that draws the fire without its smoke: FIRE SMOKE SHED, the next bullet.
   THE THIRD LOOK ON A GPU (2026-10-23, the maintainer playing the pass with the third cut: "this is looking better but still seems way too dark, especially
   relative to the other lights in the scene"; "i'd also expect the color from the fire to be more warm"; "would also expect the fire to be affected by the wind,
@@ -1538,8 +1507,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   takes the ghost's strength from that steady record (it was the level's, a fifth dimmer, paler and shorter, at the lid). It is held from the very frame it
   goes out, one frame ahead of the fog's say. ONLY under the fog's full picture with `FIRE.fog` on: with `?fogfull=0` or `?firefog=0` the fog remembers the
   level's lamp, as before. NEVER SEEN ON A GPU. (2) `fireStir`'s gap is each fire's own: a grenade between two braziers stirs both. (3) The player's round stirs a fire on the older lamp
-  search too (`AIMCOST.lamp` off, or a show on the stage), and that search goes on past the fire to a lamp behind it. (4) A floor with no fire tells the solver
-  to let hot gas go (`keepHot(0)`); the page stands one game on a fresh solver a level, so nothing reaches this today. The check's fog, hardy and gas
+  search too (`AIMCOST.lamp` off, or a show on the stage), and that search goes on past the fire to a lamp behind it. The check's fog and hardy
   lines hold each; (3) stirs on a round that STOPPED in the drum, the newer search's own rule. RUN SINCE, and it found the rule itself short: a fire's own box is its glowing lid, a finger thick, and the drum is four boxes of the level's that name no fire, so a round into the drum stirred nothing on any path (the line of October 23 called `fireStir` itself and never fired a round). `fire.ts fireStruck` now says a round stopped in a fire when it stopped in the fire's box OR in a box that stands on the fire's axis under its mouth, within the drum's wall (1.7 lids, 0.3 m at least; a wall behind the drum or the ground beside it is no drum); the player's two lamp searches and `destruction.ts fixtureRound` (everyone else's rounds) ask it. `fire-check`'s hardy line fires a real round into the drum from three metres by each search: one stir each, still burning.
   CHECK: `bun run tools/qa/probes.ts fire` (`tools/qa/fire-check.ts`, families `render`, `all`; twenty-three lines, both stands; `FIRE_BREAK=1` fails twenty-one): the lamp's swing
   and place, a second game the same frame for frame, the bed and the cracks, out and lit again, a checkpoint load (and the bed asked for again behind it; kept through frames that move no clock; asked for again behind a restart), the smoke's sources (look-only, coarse, foot over
@@ -1587,7 +1555,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   SEEN on the software adapter only (the pass at dusk, the solver stepped 10 s with the row up, then 14 s with it at 0; 480 × 300, a play view and a
   close one): with the row up a pale column leaves the flame's own tips, warm at its foot, and widens as it climbs; with it at 0 the gas shows first well
   over the flame. Whether it BILLOWS cannot be judged from a still at that size. NEVER SEEN ON A GPU; the numbers are a first setting.
-- **A FIRE AS ONE COLUMN, ON THE LOOK PAGE** (10-29; `lookConfig.fireFit`, on with the Fire smoke row up, `?firefit=0` = the pieces as they were;
+- **A FIRE AS ONE COLUMN, ON THE LOOK PAGE** (10-29; on with the Fire smoke row up;
   `game/fire.ts FIRE_LOOK_SMOKE` and `axisAt`). The maintainer on a GPU, with a simulated fire beside his shot of the pass's drum: "interaction of smoke
   with embers, heat distortion, hot part of the plume doesn't seem to look right. they should fit together more naturally?" READ OFF HIS SHOT: the gas over
   the flame is a pale glowing haze (white solver smoke a hand from the fire's own lamp); the soot the flame draws is dark and stands on the flame's
@@ -1655,10 +1623,10 @@ row on his machine is the answer, and the word puts the count back on any machin
   with no fire smoke, so a low that put the smoke back would be 0.5 to 0.95 ms short beside a fire, fall to the floor, find room and hop again, the plume coming and
   going each time. While AUTO moves the preset, low reached from verylow keeps the shed; the smoke is back at medium (where the scale has the room: the hop low →
   medium is priced without it too, and medium's scale has 6 to 11 % to give) or when a preset is put on by hand; a machine that came DOWN to low keeps its smoke. HOW: `Quality.apply` writes `settings.fireSmoke` (render-side, never `FIRE.smoke.on`: that table rides the journal
-  and a graphics preset must not write it), `game/fire.ts updateFire` reads it beside the solver's `drawing`; a fire that gets its smoke back (a hop up the ladder)
-  smokes the same frame, and one that loses it just stops filing: the plume there thins out by itself and the solver sleeps when its bricks are let go. SWITCH:
+  and a graphics preset must not write it), the tick files a fire's smoke with the word `fire` and `smoke.ts emit` drops it by this setting; a fire that gets its smoke back (a hop up the ladder)
+  smokes again at its next source (within a second; so does one near the view after a load), and one that loses it just stops filing: the plume there thins out by itself and the solver sleeps when its bricks are let go. SWITCH:
   `settings.fireSmokeShed`, default on, `?fireshed=0` = every preset keeps the fire's smoke, as it was (render-side like ONE SMOKE SOLVE: no `FROZEN_HOLDS` row, no
-  journal line; `?firesmoke=0` still puts the smoke off at every preset). WHAT IT IS NOT: a game rule on any stand (the source is look-only, and no headless stand
+  journal line; the look panel's fire smoke row at 0 still puts the smoke off at every preset). WHAT IT IS NOT: a game rule on any stand (the source is look-only, and no headless stand
   has a solver that draws) — but in the PAGE a sight line reads the solver, so beside a fire a line over a standing man's head (the fire's notes: 0.92 to 0.94 kept
   at 1.9 m, 0.55 at 2.6 m, all of it at 1.7 m and under) reads the plume on low and up and none on verylow. Nobody in the game looks along such a line today.
   ALSO RENDER-SIDE BY WAIVER, to be confirmed: the key is read inside the game's update (beside `drawing`, itself a render setting). What it
@@ -1728,8 +1696,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   merged and then try to fix forward, especially as we clean everything up and simplify the code").** Until this the look's layers drew only with a
   `look` row on the address (the bullet below, which still says how they are made). Now there is no switch: the engine draws it on every page, with what stands on it (the walls' two sides, the men's side rows, the smoke's shorter step, the
   stirred smoke and the fire's column, the maps made on workers). `?look=key:value` still
-  opens the page with a row's amount; `?look=plain|0|off` is still the GWOT dress's word, read from any `look` word of the address, and no longer
-  decides the picture's layers. THE OTHER WAY IS DELETED (the same day, the second commit): the prelude's `const LOOK`, its 35 branches in eleven
+  opens the page with a row's amount. THE OTHER WAY IS DELETED (the same day, the second commit): the prelude's `const LOOK`, its 35 branches in eleven
   shaders, every reader of `lookConfig.on` in the page, the stub functions the g-buffer was given without it, `?look=old` (which drew the picture as it was
   for a few hours of the build) and the pricing run's second page. The tools' page boot counts 47 distinct shader texts over its settings (one of them with the walls row
   down) where it counted 53. `lookConfig.on` ITSELF IS GONE from both sides (the Rust
@@ -1752,11 +1719,11 @@ row on his machine is the answer, and the word puts the count back on any machin
   pairs in a level file.
   `hills` WAS ON EVERY PAGE FOR ONE STEP OF THE BUILD AND PARTED CO-OP (step 1906, the same day; mended the step after). The first cut kept it with
   the picture as "the picture's alone". It is not: `groundRayConfig.on` was read by the game's own box world (`scene/boxes.ts groundOn`; both are gone since 11-08, the table and the read: the rays a sight line and the cursor's point use then meet the ground field) and `game/game.ts` builds the snow
-  field with its roll. A game server stands with no look, so a page had `on: true` beside its server's `false`: co-op's wider word (the parts of
-  the whole game's state a page and a server agree on, `src/net/agreed.ts`, part `m.scene_ground_field`) held on 0 of 282 word ticks with one seat
+  field with its roll. A game server stands with no look, so a page had `on: true` beside its server's `false`: co-op's word of every part
+  (part `m.scene_ground_field`) held on 0 of 282 word ticks with one seat
   where the step before held 257 of 257. The alarm's narrow word did not part, the office being flat; on a snow level the two would have played
   different ground. THE RULE THIS TEACHES: before a switch is called the picture's, look for its readers under `src/scene`, `src/game` and
-  `rust/`, and run `PORT=<dev server> node tools/qa/mpclient-page.cjs`: its `wider word` line is the check that a page's game is its server's.
+  `rust/`, and run `PORT=<dev server> node tools/qa/mpclient-page.cjs`: its `same fight` line is the check that a page's game is its server's.
   If rays should see the hills on every page, that is a rule of the game with its own registered switch, laid on every machine from the recipe.
   No `FROZEN_HOLDS` row, no knob table, no journal key. THE TOOLS' PAGE BOOT (`tools/qa/pageboot.ts`): its settings are `title` (the page as it opens), `snow` and `smokelab`.
   CHECKS: `bench-check` (a run with no look word carries the
@@ -1782,7 +1749,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   Mac on earlier builds; the look with the round things' GPU half compiled in was drawn there only as "the look, its trials off" on 11-04, on an
   older tree. NOT MEASURED HERE: what the look costs a frame (the bar: `rebuild/look-join/bar.md` in the project's files) and a load.
 - **THE LOOK PROTOTYPE** (`?look` at boot, or the page `/look` = the game's page with `look` on the pass at night unless the link names its own `levelFile`; `?look=relief:1.4,air:2` opens it with those
-  amounts, each held to 0‥4, and `?look=plain|0|off` stays the GWOT dress's word and does not raise it; `render/frame.ts lookConfig`,
+  amounts, each held to 0‥4; `render/frame.ts lookConfig`,
   `shaders/look.wgsl`, `render/lookTex.ts`, the panel `ui/lookpanel.ts`; OFF on every other page). A place to find out how far materials carry a world of boxes,
   NOT the look when it was made; the maintainer said yes to a material look on 11-01 and `STYLE.md`'s rule 1 and Surfaces are rewritten for it on this branch (the bullet THE MATERIAL MAPS ARE THE LOOK NOW, below, has what changed with that). Where the surfaces try above writes a pattern in the shader, this one samples MAPS:
   eleven tiling materials (the try's eight classes and three more for what stood untouched beside them: cloth, bare metal and painted metal; the class is
@@ -2200,7 +2167,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   COMING TO REST OR LEAVING IT, by the very test the words make (`SIDE_TURNED`). The map's own key steps every 0.04 rad, at other angles: a leaf that stopped
   inside the step it was last keyed in kept the words of a leaf still ajar (a shut door that said nothing), and a swing made the words on every frame, 2 ms
   each on the main thread. A leaf in mid-swing is keyed by a sixth of a quarter turn. The map itself is drawn once a frame for both its readers
-  (`placeField.ts PlaceMap`). THE CHECK: `bun run tools/qa/wallsides-check.ts` (the pass,
+  (`placeField.ts PlaceMap`). THE CHECK, until 2026-11-08, when the headless game it stood went: `wallsides-check` (the pass,
   headless, the shader's read mirrored in TS: 11 places, 5674 pairs within three cells and none sharing a number; 318 face points 3 cm off six faces all on their
   own side; 65964 floor points and none with a column across a wall; 28 slow closings from four angles and none left stale, the words made 122 times in 11,228
   frames; the column table right at 40 × 28 and at 80 × 56; `WALLSIDES_BREAK=1` leaves one wall out of the map, skips the last rebuilds of each closing, and
@@ -3263,8 +3230,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   rust" in a kept office are cured by saying them as `steel`, `enamel` or `brushed`, not by this word. A stuff's own `fades` and `soaks`
   now say what it does where nobody keeps it, and the kept cousins (stucco and skim of plaster, cast panel and gloss block of block, paver
   of slab) are no longer the only way to a clean wall; folding each pair into one stuff is not done. WHO SAYS IT: a generator, `export
-  const KEPT = 0.8`; the exporter writes the file's `meta.kept`, and gives a look's second file (`<name>-gwot.ts`, what the look's page
-  loads) the word of the level it dresses unless it says its own (`tools/levels/keptWord.ts`, which the check runs too); a level built on
+  const KEPT = 0.8`; the exporter writes the file's `meta.kept`; a level built on
   another's floor with no `DRESS_AS` re-exports the word; the office would say it as `level.kept` in its builder (`levelToData` writes
   the file's meta from the Level and drops either key from a caller's `meta`, a marks' texel the same way now). Every way a level enters
   the page goes through `main.ts hostLevel`, so the bundled office that stands in for an editor level that cannot stand takes its own
@@ -3834,7 +3800,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   on a wall 3 m off; a real one about 1 %), lamp glass 0.20 of its night glow; at dusk a bulb is 1/69, the torch 0.63 of its night strength and glass in
   full. The `min` is the night's hold: nothing is drawn brighter than the night draws it. The weather's cloud dims sun and sky under the hour's one
   exposure (`hours.ts`), so lamps count for more under rain by themselves. The row's amount is in stops (k^amount). NOT scaled: the sun and the moon, a
-  lightning stroke (`transient`), an infrared illuminator, a device's sight cone (`group 'devices'`) and the Team & kit figure's staging (`kitview…`).
+  lightning stroke (`transient`), an infrared illuminator and a device's sight cone (`group 'devices'`).
   Applied to the UPLOADED record and the frame's scale alone, so the picture, the bounce, the beams and the GPU's light meter read one number;
   `RtLight.intensity` and `settings.emissiveScale` are never written. WHERE NOBODY SAYS THE HOUR (`lookConfig.exposure` null: a night, or a level lit as a
   day by its own sky) the exposure runs from 1 to midday's by that sky's mean radiance 0.08 to 0.35, read without the Sky light row, as before. A night is
@@ -4033,7 +3999,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   says what each paint NAME the kits write is made of: a material of the look (`lookTex.ts LOOK_NAMES`), `plain` (meant flat: plastic, laminate,
   rubber, a screen), `waits` (no material yet: card, foliage, a lawn, a clean steel; drawn plain) or `mixed`. The palette's rows moved into it
   (checked against `GwotMat` by the compiler) and `LOOK_OF` is read off it, the same classes in the same order, so the shader's text is unchanged.
-  THE LEVEL'S OWN ROWS carry the names: the loader keeps a file's `materials` beside the level (`levelLoad.ts levelFileOf`) and the page makes the
+  THE LEVEL'S OWN ROWS carry the names: the loader keeps a file's `materials` beside the level (`levelLoad.ts`) and the page makes the
   look's word for a box with them (`lookWordOf(dry, rows)`): a paint a row names is its name's stuff, asked before any colour is weighed. A box
   and a loose prop's part are written under the FIRST row that has their colour exactly, so the row is found by the colour and no box carries a
   word. THAT IS ALSO ITS LIMIT, and what `mixed` is for: a file's writer names a box by its colour, and the kits have used one colour for two

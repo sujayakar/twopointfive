@@ -611,7 +611,7 @@ pub fn lone_call(g: &mut crate::game::Game, gd: GuardId, l: &mut crate::tactics:
         if g.gd[o].foe.is_none() {
             if let Some(crate::game::Foe::Guard(foe)) = g.gd[gd].foe {
                 if !crate::rails::rails_down(g, foe) {
-                    g.gd[o].foe = Some(crate::game::Foe::Guard(foe));
+                    crate::mind::foe(g, o, Some(crate::game::Foe::Guard(foe)), "tactics");
                 }
             }
         }

@@ -12,7 +12,7 @@
 //   · THE SET IS DERIVED, never kept: the step that is up says it all, so a checkpoint put back or a snapshot holds nothing of it.
 //   · A CUE. A step's `cue` is sent to the level's script (director.ts, its play program 'tutorial') as the signal `lesson:<cue>` the tick the step
 //     comes up; the lesson test `{ is: 'cue', name }` is true once the program has raised `done:<name>`. The program is started here when the run
-//     starts, after a restart, and after a checkpoint is put back (with that checkpoint's own cue sent again: a beat starts clean from its cue).
+//     starts, and after a restart.
 //     Every order the player gives reaches the program too, as the signal `order:<id>`.
 //   · AUTHORED CHECKPOINTS. A step's `checkpoint` asks for one save the tick it comes up (savestate.ts Checkpoints.keep: kept in memory, whatever is on
 //     the floor), and on a rails level those are the only saves: the every-step request and the floor's own triggers stand down.
@@ -32,8 +32,8 @@
 import type { Game, Guard } from './game';
 import type { LessonData } from '../scene/scenarios';
 import type { Vec3 } from '../math/vec';
-import type { Input } from './input';
-import type { FollowCamera } from './camera';
+import type { Input } from '../host/input';
+import type { FollowCamera } from '../host/camera';
 import { lessonTokenFaults } from './lesson';   // (called inside railsFaults only: src/game is one import cycle)
 import { RUST_PASS, RUST_SURFACE, goneWithTick } from './crossing';
 
@@ -108,7 +108,7 @@ export const RAILS = { on: false,
   flatRing: false,
   /** seconds a spared teammate is given when the level names none */
   spareSecs: 6 };
-export const RAILS_STATS = { dropped: 0, cues: 0, starts: 0, kept: 0, putBack: 0, spared: 0 };
+export const RAILS_STATS = { dropped: 0, cues: 0, starts: 0, kept: 0, spared: 0 };
 
 /** an action → the key codes it owns (the game's own codes: host/keymap.ts moves keys, never codes), its mouse buttons (bits of Input.buttons) and the wheel */
 interface Act { keys?: string[]; buttons?: number; wheel?: boolean }
@@ -124,7 +124,11 @@ const ACTS: Record<string, Act> = {
   //  word plays as it did. A step denies it where a man must not be gone for by hand, and keeps the interaction key)
   stalk: {},
   hands: { keys: ['KeyE', 'Digit0'] }, use: { keys: ['Space', 'ArrowUp', 'ArrowDown'] }, whistle: { keys: ['KeyV'] }, light: { keys: ['KeyL'] }, nvg: { keys: ['KeyN'] },
-  order: { keys: ['KeyB'] }, ring: {}, menu: { keys: ['KeyX'], buttons: 4 }, who: { keys: ['KeyT'] }, word: { keys: ['KeyF'] }, tools: { keys: ['KeyG', 'KeyH'] },
+  order: { keys: ['KeyB'] }, ring: {},
+  // (`ringPart`: THE WHEEL FOR A PART ONLY. The command key kept down is the ring with Shift down, for the men a Shift tap would have sent; with no Shift the key is seen
+  //  let go, so the press is a tap, which on a `noTap` step gives nothing and shows the note. So a step can teach the part's wheel with everyone's shut. Needs `goal`: railsFaults)
+  ringPart: {},
+  menu: { keys: ['KeyX'], buttons: 4 }, who: { keys: ['KeyT'] }, word: { keys: ['KeyF'] }, tools: { keys: ['KeyG', 'KeyH'] },
   // (Shift with the command key ADDS A GOAL — planmode.ts planGoal: a part of the squad takes it and the rest go on as they were. No key of its own: the
   //  pair is the command key's and his sprint's. A lesson that lists `goal` on a step has goals from that step — planmode.ts goalsOn asks `locks('goal')` —
   //  and until then Shift with the key is the plain key, as on every lesson that never lists it. With the goal rule itself off (CMDRING.goals) the pair is
@@ -162,11 +166,12 @@ export function railsFaults(L: LessonData): string[] {
   const bad = (w: string, a: unknown) => { if (a === undefined) return; if (!Array.isArray(a)) { out.push(`${w}: a list of actions`); return; } for (const x of a) if (!ACTS[x as string]) out.push(`${w}: no action '${String(x)}' (${RAILS_ACTIONS.join(', ')})`); };
   bad('rails.allow', R.allow);
   if (Array.isArray(R.allow) && R.allow.includes('stalk')) out.push("rails.allow: 'stalk' is open unless a step denies it, so naming it in the frame's list means nothing (a step's deny takes it, a later step's allow gives it back)");
-  const cues = new Set<string>(), open = new Set<string>(Array.isArray(R.allow) ? R.allow : []); let goalSaid = false;
+  const cues = new Set<string>(), open = new Set<string>(Array.isArray(R.allow) ? R.allow : []); let goalSaid = false, partSaid = false;
   L.steps.forEach((T, i) => { const w = `steps[${i}] '${T.id}'`; bad(`${w}.allow`, T.allow); bad(`${w}.deny`, T.deny);
     // (`goal` owns no key: Shift is `sprint`'s, and the gate takes it out of the tick on a step that does not let him run — so a goal with no sprint is a pair nobody can press)
     if (Array.isArray(T.allow)) for (const a of T.allow) open.add(a); if (Array.isArray(T.deny)) for (const a of T.deny) open.delete(a);
     if (open.has('goal') && !open.has('sprint') && !goalSaid) { goalSaid = true; out.push(`${w}: 'goal' is open here and 'sprint' is not — goal needs sprint: Shift is his sprint's key`); }
+    if (open.has('ringPart') && !open.has('goal') && !partSaid) { partSaid = true; out.push(`${w}: 'ringPart' is open here and 'goal' is not — the wheel for a part is for the men a goal would send`); }
     if (T.explain && (T.explain.text.length > CARD_CHARS || (T.explain.title?.length ?? 0) > 40)) out.push(`${w}.explain: a card is a heading of at most 40 characters and at most ${CARD_CHARS} of text (it is ${T.explain.title?.length ?? 0} and ${T.explain.text.length}): a card nobody reads teaches nothing`);
     // (a card's words and the frame's other lines are written out by lessonLine as a step's line is: a move's token in one is held the same way, by what the
     //  player reads — lesson.ts lessonTokenFaults — and a card's TITLE is shown as written, so a brace in it would be shown too)
@@ -188,7 +193,7 @@ export function railsFaults(L: LessonData): string[] {
 
 /** THE FRAME'S RECORD on the page's copy, as the bridge fills it from the Rust game. Nothing here decides anything: what a HUD is told is `game.view.lesson`. */
 export class Rails {
-  run: unknown = null; answered = -1; back = false; ordersSeen = 0;
+  run: unknown = null; answered = -1; ordersSeen = 0;
   /** the sky seat: the view's own shift about the squad, the eased point it rides, and whether the player has been parked for this run */
   sky = { off: [0, 0, 0] as Vec3, mid: null as Vec3 | null, midT: -1, parked: false, was: null as { invisible: boolean } | null, view: null as { yaw: number; pitch: number; dist: number } | null, again: false };
   /** teammates spared a down: the game's clock each is back on his feet at, by character id */
@@ -216,11 +221,6 @@ export class Rails {
     this.sky.again = false;
   }
 
-  /** a checkpoint of this run was put back (savestate.ts loadMem, after every object is as it stood): the program's beats are functions half run, which no
-   *  snapshot holds — it is started again, and the step's cue sent again, on the next tick */
-  putBack() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Rails.putBack', this, []); if (__r !== RUST_PASS) return __r as any; } } if (!this.g.view.lesson?.rails) return; this.back = true; RAILS_STATS.putBack++; }
-  /** an authored checkpoint was just taken with the program stopped for it (savestate.ts): started again on the next tick, the step's cue with it */
-  resume() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Rails.resume', this, []); if (__r !== RUST_PASS) return __r as any; } } if (this.g.view.lesson?.rails) this.back = true; }
 
   /** is this man on his knee right now, spared */
   isSpared(gd: Guard): boolean { const t = this.spared.get(gd.char.id); return t !== undefined && this.g.time < t; }

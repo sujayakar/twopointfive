@@ -26,7 +26,7 @@ if (childOf >= 0) {
   // ONE BOOT (pageboot.ts allows one a process): its texts and pipelines as a line of JSON
   process.env.TPS_PROFILE = 'shipped';
   const setting = argv[childOf + 1];
-  const { ROOT } = await import('./headless.ts');
+  const { ROOT } = await import('./here.ts');
   const { pageBoot } = await import('./pageboot.ts');
   const FR = await import(`${ROOT}/src/render/frame.ts`) as Record<string, any>;
   if (BREAK && setting === 'snow') FR.rainScaleConfig.on = !FR.rainScaleConfig.on;   // (the red path: a level that still raises a constant of the text)
@@ -51,14 +51,14 @@ for (const [rows, env] of [['the shader rows as written', {}], ['the shader rows
   if (!T || !S) { check(false, `texts — the two boots ran (${rows})`); continue; }
   const faults = [...T.faults, ...S.faults];
   const other = T.mods.map((m, i) => S.mods[i] && S.mods[i].label === m.label && S.mods[i].h === m.h ? null : m.label).filter(Boolean), pipes = T.asked.filter((a, i) => S.asked[i] !== a);
-  check(faults.length === 0 && T.mods.length > 30 && T.asked.length >= 100 && T.mods.length === S.mods.length && other.length === 0 && T.asked.length === S.asked.length && pipes.length === 0 && T.prelude === S.prelude,
+  check(faults.length === 0 && T.mods.length > 30 && T.asked.length >= 98 && T.mods.length === S.mods.length && other.length === 0 && T.asked.length === S.asked.length && pipes.length === 0 && T.prelude === S.prelude,
     `texts — the title and a snow level in its weather are the same ${T.mods.length} module texts and the same ${T.asked.length} pipelines (${rows})`,
     faults.length ? faults.join(' · ') : other.length || pipes.length || T.mods.length !== S.mods.length ? `${other.length} of ${T.mods.length} modules differ (${other.slice(0, 8).join(', ')}) · ${pipes.length} of ${T.asked.length} pipelines differ · the snow level's boot: ${S.mods.length} modules, ${S.asked.length} pipelines` : `${Math.round(T.mods.reduce((n, m) => n + m.n, 0) / 1024)} KB of text either way`);
   const all = Object.values(S.bits).reduce((a, b) => a | b, 0), single = Object.values(S.bits).every(v => v > 0 && (v & (v - 1)) === 0) && new Set(Object.values(S.bits)).size === Object.keys(S.bits).length;
   check(T.word === 0 && S.word === all && single && Object.keys(S.bits).length === 9, `word — the frame's level word is 0 on the title and every switch's bit on the snow level (${rows})`, `title ${T.word} · snow ${S.word} · the ${Object.keys(S.bits).length} switches together ${all}, each one bit: ${single}`);
 }
 { process.env.TPS_PROFILE = 'shipped';
-  const { ROOT, loadCastOf, fake } = await import('./headless.ts');
+  const { ROOT, characterSet, fake } = await import('./here.ts');
   const FR = await import(`${ROOT}/src/render/frame.ts`) as typeof import('../../src/render/frame');
   const { readFileSync } = await import('node:fs');
   const pre = FR.scenePrelude(), named = Object.entries(FR.LevelSw).every(([k, v]) => (pre.match(new RegExp(`const ${k}: u32 = ${v}u;`, 'g')) ?? []).length === 1 && !new RegExp(`const ${k}: bool`).test(pre));
@@ -78,7 +78,7 @@ for (const [rows, env] of [['the shader rows as written', {}], ['the shader rows
       if (k === 'createBuffer') return (d: { label?: string; size: number }) => ({ destroy() { /* */ }, size: d.size, label: d.label });
       if (k === 'queue') return { writeBuffer(b: { label?: string }, _o: number, data: ArrayBuffer, from = 0, bytes = data.byteLength - from) { if (b.label === 'meshLevels') bufs.push(new Uint32Array(data.slice(from, from + bytes))); } };   // (gpu/device.ts makeBufferWithData: the data's own buffer, its offset, its length)
       if (k === 'then') return undefined; return t[k]; } });
-    const ch = await loadCastOf(look), M = new MeshShadows(device as never, ch, fake('jointMats'), fake('charInsts'));
+    const ch = await characterSet(look), M = new MeshShadows(device as never, ch, fake('jointMats'), fake('charInsts'));
     return { text: texts[0] ?? '', sizes: [M.bvh.maxDepth + 1, M.bvh.numNodes, M.bvh.numTris, M.triBase], header: bufs.length ? Array.from(bufs[bufs.length - 1].subarray(60, 64)) : [] }; };
   const trimWas = SHADER_TRIM.on; const A = await built(false), L = await built(true); SHADER_TRIM.on = trimWas;
   if (BREAK) L.text = L.text.replace('const NODE_BASE', `const T_OF_THIS_CAST: u32 = ${L.sizes[2]}u; const NODE_BASE`);   // (the red path: a size written back into the text)

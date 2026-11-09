@@ -1,10 +1,10 @@
 //! The types of `laststand`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// what a line makes true for the HUD as it is said (laststand.ts net `then`); st and g are the caller's. NameAtUnlessFree reads d's mode when the line is said; NameAt's w was settled when the line was made
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub enum LaterThen {
     MovedFree { d: RoomfightDefId },
     MovedAt { d: RoomfightDefId, w: crate::laststand::Spoken },
@@ -12,7 +12,7 @@ pub enum LaterThen {
     NameAtUnlessFree { d: RoomfightDefId, w: crate::laststand::Spoken },
 }
 /// the wording a line that says where its man stands fills in, asked with spoken(g, d's position) when made and again as it is said (laststand.ts netAt `f`, Later.redo)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub enum LaterRedo {
     MovedAt { d: RoomfightDefId },
     CheckLone { d: RoomfightDefId },
@@ -21,7 +21,7 @@ pub enum LaterRedo {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum LineKind {
     Set,
     Go,
@@ -80,7 +80,7 @@ impl LineKind {
 }
 
 /// (TypeScript: Check, src/game/laststand.ts:144)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Check {
     pub caller: RoomfightDefId,
     pub t: f64,
@@ -103,7 +103,7 @@ impl Check {
 impl Default for Check { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/laststand.ts:144 Check.due, src/game/laststand.ts:144)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct CheckDueItem {
     pub d: RoomfightDefId,
     pub at: f64,
@@ -120,7 +120,7 @@ impl CheckDueItem {
 impl Default for CheckDueItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: LastStandSaid, src/game/laststand.ts:145)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct LastStandSaid {
     pub t: f64,
     pub who: String,
@@ -143,7 +143,7 @@ impl LastStandSaid {
 impl Default for LastStandSaid { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Later, src/game/laststand.ts:154)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Later {
     pub at: f64,
     pub t0: f64,
@@ -174,7 +174,7 @@ impl Later {
 impl Default for Later { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: State, src/game/laststand.ts:155)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct State {
     pub die: crate::math_dice::Die,
     pub next_at: f64,
@@ -223,7 +223,7 @@ impl State {
 impl Default for State { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Spot, src/game/laststand.ts:165)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Spot {
     pub name: String,
     pub pos: V3,
@@ -240,7 +240,7 @@ impl Spot {
 impl Default for Spot { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Said, src/game/laststand.ts:168)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Said {
     pub key: String,
     pub the: String,
@@ -282,7 +282,7 @@ impl Hint {
 impl Default for Hint { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/laststand.ts:159 State.stats, src/game/laststand.ts:146)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct StateStats {
     pub t0: f64,
     pub up0: f64,
@@ -423,7 +423,7 @@ impl Where {
 impl Default for Where { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/laststand.ts:202 spoken ->, src/game/laststand.ts:202)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Spoken {
     pub id: Option<String>,
     pub the: String,
@@ -562,7 +562,7 @@ impl LastStandReport {
 impl Default for LastStandReport { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct LaststandMod {
     /// (src/game/laststand.ts:170 STATES)
     pub states: Option<crate::laststand::State>,

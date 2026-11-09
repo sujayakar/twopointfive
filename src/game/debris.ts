@@ -12,7 +12,7 @@ import { Vec3, v3, quat } from '../math/vec';
 import { Box, BoxFlag, makeBox, MKEY, wordOf } from '../scene/boxes';
 import type { Game } from './game';
 import type { Prop } from './props';
-import { impulseKick, type ImpulseLike, type ImpulseResponse } from './sheetModel';
+import { impulseKick, type ImpulseLike, type ImpulseResponse } from '../render/sheetModel';
 import { NOBODY_ID } from './consts';
 import { DEBRIS } from './destructionSwitch';
 import { flightOf } from './falling';
@@ -144,7 +144,7 @@ export class Debris {
   }
   clear() { if (DEBRIS.dress || this.g.falls.waitingIn(FALL_PIECES)) this.g.falls.clear(false, FALL_PIECES); this.fling = null; this.list.length = 0; this.impulses = 0; this.serial0 = this.serial; this.shoves = 0; this.scuffAt = -1; this.feetStats = { kicked: 0, offMan: 0, walled: 0, gaveUp: 0 }; } serial0 = 1;   // (+ the impulses' hash stream and the feet's; `serial` runs on so motion keys stay unique across restarts — a restarted encounter's wobbles differ by it, two fresh games agree; `serial0` = the serial at the last clear, read by game/breakTable.ts alone)
   boxes(out: Box[]) { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Debris.boxes', this, [out]); if (__r !== RUST_PASS) return __r as any; } } for (const c of this.list) { if (c.dress) c.box.dress = true; out.push(c.box); const m = c.mate; if (m) { m.c = c.box.c; m.yaw = c.box.yaw; m.rot = c.box.rot; m.dress = c.box.dress; out.push(m); } } }
-  /** An IMPULSE over the pool (the same record the GPU particles get, game/sheetModel.ts impulseKick: strength × DEBRIS_IMP.gain × (1 − d/r) along radial + up +
+  /** An IMPULSE over the pool (the same record the GPU particles get, render/sheetModel.ts impulseKick: strength × DEBRIS_IMP.gain × (1 − d/r) along radial + up +
    *  bias): every chunk within reach kicked at least DEBRIS_IMP.wake is woken if it rests, shoved, capped at vMax and set turning by a hashed wobble ∝ the kick ÷ its
    *  size; `blocked(p)` (the caller's line-of-sight test, or none) leaves a chunk behind a partition alone; `who` (when given) takes the blame for its next landing.
    *  Returns how many it moved. Deterministic (hash01 off the chunk's serial and the pool's impulse count). */

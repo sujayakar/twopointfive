@@ -8,9 +8,8 @@
 //!   face_look(h) -> p                six numbers: where the seat's camera is to follow, and the seat's aim point (a host stepping without an apply)
 //!   face_room_at(h, x, y, z) -> 1 | 0   the driver's question that floods a room and keeps it (`roomfight.roomAt` between two ticks): 1 where it
 //!                                flooded one (the list of rooms grew)
-//!   face_stop_program(h) -> 1 | 0   a level on rails whose program runs: the program is stopped and the rails told to start it again on the next tick
-//!                                (savestate.ts:991, what the save controller does before it takes an authored checkpoint); 1 where it did. A host
-//!                                whose own save controller takes the checkpoint calls this first, so that what it keeps is the floor with no program
+//!   face_kit_plan(p, n, way) -> 1 | 0   a read for tools, of no game: `p`, `n` are a level file's text, `way` a way of its kit picture's block; 1: the plan as JSON at face_out
+//!                                (`game_start::kit_stage::plan_of_file`, tools/qa/kitview-plan.ts); 0: why not, in words, at face_out
 #[no_mangle]
 pub extern "C" fn face_follow(h: u32) {
     super::with(h, |x| game_run::follow(&mut x.g));
@@ -40,15 +39,15 @@ pub extern "C" fn face_room_at(h: u32, x: f64, y: f64, z: f64) -> u32 {
         (held.g.fight.rooms.len() != n0) as u32
     })
 }
+/// # Safety
+/// `p`, `n` name bytes the host wrote into memory from face_alloc.
 #[no_mangle]
-pub extern "C" fn face_stop_program(h: u32) -> u32 {
-    super::with(h, |x| {
-        let g = &mut x.g;
-        if !game::rails::rails_live(g) { return 0; }
-        let Some(r) = g.director.run else { return 0 };
-        if g.tab.director_run[r].ended { return 0; }
-        game::director::director_stop(g, Some(false));
-        game::rails::rails_resume(g);
-        1
-    })
+pub unsafe extern "C" fn face_kit_plan(p: *const u8, n: usize, way: u32) -> u32 {
+    super::hook();
+    let answer = core::str::from_utf8(super::bytes(p, n)).map_err(|e| format!("{}", e)).and_then(game_start::json::parse).map(|file| game_start::kit_stage::plan_of_file(&file, way as usize));
+    match answer {
+        Ok(j) if !j.is_null() => { super::out(game_start::json::to_line(&j).into_bytes()); 1 }
+        Ok(_) => { super::out(format!("way {}: no block, or no such way", way).into_bytes()); 0 }
+        Err(why) => { super::out(why.into_bytes()); 0 }
+    }
 }

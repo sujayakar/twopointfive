@@ -1,4 +1,4 @@
-// EVERY MISSION ON THE PAGE THAT HOLDS NO GAME, with no page: the module is started from each row's own address as draw.html starts it, handed a walking hand, stepped,
+// EVERY MISSION ON THE PAGE THAT HOLDS NO GAME, with no page: the module is started from each row's own address as the page starts it, handed a walking hand, stepped,
 // drawn between ticks, saved, loaded, lost to a planted panic and stood again, restarted and stepped on. A panic in a section is an abort, so each is met here first.
 //   bun run tools/draw/play-check.ts [mission id…]        exit 0 · 1 and each mission that stopped, with its words · 2 no such mission
 //   PLAY_BREAK=1 …      a load is asked of a key nothing is kept under: the line that says the load goes back must fail
@@ -8,27 +8,27 @@ import { faceHere } from '../blitz/face-build.ts';
 import { characterFiles } from '../blitz/start-pack.ts';
 import { DrawGame } from '../../src/host/drawgame';
 import { sampleHand } from '../../src/draw/hand';
-import { FollowCamera } from '../../src/game/camera';
+import { FollowCamera } from '../../src/host/camera';
 import { Section, Head, View } from '../../src/draw/sections';
 
 const ROOT = resolve(import.meta.dir, '../..'), BREAK = process.env.PLAY_BREAK === '1';
-const { ALL_MISSIONS, pickSearch } = await import(`${ROOT}/src/scene/scenarioList.ts`), { lookLevelFile, LOOK } = await import(`${ROOT}/src/scene/look.ts`);
+const { ALL_MISSIONS, pickSearch } = await import(`${ROOT}/src/scene/scenarioList.ts`), { LOOK } = await import(`${ROOT}/src/scene/look.ts`);
 LOOK.on = true;
 const wasm = faceHere(); if (!wasm) { console.error('play-check: no module of these sources (tools/blitz/face-build.ts)'); process.exit(1); }
 const instance = new WebAssembly.Instance(new WebAssembly.Module(new Uint8Array(readFileSync(wasm))), { env: { face_roll: () => { throw new Error('the game asked a die'); } } });
 const [mannequin, mannequinBin, cast, castLook] = characterFiles(ROOT), only = process.argv.slice(2);
 let fails = 0; const line = (ok: boolean, what: string, why = '') => { if (!ok) fails++; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}${why ? `\n    ${why}` : ''}`); };
-const bytes = (f: string): Uint8Array => { try { return new Uint8Array(readFileSync(resolve(ROOT, 'levels', lookLevelFile(f)))); } catch { return new Uint8Array(readFileSync(resolve(ROOT, 'levels', f))); } };
+const bytes = (f: string): Uint8Array => new Uint8Array(readFileSync(resolve(ROOT, 'levels', f)));
 
 { const stray = only.filter(id => !(ALL_MISSIONS as { id: string }[]).some(m => m.id === id)); if (stray.length) { console.error(`play-check: no mission ${stray.join(', ')}`); process.exit(2); } }
 /** from above nobody on the floor is the hand's to walk */
 const SKY = new Set(['tut-sky']);
 /** …and every level's file with no mission named, as an address with nothing on it but the level opens it */
 const PLAIN = [...new Set((ALL_MISSIONS as { id: string }[]).map(m => new URLSearchParams(pickSearch(m, '')).get('levelFile') ?? 'office.json'))].map(f => ({ id: `${f.replace('.json', '')} (no mission)`, words: `?levelFile=${f}` }));
-for (const m of [...ALL_MISSIONS, ...(only.length ? [] : [{ id: 'the plain address', words: '?draw=1&seed=1' }, ...PLAIN])] as { id: string; words?: string }[]) { if (only.length && !only.includes(m.id)) continue;
+for (const m of [...ALL_MISSIONS, ...(only.length ? [] : [{ id: 'the plain address', words: '?seed=1' }, ...PLAIN])] as { id: string; words?: string }[]) { if (only.length && !only.includes(m.id)) continue;
   const words: string = m.words ?? pickSearch(m, ''), file = new URLSearchParams(words).get('levelFile') ?? 'office.json';
   const game = new DrawGame({ exports: instance.exports, bytes: 0, fetchMs: 0, compileMs: 0 }), D = game.drawn, cam = new FollowCamera(), input = { keys: new Set<string>(), pressed: new Set<string>(), buttons: 0, clicked: 0, wheel: 0, mouseX: 640, mouseY: 300 }, canvas = { clientWidth: 1280, clientHeight: 720, width: 1280, height: 720 };
-  let at = 'the start', worst = 0, sum = 0, n = 0, boxes = 0;
+  let at = 'the start', warmMs = 0, worst = 0, sum = 0, n = 0, boxes = 0;
   const where = (): [number, number] => { const o = D.at[Section.view] + View.at; return [D.f[o], D.f[o + 2]]; }, stood = (): number => D.u[D.at[Section.view] + View.stood];
   const run = (ticks: number, what: string): void => { at = what; for (let i = 0; i < ticks; i++) {
     const keys = sampleHand(game.numbersOf(), input, cam, canvas); game.step(1 / 60, keys); input.pressed.clear(); input.clicked = 0;
@@ -40,6 +40,9 @@ for (const m of [...ALL_MISSIONS, ...(only.length ? [] : [{ id: 'the plain addre
   try {
     game.start({ level: bytes(file), words, mannequin, mannequinBin, cast, castLook, seed: 5 });
     { const o = D.at[Section.view]; cam.target = [D.f[o + View.follow], D.f[o + View.follow + 1], D.f[o + View.follow + 2]]; cam.rebuild(); }
+    // the ticks a page plays and throws away before the first: the game that plays is the game that was started
+    at = 'the ticks thrown away'; let cold = true; { const was = game.mark(true), t0 = performance.now(); await game.warm(36, (N, i) => { input.keys.clear(); if (i >= 12) input.keys.add('KeyW'); input.buttons = i >= 24 ? 1 : 0; return sampleHand(N, input, cam, canvas); }, async () => { /* */ }); input.keys.clear(); input.buttons = 0; const is = game.mark(true);
+      cold = JSON.stringify(was) === JSON.stringify(is) && game.ticks === 0; const which = stood(); run(1, 'the first tick'); cold &&= stood() === which; warmMs = Math.max(warmMs, performance.now() - t0); }
     game.commands.god(1);
     run(60, 'a second standing');
     input.pressed.add('F5'); run(2, 'a save by hand'); const saved = game.savesTold(), hand = game.saves().hand;
@@ -59,7 +62,7 @@ for (const m of [...ALL_MISSIONS, ...(only.length ? [] : [{ id: 'the plain addre
     const taught = /^tut-/.test(file), back = loaded && Math.hypot(c[0] - a[0], c[1] - a[1]) < 0.1;
     const told = !hand ? taught : saved.tag === 'CHECKPOINT SAVED' && put.tag === 'CHECKPOINT LOADED' && put.lines[0] === 'checkpoint loaded — by hand' && !game.savesTold().lines.length;   // (…and the player is told of it, once)
     const went = walked || SKY.has(m.id);
-    line(again && went && up && start && told && carded && (taught || back), `${m.id}: started, walked${walked ? '' : ' (nowhere)'}, shot, ${taught ? 'taught' : 'saved and went back'}, stood again after a panic, restarted`, `${boxes} boxes · sections ${(sum / n).toFixed(2)} ms a tick, worst ${worst.toFixed(1)}${start ? '' : ` · from the start: ${first}, at ${z.map(x => x.toFixed(1))}, kept ${kept}`}${up ? '' : ` · after the panic: ${label}, at ${e.map(x => x.toFixed(1))}`}${again ? '' : ' · the restart was not told'}${carded ? '' : ` · the card: ${JSON.stringify([E.marks, E.floor.w, E.floor.h])}`}${told ? '' : ` · what was said of the saves: ${JSON.stringify([hand, saved, put])}`}${taught || back ? '' : ` · the load left him at ${c.map(x => x.toFixed(1))}, saved at ${a.map(x => x.toFixed(1))}`}`);
+    line(again && cold && went && up && start && told && carded && (taught || back), `${m.id}: started, walked${walked ? '' : ' (nowhere)'}, shot, ${taught ? 'taught' : 'saved and went back'}, stood again after a panic, restarted`, `${cold ? '' : 'the game after the ticks thrown away is not the game before them · '}${boxes} boxes · thrown away in ${warmMs.toFixed(0)} ms · sections ${(sum / n).toFixed(2)} ms a tick, worst ${worst.toFixed(1)}${start ? '' : ` · from the start: ${first}, at ${z.map(x => x.toFixed(1))}, kept ${kept}`}${up ? '' : ` · after the panic: ${label}, at ${e.map(x => x.toFixed(1))}`}${again ? '' : ' · the restart was not told'}${carded ? '' : ` · the card: ${JSON.stringify([E.marks, E.floor.w, E.floor.h])}`}${told ? '' : ` · what was said of the saves: ${JSON.stringify([hand, saved, put])}`}${taught || back ? '' : ` · the load left him at ${c.map(x => x.toFixed(1))}, saved at ${a.map(x => x.toFixed(1))}`}`);
   } catch (e) { line(false, `${m.id}: stopped in ${at}`, String((e as Error)?.message ?? e).slice(0, 400)); }
   try { if (game.h) game.X.face_drop(game.h); } catch { /* lost to its panic */ }
 }

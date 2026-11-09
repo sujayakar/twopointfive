@@ -1,6 +1,6 @@
 //! The types of `qrf`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// one row of the response team's knobs as this machine kept them (qrf.ts saveQrfTune, read back by storedTune)
@@ -11,7 +11,7 @@ pub enum StoredTuneRow {
 }
 
 /// (TypeScript: Marks, src/game/qrf.ts:115)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Marks {
     pub door: Option<String>,
     pub name: String,
@@ -52,7 +52,7 @@ impl Marks {
 impl Default for Marks { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum QrfState {
     Idle,
     Requested,
@@ -73,7 +73,7 @@ impl QrfState {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum QrfReason {
     Gunfire,
     Panel,
@@ -92,7 +92,7 @@ impl QrfReason {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum Phase {
     Bang,
     Fan,
@@ -129,7 +129,7 @@ impl Phase {
 }
 
 /// (TypeScript: Target, src/game/qrf.ts:198)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Target {
     pub kind: crate::qrf::TargetKind,
     pub plan: Option<crate::scene_level::RoomClearPlan>,
@@ -152,7 +152,7 @@ impl Target {
 impl Default for Target { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum TargetKind {
     Room,
     Point,
@@ -167,7 +167,7 @@ impl TargetKind {
 }
 
 /// (TypeScript: Perimeter, src/game/qrf.ts:200)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Perimeter {
     pub state: crate::qrf::PerimeterState,
     pub called_at: f64,
@@ -194,7 +194,7 @@ impl Perimeter {
 impl Default for Perimeter { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum PerimeterState {
     Set,
     Called,
@@ -209,7 +209,7 @@ impl PerimeterState {
 }
 
 /// (TypeScript: inline at src/game/qrf.ts:200 Perimeter.men, src/game/qrf.ts:200)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct PerimeterMenItem {
     pub gd: GuardId,
     pub post: crate::scene_scenarios::ResponsePost,
@@ -230,7 +230,7 @@ impl PerimeterMenItem {
 impl Default for PerimeterMenItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Qrf, src/game/qrf.ts:203)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Qrf {
     pub state: crate::qrf::QrfState,
     pub reason: Option<crate::qrf::QrfReason>,
@@ -367,7 +367,7 @@ impl Qrf {
 impl Default for Qrf { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: inline at src/game/qrf.ts:223 Qrf.log, src/game/qrf.ts:223)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct QrfLogItem {
     pub t: f64,
     pub what: String,
@@ -384,7 +384,7 @@ impl QrfLogItem {
 impl Default for QrfLogItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/qrf.ts:240 Qrf.spent, src/game/qrf.ts:240)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct QrfSpent {
     pub room: String,
     pub fix_t: f64,
@@ -401,14 +401,14 @@ impl QrfSpent {
 impl Default for QrfSpent { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: a union)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum QrfWordKey {
     Guard(GuardId),
     Player,
 }
 
 /// (TypeScript: inline at src/game/qrf.ts:248 Qrf.word, src/game/qrf.ts:248)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct QrfWordValue {
     pub at: V3,
     pub t: f64,

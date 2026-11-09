@@ -43,11 +43,11 @@ import { PLAN_PACE } from '../render/planPace';
 import { REACH_PACE } from '../render/reach';
 import { COATFINISH, SOLIDGLASS } from '../scene/stuff';
 import { WALLSKIN } from '../game/wallskin';
-import { gearFromQuery } from '../game/gear';
+import { gearFromQuery } from './gear';
 import { wordsFromQuery } from '../game/words';
 import { kitLoad, KIT_SOLO, BIGSLOT } from '../game/kit';
 import { squadSenses } from '../game/enemysquads';
-import { LOOK, lookOfQuery, suitOfQuery } from '../scene/look';
+import { LOOK, suitOfQuery } from '../scene/look';
 import { LIVED, livedOfQuery } from '../scene/lived';
 import { SHAPES } from '../scene/shapes';
 import { ROOMCLEAR } from '../game/roomclear';
@@ -108,7 +108,6 @@ export function pageSwitches(q: URLSearchParams): void {
   { const still = q.get('firesway') === '0'; FIRE.wander = still ? FIRE_WANDER_WAS : FIRE_WANDER; FIRE.wanderUp = still ? FIRE_WANDER_UP_WAS : FIRE_WANDER_UP; }   // … its place shifting with the flames far enough to move a shadow's edge: ?firesway=0 = the few centimetres it was
   { const n = Math.round(+(q.get('firesteps') ?? 0)); FIRE.look.steps = n >= 4 && n <= 64 ? n : FIRE_STEPS; }   // … how many samples of the flame a pixel's ray takes (the picture only, its price on a GPU): ?firesteps=N, 4 to 64, for a timing; 40 as it opens
   FIRE.look.react = q.get('firereact') === '0' ? 0 : FIRE_REACT; FIRE.look.lean = q.get('firelean') === '0' ? FIRE_LEAN_WAS : FIRE_LEAN;   // … its pixels taken from this frame by the temporal resolve (?firereact=0 = averaged over the picture's memory, as it was), and the wind leaning the flame (?firelean=0 = hardly, as it was)
-  FIRE.gas.on = q.get('firegas') === '1';   // … its flame as gas in the smoke solver's fine cells (the picture, and the page's smoke): OFF in the page until it has been seen; ?firegas=1 = on (and a row in the fire lab)
   POSEMATH.singles = q.get('posesingles') !== '0';   // a pose's bulk arithmetic in singles (anim/skeleton.ts): blendPose and sampleClip's step worked in singles, a rotation's length a plain root, in both languages — what lets the module work four nodes a step. ON in the page; ?posesingles=0 = in doubles, as it was
   pageRows(q);   // which systems run in the Rust module (src/sim/sim.ts RUST): the rows of RUST_ON are ON in the page — pageRows below has the words
   netQuietFromQuery(q);   // the net goes quiet (game/netquiet.ts): a radio check nobody answers and a body found shake the men, the asker's calls get worse, a jumpy man's beam whips to a noise, and the last man backs to the spot his doors sit in one arc from and goes low: ON in the page; ?nonetquiet = the men as they were
@@ -117,9 +116,9 @@ export function pageSwitches(q: URLSearchParams): void {
   CMDRING.twice = q.get('qtwice') !== '0';   // …and the key tapped twice on the same thing is 'fall in' for everyone, every goal gone with it; the first tap still gives its order as it comes up (`?qtwice=0` = the second tap is the key's order again, as it was)
   SQUADTHROW.on = !q.has('nosquadthrow');   // teammates throw a frag or a stun canister where he points (game/squadthrow.ts): X on a spot of floor, G, then 1 or 2. ON in the page, ?nosquadthrow = no such row; off on the frozen stand (TPS_SQUADTHROW=1)
   BIGSLOT.on = !q.has('nobigslot');   // the big slot (game/kit.ts BIGSLOT, game/bigkit.ts): every card has ONE big slot beside its pouches — the wall charge, the breaching shotgun (kit now, not a gun: the man keeps his rifle) or the dynamic hammer — and the last two take a lock from either face, yours on a locked door's row, a teammate's on a door order. ON in the page, ?nobigslot = the cards and the weapon row as they were; off on the frozen stand (TPS_BIGSLOT=1). Before the kit is read from the store: a stored shotgun-as-gun card is read as rifle + shotgun in the big slot.
-  gearFromQuery(q);   // the 2010s issue kit (game/gear.ts): Sam's rifle and pistol named a Mk 18 and a Glock 19 (the rifle drawn as an M4-pattern carbine), two-tube goggles that do not glow, the ring worded and drawn a 40 mm sponge round — ON in the page; ?oldgear = the Splinter Cell kit, as it was. Words and boxes, and one number: the Glock's magazines hold fifteen
+  gearFromQuery(q);   // the 2010s issue kit (host/gear.ts): Sam's rifle and pistol named a Mk 18 and a Glock 19 (the rifle drawn as an M4-pattern carbine), two-tube goggles that do not glow, the ring worded and drawn a 40 mm sponge round — ON in the page; ?oldgear = the Splinter Cell kit, as it was. Words and boxes, and one number: the Glock's magazines hold fifteen
   wordsFromQuery(q);   // the dialogue pass (game/words.ts): hostages with a voice of their own, and every line said by the side and in the place it was written for — ON in the page; ?oldwords = every line as it was. A bubble's time is its length, so a reworded line can move who talks next: the frozen stand keeps the old words
-  LOOK.on = lookOfQuery(q);   // the default look, 2010s GWOT (scene/look.ts): the loud levels' second files and the men's dress (the cast file and its material tables; weapons and kit are GEAR's) — ON in the page; ?look=plain = every level and man as before. Look only: headless no run differs by it (on the page the repainted walls' bounce reaches the GPU light meter).
+  LOOK.on = true;   // the default look, 2010s GWOT (scene/look.ts): the men's dress (the cast file and its material tables; weapons and kit are GEAR's) and a leaf's paint
   suitOfQuery(q);   // …and under it the black sneaking suit Sam wears on a mission that is not a squad's loud one (game/cast.ts sneakSuit): ?suit=0 = the operators' issue dress on every mission
   LIVED.on = livedOfQuery(q);   // lived-in rooms (scene/lived.ts): the furniture, clutter, floor pieces and lamps that make each room of a level its own place, as the office's rooms are — ON in the page, raised before the level loads; ?lived=0 = every level as it was before there were any
   { const w = q.get('way'); ROOMCLEAR.way = w === 'any' ? -1 : w !== null && /^\d+$/.test(w) ? +w : 0; }   // …and the way in (ROOMCLEAR.way; the mission sheet's 'Way in' row writes it on the link): absent or ?way=1 = the level's own start, ?way=2 … = its other ones, ?way=any = dealt off this visit's die with the marks

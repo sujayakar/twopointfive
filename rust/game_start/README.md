@@ -76,7 +76,7 @@ side by side with a door between them and a door each to the yard, a defender in
 
 ### The game in a test's hands (`src/play.rs`)
 
-- **Stand:** `Play::scene(&scene, &opts)`, or `Play::level("kit-yard.json", room_clear, &opts)` for a file of `levels/`. `Play::mission("depot-gwot.json", "?levelFile=depot.json&roomclear&squad4", &opts)` starts a mission on a file from the words of its address, as a click on its row of the mission list does (the row's hour and weather, the fog of war, then the mission).
+- **Stand:** `Play::scene(&scene, &opts)`, or `Play::level("kit-yard.json", room_clear, &opts)` for a file of `levels/`. `Play::mission("depot.json", "?levelFile=depot.json&roomclear&squad4", &opts)` starts a mission on a file from the words of its address, as a click on its row of the mission list does (the row's hour and weather, the fog of war, then the mission).
 - **Time:** `p.run(secs)`; `p.until(secs, |p| …)` answers how long it took, or `None`; `p.always(secs, |p| …)` answers `None`, or the second it
   first failed; `p.frame()` is one sixtieth.
 - **Who:** `p.guard("route name")`, `p.defender_at(mark)`, `p.mates()` (the first two are the red pair, the last two the blue),
@@ -122,7 +122,7 @@ and `cargo test`'s threads take turns. A test that stands a second game drops th
 | collision, the walk grid, sound paths, fixtures, doors, guards, civilians, orders, the fog, the room fight, every module | **the game's own constructor, `game_new`** (`rust/game/src/game/p_04.rs`), which had never run before this crate |
 | the moving state at home in the block | `settle` (the die, the pose pool, the smoke grid) |
 | the host's Input and camera | the game's `input_detached`, `FollowCamera`, `follow_camera_rebuild` |
-| the address's words, where one is handed (`StartOpts.link`), BEFORE the game is made | the game's `address_before_game`: the row's own hour and weather onto the words, the weather the game is born in, the visit's hour (`src/host/standup.ts addressBeforeGame`); then `difficulty_of_address`, the difficulty it asks for (`&hard`, `&difficulty=`, the levers, `&digin`, `&pressure`, `&fogcone`), on this game's own knob tables, unless `StartOpts.difficulty` is false: a host that handed its knob tables (`stand_handed`, part 6) has read its address onto them itself (`src/host/standup.ts difficultyOfAddress`) |
+| the address's words, where one is handed (`StartOpts.link`), BEFORE the game is made | the game's `address_before_game`: the row's own hour and weather onto the words, the weather the game is born in, the visit's hour (`src/host/standup.ts addressBeforeGame`); then `difficulty_of_address`, the difficulty it asks for (`&hard`, `&difficulty=`, the levers, `&digin`, `&pressure`, `&fogcone`), on this game's own knob tables, unless `StartOpts.difficulty` is false: a host that handed commands (`stand_handed`) has read its address onto them itself (`src/host/standup.ts difficultyOfAddress`) |
 | a mission, where asked | the game's `start_scenario`; or, from an address, `start_at_address`: `start_from_query` on its words, then the solo card's question, as a click on a row of the mission list starts it on a page |
 
 `frame(g, host, dt)` is one frame of that host: the game's `game_update` on the host's Input and camera, the camera after the man, the lights'
@@ -187,7 +187,7 @@ that the picture, the sound, the HUD and the menus read (`src/host/rustgame.ts`,
    between the level's boxes going to the world and the Game). The page would hand each of these in.
 6. **The character's files twice.** `gltf.rs` reads the rig, the clips and the cast's variants for the simulation. The picture's meshes and
    skins are read from the same files by `src/anim/gltf.ts`. One reader, or two that must agree.
-7. **Which file.** The page loads a level's file in the look that is on (`scene/look.ts lookLevelFile`) and fetches it. Here the caller hands
+7. **Which file.** The page fetches the level's file. Here the caller hands
    the file's text in. (The office was the one level whose missions were not in its file: they are now, and it starts as the others do.)
 8. **The file's checks.** `validateLevelData` is TypeScript. A page that starts in Rust still validates in TypeScript, or the rules move.
 9. **What stands a game again from outside a tick.** A mission staged from a menu, a show, a kit view that sinks boxes: each is a TypeScript
@@ -197,7 +197,7 @@ that the picture, the sound, the HUD and the menus read (`src/host/rustgame.ts`,
     itself refuses for two). Nobody at the second seat's controls, no server, no rollback here.
 11. **The module.** DONE AS FAR AS THE START ITSELF. The page's module carries this crate (`rust/game_face` links it without its `std`
     feature), and `face_start` stands a game inside the module from one run of handed bytes (`src/handed.rs`: the level file's text, the
-    address's words, the character's files, the host's knob tables). `tools/blitz/start-module.ts` holds the game the module starts to the
+    address's words, the character's files, the host's commands). `tools/blitz/start-module.ts` holds the game the module starts to the
     game the native start makes, mission by mission ("The module's start", below). Nothing plays a game started that way yet: item 13.
 12. **A MISSION'S TEAM NUMBERS BELONG ON THE GAME, AND THE RUST START IS WHERE THAT LANDS.** Today they are written into the process's knob
     tables, so a game whose start does not write a table finds it as the last mission left it: the one thing a second start in one process
@@ -229,7 +229,7 @@ that the picture, the sound, the HUD and the menus read (`src/host/rustgame.ts`,
 ```sh
 tools/blitz/start.sh kit-yard.json                                   # a level of levels/, as its file has it
 tools/blitz/start.sh kit-yard.json --scenario roomclear --frames 1800
-tools/blitz/start.sh depot-gwot.json --link '?levelFile=depot.json&roomclear&squad4' --frames 300   # started as the page starts it
+tools/blitz/start.sh depot.json --link '?levelFile=depot.json&roomclear&squad4' --frames 300   # started as the page starts it
 tools/blitz/start.sh --mission depot-four --frames 300               # a row of the mission list: its file, started from its link
 tools/blitz/start.sh rust/game_start/target/scenes/two-rooms.json --scenario roomclear --frames 900
 bun run tools/blitz/start-levels.ts --write                          # every mission, and LEVELS.md written from the result (--seats 2: as games of two)
@@ -287,9 +287,8 @@ above.
 
 The page's module can start a game itself. `face_start(p, n, slot, seed, seats, flags)` (`rust/game_face/src/page.rs`) runs `stand` inside the
 module on what the host hands in one run of bytes (`src/handed.rs` reads it, `tools/blitz/start-pack.ts` writes it): the level file's text,
-the address's words, the mannequin's gltf and buffer, the two casts' gltf, and the host's knob tables as the bridge writes them (empty: the
-page's own). The knob tables are laid on the blank game before the start reads its first knob (`stand_with`), as they stand when the
-TypeScript stands a game. `slot` below 0 = a free slot of rust/sim; `flags`: 1 = the rows that dress the picture are up, 2 = the game works
+the address's words, the mannequin's gltf and buffer, the two casts' gltf, and the host's commands (what it does to the blank game
+before the start reads its first knob: `stand_with`). `slot` below 0 = a free slot of rust/sim; `flags`: 1 = the rows that dress the picture are up, 2 = the game works
 its senses out itself.
 
 ```sh
@@ -308,6 +307,23 @@ each the game they are alone.
 
 What this does NOT hold: that a game started this way can be PLAYED through a puppet. It cannot yet: item 13 of the list above. A host with
 no puppet (a game server) needs nothing more than this.
+
+## Levels: what a level owes whoever plays it (`src/bin/levels.rs`)
+
+```
+cd rust/game_start
+cargo run --release --bin levels -- second-way [level …]   # every room the defenders can shut has another way in
+cargo run --release --bin levels -- sight [level …]        # a defender sees what he watches
+cargo run --release --bin levels -- walked [level …]       # its starts and its doors are on a way
+cargo run --release --bin levels -- stacks [mission …]     # every stack mark is by its door
+cargo run --release --bin levels -- stands [level …]       # what it names stands on its built floor and can be walked to
+cargo run --release --bin levels -- doors [level …]        # every door is a real door's size, and the walk grid goes through it
+cargo run --release --bin levels -- charges [level …]      # its places for a wall charge, held by count
+cargo run --release --bin levels -- names [level …]        # it is named by its own rooms
+cargo run --release --bin levels -- rain [level …]         # its storm rains by its own roofs
+```
+
+Each stands the level (or every mission of it) by this crate's start and asks the game's own rules; the head of the file says what each holds and why.
 
 ## Hold: is this build the same game as that one (`src/bin/hold.rs`)
 
@@ -363,3 +379,13 @@ neither build is refused. Its first use: the orders' table no longer growing wit
 
 A build is the same as itself with every part in: the box mirror's record, once left out because it kept addresses, is hashed
 with the rest.
+
+## Missions: what a change of play does (`src/bin/missions.rs`)
+
+`cargo run --release --bin missions > before.tsv` on the tree before a change of play, the same to `after.tsv` on the tree after it, then
+`… --bin missions -- diff before.tsv after.tsv`: thirteen room clears as the page stands them, standard and hard, eight seeds (208 runs, three
+minutes on four cores), under a commander who gives the squad the same orders on every build. A row says who was up at the end, when the first
+man fell, when the floor was clear, the rounds and reloads of each side and how long each rule of the list had an enemy. The file's head says
+what it does not see: stealth, Sam's gun, the rescues, a commander who waits. `hold` says whether a build is the same game; this says what the
+other game came to.
+

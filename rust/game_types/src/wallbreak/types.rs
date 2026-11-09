@@ -1,16 +1,16 @@
 //! The types of `wallbreak`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// who is told of a row of the change feed, on the frame it is filed (wallbreak.ts note): WallReact = the game's one WallReact takes the row into its queue (wallreact.ts:167)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub enum ChangeListener {
     WallReact,
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum BKind {
     Wall,
     Cover,
@@ -25,7 +25,7 @@ impl BKind {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum LevelChangeKind {
     Door,
     Cover,
@@ -46,7 +46,7 @@ impl LevelChangeKind {
 }
 
 /// (TypeScript: LevelChange, src/game/wallbreak.ts:88)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct LevelChange {
     pub serial: f64,
     pub t: f64,
@@ -85,7 +85,7 @@ impl LevelChange {
 impl Default for LevelChange { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum LevelChangeCause {
     Blast,
     Fire,
@@ -148,7 +148,7 @@ impl BlastOptsHung {
 impl Default for BlastOptsHung { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: WallOpening, src/game/wallbreak.ts:133)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct WallOpening {
     pub id: f64,
     pub kind: crate::wallbreak::BKind,
@@ -221,7 +221,7 @@ impl BlastEvent {
 impl Default for BlastEvent { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Breakable, src/game/wallbreak.ts:142)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Breakable {
     pub id: f64,
     pub kind: crate::wallbreak::BKind,
@@ -308,7 +308,7 @@ impl AABB {
 impl Default for AABB { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: WallBreak, src/game/wallbreak.ts:170)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct WallBreak {
     pub authored: f64,
     pub serial: f64,
@@ -319,7 +319,11 @@ pub struct WallBreak {
     pub hidden: JsMap<crate::Num, f64>,
     pub counter: f64,
     pub dirty: bool,
+    /// (scratch, read by nobody who did not just write it: in no bytes)
+    #[bytes(skip)]
     pub scratch: Vec<i32>,
+    /// (scratch, read by nobody who did not just write it: in no bytes)
+    #[bytes(skip)]
     pub scratch2: Vec<i32>,
     pub fixture_boxes: JsSet<crate::Num>,
     pub ghosts: Vec<f64>,
@@ -359,7 +363,7 @@ impl WallBreak {
 impl Default for WallBreak { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: inline at src/game/wallbreak.ts:581 WallBreak.hungNow, src/game/wallbreak.ts:581)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct WallBreakHungNow {
     pub wall: f64,
     pub at: V3,
@@ -617,7 +621,7 @@ impl WallBreakPlanOfItem {
 impl Default for WallBreakPlanOfItem { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct WallbreakMod {
     /// (src/game/wallbreak.ts:160 WALL_LOG)
     pub wall_log: Vec<String>,

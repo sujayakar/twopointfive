@@ -1,28 +1,39 @@
 //! The types of `host_api`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: HostApi, src/host/api.ts:41)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
+#[bytes(parts)]
 pub struct HostApi {
     pub world: crate::scene_boxes::BoxWorld,
     pub lights: crate::render_lights::LightSet,
+    /// (the host's own: in no bytes)
+    #[bytes(skip)]
     pub settings: crate::root_settings::RenderSettings,
     pub weather: Option<crate::render_frame::WeatherFrame>,
+    /// (the picture's: in no bytes)
+    #[bytes(skip)]
     pub air: Option<crate::host_api::HostApiAir>,
-    pub air_wind: Option<[f64; 2]>,
-    pub air_on: Option<bool>,
+    /// (the host's own: in no bytes)
+    #[bytes(skip)]
     pub sharp_on: Option<bool>,
+    /// (the host's own: in no bytes)
+    #[bytes(skip)]
     pub effective_scale: f64,
+    /// (the picture's: in no bytes)
+    #[bytes(skip)]
     pub fires: Option<Vec<crate::render_passes::FireRecord>>,
-    pub fire_look: Option<Vec<f64>>,
+    /// (the picture's: in no bytes)
+    #[bytes(skip)]
     pub host_books: Option<crate::host_api::HostBooks>,
+    /// (the picture's: in no bytes)
+    #[bytes(skip)]
     pub skin: Option<crate::render_gbuffer::SkinnedDrawable>,
-    pub gbuffer: Option<crate::host_api::HostApiGbuffer>,
+    /// (holds nothing: in no bytes)
+    #[bytes(skip)]
     pub device: crate::Opaque,
-    pub scene_layout: crate::Opaque,
-    pub mesh_shadows_available: Option<bool>,
 }
 impl HostApi {
     /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
@@ -33,18 +44,12 @@ impl HostApi {
             settings: crate::root_settings::RenderSettings::zeroed(),
             weather: None,
             air: None,
-            air_wind: None,
-            air_on: None,
             sharp_on: None,
             effective_scale: 0.0,
             fires: None,
-            fire_look: None,
             host_books: None,
             skin: None,
-            gbuffer: None,
             device: crate::Opaque,
-            scene_layout: crate::Opaque,
-            mesh_shadows_available: None,
         }
     }
 }
@@ -71,7 +76,6 @@ impl Default for HostApiAir { fn default() -> Self { Self::zeroed() } }
 #[derive(Clone, Debug)]
 pub struct HostBooks {
     pub fire: Option<crate::fire::FireShown>,
-    pub smoke_break: Option<crate::smokebreak::SmokeShown>,
     pub breath: Option<crate::snow_breath::BreathShown>,
     pub snow: Option<crate::snow_fx::SnowState>,
     pub snow_blast: Option<crate::snow_blast::SnowBlastShown>,
@@ -82,7 +86,6 @@ impl HostBooks {
     pub fn zeroed() -> Self {
         HostBooks {
             fire: None,
-            smoke_break: None,
             breath: None,
             snow: None,
             snow_blast: None,

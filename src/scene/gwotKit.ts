@@ -288,7 +288,7 @@ export function gwotKit(host: GwotHost) {
   const r4 = (v: number) => Math.round(v * 1e4) / 1e4;
   /** HOW A WINDOW'S DRESSING STANDS: 'shut' closes the opening to a look and a round (what it is made of is real: cover, and a blind window); 'open' is the
    *  same things put aside, the opening left clear. A LEVEL'S RULE, not the kit's: a window a defender watches through gets the open form
-   *  (tools/qa/marksight-check.ts holds every man's line to what he watches), and a shut one costs the team too (measured on the block:
+   *  (rust/game_start levels sight holds every man's line to what he watches), and a shut one costs the team too (measured on the block:
    *  docs/agents/levels.md), so a window is shut only where its mission's tally was read with it shut */
   type Shut = 'shut' | 'open';
   /** a window BOARDED UP (the opening a‥b of a wall along `axis`, y0‥y1): shut = two planks nailed across, one across those, and one hanging by its last

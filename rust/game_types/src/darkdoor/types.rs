@@ -1,10 +1,10 @@
 //! The types of `darkdoor`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum DarkDoorAct {
     None,
     With,
@@ -25,7 +25,7 @@ impl DarkDoorAct {
 }
 
 /// (TypeScript: Fear, src/game/darkdoor.ts:73)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Fear {
     pub act: crate::darkdoor::DarkDoorAct,
     pub t: f64,
@@ -78,7 +78,7 @@ impl Fear {
 impl Default for Fear { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/darkdoor.ts:75 Fear.quits, src/game/darkdoor.ts:75)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct FearQuitsItem {
     pub room: f64,
     pub t: f64,
@@ -95,7 +95,7 @@ impl FearQuitsItem {
 impl Default for FearQuitsItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/darkdoor.ts:75 Fear.pass, src/game/darkdoor.ts:75)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct FearPassItem {
     pub door: f64,
     pub until: f64,
@@ -112,7 +112,7 @@ impl FearPassItem {
 impl Default for FearPassItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Read, src/game/darkdoor.ts:77)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Read {
     pub t: f64,
     pub dark: bool,
@@ -333,7 +333,7 @@ impl DarkDoorOf {
 impl Default for DarkDoorOf { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct DarkdoorMod {
     /// (src/game/darkdoor.ts:76 stateOf)
     pub state_of: JsMap<GuardId, crate::darkdoor::Fear>,

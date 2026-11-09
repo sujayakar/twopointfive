@@ -1,20 +1,16 @@
 //! The types of `anim_characters`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: CharacterRenderer, src/anim/characters.ts:20)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct CharacterRenderer {
-    pub vertex_buf: crate::Opaque,
-    pub joint_buf: crate::Opaque,
-    pub index_buf: crate::Opaque,
     pub index_count: f64,
     pub index_format: crate::anim_characters::CharacterRendererIndexFormat,
-    pub joint_mats: crate::Opaque,
-    pub char_insts: crate::Opaque,
     pub instance_count: f64,
-    pub slot_buf: crate::Opaque,
+    /// (holds nothing: in no bytes)
+    #[bytes(skip)]
     pub char_mats: crate::Opaque,
     pub mat_data: Vec<f32>,
     pub mat_dirty: bool,
@@ -23,6 +19,8 @@ pub struct CharacterRenderer {
     pub inst_u32: Vec<u32>,
     pub joint_staging: Vec<f32>,
     pub inst_sent: Vec<u32>,
+    /// (holds nothing: in no bytes)
+    #[bytes(skip)]
     pub device: crate::Opaque,
     pub ch: RigId,
     pub part_spans: Option<Vec<u32>>,
@@ -35,15 +33,9 @@ impl CharacterRenderer {
     /// what a new one holds: the TypeScript's field initialisers, before its constructor
     pub fn blank() -> Self {
         CharacterRenderer {
-            vertex_buf: crate::Opaque,
-            joint_buf: crate::Opaque,
-            index_buf: crate::Opaque,
             index_count: 0.0,
             index_format: crate::anim_characters::CharacterRendererIndexFormat::Uint32,
-            joint_mats: crate::Opaque,
-            char_insts: crate::Opaque,
             instance_count: 0.0,
-            slot_buf: crate::Opaque,
             char_mats: crate::Opaque,
             mat_data: alloc::vec![0.0; 1536],
             mat_dirty: true,
@@ -65,7 +57,7 @@ impl CharacterRenderer {
 impl Default for CharacterRenderer { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum CharacterRendererIndexFormat {
     Uint16,
     Uint32,
@@ -80,7 +72,7 @@ impl CharacterRendererIndexFormat {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum CharacterRendererJointsFormat {
     Float16,
     Float16x2,

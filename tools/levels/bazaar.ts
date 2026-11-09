@@ -662,10 +662,10 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
     { name: 'bread oven', bounds: { x0: 8.6, x1: 13.4, z0: 4.12, z1: 7.88 } }, { name: 'lorry', bounds: { x0: 13.6, x1: 20.4, z0: 18.6, z1: 21.88 } },
     { name: 'alley', bounds: { x0: 4.12, x1: 32.4, z0: 4.12, z1: 7.88 } }, { name: 'street', bounds: { x0: 4.12, x1: 35.88, z0: 16.12, z1: 21.88 } },
   ] };
-  // THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; src/host/kitViewPlan.ts measures the rest): the south gate from the lane outside it (the third start's side), the
+  // THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest): the south gate from the lane outside it (the third start's side), the
   // street's stalls and awnings over the wall behind the man.
   const kitView = { ways: [{ door: 'gate_s', ref: [22.4, 25.4], side: -1 }] };
-  // WHO COMES WHEN THE STREET GOES LOUD (scenarios.response — game/qrf.ts, tools/qa/response-check.ts): the town is under curfew and a patrol is never far.
+  // WHO COMES WHEN THE STREET GOES LOUD (scenarios.response — game/qrf.ts, rust/game_start/tests/response_team.rs): the town is under curfew and a patrol is never far.
   // It walks in by the street's open end or by a gate; every mark is out past the row or a stride inside it (Character yaws: forward = [sin, 0, cos]).
   const response: ResponseData = {
     why: 'A market street in a town under curfew: the only armed men out at night are the patrol, and gunfire in the bazaar is the one thing they are out for.',

@@ -33,7 +33,7 @@
 //             and ride the same air. Off: nothing is filed, no field is built, the wisps as they were. tools/qa/snowgrains-check.ts.
 import { Vec3, clamp } from '../math/vec';
 import type { Game } from './game';
-import type { FollowCamera } from './camera';
+import type { FollowCamera } from '../host/camera';
 import type { WeatherFrame } from '../render/frame';
 import { snowConfig, snowLookConfig, lookConfig } from '../render/frame';
 import type { Particles } from '../render/particles';

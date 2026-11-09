@@ -1,6 +1,6 @@
 //! The types of `particle_fx`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: ImpactRecipe, src/game/particleFx.ts:130)
@@ -92,7 +92,7 @@ impl CasingSpecFrom {
 }
 
 /// (TypeScript: FxState, src/game/particleFx.ts:289)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct FxState {
     pub tinks: Vec<crate::particle_fx::FxStateTinksItem>,
     pub n: f64,
@@ -109,7 +109,7 @@ impl FxState {
 impl Default for FxState { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/particleFx.ts:289 FxState.tinks, src/game/particleFx.ts:289)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct FxStateTinksItem {
     pub t: f64,
     pub pos: V3,
@@ -128,7 +128,7 @@ impl FxStateTinksItem {
 impl Default for FxStateTinksItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/particleFx.ts:35 DUST, src/game/particleFx.ts:35)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ParticleFxModDUST {
     pub count: f64,
     pub size: f64,
@@ -153,7 +153,7 @@ impl ParticleFxModDUST {
 impl Default for ParticleFxModDUST { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/particleFx.ts:39 DUST_LOOK, src/game/particleFx.ts:39)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ParticleFxModDUSTLOOK {
     pub opacity: f64,
     pub growth: f64,
@@ -176,73 +176,6 @@ impl ParticleFxModDUSTLOOK {
     }
 }
 impl Default for ParticleFxModDUSTLOOK { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/particleFx.ts:40 DUST_DEFAULTS, src/game/particleFx.ts:40)
-#[derive(Clone, Copy, Debug)]
-pub struct DUSTDEFAULTS {
-    pub emit: crate::particle_fx::DUSTDEFAULTSEmit,
-    pub look: crate::particle_fx::DUSTDEFAULTSLook,
-}
-impl DUSTDEFAULTS {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DUSTDEFAULTS {
-            emit: crate::particle_fx::DUSTDEFAULTSEmit::zeroed(),
-            look: crate::particle_fx::DUSTDEFAULTSLook::zeroed(),
-        }
-    }
-}
-impl Default for DUSTDEFAULTS { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/particleFx.ts:40 DUSTDEFAULTS.emit, src/game/particleFx.ts:40)
-#[derive(Clone, Copy, Debug)]
-pub struct DUSTDEFAULTSEmit {
-    pub count: f64,
-    pub size: f64,
-    pub life: f64,
-    pub speed: f64,
-    pub rise: f64,
-    pub spread: f64,
-}
-impl DUSTDEFAULTSEmit {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DUSTDEFAULTSEmit {
-            count: 0.0,
-            size: 0.0,
-            life: 0.0,
-            speed: 0.0,
-            rise: 0.0,
-            spread: 0.0,
-        }
-    }
-}
-impl Default for DUSTDEFAULTSEmit { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/game/particleFx.ts:40 DUSTDEFAULTS.look, src/game/particleFx.ts:40)
-#[derive(Clone, Copy, Debug)]
-pub struct DUSTDEFAULTSLook {
-    pub opacity: f64,
-    pub growth: f64,
-    pub fade_in: f64,
-    pub soft: f64,
-    pub wrap: f64,
-    pub ambient: f64,
-}
-impl DUSTDEFAULTSLook {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DUSTDEFAULTSLook {
-            opacity: 0.0,
-            growth: 0.0,
-            fade_in: 0.0,
-            soft: 0.0,
-            wrap: 0.0,
-            ambient: 0.0,
-        }
-    }
-}
-impl Default for DUSTDEFAULTSLook { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/particleFx.ts:96 STUFF_SURF, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
 #[derive(Clone, Debug)]
@@ -345,7 +278,7 @@ impl SOLIDGLASSCRACK {
 impl Default for SOLIDGLASSCRACK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/particleFx.ts:144 PFX, src/game/particleFx.ts:144)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ParticleFxModPFX {
     pub impact_scale_rifle: f64,
     pub spark_size: f64,
@@ -640,7 +573,7 @@ impl TestBurstKind {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct ParticleFxMod {
     /// (src/game/particleFx.ts:35 DUST)
     pub dust: crate::particle_fx::ParticleFxModDUST,
@@ -661,9 +594,6 @@ impl ParticleFxMod {
         }
     }
 }
-
-/// (src/game/particleFx.ts:40 DUST_DEFAULTS: a table nothing writes)
-pub fn dust_defaults() -> crate::particle_fx::DUSTDEFAULTS { crate::particle_fx::DUSTDEFAULTS { emit: crate::particle_fx::DUSTDEFAULTSEmit { count: 1.0, size: 1.0, life: 1.0, speed: 1.0, rise: 1.0, spread: 1.0 }, look: crate::particle_fx::DUSTDEFAULTSLook { opacity: 0.3, growth: 0.6, fade_in: 0.05, soft: 1.3, wrap: 0.5, ambient: 1.0 } } }
 
 /// (src/game/particleFx.ts:41 DUST_LS)
 pub const DUST_LS: &str = "twopointsix.dust.v2";

@@ -16,7 +16,7 @@ const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const { lookConfig } = await import(`${ROOT}/src/render/frame.ts`), { cutConfig } = await import(`${ROOT}/src/scene/cut.ts`), { lookWordOf, lookCoreOf } = await import(`${ROOT}/src/render/gbuffer.ts`), { COATFINISH, SOLIDGLASS } = await import(`${ROOT}/src/scene/stuff.ts`);
 const { buildWearMap } = await import(`${ROOT}/src/render/wear.ts`), { LOOK } = await import(`${ROOT}/src/scene/look.ts`), { leafRowOf, paintLeaves } = await import(`${ROOT}/src/scene/leafPaint.ts`), { levelNameOf } = await import(`${ROOT}/src/scene/levelLoad.ts`), { DUST_LOOK } = await import(`${ROOT}/src/game/particleFx.ts`);
 
-const LEVELS = process.argv.slice(2).length ? process.argv.slice(2) : ['office', 'compound-gwot', 'block-gwot', 'mousehole-gwot', 'glasshouse', 'killhouse-gwot', 'records-gwot'];
+const LEVELS = process.argv.slice(2).length ? process.argv.slice(2) : ['office', 'compound', 'block', 'mousehole', 'glasshouse', 'killhouse', 'records'];
 const BREAK = process.env.LOOK_BREAK === '1', DT = 1 / 60;
 let fails = 0;
 const line = (ok: boolean, what: string, detail = '') => { if (!ok) fails++; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}${detail ? `\n    ${detail}` : ''}`); };

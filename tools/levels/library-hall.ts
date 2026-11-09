@@ -97,7 +97,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     [x, z] = bayGwot(2.4); G.log(x, z - 0.35, 0.2, 1.0); G.log(x, z + 0.3, -0.15, 1.2, 0.13); G.choppingBlock(x + 0.9, z + 0.1, 0.4);
   }
   // A WALL'S FACE, and what the kit does to one: a stretch of mud wall with six windows along the hall's north edge. Each of the three ways to dress a window
-  // stands twice, SHUT and OPEN (a level lays the open one where a defender watches: tools/qa/marksight-check.ts); the mends, the spout, the roof's beam
+  // stands twice, SHUT and OPEN (a level lays the open one where a defender watches: rust/game_start levels sight); the mends, the spout, the roof's beam
   // ends, the split wood, the ladder; and by its foot the bench, the pot and the loose bricks
   grp('front.gwot');
   { const Z = 0.6, wins: [number, number][] = [[13.0, 14.2], [15.4, 16.6], [17.8, 19.0], [20.2, 21.4], [22.6, 23.8], [25.0, 26.2]];

@@ -1,10 +1,10 @@
 // THE RUN BEING PLAYED, KEPT: its tape goes to this browser's store every few seconds (keep.ts), at once as a mission ends, as the page goes and as the game is lost. F7 says it is kept; Shift+F7 and the end card's
 // Replay leave the game to watch it, in this window.
 import { typedInto } from '../host/keymap';
-import { clock, leaveFor } from '../replay/format';
-import { ReplayKeeper } from '../replay/keeper';
-import { KEEP, keepBudget, pruneKept } from '../replay/keepstore';
-import { keptStore } from '../replay/keptui';
+import { clock, leaveFor } from './format';
+import { ReplayKeeper } from './keeper';
+import { KEEP, keepBudget, pruneKept } from './keepstore';
+import { keptStore } from './keptui';
 import { reportWarning } from '../cloud/report';
 import { PLAYTAPE, visitPairs } from './address';
 import { HANDTAPE, type HandTape } from './handtape';

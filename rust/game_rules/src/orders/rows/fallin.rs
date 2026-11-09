@@ -6,7 +6,7 @@ use crate::orders::*;
 use crate::{js, m, v3};
 use alloc::{format, string::String, vec, vec::Vec};
 
-pub const ORDER: Row = Row { is: &[Is::Follows, Is::Resumed], ..Row::new("fallIn", label, issue) };
+pub const ORDER: Row = Row { is: &[Is::Follows, Is::LooksAbout, Is::Resumed], ..Row::new("fallIn", label, issue) };
 
 fn label(_g: &mut Game, _t: &OrderTarget) -> String { String::from("fall in") }
 

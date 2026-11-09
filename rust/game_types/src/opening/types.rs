@@ -1,10 +1,10 @@
 //! The types of `opening`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: inline at src/game/opening.ts:42 spots, src/game/opening.ts:42)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct OpeningModSpotsValue {
     pub key: String,
     pub at: Option<crate::opening::OpeningModSpotsValueAt>,
@@ -21,7 +21,7 @@ impl OpeningModSpotsValue {
 impl Default for OpeningModSpotsValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/opening.ts:42 OpeningModSpotsValue.at, src/game/opening.ts:42)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct OpeningModSpotsValueAt {
     pub pos: V3,
     pub yaw: f64,
@@ -78,7 +78,7 @@ impl FindSpot {
 impl Default for FindSpot { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct OpeningMod {
     /// (src/game/opening.ts:30 urlRead)
     pub url_read: bool,

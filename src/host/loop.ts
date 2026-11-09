@@ -27,14 +27,14 @@
 // under the tick rate, a hitch) a flash that lives one tick and was made in the frame's first is aged out by its second and never drawn (with it on, tween.ts draws it once).
 // The module's default is off = every statement below as it was; THE PAGE turns both on (host/profile.ts pageSwitches: ?fixedstep=0, ?tween=0).
 import type { Game } from '../game/game';
-import type { Input } from '../game/input';
-import type { FollowCamera } from '../game/camera';
+import type { Input } from './input';
+import type { FollowCamera } from './camera';
 import type { DirectorFrame } from '../game/director';
 import type { Vec3 } from '../math/vec';
 import type { RenderSettings } from '../settings';
 import type { HudLike, BubblesLike, View } from './hud';
 import { drawHud } from './hudsource';
-import { gearText } from '../game/gear';
+import { gearText } from './gear';
 import { TWEEN, type Tween } from './tween';
 import { ctrlTurn } from './findme';
 import { locked } from '../view/seatview';
@@ -84,7 +84,7 @@ export interface LoopCtx {
   attract: AttractLike | null;
   hud: HudLike | null;
   bubbles: BubblesLike | null;
-  /** the developer's pictures over the HUD (ui/devhud.ts): none on a page without them */
+  /** the developer's pictures over the HUD: none on a page without them */
   dev?: { update(game: Game, cam: FollowCamera, view: View): void } | null;
   /** the accumulated clock (main.ts's timeAcc): stepFrame adds dt to it first thing; render / lights / audio take it */
   time: number;

@@ -15,7 +15,7 @@
 //   3. reads what the piece is FOR, and its arguments, from the comment and the line that define it in the kit's own file.
 // Nothing about a piece is typed here: the one table below says where each kit lives and how to stand it up empty.
 // THE LIBRARY'S RULES (--check): every piece stands in a showroom; every piece says what it is; no piece tops out where a body is stopped on floor the nav
-// grid calls free (0.20 to 0.25 m: tools/qa/lived-check.ts holds the same band on a level); every kit that hands pieces out has its row here; docs/library.md
+// grid calls free (0.20 to 0.25 m: levels stands holds the same band on a level); every kit that hands pieces out has its row here; docs/library.md
 // is up to date; a piece laid on a wall's face lies the same on all four ways a wall can face (skewOf); NO PIECE FLICKERS BY ITSELF and no showroom has a
 // patch that flickers (two drawn faces in one plane, drawn differently: tools/qa/zfight-check.ts zfight, asked of every call a generator makes, laid alone,
 // and of the showrooms' files).
@@ -74,7 +74,7 @@ const levels: string[] = [], unbuilt: { level: string; why: string }[] = [], bui
 for (const f of readdirSync(HERE).filter(f => f.endsWith('.ts')).sort()) {
   if (!/^export (?:function|const) build\b/m.test(readFileSync(resolve(HERE, f), 'utf8'))) continue;   // (a file with no build() is a kit or a tool: importing export.ts would run it)
   const gen = await import(resolve(HERE, f)), name = basename(f, '.ts');
-  // A LOOK FILE (`<name>-gwot.ts`) builds with its plain level's generator, which is counted under the plain level's name; what the look file lays itself is
+  // A SKINNED LEVEL (`<name>.ts`) builds with its floor's generator (`<name>-floor.ts`), which is counted under the floor's name; what the skin lays itself is
   // its `finish` (the skin's rugs, skirts and patches, its own dressing), run here on a level built unheard
   const look = typeof gen.finish === 'function';
   building = look ? '' : name; open.length = 0;
@@ -90,7 +90,7 @@ watchPieces(null);
 levels.sort();
 const onList = new Set(ALL_MISSIONS.filter(s => !s.offList).map(s => (s.level ?? 'office.json').replace(/\.json$/, '')));
 /** a level file's name as its generator's (the two differ for one level) */
-const fileOf = (level: string) => level.replace(/-gwot$/, '');
+const fileOf = (level: string) => level.replace(/-floor$/, '');
 
 // ------------------------------------------------------------------ paints: every colour that has a name, by its numbers ----
 const key = (a: Vec3) => a.map(v => Number(v).toFixed(4)).join(',');
@@ -232,7 +232,7 @@ function measure(kitName: string, name: string, said: Said | undefined, stand: (
   piece.reach = inWay.length ? r2(Math.max(...inWay.map(top))) : 0;
   piece.kind = statics.some(b => b.flags & BoxFlag.Glass) ? 'glass' : inWay.length ? (foot >= 0.25 ? 'raised' : 'solid') : props.length ? 'loose' : solid.some(b => top(b) < 0.2) ? 'walk-over' : solid.length ? 'overhead' : 'drawn';
   // THE BAND: a top in 0.20 to 0.25 m counts where it is the piece's top there. A lower course of sandbags is under the next one, and a sack's ear a hand's
-  // width out from under the sack above it stands on a cell the pile shuts anyway: lived-check's five probes, asked of the piece's own in-the-way boxes in
+  // width out from under the sack above it stands on a cell the pile shuts anyway: levels stands's five probes, asked of the piece's own in-the-way boxes in
   // place of the baked floor
   const NEAR = 0.1;
   const under = (b: Box, x: number, z: number) => { const cs = Math.cos(b.yaw), sn = Math.sin(b.yaw), dx = x - b.c[0], dz = z - b.c[2]; return Math.abs(cs * dx - sn * dz) <= b.h[0] + NEAR && Math.abs(sn * dx + cs * dz) <= b.h[2] + NEAR; };
@@ -403,7 +403,7 @@ function usesPage(): string {
   const L: string[] = [], played = levels.filter(l => !SHOWROOMS.includes(l));
   const kitsOf = (level: string) => KITS.filter(k => catalogue.some(p => p.kit === k.name && level in p.uses)).map(k => k.name);
   L.push('# The library: which level lays which piece', '', 'Written by `bun run tools/levels/library.ts --uses FILE`. A piece laid from inside another piece is counted as the outer one;',
-    'a look file (`<name>-gwot`) is counted for what its own finish step lays on top of its plain level. The four levels built on `src/scene/levelKit.ts`',
+    'a skinned level (`<name>`) is counted for what its own finish step lays on top of its floor (`<name>-floor`). The four levels built on `src/scene/levelKit.ts`',
     '(defuse, floodlit, mousehole, records) lay the office\'s pieces through plain functions no kit hands out, so those calls are not counted.', '',
     '## The generators', '', '| Level | On the mission list | Kits it lays from | Pieces laid |', '|---|---|---|---|');
   for (const l of played) L.push(`| ${l} | ${onList.has(fileOf(l)) ? 'yes' : ''} | ${kitsOf(l).join(', ')} | ${catalogue.reduce((n, p) => n + (p.uses[l] ?? 0), 0)} |`);

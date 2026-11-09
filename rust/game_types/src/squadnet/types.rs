@@ -1,12 +1,14 @@
 //! The types of `squadnet`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: SquadNet, src/game/squadnet.ts:66)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SquadNet {
     pub rows: Vec<crate::squadnet::NetRow>,
+    /// (counts: in no bytes)
+    #[bytes(skip)]
     pub stats: crate::squadnet::SquadNetStats,
     pub down: Vec<String>,
     pub seeded: bool,
@@ -31,7 +33,7 @@ impl SquadNet {
 impl Default for SquadNet { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: NetRow, src/game/squadnet.ts:63)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct NetRow {
     pub text: String,
     pub at: V3,

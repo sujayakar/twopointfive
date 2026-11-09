@@ -12,6 +12,7 @@ import { smokeGrid, smokeSolverConsts, SmokeGrid } from './smokeGrid';
 import { byGpuCount } from './dispatch';
 import { sysRandom } from '../math/dice';   // the mixer / the solver draw the SYSTEM die, never the simulation's seeded one under a session recording (math/dice.ts)
 import { DUST_DRAW } from './dustTint';
+import { lookConfig } from '../render/frame';
 import smokeSrc from './smoke.wgsl' with { type: 'text' };
 // WIND (game/wind.ts): the field's one WGSL text + the solver's block / forcing term, prepended to the module; the records come in through setWind() once a frame
 import windFieldSrc from '../render/shaders/wind_field.wgsl' with { type: 'text' };
@@ -79,7 +80,7 @@ export class SmokeSystem implements SmokeSystemLike {
    *  fine* = gun gas gives its bricks back (smoke.wgsl THE FINE LATTICE LETS GO): thin smoke on the fine lattice, and the heat in it, fades fineDecay/s faster, always; density / heat at or under fineEps / fineHeat is
    *  stored as 0 there and fineRing cells of air are kept round it (these three only while fineDecay > 0); that lattice may hold fineShare of the pool, or what the coarse one leaves under softLo if that is more (haze is
    *  refused bricks from 0.7 of it, all but sources at all of it). fineDecay 0 and fineShare 1 = none of it, as first benched: notebook §9.8. */
-  sparse = { keep: 20, ring: 4, flushEps: 2e-3, thinDecay: 0, thinBelow: 0.25, softLo: 0.6, softHi: 0.95, softEps: 0.03, softDecay: 1.5, viewBias: 1, viewR: 10, indirect: true, directAt: 0.5, split: false, calmMax: 4, farCells: 1, readSkip: false, fresh: 0.15, fineDecay: 3, fineShare: 0.25, fineEps: 0.01, fineHeat: 0.1, fineRing: 2, fineKeep: 0 };
+  sparse = { keep: 20, ring: 4, flushEps: 2e-3, thinDecay: 0, thinBelow: 0.25, softLo: 0.6, softHi: 0.95, softEps: 0.03, softDecay: 1.5, viewBias: 1, viewR: 10, indirect: true, directAt: 0.5, split: false, calmMax: 4, farCells: 1, readSkip: false, fresh: 0.15, fineDecay: 3, fineShare: 0.25, fineEps: 0.01, fineHeat: 0.1, fineRing: 2 };
   stats = {
     /** the pool in use in units of 512 bricks, at least 1 while anything is alive, 0 with no smoke: what the F9 recorder's smoke column and the tools' 'is there smoke yet' read (512 bricks = one of
      *  the 64³ boxes recordings from before 2026-10 counted, so the column still compares). No rule reads it. */
@@ -187,9 +188,12 @@ export class SmokeSystem implements SmokeSystemLike {
   private levelOf(e: { lattice?: 'fine' | 'coarse'; kind?: string }): number { return (e.lattice ?? (e.kind === 'canister' ? 'coarse' : 'fine')) === 'coarse' ? 0 : 1; }
   emit(e: SmokeEmitter) {
     if (!this.params.enabled || this.params.frozen) return;
+    if (e.look && !this.drawing()) return;   // (a look source is the picture's: nothing to draw it, nothing to file)
+    if (e.fire && (this.engine.settings.fireSmoke === false || !(lookConfig.fireSmoke > 0))) return;   // (the graphics preset that sheds a fire's smoke, ui/quality.ts, and the look's own row: the tick says it, this takes it or not)
     const level = this.levelOf(e), voxel = this.grid.levels[level].voxel;
     const radius = e.minVoxels ? Math.max(e.radius, e.minVoxels * voxel) : e.radius;
-    this.emitters.push({ ...e, radius, pos: v3.copy(e.pos), dir: v3.normalize(e.dir), level });
+    const density = e.fire ? e.density * Math.min(2, lookConfig.fireSmoke) : e.density;   // (the look's Fire smoke row: how thick, up to twice)
+    this.emitters.push({ ...e, radius, density, pos: v3.copy(e.pos), dir: v3.normalize(e.dir), level });
     if (this.emitters.length > 2 * MAX_EMITTERS) { let drop = this.emitters.findIndex(x => x.look); if (drop < 0) drop = this.emitters.findIndex(x => (x.prio ?? 1) === 0); this.emitters.splice(drop >= 0 ? drop : 0, 1); }
     this.quiet = 0; this.emitStep = this.stepNo;
   }
@@ -233,18 +237,14 @@ export class SmokeSystem implements SmokeSystemLike {
    *  the somke". A round used to be a row of soft shoves 7 cm across (a cell and a bit) for one step, which moved nothing anyone could see. It is ONE LINE now (`push`
    *  with `line`): the air within about `radius` of the path is brought up to `speed` along it, once (smoke.wgsl: never slowed, never turned, the same whatever the
    *  frame's length), and a long thin jet is nearly free of divergence, so the pressure step leaves it standing: it drags smoke after the round out of the far side
-   *  of a plume and clear air in at the near side, and its edges roll up. `push` = how flat the jet's top is (4 = full speed out to 1.18 radii). speed 0 = the dots.
+   *  of a plume and clear air in at the near side, and its edges roll up. `push` = how flat the jet's top is (4 = full speed out to 1.18 radii). speed 0, the look's Stirred smoke row at 0 or ?look=old: no wake.
    *  The line stands two radii inside each end of the round's leg, so its round ends do not shove the air behind what the round hit or came out of. */
   readonly wake = { speed: 9, radius: 0.12, push: 4 };
   round(from: Vec3, dir: Vec3, len: number): boolean {
-    const W = this.wake; if (!(W.speed > 0)) return false;
+    const W = this.wake; if (!(W.speed > 0) || !(lookConfig.stir > 0)) return false;   // (the look's Stirred smoke row)
     const half = len / 2 - 2 * W.radius;
     if (half > 0.025) this.push({ pos: v3.mad(from, dir, len / 2), dir, speed: W.speed, radius: W.radius, line: half, push: W.push });
     return true;
-  }
-  spawnCanister(pos: Vec3, duration?: number) {
-    const P = this.params;
-    this.emit({ pos: v3.add(pos, [0, 0.12, 0]), dir: [0, 1, 0], speed: P.canisterSpeed, radius: P.canisterRadius, density: P.canisterDensity, temperature: P.canisterTemp, ttl: duration ?? P.canisterDuration, age: 0, kind: 'canister' });
   }
   get queue(): GPUQueue { return this.engine.device.queue; }
   /** THE GAME'S SMOKE, as it lies where the game left it: `rows(buffer, plan, bricks)` sends the plan's words and the bricks' rows to these places (bytes) of the buffer. Asked for when `made`
@@ -483,29 +483,7 @@ export class SmokeSystem implements SmokeSystemLike {
   }
 
   private perOp: ((name: string) => void) | null = null;
-  /** Tools: one step with every kernel in a submit of its own, waited for — wall ms per kernel (a software renderer's numbers mean something this way; a real GPU's are mostly submit latency) */
-  async profileStep(dt: number): Promise<Record<string, number>> {
-    const e = this.engine, device = e.device, out: Record<string, number> = {}; e.lastDt = dt;
-    e.world.ensurePacked();   // (as stepAlone: no draw comes before this step)
-    const cuts: { name: string; cb: GPUCommandBuffer }[] = []; let enc = device.createCommandEncoder();
-    this.perOp = name => { cuts.push({ name, cb: enc.finish() }); enc = device.createCommandEncoder(); };
-    const proxy = { beginComputePass: (d: GPUComputePassDescriptor) => enc.beginComputePass(d), copyBufferToBuffer: (...a: [GPUBuffer, number, GPUBuffer, number, number]) => enc.copyBufferToBuffer(...a) } as unknown as GPUCommandEncoder;
-    try { this.encode(proxy, () => undefined); } finally { this.perOp = null; }
-    await device.queue.onSubmittedWorkDone();
-    for (const c of cuts) { const t = performance.now(); device.queue.submit([c.cb]); await device.queue.onSubmittedWorkDone(); out[c.name] = (out[c.name] ?? 0) + performance.now() - t; }
-    device.queue.submit([enc.finish()]); this.afterSubmit();
-    return out;
-  }
 
-  stepAlone(dt: number, focus?: Vec3) {
-    if (!(dt > 0) || !this.live()) return;
-    const e = this.engine; e.lastDt = dt; if (focus) e.viewFocus = focus;
-    e.world.ensurePacked();   // (a step with no draw before it: the obstacle bake reads the box rows on the device, and an undrawn tick leaves them the last pack's — scene/boxes.ts relist)
-    const enc = e.device.createCommandEncoder({ label: 'smokeAlone' });
-    this.encode(enc, () => undefined);
-    e.device.queue.submit([enc.finish()]);
-    this.afterSubmit();
-  }
 
   afterSubmit() {
     const r = this.statQueued; if (r < 0) return;

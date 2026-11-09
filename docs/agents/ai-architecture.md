@@ -271,9 +271,10 @@ Under `rust/game_rules/src/`. One man's frame, in the order it runs (`guards/fra
 
 | what | where | to add one |
 |---|---|---|
-| what takes him whole, before he senses: a live grenade, broke and ran, shaken, startled | `control/{frag,runner,morale,startle}.rs`, the list in `control/mod.rs` | a file and a line of `rules!` |
+| his ears and eyes, every tick, whoever has his body | `guards/senses/{hearing,foe}.rs`, from `senses/mod.rs sense` | a kind of sound is a function of `hearing.rs` |
+| what takes him whole: a live grenade, broke and ran, shaken, startled | `control/{frag,runner,morale,startle}.rs`, the list in `control/mod.rs` | a file and a line of `rules!` |
 | his own script (an order, a drill, a mission's staging) | `squad/` (`run_guard_script`), `gd.script` | |
-| what he senses, a file a sense: his ears, his eyes on his man, where his man went, a colleague on the floor, the man he trails, a kicked lock | `guards/senses/{hearing,foe,lead,body,leader,lock}.rs`, in order in `senses/mod.rs` | a file and its line in `perceive`; a kind of sound is a function of `hearing.rs` |
+| what he does about what is around him where nothing has him: where his man went, a colleague on the floor, the man he trails, a kicked lock | `guards/senses/{lead,body,leader,lock}.rs`, in order in `senses/mod.rs notice` | a file and its line in `notice` |
 | where a man looks, for every eye | `guards/p_04.rs look_of`, which is `fogofwar::gaze_of` | |
 | how alert he is | `guards/frame.rs alertness`; every write of awareness, state and fix through `mind.rs` | |
 | what takes him in his fight: head down under fire | `control/duck.rs`, asked at the top of `alert` | a file and a line of `rules!` |
@@ -302,8 +303,8 @@ him, rounds pass close). One file and one line.
    keeps of one man (`()` if nothing). Three more have defaults that do nothing: `transition(g, man, dt)` move
    its own state · `commit(g, man, Outcome)` what his body made of it · `lost(g, man)` a higher rule took him.
 2. One line in `rules!` of `control/mod.rs`: `<name>: "the words that name it";`. Its place in the list is its
-   rank. WHAT IT ASKS FOR IS WHERE IT IS ASKED: a rule whose `Ask` is `GuardScript` is asked before he senses
-   and hands him a script; one whose `Ask` is `TakeCover` is asked of a man whose state is Alert and who has no
+   rank. WHAT IT ASKS FOR IS WHERE IT IS ASKED: a rule whose `Ask` is `GuardScript` is asked after his ears and
+   eyes, before anything he does of his own, and hands him a script; one whose `Ask` is `TakeCover` is asked of a man whose state is Alert and who has no
    script of his own (`TakeCover::down()`, or `TakeCover::to(spot, pace)`). ALERT IS NOT "HAS A MAN TO FIGHT":
    a bang alone makes a man Alert, so a rule that means "in a fight" asks `man::saw_his_man_within(g, man,
    secs)`. What a rule may ask of a man is `control/man.rs` (enemy, blind, staggered, held, in a standoff,
@@ -361,7 +362,8 @@ two tests of `tests/orders.rs`, hands its three functions on to a module of its 
 /tmp/held`; after it, `… -- check /tmp/held`. 72 native runs, every part of the game hashed every frame; it names
 the first frame and the parts that differ. A new reaction or order is meant to change play where it acts, so read
 it this way: every run in which it never acted must still be the same (each run's line says how long each rule
-had a man), and what it does where it acts is for the mission tallies to judge.
+had a man), and what it does where it acts is for the missions to judge: `cargo run --release --bin missions` before and
+after, then `missions diff` (208 runs of thirteen room clears, three minutes).
 
 **A behaviour of a man's own** (how he patrols, looks, fights and searches when nothing has taken him) is one file a
 state: `rust/game_rules/src/guards/behave/{patrol,suspicious,alert,search}.rs`, each one function from what he
@@ -409,7 +411,7 @@ impl Reaction for Rule {
 
 A line names the rule's file and the words that name it. The stage of a man's frame at which it is asked is the
 type of what it asks for, so a rule cannot answer out of its stage: the compiler refuses it. `GuardScript`:
-asked before he senses, and his whole body follows the script. `TakeCover`: asked at the top of `alert`
+asked once his ears and eyes have run, and his whole body follows the script. `TakeCover`: asked at the top of `alert`
 (`guards/behave/alert.rs`), that is of a man whose state is Alert and whom no script has, before his reaction time and
 before his fight: down where he is or off to a spot crouched, gun lowered toward the danger, no round fired,
 hands free to change magazine. The line makes the rule's module, its id, the table of its rows
@@ -607,7 +609,7 @@ over 3,006 ticks with 9 men; compound-four 1.22 ms over 7,576 ticks with 15 men)
 animation and light. So nothing in this design is bought with speed, and the design may spend freely on
 clarity: asking every rule every tick, granting by channel, writing the record. Speed is the bodies' matter
 (pose only men a camera can see; a cheaper light meter) and the page's (the hand-over to the picture costs more
-than the tick: `tools/blitz/PAGE.md`).
+than the tick).
 
 ## 11. Special cases today, and the general rule that replaces each
 
@@ -738,8 +740,8 @@ read it, it is a part of the state, and every machine of one game holds it the s
 (`fogofwar::FogPicture`) is THE PICTURE'S BLOCK: the renderer's rows (`frame`), the lit fog's list of lamps and
 its counts (`lamp_pick`, `lamp_n`, `lit_stats`), a lamp's glow as last seen (`face_recs`), the count of lights by
 class (`full_stats`), and what a viewer's draw with the fog off is made from (`viewer`, `raw_list`, `raw_at`;
-`look_frames`, which nothing reads). It is one machine's: the wire tool lists it among the host's own
-(`HOSTS_OWN`, `tools/wire/wire.ts`), so it has no word of the state. Two machines that show different seats
+`look_frames`, which nothing reads). It is one machine's
+(`Game.fog_picture` is `#[bytes(skip)]`), so it has no word of the state. Two machines that show different seats
 need not agree on it: the lit fog's lamps are cut by distance from the seat a machine shows.
 
 **The code follows the data.** `fogofwar/picture.rs` is the only file that names `g.fog_picture` (and the stand,
@@ -758,8 +760,7 @@ and hands it back (game.ts `fogLift`, `fogBack`). The Rust translation of that p
 deleted, with the five fields only it used. One fault found and NOT mended, for whoever owns what the page
 shows: the page never raises `viewer` on the Rust game, so the Rust tick keeps no list of the frame as it stood
 before the fog cut it, and a replay watched with the fog off cannot be showing what the fog cut. The cure is one
-write by path of `['fog_picture', 'viewer']` where the page raises its own (`replay/engineplay.ts`,
-`host/kitView.ts`); `picture::keep_raw` and the wire's `raw_list` and `raw_at` are there for it.
+write by path of `['fog_picture', 'viewer']` where the page raises its own (`replay/engineplay.ts`); `picture::keep_raw` and the wire's `raw_list` and `raw_at` are there for it.
 
 **How it was done.** Three commits. The code cut with every field in place: `hold check`, 120 of 120 runs the
 same in every part. The Rust lift deleted, and then the ten fields moved by a program

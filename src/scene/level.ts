@@ -3,31 +3,16 @@
 // the build by this import and turned into a Level by scene/levelLoad.ts loadLevel(). The procedural code that used to BE this file lives on as the legacy
 // generator (scene/officeGen.ts) that tools/level-export.ts regenerates the JSON from. Units: meters. +X east, +Z south, +Y up. Floor top at y=0.
 import { Vec3, DEG } from '../math/vec';
+import type { LightDef } from '../render/lights';
 import type { Box } from './boxes';
 import type { MarkingDef } from './markings';
 import type { LevelData, SurfacesData } from './levelData';
 import { loadLevel } from './levelLoad';
 import officeData from '../../levels/office.json' with { type: 'json' };
-import type { WeaponId } from '../game/weapons';   // (type only: what a route may hand its man — erased at runtime, so the scene layer still loads below the game's)
-import type { LevelScriptFn } from '../game/director';   // (type only, likewise: the level's script is a plain function handed to game/director.ts)
 import type { LevelScenarios } from './scenarios';
+import type { WeaponId } from './weaponIds';
 
-export interface LightDef {
-  kind: 'point' | 'spot' | 'dir';
-  pos: Vec3; dir: Vec3;
-  color: Vec3;         // linear rgb, multiplied by intensity
-  intensity: number;   // point/spot: candela-ish; dir: irradiance (lux-ish)
-  range: number;
-  innerDeg: number; outerDeg: number;
-  name: string;
-  group: string;       // for UI toggles / OCP ("ceiling", "exterior", "desk", ...)
-  mains?: boolean;     // fed from the building breaker (default true) — false for street lighting etc.
-  broad?: boolean;     // wide soft emitter → the direct pass's 'broad' denoise class (street lamps; area lights derived from fixtures set it themselves)
-  fixtureBox?: number; // index of the emissive box representing the fixture (glow card)
-  enabled: boolean;
-  volumetric: number;  // 0..1 haze scattering multiplier for beams
-  radius?: number;     // physical emitter size (m) → penumbra width; for 'dir' lights the angular radius in radians
-}
+export type { LightDef };
 
 /** One man's beat. `weapon`: the weapons.ts row he carries (absent = the 9 mm service pistol) — dealt at spawn (game.ts Guard); nobody on this level is authored one
  *  yet (the carbine lanes decide who: docs/internal/sc20k-design.md §3.5). `keys`: the keys on his belt, by lock name (doors.ts DoorDef.lock) — what Sam takes off
@@ -169,8 +154,6 @@ export interface Level {
   volumes?: VolumeDef[];
   /** named marks (LevelData v2 marks[], M3 of docs/design/level-scripting.md — nothing authors them yet: a script declares its own with literals until then) */
   marks?: MarkDef[];
-  /** this level's SCRIPT (game/director.ts runs it: bespoke set pieces as named programs); absent = no Director programs, the game exactly as it is — no shipped level has one today */
-  script?: LevelScriptFn;
   /** what the playtest SCENARIOS take from this level (scene/scenarios.ts: the room clear's rooms, the rescue's hostage room and marks, where the team starts) —
    *  the level file's own `scenarios` block. Absent = no scenario can be staged on this level */
   scenarios?: LevelScenarios;
@@ -202,9 +185,6 @@ export interface Level {
 export function buildLevel(): Level {
   return loadLevel(OFFICE_DATA);
 }
-/** attach a level SCRIPT to a Level. The script is CODE, not level data: it rides on the Level as a non-enumerable property, so everything that walks the Level's keys as data
- *  (tools/qa level-identity's generator ≡ JSON diff and key order, levelToData, structuralDiff) sees the level exactly as before, while game/director.ts reads level.script like any field. */
-export function withScript(level: Level, script: LevelScriptFn): Level { Object.defineProperty(level, 'script', { value: script, enumerable: false, writable: true, configurable: true }); return level; }
 /** the office's level data as bundled (read-only: loadLevel copies everything it hands out) */
 export const OFFICE_DATA: LevelData = officeData as unknown as LevelData;
 

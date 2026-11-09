@@ -128,7 +128,7 @@ fn under_the_fight_ai(g: &mut Game, o: RoomfightOpId) {
     if let (crate::game::GuardState::Alert, Some(fc)) = (g.gd[gd].state, fc) {
         let muzzle = g.ch[c].muzzle;
         let at = chest_of(g, fc);
-        if matches!(room_fight_friend_in_line(g, muzzle, at, gd, None), Some(RoomFightFriendInLine::Player)) {
+        if matches!(room_fight_friend_in_line(g, muzzle, at, gd), Some(RoomFightFriendInLine::Player)) {
             g.gd[gd].muzzle_down = true;
             g.gd[gd].muzzle_clear_t = 0.0;
             g.tab.roomfight_op[o].held_for_friend += 1.0;
@@ -412,7 +412,7 @@ fn fires(g: &mut Game, o: RoomfightOpId, h: GuardId, to: V3, dt: f64, speed: f64
     let feet = if !g.touring { m::max(speed, g.tab.roomfight_op[o].feet_sm.unwrap_or(0.0)) * g.k.aimcost.move_k } else { speed };
     let wide = hands * v3::lerp(p.unsettled_k, 1.0, v3::clamp(g.tab.roomfight_op[o].track, 0.0, 1.0)) * sup_k + grow + feet * p.shooter_move_k * 0.5; // how wide this round would be thrown
     let muzzle = g.ch[c].muzzle;
-    let mut in_line = room_fight_friend_in_line(g, muzzle, to, gd, None);
+    let mut in_line = room_fight_friend_in_line(g, muzzle, to, gd);
     if in_line.is_none() { // a friend anywhere this round could go holds it as one in the lane does
         let cone = wide + match def.pellets { Some(pl) => pl.cone * 2.0, None => 0.0 };
         in_line = crate::friendlyfire::friend_in_cone(g, gd, muzzle, to, cone, None, Some(hc)).map(cone_friend);
@@ -818,7 +818,7 @@ pub fn room_fight_side_step(g: &mut crate::game::Game, o: RoomfightOpId, to: V3,
         let from: V3 = [p[0], 1.4, p[2]];
         let def = g.fa[g.gd[gd].weapon].def;
         let energy = crate::glasspen::shot_energy(g, c, Some(def));
-        if crate::scene_collision::shot_blocked(g, from, to, Some(0.02), energy) || room_fight_friend_in_line(g, from, to, gd, None).is_some() || crate::friendlyfire::friend_in_cone(g, gd, from, to, 0.08, None, None).is_some() { continue; }
+        if crate::scene_collision::shot_blocked(g, from, to, Some(0.02), energy) || room_fight_friend_in_line(g, from, to, gd).is_some() || crate::friendlyfire::friend_in_cone(g, gd, from, to, 0.08, None, None).is_some() { continue; }
         let face = g.ch[c].body_yaw;
         room_fight_step_to(g, o, p, false, RoomFightStepToPatch { speed: Some(2.2), strafe: Some(true), face: Some(face), ..Default::default() });
         g.tab.roomfight_op[o].step_until = g.time + 2.0;

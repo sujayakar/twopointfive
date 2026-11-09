@@ -3,7 +3,7 @@
 // both against brute-force integration of the true spot profile on a wall), the card nomination (lights.ts cardSlotsFor), and the flag / settings table
 // (bits distinct, defaults off, the frame block sized for the card slots). The GPU halves are verified by measurement (the doc's protocol); this is what
 // can be held without one.   bun run tools/qa/perf-probes.ts   (also `probes.ts perf`)
-import { ROOT } from './headless';
+import { ROOT } from './here.ts';
 
 const { FrameFlags, FRAME_BYTES, MAX_CARDS, writeFrame, noWeather } = await import(`${ROOT}/src/render/frame.ts`);
 const { cardSlotsFor } = await import(`${ROOT}/src/render/lights.ts`);

@@ -354,13 +354,13 @@ pub fn squad_orders_tick(g: &mut crate::game::Game) {
             Some(mv) if d > 0.6 => ((mv.stance, mv.upper), true),
             _ => ((g.tab.orders_assignment[a].stance, g.tab.orders_assignment[a].upper), false),
         };
-        // UNASKED COVER (cover.ts): a man following, or holding with nothing named to watch, has an opening dealt him; his feet stay the order's
+        // UNASKED COVER (cover.ts): a man with nothing named to watch has an opening dealt him, on the walk or on his mark; his feet stay the order's
         let mut watch = g.tab.orders_assignment[a].watch;
         let posted = g.tab.orders_assignment[a].post.is_some();
         let mut strafe = g.tab.orders_assignment[a].strafe.unwrap_or(false) && posted && face.is_some();
         let spare = g.tab.orders_assignment[a].spare.unwrap_or(false);
-        let cov = if (g.tab.orders_assignment[a].watch.is_none() && (!posted || crate::orders::rows::id_is(&order_id, crate::orders::Is::Holds))) || spare {
-            let still = if spare { d < 0.6 } else { posted || face.is_some() || keep };
+        let cov = if crate::cover::cover_eyes_free(g, gd, a) || spare {
+            let still = if posted { d < 0.6 } else { face.is_some() || keep };
             crate::cover::cover_pose_for(g, gd, still, speed)
         } else { None };
         let aim_pose = { let k = crate::orders::aim(); (k.stance, k.upper) };

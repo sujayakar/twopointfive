@@ -34,10 +34,10 @@ const heard = async () => (await (await fetch(`${CLOUD}/__stats`)).json()).calls
     page.on('pageerror', x => errors.push('pageerror: ' + String(x && x.stack || x).slice(0, 400)));
     const asked = []; page.on('dialog', d => { asked.push(d.message()); d.accept().catch(() => {}); });   // (the one question a page asks: a browser handed another's link)
     // (leaving a page: it stops drawing first — on this adapter a page with drawn frames queued does not let a navigation commit for minutes; tools/qa/replaykeep-page.cjs)
-    const go = async (url) => { await page.evaluate(async () => { const e = window.__engine; if (!e) return; e.render = () => {}; try { if (window.__smoke) window.__smoke.params.enabled = false; await Promise.race([e.device.queue.onSubmittedWorkDone(), new Promise(r => setTimeout(r, 20000))]); } catch { /* */ } }).catch(() => {}); await page.goto(url, { timeout: NAV }); };
+    const go = async (url) => { await page.evaluate(async () => { const e = window.__engine; if (!e) return; e.render = () => {}; try { if (window.__draw.smoke) window.__draw.smoke.params.enabled = false; await Promise.race([e.device.queue.onSubmittedWorkDone(), new Promise(r => setTimeout(r, 20000))]); } catch { /* */ } }).catch(() => {}); await page.goto(url, { timeout: NAV }); };
     const ready = () => page.evaluate(async () => { await window.__ready; return { fatal: document.getElementById('fatal')?.textContent || '', search: location.search, cloud: window.__cloud ? { url: window.__cloud.url, pid: window.__cloud.pid, sid: window.__cloud.sid, share: window.__cloud.share } : null }; });
-    const play = (frames) => page.evaluate(async (n) => { window.__menu.close(); window.__smoke.params.enabled = false; const e = window.__engine, real = e.render; e.render = () => {};
-      try { await window.__runFrames(n, 1 / 60, ['KeyW']); } finally { e.render = real; } return { n: window.__replay.buf.n }; }, frames);
+    const play = (frames) => page.evaluate(async (n) => { window.__draw.run(0); window.__draw.smoke.params.enabled = false; const e = window.__engine, real = e.render; e.render = () => {};
+      try { await window.__runFrames(n, 1 / 60, ['KeyW']); } finally { e.render = real; } return { n: window.__draw.game.tape ? window.__draw.game.tape.ticks : 0 }; }, frames);
     return { ctx, page, go, ready, play, asked };
   };
   try {
@@ -48,7 +48,7 @@ const heard = async () => (await (await fetch(`${CLOUD}/__stats`)).json()).calls
     const a = await A.ready();
     check(!a.fatal && !!a.cloud && a.cloud.url === CLOUD && a.cloud.share === true && /^[a-z0-9]{24,64}$/.test(a.cloud.pid), `a page pointed at this machine's backend booted with one (${a.cloud?.url}, this browser's id ${a.cloud?.pid.length} characters)${a.fatal ? ' · FATAL ' + a.fatal : ''}`);
     await A.play(FR); await sleep(6500); await A.play(FR); await sleep(6500);
-    const up = await A.page.evaluate(async () => { const K = await window.__replay.kept(); await window.__cloud.sync(); await window.__cloud.sync(); const me = K.rows.find(r => r.sid === window.__cloud.sid); return { kept: me ? { pieces: me.pieces, seconds: me.seconds } : null, stats: window.__cloud.stats(), summary: window.__cloud.summary(), link: window.__cloud.link() }; });
+    const up = await A.page.evaluate(async () => { const K = { rows: await new Promise((res, rej) => { const q = indexedDB.open('twopointsix-kept'); q.onerror = rej; q.onsuccess = () => { const a = q.result.transaction('visits').objectStore('visits').getAll(); a.onsuccess = () => res(a.result); a.onerror = rej; }; }) }; await window.__cloud.sync(); await window.__cloud.sync(); const me = K.rows.find(r => r.sid === window.__cloud.sid); return { kept: me ? { pieces: me.pieces, seconds: me.seconds } : null, stats: window.__cloud.stats(), summary: window.__cloud.summary(), link: window.__cloud.link() }; });
     const rows = await admin('query', 'tapes:list', { pid: a.cloud.pid }), row = rows.find(r => r.sid === a.cloud.sid);
     check(!!up.kept && up.kept.pieces >= 2 && !!row && row.have === up.kept.pieces && up.stats.tapes.failed === 0 && up.stats.wire.failed === 0, `nothing pressed: the ${up.kept?.pieces} pieces this browser kept of the visit (${up.kept?.seconds} s) are on the backend (${row?.have} there; ${up.stats.tapes.calls} calls, ${(up.stats.tapes.bytes / 1024).toFixed(0)} KB)`);
     // the tape reads back out as a replay (the reading tool under bun, against the stand-in)

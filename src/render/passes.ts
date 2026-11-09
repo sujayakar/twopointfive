@@ -67,7 +67,7 @@ const TAAU_PARAM_BYTES = 128;   // struct TaauParams in taau.wgsl: mat4 (64) + 3
 /** lasers / tracers handed to the reflection pass (setBeams): segments at most, and the uniform's size — 16 B of count + 48 B a segment (reflect.wgsl `Beams`) */
 const BEAM_MAX = 8, BEAM_HEAD = 32, BEAM_SEG_BYTES = BEAM_HEAD + BEAM_MAX * 48, FIRE_MAX = 4, FIRE_REC = 64, FIRE_AT = BEAM_SEG_BYTES, FIRE_LOOK_AT = FIRE_AT + 16 + FIRE_MAX * FIRE_REC, FIRE_LOOK_FLOATS = 16, BEAM_BYTES = FIRE_LOOK_AT + FIRE_LOOK_FLOATS * 4;   // (header: n, flags, 2 spare words, then k: vec4f — reflect.wgsl / composite.wgsl `Beams` … and behind the segments, for the composite alone, THE OPEN FIRES: a count word + FIRE_MAX records of 4 vec4f — fire.wgsl FireRec, setFires — and behind those the look's twelve numbers, fire.wgsl FireLook, setFireLook)
 /** one open fire as the composite draws it (game/fire.ts makes them; shaders/fire.wgsl FireRec) */
-export interface FireRecord { pos: ArrayLike<number>; r: number; h: number; heat: number; seed: number; time: number; wind: ArrayLike<number>; flick: number; /** the bed of coals' radius, m (0 or absent = none drawn) */ bed?: number; /** under the fog of war (RtLight.fog's numbers): 0 or absent = drawn wherever it stands · 1 = only where the team sees · 2 = only where it does not */ fog?: number; /** how much of its flame is the smoke solver's gas (0‥1; game/fire.ts FIRE.gas) */ gas?: number; /** how far its smoke is the smoke solver's soot (0‥1; game/fire.ts FIRE_LOOK_SMOKE, the look page's ONE COLUMN): the drawn soot hands over by that much */ soot?: number }
+export interface FireRecord { pos: ArrayLike<number>; r: number; h: number; heat: number; seed: number; time: number; wind: ArrayLike<number>; flick: number; /** the bed of coals' radius, m (0 or absent = none drawn) */ bed?: number; /** under the fog of war (RtLight.fog's numbers): 0 or absent = drawn wherever it stands · 1 = only where the team sees · 2 = only where it does not */ fog?: number; /** how far its smoke is the smoke solver's soot (0‥1; game/fire.ts FIRE_LOOK_SMOKE, the look page's ONE COLUMN): the drawn soot hands over by that much */ soot?: number }
 const RESTIR_U_HEAD = 192, RESTIR_U_FWD = 64, RESTIR_U_INV = 128;
 const TF = { Reset: 1, Bypass: 2, Particles: 4, Velocity: 8 } as const;   // TaauParams.flags (TF_* in taau.wgsl)
 
@@ -308,7 +308,7 @@ export class LightingPasses {
     for (let i = 0; i < n; i++) { const r = list![i], o = 4 + i * (FIRE_REC / 4);
       F[o] = r.pos[0]; F[o + 1] = r.pos[1]; F[o + 2] = r.pos[2]; F[o + 3] = r.r;
       F[o + 4] = r.h; F[o + 5] = r.heat; F[o + 6] = r.seed; F[o + 7] = r.time;
-      F[o + 8] = r.wind[0]; F[o + 9] = r.wind[1]; F[o + 10] = r.flick; F[o + 11] = r.gas ?? 0;
+      F[o + 8] = r.wind[0]; F[o + 9] = r.wind[1]; F[o + 10] = r.flick; F[o + 11] = 0;
       F[o + 12] = r.bed ?? 0; F[o + 13] = r.fog ?? 0; F[o + 14] = r.soot ?? 0; F[o + 15] = 0; }
     this.fireN = n; this.device.queue.writeBuffer(this.beamBuf, FIRE_AT, F.buffer, 0, 16 + n * FIRE_REC);
   }
@@ -871,13 +871,6 @@ export class LightingPasses {
   }
 
   setFxaa(on: boolean) { this.fxaaEnabled = on; if (this.width) this.writeFxaaParams(); }
-  /** Test hook (main.ts __resetClock): zero the per-frame counters that feed the grain seed and the history parities, so a scripted capture renders
-   *  the same frames whatever ran during boot. */
-  /** __resetClock (automation): put the frame-keyed CLOCKS back — the grain seed here, engine.frameIdx by the caller — so a scripted capture repeats. The ping-pong PARITIES are deliberately left
-   *  as they are (review R2.7): every one of them is a symmetric flip-then-index pair (this frame reads [1 − p], writes [p]) whose value never reaches a shader, so zeroing them bought no
-   *  determinism — the same call sequence from boot yields the same parities anyway — but DID hand every history client the two-frames-old slot as 'last frame' (and the gather last frame's
-   *  moments from the wrong slot) for the frame after a mid-run reset. */
-  resetClocks() { this.grainSeed = 0; }
   private grainSeed = 0;
   /** the final blit's numbers: the OUTPUT texel size, its mode (0 plain · 1 FXAA · 2 the RCAS sharpen TAAU ends with — FXAA after a temporal resolve would only blur it), grain, seed, sharpen strength */
   private fxaaData = new Float32Array(8); private postData = new Float32Array(16); private postBits = new Uint32Array(this.postData.buffer); private postSent = new Uint32Array(16);   // (rewritten every frame in place — review R1.4)
@@ -942,22 +935,6 @@ export class LightingPasses {
     ] });
   }
 
-  /** Measurement aid (console: `await __engine.passes.softTileStats()`): reads back the tile mask of the last frame rendered with
-   *  the tile pass-through and reports the threshold it was built with, the fraction of 8x8 tiles the whole chain passes through (≈ the
-   *  fraction of the chain's per-pixel work saved; a retired tile costs one broadcast texel load + a 2-texel copy per step) and the tile
-   *  count per distance 0 .. skipT (the scan saturates at skipT: "at least that far"). */
-  async softTileStats(): Promise<{ tiles: number; skipT: number; skipped: number; byDistance: number[]; steps: { stride: number; ownT: number }[] } | null> {
-    if (!this.tileDist || !this.lastSkipT) return null;
-    const tw = this.tw, th = this.th, bpr = Math.ceil(tw * 4 / 256) * 256, T = this.lastSkipT;
-    const buf = this.device.createBuffer({ size: bpr * th, usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ });
-    const enc = this.device.createCommandEncoder(); enc.copyTextureToBuffer({ texture: this.tileDist }, { buffer: buf, bytesPerRow: bpr }, [tw, th]); this.device.queue.submit([enc.finish()]);
-    await buf.mapAsync(GPUMapMode.READ);
-    const u = new Uint32Array(buf.getMappedRange().slice(0)); buf.unmap(); buf.destroy();
-    const byDistance = new Array<number>(T + 1).fill(0); let skipped = 0;
-    for (let y = 0; y < th; y++) for (let x = 0; x < tw; x++) { const v = u[y * (bpr / 4) + x]; byDistance[Math.min(v & 255, T)]++; if (v & 256) skipped++; }
-    let travel = 0; const steps = DN_STRIDES.slice(0, dnIters(this.den.knobs.shIters)).map(stride => ({ stride, ownT: skipThreshold(travel += stride) }));   // (the shadow client's à-trous passes)
-    return { tiles: tw * th, skipT: T, skipped: skipped / (tw * th), byDistance, steps };
-  }
 
   /** Forget every cached bind group (they name texture views): rebuilt lazily on the next encode. Costs microseconds and touches no texture — NOT a history restart. */
   private dropBindGroups() { this.bgFGX = null; this.bgDirect = this.bgVol = this.bgFxaa = null; this.bgRefl = null; this.bgTileDist = null; this.bgCompFG = null; this.bgBloomDown0 = []; this.bgBloomDown = []; this.bgBloomUp = []; this.bgPost = []; this.bgTaau = [null, null]; this.bgSharpU = null; this.bgCompS = null; this.bgTaauS = [null, null]; this.bgGbaa = null; this.den.dropBindGroups(); }

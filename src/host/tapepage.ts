@@ -3,9 +3,9 @@ import { HAND } from '../draw/hand';
 import { PLAYTAPE, recipeSearch } from '../tape/address';
 import { HandWalk, TapeRefused } from '../tape/handtape';
 import { handsOf, keptHands } from '../tape/keep';
-import type { ReplayNote } from '../replay/format';
-import { parseLines } from '../replay/kept';
-import { keptStore } from '../replay/keptui';
+import type { ReplayNote } from '../tape/format';
+import { parseLines } from '../tape/kept';
+import { keptStore } from '../tape/keptui';
 
 async function opened(b: Uint8Array): Promise<Uint8Array> {
   if (b[0] !== 0x1f || b[1] !== 0x8b) return b;

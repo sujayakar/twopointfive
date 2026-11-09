@@ -1,10 +1,10 @@
 //! The types of `wet`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: WetMem, src/game/wet.ts:52)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct WetMem {
     pub sky_t: f64,
     pub open: bool,
@@ -27,7 +27,7 @@ impl WetMem {
 impl Default for WetMem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: PrintRec, src/game/wet.ts:56)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct PrintRec {
     pub d: crate::render_decals::Decal,
     pub t0: f64,
@@ -46,7 +46,7 @@ impl PrintRec {
 impl Default for PrintRec { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/wet.ts:57 prints, src/game/wet.ts:57)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct WetModPrintsValue {
     pub list: Vec<crate::wet::PrintRec>,
     pub age_t: f64,
@@ -63,7 +63,7 @@ impl WetModPrintsValue {
 impl Default for WetModPrintsValue { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct WetMod {
     /// (src/game/wet.ts:53 mem)
     pub mem: JsMap<CharId, crate::wet::WetMem>,

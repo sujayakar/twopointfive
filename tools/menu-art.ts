@@ -16,7 +16,7 @@
 // JPEG. A mission added since gets a picture by running this again; without one its card shows the menu's own drawn model (ui/planArt.ts).
 // KNOWN, each a choice of the picture and not the level's truth: with `lamps: 'all'` (the default) every lamp the file carries burns, emergency beacons and
 // lamps the level keeps dark included; a door the file gives no angle stands ajar one time in five, by a hash, whichever way it swings and steel or not.
-import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync, readdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, unlinkSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { ALL_MISSIONS } from '../src/scene/scenarioList';
 import type { ScenarioEntry } from '../src/scene/scenarios';
@@ -241,8 +241,7 @@ interface Cam { look: number[]; yaw: number; pitch: number; dist: number }
 interface Opts { W: number; H: number; spp: number; out: string; set: Record<string, Pin> }
 const hash = (s: string) => { let h = 2166136261; for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619); return h >>> 0; };
 function levelOf(file: string): { d: Data; file: string } {
-  const look = file.replace(/\.json$/, '-gwot.json'), f = existsSync(join(ROOT, 'levels', look)) ? look : file;
-  return { d: JSON.parse(readFileSync(join(ROOT, 'levels', f), 'utf8')) as Data, file: f };
+  return { d: JSON.parse(readFileSync(join(ROOT, 'levels', file), 'utf8')) as Data, file };
 }
 
 /** a mission as this tool draws it: a row of the table, or the plain solo night (`scenario` null), under the heading it is listed under */

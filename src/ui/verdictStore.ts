@@ -66,5 +66,3 @@ export function runEnded(key: string, streak: number, run: { won: boolean; appro
   write(key, rec);
   return { streak, fresh: !had, gold: waysWon(rec) >= 2, rec };
 }
-/** forget one run key's record, or every record (no key) */
-export function clearVerdicts(key?: string) { const ls = store(); if (!ls) return; try { if (!key) { ls.removeItem(KEY); return; } const all = readAll(); delete all[key]; ls.setItem(KEY, JSON.stringify(all)); } catch { /* nowhere to keep one */ } }

@@ -1,10 +1,10 @@
 //! The types of `roomfight`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: Entry, src/game/roomfight.ts:291)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Entry {
     pub door: DoorId,
     pub at: V3,
@@ -23,7 +23,7 @@ impl Entry {
 impl Default for Entry { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: RoomFight, src/game/roomfight.ts:378)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct RoomFight {
     pub skill: JsMap<crate::roomfight::RoomFightSkillKey, crate::roomfight::FightSkill>,
     pub live: bool,
@@ -72,7 +72,7 @@ impl RoomFight {
 impl Default for RoomFight { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum RoomFightSkillKey {
     Operative,
     Hostile,
@@ -87,7 +87,7 @@ impl RoomFightSkillKey {
 }
 
 /// (TypeScript: FightSkill, src/game/roomfight.ts:228)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct FightSkill {
     pub react: [f64; 2],
     pub ready: f64,
@@ -142,7 +142,7 @@ impl FightSkill {
 impl Default for FightSkill { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: FightNote, src/game/roomfight.ts:344)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct FightNote {
     pub t: f64,
     pub who: String,
@@ -161,7 +161,7 @@ impl FightNote {
 impl Default for FightNote { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/roomfight.ts:388 RoomFight.stats, src/game/roomfight.ts:388)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct RoomFightStats {
     pub op_rounds: f64,
     pub held_for_friend: f64,
@@ -194,7 +194,7 @@ impl RoomFightStats {
 impl Default for RoomFightStats { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/roomfight.ts:396 RoomFight.reports, src/game/roomfight.ts:396)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct RoomFightReportsItem {
     pub by: GuardId,
     pub t: f64,
@@ -215,7 +215,7 @@ impl RoomFightReportsItem {
 impl Default for RoomFightReportsItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/roomfight.ts:399 RoomFight.sams, src/game/roomfight.ts:399)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct RoomFightSamsItem {
     pub x: f64,
     pub z: f64,
@@ -238,7 +238,7 @@ impl RoomFightSamsItem {
 impl Default for RoomFightSamsItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Room, src/game/roomfight.ts:292)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Room {
     pub id: f64,
     pub cells: JsSet<crate::Num>,
@@ -257,7 +257,7 @@ impl Room {
 impl Default for Room { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum DefMode {
     Hold,
     Move,
@@ -274,7 +274,7 @@ impl DefMode {
 }
 
 /// (TypeScript: Def, src/game/roomfight.ts:297)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Def {
     pub gd: GuardId,
     pub station: V3,
@@ -366,7 +366,7 @@ impl Def {
 impl Default for Def { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/roomfight.ts:305 Def.cnt, src/game/roomfight.ts:305)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct DefCnt {
     pub shots: f64,
     pub kick: f64,
@@ -387,7 +387,7 @@ impl DefCnt {
 impl Default for DefCnt { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum DefMoveKind {
     Cover,
     Fallback,
@@ -402,7 +402,7 @@ impl DefMoveKind {
 }
 
 /// (TypeScript: inline at src/game/roomfight.ts:310 Def.burst, src/game/roomfight.ts:310)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct DefBurst {
     pub until: f64,
     pub n: f64,
@@ -425,7 +425,7 @@ impl DefBurst {
 impl Default for DefBurst { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Meter, src/game/roomfight.ts:316)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Meter {
     pub m: f64,
     pub seen_t: f64,
@@ -444,7 +444,7 @@ impl Meter {
 impl Default for Meter { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Op, src/game/roomfight.ts:317)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Op {
     pub gd: GuardId,
     pub meters: JsMap<GuardId, crate::roomfight::Meter>,
@@ -531,7 +531,7 @@ impl Op {
 impl Default for Op { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/roomfight.ts:319 Op.turn, src/game/roomfight.ts:319)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct OpTurn {
     pub to: GuardId,
     pub at: f64,
@@ -556,7 +556,7 @@ impl OpTurn {
 impl Default for OpTurn { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/roomfight.ts:319 Op.pass, src/game/roomfight.ts:319)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct OpPass {
     pub h: GuardId,
     pub until: f64,
@@ -575,7 +575,7 @@ impl OpPass {
 impl Default for OpPass { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/roomfight.ts:319 Op.kept, src/game/roomfight.ts:319)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct OpKept {
     pub h: GuardId,
     pub track: f64,
@@ -594,7 +594,7 @@ impl OpKept {
 impl Default for OpKept { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/roomfight.ts:322 Op.ov, src/game/roomfight.ts:322)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct OpOv {
     pub face: Option<f64>,
     pub walk: Option<bool>,
@@ -611,7 +611,7 @@ impl OpOv {
 impl Default for OpOv { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/roomfight.ts:324 Op.step, src/game/roomfight.ts:324)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct OpStep {
     pub mine: V3,
     pub goal: Option<V3>,
@@ -636,7 +636,7 @@ impl OpStep {
 impl Default for OpStep { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/roomfight.ts:331 Op.stepBy, src/game/roomfight.ts:331)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct OpStepBy {
     pub by: GuardId,
     pub t: f64,
@@ -655,7 +655,7 @@ impl OpStepBy {
 impl Default for OpStepBy { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/roomfight.ts:333 Op.doorBy, src/game/roomfight.ts:333)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct OpDoorBy {
     pub by: GuardId,
     pub t: f64,
@@ -676,7 +676,7 @@ impl OpDoorBy {
 impl Default for OpDoorBy { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: a union)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub enum OpLineBy {
     Guard(GuardId),
     Player,

@@ -13,6 +13,7 @@
 //!   set(g, man, to, by)        exactly this (his own senses' sum for the tick, a reset)
 //!   set_state(g, man, to, by)  patrol, suspicious, alert, search, dead
 //!   fix(g, man, at, by)        he has a NEW FIX: where he now thinks his man is (None: nowhere)
+//!   foe(g, man, whom, by)      whom he is fighting (None: nobody)
 //!   fix_keep(g, man, at, by)   his fix put back or cleared without being news to him (a man handed back what he had)
 //!
 //! `by` is the writer's module. The body files are moved to these calls by a program
@@ -21,6 +22,7 @@
 //! What this is a step towards: `raise` and `cap` are the only two things most writers ever meant, so the next step
 //! is that they hand over a percept ("told at this place by that man") and this module alone decides what it does
 //! to him. Nothing here changes play.
+use crate::bytes::ToBytes;
 use crate::game::{Game, GuardState};
 use crate::ids::GuardId;
 use crate::m;
@@ -29,7 +31,7 @@ use alloc::format;
 use alloc::string::String;
 
 /// One write that moved him: who, when (the game's clock) and to what.
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, ToBytes)]
 pub struct Mark {
     pub by: &'static str,
     pub t: f64,
@@ -37,7 +39,7 @@ pub struct Mark {
 }
 
 /// The last writers that moved a man's mind. A write that left him where he was is not kept.
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, ToBytes)]
 pub struct Note {
     /// the last write that made him MORE aware
     pub up: Mark,
@@ -48,6 +50,8 @@ pub struct Note {
     pub state_from: Option<GuardState>,
     /// the last write of his fix (`to` is 1 for a new fix, 0 for one kept)
     pub fix: Mark,
+    /// the last change of whom he is fighting (`to` is 1 for a man, 0 for nobody)
+    pub foe: Mark,
 }
 
 fn write(g: &mut Game, gd: GuardId, was: f64, now: f64, by: &'static str) {
@@ -106,6 +110,17 @@ pub fn fix_keep(g: &mut Game, gd: GuardId, at: Option<V3>, by: &'static str) {
     crate::control::state_mut(g).mind.at(gd).fix = Mark { by, t: now, to: 0.0 };
 }
 
+/// HIS MAN: whom he is fighting, or `None`. A burst is at one man: when he has another, or none, the burst he was firing ends, and the next man has to be
+/// aimed at like the first.
+pub fn foe(g: &mut Game, gd: GuardId, to: Option<crate::game::Foe>, by: &'static str) {
+    let was = g.gd[gd].foe;
+    g.gd[gd].foe = to;
+    if was == to { return; }
+    let now = g.time;
+    crate::control::state_mut(g).mind.at(gd).foe = Mark { by, t: now, to: if to.is_some() { 1.0 } else { 0.0 } };
+    if was.is_some() { crate::guards::burst_broken(g, gd); }
+}
+
 /// Why he is as aware as he is, in one line: his awareness and state, and who last raised him, lowered him and
 /// changed his state, with how long ago.
 pub fn why(g: &Game, gd: GuardId) -> String {
@@ -117,6 +132,7 @@ pub fn why(g: &Game, gd: GuardId) -> String {
     if !n.up.by.is_empty() { s.push_str(&format!(" · raised to {:.2} by {} {:.1} s ago", n.up.to, n.up.by, ago(n.up.t))); }
     if !n.down.by.is_empty() { s.push_str(&format!(" · lowered to {:.2} by {} {:.1} s ago", n.down.to, n.down.by, ago(n.down.t))); }
     if !n.fix.by.is_empty() { s.push_str(&format!(" · {} by {} {:.1} s ago", if man.last_known.is_some() { "his fix" } else { "no fix" }, n.fix.by, ago(n.fix.t))); }
+    if !n.foe.by.is_empty() { s.push_str(&format!(" · {} by {} {:.1} s ago", if man.foe.is_some() { "his man" } else { "nobody to fight" }, n.foe.by, ago(n.foe.t))); }
     s
 }
 

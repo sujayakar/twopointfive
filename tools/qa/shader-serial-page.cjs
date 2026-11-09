@@ -47,7 +47,7 @@ const LINE = () => {
   let red = 0;
   try {
     const ctx = await browser.newContext({ viewport: { width: 320, height: 180 }, deviceScaleFactor: 1 });
-    await ctx.addInitScript(() => { window.__testVisible = true; });
+    await ctx.addInitScript(() => { });
     await ctx.addInitScript(LINE);
     const page = await ctx.newPage(); const gpuErrs = [];
     page.on('console', m => { if (m.type() === 'error' && /WebGPU|GPU device|pipeline/i.test(m.text())) gpuErrs.push(m.text().slice(0, 300)); });

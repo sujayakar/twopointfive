@@ -1,6 +1,6 @@
 //! The types of `sim_slabshome`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: SlabNow, src/sim/slabshome.ts:35)
@@ -102,10 +102,12 @@ impl SlabCols {
 impl Default for SlabCols { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: SlabStore, src/sim/slabshome.ts:49)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct SlabStore {
     pub doors: f64,
     pub o: crate::sim_slabshome::SlabStoreO,
+    /// (holds nothing: in no bytes)
+    #[bytes(skip)]
     pub home: crate::Opaque,
     pub b8: f64,
     pub b4: f64,
@@ -127,7 +129,7 @@ impl SlabStore {
 impl Default for SlabStore { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: inline at src/sim/colstore.ts:28 SlabStore.O, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1611)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct SlabStoreO {
     pub door: f64,
     pub t: f64,

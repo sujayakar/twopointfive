@@ -1,10 +1,10 @@
 //! The frames of levels/tut-team.script.ts, written by the skeleton's program from the checker. Never edited by hand: a local a body wants across a yield that is not here is a question for the program.
 #![allow(unused_imports, unused_variables, unused_mut)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (levels/tut-team.script.ts:111-119) the beat 'hold': where it stands, and what lives across a yield
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutTeamHoldFrame {
     /// at: the resume point: 0 before the first step. A state per yield
     pub at: u16,
@@ -13,7 +13,7 @@ pub struct TutTeamHoldFrame {
 }
 
 /// (levels/tut-team.script.ts:124-132) the beat 'cook': where it stands, and what lives across a yield
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutTeamCookFrame {
     /// at: the resume point: 0 before the first step. A state per yield
     pub at: u16,
@@ -22,7 +22,7 @@ pub struct TutTeamCookFrame {
 }
 
 /// (levels/tut-team.script.ts:136-143) the beat 'ambush': where it stands, and what lives across a yield
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutTeamAmbushFrame {
     /// at: the resume point: 0 before the first step. A state per yield
     pub at: u16,
@@ -31,7 +31,7 @@ pub struct TutTeamAmbushFrame {
 }
 
 /// (levels/tut-team.script.ts:144-149) the beat 'pinned': where it stands, and what lives across a yield
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutTeamPinnedFrame {
     /// at: the resume point: 0 before the first step. A state per yield
     pub at: u16,
@@ -46,7 +46,7 @@ pub struct TutTeamPinnedFrame {
 }
 
 /// (levels/tut-team.script.ts:154-168) the beat 'smoke': where it stands, and what lives across a yield
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutTeamSmokeFrame {
     /// at: the resume point: 0 before the first step. A state per yield
     pub at: u16,
@@ -55,21 +55,21 @@ pub struct TutTeamSmokeFrame {
 }
 
 /// (levels/tut-team.script.ts:169-175) the beat 'break': where it stands, and what lives across a yield
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutTeamBreakFrame {
     /// at: the resume point: 0 before the first step. A state per yield
     pub at: u16,
 }
 
 /// (levels/tut-team.script.ts:176-176) the beat 'ordered': where it stands, and what lives across a yield
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutTeamOrderedFrame {
     /// at: the resume point: 0 before the first step. A state per yield
     pub at: u16,
 }
 
 /// (levels/tut-team.script.ts:178-178) the beat 'blind': where it stands, and what lives across a yield
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutTeamBlindFrame {
     /// at: the resume point: 0 before the first step. A state per yield
     pub at: u16,
@@ -78,7 +78,7 @@ pub struct TutTeamBlindFrame {
 }
 
 /// (levels/tut-team.script.ts:181-185) the beat 'linger': where it stands, and what lives across a yield
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutTeamLingerFrame {
     /// at: the resume point: 0 before the first step. A state per yield
     pub at: u16,
@@ -87,7 +87,7 @@ pub struct TutTeamLingerFrame {
 }
 
 /// (levels/tut-team.script.ts:190-205) the beat 'push': where it stands, and what lives across a yield
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutTeamPushFrame {
     /// at: the resume point: 0 before the first step. A state per yield
     pub at: u16,
@@ -104,28 +104,28 @@ pub struct TutTeamPushFrame {
 }
 
 /// (levels/tut-team.script.ts:208-213) the beat 'indoors': where it stands, and what lives across a yield
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutTeamIndoorsFrame {
     /// at: the resume point: 0 before the first step. A state per yield
     pub at: u16,
 }
 
 /// (levels/tut-team.script.ts:216-220) the beat 'house': where it stands, and what lives across a yield
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutTeamHouseFrame {
     /// at: the resume point: 0 before the first step. A state per yield
     pub at: u16,
 }
 
 /// (levels/tut-team.script.ts:221-225) the beat 'out': where it stands, and what lives across a yield
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutTeamOutFrame {
     /// at: the resume point: 0 before the first step. A state per yield
     pub at: u16,
 }
 
 /// (levels/tut-team.script.ts:73-89) the helper generator rake: where it stands, and what lives across a yield
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutTeamRakeHelperFrame {
     /// at: the resume point: 0 before the first step. A state per yield
     pub at: u16,
@@ -160,7 +160,7 @@ pub struct TutTeamRakeHelperFrame {
 }
 
 /// (levels/tut-team.script.ts:91-101) the helper generator harass: where it stands, and what lives across a yield
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutTeamHarassHelperFrame {
     /// at: the resume point: 0 before the first step. A state per yield
     pub at: u16,
@@ -185,7 +185,7 @@ pub struct TutTeamHarassHelperFrame {
 }
 
 /// (levels/tut-team.script.ts:156-161) the helper generator smoke, inside the beat 'smoke': where it stands, and what lives across a yield
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutTeamSmokeHelperFrame {
     /// at: the resume point: 0 before the first step. A state per yield
     pub at: u16,
@@ -196,7 +196,7 @@ pub struct TutTeamSmokeHelperFrame {
 }
 
 /// (levels/tut-team.script.ts) what the define pass names and a beat reads: the script's and its programs' locals. Its closures are your private fns: block, squad, inBunk, inKitchen, inYard, pick
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutTeamVars {
     pub rifle: Option<crate::director::LoadoutRef>,
     pub yaw: f64,
@@ -206,7 +206,7 @@ pub struct TutTeamVars {
 }
 
 /// an inline shape of the script
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutTeamZone {
     pub lo: [f64; 3],
     pub hi: [f64; 3],
@@ -215,7 +215,7 @@ pub struct TutTeamZone {
 }
 
 /// an inline shape of the script
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutTeamRakeHelperO {
     pub rounds: [f64; 2],
     pub gap: [f64; 2],
@@ -223,7 +223,7 @@ pub struct TutTeamRakeHelperO {
 }
 
 /// an inline shape of the script
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, ToBytes)]
 pub struct TutTeamHarassHelperO {
     pub rounds: [f64; 2],
     pub gap: [f64; 2],

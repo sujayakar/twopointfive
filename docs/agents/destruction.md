@@ -538,7 +538,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `game/particleFx.ts`, out events on every host (`engine.particlesOn`, = `settings.gpuParticles` ∧ attached, is whether the picture draws them): impactFx by material,
   muzzleSparksFx, casingFx (+ the CPU-scheduled `casingTink`), bangFx, kickDustFx, clackFx, the tracers' `sparkSink`. `?noparticles`, Tab ▸ Renderer —
   particles, `__particles` {stats, params, on, test(kind, at), emit, clear}. QA: `probes.ts particles` (queue / sites / off / determinism).
-  The fifth kind `sheet` (id 4, LONG ring; `game/sheetModel.ts` = the CPU REFERENCE of its equations, keep the two in step — `probes.ts destruction-sheet`
+  The fifth kind `sheet` (id 4, LONG ring; `render/sheetModel.ts` = the CPU REFERENCE of its equations, keep the two in step — `probes.ts destruction-sheet`
   compares the constants): a leaf of office paper as a LIT two-sided oriented quad (width `size` × `aspect`; the struct's 5th row = octahedral normal + f16
   angular velocity + aspect, `pOctEncode/Decode`, `sheetFrame`), gravity + drag through the sheet scaled by airspeed (a gliding leaf gets lift) + flutter torque
   off the offset centre of pressure (`sheetAir`), traceClosest lays it flat on floors / desks and puts it to sleep, walls let it slide; `sheetLight` = one pass
@@ -1137,9 +1137,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   of ours behind the wall is blind as one of ours whatever the team's size (on a team of two he took a defender's 8–4 s and its fold: the claim nobody had
   built — the WALLSHOT bullet's 'one of a team of TWO' sentence is true only with this off). The player goes down as a round puts him down (`hitPlayer`, his
   one hit): never in god mode, never the tour's scripted player; a man with `Guard.god` is passed over. Past `nearM` the safety radius is as it was. A wall
-  that held is still a wall to the men behind it. WHO BLOWS IT: the player's trigger and his order's release — and a plan's own clock
-  (`host/kitView.ts`), which is no press of his: that caller passes `pressed` false and its blast is the blast as it was (its own gate waits for the charge's
-  side to be clear on a wall way and asks nothing of who is behind the wall: the plan's owner's to decide). With the safety radius on (the page) the
+  that held is still a wall to the men behind it. WHO BLOWS IT: the player's trigger and his order's release. With the safety radius on (the page) the
   trigger's row names who is too close and who is behind the wall before the press. On the debrief a man killed at the charge is a kill by 'a wall charge'
   (`chronicle.ts chronDown`, told by the line); the knock behind the wall is filed as it always was (a knockout, a 'takedown' on the timeline: not mended
   here). The lead killed at a wall that held does not say 'no way through.': whoever of his is left does. THE DOOR CHARGE IS UNTOUCHED (its own side

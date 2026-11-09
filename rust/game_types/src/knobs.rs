@@ -1,10 +1,10 @@
 //! The knob tables, at THE PAGE'S values: the numbers the page opened with (page-values), every yes/no row from port-list.json. Written by the skeleton's program.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: inline at src/game/aim.ts:31 AIM, src/game/aim.ts:31)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AimK {
     pub guard: crate::knobs::AimKGuard,
     pub player: crate::knobs::AimKPlayer,
@@ -21,7 +21,7 @@ impl AimK {
 impl Default for AimK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/aim.ts:32 AimK.guard, src/game/aim.ts:32)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AimKGuard {
     pub settle_secs: f64,
     pub range_ref: f64,
@@ -72,7 +72,7 @@ impl AimKGuard {
 impl Default for AimKGuard { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/aim.ts:64 AimK.player, src/game/aim.ts:64)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AimKPlayer {
     pub settle_secs: f64,
     pub range_ref: f64,
@@ -127,7 +127,7 @@ impl AimKPlayer {
 impl Default for AimKPlayer { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/aim.ts:95 TRAINED, src/game/aim.ts:95)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct TrainedK {
     pub settle_k: f64,
     pub spread_k: f64,
@@ -146,7 +146,7 @@ impl TrainedK {
 impl Default for TrainedK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/guards.ts:86 AI_TUNE, src/game/guards.ts:86)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AiTuneK {
     pub motion_acuity: bool,
 }
@@ -161,7 +161,7 @@ impl AiTuneK {
 impl Default for AiTuneK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/guards.ts:367 BODY_LIGHT, src/game/guards.ts:367)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct BodyLightK {
     pub lit: f64,
     pub lit_near: f64,
@@ -184,7 +184,7 @@ impl BodyLightK {
 impl Default for BodyLightK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/guards.ts:1263 GUARD_EYE, src/game/guards.ts:1263)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct GuardEyeK {
     pub range: f64,
     pub half_deg: f64,
@@ -217,7 +217,7 @@ impl GuardEyeK {
 impl Default for GuardEyeK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/needs.ts:57 NEEDS, src/game/needs.ts:57)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct NeedsK {
     pub rate_k: f64,
     pub max_away: f64,
@@ -262,7 +262,7 @@ impl NeedsK {
 impl Default for NeedsK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/whistle.ts:31 WHISTLE, src/game/whistle.ts:31)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct WhistleK {
     pub level: f64,
     pub reach_k: f64,
@@ -297,7 +297,7 @@ impl WhistleK {
 impl Default for WhistleK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/wet.ts:49 WET, src/game/wet.ts:31)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct WetK {
     pub soak_per_sec: f64,
     pub dry_per_sec: f64,
@@ -340,7 +340,7 @@ impl WetK {
 impl Default for WetK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/wind.ts:42 WIND, src/game/wind.ts:42)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct WindK {
     pub def: f64,
     pub vent_k: f64,
@@ -389,7 +389,7 @@ impl WindK {
 impl Default for WindK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/civilians.ts:81 CIV, src/game/civilians.ts:81)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct CivK {
     pub eye: crate::knobs::CivKEye,
     pub eye_busy: crate::knobs::CivKEyeBusy,
@@ -474,7 +474,7 @@ impl CivK {
 impl Default for CivK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/civilians.ts:83 CivK.eye, src/game/civilians.ts:83)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct CivKEye {
     pub range: f64,
     pub half_deg: f64,
@@ -495,7 +495,7 @@ impl CivKEye {
 impl Default for CivKEye { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/civilians.ts:84 CivK.eyeBusy, src/game/civilians.ts:84)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct CivKEyeBusy {
     pub range: f64,
     pub half_deg: f64,
@@ -516,7 +516,7 @@ impl CivKEyeBusy {
 impl Default for CivKEyeBusy { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/civilians.ts:85 CivK.eyeAlarmed, src/game/civilians.ts:85)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct CivKEyeAlarmed {
     pub range: f64,
     pub half_deg: f64,
@@ -537,7 +537,7 @@ impl CivKEyeAlarmed {
 impl Default for CivKEyeAlarmed { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/destruction.ts:66 CHAOS, src/game/destruction.ts:66)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ChaosK {
     pub def: f64,
     pub heat_tau: f64,
@@ -606,7 +606,7 @@ impl ChaosK {
 impl Default for ChaosK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/destruction.ts:78 ChaosK.puff, src/game/destruction.ts:78)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ChaosKPuff {
     pub radius: f64,
     pub density: f64,
@@ -633,7 +633,7 @@ impl ChaosKPuff {
 impl Default for ChaosKPuff { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/destruction.ts:79 ChaosK.tile, src/game/destruction.ts:79)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ChaosKTile {
     pub half: V3,
     pub albedo: V3,
@@ -650,7 +650,7 @@ impl ChaosKTile {
 impl Default for ChaosKTile { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/destruction.ts:84 ChaosK.imp, src/game/destruction.ts:84)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ChaosKImp {
     pub bang: crate::knobs::ChaosKImpBang,
     pub impact: crate::knobs::ChaosKImpImpact,
@@ -671,7 +671,7 @@ impl ChaosKImp {
 impl Default for ChaosKImp { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/destruction.ts:85 ChaosKImp.bang, src/game/destruction.ts:85)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ChaosKImpBang {
     pub radius: f64,
     pub strength: f64,
@@ -690,7 +690,7 @@ impl ChaosKImpBang {
 impl Default for ChaosKImpBang { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/destruction.ts:86 ChaosKImp.impact, src/game/destruction.ts:86)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ChaosKImpImpact {
     pub radius: f64,
     pub strength: f64,
@@ -713,7 +713,7 @@ impl ChaosKImpImpact {
 impl Default for ChaosKImpImpact { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/destruction.ts:87 ChaosKImp.thud, src/game/destruction.ts:87)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ChaosKImpThud {
     pub radius: f64,
     pub strength: f64,
@@ -734,7 +734,7 @@ impl ChaosKImpThud {
 impl Default for ChaosKImpThud { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/destruction.ts:92 ChaosK.loud, src/game/destruction.ts:92)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ChaosKLoud {
     pub fixture_hit_m: f64,
     pub fixture_blast_m: f64,
@@ -769,7 +769,7 @@ impl ChaosKLoud {
 impl Default for ChaosKLoud { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/destruction.ts:121 ChaosK.pall, src/game/destruction.ts:121)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ChaosKPall {
     pub on: bool,
     pub solver: bool,
@@ -804,7 +804,7 @@ impl ChaosKPall {
 impl Default for ChaosKPall { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/destruction.ts:123 ChaosKPall.wall, src/game/destruction.ts:123)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ChaosKPallWall {
     pub near: f64,
     pub far: f64,
@@ -847,7 +847,7 @@ impl ChaosKPallWall {
 impl Default for ChaosKPallWall { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/destruction.ts:124 ChaosKPall.burst, src/game/destruction.ts:124)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ChaosKPallBurst {
     pub ring: f64,
     pub core_gain: f64,
@@ -890,7 +890,7 @@ impl ChaosKPallBurst {
 impl Default for ChaosKPallBurst { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/destruction.ts:132 ChaosK.mess, src/game/destruction.ts:132)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ChaosKMess {
     pub on: bool,
     pub stand_y: f64,
@@ -927,7 +927,7 @@ impl ChaosKMess {
 impl Default for ChaosKMess { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/destruction.ts:138 ChaosKMess.burst, src/game/destruction.ts:138)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ChaosKMessBurst {
     pub core: f64,
     pub lobes: f64,
@@ -950,7 +950,7 @@ impl ChaosKMessBurst {
 impl Default for ChaosKMessBurst { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/destruction.ts:140 ChaosKMess.wall, src/game/destruction.ts:140)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ChaosKMessWall {
     pub out: f64,
     pub near: crate::knobs::ChaosKMessWallNear,
@@ -969,7 +969,7 @@ impl ChaosKMessWall {
 impl Default for ChaosKMessWall { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/destruction.ts:140 ChaosKMessWall.near, src/game/destruction.ts:140)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ChaosKMessWallNear {
     pub core: f64,
     pub lobes: f64,
@@ -992,7 +992,7 @@ impl ChaosKMessWallNear {
 impl Default for ChaosKMessWallNear { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/destruction.ts:140 ChaosKMessWall.far, src/game/destruction.ts:140)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ChaosKMessWallFar {
     pub core: f64,
     pub lobes: f64,
@@ -1015,7 +1015,7 @@ impl ChaosKMessWallFar {
 impl Default for ChaosKMessWallFar { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/destruction.ts:142 ChaosKMess.foot, src/game/destruction.ts:142)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ChaosKMessFoot {
     pub out: f64,
     pub radius: f64,
@@ -1036,7 +1036,7 @@ impl ChaosKMessFoot {
 impl Default for ChaosKMessFoot { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/destruction.ts:144 ChaosKMess.top, src/game/destruction.ts:144)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ChaosKMessTop {
     pub lo: f64,
     pub hi: f64,
@@ -1055,7 +1055,7 @@ impl ChaosKMessTop {
 impl Default for ChaosKMessTop { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/destruction.ts:146 ChaosKMess.rubble, src/game/destruction.ts:146)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ChaosKMessRubble {
     pub least: f64,
     pub grow: f64,
@@ -1080,7 +1080,7 @@ impl ChaosKMessRubble {
 impl Default for ChaosKMessRubble { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/launcher.ts:28 RING, src/game/launcher.ts:28)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct RingK {
     pub speed: f64,
     pub gravity: f64,
@@ -1133,7 +1133,7 @@ impl RingK {
 impl Default for RingK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/weapons.ts:337 LAUNCHER, src/game/weapons.ts:337)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct LauncherK {
     pub rings: f64,
     pub cd: f64,
@@ -1150,7 +1150,7 @@ impl LauncherK {
 impl Default for LauncherK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/he40.ts:27 HE40, src/game/he40.ts:27)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct He40K {
     pub speed: f64,
     pub gravity: f64,
@@ -1195,7 +1195,7 @@ impl He40K {
 impl Default for He40K { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/weapons.ts:340 LAUNCHER40, src/game/weapons.ts:340)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Launcher40K {
     pub rounds: f64,
     pub cd: f64,
@@ -1212,7 +1212,7 @@ impl Launcher40K {
 impl Default for Launcher40K { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/frag.ts:75 FRAG, src/game/frag.ts:75)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct FragK {
     pub on: bool,
     pub issue: f64,
@@ -1355,7 +1355,7 @@ impl FragK {
 impl Default for FragK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/shotgun.ts:52 SHOTGUN, src/game/shotgun.ts:52)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct ShotgunK {
     pub on: bool,
     pub spots: Vec<[f64; 2]>,
@@ -1394,7 +1394,7 @@ impl ShotgunK {
 impl Default for ShotgunK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/glass.ts:25 GLASS, src/game/glass.ts:25)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct GlassK {
     pub hear_m: f64,
     pub hear_level: f64,
@@ -1427,7 +1427,7 @@ impl GlassK {
 impl Default for GlassK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/glass.ts:44 GLASSFX, src/game/glass.ts:44)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct GlassfxK {
     pub on: bool,
 }
@@ -1442,7 +1442,7 @@ impl GlassfxK {
 impl Default for GlassfxK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/glassbreak.ts:56 GLASSBREAK, src/game/glassbreak.ts:56)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct GlassbreakK {
     pub max_sites: f64,
     pub break_e: crate::knobs::GlassbreakKBreakE,
@@ -1545,7 +1545,7 @@ impl GlassbreakK {
 impl Default for GlassbreakK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/glassbreak.ts:59 GlassbreakK.breakE, src/game/glassbreak.ts:59)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct GlassbreakKBreakE {
     pub annealed: f64,
     pub tempered: f64,
@@ -1562,7 +1562,7 @@ impl GlassbreakKBreakE {
 impl Default for GlassbreakKBreakE { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum GlassbreakKRhoKey {
     Annealed,
     Laminated,
@@ -1577,7 +1577,7 @@ impl GlassbreakKRhoKey {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum GlassbreakKRadialsKey {
     Annealed,
     Laminated,
@@ -1592,7 +1592,7 @@ impl GlassbreakKRadialsKey {
 }
 
 /// (TypeScript: inline at src/game/glassbreak.ts:78 GlassbreakK.grip, src/game/glassbreak.ts:78)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct GlassbreakKGrip {
     pub side: f64,
     pub top: f64,
@@ -1611,7 +1611,7 @@ impl GlassbreakKGrip {
 impl Default for GlassbreakKGrip { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/glasspen.ts:61 GLASSPEN, src/game/glasspen.ts:61)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct GlasspenK {
     pub on: bool,
     pub energy: JsMap<String, f64>,
@@ -1668,7 +1668,7 @@ impl GlasspenK {
 impl Default for GlasspenK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/shards.ts:66 SHARDS, src/game/shards.ts:66)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct ShardsK {
     pub mid_per_m2: f64,
     pub mid_min: f64,
@@ -1805,7 +1805,7 @@ impl ShardsK {
 impl Default for ShardsK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/shards.ts:103 ShardsK.contact, src/game/shards.ts:103)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ShardsKContact {
     pub keep_floor: f64,
     pub keep_wall: f64,
@@ -1824,7 +1824,7 @@ impl ShardsKContact {
 impl Default for ShardsKContact { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/dialogue.ts:1259 TALK_TUNE, src/game/dialogue.ts:1259)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct TalkTuneK {
     pub scripts: bool,
 }
@@ -1839,7 +1839,7 @@ impl TalkTuneK {
 impl Default for TalkTuneK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:95 HOLD, src/game/character.ts:95)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct HoldK {
     pub drop_gun: bool,
     pub regrab: f64,
@@ -1954,7 +1954,7 @@ impl HoldK {
 impl Default for HoldK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:109 HoldK.yank, src/game/character.ts:109)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct HoldKYank {
     pub arch: f64,
     pub sink: f64,
@@ -1977,7 +1977,7 @@ impl HoldKYank {
 impl Default for HoldKYank { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:115 HoldK.lunge, src/game/character.ts:115)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct HoldKLunge {
     pub dip: f64,
     pub back: f64,
@@ -1996,7 +1996,7 @@ impl HoldKLunge {
 impl Default for HoldKLunge { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:115 HoldK.sway, src/game/character.ts:115)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct HoldKSway {
     pub m: f64,
     pub secs: f64,
@@ -2021,7 +2021,7 @@ impl HoldKSway {
 impl Default for HoldKSway { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:115 HoldK.apart, src/game/character.ts:115)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct HoldKApart {
     pub side: f64,
     pub tip: f64,
@@ -2038,7 +2038,7 @@ impl HoldKApart {
 impl Default for HoldKApart { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:135 HoldK.catch, src/game/character.ts:135)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct HoldKCatch {
     pub via: V3,
     pub over: V3,
@@ -2091,7 +2091,7 @@ impl HoldKCatch {
 impl Default for HoldKCatch { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:136 HoldKCatch.jolt, src/game/character.ts:136)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct HoldKCatchJolt {
     pub t: [f64; 4],
     pub fwd: f64,
@@ -2114,7 +2114,7 @@ impl HoldKCatchJolt {
 impl Default for HoldKCatchJolt { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:136 HoldKCatch.fling, src/game/character.ts:136)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct HoldKCatchFling {
     pub t: [f64; 2],
     pub land: [f64; 2],
@@ -2137,7 +2137,7 @@ impl HoldKCatchFling {
 impl Default for HoldKCatchFling { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:157 HoldK.hit, src/game/character.ts:157)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct HoldKHit {
     pub t: [f64; 4],
     pub hips: f64,
@@ -2164,7 +2164,7 @@ impl HoldKHit {
 impl Default for HoldKHit { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:172 HoldK.first, src/game/character.ts:172)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct HoldKFirst {
     pub take: f64,
     pub drop: f64,
@@ -2183,7 +2183,7 @@ impl HoldKFirst {
 impl Default for HoldKFirst { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:197 HoldK.strip, src/game/character.ts:197)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct HoldKStrip {
     pub take: f64,
     pub out: f64,
@@ -2238,7 +2238,7 @@ impl HoldKStrip {
 impl Default for HoldKStrip { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:214 HoldK.secs, src/game/character.ts:214)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct HoldKSecs {
     pub grab: f64,
     pub choke_hold: f64,
@@ -2263,7 +2263,7 @@ impl HoldKSecs {
 impl Default for HoldKSecs { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:228 HoldK.knife, src/game/character.ts:228)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct HoldKKnife {
     pub hand: V3,
     pub blade: V3,
@@ -2298,7 +2298,7 @@ impl HoldKKnife {
 impl Default for HoldKKnife { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:253 HoldK.lower, src/game/character.ts:253)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct HoldKLower {
     pub from: f64,
     pub by: f64,
@@ -2339,7 +2339,7 @@ impl HoldKLower {
 impl Default for HoldKLower { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:268 HoldK.kill, src/game/character.ts:268)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct HoldKKill {
     pub wind: f64,
     pub hit: f64,
@@ -2408,7 +2408,7 @@ impl HoldKKill {
 impl Default for HoldKKill { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:282 HoldK.beats, src/game/character.ts:282)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct HoldKBeats {
     pub clamp: [f64; 2],
     pub off: [f64; 2],
@@ -2435,7 +2435,7 @@ impl HoldKBeats {
 impl Default for HoldKBeats { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:283 HoldKBeats.lower, src/game/character.ts:283)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct HoldKBeatsLower {
     pub from: f64,
     pub by: f64,
@@ -2476,7 +2476,7 @@ impl HoldKBeatsLower {
 impl Default for HoldKBeatsLower { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:295 HoldK.haul, src/game/character.ts:295)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct HoldKHaul {
     pub in_: [f64; 2],
     pub out: [f64; 2],
@@ -2515,7 +2515,7 @@ impl HoldKHaul {
 impl Default for HoldKHaul { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:298 HoldK.breath, src/game/character.ts:298)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct HoldKBreath {
     pub hz: f64,
     pub pitch: f64,
@@ -2534,7 +2534,7 @@ impl HoldKBreath {
 impl Default for HoldKBreath { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:301 HoldK.struggle, src/game/character.ts:301)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct HoldKStruggle {
     pub rise: f64,
     pub fade_from: f64,
@@ -2565,7 +2565,7 @@ impl HoldKStruggle {
 impl Default for HoldKStruggle { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:307 HoldK.gun, src/game/character.ts:307)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct HoldKGun {
     pub hand: V3,
     pub bore: V3,
@@ -2630,7 +2630,7 @@ impl HoldKGun {
 impl Default for HoldKGun { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:322 HoldKGun.duck, src/game/character.ts:322)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct HoldKGunDuck {
     pub yaw: f64,
     pub roll: f64,
@@ -2653,7 +2653,7 @@ impl HoldKGunDuck {
 impl Default for HoldKGunDuck { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:323 HoldKGun.knock, src/game/character.ts:323)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct HoldKGunKnock {
     pub yaw: f64,
     pub roll: f64,
@@ -2672,7 +2672,7 @@ impl HoldKGunKnock {
 impl Default for HoldKGunKnock { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/suppression.ts:26 SUPPRESSION, src/game/suppression.ts:26)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SuppressionK {
     pub near_r: f64,
     pub w_near: f64,
@@ -2753,7 +2753,7 @@ impl SuppressionK {
 impl Default for SuppressionK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/player.ts:227 RIFLE_SPREAD, src/game/player.ts:227)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct RifleSpreadK {
     pub still: f64,
     pub moving: f64,
@@ -2776,7 +2776,7 @@ impl RifleSpreadK {
 impl Default for RifleSpreadK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/player.ts:243 FOOTFALL, src/game/player.ts:243)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct FootfallK {
     pub once: bool,
     pub travel: f64,
@@ -2797,7 +2797,7 @@ impl FootfallK {
 impl Default for FootfallK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/player.ts:207 TWOGEARS, src/game/player.ts:207)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct TwogearsK {
     pub on: bool,
     pub crouch: f64,
@@ -2814,7 +2814,7 @@ impl TwogearsK {
 impl Default for TwogearsK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/player.ts:215 CROUCHRUN, src/game/player.ts:215)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct CrouchrunK {
     pub on: bool,
     pub pace: f64,
@@ -2833,7 +2833,7 @@ impl CrouchrunK {
 impl Default for CrouchrunK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:693 RUNREADY, src/game/character.ts:693)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct RunreadyK {
     pub on: bool,
     pub fwd: f64,
@@ -2856,7 +2856,7 @@ impl RunreadyK {
 impl Default for RunreadyK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:704 RUNARMS, src/game/character.ts:704)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct RunarmsK {
     pub on: bool,
     pub at: f64,
@@ -2887,7 +2887,7 @@ impl RunarmsK {
 impl Default for RunarmsK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/samlook.ts:28 SAMLOOK, src/game/samlook.ts:28)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct SamlookK {
     pub on: bool,
     pub near_m: f64,
@@ -2922,7 +2922,7 @@ impl SamlookK {
 impl Default for SamlookK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1007 DASH, src/game/character.ts:1007)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct DashK {
     pub stride: f64,
     pub drop: f64,
@@ -2943,7 +2943,7 @@ impl DashK {
 impl Default for DashK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:999 WATCH, src/game/character.ts:999)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct WatchK {
     pub yaw: f64,
     pub down: f64,
@@ -2986,7 +2986,7 @@ impl WatchK {
 impl Default for WatchK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/stalk.ts:33 STALK, src/game/stalk.ts:33)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct StalkK {
     pub on: bool,
     pub only: bool,
@@ -3147,7 +3147,7 @@ impl StalkK {
 impl Default for StalkK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/devices.ts:56 OVERHEAR, src/game/devices.ts:56)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct OverhearK {
     pub path_m: f64,
     pub carry: f64,
@@ -3164,7 +3164,7 @@ impl OverhearK {
 impl Default for OverhearK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/chronicle.ts:351 SCORE, src/game/chronicle.ts:351)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ScoreK {
     pub seen: f64,
     pub seen_up: f64,
@@ -3223,7 +3223,7 @@ impl ScoreK {
 impl Default for ScoreK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/chronicle.ts:402 BADGE, src/game/chronicle.ts:402)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct BadgeK {
     pub lights_out_n: f64,
     pub speedrun_secs: f64,
@@ -3240,7 +3240,7 @@ impl BadgeK {
 impl Default for BadgeK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/savestate.ts:319 CKPT, src/game/savestate.ts:319)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct CkptK {
     pub quiet_secs: f64,
     pub aware_max: f64,
@@ -3273,7 +3273,7 @@ impl CkptK {
 impl Default for CkptK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/fogofwar.ts:137 FOG, src/game/fogofwar.ts:137)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct FogK {
     pub dim: f64,
     pub desat: f64,
@@ -3370,7 +3370,7 @@ impl FogK {
 impl Default for FogK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:734 MOVES, src/game/character.ts:734)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct MovesK {
     pub on: f64,
     pub recoil: f64,
@@ -3417,7 +3417,7 @@ impl MovesK {
 impl Default for MovesK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:915 MV, src/game/character.ts:915)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct MvK {
     pub recoil: crate::knobs::MvKRecoil,
     pub flinch: crate::knobs::MvKFlinch,
@@ -3444,7 +3444,7 @@ impl MvK {
 impl Default for MvK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:916 MvK.recoil, src/game/character.ts:916)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct MvKRecoil {
     pub back: [f64; 2],
     pub back_tau: [f64; 2],
@@ -3475,7 +3475,7 @@ impl MvKRecoil {
 impl Default for MvKRecoil { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:927 MvK.flinch, src/game/character.ts:927)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct MvKFlinch {
     pub amp: [f64; 2],
     pub dur: [f64; 2],
@@ -3502,7 +3502,7 @@ impl MvKFlinch {
 impl Default for MvKFlinch { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:928 MvK.hit, src/game/character.ts:928)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct MvKHit {
     pub dur: f64,
     pub pitch: f64,
@@ -3527,7 +3527,7 @@ impl MvKHit {
 impl Default for MvKHit { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:929 MvK.dazzle, src/game/character.ts:929)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct MvKDazzle {
     pub amp: [f64; 2],
     pub hunch: f64,
@@ -3574,7 +3574,7 @@ impl MvKDazzle {
 impl Default for MvKDazzle { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:931 MvK.gait, src/game/character.ts:931)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct MvKGait {
     pub drop: f64,
     pub aim_drop: f64,
@@ -3609,7 +3609,7 @@ impl MvKGait {
 impl Default for MvKGait { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:943 MvK.snap, src/game/character.ts:943)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct MvKSnap {
     pub in_: f64,
     pub ease: f64,
@@ -3630,7 +3630,7 @@ impl MvKSnap {
 impl Default for MvKSnap { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:955 MvK.steady, src/game/character.ts:955)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct MvKSteady {
     pub roll: f64,
     pub sway: f64,
@@ -3663,7 +3663,7 @@ impl MvKSteady {
 impl Default for MvKSteady { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:886 TURN, src/game/character.ts:886)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct TurnK {
     pub body_share: f64,
     pub green: f64,
@@ -3696,7 +3696,7 @@ impl TurnK {
 impl Default for TurnK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/doorpath.ts:37 DOORPATH, src/game/doorpath.ts:37)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct DoorpathK {
     pub on: bool,
     pub at: f64,
@@ -3739,7 +3739,7 @@ impl DoorpathK {
 impl Default for DoorpathK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/wallbreak.ts:61 WALLS, src/game/wallbreak.ts:61)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct WallsK {
     pub wall_max_thick: f64,
     pub wall_min_top: f64,
@@ -3790,7 +3790,7 @@ impl WallsK {
 impl Default for WallsK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/wallbreak.ts:75 WallsK.blast, src/game/wallbreak.ts:75)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct WallsKBlast {
     pub radius: f64,
     pub hole_k: f64,
@@ -3817,7 +3817,7 @@ impl WallsKBlast {
 impl Default for WallsKBlast { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/wallbreak.ts:79 WallsK.hung, src/game/wallbreak.ts:79)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct WallsKHung {
     pub deep: f64,
     pub long: f64,
@@ -3836,7 +3836,7 @@ impl WallsKHung {
 impl Default for WallsKHung { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/wallcharge.ts:79 WALLCHARGE, src/game/wallcharge.ts:79)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct WallchargeK {
     pub on: bool,
     pub menu: crate::knobs::WallchargeKMenu,
@@ -3973,7 +3973,7 @@ impl WallchargeK {
 impl Default for WallchargeK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum WallchargeKMenu {
     Page,
     Direct,
@@ -3988,7 +3988,7 @@ impl WallchargeKMenu {
 }
 
 /// (TypeScript: inline at src/game/wallcharge.ts:225 WALLSHOT, src/game/wallcharge.ts:225)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct WallshotK {
     pub on: bool,
     pub pall: f64,
@@ -4013,7 +4013,7 @@ impl WallshotK {
 impl Default for WallshotK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/wallcharge.ts:240 WALLKILL, src/game/wallcharge.ts:240)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct WallkillK {
     pub on: bool,
     pub near_m: f64,
@@ -4030,7 +4030,7 @@ impl WallkillK {
 impl Default for WallkillK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:403 HARDBREATH, src/game/character.ts:403)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct HardbreathK {
     pub on: bool,
     pub chest_amp: f64,
@@ -4069,7 +4069,7 @@ impl HardbreathK {
 impl Default for HardbreathK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/props.ts:40 CASTOR, src/game/props.ts:40)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct CastorK {
     pub on: bool,
     pub decel: f64,
@@ -4094,7 +4094,7 @@ impl CastorK {
 impl Default for CastorK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/wallreact.ts:52 WALLREACT, src/game/wallreact.ts:52)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct WallreactK {
     pub on: bool,
     pub see_m: f64,
@@ -4163,7 +4163,7 @@ impl WallreactK {
 impl Default for WallreactK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/coverfire.ts:52 COVERFIRE, src/game/coverfire.ts:52)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct CoverfireK {
     pub on: bool,
     pub stale_secs: f64,
@@ -4228,7 +4228,7 @@ impl CoverfireK {
 impl Default for CoverfireK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/destructionSwitch.ts:8 FURNBLAST, src/game/destructionSwitch.ts:8)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct FurnblastK {
     pub on: bool,
 }
@@ -4243,7 +4243,7 @@ impl FurnblastK {
 impl Default for FurnblastK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/doors.ts:31 DOORWAY, src/game/doors.ts:31)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct DoorwayK {
     pub one_way: bool,
     pub exits_out: bool,
@@ -4270,7 +4270,7 @@ impl DoorwayK {
 impl Default for DoorwayK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/doorblast.ts:43 DOORBLAST, src/game/doorblast.ts:43)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct DoorblastK {
     pub on: bool,
     pub tear_m: crate::knobs::DoorblastKTearM,
@@ -4311,7 +4311,7 @@ impl DoorblastK {
 impl Default for DoorblastK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/doorblast.ts:50 DoorblastK.tearM, src/game/doorblast.ts:50)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct DoorblastKTearM {
     pub stun: f64,
     pub frag: f64,
@@ -4328,7 +4328,7 @@ impl DoorblastKTearM {
 impl Default for DoorblastKTearM { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/doorblast.ts:90 DOORSHOT, src/game/doorblast.ts:90)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct DoorshotK {
     pub on: bool,
     pub toll: f64,
@@ -4377,7 +4377,7 @@ impl DoorshotK {
 impl Default for DoorshotK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/doors.ts:175 DOORTHROW, src/game/doors.ts:175)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct DoorthrowK {
     pub on: bool,
     pub push_secs: f64,
@@ -4416,7 +4416,7 @@ impl DoorthrowK {
 impl Default for DoorthrowK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/winbars.ts:42 WINBARS, src/game/winbars.ts:42)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct WinbarsK {
     pub on: bool,
     pub per_round: f64,
@@ -4453,7 +4453,7 @@ impl WinbarsK {
 impl Default for WinbarsK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/opening.ts:21 OPENING, src/game/opening.ts:21)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct OpeningK {
     pub on: bool,
     pub clear_m: f64,
@@ -4472,7 +4472,7 @@ impl OpeningK {
 impl Default for OpeningK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/doors.ts:147 DOORSTAY, src/game/doors.ts:147)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct DoorstayK {
     pub on: bool,
 }
@@ -4487,7 +4487,7 @@ impl DoorstayK {
 impl Default for DoorstayK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/handleside.ts:32 HANDLE, src/game/handleside.ts:32)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct HandleK {
     pub on: bool,
     pub tools: bool,
@@ -4554,7 +4554,7 @@ impl HandleK {
 impl Default for HandleK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/doorway.ts:36 DOORMANNERS, src/game/doorway.ts:36)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct DoormannersK {
     pub on: bool,
     pub stand: bool,
@@ -4693,7 +4693,7 @@ impl DoormannersK {
 impl Default for DoormannersK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/breakTable.ts:93 BREAKS, src/game/breakTable.ts:93)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct BreaksK {
     pub share: crate::knobs::BreaksKShare,
     pub refuse_chips: [f64; 2],
@@ -4744,7 +4744,7 @@ impl BreaksK {
 impl Default for BreaksK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/breakTable.ts:94 BreaksK.share, src/game/breakTable.ts:94)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct BreaksKShare {
     pub big: crate::knobs::BreaksKShareBig,
 }
@@ -4759,7 +4759,7 @@ impl BreaksKShare {
 impl Default for BreaksKShare { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/breakTable.ts:94 BreaksKShare.big, src/game/breakTable.ts:94)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct BreaksKShareBig {
     pub thrown: f64,
     pub heap: f64,
@@ -4778,7 +4778,7 @@ impl BreaksKShareBig {
 impl Default for BreaksKShareBig { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/breakTable.ts:107 BreaksK.heap, src/game/breakTable.ts:107)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct BreaksKHeap {
     pub span: [f64; 2],
     pub out: [f64; 2],
@@ -4797,7 +4797,7 @@ impl BreaksKHeap {
 impl Default for BreaksKHeap { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/breakTable.ts:119 BreaksK.kink, src/game/breakTable.ts:119)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct BreaksKKink {
     pub deg: [f64; 2],
     pub skew: f64,
@@ -4820,7 +4820,7 @@ impl BreaksKKink {
 impl Default for BreaksKKink { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/breakTable.ts:124 BreaksK.head, src/game/breakTable.ts:124)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct BreaksKHead {
     pub on: bool,
     pub from: f64,
@@ -4847,7 +4847,7 @@ impl BreaksKHead {
 impl Default for BreaksKHead { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/breakTable.ts:129 BreaksK.steel, src/game/breakTable.ts:129)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct BreaksKSteel {
     pub sheet: f64,
     pub kink: [f64; 2],
@@ -4876,7 +4876,7 @@ impl BreaksKSteel {
 impl Default for BreaksKSteel { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/breakTable.ts:132 BreaksK.stud, src/game/breakTable.ts:132)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct BreaksKStud {
     pub half: f64,
     pub depth_k: f64,
@@ -4903,7 +4903,7 @@ impl BreaksKStud {
 impl Default for BreaksKStud { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/furnblast.ts:56 FURN, src/game/furnblast.ts:56)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct FurnK {
     pub k: JsMap<crate::furnblast::BlastSource, f64>,
     pub fling: JsMap<crate::furnblast::BlastSource, f64>,
@@ -4948,7 +4948,7 @@ impl FurnK {
 impl Default for FurnK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/furnblast.ts:83 FurnK.mouth, src/game/furnblast.ts:83)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct FurnKMouth {
     pub on: bool,
     pub depth: f64,
@@ -4977,7 +4977,7 @@ impl FurnKMouth {
 impl Default for FurnKMouth { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/furnblast.ts:88 FurnK.hung, src/game/furnblast.ts:88)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct FurnKHung {
     pub len: f64,
     pub max: f64,
@@ -5016,7 +5016,7 @@ impl FurnKHung {
 impl Default for FurnKHung { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/furnblast.ts:90 FurnK.root, src/game/furnblast.ts:90)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct FurnKRoot {
     pub min_top: f64,
     pub max_top: f64,
@@ -5039,7 +5039,7 @@ impl FurnKRoot {
 impl Default for FurnKRoot { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/furnblast.ts:92 FurnK.rider, src/game/furnblast.ts:92)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct FurnKRider {
     pub max_top: f64,
     pub max_vol: f64,
@@ -5056,7 +5056,7 @@ impl FurnKRider {
 impl Default for FurnKRider { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/snowBog.ts:20 SNOWBOG, src/game/snowBog.ts:20)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct SnowbogK {
     pub on: bool,
     pub dead: f64,
@@ -5087,7 +5087,7 @@ impl SnowbogK {
 impl Default for SnowbogK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/destructionSwitch.ts:19 RUBBLE, src/game/destructionSwitch.ts:19)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct RubbleK {
     pub on: bool,
     pub radius: f64,
@@ -5140,7 +5140,7 @@ impl RubbleK {
 impl Default for RubbleK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/destructionSwitch.ts:38 EVICT, src/game/destructionSwitch.ts:38)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct EvictK {
     pub on: bool,
 }
@@ -5155,7 +5155,7 @@ impl EvictK {
 impl Default for EvictK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/destructionSwitch.ts:29 DEBRIS, src/game/destructionSwitch.ts:29)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct DebrisK {
     pub dress: bool,
     pub min_speed: f64,
@@ -5172,7 +5172,7 @@ impl DebrisK {
 impl Default for DebrisK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/lighting.ts:30 LIGHTWALL, src/game/lighting.ts:30)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct LightwallK {
     pub on: bool,
     pub gap: f64,
@@ -5189,7 +5189,7 @@ impl LightwallK {
 impl Default for LightwallK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/airDust.ts:37 AIRDUST, src/game/airDust.ts:37)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AirdustK {
     pub on: bool,
     pub diffuse: f64,
@@ -5212,7 +5212,7 @@ impl AirdustK {
 impl Default for AirdustK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/wallsnap.ts:27 WALLSNAP, src/game/wallsnap.ts:27)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct WallsnapK {
     pub on: bool,
     pub take_base: f64,
@@ -5357,7 +5357,7 @@ impl WallsnapK {
 impl Default for WallsnapK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/gunwall.ts:45 GUNWALL, src/game/gunwall.ts:45)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct GunwallK {
     pub on: bool,
     pub down_m: f64,
@@ -5388,7 +5388,7 @@ impl GunwallK {
 impl Default for GunwallK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/close.ts:41 CLOSE, src/game/close.ts:41)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct CloseK {
     pub on: bool,
     pub ready: bool,
@@ -5461,7 +5461,7 @@ impl CloseK {
 impl Default for CloseK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/close.ts:103 CloseK.reach, src/game/close.ts:103)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct CloseKReach {
     pub behind: f64,
     pub side: f64,
@@ -5484,7 +5484,7 @@ impl CloseKReach {
 impl Default for CloseKReach { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/close.ts:113 CloseK.noise, src/game/close.ts:113)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct CloseKNoise {
     pub behind: f64,
     pub side: f64,
@@ -5505,7 +5505,7 @@ impl CloseKNoise {
 impl Default for CloseKNoise { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/floorplan.ts:60 PLAN, src/game/floorplan.ts:60)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct PlanK {
     pub on: bool,
     pub paths: bool,
@@ -5558,7 +5558,7 @@ impl PlanK {
 impl Default for PlanK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/gear.ts:24 GEAR, src/game/gear.ts:24)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct GearK {
     pub on: bool,
 }
@@ -5573,7 +5573,7 @@ impl GearK {
 impl Default for GearK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/startfile.ts:20 START, src/game/startfile.ts:20)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct StartK {
     pub fall_in: bool,
 }
@@ -5588,7 +5588,7 @@ impl StartK {
 impl Default for StartK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/samestart.ts:21 SAMESTART, src/game/samestart.ts:21)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct SamestartK {
     pub on: bool,
 }
@@ -5603,7 +5603,7 @@ impl SamestartK {
 impl Default for SamestartK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/takecheck.ts:15 TAKE, src/game/takecheck.ts:15)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct TakeK {
     pub wired: bool,
 }
@@ -5618,7 +5618,7 @@ impl TakeK {
 impl Default for TakeK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/autoreload.ts:23 RELOAD, src/game/autoreload.ts:23)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ReloadK {
     pub delay: f64,
 }
@@ -5633,7 +5633,7 @@ impl ReloadK {
 impl Default for ReloadK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/quickthrow.ts:10 QUICKTHROW, src/game/quickthrow.ts:10)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct QuickthrowK {
     pub on: bool,
 }
@@ -5648,7 +5648,7 @@ impl QuickthrowK {
 impl Default for QuickthrowK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/samstun.ts:23 SAMSTUN, src/game/samstun.ts:23)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct SamstunK {
     pub on: bool,
     pub blind_roots: bool,
@@ -5669,7 +5669,7 @@ impl SamstunK {
 impl Default for SamstunK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/deathrecap.ts:29 RECAP, src/game/deathrecap.ts:29)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct RecapK {
     pub on: bool,
     pub secs: f64,
@@ -5708,7 +5708,7 @@ impl RecapK {
 impl Default for RecapK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/aimweight.ts:20 AIMWEIGHT, src/game/aimweight.ts:20)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AimweightK {
     pub on: bool,
     pub rate: f64,
@@ -5737,7 +5737,7 @@ impl AimweightK {
 impl Default for AimweightK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/aimcost.ts:40 AIMCOST, src/game/aimcost.ts:40)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AimcostK {
     pub lamp: bool,
     pub move_: bool,
@@ -5776,7 +5776,7 @@ impl AimcostK {
 impl Default for AimcostK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/friends.ts:27 FRIENDS, src/game/friends.ts:27)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct FriendsK {
     pub no_snap: bool,
     pub low_ready: bool,
@@ -5807,7 +5807,7 @@ impl FriendsK {
 impl Default for FriendsK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/teamtally.ts:17 TEAMTALLY, src/game/teamtally.ts:17)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct TeamtallyK {
     pub on: bool,
 }
@@ -5822,7 +5822,7 @@ impl TeamtallyK {
 impl Default for TeamtallyK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/friendlyfire.ts:37 FRIENDLYFIRE, src/game/friendlyfire.ts:37)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct FriendlyfireK {
     pub on: bool,
     pub cone_k: f64,
@@ -5849,7 +5849,7 @@ impl FriendlyfireK {
 impl Default for FriendlyfireK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/lightswitch.ts:52 LIGHTSWITCH, src/game/lightswitch.ts:52)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct LightswitchK {
     pub on: bool,
     pub reach: f64,
@@ -5884,7 +5884,7 @@ impl LightswitchK {
 impl Default for LightswitchK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/carlamps.ts:29 CARLAMPS, src/game/carlamps.ts:29)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct CarlampsK {
     pub on: bool,
     pub dark: V3,
@@ -5907,7 +5907,7 @@ impl CarlampsK {
 impl Default for CarlampsK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/particleFx.ts:92 HITSTUFF, src/game/particleFx.ts:92)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct HitstuffK {
     pub on: bool,
 }
@@ -5922,7 +5922,7 @@ impl HitstuffK {
 impl Default for HitstuffK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/render/decals.ts:121 MARKCUT, src/render/decals.ts:121)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct MarkcutK {
     pub on: bool,
 }
@@ -5937,7 +5937,7 @@ impl MarkcutK {
 impl Default for MarkcutK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/render/decals.ts:129 MARKSIT, src/render/decals.ts:129)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct MarksitK {
 }
 impl MarksitK {
@@ -5950,7 +5950,7 @@ impl MarksitK {
 impl Default for MarksitK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/render/planPace.ts:10 PLAN_PACE, src/render/planPace.ts:10)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct PlanPaceK {
 }
 impl PlanPaceK {
@@ -5963,7 +5963,7 @@ impl PlanPaceK {
 impl Default for PlanPaceK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/render/reach.ts:222 REACH_PACE, src/render/reach.ts:222)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ReachPaceK {
     pub steps: f64,
     pub whole: bool,
@@ -5982,7 +5982,7 @@ impl ReachPaceK {
 impl Default for ReachPaceK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/scene/stuff.ts:241 COATFINISH, src/scene/stuff.ts:241)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct CoatfinishK {
     pub on: bool,
 }
@@ -5997,7 +5997,7 @@ impl CoatfinishK {
 impl Default for CoatfinishK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/scene/stuff.ts:260 SOLIDGLASS, src/scene/stuff.ts:260)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct SolidglassK {
     pub on: bool,
     pub lum: f64,
@@ -6016,7 +6016,7 @@ impl SolidglassK {
 impl Default for SolidglassK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/wallskin.ts:53 WALLSKIN, src/game/wallskin.ts:53)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct WallskinK {
     pub on: bool,
     pub thick: f64,
@@ -6041,7 +6041,7 @@ impl WallskinK {
 impl Default for WallskinK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/cleanrestart.ts:28 CLEANRESTART, src/game/cleanrestart.ts:28)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct CleanrestartK {
     pub on: bool,
     pub picture: bool,
@@ -6058,7 +6058,7 @@ impl CleanrestartK {
 impl Default for CleanrestartK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/fireline.ts:44 FIRELINE, src/game/fireline.ts:44)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct FirelineK {
     pub on: bool,
     pub fire_s: f64,
@@ -6109,7 +6109,7 @@ impl FirelineK {
 impl Default for FirelineK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/savestate.ts:344 SAVETIMELINE, src/game/savestate.ts:344)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct SavetimelineK {
     pub on: bool,
     pub manual: f64,
@@ -6140,7 +6140,7 @@ impl SavetimelineK {
 impl Default for SavetimelineK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/handslot.ts:14 HANDSLOT, src/game/handslot.ts:14)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct HandslotK {
     pub on: bool,
 }
@@ -6155,7 +6155,7 @@ impl HandslotK {
 impl Default for HandslotK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/handring.ts:27 HANDRING, src/game/handring.ts:27)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct HandringK {
     pub on: bool,
     pub hold_secs: f64,
@@ -6188,7 +6188,7 @@ impl HandringK {
 impl Default for HandringK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/throwback.ts:14 THROWBACK, src/game/throwback.ts:14)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ThrowbackK {
     pub on: bool,
     pub rest_mark: bool,
@@ -6207,7 +6207,7 @@ impl ThrowbackK {
 impl Default for ThrowbackK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/ownblow.ts:28 OWNBLOW, src/game/ownblow.ts:28)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct OwnblowK {
     pub on: bool,
 }
@@ -6222,7 +6222,7 @@ impl OwnblowK {
 impl Default for OwnblowK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/sprintdoor.ts:32 SPRINTDOOR, src/game/sprintdoor.ts:32)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct SprintdoorK {
     pub on: bool,
     pub keep: f64,
@@ -6259,7 +6259,7 @@ impl SprintdoorK {
 impl Default for SprintdoorK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/teampace.ts:43 TEAMPACE, src/game/teampace.ts:43)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct TeampaceK {
     pub on: bool,
     pub k: f64,
@@ -6316,7 +6316,7 @@ impl TeampaceK {
 impl Default for TeampaceK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/noshove.ts:28 NOSHOVE, src/game/noshove.ts:28)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct NoshoveK {
     pub on: bool,
     pub round: bool,
@@ -6337,7 +6337,7 @@ impl NoshoveK {
 impl Default for NoshoveK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/rails.ts:47 RAILS, src/game/rails.ts:47)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct RailsK {
     pub on: bool,
     pub pan_speed: f64,
@@ -6396,7 +6396,7 @@ impl RailsK {
 impl Default for RailsK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/belief.ts:12 BELIEF, src/game/belief.ts:12)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct BeliefK {
     pub on: bool,
 }
@@ -6411,7 +6411,7 @@ impl BeliefK {
 impl Default for BeliefK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/doorforce.ts:62 DOORFORCE, src/game/doorforce.ts:62)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct DoorforceK {
     pub on: bool,
     pub post_ends: bool,
@@ -6474,7 +6474,7 @@ impl DoorforceK {
 impl Default for DoorforceK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/slotsetup.ts:47 SLOTSETUP, src/game/slotsetup.ts:47)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct SlotsetupK {
     pub on: bool,
     pub pop: bool,
@@ -6499,7 +6499,7 @@ impl SlotsetupK {
 impl Default for SlotsetupK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/glassbreak.ts:116 GLASSREAL, src/game/glassbreak.ts:116)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct GlassrealK {
     pub drop: bool,
     pub place: bool,
@@ -6526,7 +6526,7 @@ impl GlassrealK {
 impl Default for GlassrealK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/quietfog.ts:44 QUIETFOG, src/game/quietfog.ts:44)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct QuietfogK {
     pub on: bool,
     pub def: crate::quietfog::QuietRung,
@@ -6547,7 +6547,7 @@ impl QuietfogK {
 impl Default for QuietfogK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/told.ts:33 TOLD, src/game/told.ts:33)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ToldK {
     pub on: bool,
     pub rung: crate::told::ToldRung,
@@ -6570,7 +6570,7 @@ impl ToldK {
 impl Default for ToldK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/words.ts:27 WORDS, src/game/words.ts:27)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct WordsK {
     pub on: bool,
     pub doors: bool,
@@ -6591,7 +6591,7 @@ impl WordsK {
 impl Default for WordsK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/kitanim.ts:45 KITANIM, src/game/kitanim.ts:45)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct KitanimK {
     pub on: bool,
     pub equip: bool,
@@ -6632,7 +6632,7 @@ impl KitanimK {
 impl Default for KitanimK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/kitanim.ts:76 KitanimK.beats, src/game/kitanim.ts:76)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct KitanimKBeats {
     pub pistol: crate::knobs::KitanimKBeatsPistol,
     pub rifle: crate::knobs::KitanimKBeatsRifle,
@@ -6649,7 +6649,7 @@ impl KitanimKBeats {
 impl Default for KitanimKBeats { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/kitanim.ts:77 KitanimKBeats.pistol, src/game/kitanim.ts:77)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct KitanimKBeatsPistol {
     pub ref_: f64,
     pub empty: crate::kitanim::BeatRow,
@@ -6670,7 +6670,7 @@ impl KitanimKBeatsPistol {
 impl Default for KitanimKBeatsPistol { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/kitanim.ts:78 KitanimKBeats.rifle, src/game/kitanim.ts:78)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct KitanimKBeatsRifle {
     pub ref_: f64,
     pub empty: crate::kitanim::BeatRow,
@@ -6691,7 +6691,7 @@ impl KitanimKBeatsRifle {
 impl Default for KitanimKBeatsRifle { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1223 KIT, src/game/character.ts:1223)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct KitK {
     pub stow: JsMap<crate::character::KitItem, f64>,
     pub reach: JsMap<crate::character::KitItem, f64>,
@@ -6766,7 +6766,7 @@ impl KitK {
 impl Default for KitK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1228 KitK.apex, src/game/character.ts:1228)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct KitKApex {
     pub at: V3,
     pub fing: V3,
@@ -6787,7 +6787,7 @@ impl KitKApex {
 impl Default for KitKApex { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1235 KitK.top, src/game/character.ts:1235)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct KitKTop {
     pub fing: V3,
     pub back: V3,
@@ -6804,7 +6804,7 @@ impl KitKTop {
 impl Default for KitKTop { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1236 KitK.belt, src/game/character.ts:1236)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct KitKBelt {
     pub at: V3,
     pub fing: V3,
@@ -6825,7 +6825,7 @@ impl KitKBelt {
 impl Default for KitKBelt { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1244 KitK.front, src/game/character.ts:1244)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct KitKFront {
     pub stow: f64,
     pub reach: f64,
@@ -6852,7 +6852,7 @@ impl KitKFront {
 impl Default for KitKFront { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1253 KitK.nv, src/game/character.ts:1253)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct KitKNv {
     pub hand: crate::knobs::KitKNvHand,
     pub nod: crate::knobs::KitKNvNod,
@@ -6869,7 +6869,7 @@ impl KitKNv {
 impl Default for KitKNv { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1254 KitKNv.hand, src/game/character.ts:1254)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct KitKNvHand {
     pub dur: f64,
     pub reach: f64,
@@ -6912,7 +6912,7 @@ impl KitKNvHand {
 impl Default for KitKNvHand { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1256 KitKNv.nod, src/game/character.ts:1256)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct KitKNvNod {
     pub dur: f64,
     pub pre: f64,
@@ -6939,7 +6939,7 @@ impl KitKNvNod {
 impl Default for KitKNvNod { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1263 KitK.mag, src/game/character.ts:1263)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct KitKMag {
     pub well: V3,
     pub strip: V3,
@@ -6978,7 +6978,7 @@ impl KitKMag {
 impl Default for KitKMag { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1274 KitK.close, src/game/character.ts:1274)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct KitKClose {
     pub far: f64,
     pub hover: f64,
@@ -7019,7 +7019,7 @@ impl KitKClose {
 impl Default for KitKClose { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/character.ts:1335 THROW_BY, src/game/character.ts:1335)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ThrowByK {
     pub on: bool,
     pub toss: f64,
@@ -7058,7 +7058,7 @@ impl ThrowByK {
 impl Default for ThrowByK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/hands.ts:46 HANDS, src/game/hands.ts:46)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct HandsK {
     pub on: bool,
     pub body: bool,
@@ -7159,7 +7159,7 @@ impl HandsK {
 impl Default for HandsK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/workthings.ts:52 WORK, src/game/workthings.ts:52)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct WorkK {
     pub on: bool,
     pub pick_m: f64,
@@ -7202,7 +7202,7 @@ impl WorkK {
 impl Default for WorkK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/wand.ts:35 WAND, src/game/wand.ts:35)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct WandK {
     pub on: bool,
     pub feed_secs: f64,
@@ -7251,7 +7251,7 @@ impl WandK {
 impl Default for WandK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/stickycam.ts:43 STICKY, src/game/stickycam.ts:43)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct StickyK {
     pub on: bool,
     pub carry: f64,
@@ -7310,7 +7310,7 @@ impl StickyK {
 impl Default for StickyK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/peeksight.ts:32 PEEKSIGHT, src/game/peeksight.ts:32)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct PeeksightK {
     pub on: bool,
     pub out: f64,
@@ -7331,7 +7331,7 @@ impl PeeksightK {
 impl Default for PeeksightK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/owncharge.ts:21 OWNCHARGE, src/game/owncharge.ts:21)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct OwnchargeK {
     pub on: bool,
 }
@@ -7346,7 +7346,7 @@ impl OwnchargeK {
 impl Default for OwnchargeK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/gunslots.ts:16 GUNSLOTS, src/game/gunslots.ts:16)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct GunslotsK {
     pub on: bool,
     pub near: f64,
@@ -7371,7 +7371,7 @@ impl GunslotsK {
 impl Default for GunslotsK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/gunlook.ts:16 GUNLOOK, src/game/gunlook.ts:16)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct GunlookK {
     pub on: bool,
     pub shells: bool,
@@ -7388,7 +7388,7 @@ impl GunlookK {
 impl Default for GunlookK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/gunroles.ts:41 GUNROLES, src/game/gunroles.ts:41)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct GunrolesK {
     pub on: bool,
     pub deal: bool,
@@ -7433,7 +7433,7 @@ impl GunrolesK {
 impl Default for GunrolesK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/kittree.ts:20 KITTREE, src/game/kittree.ts:20)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct KittreeK {
     pub on: bool,
     pub rings: f64,
@@ -7452,7 +7452,7 @@ impl KittreeK {
 impl Default for KittreeK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/squadthrow.ts:74 SQUADTHROW, src/game/squadthrow.ts:74)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SquadthrowK {
     pub on: bool,
     pub frag_roll_k: f64,
@@ -7535,7 +7535,7 @@ impl SquadthrowK {
 impl Default for SquadthrowK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/squad40.ts:53 SQUAD40, src/game/squad40.ts:53)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Squad40K {
     pub on: bool,
     pub near_m: f64,
@@ -7572,7 +7572,7 @@ impl Squad40K {
 impl Default for Squad40K { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/autopilot.ts:42 AUTOPILOT, src/game/autopilot.ts:42)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AutopilotK {
     pub on: bool,
     pub show_secs: f64,
@@ -7599,7 +7599,7 @@ impl AutopilotK {
 impl Default for AutopilotK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/cmdring.ts:50 CMDRING, src/game/cmdring.ts:50)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct CmdringK {
     pub on: bool,
     pub key: String,
@@ -7676,7 +7676,7 @@ impl CmdringK {
 impl Default for CmdringK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/calmtorch.ts:37 TORCH, src/game/calmtorch.ts:37)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct TorchK {
     pub calm_off: bool,
     pub lit_at: f64,
@@ -7723,7 +7723,7 @@ impl TorchK {
 impl Default for TorchK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/backkey.ts:14 BACKKEY, src/game/backkey.ts:14)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct BackkeyK {
     pub tab: bool,
 }
@@ -7738,7 +7738,7 @@ impl BackkeyK {
 impl Default for BackkeyK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/host/loop.ts:131 FIXEDSTEP, src/host/loop.ts:131)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct FixedstepK {
 }
 impl FixedstepK {
@@ -7751,7 +7751,7 @@ impl FixedstepK {
 impl Default for FixedstepK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/host/tween.ts:37 TWEEN, src/host/tween.ts:37)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct TweenK {
 }
 impl TweenK {
@@ -7764,7 +7764,7 @@ impl TweenK {
 impl Default for TweenK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/host/savepic.ts:8 SAVEPIC, src/host/savepic.ts:8)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct SavepicK {
 }
 impl SavepicK {
@@ -7777,7 +7777,7 @@ impl SavepicK {
 impl Default for SavepicK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/host/pace.ts:71 EVENPACE, src/host/pace.ts:71)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct EvenpaceK {
 }
 impl EvenpaceK {
@@ -7790,7 +7790,7 @@ impl EvenpaceK {
 impl Default for EvenpaceK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/host/findme.ts:69 FINDTUNED, src/host/findme.ts:69)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct FindtunedK {
 }
 impl FindtunedK {
@@ -7803,7 +7803,7 @@ impl FindtunedK {
 impl Default for FindtunedK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/morale.ts:90 MORALE, src/game/morale.ts:90)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct MoraleK {
     pub on: bool,
     pub half_life: f64,
@@ -7916,7 +7916,7 @@ impl MoraleK {
 impl Default for MoraleK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/morale.ts:94 MoraleK.nerveK, src/game/morale.ts:94)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct MoraleKNerveK {
     pub brittle: f64,
     pub normal: f64,
@@ -7935,7 +7935,7 @@ impl MoraleKNerveK {
 impl Default for MoraleKNerveK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum MoraleKDarkRead {
     Place,
     Watch,
@@ -7950,7 +7950,7 @@ impl MoraleKDarkRead {
 }
 
 /// (TypeScript: inline at src/game/condition.ts:26 CONDITION, src/game/condition.ts:26)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ConditionK {
     pub on: bool,
     pub hurt_pace: f64,
@@ -7973,7 +7973,7 @@ impl ConditionK {
 impl Default for ConditionK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/inhand.ts:73 INHAND, src/game/inhand.ts:73)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct InhandK {
     pub on: bool,
     pub from: f64,
@@ -8008,7 +8008,7 @@ impl InhandK {
 impl Default for InhandK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/packside.ts:39 PACKSIDE, src/game/packside.ts:39)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct PacksideK {
     pub on: bool,
     pub ram: bool,
@@ -8043,7 +8043,7 @@ impl PacksideK {
 impl Default for PacksideK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/gunhand.ts:15 GUNHAND, src/game/gunhand.ts:15)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct GunhandK {
     pub on: bool,
     pub whistle: bool,
@@ -8064,7 +8064,7 @@ impl GunhandK {
 impl Default for GunhandK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/runner.ts:88 RUNNER, src/game/runner.ts:88)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct RunnerK {
     pub on: bool,
     pub close_m: f64,
@@ -8125,7 +8125,7 @@ impl RunnerK {
 impl Default for RunnerK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/startle.ts:40 STARTLE, src/game/startle.ts:40)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct StartleK {
     pub beat: f64,
     pub draw: f64,
@@ -8158,7 +8158,7 @@ impl StartleK {
 impl Default for StartleK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/rowset.ts:27 ROWSET, src/game/rowset.ts:27)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct RowsetK {
     pub on: bool,
 }
@@ -8173,7 +8173,7 @@ impl RowsetK {
 impl Default for RowsetK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/smokebreak.ts:26 SMOKEBREAK, src/game/smokebreak.ts:26)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct SmokebreakK {
     pub on: bool,
     pub light_secs: f64,
@@ -8195,9 +8195,7 @@ pub struct SmokebreakK {
     pub tip_out: f64,
     pub tip_up: f64,
     pub thread: crate::knobs::SmokebreakKThread,
-    pub thread_gone: f64,
     pub breath: crate::knobs::SmokebreakKBreath,
-    pub puffs: crate::knobs::SmokebreakKPuffs,
     pub color: V3,
     pub mouth_ahead: f64,
     pub mouth_down: f64,
@@ -8226,9 +8224,7 @@ impl SmokebreakK {
             tip_out: 0.0,
             tip_up: 0.0,
             thread: crate::knobs::SmokebreakKThread::zeroed(),
-            thread_gone: 0.0,
             breath: crate::knobs::SmokebreakKBreath::zeroed(),
-            puffs: crate::knobs::SmokebreakKPuffs::zeroed(),
             color: [0.0; 3],
             mouth_ahead: 0.0,
             mouth_down: 0.0,
@@ -8238,7 +8234,7 @@ impl SmokebreakK {
 impl Default for SmokebreakK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/smokebreak.ts:38 SmokebreakK.thread, src/game/smokebreak.ts:38)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct SmokebreakKThread {
     pub radius: f64,
     pub cells: f64,
@@ -8265,7 +8261,7 @@ impl SmokebreakKThread {
 impl Default for SmokebreakKThread { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/smokebreak.ts:42 SmokebreakK.breath, src/game/smokebreak.ts:42)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct SmokebreakKBreath {
     pub radius: f64,
     pub cells: f64,
@@ -8297,35 +8293,8 @@ impl SmokebreakKBreath {
 }
 impl Default for SmokebreakKBreath { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/smokebreak.ts:45 SmokebreakK.puffs, src/game/smokebreak.ts:45)
-#[derive(Clone, Copy, Debug)]
-pub struct SmokebreakKPuffs {
-    pub records: f64,
-    pub count: f64,
-    pub speed: f64,
-    pub spread: f64,
-    pub life: f64,
-    pub size: f64,
-    pub opacity: f64,
-}
-impl SmokebreakKPuffs {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SmokebreakKPuffs {
-            records: 0.0,
-            count: 0.0,
-            speed: 0.0,
-            spread: 0.0,
-            life: 0.0,
-            size: 0.0,
-            opacity: 0.0,
-        }
-    }
-}
-impl Default for SmokebreakKPuffs { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: inline at src/game/showwhy.ts:53 SHOWWHY, src/game/showwhy.ts:53)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ShowwhyK {
     pub on: bool,
     pub stack: bool,
@@ -8392,7 +8361,7 @@ impl ShowwhyK {
 impl Default for ShowwhyK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/fire.ts:53 FIRE, src/game/fire.ts:53)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct FireK {
     pub on: bool,
     pub names: Vec<String>,
@@ -8428,7 +8397,6 @@ pub struct FireK {
     pub ember_r: f64,
     pub look: crate::knobs::FireKLook,
     pub smoke: crate::knobs::FireKSmoke,
-    pub gas: crate::knobs::FireKGas,
     pub bed: f64,
     pub crack: f64,
     pub bed_secs: f64,
@@ -8475,7 +8443,6 @@ impl FireK {
             ember_r: 0.0,
             look: crate::knobs::FireKLook::zeroed(),
             smoke: crate::knobs::FireKSmoke::zeroed(),
-            gas: crate::knobs::FireKGas::zeroed(),
             bed: 0.0,
             crack: 0.0,
             bed_secs: 0.0,
@@ -8489,7 +8456,7 @@ impl FireK {
 impl Default for FireK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/fire.ts:110 FireK.look, src/game/fire.ts:110)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct FireKLook {
     pub gain: f64,
     pub core: f64,
@@ -8528,7 +8495,7 @@ impl FireKLook {
 impl Default for FireKLook { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/fire.ts:124 FireK.smoke, src/game/fire.ts:124)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct FireKSmoke {
     pub on: bool,
     pub up: f64,
@@ -8564,51 +8531,8 @@ impl FireKSmoke {
 }
 impl Default for FireKSmoke { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/fire.ts:139 FireK.gas, src/game/fire.ts:139)
-#[derive(Clone, Copy, Debug)]
-pub struct FireKGas {
-    pub on: bool,
-    pub up: f64,
-    pub radius: f64,
-    pub cells: f64,
-    pub density: f64,
-    pub temp: f64,
-    pub speed: f64,
-    pub push: f64,
-    pub jitter: f64,
-    pub every: f64,
-    pub view_r: f64,
-    pub keep: f64,
-    pub ref_: f64,
-    pub lo: f64,
-    pub ease: f64,
-}
-impl FireKGas {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FireKGas {
-            on: false,
-            up: 0.0,
-            radius: 0.0,
-            cells: 0.0,
-            density: 0.0,
-            temp: 0.0,
-            speed: 0.0,
-            push: 0.0,
-            jitter: 0.0,
-            every: 0.0,
-            view_r: 0.0,
-            keep: 0.0,
-            ref_: 0.0,
-            lo: 0.0,
-            ease: 0.0,
-        }
-    }
-}
-impl Default for FireKGas { fn default() -> Self { Self::zeroed() } }
-
 /// (TypeScript: inline at src/game/flinch.ts:45 FLINCH, src/game/flinch.ts:45)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct FlinchK {
     pub on: bool,
     pub least: f64,
@@ -8645,7 +8569,7 @@ impl FlinchK {
 impl Default for FlinchK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/darkdoor.ts:59 DARKDOOR, src/game/darkdoor.ts:59)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct DarkdoorK {
     pub on: bool,
     pub who: crate::knobs::DarkdoorKWho,
@@ -8720,7 +8644,7 @@ impl DarkdoorK {
 impl Default for DarkdoorK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum DarkdoorKWho {
     None,
     All,
@@ -8737,7 +8661,7 @@ impl DarkdoorKWho {
 }
 
 /// (TypeScript: inline at src/game/darkfoe.ts:55 DARKFOE, src/game/darkfoe.ts:55)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct DarkfoeK {
     pub on: bool,
     pub carry: f64,
@@ -8798,7 +8722,7 @@ impl DarkfoeK {
 impl Default for DarkfoeK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/powerout.ts:68 POWEROUT, src/game/powerout.ts:68)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct PoweroutK {
     pub on: bool,
     pub see_m: f64,
@@ -8851,7 +8775,7 @@ impl PoweroutK {
 impl Default for PoweroutK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/squaddeal.ts:28 SQUADDEAL, src/game/squaddeal.ts:28)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SquaddealK {
     pub on: bool,
     pub one: f64,
@@ -8872,7 +8796,7 @@ impl SquaddealK {
 impl Default for SquaddealK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/stayask.ts:26 STAYASK, src/game/stayask.ts:26)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct StayaskK {
     pub on: bool,
     pub men: f64,
@@ -8889,7 +8813,7 @@ impl StayaskK {
 impl Default for StayaskK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/rescuecheck.ts:56 RESCUECHECK, src/game/rescuecheck.ts:56)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct RescuecheckK {
     pub on: bool,
     pub first: [f64; 2],
@@ -8920,7 +8844,7 @@ impl RescuecheckK {
 impl Default for RescuecheckK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/kitload.ts:52 KITLOAD, src/game/kitload.ts:52)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct KitloadK {
     pub on: bool,
     pub gun_kg: f64,
@@ -8953,7 +8877,7 @@ impl KitloadK {
 impl Default for KitloadK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/rescueend.ts:27 RESCUEEND, src/game/rescueend.ts:27)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct RescueendK {
     pub on: bool,
     pub out_m: f64,
@@ -8980,7 +8904,7 @@ impl RescueendK {
 impl Default for RescueendK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/rescueflush.ts:40 RESCUEFLUSH, src/game/rescueflush.ts:40)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct RescueflushK {
     pub on: bool,
     pub after_secs: f64,
@@ -9011,7 +8935,7 @@ impl RescueflushK {
 impl Default for RescueflushK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/anim/skeleton.ts:289 POSEMATH, src/anim/skeleton.ts:289)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct PosemathK {
     pub singles: bool,
 }
@@ -9026,7 +8950,7 @@ impl PosemathK {
 impl Default for PosemathK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/sense.ts:33 SENSE, src/game/sense.ts:33)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct SenseK {
     pub glow: crate::knobs::SenseKGlow,
     pub smoke: crate::knobs::SenseKSmoke,
@@ -9043,7 +8967,7 @@ impl SenseK {
 impl Default for SenseK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/sense.ts:64 SenseK.glow, src/game/sense.ts:64)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct SenseKGlow {
     pub sweep: f64,
 }
@@ -9058,7 +8982,7 @@ impl SenseKGlow {
 impl Default for SenseKGlow { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/sense.ts:65 SenseK.smoke, src/game/sense.ts:65)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct SenseKSmoke {
     pub sigma: f64,
     pub decay: f64,
@@ -9089,7 +9013,7 @@ impl SenseKSmoke {
 impl Default for SenseKSmoke { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/cmd.ts:70 CMDCHECK, src/game/cmd.ts:70)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct CmdcheckK {
     pub on: bool,
     pub keys: f64,
@@ -9130,7 +9054,7 @@ impl CmdcheckK {
 impl Default for CmdcheckK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/seats.ts:31 SEATS, src/game/seats.ts:31)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct SeatsK {
     pub max: f64,
     pub apart: f64,
@@ -9149,7 +9073,7 @@ impl SeatsK {
 impl Default for SeatsK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/doze.ts:69 DOZE, src/game/doze.ts:69)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct DozeK {
     pub on: bool,
     pub min_wait: f64,
@@ -9210,7 +9134,7 @@ impl DozeK {
 impl Default for DozeK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/netquiet.ts:82 NETQUIET, src/game/netquiet.ts:82)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct NetquietK {
     pub on: bool,
     pub unanswered: f64,
@@ -9295,7 +9219,7 @@ impl NetquietK {
 impl Default for NetquietK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/attention.ts:42 ATTENTION, src/game/attention.ts:42)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AttentionK {
     pub on: bool,
     pub focus_deg: f64,
@@ -9356,7 +9280,7 @@ impl AttentionK {
 impl Default for AttentionK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/picture.ts:30 PICTURE, src/game/picture.ts:30)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct PictureK {
     pub on: bool,
     pub look_secs: f64,
@@ -9453,7 +9377,7 @@ impl PictureK {
 impl Default for PictureK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum PictureKShow {
     All,
     Off,
@@ -9470,7 +9394,7 @@ impl PictureKShow {
 }
 
 /// (TypeScript: inline at src/game/qrf.ts:98 RESPONSE, src/game/qrf.ts:98)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ResponseK {
     pub on: bool,
     pub deal: bool,
@@ -9499,7 +9423,7 @@ impl ResponseK {
 impl Default for ResponseK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/handwork.ts:36 HANDWORK, src/game/handwork.ts:36)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct HandworkK {
     pub on: bool,
     pub work: bool,
@@ -9542,7 +9466,7 @@ impl HandworkK {
 impl Default for HandworkK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/workstow.ts:26 WORKSTOW, src/game/workstow.ts:26)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct WorkstowK {
     pub on: bool,
     pub mate_down: f64,
@@ -9569,7 +9493,7 @@ impl WorkstowK {
 impl Default for WorkstowK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/squadnet.ts:39 SQUADNET, src/game/squadnet.ts:39)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct SquadnetK {
     pub on: bool,
     pub why: bool,
@@ -9606,7 +9530,7 @@ impl SquadnetK {
 impl Default for SquadnetK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/takedown.ts:37 TAKEDOWN, src/game/takedown.ts:37)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct TakedownK {
     pub on: bool,
     pub blow: bool,
@@ -9649,7 +9573,7 @@ impl TakedownK {
 impl Default for TakedownK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/stealthpose.ts:27 STEALTHPOSE, src/game/stealthpose.ts:27)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct StealthposeK {
     pub on: bool,
     pub nod: bool,
@@ -9680,7 +9604,7 @@ impl StealthposeK {
 impl Default for StealthposeK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/scene/look.ts:10 LOOK, src/scene/look.ts:10)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct LookK {
     pub on: bool,
     pub suit: bool,
@@ -9697,7 +9621,7 @@ impl LookK {
 impl Default for LookK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/audio/pieces.ts:27 MUSIC, src/audio/pieces.ts:27)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct MusicK {
 }
 impl MusicK {
@@ -9710,7 +9634,7 @@ impl MusicK {
 impl Default for MusicK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/scene/lived.ts:11 LIVED, src/scene/lived.ts:11)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct LivedK {
     pub on: bool,
 }
@@ -9725,7 +9649,7 @@ impl LivedK {
 impl Default for LivedK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/scene/collision.ts:86 UNDERFOOT, src/scene/collision.ts:86)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct UnderfootK {
     pub on: bool,
 }
@@ -9740,7 +9664,7 @@ impl UnderfootK {
 impl Default for UnderfootK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/env.ts:21 ENV, src/game/env.ts:21)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct EnvK {
     pub exposure: f64,
     pub tube_gain: f64,
@@ -9757,7 +9681,7 @@ impl EnvK {
 impl Default for EnvK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/scene/shapes.ts:67 SHAPES, src/scene/shapes.ts:67)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ShapesK {
     pub on: bool,
 }
@@ -9772,7 +9696,7 @@ impl ShapesK {
 impl Default for ShapesK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/combat.ts:678 FLASH, src/game/combat.ts:678)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct FlashK {
     pub on: bool,
     pub secs: [f64; 2],
@@ -9803,7 +9727,7 @@ impl FlashK {
 impl Default for FlashK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/guards.ts:1502 PACE, src/game/guards.ts:1502)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct PaceK {
     pub on: bool,
     pub max: f64,
@@ -9826,7 +9750,7 @@ impl PaceK {
 impl Default for PaceK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/guards.ts:1514 LIGHTS, src/game/guards.ts:1514)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct LightsK {
     pub on: bool,
     pub after_secs: f64,
@@ -9879,7 +9803,7 @@ impl LightsK {
 impl Default for LightsK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/nvg.ts:42 NVG, src/game/nvg.ts:42)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct NvgK {
     pub on: bool,
     pub quiet_secs: f64,
@@ -9916,7 +9840,7 @@ impl NvgK {
 impl Default for NvgK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/irlaser.ts:49 IR, src/game/irlaser.ts:49)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct IrK {
     pub on: bool,
     pub sam: bool,
@@ -9937,7 +9861,7 @@ impl IrK {
 impl Default for IrK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/irlight.ts:64 IRLIGHT, src/game/irlight.ts:64)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct IrlightK {
     pub on: bool,
     pub team: bool,
@@ -9982,7 +9906,7 @@ impl IrlightK {
 impl Default for IrlightK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/wallpen.ts:61 WALLPEN, src/game/wallpen.ts:61)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct WallpenK {
     pub on: bool,
     pub base: JsMap<crate::wallpen::ThinStuff, f64>,
@@ -10019,7 +9943,7 @@ impl WallpenK {
 impl Default for WallpenK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/combat.ts:579 LASER, src/game/combat.ts:579)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct LaserK {
     pub enemy: bool,
 }
@@ -10034,7 +9958,7 @@ impl LaserK {
 impl Default for LaserK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/doortools.ts:116 DOORTOOLS, src/game/doortools.ts:116)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct DoortoolsK {
     pub charges: f64,
     pub bangs: f64,
@@ -10373,7 +10297,7 @@ impl DoortoolsK {
 impl Default for DoortoolsK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/roomfight.ts:91 ROOMFIGHT, src/game/roomfight.ts:91)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct RoomfightK {
     pub on: bool,
     pub evidence_secs: f64,
@@ -10448,7 +10372,7 @@ impl RoomfightK {
 impl Default for RoomfightK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/orders.ts:126 ORDERS, src/game/orders.ts:126)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct OrdersK {
     pub key: String,
     pub mouse_opens: bool,
@@ -10623,7 +10547,7 @@ impl OrdersK {
 impl Default for OrdersK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/cover.ts:62 COVER, src/game/cover.ts:62)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct CoverK {
     pub on: bool,
     pub stacked: bool,
@@ -10742,7 +10666,7 @@ impl CoverK {
 impl Default for CoverK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/roomfit.ts:38 ROOMFIT, src/game/roomfit.ts:38)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct RoomfitK {
     pub on: bool,
     pub spread0: f64,
@@ -10839,7 +10763,7 @@ impl RoomfitK {
 impl Default for RoomfitK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/entrypoints.ts:36 ENTRY, src/game/entrypoints.ts:36)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct EntryK {
     pub off_openings: bool,
     pub move_: bool,
@@ -10874,7 +10798,7 @@ impl EntryK {
 impl Default for EntryK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/cover.ts:171 REAR, src/game/cover.ts:171)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct RearK {
     pub settle: bool,
     pub secs: f64,
@@ -10891,7 +10815,7 @@ impl RearK {
 impl Default for RearK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/silent.ts:69 SILENT, src/game/silent.ts:69)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct SilentK {
     pub on: bool,
     pub start: bool,
@@ -10934,7 +10858,7 @@ impl SilentK {
 impl Default for SilentK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/pairorders.ts:44 PAIR, src/game/pairorders.ts:44)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct PairK {
     pub on: bool,
     pub max_squad: f64,
@@ -11009,7 +10933,7 @@ impl PairK {
 impl Default for PairK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/rescue.ts:83 RESCUE, src/game/rescue.ts:83)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct RescueK {
     pub start: crate::knobs::RescueKStart,
     pub clock: bool,
@@ -11084,7 +11008,7 @@ impl RescueK {
 impl Default for RescueK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum RescueKStart {
     Quiet,
     Hot,
@@ -11099,7 +11023,7 @@ impl RescueKStart {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum RescueKDoorMan {
     Inside,
     Corridor,
@@ -11114,7 +11038,7 @@ impl RescueKDoorMan {
 }
 
 /// (TypeScript: inline at src/game/digin.ts:54 DIGIN, src/game/digin.ts:54)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct DiginK {
     pub on: bool,
     pub stay: bool,
@@ -11191,7 +11115,7 @@ impl DiginK {
 impl Default for DiginK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/digin.ts:171 HAULHOME, src/game/digin.ts:171)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct HaulhomeK {
     pub on: bool,
 }
@@ -11206,7 +11130,7 @@ impl HaulhomeK {
 impl Default for HaulhomeK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/pressure.ts:66 PRESSURE, src/game/pressure.ts:66)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct PressureK {
     pub on: bool,
     pub press: bool,
@@ -11299,7 +11223,7 @@ impl PressureK {
 impl Default for PressureK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/lanes.ts:64 LANES, src/game/lanes.ts:64)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct LanesK {
     pub on: bool,
     pub secs: f64,
@@ -11442,7 +11366,7 @@ impl LanesK {
 impl Default for LanesK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/gunhold.ts:46 GUNHOLD, src/game/gunhold.ts:46)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct GunholdK {
     pub on: bool,
     pub cover_m: f64,
@@ -11481,7 +11405,7 @@ impl GunholdK {
 impl Default for GunholdK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/difficulty.ts:43 HARD, src/game/difficulty.ts:43)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct HardK {
     pub reach_m: f64,
     pub keeper_digs: bool,
@@ -11518,7 +11442,7 @@ impl HardK {
 impl Default for HardK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/difficulty.ts:92 HARD_AT, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1611)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct HardAtK {
     /// INVENTED: HARD_AT's rows by structure name, written order, each row's optional stuns (difficulty.ts:92). A row with no stuns reads as no row at all (:150, :167, :352, :354)
     pub rows: JsMap<String, Option<f64>>,
@@ -11534,7 +11458,7 @@ impl HardAtK {
 impl Default for HardAtK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/roomfight.ts:284 DRILLED, src/game/roomfight.ts:284)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct DrilledK {
     pub shaken: f64,
 }
@@ -11549,7 +11473,7 @@ impl DrilledK {
 impl Default for DrilledK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/enemysquads.ts:75 SQUADS, src/game/enemysquads.ts:75)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct SquadsK {
     pub on: bool,
     pub think: [f64; 2],
@@ -11688,7 +11612,7 @@ impl SquadsK {
 impl Default for SquadsK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/enemysquads.ts:290 DRILL_AT, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1611)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct DrillAtK {
     /// INVENTED: DRILL_AT's rows by structure name, in written order (enemysquads.ts:287-300). A map with no row reads the drill's table as it stands (:305)
     pub rows: JsMap<String, crate::enemysquads::DrillAtRow>,
@@ -11704,7 +11628,7 @@ impl DrillAtK {
 impl Default for DrillAtK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/cues.ts:57 CUES, src/game/cues.ts:57)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct CuesK {
     pub on: bool,
     pub rows: f64,
@@ -11747,7 +11671,7 @@ impl CuesK {
 impl Default for CuesK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/weather.ts:58 WX_SIM, src/game/weather.ts:58)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct WxSimK {
     pub rain_k: f64,
     pub thunder_k: f64,
@@ -11772,7 +11696,7 @@ impl WxSimK {
 impl Default for WxSimK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/weatherKinds.ts:171 WX_OWN, src/game/weatherKinds.ts:171)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct WxOwnK {
     pub roofs: bool,
     pub wind: bool,
@@ -11789,7 +11713,7 @@ impl WxOwnK {
 impl Default for WxOwnK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/weatherKinds.ts:60 SNOW, src/game/weatherKinds.ts:60)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct SnowK {
     pub on: bool,
 }
@@ -11804,7 +11728,7 @@ impl SnowK {
 impl Default for SnowK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/weatherKinds.ts:107 SNOW_LOOK, src/game/weatherKinds.ts:107)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct SnowLookK {
     pub on: bool,
     pub wisps: bool,
@@ -11843,7 +11767,7 @@ impl SnowLookK {
 impl Default for SnowLookK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/airSim.ts:33 AIR_SIM, src/game/airSim.ts:33)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AirSimK {
     pub on: bool,
     pub ground: f64,
@@ -11884,7 +11808,7 @@ impl AirSimK {
 impl Default for AirSimK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/laststand.ts:59 LASTSTAND, src/game/laststand.ts:59)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct LaststandK {
     pub call_out: bool,
     pub places: bool,
@@ -11939,7 +11863,7 @@ impl LaststandK {
 impl Default for LaststandK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/stackroom.ts:48 STACKROOM, src/game/stackroom.ts:48)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct StackroomK {
     pub on: bool,
     pub apart: f64,
@@ -11996,7 +11920,7 @@ impl StackroomK {
 impl Default for StackroomK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/rearwatch.ts:61 REARWATCH, src/game/rearwatch.ts:61)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct RearwatchK {
     pub on: bool,
     pub through: bool,
@@ -12029,7 +11953,7 @@ impl RearwatchK {
 impl Default for RearwatchK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/stackline.ts:31 STACKLINE, src/game/stackline.ts:31)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct StacklineK {
     pub on: bool,
     pub ajar: f64,
@@ -12054,7 +11978,7 @@ impl StacklineK {
 impl Default for StacklineK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/sneak.ts:64 SNEAK, src/game/sneak.ts:64)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct SneakK {
     pub on: bool,
     pub crouch: bool,
@@ -12137,7 +12061,7 @@ impl SneakK {
 impl Default for SneakK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/pairup.ts:51 PAIRUP, src/game/pairup.ts:51)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct PairupK {
     pub on: bool,
     pub one_eye: bool,
@@ -12160,7 +12084,7 @@ impl PairupK {
 impl Default for PairupK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/spotted.ts:63 SPOTTED, src/game/spotted.ts:63)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct SpottedK {
     pub on: bool,
     pub leash_m: f64,
@@ -12213,7 +12137,7 @@ impl SpottedK {
 impl Default for SpottedK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/nightbreach.ts:61 NIGHTBREACH, src/game/nightbreach.ts:61)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct NightbreachK {
     pub room_lights: bool,
     pub op_lights: bool,
@@ -12244,7 +12168,7 @@ impl NightbreachK {
 impl Default for NightbreachK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/roomclear.ts:52 ROOMCLEAR, src/game/roomclear.ts:52)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct RoomclearK {
     pub seed: f64,
     pub reroll: bool,
@@ -12267,7 +12191,7 @@ impl RoomclearK {
 impl Default for RoomclearK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/lesson.ts:87 LESSON, src/game/lesson.ts:87)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct LessonK {
     pub on: bool,
 }
@@ -12282,7 +12206,7 @@ impl LessonK {
 impl Default for LessonK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/kit.ts:1170 ISSUE, src/game/kit.ts:1170)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct IssueK {
     pub on: bool,
     pub whole: bool,
@@ -12301,7 +12225,7 @@ impl IssueK {
 impl Default for IssueK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/verdict.ts:34 VERDICT, src/game/verdict.ts:34)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct VerdictK {
     pub on: bool,
     pub loud_card: bool,
@@ -12322,7 +12246,7 @@ impl VerdictK {
 impl Default for VerdictK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/unseen.ts:57 UNSEEN, src/game/unseen.ts:57)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct UnseenK {
     pub on: bool,
     pub pace_at: f64,
@@ -12377,7 +12301,7 @@ impl UnseenK {
 impl Default for UnseenK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/seenwalk.ts:33 SEENWALK, src/game/seenwalk.ts:33)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct SeenwalkK {
     pub on: bool,
     pub lit_at: f64,
@@ -12406,7 +12330,7 @@ impl SeenwalkK {
 impl Default for SeenwalkK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/holdfire.ts:45 HOLDFIRE, src/game/holdfire.ts:45)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct HoldfireK {
     pub on: bool,
     pub lift_secs: f64,
@@ -12427,7 +12351,7 @@ impl HoldfireK {
 impl Default for HoldfireK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/kit.ts:292 SLOTS, src/game/kit.ts:292)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SlotsK {
     pub on: bool,
     pub ok: bool,
@@ -12448,7 +12372,7 @@ impl SlotsK {
 impl Default for SlotsK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/destructionSwitch.ts:5 DESTRUCTION, src/game/destructionSwitch.ts:5)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct DestructionK {
     pub on: bool,
 }
@@ -12463,7 +12387,7 @@ impl DestructionK {
 impl Default for DestructionK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/kit.ts:313 BIGSLOT, src/game/kit.ts:313)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct BigslotK {
     pub on: bool,
     pub swings: f64,
@@ -12514,7 +12438,7 @@ impl BigslotK {
 impl Default for BigslotK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/kit.ts:377 KITDEAL, src/game/kit.ts:377)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct KitdealK {
     pub on: bool,
     pub more: bool,
@@ -12533,7 +12457,7 @@ impl KitdealK {
 impl Default for KitdealK { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/scene/cut.ts:31 CUT, src/scene/cut.ts:31)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct CutK {
     pub on: bool,
 }
@@ -13136,7 +13060,7 @@ pub fn page_rowset() -> RowsetK {
 }
 
 pub fn page_smokebreak() -> SmokebreakK {
-    crate::knobs::SmokebreakK { on: true, light_secs: 3.2, light_up: [0.5, 2.6], flame_at: 1.3, flame: 0.9, every: 7.5, draw: 2.1, out_after: 0.7, out: 1.3, flame_color: [1.0, 0.62, 0.24], flame_k: 2.4, flame_range: 3.2, ember_color: [1.0, 0.36, 0.1], ember_k: 0.1, ember_draw_k: 0.7, ember_range: 1.3, ember_every: 0.4, tip_out: 0.11, tip_up: 0.02, thread: crate::knobs::SmokebreakKThread { radius: 0.02, cells: 1.2, density: 5.0, temp: 5.0, speed: 0.25, push: 10.0, jitter: 0.35 }, thread_gone: 30.0, breath: crate::knobs::SmokebreakKBreath { radius: 0.04, cells: 1.5, density: 16.0, temp: 2.5, speed: 1.1, push: 12.0, expand: 2.2, attack: 0.1, jitter: 0.3, down: 0.1 }, puffs: crate::knobs::SmokebreakKPuffs { records: 4.0, count: 6.0, speed: 0.8, spread: 0.26, life: 2.4, size: 0.1, opacity: 0.8 }, color: [0.72, 0.76, 0.86], mouth_ahead: 0.1, mouth_down: 0.075 }
+    crate::knobs::SmokebreakK { on: true, light_secs: 3.2, light_up: [0.5, 2.6], flame_at: 1.3, flame: 0.9, every: 7.5, draw: 2.1, out_after: 0.7, out: 1.3, flame_color: [1.0, 0.62, 0.24], flame_k: 2.4, flame_range: 3.2, ember_color: [1.0, 0.36, 0.1], ember_k: 0.1, ember_draw_k: 0.7, ember_range: 1.3, ember_every: 0.4, tip_out: 0.11, tip_up: 0.02, thread: crate::knobs::SmokebreakKThread { radius: 0.02, cells: 1.2, density: 5.0, temp: 5.0, speed: 0.25, push: 10.0, jitter: 0.35 }, breath: crate::knobs::SmokebreakKBreath { radius: 0.04, cells: 1.5, density: 16.0, temp: 2.5, speed: 1.1, push: 12.0, expand: 2.2, attack: 0.1, jitter: 0.3, down: 0.1 }, color: [0.72, 0.76, 0.86], mouth_ahead: 0.1, mouth_down: 0.075 }
 }
 
 pub fn page_showwhy() -> ShowwhyK {
@@ -13144,7 +13068,7 @@ pub fn page_showwhy() -> ShowwhyK {
 }
 
 pub fn page_fire() -> FireK {
-    crate::knobs::FireK { on: true, names: alloc::vec![String::from("brazier")], height: 1.15, mouth: 1.15, coals: 0.26, coal_swing: 0.6, bed_r: 1.42, depth: 0.4, rates: alloc::vec![0.43, 1.3, 2.7, 4.9, 8.3], weights: alloc::vec![0.8, 0.9, 0.7, 0.45, 0.2], least: 0.6, most: 1.6, wander: 0.14, wander_up: 0.1, lift: 0.5, kick: 0.6, kick_secs: 0.12, bright: 1.25, warm: alloc::vec![1.0, 0.72, 0.51], reach: 1.4, hardy: true, stir_gap: 0.3, size: 1.1, pop_rate: 1.1, pop_slot: 0.2, embers: 60.0, ember_life: 1.7, ember_speed: 1.1, ember_size: 0.004, ember_gain: 0.45, ember_crack: 10.0, ember_r: 30.0, look: crate::knobs::FireKLook { gain: 3.0, core: 4.0, sigma: 2.5, speed: 0.7, tall: 0.95, torn: 1.1, plume: 1.0, shimmer: 0.019, soot: 0.5, breathe: 1.0, react: 1.0, lean: 0.2, steps: 40.0 }, smoke: crate::knobs::FireKSmoke { on: true, up: 1.9, radius: 0.26, cells: 4.0, density: 1.0, temp: 21.0, speed: 0.9, push: 6.0, jitter: 0.5, every: 1.0, view_r: 18.0, lean: 0.12 }, gas: crate::knobs::FireKGas { on: false, up: 0.1, radius: 0.2, cells: 6.0, density: 0.3, temp: 22.0, speed: 1.8, push: 8.0, jitter: 0.6, every: 0.5, view_r: 12.0, keep: 0.8, ref_: 3.2, lo: 0.2, ease: 1.5 }, bed: 0.85, crack: 0.9, bed_secs: 12.0, fog: true, max: 4.0, draw_r: 70.0, wind_max: 3.0 }
+    crate::knobs::FireK { on: true, names: alloc::vec![String::from("brazier")], height: 1.15, mouth: 1.15, coals: 0.26, coal_swing: 0.6, bed_r: 1.42, depth: 0.4, rates: alloc::vec![0.43, 1.3, 2.7, 4.9, 8.3], weights: alloc::vec![0.8, 0.9, 0.7, 0.45, 0.2], least: 0.6, most: 1.6, wander: 0.14, wander_up: 0.1, lift: 0.5, kick: 0.6, kick_secs: 0.12, bright: 1.25, warm: alloc::vec![1.0, 0.72, 0.51], reach: 1.4, hardy: true, stir_gap: 0.3, size: 1.1, pop_rate: 1.1, pop_slot: 0.2, embers: 60.0, ember_life: 1.7, ember_speed: 1.1, ember_size: 0.004, ember_gain: 0.45, ember_crack: 10.0, ember_r: 30.0, look: crate::knobs::FireKLook { gain: 3.0, core: 4.0, sigma: 2.5, speed: 0.7, tall: 0.95, torn: 1.1, plume: 1.0, shimmer: 0.019, soot: 0.5, breathe: 1.0, react: 1.0, lean: 0.2, steps: 40.0 }, smoke: crate::knobs::FireKSmoke { on: true, up: 1.9, radius: 0.26, cells: 4.0, density: 1.0, temp: 21.0, speed: 0.9, push: 6.0, jitter: 0.5, every: 1.0, view_r: 18.0, lean: 0.12 }, bed: 0.85, crack: 0.9, bed_secs: 12.0, fog: true, max: 4.0, draw_r: 70.0, wind_max: 3.0 }
 }
 
 pub fn page_flinch() -> FlinchK {
@@ -13486,7 +13410,7 @@ pub fn page_cut() -> CutK {
 }
 
 /// every knob table
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Knobs {
     pub aim: AimK,
     pub trained: TrainedK,

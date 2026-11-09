@@ -1,10 +1,10 @@
 //! The types of `scene_cut`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: CutPlane, src/scene/cut.ts:19)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct CutPlane {
     pub n: V3,
     pub d: f64,
@@ -40,7 +40,7 @@ impl CutResult {
 impl Default for CutResult { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: CutGlass, src/scene/cut.ts:208)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct CutGlass {
     pub see: f64,
     pub rim: f64,

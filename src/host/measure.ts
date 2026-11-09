@@ -1,9 +1,9 @@
 // THE MEASURING TOOLS, on a page that draws a game it does not hold: F9 records frames (ui/perfrec.ts), F8 prices the layers one at a time over a held world (Shift+F8: left running;
 // ui/perfsweep.ts), F6 captures a frame (host/capture.ts). What they read of the game is its tally (DrawGame.tally).
 import type { Engine } from '../engine';
-import type { FollowCamera } from '../game/camera';
+import type { FollowCamera } from './camera';
 import type { Gpu } from '../gpu/device';
-import type { Input } from '../game/input';
+import type { Input } from './input';
 import type { SmokeSystem } from '../smoke/smoke';
 import type { Quality } from '../ui/quality';
 import type { DrawGame } from './drawgame';
@@ -28,6 +28,7 @@ function measured(game: DrawGame, engine: Engine, smoke: SmokeSystem, marks: () 
     get qrf() { return { state: game.tally().qrf }; }, get escalation() { return game.tally().escalation; },
     get saves() { const t = game.tally(); return { stats: { autosaves: t.autosaves, manual: t.manual, loads: t.loads } }; },
     get time() { return game.time; },
+    get turned() { return game.turnedNow; },
     fogOfWar: { get on() { return D.n[Section.fog] > 0 && D.u[D.at[Section.fog] + Fog.on] !== 0; }, knobs: { get edge() { return FOG_HELD.edge ?? D.f[D.at[Section.fog] + Fog.edge]; }, set edge(v: number) { FOG_HELD.edge = v === D.f[D.at[Section.fog] + Fog.edge] ? null : v; } } },
   };
 }

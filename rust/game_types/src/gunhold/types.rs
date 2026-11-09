@@ -1,10 +1,10 @@
 //! The types of `gunhold`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: Known, src/game/gunhold.ts:81)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Known {
     pub gun_t: f64,
     pub shot_t: f64,
@@ -43,7 +43,7 @@ impl Known {
 impl Default for Known { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum Phase {
     Back,
     Run,
@@ -70,7 +70,7 @@ impl Phase {
 }
 
 /// (TypeScript: St, src/game/gunhold.ts:85)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct St {
     pub phase: crate::gunhold::Phase,
     pub go_t: f64,
@@ -123,7 +123,7 @@ impl St {
 impl Default for St { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: GunHoldStats, src/game/gunhold.ts:86)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct GunHoldStats {
     pub armed: f64,
     pub ran: f64,
@@ -323,7 +323,7 @@ impl GunHoldFeet {
 impl Default for GunHoldFeet { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct GunholdMod {
     /// (src/game/gunhold.ts:88 knowns)
     pub knowns: JsMap<u32, crate::gunhold::Known>,

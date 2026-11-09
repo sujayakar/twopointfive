@@ -1,6 +1,6 @@
 //! The types of `air_dust`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: AirDustSnap, src/game/airDust.ts:54)
@@ -25,7 +25,7 @@ impl AirDustSnap {
 impl Default for AirDustSnap { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: AirDust, src/game/airDust.ts:61)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct AirDust {
     pub dirty: bool,
     pub drift: f64,
@@ -48,7 +48,7 @@ impl AirDust {
 impl Default for AirDust { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: inline at src/game/airDust.ts:80 AirDust.stats, src/game/airDust.ts:80)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct AirDustStats {
     pub steps: f64,
     pub probes: f64,

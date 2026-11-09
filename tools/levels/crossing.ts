@@ -3,7 +3,7 @@
 // THE LEVEL'S ONE IDEA: TWO MEN WHO WATCH EACH OTHER — nobody crosses by the lane until both drop on one word.
 // Seven beats are authored (the game has seven names for a level's men); a deal mans five or six.
 //   bun run tools/levels/export.ts crossing          → levels/crossing.json (its footstep `surfaces`, its scenarios.quiet block; no room clear in it)
-//   bun run tools/qa/quiet-check.ts crossing.json     the quiet block against the built floor, every deal started
+//   levels stands crossing     the quiet block against the built floor, every deal started
 //   bun run tools/qa/quiet-light.ts crossing          the light a sneaking man stands in, on paper
 //   bun run tools/qa/quiet-pair.ts --level crossing.json --seeds 1-48      the scripted pair beside the same run alone
 //   bun run tools/qa/quiet-plan.ts crossing --png     the plan picture: beats, starts, places, ways out, the cameras' cones
@@ -156,7 +156,7 @@ export const QUIET: QuietData = {
   },
 };
 
-/** scenarios.response (game/qrf.ts, tools/qa/response-check.ts): WHO COMES WHEN THE CROSSING GOES LOUD. The road's vehicle gates are welded for the night, so
+/** scenarios.response (game/qrf.ts, rust/game_start/tests/response_team.rs): WHO COMES WHEN THE CROSSING GOES LOUD. The road's vehicle gates are welded for the night, so
  *  they come on foot from the house's side, by one of its two yard gates. Character yaws (forward = [sin, 0, cos]: 0 looks down the plan, toward the road). */
 export const RESPONSE: ResponseData = {
   why: 'A border post: the company that mans it sleeps in its lines up the road, with a duty section dressed and a telephone to the customs house.',
@@ -411,7 +411,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       { id: 'shed', mat: 'stone', x0: 30, z0: 19.5, x1: 36, z1: 24 },
     ],
   };
-  // THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; src/host/kitViewPlan.ts measures the rest): the south gate from the lorry park, where the pair starts — the
+  // THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest): the south gate from the lorry park, where the pair starts — the
   // lot's pickup and the seized blue box over the wall behind them. The pallet of crates and the two tyres left outside the gate (`G.crates(11.4, 26.4 …)`,
   // `G.tyres(12.9, 25.3 …)` above) stand where the file of five forms, so they are out of the picture: by id, as the export numbers them (the kit's list is the file's, box for box).
   // FOR THE PICTURE ONLY (`add`: the mission never loads these): only `exterior` lamps stay lit in a picture and the lane's are 8 m off, so the strip behind the

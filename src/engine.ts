@@ -28,7 +28,7 @@ import { TexturePool } from './render/texpool';
 import { reachLevel } from './render/reach';
 import { ReachKeep, type KeepGuest } from './render/reachKeep';
 import { WORLD } from './scene/world';
-import { FollowCamera } from './game/camera';
+import { FollowCamera } from './host/camera';
 import { Vec3, m4, v3, smoothstep } from './math/vec';
 
 import { RenderSettings, defaultSettings } from './settings';
@@ -435,8 +435,6 @@ export class Engine {
    *  list (fitted r0 / r1 per slot, the cull sphere fitted); null = the list as the game wrote it: hand radii, no taper byte (each record traced as an untapered cone), 1.5 m spheres */
   rigFit: RigFit | null = null;
   setRigFit(f: RigFit | null) { this.rigFit = f; }
-  /** Are the proxies the FITTED cones this frame? (a fit attached — the game and the viewer always attach one; without it they are the game's hand capsules traced as untapered cones) */
-  get sdfRigOn(): boolean { return !!this.rigFit; }
   /** Attach the decal list the g-buffer reads (or null); the g-buffer's object group rebinds by itself (keyed on the buffer). */
   setDecals(d: Decals | null) { this.decals = d; }
   /** Is FrameFlags.Decals up this frame? (the setting, a list attached, and at least one mark in it — an empty list costs the fragment stage nothing) */
@@ -490,7 +488,6 @@ export class Engine {
       const inst = new RadianceCascades(this.device, this.sceneLayout, { ...cfg }); inst.invalidateWorld(); this.rcPark.set(key, inst);
     }
   }
-  get rcParked(): string[] { return [...this.rcPark.keys()]; }
   /** Something changed the WORLD wholesale (level geometry reloaded, the light rig swapped — lighting.ts setDaylight): re-prime the radiance cache in place (rc.invalidateWorld —
    *  P0-A) AND every parked grid, which would otherwise come back on a later hop holding the field from before the change (a night grid parked through the daytime show, a
    *  day grid swapped in at night: seven frames of the wrong bounce and the wrong light-meter reading — review R10.1). Not for screen events — resize / scale / checkerboard /
@@ -525,8 +522,6 @@ export class Engine {
     this.sceneBGOutItems = this.world.itemBuf; this.sceneBGOutMesh = meshBuf; this.sceneBGOutSmoke = this.smoke.uniform;
   }
   private sceneBGOutItems: GPUBuffer | null = null; private sceneBGOutMesh: GPUBuffer | null = null; private sceneBGOutSmoke: GPUBuffer | null = null;
-  /** The scene bind group (group 0 of every scene pipeline), built if need be — for tools that run their own kernel against the live scene (MeshShadows.debugTrace). */
-  sceneBindGroup(): GPUBindGroup { this.ensureSceneBG(); return this.sceneBG!; }
   /** Is the mesh-shadow path live this frame? (the setting, the adapter budget and an attached MeshShadows all three) */
   get meshShadowsOn(): boolean { return this.settings.meshShadows && this.meshShadowsAvailable && !!this.meshShadows; }
 

@@ -8,7 +8,7 @@
 // draws them with the items.
 import { manById } from './seats';
 import { Vec3, v3 } from '../math/vec';
-import { gearText } from './gear';
+import { gearText } from '../host/gear';
 import { Box } from '../scene/boxes';
 import type { Character } from './character';
 import type { Game, Guard } from './game';

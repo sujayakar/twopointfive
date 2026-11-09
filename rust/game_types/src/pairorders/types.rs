@@ -1,10 +1,10 @@
 //! The types of `pairorders`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: PairOrders, src/game/pairorders.ts:143)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct PairOrders {
     pub jobs: JsMap<GuardId, crate::pairorders::Job>,
     pub habit: JsMap<GuardId, [f64; 2]>,
@@ -41,7 +41,7 @@ impl PairOrders {
 impl Default for PairOrders { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: Job, src/game/pairorders.ts:129)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Job {
     pub foe: GuardId,
     pub mode: crate::pairorders::JobMode,
@@ -100,7 +100,7 @@ impl Job {
 impl Default for Job { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum JobMode {
     Mark,
     Now,
@@ -115,7 +115,7 @@ impl JobMode {
 }
 
 /// (TypeScript: inline at src/game/pairorders.ts:147 PairOrders.glance, src/game/pairorders.ts:147)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct PairOrdersGlanceValue {
     pub on: bool,
     pub end_t: f64,
@@ -134,7 +134,7 @@ impl PairOrdersGlanceValue {
 impl Default for PairOrdersGlanceValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/pairorders.ts:151 PairOrders.dark, src/game/pairorders.ts:151)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct PairOrdersDarkValue {
     pub check_t: f64,
     pub lit_t: f64,
@@ -153,7 +153,7 @@ impl PairOrdersDarkValue {
 impl Default for PairOrdersDarkValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/pairorders.ts:152 PairOrders.darkMemo, src/game/pairorders.ts:152)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct PairOrdersDarkMemoValue {
     pub t: f64,
     pub spot: Option<V3>,
@@ -170,7 +170,7 @@ impl PairOrdersDarkMemoValue {
 impl Default for PairOrdersDarkMemoValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/pairorders.ts:154 PairOrders.ways, src/game/pairorders.ts:154)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct PairOrdersWaysValue {
     pub to: V3,
     pub path: Vec<V3>,
@@ -189,7 +189,7 @@ impl PairOrdersWaysValue {
 impl Default for PairOrdersWaysValue { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/pairorders.ts:113 PAIR_LOG, src/game/pairorders.ts:113)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct PairordersModPAIRLOGItem {
     pub t: f64,
     pub what: String,
@@ -321,7 +321,7 @@ impl PairOrdersStalk {
 impl Default for PairOrdersStalk { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct PairordersMod {
     /// (src/game/pairorders.ts:113 PAIR_LOG)
     pub pair_log: Vec<crate::pairorders::PairordersModPAIRLOGItem>,

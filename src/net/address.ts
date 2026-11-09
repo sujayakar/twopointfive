@@ -1,4 +1,4 @@
-// THE ADDRESS OF A NETWORKED GAME: its words, as a page in one (page.ts) and the lobby that sends a page there (lobby.ts) write and read them.
+// THE ADDRESS OF A NETWORKED GAME: its words, as a page in one (door.ts) and the lobby that sends a page there (lobby.ts) write and read them.
 /** the address's words: the server's WebSocket address, the game's id, the seat's key (read once, then kept for the tab under KEEP) */
 export const NETPLAY = 'net', NET_GAME = 'netgame', NET_KEY = 'netkey';
 /** …and four for whoever tries it on one machine or on one good network: `netpredict=0` draws his own man where the game has him (foresee.ts FORESEE.on off);

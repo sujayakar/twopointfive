@@ -24,7 +24,7 @@ const report = { checks: [], errors: [] };
 const check = (ok, label, detail) => { report.checks.push({ ok: !!ok, label, detail }); console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
 function watch(page) {
   page.on('pageerror', e => { if (!GPU && /WebGPU|adapter/i.test(String(e))) return; report.errors.push(String(e).slice(0, 300)); log('PAGE ERROR', String(e).slice(0, 300)); });
-  page.on('console', m => { if (m.type() !== 'error') return; const t = m.text(); if (NOISE.test(t) || /Failed to load resource|Failed to fetch/.test(t) || (!GPU && /WebGPU|adapter/i.test(t))) return; /* (a fetch cut off by the next page load is not a fault) */ report.errors.push(t.slice(0, 300)); log('console error', t.slice(0, 300)); });
+  page.on('console', m => { if (m.type() !== 'error') return; const t = m.text(); if (NOISE.test(t) || /Failed to load resource|Failed to fetch|Response body loading was aborted/.test(t) || (!GPU && /WebGPU|adapter/i.test(t))) return; /* (a fetch cut off by the next page load is not a fault) */ report.errors.push(t.slice(0, 300)); log('console error', t.slice(0, 300)); });
 }
 const shot = (page, name, ms = 30000) => page.screenshot({ path: path.join(outDir, name), timeout: ms }).then(() => true, e => { log('no still', name, String(e).split('\n')[0].slice(0, 120)); return false; });
 const query = u => [...new URLSearchParams(String(u).replace(/^[^?]*\?/, ''))].map(([k, v]) => v ? `${k}=${v}` : k);
@@ -199,8 +199,8 @@ const cardOf = page => page.evaluate(() => ({ buttons: [...document.querySelecto
   if (process.env.ALL) {
     const bad = [];
     for (const id of s0.rows) { await open(); await goRow(id); await page.waitForTimeout(300); const st = await stateOf(page);
-      await page.keyboard.press('Enter'); await page.waitForTimeout(500);
-      const ok = await Promise.all([deployed(), page.keyboard.press('Enter')]).then(() => true, () => false);
+      // (listened for before a key: a lesson, with no kit to pick, loads on the first Enter)
+      let gone = false; const load = deployed().then(() => gone = true, () => false); await page.keyboard.press('Enter'); await Promise.race([load, page.waitForTimeout(500)]); if (!gone) await page.keyboard.press('Enter'); const ok = await load;
       log(id, ok ? new URL(page.url()).search : 'NO LOAD'); if (!ok || !st.loadout || !st.loadout.deployInView) bad.push(id); }
     check(bad.length === 0, `every one of the ${s0.rows.length} missions: highlighted, its loadout on the page with Deploy in view, Enter Enter loads it`, bad.length ? `failed: ${bad.join(', ')}` : 'all loaded');
   }

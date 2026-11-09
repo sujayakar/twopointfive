@@ -7,7 +7,7 @@ import { faceHere } from '../blitz/face-build.ts';
 import { characterFiles } from '../blitz/start-pack.ts';
 import { DrawGame } from '../../src/host/drawgame';
 import { DrawPlay } from '../../src/host/drawplay';
-import { parseLines } from '../../src/replay/kept';
+import { parseLines } from '../../src/tape/kept';
 import { handsOf } from '../../src/tape/keep';
 
 const [file, ...rest] = process.argv.slice(2), to = rest[0] === '--to' ? Number(rest[1]) : Infinity;

@@ -1,10 +1,10 @@
 //! The types of `fireline`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: St, src/game/fireline.ts:77)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct St {
     pub since: f64,
     pub t: f64,
@@ -29,7 +29,7 @@ impl St {
 impl Default for St { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Fired, src/game/fireline.ts:82)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Fired {
     pub gun: String,
     pub shots: f64,
@@ -118,7 +118,7 @@ impl FireLineFeet {
 impl Default for FireLineFeet { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct FirelineMod {
     /// (src/game/fireline.ts:79 states)
     pub states: JsMap<GuardId, crate::fireline::St>,

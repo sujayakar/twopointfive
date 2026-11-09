@@ -1,6 +1,6 @@
 //! The types of `doorway`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// a walk's price list, nav.findPath's penalty: a cell in the lane of a door of `open` costs doormanners.lane_dear, any other 1. The doors and the knobs are read live from g when priced; `memo` keeps each cell's first answer, by nav.idx, for this one value (doorway.ts doorwayLanePrice)
@@ -10,7 +10,7 @@ pub enum DoorwayLanePrice {
 }
 
 /// (TypeScript: St, src/game/doorway.ts:140)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct St {
     pub t: f64,
     pub held_t: f64,
@@ -61,7 +61,7 @@ impl St {
 impl Default for St { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/doorway.ts:138 STACK_OWN, src/game/doorway.ts:138)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct DoorwayModSTACKOWN {
     pub leaf: f64,
     pub mark: f64,
@@ -202,7 +202,7 @@ impl Through {
 impl Default for Through { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct DoorwayMod {
     /// (src/game/doorway.ts:138 STACK_OWN)
     pub stack_own: crate::doorway::DoorwayModSTACKOWN,

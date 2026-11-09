@@ -1,6 +1,6 @@
 //! The types of `wallskin`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: Brk, src/game/wallskin.ts:71)
@@ -39,7 +39,7 @@ impl Brk {
 impl Default for Brk { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Seat, src/game/wallskin.ts:77)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Seat {
     pub k: f64,
     pub n: f64,
@@ -66,7 +66,7 @@ impl Seat {
 impl Default for Seat { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: WallSkin, src/game/wallskin.ts:115)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct WallSkin {
     pub cut: JsMap<crate::Num, Vec<FrameBoxId>>,
     pub out: JsSet<crate::Num>,
@@ -107,7 +107,7 @@ impl WallSkin {
 impl Default for WallSkin { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: inline at src/game/wallskin.ts:121 WallSkin.laid, src/game/wallskin.ts:121)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct WallSkinLaidValueItem {
     pub r: [f64; 4],
     pub slot: f64,
@@ -124,7 +124,7 @@ impl WallSkinLaidValueItem {
 impl Default for WallSkinLaidValueItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/wallskin.ts:135 WallSkin.stats, src/game/wallskin.ts:135)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct WallSkinStats {
     pub cut: f64,
     pub whole: f64,

@@ -14,8 +14,8 @@ import { GltfCharacter } from '../anim/gltf';
 import { CharacterRenderer } from '../anim/characters';
 import { Character } from './character';
 import type { Stance, HoldPhase, HoldVariant, KitItem } from './character';
-import { Input } from './input';
-import { FollowCamera } from './camera';
+import { Input } from '../host/input';
+import { FollowCamera } from '../host/camera';
 import { Seat, sampleCmd } from './cmd';   // the player's input as one plain record a tick (cmd.ts)
 import type { PlayerCmd } from './cmd';
 import { RtLight } from '../render/lights';
@@ -34,6 +34,7 @@ import { snowBogAt, snowBogMay, snowBogKinds } from './snowBog';
 import { attachSnowBlast, clearSnowBlast, stepSnowDigs } from './snowBlast';
 import { SNOW_LOOK, snowLevel, WEATHER_PRESETS } from './weatherKinds';
 import { levelNameOf } from '../scene/levelLoad';
+import { LEVEL_SCRIPTS } from './levelScripts';
 import { LOOK } from '../scene/look';   // (a leaf: no imports)
 import { leafRowOf, paintLeaves } from '../scene/leafPaint';
 import { SmokeSystemLike } from '../smoke/types';
@@ -57,7 +58,7 @@ import { doorBlast } from './doorblast';
 import { RAG } from './ragdoll';
 import { Throwables, ThrowSolution, Item } from './throwables';
 import { PropSystem, PropEvent, Prop } from './props';
-import { GameAudioLike, nullAudio } from './audio_iface';
+import { GameAudioLike, nullAudio } from '../audio/iface';
 import * as fx from './effects';
 import { Sparks } from './sparks';
 import { Tracers } from './tracers';
@@ -1216,7 +1217,7 @@ export class Game {
     for (const s of this.seats) s.view.wallCharge = new WallCharge(s.view);     // (after the door tools: it spends their charges)
     for (const s of this.seats) registerShutDoor(s.view);                     // (after the door tools: 'shut that door' stands in for their charge row on a door that stands open)
     standMen(this);   // (seats.ts: a second seat's man and his light, made last — a game of one makes nothing here)
-    this.director = new Director(this, level.script ?? null);   // the level's script: its define pass run and linted against this level here (nothing of the world touched); programs start on demand
+    this.director = new Director(this, LEVEL_SCRIPTS[levelNameOf(level) ?? ''] ?? null);   // the level's script (levelScripts.ts): its define pass run and linted against this level here (nothing of the world touched); programs start on demand
     this.glassBreak.stood();   // (which glass each pane is, settled as the level stands)
     { const over = stoodOver(this, this.col.mirror.tables); if (over) throw new Error(over); }   // (levelfit.ts: the game as it stands, against every table and pool that holds it — one over is not a game)
   }
@@ -1359,7 +1360,7 @@ export class Game {
     pl.hasRifle = withRifle;
   }
 
-  /** THE ROWS OF THE LIGHTS STOOD ON THE LIST AS IT IS: as the level is built, and again when a fixture is hung after that (the kit picture's, host/kitView.ts). So every lamp a fixture feeds has a row and one way of burning. */
+  /** THE ROWS OF THE LIGHTS STOOD ON THE LIST AS IT IS: as the level is built. So every lamp a fixture feeds has a row and one way of burning. */
   standLights(): void { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Game.standLights', this, []); if (__r !== RUST_PASS) return __r as any; } } this.lightHome.stand(this.engine.lights.lights, this.targets, this.beacons, this.devices.cameras.map(c => ({ light: c.cone, target: c.target, slot: c.slot }))); }
   resetLevelState() { { const __s = RUST_SURFACE; if (__s) { const __r = __s.call('Game.resetLevelState', this, []); if (__r !== RUST_PASS) return __r as any; } }
     for (const t of this.targets) this.lightHome.in(LIGHT_IN.on, t, t.authored ? 1 : 0);

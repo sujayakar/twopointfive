@@ -36,17 +36,15 @@ fn put_at(arr: &mut Vec<f64>, ix: usize, x: f64, hole: f64) {
 const NO_FRAME: f64 = -1.0;
 
 /// One fire's embers, as this frame files them: the closure's captures at fire.ts:369.
-struct EmberFrom { mouth: MouthOf, flame_h: f64, e_up: f64, e_a: Option<[f64; 4]>, wv: V3, heat: f64, si: f64 }
+struct EmberFrom { mouth: MouthOf, flame_h: f64, e_up: f64, e_a: [f64; 4], heat: f64, si: f64 }
 
 /// A throw of embers off one fire, by its own seed and not the particles' serial. (fire.ts:369 emberEmit)
 fn ember_emit(g: &mut Game, f: &EmberFrom, n: f64, hard: f64, k: f64) {
     let fl = fire_look_smoke();
     let (ember_speed, ember_life, ember_size, ember_gain) = (g.k.fire.ember_speed, g.k.fire.ember_life, g.k.fire.ember_size, g.k.fire.ember_gain);
     let p = f.mouth.pos;
-    let (pos, dir, spread, speed_share, jit) = match f.e_a {
-        Some(a) => ([p[0] + a[0], p[1] + f.e_up, p[2] + a[1]], [a[2], 1.0, a[3]], fl.ember_spread + 0.6 * hard, fl.ember_speed, fl.ember_jit),
-        None => ([p[0], p[1] + f.flame_h * (0.25 + 0.3 * hard), p[2]], [f.wv[0] * 0.15, 1.0, f.wv[2] * 0.15], 0.5 + 0.5 * hard, 1.0, 0.7),
-    };
+    let a = f.e_a;
+    let (pos, dir, spread, speed_share, jit) = ([p[0] + a[0], p[1] + f.e_up, p[2] + a[1]], [a[2], 1.0, a[3]], fl.ember_spread + 0.6 * hard, fl.ember_speed, fl.ember_jit);
     let seed = (m::imul(js::to_i32(f.si + 1.0), 0x9E3779B1u32 as i32) ^ m::imul(js::to_i32(k + 1.0), 0x85EBCA77u32 as i32)) as u32 as f64;
     crate::render_particles::particles_emit(g, crate::render_particles::PKind::Spark, pos, dir, n, crate::render_particles::EmitOpts {
         shape: Some(crate::render_particles::EmitShape::Cone),
@@ -103,7 +101,7 @@ pub fn update_fire(g: &mut Game, dt: f64) {
         if stale {
             books.fire = Some(FireShown {
                 n: 0.0, time: 0.0, stir: None, stir_at: None, bed: Vec::new(), smoke: Vec::new(), smokes: 0.0, beds: 0.0,
-                ember: Vec::new(), embers: 0.0, gas: Vec::new(), gas_mix: Vec::new(), gases: 0.0, soot_mix: None, kept: None,
+                ember: Vec::new(), embers: 0.0, soot_mix: None,
                 serial: 0,   // the picture's to deal, never g.serial(): a load rewinds that and the book stays. Only the bed's voice compares it, and that is not here.
             });
         }
@@ -111,7 +109,6 @@ pub fn update_fire(g: &mut Game, dt: f64) {
         p.n += 1.0;
         p.time = time;
     }
-    let drawing = crate::smoke_types::smoke_system_like_drawing(g) && g.engine.settings.fire_smoke;
     let mut fires = 0.0;
     let mut lit = 0.0;
     let look = g.m.render_frame.look_config;
@@ -191,7 +188,6 @@ pub fn update_fire(g: &mut Game, dt: f64) {
             s.n += 1.0;
         }
         let crate::fire::WindAt { wv, wl, wind } = wind_at(g, mouth.pos);
-        let fit = fits(g);
         // the embers: a steady few off the flame and a throw with each crack, of every fire on every host; the picture leaves out what is far from where it looks
         let (height, embers, ember_life, ember_crack) = (g.k.fire.height, g.k.fire.embers, g.k.fire.ember_life, g.k.fire.ember_crack);
         let flame_h = height * g.k.fire.look.tall;
@@ -218,8 +214,8 @@ pub fn update_fire(g: &mut Game, dt: f64) {
             });
         }
         let e_up = flame_h * fl_smoke.ember_up;
-        let e_a = if fit { Some(axis_at(g, e_up, wind)) } else { None };
-        let from = EmberFrom { mouth, flame_h, e_up, e_a, wv, heat, si };
+        let e_a = axis_at(g, e_up, wind);
+        let from = EmberFrom { mouth, flame_h, e_up, e_a, heat, si };
         if moved && px && ember_crack > 0.0 && book(g).stir.as_ref().map_or(false, |v| v.contains(&(ix as f64))) {
             ember_throw(g, &from, m::round(ember_crack * 2.0), 1.0);
         }
@@ -258,7 +254,7 @@ pub fn update_fire(g: &mut Game, dt: f64) {
         }
         // the smoke: a short source on the solver, filed afresh every `every` s
         let b = g.k.fire.smoke;
-        if moved && drawing {
+        if moved {
             let slot = m::floor(time / b.every);
             let p = book(g);
             let n = p.n;
@@ -266,17 +262,15 @@ pub fn update_fire(g: &mut Game, dt: f64) {
             put_at(&mut p.smoke, ix, n, NO_FRAME);
             if slot != m::floor(was / b.every) || !goes {
                 p.smokes += 1.0;
-                let sk = if wl > 8.0 { 8.0 / wl } else { 1.0 };
-                let dir = [wv[0] * sk * b.lean, 1.0, wv[2] * sk * b.lean];
-                let l = if look.fire_smoke > 0.0 { Some(fl_smoke) } else { None };
-                let a = match l { Some(l) if fit => Some(axis_at(g, height * l.up, wind)), _ => None };
+                let l = fl_smoke;
+                let a = axis_at(g, height * l.up, wind);
                 smoke_emit(g, &crate::smoke_types::SmokeEmitter {
-                    pos: [mouth.pos[0] + a.map_or(0.0, |a| a[0]), mouth.pos[1] + height * l.map_or(b.up, |l| l.up), mouth.pos[2] + a.map_or(0.0, |a| a[1])],
-                    dir: a.map_or(dir, |a| [a[2], 1.0, a[3]]),
+                    pos: [mouth.pos[0] + a[0], mouth.pos[1] + height * l.up, mouth.pos[2] + a[1]],
+                    dir: [a[2], 1.0, a[3]],
                     speed: b.speed,
-                    radius: l.map_or(b.radius, |l| l.radius),
+                    radius: l.radius,
                     min_voxels: Some(b.cells),
-                    density: b.density * heat * l.map_or(1.0, |l| l.density),
+                    density: b.density * heat * l.density,
                     temperature: b.temp * heat,
                     ttl: b.every,
                     age: 0.0,
@@ -284,42 +278,39 @@ pub fn update_fire(g: &mut Game, dt: f64) {
                     push: Some(b.push),
                     jitter: Some(b.jitter),
                     lattice: Some(crate::smoke_types::SmokeEmitterLattice::Coarse),
-                    look: Some(true),
-                    tint: a.map(|_| fl_smoke.soot),
+                    look: Some(true), fire: Some(true),
+                    tint: Some(l.soot),
                     ..crate::smoke_types::SmokeEmitter::zeroed()
                 });
             }
             // the look prototype: the fire puffs, a short burst of thicker, hotter gas, a few a second
-            if look.fire_smoke > 0.0 {
-                let l = fl_smoke;
-                let ps = m::floor(time / l.puff_every);
-                if ps != m::floor(was / l.puff_every) || !goes {
-                    let a_k = m::min(2.0, look.fire_smoke);
-                    let ox = (h01(si + ps * 31.0 + 11.0) - 0.5) * 2.0 * l.puff_off;
-                    let oz = (h01(si + ps * 31.0 + 12.0) - 0.5) * 2.0 * l.puff_off;
-                    let k = 0.7 + 0.6 * h01(si + ps * 31.0 + 13.0);
-                    let a = if fit { Some(axis_at(g, height * l.puff_up, wind)) } else { None };
-                    smoke_emit(g, &crate::smoke_types::SmokeEmitter {
-                        pos: [mouth.pos[0] + ox + a.map_or(0.0, |a| a[0]), mouth.pos[1] + height * l.puff_up, mouth.pos[2] + oz + a.map_or(0.0, |a| a[1])],
-                        dir: match a { Some(a) => [a[2] + ox, 1.0, a[3] + oz], None => [wv[0] * b.lean + ox, 1.0, wv[2] * b.lean + oz] },
-                        speed: l.puff_speed * k,
-                        radius: l.puff_radius,
-                        min_voxels: Some(b.cells),
-                        density: l.puff_density * heat * a_k * k,
-                        temperature: l.puff_temp * heat * k,
-                        ttl: l.puff_secs,
-                        age: 0.0,
-                        kind: crate::smoke_types::SmokeEmitterKind::Cloud,
-                        push: Some(l.puff_push),
-                        expand: Some(l.puff_expand),
-                        attack: Some(0.06),
-                        jitter: Some(0.9),
-                        lattice: Some(crate::smoke_types::SmokeEmitterLattice::Coarse),
-                        look: Some(true),
-                        tint: a.map(|_| l.soot),
-                        ..crate::smoke_types::SmokeEmitter::zeroed()
-                    });
-                }
+            let l = fl_smoke;
+            let ps = m::floor(time / l.puff_every);
+            if ps != m::floor(was / l.puff_every) || !goes {
+                let ox = (h01(si + ps * 31.0 + 11.0) - 0.5) * 2.0 * l.puff_off;
+                let oz = (h01(si + ps * 31.0 + 12.0) - 0.5) * 2.0 * l.puff_off;
+                let k = 0.7 + 0.6 * h01(si + ps * 31.0 + 13.0);
+                let a = axis_at(g, height * l.puff_up, wind);
+                smoke_emit(g, &crate::smoke_types::SmokeEmitter {
+                    pos: [mouth.pos[0] + ox + a[0], mouth.pos[1] + height * l.puff_up, mouth.pos[2] + oz + a[1]],
+                    dir: [a[2] + ox, 1.0, a[3] + oz],
+                    speed: l.puff_speed * k,
+                    radius: l.puff_radius,
+                    min_voxels: Some(b.cells),
+                    density: l.puff_density * heat * k,
+                    temperature: l.puff_temp * heat * k,
+                    ttl: l.puff_secs,
+                    age: 0.0,
+                    kind: crate::smoke_types::SmokeEmitterKind::Cloud,
+                    push: Some(l.puff_push),
+                    expand: Some(l.puff_expand),
+                    attack: Some(0.06),
+                    jitter: Some(0.9),
+                    lattice: Some(crate::smoke_types::SmokeEmitterLattice::Coarse),
+                    look: Some(true), fire: Some(true),
+                    tint: Some(l.soot),
+                    ..crate::smoke_types::SmokeEmitter::zeroed()
+                });
             }
         }
     }

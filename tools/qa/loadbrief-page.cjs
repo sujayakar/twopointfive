@@ -45,7 +45,7 @@ const SEEN = () => { const b = document.getElementById('brief'), t = (s) => (b &
     menu: document.getElementById('menu').classList.contains('on'), bootHead: !!document.querySelector('#menu .head') && !!document.querySelector('#menu .bootstatus'), buttons: document.querySelectorAll('#menu .actions button').length, options: !!(document.getElementById('options') && document.getElementById('options').classList.contains('on')),
     fatal: (document.getElementById('fatal') || {}).textContent || '' }; };
 // in the page: the game's clock after two drawn frames (so a clock that did not move is a held world, not a page that drew nothing)
-const CLOCK = async () => { await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))); const g = window.__game; return { t: g.time, held: [...window.__input.keys], pressed: [...window.__input.pressed] }; };
+const CLOCK = async () => { await new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))); const g = window.__game; return { t: g.time, held: [...window.__draw.input.keys], pressed: [...window.__draw.input.pressed] }; };
 const centre = (page, sel) => page.evaluate(s => { const r = document.querySelector(s).getBoundingClientRect(); return [r.left + r.width / 2, r.top + r.height / 2]; }, sel);
 const runs = async (page, from, secs = 300) => { for (const end = Date.now() + secs * 1000; Date.now() < end;) { const c = await page.evaluate(CLOCK); if (c.t > from + 1e-6) return c; await page.waitForTimeout(500); } return null; };
 
@@ -95,7 +95,7 @@ const runs = async (page, from, secs = 300) => { for (const end = Date.now() + s
       const gone = !r.after.brief && !r.after.menu && !!r.clock && r.clock.held.length === 0;
       let mid = true;
       if (job.how === 'early') mid = /live/.test(r.early.was) || (/armed/.test(r.early.cls) && r.early.brief);   // (pressed while it boots: kept, and nothing more is asked of the player; on a machine that booted before the press could be made, the press was an ordinary start)
-      else mid = /live/.test(r.ready.cls) && r.heldFor[0] === r.heldFor[1] && r.still.brief && r.still.picture && (r.still.level || '').replace(/-gwot(?=\.json$)/, '') === job.map;   // (the level's file as the page loads it: its dressed one under the default look)
+      else mid = /live/.test(r.ready.cls) && r.heldFor[0] === r.heldFor[1] && r.still.brief && r.still.picture && r.still.level === job.map;   // (the level's file as the page loads it: its dressed one under the default look)
       if (job.how === 'controls') mid = mid && r.keysUp.options && r.keysWords.length > 200 && /sprint/i.test(r.keysWords) && !r.keysShut.options && r.keysShut.brief && !r.keysShut.menu && r.keysClock === r.heldFor[1] && /bgo/.test(r.keysFocus);
       if (job.how === 'script') mid = mid && Math.abs(r.script - 3 / 60) < 1e-6;
       ok = words && mid && gone;

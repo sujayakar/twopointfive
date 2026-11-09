@@ -53,10 +53,10 @@ export const SETLISTS: Record<string, readonly string[]> = {
 /** a level with no row of its own */
 export const SETLIST_ELSE: readonly string[] = ['Night Shift', 'Wire Act'];
 
-/** a level file's name as this table keys it: without `.json`, its `-gwot` look file the same level, the office family (`office-*.json`) and no file at all = 'office' */
+/** a level file's name as this table keys it: without `.json`, the office family (`office-*.json`) and no file at all = 'office' */
 export function setlistLevel(levelFile: string | null | undefined): string {
   if (!levelFile || !/^[\w.-]+\.json$/.test(levelFile) || /^office(-[\w.-]+)?\.json$/.test(levelFile)) return 'office';
-  return levelFile.replace(/(-gwot)?\.json$/, '');
+  return levelFile.replace(/\.json$/, '');
 }
 /** the key's two halves as a query string names them: the level (setlistLevel of its `levelFile`) and the mission's kind */
 export function setlistKey(search: string | URLSearchParams): { level: string; kind: string | null } {

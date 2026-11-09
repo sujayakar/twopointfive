@@ -1,10 +1,8 @@
-// Minimal dev server: bundles index.html and the tool pages (the replay viewer, sounds, music; TS, WGSL as text) via Bun's HTML imports, serves ./public statically,
+// Minimal dev server: bundles index.html and the tool pages (sounds, music; TS, WGSL as text) via Bun's HTML imports, serves ./public statically,
 // and answers the game's fetches of level files under /levels/ (tools/levels-api.ts: index and read, loopback only).
 // Listens on LOOPBACK only (HOST=… overrides that on purpose).
 import index from "../index.html";
-import replay from "../replay.html";   // the REPLAY VIEWER (src/replay/viewer.ts): a replay saved with F7 as a map with a scrubber and notes
 import sounds from "../sounds.html";   // the LISTENING PAGE (src/sounds/main.ts): every sound the game makes, one row each, through the game's own mixer graph
-import draw from "../draw.html";   // THE PAGE THAT DRAWS A GAME IT DOES NOT HOLD (src/host/drawpage.ts)
 import music from "../music.html";   // the SCORE'S LISTENING PAGE (src/music/main.ts): every piece of the score on one row, played by the game's own sequencer and voices
 import { handleLevels } from "./levels-api.ts";
 import { localCloud } from "./cloud/local.ts";
@@ -21,7 +19,7 @@ const server = Bun.serve({
   port, hostname, maxRequestBodySize: 512 << 20,   // (a frame capture of a whole 4K frame, gzipped: POST /capture below, which says who may send one)
   development: { hmr: false, console: true },
   routes: {
-    "/": index, "/replay": replay, "/sounds": sounds, "/music": music, "/draw": draw,
+    "/": index, "/sounds": sounds, "/music": music,
     "/look": req => { const u = new URL(req.url); return Response.redirect("/?look&" + (u.searchParams.has("levelFile") ? "" : "roomclear&squad4&levelFile=pass.json&hud&") + u.search.slice(1), 302); },   // THE LOOK PROTOTYPE (src/render/shaders/look.wgsl): the game's page with ?look, on the pass unless the link names its own mission
   },
   async fetch(req) {
@@ -29,9 +27,8 @@ const server = Bun.serve({
     let path: string; try { path = decodeURIComponent(url.pathname); } catch { return new Response("bad path encoding", { status: 400 }); }
     if (path.includes("..")) return new Response("bad path", { status: 400 });
     if (path === "/index.html") return Response.redirect("/" + url.search + url.hash, 302);   // the game is '/', and a built page's neighbour link ('index.html?…') must open here too
-    if (path === "/replay.html" || path === "/replay/") return Response.redirect("/replay" + url.search, 302);
     if (path === "/sounds.html" || path === "/sounds/") return Response.redirect("/sounds" + url.search, 302);
-    if (path === "/draw.html" || path === "/draw/") return Response.redirect("/draw" + url.search, 302);
+    if (path === "/draw" || path === "/draw.html" || path === "/draw/") return Response.redirect("/" + url.search, 302);   // (an address kept from before the game's page was this one)
     if (path === "/music.html" || path === "/music/") return Response.redirect("/music" + url.search, 302);
     { const mp = await MP?.handle(req); if (mp) return mp; }   // /mp/runner/…: the backend's calls, by the runner's key
     if (path === "/capture" && req.method === "POST") {   // a frame capture from the page (src/render/framecap.ts, F6): one gzipped file under captures/ (gitignored); read with tools/qa/capture-read.ts

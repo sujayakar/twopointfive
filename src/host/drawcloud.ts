@@ -16,7 +16,7 @@ import type { Quality } from '../ui/quality';
 import { View, Section } from '../draw/sections';
 import type { DrawGame } from './drawgame';
 import type { Measure } from './measure';
-import type { KeptStore } from '../replay/keepstore';
+import type { KeptStore } from '../tape/keepstore';
 
 export interface DrawCloudDeps {
   gpu: Gpu; engine: Engine; quality: Quality; game: DrawGame; measure: Measure;
@@ -29,7 +29,7 @@ export interface DrawCloudDeps {
   /** a run is in the player's hands · the world holds still under a screen */
   live(): boolean; still(): boolean;
 }
-export interface DrawCloud { cloud: Cloud; begins(): void; drawn(rawDt: number, gpuMs: number): void }
+export interface DrawCloud { cloud: Cloud; begins(): void; /** `rested`: the frame's gap was this window giving way, which is no measure of the machine */ drawn(rawDt: number, gpuMs: number, rested: boolean): void }
 export function drawCloud(q: URLSearchParams, d: DrawCloudDeps): DrawCloud | null {
   const { gpu, engine, quality, game, measure } = d, S = engine.settings, hz = (): number => quality.displayHzPin || quality.displayHz;
   let build: string | undefined, began = 0, callsAt = NaN, ticksAt = 0;
@@ -55,5 +55,5 @@ export function drawCloud(q: URLSearchParams, d: DrawCloudDeps): DrawCloud | nul
   void buildName().then(c => { build = c || build; });
   void gpu.device.lost.then(info => { if (info.reason !== 'destroyed') void cloud.telemetry.flush(true); });
   return { cloud, begins: () => { began = performance.now(); ticksAt = game.ticks; callsAt = CALLS.play ? CALLS.play.ms : NaN; },
-    drawn: (rawDt, gpuMs) => cloud.frame(rawDt, asked(d.live, false), endStage(d.offBooks ? '' : 'play', asked(end, null)), gpuMs, gpu.device.queue) };
+    drawn: (rawDt, gpuMs, rested) => cloud.frame(rawDt, !rested && asked(d.live, false), endStage(d.offBooks ? '' : 'play', asked(end, null)), gpuMs, gpu.device.queue) };
 }

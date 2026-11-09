@@ -1,12 +1,13 @@
 //! HEAD DOWN UNDER FIRE: rounds close enough, long enough, and he gets down where he is, or shifts to the cover the suppression rule found him.
 //! The rule's own code and state are suppression/ (`gd.sup`); this file says it in the list's words.
 use super::{Outcome, Reaction, TakeCover};
+use crate::bytes::ToBytes;
 use crate::game::Game;
 use crate::ids::*;
 use crate::suppression::HeadDown;
 
 /// what the suppression rule answered this tick (it answers once: asking it moves its clocks and may draw its die)
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Default, ToBytes)]
 pub struct Row { pub want: Option<TakeCover> }
 
 pub struct Rule;

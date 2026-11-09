@@ -132,7 +132,7 @@ try {
     let w0 = 'no door', w1 = 'no door', at: any = null;
     for (const x of door) { w0 = v0.orders.give('stack', x.t, 'all') || ''; if (w0) continue; w1 = v1.orders.give('stack', v1.orders.targetAt(x.d.frameCentre), 'all') || ''; at = x.d; break; }
     let both2 = false, n0 = -1, n1 = -1, keyed = false, bare = false;
-    const lists = (k: number) => { show(k); return (g.view.plan?.own.doors ?? []).some((d: any) => d.door === at.def.name); };
+    const lists = (k: number) => { show(k); return g.view.plan.own.doors.some((d: any) => d.door === at.def.name); };
     for (let i = 0; i < 60 * 25 && !both2; i++) { W.step(DT); if (i % 20 === 19) both2 = lists(0) && lists(1); }
     if (both2) { show(0); const L = PF.plansToDraw(g), all2 = L.flatMap(x => x.P.doors).filter((d: any) => d.door === at.def.name); n0 = all2.length; keyed = L[0].P.doors.some((d: any) => d.door === at.def.name && !!d.key);
       // …and a wait that is another's alone: the first seat's men called off, the second's still on the door
@@ -152,7 +152,7 @@ try {
       && cleanName('a\u200bb\u202e') === 'ab' && cleanName('\u3164\u2800') === '' && cleanName('...') === '' && over('nan') === 'nan' && over('inf') === 'inf' && over('Ada') === 'Ada' && cleanName('\u{1F468}\u200D\u{1F469}\u200D\u{1F467}') === '\u{1F468}\u200D\u{1F469}\u200D\u{1F467}';
     // the server's own cleaning: a hello written by hand, never through a client's
     const got: string[] = [], conn = { send(t: string) { got.push(t); return 1; }, close() { /* */ } };
-    const srv = new NetServer({ now: () => 0, step() { /* */ }, word: () => '', ended: () => null } as never, { game: 'g', build: '', recipe: {} as never, seatKeys: ['a', 'b'] });
+    const srv = new NetServer({ now: () => 0, step() { /* */ }, word: () => '', ended: () => null } as never, { game: 'g', build: '', start: {} as never, seatKeys: ['a', 'b'] });
     srv.message(conn, JSON.stringify({ k: 'hello', proto: WR.NET.proto, build: '', game: 'g', key: 'b', name: '  Grace\u0007   Hopper the Second ' }));
     const said = got.map(t => JSON.parse(t)).filter(m => m.k === 'state').pop(), served = JSON.stringify(said?.names) === JSON.stringify(['', 'Grace Hopper']);
     const w0 = stateHash(g), mate = team[0];

@@ -1,10 +1,10 @@
 //! The types of `floorseen`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: FloorSeen, src/game/floorseen.ts:18)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct FloorSeen {
     pub at: JsMap<GuardId, Vec<f32>>,
     pub asked: JsMap<GuardId, Vec<f32>>,

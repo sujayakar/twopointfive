@@ -1,4 +1,4 @@
-// A RUN ON THE PAGE THAT DRAWS IS KEPT AND PLAYED AGAIN: draw.html on the software adapter, stepped by hand. A run with a save, a load and a restart is played, F7 keeps it, the page of it walks it to the same state,
+// A RUN ON THE PAGE THAT DRAWS IS KEPT AND PLAYED AGAIN: the page on the software adapter, stepped by hand. A run with a save, a load and a restart is played, F7 keeps it, the page of it walks it to the same state,
 // is sought both ways, its camera taken off and given back, its pace turned, a note kept on it. Never a GPU's judgement.
 //   PORT=<a dev server> node tools/draw/tape-page.cjs [--out dir]      exit 0 = every check passed, 1 = a FAIL, 2 = the script died
 const { chromium } = (() => { try { return require('playwright'); } catch { return require('/opt/node-tools/node_modules/playwright'); } })();
@@ -15,7 +15,7 @@ const same = (a, b) => a.die === b.die && a.parts === b.parts, whole = (a, b) =>
     const page = await ctx.newPage(), errors = []; page.setDefaultTimeout(600000);
     page.on('pageerror', x => errors.push(String(x && x.stack || x).slice(0, 500)));
     page.on('console', m => { const t = m.text(); if (m.type() === 'error' || /Invalid|error:/.test(t)) errors.push(t.slice(0, 300)); });
-    await page.goto(`http://localhost:${PORT}/draw.html?${words}`, { timeout: 300000 });
+    await page.goto(`http://localhost:${PORT}/?${words}`, { timeout: 300000 });
     if (ready) { await page.waitForFunction(() => !!window.__ready && !!window.__draw, null, { timeout: 600000 }); await page.evaluate(() => window.__ready); }
     return { page, errors };
   };
@@ -94,10 +94,16 @@ const same = (a, b) => a.die === b.die && a.parts === b.parts, whole = (a, b) =>
     check(s.lost && s.stood === 400 && Math.abs(s.back - 200) < 3 && s.up && !s.card && whole(s.m, s1.m), 'lost to a panic, it stands, is sought back and ends the same', s); await L.page.close(); }
   // ---- live: a person's page, its own frames
   { const small = await browser.newContext({ viewport: { width: 320, height: 180 }, deviceScaleFactor: 1, storageState: await ctx.storageState({ indexedDB: true }) }), page = await small.newPage(), errors = []; page.setDefaultTimeout(600000); page.on('pageerror', x => errors.push(String(x).slice(0, 300)));
-    await page.goto(`http://localhost:${PORT}/draw.html?quality=verylow&mute&playtape=${sid}`, { timeout: 300000 }); await page.waitForFunction(() => !!window.__ready && !!window.__draw && !!document.getElementById('tapebig'), null, { timeout: 600000 }); await page.evaluate(() => window.__ready);
+    await page.goto(`http://localhost:${PORT}/?quality=verylow&mute&playtape=${sid}`, { timeout: 300000 }); await page.waitForFunction(() => !!window.__ready && !!window.__draw && !!document.getElementById('tapebig'), null, { timeout: 600000 }); await page.evaluate(() => window.__ready);
     const still0 = await page.evaluate(() => window.__draw.played.at); await page.evaluate(() => document.getElementById('tapebig').click());
     const went = await page.waitForFunction(() => window.__draw.played.at >= 12, null, { timeout: 400000 }).then(() => true).catch(() => false), s = await page.evaluate(() => { const P = window.__draw.played; return { at: P.at, paused: P.paused, parted: P.parted, big: !!document.getElementById('tapebig'), frames: window.__draw.told.frames }; });
     check(still0 === 0 && went && !s.paused && s.parted === null && !s.big && errors.length === 0, 'on a person\'s page it waits under the play button, and plays by the page\'s own frames', { still0, ...s, errors: errors.slice(0, 3) }); await small.close(); }
+  // ---- the list, down the title's column
+  { const T = await open('paused&quality=verylow&mute');
+    const s = await T.page.evaluate(async () => { const at = q => [...document.querySelectorAll('#menu .actions .btn')].find(b => b.textContent.startsWith(q)), wait = ms => new Promise(r => setTimeout(r, ms)), out = {};
+      at('Extras').click(); out.extras = !!at('Replays'); at('Replays').click(); await wait(1200); const a = document.querySelector('#menu .xlist a.xrow'); out.row = a && { href: a.getAttribute('href'), name: a.querySelector('b').textContent, line: a.querySelector('i').textContent }; out.note = document.querySelector('#menu .xnote').textContent; return out; }); await still(T.page, 'tape-3-list');
+    const gone = await T.page.evaluate(async () => { const at = q => [...document.querySelectorAll('#menu .actions .btn')].find(b => b.textContent.startsWith(q)); window.dispatchEvent(new KeyboardEvent('keydown', { code: 'Escape', key: 'Escape', bubbles: true, cancelable: true })); await new Promise(r => setTimeout(r, 100)); return !!at('Play'); });
+    check(s.extras && s.row && s.row.href === `?playtape=${sid}` && /Room clear/.test(s.row.name) && /1 note/.test(s.row.line) && gone, 'the title lists the runs kept, and Esc goes back', s); check(T.errors.length === 0, 'the title: nothing threw', T.errors.slice(0, 3)); await T.page.close(); }
   // ---- refused in words
   const N = await open('paused&quality=verylow&mute&playtape=20200101T000000-none', false); await N.page.waitForFunction(() => /saved in this browser/.test(document.body.textContent), null, { timeout: 300000 }).then(() => check(true, 'a replay that is gone is refused in words')).catch(() => check(false, 'a replay that is gone is refused in words'));
   await browser.close();

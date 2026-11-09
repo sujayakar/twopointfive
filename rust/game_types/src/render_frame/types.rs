@@ -1,10 +1,10 @@
 //! The types of `render_frame`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: WeatherFrame, src/render/frame.ts:66)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct WeatherFrame {
     pub rain: f64,
     pub snow: Option<f64>,
@@ -73,23 +73,6 @@ impl RenderFrameModMeshBinding {
     }
 }
 impl Default for RenderFrameModMeshBinding { fn default() -> Self { Self::zeroed() } }
-
-/// (TypeScript: inline at src/render/frame.ts:275 traceConfig, src/render/frame.ts:275)
-#[derive(Clone, Debug)]
-pub struct RenderFrameModTraceConfig {
-    pub variant: f64,
-    pub common: Option<String>,
-}
-impl RenderFrameModTraceConfig {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RenderFrameModTraceConfig {
-            variant: 0.0,
-            common: None,
-        }
-    }
-}
-impl Default for RenderFrameModTraceConfig { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/render/frame.ts:280 glassBreakConfig, src/render/frame.ts:280)
 #[derive(Clone, Copy, Debug)]
@@ -283,7 +266,6 @@ pub struct RenderFrameModLookConfig {
     pub dark: f64,
     pub windows: f64,
     pub glare: f64,
-    pub stir: f64,
     pub grade_exp: f64,
     pub grade_c: f64,
     pub grade_h: f64,
@@ -321,7 +303,6 @@ impl RenderFrameModLookConfig {
             dark: 0.0,
             windows: 0.0,
             glare: 0.0,
-            stir: 0.0,
             grade_exp: 0.0,
             grade_c: 0.0,
             grade_h: 0.0,
@@ -414,8 +395,6 @@ pub struct RenderFrameMod {
     pub reach_binding: crate::render_frame::RenderFrameModReachBinding,
     /// (src/render/frame.ts:269 meshBinding)
     pub mesh_binding: crate::render_frame::RenderFrameModMeshBinding,
-    /// (src/render/frame.ts:275 traceConfig)
-    pub trace_config: crate::render_frame::RenderFrameModTraceConfig,
     /// (src/render/frame.ts:280 glassBreakConfig)
     pub glass_break_config: crate::render_frame::RenderFrameModGlassBreakConfig,
     /// (src/render/frame.ts:284 weatherKindConfig)
@@ -454,7 +433,6 @@ impl RenderFrameMod {
         RenderFrameMod {
             reach_binding: crate::render_frame::RenderFrameModReachBinding { storage: true },
             mesh_binding: crate::render_frame::RenderFrameModMeshBinding { enabled: true },
-            trace_config: crate::render_frame::RenderFrameModTraceConfig { variant: 0.0, common: None },
             glass_break_config: crate::render_frame::RenderFrameModGlassBreakConfig { on: false },
             weather_kind_config: crate::render_frame::RenderFrameModWeatherKindConfig { on: false },
             snow_config: crate::render_frame::RenderFrameModSnowConfig { on: false },
@@ -465,7 +443,7 @@ impl RenderFrameMod {
             rain_scale_config: crate::render_frame::RenderFrameModRainScaleConfig { on: true },
             rain_walls_config: crate::render_frame::RenderFrameModRainWallsConfig { on: true },
             bounce_walls_config: crate::render_frame::RenderFrameModBounceWallsConfig { on: true },
-            look_config: crate::render_frame::RenderFrameModLookConfig { kept: 0.0, pressed: 1.0, bounce: 0.7, air: 1.0, sky: 1.0, shade: 0.7, lamps: 1.0, exposure: None, puffs: 1.0, veil: 1.0, snow: None, eyes: 1.0, eye_at: None, door_gaps: None, night_sky: None, fire_smoke: 1.0, fire_fit: 1.0, long_foot: 1.0, walked: 1.0, fire_snow: 1.0, rooms: 1.0, steady: 1.0, room_bright: 1.0, order: 1.0, dark: 1.0, windows: 1.0, glare: 0.1, stir: 1.0, grade_exp: 1.0, grade_c: 1.35, grade_h: 0.0, grade_s: 0.0, grade_sat: 1.0 },
+            look_config: crate::render_frame::RenderFrameModLookConfig { kept: 0.0, pressed: 1.0, bounce: 0.7, air: 1.0, sky: 1.0, shade: 0.7, lamps: 1.0, exposure: None, puffs: 1.0, veil: 1.0, snow: None, eyes: 1.0, eye_at: None, door_gaps: None, night_sky: None, fire_smoke: 1.0, fire_fit: 1.0, long_foot: 1.0, walked: 1.0, fire_snow: 1.0, rooms: 1.0, steady: 1.0, room_bright: 1.0, order: 1.0, dark: 1.0, windows: 1.0, glare: 0.1, grade_exp: 1.0, grade_c: 1.35, grade_h: 0.0, grade_s: 0.0, grade_sat: 1.0 },
             refl_walls_config: crate::render_frame::RenderFrameModReflWallsConfig { on: true },
             sharp_cap_config: crate::render_frame::RenderFrameModSharpCapConfig { on: true },
             sun_glint_config: crate::render_frame::RenderFrameModSunGlintConfig { on: true },

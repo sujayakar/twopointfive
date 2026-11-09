@@ -1,10 +1,10 @@
 //! The types of `stature`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: Fit, src/game/stature.ts:84)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Fit {
     pub r0: Vec<f32>,
     pub r1: Vec<f32>,
@@ -44,7 +44,7 @@ impl STATURETUNE {
 impl Default for STATURETUNE { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/game/stature.ts:85 fits, src/game/stature.ts:85)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct StatureModFitsValue {
     pub of: crate::stature::Fit,
     pub s: f64,
@@ -116,7 +116,7 @@ impl DrawnBeam {
 impl Default for DrawnBeam { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct StatureMod {
     /// (src/game/stature.ts:47 shown)
     pub shown: JsMap<CharId, f64>,

@@ -1,10 +1,10 @@
 //! The types of `destruction`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// which CHAOS row a rate cap reads, live at each take (destruction.ts:235): puffsPerSec, papersPerSec, knocksPerSec, decalsPerSec
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub enum RateCapN {
     Puff,
     Paper,
@@ -12,7 +12,7 @@ pub enum RateCapN {
     Decal,
 }
 /// who is told of a blast, in the order they subscribed, before the doors and walls are judged: Glass adds its count to ev.res.panes (glassbreak.ts:219), Bars (winbars.ts:80), Snow (snowBlast.ts:119)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub enum BlastListener {
     Glass,
     Bars,
@@ -20,7 +20,7 @@ pub enum BlastListener {
 }
 
 /// (TypeScript: Destruction, src/game/destruction.ts:207)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Destruction {
     pub debris: crate::debris::Debris,
     pub walls: alloc::boxed::Box<crate::wallbreak::WallBreak>,
@@ -97,7 +97,7 @@ impl Destruction {
 impl Default for Destruction { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: Destructible, src/game/destruction.ts:178)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Destructible {
     pub i: f64,
     pub kind: crate::destruction::DKind,
@@ -124,7 +124,7 @@ impl Destructible {
 impl Default for Destructible { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum DKind {
     Screen,
     Paper,
@@ -147,7 +147,7 @@ impl DKind {
 }
 
 /// (TypeScript: inline at src/game/destruction.ts:235 Destruction.caps, src/game/destruction.ts:235)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct DestructionCaps {
     pub puff: crate::destruction::RateCap,
     pub paper: crate::destruction::RateCap,
@@ -168,7 +168,7 @@ impl DestructionCaps {
 impl Default for DestructionCaps { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: RateCap, src/game/destruction.ts:195)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct RateCap {
     pub ts: Vec<f64>,
     pub head: f64,
@@ -187,7 +187,7 @@ impl RateCap {
 impl Default for RateCap { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: inline at src/game/destruction.ts:370 Destruction.dustQueue, src/game/destruction.ts:370)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct DestructionDustQueueItem {
     pub p: V3,
     pub n: V3,
@@ -383,7 +383,7 @@ impl DestructionPallEmitR {
 impl Default for DestructionPallEmitR { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct DestructionMod {
     /// (src/game/destruction.ts:189 DESTR_LOG)
     pub destr_log: Vec<String>,

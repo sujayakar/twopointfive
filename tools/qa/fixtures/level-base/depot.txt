@@ -1,4 +1,0 @@
-# the huts' walls say stucco (the tan partition paint's row says cloth): 32 boxes say a word, nothing else moved
-# every box says what it does (the does key, src/scene/materials.ts): the words are what its colours said, and nothing else moved
-# version 2: a round thing is one box, the file converted by tools/levels/round-convert.ts: no box moved
-774678a9eb3f5a9a7f39370d1647565d2de59655

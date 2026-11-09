@@ -22,13 +22,9 @@ export interface RenderSettings {
   taauVelK: number;          // how much fast on-screen motion raises the new-frame weight (0‥1)
   taauMotionAlpha: number;   // MOTION SHARPNESS (docs/internal/tjank.md §vi): the new-frame weight a pixel reprojected at ≥ ½ output px / frame is raised to (0.1 still → this; ramp from ⅛ px / frame): a
                              // resampled history is a blur in motion, and noise in motion reads far less than blur in motion. 0 = off (the old 0.25-at-24-px rule alone)
-  taauMotionClip: number;    // A/B, default 0: the share the clip box narrows by at that speed (γσ × (1 − this)) — measured to add nothing to the edge-spread the weight term buys (docs/internal/tjank.md §vi)
   taauSharpenMotion: number; // … and what the final blit's RCAS sharpen gains while the CAMERA moves (the follow camera pans / orbits the whole picture: its look-at point's own screen motion, full at
                              // ½ output px / frame at any of five points round the look-at): taauSharpen + this × that. 0 = off
   taauHistSharp: number;     // C2 (image-quality program): the history de-blur under motion — the Catmull-Rom fetch plus this × (it − a bilinear fetch) while the pixel is being resampled; 0 = off (main's fetch)
-  taauLightJump: number;     // A/B, default OFF (1): a lighting change under a still surface (this frame's 3×3 mean ÷ the history in linear luminance, either way) past this ratio takes the new frame at
-                             // ≥ ½. Built for the lightning / flicker note and measured to buy nothing there (docs/internal/tjank.md: the resolve's share of a stroke's first frame is 13 % of the
-                             // step, and the clip already follows a switched level within 3 %) — kept as a row for the next look at it, not shipped on
   // ---- SHARP DIRECT (decoupled resolution; render/gbuffer.ts encodeDown, render/shaders/sharp_direct.wgsl, composite.wgsl's compute twin, docs/internal/sharp-direct.md): under TAAU at a render scale
   // below 1, rasterise the g-buffer and run the direct light's UNSHADOWED term (every light's analytic contribution: exact, history-free), the albedo / emissive / glass / decal composite and the TAA at
   // the OUTPUT size, keep everything stochastic — the shadow RATIO per emitter class, the gather's irradiance + specular, the reflections, the volumetric march — at the internal size and joint-bilateral
@@ -45,11 +41,9 @@ export interface RenderSettings {
                              // 1 = SAME-SURFACE ONLY: nothing is borrowed across surfaces — per class ONE deterministic shadow ray from the output pixel to the strongest live emitter decides that light, the class's
                              // remainder takes the darker of (the neighbours' luminance ratio, lit) — both classes off the same texels and the same rule, so no warm / cool fringe either (sharp_direct.wgsl SLIVER)
   sharpSliverCap: number;    // per 8×8 output tile, at most this many sliver pixels trace (the rest take the conservative remainder rule with no ray) — a bound on the worst case, not a look knob (0 = no rays: the conservative rule everywhere)
-  sharpDiag: number;         // diagnostic paint (0 off): 1 = sliver pixels magenta, ring-fallback pixels yellow, in the direct term (docs/review/direct-quality.html's overlays); the fallback CODE always rides in sharpE's alpha for readback either way
   gbaaClamp: boolean;        // GBAA: blend an edge pixel only toward a neighbour AT or BEHIND it (the far side of a silhouette, the other face of a crease) — never toward a NEARER third surface standing over the edge (a man in
                              // front of a partition's top edge took half his colour into the edge pixel: a rim along him). Off = Persson's blend as it was
   portalHole: boolean;   // an opening's daylight knows how deep its hole is (common.wgsl portalSeen; engine.ts day lights). false = the whole rectangle, as it was until 11-04: the address's &holedepth=0
-  portalWorth: number;   // how far an opening's own light reaches, for a visit: 0 = the rule's own (scene/openings.ts LOOK_OPENINGS.worth, openingReach); a number = that worth instead (the address's &portalworth=0.003 is the reach every opening had until 11-05). Data: one path
   restirHueSplit: boolean;   // ReSTIR shade (restir.wgsl HUE SPLIT): the believed-visible mix colours only the luminance its own lights carried; a sample of a light this pixel does not believe visible (tile-dark here / its darkSlot)
                              // keeps its own hue — without it a blocked light's penumbra deep in its own shadow was painted in whatever far dim light the tile still believed (green exit-sign fringes along a blue lamp's shadow, S3). false = as it was
   heldRays: number;          // THE HYBRID ESTIMATOR (restir.wgsl HELD): every light a character CARRIES (owner byte ≠ 0 — the guards' torches, Sam's rail / gun light, muzzle flashes, tracer heads) bypasses the
@@ -70,15 +64,11 @@ export interface RenderSettings {
   // frames it bobbed over drew that cone, faint, on whatever another light showed behind the wall. The same switch keeps texels where a class has NO light (the prior, ratio 1) out of
   // the temporal stage's 5×5 statistics and the pixel's own sample inside the history clamp's box (a thin unlit face no longer shows a hidden lamp as a bright line). Off = the client as it was.
   dnShadowIters: number; dnShadowCap: number; dnShadowClampK: number; dnShadowSigmaL: number; dnShadowPrior: boolean; dnShadowLitAlike: boolean; dnShadowOccl: boolean; dnShadowMoveCap: number; dnShadowMoveThresh: number; dnShadowJump: number;
-  dnGiIters: number; dnGiCap: number; dnGiClampK: number; dnGiSigmaL: number; dnGiFast: number; dnGiFirefly: number;
-  // (D) two follow-ups on the diffuse client (both 0 = off, the client as it was): dnGiClampCut = a valid pixel whose long history the clamp had to DRAG (its bounce changed) has its length cut by how far,
-  // relative to the box (the reflection chain's rule) — the next frames weigh the fresh estimate more and the young-history rays fire there; dnGiYoungWiden = the à-trous luminance edge-stop × (1 + it) on
-  // texels whose history is young (steadier while one or two frames stand behind the estimate)
-  dnGiClampCut: number; dnGiYoungWiden: number;
+  dnGiIters: number; dnGiCap: number; dnGiClampK: number; dnGiSigmaL: number; dnGiFast: number;
   // the runtime quality ladder's HEADROOM-AWARE CLIMB (ui/quality.ts Quality.sample): with adaptive resolution on and the GPU measurably idle (presented at the display rate AND the compute passes'
   // union under CLIMB.headroom of the frame budget for CLIMB.window s) the render scale climbs ABOVE the tier's starting scale in 0.05 steps up to 1.0, then the lossy divisors relax (gather ⅓ → ½,
-  // volumetrics ¼ → ½); capClimb = past that, the output cap itself climbs toward the window's device rows in 100-row steps (costs the per-OUTPUT-pixel kernels). Off = the ladder as it was.
-  ladderClimb: boolean; capClimb: boolean;
+  // volumetrics ¼ → ½). Off = the ladder as it was.
+  ladderClimb: boolean;
   /** the frame rate the quality ladder works to (ui/quality.ts HOLD / ladderBands; ?aim=asnow|60|90|120|display, ?aim=0 = asnow; Tab ▸ Frame): 0 = AS NOW (aim at a 60 Hz budget, spend headroom on resolution, cut
    *  only under 45 fps — the ladder byte for byte as it was before the aim); 60 / 90 / 120 = HOLD that rate (never more than the display has been seen to show): cut resolution, then the preset, the moment a
    *  fight would drop under it, climb only on the headroom left under ITS budget; 999 = hold the display's own rate. Trades resolution for frame rate. DEFAULT 60 (the maintainer's pick, 10-10: '60fps can be our target'); ?aim=asnow = the old ladder for the visit. */
@@ -106,7 +96,7 @@ export interface RenderSettings {
    *  smoke, as it was. Read when a preset is applied. */
   fireSmokeShed: boolean;
   /** what the preset on says of an open fire's smoke (written by ui/quality.ts when a preset is applied; game/fire.ts reads it beside the solver's `drawing`): false = this
-   *  preset draws the fire without its smoke. Picture only, and never the game's own table (FIRE.smoke.on, the page's ?firesmoke=0, puts it off at every preset). */
+   *  preset draws the fire without its smoke. Picture only, and never the game's own table. */
   fireSmoke: boolean;
   dnSpecIters: number; dnSpecCap: number; dnSpecClampK: number; dnSpecSigmaL: number; dnSpecRough: number;
   dnDepthK: number; dnNormalPow: number; dnMotionVectors: boolean;
@@ -140,8 +130,6 @@ export interface RenderSettings {
   restirYoung: number;         // below restirRays 5 (no final ray) spatial reuse runs only where the pixel's own history is younger than this many candidates (disocclusions, resets),
                                // where its visibility bias is transient; at 5+ it runs everywhere with the final ray
   restirSpatialAll: boolean;   // A/B: spatial reuse everywhere even without the final ray (biased near shadow edges: a neighbour's visibility stands in for ours)
-  restirPenCap: number;        // D5 (image-quality program): the temporal M cap INSIDE PENUMBRAE (pixels whose inherited reservoir carries a blocker hint) — shorter memory where the estimate is a coin
-                               // flip's EMA turns its slow random walk into per-frame noise the ratio filter + TAA average; 0 = off (the tier's cap everywhere)
   restirPenRays: boolean;      // D1: a second fresh candidate + shadow ray in those penumbra pixels whatever the tier's ray count (+1 ray where it matters; an auditing tile's penumbra lanes skip their audit)
   restirKnownDark: boolean;    // the lights an 8×8 tile's own rays found dark everywhere last frame leave its fresh draw (known dark like a reach-masked light: no ray, no coin-flip noise from a lamp
                                // behind the wall — the 'dark speckle' on the break-room lino); false = A/B the unbiased first-cut draw over every live light
@@ -157,8 +145,6 @@ export interface RenderSettings {
   restirMotionMin: number;     // (2)'s floor as a fraction of the M cap (0.1 = a 2-candidate memory at cap 20 however fast the pan)
   restirMotionPx: number;      // (4)'s threshold: screen motion in px a frame AT 1000 INTERNAL ROWS (scaled like restirMotionV) past which the spatial taps run at the pixel (0.5)
   restirMotionTaps: number;    // (4)'s tap count at such a pixel when above the tier's restirSpatial (0‥8; 0 = the tier's own k) — wider spatial reuse only where the history was cut
-  restirMotionStatic: boolean; // raise the motion bits under a STILL camera too (object motion — a walking man's own pixels — then gets the levers; measured +0.2 ms direct at high); false = a still camera's
-                               // frame carries none
   // direct light's shadow denoise knobs (render/denoise.ts, the shadow client)
   directHistory: boolean;      // the shadow client's temporal reuse (off = history-free shadows, for inspection). A weight until 2026-11-07, when the estimator that blended by it went
   directBlurCap: number;       // max penumbra filter radius in px
@@ -273,15 +259,14 @@ export interface RenderSettings {
 
 export const defaultSettings = (): RenderSettings => ({
   renderScale: 1.0, maxInternalHeight: 1000, keepHistories: true, exposure: 2.0,
-  taau: true, taauAlpha: 0.1, taauClipGamma: 1.0, taauPhases: 8, taauSharpen: 0.25, taauReactive: 0.8, taauKernel: 6.0, taauVelK: 1.0, taauLightJump: 1.0, taauMotionAlpha: 0.4, taauMotionClip: 0, taauSharpenMotion: 0.3, taauHistSharp: 0,   // TAAU on by default (?notaau boots the old FXAA chain); the presets place phases / gamma / sharpen per tier (ui/quality.ts)
+  taau: true, taauAlpha: 0.1, taauClipGamma: 1.0, taauPhases: 8, taauSharpen: 0.25, taauReactive: 0.8, taauKernel: 6.0, taauVelK: 1.0, taauMotionAlpha: 0.4, taauSharpenMotion: 0.3, taauHistSharp: 0,   // TAAU on by default (?notaau boots the old FXAA chain); the presets place phases / gamma / sharpen per tier (ui/quality.ts)
   sharpDirect: false,   // sharp direct OFF by default (the presets place it per tier — ui/quality.ts Preset.iq; ?sharp / ?nosharp force it from boot; Tab ▸ Frame; live only under TAAU below scale 1.0 with no debug view — engine.resize)
-  sharpSliver: 1, sharpSliverCap: 24, sharpDiag: 0, gbaaClamp: true, heldRays: 6, restirHueSplit: true, portalHole: true, portalWorth: 0, heldAdaptive: false, restirStableRetrace: false, restirDimClass: 0,   // direct-quality lane: same-surface-only slivers with an output-res ray, GBAA's same-surface clamp, the hybrid estimator at high's K 6 (the presets tier it; 0 / false / 0 = each path as it was)
+  sharpSliver: 1, sharpSliverCap: 24, gbaaClamp: true, heldRays: 6, restirHueSplit: true, portalHole: true, heldAdaptive: false, restirStableRetrace: false, restirDimClass: 0,   // direct-quality lane: same-surface-only slivers with an output-res ray, GBAA's same-surface clamp, the hybrid estimator at high's K 6 (the presets tier it; 0 / false / 0 = each path as it was)
   sharpDecouple: false, sharpPlaneK: 0.01,
   // (the denoiser's iterations / caps below are 'high's until a preset places them)
   dnShadowIters: 3, dnShadowCap: 12, dnShadowClampK: 1.25, dnShadowSigmaL: 4, dnShadowPrior: true, dnShadowLitAlike: true, dnShadowOccl: true, dnShadowMoveCap: 3, dnShadowMoveThresh: 0.04, dnShadowJump: 0.5,
-  dnGiIters: 4, dnGiCap: 24, dnGiClampK: 1.0, dnGiSigmaL: 4, dnGiFast: 3, dnGiFirefly: 0,   // (k 1.0 / fast 3: the sweep in docs/internal/p3-denoise.md §3 — 10 % of a lights-off in 16 frames vs legacy's 14, at half its torch-hotspot boil)
-  dnGiClampCut: 0, dnGiYoungWiden: 0,                                                     // (D): off until measured (Tab ▸ Denoiser rows)
-  ladderClimb: true, capClimb: false, ladderAim: 60, ladderPaced: true, ladderHeld: true, ladderShed: true, oneCacheGrid: true, oneSmokeSolve: true, fireSmokeShed: true, fireSmoke: true,   // the ladder spends measured headroom on scale + divisors by default (it only ever acts on presented frames with GPU timings that show the room); the output-cap climb is opt-in (Tab ▸ Frame)
+  dnGiIters: 4, dnGiCap: 24, dnGiClampK: 1.0, dnGiSigmaL: 4, dnGiFast: 3,   // (k 1.0 / fast 3: the sweep in docs/internal/p3-denoise.md §3 — 10 % of a lights-off in 16 frames vs legacy's 14, at half its torch-hotspot boil)
+  ladderClimb: true, ladderAim: 60, ladderPaced: true, ladderHeld: true, ladderShed: true, oneCacheGrid: true, oneSmokeSolve: true, fireSmokeShed: true, fireSmoke: true,   // the ladder spends measured headroom on scale + divisors by default (it only ever acts on presented frames with GPU timings that show the room)
   dnSpecIters: 1, dnSpecCap: 16, dnSpecClampK: 1.0, dnSpecSigmaL: 2, dnSpecRough: 0.08,
   dnDepthK: 0.004, dnNormalPow: 12, dnMotionVectors: true,
   flags: FrameFlags.Direct | FrameFlags.Indirect | FrameFlags.Volumetrics | FrameFlags.Smoke | FrameFlags.RcVisWeight | FrameFlags.SmokeShadows | FrameFlags.Bounce | FrameFlags.Dither | FrameFlags.SoftShadow | FrameFlags.Temporal,
@@ -289,8 +274,8 @@ export const defaultSettings = (): RenderSettings => ({
   skyZenith: [0.015, 0.025, 0.05], skyHorizon: [0.04, 0.05, 0.08],
   capColor: [0.010, 0.012, 0.016, 0.3],
   nvAmount: 0, nvGain: 475, hitFlash: 0,   // nvGain = intensifier tube gain (log curve), not a linear multiplier
-  restirRays: 4, restirSpatial: 3, restirHistory: 20, restirRadius: 16, restirGradient: true, restirGradK: 5, restirYoung: 8, restirSpatialAll: false, restirKnownDark: true, restirAudit: 0.25, restirPenCap: 0, restirPenRays: false,   // ReSTIR DI on; the presets place rays / taps / cap per tier (quality.ts), these are 'high'
-  restirMotion: 6, restirMotionV: 1.1, restirMotionMin: 0.35, restirMotionPx: 0.5, restirMotionTaps: 6, restirMotionStatic: false,   // MOTION (direct-motion lane, docs/internal/direct-motion.md; these are HIGH's — floor .35 / 6 taps since the 08-12 SPRINT take: at three times the walking pan the .1 floor made the light's edge noisier than no cut at all, .35 + taps sits between; the walking pan keeps most of its win): 6 = the motion-scaled confidence (2) + wider spatial reuse under motion (4) — measured at high: the light's edge under a walking pan −43 % flow, the lit floor −27 %, the dark floor −7 % (−46 / −32 with 6 taps), a slow pan and the still picture unchanged, main's 1–3.7 % motion darkening gone; the stochastic reprojection (1) stays an A/B row (a NEGATIVE at slow pans: +12‥34 %); the presets tier Min / Taps; 0 (?norestirmotion) = the estimator's program byte for byte
+  restirRays: 4, restirSpatial: 3, restirHistory: 20, restirRadius: 16, restirGradient: true, restirGradK: 5, restirYoung: 8, restirSpatialAll: false, restirKnownDark: true, restirAudit: 0.25, restirPenRays: false,   // ReSTIR DI on; the presets place rays / taps / cap per tier (quality.ts), these are 'high'
+  restirMotion: 6, restirMotionV: 1.1, restirMotionMin: 0.35, restirMotionPx: 0.5, restirMotionTaps: 6,   // MOTION (direct-motion lane, docs/internal/direct-motion.md; these are HIGH's — floor .35 / 6 taps since the 08-12 SPRINT take: at three times the walking pan the .1 floor made the light's edge noisier than no cut at all, .35 + taps sits between; the walking pan keeps most of its win): 6 = the motion-scaled confidence (2) + wider spatial reuse under motion (4) — measured at high: the light's edge under a walking pan −43 % flow, the lit floor −27 %, the dark floor −7 % (−46 / −32 with 6 taps), a slow pan and the still picture unchanged, main's 1–3.7 % motion darkening gone; the stochastic reprojection (1) stays an A/B row (a NEGATIVE at slow pans: +12‥34 %); the presets tier Min / Taps; 0 (?norestirmotion) = the estimator's program byte for byte
   directHistory: true, directBlurCap: 10, secMinE: 0.006,
   lightReach: true,
   giFireflyK: 4,

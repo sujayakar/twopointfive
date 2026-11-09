@@ -1,10 +1,10 @@
 //! The types of `scene_scenarios`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// a lesson step's done-test, a variant for each `is` of LESSON_TESTS (scenarios.ts LessonTest, lesson.ts). Unknown: an `is` no row has, or a record that would throw; it never passes (lesson.ts passes)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub enum LessonTestKind {
     Unknown { is: String },
     In { area: crate::scene_scenarios::Rect },
@@ -44,7 +44,7 @@ pub enum LessonTestKind {
 }
 
 /// (TypeScript: Rect, src/scene/scenarios.ts:12)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Rect {
     pub x0: f64,
     pub x1: f64,
@@ -65,7 +65,7 @@ impl Rect {
 impl Default for Rect { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: TeamStart, src/scene/scenarios.ts:16)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct TeamStart {
     pub sam: V3,
     pub sam_yaw: f64,
@@ -86,7 +86,7 @@ impl TeamStart {
 impl Default for TeamStart { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: ScenarioMark, src/scene/scenarios.ts:18)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ScenarioMark {
     pub pos: V3,
     pub aim_at: V3,
@@ -103,7 +103,7 @@ impl ScenarioMark {
 impl Default for ScenarioMark { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: NightBreachData, src/scene/scenarios.ts:23)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct NightBreachData {
     pub team: crate::scene_scenarios::TeamStart,
     pub room: Option<String>,
@@ -122,7 +122,7 @@ impl NightBreachData {
 impl Default for NightBreachData { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: StructureDoor, src/scene/scenarios.ts:27)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct StructureDoor {
     pub id: String,
     pub from: String,
@@ -139,7 +139,7 @@ impl StructureDoor {
 impl Default for StructureDoor { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: StructureMark, src/scene/scenarios.ts:29)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct StructureMark {
     pub pos: V3,
     pub watch: String,
@@ -158,7 +158,7 @@ impl StructureMark {
 impl Default for StructureMark { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: StructureRoom, src/scene/scenarios.ts:30)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct StructureRoom {
     pub id: String,
     pub name: String,
@@ -183,7 +183,7 @@ impl StructureRoom {
 impl Default for StructureRoom { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: StructureData, src/scene/scenarios.ts:40)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct StructureData {
     pub name: String,
     pub team: Option<crate::scene_scenarios::TeamStart>,
@@ -214,7 +214,7 @@ impl StructureData {
 impl Default for StructureData { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: SquadData, src/scene/scenarios.ts:70)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SquadData {
     pub id: String,
     pub name: Option<String>,
@@ -243,7 +243,7 @@ impl SquadData {
 impl Default for SquadData { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum SquadDataTraining {
     Trained,
     Green,
@@ -260,7 +260,7 @@ impl SquadDataTraining {
 }
 
 /// (TypeScript: SquadArrive, src/scene/scenarios.ts:64)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct SquadArrive {
     pub door: String,
     pub spawn: Vec<V3>,
@@ -279,7 +279,7 @@ impl SquadArrive {
 impl Default for SquadArrive { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: RouteOpening, src/scene/scenarios.ts:99)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct RouteOpening {
     pub id: String,
     pub name: String,
@@ -320,7 +320,7 @@ impl RouteOpening {
 impl Default for RouteOpening { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum RouteOpeningKind {
     Door,
     Glass,
@@ -337,7 +337,7 @@ impl RouteOpeningKind {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum RouteOpeningSide {
     Left,
     Right,
@@ -352,7 +352,7 @@ impl RouteOpeningSide {
 }
 
 /// (TypeScript: RescueFlowData, src/scene/scenarios.ts:109)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct RescueFlowData {
     pub corridor: crate::scene_scenarios::Rect,
     pub regions: Vec<crate::scene_scenarios::RescueFlowDataRegionsItem>,
@@ -373,7 +373,7 @@ impl RescueFlowData {
 impl Default for RescueFlowData { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/scene/scenarios.ts:112 RescueFlowData.regions, src/scene/scenarios.ts:112)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct RescueFlowDataRegionsItem {
     pub id: String,
     pub door: Option<String>,
@@ -392,7 +392,7 @@ impl RescueFlowDataRegionsItem {
 impl Default for RescueFlowDataRegionsItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/scene/scenarios.ts:115 RescueFlowData.hold, src/scene/scenarios.ts:115)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct RescueFlowDataHold {
     pub ahead: f64,
     pub x_max: f64,
@@ -411,7 +411,7 @@ impl RescueFlowDataHold {
 impl Default for RescueFlowDataHold { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: RescueData, src/scene/scenarios.ts:117)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct RescueData {
     pub team: crate::scene_scenarios::TeamStart,
     pub room: crate::scene_scenarios::RescueDataRoom,
@@ -444,7 +444,7 @@ impl RescueData {
 impl Default for RescueData { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/scene/scenarios.ts:120 RescueData.room, src/scene/scenarios.ts:120)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct RescueDataRoom {
     pub name: String,
     pub where_: Option<String>,
@@ -473,7 +473,7 @@ impl RescueDataRoom {
 impl Default for RescueDataRoom { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/scene/scenarios.ts:136 RescueData.side, src/scene/scenarios.ts:136)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct RescueDataSide {
     pub door: String,
     pub hold: V3,
@@ -498,7 +498,7 @@ impl RescueDataSide {
 impl Default for RescueDataSide { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/scene/scenarios.ts:141 RescueDataSide.from, src/scene/scenarios.ts:141)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct RescueDataSideFrom {
     pub door: String,
     pub bounds: Option<crate::scene_scenarios::Rect>,
@@ -515,7 +515,7 @@ impl RescueDataSideFrom {
 impl Default for RescueDataSideFrom { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/scene/scenarios.ts:148 RescueData.hostages, src/scene/scenarios.ts:148)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct RescueDataHostagesItem {
     pub pos: V3,
     pub face: f64,
@@ -532,7 +532,7 @@ impl RescueDataHostagesItem {
 impl Default for RescueDataHostagesItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/scene/scenarios.ts:151 RescueData.doorMan, src/scene/scenarios.ts:151)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct RescueDataDoorMan {
     pub inside: crate::scene_scenarios::ScenarioMark,
     pub outside: crate::scene_scenarios::ScenarioMark,
@@ -549,7 +549,7 @@ impl RescueDataDoorMan {
 impl Default for RescueDataDoorMan { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/scene/scenarios.ts:158 RescueData.cast, src/scene/scenarios.ts:158)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct RescueDataCast {
     pub roamers: f64,
 }
@@ -564,7 +564,7 @@ impl RescueDataCast {
 impl Default for RescueDataCast { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: PlaceArea, src/scene/scenarios.ts:167)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct PlaceArea {
     pub name: String,
     pub bounds: crate::scene_scenarios::Rect,
@@ -581,7 +581,7 @@ impl PlaceArea {
 impl Default for PlaceArea { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: PlacesData, src/scene/scenarios.ts:168)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct PlacesData {
     pub areas: Vec<crate::scene_scenarios::PlaceArea>,
 }
@@ -596,7 +596,7 @@ impl PlacesData {
 impl Default for PlacesData { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: QuietStart, src/scene/scenarios.ts:174)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct QuietStart {
     pub sam: V3,
     pub sam_yaw: f64,
@@ -617,7 +617,7 @@ impl QuietStart {
 impl Default for QuietStart { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: QuietSpot, src/scene/scenarios.ts:181)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct QuietSpot {
     pub place: String,
     pub area: crate::scene_scenarios::Rect,
@@ -646,7 +646,7 @@ impl QuietSpot {
 impl Default for QuietSpot { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: QuietExit, src/scene/scenarios.ts:197)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct QuietExit {
     pub name: String,
     pub door: String,
@@ -671,7 +671,7 @@ impl QuietExit {
 impl Default for QuietExit { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: QuietStand, src/scene/scenarios.ts:199)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct QuietStand {
     pub name: String,
     pub pos: V3,
@@ -692,7 +692,7 @@ impl QuietStand {
 impl Default for QuietStand { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: QuietData, src/scene/scenarios.ts:200)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct QuietData {
     pub thing: Option<String>,
     pub starts: Vec<crate::scene_scenarios::QuietStart>,
@@ -723,7 +723,7 @@ impl QuietData {
 impl Default for QuietData { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/scene/scenarios.ts:210 QuietData.needs, src/scene/scenarios.ts:210)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct QuietDataNeeds {
     pub coffee: Option<crate::scene_scenarios::QuietStand>,
     pub smoke: Option<crate::scene_scenarios::QuietStand>,
@@ -744,7 +744,7 @@ impl QuietDataNeeds {
 impl Default for QuietDataNeeds { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: LessonStep, src/scene/scenarios.ts:226)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct LessonStep {
     pub id: String,
     pub line: String,
@@ -805,7 +805,7 @@ impl LessonStep {
 impl Default for LessonStep { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/scene/scenarios.ts:270 LessonStep.eye, src/scene/scenarios.ts:270)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct LessonStepEye {
     pub at: V3,
     pub yaw: f64,
@@ -824,7 +824,7 @@ impl LessonStepEye {
 impl Default for LessonStepEye { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/scene/scenarios.ts:276 LessonStep.explain, src/scene/scenarios.ts:276)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct LessonStepExplain {
     pub title: Option<String>,
     pub text: String,
@@ -845,7 +845,7 @@ impl LessonStepExplain {
 impl Default for LessonStepExplain { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/scene/scenarios.ts:282 LessonStep.onWay, src/scene/scenarios.ts:282)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct LessonStepOnWay {
     pub nv: Option<bool>,
     pub run: Option<bool>,
@@ -862,7 +862,7 @@ impl LessonStepOnWay {
 impl Default for LessonStepOnWay { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/scene/scenarios.ts:285 LessonStep.after, src/scene/scenarios.ts:285)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct LessonStepAfter {
     pub line: Option<String>,
     pub on: Option<Vec<String>>,
@@ -881,7 +881,7 @@ impl LessonStepAfter {
 impl Default for LessonStepAfter { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: RailsData, src/scene/scenarios.ts:288)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct RailsData {
     pub allow: Vec<String>,
     pub respawn: Option<f64>,
@@ -912,7 +912,7 @@ impl RailsData {
 impl Default for RailsData { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/scene/scenarios.ts:298 RailsData.waits, src/scene/scenarios.ts:298)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct RailsDataWaits {
     pub low: Option<bool>,
 }
@@ -927,7 +927,7 @@ impl RailsDataWaits {
 impl Default for RailsDataWaits { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/scene/scenarios.ts:303 RailsData.sky, src/scene/scenarios.ts:303)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct RailsDataSky {
     pub park: V3,
     pub reach: Option<f64>,
@@ -948,7 +948,7 @@ impl RailsDataSky {
 impl Default for RailsDataSky { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/scene/scenarios.ts:303 RailsDataSky.eye, src/scene/scenarios.ts:303)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct RailsDataSkyEye {
     pub at: V3,
     pub yaw: f64,
@@ -967,7 +967,7 @@ impl RailsDataSkyEye {
 impl Default for RailsDataSkyEye { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: LessonData, src/scene/scenarios.ts:319)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct LessonData {
     pub title: String,
     pub steps: Vec<crate::scene_scenarios::LessonStep>,
@@ -986,7 +986,7 @@ impl LessonData {
 impl Default for LessonData { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: ParData, src/scene/scenarios.ts:330)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct ParData {
     pub gold: f64,
     pub silver: f64,
@@ -1007,7 +1007,7 @@ impl ParData {
 impl Default for ParData { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: IssueCard, src/scene/scenarios.ts:335)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct IssueCard {
     pub weapon: Option<crate::kit::KitWeapon>,
     pub suppressed: Option<bool>,
@@ -1044,7 +1044,7 @@ impl IssueCard {
 impl Default for IssueCard { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum IssueCardLoaded {
     Ring,
     He40,
@@ -1059,7 +1059,7 @@ impl IssueCardLoaded {
 }
 
 /// (TypeScript: IssueData, src/scene/scenarios.ts:342)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct IssueData {
     pub members: JsMap<String, crate::scene_scenarios::IssueCard>,
 }
@@ -1074,7 +1074,7 @@ impl IssueData {
 impl Default for IssueData { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: ResponseWay, src/scene/scenarios.ts:486)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct ResponseWay {
     pub name: String,
     pub door: Option<String>,
@@ -1103,7 +1103,7 @@ impl ResponseWay {
 impl Default for ResponseWay { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: ResponsePost, src/scene/scenarios.ts:503)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct ResponsePost {
     pub name: String,
     pub pos: V3,
@@ -1124,7 +1124,7 @@ impl ResponsePost {
 impl Default for ResponsePost { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: ResponseData, src/scene/scenarios.ts:504)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct ResponseData {
     pub why: String,
     pub site: String,
@@ -1161,7 +1161,7 @@ impl ResponseData {
 impl Default for ResponseData { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/scene/scenarios.ts:522 ResponseData.sweep, src/scene/scenarios.ts:522)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct ResponseDataSweepItem {
     pub name: String,
     pub pos: V3,
@@ -1178,7 +1178,7 @@ impl ResponseDataSweepItem {
 impl Default for ResponseDataSweepItem { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/scene/scenarios.ts:527 ResponseData.raid, src/scene/scenarios.ts:527)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct ResponseDataRaid {
     pub room: Option<String>,
 }
@@ -1193,7 +1193,7 @@ impl ResponseDataRaid {
 impl Default for ResponseDataRaid { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: LevelScenarios, src/scene/scenarios.ts:529)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct LevelScenarios {
     pub night_breach: Option<crate::scene_scenarios::NightBreachData>,
     pub room_clear: Option<crate::scene_scenarios::StructureData>,
@@ -1230,7 +1230,7 @@ impl LevelScenarios {
 impl Default for LevelScenarios { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: KitViewData, src/scene/scenarios.ts:480)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct KitViewData {
     pub ways: Vec<crate::scene_scenarios::KitViewWay>,
     pub sets: Option<JsMap<String, crate::scene_scenarios::KitViewSet>>,
@@ -1247,7 +1247,7 @@ impl KitViewData {
 impl Default for KitViewData { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: KitViewWay, src/scene/scenarios.ts:414)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct KitViewWay {
     pub door: Option<String>,
     pub side: Option<f64>,
@@ -1312,7 +1312,7 @@ impl KitViewWay {
 impl Default for KitViewWay { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/scene/scenarios.ts:420 KitViewWay.pin, src/scene/scenarios.ts:420)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct KitViewWayPin {
     pub yaw: f64,
     pub pitch: f64,
@@ -1331,7 +1331,7 @@ impl KitViewWayPin {
 impl Default for KitViewWayPin { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: KitViewLightOver, src/scene/scenarios.ts:413)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct KitViewLightOver {
     pub porch: Option<crate::scene_scenarios::KitViewLightOverPorch>,
     pub fill: Option<crate::scene_scenarios::KitViewLightOverFill>,
@@ -1356,7 +1356,7 @@ impl KitViewLightOver {
 impl Default for KitViewLightOver { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/scene/scenarios.ts:413 KitViewLightOver.porch, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct KitViewLightOverPorch {
     pub kind: Option<f64>,
     pub offset: Option<V3>,
@@ -1395,7 +1395,7 @@ impl KitViewLightOverPorch {
 impl Default for KitViewLightOverPorch { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/scene/scenarios.ts:399 KitViewLightOverPorch.fixture, src/scene/scenarios.ts:399)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct KitViewLightOverPorchFixture {
     pub at: V3,
     pub half: V3,
@@ -1414,7 +1414,7 @@ impl KitViewLightOverPorchFixture {
 impl Default for KitViewLightOverPorchFixture { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/scene/scenarios.ts:413 KitViewLightOver.fill, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct KitViewLightOverFill {
     pub kind: Option<f64>,
     pub offset: Option<V3>,
@@ -1449,7 +1449,7 @@ impl KitViewLightOverFill {
 impl Default for KitViewLightOverFill { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/scene/scenarios.ts:413 KitViewLightOver.sam, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct KitViewLightOverSam {
     pub on: Option<bool>,
     pub intensity: Option<f64>,
@@ -1474,7 +1474,7 @@ impl KitViewLightOverSam {
 impl Default for KitViewLightOverSam { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum KitViewWayKind {
     Door,
     Wall,
@@ -1491,7 +1491,7 @@ impl KitViewWayKind {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum KitViewWayHand {
     Left,
     Right,
@@ -1506,7 +1506,7 @@ impl KitViewWayHand {
 }
 
 /// (TypeScript: inline at src/scene/scenarios.ts:448 KitViewWay.wall, src/scene/scenarios.ts:448)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, ToBytes)]
 pub struct KitViewWayWall {
     pub face: Option<f64>,
     pub thickness: Option<f64>,
@@ -1525,14 +1525,14 @@ impl KitViewWayWall {
 impl Default for KitViewWayWall { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: a union)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub enum KitViewWayPane {
     Bool(bool),
     Arm1(crate::scene_scenarios::KitViewWayPaneArm1),
 }
 
 /// (TypeScript: inline at src/scene/scenarios.ts:450 KitViewWay.pane, src/scene/scenarios.ts:450)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct KitViewWayPaneArm1 {
     pub box_: String,
     pub stand: Option<[f64; 3]>,
@@ -1549,7 +1549,7 @@ impl KitViewWayPaneArm1 {
 impl Default for KitViewWayPaneArm1 { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/scene/scenarios.ts:472 KitViewWay.add, src/scene/scenarios.ts:472)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct KitViewWayAdd {
     pub boxes: Option<Vec<crate::scene_level_data::BoxData>>,
     pub lamps: Option<Vec<crate::scene_level_data::LightData>>,
@@ -1568,7 +1568,7 @@ impl KitViewWayAdd {
 impl Default for KitViewWayAdd { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: KitViewSet, src/scene/scenarios.ts:479)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct KitViewSet {
     pub boxes: Vec<crate::scene_level_data::BoxData>,
     pub doors: Option<Vec<crate::scene_level_data::DoorData>>,
@@ -1589,7 +1589,7 @@ impl KitViewSet {
 impl Default for KitViewSet { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: inline at src/scene/scenarios.ts:535 LevelScenarios.doorNames, src/scene/scenarios.ts:535)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct LevelScenariosDoorNamesItem {
     pub door: String,
     pub name: String,

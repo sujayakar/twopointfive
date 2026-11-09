@@ -8,7 +8,7 @@
 //                                                    looks, not after the looks — `twin` must FAIL
 // The mission is the room clear with the four (the page's `?roomclear&squad4`: fog of war up).
 // THE WORD a line holds a game to (`word` below) is the game's own: its die's count and the hash of every part of its block, what a networked game's
-// machines compare (src/net/step.ts netWord). It sees where every body, door and thing is, not a seat's aim or a man's mind (docs/agents/net.md).
+// machines compare (src/net/words.ts foldWord). It sees where every body, door and thing is, not a seat's aim or a man's mind (docs/agents/net.md).
 // WHAT IS HELD:
 //   one       a game of one seat: its seat's view IS the Game, the seat owns nothing apart, and `player` is the plain field it always was
 //   men       two seats: two men with two ids standing apart on the floor, the four dealt two a seat, each seat's order book holding its own two and no other
@@ -46,8 +46,8 @@ import { standUp, ROOT } from './headless.ts';
 const { SEAT_ASKS, SEAT_TABLES, men, seatsOfSearch } = await import(`${ROOT}/src/game/seats.ts`);
 const { VIEW_KEYS, watchViewKeys } = await import(`${ROOT}/src/math/side.ts`);
 const { sampleCmd, cmdText, cmdFromText } = await import(`${ROOT}/src/game/cmd.ts`);
-const { Input } = await import(`${ROOT}/src/game/input.ts`);
-const { FollowCamera } = await import(`${ROOT}/src/game/camera.ts`);
+const { Input } = await import(`${ROOT}/src/host/input.ts`);
+const { FollowCamera } = await import(`${ROOT}/src/host/camera.ts`);
 const { startFromQuery, startScenario } = await import(`${ROOT}/src/game/scenarioRun.ts`);
 const { SNAPS } = await import(`${ROOT}/src/game/savestate.ts`);
 const CROSSING = await import(`${ROOT}/src/game/crossing.ts`);

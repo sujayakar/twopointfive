@@ -289,7 +289,7 @@ export class RustHost {
    *  FROM A STAND-UP TO THE NEXT START NO CALL CROSSES. A stand asks about things a process shares (the cast's rig, numbered in the book of the game that met it
    *  first, so the call names that game), and the answer's apply wrote the older game's rows over what `freshStart` had just put back: its men, some of them
    *  made in Rust with no rig, stood in the new game's start (`SkeletonInstance.rig: no object for RigId`). So a stand and its staging run their TypeScript,
-   *  as the process's first stand does (tools/blitz/stand-after.ts). */
+   *  as the process's first stand does. */
   private static waiting = new Set<WeakRef<RustHost>>(); private static standing = false; private startThrew: unknown = null;
   private beCurrent(): void { useDice(this.g.dice); this.g.quiet?.current?.(); }   // (what `Game.update` opens with: a start outside its own game's update reads this game's)
   static standComing(collect: () => void): void { (globalThis as any).__tpsCall?.newGame?.(); const c = (globalThis as any).__tpsCall; if (c) c.inHook = undefined; RustHost.last = null; collect();
@@ -848,10 +848,6 @@ export class RustHost {
       // (a take is due this tick: an authored checkpoint a rule asked for, a save by hand, a load. The puppet takes the whole state first. An autosave
       // the controller decides on inside its tick takes the whole state as the take starts: `taps`. Its gate and its triggers read the puppet as the
       // filtered apply left it.)
-      // AN AUTHORED CHECKPOINT ON A LEVEL ON RAILS: the save controller stops the level's program for the take (savestate.ts:991 `D.stop(false);
-      // g.rails.resume()`), and the program is the Rust game's: a run the apply made on the puppet has none of its own (director.ts:525 threw on
-      // `R.drills`). The Rust side stops it first and the puppet takes that, so the controller finds no program running and keeps the floor as it is.
-      if (S?.authored && X.face_stop_program?.(this.h)) { this.count('an authored checkpoint: the level\'s program stopped on the Rust side before the take'); this.applyStep(); if (this.audit) rust = this.applyWhole('audit'); }
       if (S && !this.audit && !this.wholeNow && !this.keeps() && (S.authored || S.hand || S.due)) this.applyWhole('a save is due');
       try { S?.tick(g, dt); } catch (e) { this.count(`saves.tick THREW on the puppet: ${String((e as any)?.message ?? e).slice(0, 120)}`); }
       // (a save kept as a Rust game made the row on the Rust side as it was taken, before the clone: `snapTake`)
@@ -878,7 +874,7 @@ export class RustHost {
   private tsUpload: (() => void) | null = null;
   /** true where the host can step quietly (the fast way, a face that answers `face_look`) */
   // NOT YET THE SAME PLAY, so it is asked for by name (RH_QUIET=1): the Rust tick writes the lens's own row at times (a start snaps it onto the man), a
-  // quiet run does not bring that across, and the host hands its own lens back with the next record. tools/blitz/quiet-check.ts: the die and the
+  // quiet run does not bring that across, and the host hands its own lens back with the next record: the die and the
   // block equal on every one of 2,340 ticks, the host's half not (FollowCamera.target at tick 2). It wants the camera's rows on the quiet path.
   quietBegin(): boolean { if (this.audit || !this.F.X.face_look || OFF.has('quiet') || process.env.RH_QUIET !== '1') return false; this.quietOn = true; this.quietOwed = 0; return true; }
   quietEnd(): void { if (!this.quietOn) return; this.quietOn = false; this.lookNow = null; if (!this.quietOwed || !this.h) return; this.quietRuns++;
@@ -946,7 +942,7 @@ export async function standRust(g: any, word: string, o: { /** the dressing rows
 // ---- RH_STALE=<file>: WHAT THE PUPPET HAS LET FALL BEHIND. As the process ends, every game that still stands on the Rust game has its puppet exported
 // whole and held to the Rust game's whole state, and so every RH_STALE_EVERY ticks before it (300; a whole apply puts every field back, so the end alone
 // would miss what fell behind between two): a line a field in which the two differed (how many places, one of them, in how many looks). A field on the every-tick list
-// should never be there; a field on no list that something outside the tick reads is a fault waiting (tools/blitz/stale.ts makes the table).
+// should never be there; a field on no list that something outside the tick reads is a fault waiting.
 // (The games are held here until the end: with this word a process frees none.)
 const STALE: RustHost[] = [];
 const STALE_EVERY = +(process.env.RH_STALE_EVERY ?? 300);

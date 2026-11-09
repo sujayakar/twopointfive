@@ -78,7 +78,7 @@ pub fn start_brace(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::
     if r.wedged >= g.k.digin.wedges { return false; }
     let e = match entry_at(g, r.room, idx) { Some(e) => e, None => return false };
     if !wedgeable(g, e.door) || state_of(g).wedges.has(e.door) { return false; }
-    if !(crate::enemysquads::squad_may_wedge(g, gd, e.door) || crate::owner::has(g, gd, crate::owner::by::STAND)) { return false; }
+    if !crate::enemysquads::squad_may_wedge(g, gd, e.door) { return false; }
     if flat(heard_at(g, d, *m), e.at) < g.k.digin.close_m { return false; }
     let first = nearest_prop(g, d, e, None);
     let stand = crate::roomfight::room_fight_free_near(g, [e.at[0] - e.out[0] * 1.4, 0.0, e.at[2] - e.out[1] * 1.4]);
@@ -117,7 +117,6 @@ pub fn start_brace(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate::
         };
     }
     let goal = match goal { Some(q) => q, None => return false };
-    if crate::owner::has(g, gd, crate::owner::by::STAND) && !crate::roomfight::room_fight_in_room(g, Some(r.room), goal) { return false; }
     r.bracer = Some(gd);
     m.brace = idx;
     m.prop = Some(p);
@@ -223,7 +222,7 @@ pub fn holds(g: &mut crate::game::Game, e: crate::roomfight::Entry) -> bool {
 pub fn would_brace(g: &mut crate::game::Game, d: RoomfightDefId, m: crate::digin::Man, r: &crate::digin::RoomSt, e: crate::roomfight::Entry) -> bool {
     let gd = g.tab.roomfight_def[d].gd;
     if r.wedged >= g.k.digin.wedges || !wedgeable(g, e.door) || state_of(g).wedges.has(e.door) { return false; }
-    if !(crate::enemysquads::squad_may_wedge(g, gd, e.door) || crate::owner::has(g, gd, crate::owner::by::STAND)) { return false; }
+    if !crate::enemysquads::squad_may_wedge(g, gd, e.door) { return false; }
     if flat(heard_at(g, d, m), e.at) < g.k.digin.close_m { return false; }
     if nearest_prop(g, d, e, None).is_none() { return false; }
     match crate::roomfight::room_fight_free_near(g, [e.at[0] - e.out[0] * 1.4, 0.0, e.at[2] - e.out[1] * 1.4]) {
@@ -657,7 +656,7 @@ fn set_tick(g: &mut Game, d: RoomfightDefId, m: &mut Man, k: RoomfightRoomId, co
     let r = row_of(g, k);
     if now - r.entered_at > 1.0 { m.phase = Phase::Idle; return; }    // they are in: his eye is his own again
     let last = m::max_n(&[g.tab.roomfight_def[d].noise_t, m.know_t, g.gd[gd].last_seen_t]);
-    if now - last > g.k.digin.hold_secs && !crate::owner::has(g, gd, crate::owner::by::STAND) {   // (the last stand stays set)
+    if now - last > g.k.digin.hold_secs {
         m.phase = Phase::Idle;
         log(g, Some(gd), "stands down");
         return;
@@ -806,7 +805,7 @@ pub fn dig_in_set_on(g: &crate::game::Game, gd: GuardId, d: DoorId) -> bool {
     match s.men.get(gd) { Some(x) => x.phase == Phase::Set, None => false }
 }
 
-/// laststand.ts: this man is TOLD to dig in where he holds; false = already at it, no room with a door, or the team has been in it   (digin.ts digInOrder)
+/// this man is TOLD to dig in where he holds; false = already at it, no room with a door, or the team has been in it   (digin.ts digInOrder)
 pub fn dig_in_order(g: &mut crate::game::Game, def: RoomfightDefId, know: V3, beat: f64) -> bool {
     let (gd, mode, my_room) = { let x = &g.tab.roomfight_def[def]; (x.gd, x.mode, x.room) };
     let phase = state_of(g).men.get_or_insert_with(gd, new_man).phase;
@@ -819,7 +818,7 @@ pub fn dig_in_order(g: &mut crate::game::Game, def: RoomfightDefId, know: V3, be
     true
 }
 
-/// laststand.ts: where his dig-in stands ('idle' = not at it)   (digin.ts digInPhase)
+/// where his dig-in stands ('idle' = not at it)   (digin.ts digInPhase)
 pub fn dig_in_phase(g: &crate::game::Game, gd: GuardId) -> String {
     let phase = g.m.digin.states.as_ref().and_then(|s| s.men.get(gd)).map_or(Phase::Idle, |x| x.phase);
     String::from(phase.as_str())

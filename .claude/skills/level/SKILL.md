@@ -14,8 +14,8 @@ kit, its words), the other the floor itself:
 
 ```bash
 bun run tools/qa/level-needs.ts <name>            # a second: a PASS, FAIL or NOTE per need (the name in front of each need below)
-bun run tools/qa/level-needs.ts <name> --run      # also runs the level's own checks as they stand, map-check --no-runs among them
-bun run tools/qa/map-check.ts <name>              # the floor: file, lint, size, structure, squads, nav from every way in, its card, 48 scripted runs
+bun run tools/qa/level-needs.ts <name> --run      # also runs the level's own checks as they stand, the game's own questions among them
+cd rust/game_start && cargo run --release --bin levels -- stands <name>    # the game's own questions: stands, doors, second-way, sight, walked, stacks, charges, names, rain (below: `levels <question> <name>`)
 ```
 
 A FAIL is a gap. A NOTE is a thing to look at and say out loud. `--skip <need>` leaves a need out while it is red for a reason
@@ -33,12 +33,6 @@ did not.
 - **Know what your change does to saves and tapes.** Adding, moving or removing a box, door, route, light or prop moves the
   level's fingerprint: old checkpoints and recordings of that level are refused. Marks, waits and room order alone do not.
   Say which in the write-up.
-- **A level changed on purpose in its own part** (a box, a door, a mark, a route, a held key of its lesson) moves ITS OWN row
-  in `LEVEL_BASE` in `tools/qa/lived-check.ts` to the commit that carries the change (one line a level; a level with no row
-  yet gets one), or `lived-check` reads your change as furniture damage. Nothing goes in front of `BASE_REVS` any more: that
-  moved every level's bar. A lesson's words and lists (`LESSON_FREE` there: lines, cards, `after`, `allow` / `deny`, the
-  frame's `orders` and `rows`) need no row move at all; a step added or dropped, a `done` test or a mark does. A lesson key the
-  tool has in neither of its two tables is red until you put it in one.
 - **Level data is not a switch.** A new RULE that reads level data is (CLAUDE.md: switch, `FROZEN_HOLDS` row, knob table, a
   check with a `_BREAK` path). A new field wants its key in `src/scene/levelData.ts`, both directions in
   `levelLoad.ts`, and a line in `docs/level-format.md`.
@@ -61,20 +55,19 @@ did not.
 
 - **Inside the world**: 40 by 28 m, the building inside x 4..36, z 4..24 ("denser, not larger"); the box table; a frame
   draws 64 lights and a staged four already stands near that with torches and flashes, so a new emitter is weighed.
-  **check** `map-check` (its size section counts prop parts, fixture lights and camera cones too);
-  `bun run tools/qa/level-lint.ts levels/<name>.json` (leave the `.lint.json` sidecar out of a glob).
+  **check** `bun run tools/qa/level-lint.ts levels/<name>.json` (leave the `.lint.json` sidecar out of a glob).
 - **A height a foot can read**: no solid between 0.20 and 0.25 m on free floor (0.19 and under is stepped over, 0.26 and
   over is seen by the walk grid). Walls only in the two thicknesses door frames know (0.24 shell, 0.12 partition).
 - **Paint says what a thing is** to a round, a charge and a blast: use the palette's paints; a look's paint stands for the
   office paint it replaced (`gwotAs`). **seen** a plain grey repaint became a steel cabinet to the simulation.
 - **Its own footstep map** (`surfaces`, returned by `build()`). Without one a level is walked on the office's rectangles,
-  wherever its own rooms are. **check** `floor`; `map-check` says which room gets which floor.
+  wherever its own rooms are. **check** `floor`.
 - **A breaker, a beacon, the placeholder `mission` block**, a world ground slab.
 
 ## 3. Rooms, doors, walls
 
 - **Every door is real size** (0.9 by 2.05 m doorway, leaf 0.86), its middle on a walk-grid cell; a window's head stays
-  under 1.9 m or it reads as a doorway. **check** `bun run tools/qa/door-size.ts <name>`.
+  under 1.9 m or it reads as a doorway. **check** `levels doors <name>`.
 - **Glass is typed by where you put it, so place it as a glazier would.** Nothing in the file names a kind
   (`glassbreak.ts typeOf`, `GLASSREAL.place`): the pane's foot decides. Foot under 0.7 m (it reaches the floor: a
   partition, a shopfront, frontage on a kick wall), or a panel of a door (within 0.3 m of the opening, foot under 1.5 m):
@@ -83,33 +76,31 @@ did not.
   sidelight (under 0.7 m wide) or a high outside strip (under 0.8 m tall): laminated, it webs and never opens. So choose
   the foot on purpose: glass to the floor is a second door for the price of a round, a sill window is a slit that opens
   slowly. **seen** "it seems like there are two types of glass breaking ... what's the situation?": every outside
-  window was toughened and every partition float, whatever its height. **check** `probes.ts glassreal` (line 9 counts
+  window was toughened and every partition float, whatever its height. **check** no check today (`rust/game_start/tests`) (line 9 counts
   every level's panes by kind against a table: a new level with glass adds its row; `--verbose` prints them).
 - **Every room they can shut has another way in.** The maintainer: "maybe we just need to design levels so there's always
   another route in?" A door hung to open OUT (`swing`), a walk-through window, or issued wall charges. **seen** barricaded
-  rooms that could only be opened with a charge or a 40 mm. **check** `bun run tools/qa/second-way-check.ts <name>.json`
-  (export runs it too: red fails the export of a level a squad row plays and is a note on one with no row yet; a changed
+  rooms that could only be opened with a charge or a 40 mm. **check** `levels second-way <name>`
+  (in `rust/game_start`: `cargo run --release --bin levels -- second-way <name>`; export runs it too: red fails the export of a level a squad row plays and is a note on one with no row yet; a changed
   swing moves that level's tallies and par times).
 - **Its starts and its doors are on a way.** The maintainer: "wear, paths in the ground ... can all tell a story for how
   people walk through the level, its logic, leading the player". The look's page wears the floor where the level is walked
   (`src/scene/ways.ts`), so a start no way leaves from, or a door no way crosses or ends at, tells no story. Give it one
-  with a `scenarios.walked` row (from a named thing to a named thing: a door is one). **check** `bun run
-  tools/qa/walked-check.ts <name>` (what is owed is held by name in the level's count file); `bun run
-  tools/levels/walked-overlay.ts <name>` draws the ways over what is laid by hand on the ground.
+  with a `scenarios.walked` row (from a named thing to a named thing: a door is one). **check** `levels walked <name>`
+  (what is owed is held by name in the level's count file).
 - **A defender sees what he watches.** The dress goal's rule: "a window a mark watches through, or a covered lane crosses,
   stays see-through"; the maintainer: "we don't want them to feel dumb". Dress such a window with the kit's OPEN form
   (`gwotKit` `boards`, `shutters`, `windowBlanket` take `'shut'` or `'open'`), and stand no cover in a mark's line. **seen**
   the pass's tea room with its boards and shutters shut: its two men at the glass lost a half and a sixth of the yard they
   hold; and the block with one leaf shut on a window no defender needs: the scripted team took it 3 times in 24 against 7
   with the leaves folded back, so a shut window is laid only where the mission's tally was read with it shut. **check**
-  `bun run tools/qa/marksight-check.ts <name>` on both stands (export runs it too; a new level writes its
-  count file with `--write` once on each stand, and a move that makes a man see less carries the file with a `#` line
-  saying why).
-- **A door a held room lists opens into that room**, and can be walked from both faces. **check** `probes.ts oneway-men`,
+  `levels sight <name>` (export runs it too; a new level writes its count file with `--write`, and a move that makes a man see
+  less carries the file, `tools/levels/counts/sight/<name>.txt`, with a `#` line saying why).
+- **A door a held room lists opens into that room**, and can be walked from both faces. **check** no check today (`rust/game_start/tests`),
   `oneway-deal`.
 - **Every door face has floor for a stack**: a man on each jamb, 2 m of wall clear, nothing on the marks. **seen** a carton on
   a stack place; a table on the wall refused the order "no room on that door". **check**
-  `bun run tools/qa/stack-marks-check.ts <row>`; `lived-stack-check.ts <row>` after moving furniture.
+  `levels stacks <row>`; `lived-stack-check.ts <row>` after moving furniture.
 - **A solid thing by a door is read at that door.** A thing that stops feet (over 0.19 m) laid within a few metres of a door can shut the
   walk grid's cells on a team's way to its stack, and the entry is then another fight. **seen** a log laid across two others by the
   pass's chopping block shut a square metre in front of two doors; the stacks' marks and the charges' places were untouched. **check**
@@ -120,7 +111,7 @@ did not.
 - **A corridor players walk runs up the screen, or is wide.** The camera looks from the south, so a wall hides about two metres of floor behind it: a corridor 2.4 m wide running along the
   screen hides whoever is in it. **seen** the sneak lab's first dark corridor, Sam under the top of its south wall. **By eye.**
 - **No door close under a tall wall to its south** (the camera looks from the south: the door is never drawn, never under
-  the cursor). Hang it 1.9 m or more back. **check** `probes.ts doormenu-drawn doormenu-open`.
+  the cursor). Hang it 1.9 m or more back. **check** no check today (`rust/game_start/tests`).
 - **A painted band stops at the jambs.** A door's `at` is the opening's low end, not its middle. **seen** "weird box in
   front of door in duo stealth mission": a dado ran across the doorway; two more levels had the same. **check** `doorway`.
 - **Flat decals are ordered, and start at the floor.** Crossing decals lie 0.7 mm apart by the exporter's order; a
@@ -134,10 +125,9 @@ did not.
   patch a player can watch flip; a library piece's own are held by `bun run tools/levels/library.ts --check`).
 - **A roof is the kit's ceiling** (`K.ceiling`: flagged `NoPrimary`, so the camera sees the room), at ceiling height if rain
   should stop at it, and no more than four. **seen** "weird to have shed that you can't see through the ceiling"; "rain is
-  busted on records office". **check** `roof`; `bun run tools/qa/ownroofs-check.ts`; `rain-reach.ts --map <name>.json`.
+  busted on records office". **check** `roof`; `levels rain`; `rain-reach.ts --map <name>.json`.
 - **A wall a charge may hole has floor behind it and marks 2.7 m off it.** **seen** "can't walk through hole i blew in wall
-  with 40mm"; "weird that it doesn't let me use a wall charge here". **check** `bun run tools/qa/wallfurn-check.ts`,
-  `probes.ts blasthole`.
+  with 40mm"; "weird that it doesn't let me use a wall charge here". **check** `levels charges` (its places, held by count).
 
 - **No door has an always-safe spot to command it from.** Plan mode's view stays with the player (6.5 m to either
   side of him, 4.5 m up the screen and 6 m down; `?plannear=0` is the view as it was), so he orders an entry from
@@ -155,8 +145,7 @@ like that."
 
 - **Every room, corridors and yards too, has the six things**: a use you can name in two words; signature furniture only
   that room has (0.6 m and over, readable from above); clutter of use; its own light or colour; its own floor decal;
-  something to shove or break. **check** `lived` (counts things, names bare rooms); the rest **by eye**
-  (`lived-check.ts <name> --sheet` prints what each room got).
+  something to shove or break. **check** `lived` (counts things, names bare rooms); the rest **by eye**.
 - **A thing is asked of the library by name.** `docs/library.md` lists every piece of every kit with its arguments, its
   size, what it costs and what it is to a man, and every named paint; the two showrooms (`tools/levels/gwot-yard.ts`,
   `levels/library-hall.json`) stand one of each, and a piece's line in a showroom's generator is the call to copy. A
@@ -183,24 +172,22 @@ like that."
   It does not hold `STYLE.md`'s rule for a patch. Whether it reads is **by eye**, at the level's own hour (a midday
   sun shows ground a night hid). Never seen on a GPU here.
 - **A level says how kept it is, once.** `export const KEPT = <0 to 1>` in the generator (the file's `meta.kept`;
-  absent = 0, a place left to the weather, which is how every level was drawn before the word). A look's second
-  file (`<name>-gwot.ts`) takes the word of the level it dresses unless it exports its own; the office, which has
+  absent = 0, a place left to the weather, which is how every level was drawn before the word). The office, which has
   no generator of this kind, says it as `level.kept` in its builder. At 1 nothing blotches, no wall has a damp
   foot or runs under its head, no rubbish gathers where nobody treads, a mud wall's render has not let go, and
   paint on a wall is whole and its own colour; what USE does stays (a lane where feet go, paint trodden off a
   floor), and plaster, block and slab get the knocked foot and the brought-in dirt their kept cousins have.
-  A level built on another's floor with no `DRESS_AS` (a squads level on its plain one) says the word itself:
-  `export { KEPT } from './<plain>'`. Say it before saying a wall again as another stuff to make it look clean.
+  A level built on another's floor says the word itself: `export { KEPT } from './<floor>'`. Say it before saying a wall again as another stuff to make it look clean.
   `&kept=<n>` on the look page's address is the word for a visit. **What it does not do:** it changes no stuff's
   own picture. Rust on a rack is drawn into the `metal` stuff itself, so a clean rack is another stuff's word
   (`steel`, `enamel`, `brushed`), not a kept level. **seen** an office's half-metre wall numerals drew chipped,
   because every mark was old paint whatever the place; its racks drew rusty because they were said as `metal`.
-  **check** `probes.ts kept`.
+  **check** `bun run tools/qa/checks.ts kept`.
 - **Furniture is additions only**, the tail of the generator's lists, group `lived.<room>`, behind `LIVED.on`.
 - **Clear of doors, stacks, marks and lines**: 1.1 m off a door's line and out of its sweep; a 0.9 m lane between a room's
   doors; nothing on or 0.45 m beside an authored point; never across a mark's aim line; never a new wall; nothing in the
   hidden band under a room's north wall. **seen** a crate stack shut the one way round; furnished barracks played harder
-  because of one rack. **check** `bun run tools/qa/lived-check.ts <name>`.
+  because of one rack. **check** `levels stands <name>`.
 - **Measure a loud level after furnishing it**, and say the seeds: under 144 paired seeds a difference is noise.
 
 ### A hand pass (after a level is dressed)
@@ -218,7 +205,7 @@ level that already has its rooms, and moves nobody's fight. The office was the f
   A room's name is the middle of its floor: **seen** the server room's middle is a bank of racks, so three rows ended at the racks' near face
   and not where anyone stands; a mark on free floor at the thing says where.
   Draw the ways after and look: **seen** a row to a machine at the end of a walkway ran right round the building, because a parked car and a
-  bollard shut the walkway on the walk grid. **check** `bun run tools/qa/ways-check.ts`, then `bun run tools/qa/walked-check.ts <level>`: a
+  bollard shut the walkway on the walk grid. **check** `bun run tools/qa/ways-check.ts`, then `levels walked <level>`: a
   start or a door your rows now reach leaves its count file with `--write`, and the hand-over says which names left.
 - **No word names a room, and no paint is there for the player.** The maintainer, playing the office's first cut: "i don't like the "lobby"
   and "conference" labels in the level, pretty lame". A room is shown by what is in it. The test for paint: would THIS building's own people
@@ -236,7 +223,7 @@ level that already has its rooms, and moves nobody's fight. The office was the f
   and are drawn only unless told they are solid; a band of paint is the wall's own stuff in another colour (`saidAs`). Groups `lived.<room>`
   at the generator's tail, so the frozen stand's level is the level it was. Lay conduit in lengths of under two metres: a breach takes what
   hangs over the hole and leaves the rest. A band from the floor stays across a breach, as every painted dado in the game does today.
-  **check** `lived-check` (it prints "0 solid"), `wallfurn-check`, `marksight-check`, `second-way-check` and `zfight-check <level>` (no more
+  **check** `levels stands`, `levels stacks`, `levels charges`, `levels sight`, `levels second-way` and `zfight-check <level>` (no more
   seen than before), and the three play-through reads against the step before: none moves.
 - **Put it where the play camera reads, and draw your stills from that camera.** It opens at yaw -22 and pitch 55 degrees and turns with him.
   At rest it shows floors, tops, south faces and west faces, and a wall hides about two metres of floor behind it. **seen** the office's
@@ -310,7 +297,7 @@ stays dark. These are guidelines, not misses like the rest of this page: each sa
   It works the lights that hang overhead and the lamps (not screens, signs or lamps outside), split by the level's own
   lighting groups, so a big room on two circuits wants two groups. A room you ship dark can be struck on by the player
   and is left dark by its defenders. **seen** "we should have light switches for rooms!"; two rooms of 176 keep a
-  circuit no plate was found for. **check** `bun run tools/qa/probes.ts lightswitch` (every level file: each plate on
+  circuit no plate was found for. **check** no check today (`rust/game_start/tests`) (every level file: each plate on
   plain wall with floor in a hand's reach). Never seen on a GPU.
 - **`leak` · Bare metal against the wall of a dark room shows the lamp behind that wall.** The picture keeps bounced
   light in probes a metre apart. A traced reflection shades what it hits with the probes round a point a metre along
@@ -340,10 +327,10 @@ stays dark. These are guidelines, not misses like the rest of this page: each sa
 - **The `scenarios` block is in the level file** (`docs/level-format.md`): rooms with bounds, doors, garrison and marks;
   `team`; `starts[]` for a second way in; `squads[]` with every room in exactly one. Marks stand on free floor, 0.45 m off
   furniture. Room order is the order the commander works them and where the marker points. **check**
-  `bun run tools/qa/scenario-level-probes.ts levels/<name>.json` (staged, walked, finished, can be won).
+  `levels stands <name>` (every mission it names starts, and its block is right against its floor).
 - **It names its own rooms and places** (`places`, room names without the article): radio lines, debrief and autosaves
   speak them. **seen** levels off the office that spoke the office's room names. **check**
-  `bun run tools/qa/level-names-check.ts --levels <name>`.
+  `levels names <name>`.
 - **A door is named for its room, never by compass**: an id is said and shown. **seen** `n1 s4 mid` became
   `tyres bunks radio`. Same check.
 - **It ends.** **seen** "the two loud tutorial missions don't have termination conditions". **check**
@@ -353,7 +340,7 @@ stays dark. These are guidelines, not misses like the rest of this page: each sa
   hostage room no longer ends it. So the start wants room for the team and the hostages to stand, and a way back from
   the hostage room that a hostage can walk. First numbers, and whether the way out stays the way in is the maintainer's
   open call. **seen** "the hostage rescue missions should have you safely extract the hostage or fully clear the map."
-  **check** `bun run tools/qa/probes.ts rescueend` (the mission's `out` line walks them there).
+  **check** no check today (`rust/game_start/tests`) (the mission's `out` line walks them there).
 - **`response` · Who comes when it goes loud is this level's own answer.** A response team comes only where the file
   carries `scenarios.response` (`docs/level-format.md`): who, by which ways, how many and how soon as ranges, the
   radio's words, and a `why` that says in a sentence who would plausibly come here. A block with a `raid` key answers a
@@ -364,14 +351,13 @@ stays dark. These are guidelines, not misses like the rest of this page: each sa
   stairwell team by constant on every floor; the maintainer: "let's make it part of the level design and always make
   sense (ideally w.r.t. the concept/design of the level) and not all levels should have it". **check** the need (a block
   has its `why`, a twin the same block, a row it answers; no block and no line in the table is a NOTE; both is a FAIL);
-  `bun run tools/qa/response-check.ts` (about 90 s: every block against its built floor once the level is in that file's
-  `WITH` list; a call is played through only on the levels its lines name, so a new block's first call is yours to play
-  or to add a line for).
+  the team's rules are `rust/game_start/tests/response_team.rs`. NOTHING ASKS A NEW BLOCK AGAINST ITS BUILT FLOOR today: its
+  first call is yours to play.
 - **A quiet level**: the `quiet` block (starts, spots, exits, patrols), `mission` equal to `spots[0]` / `exits[0]`; every
   guard a man with a job; `wired: true` only where the holder really is on an alarm (**seen** "predictably getting a guard
   to come by when you pull the objective is a bit contrived"); a dark way exists and the short way crosses light; no deal
   is a walk and none is shut, over all deals; a long stand faces the right way on lap one. For a pair, the second man has
-  a job the numbers show. **check** `bun run tools/qa/quiet-check.ts <name>.json`, `quiet-light.ts <name>`, `takecheck-check.ts`,
+  a job the numbers show. **check** `levels stands <name>`, `quiet-light.ts <name>`, `takecheck-check.ts`,
   `TPS_PROFILE=shipped bun run tools/qa/solo-night.ts --level <name>.json --quiet`.
 - **A snatch**: the `snatch` block over the level's room clear (`docs/level-format.md`): the man and the marks he keeps
   to; at least two `exits` he runs for once it is loud, his nearest by walking first, so one can be covered while the
@@ -402,22 +388,21 @@ stays dark. These are guidelines, not misses like the rest of this page: each sa
   your team carries is that table plus those two fields, at EVERY size the row offers. **seen** "as issued still has blue
   team pretty empty": the squad's stuns, charges and frags rode on the first two teammates, so at three and four the blue
   pair came with a rifle and nothing else, on every squad mission; the issue is now worn shared out over the men who come.
-  **check** `kit` asks the issue as the page deals it, on either stand (were the table to leave a man bare it is red on every
-  row that brings him: the mend is the table's, never a block per level; `KITDEAL_BREAK=1` in front shows the cards before
-  the deal). `bun run tools/qa/kit-audit.ts` lists who carries what on every mission: read your level's row.
+  **check** the starting page's Team & kit, at each size the row offers (a man the table leaves bare is the table's mend, never a
+  block per level). Read your level's card on the starting page.
 - **A level's own cards are for a mission built round a kit**, not a patch: with `scenarios.issue` every staging wears the
   issue and the player's kept cards are not worn or shown. The ballistic shield is out of the game: a card that
   still says `shield` is refused as the file loads, in words (take the key out; the rest of the card stands). Cards of
   your own that change a counted thing (stun, charges, frags, smoke) are no longer the issue, so the game does not share
   them out over a bigger team: write a card for every man who comes. Check it is worn, at each size, and what Team & kit
-  shows. **check** `kit` (reads the cards as a staging wears them); `bun run tools/qa/issue-check.ts`.
+  shows. **check** by eye.
 - **Count the doors against what the squad brings**: locked doors, steel doors (no charge, hammer or shotgun opens steel)
-  against the door charges issued; say how each is meant to be opened. **check** `kit` notes them.
+  against the door charges issued; say how each is meant to be opened. **check** by eye.
 - **An order needs kit somebody is issued.** A frag on order is refused near a hostage, a man to take or a civilian, so on a
   rescue or a snatch say what the squad throws instead; "smoke there" needs a teammate with smoke. A quiet mission's partner
-  comes kitted as issued for a loud one unless the level says otherwise. **check** `kit` notes the first and the last.
+  comes kitted as issued for a loud one unless the level says otherwise. **check** by eye.
 - **The kit fits the idea**: a level that wants walls opened issues wall charges, the walls they are for exist, and the row
-  says so. **check** `bun run tools/qa/wallissue-check.ts`.
+  says so. **check** `levels second-way <name>` counts the walls where it issues charges.
 - **The sizes it offers are sizes it was laid out for**: a row built for one size says `only`. Who carries the floor's
   grenades follows room order.
 - **The Team & kit picture** is the level's own `scenarios.kitView` block, the same to the byte in a look twin; name boxes
@@ -428,8 +413,7 @@ stays dark. These are guidelines, not misses like the rest of this page: each sa
   which side the picture is taken from), or a set with a door in the wall the stack stands on. **seen** "some demos still
   don't really do anything": a hammer, a shotgun, a charge or the wand picked on a span or a steel door played the gun's
   row, and the picture stood still. **check** `kit picture`; `bun run tools/qa/kitview-plan.ts <name>` (fails a way that
-  anchors anywhere else); the page by `PORT=<dev server> LEVEL=<name> node tools/qa/kitview-levels.cjs`, and every pick
-  doing its work by `PORT=<dev server> LEVEL=<name> node tools/qa/kitview-work.cjs`.
+  anchors anywhere else); the game standing on it by `cargo test --test kit_levels` in `rust/game_start`.
 
 ## 8. What the player reads
 
@@ -437,15 +421,15 @@ stays dark. These are guidelines, not misses like the rest of this page: each sa
 - **Every word on the row is true to the file**, from every way in: title, `place` (6..64), `blurb` (the premise, never
   the answer; 20..140 on a squad row, 160 elsewhere), `lean`, `defenders`, `ways` (one name per start), `squads` when the
   file names squads, a group of eight drawn rows at most (a row cut from the list, `offList`, is not counted), `untuned: true` until somebody has played it. **check** `row`;
-  `probes.ts missions-list missions-screen levers-rules picker-list`.
+  `cargo test -p game_run --test desk` (in `rust/`).
 - **Its music**: two pieces in `src/audio/setlist.ts`. The maintainer: "we should curate the music for each level, not do
-  it randomly". **check** `music`; `probes.ts music`.
+  it randomly". **check** `music`.
 - **Its picture**: `public/assets/menu/<row>.jpg` and `stills.json`, from a recipe in `tools/menu-shots/recipes.cjs` (a
   frame of real play; no two in a group share a moment, an hour and a camera) or `tools/menu-art.ts`. **check** `picture`
   (that it is there; whether it looks like play is **by eye**).
-- **Its look**: built on the look's kit, or a twin `levels/<name>-gwot.json` (box for box, other paint) with its rows in
-  `src/scene/look.ts LOOK_LEVELS` and `LOOK_DOORS`; one accent and one family of ground marks no other level has. **check**
-  `look`; `probes.ts look`.
+- **Its look**: built on the look's kit (or the plain kit with `tools/levels/gwotSkin.ts` over it, box for box, other paint), with its row in
+  `src/scene/look.ts LOOK_DOORS`; one accent and one family of ground marks no other level has. **check**
+  `look`; no check today (`rust/game_start/tests`).
 - **Hard, the short list, the par clock** where the level has them: `HARD_AT` / `SQUAD_HARD`, `src/scene/picks.ts`,
   `scenarios.par` set from 24 measured seeds.
 
@@ -454,7 +438,7 @@ stays dark. These are guidelines, not misses like the rest of this page: each sa
 - **Seeds mean what they mean**: 3 says a row reaches an end, 24 that it runs and ends, 48 is a first look, 144 paired is
   a count. A dozen scatters by a third. The scripted commander never fires and cannot be hurt.
 - **A mission works only if measured**: it ends on 24 seeds as shipped; the idea matters (the same seeds using it and
-  ignoring it); fair at Standard; off = the build as it was. **check** `bun run tools/qa/map-check.ts <name>` (48 runs);
+  ignoring it); fair at Standard; off = the build as it was. **check** the native gate's missions over the seeds;
   `TPS_PROFILE=shipped bun run tools/qa/ships.ts --scn <row> --seeds 1-24`; `plan-fights.ts --scn <row>`.
 - **Some checks name their levels by hand** (a list inside the tool: the hour and weather probes, the blast and door
   probes, the squad deal). A new level is in none of them until added: `grep -ln "depot" tools/qa/*.ts` shows which.
@@ -462,10 +446,10 @@ stays dark. These are guidelines, not misses like the rest of this page: each sa
   says the same); `TPS_PROFILE=frozen` is the old stand, kept for the switch cleanup only. A tool's own "as shipped" arm from
   before that is not the page's stand.
 - **The sound replays saved on the level.** `public/assets/replays` holds recorded runs the sounds page plays: the office
-  has four (office-loud, chairs, reloads, doors), Mousehole one (wall-charge). A step that moves the level's fingerprint
-  or how it plays parts them: **seen** a hit seeded another way parted the loud office at its first firefight. **check**
-  `PORT=<dev server> node tools/qa/sound-tapes.cjs --check` (a real page, minutes a replay). Red: record again with the
-  same tool, and say in the hand-over which were recorded and what each now plays.
+  has five (office-loud, chairs, reloads, doors, cans), Mousehole, the compound and the block one each. A step that moves
+  the level or how it plays parts them: **seen** a hit seeded another way parted the loud office at its first firefight.
+  **check** `PORT=<dev server> node tools/draw/sound-tapes.cjs --check` (a real page). Red: `--again` plays the same hands
+  anew, and says what they no longer reach; say in the hand-over which were played again and what is lost.
 - **Boot the real page once** on the mission's link (`.claude/skills/verify`), no console errors. No GPU in the cloud: say
   "never seen on a GPU" of what was not, and name what nobody has played.
 - **Write it up** at the foot of `docs/agents/missions.md` or `levels.md`: the sentence, the hand placement, the checks and

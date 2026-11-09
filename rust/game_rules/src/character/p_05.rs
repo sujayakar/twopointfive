@@ -54,16 +54,6 @@ pub fn column_entry(ro: V3, rd: V3, tmax: f64, cx: f64, cz: f64, r: f64, bot: f6
     t_in
 }
 
-/// How far down he is, 0 on his feet to 1 on the floor. (character.ts CharacterAnimator.woundDown)
-pub fn anim_wound_down(g: &crate::game::Game, c: CharId) -> f64 {
-    let a = &g.ch[c].anim;
-    let Some(wd) = a.wound else { return 0.0 };
-    if a.wd_clip.is_none() { return 0.0; }
-    let table = crate::character::wound_pose();
-    let k = table.get(String::from(wd.pose.as_str())).unwrap();
-    v3::clamp(a.wd_t * k.rate / k.hold[0], 0.0, 1.0)
-}
-
 /// The action layer's weight this frame. (character.ts CharacterAnimator.actShown)
 pub fn anim_act_shown(g: &crate::game::Game, c: CharId) -> f64 {
     g.ch[c].anim.act_w
@@ -103,25 +93,6 @@ mod tests {
         for (ro, rd, tmax, cx, cz, r, bot, top, want) in cases {
             assert_eq!(column_entry(ro, rd, tmax, cx, cz, r, bot, top).to_bits(), want, "{:?} {:?}", ro, rd);
         }
-    }
-
-    // Expected bits printed by bun from `clamp(wdT * K.rate / K.hold[0], 0, 1)` with character.ts:822's rows.
-    #[test]
-    fn wound_down_matches_the_typescript_bits() {
-        let mut g = Game::blank();
-        let c: CharId = g.ch.push(Character::blank());
-        assert_eq!(anim_wound_down(&mut g, c).to_bits(), 0f64.to_bits(), "no wound");
-        g.ch[c].anim.wd_t = 0.5;
-        g.ch[c].anim.wound = Some(AnimWound { pose: AnimWoundPose::Knee, at: AnimWoundAt::Ribs, settled: None, clock: None });
-        assert_eq!(anim_wound_down(&mut g, c).to_bits(), 0f64.to_bits(), "no clip resolved yet");
-        g.ch[c].anim.wd_clip = Some(g.tab.clip.push(Default::default()));
-        assert_eq!(anim_wound_down(&mut g, c).to_bits(), 0x3fe5653594d65359, "knee");
-        g.ch[c].anim.wound = Some(AnimWound { pose: AnimWoundPose::Back, at: AnimWoundAt::Thigh, settled: None, clock: None });
-        assert_eq!(anim_wound_down(&mut g, c).to_bits(), 0x3fd689039b0ad121, "back");
-        g.ch[c].anim.wd_t = 0.7;
-        assert_eq!(anim_wound_down(&mut g, c).to_bits(), 0x3fdf8c9ea5dbf194, "back, later");
-        g.ch[c].anim.wd_t = 9.0;
-        assert_eq!(anim_wound_down(&mut g, c).to_bits(), 1f64.to_bits(), "on the floor");
     }
 
     #[test]

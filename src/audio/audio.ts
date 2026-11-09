@@ -6,7 +6,7 @@
 // placement and levels, the reverb sized by the traced free path, the footstep material — exactly as it was.
 import type { WorldAsk } from '../view/worldask';
 import { Vec3, v3 } from '../math/vec';
-import type { GameAudioLike } from '../game/audio_iface';
+import type { GameAudioLike } from './iface';
 import { FLOOR, type FloorMat } from './floors';
 import { buildSfx, buildSfxLater, ROLL_LOOP, FIRE_LOOP, SfxName } from './sfx';
 import { buildSfxWas, wasInGame, wasOnly, WAS_IN_GAME } from './sfxWas';
@@ -130,7 +130,7 @@ export class AudioEngine implements GameAudioLike {
   private lastEnvT = 0;   // when the reverb environment was last re-probed
   volume = { ...VOLUME_DEFAULTS };
   started = false; enabled = true;
-  /** told of every sound asked for (the replay's sound lanes: src/replay/soundlanes.ts); null = nobody listens, nothing is built */
+  /** told of every sound asked for (the replay's sound lanes: src/tape/soundlanes.ts); null = nobody listens, nothing is built */
   tap: ((a: SoundAsk) => void) | null = null;
   /** per sound name, what plays in its place / how (the replay page's picks); empty = the table as loaded */
   trims = new Map<string, SoundTrim>();

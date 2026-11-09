@@ -1,10 +1,10 @@
 // WHICH PART OF THE GAME TWO MACHINES DISAGREE ON. Every machine of a networked game stood through tools/mp/stand.ts with MP_WORDS=<path> writes the whole
-// game's words after each word tick to `<path>.<pid>.words` (src/net/step.ts netWhole: one word a part, the parts' names on the first line). This holds
+// game's words after each word tick to `<path>.<pid>.words` (src/net/modgame.ts whole: one word a part, the parts' names on the first line). This holds
 // those files to each other, tick by tick and part by part:
 //   MP_WORDS=/tmp/run bun run tools/qa/mpserver-check.ts ; bun run tools/mp/words-diff.ts /tmp/run.*.words
 // A line a part that ever differed: the first tick it did, how many of the ticks both files hold, and between which files. exit 0 = no part differed in any
 // tick two files share · 1 = some did · 2 = nothing to compare. Files of DIFFERENT games (another server's, another seed) share no meaning: hand it one
-// game's files. A page's words of its last word tick are `__net.whole` in the page ({ t, words, names }), written to a file of the same shape by whoever drives it.
+// game's files. A page's words are `__net.whole()` in the page ({ words, names }, as the game stands): tools/qa/mpclient-page.cjs --words writes them to a file of the same shape.
 import { readFileSync } from 'node:fs';
 const files = process.argv.slice(2); if (files.length < 2) { console.error('usage: bun run tools/mp/words-diff.ts <a.words> <b.words> [more]'); process.exit(2); }
 interface Run { file: string; names: string[]; at: Map<number, string[]> }

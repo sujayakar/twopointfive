@@ -1,10 +1,10 @@
 //! The types of `rescueflush`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// (TypeScript: RescueFlush, src/game/rescueflush.ts:62)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct RescueFlush {
     pub fell_at: f64,
     pub next_at: f64,
@@ -29,7 +29,7 @@ impl RescueFlush {
 impl Default for RescueFlush { fn default() -> Self { Self::blank() } }
 
 /// (TypeScript: Sent, src/game/rescueflush.ts:59)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Sent {
     pub at: f64,
     pub n: f64,
@@ -50,7 +50,7 @@ impl Sent {
 impl Default for Sent { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum Goal {
     Out,
     Side,

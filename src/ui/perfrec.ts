@@ -5,7 +5,7 @@
 // Stop → the dump as JSON to whoever listens at the one door (host/savefile.ts: no download since 2026-10-27, `?downloads=1` = as it was) and, if the shot server is up (:5174), POST /perf?name=… → docs/perf/<name>.json. tools/qa/perf-report.ts turns a dump into the
 // tables docs/internal/renderer-v3 was written from (per-pass mean / σ / p95 / worst, spike frames with the events around them, a contention check).
 import type { Engine } from '../engine';
-import type { FollowCamera } from '../game/camera';
+import type { FollowCamera } from '../host/camera';
 import type { Quality } from './quality';
 import { saveFile, wanted, savedWords, savedEnd, onThisMachine, type Fate } from '../host/savefile';
 
@@ -38,6 +38,8 @@ export interface MeasuredGame {
   /** its clock, s */
   readonly time?: number;
   readonly fogOfWar?: { readonly on?: boolean; readonly knobs?: { edge?: number } } | null;
+  /** the game's numbers and picks the panel or this machine turned, by name: they go with the settings in a take */
+  readonly turned?: Readonly<Record<string, number | string>>;
 }
 export interface PerfEvent { t: number; frame: number; kind: string; text: string }
 export interface PerfDump {
@@ -270,6 +272,7 @@ export class PerfRecorder {
   private snapSettings(): Record<string, unknown> {
     const S = this.engine.settings as unknown as Record<string, unknown>; const out: Record<string, unknown> = {};
     for (const k of Object.keys(S)) { const v = S[k]; if (typeof v === 'number' || typeof v === 'boolean' || typeof v === 'string') out[k] = v; }
+    for (const [k, v] of Object.entries(this.game.turned ?? {})) out[k] = v;
     return out;
   }
   /** what became of the take the last stop() delivered (host/savefile.ts): what a note or a card that says where the take went goes by. It moves once

@@ -14,7 +14,7 @@
 //   4 heights     the table `lie` is the order finish < stain < ruts < patch, a millimetre or more apart, and the pieces lie where it says:
 //                 on the kit's default finish a stain lies over the finish and under ruts, and a patch over them
 //   5 the tail    when a lived tail is done the generator's group is no lived group, so a box laid after it is one the exporter refuses by name
-// The files that follow from the kit are held by the levels' own checks (tools/levels/export.ts --check, tools/qa/lived-check.ts <level>). No picture is
+// The files that follow from the kit are held by the levels' own checks (tools/levels/export.ts --check, levels stands <level>). No picture is
 // judged here.
 import type { Vec3 } from '../../src/math/vec';
 import { BoxFlag, type Box } from '../../src/scene/boxes';

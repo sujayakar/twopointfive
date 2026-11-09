@@ -97,20 +97,6 @@ const INST_ROWS: u32 = ${CHAR_INST_BYTES / 16}u;
 }
 `;
 
-// The fixture replay (tools/qa/mesh-shadow-fixture.json → main.ts __meshTrace): the PRODUCTION walk from common.wgsl (scene prelude, scene bind group,
-// the live mesh buffer) over rays handed in through a small side buffer, character slot 0.
-const debugSrc = /* wgsl */`
-@group(1) @binding(0) var<storage, read> dbgRays: array<vec4f>;        // 2 per ray: (ro.xyz, tmax), (rd.xyz, skipOwner as f32)
-@group(1) @binding(1) var<storage, read_write> dbgOut: array<vec4f>;   // per ray: (t of meshAnyHitChar(0), t of meshShadowT over all characters, nodes N, 0)
-@compute @workgroup_size(64) fn main(@builtin(global_invocation_id) gid: vec3u) {
-  let n = arrayLength(&dbgOut);
-  if (gid.x >= n) { return; }
-  let a = dbgRays[gid.x * 2u]; let b = dbgRays[gid.x * 2u + 1u];
-  let t0 = meshAnyHitChar(0u, a.xyz, b.xyz, safeInv(b.xyz), a.w);
-  let t1 = meshShadowT(a.xyz, b.xyz, a.w, u32(b.w));
-  dbgOut[gid.x] = vec4f(t0, t1, f32(meshLoad(0u).x), 0.0);
-}
-`;
 
 export class MeshShadows {
   readonly bvh: MeshBvh;
@@ -194,29 +180,4 @@ export class MeshShadows {
     p.end();
   }
 
-  /** Fixture replay: pose character slot 0 with `joints` (SkeletonInstance.jointData layout, ≤ JOINT_STRIDE mat4s), skin + refit it, and run the production
-   *  WGSL walk over `rays` (8 floats each: ro.xyz, tmax, rd.xyz, skipOwner). Resolves to 4 floats per ray: t from meshAnyHitChar(0) (−1 clear), t from
-   *  meshShadowT over every character in the scene's list, the header's node count, 0. Clobbers slot 0's joints until the next frame rewrites them —
-   *  use it on a ?paused page. `sceneBG` = the engine's scene bind group (Engine.sceneBindGroup()). */
-  async debugTrace(sceneLayout: GPUBindGroupLayout, sceneBG: GPUBindGroup, joints: Float32Array, rays: Float32Array): Promise<Float32Array> {
-    const d = this.device; const n = (rays.length / 8) | 0; if (n === 0) return new Float32Array(0);
-    if (!this.dbg) {
-      const layout = d.createBindGroupLayout({ label: 'meshDbg', entries: [ { binding: 0, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'read-only-storage' } }, { binding: 1, visibility: GPUShaderStage.COMPUTE, buffer: { type: 'storage' } } ] });
-      const pipe = d.createComputePipeline({ label: 'meshDbg', layout: d.createPipelineLayout({ bindGroupLayouts: [sceneLayout, layout] }), compute: { module: makeShader(d, scenePrelude() + debugSrc, 'meshDbg'), entryPoint: 'main' } });
-      this.dbg = { pipe, layout };
-    }
-    d.queue.writeBuffer(this.jointMats, 0, joints.buffer, joints.byteOffset, Math.min(joints.byteLength, JOINT_STRIDE * 64));
-    const rayBuf = makeBufferWithData(d, rays, GPUBufferUsage.STORAGE, 'meshDbgRays');
-    const outBuf = makeBuffer(d, n * 16, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC, 'meshDbgOut');
-    const rd = d.createBuffer({ size: n * 16, usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ });
-    const bg = d.createBindGroup({ layout: this.dbg.layout, entries: [{ binding: 0, resource: { buffer: rayBuf } }, { binding: 1, resource: { buffer: outBuf } }] });
-    const enc = d.createCommandEncoder({ label: 'meshDbg' });
-    this.encode(enc, 1);
-    { const p = enc.beginComputePass({ label: 'meshDbgWalk' }); p.setPipeline(this.dbg.pipe); p.setBindGroup(0, sceneBG); p.setBindGroup(1, bg); p.dispatchWorkgroups(Math.ceil(n / 64)); p.end(); }
-    enc.copyBufferToBuffer(outBuf, 0, rd, 0, n * 16);
-    d.queue.submit([enc.finish()]);
-    await rd.mapAsync(GPUMapMode.READ);
-    const out = new Float32Array(rd.getMappedRange().slice(0)); rd.unmap(); rd.destroy(); rayBuf.destroy(); outBuf.destroy();
-    return out;
-  }
 }

@@ -136,43 +136,7 @@ export function buildMeshBvh(positions: Float32Array, indices: Uint32Array): Mes
 // Layouts mirror the GPU buffer (meshShadows.ts): triangle corner (t, j) is 4 floats at ((t·3 + j)·4) — xyz + a pad — and node i is two
 // float4s: (min.xyz, skip) and (max.xyz, triStart | triCount << 24), the integer words kept apart here as the MeshBvh arrays.
 
-/** Skin every triangle corner with linear blend skinning exactly as gbuffer.wgsl's vsSkin / the GPU skin pass do: M = Σ wᵢ·J[jᵢ], p' = M·p.
- *  `jointData` = SkeletonInstance.jointData (column-major world skinning matrices); out = 4 floats per corner (w = 1). */
-export function skinCorners(bvh: MeshBvh, positions: Float32Array, joints: Uint8Array | Uint16Array, weights: Float32Array, jointData: Float32Array, out?: Float32Array): Float32Array {
-  const T = bvh.numTris; out ??= new Float32Array(T * 3 * 4);
-  for (let c = 0; c < T * 3; c++) {
-    const vi = bvh.corners[c];
-    const px = positions[vi * 3], py = positions[vi * 3 + 1], pz = positions[vi * 3 + 2];
-    let x = 0, y = 0, z = 0;
-    for (let k = 0; k < 4; k++) {
-      const w = weights[vi * 4 + k]; if (w === 0) continue;
-      const m = joints[vi * 4 + k] * 16;
-      x += w * (jointData[m] * px + jointData[m + 4] * py + jointData[m + 8] * pz + jointData[m + 12]);
-      y += w * (jointData[m + 1] * px + jointData[m + 5] * py + jointData[m + 9] * pz + jointData[m + 13]);
-      z += w * (jointData[m + 2] * px + jointData[m + 6] * py + jointData[m + 10] * pz + jointData[m + 14]);
-    }
-    out[c * 4] = x; out[c * 4 + 1] = y; out[c * 4 + 2] = z; out[c * 4 + 3] = 1;
-  }
-  return out;
-}
 
-/** The same blend per VERTEX (3 floats each) — for tools that want the posed mesh itself (e.g. to rebuild a tree at a pose for comparison). */
-export function skinVertices(positions: Float32Array, joints: Uint8Array | Uint16Array, weights: Float32Array, jointData: Float32Array): Float32Array {
-  const V = (positions.length / 3) | 0; const out = new Float32Array(V * 3);
-  for (let vi = 0; vi < V; vi++) {
-    const px = positions[vi * 3], py = positions[vi * 3 + 1], pz = positions[vi * 3 + 2];
-    let x = 0, y = 0, z = 0;
-    for (let k = 0; k < 4; k++) {
-      const w = weights[vi * 4 + k]; if (w === 0) continue;
-      const m = joints[vi * 4 + k] * 16;
-      x += w * (jointData[m] * px + jointData[m + 4] * py + jointData[m + 8] * pz + jointData[m + 12]);
-      y += w * (jointData[m + 1] * px + jointData[m + 5] * py + jointData[m + 9] * pz + jointData[m + 13]);
-      z += w * (jointData[m + 2] * px + jointData[m + 6] * py + jointData[m + 10] * pz + jointData[m + 14]);
-    }
-    out[vi * 3] = x; out[vi * 3 + 1] = y; out[vi * 3 + 2] = z;
-  }
-  return out;
-}
 
 /** FNV-1a over the topology arrays: the offline harness and the running page (MeshShadows.digest) must print the same for the fixture to apply. */
 export function topologyDigest(b: MeshBvh): string {
@@ -185,100 +149,6 @@ export function topologyDigest(b: MeshBvh): string {
 /** leaf boxes are grown by this much (m) so a hit lying exactly on a box face survives the slab test's rounding; parents inherit it */
 export const LEAF_PAD = 1e-4;
 
-/** Bottom-up refit in the GPU's order (deepest level first, each level in levelNodes order): leaves from their corners (+ LEAF_PAD), internal
- *  nodes as the union of their two children. nmin / nmax: 4 floats per node (w unused). */
-export function refitLevels(bvh: MeshBvh, tv: Float32Array, nmin: Float32Array, nmax: Float32Array) {
-  for (let L = 0; L <= bvh.maxDepth; L++) for (let q = bvh.levelOff[L]; q < bvh.levelOff[L + 1]; q++) refitNode(bvh, bvh.levelNodes[q], tv, nmin, nmax);
-}
-/** The same by plain reverse index sweep (children always carry larger indices than their parent in the depth-first numbering). */
-export function refitReverse(bvh: MeshBvh, tv: Float32Array, nmin: Float32Array, nmax: Float32Array) {
-  for (let i = bvh.numNodes - 1; i >= 0; i--) refitNode(bvh, i, tv, nmin, nmax);
-}
-function refitNode(bvh: MeshBvh, i: number, tv: Float32Array, nmin: Float32Array, nmax: Float32Array) {
-  const o = i * 4;
-  if (bvh.triCount[i] > 0) {
-    let x0 = Infinity, y0 = Infinity, z0 = Infinity, x1 = -Infinity, y1 = -Infinity, z1 = -Infinity;
-    for (let c = bvh.triStart[i] * 3, e = (bvh.triStart[i] + bvh.triCount[i]) * 3; c < e; c++) {
-      const x = tv[c * 4], y = tv[c * 4 + 1], z = tv[c * 4 + 2];
-      if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; if (z < z0) z0 = z; if (z > z1) z1 = z;
-    }
-    nmin[o] = Math.fround(x0 - LEAF_PAD); nmin[o + 1] = Math.fround(y0 - LEAF_PAD); nmin[o + 2] = Math.fround(z0 - LEAF_PAD);
-    nmax[o] = Math.fround(x1 + LEAF_PAD); nmax[o + 1] = Math.fround(y1 + LEAF_PAD); nmax[o + 2] = Math.fround(z1 + LEAF_PAD);
-  } else {
-    const l = (i + 1) * 4, r = bvh.right[i] * 4;
-    for (let a = 0; a < 3; a++) { nmin[o + a] = Math.min(nmin[l + a], nmin[r + a]); nmax[o + a] = Math.max(nmax[l + a], nmax[r + a]); }
-  }
-}
-/** Box of node i straight from ALL corners under it (its contiguous triangle run) — what a rebuild would store; refit must equal it exactly. */
-export function subtreeBox(bvh: MeshBvh, i: number, tv: Float32Array): { min: Vec3; max: Vec3 } {
-  let x0 = Infinity, y0 = Infinity, z0 = Infinity, x1 = -Infinity, y1 = -Infinity, z1 = -Infinity;
-  for (let c = bvh.triStart[i] * 3, e = bvh.subtreeEnd[i] * 3; c < e; c++) {
-    const x = tv[c * 4], y = tv[c * 4 + 1], z = tv[c * 4 + 2];
-    if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; if (z < z0) z0 = z; if (z > z1) z1 = z;
-  }
-  return { min: [Math.fround(x0 - LEAF_PAD), Math.fround(y0 - LEAF_PAD), Math.fround(z0 - LEAF_PAD)], max: [Math.fround(x1 + LEAF_PAD), Math.fround(y1 + LEAF_PAD), Math.fround(z1 + LEAF_PAD)] };
-}
 
-// ---- ray tests: the same arithmetic, tolerances and visiting order as meshTri / meshAnyHitChar in common.wgsl ----
-/** barycentric slack: triangles are this much 'fat' at their edges so a ray through a shared edge cannot slip between both neighbours */
-export const EPS_UV = 1e-5;
-/** hits nearer than this along the ray are ignored (the origin sits on some other surface, ≥ 1 cm off it; this only guards t ≈ 0 noise) */
-export const MESH_TMIN = 1e-4;
 
-/** Möller–Trumbore, no backface culling: t of the hit in (MESH_TMIN, tmax], or −1. Corner c0 = first of the triangle's three in `tv`. */
-export function triHit(tv: Float32Array, c0: number, ro: Vec3, rd: Vec3, tmax: number): number {
-  const o = c0 * 4;
-  const ax = tv[o], ay = tv[o + 1], az = tv[o + 2];
-  const e1x = tv[o + 4] - ax, e1y = tv[o + 5] - ay, e1z = tv[o + 6] - az;
-  const e2x = tv[o + 8] - ax, e2y = tv[o + 9] - ay, e2z = tv[o + 10] - az;
-  const px = rd[1] * e2z - rd[2] * e2y, py = rd[2] * e2x - rd[0] * e2z, pz = rd[0] * e2y - rd[1] * e2x;
-  const det = e1x * px + e1y * py + e1z * pz;
-  if (Math.abs(det) < 1e-12) return -1;
-  const inv = 1 / det;
-  const sx = ro[0] - ax, sy = ro[1] - ay, sz = ro[2] - az;
-  const u = (sx * px + sy * py + sz * pz) * inv;
-  if (u < -EPS_UV || u > 1 + EPS_UV) return -1;
-  const qx = sy * e1z - sz * e1y, qy = sz * e1x - sx * e1z, qz = sx * e1y - sy * e1x;
-  const v = (rd[0] * qx + rd[1] * qy + rd[2] * qz) * inv;
-  if (v < -EPS_UV || u + v > 1 + EPS_UV) return -1;
-  const t = (e2x * qx + e2y * qy + e2z * qz) * inv;
-  return t > MESH_TMIN && t <= tmax ? t : -1;
-}
-/** slab test of [0, tmax] against node i's box */
-function boxHit(nmin: Float32Array, nmax: Float32Array, i: number, ro: Vec3, inv: Vec3, tmax: number): boolean {
-  const o = i * 4;
-  let t0 = 0, t1 = tmax;
-  for (let a = 0; a < 3; a++) {
-    let ta = (nmin[o + a] - ro[a]) * inv[a], tb = (nmax[o + a] - ro[a]) * inv[a];
-    if (ta > tb) { const s = ta; ta = tb; tb = s; }
-    if (ta > t0) t0 = ta; if (tb < t1) t1 = tb;
-  }
-  return t0 <= t1;
-}
-export const safeInv = (rd: Vec3): Vec3 => [Math.abs(rd[0]) < 1e-20 ? 1e20 : 1 / rd[0], Math.abs(rd[1]) < 1e-20 ? 1e20 : 1 / rd[1], Math.abs(rd[2]) < 1e-20 ? 1e20 : 1 / rd[2]];
 
-/** Stackless any-hit walk (skip pointers): t of the FIRST triangle found blocking (MESH_TMIN, tmax] — not necessarily the nearest — or −1.
- *  `visits`, if given, gets the number of nodes touched added to visits[0] and triangles tested to visits[1]. */
-export function bvhAnyHit(bvh: MeshBvh, nmin: Float32Array, nmax: Float32Array, tv: Float32Array, ro: Vec3, rd: Vec3, tmax: number, visits?: number[]): number {
-  const inv = safeInv(rd); const N = bvh.numNodes;
-  let i = 0;
-  while (i < N) {
-    if (visits) visits[0]++;
-    if (!boxHit(nmin, nmax, i, ro, inv, tmax)) { i = bvh.skip[i]; continue; }
-    const cnt = bvh.triCount[i];
-    if (cnt === 0) { i++; continue; }
-    for (let k = 0; k < cnt; k++) {
-      if (visits) visits[1]++;
-      const t = triHit(tv, (bvh.triStart[i] + k) * 3, ro, rd, tmax);
-      if (t >= 0) return t;
-    }
-    i = bvh.skip[i];
-  }
-  return -1;
-}
-/** Every triangle, no tree: nearest blocking t in (MESH_TMIN, tmax] or −1 (the ground truth the walk is checked against). */
-export function bruteNearest(bvh: MeshBvh, tv: Float32Array, ro: Vec3, rd: Vec3, tmax: number): number {
-  let best = -1;
-  for (let t = 0; t < bvh.numTris; t++) { const h = triHit(tv, t * 3, ro, rd, tmax); if (h >= 0 && (best < 0 || h < best)) best = h; }
-  return best;
-}

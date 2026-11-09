@@ -1,10 +1,10 @@
 //! The types of `throwables`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// what an item does when it bounces (Item.onBounce); called from throwables_say with speed, point, item and face normal
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub enum ItemBounce {
     Can,
     CanHeard,
@@ -18,7 +18,7 @@ pub enum ItemBounce {
 }
 
 /// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum ItemKind {
     Pistol,
     Rifle,
@@ -47,7 +47,7 @@ impl ItemKind {
 }
 
 /// (TypeScript: ThrowSolution, src/game/throwables.ts:180)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct ThrowSolution {
     pub v0: V3,
     pub t: f64,
@@ -68,7 +68,7 @@ impl ThrowSolution {
 impl Default for ThrowSolution { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Throwables, src/game/throwables.ts:203)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Throwables {
     pub items: Vec<ItemId>,
     pub rows: Vec<ItemId>,
@@ -154,7 +154,7 @@ impl ItemFields {
 impl Default for ItemFields { fn default() -> Self { Self::zeroed() } }
 
 /// (TypeScript: Item, src/game/throwables.ts:131)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, ToBytes)]
 pub struct Item {
     pub r: f64,
     pub kept: Option<Vec<f64>>,
