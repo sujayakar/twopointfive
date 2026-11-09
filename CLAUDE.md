@@ -80,15 +80,14 @@ notes and before and after pairs from the game's own text: `docs/agents/writing.
 
 ## The area files (`docs/agents/`)
 
-One page a system. `overview.md` and `doors.md` are true to the code today, and `docs-check.ts` holds every name in them; the others are still
-the diary they were. The git log is the newest in-repo record of what happened when; the live queue is outside the repo.
+One page a system, true to the code today; `docs-check.ts` holds every name in it. The pages on that check's `OLD` list are still the diary
+they were. The git log is the newest in-repo record of what happened when; the live queue is outside the repo.
 
 - `overview.md` — what the game is, the two halves, one tick, where everything stands, how to change it, what holds it.
-- `qa.md` — run / build / check in full, the gates, driving the page headlessly (hooks, URL flags,
-  `__stage`, `__ready`), checkpoints + autosave.
+- `qa.md` — run, build and check; the module; `gate`, `hold`, the checks and page scripts; the address words and `window` hooks; what "verified" means.
 - `missions.md` — scenario kinds, fresh deals and ways in, the lesson engine (the old Training lessons are out), the par clock, the snatch, timed charges, Mousehole, the
   long hall, the vault, quiet missions, lights-out, the glasshouse, the solo night's opening.
-- `menus.md` — title, start page, Team & kit, the kit figure, key art, the debrief, the sandbox row, the debugger panel (backtick).
+- `menus.md` — the title, start page, kit, HUD, rings, cards, Options and keys, the debugger.
 - `squad.md` — the orders menu and its keys, every squad order, move-there, four in two pairs and the word, fall in, rear men, throws
   on order, a teammate works a thing, log lines.
 - `door-tools.md` — open / bang / charge / outside, the threshold, the whole-room rule, doors found shut, entry paths, cans and leaves.
@@ -104,22 +103,19 @@ the diary they were. The git log is the newest in-repo record of what happened w
 - `doors.md` — doors and furniture: which way one opens, locks, the boot, a leaf's weight, who works one from where, the level rules.
 - `destruction.md` — wall charges (outer walls, furniture, the safety radius), glass (panes, refraction, fracture, rounds through),
   decals, GPU particles, destruction under fire, the paced blast frame, cut boxes.
-- `weather.md` — the hour, weather kinds, cloud over the hour, the level's own roofs, the dust volume, wet characters, wind.
+- `weather.md` — hours, weather kinds, roofs, wind, fire, snow, wet men; what of it moves a rule and what is dress.
 - `levels.md` — the level is data, scenario data in the level file, the GWOT look and its look files, lived-in rooms, the roof rule.
 - `showcases.md` — the breach drill and the daylight variant, the Director (level scripting, no program today), the removed
   night and day showcases.
-- `anim.md` — MOVES and TURN, the second MOVES pass, wounds, character materials.
-- `render.md` — judging renderer output, GPU timing traps, quality presets and the ladder, caps, froxels, ReSTIR, TAAU, sharp direct,
-  the gather, the denoiser, the smoke solver, effects numbers, prototype branches (longer renderer bullets:
-  `docs/internal/claude-md-renderer-systems.md`).
-- `replays.md` — the game's own die, the fixed step, the input record, F7 replays, the
-  engine replay player, kept runs and the dump.
-- `net.md` — networked play: the wire (inputs, never state), the server's input rule, the server and client cores, the game server
-  process and its environment, the page as a client (`?net=`), the lobby (host or join a co-op game, `?join=`), their checks.
+- `anim.md` — the skeleton, the layers that pose a man, the turn, falls, outfits and materials.
+- `render.md` — the frame, the box world, smoke as drawn, exposure, fog, glass, presets and the ladder, shader text, measuring, judging a picture.
+- `render-light.md` — direct light, the gather, the cascades, the denoiser, reflections, TAAU and sharp direct, men in rays.
+- `replays.md` — the tape, why a run is the same again, the kept runs, the replay page, saves.
+- `net.md` — two players: the wire, the server, the lobby, seats in the rules; the hosted build and its backend.
 - `rust.md` — the game in Rust: its crates and their build, what Rust code owes the game, the view, the worlds it asks, and how it was
   moved out of TypeScript.
 - `ai-architecture.md` — the AI's design: a man's records, assignment and control, `rust/game_rules/src/control/` (the list of rules, adding one).
-- `sounds.md` — the game's sound table, sound lanes on the engine replay, takes, tuning, the score and its pieces.
+- `sounds.md` — how a sound is asked for, its path to the ear, the mixer, the table, the score, the listening pages and sound lanes.
 - `writing.md` — how player text is written: the rules above at length, by kind of text (prompt, card, list row, menu, radio line),
   with before and after pairs from the game.
 - `workflow.md` — the fast loop, reviews, lanes and their deliverables, commits, the maintainer's taste, where the repo lives.
