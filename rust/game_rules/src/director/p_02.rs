@@ -92,7 +92,6 @@ pub fn director_new(g: &crate::game::Game, script: Option<crate::scene_level::Le
         doors: g.level.doors.clone(),
         switchables: g.level.switchables.clone(),
         clear_plans: g.level.clear_plans.clone(),
-        daylight: g.level.daylight.clone(),
         volumes: g.level.volumes.clone(),
     };
     d.problems.extend(lint_manifest(g, &manifest, &level));

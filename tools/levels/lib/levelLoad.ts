@@ -8,7 +8,7 @@
 import type { Vec3 } from '../../../src/math/vec';
 import { Box, BoxFlag, makeBox, ROUGH_DEFAULT, type BoxStuff, type DoesWord } from '../../../src/scene/boxes';
 import { DOES_DEFAULT, doesSaid } from '../../../src/scene/materials';
-import type { Level, LightDef, PropDef, PropPart, LevelDoorDef, PatrolRoute, Chokepoint, RoomClearPlan, BreachPlan, DaylightDef, DeviceDef, CivilianDef, VentDef, HumDef, VolumeDef, MarkDef } from './level';
+import type { Level, LightDef, PropDef, PropPart, LevelDoorDef, PatrolRoute, Chokepoint, RoomClearPlan, BreachPlan, DeviceDef, CivilianDef, VentDef, HumDef, VolumeDef, MarkDef } from './level';
 import { LevelData, LEVEL_DATA_VERSION, BoxData, ShapeData, ShapePieceData, DoorData, LightData, PropData, MaterialData, FloorData, SurfacesData, RoomClearPlanData, BreachPlanData, ObjectiveData, DeviceData, CivilianData, VentData, HumData, MarkData, flagsToBits, bitsToFlags } from './levelData';
 import { copyMarkings } from '../../../src/scene/markings';
 import { formOf, type BoxShape, type ShapePiece } from '../../../src/scene/shapes';
@@ -112,7 +112,6 @@ export function loadLevel(data: LevelData): Level {
   const reach = ob('reach'), drive = ob('drive'), exfil = ob('exfil');
   const level: Level = {
     boxes, props, lights, switchables,
-    ...(data.daylight ? { daylight: { sun: lightOf(data.daylight.sun), sky: { zenith: V(data.daylight.sky.zenith), horizon: V(data.daylight.sky.horizon) }, groupsOn: [...data.daylight.groupsOn], groupsOff: [...data.daylight.groupsOff], lightsOff: [...data.daylight.lightsOff], haze: data.daylight.haze, exposure: data.daylight.exposure } satisfies DaylightDef } : {}),
     ...(data.plans.breach ? { breach: planOf(data.plans.breach) as BreachPlan } : {}),
     doors,
     devices,
@@ -281,7 +280,6 @@ export function levelToData(level: Level, opts: LevelToDataOpts): LevelData {
     breaker: { pos: V(level.breaker.pos), panel: ids[level.breaker.boxes[0]], led: ids[level.breaker.boxes[1]], ...(level.breaker.fumble !== undefined ? { fumble: level.breaker.fumble } : {}) },
     beacons: level.beacons.map((b, i) => ({ id: `beacon${i}`, pos: V(b.pos), box: ids[b.box] })),
     sky: { zenith: V(level.sky.zenith), horizon: V(level.sky.horizon) },
-    ...(level.daylight ? { daylight: { sun: lightData(level.daylight.sun), sky: { zenith: V(level.daylight.sky.zenith), horizon: V(level.daylight.sky.horizon) }, groupsOn: [...level.daylight.groupsOn], groupsOff: [...level.daylight.groupsOff], lightsOff: [...level.daylight.lightsOff], haze: level.daylight.haze, exposure: level.daylight.exposure } } : {}),
     plans: { roomClear: (level.clearPlans ?? []).map((p, i) => planData(p, planIds[i]) as RoomClearPlanData), ...(level.breach ? { breach: planData(level.breach, `breach_${slug(level.breach.door)}`) as BreachPlanData } : {}) },
     ...(level.scenarios ? { scenarios: clone(level.scenarios) } : {}),   // (the level's own block: lib/scenarios.ts)
   };

@@ -2,7 +2,7 @@
 //! and keeps what makes the level the level. A way with no set gets the very object it handed in, so nothing downstream can differ. Pure, as the planner beside it: nothing handed in is written to.
 //!
 //! KEPT, the level's own: `name` (what the weather's snow levels and the look's door paint are keyed by), `version`, `meta`, `floors`, `materials` (the set's boxes take the level's paint by name),
-//! `surfaces`, `sky`, `daylight` (less the lamps it names that are gone), every directional light and `scenarios.issue`. The hour and the weather are the link's and are not touched here.
+//! `surfaces`, `sky`, every directional light and `scenarios.issue`. The hour and the weather are the link's and are not touched here.
 //! SWAPPED: `boxes`, `doors` and the lamps are the set's. Box i of the set is box i of the level that loads (the plan's `hidden` indexes hold).
 //! GONE: props, switchables, routes, chokepoints, civilians, volumes, devices, vents, connectors, beacons, the clear and breach plans, and every scenario block but the two below: each names a place
 //! in the level that is no longer there.
@@ -197,11 +197,6 @@ pub fn set_level(data: &Json, way: usize) -> Cow<'_, Json> {
     o.push(("breaker", json::obj(vec![("pos", json::nums(&[far[0], K.sunk, far[1]])), ("panel", json::s(K.panel)), ("led", json::s(K.led))])));
     o.push(("beacons", json::arr(Vec::new())));
     if data.has("sky") { o.push(("sky", data.get("sky").clone())); }
-    if truthy(data.get("daylight")) {
-        let mut dl = data.get("daylight").clone();
-        dl.set_member("lightsOff", json::arr(data.get("daylight").get("lightsOff").items().iter().filter(|id| id.str().map_or(false, |x| lit.contains(&x))).cloned().collect()));
-        o.push(("daylight", dl));
-    }
     o.push(("plans", json::obj(vec![("roomClear", json::arr(Vec::new()))])));
     // (every way of the block on THIS set keeps its place; a way that is the level's own, or another set's, stands in as the staged one: its door is gone)
     let mut scen: Vec<(&str, Json)> = vec![("kitView", json::obj(vec![("ways", json::arr(ways.items().iter().map(|w| if w.get("set").str() == Some(hit.name) { w.clone() } else { hit.way.clone() }).collect())), ("sets", json::obj(vec![(hit.name, t.clone())]))])), ("roomClear", room_clear)];

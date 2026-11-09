@@ -55,7 +55,7 @@ The page's half reads those rows and writes nothing back:
 
 **An hour is laid over a level** (`apply_hour`, `put_in`). Night is no record: the level as built. Any other hour puts the moon out, puts a sun in at
 the moon's place in the light list, gives `told` sky, haze and exposure from its `HourDef`, and at midday and on the gray day opens the switch of every
-`exterior` lamp (`lamps_out`). `take_out` puts everything back. `is_daylight` is the drill's day show, false under any hour.
+`exterior` lamp (`lamps_out`). `take_out` puts everything back.
 
 **Cloud moves light.** A picked kind's `cloud` takes light off the ground (`cloud_sun`), moves what is left from the sun to the sky (`cloud_light`),
 and past half cover spreads the disc and grays both (`under_weather`). `HourState.sun_k` is the sun's one number. A strength set by hand

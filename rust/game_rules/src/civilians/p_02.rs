@@ -52,7 +52,7 @@ pub fn hostage_say(g: &mut crate::game::Game, gd: GuardId, moment: crate::dialog
 
 /// Are the civilians on the floor at all right now.   (civilians.ts civiliansOnFloor)
 pub fn civilians_on_floor(g: &crate::game::Game) -> bool {
-    !g.civilians.is_empty() && !g.aside && !crate::lighting::is_daylight(g)
+    !g.civilians.is_empty() && !g.aside
 }
 
 /// The ones to draw and collide with this frame.   (civilians.ts civiliansShown)

@@ -386,9 +386,6 @@ pub fn wind_blows(g: &crate::game::Game) -> bool {
     if !crate::weather::weather_enabled(g) {
         return false;
     }
-    if crate::lighting::is_daylight(g) && crate::weather::weather_kind(g).is_none() {
-        return false;
-    }
     crate::weather::weather_kind(g).is_some() || crate::weather::weather_rain_rate(g) > 0.001 || crate::weather::weather_storm(g) > 0.01
 }
 

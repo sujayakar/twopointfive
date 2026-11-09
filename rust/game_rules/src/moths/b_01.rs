@@ -58,7 +58,7 @@ pub fn moths_clear(g: &mut crate::game::Game) {
 pub fn moths_update(g: &mut crate::game::Game, dt: f64) {
     if g.moths.lamps.is_empty() { return; }
     let k = moths();
-    let on = g.tune.moths && !crate::lighting::is_daylight(g);
+    let on = g.tune.moths;
     let rain = if g.weather.on { if g.weather.snow_rate > 0.0 { 1.0 } else { crate::weather::weather_rain_rate(g) } } else { 0.0 };   // (no moths at a lamp in falling snow)
     // each lamp's pull on its moths: lit × night × calm enough × not a downpour, eased so they gather and scatter over seconds
     for li in 0..g.moths.lamps.len() {

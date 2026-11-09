@@ -156,7 +156,6 @@ pub struct Manifest {
     pub plans: JsMap<String, crate::director::PlanKind>,
     pub loadouts: JsMap<String, crate::director::LoadoutSpec>,
     pub groups: JsSet<String>,
-    pub variants: JsSet<String>,
     pub programs: JsMap<String, crate::director::ProgramDef>,
     pub expects: Vec<crate::director::ManifestExpectsItem>,
     pub systems: JsMap<&'static str, bool>,
@@ -302,18 +301,6 @@ pub struct DoorRef {
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct VolumeRef {
     pub id: String,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-pub enum VariantRefId {
-    #[default] Daylight,
-}
-impl VariantRefId {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            VariantRefId::Daylight => "daylight",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -617,7 +604,6 @@ pub struct LintManifestLevel {
     pub lights: Vec<crate::scene_level::LightDef>,
     pub switchables: Vec<crate::scene_level::LevelSwitchablesItem>,
     pub clear_plans: Option<Vec<crate::scene_level::RoomClearPlan>>,
-    pub daylight: Option<crate::scene_level::DaylightDef>,
     pub volumes: Option<Vec<crate::scene_level::VolumeDef>>,
 }
 
