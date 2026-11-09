@@ -260,7 +260,7 @@ export interface LessonStep {
   fog?: boolean;
   /** the step teaches the command key HELD: a tap of it gives no order while the step is up, and these words come up under the line ('Keep [B] held') */
   noTap?: string;
-  /** a lookout for the fog of war while this step is up (as `rails.sky.eye`): a place the PLAYER is shown without a man's eyes on it, its own charge on a wall.
+  /** a lookout for the fog of war while this step is up: a place the PLAYER is shown without a man's eyes on it, its own charge on a wall.
    *  The picture's alone: the squad knows nothing through it (rust/game_rules/src/rails RAILS.eyeView) */
   eye?: { at: Vec3; yaw: number; fov?: number };
   /** A CARD that pauses the page when the step comes up (ui/railcard.ts): a heading and a few sentences on a rule of the game no key press shows — a new
@@ -271,8 +271,7 @@ export interface LessonStep {
   explain?: { title?: string; text: string; quiet?: boolean; now?: boolean };
   /** an ARROW on the ground in place of the ring: from the step's `at` it points at this place ('walk into the wall': which way) */
   toward?: Vec3;
-  /** once a man of the squad is under an order to the step's mark: the sky seat's view goes back to the squad (the hand's shift eased out, the mark no
-   *  longer kept in the picture), `nv: false` puts the night vision up for the walk out, and `run: true` has the men run the leg (the job is done: they
+  /** once a man of the squad is under an order to the step's mark: `nv: false` puts the night vision up for the walk out, and `run: true` has the men run the leg (the job is done: they
    *  go back at a sprint — rust/game_rules/src/teampace team_told, RAILS.wayRun) */
   onWay?: { nv?: boolean; run?: boolean };
   /** (rails) THE LINE ONCE THE ORDER IS GIVEN: while the men carry out what the step asks for, the line says what they are doing and never asks again
@@ -289,15 +288,8 @@ export interface RailsData {
   fog?: boolean;
   /** THE SQUAD WAITS WHERE THE MISSION STOOD IT until a step hands him the command key (the first step that allows `order`): a man on 'fall in' holds his
    *  place, on a knee with `low`, so a mission can send him in alone first with his four on the floor (rust/game_rules/src/rails). Absent: they fall in on him from the
-   *  first tick. Not with `sky`, whose seat holds them its own way */
+   *  first tick */
   waits?: { low?: boolean };
-  /** nobody on the floor is the player: he is parked at `park`, out of the picture and every sense, and the view rides the squad (`reach`: metres the
-   *  walk keys may shift it off them). `eye`: a lookout the mission stands for the fog of war (the man left with the trucks): a place and the way it looks
-   *  (`yaw`, radians, a man's own: 0 = +Z; `fov` degrees, 120 unless said), one more eye of the PICTURE's for as long as the seat is the sky's (drawn, not seen: the squad
-   *  knows nothing through it — rust/game_rules/src/rails RAILS.eyeView) */
-  sky?: { park: Vec3; reach?: number; eye?: { at: Vec3; yaw: number; fov?: number };
-    /** the squad holds ON A KNEE where the mission stood it until its first order (men behind their trucks under fire), not at the low ready on its feet */
-    low?: boolean };
   /** false: no teammate shows an aiming laser on this level, red or infrared (rust/game_rules/src/irlaser laserOn) */
   lasers?: boolean;
   /** the orders the squad's menu lists on this level, by id (rust/game_rules/src/orders: 'move', 'stack', 'go', 'walltools', 'wallCharge', 'work' …): a row not named is

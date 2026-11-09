@@ -28,7 +28,7 @@ pub fn lookout_eye(id_2: f64, e: crate::rails::LookoutEyeE) -> crate::fogofwar::
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::scene_scenarios::{LessonData, LessonStep, LessonStepAfter, RailsData, RailsDataSky, RailsDataSkyEye, RailsDataWaits};
+    use crate::scene_scenarios::{LessonData, LessonStep, LessonStepAfter, RailsData, RailsDataWaits};
 
     #[test]
     fn said_takes_the_word_only_at_two() {
@@ -41,8 +41,8 @@ mod tests {
 
     #[test]
     fn lookout_eye_defaults() {
-        let e = lookout_eye(LOOKOUT_ID, LookoutEyeE { at: [1.0, 2.0, 3.0], yaw: 0.0, fov: None });
-        assert_eq!(e.id, 199.0);
+        let e = lookout_eye(STEP_EYE_ID, LookoutEyeE { at: [1.0, 2.0, 3.0], yaw: 0.0, fov: None });
+        assert_eq!(e.id, 198.0);
         assert_eq!(e.pos, [1.0, 2.0, 3.0]);
         assert_eq!(e.at, e.pos);
         assert_eq!(e.look, [0.0, 0.0, 1.0]);
