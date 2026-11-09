@@ -1,6 +1,6 @@
 //! The types of `props`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -47,7 +47,7 @@ pub struct KindTune {
     pub thud_rate: f64,
 }
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Prop {
     pub hx: f64,
     pub hz: f64,
@@ -62,60 +62,21 @@ pub struct Prop {
     pub def: crate::scene_level::PropDef,
     pub id: f64,
 }
-impl Prop {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        Prop {
-            hx: 0.0,
-            hz: 0.0,
-            radius: 0.0,
-            height: 0.0,
-            mass: 0.0,
-            inv_mass: 0.0,
-            inv_i: 0.0,
-            tune: crate::props::KindTune::default(),
-            home: [0.0; 3],
-            boxes: Vec::new(),
-            def: crate::scene_level::PropDef::default(),
-            id: 0.0,
-        }
-    }
-}
-impl Default for Prop { fn default() -> Self { Self::blank() } }
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct PropSystem {
     pub props: Vec<PropId>,
     pub all: Vec<PropId>,
     pub store: crate::sim_propshome::PropStore,
-    pub enabled: bool,
-    pub friction_scale: f64,
-    pub stats: crate::props::PropSystemStats,
+    #[is(true)] pub enabled: bool,
+    #[is(1.0)] pub friction_scale: f64,
+    #[is(crate::props::PropSystemStats { awake: 0.0 })] pub stats: crate::props::PropSystemStats,
     pub by_box: JsMap<BoxId, PropId>,
-    pub muted: bool,
+    #[is(true)] pub muted: bool,
     pub said: Vec<crate::props::PropEvent>,
     pub stepping: bool,
     pub doorways: Vec<crate::props::PropSystemDoorwaysItem>,
 }
-impl PropSystem {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        PropSystem {
-            props: Vec::new(),
-            all: Vec::new(),
-            store: crate::sim_propshome::PropStore::blank(),
-            enabled: true,
-            friction_scale: 1.0,
-            stats: crate::props::PropSystemStats { awake: 0.0 },
-            by_box: JsMap::new(),
-            muted: true,
-            said: Vec::new(),
-            stepping: false,
-            doorways: Vec::new(),
-        }
-    }
-}
-impl Default for PropSystem { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct PropSystemStats {

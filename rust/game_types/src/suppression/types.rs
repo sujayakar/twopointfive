@@ -1,61 +1,32 @@
 //! The types of `suppression`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Blank)]
 pub struct Sup {
     pub v: f64,
     pub kick: f64,
     pub src: Option<V3>,
-    pub src_id: f64,
-    pub src_t: f64,
+    #[is(-1.0)] pub src_id: f64,
+    #[is(-100.0)] pub src_t: f64,
     pub last_add: f64,
-    pub flinch_at: f64,
-    pub pinned_at: f64,
+    #[is(-100.0)] pub flinch_at: f64,
+    #[is(-100.0)] pub pinned_at: f64,
     pub band: f64,
     pub down_t: f64,
     pub latched: bool,
     pub pinned_t: f64,
     pub cover: Option<V3>,
-    pub displaced_at: f64,
+    #[is(-100.0)] pub displaced_at: f64,
     pub displaces: f64,
-    pub cover_until: f64,
-    pub bark_t: f64,
+    #[is(-1.0)] pub cover_until: f64,
+    #[is(-100.0)] pub bark_t: f64,
     pub bark_was: Option<crate::suppression::SupMoment>,
     pub pending: Option<crate::suppression::SupMoment>,
-    pub pending_t: f64,
+    #[is(-100.0)] pub pending_t: f64,
     pub was_pinned: bool,
 }
-impl Sup {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        Sup {
-            v: 0.0,
-            kick: 0.0,
-            src: None,
-            src_id: -1.0,
-            src_t: -100.0,
-            last_add: 0.0,
-            flinch_at: -100.0,
-            pinned_at: -100.0,
-            band: 0.0,
-            down_t: 0.0,
-            latched: false,
-            pinned_t: 0.0,
-            cover: None,
-            displaced_at: -100.0,
-            displaces: 0.0,
-            cover_until: -1.0,
-            bark_t: -100.0,
-            bark_was: None,
-            pending: None,
-            pending_t: -100.0,
-            was_pinned: false,
-        }
-    }
-}
-impl Default for Sup { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words)]
 pub enum SupMoment {
@@ -80,7 +51,7 @@ pub struct GuardFireMods {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct SuppressionMod {
     /// (src/game/suppression.ts:144 floorLineT)
     pub floor_line_t: Option<f64>,
@@ -88,15 +59,6 @@ pub struct SuppressionMod {
     pub floor_bark_t: Option<f64>,
     /// (src/game/suppression.ts:144 lastLine)
     pub last_line: JsMap<GuardId, String>,
-}
-impl SuppressionMod {
-    pub fn blank() -> Self {
-        SuppressionMod {
-            floor_line_t: None,
-            floor_bark_t: None,
-            last_line: JsMap::new(),
-        }
-    }
 }
 
 /// (src/game/suppression.ts:149 RANK: a table nothing writes)

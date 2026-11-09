@@ -4,7 +4,7 @@
 extern crate alloc;
 extern crate self as game_types;   // (what a derive writes names this crate from inside it too)
 use crate::bytes::ToBytes;
-pub use game_derive::Words;
+pub use game_derive::{Blank, Words};
 pub mod bytes;
 pub mod ids;
 pub mod js;

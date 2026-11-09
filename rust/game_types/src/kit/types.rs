@@ -1,6 +1,6 @@
 //! The types of `kit`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// KitRow.get and .set: a row that is not one field of the card reads and writes it itself. The arm says which
@@ -399,14 +399,14 @@ pub struct KitPool {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct KitMod {
     /// (src/game/kit.ts:171 hand)
     pub hand: Option<crate::kit::KitHand>,
     /// (src/game/kit.ts:175 KIT)
-    pub kit: crate::kit::KitModKIT,
+    #[is({ let card = |bangs: f64, charges: f64, smoke: f64, frags: f64, shells: f64| crate::kit::MemberKit { weapon: crate::kit::KitWeapon::Rifle, suppressed: true, light: true, nvg: true, bangs, charges, smoke, frags, walls: 0.0, shells, suit: crate::kit::SuitId::Issued, trim: crate::kit::TrimId::Issued, wand: false, cams: 0.0, bare: None, big: crate::kit::BigKit::None, primary: String::from("mk18"), secondary: String::from("g19"), side_can: true, rings: 0.0 }; crate::kit::KitModKIT { on: true, members: alloc::vec![card(1.0, 0.0, 1.0, 1.0, 1.0), card(2.0, 1.0, 0.0, 1.0, 0.0), card(1.0, 1.0, 0.0, 1.0, 0.0), card(0.0, 0.0, 0.0, 0.0, 0.0), card(0.0, 0.0, 0.0, 0.0, 0.0)] } })] pub kit: crate::kit::KitModKIT,
     /// (src/game/kit.ts:353 team)
-    pub team: f64,
+    #[is(4.0)] pub team: f64,
     /// (src/game/kit.ts:423 loudYou)
     pub loud_you: Option<crate::kit::MemberKit>,
     /// (src/game/kit.ts:423 stealthYou)
@@ -418,11 +418,11 @@ pub struct KitMod {
     /// (src/game/kit.ts:921 rowCache)
     pub row_cache: JsMap<String, Vec<crate::kit::KitRow>>,
     /// (src/game/kit.ts:1075 KIT_NOTE)
-    pub kit_note: Vec<String>,
+    #[is(alloc::vec![String::from(""); 5])] pub kit_note: Vec<String>,
     /// (src/game/kit.ts:1148 issuedPage)
     pub issued_page: bool,
     /// (src/game/kit.ts:1148 issuing)
-    pub issuing: crate::kit::KitModIssuing,
+    #[is(crate::kit::KitModIssuing::Bool(false))] pub issuing: crate::kit::KitModIssuing,
     /// this page is a lesson's: its stagings wear the issue
     pub lesson_page: bool,
     /// (src/game/kit.ts:1203 kept0)
@@ -434,36 +434,11 @@ pub struct KitMod {
     /// (src/game/kit.ts:1223 bareEyed)
     pub bare_eyed: JsSet<GuardId>,
     /// (src/game/kit.ts:1225 KIT_STAGED)
-    pub kit_staged: crate::kit::KitModKITSTAGED,
+    #[is(crate::kit::KitModKITSTAGED { n: 0.0, ops: Vec::new() })] pub kit_staged: crate::kit::KitModKITSTAGED,
     /// (src/game/kit.ts:1239 issuedPlayer)
     pub issued_player: JsMap<PlayerId, crate::kit::KitModIssuedPlayerValue>,
     /// (src/game/kit.ts:1242 youBare)
     pub you_bare: JsMap<PlayerId, crate::kit::KitModYouBareValue>,
-}
-impl KitMod {
-    pub fn blank() -> Self {
-        KitMod {
-            hand: None,
-            kit: { let card = |bangs: f64, charges: f64, smoke: f64, frags: f64, shells: f64| crate::kit::MemberKit { weapon: crate::kit::KitWeapon::Rifle, suppressed: true, light: true, nvg: true, bangs, charges, smoke, frags, walls: 0.0, shells, suit: crate::kit::SuitId::Issued, trim: crate::kit::TrimId::Issued, wand: false, cams: 0.0, bare: None, big: crate::kit::BigKit::None, primary: String::from("mk18"), secondary: String::from("g19"), side_can: true, rings: 0.0 }; crate::kit::KitModKIT { on: true, members: alloc::vec![card(1.0, 0.0, 1.0, 1.0, 1.0), card(2.0, 1.0, 0.0, 1.0, 0.0), card(1.0, 1.0, 0.0, 1.0, 0.0), card(0.0, 0.0, 0.0, 0.0, 0.0), card(0.0, 0.0, 0.0, 0.0, 0.0)] } },
-            team: 4.0,
-            loud_you: None,
-            stealth_you: None,
-            staged: false,
-            deal_own: false,
-            row_cache: JsMap::new(),
-            kit_note: alloc::vec![String::from(""); 5],
-            issued_page: false,
-            issuing: crate::kit::KitModIssuing::Bool(false),
-            lesson_page: false,
-            kept0: None,
-            kept_wand: Vec::new(),
-            man_of: JsMap::new(),
-            bare_eyed: JsSet::new(),
-            kit_staged: crate::kit::KitModKITSTAGED { n: 0.0, ops: Vec::new() },
-            issued_player: JsMap::new(),
-            you_bare: JsMap::new(),
-        }
-    }
 }
 
 /// (src/game/kit.ts:128 KIT_MEMBERS)

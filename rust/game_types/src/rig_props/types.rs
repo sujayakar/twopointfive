@@ -1,6 +1,6 @@
 //! The types of `rig_props`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -595,17 +595,10 @@ pub enum HungBoxesWeapon {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct RigPropsMod {
     /// (src/game/rigProps.ts:341 curOwner)
     pub cur_owner: f64,
-}
-impl RigPropsMod {
-    pub fn blank() -> Self {
-        RigPropsMod {
-            cur_owner: 0.0,
-        }
-    }
 }
 
 /// (src/game/rigProps.ts:136 RIG: a table nothing writes)

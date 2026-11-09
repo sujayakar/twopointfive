@@ -1,6 +1,6 @@
 //! The types of `powerout`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -107,15 +107,8 @@ pub struct CoverSpot {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct PoweroutMod {
     /// (src/game/powerout.ts:111 STATES)
     pub states: Option<crate::powerout::State>,
-}
-impl PoweroutMod {
-    pub fn blank() -> Self {
-        PoweroutMod {
-            states: None,
-        }
-    }
 }

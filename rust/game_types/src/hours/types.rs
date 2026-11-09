@@ -1,6 +1,6 @@
 //! The types of `hours`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
@@ -111,21 +111,13 @@ pub struct NIGHT {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct HoursMod {
     /// (src/game/hours.ts:140 states)
     pub states: Option<crate::hours::HourState>,
     /// (made again from the world: in no bytes)
     #[bytes(skip)]
     pub reach: crate::hours::SkyReach,
-}
-impl HoursMod {
-    pub fn blank() -> Self {
-        HoursMod {
-            states: None,
-            reach: crate::hours::SkyReach::blank(),
-        }
-    }
 }
 
 /// (src/game/hours.ts:45 HOUR_IDS: a table nothing writes)

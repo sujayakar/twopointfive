@@ -1,6 +1,6 @@
 //! The types of `scene_markings`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
@@ -69,17 +69,10 @@ pub struct MarkWorldRect {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct SceneMarkingsMod {
     /// (src/scene/markings.ts:369 AREA_LIT_MARKS)
     pub area_lit_marks: JsSet<u32>,
-}
-impl SceneMarkingsMod {
-    pub fn blank() -> Self {
-        SceneMarkingsMod {
-            area_lit_marks: JsSet::new(),
-        }
-    }
 }
 
 /// (src/scene/markings.ts:21 MARKING_TEXEL)

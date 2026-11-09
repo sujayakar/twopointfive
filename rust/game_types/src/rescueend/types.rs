@@ -1,25 +1,14 @@
 //! The types of `rescueend`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Blank)]
 pub struct RescueEnd {
     pub lead: Option<CharId>,
     pub led: bool,
-    pub clear_at: f64,
+    #[is(f64::NAN)] pub clear_at: f64,
 }
-impl RescueEnd {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        RescueEnd {
-            lead: None,
-            led: false,
-            clear_at: f64::NAN,
-        }
-    }
-}
-impl Default for RescueEnd { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum RescueEndWon {

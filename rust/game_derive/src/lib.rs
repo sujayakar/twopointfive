@@ -124,6 +124,29 @@ pub fn words(item: TokenStream) -> TokenStream {
     }).collect();
     format!("impl {name} {{ pub const fn as_str(self) -> &'static str {{ match self {{ {arms} }} }} }}").parse().unwrap()
 }
+/// what a new one holds: each field at its type's own start, or at what `#[is(…)]` says
+#[proc_macro_derive(Blank, attributes(is))]
+pub fn blank(item: TokenStream) -> TokenStream {
+    let mut t = item.into_iter().peekable();
+    attributes(&mut t, &["parts"]);
+    visibility(&mut t);
+    let (kind, name) = (word(t.next()), word(t.next()));
+    let Some(TokenTree::Group(g)) = t.next() else { panic!("Blank is for a struct with named fields: {name}") };
+    if kind != "struct" || g.delimiter() != Delimiter::Brace { panic!("Blank is for a struct with named fields: {name}") }
+    let fields: String = split(g.stream()).into_iter().map(|f| {
+        let mut t = f.into_iter().peekable();
+        let mut value = String::from("::core::default::Default::default()");
+        while matches!(t.peek(), Some(TokenTree::Punct(p)) if p.as_char() == '#') {
+            t.next();
+            let Some(TokenTree::Group(g)) = t.next() else { panic!("an attribute with nothing in it") };
+            let mut a = g.stream().into_iter();
+            if word(a.next()) == "is" { if let Some(TokenTree::Group(v)) = a.next() { value = v.stream().to_string(); } }
+        }
+        visibility(&mut t);
+        format!("{}: {value}, ", word(t.next()))
+    }).collect();
+    format!("impl {name} {{ pub fn blank() -> Self {{ Self {{ {fields} }} }} }} impl ::core::default::Default for {name} {{ fn default() -> Self {{ Self::blank() }} }}").parse().unwrap()
+}
 /// the fields of a struct that are written, as they are named after `self.`
 fn kept(f: &Fields) -> Vec<String> {
     match f {

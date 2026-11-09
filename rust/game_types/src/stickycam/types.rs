@@ -1,6 +1,6 @@
 //! The types of `stickycam`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -54,17 +54,10 @@ pub enum StickyRowsRowOverKind {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct StickycamMod {
     /// (src/game/stickycam.ts:76 VISIT)
     pub visit: Option<f64>,
-}
-impl StickycamMod {
-    pub fn blank() -> Self {
-        StickycamMod {
-            visit: None,
-        }
-    }
 }
 
 /// the counters this module keeps for the checks

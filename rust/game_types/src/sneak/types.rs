@@ -1,6 +1,6 @@
 //! The types of `sneak`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default, Words)]
@@ -177,7 +177,7 @@ pub struct SneakModKeptLinesValue {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct SneakMod {
     /// (src/game/sneak.ts:188 leafT)
     pub leaf_t: JsMap<DoorId, crate::sneak::SneakModLeafTValue>,
@@ -189,17 +189,6 @@ pub struct SneakMod {
     pub cell_lit: Option<JsMap<crate::Num, [f64; 2]>>,
     /// (src/game/sneak.ts:325 keptLines)
     pub kept_lines: JsMap<GuardId, crate::sneak::SneakModKeptLinesValue>,
-}
-impl SneakMod {
-    pub fn blank() -> Self {
-        SneakMod {
-            leaf_t: JsMap::new(),
-            states: None,
-            live_at: None,
-            cell_lit: None,
-            kept_lines: JsMap::new(),
-        }
-    }
 }
 
 /// the counters this module keeps for the checks

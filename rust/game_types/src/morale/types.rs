@@ -1,6 +1,6 @@
 //! The types of `morale`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
@@ -135,7 +135,7 @@ pub struct MoraleOf {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct MoraleMod {
     /// (src/game/morale.ts:128 stateOf)
     pub state_of: JsMap<GuardId, crate::morale::Mind>,
@@ -143,15 +143,6 @@ pub struct MoraleMod {
     pub blasts_of: Option<Vec<crate::morale::Blast>>,
     /// (src/game/morale.ts:219 mixAt)
     pub mix_at: Option<crate::morale::MoraleModMixAtValue>,
-}
-impl MoraleMod {
-    pub fn blank() -> Self {
-        MoraleMod {
-            state_of: JsMap::new(),
-            blasts_of: None,
-            mix_at: None,
-        }
-    }
 }
 
 /// the counters this module keeps for the checks

@@ -1,6 +1,6 @@
 //! The types of `devices`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -42,57 +42,29 @@ pub enum LaserDef2Alarm {
     Suspicion,
 }
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct CameraRt {
     pub def: crate::devices::CameraDef2,
     pub index: f64,
-    pub target: FixtureId,
-    pub cone: LightId,
+    #[is(FixtureId(0))] pub target: FixtureId,
+    #[is(LightId(0))] pub cone: LightId,
     pub slot: f64,
     /// (holds nothing: in no bytes)
     #[bytes(skip)]
-    pub st: crate::Opaque,
+    #[is(crate::Opaque)] pub st: crate::Opaque,
 }
-impl CameraRt {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        CameraRt {
-            def: crate::devices::CameraDef2::default(),
-            index: 0.0,
-            target: FixtureId(0),
-            cone: LightId(0),
-            slot: 0.0,
-            st: crate::Opaque,
-        }
-    }
-}
-impl Default for CameraRt { fn default() -> Self { Self::blank() } }
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct LaserRt {
     pub def: crate::devices::LaserDef2,
-    pub target: FixtureId,
+    #[is(FixtureId(0))] pub target: FixtureId,
     pub dir: V3,
     pub len: f64,
     pub slot: f64,
     /// (holds nothing: in no bytes)
     #[bytes(skip)]
-    pub st: crate::Opaque,
+    #[is(crate::Opaque)] pub st: crate::Opaque,
 }
-impl LaserRt {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        LaserRt {
-            def: crate::devices::LaserDef2::default(),
-            target: FixtureId(0),
-            dir: [0.0; 3],
-            len: 0.0,
-            slot: 0.0,
-            st: crate::Opaque,
-        }
-    }
-}
-impl Default for LaserRt { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct KeypadRt {
@@ -105,7 +77,7 @@ pub struct KeypadRt {
 pub struct DeviceLogRow {
 }
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Devices {
     pub cameras: Vec<CameraRtId>,
     pub lasers: Vec<LaserRtId>,
@@ -115,21 +87,6 @@ pub struct Devices {
     pub seq: f64,
     pub radio_count: f64,
 }
-impl Devices {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        Devices {
-            cameras: Vec::new(),
-            lasers: Vec::new(),
-            keypads: Vec::new(),
-            pad_by_door: JsMap::new(),
-            log: Vec::new(),
-            seq: 0.0,
-            radio_count: 0.0,
-        }
-    }
-}
-impl Default for Devices { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct CONE {

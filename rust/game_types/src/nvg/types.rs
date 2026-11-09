@@ -1,6 +1,6 @@
 //! The types of `nvg`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
@@ -44,17 +44,10 @@ pub struct Team {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct NvgMod {
     /// (src/game/nvg.ts:94 teams)
     pub teams: Option<crate::nvg::Team>,
-}
-impl NvgMod {
-    pub fn blank() -> Self {
-        NvgMod {
-            teams: None,
-        }
-    }
 }
 
 /// (src/game/nvg.ts:138 LOOK_M: a table nothing writes)

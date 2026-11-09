@@ -1,6 +1,6 @@
 //! The types of `wallpen`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default, Words)]
@@ -72,17 +72,10 @@ pub enum ThinLine2 {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct WallpenMod {
     /// (src/game/wallpen.ts:87 LOG)
     pub log: Vec<String>,
-}
-impl WallpenMod {
-    pub fn blank() -> Self {
-        WallpenMod {
-            log: Vec::new(),
-        }
-    }
 }
 
 /// the counters this module keeps for the checks

@@ -1,6 +1,6 @@
 //! The types of `needs`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default, Words)]
@@ -92,20 +92,12 @@ pub struct DeparturePoint {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct NeedsMod {
     /// (src/game/needs.ts:111 memOf)
     pub mem_of: JsMap<GuardId, crate::needs::NeedMem>,
     /// (src/game/needs.ts:121 floorOf)
     pub floor_of: Option<crate::needs::NeedsModFloorOfValue>,
-}
-impl NeedsMod {
-    pub fn blank() -> Self {
-        NeedsMod {
-            mem_of: JsMap::new(),
-            floor_of: None,
-        }
-    }
 }
 
 /// the counters this module keeps for the checks

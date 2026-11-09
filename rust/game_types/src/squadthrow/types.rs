@@ -1,6 +1,6 @@
 //! The types of `squadthrow`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// a throw search's test: a frag thrown so catches nobody of ours; a stun always passes (squadthrow.ts Lob.clean)
@@ -361,7 +361,7 @@ pub struct FragCatchesBurst {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct SquadthrowMod {
     /// (src/game/squadthrow.ts:133 states)
     pub states: JsMap<PlayerId, crate::squadthrow::State>,
@@ -369,15 +369,6 @@ pub struct SquadthrowMod {
     pub squadthrow_log: Vec<crate::squadthrow::SquadthrowModSQUADTHROWLOGItem>,
     /// (src/game/squadthrow.ts:201 duckMates)
     pub duck_mates: Option<crate::squadthrow::SquadThrowKeptDuck>,
-}
-impl SquadthrowMod {
-    pub fn blank() -> Self {
-        SquadthrowMod {
-            states: JsMap::new(),
-            squadthrow_log: Vec::new(),
-            duck_mates: None,
-        }
-    }
 }
 
 /// the counters this module keeps for the checks

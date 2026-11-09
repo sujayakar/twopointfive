@@ -1,6 +1,6 @@
 //! The types of `netquiet`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default, Words)]
@@ -69,17 +69,10 @@ pub struct NetQuietPose {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct NetquietMod {
     /// (src/game/netquiet.ts:125 stateOf)
     pub state_of: JsMap<GuardId, crate::netquiet::Mind>,
-}
-impl NetquietMod {
-    pub fn blank() -> Self {
-        NetquietMod {
-            state_of: JsMap::new(),
-        }
-    }
 }
 
 /// the counters this module keeps for the checks

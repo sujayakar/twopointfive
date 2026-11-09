@@ -1,6 +1,6 @@
 //! The types of `lighting`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -35,20 +35,12 @@ pub enum LightEventCause {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct LightingMod {
     /// (src/game/lighting.ts:33 LENS_FROM)
     pub lens_from: JsMap<LightId, V3>,
     /// (src/game/lighting.ts:178 dayStates)
     pub day_states: Option<crate::lighting::DayState>,
-}
-impl LightingMod {
-    pub fn blank() -> Self {
-        LightingMod {
-            lens_from: JsMap::new(),
-            day_states: None,
-        }
-    }
 }
 
 /// the counters this module keeps for the checks

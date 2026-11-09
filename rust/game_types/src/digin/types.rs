@@ -1,6 +1,6 @@
 //! The types of `digin`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
@@ -150,23 +150,14 @@ pub struct DigInRefuge {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct DiginMod {
     /// (src/game/digin.ts:189 DIGIN_LOG)
     pub digin_log: Vec<crate::digin::DiginModDIGINLOGItem>,
     /// (src/game/digin.ts:192 DIGIN_SHUT)
-    pub digin_shut: crate::digin::DiginModDIGINSHUT,
+    #[is(crate::digin::DiginModDIGINSHUT { })] pub digin_shut: crate::digin::DiginModDIGINSHUT,
     /// (src/game/digin.ts:220 states)
     pub states: Option<crate::digin::St>,
-}
-impl DiginMod {
-    pub fn blank() -> Self {
-        DiginMod {
-            digin_log: Vec::new(),
-            digin_shut: crate::digin::DiginModDIGINSHUT {  },
-            states: None,
-        }
-    }
 }
 
 /// the counters this module keeps for the checks

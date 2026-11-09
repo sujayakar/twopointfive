@@ -1,6 +1,6 @@
 //! The types of `quietfog`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
@@ -36,12 +36,12 @@ pub struct QUIETRUNGSItem {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct QuietfogMod {
     /// (src/game/quietfog.ts:69 PICK)
     pub pick: Option<crate::quietfog::QuietRung>,
     /// (src/game/quietfog.ts:70 PICK_DEF)
-    pub pick_def: crate::quietfog::QuietRung,
+    #[is(crate::quietfog::QuietRung::Off)] pub pick_def: crate::quietfog::QuietRung,
     /// (src/game/quietfog.ts:80 KEPT)
     pub kept: bool,
     /// (src/game/quietfog.ts:86 CAMS)
@@ -50,18 +50,6 @@ pub struct QuietfogMod {
     pub cams_read: bool,
     /// (src/game/quietfog.ts:148 HELD)
     pub held: Option<crate::quietfog::Held>,
-}
-impl QuietfogMod {
-    pub fn blank() -> Self {
-        QuietfogMod {
-            pick: None,
-            pick_def: crate::quietfog::QuietRung::Off,
-            kept: false,
-            cams: None,
-            cams_read: false,
-            held: None,
-        }
-    }
 }
 
 /// (src/game/quietfog.ts:48 NOT_SOLO: a table nothing writes)

@@ -1,6 +1,6 @@
 //! The types of `enemysquads`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// what RoundCtx.hot closed over that the record does not hold: the known places as of the build, and the doorways standing open then (enemysquads.ts roundCtx); rear is RoundCtx.rear
@@ -448,7 +448,7 @@ pub struct NetSend {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct EnemysquadsMod {
     /// (src/game/enemysquads.ts:281 STATES)
     pub states: Option<crate::enemysquads::State>,
@@ -458,16 +458,6 @@ pub struct EnemysquadsMod {
     pub bangs: JsMap<GuardId, crate::enemysquads::EnemysquadsModBANGSValue>,
     /// (src/game/enemysquads.ts:1130 GLIMPSED)
     pub glimpsed: JsMap<GuardId, f64>,
-}
-impl EnemysquadsMod {
-    pub fn blank() -> Self {
-        EnemysquadsMod {
-            states: None,
-            ctx: None,
-            bangs: JsMap::new(),
-            glimpsed: JsMap::new(),
-        }
-    }
 }
 
 /// (src/game/enemysquads.ts:613 COUNT: a table nothing writes)

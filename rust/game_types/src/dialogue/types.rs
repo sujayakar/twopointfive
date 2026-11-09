@@ -3040,3 +3040,4 @@ impl PartialEq for crate::dialogue::StageKey {
         match (self, o) { (Self::Num(a), Self::Num(b)) => a == b, (Self::X, Self::X) => true, _ => false }
     }
 }
+impl Default for DialogueMod { fn default() -> Self { Self::blank() } }

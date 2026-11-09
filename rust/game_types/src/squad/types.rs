@@ -1,31 +1,19 @@
 //! The types of `squad`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Sweep {
     pub pts: Vec<V3>,
     pub t0: f64,
-    pub dur: f64,
+    #[is(1.0)] pub dur: f64,
     pub active: bool,
 }
-impl Sweep {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        Sweep {
-            pts: Vec::new(),
-            t0: 0.0,
-            dur: 1.0,
-            active: false,
-        }
-    }
-}
-impl Default for Sweep { fn default() -> Self { Self::blank() } }
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Clearing {
-    pub stage: crate::squad::ClearStage,
+    #[is(crate::squad::ClearStage::Muster)] pub stage: crate::squad::ClearStage,
     pub room_i: usize,
     pub drill: Option<RoomClearId>,
     pub cur: Option<crate::scene_level::RoomClearPlan>,
@@ -33,40 +21,16 @@ pub struct Clearing {
     pub total: f64,
     pub eta: f64,
     pub t_drill: f64,
-    pub t_near: f64,
-    pub aw: Vec<f64>,
-    pub wps: [Vec<V3>; 2],
+    #[is(f64::NAN)] pub t_near: f64,
+    #[is(alloc::vec![0.0, 0.0])] pub aw: Vec<f64>,
+    #[is([Vec::new(), Vec::new()])] pub wps: [Vec<V3>; 2],
     pub dark: bool,
     pub rooms: Vec<Vec<crate::scene_level::RoomClearPlan>>,
-    pub a: GuardId,
+    #[is(GuardId(0))] pub a: GuardId,
     pub b: Option<GuardId>,
     /// INVENTED: g.serial() where a clear is begun (guards.ts planClears): a reader holds it by identity to know a new one began
     pub serial: u32,
 }
-impl Clearing {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        Clearing {
-            stage: crate::squad::ClearStage::Muster,
-            room_i: 0,
-            drill: None,
-            cur: None,
-            t: 0.0,
-            total: 0.0,
-            eta: 0.0,
-            t_drill: 0.0,
-            t_near: f64::NAN,
-            aw: alloc::vec![0.0, 0.0],
-            wps: [Vec::new(), Vec::new()],
-            dark: false,
-            rooms: Vec::new(),
-            a: GuardId(0),
-            b: None,
-            serial: 0,
-        }
-    }
-}
-impl Default for Clearing { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum ClearStage {
@@ -76,14 +40,14 @@ pub enum ClearStage {
     Drill,
 }
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct RoomClear {
-    pub phase: crate::squad::RoomClearPhase,
-    pub t_kick: f64,
-    pub t_enter: f64,
-    pub t_enter2: f64,
-    pub t_search: f64,
-    pub t_resolve: f64,
+    #[is(crate::squad::RoomClearPhase::Stack)] pub phase: crate::squad::RoomClearPhase,
+    #[is(f64::NAN)] pub t_kick: f64,
+    #[is(f64::NAN)] pub t_enter: f64,
+    #[is(f64::NAN)] pub t_enter2: f64,
+    #[is(f64::NAN)] pub t_search: f64,
+    #[is(f64::NAN)] pub t_resolve: f64,
     pub door: Option<DoorId>,
     pub next_door: Option<DoorId>,
     pub live: bool,
@@ -91,8 +55,8 @@ pub struct RoomClear {
     pub flung: bool,
     pub b_go: bool,
     pub no_mark: bool,
-    pub t_set: f64,
-    pub t_go: f64,
+    #[is(f64::NAN)] pub t_set: f64,
+    #[is(f64::NAN)] pub t_go: f64,
     pub t_now: f64,
     pub a_home: bool,
     pub b_home: bool,
@@ -105,46 +69,9 @@ pub struct RoomClear {
     pub wp_a: Vec<V3>,
     pub wp_b: Vec<V3>,
     pub plan: crate::scene_level::RoomClearPlan,
-    pub a: GuardId,
+    #[is(GuardId(0))] pub a: GuardId,
     pub b: Option<GuardId>,
 }
-impl RoomClear {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        RoomClear {
-            phase: crate::squad::RoomClearPhase::Stack,
-            t_kick: f64::NAN,
-            t_enter: f64::NAN,
-            t_enter2: f64::NAN,
-            t_search: f64::NAN,
-            t_resolve: f64::NAN,
-            door: None,
-            next_door: None,
-            live: false,
-            done: JsSet::new(),
-            flung: false,
-            b_go: false,
-            no_mark: false,
-            t_set: f64::NAN,
-            t_go: f64::NAN,
-            t_now: 0.0,
-            a_home: false,
-            b_home: false,
-            aim_a: [0.0, 0.0, 0.0],
-            aim_b: [0.0, 0.0, 0.0],
-            sw_a: crate::squad::Sweep::blank(),
-            sw_b: crate::squad::Sweep::blank(),
-            rest_a: None,
-            rest_b: None,
-            wp_a: Vec::new(),
-            wp_b: Vec::new(),
-            plan: crate::scene_level::RoomClearPlan::default(),
-            a: GuardId(0),
-            b: None,
-        }
-    }
-}
-impl Default for RoomClear { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum RoomClearPhase {
@@ -301,20 +228,12 @@ pub enum Perceive {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct SquadMod {
     /// (src/game/squad.ts:39 settleWatch)
     pub settle_watch: JsMap<GuardId, crate::squad::SquadModSettleWatchValue>,
     /// (src/game/squad.ts:42 walkWatch)
     pub walk_watch: JsMap<GuardId, crate::squad::SquadModWalkWatchValue>,
-}
-impl SquadMod {
-    pub fn blank() -> Self {
-        SquadMod {
-            settle_watch: JsMap::new(),
-            walk_watch: JsMap::new(),
-        }
-    }
 }
 
 /// (src/game/squad.ts:31 SETTLE)

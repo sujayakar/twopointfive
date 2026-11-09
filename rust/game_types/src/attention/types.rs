@@ -1,6 +1,6 @@
 //! The types of `attention`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
@@ -86,20 +86,12 @@ pub struct AttentionLendO {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct AttentionMod {
     /// (src/game/attention.ts:100 memOf)
     pub mem_of: JsMap<GuardId, crate::attention::Mem>,
     /// (src/game/attention.ts:106 ATTENTION_LOG)
     pub attention_log: Vec<crate::attention::AttentionModATTENTIONLOGItem>,
-}
-impl AttentionMod {
-    pub fn blank() -> Self {
-        AttentionMod {
-            mem_of: JsMap::new(),
-            attention_log: Vec::new(),
-        }
-    }
 }
 
 /// the counters this module keeps for the checks

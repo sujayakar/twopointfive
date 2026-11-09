@@ -1,6 +1,6 @@
 //! The types of `shotgun`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// a man this shell puts down, settled once the whole pattern has flown: combat.ts fireWeaponRaw's two blocks, run by fire_shell
@@ -58,17 +58,10 @@ pub struct BreachSpot {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct ShotgunMod {
     /// (src/game/shotgun.ts:38 SHOTGUN_LAST)
-    pub shotgun_last: crate::shotgun::ShotgunModSHOTGUNLAST,
-}
-impl ShotgunMod {
-    pub fn blank() -> Self {
-        ShotgunMod {
-            shotgun_last: crate::shotgun::ShotgunModSHOTGUNLAST { ends: Vec::new(), glass: JsMap::new() },
-        }
-    }
+    #[is(crate::shotgun::ShotgunModSHOTGUNLAST { ends: Vec::new(), glass: JsMap::new() })] pub shotgun_last: crate::shotgun::ShotgunModSHOTGUNLAST,
 }
 
 /// the counters this module keeps for the checks

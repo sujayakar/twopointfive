@@ -1,103 +1,55 @@
 //! The types of `ragdoll`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, Default)]
 pub struct RagdollWorld {
 }
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Ragdoll {
-    pub x: Vec<f64>,
-    pub px: Vec<f64>,
-    pub w: Vec<f64>,
-    pub pin_t: Vec<f64>,
-    pub pinned: Vec<u8>,
+    #[is(alloc::vec![0.0; 48])] pub x: Vec<f64>,
+    #[is(alloc::vec![0.0; 48])] pub px: Vec<f64>,
+    #[is(alloc::vec![0.0; 16])] pub w: Vec<f64>,
+    #[is(alloc::vec![0.0; 48])] pub pin_t: Vec<f64>,
+    #[is(alloc::vec![0; 16])] pub pinned: Vec<u8>,
     pub any_pin: bool,
-    pub ride_v: Vec<f64>,
+    #[is(alloc::vec![0.0; 5])] pub ride_v: Vec<f64>,
     pub ride_owed: bool,
-    pub pen: Vec<f64>,
-    pub cn: Vec<f64>,
-    pub stick_len: Vec<f64>,
-    pub r0: Vec<f64>,
+    #[is(alloc::vec![0.0; 16])] pub pen: Vec<f64>,
+    #[is(alloc::vec![0.0; 48])] pub cn: Vec<f64>,
+    #[is(alloc::vec![0.0; 9])] pub stick_len: Vec<f64>,
+    #[is(alloc::vec![0.0; 21])] pub r0: Vec<f64>,
     pub trunk_mass: f64,
-    pub rot: Quat,
-    pub r: Vec<f64>,
+    #[is([0.0, 0.0, 0.0, 1.0])] pub rot: Quat,
+    #[is(alloc::vec![1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0])] pub r: Vec<f64>,
     pub centre: V3,
     pub prev_centre: V3,
-    pub a: Vec<f64>,
+    #[is(alloc::vec![0.0; 9])] pub a: Vec<f64>,
     pub fwd0: V3,
     pub up0: V3,
     pub hip_axis0: V3,
-    pub near: Vec<i32>,
-    pub near_cs: Vec<f64>,
+    #[is(alloc::vec![0; 384])] pub near: Vec<i32>,
+    #[is(alloc::vec![0.0; 768])] pub near_cs: Vec<f64>,
     pub n_near: f64,
-    pub dyn_: Vec<i32>,
-    pub dyn_cs: Vec<f64>,
+    #[is(alloc::vec![0; 32])] pub dyn_: Vec<i32>,
+    #[is(alloc::vec![0.0; 64])] pub dyn_cs: Vec<f64>,
     pub n_dyn: f64,
-    pub near_b: Vec<f64>,
-    pub dyn_b: Vec<f64>,
-    pub exit_l: Vec<f64>,
-    pub exit_p: Vec<f64>,
-    pub snap: Vec<f64>,
+    #[is(alloc::vec![0.0; 2304])] pub near_b: Vec<f64>,
+    #[is(alloc::vec![0.0; 192])] pub dyn_b: Vec<f64>,
+    #[is(alloc::vec![0.0; 3])] pub exit_l: Vec<f64>,
+    #[is(alloc::vec![0.0; 3])] pub exit_p: Vec<f64>,
+    #[is(alloc::vec![0.0; 48])] pub snap: Vec<f64>,
     pub snap_t: f64,
     pub sleeping: bool,
     pub awake: f64,
     pub acc: f64,
     pub strain: f64,
     pub impact_v: f64,
-    pub since_impact: f64,
+    #[is(1.0)] pub since_impact: f64,
     pub world: bool,
 }
-impl Ragdoll {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        Ragdoll {
-            x: alloc::vec![0.0; 48],
-            px: alloc::vec![0.0; 48],
-            w: alloc::vec![0.0; 16],
-            pin_t: alloc::vec![0.0; 48],
-            pinned: alloc::vec![0; 16],
-            any_pin: false,
-            ride_v: alloc::vec![0.0; 5],
-            ride_owed: false,
-            pen: alloc::vec![0.0; 16],
-            cn: alloc::vec![0.0; 48],
-            stick_len: alloc::vec![0.0; 9],
-            r0: alloc::vec![0.0; 21],
-            trunk_mass: 0.0,
-            rot: [0.0, 0.0, 0.0, 1.0],
-            r: alloc::vec![1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0],
-            centre: [0.0, 0.0, 0.0],
-            prev_centre: [0.0, 0.0, 0.0],
-            a: alloc::vec![0.0; 9],
-            fwd0: [0.0; 3],
-            up0: [0.0; 3],
-            hip_axis0: [0.0; 3],
-            near: alloc::vec![0; 384],
-            near_cs: alloc::vec![0.0; 768],
-            n_near: 0.0,
-            dyn_: alloc::vec![0; 32],
-            dyn_cs: alloc::vec![0.0; 64],
-            n_dyn: 0.0,
-            near_b: alloc::vec![0.0; 2304],
-            dyn_b: alloc::vec![0.0; 192],
-            exit_l: alloc::vec![0.0; 3],
-            exit_p: alloc::vec![0.0; 3],
-            snap: alloc::vec![0.0; 48],
-            snap_t: 0.0,
-            sleeping: false,
-            awake: 0.0,
-            acc: 0.0,
-            strain: 0.0,
-            impact_v: 0.0,
-            since_impact: 1.0,
-            world: false,
-        }
-    }
-}
-impl Default for Ragdoll { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct RAG {

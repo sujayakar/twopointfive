@@ -1,6 +1,6 @@
 //! The types of `whistle`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -52,7 +52,7 @@ pub enum PickKey {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct WhistleMod {
     /// (src/game/whistle.ts:88 memOf)
     pub mem_of: JsMap<GuardId, crate::whistle::WhistleMem>,
@@ -62,16 +62,6 @@ pub struct WhistleMod {
     pub res_of: JsMap<u32, crate::whistle::Resolution>,
     /// (src/game/whistle.ts:132 WHISTLE_LOG)
     pub whistle_log: Vec<crate::whistle::WhistleModWHISTLELOGItem>,
-}
-impl WhistleMod {
-    pub fn blank() -> Self {
-        WhistleMod {
-            mem_of: JsMap::new(),
-            blower_of: JsMap::new(),
-            res_of: JsMap::new(),
-            whistle_log: Vec::new(),
-        }
-    }
 }
 
 /// the counters this module keeps for the checks

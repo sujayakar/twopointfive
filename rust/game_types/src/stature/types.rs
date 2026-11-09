@@ -1,6 +1,6 @@
 //! The types of `stature`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -12,20 +12,12 @@ pub struct STATURETUNE {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct StatureMod {
     /// (src/game/stature.ts:47 shown)
     pub shown: JsMap<CharId, f64>,
     /// (src/game/stature.ts:103 byId)
-    pub by_id: Vec<Option<CharId>>,
-}
-impl StatureMod {
-    pub fn blank() -> Self {
-        StatureMod {
-            shown: JsMap::new(),
-            by_id: alloc::vec![None; 256],
-        }
-    }
+    #[is(alloc::vec![None; 256])] pub by_id: Vec<Option<CharId>>,
 }
 
 /// (src/game/stature.ts:26 STATURE: a table nothing writes)

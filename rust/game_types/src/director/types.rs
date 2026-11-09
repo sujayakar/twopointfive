@@ -1,6 +1,6 @@
 //! The types of `director`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// which events a c.on takes: every distinct filter closure of levels/*.script.ts, with what it captured (director.ts EventFilter)
@@ -100,7 +100,7 @@ pub enum EventKind {
     Glass,
 }
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Director {
     pub manifest: Option<crate::director::Manifest>,
     pub problems: Vec<crate::director::LintProblem>,
@@ -116,27 +116,6 @@ pub struct Director {
     pub due_clicks: f64,
     pub shown: JsSet<GuardId>,
 }
-impl Director {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        Director {
-            manifest: None,
-            problems: Vec::new(),
-            armed: false,
-            log: Vec::new(),
-            run: None,
-            last_run: None,
-            frame: None,
-            serial: 0.0,
-            seen: JsSet::new(),
-            exiting: false,
-            due_keys: JsSet::new(),
-            due_clicks: 0.0,
-            shown: JsSet::new(),
-        }
-    }
-}
-impl Default for Director { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct Manifest {

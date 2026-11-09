@@ -1,6 +1,6 @@
 //! The types of `rescuecheck`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
@@ -86,15 +86,8 @@ pub struct Goer {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct RescuecheckMod {
     /// (src/game/rescuecheck.ts:80 STATES)
     pub states: Option<crate::rescuecheck::State>,
-}
-impl RescuecheckMod {
-    pub fn blank() -> Self {
-        RescuecheckMod {
-            states: None,
-        }
-    }
 }

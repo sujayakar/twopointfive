@@ -1,9 +1,9 @@
 //! The types of `pairorders`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct PairOrders {
     pub jobs: JsMap<GuardId, crate::pairorders::Job>,
     pub habit: JsMap<GuardId, [f64; 2]>,
@@ -17,25 +17,6 @@ pub struct PairOrders {
     pub go_seated: bool,
     pub hands_was: bool,
 }
-impl PairOrders {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        PairOrders {
-            jobs: JsMap::new(),
-            habit: JsMap::new(),
-            glance: JsMap::new(),
-            stood: JsMap::new(),
-            swept: JsMap::new(),
-            dark: JsMap::new(),
-            dark_memo: JsMap::new(),
-            ways: JsMap::new(),
-            seated: false,
-            go_seated: false,
-            hands_was: false,
-        }
-    }
-}
-impl Default for PairOrders { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Job {
@@ -120,17 +101,10 @@ pub struct PairOrdersStalk {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct PairordersMod {
     /// (src/game/pairorders.ts:113 PAIR_LOG)
     pub pair_log: Vec<crate::pairorders::PairordersModPAIRLOGItem>,
-}
-impl PairordersMod {
-    pub fn blank() -> Self {
-        PairordersMod {
-            pair_log: Vec::new(),
-        }
-    }
 }
 
 /// the counters this module keeps for the checks

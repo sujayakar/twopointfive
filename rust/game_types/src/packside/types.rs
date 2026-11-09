@@ -1,6 +1,6 @@
 //! The types of `packside`.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{Blank, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -60,17 +60,10 @@ pub struct SideBindDims {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Blank)]
 pub struct PacksideMod {
     /// (src/game/packside.ts:49 memo)
     pub memo: JsMap<RigId, crate::packside::Memo>,
-}
-impl PacksideMod {
-    pub fn blank() -> Self {
-        PacksideMod {
-            memo: JsMap::new(),
-        }
-    }
 }
 
 /// (src/game/packside.ts:51 STRIP)

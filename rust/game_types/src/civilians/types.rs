@@ -1,6 +1,6 @@
 //! The types of `civilians`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// what a civilian has given up on (TypeScript: a Set of objects, compared by identity): a man, or a CivSpot of the level by its place in the level's list
@@ -242,20 +242,12 @@ pub enum CivPanicWhat {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct CiviliansMod {
     /// (src/game/civilians.ts:78 ownSpots)
     pub own_spots: Option<crate::civilians::CivSpots>,
     /// (src/game/civilians.ts:443 floors)
     pub floors: Option<crate::civilians::CiviliansModFloorsValue>,
-}
-impl CiviliansMod {
-    pub fn blank() -> Self {
-        CiviliansMod {
-            own_spots: None,
-            floors: None,
-        }
-    }
 }
 
 /// the counters this module keeps for the checks

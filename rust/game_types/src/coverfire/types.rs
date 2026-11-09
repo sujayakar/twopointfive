@@ -1,6 +1,6 @@
 //! The types of `coverfire`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, ToBytes)]
@@ -167,7 +167,7 @@ pub struct CoverfireOn {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct CoverfireMod {
     /// (src/game/coverfire.ts:83 COVERFIRE_LOG)
     pub coverfire_log: Vec<String>,
@@ -175,15 +175,6 @@ pub struct CoverfireMod {
     pub coverfire_why: JsMap<String, f64>,
     /// (src/game/coverfire.ts:100 states)
     pub states: Option<crate::coverfire::State>,
-}
-impl CoverfireMod {
-    pub fn blank() -> Self {
-        CoverfireMod {
-            coverfire_log: Vec::new(),
-            coverfire_why: JsMap::new(),
-            states: None,
-        }
-    }
 }
 
 /// the counters this module keeps for the checks

@@ -1,6 +1,6 @@
 //! The types of `roomclear`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -26,13 +26,13 @@ pub struct RoomState {
     pub cleared_at: f64,
 }
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct RoomClearScenario {
     pub rooms: Vec<crate::roomclear::RoomState>,
     pub end: Option<crate::roomclear::RoomClearEnd>,
-    pub end_at: f64,
-    pub end_why: String,
-    pub end_say: String,
+    #[is(f64::NAN)] pub end_at: f64,
+    #[is(String::from(""))] pub end_why: String,
+    #[is(String::from("team wiped"))] pub end_say: String,
     pub placement: Vec<crate::roomclear::Placement>,
     pub seed: f64,
     pub attempt: f64,
@@ -42,33 +42,9 @@ pub struct RoomClearScenario {
     pub entry_said: bool,
     pub team_said: bool,
     pub clear_due: Vec<crate::scene_scenarios::StructureRoom>,
-    pub clear_at: f64,
-    pub layout: crate::nightbreach::NightBreachLayout,
+    #[is(f64::NAN)] pub clear_at: f64,
+    #[is(crate::nightbreach::NightBreachLayout { name: String::from("room clear") })] pub layout: crate::nightbreach::NightBreachLayout,
 }
-impl RoomClearScenario {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        RoomClearScenario {
-            rooms: Vec::new(),
-            end: None,
-            end_at: f64::NAN,
-            end_why: String::from(""),
-            end_say: String::from("team wiped"),
-            placement: Vec::new(),
-            seed: 0.0,
-            attempt: 0.0,
-            fresh: 0.0,
-            way: 0.0,
-            pair_said: false,
-            entry_said: false,
-            team_said: false,
-            clear_due: Vec::new(),
-            clear_at: f64::NAN,
-            layout: crate::nightbreach::NightBreachLayout { name: String::from("room clear") },
-        }
-    }
-}
-impl Default for RoomClearScenario { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Debug, Default)]
 pub struct PlaceDefendersS {

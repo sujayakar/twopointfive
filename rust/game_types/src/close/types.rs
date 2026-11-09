@@ -1,6 +1,6 @@
 //! The types of `close`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
@@ -145,20 +145,12 @@ pub enum CloseTookWhat {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct CloseMod {
     /// (src/game/close.ts:146 STATE)
     pub state: JsMap<PlayerId, crate::close::State>,
     /// (src/game/close.ts:148 SEATED)
     pub seated: Option<JsMap<GuardId, crate::close::Seat>>,
-}
-impl CloseMod {
-    pub fn blank() -> Self {
-        CloseMod {
-            state: JsMap::new(),
-            seated: None,
-        }
-    }
 }
 
 /// the counters this module keeps for the checks

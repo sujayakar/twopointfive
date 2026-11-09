@@ -1,6 +1,6 @@
 //! The types of `teampace`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
@@ -51,7 +51,7 @@ pub struct TeampaceModAimSeenValue {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct TeampaceMod {
     /// (src/game/teampace.ts:112 leave)
     pub leave: JsMap<GuardId, crate::teampace::Leave>,
@@ -63,17 +63,6 @@ pub struct TeampaceMod {
     pub reason_t: JsMap<GuardId, f64>,
     /// (src/game/teampace.ts:128 aimSeen)
     pub aim_seen: JsMap<GuardId, crate::teampace::TeampaceModAimSeenValue>,
-}
-impl TeampaceMod {
-    pub fn blank() -> Self {
-        TeampaceMod {
-            leave: JsMap::new(),
-            ran: JsMap::new(),
-            dash: JsMap::new(),
-            reason_t: JsMap::new(),
-            aim_seen: JsMap::new(),
-        }
-    }
 }
 
 /// the counters this module keeps for the checks

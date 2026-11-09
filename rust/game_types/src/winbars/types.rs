@@ -1,6 +1,6 @@
 //! The types of `winbars`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -24,20 +24,12 @@ pub enum BreakBarCause {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct WinbarsMod {
     /// (src/game/winbars.ts:57 LOG)
     pub log: Vec<String>,
     /// (src/game/winbars.ts:64 STATE)
     pub state: Option<crate::winbars::BarState>,
-}
-impl WinbarsMod {
-    pub fn blank() -> Self {
-        WinbarsMod {
-            log: Vec::new(),
-            state: None,
-        }
-    }
 }
 
 /// the counters this module keeps for the checks

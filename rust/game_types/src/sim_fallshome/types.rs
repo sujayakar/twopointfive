@@ -1,6 +1,6 @@
 //! The types of `sim_fallshome`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Words)]
@@ -22,17 +22,9 @@ pub struct FallDue {
     pub dust: f64,
 }
 
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Blank)]
 pub struct FallStore {
 }
-impl FallStore {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        FallStore {
-        }
-    }
-}
-impl Default for FallStore { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Debug, Default)]
 pub struct SimFallshomeModFALLS {
@@ -65,17 +57,10 @@ pub struct FallStoreStep {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Blank)]
 pub struct SimFallshomeMod {
     /// (src/sim/fallshome.ts:43 FALLS)
-    pub falls: crate::sim_fallshome::SimFallshomeModFALLS,
-}
-impl SimFallshomeMod {
-    pub fn blank() -> Self {
-        SimFallshomeMod {
-            falls: crate::sim_fallshome::SimFallshomeModFALLS { there: 0.0, dues: 0.0, steps: 0.0, crunches: 0.0 },
-        }
-    }
+    #[is(crate::sim_fallshome::SimFallshomeModFALLS { there: 0.0, dues: 0.0, steps: 0.0, crunches: 0.0 })] pub falls: crate::sim_fallshome::SimFallshomeModFALLS,
 }
 
 /// (src/sim/fallshome.ts:20 FALL_CELL)

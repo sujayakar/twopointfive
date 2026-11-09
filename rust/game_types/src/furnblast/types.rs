@@ -1,6 +1,6 @@
 //! The types of `furnblast`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Words)]
@@ -10,7 +10,7 @@ pub enum BlastSource {
     Wall,
 }
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Furniture {
     pub groups: Option<Vec<crate::furnblast::Group>>,
     pub member_at: JsMap<crate::Num, FurnblastMemberId>,
@@ -20,33 +20,12 @@ pub struct Furniture {
     pub gone_mouth: JsSet<crate::Num>,
     pub kept: JsSet<crate::Num>,
     pub fronts: Vec<V3>,
-    pub counter: f64,
+    #[is(1.0)] pub counter: f64,
     pub last: Option<crate::furnblast::FurnitureLast>,
     pub row_kept: Option<crate::furnblast::FurnitureRowKept>,
-    pub fling: f64,
-    pub mouth_memo: crate::furnblast::FurnitureMouthMemo,
+    #[is(1.0)] pub fling: f64,
+    #[is(crate::furnblast::FurnitureMouthMemo { t: -1.0, serial: -1.0, can: JsMap::new(), under: JsMap::new() })] pub mouth_memo: crate::furnblast::FurnitureMouthMemo,
 }
-impl Furniture {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        Furniture {
-            groups: None,
-            member_at: JsMap::new(),
-            hidden: JsMap::new(),
-            gone_props: 0.0,
-            gone: JsSet::new(),
-            gone_mouth: JsSet::new(),
-            kept: JsSet::new(),
-            fronts: Vec::new(),
-            counter: 1.0,
-            last: None,
-            row_kept: None,
-            fling: 1.0,
-            mouth_memo: crate::furnblast::FurnitureMouthMemo { t: -1.0, serial: -1.0, can: JsMap::new(), under: JsMap::new() },
-        }
-    }
-}
-impl Default for Furniture { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct Group {
@@ -200,17 +179,10 @@ pub enum FurnitureNoteResetCause {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct FurnblastMod {
     /// (src/game/furnblast.ts:117 FURN_LOG)
     pub furn_log: Vec<String>,
-}
-impl FurnblastMod {
-    pub fn blank() -> Self {
-        FurnblastMod {
-            furn_log: Vec::new(),
-        }
-    }
 }
 
 /// the counters this module keeps for the checks

@@ -1,6 +1,6 @@
 //! The types of `scene_stuff`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words)]
@@ -61,16 +61,9 @@ pub struct WordFor {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct SceneStuffMod {
     /// (src/scene/stuff.ts:110 PAINTS)
-    pub paints: JsMap<[u64; 3], crate::scene_stuff::Paint>,
-}
-impl SceneStuffMod {
-    pub fn blank() -> Self {
-        SceneStuffMod {
-            paints: { let mut m = crate::js::JsMap::new(); let c = crate::rig_props::col(); for (row, stuff) in [(c.can, crate::scene_stuff::BoxStuff::Metal), (c.fde, crate::scene_stuff::BoxStuff::MudWall), (c.shell, crate::scene_stuff::BoxStuff::Cloth), ([0.4, 0.41, 0.42], crate::scene_stuff::BoxStuff::Sheet)] { m.set([row[0].to_bits(), row[1].to_bits(), row[2].to_bits()], crate::scene_stuff::Paint { name: String::new(), rough: None, metal: None, stuff: Some(stuff), does: None }); } m },
-        }
-    }
+    #[is({ let mut m = crate::js::JsMap::new(); let c = crate::rig_props::col(); for (row, stuff) in [(c.can, crate::scene_stuff::BoxStuff::Metal), (c.fde, crate::scene_stuff::BoxStuff::MudWall), (c.shell, crate::scene_stuff::BoxStuff::Cloth), ([0.4, 0.41, 0.42], crate::scene_stuff::BoxStuff::Sheet)] { m.set([row[0].to_bits(), row[1].to_bits(), row[2].to_bits()], crate::scene_stuff::Paint { name: String::new(), rough: None, metal: None, stuff: Some(stuff), does: None }); } m })] pub paints: JsMap<[u64; 3], crate::scene_stuff::Paint>,
 }
 

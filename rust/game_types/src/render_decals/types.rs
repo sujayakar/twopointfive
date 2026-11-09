@@ -1,6 +1,6 @@
 //! The types of `render_decals`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
@@ -32,19 +32,10 @@ pub struct DecalOpts {
     pub pane: Option<f64>,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Blank)]
 pub struct Decals {
-    pub enabled: bool,
+    #[is(true)] pub enabled: bool,
 }
-impl Decals {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        Decals {
-            enabled: true,
-        }
-    }
-}
-impl Default for Decals { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct WEARMARK {

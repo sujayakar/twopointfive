@@ -1,6 +1,6 @@
 //! The types of `quiet`.
 #![allow(unused_imports)]
-use crate::{Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -10,13 +10,13 @@ pub struct QuietDeal {
     pub patrol: f64,
 }
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct QuietMission {
     pub active: bool,
     pub ops: Vec<GuardId>,
     pub squad: f64,
     pub pin: Option<f64>,
-    pub deal: crate::quiet::QuietDeal,
+    #[is(crate::quiet::QuietDeal { start: 0.0, spot: 0.0, patrol: -1.0 })] pub deal: crate::quiet::QuietDeal,
     pub staged: f64,
     pub log: Vec<String>,
     pub data: Option<crate::scene_scenarios::QuietData>,
@@ -29,30 +29,6 @@ pub struct QuietMission {
     pub cut: bool,
     pub failure: Option<String>,
 }
-impl QuietMission {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        QuietMission {
-            active: false,
-            ops: Vec::new(),
-            squad: 0.0,
-            pin: None,
-            deal: crate::quiet::QuietDeal { start: 0.0, spot: 0.0, patrol: -1.0 },
-            staged: 0.0,
-            log: Vec::new(),
-            data: None,
-            authored: None,
-            benched: Vec::new(),
-            was: None,
-            mine: None,
-            pending: None,
-            fall_in: false,
-            cut: false,
-            failure: None,
-        }
-    }
-}
-impl Default for QuietMission { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct QuietMissionAuthored {
@@ -121,17 +97,10 @@ pub struct QuietWords {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct QuietMod {
     /// (src/game/quiet.ts:60 holder)
     pub holder: bool,
-}
-impl QuietMod {
-    pub fn blank() -> Self {
-        QuietMod {
-            holder: false,
-        }
-    }
 }
 
 /// the counters this module keeps for the checks

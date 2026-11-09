@@ -1,6 +1,6 @@
 //! The types of `workthings`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -18,25 +18,13 @@ pub enum WorkThingKind {
     Objective,
 }
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct WorkThings {
-    pub row: OrdersOrderDefId,
+    #[is(OrdersOrderDefId(0))] pub row: OrdersOrderDefId,
     pub jobs: JsMap<GuardId, crate::workthings::Job>,
     pub hands: JsMap<CharId, crate::workthings::WorkThingsHandsValue>,
     pub cache: Option<crate::workthings::WorkThingsCache>,
 }
-impl WorkThings {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        WorkThings {
-            row: OrdersOrderDefId(0),
-            jobs: JsMap::new(),
-            hands: JsMap::new(),
-            cache: None,
-        }
-    }
-}
-impl Default for WorkThings { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct Job {
@@ -141,17 +129,10 @@ impl Default for WorkNear {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct WorkthingsMod {
     /// (src/game/workthings.ts:136 errands)
     pub errands: Option<crate::workthings::WorkthingsModErrandsValue>,
-}
-impl WorkthingsMod {
-    pub fn blank() -> Self {
-        WorkthingsMod {
-            errands: None,
-        }
-    }
 }
 
 /// the counters this module keeps for the checks

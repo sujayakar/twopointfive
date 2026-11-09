@@ -1,6 +1,6 @@
 //! The types of `tactics`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// a man's price list for nav.findPath, fixed when asked: a cell of his side's dangerous doorways costs door_mult, a cell of his flank's avoid-set at least CORRIDOR_COST, any other 1 (tactics.ts tacticsPenalty)
@@ -219,20 +219,12 @@ pub struct TacticsLook {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct TacticsMod {
     /// (src/game/tactics.ts:149 states)
     pub states: Option<crate::tactics::TState>,
     /// (src/game/tactics.ts:156 kit)
     pub kit: JsMap<GuardId, crate::tactics::TacticsModKitValue>,
-}
-impl TacticsMod {
-    pub fn blank() -> Self {
-        TacticsMod {
-            states: None,
-            kit: JsMap::new(),
-        }
-    }
 }
 
 /// the counters this module keeps for the checks

@@ -1,9 +1,9 @@
 //! The types of `rescue`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, Words, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Rescue {
     pub active: bool,
     pub ops: Vec<GuardId>,
@@ -14,8 +14,8 @@ pub struct Rescue {
     pub staged: f64,
     pub log: Vec<crate::rescue::RescueLogItem>,
     pub resolve: f64,
-    pub resolve_secs: f64,
-    pub t0: f64,
+    #[is(35.0)] pub resolve_secs: f64,
+    #[is(f64::NAN)] pub t0: f64,
     pub door_orders: f64,
     pub blind_rounds: f64,
     pub result: Option<crate::rescue::RescueResult>,
@@ -24,13 +24,13 @@ pub struct Rescue {
     pub cap_by: Option<GuardId>,
     pub executed: JsSet<GuardId>,
     pub counted: JsSet<GuardId>,
-    pub secured_at: f64,
-    pub step: crate::rescue::RescueStep,
+    #[is(f64::NAN)] pub secured_at: f64,
+    #[is(crate::rescue::RescueStep::Waiting)] pub step: crate::rescue::RescueStep,
     pub bark_at: f64,
     pub noise: Option<V3>,
     pub heard: JsSet<u32>,
     pub last_order: Option<u32>,
-    pub alarm_at: f64,
+    #[is(f64::NAN)] pub alarm_at: f64,
     pub way: Option<Vec<V3>>,
     pub benched: Option<Vec<GuardId>>,
     pub said: JsSet<String>,
@@ -38,8 +38,8 @@ pub struct Rescue {
     pub failure: Option<String>,
     pub murmur_at: f64,
     pub murmur_n: f64,
-    pub ack_at: f64,
-    pub flow: alloc::boxed::Box<crate::rescueflow::RescueFlow>,
+    #[is(f64::NAN)] pub ack_at: f64,
+    #[is(alloc::boxed::Box::new(crate::rescueflow::RescueFlow::blank()))] pub flow: alloc::boxed::Box<crate::rescueflow::RescueFlow>,
     pub called: bool,
     pub search_t: JsMap<GuardId, f64>,
     pub search_a: JsMap<GuardId, crate::rescue::RescueSearchAValue>,
@@ -50,57 +50,6 @@ pub struct Rescue {
     /// INVENTED by a review: see the proposals
     pub noise_serial: Option<u32>,
 }
-impl Rescue {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        Rescue {
-            active: false,
-            ops: Vec::new(),
-            hostiles: Vec::new(),
-            hostages: Vec::new(),
-            plan: None,
-            entry: None,
-            staged: 0.0,
-            log: Vec::new(),
-            resolve: 0.0,
-            resolve_secs: 35.0,
-            t0: f64::NAN,
-            door_orders: 0.0,
-            blind_rounds: 0.0,
-            result: None,
-            defs: JsMap::new(),
-            act: None,
-            cap_by: None,
-            executed: JsSet::new(),
-            counted: JsSet::new(),
-            secured_at: f64::NAN,
-            step: crate::rescue::RescueStep::Waiting,
-            bark_at: 0.0,
-            noise: None,
-            heard: JsSet::new(),
-            last_order: None,
-            alarm_at: f64::NAN,
-            way: None,
-            benched: None,
-            said: JsSet::new(),
-            cut: false,
-            failure: None,
-            murmur_at: 0.0,
-            murmur_n: 0.0,
-            ack_at: f64::NAN,
-            flow: alloc::boxed::Box::new(crate::rescueflow::RescueFlow::blank()),
-            called: false,
-            search_t: JsMap::new(),
-            search_a: JsMap::new(),
-            auto: JsSet::new(),
-            server_out: None,
-            ending: crate::rescueend::RescueEnd::blank(),
-            flush: crate::rescueflush::RescueFlush::blank(),
-            noise_serial: None,
-        }
-    }
-}
-impl Default for Rescue { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct Entry {
@@ -264,18 +213,10 @@ pub struct RescueObjective {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct RescueMod {
     /// (src/game/rescue.ts:150 applied)
-    pub applied: Option<crate::scene_scenarios::TeamStart>,
-}
-impl RescueMod {
-    pub fn blank() -> Self {
-        RescueMod {
-            // (the team's start the knob table holds as it is made: a start whose level names another writes its own over the knobs)
-            applied: { let k = crate::knobs::RescueK::page(); Some(crate::scene_scenarios::TeamStart { sam: k.sam_at, sam_yaw: k.sam_yaw, ops: Some(k.ops_at.to_vec()), ops_yaw: None }) },
-        }
-    }
+    #[is({ let k = crate::knobs::RescueK::page(); Some(crate::scene_scenarios::TeamStart { sam: k.sam_at, sam_yaw: k.sam_yaw, ops: Some(k.ops_at.to_vec()), ops_yaw: None }) })] pub applied: Option<crate::scene_scenarios::TeamStart>,
 }
 
 /// (src/game/rescue.ts:156 NUMBER: a table nothing writes)
