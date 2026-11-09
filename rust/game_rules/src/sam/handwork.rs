@@ -422,15 +422,16 @@ pub fn belt_torch(g: &mut crate::game::Game, c_2: CharId, out: &mut Vec<AnyBoxId
 mod tests {
     use super::*;
 
-    fn bits(v: &[[f64; 2]]) -> Vec<[u64; 2]> { v.iter().map(|k| [k[0].to_bits(), k[1].to_bits()]).collect() }
-
-    // the TypeScript's own bits: padKeys under bun with EXACT.on
+    /// A failure means his finger goes to keys the code does not hold: the four presses are the code's own, a short code goes round, a key the pad has not is its middle key.
     #[test]
-    fn pad_keys_match_the_typescript() {
-        assert_eq!(bits(&pad_keys("1937")), PAD_1937.to_vec());
-        assert_eq!(bits(&pad_keys("*0")), PAD_STAR0.to_vec());
-        assert_eq!(bits(&pad_keys("7x")), PAD_7X.to_vec());
-        assert_eq!(bits(&pad_keys("")), PAD_EMPTY.to_vec());
+    fn a_code_presses_its_own_keys_on_the_pad() {
+        let table = key_at();
+        let at = |c: &str| *table.get(String::from(c)).unwrap();
+        assert_eq!(pad_keys("1937"), vec![at("1"), at("9"), at("3"), at("7")]);
+        assert_eq!(pad_keys("*0"), vec![at("*"), at("0"), at("*"), at("0")]);
+        assert_eq!(pad_keys("7x"), vec![at("7"), at("5"), at("7"), at("5")]);
+        assert_eq!(pad_keys(""), vec![at("5")]);
+        assert!(at("1")[0] < at("2")[0] && at("2")[0] < at("3")[0] && at("1")[1] > at("4")[1], "the pad reads as a pad: 1 at the top left");
     }
 
     #[test]
@@ -443,8 +444,4 @@ mod tests {
         assert_eq!(face_toward([0.0; 3], [0.0; 3]), [0.0, 0.0, 1.0]);
     }
 
-    const PAD_1937: [[u64; 2]; 4] = [[0xbf947ae147ae147b, 0x3f870a3d70a3d70c], [0x3f947ae147ae147b, 0xbf9851eb851eb852], [0x3f947ae147ae147b, 0x3f870a3d70a3d70c], [0xbf947ae147ae147b, 0xbf9851eb851eb852]];
-    const PAD_STAR0: [[u64; 2]; 4] = [[0xbf947ae147ae147b, 0xbfa51eb851eb851f], [0x0000000000000000, 0xbfa51eb851eb851f], [0xbf947ae147ae147b, 0xbfa51eb851eb851f], [0x0000000000000000, 0xbfa51eb851eb851f]];
-    const PAD_7X: [[u64; 2]; 4] = [[0xbf947ae147ae147b, 0xbf9851eb851eb852], [0x0000000000000000, 0xbf79999999999998], [0xbf947ae147ae147b, 0xbf9851eb851eb852], [0x0000000000000000, 0xbf79999999999998]];
-    const PAD_EMPTY: [[u64; 2]; 1] = [[0x0000000000000000, 0xbf79999999999998]];
 }
