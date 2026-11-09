@@ -1,5 +1,5 @@
 // Regenerate levels/office.json from the legacy procedural generator (tools/levels/lib/officeGen.ts buildOfficeProcedural): run it ONCE, convert the Level it
-// returns to level data (tools/levels/lib/levelLoad.ts levelToData — ids, flag names, palette materials, editor groups), validate, and write the file in the
+// returns to level data (tools/levels/lib/levelLoad.ts levelToData — ids, flag names, palette materials, editor groups), ask its faults, and write the file in the
 // canonical one-entity-per-line format (tools/levels/lib/levelData.ts serializeLevelData). Then prove the file is the level: parse it back, load it
 // (loadLevel) and diff the result against the generator's Level field by field — the export refuses to write a file that does not reproduce it.
 //   bun run tools/level-export.ts            write levels/office.json (+ print counts, sizes, digest)
@@ -14,7 +14,8 @@ const { buildOfficeProcedural, OFFICE_PALETTE, OFFICE_FINISH } = await import(`$
 const { rowWord, rowDoes } = await import(`${ROOT}/src/scene/stuff.ts`);   // (what each paint is made of, by its name: written into the file's material rows)
 const { levelToData, loadLevel } = await import(`${ROOT}/tools/levels/lib/levelLoad.ts`);
 const { stampDoes } = await import('./levels/doesWas.ts');   // (what a box nobody spoke for does: the word its colour had. src/scene/materials.ts)
-const { levelFaults, serializeLevelData, parseLevelData, levelDataDigest, structuralDiff } = await import(`${ROOT}/tools/levels/lib/levelData.ts`);
+const { serializeLevelData, parseLevelData, levelDataDigest, structuralDiff } = await import(`${ROOT}/tools/levels/lib/levelData.ts`);
+const { levelFaults } = await import(`${ROOT}/tools/levels/lib/judge.ts`);
 const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
 const { FINISHES, BUILDING, GRASS_EDGE } = await import(`${ROOT}/tools/levels/lib/officeFloor.ts`);
 
@@ -52,15 +53,15 @@ const data = levelToData(level, {
   meta: { bounds: { min: [...WORLD.min], max: [...WORLD.max] }, generator: 'tools/levels/lib/officeGen.ts buildOfficeProcedural → tools/level-export.ts', notes: 'The night-shift office: one floor, box geometry only. Regenerated from the legacy generator until the editor (lane G1b) takes over; hand edits survive only if the generator is retired first.' },
 });
 
-// 3. validate + serialize
-const errs = levelFaults(data);
+// 3. its faults (judge.ts), and the text
+const errs = CHECK ? [] : levelFaults(data);   // (a file that is there, which --check holds this to byte for byte, is judged by `gate`)
 if (errs.length) { console.error(`${data.name}: ${errs.length} fault(s)\n  ${errs.slice(0, 30).join('\n  ')}`); process.exit(1); }
 const text = serializeLevelData(data);
 
 // 4. the proof: text → LevelData → Level must be the generator's Level, field for field (and the data must survive its own round trip)
 const parsed = parseLevelData(text);
 const dataDiffs: string[] = []; const nData = structuralDiff(data, parsed, dataDiffs);
-const reloaded = loadLevel(parsed, { validate: false });
+const reloaded = loadLevel(parsed);
 const levelDiffs: string[] = []; const nLevel = structuralDiff(level, reloaded, levelDiffs);
 if (nData || nLevel) {
   console.error(`export REFUSED: the file would not reproduce the level — ${nLevel} Level diff(s), ${nData} data diff(s)`);
