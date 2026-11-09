@@ -57,6 +57,10 @@ clips; stance, wall, kick, carry, long gun; lock work, the hold and the held; th
 poses; ready pose, kit errands, reload, throw, blow, hit; the big tool, a lean; the reactions; a whole-body clip (`anim_act_layer`); fingers (`anim_hands_pass`);
 goggles and a smoke. Then `twists` carry the aim down the spine. Each layer stands down, by an eased weight, for whatever else has the arms.
 
+**The feet.** A foot that is down stays where it is, and goes elsewhere only through the air, no faster than a foot goes: `feet_last`, after every layer, writing only
+thigh, shin and foot. `life_layer`'s standing lock and `run_plant` stay under it, because the layers above are posed over their legs. No address word; never seen on a GPU.
+A round and the cursor's ray meet a leg where it is drawn, and a man falls from where his legs are: a change of play, `tests/poses.rs` its check, `missions` before and after.
+
 **A layer** is a function of `layers.rs` that works on the pose where it lies: it takes his animation as it is (`an: &mut Anim`), the knob tables (`tune`) and what only this
 call knows, and asks nodes by `role(NAME)`. What it keeps from tick to tick is in `Anim`. An `anim_*` function in `character/` decides when, and calls it by `anim_layer`.
 
