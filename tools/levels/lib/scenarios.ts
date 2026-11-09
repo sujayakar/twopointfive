@@ -63,8 +63,8 @@ export interface StructureData { name: string; team?: TeamStart; rooms: Structur
 /** A late squad's way in: not on the floor at the start; it comes by `door` (an outside door) once the floor is loud and the living defenders + `men` fit maxMen. */
 export interface SquadArrive { door: string; spawn: Vec3[]; men: number }
 /** ONE DEFENDER SQUAD of a structure. Its members are the men dealt into its `rooms` (placeDefenders) — or, with `arrive`, the men who come in later.
- *  The rules (levelData.ts validateLevelData for what the file alone can say, rust/game_rules/src/roomclear check_structure against the floor): with a squads block every room is in
- *  exactly one squad; an `arrive` squad has no rooms and every other at least one; Σ garrison ≤ maxMen ≤ SQUAD_MAX_MEN; `rally` is standable floor inside one of its
+ *  The rules (rust/game_start faults.rs for what the file alone can say, rust/game_rules/src/roomclear check_structure against the floor): with a squads block every room is in
+ *  exactly one squad; an `arrive` squad has no rooms and every other at least one; Σ garrison ≤ maxMen ≤ eleven (16 skinned characters less Sam and the four); `rally` is standable floor inside one of its
  *  rooms (anywhere standable for a late squad); `barricade` doors are doors of its rooms; `arrive.spawn` points are standable, outside every room, joined on foot
  *  to `arrive.door`, and at least `arrive.men` of them. */
 export interface SquadData {
@@ -84,8 +84,6 @@ export interface SquadData {
   training?: 'green' | 'mixed' | 'trained';
   arrive?: SquadArrive;
 }
-/** the most defenders alive at once on a structure with `maxMen` (16 skinned characters less Sam and the four) */
-export const SQUAD_MAX_MEN = 11;
 
 /** THE HOSTAGE RESCUE's flow (rust/game_rules/src/rescueflow): the corridor the team runs and the openings off it. AS BUILT the flow reads a corridor that runs along +x and is
  *  walked west to east (an opening is 'passed' when Sam's x goes by it; `north` says which side of the corridor it is on). A level whose route is not that shape
@@ -208,8 +206,6 @@ export interface QuietData {
    *  stand posts its words lean on (the Training lessons: a reader slower than the check found the posts empty). Absent = the game's check, as on every level */
   radioCheck?: boolean;
 }
-/** how many routes a patrol set may man: Sam, one partner and six fill the eight characters that cast shadows (rust/game_rules/src/guards spawn_unit's budget) */
-export const QUIET_MAX_ROUTES = 6;
 
 /** A LESSON (rust/game_rules/src/lesson — the Training group of the mission list): STEPS laid over whichever scenario the level's row starts (a quiet mission, a room clear).
  *  Each step is a LINE on the HUD's objective row naming the key, and a DONE-TEST the game reads off its own state: the line moves on when the player has done
@@ -419,7 +415,7 @@ export interface KitViewWay {
    *  names it (the way's `show` with its name: it stays; its `hide` with its name: it goes). A box's `material` may be look alternatives 'a|b', as a set's.
    *  Ids new to the level's own records (two ways may write the same id: one way is ever laid in), each record under the level format's own rule;
    *  never on a way that names a `set` (the set is the place to put them). `laid` is the LOADER's word, never a file's: the level this block rides on has
-   *  the records in it already (the picture's built level: the plan lays nothing twice, the validator asks that they ARE there) */
+   *  the records in it already (the picture's built level: the plan lays nothing twice) */
   add?: { boxes?: BoxData[]; lamps?: LightData[]; laid?: boolean };
 }
 /** A BESPOKE SET for the picture (the owner, 10-15: "feel free to make a bespoke set for the gear screen if there isn't a good existing one in the level
@@ -481,7 +477,7 @@ export interface LevelScenarios { nightBreach?: NightBreachData; roomClear?: Str
   /** WHAT A DOOR IS CALLED where its id cannot say it (rust/game_rules/src/doornames, words.ts WORDS.doors): a row a door — its id and the name on the squad's rows
    *  and in a defender's call, written as it is read there ('yard gate', 'records side door': no 'the'). For a door whose id carries a bearing or a letter
    *  and that the room clear structure does not list (or a level with no structure): the HUD has no compass. No bearing in a name, no two doors of a level
-   *  called the same; a door the level has, once (the validator). A door
+   *  called the same; a door the level has, once. A door
    *  with no row keeps the name it had. Words only: not in the level's fingerprint. */
   doorNames?: { door: string; name: string }[];
   /** WAYS THE LEVEL IS WALKED THAT NOTHING ELSE IN IT SAYS (the traffic map's hints): from a named thing to a named thing — a door, a mark, a route,

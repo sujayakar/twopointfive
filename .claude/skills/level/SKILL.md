@@ -7,7 +7,7 @@ description: Everything a twopointsix level needs, in order, each with what it g
 
 A level is a generator, a file, count files, rows in two lists, two pictures, music, a look and a line in the docs, in places that do not know about each other.
 `docs/agents/levels.md` says how the system works, and holds most of the maintainer's rulings. This page is the order of work. `docs/level-format.md` has the file
-member by member, but parts of it are stale: where they differ, `tools/levels/lib/levelData.ts` is right.
+member by member: where it and the reader differ, the reader is right (`rust/game_start/src/file.rs`, `records.rs`, `faults.rs`).
 
 **Two tools start and finish the work.** `level-needs.ts` asks what stands around the file, and the native `levels` asks the floor.
 
@@ -43,7 +43,7 @@ a `word` is that need.
 ## 3. The file
 
 - **Inside the world.** `WORLD` is 40 by 28 m with a 3 m ceiling. `bun run tools/qa/level-lint.ts levels/<name>.json` warns on a box outside it and fails on too many
-  boxes or light slots (`levels/<name>.lint.json` holds a reason for an odd thing). `tools/levels/lib/caps.ts` has the most a level may have.
+  boxes or light slots (`levels/<name>.lint.json` holds a reason for an odd thing). `docs/level-format.md` has the most a level may have.
 - **A height a foot can read.** A top of 0.19 m or less is stepped over. Nothing solid on free floor tops out between that and 0.25 m (`docs/agents/levels.md`).
 - **Two wall thicknesses:** `GW_SHELL` outside and `GW_PART` inside, so that a door's frame fits.
 - **Paint says what a thing is** to a round, a charge and a blast. `gwotAs` is one paint on a thing that does something else. `does_and_stages.rs` holds that no rule
@@ -156,7 +156,7 @@ floor.
 - **A level does not deal the squad's kit.** There is one issue (`issued_card` in `rust/game_rules/src/kit`). A level changes it in two places:
   `scenarios.issue.members` and `roomClear.wallCharges`. Read the card on Team & kit at every size the row offers. Test: `level_rules.rs`.
 - **Its own cards are for a mission built around a kit,** and one that changes a counted thing is not shared out, so write one for every man who comes. A `shield`
-  key is refused by the validator. By eye, at each size.
+  key is a fault of the file. By eye, at each size.
 - **Count locked and steel doors against the door charges,** and say how each is meant to open. By eye.
 - **An order needs kit somebody is issued.** A frag on order is refused near a hostage or a civilian (`squad_frag_catches`), so say what a rescue's squad throws
   instead. By eye.

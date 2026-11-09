@@ -119,8 +119,6 @@ export const DOES_DEFAULT: DoesWord = 'unnamed';
 /** word → its `does`, made once from the table and never written again */
 const ROWS: ReadonlyMap<string, Does> = new Map(Object.entries(MATERIALS as Record<string, Material>).flatMap(([w, m]): [string, Does][] => m.does ? [[w, m.does]] : []));
 const DEFAULT: Does = ROWS.get(DOES_DEFAULT)!;
-/** every word that has a `does`, in the table's order */
-export const DOES_WORDS: readonly string[] = [...ROWS.keys()];
 export const doesWordOk = (v: unknown): v is DoesWord => typeof v === 'string' && ROWS.has(v);
 /** the columns of a word (the default row's for a word the table does not have: a file opened leniently can carry any string) */
 export const doesOfWord = (w: string | undefined): Does => (w !== undefined && ROWS.get(w)) || DEFAULT;

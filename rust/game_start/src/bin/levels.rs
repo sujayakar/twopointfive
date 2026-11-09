@@ -8,6 +8,7 @@
 //!   levels doors [LEVEL…] [--list]                                 every door is a real door's size and the walk grid goes through it
 //!   levels charges [LEVEL…] [--write]                              no place for a wall charge was taken by a thing stood at a wall
 //!   levels names [LEVEL…]                                          it is named by its own rooms
+//!   levels file [LEVEL…]                                           its file has no fault, each said by the file and its place in it (faults.rs)
 //!   levels rain [LEVEL…]                                           its storm rains by its own roofs
 //!
 //! A LEVEL is a file of levels/ by its name; none named = every level the question is about. Exit 0 every line passes, 1 a FAIL line, 2 a word or a level that is not known.
@@ -788,11 +789,25 @@ fn rain(levels: &[String]) -> i32 {
     v.end("rain")
 }
 
+// ---------------------------------------------------------------------------------------------------------------- file
+fn file(levels: &[String]) -> i32 {
+    let mut v = Verdicts::default();
+    let levels: Vec<String> = if levels.is_empty() { every_level() } else { levels.to_vec() };
+    let mut bad = Vec::new();
+    for level in &levels {
+        let mut data = data_of(level);
+        if breaks() { data.set_member("elevators", json::arr(vec![])); data.set_member("name", json::n(3.0)); }
+        bad.extend(game_start::faults::of(&data).into_iter().map(|f| format!("levels/{level}.json: {f}")));
+    }
+    v.say(bad.is_empty(), &format!("{} level files are levels: nothing in them the game does not read, and every rule of the format holds", levels.len()), &format!("{} faults{}", bad.len(), list(&bad)));
+    v.end("file")
+}
+
 fn main() {
     let args: Vec<String> = std::env::args().skip(1).collect();
-    let usage = || -> ! { eprintln!("levels second-way [LEVEL…] [--list] [--walls] [--nolists] | sight [LEVEL…] [--write] | walked [LEVEL…] [--write] | stacks [MISSION…] | stands | doors [--list] | charges [--write] | names | rain [LEVEL…]"); std::process::exit(2) };
+    let usage = || -> ! { eprintln!("levels second-way [LEVEL…] [--list] [--walls] [--nolists] | sight [LEVEL…] [--write] | walked [LEVEL…] [--write] | stacks [MISSION…] | stands | doors [--list] | charges [--write] | names | rain | file [LEVEL…]"); std::process::exit(2) };
     let Some(ask) = args.first() else { usage() };
-    let allowed: &[&str] = match ask.as_str() { "second-way" => &["--list", "--walls", "--nolists"], "sight" | "walked" | "charges" => &["--write"], "doors" => &["--list"], "stacks" | "stands" | "names" | "rain" => &[], _ => usage() };
+    let allowed: &[&str] = match ask.as_str() { "second-way" => &["--list", "--walls", "--nolists"], "sight" | "walked" | "charges" => &["--write"], "doors" => &["--list"], "stacks" | "stands" | "names" | "rain" | "file" => &[], _ => usage() };
     let (flags, names): (Vec<&String>, Vec<&String>) = args[1..].iter().partition(|a| a.starts_with("--"));
     if flags.iter().any(|f| !allowed.contains(&f.as_str())) { usage(); }
     let has = |f: &str| flags.iter().any(|x| *x == f);
@@ -808,6 +823,7 @@ fn main() {
         "charges" => charges(&names, has("--write")),
         "names" => self::names(&names),
         "rain" => rain(&names),
+        "file" => file(&names),
         _ => stacks(&names),
     });
 }
