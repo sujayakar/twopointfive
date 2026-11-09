@@ -146,7 +146,7 @@ pub fn press_say(g: &mut crate::game::Game) {
         let gd = g.guards[i];
         i += 1;
         let t = g.time;
-        let has = on && match g.fight.defs.iter().copied().find(|x| g.tab.roomfight_def[*x].gd == gd) {
+        let has = on && match crate::roomfight::def_of(g, gd) {
             Some(d) => g.m.pressure.states.as_ref().map_or(false, |st| st.of.has(d) || st.think.has(d)),
             None => false,
         };

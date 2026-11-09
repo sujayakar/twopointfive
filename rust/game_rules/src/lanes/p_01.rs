@@ -220,10 +220,7 @@ pub fn up_id(g: &crate::game::Game, id_2: f64) -> bool {
     g.guards.iter().any(|&o| g.ch[g.gd[o].ch].id == id_2 && g.gd[o].state != crate::game::GuardState::Dead)
 }
 
-/// His row in the room fight.   (lanes.ts defOf)
-pub fn def_of(g: &crate::game::Game, gd: GuardId) -> Option<RoomfightDefId> {
-    g.fight.defs.iter().copied().find(|&d| g.tab.roomfight_def[d].gd == gd)
-}
+pub use crate::roomfight::def_of;
 
 /// A line in the fight's log.   (lanes.ts note)
 pub fn note(g: &mut crate::game::Game, gd: Option<GuardId>, what: &str) {

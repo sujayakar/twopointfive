@@ -284,6 +284,7 @@ Under `rust/game_rules/src/`. One man's frame, in the order it runs (`guards/fra
 | his pose, his light, his footfall | `guards/frame.rs pose` | |
 | whose man he is: the taskers, strongest first, and who may take him (`kept`) | `game_types/src/owner/types.rs`, `owner/` | a line of `taskers!`; `kept` before it takes him |
 | what a rule may ask of a man (enemy, blind, staggered, held, in contact, still) | `control/man.rs` | a function |
+| a defender's post: how he leaves it and comes back | `roomfight/post.rs` (`send`, `loose`, `back_on`) | `send` with a `Leg`; never `mode` by hand |
 | his hands: a change of magazine | `guards/frame.rs hands`; begun by `guards::begin_reload` only | |
 | why he is doing that | `control::control_line`, `mind::why`, `owner::who` | |
 

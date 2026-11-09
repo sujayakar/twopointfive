@@ -8,8 +8,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-pub(super) fn def_of(g: &Game, gd: GuardId) -> Option<RoomfightDefId> { g.fight.defs.iter().copied().find(|&d| g.tab.roomfight_def[d].gd == gd) }
-
 /// `FIGHT_SKILL.hostile`: `readonly skill = FIGHT_SKILL`, so g.fight.skill is the one table
 pub(super) fn hostile_skill(g: &Game) -> FightSkill { *g.fight.skill.get(RoomFightSkillKey::Hostile).unwrap() }
 
@@ -418,11 +416,8 @@ pub fn room_fight_break_off(g: &mut crate::game::Game, d: RoomfightDefId) {
     }
     if !ask { best = was; } else if best.map(|b| (b.door, b.spot)) != was.map(|w| (w.door, w.spot)) { g.stats.picture.moved += 1; }   // (the same object: the same door's spot, and one door's spots all differ)
     if let Some(b) = best {
-        let now_pos = g.ch[c].pos;
-        { let D = &mut g.tab.roomfight_def[d]; D.mode = DefMode::Move; D.move_kind = DefMoveKind::Fallback; D.came_by = Some(b.door); D.move_t = 0.0; D.stall_at = now_pos; D.stall_t = 0.0; }
-        crate::control::set_pinned(g, gd, false, "roomfight");
-        let speed = g.tune.guard_chase + 0.3;
-        crate::squad::order(g, gd, crate::squad::OrderPatch { goal: Some(Some(b.spot)), speed: Some(Some(speed)), face: Some(None), strafe: Some(Some(false)), aim_at: Some(None), upper: Some(Some(crate::character::UpperMode::Aim)), stance: Some(Some(crate::character::Stance::None)), crouch: Some(Some(false)), ..Default::default() });
+        let pace = g.tune.guard_chase + 0.3;
+        send(g, d, Leg { by: Some(b.door), ..Leg::to(b.spot, pace) }, "roomfight");
         g.fight.stats.fell_back += 1.0;
         let what = alloc::format!("falls back through {} to {},{}", door_name(g, b.door), js::to_fixed(b.spot[0], 1), js::to_fixed(b.spot[2], 1));
         room_fight_note(g, Some(gd), &what);
@@ -431,11 +426,8 @@ pub fn room_fight_break_off(g: &mut crate::game::Game, d: RoomfightDefId) {
         return;
     }
     if let Some(p) = crate::suppression::cover_from(g, gd, threat) {
-        let now_pos = g.ch[c].pos;
-        { let D = &mut g.tab.roomfight_def[d]; D.mode = DefMode::Move; D.move_kind = DefMoveKind::Cover; D.came_by = None; D.move_t = 0.0; D.stall_at = now_pos; D.stall_t = 0.0; }
-        crate::control::set_pinned(g, gd, false, "roomfight");
-        let speed = g.tune.guard_chase;
-        crate::squad::order(g, gd, crate::squad::OrderPatch { goal: Some(Some(p)), speed: Some(Some(speed)), face: Some(None), strafe: Some(Some(false)), aim_at: Some(None), upper: Some(Some(crate::character::UpperMode::Aim)), stance: Some(Some(crate::character::Stance::None)), crouch: Some(Some(true)), ..Default::default() });
+        let pace = g.tune.guard_chase;
+        send(g, d, Leg { cover: true, ..Leg::to(p, pace) }, "roomfight");
         g.fight.stats.took_cover += 1.0;
         room_fight_note(g, Some(gd), "takes cover");
         crate::game::game_say(g, gd, "cover \u{2014} get to cover!", None, None, None);
@@ -596,15 +588,7 @@ pub fn room_fight_rally(g: &mut crate::game::Game, d: RoomfightDefId) {
         g.tab.roomfight_def[d].rally_go = go;
         return;
     }
-    let time = g.time;
-    {
-        let def = &mut g.tab.roomfight_def[d];
-        def.mode = DefMode::Free;
-        def.free_at = time;
-        def.rally_at = f64::NAN;
-    }
-    crate::control::set_hold(g, gd, false, "roomfight");
-    crate::control::set_pinned(g, gd, false, "roomfight");
+    loose(g, gd, "roomfight");
     crate::mind::set_state(g, gd, crate::game::GuardState::Alert, "roomfight");
     crate::mind::raise(g, gd, 0.92, "roomfight");
     crate::mind::fix(g, gd, Some(v3::copy(at)), "roomfight"); // a new object: a whole write of the fix (doze.ts:244)
