@@ -57,6 +57,9 @@ pub fn kept(g: &Game, gd: GuardId, by: By) -> Option<&'static str> {
     TASKERS.iter().find(|t| t.by.rank() > by.rank() && has(g, gd, t.by)).map(|t| t.name)
 }
 
+/// a tasker's name
+pub fn name_of(by: By) -> Option<&'static str> { TASKERS.iter().find(|t| t.by == by).map(|t| t.name) }
+
 /// who has him, for what reason and since when; None: nobody
 pub fn who(g: &Game, gd: GuardId) -> Option<(&'static str, &'static str, f64)> {
     let c = g.gd[gd].ch;

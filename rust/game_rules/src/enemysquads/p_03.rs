@@ -79,7 +79,7 @@ pub fn follow(g: &mut crate::game::Game, q: EnemysquadsSquadId, s: GuardId, d: R
             Some(xd) => xd,
             None => continue,
         };
-        if def!(g, xd).mode != crate::roomfight::DefMode::Hold {
+        if !crate::roomfight::at_post(g, xd) {
             continue;
         }
         {
@@ -212,7 +212,7 @@ pub fn back(g: &mut crate::game::Game, q: EnemysquadsSquadId, s: GuardId, d: Roo
             Some(xd) => xd,
             None => continue,
         };
-        if def!(g, xd).mode == crate::roomfight::DefMode::Free {
+        if crate::roomfight::is_loose(g, xd) {
             continue;
         }
         let from = {
@@ -231,7 +231,7 @@ pub fn back(g: &mut crate::game::Game, q: EnemysquadsSquadId, s: GuardId, d: Roo
         }
         // (`X.pt[0] = at[0]; X.pt[2] = at[2]` in place, enemysquads.ts:778: a fix or a cover that IS the point moves with it)
         { let was = def!(g, xd).pt; crate::roomfight::def_move_pt(g, xd, [at[0], was[1], at[2]]); }
-        crate::pressure::run(g, xd, from, None, Some(0.3));
+        crate::roomfight::run(g, xd, from, None, 0.3, crate::owner::by::SQUAD_LEG);
         names.push(x);
     }
     if names.is_empty() {
@@ -430,7 +430,7 @@ pub fn look_out(g: &mut crate::game::Game) {
     let defs = g.fight.defs.clone();
     for dd in defs.iter() {
         let man = def!(g, *dd).gd;
-        if alive(g, man) && def!(g, *dd).mode == crate::roomfight::DefMode::Free {
+        if alive(g, man) && crate::roomfight::is_loose(g, *dd) {
             return;
         }
     }
@@ -438,7 +438,7 @@ pub fn look_out(g: &mut crate::game::Game) {
     if r.is_some() {
         for dd in defs.iter() {
             let man = def!(g, *dd).gd;
-            if alive(g, man) && def!(g, *dd).mode == crate::roomfight::DefMode::Hold && def!(g, *dd).room == r {
+            if alive(g, man) && crate::roomfight::at_post(g, *dd) && def!(g, *dd).room == r {
                 return;
             }
         }
@@ -650,7 +650,7 @@ pub fn went_silent(g: &mut crate::game::Game, q: EnemysquadsSquadId, m: GuardId,
                         x.look_t = None;
                     }
                     if let Some(d) = def_of(g, man) {
-                        if def!(g, d).mode == crate::roomfight::DefMode::Move {
+                        if crate::roomfight::on_leg_of(g, d, crate::owner::by::SQUAD_LEG) {
                             walk(g, d, was_at);
                         }
                     }
@@ -731,7 +731,7 @@ pub fn bang_t(g: &mut crate::game::Game, x: GuardId) -> f64 {
 }
 /// A looker's leg: pressure.ts's scripted leg, at the pace of a man going to look.   (enemysquads.ts walk)
 pub fn walk(g: &mut crate::game::Game, d: RoomfightDefId, to: V3) {
-    crate::pressure::run(g, d, to, None, None);
+    crate::roomfight::run(g, d, to, None, 0.0, crate::owner::by::SQUAD_LEG);
     let gd = def!(g, d).gd;
     let speed = g.tune.guard_investigate;
     crate::squad::order(g, gd, crate::squad::OrderPatch { speed: Some(Some(speed)), ..Default::default() });
@@ -1319,7 +1319,7 @@ pub fn turn_back(g: &mut crate::game::Game, q: EnemysquadsSquadId, who: GuardId)
                 x.from
             };
             if let Some(d) = def_of(g, man) {
-                if def!(g, d).mode == crate::roomfight::DefMode::Move {
+                if crate::roomfight::on_leg_of(g, d, crate::owner::by::SQUAD_LEG) {
                     walk(g, d, from);
                 }
             }
@@ -1432,15 +1432,15 @@ pub fn looks(g: &mut crate::game::Game, q: EnemysquadsSquadId, l: GuardId) -> bo
         (r.back, r.spot, r.from, r.t0, r.news0, r.about, r.all == Some(true))
     };
     if sq!(g, q).state == SquadState::Contact {
-        if def!(g, d).mode == crate::roomfight::DefMode::Move {
+        if crate::roomfight::on_leg_of(g, d, crate::owner::by::SQUAD_LEG) {
             let p = pos(g, gd);
             let to = if !l_back && flat(p, l_spot) < flat(p, l_from) { l_spot } else { l_from };
-            crate::pressure::run(g, d, to, None, None);
+            crate::roomfight::run(g, d, to, None, 0.0, crate::owner::by::SQUAD_LEG);
         }
         return true;
     }
     let eyes = g.time - g.gd[gd].last_seen_t < 1.0 && noticed(g, gd);
-    if eyes || def!(g, d).mode != crate::roomfight::DefMode::Move {
+    if eyes || !crate::roomfight::on_leg_of(g, d, crate::owner::by::SQUAD_LEG) {
         if eyes {
             let p = pos(g, gd);
             if room_of(g, q, p, Some(1.0)).is_none() {
@@ -1570,7 +1570,7 @@ pub fn looks(g: &mut crate::game::Game, q: EnemysquadsSquadId, l: GuardId) -> bo
         let y_gd = *y_gd;
         if y_gd != gd && *y_who == who && !*y_back && alive(g, y_gd) && g.gd[y_gd].held.is_none() {
             if let Some(yd) = def_of(g, y_gd) {
-                if def!(g, yd).mode == crate::roomfight::DefMode::Move {
+                if crate::roomfight::on_leg_of(g, yd, crate::owner::by::SQUAD_LEG) {
                     mate_out = true;
                     break;
                 }

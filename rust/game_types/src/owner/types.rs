@@ -4,7 +4,7 @@ use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// A tasker that may have a man, or several: a bit each, the higher the stronger. They are or-ed (`by::PRESS | by::WALK`).
-#[derive(Clone, Copy, PartialEq, Eq, Debug, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug, Default, crate::bytes::ToBytes)]
 pub struct By(pub u32);
 impl core::ops::BitOr for By { type Output = By; fn bitor(self, o: By) -> By { By(self.0 | o.0) } }
 impl By {

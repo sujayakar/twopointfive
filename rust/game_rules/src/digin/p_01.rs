@@ -460,7 +460,7 @@ pub fn wants_deep(g: &Game, d: RoomfightDefId, r: &crate::digin::RoomSt) -> bool
 
 /// The room fight's own 'move' mode, by his script's legs. (digin.ts move)
 pub fn move_(g: &mut Game, d: RoomfightDefId, goal: V3, speed: f64) {
-    crate::roomfight::send(g, d, crate::roomfight::Leg::to(goal, speed), "digin");
+    crate::roomfight::send(g, d, crate::roomfight::Leg::to(goal, speed), crate::owner::by::DIG);
 }
 
 /// The fear he keeps on his door. (digin.ts fear)

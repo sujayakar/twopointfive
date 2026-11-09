@@ -685,7 +685,7 @@ pub fn cues_squad_voice(g: &crate::game::Game, name: &str, by: &str) -> Option<G
     }
     if men.is_empty() { return None; }
     if let Some(&m) = men.iter().find(|&&m| g.gd[m].callsign == by) { return Some(m); }
-    let holding = men.iter().copied().find(|&m| g.fight.defs.iter().any(|&d| g.tab.roomfight_def[d].gd == m && g.tab.roomfight_def[d].mode == crate::roomfight::DefMode::Hold));
+    let holding = men.iter().copied().find(|&m| g.fight.defs.iter().any(|&d| g.tab.roomfight_def[d].gd == m && crate::roomfight::at_post(g, d)));
     Some(holding.unwrap_or(men[0]))
 }
 
@@ -724,7 +724,7 @@ pub fn cues_tick(g: &mut crate::game::Game) {
         let c = g.gd[gd].ch;
         let sight = t - g.gd[gd].last_seen_t;
         let still = m::hyp2(g.ch[c].vel[0], g.ch[c].vel[2]) < 0.3;
-        let hold = g.tab.roomfight_def[d].mode == crate::roomfight::DefMode::Hold;
+        let hold = crate::roomfight::at_post(g, d);
         let on_player = matches!(g.gd[gd].foe, Some(crate::game::Foe::Player));
         let faced_down = |g: &Game| -> Option<PlayerId> {
             let f = crate::seats::faced_man(g, gd);

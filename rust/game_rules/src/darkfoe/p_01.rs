@@ -289,7 +289,7 @@ pub fn dark_foe_spot(g: &mut crate::game::Game, d: RoomfightDefId) -> Option<cra
 /// The room fight's own 'move' leg: his script's legs, his own senses, planted where he gets to.   (darkfoe.ts walk)
 pub fn walk(g: &mut crate::game::Game, d: RoomfightDefId, goal: V3) {
     let pace = g.tune.guard_investigate * g.k.darkfoe.stumble_k;
-    crate::roomfight::send(g, d, crate::roomfight::Leg::to(goal, pace), "darkfoe");
+    crate::roomfight::send(g, d, crate::roomfight::Leg::to(goal, pace), crate::owner::by::BREAKER);
 }
 
 /// Why a blind man with no light may not leave his post now (None = he may).   (darkfoe.ts darkFoeKept)
@@ -300,7 +300,7 @@ pub fn dark_foe_kept(g: &mut crate::game::Game, gd: GuardId, d: Option<Roomfight
     };
     let Some(d) = d else { return Some(String::from("not a room's defender")) };
     if let Some(who) = crate::owner::kept(g, gd, crate::owner::by::BREAKER) { return Some(String::from(who)); }
-    if g.tab.roomfight_def[d].mode != crate::roomfight::DefMode::Hold { return Some(String::from("on the move")); }
+    if !crate::roomfight::at_post(g, d) { return Some(String::from("on the move")); }
     if g.tab.roomfight_def[d].room.is_none() { return Some(String::from("no room of his own")); }
     if g.gd[gd].script.is_some() { return Some(String::from("on a script")); }
     if g.gd[gd].state != crate::game::GuardState::Alert { return Some(String::from("not alert")); }

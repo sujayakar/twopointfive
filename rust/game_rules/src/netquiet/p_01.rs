@@ -722,7 +722,7 @@ pub fn sync_last_man(g: &mut crate::game::Game) {
 
 /// at his post: holding his room, on nobody's scripted leg (netquiet.ts posted)
 pub fn posted(g: &crate::game::Game, gd: GuardId, d: RoomfightDefId) -> bool {
-    g.tab.roomfight_def[d].mode == crate::roomfight::DefMode::Hold && g.gd[gd].hold && g.gd[gd].script.is_none()
+    crate::roomfight::at_post(g, d) && g.gd[gd].hold && g.gd[gd].script.is_none()
 }
 
 /// once a frame, after morale's tick: the lines owed, the whip, a step of the last man's act (netquiet.ts netQuietTick)
@@ -938,7 +938,7 @@ fn tick_man(g: &mut Game, gd: GuardId, dt: f64) {
             n.last = DONE;
             return;
         };
-        let out = g.tab.roomfight_def[d].mode == crate::roomfight::DefMode::Free && g.gd[gd].script.is_none();
+        let out = crate::roomfight::is_loose(g, d) && g.gd[gd].script.is_none();
         if !posted(g, gd, d) && !out {
             return;
         }
@@ -964,7 +964,7 @@ fn tick_man(g: &mut Game, gd: GuardId, dt: f64) {
             g.stats.netquiet.backs += 1;
             // the room fight's own scripted leg, walked backwards, his gun on the doors
             let aim = [to[0] + m::sin(a.yaw) * 6.0, 1.1, to[2] + m::cos(a.yaw) * 6.0];
-            crate::roomfight::send(g, d, crate::roomfight::Leg { face: Some(a.yaw), aim: Some(aim), ..crate::roomfight::Leg::to(to, k.back_speed) }, "netquiet");
+            crate::roomfight::send(g, d, crate::roomfight::Leg { face: Some(a.yaw), aim: Some(aim), ..crate::roomfight::Leg::to(to, k.back_speed) }, crate::owner::by::LAST_MAN);
         } else {
             settle(g, gd, d);
         }
@@ -975,7 +975,7 @@ fn tick_man(g: &mut Game, gd: GuardId, dt: f64) {
             n.last = DONE;
             return;
         };
-        if g.tab.roomfight_def[d].mode != crate::roomfight::DefMode::Move {
+        if !crate::roomfight::on_leg_of(g, d, crate::owner::by::LAST_MAN) {
             settle(g, gd, d);
         }
         return;
@@ -985,7 +985,7 @@ fn tick_man(g: &mut Game, gd: GuardId, dt: f64) {
     }
     let Some(spot) = n.spot else { return };
     let Some(d) = d else { return };
-    if g.tab.roomfight_def[d].mode != crate::roomfight::DefMode::Hold {
+    if !crate::roomfight::at_post(g, d) {
         return;
     }
     if flat(pos_of(g, gd), spot) > 1.0 {

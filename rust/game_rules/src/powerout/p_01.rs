@@ -205,7 +205,7 @@ pub fn floor_watched(g: &mut crate::game::Game, gd: GuardId) -> f64 {
 pub fn power_out_kept(g: &mut crate::game::Game, d: RoomfightDefId) -> Option<String> {
     let gd = g.tab.roomfight_def[d].gd;
     if let Some(who) = crate::owner::kept(g, gd, crate::owner::by::BREAKER) { return Some(who.into()); }
-    if g.tab.roomfight_def[d].mode != crate::roomfight::DefMode::Hold { return Some("on the move".into()); }
+    if !crate::roomfight::at_post(g, d) { return Some("on the move".into()); }
     if g.gd[gd].script.is_some() { return Some("on a script".into()); }
     if roused(g, gd) { return Some("in a fight".into()); }
     if crate::rescue::rescue_crew_hides(g, gd) || crate::rescue::rescue_captor(g) == Some(gd) { return Some("the captor / lying in wait".into()); }
@@ -307,7 +307,7 @@ pub fn calm_of(g: &crate::game::Game, d: RoomfightDefId) -> crate::powerout::Cal
 
 /// a leg of the walk: pressure.ts's scripted leg at the pace of a man going to look. (powerout.ts walk)
 pub fn walk(g: &mut crate::game::Game, d: RoomfightDefId, to: V3) {
-    crate::pressure::run(g, d, to, None, None);
+    crate::roomfight::run(g, d, to, None, 0.0, crate::owner::by::BREAKER);
     let gd = g.tab.roomfight_def[d].gd;
     let speed = g.tune.guard_investigate;
     crate::squad::order(g, gd, crate::squad::OrderPatch { speed: Some(Some(speed)), ..Default::default() });
@@ -387,7 +387,7 @@ pub fn decide_out(g: &mut crate::game::Game) {
             let at = i;
             i += 1;
             let Some(d) = def_of(g, gd) else { continue };
-            if man(g, at).phase != Phase::Back || g.tab.roomfight_def[d].mode != crate::roomfight::DefMode::Move {
+            if man(g, at).phase != Phase::Back || !crate::roomfight::on_leg_of(g, d, crate::owner::by::BREAKER) {
                 continue;
             }
             man(g, at).phase = Phase::Out;
@@ -597,7 +597,7 @@ pub fn decide(g: &mut crate::game::Game, defs: &[RoomfightDefId]) {
         js::sort_by(&mut ways, |a, b| a.1.l - b.1.l);
         let mut in_room: JsMap<Option<RoomfightRoomId>, f64> = JsMap::new();
         for &d in &live {
-            if g.tab.roomfight_def[d].mode == crate::roomfight::DefMode::Hold {
+            if crate::roomfight::at_post(g, d) {
                 let room = g.tab.roomfight_def[d].room;
                 let n = in_room.get(room).copied().unwrap_or(0.0);
                 in_room.set(room, n + 1.0);
@@ -764,7 +764,7 @@ fn all_back(g: &mut Game) {
     while j < st(g).men.len() {
         let x = man(g, j).gd;
         if let Some(xd) = def_of(g, x) {
-            if g.tab.roomfight_def[xd].mode == crate::roomfight::DefMode::Move && man(g, j).phase != Phase::Wait {
+            if crate::roomfight::on_leg_of(g, xd, crate::owner::by::BREAKER) && man(g, j).phase != Phase::Wait {
                 man(g, j).phase = Phase::Back;
                 man(g, j).tries = 0.0;
                 let from = man(g, j).from;
@@ -815,7 +815,7 @@ fn step_man(g: &mut Game, i: usize, lever: Option<usize>, defs: &[RoomfightDefId
     let from = man(g, i).from;
     let heard0 = man(g, i).heard0;
     let at_lever = role == ManRole::Lever && man(g, i).phase == Phase::There;
-    if g.tab.roomfight_def[d].mode != crate::roomfight::DefMode::Move {
+    if !crate::roomfight::on_leg_of(g, d, crate::owner::by::BREAKER) {
         // (met on the way: tickMove planted him, roused — its man)
         event(g, PowerOutEventWhat::Abort, Some(gd), "the room fight has him where he stands");
         return false;
@@ -830,13 +830,13 @@ fn step_man(g: &mut Game, i: usize, lever: Option<usize>, defs: &[RoomfightDefId
             s.fell = None;
             s.word = true;
             crate::game::game_say(g, gd, "he's down at the breaker — that's them! Stay on your doors!", Some(true), None, None);
-            crate::pressure::run(g, d, from, None, None);
+            crate::roomfight::run(g, d, from, None, 0.0, crate::owner::by::BREAKER);
             event(g, PowerOutEventWhat::Abort, Some(gd), "sees the man he came with on the floor: says so, and back to his post at a run");
             return false;
         }
     }
     if (fight || roused(g, gd) || loud_heard(g, gd) > heard0) && !(at_lever && bo_active(g) && !bo_permanent(g)) {
-        crate::pressure::run(g, d, from, None, None); // (the leg ends in the room fight's plant: its man from here)
+        crate::roomfight::run(g, d, from, None, 0.0, crate::owner::by::BREAKER); // (the leg ends in the room fight's plant: its man from here)
         let why = if roused(g, gd) {
             String::from("he is roused")
         } else if loud_heard(g, gd) > heard0 {
@@ -1051,9 +1051,9 @@ pub fn stand_down(g: &mut crate::game::Game) {
     while i < st(g).men.len() {
         let gd = man(g, i).gd;
         if let Some(d) = def_of(g, gd) {
-            if g.tab.roomfight_def[d].mode == crate::roomfight::DefMode::Move && man(g, i).phase != Phase::Wait && alive(g, gd) && g.gd[gd].held.is_none() {
+            if crate::roomfight::on_leg_of(g, d, crate::owner::by::BREAKER) && man(g, i).phase != Phase::Wait && alive(g, gd) && g.gd[gd].held.is_none() {
                 let from = man(g, i).from;
-                crate::pressure::run(g, d, from, None, None);
+                crate::roomfight::run(g, d, from, None, 0.0, crate::owner::by::BREAKER);
             }
         }
         i += 1;

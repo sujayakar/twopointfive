@@ -53,7 +53,7 @@ pub fn room_fight_adopt(g: &mut crate::game::Game, gd: GuardId) -> RoomfightDefI
         glance_to: -1.0, glance_until: -1.0, glance_next, pt: front,
         heard_t: H.last_t, cnt: DefCnt { shots: H.shots, kick: H.kick, bang: H.bang, small: H.small }, noise_at: None, noise_t: -100.0, noise_out: false,
         last_state: String::from(g.gd[gd].state.as_str()), last_seen: g.gd[gd].last_seen_t, fix_keep: -1.0, pre: false, nerve, lost_at: 0.0, moved_at: -100.0,
-        mode: DefMode::Hold, move_kind: DefMoveKind::Cover, move_t: 0.0, came_by: None, stall_at: p, stall_t: 0.0, free_at: 0.0,
+        mode: DefMode::Hold, move_kind: DefMoveKind::Cover, move_t: 0.0, leg_by: crate::owner::By::NOBODY, came_by: None, stall_at: p, stall_t: 0.0, free_at: 0.0,
         burst: DefBurst { until: -1.0, n: 0.0, next: 0.0, broke: false, daze: 0.0 }, bolt_until: -1.0, bolt_from: None, pt_stamp: None,
     };
     g.tab.roomfight_def.push(row)
@@ -334,10 +334,10 @@ pub fn room_fight_threat_of(g: &crate::game::Game, d: RoomfightDefId) -> V3 {
 /// a man on a post caught unaware and alone goes as a man whose nerve has gone. None = no post of this file's.   (roomfight.ts bolt)
 pub fn room_fight_bolt(g: &mut crate::game::Game, gd: GuardId, clear_secs: f64) -> Option<bool> {
     let d = def_of(g, gd)?;
-    if g.tab.roomfight_def[d].mode != DefMode::Hold || is_dead(g, gd) || g.gd[gd].held.is_some() { return Some(false); }
+    if !crate::roomfight::at_post(g, d) || is_dead(g, gd) || g.gd[gd].held.is_some() { return Some(false); }
     let (moved, out, pic) = (g.tab.roomfight_def[d].moved_at, g.fight.stats.fall_back_out, g.stats.picture.moved);
     room_fight_break_off(g, d);
-    if g.tab.roomfight_def[d].mode == DefMode::Hold {
+    if crate::roomfight::at_post(g, d) {
         g.tab.roomfight_def[d].moved_at = moved; g.fight.stats.fall_back_out = out; g.stats.picture.moved = pic;
         return Some(false);
     }
@@ -377,7 +377,7 @@ pub fn room_fight_break_off(g: &mut crate::game::Game, d: RoomfightDefId) {
     g.tab.roomfight_def[d].moved_at = g.time;
     let rp = crate::enemysquads::squad_rally(g, gd, threat);
     if let Some(rp) = rp {
-        crate::pressure::run(g, d, rp, None, Some(0.3));
+        run(g, d, rp, None, 0.3, crate::owner::By::NOBODY);
         g.fight.stats.fell_back += 1.0;
         room_fight_note(g, Some(gd), "falls back to his squad's rally point");
         crate::game::game_say(g, gd, "fall back \u{2014} back to the others!", None, None, None);
@@ -417,7 +417,7 @@ pub fn room_fight_break_off(g: &mut crate::game::Game, d: RoomfightDefId) {
     if !ask { best = was; } else if best.map(|b| (b.door, b.spot)) != was.map(|w| (w.door, w.spot)) { g.stats.picture.moved += 1; }   // (the same object: the same door's spot, and one door's spots all differ)
     if let Some(b) = best {
         let pace = g.tune.guard_chase + 0.3;
-        send(g, d, Leg { by: Some(b.door), ..Leg::to(b.spot, pace) }, "roomfight");
+        send(g, d, Leg { by: Some(b.door), ..Leg::to(b.spot, pace) }, crate::owner::By::NOBODY);
         g.fight.stats.fell_back += 1.0;
         let what = alloc::format!("falls back through {} to {},{}", door_name(g, b.door), js::to_fixed(b.spot[0], 1), js::to_fixed(b.spot[2], 1));
         room_fight_note(g, Some(gd), &what);
@@ -427,7 +427,7 @@ pub fn room_fight_break_off(g: &mut crate::game::Game, d: RoomfightDefId) {
     }
     if let Some(p) = crate::suppression::cover_from(g, gd, threat) {
         let pace = g.tune.guard_chase;
-        send(g, d, Leg { cover: true, ..Leg::to(p, pace) }, "roomfight");
+        send(g, d, Leg { cover: true, ..Leg::to(p, pace) }, crate::owner::By::NOBODY);
         g.fight.stats.took_cover += 1.0;
         room_fight_note(g, Some(gd), "takes cover");
         crate::game::game_say(g, gd, "cover \u{2014} get to cover!", None, None, None);
