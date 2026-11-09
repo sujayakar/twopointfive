@@ -82,9 +82,6 @@ fn mk(aim: V3) -> OpFlow {
 }
 
 // ---------------------------------------------------------------- the drill
-/// Flat distance.
-fn flat(a: V3, b: V3) -> f64 { m::hyp2(a[0] - b[0], a[2] - b[2]) }
-
 /// A drill, not yet started.
 pub(super) fn breach_drill_new(g: &crate::game::Game, plan: &crate::scene_level::BreachPlan, a: GuardId, b: GuardId, hostiles: &[GuardId], live: crate::breach::BreachLive) -> crate::breach::BreachDrill {
     let mut d = BreachDrill::blank();
@@ -144,7 +141,7 @@ fn breach_drill_advance(g: &mut crate::game::Game, gd: GuardId, wps: &mut Vec<V3
     let pass = pass.unwrap_or(0.7);
     if crate::condition::down(g, g.gd[gd].ch) { return true; }
     let c = g.gd[gd].ch;
-    while wps.len() > 1 && flat(g.ch[c].pos, wps[0]) < pass {
+    while wps.len() > 1 && v3::dist_xz(g.ch[c].pos, wps[0]) < pass {
         wps.remove(0);
         crate::squad::order(g, gd, OP { goal: Some(Some(wps[0])), ..Default::default() });
     }
@@ -265,7 +262,7 @@ pub(super) fn breach_drill_tick(g: &mut crate::game::Game, dt: f64) {
         Phase::Approach => {
             let base = dr!(g).t_run;
             let stack0 = dr!(g).plan.stack[0];
-            if flat(g.ch[ca].pos, stack0) < 3.2 || t > base + 16.0 {
+            if v3::dist_xz(g.ch[ca].pos, stack0) < 3.2 || t > base + 16.0 {
                 dr!(g).phase = Phase::Stack;
                 dr!(g).t_stack = t;
                 breach_drill_beat(g, "approach-done");
@@ -297,7 +294,7 @@ pub(super) fn breach_drill_tick(g: &mut crate::game::Game, dt: f64) {
         }
         Phase::Breach => {
             let (from, kf, t_go) = (dr!(g).plan.kick_from, dr!(g).plan.kick_face, dr!(g).t_go);
-            let planted = a_in && flat(g.ch[ca].pos, from) < 0.07 && m::abs(v3::wrap_angle(g.ch[ca].body_yaw - kf)) < 0.1;
+            let planted = a_in && v3::dist_xz(g.ch[ca].pos, from) < 0.07 && m::abs(v3::wrap_angle(g.ch[ca].body_yaw - kf)) < 0.1;
             if (planted && t > t_go + 0.5) || t > t_go + 1.8 {
                 crate::squad::order(g, a, OP { goal: Some(None), aim_at: Some(None), ..Default::default() });
                 crate::character::anim_kick_door(g, ca, Some(crate::character::AnimKickDoorOpts { leg: Some(crate::character::AnimKickDoorOptsLeg::Left) }));
@@ -354,7 +351,7 @@ fn tick_kick(g: &mut Game, t: f64, d: DoorId) {
     if dr!(g).t_flung.is_nan() && (crate::character::anim_kick_impact(g, c) || crate::character::anim_kick_time(g, c) >= crate::character::KICK_IMPACT || !crate::character::anim_kicking(g, c)) {
         dr!(g).t_flung = t;
         let (from, kf, fling) = (dr!(g).plan.kick_from, dr!(g).plan.kick_face, dr!(g).plan.fling);
-        let on_it = flat(g.ch[c].pos, from) < 0.4 && m::abs(v3::wrap_angle(g.ch[c].body_yaw - kf)) < 0.35;
+        let on_it = v3::dist_xz(g.ch[c].pos, from) < 0.4 && m::abs(v3::wrap_angle(g.ch[c].body_yaw - kf)) < 0.35;
         if m::abs(crate::doors::door_angle(g, d)) < 1.4 {
             crate::doors::door_set_latched(g, d, false);
             crate::doors::door_set_closing(g, d, false);
@@ -527,7 +524,7 @@ fn breach_drill_tick_flow(g: &mut crate::game::Game, i: usize, dt: f64) {
     match dr!(g).flows[i].st {
         FlowSt::Into => {
             let last = fl.into[fl.into.len() - 1];
-            if flat(g.ch[c].pos, last) < 0.55 || t > dr!(g).flows[i].t0 + 2.2 {
+            if v3::dist_xz(g.ch[c].pos, last) < 0.55 || t > dr!(g).flows[i].t0 + 2.2 {
                 let f = &mut dr!(g).flows[i];
                 f.st = FlowSt::Corner;
                 f.in_at = t;
@@ -716,10 +713,6 @@ fn breach_drill_staged_exchange(g: &mut crate::game::Game, i: usize, dt: f64) ->
 mod tests {
     use super::*;
 
-    #[test]
-    fn a_distance_on_the_floor_ignores_height() {
-        assert_eq!(flat([1.0, 0.0, 2.0], [4.0, 9.0, 6.0]), 5.0);
-    }
 
     #[test]
     fn live_lines_by_charge_and_key() {

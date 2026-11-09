@@ -135,7 +135,7 @@ pub(super) fn rescue_clock(g: &mut crate::game::Game, dt: f64) {
         let mut v = mine[0];
         for &b in &mine[1..] {
             let (pa, pb) = (pos_of(g, v), pos_of(g, b));
-            if !(flat(pa, cp) <= flat(pb, cp)) { v = b; }
+            if !(v3::dist_xz(pa, cp) <= v3::dist_xz(pb, cp)) { v = b; }
         }
         let at = chest_of(g, v);
         let def = crate::roomfight::def_of(g, cap);
@@ -272,7 +272,7 @@ pub(super) fn rescue_voices(g: &mut crate::game::Game) {
     }
     if rescue_over(g) || g.rescue.act.is_some() || alive.is_empty() || !g.rescue.secured_at.is_nan() { return; }
     if let Some(n) = g.rescue.noise {
-        if !g.rescue.said.has(String::from("h:entry")) && (crate::squad::in_bounds(n, b, None) || flat(n, rescue_room_point(g, RescueRoomPointWhich::Outside)) < 3.0) {
+        if !g.rescue.said.has(String::from("h:entry")) && (crate::squad::in_bounds(n, b, None) || v3::dist_xz(n, rescue_room_point(g, RescueRoomPointWhich::Outside)) < 3.0) {
             g.rescue.said.add(String::from("h:entry"));
             let h = next_voice(g, &alive);
             let other = alive.iter().copied().find(|&o| o != h);
