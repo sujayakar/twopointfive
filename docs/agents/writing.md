@@ -19,7 +19,7 @@ carry the voice of these notes into the game. They run noun first with no contra
 | a row beside what Sam can use | `interact_view`, `player/p_07.rs` | the view |
 | squad rows and answers | `orders/`, `orders/rows/`, `doortools/` (`squad.md`) | the view |
 | spoken lines | `rust/game_types/src/dialogue/types.rs` and each rule's own tables (`dialogue.md`) | the view |
-| menus, the kit's walkthrough | `src/ui/`, for instance `kitGuide.ts` | the page |
+| menus | `src/ui/`, for instance `startpage.ts` | the page |
 | what a key is called | `src/host/keymap.ts` | `keyText`, `capsPlain` |
 
 `tools/qa/writing-check.ts` and `tools/qa/mystery-check.ts` are the checks; `tools/qa/lessonwords.ts` writes a token out for them.
