@@ -64,7 +64,7 @@ fn far_off_it_arms_and_the_blast_takes_him_once() {
         let (armed, flown, _) = p.forty_end().expect("the round's end is logged");
         assert!(armed && flown >= arm && (flown - 14.0).abs() < 1.2, "seed {s}: armed {armed} after {flown:.2} m");
         assert_eq!(p.forty_duds(), 0, "seed {s}: a dud after a burst");
-        assert!(p.log().iter().any(|l| l.contains("40 mm grenade") && l.contains("1 down")), "seed {s}: the log: {:?}", p.log());
+        assert_eq!(p.g.m.frag.frag_log.last().map(|r| r.killed - r.finished), Some(1.0), "seed {s}: one down by it");
         drop(p);
 
         let (mut p, man, _) = forty_stage(14.0, s);

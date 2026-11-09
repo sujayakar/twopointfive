@@ -121,7 +121,7 @@ pub fn settle(g: &mut crate::game::Game, gd: GuardId, j: &mut crate::wandorder::
     lens_out(g, gd, j);
     g.m.wandorder.states.get_mut(k).unwrap().jobs.delete(gd);
     if let Some(l) = line.filter(|l| !l.is_empty()) {
-        crate::game::game_say(g, gd, l, None, None, None);
+        crate::game::game_say(g, gd, l, None, None);
     }
     let to = match j.aside {
         Some(a) if moved && crate::orders::squad_orders_reach(g, gd, a.pos).is_none() => Some(a),
@@ -299,7 +299,7 @@ pub fn tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignmentId) {
     put_job(g, gd, j);
     if through {
         g.stats.wandorder.live += 1;
-        crate::game::game_say(g, gd, "wand's in.", None, None, None);
+        crate::game::game_say(g, gd, "wand's in.", None, None);
     }
     let what = if j.live { "looking under" } else { "feeding the wand" };
     let there = alloc::format!("{} · {}", what, crate::orders::door_words(g, d));

@@ -146,14 +146,14 @@ pub fn door_tools_frame_answer(g: &mut crate::game::Game, op: DoorOpId) -> bool 
     if !door_tools_pickable(g, d) {
         g.door_tools.stats.no_boot += 1.0;
         let said = door_tools_no_boot(g, &crate::seats::here(g), d);
-        crate::game::game_say(g, lead, &said, None, None, None);
+        crate::game::game_say(g, lead, &said, None, None);
         door_tools_end(g, op, "opens toward us · no boot");
         return true;
     }
     if crate::silent::silent_no_boot(g) { return false; }
     door_tools_to_pick(g, op);
     door_tools_beat(g, op, "opens toward us: pick");
-    crate::game::game_say(g, lead, "locked, and it opens toward us. picking it.", None, None, None);
+    crate::game::game_say(g, lead, "locked, and it opens toward us. picking it.", None, None);
     true
 }
 
@@ -260,7 +260,7 @@ pub fn door_tools_test(g: &mut crate::game::Game, d: DoorId, side: f64, gd: Guar
     door_tools_note(g, &line);
     if say {
         let said = if out { format!("{}.", door_tools_shut_why(g, d)) } else { String::from("it's not locked.") };
-        crate::game::game_say(g, gd, &said, None, None, None);
+        crate::game::game_say(g, gd, &said, None, None);
     }
     out
 }
@@ -333,7 +333,7 @@ pub fn door_tools_halt_at(g: &mut crate::game::Game, op: DoorOpId) -> bool {
 pub fn door_tools_shut_said(g: &mut crate::game::Game, lead: GuardId, d: DoorId) -> String {
     let why = door_tools_shut_why(g, d);
     g.door_tools.stats.halted += 1.0;
-    crate::game::game_say(g, lead, &format!("{}. holding on it — your call.", why), None, None, None);
+    crate::game::game_say(g, lead, &format!("{}. holding on it — your call.", why), None, None);
     why
 }
 
@@ -708,7 +708,7 @@ pub fn door_tools_threshold_then(g: &mut crate::game::Game, what: crate::doortoo
             crate::doortools::DoorToolsThresholdThenWhat::Leave => {
                 door_tools_held_beat(g, op);
                 let lead = g.tab.doortools_door_op[op].lead;
-                crate::game::game_say(g, lead, "coming off the door.", None, None, None);
+                crate::game::game_say(g, lead, "coming off the door.", None, None);
                 door_tools_end(g, op, "stood down");
                 let them = g.tab.doortools_door_op[op].men.clone();
                 let mut left = Vec::new();

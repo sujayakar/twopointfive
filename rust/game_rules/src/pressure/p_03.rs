@@ -7,7 +7,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-fn say_radio(g: &mut Game, gd: GuardId, text: &str) { crate::game::game_say(g, gd, text, Some(true), None, None); }
+fn say_radio(g: &mut Game, gd: GuardId, text: &str) { crate::game::game_say(g, gd, text, Some(true), None); }
 /// `alive(X) && X.mode === 'hold'`   (standTo's holds)
 fn holds(g: &mut Game, x: RoomfightDefId) -> bool { alive(g, x) && g.tab.roomfight_def[x].mode == crate::roomfight::DefMode::Hold }
 /// `F.defs.find(holds)`

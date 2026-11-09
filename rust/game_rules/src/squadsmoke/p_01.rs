@@ -174,7 +174,7 @@ pub fn row_smoke_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTa
     let it = crate::throwables::throwables_spawn(g, crate::throwables::ItemKind::Smoke, th.from, th.sol.v0, Some(opts));
     g.tab.item[it].on_bounce = Some(crate::throwables::ItemBounce::Can);
     crate::character::anim_toss_item(g, c, Some(crate::character::TOSS_QUICK));
-    crate::game::game_say(g, th.gd, "smoke out.", None, None, None);
+    crate::game::game_say(g, th.gd, "smoke out.", None, None);
     let callsign = g.gd[th.gd].callsign.clone();
     let serial = g.serial();
     g.orders.log.push(crate::orders::SquadOrdersLogItem {

@@ -64,7 +64,7 @@ pub fn room_fight_speak(g: &mut crate::game::Game, o: RoomfightOpId, text: &str,
     let gap = gap.unwrap_or(1.2);
     if g.time - g.tab.roomfight_op[o].said_t < gap { return; }
     g.tab.roomfight_op[o].said_t = g.time;
-    crate::game::game_say(g, g.tab.roomfight_op[o].gd, text, None, None, None);
+    crate::game::game_say(g, g.tab.roomfight_op[o].gd, text, None, None);
 }
 
 /// One teammate's frame in the fight: his eyes, who his muzzle is on, his trigger. (roomfight.ts tickOp)

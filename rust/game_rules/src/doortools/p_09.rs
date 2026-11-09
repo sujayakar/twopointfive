@@ -70,9 +70,7 @@ pub fn door_tools_blow_raw(g: &mut crate::game::Game, c_2: Option<ChargeId>) -> 
     let spot = door_pt(g, d, w * 0.7, 0.2, into, Some(0.5));
     let it = crate::throwables::throwables_spawn(g, crate::throwables::ItemKind::Flash, spot, [0.0, 0.0, 0.0], Some(crate::throwables::ThrowablesSpawnOpts { fuse: Some(99.0), who: Some(who), ..Default::default() }));
     crate::throwables::item_set_fired(g, it, true);
-    let last = g.messages.last().map(|m| m.serial);
     seam_detonate_stun_nobody(g, it);
-    if g.messages.last().map_or(false, |m| Some(m.serial) != last && m.text.contains("flashbang")) { g.messages.pop(); }   // ('flashbang went off': this was not one)
     if let Some(ii) = g.items.items.iter().position(|x| *x == it) { g.items.items.remove(ii); }
     let (mut knocked, mut stunned, mut backblast) = (0.0_f64, 0.0_f64, 0.0_f64);
     let fc = g.dr[d].frame_centre;
@@ -123,7 +121,6 @@ pub fn door_tools_blow_raw(g: &mut crate::game::Game, c_2: Option<ChargeId>) -> 
     if js::truthy(stunned) { text.push_str(&format!(" · {} stunned", stunned)); }
     if js::truthy(backblast) { text.push_str(&format!(" · {} of yours too close", backblast)); }
     if sam_too { text.push_str(" · you were too close"); }
-    crate::game::game_msg(g, &text);
     let note = format!("blow {}: knocked {} stunned {} backblast {}", g.dr[d].def.name, knocked, stunned, backblast);
     door_tools_note(g, &note);
     let mut i = 0;
@@ -366,7 +363,7 @@ pub fn door_tools_to_slice(g: &mut crate::game::Game, op: DoorOpId) {
     o!(g, op).t0 = now;
     door_tools_beat(g, op, "slice");
     let l = o!(g, op).lead;
-    crate::game::game_say(g, l, "working it from outside.", None, None, None);
+    crate::game::game_say(g, l, "working it from outside.", None, None);
 }
 
 /// this door's leaf comes round onto face `side`: a one-way door worked from the face it opens toward   (doortools.ts DoorTools.leafOurs)
@@ -492,7 +489,7 @@ pub fn door_tools_last_stack(g: &mut crate::game::Game, op: DoorOpId) {
     let mut what = format!("last warning · not waiting for {}", names(g, &late));
     if handed { what.push_str(&format!(" · the door is {}'s", g.gd[lead].callsign)); }
     door_tools_beat(g, op, &what);
-    crate::game::game_say(g, lead, "no time. going.", None, None, None);
+    crate::game::game_say(g, lead, "no time. going.", None, None);
 }
 
 /// (thrDark, thrLight, thrPieOne: one light on the door, the one man cutting's)
@@ -579,7 +576,7 @@ pub fn door_tools_to_threshold(g: &mut crate::game::Game, op: DoorOpId) {
     if hold { what.push_str(" · to hold"); }
     if first { what.push_str(" · a can first"); }
     door_tools_beat(g, op, &what);
-    crate::game::game_say(g, lead, "working it from the door.", None, None, None);
+    crate::game::game_say(g, lead, "working it from the door.", None, None);
 }
 
 /// does this door get a can before anybody shows in its opening   (doortools.ts DoorTools.canFirst)

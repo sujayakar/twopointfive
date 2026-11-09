@@ -60,8 +60,8 @@ pub struct Checkpoints {
     pub hand: bool,
     pub due: Option<String>,
     pub authored: Option<String>,
-    /// a step asked for the mission over, in these words, as a load in a step asks
-    pub again: Option<String>,
+    /// a step asked for the mission over, as a load in a step asks
+    pub again: bool,
     /// which stand this game is of, under which the control holds what it keeps (0: none yet)
     pub stood: u32,
 }
@@ -88,7 +88,7 @@ impl Checkpoints {
             hand: false,
             due: None,
             authored: None,
-            again: None,
+            again: false,
             stood: 0,
         }
     }

@@ -811,8 +811,6 @@ pub fn director_enter_show(g: &mut crate::game::Game, r: DirectorRunId) {
     }
     g.director.due_keys.clear();
     g.director.due_clicks = 0.0;
-    let line = format!("{} — P to stop", g.tab.director_run[r].name);
-    crate::game::game_msg(g, &line);
 }
 
 /// the show's own flashlights back in the light list, the shift back on the list ahead of anything left

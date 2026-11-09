@@ -353,16 +353,10 @@ pub fn game_door_acts(g: &mut crate::game::Game, dt: f64, input: InputId) {
                 if crate::doors::doors_locked_out(g, d, pos, Some(&keys)) { crate::player::start_picking(g, d); }
             }
             Some(Verb::Kick) => {
-                if crate::doors::doors_boot_holds(g, d, pos) {
-                    crate::game::game_msg(g, "it opens toward you, so a kick won't move it");
-                } else {
-                    crate::player::start_kick(g, d, None, None);
-                }
+                if !crate::doors::doors_boot_holds(g, d, pos) { crate::player::start_kick(g, d, None, None); }
             }
             Some(Verb::Rattle) => {
                 crate::doors::doors_rattle(g, d, id, None);
-                let steel = g.dr[d].def.steel.unwrap_or(false);
-                crate::game::game_msg(g, if steel { "the stair door is bolted from the landing side with no keyhole on this side, so it's not your way out tonight" } else { "it's locked. pick it (quiet, slow) or kick it in (loud)" });
             }
             Some(Verb::Code) => { crate::devices::start_coding(g, d); }
             Some(Verb::Nocode) => crate::devices::deny_pad(g, d),
@@ -393,7 +387,6 @@ pub fn game_door_acts(g: &mut crate::game::Game, dt: f64, input: InputId) {
                 g.pl[pl].ease_stall_t += dt;
                 if g.pl[pl].ease_stall_t > 0.5 {
                     g.pl[pl].easing = None;
-                    crate::game::game_msg(g, "it won't go any further");
                 }
             } else {
                 g.pl[pl].ease_stall_t = 0.0;

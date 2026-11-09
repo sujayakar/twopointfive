@@ -68,19 +68,6 @@ fn menu_target_of(m: &Menu) -> OrderTarget {
         (t, _) => t.clone(),
     }
 }
-/// `label.replace(/ · (\d+ left|uses .+)$/, '')`
-fn drop_stock_word(s: &str) -> &str {
-    const CUT: &str = " · ";
-    for (i, _) in s.match_indices(CUT) {
-        let rest = &s[i + CUT.len()..];
-        let digits = rest.bytes().take_while(|b| b.is_ascii_digit()).count();
-        let left = digits > 0 && &rest[digits..] == " left";
-        let uses = rest.strip_prefix("uses ").map_or(false, |u| !u.is_empty() && !u.contains(|c| matches!(c, '\n' | '\r' | '\u{2028}' | '\u{2029}')));
-        if left || uses { return &s[..i]; }
-    }
-    s
-}
-
 // ---- what skeleton 5 still cannot reach ----
 /// `b.owner`. Once the table of Box rows is there, the body is that row's field
 fn seam_box_owner(g: &Game, b: AnyBoxId) -> f64 { g.tab[b].owner }
@@ -367,7 +354,7 @@ pub fn squad_orders_give(g: &mut crate::game::Game, id_2: &str, t: Option<&crate
         }
         None => squad_orders_recipients(g, &crate::seats::here(g), Some(&t), who),
     };
-    if asked.is_empty() { crate::game::game_msg(g, "nobody to take that order"); return Some(String::from("nobody to take it")); }
+    if asked.is_empty() { return Some(String::from("nobody to take it")); }
     if g.tab.orders_order_def[def].row.only.is_some() {
         let o = order_only(g, def, &asked, &t);
         if !o.is_empty() { asked = o; }
@@ -393,10 +380,10 @@ pub fn squad_orders_give(g: &mut crate::game::Game, id_2: &str, t: Option<&crate
             g.orders.acks += 1.0;
             all[js::rem(k, all.len() as f64) as usize]
         } else { cant[0].0 };
-        crate::game::game_say(g, by, &no, None, None, None);
+        crate::game::game_say(g, by, &no, None, None);
         return Some(no);
     }
-    for (gd, w) in &cant { crate::game::game_say(g, *gd, w, None, None, None); }
+    for (gd, w) in &cant { crate::game::game_say(g, *gd, w, None, None); }
     let mut why: Option<String> = None;
     let mut men: Vec<GuardId> = Vec::new();
     let free = on(g.tab.orders_order_def[def].free);
@@ -432,8 +419,6 @@ pub fn squad_orders_give(g: &mut crate::game::Game, id_2: &str, t: Option<&crate
         g.orders.log.push(item);
     }
     if g.orders.log.len() > 200 { g.orders.log.drain(0..50); }
-    let line = squad_orders_given_line(g, def, &t, &men);
-    crate::game::game_msg(g, &line);
     let ack = g.tab.orders_order_def[def].ack.clone().filter(|a| !a.is_empty());
     if let Some(ack) = ack {
         let k = g.orders.acks;
@@ -448,7 +433,7 @@ pub fn squad_orders_give(g: &mut crate::game::Game, id_2: &str, t: Option<&crate
         let n = men.len() as f64;
         let by = men[js::rem(k, n) as usize];
         let said = lines[js::rem(m::floor(k / n), lines.len() as f64) as usize].clone();
-        crate::game::game_say(g, by, &said, None, None, None);
+        crate::game::game_say(g, by, &said, None, None);
     }
     if g.orders.posture.is_some() {
         let loud = crate::orders::rows::id_is(id_2, crate::orders::Is::Loud);
@@ -459,30 +444,15 @@ pub fn squad_orders_give(g: &mut crate::game::Game, id_2: &str, t: Option<&crate
     None
 }
 
-/// The line the panel shows for an order given (orders.ts SquadOrders.givenLine)
-pub fn squad_orders_given_line(g: &mut crate::game::Game, def: OrdersOrderDefId, t: &crate::orders::OrderTarget, men: &[GuardId]) -> String {
-    let label = squad_orders_label_of(g, def, t);
-    let said = drop_stock_word(&label).replacen("on your mark", "on my mark", 1);
-    let who = squad_orders_who_words(g, &crate::seats::here(g), Some(men));
-    let mut door = String::new();
-    if let OrderTarget::Door(x) = t {
-        let w = crate::orders::door_words(g, x.door);
-        if w != "door" { door = format!(" · {}", w); }
-    }
-    format!("you: {} — {}{}", who, said, door)
-}
-
 /// An order asked again of men who already stand on it (orders.ts SquadOrders.again)
-pub fn squad_orders_again(g: &mut crate::game::Game, id_2: &str, t: &crate::orders::OrderTarget, men: &[GuardId], lines: &[String]) {
-    let Some(def) = g.orders.defs.iter().copied().find(|&d| g.tab.orders_order_def[d].id == id_2) else { return };
+pub fn squad_orders_again(g: &mut crate::game::Game, id_2: &str, men: &[GuardId], lines: &[String]) {
+    if !g.orders.defs.iter().any(|&d| g.tab.orders_order_def[d].id == id_2) { return; }
     if men.is_empty() || lines.is_empty() { return; }
     let k = g.orders.acks;
     g.orders.acks += 1.0;
-    let line = squad_orders_given_line(g, def, t, men);
-    crate::game::game_msg(g, &line);
     let by = men[js::rem(k, men.len() as f64) as usize];
     let said = &lines[js::rem(k, lines.len() as f64) as usize];
-    crate::game::game_say(g, by, said, None, None, None);
+    crate::game::game_say(g, by, said, None, None);
 }
 
 /// Hand a man his assignment (orders.ts SquadOrders.assign)
@@ -989,24 +959,6 @@ mod tests {
         // bun: x.toFixed(1) for each
         for (x, s) in [(0.25, "0.3"), (-0.25, "-0.3"), (0.75, "0.8"), (1.25, "1.3"), (0.35, "0.3"), (1.45, "1.4"), (-0.04, "-0.0"), (0.0, "0.0"), (-0.0, "0.0"), (2.5, "2.5"), (12.05, "12.1"), (-12.15, "-12.2"), (100.125, "100.1"), (1e-9, "0.0")] {
             assert_eq!(js::to_fixed(x, 1), s, "{}", x);
-        }
-    }
-
-    #[test]
-    fn the_stock_word_comes_off_as_the_regex_has_it() {
-        // bun: s.replace(/ · (\d+ left|uses .+)$/, '').replace('on your mark', 'on my mark')
-        for (s, out) in [
-            ("frag · 2 left", "frag"),
-            ("frag · 2 left · uses a can", "frag · 2 left"),
-            ("go · uses a can", "go"),
-            ("go · uses ", "go · uses "),
-            ("a · b · 12 left", "a · b"),
-            ("x · 2 leftover", "x · 2 leftover"),
-            ("x · 2 left\n", "x · 2 left\n"),
-            ("x · uses a\nb", "x · uses a\nb"),
-            ("on your mark on your mark · 3 left", "on my mark on your mark"),
-        ] {
-            assert_eq!(drop_stock_word(s).replacen("on your mark", "on my mark", 1), out);
         }
     }
 

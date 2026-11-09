@@ -5,7 +5,7 @@ use crate::ids::*;
 use crate::js::{self, JsMap, JsSet};
 use crate::m;
 use crate::v3::{self, Quat, V3};
-use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
+use alloc::{string::String, vec::Vec};
 
 /// the hold of this seat, where the TypeScript keeps `H`: re-read at every use, never held across a call that takes `g`
 macro_rules! hold {
@@ -183,23 +183,6 @@ pub fn update_hold(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Came
             g.ch[c].body_yaw = his_yaw;
             let at = v3::add(g.ch[hc].pos, [0.0, 1.5, 0.0]);
             crate::audio_iface::game_audio_like_play(g, "heldProtest", Some(at), Some(0.18), None);
-            let callsign = g.gd[gd].callsign.clone();
-            if let Some(cv) = g.gd[gd].civ {
-                let (label, her, she) = (g.cv[cv].label.clone(), g.cv[cv].her.clone(), g.cv[cv].she.clone());
-                let text = if gun {
-                    format!("got {callsign}, the {label}. press Space to tell {her} to stay down and quiet (lets {her} go) · hold Space for the pistol-whip · press E to holster and question {her}")
-                } else {
-                    format!("got {callsign}, the {label}. press Space to ask what {she} knows · hold Space for 'stay down, stay quiet' or the choke · knocking out a civilian will cost you")
-                };
-                crate::game::game_msg(g, &text);
-            } else if !hold!(g, p).rmb_choke.map_or(false, js::truthy) {
-                let text = if gun {
-                    format!("got {callsign} with the pistol at his head. click to fire past him, press Space to pistol-whip him, or E to holster it and question him")
-                } else {
-                    format!("got {callsign}. press Space to make him talk, hold Space for the choke, or press 1 to put the gun to his head")
-                };
-                crate::game::game_msg(g, &text);
-            }
         }
     } else {
         use crate::character::HoldPhase as Ph;
@@ -242,12 +225,7 @@ pub fn update_hold(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Came
                 }
             }
             if act == Some(Verb::Question) && !swapping {
-                if gun {
-                    let text = format!("press E to holster the gun first, then Space to question {}", g.gd[gd].callsign);
-                    crate::game::game_msg(g, &text);
-                } else {
-                    ask_held(g);
-                }
+                if !gun { ask_held(g); }
             }
             if clk_choke {
                 // CLOSE.rmbHold: in the arm too the right button kept down is the choke for as long as it is down, and a tap of it the whole choke
@@ -347,7 +325,6 @@ pub fn update_hold(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Came
                     g.pl[p].fire_cd = 0.25;
                     let muzzle = g.ch[c].muzzle;
                     crate::audio_iface::game_audio_like_play(g, "dryFire", Some(muzzle), Some(0.7), None);
-                    crate::game::game_msg(g, "click — empty, and no hand free to reload");
                 }
             }
             if !swapping && crate::input::input_rmb_hit(g, input) && (crate::lighting::ocpable(g, &crate::seats::here(g)) || (g.aim_target.is_none() && g.aim_guard.is_none())) {
@@ -389,9 +366,6 @@ pub fn update_hold(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Came
                 let (spread_sup, spread_aim) = (crate::suppression::sam_spread(g, &crate::seats::here(g)), crate::aim::sam_aim(g));
                 let opts = crate::combat::FireOpts { spread: Some(HOLD_SPREAD + spread_sup + spread_aim), ..crate::combat::FireOpts::default() };
                 crate::combat::fire_weapon(g, c, tgt, true, Some(&opts));
-                if crate::weapons::firearm_rounds_ready(g, pistol) == 0.0 {
-                    crate::game::game_msg(g, "empty — and no hand free to reload");
-                }
             }
         }
         // ---- turning: the pair comes round toward the cursor, rate-limited
@@ -661,16 +635,9 @@ pub fn ease_off_hold(g: &mut crate::game::Game) {
         h.wind_t = -1.0;
         return;
     }
-    let was = h.phase;
     set_phase(g, Ph::Held);
     let (talk, time) = (g.gd[gd].talk, g.time);
     g.tab.game_talk[talk].abort_t = time;
-    let text = if was == Ph::Whip {
-        format!("checked it — the pistol goes back to {}'s head", g.gd[gd].callsign)
-    } else {
-        format!("eased off — {} is still with you", g.gd[gd].callsign)
-    };
-    crate::game::game_msg(g, &text);
     let hc = g.gd[gd].ch;
     let at = v3::add(g.ch[hc].pos, [0.0, 1.4, 0.0]);
     crate::audio_iface::game_audio_like_play(g, "propScrape", Some(at), Some(0.1), Some(&crate::audio_iface::PlayOpts::Rate { rate: 2.2 }));
@@ -691,7 +658,7 @@ pub fn cancel_ask(g: &mut crate::game::Game) {
     }
 }
 
-/// The waiting remark goes up over Sam: his beat of a bubble, the murmur by the man's ear, the log's 'you ▸'. Nobody answers it.   (player.ts sayAfter)
+/// The waiting remark goes up over Sam: his beat of a bubble, the murmur by the man's ear. Nobody answers it.   (player.ts sayAfter)
 pub fn say_after(g: &mut crate::game::Game) {
     let p = g.player;
     let Some(a) = g.pl[p].holding.as_mut().and_then(|h| h.after.take()) else { return };
@@ -699,14 +666,13 @@ pub fn say_after(g: &mut crate::game::Game) {
     say_over_sam(g, &a.text, time);
 }
 
-/// A remark of Sam's up over him: bubble, murmur, log. (sayAfter, the pistol line in swapHold, a code he has learnt)
+/// A remark of Sam's up over him: bubble, murmur. (sayAfter, the pistol line in swapHold, a code he has learnt)
 pub fn say_over_sam(g: &mut Game, text: &str, time: f64) {
     let p = g.player;
     let c = g.pl[p].ch;
     g.pl[p].bubble = Some(crate::game::PlayerBubble { text: String::from(text), t: time, dur: sam_beat(js_len(text)), radio: false });
     let at = v3::add(g.ch[c].pos, [0.0, 1.6, 0.0]);
     crate::audio_iface::game_audio_like_play(g, "murmur", Some(at), Some(0.2), None);
-    crate::game::game_note(g, &format!("you ▸ {text}"));
 }
 
 /// E with the man already in the arm: the OTHER hold from here, and HOLD.secs.swap of lockout begun.   (player.ts swapHold)
@@ -730,7 +696,6 @@ pub fn swap_hold(g: &mut crate::game::Game) {
     }
     g.pl[p].fire_cd = m::max(g.pl[p].fire_cd, swap);
     cancel_ask(g);
-    let callsign = g.gd[gd].callsign.clone();
     if to == Var::Gun {
         g.pl[p].slot = crate::game::SlotKind::Pistol;
         set_holstered(g, false, Some(true));
@@ -742,15 +707,8 @@ pub fn swap_hold(g: &mut crate::game::Game) {
                 say_over_sam(g, &line.text, time);
             }
         }
-        crate::game::game_msg(g, &format!("the pistol is at {callsign}'s head. click to fire past him, press Space to pistol-whip him, or E to holster it and question him"));
     } else {
         set_holstered(g, true, Some(true));
-        let text = if crate::close::close_bare(g) {
-            format!("holstered, with both hands on {callsign} again. press Space to question him, or hold Space for the choke")
-        } else {
-            format!("holstered, with the knife back at {callsign}'s throat. press Space to question him, or hold Space for the choke")
-        };
-        crate::game::game_msg(g, &text);
     }
     crate::audio_iface::game_audio_like_play(g, "equip", None, Some(0.45), None);
 }
@@ -934,7 +892,6 @@ pub fn ask_held(g: &mut crate::game::Game) {
     let c = g.pl[p].ch;
     let at = v3::add(g.ch[c].pos, [0.0, 1.6, 0.0]);
     crate::audio_iface::game_audio_like_play(g, "murmur", Some(at), Some(0.2), None);
-    crate::game::game_note(g, &format!("you ▸ {text}"));
 }
 
 /// Sam's line has hung its beat: the man answers it, and the muffled sound of it under the arm.   (player.ts answerHeld)
@@ -970,8 +927,6 @@ pub fn take_key(g: &mut crate::game::Game, gd: GuardId, rnd: Option<&mut dyn FnM
     crate::audio_iface::game_audio_like_play(g, "lockPick", Some(at), Some(0.45), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.6 }));
     crate::mission::tally(g, crate::mission::TallyK::Keys);
     crate::chronicle::chron_key(g, gd);
-    let text = format!("you took {}'s key. keyed doors will open for you now", g.gd[gd].callsign);
-    crate::game::game_msg(g, &text);
     let variant = match &g.pl[p].holding {
         Some(h) if h.g == gd => Some(h.variant),
         _ => None,

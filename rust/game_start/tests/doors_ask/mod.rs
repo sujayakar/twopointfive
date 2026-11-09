@@ -773,7 +773,7 @@ impl DoorsAsk for Play {
             c.smoke = n;
             if n > 0.0 { (c.frags, c.charges) = (0.0, 0.0); }   // (the pouches: room made for it, as the card's own row asks)
         }
-        game::game::game_restart(&mut self.g, None);
+        game::game::game_restart(&mut self.g);
     }
     fn round_from(&mut self, m: GuardId, at: [f64; 3]) { let c = self.g.gd[m].ch; let q = self.g.ch[c].pos; self.g.ch[c].muzzle = [q[0], 1.35, q[2]]; let o = game::combat::FireOpts { spread: Some(0.0), weapon: None, steady: Some(true), blind: None }; game::combat::fire_weapon(&mut self.g, c, at, false, Some(&o)); }
     fn sam_down_hits(&self) -> (bool, f64) { let p = &self.g.pl[self.g.player]; (p.down, p.hits_left) }

@@ -407,22 +407,9 @@ fn stagger_of(g: &mut Game, stagger: &mut JsMap<String, f64>, grp: &str) -> f64 
     *stagger.get(String::from(grp)).unwrap()
 }
 
-/// A line for the player's log; the log keeps five. (game.ts Game.msg)
-pub fn game_msg(g: &mut crate::game::Game, text: &str) {
-    let (t, serial) = (g.time, g.serial());
-    g.messages.push(crate::game::GameMessagesItem { text: String::from(text), t, serial });
-    if g.messages.len() > 5 { g.messages.remove(0); }
-    crate::cues::cues_raw(g, text);
-}
-
 /// A man says something. (game.ts Game.say)
-pub fn game_say(g: &mut crate::game::Game, g_2: GuardId, text: &str, radio: Option<bool>, force: Option<bool>, row: Option<bool>) {
-    crate::guards::say(g, g_2, text, radio, force, row);
-}
-
-/// A utility or sandbox confirmation: the showcase's own plumbing stays out of the log. (game.ts Game.note)
-pub fn game_note(g: &mut crate::game::Game, text: &str) {
-    if !g.quiet_utility { game_msg(g, text); }
+pub fn game_say(g: &mut crate::game::Game, g_2: GuardId, text: &str, radio: Option<bool>, force: Option<bool>) {
+    crate::guards::say(g, g_2, text, radio, force);
 }
 
 #[cfg(test)]

@@ -183,7 +183,7 @@ pub fn run_shell_late(g: &mut crate::game::Game, late: &crate::shotgun::ShellLat
     }
 }
 
-/// The man the round found: where it landed decides, then the log's line, the sound, whose round it was. (fireWeapon's manDown)
+/// The man the round found: where it landed decides, then the sound, whose round it was. (fireWeapon's manDown)
 fn man_down(g: &mut Game, hit_guard: GuardId, sg: Option<GuardId>, shooter: CharId, is_player: bool, ff_ours: bool, hostage_hit: bool, muzzle: V3, dir: V3, t_hit: f64, hit_p: V3) {
     use crate::game::{DownBy, DownKind, GuardState};
     let was_up = g.gd[hit_guard].state != GuardState::Dead;
@@ -243,17 +243,14 @@ fn shoot_out(g: &mut Game, t: FixtureId, muzzle: V3) {
         return;
     }
     if crate::carlamps::lamp_glass(g, t) { g.stats.carlamps.shot += 1; }
-    let name = g.tab.sim_lightshome_fixture[t].name.clone();
     let lens = g.tab.sim_lightshome_fixture[t].lens;
     if crate::carlamps::dead_lamp(g, t) {
         crate::sim_lightshome::light_home_in(g, break_, Some(t), None, None, None, None);
-        crate::game::game_msg(g, &alloc::format!("shot out {}", name));
         crate::audio_iface::game_audio_like_play(g, "lightBreak", Some(pos), Some(0.8), None);
         crate::particle_fx::lens_shatter_fx(g, crate::particle_fx::LensShatterFxT { pos, lens }, muzzle);
         return;
     }
     crate::sim_lightshome::light_home_in(g, break_, Some(t), None, None, None, None);
-    crate::game::game_msg(g, &alloc::format!("shot out {}", name));
     crate::game::game_light_event(g, t, None, None);
     crate::chronicle::chron_light_shot(g, t);
     crate::render_lights::light_set_flash(g, pos, [0.7, 0.8, 1.0], 6.0, 4.0, 0.12, 0.0);

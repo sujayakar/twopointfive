@@ -48,7 +48,7 @@ pub fn team_says(g: &mut crate::game::Game, about: Option<GuardId>, text: &str) 
         best.map(|b| b.0)
     });
     let Some(by) = by else { return false };
-    crate::game::game_say(g, by, text, None, None, None);
+    crate::game::game_say(g, by, text, None, None);
     true
 }
 

@@ -101,7 +101,6 @@ pub fn fire_shell(g: &mut crate::game::Game, shooter: CharId, target: V3, is_pla
                 if !crate::doors::doors_kick_in(g, d, muzzle, id, Some(true)) { continue; }
                 g.stats.shotgun.locks += 1;
                 if is_player {
-                    crate::game::game_msg(g, "you shot the lock off, and the whole floor heard that");
                     crate::chronicle::chron_door(g, crate::chronicle::ChronDoorKind::DoorKicked, d);
                 }
             }

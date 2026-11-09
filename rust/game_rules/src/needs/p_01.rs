@@ -513,7 +513,7 @@ pub fn announce(g: &mut crate::game::Game, gd: GuardId, t: &mut crate::needs::Tr
         let now: Vec<String> = was.iter().map(|x| lines.now.get(x.clone()).cloned().unwrap_or_else(|| x.clone())).collect();
         let pool = crate::words::wg::<Vec<String>>(g, &now, &was);
         t.line = pick_line(g, &pool, gd, "announce");
-        crate::game::game_say(g, gd, &t.line, None, None, None);
+        crate::game::game_say(g, gd, &t.line, None, None);
         let d = v3::dist_xz(g.ch[g.gd[p].ch].pos, g.ch[g.gd[gd].ch].pos);
         let pcs = g.gd[p].callsign.clone();
         log(g, gd, &format!("tells {} ({} m): \"{}\"", pcs, js::to_fixed(d, 1), t.line));
@@ -523,7 +523,7 @@ pub fn announce(g: &mut crate::game::Game, gd: GuardId, t: &mut crate::needs::Tr
         let own = if quiet { lines.short_own.get(key(kind)) } else { None };
         let short: String = own.or_else(|| lines.short.get(key(kind))).cloned().unwrap_or_else(|| key(kind));
         t.line = lines.radio.replacen("{who}", &g.gd[gd].callsign, 1).replacen("{short}", &short, 1);
-        crate::game::game_say(g, gd, &t.line, Some(true), None, None);
+        crate::game::game_say(g, gd, &t.line, Some(true), None);
         let c = g.gd[gd].ch;
         let at = match g.ch[c].bones.get(crate::character::Bone::Head) {
             Some(h) => *h,
@@ -569,7 +569,7 @@ pub fn partner_reply(g: &mut crate::game::Game, gd: GuardId, t: &mut crate::need
     let cs = g.gd[gd].callsign.clone();
     let h = crate::math_dice::hash_str(&format!("{}|{}|{}|reply", pcs, cs, trips));
     let line = pool[js::rem(h, pool.len() as f64) as usize].clone();
-    crate::game::game_say(g, p, &line, None, None, None);
+    crate::game::game_say(g, p, &line, None, None);
     g.stats.needs.replies += 1;
     log(g, gd, &format!("{} answers: \"{}\"", pcs, line));
 }
@@ -769,7 +769,7 @@ pub fn needs_patrol(g: &mut crate::game::Game, gd: GuardId, dt: f64, walk: f64) 
                 let away = m::round(now - left_at);
                 let back = crate::dialogue::needs_lines_table().back;
                 let line = pick_line(g, &back, gd, "back");
-                crate::game::game_say(g, gd, &line, None, None, None);
+                crate::game::game_say(g, gd, &line, None, None);
                 let mut d = JsMap::new();
                 d.set(key("who"), text(&cs));
                 d.set(key("kind"), text(kind.as_str()));

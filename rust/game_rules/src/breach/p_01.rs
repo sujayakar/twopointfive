@@ -144,7 +144,7 @@ pub fn breach_drill_say(g: &mut crate::game::Game, gd: GuardId, key: &str, text:
     let radio = radio.unwrap_or(false);
     let text = if live_of(g).is_some() { let charge = breach_drill_charge(g); live_text(charge, key, text) } else { String::from(text) };
     if !text.is_empty() && breach_drill_once(g, &alloc::format!("say:{}", key)) && !dead(g, gd) {
-        crate::game::game_say(g, gd, &text, Some(radio), None, None);
+        crate::game::game_say(g, gd, &text, Some(radio), None);
     }
 }
 

@@ -318,7 +318,7 @@ pub fn squad_orders_tick(g: &mut crate::game::Game) {
                 } else {
                     if d >= 1.0 {
                         g.tab.orders_assignment[a].there = String::from("stopped short");
-                        crate::game::game_say(g, gd, "can't get through.", None, None, None);
+                        crate::game::game_say(g, gd, "can't get through.", None, None);
                     }
                     let np = [p[0], 0.0, p[2]];
                     let aa = &mut g.tab.orders_assignment[a];
@@ -462,7 +462,7 @@ pub fn squad_orders_tick(g: &mut crate::game::Game) {
             // (one of them said "can't get through": the group is not where it was sent, and nobody calls it set)
             let mut short = false;
             for &b in g.orders.asg.values() { let bb = &g.tab.orders_assignment[b]; if bb.group == group && bb.there == "stopped short" { short = true; break; } }
-            if !short { crate::game::game_say(g, last, &line, None, None, None); }
+            if !short { crate::game::game_say(g, last, &line, None, None); }
             for (_, &b) in g.orders.asg.iter() { if g.tab.orders_assignment[b].group == group { g.tab.orders_assignment[b].set_said = true; } }
         }
     }
@@ -687,7 +687,7 @@ pub fn squad_orders_rest_short(g: &mut crate::game::Game, gd: GuardId, a: Orders
     let q = match q { Some(q) => q, None => return false };
     g.orders.short_of.get_mut(a).unwrap().k += 1.0;
     g.tab.orders_assignment[a].there = String::from("stopped short");
-    crate::game::game_say(g, gd, "can't get through.", None, None, None);
+    crate::game::game_say(g, gd, "can't get through.", None, None);
     let now = g.time;
     let aa = &mut g.tab.orders_assignment[a];
     aa.post = Some(q); if aa.had == Some(q) { aa.had = None; } aa.goal = v3::copy(q); aa.via.clear(); aa.mark_t = now; aa.moved_t = now; aa.new_leg = true;

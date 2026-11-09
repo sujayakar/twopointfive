@@ -16,7 +16,3 @@ pub fn auto_reload_due(g: &crate::game::Game, pl: PlayerId, gun: FirearmId) -> b
     !(since >= 0.0 && since < g.k.reload.delay)
 }
 
-/// The words for a gun just gone dry: the reload is coming, so R is not asked for. (autoreload.ts autoReloads)
-pub fn auto_reloads(g: &crate::game::Game, gun: FirearmId) -> bool {
-    !g.touring && !g.puppet.is_some() && !g.fa[gun].spare.is_empty()
-}

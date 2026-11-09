@@ -302,7 +302,7 @@ pub fn nvg_tick(g: &mut crate::game::Game) {
         if team.call_due && now - team.called_t >= gap {
             team.call_due = false;
             team.called_t = now;
-            crate::game::game_say(g, who, "going dark.", None, None, None);   // (said by the first man who really is dark, the frame there is one)
+            crate::game::game_say(g, who, "going dark.", None, None);   // (said by the first man who really is dark, the frame there is one)
         }
     }
 }

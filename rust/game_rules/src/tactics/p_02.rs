@@ -116,7 +116,7 @@ pub fn tick_plans(g: &mut crate::game::Game) {
             if now - g.tab.tactics_plan[plan].last_radio_t > 4.0 {
                 let who = if crate::teams::defender_words(g, fresh) { "they've" } else { "he's" };
                 let place = crate::dialogue::place_name(g, fix);
-                crate::game::game_say(g, fresh, &alloc::format!("{} moved — {}", who, place), Some(true), None, None);
+                crate::game::game_say(g, fresh, &alloc::format!("{} moved — {}", who, place), Some(true), None);
                 g.tab.tactics_plan[plan].last_radio_t = now;
             }
             let mut far = Vec::new();
@@ -317,7 +317,7 @@ pub fn go_now(g: &mut crate::game::Game, plan: TacticsPlanId, caller: GuardId, w
         g.stats.tactics.go_timeouts += 1;
     }
     let line = if why == "contact" { "eyes on — go go go" } else if why == "timeout" { "can't wait — pushing, go" } else { "go go go" };
-    crate::game::game_say(g, caller, line, Some(true), None, None);
+    crate::game::game_say(g, caller, line, Some(true), None);
     g.tab.tactics_plan[plan].last_radio_t = g.time;
     for m in g.tab.tactics_plan[plan].members.clone() {
         clear_path(g, m);
@@ -405,7 +405,7 @@ pub fn move_role(g: &mut crate::game::Game, gd: GuardId, role: TacticsRoleId, dt
             if !g.tab.tactics_role[role].said_set && (flat(g.ch[c].pos, set_at) <= SET_M || g.tab.tactics_role[role].holding) {
                 g.tab.tactics_role[role].said_set = true;
                 g.tab.tactics_role[role].set = true;
-                crate::game::game_say(g, gd, "set", Some(true), None, None);
+                crate::game::game_say(g, gd, "set", Some(true), None);
                 g.tab.tactics_plan[plan].last_radio_t = g.time;
             }
             if !g.tab.tactics_role[role].holding {
@@ -426,7 +426,7 @@ pub fn move_role(g: &mut crate::game::Game, gd: GuardId, role: TacticsRoleId, dt
                     if !g.tab.tactics_role[role].said_set {
                         g.tab.tactics_role[role].said_set = true;
                         let line: &str = crate::words::wg(g, &"set — can't get any farther around", &"set — as far round as I get");
-                        crate::game::game_say(g, gd, line, Some(true), None, None);
+                        crate::game::game_say(g, gd, line, Some(true), None);
                     }
                 }
                 aim_at_fix(&mut out, fix);
@@ -587,7 +587,7 @@ pub fn lone_call(g: &mut crate::game::Game, gd: GuardId, l: &mut crate::tactics:
     } else {
         alloc::format!("armed contact, {} — holding here, need another gun on it", place)
     };
-    crate::game::game_say(g, gd, &line, Some(true), None, None);
+    crate::game::game_say(g, gd, &line, Some(true), None);
     let at = head_or_pos(g, gd);
     crate::audio_iface::game_audio_like_play(g, "radio", Some(at), Some(0.7), None);
     let team = g.gd[gd].team;
@@ -1042,7 +1042,7 @@ pub fn gate_call(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::tactic
             _ => alloc::format!("man down at {} — hold, don't go through", door),
         }
     };
-    crate::game::game_say(g, gd, &line, Some(true), None, None);
+    crate::game::game_say(g, gd, &line, Some(true), None);
     let radio_at = head_or_pos(g, gd);
     crate::audio_iface::game_audio_like_play(g, "radio", Some(radio_at), Some(0.7), None);
     // the summons
@@ -1098,7 +1098,7 @@ pub fn gate_call(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::tactic
     g.stats.tactics.summons += 1;
     let name_said = crate::teams::spoken_name(g, gd).map_or(false, |n| !n.is_empty());
     let answer = if name_said { alloc::format!("copy — coming to you, {}", g.gd[gd].callsign) } else { String::from("copy — coming to you") };
-    crate::game::game_say(g, best, &answer, None, None, None);
+    crate::game::game_say(g, best, &answer, None, None);
 }
 
 /// Does this man's way take him through (or up to) a doorway dangerous to his side he has not yet taken as a drill: the gate has him.   (tactics.ts tryEngage)

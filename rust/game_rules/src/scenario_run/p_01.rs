@@ -103,10 +103,6 @@ pub fn start_scenario(g: &mut crate::game::Game, spec: &crate::scene_scenario_li
             crate::scene_scenario_list::ScenarioSpecKind::Rescue => crate::rescue::rescue_start(g),
         },
     };
-    if let Some(w) = &why {
-        let text = alloc::format!("{} refused — {}", word(spec.kind.as_str()), w);
-        crate::game::game_msg(g, &text);
-    }
     why
 }
 

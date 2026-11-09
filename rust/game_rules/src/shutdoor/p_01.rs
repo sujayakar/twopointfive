@@ -326,7 +326,7 @@ pub fn finish(g: &mut crate::game::Game, gd: GuardId, j: Option<crate::shutdoor:
 
 /// tick's `end`: the word, the log, the count, and his order is over.
 fn end(g: &mut Game, gd: GuardId, d: DoorId, j: Job, line: Option<&str>, what: &str, shut: bool) {
-    if let Some(line) = line { crate::game::game_say(g, gd, line, None, None, None); }
+    if let Some(line) = line { crate::game::game_say(g, gd, line, None, None); }
     note(g, gd, d, what);
     if shut { g.stats.shutdoor.shut += 1; } else { g.stats.shutdoor.gave_up += 1; }
     finish(g, gd, Some(j));

@@ -228,7 +228,7 @@ pub fn hear_whistle(g: &mut crate::game::Game, gd: GuardId, e: crate::game::Game
         }
         let pool = if is_guard { twice_now() } else { twice_foe() };
         let line = pick(g, &pool, gd, PickKey::LastTwice);
-        crate::game::game_say(g, gd, &line, None, None, None);
+        crate::game::game_say(g, gd, &line, None, None);
     } else {
         // the first: over to it for a look, torch in hand
         if g.gd[gd].state == GuardState::Patrol { crate::mind::set_state(g, gd, GuardState::Suspicious, "whistle"); }
@@ -238,7 +238,7 @@ pub fn hear_whistle(g: &mut crate::game::Game, gd: GuardId, e: crate::game::Game
         row.soft_at = now;
         let pool = if is_guard { look_lines() } else { look_foe() };
         let line = pick(g, &pool, gd, PickKey::LastLook);
-        crate::game::game_say(g, gd, &line, None, None, None);
+        crate::game::game_say(g, gd, &line, None, None);
     }
 }
 

@@ -246,14 +246,6 @@ pub fn dud(g: &mut crate::game::Game, sh: crate::he40::Shell, at: V3, vel: V3, m
         };
         g.events.push(ev);
     }
-    if crate::seats::is_man_id(g, shooter_id) {
-        let text = alloc::format!(
-            "the 40 mm was a dud because it hit something {} m out, short of the {} m it needs to arm",
-            js::to_fixed(sh.flown, 1),
-            js::num_str(g.k.he40.arm_m)
-        );
-        crate::game::game_msg(g, &text);
-    }
     g.stats.he40.duds += 1;
     log_end(g, &crate::he40::ShellEnd { flown: sh.flown, armed: false, met });
 }
@@ -438,7 +430,6 @@ pub fn dud_hits_character(g: &mut crate::game::Game, r: crate::he40::Shell, c_2:
         None => {
             crate::character::anim_hit(g, c);
             crate::audio_iface::game_audio_like_play(g, "bodyHit", Some(at), Some(0.6), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.9 }));
-            crate::game::game_msg(g, "a 40 mm round in the ribs — unarmed, luckily");
         }
         Some(id) if g.gd[id].civ.is_some() => {
             crate::character::anim_hit(g, c);

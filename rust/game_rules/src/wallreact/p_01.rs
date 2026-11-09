@@ -16,7 +16,7 @@ fn char_id(g: &Game, gd: GuardId) -> f64 { g.ch[g.gd[gd].ch].id }
 fn is_dead(g: &Game, gd: GuardId) -> bool { g.gd[gd].state == crate::game::GuardState::Dead }
 fn is_op(g: &Game, gd: GuardId) -> bool { g.gd[gd].team == crate::teams::Team::Operative }
 fn breaches_of(g: &Game) -> Vec<WallreactBreachId> { g.m.wallreact.wall_react.breaches.clone() }
-fn say(g: &mut Game, gd: GuardId, text: &str) { crate::game::game_say(g, gd, text, None, None, None) }
+fn say(g: &mut Game, gd: GuardId, text: &str) { crate::game::game_say(g, gd, text, None, None) }
 
 /// `g.seats.some(s => (s.view.wallCharge?.stats.blown ?? 0) > 0)`   (wallreact.ts:323)
 fn any_seat_blown(g: &mut Game) -> bool {

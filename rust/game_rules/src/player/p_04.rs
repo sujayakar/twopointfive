@@ -133,7 +133,6 @@ pub fn stack_up(g: &mut crate::game::Game, dt: f64, input: InputId) -> bool {
         if crate::input::input_lmb_hit(g, input) && g.time - g.pl[p].wall.unwrap().say_t.unwrap_or(-10.0) > 1.5 {
             let now = g.time;
             w!(g, p).say_t = Some(now);
-            crate::game::game_msg(g, "the wall is in the way, so step out past its end or come off it");
         }
         return false;
     }
@@ -323,7 +322,7 @@ fn wall_take_back(g: &mut Game, p: PlayerId, c: CharId, firm: bool, dir: f64, ba
     let u_real = pos[0] * t[0] + pos[2] * t[2] - w0.lean_off.unwrap_or(0.0);
     let off_real = pos[0] * n[0] + pos[2] * n[2] - base;
     if u_real < u_lo - 0.25 || u_real > u_hi + 0.25 || off_real > WALL_SHOVE_OFF {
-        if w0.seated { crate::game::game_msg(g, "pushed off the wall"); wall_voice(g, w0, false); }
+        if w0.seated { wall_voice(g, w0, false); }
         else { crate::interact::refuse(g, p, Some(crate::view::ThingKind::Wall), "can't get to that wall"); }
         release_wall(g);
         return false;
@@ -732,7 +731,6 @@ pub fn start_grab(g: &mut crate::game::Game, gd: GuardId, way: Option<crate::clo
         }
     }
     if g.pl[p].crouch && !can_stand(g) {
-        crate::game::game_msg(g, "no room to stand up behind him here");
         return;
     }
     if crate::game::player_rifle_up(g, p) { set_holstered(g, true, Some(true)); }
@@ -755,10 +753,6 @@ pub fn start_grab(g: &mut crate::game::Game, gd: GuardId, way: Option<crate::clo
     if let Some(bub) = g.gd[gd].bubble.clone() {
         let now = g.time;
         if now - bub.t < bub.dur {
-            if now - bub.t < 0.8 {
-                let line = if g.gd[gd].unit.is_some() { alloc::format!("{}: {}", g.gd[gd].callsign, bub.text) } else { alloc::format!("guard: {}", bub.text) };
-                crate::game::game_msg(g, &line);
-            }
             g.gd[gd].bubble = None;
         }
     }
@@ -874,7 +868,6 @@ pub fn nv_key(g: &mut crate::game::Game, input: Option<InputId>, dt: f64) {
         let on = !g.pl[p].nv;
         g.pl[p].nv = on;
         crate::audio_iface::game_audio_like_play(g, if on { "nvOn" } else { "nvOff" }, None, Some(0.7), None);
-        crate::game::game_msg(g, if on { "night vision on" } else { "night vision off" });
         crate::kitanim::kit_nv(g);
     }
     let eye = crate::kitanim::kit_nv_eye(g);

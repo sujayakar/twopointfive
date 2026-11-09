@@ -450,10 +450,10 @@ pub fn wall_snap_pending(g: &mut crate::game::Game, dt: f64, cam: CameraId, want
     if p.t <= 0.0 {
         let blocked = p.blocked;
         g.m.player.ws_pend.delete(pl);
-        game_msg_blocked(g, blocked || why.blocked);
+        wall_refused(g, blocked || why.blocked);
     }
 }
-fn game_msg_blocked(g: &mut Game, blocked: bool) {
+fn wall_refused(g: &mut Game, blocked: bool) {
     let pl = g.player;
     crate::interact::refuse(g, pl, Some(crate::view::ThingKind::Wall), if blocked { "can't get to that wall" } else { "no wall to take here" });
 }
