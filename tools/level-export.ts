@@ -49,7 +49,7 @@ const data = levelToData(level, {
   name: 'office',
   materials, surfaces, boxGroups: trace.groups,
   floors: [{ id: 'f0', name: 'ground floor', y: 0, ceiling: WORLD.ceilingY }],
-  meta: { bounds: { min: [...WORLD.min], max: [...WORLD.max] }, generator: 'src/scene/officeGen.ts buildOfficeProcedural → tools/level-export.ts', notes: 'The night-shift office: one floor, box geometry only. Regenerated from the legacy generator until the editor (lane G1b) takes over; hand edits survive only if the generator is retired first.' },
+  meta: { bounds: { min: [...WORLD.min], max: [...WORLD.max] }, generator: 'tools/levels/lib/officeGen.ts buildOfficeProcedural → tools/level-export.ts', notes: 'The night-shift office: one floor, box geometry only. Regenerated from the legacy generator until the editor (lane G1b) takes over; hand edits survive only if the generator is retired first.' },
 });
 
 // 3. validate + serialize
