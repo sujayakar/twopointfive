@@ -69,7 +69,7 @@ fn rescue_order_door(g: &mut crate::game::Game) -> Option<crate::rescue::RescueO
             return None;
         }
     }
-    if let Some(&o) = on.iter().find(|&&o| g.tab.doortools_door_op[o].kind != crate::doortools::DoorToolKind::Outside) {
+    if let Some(&o) = on.first() {
         let by = g.tab.doortools_door_op[o].men.first().copied();
         crate::interact::say_why(g, by, crate::view::ThingKind::Door, "we're on that door already.", "they're on that door already");
         return None;

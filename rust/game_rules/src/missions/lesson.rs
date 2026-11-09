@@ -146,7 +146,7 @@ fn partner_of(g: &crate::game::Game) -> Option<GuardId> { g.guards.iter().copied
 
 /// is `v` within the record's below and above; a kind with neither field has nothing to refuse
 fn band(v: f64, t: &crate::lesson::LessonTest) -> bool {
-    let (LessonTest::Meter { below, above, .. } | LessonTest::Pace { below, above }) = t else { return true };
+    let LessonTest::Meter { below, above, .. } = t else { return true };
     below.map_or(true, |b| v < b) && above.map_or(true, |a| v > a)
 }
 
@@ -177,7 +177,6 @@ fn passes(g: &mut Game, t: &LessonTest, s: &mut StepSeen) -> bool {
         T::Near { at, r } => { let p = own_pos(g, &crate::seats::here(g)); m::hyp2(p[0] - at[0], p[2] - at[2]) < r.unwrap_or(1.2) }
         T::Flag { flag, value } => flag_of(g, *flag) == value.unwrap_or(true),
         T::Slot { slot, drawn } => { let p = who(g, &crate::seats::here(g)); g.pl[p].slot == *slot && drawn.map_or(true, |d| !g.pl[p].holstered == d) }
-        T::Pace { .. } => true,   // (TWOGEARS.on: the wheel is nobody's pace and the line goes by)
         T::Meter { which, .. } => { let p = who(g, &crate::seats::here(g)); let v = if *which == LessonMeter::Noise { g.pl[p].noise } else { g.shown[g.pl[p].ch].visibility }; band(v, t) }
         T::Stage { stage } => stage_index(g.mission.stage.as_str()) >= stage_index(stage.as_str()) && g.mission.stage != crate::game::MissionStage::Failed,
         T::Door { door, state } => ok_door(g, door, *state),
@@ -569,8 +568,6 @@ mod tests {
         let meter = |below, above| LessonTest::Meter { which: LessonMeter::Noise, below, above };
         assert!(band(0.5, &meter(Some(1.0), Some(0.0))) && !band(1.0, &meter(Some(1.0), None)) && !band(0.0, &meter(None, Some(0.0))));
         assert!(band(9.0, &LessonTest::Loaded));
-        let pace = |below, above| LessonTest::Pace { below, above };
-        assert!(band(0.5, &pace(Some(1.0), None)) && !band(1.5, &pace(Some(1.0), None)));
     }
 
     /// A step that waits on a stage passes once the mission is at it or beyond: the stages run in order, and a failed run is on none of them.

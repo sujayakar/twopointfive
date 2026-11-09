@@ -5598,7 +5598,7 @@ pub fn hold_layer(g: usize, an: &mut Anim, w: f64, dt: f64, h: &HoldPose, kill_o
     let (at, at_b, _) = poses(an);
     let (at_c, at_aim, live, gun_v, no_knife) = (an.p_c.at as usize, an.p_aim.at as usize, an.hold_pose.is_some(), h.variant == Some(HoldVariant::Gun), an.no_knife);
     let (ph, t, low, haul, yank, step, pull) = (h.phase, h.t, h.low.unwrap_or(0.0), h.haul.unwrap_or(false), h.yank, h.step, h.pull);
-    let (grab, held, choke, whip, kill) = (ph == HoldPhase::Grab, ph == HoldPhase::Held, ph == HoldPhase::Choke, ph == HoldPhase::Whip, ph == HoldPhase::Kill);
+    let (grab, held, choke, whip, kill) = (ph == HoldPhase::Grab, ph == HoldPhase::Held, ph == HoldPhase::Choke, ph == HoldPhase::Whip, false);
     let (idle_t, strip, tw_y, tw_p) = (an.idle_t, an.hold_pose.and_then(|h| h.strip).map(|s| s.t), an.aim_yaw_offset, -an.aim_pitch * an.upper_w.aim * 0.35);
     let (gun_out, gun_pitch, shoot_t, rd_hand) = (h.gun_out.unwrap_or(0.0), h.gun_pitch.unwrap_or(0.0), an.shoot_t, an.rd_hand_l);
     let (fix_l, fix_r, grip_up) = (an.hand_fix[0], an.hand_fix[1], an.grip_up);
@@ -5987,7 +5987,7 @@ struct ArmSet {
 pub fn held_layer(g: usize, an: &mut Anim, w: f64, dt: f64, h: &HeldPose, kill_on: bool, beats: bool, tune: &Knobs) -> u32 {
     let (at, at_b, _) = poses(an);
     let (gun, bare, live, ph, t) = (h.variant == Some(HoldVariant::Gun), h.bare.unwrap_or(false), an.held_pose.is_some(), h.phase, h.t);
-    let (grab, held, choke, whip, kill) = (ph == HoldPhase::Grab, ph == HoldPhase::Held, ph == HoldPhase::Choke, ph == HoldPhase::Whip, ph == HoldPhase::Kill);
+    let (grab, held, choke, whip, kill) = (ph == HoldPhase::Grab, ph == HoldPhase::Held, ph == HoldPhase::Choke, ph == HoldPhase::Whip, false);
     let (ag, low, haul, yank, pull, shot_in, armed) = (clamp(h.agitation, 0.0, 1.0), h.low.unwrap_or(0.0), h.haul.unwrap_or(false), h.yank, h.pull.unwrap_or(0.0), h.shot.filter(|s| *s >= 0.0), h.armed.unwrap_or(false));
     let (tt, strip, fix_l, fix_r) = (an.idle_t, an.held_pose.and_then(|h| h.strip).map(|s| s.t), an.hand_fix[0], an.hand_fix[1]);
     // (read before anything is posed: an answer of 0 leaves the pose as it was handed)

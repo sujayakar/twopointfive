@@ -298,14 +298,6 @@ pub(super) fn update_hold(g: &mut crate::game::Game, dt: f64, input: InputId, ca
             hold_tail(g, dt, 0.0, None);
             return;
         }
-        let killing = hold_killing(hold!(g, p));
-        if killing && t_now >= kill_secs(g) {
-            // the clock's LAST frame of the knife is drawn on Sam, and the hold lets go after it
-            hold_tail(g, dt, 0.0, None);
-            kill_out(g);
-            g.ch[c].anim.hold_pose = None;
-            return;
-        }
         // ---- the gun: a click queues one round, the pistol comes off his head and it goes, never at the man in the arm
         let pistol = g.pl[p].pistol;
         let gun_held = gun && phase_now == Ph::Held;
@@ -731,21 +723,6 @@ fn start_whip(g: &mut crate::game::Game) {
     crate::audio_iface::game_audio_like_play(g, "propScrape", Some(at), Some(0.12), Some(&crate::audio_iface::PlayOpts::Rate { rate: 2.6 }));
 }
 
-/// The knife's clock in the hold.
-fn kill_secs(g: &crate::game::Game) -> f64 {
-    g.k.hold.secs.kill
-}
-
-/// Seconds into the knife's clock at which the blade is in: the hold broken from there on leaves the man dead all the same.
-pub(super) fn kill_cut(g: &crate::game::Game) -> f64 {
-    g.k.hold.kill.hit * kill_secs(g)
-}
-
-/// The knife is going in on the man in his arm: a commit nothing eases off.
-pub(in crate::sam) fn hold_killing(h: &crate::player::Hold) -> bool {
-    h.phase == crate::character::HoldPhase::Kill
-}
-
 /// The man rigid in front, HOLD.dist ahead on Sam's facing, kept out of the statics; what the walls take off his station Sam gives up too.
 fn place_held(g: &mut crate::game::Game) {
     let p = g.player;
@@ -964,36 +941,6 @@ fn choke_out(g: &mut crate::game::Game) {
     g.pl[p].holding = None;
 }
 
-/// The knife run through its clock: he is dead in the arm and let fall at Sam's feet.
-pub(super) fn kill_out(g: &mut crate::game::Game) {
-    let p = g.player;
-    let Some(gd) = g.pl[p].holding.as_ref().map(|h| h.g) else { return };
-    let c = g.pl[p].ch;
-    let hc = g.gd[gd].ch;
-    let f = crate::character::character_forward(g, c);
-    unhook(g, gd);
-    let at = v3::add(g.ch[hc].pos, [0.0, 1.4, 0.0]);
-    crate::audio_iface::game_audio_like_play(g, "chokeLimp", Some(at), Some(0.35), None);
-    crate::takedown::take_fall(g, gd, None, true, Some(crate::takedown::TakeFallHow::Kill));
-    crate::combat::kill_guard(g, gd, f, Some(true), Some(crate::game::DownKind::Shot), Some(crate::game::DownBy::Player), Some("knife — dead"));
-    // startTakedown's own rewrite for the knife: a man who watched saw him DROPPED, not shot
-    let time = g.time;
-    let callsign = g.gd[gd].callsign.clone();
-    let mut i = 0;
-    while i < g.guards.len() {
-        let o = g.guards[i];
-        i += 1;
-        if let Some(w) = g.gd[o].witness.saw_act.as_mut() {
-            if w.kind == crate::game::WitnessSawActKind::Shot && w.t == time && w.victim == callsign {
-                w.kind = crate::game::WitnessSawActKind::Struck;
-            }
-        }
-    }
-    let pos = v3::copy(g.ch[hc].pos);
-    prop_noise(g, pos, FOLD_NOISE);
-    g.pl[p].holding = None;
-}
-
 /// The whip run through HOLD.secs.whip: the pistol lands behind his right ear and he drops out of the arm, the loudest thing a hold does.
 fn whip_out(g: &mut crate::game::Game) {
     let p = g.player;
@@ -1074,9 +1021,5 @@ mod tests {
     #[test]
     fn the_knife_is_only_the_kill_phase() {
         let mut h = Hold::default();
-        h.phase = crate::character::HoldPhase::Kill;
-        assert!(hold_killing(&h));
-        h.phase = crate::character::HoldPhase::Choke;
-        assert!(!hold_killing(&h));
     }
 }

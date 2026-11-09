@@ -102,7 +102,7 @@ pub fn running_verb(g: &Game, seat: &crate::seats::SeatRef) -> String {
     if let Some(w) = &g.pl[pl].wanding { let d = w.door; return format!("wand:{}", g.dr[d].def.name); }
     if let Some(d) = g.pl[pl].coding { return format!("code:{}", g.dr[d].def.name); }
     if let Some(h) = &g.pl[pl].holding {
-        if h.wind_t >= 0.0 || h.phase == crate::character::HoldPhase::Choke || h.phase == crate::character::HoldPhase::Whip || crate::player::hold_killing(h) {
+        if h.wind_t >= 0.0 || h.phase == crate::character::HoldPhase::Choke || h.phase == crate::character::HoldPhase::Whip {
             let who = h.g;
             return format!("hold:{}", g.gd[who].callsign);
         }
@@ -121,11 +121,10 @@ pub(super) fn cancel_sustained(g: &mut Game) -> bool {
     if g.pl[pl].picking.is_some() { crate::player::stop_picking(g); return true; }
     if g.pl[pl].wanding.is_some() { crate::player::stop_wand(g); return true; }
     if g.pl[pl].coding.is_some() { crate::devices::stop_coding(g); return true; }
-    let (held, killing, working) = match &g.pl[pl].holding {
-        Some(h) => (true, crate::player::hold_killing(h), h.wind_t >= 0.0 || h.phase == crate::character::HoldPhase::Choke || h.phase == crate::character::HoldPhase::Whip),
-        None => (false, false, false),
+    let (held, working) = match &g.pl[pl].holding {
+        Some(h) => (true, h.wind_t >= 0.0 || h.phase == crate::character::HoldPhase::Choke || h.phase == crate::character::HoldPhase::Whip),
+        None => (false, false),
     };
-    if held && killing { return false; }   // the knife in the hold is COMMITTED
     if held && working { crate::player::ease_off_hold(g); return true; }
     if g.mission.drive_t >= 0.0 { crate::mission::cancel_drive(g); return true; }
     if crate::doortools::door_tools_cancel_sam(g) { return true; }
