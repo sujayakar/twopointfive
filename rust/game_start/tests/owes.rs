@@ -98,7 +98,7 @@ fn each_fault_is_said() {
         ("speed", |p, m| p.g.gd[m].speed = 50.0),
         ("awareness", |p, m| p.g.gd[m].awareness = 2.0),
         ("alive", |p, m| { let c = p.g.gd[m].ch; p.g.ch[c].alive = false; }),
-        ("down with no how", |p, m| { let c = p.g.gd[m].ch; p.g.gd[m].state = GuardState::Dead; p.g.ch[c].alive = false; }),
+        ("down with no how", |p, m| { let c = p.g.gd[m].ch; p.g.gd[m].state = GuardState::Dead; p.g.cond[c].down = true; p.g.ch[c].alive = false; }),
         ("door", |p, _| { let k = p.g.doors.list[0]; d::door_set_latched(&mut p.g, k, true); d::door_set_angle(&mut p.g, k, 0.5); }),
         ("door", |p, _| { let k = p.g.doors.list[0]; d::door_set_pick(&mut p.g, k, 2.0); }),
         ("alarm", |p, _| { p.g.escalation = 1.0; p.g.escalation_t = -1.0; }),
@@ -138,6 +138,7 @@ fn each_count_counts() {
     for (man, killer, n) in [(m[0], 0.0, 0), (m[1], game::consts::PLAYER_ID, 1)] {
         let c = p.g.gd[man].ch;
         (p.g.gd[man].state, p.g.ch[c].alive, p.g.gd[man].killer_id) = (GuardState::Dead, false, killer);
+        p.g.cond[c].down = true;
         owes.tick(&mut p.g);
         assert_eq!(owes.friendly, n, "{}", owes.line());
     }
