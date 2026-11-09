@@ -31,7 +31,6 @@ export const BOX_CUT_BIT = 1 << 16;
 export const cutConfig = {
   on: false,
 };
-export const cutBoxesOn = () => cutConfig.on;
 /** read the switch from the page's URL / localStorage (a no-op headless): ON in the page unless ?nocutboxes / ?cutboxes=0, or this machine kept '0'. Call before
  *  the first pipeline is compiled. */
 export function initCutSwitch(): boolean {
@@ -47,12 +46,6 @@ export function initCutSwitch(): boolean {
 export function cutPlane(n: Vec3, d: number): CutPlane {
   const L = Math.hypot(n[0], n[1], n[2]); if (!(L > 1e-12)) return { n: [0, 0, 0], d: 1 };
   return { n: [n[0] / L, n[1] / L, n[2] / L], d: d / L };
-}
-/** the plane through local point p whose normal n points at what is REMOVED */
-export function cutThrough(p: Vec3, n: Vec3): CutPlane {
-  const L = Math.hypot(n[0], n[1], n[2]); if (!(L > 1e-12)) return { n: [0, 0, 0], d: 1 };
-  const u: Vec3 = [n[0] / L, n[1] / L, n[2] / L];
-  return { n: u, d: u[0] * p[0] + u[1] * p[1] + u[2] * p[2] };
 }
 /** the farthest the uncut box reaches along n: max over the box of n · p */
 export const cutSupport = (h: Vec3, n: Vec3) => Math.abs(n[0]) * h[0] + Math.abs(n[1]) * h[1] + Math.abs(n[2]) * h[2];
@@ -148,33 +141,6 @@ export function cutToWorld(v: Vec3, yaw: number, rot?: Quat): Vec3 {
   }
   const cs = Math.cos(yaw), sn = Math.sin(yaw);
   return [cs * v[0] + sn * v[2], v[1], -sn * v[0] + cs * v[2]];
-}
-
-/** A PRISM from a convex outline: the polygon `poly` (points (u, v) in the plane across `axis`, either winding) extruded ± halfT along `axis` (0 = x, 1 = y,
- *  2 = z; (u, v) = the next two axes in order: axis x → (y, z), y → (z, x), z → (x, y)). Returns the fitted box { off, h } in the frame the polygon was given in and
- *  its record: one plane per polygon edge that is not already a side of the bounding rectangle. More than MAX_CUT_PLANES such edges: the ones that take least off
- *  are left out (`dropped`; the piece is then a little bigger than the outline — split the outline or accept it). A glass shard = its cell's outline across the
- *  pane's thin axis; a wall chunk = its outline across the wall's. */
-export function cutPrism(axis: 0 | 1 | 2, halfT: number, poly: readonly (readonly [number, number])[]): { off: Vec3; h: Vec3; cut: CutPlane[] | undefined; dropped: number; empty: boolean } {
-  const ua = (axis + 1) % 3, va = (axis + 2) % 3;
-  let u0 = Infinity, u1 = -Infinity, v0 = Infinity, v1 = -Infinity, area2 = 0;
-  for (let i = 0; i < poly.length; i++) {
-    const p = poly[i], q = poly[(i + 1) % poly.length];
-    u0 = Math.min(u0, p[0]); u1 = Math.max(u1, p[0]); v0 = Math.min(v0, p[1]); v1 = Math.max(v1, p[1]); area2 += p[0] * q[1] - q[0] * p[1];
-  }
-  const off: Vec3 = [0, 0, 0], h: Vec3 = [0, 0, 0];
-  if (poly.length < 3 || !(Math.abs(area2) > 1e-12) || !(halfT > 0)) return { off, h, cut: undefined, dropped: 0, empty: true };
-  const cu = (u0 + u1) / 2, cv = (v0 + v1) / 2; off[ua] = cu; off[va] = cv; h[axis] = halfT; h[ua] = (u1 - u0) / 2; h[va] = (v1 - v0) / 2;
-  const sgn = area2 > 0 ? 1 : -1, planes: CutPlane[] = [];
-  for (let i = 0; i < poly.length; i++) {
-    const p = poly[i], q = poly[(i + 1) % poly.length]; const eu = q[0] - p[0], ev = q[1] - p[1];
-    if (Math.abs(eu) + Math.abs(ev) < 1e-12) continue;
-    const n: Vec3 = [0, 0, 0]; n[ua] = sgn * ev; n[va] = -sgn * eu;                 // outward normal of the edge (the polygon's inside is on its other side)
-    const at: Vec3 = [0, 0, 0]; at[ua] = p[0] - cu; at[va] = p[1] - cv;
-    planes.push(cutThrough(at, n));
-  }
-  const r = cutRecord(h, planes);
-  return { off, h, cut: r.cut, dropped: r.dropped, empty: r.empty };
 }
 
 /** GLASS on a cut box (Box.cutGlass — picture only, the g-buffer's cut pass): the box's two faces across its own z (a glass plate: cutPrism over z) are drawn see-through by a

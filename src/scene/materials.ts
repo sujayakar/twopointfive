@@ -126,7 +126,5 @@ export const doesWordOk = (v: unknown): v is DoesWord => typeof v === 'string' &
 export const doesOfWord = (w: string | undefined): Does => (w !== undefined && ROWS.get(w)) || DEFAULT;
 /** WHAT A BOX DOES: its own word's row, else the default row. The one question a rule asks of a material. */
 export const doesOf = (b: { does?: string } | null | undefined): Does => (b && b.does !== undefined && ROWS.get(b.does)) || DEFAULT;
-/** … and what it does WHILE SOAKED (the lot's slab under rain: Does.wet) */
-export const doesWet = (b: { does?: string } | null | undefined): Does => { const d = doesOf(b); return d.wet !== undefined ? doesOfWord(d.wet) : d; };
 /** the word a box carries for `w`: nothing for the default row (absent = default everywhere a box is kept) */
 export const doesSaid = (w: string | undefined): { does?: DoesWord } => w !== undefined && w !== DOES_DEFAULT && doesWordOk(w) ? { does: w } : {};

@@ -94,5 +94,3 @@ export function pickRedirect(search: string, list: Pick[] = PICKS, scenarios: Sc
   const q = new URLSearchParams(search); if (!q.has(PICK_KEY) || specOfQuery(q) || SCENARIO_KEYS.some(k => q.has(k))) return null;
   const p = pickNamed(q.get(PICK_KEY), list); return p ? pickHref(p, search, list, scenarios, difficultyOf(search)) : null;   // (`?pick=1&difficulty=hard` typed by hand: the row at that difficulty)
 }
-/** the URL names something to play (a scenario, the solo night): its page boots that, and the cards on it carry no rows */
-export function namesMission(search: string): boolean { const q = new URLSearchParams(search); return !!specOfQuery(q) || q.has(SOLO_KEY); }

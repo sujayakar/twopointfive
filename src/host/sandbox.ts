@@ -15,9 +15,3 @@ export function keepSandbox(key: SandboxKey, on: boolean): void { try { localSto
 const AUTOSAVE_LS = 'twopointsix.autosave';
 export function autosaveKept(): boolean { try { return localStorage.getItem(AUTOSAVE_LS) !== '0'; } catch { return true; } }
 export function keepAutosave(on: boolean): void { try { localStorage.setItem(AUTOSAVE_LS, on ? '1' : '0'); } catch { /* no store */ } }
-/** put what is kept on a game; one console line when anything is, so no page runs with nobody thinking silently */
-export function loadSandbox(game: { godMode: boolean; aiEnabled: boolean; infiniteAmmo: boolean }, announce = true): void {
-  const j = sandboxKept();
-  if (j.god !== undefined) game.godMode = j.god; if (j.noAi !== undefined) game.aiEnabled = !j.noAi; if (j.ammo !== undefined) game.infiniteAmmo = j.ammo;
-  if (announce && (j.god || j.noAi || j.ammo)) console.log(`sandbox (start card, this machine): ${[j.god && 'god mode', j.noAi && 'NO AI', j.ammo && 'unlimited ammo'].filter(Boolean).join(' · ')}`);
-}

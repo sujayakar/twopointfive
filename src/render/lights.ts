@@ -112,15 +112,6 @@ export function cardSlotsFor(lights: RtLight[], target: Vec3, max: number): numb
   return cands.slice(0, max).map(c => c.slot);
 }
 
-export function lightFromDef(d: LightDef): RtLight {
-  return {
-    name: d.name, group: d.group, kind: d.kind === 'point' ? 0 : d.kind === 'spot' ? 1 : 2,
-    pos: v3.copy(d.pos), dir: v3.normalize(d.dir), color: v3.copy(d.color), intensity: d.intensity,
-    range: d.range, innerDeg: d.innerDeg, outerDeg: d.outerDeg, radius: d.kind === 'dir' ? (d.radius ?? 0) : (d.radius ?? 0.05),
-    volumetric: d.volumetric, owner: 0, enabled: d.enabled, fixtureBox: d.fixtureBox ?? -1, flicker: 0, ttl: -1, age: 0, peakIntensity: d.intensity, broad: !!d.broad,
-  };
-}
-
 /** ONE LIGHT'S GPU RECORD (common.wgsl struct Light, 16 words) into f / u — two views of one buffer — at word `o`: the one packing, for the scene's list
  *  (upload below) and for the lit fog's own list of lamps (rust/game_rules/src/fogofwar litBlock → shaders/fogofwar.wgsl fowLights). `inten` scales the colour; `kindWord` is
  *  the kind with whatever flag bits the caller sets above its low byte, `ownerWord` the owner byte with the glass mask above it. */

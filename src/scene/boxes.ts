@@ -1,5 +1,4 @@
 // Box scene representation, GPU packing and the 2D (XZ) uniform grid used by all ray queries.
-import { SideMap } from '../math/side';
 import { Vec3, Quat, quat } from '../math/vec';
 import { WORLD } from './world';
 import { makeBuffer, writeWordsIfChanged } from '../gpu/device';
@@ -35,9 +34,6 @@ export const BoxFlag = {
   // breaks it and a line of fire passes one while WINBARS.on is up (rust/game_rules/src/winbars; collision.ts shotBlocked's `firePass`); read by nothing else.
   Bar: 1 << 19,
 } as const;
-/** A DRAWN-ONLY SHEET (a stain, ruts, a painted line, a poster: something the picture shows that no ray and no body meets) is a box whose flags under this
- *  mask are NoShadow alone; a SOLID thing is one with none of them */
-export const SHEET_MASK = BoxFlag.NoPrimary | BoxFlag.NoShadow | BoxFlag.Glass | BoxFlag.Dynamic;
 /** the most panes SceneInfo.glass carries to the GPU (nearest to the camera's look-at first when a level has more) */
 export const MAX_GLASS = 32;
 /** the GPU flag bit of a ROUND box (common.wgsl GEO_ROUND; scene/round.ts). Bit 3 of the geo flags word, which on the CPU is Dynamic: no shader reads that one, and
@@ -170,9 +166,6 @@ export interface Box {
  *  `look` is more than a motion identity: a box keyed in its byte is PICTURE ONLY for the CPU's world ray whatever its flags say (BoxWorld.raycast, lookKeyed
  *  below) — key nothing there that a cursor, an order, a laser or a tripwire should land on. */
 export const MKEY = { door: 1 << 24, prop: 2 << 24, item: 3 << 24, rig: 4 << 24, device: 5 << 24, ring: 6 << 24, test: 7 << 24, debris: 8 << 24, look: 9 << 24, skin: 10 << 24 } as const;   // debris: the destruction lane's rigid chunks (rust/game_rules/src/debris), keyed off their serial · look: what a broken wall looks like where it broke (rust/game_rules/src/edge_look: plates, lintels, rubble) · skin: what stands of the paint on a holed wall (rust/game_rules/src/wallskin: the authored static × 16 + piece)
-/** a LOOK piece (keyed MKEY.look): drawn and lit, in no collision list — a round, an eye and a boot pass through it. Most are NoShadow; under the cut switch the
- *  bigger ones drop that flag so LIGHT's rays meet them and they cast the shadow they draw, which would also hand them to the CPU's ray: this is how it tells */
-const lookKeyed = (b: Box): boolean => b.dress === true || (b.mkey !== undefined && b.mkey >>> 24 === MKEY.look >>> 24);   // (or a piece of DRESSING under another key: Box.dress)
 
 /** ONE LAYOUT FOR EVERY BOX: a box is made with every field of the interface in place, in one order (the optional ones `undefined`), so the engines keep ONE hidden class
  *  for all of them and every read of a box in a hot loop (the line tests, the rays, the pack, the fog's list) is a plain field load. A field set later (`mkey`, `dc`,
@@ -187,8 +180,6 @@ export function boxOf(c: Vec3, h: Vec3, yaw: number, albedo: Vec3, emissive: Vec
  *  that hides a box (a round, a blast, a wall coming down, a checkpoint putting any of them back) hides, files or restores its trim — the picture asks the
  *  box, here, where the world lists what it draws. A piece's own flags never change. */
 export const trimDrawn = (all: readonly Box[], t: Box): boolean => t.of === undefined || !(all[t.of].flags & BoxFlag.NoPrimary);
-/** is a static drawn: not hidden, not a pane, and trim only while its box is (the test the world's list makes; for a check that asks what the picture shows) */
-export const boxDrawn = (all: readonly Box[], b: Box): boolean => !(b.flags & (BoxFlag.NoPrimary | BoxFlag.Glass)) && (b.piece !== true || trimDrawn(all, b));
 export function makeBox(p: Partial<Box> & { c: Vec3; h: Vec3 }): Box {
   const b = boxOf(p.c, p.h, 0, [0.5, 0.5, 0.5], [0, 0, 0], 0, 0);
   for (const k in p) (b as unknown as Record<string, unknown>)[k] = (p as unknown as Record<string, unknown>)[k];   // (the spread's own rule: every key the caller gave, as given)
@@ -322,11 +313,6 @@ export class BoxWorld {
   private gbData = new Float32Array(GB_ROWS * 4); private gbLive = false;
   /** the cell table as last uploaded, bit for bit (packGlass writes the buffer only when the freshly filled table differs from it) */
   private gbSent = new Uint32Array(GB_ROWS * 4); private gbBits = new Uint32Array(this.gbData.buffer);
-  /** THE AIR GRID (scene/airGrid.ts; rust/game_rules/src/air_dust is its writer): the weather's dust share per plan cell, in matBuf's tail after the marking and glass
-   *  tables and BEFORE the cut table (so its place does not move with the cut switch) — AIR_ROWS vec4 rows read by common.wgsl wxIndoor under the prelude's WX_VOL. Written only when handed a changed grid. */
-  setAirGrid(cells: Float32Array) {
-    this.device.queue.writeBuffer(this.matBuf, this.maxBoxes * MAT_STRIDE * 4 + MARK_TABLE_ROWS * 16 + GB_ROWS * 16, cells.buffer, cells.byteOffset, Math.min(cells.byteLength, AIR_ROWS * 16));
-  }
   /** how many statics' geo + mat rows the last WHOLE write of the two buffers covered (−1 = none yet): upload() writes only the dynamics' tail while they still stand */
   private rowsStatN = -1;
   /** the visible list as last uploaded, word for word */
@@ -401,34 +387,6 @@ export class BoxWorld {
   private gridLast = new Int32Array(0); private gridLastGlobals: number[] = []; private gridLiveN = -1;
   /** how many frames' trace grids were built, and how many were found standing (QA / the panel) */
   gridBuilds = { built: 0, kept: 0 };
-  // ---- THE CPU RAYCAST's OWN GRID over the statics (rayGrid — the CPU-frame lane): raycast() used to test every box in `all` (~1100) per ray, three rays a frame in the calm office
-  // (two laser tripwires + the cursor's aim ray) — a quarter of Game.update. Now the STATIC prefix of `all` (as of the last upload) is walked through a 2D DDA over WORLD's 1 m
-  // cells, testing only the statics registered in each cell (once per ray — a stamp), the few too big for the grid or reaching outside it once per ray as GLOBALS, and the
-  // dynamics (the tail of `all`) by the same brute force as before. Every static is registered whatever its flags (skipFlags are judged per query exactly as the brute force did:
-  // a static hidden by destruction and restored later is findable; a pane IS a hit unless the caller skips Glass), padded RAY_PAD each side so a face on a cell line is in
-  // both cells. The per-box test (rayBox with the running best as tmax) is unchanged, so a hit's t and normal are the same bits; the candidate SET is what shrank. The one
-  // rule the brute force had that a walk does not is 'first index wins a tie', kept explicitly (r.t === best && i < bi). Rebuilt by list() when a static's SHAPE changed
-  // (rgShape: its centre, half-sizes or turn — a changed colour or wetness leaves it standing) or the count did.
-  static readonly RAY_PAD = 1e-3;
-  private rgStart = new Uint32Array(WORLD.gridW * WORLD.gridH + 1); private rgItems = new Uint32Array(4096); private rgGlobals: number[] = [];
-  private rgN = -1;   // statics the ray grid covers (= the static prefix of `all` at its build; −1 = never built)
-  /** the shape each static had when the ray grid was last built (list()): RS doubles a static — centre, yaw, half-sizes, rotated?, the rotation */
-  private static readonly RS = 12; private rgShape = new Float64Array(0);
-  private rgFill = new Uint32Array(WORLD.gridW * WORLD.gridH); private rgRanges = new Int32Array(0);
-  private rgStamp = new Uint32Array(0); private rgRay = 0;
-  private rcBest = 0; private rcBi = -1; private rcBn: Vec3 = [0, 1, 0];
-  /** A RAY ASKED BY THE PICTURE (the cursor's pick under a HUD read — rust/game_rules/src/orders hover): `fn` with the ray grid's stamps the asker's own (`own.w`, kept
-   *  between asks) and the last ray's scratch put back after, so it writes nothing a snapshot of the game holds. Not to be nested. */
-  rayAside<T>(own: { w?: object }, fn: () => T): T {
-    type Q = { stamp: Uint32Array<ArrayBuffer>; ray: number };
-    let q = own.w as Q | undefined; if (!q || q.stamp.length < this.rgStamp.length) q = { stamp: new Uint32Array(this.rgStamp.length), ray: 0 };   // (boxes added since: an empty table is a clean one)
-    const mine = { stamp: this.rgStamp, ray: this.rgRay, best: this.rcBest, bi: this.rcBi, bn: this.rcBn };
-    this.rgStamp = q.stamp; this.rgRay = q.ray; own.w = undefined;   // (an ask inside this one on the same store makes a table of its own: this one's ray ids are in use)
-    try { return fn(); }
-    finally { own.w = { stamp: this.rgStamp, ray: this.rgRay } satisfies Q; this.rgStamp = mine.stamp; this.rgRay = mine.ray; this.rcBest = mine.best; this.rcBi = mine.bi; this.rcBn = mine.bn; }
-  }
-  /** the ray grid's shape, for the panel / the differential test */
-  rayGridStats = { statics: 0, globals: 0, items: 0 };
   // ---- MARKINGS (scene/markings.ts): the table of packed records lives in the TAIL of matBuf, from vec4 row maxBoxes × MAT_STRIDE / 4 (common.wgsl MARK_BASE) —
   // no new binding: every shader that has the scene group can read a box's markings. A box's list is registered on first upload (deduplicated by CONTENT +
   // albedo + size, so every carton of a size shares one set of records — 'identical on every instance of a kind' literally), its first record's 1-based
@@ -439,7 +397,7 @@ export class BoxWorld {
   markingTexel = MARKING_TEXEL;
   markData = new Float32Array(MARK_TABLE_ROWS * 4); markRows = 0; private markDirty = false;   // the table (vec4 rows) and how many rows are taken
   private markByKey = new Map<string, { slot: number; n: number; rows: number; sec: Vec3; anyEmit: boolean; marks: MarkingDef[]; base: Vec3; h: Vec3 }>();
-  private markOfBox = new SideMap<Box, { key: string; slot: number; sec: Vec3; a0: number; a1: number; a2: number; marks: MarkingDef[] }>();
+  private markOfBox = new WeakMap<Box, { key: string; slot: number; sec: Vec3; a0: number; a1: number; a2: number; marks: MarkingDef[] }>();
   markStatsInfo = { lists: 0, records: 0, rows: 0, boxes: 0, dropped: 0, uploads: 0 };
   // ---- CUT BOXES (scene/cut.ts): under the switch (latched here at construction — the shaders were compiled from the same value) a box with a cut record raises
   // BOX_CUT_BIT in its GPU flags word and its planes are packed into the CUT TABLE, a third tail region of matBuf after the marking and glass tables: CUT_STRIDE vec4
@@ -479,8 +437,6 @@ export class BoxWorld {
     this.visible = new Uint32Array(maxBoxes); this.visibleSent = new Uint32Array(maxBoxes);
     this.visibleBuf = makeBuffer(device, this.visible.byteLength, S, 'visibleBoxes');
   }
-
-  addStatic(b: Box): number { this.statics.push(b); this.staticsDirty = true; return this.statics.length - 1; }
 
   // ---- markings ----
   /** The 1-based slot of the first record of box b's marking list (0 = none / table full), registering the list on first sight; also caches the box's
@@ -656,26 +612,13 @@ export class BoxWorld {
     return q < 0 ? 0 : q > WORLD.gridYLevels - 1 ? WORLD.gridYLevels - 1 : q;
   }
 
-  /** THE LIST — what the GAME reads of the box world: the combined list as of now (`all`: raycast's candidates, an index's box), the glass statics' list, and the
-   *  raycast's grid over the statics, rebuilt when their count changed or one's SHAPE moved (rgShape: centre, half-sizes, turn — all buildRayGrid reads; a changed
-   *  colour, wetness or lamp leaves it standing). Returns the statics' count. Nothing here is the picture's and nothing is written to the GPU. */
+  /** THE LIST: the combined list as of now (`all`: an index's box) and the glass statics' list. Returns the statics' count. Nothing is written to the GPU. */
   private list(): number {
     const all = this.all; all.length = 0;
     for (const b of this.statics) all.push(b); for (const b of this.dynamics) all.push(b);
     if (all.length > this.maxBoxes) throw new Error(`too many boxes: ${all.length}`);
     const nStat = this.statics.length;
     if (this.staticsDirty || this.glassStaticsN !== nStat) { this.glassStatics.length = 0; for (let i = 0; i < nStat; i++) if (this.statics[i].flags & BoxFlag.Glass) this.glassStatics.push(i); this.staticsDirty = false; this.glassStaticsN = nStat; }
-    const RS = BoxWorld.RS; if (this.rgShape.length < nStat * RS) { this.rgShape = new Float64Array(Math.max(nStat, this.maxBoxes) * RS); this.rgN = -1; }
-    const G = this.rgShape; let moved = this.rgN !== nStat;
-    for (let i = 0; i < nStat; i++) {
-      const b = all[i], o = i * RS, c = b.c, h = b.h, rot = b.rot;
-      if (G[o] === c[0] && G[o + 1] === c[1] && G[o + 2] === c[2] && G[o + 3] === b.yaw && G[o + 4] === h[0] && G[o + 5] === h[1] && G[o + 6] === h[2]
-        && (rot ? G[o + 7] === 1 && G[o + 8] === rot[0] && G[o + 9] === rot[1] && G[o + 10] === rot[2] && G[o + 11] === rot[3] : G[o + 7] === 0)) continue;
-      moved = true;
-      G[o] = c[0]; G[o + 1] = c[1]; G[o + 2] = c[2]; G[o + 3] = b.yaw; G[o + 4] = h[0]; G[o + 5] = h[1]; G[o + 6] = h[2];
-      if (rot) { G[o + 7] = 1; G[o + 8] = rot[0]; G[o + 9] = rot[1]; G[o + 10] = rot[2]; G[o + 11] = rot[3]; } else { G[o + 7] = 0; G[o + 8] = 0; G[o + 9] = 0; G[o + 10] = 0; G[o + 11] = 0; }
-    }
-    if (moved) this.buildRayGrid(nStat);
     return nStat;
   }
   /** THE LIST, THEN THE PACK: every box into its rows for the GPU, the visible and cut lists, the trace grid, and the writes. Call once per drawn frame after dynamics
@@ -1024,91 +967,8 @@ export class BoxWorld {
     this.device.queue.writeBuffer(this.capsuleBuf, 0, this.capsuleData.buffer, 0, Math.max(32, this.capsuleCount * 32));
     this.device.queue.writeBuffer(this.infoBuf, 0, info);
   }
-
-  /** CPU ray cast against all boxes (closest hit). Used for mouse picking / aim point. A glass pane IS hit by default (the maintainer, 08-11: "pointing at glass should
-   *  target that point in the glass, not what's behind it" — the reticle, the arm and the throw arc sit on the pane; a round finds it anyway, combat.ts through
-   *  StaticCollision.raycast); pass BoxFlag.Glass in skipFlags to see through panes (a laser's reach, a tracer's line). */
-  /** glass-break's hook (rust/game_rules/src/glassbreak sets it beside StaticCollision.glassOpen): a Glass static whose CELL at the hit point has fallen is no hit — the aim
-   *  ray, the reticle and the throw arc pass through the hole like a round and a sight line do (W4G.10) */
-  glassOpen: ((index: number, p: Vec3) => boolean) | null = null;
-  /** A LOOK piece (MKEY.look — a blown wall's plates, lintel and rubble) is not met, shadow-casting or not: the game's callers ask where something LANDS (the
-   *  cursor's aim, an order's point, a weapon laser's dot, a tripwire's reach), and a round along the same line goes through it (the collision lists never held
-   *  one). `withLook` is for an instrument standing in for the PICTURE's rays (tools/qa/cut-cost.js: what the raster shows, what a gather ray stops on). */
-  raycast(ro: Vec3, rd: Vec3, tmax = 1e9, skipFlags: number = BoxFlag.NoShadow | BoxFlag.NoPrimary, skipOwner = 0, withLook = false): { t: number; index: number; n: Vec3 } | null {
-    const all = this.all; this.rcBest = tmax; this.rcBi = -1; this.rcBn = [0, 1, 0];
-    const nS = this.rgN;
-    if (nS < 0 || nS > all.length) {   // no grid for this list (never uploaded): the brute force as it was
-      for (let i = 0; i < all.length; i++) if (withLook || !lookKeyed(all[i])) this.rayTest(i, ro, rd, skipFlags, skipOwner);
-    } else {
-      // dynamics and globals first (they tighten `best` before the walk), then the statics cell by cell along the ray
-      for (let i = nS; i < all.length; i++) if (withLook || !lookKeyed(all[i])) this.rayTest(i, ro, rd, skipFlags, skipOwner);
-      const G = this.rgGlobals; for (let k = 0; k < G.length; k++) this.rayTest(G[k], ro, rd, skipFlags, skipOwner);
-      this.rayWalk(ro, rd, skipFlags, skipOwner);
-    }
-    return this.rcBi >= 0 ? { t: this.rcBest, index: this.rcBi, n: this.rcBn } : null;
-  }
-  /** one candidate of raycast(): the brute force's per-box test, statement for statement, + the tie rule the index order gave it */
-  private rayTest(i: number, ro: Vec3, rd: Vec3, skipFlags: number, skipOwner: number) {
-    const b = this.all[i]; if (b.flags & skipFlags) return; if (skipOwner && b.owner === skipOwner) return;   // (e.g. the cursor's aim ray must not land on the player's own gun / goggles)
-    const r = rayBoxOwn(ro, rd, b, this.rcBest);
-    if (r && (r.t < this.rcBest || (r.t === this.rcBest && i < this.rcBi))) {
-      if (this.glassOpen && (b.flags & BoxFlag.Glass) && i < this.statics.length && this.glassOpen(i, [ro[0] + rd[0] * r.t, ro[1] + rd[1] * r.t, ro[2] + rd[2] * r.t])) return;   // through the hole in a holed pane
-      this.rcBest = r.t; this.rcBi = i; this.rcBn = r.n;
-    }
-  }
-  /** the statics along the ray: a 2D DDA over the XZ cells from where the ray enters the grid, each cell's registered statics tested once (the stamp), stopping once the next
-   *  cell begins past the best hit (a static's entry point lies in a cell it is registered in — the padded footprint contains it — so nothing nearer can be beyond) */
-  private rayWalk(ro: Vec3, rd: Vec3, skipFlags: number, skipOwner: number) {
-    const W = WORLD.gridW, H = WORLD.gridH, cs = WORLD.gridCell; const gx = W * cs, gz = H * cs;
-    const ox = ro[0], oz = ro[2], dx = rd[0], dz = rd[2];
-    let t0 = 0, t1 = Infinity;
-    if (dx !== 0) { const ta = (0 - ox) / dx, tb = (gx - ox) / dx; if (ta < tb) { if (ta > t0) t0 = ta; if (tb < t1) t1 = tb; } else { if (tb > t0) t0 = tb; if (ta < t1) t1 = ta; } } else if (ox < 0 || ox > gx) return;
-    if (dz !== 0) { const ta = (0 - oz) / dz, tb = (gz - oz) / dz; if (ta < tb) { if (ta > t0) t0 = ta; if (tb < t1) t1 = tb; } else { if (tb > t0) t0 = tb; if (ta < t1) t1 = ta; } } else if (oz < 0 || oz > gz) return;
-    if (!(t0 <= t1)) return;   // (misses the grid — or NaN)
-    let cx = Math.floor((ox + dx * t0) / cs), cz = Math.floor((oz + dz * t0) / cs);
-    if (cx < 0) cx = 0; else if (cx > W - 1) cx = W - 1; if (cz < 0) cz = 0; else if (cz > H - 1) cz = H - 1;
-    const stepX = dx > 0 ? 1 : dx < 0 ? -1 : 0, stepZ = dz > 0 ? 1 : dz < 0 ? -1 : 0;
-    const dtx = stepX ? cs / Math.abs(dx) : Infinity, dtz = stepZ ? cs / Math.abs(dz) : Infinity;
-    let tmx = dx > 0 ? ((cx + 1) * cs - ox) / dx : dx < 0 ? (cx * cs - ox) / dx : Infinity;
-    let tmz = dz > 0 ? ((cz + 1) * cs - oz) / dz : dz < 0 ? (cz * cs - oz) / dz : Infinity;
-    if (++this.rgRay === 0xffffffff) { this.rgStamp.fill(0); this.rgRay = 1; }
-    const ray = this.rgRay, stamp = this.rgStamp, start = this.rgStart, items = this.rgItems;
-    let tEnter = t0;
-    for (;;) {
-      if (tEnter > this.rcBest) return;
-      const c = cz * W + cx; const e = start[c + 1];
-      for (let k = start[c]; k < e; k++) { const i = items[k]; if (stamp[i] === ray) continue; stamp[i] = ray; this.rayTest(i, ro, rd, skipFlags, skipOwner); }
-      if (tmx < tmz) { tEnter = tmx; cx += stepX; if (cx < 0 || cx >= W) return; tmx += dtx; }
-      else if (tmz < Infinity) { tEnter = tmz; cz += stepZ; if (cz < 0 || cz >= H) return; tmz += dtz; }
-      else return;   // (a vertical ray: one cell)
-    }
-  }
-  /** register the static prefix all[0, n) of the last upload in the ray grid (see the members): padded footprints into cells, the oversize / out-of-grid ones as globals */
-  private buildRayGrid(n: number) {
-    const W = WORLD.gridW, H = WORLD.gridH, cs = WORLD.gridCell, N = W * H, pad = BoxWorld.RAY_PAD; const all = this.all;
-    if (this.rgRanges.length < n * 4) this.rgRanges = new Int32Array(Math.max(n, this.maxBoxes) * 4);
-    if (this.rgStamp.length < this.maxBoxes) { this.rgStamp = new Uint32Array(this.maxBoxes); this.rgRay = 0; }
-    const R = this.rgRanges, start = this.rgStart; start.fill(0); this.rgGlobals.length = 0;
-    for (let i = 0; i < n; i++) {
-      const b = all[i]; const r = i * 4; const [ex, ez] = BoxWorld.footprint(b);
-      const x0 = Math.floor((b.c[0] - ex - pad) / cs), x1 = Math.floor((b.c[0] + ex + pad) / cs), z0 = Math.floor((b.c[2] - ez - pad) / cs), z1 = Math.floor((b.c[2] + ez + pad) / cs);
-      if (!(x0 >= 0 && z0 >= 0 && x1 < W && z1 < H) || (x1 - x0 + 1) * (z1 - z0 + 1) > 96) { R[r] = -1; this.rgGlobals.push(i); continue; }   // (reaches outside the grid, or huge — a floor: tested every ray; NaN geometry lands here too)
-      R[r] = x0; R[r + 1] = x1; R[r + 2] = z0; R[r + 3] = z1;
-      for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) start[z * W + x]++;
-    }
-    let sum = 0; for (let c = 0; c < N; c++) { const k = start[c]; start[c] = sum; sum += k; } start[N] = sum;
-    if (sum > this.rgItems.length) this.rgItems = new Uint32Array(Math.max(sum, this.rgItems.length * 2));
-    const fill = this.rgFill; fill.fill(0); const items = this.rgItems;
-    for (let i = 0; i < n; i++) {
-      const r = i * 4; const x0 = R[r]; if (x0 < 0) continue; const x1 = R[r + 1], z0 = R[r + 2], z1 = R[r + 3];
-      for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) { const c = z * W + x; items[start[c] + fill[c]++] = i; }
-    }
-    this.rgN = n; this.rayGridStats.statics = n; this.rayGridStats.globals = this.rgGlobals.length; this.rayGridStats.items = sum;
-  }
 }
 
-/** is this box's record a SHAPE's (scene/shapes.ts: the box says it, and stands as it) and no break's? */
-export const shapeCut = (b: Box): boolean => b.shaped === true && b.cut !== undefined;
 /** IS THIS BOX'S CUT RECORD MET by the game's rays and segments? Under the cut-pieces switch every record is (scene/cut.ts); a shape's always: a shape is
  *  the simulation's, and a picture setting may not move it (as a round thing, scene/round.ts). Ask it only of a box that has a record. */
 export const cutMet = (b: Box): boolean => (cutConfig.on || b.shaped === true) && b.cut!.length > 0;

@@ -1,9 +1,6 @@
 // Fixed-angle follow camera (tilted perspective, à la the reference shots) + screen→world rays.
 import { Vec3, m4, v3, DEG, damp, clamp } from '../math/vec';
 
-/** the steepest pitch a pinned framing may ask for (setPin clamps to it): straight down / up is a degenerate lookAt */
-export const PIN_PITCH_MAX = 89 * DEG;
-
 export class FollowCamera {
   target: Vec3 = [10, 0, 15];       // smoothed look-at point (on the floor)
   desired: Vec3 = [10, 0, 15];
@@ -24,22 +21,6 @@ export class FollowCamera {
   /** Automation only (main.ts __stage): a fixed framing that update() applies verbatim — look-at, yaw, pitch, distance, no damping, no aim lead, no peek
    *  offset — so a scripted capture frames what it means to frame instead of wherever the follow camera has drifted to. null = the live follow camera. */
   pin: { look: Vec3; yaw: number; pitch: number; dist: number } | null = null;
-  /** the free camera's angles + zoom from before the first setPin, put back when the pin is released through setPin(null) */
-  private beforePin: { yaw: number; pitch: number; distance: number; desiredDistance: number } | null = null;
-  /** Pin the framing (or, with null, release it) — the way __stage sets `pin`: the numbers are checked (all finite, else it throws) and clamped (dist ≥ near +
-   *  0.05 so the eye never sits on the look-at point; |pitch| ≤ PIN_PITCH_MAX, since at ±90° the view direction is the up vector and lookAt degenerates), and the
-   *  FREE camera's yaw / pitch / zoom are remembered on the first pin and restored on release — a script that pinned the camera hands back the camera the player
-   *  had, not the pin's zoom and bearing (review B7.10). Returns the pin as applied. Writing `pin` directly still works and skips all of this (the breach's shots). */
-  setPin(p: { look: Vec3; yaw: number; pitch: number; dist: number } | null): FollowCamera['pin'] {
-    if (!p) {
-      if (this.pin && this.beforePin) { this.yaw = this.beforePin.yaw; this.pitch = this.beforePin.pitch; this.distance = this.beforePin.distance; this.desiredDistance = this.beforePin.desiredDistance; }
-      this.pin = null; this.beforePin = null; return null;
-    }
-    if (![p.look?.[0], p.look?.[1], p.look?.[2], p.yaw, p.pitch, p.dist].every(x => typeof x === 'number' && Number.isFinite(x))) throw new Error('camera pin: look[3], yaw, pitch and dist must all be finite numbers');
-    if (!this.pin) this.beforePin = { yaw: this.yaw, pitch: this.pitch, distance: this.distance, desiredDistance: this.desiredDistance };
-    this.pin = { look: v3.copy(p.look), yaw: p.yaw, pitch: clamp(p.pitch, -PIN_PITCH_MAX, PIN_PITCH_MAX), dist: Math.max(this.near + 0.05, p.dist) };
-    return this.pin;
-  }
   update(dt: number, follow: Vec3, aimPoint: Vec3 | null) { this.frame(); this.step(dt, follow, aimPoint); }
   /** update()'s two halves, for a host that steps the camera with the game and draws at its own rate (src/host/drawpage.ts under the fixed step). `frame()`, once a drawn
    *  frame: 'previous' ← the matrix the last frame was DRAWN with. `step()`, once a game tick: the follow itself. */
