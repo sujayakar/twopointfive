@@ -83,7 +83,7 @@ for (const f of readdirSync(HERE).filter(f => f.endsWith('.ts')).sort()) {
     levels.push(name); builtBoxes.set(name, built.level.boxes);
   } catch (e) { unbuilt.push({ level: name, why: firstLine(e) }); }
 }
-building = 'office'; open.length = 0; builtBoxes.set('office', buildOfficeProcedural({ groups: [] }, { lived: true }).boxes); levels.push('office');   // (the office is built by its own function, not a file under tools/levels; `lived`: as its FILE has it, whatever stand this tool runs on — the exporter says the same word)
+building = 'office'; open.length = 0; builtBoxes.set('office', buildOfficeProcedural({ groups: [] }).boxes); levels.push('office');   // (the office is built by its own function, not a file under tools/levels; `lived`: as its FILE has it, whatever stand this tool runs on — the exporter says the same word)
 building = ''; for (const k of KITS) k.stand();                   // a kit no generator stood up still says its pieces
 watchPieces(null);
 levels.sort();

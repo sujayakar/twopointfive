@@ -65,7 +65,7 @@ export function lintLevel(data: LevelData, opts: LintOpts = {}): LintReport {
   const verrs = validateLevelData(data);
   if (verrs.length) { for (const e of verrs.slice(0, 50)) add('error', 'schema', e, idsInMessage(e, data)); return done({ schema: verrs.length }); }
   let level: Level;
-  try { level = loadLevel(data, { validate: false, dressing: true, lived: true }); } catch (e) { add('error', 'load', String((e as Error).message ?? e)); return done({}); }
+  try { level = loadLevel(data, { validate: false }); } catch (e) { add('error', 'load', String((e as Error).message ?? e)); return done({}); }
   const boxes = level.boxes; const boxId = (i: number) => data.boxes[i]?.id ?? `box#${i}`;
 
   // 1. boxes: extents, duplicates, bounds

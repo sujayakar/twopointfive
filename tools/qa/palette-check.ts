@@ -70,7 +70,7 @@ const shapeOf = (b: Box) => JSON.stringify(b.shape ? { ...b.shape, with: b.shape
 
 // 2. A LEVEL'S SKIN IN THE SECOND PAINTS: the skin's shared rules over every level's floor, once in the kit's palette, once in the second
 { const plains = floorLevels(), floorOf = floorFiles(plains);
-  const open = (name: string) => { const data = parseLevelData(readFileSync(floorOf(name), 'utf8')) as LevelData; return { level: loadLevel(data, { lived: true, dressing: true } as never), n: 0 }; };
+  const open = (name: string) => { const data = parseLevelData(readFileSync(floorOf(name), 'utf8')) as LevelData; return { level: loadLevel(data), n: 0 }; };
   const bad: string[] = []; let asked = 0, repainted = 0, decals = 0, laidInKit = 0;
   for (const name of plains) { const A = open(name), B = open(name), O = open(name), n0 = A.level.boxes.length;   // (O: the floor, untouched)
     const groups = (parseLevelData(readFileSync(floorOf(name), 'utf8')) as LevelData).boxes.map(b => (b as { group?: string }).group ?? '');

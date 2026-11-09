@@ -1,6 +1,6 @@
 // The two conversions between the level FILE (levelData.ts LevelData: ids, flag names, material keys) and the level the game RUNS (level.ts Level: Box[]
 // with bit flags, array indices, LightDef[] …):
-//   loadLevel(data)          → Level   what buildLevel() does with levels/office.json at every boot (browser, tools alike)
+//   loadLevel(data)          → Level   the whole file, every box in file order
 //   levelToData(level, opts) → LevelData   the exporter's direction (tools/level-export.ts turns the legacy procedural generator's output into the file)
 // Both preserve ARRAY ORDER exactly — data.boxes[i] ⇄ level.boxes[i] ⇄ world.statics[i] — and resolve every cross reference (a light's fixture, a
 // switchable's boxes, the breaker's pair, a beacon's dome) id ⇄ index. Nothing here is procedural: the one computed thing is a prop's collision footprint
@@ -12,8 +12,6 @@ import type { Level, LightDef, PropDef, PropPart, LevelDoorDef, PatrolRoute, Cho
 import { LevelData, LEVEL_DATA_VERSION, BoxData, ShapeData, ShapePieceData, DoorData, LightData, PropData, MaterialData, FloorData, SurfacesData, RoomClearPlanData, BreachPlanData, ObjectiveData, DeviceData, CivilianData, VentData, MarkData, validateLevelData, flagsToBits, bitsToFlags } from './levelData';
 import { copyMarkings } from '../../../src/scene/markings';
 import { formOf, type BoxShape, type ShapePiece } from '../../../src/scene/shapes';
-import { LIVED, isLived } from './lived';   // (no imports of its own: the lived-in rooms' switch and what counts as lived)
-import { DESTRUCTION, DRESS_GROUP } from './dressing';   // (no imports of its own: the switch + the dressing group's name)
 
 const V = (v: readonly number[]): Vec3 => [v[0], v[1], v[2]];
 const VV = (a: readonly (readonly number[])[]): Vec3[] => a.map(V);
@@ -34,13 +32,9 @@ export function fitPropFootprint(parts: readonly { off: Vec3; h: Vec3; yaw?: num
 }
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------ LevelData → Level
-/** the name of the file a loaded level came from (LevelData.name) — beside the Level, not on it: its shape is what generators and round trips compare.
- *  Asked by rust/game_rules/src/weather for a level built for snow (rust/game_rules/src/weather_kinds SNOW_LEVELS). A Level nobody loaded from data (a generator's, a bare stage) has none. */
-const levelNames = new WeakMap<Level, string>();
-export function levelNameOf(level: Level | null | undefined): string | null { return (level && levelNames.get(level)) ?? null; }
 /** Build the runtime Level from level data. Validates first (throws listing every problem) unless told the caller already has. Every vector is copied:
  *  the game mutates its Level (box flags, scratch routes) and two loads must never share state. */
-export function loadLevel(data: LevelData, opts: { validate?: boolean; dressing?: boolean; lived?: boolean } = {}): Level {
+export function loadLevel(data: LevelData, opts: { validate?: boolean } = {}): Level {
   if (opts.validate !== false) {
     const errs = validateLevelData(data);
     if (errs.length) throw new Error(`level '${data?.name ?? '?'}' (v${(data as any)?.version} vs loader v${LEVEL_DATA_VERSION}): ${errs.length} error(s)\n  ${errs.slice(0, 20).join('\n  ')}${errs.length > 20 ? `\n  … ${errs.length - 20} more` : ''}`);
@@ -63,14 +57,7 @@ export function loadLevel(data: LevelData, opts: { validate?: boolean; dressing?
   const saidOf = (o: { stuff?: string; does?: string; material?: string }): { stuff?: BoxStuff; does?: DoesWord } => { const m = o.material !== undefined ? mats.get(o.material) : undefined, w = stuffOf(o, m); return { ...(w !== undefined ? { stuff: w } : {}), ...doesOf(o, m) }; };
   // boxes, in file order (index i of the file IS static box i)
   const boxIndex = new Map<string, number>();
-  // (the DRESSING — things a level file carries only to be wrecked, appended last by tools/levels/dress.ts — is left out with the destruction switch off: every other
-  // box keeps its index and the level is the one it was before there was any)
-  // (the LIVED things — what furnishes a room as the office's rooms are furnished, lived.ts: boxes in group 'lived.<room>', props / lights / fixtures whose id
-  // starts 'lived.' — are left out the same way with their switch off: nothing else moves, and nothing that is kept may name one)
-  const lived = opts.lived ?? LIVED.on, dressed = opts.dressing ?? DESTRUCTION.on;
-  const fileBoxes = lived && dressed ? data.boxes : data.boxes.filter(b => (dressed || b.group !== DRESS_GROUP) && (lived || !isLived(b.group)));
-  const fileProps = lived ? data.props : data.props.filter(p => !isLived(p.id)), fileLights = lived ? data.lights : data.lights.filter(l => !isLived(l.id)), fileSwitchables = lived ? data.switchables : data.switchables.filter(s => !isLived(s.id));
-  const boxes: Box[] = fileBoxes.map((b, i) => {
+  const boxes: Box[] = data.boxes.map((b, i) => {
     boxIndex.set(b.id, i);
     const p: Partial<Box> & { c: Vec3; h: Vec3 } = { c: V(b.c), h: V(b.h), yaw: b.yaw ?? 0, albedo: albedoOf(b), emissive: b.emissive ? V(b.emissive) : [0, 0, 0], flags: flagsToBits(b.flags) };
     if (b.rot) p.rot = [b.rot[0], b.rot[1], b.rot[2], b.rot[3]];
@@ -90,7 +77,7 @@ export function loadLevel(data: LevelData, opts: { validate?: boolean; dressing?
   });
   const bx = (id: string) => { const i = boxIndex.get(id); if (i === undefined) throw new Error(`level '${data.name}': unknown box '${id}'`); return i; };
   // loose props
-  const props: PropDef[] = fileProps.map(p => {
+  const props: PropDef[] = data.props.map(p => {
     const parts: PropPart[] = p.parts.map(q => { const part: PropPart = { off: V(q.off), h: V(q.h), yaw: q.yaw ?? 0, albedo: albedoOf(q) }; const marks = copyMarkings(q.markings); if (marks) part.marks = marks; const said = saidOf(q); if (said.stuff !== undefined) part.stuff = said.stuff; if (said.does !== undefined) part.does = said.does; return part; });
     const fit = fitPropFootprint(parts);
     return { kind: p.kind, name: p.name ?? p.id, x: p.x, z: p.z, yaw: p.yaw ?? 0, parts, half: p.half ? [p.half[0], p.half[1]] : fit.half, height: p.height ?? fit.height, mass: p.mass };
@@ -104,8 +91,8 @@ export function loadLevel(data: LevelData, opts: { validate?: boolean; dressing?
     if (l.broad !== undefined) d.broad = l.broad;
     return d;
   };
-  const lights = fileLights.map(lightOf);
-  const switchables: Level['switchables'] = fileSwitchables.map(s => {
+  const lights = data.lights.map(lightOf);
+  const switchables: Level['switchables'] = data.switchables.map(s => {
     const o: Level['switchables'][number] = { name: s.id, boxes: s.boxes.map(bx), group: s.group, on: s.on, baseEmissive: V(s.baseEmissive) };
     if (s.flicker !== undefined) o.flicker = s.flicker; if (s.mains !== undefined) o.mains = s.mains;
     return o;
@@ -152,7 +139,6 @@ export function loadLevel(data: LevelData, opts: { validate?: boolean; dressing?
   // data.surfaces → Level.surfaces, what rust/game_rules/src/floor reads for this level's footsteps: non-enumerable, so a Level compared or written as data is what it was
   // (a file with none: rust/game_rules/src/floor's own office map).
   if (data.surfaces) Object.defineProperty(level, 'surfaces', { value: clone(data.surfaces), enumerable: false, writable: true, configurable: true });
-  levelNames.set(level, data.name);
   return level;
 }
 /** one device record → its runtime def (id → name, floor / notes dropped like a door's, every vector copied, optional fields written iff present) */

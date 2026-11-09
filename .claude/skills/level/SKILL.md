@@ -181,7 +181,7 @@ like that."
   (`steel`, `enamel`, `brushed`), not a kept level. **seen** an office's half-metre wall numerals drew chipped,
   because every mark was old paint whatever the place; its racks drew rusty because they were said as `metal`.
   **check** `bun run tools/qa/checks.ts kept`.
-- **Furniture is additions only**, the tail of the generator's lists, group `lived.<room>`, behind `LIVED.on`.
+- **Furniture is additions only**, the tail of the generator's lists, group `lived.<room>` (`tools/levels/lib/lived.ts`).
 - **Clear of doors, stacks, marks and lines**: 1.1 m off a door's line and out of its sweep; a 0.9 m lane between a room's
   doors; nothing on or 0.45 m beside an authored point; never across a mark's aim line; never a new wall; nothing in the
   hidden band under a room's north wall. **seen** a crate stack shut the one way round; furnished barracks played harder
@@ -422,7 +422,7 @@ stays dark. These are guidelines, not misses like the rest of this page: each sa
   share a moment, an hour and a camera). **check** `picture`
   (that it is there; whether it looks like play is **by eye**).
 - **Its look**: built on the look's kit (or the plain kit with `tools/levels/gwotSkin.ts` over it, box for box, other paint), with its row in
-  `src/scene/look.ts LOOK_DOORS`; one accent and one family of ground marks no other level has. **check**
+  `rust/game_rules/src/doors/paint.rs`; one accent and one family of ground marks no other level has. **check**
   `look`; no check today (`rust/game_start/tests`).
 - **Hard, the short list, the par clock** where the level has them: `HARD_AT` / `SQUAD_HARD`, `src/scene/picks.ts`,
   `scenarios.par` set from 24 measured seeds.

@@ -5,7 +5,6 @@
 // ONE SWITCH (and under it `suit`, the sneaking suit: on whenever the look is, looks only). OFF in this module; the PAGE turns it on at boot before the cast is
 // fetched (host/drawpage.ts). It says what the men wear and how a leaf is painted, never which file a level is.
 // No imports here: scene/, game/ and the tools all read it.
-import type { BoxStuff } from './boxes';
 export const LOOK = {
   on: false,
   /** THE SNEAKING SUIT (the maintainer, 10-10: "sam should also be in a black sneaking suit in stealth missions (probs not loud ones)"): with the look on, Sam —
@@ -33,27 +32,6 @@ export function placeOfQuery(q: URLSearchParams): boolean {
   const lf = q.get('levelFile'); if (lf && /^[\w.-]+\.json$/.test(lf)) return !/^office(-[\w.-]+)?\.json$/.test(lf);   // (a name host/drawpage.ts's boot will not fetch boots the bundled office)
   return false;
 }
-
-/** DOOR LEAVES per level (picture only; tools/levels/lib/leafPaint.ts paintLeaves): the paint of the outside leaves and, where a level has its own, of the inside ones — for
- *  the levels whose accent is not one of the three paints paintLeaves counts off a level's boxes (the compound's blue, the barracks' green, the depot's oxide
- *  red). Without a row here every such level got the barracks' green doors. Keyed by the level's own file, colours as plain numbers (no imports here).
- *  `stuff` = WHAT THE LEAVES ARE MADE OF (Box.stuff): one word for every leaf, or one for the outside leaves and one for the inside ones. A row's colours are
- *  numbers and numbers say nothing, so a row that says no word has plain leaves. (Until 11-04 a leaf was whatever its colour was nearest: the records
- *  office's black lacquer was bare iron and the consulate's dark varnish a blanket, on the leaves whose own shade fell under their paint's and on no other.) */
-export type LookDoorStuff = BoxStuff | { out?: BoxStuff; in?: BoxStuff };
-export const LOOK_DOORS: Readonly<Record<string, { out: readonly [number, number, number]; in?: readonly [number, number, number]; stuff?: LookDoorStuff }>> = {
-  'white-roof.json': { out: [0.88, 0.24, 0.03], in: [0.74, 0.74, 0.73], stuff: 'enamel' },   // the look study's roof: orange gloss outside, white inside, kept
-  'block.json': { out: [0.22, 0.4, 0.1] },   // the telephone exchange: pistachio gloss
-  'warehouse.json': { out: [0.6, 0.42, 0.04], stuff: { out: 'paint' } },         // the customs shed: safety yellow
-  'registry.json': { out: [0.1, 0.1, 0.105], stuff: { out: 'paint' } },          // the records office: black lacquer
-  'records.json': { out: [0.2, 0.2, 0.22], in: [0.47, 0.36, 0.22], stuff: { in: 'wood' } },   // the land office: grey paint outside, pale poplar inside
-  'consulate.json': { out: [0.21, 0.05, 0.105], in: [0.27, 0.18, 0.12], stuff: { in: 'wood' } },   // the consulate: plum outside, dark varnish inside
-  'defuse.json': { out: [0.3, 0.14, 0.05] },                                     // the bomb maker's house: the firing wire's copper, darker
-  'floodlit.json': { out: [0.62, 0.17, 0.03] },                                  // the airstrip's fuel post: aviation orange
-  'mousehole.json': { out: [0.05, 0.2, 0.19] },                                 // the clinic: its queue line's teal, darker
-  'killhouse.json': { out: [0.26, 0.12, 0.42], in: [0.55, 0.43, 0.27], stuff: { in: 'wood' } },   // the shoot house: its marking paint's violet, darker, outside; raw plywood inside
-  'hall.json': { out: [0.16, 0.36, 0.47] },                                      // the scouts' barrack wing: its range card's pale sky blue, darker
-};
 
 // THE LOOK (the material picture: render/frame.ts lookConfig, shaders/look.wgsl; not the dress above, though they share the word): what on an address is its.
 // One reader, so that the page and a run of several pages that is to be ONE look from its first page to its last (ui/benchrun.ts) cannot come to read an

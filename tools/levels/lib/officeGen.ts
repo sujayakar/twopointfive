@@ -1,9 +1,6 @@
-// LEGACY GENERATOR — the office level as it was authored before the level became data (levels/office.json, levelData.ts).
-// NOT imported by the game: the page boots from the JSON through level.ts buildLevel() → levelLoad.ts loadLevel(). This file is kept as the
-// source of truth for REGENERATING that JSON — `bun run tools/level-export.ts` runs buildOfficeProcedural() once and writes levels/office.json.
-// Edit the level here and re-export ONLY until the editor lane (G1b) lands; after that the JSON is the level and this file goes.
-// The body is the old buildLevel() verbatim but for its name, the `grp()` section markers (editor grouping recorded per box in `trace`, no effect on
-// the output) and the exported palette. Units: meters. +X east, +Z south, +Y up. Floor top at y=0.
+// THE OFFICE'S GENERATOR AND ITS KIT. `bun run tools/level-export.ts` runs buildOfficeProcedural() once and writes levels/office.json, the level the game reads: edit the level here and
+// export it again. officeKit is the same walls, doors, furniture, lights and paints for other levels' generators. `grp()` records each box's editor group in `trace` and changes nothing
+// else. Units: meters. +X east, +Z south, +Y up. Floor top at y=0.
 import { Vec3, DEG, quat } from '../../../src/math/vec';
 import { Box, BoxFlag, makeBox } from '../../../src/scene/boxes';
 import { saidFor, namePaints, paintOf, worded, type BoxStuff, drawnAs, PANEL_GREY, CHAIR_GREY, KERB_GREY, RACK_BLACK, KEY_BLACK, PHONE_BLACK, madeOf, saidAs } from '../../../src/scene/stuff';
@@ -11,7 +8,6 @@ import { carShapes, hubPaint, carSays } from './carShapes';
 import { WORLD } from '../../../src/scene/world';
 import type { Level, LightDef, PatrolRoute, Chokepoint, RoomClearPlan, BreachPlan, DaylightDef, LevelDoorDef, PropKind, PropPart, PropDef, DeviceDef, CivilianDef, VentDef } from './level';
 import { MarkingDef, MARKING_TEXEL, MAX_MARKS_PER_BOX, markStats, stencilWidth, type MarkFace, type MarkPal } from '../../../src/scene/markings';
-import { LIVED } from './lived';
 import * as MD from './markingDefaults';
 import { fitOpenings, fitDoorDef, exitThrough, JAMB_FACE, DOOR_HEAD, LEAF_H } from './doorSize';
 import { fitPropFootprint } from './levelLoad';
@@ -26,10 +22,7 @@ export interface GeneratorTrace { groups: string[]; }
  *  LED nubs, the vending machines' glowing front slabs, clock faces and hands, screen sheets, door-gap strips, deck boards…) is removed and drawn as markings
  *  on the parent face instead — never a free-standing object (papers, notes, books, trays keep their boxes: the sheet's edge is what makes it a thing on the
  *  table). Both default ON. `texel` = the base lattice the bitmaps are generated for (the page's world-resolution strip: 2 / 2.5 / 4 cm). */
-export interface GeneratorOpts { markings?: boolean; demote?: boolean; texel?: number;
-  /** the office's lived tier (the hand pass's drawn-only things, groups `lived.<room>` at the tail): laid or left out. Absent = as the level is loaded here
-   *  (tools/levels/lib/lived.ts LIVED.on), so the generator and the loaded file are the same Level on either stand; the exporter asks for it, since the FILE carries it */
-  lived?: boolean; }
+export interface GeneratorOpts { markings?: boolean; demote?: boolean; texel?: number; }
 
 const H = WORLD.ceilingY;
 /** How far one drawn face is sunk behind another that would lie in its plane, so that the depth test can choose between them (two faces in one plane, drawn
@@ -182,7 +175,7 @@ export function officeKit(trace?: GeneratorTrace, opts: GeneratorOpts = {}) {
   // emits their boxes as dynamics every frame. Keeping them out of `boxes` (rather than leaving them in and flagging them) means the static GPU list,
   // the static collision and the nav bake are prop-free with no special cases and nothing is baked twice; the box indices other systems hold (switchables,
   // LightDef.fixtureBox, breaker, beacons — and world.statics[i] ≡ boxes[i]) stay consistent because every one of them is captured from the
-  // same add() sequence in this run and nothing outside buildLevel hardcodes an index. Desk-top and shelf cartons stay static (they are not on the floor).
+  // same add() sequence in this run and nothing outside this function hardcodes an index. Desk-top and shelf cartons stay static (they are not on the floor).
   const props: PropDef[] = [];
   /** Fit the collision footprint (bounding rectangle of the parts in the prop frame) and height, and re-centre the prop origin on that rectangle so the
    *  body turns about — and collides symmetrically around — the middle of the group (matters for a stack whose top carton overhangs the base). */
@@ -1240,7 +1233,7 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
     // ---- KEEP CLEAR, on the ground outside the fire exit: the one place of this building where hatching is painted
     keepClear(boxOn('+y', 38, 0, 26), 36.14, 20.1, 37.3, 21.4);
 
-    if (opts.lived ?? LIVED.on) {
+    {
       const coat = madeOf('enamel', [0.62, 0.62, 0.6], { rough: 0.4 }), louvre = madeOf('louvre', [0.5, 0.51, 0.52], { rough: 0.45 }), dark = madeOf('enamel', [0.2, 0.21, 0.23], { rough: 0.4 });
       // ---- the corridor: the grey of the conference room's sill runs on as a dado along the whole north wall (the same skim, the sill's own paint);
       // conduit under the wall's head from the server room's door to the manager's and on to a box by the storage door, where the breaker is; a transfer
