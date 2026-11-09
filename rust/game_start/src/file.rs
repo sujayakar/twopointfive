@@ -7,7 +7,7 @@ use crate::json::Json;
 use crate::json_struct;
 use crate::json_words;
 use crate::kit_file::KitView;
-use crate::read::{field, record, At, Faults, FromJson};
+use crate::read::{blank, field, At, Faults, FromJson};
 use alloc::{format, string::String, vec::Vec};
 use game::js::JsMap;
 use game::scene_level::{BreachPlan, CivilianDef, DeviceDef, RoomClearPlan, VentDef};
@@ -112,22 +112,22 @@ pub struct Exfil { pub door: String, pub x: f64, pub z: f64, pub out: Option<[f6
 json_struct!(Exfil { door: "door", x: "x", z: "z", out: "out" } drops { "id": String });
 pub struct Mission { pub player_spawn: V3, pub reach: Reach, pub drive: Drive, pub exfil: Exfil }
 impl FromJson for Mission {
-    fn from_json(j: &Json, at: &At) -> Option<Self> {
-        record(j, at)?;
+    fn from_json(j: &Json, at: &At) -> Self {
+        let at = &at.of_record(j);
         let player_spawn = field(j, "playerSpawn", at);
         let (list, here) = (j.get("objectives").items(), at.key("objectives"));
-        fn one<T: FromJson>(list: &[Json], here: &At, kind: &str) -> Option<T> {
-            let mine: Vec<usize> = (0..list.len()).filter(|&i| list[i].get("kind").str() == Some(kind)).collect();
-            if mine.len() != 1 { here.fault(format!("exactly one '{kind}' objective (found {})", mine.len())); }
+        fn one<T: FromJson>(list: &[Json], here: &At, kind: &str) -> T {
             // (two of a kind: each is read, so that neither's members are unread)
-            let read: Vec<Option<T>> = mine.iter().map(|&i| T::from_json(&list[i], &here.item(i, list[i].peek("id").and_then(Json::str)))).collect();
-            if read.len() == 1 { read.into_iter().next()? } else { None }
+            let mut read: Vec<T> = (0..list.len()).filter(|&i| list[i].get("kind").str() == Some(kind))
+                .map(|i| T::from_json(&list[i], &here.item(i, list[i].peek("id").and_then(Json::str)))).collect();
+            if read.len() != 1 { here.fault(&format!("exactly one '{kind}' objective (found {})", read.len())); }
+            read.pop().unwrap_or_else(blank)
         }
-        let (reach, drive, exfil) = (one(list, &here, "reach"), one(list, &here, "drive"), one(list, &here, "exfil"));
+        let mission = Mission { player_spawn, reach: one(list, &here, "reach"), drive: one(list, &here, "drive"), exfil: one(list, &here, "exfil") };
         for (i, o) in list.iter().enumerate() {
-            if !matches!(o.get("kind").str(), Some("reach" | "drive" | "exfil")) { o.skip_all(); here.item(i, None).key("kind").wants::<()>("one of reach, drive, exfil", o.get("kind")); }
+            if !matches!(o.get("kind").str(), Some("reach" | "drive" | "exfil")) { o.skip_all(); here.item(i, None).key("kind").wants_word(&["reach", "drive", "exfil"], o.get("kind")); }
         }
-        Some(Mission { player_spawn: player_spawn?, reach: reach?, drive: drive?, exfil: exfil? })
+        mission
     }
 }
 /// the mains panel: `panel` and `led` are boxes
@@ -143,10 +143,9 @@ json_struct!(Daylight { sun: "sun", sky: "sky", groups_on: "groupsOn", groups_of
 /// a drill's plan and the file's id of it
 pub struct Plan<T> { pub id: String, pub plan: T }
 impl<T: FromJson> FromJson for Plan<T> {
-    fn from_json(j: &Json, at: &At) -> Option<Self> {
-        record(j, at)?;
-        let (id, plan) = (field(j, "id", at), T::from_json(j, at));
-        Some(Plan { id: id?, plan: plan? })
+    fn from_json(j: &Json, at: &At) -> Self {
+        let at = &at.of_record(j);
+        Plan { id: field(j, "id", at), plan: T::from_json(j, at) }
     }
 }
 pub struct Plans { pub room_clear: Vec<Plan<RoomClearPlan>>, pub breach: Option<Plan<BreachPlan>> }
@@ -155,17 +154,16 @@ json_struct!(Plans { room_clear: "roomClear", breach: "breach" });
 /// the missions' block: what the game keeps of it, and the Team & kit picture's part
 pub struct Scenarios { pub kept: LevelScenarios, pub kit_view: Option<KitView> }
 impl FromJson for Scenarios {
-    fn from_json(j: &Json, at: &At) -> Option<Self> {
-        record(j, at)?;
-        let (kept, kit_view) = (LevelScenarios::from_json(j, at), field(j, "kitView", at));
-        Some(Scenarios { kept: kept?, kit_view: kit_view? })
+    fn from_json(j: &Json, at: &At) -> Self {
+        let at = &at.of_record(j);
+        Scenarios { kept: LevelScenarios::from_json(j, at), kit_view: field(j, "kitView", at) }
     }
 }
 
 /// a list nothing has ever stood in: the file says it empty
 pub struct Nothing;
 impl FromJson for Nothing {
-    fn from_json(j: &Json, at: &At) -> Option<Self> { j.skip_all(); at.fault("a way between floors (a stair, a ladder) is in no game yet: the list is empty"); None }
+    fn from_json(j: &Json, at: &At) -> Self { j.skip_all(); at.fault("a way between floors (a stair, a ladder) is in no game yet: the list is empty"); Nothing }
 }
 
 pub struct LevelFile {
@@ -186,7 +184,7 @@ pub fn read(data: &Json) -> (Option<LevelFile>, Vec<String>) {
     let at = At::top(&faults);
     let v = data.get("version");
     if v.num() != Some(VERSION) {
-        at.key("version").fault(if v.num() == Some(1.0) { String::from("version 1 writes a round thing as four slabs: bun run tools/levels/round-convert.ts <file> makes it version 2") }
+        at.key("version").fault(&if v.num() == Some(1.0) { String::from("version 1 writes a round thing as four slabs: bun run tools/levels/round-convert.ts <file> makes it version 2") }
             else { format!("this build reads version {VERSION}, and the file says {}", crate::json::to_line(v)) });
         return (None, faults.all());
     }
@@ -195,5 +193,5 @@ pub fn read(data: &Json) -> (Option<LevelFile>, Vec<String>) {
     data.unread("", &mut unread);
     for place in unread { faults.say(place, "nothing in the game reads a member of this name here"); }
     let faults = faults.all();
-    (if faults.is_empty() { file } else { None }, faults)
+    (faults.is_empty().then_some(file), faults)
 }
