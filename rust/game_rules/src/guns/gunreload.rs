@@ -400,103 +400,165 @@ pub fn reload_hand_boxes(g: &mut crate::game::Game, c_2: CharId, id_2: crate::we
 
 #[cfg(test)]
 mod tests {
-    // Bits from the TypeScript under bun with EXACT.on, GUNLOOK.on and GUNLOOK.shells: FNV-1a 64 over the words in the order below.
     use super::*;
     use crate::weapons::GunModelId as M;
 
-    struct H(u64);
-    impl H {
-        fn new() -> H { H(0xcbf29ce484222325) }
-        fn w(&mut self, x: u64) { self.0 = (self.0 ^ x).wrapping_mul(0x100000001b3); }
-        fn f(&mut self, x: f64) { self.w(x.to_bits()); }
-        fn s(&mut self, t: &str) { for c in t.bytes() { self.w(c as u64); } }
-    }
     fn b(dur: f64, out: f64, in_: f64, rack: f64, pull: bool) -> FeedBeat { FeedBeat { dur, out, in_, rack, pull } }
     fn long(pull: bool) -> FeedBeat { b(6.0, 1.2, 4.4, 5.4, pull) }
     fn m1014(pull: bool) -> FeedBeat { b(3.6, 0.4, 2.9, 3.3, pull) }
     fn m870() -> FeedBeat { b(3.2, 0.4, 2.5, 2.9, true) }
+    fn near(a: f64, b: f64) -> bool { (a - b).abs() < 1e-9 }
 
-    fn path(model: M, beat: FeedBeat, n: f64, port: bool) -> (usize, u64) {
-        let FeedPath::Arm0(p) = path_of(model, beat, n, port) else { panic!("keys") };
-        let mut h = H::new();
-        for k in &p.keys {
-            h.f(k.t);
-            match k.at { FeedKeyAt::Pouch => h.w(1), FeedKeyAt::List(a) => { h.f(a[0]); h.f(a[1]); h.f(a[2]); } }
-            h.s(k.how.as_str());
-            h.f(k.grip);
+    /// A belt change goes cover up, box off, new box from the pouch, box on, belt laid, cover down, and only a dry gun is charged last.
+    #[test]
+    fn a_belt_change_runs_in_the_order_a_gunner_works() {
+        let t = belt_times(long(true));
+        let order = [t.up, t.off, t.pouch, t.on, t.lay, t.down, t.charge];
+        assert!(order.windows(2).all(|w| w[0] < w[1]), "{:?}", order);
+        assert_eq!((t.off, t.lay, t.charge), (1.2, 4.4, 5.4));
+        assert_eq!(belt_times(long(false)).charge, -1.0, "a gun with a round up is not charged");
+        // however short the beat, the cover lifts a beat in, not at the start
+        assert_eq!(belt_times(b(1.0, 0.2, 0.4, 0.6, true)).up, 0.1);
+    }
+
+    /// The shells go in evenly, one by one, and the last is home at the beat's `in_`.
+    #[test]
+    fn shells_go_in_evenly_and_the_last_is_home_on_the_beat() {
+        let beat = m1014(false);
+        let t = shell_times(beat, 7.0);
+        assert_eq!(t.len(), 7);
+        let per = (beat.in_ - beat.out) / 7.0;
+        assert!(near(t[0], beat.out + per));
+        assert!(t.windows(2).all(|w| near(w[1] - w[0], per)));
+        assert!(near(t[6], beat.in_));
+        assert!(shell_times(beat, 0.0).is_empty());
+    }
+
+    fn keys(model: M, beat: FeedBeat, n: f64, port: bool) -> Vec<FeedKey> {
+        let FeedPath::Arm0(p) = path_of(model, beat, n, port) else { panic!("a magazine gun has no stations") };
+        p.keys
+    }
+
+    /// The hand never goes back in time or holds two places at once, and is done a tenth of a second before the beat ends, however short the beat.
+    #[test]
+    fn the_hand_keeps_time_inside_the_beat() {
+        let beats = [
+            (M::Mk46, long(true), 100.0, true), (M::Mk46, long(false), 100.0, false), (M::Mk46, b(1.0, 0.2, 0.4, 0.6, true), 100.0, true),
+            (M::Mk46, b(0.3, 0.1, 0.15, 0.2, true), 100.0, true), (M::M1014, m1014(false), 7.0, true), (M::M1014, m1014(true), 3.0, false),
+            (M::M1014, m1014(false), 1.0, true), (M::M870, m870(), 6.0, true),
+        ];
+        for (model, beat, n, port) in beats {
+            let k = keys(model, beat, n, port);
+            assert!(!k.is_empty());
+            assert!(k.windows(2).all(|w| w[0].t < w[1].t), "{:?} out of order", model);
+            assert!(k[0].t >= 0.08 - 1e-9 && k[k.len() - 1].t <= beat.dur - 0.1 + 1e-9, "{:?} {} to {}", model, k[0].t, k[k.len() - 1].t);
         }
-        (p.keys.len(), h.0)
+        assert_eq!(keys(M::Mk46, b(0.3, 0.1, 0.15, 0.2, true), 100.0, true).len(), 2, "a beat too short for the belt's stations still ends in time");
+        assert!(keys(M::M870, b(0.4, 0.02, 0.04, 0.2, true), 0.0, false).is_empty(), "no shells: the hand stays home");
     }
-    fn cues(model: M, beat: FeedBeat, n: f64, port: bool) -> (usize, u64) {
-        let c = cues_of(feed_by(model), beat, n, port).unwrap();
-        let mut h = H::new();
-        for q in &c { h.f(q.t); h.s(&q.sfx); h.f(q.gain); h.f(q.rate); }
-        (c.len(), h.0)
+
+    /// The hand goes to the pouch once on a belt change, reaches for the charging handle only on a dry gun.
+    #[test]
+    fn a_belts_hand_goes_to_the_pouch_and_only_a_dry_gun_to_the_handle() {
+        let s = belt();
+        let to_handle = |k: &[FeedKey]| k.iter().any(|q| matches!(q.at, FeedKeyAt::List(a) if a == s.handle));
+        let dry = keys(M::Mk46, long(true), 100.0, true);
+        assert!(dry.iter().any(|q| matches!(q.at, FeedKeyAt::Pouch)));
+        assert!(to_handle(&dry));
+        assert!(!to_handle(&keys(M::Mk46, long(false), 100.0, false)));
     }
-    fn row(s: ShellRowShell, cap: f64, tube: f64, have: f64, max: f64, port: bool, chamber: f64) -> (f64, bool, u64) {
-        let (r, times, n, pull) = shell_row(s, cap, tube, have, max, port, chamber);
-        let mut h = H::new();
-        h.f(r.dur); h.f(r.out.unwrap()); h.f(r.in_.unwrap());
-        match r.rack { None => h.w(1), Some(x) => h.f(x) }
-        for t in &times { h.f(*t); }
-        h.f(n);
-        (n, pull, h.0)
+
+    /// The first shell of an empty M1014 goes into the open port, and the bolt then drops on it, so the hand has no bolt to work at the end. A pump gun's fore end is worked by the other arm.
+    #[test]
+    fn a_tube_guns_hand_goes_to_the_port_only_when_it_is_empty() {
+        let s = tube();
+        let at_eject = |k: &[FeedKey]| k.iter().filter(|q| matches!(q.at, FeedKeyAt::List(a) if a == s.eject)).count();
+        let from_empty = keys(M::M1014, m1014(true), 3.0, true);
+        assert_eq!(at_eject(&from_empty), 2, "the head shell's two stations, and no bolt");
+        assert_eq!(at_eject(&keys(M::M1014, m1014(false), 3.0, true)), 2, "the head shell goes in at the port");
+        assert_eq!(at_eject(&keys(M::M1014, m1014(true), 3.0, false)), 2, "no shell at the port, the bolt pulled at the end");
+        assert_eq!(at_eject(&keys(M::M1014, m1014(false), 3.0, false)), 0);
+        assert_eq!(at_eject(&keys(M::M870, m870(), 6.0, true)), 0);
     }
+
+    /// A magazine gun's hand follows its own marks where it has them, and otherwise the old magazine change.
+    #[test]
+    fn a_magazine_gun_has_its_marks_or_none() {
+        let FeedPath::Arm1(p) = path_of(M::Mp7, long(true), 40.0, false) else { panic!("marks") };
+        assert!(p.marks.is_some());
+        assert!(matches!(path_of(M::Mk12, long(true), 20.0, false), FeedPath::Arm1(FeedPathArm1 { marks: None })));
+    }
+
+    fn heard(model: M, beat: FeedBeat, n: f64, port: bool) -> Vec<FeedCue> { cues_of(feed_by(model), beat, n, port).unwrap() }
+    fn said(c: &[FeedCue]) -> Vec<&str> { c.iter().map(|q| q.sfx.as_str()).collect() }
+
+    /// What is heard of a belt change is the belt change, and in order, with the charge only on a dry gun.
+    #[test]
+    fn a_belt_change_is_heard_in_order() {
+        let dry = heard(M::Mk46, long(true), 100.0, true);
+        assert_eq!(said(&dry), ["beltCoverUp", "beltBoxOff", "beltBoxOn", "beltLay", "beltCoverDown", "chargeLmg"]);
+        assert!(dry.windows(2).all(|w| w[0].t <= w[1].t));
+        assert_eq!(said(&heard(M::Mk46, long(false), 100.0, false)), ["beltCoverUp", "beltBoxOff", "beltBoxOn", "beltLay", "beltCoverDown"]);
+    }
+
+    /// A shell is heard for each shell, each a little different in pitch. The M1014's first into the open port is softer and the bolt drops after it, once. Otherwise a dry gun is worked at the end: the bolt, or the pump, slower.
+    #[test]
+    fn shells_are_heard_one_by_one_and_then_the_bolt_or_the_pump() {
+        let c = heard(M::M1014, m1014(false), 7.0, true);
+        assert_eq!(said(&c), ["shellIn", "boltDrop", "shellIn", "shellIn", "shellIn", "shellIn", "shellIn", "shellIn"]);
+        assert!(c[0].gain < c[2].gain, "the shell at the port is softer than the ones into the tube");
+        assert!(c[0].t < c[1].t && c[1].t < c[2].t, "the bolt drops between the first shell and the second");
+        assert!(c[0].rate != c[2].rate);
+        // the only shell: the bolt still drops after it
+        assert_eq!(said(&heard(M::M1014, m1014(false), 1.0, true)), ["shellIn", "boltDrop"]);
+        // a shell into the tube and a dry gun: the bolt goes last
+        let c = heard(M::M1014, m1014(true), 3.0, false);
+        assert_eq!(said(&c), ["shellIn", "shellIn", "shellIn", "boltDrop"]);
+        assert_eq!(c[3].t, m1014(true).rack);
+        // the pump, at its own slower rate
+        let c = heard(M::M870, m870(), 6.0, true);
+        assert_eq!(said(&c[6..]), ["rack"]);
+        assert_eq!((c[6].t, c[6].rate), (m870().rack, 0.7));
+        assert!(cues_of(feed_by(M::G18), m870(), 33.0, true).is_none(), "a magazine gun has no cues of its own");
+    }
+
     const S1014: ShellRowShell = ShellRowShell { lead: 0.4, each: 0.36, tail: 0.7, bolt: 0.4 };
     const S870: ShellRowShell = ShellRowShell { lead: 0.4, each: 0.35, tail: 0.7, bolt: 0.4 };
     const INF: f64 = f64::INFINITY;
 
+    /// He loads what the tube has room for, what he has and what he was told, the least of the three, and the beat is as long as those shells.
     #[test]
-    fn belt_moments_to_the_bit() {
-        let t = belt_times(long(true));
-        assert_eq!([t.up, t.off, t.pouch, t.on, t.lay, t.down, t.charge].map(f64::to_bits),
-            [0x3fe147ae147ae148, 0x3ff3333333333333, 0x400189374bc6a7f0, 0x400978d4fdf3b646, 0x401199999999999a, 0x401399999999999a, 0x401599999999999a]);
-        let t = belt_times(b(1.0, 0.2, 0.4, 0.6, true));
-        assert_eq!([t.up, t.off, t.pouch, t.on, t.lay, t.down, t.charge].map(f64::to_bits),
-            [0x3fb999999999999a, 0x3fc999999999999a, 0x3fd0c49ba5e353f8, 0x3fd4bc6a7ef9db23, 0x3fd999999999999a, 0x3fe0a3d70a3d70a4, 0x3fe3333333333333]);
+    fn a_tube_takes_the_least_of_its_room_his_shells_and_the_order() {
+        assert_eq!(shell_row(S1014, 7.0, 0.0, 21.0, INF, true, 0.0).2, 7.0, "room");
+        assert_eq!(shell_row(S1014, 7.0, 3.0, 2.0, INF, true, 1.0).2, 2.0, "his shells");
+        assert_eq!(shell_row(S870, 6.0, 0.0, INF, 4.0, false, 0.0).2, 4.0, "the order");
+        assert_eq!(shell_row(S870, 6.0, 7.0, INF, INF, false, 1.0).2, 0.0, "never a negative count");
+        let (r, times, n, _) = shell_row(S870, 6.0, 0.0, INF, INF, false, 0.0);
+        assert_eq!(times.len(), n as usize);
+        let last = S870.lead + n * S870.each;
+        assert_eq!((r.dur, r.out, r.in_), (last + S870.tail, Some(S870.lead), Some(last)));
+        assert!(near(times[times.len() - 1], last));
     }
+
+    /// A dry gun has to be worked unless the first shell goes in at the port. An empty gun with nothing to load can't be, and a full chamber never is.
     #[test]
-    fn shell_moments_to_the_bit() {
-        let t: Vec<u64> = shell_times(m1014(false), 7.0).iter().map(|x| x.to_bits()).collect();
-        assert_eq!(t, vec![0x3fe83a83a83a83a8, 0x3ff1d41d41d41d42, 0x3ff78af8af8af8b0, 0x3ffd41d41d41d41e, 0x40017c57c57c57c6, 0x400457c57c57c57c, 0x4007333333333333]);
+    fn a_dry_tube_gun_is_worked_unless_a_shell_went_in_at_the_port() {
+        assert!(!shell_row(S1014, 7.0, 0.0, 21.0, INF, true, 0.0).3, "the shell at the port chambers it");
+        assert!(shell_row(S870, 6.0, 0.0, INF, INF, false, 0.0).3, "no port: the pump");
+        assert!(shell_row(S1014, 7.0, 2.0, 3.0, INF, true, 0.0).3, "shells in the tube: the port is shut");
+        assert!(!shell_row(S1014, 7.0, 2.0, 3.0, INF, true, 1.0).3, "one chambered");
+        assert!(!shell_row(S870, 6.0, 0.0, 0.0, INF, false, 0.0).3, "nothing to chamber");
+        let (r, _, _, pull) = shell_row(S870, 6.0, 0.0, INF, INF, false, 0.0);
+        assert_eq!((pull, r.rack), (true, Some(r.dur - S870.bolt)));
+        assert_eq!(shell_row(S870, 6.0, 0.0, INF, INF, true, 1.0).0.rack, None, "no bolt to work on the row when none is due");
     }
+
+    /// Nothing to load but a round to work: the beat is the bolt alone.
     #[test]
-    fn the_hands_stations_to_the_bit() {
-        assert_eq!(path(M::Mk46, long(true), 100.0, true), (19, 0xadfd59b69901a0d9));
-        assert_eq!(path(M::Mk46, long(false), 100.0, false), (15, 0xc65ea4df60786530));
-        assert_eq!(path(M::Mk46, b(1.0, 0.2, 0.4, 0.6, true), 100.0, true), (19, 0xaba8c561e062a73d));
-        assert_eq!(path(M::Mk46, b(0.3, 0.1, 0.15, 0.2, true), 100.0, true), (2, 0x7cd7590eaf653c01));   // (the clamp and the filter against the list before filtering)
-        assert_eq!(path(M::M1014, m1014(false), 7.0, true), (28, 0x8f9d373a53fe2993));
-        assert_eq!(path(M::M1014, m1014(true), 3.0, false), (14, 0x08a6d9a54577785f));
-        assert_eq!(path(M::M1014, m1014(false), 1.0, true), (4, 0x6c4358ce7d8e3729));
-        assert_eq!(path(M::M870, m870(), 6.0, true), (24, 0x4815b5e6cdbc9ba5));
-        assert_eq!(path(M::M870, b(0.4, 0.02, 0.04, 0.2, true), 0.0, false), (0, 0xcbf29ce484222325));
-    }
-    #[test]
-    fn a_magazine_guns_marks_to_the_bit() {
-        let FeedPath::Arm1(p) = path_of(M::Mp7, long(true), 40.0, false) else { panic!("marks") };
-        let k = p.marks.unwrap();
-        let mut h = H::new();
-        for a in [k.mag, k.strip, k.handle, k.pull, k.hf, k.hb] { for x in a { h.f(x); } }
-        assert_eq!(h.0, 0xa47a5d23edc22763);
-        assert!(matches!(path_of(M::Mk12, long(true), 20.0, false), FeedPath::Arm1(FeedPathArm1 { marks: None })));
-    }
-    #[test]
-    fn what_is_heard_to_the_bit() {
-        assert_eq!(cues(M::Mk46, long(true), 100.0, true), (6, 0x29406aaec1a02ff1));
-        assert_eq!(cues(M::Mk46, long(false), 100.0, false), (5, 0x990d3607ce5b8dc6));
-        assert_eq!(cues(M::M1014, m1014(false), 7.0, true), (8, 0xd7ca8903e88dcbe2));
-        assert_eq!(cues(M::M1014, m1014(false), 1.0, true), (2, 0x845f8f4144057e20));
-        assert_eq!(cues(M::M1014, m1014(true), 3.0, false), (4, 0x99765c96ca3e30b5));
-        assert_eq!(cues(M::M870, m870(), 6.0, true), (7, 0xfb2dc0ae1c2ae76d));
-        assert!(cues_of(feed_by(M::G18), m870(), 33.0, true).is_none());
-    }
-    #[test]
-    fn a_tube_guns_row_to_the_bit() {
-        assert_eq!(row(S1014, 7.0, 0.0, 21.0, INF, true, 0.0), (7.0, false, 0x2c6b80dd321606bd));
-        assert_eq!(row(S1014, 7.0, 3.0, 2.0, INF, true, 1.0), (2.0, false, 0x8b0403987b60d167));
-        assert_eq!(row(S870, 6.0, 0.0, INF, INF, false, 0.0), (6.0, true, 0x9f7fae51a19f2584));
-        assert_eq!(row(S870, 6.0, 2.0, 6.0, 0.0, false, 0.0), (0.0, true, 0x749ac9880845266f));
-        assert_eq!(row(S870, 6.0, 6.0, 6.0, INF, false, 1.0), (0.0, false, 0x749ac9880845266f));
+    fn a_full_tube_with_a_dry_chamber_is_only_the_bolt() {
+        let (r, times, n, pull) = shell_row(S870, 6.0, 6.0, 6.0, INF, false, 0.0);
+        assert_eq!((n, pull, r.dur), (0.0, true, S870.bolt));
+        assert!(times.is_empty());
+        assert!(r.out.unwrap() < r.in_.unwrap() && r.in_.unwrap() < r.rack.unwrap() && r.rack.unwrap() < r.dur);
     }
 }

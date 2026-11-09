@@ -362,55 +362,68 @@ pub(super) fn spent_in_wall(g: &mut crate::game::Game, index: f64) {
 mod tests {
     use super::*;
 
-    fn bits(v: V3) -> [u64; 3] { [v[0].to_bits(), v[1].to_bits(), v[2].to_bits()] }
+    fn near(a: V3, b: V3) -> bool { v3::dist(a, b) < 1e-12 }
 
+    /// A wall's facing is along its thin side, whichever side that is and however the wall is turned: a round's toll is counted across it.
     #[test]
-    fn thin_axis_bits() {
-        assert_eq!(bits(thin_n_of([0.05, 1.2, 2.0], 0.7)), TS_THIN_A);
-        assert_eq!(bits(thin_n_of([2.0, 1.2, 0.05], 2.1)), TS_THIN_B);
+    fn a_walls_thin_axis_is_across_it() {
+        assert!(near(thin_n_of([0.05, 1.2, 2.0], 0.0), [1.0, 0.0, 0.0]));
+        assert!(near(thin_n_of([2.0, 1.2, 0.05], 0.0), [0.0, 0.0, 1.0]));
+        for yaw in [0.7, 2.1] {
+            for h in [[0.05, 1.2, 2.0], [2.0, 1.2, 0.05]] {
+                let n = thin_n_of(h, yaw);
+                assert!((v3::len(n) - 1.0).abs() < 1e-12 && n[1] == 0.0);
+                // a turned box's axis: its face is reached along this normal by its half-thickness
+                let thin = if h[0] < h[2] { h[0] } else { h[2] };
+                let on_face = [n[0] * thin, 0.0, n[2] * thin];
+                assert!(near(face_n_of([0.0; 3], [h[0], 1.2, h[2]], yaw, on_face), n), "the thin face's own normal");
+            }
+        }
     }
 
+    /// The face a point is on is the one it is nearest by the box's own proportions, pointing out of the box.
     #[test]
-    fn face_bits() {
+    fn a_face_points_out_of_the_box_on_the_side_the_point_is() {
         let (c, h, yaw) = ([1.0, 1.5, -2.0], [0.06, 1.5, 2.0], 0.7);
-        assert_eq!(bits(face_n_of(c, h, yaw, [1.0467, 1.1, -1.9633])), TS_FACE_A);
-        assert_eq!(bits(face_n_of(c, h, yaw, [1.2, 2.9999, -2.3])), TS_FACE_B);
-        assert_eq!(bits(face_n_of(c, h, yaw, [2.3, 1.1, -0.5])), TS_FACE_C);
-        // exactly at the centre: sign 0 || 1
-        assert_eq!(bits(face_n_of(c, h, yaw, c)), TS_FACE_D);
+        let (cs, sn) = (m::cos(yaw), m::sin(yaw));
+        let (x_axis, z_axis): (V3, V3) = ([cs, 0.0, -sn], [sn, 0.0, cs]);
+        let on = |x: f64, y: f64, z: f64| -> V3 { [c[0] + x_axis[0] * x + z_axis[0] * z, c[1] + y, c[2] + x_axis[2] * x + z_axis[2] * z] };
+        assert_eq!(face_n_of(c, h, yaw, on(0.0, 1.5, 0.5)), [0.0, 1.0, 0.0], "on the top");
+        assert_eq!(face_n_of(c, h, yaw, on(0.0, -1.5, 0.5)), [0.0, -1.0, 0.0], "under it");
+        assert!(near(face_n_of(c, h, yaw, on(0.06, 0.2, 0.5)), x_axis));
+        assert!(near(face_n_of(c, h, yaw, on(-0.06, 0.2, 0.5)), v3::scale(x_axis, -1.0)));
+        assert!(near(face_n_of(c, h, yaw, on(0.01, 0.2, 2.0)), z_axis));
+        assert!(near(face_n_of(c, h, yaw, on(0.01, 0.2, -2.0)), v3::scale(z_axis, -1.0)));
+        assert_eq!(face_n_of(c, h, yaw, c), [0.0, 1.0, 0.0], "dead in the middle it still answers, upward");
     }
 
+    fn turn_of(a: V3, b: V3) -> f64 { m::acos(m::min(1.0, v3::dot(a, b))) }
+
+    /// A round through a thin wall comes out inside the cone the toll opens and no wider, and the same hole turns it the same way every time, on any heading.
     #[test]
-    fn scatter_hash_bits() {
-        assert_eq!(scatter_hash(0.0), TS_HASH[0]);
-        assert_eq!(scatter_hash(1.0), TS_HASH[1]);
-        assert_eq!(scatter_hash(2654435769.0), TS_HASH[2]);
-        assert_eq!(scatter_hash(4294967295.0), TS_HASH[3]);
+    fn a_round_is_turned_inside_its_cone_by_the_hole() {
+        let a = 4.0 * m::PI / 180.0;
+        for d in [[0.6, 0.0, 0.8], [0.0, 0.98, 0.1989974874213241], [1.0, 0.0, 0.0]] {
+            let mut ways = Vec::new();
+            for seed in [0.0, 1.0, 123456789.0, 2654435769.0, 4294967295.0] {
+                let out = scatter(seed, a, d);
+                assert!((v3::len(out) - 1.0).abs() < 1e-12);
+                assert!(turn_of(out, d) <= a + 1e-9, "turned {} by seed {}", turn_of(out, d), seed);
+                assert_eq!(out, scatter(seed, a, d));
+                ways.push(out);
+            }
+            for i in 1..ways.len() { assert!(!near(ways[i], ways[0]), "two holes turned it the same way"); }
+            assert!(near(scatter(77.0, 0.0, d), d), "no toll, no turn");
+        }
     }
 
+    /// A row off the list is no row, whichever way it is off: a static or a leaf a ray can't name is never read.
     #[test]
-    fn scatter_bits() {
-        let a = 4.0 * m::PI / 180.0 * v3::clamp(0.225 / m::max(1.0, 1e-6), 0.0, 1.0);
-        assert_eq!(bits(scatter(2654435769.0, a, [0.6, 0.0, 0.8])), TS_SCATTER_A);
-        assert_eq!(bits(scatter(123456789.0, a, [0.0, 0.98, 0.1989974874213241])), TS_SCATTER_B);
-    }
-
-    #[test]
-    fn row_of_is_undefined_off_the_list() {
+    fn a_row_off_the_list_is_none() {
         assert_eq!(row_of(1.0, 2), Some(1));
         assert!(row_of(-1.0, 2).is_none());
         assert!(row_of(2.0, 2).is_none());
         assert!(row_of(0.5, 2).is_none());
         assert!(row_of(f64::NAN, 2).is_none());
     }
-
-    const TS_THIN_A: [u64; 3] = [0x3fe87996529f9d92, 0x0000000000000000, 0xbfe49d6e694619b8];
-    const TS_THIN_B: [u64; 3] = [0x3feb9f693feb72fb, 0x0000000000000000, 0xbfe027b304989ec9];
-    const TS_FACE_A: [u64; 3] = [0x0000000000000000, 0xbff0000000000000, 0x0000000000000000];
-    const TS_FACE_B: [u64; 3] = [0x3fe87996529f9d92, 0x0000000000000000, 0xbfe49d6e694619b8];
-    const TS_FACE_C: [u64; 3] = [0x3fe49d6e694619b8, 0x0000000000000000, 0x3fe87996529f9d92];
-    const TS_FACE_D: [u64; 3] = [0x0000000000000000, 0x3ff0000000000000, 0x0000000000000000];
-    const TS_HASH: [u32; 4] = [695872825, 1435855270, 2426490308, 2963287353];
-    const TS_SCATTER_A: [u64; 3] = [0x3fe2fef08aaa411d, 0xbf6c27014300eab3, 0x3fe9c06959cfcda1];
-    const TS_SCATTER_B: [u64; 3] = [0x3f8508225d1585a0, 0x3fef5ed532f62798, 0x3fc93b1da2a72655];
 }

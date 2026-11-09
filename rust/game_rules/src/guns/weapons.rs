@@ -22,7 +22,7 @@ mod tests {
 
     fn table_row(id: WeaponId) -> WeaponDef { WeaponsMod::blank().weapons.get(id).unwrap().clone() }
 
-    /// The row's own number, then its class's; `??` lets a 0 stand.
+    /// The row's own number, then its class's; a 0 on the row stands.
     #[test]
     fn handling_reads_the_row_then_the_class() {
         assert_eq!(handling_of(&table_row(WeaponId::Fn2000)), 0.8);
@@ -520,8 +520,6 @@ pub fn ocp_update(this: &mut crate::weapons::Ocp, dt: f64) {
 #[cfg(test)]
 mod tests_2 {
     use super::*;
-
-    // Every expected value below was printed by the TypeScript classes under bun, with GEAR.on and RELOAD.lastMag at the page's true.
 
     fn st(g: &Game, id: FirearmId) -> (f64, Option<f64>, Vec<f64>, f64, f64, bool, bool, bool) {
         let f = &g.fa[id];
