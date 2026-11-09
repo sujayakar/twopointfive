@@ -10,8 +10,6 @@ fn compound(s: u32, training: Training) -> Play {
     p.g.god_mode = true;
     p.g.player_invisible = true;
     p.g.k.morale.training = training;
-    p.g.k.runner.on = false;
-    p.g.k.darkdoor.on = false;
     p.run(0.5);
     p
 }
