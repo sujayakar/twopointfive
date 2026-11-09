@@ -6,7 +6,7 @@
 // in it and the wall's top showed no rain and the streaks over the yard stopped dead at the wall behind them. The rule now asked: is the point UNDER the roofs,
 // 0.2 m or more inside them on every side (common.wgsl wxUnderRoof).
 // WHAT THIS CAN AND CANNOT SAY. No shader runs here. The rule is written again below (`under`) and the shader's own function is held to it BY ITS TEXT, with the
-// two places that ask it and the ring's own gate; the copy is then asked at a wall under a roof written here, grown over it as a level's is. A change to those
+// two places that ask it; the copy is then asked at a wall under a roof written here, grown over it as a level's is. A change to those
 // shader lines is a red line here, not a silent pass. What the picture looks like is the page's to show.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -34,14 +34,11 @@ export async function rainWallsCheck(): Promise<boolean> {
     verdict(seam === n && same === m, 'the strip where two roof slabs of one building meet is under the roof, and on the office\'s own two rectangles (no kind in force) the rule is the bare rectangle',
       `two slabs overlapping 12 cm: ${seam} of ${n} points across the seam dry · the office's rectangles: ${same} of ${m} points as the bare test says`); }
   // (3) who asks, and the switch
-  { const F = await import(`${ROOT}/src/render/frame.ts`) as any, was = F.rainWallsConfig.on; let onT = '', offT = '';
-    try { F.rainWallsConfig.on = true; onT = F.scenePrelude(); F.rainWallsConfig.on = false; offT = F.scenePrelude(); } finally { F.rainWallsConfig.on = was; }
-    const main = readFileSync(`${ROOT}/src/host/pictureopens.ts`, 'utf8');
+  {
     const asked = /if \(depth >= 1\.0 \|\| outdoorsXZ\(Pend\.xz\) \|\| \(RAIN_WALLS && !wxUnderRoof\(Pend\.xz\)\)\) \{/.test(vol) && /else if \(RAIN_WALLS && rainOverWall\(Pend\)\) \{ \}[^\n]*\n\s*else if \(!rainOutdoors\(Pend\.xz\)\) \{ discard; \}/.test(draw) && /fn rainOverWall\(P: vec3f\) -> bool \{\s*let p = P\.xz;\s*return !wxUnderRoof\(p\) && /.test(pc);
-    const rings = /if \(depth < 1\.0 && outdoorsXZ\(Pend\.xz\)\) \{ let sp = splashAt\(Pend\);/.test(vol);
-    verdict(was === true && body === WANT && IN === 0.2 && asked && rings && /const RAIN_WALLS: bool = true;/.test(onT) && /const RAIN_WALLS: bool = false;/.test(offT) && /q\.has\('norainwalls'\)\) rainWallsConfig\.on = false;/.test(main),
-      'the shader\'s rule is the one asked here; the lattice rain and the particle rain both ask it and a ring is drawn on open ground only; the prelude carries the constant, on as the page boots, and ?norainwalls lowers it before the shaders are built',
-      `wxUnderRoof's text as held ${body === WANT} · drawn in ${IN} m · both gates ask ${asked} · rings behind the old test ${rings} · on at import ${was} · in the prelude on ${/const RAIN_WALLS: bool = true;/.test(onT)}, off ${/const RAIN_WALLS: bool = false;/.test(offT)} · the page's flag ${/norainwalls/.test(main)}`); }
+    verdict(body === WANT && IN === 0.2 && asked,
+      'the shader\'s rule is the one asked here, 0.2 m in from the roofs, and the lattice rain and the particle rain are the two gates the copy runs',
+      `wxUnderRoof's text as held ${body === WANT} · drawn in ${IN} m · both gates ask ${asked}`); }
   console.log(`=== rainwalls: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;
 }

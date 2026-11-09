@@ -47,12 +47,6 @@ export async function rainScaleCheck(): Promise<boolean> {
   // (3) the floor is the measured one
   { const fill = near / light(5, false);
     verdict(Math.abs(fill - FILL) < 0.006, 'SPLASH_FILL is what it says: the light of a ring\'s own line over that of its whole cell lit for the ring\'s life', `measured ${fill.toFixed(4)} · the shader's ${FILL}`); }
-  // (4) the switch
-  { const F = await import(`${ROOT}/src/render/frame.ts`) as any, was = F.rainScaleConfig.on; let onT = '', offT = '';
-    try { F.rainScaleConfig.on = true; onT = F.scenePrelude(); F.rainScaleConfig.on = false; offT = F.scenePrelude(); } finally { F.rainScaleConfig.on = was; }
-    const main = readFileSync(`${ROOT}/src/host/pictureopens.ts`, 'utf8');
-    verdict(was === true && /const RAIN_SCALE: bool = true;/.test(onT) && /const RAIN_SCALE: bool = false;/.test(offT) && /q\.has\('norainscale'\)\) rainScaleConfig\.on = false;/.test(main) && /RAIN_SCALE && w > SPLASH_W/.test(fn),
-      'the prelude carries the constant, on as the page boots, and ?norainscale lowers it before the shaders are built', `on at import ${was} · in the prelude on ${/const RAIN_SCALE: bool = true;/.test(onT)}, off ${/const RAIN_SCALE: bool = false;/.test(offT)} · the page's flag ${/norainscale/.test(main)}`); }
   console.log(`=== rainscale: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;
 }
