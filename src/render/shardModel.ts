@@ -1,9 +1,9 @@
 // A glass SHARD's dynamics — the CPU reference of what render/shaders/particles.wgsl integrates for the P_SHARD particle kind (a fragment of a pane that has let
 // go: rust/game_rules/src/shards files them when the fracture model releases a piece). One model, written twice, like the falling sheet (render/sheetModel.ts): the shader
-// flies the thousands you see, this file flies the same equations for the QA probes (they come to rest, they stay bounded, nothing goes NaN — tools/qa
-// shards-probes.ts) and for the trajectory sheet, and is the place the numbers are argued. Keep the two in step: SHARD below = particles.ts KIND_DEFAULTS.shard's
+// flies the thousands you see, this file flies the same equations
+// and is the place the numbers are argued. Keep the two in step: SHARD below = particles.ts KIND_DEFAULTS.shard's
 // eight slots (gravity · drag · restitution · keep · sleepV · fade · ROUGH · SCATTER) + the constants the kind block has no slot for, which
-// particles_common.wgsl repeats as SHARD_* (the probes compare them by name).
+// particles_common.wgsl repeats as SHARD_*.
 // What is shared exactly: the equations, every constant, the hash FUNCTION and the emit kernel's draws (sprayShards below = the same seeds, streams and cone). What is
 // not: the per-touch draws are keyed here by the touch count and in the kernel by the particle's age bits — so this file predicts the DISTRIBUTION the GPU flies
 // (reach, hops, time to rest, rest tilts), not any one fragment's path.

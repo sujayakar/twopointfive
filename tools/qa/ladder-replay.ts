@@ -117,7 +117,7 @@ function replay(d: PerfDump, aim: number, opts: { hz?: number; warm?: Warm } = {
     while (se < setEv.length && setEv[se].t <= f.t) applySettings(setEv[se++].text);
     { const labelNow = presetOfLabel(f.preset).preset; if (labelNow !== rec.preset) { rec.preset = labelNow; rec.maxH = PRESETS[labelNow].maxH; rec.gatherThird = PRESETS[labelNow].lossy.gatherThird; rec.volQuarter = PRESETS[labelNow].lossy.volQuarter; } }   // (a recorded preset hop: its rows — the 'settings' event of a hop lists only its first eight keys)
     if (f.res?.[1] > 0) rec.scale = +(f.res[1] / Math.min(rec.maxH, w.cssH * w.dpr)).toFixed(2);
-    if (!(f.dt < 500)) continue;   // (main.ts feeds no frame of half a second or more)
+    if (!(f.dt < 500)) continue;   // (host/drawpage.ts feeds no frame of half a second or more)
     const key = gpuKey(f); const stale = key === prevKey; prevKey = key;
     const union = f.gpuUnion ?? 0; if (union > 0 && !stale) lastUnion = union;
     const sim = stateOf(q, E);

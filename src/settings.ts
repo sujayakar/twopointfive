@@ -1,5 +1,5 @@
 // The renderer's SETTINGS — the knob table every surface reads and writes (the Tab panel, the presets, the URL flags, the game's few reads: emissiveScale,
-// decals, markings …) — kept in a module of their own so a host that is not the WebGPU Engine (the QA harness's stand-in) can build a settings object without importing src/engine.ts and the whole render pass graph behind it. src/engine.ts re-exports both names, so every existing import
+// decals, markings …) — kept in a module of their own so a host that is not the WebGPU Engine can build a settings object without importing src/engine.ts and the whole render pass graph behind it. src/engine.ts re-exports both names, so every existing import
 // (`import { RenderSettings, defaultSettings } from '../engine'`) still resolves; the values are the same object, byte for byte.
 import type { Vec3 } from './math/vec';
 import { FrameFlags } from './render/frame';
@@ -198,7 +198,7 @@ export interface RenderSettings {
   charMats: boolean;           // CHARACTER MATERIALS (render/charMaterials.ts + rust/game_rules/src/char_look + gbuffer.wgsl vsSkin / fsSkin): a man shaded per material SLOT — skin, two cloths, webbing, boot, helmet, dark
                                // metal, rubber, lens, a marking — each with its own colour and highlight out of a table per side (operators / defenders / civilians), creases and ridges from the mesh's own
                                // curvature, the ground's dust up from the sole, and one colour per shadow proxy for bounce rays and reflections. Off (the default with the shipped mannequin, which carries
-                               // no slots: `?charmats` dresses it by joint as a stand-in) = his two tints, the frame as it was. main.ts raises it when the loaded mesh has slot-named materials
+                               // no slots: `?charmats` dresses it by joint as a stand-in) = his two tints, the frame as it was. host/drawpage.ts raises it when the loaded mesh has slot-named materials
   wetChars: boolean;           // wet characters (rust/game_rules/src/wet + gbuffer.wgsl fsSkin + composite.wgsl): whoever stands in the rain soaks — darker saturated fabric under a glossy clear coat (a GGX lobe per light in composite, dimmed by the direct pass's own shadowing) and drops beading and running down him in his bind-pose space — and dries indoors. The renderer's half only: the CPU model runs regardless (probes read it); off = the g-buffer is handed zeros and every character shades bit for bit as before. Default on
   // ---- PARTICLE RAIN (rust/game_rules/src/rain_fx + the 'rain' particle kind; docs/internal/prain.md, docs/review/prain.html): a NEAR-FIELD layer of real GPU rain drops over the lattice rain
   // volumetrics.wgsl draws — recycled over the outdoor ground within a disc round the view, falling at terminal speed with the wind field's air, killed where they hit (roof, bonnet,
@@ -294,7 +294,7 @@ export const defaultSettings = (): RenderSettings => ({
   meshShadows: false,          // mesh-traced character shadows: the ULTRA preset switches it on (every ray) and HIGH in its near-only form, every other preset off (quality.ts apply); ?meshShadows / the Tab row flip it by hand until the preset next changes; Tab ▸ Direct light, the pause menu's trade-offs, or ?meshShadows
   gbaa: false,                 // GBAA off (Tab ▸ Frame; the image-quality program's per-tier configs place it with taauPhases 0)
   motionIds: true,             // motion identity for keyed dynamic boxes (Tab ▸ Frame; off = the index rule as it was)
-  charMats: false,             // character materials: off = the two tints (main.ts turns it on for a mesh that carries slot materials; ?charmats / ?nocharmats; Tab ▸ Materials ▸ Characters)
+  charMats: false,             // character materials: off = the two tints (host/drawpage.ts turns it on for a mesh that carries slot materials; ?charmats / ?nocharmats; Tab ▸ Materials ▸ Characters)
   wetChars: true,              // wet characters: on (Tab ▸ Weather ▸ wet characters; nothing shows unless somebody is actually wet — weather off = everybody dry = the untouched path)
   gpuParticles: true,          // the experiment this branch is for: on unless ?noparticles / the Tab ▸ 'Renderer — particles (EXP)' row says otherwise; not part of any preset
   airSim: true, airEvery: 1,   // the air field's step: on, at 60 Hz; not part of any preset

@@ -1,7 +1,7 @@
 // THE CONSULATE — the four's hostage rescue: three hostages at the far end of a floor of rooms the squad has no time to clear, in a room one stack cannot take.
 // A level generator in the scenario levels' shape (tools/levels/test-rooms.ts is the template; rebuild/scenario-levels/contract.md the how-to):
 //   bun run tools/levels/export.ts consulate [--check]   → levels/consulate.json, with its `scenarios.rescue` block
-//   page: ?levelFile=consulate.json&rescue&squad=4        · headless: bun run tools/qa/probes.ts consulate
+//   page: ?levelFile=consulate.json&rescue&squad=4
 //
 // The idea it playtests (this goal's assumption, on the maintainer's words 'high risk hostage rescue situations where you do need to flow a lot more, go dynamic,
 // selective clearance along the way' and 'a four person squad as two pairs'): THE SQUAD SPENDS ITS MEN, NOT ITS TIME. The captor's clock starts on the team's
@@ -445,7 +445,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   const SIDE: Vec3 = [29.1, 1.1, 17.0];    // … and on the side door, the south half's
   const scenarios: LevelScenarios = {
     rescue: {
-      // the four: the red pair in front, the blue pair a stride behind (rescue.ts stages team.ops[0..3] in the squad's own order)
+      // the four: the red pair in front, the blue pair a stride behind (rust/game_rules/src/rescue stages team.ops[0..3] in the squad's own order)
       team: { sam: [7.2, 0, 15.4], samYaw: Math.PI / 2, ops: [[5.9, 0, 14.7], [5.9, 0, 16.1], [4.85, 0, 14.7], [4.85, 0, 16.1]], opsYaw: Math.PI / 2 },
       room: { name: "consul's office", where: 'end of the corridor', door: 'suite', bounds: R.suite, lights: 'suite', doorAim: MAIN },
       side: { door: 'suite_side', hold: [29.1, 0, 17.0], from: { door: 'back', bounds: R.back }, pair: true },

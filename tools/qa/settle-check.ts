@@ -1,6 +1,6 @@
 // THE START WAITS FOR THE PICTURE (src/ui/settle.ts SETTLE): a mission's brief holds its START until every shader is in, the frames behind it have been drawn
 // with them and auto quality has made its pick. What is checked here is the rule itself on a clock the check moves by hand, and that drawpage.ts still has its
-// places; the brief's own held state is in tools/qa/loadbrief-check.ts and the queue's rush in tools/qa/pipequeue-check.ts. What a real page looks like at its
+// places; the queue's rush in tools/qa/pipequeue-check.ts. What a real page looks like at its
 // start is not something a check sees: never seen on a GPU from here.
 //   bun run tools/qa/settle-check.ts                  exit 0 = every line passed, 1 = one failed
 //   SETTLE_BREAK=1 bun run tools/qa/settle-check.ts   the start is live at once (the build as it was): must FAIL
@@ -34,7 +34,7 @@ line(SETTLE.on === false, 'the switch is off in the module: the page raises it, 
 { const S = new Settle(), a = run(S, SETTLE.programSecs * 4, { out: 1, measuring: false }, 0.25), b = run(S, 200, { out: 1, measuring: false });
   line(a === -1 && b === SETTLE.frames, `a compile that never comes back does not keep the mission shut: after ${SETTLE.programSecs} s the picture has its turn and the start goes live (${b} frames on)`); }
 
-// ---- wiring (the page's own entry, read as text: the harness never runs it)
+// ---- wiring (the page's own entry, read as text)
 { const brief = readFileSync(`${ROOT}/src/ui/loadbrief.ts`, 'utf8'), wait = readFileSync(`${ROOT}/src/ui/startwait.ts`, 'utf8'), draw = readFileSync(`${ROOT}/src/host/drawpage.ts`, 'utf8');
   const flag = /SETTLE\.on = v === null \? navigator\.webdriver !== true : v !== '0';/.test(wait) && /settleOfQuery\(q\);/.test(draw);
   const road = /startWaits\(brief, /.test(draw) && !/brief\.live\(/.test(draw);

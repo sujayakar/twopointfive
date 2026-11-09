@@ -1,17 +1,16 @@
 // THE LAMPS' REACH MASKS, KEPT BY THE PICTURE. A mask says which 1 m cells of the level a light can reach past the full-height walls (render/reach.ts has the
 // rules); only the picture reads one (the light set's rows: the direct pass and the reservoirs). Until 11-05 the masks, the wall raster they are decided on
 // and the queue that decides them again after a wall changes all lived in the Game and were worked in its tick: a blown wall then cost the GAME's frame 10 to
-// 42 ms of picture work, a headless run and a server paid for masks nobody drew, and every row of it rode in the rollback snapshot.
+// 42 ms of picture work.
 // WHAT LIVES HERE: all of it. The masks themselves, a light at a time (no light object carries one: render/lights.ts asks `row`); the raster; the lights
 // waiting to be decided again and the walls' changes noted but not yet read. The engine keeps one of these and takes ONE STEP OF IT A DRAWN FRAME (`tick`).
 // A stand with no picture has none: the game's three tells below go nowhere and no mask is ever made.
 // WHAT THE GAME TELLS IT, and nothing else passes between them: `boot` (the level stands: its doors, and which cells are under a roof), `changed` (walls
 // changed in this rect, or `null`: they are the authored walls again), `dir` and `sun` (this directional light wants a mask). It READS the box world's
-// statics and the light set's lights and writes nothing of the game's. The engine hands it to the light set's upload each frame (lights.ts `upload`): no
-// object a snapshot walks holds it.
+// statics and the light set's lights and writes nothing of the game's. The engine hands it to the light set's upload each frame (lights.ts `upload`).
 // A WIDE SUN'S MASK IS OF ITS DISC (`sun`), and the disc is the game's to change and to put back: each step looks at the radius such a mask was made for
 // against the light's own, and makes it again where they differ (so the hour's tell is a hint, and a radius that went back with a snapshot is followed).
-// It imports nothing from src/game.
+// It imports no game code.
 import { type Vec3, v3 } from '../math/vec';
 import { type Box, BoxFlag, rayBox } from '../scene/boxes';
 import { WORLD } from '../scene/world';

@@ -40,7 +40,7 @@
 //   AND HOW FAR BEHIND THE GPU IS (`lag`): each frame is timed from its start to the moment the GPU has finished everything the frame handed it (`work`: the
 //   queue's own "submitted work done"), in frames. It is NOT a cost: the answer comes back after the next frame has begun even when the GPU keeps up (about
 //   1.2 frames at 60 Hz, measured), and later when it does not. AND A FRAME'S TIME IS THE TIME BETWEEN TWO FRAMES THE PAGE DREW (`ms`), by the pacer's own
-//   count of the display frames it worked (host/pace.ts, `window.__pace`): a priced page waits for the GPU as a player's does (main.ts `flight`), so where
+//   count of the display frames it worked (host/pace.ts, `window.__pace`): a priced page waits for the GPU as a player's does (host/drawpage.ts `flight`), so where
 //   the GPU cannot finish a frame in a display frame the page passes display frames over, and the time between two frame CALLBACKS would still read the
 //   display's. (Two older ways and why they went, both 11-04: a frame's "cost" as the lesser of `work` and the time between callbacks read the display's
 //   interval in every state. And a priced page that did not wait for the GPU queued hundreds of frames ahead on a level the card could not hold sixty on:
@@ -54,7 +54,7 @@
 //   `&pricelive=N` = the world runs to second N before its read (default PRICE.runS; 0 = held pictures only). THE LOOK'S OWN WORDS on the address that asked (`look=walls:0`, `longfoot=0` …) ride on every page
 //   of the run, with the trials this machine's look panel keeps off, as the benchmark carries them (ui/benchrun.ts): the file says which look was priced.
 //   A reload in the middle does not start it again (the page finds its own mark and is a plain mission page); Esc stops a run.
-// THE PAGE'S HALF IS ONE LINE (main.ts, before the boot): `if (priceLevelsPage(q)) return;`. Everything else is asked of what the page already puts on `window`
+// THE PAGE'S HALF IS ONE LINE (host/drawpage.ts, before the boot): `if (priceLevelsPage(q)) return;`. Everything else is asked of what the page already puts on `window`
 // for its checks (__ready, __engine, __game, __quality, __perfsweep, __boot): this file adds no hook and no state to the game.
 import { listedLevels } from '../scene/scenarioList';
 import { pacer } from '../host/pace';
@@ -74,13 +74,13 @@ export const PRICE_KEY = PRICE_LEVELS_WORD, PRICE_RUN_KEY = PRICE_RUN_WORD;
 const DRAWN = [...RENDER_PASSES], SURFACE = SURFACE_PASS, PRESENTS = [...PRESENT_PASSES];
 export const PRICE = {
   /** seconds OF THE GAME'S OWN CLOCK the mission plays before its picture is held. ONE WAY, on every page: the page's loop is held from before its boot and
-   *  the mission is played in fixed sixtieths by the page's own scripted step (main.ts `__runFrames`), ONE STEP A DISPLAY FRAME, EVERY STEP DRAWN, to exactly
+   *  the mission is played in fixed sixtieths by the page's own scripted step (host/drawpage.ts `__runFrames`), ONE STEP A DISPLAY FRAME, EVERY STEP DRAWN, to exactly
    *  the step asked. So a level has run the same steps, drawn the same number of frames and stands on the same render clock (a lamp's flicker
    *  reads it) on every run, whatever its frames cost and whatever the display's rate; a lesson whose card holds the clock on a page nobody plays is stepped like the
    *  rest. The play WAITS FOR THE GPU as the page's own pacer does (host/pace.ts): no step is drawn while as many frames are still with the GPU as the
    *  pacer keeps there (`window.__pace().flight`; `flight` here where a build does not say), so what the game reads back from the GPU comes as late as on a
    *  player's page and no later.
-   *  THE PAGE'S WARM-UP COMES FIRST: a page clears every particle and all smoke some frames after its first frame of its own (main.ts `__prewarm`: a
+   *  THE PAGE'S WARM-UP COMES FIRST: a page clears every particle and all smoke some frames after its first frame of its own (host/drawpage.ts `__prewarm`: a
    *  throwaway can and spark that touch the pipelines once). Held from its boot and stepped, that clear came after the play, with the clock held, and A
    *  SNOW LEVEL WAS PRICED WITH NO SNOW IN ITS AIR (11-04, a rented card: its fog pass read 1.4 ms too cheap). So the run asks for the warm-up itself and
    *  lets the page draw with the clock held until the page says the clear is over (`window.__prewarmed`; `warmFrames` of its own frames on a build that
@@ -103,7 +103,7 @@ export const PRICE = {
    *  `pacer`: the display's period read off the callbacks, a display frame passed over where the rate asks or the GPU has no room, a frame the queue never
    *  answers given up). So the world runs at the game's rate on a 60 or a 120 Hz display (on a 144 Hz one the pacer's rule draws 72, and the world runs a
    *  fifth fast; with `?pace=0`, the page's word for no even pace, every display frame is stepped). NOT THE PAGE'S OWN LOOP, though that is what a player's page runs: a card on the page
-   *  freezes that loop (main.ts `frozen`: a lesson's card on a tutorial nobody plays), and a scripted step is the one way the world runs on every level,
+   *  freezes that loop (host/drawpage.ts `frozen`: a lesson's card on a tutorial nobody plays), and a scripted step is the one way the world runs on every level,
    *  as the play before the held picture already knows. What that costs in truth: a played page on a fast display draws between its steps too, and this
    *  turn does not.
    *  THE LATE ANSWER'S RULE READS THIS TURN AGAINST ITS OWN KIND: the least answer among the running states, not the held ones' (a running state is paced
@@ -164,8 +164,7 @@ export interface PriceRow {
   /** WHY THE ROW IS NOT ONE PICTURE, in words (none: it is): the picture moved between its turns, or frames were queued ahead of the GPU. Such a row keeps its
    *  numbers and is NOT JUDGED: `over` stays empty and the report says so */
   apart: string[];
-  /** THE VERDICT, written by the run once the row is whole (priceOver): what puts it over the bar, in words; none = under it. The table of levels
-   *  (tools/qa/level-table.ts) prints these and judges nothing itself */
+  /** THE VERDICT, written by the run once the row is whole (priceOver): what puts it over the bar, in words; none = under it. */
   over: string[];
   /** … and the same two of THE RUNNING READ (absent where the row has none): why it is not judged (frames queued, a late answer; a row whose held read is
    *  apart is not judged running either), and what puts it over the bar (priceOverRun) */
@@ -248,7 +247,7 @@ function countPrograms() {
 }
 
 /** what of the page this file asks (all of it on `window` already, for the page's checks) */
-interface PageHooks { __prewarm?: () => boolean; /** the page's warm-up has cleared what it threw in (main.ts; undefined: a build without the word) */ __prewarmed?: boolean; __perfrec?: { commit?: string };
+interface PageHooks { __prewarm?: () => boolean; /** the page's warm-up has cleared what it threw in (host/drawpage.ts; undefined: a build without the word) */ __prewarmed?: boolean; __perfrec?: { commit?: string };
   __ready?: Promise<unknown>; __timeScale?: number; __pauseLoop?: boolean; __runFrames?: (n: number, dt?: number, keys?: string[], draw?: boolean | 'none') => void; __menu?: { isOpen?: boolean }; __game?: { time: number; /** the mission's own word: its stage, whether the alarm is on, and its count of alarm episodes (someone went to alert while nobody was) */ mission?: { stage?: string; alarmOn?: boolean; stats?: { alerts?: number } } };
   __engine?: { width: number; height: number; outWidth: number; outHeight: number; settings: { renderScale: number; sharpDirect?: boolean; maxInternalHeight?: number; gatherThird?: boolean; volQuarter?: boolean }; gpu?: { adapterInfo?: string; adapterFallback?: boolean }; device?: { queue: { onSubmittedWorkDone(): Promise<unknown> } };
     timer?: { enabled: boolean; resolved: number; lastFrame: Map<string, number>; unionMs(exclude: string[]): number } };
@@ -296,7 +295,7 @@ async function turn(w: PageHooks, secs: number, stop: () => boolean, drive?: (ts
   const T = w.__engine?.timer, dev = w.__engine?.device;
   for (let tries = 0; tries <= PRICE.retries; tries++) {
     const ms: number[] = [], gpu: number[] = [], all: number[] = [], work: number[] = [], asked: Promise<void>[] = [], passes = new Map<string, number[]>(); let away = false, last = await frame(), seen = T?.resolved ?? 0;
-    // THE FRAMES THE PAGE DREW, by its pacer's own count: the page waits for the GPU (main.ts `flight`), so on a level the GPU cannot finish in a display
+    // THE FRAMES THE PAGE DREW, by its pacer's own count: the page waits for the GPU (host/drawpage.ts `flight`), so on a level the GPU cannot finish in a display
     // frame it passes display frames over, and the time between this file's own frame callbacks stays the display's. A frame's time is the measured part's
     // length over the frames worked in it; and the GPU is asked for "done" only on a frame that was worked (a passed-over frame handed it nothing)
     let stepped = 0; const worked = drive ? () => stepped : () => w.__pace?.().worked, w0 = worked(); let workedAt = w0, workedLast = w0;

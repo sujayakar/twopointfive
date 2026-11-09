@@ -6,7 +6,7 @@
 //            passed, a discard, a loop's continuing block, a test without its parentheses) come out as written by hand; what it must NOT touch stays as written (`x && NAME`, a name inside a comparison or a call, a function
 //            with a parameter or a local of the constant's name, a constant that is no bool, a `select`, an `if` with an attribute in front)
 //   boot     the shaders the PAGE boots with (tools/qa/pageboot.ts: the Engine, the smoke solver, the Game's own modules and the cut-box set, with the
-//            switches main.ts raises), under each setting of the switches (the title, a snow level in its weather, and the look prototype's page where
+//            switches host/drawpage.ts raises), under each setting of the switches (the title, a snow level in its weather, and the look prototype's page where
 //            the tree has one; this file runs itself once for each), folded: no test is left that the constants decide; the dead side of every plain
 //            `if (NAME)` / `if (!NAME)` of the unfolded text is gone from the folded one, and the constant that decided it is still there (both read off the
 //            unfolded text here, not by the fold); no
@@ -14,9 +14,7 @@
 //            is kept; nothing left mentions a declaration that was dropped; no module is bigger
 //   size     the text a boot hands the browser, with and without (pasted call site by call site it is tools/qa/shaderinline-check.ts's)
 //   switch   with SHADER_FOLD down the texts are the trim's alone, character for character; the page lowers it for ?shaderfold=0
-// The stand is the caller's: run it bare and with TPS_PROFILE=shipped in front (the page's own texts).
-// That the folded text COMPILES with no warning is tools/qa/wgsl-compile.cjs's to say, and that it draws the same frame tools/qa/draw-equal.cjs's
-// (`capture … --with shaderfold=0` against a capture without, then `compare`: the software adapter).
+// That the folded text COMPILES with no warning is tools/qa/wgsl-compile.cjs's to say.
 //   bun run tools/qa/shaderfold-check.ts             exit 0 = every check passed, 1 = one failed
 //   SHADERFOLD_BREAK=1 bun run tools/qa/shaderfold-check.ts     the fold is handed every literal constant with its value turned over: `forms` and `boot` must FAIL
 export {};

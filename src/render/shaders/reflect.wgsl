@@ -51,7 +51,7 @@ fn ggxD(h: vec3f, ax: f32, ay: f32) -> f32 {
 /** Heitz 2018, "Sampling the GGX Distribution of Visible Normals": a half vector distributed as D_v(h) = G1(v) max(0, v·h) D(h) / v·z for the view
  *  direction Ve (tangent frame, z up, pointing AWAY from the surface) and roughness (ax, ay), from two uniforms. Every sample is a normal the eye can
  *  see, so at 1 ray/pixel nothing is wasted on back-facing microfacets; the reflected direction can still dip under the horizon for rough finishes at
- *  grazing views (the caller falls back to the mirror direction then). tools/qa/rtreflect-probes.ts holds a TS port to the same numbers. */
+ *  grazing views (the caller falls back to the mirror direction then). */
 fn sampleGGXVNDF(Ve: vec3f, ax: f32, ay: f32, u1: f32, u2: f32) -> vec3f {
   let Vh = normalize(vec3f(ax * Ve.x, ay * Ve.y, Ve.z));                 // to the hemisphere configuration
   let lensq = Vh.x * Vh.x + Vh.y * Vh.y;
@@ -186,7 +186,7 @@ fn rtGlints(P: vec3f, Po: vec3f, N: vec3f, V: vec3f, T: vec3f, B: vec3f, ax: f32
     } else if (kind == 3u) {
       let ce = dot(-Ld, li.dir);                                          // one-sided Lambertian panel: dark from behind (as evalLight)
       if (ce <= 0.0) { continue; }
-      att *= ce * kAna;                                                   // (wid stays r / 2d: against a quadrature over a 1.2 × 0.6 panel — tools/qa/rtreflect-probes.ts — the centre direction through a lobe widened by half the disc's angular radius tracks the true integral within ~20 % at the peak for rough 0.3‥0.45; the full radius, or Karis' (α/α')² renormalisation, lands 3-4× too dim)
+      att *= ce * kAna;                                                   // (wid stays r / 2d: against a quadrature over a 1.2 × 0.6 panel, the centre direction through a lobe widened by half the disc's angular radius tracks the true integral within ~20 % at the peak for rough 0.3‥0.45; the full radius, or Karis' (α/α')² renormalisation, lands 3-4× too dim)
       let mref = lightMarkRef(li);                                        // a MARKING's light (the vending windows): texture the uniform analytic image with the window's own pattern at the mirror point (markings.wgsl)
       if (mref >= 0 && frame.markCfg.w > 0.0) { pat = markPatternAtMirror(u32(mref), li, Po, N, V, ax); }
     }
@@ -238,7 +238,7 @@ fn rtGlints(P: vec3f, Po: vec3f, N: vec3f, V: vec3f, T: vec3f, B: vec3f, ax: f32
 // ---- LASERS / TRACERS IN THE REFLECTION (render/passes.ts setBeams; settings.beamReflect). A weapon laser's beam and a tracer's streak are NoShadow boxes: no
 // ray can meet one, so traceClosest never returns them. The host hands the nearest 8 as line segments and their mirror image is added ANALYTICALLY: where the
 // pixel's mirror ray passes a segment, the share of the lobe's footprint there that the hair-thin line fills (footprint = the pixel's cone + the finish's lobe, so a polish shows a line and a rough wet patch a faint smear), one occlusion ray to that point, the finish's Fresnel. Stable frame to frame
-// (no sampling), like the analytic highlights. Picture only. beams.n == 0 → never called: the pass's arithmetic as it was. KEEP IN STEP: reflect.wgsl ≡ reflect_p5.wgsl.
+// (no sampling), like the analytic highlights. Picture only. beams.n == 0 → never called: the pass's arithmetic as it was.
 struct BeamSeg { a: vec4f, b: vec4f, e: vec4f };   // a = from xyz + the drawn half-width (m) · b = to xyz · e = emitted radiance rgb (already dimmed for that width)
 struct Beams { n: u32, p0: u32, p1: u32, p2: u32, k: vec4f, seg: array<BeamSeg, 8> };   // p0: bit 0 = mirror images on, bit 1 = the lasers are light in the air (composite.wgsl beamAir); seg.e.w = that beam's share of air (0 = a box)
 @group(1) @binding(11) var<uniform> beams: Beams;

@@ -20,7 +20,7 @@
 //   [REC0, +3·CAP)            the records, 3 vec4 each: (pos.xyz, radius) (normal.xyz, param) (tangent.xyz, bits(kind3 | attached1 | seed12 | box16))
 //                             (box16 = the box an attached mark rides, DECAL_ANY_BOX for a world-fixed one, or — kind glassHit — the static index of ITS pane)
 //
-// Kind 'wetprint' (rust/game_rules/src/wet): a wet shoe print, param = how wet — the one kind whose record is EDITED after the fact (wet.ts agePrints lowers param as it
+// Kind 'wetprint' (rust/game_rules/src/wet): a wet shoe print, param = how wet — the one kind whose record is EDITED after the fact (rust/game_rules/src/wet lowers param as it
 // dries and calls touch(); remove() retires it before the ring would).
 // Kind 'damage' with param ≥ WEAR_MARK.look (rust/game_rules/src/wallwear): a WALL-WEAR mark — a round's own 'bullet' record EDITED in place (kind, pos, radius, param; touch())
 // into what a breakable shows before it gives. See WEAR_MARK below; decals.wgsl wearMark draws it.
@@ -84,7 +84,7 @@ const CELL0 = 1, LIST0 = CELL0 + CELLS_V4, REC0 = LIST0 + LIST_V4;
 const TOTAL_V4 = REC0 + DECAL_CAP * 3;
 export const DECAL_BYTES = TOTAL_V4 * 16;
 
-/** Measurement only (?decalStress=N in main.ts, read when the g-buffer shader is built): evaluate the decal lookup N times per fragment so its cost rises above the
+/** Measurement only (read when the g-buffer shader is built): evaluate the decal lookup N times per fragment so its cost rises above the
  *  timer's noise floor — the reported delta ÷ N is the honest per-fragment figure. 1 = production. */
 export const decalDebug = { repeat: 1 };
 /** WGSL consts for render/shaders/decals.wgsl: the layout above + the caps (prepended by gbuffer.ts next to the scene prelude) */
@@ -105,7 +105,7 @@ const DEFAULTS: Record<DecalKind, { radius: number; param: number }> = {
   scorch: { radius: 0.75, param: 1 },      // soot disc, intensity 1
   scuff: { radius: 0.1, param: 0.16 },     // (radius is re-derived from the streak length below)
   chip: { radius: 0.013, param: 1 },
-  glassHit: { radius: 0.12, param: 1 },  // the crack star's reach from the hole (glass.ts draws 0.075‥0.2 off the hit's seed)
+  glassHit: { radius: 0.12, param: 1 },  // the crack star's reach from the hole (rust/game_rules/src/glass draws 0.075‥0.2 off the hit's seed)
   wetprint: { radius: 0.17, param: 1 },  // a wet shoe print (rust/game_rules/src/wet wet_footfall): the sole fits inside 17 cm of its centre; param = how wet, aged toward 0
   damage: { radius: 0.05, param: 0.8 },   // the destruction lane's marks (rust/game_rules/src/destruction): floor(param) = the look — 0 a DENT in sheet metal, 1 a SHRED in fabric, 2 a CRACK in a dark screen, 6 a FILM of settled dust, 7 / 8 the RUBBLE a chunk leaves (rust/game_rules/src/floormess; 3‥5 are the wall wear's) — fract(param) = strength
 };
@@ -114,10 +114,7 @@ const SCUFF_HALF_W = 0.016;
 /** MARKS THAT SIT IN THE SURFACE (decals.wgsl dkSit): a blast's scorch and its film of dust are drawn off round, broken by one field that every mark on a
  *  surface shares, coloured by what they lie on, and wet where the ground is wet. The picture's alone: it is one word of the uploaded header, nothing the
  *  game reads, so no run differs by it.
- *  THE SWITCH: MARKSIT.on — ON in the page (`?marksit=0` = every mark as it was drawn), OFF in the module and on the frozen stand (FROZEN_HOLDS;
- *  TPS_MARKSIT=1 raises it there); in the registry (game/knobs.ts) and the journal. It was a field of one Decals that the page alone set, so the page's stand
- *  run headless packed the old header (11-05). CHECK: tools/qa/decals-probes.ts decalsSit (MARKSIT_BREAK=1 fails it); the picture itself:
- *  tools/qa/marksit-page.cjs. */
+ *  THE SWITCH: MARKSIT.on — ON in the page, OFF in the module. */
 export const MARKSIT = { on: false };
 export class Decals {
   /** live decals, oldest first (the ring drops from the front) */
@@ -141,7 +138,7 @@ export class Decals {
   get count() { return this.list.length; }
 
   /** Leave a mark of `kind` centred at `pos` on a surface whose outward normal is `normal` (world). `size` overrides the kind's radius (the scuff's LENGTH goes in
-   *  opts.param). Returns the decal, or null when decals are off. Never touches Math.random (seeded QA runs must not shift): the look seed counts. */
+   *  opts.param). Returns the decal, or null when decals are off. Never touches Math.random: the look seed counts. */
   add(kind: DecalKind, pos: Vec3, normal: Vec3, size?: number, opts: DecalOpts = {}): Decal | null {
     if (!this.enabled) return null;
     const n = v3.normalize(normal);
@@ -174,7 +171,7 @@ export class Decals {
   touch() { this.dirty = true; }
 
   /** Attached decals: find each one's box in this frame's list (statics first, then dynamics — BoxWorld.upload's order) and re-derive its world placement from
-   *  where the box stands now. Cheap when nothing moved (a cached index check + three compares per decal). Called by frame(); the QA harness calls it by hand. */
+   *  where the box stands now. Cheap when nothing moved (a cached index check + three compares per decal). Called by frame(). */
   sync(world: BoxWorld) {
     const all = world.all; const nStat = world.statics.length;
     for (const d of this.list) {
@@ -201,7 +198,7 @@ export class Decals {
   }
 
   /** Pack the list: bucket every drawn decal into the 1 m cells its bounding circle overlaps (newest DECAL_MAX_PER_CELL per cell, DECAL_LIST_CAP entries in all —
-   *  anything beyond is dropped from the OLD end and counted in stats.dropped), then the records. Exposed for the harness (no GPU there: it inspects the words). */
+   *  anything beyond is dropped from the OLD end and counted in stats.dropped), then the records. */
   build() {
     const t0 = performance.now();
     const W = WORLD.gridW, H = WORLD.gridH, cs = WORLD.gridCell;
@@ -237,11 +234,11 @@ export class Decals {
     this.stats.count = drawn; this.stats.listLen = k; this.stats.maxCell = maxCell; this.stats.dropped = dropped; this.stats.buildMs = performance.now() - t0;
   }
 
-  /** harness: a copy of the packed words (header + cells + list + records) as last built */
+  /** a copy of the packed words (header + cells + list + records) as last built */
   words(): Uint32Array { return this.u32.slice(0); }
 }
 
-// ---- box frames (the same conventions as boxes.ts rayBox / props.ts: local +X → world (cos yaw, 0, −sin yaw), local +Z → (sin yaw, 0, cos yaw); Box.rot when present)
+// ---- box frames (the same conventions as boxes.ts rayBox / rust/game_rules/src/props: local +X → world (cos yaw, 0, −sin yaw), local +Z → (sin yaw, 0, cos yaw); Box.rot when present)
 function toLocal(b: Box, v: Vec3, point: boolean): Vec3 {
   const d: Vec3 = point ? v3.sub(v, b.c) : v3.copy(v);
   if (b.rot) return quat.rotate(quat.conj(b.rot), d);

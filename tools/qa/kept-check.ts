@@ -1,6 +1,6 @@
 // HOW KEPT A PLACE IS, ONE WORD A LEVEL: the check behind a level file's `meta.kept`, scene/look.ts lookKeptOf, look.wgsl lookKept and markings.wgsl's old
 // paint (docs/agents/render.md has the rule at length).
-//   bun run tools/qa/probes.ts kept        (family `render`)
+//   bun run tools/qa/checks.ts kept
 //   KEPT_BREAK=1     the weather's rules and a mark's age do not ask the word (the second writing below leaves it out), and the level a look's second
 //                    file dresses cannot be read when its word is asked: must FAIL
 // Until 11-05 whether a surface looked looked-after was said stuff by stuff (a stuff with no `fades` is "a place somebody keeps"), and every painted mark

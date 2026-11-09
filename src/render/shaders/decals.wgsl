@@ -463,7 +463,7 @@ fn decalSurface(P: vec3f, faceN: vec3f, boxIdx: u32, albedo: vec3f, fp: f32) -> 
 // What a bullet does to laminated glazing: a hole the size of a pea, a collar of pulverised glass round it that has gone milky, and a star of cracks running
 // out from it — some short and crazed, some long with a fork, the odd chord of the web joining two of them — stopped by the interlayer before the pane can
 // fall. Three coverages come back and composite turns them into light: the crack lines and the collar cut what comes THROUGH the pane and catch what falls
-// ON it (they are diffusers now), the hole is simply dark. Everything is drawn off the decal's 12-bit seed (glass.ts hashes it from where the pane was hit),
+// ON it (they are diffusers now), the hole is simply dark. Everything is drawn off the decal's 12-bit seed (rust/game_rules/src/glass hashes it from where the pane was hit),
 // in the pane's plane, in metres, softened over the pixel's footprint on the pane — with a floor under a crack's coverage, because a hairline that catches
 // the light reads from across the room though it is a twentieth of a pixel wide.
 struct GlassMarks { crack: f32, frost: f32, core: f32 };

@@ -4,9 +4,6 @@
 // Seven beats are authored (the game has seven names for a level's men); a deal mans five or six.
 //   bun run tools/levels/export.ts crossing          → levels/crossing.json (its footstep `surfaces`, its scenarios.quiet block; no room clear in it)
 //   levels stands crossing     the quiet block against the built floor, every deal started
-//   bun run tools/qa/quiet-light.ts crossing          the light a sneaking man stands in, on paper
-//   bun run tools/qa/quiet-pair.ts --level crossing.json --seeds 1-48      the scripted pair beside the same run alone
-//   bun run tools/qa/quiet-plan.ts crossing --png     the plan picture: beats, starts, places, ways out, the cameras' cones
 //   page: ?levelFile=crossing.json&quiet&squad=1   (&quiet=N pins the deal)
 //
 //        x 4      8       13       19       25       31       36
@@ -36,7 +33,7 @@
 //    fall at their heels), and the box hides the floor at each man's back from the other man — but not the man. Drop one and the other watches him fall, or
 //    finds him lying under his lamp a breath later. What the two do: the partner is sent round to one man's back (X on him, 1) and says 'set'; a bare F is
 //    refused while the mate is looking — 'hold. he has eyes on him' — so the player goes up the box's other side to the other man's back himself, gives F and
-//    F again, and puts his own hands on with the partner's: both go down on one beat (pairorders.ts PAIR.gripBody: a man with the partner's hands on him
+//    F again, and puts his own hands on with the partner's: both go down on one beat (rust/game_rules/src/pairorders PAIR.gripBody: a man with the partner's hands on him
 //    calls no body in). A stack of crates off each end of the box turns the way to each back into a diagonal from the lot: straight up his spine, not across
 //    his shoulder. Across the lane's mouth, out on the road, stands a BLAST SCREEN (x 17.5 to 23.5): the lane men see the lane and each other and nothing
 //    of the forecourt, and whoever goes through the mouth walks round the screen's end under their lamps. Alone the lane is not a way: it is another crossing.
@@ -92,7 +89,7 @@ export const CROSSING_ROOMS: Record<'records' | 'office' | 'impound' | 'hut' | '
 };
 const R = CROSSING_ROOMS;
 
-/** THE SEVEN BEATS (seven and no more: a level's men are named off game.ts CALLSIGNS by route, which holds seven). A waypoint with a wait is where he stands and looks, facing the way he came to it — so a mark is come at from the side he is to look from.
+/** THE SEVEN BEATS (seven and no more: a level's men are named off rust/game_rules/src/game CALLSIGNS by route, which holds seven). A waypoint with a wait is where he stands and looks, facing the way he came to it — so a mark is come at from the side he is to look from.
  *  ON THE FIRST LAP a man stands on waypoint 0 from the first frame and has not come to it from anywhere (he faces down his first leg): so the long stands — the lane men's marks, the clerk's desk, the road
  *  walker's chicane — are waypoint 1 or later, come at on the first lap as on every other. (The forecourt man's first six seconds and the south walker's first eight face the other way: short, and left.) */
 export const CROSSING_ROUTES: PatrolRoute[] = [
@@ -124,7 +121,7 @@ export const CROSSING_ROUTES: PatrolRoute[] = [
  *    the south gate (the lane and its two lit men straight ahead, the long dark way to the east door off to the right, the west pocket walled off) ·
  *    the office safe (the one place with a second problem behind the crossing: the clerk's back and the lens on the safe) ·
  *    set 0 (nobody in the lot behind the pair, nobody on the forecourt: the lane's two men ARE the problem, and the road walker is what the east door costs).
- *  Measured (tools/qa/quiet-pair.ts, scripted, build 53406430): alone or with the partner only following nobody gets across; the double lands 5 of 6 and ends unseen;
+ *  Measured (scripted, build 53406430): alone or with the partner only following nobody gets across; the double lands 5 of 6 and ends unseen;
  *  the east door with the partner on the walker 4 of 4. Set 2 in its place leaves the east door to the camera alone (a free way round); set 1 empties the office. */
 export const QUIET: QuietData = {
   thing: 'the manifest',

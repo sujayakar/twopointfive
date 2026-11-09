@@ -1,6 +1,6 @@
 // A REFLECTION TEXEL OF ANOTHER SURFACE HAS NO SAY: the check behind composite.wgsl upsampleRefl (no switch: it is the upsampler's own rule, on every page that
 // traces reflections).
-//   bun run tools/qa/probes.ts reflup        (family `render`)        REFLUP_BREAK=1 = the plain bilinear blend, as it was: must FAIL
+//   bun run tools/qa/checks.ts reflup        REFLUP_BREAK=1 = the plain bilinear blend, as it was: must FAIL
 // The maintainer on his GPU, 11-04, the white roof's service door at midday: "weird artifacts in the specular ... around the edges, looks like it's
 // blocky/rendered at a lower resolution". The reflections are traced at a half or a third of the picture's size and the composite took ONE bilinear fetch
 // of them. At a jamb, a pixel of the dark room took a share of the texel traced on the sunlit ground seen past it; the one exposure model shows the room

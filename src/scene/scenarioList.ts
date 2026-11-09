@@ -1,4 +1,4 @@
-// THE SCENARIO LIST: the curated scenarios the mission list offers (ui/missions.ts renders one row per entry; main.ts boots the one the URL names) and the pure
+// THE SCENARIO LIST: the curated scenarios the mission list offers (ui/missions.ts renders one row per entry; host/drawpage.ts boots the one the URL names) and the pure
 // helpers between a row and the page's query string. A scenario with a level of its own is ONE NEW ROW here — `level` names its file under levels/, whose own
 // `scenarios` block carries the marks (scene/scenarios.ts LevelScenarios) — and no picker code.
 //
@@ -76,7 +76,7 @@ export const SCENARIOS: ScenarioEntry[] = [
     only: 'Your kit is issued for this one, so it\'s played with the full squad of four.',
     blurb: 'Two enemies at the dim far end cover the whole hall, and the only door in opens onto it. Your kit is issued for this one.' },
   // The glasshouse = glass is not cover: a floodlit forecourt, a glazed front and glass partitions with dark rooms behind (rounds pass panes: rust/game_rules/src/glasspen), a blank back wall with the back door into the store; both starts are dark and out of sight.
-  // FILED UNDER 'more', not 'ideas': the list's own rule is eight drawn rows a group at most (probes.ts missions-list; a row cut from the list is not counted) and 'New ideas' holds eight — the owner's call which row moves.
+  // FILED UNDER 'more', not 'ideas': the list's own rule is eight drawn rows a group at most (a row cut from the list is not counted) and 'New ideas' holds eight — the owner's call which row moves.
   // The blurb is the premise and holds for both ways in (the sheet's 'Way in' row names them). The list deals the first way (beside the building: the lit glass is the player's own decision); the back lot is his pick on that row.
   // Two squads hold it since the hand placement (Front stays in the glasshouse, Back moves), and the level issues one wall charge for the blank end wall.
   { id: 'glasshouse-four', title: 'The glasshouse', kind: 'roomclear', squad: 4, level: 'glasshouse.json', ways: ['the dark beside the building, round the corner from the glass', 'the dark back lot, on the back door'], untuned: true, group: 'raids', offList: true,
@@ -101,7 +101,7 @@ export const QUIET_MISSIONS: ScenarioEntry[] = [
   { id: 'police-post-quiet', title: 'The police post', kind: 'quiet', squad: 0, level: 'police-post.json', untuned: true, offList: true,
     place: 'A walled district police post', lean: 'quiet', defenders: 5,
     blurb: 'The desk sergeant carries the keys, and the guards know the armory code. Grab one and ask, or pick a lock. Take the case file and leave through a side gate.' },
-  // (tools/levels/vault.ts: a quiet level built round the devices — a lens on each gate and one on a keypad door, as the bazaar and the police post have them, and two tripwire beams, which no level but the office had; tools/qa/vault-run.ts plays it, probe `vault`)
+  // (tools/levels/vault.ts: a quiet level built round the devices — a lens on each gate and one on a keypad door, as the bazaar and the police post have them, and two tripwire beams, which no level but the office had)
   { id: 'vault-quiet', title: 'The counting house', kind: 'quiet', squad: 0, level: 'vault.json', untuned: true, group: 'quiet-alone',
     place: "A money changer's house in a walled yard", lean: 'quiet', defenders: 3,
     blurb: 'There\'s a camera on the lit gate and a keypad on the strongroom. The clerk who knows the code smokes alone in the dark. Two tripwires guard the back door.' },
@@ -113,8 +113,7 @@ export const QUIET_MISSIONS: ScenarioEntry[] = [
     place: 'A hilltop radio relay: mast, comms hut, ops room', lean: 'quiet', defenders: 6,
     blurb: 'The crypto drive is in the comms hut. Its door is lit, locked and on camera, and a guard watches it from the dark behind the mast. Send your partner behind him.' },
   // (tools/levels/lights-out.ts: a quiet level built for two — the breaker and the door it darkens are a courtyard apart, and the dark lasts as long as one man's walk to the panel;
-  //  the man at the hall's window is the one the game sends to the panel; tools/qa/lights-out-run.ts plays it as a pair, alone, with the partner left behind and
-  //  with the panel shot dead (low, at a sprint, and with the sentry choked out first), probe `lights-out`)
+  //  the man at the hall's window is the one the game sends to the panel)
   { id: 'lights-out-two', title: 'Lights out, as two', kind: 'quiet', squad: 1, level: 'lights-out.json', untuned: true, group: 'quiet-two',
     place: 'A walled compound: the generator shed, the radio house', lean: 'quiet', defenders: 3,
     blurb: 'The codebook is in the radio house, behind a camera, beams and a sentry. The breaker is in a shed, and the dark only lasts until he walks over to it.' },
@@ -124,7 +123,7 @@ export const QUIET_MISSIONS: ScenarioEntry[] = [
  *  screen. The first is one man alone with his rifle; the second is his squad, led from the ground beside them. A row cut from the list (`offList`)
  *  keeps its place in this table: the list and a won lesson's next are the drawn rows in this order. */
 export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
-  // the first: one man and his rifle (tools/levels/tut-road.ts, levels/tut-road.script.ts). He walks one snowed-in mountain road, and every wreck and wall
+  // the first: one man and his rifle (tools/levels/tut-road.ts). He walks one snowed-in mountain road, and every wreck and wall
   // on the way up it is the cover for the next key. Nothing to throw, nobody to lead, nothing to sneak past
   { id: 'tut-road', title: 'The pass road, alone', kind: 'quiet', squad: 0, level: 'tut-road.json', group: 'tutorial',
     place: 'A snowed-in road below the pass, at night', lean: 'loud', defenders: 6, hour: 'night',   // (lit for the night: three fires, two trucks' lamps and a thin moon on snow)
@@ -137,7 +136,7 @@ export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
     blurb: 'Your squad is pinned down on the road with you. Get them through the gate, then lead them door by door.',
     scene: 'The people who hit the convoy fell back to a road tunnel. You and your squad went after them and ran straight into their roadblock at the station by the tunnel\'s mouth.',
     teaches: ['Zoom out to see your squad', 'Move the squad with one key', 'Stack the squad up on a door, then send them in', 'Call the squad back to you'] },
-  // his kit, then the squad's (tools/levels/tut-kit.ts, levels/tut-kit.script.ts): the fuel halt at night. He goes in alone and uses each thing he carries
+  // his kit, then the squad's (tools/levels/tut-kit.ts): the fuel halt at night. He goes in alone and uses each thing he carries
   // once, then calls his four up and has them use theirs from the ring on the squad's key.
   { id: 'tut-kit', title: 'The fuel stop', kind: 'roomclear', squad: 4, level: 'tut-kit.json', seed: 1, group: 'tutorial',
     hour: 'night', weather: 'clear',   // (built for the dark: its lamps are the photocell's, one of them is his to shoot out and the rest are the breaker box's)
@@ -145,7 +144,7 @@ export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
     blurb: 'Go in alone and use everything you carry. Then call your squad up and have them use theirs on your order.',
     scene: 'The enemies who hit the convoy fuel their trucks at a stop down the valley, and there\'s a machine gun behind its gate. You\'ll go in ahead of your squad to take out the gun, then call them up to clear the rest.',
     teaches: ['Throw smoke, a frag and a stun grenade', 'Blow a locked door with your own charge', 'Use your rifle\'s launcher and your pistol', 'Give your squad orders from their ring', 'Cut the lights and fight in the dark'] },
-  // the squad in two pairs (tools/levels/tut-queue.ts, levels/tut-queue.script.ts): he is on the ground with his four, and every stop is a thing one order to
+  // the squad in two pairs (tools/levels/tut-queue.ts): he is on the ground with his four, and every stop is a thing one order to
   // all four loses and two orders win — Shift held with the command key gives the new order to a part of the squad, and the word sends everything that waits
   { id: 'tut-queue', title: 'The relay post, in pairs', kind: 'roomclear', squad: 4, level: 'tut-queue.json', seed: 1, group: 'tutorial', hour: 'dusk', weather: 'clear',   // (the last light: a low sun and long shadows across the yard, as the floor was judged for the mission it came from)
     place: 'A walled relay post in the hills', lean: 'loud', defenders: 8, squads: true,

@@ -6,7 +6,7 @@
 // own height, to the spot's (x, z) through the renderer's own trace grid (occludedTBoxes: every box a shadow ray meets — statics, door leaves, furniture, and
 // the things other men carry; glass panes are not in the grid, so sight passes them; characters' bodies are not asked, and the eye's own kit is skipped). In
 // plan, at eye height: the floor behind a desk is seen (he sees over it) and the floor behind a wall, a tall cabinet or a shut leaf is not — the Door Kickers
-// picture, on the statics and leaves the CPU's eye test (collision.ts segmentBlocked) walks for the men. The eye is handed in over the man's FEET at a nominal
+// picture, on the statics and leaves the CPU's eye test (rust/game_rules/src/scene_collision segment_blocked) walks for the men. The eye is handed in over the man's FEET at a nominal
 // height for his stance (rust/game_rules/src/fogofwar FogEye.at), not at his animated head: the mask must not move with his stride.
 // The ray stops a hand short of the spot: a wall's FACE is seen when the floor at its foot is (the spot is pushed off the face along its normal first), and a
 // top face above the eye — a wall's top, a tall cabinet's — when the line reaches within `topPad` of it (its own box stands in the way of anything nearer).
@@ -26,7 +26,7 @@
 //            walk is not taken. A box that does not answer proves nothing: the walk is taken as ever. The table only PROPOSES a box; the answer is the test's.
 //            So a pixel nobody sees costs a box test or two an eye where it cost a walk an eye, and no pixel's answer can differ. It also leaves alone what it does
 //            not change: a seen pixel and the sky are not stored back (hdr already holds them) and the copy is read only where it is needed.
-//   (`//#C ` / `//#CH ` lines + the count section: tools/qa/fog-pass-check.cjs's counting programs — rays, box tests and cells per pixel instead of the picture.)
+//   (`//#C ` / `//#CH ` lines + the count section: the counting programs — rays, box tests and cells per pixel instead of the picture.)
 struct FowU {
   eyes: array<vec4f, 7>,    // xyz = the eye, w = his character id (0 = no eye in this slot): the ray skips the boxes he carries himself (goggles at the eye, the gun)
   looks: array<vec4f, 7>,   // xy = where it looks in plan (x, z; unit), z = cos of the half field (≤ −1.5: all round), w = the near field's radius (m)
@@ -62,8 +62,7 @@ const FOW_FACE_OFF: f32 = 0.06;   // the spot is taken this far off its surface 
 //   · of a spot it does NOT see, the first bearing that goes as far as the spot (fowFirstClear; less FOW_EDGE_SLANT × the way across, which is what a wall
 //     through the spot at a slant explains), and the same question of the step before it: past a thing that ends, not a wall that carries on.
 // The band is `cfg.w` × how sure the step is (FOW_EDGE_JLO ‥ JHI: no pop as a man walks) × how far behind the nearer thing the spot is, up to a band (the line
-// leaves a corner hard and widens behind it, as a shadow's edge does; a spot beside the thing is not dimmed). tools/qa/fog-probes.ts edgeReplica is this, in
-// plan, statement for statement, and holds its rules: CHANGE BOTH TOGETHER (the probe pins this text's hash).
+// leaves a corner hard and widens behind it, as a shadow's edge does; a spot beside the thing is not dimmed).
 const FOW_EDGE_BINS: i32 = 64;      // the most bearings searched a side
 const FOW_EDGE_JLO: f32 = 0.06;     // a nearer thing starts where 1 / range steps up by this share over the bearings beside it … (no band under it)
 const FOW_EDGE_JHI: f32 = 0.18;     // … the whole band from this share up
@@ -246,7 +245,7 @@ fn fowLitOpen(Po: vec3f, N: vec3f) -> f32 {
   return 1.0 - fow.lit2.x * min(shut * 0.3, 1.0);
 }
 /// the unseen pixel under FOG.lit: the paint under the fill (`form` = the fixed light's own shape; shut out where fowLitOpen says) + under each remembered lamp that
-/// a ray from the spot reaches + the glow of a lit panel's own face (an area lamp stands 7 cm proud of the face it is the light of: game.ts)
+/// a ray from the spot reaches + the glow of a lit panel's own face (an area lamp stands 7 cm proud of the face it is the light of: rust/game_rules/src/game)
 fn fowLit(P: vec3f, N: vec3f, paint: vec3f, form: f32) -> vec3f {
   let Po = P + N * 0.03;
   let inv = 1.0 / max(frame.exposure, 1e-4);
@@ -425,7 +424,7 @@ fn pre(@builtin(global_invocation_id) gid: vec3u) {
   textureStore(fowHintOut, vec2i(gid.xy), vec4u(h, 0u, 0u, 0u));
   //#C textureStore(fowHintOut, vec2i(i32(gid.x), i32(gid.y) + 7), vec4u(u32(fowCount.z) | (u32(fowCount.w) << 16u), 0u, 0u, 0u));   // (the counting table is twice as tall: what each ray cost, under the rows — 7 = the eyes, the arrays' own literal)
 }
-//#SECTION count — the counting programs only (tools/qa/fog-pass-check.cjs through FogPass.qaRun): per pixel x = walks taken (+ 64 for every disagreement: a hint that
+//#SECTION count — the counting programs only (FogPass.qaRun): per pixel x = walks taken (+ 64 for every disagreement: a hint that
 // answered where the walk says clear, or fowWalk against occludedTBoxes) · y = the hints' box tests · z = the walks' box tests · w = the cells the walks crossed
 var<private> fowCount: vec4f;
 fn fowTally(ro: vec3f, rd: vec3f, tmax: f32, owner: u32) {

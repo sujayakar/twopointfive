@@ -80,7 +80,7 @@ export const SKY_PARK: Vec3 = [2.0, 0, 9.0];
 // ---- the road, east: the roadblock (two low walls of sandbags across the lanes), the gun truck in front of the south one, the tunnel behind them ----
 const GUN_TRUCK = { x: 29.2, z: 24.4, yaw: Math.PI - 0.07 };
 const PORTAL_X = 37.6;
-// (the three men of the roadblock are the level's script's: levels/tut-team.script.ts POSTS, behind the sandbags below)
+// (the three men of the roadblock are the level's script's: rust/game_rules/src/script_tut_team POSTS, behind the sandbags below)
 /** THE PLOUGH LORRY, the yard's one big thing: parked across the east half of the yard in front of the bunkhouse, its blade toward the gateway. Local +X is its nose */
 const LORRY = { x: 24.0, z: 15.6, yaw: Math.PI - 0.05 };   // (a lane a man walks on each side of it, never a pocket he is posted in — and it stands in the line from the mains box, and from most of the yard, to the bunkhouse's door: what comes out of that door in the dark is seen first as light round its tail)
 

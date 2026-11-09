@@ -5,10 +5,9 @@
 //               to a round, a charge and a blast the box is exactly what it was, in any paint of any colour;
 //   · DECALS    appended LAST under the group 'look': NoShadow boxes only, EVERY ONE FROM THE FLOOR UP (rugs, patches and wear on the ground, the damp foot
 //               of an outside wall and the strip of ground along it, a painted dado indoors) — drawn and lit, invisible to every ray and every collision
-//               query (the old look-check also asked the three destruction indexes, which find things by shape, whether they list the same boxes in
-//               both files). From the floor up, because a drawn-only thing OFF the floor is something rust/game_rules/src/wallbreak judges when what it touches breaks
+//               query. From the floor up, because a drawn-only thing OFF the floor is something rust/game_rules/src/wallbreak judges when what it touches breaks
 //               (it falls: debris, a sound) — a decal that starts at the floor is never asked. A decal on a wall's face goes with its wall when the wall
-//               is holed: scene/lookTidy.ts, picture only;
+//               is holed, picture only;
 //   · PROPS     keep their kind, place, mass and parts; a part's paint may change (nothing reads it but the renderer).
 // Never touched: lights, doors, routes, marks, scenarios, glass, lit boxes, fixtures, screens, the destruction dressing, and anything small enough to be the
 // clutter / paper the destruction index finds (by shape and by what the box does; until 2026-11-05 by tone, which is why the skin left them, and it still does).
@@ -54,7 +53,7 @@ export interface SkinCtx {
   y0: number; y1: number; thin: number; long: number;
   /** stands from the floor to (near) the ceiling */
   full: boolean;
-  /** a thing of no office paint that a blast takes apart as a sheet and a carcass (what it does says `steel`: scene/materials.ts, furnblast.ts) */
+  /** a thing of no office paint that a blast takes apart as a sheet and a carcass (what it does says `steel`: scene/materials.ts, rust/game_rules/src/furnblast) */
   steel: boolean;
   /** 0‥1, the same for every box of this group */
   gh: number;

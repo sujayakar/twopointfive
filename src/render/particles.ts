@@ -39,7 +39,7 @@ export const P_CAP = 16384;
 export const RINGS: readonly { start: number; size: number }[] = [{ start: 0, size: 6144 }, { start: 6144, size: 10240 }];
 /** the RAIN ring (EXPERIMENT exp/particle-rain, rust/game_rules/src/rain_fx): slots P_CAP ‥ P_CAP + RAIN_CAP past the two gameplay rings — its window rides in the emit block's TAIL (particles_common.wgsl EmitBlock.rainWin) so the
  *  header, the records and both gameplay windows are laid out exactly as they were. A drop's slot is held for its filed life + slack (≈ 1.23 s; a drip off a lamp head ≈ 1.8 s, and the FIFO
- *  retires in order) while it is in the air ~0.73 s, so N alive need 1.7‥2.5 N slots: 16384 hold ~5900 with the drips on, ~8900 without (rainFx.ts clamps its target to the ring); +1.25 MB of pool. */
+ *  retires in order) while it is in the air ~0.73 s, so N alive need 1.7‥2.5 N slots: 16384 hold ~5900 with the drips on, ~8900 without (rust/game_rules/src/rain_fx clamps its target to the ring); +1.25 MB of pool. */
 export const RAIN_CAP = 16384;
 export const RAIN_RING = { start: P_CAP, size: RAIN_CAP } as const;
 /** rain births a frame (its own budget, apart from settings.particleBirths: a downpour is a steady 100‥250 a frame, dealt AFTER every gameplay record and never queued — what does not fit this frame is simply not born) */
@@ -68,7 +68,7 @@ export const REC_BYTES = 112, BLOCK_HDR_BYTES = 48 + P_KINDS.length * 48, KP_FLO
  *  Shading: iso / fwdK / fwdG (the drop's phase), glintK / glintRough / glintCap (the strand glint and its bound), gain, tailKeep; the splat: refract (0 = off) / refractReachM / refractTaps /
  *  refractClamp / refractDepth / refractPaint (0‥1: how much of the picture a read taken beside the streak keeps; 1 = all of it, as it was; 0 = its light only), lenJit / brightJit / minPx; the wind: windK (× the air on a drop), sheetAmp / sheetLen + the sheets' running offset bandOffX / Z (m, ∫ air dt). */
 export interface RainLook { iso: number; fwdK: number; fwdG: number; glintK: number; glintRough: number; glintCap: number; gain: number; tailKeep: number; refract: number; refractReachM: number; refractTaps: number; refractClamp: number; refractDepth: number; refractPaint: number; lenJit: number; brightJit: number; minPx: number; maxPx: number; boostCap: number; nearFadeM: number; beadAmp: number; windK: number; sheetAmp: number; sheetLen: number; bandOffX: number; bandOffZ: number; }
-export const RAIN_LOOK_DEFAULTS: Readonly<RainLook> = Object.freeze({ iso: 1, fwdK: 0, fwdG: 0.8, glintK: 0, glintRough: 0.08, glintCap: 12, gain: 1, tailKeep: 0, refract: 0, refractReachM: 6, refractTaps: 3, refractClamp: 6, refractDepth: 0.3, refractPaint: 1, lenJit: 0, brightJit: 0, minPx: 0.75, maxPx: 64, boostCap: 1, nearFadeM: 2, beadAmp: 0, windK: 1, sheetAmp: 0, sheetLen: 7, bandOffX: 0, bandOffZ: 0 });   // (= v1's look until rainFx.ts writes PRAIN over it: iso 1, no lobe, no glint, no refraction, no spread, no width ceiling, the 2 m near fade)
+export const RAIN_LOOK_DEFAULTS: Readonly<RainLook> = Object.freeze({ iso: 1, fwdK: 0, fwdG: 0.8, glintK: 0, glintRough: 0.08, glintCap: 12, gain: 1, tailKeep: 0, refract: 0, refractReachM: 6, refractTaps: 3, refractClamp: 6, refractDepth: 0.3, refractPaint: 1, lenJit: 0, brightJit: 0, minPx: 0.75, maxPx: 64, boostCap: 1, nearFadeM: 2, beadAmp: 0, windK: 1, sheetAmp: 0, sheetLen: 7, bandOffX: 0, bandOffZ: 0 });   // (= v1's look until rust/game_rules/src/rain_fx writes PRAIN over it: iso 1, no lobe, no glint, no refraction, no spread, no width ceiling, the 2 m near fade)
 
 /** Per-kind numbers (shaders/particles_common.wgsl k0 / k1), live from the panel. holdOrFade: SPARK = fraction of life held white-hot before the fall to red;
  *  others = seconds of fade-out at the end of life. shutterOrGrowth: streak kinds = seconds of motion one streak shows; DUST = growth factor of the radius over
@@ -81,9 +81,9 @@ export const RAIN_LOOK_DEFAULTS: Readonly<RainLook> = Object.freeze({ iso: 1, fw
  *  keep = splash crown radius m · sleepV = splash seconds · holdOrFade = streak fade-in s (born under the top of the slab, not popped) · shutterOrGrowth = streak shutter s · brightOrOpacity = radiance ×. */
 export interface KindParams { gravity: number; drag: number; restitution: number; keep: number; sleepV: number; holdOrFade: number; shutterOrGrowth: number; brightOrOpacity: number; }
 export const KIND_DEFAULTS: Record<PKind, KindParams> = {
-  spark:  { gravity: 16,  drag: 1.6, restitution: 0.25, keep: 0.7,  sleepV: 0,    holdOrFade: 0.15, shutterOrGrowth: 0.017, brightOrOpacity: 2.6 },   // = effects.ts sparks: gravity 16, drag 1.6, floor bounce −0.25 / ×0.7, hold 0.15, shutter 17 ms, brightness 2.6
+  spark:  { gravity: 16,  drag: 1.6, restitution: 0.25, keep: 0.7,  sleepV: 0,    holdOrFade: 0.15, shutterOrGrowth: 0.017, brightOrOpacity: 2.6 },   // = rust/game_rules/src/effects sparks: gravity 16, drag 1.6, floor bounce −0.25 / ×0.7, hold 0.15, shutter 17 ms, brightness 2.6
   debris: { gravity: 9.8, drag: 0.9, restitution: 0.3,  keep: 0.55, sleepV: 0.35, holdOrFade: 3.0,  shutterOrGrowth: 0.008, brightOrOpacity: 1 },
-  dust:   { gravity: 0.35, drag: 6.0, restitution: 0.5, keep: 1.0,  sleepV: 0.05, holdOrFade: 1.3,  shutterOrGrowth: 0.6,   brightOrOpacity: 0.3 },   // (drag 6: a puff of dust decelerates in centimetres, it does not sail; growth / opacity = particleFx.ts DUST_LOOK's 08-12 defaults)   // (restitution / keep / sleepV / holdOrFade = the puff's LOOK: wrap, ambient ×, fade-in s, softness × — particleFx.ts DUST_LOOK)
+  dust:   { gravity: 0.35, drag: 6.0, restitution: 0.5, keep: 1.0,  sleepV: 0.05, holdOrFade: 1.3,  shutterOrGrowth: 0.6,   brightOrOpacity: 0.3 },   // (drag 6: a puff of dust decelerates in centimetres, it does not sail; growth / opacity = rust/game_rules/src/particle_fx DUST_LOOK's 08-12 defaults)   // (restitution / keep / sleepV / holdOrFade = the puff's LOOK: wrap, ambient ×, fade-in s, softness × — rust/game_rules/src/particle_fx DUST_LOOK)
   casing: { gravity: 9.8, drag: 0.45, restitution: 0.42, keep: 0.72, sleepV: 0.4, holdOrFade: 4.0,  shutterOrGrowth: 0.008, brightOrOpacity: 1 },
   sheet:  { gravity: SHEET.gravity, drag: SHEET.KT, restitution: SHEET.KN_LIN, keep: SHEET.KN_Q, sleepV: SHEET.sleepV, holdOrFade: SHEET.fade, shutterOrGrowth: SHEET.FLUT, brightOrOpacity: SHEET.TRANS },
   rain:   { gravity: 9.8, drag: 9.8 / 9.0, restitution: 6, keep: 0.06, sleepV: 0.2, holdOrFade: 0.09, shutterOrGrowth: 1 / 30, brightOrOpacity: 1 },   // (restitution = the reactivity ×, mirrored from settings.particleRainReact by rust/game_rules/src/rain_fx; brightOrOpacity likewise from particleRainBright)
@@ -248,9 +248,9 @@ export class Particles {
     this.simMod = makeShader(device, pre + lightingCommon + particlesCommon + windFieldSrc + particlesSrc, 'particles');   // (+ the wind field's one text, ahead of the kernels that sum it)
     this.simLay = device.createPipelineLayout({ bindGroupLayouts: [sceneLayout, this.lSim] });
     this.drawMod = makeShader(device, pre + particlesCommon + refractCommon + placeCommonSrc + particlesDrawSrc, 'particlesDraw');   // (+ refract_common.wgsl ahead of the splat: the rain streaks' refraction; + place_common.wgsl: a particle's light is shown by its place)
-    this.drawLay = device.createPipelineLayout({ bindGroupLayouts: [sceneLayout, this.lDraw] });   // (the three pipelines: init(), awaited by main.ts before the first frame)
+    this.drawLay = device.createPipelineLayout({ bindGroupLayouts: [sceneLayout, this.lDraw] });   // (the three pipelines: init(), awaited by host/drawpage.ts before the first frame)
   }
-  /** emit + update + the splat, compiled off the GPU process's main thread (gpu/device.ts) — main.ts awaits it with the rest of the game's GPU init; never called by the headless probes */
+  /** emit + update + the splat, compiled off the GPU process's main thread (gpu/device.ts) — host/drawpage.ts awaits it with the rest of the game's GPU init */
   async init(): Promise<void> {
     const device = this.device;
     [this.pEmit, this.pUpdate, this.pDraw] = await Promise.all([
@@ -326,7 +326,7 @@ export class Particles {
    *  THEY ARE THE FIRST LEFT OUT when the block is full (WIND_GPU_MAX records less a blast frame's impulses): the wind keeps its places. */
   heat: readonly WindGpuSource[] = [];
   setHeat(srcs: readonly WindGpuSource[]) { this.heat = srcs; }
-  /** This frame's WIND (rust/game_rules/src/wind, once a frame at the end of Game.update): the sources whose air the update kernel measures every live particle's drag against — kept by
+  /** This frame's WIND (rust/game_rules/src/wind, once a frame): the sources whose air the update kernel measures every live particle's drag against — kept by
    *  reference until the next call, packed at prepare() behind the impulses; an empty list = still air (nothing packed, nothing uploaded, the kernel's one branch). `knobs` =
    *  (sheet wake m/s, sheet kick ×, debris coupling), riding on every record. Allocates nothing; never wakes or moves anything by itself. */
   setWind(srcs: readonly WindGpuSource[], knobs: readonly [number, number, number]) { this.winds = srcs; this.windKnobs[0] = knobs[0]; this.windKnobs[1] = knobs[1]; this.windKnobs[2] = knobs[2]; }

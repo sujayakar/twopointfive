@@ -13,7 +13,7 @@ import { faceAsk } from "./blitz/face-build.ts";   // the game's module (rust/ga
 /** the module file's own name (a kept run says which module it was played on: src/tape/module.ts) */
 let faceNamed = { path: "", at: 0, name: "" };
 async function faceName(path: string): Promise<string> { const f = Bun.file(path), at = f.lastModified; if (faceNamed.path !== path || faceNamed.at !== at) faceNamed = { path, at, name: Bun.hash(await f.arrayBuffer()).toString(36) }; return faceNamed.name; }
-const COMMIT = (() => { try { const r = Bun.spawnSync(["git", "rev-parse", "--short=12", "HEAD"]); return r.success ? new TextDecoder().decode(r.stdout).trim() : ""; } catch { return ""; } })();   // (read once at start: a dev server outlives commits, but the journal only wants "about which build")
+const COMMIT = (() => { try { const r = Bun.spawnSync(["git", "rev-parse", "--short=12", "HEAD"]); return r.success ? new TextDecoder().decode(r.stdout).trim() : ""; } catch { return ""; } })();   // (read once at start: a dev server outlives commits, but a kept file only wants "about which build")
 let CLOUD: ReturnType<typeof localCloud> = null;   // the local build's backend (tools/cloud/local.ts), started below once the port is ours: null on a plain start — `bun run dev` asks for one (TPS_LOCAL_CLOUD=1), TPS_DEV_CLOUD names one that is already up
 let MP: DevRunner | null = null;   // co-op's game servers on this machine (tools/mp/runner.ts): the local backend asks this server to start and stop them. null where no backend was asked for
 const port = Number(process.env.PORT ?? 5173);
@@ -56,7 +56,7 @@ const server = Bun.serve({
     const lv = await handleLevels(req); if (lv) return lv;
     if (path === "/qa/commit") return new Response(COMMIT, { headers: { "Cache-Control": "no-store", "Content-Type": "text/plain" } });   // the commit this server was started on (a run and a report file it)
     if (path === "/qa/cloud") return new Response(CLOUD?.url() ?? "", { headers: { "Cache-Control": "no-store", "Content-Type": "text/plain" } });   // the backend this server runs for the page, or nothing (src/cloud/cloud.ts cloudFind asks once a page load)
-    if (/^\/qa\/[\w.-]+\.js$/.test(path)) { const qa = Bun.file("./tools" + path); if (await qa.exists()) return new Response(qa, { headers: { "Cache-Control": "no-store" } }); }   // the in-page measurement harnesses (dev only, never bundled): `await import('/qa/perf-harness.js')` → window.__perf, '/qa/perf-frames.js' → window.__pf
+    if (/^\/qa\/[\w.-]+\.js$/.test(path)) { const qa = Bun.file("./tools" + path); if (await qa.exists()) return new Response(qa, { headers: { "Cache-Control": "no-store" } }); }   // the in-page measurement harnesses (dev only, never bundled)
     const f = Bun.file("./public" + path);
     if (await f.exists()) return new Response(f);
     return new Response("not found: " + path, { status: 404 });

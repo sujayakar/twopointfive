@@ -3,7 +3,7 @@
 // no weapon number is touched and no dice are drawn by any of it. A level's paint is that level's file: a wall's colour is in the light that comes round a room, which
 // a man's eye reads (sim/glow.rs), so paint plays.
 // ONE SWITCH (and under it `suit`, the sneaking suit: on whenever the look is, looks only). OFF in this module; the PAGE turns it on at boot before the cast is
-// fetched (host/profile.ts pageSwitches), a harness run under TPS_LOOK=1. It says what the men wear and how a leaf is painted, never which file a level is.
+// fetched (host/drawpage.ts). It says what the men wear and how a leaf is painted, never which file a level is.
 // No imports here: scene/, game/ and the tools all read it.
 import type { BoxStuff } from './boxes';
 export const LOOK = {
@@ -19,7 +19,7 @@ export const LOOK = {
  *  tables — local dress for the defenders, tan issue for the operators — are for the look's places. On the OFFICE family (the bundled office, relief, the texel
  *  variants) the men are dressed as they were before the look: the first cast file and its tables, and of its defenders only the ones dressed for a building
  *  (rust/game_rules/src/cast office_dress: no straw hat, no bandolier). The sneaking suit is the look's on every level (LOOK.suit). Not a knob: it is a fact of the level the
- *  PAGE booted on, said once at boot (main.ts, before the cast is fetched); everything headless leaves it true, so `LOOK.on` alone still means the look's dress there.
+ *  PAGE booted on, said once at boot (host/drawpage.ts, before the cast is fetched); a tool leaves it true, so `LOOK.on` alone still means the look's dress there.
  *  Looks only. */
 let lookPlace = true;
 /** the page says what its level is: true = one of the look's places (every level but the office family) */
@@ -30,7 +30,7 @@ export function lookDress(): boolean { return LOOK.on && lookPlace; }
 export function lookOffice(): boolean { return LOOK.on && !lookPlace; }
 /** is the level a page's query boots one of the look's places? No `levelFile` = the bundled office; `office.json` / `office-*.json` = the office family */
 export function placeOfQuery(q: URLSearchParams): boolean {
-  const lf = q.get('levelFile'); if (lf && /^[\w.-]+\.json$/.test(lf)) return !/^office(-[\w.-]+)?\.json$/.test(lf);   // (a name main.ts's boot will not fetch boots the bundled office)
+  const lf = q.get('levelFile'); if (lf && /^[\w.-]+\.json$/.test(lf)) return !/^office(-[\w.-]+)?\.json$/.test(lf);   // (a name host/drawpage.ts's boot will not fetch boots the bundled office)
   return false;
 }
 
@@ -67,7 +67,7 @@ export function lookPageRows(q: URLSearchParams): string[] { return q.getAll('lo
 export function lookTrialsKept(q: URLSearchParams): string[] {
   let cut: string | null = null; try { cut = localStorage.getItem('twopointsix.cutboxes'); } catch { /* no store: on */ }   // (the cut boxes' own switch: scene/cut.ts initCutSwitch)
   return cut === '0' && !q.has('cutboxes') && !q.has('nocutboxes') ? ['cutboxes=0'] : []; }
-/** the other words the page reads once, at boot, into its shader text and its level (main.ts, scene/cut.ts: the look's geometry is cut boxes) */
+/** the other words the page reads once, at boot, into its shader text and its level (host/drawpage.ts, scene/cut.ts: the look's geometry is cut boxes) */
 const LOOK_PAGE_WORDS: ReadonlySet<string> = new Set(['longfoot', 'walked', 'firesnow', 'firesoot', 'emberfog', 'cutboxes', 'nocutboxes', 'smokelook', 'nosunglint', 'glintpick', 'holedepth', 'kept', 'lookworkers']);
 /** a word of an address, decoded, is the look page's own */
 export function lookPageWord(k: string, v: string): boolean { return k === 'look' ? lookRow(v) : LOOK_PAGE_WORDS.has(k); }

@@ -1,6 +1,6 @@
-// A LESSON DONE LEADS TO THE NEXT ONE: the end card of a tutorial mission that was won offers the next row of the tutorial as its first button (ui/menu.ts
-// debrief) — that row's own page load, the visitor's other flags kept, as a pick of it on the mission list would be. Null on any other page and after the last
-// lesson. "Next" is the next lesson the lists draw (ui/missions.ts listedMissions; ?offlist=0: every row).
+// A LESSON DONE LEADS TO THE NEXT ONE: the end card of a tutorial mission that was won offers the next row of the tutorial as its first button
+// — that row's own page load, the visitor's other flags kept, as a pick of it on the mission list would be. Null on any other page and after the last
+// lesson. "Next" is the next lesson the lists draw (ui/missions.ts listedMissions).
 import { desk, deskStands } from '../view/desk';
 
 /** `id` = the tutorial row that is up (the running scenario's own entry: what was staged, not what the query asked for) */

@@ -27,7 +27,7 @@
 // own (`Keeper.take(seat)`, `keepRole`'s `beside`): the visit's programs answer it, and the ones it adds (the picked mission's own) are there when Deploy
 // loads that mission. Its lease ends with its window, with the next picture's, or with its page's. With no shell above (a driven page, `?keeppage=0`)
 // it opens its own device, as it did.
-// A page switch, not a rule of the game: no knob, no row of the frozen stand — the harness has no page. This file imports nothing.
+// A page switch, not a rule of the game. This file imports nothing.
 
 export const KEEP_PAGE = { /** the shell's and the frame's side must agree on this */ v: 2, hook: '__pageKeeper', word: 'keeppage', store: 'twopointsix.keeppage', frameId: 'kept-page',
   /** the seats a lease is taken on (`Keeper.take`): the game's page in the shell's frame, and a picture shown inside that page (under it: it goes with its page) */
@@ -379,7 +379,7 @@ const textured = (a: unknown[]): number => {
   const h = (Array.isArray(z) ? z[1] : z?.height) ?? 1, d = (Array.isArray(z) ? z[2] : z?.depthOrArrayLayers) ?? 1, whole = Math.max(0, sizeOf(a[1]) - (lay?.offset ?? 0));
   return lay?.bytesPerRow ? Math.min(whole, lay.bytesPerRow * ((lay.rowsPerImage ?? h) * (d - 1) + h)) : whole;
 };
-/** Start the page's clock on `device` (main.ts, as soon as it has one; `on` = false, `?callclock=0`: not timed). The five calls are put over the device's and
+/** Start the page's clock on `device` (host/drawpage.ts, as soon as it has one; `on` = false, `?callclock=0`: not timed). The five calls are put over the device's and
  *  its queue's for as long as the clock runs, in THIS page's window, and what was there is put back at `CALLS.stop` (a kept page's device has the keeper's
  *  own makers there, a whole page's has nothing). A kept page's load that ends first loses them with its lease (`dress`) */
 export function startCallClock(device: GPUDevice, on = wordOn(KEEP_PAGE.clockWord), play = wordOn(KEEP_PAGE.playWord)): void {
@@ -422,7 +422,7 @@ export function startCallClock(device: GPUDevice, on = wordOn(KEEP_PAGE.clockWor
   };
 }
 function wordOn(word: string): boolean { try { return new URLSearchParams((globalThis as { location?: { search?: string } }).location?.search ?? '').get(word) !== '0'; } catch { return false; } }
-/** the boot's own pipelines are in (main.ts, where it freezes the boot's count): the record's `made` is the load's, however long the page then stays, and
+/** the boot's own pipelines are in (host/drawpage.ts, where it freezes the boot's count): the record's `made` is the load's, however long the page then stays, and
  *  the load's clock on its GPU calls stops, and the play total starts */
 export function keptFreeze(): void { KEPT.lease?.freeze(); CALLS.stop(); CALLS.startPlay(); }
 /** a load's record, with the kept page's words: `kept` which load on this page, `made` what the browser compiled for it against what was asked, and on the first

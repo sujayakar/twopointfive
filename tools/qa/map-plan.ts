@@ -26,7 +26,7 @@ export function mapName(arg: string): string | null {
   if (!/^[\w-]+$/.test(n) || !existsSync(file)) return null;
   return arg.includes('/') && resolve(process.cwd(), arg) !== file ? null : n;
 }
-/** the level as the game loads it (an office-family file gets the office's script and scenarios, as main.ts and the harness give it) */
+/** the level as the game loads it (an office-family file gets the office's script and scenarios) */
 export function loadMap(name: string): any { const data = parseLevelData(readFileSync(resolve(ROOT, 'levels', `${name}.json`), 'utf8')); return loadLevel(data); }
 
 const SQUAD_COLOURS = ['#ff6b6b', '#ffb347', '#c792ea', '#5ad1c8', '#f78fb3', '#9bd35a'];

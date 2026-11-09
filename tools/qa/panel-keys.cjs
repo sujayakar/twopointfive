@@ -1,6 +1,6 @@
-// PANEL KEYS: the debugger's key, pressed for real. The page is booted in headless Chromium on the software WebGPU adapter (see page-look.cjs for what that
+// PANEL KEYS: the debugger's key, pressed for real. The page is booted in headless Chromium on the software WebGPU adapter (see pages.ts for what that
 // adapter can and cannot do) and REAL key events are sent through the browser, so the whole road is under test: Input's capture listener, the panel's veto,
-// the panel's own listener for a focused field, main.ts's hotkey line.
+// the panel's own listener for a focused field, host/drawpage.ts's hotkey line.
 //   backtick  opens and shuts the tweak panel — with the pointer over the game, over the panel, with the search box / a slider / a list holding the keyboard —
 //             is never typed into the search, and steps NO debug view (the buffers are the 'debug view' row on the Frame page, by the list alone)
 //   Tab       does nothing to the panel; the game is handed the press (Input.pressed) and the browser's focus does not move

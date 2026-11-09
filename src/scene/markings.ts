@@ -12,7 +12,7 @@
 // first) — canonical, deterministic, greppable. Readable text / logos would come later as an SDF-glyph atlas add-on to this same table, not now.
 //
 // This file also computes each marking's per-entry COVERAGE FRACTIONS (the mean the shader fades to; area-averaged over the box, the albedo the secondary
-// rays see — boxes.ts upload: GI energy right at zero ray cost) and its MEAN EMISSION (an emissive marking is a LIGHT: game.ts registers a one-sided
+// rays see — boxes.ts upload: GI energy right at zero ray cost) and its MEAN EMISSION (an emissive marking is a LIGHT: rust/game_rules/src/game registers a one-sided
 // rectangular emitter for it exactly like an emissive fixture box, so ReSTIR shadows, the beams, the bounce and the light meter all see it).
 import type { Vec3 } from '../math/vec';
 import { onExact } from '../math/exact';
@@ -364,7 +364,7 @@ export function packMarking(out: Float32Array, row: number, m: MarkingDef, st: M
   const [W, H] = m.size; const cb = o + MARK_HEAD_ROWS * 4;
   for (let j = 0; j < H; j++) { const rowStr = m.cells[H - 1 - j]; for (let i = 0; i < W; i++) { const e = CELL_CHARS.indexOf(rowStr[i]); if (e <= 0) continue; const c = j * W + i; out[cb + Math.floor(c / CELLS_PER_FLOAT)] += e << (2 * (c % CELLS_PER_FLOAT)); } }
 }
-/** markings whose emission has been registered as an analytic light (game.ts): reflections then take only emitTraceK of the traced radiance, as for an area-lit fixture */
+/** markings whose emission has been registered as an analytic light (rust/game_rules/src/game): reflections then take only emitTraceK of the traced radiance, as for an area-lit fixture */
 export const AREA_LIT_MARKS = new WeakSet<MarkingDef>();
 export function faceAreas(h: Vec3): { areas: number[]; total: number } {
   const areas = MARK_FACES.map((_, f) => { const { hu, hv } = faceHalf(h, f); return 4 * hu * hv; });

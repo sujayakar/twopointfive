@@ -15,7 +15,7 @@
 // WHERE THE WORDS CAME FROM (2026-11-05). Until then the rules read a box's COLOUR: an exact match against the office's palette gave a paint's name, a
 // paint of the 2010s look carried the name it stood for in a hair's shift of its colour, and a colour nobody had named was classed by how bright and how
 // grey it was. Every row below is one answer that rule gave, under a plain name, and every level file was written again with the word its colour said, so
-// no rule moved (tools/qa/does-audit.ts lists a box whose word and colour disagree; tools/levels/doesWas.ts keeps the old rule, frozen, to bring forward
+// no rule moved (tools/levels/doesWas.ts keeps the old rule, frozen, to bring forward
 // a box nobody has said a word for). So some rows are accidents kept: the 'unnamed' rows are tones, not stuffs. Each is a choice still owed, and making
 // it is one edit here or one word in a generator.
 // No imports but types: game/ reads this without pulling a kit, a palette or the renderer in.
@@ -29,30 +29,30 @@ export type SnowKind = 'snow' | 'snowPacked' | 'snowOld';
 
 /** WHAT A MATERIAL DOES: every column a rule reads. An absent flag is false; an absent word is none. */
 export interface Does {
-  /** a round's hit (rust/game_rules/src/particle_fx), how tough a wall of it is (wallbreak.ts), what a round goes through (wallpen.ts), what a charge is told (wallcharge.ts) */
+  /** a round's hit (rust/game_rules/src/particle_fx), how tough a wall of it is (rust/game_rules/src/wallbreak), what a round goes through (rust/game_rules/src/wallpen), what a charge is told (rust/game_rules/src/wallcharge) */
   surf: Surf;
-  /** how a blast breaks furniture of it (furnblast.ts, winbars.ts) */
+  /** how a blast breaks furniture of it (rust/game_rules/src/furnblast, winbars) */
   breaks: BreakClass;
-  /** sheet steel on a frame: a cabinet or a locker of it comes apart as sheets and a carcass (furnblast.ts steel) */
+  /** sheet steel on a frame: a cabinet or a locker of it comes apart as sheets and a carcass (rust/game_rules/src/furnblast steel) */
   steel?: true;
-  /** the wall engine's partitions (wallbreak.ts): 'board' = a plasterboard wall where it stands full height, low cover where it does not; 'screen' = a
+  /** the wall engine's partitions (rust/game_rules/src/wallbreak): 'board' = a plasterboard wall where it stands full height, low cover where it does not; 'screen' = a
    *  cubicle's partition, a full wall the same way and, thin and low, cloth on a frame */
   wall?: 'board' | 'screen';
-  /** plasterboard to a round: it goes through a thin run of it under a roof (wallpen.ts). A pale thing of no row is nobody's plasterboard */
+  /** plasterboard to a round: it goes through a thin run of it under a roof (rust/game_rules/src/wallpen). A pale thing of no row is nobody's plasterboard */
   board?: true;
-  /** low cover the wall engine breaks, and furniture a blast takes where it is a panel or a small carton (wallbreak.ts, furnblast.ts) */
+  /** low cover the wall engine breaks, and furniture a blast takes where it is a panel or a small carton (rust/game_rules/src/wallbreak, furnblast) */
   cover?: 'wood' | 'cardboard';
-  /** the building, not its furniture: a blast leaves it standing and its mouth throws none of it (furnblast.ts) */
+  /** the building, not its furniture: a blast leaves it standing and its mouth throws none of it (rust/game_rules/src/furnblast) */
   struct?: true;
-  /** … but low down it is a counter or an appliance, which the mouth of a hole does throw (furnblast.ts mouthMine) */
+  /** … but low down it is a counter or an appliance, which the mouth of a hole does throw (rust/game_rules/src/furnblast) */
   counter?: true;
-  /** a dark casing: a screen's housing, a monitor's foot and neck are found by it (destruction.ts index) */
+  /** a dark casing: a screen's housing, a monitor's foot and neck are found by it (rust/game_rules/src/destruction index) */
   casing?: true;
-  /** a small thin sheet of it lying on a desk or pinned to a wall is paper (destruction.ts index) */
+  /** a small thin sheet of it lying on a desk or pinned to a wall is paper (rust/game_rules/src/destruction index) */
   paper?: true;
-  /** a thin slab of it is a screen or a television (destruction.ts index) */
+  /** a thin slab of it is a screen or a television (rust/game_rules/src/destruction index) */
   screen?: true;
-  /** lying snow (snowBog.ts, airSim.ts, the blast's mouth, and the picture's snow field) */
+  /** lying snow (rust/game_rules/src/snow_bog, air_sim, the blast's mouth, and the picture's snow field) */
   snow?: SnowKind;
   /** THE WORD IT TAKES WHILE SOAKED, for the one slab the weather soaks in place (the lot: rust/game_rules/src/weather). Nothing is kept: whoever asks what a round
    *  knocks out of the lot while the ground is wet is answered from this (doesWet below). Absent = the same wet as dry. As measured: wet tarmac sparks. */

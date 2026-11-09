@@ -17,7 +17,7 @@
 //                drum's paint is), on two chocks that reach in under the round's flank; it carries no markings (a box that says a form cannot); and it
 //                hands back its top, along which the kit's `lay` puts a sheet that follows the round (scene/carShapes.ts layOn)
 // The files that follow from the kit are held by the levels' own checks (tools/levels/export.ts --check, levels stands <level>). No picture is
-// judged here; the shape rule's own check (tools/qa/shapes-check.ts) holds what a round box is to a ray and a walker.
+// judged here; the shape rule's own check holds what a round box is to a ray and a walker.
 import type { Vec3 } from '../../src/math/vec';
 import { BoxFlag, type Box } from '../../src/scene/boxes';
 import { GWOT_PALETTE, GWOT_FINISH } from '../../src/scene/gwotPalette';

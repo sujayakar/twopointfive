@@ -14,10 +14,10 @@ import type { WeaponId } from './weaponIds';
 
 export type { LightDef };
 
-/** One man's beat. `weapon`: the weapons.ts row he carries (absent = the 9 mm service pistol) — dealt at spawn (game.ts Guard); nobody on this level is authored one
- *  yet (the carbine lanes decide who: docs/internal/sc20k-design.md §3.5). `keys`: the keys on his belt, by lock name (doors.ts DoorDef.lock) — what Sam takes off
- *  him when he gives the keyed door up under questioning (player.ts takeKey); absent = the floor key every man on nights carries (doors.ts FLOOR_KEY). The leaves
- *  themselves treat every man on the staff as keyed (game.ts updateDoors, `key: true`): a route authored keyless would want that contact narrowed too. */
+/** One man's beat. `weapon`: the rust/game_rules/src/weapons row he carries (absent = the 9 mm service pistol) — dealt at spawn (rust/game_rules/src/game Guard); nobody on this level is authored one
+ *  yet (the carbine lanes decide who: docs/internal/sc20k-design.md §3.5). `keys`: the keys on his belt, by lock name (rust/game_rules/src/doors DoorDef.lock) — what Sam takes off
+ *  him when he gives the keyed door up under questioning (rust/game_rules/src/player take_key); absent = the floor key every man on nights carries (rust/game_rules/src/doors FLOOR_KEY). The leaves
+ *  themselves treat every man on the staff as keyed (rust/game_rules/src/game, `key: true`): a route authored keyless would want that contact narrowed too. */
 export interface PatrolRoute { name: string; points: Vec3[]; wait: number[]; weapon?: WeaponId; keys?: string[]; }
 /** A corridor junction one man can hold in a lockdown (rust/game_rules/src/guards): planted at `pos` facing `yaw` (Character convention: forward = [sin yaw, 0, cos yaw]), sweeping. */
 export interface Chokepoint { name: string; pos: Vec3; yaw: number; }
@@ -58,7 +58,7 @@ export interface RoomClearPlan {
  *  door), whom each engages on the way, and the next threshold both then stack on. entry / entryAim / searchPath etc. stay authored (entry = the flows' own
  *  legs) so RoomClear can dry-run the same door. */
 export interface BreachPlan extends RoomClearPlan {
-  /** unit XZ pointing through the doorway INTO the room (where the muzzles go once the leaf is off: breach.ts) — absent = +x, the break room's west door, the
+  /** unit XZ pointing through the doorway INTO the room (where the muzzles go once the leaf is off: rust/game_rules/src/breach) — absent = +x, the break room's west door, the
    *  only door the level's own plan takes; a plan built in code for another door (rust/game_rules/src/rescue: the manager's office, north of the corridor) says its own */
   inward?: [number, number];
   /** the opposition: pinned on these marks facing `yaw`, muzzle on `aimAt` (the doorway, mostly) — one standing in the room's middle for #1's centre check */
@@ -74,7 +74,7 @@ export interface BreachPlan extends RoomClearPlan {
   targets: [{ centre: number[]; corner: number[] }, { centre: number[]; corner: number[] }];
   /** the room's NEXT threshold — the door #2 ends up holding from his point, and the stack both then take on it: #2 nearest the leaf (he becomes the point),
    *  #1 tucked in behind, bladed with the wall on `stackSide`, muzzles on `stackAim`; `via` = a lane through the room clear of its furniture, in order from the
-   *  entry side, for a man whose straight walk to his mark is blocked (breach.ts legTo takes as much of it as it needs) */
+   *  entry side, for a man whose straight walk to his mark is blocked (rust/game_rules/src/breach takes as much of it as it needs) */
   next: { door: string; stack: [Vec3, Vec3]; stackFace: [number, number]; stackSide: -1 | 1; stackAim: [Vec3, Vec3]; via?: Vec3[] };
   /** what they say that the drill does not: #1 stepping out to breach, the charge going in, the entry, each man's corner as he clears it, the room called, the
    *  word for the next door, the radio line */
@@ -91,7 +91,7 @@ export interface BreachFlow { into: Vec3[]; centre: [Vec3, Vec3]; corner: Vec3[]
 export interface DaylightDef {
   sun: LightDef;
   sky: { zenith: Vec3; horizon: Vec3 };
-  /** light-target groups switched fully on / fully off for the day (game.ts LightTarget.group) */
+  /** light-target groups switched fully on / fully off for the day (rust/game_rules/src/game LightTarget.group) */
   groupsOn: string[]; groupsOff: string[];
   /** individual analytic lights disabled outright (the moon: it is a level light with no target of its own) */
   lightsOff: string[];
@@ -102,9 +102,9 @@ export interface DaylightDef {
   exposure: number;
 }
 
-/** locked: a keyed lever set, cylinder on the corridor face (doors.ts DoorDef.locked — guards carry keys; the player picks it or kicks it in, or takes a key off a man he
- *  questions; the room side always opens). lock: which key turns it (doors.ts DoorDef.lock) — absent = the floor key; every keyed door here takes that one. */
-export interface LevelDoorDef { name: string; hinge: [number, number]; closedDir: number; width: number; angle?: number; exterior?: boolean; closer?: boolean; minAngle?: number; maxAngle?: number; locked?: boolean; lock?: string; keySide?: 1 | -1; steel?: boolean; /** the side it opens into (doors.ts DoorDef.swing); absent = dealt from the level (rust/game_rules/src/doorswing) */ swing?: 1 | -1; }   // steel: a fire door a boot only rings off and no pick opens (doors.ts DoorDef.steel — the QRF's west stair door, rust/game_rules/src/qrf)
+/** locked: a keyed lever set, cylinder on the corridor face (rust/game_rules/src/doors DoorDef.locked — guards carry keys; the player picks it or kicks it in, or takes a key off a man he
+ *  questions; the room side always opens). lock: which key turns it (rust/game_rules/src/doors DoorDef.lock) — absent = the floor key; every keyed door here takes that one. */
+export interface LevelDoorDef { name: string; hinge: [number, number]; closedDir: number; width: number; angle?: number; exterior?: boolean; closer?: boolean; minAngle?: number; maxAngle?: number; locked?: boolean; lock?: string; keySide?: 1 | -1; steel?: boolean; /** the side it opens into (rust/game_rules/src/doors DoorDef.swing); absent = dealt from the level (rust/game_rules/src/doorswing) */ swing?: 1 | -1; }   // steel: a fire door a boot only rings off and no pick opens (rust/game_rules/src/doors DoorDef.steel — the QRF's west stair door, rust/game_rules/src/qrf)
 /** The level-design devices as the game runs them (rust/game_rules/src/devices) — the file's records (levelData.ts DeviceData, every field documented there) with the id as
  *  `name`, the way lights and doors carry theirs. Optional fields keep the file's meaning: absent = the default in levelData.ts DEVICE_DEFAULTS. */
 export type DeviceDef =
@@ -124,14 +124,14 @@ export interface MarkDef { name: string; pos: Vec3; yaw?: number; }
 export interface VentDef { name: string; pos: Vec3; dir: Vec3; speed: number; spread: number; reach: number; size?: number; period?: number; duty?: number; phase?: number; mains?: boolean; }
 export type PropKind = 'chair' | 'cardboard' | 'bin' | 'plant';
 /** One box of a loose prop, in the prop's local frame: `off` from the prop origin (on the floor, y up), `yaw` relative to the prop's heading (frameAt / Box.yaw convention);
- *  `marks` = the markings on the part's faces (scene/markings.ts — the tape and glyphs on a carton), carried onto the box props.ts makes of it. */
+ *  `marks` = the markings on the part's faces (scene/markings.ts — the tape and glyphs on a carton), carried onto the box rust/game_rules/src/props makes of it. */
 export interface PropPart { off: Vec3; h: Vec3; yaw: number; albedo: Vec3; marks?: MarkingDef[]; /** what the part is made of, where its paint's name does not say (Box.stuff) */ stuff?: import('./boxes').BoxStuff; /** what the part does, as Box.does (scene/materials.ts) */ does?: import('./boxes').DoesWord; }
 /** Loose furniture handed to the physics layer (rust/game_rules/src/props) instead of `boxes`: a rigid group of parts standing on the floor at (x, z) with
  *  heading `yaw`, its collision footprint (half extents of the local XZ rectangle about the origin), overall height and mass (kg). */
 export interface PropDef { kind: PropKind; name: string; x: number; z: number; yaw: number; parts: PropPart[]; half: [number, number]; height: number; mass: number; }
 export interface Level {
   boxes: Box[];
-  /** Chairs, floor-standing cardboard boxes, bins, potted plants. Deliberately NOT in `boxes` (so the static GPU list, StaticCollision and the nav bake
+  /** Chairs, floor-standing cardboard boxes, bins, potted plants. Deliberately NOT in `boxes` (so the static GPU list, the static collision and the nav bake
    *  never see them and nothing is baked twice); the game's PropSystem simulates them and emits their boxes as dynamics every frame. */
   props: PropDef[];
   lights: LightDef[];
@@ -167,11 +167,11 @@ export interface Level {
   /** the daytime variant (optional: the viewer's stage has none) and the breach drill's plan (rust/game_rules/src/breach BreachDrill) */
   daylight?: DaylightDef;
   breach?: BreachPlan;
-  /** the base texel (m) the level's marking bitmaps were generated for (scene/markings.ts; absent = MARKING_TEXEL 0.025) — main.ts hands it to the engine */
+  /** the base texel (m) the level's marking bitmaps were generated for (scene/markings.ts; absent = MARKING_TEXEL 0.025) — host/drawpage.ts hands it to the engine */
   markTexel?: number;
-  /** how kept the place is, 0‥1 (the file's meta.kept; absent = 0): main.ts hands it to the look (scene/look.ts lookKeptOf) */
+  /** how kept the place is, 0‥1 (the file's meta.kept; absent = 0): host/drawpage.ts hands it to the look (scene/look.ts lookKeptOf) */
   kept?: number;
-  /** The one mission thread's geometry (game.ts Mission): the room to reach (floor rectangle) and the door the HUD points at for it, the rack whose drive
+  /** The one mission thread's geometry (rust/game_rules/src/game Mission): the room to reach (floor rectangle) and the door the HUD points at for it, the rack whose drive
    *  gets pulled (its index n names the switchables `rack${n}_leds` / `rack${n}_glow` that go dark; `front` is the marker point on its LED face), the door
    *  to leave by and the x past which you are outside it. */
   mission: { serverRoom: { x0: number; x1: number; z0: number; z1: number }; entryDoor: string; rack: { index: number; front: Vec3; halfW: number }; exfilDoor: string; exfilX: number; exfilZ: number;
@@ -181,7 +181,7 @@ export interface Level {
 
 /** The office level, loaded from its data (levels/office.json → loadLevel). A fresh Level every call: the game mutates the one it is given (box flags,
  *  the breach's scratch routes), so nothing may be shared between two boots. The JSON is imported, not fetched — Bun inlines it into the bundle, so the
- *  playable Artifact and the headless harness both get it with no extra asset. */
+ *  playable Artifact gets it with no extra asset. */
 export function buildLevel(): Level {
   return loadLevel(OFFICE_DATA);
 }

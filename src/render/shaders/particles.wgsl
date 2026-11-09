@@ -71,7 +71,7 @@ fn sparkBounce(vel: vec3f, n: vec3f, seed: u32, salt: u32) -> vec3f {
     let dn = normalize(rec.dir); let U = basisU(dn); let W = cross(dn, U);
     let cy = 1.0 - rnd(seed, 1u) * (1.0 - cos(rec.p.x)); let sr = sqrt(max(0.0, 1.0 - cy * cy)); let th = rnd(seed, 2u) * 6.2831853;
     vel = (dn * cy + U * (cos(th) * sr) + W * (sin(th) * sr)) * sp;
-  } else if (rec.shape == 1u) {                            // ground burst: upper hemisphere narrowed by spread, rotated toward vertical by lift (sparks.ts emitBurst)
+  } else if (rec.shape == 1u) {                            // ground burst: upper hemisphere narrowed by spread, rotated toward vertical by lift (rust/game_rules/src/sparks)
     let th = rnd(seed, 1u) * 6.2831853;
     var cy = pow(rnd(seed, 2u), 1.0 + rec.p.x * 3.0) * 0.9 + 0.05; cy = cy + (1.0 - cy) * rec.q.y;
     let sr = sqrt(max(0.0, 1.0 - cy * cy));
@@ -488,7 +488,7 @@ fn applyImpulses(p: ptr<function, Particle>, kind: u32, slot: u32, sn: ptr<funct
     } else {
       p.vel.y -= k0.x * dt;
       if (emberIs(kind, p.color)) { let ph = f32(p.seed & 1023u) * 0.00614; p.vel += vec3f(EMBER_SWIRL * sin(p.age * 5.1 + ph), k0.x + EMBER_LIFT, EMBER_SWIRL * cos(p.age * 4.3 + ph * 1.7)) * dt; }   // EMBER (rust/game_rules/src/fire): lighter than the hot air it left the fire in — it climbs, wandering, until it burns out
-      if (kind == P_DUST && steamIs(p.color)) { p.vel.y += 2.0 * k0.x * dt; }   // STEAM (snowBreath.ts): warm breath is lighter than the air — the puff's own slow settling, the other way up
+      if (kind == P_DUST && steamIs(p.color)) { p.vel.y += 2.0 * k0.x * dt; }   // STEAM (rust/game_rules/src/snow_breath): warm breath is lighter than the air — the puff's own slow settling, the other way up
       p.vel = vAir + (p.vel - vAir) * exp(-k0.y * dt);   // drag against the MOVING air (vAir = 0: × e^−k·dt exactly as it was)
     }
     let mv = p.vel * dt; let len = length(mv);
@@ -963,7 +963,7 @@ fn wispStep(pin: Particle, slot: u32, isNew: bool, dt: f32) -> RainReq {
 // the level's floor, the walls and door leaves its obstacles) with small eddies of its own on top, skipping where it comes down while the air is fast, lying again
 // where it is not. A rain-kind particle filed with aspect 3 (particles_common.wgsl grainIs) — every statement dead code without the prelude's SNOW_GRAINS.
 // PICTURE ONLY: nothing reads a grain, and nothing reads the air it rides.
-const AIR_CELLS_PER_M: f32 = 5.0;    // the air field's cells a metre (render/airField.ts AIR_RES — tools/qa/snowgrains-check.ts holds the two together)
+const AIR_CELLS_PER_M: f32 = 5.0;    // the air field's cells a metre (render/airField.ts AIR_RES)
 const GRAIN_PICK_RATE: f32 = 5.0;    // 1/s: tries at being picked up, per lying grain
 const GRAIN_PICK_LO: f32 = 0.7;      // × the wind's ungusted speed: air slower than this lifts nothing (a lull, a lee) …
 const GRAIN_PICK_HI: f32 = 1.3;      // … at this it lifts every grain that tries (a gust, the jet through a gap)
@@ -1053,7 +1053,7 @@ fn grainStep(pin: Particle, slot: u32, isNew: bool, dt: f32) -> RainReq {
   let n1 = grainNoise3(vec3f(p.pos.xz / GRAIN_EDDY1, tz + p.pos.y / GRAIN_EDDY1), 11u);
   let n2 = grainNoise3(vec3f(p.pos.xz / GRAIN_EDDY2, tz * 2.3 + p.pos.y / GRAIN_EDDY2), 23u);
   let ed = (n1 + n2 * 0.6) * (max(grain.b.x, 0.0) * s);
-  let gk = max(grain.b.z, 0.0);   // × the field's air = the blown snow's speed (snowFx.ts SNOWGRAINS.speedK: the field itself is the game's air as it is, for every reader)
+  let gk = max(grain.b.z, 0.0);   // × the field's air = the blown snow's speed (rust/game_rules/src/snow_fx SNOWGRAINS.speedK: the field itself is the game's air as it is, for every reader)
   var vT = (vec3f(A.x, 0.0, A.y) * ((0.55 + 0.45 * up) * (0.8 + 0.4 * h1)) + vec3f(ed.x, ed.z * 0.6, ed.y)) * gk;
   vT.y += A.z * grain.b.y * gk - GRAIN_SETTLE;
   p.vel = vT + (p.vel - vT) * exp(-mix(4.0, 9.0, h2) * dt);

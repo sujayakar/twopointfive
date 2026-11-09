@@ -30,7 +30,7 @@ export function verdictHead(end: RunEnd, V: RunVerdict): HTMLElement {
   if (P && V.won && P.medal !== 'none') { const m = el('span', `vd-medal m-${P.medal}`); m.textContent = P.medal; m.title = P.shown; top.appendChild(m); }
   if (V.void) { const v = el('span', 'vd-void'); v.textContent = 'cheats'; v.title = 'a cheat was on during this try, so it doesn\'t count'; top.appendChild(v); }
   top.appendChild(el('span', 'vd-gap'));
-  if (kept?.lesson) box.classList.add('lesson');   // a Training lesson: the word and the clock, nothing graded (no ways, no tries: main.ts keeps none)
+  if (kept?.lesson) box.classList.add('lesson');   // a Training lesson: the word and the clock, nothing graded (no ways, no tries)
   else top.appendChild(pipsEl(kept?.ways ?? {}, V.void ? null : V.approach));
   if (kept && kept.streak > 0) {
     const n = kept.streak, shown = Math.min(n, TICKS_MAX), tries = el('span', 'vd-tries');

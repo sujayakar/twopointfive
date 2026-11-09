@@ -22,7 +22,7 @@
 // deployed with the short list's settings still on it the page it loads is that pick's own URL (the desk's SheetView.base) — so the pause card's 'Next' and
 // the 'played' mark work as they did off the short list. Anything else is the mission list's own link for the row. Coming onto a short-list row puts ITS
 // hour on the Hour row; leaving it puts the player's own back (an hour picked by hand on a row is the player's from then on).
-// The page is looked at on the real build by tools/qa/startpage-look.cjs (its rows as data: picks-probes.ts picks-list). A page whose URL names a mission never opens it (that page is booting the mission).
+// The page is looked at on the real build by tools/qa/startpage-look.cjs. A page whose URL names a mission never opens it (that page is booting the mission).
 // Plain DOM inside the mission list's own layer (#missions, which gets the class `one`), styles injected here once. Nothing at module level uses another
 // module's exports.
 import { MISSIONS, openMissions, currentMissions, type Mission, type MissionsScreen } from './missions';

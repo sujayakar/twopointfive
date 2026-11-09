@@ -1,6 +1,6 @@
 // A SPLASH IS THE SAME SPLASH AT EVERY ZOOM — the check behind the scene prelude's RAIN_SCALE (src/render/frame.ts rainScaleConfig; on, ?norainscale at
 // boot = as it was; picture only: no game table, nothing for a recording to carry).
-//   bun run tools/qa/probes.ts rainscale        (family `weather`)        RAINSCALE_BREAK=1 = the rule off and the same lines asked: must FAIL
+//   bun run tools/qa/checks.ts rainscale        RAINSCALE_BREAK=1 = the rule off and the same lines asked: must FAIL
 // the maintainer, 10-19, three zooms of one yard in the rain: "the low res rain isn't scale invariant". The ring a landing drop throws up is drawn in the
 // volumetric pass (volumetrics.wgsl splashAt), its line never thinner than that pass's texel at the ground: with the camera pulled back the texel is many
 // centimetres and each 2 cm ring was a blob that wide at a ring's full brightness.
@@ -8,7 +8,7 @@
 // factor's block, the returned brightness) and runs them as written, over a floor of 9 cm cells sampled with its own die exactly as the function lays them
 // out (one ring a cell, the point asked in the ring's own cell) — so what it measures is the light a square metre of ground gets from its rings as the
 // texel at the ground grows. A change to those lines that this file can no longer lift is a red line here, not a silent pass. What the picture looks like is
-// the page's to show (tools/qa/weather-look.cjs).
+// the page's to show.
 import { readFileSync } from 'node:fs';
 import { ROOT, main } from './here.ts';
 export async function rainScaleCheck(): Promise<boolean> {

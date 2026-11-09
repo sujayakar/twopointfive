@@ -17,7 +17,7 @@ export {};
 import { readFileSync, writeFileSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-const ROOT = resolve(import.meta.dir, '../..');   // (the harness itself, tools/qa/headless.ts, is imported by an arm only: the store cases must set their page up before any module of the game is read)
+const ROOT = resolve(import.meta.dir, '../..');
 
 const ARMS = { off: {}, first: { TPS_FIRSTFRAME: '1' } } as const;
 type Arm = keyof typeof ARMS;
@@ -76,7 +76,7 @@ async function arm(name: Arm, dump: string | null) {
   const S = standIn(fake); pipelineProgress.reset();
   const gpu = { device: S.device, adapterInfo: 'stand-in', hasTimestamps: false, format: 'bgra8unorm', linearSampler: fake('sampler'), canvas: { clientWidth: 800, clientHeight: 500, width: 800, height: 500 }, ctx: fake('ctx') };
   const engine = new Engine(gpu as never);
-  const particles = new Particles(S.device as never, engine.sceneLayout);   // (the page makes it beside the engine and waits for both: src/main.ts)
+  const particles = new Particles(S.device as never, engine.sceneLayout);   // (the page makes it beside the engine and waits for both: host/drawpage.ts)
   let ready = false; const init = Promise.all([engine.init({ sharp: true, gbaa: true }), particles.init()]).then(() => { ready = true; });
   // THE LATER SET, by name: what the start may leave out with the row on (render/passes.ts traceJobs).
   const LATER = ['composite'];
@@ -133,7 +133,7 @@ async function arm(name: Arm, dump: string | null) {
   if (wantFirst) {
     check(engine.passes.fragCompReady === false, 'the engine knows what is not in yet (no fragment composite)');
     shot('while the LATER set compiles', false);
-    // (what a script's `__ready` waits on, main.ts: the start card is live for the player, a tool's first picture is the settings' own)
+    // (what a script's `__ready` waits on, host/drawpage.ts: the start card is live for the player, a tool's first picture is the settings' own)
     let idle = false; void laterIdle().then(() => { idle = true; }); await tick(); await tick();
     check(!idle && engine.standsIn === true, 'while it compiles the engine says a pass stands in, and what a script\'s `__ready` waits on (laterIdle) has not resolved');
     for (let turn = 0; turn < 50 && S.asked.some(a => !a.done); turn++) { for (const a of S.asked) a.let(); await tick(); }
@@ -164,7 +164,7 @@ const STORE = {
   old: { kept: '{"firstFrame":false}', search: '', agent: MAC, want: true },
   word: { kept: null as string | null, search: '?firstframe=0', agent: MAC, want: false },
   visit: { kept: null as string | null, search: '?firstframe=1', want: true },
-  // … and in a BROWSER (the harness is none: its own name is not a browser's), where it starts on for a person
+  // … and in a BROWSER (a tool is none: its own name is not a browser's), where it starts on for a person
   starts: { kept: null as string | null, search: '', agent: MAC, want: true },
   plain: { kept: null as string | null, search: '?compactshaders=0&splitrays=0&firstframe=0', agent: WIN, want: false },
   // … and in a browser a SCRIPT drives (every page tool's): it starts off there, so a tool's first picture is the settings' own

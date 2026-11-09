@@ -12,7 +12,7 @@
 //   C3. EVERY CARD OPEN, EVERY SQUAD SIZE: no two men within a body of each other, the fourth man's acting place on free floor.
 //   D. A QUIET MISSION'S WAY hangs its pool lamp over a glowing box on a wall (no box, no fixture to shoot out).
 //   E. THE WORD `laid` is the loader's and a file may not write it; a broken block does not refuse a level to play (parseLevelData `kitView: 'drop'`), and is refused everywhere else.
-// Lines are `- PASS — …` / `- FAIL — …` (tools/qa/gate.sh counts them). The first line printed names the levels that carry a block (nothing else lists them). Exit 0 = all pass · 1 = a row failed · 2 = an
+// Lines are `- PASS — …` / `- FAIL — …`. The first line printed names the levels that carry a block (nothing else lists them). Exit 0 = all pass · 1 = a row failed · 2 = an
 // unknown level, or a module with no `face_kit_plan` (it is older than this tool: bun run tools/blitz/face-build.ts).
 // KITPLAN_BREAK=1: what is asked is spoiled (the side worked out read flipped, a block's second place moved onto the wall's line, every way's door read as steel, the way in asked of a point past the floor, the fourth man's place on Sam's): rows of B, C and C3 must FAIL, exit 1.
 import { readFileSync, readdirSync, existsSync } from 'node:fs';

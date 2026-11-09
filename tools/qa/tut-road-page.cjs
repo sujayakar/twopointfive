@@ -81,7 +81,7 @@ const codeOf = cap => cap === 'Space' ? 'Space' : cap === 'Ctrl' ? 'ControlLeft'
     // (the view's key is the one the line's own cap names)
     turn: async () => { const R0 = await read(), k = codeOf(R0.keys[0] || 'Ctrl'); await page.keyboard.down(k); for (let x = 400; x <= 900 && (await read()).id === 'turn'; x += 25) { await page.mouse.move(x, 320); await run(3); } await page.keyboard.up(k);
       const R1 = await read(); check(Math.abs(R1.yaw - R0.yaw) > 0.5, 'the view turns with the key on the line\'s cap held and the mouse moved', `cap [${R0.keys}] → ${k} · the view's yaw ${R0.yaw} → ${R1.yaw}`);
-      // (and back as it opened, by the harness and not by a hand: the pictures after this are the level as a player first sees it)
+      // (and back as it opened, by the script and not by a hand: the pictures after this are the level as a player first sees it)
       for (let n = 0; n < 6; n++) { const y = (await read()).yaw; if (Math.abs(y - R0.yaw) < 0.01) break; await page.evaluate(d => window.__draw.cam.rotate(d), R0.yaw - y); await run(6); }
       const back = (await read()).yaw; if (Math.abs(back - R0.yaw) > 0.05) log(`  (the view is at ${back}, it opened at ${R0.yaw})`); },
     ready: async () => { await tap('Digit2'); await run(40); },

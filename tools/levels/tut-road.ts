@@ -7,7 +7,7 @@
 // THE SENTENCE NOBODY COULD SAY OF ANOTHER LEVEL: a mountain road with one way along it, where every wreck and wall on the way up is the cover for the next key.
 // WHAT IT TEACHES, and nothing else: his body (walk, sprint, crouch, a wall and the lean round its end) and his gun (bring it up, aim, fire, full auto, a
 // door shot off its hinges, the reload, a man shot through a plank wall). No grenade, no charge, no squad, nothing to sneak past.
-// THE HAND PLACEMENT: the fights are the level's script (levels/tut-road.script.ts). Its six men are held on their marks until their beat, so the first of
+// THE HAND PLACEMENT: the fights are the level's script (rust/game_rules/src/script_tut_road). Its six men are held on their marks until their beat, so the first of
 // every list here is the only deal there is. The sentry stands in the gateway's line and nowhere near cover; the gun is in the far corner under the rock
 // and everything it can reach from there is either hosed (the open snow before it) or swept at chest height (the lane behind the sandbags); the last
 // three wait outside the upper gate, out of every line through it, and come in by it.
@@ -27,7 +27,6 @@
 //
 //   bun run tools/levels/export.ts tut-road [--check]      → levels/tut-road.json
 //   bun run tools/qa/pages.ts tut-road-page                      the page with real keys through every step to the debrief
-//   bun run tools/qa/tut-road-check.ts                     the lesson played as said, and failed the two ways its lines warn of
 //   page: ?levelFile=tut-road.json&quiet
 import type { Vec3 } from '../../src/math/vec';
 import { glowShape, pickupLens, coated } from '../../src/scene/carShapes';
@@ -97,7 +96,7 @@ export const COVER: Vec3 = [28.6, 0, 16.2], CORNER_E: Vec3 = [RB_WALL.x1, 1.2, C
 /** the man on the gun, in his nest under the rock: more behind the roadblock's wall than beside it, as a man leaning round its end sees him (a man
  *  who can already be seen from the wall has nobody to lean out for: rust/game_rules/src/wallsnap ws_seen_deg) */
 export const GUNNER: Vec3 = [31.6, 0, 11.2];
-/** THE LAST THREE wait outside the upper gate and come in by it: their marks are the script's (levels/tut-road.script.ts LAST_OUT, LAST_MEN) */
+/** THE LAST THREE wait outside the upper gate and come in by it: their marks are the script's (rust/game_rules/src/script_tut_road LAST_OUT, LAST_MEN) */
 export { LAST_OUT, LAST_MEN };
 /** the way out: the upper gate, and on up the road */
 export const EXIT = { name: 'the upper gate', door: 'gate', x: POST.x1 + 0.8, z: GATE_Z, out: [1, 0] as [number, number] };
@@ -242,7 +241,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   G.yardWallX(11.4, POST.x1 + 0.12, 40, 'block'); G.yardWallX(17.3, POST.x1 + 0.12, 40, 'block');
   grp('walls.hut');
   // THE HUT. Its door on the road is wooden and locked, and it opens TOWARD the road: a sprint into a locked door is a kick, and a frame holds a boot from
-  // the face its door opens toward (doors.ts DOORWAY.frameHolds), so the run a new player tries first stops on it and the trigger is the way through. A
+  // the face its door opens toward (rust/game_rules/src/doors DOORWAY.frameHolds), so the run a new player tries first stops on it and the trigger is the way through. A
   // window beside it, lit: plain glass on a sill, which a burst takes with the door
   G.wallX(HUT.z0, HUT.x0 - t, HUT.x1 + t, 'render');
   G.wallX(HUT.z1, HUT.x0 - t, HUT.x1 + t, 'render', [{ a: SIDE_DOOR_X - 0.6, b: SIDE_DOOR_X + 0.6 }]);          // its side door: a doorway, no leaf (the light of the room falls out of it onto the snow)
@@ -262,7 +261,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   grp('convoy.truck');
   // its last truck, across the road with its nose to the rock: his first cover, and what the sentry's rounds chew. Everything on it is on, as its driver
   // left it: two head lamps (on the rock), the tail lamps, the lamp in the load bay over its open back doors, which is the light he starts in. Each lens is
-  // a glowing sliver a hair off the truck's own, so a round at a lamp meets the sliver first and puts it out (carlamps.ts finds the lenses here)
+  // a glowing sliver a hair off the truck's own, so a round at a lamp meets the sliver first and puts it out (rust/game_rules/src/carlamps finds the lenses here)
   const van0 = K.boxes.length, VS = G.van(VAN_AT.x, VAN_AT.z, VAN_AT.yaw);
   { const lenses = carLampsIn(K.boxes.slice(van0)).map(l => ({ what: l.what, b: K.boxes[van0 + l.box] })), heads = lenses.filter(l => l.what === 'head lamp').map(l => l.b), tails = lenses.filter(l => l.what === 'tail lamp').map(l => l.b);
     if (heads.length !== 2 || tails.length !== 2) throw new Error(`tut-road: the truck's lamps were not found (${heads.length} head, ${tails.length} tail): the kit's lenses have moved`);
@@ -416,7 +415,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   const dome = add({ c: [HUT.x0 - 0.2, 2.72, 13.0], h: [0.055, 0.07, 0.055], albedo: [0.35, 0.08, 0.05], flags: DECAL });
   switchables.push({ name: 'beacon0', boxes: [dome], group: 'emergency', on: false, baseEmissive: [9, 1.2, 0.35], mains: false });
 
-  // ---- six men, each on his mark until the script calls his beat (levels/tut-road.script.ts names them by roster order) ----
+  // ---- six men, each on his mark until the script calls his beat (rust/game_rules/src/script_tut_road names them by roster order) ----
   const post = (name: string, p: Vec3, weapon?: PatrolRoute['weapon'], dx = 0.3): PatrolRoute => ({ name, points: [p, [p[0] + dx, 0, p[2] + 0.2]], wait: [600, 600], ...(weapon ? { weapon } : {}) });
   const routes: PatrolRoute[] = [post('sentry', SENTRY), post('hut', HUT_NOOK, undefined, 0), post('gunner', GUNNER, 'pkm'), post('bend', LAST_OUT[0]), post('trucks', LAST_OUT[1]), post('tunnel', LAST_OUT[2])];
 

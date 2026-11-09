@@ -13,7 +13,7 @@
 //     movement — 'stuck', or 'waited' where the man said why he stood or his order's row reads a wait; a mark that really jumps — never a defender, who stands
 //     on purpose, and never one walk dealt its next corner), where F7 was pressed, and every note. The header's switches are the run tape's start flags and
 //     each change with its moment, not the flags the file happened to end under. KNOWN: a wait is read off his words and his order's row; the game's own
-//     reason for it (sneak.ts) is not in the trace.
+//     reason for it (rust/game_rules/src/sneak) is not in the trace.
 //   · a single file unpacked on an earlier call is folded into its visit when the visit's own tape arrives later; --again goes through everything already in
 //     --out with this build's reader (no input needed).
 //   · --out/index.json remembers what earlier calls unpacked there (the next dump is held against it); --out/index.md is the table to read.
@@ -36,17 +36,17 @@ export interface Moment { r: number; kind: string; text: string; pos?: [number, 
 const pt = (p: [number, number] | number[] | undefined | null) => p ? `(${(+p[0]).toFixed(1)}, ${(+p[1]).toFixed(1)})` : '–';
 const q = (s: string, n = 140) => JSON.stringify(s.length > n ? s.slice(0, n) + '…' : s);
 const REFUSED = /\b(no room|can'?t|cannot|won'?t|refus|no way|no route|no boot|no line|not from here|locked\.)/i;
-/** the player's own gun speaking on a click (player.ts): no order was refused */
+/** the player's own gun speaking on a click (rust/game_rules/src/player): no order was refused */
 const OWN_GUN = /^(no room to bring the gun up|gun down —|stunned —)/;
-/** somebody's spoken line ('you ▸ …', 'radio: Lambert ▸ …': player.ts, dialogue.ts): words, never an order refused */
+/** somebody's spoken line ('you ▸ …', 'radio: Lambert ▸ …': rust/game_rules/src/player, dialogue): words, never an order refused */
 const SPOKEN = /^(radio: )?[^▸]{1,24} ▸ /;
-/** a man's own words for a wait he means (sneak.ts and pairorders.ts say them; guards.ts files a teammate's off-screen line on the log under his name) */
+/** a man's own words for a wait he means (rust/game_rules/src/sneak and pairorders say them; rust/game_rules/src/guards files a teammate's off-screen line on the log under his name) */
 const WAIT_SAID = /\b(holding|waiting|can't cross|he's still (on it|facing me)|long lit stretch|hold in the dark|off the door|has eyes on him|not yet)\b/i;
-/** …and his ORDER's own row for one (pairorders.ts: 'waiting · no room at <name>'s back', 'holding in the dark') — never a plain 'hold', which he may be stuck short of */
+/** …and his ORDER's own row for one (rust/game_rules/src/pairorders: 'waiting · no room at <name>'s back', 'holding in the dark') — never a plain 'hold', which he may be stuck short of */
 const WAIT_ORD = /\bwaiting ·|\bholding in the dark\b/i;
-/** does he stand on purpose? By what he said while he stood, or by the rows his order showed (replay-at.ts asks the same) */
+/** does he stand on purpose? By what he said while he stood, or by the rows his order showed */
 export const meansToWait = (said: readonly string[], ords: readonly string[] = []): boolean => said.some(t => WAIT_SAID.test(t)) || ords.some(t => WAIT_ORD.test(t));
-/** the still-with-a-route rule's own pieces, shared with replay-at.ts: how far his feet are from where his route ends (0 = no route asked; under STUCK_OFF he
+/** the still-with-a-route rule's own pieces: how far his feet are from where his route ends (0 = no route asked; under STUCK_OFF he
  *  has arrived), and a man somebody else has stopped (held for a talk or a wait at his waypoint, in Sam's arm, planted on a post) */
 export const STUCK_OFF = 0.75;
 export const toGo = (a: { x: number; z: number; do: ManDo }): number => { const P = a.do.path; if (!P?.length) return 0; const e = a.do.goal ?? P[P.length - 1]; return Math.hypot(e[0] - a.x, e[1] - a.z); };
@@ -114,7 +114,7 @@ export function momentsOf(F: ReplayFile, f7: { r: number; why?: string }[] = [])
   // (A QUIET MISSION'S FOUR STAGES are four chronicle rows that read alike, 'objective (<room>)': the trace keeps a row's kind and room, not its words. What each
   //  was is on the HUD's line of the same instant where the game says one ('taking the vehicle log — stay on it', 'exfiltrated — 2:31 · GHOST 94'). So rows
   //  of one room inside OBJ_FOLD of each other, in one run, are ONE row carrying those lines, and the run's end is a row of its own, said in the game's words.
-  //  THE END LINES are the game's own (roomclear.ts, rescue.ts, nightbreach.ts, mission.ts): every one but the quiet game's 'exfiltrated —'
+  //  THE END LINES are the game's own (rust/game_rules/src/roomclear, rescue, nightbreach, mission): every one but the quiet game's 'exfiltrated —'
   //  (a file from before the lines were reworded says 'stages it again', and one from before the two charges left has their lines: all are read). NOT an end, though they read like one: 'structure taken — …. it's not over yet: …',
   //  'the house is taken, but the charges are still live', 'breach called off, and …', '<who> is down, so you'll have to take the room yourself'.)
   const OBJ_FOLD = 20, ENDS = /to restart$|stages it again|^exfiltrated —|mission failed|every charge is safe and the house is yours|every charge safe, the house is yours/i, LIVE = /not over(?: yet)?:|still live|called off|have to take the|yours to take/i;

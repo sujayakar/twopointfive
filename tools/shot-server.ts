@@ -41,7 +41,7 @@ Bun.serve({
       const bytes = new Uint8Array(await req.arrayBuffer()); await Bun.write(`${clipDir}f${String(i).padStart(4, '0')}.jpg`, bytes);
       return new Response('ok', { headers: cors });
     }
-    if (req.method === 'POST' && url.pathname === '/pref') {    // the preference page's judgments (tools/qa/smoke-pref.html): appended as JSON lines to docs/perf/<name>.jsonl
+    if (req.method === 'POST' && url.pathname === '/pref') {    // the preference page's judgments: appended as JSON lines to docs/perf/<name>.jsonl
       const name = (url.searchParams.get('name') ?? 'smoke-pref').replace(/[^A-Za-z0-9_.-]/g, '_').slice(0, 96);
       const perfDir = new URL('../docs/perf/', import.meta.url).pathname; mkdirSync(perfDir, { recursive: true });
       const body = (await req.text()).trim(); const file = Bun.file(perfDir + name + '.jsonl'); const prev = (await file.exists()) ? await file.text() : '';

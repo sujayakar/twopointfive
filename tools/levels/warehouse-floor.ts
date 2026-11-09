@@ -28,7 +28,7 @@
 // the hall's length: the dock doors and the west door look straight down them. A racking bay is loaded full (nobody sees or shoots through), low (a man kneels
 // behind it and stands to see over), high (legs show under it) or empty; pallets and one tall crate stand in the middle lane.
 // ELEVEN DEFENDERS IN FOUR SQUADS, by the rooms they hold (`scenarios.roomClear.squads`, the squads part's format: rebuild/enemy-squads/squad-format.md).
-// A squad sends men out only with two to spare past one a room (enemysquads.ts), so who can LEAVE is the level's own decision:
+// A squad sends men out only with two to spare past one a room (rust/game_rules/src/enemysquads), so who can LEAVE is the level's own decision:
 //   office (3)  the front office 2, the manager's office 1 — one to spare: they lock down and hold
 //   floor (3)   the hall — two to spare: a pair can come round
 //   dock (3)    the dock — two to spare: a pair can come round
@@ -512,7 +512,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     // THE EXAMINING TABLE stands against the north wall, west of the corner man's mark (moved 11-04, the maintainer's word). Out in the lane (27.4, 12.9,
     // where it first stood) it lay on the one cheap line from the hall's north door to the standing places outside the dock's north door, the line that
     // skirts that door's own lane: a man of the floor squad sent round to the dock was priced 38 m round the racks where the bare hall gives him 7, and was
-    // refused, so the squad never went round to the dock (tools/qa/wayround-check.ts: 54 ways of 4463)
+    // refused, so the squad never went round to the dock (54 ways of 4463)
     { const X = 26.9, Z = 11.65;
       L.table(X, Z, 1.6, 0.9, 0, C.metal, 0.9);                                   // a crate opened on it, its lid, straw, what was in it
       B(X - 0.55, Z - 0.4, X + 0.35, Z + 0.4, 0.9, 0.905, [0.7, 0.6, 0.3], NS); B(X - 0.4, Z - 0.3, X + 0.2, Z + 0.2, 0.905, 1.22, C.wood); B(X + 0.38, Z - 0.35, X + 0.74, Z + 0.1, 0.9, 0.93, C.woodDark);
@@ -626,7 +626,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // Eleven defenders in six held rooms (maxMen: with Sam and the four that is sixteen characters, all the skinning holds). Every room gives more marks than men,
   // split between its doors. The room order is the order a scripted commander works them, each room's first door the one he tries first: from the staff door the
   // front office, the manager's office through it, the hall by its west door, the dock from the hall, then the two north-east rooms.
-  // THE ELEVEN ARE PLACED BY HAND: placement seed 0, attempt 1 (roomclear.ts placeDefenders) stands each room's FIRST `garrison` marks, in the order written here,
+  // THE ELEVEN ARE PLACED BY HAND: placement seed 0, attempt 1 (rust/game_rules/src/roomclear place_defenders) stands each room's FIRST `garrison` marks, in the order written here,
   // so the first marks of every room are the level's one authored problem and the rest are spares a seeded deal may still draw. What the hand placement is for:
   //   THE PROBLEM  the building is a ring: whichever door the team fights at, somebody can walk round to its back. The hall's three and the dock's three each
   //                have a pair to send (one squad of one room, two to spare); the offices' three and the two store rooms hold where they are.

@@ -49,22 +49,22 @@
 //                   are on him: nothing on the kit strip that no line of this mission uses.
 //   WHO             the hall's man. Of the three he is the one a second pair of hands was spent on (the first man is grabbed for the code, the clerk is
 //                   taken at the box), and he is the one a wall hides the player from: the shot is let go from the store, at his back.
-//   WHY NOT HANDS   the chest beam is 0.45 m behind his heels. A man on his feet behind him stands in it (devices.ts: the player's own body breaks a
+//   WHY NOT HANDS   the chest beam is 0.45 m behind his heels. A man on his feet behind him stands in it (rust/game_rules/src/devices: the player's own body breaks a
 //                   beam, at any capsule). The frame keeps the game from walking him into it: from `nook` to the beam the trigger and the held
-//                   left click that stalks a man (`stalk`, rails.ts gate) are not his, nor the whistle, which would bring the man round to the
+//                   left click that stalks a man (`stalk`, rust/game_rules/src/rails gate) are not his, nor the whistle, which would bring the man round to the
 //                   store, nor the right button until the shot's own line. The interaction key stays his through the store. (The first build shut the held click by taking that key
 //                   from the first line inside: a tap at the open back door then did nothing and said nothing.) The grab's own row is still his
 //                   close behind the man, and the hand that takes him breaks the beam: the room says no, not a dead key.
 //   WHERE FROM      the dark corner he is sent to has no line to the man: the doorway's own wall is in the way. A round let go from there does not
-//                   reach him (on the real page one left the tube and he turned to the knock; in the harness on the page's stand none left it, on the
-//                   frozen stand one did). So the corner is where the rifle comes out and the load is swapped, and a line of its own then puts a
+//                   reach him (on the real page one left the tube and he turned to the knock).
+//                   So the corner is where the rifle comes out and the load is swapped, and a line of its own then puts a
 //                   mark on the floor where the shot can be made: on the doorway's line, 2.6 m behind his back. That floor is in the doorway's light
 //                   (the hall's bulb through it); the dark floor with a line to him is a strip under half a metre wide along the light's edge, too thin
 //                   to send a player to. Nobody is looking that way: the man has his back to it and a wall stands between it and the table.
 //   THE STEPS       inside, and at once the line that names the laser and sends him to the dark corner · rifle (2) · the card, then the swap (the frame's action `load`: the setup's load row alone, the right button still shut) · the
 //                   step out to the mark · the shot (the right button held, the arc, let go) · the rifle put away (the hands' own key: the next
 //                   man is taken by hand).
-//   NEVER STUCK     five sponge rounds, and a launcher with none left passes the shot's line (lesson.ts `ringsOut`): the lesson goes on with him
+//   NEVER STUCK     five sponge rounds, and a launcher with none left passes the shot's line (rust/game_rules/src/lesson `ringsOut`): the lesson goes on with him
 //                   on his feet, and what that costs is the mission's to say, not a line that can no longer be done.
 //
 // THREE MEN, each with one beat. A fourth (inside the front door) was taken out: seven metres from the box through an open doorway he heard the clerk go
@@ -109,7 +109,7 @@ export const TQ = {
                                           // was: with the mark on his own line that is straight ahead, down the lane (0.3 m to one side of his line, as it
                                           // first stood, it was beside him when he stopped: he stood with his light on the shop's wall a step away)
   hide: [23.9, 0, 19.05] as P3,           // behind the long wall, on the lane's side of it: the man who comes stops on the other side of the cross wall
-  // THE MAN WHO COMES TO THE WHISTLE DOES NOT WALK TO IT (the level's script stages him: levels/tut-quiet.script.ts). He stops in the back strip a stride
+  // THE MAN WHO COMES TO THE WHISTLE DOES NOT WALK TO IT (the level's script stages him: rust/game_rules/src/script_tut_quiet). He stops in the back strip a stride
   // short of the cross wall's gap and puts his light through it, down the walk and over the place the sound came from, five metres off: far enough that
   // the prints in the snow there are nothing he could read. Then he turns round, walks back up the strip past the back door to his chair at its far end
   // and has a smoke there, his back to the way he came: against the neighbour's wall beyond him, which the court's lamp lights through the long wall's
@@ -117,7 +117,7 @@ export const TQ = {
   look: [26.4, 0, 17.75] as P3,           // where he looks from: in line with the gap and the whistle's mark, so his beam goes through the one and over the other
   smoke: [30.6, 0, 17.7] as P3,           // where he smokes, his back to the gap: by his chair, the tin for the ends at its foot. (Two and a half metres past
                                           // the back door's lock: a man put down nearer lies in reach of a hand at the lock, and a body's row comes before a door's.
-                                          // 30.6, not 30.3: a man grabbed from the creep is hauled a step back onto the arm — stalk.ts STALK.yank — toward that door)
+                                          // 30.6, not 30.3: a man grabbed from the creep is hauled a step back onto the arm — rust/game_rules/src/stalk STALK.yank — toward that door)
   backDoor: [27.9, 0, 17.2] as P3,        // the court side of the back door
   inside: [27.9, 0, 15.6] as P3,          // a stride inside the back door
   nook: [26.1, 0, 14.15] as P3,           // the store's dark corner beside the lit doorway to the hall
@@ -347,7 +347,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   G.dado('x', 8.5, 20.14, 25.36, 1, 'paintGreen');
   // THE MAINS BOX: on the hall's own wall, a stride inside the counting room's doorway. The man sent to it comes through that doorway and stands at it
   // with his back to the room. (The game's fixed spot for the man sent to a panel lies toward −x and −z of it:
-  // a box that faces −z with floor before it is stood at alike on both stands)
+  // a box that faces −z with floor before it is stood at alike)
   breakerAt(TQ.box[0], 16.34, 'n', 7); grp('house.hall');   // (seven seconds at it: an old box, his back to the room and his light on the panel)
   // TWO WALLS THE PAGE ASKED FOR. On the page the man who comes to the box carries a light, and a light finds what the dark hid: the hall's man where he
   // fell (the mission teaches no carrying), and anyone flat to a wall in the open (inside 3.5 m a man sees a shape at his elbow). So what hides here is
@@ -378,7 +378,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ================================================================ THE LANE AND THE BACK COURT: the cross wall with its gap, the long wall along the shop ====
   grp('walls.lane');
-  // (these stand LOW, a head high, piers and coping and all under 2 m: a man cannot see over them, and a whistle carries over the top — collision.ts propagate)
+  // (these stand LOW, a head high, piers and coping and all under 2 m: a man cannot see over them, and a whistle carries over the top — rust/game_rules/src/scene_collision propagate)
   const LOW = 1.8;
   G.yardWallZ(25.5, 16.62, 21.88, 'mud', [{ a: 17.3, b: 18.2, y0: 0, y1: LOW }], LOW);
   // THE LONG WALL: a head-high wall a stride and a half off the shop and along it, from the lane through the cross wall into the back court. The way

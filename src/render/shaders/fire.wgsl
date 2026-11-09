@@ -3,7 +3,7 @@
 // SMOKE its tips turn into, marched with it; the BED OF COALS it stands on (a disc over the drum's mouth); and the SHIMMER of the hot air over it (fireShimmer:
 // how far the picture behind is pushed aside). (The other two: its EMBERS are GPU particles, rust/game_rules/src/fire; and it files real gas in the smoke solver.)
 // Nothing here reads the scene: a record per fire, the look's numbers and the pixel's ray in, light and how much of what is behind is kept out — so the same text
-// runs alone on a plain stage (tools/qa/fire-lab.cjs), where its look was set. Picture only: the game reads none of it (the fire's LIGHT is an engine light).
+// runs alone on a plain stage, where its look was set. Picture only: the game reads none of it (the fire's LIGHT is an engine light).
 //   a = where the coals are (the middle of the drum's mouth) + the mouth's radius (m)      b = flame height (m) · heat 0‥1 · the fire's own seed 0‥1 · its clock (s)
 //   c = the wind at the flame (x, z; m/s) · the light's flicker this frame (about 1) · spare      d = the bed of coals' radius (m; 0 = none drawn) · under the fog of war: 0 = drawn wherever it stands, 1 = only where the team sees, 2 = only where it does not (the composite's test: fireOver)
 struct FireRec { a: vec4f, b: vec4f, c: vec4f, d: vec4f };   // (d.z: how far its smoke is the solver's soot, 0‥1 — fireFlame)

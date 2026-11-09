@@ -36,7 +36,7 @@ function insideBox(p: Vec3, b: Box, margin = 0): boolean {
 function firstHit(boxes: readonly Box[], from: Vec3, dir: Vec3, max: number): { t: number } | null { let t = max, hit = false; for (const b of boxes) { if (b.flags & BoxFlag.NoShadow) continue; const h = rayBox(from, dir, b, t); if (h && h.t < t) { t = h.t; hit = true; } } return hit ? { t } : null; }
 const fmt = (p: readonly number[]) => `(${p.map(v => (+v.toFixed(2))).join(', ')})`;
 
-/** How many analytic area lights game.ts will derive from the switchables (its rule: thin ≤ 6 cm, face ≥ 0.01 m², not the rack LEDs / beacon domes). */
+/** How many analytic area lights rust/game_rules/src/game will derive from the switchables (its rule: thin ≤ 6 cm, face ≥ 0.01 m², not the rack LEDs / beacon domes). */
 export function derivedAreaLightCount(level: Level): { total: number; lit: number } {
   let total = 0, lit = 0;
   for (const sw of level.switchables) {
@@ -97,7 +97,7 @@ export function lintLevel(data: LevelData, opts: LintOpts = {}): LintReport {
     });
     const analyticOn = level.lights.filter(l => l.enabled && l.kind !== 'dir').length;
     const area = derivedAreaLightCount(level);
-    const cones = data.devices.filter(v => v.kind === 'camera').length;   // each live camera throws a haze cone (devices.ts, tune.deviceCones): a slot apiece
+    const cones = data.devices.filter(v => v.kind === 'camera').length;   // each live camera throws a haze cone (rust/game_rules/src/devices, tune.deviceCones): a slot apiece
     const slots = level.lights.filter(l => l.enabled).length + area.lit + cones + /* torches, rail light, a flash or two */ 6;
     const lightWarn = opts.lightWarn ?? 24, slotWarn = opts.slotWarn ?? 52, slotError = opts.slotError ?? 64;
     if (analyticOn > lightWarn) add('warn', 'light-budget', `${analyticOn} enabled analytic point / spot lights (budget ${lightWarn}) — every pixel scores every light in reach`, []);
@@ -156,7 +156,7 @@ export function lintLevel(data: LevelData, opts: LintOpts = {}): LintReport {
         if (m && d) {
           const dist = Math.hypot(m[0] - v.pos[0], m[2] - v.pos[2]);
           if (dist > 2.5) add('warn', 'keypad-far', `keypad '${v.id}' is ${dist.toFixed(1)} m from its door '${v.door}' — nobody standing at the door can be at the pad`, [ref, `door:${v.door}`]);
-          const perp = Math.cos(d.closedDir) * (v.pos[2] - d.hinge[1]) - Math.sin(d.closedDir) * (v.pos[0] - d.hinge[0]); const side = perp >= 0 ? 1 : -1;   // (doors.ts side())
+          const perp = Math.cos(d.closedDir) * (v.pos[2] - d.hinge[1]) - Math.sin(d.closedDir) * (v.pos[0] - d.hinge[0]); const side = perp >= 0 ? 1 : -1;   // (rust/game_rules/src/doors side())
           if (side !== (d.keySide ?? 1)) add('warn', 'keypad-side', `keypad '${v.id}' hangs on the ${side > 0 ? '+' : '−'} face of door '${v.door}' but the lock bites on the ${(d.keySide ?? 1) > 0 ? '+' : '−'} face (keySide) — the pad is on the side that always opens`, [ref, `door:${v.door}`]);
           if (v.pos[1] < 0.9 || v.pos[1] > 1.8) add('info', 'keypad-height', `keypad '${v.id}' at y ${v.pos[1].toFixed(2)} — pads sit at hand height (1.4)`, [ref]);
         }

@@ -15,8 +15,7 @@
 //   z 19 │  ▒▒▒▒ livedQuiet ▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒ │
 //   z 22 │  ░░░░ livedTrain ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░ │
 //   z 28 └────────────────────────────────────────────────────────┘      the man starts in the west aisle (x under 3)
-// THE FOUR LIVED KITS' PIECES ARE LIVED THINGS (src/scene/lived.ts): the tail of the lists, left out with the switch off. So on the frozen stand the hall is
-// the hut and the bare grounds.
+// THE FOUR LIVED KITS' PIECES ARE LIVED THINGS (src/scene/lived.ts): the tail of the lists, left out with the switch off.
 import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef } from '../../src/scene/level';
 import type { LevelScenarios, Rect } from '../../src/scene/scenarios';

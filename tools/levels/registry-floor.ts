@@ -1,7 +1,7 @@
 // THE REGISTRY — the hostage rescue's level: one lit gallery straight to the room, two rooms you may run past, and a long dark locked way round to its other door.
 // A level generator in the scenario levels' shape (tools/levels/test-rooms.ts is the template; rebuild/scenario-levels/contract.md the how-to):
 //   bun run tools/levels/export.ts registry [--check]   → levels/registry.json, with its `scenarios.rescue` block
-//   page: ?levelFile=registry.json&rescue                · headless: bun run tools/qa/probes.ts registry
+//   page: ?levelFile=registry.json&rescue
 //
 // The idea it playtests (the levels goal's assumption, not the maintainer's words): THE CLOCK DECIDES WHAT YOU SKIP. The captor's clock starts on the team's
 // first step; the hostages are at the far end; and between the team and their door are two rooms the gallery passes. What the layout does about it:

@@ -13,7 +13,7 @@ import { pageSay } from '../view/pagesaid';
 import type { Panel } from './panel';
 import { AIM_DISPLAY, HOLD, QUALITY_NAMES, type Quality } from './quality';
 
-/** what the frame loop lends the status strip: its smoothed frame rate and GPU union (main.ts fpsSm / unionSm) */
+/** what the frame loop lends the status strip: its smoothed frame rate and GPU union */
 export type HudStats = () => { fps: number; union: number };
 /** the systems' names, the panel's rail */
 export const SYS = { frame: 'Frame', direct: 'Direct light', indirect: 'Indirect light', vol: 'Volumetrics', mat: 'Materials', dn: 'Denoiser', rfx: 'Renderer fx', wx: 'Weather & wind', sand: 'Sandbox', missions: 'Missions', audio: 'Audio', ckpt: 'Checkpoints' } as const;
@@ -351,7 +351,7 @@ export function buildGraphics(panel: Panel, engine: Engine, smoke: SmokeSystem, 
 
   // ================================================================ RENDERER FX: glass · decals · GPU particles · markings · the SDF character rig
   panel.system(SYS.rfx);
-  // GLASS (E3): panes as data (BoxFlag.Glass) — out of the raster and the trace grid, tested analytically where it matters (composite / fgather / direct); rounds star them (glass.ts + the glassHit decal)
+  // GLASS (E3): panes as data (BoxFlag.Glass) — out of the raster and the trace grid, tested analytically where it matters (composite / fgather / direct); rounds star them (rust/game_rules/src/glass + the glassHit decal)
   const gl = panel.section('Glass (the picture)', { open: true, summary: () => S.glass ? G.glass?.() ?? 'on' : 'off (?noglass)' });
   panel.toggleBox(gl, 'glass panes', () => S.glass, v => { S.glass = v; }, 'the level\'s glazing (in the office: conference partition, manager sidelight, every exterior window) as glass: what stands behind a pane is drawn as always (the pane is in no raster and no traced ray meets it) and composite lays over it the pane\'s tint (albedo^depth ÷ cos), a traced mirror image × Schlick Fresnel (n 1.5: 4 % square-on, most of it edge-on) through the gloss floors\' specular texture + history + blur pass, the analytic glint of small emitters, and a dust glow where light lands ON the glass; the direct pass tints light that crossed a pane. Men see through it and do not hear through it. What a round or a blast does to a pane is not this switch: that is glass breaking (the cracks, the pieces, rounds passing through). OFF = no pane list at all: every glass box is an empty opening (the level as it was) — the CPU side (feet, sound, the crack stars) stays. Costs a slab test per listed pane per pixel in composite, ~3 rays per glass texel at gather res. (frame flag 268435456; ?noglass boots it off)');
   panel.slider(gl, 'reflection strength', 0, 3, 0.05, () => S.glassReflect, v => { S.glassReflect = v; }, '× the physical Fresnel mirror term (1 = as traced; the share taken out of the transmitted picture is capped at the physical value whatever this says)');

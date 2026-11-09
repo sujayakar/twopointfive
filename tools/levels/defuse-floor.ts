@@ -227,7 +227,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
     // THE LOT AND THE BACK, from the look's kit (src/scene/gwotKit.ts: a drum and a tyre are round). What a bomb maker's house keeps outside: fertiliser
     // in sacks against the front wall, two drums east of the door, the spare wheels by the car that has not moved, firewood at the far edge of the back strip,
     // and the stones nobody has cleared. Nothing stands within 3 m of the front door or under a window, on the walk round either end, before a back door,
-    // or ON THE DEFENDERS' WAY ROUND THE OUTSIDE, which is 45.7 to 45.9 m of the 46 it may be (tools/qa/wayround-check.ts): it hugs the front wall, so the
+    // or ON THE DEFENDERS' WAY ROUND THE OUTSIDE, which is 45.7 to 45.9 m of the 46 it may be: it hugs the front wall, so the
     // sacks and the two drums stand beside the cars; and behind the house, with the team heard in the hall, it bows out to about 2 m from the back wall,
     // so the firewood is stacked at the strip's far edge. (Firewood on that line made the way 46.9 m and the pair stopped going round on one run in seven.)
     P.room('lot');

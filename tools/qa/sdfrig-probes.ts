@@ -4,7 +4,7 @@
 //   sdfrig-pack     BoxWorld.upload on the fake device turns a frame's proxy list into the rig exactly: r0 over the hand radius, r1's millimetres in misc's top byte,
 //                   owner + albedo bits untouched, padding records left alone, the cull sphere fitted and holding every cone, idempotent, and rig = null (no fit attached) leaves the
 //                   list as written
-//   bun run tools/qa/probes.ts sdfrig
+//   bun run tools/qa/checks.ts sdfrig
 import { ROOT, fake, main } from './here.ts';
 
 const { loadGltfCharacter } = await import(`${ROOT}/src/anim/gltf.ts`);

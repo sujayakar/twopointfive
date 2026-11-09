@@ -125,8 +125,8 @@ const fin = (p: Paint): string => `${p.stuff ?? 'plain'}${p.rough !== undefined 
  *  one in place). The same thing said twice is nothing (a module evaluated again, a helper called per level). A second thing in the same colour is
  *  another array: `saidAs`, or the numbers written out again. ONE THING IS ADDED IN PLACE, by its own function: what a colour WRITTEN AS NUMBERS does
  *  (`doing` below, after `madeOf` or alone), once; a kit's NAMED row does what the table of names says and nothing else.
- *  HOW IT IS REFUSED (ONE_PAINT.refuses): OUT LOUD, a throw, wherever a level is MADE or checked: the exporters, the generators, every tool and the
- *  headless harness, which all run under bun. IN THE PAGE it is told once to the console for that paint and the first saying is kept: the page never
+ *  HOW IT IS REFUSED (ONE_PAINT.refuses): OUT LOUD, a throw, wherever a level is MADE or checked: the exporters, the generators and every tool,
+ *  which all run under bun. IN THE PAGE it is told once to the console for that paint and the first saying is kept: the page never
  *  stops on a writer's slip. Check: tools/qa/stuff-check.ts, the line that builds every generator in one process. */
 export const ONE_PAINT = { refuses: (globalThis as { Bun?: unknown }).Bun !== undefined };
 const told = new WeakSet<readonly number[]>();
@@ -235,9 +235,7 @@ export const namedCoat = (word: BoxStuff | undefined): NamedCoat | undefined => 
  *  WHERE: read by the one function that hands a box's finish to the GPU (scene/boxes.ts matWord), so it holds for a level's statics, a shape's pieces, a
  *  piece blown off a car and anything made later that says the word. No box is changed and no level file carries the number: `Box.rough` is what the file
  *  gave, always.
- *  THE SWITCH: COATFINISH.on — ON in the page (`?coatfinish=0` = every box the finish its file gives it, as it was), OFF in the module and on the frozen
- *  stand (FROZEN_HOLDS; TPS_COATFINISH=1 raises it there); in the registry (game/knobs.ts) and the journal. A picture only.
- *  CHECK: tools/qa/coatfinish-check.ts (COATFINISH_BREAK=1 fails it), on both stands. */
+ *  THE SWITCH: COATFINISH.on — ON in the page, OFF in the module. A picture only. */
 export const COATFINISH = { on: false };
 /** the roughness a named coat lends the thing that says `word`, or nothing (the rule down, no word, a word that is no named coat) */
 export const coatRough = (word: BoxStuff | undefined): number | undefined => COATFINISH.on && word !== undefined ? namedCoat(word)?.rough : undefined;
@@ -252,11 +250,9 @@ export const coatRough = (word: BoxStuff | undefined): number | undefined => COA
  *  sends a wet box darker (scene/boxes.ts sentAlbedo), and no rougher than `rough` (matWord). Darker and smoother stay as they are. NEUTRAL, not the
  *  row's hue scaled down: under about 0.03 a hue does not survive the 8-bit albedo target (render/shaders/gbuffer.wgsl), and a channel on a rounding
  *  edge would flicker.
- *  `lum` and `rough` ride in the table, so the page's knobs and a recording carry them.
- *  THE SWITCH: SOLIDGLASS.on — ON in the page (`?solidglass=0` = every such box as its file gives it, as it was), OFF in the module and on the frozen
- *  stand (FROZEN_HOLDS; TPS_SOLIDGLASS=1 raises it there); in the registry (game/knobs.ts) and the journal. A picture only on the harness; on a GPU page
- *  the light meter's bounce sees the darker glass, as it sees a wet box's darker ground (Box.wetK).
- *  CHECK: tools/qa/coatfinish-check.ts lines 6 and 7 (SOLIDGLASS_BREAK=1 fails both), on both stands. */
+ *  `lum` and `rough` ride in the table.
+ *  THE SWITCH: SOLIDGLASS.on — ON in the page, OFF in the module. On a GPU page
+ *  the light meter's bounce sees the darker glass, as it sees a wet box's darker ground (Box.wetK). */
 export const SOLIDGLASS = { on: false, lum: 0.02, rough: 0.05 };
 /** the word of a thing that said `was` and is painted again with a paint that says `now`: the new paint's (whoever repaints a thing does not keep the
  *  old paint's word) — but A NAMED COAT STAYS UNDER A PLAIN ONE, whichever plain coat the look has: a car's body given another paint or another enamel is

@@ -1,5 +1,5 @@
 // ONE WAY TO SAY "THIS WENT WRONG" (the maintainer, 10-27: "let's do an audit of all our errors and have them use some reusable error reporter that sends up
-// to convex"). Any file may call it; it imports nothing, never throws, and costs a headless run nothing.
+// to convex"). Any file may call it; it imports nothing and never throws.
 //   reportError(where, err, data?)     an error: printed to the console WORD FOR WORD as the `console.error(err)` it replaces (page tools and checks
 //                                      read those lines; `data` is the record's, never printed), and handed on
 //   reportWarning(where, err, data?)   the same for something the game went on from (a fallback taken, a thing not built on this machine). It is what a

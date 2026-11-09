@@ -30,7 +30,7 @@ export interface KeeperOpts {
 /** the head is made again (the floor's drawing, the switches) once in this many pieces */
 const HEAD_EVERY = 6;
 
-/** (the check's red path: REPLAYEND_BREAK=1 in front of tools/qa/replaykeep-probes.ts — a run that becomes over is never due; a page has no process) */
+/** (the check's red path: REPLAYEND_BREAK=1 — a run that becomes over is never due; a page has no process) */
 const END_BREAK = (() => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.REPLAYEND_BREAK ?? '') === '1'; } catch { return false; } })();
 
 export class ReplayKeeper {
@@ -96,7 +96,7 @@ export class ReplayKeeper {
   flush(): Promise<void> { this.beat(true); return this.q; }
   /** A RUN'S END IS FILED AT ONCE (2026-10-30: a kept visit on a build's backend stopped twelve seconds short of its win — the tab was shut four seconds
    *  after the mission ended, and the ending was still waiting for a beat and for the tape sync's round). The page tells the keeper a few times a second
-   *  whether the run is over (ui/replaykey.ts runOver: what the page's own end is, never a word of the game's in here); `KEEP.endMs` after it BECOMES over
+   *  whether the run is over (what the page's own end is, never a word of the game's in here); `KEEP.endMs` after it BECOMES over
    *  `watch` answers true, once, and the page asks `endBeat` in an idle moment: the last shots, the verdict and a moment of what followed are in the store
    *  about a second after they happened, and the promise settles when they are (the page then sends its tapes, where it sends any). One beat an end; a page
    *  whose first answer is 'over' has no ending of its own to file. `nowMs` is the caller's clock (the page's: performance.now()). Nothing of the game is

@@ -110,9 +110,9 @@ if (gridMisses) console.log(`  *** ${gridMisses} pick(s) off the ${SCALE_STEP} g
 
 // ---------------------------------------------------------------- 5. what applying each preset writes (the real Quality.apply over a stub engine) ----------------------------------------------------------------
 // No GPU: the engine is a bag holding defaultSettings(), an rc.cfg and a rebuildRc that records the request; the smoke system is { params }. This is the path the menu's
-// Quality select, the Tab panel, ?quality= and auto's ladder all take, so it doubles as the "nothing throws when a preset applies" check the headless tour cannot make.
+// Quality select, the Tab panel, ?quality= and auto's ladder all take, so it doubles as the "nothing throws when a preset applies" check.
 {
-  const G = globalThis as unknown as Record<string, unknown>;   // engine.ts names the WebGPU usage enums at module load; plain Bun has none (the same shim tools/qa/headless.ts uses)
+  const G = globalThis as unknown as Record<string, unknown>;   // engine.ts names the WebGPU usage enums at module load; plain Bun has none
   G.GPUBufferUsage ??= { MAP_READ: 1, MAP_WRITE: 2, COPY_SRC: 4, COPY_DST: 8, INDEX: 16, VERTEX: 32, UNIFORM: 64, STORAGE: 128, INDIRECT: 256, QUERY_RESOLVE: 512 };
   G.GPUTextureUsage ??= { COPY_SRC: 1, COPY_DST: 2, TEXTURE_BINDING: 4, STORAGE_BINDING: 8, RENDER_ATTACHMENT: 16 };
   G.GPUShaderStage ??= { VERTEX: 1, FRAGMENT: 2, COMPUTE: 4 }; G.GPUMapMode ??= { READ: 1, WRITE: 2 };
@@ -201,7 +201,7 @@ let stateFails = 0;
     const E = mkEngine(1); const q = new Q2(E as never, { params: { rbIters: 4 } } as never); E.q = q;
     pump(E, q, 100);                                   // the fast machine settles on its first visit (high ×0.77 since TAAU: 0.59× the pixels puts the reference M4 Max back under the 15 ms budget at high; medium ×1.0 before)
     const settledAt = q.current as QualityName;
-    q.auto = false; q.apply('medium');                 // main.ts ?quality=medium
+    q.auto = false; q.apply('medium');                 // host/drawpage.ts ?quality=medium
     const dq = pump(E, q, 120); check(dq === 0 && !q.calibrating, `?quality=medium: nothing calibrates while it holds (${dq})`);
     q.setAuto(); check(q.current === settledAt && q.calibrating, `setAuto on the fast machine: from its remembered ${q.current} (auto settled at ${settledAt} on the first visit), calibrating`);
     const dd = pump(E, q, 100); check(dd === 1 && q.current === settledAt && Math.abs(E.settings.renderScale - PRESETS[settledAt].scale) < 1e-6, `settles once: ${q.current} ×${E.settings.renderScale.toFixed(2)} (${settledAt} at its own starting scale ×${PRESETS[settledAt].scale})`);

@@ -1,6 +1,6 @@
 // ---- THE WIND FIELD (rust/game_rules/src/wind): the air's velocity from ONE source at a point — the analytic supply-vent JET and the STORM outdoors. This one text is compiled
 // into BOTH GPU consumers (render/particles.ts prepends it to the particle kernels, smoke/smoke.ts to the solver's), and rust/game_rules/src/wind jet_vel / stormVel repeat it
-// on the CPU (windAt: the moths, the panel, the probes) — three copies of one small model; tools/qa wind-probes compares the constants and the CPU numbers. No
+// on the CPU (windAt: the moths, the panel, the probes) — three copies of one small model. No
 // bindings, no structs of either consumer: plain functions of plain arguments, so the two blocks that carry the records (particles_common.wgsl ImpulseRec in its
 // 'wind' mode, smoke/wind_force.wgsl WindSrc) can lay them out as suits them.
 //
