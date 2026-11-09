@@ -29,7 +29,6 @@ fn head_at(g: &Game, c: CharId) -> f64 {
 pub fn update_wetness(g: &mut crate::game::Game, dt: f64) {
     if dt <= 0.0 { return; }
     crate::weather::weather_roofs_now(g);
-    if !g.m.rustknobs.rust_knobs.tick { crate::rustknobs::knobs_to_rust(g); } // WX_KNOBS.here
     crate::scene_collision::rule(g, &mut |g: &mut Game| {
         crate::scene_collision::rule_open(g);
         let (w, set, ask) = (g.col.mirror.slot as usize, g.col.mirror.rule_set as i32, g.col.mirror.rule_panes as u32);
@@ -47,7 +46,7 @@ pub fn update_wetness(g: &mut crate::game::Game, dt: f64) {
             coat[::sim::weather::M_LINE] = ch.wet_line;
             coat[::sim::weather::M_SKY_T] = mem.sky_t;
             coat[::sim::weather::M_OPEN] = if mem.open { 1.0 } else { 0.0 };
-            ::sim::weather::wet_step(::sim::weather::of(g.sim), w, set, ask, g.time, dt, ch.pos[0], ch.pos[2], head, &mut coat);
+            ::sim::weather::wet_step(::sim::weather::of(g.sim), w, set, ask, g.time, dt, ch.pos[0], ch.pos[2], head, &mut coat, &g.k);
             if coat[::sim::weather::M_ASKED] != 0.0 { g.stats.wet.sky_tests += 1; }
             let ch = &mut g.ch[c];
             ch.wet = coat[::sim::weather::M_WET];
@@ -72,7 +71,7 @@ fn open_sky_of(g: &mut Game, c: CharId) -> bool {
         let head = head_at(g, c);
         let (mut sky_t, mut open) = (mem.sky_t, if mem.open { 1.0 } else { 0.0 });
         let (x, z) = (g.ch[c].pos[0], g.ch[c].pos[2]);
-        let (is_open, asked) = ::sim::weather::open_sky(::sim::weather::of(g.sim), w, set, ask, g.time, x, z, head, &mut sky_t, &mut open);
+        let (is_open, asked) = ::sim::weather::open_sky(::sim::weather::of(g.sim), w, set, ask, g.time, x, z, head, &mut sky_t, &mut open, &g.k);
         if asked { g.stats.wet.sky_tests += 1; }
         let m = g.m.wet.mem.get_mut(c).unwrap();
         m.sky_t = sky_t;

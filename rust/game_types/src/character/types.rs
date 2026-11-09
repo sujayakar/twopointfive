@@ -1834,7 +1834,7 @@ pub struct WALLTUCKPistol {
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct CharacterModLONGSTEADY {
+pub struct LongSteady {
     pub tau: f64,
     pub run_yaw: f64,
 }
@@ -2120,8 +2120,8 @@ pub struct Creep {
     pub low: crate::character::CreepLow,
     pub wide: crate::character::CreepWide,
     pub heft: crate::character::CreepHeft,
-    pub l: crate::character::CreepL,
-    pub r: crate::character::CreepR,
+    pub l: crate::character::CreepHand,
+    pub r: crate::character::CreepHand,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -2160,19 +2160,7 @@ pub struct CreepHeft {
 }
 
 #[derive(Clone, Copy, Debug, Default)]
-pub struct CreepL {
-    pub at: V3,
-    pub at_c: V3,
-    pub pole: V3,
-    pub fing: V3,
-    pub back: V3,
-    pub curl: f64,
-    pub thumb: f64,
-    pub spread: f64,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct CreepR {
+pub struct CreepHand {
     pub at: V3,
     pub at_c: V3,
     pub pole: V3,
@@ -2592,8 +2580,6 @@ pub struct CharacterMod {
     #[is(crate::character::CharacterModHOLDSHOW { kill: false, beats: false })] pub hold_show: crate::character::CharacterModHOLDSHOW,
     /// (src/game/character.ts:478 AT0)
     pub at0: JsMap<ClipId, crate::character::CharacterModAT0Value>,
-    /// (src/game/character.ts:719 LONG_STEADY)
-    #[is(crate::character::CharacterModLONGSTEADY { tau: 0.5, run_yaw: 0.85 })] pub long_steady: crate::character::CharacterModLONGSTEADY,
 }
 
 /// (src/game/character.ts:81 WORK: a table nothing writes)
@@ -2810,7 +2796,7 @@ pub fn kit_no() -> JsMap<String, f64> { { let mut t = JsMap::new(); t.set(String
 pub fn kit_of() -> Vec<Option<crate::character::KitItem>> { alloc::vec![None, Some(crate::character::KitItem::Pistol), Some(crate::character::KitItem::Rifle), Some(crate::character::KitItem::Can), Some(crate::character::KitItem::Knife)] }
 
 /// (src/game/character.ts:1146 CREEP: a table nothing writes)
-pub static CREEP: crate::character::Creep = crate::character::Creep { in_: 6.0, out: 5.0, gait_in: 0.2, gait_out: 0.4, drop: [0.09, 0.03], back: [0.03, 0.01], lean: [14.0, 6.0], round: 10.0, look: 0.85, low: crate::character::CreepLow { rate: 8.0, up: 24.0 }, wide: crate::character::CreepWide { in_: 5.0, out: 14.0, still: 0.03, pole: [0.75, 0.1, -0.65], fing: [0.3, -0.5, 0.8], back: [0.15, 0.9, 0.35], curl: 0.1, thumb: 0.15, spread: 0.55 }, heft: crate::character::CreepHeft { stride: 0.75, lift: 0.1, run: 1.6, trunk: [11.0, 0.7], arm: [7.0, 0.55], body: [9.0, 0.75], go: [5.0, 0.5], out: 0.15, up: 0.3, breath: 1.3, breath_hz: 0.32, dt: 0.03333333333333333 }, l: crate::character::CreepL { at: [-0.05, -0.27, 0.3], at_c: [0.0, -0.17, 0.3], pole: [0.7, -0.6, -0.5], fing: [-0.2, 0.35, 1.0], back: [0.7, 0.7, 0.0], curl: 0.32, thumb: 0.25, spread: 0.2 }, r: crate::character::CreepR { at: [0.05, -0.33, 0.27], at_c: [0.0, -0.21, 0.28], pole: [-0.7, -0.6, -0.5], fing: [0.2, 0.3, 1.0], back: [-0.7, 0.7, 0.0], curl: 0.38, thumb: 0.3, spread: 0.15 } };
+pub static CREEP: crate::character::Creep = crate::character::Creep { in_: 6.0, out: 5.0, gait_in: 0.2, gait_out: 0.4, drop: [0.09, 0.03], back: [0.03, 0.01], lean: [14.0, 6.0], round: 10.0, look: 0.85, low: crate::character::CreepLow { rate: 8.0, up: 24.0 }, wide: crate::character::CreepWide { in_: 5.0, out: 14.0, still: 0.03, pole: [0.75, 0.1, -0.65], fing: [0.3, -0.5, 0.8], back: [0.15, 0.9, 0.35], curl: 0.1, thumb: 0.15, spread: 0.55 }, heft: crate::character::CreepHeft { stride: 0.75, lift: 0.1, run: 1.6, trunk: [11.0, 0.7], arm: [7.0, 0.55], body: [9.0, 0.75], go: [5.0, 0.5], out: 0.15, up: 0.3, breath: 1.3, breath_hz: 0.32, dt: 0.03333333333333333 }, l: crate::character::CreepHand { at: [-0.05, -0.27, 0.3], at_c: [0.0, -0.17, 0.3], pole: [0.7, -0.6, -0.5], fing: [-0.2, 0.35, 1.0], back: [0.7, 0.7, 0.0], curl: 0.32, thumb: 0.25, spread: 0.2 }, r: crate::character::CreepHand { at: [0.05, -0.33, 0.27], at_c: [0.0, -0.21, 0.28], pole: [-0.7, -0.6, -0.5], fing: [0.2, 0.3, 1.0], back: [-0.7, 0.7, 0.0], curl: 0.38, thumb: 0.3, spread: 0.15 } };
 
 /// (src/game/character.ts:1167 READY_RATE)
 pub const READY_RATE: f64 = 12.0;
@@ -2869,3 +2855,5 @@ pub fn rag_limbs() -> Vec<(String, f64, f64, f64)> { alloc::vec![(String::from("
 /// (src/game/character.ts:4269 RAG_BONES: a table nothing writes)
 pub fn rag_bones() -> Vec<crate::character::Bone> { alloc::vec![crate::character::Bone::Hips, crate::character::Bone::Spine2, crate::character::Bone::Neck, crate::character::Bone::Head, crate::character::Bone::UpperArmL, crate::character::Bone::UpperArmR, crate::character::Bone::ForearmL, crate::character::Bone::ForearmR, crate::character::Bone::HandL, crate::character::Bone::HandR, crate::character::Bone::ThighL, crate::character::Bone::ThighR, crate::character::Bone::ShinL, crate::character::Bone::ShinR, crate::character::Bone::FootL, crate::character::Bone::FootR] }
 
+/// how a long gun is kept steady on the move
+pub static LONG_STEADY: crate::character::LongSteady = crate::character::LongSteady { tau: 0.5, run_yaw: 0.85 };

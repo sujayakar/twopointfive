@@ -18,6 +18,7 @@
 //! would break (VIEW_GIVES: panes.rs `gives`, from the burst's numbers and the pane's own state, by the rule that breaks them). The view stands for the length of one
 //! judgment and is none at every other time.
 
+use game_types::knobs::Knobs;
 use crate::maths::{atan2, cos, hypot3, sin};
 use crate::world::*;
 use prim::floor;
@@ -244,9 +245,9 @@ fn to_uv(b: &[f64], x: f64, y: f64, z: f64) -> (f64, f64) {
 
 /// the view's word on a pane it may name: glass a burst would break is no glass to the man reckoning it (glassbreak.ts wouldGive, worked out by its
 /// owner into the view's rows: a pane that gives whole has a reach below nought, float glass gives within its reach of the pane's nearest point)
-fn gives(o: &World, bi: usize, x: f64, y: f64, z: f64) -> bool {
+fn gives(o: &World, bi: usize, x: f64, y: f64, z: f64, tune: &Knobs) -> bool {
     if o.panes_g != NO_BLOCK {
-        return crate::panes::gives(o.panes_g as usize - 1, o, bi, x, y, z);
+        return crate::panes::gives(o.panes_g as usize - 1, o, bi, x, y, z, tune);
     }
     for k in 0..o.view_n as usize {
         if o.view_bi[k] as usize != bi {
@@ -260,17 +261,17 @@ fn gives(o: &World, bi: usize, x: f64, y: f64, z: f64) -> bool {
 
 /// IS STATIC `bi`, A PANE OF GLASS, OPEN AT (x, y, z) — the game's rule (glassbreak.ts: `openAt(bi, X) || also(bi, X)`): a piece has fallen out there, or
 /// the view in hand counts the glass there out.
-pub fn open(o: &World, bi: usize, x: f64, y: f64, z: f64) -> bool {
+pub fn open(o: &World, bi: usize, x: f64, y: f64, z: f64, tune: &Knobs) -> bool {
     // (where the pane's state stands: its row in the game's block, the rule being this module's own (panes.rs) — or the copy's, the rule being the host's)
     let (d, w): (&[f64], &[u32]) = if o.panes_g != NO_BLOCK {
         match crate::panes::row_for(o.panes_g as usize - 1, bi as u32) {
             Some(row) => row,
-            None => return o.view_kind == VIEW_GIVES && gives(o, bi, x, y, z),
+            None => return o.view_kind == VIEW_GIVES && gives(o, bi, x, y, z, tune),
         }
     } else {
         let r = o.glass_of[bi] as usize;
         if r == 0 || r > o.glass_n as usize {
-            return o.view_kind == VIEW_GIVES && gives(o, bi, x, y, z);
+            return o.view_kind == VIEW_GIVES && gives(o, bi, x, y, z, tune);
         }
         (&o.glass[(r - 1) * GD..r * GD], &o.glass_w[(r - 1) * GW..r * GW])
     };
@@ -290,7 +291,7 @@ pub fn open(o: &World, bi: usize, x: f64, y: f64, z: f64) -> bool {
     match o.view_kind {
         // goingAt: the piece there is queued to leave, or it is a crater's wedge and one of its crater is
         VIEW_BLOWN => fid >= 0 && (bit(w, GW_GOING, fid as u32) || ((fid as u32 % FRAGS_PER_SITE) / MAX_SECTORS == 0 && w[GW_CRATER] >> (fid as u32 / FRAGS_PER_SITE) & 1 != 0)),
-        VIEW_GIVES => gives(o, bi, x, y, z),
+        VIEW_GIVES => gives(o, bi, x, y, z, tune),
         _ => false,
     }
 }

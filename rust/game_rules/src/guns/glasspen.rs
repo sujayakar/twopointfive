@@ -124,7 +124,7 @@ pub fn glass_toll_sig(g: &mut crate::game::Game) -> f64 {
 /// remember a crossing on pane `bi`: the module keeps it, the oldest going past `holes` (glasspen.ts addHole)
 fn add_hole(g: &mut crate::game::Game, bi: f64, p: V3) {
     state_of(g).rev += 1.0;
-    crate::glassbreak::glass_break_asking(g, &mut |_g: &mut Game, s: f64, _w: f64| ::sim::pen::add_hole(s as usize, js::to_u32(bi), p));
+    crate::glassbreak::glass_break_asking(g, &mut |g: &mut Game, s: f64, _w: f64| ::sim::pen::add_hole(s as usize, js::to_u32(bi), p, &g.k));
 }
 
 // ---------------------------------------------------------------- the toll
@@ -142,8 +142,8 @@ fn cross_at(m: &[f64], o: f64, into: f64) -> crate::glasspen::PaneCross {
 
 /// one pane on a round's flight: what it takes and where the round leaves it, or None: spent in it (glasspen.ts paneCrossing)
 pub(super) fn pane_crossing(g: &mut crate::game::Game, bi: f64, o: V3, d: V3, t: f64, e: f64, nth: f64) -> Option<crate::glasspen::PaneCross> {
-    crate::glassbreak::glass_break_asking(g, &mut |_g: &mut Game, _s: f64, _w: f64| -> Option<PaneCross> {
-        if ::sim::pen_cross(js::to_u32(bi), o[0], o[1], o[2], d[0], d[1], d[2], t, e, nth as usize) == 0 { return None; }
+    crate::glassbreak::glass_break_asking(g, &mut |g: &mut Game, _s: f64, _w: f64| -> Option<PaneCross> {
+        if ::sim::pen_cross(js::to_u32(bi), o[0], o[1], o[2], d[0], d[1], d[2], t, e, nth as usize, &g.k) == 0 { return None; }
         let m = scratch();
         Some(cross_at(m, 0.0, m[CROSS as usize]))
     })
@@ -231,8 +231,8 @@ pub(super) fn arm_through_glass(g: &mut crate::game::Game, c_2: CharId, dir: V3,
     let from = match g.ch[c_2].bones.get(crate::character::Bone::UpperArmR) { Some(&p) => p, None => v3::add(g.ch[c_2].pos, [0.0, 1.4, 0.0]) };
     let mz = g.ch[c_2].muzzle;
     let l = v3::len(v3::sub(mz, from));
-    let w = crate::glassbreak::glass_break_asking(g, &mut |_g: &mut Game, _s: f64, _w: f64| -> Option<(f64, Vec<PaneCross>)> {
-        let n = ::sim::pen_arm(from[0], from[1], from[2], mz[0], mz[1], mz[2], dir[0], dir[1], dir[2], energy);
+    let w = crate::glassbreak::glass_break_asking(g, &mut |g: &mut Game, _s: f64, _w: f64| -> Option<(f64, Vec<PaneCross>)> {
+        let n = ::sim::pen_arm(from[0], from[1], from[2], mz[0], mz[1], mz[2], dir[0], dir[1], dir[2], energy, &g.k);
         if n < 0 { return None; }
         let m = scratch();
         let mut cross: Vec<PaneCross> = Vec::new();
@@ -251,13 +251,13 @@ pub(super) fn arm_through_glass(g: &mut crate::game::Game, c_2: CharId, dir: V3,
 pub fn shot_passes(g: &mut crate::game::Game, a: V3, rd: V3, panes: &[crate::scene_collision::SegmentBlockedPanesItem], energy: Option<f64>) -> bool {
     let energy = energy.unwrap_or(g.k.glasspen.default_energy);
     g.stats.glasspen.shot_asked += 1;
-    let ok = crate::glassbreak::glass_break_asking(g, &mut |_g: &mut Game, _s: f64, _w: f64| -> bool {
+    let ok = crate::glassbreak::glass_break_asking(g, &mut |g: &mut Game, _s: f64, _w: f64| -> bool {
         let m = unsafe { core::slice::from_raw_parts_mut(::sim::sim_scratch(), ::sim::sim_scratch_len()) };
         for k in 0..panes.len() {
             m[2 * k] = panes[k].bi;
             m[2 * k + 1] = panes[k].t;
         }
-        ::sim::pen_passes(a[0], a[1], a[2], rd[0], rd[1], rd[2], panes.len(), energy) == 1
+        ::sim::pen_passes(a[0], a[1], a[2], rd[0], rd[1], rd[2], panes.len(), energy, &g.k) == 1
     });
     if ok { g.stats.glasspen.shot_through += 1; } else { g.stats.glasspen.shot_refused += 1; }
     ok

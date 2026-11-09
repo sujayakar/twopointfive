@@ -16,9 +16,10 @@
 //!
 //! BOUNDS. Sheets and rows: a level of more sheets is refused as it loads (src/game/levelfit.ts), by name. Clumps of a sheet: the same (pattern.rs MAX_CLUMPS).
 //! THE QUEUE: MAX_Q pieces waiting in a game; a piece past that stays in its frame for the next support pass. No run has come within a tenth of it.
+use game_types::knobs::Knobs;
 use crate::falls;
 use crate::glass::{classify_row, dice_out, site_of, GW_COLS, GW_CRATER, GW_DSEED, GW_FLAGS, GW_GOING, GW_N, GW_OPEN, GW_ROWS, GW_SEED, G_DICE, G_DICE_AT, G_GONE, G_RUN, G_SITE};
-use crate::knobs::*;
+use crate::roles::*;
 use crate::lines::{self, ASK_GLASS};
 use crate::maths::{hypot2, hypot3, round_half_up};
 use crate::pattern::{self, clip_rect, frags_of, hull, order_of, poly_area, Dice, Frag, Pt, FRAGS_PER_SITE, MAX_PTS, REMAINDER};
@@ -586,8 +587,8 @@ fn nearest_site(r: &Row, u: f64, v: f64) -> i32 {
     best
 }
 #[inline]
-fn tooth(f: &Frag) -> bool {
-    f.area < k(GB_TOOTH_AREA) && f.frame_sum() > 1e-4
+fn tooth(f: &Frag, tune: &Knobs) -> bool {
+    f.area < tune.glassbreak.tooth_area && f.frame_sum() > 1e-4
 }
 
 // ---- one call's business: whose block, whose world, which leaves, what time it is
@@ -604,14 +605,14 @@ pub struct Ctx {
 }
 /// one line as the rule asks it of the statics and the leaves: is something solid across it (collision.ts solidBlocked)
 #[inline]
-fn solid(c: &Ctx, a: [f64; 3], b: [f64; 3]) -> bool {
-    lines::solid_line(c.w, c.set, ASK_GLASS, a[0], a[1], a[2], b[0], b[1], b[2]).unwrap_or(true)
+fn solid(c: &Ctx, a: [f64; 3], b: [f64; 3], tune: &Knobs) -> bool {
+    lines::solid_line(c.w, c.set, ASK_GLASS, a[0], a[1], a[2], b[0], b[1], b[2], tune).unwrap_or(true)
 }
 
 // ---- which glass a pane is
 /// glassbreak.ts skySide: which face of the pane has the open sky (+1 the side its normal points to, −1 the other, 0 neither or both). Asked of the level's own
 /// geometry once, and kept: statics do not move.
-pub fn sky_side(c: &Ctx, s: usize) -> i32 {
+pub fn sky_side(c: &Ctx, s: usize, tune: &Knobs) -> i32 {
     let (bi, known) = {
         let h = &world(c.w).sheets[s];
         (h.bi as usize, h.sky)
@@ -634,7 +635,7 @@ pub fn sky_side(c: &Ctx, s: usize) -> i32 {
             for t in [-0.5, 0.0, 0.5] {
                 let d = (if k == 1 { 1.0 } else { -1.0 }) * off;
                 let p = [b_c[0] + n[0] * d + a[0] * t * hu, b_c[1], b_c[2] + n[2] * d + a[2] * t * hu];
-                if !solid(c, p, [p[0], EXT_SKY_TOP, p[2]]) {
+                if !solid(c, p, [p[0], EXT_SKY_TOP, p[2]], tune) {
                     sky[k] += 1;
                 }
             }
@@ -678,19 +679,19 @@ fn over_of(p: &Panes, bi: u32) -> u32 {
 }
 /// glassbreak.ts typeOf: the type a pane breaks as when nobody has said. Outside walls are safety glass, a low clerestory strip laminated; inside, a narrow
 /// sidelight is laminated and a partition float; under GLASSREAL.place the pane's own place decides between toughened and float.
-fn type_by_place(c: &Ctx, s: usize, h0: f64, h1: f64, h2: f64, cy: f64) -> u32 {
-    place_rule(sky_side(c, s) != 0, h0, h1, h2, cy, world(c.w).sheets[s].gap)
+fn type_by_place(c: &Ctx, s: usize, h0: f64, h1: f64, h2: f64, cy: f64, tune: &Knobs) -> u32 {
+    place_rule(sky_side(c, s, tune) != 0, h0, h1, h2, cy, world(c.w).sheets[s].gap, tune)
 }
 /// the rule itself, on a pane's sizes, the wall it is in and how far it stands from a door
-pub fn place_rule(outside: bool, h0: f64, h1: f64, h2: f64, cy: f64, gap: f64) -> u32 {
+pub fn place_rule(outside: bool, h0: f64, h1: f64, h2: f64, cy: f64, gap: f64, tune: &Knobs) -> u32 {
     if if outside { h1 < 0.4 } else { js_max(h0, h2) < 0.35 } {
         return LAMINATED;
     }
-    if !truthy(GR_PLACE) {
+    if !(1.0 != 0.0) {
         return if outside { TEMPERED } else { ANNEALED };
     }
     let foot = cy - h1;
-    if foot < k(GR_LOW_M) || (foot < k(GR_DOOR_FOOT_M) && gap <= k(GR_DOOR_M)) {
+    if foot < tune.glassreal.low_m || (foot < tune.glassreal.door_foot_m && gap <= tune.glassreal.door_m) {
         TEMPERED
     } else {
         ANNEALED
@@ -698,7 +699,7 @@ pub fn place_rule(outside: bool, h0: f64, h1: f64, h2: f64, cy: f64, gap: f64) -
 }
 /// glassbreak.ts typeOfPane: the type of static `bi` as it will break, or NONE: it is no sheet of glass
 pub const NO_TYPE: u32 = 9;
-pub fn type_of_pane(c: &Ctx, bi: u32) -> u32 {
+pub fn type_of_pane(c: &Ctx, bi: u32, tune: &Knobs) -> u32 {
     let s = match sheet_of(world(c.w), bi) {
         Some(s) => s,
         None => return NO_TYPE,
@@ -715,7 +716,7 @@ pub fn type_of_pane(c: &Ctx, bi: u32) -> u32 {
     if over != NO_OVER {
         return over;
     }
-    type_by_place(c, s, h0, h1, h2, cy)
+    type_by_place(c, s, h0, h1, h2, cy, tune)
 }
 /// glassbreak.ts setType: pane `bi` breaks as this from here on, made whole first (NO_OVER: back to its place's word)
 pub fn set_type(g: usize, bi: u32, ty: u32) {
@@ -761,16 +762,16 @@ pub fn reset(g: usize) {
 
 // ---- a pane's first touch
 /// glassbreak.ts stateOf: the pane's row, made if this is its first touch; None: it is no sheet of glass
-fn state_of(c: &Ctx, bi: u32) -> Option<usize> {
+fn state_of(c: &Ctx, bi: u32, tune: &Knobs) -> Option<usize> {
     if let Some(r) = pn(c.g).row_of(bi) {
         return Some(r);
     }
-    let ty = type_of_pane(c, bi);
+    let ty = type_of_pane(c, bi, tune);
     if ty == NO_TYPE {
         return None;
     }
     let s = sheet_of(world(c.w), bi)?;
-    let exterior = sky_side(c, s) != 0;
+    let exterior = sky_side(c, s, tune) != 0;
     let o = world(c.w);
     let b = rec(o, bi as usize);
     let (hb0, hb1, hb2) = (b[R_H], b[R_H + 1], b[R_H + 2]);
@@ -800,13 +801,13 @@ fn state_of(c: &Ctx, bi: u32) -> Option<usize> {
 
 // ---- sites
 /// glassbreak.ts addSite: a new site at (u, v) for a blow of energy e, its ring zone fitted to the room the others leave; −1 = no room
-fn add_site(r: &mut Row, u: f64, v: f64, e: f64, seed32: u32) -> i32 {
+fn add_site(r: &mut Row, u: f64, v: f64, e: f64, seed32: u32, tune: &Knobs) -> i32 {
     let ns = site_n(r);
-    if ns as f64 >= js_min(MAX_SITES as f64, k(GB_MAX_SITES)) || run(r) {
+    if ns as f64 >= js_min(MAX_SITES as f64, tune.glassbreak.max_sites) || run(r) {
         return -1;
     }
     let web = r.ty == LAMINATED;
-    let base = if web { [k(GB_RHO_L0), k(GB_RHO_L1), k(GB_RHO_L2), k(GB_RHO_L3)] } else { [k(GB_RHO_A0), k(GB_RHO_A1), k(GB_RHO_A2), k(GB_RHO_A3)] };
+    let base = if web { [tune.glassbreak.rho.get(game_types::knobs::GlassbreakKRhoKey::Laminated).unwrap()[0], tune.glassbreak.rho.get(game_types::knobs::GlassbreakKRhoKey::Laminated).unwrap()[1], tune.glassbreak.rho.get(game_types::knobs::GlassbreakKRhoKey::Laminated).unwrap()[2], tune.glassbreak.rho.get(game_types::knobs::GlassbreakKRhoKey::Laminated).unwrap()[3]] } else { [tune.glassbreak.rho.get(game_types::knobs::GlassbreakKRhoKey::Annealed).unwrap()[0], tune.glassbreak.rho.get(game_types::knobs::GlassbreakKRhoKey::Annealed).unwrap()[1], tune.glassbreak.rho.get(game_types::knobs::GlassbreakKRhoKey::Annealed).unwrap()[2], tune.glassbreak.rho.get(game_types::knobs::GlassbreakKRhoKey::Annealed).unwrap()[3]] };
     let kk = js_max(0.8, js_min(1.4, 0.75 + 0.25 * e));
     let mut rho = [base[0] * kk, base[1] * kk, base[2] * kk, base[3] * kk];
     let mut rz = rho[2] * RHO_TOP * 1.001;
@@ -815,7 +816,7 @@ fn add_site(r: &mut Row, u: f64, v: f64, e: f64, seed32: u32) -> i32 {
         let s = &r.d[q * G_SITE..q * G_SITE + G_SITE];
         room = js_min(room, hypot2(s[S_U] - u, s[S_V] - v) - s[S_RZ]);
     }
-    if room < (if web { k(GB_RZ_MIN) * 0.4 } else { k(GB_RZ_MIN) }) {
+    if room < (if web { tune.glassbreak.rz_min * 0.4 } else { tune.glassbreak.rz_min }) {
         return -1;
     }
     if rz > room {
@@ -827,7 +828,7 @@ fn add_site(r: &mut Row, u: f64, v: f64, e: f64, seed32: u32) -> i32 {
     }
     rho[3] = js_max(rho[3], rho[2] * 2.0);
     let seed = seed32 >> 8;
-    let (r0, r1) = if web { (k(GB_RADIALS_L0), k(GB_RADIALS_L1)) } else { (k(GB_RADIALS_A0), k(GB_RADIALS_A1)) };
+    let (r0, r1) = if web { (tune.glassbreak.radials.get(game_types::knobs::GlassbreakKRadialsKey::Laminated).unwrap()[0], tune.glassbreak.radials.get(game_types::knobs::GlassbreakKRadialsKey::Laminated).unwrap()[1]) } else { (tune.glassbreak.radials.get(game_types::knobs::GlassbreakKRadialsKey::Annealed).unwrap()[0], tune.glassbreak.radials.get(game_types::knobs::GlassbreakKRadialsKey::Annealed).unwrap()[1]) };
     let spread = js_max(1.0, r1) as u32;
     let n = js_min(MAX_SECTORS as f64, r0 + ((seed >> 12) % spread) as f64);
     let d = &mut r.d[ns * G_SITE..ns * G_SITE + G_SITE];
@@ -839,7 +840,7 @@ fn add_site(r: &mut Row, u: f64, v: f64, e: f64, seed32: u32) -> i32 {
     d[S_RHO + 2] = rho[2];
     d[S_RHO + 3] = rho[3];
     d[S_RZ] = rz;
-    d[S_MERGE] = if web { 0.0 } else { k(GB_MERGE) };
+    d[S_MERGE] = if web { 0.0 } else { tune.glassbreak.merge };
     r.w[GW_N + ns] = n as u32;
     r.w[GW_SEED + ns] = seed;
     r.e[ns] = e;
@@ -937,29 +938,29 @@ struct Fr {
     key: f64,
 }
 /// falling.ts fallOf: where and when something let go at c with velocity v reaches what is under it (statics and leaves as the ray has them, the world's floor if nothing is)
-pub fn fall_of(cx: &Ctx, c: [f64; 3], v: [f64; 3], gravity: f64, reach_k: f64) -> (f64, [f64; 3]) {
+pub fn fall_of(cx: &Ctx, c: [f64; 3], v: [f64; 3], gravity: f64, reach_k: f64, tune: &Knobs) -> (f64, [f64; 3]) {
     let vy = -v[1];
     let t_of = |h: f64| (-vy + sqrt(vy * vy + 2.0 * gravity * h)) / gravity;
     let mut reach = hypot2(v[0], v[2]) * t_of(js_max(0.02, c[1])) * reach_k;
     let d = if reach > 1e-4 { [v[0] * reach_k * t_of(js_max(0.02, c[1])) / reach, 0.0, v[2] * reach_k * t_of(js_max(0.02, c[1])) / reach] } else { [0.0, 0.0, 0.0] };
     let mut out = [0.0; 4];
     if reach > 0.05 {
-        let m = lines::ray_rule(cx.w, c[0], c[1], c[2], d[0], d[1], d[2], reach + 0.05, cx.set, -1, true, &mut out);
+        let m = lines::ray_rule(cx.w, c[0], c[1], c[2], d[0], d[1], d[2], reach + 0.05, cx.set, -1, true, &mut out, tune);
         if m >= 0 {
             reach = js_max(0.0, out[0] - 0.05);
         }
     }
     let (x, z) = (c[0] + d[0] * reach, c[2] + d[2] * reach);
-    let m = lines::ray_rule(cx.w, x, c[1], z, 0.0, -1.0, 0.0, c[1] + 0.5, cx.set, -1, true, &mut out);
+    let m = lines::ray_rule(cx.w, x, c[1], z, 0.0, -1.0, 0.0, c[1] + 0.5, cx.set, -1, true, &mut out, tune);
     let h = js_max(0.02, if m >= 0 { out[0] } else { c[1] });
     (t_of(h), [x, c[1] - h, z])
 }
 /// glassbreak.ts emit, and what shards.ts release decides of a fragment that is the simulation's: the break heard, its landing, and the fragment listed for the host
-fn emit(c: &Ctx, ri: usize, f: Fr, pts: &[Pt], rev: bool) {
+fn emit(c: &Ctx, ri: usize, f: Fr, pts: &[Pt], rev: bool, tune: &Knobs) {
     let (bi, ty, who, thick, heard) = {
         let r = pn(c.g).row(ri);
         let mut heard = 0.0;
-        if f.cause != C_HIT && c.now - r.sound_at >= k(GB_CRACK_GAP) {
+        if f.cause != C_HIT && c.now - r.sound_at >= tune.glassbreak.crack_gap {
             r.sound_at = c.now;
             heard = 1.0;
         }
@@ -967,11 +968,11 @@ fn emit(c: &Ctx, ri: usize, f: Fr, pts: &[Pt], rev: bool) {
     };
     let (mut fall_t, mut fall_p, mut landed) = (-1.0, [0.0; 3], 0.0);   // (no time: not asked, for nothing will read it)
     if c.shards {
-        let (t, p) = fall_of(c, f.centre, f.velocity, c.gravity, 0.8);
+        let (t, p) = fall_of(c, f.centre, f.velocity, c.gravity, 0.8, tune);
         fall_t = t;
         fall_p = p;
-        if truthy(SH_BY_FALL) {
-            landing(c, &f, ty, who, t, p);
+        if (1.0 != 0.0) {
+            landing(c, &f, ty, who, t, p, tune);
             landed = 1.0;
         }
     }
@@ -1033,12 +1034,12 @@ const EV_UNHEARD: f64 = 0.0;
 const EV_IF_SOUNDED: f64 = 1.0;
 const EV_HEARD: f64 = 2.0;
 /// shards.ts release, what of it is the simulation's under SHARDS.byFall: a fragment's one landing — a sound for the ear if it has one of its own, the glass it leaves, the floor told
-fn landing(c: &Ctx, f: &Fr, ty: u32, who: f64, t: f64, p: [f64; 3]) {
+fn landing(c: &Ctx, f: &Fr, ty: u32, who: f64, t: f64, p: [f64; 3], tune: &Knobs) {
     let a = js_max(1e-4, f.area);
     let dice = f.kind == K_CLUMP || ty == TEMPERED;
     let powder = !dice && f.kind != K_SHEET && f.grain > 0.0;
-    let plateable = !dice && !powder && a >= k(SH_PLATE_MIN_AREA);
-    let cap = k(SH_PENDING_MAX);
+    let plateable = !dice && !powder && a >= tune.shards.plate_min_area;
+    let cap = tune.shards.pending_max;
     let at = c.now + t;
     let put = |t: f64, name: f64, gain: f64, rate: f64, amount: f64, ev: f64| {
         falls::schedule(c.g, falls::L_GLASS, t, p[0], p[1], p[2], name, gain, rate, amount, who, ev, 0.0, 0.0, cap);
@@ -1055,10 +1056,10 @@ fn landing(c: &Ctx, f: &Fr, ty: u32, who: f64, t: f64, p: [f64; 3]) {
 }
 
 /// glassbreak.ts afterRelease: the pane has a piece less
-fn after_release(c: &Ctx, ri: usize) {
+fn after_release(c: &Ctx, ri: usize, tune: &Knobs) {
     let (w, was, ext) = {
         let r = pn(c.g).row(ri);
-        (walkable_now(r), r.walkable, r.exterior)
+        (walkable_now(r, tune), r.walkable, r.exterior)
     };
     if w as u32 != was {
         pn(c.g).row(ri).walkable = w as u32;
@@ -1084,17 +1085,17 @@ pub fn take_wrote() -> bool {
     }
 }
 /// glassbreak.ts walkableNow
-fn walkable_now(r: &mut Row) -> bool {
+fn walkable_now(r: &mut Row, tune: &Knobs) -> bool {
     if gone(r) {
         return true;
     }
     if dicing(r) || r.ty != ANNEALED || !run(r) {
         return false;
     }
-    let v_clear = k(GB_WALK_CLEAR_H) - r.c[1];
+    let v_clear = tune.glassbreak.walk_clear_h - r.c[1];
     let frags = frags_of(&r.d, &r.w, r.hu, r.hv);
     for f in frags.list() {
-        if f.v_min < v_clear && !bit(&r.w, GW_OPEN, f.fid) && !tooth(f) {
+        if f.v_min < v_clear && !bit(&r.w, GW_OPEN, f.fid) && !tooth(f, tune) {
             return false;
         }
     }
@@ -1105,7 +1106,7 @@ fn set_open(r: &mut Row, fid: u32) {
     r.n_open += 1;
 }
 /// glassbreak.ts releaseCrater: a site's crater wedges go together, as one fragment. → fragments let go
-fn release_crater(c: &Ctx, ri: usize, i: usize, cause: u32) -> u32 {
+fn release_crater(c: &Ctx, ri: usize, i: usize, cause: u32, tune: &Knobs) -> u32 {
     let (hull_n, hp, frag) = {
         let r = pn(c.g).row(ri);
         let n = r.w[GW_N + i] as usize;
@@ -1145,8 +1146,8 @@ fn release_crater(c: &Ctx, ri: usize, i: usize, cause: u32) -> u32 {
         )
     };
     let rev = outline_rev(pn(c.g).row(ri), frag.1);
-    emit(c, ri, frag.0, &hp[..hull_n], rev);
-    after_release(c, ri);
+    emit(c, ri, frag.0, &hp[..hull_n], rev, tune);
+    after_release(c, ri, tune);
     1
 }
 /// glassbreak.ts outline: (u, v, w) is right-handed for a pane along x and left-handed for one along z: is the (u, v) polygon to be walked backwards to run anticlockwise from the side it leaves by
@@ -1155,7 +1156,7 @@ fn outline_rev(r: &Row, out_sign: f64) -> bool {
     (out_sign > 0.0) != (r.u_axis == 0)
 }
 /// glassbreak.ts releaseFrag
-fn release_frag(c: &Ctx, ri: usize, fid: u32, cause: u32, from: Option<[f64; 3]>, kk: f64) {
+fn release_frag(c: &Ctx, ri: usize, fid: u32, cause: u32, from: Option<[f64; 3]>, kk: f64, tune: &Knobs) {
     let (f, fr, rev) = {
         let r = pn(c.g).row(ri);
         if bit(&r.w, GW_OPEN, fid) {
@@ -1182,17 +1183,17 @@ fn release_frag(c: &Ctx, ri: usize, fid: u32, cause: u32, from: Option<[f64; 3]>
         let fd = fid as f64;
         let (h1, h2, h3) = (hash01(key * 7919.0 + fd * 131.0), hash01(key * 104729.0 + fd * 193.0), hash01(fd * 7.0 + key));
         let speed = if cause == C_BLAST {
-            k(GB_BLAST_OUT) * kk * (0.6 + 0.8 * h3)
+            tune.glassbreak.blast_out * kk * (0.6 + 0.8 * h3)
         } else if cause == C_HIT {
-            k(GB_OUT) * (0.8 + 1.2 * h3)
+            tune.glassbreak.out * (0.8 + 1.2 * h3)
         } else if cause == C_RAKE {
-            k(GB_OUT) * (1.2 + 0.8 * h3)
+            tune.glassbreak.out * (1.2 + 0.8 * h3)
         } else {
-            k(GB_OUT) * (0.15 + 0.5 * h3)
+            tune.glassbreak.out * (0.15 + 0.5 * h3)
         };
         let base = if (cause == C_BLAST || cause == C_RAKE) && from.is_some() { scale3(norm3(add3(scale3(dir_out, 0.7), scale3(nn, 0.5))), speed) } else { scale3(nn, speed) };
         let velocity = add3(base, [0.0, -0.2 - 0.6 * h1, 0.0]);
-        let spin = k(GB_SPIN);
+        let spin = tune.glassbreak.spin;
         let seed = point_seed(r.key, cw[0], cw[1], cw[2]) ^ fid;
         (
             f,
@@ -1200,46 +1201,46 @@ fn release_frag(c: &Ctx, ri: usize, fid: u32, cause: u32, from: Option<[f64; 3]>
             outline_rev(r, out_sign),
         )
     };
-    emit(c, ri, fr, &f.p[..f.n as usize], rev);
-    after_release(c, ri);
+    emit(c, ri, fr, &f.p[..f.n as usize], rev, tune);
+    after_release(c, ri, tune);
 }
 /// glassbreak.ts knockOut: a hard blow on a piece: it goes now (a crater's wedge takes the whole crater with it). → fragments let go
-fn knock_out(c: &Ctx, ri: usize, fid: u32) -> u32 {
+fn knock_out(c: &Ctx, ri: usize, fid: u32, tune: &Knobs) -> u32 {
     let r = pn(c.g).row(ri);
     if bit(&r.w, GW_OPEN, fid) {
         return 0;
     }
     let (i, b) = (fid as usize / FRAGS_PER_SITE, (fid as usize % FRAGS_PER_SITE) / MAX_SECTORS);
     if b == 0 {
-        return release_crater(c, ri, i, C_HIT);
+        return release_crater(c, ri, i, C_HIT, tune);
     }
     if frags_of(&r.d, &r.w, r.hu, r.hv).by(fid).is_none() {
         return 0;
     }
-    release_frag(c, ri, fid, C_HIT, None, 1.0);
+    release_frag(c, ri, fid, C_HIT, None, 1.0, tune);
     1
 }
 /// glassbreak.ts setRun: the radials reach the frame
-fn set_run(c: &Ctx, ri: usize) {
+fn set_run(c: &Ctx, ri: usize, tune: &Knobs) {
     let r = pn(c.g).row(ri);
     if run(r) || r.ty != ANNEALED || site_n(r) == 0 {
         return;
     }
     r.w[GW_FLAGS] |= G_RUN;
     unsafe { TALLY.runs += 1.0 };
-    r.next_think = c.now + k(GB_THINK);
+    r.next_think = c.now + tune.glassbreak.think;
 }
 
 // ---- toughened glass
 /// glassbreak.ts startDice
-fn start_dice(c: &Ctx, ri: usize, u: f64, v: f64, seed: u32) {
+fn start_dice(c: &Ctx, ri: usize, u: f64, v: f64, seed: u32, tune: &Knobs) {
     let d = {
         let r = pn(c.g).row(ri);
         if dicing(r) || gone(r) {
             return;
         }
-        let cols = js_max(1.0, round_half_up(2.0 * r.hu / k(GB_CLUMP_M))) as u32;
-        let rows = js_max(1.0, round_half_up(2.0 * r.hv / k(GB_CLUMP_M))) as u32;
+        let cols = js_max(1.0, round_half_up(2.0 * r.hu / tune.glassbreak.clump_m)) as u32;
+        let rows = js_max(1.0, round_half_up(2.0 * r.hv / tune.glassbreak.clump_m)) as u32;
         r.w[GW_COLS] = cols;
         r.w[GW_ROWS] = rows;
         r.w[GW_DSEED] = seed >> 8;
@@ -1266,7 +1267,7 @@ fn start_dice(c: &Ctx, ri: usize, u: f64, v: f64, seed: u32) {
     }
     let mut next = 0;
     while next < order.len() && order[next].key <= key0 + DICE_TIE {
-        release_clump(c, ri, &d, order[next]);
+        release_clump(c, ri, &d, order[next], tune);
         next += 1;
         pn(c.g).row(ri).d_next = next as u32;
     }
@@ -1284,14 +1285,14 @@ fn dice_done(c: &Ctx, ri: usize) {
     }
 }
 /// glassbreak.ts stepDice
-fn step_dice(c: &Ctx, ri: usize) {
+fn step_dice(c: &Ctx, ri: usize, tune: &Knobs) {
     let (d, t0) = {
         let r = pn(c.g).row(ri);
         (dice_of(r), r.d[D_T0])
     };
-    if truthy(GR_DROP) {
-        if c.now - t0 >= k(GR_HANG) {
-            drop_all(c, ri, &d);
+    if (1.0 != 0.0) {
+        if c.now - t0 >= tune.glassreal.hang {
+            drop_all(c, ri, &d, tune);
         } else {
             let r = pn(c.g).row(ri);
             if r.walkable != 0 {
@@ -1302,12 +1303,12 @@ fn step_dice(c: &Ctx, ri: usize) {
         return;
     }
     let order = order_of(&d);
-    let rr = (c.now - t0 - k(GB_DICE_HANG)) * k(GB_DICE_SPEED);
+    let rr = (c.now - t0 - tune.glassbreak.dice_hang) * tune.glassbreak.dice_speed;
     let mut next = pn(c.g).row(ri).d_next as usize;
     let mut n = 0.0;
-    let per = k(GB_CLUMPS_PER_FRAME);
+    let per = tune.glassbreak.clumps_per_frame;
     while next < order.len() && (order[next].key <= order[next - 1].key + DICE_TIE || (order[next].key <= rr && n < per)) {
-        release_clump(c, ri, &d, order[next]);
+        release_clump(c, ri, &d, order[next], tune);
         next += 1;
         n += 1.0;
         pn(c.g).row(ri).d_next = next as u32;
@@ -1323,7 +1324,7 @@ fn step_dice(c: &Ctx, ri: usize) {
     }
 }
 /// glassbreak.ts releaseClump
-fn release_clump(c: &Ctx, ri: usize, d: &Dice, cl: pattern::Clump) {
+fn release_clump(c: &Ctx, ri: usize, d: &Dice, cl: pattern::Clump, tune: &Knobs) {
     {
         let r = pn(c.g).row(ri);
         r.d[D_LAST] = cl.key;
@@ -1352,21 +1353,21 @@ fn release_clump(c: &Ctx, ri: usize, d: &Dice, cl: pattern::Clump) {
         let rad = js_max(1e-3, hypot2(cu - d.u, cv - d.v));
         let (a, b) = (to_world(r, 0.0, 0.0), to_world(r, (cu - d.u) / rad, (cv - d.v) / rad));
         let spread = sub3(b, a);
-        let velocity = add3(add3(scale3(nn, k(GB_OUT) * (0.3 + 0.9 * h1)), scale3(spread, 0.5 * h2)), [0.0, -0.3 - 0.5 * h3, 0.0]);
-        let spin = k(GB_SPIN);
+        let velocity = add3(add3(scale3(nn, tune.glassbreak.out * (0.3 + 0.9 * h1)), scale3(spread, 0.5 * h2)), [0.0, -0.3 - 0.5 * h3, 0.0]);
+        let spin = tune.glassbreak.spin;
         let centre = to_world(r, cu, cv);
         (
-            Fr { kind: K_CLUMP, centre, normal: nn, area, velocity, spin: [(h1 - 0.5) * spin, (h2 - 0.5) * 2.0, (h3 - 0.5) * spin], grain: k(GB_DICE_GRAIN), cause: C_DICE, seed: d.seed ^ (cl.k + 1).wrapping_mul(0x9E37_79B1), key: ck },
+            Fr { kind: K_CLUMP, centre, normal: nn, area, velocity, spin: [(h1 - 0.5) * spin, (h2 - 0.5) * 2.0, (h3 - 0.5) * spin], grain: tune.glassbreak.dice_grain, cause: C_DICE, seed: d.seed ^ (cl.k + 1).wrapping_mul(0x9E37_79B1), key: ck },
             outline_rev(r, out_sign),
         )
     };
-    emit(c, ri, fr, &pts[..np], rev);
+    emit(c, ri, fr, &pts[..np], rev, tune);
 }
 /// glassbreak.ts dropAll (GLASSREAL.drop): every clump still standing leaves on this step, handed on in square blocks of them
-fn drop_all(c: &Ctx, ri: usize, d: &Dice) {
+fn drop_all(c: &Ctx, ri: usize, d: &Dice, tune: &Knobs) {
     let order = order_of(d);
     const MAX_BLOCKS: usize = 1024;
-    let blocks = js_min(MAX_BLOCKS as f64, js_max(1.0, k(GR_BLOCKS)));
+    let blocks = js_min(MAX_BLOCKS as f64, js_max(1.0, tune.glassreal.blocks));
     let (cols, rows) = (d.cols as f64, d.rows as f64);
     let mut m = 1.0;
     while js_ceil(cols / m) * js_ceil(rows / m) > blocks {
@@ -1416,18 +1417,18 @@ fn drop_all(c: &Ctx, ri: usize, d: &Dice) {
             let (key, bd) = (r.key as f64, b as f64);
             let (h1, h3) = (hash01(key * 7919.0 + bd * 131.0), hash01(bd * 7.0 + key));
             let near = js_max(0.0, 1.0 - hypot2(cu - d.u, cv - d.v) / 0.6);
-            let spin = k(GB_SPIN);
+            let spin = tune.glassbreak.spin;
             (
-                Fr { kind: K_CLUMP, centre: to_world(r, cu, cv), normal: nn, area: n[b] as f64 * du * dv, velocity: add3(scale3(nn, k(GB_OUT) * (0.1 + 0.25 * h1 + 0.8 * near)), [0.0, -0.3 - 0.5 * h3, 0.0]), spin: [(h1 - 0.5) * spin, 0.0, (h3 - 0.5) * spin], grain: k(GB_DICE_GRAIN), cause: C_DICE, seed: d.seed ^ (b as u32 + 1).wrapping_mul(0x9E37_79B1), key: bd },
+                Fr { kind: K_CLUMP, centre: to_world(r, cu, cv), normal: nn, area: n[b] as f64 * du * dv, velocity: add3(scale3(nn, tune.glassbreak.out * (0.1 + 0.25 * h1 + 0.8 * near)), [0.0, -0.3 - 0.5 * h3, 0.0]), spin: [(h1 - 0.5) * spin, 0.0, (h3 - 0.5) * spin], grain: tune.glassbreak.dice_grain, cause: C_DICE, seed: d.seed ^ (b as u32 + 1).wrapping_mul(0x9E37_79B1), key: bd },
                 outline_rev(r, out_sign),
             )
         };
-        emit(c, ri, fr, &[(u0, v0), (u1, v0), (u1, v1), (u0, v1)], rev);
+        emit(c, ri, fr, &[(u0, v0), (u1, v0), (u1, v1), (u0, v1)], rev, tune);
     }
     dice_done(c, ri);
 }
 /// glassbreak.ts releaseSheet: the laminated sheet leaves its frame whole
-fn release_sheet(c: &Ctx, ri: usize, away: [f64; 3], kk: f64) {
+fn release_sheet(c: &Ctx, ri: usize, away: [f64; 3], kk: f64, tune: &Knobs) {
     let (fr, pts, rev) = {
         let p = pn(c.g);
         let qn = p.row(ri).qn as usize;
@@ -1457,12 +1458,12 @@ fn release_sheet(c: &Ctx, ri: usize, away: [f64; 3], kk: f64) {
         let area = 4.0 * hu * hv;
         let seed = point_seed(r.key, r.c[0], r.c[1], r.c[2]);
         (
-            Fr { kind: K_SHEET, centre: r.c, normal: nn, area, velocity: add3(scale3(nn, k(GB_BLAST_OUT) * kk * 0.6), [0.0, 0.4, 0.0]), spin: [1.5 * kk, 0.0, 0.4], grain: 0.0, cause: C_BLAST, seed, key: 0.0 },
+            Fr { kind: K_SHEET, centre: r.c, normal: nn, area, velocity: add3(scale3(nn, tune.glassbreak.blast_out * kk * 0.6), [0.0, 0.4, 0.0]), spin: [1.5 * kk, 0.0, 0.4], grain: 0.0, cause: C_BLAST, seed, key: 0.0 },
             [(-hu, -hv), (hu, -hv), (hu, hv), (-hu, hv)],
             outline_rev(r, out_sign),
         )
     };
-    emit(c, ri, fr, &pts, rev);
+    emit(c, ri, fr, &pts, rev, tune);
 }
 
 // ---- the queue
@@ -1494,11 +1495,11 @@ pub struct Blow {
 }
 /// glassbreak.ts impact: a blow of `energy` (1 = one pistol round square on) met pane `bi` at (x, y, z) travelling `dir`. `through`: the caller's word on the round
 /// (1 went on · 0 stopped · −1 none: the glass decides by energy). The glass does what it does; what the round does next is the caller's.
-pub fn impact(c: &Ctx, bi: u32, x: [f64; 3], dir: Option<[f64; 3]>, energy: f64, who: f64, through: i32) -> Blow {
+pub fn impact(c: &Ctx, bi: u32, x: [f64; 3], dir: Option<[f64; 3]>, energy: f64, who: f64, through: i32, tune: &Knobs) -> Blow {
     let mut res = Blow { ty: LAMINATED, ..Blow::default() };
-    let ty = type_of_pane(c, bi);
+    let ty = type_of_pane(c, bi, tune);
     res.ty = if ty == NO_TYPE { LAMINATED } else { ty };
-    let ri = match state_of(c, bi) {
+    let ri = match state_of(c, bi, tune) {
         Some(r) => r,
         None => return res,
     };
@@ -1526,9 +1527,9 @@ pub fn impact(c: &Ctx, bi: u32, x: [f64; 3], dir: Option<[f64; 3]>, energy: f64,
     };
     if ty == TEMPERED {
         let r = pn(c.g).row(ri);
-        if r.energy >= k(GB_BREAK_E_T) || through == 1 {
+        if r.energy >= tune.glassbreak.break_e.tempered || through == 1 {
             let started = !dicing(r);
-            start_dice(c, ri, u, v, seed);
+            start_dice(c, ri, u, v, seed, tune);
             res.diced = true;
             res.punched = open_uv(pn(c.g).row(ri), u, v);
             res.released = if started { 1 } else { 0 };
@@ -1538,7 +1539,7 @@ pub fn impact(c: &Ctx, bi: u32, x: [f64; 3], dir: Option<[f64; 3]>, energy: f64,
     }
     if ty == LAMINATED {
         let r = pn(c.g).row(ri);
-        if classify_row(&r.d, &r.w, u, v) < 0 && add_site(r, u, v, energy, seed) >= 0 {
+        if classify_row(&r.d, &r.w, u, v) < 0 && add_site(r, u, v, energy, seed, tune) >= 0 {
             res.cracked = true;
             return res;
         }
@@ -1550,7 +1551,7 @@ pub fn impact(c: &Ctx, bi: u32, x: [f64; 3], dir: Option<[f64; 3]>, energy: f64,
         return res;
     }
     // float glass
-    let hard = if through >= 0 { through == 1 } else { energy >= k(GB_PUNCH_E) };
+    let hard = if through >= 0 { through == 1 } else { energy >= tune.glassbreak.punch_e };
     let mut no_room = false;
     let fid = {
         let r = pn(c.g).row(ri);
@@ -1563,16 +1564,16 @@ pub fn impact(c: &Ctx, bi: u32, x: [f64; 3], dir: Option<[f64; 3]>, energy: f64,
         r.e[i] += energy;
         r.hits[i] += 1.0;
         if hard {
-            res.released += knock_out(c, ri, fid as u32);
+            res.released += knock_out(c, ri, fid as u32, tune);
         }
     } else {
         // on the uncut sheet: a new star if there is room for one
         let r = pn(c.g).row(ri);
-        let i = add_site(r, u, v, energy, seed);
+        let i = add_site(r, u, v, energy, seed, tune);
         if i >= 0 {
             res.cracked = true;
             if hard {
-                res.released += release_crater(c, ri, i as usize, C_HIT);
+                res.released += release_crater(c, ri, i as usize, C_HIT, tune);
             }
         } else {
             let j = nearest_site(r, u, v);
@@ -1585,16 +1586,16 @@ pub fn impact(c: &Ctx, bi: u32, x: [f64; 3], dir: Option<[f64; 3]>, energy: f64,
     }
     let goes = {
         let r = pn(c.g).row(ri);
-        !run(r) && (r.energy >= k(GB_BREAK_E_A) || energy >= k(GB_RUN_SINGLE_E) || (through == 1 && no_room))
+        !run(r) && (r.energy >= tune.glassbreak.break_e.annealed || energy >= tune.glassbreak.run_single_e || (through == 1 && no_room))
     };
     if goes {
-        set_run(c, ri);
+        set_run(c, ri, tune);
         let (open_now, f2) = {
             let r = pn(c.g).row(ri);
             (open_uv(r, u, v), classify_row(&r.d, &r.w, u, v))
         };
         if hard && !open_now && f2 >= 0 {
-            res.released += knock_out(c, ri, f2 as u32);
+            res.released += knock_out(c, ri, f2 as u32, tune);
         }
         let j = if hard {
             let r = pn(c.g).row(ri);
@@ -1602,8 +1603,8 @@ pub fn impact(c: &Ctx, bi: u32, x: [f64; 3], dir: Option<[f64; 3]>, energy: f64,
         } else {
             -1
         };
-        if j >= 0 && k(GB_RUN_STAR) > 0.0 {
-            ring_out(c, ri, j as usize);
+        if j >= 0 && tune.glassbreak.run_star > 0.0 {
+            ring_out(c, ri, j as usize, tune);
         }
     }
     let r = pn(c.g).row(ri);
@@ -1612,29 +1613,29 @@ pub fn impact(c: &Ctx, bi: u32, x: [f64; 3], dir: Option<[f64; 3]>, energy: f64,
         res.cracked = true;
     }
     if r.next_think <= 0.0 {
-        r.next_think = c.now + k(GB_THINK);
+        r.next_think = c.now + tune.glassbreak.think;
     }
     res
 }
 /// the blow that RUNS a pane breaks its own star out: the rings round the site it landed on follow the crater over the next few frames
-fn ring_out(c: &Ctx, ri: usize, j: usize) {
+fn ring_out(c: &Ctx, ri: usize, j: usize, tune: &Knobs) {
     let (frags, key) = {
         let r = pn(c.g).row(ri);
         (frags_of(&r.d, &r.w, r.hu, r.hv), r.key as f64)
     };
-    let top = js_min(2.0, k(GB_RUN_STAR));
+    let top = js_min(2.0, tune.glassbreak.run_star);
     for f in frags.list() {
         if f.i as usize == j && f.b >= 1 && f.b as f64 <= top {
             let r = pn(c.g).row(ri);
             if !bit(&r.w, GW_OPEN, f.fid) && !bit(&r.w, GW_GOING, f.fid) {
-                let at = c.now + k(GB_RUN_RING_SECS) * (f.b as f64 + hash01(key * 53.0 + f.fid as f64));
+                let at = c.now + tune.glassbreak.run_ring_secs * (f.b as f64 + hash01(key * 53.0 + f.fid as f64));
                 queue(c, ri, f.fid, at, C_HIT, [0.0; 3], 1.0);
             }
         }
     }
 }
 /// glassbreak.ts widen: a pellet through glass its own shell has just broken: the piece it passed through, if one still stands, goes with it. → fragments let go
-pub fn widen(c: &Ctx, bi: u32, x: [f64; 3]) -> u32 {
+pub fn widen(c: &Ctx, bi: u32, x: [f64; 3], tune: &Knobs) -> u32 {
     let ri = match pn(c.g).row_of(bi) {
         Some(r) => r,
         None => return 0,
@@ -1654,10 +1655,10 @@ pub fn widen(c: &Ctx, bi: u32, x: [f64; 3]) -> u32 {
         }
         fid as u32
     };
-    let n = knock_out(c, ri, fid);
+    let n = knock_out(c, ri, fid, tune);
     let r = pn(c.g).row(ri);
     if n > 0 && r.next_think <= 0.0 {
-        r.next_think = c.now + k(GB_THINK);
+        r.next_think = c.now + tune.glassbreak.think;
     }
     n
 }
@@ -1740,7 +1741,7 @@ pub fn blast_begin(c: &Ctx, at: [f64; 3]) {
 static mut BLAST_SEQ: f64 = 0.0;
 static mut BLAST_AT: [f64; 3] = [0.0; 3];
 /// glassbreak.ts blastIn over one sheet of the level. → it took the blow (blast()'s count of panes changed)
-pub fn blast_sheet(c: &Ctx, s: usize, at: [f64; 3], radius: f64, power: f64, who: f64) -> bool {
+pub fn blast_sheet(c: &Ctx, s: usize, at: [f64; 3], radius: f64, power: f64, who: f64, tune: &Knobs) -> bool {
     let bi = world(c.w).sheets[s].bi;
     let (seq, twin_at) = unsafe { (BLAST_SEQ, BLAST_AT) };
     let q = {
@@ -1763,11 +1764,11 @@ pub fn blast_sheet(c: &Ctx, s: usize, at: [f64; 3], radius: f64, power: f64, who
     if prev >= kk {
         return false;
     }
-    let ty = type_of_pane(c, bi);
-    if ty == NO_TYPE || (ty == TEMPERED && kk <= k(GB_BLAST_DICE_K) && had_row.is_none()) {
+    let ty = type_of_pane(c, bi, tune);
+    if ty == NO_TYPE || (ty == TEMPERED && kk <= tune.glassbreak.blast_dice_k && had_row.is_none()) {
         return false;
     }
-    let ri = match state_of(c, bi) {
+    let ri = match state_of(c, bi, tune) {
         Some(r) => r,
         None => return false,
     };
@@ -1787,10 +1788,10 @@ pub fn blast_sheet(c: &Ctx, s: usize, at: [f64; 3], radius: f64, power: f64, who
     };
     if pn(c.g).row(ri).ty == TEMPERED {
         let r = pn(c.g).row(ri);
-        if kk > k(GB_BLAST_DICE_K) && !dicing(r) {
+        if kk > tune.glassbreak.blast_dice_k && !dicing(r) {
             r.energy += 1.0 + 2.0 * kk;
             let seed = blast_seed(r.key, &twin_at);
-            start_dice(c, ri, qu, qv, seed);
+            start_dice(c, ri, qu, qv, seed, tune);
             return true;
         }
         return false;
@@ -1816,18 +1817,18 @@ pub fn blast_sheet(c: &Ctx, s: usize, at: [f64; 3], radius: f64, power: f64, who
             if open_uv(r, pu, pv) || classify_row(&r.d, &r.w, pu, pv) >= 0 {
                 continue;
             }
-            add_site(r, pu, pv, 0.6 + kk, s);
+            add_site(r, pu, pv, 0.6 + kk, s, tune);
         }
         r.energy += if prev > 0.0 { 2.0 * (kk - prev) } else { 1.0 + 2.0 * kk };
         if web {
-            if kk > k(GB_BLAST_SHEET_K) {
-                release_sheet(c, ri, away, kk);
+            if kk > tune.glassbreak.blast_sheet_k {
+                release_sheet(c, ri, away, kk, tune);
             }
             return true;
         }
     }
-    if kk > k(GB_BLAST_RUN_K) {
-        set_run(c, ri);
+    if kk > tune.glassbreak.blast_run_k {
+        set_run(c, ri, tune);
     }
     let reach = blast_reach(kk);
     let frags = {
@@ -1843,14 +1844,14 @@ pub fn blast_sheet(c: &Ctx, s: usize, at: [f64; 3], radius: f64, power: f64, who
         if dd > reach {
             continue;
         }
-        if kk < k(GB_TOOTH_K) && tooth(f) {
+        if kk < tune.glassbreak.tooth_k && tooth(f, tune) {
             continue;
         }
         queue(c, ri, f.fid, c.now + dd * 0.03, C_BLAST, at, kk);
     }
     let r = pn(c.g).row(ri);
     if r.next_think <= 0.0 {
-        r.next_think = c.now + k(GB_THINK);
+        r.next_think = c.now + tune.glassbreak.think;
     }
     true
 }
@@ -1863,12 +1864,12 @@ fn blast_reach(kk: f64) -> f64 {
 // ---- support
 static mut HELD_BITS: [u32; 21] = [0; 21];
 /// glassbreak.ts heldSet: which intact pieces of a float pane are HELD, grown outward from the frame and the uncut sheet, so every held piece is joined to them through held pieces
-fn held_set(r: &Row, without: i32) -> &'static [u32; 21] {
+fn held_set(r: &Row, without: i32, tune: &Knobs) -> &'static [u32; 21] {
     let held = unsafe { &mut *core::ptr::addr_of_mut!(HELD_BITS) };
     *held = [0; 21];
     let frags = frags_of(&r.d, &r.w, r.hu, r.hv);
     let ac = pattern::across(frags, &r.d, &r.w);
-    let (side, top, wedged, stand_ny, stand_foot, tol, hang) = (k(GB_GRIP_SIDE), k(GB_GRIP_TOP), k(GB_GRIP_WEDGED), k(GB_STAND_NY), k(GB_STAND_FOOT), k(GB_BALANCE_TOL), k(GB_HANG_AREA));
+    let (side, top, wedged, stand_ny, stand_foot, tol, hang) = (tune.glassbreak.grip.side, tune.glassbreak.grip.top, tune.glassbreak.grip.wedged, tune.glassbreak.stand_ny, tune.glassbreak.stand_foot, tune.glassbreak.balance_tol, tune.glassbreak.hang_area);
     let mut changed = true;
     while changed {
         changed = false;
@@ -1922,7 +1923,7 @@ fn held_set(r: &Row, without: i32) -> &'static [u32; 21] {
     unsafe { &*core::ptr::addr_of!(HELD_BITS) }
 }
 /// glassbreak.ts supportPass: what a change left unheld falls, a beat later and staggered
-fn support_pass(c: &Ctx, ri: usize) {
+fn support_pass(c: &Ctx, ri: usize, tune: &Knobs) {
     let (frags, key, lu, lv) = {
         let r = pn(c.g).row(ri);
         if r.ty != ANNEALED || r.n_open == 0 {
@@ -1930,8 +1931,8 @@ fn support_pass(c: &Ctx, ri: usize) {
         }
         (frags_of(&r.d, &r.w, r.hu, r.hv), r.key as f64, r.last_uv[0], r.last_uv[1])
     };
-    let held = *held_set(pn(c.g).row(ri), -1);
-    let (per, jit) = (k(GB_STAGGER_PER_M), k(GB_STAGGER_JIT));
+    let held = *held_set(pn(c.g).row(ri), -1, tune);
+    let (per, jit) = (tune.glassbreak.stagger_per_m, tune.glassbreak.stagger_jit);
     for f in frags.list() {
         let r = pn(c.g).row(ri);
         if bit(&r.w, GW_OPEN, f.fid) || held[(f.fid >> 5) as usize] >> (f.fid & 31) & 1 != 0 || bit(&r.w, GW_GOING, f.fid) {
@@ -1962,21 +1963,21 @@ pub fn men_set(n: usize) {
     unsafe { MEN_N = if n < MAX_MEN { n } else { MAX_MEN } }
 }
 /// glassbreak.ts update, one pane's part
-pub fn step_row(c: &Ctx, ri: usize) {
+pub fn step_row(c: &Ctx, ri: usize, tune: &Knobs) {
     {
         let r = pn(c.g).row(ri);
         if gone(r) {
             return;
         }
         if dicing(r) {
-            step_dice(c, ri);
+            step_dice(c, ri, tune);
             return;
         }
     }
     let now = c.now;
     if pn(c.g).row(ri).qn > 0 {
         let mut went = false;
-        let budget = k(GB_RELEASES_PER_FRAME);
+        let budget = tune.glassbreak.releases_per_frame;
         loop {
             let p = pn(c.g);
             let (qn, q0) = {
@@ -1993,9 +1994,9 @@ pub fn step_row(c: &Ctx, ri: usize) {
                 if !bit(&r.w, GW_OPEN, e.fid) {
                     let from = if e.cause == C_BLAST || e.cause == C_RAKE { Some(e.from) } else { None };
                     if b == 0 {
-                        release_crater(c, ri, i as usize, e.cause);
+                        release_crater(c, ri, i as usize, e.cause, tune);
                     } else {
-                        release_frag(c, ri, e.fid, e.cause, from, e.k);
+                        release_frag(c, ri, e.fid, e.cause, from, e.k, tune);
                     }
                     pn(c.g).released += 1;
                     went = true;
@@ -2004,7 +2005,7 @@ pub fn step_row(c: &Ctx, ri: usize) {
         }
         let r = pn(c.g).row(ri);
         if went && r.next_think <= 0.0 {
-            r.next_think = now + k(GB_THINK);
+            r.next_think = now + tune.glassbreak.think;
         }
     }
     {
@@ -2012,30 +2013,30 @@ pub fn step_row(c: &Ctx, ri: usize) {
         if r.next_think > 0.0 && now >= r.next_think {
             r.next_think = 0.0;
             unsafe { TALLY.thinks += 1.0 };
-            support_pass(c, ri);
+            support_pass(c, ri, tune);
         }
     }
     let rake_it = {
         let r = pn(c.g).row(ri);
-        run(r) && r.walkable == 0 && k(GB_RAKE_OPEN) > 0.0 && r.ty == ANNEALED
+        run(r) && r.walkable == 0 && tune.glassbreak.rake_open > 0.0 && r.ty == ANNEALED
     };
     if rake_it {
         let n = unsafe { MEN_N };
         for m in 0..n {
             let men = unsafe { &*core::ptr::addr_of!(MEN) };
-            rake_by(c, ri, &men[m * MAN..m * MAN + MAN]);
+            rake_by(c, ri, &men[m * MAN..m * MAN + MAN], tune);
         }
     }
 }
 /// glassbreak.ts rakeBy: a man on his feet walks into what is left of a run pane that is mostly hole: the pieces in his way go, away from him, nearest first
-fn rake_by(c: &Ctx, ri: usize, m: &[f64]) {
+fn rake_by(c: &Ctx, ri: usize, m: &[f64], tune: &Knobs) {
     let pos = [m[0], m[1], m[2]];
     let vel = [m[3], m[4], m[5]];
     let (frags, mu, key, v_clear) = {
         let r = pn(c.g).row(ri);
         let n = normal_of(r);
         let w = dot3(sub3(pos, r.c), n);
-        if js_abs(w) > k(GB_RAKE_M) || pos[1] >= r.c[1] + r.hv {
+        if js_abs(w) > tune.glassbreak.rake_m || pos[1] >= r.c[1] + r.hv {
             return;
         }
         let (mu, _) = to_uv(r, pos[0], pos[1], pos[2]);
@@ -2047,7 +2048,7 @@ fn rake_by(c: &Ctx, ri: usize, m: &[f64]) {
         if vn <= 0.3 || vn < 0.6 * sp {
             return;
         }
-        (frags_of(&r.d, &r.w, r.hu, r.hv), mu, r.key as f64, k(GB_WALK_CLEAR_H) - r.c[1])
+        (frags_of(&r.d, &r.w, r.hu, r.hv), mu, r.key as f64, tune.glassbreak.walk_clear_h - r.c[1])
     };
     {
         let p = pn(c.g);
@@ -2060,7 +2061,7 @@ fn rake_by(c: &Ctx, ri: usize, m: &[f64]) {
                 return;
             }
         }
-        if open_fraction_row(p.row(ri)) < k(GB_RAKE_OPEN) {
+        if open_fraction_row(p.row(ri)) < tune.glassbreak.rake_open {
             return;
         }
     }
@@ -2071,7 +2072,7 @@ fn rake_by(c: &Ctx, ri: usize, m: &[f64]) {
         if bit(&r.w, GW_OPEN, f.fid) || f.v_min >= v_clear || bit(&r.w, GW_GOING, f.fid) {
             continue;
         }
-        if tooth(f) {
+        if tooth(f, tune) {
             continue;
         }
         queue(c, ri, f.fid, c.now + 0.04 + 0.12 * js_abs(f.cu - mu) + 0.05 * hash01(key * 71.0 + f.fid as f64), C_RAKE, from, 1.0);
@@ -2160,7 +2161,7 @@ pub fn row_for(g: usize, bi: u32) -> Option<(&'static [f64], &'static [u32])> {
     Some((&r.d, &r.w))
 }
 /// glassbreak.ts wouldGive, the view's half: would a burst of this size take pane `bi` out of the way at (x, y, z). `sure`: a man counting on it (the near reach alone), else a wary one (the whole pane or nothing).
-pub fn gives(g: usize, o: &World, bi: usize, x: f64, y: f64, z: f64) -> bool {
+pub fn gives(g: usize, o: &World, bi: usize, x: f64, y: f64, z: f64, tune: &Knobs) -> bool {
     let (at, radius, power, sure) = ([o.view_at[0], o.view_at[1], o.view_at[2]], o.view_at[3], o.view_at[4], o.view_at[5] != 0.0);
     let p = &state_read(g).panes;
     let s = match sheet_of(o, bi as u32) {
@@ -2173,24 +2174,24 @@ pub fn gives(g: usize, o: &World, bi: usize, x: f64, y: f64, z: f64) -> bool {
     }
     let q = nearest_on(b, at);
     let kk = power * (1.0 - hypot3(q[0] - at[0], q[1] - at[1], q[2] - at[2]) / radius);
-    if kk < js_min(js_min(k(GB_BLAST_DICE_K), k(GB_BLAST_SHEET_K)), if sure { k(GB_TOOTH_K) } else { BLAST_MIN_K }) {
+    if kk < js_min(js_min(tune.glassbreak.blast_dice_k, tune.glassbreak.blast_sheet_k), if sure { tune.glassbreak.tooth_k } else { BLAST_MIN_K }) {
         return false;
     }
     // (a slot no pane was touched in: its counts read none, whatever lies past the first word)
     let (over, sky, gap) = (if p.used == 0 { NO_OVER } else { over_of(p, bi as u32) }, o.sheets[s].sky, o.sheets[s].gap);
     // (every sheet's sky was settled as the level stood up: a line asks no line of its own here)
-    let ty = if over != NO_OVER { over } else { place_rule(sky != 0 && sky != SKY_UNKNOWN, b[R_H], b[R_H + 1], b[R_H + 2], b[R_C + 1], gap) };
+    let ty = if over != NO_OVER { over } else { place_rule(sky != 0 && sky != SKY_UNKNOWN, b[R_H], b[R_H + 1], b[R_H + 2], b[R_C + 1], gap, tune) };
     if ty == TEMPERED {
-        return kk > k(GB_BLAST_DICE_K);
+        return kk > tune.glassbreak.blast_dice_k;
     }
     if ty == LAMINATED {
-        return kk > k(GB_BLAST_SHEET_K);
+        return kk > tune.glassbreak.blast_sheet_k;
     }
     if !sure {
         return kk > BLAST_MIN_K;
     }
     let reach = blast_reach(kk);
-    kk >= k(GB_TOOTH_K) && reach >= 0.0 && hypot3(x - q[0], y - q[1], z - q[2]) <= reach
+    kk >= tune.glassbreak.tooth_k && reach >= 0.0 && hypot3(x - q[0], y - q[1], z - q[2]) <= reach
 }
 /// the sheet's numbers for the host: its static · sky · word · gap
 pub fn sheet_count(c: &Ctx) -> u32 {
@@ -2200,9 +2201,9 @@ pub fn sheet_bi(c: &Ctx, s: usize) -> u32 {
     world(c.w).sheets[s].bi
 }
 /// is `bi` a sheet the wind should ask of: its face to the sky, or 0
-pub fn sky_known(c: &Ctx, bi: u32) -> i32 {
+pub fn sky_known(c: &Ctx, bi: u32, tune: &Knobs) -> i32 {
     match sheet_of(world(c.w), bi) {
-        Some(s) => sky_side(c, s),
+        Some(s) => sky_side(c, s, tune),
         None => 0,
     }
 }
@@ -2264,10 +2265,10 @@ pub fn row_index(g: usize, bi: u32) -> i32 {
     }
 }
 /// shards.ts crossed under SHARDS.byFall: where the jet off a sheet's far face comes down (the air has most of a fine's speed inside a stride)
-pub fn jet(c: &Ctx, at: [f64; 3], d: [f64; 3], speed: f64, amount: f64, who: f64) {
+pub fn jet(c: &Ctx, at: [f64; 3], d: [f64; 3], speed: f64, amount: f64, who: f64, tune: &Knobs) {
     let v = [d[0] * (speed * 0.35), d[1] * (speed * 0.35), d[2] * (speed * 0.35)];
-    let (t, p) = fall_of(c, at, v, c.gravity, 0.8);
-    falls::schedule(c.g, falls::L_GLASS, c.now + t, p[0], p[1], p[2], SOUND_TINKLE, 0.0, 1.0, amount, who, EV_UNHEARD, 0.0, 0.0, k(SH_PENDING_MAX));
+    let (t, p) = fall_of(c, at, v, c.gravity, 0.8, tune);
+    falls::schedule(c.g, falls::L_GLASS, c.now + t, p[0], p[1], p[2], SOUND_TINKLE, 0.0, 1.0, amount, who, EV_UNHEARD, 0.0, 0.0, tune.shards.pending_max);
 }
 pub fn clear_holes(g: usize) {
     let p = pn(g);
@@ -2322,7 +2323,7 @@ pub fn bar_take(c: &Ctx, bi: u32, flags: u32) -> bool {
 }
 /// what bars a charge at `from` takes: every standing bar with a point of its length inside its reach and nothing solid between, each judged as if the others
 /// were not there. Lists (a static, the point: 4 doubles each) in `out`, ascending, and says how many.
-pub fn bars_blast(c: &Ctx, from: [f64; 3], reach: f64, statics: usize, out: &mut [f64]) -> usize {
+pub fn bars_blast(c: &Ctx, from: [f64; 3], reach: f64, statics: usize, out: &mut [f64], tune: &Knobs) -> usize {
     let o = world(c.w);
     let mut near = [0u32; MAX_BARS];
     let mut was = [0u32; MAX_BARS];
@@ -2357,7 +2358,7 @@ pub fn bars_blast(c: &Ctx, from: [f64; 3], reach: f64, statics: usize, out: &mut
             if hypot3(from[0] - q[0], from[1] - q[1], from[2] - q[2]) > reach + js_max(h0, h2) {
                 continue;
             }
-            if solid(c, from, q) {
+            if solid(c, from, q, tune) {
                 continue;
             }
             out[took * 4] = bi as f64;

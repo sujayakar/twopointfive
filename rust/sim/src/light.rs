@@ -9,6 +9,7 @@
 //!
 //! The cosines and the lines' lengths are the game's own, so this answers only where EXACT.on.
 
+use game_types::knobs::Knobs;
 use crate::bricks;
 use crate::lights::{Lights, ROWS, R_DAY, R_ON, R_STEADY};
 use crate::lines;
@@ -199,9 +200,9 @@ static mut AT: usize = 0;
 /// `estimate` for the host's question (lib.rs light_estimate): the faces are summed in SUM and, as each part ends, copied to `out` for the host to read
 /// after the last
 #[allow(clippy::too_many_arguments)]
-pub fn asked(w: usize, set: i32, n: usize, p: [f64; 3], shade: &Shade, more: bool, rows: Option<Rows>, last: bool, out: &mut [f64]) -> u32 {
+pub fn asked(w: usize, set: i32, n: usize, p: [f64; 3], shade: &Shade, more: bool, rows: Option<Rows>, last: bool, out: &mut [f64], tune: &Knobs) -> u32 {
     let (sum, at) = unsafe { (&mut *core::ptr::addr_of_mut!(SUM), &mut *core::ptr::addr_of_mut!(AT)) };
-    let r = estimate(w, set, n, p, shade, more, rows, last, at, sum);
+    let r = estimate(w, set, n, p, shade, more, rows, last, at, sum, tune);
     out[..6].copy_from_slice(sum);
     r
 }
@@ -231,7 +232,7 @@ fn light_window(d: f64, range: f64) -> f64 {
 /// gone on from, so a list of any length is one sum in one order, the bits of a single loop over it. `last` = no part follows: the rows after the last
 /// written lamp are taken. The faces are read after the last part alone.
 #[allow(clippy::too_many_arguments)]
-pub fn estimate(w: usize, set: i32, n: usize, p: [f64; 3], shade: &Shade, more: bool, rows: Option<Rows>, last: bool, at: &mut usize, acc: &mut [f64]) -> u32 {
+pub fn estimate(w: usize, set: i32, n: usize, p: [f64; 3], shade: &Shade, more: bool, rows: Option<Rows>, last: bool, at: &mut usize, acc: &mut [f64], tune: &Knobs) -> u32 {
     if !more {
         for a in acc[..6].iter_mut() {
             *a = 0.0;
@@ -243,11 +244,11 @@ pub fn estimate(w: usize, set: i32, n: usize, p: [f64; 3], shade: &Shade, more: 
     }
     // (a lamp this dim on the point is no lamp; beside an hour's light, at which eyes are used to as much less)
     let least = 0.002 * rows.map_or(1.0, |q| q.exposure);
-    each(n, rows, last, at, |l| one(w, set, p, shade, l, least, acc))
+    each(n, rows, last, at, |l| one(w, set, p, shade, l, least, acc, tune))
 }
 /// one lamp's light on the point, onto the six faces: the shader's own terms, then one line to it, then the receiving cosine a face. 0, or ASK_HOST.
 #[inline(always)]
-fn one(w: usize, set: i32, p: [f64; 3], shade: &Shade, l: &Lamp, least: f64, acc: &mut [f64]) -> u32 {
+fn one(w: usize, set: i32, p: [f64; 3], shade: &Shade, l: &Lamp, least: f64, acc: &mut [f64], tune: &Knobs) -> u32 {
     let (dx, dy, dz) = (l.pos[0] - p[0], l.pos[1] - p[1], l.pos[2] - p[2]);
     let range = l.range;
     // (a lamp further off along one axis than its range is further off than its range: the test below would pass it by, at the price of a root)
@@ -289,7 +290,7 @@ fn one(w: usize, set: i32, p: [f64; 3], shade: &Shade, l: &Lamp, least: f64, acc
     let tmax = dist - lr - 0.02;
     if tmax > 0.05 {
         let end = [p[0] + lx * tmax, p[1] + ly * tmax, p[2] + lz * tmax];
-        match lines::sight_line(w, set, F_GLASS, p[0], p[1], p[2], end[0], end[1], end[2]) {
+        match lines::sight_line(w, set, F_GLASS, p[0], p[1], p[2], end[0], end[1], end[2], tune) {
             None => return ASK_HOST,
             Some(true) => return 0,
             Some(false) => {}

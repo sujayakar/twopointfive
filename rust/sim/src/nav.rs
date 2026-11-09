@@ -7,6 +7,7 @@
 //!
 //! The lengths (the smoothing's, and the lines nearestFree asks) are the game's own, so this answers only where EXACT.on.
 
+use game_types::knobs::Knobs;
 use crate::lines;
 use crate::maths::hypot2;
 use crate::single::{get, put, S};
@@ -112,7 +113,7 @@ impl Grid {
         true
     }
     /// NavGrid.nearestFree for a world point that asked: Ok(the cell, or none), Err = a line the host must judge
-    fn nearest_free(&self, shut: &[u8], w: usize, set: i32, ask: u32, gx: usize, gz: usize, wx: f64, wz: f64) -> Result<Option<(usize, usize)>, ()> {
+    fn nearest_free(&self, shut: &[u8], w: usize, set: i32, ask: u32, gx: usize, gz: usize, wx: f64, wz: f64, tune: &Knobs) -> Result<Option<(usize, usize)>, ()> {
         let mut fallback: Option<(usize, usize)> = None;
         let mut extra: i32 = 1;
         let (gx, gz) = (gx as i32, gz as i32);
@@ -131,7 +132,7 @@ impl Grid {
                     if fallback.is_none() {
                         fallback = Some(c);
                     }
-                    match lines::solid_line(w, set, ask, wx, 1.0, wz, (x as f64 + 0.5) * self.cell, 1.0, (z as f64 + 0.5) * self.cell) {
+                    match lines::solid_line(w, set, ask, wx, 1.0, wz, (x as f64 + 0.5) * self.cell, 1.0, (z as f64 + 0.5) * self.cell, tune) {
                         None => return Err(()),
                         Some(false) => return Ok(Some(c)),
                         Some(true) => {}
@@ -152,16 +153,16 @@ impl Grid {
 
 /// findPath(a, b, max_iter) with no penalty: how many waypoints were written (x z each, at way_addr) · NO_WAY (the TypeScript's null) · ASK_HOST
 #[allow(clippy::too_many_arguments)]
-pub fn find_path(w: usize, set: i32, ask: u32, gw: usize, gh: usize, cell: f64, a0: f64, a2: f64, b0: f64, b2: f64, max_iter: u32) -> i32 {
-    begin(&mut Flat, w, set, ask, gw, gh, cell, a0, a2, b0, b2, max_iter)
+pub fn find_path(w: usize, set: i32, ask: u32, gw: usize, gh: usize, cell: f64, a0: f64, a2: f64, b0: f64, b2: f64, max_iter: u32, tune: &Knobs) -> i32 {
+    begin(&mut Flat, w, set, ask, gw, gh, cell, a0, a2, b0, b2, max_iter, tune)
 }
 /// findPath(a, b, max_iter, penalty): as `find_path`, or NEED = the search has come to cells whose price it does not have (`need_len` of them at
 /// `need_addr`, a cell's index each). The host writes each one's price at `price_addr` (a double a cell, by the cell's index) and calls `resume`,
 /// which answers as this does. A SEARCH THAT WAITS IS SCRATCH OF ONE QUESTION: until it is resumed to its end or dropped (`drop_run`), every
 /// other search asked here is the host's (ASK_HOST), so the host never asks one from inside a price.
 #[allow(clippy::too_many_arguments)]
-pub fn find_priced(w: usize, set: i32, ask: u32, gw: usize, gh: usize, cell: f64, a0: f64, a2: f64, b0: f64, b2: f64, max_iter: u32) -> i32 {
-    begin(&mut Asked, w, set, ask, gw, gh, cell, a0, a2, b0, b2, max_iter)
+pub fn find_priced(w: usize, set: i32, ask: u32, gw: usize, gh: usize, cell: f64, a0: f64, a2: f64, b0: f64, b2: f64, max_iter: u32, tune: &Knobs) -> i32 {
+    begin(&mut Asked, w, set, ask, gw, gh, cell, a0, a2, b0, b2, max_iter, tune)
 }
 pub fn need_addr() -> usize {
     core::ptr::addr_of!(WANT) as usize
@@ -246,7 +247,7 @@ struct Run {
 static mut RUN: Run = Run { live: false, smoothing: false, held: false, gw: 0, gh: 0, cell: 0.0, a0: 0.0, a2: 0.0, start: 0, goal: 0, gx: 0, gz: 0, n_open: 0, n_seen: 0, iter: 0, max_iter: 0, cur: 0, n: 0, n_priced: 0 };
 
 #[allow(clippy::too_many_arguments)]
-fn begin<P: Prices>(src: &mut P, w: usize, set: i32, ask: u32, gw: usize, gh: usize, cell: f64, a0: f64, a2: f64, b0: f64, b2: f64, max_iter: u32) -> i32 {
+fn begin<P: Prices>(src: &mut P, w: usize, set: i32, ask: u32, gw: usize, gh: usize, cell: f64, a0: f64, a2: f64, b0: f64, b2: f64, max_iter: u32, tune: &Knobs) -> i32 {
     let run = unsafe { &mut *core::ptr::addr_of_mut!(RUN) };
     // (a search asked while another waits for its prices would write over that one's tables)
     if run.live {
@@ -284,7 +285,7 @@ fn begin<P: Prices>(src: &mut P, w: usize, set: i32, ask: u32, gw: usize, gh: us
     let (sx, sz) = (cell_of(a0, cell, gw), cell_of(a2, cell, gh));
     let (mut gx, mut gz) = (cell_of(b0, cell, gw), cell_of(b2, cell, gh));
     if shut[gz * gw + gx] != 0 {
-        match grid.nearest_free(shut, w, set, ask, gx, gz, b0, b2) {
+        match grid.nearest_free(shut, w, set, ask, gx, gz, b0, b2, tune) {
             Err(()) => return ASK_HOST,
             Ok(None) => return NO_WAY,
             Ok(Some((x, z))) => {

@@ -61,19 +61,18 @@ pub fn snow_bog_kinds(g: &mut crate::game::Game) -> Vec<u8> {
 pub fn snow_bog_at(g: &mut crate::game::Game, x: f64, y: f64, z: f64) -> f64 {
     if !snow_bog_may(g) { return 0.0; }
     crate::weather::weather_roofs_now(g);
-    if !g.m.rustknobs.rust_knobs.tick { crate::rustknobs::knobs_to_rust(g); } // WX_KNOBS.here
     crate::scene_collision::rule(g, &mut |g: &mut Game| {
         crate::scene_collision::rule_open(g);
         let kinds = ground(g).kinds;
         crate::scene_box_mirror::box_mirror_snow(g, &kinds);
-        ::sim::snow::bog_at(g.sim, g.col.mirror.slot as usize, x, y, z)
+        ::sim::snow::bog_at(g.sim, g.col.mirror.slot as usize, x, y, z, &g.k)
     })
 }
 
 /// …asked of the game shared: the table of the snow as the last thing to touch the ground of this level left it (none has yet: no bog)
 pub fn snow_bog_shared(g: &Game, x: f64, y: f64, z: f64) -> f64 {
     if !snow_bog_may(g) || g.col.mirror.snow_len < 0.0 { return 0.0; }
-    ::sim::snow::bog_at(g.sim, g.col.mirror.slot as usize, x, y, z)
+    ::sim::snow::bog_at(g.sim, g.col.mirror.slot as usize, x, y, z, &g.k)
 }
 
 #[cfg(test)]
