@@ -7,8 +7,7 @@ fn varOf(q: vec2i) -> vec2f { let m = textureLoad(mom, q, 0); var v = max(m.y - 
   if (p.sky && NARROW == 0) { textureStore(outB, id.xy, c); return; } if (NARROW == 1 && c.a < 0.0) { textureStore(outB, id.xy, c); return; }
   var vm = vec2f(0.0); var wv = 0.0; for (var y = -1; y <= 1; y++) { for (var x = -1; x <= 1; x++) { let q = clamp(p0 + vec2i(x, y), vec2i(0), dim - 1); let w = f32((2 - abs(x)) * (2 - abs(y))); vm += varOf(q) * w; wv += w; } } vm /= wv;
   let m0 = textureLoad(mom, p0, 0); let n = m0.z; let sg = sqrt(vm.x) * (SHARE * @tune.soft) / sqrt(max(n * 0.5, 1.0)) + 1e-3 + 0.012 * lum(c.rgb);
-  let young = 1.0 - smoothstep(1.0, 10.0, n); let keen = KIND == 0 && NARROW == 0 && n > BROAD * f32(64 / STRIDE);     // (what many frames stand behind needs no wide blur: 0 = never)
-  if (keen) { textureStore(outB, id.xy, c); return; }
+  let young = 1.0 - smoothstep(1.0, 10.0, n);
   var acc = c; var first = 0.0; var ws = 1.0; var wf = vec4f(1.0); if (KIND == 1) { if (STRIDE == 4 && n > 12.0) { textureStore(outB, id.xy, c); return; } wf = lightOf(p0); acc = c * wf; first = firstNow; } let sf = sqrt(max(c * (1.0 - c), vec4f(0.0))) * 2.2 / sqrt(max(n, 1.0)) + vec4f(0.012) + vec4f(0.35 * young); let l0 = lum(c.rgb); let fr = LAYER == 1;
   var reach = 1.0; if (NARROW == 1) { var rough = p.rough; if (fr) { rough = 0.02; } let lobe = rough * rough * 1.6 * c.a / max(p.t + c.a, 0.1) * frame.size.y / (2.0 * length(frame.camUp.xyz) * f32(DIV)); reach = lobe * (0.6 + young) + 1.5 * young; if (reach < 0.6 * f32(STRIDE)) { textureStore(outB, id.xy, c); return; } }
   for (var y = -1; y <= 1; y++) { for (var x = -1; x <= 1; x++) {
