@@ -51,7 +51,7 @@ function wood(p: Put, fine: boolean) {
     for (const [y, h] of [[0.0735, 0.0500], [0.1655, 0.0215]] as const) board([s * (X - 0.0115), y, 0], [0.0065, h, Z - 2 * THICK - 0.0005], y < 0.1 ? { marks: [label(s)] } : {}, fine ? [s > 0 ? 1 : 0] : []);
     for (const z of [-1, 1]) p.add({ at: [s * (X - 0.029), POST / 2 + 0.003, z * (Z - 2 * THICK - 0.0125)], half: [0.0110, POST / 2 - 0.003, 0.0110], mat: M['lamp shade']!, tint: tone(WOOD, 0.93 + 0.06 * q()) });
   }
-  p.box([0, 0.020, 0], [X - 0.020, 0.0045, Z - 2 * THICK - 0.002], M['lamp shade']!, tone(WOOD, 0.9));
+  p.box([0, 0.020, 0], [X - 0.020, 0.0045, Z - 2 * THICK - 0.004], M['lamp shade']!, tone(WOOD, 0.9));
   for (const s of [-1, 1]) p.box([s * 0.16, 0.0082, 0], [0.016, 0.0082, 0.112], M['lamp shade']!, tone(WOOD, 0.88)); /* (it stands on these two, set in: a low wide thing on its corners rocks) */
   if (!fine) return;
   for (const s of [-1, 1]) { for (const [y, h] of SLATS) for (const z of [-1, 1]) for (const d of [-1, 1]) p.drum([s * (X - 0.030 + d * 0.004), y + d * h * 0.5, z * (Z + 0.0006)], 0.0030, 0.0010, M.steel!, [0.62, 0.60, 0.58], { rot: rotX(Math.PI / 2) }); }
