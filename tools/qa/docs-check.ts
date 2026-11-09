@@ -13,8 +13,7 @@ import { resolve } from 'node:path';
 const ROOT = resolve(import.meta.dir, '../..'), BREAK = process.env.DOCS_BREAK === '1', asked = process.argv.slice(2);
 const INDEX = { bytes: 14_000, lines: 150 }, PAGE = 15_000, WIDE = 200;
 /** pages still to be written over: named by the index, asked nothing. This list only gets shorter */
-const OLD = ['ai-architecture', 'destruction', 'dialogue', 'door-tools', 'enemies', 'levels', 'missions', 'player', 'rust', 'showcases',
-  'squad', 'stealth', 'team-feel', 'workflow', 'writing'].map(a => `docs/agents/${a}.md`);
+const OLD = ['ai-architecture', 'destruction', 'door-tools', 'enemies', 'rust', 'squad', 'team-feel', 'workflow'].map(a => `docs/agents/${a}.md`);
 
 const read = (f: string) => readFileSync(resolve(ROOT, f), 'utf8');
 const files: string[] = (execFileSync('git', ['-C', ROOT, 'ls-files', '--cached', '--others', '--exclude-standard'], { encoding: 'utf8', maxBuffer: 64 << 20 }) as string).split('\n').filter(f => f && existsSync(resolve(ROOT, f)));
