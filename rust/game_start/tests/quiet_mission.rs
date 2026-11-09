@@ -71,6 +71,30 @@ fn the_offices_night_plays_to_its_end() {
     told(&p, "out through the fire exit");
 }
 
+/// THE RULE: the thing is taken from its face: in reach in front of it (to 1.4 m) and across its width, and never through what stands between, from behind. A man sent to look is sent to floor in the room
+/// with a clear line to it.
+/// A FAILURE MEANS: the drive is pulled through the rack from the next aisle, or a man sent to look at it stands somewhere he can't see it.
+#[test]
+fn the_offices_rack_is_reached_from_its_face() {
+    let mut p = Play::level("office.json", false, &Opts { seed: 5, ..Default::default() });
+    p.g.player_invisible = true;
+    p.run(0.1);
+    let e = p.g.level.errand.clone();
+    let (f, w, reach) = (e.front, e.half_w, game::consts::DRIVE_REACH);
+    for dx in [-w, 0.0, w] { assert!(game::mission::rack_dist(&mut p.g, [f[0] + dx, 0.0, f[2] + 0.7]) < reach, "in front of it, {dx:.2} m along, and out of reach"); }
+    assert!(game::mission::rack_dist(&mut p.g, [f[0], 0.0, f[2] + 1.35]) < reach, "1.35 m straight out and out of reach");
+    assert!(game::mission::rack_dist(&mut p.g, [f[0], 0.0, f[2] + 1.5]) > reach, "1.5 m straight out and in reach");
+    assert!(game::mission::rack_dist(&mut p.g, [f[0], 0.0, f[2] - 1.2]) > reach, "in reach from behind, through the rack");
+    p.sam_put(p.free_near([f[0], f[2] + 0.6], 0.6));
+    p.until(3.0, |p| p.mission_stage() != Stage::Infiltrate).expect("at the rack and the mission does not know it");
+    game::mission::drive_pulled(&mut p.g);
+    let sent = |p: &Play| p.g.guards.iter().find_map(|&m| match &p.g.gd[m].task { Some(game::game::GuardTask::Arm0(t)) if t.kind == game::game::GuardTaskArm0Kind::Rack => Some(t.pos), _ => None });
+    p.until(12.0, |p| sent(p).is_some()).expect("12 s and nobody is sent to look");
+    let at = sent(&p).unwrap();
+    assert!(at[0] > e.area.x0 && at[0] < e.area.x1 && at[2] > e.area.z0 && at[2] < e.area.z1, "he is sent out of the room: {at:?}");
+    assert!(!game::scene_collision::solid_blocked(&mut p.g, [at[0], 1.0, at[2]], [f[0], 1.0, f[2] + 0.05], None), "he is sent where he can't see it: {at:?}");
+}
+
 /// THE RULE: walking out before the thing is taken ends nothing. (The control of the rule above.)
 /// A FAILURE MEANS: the mission can be finished by leaving.
 #[test]

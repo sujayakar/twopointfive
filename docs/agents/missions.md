@@ -68,7 +68,7 @@ living hostage within `out_m` of the team's start, having been led (`rescue_end_
 
 **Quiet** (`QuietData`): `starts`, `spots`, `exits`, `patrols`, `thing`. `quiet_mission_before_restart` writes the deal into `g.level.errand` and benches the routes not manned. The stages run
 in `update_mission`: Infiltrate, Drive (hold on the holder for `DRIVE_SECS`; walking off, sprinting or hauling a body lets go), Exfil, Done past any exit (`out_now`). Every player down is
-Failed. `take_told` is true where the spot is `wired`, and then a calm man is sent to look. `squad=1` adds a partner: pair rules and silence held on (`Held`, put back by
+Failed. Where the spot is `wired` (`Errand` `told`), a calm man is sent to look. `squad=1` adds a partner: pair rules and silence held on (`Held`, put back by
 `quiet_mission_release`), staff hostile to him. The **solo night** is those stages on the office's own mission with no scenario up.
 
 **How it ended** (`ended` in `verdict.rs`): DOWN, CLEAR, WIPED, RESCUED, LOST, OUT or FAILED. `verdict_tick` latches one `RunVerdict`, which never changes for that run.

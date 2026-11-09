@@ -168,11 +168,10 @@ fn breaker_face(g: &crate::game::Game, from: V3) -> crate::handwork::BreakerFace
     BreakerFace { p: pos, n: face_toward(pos, from) }
 }
 
-/// The face of the objective's holder toward a man: the office's rack faces ±z; a quiet mission's holder faces the way he came at it.
+/// The face of the errand's holder toward a man: it faces the way he came at it.
 fn rack_face(g: &crate::game::Game, from: V3) -> crate::handwork::RackFace {
     let rf = g.level.errand.front;
-    let n = if g.staged.facts.unseen { face_toward(rf, from) } else { [0.0, 0.0, js::or(m::sign(from[2] - rf[2]), 1.0)] };
-    RackFace { p: rf, n }
+    RackFace { p: rf, n: face_toward(rf, from) }
 }
 
 /// What Sam's hands are on, if a verb of his that plants him is running.
