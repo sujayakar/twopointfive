@@ -3,21 +3,6 @@
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Debug, Default)]
-pub struct Brk {
-    pub id: f64,
-    pub kind: crate::wallbreak::BKind,
-    pub surf: String,
-    pub box_: BoxId,
-    pub nx: f64,
-    pub ny: f64,
-    pub nz: f64,
-    pub yb: Vec<f64>,
-    pub open: Vec<u8>,
-    pub slots: Vec<f64>,
-    pub live: f64,
-}
-
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Seat {
     pub k: f64,

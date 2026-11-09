@@ -22,27 +22,11 @@ pub enum SamBig {
     Shotgun,
     Hammer,
 }
-impl SamBig {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SamBig::Shotgun => "shotgun",
-            SamBig::Hammer => "hammer",
-        }
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum SamBigSpotTool {
     Shotgun,
     Hammer,
-}
-impl SamBigSpotTool {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SamBigSpotTool::Shotgun => "shotgun",
-            SamBigSpotTool::Hammer => "hammer",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -72,68 +56,17 @@ pub enum SamBigFar {
     Shotgun,
     Hammer,
 }
-impl SamBigFar {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SamBigFar::Shotgun => "shotgun",
-            SamBigFar::Hammer => "hammer",
-        }
-    }
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct SamBigPose {
-    pub kind: crate::bigkit::SamBigPoseKind,
-    pub t: f64,
-    pub equip: f64,
-    pub windup: f64,
-    pub stow: f64,
-    pub blows: Vec<f64>,
-    pub end: f64,
-    pub at: V3,
-    pub snug: bool,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-pub enum SamBigPoseKind {
-    #[default] Shotgun,
-    Hammer,
-}
-impl SamBigPoseKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SamBigPoseKind::Shotgun => "shotgun",
-            SamBigPoseKind::Hammer => "hammer",
-        }
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum BigEquipKind {
     Shotgun,
     Hammer,
 }
-impl BigEquipKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            BigEquipKind::Shotgun => "shotgun",
-            BigEquipKind::Hammer => "hammer",
-        }
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum BigOutByKind {
     Shotgun,
     Hammer,
-}
-impl BigOutByKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            BigOutByKind::Shotgun => "shotgun",
-            BigOutByKind::Hammer => "hammer",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -145,14 +78,6 @@ pub struct BigCarriedC {
 pub enum BigCarried {
     Shotgun,
     Hammer,
-}
-impl BigCarried {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            BigCarried::Shotgun => "shotgun",
-            BigCarried::Hammer => "hammer",
-        }
-    }
 }
 
 /// the counters this module keeps for the checks
@@ -176,9 +101,6 @@ pub const TAIL: f64 = 0.3;
 
 /// (src/game/bigkit.ts:66 BREAK)
 pub const BREAK: bool = false;
-
-/// (src/game/bigkit.ts:68 WEIGHT_BREAK)
-pub const WEIGHT_BREAK: bool = false;
 
 /// (src/game/bigkit.ts:109 MOVE_SLACK)
 pub const MOVE_SLACK: f64 = 1.2;
@@ -210,8 +132,3 @@ pub fn spots() -> JsMap<String, crate::bigkit::SPOTSValue> { { let mut t = JsMap
 /// (src/game/bigkit.ts:189 CARRY_TAIL)
 pub const CARRY_TAIL: f64 = 0.6;
 
-/// (src/game/bigkit.ts:213 BESIDE_REACH)
-pub const BESIDE_REACH: f64 = 1.7;
-
-/// (src/game/bigkit.ts:215 BESIDE_CLEAR)
-pub const BESIDE_CLEAR: f64 = 0.6;

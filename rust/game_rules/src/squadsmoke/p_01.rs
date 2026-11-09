@@ -135,7 +135,7 @@ pub fn squad_smoke_thrower(g: &mut crate::game::Game, men: &[GuardId], at: V3) -
             if g.time - last < again { continue; }
         }
         if let Some(arc) = squad_arc_to(g, gd, at, None, None) {
-            return Some(SquadSmokeThrower { gd, from: arc.from, sol: arc.sol, rest: arc.rest });
+            return Some(SquadSmokeThrower { gd, from: arc.from, sol: arc.sol });
         }
     }
     None
@@ -183,14 +183,9 @@ pub fn row_smoke_issue(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTa
         who: vec![callsign.clone()],
         target: format!("floor:{},{}", js::to_fixed(at[0], 1), js::to_fixed(at[2], 1)),
         auto: None,
-        laid: None,
         serial,
     });
     g.stats.squadsmoke.thrown += 1;
-    let left = g.m.squadsmoke.states.get(key).unwrap().cans;
-    let log = &mut g.m.squadsmoke.squadsmoke_log;
-    log.push(SquadsmokeModSQUADSMOKELOGItem { t: g.time, who: callsign, from: th.from, at: v3::copy(at), land: v3::copy(th.sol.land), rest: th.rest, left });
-    if log.len() > 100 { log.drain(0..50); }
     None
 }
 

@@ -63,14 +63,6 @@ pub enum RoomFightSkillKey {
     Operative,
     Hostile,
 }
-impl RoomFightSkillKey {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RoomFightSkillKey::Operative => "operative",
-            RoomFightSkillKey::Hostile => "hostile",
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct FightSkill {
@@ -198,8 +190,6 @@ pub struct Def {
     pub burst: crate::roomfight::DefBurst,
     pub bolt_until: f64,
     pub bolt_from: Option<crate::game::Foe>,
-    /// INVENTED by a review: see the proposals
-    pub pt_stamp: Option<u32>,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -214,14 +204,6 @@ pub struct DefCnt {
 pub enum DefMoveKind {
     #[default] Cover,
     Fallback,
-}
-impl DefMoveKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DefMoveKind::Cover => "cover",
-            DefMoveKind::Fallback => "fallback",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -255,7 +237,6 @@ pub struct Op {
     pub next: f64,
     pub lost_at: f64,
     pub fell: Option<bool>,
-    pub first: bool,
     pub aim: V3,
     pub ov: crate::roomfight::OpOv,
     pub step: Option<crate::roomfight::OpStep>,
@@ -342,23 +323,6 @@ pub enum OpLineBy {
     Player,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct RoomFightSightOn {
-    pub visible: bool,
-    pub rate: f64,
-    pub dist: f64,
-    pub sighting: bool,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct RoomFightWatchOf {
-    pub at: V3,
-    pub door: Option<String>,
-    pub settled: Option<String>,
-    pub glancing: bool,
-    pub mode: crate::roomfight::DefMode,
-}
-
 #[derive(Clone, Copy, Debug)]
 pub enum RoomFightFriendInLine {
     Guard(GuardId),
@@ -374,7 +338,6 @@ pub struct RoomFightDoorShot {
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct RoomFightStepToPatch {
-    pub goal: Option<V3>,
     pub speed: Option<f64>,
     pub face: Option<f64>,
     pub strafe: Option<bool>,
@@ -392,12 +355,6 @@ pub struct RoomFightStepToPatch {
     pub smoke: Option<bool>,
     pub over: Option<crate::game::GuardScriptOver>,
 }
-
-/// (src/game/roomfight.ts:88 COVER_BREAK)
-pub const COVER_BREAK: bool = false;
-
-/// (src/game/roomfight.ts:90 DOORSHOT_BREAK)
-pub const DOORSHOT_BREAK: bool = false;
 
 /// (src/game/roomfight.ts:260 FIGHT_SKILL: a table nothing writes)
 pub fn fight_skill() -> JsMap<String, crate::roomfight::FightSkill> { { let mut t = JsMap::new(); t.set(String::from("operative"), crate::roomfight::FightSkill { react: [0.12, 0.22], ready: 1.0, surprise: [0.35, 0.6], sector_deg: 50.0, settle_k: 0.4, spread_k: 0.5, preaim: 0.6, notice: 0.12, pair: 0.16, shift: [0.2, 0.3], hold: [f64::INFINITY, f64::INFINITY], glance: [0.0, 0.0], turn: 8.0, bang_break: 0.0, startle: [0.0, 0.0], daze: [0.0, 0.0], nerve: [2.0, 2.0], rally: [0.0, 0.0], rally_chance: 0.0, funnel: 0.35, line: 0.5 }); t.set(String::from("hostile"), crate::roomfight::FightSkill { react: [0.4, 1.1], ready: 0.25, surprise: [0.5, 0.9], sector_deg: 40.0, settle_k: 1.5, spread_k: 1.0, preaim: 0.55, notice: 0.85, pair: 0.1, shift: [0.4, 0.9], hold: [5.0, 11.0], glance: [1.2, 2.6], turn: 3.0, bang_break: 0.3, startle: [0.4, 0.65], daze: [1.0, 2.0], nerve: [0.34, 0.7], rally: [1.5, 4.0], rally_chance: 0.75, funnel: f64::INFINITY, line: f64::INFINITY }); t } }

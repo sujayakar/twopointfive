@@ -460,7 +460,7 @@ pub fn step_sound(g: &mut crate::game::Game, gd: GuardId, move_: f64) {
     g.gd[gd].step_phase = g.ch[c].anim.phase;
     if move_ > 0.4 && ((prev < 0.5) != (g.gd[gd].step_phase < 0.5)) {
         let p = g.ch[c].pos;
-        crate::audio_iface::game_audio_like_footstep(g, p, if move_ > 2.0 { 0.7 } else { 0.3 }, false, None);
+        crate::floor::footfall(g, p, if move_ > 2.0 { 0.7 } else { 0.3 }, false);
     }
 }
 
@@ -958,11 +958,11 @@ pub fn released(g: &mut crate::game::Game, gd: GuardId) {
 // ---------------------------------------------------------------- FLEE: whom to, and the run
 /// Metres by path, and the path; no path is Infinity.   (civilians.ts pathMetres)
 pub fn path_metres(g: &mut crate::game::Game, from: V3, to: V3) -> crate::civilians::PathMetres {
-    let p = match crate::scene_collision::nav_grid_find_path(g, from, to, Some(6000.0), None) { Some(p) if !p.is_empty() => p, _ => return PathMetres { m: m::INF, path: None } };
+    let p = match crate::scene_collision::nav_grid_find_path(g, from, to, Some(6000.0), None) { Some(p) if !p.is_empty() => p, _ => return PathMetres { m: m::INF } };
     let mut s = 0.0;
     let mut prev = from;
     for q in p.iter() { s += m::hyp2(q[0] - prev[0], q[2] - prev[2]); prev = *q; }
-    PathMetres { m: s, path: Some(p) }
+    PathMetres { m: s }
 }
 
 /// May this man be run to and told.   (civilians.ts tellable)

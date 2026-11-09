@@ -81,7 +81,7 @@ pub fn place_defenders(seed: f64, attempt: Option<f64>, s: &crate::roomclear::Pl
         for k in idx {
             let mk = &r.marks[k];
             let name = format!("Tango {}", out.len() + 1);
-            out.push(crate::roomclear::Placement { room: r.id.clone(), mark: k as f64, pos: mk.pos, watch: mk.watch.clone(), aim_at: mk.aim_at, name });
+            out.push(crate::roomclear::Placement { room: r.id.clone(), mark: k as f64, pos: mk.pos, aim_at: mk.aim_at, name });
         }
     }
     out
@@ -540,7 +540,6 @@ pub fn room_clear_scenario_start(g: &mut crate::game::Game, seed: Option<f64>) -
         g.room_clear.fresh = fresh0;
         return Some(why);
     }
-    g.room_clear.log.clear();
     g.room_clear.attempt = 0.0;
     let name = room_clear_scenario_structure(g).map_or(String::new(), |s| s.name);
     crate::difficulty::difficulty_here(g, &name);
@@ -551,14 +550,6 @@ pub fn room_clear_scenario_start(g: &mut crate::game::Game, seed: Option<f64>) -
         return Some(r.unwrap_or_else(|| String::from("the staging failed")));
     }
     None
-}
-
-/// Stop it: the night breach's stop   (roomclear.ts RoomClearScenario.stop)
-pub fn room_clear_scenario_stop(g: &mut crate::game::Game) {
-    if room_clear_scenario_active(g) {
-        crate::nightbreach::night_breach_stop(g);
-    }
-    room_clear_scenario_clear(g);
 }
 
 /// Stage it afresh   (roomclear.ts RoomClearScenario.restage)
@@ -587,12 +578,6 @@ pub fn room_clear_scenario_clear(g: &mut crate::game::Game) {
 
 /// what happened when, on the game clock   (roomclear.ts RoomClearScenario.note)
 pub fn room_clear_scenario_note(g: &mut crate::game::Game, what: &str) {
-    let t = g.time;
-    let log = &mut g.room_clear.log;
-    log.push(crate::roomclear::RoomClearScenarioLogItem { t, what: String::from(what) });
-    if log.len() > 400 {
-        log.drain(0..100);
-    }
 }
 
 /// the night breach's staging asks who the defenders are: every staging is the knob's placement, first attempt (SAMESTART)   (roomclear.ts RoomClearScenario.deal)
@@ -731,16 +716,13 @@ pub fn room_clear_scenario_tick(g: &mut crate::game::Game, _dt: f64) {
     if g.room_clear.end.is_some() {
         return;
     }
-    let pair_word = if ops > 2 { "the squad down" } else { "the pair down" };
     if crate::seats::all_down(g) {
         // (first: the last defender and Sam down inside one frame is no win)
         room_clear_scenario_finish(g, crate::roomclear::RoomClearEnd::Wiped, "player down");
     } else if crate::rails::rails_ends_now(g) {
         room_clear_scenario_finish(g, crate::roomclear::RoomClearEnd::Taken, "the mission is done");
     } else if crate::rails::rails_holds_end(g) {
-        if pair_up == 0 && ops > 0 && crate::rails::rails_sky_on(g) {
-            room_clear_scenario_finish(g, crate::roomclear::RoomClearEnd::Wiped, pair_word);
-        }
+        // (the mission is still on its steps: its end is theirs)
     } else if live.is_empty() && !crate::qrf::response_up(g) {
         let team = if ops > 0 { format!("{} of {} teammates up", pair_up, ops) } else { String::from("alone") };
         let why = format!("{} rooms clear, {}", g.room_clear.rooms.len(), team);

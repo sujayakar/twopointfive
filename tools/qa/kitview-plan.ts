@@ -19,7 +19,7 @@ import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { faceHere, FACE_WASM } from '../blitz/face-build';
 import { parseLevelData, validateLevelData } from '../levels/lib/levelData';
-import { ALL_MISSIONS } from '../../src/scene/scenarioList';
+import { missionRows } from '../desk.ts';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type Data = any;
@@ -155,7 +155,7 @@ function acting() {
 // ---- D
 function quietWays() {
   say('\n=== D. a quiet mission\'s way: the pool lamp hangs over a glowing box on a wall');
-  const quietLevels = new Set((ALL_MISSIONS as Data[]).filter(e => e.kind === 'quiet').map(e => (e.level ?? 'office.json').replace(/\.json$/, ''))); quietLevels.add('office');   // (the solo night: no row of the list, the bundled office's first way)
+  const quietLevels = new Set(missionRows().filter(e => e.kind === 'quiet').map(e => e.level.replace(/\.json$/, ''))); quietLevels.add('office');   // (the solo night: no row of the list, the bundled office's first way)
   for (const name of withBlock) { if (!quietLevels.has(name)) continue; const Y = levelOf(name).data.scenarios.kitView.ways[0], F = (answers.get(`${name} 0`) ?? ask(levelOf(name).text, 0)).plan.lamps.porch.fixture;
     row(!!F, `${said(name, Y, 0)}: ${F ? `the box at ${pt(F.at)}` : 'NO WALL CARRIES ONE: nothing to shoot out'}`); }
 }

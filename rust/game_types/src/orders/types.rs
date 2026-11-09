@@ -138,7 +138,6 @@ impl Default for SquadOrders { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct SquadOwner {
-    pub name: String,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -280,7 +279,6 @@ pub struct SquadOrdersLogItem {
     pub who: Vec<String>,
     pub target: String,
     pub auto: Option<bool>,
-    pub laid: Option<bool>,
     /// INVENTED: g.serial() at the push (orders.ts:881 cuts the front): rescue.ts:570 and lesson.ts:113 hold a row as a cursor by identity
     pub serial: u32,
 }
@@ -426,12 +424,10 @@ pub struct OrderDef {
     pub opens: Option<String>,
     pub listed: Option<Vec<crate::orders::TargetKind>>,
     pub hot_key: Option<String>,
-    pub page_only: Option<bool>,
     pub ack: Option<Vec<String>>,
     pub ack_now: Option<Vec<String>>,
     pub on_word: Option<bool>,
     pub free: Option<bool>,
-    pub head: Option<String>,
     pub stands_in: Option<crate::orders::OrderDefStandsIn>,
 }
 impl Default for OrderDef {
@@ -445,21 +441,13 @@ impl Default for OrderDef {
             opens: None,
             listed: None,
             hot_key: None,
-            page_only: None,
             ack: None,
             ack_now: None,
             on_word: None,
             free: None,
-            head: None,
             stands_in: None,
         }
     }
-}
-
-#[derive(Clone, Debug)]
-pub enum OrderDefLabel {
-    Text(String),
-    Arm1(crate::FnField),
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -526,83 +514,6 @@ pub enum Tone {
     Blue,
     Gold,
 }
-impl Tone {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Tone::Red => "red",
-            Tone::Blue => "blue",
-            Tone::Gold => "gold",
-        }
-    }
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct OrderHudRow {
-    pub kind: crate::orders::OrderHudRowKind,
-    pub label: String,
-    pub opts: Vec<crate::orders::OrderHudRowOptsItem>,
-    pub in_reach: bool,
-    pub off: bool,
-    pub cont: Option<bool>,
-    pub tone: Option<crate::orders::Tone>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
-pub enum OrderHudRowKind {
-    #[default] Cam,
-    Guard,
-    Breaker,
-    Door,
-    Light,
-    Body,
-    Objective,
-    Held,
-    Wall,
-    Switch,
-    Charge,
-    Cancel,
-}
-impl OrderHudRowKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            OrderHudRowKind::Cam => "cam",
-            OrderHudRowKind::Guard => "guard",
-            OrderHudRowKind::Breaker => "breaker",
-            OrderHudRowKind::Door => "door",
-            OrderHudRowKind::Light => "light",
-            OrderHudRowKind::Body => "body",
-            OrderHudRowKind::Objective => "objective",
-            OrderHudRowKind::Held => "held",
-            OrderHudRowKind::Wall => "wall",
-            OrderHudRowKind::Switch => "switch",
-            OrderHudRowKind::Charge => "charge",
-            OrderHudRowKind::Cancel => "cancel",
-        }
-    }
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct OrderHudRowOptsItem {
-    pub key: String,
-    pub text: String,
-    pub tone: Option<crate::orders::Tone>,
-    pub gone: Option<bool>,
-    pub lost: Option<crate::deathrecap::LostMan>,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct OrderHudMenu {
-    pub rows: Vec<crate::orders::OrderHudRow>,
-    pub primary: f64,
-    pub more: f64,
-    pub open: bool,
-    pub hint: String,
-    pub cancel: String,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct FightLease {
-}
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct OrdersModFOLLOWWORDValue {
@@ -620,22 +531,6 @@ pub struct LOW {
 pub struct AIM {
     pub stance: crate::character::Stance,
     pub upper: crate::character::UpperMode,
-}
-
-#[derive(Clone, Debug)]
-pub enum SquadOrdersRecipientsT {
-    Floor(crate::orders::OrderTargetFloor),
-    Door(crate::orders::OrderTargetDoor),
-    None(crate::orders::OrderTargetNone),
-    Foe(crate::orders::OrderTargetFoe),
-}
-
-#[derive(Clone, Copy, Debug)]
-pub enum SquadOrdersRecipientsWho {
-    Num(f64),
-    All,
-    Red,
-    Blue,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -662,14 +557,6 @@ pub struct SquadOrdersSceneHitFirst {
 pub struct SquadOrdersSceneHit {
     pub t: f64,
     pub index: f64,
-}
-
-#[derive(Clone, Copy, Debug)]
-pub enum SquadOrdersGiveWho {
-    Num(f64),
-    All,
-    Red,
-    Blue,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -723,38 +610,6 @@ pub struct SquadOrdersAssignA {
     pub tries: Option<crate::doortools::DoorToolsDoneItemLaneBackTries>,
 }
 
-#[derive(Clone, Debug)]
-pub enum SquadOrdersMenuTarget {
-    Floor(crate::orders::OrderTargetFloor),
-    Door(crate::orders::OrderTargetDoor),
-    None(crate::orders::OrderTargetNone),
-    Foe(crate::orders::OrderTargetFoe),
-}
-
-#[derive(Clone, Debug)]
-pub enum SquadOrdersHover {
-    Floor(crate::orders::OrderTargetFloor),
-    Door(crate::orders::OrderTargetDoor),
-    None(crate::orders::OrderTargetNone),
-    Foe(crate::orders::OrderTargetFoe),
-}
-
-#[derive(Clone, Debug)]
-pub enum SquadOrdersWhoAfterTPoint {
-    Floor(crate::orders::OrderTargetFloor),
-    Door(crate::orders::OrderTargetDoor),
-    None(crate::orders::OrderTargetNone),
-    Foe(crate::orders::OrderTargetFoe),
-}
-
-#[derive(Clone, Debug)]
-pub enum SquadOrdersStepWhoPoint {
-    Floor(crate::orders::OrderTargetFloor),
-    Door(crate::orders::OrderTargetDoor),
-    None(crate::orders::OrderTargetNone),
-    Foe(crate::orders::OrderTargetFoe),
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct SquadOrdersRingUpG {
     pub men: Vec<GuardId>,
@@ -767,23 +622,12 @@ pub struct SquadOrdersGoalPart {
     pub split: bool,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct SquadOrdersHintViewRing {
-    pub at: V3,
-    pub r: f64,
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct SquadOrdersSeats {
     pub row: Vec<f64>,
     pub more: f64,
     pub over: Vec<f64>,
     pub same: Vec<f64>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct SquadOrdersOwnMarkFirstAskRetItem {
-    pub pos: V3,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -820,15 +664,6 @@ pub enum SquadOrdersRouteHow {
     Through,
     Mouth,
 }
-impl SquadOrdersRouteHow {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SquadOrdersRouteHow::Round => "round",
-            SquadOrdersRouteHow::Through => "through",
-            SquadOrdersRouteHow::Mouth => "mouth",
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct SquadOrdersRouteLock {
@@ -863,57 +698,6 @@ pub struct SquadOrdersWalkSendT {
 }
 
 #[derive(Clone, Debug, Default)]
-pub struct SquadOrdersWalkSendOn {
-    pub post: Option<V3>,
-    pub going: String,
-    pub order: String,
-    pub face: Option<f64>,
-    pub there: String,
-    pub t0: Option<f64>,
-    pub follow: Option<f64>,
-    pub watch: Option<V3>,
-    pub door: Option<DoorId>,
-    pub strafe: Option<bool>,
-    pub stance: Option<crate::character::Stance>,
-    pub upper: Option<crate::character::UpperMode>,
-    pub stack_side: Option<f64>,
-    pub move_: Option<crate::doortools::DoorToolsDoneItemLaneBackMove>,
-    pub set_line: Option<String>,
-    pub group: Option<f64>,
-    pub set_said: Option<bool>,
-    pub goal: Option<V3>,
-    pub arrived: Option<bool>,
-    pub held_set: Option<bool>,
-    pub held_fire: Option<bool>,
-    pub arr_t: Option<f64>,
-    pub moved_t: Option<f64>,
-    pub light: Option<bool>,
-    pub low: Option<bool>,
-    pub yield_t: Option<f64>,
-    pub face_now: Option<f64>,
-    pub search: Option<bool>,
-    pub search_t: Option<f64>,
-    pub via: Option<Vec<V3>>,
-    pub anchor: Option<V3>,
-    pub mark: Option<V3>,
-    pub mark_t: Option<f64>,
-    pub had: Option<V3>,
-    pub back_n: Option<f64>,
-    pub shy: Option<DoorId>,
-    pub thru: Option<DoorId>,
-    pub via_for: Option<V3>,
-    pub via_t: Option<f64>,
-    pub pace: Option<f64>,
-    pub spare: Option<bool>,
-    pub from: Option<V3>,
-    pub foe: Option<GuardId>,
-    pub crouch: Option<bool>,
-    pub lean: Option<f64>,
-    pub fit: Option<crate::roomfit::Fit>,
-    pub tries: Option<crate::doortools::DoorToolsDoneItemLaneBackTries>,
-}
-
-#[derive(Clone, Debug, Default)]
 pub struct SquadOrdersAsked {
     pub why: Option<String>,
     pub lock: Option<crate::orders::SquadOrdersAskedLock>,
@@ -926,33 +710,8 @@ pub struct SquadOrdersAskedLock {
 }
 
 #[derive(Clone, Debug, Default)]
-pub struct SquadOrdersAskAsideOwn {
-    pub r: Option<JsMap<String, crate::orders::SquadOrdersReachedValue>>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct SquadOrdersAskAsideOwnR {
-}
-
-#[derive(Clone, Debug, Default)]
 pub struct SquadOrdersWhoTag {
     pub tag: String,
-    pub one: bool,
-}
-
-#[derive(Clone, Debug)]
-pub enum SquadOrdersHoverWordsT {
-    Floor(crate::orders::OrderTargetFloor),
-    Door(crate::orders::OrderTargetDoor),
-    None(crate::orders::OrderTargetNone),
-    Foe(crate::orders::OrderTargetFoe),
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct SquadOrdersMark {
-    pub at: V3,
-    pub text: String,
-    pub tone: Option<crate::orders::Tone>,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -996,12 +755,6 @@ pub const WHEEL_STEP: f64 = 60.0;
 /// (src/game/orders.ts:336 ORDER_DIGITS)
 pub const ORDER_DIGITS: f64 = 5.0;
 
-/// (src/game/orders.ts:339 COMPASS: a table nothing writes)
-pub fn compass_table() -> Vec<String> { alloc::vec![String::from("south"), String::from("south-east"), String::from("east"), String::from("north-east"), String::from("north"), String::from("north-west"), String::from("west"), String::from("south-west")] }
-
-/// (src/game/orders.ts:425 WORD_HEAD)
-pub const WORD_HEAD: &str = "on your word";
-
 /// (src/game/orders.ts:2629 LOW: a table nothing writes)
 pub fn low() -> crate::orders::LOW { crate::orders::LOW { stance: crate::character::Stance::LowReady, upper: crate::character::UpperMode::None } }
 
@@ -1019,27 +772,6 @@ pub const MOUTH_M: f64 = 0.8;
 
 /// (src/game/orders.ts:2636 SAME_PLUS_M)
 pub const SAME_PLUS_M: f64 = 2.0;
-
-/// (src/game/orders.ts:2637 SAMEWAY_BREAK)
-pub const SAMEWAY_BREAK: bool = false;
-
-/// (src/game/orders.ts:2638 SELFBODY_BREAK)
-pub const SELFBODY_BREAK: bool = false;
-
-/// (src/game/orders.ts:2639 FILEQUEUE_BREAK)
-pub const FILEQUEUE_BREAK: bool = false;
-
-/// (src/game/orders.ts:2640 PROPROUND_BREAK)
-pub const PROPROUND_BREAK: bool = false;
-
-/// (src/game/orders.ts:2662 ASIDECLEAR_BREAK)
-pub const ASIDECLEAR_BREAK: bool = false;
-
-/// (src/game/orders.ts:2663 TRAILDOORS_BREAK)
-pub const TRAILDOORS_BREAK: bool = false;
-
-/// (src/game/orders.ts:2679 ROUND_CAP)
-pub const ROUND_CAP: f64 = 1.6;
 
 /// (src/game/orders.ts:2679 ROUND_PLUS_M)
 pub const ROUND_PLUS_M: f64 = 3.0;

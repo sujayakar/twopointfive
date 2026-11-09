@@ -101,12 +101,6 @@ pub struct DoorPathWay {
 #[derive(Clone, Copy, Debug, Default)]
 pub struct DoorPathMayGoQ {
     pub gd: GuardId,
-    pub pod: crate::doorpath::DoorPathMayGoQPod,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct DoorPathMayGoQPod {
-    pub pos: V3,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -118,12 +112,4 @@ pub struct DoorPathSentPod {
 pub enum DoorPathDropWhy {
     Taken,
     GaveUp,
-}
-impl DoorPathDropWhy {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DoorPathDropWhy::Taken => "taken",
-            DoorPathDropWhy::GaveUp => "gaveUp",
-        }
-    }
 }

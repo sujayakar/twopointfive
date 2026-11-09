@@ -1,6 +1,6 @@
 // HOW MANY ARE INSIDE IS A MYSTERY. The maintainer, 10-23: "we should also remove all defender counts from the
 // menus, etc., it should be a mystery!" What a player reads BEFORE a mission, held to that: the words of
-// every mission row, start-page pick and difficulty sentence. Reads tables only: no stand, nothing of the game runs.
+// every mission row, start-page pick and difficulty sentence. The rows are the module's (tools/desk.ts): no game is stood.
 //   bun run tools/qa/mystery-check.ts [--list]
 //   total    no row's place, job or pick line says its own head count: a number beside "enemies", "defenders", "guards", "men" … that IS the row's
 //            `defenders`, any such number past five, "against eleven", "eleven hold". A smaller number is a part of the puzzle and stays ("two sentries
@@ -28,14 +28,12 @@ export async function mysteryCheck(): Promise<boolean> {
   const BREAK = process.env.MYSTERY_BREAK === '1', LIST = process.argv.includes('--list');
   console.log(`\n=== mystery: no screen says how many are inside${BREAK ? ' — MYSTERY_BREAK: the old sentences read as rows' : ''} ===`);
   let all = true; const line = (ok: boolean, label: string, detail = '') => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}${detail ? `\n    ${detail}` : ''}`); };
-  const { ALL_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
-  const { PICKS, pickEntry } = await import(`${ROOT}/src/scene/picks.ts`);
+  const { missions } = await import(`${ROOT}/tools/desk.ts`) as typeof import('../desk.ts'), list = missions();
   {
     // ---- total
-    const rows: { id: string; text: string; total: number; lesson: boolean }[] = (ALL_MISSIONS as { id: string; title: string; place?: string; blurb?: string; scene?: string; defenders?: number; group?: string }[]).map(e => (
-      { id: e.id, text: [e.place, e.blurb, e.scene].filter(Boolean).join(' '), total: e.defenders ?? -1, lesson: e.group === 'tutorial' }));
-    rows.push({ id: 'solo-night', text: "The office, after dark. You're alone on the office floor. Reach the server room, pull the drive and leave through the fire exit. Watch out for lights, noise and cameras.", total: 3, lesson: false });   // (its row's words: rust/game_rules/src/start_list, solo_night)
-    for (const p of PICKS as { id: string; line: string }[]) rows.push({ id: `pick ${p.id}`, text: p.line, total: (pickEntry(p) as { defenders?: number } | null)?.defenders ?? 3, lesson: false });
+    const total = (e: typeof list[number]): number => e.kind === 'solo' ? 3 : e.defenders;   // (the solo night's three are the level's own)
+    const rows: { id: string; text: string; total: number; lesson: boolean }[] = list.map(e => ({ id: e.id, text: [e.place, e.blurb, e.scene].filter(Boolean).join(' '), total: total(e), lesson: e.group === 'tutorial' }));
+    for (const e of list) if (e.line) rows.push({ id: `${e.id}'s line on the short list`, text: e.line, total: total(e), lesson: false });
     if (BREAK) for (const [text, total] of OLD) rows.push({ id: 'an old row', text, total, lesson: false });
     const bad: string[] = [], part: string[] = [], lessons: string[] = [];
     for (const r of rows) for (const [words, n, whole] of countsIn(r.text)) (r.lesson ? lessons : whole || n === r.total || n > 5 ? bad : part).push(`${r.id} "${words}"`);

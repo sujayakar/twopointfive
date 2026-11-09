@@ -57,10 +57,6 @@ impl Verdict {
 }
 impl Default for Verdict { fn default() -> Self { Self::blank() } }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct VerdictRun {
-}
-
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct Track {
     pub id: f64,
@@ -179,71 +175,5 @@ pub struct RunVerdictHostages {
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct KeptNote {
-    pub streak: f64,
-    pub fresh: bool,
-    pub gold: bool,
-    pub ways: crate::verdict::KeptNoteWays,
-    pub lesson: Option<bool>,
 }
 
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct KeptNoteWays {
-    pub doors: Option<crate::verdict::KeptNoteWaysDoors>,
-    pub quiet: Option<crate::verdict::KeptNoteWaysDoors>,
-    pub walls: Option<crate::verdict::KeptNoteWaysDoors>,
-    pub dark: Option<crate::verdict::KeptNoteWaysDoors>,
-}
-
-#[derive(Clone, Copy, Debug, ToBytes, Default)]
-pub struct KeptNoteWaysDoors {
-    pub first: bool,
-    pub clean: bool,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct VerdictOnlyMateH {
-    pub killer_id: f64,
-    pub down_by: Option<String>,
-    pub down_kind: Option<String>,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct VerdictEnded {
-    pub won: bool,
-    pub word: String,
-    pub why: String,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct VerdictCloseEnd {
-    pub won: bool,
-    pub word: String,
-    pub why: String,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum VerdictApproachKind {
-    Nightbreach,
-    Roomclear,
-    Rescue,
-    Quiet,
-}
-impl VerdictApproachKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            VerdictApproachKind::Nightbreach => "nightbreach",
-            VerdictApproachKind::Roomclear => "roomclear",
-            VerdictApproachKind::Rescue => "rescue",
-            VerdictApproachKind::Quiet => "quiet",
-        }
-    }
-}
-
-/// (src/game/verdict.ts:97 PATH_CAP)
-pub const PATH_CAP: f64 = 1500.0;
-
-/// (src/game/verdict.ts:97 PATH_SECS)
-pub const PATH_SECS: f64 = 0.5;
-
-/// (src/game/verdict.ts:97 HOLE_M)
-pub const HOLE_M: f64 = 0.9;

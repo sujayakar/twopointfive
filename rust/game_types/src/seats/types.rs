@@ -3,29 +3,6 @@
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum SeatTone {
-    You,
-    Purple,
-}
-impl SeatTone {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SeatTone::You => "you",
-            SeatTone::Purple => "purple",
-        }
-    }
-}
-
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct SeatsModSEATASKS {
-    pub strict: bool,
-    pub shared: bool,
-    pub misses: f64,
-    pub missed: JsSet<String>,
-    pub sites: Option<JsMap<String, f64>>,
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct ViewOfBodyC {
     pub id: f64,
@@ -82,28 +59,6 @@ impl Default for SeatSet {
     }
 }
 
-/// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
-pub struct SeatsMod {
-    /// (src/game/seats.ts:48 SEAT_ASKS)
-    pub seat_asks: crate::seats::SeatsModSEATASKS,
-}
-impl SeatsMod {
-    pub fn blank() -> Self {
-        SeatsMod {
-            seat_asks: crate::seats::SeatsModSEATASKS { strict: false, shared: false, misses: 0.0, missed: JsSet::new(), sites: None },
-        }
-    }
-}
-
 /// (src/game/seats.ts:44 SEAT_KINDS: a table nothing writes)
 pub fn seat_kinds() -> Vec<String> { alloc::vec![String::from("roomclear"), String::from("nightbreach")] }
 
-/// (src/game/seats.ts:54 SEAT_KEYS: a table nothing writes)
-pub fn seat_keys() -> [String; 19] { [String::from("seat"), String::from("player"), String::from("orders"), String::from("doorTools"), String::from("work"), String::from("wallCharge"), String::from("aimPoint"), String::from("aimTarget"), String::from("aimGuard"), String::from("aimFriend"), String::from("aimSnap"), String::from("hover"), String::from("interactables"), String::from("nearby"), String::from("act"), String::from("useDoor"), String::from("viewProj"), String::from("threatProximity"), String::from("torchOnT")] }
-
-/// (src/game/seats.ts:61 SEAT_TABLES: a table nothing writes)
-pub fn seat_tables() -> Vec<String> { alloc::vec![String::from("blastFeel.STATE"), String::from("blastLook.STATE"), String::from("close.STATE"), String::from("guards.groundTrack"), String::from("holdfire.states"), String::from("player.lightAt"), String::from("rearwatch.books"), String::from("samlook.STATE"), String::from("showwhy.states"), String::from("silent.seats"), String::from("silent.states"), String::from("squad40.states"), String::from("squadsmoke.states"), String::from("squadthrow.states"), String::from("stalk.STATE"), String::from("unseen.states"), String::from("wandorder.states")] }
-
-/// (src/game/seats.ts:151 SEAT_TONES: a table nothing writes)
-pub fn seat_tones() -> Vec<String> { alloc::vec![String::from("you"), String::from("purple")] }

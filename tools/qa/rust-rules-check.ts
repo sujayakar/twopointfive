@@ -2,7 +2,6 @@
 //   rules     no line of rust/sim (the world's numbers: lines, bodies, doors, light, the maths) names a rounded function of the standard library, a fused multiply-add, relaxed SIMD, a cell, an atomic or std:
 //             one arithmetic on every machine, and nothing kept where a snapshot does not see it
 //   statics   every `static mut` of rust/sim and rust/prim is a row here: the games' state, scratch of one call, or a copy proven where it is made
-//   powers    rust/sim/src/pow10.rs is the language's own decimal powers, row by row
 //   sides     every crate under rust/ is gameplay, dressing or both, and neither side links the other; a crate from outside has no side
 //   module    the crates the game's module is hashed from (tools/blitz/face-build.ts FACE_CRATES) are the crates its locks link: a crate left out would leave a stale module unseen
 //   bun run tools/qa/rust-rules-check.ts        exit 0 = it holds · 1 = a line says what does not        RUSTRULES_BREAK=1: one breach of each planted in memory: every line must FAIL
@@ -80,7 +79,7 @@ const STATICS: Readonly<Record<string, string>> = {
   'sim/src/glow.rs SWEPT': 'SCRATCH · how many metres the last step of the light field swept; read by a test, by nothing of a game',
   'sim/src/glow.rs CASTS': 'COPY · what the light field\'s lines meet of a game\'s statics, made of the box world and held to it row by row before it is read (the world\'s count of writes); made again wherever a row is another',
   'sim/src/glow.rs WAYS': 'COPY · the lines\' directions and what each counts for on a face: a table of numbers, worked out once and the same for every game',
-  'sim/src/bricks.rs DELTA': 'SCRATCH · one step\'s flows', 'sim/src/bricks.rs WIND': 'SCRATCH · the wind\'s share of each square metre of the plan, written by the host before a step that has wind', 'sim/src/bricks.rs THIN': 'SCRATCH · one step\'s thin bricks', 'sim/src/bricks.rs HELD': 'SCRATCH · one step\'s sum a brick',
+  'sim/src/bricks.rs DELTA': 'SCRATCH · one step\'s flows', 'sim/src/bricks.rs WIND': 'SCRATCH · the wind\'s share of each square metre of the plan, written by the host before a step that has wind', 'sim/src/bricks.rs CAME': 'SCRATCH · one step\'s inflow of each brick', 'sim/src/bricks.rs THIN': 'SCRATCH · one step\'s thin bricks', 'sim/src/bricks.rs HELD': 'SCRATCH · one step\'s sum a brick',
 };
 /** the crates each crate links, by name: the workspace's folders (a crate is a folder of rust/ with a Cargo.toml) and, for what each depends on, CARGO'S OWN
  *  LIST in rust/Cargo.lock — every build here is `--locked`, so the lock is what is linked, and nobody has to read the many ways a Cargo.toml can spell a
@@ -119,11 +118,6 @@ if (BREAK) sim.push({ at: 'rust/sim/src/planted.rs:1', file: 'sim/src/planted.rs
     const key = `${l.file} ${m[1]}`; met.add(key); if (!(key in STATICS)) bad.push(`${l.at} — \`static mut ${m[1]}\` has no row in STATICS (here): a game's state belongs in its block (state.rs), and scratch or a copy says which it is`); }
   for (const k of Object.keys(STATICS)) if (!met.has(k)) bad.push(`STATICS names ${k}, which is not there`);
   line(bad, 'statics: every `static mut` is the games\' state, scratch of one call or a proven copy', `${met.size} of them, a row each`); }
-{ const t = readFileSync(join(WORK, 'sim/src/pow10.rs'), 'utf8'), min = Number(/POW10_MIN: i32 = (-?\d+)/.exec(t)?.[1]), rows = [...t.slice(t.indexOf('= [')).matchAll(/0x([0-9a-f]{16})/g)].map(m => BigInt(`0x${m[1]}`)), f = new Float64Array(1), u = new BigUint64Array(f.buffer), bad: string[] = [];
-  if (BREAK) rows[10] ^= 1n;
-  rows.forEach((r, i) => { f[0] = Number(`1e${min + i}`); if (u[0] !== r) bad.push(`1e${min + i} is not the double the language reads`); });
-  if (min !== -323 || rows.length !== 632) bad.push(`${rows.length} powers from 1e${min}: 632 from 1e-323 are the ones a double holds`);
-  line(bad, 'powers: rust/sim/src/pow10.rs is the language\'s own', `${rows.length} powers`); }
 const L = links(); if (BREAK) L.planted = ['outside', 'sim'];
 { const bad: string[] = [];
   for (const [c, deps] of Object.entries(L)) {

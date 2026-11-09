@@ -27,43 +27,6 @@ impl LayerCast {
 pub struct LoosePose { pub nodes: u32, pub floats: Vec<f32> }
 impl Pose { /** a place at or past this names a row of Game.loose_poses, no place in the pool */ pub const LOOSE: u32 = 0xffff0000; }
 
-/// WHICH TABLE OF A LAYER'S KEPT COLUMNS (anim/skeleton.ts LayerCols): a static table of character.ts, 26 of CharacterAnimator and Character's turnCols. It captures nothing; whose columns they are is said at the call. get and put of each arm are generated from the TypeScript's tables, as their order is the contract with rust/sim/src/layers.rs
-#[derive(Clone, Copy, Debug)]
-pub enum ColsTable {
-    Act,
-    Lean,
-    Gaze,
-    MvPre,
-    MvPost,
-    MvPostArm,
-    HandsPass,
-    RunPlant,
-    Life,
-    LongArm,
-    Wall,
-    Hand,
-    Kick,
-    Tell,
-    Watch,
-    Creep,
-    Stealth,
-    Cable,
-    Kit,
-    Rd,
-    Door,
-    Work,
-    Hold,
-    Held,
-    Big,
-    Throw,
-    Turn,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct ColsOf {
-    pub n: f64,
-}
-
 #[derive(Clone, Debug, ToBytes)]
 pub struct PoseSet {
     pub list: Vec<crate::anim_skeleton::Pose>,
@@ -126,7 +89,6 @@ impl Default for PoseFK { fn default() -> Self { Self::blank() } }
 #[derive(Clone, Copy, Debug, Default)]
 pub struct AnimSkeletonModPOSEBENCH {
     pub rig: Option<RigId>,
-    pub asked: f64,
     pub in_place: f64,
     pub owed: f64,
 }
@@ -144,11 +106,6 @@ pub struct AnimSkeletonModLAYERSNames {
     pub roles: Vec<String>,
     pub lists: Vec<String>,
     pub nums: Vec<String>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct LayerCols {
-    pub n: f64,
 }
 
 #[derive(Clone, Debug, Default)]
@@ -171,22 +128,13 @@ pub struct AnimSkeletonMod {
     pub layers: crate::anim_skeleton::AnimSkeletonModLAYERS,
     /// (src/anim/skeleton.ts:238 CLIP_SIDE)
     pub clip_side: JsMap<ClipId, crate::anim_skeleton::ClipSide>,
-    /// (src/anim/skeleton.ts:299 ON_HOW)
-    pub on_how: Vec<u8>,
-    /// (src/anim/skeleton.ts:299 ON_LO)
-    pub on_lo: Vec<i32>,
-    /// (src/anim/skeleton.ts:299 ON_F)
-    pub on_f: Vec<f64>,
 }
 impl AnimSkeletonMod {
     pub fn blank() -> Self {
         AnimSkeletonMod {
-            pose_bench: crate::anim_skeleton::AnimSkeletonModPOSEBENCH { rig: None, asked: 0.0, in_place: 0.0, owed: 0.0 },
+            pose_bench: crate::anim_skeleton::AnimSkeletonModPOSEBENCH { rig: None, in_place: 0.0, owed: 0.0 },
             layers: crate::anim_skeleton::AnimSkeletonModLAYERS { ran: 0.0, roles: None, names: None, lists: Vec::new() },
             clip_side: JsMap::new(),
-            on_how: alloc::vec![0; 8],
-            on_lo: alloc::vec![0; 8],
-            on_f: alloc::vec![0.0; 8],
         }
     }
 }

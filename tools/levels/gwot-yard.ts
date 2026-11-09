@@ -1,7 +1,7 @@
 // GWOT-YARD: the GWOT kit's SHOWROOM (lib/gwotKit.ts) — NOT a level to play for its own sake and not in the missions list. A walled family compound with
 // a two-room guest house, a rendered store, a yard and the road outside, with EVERY piece of the kit stood in it once, so the kit can be exported, linted,
 // looked at once. It has no file of its own now. It is the kit's worked example: a map thread reads this file next to the guide
-// (rebuild/play-style-levels/look/read-first.md) and copies the calls.
+// (docs/library.md, docs/agents/levels.md) and copies the calls.
 //
 //        x 8  10             15.5        20                    32
 //   z 6  ┌────┬──────────────┬───────────┬─────────────────────┐
@@ -14,7 +14,7 @@
 //           stalls ·  hesco      the road: gravel, barriers, a technical
 import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef } from './lib/level';
-import type { LevelScenarios, Rect } from '../../src/scene/scenarios';
+import type { LevelScenarios, Rect } from './lib/scenarios';
 import type { SurfacesData } from './lib/levelData';
 import { officeKit, normalize3 as norm, type GeneratorTrace } from './lib/officeGen';
 import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, GW_PART } from './lib/gwotKit';

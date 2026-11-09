@@ -143,7 +143,6 @@ pub fn state_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::coverfire::S
             last_t: time,
             men: JsMap::new(),
             serial,
-            base,
             stats: zero(),
             by_id: JsMap::new(),
             said_t: -100.0,
@@ -297,7 +296,6 @@ pub fn ask(g: &mut crate::game::Game, gd: GuardId, to: V3) -> Option<crate::cove
                     && crate::props::prop_system_raycast(g, from, dir, reach).is_none()
                 {
                     return Some(Ask2::Ask(Ask {
-                        index: x.index,
                         id: -2.0 - x.index,
                         kind: String::from("thru"),
                         hit: x.at,
@@ -350,7 +348,6 @@ pub fn ask(g: &mut crate::game::Game, gd: GuardId, to: V3) -> Option<crate::cove
     let rounds = m::ceil(left / w - 1e-6);
     if rounds > g.k.coverfire.max_rounds { no(g, "rounds"); return None; }
     Some(Ask2::Ask(Ask {
-        index: st.index,
         id: b.id,
         kind: String::from(kind),
         hit,
@@ -931,24 +928,10 @@ pub fn coverfire_tick(g: &mut crate::game::Game, dt: f64) {
     }
 }
 
-/// QA: hand `gd` the record a real sighting of `who` leaves, `age` seconds old, standing still (coverfire.ts coverfireSaw)
-pub fn coverfire_saw(g: &mut crate::game::Game, gd: GuardId, who: crate::game::Foe, age: Option<f64>) {
-    let age = age.unwrap_or(0.0);
-    state_of(g);
-    let c = char_of(g, gd, who);
-    let low = g.ch[c].anim.crouch > 0.5;
-    see(g, gd, who, low);
-    let t = g.time - age;
-    if let Some(k) = man_of(g, gd).know.iter_mut().find(|k| same_who(k.who, who)) {
-        k.t = t;
-        k.v = [0.0, 0.0];
-    }
-}
-
 /// QA: what `gd` is on this frame (coverfire.ts coverfireOn)
 pub fn coverfire_on(g: &crate::game::Game, gd: GuardId) -> Option<crate::coverfire::CoverfireOn> {
     let cw = g.m.coverfire.states.as_ref()?.men.get(gd)?.chew.as_ref()?;
-    Some(CoverfireOn { id: cw.id, kind: cw.kind.clone(), fired: cw.fired, want: cw.want, to: v3::copy(cw.to) })
+    Some(CoverfireOn { kind: cw.kind.clone(), fired: cw.fired })
 }
 
 /// a restart or a checkpoint load: forget everything about this game (coverfire.ts coverfireReset)

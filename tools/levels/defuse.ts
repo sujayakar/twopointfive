@@ -22,7 +22,7 @@
 import type { Vec3 } from '../../src/math/vec';
 import { BoxFlag } from '../../src/scene/boxes';
 import type { Level } from './lib/level';
-import type { KitViewData, LevelScenarios, StructureData } from '../../src/scene/scenarios';
+import type { KitViewData, LevelScenarios, StructureData } from './lib/scenarios';
 import type { SurfacesData } from './lib/levelData';
 import * as K from './lib/levelKit';
 import { livedPieces, INK } from './livedPieces';
@@ -47,7 +47,7 @@ export const DEFUSE_START: Vec3 = [20.0, 0, 22.4];
 /** the workshops' bench: its middle on the north wall */
 const BENCH_Z = 7.47, BENCH_D = 0.7, BENCH_TOP = 0.76, WEST_X = 8.5, EAST_X = 31.5;
 
-/** THE ROOM CLEAR (scene/scenarios.ts StructureData): four held rooms, two men in each — the room in front of each workshop and the workshop itself.
+/** THE ROOM CLEAR (lib/scenarios.ts StructureData): four held rooms, two men in each — the room in front of each workshop and the workshop itself.
  *  A mark's place implies its facing: a man stands across the room from the door he fears. No breach plan, so no F drill: the team's start is here. */
 export const DEFUSE_STRUCTURE: StructureData = {
   name: 'the house', maxMen: 8,

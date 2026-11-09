@@ -116,7 +116,7 @@ mod tests {
             (f64::NAN, 0.6, 0.45, 1.0, false),
         ];
         for (t, equip, stow, end, want) in cases {
-            assert_eq!(big_off(BigOffB { t, equip, stow, end, snug: Some(true) }), want, "t {}", t);
+            assert_eq!(big_off(BigOffB { t, equip, stow, end }), want, "t {}", t);
         }
     }
 }

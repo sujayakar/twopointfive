@@ -149,7 +149,7 @@ export class GBuffer {
       { binding: 6, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float', viewDimension: '2d' } },   // the traffic map the detail layer reads (rg8unorm over the world's XZ; a 1×1 zero until a level hands one over — setWearMap)
       { binding: 8, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, texture: { sampleType: 'float', viewDimension: '2d' } },   // the snow field (render/snowField.ts; rgba16float over the world's XZ — a 1×1 zero on every page but a snow level's) …
       { binding: 9, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } },   // … and its place + the look's numbers (snow.wgsl SnowCfg; all zero = not live)
-      { binding: 10, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float', viewDimension: '2d' } },   // the prints pressed into the snow (rust/game_rules/src/snow_tracks; r8unorm over the world's XZ — a 1×1 zero until a snow level hands one over)
+      { binding: 10, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float', viewDimension: '2d' } },   // the prints pressed into the snow (src/picture/snow/tracks.ts; r8unorm over the world's XZ — a 1×1 zero until a snow level hands one over)
       // THE LOOK PROTOTYPE (look.wgsl): the two map arrays, their sampler and the panel's numbers
       { binding: 11, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float', viewDimension: '2d-array' } },
       { binding: 12, visibility: GPUShaderStage.FRAGMENT, texture: { sampleType: 'float', viewDimension: '2d-array' } },
@@ -302,7 +302,7 @@ export class GBuffer {
     this.device.queue.writeTexture({ texture: this.snowTex, origin: [x0, z0] }, f.data, { offset: (z0 * f.w + x0) * 8, bytesPerRow: f.w * 8 }, [rw, rh]);
   }
   private trackTex: GPUTexture; private trackView: GPUTextureView; private trackW = 1; private trackH = 1;
-  /** the prints pressed into the snow (rust/game_rules/src/snow_tracks): `rect` = the texels changed since the last call ([x0, z0, x1, z1], inclusive; none = all of it); null = none
+  /** the prints pressed into the snow (src/picture/snow/tracks.ts): `rect` = the texels changed since the last call ([x0, z0, x1, z1], inclusive; none = all of it); null = none
    *  (a 1×1 zero). The texture is made the first time a size is seen. */
   setSnowTracks(t: { data: Uint8Array; w: number; h: number } | null, rect?: readonly [number, number, number, number]) {
     const w = t?.w ?? 1, h = t?.h ?? 1;
@@ -388,7 +388,7 @@ export class GBuffer {
     return p;
   }
 
-  /** A new INTERNAL size (w, h) — and, under SHARP DIRECT (docs/internal/sharp-direct.md), the OUTPUT size (ow, oh) the boxes and men are actually rasterised at: then the six targets everyone binds
+  /** A new INTERNAL size (w, h) — and, under SHARP DIRECT, the OUTPUT size (ow, oh) the boxes and men are actually rasterised at: then the six targets everyone binds
    *  (albedo … mat, at w × h) are the internal VIEW of an output-size raster set (albedoO … matO), filled by encodeDown; sharp off = one set at w × h exactly as before (the O views alias it). */
   resize(w: number, h: number, ow = w, oh = h, sharp = false) {
     if (!sharp) { ow = w; oh = h; }

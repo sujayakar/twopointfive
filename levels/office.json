@@ -1,7 +1,7 @@
 {
   "version": 2,
   "name": "office",
-  "meta": { "bounds": { "min": [0, -0.25, 0], "max": [40, 8, 28] }, "generator": "src/scene/officeGen.ts buildOfficeProcedural → tools/level-export.ts", "notes": "The night-shift office: one floor, box geometry only. Regenerated from the legacy generator until the editor (lane G1b) takes over; hand edits survive only if the generator is retired first.", "kept": 1 },
+  "meta": { "bounds": { "min": [0, -0.25, 0], "max": [40, 8, 28] }, "generator": "tools/levels/lib/officeGen.ts buildOfficeProcedural → tools/level-export.ts", "notes": "The night-shift office: one floor, box geometry only. Regenerated from the legacy generator until the editor (lane G1b) takes over; hand edits survive only if the generator is retired first.", "kept": 1 },
   "floors": [
     { "id": "f0", "name": "ground floor", "y": 0, "ceiling": 3 }
   ],
@@ -1096,6 +1096,14 @@
     { "id": "vent_corridor", "pos": [17, 2.965, 11.1], "dir": [0, -1, 0], "speed": 2, "spread": 26, "reach": 1.2, "period": 45, "duty": 0.75, "phase": 20, "mains": true },
     { "id": "vent_break", "pos": [30.4, 2.965, 15.2], "dir": [0, -1, 0], "speed": 2, "spread": 26, "reach": 1.2, "period": 50, "duty": 0.6, "mains": true },
     { "id": "vent_server", "pos": [16.3, 2.965, 8.8], "dir": [0, -1, 0], "speed": 2.8, "spread": 22, "reach": 1.4, "mains": true }
+  ],
+  "hums": [
+    { "id": "hum_servers", "kind": "servers", "pos": [18, 1.2, 7], "level": 0.5, "radius": 12 },
+    { "id": "hum_vending", "kind": "buzz", "pos": [29.5, 1.2, 13.2], "level": 0.35, "radius": 7 },
+    { "id": "hum_ballast", "kind": "buzz", "pos": [16.5, 2.8, 20.6], "level": 0.15, "radius": 6 },
+    { "id": "hum_air", "kind": "hum", "pos": [8, 2.6, 18], "level": 0.25, "radius": 14 },
+    { "id": "wind_lot", "kind": "wind", "pos": [16, 3, 27], "level": 0.5, "radius": 18, "mains": false },
+    { "id": "wind_west", "kind": "wind", "pos": [1.5, 3, 20], "level": 0.4, "radius": 14, "mains": false }
   ],
   "connectors": [],
   "mission": {

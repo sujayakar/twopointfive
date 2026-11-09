@@ -292,14 +292,6 @@ pub fn find_wall(g: &mut crate::game::Game, quick: Option<bool>, why: Option<&mu
     None
 }
 
-/// Is he free to put his back to a wall, and would Q find one from where he stands? (player.ts canWallSnap)
-pub fn can_wall_snap(g: &mut crate::game::Game) -> bool {
-    let pl = g.player;
-    let p = &g.pl[pl];
-    if p.wall.is_some() || p.down || p.dragging.is_some() || p.takedown.is_some() || p.holding.is_some() || p.kick.is_some() || p.picking.is_some() || p.wanding.is_some() || p.sprinting { return false; }
-    find_wall(g, Some(true), None, None).is_some()
-}
-
 /// where a sole is drawn this moment (wallSnap `ft`)
 fn foot_at(a: Option<V3>, toe: Option<V3>) -> Option<(V3, f64)> {
     match (a, toe) {

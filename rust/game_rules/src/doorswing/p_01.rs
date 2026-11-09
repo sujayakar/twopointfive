@@ -369,7 +369,6 @@ fn deal(g: &Game, d: DoorId, swing: f64, why: crate::doorswing::SwingWhy, into: 
         return None;
     }
     Some(crate::doorswing::SwingDeal {
-        door: g.dr[d].def.name.clone(),
         swing,
         why,
         into: into.filter(|i| !i.is_empty()).map(String::from),
@@ -507,7 +506,6 @@ fn deal_all(g: &mut Game) -> Vec<crate::doorswing::SwingDeal> {
         let mut got = match first_rule(g, &given, &mut fl, d, &name) {
             Some(s) => s,
             None => crate::doorswing::SwingDeal {
-                door: name.clone(),
                 swing: if g.dr[d].max_auth >= -g.dr[d].min_auth { 1.0 } else { -1.0 },
                 why: SwingWhy::Wider,
                 into: None,
@@ -533,7 +531,6 @@ fn deal_all(g: &mut Game) -> Vec<crate::doorswing::SwingDeal> {
             let other = if cut >= LEAF_CUT { leaf_cut(g, d, -got.swing) } else { -1.0 };
             if cut >= LEAF_CUT && other >= 0.0 && other < LEAF_CUT && other * 2.0 <= cut && leaf_swings(g, d, -got.swing) {
                 clear = Some(crate::doorswing::SwingDeal {
-                    door: name.clone(),
                     swing: -got.swing,
                     why: SwingWhy::LeafRoom,
                     into: Some(alloc::format!("{} m² of floor shut off by its leaf the other way", js::to_fixed(cut, 1))),

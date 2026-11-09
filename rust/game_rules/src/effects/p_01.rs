@@ -78,12 +78,11 @@ pub fn spawn_shot(g: &mut crate::game::Game, muzzle: V3, dir: V3, o: &crate::eff
     let d = v3::normalize(dir);
     let f = muzzle_frame(muzzle, d);
     let at = at3(muzzle, &f, s.jet_off);
-    let anchor = v3::mad(muzzle, d, 0.38);
     let jv: V3 = [d[0] * s.jet_speed, d[1] * s.jet_speed + s.jet_rise, d[2] * s.jet_speed];
     if gas {
         smoke_emit(g, &Emitter {
             pos: at, dir: jv, speed: v3::len(jv), radius: s.jet_radius, density: s.jet_density, temperature: s.jet_temp, ttl: s.jet_life, age: 0.0, kind: Kind::Jet,
-            push: Some(s.jet_push), expand: Some(s.jet_expand), attack: Some(s.jet_attack), jitter: Some(s.jitter), lattice: Some(Lattice::Fine), anchor: Some(anchor), confined: Some(true),
+            push: Some(s.jet_push), expand: Some(s.jet_expand), attack: Some(s.jet_attack), jitter: Some(s.jitter), lattice: Some(Lattice::Fine), confined: Some(true),
             ..Emitter::default()
         });
     }
@@ -96,7 +95,7 @@ pub fn spawn_shot(g: &mut crate::game::Game, muzzle: V3, dir: V3, o: &crate::eff
         if gas {
             smoke_emit(g, &Emitter {
                 pos: at3(muzzle, &f, s.port_off), dir: pv, speed: v3::len(pv), radius: s.jet_radius * s.port_radius_k, density: s.jet_density * s.port_fraction, temperature: s.jet_temp * s.port_fraction, ttl: s.jet_life, age: 0.0, kind: Kind::Jet,
-                push: Some(s.jet_push * s.port_push_k), expand: Some(s.jet_expand * s.port_expand_k), attack: Some(s.jet_attack), jitter: Some(s.jitter), lattice: Some(Lattice::Fine), anchor: Some(anchor), confined: Some(true),
+                push: Some(s.jet_push * s.port_push_k), expand: Some(s.jet_expand * s.port_expand_k), attack: Some(s.jet_attack), jitter: Some(s.jitter), lattice: Some(Lattice::Fine), confined: Some(true),
                 ..Emitter::default()
             });
         }
@@ -106,7 +105,7 @@ pub fn spawn_shot(g: &mut crate::game::Game, muzzle: V3, dir: V3, o: &crate::eff
     if gas {
         smoke_emit(g, &Emitter {
             pos: at3(muzzle, &f, s.wisp_off), dir: wv, speed: v3::len(wv), radius: s.wisp_radius, density: s.wisp_density, temperature: s.wisp_temp, ttl: s.wisp_life, age: 0.0, kind: Kind::Wisp,
-            push: Some(s.wisp_push), attack: Some(s.wisp_attack), jitter: Some(0.25), lattice: Some(Lattice::Fine), anchor: Some(anchor), confined: Some(true), track: o.track.clone(),
+            push: Some(s.wisp_push), attack: Some(s.wisp_attack), jitter: Some(0.25), lattice: Some(Lattice::Fine), confined: Some(true), track: o.track.clone(),
             ..Emitter::default()
         });
     }
@@ -115,7 +114,7 @@ pub fn spawn_shot(g: &mut crate::game::Game, muzzle: V3, dir: V3, o: &crate::eff
             if let Some((pos, _dir)) = track_at(g, eject) {
                 smoke_emit(g, &Emitter {
                     pos, dir: [0.0, 1.0, 0.0], speed: 0.1, radius: s.eject_radius, density: s.eject_density, temperature: s.eject_temp, ttl: s.eject_life, age: 0.0, kind: Kind::Wisp,
-                    lattice: Some(Lattice::Fine), anchor: Some(anchor), confined: Some(true), track: Some(eject.clone()),
+                    lattice: Some(Lattice::Fine), confined: Some(true), track: Some(eject.clone()),
                     ..Emitter::default()
                 });
             }

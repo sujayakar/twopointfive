@@ -75,7 +75,7 @@ export const SNOWTRACKS = {
   puffUp: 2.6,        // m/s, the fastest, × (0.5 + 0.5 × force): a flake's own drag has it stopped a hand or two up
   puffLife: 0.9,      // s
   puffMost: 48,       // the most one mark throws
-  puffRecs: 3,        // kicks filed a frame, the hardest first (rust/game_rules/src/snow_fx: each is a particle record, and a frame has twelve for everything)
+  puffRecs: 3,        // kicks filed a frame, the hardest first (src/picture/snow/fx.ts: each is a particle record, and a frame has twelve for everything)
   puffWait: 12,       // … and this many may wait for the next frame
   puffKeep: 0.25,     // s: a kick leaves the list after this, filed or not (formSnowTracks): one still not filed by then never is
 };
@@ -95,9 +95,9 @@ export interface SnowTracks {
   marks: number;
   /** the marks still forming (SNOW_LOOK.marks; `formSnowTracks` brings them on) */
   forming: Forming[];
-  /** snow kicked up in the last `puffKeep` s (rust/game_rules/src/snow_fx files each once, telling the new ones by their number `n`; nobody else reads it). The list is the GAME's:
+  /** snow kicked up in the last `puffKeep` s (src/picture/snow/fx.ts files each once, telling the new ones by their number `n`; nobody else reads it). The list is the GAME's:
    *  only time empties it (formSnowTracks), a restart, and the cap (the oldest dropped) — nothing a particle pool does reaches it, so a host with a pool and a
-   *  host without keep the same list. What the pool has taken and what waits on it is the host's book (rust/game_rules/src/snow_fx SnowShown kickSeen / kickQ) */
+   *  host without keep the same list. What the pool has taken and what waits on it is the host's book (src/picture/snow/fx.ts SnowShown kickSeen / kickQ) */
   kicks: SnowKick[];
   /** kicks queued so far, never wound back by a restart: a kick's own number */
   kicked: number;

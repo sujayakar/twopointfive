@@ -14,25 +14,6 @@ pub struct GpSite {
     pub rz: f64,
     pub e: f64,
     pub merge: f64,
-    pub hits: f64,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum FrameSide {
-    Left,
-    Right,
-    Bottom,
-    Top,
-}
-impl FrameSide {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            FrameSide::Left => "left",
-            FrameSide::Right => "right",
-            FrameSide::Bottom => "bottom",
-            FrameSide::Top => "top",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -48,42 +29,6 @@ pub enum Tag {
 pub struct Poly {
     pub pts: Vec<[f64; 2]>,
     pub tags: Vec<crate::glass_pattern::Tag>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct GpNb {
-    pub fid: f64,
-    pub len: f64,
-    pub ny: f64,
-    pub u0: f64,
-    pub u1: f64,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct GpFrag {
-    pub fid: f64,
-    pub i: f64,
-    pub s: f64,
-    pub b: f64,
-    pub pts: Vec<[f64; 2]>,
-    pub area: f64,
-    pub cen: [f64; 2],
-    pub perim: f64,
-    pub u_min: f64,
-    pub u_max: f64,
-    pub v_min: f64,
-    pub v_max: f64,
-    pub frame: crate::glass_pattern::GpFragFrame,
-    pub foot: Option<[f64; 2]>,
-    pub nb: Vec<crate::glass_pattern::GpNb>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct GpFragFrame {
-    pub bottom: f64,
-    pub right: f64,
-    pub top: f64,
-    pub left: f64,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -190,9 +135,6 @@ pub const GP_WEB_RING: f64 = 0.45;
 
 /// (src/game/glassPattern.ts:37 GP_REMAINDER)
 pub const GP_REMAINDER: f64 = -2.0;
-
-/// (src/game/glassPattern.ts:157 NB_SAMPLES)
-pub const NB_SAMPLES: f64 = 6.0;
 
 /// (src/game/glassPattern.ts:272 GP_DICE_JIT)
 pub const GP_DICE_JIT: f64 = 0.6;

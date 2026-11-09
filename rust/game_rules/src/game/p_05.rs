@@ -76,7 +76,7 @@ pub fn game_on_door_event(g: &mut crate::game::Game, e: crate::doors::DoorEvent)
     });
 }
 
-/// The rolling chairs' voices, once a step right after the props have moved; nothing in the simulation reads this and no die is drawn. (game.ts Game.rollTick)
+/// The rolling chairs that are heard (`voice`, a number of its own each time one sets off), once a step right after the props have moved; nothing in the simulation reads this and no die is drawn. (game.ts Game.rollTick)
 pub fn game_roll_tick(g: &mut crate::game::Game, dt: f64) {
     if g.rolls.is_empty() { return; }
     let voice = crate::game::roll_voice();
@@ -96,9 +96,7 @@ pub fn game_roll_tick(g: &mut crate::game::Game, dt: f64) {
             g.rolls[i].move_t = g.time;
             if !js::truthy(g.rolls[i].voice) {
                 g.roll_seq += 1.0;
-                let tok = g.roll_seq;
-                g.rolls[i].voice = tok;
-                crate::audio_iface::game_audio_like_play(g, "chairRoll", Some([px, 0.05, pz]), Some(voice.gain), Some(&crate::audio_iface::PlayOpts::ChairRoll { tok }));   // (the `follow` closure: audio_follow_now answers by the token)
+                g.rolls[i].voice = g.roll_seq;
             }
         } else if js::truthy(g.rolls[i].voice) && (!here || g.time - g.rolls[i].move_t > voice.grace || g.time < g.rolls[i].move_t) {
             g.rolls[i].voice = 0.0;
@@ -169,16 +167,6 @@ pub fn game_escalate(g: &mut crate::game::Game) {
     crate::guards::raise_escalation(g, to, None, None, None);
 }
 
-/// Panel: straight back to calm. (game.ts Game.standDown)
-pub fn game_stand_down(g: &mut crate::game::Game) {
-    crate::guards::stand_down_escalation(g);
-}
-
-/// Panel: what each unfound body reads on the light meter. (game.ts Game.bodyLightSummary)
-pub fn game_body_light_summary(g: &mut crate::game::Game) -> String {
-    crate::guards::body_light_summary(g)
-}
-
 /// Is this record somebody on the floor right now: a man of the shift, a unit or a civilian? (game.ts Game.onFloor)
 pub fn game_on_floor(g: &crate::game::Game, gd: GuardId) -> bool {
     g.guards.contains(&gd) || g.civilians.contains(&gd)
@@ -230,42 +218,6 @@ pub fn game_free_held(g: &mut crate::game::Game, why: crate::game::GameFreeHeldW
     crate::player::free_held(g, why);
 }
 
-/// The living man nearest Sam within `reach` metres; `foe`: only men hostile to the player. (game.ts Game.nearestLivingGuard)
-pub fn game_nearest_living_guard(g: &crate::game::Game, seat: &crate::seats::SeatRef, reach: Option<f64>, foe: Option<bool>) -> Option<GuardId> {
-    let foe = foe.unwrap_or(false);
-    let mut best: Option<GuardId> = None;
-    let mut bd = reach.unwrap_or(m::INF);
-    for gd in g.guards.clone() {
-        if g.gd[gd].state == crate::game::GuardState::Dead || (foe && !crate::teams::hostile_to(g, gd, crate::teams::HostileToO::Player)) { continue; }
-        let d = v3::dist_xz(g.ch[g.gd[gd].ch].pos, g.ch[g.pl[seat.player].ch].pos);
-        if d <= bd { bd = d; best = Some(gd); }
-    }
-    best
-}
-
-/// Sandbox: lean on whoever is within reach; a note if nobody is. (game.ts Game.interrogateNearest)
-pub fn game_interrogate_nearest(g: &mut crate::game::Game, rnd: Option<&mut dyn FnMut(&mut crate::game::Game) -> f64>) -> Option<crate::dialogue::DialoguePick> {
-    if g.pl[g.player].down { game_note(g, "you're down \u{2014} nobody answers to a man on the floor"); return None; }
-    let Some(gd) = game_nearest_living_guard(g, &crate::seats::here(g), Some(crate::dialogue::INTERROGATE_REACH), Some(true)) else {
-        game_note(g, &format!("nobody hostile within {} m to lean on \u{2014} walk up to a living guard", js::num_str(crate::dialogue::INTERROGATE_REACH)));
-        return None;
-    };
-    let pick = game_interrogate(g, gd, rnd);
-    if pick.is_none() {
-        let line = format!("{} is in reach but there is something solid between you", g.gd[gd].callsign);
-        game_note(g, &line);
-    }
-    pick
-}
-
-/// Panel: the interrogation engine's read of the man nearest Sam, at any distance. (game.ts Game.dialogueSummary)
-pub fn game_dialogue_summary(g: &mut crate::game::Game) -> String {
-    let Some(gd) = game_nearest_living_guard(g, &crate::seats::here(g), Some(m::INF), Some(true)) else { return String::from("dialogue: nobody left standing"); };
-    let d = v3::dist_xz(g.ch[g.gd[gd].ch].pos, g.ch[g.pl[g.player].ch].pos);
-    let s = crate::dialogue::dialogue_summary(g, gd);
-    if d <= crate::dialogue::INTERROGATE_REACH { format!("dialogue \u{25B8} {} \u{B7} in reach", s) } else { format!("dialogue \u{25B8} {} \u{B7} {} m off", s, js::to_fixed(d, 1)) }
-}
-
 /// `g.audio.play(name, pos, gain)`.
 fn audio_play(g: &mut Game, name: &str, pos: V3, gain: f64) {
     crate::audio_iface::game_audio_like_play(g, name, Some(pos), Some(gain), None);
@@ -281,11 +233,10 @@ fn audio_play_rate(g: &mut Game, name: &str, pos: V3, gain: f64, rate: f64) {
 /// (game.ts clearNearestRoom)
 pub fn game_clear_nearest_room(g: &mut crate::game::Game) { crate::guards::force_clear(g) }
 
-/// Camera follow position: a spectated guard, a rail's look, `at`, else the player.   (game.ts followPos)
+/// Camera follow position: a spectated guard, `at`, else the player.   (game.ts followPos)
 pub fn game_follow_pos(g: &mut crate::game::Game, at: Option<V3>) -> V3 {
     let gd = if g.spectate >= 0.0 { g.guards.get(g.spectate as usize).copied() } else { None };
     if let Some(gd) = gd { let c = g.gd[gd].ch; return g.ch[c].pos; }
-    if let Some(p) = crate::rails::rails_look(g, &crate::seats::here(g)) { return p; }
     if let Some(a) = at { return a; }
     let c = g.pl[g.player].ch;
     g.ch[c].pos
@@ -330,22 +281,6 @@ pub fn game_clear_aftermath(g: &mut crate::game::Game) {
     }
 }
 
-/// The FN2000 in or out of the kit, applied to the man standing there now.   (game.ts setLoadout)
-pub fn game_set_loadout(g: &mut crate::game::Game, with_rifle: bool) {
-    g.fn2000 = with_rifle;
-    let pl = g.player;
-    if !with_rifle && g.pl[pl].slot == crate::game::SlotKind::Rifle {
-        g.pl[pl].slot = crate::game::SlotKind::Pistol;
-        let rifle = g.pl[pl].rifle;
-        if crate::weapons::firearm_reloading(g, rifle) {
-            let c = g.pl[pl].ch;
-            crate::character::anim_cancel_reload(g, c);
-        }
-        crate::weapons::firearm_cancel_reload(g, rifle);
-    }
-    g.pl[pl].has_rifle = with_rifle;
-}
-
 /// Was this fixture's switch on in the level as authored.   (game.ts authoredOn)
 pub fn game_authored_on(g: &crate::game::Game, t: FixtureId) -> bool { crate::sim_lightshome::fixture_authored(g, t) }
 
@@ -380,12 +315,6 @@ pub fn game_reset_level_state(g: &mut crate::game::Game) {
     crate::hours::hour_after_reset(g);
     crate::air_dust::air_dust_reset(g);
 }
-
-/// (game.ts crackTest)
-pub fn game_crack_test(g: &mut crate::game::Game) -> f64 { crate::glass::crack_test(g) }
-
-/// (game.ts wetSummary)
-pub fn game_wet_summary(g: &crate::game::Game) -> String { crate::wet::wet_summary(g) }
 
 /// The clocks the last try left running, as a new Game has them.   (game.ts cleanSlate)
 pub fn game_clean_slate(g: &mut crate::game::Game) {
@@ -559,7 +488,6 @@ pub fn game_host_after(g: &mut crate::game::Game, input: InputId, cam: CameraId,
     if let Some(cut) = crate::cmd::seat_take_cut(g, me) { cut_lens(g, cam, cut); }
     let vp = g.tab.camera[cam].view_proj;
     crate::seats::with_seat(g, me, &mut |g| g.view_proj = Some(crate::game::GameViewProj::Float32Array(vp.to_vec())));
-    crate::rails::rails_host_view(g, cam);
     crate::seats::with_seat(g, me, &mut |g| crate::orders::squad_orders_host_view(g, input, cam, canvas));
 }
 

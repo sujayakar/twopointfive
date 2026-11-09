@@ -155,7 +155,7 @@ fn man_singles_of(g: &mut Game, s: &crate::levelfit::Stood) -> f64 {
 
 /// One row of the count.
 fn row(row: &str, what: &str, has: f64, cap: f64, table: Option<&str>) -> crate::levelfit::FitRow {
-    crate::levelfit::FitRow { row: String::from(row), what: String::from(what), has, cap, table: table.map(String::from), play: None }
+    crate::levelfit::FitRow { what: String::from(what), has, cap, play: None }
 }
 
 /// Every count of a stood game against what holds it.   (levelfit.ts fitRows)

@@ -22,6 +22,7 @@ pub mod play;
 pub mod hand;
 pub mod block;
 pub mod hands_off;
+pub mod figures;
 pub mod moment;
 pub mod owes;
 pub mod parts;

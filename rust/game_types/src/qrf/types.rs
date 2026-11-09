@@ -3,13 +3,6 @@
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// one row of the response team's knobs as this machine kept them (qrf.ts saveQrfTune, read back by storedTune)
-#[derive(Clone, Debug)]
-pub enum StoredTuneRow {
-    Bool { v: bool },
-    Num { v: f64 },
-}
-
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct Marks {
     pub door: Option<String>,
@@ -82,25 +75,6 @@ pub enum Phase {
     Landing,
     File,
 }
-impl Phase {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Phase::Bang => "bang",
-            Phase::Fan => "fan",
-            Phase::Breach => "breach",
-            Phase::Hold => "hold",
-            Phase::Move => "move",
-            Phase::Stack => "stack",
-            Phase::Called => "called",
-            Phase::Drill => "drill",
-            Phase::Fight => "fight",
-            Phase::Flow => "flow",
-            Phase::Regroup => "regroup",
-            Phase::Landing => "landing",
-            Phase::File => "file",
-        }
-    }
-}
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct Target {
@@ -128,7 +102,6 @@ impl TargetKind {
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct Perimeter {
     pub state: crate::qrf::PerimeterState,
-    pub called_at: f64,
     pub eta_at: f64,
     pub set_at: f64,
     pub men: Vec<crate::qrf::PerimeterMenItem>,
@@ -140,14 +113,6 @@ pub struct Perimeter {
 pub enum PerimeterState {
     #[default] Set,
     Called,
-}
-impl PerimeterState {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            PerimeterState::Set => "set",
-            PerimeterState::Called => "called",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -296,7 +261,6 @@ impl Default for Qrf { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct QrfLogItem {
-    pub t: f64,
     pub what: String,
 }
 
@@ -316,59 +280,12 @@ pub enum QrfWordKey {
 pub struct QrfWordValue {
     pub at: V3,
     pub t: f64,
-    pub how: String,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct ResponseWordSnap {
-    pub who: f64,
-    pub at: V3,
-    pub age: f64,
-    pub how: String,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct QRFMARKS {
-    pub door: String,
-    pub landing: Vec<V3>,
-    pub entry: Vec<V3>,
-    pub entry_face: Vec<f64>,
-    pub posts: Vec<crate::qrf::QRFMARKSPostsItem>,
-    pub outside_spawn: Vec<V3>,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct QRFMARKSPostsItem {
-    pub name: String,
-    pub pos: V3,
-    pub yaw: f64,
-    pub sweep: Vec<V3>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct QRFTUNEDEFAULTS {
-    pub qrf: bool,
-    pub qrf_eta: f64,
-    pub qrf_size: f64,
-    pub perimeter: bool,
-    pub perimeter_eta: f64,
-    pub perimeter_size: f64,
-    pub qrf_silent: bool,
-    pub qrf_squad: bool,
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum SideOfTeam {
     Guard,
     Hostile,
-}
-impl SideOfTeam {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SideOfTeam::Guard => "guard",
-            SideOfTeam::Hostile => "hostile",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -384,7 +301,6 @@ pub struct BudgetOfArm0 {
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct BudgetOfArm1 {
-    pub budget: Option<()>,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -409,7 +325,6 @@ pub struct FixOf {
 #[derive(Clone, Debug, Default)]
 pub struct ResponseWords {
     pub site: String,
-    pub at: String,
     pub team: String,
 }
 
@@ -432,33 +347,6 @@ pub struct FlowLegs {
     pub face: f64,
     pub aim: V3,
 }
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct RoutePatch {
-    pub goal: Option<V3>,
-    pub speed: Option<f64>,
-    pub face: Option<f64>,
-    pub strafe: Option<bool>,
-    pub aim_at: Option<V3>,
-    pub stance: Option<crate::character::Stance>,
-    pub stack_side: Option<f64>,
-    pub crouch: Option<bool>,
-    pub lean: Option<f64>,
-    pub upper: Option<crate::character::UpperMode>,
-    pub light: Option<bool>,
-    pub arrived: Option<bool>,
-    pub hot: Option<bool>,
-    pub flinch: Option<bool>,
-    pub direct: Option<bool>,
-    pub smoke: Option<bool>,
-    pub over: Option<crate::game::GuardScriptOver>,
-}
-
-/// (src/game/qrf.ts:71 QRF_MARKS: a table nothing writes)
-pub fn qrf_marks() -> crate::qrf::QRFMARKS { crate::qrf::QRFMARKS { door: String::from("stairwell"), landing: alloc::vec![[3.1, 0.0, 11.25], [2.25, 0.0, 11.25], [3.1, 0.0, 10.3], [2.25, 0.0, 10.3]], entry: alloc::vec![[6.7, 0.0, 11.2], [5.9, 0.0, 10.55], [5.9, 0.0, 11.8], [5.4, 0.0, 11.25]], entry_face: alloc::vec![1.5707963267948966, 2.4, 0.75, 1.5707963267948966], posts: alloc::vec![crate::qrf::QRFMARKSPostsItem { name: String::from("fire exit"), pos: [38.9, 0.0, 24.2], yaw: -2.48, sweep: alloc::vec![[36.15, 1.0, 19.9], [36.15, 1.0, 21.5]] }, crate::qrf::QRFMARKSPostsItem { name: String::from("break-room door"), pos: [27.4, 0.0, 25.7], yaw: 1.95, sweep: alloc::vec![[30.9, 1.0, 24.15], [32.4, 1.0, 24.15]] }, crate::qrf::QRFMARKSPostsItem { name: String::from("lobby front"), pos: [2.3, 0.0, 20.6], yaw: 1.5707963267948966, sweep: alloc::vec![[3.9, 1.0, 17.6], [3.9, 1.0, 22.4]] }, crate::qrf::QRFMARKSPostsItem { name: String::from("south lot"), pos: [17.4, 0.0, 26.4], yaw: 3.141592653589793, sweep: alloc::vec![[14.5, 1.2, 24.15], [23.5, 1.2, 24.15]] }], outside_spawn: alloc::vec![[38.6, 0.0, 26.6], [37.4, 0.0, 26.9], [38.8, 0.0, 25.4], [37.2, 0.0, 25.6]] } }
-
-/// (src/game/qrf.ts:163 CHAR_BUDGET)
-pub const CHAR_BUDGET: f64 = 8.0;
 
 /// (src/game/qrf.ts:165 LOUD_MEMORY_SECS)
 pub const LOUD_MEMORY_SECS: f64 = 180.0;
@@ -556,8 +444,3 @@ pub const POST_SPEED: f64 = 2.6;
 /// (src/game/qrf.ts:193 SWEEP_SECS)
 pub const SWEEP_SECS: f64 = 5.0;
 
-/// (src/game/qrf.ts:261 TUNE_KEY)
-pub const TUNE_KEY: &str = "twopointsix.qrf";
-
-/// (src/game/qrf.ts:280 QRF_TUNE_DEFAULTS: a table nothing writes)
-pub fn qrf_tune_defaults() -> crate::qrf::QRFTUNEDEFAULTS { crate::qrf::QRFTUNEDEFAULTS { qrf: true, qrf_eta: 75.0, qrf_size: 4.0, perimeter: true, perimeter_eta: 45.0, perimeter_size: 2.0, qrf_silent: true, qrf_squad: true } }

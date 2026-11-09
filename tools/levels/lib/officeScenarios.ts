@@ -1,10 +1,10 @@
-// The OFFICE's scenario data (src/scene/scenarios.ts LevelScenarios): what the night breach, the room clear and the hostage rescue take from this level — the
+// The OFFICE's scenario data (lib/scenarios.ts LevelScenarios): what the night breach, the room clear and the hostage rescue take from this level — the
 // tables that lived in rust/game_rules/src/nightbreach, rust/game_rules/src/roomclear, rescue and rescueflow, moved here number for number. THE OFFICE GENERATOR'S INPUT, and nobody
 // else's: officeGen.ts puts the block on the Level it builds and tools/level-export.ts writes it into levels/office.json, where the game, the page and
 // every tool read it as they read any level's (as tools/levels/<name>.ts holds another level's). Change a number here, then run the export.
 // Plain literals and type-only imports: nothing here is built from another module's exports.
 import type { Vec3 } from '../../../src/math/vec';
-import type { LevelScenarios, StructureData, RescueData, NightBreachData, KitViewData, ResponseData, WayHint } from '../../../src/scene/scenarios';
+import type { LevelScenarios, StructureData, RescueData, NightBreachData, KitViewData, ResponseData, WayHint } from './scenarios';
 import type { MarkDef } from './level';
 
 /** the night breach: Sam beside the pair on the breach plan's approach marks, in the cubicles' south aisle, facing east down it */
@@ -154,7 +154,7 @@ export const OFFICE_MARKS: MarkDef[] = [
   { name: 'van', pos: [27.7, 0, 26.4] },
 ];
 
-/** HOW THE OFFICE IS WALKED BY THE PEOPLE WHO WORK IN IT (rust/game_rules/src/scene_ways: the look's page wears its floors by the ways field). The level's own ways are the
+/** HOW THE OFFICE IS WALKED BY THE PEOPLE WHO WORK IN IT (rust/game_types/src/scene_ways: the look's page wears its floors by the ways field). The level's own ways are the
  *  night shift's three routes, each team's start to its rooms, and the three outer doors door to door: nobody had said how a desk, the printer, the coffee
  *  or a car is reached, the conference room's door had no way through it, and the plain night's own start had none leaving it. A weight is how many ways a
  *  row counts as beside one lap of a patrol (1). THE DAY: everybody comes up the west stair and signs in; each of the sixteen desks is reached from the

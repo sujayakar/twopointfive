@@ -67,7 +67,7 @@ import { cloudNote } from '../ui/cloudnote';
 import { keptFreeze, startCallClock } from '../gpu/keep';
 import * as boot from '../ui/boot';
 import { BENCH_RUN_KEY, benchBegin, benchSceneWaits } from '../ui/benchrun';
-import { priceLevelsPage } from '../ui/pricerun';
+import { PRICE_KEY, PRICE_RUN_KEY, priceLevelsPage } from '../ui/pricerun';
 import { urlFlagsOnEngine } from './engineflags';
 import { pictureKeepsPace, pictureMakes, pictureOpens, pictureSolves, pictureWords } from './pictureopens';
 import { FRAMECAP, watchTextures } from '../render/framecap';
@@ -89,14 +89,13 @@ import { KitPage, kitNone } from './kitpage';
 import { Desk, desk, setDesk, type DeskFace } from '../view/desk';
 import type { BriefView } from '../view/read';
 import { Commands } from '../draw/commands';
-import { pickRedirect } from '../scene/picks';
 import { nextPickOf } from '../ui/picks';
 import { keepPageBoot } from './keeppage';
 import { heldPage, ownPage, runPage } from './runpage';
 import { bootTextSize } from '../ui/textsize';
 import { Fog, Heard, Man, Section, Sky, View } from '../draw/sections';
 import { AudioEngine, SFX_TABLE, SFX_WARM, warmSfx } from '../audio/audio';
-import { setlistOfQuery } from '../audio/setlist';
+import { setlistLevel, setlistOf } from '../audio/setlist';
 import { MUSIC } from '../audio/pieces';
 import { askOf } from '../draw/ask';
 import { rimsFrom } from '../draw/rims';
@@ -140,16 +139,26 @@ async function main(): Promise<void> {
   TITLE.coop = () => COOP.on ? coopRows : null;
   // (a game hosted from here stands on this machine's settings; both players play the kit as issued)
   HOSTED.setup = scenario => { const w = new URLSearchParams(scenario), C = new Commands(); w.set('nokit', ''); machineBefore(w, w.get('levelFile') ?? '', C); return { commands: commandText(C.take()) }; };
-  { const to = tape || coop ? null : pickRedirect(location.search); if (to !== null) { location.replace(location.pathname + to + location.hash); return; } }
   const canvas = document.getElementById('view') as HTMLCanvasElement;
   // (the Team & kit picture has no HUD)
   if (kitPicture) for (const el of document.getElementById('app')!.children) if (!['view', 'panel', 'lcol', 'veil', 'loading', 'menu', 'missions', 'fatal'].includes(el.id)) (el as HTMLElement).style.display = 'none';
-  // (the benchmark asked for on the address goes to its first scene's page before anything boots; so does the pricing run)
-  let refused: string | null = null; if (q.has('bench') && !q.has(BENCH_RUN_KEY)) { refused = benchBegin(false); if (refused === null) return; console.info(`benchmark: ${refused}`); }
-  if (priceLevelsPage(q)) return;
   gameKeysBoot(q, walkInNow); bootTextSize(q, kitPicture);
   setLookPlace(placeOfQuery(q));
   const name = coop?.start.file ?? (/^[\w.-]+\.json$/.test(q.get('levelFile') ?? '') ? q.get('levelFile')! : 'office.json'), at = (p: string) => new URL(p, document.baseURI).href;
+
+  // ---- the game's module
+  const faceP = fetchFace(say).then(face => { MODULE.name = face.name ?? '';
+    // THE DESK: the cards before a game ask the module, and what a press keeps goes in this machine's store, where the next page's start reads it
+    const C = new Commands(); setDesk(new Desk(face.exports as unknown as DeskFace, face.exports.memory as WebAssembly.Memory, (key, text) => { try { if (text) localStorage.setItem(key, text); else localStorage.removeItem(key); } catch { /* no store: nothing is kept */ } }));
+    C.words(location.search); machineBefore(q, name, C); desk().do(C); return face; });
+  faceP.catch(() => { /* told where it is awaited, below */ });
+  // (an address that may only say where to go waits for the module before anything else is fetched: a row of the short list named and nothing to play goes to that row's own page, the benchmark asked
+  //  for to its first scene's, the pricing run to its first level's. A page of a pricing run under way takes its part here, before the picture boots)
+  let refused: string | null = null;
+  if (q.has('bench') || q.has(PRICE_KEY) || q.has(PRICE_RUN_KEY) || (q.has('pick') && !q.has('levelFile') && !q.has('solo'))) { await faceP;
+    const to = tape || coop ? '' : desk().pick(location.search); if (to) { location.replace(location.pathname + to + location.hash); return; }
+    if (q.has('bench') && !q.has(BENCH_RUN_KEY)) { refused = benchBegin(false); if (refused === null) return; console.info(`benchmark: ${refused}`); }
+    if (priceLevelsPage(q)) return; }
 
   SFX_TABLE.was = q.has('oldsounds'); SFX_TABLE.redone = q.has('newsounds'); if (q.has('bench') || q.has(BENCH_RUN_KEY)) SFX_WARM.on = false; else if (!q.has('mute')) warmSfx();   // (the sounds, a voice at a time in idle moments)
 
@@ -158,10 +167,7 @@ async function main(): Promise<void> {
   const chP = loadCharacterSet(at('assets/ual/AnimationLibrary_Godot_Standard.gltf'), castUrlFor(location.search, document.baseURI)); chP.then(() => boot.span('gltf', tBoot), () => { /* awaited below */ });
   const tFiles = performance.now(), filesP = Promise.all([tape ? new Uint8Array(0) : coop ? bytesOf(`levels/${name}`) : levelBytes(name).then(b => { boot.span('level', tFiles); return b; }), bytesOf(at('assets/ual/AnimationLibrary_Godot_Standard.gltf')), bytesOf(at('assets/ual/AnimationLibrary_Godot_Standard.bin')), bytesOf(at(`assets/chars/${CAST_FILE}`)), bytesOf(at(`assets/chars/${CAST_FILE_LOOK}`))]); filesP.catch(() => { /* awaited below */ });
   boot.expose();
-  const face = await fetchFace(say); MODULE.name = face.name ?? '';
-  // THE DESK: the cards before a game ask the module, and what a press keeps goes in this machine's store, where the next page's start reads it
-  { const C = new Commands(); setDesk(new Desk(face.exports as unknown as DeskFace, face.exports.memory as WebAssembly.Memory, (key, text) => { try { if (text) localStorage.setItem(key, text); else localStorage.removeItem(key); } catch { /* no store: nothing is kept */ } }));
-    C.words(location.search); machineBefore(q, name, C); desk().do(C); }
+  const face = await faceP;
   // (an address that plays a mission comes up on that mission's brief, one that plays nothing on the title; either is live from here, and the game is made behind it)
   LOADBRIEF.on = q.get('loadbrief') !== '0'; settleOfQuery(q);
   LOADBRIEF.options = { open: () => openOptions({ tab: 'controls' }), close: closeOptions, up: optionsOpen };
@@ -238,7 +244,7 @@ async function main(): Promise<void> {
   { const eye: [number, number] = [0, 0]; lookConfig.eyeAt = () => { const o = view() + View.at; eye[0] = D.f[o]; eye[1] = D.f[o + 2]; return eye; }; }
   const gaps = doorways(D); { const lines = gaps.map(d => [d.hinge[0], d.hinge[1], d.hinge[0] + Math.cos(d.closedDir) * d.width, d.hinge[1] + Math.sin(d.closedDir) * d.width] as [number, number, number, number]); lookConfig.doorGaps = () => lines; }
   const fog = makeFogFrame(), ask = askOf(game), audio = new AudioEngine(ask), events = new DrawEvents(D, engine.particles, smoke, audio, i => game.nameOf(i));
-  MUSIC.pieces = MUSIC.byLevel = MUSIC.theirs = true; audio.scoreSet = setlistOfQuery(location.search); let run = -1;   // (the level's own music, as tense as those who are against him)
+  MUSIC.pieces = MUSIC.byLevel = MUSIC.theirs = true; audio.scoreSet = setlistOf(setlistLevel(q.get('levelFile')), desk().kind(location.search) || null); let run = -1;   // (the level's own music, as tense as those who are against him)
   if (q.has('mute')) { audio.volume.master = 0; audio.start = () => { /* silent */ }; }
   const hud = kitPicture ? null : new DrawHud(game, ask); if (hud && (play || q.get('cards') === '0')) hud.overlay.cards = false;   // (a run being played again waits for nobody)
   deaf = () => audio.hush();
@@ -248,6 +254,7 @@ async function main(): Promise<void> {
   const lights = new DrawLights(engine.lights, D); lights.from();   // (the lights stand too: their reach is worked out of the level as it opens)
   const reach = new DrawReach(engine, world, gaps);
   const weather = new WeatherPicture(engine, D, world, engine.particles, smoke);
+  audio.outdoors = weather.roofs.outdoors;
 
   // ---- the player
   const input = new Input(canvas); if (hud) hud.overlay.cardClosed = () => input.focusGame(); input.saveKey = () => !title && !play && !brief?.up;   // (F5 is the game's while a run is on: a save by hand)

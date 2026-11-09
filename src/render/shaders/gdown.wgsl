@@ -1,4 +1,4 @@
-// SHARP DIRECT (docs/internal/sharp-direct.md): the INTERNAL-resolution view of a g-buffer rasterised at the OUTPUT resolution.
+// SHARP DIRECT: the INTERNAL-resolution view of a g-buffer rasterised at the OUTPUT resolution.
 // One fullscreen triangle at the internal size; every internal pixel takes the OUTPUT texel that holds its own centre — o = ⌊(i + ½) · out ∕ in⌋ — and
 // copies its six values through as they are (albedo, packed normal, id, object motion, material, and the depth through frag_depth). Nothing is averaged:
 // a depth or a normal that is the mean of two surfaces names neither, and every internal-resolution pass downstream (the direct estimators, the gather,

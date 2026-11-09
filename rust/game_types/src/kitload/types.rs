@@ -67,5 +67,3 @@ impl KitloadMod {
     }
 }
 
-/// (src/game/kitload.ts:76 BREAK)
-pub const BREAK: bool = false;

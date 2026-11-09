@@ -574,9 +574,6 @@ pub fn work_things_working(g: &crate::game::Game, seat: &crate::seats::SeatRef, 
 
 /// A line of the module's log, kept to 200. (workthings.ts WorkThings.note)
 pub fn work_things_note(g: &mut crate::game::Game, gd: GuardId, what: &str) {
-    let row = WorkThingsLogItem { t: g.time, who: g.gd[gd].callsign.clone(), what: String::from(what) };
-    g.work.log.push(row);
-    if g.work.log.len() > 200 { g.work.log.drain(0..50); }
 }
 
 /// orders.ts targetAt: a thing a teammate can work near a point. (workthings.ts workNear)

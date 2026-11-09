@@ -39,7 +39,7 @@
 import type { Vec3 } from '../../src/math/vec';
 import { BoxFlag } from '../../src/scene/boxes';
 import type { Level } from './lib/level';
-import type { LevelScenarios, StructureData, ResponseData } from '../../src/scene/scenarios';
+import type { LevelScenarios, StructureData, ResponseData } from './lib/scenarios';
 import * as K from './lib/levelKit';
 import { gwotKit, gwotOfKit, GWOT_MATERIALS } from './lib/gwotKit';
 import { feetOn } from './lib/carShapes';
@@ -67,7 +67,7 @@ const TRUCK = [22.0, 20.4, 0.06] as const;
 /** where the team forms up: the dark lot south of the front door, behind the parked car */
 export const RECORDS_START: Vec3 = [13.0, 0, 26.9];
 
-/** THE ROOM CLEAR on this level (the file's `scenarios.roomClear` block — scene/scenarios.ts StructureData: the rooms a defender holds, their ways in, how many
+/** THE ROOM CLEAR on this level (the file's `scenarios.roomClear` block — lib/scenarios.ts StructureData: the rooms a defender holds, their ways in, how many
  *  men, where they may stand and which door each watches from there; and where the team starts, for this level has no breach plan and so no F drill). Five men:
  *  front office 1, records 2, strong room 1, staff room 1. A mark's place implies its facing — a man stands across the room from the door he fears — and the
  *  first `garrison` marks of a room are the authored placement (seed 0): in records one man per door. The door between records and the strong room is a way
@@ -116,7 +116,7 @@ export const RECORDS_STRUCTURE: StructureData = {
 /** the parked car's boxes, by the ids the export writes (body, cabin, roof, wheels, lamps): what the front door's kit view takes out of ITS picture — it stands
  *  between that camera and the men. (tools/qa/kitview-plan.ts holds each id to what stands in the camera's way: a level edit that renumbers them is red there.) */
 const CAR = ['box_0212', 'box_0213', 'box_0214', 'box_0215', 'box_0216', 'box_0217', 'box_0218', 'box_0219', 'box_0220', 'box_0221', 'box_0222'];
-/** THE RECORDS OFFICE'S RESPONSE TEAM (scene/scenarios.ts ResponseData; rust/game_rules/src/qrf RESPONSE.raid — rust/game_start/tests/response_team.rs stands every mark
+/** THE RECORDS OFFICE'S RESPONSE TEAM (lib/scenarios.ts ResponseData; rust/game_rules/src/qrf RESPONSE.raid — rust/game_start/tests/response_team.rs stands every mark
  *  on the built floor). A raid's team: it stands with the defenders. WHY HERE: the front office is 'the first room on a QUIET floor' — a night desk, a lamp,
  *  a screen, and a telephone. Gunfire the desk hears, and a few seconds to dial, is a patrol car on its way; the desk taken first and quietly, from the dark
  *  lot, and nobody calls. Two men, never more: this is the pair's level. */
@@ -135,9 +135,9 @@ export const RESPONSE: ResponseData = {
 };
 /** what the playtest scenarios take from this level: the room clear (pair or four). No rescue, no night breach: it is not their level. */
 export const RECORDS_SCENARIOS: LevelScenarios = { roomClear: RECORDS_STRUCTURE, response: RESPONSE,
-  // the floor nobody holds, by name (scene/scenarios.ts PlacesData — words only): what a line on their net calls a spot that is no room of the structure
+  // the floor nobody holds, by name (lib/scenarios.ts PlacesData — words only): what a line on their net calls a spot that is no room of the structure
   places: { areas: [{ name: RECORDS_ROOMS.hall.name, bounds: { ...RECORDS_ROOMS.hall.bounds } }] },
-  // the start page's picture of the team at the way-in door (scene/scenarios.ts KitViewData, rust/game_rules/src/kitstage; picture only), per way in as the starts are:
+  // the start page's picture of the team at the way-in door (lib/scenarios.ts KitViewData, rust/game_rules/src/kitstage; picture only), per way in as the starts are:
   // the south lot's front door with the worked-out camera and lamp and its slots written down; the dark west side's the same way (no pin: one worked-out camera rule for both)
   // (Sam's slot is 1.8 m from each door's middle, further off the wall than the worked-out 1.2 m: a door charge's moment goes off beside him — rust/game_rules/src/kitstage KIT_VIEW_STAGE)
   // (what the plan — rust/game_start/src/kit_plan.rs — would otherwise MEASURE and get a different picture from, written down as this level's own: the stack was laid out

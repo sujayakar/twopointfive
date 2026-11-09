@@ -33,13 +33,13 @@ struct Frame {
   p5Cfg: vec4u,                             // renderer v3 phase 5 (ultra-only extras; every field 0 = the pass exactly as it was): x, y free (the resampling gather's mode and numbers until 2026-11-07), z = the reflection pass's bits: 1 = characters are their skinned MESH at reflection hits (closest-hit walk of the mesh-shadow trees, reflect.wgsl; needs FLAG_MESH_SHADOWS up), 2 = the second reflection ray decorrelated (antithetic azimuth) + the hit's lighting reused from last frame's record when the hit point matches (rtHitReuse); w = the lowest light slot holding a TRANSIENT light this frame (lights.ts firstTransientSlot: they are born at the tail) — gather_common's per-hit subtraction walk starts there instead of at 0, testing each slot it visits as before (0 when none is alive)
   jitter: vec4f,                            // xy = this frame's TAAU sub-pixel jitter in internal pixels (0 without TAAU / under a debug view), zw = the previous render's — a screen-space history keyed on the UNJITTERED pixel (the gather's reservoirs) takes both out of its reprojection
   markCfg: vec4f,                           // MARKINGS (scene/markings.ts, shaders/markings.wgsl): x = the base texel in metres (0 = markings OFF: nothing evaluated anywhere, the frame as it was), y = contrast 0‥1 (palette colours lerped from the box albedo), z = × the emission of emissive markings, w = 1 = evaluate markings at reflection hits too
-  sharpCfg: vec4f,                          // SHARP DIRECT (docs/internal/sharp-direct.md): xy = the internal size, zw = the OUTPUT size the g-buffer / unshadowed direct / composite / TAA run at this frame — z = 0 = off: every pass as it was. (frame.screen is whichever of the two the pass binding this block runs at: the engine keeps an internal-screen and an output-screen copy of the block)
+  sharpCfg: vec4f,                          // SHARP DIRECT: xy = the internal size, zw = the OUTPUT size the g-buffer / unshadowed direct / composite / TAA run at this frame — z = 0 = off: every pass as it was. (frame.screen is whichever of the two the pass binding this block runs at: the engine keeps an internal-screen and an output-screen copy of the block)
   sharpCfgB: vec4f,                         // sharp direct's knob: w = the same-plane weight's k (plane distance ∕ (z·k)); xyz free
   sharpCfgC: vec4f,                         // DECOUPLED JITTER under sharp direct: xy = the jitter the INTERNAL raster carries relative to the (unjittered) OUTPUT raster, internal px (gdown / sharp_direct / composite / taau / particles add it to every internal ↔ output texel map); 0 = one jitter for both rasters, the path as it was
   rigCfg: vec4f,                            // SDF CHARACTER RIG (render/sdfrig.ts, shaders/sdfrig.wgsl): x = bits (64 = character self-shadow in the direct estimators' shadow rays (selfShadowT), 128 = mesh shadows for near receivers only (meshShadowT); the bits under 64 are free — the round-cone proxy test is unconditional); yzw free
   rigCfgB: vec4f,                           // free
   giCfg: vec4f,                             // four free words (the young-history gather rays read them until 2026-11-07)
-  weatherE: vec4f,                          // PARTICLE RAIN (experiment, rust/game_rules/src/rain_fx + shaders/particles*.wgsl): xy = centre xz of the near-field particle layer's disc, z = its radius (m), w = the share 0‥1 of the LATTICE rain volumetrics.wgsl drops inside it (rainNearKeep) — 0 = no particle layer: the lattice exactly as it was (NEGATIVE on a snow level: the metres past the level's rim the snow goes on falling, particles_common.wgsl snowPast — every lattice reader asks `> 0.0`)
+  weatherE: vec4f,                          // PARTICLE RAIN (experiment, src/picture/rain.ts + shaders/particles*.wgsl): xy = centre xz of the near-field particle layer's disc, z = its radius (m), w = the share 0‥1 of the LATTICE rain volumetrics.wgsl drops inside it (rainNearKeep) — 0 = no particle layer: the lattice exactly as it was (NEGATIVE on a snow level: the metres past the level's rim the snow goes on falling, particles_common.wgsl snowPast — every lattice reader asks `> 0.0`)
   weatherF: vec4f,                          // PARTICLE RAIN v2: the drop's PHASE the lattice's streaks share with the particles' (volumetrics.wgsl rainLight): x = isotropic floor, y = forward-lobe weight, z = its Henyey-Greenstein g, w = × gain — w 0 = the lattice's isotropic sum exactly as it was
   shadeCfg: vec4f,                          // THE LOOK PROTOTYPE, eyes adjust to shade (engine.ts lookShade writes it, zeros = the picture as it was; the one exposure model's, place_common.wgsl lookExpoFor): x = the share of its dark a place darker than the open air is brought up by (0 = off), y = the mean radiance open air holds from the sky alone (luminance), z = spare, w = the irradiance open ground gets from the sky alone (luminance)
   veilA: vec4f,                             // THE LOOK PROTOTYPE, loose snow in the air (composite.wgsl lookPowder; render/lookveil.ts lookVeilFrame, zeros = none): xy = 1 ∕ the floor plan the powder's field covers (width, depth), z = how much of it is drawn 0‥1, w = what the sun (or the moon) puts on level ground, as luminance
@@ -437,11 +437,11 @@ fn isectCut(lo: vec3f, ld: vec3f, tmn: vec3f, tN0: f32, tF0: f32, tmax: f32, bi:
 // off loses no bits to the distance. Codes: an end keeps isectBox's 2 / 3, 7 = origin inside, and the SIDE answers ROUND_SIDE (negative, under the cut planes'
 // −1‥−8: every caller's `code > 6.5` inside test and its t tests read it as an ordinary face). The side's normal needs the hit point: roundNormalAt, asked by the
 // closest-hit walks after boxNormalFromCode. boxes.ts rayBoxRound is this on the CPU (rayBox).
-// (docs/agents/levels.md, the round things' bullet, has the whole of it and what was run.)
+// (docs/agents/levels.md, "Round and shaped things".)
 const ROUND_SIDE: f32 = -9.0;
 // A RAY MEETS A ROUND AS ITS PICTURE'S PRISM (the prelude's ROUND_AS_CUT: a module compiled with the cut rule, which is every one where cut boxes are on).
 // The software adapter writes a copy of isectBox for every place a box walk stands, and those copies already hold isectCut: with isectRound on top a newer adapter lost its
-// device on the first frame a cut piece was alive (docs/agents/levels.md). A round's eight rows of the cut table are the prism the cut pass draws, in isectCut's own
+// device on the first frame a cut piece was alive. A round's eight rows of the cut table are the prism the cut pass draws, in isectCut's own
 // form, so the walk hands a round to isectCut and the cylinder's test is not written: the walks are the size they were before round things. A ray
 // meets the round up to 3.5 % of its radius further out at the prism's twelve corners; the side's normal still turns smoothly (roundSideHit, roundNormalAt).
 const ROUND_RAY: bool = ROUND_BOXES && !ROUND_AS_CUT;
@@ -624,7 +624,7 @@ fn meshAnyHitChar(k: u32, ro: vec3f, rd: vec3f, invRd: vec3f, tmax: f32) -> f32 
 // them would clip the very silhouette this is for. First blocker found (its t), or −1.
 // THE LIST HOLDS MORE MEN THAN THERE ARE TREES (boxes.ts MAX_CAST against MESH_MAX_CHARS): a man past the trees' places is his round cones to every ray, here and in meshClosest's
 // caller. This loop stopped at the trees' count, so with mesh shadows on such a man threw no traced shadow at all.
-// NEAR-ONLY mode (frame.rigCfg bit 128 = settings.meshShadowsNear, the HIGH tier's form of mesh shadows — docs/internal/render-defects-0812.md §1): only a receiver within MESH_NEAR_M of a
+// NEAR-ONLY mode (frame.rigCfg bit 128 = settings.meshShadowsNear, the HIGH tier's form of mesh shadows): only a receiver within MESH_NEAR_M of a
 // man's cull sphere tests his MESH; anything farther keeps his round cones (statement for statement the loop occludedCapsules runs). The mesh is what closes the lit seam
 // between a rasterised limb and the shadow its slimmer proxy casts beside it — a CONTACT defect: the floor at his boots, the desk under his hand, the man beside him — while a
 // torch throwing his shadow on a wall three metres off reads the same off either; and it is the rays that start ON or BESIDE a lit man (a torch full on him) that made the
@@ -651,7 +651,7 @@ fn meshShadowT(ro: vec3f, rd: vec3f, tmax: f32, skipOwner: u32) -> f32 {
   return -1.0;
 }
 
-// ---- CHARACTER SELF-SHADOW (frame.rigCfg bit 64 = settings.charSelfShadow; direct_common.wgsl shadowSample asks it for a man's own pixels — docs/internal/render-defects-0812.md §1).
+// ---- CHARACTER SELF-SHADOW (frame.rigCfg bit 64 = settings.charSelfShadow; direct_common.wgsl shadowSample asks it for a man's own pixels).
 // Every shadow ray leaving a man's pixel skips ALL of his own proxies / his own mesh (the owner byte, above): the proxies are fitted ±2–3 cm round the mesh, and even the
 // mesh's own facets sit a hair off the smooth-shaded surface, so testing them from the surface point would print acne. The price was that his own body never stood between
 // any part of him and a light: crouched under the moon through a window, the tops of his thighs, boots and tucked forearms lit up as brightly as the crown of his head — the
@@ -1087,7 +1087,7 @@ fn portalSoft(li: Light, high: f32) -> f32 { return li.cosOuter * high * (2.0 / 
 /// line on a wall). (Until 11-05 the sky was also cut in two halves along the wall, five pieces in all, "so a long opening seen from close is not
 /// one piece". Against a sum over the opening's own points, tools/qa/portal-check.ts, the halves halved an error that is about a hundredth of a
 /// place's light without them under the most uneven sky an hour has, on every kind of face alike, and they were two fifths of what the sum cost
-/// every pixel in an opening's reach: docs/agents/render.md, AN OPENING'S LIGHT IS ADDED UP IN THREE PIECES, has the numbers and what was tried.) A sky piece's brightness runs straight
+/// every pixel in an opening's reach.) A sky piece's brightness runs straight
 /// from its foot to its head and so, near enough, does how squarely the face takes it: the piece counts as bright as the mean of the one weighed by
 /// the other, read where the part of it the face sees lies (portalEnds, portalMean). What is exact is the geometry; the sky's own ramp is followed to a few per
 /// cent from a metre off and to a third in the worst corner tools/qa/portal-check.ts could find (a floor at the sill of a long opening is a fifth

@@ -67,20 +67,6 @@ pub fn bench() -> &'static mut Bench {
 pub fn bench_read() -> &'static Bench {
     unsafe { &*core::ptr::addr_of!(BENCH) }
 }
-/// where a table of the bench is (a byte address): 0 rot · 1 pos · 2 args · 3 pose · 4 mask · 5 parent · 6 order
-pub fn addr(table: u32) -> usize {
-    let b = bench();
-    match table {
-        0 => b.rot.as_ptr() as usize,
-        1 => b.pos.as_ptr() as usize,
-        2 => b.args.as_ptr() as usize,
-        3 => b.pose.as_ptr() as usize,
-        4 => b.mask.as_ptr() as usize,
-        5 => b.parent.as_ptr() as usize,
-        6 => b.order.as_ptr() as usize,
-        _ => 0,
-    }
-}
 
 /// `x || 1` of a length: 1 where it is nothing or no number
 #[inline(always)]

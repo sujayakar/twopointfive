@@ -213,7 +213,7 @@ fn test_ok(g: &mut Game, t: &LessonTest, s: &mut StepSeen) -> Option<bool> {
         T::Mate { area, at, r, by, away } => ok_mate(g, &crate::seats::here(g), *area, *at, *r, *by, *away),
         T::Pair { what, n } => ok_pair(g, what, *n, s),
         T::Cue { name } => crate::rails::rails_cued(g, name),
-        T::View { turned, zoomed, panned } => ok_view(g, &crate::seats::here(g), *turned, *zoomed, *panned, s),
+        T::View { turned, zoomed } => ok_view(g, &crate::seats::here(g), *turned, *zoomed, s),
         T::Squad { area, n } => ok_squad(g, *area, *n),
         T::Stacks { doors, n, set } => ok_stacks(g, doors, *n, *set),
         T::Watching { at, r, n } => ok_watching(g, &crate::seats::here(g), *at, *r, *n),
@@ -381,12 +381,11 @@ fn ok_pair(g: &Game, what: &str, n: Option<f64>, s: &StepSeen) -> bool {
     hits as f64 >= n.unwrap_or(1.0)
 }
 
-fn ok_view(g: &Game, seat: &crate::seats::SeatRef, turned: Option<f64>, zoomed: Option<f64>, panned: Option<f64>, s: &StepSeen) -> bool {
+fn ok_view(g: &Game, seat: &crate::seats::SeatRef, turned: Option<f64>, zoomed: Option<f64>, s: &StepSeen) -> bool {
     let cam = g.tab.cmd_seat[seat.id].cam;
     let distance = g.tab.camera[cam].distance;
     turned.map_or(true, |d| s.turned * 180.0 / m::PI >= d)
         && zoomed.map_or(true, |z| m::abs(m::log(distance / s.dist0)) >= m::log(z))
-        && panned.map_or(true, |d| crate::rails::rails_panned(g) >= d)
 }
 
 fn ok_squad(g: &Game, area: crate::scene_scenarios::Rect, n: Option<f64>) -> bool {

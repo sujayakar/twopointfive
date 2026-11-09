@@ -246,10 +246,6 @@ impl<K: Eq + Clone + Hash> JsSet<K> {
     pub fn keys(&self) -> Vec<K> {
         self.m.keys()
     }
-    /// a walk that sees the set as it changes (JsMap::next_key)
-    pub fn next_key(&self, at: &mut usize) -> Option<K> {
-        self.m.next_key(at)
-    }
     pub fn iter(&self) -> impl Iterator<Item = K> + '_ {
         self.m.iter().map(|r| r.0)
     }

@@ -5,7 +5,7 @@ use crate::V3;
 use alloc::vec::Vec;
 use game_derive::Knobs;
 
-/// The hold's contact constants (docs/internal/grab-interrogate-design.md §3). The two roots are locked HOLD.dist apart on ONE facing, so a point on the other man
+/// The hold's contact constants. The two roots are locked HOLD.dist apart on ONE facing, so a point on the other man
 ///  is a constant in each figure's own model space (x = the figure's left, y up, z ahead of its root) — no bone hand-off between the characters. Timings are the
 ///  controller's too (player.ts reads secs). First-pass numbers off the mannequin's measured joints; the viewer will get a page to tune them like RIG.
 #[derive(Clone, Debug, ToBytes, Knobs)]
@@ -672,7 +672,7 @@ pub struct WatchK {
 ///  swinging, elbow out), falls that do not all go over backwards, and the stack's shoulder squeeze. Every part has its own switch and `on` is the master:
 ///  **on = 0 is the animator exactly as it was** (every new branch below is behind `mvOn`, the old statements untouched) — the headless harness stands up with it
 ///  off (host/standup.ts), so every frozen digest holds; the page has it on, `?nomoves` puts it off. Poses feed the game (the muzzle rides the hand, hit columns
-///  ride the hips and chest), so ON is a different simulation in the small — see rebuild/characters-loud/animations/notes.md.
+///  ride the hips and chest), so ON is a different simulation in the small.
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct MovesK {
     #[k(1.0)] pub on: f64,
@@ -683,7 +683,7 @@ pub struct MovesK {
     #[k(1.0)] pub gait: f64,
     #[k(1.0)] pub fall: f64,
     #[k(1.0)] pub squeeze: f64,
-    /// THE SECOND PASS (rebuild/cast-faces-and-moves/moves/notes.md) — looks laid on states the game already has. `reload`, `bound` and `clutch` move ARMS ONLY that
+    /// THE SECOND PASS — looks laid on states the game already has. `reload`, `bound` and `clutch` move ARMS ONLY that
     ///  nothing in the fight reads (a rifleman's support arm; an unarmed civilian's two): the trunk, the head, the trigger hand and with them the muzzle, the bore, the
     ///  eyes and the hit columns are bit for bit what they were, so these are on with the pass. `entry` lowers a teammate's muzzle past a friend's back — the muzzle is
     ///  the game's own (rounds leave it, the line-of-fire tests start at it), so it is a different simulation in the small: OFF — tallied over 144 seeds (CLAUDE.md, the MOVES second pass): no mission is measurably better for it, The block leans worse, and the bore still ends on the friend.

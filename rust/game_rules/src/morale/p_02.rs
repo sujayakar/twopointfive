@@ -258,46 +258,10 @@ pub fn rung_of(g: &crate::game::Game, gd: GuardId) -> f64 {
 pub fn morale_of(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::morale::MoraleOf> {
     let s = g.m.morale.state_of.get(gd)?;
     Some(MoraleOf {
-        drive: s.drive, heard: s.heard, t: s.t, lost: s.lost, next: s.next, hole: s.hole, goal: s.goal, act: s.act, lit: s.lit, said: s.said,
-        alone: s.alone, ask: s.ask, by: s.by, green: s.green, dark: s.dark, rounds: s.rounds, fall: s.fall, drive_t: s.drive_t, calls: s.calls,
-        shock: s.shock, rung: s.rung, leader_down: s.leader_down, broke_t: s.broke_t, call_t: s.call_t, baits: s.baits, at_hole: s.at_hole,
-        bark: s.bark, shout: s.shout,
+        t: s.t, act: s.act,
+        alone: s.alone, green: s.green,
     })
 }
-
-/// 'men ▸ S g g g · S g g': who is steady and who green, a band at a time, the living only; men with no band as one last group (morale.ts moraleRoster)
-pub fn morale_roster(g: &mut crate::game::Game) -> String {
-    let mut groups: Vec<Vec<GuardId>> = Vec::new();
-    let mut loose: Vec<GuardId> = Vec::new();
-    let mut seen: Vec<Vec<GuardId>> = Vec::new();
-    for i in 0..g.guards.len() {
-        let gd = g.guards[i];
-        if !ours(g, gd) || rescued(g, gd) { continue; }
-        match band_of(g, gd) {
-            None => loose.push(gd),
-            Some(b) => {
-                if !seen.contains(&b) {
-                    let mut living: Vec<GuardId> = Vec::new();
-                    for &o in b.iter() { if ours(g, o) { living.push(o); } }
-                    seen.push(b);
-                    groups.push(living);
-                }
-            }
-        }
-    }
-    if !loose.is_empty() { groups.push(loose); }
-    let mut shown: Vec<String> = Vec::new();
-    for b in groups.iter() {
-        let mut marks: Vec<&str> = Vec::new();
-        for &o in b.iter() { marks.push(if training_of(g, o) == TrainingOf::Steady { "S" } else { "g" }); }
-        shown.push(marks.join(" "));
-    }
-    let body = shown.join(" · ");
-    alloc::format!("men ▸ {}", if body.is_empty() { "nobody" } else { body.as_str() })
-}
-
-
-
 
 /// runner.ts: the man is that file's from here: whatever sequence has him ends where it stands, and this rule lets go of him; dread and rung stay (morale.ts moraleRelease)
 pub fn morale_release(g: &mut crate::game::Game, gd: GuardId) {
@@ -308,7 +272,3 @@ pub fn morale_release(g: &mut crate::game::Game, gd: GuardId) {
     crate::owner::release(g, gd, crate::owner::by::MORALE, t);
 }
 
-/// A position as three numbers, NaN for none. (morale.ts n3)
-pub fn n3(p: Option<V3>) -> Vec<f64> {
-    match p { Some(p) => vec![p[0], p[1], p[2]], None => vec![f64::NAN, f64::NAN, f64::NAN] }
-}

@@ -1,5 +1,3 @@
-pub use ::game_types::posehome::types;
-pub use types::*;
 pub mod base;
 pub use base::*;
 pub mod b_01;

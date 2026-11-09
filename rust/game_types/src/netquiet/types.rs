@@ -61,25 +61,6 @@ pub struct Mind {
     pub low: bool,
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct NetQuietSnap {
-    pub men: Vec<Option<Vec<f64>>>,
-    pub pts: Vec<Option<Vec<f64>>>,
-    pub names: Vec<Option<String>>,
-    pub asked: Vec<Option<Vec<f64>>>,
-    pub known: Option<Vec<Option<Vec<f64>>>>,
-    pub paid: Option<Vec<Option<Vec<f64>>>>,
-}
-
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct NetquietModNETQUIETLOGItem {
-    pub id: f64,
-    pub t: f64,
-    pub kind: crate::netquiet::LineKind,
-    pub text: String,
-    pub radio: bool,
-}
-
 #[derive(Clone, Copy, Debug, Default)]
 pub struct NETQUIETQA {
     pub broken: bool,
@@ -99,61 +80,15 @@ pub struct NetQuietPose {
     pub crouch: f64,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct NetQuietSpot {
-    pub to: Option<V3>,
-    pub arc: f64,
-    pub seen: f64,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct NetQuietOf {
-    pub quiet: f64,
-    pub asked: JsSet<crate::Num>,
-    pub known: JsSet<crate::Num>,
-    pub paid: JsMap<crate::Num, f64>,
-    pub say: f64,
-    pub say_t: f64,
-    pub say_name: String,
-    pub bark: f64,
-    pub last_kind: f64,
-    pub body_t: f64,
-    pub roused: f64,
-    pub heard_t: f64,
-    pub cs: f64,
-    pub cl: f64,
-    pub fx: f64,
-    pub fz: f64,
-    pub whip_at: Option<V3>,
-    pub whip_in: f64,
-    pub whip_t: f64,
-    pub whip_held: f64,
-    pub last: f64,
-    pub t: f64,
-    pub mate_t: f64,
-    pub news: f64,
-    pub news_t: f64,
-    pub eye: f64,
-    pub eye_half: f64,
-    pub spot: Option<V3>,
-    pub yaw: f64,
-    pub arc: f64,
-    pub look: Option<V3>,
-    pub low: bool,
-}
-
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct NetquietMod {
-    /// (src/game/netquiet.ts:89 NETQUIET_LOG)
-    pub netquiet_log: Vec<crate::netquiet::NetquietModNETQUIETLOGItem>,
     /// (src/game/netquiet.ts:125 stateOf)
     pub state_of: JsMap<GuardId, crate::netquiet::Mind>,
 }
 impl NetquietMod {
     pub fn blank() -> Self {
         NetquietMod {
-            netquiet_log: Vec::new(),
             state_of: JsMap::new(),
         }
     }
@@ -209,5 +144,3 @@ pub const LOW: f64 = 3.0;
 /// (src/game/netquiet.ts:115 DONE)
 pub const DONE: f64 = 4.0;
 
-/// (src/game/netquiet.ts:484 VISIT)
-pub const VISIT: &str = "twopointsix.netquiet.visit";

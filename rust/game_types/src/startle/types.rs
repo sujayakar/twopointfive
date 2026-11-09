@@ -23,11 +23,6 @@ pub struct St {
     pub script: Option<crate::game::GuardScript>,
 }
 
-#[derive(Clone, Debug, Default)]
-pub struct StartleSnap {
-    pub men: Vec<Option<Vec<f64>>>,
-}
-
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct StartleMod {

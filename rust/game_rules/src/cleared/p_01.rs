@@ -275,17 +275,6 @@ pub fn cleared_rooms_dear_along(g: &mut crate::game::Game, from: V3, path: &[V3]
     metres
 }
 
-/// The line for the checks.   (cleared.ts ClearedRooms.summary)
-pub fn cleared_rooms_summary(g: &mut crate::game::Game) -> String {
-    cleared_rooms_build(g);
-    let k = g.cleared.known;
-    let s = g.cleared.stats;
-    alloc::format!(
-        "cleared rooms: {} of {} known · routes {} round, {} through for want of a way · {} stacks on the known face · {} walked to the ordered door",
-        k, g.cleared.sizes.len() - 1, s.round, s.through, s.face, s.mouth
-    )
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

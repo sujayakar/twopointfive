@@ -12,7 +12,7 @@
 // (host/drawpage.ts → initCutSwitch) unless the address says ?nocutboxes / ?cutboxes=0 or this machine kept localStorage twopointsix.cutboxes = '0'. OFF = Box.cut is ignored by
 // everything: the plain box, the base build's frame hash for hash. Whoever EMITS cut pieces asks cutBoxesOn() and emits its plain boxes otherwise.
 //
-// The record's contract (type, packing, limits) is written up in rebuild/cut-pieces/contract.md; the layout below is version 1.
+// The layout below is version 1.
 import type { Vec3, Quat } from '../math/vec';
 
 /** one cutting plane in the box's LOCAL frame: the box KEEPS the side n · p ≤ d (n unit, d metres from the box centre along n; what lies beyond is gone) */

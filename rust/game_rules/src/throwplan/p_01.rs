@@ -123,7 +123,6 @@ pub fn throw_flight(g: &mut crate::game::Game, kind: crate::squadthrow::SquadThr
         end: pos,
         land: match land { Some(l) => l, None => v3::copy(pos) },
         points,
-        landed: bounces > 0 || settled,
     }
 }
 

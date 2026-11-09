@@ -9,15 +9,6 @@ pub enum LiftWhy {
     Order,
     Drill,
 }
-impl LiftWhy {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            LiftWhy::Shot => "shot",
-            LiftWhy::Order => "order",
-            LiftWhy::Drill => "drill",
-        }
-    }
-}
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct State {
@@ -26,13 +17,6 @@ pub struct State {
     pub cast: Vec<GuardId>,
     pub by: Option<PlayerId>,
     pub loud_t: f64,
-}
-
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct HoldfireModHOLDFIRELOGItem {
-    pub t: f64,
-    pub why: crate::holdfire::LiftWhy,
-    pub what: String,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -47,15 +31,12 @@ pub struct HoldFireOrderO {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct HoldfireMod {
-    /// (src/game/holdfire.ts:70 HOLDFIRE_LOG)
-    pub holdfire_log: Vec<crate::holdfire::HoldfireModHOLDFIRELOGItem>,
     /// (src/game/holdfire.ts:74 states)
     pub states: JsMap<PlayerId, crate::holdfire::State>,
 }
 impl HoldfireMod {
     pub fn blank() -> Self {
         HoldfireMod {
-            holdfire_log: Vec::new(),
             states: JsMap::new(),
         }
     }
@@ -69,5 +50,3 @@ pub struct HoldfireStats {
     pub lifts: [i32; 3],
 }
 
-/// (src/game/holdfire.ts:100 WAITS: a table nothing writes)
-pub fn waits() -> Vec<String> { alloc::vec![String::from("place"), String::from("standoff"), String::from("armed")] }

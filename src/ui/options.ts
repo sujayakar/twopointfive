@@ -50,9 +50,9 @@ const TIERS: { v: 'auto' | QualityName; label: string; line: string }[] = [
 /** THE KEYS, grouped by what the hand is doing: [key caps, what it does, the small print] */
 const WALL_WHAT = 'Back to the wall beside you', WALL_SMALL = 'slide along it and look around its end, then press Q or step away to let go';
 const E_WHAT = 'Holster or draw';
-/** the empty hands' own slot (rust/game_rules/src/handslot; '0' is its row's cap in the build, shown as the key it is on: backtick): it heads the kit's rows, and E's row is gone */
+/** the empty hands' own slot (rust/game_types/src/handslot; '0' is its row's cap in the build, shown as the key it is on: backtick): it heads the kit's rows, and E's row is gone */
 const SLOT_ROW: [string[], string, string?] = [['0'], 'Empty hands', 'put away what you\'re holding, then press a number to draw again'];
-/** the action key's row and the whistle's while his own actions are a ring that stays (rust/game_rules/src/handring): the list's wheel is gone, the whistle is a wedge */
+/** the action key's row and the whistle's while his own actions are a ring that stays (rust/game_types/src/knobs/handring.rs): the list's wheel is gone, the whistle is a wedge */
 const ACT_WHAT = 'Do the highlighted action', WHISTLE_WHAT = 'Whistle';
 const RING_SMALL = 'hold it a moment for a ring of everything you can do here, then pick with 1 to 5 or a click', WHISTLE_SMALL = 'the nearest guard will come to look. the whistle is on the ring';
 /** THE WHO ROW (the orders' who key, code 'KeyT'). While quick orders are the whole squad's (rust/game_rules/src/cmdring `wholeSquad`: the key steps
@@ -130,7 +130,7 @@ export const KEYS: { group: string; rows: [string[], string, string?][] }[] = [
     [['F5'], 'Save'],
     [['Enter'], 'Go back to the last checkpoint when you\'re down'],
     [['Shift', 'Enter'], 'Restart the mission'],
-    [['F7'], 'Keep a replay of the last five minutes'],
+    [['F7'], 'Keep a replay of this run'],
     [['`'], 'The debugger', 'every knob in the build'],
   ] },
 ];

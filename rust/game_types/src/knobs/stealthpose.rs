@@ -3,7 +3,7 @@ use crate::bytes::ToBytes;
 use game_derive::Knobs;
 
 /// STEALTH POSES — how Sam carries himself with his hands empty and nobody on to him, posed against Chaos Theory's own clips (the maintainer's clips, cut into
-/// beats: rebuild/takedowns-like-chaos-theory/clips/stealth-moves.md). The PLAYER only; picture and pose only.
+/// beats). The PLAYER only; picture and pose only.
 ///   IDLE    the crouch at a stand, hands empty: both arms hang forward of the knees off the shoulders, elbows a little out, forearms dropping in front of the
 ///           knees, hands open and loose between shin and knee height — and never a held frame: the weight goes foot to foot on a slow cycle (the pelvis a
 ///           centimetre to each side, feet where they were) with the hands drifting.

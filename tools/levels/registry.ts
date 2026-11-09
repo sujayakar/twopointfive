@@ -1,5 +1,5 @@
 // THE REGISTRY — the hostage rescue's level: one lit gallery straight to the room, two rooms you may run past, and a long dark locked way round to its other door.
-// A level generator in the scenario levels' shape (tools/levels/test-rooms.ts is the template; rebuild/scenario-levels/contract.md the how-to):
+// A level generator in the scenario levels' shape (tools/levels/test-rooms.ts is the template; docs/agents/levels.md the how-to):
 //   bun run tools/levels/export.ts registry [--check]   → levels/registry.json, with its `scenarios.rescue` block
 //   page: ?levelFile=registry.json&rescue
 //
@@ -40,7 +40,7 @@
 // sorting room: the long one) — the level's one decision, painted on its floor.
 import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef } from './lib/level';
-import type { KitViewData, LevelScenarios, Rect } from '../../src/scene/scenarios';
+import type { KitViewData, LevelScenarios, Rect } from './lib/scenarios';
 import { officeKit, normalize3 as norm, OFFICE_PALETTE, type GeneratorTrace } from './lib/officeGen';
 import * as MD from './lib/markingDefaults';
 import { WORLD } from '../../src/scene/world';
@@ -70,7 +70,7 @@ export const REGISTRY_ROWS: { x: number; z0: number; z1: number }[] = [
   { x: 13.2, z0: 12.9, z1: 19.9 }, { x: 16.8, z0: 16.9, z1: 23.9 }, { x: 20.4, z0: 12.9, z1: 19.9 }, { x: 24.0, z0: 16.9, z1: 23.9 },
 ];
 
-/** THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest; picture only). The rescue starts the team 3 m INSIDE the
+/** THE TEAM & KIT PICTURE (lib/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest; picture only). The rescue starts the team 3 m INSIDE the
  *  front door, and from in there a picture looks out; from the forecourt the one thing that is this building's — the scribe's pitch, his table and typewriter
  *  under a faded umbrella — stands on the floor the men walk, south of the door and between Sam and the camera. So the way is a bespoke set: THE FRONT ITSELF,
  *  where it stands (the west wall on x 4, the same leaf on the same hinge, the lobby's red floor, its door mat and exit sign, a panel burning over the
@@ -466,7 +466,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     },
   };
   scenarios.kitView = REGISTRY_KITVIEW;
-  // THE FLOOR, BY NAME (scene/scenarios.ts PlacesData — words only, nothing in the simulation reads it): this level has no room-clear structure, so without
+  // THE FLOOR, BY NAME (lib/scenarios.ts PlacesData — words only, nothing in the simulation reads it): this level has no room-clear structure, so without
   // these a line that says where ('holding …') had only the OFFICE's words for it — the captor 'holding the server room' in the registrar's office
   scenarios.places = { areas: [{ name: "registrar's office", bounds: { ...R.office } }, { name: 'reading room', bounds: { ...R.reading } }, { name: 'copy room', bounds: { ...R.copy } }, { name: 'hall', bounds: { ...R.hall } }, { name: 'gallery', bounds: { ...R.gallery } }, { name: 'lobby', bounds: { ...R.lobby } }, { name: 'stacks', bounds: { ...R.stacks } }, { name: 'sorting room', bounds: { ...R.sorting } }] };
   scenarios.doorNames = [{ door: 'stacks_w', name: 'lobby-side stacks door' }];   // (doorNames: what a row calls the doors no room of the level names — rust/game_rules/src/doornames; no bearing in a name)

@@ -372,11 +372,6 @@ impl Air {
             self.acc = h;
         }
     }
-    /// airDust.ts restore's last line: the leaves read again over a field put back
-    pub fn reread(p: &mut Plan, wo: usize, set: i32) {
-        p.sig = f64::NAN;
-        Air::leaves(p, wo, set);
-    }
 }
 
 /// Math.round of a number a leaf's place makes, as a word (ToInt32 of it)

@@ -540,9 +540,6 @@ pub fn round(g: &mut crate::game::Game, gd: GuardId, dt: f64, every: f64, of: cr
     r.next = every;
     let left = r.rounds;
     g.stats.morale.rounds += 1;
-    let item = MoraleModMORALELOGItem { id: g.ch[c].id, t: g.time, from: v3::copy(g.ch[c].muzzle), at, of: match of { RoundOf::Dust => MoraleModMORALELOGItemOf::Dust, RoundOf::Bait => MoraleModMORALELOGItemOf::Bait } };
-    g.m.morale.morale_log.push(item);
-    if g.m.morale.morale_log.len() > 96 { g.m.morale.morale_log.remove(0); }
     left > 0.0
 }
 

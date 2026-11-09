@@ -1,222 +1,162 @@
-# Spoken and radio lines
+# Dialogue
 
-One of the area files CLAUDE.md indexes. Everything below was moved here word for word from CLAUDE.md on 2026-10-13, in its old order;
-"the bullet above / below" in a bullet means its neighbour there (each block says which lines it was), and a bullet named by its bold
-title may now live in another file of this folder: `grep -l '<title>' docs/agents/*.md`. New bullets for this area go at the foot of this file.
+Who says what, where and to whom, how a line is picked, and how it reaches the screen. How a line should read is `writing.md`. What makes a defender's net go
+quiet is `enemies.md`, Sam's arm on a man is `stealth.md`, and an order's row and refusal are `squad.md`.
 
-<!-- was CLAUDE.md lines 1428–1443 -->
-- **The dialogue pass = every line fits who says it and where** (`rust/game_rules/src/words`, ONE switch `WORDS.on`: ON in the page — `?oldwords` = every line as it was — OFF in the module and on the
-  frozen harness stand, `TPS_WORDS=1`; a `FROZEN_HOLDS` row, in the knob registry and a journal's tables; off = the build by run digest, since a bubble's time on screen is its length). `w(now, was)`
-  is evaluated WHERE A LINE IS READ, never in a table built as a module loads; a table row that changes carries an optional field (`now`, `own`, `away`, `bare`, `only`, `office`) resolved at the read
-  site. HOSTAGES have their own voice (dialogue.ts `HOSTAGE_LINES` by moment — wait / threat / aimed / shot / entry / alone / secured + the team's answer — said through civilians.ts `hostageSay`,
-  timed by rescue.ts `voices()`; label 'hostage'; the lines she repeats all mission are a bubble only, never a log row). A DEFENDER (teams.ts `defenderWords(gd)` = a hostile unit) speaks of the
-  team as 'them', never says the team's label for a mate (`spokenName` null → 'one of ours'; the squad net's `mate()` says 'Ten'), is the hard man when held (`temperamentOf`) and runs none of
-  the night watchman's scripts (`only: 'shift'` / `needs: ['office']` rows). OFFICE THINGS (corridor, lift, fourth floor, desks, cleaning staff, security, the server room) are said only where
-  `isOffice(level)`; elsewhere the level's own place names or words that name nothing. Door ids are said through orders.ts `doorIdWords` (compass letters as words, no token dropped). A DOOR WHOSE ID IS SHORTHAND
-  is named by the rooms it joins (`rust/game_rules/src/doornames`: 'hall-side mess door', 'mess hall to galley door', 'outer galley door', 'bunks 2 door from bunks 1', 'first / second day room door' off the level's room clear structure, hung on the
-  Door at Game construction; never the office, never a Training lesson's level — its lines name its doors; `shorthandId(id)` is THE test, tactics.ts asks it too: a compass letter or whole compass word, one or two letters, letters with a digit, no vowel, 'off' / 'his' — a bare number is a word, 'back_1' is said 'back 1'; a place it is taken from that is itself named by a bearing is left out of the name) and that ONE name is what the squad's rows (orders.ts `doorWords(d)`), a defender's call (tactics.ts `gateCall`) and digin.ts's wedged-door line
-  say; `rescue.ts doorName` still says by id. No bearing is said on a squad row: roomfit.ts `wayWords / runWords` and cover.ts `nameOf` name the place watched (dialogue.ts `watchedPlace`),
-  else 'the opening' / 'the far end'. A door or wall CHARGE's report carries `GameEvent.charge` (combat.ts detonateStun `borrowed`; not saved, as `frag` is not) and is called a charge, not a
-  flashbang; no man calls 'a door going in' at a door his own side's blast or boot took (`frag.ts ownNoise`: the line only — he is roused as before). roomclear.ts calls rooms that come
-  clear within 0.6 s in ONE line (so the line comes that beat after the room empties, and a room that empties inside the beat before the run ends is not called) and words a room the team never stood in (its first floor cell asked of `g.cleared.roomAt / isKnown`) 'nobody left in …'; the rule for when a room counts clear is untouched. `words-doors` also holds that no said name carries a bearing its room's own name does not. One errand
-  rides the switch: lighting.ts `theirMains` (only a side hostile to Sam walks to the breaker). A new spoken line follows the same rules; `probes.ts words` (lint / hostage / off / routes / log / doors / frag, in all-quick) and
-  `lintDialogue()` hold them. Under `TPS_WORDS=1` `orders-stack` and part of `enemysquads-radiocheck` are red only for matching old text. Page: rebuild/dialogue/read-first.md.
+## What the player gets
 
-<!-- added 2026-10-13, after the cut -->
-- **One can, two words, each in its place** (the squad goal asked; the call is the dialogue pass's, 10-13): in the ORDER MENU and in a MOUTH the stun canister is a BANG — the door rows
-  'bang, then go in · N left' / 'step in · no bang' (doortools.ts), the floor rows 'throw · frag N · bang N ▸' and 'bang there · N left', the squad block 'moving to throw · bang' /
-  'throwing · bang' (squadthrow.ts `word()`), 'bang out!', 'no bangs left.' — because it is one squad count and the man calls it that. The THING keeps its name where kit is picked or
-  held: Team & kit 'N stun', the HUD's 'stun canister', the key card's 'smoke · stun · frag'; what it DOES is 'stunned'. Tab rows (the debugger) say what the code says and are not
-  player lines. A new row or line about this can takes the word of the place it stands in. `tools/qa/squadthrow-check.ts` asserts the rows' text. Never seen on a GPU; nobody has
-  played the renamed rows.
-- **The end card's verdict is one or two words in capitals, never a sentence** (`rust/game_rules/src/verdict`; the card and its switch are the 'Every run ends on a verdict' bullet in menus.md):
-  won — CLEAR · RESCUED · OUT (a solo mission walked out of); lost — DOWN (every player down; the why is 'by <who>') · WIPED (the team) · DEAD (the man who was
-  to be taken alive) · GOT AWAY (he left the floor) · LOST (the hostages) · BLOWN (the charge went off) · FAILED (a mission stage failed). The why under it is the mission's own end
-  line (`roomclear.endWhy`, `rescue.result.why`), not a new sentence. Small words: the tag 'cheats' (a cheat was on: nothing is kept of the try), the count rows
-  'defenders' and 'hostages' — the game's own nouns (never 'enemies', 'tangos', 'civilians' for a hostage). A new end takes a word of this kind: what happened, in the past, no verb
-  of blame, no compass word, no number.
-- **A man out on a look does not say he is coming AT anybody** (`tactics.ts flankCall`, 10-13; the hard-defenders goal's claim, mended as an after-close step of the dialogue pass). The
-  flanker of a pursuit plan says 'moving round — coming at him / them from <place>'. A plan forms on a last-known spot, so the pair hard sends to where the team was last put after
-  `sweepSecs` of nothing (pressure.ts `PRESSURE.sweep` goLook · enemysquads.ts `drillLook`; enemies.md) said 'him' with nobody seen. Now: when EVERY man of the plan is out on that look
-  (`pressure.ts lookSince` / `enemysquads.ts squadLookSince`, readers added for this) and no man of their side has had eyes on the team since the look was called, he says 'moving
-  round — coming in from <place>'. Any man of the plan not on a look, or one sight since the call, and the line is as it was. Words only — no rule reads either reader, who walks
-  where is untouched — and only under the pass (`WORDS.on` off = the old line, so the frozen stand's lines stand). `tools/qa/sweep-check.ts` has the line on both its levels (asked
-  where the pass is on: shipped, or `TPS_WORDS=1`; `FLANKCALL_BREAK=1` must fail there). Never heard in play; never seen on a GPU.
-- **'to' in a door id is a word** (10-13, after the depot and the block were rebuilt with ids like `kitchen_to_hall`, `battery_to_yard`). `doornames.ts shorthandId` counted
-  every token of two letters as its author's shorthand, so an id of two places joined by 'to' was shorthand: the squad's row said 'kitchen to hall door' (`orders.ts doorIdWords`)
-  while a defender's call (`tactics.ts gateCall`) dropped that name for the nearest room's or 'this door' — two names for one door. `JOIN` (`doornames.ts`) lets 'to' through;
-  letters either side of it are shorthand as before (`m_to_k`). A door the room clear structure LISTS is still named by its rooms only when its id is shorthand, so a listed
-  `x_to_y` door now keeps its id's words (none is listed today: all twelve on the depot and the block are doors the structure leaves out). Words only, and only under the pass.
-  `words-doors` asks it (`WORDS_BREAK=1` must fail) and asks the rebuilt block's room-named doors (`m_s`, `m_k`, `b_f`). Read, not heard: no run had a defender stack on one.
-- **A man who runs, and a man at a dark doorway: their lines** (10-13, the enemy morale goal's steps; lines in the modules' own `LINES` tables, said through `g.say`, `he` / `they`
-  picked as morale.ts has it — a scenario's defender under the pass is up against a team). `runner.ts`: `done`, shouted at the enemy the beat before the gun goes down ("no. no,
-  I'm done. I'm done!"); `mates`, shouted to his own as he runs in on them ("don't shoot — it's me! it's me!", "… they're right behind me!"). `darkdoor.ts`: `call` as he stops
-  and calls a mate ("I'm not going in there alone. get up here."), `self` with nobody to call ("pitch black. no. not alone."), `copy` the mate setting off ("copy. coming."),
-  `with` the mate at his shoulder, `nobody` when no one came ("nobody. forget that room."), `alone` when he is sent in anyway ("all right. slow. going in."). Their authors call
-  them placeholders: the writing pass is the maintainer's. Read by the dialogue pass and left as they are — a frightened man's short words, no bearings, nothing a trained squad
-  says — but for ONE: `with` had 'on you. light it up.', which reads as an order to open fire; it is 'on you. get a light in there.' (their sibling line is 'lights on — go.').
-  Read in the source; never heard in play.
-- **The net goes quiet: its lines** (10-13, the enemy morale goal's third slice; `rust/game_rules/src/netquiet` `LINES`, said through `g.say` on the net — `body` aloud once nobody is
-  left on it; the switch `NETQUIET.on`, its words and its check are the 'The net goes quiet' bullet in enemies.md). Six kinds: `name`, the first man who does not answer, his name
-  again, flat, as the squad's own ask names him ("{name}. … {name}."); `why`, a second or later silence with others still on the net ("why's nobody answering?"); `last`, nobody
-  at all left on the net ("is anyone left on this net?"); `body`, the finder of a man nobody heard go — never a man who heard the shot ("he's down. nobody heard a thing?");
-  `alone`, the last of a squad of two or more, other squads still up ("nobody left in here but me."); `ask`, a roused man nobody has asked calls the net himself ("all posts,
-  answer up."). Their author calls them placeholders: the writing pass is the maintainer's. Read by the dialogue pass and TWO MENDED, each said of the wrong count: "that's two of
-  you quiet" is owed at the second silence and at every later one (now "that's another of you quiet. come on."), and "they're all gone quiet" was the survivor of a PAIR speaking
-  of his one mate (now "it's gone quiet in here. i'm on my own."). Left as they are: "that's my whole squad quiet" from a pair's survivor, and the lower-case 'i' (breach.ts and
-  sneak.ts lines have it, enemysquads.ts writes "I'm" — no rule yet). A squad of one never says `alone` (`knowsSquad` wants two men). The pick is by index off the game's die, so
-  the two mends move no draw; after them `probes.ts netquiet` is ALL PASS on the frozen stand (`TPS_MORALE=1 TPS_NETQUIET=1`) and on shipped, and the `words` family on
-  both. Read, not heard; never seen on a GPU.
-- **A guard's attention: its lines** (10-13, the attention goal's step; `rust/game_rules/src/attention`, six small pools said through `g.say`, never on the net; the rule, its
-  switch `ATTENTION.on` and its checks are the attention bullet in stealth.md). The split is by side: `gd.team === 'guard'` = the night staff, anybody else = a defender.
-  `WARY` / `WARY_FOE`, the second taking inside his memory, said INSTEAD of 'huh?' ("again?", "…that's twice." / "again. stay sharp.", "twice now."); `SPENT` / `SPENT_FOE`,
-  the taking that is no look at all — he draws and searches ("no. somebody's doing that.", "that's no accident. come out." / "that's bait. search the place.", "someone's
-  playing us. sweep it."); `BROKE`, both sides, the hold broken by a man at the edge of his eye ("—wait.", "what—"); `DONE_FOE`, a defender done looking ("…nothing.",
-  "nothing there."). The staff's word for done is their old one, MOVED: 'must have been nothing' ('clear here — staying on it' once the floor is raised) is said `tellSecs`
-  before the look ends, not on the walk back, under guards.ts's rules for that line (never within 4 m of a known body, never on top of his own radio line, never with Sam
-  down); `attentionTold` keeps the walk back from saying it twice. Their author calls them placeholders: the writing pass is the maintainer's. Read by the dialogue pass,
-  ONE MENDED: a defender's "that's bait. find him." — a defender speaks of the team as 'them' and 'find him' is the night staff's (teams.ts says so) — is now "that's bait.
-  search the place.", which names nobody and is what he then does. Left: "twice" in two lines is true only while `ATTENTION.spent` is 3 (the wary line is the second
-  taking's alone; a larger `spent` would have a third taking say 'twice'); "stay sharp" from a defender with no mate in earshot. The pick is by index off the game's die: the
-  mend moves no draw; after it `probes.ts attention` (2 probes) is ALL PASS on frozen (`TPS_ATTENTION=1`) and on shipped, and the `words` family on both. Read, not heard.
+- Everybody talks in words on the screen. No line has a voice.
+- A line stands over the head of whoever says it, if the player can see him, in a tone that shows how he is: calm, wary or in a fight.
+- A teammate off the screen or hidden by the fog is still read: his line sits at the edge of the view on his side, under his name, and the net clicks.
+- A teammate who goes down is called from where he fell, with a louder, lower click.
+- The defenders' net is on the radio strip, three rows at most, ranked so that a fall-back beats a man repeating that he is holding.
+- A shout from a defender the fog hides is a quiet row with no name, and only if it really reached Sam's ears or a living teammate's.
+- Sam can question a man in his arm. The man answers from what he saw and how scared he is, and may give up a key, a code, a route or how many are left.
+- Two bored guards stop and chat. Sam can overhear a keypad's code that way.
+- Hostages plead, civilians gasp and answer, and a handler talks Sam through the office night.
 
-- **A shout heard: a hidden defender's shout that reaches an ear is a quiet row on the strip** (10-16, `rust/game_rules/src/cues overheard`; the maintainer's call on the open
-  question 'a shout from a defender you can't see': yes — a quiet row on the radio strip, only when the shout really reaches the player's ears or a living teammate's,
-  no name, no place). Switch `CUES.overheard`: ON in the page (`?overheard=0` = such a shout is no row, as it was), OFF in the module and on the frozen stand
-  (`TPS_OVERHEARD=1` raises it; `TPS_PROFILE=shipped` has it up); a `FROZEN_HOLDS` row; `CUES` now rides a recording (`JOURNAL_KNOBS`), and a recording from before the
-  key replays with it down. THE RULE: `guards.ts say()` hands every SPOKEN line (never one on a net) to `overheard()`. A row only when all of: the speaker is hostile
-  to the player, alive, and the fog hides him (a man in sight has his bubble; the fog off = never); the line is SHOUTED = its writer put a '!' in it (`isShout` —
-  the tables' own mark, so a new shouted line needs nothing but its '!'); it has not just been drawn (the same words inside `dupSecs`, any two `overheardGap` 4 s
-  apart); the strip has a FREE row; and an ear of the team's gets it by the shout's own law (digin.ts `heardBy`: flat distance and the path both under `DIGIN.shoutM`
-  18 m × the propagation's carry — mouth at 1.2 m, ears at 1.6 m: the player's if he is up, each living teammate's). The cheap questions come first and the hearing
-  model is asked with `hearPath(..., keep = false)` (`SoundPaths.propagate`'s new third argument): the row leaves NO route in the half-second cache the AI's own
-  hearing reads. WHAT IS DRAWN: the words alone under the word HEARD (`game.view.radio`: a row of kind `heard`; ui/overlay.ts draws `<span class="rx heard old"><b>HEARD</b>…`,
-  the strip's existing dim row — no colour of its own, so the menus' colour rules reach it through `.rx`). No callsign, no squad, no room, no door, no side of the
-  screen. NEVER IN A ROW'S WAY: the row is a field of its own (`Cues.heardRow`), not one of `Cues.rows` — nothing that files, ranks, counts or reads the net's rows
-  meets it (the gap rule, `netWait`, the squelch, the playthrough bot's leads); the first row filed onto a full strip ends it for good; a checkpoint load (`adopt`)
-  and a clock gone back clear it. `Cues.heardLog` says why each offered shout was or was not drawn ('dup' · 'gap' · 'full' · 'far'); `stats.shouts` / `shoutsDrawn`.
-  It moves no man and no die: a row is not a sensing (the AI is told nothing, the bot is told nothing). CHECK: `bun run tools/qa/probes.ts words-overheard` (families
-  `words`, `cues`; `tools/qa/overheard-check.ts`, 15 verdicts: a bare clock for who gets a row and who does not; levels/block-squads.json under the fog, every hidden
-  defender shouting in turn with the player's ear brought beside him — on shipped 1,096 shouts in earshot drew, 632 out of it drew none, 0 wrong, and across 1,252
-  questions that went round walls the route cache grew by 0 (frozen with the switch raised: 869 · 697 · 0 · 1,578 · 0); one seed with the switch down and up, 60 digests equal; the stands' row, the word, the recording) — ALL PASS on frozen
-  and on shipped; `OVERHEARD_BREAK=1` (the switch left down) = 7 FAIL on each, exit 1. The page: `PORT=<port> node tools/qa/overheard-page.cjs` (headless Chromium, the
-  software adapter) — the page has the switch up and the strip's element is that one span; with `?overheard=0` no such row. MEASURED (playthrough.ts, the shipped
-  stand, block-squads · depot-four · rescue-registry · floodlit-four · killhouse-four · night-breach × seeds 1–4 = 24 runs): 77 hidden defenders' shouts offered,
-  12 drawn (42 out of earshot, 14 inside the 4 s gap, 9 with no free row); the words drawn: 'flashbang!' ×3, 'cover — get to cover!' ×2, 'CONTACT!', 'fire in the
-  hole!', 'get that against the door!', "the wall's down — watch it!", 'they got him! they got him!', "they're hitting the others — move!". The same 24
-  with `TPS_OVERHEARD=0`: every run ends the same way at the same second with the same team, kills and deaths (24 of 24) — taken 17, rescued 4, wiped 3 either way.
-  NOBODY HAS SEEN IT ON A GPU OR HEARD ANYTHING: whether a dim row under HEARD reads as 'I heard that' and not as a radio line, whether one row in two
-  fights is too few or 4 s too tight, and whether '!' is the right mark for a shout are by-eye calls. Left as found: a shout has no SOUND of its own (the row is the
-  only trace); a hidden defender's quiet spoken line is still nothing; teammates' ears count but the row does not say whose. The
-  rule asks who is hostile to the player, not which mission: the night staff's shouts under a quiet mission's fog are rows too — NOT measured (the 24 runs are loud
-  missions) and nobody has played it.
+## Where the code is
 
-- **On a defender's net 'they' and 'them' are the team; the hostages are named** (10-18, read against the hostage rescue's ending, `rust/game_rules/src/rescueflush`). Two of
-  its radio lines used the two words for the hostages and for the team in one breath — "they're gone — they're moving them! cut them off!" and "on the way out
-  — they don't leave with them!" — which on the strip, with no picture, takes a second read. Now "the hostages are gone — they're moving them! cut them off!"
-  and "on the way out — they don't leave with the hostages!": the hostages are named once (the defenders' net already says "moving to the hostage door!") and
-  every 'they' / 'them' left is the team, as in every other defender line. Words only: said by the same man at the same moment, no draw moved. Left as read:
-  "I'm going in for them!" (either reading is true of what he does). ALSO FOUND, the same day: `words-hostage` was RED on the shipped stand at the build head (green on
-  frozen) — its line 'the room is the team's: one of them speaks, a teammate answers a beat later' kills every man of theirs to make the room the team's, and
-  under the new ending (`RESCUEEND.on`: nobody of theirs left = won `clearSecs` 1.5 s later) the result came before the teammate's answer at +2.4 s. THE RED
-  WAS THE CHECK'S, NOT THE GAME'S: its listening stopped at the result. The answer is said all the same (`rescue.ts voices()` runs on after the result; the
-  rescue's owner measured it on three levels: she asks at once, the result at +1.5 s, his answer at +2.4 s, the end card at +3.5 s over the rest of his
-  bubble), and the check now listens the beat out and hears it on both stands. A first note here said the answer was never said in play: that was wrong.
-  Left for play: whether the card coming over his line reads well (a presentation call in the debrief's file, nobody is building it). After it
-  `probes.ts words` (8) and `rescueflush` are ALL PASS on both stands. Read, not heard; never seen on a GPU.
-- **Read 10-19, left as they are: the office's response lines keep 'the west stairwell' and 'nobody west of the lobby arch'.** The office names its
-  own places with bearings all through (the same team says 'south lot', the handler 'Fire exit, east end.', the held
-  worker 'They come up the west stairs.'), and men who work a building speak that way: the lines fit who says them. The no-compass rule is for what the
-  player steers by: a row on the HUD, a door's name on the squad's menu. A rewording was built and taken back out, for a reason the next session needs:
-  A BUBBLE'S TEXT IS IN THE RUN DIGEST (digest.ts folds it to length + hash, and a held civilian's bubble stays up by its length), so changing a line that is said
-  under a switch that already exists makes every recording in which it was said replay to a different digest. A changed line is therefore a key of its own
-  that the journal carries (journal.ts, as `ORDERS.inWay` was), or it is a line no recording can hold yet. Taking the bearings out of the office's speech is
-  that kind of job, over a dozen lines and two door labels, and nobody has asked for it. Also read that day, all fit: the levels' own response lines (site,
-  team, tag and way phrases; no other level's `response` block says a bearing: seven files read). The hostage check's last line ('and then they are quiet')
-  listened one step on the shipped stand, where the result is already in: it now listens six seconds there.
-- **A level names its own doors where the rooms cannot (10-19, `WORDS.doors`).** The squad's rows, the hover words, 'covering …' and '… is locked.' read a
-  door's name through `orders.ts doorWords`; `doornames.ts` makes that name from the rooms only for a door the room clear structure lists, so every other
-  door with a bearing in its id read 'gate north door', 'fence east door', 'break room west door': a compass word on a HUD that has no compass. A default
-  without the bearing cannot work (the crossing's five gates would all be 'gate door'), and renaming ids moves the level fingerprint and every plan that
-  holds one. So the level says the name: `scenarios.doorNames`, rows of `{ door, name }`, the name as a row reads it ('yard gate', no 'the';
-  `scene/scenarios.ts LevelScenarios`, `KEYS.scenarios` and a rule in `levelData.ts` — a door the level has, once, 1 to 40 characters; the editor's
-  `scenarioRefs` knows the slot, so a rename follows and a delete is refused; `docs/level-format.md`). Not in the fingerprint (door ids, routes, boxes).
-  `doornames.ts nameDoors` hangs three things on the Door at construction: the made name as it was, the written name, and the made names as they come out
-  BESIDE the written ones (a 'second hall door' is a 'hall door' once the first is a 'loading door'). `doorSaidName` gives written, then made-beside, WHILE
-  THE KEY IS UP, and the old made name with it down: the key is asked when a name is read, not when the game is built (the harness writes its switches after
-  the Game is made). ONE NAME A DOOR: `doorWrittenName(d)` (the written name, key up, else undefined) is read first by the lines that named a door some other
-  way — a rear man's 'holding ·' row (`rearwatch.ts`), the rescue's held-door label (`rescue.ts doorName`), the response team's 'stack on …' and 'by the …'
-  (`qrf.ts doorSaid`), and the office's own men on the net (`tactics.ts gateCall`; another level's men already read `doorSaidName`). A door with no written
-  name says in each of those exactly what it said. A written name need not end in 'door': gateCall's '…down in the <door>way' drops the 'way' then.
-  THE KEY: ON in the page, `?doornames=0` = every door called what it was; OFF in the module and on the frozen stand, `TPS_DOORNAMES=1` raises it (read only
-  with the words switch on); `FROZEN_HOLDS` row, `STAND_ENV` word, the stand's pinned line; it rides the WORDS table in a recording, and one from before the
-  key replays with it down (`journal.ts applyKnobs`) — a door's name is said in bubbles and a bubble's text is in the run digest. What the key does NOT hold:
-  a name written into a level file LATER changes what a recording made on that level in between replays to, like any other change to a level's scenario
-  data (none of it is in the fingerprint). NAMED SO FAR: the office's two (`tools/levels/lib/officeScenarios.ts`: 'corridor-side break room door', 'cubicles-side
-  break room door', by what each is taken from — the same words the rooms rule would make if the office were not left out of it). OWED: 96 doors in 25 level
-  files, door for door in `tools/qa/words-probes.ts DOORS_OWED` — the levels' own to write; a door named comes off the list in the same change
-  (`DOORNAMES_CENSUS=1` in front of the check prints the list as it now is). Check `bun run tools/qa/probes.ts words-doornames` (6 lines: the lookup on a
-  made-up level with the key up and down; a written name says no bearing and begins with no 'the'; no two doors of a level called the same; the doors
-  still called by a bearing are exactly the owed list; the office stood up, the row and a line that names the door another way, key up and down; the two
-  stands' row, the word either way and an old recording). `DOORNAMES_BREAK=1` reads the names with the key down and is red (the office's two owed again),
-  on both stands. The debrief's timeline reads the same name since (`chronicle.ts eventText`, worded when the row is read: `menus.md`). NOT TOUCHED: the office's men say
-  'break room west door' of a door nobody wrote a name for — there is none left on the office. On the real page (headless Chromium, the software adapter, the office's room clear, the orders' menu opened on that door, the page's text read): 'ON
-  CUBICLES-SIDE BREAK ROOM DOOR', and with `?doornames=0` 'ON BREAK ROOM WEST DOOR'; no console or page error on either. Its text, not its pixels: never seen on a GPU.
-- **The same rule's two other lists (10-19, in `words-doornames`).** With every door named, the check holds two more lists that must shrink, and a level
-  file that gets a new name of either kind is red: `PLACES_OWED` — a quiet mission's EXIT and a level's AREA still named by a bearing
-  ('the east gate', 'north gallery'): an exit's name is on the objective's line and the debrief's map (`quiet.ts` brief `outs`,
-  `ui/debrief.ts`), an area's is in the men's lines the strip prints and on the debrief's timeline (`dialogue.ts roomName`, `chronicle.ts`). 56 names in 20
-  files; they are the level files' own words (`scenarios.quiet.exits` / `.places.areas`), renamed in each level's generator. Not on the
-  list: a start's name (printed nowhere but a debug summary), a `from` (only ever read to make a door's name, and a bearing there is dropped), a civilian's
-  way out and a need's stand (looked up by name, not shown). `LETTERS_OWED` — a door still called by its id's letters because nothing names it ('p back
-  door', 'n1 door', 'lb door'): 23 doors in 10 files, a `scenarios.doorNames` row each. `DOORNAMES_CENSUS=1` in front of the check prints all three lists
-  as they now are, ready to paste; under `DOORNAMES_BREAK=1` both new lists read as empty and both lines are red, on both stands. THE REAR MAN'S ROW
-  (`rearwatch.ts`, 'holding · …') now reads the door's one name through `doorWords` with the words switch on — it built its own from the raw id and said
-  'gen door door' of the bazaar's `gen_door`; a status row is in no digest (`digest.ts` has no `going`), so it needed no key. Headless; no row seen on a page.
+In `rust/game_rules/src/`, with types and tables under the same names in `rust/game_types/src/` and its `knobs/`:
 
-- **The handler's radio asides are the office night's (`WORDS.radioHome`, `dialogue.ts radioLive`).** The maintainer, off the stealth tutorial mission: "the
-  'subtle was twenty years ago' text with the handler keeps popping up -- should be confined to just the office level and honestly a bit stale anyways". Her
-  lines and his answers (`HANDLER_LINES`: the drive, the rack, the alarm, the lockdown, the lights, a body found) were written for the solo night at the office
-  and were said on every level a solo night ran on, and a mission restarted at a checkpoint heard the same pair again each time. With the key up `radioLive` is
-  false on any level that is not the office (`isOffice`): no beat sounds, a queued one is dropped, no reply. ON in the page (`?handlerall` = as before); OFF in
-  the module and on the frozen stand (`TPS_RADIOHOME=1` raises it); a `FROZEN_HOLDS` row, a `STAND_ENV` word, in the journal's `WORDS` table (a recording from
-  before the key replays with it down). Check: `tools/qa/radiohome-check.ts` (`probes.ts radiohome`, families words / dialogue; `RADIOHOME_BREAK=1` fails
-  `away`), both stands: the office hears the blackout pair, `tut-quiet` / `quiet-yard` / `lights-out` hear nothing in twelve seconds with the key up and the
-  pair with it down. One staged night a level, no seeds varied. The lines themselves are untouched (whether to rewrite or drop them is the maintainer's call).
-  NOBODY HAS SEEN IT ON A GPU; the radio strip is not drawn headless (the game's message list is what was read).
-- **Spoken lines read by the writing guide (`WORDS.guide`, `words.ts wg`)** (10-22, the key 10-23; `docs/agents/writing.md` rule 7). About 150
-  spoken and radio lines reworded: "round" for "around", a missing contraction, "a man" for somebody of his own side, a line clipped until it
-  was unclear. The wordings have a KEY OF THEIR OWN, because a bubble's time on screen is its length and its text is in a run's digest:
-  `wg(now, was)` = `WORDS.on && WORDS.guide ? now : was`. ON in the page (`?noguide` puts it off), OFF in the module and on the frozen stand
-  (`TPS_GUIDEWORDS=1` raises it there; the shipped stand has it up); a `FROZEN_HOLDS` row, a `STAND_ENV` word, in the journal's `WORDS` table,
-  and `applyKnobs` holds it off for a recording from before the key. THREE STATES: the pass off = the first words · the pass on, the key off
-  = what the page said before the key, byte for byte · both on = the guide's words. The key alone says nothing. How a table carries one: a
-  row's `guide` beside its `now` (SAM_LINES, cues.ts, laststand.ts), `INTEL_GUIDE`, `CIV_LINES.guide` (report / control / greetCiv /
-  greetGuard place for place, and `own`), `DRIVE_AWAY_GUIDE`, `ROUTE_NAMES_GUIDE` / `DOOR_NAMES_GUIDE`, breach.ts `LIVE_GUIDE`, weather.ts
-  `THUNDER_OUT_GUIDE`, a `Beat`'s `samNow`, a handler row's `hNow`, an order row's `ackNow` (orders.ts reads it where a man answers), or a
-  small old-line → new-line table applied where the line is picked (`NEEDS_LINES.now`, guards.ts `STANDOFF_NOW`, gunhold.ts `GUNHOLD_NOW`,
-  netquiet.ts `LINES_NOW`, sneak.ts `LINES_NOW`, squad.ts `BODY_LINES_NOW`, whistle.ts `TWICE_NOW`); a line in a say call is `wg(now, was)`
-  there. A wording the pass already had is never edited in place: the guide's goes beside it. `shapedIntelText` reads through `intelTable`;
-  `needsLines()`, `civilianLines()`, the net-quiet, morale and whistle lists and `lineLengthReport()` carry the guide's lines while the key
-  is up. cues.ts `CLASSES` knows the new words beside the old (going around, moving around, get around, coming up behind, ready for them);
-  the last-stand answer is "here — I'm after them, {at}." so that no tool reads it as a claim to be on them. A refusal an order returns is
-  said by a man AND printed on its greyed menu row: both follow the key. HELD for the maintainer: the office night staff's British voice
-  (the held man's lines, his scripts, the pairs). Checks that named old words take both wordings.
-  Check: `bun run tools/qa/guidewords-check.ts` (`probes.ts guidewords`, in the `words` and `dialogue` families), `GUIDEWORDS_BREAK=1` (the
-  key left up where it is asked down) must fail. With the key off, every line the game can list (about 2,950: the staff, needs, hostage,
-  snatch, net-quiet, morale, whistle and small bark lists, the defender net with its classes, every interrogation answer plain and as each
-  room script shapes it, the length report's rows, the gun-in-a-hold pools, route names) is counted and digested against pins taken from
-  the commit before the key, with the pass off and with it on; 13 wordings pair by pair; the pass's own wordings still in the source beside
-  the guide's; her lockdown aside sounded at the office in the three states; the stands, a recording, the page's flag. A LINE OF THOSE LISTS
-  CHANGED ON PURPOSE MOVES THE PIN (`GUIDEWORDS_PRINT=1` prints it). Not in the check: a line said from inside a function is listed by no
-  table, so only the source is read for those and none is played.
-  Measured: the check green on both stands and with `TPS_GUIDEWORDS=1` on the frozen one, red with its break word on both; typecheck,
-  `knobs-check`, `rollback-check --static`; `words` and `dialogue` on both stands (the one red, `words-routes`, is red without this change
-  too); `radiohome`. No run digests, no tour, no soak, no seeds: on the shipped stand a bubble's length is its time on screen, so runs there
-  can play out differently, and that is not measured. Read, not heard; NOBODY HAS SEEN IT ON A GPU or played it.
+| module | what it does |
+|---|---|
+| `guards/p_09.rs` | `say`: the one way a man speaks; `guards/p_08.rs` has `bubble_secs` |
+| `dialogue/` | the held man and Sam: `gather`, `pick_line`, `script_for`, `pick_sam_line`; places (`place_name`, `is_office`); `tick_radio`; `update_ambient` |
+| `cues/` | the strip's rows (`cues_file`, `radio_rows`), each line as a HUD is told it (`bubbles_view`), the defenders' cues (`cues_tick`, `cues_note`) |
+| `squadnet/` | the click, "… is down.", a lead's call at the end of an entry (`room_call`, `plain_call`), a quick pick's reason (`why_words`) |
+| `doornames/` | the name a door is said by (`name_doors`, `door_said_name`, `shorthand_id`) |
+| `netquiet/` | its speech is `speak`: a man calling a name that does not answer |
+| `civilians/` | `hostage_say`, `civ_say`, `civilian_answer`; `rescue/p_03.rs` times the hostages |
+| `words/` | `w` and `wg`: each hands back the present line and nothing else |
+| `view/` | `tick_view` hands `radio` and `bubbles` to the page |
 
-- **What is said reaches the HUD as the game tells it (2026-11-07).** `game.view.radio` (the strip's rows: `cues::radio_rows`) and `game.view.bubbles` (each line on the floor with who says it,
-  how it sounds and where it goes: `cues::bubbles_view`; `over`, `overOrEdge`, `edge`; a man is named by his character's id) replace `stripRows`, `Cues.bubbleOf` as the HUD asked it and
-  `bubbleTone`. `src/ui/bubbles.ts` asks only its own camera whether a man is on the screen and the men as drawn where his head is; `src/ui/overlay.ts` draws the rows. No switch: `CUES.on`, `CUES.overheard`, `SQUADNET.on` are settled rows that the Rust rules never read, and with this the page's `?nocues`, `?overheard=0`, `?squadnet=0` do nothing any more. A place's name (`dialogue::level_rects`, `room_name`) keeps no memo.
-  Left on the copy, each for the move that owns it: the death recap's witness (`Cues.aside`: its word over a man is not drawn until the recap is the tick's); `roomName`, `watchedPlace` under `Cover.tail` (the squad block's row); `ownPlace`, `isOffice` under the verdict's watch; `levelRects` under the debrief's map.
-  **WHAT THE PAGE ITSELF SAYS IS NOT THE GAME'S LOG:** `src/view/pagesaid.ts pageSay`: a save's word, a capture's or a recorder's, a panel's answer, drawn under the radio's rows on the page's clock (three rows, six seconds; class `said`). The page writes nothing to `game.messages` now. NEW TO THE PLAYER: these lines were never drawn before (`checkpoint loaded`, `hands-off tour — P to stop`, a recorder's notes, a panel's answer); no switch. Native tests `rust/game_start/tests/radio.rs` (the strip's ranking from the old `cues-strip`, three seeds, a second seat). Looked at on the real page, software adapter: the strip's rows and the lines drawn, held to the view for 1,230 frames. Never seen on a GPU, nobody has played it.
+The page's half: `src/ui/bubbles.ts` puts each line on the screen and `src/ui/netplace.ts` finds its place at the edge. The strip is drawn by `src/ui/overlay.ts`.
+`src/view/pagesaid.ts` (`pageSay`) is what the page says for itself, a save's word or a panel's answer, in rows under the strip. No game hears it.
+
+Who says what, and where the words are:
+
+| who | lines | when |
+|---|---|---|
+| a man in Sam's arm | `lines`, `scripts`, `intel_text_table` in `game_types/src/dialogue/types.rs` | each press of the key |
+| Sam | `sam_lines` on the game's table, a script's own beats | before each answer, `sam_key_line_for` as he takes a key, `sam_remark_for` as the pistol comes up |
+| two calm guards | `ambient_pairs` | `update_ambient`, on a floor with no alarm |
+| staff about their rounds | `needs_lines_table`, and lines in `guards/` | a coffee, a smoke, a call for a missing man |
+| the handler and Sam | `handler_lines` | `handler_beat`, the office night only |
+| civilians, hostages | `civ_lines`, `hostage_lines_table` | `civ_say`, `hostage_say` by `HostageMoment` |
+| a man who finds a hold | `lines_of` in `guards/p_03.rs` | by moment and temperament |
+| a defender | `LINES` in `morale/`, `laststand/`, `darkdoor/`; `lines` in `runner/`, `gunhold/`; `SUP_LINES` in `suppression/`; `wary` and its sisters in `attention/` | each rule's own moment |
+| a defender at a door, or going around | `gate_call`, `flank_call` in `tactics/` | a pursuit plan |
+| a defender's squad | `LINES` in `cues/`, more in `enemysquads/`, `rescueflush/` | `cues_cue`, or the rule itself |
+| a teammate | an order's `ack` in `orders/p_02.rs`, `doortools/`, `sneak/`, `showwhy/`, a contact called by `fog_of_war_call_words` | `say`, or `cues_call` for a call through the fog |
+
+## How it works
+
+**A line is said once.** `say` puts it in the man's bubble (`GuardBubble`), for `bubble_secs` by its length. Two lines in one tick queue, and `bubble_tick` raises
+the next. A held man says nothing unless forced. A man under the squad's silence (`silent_hush`) speaks on the net, and his free hand goes to his radio.
+`game_interrogate` forces the answer up and gives it longer.
+
+**What a HUD is told** is asked of the game with a shared borrow, so reading it changes nothing. `bubbles_view` goes over everybody with a line up:
+
+- A man who is not the seat's own has no line drawn while the fog hides him.
+- The seat's own man has `BubblePlace::Edge` while the fog hides him. Otherwise `BubblePlace::OverOrEdge` lets the page choose by its camera.
+- The tone (`bubble_tone`) comes from his state. A teammate is never wary.
+
+**The strip.** `radio_rows` gives what `cues_file` kept. A row has a class (`cue_class` by its words, or the kind's own in `cues/`), and a lower class is better. Class 0
+is a line that came in `radio: `: control, the staff's net and the handler. A class waits for its gap, the same words are not filed twice, and a full strip gives up
+its worst row. A squad's word ("Bravo: …", `squad_word`) outranks a man's in its class. Each part of that is a knob in `CuesK`.
+
+**A defender's line reaches the strip three ways:** `say` on the radio calls `cues_heard`, `cues_net` is a line that is telling only, and `cues_cue` is one of the kinds in
+`cues/`. All of them need a room fight to be on (`fight_live`, and `cues_tick` returns without one). `cues_tick` watches each defender and `cues_note` reads the fight's log, in the man's words.
+
+**What the player hears and what is only shown.** Lines are text. The sounds around them are these: `radio` as the defenders' squelch, as the team's higher click and as a teammate's lower "down"
+click; `murmur` when Sam remarks; `heldProtest` from a hostage or a man in Sam's arm. A shout (`is_shout`: the writer put a bang in it) that `cues_overheard` carries by `hear_path` to an ear
+within `k.digin.shout_m` is the `RadioKind::Heard` row. It takes only a free place and gives it up to the next real row.
+
+**The log is not the strip.** `game_msg` writes `g.messages`, the last five lines. No view and no host reads that list. A line reaches the player from it only if it starts `radio: `,
+which `cues_raw` files. The rest are for rules that look back (`guards/frame.rs`, `combat/p_02.rs`, `wallcharge/p_03.rs`) and for tests (`Play::log`). To tell the player
+something use a bubble, a strip row, or a row the view already carries (`mission::objective`, `interact_view`).
+
+**A held man.** `gather` builds `DialogueCtx`: what he knows (`knowledge_of`), how rattled (`agitation_of`, `band_of`), his temperament (`temperament_of`), the facts
+and the tokens a line can use. `pick_line` then asks, in order:
+
+1. Is this a press where he gives (`gives_at`)? `intel_for` picks the next true thing he has not given. A door's name hands over its key, and a code teaches the keypad's.
+2. Does his script (`script_for`, dealt once per man, off the scripts and shapes least played) have a beat for this press?
+3. Otherwise the pool for his cell: exact, then any temperament, then any agitation. Another man's knowledge is never used.
+
+A row of a table has its words in layers, and `said_of` takes the first that applies: `bare` for a nameless place, `away` off the office, then `guide`, `now`, `text`. A
+token (`expand`) fills a name, and a line whose token has no value cannot be said, so it drops out of the pool.
+
+**A pair's talk can teach.** A pair's line that names the code calls `devices_overhear_said`, and Sam learns it if the sound's path reaches him (`k.overhear`).
+
+**How a line is not repeated:**
+
+| who | what stops it |
+|---|---|
+| a held man | `said` on his row; a line said in the last `RECENT_SECS` by anybody weighs `RECENT_W`; a repeat only when no fresh line fits, and never the same one twice running |
+| Sam | `SAM_RECENT_SECS` on `SamMemory`, then the whole list but the last |
+| a script | the fewest played first, of the script and of its shape, on the game's `recent` table |
+| a pair | `played`, the fewest first, a pair's talk once only off the office |
+| a cue | `man_secs` for one man, `kind_gap` for the floor, `again_secs` for a "still here" |
+| a hostage | never the line over her head; `murmur_at` spaces them |
+| attention, a net call | a pool and a die, never the one he used last (`line`); a net call by kind, on a die (`speak`) |
+| the handler | each beat once a run (`done`), and five seconds between beats; a beat with no quiet moment in twenty is dropped |
+
+**A door's name** (`door_said_name`): what the level wrote (`doorNames` in its `scenarios`), else a name made from the rooms in `names_of`, for a shorthand id (`shorthand_id`) that the
+room clear structure lists. Failing both, `door_words` says the id's words through `door_id_words`. The office and a lesson's level make no names.
+
+**A place's name** is `place_name`, from the level's own rooms (`level_rects`). `own_place` is a nearby room, `watched_place` what a man looks at.
+
+## Rules that hold
+
+- **A defender is not staff.** `defender_words` is a hostile unit. He says "them" of the team (`flank_call`), has no name for a mate in a line (`spoken_name`), though his squad's net
+  counts them off (`mate`), is `Temperament::Hard` when held, and runs none of the night watchman's lines (`LineOnly::Shift`, `Need::Office`).
+- **Office things are said only in the office.** `is_office` asks for the office's routes. Elsewhere `away` and `own` rows name the level's own places.
+- **The handler is the office's.** "the 'subtle was twenty years ago' text with the handler keeps popping up -- should be confined to just the office level and honestly a bit
+  stale anyways". `radio_live` is false anywhere else. A beat also waits for `radio_clear`: nobody alert and Sam's hands free. His answer is dropped if he cannot give it.
+- **No compass word in a door's or a route's name,** and no two doors of a level said the same, the office and the lessons aside. A route is said by the level's place it keeps to
+  (`route_name`), else by its own words. The office's response team keeps "west stairwell" (`qrf/p_02.rs`).
+- **On a defender's net "they" is the team.** So the hostages are named: "the hostages are gone — they're moving them! cut them off!" (`rescueflush/`).
+- **One can, a word for each place.** A squad's rows and mouths say bang ("bang out!", "no bangs left."). Where kit is picked or held it is "stun canister", and a lesson says
+  "stun grenade". A mission's blurb and `combat/` say flashbang. A new line takes the word of the place it stands in.
+- **The verdict is a word or two in capitals, never a sentence** (`verdict/`): CLEAR, RESCUED, OUT; DOWN, WIPED, LOST, FAILED. The why under it is the mission's own line.
+- **The same words on the same floor are one row.** A second man's copy of a line is news to nobody (`dup_secs`).
+- **How many are inside is a mystery.** "we should also remove all defender counts from the menus, etc., it should be a mystery!" A man in Sam's arm may say how many, because he gave it up.
+
+## To change it
+
+- **Reword a line:** find its words (`rust/game_types/src/dialogue/types.rs` holds most tables, the rest are in the module that says them). Read `writing.md` first. A reword fails the pin of
+  its table at the foot of the module (`lines_match_the_typescript`, `script_lines_are_the_typescripts`, `beats_rows_are_the_typescripts`, `handler_pools_are_the_typescripts`,
+  `pairs_are_the_typescripts`): change the pin with it. The words are in the game's state and `bubble_secs` times them, so `gate`'s pins can move too.
+- **Words only for one kind of place:** the `away`, `bare`, `guide` and `now` fields of a row; `own` on a pair's line; `h_now` on the handler's. Add no new branch where a line is read.
+- **A new line for a held man:** a `Line` in `lines` with `k`, `t`, `s` and `needs` (a `Need`, then its fact in `gather` and `hold_fact`). A new token: `Token`, `DialogueCtxTokens`, and the
+  table in `ctx_tokens_map`.
+- **A new script:** a `Script` in `scripts`, with all four `ScriptBeats`. `script_fits` drops it for any man it cannot fill.
+- **A new defender's line on the strip:** a `CueKind` with its row in `LINES` in `cues/` and a class, or `say` with radio on and words that `CLASSES` already ranks. A line in no row of `CLASSES`
+  files as class 4.
+- **Say something to the HUD:** `say` for a man. `game_msg` with `radio: ` for control. Anything else in `game_msg` reaches nobody.
+- **A strip's numbers:** `rust/game_types/src/knobs/cues.rs`; the edge and the click: `squadnet.rs`. Both turn on a panel or by `?knob.cues.rows=4`.
+- **A door's name:** `doorNames` in the level's generator, then `bun run tools/levels/export.ts <name>`.
+
+## What holds it
+
+Native tests in `rust/game_start/tests/`, and each module's own tests, by `gate tests`:
+
+| file | what it holds |
+|---|---|
+| `radio.rs` | a line as the scene says it, its tone, the strip's ranking, each HUD told its own in a game of two |
+| `held_words.rs` | no count in a row, no order row past digit five, no door and no route said by a compass word |
+| `net_quiet.rs` | calls that get worse, the last line only for the last man |
+| `squads_radio.rs` | a drop found by a radio check, nobody walking out at a noise |
+| `civilians_held.rs` | a held civilian talks, told to stay down she stays, and she tells the first man who finds her |
+| `standoff_held.rs` | a man who finds a hold calls it in, once, and talks to it |
+| `attention.rs` | a guard's lines as his attention moves and breaks |
+| `rescue_ends.rs` | a hostage rescue's "secured" before its end |
+
+`bun run tools/qa/checks.ts words` runs `mystery-check.ts` and `writing-check.ts`, which read mission rows and lessons and no spoken line (`writing.md`). `bun run tools/qa/view-check.ts`
+holds the HUD to importing nothing of the game.
+
+## Not seen
+
+How often lines come in a fight was read in tests, not felt. No check sees a bubble or the strip on a GPU.
+Spoken lines have no lint: a line over length, a banned word in a mouth or a bad token shows only by reading the table. Much that is written to the player through `game_msg` reaches no screen.

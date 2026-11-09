@@ -1,4 +1,5 @@
-// SHARP DIRECT — the direct light's UNSHADOWED term at the OUTPUT resolution (docs/internal/sharp-direct.md).
+// A big body is written once here and asked in a loop: the compile pastes every call. Credit: Stephen Jayakar, from his pull request 1.
+// SHARP DIRECT — the direct light's UNSHADOWED term at the OUTPUT resolution (docs/agents/render-light.md, "Sharp direct").
 // Direct light = U × visibility. U — every light's analytic contribution at the pixel: cone, falloff, N·L, emitter shape (evalLight) — is exact and
 // history-free wherever it is evaluated, and it is where every HARD edge of the direct term lives (light-pool boundaries, cone edges, the lit / unlit
 // break at a box corner); visibility is the stochastic part (shadow rays → the ratio-space denoiser), soft by nature except at contact. So this pass
@@ -7,7 +8,7 @@
 // visibility RATIO r̂ = S ∕ U the internal pass + its denoiser settled on, joint-bilateral upsampled from the 2×2 internal texels round the pixel
 // (bilinear × same-plane × same-orientation; the ratio taken as Σw·S ∕ Σw·U — the U-weighted mean of the taps' own ratios, so a tap outside this
 // light's footprint, U = 0, simply has no say). Output per class: E_c = U_c(out) ⊙ r̂_c → what composite reads as directTex / softTex at ITS pixel.
-// SLIVERS (lane v3/direct-quality, docs/internal/direct-quality.md; frame.sharpCfgC.z & 3 = settings.sharpSliver): an output pixel none of whose 4×4 internal texels lies on its surface — a
+// SLIVERS (frame.sharpCfgC.z & 3 = settings.sharpSliver): an output pixel none of whose 4×4 internal texels lies on its surface — a
 // door frame's 4-cm reveal, a chair leg, the edge of a limb, a contact line the internal raster stepped over — has NO measured visibility of its own. Rule 0 (the path as it was) borrowed
 // the 2×2's ratio whatever those texels show: a lit floor lent 'lit' to the occluded underside of a desk's lip, the lit wall beside a door lent it to the reveal the leaf shadows — thin
 // bright lines exactly where the picture is darkest, and per channel, so a neighbour under another light mix lent its hue too. Rule 1 borrows NOTHING across surfaces: per emitter

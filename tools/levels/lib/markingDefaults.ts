@@ -1,5 +1,5 @@
 // MARKING DEFAULTS — the per-KIND signifiers the office's objects carry, as BITMAP GENERATORS (scene/markings.ts is the format: palette-indexed cells on a
-// world-space lattice; docs/review/legibility.html grades them at follow height). Every recipe takes the box's half extents (and the odd option) and returns
+// world-space lattice). Every recipe takes the box's half extents (and the odd option) and returns
 // MarkingDef[] — cells + a ≤ 3-entry MATERIAL palette — so the level file (levels/office.json, written by tools/level-export.ts from officeGen.ts) carries
 // them explicitly and every instance of a kind is marked identically. Procedural kinds paint a CellCanvas through markings.ts GEN (grid, seams, lines,
 // dots, window); hand-drawn ones are ASCII art below ('.' transparent, 'a' 'b' 'c' the palette). Sizes count in the 2.5 cm base texel unless a recipe says

@@ -68,7 +68,7 @@ pub fn slab_store_new(g: &crate::game::Game, st: crate::Opaque, doors: f64) -> c
     let o = store_o(&slab_cols(SLAB_CAP));
     keep_home(g, js::to_u32(SLAB_BIT), "leaves off their hinges");
     let at = crate::sim_state::sim_part(crate::sim_state::P_SLABS);
-    SlabStore { doors, o, home: st, b8: (js::to_u32(at) >> 3) as f64, b4: (js::to_u32(at) >> 2) as f64, cap: SLAB_CAP }
+    SlabStore { doors, o }
 }
 
 /// Slabs in all. (slabshome.ts SlabStore.n)
@@ -204,7 +204,6 @@ fn same_double(x: f64, y: f64) -> bool {
 }
 
 /// colDiff over SLAB_F64 and SWAPPED, naming a row `door ${u[O.door + r]}`, appending to `out`. A read past a view's end is `undefined` on both sides, so no line.
-// SKELETON-GAP: sim_colstore::col_diff cannot find a column (ColDiffO holds only `bytes`, and a name K has no way to a field), so this is its walk by column start. (slabshome.ts:142, colstore.ts:58)
 fn col_diff_slabs(o: &SlabStoreO, a: &[u8], b: &[u8], rows: f64, most: f64, mut out: Vec<String>) -> Vec<String> {
     let at = in_order(o);
     let (doubles_long, words_long) = ((js::to_u32(o.flags) >> 1) as usize, (js::to_u32(o.bytes) >> 2) as usize);

@@ -1143,7 +1143,7 @@
         { "name": "the tea stall wicket", "door": "gate_w", "x": 4, "z": 21.75, "out": [-1, 0] }
       ],
       "patrols": [["laneW", "laneE", "boom", "east", "clerk"], ["laneW", "laneE", "boom", "east", "yard", "south"], ["laneW", "laneE", "boom", "south", "clerk", "yard"]],
-      "needs": { "coffee": { "name": "the kettle in the boom hut", "pos": [6.2, 0, 19.1], "face": -1.5707963267948966 }, "smoke": { "name": "the east gate", "pos": [35.3, 0, 15.9], "face": 3.141592653589793 } }
+      "needs": { "coffee": { "name": "the kettle in the boom hut", "pos": [6.2, 0, 19.1], "face": -1.5707963267948966 }, "smoke": { "name": "the road gate", "pos": [35.3, 0, 15.9], "face": 3.141592653589793 } }
     },
     "kitView": {
       "ways": [

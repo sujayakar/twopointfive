@@ -54,6 +54,35 @@ pub struct VentDef {
     pub mains: Option<bool>,
 }
 
+#[derive(Clone, Copy, Debug, ToBytes, Default, PartialEq)]
+pub enum HumKind {
+    #[default]
+    Hum,
+    Servers,
+    Buzz,
+    Wind,
+}
+impl HumKind {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            HumKind::Hum => "hum",
+            HumKind::Servers => "servers",
+            HumKind::Buzz => "buzz",
+            HumKind::Wind => "wind",
+        }
+    }
+}
+
+#[derive(Clone, Debug, ToBytes, Default)]
+pub struct HumDef {
+    pub name: String,
+    pub kind: crate::scene_level::HumKind,
+    pub pos: V3,
+    pub level: f64,
+    pub radius: f64,
+    pub mains: Option<bool>,
+}
+
 #[derive(Clone, Debug, ToBytes)]
 pub struct BreachPlan {
     pub inward: Option<[f64; 2]>,
@@ -198,14 +227,6 @@ pub enum BreachPlanBreach {
     Kick,
     Open,
 }
-impl BreachPlanBreach {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            BreachPlanBreach::Kick => "kick",
-            BreachPlanBreach::Open => "open",
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct BreachPlanBounds {
@@ -294,14 +315,6 @@ pub enum RoomClearPlanBreach {
     Kick,
     Open,
 }
-impl RoomClearPlanBreach {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RoomClearPlanBreach::Kick => "kick",
-            RoomClearPlanBreach::Open => "open",
-        }
-    }
-}
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct Level {
@@ -315,6 +328,7 @@ pub struct Level {
     pub doors: Vec<crate::scene_level::LevelDoorDef>,
     pub devices: Option<Vec<crate::scene_level::DeviceDef>>,
     pub vents: Option<Vec<crate::scene_level::VentDef>>,
+    pub hums: Option<Vec<crate::scene_level::HumDef>>,
     pub civilians: Option<Vec<crate::scene_level::CivilianDef>>,
     pub volumes: Option<Vec<crate::scene_level::VolumeDef>>,
     pub marks: Option<Vec<crate::scene_level::MarkDef>>,
@@ -356,15 +370,6 @@ pub enum LightDefKind {
     #[default] Spot,
     Dir,
     Point,
-}
-impl LightDefKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            LightDefKind::Spot => "spot",
-            LightDefKind::Dir => "dir",
-            LightDefKind::Point => "point",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -463,33 +468,15 @@ impl CivilianTask {
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct VolumeDef {
     pub name: String,
-    pub kind: crate::scene_level::VolumeDefKind,
     pub c: V3,
     pub h: V3,
     pub yaw: Option<f64>,
-}
-
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
-pub enum VolumeDefKind {
-    #[default] Trigger,
-    Hide,
-    Utility,
-}
-impl VolumeDefKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            VolumeDefKind::Trigger => "trigger",
-            VolumeDefKind::Hide => "hide",
-            VolumeDefKind::Utility => "utility",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct MarkDef {
     pub name: String,
     pub pos: V3,
-    pub yaw: Option<f64>,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]

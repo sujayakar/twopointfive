@@ -1,5 +1,5 @@
 // THE DEPOT — a motor pool at night: three huts round a floodlit yard, and a dark signals hut and a store's hatch that look across it.
-// A level generator in the scenario levels' shape (tools/levels/test-rooms.ts is the template; rebuild/scenario-levels/contract.md the how-to):
+// A level generator in the scenario levels' shape (tools/levels/test-rooms.ts is the template; docs/agents/levels.md the how-to):
 //   bun run tools/levels/export.ts depot [--check]     → levels/depot.json, with its `scenarios.roomClear` block
 //   page: ?levelFile=depot.json&roomclear&squad4
 //
@@ -57,7 +57,7 @@
 // inspection pit. No green, no mud.
 import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef } from './lib/level';
-import type { LevelScenarios, Rect, ResponseData } from '../../src/scene/scenarios';
+import type { LevelScenarios, Rect, ResponseData } from './lib/scenarios';
 import type { SurfacesData } from './lib/levelData';
 import { officeKit, normalize3, OFFICE_PALETTE, type GeneratorTrace } from './lib/officeGen';
 import * as MD from './lib/markingDefaults';
@@ -102,7 +102,7 @@ export const DEPOT_ROOMS: Record<'duty' | 'a' | 'wash' | 'battery' | 'generator'
   aerials: { x0: 29.62, x1: 35.88, z0: 4.12, z1: 14.88 },
 };
 
-/** THE DEPOT'S RESPONSE TEAM (scene/scenarios.ts ResponseData; rust/game_rules/src/qrf RESPONSE.raid — rust/game_start/tests/response_team.rs stands every mark on the
+/** THE DEPOT'S RESPONSE TEAM (lib/scenarios.ts ResponseData; rust/game_rules/src/qrf RESPONSE.raid — rust/game_start/tests/response_team.rs stands every mark on the
  *  built floor). A raid's team: it stands with the defenders. WHY HERE: the signals hut is this level's one problem already — the answer the floor is cut for
  *  is round the back to the hut and the mains — and a motor pool's trucks are out on the road with an escort the hut talks to. So the hut is also what
  *  calls: gunfire its men hear, and a few seconds to say so, brings the escort back to one of the depot's own two gates. The hut taken first, nobody calls. */
@@ -518,7 +518,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     },
   };
   // the open floor's names (rust/game_rules/src/dialogue: a held room is its own name; these are for everywhere a held room is not)
-  // THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest): both ways are the level's own. The main gate has no leaf
+  // THE TEAM & KIT PICTURE (lib/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest): both ways are the level's own. The main gate has no leaf
   // (its two are chained back on the inside of the wall), and a picture anchored on the opening had nothing for the kit that works a leaf — the hammer, the
   // shotgun, a door charge, the wand, a bang or a frag on order all stood idle there. So the first way is the first door the team meets through that gate:
   // the first hut's door on the yard (`a_s`), which plans with nothing in the camera's way. The second is the back gate's leaf in the east wall.

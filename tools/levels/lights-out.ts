@@ -18,8 +18,7 @@
 // the sentry's turn, which got out clean before the lock, is shot at the keyway on both deals.
 // THREE men: the window's sentry on the north side, one walks the east strip
 // past the fire door and the east gate, one keeps the cook fire on the south side.
-// The page is rebuild/missions/new/duo.md in the project files.
-import type { KitViewData, QuietData } from '../../src/scene/scenarios';
+import type { KitViewData, QuietData } from './lib/scenarios';
 import type { DeviceDef } from './lib/level';
 import { BoxFlag } from '../../src/scene/boxes';
 import { GWOT_MATERIALS } from './lib/gwotKit';
@@ -64,7 +63,7 @@ const PLACES = { areas: [
   { name: 'front track', bounds: { x0: 0, x1: 8.12, z0: 0, z1: 28 } }, { name: 'back track', bounds: { x0: 31.88, x1: 40, z0: 0, z1: 28 } },
 ] };
 
-/** THE TEAM & KIT PICTURE (scene/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest): a bespoke set on the yard's west gate
+/** THE TEAM & KIT PICTURE (lib/scenarios.ts KitViewData; rust/game_start/src/kit_plan.rs measures the rest): a bespoke set on the yard's west gate
  *  (train-ground-kitview.ts). In the level the generator and the breaker stand in a walled shed south of the gate, where the picture cannot see in. So: a lean-to
  *  of the shed's block against the yard wall, open to the gate, with the generator, the breaker on its back wall and the fuel out of the cage. The generator, the breaker's
  *  paint and the drums are this level's own boxes as exported (levels/lights-out.json), moved; the ids are the set's (lo_). */

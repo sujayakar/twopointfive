@@ -30,7 +30,6 @@ pub struct Man {
 pub struct State {
     pub men: JsMap<CharId, crate::smokebreak::Man>,
     pub stats: crate::smokebreak::SmokeBreakStats,
-    pub seed: f64,
 }
 
 #[derive(Clone, Copy, Debug, Default)]

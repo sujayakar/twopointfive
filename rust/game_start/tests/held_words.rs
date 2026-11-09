@@ -64,12 +64,34 @@ fn every_order_row_is_on_a_digit_up_to_five_or_a_key_of_its_own() {
     }
 }
 
+fn bearing(n: &str) -> bool {
+    const COMPASS: [&str; 8] = ["north", "south", "east", "west", "northeast", "northwest", "southeast", "southwest"];
+    n.to_lowercase().split(|c: char| !c.is_alphanumeric()).any(|w| COMPASS.contains(&w))
+}
+
+/// THE RULE: a man says his route by the place it keeps to or by words of its own, never by a bearing: every route of every level a mission plays.
+/// A FAILURE MEANS: "I walk the west lane", to a player with no compass.
+#[test]
+fn no_route_is_said_by_a_compass_word() {
+    let mut levels: Vec<String> = game::scene_scenario_list::all_missions().into_iter().filter_map(|e| e.level).filter(|l| !l.is_empty()).collect();
+    levels.sort();
+    levels.dedup();
+    let (mut bad, mut said) = (Vec::new(), Vec::new());
+    for file in &levels {
+        let p = Play::level(if file.ends_with(".json") { file.clone() } else { format!("{file}.json") }.as_str(), false, &Opts { seed: 1, ..Default::default() });
+        let words = p.route_words();
+        for w in &words { if bearing(w) { bad.push(format!("{file}: said {w:?}")); } }
+        said.extend(words);
+    }
+    assert!(said.len() > 20 && said.iter().any(|w| w == "the window side"), "the staging: {said:?}");
+    assert!(bad.is_empty(), "routes said by a bearing: {bad:#?}");
+}
+
 /// THE RULE: no compass words on the HUD or in a door's name: over every level a mission plays, the name a door is said by holds no bearing, and no two doors of a level are said the same. The office and a lesson's level name their own and are not asked. The control: the test's own eye catches such a name.
 /// A FAILURE MEANS: a line reads 'gate north door' on a HUD that has no compass.
 #[test]
 fn no_door_is_said_by_a_compass_word() {
-    const COMPASS: [&str; 8] = ["north", "south", "east", "west", "northeast", "northwest", "southeast", "southwest"];
-    let has = |n: &str| n.to_lowercase().split(|c: char| !c.is_alphanumeric()).any(|w| COMPASS.contains(&w));
+    let has = bearing;
     assert!(has("gate north door") && !has("hall-side mess door"), "the control: the eye reads a bearing wrong");
     let mut levels: Vec<String> = game::start_list::mission_list().into_iter().filter(|m| !m.entry.as_ref().is_some_and(|e| e.group == Some(game::scene_scenarios::MissionGroup::Tutorial)))
         .filter_map(|m| m.entry.and_then(|e| e.level)).filter(|l| !l.is_empty() && !l.starts_with("office")).collect();

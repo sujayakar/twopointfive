@@ -100,9 +100,8 @@ pub fn update_fire(g: &mut Game, dt: f64) {
         let books = g.engine.host_books.get_or_insert_with(crate::host_api::HostBooks::default);
         if stale {
             books.fire = Some(FireShown {
-                n: 0.0, time: 0.0, stir: None, stir_at: None, bed: Vec::new(), smoke: Vec::new(), smokes: 0.0, beds: 0.0,
-                ember: Vec::new(), embers: 0.0, soot_mix: None,
-                serial: 0,   // the picture's to deal, never g.serial(): a load rewinds that and the book stays. Only the bed's voice compares it, and that is not here.
+                n: 0.0, time: 0.0, stir: None, stir_at: None, smoke: Vec::new(), smokes: 0.0,
+                ember: Vec::new(), embers: 0.0,
             });
         }
         let p = books.fire.as_mut().unwrap();
@@ -200,7 +199,6 @@ pub fn update_fire(g: &mut Game, dt: f64) {
             let n = m::hyp3(a[2], 1.0, a[3]);
             jets.push(crate::smoke_types::WindGpuSource {
                 kind: crate::smoke_types::WindGpuSourceKind::Jet,
-                name: String::from("fire"),
                 pos: mouth.pos,
                 dir: [a[2] / n, 1.0 / n, a[3] / n],
                 speed: w.speed * heat,
@@ -237,19 +235,6 @@ pub fn update_fire(g: &mut Game, dt: f64) {
                         ember_throw(g, &from, m::round(ember_crack * (0.4 + 0.6 * p.hard)), p.hard);
                     }
                 }
-            }
-        }
-        // the bed: asked for when the fire starts to burn and handed on every `bed_secs`. The closure of fire.ts:379 (`follow`) has no arm in PlayOpts: notes, ## Out
-        if moved {
-            let (bed_secs, bed_gain) = (g.k.fire.bed_secs, g.k.fire.bed);
-            let slot = m::floor(time / bed_secs);
-            let p = book(g);
-            let n = p.n;
-            let goes = p.bed.get(ix).copied() == Some(n - 1.0);
-            put_at(&mut p.bed, ix, n, NO_FRAME);
-            if slot != m::floor(was / bed_secs) || !goes {
-                p.beds += 1.0;
-                crate::audio_iface::game_audio_like_play(g, "fireBed", Some(mouth.pos), Some(bed_gain), None);
             }
         }
         // the smoke: a short source on the solver, filed afresh every `every` s

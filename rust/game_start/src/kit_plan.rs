@@ -3,7 +3,7 @@
 //! value is MEASURED here, the same way for every level. Pure: plain level data in, plain data out; no die, no clock.
 //!
 //! A LEVEL OR A SET. The plan is made from whatever geometry it is handed and reaches for nothing else: a way that names a bespoke set is planned from the set's own records and its
-//! `ref`, with not one record of the level's in reach (`plan_way` is the one place that chooses).
+//! `ref`, with not one record of the level's in reach.
 //!
 //! AUTHORED KEYS ALWAYS WIN. Every value the plan measures can be written on the way and is then taken as written, key by key, never corrected: level numbers tuned in the viewer are
 //! authored data. `src` says, per value, which it was.
@@ -382,26 +382,6 @@ pub fn geometry<'a>(level: &'a PlanLevel, block: Option<&'a PlanBlock>, way: &Wa
 /// are out of the picture) · `also_hide` = ids the caller has already taken out of the picture: out of the floor and among `hidden`, without the way's `hide` counting as written
 #[derive(Clone, Copy, Default)]
 pub struct PlanOpts<'a> { pub floor: Option<&'a Floor>, pub free: Option<&'a dyn Fn(f64, f64) -> bool>, pub hidden_stand: bool, pub also_hide: &'a [String] }
-
-/// …and the plan from it. A set has its own floor, and so has a level with a piece added here: the level's `floor` and `free` are not handed on, for a `free` made on the bare level puts a man inside
-/// the added crate and says nothing. What the caller says of the way's `hide` is the way's, whatever it is planned on.
-pub fn plan_way(level: &PlanLevel, block: Option<&PlanBlock>, way: &Way, ref_: V2, opts: &PlanOpts) -> Planned {
-    let g = match geometry(level, block, way, ref_) {
-        Some(g) => g,
-        None => {
-            let mut p = plan(&PlanLevel::default(), way, ref_, &PlanOpts::default());
-            let name = way.set.clone().unwrap_or_default();
-            p.problems = vec![format!("no set '{}' in the block's sets", name)];
-            p.set = way.set.clone();
-            return p;
-        }
-    };
-    let own = g.set.is_none() && matches!(g.level, Cow::Borrowed(_));
-    let said = PlanOpts { floor: None, free: None, hidden_stand: opts.hidden_stand, also_hide: opts.also_hide };
-    let mut p = plan(&g.level, way, g.ref_, if own { opts } else { &said });
-    p.set = g.set;
-    p
-}
 
 /// THE PLAN AS THE CHILD MAKES IT: two passes on the floor as the game has it. The first plans with the way's `hide` still standing on that floor and hands what is out of the picture to `sink`
 /// (the child puts those boxes under the ground and rebakes; `free` must answer for the floor that leaves). The second plans again with the first's occluders named as already out, none where the way

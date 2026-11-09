@@ -23,7 +23,7 @@ struct SP {
   dt: f32, time: f32, buoyancy: f32, weight: f32,
   vortConf: f32, velDamp: f32, densDecay: f32, tempDecay: f32,
   turbulence: f32, omega: f32, flushEps: f32, ring: u32,          // ring: CELLS of air kept round the smoke (1‥8; 8 = every brick that holds smoke has all 26 neighbours)
-  stirConf: f32, law: f32, numDirty: u32, bakeAll: u32,          // stirConf: × MORE vorticity confinement right round a moving body (forces, emBody; 0 = one strength everywhere, as it was)
+  stirConf: f32, pad17: f32, numDirty: u32, bakeAll: u32,          // stirConf: × MORE vorticity confinement right round a moving body (forces, emBody; 0 = one strength everywhere, as it was)
   softLo: f32, softHi: f32, softEps: f32, softDecay: f32,         // the pool's soft ceiling: between softLo and softHi of CAP in use the flush threshold rises to softEps and thin smoke decays softDecay/s faster
   thinDecay: f32, thinBelow: f32, readSkip: f32, fresh: f32,       // density under thinBelow decays up to thinDecay/s faster, always (0 = off): how far a plume's faint skirt spreads before it is gone · fresh: WHO GIVES WAY below
   viewX: f32, viewZ: f32, viewR: f32, viewBias: f32,              // where the camera looks (floor plan) and how far round it counts as seen: past viewR, rising to full at 2 viewR, the pool's ceiling comes sooner and harder (farOf); bias 0 = one ceiling for all
@@ -62,7 +62,7 @@ const K_ACC: u32 = 35u; const K_DT: u32 = 36u; const K_PER: u32 = 37u;   // time
 const K_DMAX: u32 = 38u;   // its densest cell as its last step left it (injectDecay)
 const K_MEAN: u32 = 39u;   // how much of the game's own smoke is in it, on average over its air (publish)
 const K_PULL: u32 = 40u;   // which way it is drawn toward where the game has more (injectDecay, for the next step's forces): x y, z as 4 × f16
-const F_SCALAR: u32 = 1u; const F_RENDER: u32 = 2u; const F_NEW: u32 = 4u; const F_ACT: u32 = 8u; const F_KIND: u32 = 16u; const F_KINDS: u32 = 32u; const F_TINT: u32 = 64u; const F_WALL: u32 = 128u;   // F_WALL: its middle is in something solid · F_KIND: some cell's K word is not 0 · F_KINDS: mine or a neighbour's is, or such a source is on me: the kind is carried here this step · F_TINT: some cell is tinted
+const F_SCALAR: u32 = 1u; const F_RENDER: u32 = 2u; const F_NEW: u32 = 4u; const F_ACT: u32 = 8u; const F_KIND: u32 = 16u; const F_KINDS: u32 = 32u; const F_TINT: u32 = 64u; const F_WALL: u32 = 128u;   // F_WALL: its middle is in something solid · F_KIND: some cell's K word is not 0 · F_KINDS: mine or a neighbour's is, or such a source is on me, or the game's smoke here has a color: the kind is carried here this step · F_TINT: some cell is tinted
 
 const V_VEL0: u32 = 0u; const V_VEL1: u32 = CAP * 512u; const V_CURL: u32 = CAP * 1024u;
 const S_DEN0: u32 = 0u; const S_DEN1: u32 = CAP * 512u; const S_BITS: u32 = CAP * 1024u; const S_KIND: u32 = CAP * 1152u;
@@ -76,17 +76,18 @@ const MAX_TRACE: f32 = 14.0;   // cells a backtrace may span: two bricks less th
 // what is drawn of it, finer and livelier than the simulation could afford, so it is BENT TOWARD THE GRID ALL THE TIME, ONE WAY, A LITTLE AT A TIME: x ← step(x) + (1 − e^(−dt·rate)) · P(y − C·x). y = the
 // grid's cells (the page hands them over as they lie: rust/game_draw/src/smoke.rs) · C = the mean over a brick's air (K_MEAN): A COARSE BRICK IS ONE CELL OF THE GRID, half a metre, so C is one sum a brick
 // · P = the correction spread over the brick's cells, shaded into the bricks next door where the grid says the way is open, so nothing is drawn of the half metres. Everything finer than a brick is left alone.
-//   · HOW FAST goes by how much it matters to an eye: `bend` × the square of the difference in what a metre and a half of it hides. Two opaque clouds are one and a small difference is let be (it is the
-//     solver's to look as it likes within it: billows), a cloud one side lacks is mended at once.
+//   · HOW FAST goes by how much it matters to an eye: `bend` × the difference in what a metre and a half of it hides. Two opaque clouds are one (what they differ in is the solver's, to look as it likes: billows), a
+//     cloud one side lacks is mended in a second, and the last of a gap closes too: by the square of the difference a thin edge never filled, and men could not see through smoke nobody was shown.
+//   · IT THINS BY THE GAME'S LAW, which is in what the grid holds: what is drawn of the game's smoke thins of itself only where there is more of it than that. By both, a cloud was half the game's as it went.
 //   · IT GOES THERE FIRST: smoke is drawn toward where the game has more of it (`pull`, along the difference's gradient; K_PULL), so a cloud rolls out to where it should be and what is left to mend is little.
 //   · TOO MUCH is thinned where it stands, its thin parts first; TOO LITTLE is thickened where it stands, its thick parts first, so billows stay billows; where there is next to none it comes up out of the air in wisps (bendTo; no haze is laid between billows).
 //   · ONLY THE GAME'S SMOKE is measured and bent. A source the game does not hold (a breath, a fire's plume, gun gas) says so in the first byte of its K word, and that share of a cell is nobody's here.
-//   · what the grid holds that has no brick gets one (markBent).
+//   · what the grid holds that has no brick gets one (markBent); what comes up to meet it is of the color the grid's brick has (two metres square: dust, soot).
 //   · A JUMP IS THE SAME BEND TAKEN THE WHOLE OF THE WAY (`whole`): where the game is another moment's than the picture, the empty pool takes the grid as it stands in a few steps of next to no time, all before the
 //     frame is drawn (smoke.ts anew). What made the game jump is nobody's to ask here.
 const M_BENT: u32 = M_META + CAP * MS;   // (+ 0: the grid's plan in its own bricks, along x · + 1: along z)
 const M_BAT: u32 = M_BENT + 16u;         // a word a place of the plan: the row of the brick there and one (0 = none stands)
-const M_BROW: u32 = M_BAT + 512u;        // rows of 160 words: 128 densities (4 along x, then 4 along z, then 8 up), then a byte a cell: 1, 2, 4 = open toward +x, up, +z
+const M_BROW: u32 = M_BAT + 512u;        // rows of 161 words: 128 densities (4 along x, then 4 along z, then 8 up), a byte a cell: 1, 2, 4 = open toward +x, up, +z; then what is missing from its color, as in a K word
 /** what a cell of the grid holds before a brick is made and kept for it: more as the pool runs short (WHO GIVES WAY) */
 fn bentLeast() -> f32 { return 0.03 * (1.0 + 3.0 * bitcast<f32>(M[M_TIGHT])); }
 const BENT_SIGMA: f32 = 6.0;             // what a metre of smoke of density 1 takes out of the light (common.wgsl)
@@ -97,8 +98,10 @@ fn bentAt(b: vec3i) -> vec2u {
   return vec2u(M[M_BAT + u32(z * wide + x)], u32((b.y * 4 + (b.z & 3)) * 4 + (b.x & 3)));
 }
 /** what the grid holds there (−1 = it says nothing) */
-fn bentRho(r: vec2u) -> f32 { if (r.x == NONE) { return -1.0; } if (r.x == 0u) { return 0.0; } return bitcast<f32>(M[M_BROW + (r.x - 1u) * 160u + r.y]); }
-fn bentOpen(r: vec2u) -> u32 { if (r.x == NONE || r.x == 0u) { return 0u; } return (M[M_BROW + (r.x - 1u) * 160u + 128u + (r.y >> 2u)] >> ((r.y & 3u) * 8u)) & 7u; }
+fn bentRho(r: vec2u) -> f32 { if (r.x == NONE) { return -1.0; } if (r.x == 0u) { return 0.0; } return bitcast<f32>(M[M_BROW + (r.x - 1u) * 161u + r.y]); }
+fn bentOpen(r: vec2u) -> u32 { if (r.x == NONE || r.x == 0u) { return 0u; } return (M[M_BROW + (r.x - 1u) * 161u + 128u + (r.y >> 2u)] >> ((r.y & 3u) * 8u)) & 7u; }
+/** what is missing from the color of the smoke there (1 − tint) */
+fn bentDye(r: vec2u) -> vec3f { if (r.x == NONE || r.x == 0u) { return vec3f(0.0); } return unpack4x8unorm(M[M_BROW + (r.x - 1u) * 161u + 160u]).yzw; }
 /** what `m` metres of it let through */
 fn bentThrough(rho: f32, m: f32) -> f32 { return exp(-BENT_SIGMA * m * rho); }
 
@@ -599,7 +602,7 @@ fn link(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) li: 
       var mid = 0u; for (var j = 0; j < 8; j++) { mid += solidBit(vec3i(3 + (j & 1), 3 + ((j >> 1u) & 1), 3 + (j >> 2u))); }
       fl = select(fl & ~F_WALL, fl | F_WALL, mid > 4u);
     }
-    if (k.l == 0u && atomicLoad(&wgKind) != 0u) { fl |= F_KINDS; }
+    if (k.l == 0u && (atomicLoad(&wgKind) != 0u || (sp.bend > 0.0 && any(bentDye(bentAt(k.b)) > vec3f(0.0))))) { fl |= F_KINDS; }
     if (act) { fl |= F_ACT; } else { fl &= ~F_SCALAR; M[k.m + K_BOX] = 0u; M[k.m + K_DMAX] = 0u; M[k.m + K_MEAN] = 0u; }
     M[k.m + K_FLAGS] = fl;
     M[k.m + K_EM0] = atomicLoad(&wgEm[0]); M[k.m + K_EM1] = atomicLoad(&wgEm[1]); M[k.m + K_WIND] = atomicLoad(&wgWind); M[k.m + K_OPEN] = atomicLoad(&wgOpen);
@@ -856,12 +859,11 @@ fn lumps(p: vec3f) -> f32 {
 }
 /** the game's smoke in a cell, bent: `g` of it stands there, the grid holds h.x about it and h.y is drawn. The mean over a brick moves by the share of the way the rate says, whatever is in its cells. */
 fn bendTo(g: f32, h: vec2f, P: vec3f, dt: f32) -> f32 {
-  let o = bentThrough(h.x, 1.5) - bentThrough(h.y, 1.5); var f = o * o; if (sp.law > 1.5) { f = abs(o); } if (sp.law > 2.5 && sp.law < 3.5) { f = max(o * o, 0.3 * abs(o)); }
-  let a = select(1.0 - exp(-sp.bend * f * dt), 1.0, sp.whole > 0.0);
+  let o = bentThrough(h.x, 1.5) - bentThrough(h.y, 1.5); let a = select(1.0 - exp(-sp.bend * abs(o) * dt), 1.0, sp.whole > 0.0);
   let d = h.x - h.y;
   let thick = 2.0 * g / max(g + h.y, 1e-6);   // (1 where a cell holds what the brick does, toward 2 in its billows, 0 in its gaps)
   if (d <= 0.0) { return g * max(1.0 + a * d / max(h.y, 1e-6) * (2.0 - thick), 0.0); }
-  let was = g * (1.0 + a * min(d / max(h.y, 1e-6), 2.0) * thick); let bare = 1.0 - h.y / h.x; var due = a * d * bare * bare; if (sp.law < 3.5) { due *= bare * bare; }
+  let was = g * (1.0 + a * min(d / max(h.y, 1e-6), 2.0) * thick); let bare = 1.0 - h.y / h.x; let due = a * d * bare * bare * bare * bare;
   if (due < 1e-6) { return was; }
   let q = P * 2.0 + vec3f(0.0, -sp.time * 0.35, sp.time * 0.15);
   return was + due * (0.2 + 1.75 * smoothstep(-0.3, 0.5, lumps(q) + 0.5 * lumps(q * 2.1 + 17.0)));   // (wisps at two sizes, 0.85 in the mean)
@@ -898,7 +900,7 @@ fn injectDecay(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_id) 
     }
     M[k.m + K_PULL] = pack2x16float(pull.xy); M[k.m + K_PULL + 1u] = pack2x16float(vec2f(pull.z, 0.0));
   }
-  let least = bentLeast();
+  let least = bentLeast(); let dye = bentDye(bentAt(k.b));
   if (bent && li < 8u) { wgCorners[li] = bentCorners(select(vec3i(-1), vec3i(1), vec3<bool>((li & 1u) != 0u, (li & 2u) != 0u, (li & 4u) != 0u))); }
   workgroupBarrier();
   var eps = bitcast<f32>(M[M_EPS]); var extra = bitcast<f32>(M[M_DECAY]); let thin0 = bitcast<f32>(M[M_THIN]); var thin = thin0; let open = M[k.m + K_OPEN];
@@ -918,8 +920,9 @@ fn injectDecay(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_id) 
     // (the pool's soft ceiling: as it fills, THIN smoke goes faster — the body of a plume is untouched, its faint skirts give their bricks back)
     var faint = 1.0 - smoothstep(0.0, thin, v.x);
     var h = vec2f(-1.0, 0.0); if (bent) { h = bentHere(c); }
-    var decay = sp.densDecay; if (sp.law > 0.5 && h.x > 0.0) { decay *= mix(smoothstep(0.95, 1.1, h.y / h.x), 1.0, kd.x); }
-    v.x *= exp(-(decay + extra * faint) * k.dt);
+    let thins = exp(-(sp.densDecay + extra * faint) * k.dt); var mine = thins;
+    if (h.x > 0.0) { mine = exp(-(sp.densDecay * mix(1.0, smoothstep(0.95, 1.1, h.y / h.x), smoothstep(0.1 * least, 0.5 * least, h.x)) + extra * faint) * k.dt); }   // (IT THINS BY THE GAME'S LAW, above; what the grid has next to none of goes as ever)
+    if (kinds) { let own = v.x * kd.x * thins; v.x = own + v.x * (1.0 - kd.x) * mine; kd.x = own / max(v.x, 1e-6); } else { v.x *= mine; }
     v.y *= exp(-(sp.tempDecay + cool * faint) * k.dt);
     let Pw = worldP(k, c); var fed = false;
     for (var w = 0u; w < 2u; w++) {
@@ -939,8 +942,8 @@ fn injectDecay(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_id) 
     var held = false;
     if (bent) {
       if (h.x >= 0.0) {
-        let own = v.x * kd.x; let g = bendTo(v.x - own, h, Pw, k.dt); v.x = own + g; held = h.x > 0.5 * least;
-        if (kinds) { kd.x = own / max(v.x, 1e-6); }
+        let own = v.x * kd.x; let had = v.x; let g = bendTo(v.x - own, h, Pw, k.dt); v.x = own + g; held = h.x > 0.5 * least;
+        if (kinds) { kd = vec4f(own / max(v.x, 1e-6), mix(kd.yzw, dye, clamp((v.x - had) / max(v.x, 1e-6), 0.0, 1.0))); }   // (what comes up comes up of the game's color)
       }
     }
     // an OPEN face (the world's edge, or the pool refused the brick beyond): the old boxes' dissipation band, only there. A brick with smoke normally has all its neighbours and never runs this.

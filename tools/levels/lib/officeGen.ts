@@ -13,11 +13,11 @@ import { fitOpenings, fitDoorDef, exitThrough, JAMB_FACE, DOOR_HEAD, LEAF_H } fr
 import { fitPropFootprint } from './levelLoad';
 import { pieces } from './library';
 import { DESK_CLUSTERS, OFFICE_MARKS, OFFICE_SCENARIOS } from './officeScenarios';   // the desks' four places, the office's named marks and its missions' data (plain literals; the builder puts them on its Level and the exporter writes them into the file)
-import type { LevelScenarios } from '../../../src/scene/scenarios';
+import type { LevelScenarios } from './scenarios';
 
 /** what the exporter asks the generator to record on the side: the editor group of every box, in box order */
 export interface GeneratorTrace { groups: string[]; }
-/** The markings lane's switches (docs/review/legibility.html): `markings` = the objects carry their pixel-art signifiers (markingDefaults.ts) — keyboards,
+/** The markings lane's switches: `markings` = the objects carry their pixel-art signifiers (markingDefaults.ts) — keyboards,
  *  cartons, cabinets, papers, whiteboards, the vending machines, racks…; `demote` = FACE RELIEF that used to be modelled as thin sub-part boxes (drawer pulls,
  *  LED nubs, the vending machines' glowing front slabs, clock faces and hands, screen sheets, door-gap strips, deck boards…) is removed and drawn as markings
  *  on the parent face instead — never a free-standing object (papers, notes, books, trays keep their boxes: the sheet's edge is what makes it a thing on the
@@ -44,14 +44,14 @@ const C = {
 };
 /** the palette above, by name — the exporter writes these as the level file's `materials` and matches box albedos against them */
 export const OFFICE_PALETTE: Readonly<Record<string, Vec3>> = C;
-/** The FINISH of each palette material (Box.rough / metal — what the ray-traced reflection pass reads; docs/internal/claude-md-renderer-systems.md): GGX roughness 0‥1 and
+/** The FINISH of each palette material (Box.rough / metal — what the ray-traced reflection pass reads): GGX roughness 0‥1 and
  *  bare metal. Anything absent here is matte (ROUGH_DEFAULT 1). The exporter writes these into the level file's `materials` next to the albedo, and `add()`
  *  below gives them to every box made with that paint (the palette's row handed over: scene/stuff.ts paintOf) so the generated Level and the loaded one
  *  agree box for box. Numbers over a preset's rtMaxRough (0.45 high / 0.55 ultra) never cost a ray; they are still authored so the panel and the cutoff fade
  *  have something true to read. */
 export const OFFICE_FINISH: Readonly<Record<string, { rough: number; metal?: boolean }>> = {
   stone: { rough: 0.15 },                                  // sealed, polished lobby stone: the frontage, the exit sign and the reception screen mirror with edges (the brief said 0.18; both are in the traced regime, 0.15 keeps a torch beam legible in it)
-  lino: { rough: 0.22 },                                   // waxed corridor / break-room lino: panels and vending fronts as soft-edged RECTANGLES hardening at the contact — the brief's 0.32 is physically a matte sealer: the GGX lobe (median 10°, p90 27° off the mirror) turns a vending front 2 m up into a shapeless glow (tried at 0.20 / 0.24 / 0.28 / 0.32: docs/internal/p4-materials.md)
+  lino: { rough: 0.22 },                                   // waxed corridor / break-room lino: panels and vending fronts as soft-edged RECTANGLES hardening at the contact — the brief's 0.32 is physically a matte sealer: the GGX lobe (median 10°, p90 27° off the mirror) turns a vending front 2 m up into a shapeless glow (tried at 0.20 / 0.24 / 0.28 / 0.32)
   glass: { rough: 0.03 }, glassExt: { rough: 0.03 },        // (panes are never rasterised — composite reflects them analytically — here for the record)
   metal: { rough: 0.28, metal: true },                      // shelving, the UPS, cart frames, lamp posts, bike hoops: brushed steel
   glassFrame: { rough: 0.4, metal: true },                  // anodised mullions
@@ -1209,7 +1209,7 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
   };
 
   // ================================================================ THE HAND PASS (11-05) ====
-  // What a painter and a fitter left on a kept building, laid where the floor is walked and fought (how that was read: docs/agents/levels.md, the hand pass).
+  // What a painter and a fitter left on a kept building, laid where the floor is walked and fought.
   // The maintainer, 11-04: "wear, paths in the ground, different materials can all tell a story for how people walk through the level, its logic, leading the
   // player for game play", and of the look he is after: "it's all quite intentionally dressed". Three kinds of thing, each through the system that owns it:
   //   WORN PATHS   are not here: the ways the day's people walk are named marks and `walked` rows beside the office's scenarios (officeScenarios.ts),
@@ -1263,6 +1263,14 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
     doors: doorDefs,   // hinged leaves for the doorway gaps (closedDir 0: leaf runs +X from the hinge along a z-wall; π/2: runs +Z along an x-wall)
     devices,
     vents,             // the HVAC diffusers (rust/game_rules/src/wind): after devices, where loadLevel puts them — the identity probe compares key order too
+    hums: [
+      { name: 'hum_servers', kind: 'servers', pos: [18, 1.2, 7], level: 0.5, radius: 12 },   // the server room
+      { name: 'hum_vending', kind: 'buzz', pos: [29.5, 1.2, 13.2], level: 0.35, radius: 7 },   // the vending machines
+      { name: 'hum_ballast', kind: 'buzz', pos: [16.5, 2.8, 20.6], level: 0.15, radius: 6 },   // the flickering panel's ballast
+      { name: 'hum_air', kind: 'hum', pos: [8, 2.6, 18], level: 0.25, radius: 14 },   // the air handling
+      { name: 'wind_lot', kind: 'wind', pos: [16, 3, 27], level: 0.5, radius: 18, mains: false },   // the wind over the lot
+      { name: 'wind_west', kind: 'wind', pos: [1.5, 3, 20], level: 0.4, radius: 14, mains: false },   // …and along the west side
+    ],
     breaker: { pos: [34.3, 1.35, 9.8], boxes: [brk, brkLed] },
     beacons,
     playerSpawn: [5.1, 0, 15.2],
@@ -1270,7 +1278,7 @@ export function buildOfficeProcedural(trace?: GeneratorTrace, opts: GeneratorOpt
     marks: OFFICE_MARKS.map(m => ({ ...m, pos: [m.pos[0], m.pos[1], m.pos[2]] as Vec3 })),   // where a person stands to use each thing (officeScenarios.ts): written into the file by the exporter, as any level's marks are
     sky: { zenith: [0.015, 0.025, 0.05], horizon: [0.04, 0.05, 0.08] },
     mission: { serverRoom: { x0: 14.12, x1: 21.88, z0: 4.12, z1: 9.94 }, entryDoor: 'server', rack: { index: DRIVE_RACK, front: rackFront, halfW: 0.33 }, exfilDoor: 'fire_exit', exfilX: 36.5, exfilZ: exitThrough(doorDefs.find(d => d.name === 'fire_exit')!, 36.5, 20.6)[1] },   // room = inside its partitions; exfilX = clear of the east wall (x 36 ± 0.12): past it you are in the lot
-    kept: 1,   // (a let office with a cleaner on contract: its paint is whole and its walls one shade. The word is the level's own, the file's meta.kept: docs/agents/render.md, A LEVEL SAYS HOW KEPT IT IS)
+    kept: 1,   // (a let office with a cleaner on contract: its paint is whole and its walls one shade. The word is the level's own, the file's meta.kept: docs/agents/levels.md, "The look")
     scenarios: JSON.parse(JSON.stringify(OFFICE_SCENARIOS)) as LevelScenarios,   // what the night breach, the room clear and the rescue take from this level (officeScenarios.ts): the level's own block, written into the file by the exporter as any level's is: last, where loadLevel puts it (the identity probe compares key order too). (A copy: a Level and the generator's tables never share an array.)
   };
 }

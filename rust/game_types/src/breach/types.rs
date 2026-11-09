@@ -98,26 +98,9 @@ pub enum Phase {
     Enter,
     Restack,
 }
-impl Phase {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Phase::Clear => "clear",
-            Phase::Bang => "bang",
-            Phase::Kick => "kick",
-            Phase::Approach => "approach",
-            Phase::Breach => "breach",
-            Phase::Stack => "stack",
-            Phase::Done => "done",
-            Phase::Wait => "wait",
-            Phase::Enter => "enter",
-            Phase::Restack => "restack",
-        }
-    }
-}
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct BreachDrillBeatsItem {
-    pub t: f64,
     pub what: String,
 }
 
@@ -125,7 +108,6 @@ pub struct BreachDrillBeatsItem {
 pub struct OpFlow {
     pub st: crate::breach::FlowSt,
     pub t0: f64,
-    pub wps: Vec<V3>,
     pub sweep: crate::squad::Sweep,
     pub aim: V3,
     pub q: Vec<usize>,
@@ -133,7 +115,6 @@ pub struct OpFlow {
     pub since: f64,
     pub n: f64,
     pub next: f64,
-    pub said: bool,
     pub in_at: f64,
     pub corner_at: f64,
     pub hold_at: f64,
@@ -146,17 +127,6 @@ pub enum FlowSt {
     Into,
     Corner,
     Centre,
-}
-impl FlowSt {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            FlowSt::Hold => "hold",
-            FlowSt::Wait => "wait",
-            FlowSt::Into => "into",
-            FlowSt::Corner => "corner",
-            FlowSt::Centre => "centre",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -172,27 +142,6 @@ pub struct BreachLive {
 pub struct BreachDrillNewOpts {
     pub guarantee_downs: Option<bool>,
     pub live: Option<crate::breach::BreachLive>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct BreachDrillRoutePatch {
-    pub goal: Option<V3>,
-    pub speed: Option<f64>,
-    pub face: Option<f64>,
-    pub strafe: Option<bool>,
-    pub aim_at: Option<V3>,
-    pub stance: Option<crate::character::Stance>,
-    pub stack_side: Option<f64>,
-    pub crouch: Option<bool>,
-    pub lean: Option<f64>,
-    pub upper: Option<crate::character::UpperMode>,
-    pub light: Option<bool>,
-    pub arrived: Option<bool>,
-    pub hot: Option<bool>,
-    pub flinch: Option<bool>,
-    pub direct: Option<bool>,
-    pub smoke: Option<bool>,
-    pub over: Option<crate::game::GuardScriptOver>,
 }
 
 /// (src/game/breach.ts:26 RUN)

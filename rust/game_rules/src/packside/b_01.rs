@@ -30,7 +30,7 @@ fn memo_made(g: &mut Game, ch: RigId) -> bool {
     for (i, name) in parts.iter().enumerate() {
         if name.starts_with("kit_") {
             kit |= 1u32 << i;
-            ext[i] = Some(PackExt { part: i as f64, x0: m::INF, x1: -m::INF, top0: -m::INF, top1: -m::INF, z0: m::INF, z1: -m::INF });
+            ext[i] = Some(PackExt { x0: m::INF, x1: -m::INF, top0: -m::INF, top1: -m::INF, z0: m::INF, z1: -m::INF });
         }
     }
     {

@@ -11,7 +11,7 @@ use game::loadout::entry_of;
 use game::query::{after_mark, Query};
 use game::scene_scenarios::IssueData;
 use game::start_list::{self, Sitting};
-use game::view::{BriefView, CardView, KeptText, Pressed, SheetView, ShortView, StartView, TeamView};
+use game::view::{BriefView, CardView, KeptText, MissionsView, Pressed, SheetView, ShortView, StartView, TeamView};
 use game_start::json::{parse, Json};
 use game_start::read::FromJson;
 use std::any::Any;
@@ -216,4 +216,10 @@ asks! {
     18 Brief { search: &str } -> BriefView = |_, search| start_list::brief_of(search);
     /// 1 where the link starts what a page at this address already stands, so that it needs no page load; else 0
     19 Same { link: &str, page: &str } -> u32 = |d, link, page| start_list::same_start(&d.g, link, page) as u32;
+    /// every mission there is, as its row of the table says it
+    20 Missions {} -> MissionsView = |_| start_list::missions_view();
+    /// the kind of mission an address starts (empty: none), on the list or not
+    21 Kind { search: &str } -> String = |_, search| start_list::kind_of_address(search);
+    /// where an address that names a row of the short list and nothing to play goes instead (empty: it stays)
+    22 Pick { search: &str } -> String = |_, search| game::scene_scenario_list::pick_goes(search).unwrap_or_default();
 }

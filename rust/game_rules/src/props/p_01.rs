@@ -397,23 +397,6 @@ pub fn prop_system_reset(g: &mut crate::game::Game) {
     }
 }
 
-/// debug: a random shove to every thing   (props.ts PropSystem.scatter)
-pub fn prop_system_scatter(g: &mut crate::game::Game, strength: Option<f64>) {
-    let strength = strength.unwrap_or(1.5);
-    for i in 0..g.props.props.len() {
-        let p = g.props.props[i];
-        let a = crate::dice::draw_world(g, "props::prop_system_scatter#1") * m::PI * 2.0;
-        let s = strength * (0.5 + crate::dice::draw_world(g, "props::prop_system_scatter#2"));
-        let vx = prop_vx(g, p) + m::cos(a) * s;
-        prop_set_vx(g, p, vx);
-        let vz = prop_vz(g, p) + m::sin(a) * s;
-        prop_set_vz(g, p, vz);
-        let w = prop_w(g, p) + (crate::dice::draw_world(g, "props::prop_system_scatter#3") - 0.5) * 6.0 * strength;
-        prop_set_w(g, p, w);
-        prop_wake(g, p);
-    }
-}
-
 /// authoring overlaps resolved once, silently; the settled pose becomes home   (props.ts PropSystem.settle)
 pub fn prop_system_settle(g: &mut crate::game::Game) {
     g.props.muted = true;

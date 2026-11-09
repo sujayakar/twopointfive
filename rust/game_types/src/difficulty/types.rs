@@ -36,22 +36,6 @@ impl Difficulty {
     }
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum FogRung {
-    Team,
-    Own,
-    Cones,
-}
-impl FogRung {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            FogRung::Team => "team",
-            FogRung::Own => "own",
-            FogRung::Cones => "cones",
-        }
-    }
-}
-
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum KitRung {
     #[default] None,
@@ -139,10 +123,8 @@ pub struct SQUADHARDItem {
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct TablesOfSet {
-    pub fog: Option<crate::quietfog::QuietRung>,
     pub ai: Option<crate::difficulty::Difficulty>,
     pub kit: Option<crate::difficulty::KitRung>,
-    pub told: Option<crate::told::ToldRung>,
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -175,69 +157,11 @@ pub struct LeversShown {
     pub told: Option<crate::told::ToldRung>,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct LeversSet {
-    pub fog: Option<crate::quietfog::QuietRung>,
-    pub ai: Option<crate::difficulty::Difficulty>,
-    pub kit: Option<crate::difficulty::KitRung>,
-    pub told: Option<crate::told::ToldRung>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct KeptHidden {
-    pub fog: Option<crate::quietfog::QuietRung>,
-    pub ai: Option<crate::difficulty::Difficulty>,
-    pub kit: Option<crate::difficulty::KitRung>,
-    pub told: Option<crate::told::ToldRung>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct KeptLevers {
-    pub fog: Option<crate::quietfog::QuietRung>,
-    pub ai: Option<crate::difficulty::Difficulty>,
-    pub kit: Option<crate::difficulty::KitRung>,
-    pub told: Option<crate::told::ToldRung>,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct SquadsOfE {
-    pub level: Option<String>,
-    pub squads: Option<bool>,
-}
-
-#[derive(Clone, Debug)]
-pub enum SquadsOf {
-    Text(String),
-    Bool(bool),
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct SquadsHeldE {
-    pub level: Option<String>,
-    pub squads: Option<bool>,
-    pub kind: Option<String>,
-}
-
-#[derive(Clone, Debug)]
-pub enum SquadsHeld {
-    Text(String),
-    Bool(bool),
-}
-
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum DifficultyWordsLevel {
     Hard,
     Standard,
     Custom,
-}
-impl DifficultyWordsLevel {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            DifficultyWordsLevel::Hard => "hard",
-            DifficultyWordsLevel::Standard => "standard",
-            DifficultyWordsLevel::Custom => "custom",
-        }
-    }
 }
 
 #[derive(Clone, Debug)]
@@ -277,9 +201,6 @@ impl DifficultyMod {
         }
     }
 }
-
-/// (src/game/difficulty.ts:40 DIFFICULTIES: a table nothing writes)
-pub fn difficulties() -> Vec<String> { alloc::vec![String::from("standard"), String::from("hard")] }
 
 /// (src/game/difficulty.ts:97 LEVEL_STRUCTURE: a table nothing writes)
 pub fn level_structure() -> JsMap<String, String> { { let mut t = JsMap::new(); t.set(String::from("block.json"), String::from("the block")); t } }

@@ -19,8 +19,6 @@ impl Query {
         let pairs = text.split('&').filter(|w| !w.is_empty()).map(|w| match w.split_once('=') { Some((k, v)) => (decode(k), decode(v)), None => (decode(w), String::new()) }).collect();
         Query { pairs }
     }
-    /// `q.getAll(name)`
-    pub fn get_all<'a>(&'a self, name: &'a str) -> impl Iterator<Item = &'a str> + 'a { self.pairs.iter().filter(move |(k, _)| k == name).map(|(_, v)| v.as_str()) }
     /// `q.has(name)`
     pub fn has(&self, name: &str) -> bool { self.pairs.iter().any(|(k, _)| k == name) }
     /// `q.get(name)`: the first value under the name
@@ -40,7 +38,7 @@ impl Query {
     pub fn number(&self, name: &str) -> Option<f64> { self.get(name).map(crate::js::number_of) }
     /// `parseFloat(q.get(name))` where the name is there (the number the text starts with: `float_of`)
     pub fn float(&self, name: &str) -> Option<f64> { self.get(name).map(crate::js::float_of) }
-    /// the words as text again, a bare flag left bare (`?mute`, not `?mute=`): scene/scenarioList.ts `bare`. No words = the empty text.
+    /// the words as text again, a bare flag left bare (`?mute`, not `?mute=`). No words = the empty text.
     pub fn bare(&self) -> String {
         let mut out = String::new();
         for (k, v) in &self.pairs { out.push(if out.is_empty() { '?' } else { '&' }); encode(k, &mut out); if !v.is_empty() { out.push('='); encode(v, &mut out); } }

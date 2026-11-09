@@ -979,7 +979,7 @@ pub fn take_key(g: &mut crate::game::Game, gd: GuardId, rnd: Option<&mut dyn FnM
     if let Some(variant) = variant {
         if let Some(line) = crate::dialogue::sam_key_line_for(g, gd, variant, rnd) {
             if let Some(h) = g.pl[p].holding.as_mut() {
-                h.after = Some(crate::player::HoldAfter { text: line.text, id: line.id });
+                h.after = Some(crate::player::HoldAfter { text: line.text });
             }
         }
     }

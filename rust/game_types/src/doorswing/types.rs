@@ -5,7 +5,6 @@ use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct SwingDeal {
-    pub door: String,
     pub swing: f64,
     pub why: crate::doorswing::SwingWhy,
     pub into: Option<String>,

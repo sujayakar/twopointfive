@@ -5,14 +5,14 @@ import type { LightDef } from '../../../src/render/lights';
 import type { Box } from '../../../src/scene/boxes';
 import type { MarkingDef } from '../../../src/scene/markings';
 import type { SurfacesData } from './levelData';
-import type { LevelScenarios } from '../../../src/scene/scenarios';
+import type { LevelScenarios } from './scenarios';
 
 export type { LightDef };
 /** a gun by its word, as a level file's routes hand one out */
 export type WeaponId = 'fiveseven' | 'guard9mm' | 'aks74u' | 'ak74m' | 'akms' | 'fn2000' | 'm870' | 'mk12' | 'mp7' | 'mk46' | 'm1014' | 'hk45' | 'g18' | 'pkm' | 'mk18bare' | 'g19bare';
 
 /** One man's beat. `weapon`: the rust/game_rules/src/weapons row he carries (absent = the 9 mm service pistol) — dealt at spawn (rust/game_rules/src/game Guard); nobody on this level is authored one
- *  yet (the carbine lanes decide who: docs/internal/sc20k-design.md §3.5). `keys`: the keys on his belt, by lock name (rust/game_rules/src/doors DoorDef.lock) — what Sam takes off
+ *  yet (the carbine lanes decide who). `keys`: the keys on his belt, by lock name (rust/game_rules/src/doors DoorDef.lock) — what Sam takes off
  *  him when he gives the keyed door up under questioning (rust/game_rules/src/player take_key); absent = the floor key every man on nights carries (rust/game_rules/src/doors FLOOR_KEY). The leaves
  *  themselves treat every man on the staff as keyed (rust/game_rules/src/game, `key: true`): a route authored keyless would want that contact narrowed too. */
 export interface PatrolRoute { name: string; points: Vec3[]; wait: number[]; weapon?: WeaponId; keys?: string[]; }
@@ -119,6 +119,8 @@ export interface VolumeDef { name: string; kind: 'hide' | 'utility' | 'trigger';
 /** a named mark at run time (a place + a facing) */
 export interface MarkDef { name: string; pos: Vec3; yaw?: number; }
 export interface VentDef { name: string; pos: Vec3; dir: Vec3; speed: number; spread: number; reach: number; size?: number; period?: number; duty?: number; phase?: number; mains?: boolean; }
+/** what hums in a room (levelData.ts HumData: id → name) */
+export interface HumDef { name: string; kind: 'hum' | 'servers' | 'buzz' | 'wind'; pos: Vec3; level: number; radius: number; mains?: boolean; }
 export type PropKind = 'chair' | 'cardboard' | 'bin' | 'plant';
 /** One box of a loose prop, in the prop's local frame: `off` from the prop origin (on the floor, y up), `yaw` relative to the prop's heading (frameAt / Box.yaw convention);
  *  `marks` = the markings on the part's faces (scene/markings.ts — the tape and glyphs on a carton), carried onto the box rust/game_rules/src/props makes of it. */
@@ -145,13 +147,15 @@ export interface Level {
   devices?: DeviceDef[];
   /** HVAC supply vents (rust/game_rules/src/wind): the ceiling diffusers whose jets move the particles and the smoke; optional — a level with none has still air indoors */
   vents?: VentDef[];
+  /** what hums in its rooms; optional — a level with none is silent till something is done in it */
+  hums?: HumDef[];
   /** the cleaner, the late worker (rust/game_rules/src/civilians); optional — a level with none has nobody but the shift on it */
   civilians?: CivilianDef[];
   /** authored volumes (LevelData volumes[] — the editor's V tool): the level script's onEnter triggers test them (rust/game_rules/src/director); absent = the level authors none */
   volumes?: VolumeDef[];
   /** named marks (LevelData v2 marks[], M3 of docs/design/level-scripting.md — nothing authors them yet: a script declares its own with literals until then) */
   marks?: MarkDef[];
-  /** what the playtest SCENARIOS take from this level (scene/scenarios.ts: the room clear's rooms, the rescue's hostage room and marks, where the team starts) —
+  /** what the playtest SCENARIOS take from this level (lib/scenarios.ts: the room clear's rooms, the rescue's hostage room and marks, where the team starts) —
    *  the level file's own `scenarios` block. Absent = no scenario can be staged on this level */
   scenarios?: LevelScenarios;
   /** what is underfoot (rust/game_rules/src/floor: which footstep, how far it carries) — the level file's own `surfaces` block, attached by loadLevel NON-ENUMERABLY (it is

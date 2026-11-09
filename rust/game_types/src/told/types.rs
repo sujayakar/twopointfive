@@ -19,5 +19,3 @@ impl ToldRung {
     }
 }
 
-/// (src/game/told.ts:31 TOLD_RUNGS: a table nothing writes)
-pub fn told_rungs() -> Vec<String> { alloc::vec![String::from("guided"), String::from("standard"), String::from("bare")] }

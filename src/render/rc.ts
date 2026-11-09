@@ -81,17 +81,17 @@ export class RadianceCascades {
    *  them too). Everything downstream just reads a dice volume that is at most a frame older; bounce / light meter / smoke ambient lag a
    *  moving light by that much. staggerUpper then counts in pairs (c2+ every fourth frame). */
   halfRate = false;
-  /** AMORTIZED UPKEEP (engine.settings.rcAmortize, mirrored every frame; docs/internal/p0a-cascades.md): when on, upper level n re-traces an interleaved
+  /** AMORTIZED UPKEEP (engine.settings.rcAmortize, mirrored every frame; docs/agents/render-light.md, "The cascades"): when on, upper level n re-traces an interleaved
    *  1/periods[n] of its probes per frame (rc.wgsl rcUpper's scheduled path) — constant work every frame, every probe refreshed once per period, c0 + the
    *  dice bake whole every frame; a fresh cache first bakes whole levels for PRIME_FRAMES so a never-traced probe is never read, and a re-primed one
    *  (invalidateWorld — engine.rebuildRc calls it) also takes its next dice bake with no history so it does not crawl up from black. Off = every level whole
    *  every frame through the original 3-D dispatch and the configured dice blend from the first bake: the cache exactly as it was — and so is ON while the
-   *  periods are all 1 (bit-identical captures, docs/internal/p0a-cascades.md §6). */
+   *  periods are all 1 (bit-identical captures). */
   amortize = true;
   periods: RcPeriods = RC_FULL_RATE;
   /** workgroups per upper-cascade probe (occupancy only — the same output bits for any count, verified by capture hash; index = level, entry 0 unused). c3's 80
    *  probes × 64 threads is about one thread per lane of an M4 Max looping 16×, so the pass was latency-bound: c3 0.79 → 0.39 (4 chunks) → 0.26 ms (8; 16 no
-   *  better), c2 0.53 → 0.39 (2; 4 no better), c1 already runs one item per thread — Σ 1.77 → 1.05 ms (docs/internal/p0a-cascades.md §6). engine.settings.rcChunks
+   *  better), c2 0.53 → 0.39 (2; 4 no better), c1 already runs one item per thread — Σ 1.77 → 1.05 ms. engine.settings.rcChunks
    *  is the source of truth (default [1,1,2,8]); all 1 = the original one-workgroup-per-probe dispatch. */
   chunks: readonly number[] = [1, 1, 1, 1];
   /** whole-level bakes still owed (counts down once every level has run whole); `historyFree` = the next dice bake blends nothing in (set by invalidateWorld — a
@@ -238,7 +238,7 @@ export class RadianceCascades {
   private bake(enc: GPUCommandEncoder, sceneBG: GPUBindGroup, timer: GpuTimer | null, frameIdx: number) {
     const N = this.cfg.cascades, forced = !timer;
     // half rate: uppers on even frames, c0 + bake on odd; a resting level declares itself idle to the timer (an honest 0 that frame — NOT an empty timed
-    // pass: an empty pass never writes its timestamps and the slot's stale ticks read as a phantom cost, docs/internal/p0a-cascades.md §4)
+    // pass: an empty pass never writes its timestamps and the slot's stale ticks read as a phantom cost)
     const doUpper = forced || !this.halfRate || (frameIdx & 1) === 0, doC0 = forced || !this.halfRate || (frameIdx & 1) === 1;
     const staggerClock = this.halfRate ? (frameIdx >> 1) : frameIdx;
     const sched: string[] = new Array(N).fill('rest'); const seen = this.primeSeen; if (seen.length !== N) { seen.length = N; seen.fill(false); }

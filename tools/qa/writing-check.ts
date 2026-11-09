@@ -62,7 +62,7 @@ function lessonTexts(name: string, L: any): Text[] {
   const out: Text[] = [], S = L?.scenarios?.lesson; if (!S?.steps) return out;
   const put = (where: string, kind: Kind, text: unknown) => { if (typeof text === 'string' && text.trim()) out.push({ where: `${name} ${where}`, kind, text, lesson: true }); };
   for (const s of S.steps) { const id = s.id ?? '?';
-    for (const k of ['line', 'menuLine', 'pageLine', 'flatLine', 'noTap', 'ringLine', 'planLine', 'setupLine', 'blowLine']) put(`'${id}'.${k}`, 'line', s[k]);
+    for (const k of ['line', 'menuLine', 'pageLine', 'flatLine', 'noTap', 'ringLine', 'setupLine', 'blowLine']) put(`'${id}'.${k}`, 'line', s[k]);
     put(`'${id}'.after.line`, 'line', s.after?.line); put(`'${id}'.after.word`, 'line', s.after?.word);
     put(`'${id}'.card title`, 'title', s.explain?.title); put(`'${id}'.card`, 'card', s.explain?.text); }
   return out;
@@ -88,7 +88,7 @@ export async function writingCheck(): Promise<boolean> {
   const BREAK = process.env.WRITING_BREAK === '1', LIST = process.argv.includes('--list');
   console.log(`\n=== writing: the text a player reads, by the guide${BREAK ? ' — WRITING_BREAK: the old sentences are read as a level\'s' : ''} ===`);
   let all = true; const line = (ok: boolean, label: string, detail = '') => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}${detail ? `\n    ${detail}` : ''}`); };
-  const { ALL_MISSIONS, TUTORIAL_MISSIONS } = await import(`${ROOT}/src/scene/scenarioList.ts`);
+  const { missions } = await import(`${ROOT}/tools/desk.ts`) as typeof import('../desk.ts');
   const asPage = (t: string): string => tokenLine(t, false, true), W: (s: string) => string = BREAK ? (t: string) => asPage(t).replace(/press \[Space\] to grab/gi, '[Space]: grab') : asPage;
 
   // ---- the lessons
@@ -110,12 +110,12 @@ export async function writingCheck(): Promise<boolean> {
       [R.n ? R.text : '', ...left.map(t => `${t.where}: a brace is left in it ("${t.text}")`)].filter(Boolean).join('\n    ')); }
 
   // ---- the mission rows
-  { const rows: Text[] = []; const tut = new Set((TUTORIAL_MISSIONS as any[]).map(e => e.id));
-    for (const e of ALL_MISSIONS as any[]) { const lesson = tut.has(e.id);
+  { const rows: Text[] = [];
+    for (const e of missions()) { const lesson = e.group === 'tutorial';
       if (e.blurb) rows.push({ where: `row ${e.id} blurb`, kind: 'row', text: e.blurb, lesson });
       if (e.scene) rows.push({ where: `row ${e.id} scene`, kind: 'row', text: e.scene, lesson });
       if (e.only) rows.push({ where: `row ${e.id} only`, kind: 'row', text: e.only, lesson });
-      for (const [i, t] of (e.teaches ?? []).entries()) rows.push({ where: `row ${e.id} teaches ${i + 1}`, kind: 'teach', text: t, lesson }); }
+      for (const [i, t] of e.teaches.entries()) rows.push({ where: `row ${e.id} teaches ${i + 1}`, kind: 'teach', text: t, lesson }); }
     const R = report(rows);
     line(rows.length >= 40 && R.n === 0, `every mission row's blurb, scene and list hold to the guide (${rows.length} texts)`, R.n ? R.text : ''); }
 

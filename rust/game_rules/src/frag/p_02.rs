@@ -98,7 +98,7 @@ fn finish(g: &mut Game, b: &Burst, rep: &mut BlastReport, gd: GuardId) {
     let j = judge_at(g, b, id, d, Shows::Lying(&pts));
     if j.r != Some(BlastResult::Killed) && !(j.r == Some(BlastResult::Wounded) && j.d <= b.lethal) { return; }
     let (callsign, team) = (g.gd[gd].callsign.clone(), g.gd[gd].team);
-    rep.hits.push(BlastHit { id, name: callsign.clone(), team, d: j.d, exposed: j.e, result: BlastResult::Killed, down: Some(true), behind: None });
+    rep.hits.push(BlastHit { id, team, exposed: j.e, result: BlastResult::Killed, behind: None });
     rep.killed += 1.0;
     rep.finished += 1.0;
     if same_side(b.side, team) && js::truthy(b.who) { g.stats.frag.own += 1; }
@@ -142,7 +142,7 @@ fn seat_blast(g: &mut Game, b: &Burst, rep: &mut BlastReport) {
     let Some(r) = j.r else { return };
     rep.player = Some(r);
     let behind = if r == BlastResult::Stunned { j.behind } else { None };
-    rep.hits.push(BlastHit { id, name: String::from("you"), team: crate::teams::Team::Player, d: j.d, exposed: j.e, result: r, down: None, behind });
+    rep.hits.push(BlastHit { id, team: crate::teams::Team::Player, exposed: j.e, result: r, behind });
     let came = if j.behind == Some(BlastHitBehind::Cover) { "the blast broke through your cover" } else { "the blast came through the door" };
     if r == BlastResult::Killed {
         if g.god_mode {
@@ -187,7 +187,7 @@ pub fn blast_raw(g: &mut crate::game::Game, at: V3, spec: &crate::frag::BlastSpe
     let serial = match spec.serial { Some(s) => s, None => m::floor(g.time * 1000.0) };
     let from: V3 = [at[0], at[1] + g.k.frag.lift, at[2]];
     let name: String = match &spec.name { Some(n) => n.clone(), None => String::from("frag grenade") };
-    let mut rep = BlastReport { at: v3::copy(at), who: spec.who, hits: Vec::new(), killed: 0.0, finished: 0.0, wounded: 0.0, shielded: 0.0, stunned: 0.0, player: None };
+    let mut rep = BlastReport { at: v3::copy(at), hits: Vec::new(), killed: 0.0, finished: 0.0, wounded: 0.0, shielded: 0.0, stunned: 0.0, player: None };
     let side = if js::truthy(spec.who) { crate::teams::team_of_id(g, spec.who) } else { crate::teams::Team::Guard };
     let mine = crate::seats::is_man_id(g, spec.who);
     if spec.fx != Some(false) {
@@ -275,7 +275,7 @@ pub fn blast_raw(g: &mut crate::game::Game, at: V3, spec: &crate::frag::BlastSpe
         let j = judge(g, &b, pos, head, id);
         let Some(r) = j.r else { continue };
         let team = g.gd[gd].team;
-        rep.hits.push(BlastHit { id, name: g.gd[gd].callsign.clone(), team, d: j.d, exposed: j.e, result: r, down: None, behind: if r == BlastResult::Stunned { j.behind } else { None } });
+        rep.hits.push(BlastHit { id, team, exposed: j.e, result: r, behind: if r == BlastResult::Stunned { j.behind } else { None } });
         if r == BlastResult::Shielded { rep.shielded += 1.0; continue; }
         if same_side(side, team) && js::truthy(spec.who) { g.stats.frag.own += 1; }
         if r == BlastResult::Stunned { rep.stunned += 1.0; }
@@ -393,23 +393,6 @@ pub fn frag_reset(g: &mut crate::game::Game) {
         crate::owner::release(g, gd, frag, time);
     }
     g.m.frag.books.as_mut().unwrap().clear();
-}
-
-/// Where a grenade is to be judged from: where it lies, or where its arc comes down. (frag.ts comeDown)
-pub fn come_down(g: &mut crate::game::Game, it: ItemId) -> V3 {
-    if crate::throwables::item_bounces(g, it) > 0.0 || crate::throwables::item_settled(g, it) { return crate::throwables::item_pos(g, it); }
-    let mut p: V3 = crate::throwables::item_pos(g, it);
-    let mut v: V3 = crate::throwables::item_vel(g, it);
-    let h = 0.05;
-    let mut i = 0;
-    while i < 40 && p[1] > 0.08 {
-        let q: V3 = [p[0] + v[0] * h, m::max(0.05, p[1] + v[1] * h), p[2] + v[2] * h];
-        v[1] -= crate::throwables::GRAVITY * h;
-        if crate::scene_collision::solid_blocked(g, p, q, None) { break; }
-        p = q;
-        i += 1;
-    }
-    [p[0], 0.05, p[2]]
 }
 
 /// what rollOn reads of the thing it flies: a live item, or a body that was never spawned (restOfThrow)
@@ -569,15 +552,6 @@ pub fn frag_marks(g: &crate::game::Game) -> Vec<crate::view::FragMark> {
 /// The height a grenade lying at y is judged from, less the lift: what it lies on. (frag.ts restY)
 pub fn rest_y(g: &crate::game::Game, y: f64) -> f64 {
     m::max(0.05, y)
-}
-
-/// Where a live grenade is reckoned to come to rest. (frag.ts fragRestGuess)
-pub fn frag_rest_guess(g: &mut crate::game::Game, it: ItemId) -> V3 {
-    if crate::throwables::item_settled(g, it) {
-        let p = crate::throwables::item_pos(g, it);
-        return [p[0], rest_y(g, p[1]), p[2]];
-    }
-    roll_on(g, it, None, None, None).at
 }
 
 /// The rest reckoning of book `l` of the live grenades, made again ten times a second. (frag.ts restOf)

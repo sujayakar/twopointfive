@@ -304,7 +304,6 @@ pub fn player_props(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     use crate::kitanim::KitShowVRifle as Rf;
     use crate::rig_props::{RigOpts, RigOptsRifle};
     let p = g.player;
-    let mine0 = out.len();
     let c = g.pl[p].ch;
     let busy = g.ch[c].anim.hide_held_item;
     let kind_sel = crate::game::player_canister_sel(g, p);
@@ -393,7 +392,6 @@ pub fn player_props(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     crate::rig_props::rig_boxes(g, c, opts, out, None, None);
     crate::handwork::work_props(g, c, out);
     crate::irlaser::sam_laser_boxes(g, out);
-    if crate::rails::rails_sky_on(g) { out.truncate(mine0); }
 }
 
 /// Where the hammer's grip point and handle are at the side of the pack this man wears, in his chest joint's space. None: no pack.   (combat.ts hammerSide)
@@ -586,30 +584,6 @@ pub fn hidden_props(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     rig_keys(g, out, n0);
 }
 
-/// A hunting man's weapon laser: a thin emissive line from the muzzle to what it meets, and a dot there. LASER.enemy is off on the page: a man hostile to the player has none.   (combat.ts laserBoxes)
-pub fn laser_boxes(g: &mut crate::game::Game, gd: GuardId, out: &mut Vec<AnyBoxId>) {
-    let team = g.gd[gd].team;
-    if crate::teams::is_hostile(g, team, crate::teams::Team::Player) { return; }
-    let ir = crate::irlaser::laser_band(g, gd) == crate::irlaser::LaserBand::Ir;
-    if ir && !crate::irlaser::ir_viewer(g) { return; }
-    let c = g.gd[gd].ch;
-    let r = match laser_reach(g, c, Some(gd), Some(ir)) { Some(r) => r, None => return };
-    let (from, dir, l, dot) = (r.from, r.dir, r.l, r.dot);
-    if ir {
-        if let Some(on) = r.on { if crate::irlaser::paints_own(g, gd, on) { return; } }
-    }
-    let b = crate::stature::drawn_beam(g, c, from, dir, l);
-    if crate::fogofwar::fog_of_war_active(g) && !crate::fogofwar::fog_of_war_on_team(g, gd) {
-        if !crate::fogofwar::fog_of_war_seen(g, gd) { return; }
-        for run in crate::fogofwar::fog_of_war_beam_runs(g, from, dir, l) {
-            let (t0, t1) = (run[0], run[1]);
-            if t1 - t0 > 0.02 { beam_boxes(g, v3::mad(b.from, b.dir, t0 * b.k), b.dir, (t1 - t0) * b.k, out, dot && t1 >= l - 1e-6, Some(ir), None); }
-        }
-        return;
-    }
-    beam_boxes(g, b.from, b.dir, l * b.k, out, dot, Some(ir), Some(true));
-}
-
 /// Where a weapon laser goes: from the muzzle along the bore to the first thing inside 30 m, and the man it ends on. None: no bore, or the muzzle is against what it meets.   (combat.ts laserReach)
 pub fn laser_reach(g: &mut crate::game::Game, c_2: CharId, self_: Option<GuardId>, civ: Option<bool>) -> Option<crate::combat::LaserReach> {
     let civ = civ.unwrap_or(false);
@@ -649,7 +623,7 @@ pub fn laser_reach(g: &mut crate::game::Game, c_2: CharId, self_: Option<GuardId
         }
     }
     if l < 0.05 { return None; }
-    Some(LaserReach { from, dir, l, dot: wh.is_some() || ph.is_some() || l < 30.0, on })
+    Some(LaserReach { from, dir, l, dot: wh.is_some() || ph.is_some() || l < 30.0 })
 }
 
 /// A laser line from `from` along unit `dir` for `l` metres and (dot) the bead where it lands: emissive geometry no ray sees. The one place an infrared box is made.   (combat.ts beamBoxes)
@@ -757,7 +731,8 @@ pub fn start_canister(g: &mut crate::game::Game, it: ItemId) {
     }
     crate::throwables::item_set_emit_t(g, it, seconds);
     let pos = crate::throwables::item_pos(g, it);
-    crate::audio_iface::game_audio_like_play(g, "smokeHiss", Some(pos), Some(1.0), Some(&crate::audio_iface::PlayOpts::Duration { duration: seconds }));
+    // (its hiss is no event: a picture hears it for as long as the can pours, off the can itself)
+    crate::audio_iface::game_audio_like_play(g, "smokePop", Some(pos), Some(0.9), None);
     crate::game::game_msg(g, "smoke deployed");
     let e = crate::game::GameEvent { kind: crate::director::EventKind::Shot, pos: v3::copy(pos), time: g.time, loud: false, serial: g.serial(), ..Default::default() };
     g.events.push(e);

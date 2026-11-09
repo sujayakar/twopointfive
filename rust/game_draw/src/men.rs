@@ -206,8 +206,6 @@ fn players(g: &Game) -> impl Iterator<Item = CharId> + '_ { g.seats.iter().map(|
 fn shown(g: &Game, bared: bool) -> Vec<CharId> {
     let all: Vec<CharId> = players(g).chain(g.guards.iter().map(|&gd| g.gd[gd].ch)).chain(game::civilians::civilians_shown(g).iter().map(|&gd| g.gd[gd].ch)).collect();
     let mut drawn = if bared { all } else { game::fogofwar::fog_of_war_filter(g, &all) };
-    // (from the sky nobody on the floor is the player)
-    if game::rails::rails_sky_on(g) { let me = g.pl[game::seats::host_man(g)].ch; drawn.retain(|c| *c != me); }
     // (more men than have a mesh of their own to throw a shadow by: the men down give up their places first)
     if drawn.len() > 8 && (g.night_breach.active || g.rescue.active) {
         let down = |c: &CharId| g.guards.iter().any(|&gd| g.gd[gd].ch == *c && g.gd[gd].state == GuardState::Dead);

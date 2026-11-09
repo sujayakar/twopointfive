@@ -15,9 +15,7 @@ fn man(g: &mut Game, gd: GuardId) -> &mut crate::spotted::Man {
     g.m.spotted.men.get_mut(gd).expect("spotted: a man's row is made by spotted_tick or looked for first")
 }
 fn log(g: &mut Game, t: f64, gd: GuardId, to: crate::spotted::SpottedMode, what: Option<&str>, of: Option<GuardId>) {
-    let who = g.gd[gd].callsign.clone();
-    let of = of.map(|o| g.gd[o].callsign.clone());
-    g.m.spotted.spotted_log.push(SpottedModSPOTTEDLOGItem { t, who, to, what: what.map(String::from), of });
+    g.m.spotted.spotted_log.push(SpottedModSPOTTEDLOGItem {  });
 }
 /// any man of `wary` has a line to a body knelt at `q`
 fn any_in_line(g: &mut Game, wary: &[GuardId], q: &[f64]) -> bool {
@@ -174,7 +172,7 @@ pub fn spotted_feet(g: &mut crate::game::Game, gd: GuardId, follower: bool, asid
     if let Some(tk) = take {
         if !aside {
             let c = pos(g, tk.foe);
-            return Some(SpottedFeet { goal: Some(tk.spot), speed: Some(if pace > 0.0 { pace } else { 1.6 }), crouch: false, watch: Some([c[0], 1.2, c[2]]), goal_serial: Some(tk.spot_serial) });
+            return Some(SpottedFeet { goal: Some(tk.spot), speed: Some(if pace > 0.0 { pace } else { 1.6 }), crouch: false, watch: Some([c[0], 1.2, c[2]]) });
         }
     }
     if mode == crate::spotted::SpottedMode::Calm { return None; }
@@ -186,15 +184,15 @@ pub fn spotted_feet(g: &mut crate::game::Game, gd: GuardId, follower: bool, asid
     if mode == crate::spotted::SpottedMode::Caught {
         let step = follower && !aside && spot.is_some() && what == Some(crate::spotted::ManWhat::Step);
         if !step && watch.is_none() { return None; }
-        return Some(SpottedFeet { goal: if step { spot } else { None }, speed: if step && pace > 0.0 { Some(pace) } else { None }, crouch: false, watch, goal_serial: None });
+        return Some(SpottedFeet { goal: if step { spot } else { None }, speed: if step && pace > 0.0 { Some(pace) } else { None }, crouch: false, watch });
     }
     let crouch = exposed || what.is_some();
     if !follower || aside || spot.is_none() {
         if !crouch && watch.is_none() { return None; }
-        return Some(SpottedFeet { goal: None, speed: None, crouch, watch, goal_serial: None });
+        return Some(SpottedFeet { goal: None, speed: None, crouch, watch });
     }
     let speed = if what == Some(crate::spotted::ManWhat::Freeze) { 0.0 } else { m::min(1.2, if pace > 0.0 { pace } else { 1.2 }) };
-    Some(SpottedFeet { goal: spot, speed: Some(speed), crouch, watch, goal_serial: None })
+    Some(SpottedFeet { goal: spot, speed: Some(speed), crouch, watch })
 }
 
 /// a change of mode: counted, logged, the spell's fields cleared (spotted.ts set)
@@ -423,8 +421,8 @@ pub fn hands(g: &mut crate::game::Game, gd: GuardId) {
             best = Some(h);
         }
         if let Some(best) = best {
-            let spot_serial = g.serial();
-            man(g, gd).take = Some(ManTake { foe: best, t0: -1.0, born: t, spot: [p[0], 0.0, p[2]], asked: None, spot_serial });
+            g.serial();   // (dealt and kept by nobody: every number dealt after it stands as it did)
+            man(g, gd).take = Some(ManTake { foe: best, t0: -1.0, born: t, spot: [p[0], 0.0, p[2]], asked: None });
             g.stats.spotted.takes += 1;
             cue(g, gd, "he's on me. taking him.", Some(0.0));
             let mode = man(g, gd).mode;
@@ -487,8 +485,8 @@ pub fn spotted_take(g: &mut crate::game::Game, gd: GuardId, foe: GuardId) -> boo
     let limit = if st == crate::game::GuardState::Alert || st == crate::game::GuardState::Search { k.take_reach + 0.3 } else { k.take_m };
     if flat(&p, &c) >= limit || crate::scene_collision::solid_blocked(g, [p[0], 1.0, p[2]], [c[0], 1.0, c[2]], None) { return false; }
     let now = g.time;
-    let spot_serial = g.serial();
-    man(g, gd).take = Some(ManTake { foe, t0: -1.0, born: now, spot: [p[0], 0.0, p[2]], asked: Some(true), spot_serial });
+    g.serial();   // (dealt and kept by nobody: every number dealt after it stands as it did)
+    man(g, gd).take = Some(ManTake { foe, t0: -1.0, born: now, spot: [p[0], 0.0, p[2]], asked: Some(true) });
     g.stats.spotted.takes += 1;
     cue(g, gd, "taking him.", Some(0.0));
     let mode = man(g, gd).mode;
@@ -529,7 +527,7 @@ pub fn fresh(g: &mut crate::game::Game) -> Vec<crate::spotted::FreshItem> {
     }
     d.seen = true;
     while !d.at.is_empty() && (now - d.at[0].t > brace_secs || now < d.at[0].t) { d.at.remove(0); }
-    d.at.iter().map(|a| FreshItem { pos: a.pos, t: a.t }).collect()
+    d.at.iter().map(|a| FreshItem { pos: a.pos }).collect()
 }
 
 /// once a frame, after silent.ts has the posture and before the orders pose the men (spotted.ts spottedTick)

@@ -31,10 +31,6 @@ pub fn handle_of(g: &mut crate::game::Game, d: DoorId) -> V3 {
 
 /// A line of the order's log, newest last. (shutdoor.ts note)
 pub fn note(g: &mut crate::game::Game, gd: GuardId, d: DoorId, what: &str) {
-    let row = ShutdoorModSHUTDOORLOGItem { t: g.time, who: g.gd[gd].callsign.clone(), door: g.dr[d].def.name.clone(), what: String::from(what) };
-    let log = &mut g.m.shutdoor.shutdoor_log;
-    log.push(row);
-    if log.len() > 200 { log.drain(0..50); }
 }
 
 /// Does d stand open (off its hinges it reads wide open: its row is there, greyed). (shutdoor.ts standsOpen)

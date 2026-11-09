@@ -228,12 +228,12 @@ const before = (p: ReturnType<typeof page>) => JSON.stringify([p.S, p.Q.current,
   const store = new Map<string, string>(); (globalThis as any).sessionStorage = { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => { store.set(k, v); }, removeItem: (k: string) => { store.delete(k); } };
   const { benchBegin, benchLegOfPage, benchSceneSearch, benchSceneWaits } = await import('../../src/ui/benchrun');
   const { BENCH_SCENES, BENCH_SET } = await import('../../src/host/benchScenes');
-  const { SCENARIOS } = await import('../../src/scene/scenarioList');
+  const { missionRows } = await import('../desk.ts'), LISTED = missionRows();
   const tab = (search: string) => { const L: any = { pathname: '/', search, hash: '', went: [] as string[], how: [] as string[], assign(u: string) { this.went.push(u); this.how.push('assign'); }, replace(u: string) { this.went.push(u); this.how.push('replace'); } }; return L; };
   const searchOf = (u: string) => u.slice(u.indexOf('?'));
   const t0 = tab('?levelFile=depot.json&roomclear&squad4&bench=2&benchcap=30&nomusic&hard=0&hour=noon&quality=low');
   check(benchBegin(true, t0) === null && t0.went.length === 1 && t0.how[0] === 'assign' && t0.went[0] === '/' + benchSceneSearch(BENCH_SCENES[0], 0, ['nomusic', 'quality=low']) && !/hard=0|hour=|depot/.test(t0.went[0]), `begun from the title: the first scene's address is loaded, the visitor's sound and quality flags on it and nothing that would change the fight (${t0.went[0]})`);
-  { const u = new URLSearchParams(searchOf(t0.went[0])), S = BENCH_SCENES[0], E = SCENARIOS.find(e => e.id === S.scn)!;
+  { const u = new URLSearchParams(searchOf(t0.went[0])), S = BENCH_SCENES[0], E = LISTED.find(e => e.id === S.scn)!;
     check(u.get('levelFile') === E.level && u.get('roomclear') === String(S.seed) && u.get('seed') === String(S.seed) && u.has('squad4') && u.get('difficulty') === (S.hard ? 'hard' : 'standard') && u.has('nokeep') && u.get('benchrun') === '0' && !u.has('bench'), 'the address pins the level, the deal, the die and the difficulty, keeps no replay of the try, and does not carry ?bench'); }
   const l0 = benchLegOfPage(tab(searchOf(t0.went[0])));
   check(!!l0 && l0.scene.id === BENCH_SCENES[0].id && l0.secs === '2' && l0.cap === 30 && l0.leg.index === 0 && l0.leg.of === BENCH_SCENES.length && l0.leg.set === BENCH_SET && l0.leg.notes.some(n => /started from the title/.test(n)), 'the first scene\'s page finds its part: the seconds a window, the short cap, and the note that its load is a second one');
@@ -276,7 +276,7 @@ const before = (p: ReturnType<typeof page>) => JSON.stringify([p.S, p.Q.current,
     const u1 = new URLSearchParams(searchOf(pg.went[0]));
     check(u1.get('benchrun') === '1' && SHADER_ROW_WORDS.every((w, i) => u1.get(w) === String((i + 1) % 2)), `and on the next scene's (${pg.went[0]})`);
     store.clear(); }
-  // …and the word for how a save's picture is taken: `?bench&savepic=0` against `?bench` is the pair that prices the wider canvas (docs/agents/qa.md), and with the
+  // …and the word for how a save's picture is taken: `?bench&savepic=0` against `?bench` is the pair that prices the wider canvas, and with the
   // word dropped at the first scene that pair was one run twice
   { store.clear(); const t3 = tab('?bench&savepic=0'); benchBegin(false, t3); const u3 = new URLSearchParams(searchOf(t3.went[0]));
     check(u3.get('savepic') === '0' && benchLegOfPage(tab(searchOf(t3.went[0])))!.leg.notes.every(n => !/played without/.test(n)), `the save picture's word is on the first scene's address, and no note says it was left behind (${t3.went[0]})`); store.clear(); }
@@ -305,7 +305,7 @@ const before = (p: ReturnType<typeof page>) => JSON.stringify([p.S, p.Q.current,
     check(said(held, SIZE_UNNAMED) === 1 && said(bare, SIZE_HELD) === 1 && said(bare, SIZE_UNNAMED) === 1 && said(named, SIZE_HELD) === 1 && said(named, SIZE_UNNAMED) === 0 && [auto, moved].every(r => said(r, SIZE_UNNAMED) === 0) && SIZE_UNNAMED.length <= 150,
       `a held run with no tier on its address says the tier was not named (${said(bare, SIZE_UNNAMED)}); with one named it does not (${said(named, SIZE_UNNAMED)})`); }
   // the scenes themselves
-  const rows = BENCH_SCENES.map(S => SCENARIOS.find(e => e.id === S.scn));
+  const rows = BENCH_SCENES.map(S => LISTED.find(e => e.id === S.scn));
   check(BENCH_SCENES.length >= 2 && rows.every(e => !!e && e.kind === 'roomclear' && e.squad === 4 && !!e.level) && new Set(BENCH_SCENES.map(S => S.id)).size === BENCH_SCENES.length && BENCH_SCENES.every(S => S.name.length <= 21 && Number.isInteger(S.seed) && S.secs >= 60), `every scene is a four-man room clear of the mission list on its own level, with a name that fits its column: ${BENCH_SCENES.map(S => `${S.id} = ${S.scn} seed ${S.seed}`).join(' · ')}`);
   // the page's wiring, read as text
   const wired = readFileSync(new URL('../../src/host/drawbench.ts', import.meta.url), 'utf8'), opens = readFileSync(new URL('../../src/host/drawpage.ts', import.meta.url), 'utf8');

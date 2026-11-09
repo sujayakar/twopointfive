@@ -48,11 +48,6 @@ pub fn log(g: &mut crate::game::Game, gd: GuardId, what: &str) {
     if g.cv[c].log.len() > 40 {
         g.cv[c].log.drain(0..10);
     }
-    let row = crate::civilians::CiviliansModCIVLOGItem { t: g.time, who: g.cv[c].name.clone(), what: String::from(what) };
-    g.m.civilians.civ_log.push(row);
-    if g.m.civilians.civ_log.len() > 200 {
-        g.m.civilians.civ_log.drain(0..50);
-    }
 }
 
 /// A civilian comes into a game here and nowhere else; one more than a step of the doors can be handed is a level too big.   (civilians.ts join)
@@ -200,7 +195,6 @@ pub fn make_civilian(g: &mut crate::game::Game, def: &crate::scene_level::Civili
         told: JsMap::new(),
         known_bodies: JsSet::new(),
         intel_n: 0,
-        outside_call_at: -1.0,
         vis: 0.0,
         dice: crate::dice::Die::new(js::to_i32(crate::math_dice::hash_str(&format!("civdice:{}", def.name))) as u32),
         log: Vec::new(),

@@ -336,7 +336,7 @@ pub fn item_set_fuse(g: &mut crate::game::Game, id: ItemId, v: f64) {
 }
 
 /// (throwables.ts Item.emitT)
-pub fn item_emit_t(g: &mut crate::game::Game, id: ItemId) -> f64 {
+pub fn item_emit_t(g: &crate::game::Game, id: ItemId) -> f64 {
     item_f(g, id, ic::EMIT_T)
 }
 

@@ -1,3 +1,4 @@
+// A big body is written once here and asked in a loop: the compile pastes every call. Credit: Stephen Jayakar, from his pull request 1.
 // Composite: albedo * (direct + upsampled indirect) / pi + emissive (+ the glossy floors' specular, FLAG_GLOSS; + the ray-traced reflections, frame.rtCfg.w > 0; + a wet character's clear coat, wetCoatSpec), through the glass panes' tint — bent by them while frame.glassCfg.w is an index — then volumetrics → HDR scene colour (rgba16f).
 // Exposure / tonemap / bloom / night vision happen in post.wgsl.
 @group(1) @binding(0) var gAlbedo: texture_2d<f32>;
@@ -13,7 +14,7 @@
 @group(1) @binding(12) var reflTex: texture_2d<f32>;      // ray-traced reflections, THE MIRROR (reflect.wgsl outRefl → the shared denoiser's specular client), at 1/frame.rtCfg.w res: what the lobe's rays bring back per texel, filterable (sampled bilinearly) — only read while frame.rtCfg.w > 0
 @group(1) @binding(18) var hiTex: texture_storage_2d<rgba16float, read>;   // … and THE HIGHLIGHTS on the same grid (reflect.wgsl outHi, as the pass wrote it): rgb = the lamps', the panels' and the sun's highlights and a beam's image, a = 0 where the texel holds none, else 1 + the roughness the texel made them with. A storage texture: this stage had no sampled texture left when it was added (one is free since the froxel volume went), and a load is all it is asked
 @group(1) @binding(13) var gMat: texture_2d<f32>;         // the g-buffer's material target: (roughness, metalness) per pixel (the reflections' cutoff fade, the metal step-back, the upsample's tap test)
-// ---- SHARP DIRECT (docs/internal/sharp-direct.md). passes.ts compiles this text TWICE behind a prepended `const SHARP: bool`: false = the fragment composite at the INTERNAL size
+// ---- SHARP DIRECT. passes.ts compiles this text TWICE behind a prepended `const SHARP: bool`: false = the fragment composite at the INTERNAL size
 // exactly as it always was (every `if (SHARP)` folds away); true = the same arithmetic per OUTPUT pixel as a compute kernel (`cs` below, writing hdrOut) with group 0 = the OUTPUT frame block, the
 // g-buffer bindings = the output-size raster, directTex / softTex = the output-size shadowed direct (sharp_direct.wgsl), and everything stochastic — the gather's irradiance + specular, the volumetric
 // march, the reflections — still on its INTERNAL grid: their texel ↔ pixel maps go through the internal size (frame.sharpCfg.xy) and their depth / normal / id guides are read at the output texel
@@ -146,7 +147,7 @@ fn upsampleSpecAny(pix: vec2i, pin: vec2f, z: f32, N: vec3f) -> vec3f {
 // tile's representative reflection instead of black (denoise.wgsl radTemporalCore), and THIS pixel is masked by the roughness of its own finish about it (reflK: upsampleHi's .a) — so the polish beside a chair
 // leg reads polish, and the leg reads nothing. The plain bilinear fetch stays in the blend at a hundred-thousandth: where none of the four is this pixel's surface (a thing thinner
 // than a texel) it is the answer, and there is no line where one answer hands over to the other. (The one fetch was
-// chosen when a joint-bilateral made the same picture under TAAU, docs/internal/p4-materials.md §2: true while a pixel was shown at the frame's exposure, not under a place's gain.)
+// chosen when a joint-bilateral made the same picture under TAAU: true while a pixel was shown at the frame's exposure, not under a place's gain.)
 // WHAT THIS DOES NOT REACH: two places in ONE plane (a room's floor running out over the threshold into the sun) are one surface to depth and normal.
 fn upsampleRefl(pixf: vec2f, z: f32, N: vec3f) -> vec3f {
   let rdiv = max(frame.rtCfg.w, 1.0);
@@ -494,7 +495,7 @@ fn snowGlow(sPix: vec2i, P: vec3f, N: vec3f, z: f32, EdS: vec3f, EdB: vec3f) -> 
   for (var i = 0u; i < min(frame.numLights, 64u); i++) {
     // THE LAMP'S OWN RANGE FIRST: evalLight's first exit (common.wgsl evalLightRaw, `dist > li.range`), in its own arithmetic and from the lamp's own three fields,
     // before the reach table is read. Most of a level's lamps are out of range of a snow pixel, and the table's read was what a lamp cost here that gave nothing
-    // (timed 11-05: docs/agents/weather.md, the glow's bullet). The same lamps pass as before: one this line drops, evalLight was about to
+    // (timed 11-05). The same lamps pass as before: one this line drops, evalLight was about to
     if ((lights[i].kind & 255u) != 2u) { let dq = lights[i].pos - P; if (sqrt(dot(dq, dq)) > lights[i].range) { continue; } }   // (255: lightKind's own mask; 2 = directional, which has no range)
     if (!lightReaches(i, P)) { continue; }
     let li = lights[i];
@@ -1004,7 +1005,7 @@ fn compositePixel(pix0: vec2f) -> vec3f {
     // the crack faces, and light up with whatever falls ON the pane from either side (a torch on the glazing sets the star alight; in the dark it is a dark web
     // against the room behind). The hole itself is just dark. Only under FLAG_DECALS (up while any mark exists), only for pixels on a pane.
     zg = z0; Ng = select(N, N0, moved);         // the panes' reflection field and the fog key on the PIXEL — its own distance, the normal AT it — not on what a bend read (≡ z / N unless the bend moved the read)
-    var dif = albedo * (Ed + Ei) * (1.0 / PI);   // (the old product, untouched: the pass-off frame hashes identical to main — docs/internal/p4-materials.md §5)
+    var dif = albedo * (Ed + Ei) * (1.0 / PI);   // (the old product, untouched: the pass-off frame hashes identical to main)
     var sparkle = vec3f(0.0);                    // SNOW SPARKLE (snowSparkleFacet above): the facets' flashes at this pixel — zero unless SNOW_SPARKLE, on lit fresh snow
     if (lv(SNOW_GLOW) || lv(SNOW_SPARKLE)) {   // SNOW GLOW (snowGlow above): on a snow pixel, the light that wrapped its terminator, and shade that leans to blue — never a man's pixel or a section cap's (one walk of the lights for the glow and the sparkle)
       let sa = snowGlowAmt(textureLoad(gNormal, sPix, 0).a);

@@ -136,10 +136,6 @@ pub fn lift(g: &mut crate::game::Game, why: crate::holdfire::LiftWhy, what: &str
     }
     if !was {
         g.stats.holdfire.lifts[why as usize] += 1;
-        g.m.holdfire.holdfire_log.push(HoldfireModHOLDFIRELOGItem { t: now, why, what: String::from(what) });
-        if g.m.holdfire.holdfire_log.len() > 200 {
-            g.m.holdfire.holdfire_log.drain(0..100);
-        }
     }
 }
 
@@ -266,29 +262,3 @@ pub fn hold_fire_reset(g: &mut crate::game::Game) {
     g.m.holdfire.states.delete(key);
 }
 
-/// The panel's and the checks' line.   (holdfire.ts holdFireSummary)
-pub fn hold_fire_summary(g: &mut crate::game::Game) -> String {
-    let n = if crate::orders::squad_orders_active(g, &crate::seats::here(g)) { living(g, &crate::seats::here(g)).len() } else { 0 };
-    if n == 0 {
-        return String::from("no squad");
-    }
-    let lifted = hold_fire_lifted(g);
-    let men = living(g, &crate::seats::here(g));
-    let found = hold_fire_found(g, &men);
-    let key = crate::seats::view_key(g, &crate::seats::here(g));
-    let secs = g.k.holdfire.lift_secs;
-    let head = if let Some(found) = found {
-        alloc::format!("found ({})", found)
-    } else if lifted {
-        let why = match g.m.holdfire.states.get(key) {
-            Some(s) if g.time - s.lift_t < secs => alloc::format!("{}, {} s left", s.why.map_or("null", |w| w.as_str()), js::to_fixed(secs - (g.time - s.lift_t), 0)),
-            _ => String::from("a door order under way"),
-        };
-        alloc::format!("fight started ({})", why)
-    } else {
-        String::from("holding fire")
-    };
-    let st = &g.stats.holdfire;
-    let (shot, order, drill) = (st.lifts[LiftWhy::Shot as usize], st.lifts[LiftWhy::Order as usize], st.lifts[LiftWhy::Drill as usize]);
-    alloc::format!("{} · held {} · for glass {} · started by shot {} / order {} / drill {}", head, st.held, st.held_glass, shot, order, drill)
-}

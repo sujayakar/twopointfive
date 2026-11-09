@@ -155,7 +155,7 @@ pub fn lamp_asked(g: &mut crate::game::Game, l: LightId, skip_owner: Option<&mut
 pub fn rows_of(g: &mut crate::game::Game, steady_only: bool, leave: f64) -> crate::scene_collision::LampRows {
     let st = crate::sim_lightshome::light_home_block(g);
     let leave = if steady_only { (js::to_i32(leave) | js::to_i32(crate::sim_lightshome::row_bit().passing)) as f64 } else { leave };
-    crate::scene_collision::LampRows { st, leave, steady: steady_only }
+    crate::scene_collision::LampRows { leave, steady: steady_only }
 }
 
 /// A light question's own lamps written to the module, in the list's order, each with how many of the level's rows stand before it; the rows themselves are the module's to read. False = no question stands and the table is full. (guards.ts writeLamps)
@@ -534,7 +534,7 @@ pub fn burst_trigger(g: &mut crate::game::Game, gd: GuardId, dt: f64, aim_at: V3
             let out = SUPPRESS_FIRST_OFF_M + crate::dice::draw_of(g, "guards::burst_trigger#3", gd) * SUPPRESS_FIRST_JITTER_M;
             off = Some([px * side * out, SUPPRESS_FIRST_UP_M, pz * side * out]);
         }
-        g.fa[w].burst = Some(crate::weapons::BurstState { left: n, n, next_t: 0.0, idx: 0.0, t: g.time, off });
+        g.fa[w].burst = Some(crate::weapons::BurstState { left: n, next_t: 0.0, idx: 0.0, t: g.time, off });
     }
     // `b` is the TypeScript's own local: a burst something else ends under the calls below is written no more, and b is still read
     let mut b = g.fa[w].burst.unwrap();

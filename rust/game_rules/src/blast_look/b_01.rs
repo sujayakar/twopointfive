@@ -52,18 +52,18 @@ pub fn blast_look_tick_raw(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     let key = crate::seats::view_key(g, &crate::seats::here(g));
     // (`g.wallCharge` is always there in the Rust game)
     if !live(g) {
-        if let Some(s) = g.m.blast_look.state.get_mut(key) { s.seen.clear(); s.queue.clear(); }
+        if let Some(s) = g.m.blast_look.state.get_mut(key) { s.seen.clear();  }
         return;
     }
     let set = g.wall_charge.set.clone();
     if !g.m.blast_look.state.has(key) {
         if set.is_empty() { return; }
-        g.m.blast_look.state.set(key, State { seen: Vec::new(), queue: Vec::new(), serial: 1.0, first: false, last: -1.0 });
+        g.m.blast_look.state.set(key, State { seen: Vec::new(), serial: 1.0, first: false, last: -1.0 });
     }
     let time = g.time;
     {
         let st = g.m.blast_look.state.get_mut(key).unwrap();
-        if time < st.last { st.queue.clear(); }   // (the clock went back: a load / a restart)
+        if time < st.last {  }   // (the clock went back: a load / a restart)
         st.last = time;
     }
     // charges gone from the list since last frame: BLOWN (the flash detonateStun lit for it is burning at its stun point) or given back (no flash)
@@ -196,7 +196,7 @@ pub fn warm_of(g: &crate::game::Game, c_2: V3) -> V3 {
 /// this view's state, made on first ask   (blastLook.ts:151 stateOf)
 fn state_mut(g: &mut Game) -> &mut State {
     let key = crate::seats::view_key(g, &crate::seats::here(g));
-    g.m.blast_look.state.get_or_insert_with(key, || State { seen: Vec::new(), queue: Vec::new(), serial: 1.0, first: false, last: -1.0 })
+    g.m.blast_look.state.get_or_insert_with(key, || State { seen: Vec::new(), serial: 1.0, first: false, last: -1.0 })
 }
 
 /// this module's own dice: a counter of its own through a hash   (blastLook.ts:153 hashU)
@@ -357,9 +357,8 @@ pub fn emit(g: &mut crate::game::Game, pl: PlayerId, kind: crate::render_particl
 /// A wall charge's blast, out of the wall's two faces (into the room only through a wall that gave): the jet, the core, the wall's dust, then the
 /// shower, the wall's chips and the embers.
 /// STAND-IN: THE THREE LATER FANS GO OUT WITH THE FIRST. The TypeScript holds the shower and the chips back a frame and the embers two, on a queue of
-/// closures (`S.queue`); the generated queue row holds no data (`StateQueueItem.run` is a closure's place), so there is nowhere to keep "which fan, of
-/// which wall" until its time. They are thrown at once, in the order the queue would have run them (so each record's seed is the one it would have
-/// had): one or two frames early. Belongs: a queue row that says what to run (asked of the generator).   (blastLook.ts:302 wallBlast)
+/// closures. There is no such queue here. They are thrown at once, in the order the queue would have run them (so each record's seed is the one it would have
+/// had): one or two frames early. Belongs: a queue row that says which fan, of which wall, and when.   (blastLook.ts:302 wallBlast)
 pub fn wall_blast(g: &mut crate::game::Game, pl: PlayerId, w: &crate::wallcharge::WallSpot) {
     use crate::render_particles::{EmitOpts, EmitShape, PKind};
     let (b, h, open, k) = (wall_blast_table(), g.k.wallcharge.height, holed(g, w), scale(g));

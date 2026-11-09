@@ -1,13 +1,14 @@
 // A START WITH NO GPU (src/gpu/adapter.ts GPU_ASK, the card in src/gpu/device.ts showFatal), on the real page in headless Chromium, software WebGPU adapter.
 // `navigator.gpu.requestAdapter` is stubbed before the page's own script runs (?stub=none: nothing for the fast card or for any card, the real answer for the
 // software ask · ?stub=first: nothing for the fast card, the real answer after it):
+//   0. ?stub=wasm: WebAssembly gone before the page's script: the red card says so in one line and asks for another browser;
 //   1. no card from either ask: the red card with its sentence, the lines of what the machine said and a Copy button that is on top, fits the window and
 //      puts the text on the clipboard;
 //   2. the same under ?gpuask=0: one ask and the old one-line card;
 //   3. an empty first ask: on this box the second answers with the software adapter, which is not a start (a box with a real card would start on it);
 //   4. a plain boot: no card, and a recorder's take goes out through the one door with no download (src/host/savefile.ts): nobody listens on this page (?cloud=0),
 //      so the recorder knows it went nowhere.
-//   node tools/qa/nogpu-page.cjs        env: PORT (the dev server's, default 5199) · NOGPU_ONLY=card = steps 1 to 3 alone (seconds; step 4 boots the game)
+//   node tools/qa/nogpu-page.cjs        env: PORT (the dev server's, default 5199) · NOGPU_ONLY=card = steps 0 to 3 alone (seconds; step 4 boots the game), wasm = step 0
 // Nothing here is a machine that really has no adapter, and no real card is ever asked. Exit 0 = every check passed, 1 = one failed or a page did not boot.
 //   NOGPU_BREAK=1: every page runs under ?gpuask=0 — must FAIL.
 const { page: pageRun, NOT_THE_PAGE } = require('./page.cjs'), PAGE = pageRun({ name: 'nogpu-page' }), { check, note: log } = PAGE;
@@ -15,7 +16,7 @@ const BREAK = process.env.NOGPU_BREAK === '1' ? '&gpuask=0' : '', ONLY = process
 (async () => {
   const { page, errors: errs, ready } = await PAGE.open({ size: [1000, 640], options: { acceptDownloads: true, permissions: ['clipboard-read', 'clipboard-write'] }, errors: { skipAt: NOT_THE_PAGE }, init: [() => {
     window.__testVisible = true;
-    const how = new URLSearchParams(location.search).get('stub'); if (!how || !navigator.gpu) return;
+    const how = new URLSearchParams(location.search).get('stub'); if (how === 'wasm') { delete window.WebAssembly; return; } if (!how || !navigator.gpu) return;
     const real = navigator.gpu.requestAdapter.bind(navigator.gpu); window.__asked = [];
     navigator.gpu.requestAdapter = o => { window.__asked.push(o?.forceFallbackAdapter ? 'soft' : o?.powerPreference ? 'fast' : 'any');
       if (how === 'none') return Promise.resolve(o?.forceFallbackAdapter ? real(o) : null).then(a => a);
@@ -26,6 +27,12 @@ const BREAK = process.env.NOGPU_BREAK === '1' ? '&gpuask=0' : '', ONLY = process
   const downloads = []; page.on('download', d => downloads.push(d));
   const cardOf = () => page.evaluate(() => { const el = document.getElementById('fatal'); const b = el?.querySelector('button'); const r = b?.getBoundingClientRect();
     return { up: el?.style.display === 'flex', text: el?.innerText ?? '', kids: el?.children.length ?? 0, button: b?.textContent ?? '', top: b && r ? document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2) === b : false, asked: window.__asked ?? [], fits: el ? el.scrollHeight <= el.clientHeight + 1 : false }; });
+
+  // 0. no WebAssembly (the line is the maintainer's pick)
+  await page.goto(PAGE.url('paused&quality=low&mute&stub=wasm'), { waitUntil: 'load' });
+  await page.waitForFunction(() => document.getElementById('fatal')?.style.display === 'flex', null, { timeout: 60000 });
+  { const w = await cardOf(); log('card:\n' + w.text); check(w.text.startsWith("This game needs WebAssembly, and it's turned off in this browser. Try another browser."), 'with no WebAssembly the card says so and nothing else is tried'); }
+  if (ONLY === 'wasm') { await PAGE.end(); return; }
 
   // 1. no card from either ask
   await page.goto(PAGE.url(`paused&quality=low&mute&stub=none${BREAK}`), { waitUntil: 'load' });
@@ -38,7 +45,7 @@ const BREAK = process.env.NOGPU_BREAK === '1' ? '&gpuask=0' : '', ONLY = process
   await page.click('#fatal button'); await page.waitForTimeout(400);
   const clip = await page.evaluate(() => navigator.clipboard.readText()).catch(e => 'ERR ' + e); c = await cardOf();
   check(c.button === 'Copied' && clip.startsWith("The game couldn't start.\nNo WebGPU adapter available.\nasked for the fast card: nothing") && /browser: Mozilla/.test(clip), `Copy puts the first line and the lines on the clipboard (${clip.length} chars)`);
-  const only = errs.filter(e => !/No WebGPU adapter available|NoGpuError/.test(e));
+  const only = errs.filter(e => !/No WebGPU adapter available|NoGpuError|RustGameError: This game needs WebAssembly/.test(e));
   check(only.length === 0, `no other error on the page (${only.length}${only.length ? ': ' + only[0] : ''})`);
   // 2. the switch off: the one line, as it was
   errs.length = 0;

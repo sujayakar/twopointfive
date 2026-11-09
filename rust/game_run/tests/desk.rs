@@ -1,6 +1,6 @@
 //! The desk as a page has it: asks by their bytes, answers read off the wire's shape.
 use game::kit::{MemberKit, TrimId};
-use game::view::{BriefView, CardRow, CardView, Pressed, Setting, SheetView, ShortView, StartView, TeamView};
+use game::view::{BriefView, CardRow, CardView, MissionRow, MissionsView, Pressed, Setting, SheetView, ShortView, StartView, TeamView};
 use game_run::command::apply;
 use game_run::desk::Desk;
 use game_run::kept;
@@ -536,4 +536,56 @@ fn no_group_draws_more_than_eight_rows_and_every_group_draws_one() {
     groups.dedup();
     assert_eq!(groups.len(), 6, "every group once, in a run of its own: {groups:?}");
     for g in groups { let n = rows.iter().filter(|r| r.group == g).count(); assert!((1..=8).contains(&n), "{g}: {n} rows"); }
+}
+
+const MISSIONS: u32 = 20;
+const KIND: u32 = 21;
+const PICK: u32 = 22;
+fn missions(d: &mut Desk) -> Vec<MissionRow> { answer::<MissionsView>(d, &MISSIONS.to_le_bytes()).rows }
+fn kind(d: &mut Desk, search: &str) -> String { word_of(d, &worded(KIND, &[search])) }
+fn goes(d: &mut Desk, search: &str) -> String { word_of(d, &worded(PICK, &[search])) }
+
+#[test]
+fn every_mission_is_told_once_by_the_address_that_starts_it() {
+    let mut d = Desk::new();
+    let all = missions(&mut d);
+    let mut ids: Vec<&str> = all.iter().map(|m| m.id.as_str()).collect();
+    ids.sort();
+    ids.dedup();
+    assert_eq!(ids.len(), all.len(), "two rows of one name");
+    assert_eq!(all[0].id, "solo-night");
+    for m in &all {
+        assert_eq!(mission_of(&mut d, &m.link), m.id, "{}", m.link);
+        assert_eq!(kind(&mut d, &m.link), if m.kind == "solo" { "" } else { m.kind.as_str() }, "{}", m.link);
+        assert!(!m.title.is_empty() && !m.level.is_empty(), "{}", m.id);
+    }
+    // (the list's own rows are these, as the cards draw them)
+    for r in start(&mut d, "?offlist=0").rows {
+        let m = all.iter().find(|m| m.id == r.id).unwrap_or_else(|| panic!("{} is no mission", r.id));
+        assert_eq!((&m.title, &m.kind, &m.group, &m.level, &m.blurb, &m.ways, &m.line, m.off_list), (&r.title, &r.kind, &r.group, &r.level, &r.blurb, &r.ways, &r.line, r.off_list), "{}", r.id);
+        assert_eq!(r.two, (r.kind == "roomclear" || r.kind == "nightbreach") && m.only.is_empty() && !r.lesson, "{}", r.id);
+    }
+}
+
+#[test]
+fn a_kind_is_the_addresss_own_on_the_list_or_not() {
+    let mut d = Desk::new();
+    for (search, want) in [("?roomclear&levelFile=kit-yard.json", "roomclear"), ("?squad4", "roomclear"), ("?squad4&quiet", "quiet"), ("?nightbreach", "nightbreach"), ("?rescue", "rescue"), ("", ""), ("?mute", ""), ("?solo", "")] {
+        assert_eq!(kind(&mut d, search), want, "{search}");
+    }
+}
+
+#[test]
+fn an_address_that_names_a_row_of_the_short_list_alone_goes_to_that_row_and_stays_there() {
+    let mut d = Desk::new();
+    for (search, want) in [
+        ("?pick=1", "?levelFile=compound.json&roomclear&squad4&difficulty=standard&pick=compound"),
+        ("?pick=depot&mute", "?levelFile=depot.json&roomclear&squad4&difficulty=standard&pick=depot&mute"),
+        ("?pick=depot&difficulty=hard", "?levelFile=depot.json&roomclear&squad4&difficulty=hard&pick=depot"),
+        ("?pick=solo&hour=midday&mute", "?solo&pick=solo&mute"),
+    ] {
+        assert_eq!(goes(&mut d, search), want, "{search}");
+        assert_eq!(goes(&mut d, want), "", "{want} is the row's own page");
+    }
+    for search in ["", "?mute", "?pick", "?pick=9", "?pick=nosuch", "?pick=compound&roomclear", "?pick=compound&solo", "?pick=1&levelFile=depot.json"] { assert_eq!(goes(&mut d, search), "", "{search}"); }
 }

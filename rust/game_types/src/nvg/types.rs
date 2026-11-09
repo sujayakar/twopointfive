@@ -9,15 +9,6 @@ pub enum Mode {
     Free,
     Dark,
 }
-impl Mode {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            Mode::Off => "off",
-            Mode::Free => "free",
-            Mode::Dark => "dark",
-        }
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
 pub enum Why {
@@ -63,42 +54,15 @@ pub struct Team {
     pub call_due: bool,
 }
 
-#[derive(Clone, Debug, ToBytes, Default)]
-pub struct NvgNote {
-    pub t: f64,
-    pub who: String,
-    pub what: String,
-}
-
-#[derive(Clone, Debug, Default)]
-pub struct NvgState {
-    pub mode: crate::nvg::Mode,
-    pub why: crate::nvg::Why,
-    pub quiet_for: f64,
-    pub men: Vec<crate::nvg::NvgStateMenItem>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct NvgStateMenItem {
-    pub gd: GuardId,
-    pub down: bool,
-    pub dark: bool,
-    pub dim: bool,
-    pub black: bool,
-}
-
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct NvgMod {
-    /// (src/game/nvg.ts:93 NVG_LOG)
-    pub nvg_log: Vec<crate::nvg::NvgNote>,
     /// (src/game/nvg.ts:94 teams)
     pub teams: Option<crate::nvg::Team>,
 }
 impl NvgMod {
     pub fn blank() -> Self {
         NvgMod {
-            nvg_log: Vec::new(),
             teams: None,
         }
     }

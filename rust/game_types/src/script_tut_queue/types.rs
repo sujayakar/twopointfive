@@ -22,10 +22,6 @@ pub struct TutQueueGunFrame {
     pub alone: bool,
     /// k: a yield separates its declaration from a use
     pub k: f64,
-    /// u: a yield separates its declaration from a use
-    pub u: Option<crate::director::UnitRef>,
-    /// u: a yield separates its declaration from a use
-    pub u_2: Option<crate::director::UnitRef>,
 }
 
 /// (levels/tut-queue.script.ts:88-124) the beat 'gates': where it stands, and what lives across a yield

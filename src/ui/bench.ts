@@ -91,7 +91,7 @@ export interface BenchStep {
    *  NOT in `gpu`: that is the compute passes' union, the number the quality ladder is fed, and it leaves every drawn pass out because a drawn pass's stamps are
    *  not to be trusted on Metal (ui/perfrec.ts). So work that lands in the g-buffer (more boxes, a richer material) showed in no number of a line. It is LISTED
    *  APART, and its own stamp is good on the one Metal chip it was checked on: in an M4 Max's takes it moved with g-buffer work and not with the frame's
-   *  length, where `post` and `fxaa` did the opposite (docs/agents/qa.md). `gpu + gbuf` is an estimate of the frame's GPU work: two separate statistics, counted twice wherever a driver
+   *  length, where `post` and `fxaa` did the opposite. `gpu + gbuf` is an estimate of the frame's GPU work: two separate statistics, counted twice wherever a driver
    *  ran the g-buffer beside a compute pass. Under sharp direct the pass draws at the OUTPUT size (and its downsample is not stamped), so it follows the
    *  line's quality row, not its 'drawn at': hold it only against a line with the same rows. */
   gbuf?: number;

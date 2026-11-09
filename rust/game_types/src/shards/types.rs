@@ -16,7 +16,6 @@ pub struct PaneCrossLike {
 
 #[derive(Clone, Debug, Default)]
 pub struct GlassFragmentLike {
-    pub pane: f64,
     pub type_: crate::glasspen::PaneType,
     pub kind: crate::shards::GlassFragmentLikeKind,
     pub outline: Vec<V3>,
@@ -42,16 +41,6 @@ pub enum GlassFragmentLikeKind {
     Dagger,
     Clump,
 }
-impl GlassFragmentLikeKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            GlassFragmentLikeKind::Piece => "piece",
-            GlassFragmentLikeKind::Sheet => "sheet",
-            GlassFragmentLikeKind::Dagger => "dagger",
-            GlassFragmentLikeKind::Clump => "clump",
-        }
-    }
-}
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum GlassFragmentLikeCause {
@@ -61,27 +50,11 @@ pub enum GlassFragmentLikeCause {
     Support,
     Rake,
 }
-impl GlassFragmentLikeCause {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            GlassFragmentLikeCause::Blast => "blast",
-            GlassFragmentLikeCause::Hit => "hit",
-            GlassFragmentLikeCause::Dice => "dice",
-            GlassFragmentLikeCause::Support => "support",
-            GlassFragmentLikeCause::Rake => "rake",
-        }
-    }
-}
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct GlassFragmentLikeFall {
     pub t: f64,
     pub pos: V3,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct ShardsTune {
-    pub glass_shards: Option<bool>,
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -93,18 +66,6 @@ pub struct PlateMeta {
     pub seed: f64,
     pub littered: Option<bool>,
     pub poly: Option<Vec<[f64; 2]>>,
-}
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct Pending {
-    pub t: f64,
-    pub pos: V3,
-    pub name: crate::sim_fallshome::FallSound,
-    pub gain: f64,
-    pub rate: f64,
-    pub amount: f64,
-    pub who: f64,
-    pub event: f64,
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -214,24 +175,6 @@ pub struct GlassShardsLandingFall {
     pub pos: V3,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
-pub enum GlassShardsTestKind {
-    Piece,
-    Sheet,
-    Dagger,
-    Clump,
-}
-impl GlassShardsTestKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            GlassShardsTestKind::Piece => "piece",
-            GlassShardsTestKind::Sheet => "sheet",
-            GlassShardsTestKind::Dagger => "dagger",
-            GlassShardsTestKind::Clump => "clump",
-        }
-    }
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct CutPlateBox {
     pub box_: BoxId,
@@ -264,15 +207,6 @@ pub struct ShardsStats {
     pub peak_live: i32,
     pub peak_plates: i32,
 }
-
-/// (src/game/shards.ts:128 SHARDS_DEFAULTS: a table nothing writes)
-pub fn shards_defaults() -> crate::knobs::ShardsK { crate::knobs::ShardsK::page() }
-
-/// (src/game/shards.ts:131 LS_KEY)
-pub const LS_KEY: &str = "twopointsix.shards";
-
-/// (src/game/shards.ts:133 LIVE_CAP_MAX)
-pub const LIVE_CAP_MAX: f64 = 8000.0;
 
 /// (src/game/shards.ts:677 EDGE_GREEN: a table nothing writes)
 pub fn edge_green() -> V3 { [0.74, 0.94, 0.86] }
