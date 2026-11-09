@@ -25,16 +25,6 @@ export const GEAR = { on: false };
 
 /** the two rows' names under the switch (weapons.ts reads them in the rows' own getters) */
 export const GEAR_NAMES = { rifle: 'Mk 18', rifleLong: 'Mk 18 (suppressed)', pistol: 'Glock 19', pistolLong: 'Glock 19 (suppressed)', pistolCalibre: '9×19 mm' } as const;
-/** rounds a magazine of the issue kit's pistol holds (weapons.ts fiveseven's magCapacity getter; the row's own ten without the kit) */
-export const GEAR_MAG = { pistol: 15 } as const;
-/** …and the names they had before it: what is WRITTEN DOWN (a chronicle row, so a save and a recording) whichever kit is issued — worded by gearText where it is shown */
-export const OLD_NAMES = { rifle: 'FN2000', rifleLong: 'FN2000 (suppressed)', pistol: 'Five-seveN', pistolLong: 'FN Five-seveN (suppressed)', pistolCalibre: '5.7×28 mm' } as const;
-/** a weapon row's short name as it is written down: the same string on and off (the two renamed rows by their old names, every other row its own) */
-export function plainShort(def: { id: string; short: string }): string { return def.id === 'fn2000' || def.id === 'mk18bare' ? OLD_NAMES.rifle : def.id === 'fiveseven' || def.id === 'g19bare' ? OLD_NAMES.pistol : def.short; }
-/** the page's one rule for the switch: on unless the address says `?oldgear` */
-export function gearFromQuery(q: URLSearchParams) { GEAR.on = !q.has('oldgear'); }
-/** the HUD tag of the rifle's first attachment (the kit column, the reticle's right-button word, the draw line) */
-export function ringTag(): string { return GEAR.on ? 'SPONGE' : 'RING'; }
 /** a line written in the old kit's words, in the kit's words as issued: every player-facing string that names the kit goes through here where it is SHOWN (never
  *  as a module loads), so off is the string as written, character for character */
 export function gearText(s: string): string {

@@ -15,13 +15,6 @@ export const LOOK = {
   suit: true,
 };
 
-/** WHICH MISSION THE MEN ARE DRESSED FOR, where it is not the scenario that is up: the Rust game's `scene_look.suit_asked` (a picture staged as a room clear for a quiet mission, rust/game_start/src/kit_stage.rs
- *  dress), carried to this name by the state bridge as any module's word is (tools/blitz/schema.json). 'quiet' = Sam and the staged team in the suit, null = no mission (Sam alone in it), undefined = the scenario
- *  decides (rust/game_rules/src/cast sneak_suit reads this first). Nothing on this page writes it. Looks only. */
-let suitAsked: 'quiet' | null | undefined;
-/** the mission asked for (undefined: none asked — the game's own scenario decides) */
-export function suitAs(): 'quiet' | null | undefined { return suitAsked; }
-
 /** THE MEN'S DRESS FOLLOWS THE PLACE (the maintainer, 10-10: "middle eastern enemies also don't make sense for the office level"): the look's cast and colour
  *  tables — local dress for the defenders, tan issue for the operators — are for the look's places. On the OFFICE family (the bundled office, relief, the texel
  *  variants) the men are dressed as they were before the look: the first cast file and its tables, and of its defenders only the ones dressed for a building
@@ -61,8 +54,6 @@ export const LOOK_DOORS: Readonly<Record<string, { out: readonly [number, number
   'killhouse.json': { out: [0.26, 0.12, 0.42], in: [0.55, 0.43, 0.27], stuff: { in: 'wood' } },   // the shoot house: its marking paint's violet, darker, outside; raw plywood inside
   'hall.json': { out: [0.16, 0.36, 0.47] },                                      // the scouts' barrack wing: its range card's pale sky blue, darker
 };
-/** the sneaking suit: on unless `?suit=0` (or `?suit=off` / `?nosuit`) */
-export function suitOfQuery(q: URLSearchParams): boolean { const v = q.get('suit'); return !(q.has('nosuit') || v === '0' || v === 'off'); }
 
 // THE LOOK (the material picture: render/frame.ts lookConfig, shaders/look.wgsl; not the dress above, though they share the word): what on an address is its.
 // One reader, so that the page and a run of several pages that is to be ONE look from its first page to its last (ui/benchrun.ts) cannot come to read an

@@ -64,7 +64,6 @@ import { makeBox, BoxFlag, type Box, type BoxStuff } from './boxes';
 import { cutPlane, cutRecord, cutToWorld, MAX_CUT_PLANES, type CutPlane } from './cut';
 import type { Vec3 } from '../math/vec';
 
-export const SHAPES = { on: false };
 export const SHAPES_STATS = { shaped: 0, pieces: 0, levels: 0 };
 
 /** one plane of a shape in the box's own frame: [nx, ny, nz, d] keeps n · p ≤ d (n need not be unit: d is measured along n as given) */
@@ -153,20 +152,6 @@ function formBox(b: Box, f: ShapeForm): void {
   else if (b.cut && f.arc) { const w = f.arc.axis === 1 ? b.h[2] : b.h[0], R = (w * w + f.arc.rise * f.arc.rise) / (2 * f.arc.rise); b.cutRound = f.arc.axis; b.cutArc = R - b.h[1]; }
   if (b.cut && f.old) b.cutOld = true;
 }
-/** A NUMBER OF THE SHAPES A LEVEL STANDS ON (the level's fingerprint takes it in: rust/game_rules/src/savestate), over its first `n` boxes: FNV-1a over each shaped
- *  box's place in the list and the GEOMETRY of its shape to the millimetre — its form, and each piece's place, size, turn and form (a piece has a number in
- *  the list and a blast reads where it hangs). Never a paint, a finish or the picture's `old`: a repaint is not another level. 0 = no box stands shaped. */
-export function shapeStamp(boxes: readonly Box[], n = boxes.length): number {
-  let h = 0x811c9dc5, any = false;
-  const num = (v: number) => { h ^= Math.round(v * 1000) & 0xffffffff; h = Math.imul(h, 0x01000193) >>> 0; };
-  const form = (f: ShapeForm) => { num(f.round ?? 0); num(f.arc ? f.arc.axis : 0); num(f.arc ? f.arc.rise : 0); num(f.cut ? f.cut.length : 0); for (const q of f.cut ?? []) for (const v of q) num(v); };
-  for (let i = 0; i < n && i < boxes.length; i++) {
-    const b = boxes[i]; if (b.shaped !== true) continue; const s = b.shape!; any = true;
-    num(i / 1000); form(s); num(s.with ? s.with.length : 0);
-    for (const w of s.with ?? []) { for (const v of w.off) num(v); for (const v of w.h) num(v); num(w.yaw ?? 0); form(w); }
-  }
-  return any ? (h || 1) : 0;
-}
 
 /** A LEVEL AS ITS FILE HAS IT: every record a stand-up gave is taken back and the pieces added then are taken away. Idempotent. */
 export function plainLevel(boxes: Box[]): void {
@@ -195,9 +180,4 @@ export function shapeLevel(boxes: Box[], on: boolean): number {
   for (const p of tail) boxes.push(p);
   SHAPES_STATS.shaped = made; SHAPES_STATS.pieces = tail.length; SHAPES_STATS.levels++;
   return made;
-}
-/** A RECORDING'S TABLES, before its level is stood up (replay/recipestand.ts and tools/qa/rerun.ts `tables`): one from before this table is played on a floor
- *  of plain boxes, as it was recorded — journal.ts applyKnobs says the same afterwards, too late for a level already standing */
-export function shapesTape(tables: Record<string, unknown>) {
-  const t = tables.SHAPES; if (t === null || typeof t !== 'object') SHAPES.on = false;
 }

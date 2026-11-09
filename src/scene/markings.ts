@@ -378,11 +378,3 @@ export function secondaryAlbedo(base: Vec3, h: Vec3, marks: readonly MarkingDef[
   for (const m of marks) { const st = markStats(m, base, texelBase); const w = Math.min(st.area / total, 1); out[0] += st.dAlbedo[0] * w; out[1] += st.dAlbedo[1] * w; out[2] += st.dAlbedo[2] * w; }
   return [Math.min(Math.max(out[0], 0), 1), Math.min(Math.max(out[1], 0), 1), Math.min(Math.max(out[2], 0), 1)];
 }
-/** the world-space centre, half sizes and outward normal of a marking's bitmap on box (c, h, yaw) — where game.ts stands its light */
-export function markWorldRect(m: MarkingDef, c: Vec3, h: Vec3, yaw: number, texelBase = MARKING_TEXEL): { centre: Vec3; n: Vec3; hu: number; hv: number } {
-  const f = faceIndex(m.face); const ax = FACE_AXES[f]; const t = texelOf(m, texelBase);
-  const cs = Math.cos(yaw), sn = Math.sin(yaw); const toWorld = (l: Vec3): Vec3 => [cs * l[0] + sn * l[2], l[1], -sn * l[0] + cs * l[2]];   // Box.yaw convention: +X → (cos, 0, −sin), +Z → (sin, 0, cos)
-  const n = toWorld(ax.n), uW = toWorld(ax.u), vW = toWorld(ax.v); const { hn } = faceHalf(h, f);
-  const uc = (m.at[0] + m.size[0] / 2) * t, vc = (m.at[1] + m.size[1] / 2) * t;
-  return { centre: [c[0] + n[0] * hn + uW[0] * uc + vW[0] * vc, c[1] + n[1] * hn + uW[1] * uc + vW[1] * vc, c[2] + n[2] * hn + uW[2] * uc + vW[2] * vc], n, hu: m.size[0] * t / 2, hv: m.size[1] * t / 2 };
-}

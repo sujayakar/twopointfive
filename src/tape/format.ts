@@ -18,8 +18,6 @@ interface Recipe { seed: number | null; search: string; levelFile?: string; scen
 export const REPLAY_VERSION = 1;
 /** how a 'mark' line that files a PAGE ERROR starts (ui/replaykey.ts files one at the play moment the error came; the viewer and replay-at.ts find them by it) */
 export const ERROR_MARK = 'the page hit an error: ';
-/** a restart's mark opens with this (game/replaybuf.ts writes it: a fresh run, the men and the clock's story start over; a checkpoint load is not one) */
-export const RESTART_MARK = 'restart (';
 /** is this line a page error's */
 export const isErrorMark = (l: ReplayLine): boolean => l.k === 'mark' && typeof l.text === 'string' && l.text.startsWith(ERROR_MARK);
 /** the page errors a file holds, oldest first: the moment (seconds from the file's start) and the error's words */
@@ -106,8 +104,6 @@ export interface ReplayMap {
 /** THE RUN TAPE (game/runtape.ts): what a headless game is walked through the same run with (tools/qa/rerun.ts) — the recipe, then per step (`f`, from the game's
  *  first) its dt, the player's input and camera, and what was done to the game from outside a step: the game senses for itself, so nothing else goes into it. */
 export type TapeVal = number | string | null;
-/** a tape value read back */
-export const tapeNum = (e: TapeVal): number | undefined => e === null ? undefined : typeof e === 'number' ? e : e === 'nan' ? NaN : e === '-0' ? -0 : e === 'inf' ? Infinity : e === '-inf' ? -Infinity : Number(e);
 /** a step's input where it differs from the step before: keys held, keys that went down, clicked bits, buttons, the cursor, the wheel */
 export interface TapeInput { k?: string[]; p?: string[]; c?: number; b?: number; m?: [number, number]; w?: number; }
 /** the run tape's own version: a tape of another is not walked (tapeWhy). 2 = the game senses for itself: no value of the renderer's is on it */
@@ -163,18 +159,6 @@ export interface ReplayFile {
   rerun?: RunTape | { dead: string; tick: number };
 }
 
-/** a level had a second file until each came to have one: a tape on `hall-gwot.json`, or on the plain file because its address asked for it, has no game to walk through */
-const tapeOldFile = (T: RunTape): boolean => {
-  const q = new URLSearchParams(T.recipe.search ?? '');
-  return /-gwot\.json$/.test(T.recipe.levelFile ?? '') || q.has('nolook') || ['plain', '0', 'off'].includes(q.get('look') ?? '');
-};
-/** why a replay's run cannot be walked through a game, as a sentence with no stop ('' = it can): asked by every reader that would (the page's player and the roads
- *  to it, tools/qa/rerun.ts). The map viewer draws any file: its samples are the recording itself. */
-export function tapeWhy(F: ReplayFile | null): string {
-  const T = F?.rerun, why = !T ? 'it was saved without a record of the controls' : 'dead' in T ? T.dead : T.v !== TAPE_VERSION ? 'a different version of the game saved it' : tapeOldFile(T) ? 'it was recorded on a level file that has since been replaced' : '';
-  return why && `This replay can't be played in the game because ${why}`;
-}
-
 /** a file's sanity, in words ('' = fine) */
 export function checkReplay(F: Partial<ReplayFile> | null | undefined): string {
   if (!F || typeof F !== 'object') return 'not an object';
@@ -219,29 +203,9 @@ export function decode(file: ReplayFile): Decoded {
   }
   return { file, r, men, doors, cam, aim };
 }
-/** the last sample at or before replay time `r` (0 when before the first) */
-export function sampleAt(D: Decoded, r: number): number {
-  let lo = 0, hi = D.r.length - 1; if (hi < 0) return 0;
-  while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (D.r[mid] <= r) lo = mid; else hi = mid - 1; }
-  return lo;
-}
 /** m:ss.s */
 export function clock(sec: number): string { const s = Math.round(Math.max(0, sec) * 10) / 10; const m = Math.floor(s / 60);   // (to the tenth FIRST: 299.96 is 5:00.0, not 4:60.0)
   return `${m}:${(s - m * 60).toFixed(1).padStart(4, '0')}`; }
-/** a man's doing in one line of words */
-export function doWords(d: ManDo, cast: CastRow[]): string {
-  const out: string[] = [];
-  if (d.st) out.push(d.st); if (d.down) out.push(`(${d.down})`);
-  if (d.ord) out.push(`order ${d.ord}`); if (d.by) out.push(`[${d.by}]`); if (d.task) out.push(`task ${d.task}`);
-  if (d.crouch) out.push('crouched'); if (d.slot) out.push(d.slot);
-  if (d.foe !== undefined && d.foe >= 0) out.push(`gun on ${cast[d.foe]?.name ?? '?'}`);
-  if (d.goal) out.push(`going to (${d.goal[0]}, ${d.goal[1]})`);
-  if (d.path?.length) out.push(`route ${d.path.length} pts → (${d.path[d.path.length - 1][0]}, ${d.path[d.path.length - 1][1]})`);
-  if (d.fix) out.push(`fix (${d.fix[0]}, ${d.fix[1]})`);
-  if (d.sup) out.push(`suppressed ${d.sup}`);
-  if (d.say) out.push(`says “${d.say}”`);
-  return out.join(' · ');
-}
 /** the name a replay file goes out under */
 export function replayName(f: ReplayFile): string { return `twopointsix-replay-${f.savedAt.replace(/[:.]/g, '-').replace(/Z$/, '')}-${Math.round(f.seconds)}s${f.notes.length ? `-${f.notes.length}notes` : ''}.json`; }
 /** a replay file's JSON text IN PARTS, which joined are exactly `JSON.stringify(F)`: a long list (the samples, the run tape's steps) goes a few hundred rows a

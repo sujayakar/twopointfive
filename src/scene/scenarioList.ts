@@ -8,7 +8,7 @@
 // Types and pure functions: nothing here imports the game (but rust/game_rules/src/loadout — itself types and pure functions, importing nothing at run time: keep it so) or
 // touches the DOM.
 import { scenarioQuery, type ScenarioEntry } from './scenarios';
-import { squadOfQuery, sizeWords, type SquadSize } from './squadsize';   // (pure: the loadout's size, its words and its query key — nothing of the game)
+import { squadOfQuery, type SquadSize } from './squadsize';   // (pure: the loadout's size, its words and its query key — nothing of the game)
 import { HELD_PAGE_WORDS, PRICE_ASK_WORDS, RUN_PAGE_WORDS, heldPage } from '../host/runpage';   // (a leaf: the words of a run's page)
 
 // THE LIST'S GROUPS (scenarios.ts MISSION_GROUPS, ui/missions.ts groupOf): a row may name its own; without one a quiet mission is 'quiet alone' / 'quiet as
@@ -164,8 +164,6 @@ export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
     scene: 'The ledger shows payments to a truck park at the edge of town, and the convoy\'s fuel went through it. Two of you are going in to get the manifest from the office, and nobody can know.',
     teaches: ['A partner who follows you quietly', 'Send him around behind a guard', 'Take down two guards at once', 'Have him cut the power while your hands are full', 'Move through the dark together'] },
 ];
-/** every row that is a lesson: the tutorial's missions (the seven older Training lessons were taken out 2026-10-23) */
-export const LESSON_MISSIONS: ScenarioEntry[] = TUTORIAL_MISSIONS;
 export const ALL_MISSIONS: ScenarioEntry[] = [...TUTORIAL_MISSIONS, ...SCENARIOS, ...QUIET_MISSIONS];
 /** EVERY LEVEL THE LIST DRAWS: the rows a player is shown (not `offList`), a level each in the list's order, with the rows that play on it (the first is the
  *  one a tool opens the level by). The one answer to "which levels are on the mission list": the pricing run and the level tools ask it */
@@ -180,8 +178,6 @@ export function listedLevels(): { level: string; rows: ScenarioEntry[] }[] {
  *  a quit drops it like the rest. */
 export const SCENARIO_KEYS = ['levelFile', 'nightbreach', 'roomclear', 'rescue', 'quiet', 'squad4', 'squad', 'loadout', 'solo'];   // (`squad=N`: the loadout's size, rust/game_rules/src/loadout; `loadout=<id>`: its screen, ui/loadout.ts)
 
-/** 'you + the pair' / 'you + four' (and the loadout's other sizes: 'solo', 'you + one', 'you + three'): how many teammates, in the picker's words */
-export function teamWords(e: { squad: number }): string { return sizeWords(e.squad); }
 /** what the level is called on the picker: the file's stem, or 'office' for the bundled level */
 export function levelWords(e: { level?: string }): string { return e.level ? e.level.replace(/\.json$/, '') : 'office'; }
 
@@ -202,12 +198,6 @@ export function specOfQuery(search: string | URLSearchParams): ScenarioSpec | nu
   if (kind === 'roomclear') { const s = q.get('roomclear') || q.get('squad4'); if (s && Number.isFinite(Number(s))) spec.seed = Math.floor(Number(s)); }
   if (kind === 'quiet') { const s = q.get('quiet'); if (s && Number.isFinite(Number(s))) spec.seed = Math.floor(Number(s)); }
   return spec;
-}
-/** the list's row a query string boots (same kind, team size, level and seed), or null: a hand-typed combination the list does not hold (a row deployed at
- *  another size than its own is one: rust/game_rules/src/scenario_run running_scenario still names it) */
-export function entryOfQuery(search: string | URLSearchParams, list: ScenarioEntry[] = ALL_MISSIONS): ScenarioEntry | null {
-  const s = specOfQuery(search); if (!s) return null;
-  return list.find(e => e.kind === s.kind && e.squad === s.squad && (e.level ?? '') === (s.level ?? '') && (e.kind !== 'roomclear' || (e.seed ?? null) === (s.seed ?? null)) && (e.kind !== 'quiet' || e.seed === undefined || e.seed === s.seed)) ?? null;   // (a quiet row with no seed of its own is its row whatever deal the URL pins)
 }
 /** the visitor's query string with every scenario key dropped ('' or '?a=1&b') */
 export function quitSearch(search: string): string {

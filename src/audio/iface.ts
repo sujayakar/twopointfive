@@ -10,4 +10,3 @@ export interface GameAudioLike {
   /** the rain bed's level 0‥1 (weather.ts: the rate × where the listener stands; 0 = silence it). Optional: the QA harness's counting object has none. */
   rain?(level: number): void;
 }
-export const nullAudio: GameAudioLike = { play() { /* silent */ }, footstep() { /* silent */ } };

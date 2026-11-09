@@ -9,10 +9,6 @@ export const clamp = (x: number, a: number, b: number) => (x < a ? a : x > b ? b
 export const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 export const smoothstep = (a: number, b: number, x: number) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
 export const DEG = Math.PI / 180;
-/** Wrap angle to (-PI, PI]. */
-export const wrapAngle = (a: number) => { a = (a + Math.PI) % (2 * Math.PI); if (a <= 0) a += 2 * Math.PI; return a - Math.PI; };
-/** Move angle a toward b by at most maxStep (shortest arc). */
-export const approachAngle = (a: number, b: number, maxStep: number) => { const d = wrapAngle(b - a); return Math.abs(d) <= maxStep ? b : a + Math.sign(d) * maxStep; };
 export const damp = (a: number, b: number, rate: number, dt: number) => lerp(a, b, 1 - Math.exp(-rate * dt));
 
 export const v3 = {

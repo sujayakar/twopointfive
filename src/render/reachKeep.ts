@@ -9,18 +9,14 @@
 // changed in this rect, or `null`: they are the authored walls again), `dir` and `sun` (this directional light wants a mask). It READS the box world's
 // statics and the light set's lights and writes nothing of the game's. The engine hands it to the light set's upload each frame (lights.ts `upload`): no
 // object a snapshot walks holds it.
-// NOBODY'S STATE: a HostOwned (math/side.ts), so a snapshot neither copies nor compares it. After a snapshot is put back the walls may be another moment's
-// and nobody told it: it reads the count of put-backs (math/side.ts PUT_BACKS, the host's) at each step, and after one it reads the walls again and decides
-// the masks again from where they stand, only where the raster differs. Any put-back, a rollback's as well as a save's, with no caller to remember it.
 // A WIDE SUN'S MASK IS OF ITS DISC (`sun`), and the disc is the game's to change and to put back: each step looks at the radius such a mask was made for
 // against the light's own, and makes it again where they differ (so the hour's tell is a hint, and a radius that went back with a snapshot is followed).
 // It imports nothing from src/game.
-import { HostOwned, PUT_BACKS } from '../math/side';
 import { type Vec3, v3 } from '../math/vec';
 import { type Box, BoxFlag, rayBox } from '../scene/boxes';
 import { WORLD } from '../scene/world';
 import type { RtLight } from './lights';
-import { buildWallRaster, reachMaskFor, reachMaskSome, reachMaskForDirectionalSteps, wallRasterDiff, wallRasterDiffSteps, rasterRect, REACH_WORK, REACH_PACE, type ReachDoor, type ReachOnly, type ReachJob } from './reach';
+import { buildWallRaster, reachMaskFor, reachMaskSome, reachMaskForDirectionalSteps, wallRasterDiff, wallRasterDiffSteps, REACH_WORK, REACH_PACE, type ReachDoor, type ReachOnly, type ReachJob } from './reach';
 import { whole, clock } from './steps';
 
 type Rect = [number, number, number, number];
@@ -58,7 +54,7 @@ const ROUND = ['F', 'F', 'L', 'O'] as const;
 
 const NO_GUESTS: readonly KeepGuest[] = [], ORDER = ['F', 'L', 'O'] as const, NEVER = (): boolean => false, byRank = (a: KeepGuest, b: KeepGuest): number => a.rank - b.rank;
 
-export class ReachKeep extends HostOwned {
+export class ReachKeep {
   private readonly world: { readonly statics: Box[] }; private readonly lights: { readonly lights: RtLight[] };
   /** a lamp's mask (none = it may reach anywhere) and a directional light's (the cells with a clear way toward it: sent only with the reservoirs) */
   private readonly point = new WeakMap<RtLight, Uint32Array>(); private readonly dirs = new WeakMap<RtLight, Uint32Array>();
@@ -70,25 +66,23 @@ export class ReachKeep extends HostOwned {
   /** the lamps that carry a mask, and the lights whose masks wait to be decided again */
   private masked: RtLight[] = []; private queue: Asked[] = [];
   /** walls' changes noted and not yet read into the raster: the ones that wait `hold` steps (the blast's own frame is the long one), the ones read at the
-   *  next step, and `stale`: the walls are to be read again whatever was noted (a snapshot put back, known by the count of them) */
-  private held: Rect[] = []; private hold = 0; private now: Rect[] = []; private stale = false; private putBacks = PUT_BACKS.n;
+   *  next step */
+  private held: Rect[] = []; private hold = 0; private now: Rect[] = [];
   /** a reading of the walls in hand (on a budget of time: the raster as it was built when the reading began, and the scan that sets it against the last) */
   private reading: { rects: Rect[]; solid: Uint8Array; it: Generator<void, Rect | null, void> } | null = null;
   /** the place in ROUND that leads the next step with a guest's work in it (it moves on past a class that owes nothing) */
   private turn = 0;
 
-  constructor(world: { readonly statics: Box[] }, lights: { readonly lights: RtLight[] }) { super(); this.world = world; this.lights = lights; }
+  constructor(world: { readonly statics: Box[] }, lights: { readonly lights: RtLight[] }) { this.world = world; this.lights = lights; }
 
   /** a lamp's own mask (undefined = anywhere) */
   of(l: RtLight): Uint32Array | undefined { return this.point.get(l); }
-  /** a directional light's mask (undefined = it has none) */
-  dirOf(l: RtLight): Uint32Array | undefined { return this.dirs.get(l); }
   /** the row the light set sends for a light: a directional light's own mask, else the lamp's, else none (anywhere) */
   row(l: RtLight): Uint32Array | undefined { return this.dirs.get(l) ?? this.point.get(l); }
   /** a mask its maker decided itself (the picture's own lights: daylight at an opening, engine.ts); undefined = none */
   give(l: RtLight, m: Uint32Array | undefined): void { if (m) this.point.set(l, m); else this.point.delete(l); }
   /** lights still waiting, and changes still to be read (none before a level stands) */
-  get pending(): number { return this.solid ? this.queue.length + this.held.length + this.now.length + (this.reading ? 1 : 0) + (this.stale || this.putBacks !== PUT_BACKS.n ? 1 : 0) : 0; }
+  get pending(): number { return this.solid ? this.queue.length + this.held.length + this.now.length + (this.reading ? 1 : 0) : 0; }
   /** what it stands on, as it is (a tool's: the raster, the cells under a roof, the lamps that carry a mask, the lights waiting and the notes not yet read) */
   peek(): { solid: Uint8Array | null; interior: Uint8Array | null; doors: readonly ReachDoor[]; lamps: readonly RtLight[]; queue: readonly { l: RtLight }[]; held: readonly unknown[]; now: readonly unknown[] } {
     return { solid: this.solid, interior: this.interior, doors: this.doors, lamps: this.masked, queue: this.queue, held: this.held, now: this.now }; }
@@ -99,7 +93,7 @@ export class ReachKeep extends HostOwned {
   boot(doors: ReachDoor[], interior: Uint8Array): void {
     const solid = buildWallRaster(this.world.statics, doors);
     this.doors = doors; this.interior = interior; this.solid = this.solidBoot = solid;
-    this.masked = []; this.queue = []; this.bootMask.clear(); this.held = []; this.now = []; this.hold = 0; this.stale = false; this.putBacks = PUT_BACKS.n; this.reading = null;
+    this.masked = []; this.queue = []; this.bootMask.clear(); this.held = []; this.now = []; this.hold = 0; this.reading = null;
     for (const l of this.lights.lights) {
       if (l.ttl >= 0 || l.kind === 2 || l.group === 'player' || l.group === 'flashlights') continue;   // transient / the moon / lights that MOVE (Sam's rail light, the guards' torches): anywhere. Exterior lamp heads above the roof DO get a mask, but only its interior cells (reach.ts)
       this.masked.push(l); this.point.set(l, reachMaskFor(solid, l.pos, l.kind === 3 || l.kind === 1 ? l.dir : [0, 0, 0], l.radius, interior));
@@ -153,21 +147,6 @@ export class ReachKeep extends HostOwned {
     if (!r.done) return false;
     this.reading = null; this.readEnds(R.rects, R.solid, r.value); return true;
   }
-  /** the walls read again with nothing known of where they changed (a snapshot put back). The authored walls: the raster the level booted with (and its
-   *  sight lines' jump field) and the masks it booted with, at once. Any others: the lights in reach of the raster's own changed box are asked, from the
-   *  masks as they stand (one rect round every change: two holes far apart cost the lamps between them a wide wedge each). */
-  private reread(): void {
-    if (!this.solid) return;
-    this.held.length = 0; this.now.length = 0; this.reading = null;
-    const solid = this.raster(), boot = this.solidBoot;
-    let same = !!boot && boot.length === solid.length; for (let i = 0; same && i < solid.length; i++) if (boot![i] !== solid[i]) same = false;
-    if (same) { this.asBooted(); return; }
-    const box = wallRasterDiff(this.solid, solid); if (!box) return;
-    this.solid = solid;
-    for (const q of this.queue) if (q.job?.st || q.dirJob) { q.job = undefined; q.dirJob = undefined; q.restarts++; }   // (the raster changed under every part-decided mask)
-    this.askNear(rasterRect(box), box);
-  }
-
   /** ONE STEP ON THE COUNT, a drawn frame's where the frame has no pace (a tool's stand, which keeps no clock; the page with `?planpace=old`; a page's
    *  first frames): the walls read where a note is due, then the waiting masks decided again in the order they were asked, `steps` sight-line steps of
    *  them (about 2 ms warm: a mask too big for a step's share carries on where it stopped at the next, reach.ts ReachJob, and is put in whole when its
@@ -185,10 +164,7 @@ export class ReachKeep extends HostOwned {
   timeNow: () => number = clock;
 
   private step(byTime: boolean, n: number, steps: number, guests: readonly KeepGuest[] = NO_GUESTS): number {
-    const putBack = this.putBacks !== PUT_BACKS.n; this.putBacks = PUT_BACKS.n;
     if (this.solid) {
-      if (putBack) this.stale = true;   // (a snapshot was put back since the last step: the walls may be another moment's)
-      if (this.stale) { this.stale = false; this.reread(); }
       // A DIRECTIONAL LIGHT'S MASK KNOWS WHAT IT WAS MADE FOR (the walls, the way it shone, its disc): one that is not waiting to be decided again and whose
       // disc is another now (the weather turned; a snapshot put the old one back) or whose walls are not these (made on a holed level since put back as
       // authored) is made again here, whole. Rare, and never on a blast's frames: a blast asks the light, and a light that waits is the queue's.
