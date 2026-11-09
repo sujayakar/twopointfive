@@ -2,11 +2,10 @@
 //! back, in a fresh slot after another game has stood and gone, goes on as the game that was not put back did. A beat's place is plain data (`BeatFrame`), so nothing has to be stopped for a picture, or started again after one.
 //! `PROGRAM_MOMENT_BREAK=1`: the moment comes back with a beat's place lost, and the tests must fail on it.
 use game::game::{Game, GuardState};
-use game::savestate::control::{self, Do};
+use game::savestate::control;
 use game::scene_scenario_list::{all_missions, pick_search};
-use game_start::moment::Moment;
+use game::savestate::control::Moment;
 use game_start::play::{Opts, Play};
-use std::collections::BTreeMap;
 
 const STAND_SECS: usize = 1;
 const ON_SECS: usize = 20;
@@ -42,18 +41,15 @@ fn hands(p: &mut Play, i: usize, checkpoint: &str) {
     if i % 180 == 60 { p.key_up("KeyW"); }
     if i == CHECKPOINT_SECS * 60 { put_step(p, checkpoint); }
 }
-/// a frame of a host that keeps what the save controller asks for, as the page's module does (page::saves)
-struct Host { kept: BTreeMap<String, (Box<Game>, Vec<u8>)>, taken: usize, back: usize }
+/// a frame, and what the end of its step told the host: what was kept, under which key, and how many games were put back
+struct Host { kept: Vec<String>, taken: usize, back: usize }
 impl Host {
-    fn new() -> Host { Host { kept: BTreeMap::new(), taken: 0, back: 0 } }
+    fn new() -> Host { Host { kept: Vec::new(), taken: 0, back: 0 } }
     fn frame(&mut self, p: &mut Play) {
-        let asked = p.g.stats.rails.kept;
         p.frame();
-        if p.g.stats.rails.kept > asked { let l = game::lesson::lesson_step(&p.g).and_then(|t| t.checkpoint).expect("the step that asked names it"); control::keep(&mut p.g, &l); }
-        match control::tick(&mut p.g, 1.0 / 60.0) {
-            Some(Do::Keep { key, label }) => { game_run::checkpoint(&mut p.g, &label); self.kept.insert(key, (p.g.clone(), block(&p.g))); self.taken += 1; }
-            Some(Do::Back { key }) => { let was = control::abandoned(&p.g); let (g, b) = self.kept[&key].clone(); lay(p, &g, &b, p.g.sim); control::put_back(&mut p.g, &key, was); self.back += 1; }
-            _ => {}
+        for t in p.told.drain(..) {
+            if let Some(key) = t.kept { self.kept.push(key); self.taken += 1; }
+            if t.back { self.back += 1; }
         }
     }
 }
@@ -83,7 +79,7 @@ fn a_checkpoint_touches_nothing(id: &str, step: &str, checkpoint: &str) {
     assert_eq!(awake(&p.g), men, "{}: a checkpoint moved the men the program holds", id);
     assert!(p.g.director.run == run && in_the_middle(&p.g) > 0 && p.g.stats.rails.starts == starts, "{}: a checkpoint stopped the program", id);
     // and it is the same program that comes back
-    let key = h.kept.keys().next().unwrap().clone();
+    let key = h.kept[0].clone();
     for _ in 0..60 { h.frame(&mut p); }
     assert_eq!(control::ask_load(&mut p.g, &key), None, "{}", id);
     h.frame(&mut p);
