@@ -13,8 +13,8 @@ fn foot(w: f32, s: f32) {
   let g = FINEST * 0.70710678 * exp2(rnd() - 0.5); let t = max((vec4f(1.0, 2.0, 4.0, 8.0) * g - w) / s, vec4f(0.0)); blk = t; lim = vec4f(t.xy, 1e9, 1e9); leafTo = t.x * LEAF_NEAR; smallTo = 1e9;
 }
 fn footSolid(w: f32, s: f32) { foot(w, s); }
-/** for a ray whose edges are looked at (a lamp's own shadow): solids as they are all the way, and only leaves by the cells */
-fn footSharp(w: f32, s: f32) { foot(w, s); lim = vec4f(1e9); leafTo = 0.0; leafOnly = true; }
+/** for a ray whose edges are looked at (a lamp's own shadow): solids as they are (what is small as far as it shows), and only leaves by the cells */
+fn footSharp(w: f32, s: f32) { foot(w, s); lim = vec4f(lim.x, 1e9, 1e9, 1e9); leafTo = 0.0; leafOnly = true; }
 fn footAt(t: f32) -> f32 { return footW + footS * t; }
 var<private> walked: u32 = 0u;
 fn classOf(fl: u32) -> u32 { return fl >> 30u; }
@@ -135,9 +135,9 @@ fn blockWalk(ro: vec3f, rd: vec3f, t0: f32, t1: f32, want: f32, lit: bool) -> Bl
     if (p == 0u || ((leafOnly || t < blk.x) && (w >> 31u) == 0u)) { let e = (BLK_LO + (vec3f(c) + ahead) * BRICK - ro) * inv; t = max(min3(e), t) + 1e-3; continue; }
     let per = 8u >> level; let h = FINEST * f32(1u << level); let q = clamp(vec3i(floor((g - vec3f(c)) * f32(per))), vec3i(0), vec3i(i32(per) - 1)); let lo = BLK_LO + vec3f(c) * BRICK + vec3f(q) * h;
     let e = (lo + ahead * h - ro) * inv; var out = max(min3(e), t); if (level == 0u) { out = min(out, max(blk.y, t)); } if (blk.x > t) { out = min(out, blk.x); }
-    { let u = vec3u(clamp(vec3i(floor((g - vec3f(c)) * 2.0)), vec3i(0), vec3i(1))); if (blkWord(BLK_BRICKS, (p - 1u) * 588u + 576u + u.x + 2u * (u.y + 2u * u.z)) == 0u) { let e2 = (BLK_LO + (vec3f(c) + 0.5 * (vec3f(u) + ahead)) * BRICK - ro) * inv; t = max(min3(e2), t) + 1e-3; continue; } }      /* (nothing in the 1.28 m round here) */
     let cell = blkWord(BLK_BRICKS, (p - 1u) * 588u + level * 512u + u32(q.x) + per * (u32(q.y) + per * u32(q.z)));
-    if (cell != 0u && cell != fromCell) {
+    if (cell >= 0x80000000u) { let d = i32(cell & 255u); let e2 = (BLK_LO + vec3f(c) * BRICK + select(vec3f(max(q - d + 1, vec3i(0))), vec3f(min(q + d, vec3i(i32(per)))), rd > vec3f(0.0)) * h - ro) * inv; t = max(t, min(min3(e2), select(1e9, max(blk.y, t), level == 0u))) + 1e-3; continue; }      /* (nothing so many cells round) */
+    if (cell != fromCell) {
       let r = bitcast<vec4u>(extra[BLK_CELLS + (cell - 1u) * 2u]); let B = cellBox(r, lo, h); let u = (B.lo - ro) * inv; let v = (B.hi - ro) * inv; let ta = max(t - 1e-3, max3(min(u, v))); let tb = min(min(out, te), min3(max(u, v)));
       if (tb > ta && (r.x & 0xffffffu) != 0u) { let part = f32(r.x >> 24u) / 255.0; let sg = length(B.sigma * rd); let sigma = sg * select(select(1.0, 1.0 - part, noLeaves), part, t < blk.x || leafOnly); let d = sigma * (tb - ta); if (lit && d > 0.0) { o.L += exp(-o.tau) * (1.0 - exp(-d)) * cellSent(cell, r, B.sigma * rd / sg, rd); } if (o.tau + d >= want) { o.t = ta + (want - o.tau) / sigma; o.cell = cell; o.tau = want; return o; } o.tau += d; }
     }

@@ -18,7 +18,7 @@ fn cellSent(cell: u32, r: vec4u, k: vec3f, rd: vec3f) -> vec3f {
   let q1 = keptRow(slot, 1u); let q2 = keptRow(slot, 2u); let w = k * k; return keptSix(q0, q1, q2, 0u, rd.x < 0.0) * w.x + keptSix(q0, q1, q2, 1u, rd.y < 0.0) * w.y + keptSix(q0, q1, q2, 2u, rd.z < 0.0) * w.z;
 }
 /** the cell of 0.32 m at a place in steps of it, or 0 */
-fn cellAt(c: vec3i) -> u32 { let b = vec3i(floor(vec3f(c) * 0.125)) - vec3i(floor(BLK_LO / BRICK + 0.5)); if (any(b < vec3i(0)) || any(b >= BLK_N)) { return 0u; } let p = blkWord(BLK_PAGE, u32(b.x + BLK_N.x * (b.y + BLK_N.y * b.z))) & 0x7fffffffu; if (p == 0u) { return 0u; } let q = vec3u(c & vec3i(7)); return blkWord(BLK_BRICKS, (p - 1u) * 588u + q.x + 8u * (q.y + 8u * q.z)); }
+fn cellAt(c: vec3i) -> u32 { let b = vec3i(floor(vec3f(c) * 0.125)) - vec3i(floor(BLK_LO / BRICK + 0.5)); if (any(b < vec3i(0)) || any(b >= BLK_N)) { return 0u; } let p = blkWord(BLK_PAGE, u32(b.x + BLK_N.x * (b.y + BLK_N.y * b.z))) & 0x7fffffffu; if (p == 0u) { return 0u; } let q = vec3u(c & vec3i(7)); let c2 = blkWord(BLK_BRICKS, (p - 1u) * 588u + q.x + 8u * (q.y + 8u * q.z)); return select(c2, 0u, c2 >= 0x80000000u); }
 fn folWalk(ro: vec3f, rd: vec3f, t1: f32, lit: bool) -> Fol {
   var o: Fol; if (lit) { o.L = blkL; o.T = vec3f(blkT); return o; }            /* (what nearest has found on its way) */
   let was = blk; blk = vec4f(0.0, 1e9, 1e9, 1e9); let hid = noLeaves; noLeaves = false; o.T = exp(-vec3f(1.0, 0.86, 1.1) * blockWalk(ro, rd, 0.0, t1, 1e9, false).tau); blk = was; noLeaves = hid; return o;
@@ -38,7 +38,7 @@ fn look(x: vec3f) {
   if (all(x == roundAt)) { return; } roundAt = x; let g = x / 0.32 - 0.5; let b = vec3i(floor(g)); let f = g - floor(g); roundSum = 0.0; roundG = vec3f(0.0); var lastB = vec3i(2147483647); var p = 0u;
   for (var k = 0; k < 8; k++) {
     roundSlot[k] = 0u; let d = vec3i(k & 1, (k >> 1) & 1, k >> 2); let c = b + d; let br = vec3i(floor(vec3f(c) * 0.125)) - vec3i(floor(BLK_LO / BRICK + 0.5)); if (any(br < vec3i(0)) || any(br >= BLK_N)) { continue; } if (any(br != lastB)) { lastB = br; p = blkWord(BLK_PAGE, u32(br.x + BLK_N.x * (br.y + BLK_N.y * br.z))); } if ((p >> 31u) == 0u) { continue; }
-    let q = vec3u(c & vec3i(7)); let cell = blkWord(BLK_BRICKS, ((p & 0x7fffffffu) - 1u) * 588u + q.x + 8u * (q.y + 8u * q.z)); if (cell == 0u) { continue; } let r = bitcast<vec4u>(extra[BLK_CELLS + (cell - 1u) * 2u]); if ((r.x >> 24u) < 128u) { continue; } let r2 = bitcast<vec4u>(extra[BLK_CELLS + (cell - 1u) * 2u + 1u]); if (r2.z == 0u) { continue; }
+    let q = vec3u(c & vec3i(7)); let cell = blkWord(BLK_BRICKS, ((p & 0x7fffffffu) - 1u) * 588u + q.x + 8u * (q.y + 8u * q.z)); if (cell == 0u || cell >= 0x80000000u) { continue; } let r = bitcast<vec4u>(extra[BLK_CELLS + (cell - 1u) * 2u]); if ((r.x >> 24u) < 128u) { continue; } let r2 = bitcast<vec4u>(extra[BLK_CELLS + (cell - 1u) * 2u + 1u]); if (r2.z == 0u) { continue; }
     let q0 = keptRow(r2.z, 0u); let w3 = select(1.0 - f, f, d == vec3i(1)); let w = w3.x * w3.y * w3.z + 1e-3; roundSlot[k] = r2.z; roundW[k] = w; roundSum += w; let J = vec3f(unpack2x16float(q0.x), unpack2x16float(q0.y).x); let sv = unpack2x16float(q0.y).y; let cc = cellLeaf(r, r2); roundG += (J * PI + (cc[0] + cc[1]) * frame.sunE.xyz * (0.25 * sv)) * w;
   }
 }
