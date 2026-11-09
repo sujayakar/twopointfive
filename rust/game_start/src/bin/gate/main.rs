@@ -4,12 +4,14 @@
 //!   gate ROW…            only rows whose name starts with one of the words (`gate start`, `gate "start depot-four"`, `gate save`)
 //!   gate pin [ROW…]      record the pins again (all, or the rows named) and say which moved; writes pins.txt
 //!   gate breaks          each row of the breaks' table plays unbroken and must PASS; then each of its breaks must FAIL, in its check's own words. exit 0 = all did
+//!   gate long [DIR]      the quick kind, then the rows that are too slow for it, then `hold check DIR` if a folder is named, and nothing else
 //!   gate list            the rows
 //!
 //! A row is a line of a child process of this tool (`gate one ROW… [--break=NAME] [--pin]`), because a game is one a process and because a game that panics takes only its own rows with it.
 //! The rows of one run share a child, since the run is played once for all of them. The longest kinds are started first, and the rows are printed in their order.
 mod draw;
 mod pins;
+mod played;
 mod rows;
 
 use rows::{Flags, Job, Row};
@@ -17,7 +19,7 @@ use std::collections::BTreeMap;
 use std::process::{Command, Stdio};
 use std::sync::{mpsc, Arc, Mutex};
 
-const USAGE: &str = "gate [ROW…]         every row, or those whose name starts with one of the words\ngate pin [ROW…]     record the pins again and say which moved\ngate breaks         every check's own fault planted: each must FAIL in its words\ngate list           the rows";
+const USAGE: &str = "gate [ROW…]         every row of the quick kind, or those whose name starts with one of the words\ngate long [DIR]     the quick kind, the slow rows, then `hold check DIR`\ngate pin [ROW…]     record the pins again and say which moved\ngate breaks         every check's own fault planted: each must FAIL in its words\ngate list           the rows";
 
 /// what a child said of a row
 #[derive(Clone)]
@@ -109,7 +111,7 @@ fn gate(picked: Vec<Row>, whole: bool) -> i32 {
         }
     }
     if whole {
-        let list = pins::Pins::read_file().rows_differ(&order);
+        let list = pins::Pins::read_file().rows_differ(&rows::every().into_iter().map(|r| r.name).collect::<Vec<_>>());
         for l in &list { println!("{}", l); }
         failed += usize::from(!list.is_empty());
     }
@@ -117,6 +119,19 @@ fn gate(picked: Vec<Row>, whole: bool) -> i32 {
     let passed = order.iter().filter(|n| said.get(*n).is_some_and(|s| s.pass)).count();
     println!("gate: {} of {} rows pass · {:.1} s (the rows' own seconds: {})", passed, order.len(), t.elapsed().as_secs_f64(), share.join(", "));
     if failed > 0 { 1 } else { 0 }
+}
+
+/// THE LONG KIND: the quick kind, the rows too slow for it, and a build held to another by `hold` (its folder kept by `hold keep` on that build), if one is named.
+fn long(folder: Option<&str>) -> i32 {
+    let mut code = gate(rows::all(), true);
+    code = code.max(gate(rows::long(), false));
+    if let Some(dir) = folder {
+        let hold = std::env::current_exe().expect("this tool's own path").with_file_name("hold");
+        let ok = Command::new(&hold).args(["check", dir]).status().unwrap_or_else(|e| panic!("{}: {}", hold.display(), e)).success();
+        println!("hold check {}: {}", dir, if ok { "the same" } else { "NOT the same" });
+        if !ok { code = 1; }
+    }
+    code
 }
 
 /// RECORD THE PINS AGAIN: the rows picked are played as far as a pin goes, and what moved is said. Nothing moved: the file is left as it is, byte for byte.
@@ -138,7 +153,7 @@ fn pin(picked: Vec<Row>, whole: bool) -> i32 {
     if bad > 0 { println!("gate pin: {} rows could not be played: pins.txt is left as it is", bad); return 1; }
     let said = was.take(&lines, whole);
     for s in &said { println!("{}", s); }
-    let text = was.text(&rows::all());
+    let text = was.text(&rows::every());
     let before = std::fs::read_to_string(pins::path()).unwrap_or_default();
     if text == before { println!("gate pin: nothing moved: pins.txt is as it was"); return 0; }
     std::fs::write(pins::path(), &text).expect("pins.txt");
@@ -185,11 +200,13 @@ fn main() {
             let h = std::thread::Builder::new().stack_size(1 << 30).spawn(move || rows::one(&names, flags)).unwrap();
             if h.join().is_ok() { 0 } else { 2 }
         }
-        Some("list") => { for r in rows::all() { println!("{}", r.name); } 0 }
-        Some("pin") => pin(pick(rows::all(), &a[1..]), a.len() == 1),
+        Some("list") => { for r in rows::every() { println!("{}", r.name); } 0 }
+        Some("long") if a.len() <= 2 => long(a.get(1).map(|s| s.as_str())),
+        Some("pin") => pin(pick(rows::every(), &a[1..]), a.len() == 1),
         Some("breaks") if a.len() == 1 => breaks(),
         Some(w) if w.starts_with("--") || w == "help" => { eprintln!("{}", USAGE); 64 }
-        _ => gate(pick(rows::all(), &a), a.is_empty()),
+        None => gate(rows::all(), true),
+        _ => gate(pick(rows::every(), &a), false),
     };
     std::process::exit(code);
 }
