@@ -329,22 +329,45 @@ pub fn stand(g: &mut Game, mut new: Box<Game>) {
 
 /// what is kept of a game: the image, which came after which, its label, and whether the floor came down straight after it
 #[derive(Clone)]
-pub struct Kept { pub image: Rc<Moment>, pub at: f64, pub runs: Vec<f64>, pub label: String, pub regret: bool }
+pub struct Kept { pub image: Rc<Moment>, pub at: f64, pub label: String, pub regret: bool }
 /// the key of a run's first step
 pub const START: &str = "start";
-/// EVERY GAME THE CONTROL KEEPS, by the stand of the game it was kept of (`stood`). A game lost to a panic is gone while what is kept of it is not, so they are held beside the games and not in them. Only the last few stands' are held: a game dropped may stand again from a kept copy of itself (a panic's way back, a tool's slot given up), and is the same stand.
-static mut IMAGES: BTreeMap<u32, BTreeMap<String, Kept>> = BTreeMap::new();
+/// what a restart goes back to: the level before the men, with the lines that stand them on it
+pub struct First { image: Moment, men: crate::standing::Men }
+/// EVERY GAME THE CONTROL KEEPS OF A STAND: the first, what a stage goes back to, and what was kept as it ran
+#[derive(Default)]
+struct Held { first: Option<Rc<First>>, stage: Option<Rc<Moment>>, kept: BTreeMap<String, Kept>, used: u64 }
+/// … by the stand of the game (`stood`). A game lost to a panic is gone while what is kept of it is not, so they are held beside the games and not in them. Only the last few stands' are held: a game dropped may stand again from a kept copy of itself (a panic's way back, a tool's slot given up), and is the same stand.
+static mut IMAGES: BTreeMap<u32, Held> = BTreeMap::new();
 static mut STANDS: u32 = 0;
+static mut USES: u64 = 0;
 const STANDS_HELD: usize = ::sim::state::GAMES + 4;
 /// which stand this game is of: a game kept and put back is of its own, one imported is a new one
 pub fn stood(g: &mut Game) -> u32 {
     if g.saves.stood == 0 { g.saves.stood = unsafe { STANDS += 1; STANDS }; }
     g.saves.stood
 }
-fn images(stood: u32) -> &'static mut BTreeMap<String, Kept> {
+fn held(stood: u32) -> &'static mut Held {
     let all = unsafe { &mut *core::ptr::addr_of_mut!(IMAGES) };
-    while all.len() >= STANDS_HELD && !all.contains_key(&stood) { all.pop_first(); }
-    all.entry(stood).or_default()
+    // (a game that runs asks every step, so it is never the one let go)
+    while all.len() >= STANDS_HELD && !all.contains_key(&stood) {
+        let Some(last) = all.iter().min_by_key(|(_, h)| h.used).map(|(k, _)| *k) else { break };
+        all.remove(&last);
+    }
+    let h = all.entry(stood).or_default();
+    h.used = unsafe { USES += 1; USES };
+    h
+}
+fn images(stood: u32) -> &'static mut BTreeMap<String, Kept> { &mut held(stood).kept }
+/// THE LEVEL AS IT STANDS BEFORE THE MEN, and the lines that stand them on it: a restart's way
+pub fn keep_level(g: &mut Game, men: &crate::standing::Men) {
+    let of = stood(g);
+    held(of).first = Some(Rc::new(First { image: Moment::of(g), men: men.clone() }));
+}
+/// THIS GAME, kept as what `again` puts back: a stage's way, which sets itself up on a mission that is up
+pub fn keep_first(g: &mut Game) {
+    let of = stood(g);
+    held(of).stage = Some(Rc::new(Moment::of(g)));
 }
 /// what is kept of this stand's game, the best to go back to first: the newest save nothing came down after, the newest at all, and the run's first step last
 /// What a stand keeps is this again (a moment of the game going back: what was kept after it is gone, what it held comes back).
@@ -361,62 +384,91 @@ pub fn kept_of(stood: u32) -> Vec<(String, Kept)> {
 pub struct Survivors {
     god: bool, ai: bool, ammo: bool, unseen: bool, clear_rooms: f64, spectate: f64, show_debug: bool, touring: bool, quiet_utility: bool, mission_in_tour: bool,
     tune: crate::game::GameTune, props_on: bool, friction: f64, fog_on: bool, fog_viewer: bool,
-    men: Vec<(bool, crate::kit::BigKit)>, kit: crate::kit::KitModKIT, pending: Option<crate::quiet::QuietDeal>,
+    kit: crate::kit::KitMod, difficulty: crate::difficulty::DifficultyMod, pending: Option<crate::quiet::QuietDeal>,
     dice: Option<crate::math_dice::SimDice>, sim_dice: ::sim::dice::Dice, fx_seed: f64, roll_seq: f64, event_seq: f64,
     saves_on: bool, stats: crate::game::Stats, settings: crate::root_settings::RenderSettings, k: crate::knobs::Knobs, lens: Vec<(f64, f64)>,
     out: Vec<crate::out_events::OutEvent>, cmd_buf: Option<crate::cmd::PlayerCmd>,
 }
 impl Survivors {
     pub fn of(g: &Game) -> Survivors {
-        let seats = g.seats.clone();
         Survivors {
             god: g.god_mode, ai: g.ai_enabled, ammo: g.infinite_ammo, unseen: g.player_invisible, clear_rooms: g.clear_rooms, spectate: g.spectate, show_debug: g.show_debug, touring: g.touring, quiet_utility: g.quiet_utility, mission_in_tour: g.mission_in_tour,
             tune: g.tune.clone(), props_on: g.props.enabled, friction: g.props.friction_scale, fog_on: g.fog_of_war.on, fog_viewer: g.fog_picture.viewer,
-            men: seats.iter().map(|&s| { let m = crate::cmd::seat_man(g, s); (g.pl[m].wand, g.pl[m].big_kit.clone()) }).collect(), kit: g.m.kit.kit.clone(), pending: g.quiet.pending.clone(),
+            kit: g.m.kit.clone(), difficulty: g.m.difficulty.clone(), pending: g.quiet.pending.clone(),
             dice: g.dice.clone(), sim_dice: unsafe { core::ptr::read(&::sim::state::state_read(g.sim).dice) }, fx_seed: g.fx_seed, roll_seq: g.roll_seq, event_seq: g.event_seq,
             saves_on: g.saves.enabled, stats: g.stats.clone(), settings: g.engine.settings.clone(), k: g.k.clone(), lens: g.tab.camera.ids().map(|c| (g.tab.camera[c].distance, g.tab.camera[c].desired_distance)).collect(),
             out: g.out.clone(), cmd_buf: g.cmd_buf.clone(),
         }
     }
-    fn write(self, g: &mut Game) {
+    /// what the men's lines read and write on: the tables, the die, the counts and what the host is owed. They go on from here, so this is written once, before them
+    fn write_under(&self, g: &mut Game) {
+        put_cards(g, self.kit.clone());
+        g.m.difficulty = self.difficulty.clone();
+        g.quiet.pending = self.pending.clone();
+        (g.dice, g.fx_seed, g.roll_seq, g.event_seq) = (self.dice.clone(), self.fx_seed, self.roll_seq, self.event_seq);
+        ::sim::state::state(g.sim).dice = unsafe { core::ptr::read(&self.sim_dice) };
+        // (the picture's settings, but the sky and the exposure, which are the hour's, and the hour is the first step's)
+        let new = &g.engine.settings;
+        let hour = (new.sky_zenith, new.sky_horizon, new.haze_density, new.exposure);
+        (g.stats, g.engine.settings, g.k, g.out, g.cmd_buf) = (self.stats.clone(), self.settings.clone(), self.k.clone(), self.out.clone(), self.cmd_buf.clone());
+        let now = &mut g.engine.settings;
+        (now.sky_zenith, now.sky_horizon, now.haze_density, now.exposure) = hour;
+    }
+    /// what the men's lines answered to as they did the first time (a switch set since could make a mission refuse), and what a mission's start wrote of its own is taken back: the switches, the lenses
+    fn write_over(&self, g: &mut Game) {
         (g.god_mode, g.ai_enabled, g.infinite_ammo, g.player_invisible, g.clear_rooms, g.spectate, g.show_debug, g.touring, g.quiet_utility, g.mission_in_tour) = (self.god, self.ai, self.ammo, self.unseen, self.clear_rooms, self.spectate, self.show_debug, self.touring, self.quiet_utility, self.mission_in_tour);
-        (g.tune, g.props.enabled, g.props.friction_scale, g.fog_of_war.on, g.fog_picture.viewer) = (self.tune, self.props_on, self.friction, self.fog_on, self.fog_viewer);
-        let seats = g.seats.clone();
-        for (&s, (wand, big)) in seats.iter().zip(self.men) { let m = crate::cmd::seat_man(g, s); g.pl[m].wand = wand; g.pl[m].big_kit = big; }
-        g.m.kit.kit = self.kit;
-        g.quiet.pending = self.pending;
-        (g.dice, g.fx_seed, g.roll_seq, g.event_seq) = (self.dice, self.fx_seed, self.roll_seq, self.event_seq);
-        ::sim::state::state(g.sim).dice = self.sim_dice;
+        (g.tune, g.props.enabled, g.props.friction_scale, g.fog_of_war.on, g.fog_picture.viewer) = (self.tune.clone(), self.props_on, self.friction, self.fog_on, self.fog_viewer);
         g.saves.enabled = self.saves_on;
-        (g.stats, g.engine.settings, g.k, g.out, g.cmd_buf) = (self.stats, self.settings, self.k, self.out, self.cmd_buf);
         let cams: Vec<_> = g.tab.camera.ids().collect();
-        for (c, (d, want)) in cams.into_iter().zip(self.lens) { g.tab.camera[c].distance = d; g.tab.camera[c].desired_distance = want; }
+        for (c, (d, want)) in cams.into_iter().zip(self.lens.iter()) { g.tab.camera[c].distance = *d; g.tab.camera[c].desired_distance = *want; }
     }
 }
 /// A step asks for the mission over (Enter once down, Shift+Enter): the step ends first, as a load in a step does
 pub fn ask_restart(g: &mut Game, said: Option<&str>) { g.saves.again = Some(String::from(said.unwrap_or(""))); }
-/// THE MISSION OVER, from outside a step: the run's first step stands again with what an evening keeps, a new run, the view cut to the fresh man. False where no step has been taken, so there is no start to go back to
+/// THE MISSION OVER, from outside a step: the level stands again and the men are stood on it by the stand's own lines, with what an evening keeps; a new run, the view cut to the fresh man. False where the game keeps no level (it has lost its place among the stands held)
 pub fn restart(g: &mut Game, said: Option<&str>) -> bool {
     let (slot, of) = (g.sim, stood(g));
-    keep_start(g);
+    let Some(first) = held(of).first.clone() else { return false };
     let was = Survivors::of(g);
-    let Some(new) = images(of).get(START).map(|e| e.image.laid(slot)) else { return false };
-    over(g, new);
-    was.write(g);
+    let host = (g.host_cam, g.host_input);
+    // (no box world's copy stands yet of a level with no men: the lines open it, as they did)
+    crate::scene_collision::unstand(g);
+    let mut new = first.image.laid(slot);
+    new.serial_next = new.serial_next.max(g.serial_next);
+    core::mem::swap(g, &mut *new);
+    was.write_under(g);
+    // (a mission that started once and refuses now leaves the plain floor, as a refused start does, and says so)
+    if let Some(why) = crate::standing::stand_men(g, &first.men) { crate::game::game_msg(g, &why); }
+    crate::scene_collision::light_ready(g);
+    was.write_over(g);
     g.mission.serial = g.serial();
-    let run = g.mission.serial as f64;
-    if let Some(e) = images(of).get_mut(START) { e.runs.push(run); }
+    assert!((g.host_cam, g.host_input) == host, "the men's lines made the host's rows elsewhere than the first time");
     if let Some(s) = said { if !s.is_empty() { crate::game::game_msg(g, s); } }
     crate::game::game_cut_to_men(g);
     g.restart_cut = true;
     g.stats.cleanrestart.restarts += 1;
     true
 }
-/// the run's first moment is kept, once: a run is every serial it has gone by, so a game put back from before a restart is still of it
+/// the cards, the notes, the words on them; what is keyed by a man or a player is of the game thrown away, and new men would answer to it
+fn put_cards(g: &mut Game, kit: crate::kit::KitMod) {
+    let of_new = core::mem::replace(&mut g.m.kit, kit);
+    (g.m.kit.man_of, g.m.kit.bare_eyed, g.m.kit.kit_staged, g.m.kit.issued_player, g.m.kit.you_bare) = (of_new.man_of, of_new.bare_eyed, of_new.kit_staged, of_new.issued_player, of_new.you_bare);
+}
+/// A STAGE'S WAY OF STARTING OVER: the game `keep_first` kept stands again, die, sky and all, so a picture of the same cards is the same picture, with only the cards, the tables and what the host is owed. False where none was kept
+pub fn again(g: &mut Game) -> bool {
+    let (slot, of) = (g.sim, stood(g));
+    let Some(first) = held(of).stage.clone() else { return false };
+    let (kit, k, out, cmd) = (g.m.kit.clone(), g.k.clone(), core::mem::take(&mut g.out), g.cmd_buf.take());
+    over(g, first.laid(slot));
+    put_cards(g, kit);
+    (g.k, g.out, g.cmd_buf) = (k, out, cmd);
+    true
+}
+/// the run's first moment is kept, once, for a game that is lost before anything else is
 fn keep_start(g: &mut Game) {
     let (of, run) = (stood(g), g.mission.serial as f64);
-    if images(of).get(START).is_some_and(|e| e.runs.contains(&run)) { return; }
-    images(of).insert(String::from(START), Kept { image: Rc::new(Moment::of(g)), at: run, runs: alloc::vec![run], label: String::new(), regret: false });
+    if images(of).get(START).is_some_and(|e| e.at == run) { return; }
+    images(of).insert(String::from(START), Kept { image: Rc::new(Moment::of(g)), at: run, label: String::new(), regret: false });
 }
 /// a step's end: a restart it asked for is made
 fn restart_asked(g: &mut Game) -> bool {
@@ -457,7 +509,7 @@ pub fn after_step(g: &mut Box<Game>, dt: f64, asked: Vec<crate::out_events::OutE
         Some(Do::Keep { key, label }) => {
             checkpoint(g, &label);
             let at = g.saves.shelf.m.values().map(|e| e.info.saved_at).fold(0.0, crate::m::max);
-            images(of).insert(key.clone(), Kept { image: Rc::new(Moment::of(g)), at, runs: Vec::new(), label, regret: false });
+            images(of).insert(key.clone(), Kept { image: Rc::new(Moment::of(g)), at, label, regret: false });
             told.kept = Some(key);
         }
         Some(Do::Back { key }) => {

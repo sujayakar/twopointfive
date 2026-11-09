@@ -255,6 +255,7 @@ pub mod shotgun;
 pub mod showwhy;
 pub mod shutdoor;
 pub mod silent;
+pub mod standing;
 pub mod sim_built;
 pub mod sim_colstore;
 pub mod sim_doorshome;

@@ -104,11 +104,6 @@ pub struct LampAs { pub t: FixtureId, pub intensity: f64, pub emissive: V3 }
 #[derive(Clone, Copy, Debug)]
 pub struct LightAs { pub light: LightId, pub intensity: f64 }
 
-/// The mission as its start left it, before anything of it was staged: the game's own value, its block, and the stage as it then was
-#[derive(Clone)]
-pub struct Base(pub alloc::sync::Arc<(alloc::boxed::Box<crate::game::Game>, Vec<u8>, KitStage)>);
-impl core::fmt::Debug for Base { fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result { f.write_str("Base") } }
-
 /// THE KIT PICTURE'S STAGE: all a host keeps to hold a game as the picture of the team at its way in. No rule of the game reads it.
 #[derive(Clone, Debug, Default)]
 pub struct KitStage {
@@ -136,8 +131,6 @@ pub struct KitStage {
     pub sunk: Vec<usize>, pub roused_men: u32, pub roused_alarms: u32,
     /// nothing to stage
     pub none: bool,
-    /// what every staging starts from
-    pub base: Option<Base>,
     /// THE WAY IN AS THE ACTS READ IT: the leaf (none: a wall or a gap) · a blank wall · the opening's width · the floor a can or a round has behind the anchor's line · where Sam's frag is aimed and how far in its arc must land · a wall anchor stands blown open
     pub door: Option<DoorId>, pub walled: bool, pub width: f64, pub reach_in: f64, pub frag_m: f64, pub frag_land: f64, pub hole: bool,
     /// the door's face the team is on · the leaf's angle shut and at rest · along the wall toward the stack, out on the team's side, the anchor's middle · which way along the wall the leaf's free edge is

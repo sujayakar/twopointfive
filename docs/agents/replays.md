@@ -32,10 +32,10 @@ saves. The hand and the tick are in `overview.md`; a game over a wire is `net.md
 | `src/host/fixedstep.ts` | whole ticks a frame: `planTicks` |
 | `rust/sim/src/dice.rs`, `rust/game_rules/src/dice.rs` | the game's die, and its keyed draws |
 | `rust/sim/src/maths.rs`, `rust/prim/` | the game's own sin, cos and the rest; the few operations exact by the standard |
-| `rust/game_start/src/moment.rs` | `Moment`: the game as a value and its block, and the one way to put it back |
 | `rust/game_face/src/moment.rs` | `face_moment`, `face_moment_back`: a moment for a walk, with the shelf and what was said |
-| `rust/game_face/src/saves.rs` | the shelf of saves, and `face_recover` after a panic |
-| `savestate/` (`control.rs`) | when a save is made, under which name, what happens when one goes back |
+| `rust/game_face/src/saves.rs` | a host's turn of the controller, and `face_recover` after a panic |
+| `savestate/` (`control.rs`) | when a save is made, under which name, what happens when one goes back; `Moment`: the game as a value and its block; `restart` |
+| `rust/game_rules/src/standing.rs` | the men as a stand stands them, and again on a restart |
 | `rust/game_rules/src/state_words.rs` | the hash of the whole game, a word a part |
 
 The numbers of saves are `CkptK` and `SavetimelineK` in `rust/game_types/src/knobs/savestate.rs`. `rollback/` holds only types that nothing uses.
@@ -81,7 +81,7 @@ are closest. A seek back goes to the moment before the target and plays on unsee
 `face_draw_cut` starts the picture over. `?at=` opens at a tick; Shift+F7 uses it to start at the try that is on.
 
 **A moment and a save.** A `Moment` clones `Game` and copies its block. `face_moment_back` stands exactly there, with the shelf and what was said, so
-the same hands play the same run. A save put back (`back` in `saves.rs`) goes on from now: `serial_next` keeps the later value, so no serial is dealt
+the same hands play the same run. A save put back (`after_step` in `control.rs`) goes on from now: `serial_next` keeps the later value, so no serial is dealt
 twice, and what belongs to the run as it is now carries over (`abandoned`).
 
 **The save controller.** `control::tick` runs after every step and answers `Do::Keep`, `Do::Back` or `Do::Say`. Autosaves and saves by hand are two
@@ -89,6 +89,10 @@ rings, and neither pushes the other out. A request comes from a new stage, a new
 `min_gap_secs`, and lapses after `pending_secs`. `gate` in `control.rs` holds it while anyone is alert, searching or over `aware_max`; `run_no` holds
 a save during a response, with Sam down, after the run or with two players. An autosave followed by an alert inside `regret_secs` is kept but offered
 last.
+
+**A restart.** A restart is the road a load goes. The controller holds the level as it stands before the men (`keep_level`). `control::restart` puts it
+back, writes `Survivors` under the men, runs the stand's own lines (`standing::stand_men`), then writes the switches, the tune and each lens over them.
+Nothing else goes over, so a new field needs no reset line, and one that must outlive a try goes in `Survivors`. Only serials and `event_seq` go on.
 
 **Across builds.** A kept row names the module it was played on (the file's ETag, `src/host/face.ts`). On that module any mark that differs ends the
 run: die, figures or hashes. On another module, or from a file, the hashes mean nothing, because the state may be laid out differently, so only the
@@ -139,6 +143,7 @@ Native tests in `rust/game_start/tests/`:
 | `held_saves.rs` | each thing asks for an autosave once, and none is written while he is compromised |
 | `rounds_and_saves.rs` | a save carries the broken level |
 | `restarts.rs` | a restart equals a fresh staging |
+| `restart.rs` | what an evening keeps, a card reaches its man on every try, every kind of mission starts over as it started |
 | `hosts_agree.rs` | two machines of one game, every part of the state by name |
 | `players.rs` | `a_moment_of_a_game_of_two_put_back_plays_the_same` |
 | `senses.rs`, `draw.rs` | a game put back has the light and smoke of one that never left, and tells the picture so |
