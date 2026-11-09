@@ -1,10 +1,12 @@
-// REPLAY THE QUALITY LADDER OVER AN F9 RECORDING — no GPU needed (rebuild/performance/auto-quality.md is the write-up).
+// THE QUALITY LADDER'S ONE CHECK: what src/ui/quality.ts decides, which preset at which scale and when it steps. No GPU: the real class over a stub engine, fed frame times and GPU unions.
 //
-//   bun run tools/qa/ladder-replay.ts <perf-….json>… [--aim asnow|60|90|120|display|all] [--hz N] [--paced on|off] [--held on|off] [--shed on|off] [--sharpk N] [--sweeps] [--check] [--md] [--timeline] [--hold k=v,…]
-//   bun run tools/qa/ladder-replay.ts --selftest
+//   bun run tools/qa/quality-check.ts      every check, on synthetic machines (exit 1 on a FAIL). ADAPT_BREAK, LADDERHELD_BREAK, ONEGRID_BREAK, ONESOLVE_BREAK, FIRESHED_BREAK, FOGROWS_BREAK, LADDERSHED_BREAK, LADDERHOLD_BREAK = 1: each must fail
+//   bun run tools/qa/quality-check.ts --plan [--budget 15] [--k 4.5 --css 1440x900 --dpr 2]     the cost table and plan()'s picks for machines (the flags add one of your own)
+//   bun run tools/qa/quality-check.ts <perf-….json>… [--aim asnow|60|90|120|display|all] [--hz N] [--paced on|off] [--held on|off] [--shed on|off] [--sharpk N] [--sweeps] [--check] [--timeline] [--hold k=v,…]
 //
+// THE REPLAY OVER AN F9 RECORDING.
 // An F9 dump (ui/perfrec.ts) carries, per frame, the frame time, the compute passes' GPU union, the resolution and the preset, and the ladder's own moves as events. That is everything
-// `Quality.sample()` is fed in the page, so the REAL class (src/ui/quality.ts, over a stub engine as tools/qa/quality-plan.ts builds one) can be driven by a recording:
+// `Quality.sample()` is fed in the page, so the real class can be driven by a recording:
 //
 //   · while the replayed ladder sits where the recording's sat, a frame is fed back exactly as recorded (dt, union; NaN where the readback was stale — two frames with the same pass table);
 //   · where it sits elsewhere (another aim cut the scale, dropped a preset, climbed a rung) the frame is RE-PRICED by the cost model: union' = union × model(replayed state) ÷ model(recorded
@@ -14,9 +16,8 @@
 //
 //   --check   as-now only: the replayed moves must be the recording's own 'ladder' events (same moves, same order, each within 2.5 s). The ladder's counters at the moment F9 was pressed are
 //             not in a dump, so the window phase and the roomy count are tried over their few values and the best fit is named. Exit 1 if no start state reproduces the take.
-//   --selftest  synthetic closed-loop machines: what each aim must do (PASS / FAIL lines, exit 1 on a FAIL).
 import { readFileSync } from 'node:fs';
-import { PRESETS, REF, SCALE_FLOOR, LADDER, CLIMB, HOLD, PACED, SHED, sharpForce, AIM_DISPLAY, PLAN_BUDGET_MS, QUALITY_NAMES, ladderBands, ladderAimOf, visitAdaptive, displayRateOf, presetCost, plan, costTable, type QualityName, type Preset } from '../../src/ui/quality.ts';
+import { PRESETS, REF, SCALE_FLOOR, LADDER, CLIMB, HOLD, PACED, SHED, sharpForce, AIM_DISPLAY, PLAN_BUDGET_MS, QUALITY_NAMES, ladderBands, ladderAimOf, visitAdaptive, displayRateOf, presetCost, plan, costTable, COST, AUTO_LADDER, SCALE_STEP, STANDS_IN, type QualityName, type Preset } from '../../src/ui/quality.ts';
 import type { PerfDump, PerfFrame } from '../../src/ui/perfrec.ts';
 
 const G = globalThis as unknown as Record<string, any>;
@@ -29,10 +30,12 @@ G.document = { hidden: false }; G.window = { devicePixelRatio: 2, __testVisible:
 const { Quality } = await import('../../src/ui/quality.ts');
 const { smokeLookStep } = await import('../../src/render/smokeLook.ts');   // the march's step as the page marches it: the preset's row in proportion to the look table
 const { defaultRcConfig } = await import('../../src/render/rc.ts');
+const { laterProgress } = await import('../../src/gpu/device.ts');
+const { PerfRecorder } = await import('../../src/ui/perfrec.ts');
 const defaults = (await import('../../src/engine.ts')).defaultSettings as unknown as () => Record<string, any>;
 
 // ---- the response model: what the union does when the ladder sits somewhere else -------------------------------------------------------------------------------------------------------------
-/** measured on the Mac's sweep take (rebuild/performance/mac-recordings.md, take 3: High ×0.95 gather ½, 13.9 ms union): 0.95 → 0.90 gave back 0.94 ms (ratio 0.932), 0.95 → 0.77 gave
+/** measured on the Mac's sweep take (take 3: High ×0.95 gather ½, 13.9 ms union): 0.95 → 0.90 gave back 0.94 ms (ratio 0.932), 0.95 → 0.77 gave
  *  3.27 ms (0.765), all of Medium 7.62 ms (0.452). presetCost alone says 0.924 / 0.747 / 0.380: its fixed part is short of what a frame carries today (fog of war, the mesh refit, the
  *  probe's traffic). `extraFixed` model-ms on every preset puts the two scale steps at 0.930 / 0.765; `under` on the presets below high puts Medium at 0.452. */
 const MODEL = { extraFixed: 1.6, under: 1.07, overheadMs: 2.8, sharpK: 1 };   // (sharpK: sharp direct's part × this — the same Mac's sweep of 10-25 priced it at 4.9 of 15.5 ms at High ×0.5, well over presetCost's share: the fog pass, the g-buffer and the composite at the output size ride with it; 1 = the model's own, as every machine here before SHARP SHED ran)
@@ -51,7 +54,7 @@ function mkEngine(w: Win, settings: Record<string, any>) {
   G.window.devicePixelRatio = w.dpr;
   const E: any = { settings: { ...defaults(), ...settings }, rc: { cfg: { ...defaultRcConfig } }, rebuildRc(cfg: any) { this.rc.cfg = cfg; }, gpu: { canvas: { clientHeight: w.cssH, clientWidth: w.cssW } },
     get capScale() { return Math.min(1, this.settings.maxInternalHeight / (w.cssH * w.dpr)); }, get effectiveScale() { return this.capScale * Math.min(1, this.settings.renderScale); },
-    timer: { enabled: true, results: new Map<string, number>(), total() { return 0; }, unionMs() { return 0; } } };
+    timer: { enabled: true, results: new Map<string, number>(), total(excl: string[]) { let s = 0; for (const [n, v] of this.results) if (!excl.includes(n)) s += v; return s; }, unionMs() { return 0; } } };
   return E;
 }
 /** a Quality standing where a session stands once its boot is behind it: `preset` applied, calibration done, auto or pinned-with-adaptive, then the recording's own settings laid over */
@@ -184,24 +187,76 @@ function checkAsNow(d: PerfDump, name: string, hz?: number): boolean {
 // ---- reporting -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 const aimName = (a: number) => a === 0 ? 'as now' : a >= AIM_DISPLAY ? 'hold display' : `hold ${a}`;
 const pct = (x: number) => `${(100 * x).toFixed(0)} %`;
-function report(name: string, d: PerfDump, rs: Result[], md: boolean, timeline: boolean) {
+function report(name: string, d: PerfDump, rs: Result[], timeline: boolean) {
   const r0 = rs[0]; const w = r0.win;
   const head = `${name}: ${r0.secs.toFixed(0)} s, ${d.frames[0].preset}, window ${w.cssW}×${w.cssH} @${w.dpr} (${w.cssH * w.dpr} device rows), display taken as ${r0.hz} Hz, frame overhead past the GPU union ${r0.overhead.toFixed(1)} ms`;
   const recLine = `recorded: mean ${r0.recorded.meanFps.toFixed(1)} fps, worst second ${r0.recorded.worst1.toFixed(0)}, worst two seconds ${r0.recorded.worst2.toFixed(0)}; at or over 58 fps ${pct(r0.recorded.held(HOLD.cut * 60))} of the time, 87 fps ${pct(r0.recorded.held(HOLD.cut * 90))}, 116 fps ${pct(r0.recorded.held(HOLD.cut * 120))}`;
   const rows = rs.map(r => { const top = Object.entries(r.scaleShare).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([k, v]) => `${k} ${pct(v)}`).join(', ');
     return [aimName(r.aim), r.aim ? `${r.target} fps` : '(60 Hz budget)', r.meanFps.toFixed(1), r.aim ? pct(r.held) : `${pct(r.held)} (of 58)`, r.worst1.toFixed(0), r.worst2.toFixed(0), `${r.rowsMean.toFixed(0)} (${r.rowsMin.toFixed(0)}‥${r.rowsMax.toFixed(0)})`, Object.entries(r.presetShare).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${pct(v)}`).join(', '), top, String(r.moves.length)]; });
   const cols = ['aim', 'works to', 'mean fps', 'time at the aim', 'worst 1 s', 'worst 2 s', 'rows mean (min‥max)', 'preset', 'most of the time at', 'moves'];
-  if (md) { console.log(`\n**${head}**\n\n${recLine}\n\n| ${cols.join(' | ')} |\n|${cols.map(() => '---').join('|')}|`); for (const r of rows) console.log(`| ${r.join(' | ')} |`); }
-  else { console.log(`\n${head}\n  ${recLine}`); const wd = cols.map((c, i) => Math.max(c.length, ...rows.map(r => r[i].length))); console.log('  ' + cols.map((c, i) => c.padEnd(wd[i])).join('  ')); for (const r of rows) console.log('  ' + r.map((c, i) => c.padEnd(wd[i])).join('  ')); }
+  console.log(`\n${head}\n  ${recLine}`); const wd = cols.map((c, i) => Math.max(c.length, ...rows.map(r => r[i].length))); console.log('  ' + cols.map((c, i) => c.padEnd(wd[i])).join('  ')); for (const r of rows) console.log('  ' + r.map((c, i) => c.padEnd(wd[i])).join('  '));
   if (timeline) for (const r of rs) {
-    console.log(md ? `\n${aimName(r.aim)}, every 15 s: ` + '`' + r.timeline.map(x => `${x.t0}s ${x.fps.toFixed(0)}fps(min ${x.worst.toFixed(0)}) ${x.rows.toFixed(0)}r`).join(' · ') + '`' : `\n  ${aimName(r.aim)} — every 15 s: mean fps (worst second) · mean union · rows`);
-    if (!md) for (const x of r.timeline) console.log(`    ${String(x.t0).padStart(4)} s  ${x.fps.toFixed(0).padStart(4)} fps (${x.worst.toFixed(0).padStart(3)})  ∪ ${x.union.toFixed(1).padStart(5)} ms  ${x.rows.toFixed(0).padStart(5)} rows`);
-    console.log(md ? `\n${aimName(r.aim)} moves:\n` : `  ${aimName(r.aim)} — moves:`);
-    for (const m of r.moves) console.log(`${md ? '- ' : '    '}${m.t.toFixed(1).padStart(6)} s  ${m.state.preset} ×${m.state.scale.toFixed(2)} = ${m.rows.toFixed(0)} rows  ${m.text}`);
+    console.log(`\n  ${aimName(r.aim)} — every 15 s: mean fps (worst second) · mean union · rows`);
+    for (const x of r.timeline) console.log(`    ${String(x.t0).padStart(4)} s  ${x.fps.toFixed(0).padStart(4)} fps (${x.worst.toFixed(0).padStart(3)})  ∪ ${x.union.toFixed(1).padStart(5)} ms  ${x.rows.toFixed(0).padStart(5)} rows`);
+    console.log(`  ${aimName(r.aim)} — moves:`);
+    for (const m of r.moves) console.log(`    ${m.t.toFixed(1).padStart(6)} s  ${m.state.preset} ×${m.state.scale.toFixed(2)} = ${m.rows.toFixed(0)} rows  ${m.text}`);
   }
 }
 
-// ---- --selftest: synthetic machines ------------------------------------------------------------------------------------------------------------------------------------------------------------
+// ---- --plan: the cost table, and plan() on machines the cost model prices ---------------------------------------------------------------------------------------------------------------------------
+// Machines are `k` × the reference M4 Max per unit of work on a window. The absolute numbers are only as good as REF / FACTOR: the point is the decision logic and the ratios.
+interface Machine { name: string; k: number; cssW: number; cssH: number; dpr: number }
+/** effective scale (internal / CSS×dpr) the preset's cap gives machine m's window at render scale 1.0 (engine.ts capScale) */
+const capOf = (name: QualityName, m: Machine) => Math.min(1, PRESETS[name].maxH / (m.cssH * m.dpr));
+/** effective scale of preset `name` at render scale `scale` — the CURRENT semantics: relative to the cap */
+const effOf = (name: QualityName, scale: number, m: Machine) => capOf(name, m) * Math.min(1, scale);
+/** …and the semantics until 08-11: the scale multiplied the window and was then capped */
+const mpxOf = (eff: number, m: Machine) => (m.cssW * m.dpr * eff) * (m.cssH * m.dpr * eff) / 1e6;
+/** compute ms the model says preset `name` costs on machine m at effective scale `eff` (per-pixel part scaled from the reference pixel count + the fixed part, × k) */
+const msAtEff = (name: QualityName, eff: number, m: Machine) => m.k * (COST[name].pixel * mpxOf(eff, m) / REF.mpx + COST[name].fixed);
+const trueMs = (name: QualityName, scale: number, m: Machine) => msAtEff(name, effOf(name, scale, m), m);
+const fixedMsOf = (name: QualityName, m: Machine) => m.k * COST[name].fixed;
+const MACHINES: Machine[] = [
+  { name: 'M4 Max, reference window', k: 1, cssW: 1777, cssH: 1000, dpr: 1 },
+  { name: 'M4 Max, 1440×900 HiDPI panel', k: 1, cssW: 1440, cssH: 900, dpr: 2 },
+  { name: 'M-series Pro class (2.5×), 1512×982 @2', k: 2.5, cssW: 1512, cssH: 982, dpr: 2 },
+  { name: 'M1 / M2 base (4.5×), 1440×900 @2', k: 4.5, cssW: 1440, cssH: 900, dpr: 2 },
+  { name: 'M1 if it is 5.5×, 1440×900 @2', k: 5.5, cssW: 1440, cssH: 900, dpr: 2 },
+  { name: 'M1 base on a 1080p monitor (4.5×) @1', k: 4.5, cssW: 1920, cssH: 1080, dpr: 1 },
+  { name: 'iGPU (8×), 1920×1080 @1', k: 8, cssW: 1920, cssH: 1080, dpr: 1 },
+  { name: 'iGPU (12×), 1366×768 @1', k: 12, cssW: 1366, cssH: 768, dpr: 1 },
+];
+const f1 = (v: number) => v.toFixed(1).padStart(5), f2 = (v: number) => v.toFixed(2);
+/** what the boot's calibration picks on machine m, measuring at 'high' at its own start */
+function pickOf(m: Machine, budget = PLAN_BUDGET_MS) { const gpu = trueMs('high', PRESETS.high.scale, m), fixed = fixedMsOf('high', m); return { gpu, fixed, pick: plan(gpu, fixed, 'high', effOf('high', PRESETS.high.scale, m), m.cssH, m.dpr, budget) }; }
+function printPlan(budget: number, own: Machine[]) {
+  console.log(`Cost model (src/ui/quality.ts COST): modelled compute ms on the reference M4 Max at ${REF.mpx} Mpx internal, per preset — per-pixel passes | fixed part | ratios plan() uses`);
+  console.log(`  preset    direct softbl gather tempor volume bloom | cascad probe |  pixel (rel)   fixed (rel)   what it switches`);
+  for (const n of QUALITY_NAMES) {
+    const c = COST[n], P = c.passes, p = PRESETS[n], L = p.lossy;
+    const sw = [`${p.restir.rays} rays`, `maxH ${p.maxH}`, `scale ${p.scale}`, ...(['gatherThird', 'rcHalfRate', 'volQuarter'] as const).filter(k => L[k])].join(', ');
+    console.log(`  ${n.padEnd(8)} ${f1(P.direct)}  ${f1(P.softblur)}  ${f1(P.gather)}  ${f1(P.temporal)}  ${f1(P.volumetrics)} ${f1(P.bloom)} | ${f1(P.rc)}  ${f1(P.probe)} | ${f1(c.pixel)} (${f2(c.pixel / COST.high.pixel)})  ${f1(c.fixed)} (${f2(c.fixed / COST.high.fixed)})   ${sw}`);
+  }
+  console.log(`\nCalibration on a first visit (measuring at 'high' at its own start), budget ${budget} ms of compute: floor ${SCALE_FLOOR} of the cap, ${SCALE_STEP} grid; model = what the cost model says the pick costs at the rows it renders`);
+  for (const m of [...MACHINES, ...own]) { const { gpu, fixed, pick: r } = pickOf(m, budget), e = effOf(r.preset, r.scale, m); console.log(`  ${m.name.padEnd(44)} ${f1(gpu)} ms (fixed ${f1(fixed)}) ×${f2(effOf('high', PRESETS.high.scale, m))} → ${r.preset.padEnd(7)} ×${f2(r.scale)} (${Math.floor(m.cssH * m.dpr * e)} rows)  model ${f1(trueMs(r.preset, r.scale, m))} ms  ${r.note}`); }
+}
+
+// ---- the machine the boot's and as-now's checks run on -------------------------------------------------------------------------------------------------------------------------------------------
+const W2: Win = { cssW: 1440, cssH: 900, dpr: 2 };
+/** a stub engine and a real Quality on a machine `k`× the reference on 1440×900 @2. `aim` = settings.ladderAim, null = the page's default. E.tick refreshes the timer for this frame: what the cost model says the current preset costs at the effective scale, its per-pixel part + its fixed part, × k */
+function machine(k: number, aim: number | null = null) {
+  const E = mkEngine(W2, aim === null ? {} : { ladderAim: aim }), q: any = new Quality(E as never, { params: { rbIters: 4 } } as never);
+  E.tick = () => { const name = q.current as QualityName, eff = E.effectiveScale, mpx = (W2.cssW * W2.dpr * eff) * (W2.cssH * W2.dpr * eff) / 1e6, R = E.timer.results; R.clear(); R.set('direct', k * COST[name].pixel * mpx / REF.mpx); R.set('rc c0', k * COST[name].fixed * 0.9); R.set('probe', k * COST[name].fixed * 0.1); R.set('composite', 16); };   // (a render pass, excluded from the total like the real ones)
+  return { E, q };
+}
+/** calibration done, the tier on, nothing else: pinned high with adaptive resolution on */
+const calibrated = (q: any) => { q.calib = { ...q.calib, done: true }; };
+const pinnedHigh = (aim: number | null = null) => { store.clear(); const x = machine(1, aim); x.q.auto = false; x.q.apply('high'); x.q.adaptive = true; calibrated(x.q); return x; };
+  const pump = (E: any, q: any, frames: number) => { let decided = 0; for (let i = 0; i < frames; i++) { E.tick(); const was = q.calibrating; if (q.calibrating) q.calibrateTick(1 / 60); if (was && !q.calibrating) decided++; } return decided; };
+/** the reference machine after its first calibration, then `preset` put on, under auto: the as-now ladder */
+const settledOn = (preset: QualityName) => { store.clear(); const x = machine(1, 0); pump(x.E, x.q, 100); x.q.apply(preset); calibrated(x.q); return x; };
+
+// ---- the checks: synthetic machines ----------------------------------------------------------------------------------------------------------------------------------------------------------------
 function selftest(): boolean {
   let fails = 0; const check = (ok: boolean, what: string) => { console.log(`  ${ok ? 'PASS' : 'FAIL'} — ${what}`); if (!ok) fails++; };
   const w: Win = { cssW: 1456, cssH: 873, dpr: 2 }; const S0 = { sharpDirect: true, taau: true, oneCacheGrid: true };   // (the synthetic machines run the page as it opens: one cache grid, as the ladder's own cost table prices it)
@@ -224,15 +279,18 @@ function selftest(): boolean {
   const sc = (x: { E: any }) => x.E.settings.renderScale as number; const words = (m: string[]) => m.map(x => x.split(' (')[0].replace(/^[\d.]+ s /, '')).join(' | ') || 'none';
 
   console.log('\nThe bands each aim puts the ladder on:');
-  { const b0 = ladderBands(0), b60 = ladderBands(60, 120), b90 = ladderBands(90, 120), b120 = ladderBands(120, 120), bd = ladderBands(AIM_DISPLAY, 144), b12060 = ladderBands(120, 60);
-    check(b0.cutFps === LADDER.cutFps && b0.aimFps === LADDER.aimFps && b0.restoreFps === LADDER.restoreFps && b0.starvedFps === LADDER.starvedFps && b0.cruisingFps === LADDER.cruisingFps && b0.backoffFps === CLIMB.backoffFps && b0.budget === 1000 / CLIMB.budgetFps && b0.planBudget === PLAN_BUDGET_MS && b0.gpuFloor === LADDER.cutGpuFrac * (1000 / LADDER.aimFps) && !b0.hold, `as now = the literal LADDER / CLIMB numbers: cut < ${b0.cutFps}, aim ${b0.aimFps}, restore > ${b0.restoreFps}, cruising ${b0.cruisingFps}, back-off ${b0.backoffFps} fps, budget ${b0.budget.toFixed(2)} ms, plan ${b0.planBudget} ms`);
+  { const b0 = ladderBands(0), b60 = ladderBands(60, 120), b90 = ladderBands(90, 120), b120 = ladderBands(120, 120), bd = ladderBands(AIM_DISPLAY, 144);
+    check(b0.cutFps === 45 && b0.aimFps === 50 && b0.restoreFps === 58 && b0.starvedFps === 40 && b0.cruisingFps === 57 && b0.backoffFps === 55 && b0.budget === 1000 / 60 && b0.planBudget === 15 && b0.gpuFloor === 11 && !b0.hold, `as now: cut < ${b0.cutFps}, aim ${b0.aimFps}, restore > ${b0.restoreFps}, cruising ${b0.cruisingFps}, back-off ${b0.backoffFps} fps, budget ${b0.budget.toFixed(2)} ms, plan ${b0.planBudget} ms`);
     check(Math.abs(b60.budget - b0.budget) < 1e-9 && Math.abs(b60.planBudget - PLAN_BUDGET_MS) < 1e-9 && b60.cruisingFps > b60.cutFps && b60.cruisingFps < 60, `hold 60 climbs on today's bands: budget ${b60.budget.toFixed(2)} ms (headroom ${(CLIMB.headroom * b60.budget).toFixed(2)}, back-off ${(CLIMB.backoff * b60.budget).toFixed(2)}), hop / plan ${b60.planBudget.toFixed(2)} ms, cruising ${b60.cruisingFps.toFixed(1)} fps; but cuts under ${b60.cutFps.toFixed(1)} fps (as now: ${b0.cutFps})`);
-    for (const [n, b] of [['hold 90', b90], ['hold 120', b120]] as const) console.log(`  ${n}: GPU union budget ${b.planBudget.toFixed(2)} ms (climb under ${(CLIMB.headroom * b.budget).toFixed(2)}, step off over ${(CLIMB.backoff * b.budget).toFixed(2)}), cuts under ${b.cutFps.toFixed(1)} fps, cuts aim for ${b.aimFps.toFixed(1)}`);
-    check(b12060.target === 60 && Math.abs(b12060.budget - b60.budget) < 1e-9, `hold 120 on a display seen at 60 Hz = hold 60 (target ${b12060.target})`);
     check(bd.target === 144 && ladderBands(AIM_DISPLAY, 0).target === 60 && ladderBands(120, 0).target === 60, `hold display = the rate seen (144 on a 144 Hz display); until the first frames have said, every aim is 60`);
     check(ladderBands(60, 29).target === 60 && ladderBands(120, 29).target === 60 && ladderBands(AIM_DISPLAY, 40).target === 60 && ladderBands(120, 90).target === 90, `a rate seen under 60 never lowers an aim (a slow machine's own frame rate is not its display): hold 60 seen at 29 = ${ladderBands(60, 29).target}, hold 120 seen at 29 = ${ladderBands(120, 29).target}, seen at 90 = ${ladderBands(120, 90).target}`);
     check(displayRateOf(Array.from({ length: 60 }, (_, i) => [16, 17, 17][i % 3])) === 60 && displayRateOf(Array.from({ length: 60 }, (_, i) => i % 20 === 0 ? 25 : i % 20 === 1 ? 8.4 : 16.67)) === 60 && displayRateOf(Array.from({ length: 60 }, (_, i) => i > 20 && i < 32 ? 8.33 : 14)) === 120, `the display's rate off frame times: 16/17/17 ms timestamps read 60, one short catch-up frame after a long one does not read 120, a second of 8.33 ms frames does`);
     check(ladderAimOf('asnow') === 0 && ladderAimOf('0') === 0 && ladderAimOf('60') === 60 && ladderAimOf('90') === 90 && ladderAimOf('120') === 120 && ladderAimOf('display') === AIM_DISPLAY && ladderAimOf('75') === null && ladderAimOf('') === null, `?aim= words: asnow (or 0) 0 · 60 · 90 · 120 · display ${AIM_DISPLAY} · anything else refused`);
+    // THE PAGE'S DEFAULT is hold 60 (the maintainer's pick of 10-10): what the climb, the cut and the hop work to on a stub with no word of its own
+    { const { E, q } = machine(1); check(E.settings.ladderAim === 60 && q.aimState.hold && q.aimState.target === 60, `the default holds 60: settings.ladderAim ${E.settings.ladderAim}, the ladder's target ${q.aimState.target}`); }
+    // what the boot's plan picks: the reference machine high at its own start, an M1 / M2 base at the floor, and a pick's scale on the grid or its tier's own start
+    { const picks = MACHINES.map(m => pickOf(m).pick), r = (p: { preset: string; scale: number }) => `${p.preset} ×${p.scale.toFixed(2)}`, onGrid = (p: { preset: QualityName; scale: number }) => Math.abs(p.scale / SCALE_STEP - Math.round(p.scale / SCALE_STEP)) < 1e-6 || Math.abs(p.scale - PRESETS[p.preset].scale) < 1e-6;
+      check(r(picks[0]) === 'high ×0.77' && r(picks[3]) === 'verylow ×0.50' && picks.every(onGrid), `plan() at ${PLAN_BUDGET_MS} ms: ${MACHINES.map((m, i) => `${m.name} ${r(picks[i])}`).join(' · ')}`); }
   }
 
   console.log('\nA GPU-bound machine on a 120 Hz variable-rate display (frame = union + 2.8 ms), pinned high with adaptive resolution:');
@@ -243,7 +301,7 @@ function selftest(): boolean {
     const fightA = ra.fps.slice(26, 78), fightH = rh.fps.slice(26, 78); const cutAt = rh.moves.find(m => /hold 60 ↓/.test(m));
     check(minOf(fightA) > 45 && minOf(fightA) < 56 && !ra.moves.some(m => /adaptive ↓/.test(m)), `as now: the fight runs at ${minOf(fightA).toFixed(0)}‥${Math.max(...fightA).toFixed(0)} fps and nothing below the tier's start is cut (over 45 fps is fine by it); moves: ${ra.moves.map(m => m.split(' (')[0]).join(' | ') || 'none'}`);
     check(!!cutAt && parseFloat(cutAt) < 24.5 && minOf(fightH) >= HOLD.cut * 60 - 0.5, `hold 60: cut within ${cutAt ? (parseFloat(cutAt) - 20).toFixed(1) : '?'} s of the fight starting, then ${minOf(fightH).toFixed(0)}‥${Math.max(...fightH).toFixed(0)} fps to its end at ×${h.E.settings.renderScale.toFixed(2)} — ${rh.moves.map(m => m.split(' (')[0]).join(' | ')}`);
-    const n0 = rh.moves.length; const rh2 = run(h.q, h.E, 120, 120, load, { t0: 80 });
+    const rh2 = run(h.q, h.E, 120, 120, load, { t0: 80 });
     check(h.E.settings.renderScale >= PRESETS.high.scale - 1e-6 && minOf(rh2.fps.slice(4)) >= HOLD.cut * 60 - 0.5, `the fight over: the pixels come back on measured headroom — ×${h.E.settings.renderScale.toFixed(2)} after two minutes, never under ${minOf(rh2.fps.slice(4)).toFixed(0)} fps on the way (${rh2.moves.length} moves: ${rh2.moves.map(m => m.split(' (')[0]).join(' | ')})`);
     // NOTHING ADAPTS (`?adapt=0`, ui/quality.ts visit: what two benchmark runs need to be held against each other), through a fight that takes high to 25 ms of
     // union (36 fps), under hold 60 and as now. With a tier named (`?quality=high&adapt=0`) nothing moves the picture's size or its tier. With NONE named the
@@ -276,7 +334,6 @@ function selftest(): boolean {
           `a browser that never ran auto is held on high (the tier nobody measured, which the benchmark's card says); a tier named on the address is the one held whatever is remembered; a tier pinned from the menu is held as it is`);
         check(plain.q.auto && plain.q.adaptive && plain.q.calibrating && plain.q.climbAllowed && plain.q.current === 'medium' && Math.abs(sc(plain) - 0.6) < 1e-9 && !plain.wrote, 'and an address without the word opens as it always did: auto, calibrating, at the size it remembered'); }
       store.clear(); }
-    void n0;
     // (2) steady load: no oscillation
     const s = mk(60, 120); const rs = run(s.q, s.E, 300, 120, () => at(15.5)); const late = rs.moves.filter(m => parseFloat(m) > 30);
     check(minOf(rs.fps.slice(8)) >= HOLD.cut * 60 - 0.5 && late.length <= 6, `steady load (15.5 ms at the tier's start) for five minutes: settles at ×${s.E.settings.renderScale.toFixed(2)}, ${minOf(rs.fps.slice(8)).toFixed(0)}‥${Math.max(...rs.fps.slice(8)).toFixed(0)} fps, ${late.length} moves after the first 30 s (${late.map(m => m.split(' (')[0]).join(' | ') || 'none'})`);
@@ -294,8 +351,6 @@ function selftest(): boolean {
     check(h.E.settings.renderScale >= PRESETS.high.scale - 1e-6 && !r.moves.some(m => /↓/.test(m)), `hold 120 on a 60 Hz display with 9 ms of GPU work: no cut (×${h.E.settings.renderScale.toFixed(2)}; it holds 60 — ${r.moves.map(m => m.split(' (')[0]).join(' | ') || 'no moves'})`);
     const p = mk(60, 60); const rp = run(p.q, p.E, 30, 60, () => at(5), { paceMs: 33.3 });
     check(p.E.settings.renderScale >= PRESETS.high.scale - 1e-6 && rp.moves.some(m => /frame pacing/.test(m)), `hold 60, a page paced to 30 fps with the GPU 5 ms busy: resolution left alone (×${p.E.settings.renderScale.toFixed(2)}) — “${rp.moves.find(m => /pacing/.test(m))?.replace(/^\S+ s /, '')}”`);
-    const v = mk(60, 60); const rv = run(v.q, v.E, 40, 60, () => at(16), { vrr: false });
-    check(v.E.settings.renderScale < PRESETS.high.scale - 1e-6 && minOf(rv.fps.slice(10)) >= 59, `hold 60 on a fixed 60 Hz display missing its vsync (16 ms of GPU work shows as 30‥45 fps): that IS load — cut to ×${v.E.settings.renderScale.toFixed(2)}, ${minOf(rv.fps.slice(10)).toFixed(0)} fps from 10 s on`);
     const b = mk(60, 120); const rb = run(b.q, b.E, 60, 120, () => at(17), { timed: false });
     check(b.E.settings.renderScale < PRESETS.high.scale - 1e-6 && minOf(rb.fps.slice(17)) >= HOLD.cut * 60 - 0.5 && rb.moves.length <= 3, `hold 60 with no GPU timings: cuts on the rate alone, tries one step back blind, takes it off again and holds it off (×${b.E.settings.renderScale.toFixed(2)}, ${minOf(rb.fps.slice(17)).toFixed(0)} fps from 17 s on — ${rb.moves.map(m => m.split(' (')[0]).join(' | ')})`);
     // the display seen at 120 earlier, the window now on a 60 Hz one (nothing pinned: the page has to find out)
@@ -311,7 +366,7 @@ function selftest(): boolean {
   }
   console.log('\nAs now, on a page something else paces (settings.ladderPaced; the maintainer\'s Mac 10-10: 30 fps shown, ×0.57 then ×0.50, GPU union 8.9 ms):');
   { const mkP = (on: boolean, auto = true, scale?: number) => mkQuality(w, 'high', auto, scale === undefined ? { ladderClimb: true, ladderPaced: on } : { ladderClimb: true, ladderPaced: on, renderScale: scale }, 0, 120);
-    const words = (m: string[]) => m.map(x => x.split(' (')[0]).join(' | ') || 'none'; const sc = (x: { E: any }) => x.E.settings.renderScale as number;
+    const words = (m: string[]) => m.map(x => x.split(' (')[0]).join(' | ') || 'none';
     // (1) THE FAULT, with the check off: 30 fps by pacing, 12.6 ms of union at high's start → ×0.57 (= 0.77 − 0.20: the one scale the as-now cut reaches off the 0.05 grid), kept; a heavier spell → the floor and a preset down, kept
     const o = mkP(false); const ro = run(o.q, o.E, 40, 120, () => at(12.6), { paceMs: 33.33 }); const s1 = sc(o);
     const ro2 = run(o.q, o.E, 80, 120, t => at(t < 50 ? 16.5 : 12.6), { paceMs: 33.33, t0: 40 });
@@ -502,7 +557,6 @@ function selftest(): boolean {
     check(V.volQuarter === true && V.volSteps === 8 && V.volLightCap === 2 && PRESETS.verylow.caps.volStep === 2 && PRESETS.high.caps.volStep === 1.5 && V.volStepVoxels === smokeLookStep(2) && V.volStepVoxels > H.volStepVoxels, `verylow, the floor, keeps its own small rows: ${row(V)}`);
     { const T = costTable(true); check(Math.abs(T.medium.passes.volumetrics - T.high.passes.volumetrics) < 1e-9 && Math.abs(T.low.passes.volumetrics - T.high.passes.volumetrics) < 1e-9 && T.verylow.passes.volumetrics < T.low.passes.volumetrics && !('volFroxel' in T.high.passes),
       `the ladder prices the one march a pixel alike on high, medium and low (${T.high.passes.volumetrics.toFixed(2)} model-ms), less on verylow (${T.verylow.passes.volumetrics.toFixed(2)}), and no froxel term is left in any rung's fixed part`); }
-    check([H, V, ...under.map(n => put(n).S)].every(S => S.volLightCap >= 1), 'every rung has a light cap: the march has no path without one');
     { const x = put('medium'); x.q.lastCut = { from: 0.7 }; x.q.upTrial = { from: 0.55 }; x.q.apply('low'); check(x.q.lastCut === null && x.q.upTrial === null, 'a preset put on still clears the judged cut and the judged step up'); }
   }
   console.log('\nAuto lets sharp direct go before it shrinks the picture (settings.ladderShed; the maintainer\'s pick of 10-25. His Mac\'s sweep priced sharp direct at 4.9 of 15.5 ms at High ×0.5, and the machine below is priced so):');
@@ -564,7 +618,6 @@ function selftest(): boolean {
       const same = (name: string, mk: (on: boolean) => { q: any; E: any }, k: (t: number) => number, secs = 120, want = (m: string[]) => m.some(x => /↓/.test(x))) => { const a = mk(true), z = mk(false); const ra = watch(a, secs, k), rz = watch(z, secs, k); check(JSON.stringify(ra.moves) === JSON.stringify(rz.moves) && !ra.moves.some(m => /shed/.test(m)) && want(ra.moves) && sharpOn(a) === sharpOn(z), `${name}: the same ${steps(ra.moves).length} moves with the switch on and off, sharp direct ${sharpOn(a) ? 'on' : 'off'}`); };
       same('a preset pinned by hand (High, adaptive resolution) through that fight', on => mkS(on, { auto: false }), fight);
       same('a machine with room (8 ms: it climbs)', on => mkS(on), () => A(8), 120, m => m.some(x => /climb ↑/.test(x)));
-      sharpForce.v = false; try { same('?nosharp (sharp direct forced off for the visit)', on => { const x = mkS(on); x.q.apply('high'); x.q.cooldown = 0; x.q.lastChange = ''; return x; }, fight); } finally { sharpForce.v = null; }
       sharpForce.v = true; try { same('?sharp (forced on)', on => { const x = mkS(on); x.q.apply('high'); x.q.cooldown = 0; x.q.lastChange = ''; return x; }, fight); } finally { sharpForce.v = null; }
       { const a = mkS(true), z = mkS(false); delete a.E.settings.ladderShed; const ra = watch(a, 120, fight), rz = watch(z, 120, fight); check(JSON.stringify(ra.moves) === JSON.stringify(rz.moves), 'a settings object with no such key (a tool\'s mock) = the ladder as it was'); }
       // (10) the shed ends with the switch, a pin, a new auto spell
@@ -592,29 +645,223 @@ function selftest(): boolean {
     { const o = mkS(false), n = mkS(ON); watch(o, 300, () => at(14.5)); const rn = watch(n, 300, () => at(14.5));
       check(sc(o) < PRESETS.high.scale - 0.04 && sharpOn(o) && Math.abs(sc(n) - PRESETS.high.scale) < 1e-6 && !sharpOn(n) && steps(rn.moves).length === 1 && minOf(rn.fps.slice(5)) >= HOLD.cut * 60 - 0.5, `on the cost model's own machine, a steady 14.5 ms: ×${sc(n).toFixed(2)} without sharp direct for five minutes in one move, ${minOf(rn.fps.slice(5)).toFixed(0)} fps and up (the switch off: ×${sc(o).toFixed(2)} with it)`); }
   }
-  if (fails) console.log(`\n${fails} check(s) FAILED`); else console.log('\n=== ladder-replay selftest: ALL PASS ===');
+
+  console.log(`\n'auto' chosen after boot (the real Quality over a stub engine with timers; a 4.5× machine on 1440×900 @2):`);
+  // (A) boots pinned low, 'auto' on the pause card
+  {
+    store.clear(); store.set('twopointsix.quality', 'low');
+    const { E, q } = machine(4.5); let fired = 0; q.onCalibrated = () => { fired++; };
+    check(!q.auto && q.current === 'low' && !q.calibrating, `pinned boot: auto ${q.auto}, at ${q.current}, calibrating ${q.calibrating} (want false / low / false)`);
+    const idle = pump(E, q, 120); check(idle === 0 && !q.calibrating, `two seconds pinned: no calibration runs (${idle} decisions)`);
+    q.setAuto(); const startedAt = q.current; const note0 = q.lastChange;
+    check(q.auto && q.calibrating && /calibrating/.test(note0), `setAuto → auto ${q.auto}, calibrating ${q.calibrating}, note “${note0}”`);
+    const d1 = pump(E, q, 100); const settled = `${q.current} ×${E.settings.renderScale.toFixed(2)}`;
+    check(d1 === 1 && !q.calibrating && /^calibrated/.test(q.lastChange) && fired === 1, `~1.3 s behind the card: decided ${d1}× (started at ${startedAt}, settled ${settled}), onCalibrated fired ${fired}×, note “${q.lastChange}”`);
+    const d2 = pump(E, q, 300); check(d2 === 0 && `${q.current} ×${E.settings.renderScale.toFixed(2)}` === settled, `then quiet: ${d2} more decisions over 5 s, still ${q.current} ×${E.settings.renderScale.toFixed(2)}`);
+    check(store.get('twopointsix.quality') === 'auto' && store.get('twopointsix.autoPreset') === q.current && Math.abs(Number(store.get('twopointsix.autoScaleRel')) - E.settings.renderScale) < 1e-6, `remembered: mode ${store.get('twopointsix.quality')}, autoPreset ${store.get('twopointsix.autoPreset')}, autoScaleRel ${store.get('twopointsix.autoScaleRel')}`);
+  }
+  // (B) auto boot on the same slow machine → settles; pin high; 'auto' again → starts from the settled pick, not high ×1.0, and re-measures once
+  {
+    store.clear();
+    const { E, q } = machine(4.5);
+    check(q.auto && q.calibrating && q.current === 'high', `first visit: auto, calibrating from ${q.current}`);
+    const d0 = pump(E, q, 100); const first = { preset: q.current, scale: E.settings.renderScale };
+    check(d0 === 1 && AUTO_LADDER.indexOf(first.preset as QualityName) < AUTO_LADDER.indexOf('high'), `boot calibration: decided ${d0}× → ${first.preset} ×${first.scale.toFixed(2)} (“${q.lastChange}”)`);
+    q.pin('high'); const dPinned = pump(E, q, 120);
+    check(!q.auto && q.current === 'high' && dPinned === 0, `pin high: auto ${q.auto}, ${q.current}, ${dPinned} decisions while pinned`);
+    q.setAuto();
+    check(q.current === first.preset && Math.abs(E.settings.renderScale - first.scale) < 1e-6 && q.calibrating, `setAuto: starts at ${q.current} ×${E.settings.renderScale.toFixed(2)} = what auto settled on here (not high ×1.00), calibrating ${q.calibrating} (“${q.lastChange}”)`);
+    const d3 = pump(E, q, 100);
+    check(d3 === 1 && !q.calibrating && q.current === first.preset && Math.abs(E.settings.renderScale - first.scale) < 0.02, `re-measured once behind the card: ${q.current} ×${E.settings.renderScale.toFixed(2)} — the same answer from the same machine, no crawl (“${q.lastChange}”)`);
+  }
+  // (C) a fast machine settles at high's own start on its first visit (high ×0.77 since TAAU: 0.59× the pixels puts the reference M4 Max back under the 15 ms budget at high; medium ×1.0 before), and auto chosen again from another tier settles there once more
+  {
+    store.clear();
+    const { E, q } = machine(1);
+    pump(E, q, 100); const settledAt = q.current as QualityName;
+    q.auto = false; q.apply('medium'); q.setAuto(); const from = q.current, cal = q.calibrating;
+    const dd = pump(E, q, 100); check(settledAt === 'high' && from === settledAt && cal && dd === 1 && q.current === settledAt && Math.abs(E.settings.renderScale - PRESETS[settledAt].scale) < 1e-6, `setAuto on the fast machine: from its remembered ${from}, calibrating ${cal}, settles once: ${q.current} ×${E.settings.renderScale.toFixed(2)} (${settledAt} at its own starting scale ×${PRESETS[settledAt].scale})`);
+  }
+  // (D1) STANDS IN: while a program asked for through the later lane is still compiling (gpu/device.ts laterProgress) the ladder takes no step and judges none — for at most STANDS_IN.maxSecs
+  {
+    const BREAK = process.env.LADDERHOLD_BREAK === '1';   // (LADDERHOLD_BREAK=1: the count is never raised — must FAIL)
+    const slow = (q: any, secs: number) => { for (let i = 0; i < secs * 40; i++) q.sample(1 / 40); };
+    { const { E, q } = pinnedHigh(); const sc0 = E.settings.renderScale, note0 = q.lastChange, clock0 = q.clock;
+      if (!BREAK) laterProgress.pending = 2;
+      slow(q, 8);
+      check(E.settings.renderScale === sc0 && q.lastChange === note0 && q.clock === clock0 && Math.abs(q.standsInFor - 8) < 0.1, `a program still compiling: eight seconds of 40 fps frames and the ladder has not moved (scale ${sc0.toFixed(2)} → ${E.settings.renderScale.toFixed(2)}, its clock ${(q.clock - clock0).toFixed(1)} s on, waited ${q.standsInFor.toFixed(1)} s)`);
+      laterProgress.pending = 0; slow(q, 8);
+      check(E.settings.renderScale < sc0 - 0.04 && q.standsInFor === 0, `it is in: the same frames are judged and the ladder cuts (${sc0.toFixed(2)} → ${E.settings.renderScale.toFixed(2)}, “${q.lastChange}”)`); }
+    { const { E, q } = pinnedHigh(); const sc0 = E.settings.renderScale;
+      if (!BREAK) laterProgress.pending = 1;
+      slow(q, STANDS_IN.maxSecs - 1); const held = E.settings.renderScale === sc0; slow(q, 9);
+      check(held && E.settings.renderScale < sc0 - 0.04, `one that never arrives: held a second short of ${STANDS_IN.maxSecs} s (${held}), and past it the ladder runs again (${sc0.toFixed(2)} → ${E.settings.renderScale.toFixed(2)})`);
+      laterProgress.pending = 0; }
+    // … and the boot's own measure waits the same way and no longer (calibrateTick): a later set that takes a minute must not leave a slow machine a minute with no quality step
+    { store.clear(); const { E, q } = machine(4.5); if (!q.auto) q.setAuto();
+      if (!BREAK) laterProgress.pending = 3;
+      const d0 = pump(E, q, 10 * 60), waiting = q.calibrating && !q.measuring;
+      const d1 = pump(E, q, (STANDS_IN.maxSecs - 11) * 60), still = q.calibrating;
+      const d2 = pump(E, q, 4 * 60);
+      check(d0 === 0 && waiting && d1 === 0 && still && d2 === 1 && !q.calibrating && q.early === true, `the boot's measure with programs still compiling: ten seconds in it waits and reads no frame (${d0} decided, waiting ${waiting}), a second short of ${STANDS_IN.maxSecs} s still (${d1}, ${still}), and past it the picture as it is is measured once and marked early (${d2}, early ${q.early}; “${q.lastChange}”)`);
+      q.remeasure(); const heldOn = !q.calibrating && q.early === true;   // (still out: nothing to measure again yet)
+      laterProgress.pending = 0; q.remeasure(); const again = q.calibrating && q.early === false, d3 = pump(E, q, 3 * 60); q.remeasure();
+      check(heldOn && again && d3 === 1 && !q.calibrating, `…and when the programs are in the page measures once more, on the settings' own picture, and only once (asked while still out: nothing ${heldOn}; in: calibrating ${again}, decided ${d3}×)`); }
+    { store.clear(); const { E, q } = machine(4.5); if (!q.auto) q.setAuto();
+      if (!BREAK) laterProgress.pending = 3;
+      let stalled = 0; for (let i = 0; i < STANDS_IN.maxSecs + 2; i++) { E.tick(); q.calibrateTick(1.0); if (!q.calibrating) stalled++; }   // (a compile that stalls every frame a whole second: those frames measure nothing, and still count to the wait)
+      const out = q.measuring === true && q.early === true;
+      check(stalled === 0 && out, `frames a compile stalls for a second each still run the wait out (${STANDS_IN.maxSecs + 2} of them: measuring ${q.measuring}, early ${q.early}), and none of them is read (${stalled})`);
+      laterProgress.pending = 0; }
+    { store.clear(); const { E, q } = machine(4.5); if (!q.auto) q.setAuto();
+      if (!BREAK) laterProgress.pending = 3;
+      const d0 = pump(E, q, 5 * 60); laterProgress.pending = 0; const d1 = pump(E, q, 2 * 60);
+      check(d0 === 0 && d1 === 1 && q.standsInFor === 0 && q.measuring === false, `they land five seconds in: the measure is taken then, on the settings' own picture (${d0} then ${d1})`); }
+  }
+  // (D), (E): the as-now ladder (?aim=asnow), the rules it keeps: cut under 45, restore over 58, starve by the union's floor. Hold 60's own rules are the blocks above
+  // (D) the runtime ladder must actually CUT when frames are slow — and every cut must be a real cut in pixels (08-10 field dumps: eff sat pinned at the cap for
+  //     whole sessions at 33–54 fps while lastChange announced 'adaptive ↓ scale 1.00' — a trailing comment had swallowed the renderScale assignment; and before
+  //     08-11 the top of the scale's travel was dead under a HiDPI cap anyway). Also: steps ≥ SCALE_STEP, on the grid, never closer than LADDER.stepCooldown,
+  //     never under the floor; and pixels come back when it is fast again.
+  {
+    const { E, q } = pinnedHigh(0);
+    const eff0 = E.effectiveScale, rows0 = Math.floor(1800 * eff0);   // high's 1000-row cap on 900 CSS × 2 = eff 0.556 at render scale 1.0
+    const steps: { t: number; scale: number; eff: number }[] = []; let t = 0, lastScale = E.settings.renderScale;
+    const run = (secs: number, dt: number) => { for (let i = 0; i < Math.round(secs / dt); i++) { t += dt; q.sample(dt); if (E.settings.renderScale !== lastScale) { steps.push({ t, scale: E.settings.renderScale, eff: E.effectiveScale }); lastScale = E.settings.renderScale; } } };
+    run(8, 1 / 40);                                                 // eight seconds of 40 fps frames
+    const cuts = steps.length;
+    check(E.settings.renderScale < 1 - 1e-3 && E.effectiveScale < eff0 - 0.01 && /adaptive ↓ scale 0\./.test(q.lastChange), `slow frames: the ladder really cuts, in pixels (render scale 1.00 → ${E.settings.renderScale.toFixed(2)}; ${rows0} → ${Math.floor(1800 * E.effectiveScale)} rows; “${q.lastChange}”)`);
+    const gaps = steps.slice(1).map((s, i) => s.t - steps[i].t), sizes = steps.map((s, i) => Math.abs(s.scale - (i ? steps[i - 1].scale : 1)));
+    const onGrid = steps.every(s => Math.abs(s.scale / SCALE_STEP - Math.round(s.scale / SCALE_STEP)) < 1e-6);
+    check(cuts >= 1 && gaps.every(g => g >= LADDER.stepCooldown - 1e-6) && sizes.every(z => z >= SCALE_STEP - 1e-6) && onGrid && steps.every(s => s.scale >= SCALE_FLOOR - 1e-6),
+      `${cuts} cut(s) at t = ${steps.map(s => s.t.toFixed(1)).join(' / ')} s → scales ${steps.map(s => s.scale.toFixed(2)).join(' / ')}: gaps ≥ ${LADDER.stepCooldown} s (${gaps.map(g => g.toFixed(1)).join(', ') || '—'}), steps ≥ ${SCALE_STEP}, on the grid, ≥ floor ${SCALE_FLOOR}`);
+    const cut = E.settings.renderScale; const nCut = steps.length;
+    run(12, 1 / 70);                                                // then twelve seconds comfortably fast: it gives pixels back, up to the preset's own scale
+    const ups = steps.slice(nCut); const upGaps = ups.slice(1).map((s, i) => s.t - ups[i].t);
+    check(E.settings.renderScale > cut + 0.01 && upGaps.every(g => g >= LADDER.stepCooldown - 1e-6) && ups.every(s => Math.abs(s.scale / SCALE_STEP - Math.round(s.scale / SCALE_STEP)) < 1e-6), `fast again: pixels come back (${cut.toFixed(2)} → ${E.settings.renderScale.toFixed(2)} in ${ups.length} step(s), gaps ${upGaps.map(g => g.toFixed(1)).join(', ') || '—'} s)`);
+    run(30, 1 / 40);                                                // and a long starve pinned at high (auto off): down to the floor and no further
+    check(Math.abs(E.settings.renderScale - SCALE_FLOOR) < 1e-6, `a 30 s starve pinned at high stops at the floor: render scale ${E.settings.renderScale.toFixed(2)} = ${Math.floor(1800 * E.effectiveScale)} rows (floor ${SCALE_FLOOR} of the ${rows0}-row cap)`);
+  }
+  // (E) THE HEADROOM-AWARE CLIMB (GI in motion, quality.ts CLIMB): pinned high, adaptive on, presented at 60 fps with the GPU union handed to sample(). With the union well
+  //     under 60 % of the 16.7-ms budget it must climb — scale first, 0.05 a rung, ≥ climbGap apart, never past 1.0, then the gather's divisor — and with the union over
+  //     80 % (or the frame rate under 55) it must undo the newest rung at once, hold that rung off for failSecs, and never oscillate; with no union at all it never acts;
+  //     under auto below the top of the ladder the PRESET goes up instead.
+  {
+    console.log(`\nThe headroom-aware climb (CLIMB: headroom ${CLIMB.headroom} / divisors ${CLIMB.divisorRoom} / back-off ${CLIMB.backoff} of a ${CLIMB.budgetFps}-fps budget, ${CLIMB.windows} windows, gap ${CLIMB.climbGap} s, fail hold ${CLIMB.failSecs} s):`);
+    const mk = () => pinnedHigh(0);
+    type Ev = { t: number; scale: number; g3: boolean; note: string };
+    /** CLOSED LOOP: the union re-derived every window from what is being RENDERED (presetCost of the live preset — scale, divisors, cap — × k, on the stub's 1440×900 @2 window), so a rung the
+     *  climb takes makes the next window dearer and a hop is priced against a union that moved; `k` = the machine (ms of union per modelled ms). fps fixed (the rate is not modelled here). */
+    const liveUnion = (q: any, E: any, k: number) => { const S = E.settings; const name = q.current as QualityName; const pc = PRESETS[name]; const live = { ...pc, lossy: { ...pc.lossy, gatherThird: !!S.gatherThird, volQuarter: !!S.volQuarter, rcHalfRate: !!S.rcHalfRate }, maxH: S.maxInternalHeight || pc.maxH, scale: S.renderScale }; const c = presetCost(live as any); const rows = Math.min(live.maxH, 900 * 2) * S.renderScale; const mpx = rows * rows * (1440 / 900) / 1e6; return k * (c.fixed + c.pixel * mpx / REF.mpx); };
+    const driveLive = (q: any, E: any, secs: number, fps: number, k: number, log: Ev[], t0: { t: number }) => { const dt = 1 / fps; let last = JSON.stringify([q.current, E.settings.renderScale, E.settings.gatherThird, E.settings.volQuarter]); for (let w = 0; w < secs; w++) { const u = liveUnion(q, E, k); for (let i = 0; i < fps; i++) { t0.t += dt; q.sample(dt, u); const now = JSON.stringify([q.current, E.settings.renderScale, E.settings.gatherThird, E.settings.volQuarter]); if (now !== last) { log.push({ t: t0.t, scale: E.settings.renderScale, g3: E.settings.gatherThird, note: `${q.lastChange} [∪ ${u.toFixed(1)}]` }); last = now; } } } };
+    const drive = (q: any, E: any, secs: number, fps: number, union: number, log: Ev[], t0: { t: number }) => { const dt = 1 / fps; let last = JSON.stringify([E.settings.renderScale, E.settings.gatherThird, E.settings.volQuarter, E.settings.maxInternalHeight]); for (let i = 0; i < Math.round(secs * fps); i++) { t0.t += dt; q.sample(dt, union); const now = JSON.stringify([E.settings.renderScale, E.settings.gatherThird, E.settings.volQuarter, E.settings.maxInternalHeight]); if (now !== last) { log.push({ t: t0.t, scale: E.settings.renderScale, g3: E.settings.gatherThird, note: q.lastChange }); last = now; } } };
+    // E1: climbs with headroom — the scale to its TOP (0.95 while sharp direct rides under TAAU: at 1.0 there is nothing to decouple and the resolve configuration would switch off), then the divisors
+    { const { E, q } = mk(); const log: Ev[] = []; const T = { t: 0 }; const s0 = E.settings.renderScale; const topWant = E.settings.sharpDirect && E.settings.taau !== false ? 0.95 : 1.0;
+      drive(q, E, 60, 60, 8.0, log, T);   // a minute at 60 fps with the GPU 8 ms busy of 16.7 (48 %)
+      const scaleRungs = log.filter(e => /climb ↑ scale/.test(e.note)); const gaps = log.slice(1).map((e, i) => e.t - log[i].t);
+      const orderOk = (() => { let sawGather = false; for (const e of log) { if (/gather/.test(e.note)) sawGather = true; else if (/climb ↑ scale/.test(e.note) && sawGather) return false; } return true; })();
+      check(scaleRungs.length >= 3 && Math.abs(E.settings.renderScale - topWant) < 1e-6 && log.every(e => e.scale <= topWant + 1e-9), `headroom (∪ 8 ms @ 60 fps): the scale climbs ${s0.toFixed(2)} → ${scaleRungs.map(e => e.scale.toFixed(2)).join(' → ')} and stops at ${topWant.toFixed(2)} (sharp direct ${E.settings.sharpDirect ? 'on: 1.0 would switch it off' : 'off'}), never above`);
+      check(gaps.every(g => g >= CLIMB.climbGap - 1e-6) && log[0].t >= CLIMB.windows - 1e-6, `≥ ${CLIMB.climbGap} s between climbs (gaps ${gaps.map(g => g.toFixed(1)).join(', ')}), the first only after ${CLIMB.windows} roomy windows (t = ${log[0].t.toFixed(1)} s)`);
+      check(!E.settings.gatherThird && orderOk && log.filter(e => /gather/.test(e.note)).length === 1, `then the divisors, in order: gather ⅓ → ½ once the scale is at its top (gatherThird ${E.settings.gatherThird}); no scale rung after a divisor rung; volQuarter untouched at high (${E.settings.volQuarter} — the preset never had it)`);
+      // E2: back-off on the GPU: the union jumps to 14 ms (84 %) → the newest rung (the gather) is undone within about a window, then a scale rung per window + cooldown; failed rungs are held
+      const nUp = log.length; drive(q, E, 1.6, 60, 14.0, log, T);
+      const firstUndo = log[nUp];
+      check(!!firstUndo && firstUndo.g3 === true && /undid gather/.test(firstUndo.note), `∪ 14 ms: the newest rung goes first and at once — “${firstUndo?.note}” at t = ${firstUndo?.t.toFixed(1)} s`);
+      drive(q, E, 12, 60, 14.0, log, T);
+      const downs = log.slice(nUp); const failedNow = q.climbState.failed as string[];
+      check(downs.length >= 3 && downs.slice(1).every((e, i) => e.scale <= downs[i].scale + 1e-9) && E.settings.renderScale < topWant && failedNow.length >= 3, `held over the band: rungs come off one by one, newest first (${downs.map(e => /undid (\S+)/.exec(e.note)?.[1] ?? '?').join(', ')}), scale now ${E.settings.renderScale.toFixed(2)}, ${failedNow.length} rungs held off`);
+      // E3: no oscillation: headroom straight back (8 ms) — the rungs that just failed stay off for their hold; nothing re-climbs inside it past the lowest failed scale; a rung failing AGAIN doubles its hold
+      const nDown = log.length; const scaleBefore = E.settings.renderScale; drive(q, E, 40, 60, 8.0, log, T);
+      const reclimbs = log.slice(nDown).filter(e => /climb ↑/.test(e.note));
+      const lowestFailedScale = Math.min(...failedNow.filter(f => f.startsWith('scale:')).map(f => parseFloat(f.slice(6))));
+      check(reclimbs.every(e => e.scale < lowestFailedScale - 1e-6 || !/scale/.test(e.note)) && !reclimbs.some(e => /gather/.test(e.note)), `headroom back for 40 s: no failed rung re-taken inside its hold (re-climbs: ${reclimbs.map(e => /scale/.test(e.note) ? e.scale.toFixed(2) : 'gather').join(', ') || 'none'}; lowest failed scale ${isFinite(lowestFailedScale) ? lowestFailedScale.toFixed(2) : '—'}, from ${scaleBefore.toFixed(2)})`);
+      drive(q, E, 40, 60, 8.0, log, T);   // past the hold (60 s since the failures): it climbs again, and the check below is on what it climbed
+      const n2 = log.length; drive(q, E, 4.2, 60, 14.0, log, T); const again = log.slice(n2).find(e => /undid/.test(e.note));
+      check(!!again && /held 120 s/.test(again.note), `the same rung failing a second time is held twice as long — “${again?.note}”`);
+    }
+    // E4: fps dips count as no headroom: 50 fps with an idle GPU never climbs; and two windows under 55 with rungs standing drop ALL of them at once (a load spike must not wait a window per rung), the newest held off
+    { const { E, q } = mk(); const log: Ev[] = []; const T = { t: 0 };
+      drive(q, E, 20, 50, 6.0, log, T);
+      check(log.filter(e => /climb ↑/.test(e.note)).length === 0, `50 fps with the GPU idle (∪ 6 ms): no climb (${log.length} changes: ${log.map(e => e.note).join(' | ') || 'none'})`);
+      drive(q, E, 50, 60, 6.0, log, T); const up = log.filter(e => /climb ↑/.test(e.note)).length; const standing = (q.climbState.standing as string[]).length;
+      const nB = log.length; drive(q, E, 3.2, 50, 6.0, log, T); const dropAll = log.slice(nB).find(e => /all rungs/.test(e.note));
+      check(up >= 2 && standing >= 2 && !!dropAll && Math.abs(dropAll.scale - PRESETS.high.scale) < 1e-9 && (q.climbState.standing as string[]).length === 0 && (q.climbState.failed as string[]).length === 1, `then 60 fps: ${up} climbs (${standing} standing, the last well before the dip); then 50 fps: within two windows every rung comes off at once, back to the preset's ×${PRESETS.high.scale} — “${dropAll?.note}” — one rung (the newest) held off`);
+      // E4b: a dip that begins RIGHT AFTER a climb is that rung's doing: only the newest comes off
+      const { E: E2, q: q2 } = mk(); const log2: Ev[] = []; const T2 = { t: 0 };
+      drive(q2, E2, 12, 60, 8.0, log2, T2); const st2 = (q2.climbState.standing as string[]).slice();
+      const n2 = log2.length; drive(q2, E2, 3.2, 50, 8.0, log2, T2); const undo = log2.slice(n2).find(e => /undid/.test(e.note));
+      check(st2.length >= 2 && !!undo && (q2.climbState.standing as string[]).length === st2.length - 1, `a dip straight after a climb (${st2.length} standing, the last ${'<'} 6 s old): only the newest comes off — “${undo?.note}” — ${(q2.climbState.standing as string[]).length} still standing`);
+    }
+    // E5: no GPU timings (union 0): never acts, however fast
+    { const { E, q } = mk(); const log: Ev[] = []; const T = { t: 0 }; drive(q, E, 30, 60, 0, log, T); check(log.length === 0 && Math.abs(E.settings.renderScale - PRESETS.high.scale) < 1e-9, `no union handed in: nothing moves in 30 s at 60 fps (scale ${E.settings.renderScale.toFixed(2)})`); }
+    // E6: the switch off = the ladder as it was: same 60 s of headroom, ladderClimb false → nothing climbs
+    { const { E, q } = mk(); E.settings.ladderClimb = false; const log: Ev[] = []; const T = { t: 0 }; drive(q, E, 60, 60, 8.0, log, T); check(log.length === 0, `ladderClimb off: nothing climbs (${log.length} changes)`); }
+    // E7: under AUTO at medium with headroom the preset goes up first (the cruising rule), not the scale — AT EXACTLY 60.0 fps: a 60 Hz display's rAF never averages better, and the old
+    // 'avg > 62 fps' cruising test could not fire on one (auto ↑ only ever happened on faster panels; a machine calibrated low during a loaded boot stayed low all session)
+    { const { E, q } = settledOn('medium');
+      const log: Ev[] = []; const T = { t: 0 }; const p0 = q.current; drive(q, E, 20, 60.0, 6.0, log, T);
+      check(p0 === 'medium' && q.current === 'high' && !log.some(e => /climb ↑ scale/.test(e.note) && e.t < (log.find(x => /preset|auto ↑/.test(x.note))?.t ?? 1e9)), `auto at medium, 60.0 fps (a 60 Hz panel), ∪ 6 ms: ${p0} → ${q.current} by the cruising rule before any scale climb (${log.map(e => e.note.split(' (')[0]).join(' | ')})`); }
+    // E7b (CLOSED LOOP — the union follows what is rendered): a medium machine whose union is 9.5 ms at ×0.67: high is priced ~×1.7 = 16 ms → no hop; the scale climbs a rung or two on the
+    // room there is, each rung making the window dearer, and — union × hopRatio being invariant under its own rungs — it never talks itself into the hop; a LOW machine at 9.5 ms likewise
+    // (medium ≈ ×2.1: the flat '×2' rule hopped it, fell to ~41 fps, came back and cycled every ~15 s); WITHOUT timings (union 0) the rate alone decides, over twice the windows
+    { const { E, q } = settledOn('medium');
+      const k = 9.5 / liveUnion(q, E, 1); const log: Ev[] = []; const T = { t: 0 }; driveLive(q, E, 60, 60.0, k, log, T);
+      check(q.current === 'medium' && E.settings.renderScale > PRESETS.medium.scale + 1e-6, `closed loop, medium, ∪ 9.5 ms at ×${PRESETS.medium.scale}: after 60 s still ${q.current}, scale ${E.settings.renderScale.toFixed(2)} (∪ now ${liveUnion(q, E, k).toFixed(1)}; high priced ×${q.hopRatio('high').toFixed(2)} = ${(liveUnion(q, E, k) * q.hopRatio('high')).toFixed(1)} ms vs ${(0.9 * PLAN_BUDGET_MS).toFixed(1)}) — ${log.map(e => e.note.split(' (')[0]).join(' | ') || 'no changes'}`);
+      const { E: E4, q: q4 } = settledOn('low');
+      const k4 = 9.5 / liveUnion(q4, E4, 1); const log4: Ev[] = []; const T4 = { t: 0 }; driveLive(q4, E4, 90, 60.0, k4, log4, T4);
+      check(q4.current === 'low', `closed loop, low, ∪ 9.5 ms at ×${PRESETS.low.scale}: after 90 s still ${q4.current}, scale ${E4.settings.renderScale.toFixed(2)} (medium priced ×${q4.hopRatio('medium').toFixed(2)} = ${(liveUnion(q4, E4, k4) * q4.hopRatio('medium')).toFixed(1)} ms) — ${log4.map(e => e.note.split(' (')[0]).join(' | ') || 'no changes'}`);
+      const { E: E3, q: q3 } = settledOn('medium');
+      const log3: Ev[] = []; const T3 = { t: 0 }; drive(q3, E3, 8, 60.0, 0, log3, T3); const early = q3.current; drive(q3, E3, 10, 60.0, 0, log3, T3);
+      check(early === 'medium' && q3.current === 'high', `no GPU timings, 60.0 fps: still medium after 8 s (${early}), high after 18 s (${q3.current}) — the rate alone, twice the windows`);
+      // a hop that comes straight back down is held off (doubling) and the hold survives the apply()s; after the hold it is re-tried on REAL room (closed loop: medium's own rungs neither fake room nor block it)
+      const { E: E5, q: q5 } = settledOn('medium');
+      const k5 = 6.0 / liveUnion(q5, E5, 1); const log5: Ev[] = []; const T5 = { t: 0 }; driveLive(q5, E5, 12, 60.0, k5, log5, T5); const hopped = q5.current;
+      for (let s2 = 0; s2 < 24 && q5.current === 'high'; s2++) drive(q5, E5, 1, 36, 14.0, log5, T5);   // (high turns out starved on this machine — a scene the model under-priced)
+      const back = q5.current; const heldNote = log5.map(e => e.note).find(n => /auto ↓/.test(n)) ?? '';
+      driveLive(q5, E5, 30, 60.0, k5, log5, T5); const during = q5.current;
+      driveLive(q5, E5, 60, 60.0, k5, log5, T5);
+      check(hopped === 'high' && back === 'medium' && /held off/.test(heldNote) && during === 'medium' && q5.current === 'high', `closed loop: medium ∪ 6 → ${hopped}; starved there → ${back} (“${heldNote.split(' [')[0]}”); ∪ 6-ish at medium for 30 s → still ${during} (held); a minute on → ${q5.current} (re-tried after the hold, over the rungs the climb put up meanwhile)`); }
+  }
+
+  // WHAT THE PAGE RECORDS TODAY: a take the recorder (ui/perfrec.ts) makes of the ladder on a machine, through the dump's own JSON, replays to its own moves
+  { const realNow = performance.now.bind(performance); let now = 1000; (performance as { now: () => number }).now = () => now;
+    const x = mkQuality(w, 'high', true, { ladderClimb: true }, 60, 120), T = x.E.timer; let union = 0, n = 0; x.q.lastChange = '';
+    Object.assign(x.E, { lights: { activeCount: 1 }, world: { dynamics: [] }, passes: { reallocs: 0, lastRealloc: '' } });
+    Object.assign(T, { lastFrame: new Map([['direct', 1]]), lastRaw: [1], unionMs: () => union, ranThisFrame: () => true });
+    const rec = new PerfRecorder(x.E as never, { guards: [] } as never, { target: [0, 0, 0], yaw: 0, pitch: 0, distance: 1 } as never, x.q as never, () => {}); rec.watch = false; rec.start('a take');
+    for (let t = 0; t < 120_000;) { const k = at(t < 20_000 ? 11 : t < 80_000 ? 17 : 11); union = +(k * modelCost(stateOf(x.q, x.E), w, S0)).toFixed(2); T.lastFrame.set('direct', union); T.lastFrame.set('other', ++n / 1000); const dt = Math.max(1000 / 120, union + MODEL.overheadMs); now += dt; t += dt; x.E.height = Math.round(rowsOf(stateOf(x.q, x.E), w)); x.E.width = Math.round(x.E.height * w.cssW / w.cssH); rec.frame(dt / 1000, 1000 / dt); x.q.sample(dt / 1000, union); }
+    const d = JSON.parse(JSON.stringify(rec.stop(false))) as PerfDump; (performance as { now: () => number }).now = realNow;
+    const want = laddersOf(d), b = bestWarm(d);
+    check(want.length >= 2 && b.matched === want.length && b.extra === 0, `a take of a fight, ${d.frames.length} frames: its ${want.length} ladder moves reproduced by the replay, ${b.extra} extra (${want.map(m => m.key).join(' | ')})`); }
+  if (fails) console.log(`\n${fails} check(s) FAILED`); else console.log('\n=== quality-check: ALL PASS ===');
   return fails === 0;
 }
 
 // ---- main --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+// ---- main --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 const args = process.argv.slice(2); const flag = (n: string) => args.includes(n); const opt = (n: string) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : undefined; };
-const KNOWN = ['--aim', '--hz', '--check', '--md', '--timeline', '--selftest', '--hold', '--paced', '--held', '--shed', '--sharpk', '--sweeps'];
-{ const p = opt('--paced'); if (p !== undefined) { if (p !== 'on' && p !== 'off') { console.error(`--paced ${p}: on | off`); process.exit(2); } pacedForce = p === 'on'; } }
-{ const p = opt('--held'); if (p !== undefined) { if (p !== 'on' && p !== 'off') { console.error(`--held ${p}: on | off`); process.exit(2); } heldForce = p === 'on'; } }
-{ const p = opt('--shed'); if (p !== undefined) { if (p !== 'on' && p !== 'off') { console.error(`--shed ${p}: on | off`); process.exit(2); } shedForce = p === 'on'; } }
+const VALUED = ['--aim', '--hz', '--hold', '--paced', '--held', '--shed', '--sharpk', '--budget', '--k', '--css', '--dpr'], KNOWN = [...VALUED, '--check', '--timeline', '--sweeps', '--plan'];
+for (const a of args) if (a.startsWith('--') && !KNOWN.includes(a)) { console.error(`unknown flag ${a} (known: ${KNOWN.join(' ')})`); process.exit(2); }
+if (flag('--plan')) {
+  const own: Machine[] = [];
+  if (flag('--k')) { const [cssW, cssH] = (opt('--css') ?? '1440x900').split('x').map(Number), dpr = Number(opt('--dpr') ?? 1), k = Number(opt('--k')); if (![k, cssW, cssH, dpr].every(v => isFinite(v) && v > 0)) { console.error('usage: --k 4.5 --css 1440x900 --dpr 2 (all positive numbers)'); process.exit(2); } own.push({ name: `yours (${k}×), ${cssW}×${cssH} @${dpr}`, k, cssW, cssH, dpr }); }
+  printPlan(Number(opt('--budget') ?? PLAN_BUDGET_MS), own); process.exit(0);
+}
+const onOff = (n: string): boolean | undefined => { const p = opt(n); if (p !== undefined && p !== 'on' && p !== 'off') { console.error(`${n} ${p}: on | off`); process.exit(2); } return p === undefined ? undefined : p === 'on'; };
+pacedForce = onOff('--paced'); heldForce = onOff('--held'); shedForce = onOff('--shed');
 { const k = opt('--sharpk'); if (k !== undefined) { if (!(+k >= 0.2 && +k <= 10)) { console.error(`--sharpk ${k}: 0.2‥10`); process.exit(2); } MODEL.sharpK = +k; } }
 { const h = opt('--hold'); if (h) for (const kv of h.split(',')) { const [k, v] = kv.split('='); if (!(k in HOLD) || !Number.isFinite(+v)) { console.error(`--hold ${kv}: HOLD has ${Object.keys(HOLD).join(', ')}`); process.exit(2); } (HOLD as Record<string, number>)[k] = +v; } }   // tuning: replay with a HOLD constant moved (--hold restore=0.8,restoreWindows=6)
-for (const a of args) if (a.startsWith('--') && !KNOWN.includes(a)) { console.error(`unknown flag ${a} (known: ${KNOWN.join(' ')})`); process.exit(2); }
-const files = args.filter((a, i) => !a.startsWith('--') && !['--aim', '--hz', '--hold', '--paced', '--held', '--shed', '--sharpk'].includes(args[i - 1]));
+const files = args.filter((a, i) => !a.startsWith('--') && !VALUED.includes(args[i - 1]));
+if (!files.length) process.exit(selftest() ? 0 : 1);
 let ok = true;
-if (flag('--selftest')) ok = selftest() && ok;
-if (!files.length && !flag('--selftest')) { console.error('usage: bun run tools/qa/ladder-replay.ts <perf-….json>… [--aim asnow|60|90|120|display|all] [--hz N] [--paced on|off] [--held on|off] [--shed on|off] [--sharpk N] [--sweeps] [--check] [--md] [--timeline] | --selftest'); process.exit(2); }
 const aimArg = opt('--aim') ?? 'all'; const aims = aimArg === 'all' ? [0, 60, 90, 120, AIM_DISPLAY] : aimArg.split(',').map(a => { const v = ladderAimOf(a); if (v === null) { console.error(`--aim ${a}: not one of asnow | 0 | 60 | 90 | 120 | display`); process.exit(2); } return v; });
 const hzArg = opt('--hz') ? Number(opt('--hz')) : undefined; if (hzArg !== undefined && !(hzArg >= 24 && hzArg <= 480)) { console.error(`--hz ${opt('--hz')}: a display rate, 24‥480`); process.exit(2); }
 for (const path of files) {
   const d = loadDump(path); const name = path.split('/').pop()!.replace(/\.json$/, '');
+  if (!d.frames.length) { console.log(`\n${name}: no frames`); continue; }
+  { const gone = [...new Set(d.frames.map(f => presetOfLabel(f.preset).preset))].filter(p => !(p in PRESETS)); if (gone.length) { console.log(`\n${name}: a take on ${gone.join(', ')}, a tier that is gone: nothing to replay it on`); continue; } }
   if (d.events.some(e => e.kind === 'sweep')) { if (!flag('--sweeps')) { console.log(`\n${name}: a sweep take (the ladder was held still) — nothing to replay (--sweeps replays it anyway)`); continue; } console.log(`\n${name}: A SWEEP TAKE replayed anyway (--sweeps): its rows flip features under the ladder, so read the moves and the rows, not the fps`); }
   if (flag('--check')) ok = checkAsNow(d, name, hzArg) && ok;
-  else { const warm = bestWarm(d, hzArg).warm; report(name, d, aims.map(a => replay(d, a, { hz: hzArg, warm })), flag('--md'), flag('--timeline')); }   // (every aim from the start state as-now's own replay fits best)
+  else { const warm = bestWarm(d, hzArg).warm; report(name, d, aims.map(a => replay(d, a, { hz: hzArg, warm })), flag('--timeline')); }   // (every aim from the start state as-now's own replay fits best)
 }
 process.exit(ok ? 0 : 1);
