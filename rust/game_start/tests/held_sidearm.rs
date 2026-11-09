@@ -45,8 +45,11 @@ fn dry_on_a_man_close_in_he_draws_and_with_nobody_in_front_he_puts_it_back() {
     }
 }
 
-/// Two teammates with one round each five metres from three men: seconds from both guns dry to the last man down, sidearms drawn, and the guns they end on.
-fn fight(seed: u32, sidearms: bool) -> (Option<f64>, f64, (i32, i32), Vec<(bool, bool)>) {
+/// what a fight came to: seconds from both guns dry to the last man down and to their next round, the magazine change's, sidearms drawn and back, the guns they end on
+struct Came { last_down: Option<f64>, next_round: Option<f64>, reload: f64, sidearms: (i32, i32), hands: Vec<(bool, bool)> }
+
+/// Two teammates with one round each five metres from three men.
+fn fight(seed: u32, sidearms: bool) -> Came {
     let mut p = squad(seed);
     let men = p.men_on_the_floor();
     let (foes, rest) = men.split_at(3);
@@ -59,15 +62,20 @@ fn fight(seed: u32, sidearms: bool) -> (Option<f64>, f64, (i32, i32), Vec<(bool,
     for (k, &h) in foes.iter().enumerate() { let at = [19.5 + 0.3 * k as f64, 16.8 + 0.5 * k as f64]; p.fights_from(h, at, [14.0, 17.6], 0.0, 0.0); p.man_posted(h); }
     for &o in two { p.man_cannot_fall(o); p.gun_has(o, 1.0); if !sidearms { p.no_second_gun(o); } }
     p.sam_put([13.0, 17.6]);
-    let (mut dry_at, mut last_down) = (None, None);
+    let (mut dry_at, mut last_down, mut next_round) = (None, None, None);
+    let fired = |p: &Play| two.iter().map(|&o| p.rounds_fired(o)).sum::<f64>();
+    let (mut guns, mut was) = (two.iter().map(|&o| p.pistol_in_hand(o)).collect::<Vec<_>>(), fired(&p));
     let reload = p.reload_secs(two[0]);
     for _ in 0..(12 * 60) {
         p.frame();
         if dry_at.is_none() && two.iter().all(|&o| p.pistol_in_hand(o) || p.rounds_ready(o) == 0.0) { dry_at = Some(p.time()); }
+        let (held, now) = (two.iter().map(|&o| p.pistol_in_hand(o)).collect::<Vec<_>>(), fired(&p));
+        if dry_at.is_some_and(|d| p.time() > d) && next_round.is_none() && held == guns && now > was { next_round = Some(p.time()); }   // (a gun changed for another counts its own rounds)
+        (guns, was) = (held, now);
         if last_down.is_none() && foes.iter().all(|&h| !p.up(h)) { last_down = Some(p.time()); }
     }
-    let gap = dry_at.zip(last_down).map(|(d, l)| l - d);
-    (gap, reload, p.sidearm_counts(), two.iter().map(|&o| (p.pistol_in_hand(o), p.rounds_ready(o) > 0.0)).collect())
+    let after = |t: Option<f64>| dry_at.zip(t).map(|(d, t)| t - d);
+    Came { last_down: after(last_down), next_round: after(next_round), reload, sidearms: p.sidearm_counts(), hands: two.iter().map(|&o| (p.pistol_in_hand(o), p.rounds_ready(o) > 0.0)).collect() }
 }
 
 /// THE RULE: dry in a fight at five metres the sidearm finishes it sooner than a magazine change would; the floor quiet, every sidearm is back and the long gun loaded.
@@ -76,18 +84,18 @@ fn fight(seed: u32, sidearms: bool) -> (Option<f64>, f64, (i32, i32), Vec<(bool,
 #[test]
 fn dry_in_a_fight_the_sidearm_finishes_it() {
     for seed in [17, 18, 19] {
-        let (gap, reload, (drawn, back), hands) = fight(seed, true);
-        let gap = gap.unwrap_or_else(|| panic!("seed {seed}: the three never all went down"));
+        let Came { last_down, reload, sidearms: (drawn, back), hands, .. } = fight(seed, true);
+        let gap = last_down.unwrap_or_else(|| panic!("seed {seed}: the three never all went down"));
         assert!(drawn >= 1, "seed {seed}: no sidearm drawn");
         assert!(gap < reload, "seed {seed}: the last man down {gap:.2} s after the guns ran dry; a magazine change is {reload}");
         assert_eq!(drawn, back, "seed {seed}: drawn and put back");
         assert!(hands.iter().all(|&(pistol, _)| !pistol), "seed {seed}: a pistol still in his hands: {hands:?}");
         assert!(hands.iter().filter(|&&(_, loaded)| loaded).count() as i32 >= drawn, "seed {seed}: a man who drew went back to a long gun with nothing in it: {hands:?}");
+
+        let Came { next_round, reload, sidearms: (drawn, _), .. } = fight(seed, false);
+        assert_eq!(drawn, 0, "seed {seed}, control: he has no sidearm");
+        assert!(next_round.is_none_or(|t| t >= reload - 0.05), "seed {seed}, control: with magazines only the next round goes {next_round:?} s after the guns ran dry; a magazine change is {reload}");
     }
-    let (gap, reload, (drawn, _), _) = fight(17, false);
-    assert_eq!(drawn, 0, "control: he has no sidearm");
-    let gap = gap.expect("control: they get there in the end");
-    assert!(gap >= reload, "control: with magazines only the last man is down {gap:.2} s after the guns ran dry; a magazine change is {reload}");
 }
 
 
