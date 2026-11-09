@@ -759,23 +759,23 @@ mod tests {
         assert!(!is_prop(-1.0));
     }
 
-    /// The keys thingKeyOf gives, as the snapshot's own function gives them under bun (values in the test).
+    /// What the fog remembers as one thing: a prop's or an item's parts together, a broken fixture's body as the fixture and what came off it by itself; the things it leaves alone have no key.
     #[test]
-    fn thing_keys_are_the_typescripts() {
+    fn the_fog_remembers_a_thing_by_its_key() {
         let g = Game::blank();
         const SYS: f64 = 0x1000000 as f64;
         for (k, want) in [
             (1.0 * SYS + 5.0, -1.0),                   // a leaf
             (4.0 * SYS + 5.0, -1.0),                   // what a man carries
             (5.0 * SYS + 5.0, -1.0),                   // a wall device
-            (10.0 * SYS + 5.0, -1.0),                  // a holed wall's paint (line 355)
+            (10.0 * SYS + 5.0, -1.0),                  // a holed wall's paint
             (7.0 * SYS + 0x4001 as f64, -1.0),         // a moth
             (2.0 * SYS + 35.0, 2.0 * SYS + 2.0),       // a prop's parts share a key
             (3.0 * SYS + 35.0, 3.0 * SYS + 4.0),       // an item's
             (8.0 * SYS + 35.0, 8.0 * SYS + 35.0),      // debris: a thing by itself
             (7.0 * SYS + (0x5000 + (3 << 5) + 2) as f64, 7.0 * SYS + ((0x5000 + (3 << 5) + 2) >> 5) as f64), // a broken fixture's body
             (7.0 * SYS + (0x5000 + (3 << 5) + 6) as f64, 7.0 * SYS + (0x5000 + (3 << 5) + 6) as f64),        // what came off it
-            (7.0 * SYS + 0x8000 as f64, 7.0 * SYS + 0x8000 as f64),
+            (7.0 * SYS + 0x8000 as f64, 7.0 * SYS + 0x8000 as f64),                                          // a piece cut off
         ] { assert_eq!(key_of_mkey(&g, k), want, "mkey {}", k); }
     }
 
