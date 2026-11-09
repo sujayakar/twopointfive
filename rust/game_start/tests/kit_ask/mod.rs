@@ -182,6 +182,8 @@ pub trait KitAsk {
     fn order_keys(&self) -> Vec<(String, Option<f64>, bool)>;
     /// the name each door is said by, as the level stands
     fn door_names(&self) -> Vec<String>;
+    /// what a man calls each of the level's routes
+    fn route_words(&self) -> Vec<String>;
     /// what the big tools have done so far: Sam's blows, his shells; a teammate's blows, doors he has hammered
     fn big_counts(&self) -> (i32, i32, i32, i32);
     /// is a man's own gun in his hands (no tool out on a sling)
@@ -600,6 +602,7 @@ impl KitAsk for Play {
     fn switch_on(&self, sw: &game::lightswitch::WallSwitch) -> bool { game::lightswitch::switch_lit(&self.g, sw) }
     fn order_keys(&self) -> Vec<(String, Option<f64>, bool)> { self.g.tab.orders_order_def.iter().map(|(_, r)| (r.id.clone(), r.key, r.hot_key.is_some())).collect() }
     fn door_names(&self) -> Vec<String> { self.g.doors.list.iter().filter_map(|&d| game::doornames::door_said_name(&self.g, d)).collect() }
+    fn route_words(&self) -> Vec<String> { (0..self.g.level.routes.len()).map(|i| game::dialogue::route_name(&self.g, i as f64)).collect() }
     fn big_counts(&self) -> (i32, i32, i32, i32) { let b = &self.g.stats.bigkit; (b.sam_blows, b.sam_shells, b.mate_blows, b.mate_hammered) }
     fn own_gun_up(&self, gd: GuardId) -> bool { self.g.gd[gd].slung.as_ref().map_or(true, |s| !s.out) && self.g.ch[self.g.gd[gd].ch].anim.big_tool.is_none() }
     fn frame_blows(&self) -> f64 { self.g.k.bigslot.swings }

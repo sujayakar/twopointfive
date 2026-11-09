@@ -149,7 +149,7 @@ export const QUIET: QuietData = {
   ],
   needs: {
     coffee: { name: 'the kettle in the boom hut', pos: [6.2, 0, 19.1], face: -Math.PI / 2 },
-    smoke: { name: 'the east gate', pos: [35.3, 0, 15.9], face: Math.PI },
+    smoke: { name: 'the road gate', pos: [35.3, 0, 15.9], face: Math.PI },
   },
 };
 

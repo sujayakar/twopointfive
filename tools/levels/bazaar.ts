@@ -403,7 +403,7 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
       stretch: { name: 'the street', pos: [24.5, 0, 18.9], face: HALF, loop: [W(24.5, 18.9), W(28.0, 18.8), W(28.0, 19.6), W(21.0, 19.0), W(13.0, 18.6)] },
     },
     phones: [{ name: 'the tea house\'s phone', pos: [5.4, 0, 14.6], face: -HALF }],
-    wayouts: [{ name: 'the street\'s west end', pos: [2.6, 0, 19.0], face: -HALF }, { name: 'the alley\'s mouth', pos: [2.6, 0, 6.0], face: -HALF }],
+    wayouts: [{ name: 'the open end of the street', pos: [2.6, 0, 19.0], face: -HALF }, { name: 'the alley\'s mouth', pos: [2.6, 0, 6.0], face: -HALF }],
   };
 
   // ---------------- LIVED-IN ROOMS (lib/lived.ts; rebuild/play-style-levels/rooms/read-first.md): what makes each shop, the alley, the passage and the
