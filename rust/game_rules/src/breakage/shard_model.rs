@@ -5,26 +5,26 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{string::String, vec, vec::Vec};
 
-/// The kernel's hash, one word to one word: integer ops only. (shardModel.ts pcg)
+/// The kernel's hash, one word to one word: integer ops only.
 fn pcg(v: f64) -> f64 {
     let s = js::to_u32(m::imul(js::to_i32(v), 747796405) as f64 + 2891336453.0);
     let w = m::imul(((s >> ((s >> 28) + 4)) ^ s) as i32, 277803737) as u32;
     ((w >> 22) ^ w) as f64
 }
 
-/// The `k`th hashed draw in 0 to 1 of a seed. (shardModel.ts rnd)
+/// The `k`th hashed draw in 0 to 1 of a seed.
 fn rnd(seed: f64, k: f64) -> f64 {
     let v = (js::to_i32(seed) ^ m::imul(js::to_i32(k), 0x9E3779B9u32 as i32)) as u32;
     (js::to_u32(pcg(v as f64)) >> 8) as f64 / 16777216.0
 }
 
-/// The drag rate of a fragment `size` metres across, 1/s. (shardModel.ts shardDrag)
+/// The drag rate of a fragment `size` metres across, 1/s.
 fn shard_drag(size: f64, k: Option<crate::shard_model::SHARD>) -> f64 {
     let k = k.unwrap_or_else(shard);
     m::min(k.drag_max, k.drag * k.ref_size / m::max(size, 0.0015))
 }
 
-/// One step of free flight, no collision. (shardModel.ts shardAir)
+/// One step of free flight, no collision.
 fn shard_air(s: &mut crate::shard_model::ShardState, dt: f64, k: Option<crate::shard_model::SHARD>) {
     let k = k.unwrap_or_else(shard);
     if s.asleep || dt <= 0.0 { return; }
@@ -37,7 +37,7 @@ fn shard_air(s: &mut crate::shard_model::ShardState, dt: f64, k: Option<crate::s
     s.n = v3::normalize([s.n[0] + c[0] * dt, s.n[1] + c[1] * dt, s.n[2] + c[2] * dt]);
 }
 
-/// A touch on a surface of unit normal `nrm`, the fragment already at the contact. True when it went to sleep. (shardModel.ts shardTouch)
+/// A touch on a surface of unit normal `nrm`, the fragment already at the contact. True when it went to sleep.
 fn shard_touch(s: &mut crate::shard_model::ShardState, nrm: V3, k: Option<crate::shard_model::SHARD>) -> bool {
     let k = k.unwrap_or_else(shard);
     s.touches += 1.0;
@@ -87,7 +87,7 @@ fn shard_touch(s: &mut crate::shard_model::ShardState, nrm: V3, k: Option<crate:
     false
 }
 
-/// Fly one shard to rest over a floor and, optionally, an upright wall, at a fixed step. The probes' and the trajectory sheet's flight. (shardModel.ts flyShard)
+/// Fly one shard to rest over a floor and, optionally, an upright wall, at a fixed step. The probes' and the trajectory sheet's flight.
 fn fly_shard(s: &mut crate::shard_model::ShardState, opts: Option<crate::shard_model::FlyShardOpts>, k: Option<crate::shard_model::SHARD>) -> crate::shard_model::FlyShard {
     let k = k.unwrap_or_else(shard);
     let opts = opts.unwrap_or_default();
@@ -125,7 +125,7 @@ fn fly_shard(s: &mut crate::shard_model::ShardState, opts: Option<crate::shard_m
     crate::shard_model::FlyShard { path, rest_t, hops, max_h, reach: m::hyp2(s.p[0] - p0[0], s.p[2] - p0[2]) }
 }
 
-/// A shard in the state the emit kernel would deal one: speed along `dir` inside a cone, tumbling. (shardModel.ts makeShard)
+/// A shard in the state the emit kernel would deal one: speed along `dir` inside a cone, tumbling.
 fn make_shard(seed: f64, p: V3, dir: V3, speed: f64, spread: f64, size: f64, tumble: f64) -> crate::shard_model::ShardState {
     let dn = v3::normalize(dir);
     let u = v3::normalize(v3::cross(if m::abs(dn[1]) > 0.9 { [1.0, 0.0, 0.0] } else { [0.0, 1.0, 0.0] }, dn));
@@ -151,7 +151,7 @@ fn make_shard(seed: f64, p: V3, dir: V3, speed: f64, spread: f64, size: f64, tum
     }
 }
 
-/// The shards one emit record deals, by the emit kernel's own draws. The probes' and the trajectory sheet's births. (shardModel.ts sprayShards)
+/// The shards one emit record deals, by the emit kernel's own draws. The probes' and the trajectory sheet's births.
 fn spray_shards(r: crate::shard_model::ShardSpray) -> Vec<crate::shard_model::ShardState> {
     let mut out: Vec<crate::shard_model::ShardState> = Vec::new();
     let dn = v3::normalize(r.dir);

@@ -6,7 +6,7 @@ use game_derive::Knobs;
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct He40K {
     /// muzzle speed (m/s: the 40×46 mm low-velocity round), gravity, air drag (/s), contact radius (m), seconds of flight before it is simply gone (a round sent
-    ///  up and out over the lot), substeps a frame, and the passes of the elevation solve (launcher.ts launchVel)
+    ///  up and out over the lot), substeps a frame, and the passes of the elevation solve
     #[k(76.0)] pub speed: f64,
     #[k(9.81)] pub gravity: f64,
     #[k(0.12)] pub drag: f64,

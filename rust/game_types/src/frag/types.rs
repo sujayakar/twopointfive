@@ -230,19 +230,12 @@ pub enum FragThrowAt {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct FragMod {
-    /// (src/game/frag.ts:210 FRAG_LOG)
     pub frag_log: Vec<crate::frag::BlastReport>,
-    /// (src/game/frag.ts:213 FRAG_WHY)
     pub frag_why: JsMap<String, f64>,
-    /// (src/game/frag.ts:268 WALLS_FOR)
     pub walls_for: Option<crate::frag::FragModWALLSFORValue>,
-    /// (src/game/frag.ts:281 TORN)
     pub torn: Option<crate::frag::FragModTORNValue>,
-    /// (src/game/frag.ts:449 warned)
     pub warned: JsMap<GuardId, f64>,
-    /// (src/game/frag.ts:450 books)
     pub books: Option<Vec<crate::frag::Live>>,
-    /// (src/game/frag.ts:820 defBooks)
     pub def_books: Option<crate::frag::DefBook>,
 }
 
@@ -266,5 +259,4 @@ pub struct FragStats {
     pub stunned: i32,
 }
 
-/// (src/game/frag.ts:835 SHOUTS: a table nothing writes)
 pub fn shouts() -> Vec<String> { alloc::vec![String::from("frag out!"), String::from("grenade out!"), String::from("fire in the hole!")] }

@@ -20,6 +20,6 @@ pub struct GlassK {
     #[k(0.045)] pub crack_gap: f64,
     /// s, ONLY while glass breaking is live: one 'glass' hearing event per pane per SHOOTER per gap (the crack itself still sounds per round, softer inside it); 0 = every hit its own event
     #[k(0.2)] pub live_gap: f64,
-    /// m off each face of the pane those two points stand: past one 0.5 m walk-grid cell, because a routed sound is searched — and kept for half a second — per CELL (collision.ts propagate), and a point sharing the struck point's cell would be handed that point's answer
+    /// m off each face of the pane those two points stand: past one 0.5 m walk-grid cell, because a routed sound is searched — and kept for half a second — per CELL, and a point sharing the struck point's cell would be handed that point's answer
     #[k(0.55)] pub ear_off: f64,
 }

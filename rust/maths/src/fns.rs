@@ -532,7 +532,7 @@ pub fn pow(x: f64, y: f64) -> f64 {
     ldexp(a1, ae)
 }
 
-// ---- lengths: |x| scaled by the largest, the squares in a compensated sum (src/math/hyp.ts kahan2 / 3 / 4 / N)
+// ---- lengths: |x| scaled by the largest, the squares in a compensated sum
 /// one more scaled square into the running sum
 #[inline]
 fn kahan_step(x: f64, max: f64, sum: &mut f64, comp: &mut f64) {

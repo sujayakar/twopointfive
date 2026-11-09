@@ -33,5 +33,4 @@ pub struct PlanmodeStats {
     pub none: i32,
 }
 
-/// (src/game/planmode.ts:23 GOAL_NONE)
 pub const GOAL_NONE: &str = "nobody's free for that.";

@@ -4,12 +4,12 @@ use crate::game::Game;
 use crate::ids::*;
 use crate::m;
 
-/// Is the rule live for this man: not while he is down, nor under the puppet's strings.   (sprintdoor.ts live)
+/// Is the rule live for this man: not while he is down, nor under the puppet's strings.
 fn live(g: &mut crate::game::Game, pl: crate::sprintdoor::LivePl) -> bool {
     !pl.down && g.puppet.is_none()
 }
 
-/// What his door contact carries this frame: the rule's numbers while he is at a sprint, nothing otherwise.   (sprintdoor.ts sprintDoorRun)
+/// What his door contact carries this frame: the rule's numbers while he is at a sprint, nothing otherwise.
 pub fn sprint_door_run(g: &mut crate::game::Game, pl: PlayerId) -> Option<crate::doors::DoorContactRun> {
     let down = g.pl[pl].down;
     if live(g, crate::sprintdoor::LivePl { down }) && g.pl[pl].sprinting {
@@ -19,7 +19,7 @@ pub fn sprint_door_run(g: &mut crate::game::Game, pl: PlayerId) -> Option<crate:
     }
 }
 
-/// THE BOOT AT THE RUN: the leaf his sprint is about to meet from the face it opens toward, when a boot is the thing to do about it. None = no kick this frame.   (sprintdoor.ts sprintDoorKick)
+/// THE BOOT AT THE RUN: the leaf his sprint is about to meet from the face it opens toward, when a boot is the thing to do about it. None = no kick this frame.
 pub fn sprint_door_kick(g: &mut crate::game::Game, pl: PlayerId) -> Option<DoorId> {
     let down = g.pl[pl].down;
     if !live(g, crate::sprintdoor::LivePl { down }) || !g.pl[pl].sprinting { return None; }
@@ -56,7 +56,7 @@ pub fn sprint_door_kick(g: &mut crate::game::Game, pl: PlayerId) -> Option<DoorI
     None
 }
 
-/// After the doors have been resolved: what the leaf he ran open or ripped round cost him.   (sprintdoor.ts sprintDoorAfter)
+/// After the doors have been resolved: what the leaf he ran open or ripped round cost him.
 pub fn sprint_door_after(g: &mut crate::game::Game, pl: PlayerId, own: &crate::doors::DoorContact) {
     let c = g.pl[pl].ch;
     if own.run.is_none() { return; }
@@ -90,19 +90,19 @@ pub fn sprint_door_after(g: &mut crate::game::Game, pl: PlayerId, own: &crate::d
     }
 }
 
-/// The share of his top speed his run is held to this frame: `ripPace` while his hand is ripping a leaf round, else 1.   (sprintdoor.ts sprintDoorPace)
+/// The share of his top speed his run is held to this frame: `ripPace` while his hand is ripping a leaf round, else 1.
 pub fn sprint_door_pace(g: &mut crate::game::Game, pl: crate::sprintdoor::DoorStamps, now: Option<f64>) -> f64 {
     let now = now.unwrap_or(g.time);
     if live(g, crate::sprintdoor::LivePl { down: pl.down }) && now < pl.door_rip_until { g.k.sprintdoor.rip_pace } else { 1.0 }
 }
 
-/// Is the turn of his shoulder into a leaf (or his head coming back off it) still running.   (sprintdoor.ts sprintDoorTurning)
+/// Is the turn of his shoulder into a leaf (or his head coming back off it) still running.
 fn sprint_door_turning(g: &crate::game::Game, pl: crate::sprintdoor::DoorStamps, now: Option<f64>) -> bool {
     let now = now.unwrap_or(g.time);
     g.k.sprintdoor.lean_secs > 0.0 && now - pl.door_bash_at < g.k.sprintdoor.lean_secs + SETTLE
 }
 
-/// Radians added to the yaw his body runs at: the shoulder turned into the leaf, easing back square. None = no turn running and none just ended.   (sprintdoor.ts sprintDoorLean)
+/// Radians added to the yaw his body runs at: the shoulder turned into the leaf, easing back square. None = no turn running and none just ended.
 pub fn sprint_door_lean(g: &crate::game::Game, pl: crate::sprintdoor::DoorStamps, now: Option<f64>) -> Option<f64> {
     let now = now.unwrap_or(g.time);
     if !sprint_door_turning(g, pl, Some(now)) { return None; }
@@ -111,7 +111,7 @@ pub fn sprint_door_lean(g: &crate::game::Game, pl: crate::sprintdoor::DoorStamps
     Some(if t >= 1.0 { 0.0 } else { pl.door_bash_lean * g.k.sprintdoor.lean * (1.0 - t) * (1.0 - t) })
 }
 
-/// The look his head is given while his body is `off` radians off his run: the same angle back the other way.   (sprintdoor.ts sprintDoorHead)
+/// The look his head is given while his body is `off` radians off his run: the same angle back the other way.
 pub fn sprint_door_head(off: f64) -> f64 {
     let w = off - m::round(off / (2.0 * m::PI)) * 2.0 * m::PI;
     if m::abs(w) < 1e-6 { 0.0 } else { HEAD_SIGN * w }

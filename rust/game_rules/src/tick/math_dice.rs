@@ -7,7 +7,7 @@ use crate::m;
 use alloc::vec::Vec;
 
 // TEMP-BRINGUP: WHAT STANDS IN Math.random's PLACE. A game with no die of its own (`Game.dice` null: the play-through harness's games) draws off the
-// HOST's Math.random (dice.ts simRandom's first line), which the harness has seeded. That stream is no part of the game's state, so the bring-up's host
+// HOST's Math.random, which the harness has seeded. That stream is no part of the game's state, so the bring-up's host
 // hands the tick the draws the TypeScript tick took, in order, and the Rust tick must take the same ones.
 // SKELETON-GAP: a host seam for Math.random (`host_api::math_random(g) -> f64`), or a rule that every game compared has its own die.
 struct Draws(core::cell::UnsafeCell<(Vec<f64>, usize)>);
@@ -28,20 +28,20 @@ fn host_draw() -> f64 {
     }
 }
 
-/// The die's bit in the block's head: which systems' state is at home there.   (dicehome.ts simTenant's `bit`)
+/// The die's bit in the block's head: which systems' state is at home there.
 const DICE_BIT: u32 = 1;
 
-/// A die made and spent inside one call: the stream of `roll(die_of(a))`.   (dice.ts mulberry32)
+/// A die made and spent inside one call: the stream of `roll(die_of(a))`.
 pub fn mulberry32(a: f64) -> crate::dice::Die {
     crate::dice::Die::new(js::to_u32(a))
 }
 
-/// A die whose whole state is one word on a record.   (dice.ts dieOf)
+/// A die whose whole state is one word on a record.
 pub fn die_of(seed: f64) -> crate::math_dice::Die {
     Die { dice: js::to_i32(seed) as f64 }
 }
 
-/// One draw off a die kept in state, uniform in [0, 1).   (dice.ts roll)
+/// One draw off a die kept in state, uniform in [0, 1).
 pub fn roll(d: &mut crate::math_dice::Die) -> f64 {
     let a = js::to_i32(d.dice + 0x6D2B79F5_u32 as f64);
     d.dice = a as f64;
@@ -50,7 +50,7 @@ pub fn roll(d: &mut crate::math_dice::Die) -> f64 {
     (((t ^ ((t as u32 >> 14) as i32)) as u32) as f64) / 4294967296.0
 }
 
-/// FNV-1a, 32 bit, over UTF-16 code units: what is dealt by name.   (dice.ts hashStr)
+/// FNV-1a, 32 bit, over UTF-16 code units: what is dealt by name.
 pub fn hash_str(s: &str) -> f64 {
     let mut h: u32 = 0x811c9dc5;
     for c in s.encode_utf16() {
@@ -65,7 +65,7 @@ pub fn sim_dice_new(seed: f64) -> crate::math_dice::SimDice {
     SimDice { s0: js::to_i32(seed) as f64, seed: js::to_u32(seed) as f64, ..SimDice::blank() }
 }
 
-/// Where the word stands. `home` keeps the block's word as sim_random leaves it.   (dice.ts SimDice.s)
+/// Where the word stands. `home` keeps the block's word as sim_random leaves it.
 pub fn sim_dice_s(this: &crate::math_dice::SimDice) -> f64 {
     match this.home {
         Some(h) => h.s,
@@ -73,7 +73,7 @@ pub fn sim_dice_s(this: &crate::math_dice::SimDice) -> f64 {
     }
 }
 
-/// How many draws have been taken.   (dice.ts SimDice.n)
+/// How many draws have been taken.
 pub fn sim_dice_n(this: &crate::math_dice::SimDice) -> f64 {
     match this.home {
         Some(h) => h.n,
@@ -109,12 +109,12 @@ pub fn use_dice(g: &mut crate::game::Game) {
     }
 }
 
-/// The die in use: the game's own, since nothing in the Rust game can stand in Math.random's place.   (dice.ts diceInUse)
+/// The die in use: the game's own, since nothing in the Rust game can stand in Math.random's place.
 fn dice_in_use(g: &crate::game::Game) -> Option<crate::math_dice::SimDice> {
     g.dice
 }
 
-/// A draw for the simulation, uniform in [0, 1): off the block where the die is at home, else off its own word; no die, Math.random.   (dice.ts simRandom)
+/// A draw for the simulation, uniform in [0, 1): off the block where the die is at home, else off its own word; no die, Math.random.
 pub fn sim_random(g: &mut crate::game::Game) -> f64 {
     if g.dice.is_none() {
         return seam_math_random(g);

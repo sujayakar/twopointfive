@@ -92,9 +92,7 @@ pub struct KickStep {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct DoorforceMod {
-    /// (src/game/doorforce.ts:92 DOORFORCE_LOG)
     pub doorforce_log: Vec<String>,
-    /// (src/game/doorforce.ts:105 states)
     pub states: Option<crate::doorforce::State>,
 }
 

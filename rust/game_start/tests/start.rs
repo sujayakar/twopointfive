@@ -39,7 +39,7 @@ fn a_level_stands_as_its_file_has_it() {
 /// A mission started from the words of its address, as the page starts one: the row of the mission list that owns the level lays its hour, the
 /// link's fog of war goes on, and the mission is staged. The same level with the mission alone started on it stays at the hour a game is made at.
 /// A FAILURE MEANS: the game no longer reads an address's words itself (`game::query`), or a start from them stopped laying what the row says
-/// before it stages the mission (rowset.ts, hours.ts, scenarioRun.ts startFromQuery).
+/// before it stages the mission.
 #[test]
 fn a_mission_starts_from_its_link_as_the_page_starts_it() {
     use game::hours::HourId;

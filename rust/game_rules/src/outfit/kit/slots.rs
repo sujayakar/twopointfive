@@ -82,7 +82,7 @@ pub fn kit_view(g: &Game, seat: &crate::seats::SeatRef) -> KitView {
 
 // ---- private helpers
 
-/// SLOT_AMOUNT[k](m): the table as a call by its key; a key it does not hold panics, as the call of undefined throws.   (kit.ts:252, skeleton's slot_amount_of)
+/// SLOT_AMOUNT[k](m): the table as a call by its key; a key it does not hold panics, as the call of undefined throws.
 pub(super) fn slot_amount_of(g: &mut crate::game::Game, k: &str, m: &crate::kit::MemberKit) -> f64 {
     match k {
         "smoke" => slot_amount::smoke(m),
@@ -100,7 +100,7 @@ pub(super) fn slot_amount_of(g: &mut crate::game::Game, k: &str, m: &crate::kit:
     }
 }
 
-/// SLOT_PUT[k](m, n, d): the table as a call by its key; `d`, what he is issued, is read by the shotgun alone.   (kit.ts:261, skeleton's slot_put_of)
+/// SLOT_PUT[k](m, n, d): the table as a call by its key; `d`, what he is issued, is read by the shotgun alone.
 pub(super) fn slot_put_of(g: &mut crate::game::Game, k: &str, m: &mut crate::kit::MemberKit, n: f64, d: &crate::kit::MemberKit) {
     match k {
         "smoke" => slot_put::smoke(m, n),
@@ -118,7 +118,7 @@ pub(super) fn slot_put_of(g: &mut crate::game::Game, k: &str, m: &mut crate::kit
     }
 }
 
-/// (kit.ts m[slot]) The pick in a slot of a card.
+///  The pick in a slot of a card.
 fn pick_of(m: &crate::kit::MemberKit, slot: crate::gunslots::GunSlot) -> &str {
     match slot {
         crate::gunslots::GunSlot::Primary => &m.primary,
@@ -128,7 +128,7 @@ fn pick_of(m: &crate::kit::MemberKit, slot: crate::gunslots::GunSlot) -> &str {
 
 // ---- the part
 
-/// What member i is issued as the rule stands.   (kit.ts issuedCard)
+/// What member i is issued as the rule stands.
 pub(super) fn issued_card(g: &mut crate::game::Game, i: f64) -> crate::kit::MemberKit {
     if i == 0.0 {
         if let Some(h) = g.m.kit.hand {
@@ -147,12 +147,12 @@ pub(super) fn issued_card(g: &mut crate::game::Game, i: f64) -> crate::kit::Memb
     issued()[i as usize].clone()
 }
 
-/// A fresh copy of what member i is issued.   (kit.ts kitDefault)
+/// A fresh copy of what member i is issued.
 pub(super) fn kit_default(g: &mut crate::game::Game, i: f64) -> crate::kit::MemberKit {
     issued_card(g, i)
 }
 
-/// The weapons.ts row a card names.   (kit.ts kitGun)
+/// The weapons.ts row a card names.
 pub(in crate::outfit) fn kit_gun(g: &crate::game::Game, m: &crate::kit::MemberKit) -> crate::weapons::WeaponId {
     if guns_on(g) {
         let w = if m.weapon == KitWeapon::Pistol {
@@ -176,24 +176,24 @@ pub(in crate::outfit) fn kit_gun(g: &crate::game::Game, m: &crate::kit::MemberKi
     }
 }
 
-/// The card has two gun rows.   (kit.ts gunsOn)
+/// The card has two gun rows.
 pub(super) fn guns_on(g: &crate::game::Game) -> bool {
     g.k.bigslot.on && !crate::gunslots::guns_broken()
 }
 
-/// The card is laid out as a tree.   (kit.ts treeUp)
+/// The card is laid out as a tree.
 pub(in crate::outfit) fn tree_up(g: &crate::game::Game) -> bool {
     guns_on(g)
 }
 
-/// A slot's pick comes with its suppressor on or off.   (kit.ts canChoice)
+/// A slot's pick comes with its suppressor on or off.
 pub fn can_choice(g: &crate::game::Game, id_2: &str) -> bool {
     let a = crate::gunslots::pick_row(g, id_2, true);
     let b = crate::gunslots::pick_row(g, id_2, false);
     a.is_some() && b.is_some() && a != b
 }
 
-/// The gun in a slot of a card wears its suppressor.   (kit.ts kitSlotCan)
+/// The gun in a slot of a card wears its suppressor.
 pub(super) fn kit_slot_can(g: &crate::game::Game, m: &crate::kit::MemberKit, slot: crate::gunslots::GunSlot) -> bool {
     let can = if slot == crate::gunslots::GunSlot::Primary { m.suppressed } else { m.side_can };
     match crate::gunslots::pick_row(g, pick_of(m, slot), can) {
@@ -202,7 +202,7 @@ pub(super) fn kit_slot_can(g: &crate::game::Game, m: &crate::kit::MemberKit, slo
     }
 }
 
-/// The gun a card's man carries that is not in his hands, or None.   (kit.ts kitSide)
+/// The gun a card's man carries that is not in his hands, or None.
 pub(in crate::outfit) fn kit_side(g: &crate::game::Game, m: &crate::kit::MemberKit) -> Option<crate::weapons::WeaponId> {
     if m.weapon == KitWeapon::Pistol {
         return None;
@@ -210,7 +210,7 @@ pub(in crate::outfit) fn kit_side(g: &crate::game::Game, m: &crate::kit::MemberK
     kit_second(g, m)
 }
 
-/// The row in a card's secondary slot; None with the switch off.   (kit.ts kitSecond)
+/// The row in a card's secondary slot; None with the switch off.
 pub(super) fn kit_second(g: &crate::game::Game, m: &crate::kit::MemberKit) -> Option<crate::weapons::WeaponId> {
     if !guns_on(g) {
         return None;
@@ -219,7 +219,7 @@ pub(super) fn kit_second(g: &crate::game::Game, m: &crate::kit::MemberKit) -> Op
     crate::gunslots::pick_row(g, &m.secondary, can)
 }
 
-/// The weapons.ts row of the gun in a slot of member i's card as he would deploy with it, or None.   (kit.ts kitSlotDef)
+/// The weapons.ts row of the gun in a slot of member i's card as he would deploy with it, or None.
 pub(super) fn kit_slot_def(g: &crate::game::Game, i: f64, m: &crate::kit::MemberKit, slot: crate::gunslots::GunSlot) -> Option<crate::weapons::WeaponDef> {
     if slot == crate::gunslots::GunSlot::Primary && m.weapon == KitWeapon::Pistol {
         return None;
@@ -236,7 +236,7 @@ pub(super) fn kit_slot_def(g: &crate::game::Game, i: f64, m: &crate::kit::Member
     g.m.weapons.weapons.get(w).cloned()
 }
 
-/// A card's two picks are ones the table offers. Writes `m` and returns a copy of it.   (kit.ts gunsHome)
+/// A card's two picks are ones the table offers. Writes `m` and returns a copy of it.
 pub(super) fn guns_home(g: &crate::game::Game, m: &mut crate::kit::MemberKit) -> crate::kit::MemberKit {
     let none = crate::gunslots::NO_PRIMARY;
     let long: Vec<String> = crate::gunslots::gun_picks(g, crate::gunslots::GunSlot::Primary).into_iter().filter(|p| p != none).collect();
@@ -250,7 +250,7 @@ pub(super) fn guns_home(g: &crate::game::Game, m: &mut crate::kit::MemberKit) ->
     m.clone()
 }
 
-/// A loadout's tools this build cannot put on.   (kit.ts loadoutMissing)
+/// A loadout's tools this build cannot put on.
 pub(super) fn loadout_missing(g: &crate::game::Game, l: &crate::kit::SlotLoadout) -> Vec<String> {
     let walls = l.counts.iter().any(|c| c.get(String::from("walls")).copied().unwrap_or(0.0) > 0.0);
     let mut missing = l.missing.clone();
@@ -260,7 +260,7 @@ pub(super) fn loadout_missing(g: &crate::game::Game, l: &crate::kit::SlotLoadout
     missing
 }
 
-/// A card as the big slot reads it: the shotgun is no gun. Writes `m` and returns a copy of it.   (kit.ts bigHome)
+/// A card as the big slot reads it: the shotgun is no gun. Writes `m` and returns a copy of it.
 pub(super) fn big_home(m: &mut crate::kit::MemberKit, i: f64) -> crate::kit::MemberKit {
     if m.weapon == KitWeapon::Shotgun {
         m.weapon = issued()[i as usize].weapon;
@@ -271,7 +271,7 @@ pub(super) fn big_home(m: &mut crate::kit::MemberKit, i: f64) -> crate::kit::Mem
     m.clone()
 }
 
-/// What is in the big slot of a card, as its row words it.   (kit.ts bigOf)
+/// What is in the big slot of a card, as its row words it.
 pub(in crate::outfit) fn big_of(m: &crate::kit::MemberKit) -> crate::kit::BigPick {
     if js::truthy(m.walls) {
         return BigPick::Wall;
@@ -283,7 +283,7 @@ pub(in crate::outfit) fn big_of(m: &crate::kit::MemberKit) -> crate::kit::BigPic
     }
 }
 
-/// The pouches one of an item fills as the rule stands.   (kit.ts priceOf)
+/// The pouches one of an item fills as the rule stands.
 pub(super) fn price_of(g: &crate::game::Game, it: Option<&crate::kit::SlotItem>) -> f64 {
     match it {
         None => 0.0,
@@ -293,7 +293,7 @@ pub(super) fn price_of(g: &crate::game::Game, it: Option<&crate::kit::SlotItem>)
     }
 }
 
-/// The pouches `n` of an item fill.   (kit.ts pouchesOf)
+/// The pouches `n` of an item fill.
 pub(super) fn pouches_of(g: &crate::game::Game, it: Option<&crate::kit::SlotItem>, n: f64) -> f64 {
     let p = price_of(g, it);
     if !js::truthy(p) || n <= 0.0 {
@@ -307,7 +307,7 @@ pub(super) fn pouches_of(g: &crate::game::Game, it: Option<&crate::kit::SlotItem
     }
 }
 
-/// How many big things a card carries (0 with the big slot off).   (kit.ts bigUsed)
+/// How many big things a card carries (0 with the big slot off).
 pub(super) fn big_used(g: &mut crate::game::Game, m: &crate::kit::MemberKit, t: &crate::kit::SlotTable) -> f64 {
     if !g.k.bigslot.on {
         return 0.0;
@@ -321,7 +321,7 @@ pub(super) fn big_used(g: &mut crate::game::Game, m: &crate::kit::MemberKit, t: 
     n
 }
 
-/// A whole number at or over `lo`.   (kit.ts int)
+/// A whole number at or over `lo`.
 pub(super) fn int(x: Option<&crate::kit::KitValue>, lo: f64) -> bool {
     match x {
         Some(KitValue::Num(n)) => n.is_finite() && m::floor(*n) == *n && *n >= lo,
@@ -329,7 +329,7 @@ pub(super) fn int(x: Option<&crate::kit::KitValue>, lo: f64) -> bool {
     }
 }
 
-/// `n` pouches, in a card's words.   (kit.ts pouchWords)
+/// `n` pouches, in a card's words.
 pub(super) fn pouch_words(n: f64) -> String {
     if n == 1.0 {
         return String::from("a pouch");
@@ -337,7 +337,7 @@ pub(super) fn pouch_words(n: f64) -> String {
     alloc::format!("{} pouches", js::num_str(n))
 }
 
-/// Your card's long gun has the launcher under it.   (kit.ts tubed)
+/// Your card's long gun has the launcher under it.
 pub(super) fn tubed(g: &crate::game::Game, m: &crate::kit::MemberKit) -> bool {
     if m.weapon != KitWeapon::Rifle {
         return false;
@@ -349,12 +349,12 @@ pub(super) fn tubed(g: &crate::game::Game, m: &crate::kit::MemberKit) -> bool {
     g.m.weapons.weapons.get(w).unwrap().launcher != Some(false)
 }
 
-/// A teammate's card has the 40 mm row.   (kit.ts mateShells)
+/// A teammate's card has the 40 mm row.
 pub(super) fn mate_shells(g: &crate::game::Game) -> bool {
     tree_up(g)
 }
 
-/// A suppressor's flag holds a value only while its gun has the choice. Writes `m` and returns a copy of it.   (kit.ts homeCans)
+/// A suppressor's flag holds a value only while its gun has the choice. Writes `m` and returns a copy of it.
 pub(super) fn home_cans(g: &crate::game::Game, m: &mut crate::kit::MemberKit) -> crate::kit::MemberKit {
     if (!m.suppressed || !m.side_can) && tree_up(g) {
         if m.weapon == KitWeapon::Pistol || !can_choice(g, &m.primary) {
@@ -367,7 +367,7 @@ pub(super) fn home_cans(g: &crate::game::Game, m: &mut crate::kit::MemberKit) ->
     m.clone()
 }
 
-/// The launcher's rounds go home with the rifle. Writes `m` and returns a copy of it.   (kit.ts homeShells)
+/// The launcher's rounds go home with the rifle. Writes `m` and returns a copy of it.
 pub(super) fn home_shells(g: &crate::game::Game, m: &mut crate::kit::MemberKit) -> crate::kit::MemberKit {
     home_cans(g, m);
     if !tubed(g, m) {
@@ -382,7 +382,7 @@ pub(super) fn home_shells(g: &crate::game::Game, m: &mut crate::kit::MemberKit) 
     m.clone()
 }
 
-/// The pouches a card fills.   (kit.ts costOf)
+/// The pouches a card fills.
 pub(super) fn cost_of(g: &mut crate::game::Game, m: &crate::kit::MemberKit, t: &crate::kit::SlotTable) -> f64 {
     let mut used = 0.0;
     for k in slot_amount().keys() {
@@ -392,7 +392,7 @@ pub(super) fn cost_of(g: &mut crate::game::Game, m: &crate::kit::MemberKit, t: &
     used
 }
 
-/// The teammates who come, of five cards; copies, since the only readers only read.   (kit.ts coming)
+/// The teammates who come, of five cards; copies, since the only readers only read.
 pub(super) fn coming(cards: &[crate::kit::MemberKit], n: f64) -> Vec<crate::kit::MemberKit> {
     let end = (1 + n as usize).min(cards.len());
     if end <= 1 {
@@ -401,88 +401,69 @@ pub(super) fn coming(cards: &[crate::kit::MemberKit], n: f64) -> Vec<crate::kit:
     cards[1..end].to_vec()
 }
 
-/// (kit.ts SLOT_AMOUNT) How much of each priced thing a card carries.
+///  How much of each priced thing a card carries.
 pub mod slot_amount {
     use crate::js;
     use crate::kit::{BigKit, KitWeapon};
 
-    /// (kit.ts SLOT_AMOUNT.smoke)
     pub fn smoke(m: &crate::kit::MemberKit) -> f64 { m.smoke }
 
-    /// (kit.ts SLOT_AMOUNT.bangs)
     pub fn bangs(m: &crate::kit::MemberKit) -> f64 { m.bangs }
 
-    /// (kit.ts SLOT_AMOUNT.frags)
     pub fn frags(m: &crate::kit::MemberKit) -> f64 { m.frags }
 
-    /// (kit.ts SLOT_AMOUNT.shells)
     pub fn shells(m: &crate::kit::MemberKit) -> f64 { m.shells }
 
-    /// (kit.ts SLOT_AMOUNT.charges)
     pub fn charges(m: &crate::kit::MemberKit) -> f64 { m.charges }
 
-    /// (kit.ts SLOT_AMOUNT.walls)
     pub fn walls(m: &crate::kit::MemberKit) -> f64 { m.walls }
 
-    /// With the big slot on the shotgun is what is in it, never the gun.   (kit.ts SLOT_AMOUNT.shotgun)
+    /// With the big slot on the shotgun is what is in it, never the gun.
     pub fn shotgun(g: &mut crate::game::Game, m: &crate::kit::MemberKit) -> f64 {
         let has = if g.k.bigslot.on { m.big == BigKit::Shotgun } else { m.weapon == KitWeapon::Shotgun };
         if has { 1.0 } else { 0.0 }
     }
 
-    /// (kit.ts SLOT_AMOUNT.hammer)
     pub fn hammer(g: &mut crate::game::Game, m: &crate::kit::MemberKit) -> f64 {
         if g.k.bigslot.on && m.big == BigKit::Hammer { 1.0 } else { 0.0 }
     }
 
-    /// (kit.ts SLOT_AMOUNT.cams)
     pub fn cams(g: &mut crate::game::Game, m: &crate::kit::MemberKit) -> f64 {
         if js::truthy(m.cams) { m.cams } else { 0.0 }
     }
 
-    /// (kit.ts SLOT_AMOUNT.rings)
     pub fn rings(g: &mut crate::game::Game, m: &crate::kit::MemberKit) -> f64 {
         if js::truthy(m.rings) && super::tree_up(g) { m.rings } else { 0.0 }
     }
 
-    /// (kit.ts SLOT_AMOUNT.wand)
     pub fn wand(g: &mut crate::game::Game, m: &crate::kit::MemberKit) -> f64 {
         if m.wand { 1.0 } else { 0.0 }
     }
 }
 
-/// (kit.ts SLOT_PUT) How a card is put to `n` of one thing.
+///  How a card is put to `n` of one thing.
 pub mod slot_put {
     use crate::kit::{BigKit, KitWeapon};
 
-    /// (kit.ts SLOT_PUT.smoke)
     pub fn smoke(m: &mut crate::kit::MemberKit, n: f64) { m.smoke = n; }
 
-    /// (kit.ts SLOT_PUT.bangs)
     pub fn bangs(m: &mut crate::kit::MemberKit, n: f64) { m.bangs = n; }
 
-    /// (kit.ts SLOT_PUT.frags)
     pub fn frags(m: &mut crate::kit::MemberKit, n: f64) { m.frags = n; }
 
-    /// (kit.ts SLOT_PUT.shells)
     pub fn shells(m: &mut crate::kit::MemberKit, n: f64) { m.shells = n; }
 
-    /// (kit.ts SLOT_PUT.charges)
     pub fn charges(m: &mut crate::kit::MemberKit, n: f64) { m.charges = n; }
 
-    /// (kit.ts SLOT_PUT.walls)
     pub fn walls(m: &mut crate::kit::MemberKit, n: f64) { m.walls = n; }
 
-    /// (kit.ts SLOT_PUT.wand)
     pub fn wand(m: &mut crate::kit::MemberKit, n: f64) { m.wand = n > 0.0; }
 
-    /// (kit.ts SLOT_PUT.cams)
     pub fn cams(m: &mut crate::kit::MemberKit, n: f64) { m.cams = n; }
 
-    /// (kit.ts SLOT_PUT.rings)
     pub fn rings(m: &mut crate::kit::MemberKit, n: f64) { m.rings = n; }
 
-    /// A shotgun given up is the issued gun again (`d`: what he is issued).   (kit.ts SLOT_PUT.shotgun)
+    /// A shotgun given up is the issued gun again (`d`: what he is issued).
     pub fn shotgun(g: &mut crate::game::Game, m: &mut crate::kit::MemberKit, n: f64, d: &crate::kit::MemberKit) {
         if g.k.bigslot.on {
             if n > 0.0 {
@@ -497,7 +478,6 @@ pub mod slot_put {
         }
     }
 
-    /// (kit.ts SLOT_PUT.hammer)
     pub fn hammer(g: &mut crate::game::Game, m: &mut crate::kit::MemberKit, n: f64) {
         if !g.k.bigslot.on {
             return;

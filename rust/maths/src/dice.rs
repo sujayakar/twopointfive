@@ -1,4 +1,4 @@
-//! THE GAME'S OWN DIE (src/math/dice.ts SimDice, simRandom) — the one stream every draw of the simulation comes off: mulberry32, its whole state one word, and
+//! THE GAME'S OWN DIE — the one stream every draw of the simulation comes off: mulberry32, its whole state one word, and
 //! the count of draws taken beside it. It lives in the game's block (state.rs) so that a rule here rolls it with no call out of the module, and so that a
 //! rollback puts it back with everything else.
 use core::mem::size_of;

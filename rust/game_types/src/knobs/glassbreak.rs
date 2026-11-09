@@ -51,7 +51,7 @@ pub struct GlassbreakK {
     #[k(0.7)] pub stand_ny: f64,
     #[k(0.3)] pub stand_foot: f64,
     #[k(0.02)] pub balance_tol: f64,
-    /// blast(): default reach (m) to a pane's nearest point, and the power a stun charge's 'bang' carries (glass.ts updateGlass); a TOOTH — a piece on the frame under
+    /// blast(): default reach (m) to a pane's nearest point, and the power a stun charge's 'bang' carries; a TOOTH — a piece on the frame under
     ///  toothArea m² — is left in by a blast weaker than toothK there (the jagged rim a blown window keeps)
     #[k(2.6)] pub blast_m: f64,
     #[k(0.6)] pub bang_power: f64,
@@ -108,7 +108,6 @@ pub struct GlassbreakKGrip {
 }
 
 /// GLASS AS BUILDINGS HAVE IT (two rules, each ON in the page — `?glassdrop=0`, `?glassplace=0` — and off here and on the frozen stand, `TPS_GLASSDROP=1`,
-///  `TPS_GLASSPLACE=1`; Tab ▸ Destruction ▸ Glass breaking). Off = the build as it was: the wave below and typeOf's first rule.
 ///    drop  — toughened glass lets go ALL AT ONCE. Its stored stress crazes the whole sheet in a millisecond; nothing travels across it that an eye could follow. So
 ///            the sheet stands white for `hang` seconds and then every clump leaves on the one step (stepDice → dropAll), handed on as at most `blocks` fragments
 ///            that fall: out along the blow a little, no push across the pane. (The wave was the same release spread over half a second at diceSpeed.)

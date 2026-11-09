@@ -1,4 +1,3 @@
-//! src/game/character.ts lines 2620 to 3085
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -19,7 +18,7 @@ fn set_rot(g: &mut Game, pose: crate::anim_skeleton::Pose, i: usize, q: Quat) { 
 
 // ---- the action clip
 
-/// The whole-body action clip over the finished pA: clocks and weight here, the blend in the layer. The weight used (0 = untouched). (character.ts actLayer)
+/// The whole-body action clip over the finished pA: clocks and weight here, the blend in the layer. The weight used (0 = untouched).
 pub(super) fn anim_act_layer(g: &mut crate::game::Game, c: CharId, dt: f64) -> f64 {
     let a = g.ch[c].anim.act.clone();
     if let Some(a) = &a {
@@ -84,7 +83,7 @@ pub(super) fn anim_mv_trunk(g: &mut crate::game::Game, c: CharId, w: f64, o: cra
     if w >= 0.003 { anim_layer(g, c, |s, an, k| ::sim::layers::mv_trunk(s, an, w, o, aim_pass, k)); }
 }
 
-/// MOVES, the second pass: the arms the fight does not read, after every other layer: the magazine change, the hand to his ribs, a figure kept down. (character.ts mvArms)
+/// MOVES, the second pass: the arms the fight does not read, after every other layer: the magazine change, the hand to his ribs, a figure kept down.
 pub(super) fn anim_mv_arms(g: &mut crate::game::Game, c: CharId, dt: f64, gate: f64) {
     let an = &g.ch[c].anim;
     let (sig_t, tell_t, ts_t) = (an.sig_t, an.tell_t, an.mvs.ts_t);
@@ -176,7 +175,7 @@ pub(super) fn anim_mv_arms(g: &mut crate::game::Game, c: CharId, dt: f64, gate: 
     }
 }
 
-/// The trunk's own frame off the joints of `fk`: across the shoulders to his left, up the spine, out of the chest. (character.ts trunkFrame)
+/// The trunk's own frame off the joints of `fk`: across the shoulders to his left, up the spine, out of the chest.
 pub(super) fn anim_trunk_frame(g: &crate::game::Game, c: CharId) -> crate::character::AnimTrunkFrame {
     let an = &g.ch[c].anim;
     let (nd, fk) = (&an.nodes, &an.fk);
@@ -213,7 +212,7 @@ fn anim_clutch_arm(g: &mut crate::game::Game, c: CharId, w: f64) { anim_layer(g,
 /// A figure kept down: wrists behind the back, or hands on the head.
 fn anim_bound_arms(g: &mut crate::game::Game, c: CharId, w: f64, kind: f64) { anim_layer(g, c, |s, an, k| ::sim::layers::bound_arms(s, an, w, kind, k)); }
 
-/// The reactions: where the dazzle is from in his own frame, then their body, then their arms. (character.ts mvPost)
+/// The reactions: where the dazzle is from in his own frame, then their body, then their arms.
 pub(super) fn anim_mv_post(g: &mut crate::game::Game, c: CharId, dt: f64, gate: f64) {
     if let Some(dz) = g.ch[c].anim.dazzle {
         let (pos, was) = (g.ch[c].pos, g.ch[c].anim.mvs.dz_d);
@@ -240,7 +239,7 @@ fn anim_mv_post_arms(g: &mut crate::game::Game, c: CharId, dt: f64, gate: f64) {
 
 // ---- procedural layers
 
-/// One node of PoseFK.run's arithmetic, operand for operand, under its parent's rotation and origin. (the body of character.ts fkPart)
+/// One node of PoseFK.run's arithmetic, operand for operand, under its parent's rotation and origin.
 #[inline]
 fn fk_node(d: &[f32], n: usize, i: usize, pr: Quat, pp: V3) -> (Quat, V3) {
     let (rx, ry, rz, rw) = (d[3 * n + i] as f64, d[4 * n + i] as f64, d[5 * n + i] as f64, d[6 * n + i] as f64);
@@ -259,7 +258,7 @@ fn fk_node(d: &[f32], n: usize, i: usize, pr: Quat, pp: V3) -> (Quat, V3) {
     )
 }
 
-/// fk.run() for a few nodes: those of `list` hold exactly what a full run would give them, the rest of fk stands as the last run left it. (character.ts fkPart)
+/// fk.run() for a few nodes: those of `list` hold exactly what a full run would give them, the rest of fk stands as the last run left it.
 pub(super) fn anim_fk_part(g: &mut crate::game::Game, c: CharId, pose: crate::anim_skeleton::Pose, list: &[i32]) {
     let n = crate::anim_skeleton::pose_rows(pose.nodes as f64) as usize;
     let rig = g.ch[c].anim.rig;
@@ -283,7 +282,7 @@ pub(super) fn anim_fk_part(g: &mut crate::game::Game, c: CharId, pose: crate::an
     }
 }
 
-/// Curl the four fingers and set the thumb of one hand, from the rest hand; and the hand pass's note of how far this shape stands from the locomotion's. (character.ts hand)
+/// Curl the four fingers and set the thumb of one hand, from the rest hand; and the hand pass's note of how far this shape stands from the locomotion's.
 pub(super) fn anim_hand(g: &mut crate::game::Game, c: CharId, pose: crate::anim_skeleton::Pose, side: f64, curl: &[f64], thumb: f64, spread: Option<f64>) {
     const J: [f64; 3] = [72.0, 92.0, 62.0];
     const TJ: [f64; 3] = [30.0, 25.0, 45.0];
@@ -326,7 +325,7 @@ pub(super) fn anim_hand(g: &mut crate::game::Game, c: CharId, pose: crate::anim_
 /// MOVES, crouched: the kneeling foot's toe brought back onto the floor.
 pub(super) fn anim_toes_up(g: &mut crate::game::Game, c: CharId, w: f64) { anim_layer(g, c, |s, an, _| ::sim::layers::toes_up(s, an, w)); }
 
-/// The man's own small hash of `k` to −1‥1 (handsBuild's `h`): the die of how his hands hang, drawing nothing from the game's. (character.ts:2984)
+/// The man's own small hash of `k` to −1‥1 (handsBuild's `h`): the die of how his hands hang, drawing nothing from the game's.
 fn hand_hash(seed: f64, k: f64) -> f64 {
     let mut x = m::imul(js::to_i32((seed + 1.0) * 2654435761.0) ^ js::to_i32(k * 40503.0), js::to_i32(2246822519.0)) as u32;
     x ^= x >> 15;
@@ -335,7 +334,7 @@ fn hand_hash(seed: f64, k: f64) -> f64 {
     x as f64 / 4294967296.0 * 2.0 - 1.0
 }
 
-/// This man's relaxed hands, as the turn from the library's fist on each digit joint, and the index laid straight for the trigger hand. (character.ts handsBuild)
+/// This man's relaxed hands, as the turn from the library's fist on each digit joint, and the index laid straight for the trigger hand.
 fn anim_hands_build(g: &mut crate::game::Game, c: CharId) {
     use v3::quat;
     let hd = &HAND;

@@ -69,7 +69,6 @@ pub struct StalkWait {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct StalkMod {
-    /// (src/game/stalk.ts:142 STATE)
     pub state: JsMap<PlayerId, crate::stalk::St>,
 }
 

@@ -8,14 +8,11 @@ pub enum MoraleKDarkRead {
     Watch,
 }
 
-/// the switch and its numbers: on (?nomorale = every man as steady as he was) and by the shipped
-///  stand; the harness's frozen stand leaves it off (TPS_MORALE=1 turns it on). Dread is 0‥1: `jumpy` / `broken` are the rungs' lines, `hyst` how far under its
-///  line a rung holds. `blast` is a blast's shock inside `nearM`, × `farK` by `blastM`, `shockCap` the most shock a man carries; `alone` / `dark` the two standing
-///  terms. The rest are seconds, metres, metres a second and rounds, named as the head of the file names them; `barkSecs` = the least time between two of one
-///  man's lines from this file. `fanDeg` / `fanStep` / `straightM`: the scrabble's fan (backGoal). TRAINING: `training` = who is green — 'difficulty' (the
-///  squad's own key, else MORALE_AT), 'green' / 'mixed' / 'trained' for every squad, 'none' = the first slice's men; `greenBroken` = a green man's broken line;
-///  `leaderDown` his standing term with his leader down, `leaderShock` the shock of seeing it, `flinchSecs` the flinch; `shoutGap` how long the duck's shout waits on a line already in his mouth; `orderM` / `orderBeat` / `orderSecs` /
-///  `orderGap` / `standSecs` / `sideM` the leader's order (the head), `steadyDuck` a steady man's duck; `holdShock` / `holdMax` end a break (the head); `nerve` picks the row of `nerveK` every shock is scaled by. UNTUNED by eye (nobody has seen it on a GPU, nobody has played it).
+/// Dread is 0‥1: `jumpy` / `broken` are the rungs' lines, `hyst` how far under its line a rung holds. `blast` is a blast's shock inside `nearM`, × `farK` by `blastM`, `shockCap` the most shock a man carries; `alone` / `dark` the two standing terms. The rest are seconds, metres,
+/// metres a second and rounds, named as the head of the file names them; `barkSecs` = the least time between two of one man's lines from this file. `fanDeg` / `fanStep` / `straightM`: the scrabble's fan (backGoal). TRAINING: `training` = who is green — 'difficulty' (the squad's
+/// own key, else MORALE_AT), 'green' / 'mixed' / 'trained' for every squad, 'none' = the first slice's men; `greenBroken` = a green man's broken line; `leaderDown` his standing term with his leader down, `leaderShock` the shock of seeing it, `flinchSecs` the flinch; `shoutGap`
+/// how long the duck's shout waits on a line already in his mouth; `orderM` / `orderBeat` / `orderSecs` / `orderGap` / `standSecs` / `sideM` the leader's order (the head), `steadyDuck` a steady man's duck; `holdShock` / `holdMax` end a break (the head); `nerve` picks the row of
+/// `nerveK` every shock is scaled by. UNTUNED by eye (nobody has seen it on a GPU, nobody has played it).
 #[derive(Clone, Copy, Debug, ToBytes, Knobs)]
 pub struct MoraleK {
     #[k(25.0)] pub half_life: f64,

@@ -80,7 +80,7 @@ fn cell(x: f64, z: f64) -> usize {
         NCELLS
     }
 }
-/// shards.ts deposit: `amount` m² of glass laid at (x, z)
+/// `amount` m² of glass laid at (x, z)
 pub fn deposit(f: &mut Falls, x: f64, z: f64, amount: f64) {
     if amount <= 0.0 {
         return;
@@ -166,7 +166,7 @@ pub fn due(g: usize, l: usize, time: f64, level: f64, gap: f64, out: &mut [f64])
     f.n[l] = w as f64;
     made as u32
 }
-/// shards.ts step: a footfall at (x, z) of hearing level `level` — on glass it is louder and grinds the glass down. Returns the level to file; how much
+/// A footfall at (x, z) of hearing level `level` — on glass it is louder and grinds the glass down. Returns the level to file; how much
 /// glass was underfoot (0‥1; 0 = no crunch) → `k`.
 #[allow(clippy::too_many_arguments)]
 pub fn step(g: usize, x: f64, z: f64, level: f64, crunch_full: f64, grind: f64, gain: f64, add: f64, k_out: &mut f64) -> f64 {

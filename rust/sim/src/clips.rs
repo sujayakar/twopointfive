@@ -1,4 +1,4 @@
-//! THE CLIPS A POSE IS SAMPLED FROM (src/anim/gltf.ts Clip, Track; src/anim/skeleton.ts sampleClip) — a character file's animations, copied in ONCE as the
+//! THE CLIPS A POSE IS SAMPLED FROM — a character file's animations, copied in ONCE as the
 //! host first samples one, so that a sample is one question whose answer is written straight into a pose (the bench's, or one at home in a game's pool:
 //! skeleton.rs `ask_sample`), and so that a layer of the animator written here samples with no crossing.
 //!
@@ -332,7 +332,7 @@ pub fn nodes_of(c: usize) -> usize {
     }
 }
 
-/// skeleton.ts sampleClip: clip `c` at time `t` (seconds; wrapped where `looped`, else held inside the clip) into the pose `d` — only the nodes the clip
+/// Clip `c` at time `t` (seconds; wrapped where `looped`, else held inside the clip) into the pose `d` — only the nodes the clip
 /// has tracks for are written. The caller has made sure `d` holds `nodes_of(c)` nodes; a number the table does not hold writes nothing.
 pub fn sample(d: &mut [S], c: usize, mut t: f64, looped: bool, in_singles: bool) {
     let tb = table();

@@ -215,10 +215,10 @@ pub struct Shade {
 }
 pub const NO_SHADE: Shade = Shade { sigma: 0.0, g: 0, stamp: 0.0 };
 
-/// the six axis normals the renderer's meter takes its best face over (guards.ts METER_NORMALS)
+/// the six axis normals the renderer's meter takes its best face over
 const N6: [[f64; 3]; 6] = [[1.0, 0.0, 0.0], [-1.0, 0.0, 0.0], [0.0, 1.0, 0.0], [0.0, -1.0, 0.0], [0.0, 0.0, 1.0], [0.0, 0.0, -1.0]];
 
-/// guards.ts lightWindow: (1 − (d/range)⁴)², clamped
+/// (1 − (d/range)⁴)², clamped
 #[inline(always)]
 fn light_window(d: f64, range: f64) -> f64 {
     let x = d / range;

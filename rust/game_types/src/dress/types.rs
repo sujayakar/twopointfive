@@ -18,6 +18,5 @@ pub struct DressModDRESS {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct DressMod {
-    /// (src/game/dress.ts:11 DRESS)
     #[is(crate::dress::DressModDRESS { moths: true, cues: true, blast_feel: true, fixtures: true, fx: true, stature: true, net: true, wind: true })] pub dress: crate::dress::DressModDRESS,
 }

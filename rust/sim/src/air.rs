@@ -5,7 +5,7 @@
 //! An opening between two cells is asked of the statics alone (three heights, both ways), and of the door leaves as rectangles, re-read whenever a leaf has moved.
 //!
 //! WHAT IS NOT STATE and is made again (`Plan`, a set a slot of the blocks, as bricks.rs's tables): which cells are roofed and the lists walked over them are the roofs',
-//! and which edges a leaf stands across is the leaves'. Whose a slot's set is goes by the block's stamp (src/sim/state.ts SimState.stamp).
+//! and which edges a leaf stands across is the leaves'. Whose a slot's set is goes by the block's stamp.
 use game_types::knobs::Knobs;
 use crate::lines;
 use crate::maths::{cos, hypot2, sin};
@@ -19,7 +19,7 @@ pub const AIR_W: usize = 80;
 pub const AIR_H: usize = 56;
 pub const AIR_CELL: f64 = 0.5;
 pub const N: usize = AIR_W * AIR_H;
-/// the world's corner on the plan (scene/world.ts WORLD.min)
+/// the world's corner on the plan
 pub const X0: f64 = 0.0;
 pub const Z0: f64 = 0.0;
 /// the heights a way between two cells is asked at
@@ -122,7 +122,7 @@ pub struct Said {
     pub open: f64,
 }
 
-/// the fixed step in use (airDust.ts stepSecs): held to what the explicit scheme and a frame can take
+/// the fixed step in use: held to what the explicit scheme and a frame can take
 #[inline]
 fn step_secs(tune: &Knobs) -> f64 {
     let h = tune.airdust.step;
@@ -168,7 +168,7 @@ impl Air {
         self.n_cells = 0.0;
         self.n_edges = 0.0;
     }
-    /// airDust.ts shareAt: off the grid = the open air
+    /// Off the grid = the open air
     #[inline]
     pub fn share_at(&self, x: f64, z: f64) -> f64 {
         let ix = floor((x - X0) / AIR_CELL);
@@ -179,7 +179,7 @@ impl Air {
             self.s[ix as usize + iz as usize * AIR_W]
         }
     }
-    /// airDust.ts ask: is the way along edge `e` clear of every static
+    /// Is the way along edge `e` clear of every static
     fn ask(&self, wo: usize, ask: u32, e: usize, probes: &mut f64, tune: &Knobs) -> bool {
         let i = e >> 1;
         let j = if e & 1 != 0 { i + AIR_W } else { i + 1 };
@@ -195,7 +195,7 @@ impl Air {
         }
         false
     }
-    /// airDust.ts recheck: the shut edges asked again, a share of the list a step
+    /// The shut edges asked again, a share of the list a step
     fn recheck(&mut self, p: &Plan, wo: usize, ask: u32, h: f64, probes: &mut f64, tune: &Knobs) {
         let n = self.n_edges as usize;
         if n == 0 {
@@ -212,7 +212,7 @@ impl Air {
         }
         self.cur = cur as f64;
     }
-    /// airDust.ts leaves: which edges the door leaves stand across, re-read only when a leaf has moved
+    /// Which edges the door leaves stand across, re-read only when a leaf has moved
     fn leaves(p: &mut Plan, wo: usize, set: i32) {
         let o = world(wo);
         let n = if set < 0 { 0 } else { o.leaves[set as usize] as usize };
@@ -269,7 +269,7 @@ impl Air {
             }
         }
     }
-    /// airDust.ts stepOnce: one step of the equation → the most any cell moved
+    /// One step of the equation → the most any cell moved
     fn step_once(&mut self, p: &Plan, dt: f64, open_out: &mut f64, tune: &Knobs) -> f64 {
         let next = unsafe { &mut *core::ptr::addr_of_mut!(NEXT) };
         let leak = self.leak;
@@ -355,7 +355,7 @@ impl Air {
             i += 1;
         }
     }
-    /// airDust.ts update: through the openings as they stand this tick
+    /// Through the openings as they stand this tick
     pub fn update(&mut self, p: &mut Plan, wo: usize, set: i32, ask: u32, dt: f64, said: &mut Said, tune: &Knobs) {
         let h = step_secs(tune);
         self.acc += dt;
@@ -379,7 +379,7 @@ impl Air {
 fn js_round(x: f64) -> i32 {
     floor(x + 0.5) as i64 as i32
 }
-/// airDust.ts crosses: does the plan segment from (x, z) along (dx, dz), t in [0, 1], enter the rectangle |x| ≤ hx, |z| ≤ hz
+/// Does the plan segment from (x, z) along (dx, dz), t in [0, 1], enter the rectangle |x| ≤ hx, |z| ≤ hz
 #[inline]
 fn crosses(x: f64, z: f64, dx: f64, dz: f64, hx: f64, hz: f64) -> bool {
     let (mut t0, mut t1) = (0.0, 1.0);

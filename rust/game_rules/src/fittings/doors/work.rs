@@ -1,4 +1,3 @@
-//! src/game/doors.ts lines 1040 to 1192
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,7 +6,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// A door's sound, heard and played: what the Game hands the doors as `emit`, called by name (game.ts:1196).
+/// A door's sound, heard and played: what the Game hands the doors as `emit`, called by name.
 fn emit(g: &mut Game, d: DoorId, sound: crate::doors::DoorSound, pos: V3, who: f64, level: f64) {
     door_event(g, crate::doors::DoorEvent { door: d, sound, pos, who, level });
 }
@@ -16,12 +15,12 @@ fn door_event(g: &mut Game, e: crate::doors::DoorEvent) {
     crate::game::game_on_door_event(g, e);
 }
 
-/// How far a leaf stands open the way a shove would send it; one-way, simply how far open.   (doors.ts Doors.openFor)
+/// How far a leaf stands open the way a shove would send it; one-way, simply how far open.
 pub fn doors_open_for(g: &crate::game::Game, d: DoorId, s: f64) -> f64 {
     m::abs(door_angle(g, d))
 }
 
-/// Pull a leaf to from wherever it stands: a stiff sprung close the latch catches.   (doors.ts Doors.pullTo)
+/// Pull a leaf to from wherever it stands: a stiff sprung close the latch catches.
 pub fn doors_pull_to(g: &mut crate::game::Game, d: DoorId, who: f64) {
     if door_latched(g, d) || door_off(g, d) { return; }
     door_set_closing(g, d, true);
@@ -36,7 +35,7 @@ pub fn doors_coming_home(g: &crate::game::Game, d: DoorId) -> bool {
     door_closing(g, d) && door_vel(g, d) * door_angle(g, d) < 0.0 && m::abs(door_vel(g, d)) > 0.005
 }
 
-/// A hand on the handle from the face it opens into: unlatched with its creak, brought round at the pull's pace.   (doors.ts Doors.pull)
+/// A hand on the handle from the face it opens into: unlatched with its creak, brought round at the pull's pace.
 pub(in crate::fittings) fn doors_pull(g: &mut crate::game::Game, d: DoorId, who: f64, quiet: Option<bool>) {
     let quiet = quiet.unwrap_or(false);
     if door_off(g, d) { return; }
@@ -59,7 +58,7 @@ pub(in crate::fittings) fn doors_pull(g: &mut crate::game::Game, d: DoorId, who:
     door_set_last_who(g, d, who);
 }
 
-/// Try the lever against the bolt: a clack, and the marker's flash, which is also the rate limit.   (doors.ts Doors.rattle)
+/// Try the lever against the bolt: a clack, and the marker's flash, which is also the rate limit.
 pub fn doors_rattle(g: &mut crate::game::Game, d: DoorId, who: f64, level: Option<f64>) {
     let level = level.unwrap_or(0.12);
     if door_rattle_t(g, d) > 0.0 || door_off(g, d) { return; }
@@ -69,14 +68,14 @@ pub fn doors_rattle(g: &mut crate::game::Game, d: DoorId, who: f64, level: Optio
     emit(g, d, crate::doors::DoorSound::Rattle, pos, who, level);
 }
 
-/// The root `stand` off the leaf, `along` from the hinge, on the side `s`, and the yaw back into the leaf.   (doors.ts workSpot's sums)
+/// The root `stand` off the leaf, `along` from the hinge, on the side `s`, and the yaw back into the leaf.
 fn work_spot_at(hinge: [f64; 2], u: [f64; 2], s: f64, stand: f64, along: f64) -> (V3, f64) {
     let [hx, hz] = hinge;
     let (nx, nz) = (-u[1] * s, u[0] * s);
     ([hx + u[0] * along + nx * stand, 0.0, hz + u[1] * along + nz * stand], m::atan2(-nx, -nz))
 }
 
-/// Where to work d's lock from `from`'s side.   (doors.ts Doors.workSpot)
+/// Where to work d's lock from `from`'s side.
 pub fn doors_work_spot(g: &crate::game::Game, d: DoorId, from: V3, stand: Option<f64>, along: Option<f64>) -> crate::doors::DoorsWorkSpot {
     let stand = stand.unwrap_or(0.5);
     let along = along.unwrap_or(g.dr[d].def.width - 0.14);
@@ -87,13 +86,13 @@ pub fn doors_work_spot(g: &crate::game::Game, d: DoorId, from: V3, stand: Option
     crate::doors::DoorsWorkSpot { pos, yaw }
 }
 
-/// A kick's station along the leaf: the runner's own, kept on the leaf's outer half.   (doors.ts kickSpot's sums)
+/// A kick's station along the leaf: the runner's own, kept on the leaf's outer half.
 fn kick_along(hinge: [f64; 2], u: [f64; 2], width: f64, from: V3) -> f64 {
     let along = (from[0] - hinge[0]) * u[0] + (from[2] - hinge[1]) * u[1];
     v3::clamp(along, width * 0.5, width - 0.18)
 }
 
-/// Where a kick is thrown from: square to the leaf, by the lock.   (doors.ts Doors.kickSpot)
+/// Where a kick is thrown from: square to the leaf, by the lock.
 pub fn doors_kick_spot(g: &crate::game::Game, d: DoorId, from: V3) -> crate::doors::DoorsKickSpot {
     let u = door_dir(g, d);
     let (hinge, width) = (g.dr[d].def.hinge, g.dr[d].def.width);
@@ -101,7 +100,7 @@ pub fn doors_kick_spot(g: &crate::game::Game, d: DoorId, from: V3) -> crate::doo
     crate::doors::DoorsKickSpot { pos: spot.pos, yaw: spot.yaw }
 }
 
-/// The kick from beside the door's sums: past the latch edge, behind the wall, turned to the lock.   (doors.ts kickSpotSide's sums)
+/// The kick from beside the door's sums: past the latch edge, behind the wall, turned to the lock.
 fn side_spot_at(hinge: [f64; 2], u: [f64; 2], s: f64, w: f64, past: f64, out: f64) -> (V3, f64) {
     let [hx, hz] = hinge;
     let (nx, nz) = (-u[1] * s, u[0] * s);
@@ -110,7 +109,7 @@ fn side_spot_at(hinge: [f64; 2], u: [f64; 2], s: f64, w: f64, past: f64, out: f6
     (pos, m::atan2(lx - pos[0], lz - pos[2]))
 }
 
-/// The same kick thrown from beside the door. Geometry only: whether there is floor there is the caller's to ask.   (doors.ts Doors.kickSpotSide)
+/// The same kick thrown from beside the door. Geometry only: whether there is floor there is the caller's to ask.
 pub fn doors_kick_spot_side(g: &crate::game::Game, d: DoorId, from: V3) -> crate::doors::DoorsKickSpotSide {
     let hinge = g.dr[d].def.hinge;
     let u = door_dir(g, d);
@@ -121,7 +120,7 @@ pub fn doors_kick_spot_side(g: &crate::game::Game, d: DoorId, from: V3) -> crate
     crate::doors::DoorsKickSpotSide { pos, yaw }
 }
 
-/// How far along the frame line from the hinge, and how far off it, a point stands.   (doors.ts Doors.frameCoords)
+/// How far along the frame line from the hinge, and how far off it, a point stands.
 pub fn doors_frame_coords(g: &crate::game::Game, d: DoorId, p: V3) -> crate::doors::DoorsFrameCoords {
     let u = door_dir(g, d);
     let hinge = g.dr[d].def.hinge;
@@ -129,12 +128,12 @@ pub fn doors_frame_coords(g: &crate::game::Game, d: DoorId, p: V3) -> crate::doo
     crate::doors::DoorsFrameCoords { along: dx * u[0] + dz * u[1], off: m::abs(-dx * u[1] + dz * u[0]) }
 }
 
-/// Seconds to the next pick click after click number `n`: an uneven rhythm of about 0.7 s.   (doors.ts Doors.pick)
+/// Seconds to the next pick click after click number `n`: an uneven rhythm of about 0.7 s.
 fn pick_gap(n: f64) -> f64 {
     0.55 + 0.3 * js::rem(n * 0.618034, 1.0)
 }
 
-/// One frame of working the lock. True on the frame it opens, and for a lock already open.   (doors.ts Doors.pick)
+/// One frame of working the lock. True on the frame it opens, and for a lock already open.
 pub fn doors_pick(g: &mut crate::game::Game, d: DoorId, who: f64, dt: f64) -> bool {
     if !door_locked(g, d) { return true; }
     if g.dr[d].def.steel.unwrap_or(false) { return false; }
@@ -168,7 +167,7 @@ pub fn doors_pick(g: &mut crate::game::Game, d: DoorId, who: f64, dt: f64) -> bo
     true
 }
 
-/// A boot beside the lock, or (`lock`) what destroys the lock itself. Returns whether the door gave.   (doors.ts Doors.kickIn)
+/// A boot beside the lock, or (`lock`) what destroys the lock itself. Returns whether the door gave.
 pub fn doors_kick_in(g: &mut crate::game::Game, d: DoorId, from: V3, who: f64, lock: Option<bool>) -> bool {
     let lock = lock.unwrap_or(false);
     if door_off(g, d) { return false; }
@@ -213,12 +212,12 @@ pub fn doors_kick_in(g: &mut crate::game::Game, d: DoorId, from: V3, who: f64, l
     true
 }
 
-/// The doors' side of a blast: the leaves it took off. The Game's `blaster`, called by name (game.ts:1206).   (doors.ts Doors.blast)
+/// The doors' side of a blast: the leaves it took off. The Game's `blaster`, called by name.
 pub fn doors_blast(g: &mut crate::game::Game, at: V3, tear_m: f64, who: f64) -> Vec<DoorId> {
     crate::doorblast::door_blast(g, at, tear_m, who)
 }
 
-/// A noise of d's that is not a leaf's own doing, heard and played as any other.   (doors.ts Doors.sound)
+/// A noise of d's that is not a leaf's own doing, heard and played as any other.
 pub fn doors_sound(g: &mut crate::game::Game, d: DoorId, sound: crate::doors::DoorSound, pos: V3, who: f64, level: f64) {
     emit(g, d, sound, pos, who, level);
 }
@@ -243,12 +242,12 @@ fn torn_feed(g: &mut Game, d: DoorId, who: f64, cause: crate::doors::DoorsTornCa
     crate::wallbreak::wall_break_note(g, &row);
 }
 
-/// Told of every leaf that comes off, by whatever road, on the frame it leaves its frame.   (doors.ts Doors.torn)
+/// Told of every leaf that comes off, by whatever road, on the frame it leaves its frame.
 pub(in crate::fittings) fn doors_torn(g: &mut crate::game::Game, d: DoorId, who: f64, cause: Option<crate::doors::DoorsTornCause>) {
     torn_feed(g, d, who, cause.unwrap_or(crate::doors::DoorsTornCause::Blast));
 }
 
-/// The first of `dists` out from the door's middle on `side` that has floor.   (doors.ts threadPath's `pick`)
+/// The first of `dists` out from the door's middle on `side` that has floor.
 fn thread_pick(cx: f64, cz: f64, n: [f64; 2], dists: &[f64], side: f64, free: &mut dyn FnMut(f64, f64) -> bool) -> Option<V3> {
     for &dd in dists {
         let q: V3 = [cx + n[0] * dd * side, 0.0, cz + n[1] * dd * side];
@@ -257,7 +256,7 @@ fn thread_pick(cx: f64, cz: f64, n: [f64; 2], dists: &[f64], side: f64, free: &m
     None
 }
 
-/// What the leg prev→p needs inserted for one door: where along the leg it crosses, and the points; None if it does not cross or needs none.   (doors.ts threadPath's walk)
+/// What the leg prev→p needs inserted for one door: where along the leg it crosses, and the points; None if it does not cross or needs none.
 fn thread_door(hinge: [f64; 2], closed_dir: f64, width: f64, prev: V3, p: V3, free: &mut dyn FnMut(f64, f64) -> bool) -> Option<(f64, Vec<V3>)> {
     let [hx, hz] = hinge;
     let u: [f64; 2] = [m::cos(closed_dir), m::sin(closed_dir)];
@@ -283,7 +282,7 @@ fn thread_door(hinge: [f64; 2], closed_dir: f64, width: f64, prev: V3, p: V3, fr
     if pts.is_empty() { None } else { Some((t, pts)) }
 }
 
-/// Insert approach and exit points where a path crosses a doorway, so men take doors head-on and clear the swung leaf before turning.   (doors.ts Doors.threadPath)
+/// Insert approach and exit points where a path crosses a doorway, so men take doors head-on and clear the swung leaf before turning.
 pub fn doors_thread_path(g: &mut crate::game::Game, path: &[V3], start: V3, is_free: Option<&mut dyn FnMut(&mut crate::game::Game, f64, f64) -> bool>) -> Vec<V3> {
     if path.is_empty() { return Vec::new(); }
     let mut is_free = is_free;
@@ -307,7 +306,7 @@ pub fn doors_thread_path(g: &mut crate::game::Game, path: &[V3], start: V3, is_f
     out
 }
 
-/// Every leaf's box and its two handles, for the picture's list (the fog's doorBoxes asks it).   (doors.ts Doors.boxes)
+/// Every leaf's box and its two handles, for the picture's list (the fog's doorBoxes asks it).
 pub fn doors_boxes(g: &crate::game::Game, out: &mut Vec<AnyBoxId>) {
     for d in g.doors.list.iter() {
         let dr = &g.dr[*d];
@@ -317,7 +316,7 @@ pub fn doors_boxes(g: &crate::game::Game, out: &mut Vec<AnyBoxId>) {
     }
 }
 
-/// Leaf boxes, for registering as dynamic occluders with the collision layer.   (doors.ts Doors.leafBoxes)
+/// Leaf boxes, for registering as dynamic occluders with the collision layer.
 pub fn doors_leaf_boxes(g: &crate::game::Game) -> Vec<BoxId> {
     g.doors.list.iter().map(|d| g.dr[*d].box_).collect()
 }

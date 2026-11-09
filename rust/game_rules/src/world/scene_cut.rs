@@ -5,7 +5,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{vec, vec::Vec};
 
-/// A plane from any normal (normalised here) and its offset along that normal's length: keeps n · p ≤ d.   (cut.ts cutPlane)
+/// A plane from any normal (normalised here) and its offset along that normal's length: keeps n · p ≤ d.
 pub fn cut_plane(n: V3, d: f64) -> crate::scene_cut::CutPlane {
     let l = m::hyp3(n[0], n[1], n[2]);
     if !(l > 1e-12) {
@@ -14,7 +14,7 @@ pub fn cut_plane(n: V3, d: f64) -> crate::scene_cut::CutPlane {
     CutPlane { n: [n[0] / l, n[1] / l, n[2] / l], d: d / l }
 }
 
-/// The plane through local point p whose normal n points at what is removed.   (cut.ts cutThrough)
+/// The plane through local point p whose normal n points at what is removed.
 pub fn cut_through(p: V3, n: V3) -> crate::scene_cut::CutPlane {
     let l = m::hyp3(n[0], n[1], n[2]);
     if !(l > 1e-12) {
@@ -24,12 +24,12 @@ pub fn cut_through(p: V3, n: V3) -> crate::scene_cut::CutPlane {
     CutPlane { n: u, d: u[0] * p[0] + u[1] * p[1] + u[2] * p[2] }
 }
 
-/// The farthest the uncut box reaches along n.   (cut.ts cutSupport)
+/// The farthest the uncut box reaches along n.
 fn cut_support(h: V3, n: V3) -> f64 {
     m::abs(n[0]) * h[0] + m::abs(n[1]) * h[1] + m::abs(n[2]) * h[2]
 }
 
-/// The corners of the cut solid (local frame): every triple of its bounding planes that meets in a point inside all the others.   (cut.ts cutVerts)
+/// The corners of the cut solid (local frame): every triple of its bounding planes that meets in a point inside all the others.
 pub fn cut_verts(h: V3, cut: Option<&[crate::scene_cut::CutPlane]>) -> Vec<V3> {
     let mut pl: Vec<CutPlane> = vec![
         CutPlane { n: [1.0, 0.0, 0.0], d: h[0] },
@@ -98,12 +98,12 @@ pub fn cut_verts(h: V3, cut: Option<&[crate::scene_cut::CutPlane]>) -> Vec<V3> {
     out
 }
 
-/// How far into the box the plane reaches.   (cut.ts cutRecord's depth)
+/// How far into the box the plane reaches.
 fn depth(h: V3, c: &CutPlane) -> f64 {
     cut_support(h, c.n) - c.d
 }
 
-/// THE BUILDER: a valid record for a box of half-extents h from any list of planes.   (cut.ts cutRecord)
+/// THE BUILDER: a valid record for a box of half-extents h from any list of planes.
 pub fn cut_record(h: V3, planes: &[crate::scene_cut::CutPlane]) -> crate::scene_cut::CutResult {
     let mut list: Vec<CutPlane> = Vec::new();
     for raw in planes {
@@ -182,7 +182,7 @@ pub fn cut_record(h: V3, planes: &[crate::scene_cut::CutPlane]) -> crate::scene_
     CutResult { cut: if list.is_empty() { None } else { Some(list) }, empty: false, dropped }
 }
 
-/// The cut solid's own bounds in the box's local frame.   (cut.ts cutBounds)
+/// The cut solid's own bounds in the box's local frame.
 fn cut_bounds(h: V3, cut: Option<&[crate::scene_cut::CutPlane]>) -> crate::scene_cut::CutBounds {
     let cut = match cut {
         Some(c) if !c.is_empty() => c,
@@ -206,7 +206,7 @@ fn cut_bounds(h: V3, cut: Option<&[crate::scene_cut::CutPlane]>) -> crate::scene
     CutBounds { min, max }
 }
 
-/// The same solid in the tightest box of the same orientation.   (cut.ts cutFit)
+/// The same solid in the tightest box of the same orientation.
 pub fn cut_fit(h: V3, cut: Option<&[crate::scene_cut::CutPlane]>) -> crate::scene_cut::CutFit {
     let cut = match cut {
         Some(c) if !c.is_empty() => c,
@@ -222,7 +222,7 @@ pub fn cut_fit(h: V3, cut: Option<&[crate::scene_cut::CutPlane]>) -> crate::scen
     CutFit { off, h: nh, cut: cut_record(nh, &moved).cut }
 }
 
-/// Rotate a local vector into the world by a box's orientation (rot if it has one, else its yaw).   (cut.ts cutToWorld)
+/// Rotate a local vector into the world by a box's orientation (rot if it has one, else its yaw).
 pub fn cut_to_world(v: V3, yaw: f64, rot: Option<Quat>) -> V3 {
     if let Some(rot) = rot {
         let (qx, qy, qz, qw) = (rot[0], rot[1], rot[2], rot[3]);
@@ -236,7 +236,7 @@ pub fn cut_to_world(v: V3, yaw: f64, rot: Option<Quat>) -> V3 {
     [cs * v[0] + sn * v[2], v[1], -sn * v[0] + cs * v[2]]
 }
 
-/// A prism from a convex outline, extruded ± half_t along `axis` (0, 1 or 2).   (cut.ts cutPrism)
+/// A prism from a convex outline, extruded ± half_t along `axis` (0, 1 or 2).
 pub fn cut_prism(axis: f64, half_t: f64, poly: &[[f64; 2]]) -> crate::scene_cut::CutPrism {
     let axis = axis as usize;
     let (ua, va) = ((axis + 1) % 3, (axis + 2) % 3);
@@ -282,7 +282,7 @@ pub fn cut_prism(axis: f64, half_t: f64, poly: &[[f64; 2]]) -> crate::scene_cut:
     CutPrism { off, h, cut: r.cut, dropped: r.dropped, empty: r.empty }
 }
 
-/// THE CPU CLIP every ray / segment test shares: [t0, t1] of the local line o + t·d cut down by the record; None = nothing left.   (cut.ts cutClip)
+/// THE CPU CLIP every ray / segment test shares: [t0, t1] of the local line o + t·d cut down by the record; None = nothing left.
 pub(super) fn cut_clip(cut: &[crate::scene_cut::CutPlane], ox: f64, oy: f64, oz: f64, dx: f64, dy: f64, dz: f64, t0: f64, t1: f64) -> Option<(f64, f64)> {
     cut_clip_of(cut, ox, oy, oz, dx, dy, dz, t0, t1).map(|(t0, t1, _)| (t0, t1))
 }

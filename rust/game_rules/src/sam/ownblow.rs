@@ -4,18 +4,18 @@ use crate::game::Game;
 use crate::v3::{self, Quat, V3};
 use alloc::string::String;
 
-/// The key a set charge's row names: the squad's while that key blows it, else the interaction's. (ownblow.ts blowKeyWord)
+/// The key a set charge's row names: the squad's while that key blows it, else the interaction's.
 pub fn blow_key_word(key_is: bool, key: &str) -> String {
     if key_is { String::from(key) } else { String::from("Space") }
 }
 
-/// What a line drawn as written says after 'charge set': the squad's key by name while it blows it, nothing for his own. (ownblow.ts blowTail)
+/// What a line drawn as written says after 'charge set': the squad's key by name while it blows it, nothing for his own.
 pub fn blow_tail(key_is: bool, key: &str, sep: Option<&str>) -> String {
     let sep = sep.unwrap_or(" · ");
     if key_is { alloc::format!("{}press {} to blow it", sep, key) } else { String::new() }
 }
 
-/// The nearest free charge of his own, a door's or a wall's. (ownblow.ts ownSet)
+/// The nearest free charge of his own, a door's or a wall's.
 fn own_set(g: &mut crate::game::Game) -> Option<crate::ownblow::OwnSet> {
     if g.door_tools.set.is_empty() && g.wall_charge.set.is_empty() { return None; }
     let p = g.ch[g.pl[g.player].ch].pos;
@@ -41,7 +41,7 @@ fn own_set(g: &mut crate::game::Game) -> Option<crate::ownblow::OwnSet> {
     Some(OwnSet { at: w_at?, words, where_, fatal, go: OwnSetGo::Wall { w } })
 }
 
-/// player.ts buildInteractables: the row, or None. (ownblow.ts ownBlowRow)
+/// The row, or None.
 pub(super) fn own_blow_row(g: &mut crate::game::Game) -> Option<crate::game::Interactable> {
     let c = own_set(g)?;
     if !(crate::rails::rails_offers(g, "blow") || crate::rails::rails_offers(g, "charge"))
@@ -59,7 +59,7 @@ pub(super) fn own_blow_row(g: &mut crate::game::Game) -> Option<crate::game::Int
     })
 }
 
-/// interact.ts, at a bare tap's release: is the highlighted row his own charge where it would put him down. (ownblow.ts ownBlowHeld)
+/// interact.ts, at a bare tap's release: is the highlighted row his own charge where it would put him down.
 pub(super) fn own_blow_held(g: &mut crate::game::Game, r: Option<&crate::game::Interactable>) -> bool {
     let Some(r) = r else { return false; };
     if r.kind != crate::game::InteractableKind::Charge || r.verb != Some(crate::game::Verb::Blow) { return false; }
@@ -67,7 +67,7 @@ pub(super) fn own_blow_held(g: &mut crate::game::Game, r: Option<&crate::game::I
     true
 }
 
-/// game.ts, where this frame's act is read: the row given. (ownblow.ts ownBlowAct)
+/// game.ts, where this frame's act is read: the row given.
 pub fn own_blow_act(g: &mut crate::game::Game) {
     let Some(a) = g.act.as_ref() else { return; };
     if a.kind != crate::game::InteractableKind::Charge || a.verb != Some(crate::game::Verb::Blow) || g.pl[g.player].down { return; }

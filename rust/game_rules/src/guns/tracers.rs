@@ -9,7 +9,7 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 // ---------------------------------------------------------------- what stands between this file and a box's row
 
-/// A box's row (`t.box`, tracers.ts:105, :141-143). Skeleton 5 has `g.col.boxes: Vec<BoxId>` and no table of Box rows, while index/properties.txt says `g.col.boxes[id].c`. Once it is the table, the body is `&mut g.col.boxes[b]`.
+/// A box's row. Vec<BoxId>` and no table of Box rows, while index/properties.txt says `g.col.boxes[id].c`. Once it is the table, the body is `&mut g.col.boxes[b]`.
 #[cfg(not(test))]
 fn seam_box<'g>(g: &'g mut Game, b: BoxId) -> &'g mut crate::scene_boxes::Box { &mut g.tab.boxes[b] }
 /// makeBox and thinNote, here so a test of this file's own arithmetic stands on no stub (a test's versions are at the foot of the file).
@@ -24,7 +24,7 @@ fn made_box(g: &Game, p: &crate::scene_boxes::MakeBoxP) -> BoxId { tests::made(p
 #[cfg(test)]
 fn noted_thin(g: &Game, b: BoxId, hw0: f64, k: f64, r: f64, g_2: f64, bl: f64) {}
 
-/// A slot's streak: one thin emissive box, dynamic and shadowless, parked under the floor. (tracers.ts:72)
+/// A slot's streak: one thin emissive box, dynamic and shadowless, parked under the floor.
 fn streak_box_p() -> crate::scene_boxes::MakeBoxP {
     let f = crate::scene_boxes::box_flag();
     crate::scene_boxes::MakeBoxP {
@@ -37,7 +37,7 @@ fn streak_box_p() -> crate::scene_boxes::MakeBoxP {
     }
 }
 
-/// A round just cycled out of `w`: is it a tracer? Every `every`-th out of the box, or fewer than `lastN` left. (tracers.ts isTracerRound)
+/// A round just cycled out of `w`: is it a tracer? Every `every`-th out of the box, or fewer than `lastN` left.
 fn is_tracer_round(g: &mut crate::game::Game, w: FirearmId) -> bool {
     let def = g.fa[w].def;
     let Some(t) = g.m.weapons.weapons.get(def).unwrap().tracer else { return false; };
@@ -45,7 +45,7 @@ fn is_tracer_round(g: &mut crate::game::Game, w: FirearmId) -> bool {
     (t.every > 0.0 && k > 0.0 && js::rem(k, t.every) == 0.0) || crate::weapons::firearm_rounds_ready(g, w) < t.last_n
 }
 
-/// The pool: every slot made once, with its lamp. The lights are `g.engine.lights`, reached by path. (tracers.ts Tracers.constructor)
+/// The pool: every slot made once, with its lamp. The lights are `g.engine.lights`, reached by path.
 pub fn tracers_new(g: &mut crate::game::Game, params: Option<crate::tracers::TracersParams>) -> crate::tracers::Tracers {
     let params = match params { Some(p) => p, None => crate::effects::tracer_fx() };
     let mut this = Tracers::blank();
@@ -98,12 +98,12 @@ pub fn tracers_new(g: &mut crate::game::Game, params: Option<crate::tracers::Tra
     this
 }
 
-/// Every live streak, copied. (tracers.ts Tracers.each)
+/// Every live streak, copied.
 fn tracers_each(g: &crate::game::Game) -> Vec<crate::tracers::Tracer> {
     g.tracers.pool.iter().filter(|t| t.alive).copied().collect()
 }
 
-/// fireWeapon's one call, after the round was traced. Returns whether a streak went. (tracers.ts Tracers.round)
+/// fireWeapon's one call, after the round was traced. Returns whether a streak went.
 pub(super) fn tracers_round(g: &mut crate::game::Game, w: Option<FirearmId>, def: &crate::weapons::WeaponDef, muzzle: V3, dir: V3, t_hit: f64, impact: crate::tracers::TracerImpact, owner: f64, force: Option<bool>) -> bool {
     let force = force.unwrap_or(false);
     let spec = def.tracer;
@@ -119,7 +119,7 @@ pub(super) fn tracers_round(g: &mut crate::game::Game, w: Option<FirearmId>, def
     true
 }
 
-/// A free slot's place in the pool, else the oldest streak's (its light handed back first). (tracers.ts Tracers.slot)
+/// A free slot's place in the pool, else the oldest streak's (its light handed back first).
 fn slot_at(g: &mut Game) -> usize {
     let (mut oldest, mut oa) = (0, -1.0);
     for i in 0..g.tracers.pool.len() {
@@ -133,13 +133,13 @@ fn slot_at(g: &mut Game) -> usize {
     oldest
 }
 
-/// A free slot, else the oldest streak's: the row itself. (tracers.ts Tracers.slot)
+/// A free slot, else the oldest streak's: the row itself.
 fn tracers_slot<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::tracers::Tracer {
     let i = slot_at(g);
     &mut g.tracers.pool[i]
 }
 
-/// Starts a streak in a slot, with a head light if the budget of lights has one to spare. (tracers.ts Tracers.spawn)
+/// Starts a streak in a slot, with a head light if the budget of lights has one to spare.
 pub fn tracers_spawn(g: &mut crate::game::Game, from: V3, dir: V3, l: f64, impact: crate::tracers::TracerImpact, color: V3, owner: f64) {
     let p = g.tracers.params;
     let i = slot_at(g);
@@ -179,7 +179,7 @@ pub fn tracers_spawn(g: &mut crate::game::Game, from: V3, dir: V3, l: f64, impac
     g.tracers.live += 1.0;
 }
 
-/// Hands the light of the slot at `i` back to the set (idempotent). (tracers.ts Tracers.release)
+/// Hands the light of the slot at `i` back to the set (idempotent).
 fn release_at(g: &mut Game, i: usize) {
     let Some(l) = g.tracers.pool[i].light else { return; };
     crate::render_lights::light_set_remove(g, l);
@@ -187,7 +187,7 @@ fn release_at(g: &mut Game, i: usize) {
     g.tracers.lit = m::max(0.0, g.tracers.lit - 1.0);
 }
 
-/// One frame: a head that reached the end last frame retires, the others advance, one arriving now makes its ember, the lights ride the heads, each streak's box is rewritten tail to head and goes out. (tracers.ts Tracers.update)
+/// One frame: a head that reached the end last frame retires, the others advance, one arriving now makes its ember, the lights ride the heads, each streak's box is rewritten tail to head and goes out.
 pub fn tracers_update(g: &mut crate::game::Game, dt: f64, out: &mut Vec<AnyBoxId>) {
     if g.tracers.live == 0.0 { return; }
     let p = g.tracers.params;
@@ -234,7 +234,7 @@ pub fn tracers_update(g: &mut crate::game::Game, dt: f64, out: &mut Vec<AnyBoxId
     g.tracers.lit = lit;
 }
 
-/// The splash where a tracer stops in geometry, its shooter's doing: a few sparks back off the surface and a brief glow. Nothing in a man, nothing for a round that met nothing. (tracers.ts Tracers.ember)
+/// The splash where a tracer stops in geometry, its shooter's doing: a few sparks back off the surface and a brief glow. Nothing in a man, nothing for a round that met nothing.
 fn tracers_ember(g: &mut crate::game::Game, t: crate::tracers::Tracer) {
     if t.impact != TracerImpact::Solid { return; }
     let p = g.tracers.params;
@@ -251,7 +251,7 @@ fn tracers_ember(g: &mut crate::game::Game, t: crate::tracers::Tracer) {
     crate::fogofwar::fog_of_war_done(g, was);
 }
 
-/// Everything gone at once: lights handed back, slots freed. (tracers.ts Tracers.clear)
+/// Everything gone at once: lights handed back, slots freed.
 pub fn tracers_clear(g: &mut crate::game::Game) {
     for i in 0..g.tracers.pool.len() {
         if !g.tracers.pool[i].alive { continue; }
@@ -269,7 +269,6 @@ mod tests {
 
     std::thread_local! { static ROWS: core::cell::RefCell<Vec<*mut crate::scene_boxes::Box>> = core::cell::RefCell::new(Vec::new()); }
 
-    /// A box made for a test: the fields `streak_box_p` gives, in a table of the test's own, since the skeleton has none yet.
     pub(super) fn made(p: &crate::scene_boxes::MakeBoxP) -> BoxId {
         let mut b = crate::scene_boxes::Box::default();
         b.c = p.c; b.h = p.h; b.albedo = p.albedo.unwrap(); b.emissive = p.emissive.unwrap(); b.flags = p.flags.unwrap();

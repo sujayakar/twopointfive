@@ -1,4 +1,3 @@
-//! src/game/doortools.ts lines 594 to 971
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -22,23 +21,23 @@ fn frame_along(th: f64, h: [f64; 2], p: V3) -> f64 {
 fn frame_off(th: f64, h: [f64; 2], p: V3, side: f64) -> f64 {
     (m::cos(th) * (p[2] - h[1]) - m::sin(th) * (p[0] - h[0])) * side
 }
-/// a point in a door's frame: `a` m along hinge → latch, `b` out from the frame line on face `side`   (doortools.ts doorPt)
+/// a point in a door's frame: `a` m along hinge → latch, `b` out from the frame line on face `side`
 pub fn door_pt(g: &crate::game::Game, d: DoorId, a: f64, b: f64, side: f64, y: Option<f64>) -> V3 {
     frame_pt(g.dr[d].def.closed_dir, g.dr[d].def.hinge, a, b, side, y.unwrap_or(0.0))
 }
-/// metres along the frame, hinge → latch   (doortools.ts alongOf)
+/// metres along the frame, hinge → latch
 pub fn along_of(g: &crate::game::Game, d: DoorId, p: V3) -> f64 {
     frame_along(g.dr[d].def.closed_dir, g.dr[d].def.hinge, p)
 }
-/// metres off the frame line on face `side` (negative: the other face)   (doortools.ts offOf)
+/// metres off the frame line on face `side` (negative: the other face)
 pub fn off_of(g: &crate::game::Game, d: DoorId, p: V3, side: f64) -> f64 {
     frame_off(g.dr[d].def.closed_dir, g.dr[d].def.hinge, p, side)
 }
-/// unlatched and swung past OPEN_RAD   (doortools.ts isOpen)
+/// unlatched and swung past OPEN_RAD
 pub fn is_open(g: &crate::game::Game, d: DoorId) -> bool {
     !crate::doors::door_latched(g, d) && m::abs(crate::doors::door_angle(g, d)) >= OPEN_RAD
 }
-/// is most of a room's floor under the sky (asked once per room, of every cell or about 64 of them)   (doortools.ts underSky)
+/// is most of a room's floor under the sky (asked once per room, of every cell or about 64 of them)
 fn under_sky(g: &mut crate::game::Game, room: RoomfightRoomId) -> bool {
     let size = g.tab.roomfight_room[room].cells.len() as f64;
     if let Some(hit) = g.m.doortools.sky.get(room) {
@@ -62,7 +61,7 @@ fn under_sky(g: &mut crate::game::Game, room: RoomfightRoomId) -> bool {
     g.m.doortools.sky.set(room, crate::doortools::DoortoolsModSKYValue { n: size, open });
     open
 }
-/// open floor, not a room: a flood past `searchCells`, or floor under the sky   (doortools.ts openFloor)
+/// open floor, not a room: a flood past `searchCells`, or floor under the sky
 pub(super) fn open_floor(g: &mut crate::game::Game, room: RoomfightRoomId) -> bool {
     g.tab.roomfight_room[room].cells.len() as f64 > g.k.doortools.search_cells || under_sky(g, room)
 }
@@ -116,7 +115,7 @@ pub fn row_can_then(g: &mut Game, what: crate::doortools::DoorToolsCanThresholdT
 pub fn row_behind_words(g: &Game, who: String) -> String {
     if who == "you" { let (now, was) = (String::from("you're behind that door."), String::from("you are behind that door.")); crate::words::wg(g, &now, &was) } else { format!("{} is behind that door.", who) }
 }
-/// `this.heldPlain(t, men) ? (o?.onWord ? this.thenOnWord(what, men, t) : this.thresholdThen(what, men, t)) : this.issue(kind, men, t, !!o?.onWord)`   (doortools.ts:811, :818)
+/// `this.heldPlain(t, men) ? (o?.onWord ? this.thenOnWord(what, men, t) : this.thresholdThen(what, men, t)) : this.issue(kind, men, t, !!o?.onWord)`
 pub fn row_entry(g: &mut Game, bang: bool, men: &[GuardId], t: &crate::orders::OrderTarget, on_word: bool) -> Option<String> {
     use crate::doortools::{DoorToolKind as Kind, DoorToolsThenOnWord, DoorToolsThenOnWordWhat, DoorToolsThresholdThen, DoorToolsThresholdThenWhat};
     if crate::doortools::door_tools_held_plain(g, &crate::seats::here(g), t, men) {
@@ -127,17 +126,17 @@ pub fn row_entry(g: &mut Game, bang: bool, men: &[GuardId], t: &crate::orders::O
     }
     match crate::doortools::door_tools_issue(g, if bang { Kind::BangClear } else { Kind::OpenClear }, men, t, Some(on_word)) { DoorToolsIssue::Text(w) => Some(w), DoorToolsIssue::Arm1(()) => None }
 }
-/// `only` of the two entries: the men holding the threshold, while it is held   (doortools.ts:809)
+/// `only` of the two entries: the men holding the threshold, while it is held
 pub fn row_held_or_all(g: &mut Game, men: &[GuardId], t: &crate::orders::OrderTarget) -> Vec<GuardId> { if crate::doortools::door_tools_held_plain(g, &crate::seats::here(g), t, men) { crate::doortools::door_tools_held_men(g, &crate::seats::here(g), men, t) } else { men.to_vec() } }
 
 // ---------------------------------------------------------------- the class
 
-/// the menu's switches as one number, to see one move: on the page all four are settled on   (doortools.ts DoorTools.thrSigNow)
+/// the menu's switches as one number, to see one move: on the page all four are settled on
 fn door_tools_thr_sig_now(g: &mut crate::game::Game) -> f64 {
     (1 | 2 | 4 | 8) as f64
 }
 
-/// the door tools, and their rows on the menu   (doortools.ts DoorTools.constructor)
+/// the door tools, and their rows on the menu
 pub fn door_tools_new(g: &mut crate::game::Game) -> crate::doortools::DoorTools {
     use crate::orders::{rows, OrderDef, TargetKind as K};
     use crate::doortools::TOOLS_PAGE;
@@ -151,7 +150,7 @@ pub fn door_tools_new(g: &mut crate::game::Game) -> crate::doortools::DoorTools 
     register(g, rows::def(&rows::charge::ORDER, OrderDef { page: Some(String::from(TOOLS_PAGE)), targets: vec![K::Door], ack: Some(strs(&["copy.", "on it."])), ..OrderDef::default() }), None);
     let frag_key = g.k.frag.order_key.clone();
     register(g, rows::def(&rows::fragclear::ORDER, OrderDef { page: Some(String::from(TOOLS_PAGE)), hot_key: Some(frag_key), targets: vec![K::Door], ack: Some(strs(&["frag and clear.", "copy, fragging it."])), on_word: Some(true), ..OrderDef::default() }), None);
-    // the row that stands in for the tools' while the jambs are held (doortools.ts:846). no part registered it (CHANGES-6)
+    // the row that stands in for the tools' while the jambs are held. no part registered it (CHANGES-6)
     register(g, rows::def(&rows::held::ORDER, OrderDef { targets: vec![K::Door], opens: Some(String::from(crate::doortools::HELD_PAGE)),
         stands_in: Some(crate::orders::OrderDefStandsIn { for_: String::from(TOOLS_PAGE) }), ..OrderDef::default() }), None);
     // thrRows writes `this`, and this is not on g yet: it stands there for the call
@@ -161,7 +160,7 @@ pub fn door_tools_new(g: &mut crate::game::Game) -> crate::doortools::DoorTools 
     me
 }
 
-/// the row of the door held from outside, the one order of that page on the page's switches   (doortools.ts DoorTools.thrRows)
+/// the row of the door held from outside, the one order of that page on the page's switches
 pub fn door_tools_thr_rows(g: &mut crate::game::Game) {
     use crate::orders::{rows, OrderDef, TargetKind as K};
     g.door_tools.thr_sig = door_tools_thr_sig_now(g);
@@ -173,7 +172,7 @@ pub fn door_tools_thr_rows(g: &mut crate::game::Game) {
     g.door_tools.thr_key = None;
 }
 
-/// spend one (false: none left)   (doortools.ts DoorTools.take)
+/// spend one (false: none left)
 pub fn door_tools_take(g: &mut crate::game::Game, what: crate::doortools::DoorToolsTakeWhat) -> bool {
     use crate::doortools::DoorToolsTakeWhat as W;
     door_tools_sync(g);
@@ -196,7 +195,7 @@ pub fn door_tools_take(g: &mut crate::game::Game, what: crate::doortools::DoorTo
     true
 }
 
-/// one back in the bag   (doortools.ts DoorTools.refund)
+/// one back in the bag
 pub fn door_tools_refund(g: &mut crate::game::Game, what: crate::doortools::DoorToolsRefundWhat) {
     use crate::doortools::DoorToolsRefundWhat as W;
     if what == W::Frag {
@@ -210,7 +209,7 @@ pub fn door_tools_refund(g: &mut crate::game::Game, what: crate::doortools::Door
     door_tools_note(g, &said);
 }
 
-/// a new cast is a fresh run; the rows that hang on the cast dealt again   (doortools.ts DoorTools.sync)
+/// a new cast is a fresh run; the rows that hang on the cast dealt again
 pub fn door_tools_sync(g: &mut crate::game::Game) {
     use crate::orders::{rows, OrderDef, TargetKind as K};
     use crate::doortools::{BIG_KEY, BIG_ORDER, TOOLS_PAGE};
@@ -280,8 +279,6 @@ pub fn door_tools_sync(g: &mut crate::game::Game) {
             register(g, rows::def(&rows::bigclear::ORDER, OrderDef { page: Some(String::from(TOOLS_PAGE)), hot_key: Some(String::from(BIG_KEY)), targets: vec![K::Door], ack: Some(strs(&["on it.", "breaching."])), on_word: Some(true), ..OrderDef::default() }), Some(crate::orders::rows::fragclear::ORDER.id));
         }
     }
-    // THE WORD'S ROW ON A HELD THRESHOLD'S PAGE, dealt its key when it is registered and again when the key moves (doortools.ts:932-938). skeleton 5.2 has
-    // the arms (DoorThrWord); the part set the key every call and registered nothing, so the row the TypeScript deals again at the first sync stood one place off.
     let thr_key = match &go_key { None => g.k.doortools.blow_key.clone(), Some(k) => k.clone() };
     if Some(&thr_key) != g.door_tools.thr_key.as_ref() {
         g.door_tools.thr_key = Some(thr_key.clone());
@@ -289,7 +286,7 @@ pub fn door_tools_sync(g: &mut crate::game::Game) {
     }
 }
 
-/// a fresh run: the counts back, nothing set, nothing under way   (doortools.ts DoorTools.reset)
+/// a fresh run: the counts back, nothing set, nothing under way
 pub fn door_tools_reset(g: &mut crate::game::Game) {
     let mut i = 0;
     while i < g.door_tools.ops.len() {
@@ -317,7 +314,7 @@ pub fn door_tools_reset(g: &mut crate::game::Game) {
     g.door_tools.led = crate::doortools::DoorToolsLed { entries: 0.0, by_seen: 0.0 };
 }
 
-/// nobody came with him: the count is his card's, nothing set, nothing spent   (doortools.ts DoorTools.alone)
+/// nobody came with him: the count is his card's, nothing set, nothing spent
 pub fn door_tools_alone(g: &mut crate::game::Game, n: f64) {
     door_tools_sync(g);
     if !g.door_tools.roster.is_empty() { return; }
@@ -326,12 +323,12 @@ pub fn door_tools_alone(g: &mut crate::game::Game, n: f64) {
     g.door_tools.charges = m::max(0.0, m::floor(n));
 }
 
-/// the charge set on this door, if any   (doortools.ts DoorTools.chargeOn)
+/// the charge set on this door, if any
 pub fn door_tools_charge_on(g: &crate::game::Game, seat: &crate::seats::SeatRef, d: DoorId) -> Option<ChargeId> {
     seat.door_tools.set.iter().copied().find(|&c| g.tab.doortools_set_charge[c].door == d)
 }
 
-/// can these men stack on that face of that door (the entry orders' menu test)   (doortools.ts DoorTools.stackable)
+/// can these men stack on that face of that door (the entry orders' menu test)
 pub(super) fn door_tools_stackable(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, men: &[GuardId]) -> crate::doortools::DoorToolsStackable {
     use crate::doortools::DoorToolsStackable as V;
     let Some((d, side)) = door_of(t) else { return V::Bool(false) };
@@ -357,7 +354,7 @@ pub(super) fn door_tools_stackable(g: &mut crate::game::Game, t: &crate::orders:
     V::Bool(true)
 }
 
-/// is the door locked against the team from that face   (doortools.ts DoorTools.lockedOut)
+/// is the door locked against the team from that face
 pub(super) fn door_tools_locked_out(g: &crate::game::Game, d: DoorId, side: f64) -> bool {
     let w = g.dr[d].def.width;
     let from = door_pt(g, d, w / 2.0, 0.6, side, None);
@@ -365,7 +362,7 @@ pub(super) fn door_tools_locked_out(g: &crate::game::Game, d: DoorId, side: f64)
     crate::doors::doors_locked_out(g, d, from, Some(&ring))
 }
 
-/// locked against the team on the face it opens toward: a boot only drives it onto its frame   (doortools.ts DoorTools.frameHeld)
+/// locked against the team on the face it opens toward: a boot only drives it onto its frame
 pub(super) fn door_tools_frame_held(g: &crate::game::Game, d: DoorId, side: f64) -> bool {
     if g.dr[d].def.steel.unwrap_or(false) || is_open(g, d) || !door_tools_locked_out(g, d, side) { return false; }
     let w = g.dr[d].def.width;

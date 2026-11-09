@@ -148,7 +148,7 @@ pub fn marks_settle(g: &mut Game) {
     s.list.retain(|d| !d.dries.is_some_and(|w| w.at(t) <= 0.01));
 }
 
-/// a kind's radius and parameter where a rule says neither (render/decals.ts DEFAULTS)
+/// a kind's radius and parameter where a rule says neither
 fn defaults(kind: DecalKind) -> (f64, f64) {
     match kind {
         DecalKind::Bullet => (0.03, 1.0),

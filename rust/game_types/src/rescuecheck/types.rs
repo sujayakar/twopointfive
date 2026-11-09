@@ -88,6 +88,5 @@ pub struct Goer {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct RescuecheckMod {
-    /// (src/game/rescuecheck.ts:80 STATES)
     pub states: Option<crate::rescuecheck::State>,
 }

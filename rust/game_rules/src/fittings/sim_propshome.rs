@@ -4,7 +4,7 @@ use crate::game::Game;
 use crate::js::{self, JsMap, JsSet};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// Where each column starts for columns `cap` rows long. (propshome.ts propCols)
+/// Where each column starts for columns `cap` rows long.
 fn prop_cols(cap: f64) -> crate::sim_propshome::PropCols {
     // colsOf(PROP_HEAD, PROP_F64, PROP_U32, cap): walked here
     let mut o = crate::sim_propshome::PropCols::default();
@@ -21,7 +21,7 @@ fn prop_cols(cap: f64) -> crate::sim_propshome::PropCols {
     o
 }
 
-/// The columns of the game's furniture, over its block: every thing in its own row, asleep, to be placed. (propshome.ts PropStore.constructor, colstore.ts ColStore.constructor)
+/// The columns of the game's furniture, over its block: every thing in its own row, asleep, to be placed.
 pub(super) fn prop_store_new(g: &crate::game::Game, st: crate::Opaque, total: f64) -> crate::sim_propshome::PropStore {
     if total > PROP_CAP {
         panic!("a level of {} loose things of furniture: the game holds {} (sim/propshome.ts PROP_CAP, rust/sim/src/props.rs CAP)", total, PROP_CAP);
@@ -43,17 +43,17 @@ pub(super) fn prop_store_new(g: &crate::game::Game, st: crate::Opaque, total: f6
     crate::sim_propshome::PropStore { total, o }
 }
 
-/// Rows in the level now. (propshome.ts PropStore.n)
+/// Rows in the level now.
 fn prop_store_n(g: &crate::game::Game) -> f64 {
     sim::state::state_read(g.sim).props.n as f64
 }
 
-/// Where thing `id` is. (propshome.ts PropStore.rowOf)
+/// Where thing `id` is.
 fn prop_store_row_of(g: &crate::game::Game, id_2: f64) -> f64 {
     sim::state::state_read(g.sim).props.row[id_2 as usize] as f64
 }
 
-/// Rows a and b change places in every column but `row`, the table that follows them. (propshome.ts PropStore.swap, colstore.ts swapCols)
+/// Rows a and b change places in every column but `row`, the table that follows them.
 fn prop_store_swap(g: &crate::game::Game, a: f64, b: f64) {
     if a == b { return; }
     let (a, b) = (a as usize, b as usize);
@@ -77,7 +77,7 @@ fn prop_store_swap(g: &crate::game::Game, a: f64, b: f64) {
     p.row[at_b] = b as u32;
 }
 
-/// A thing leaves the level: its row goes behind the live ones, those after it closing up in their order. False if it was not in. (propshome.ts PropStore.leave)
+/// A thing leaves the level: its row goes behind the live ones, those after it closing up in their order. False if it was not in.
 pub(super) fn prop_store_leave(g: &crate::game::Game, id_2: f64) -> bool {
     let n = prop_store_n(g);
     let mut r = prop_store_row_of(g, id_2);
@@ -90,7 +90,7 @@ pub(super) fn prop_store_leave(g: &crate::game::Game, id_2: f64) -> bool {
     true
 }
 
-/// The level put back: every thing in the level again, each in the row of its own id. (propshome.ts PropStore.homeRows)
+/// The level put back: every thing in the level again, each in the row of its own id.
 pub(super) fn prop_store_home_rows(g: &crate::game::Game) {
     let total = g.props.store.total;
     let mut i = 0.0;
@@ -102,7 +102,7 @@ pub(super) fn prop_store_home_rows(g: &crate::game::Game) {
     sim::state::state(g.sim).props.n = js::to_u32(total);
 }
 
-/// Where the hand-over's tables are in the module's memory (indices into its doubles) and how much each holds, asked once; the layout worked out here held to the module's own. (propshome.ts propIo)
+/// Where the hand-over's tables are in the module's memory (indices into its doubles) and how much each holds, asked once; the layout worked out here held to the module's own.
 pub fn prop_io(g: &mut crate::game::Game) -> crate::sim_propshome::PropIo {
     if let Some(io) = g.m.sim_propshome.io { return io; }
     let x = crate::sim_sim::sim();
@@ -130,7 +130,7 @@ pub fn prop_io(g: &mut crate::game::Game) -> crate::sim_propshome::PropIo {
     io
 }
 
-/// Where two takes of the store's bytes differ, in words: the clock, the counts, then column by column and row by row. At most `most` lines. (propshome.ts propDiff)
+/// Where two takes of the store's bytes differ, in words: the clock, the counts, then column by column and row by row. At most `most` lines.
 fn prop_diff(g: &crate::game::Game, a: &[u8], b: &[u8], most: Option<f64>) -> Vec<String> {
     let most = most.unwrap_or(4.0);
     let o = g.props.store.o;
@@ -295,7 +295,6 @@ mod tests {
     fn put_double(bytes: &mut [u8], i: usize, x: f64) { bytes[i * 8..i * 8 + 8].copy_from_slice(&x.to_ne_bytes()); }
     fn put_word(bytes: &mut [u8], i: usize, x: u32) { bytes[i * 4..i * 4 + 4].copy_from_slice(&x.to_ne_bytes()); }
 
-    /// The lines are propDiff's own, run under bun on the same two takes (see notes.md).
     #[test]
     fn two_takes_differ_in_these_words() {
         let mut g = alloc::boxed::Box::new(Game::blank());

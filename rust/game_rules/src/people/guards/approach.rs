@@ -1,4 +1,3 @@
-//! src/game/guards.ts lines 1917 to 2107
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -8,7 +7,7 @@ use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// This frame's light readings for a plan: his share of the frame's readings, round-robin over the spots still worth asking about (all of them once those
-/// are done), each kept DARK_WINDOW_SECS, the darkest live one mapped through the meter's own curve.   (guards.ts searchProbes)
+/// are done), each kept DARK_WINDOW_SECS, the darkest live one mapped through the meter's own curve.
 pub(super) fn search_probes(g: &mut crate::game::Game, gd: GuardId) {
     let n = g.gd[gd].search_plan.as_ref().unwrap().spots.len();
     if n == 0 { return; }
@@ -49,7 +48,7 @@ pub(super) fn search_probes(g: &mut crate::game::Game, gd: GuardId) {
     g.gd[gd].search_plan = Some(own);
 }
 
-/// scoreSpots on the plan in hand.   (guards.ts scoreSpots)
+/// scoreSpots on the plan in hand.
 fn score_into(g: &Game, gd: GuardId, p: &mut crate::guards::SearchPlan, walk: Option<&[f32]>) {
     let elapsed = g.time - p.t0;
     let team = g.gd[gd].team;
@@ -70,14 +69,14 @@ fn score_into(g: &Game, gd: GuardId, p: &mut crate::guards::SearchPlan, walk: Op
 }
 
 /// Score every spot for THIS man now (dark × cover × plausible, eased toward the shorter walk), folding in what the other searchers have looked into.
-/// The plan is the man's row.   (guards.ts scoreSpots)
+/// The plan is the man's row.
 pub fn score_spots(g: &mut crate::game::Game, gd: GuardId, walk: Option<&[f32]>) {
     let mut own = g.gd[gd].search_plan.take().unwrap();   // (off his row for the walk: the scoring reads only the OTHER men's plans)
     score_into(g, gd, &mut own, walk);
     g.gd[gd].search_plan = Some(own);
 }
 
-/// A spot some other searcher is walking to or looking into right now (within a spot's spacing of it): his, not ours.   (guards.ts spotTaken)
+/// A spot some other searcher is walking to or looking into right now (within a spot's spacing of it): his, not ours.
 fn spot_taken(g: &crate::game::Game, gd: GuardId, s: &crate::guards::SearchSpot) -> bool {
     let team = g.gd[gd].team;
     let spacing = SEARCH_SPACING_M;
@@ -91,7 +90,7 @@ fn spot_taken(g: &crate::game::Game, gd: GuardId, s: &crate::guards::SearchSpot)
     false
 }
 
-/// On to the best spot still worth it (scored this frame), or the plan is done.   (guards.ts pickNextSpot)
+/// On to the best spot still worth it (scored this frame), or the plan is done.
 pub(super) fn pick_next_spot(g: &mut crate::game::Game, gd: GuardId) {
     let at = g.ch[g.gd[gd].ch].pos;
     let walk = flood_from(g, at, SEARCH_RADIUS_M * 2.0 + 4.0, Some(true)).metres;   // (his own walk to each, doors and all: round the partitions, not through them)
@@ -139,25 +138,25 @@ pub(super) fn pick_next_spot(g: &mut crate::game::Game, gd: GuardId) {
     crate::game::game_say(g, gd, &text, None, None);
 }
 
-/// The closed frame of a door: hinge, unit along the frame hinge → latch, unit normal (+ = CCW side), width.   (guards.ts frameOf)
+/// The closed frame of a door: hinge, unit along the frame hinge → latch, unit normal (+ = CCW side), width.
 pub fn frame_of(g: &crate::game::Game, d: DoorId) -> crate::doorway::RelF {
     let def = &g.dr[d].def;
     frame_from(def.closed_dir, def.hinge, def.width)
 }
 
-/// frameOf's sums.   (guards.ts frameOf)
+/// frameOf's sums.
 fn frame_from(closed_dir: f64, hinge: [f64; 2], width: f64) -> crate::doorway::RelF {
     let (ux, uz) = (m::cos(closed_dir), m::sin(closed_dir));
     crate::doorway::RelF { hx: hinge[0], hz: hinge[1], ux, uz, nx: -uz, nz: ux, w: width }
 }
 
-/// Where segment a→b crosses d's frame line within the opening: t along the segment, the side a is on, the crossing point, or None.   (guards.ts crossesDoor)
+/// Where segment a→b crosses d's frame line within the opening: t along the segment, the side a is on, the crossing point, or None.
 pub fn crosses_door(g: &crate::game::Game, a: V3, b: V3, d: DoorId) -> Option<crate::guards::CrossesDoor> {
     let f = frame_of(g, d);
     crosses_frame(&f, a, b)
 }
 
-/// crossesDoor's sums.   (guards.ts crossesDoor)
+/// crossesDoor's sums.
 fn crosses_frame(f: &crate::doorway::RelF, a: V3, b: V3) -> Option<crate::guards::CrossesDoor> {
     let (da, db) = ((a[0] - f.hx) * f.nx + (a[2] - f.hz) * f.nz, (b[0] - f.hx) * f.nx + (b[2] - f.hz) * f.nz);
     if da * db >= 0.0 || m::abs(da - db) < 1e-6 { return None; }
@@ -168,7 +167,7 @@ fn crosses_frame(f: &crate::doorway::RelF, a: V3, b: V3) -> Option<crate::guards
     Some(crate::guards::CrossesDoor { t, side: if da > 0.0 { 1.0 } else { -1.0 }, at: [ix, 0.0, iz] })
 }
 
-/// Doorways a hunting man goes through, pied or not: his stride since the last frame looked at cutting a frame line. Once a frame at most.   (guards.ts noteDoorCrossings)
+/// Doorways a hunting man goes through, pied or not: his stride since the last frame looked at cutting a frame line. Once a frame at most.
 pub(super) fn note_door_crossings(g: &mut crate::game::Game, gd: GuardId) {
     let pos = g.ch[g.gd[gd].ch].pos;
     if g.gd[gd].pie_prev_t == g.time { return; }
@@ -194,7 +193,7 @@ pub(super) fn note_door_crossings(g: &mut crate::game::Game, gd: GuardId) {
     me.pie_prev_t = now;
 }
 
-/// The look as a bearing off the way through, about the near jamb's edge. deg: + toward the far side, − the near.   (guards.ts pieDoorway, bearing)
+/// The look as a bearing off the way through, about the near jamb's edge. deg: + toward the far side, − the near.
 fn bearing(deg: f64, reach: f64, y: f64, far: f64, ex: f64, ez: f64, tx: f64, tz: f64, ux: f64, uz: f64) -> V3 {
     let a = deg * v3::DEG;
     let (ca, sa) = (m::cos(a), m::sin(a) * far);
@@ -202,7 +201,7 @@ fn bearing(deg: f64, reach: f64, y: f64, far: f64, ex: f64, ez: f64, tx: f64, tz
 }
 
 /// This frame's threshold discipline for a man followPath is about to move at `speed`: keeps Guard.pieing, notes the doorways he goes through. `eyes_on`: no
-/// drill, he is chasing. Returns the speed to walk at and a look point (None = the caller's own).   (guards.ts pieDoorway)
+/// drill, he is chasing. Returns the speed to walk at and a look point (None = the caller's own).
 pub fn pie_doorway(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, eyes_on: bool) -> crate::guards::PieDoorway {
     let pos = g.ch[g.gd[gd].ch].pos;
     note_door_crossings(g, gd);
@@ -293,7 +292,7 @@ pub fn pie_doorway(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, 
     crate::guards::PieDoorway { speed: out, look }
 }
 
-/// Does the man's remaining path still run through this door.   (guards.ts pathCrosses)
+/// Does the man's remaining path still run through this door.
 fn path_crosses(g: &crate::game::Game, gd: GuardId, d: DoorId) -> bool {
     let mut prev = g.ch[g.gd[gd].ch].pos;
     let mut i = g.gd[gd].path_i;
@@ -306,7 +305,7 @@ fn path_crosses(g: &crate::game::Game, gd: GuardId, d: DoorId) -> bool {
     false
 }
 
-/// The crossing point of the man's pie (his row) again, off the path as it now runs.   (guards.ts refreshCrossing)
+/// The crossing point of the man's pie (his row) again, off the path as it now runs.
 fn refresh_crossing(g: &mut crate::game::Game, gd: GuardId) {
     let door = g.gd[gd].pieing.as_ref().unwrap().door;
     let mut prev = g.ch[g.gd[gd].ch].pos;
@@ -323,7 +322,7 @@ fn refresh_crossing(g: &mut crate::game::Game, gd: GuardId) {
 }
 
 /// Bend the approach already on his path toward the hinge side: the last mark short of the line slides to 0.42 of the width, and a mark 1.5 m out goes in ahead
-/// of it unless he comes along the wall from the latch side. Only onto free cells he can walk between.   (guards.ts bendApproach)
+/// of it unless he comes along the wall from the latch side. Only onto free cells he can walk between.
 fn bend_approach(g: &mut crate::game::Game, gd: GuardId, d: DoorId, sg: f64) {
     let f = frame_of(g, d);
     let pos = g.ch[g.gd[gd].ch].pos;
@@ -370,7 +369,7 @@ fn bend_approach(g: &mut crate::game::Game, gd: GuardId, d: DoorId, sg: f64) {
 }
 
 /// The alert chase on a fix with no eyes on him: path to the fix at `pace`, pie the doorways on the way, and the three no-progress exits into the search.
-/// Returns his move speed, aim point and that a pie may stand.   (guards.ts chaseFix)
+/// Returns his move speed, aim point and that a pie may stand.
 pub fn chase_fix(g: &mut crate::game::Game, gd: GuardId, dt: f64, pace: f64) -> crate::guards::ChaseFix {
     let c = g.gd[gd].ch;
     let fix = g.gd[gd].last_known.unwrap();

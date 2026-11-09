@@ -1,4 +1,3 @@
-//! src/game/combat.ts lines 664 to 757
 use super::*;                      // your own module: its types, its other parts' functions
 use crate::game::Game;
 use crate::ids::*;
@@ -7,12 +6,12 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::vec::Vec;
 
-/// Seconds a stun can sits after it lands: FLASH.fuse in a room fight, else the night game's.   (combat.ts flashFuse)
+/// Seconds a stun can sits after it lands: FLASH.fuse in a room fight, else the night game's.
 pub fn flash_fuse(g: &crate::game::Game) -> f64 {
     if crate::roomfight::fight_live(g) { g.k.flash.fuse } else { crate::effects::bang().fuse }
 }
 
-/// The stun can goes off, as its thrower's doing.   (combat.ts detonateStun)
+/// The stun can goes off, as its thrower's doing.
 pub fn detonate_stun(g: &mut crate::game::Game, it: ItemId, borrowed: Option<bool>, sam: Option<crate::combat::DetonateStunSam>) {
     let borrowed = borrowed.unwrap_or(false);
     let raw = sam.map(|s| crate::combat::DetonateStunRawSam { side: s.side, spare: s.spare });
@@ -20,7 +19,7 @@ pub fn detonate_stun(g: &mut crate::game::Game, it: ItemId, borrowed: Option<boo
     crate::fogofwar::fog_of_war_doing(g, Some(who), &mut |g: &mut Game| detonate_stun_raw(g, it, borrowed, raw));
 }
 
-/// The burst, the flash and the bang, then who it blinds and folds: the guards, then every seat's man.   (combat.ts detonateStunRaw)
+/// The burst, the flash and the bang, then who it blinds and folds: the guards, then every seat's man.
 fn detonate_stun_raw(g: &mut crate::game::Game, it: ItemId, borrowed: bool, sam: Option<crate::combat::DetonateStunRawSam>) {
     let b = crate::effects::bang();
     let p = crate::throwables::item_pos(g, it);
@@ -188,7 +187,7 @@ fn detonate_stun_raw(g: &mut crate::game::Game, it: ItemId, borrowed: bool, sam:
     });
 }
 
-/// Sandbox / panel: an armed can dropped at `p` as if just landed, thrown from where the player stands.   (combat.ts dropThrowable)
+/// Sandbox / panel: an armed can dropped at `p` as if just landed, thrown from where the player stands.
 pub fn drop_throwable(g: &mut crate::game::Game, kind: crate::game::ThrowKind, p: V3) {
     let c = g.pl[g.player].ch;
     let from = g.ch[c].pos;

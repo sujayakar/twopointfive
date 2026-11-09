@@ -20,7 +20,7 @@ pub struct SlotsK {
 /// THE BIG SLOT (the head of this file). `on` set by hand (the page's boot, the harness, the panel, the knobs put back) carries the cards in memory across:
 ///  switched ON, a card whose gun is the shotgun gets its issued gun back with the shotgun in the big slot, and a man over his one big slot gives up what
 ///  does not fit (bigHome, kitFitAll); switched OFF nothing is written — `big` stays on the card, inert. The hammer's and the kit shotgun's numbers
-///  (bigkit.ts reads them): `swings` blows of the hammer take a lock where the frame holds a boot (one blow where a boot would do), one every `swing` seconds, the first after `windup`; `draw` seconds bring the
+///  : `swings` blows of the hammer take a lock where the frame holds a boot (one blow where a boot would do), one every `swing` seconds, the first after `windup`; `draw` seconds bring the
 ///  shotgun up off its sling before a shell goes; `shells` YOUR shotgun may put into one lock before you give it up.
 /// `shut` (the maintainer, 10-15, having played it: "ah these things should work for unlocked doors too" · "helps also not be directly in front of the door
 ///  when opening"): the two tools open ANY shut door that is not steel — a row of yours on an unlocked one beside 'push it open', a teammate's entry order
@@ -30,7 +30,7 @@ pub struct SlotsK {
 ///  hammer shouldn't require being directly in front of the door?" · "the character should have a hammer on their back, they put away their gun, equip the
 ///  hammer, wind up, and then hit the door in one motion"): the tool is CARRIED where it can be seen (the hammer on a man's back), a man's own gun is put
 ///  away for it, `equip` seconds bring it into his hands (as he walks onto his spot), the blow is one wound-up swing and `stow` seconds put it back; you
-///  take the row from `reach` metres of the door — where a stack stands — and WALK to a free place beside either jamb (bigkit.ts samBigSpot), never
+///  take the row from `reach` metres of the door — where a stack stands — and WALK to a free place beside either jamb, never
 ///  slid there and never square in the opening while there is floor beside it. Off = the build of 10-15 morning.
 ///  `snug` (with the moves): his own gun and the tool each stay IN A HAND while they are off him (character.ts BIGMOVE.snug — the animator is told by the
 ///  beat's record). Off = the first-pass shares: the tool drawn part way between his back and a fist that had left, his rifle carried toward his shoulder.

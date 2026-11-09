@@ -38,7 +38,7 @@ pub struct Opts {
     pub squad: u32,
     /// how many players (1 or 2): each has a seat, his own man and his share of the squad. The hand's keys and cursor are the first seat's.
     pub seats: u32,
-    /// THE ROWS THAT ONLY DRESS THE PICTURE (game/dress.ts DRESS), as a page has them: the debris pool tumbling a break's pieces, above all. Off (the default) as
+    /// THE ROWS THAT ONLY DRESS THE PICTURE, as a page has them: the debris pool tumbling a break's pieces, above all. Off (the default) as
     /// on any host that draws nothing: a thrown piece is then only its one landing told to the floor, and the pool stays empty.
     pub dress: bool,
     /// a mission the game refuses is said (`Play.refused`) and no stop

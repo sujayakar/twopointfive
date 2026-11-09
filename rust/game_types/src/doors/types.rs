@@ -247,59 +247,40 @@ pub enum DoorsTornCause {
     Fire,
 }
 
-/// (src/game/doors.ts:1056 DOORS_PICK_SECS)
 pub const DOORS_PICK_SECS: f64 = 4.2;
 
-/// (src/game/doors.ts:1061 DOORS_PICK_LEVEL)
 pub const DOORS_PICK_LEVEL: f64 = 0.16;
 
-/// (src/game/doors.ts:1061 DOORS_UNLOCK_LEVEL)
 pub const DOORS_UNLOCK_LEVEL: f64 = 0.3;
 
-/// (src/game/doors.ts:1061 DOORS_KEY_LEVEL)
 pub const DOORS_KEY_LEVEL: f64 = 0.12;
 
-/// (src/game/doors.ts:1183 DOORS_USE_REACH)
 pub const DOORS_USE_REACH: f64 = 1.35;
 
-/// (src/game/doors.ts:81 SIDE_KICK: a table nothing writes)
 pub fn side_kick() -> crate::doors::SIDEKICK { crate::doors::SIDEKICK { past: 0.3, out: 0.55 } }
 
-/// (src/game/doors.ts:85 PULL_VEL)
 pub const PULL_VEL: f64 = 3.9;
 
-/// (src/game/doors.ts:85 PULL_VEL_QUIET)
 pub const PULL_VEL_QUIET: f64 = 2.2;
 
-/// (src/game/doors.ts:85 PULL_SECS)
 pub const PULL_SECS: f64 = 0.7;
 
-/// (src/game/doors.ts:88 DRIVEN_SECS)
 pub const DRIVEN_SECS: f64 = 0.25;
 
-/// (src/game/doors.ts:102 SHUT_HOME)
 pub const SHUT_HOME: f64 = 0.05;
 
-/// (src/game/doors.ts:134 FLOOR_KEY)
 pub const FLOOR_KEY: &str = "floor";
 
-/// (src/game/doors.ts:208 MAN_SIDE)
 pub const MAN_SIDE: f64 = 3.0;
 
-/// (src/game/doors.ts:208 MAN_FOLDED)
 pub const MAN_FOLDED: f64 = 4.0;
 
-/// (src/game/doors.ts:208 MAN_BRACED)
 pub const MAN_BRACED: f64 = 8.0;
 
-/// (src/game/doors.ts:208 MAN_CALM)
 pub const MAN_CALM: f64 = 16.0;
 
-/// (src/game/doors.ts:208 MAN_HELD)
 pub const MAN_HELD: f64 = 32.0;
 
-/// (src/game/doors.ts:294 DRIVE_COLS: a table nothing writes)
 pub fn drive_cols() -> Vec<f64> { alloc::vec![34.0, 35.0, 36.0, 37.0, 38.0, 39.0, 40.0, 41.0, 42.0, 43.0, 44.0] }
 
-/// (src/game/doors.ts:526 FLOOR_Y0)
 pub const FLOOR_Y0: f64 = 0.2;

@@ -19,6 +19,5 @@ pub struct MESSLOOK {
     pub splinter: f64,
 }
 
-/// (src/game/floormess.ts:24 MESS_LOOK: a table nothing writes)
 pub fn mess_look() -> crate::floormess::MESSLOOK { crate::floormess::MESSLOOK { film: 6.0, grit: 7.0, splinter: 8.0 } }
 

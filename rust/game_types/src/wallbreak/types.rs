@@ -3,7 +3,7 @@
 use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// who is told of a row of the change feed, on the frame it is filed (wallbreak.ts note): WallReact = the game's one WallReact takes the row into its queue (wallreact.ts:167)
+/// who is told of a row of the change feed, on the frame it is filed: WallReact = the game's one WallReact takes the row into its queue
 #[derive(Clone, Copy, Debug, ToBytes)]
 pub enum ChangeListener {
     WallReact,
@@ -203,7 +203,6 @@ pub struct WallBreakPlanOfItem {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct WallbreakMod {
-    /// (src/game/wallbreak.ts:160 WALL_LOG)
     pub wall_log: Vec<String>,
 }
 
@@ -224,5 +223,4 @@ pub struct WallbreakStats {
     pub nav_opened: i32,
 }
 
-/// (src/game/wallbreak.ts:162 HIDE)
 pub const HIDE: f64 = 3.0;

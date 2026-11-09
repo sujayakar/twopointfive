@@ -98,8 +98,6 @@ pub struct HandworkStats {
     pub levers: i32,
 }
 
-/// (src/game/handwork.ts:90 WORK_TURN)
 pub const WORK_TURN: f64 = 10.0;
 
-/// (src/game/handwork.ts:94 KEY_AT: a table nothing writes)
 pub fn key_at() -> JsMap<String, [f64; 2]> { { let mut m = JsMap::new(); for (r, row) in ["123", "456", "789", "*0#"].iter().enumerate() { for (c, ch) in row.chars().enumerate() { m.set(String::from(ch), [(c as f64 - 1.0) * 0.02, -0.015 + (1.5 - r as f64) * 0.0175]); } } m } }

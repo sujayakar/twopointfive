@@ -79,7 +79,7 @@ fn places_of(o: &ItemStoreO) -> Vec<f64> {
     ]
 }
 
-/// Where each column starts and how long the part is. (itemshome.ts itemCols)
+/// Where each column starts and how long the part is.
 fn item_cols() -> crate::sim_itemshome::ItemCols {
     // colsOf(ITEM_HEAD, ITEM_F64, ITEM_U32, ITEM_ROWS), walked here: the skeleton's cols_of hands back only `bytes`.
     let mut s = [0.0; COLS_ALL];
@@ -94,9 +94,8 @@ fn item_cols() -> crate::sim_itemshome::ItemCols {
     }
 }
 
-/// The columns of one pool over its game's block; ColStore's constructor folded in. (itemshome.ts ItemStore.constructor)
+/// The columns of one pool over its game's block; ColStore's constructor folded in.
 pub(super) fn item_store_new(g: &crate::game::Game, st: crate::Opaque) -> crate::sim_itemshome::ItemStore {
-    // `st.keep(ITEM_BIT, 'thrown things')` is not in the game (notInTheGame.txt); rust/sim's State holds the part from the start.
     let o = o_of(item_cols());
     let part = crate::sim_state::sim_part(crate::sim_state::P_ITEMS);
     ItemStore {
@@ -105,19 +104,19 @@ pub(super) fn item_store_new(g: &crate::game::Game, st: crate::Opaque) -> crate:
     }
 }
 
-/// `n` rows fit, or it is a fault. (itemshome.ts ItemStore.room)
+/// `n` rows fit, or it is a fault.
 fn item_store_room(g: &crate::game::Game, n: f64) {
     if n > g.items.store.cap {
         panic!("a pool of {} thrown things: its columns hold {} (sim/itemshome.ts ITEM_ROWS, rust/sim/src/items.rs CAP; game/throwables.ts spawn gives one up for each new one past {})", n, g.items.store.cap, ITEM_CAP);
     }
 }
 
-/// Things in the pool. (itemshome.ts ItemStore.n)
+/// Things in the pool.
 fn item_store_n(g: &crate::game::Game) -> f64 {
     sim::state::state_read(g.sim).items.n as f64
 }
 
-/// One more thing, behind the last: its row (zeros, the caller's to write). (itemshome.ts ItemStore.enter)
+/// One more thing, behind the last: its row (zeros, the caller's to write).
 pub(super) fn item_store_enter(g: &crate::game::Game) -> f64 {
     let n = item_store_n(g);
     item_store_room(g, n + 1.0);
@@ -125,7 +124,7 @@ pub(super) fn item_store_enter(g: &crate::game::Game) -> f64 {
     n
 }
 
-/// Row `r`'s numbers, by their places (IC). (itemshome.ts ItemStore.rowOut)
+/// Row `r`'s numbers, by their places (IC).
 pub(super) fn item_store_row_out(g: &crate::game::Game, r: f64) -> Vec<f64> {
     let c = &mut sim::state::state(g.sim).items;
     let row = r as usize;
@@ -135,7 +134,7 @@ pub(super) fn item_store_row_out(g: &crate::game::Game, r: f64) -> Vec<f64> {
     out
 }
 
-/// …and into it; a word takes its number as a Uint32Array does. (itemshome.ts ItemStore.rowIn)
+/// …and into it; a word takes its number as a Uint32Array does.
 fn item_store_row_in(g: &crate::game::Game, r: f64, v: &[f64]) {
     let c = &mut sim::state::state(g.sim).items;
     let row = r as usize;
@@ -143,7 +142,7 @@ fn item_store_row_in(g: &crate::game::Game, r: f64, v: &[f64]) {
     for k in COLS_F..COLS_ALL { set_word_at(c, k, row, js::to_u32(v[k])); }
 }
 
-/// A row is given up: those behind it close up in their order, the last is zeros again. (itemshome.ts ItemStore.close)
+/// A row is given up: those behind it close up in their order, the last is zeros again.
 pub(super) fn item_store_close(g: &crate::game::Game, r: f64) {
     let n = item_store_n(g);
     if r < 0.0 || r >= n { return; }
@@ -164,7 +163,7 @@ pub(super) fn item_store_close(g: &crate::game::Game, r: f64) {
     c.n = js::to_u32(n - 1.0);
 }
 
-/// The pool laid out anew: these rows, in this order, and zeros behind them. (itemshome.ts ItemStore.lay)
+/// The pool laid out anew: these rows, in this order, and zeros behind them.
 pub(super) fn item_store_lay(g: &crate::game::Game, rows: &[Vec<f64>]) {
     let was = item_store_n(g) as usize;
     item_store_room(g, rows.len() as f64);
@@ -194,7 +193,7 @@ fn same_double(x: f64, y: f64) -> bool {
     (x.is_nan() && y.is_nan()) || x.to_bits() == y.to_bits()
 }
 
-/// Where two takes of the store's bytes differ, in words: at most `most` lines, none if they are the same state. (itemshome.ts itemDiff)
+/// Where two takes of the store's bytes differ, in words: at most `most` lines, none if they are the same state.
 fn item_diff(g: &crate::game::Game, a: &[u8], b: &[u8], most: Option<f64>) -> Vec<String> {
     let most = most.unwrap_or(4.0);
     let o = g.items.store.o;
@@ -205,7 +204,7 @@ fn item_diff(g: &crate::game::Game, a: &[u8], b: &[u8], most: Option<f64>) -> Ve
     out
 }
 
-/// colDiff(O, ITEM_F64, ITEM_U32, a, b, rows, who, most, out) over this store's columns (itemshome.ts:143, colstore.ts:58), `who` being the row's serial.
+/// colDiff(O, ITEM_F64, ITEM_U32, a, b, rows, who, most, out) over this store's columns, `who` being the row's serial.
 fn col_diff_items(o: &ItemStoreO, a: &[u8], b: &[u8], rows: usize, most: f64, out: &mut Vec<String>) {
     let at = places_of(o);
     for (c, k) in item_f64().iter().enumerate() {
@@ -304,7 +303,7 @@ mod tests {
         assert_eq!(item_store_n(&mut g), 1.0, "nothing laid by a pool that does not fit");
     }
 
-    /// the words itemDiff gives, held to the TypeScript's own output for these same bytes (bun, src/sim/itemshome.ts itemDiff)
+    /// the words itemDiff gives, held to the TypeScript's own output for these same bytes
     #[test]
     fn two_takes_differ_in_the_typescripts_words() {
         let mut g = Box::new(crate::game::Game::blank());

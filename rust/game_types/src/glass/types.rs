@@ -41,9 +41,7 @@ pub enum GlassHitCause {
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes, Blank)]
 pub struct GlassMod {
-    /// (src/game/glass.ts:59 states)
     pub states: Option<crate::glass::GlassState>,
 }
 
-/// (src/game/glass.ts:74 THICK_GLASS_HALF)
 pub const THICK_GLASS_HALF: f64 = 0.05;

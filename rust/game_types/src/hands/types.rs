@@ -82,5 +82,4 @@ pub struct LayLie {
     pub yaw: f64,
 }
 
-/// (src/game/hands.ts:165 Y: a table nothing writes)
 pub fn y() -> V3 { [0.0, 1.0, 0.0] }

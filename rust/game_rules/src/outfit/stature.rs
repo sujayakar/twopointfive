@@ -1,5 +1,5 @@
 #![allow(unused_imports, unused_variables)]
-//! STATURE (src/game/stature.ts): the cast drawn at slightly different heights a man. LOOKS ONLY by its own word: the skeleton, the bones, the hit
+//! STATURE: the cast drawn at slightly different heights a man. LOOKS ONLY by its own word: the skeleton, the bones, the hit
 //! capsules and every box a ray meets are untouched. What it writes that the tick's own state holds: `Box.dc / dh` of the boxes bolted to a man
 //! (rows of the frame's list, where the picture is to draw them) and the near end of his weapon laser (a box of the frame's list made from the
 //! DRAWN muzzle). Those are fields and boxes of the game's own tables, so they are written here, under the DRESS row, as the TypeScript writes them.
@@ -16,7 +16,6 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, vec::Vec};
 
-/// (src/game/stature.ts:33 hash01)
 fn hash01(n: f64) -> f64 {
     // (`(n | 0) * 0x9E3779B1` is a product of doubles, then `x ^= x >>> 15` takes it to an int32)
     let mut x = js::to_i32(js::to_i32(n) as f64 * 2654435761.0);
@@ -26,7 +25,7 @@ fn hash01(n: f64) -> f64 {
     ((x as u32) % 4096) as f64 / 4095.0
 }
 
-/// The man's own stature (1 for a player's man, and for everybody with no cast loaded). (src/game/stature.ts:35 statureBase)
+/// The man's own stature (1 for a player's man, and for everybody with no cast loaded).
 fn stature_base(g: &mut crate::game::Game, c_2: CharId) -> f64 {
     if crate::seats::man_of(g, Some(c_2)).is_some() { return 1.0; }
     let Some(v) = crate::cast::cast_variant_of(g, c_2) else { return 1.0; };
@@ -36,14 +35,14 @@ fn stature_base(g: &mut crate::game::Game, c_2: CharId) -> f64 {
     m::round(m::min(t.max, m::max(t.min, s)) * 1000.0) / 1000.0
 }
 
-/// Two bodies that must meet: he is in a player's arm, or is the body one hauls. (src/game/stature.ts:42 paired)
+/// Two bodies that must meet: he is in a player's arm, or is the body one hauls.
 fn paired(g: &crate::game::Game, c_2: CharId) -> bool {
     for pl in crate::seats::men(g) { if let Some(d) = g.pl[pl].dragging { if g.gd[d].ch == c_2 { return true; } } }
     let rec = g.guards.iter().copied().find(|x| g.gd[*x].ch == c_2).or_else(|| g.civilians.iter().copied().find(|x| g.gd[*x].ch == c_2));
     match rec { Some(r) => g.gd[r].held.is_some(), None => false }
 }
 
-/// Once a frame, before anything of the men is drawn: every man's scale for this frame. False with no cast loaded. (src/game/stature.ts:49 statureTick)
+/// Once a frame, before anything of the men is drawn: every man's scale for this frame. False with no cast loaded.
 pub fn stature_tick(g: &mut crate::game::Game, men: &[CharId], dt: f64) -> bool {
     if g.tab.rig[g.rig].cast.is_none() { return false; }
     for &c in men {
@@ -59,10 +58,9 @@ pub fn stature_tick(g: &mut crate::game::Game, men: &[CharId], dt: f64) -> bool 
     true
 }
 
-/// The scale this man is drawn at this frame (1 = as the skeleton has him). (src/game/stature.ts:59 statureOf)
 pub fn stature_of(g: &crate::game::Game, c_2: CharId) -> f64 { g.m.stature.shown.get(c_2).copied().unwrap_or(1.0) }
 
-/// Where a point of the simulation's man is DRAWN: scaled about his feet. (src/game/stature.ts:62 drawnPoint)
+/// Where a point of the simulation's man is DRAWN: scaled about his feet.
 fn drawn_point(g: &crate::game::Game, c_2: CharId, p: V3, s: Option<f64>) -> V3 {
     let s = match s { Some(s) => s, None => stature_of(g, c_2) };
     let f = g.ch[c_2].pos;
@@ -70,7 +68,7 @@ fn drawn_point(g: &crate::game::Game, c_2: CharId, p: V3, s: Option<f64>) -> V3 
 }
 
 /// The boxes out[from‥] that carry a drawn man's owner byte (his rig, a can in his fist): where the picture is to draw them (Box.dc / dh). The box
-/// itself is not moved. (src/game/stature.ts:94 drawnBoxes)
+/// itself is not moved.
 pub fn drawn_boxes(g: &mut crate::game::Game, men: &[CharId], out: &Vec<AnyBoxId>, from: f64) {
     let mut any = false;
     for &c in men { if stature_of(g, c) != 1.0 { let i = (js::to_i32(g.ch[c].id) & 0xff) as usize; g.m.stature.by_id[i] = Some(c); any = true; } }

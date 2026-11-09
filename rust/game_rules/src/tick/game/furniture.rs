@@ -6,7 +6,7 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
-/// one row of the walk over who has hands (game.ts:2141)
+/// one row of the walk over who has hands
 #[derive(Clone, Copy)]
 struct WhoRow { c: CharId, can: bool, right_free: bool, gd: Option<GuardId>, pl: Option<PlayerId> }
 
@@ -15,7 +15,7 @@ fn was_at(before: &[f64], k: Option<usize>) -> f64 {
     match k { Some(i) if i < before.len() => before[i], _ => m::NAN }
 }
 
-/// what spot() closes over: the leaf a frame on, his side of it, his shoulders (game.ts:2189-2194)
+/// what spot() closes over: the leaf a frame on, his side of it, his shoulders
 #[derive(Clone, Copy)]
 struct Leaf { u: [f64; 2], fx: f64, fz: f64, lo: f64, hi: f64, crack: bool, chest: V3, rgt: [f64; 2], arm_l: Option<V3>, arm_r: Option<V3> }
 
@@ -23,7 +23,7 @@ struct Leaf { u: [f64; 2], fx: f64, fz: f64, lo: f64, hi: f64, crack: bool, ches
 #[derive(Clone, Copy, Debug)]
 struct Spot { p: V3, reach: bool, dist: f64 }
 
-/// the spot for one hand (`right`: the right), off that shoulder joint (game.ts:2201 spot)
+/// the spot for one hand (`right`: the right), off that shoulder joint
 fn spot(l: &Leaf, right: bool) -> Spot {
     let (u, rgt, chest, fx, fz, lo, hi) = (l.u, l.rgt, l.chest, l.fx, l.fz, l.lo, l.hi);
     let side = if right { 0.2 } else { -0.2 };
@@ -63,7 +63,7 @@ fn spot(l: &Leaf, right: bool) -> Spot {
     Spot { p, reach, dist: m::hyp3(p[0] - sh[0], p[1] - sh[1], p[2] - sh[2]) }
 }
 
-/// who is pushing which leaf open right now, and where on it his free hand goes (game.ts Game.handsOnDoors)
+/// who is pushing which leaf open right now, and where on it his free hand goes
 pub(super) fn game_hands_on_doors(g: &mut crate::game::Game, before: &[f64]) {
     const FOLLOW: f64 = 0.12;
     const FADE: f64 = 0.4;
@@ -278,7 +278,7 @@ pub(super) fn game_hands_on_doors(g: &mut crate::game::Game, before: &[f64]) {
     }
 }
 
-/// loose furniture: the same contact pattern as the doors, after everyone has moved (game.ts Game.updateProps)
+/// loose furniture: the same contact pattern as the doors, after everyone has moved
 pub fn game_update_props(g: &mut crate::game::Game, dt: f64) {
     let seats: Vec<SeatId> = g.seats.clone();
     let mut chars: Vec<CharId> = Vec::new();
@@ -315,7 +315,7 @@ pub fn game_update_props(g: &mut crate::game::Game, dt: f64) {
         g.col.dynamic_boxes.clone()
     };
     crate::props::prop_system_update(g, dt, &mut contacts, &leaves);
-    // a contact's pos is the man's own in the TypeScript: what the step moved him by is his (props.ts takeBack writes x and z)
+    // a contact's pos is the man's own in the TypeScript: what the step moved him by is his
     for (i, c) in chars.iter().enumerate() {
         g.ch[*c].pos[0] = contacts[i].pos[0];
         g.ch[*c].pos[2] = contacts[i].pos[2];
@@ -336,10 +336,8 @@ pub fn game_update_props(g: &mut crate::game::Game, dt: f64) {
     }
 }
 
-/// (game.ts Game.dropThrowable)
 pub fn game_drop_throwable(g: &mut crate::game::Game, kind: crate::game::ThrowKind, p: V3) { crate::combat::drop_throwable(g, kind, p) }
 
-/// (game.ts Game.throwCount)
 pub fn game_throw_count(g: &crate::game::Game, seat: &crate::seats::SeatRef, kind: crate::game::ThrowKind) -> f64 { crate::player::throw_count(g, seat, kind) }
 
 #[cfg(test)]

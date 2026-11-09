@@ -9,5 +9,4 @@ pub struct SquadCast {
     pub tools: crate::doortools::DoorTools,
 }
 
-/// (src/game/squadcast.ts:17 EVERY_KEY: a table nothing writes)
 pub fn every_key() -> JsSet<String> { { let mut s = JsSet::new(); s.add(String::from("*")); s } }
