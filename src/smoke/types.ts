@@ -76,8 +76,6 @@ export interface SmokeSystemLike {
   /** is smoke handed over now stepped AND drawn (a solver switched off or frozen, or its rendering switched off, is not; absent = no)? The solver's
    *  own question (emit drops a look-only source when it is not, and the picture asks it): the game asks nothing */
   drawing?(): boolean;
-  /** drop every emitter and all the smoke (encounter restart: a 30 s canister must not keep venting into the next one) */
-  clearAll?(): void;
   /** every can venting stops venting now, what it has let out left in the air (the game's `SmokeCansShut`) */
   shutCans?(): void;
   /** something solid within r of c stopped being solid (or came back): the bricks there re-bake their obstacle field — the destruction lane hiding a static it knocked off */

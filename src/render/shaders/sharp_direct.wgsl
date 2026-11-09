@@ -1,3 +1,4 @@
+// A big body is written once here and asked in a loop: the compile pastes every call. Credit: Stephen Jayakar, from his pull request 1.
 // SHARP DIRECT — the direct light's UNSHADOWED term at the OUTPUT resolution (docs/internal/sharp-direct.md).
 // Direct light = U × visibility. U — every light's analytic contribution at the pixel: cone, falloff, N·L, emitter shape (evalLight) — is exact and
 // history-free wherever it is evaluated, and it is where every HARD edge of the direct term lives (light-pool boundaries, cone edges, the lit / unlit

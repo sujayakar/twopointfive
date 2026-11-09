@@ -2,7 +2,7 @@
 
 **THIS FILE IS AN INDEX. NEW BULLETS GO INTO THE MATCHING `docs/agents/` FILE, NEVER INTO CLAUDE.md. A SESSION READS ONLY THE AREA
 FILES ITS WORK NEEDS** — and inside one, the bullet it needs, not the file: `grep -n '<module or switch>' docs/agents/*.md`, then read
-those lines. This file is loaded into every session; it was 640 KB and sessions died of it. `bun run tools/qa/claude-md-check.ts`
+those lines. This file is loaded into every session; it was 640 KB and sessions died of it. `bun run tools/qa/docs-check.ts`
 fails when it is over 14 KB or 150 lines, or when an area file is missing from the index below.
 
 ## What this is
@@ -72,7 +72,7 @@ The maintainer's model, from a tutorial card:
 - **Short is good, clipped is not.** Cut ideas, never the small words (the, a, to, you, press). "Show, not tell" means fewer
   screens of text, not telegrams. A character cap is there for layout: if a natural sentence doesn't fit, say less or raise the
   cap openly. Never squeeze the sentence.
-- **A voice keeps its brevity, not odd grammar.** A radio call can be "Stacked up." or "Room clear."; it still runs in the order a
+- **A voice keeps its brevity, not odd grammar.** A radio call can be "stacking up." or "room clear."; it still runs in the order a
   person would say it.
 
 The banned words stand (no compass words, no digit above 5) and a key is still written as its code in brackets (`[B]`). Longer
@@ -80,16 +80,13 @@ notes and before and after pairs from the game's own text: `docs/agents/writing.
 
 ## The area files (`docs/agents/`)
 
-Each is the old CLAUDE.md's bullets for that area, word for word (moved 2026-10-13). The git log is the newest in-repo record of what
-happened when; the live queue is outside the repo.
+One page a system, true to the code today; `docs-check.ts` holds every name in it. The pages on that check's `OLD` list are still the diary
+they were. The git log is the newest in-repo record of what happened when; the live queue is outside the repo.
 
-- `overview.md` — what the game is, one model for picture and AI, where the module families live, a line per small module, the
-  architecture map (files, frame flags, box flags, the Frame layout), the removed Mac app.
-- `qa.md` — run / build / check in full, the gates, driving the page headlessly (hooks, URL flags,
-  `__stage`, `__ready`), checkpoints + autosave.
-- `missions.md` — scenario kinds, fresh deals and ways in, the lesson engine (the old Training lessons are out), the par clock, the snatch, timed charges, Mousehole, the
-  long hall, the vault, quiet missions, lights-out, the glasshouse, the solo night's opening.
-- `menus.md` — title, start page, Team & kit, the kit figure, key art, the debrief, the sandbox row, the debugger panel (backtick).
+- `overview.md` — what the game is, the two halves, one tick, where everything stands, how to change it, what holds it.
+- `qa.md` — run, build and check; the module; `gate`, `hold`, the checks and page scripts; the address words and `window` hooks; what "verified" means.
+- `missions.md` — the list, each kind of mission staged, won and lost, par, the tutorials and their scripts.
+- `menus.md` — the title, start page, kit, HUD, rings, cards, Options and keys, the debugger.
 - `squad.md` — the orders menu and its keys, every squad order, move-there, four in two pairs and the word, fall in, rear men, throws
   on order, a teammate works a thing, log lines.
 - `door-tools.md` — open / bang / charge / outside, the threshold, the whole-room rule, doors found shut, entry paths, cans and leaves.
@@ -97,33 +94,24 @@ happened when; the live queue is outside the repo.
   loud, sneaking with Sam.
 - `enemies.md` — difficulty and Hard, defender cues, defender squads and the radio check, covered lanes, QRF, pursuit tactics, the
   gun-in-a-hold rule, needs, civilians, the calm torch.
-- `dialogue.md` — the dialogue pass (`WORDS`): who says what where, hostages, defenders, door names, the lint.
-- `stealth.md` — fog of war (cone, squad doors, squad fire, nothing live in the fog), sticky cameras, interaction rows, devices, the
-  wall hold, the whistle, the close-in mode, takedowns, stealth poses, the optical wand.
-- `player.md` — guns at walls, small player rules, friends in the line, blasts on the player, the kit and the FN2000 / issue kit, aim
-  weight, kit handling, hands, hands at work, the player's own charges.
-- `doors.md` — locks and keys, one-way doors, frames that hold a boot, doors stay where left, rolling chairs, real-size doors, the
-  second-way-in level rule.
+- `dialogue.md` — who says what, how a line is picked and reaches the screen, door and place names.
+- `stealth.md` — the fog of war, the meters, lights as things, Sam's close work, the wall hold, the whistle, stuck cameras, the wand, devices.
+- `player.md` — Sam's feet, aim, guns, throws, kit, rows; friends in the line; being hit; restarts.
+- `doors.md` — doors and furniture: which way one opens, locks, the boot, a leaf's weight, who works one from where, the level rules.
 - `destruction.md` — wall charges (outer walls, furniture, the safety radius), glass (panes, refraction, fracture, rounds through),
   decals, GPU particles, destruction under fire, the paced blast frame, cut boxes.
-- `weather.md` — the hour, weather kinds, cloud over the hour, the level's own roofs, the dust volume, wet characters, wind.
-- `levels.md` — the level is data, scenario data in the level file, the GWOT look and its look files, lived-in rooms, the roof rule.
-- `showcases.md` — the breach drill and the daylight variant, the Director (level scripting, no program today), the removed
-  night and day showcases.
-- `anim.md` — MOVES and TURN, the second MOVES pass, wounds, character materials.
-- `render.md` — judging renderer output, GPU timing traps, quality presets and the ladder, caps, froxels, ReSTIR, TAAU, sharp direct,
-  the gather, the denoiser, the smoke solver, effects numbers, prototype branches (longer renderer bullets:
-  `docs/internal/claude-md-renderer-systems.md`).
-- `replays.md` — the game's own die, the fixed step, the input record, F7 replays, the
-  engine replay player, kept runs and the dump.
-- `net.md` — networked play: the wire (inputs, never state), the server's input rule, the server and client cores, the game server
-  process and its environment, the page as a client (`?net=`), the lobby (host or join a co-op game, `?join=`), their checks.
+- `weather.md` — hours, weather kinds, roofs, wind, fire, snow, wet men; what of it moves a rule and what is dress.
+- `levels.md` — the level file, its generators and kits, rooms, marks, lamps, paint and the look, what a level owes and what checks it.
+- `anim.md` — the skeleton, the layers that pose a man, the turn, falls, outfits and materials.
+- `render.md` — the frame, the box world, smoke as drawn, exposure, fog, glass, presets and the ladder, shader text, measuring, judging a picture.
+- `render-light.md` — direct light, the gather, the cascades, the denoiser, reflections, TAAU and sharp direct, men in rays.
+- `replays.md` — the tape, why a run is the same again, the kept runs, the replay page, saves.
+- `net.md` — two players: the wire, the server, the lobby, seats in the rules; the hosted build and its backend.
 - `rust.md` — the game in Rust: its crates and their build, what Rust code owes the game, the view, the worlds it asks, and how it was
   moved out of TypeScript.
 - `ai-architecture.md` — the AI's design: a man's records, assignment and control, `rust/game_rules/src/control/` (the list of rules, adding one).
-- `sounds.md` — the game's sound table, sound lanes on the engine replay, takes, tuning, the score and its pieces.
-- `writing.md` — how player text is written: the rules above at length, by kind of text (prompt, card, list row, menu, radio line),
-  with before and after pairs from the game.
+- `sounds.md` — how a sound is asked for, its path to the ear, the mixer, the table, the score, the listening pages and sound lanes.
+- `writing.md` — how player text is written, by kind of text, on the game's own lines.
 - `workflow.md` — the fast loop, reviews, lanes and their deliverables, commits, the maintainer's taste, where the repo lives.
 
 Other maps: `STYLE.md` (the look as rules), `docs/level-format.md`, `docs/internal/<topic>.md` (notebooks),
