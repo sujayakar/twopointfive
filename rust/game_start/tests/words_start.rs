@@ -1,4 +1,4 @@
-//! THE ADDRESS'S WORDS AT A START (game_run words.rs), through the door the page's start goes by.
+//! THE ADDRESS'S WORDS AT A START (game_start host/words.rs), through the door the page's start goes by.
 //! (A file of its own: this stand holds no `Play`, so it must not run beside the tests that do: the character's clips are one store of the process.)
 use game_start::files;
 use game_start::handed::stand_handed;
@@ -16,10 +16,10 @@ fn a_start_stands_with_what_its_address_says() {
     let stand = |words: &str| {
         let link = format!("?levelFile=depot.json&roomclear&squad4{words}");
         let b = pack(&[level.as_bytes(), link.as_bytes(), a.mannequin.text.as_bytes(), a.mannequin.bin.unwrap(), a.cast.map_or(&b""[..], |c| c.text.as_bytes()), a.cast_look.map_or(&b""[..], |c| c.text.as_bytes()), b""]);
-        stand_handed(&b, &StartOpts { seed: 1, slot: 1, ..Default::default() }, &mut |g, w, c| game_run::words::at_start(g, w, c).unwrap())
+        stand_handed(&b, &StartOpts { seed: 1, slot: 1, ..Default::default() }, &mut |g, w, c| game_start::host::words::at_start(g, w, c).unwrap())
     };
     let plain = stand("");
-    let read = |g: &game::game::Game, n: &str| game_run::knobs::get(g, n).unwrap();
+    let read = |g: &game::game::Game, n: &str| game_start::host::knobs::get(g, n).unwrap();
     assert_eq!(read(&plain.game, "cmdring.twice"), 1.0);
     let (was_rate, was_lean) = (read(&plain.game, "sneak.seen_rate"), read(&plain.game, "fire.look.lean"));
     assert_ne!(was_lean, 0.07);

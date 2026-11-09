@@ -1,8 +1,9 @@
 //! THE CARDS AS A MACHINE KEEPS THEM: one text (JSON), read into a game's cards and written from them.
+use crate::json::{parse, Json};
+use alloc::{format, string::String, vec::Vec};
 use game::game::Game;
 use game::js::JsMap;
 use game::kit::{self, KitValue, KitWeapon, MemberKit};
-use game_start::json::{parse, Json};
 
 /// the name the cards are kept under
 pub const KIT: &str = "twopointsix.kit";

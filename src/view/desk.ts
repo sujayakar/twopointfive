@@ -1,4 +1,4 @@
-// THE DESK, as a page has it (rust/game_run/src/desk.rs): what the cards before a game show and press. The page holds no rule of a card and no card: it keeps
+// THE DESK, as a page has it (rust/game_start/src/host/desk.rs): what the cards before a game show and press. The page holds no rule of a card and no card: it keeps
 // the text a press says is kept, and asks again.
 import { Asks } from '../draw/asks';
 import type { Commands } from '../draw/commands';

@@ -2,9 +2,9 @@
 //! with the cards the desk says they go with.
 use game::kit;
 use game::view::{Pressed, StartView, TeamView};
-use game_run::command::apply;
-use game_run::desk::Desk;
-use game_run::kept;
+use game_start::host::command::apply;
+use game_start::host::desk::Desk;
+use game_start::host::kept;
 use game_start::stand::{stand_with, StartOpts};
 use game_start::{files, json};
 

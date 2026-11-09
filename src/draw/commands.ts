@@ -1,4 +1,4 @@
-// Written by tools/draw/gen.ts from rust/game_run/src/command.rs. To change a command, change it there.
+// Written by tools/draw/gen.ts from rust/game_start/src/host/command.rs. To change a command, change it there.
 import { Writer } from './writer';
 
 /** what a player or a panel does that is not input, in its order, until a step takes it */

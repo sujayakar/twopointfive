@@ -1,4 +1,4 @@
-//! THE NUMBERS THE GAME IS TUNED BY: a file a family, each table with its values beside its fields. A person turns one by its dotted name: a row of the panel (game_run shown.rs), an address word (words.rs), a tape's Knob command.
+//! THE NUMBERS THE GAME IS TUNED BY: a file a family, each table with its values beside its fields. A person turns one by its dotted name: a row of the panel (game_start host/shown.rs), an address word (words.rs), a tape's Knob command.
 use crate::bytes::ToBytes;
 use alloc::string::String;
 use game_derive::Knobs;

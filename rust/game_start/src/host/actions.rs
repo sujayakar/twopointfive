@@ -1,5 +1,6 @@
 //! THE PANEL'S ACTIONS: what a person does to the game from the debugger that isn't a number, as one list. The page draws a button, a box or a choice from a row and knows none by name; a press is a
 //! command (`Act`), so a tape carries it as it does a turned number.
+use alloc::{format, string::String, vec, vec::Vec};
 use game::game::{Game, GameSetBlackoutCause, GuardState};
 use game::m;
 use game::teams::Team;

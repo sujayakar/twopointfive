@@ -21,8 +21,7 @@ Each crate is its own cargo workspace and target folder.
 | `rust/sim/` | hot loops, over records and columns; each game's block. `no_std` | `game_types`, `maths`, `prim` |
 | `rust/game_rules/` | the rules; its crate name is `game`. `no_std` | `game_types`, `sim`, `prim` |
 | `rust/game_draw/` | what the picture is told. `no_std` | `game`, `sim` |
-| `rust/game_start/` | a game from a level file; tests, `gate`, `hold`, `levels`, `missions` | `game`, `sim`, `game_draw` under `std` |
-| `rust/game_run/` | a host's work round a step: commands, knobs by name, cards, address words | `game`, `game_start` |
+| `rust/game_start/` | a game from a level file, what a host does round a step (`src/host/`: commands, knobs by name, cards, address words); tests, `gate`, `hold`, `levels`, `missions` | `game`, `sim`, `game_draw` under `std` |
 | `rust/game_face/` | the module's C calls | all of them |
 
 ## How it works
@@ -152,7 +151,7 @@ and neither side may link the other. Inside the rules:
   (`game_start/src/block.rs`). A new `static mut` needs its `STATICS` row, saying STATE, SCRATCH, COPY or TALLY.
 - **A knob:** `#[k(value)] pub name: f64` in its table. A new table is a file in `knobs/` with `#[derive(Clone, Copy, Debug, ToBytes, Knobs)]`, a
   `mod` line and a `Knobs` field in `knobs/mod.rs`. A slider is a `ROWS` line in `shown.rs`; an address word, only if asked for, a `WORDS` line in
-  `game_run/src/words.rs`. A loop of `rust/sim` takes the tables (`tune: &Knobs`) and reads it by its name.
+  `game_start/src/host/words.rs`. A loop of `rust/sim` takes the tables (`tune: &Knobs`) and reads it by its name.
 - **A table of things:** a row in `id!`, a `Tab` field in `Tabs` and in `Tabs::blank`.
 - **A question:** the walk in `rust/sim`; a `&mut Game` form and a shared form (`line_shared`) in `scene_collision.rs`; a method on `WorldAsk`,
   and on `Asker` if a rule needs one body; a call in `game_face/src/ask.rs` and `src/draw/ask.ts` if the page asks it.
