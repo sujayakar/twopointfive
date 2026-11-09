@@ -279,6 +279,7 @@ Under `rust/game_rules/src/`. One man's frame, in the order it runs (`guards/fra
 | where a man looks, for every eye | `guards/p_04.rs look_of`, which is `fogofwar::gaze_of` | |
 | how alert he is | `guards/frame.rs alertness`; every write of awareness, state and fix through `mind.rs` | |
 | what takes him in his fight: head down under fire | `control/duck.rs`, asked at the top of `alert` | a file and a line of `rules!` |
+| what takes him off his post in a room fight: his room is lost | `control/lost.rs`, asked at the end of `room_fight_tick_def` | a file and a line of `rules!`, whose `Ask` is a `Leg` |
 | what he does, by his state | `guards/behave/{patrol,suspicious,alert,search}.rs` | his state's file |
 | the looks laid over his aim | `guards/looks.rs` | a line of `LOOKS` |
 | his pose, his light, his footfall | `guards/frame.rs pose` | |
