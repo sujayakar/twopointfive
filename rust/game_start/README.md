@@ -77,6 +77,7 @@ side by side with a door between them and a door each to the yard, a defender in
 ### The game in a test's hands (`src/play.rs`)
 
 - **Stand:** `Play::scene(&scene, &opts)`, or `Play::level("kit-yard.json", room_clear, &opts)` for a file of `levels/`. `Play::mission("depot.json", "?levelFile=depot.json&roomclear&squad4", &opts)` starts a mission on a file from the words of its address, as a click on its row of the mission list does (the row's hour and weather, the fog of war, then the mission).
+- **A player at the keys:** `src/player.rs` is a scripted player of a seat: async code with no executor, an await is one tick, who acts only through the hand of the next tick and asks the game through a borrow that cannot outlive the question. `p.played_by(&mut script)` is one tick with his hands on the first seat, by the road the page's own goes; `p.played_out(&mut script, secs)` plays him to his end. The hands-off player (`src/hands_off.rs`, a room clear from its first step to its end) is such a script, and the page's Benchmark plays him.
 - **Time:** `p.run(secs)`; `p.until(secs, |p| …)` answers how long it took, or `None`; `p.always(secs, |p| …)` answers `None`, or the second it
   first failed; `p.frame()` is one sixtieth.
 - **Who:** `p.guard("route name")`, `p.defender_at(mark)`, `p.mates()` (the first two are the red pair, the last two the blue),
