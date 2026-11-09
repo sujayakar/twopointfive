@@ -295,6 +295,34 @@ pub fn gun_place(g: &crate::game::Game, gd: GuardId) -> Option<V3> { if crate::m
 /// The last warning before a captive dies, as the men at a door have it.
 pub fn last_warning(g: &mut crate::game::Game, d: DoorId) -> bool { !g.staged.captives.is_empty() && crate::rescue::rescue_last_warning(g, d) }
 
+/// A drill of the mission's own has this man, and its orders are not the menu's.
+pub fn has(g: &crate::game::Game, gd: GuardId) -> bool { crate::nightbreach::drill_has(g, gd) }
+
+/// A menu order came for a man of its drill: he is let go of (and with him the pair), or why not.
+pub fn lets_go(g: &mut crate::game::Game, gd: GuardId) -> Option<String> { if crate::nightbreach::night_breach_drill_ops(g).contains(&gd) { crate::nightbreach::night_breach_call_off(g) } else { None } }
+
+/// What a man of its drill is doing, in the menu's words.
+pub fn doing(g: &crate::game::Game, gd: GuardId) -> Option<String> { crate::nightbreach::drill_doing(g, gd) }
+
+/// What of its own waits at a door for the second word: the drill's pair (true), or an entry on the captives' room (false).
+pub fn waits(g: &crate::game::Game) -> Vec<(DoorId, Vec<GuardId>, bool)> {
+    let mut out: Vec<(DoorId, Vec<GuardId>, bool)> = crate::nightbreach::drill_waits(g).map(|(d, men)| (d, men, true)).into_iter().collect();
+    out.extend(crate::rescue::rescue_waits(g).into_iter().map(|(d, men)| (d, men, false)));
+    out
+}
+
+/// A man stood on its floor after the staging joins its foes.
+pub fn adopt(g: &mut crate::game::Game, gd: GuardId, mark: &crate::nightbreach::NightBreachMark) { crate::nightbreach::night_breach_adopt(g, gd, mark); }
+
+/// THE MISSIONS' TICK, each its own while it is up, and the squads its men are in.
+pub(crate) fn mission_tick(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Option<CameraId>) {
+    crate::nightbreach::night_breach_tick(g, dt, input, cam);
+    crate::quiet::quiet_mission_tick(g, cam);
+    crate::enemysquads::squads_tick(g);
+    crate::roomclear::room_clear_scenario_tick(g, dt);
+    crate::rescue::rescue_tick(g, dt, input, cam);
+}
+
 /// THE MISSION'S ONE LINE AND ITS PLACE, as they stand now, and whose they are: a level's program while it runs, a lesson's step over its own scenario,
 /// the room clear, the rescue, the night breach by itself, and else the stealth mission's own stages.
 /// Empty while nobody plays. A read: the HUD's view of it is `view::MissionView`, and nothing of it is kept.

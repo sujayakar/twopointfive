@@ -55,7 +55,7 @@ pub fn squad_orders_tick(g: &mut crate::game::Game) {
     while let Some(gd) = g.orders.asg.next_key(&mut at) {
         let a = *g.orders.asg.get(gd).unwrap();
         if crate::condition::down(g, g.gd[gd].ch) { squad_orders_drop(g, gd); continue; }
-        if nightbreach_owns(g, gd) { squad_orders_drop(g, gd); continue; }   // a drill has taken him: its order stands, ours is dropped
+        if crate::mission::has(g, gd) { squad_orders_drop(g, gd); continue; }   // a drill has taken him: its order stands, ours is dropped
         let c = g.gd[gd].ch;
         if g.tab.orders_assignment[a].thru.is_some() {   // (ORDERS.ownDoor: he is in the room, by its door)
             if let Some(post) = g.tab.orders_assignment[a].post {

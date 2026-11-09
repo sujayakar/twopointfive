@@ -817,7 +817,7 @@ pub fn open(g: &mut Game, who: u32, field: &str) {
 pub fn cards(g: &mut Game, size: i32) {
     let Some(mut st) = take(g) else { return };
     let size = if (0..=4).contains(&size) && !staged_way_of(g, st.asks_none).fixed { Some(size as u32) } else { None };
-    if let Some(n) = size { if crate::rescue::rescue_up(g) { g.k.rescue.squad = n as f64; } else { g.k.nightbreach.squad = n as f64; } }
+    if let Some(n) = size { (g.k.rescue.squad, g.k.nightbreach.squad) = (n as f64, n as f64); }   // (whichever is up stages so many)
     if size.is_some() { st.size = size; }
     if st.still { st.due = true; } else { super::cards::told(g, &mut st, size); }
     g.kit_stage = Some(st);
