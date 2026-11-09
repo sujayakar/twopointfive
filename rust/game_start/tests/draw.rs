@@ -255,7 +255,7 @@ fn what_goes_on_is_heard_as_it_stands() {
     step(&mut p, &mut d, 300);
     let at = heard(&d, "smokeHiss");
     assert!(at.len() == 1 && at[0].2 > 1.0 && (at[0].2 + at[0].3 - 32.0).abs() < 0.1, "the can, its age and what it has left: {at:?}");
-    let then = game_start::moment::Moment::of(&p.g);
+    let then = game::savestate::control::Moment::of(&p.g);
     step(&mut p, &mut d, 32 * 60);
     assert!(heard(&d, "smokeHiss").is_empty() && heard(&d, "fireBed").len() == fires.len(), "burnt out, and the brazier burns on");
     assert!(events.iter().any(|n| n == "smokePop") && !events.iter().any(|n| n == "smokeHiss" || n == "fireBed"), "told by events: {events:?}");
@@ -299,7 +299,7 @@ fn the_smoke_keeps_its_color() {
     let blue = mixed.iter().map(|w| w >> 24).max().unwrap();
     assert!(mixed.iter().all(|w| w & 255 == 0) && (10..153).contains(&blue), "dust let into a can's smoke, at most part of it: {mixed:x?}");
     assert!(mixed.iter().all(|w| (w >> 24) >= (w >> 16 & 255) && (w >> 16 & 255) >= (w >> 8 & 255)), "its color is the dust's: {mixed:x?}");
-    let then = game_start::moment::Moment::of(&p.g);
+    let then = game::savestate::control::Moment::of(&p.g);
     p.run(6.0);
     d.take(&p.g, want::smoke);
     assert!(dyes(&d).iter().filter(|w| **w != 0).count() > mixed.iter().filter(|w| **w != 0).count(), "the smoke that spread took its color along: {:x?}", dyes(&d));
