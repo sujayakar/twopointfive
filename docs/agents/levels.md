@@ -154,7 +154,7 @@ mark reaches its door); `names`; `rain`; `file` (its faults).
 `floor-order-check.ts` and the `levels` questions, which `gate long` asks of every level.
 
 `levels/<name>.lint.json` holds a reason for an odd thing `level-lint.ts` finds. In `checks.ts`: `exports-check.ts`, `level-lint.ts`,
-`ground-pieces-check.ts`, `kit-stores-check.ts`, `palette-check.ts`, `stuff-check.ts`, `floor-order-check.ts`. By hand: `tools/qa/zfight-check.ts`,
+`ground-pieces-check.ts`, `kit-stores-check.ts`, `palette-check.ts`, `stuff-check.ts`, `floor-order-check.ts`, `zfight-check.ts`. By hand:
 `bun run tools/levels/library.ts --check`.
 
 | native test | what it holds |

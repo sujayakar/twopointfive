@@ -275,7 +275,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // Two doors: c_n on the yard's east mouth (an arm's length from the hatch), c_w from the bay (behind the hatch: one man's back to it, the edge of the other's eye). The hatch in its yard wall
   // has a shelf for a counter; two rows of racking run north–south in the south half.
   grp('room_c');
-  add({ c: [20.4, 0.98, 18.7], h: [1.0, 0.02, 0.1], albedo: C.woodDark });                    // the hatch's counter, a shelf on the wall's inside
+  add({ c: [20.4, 0.98, 18.71], h: [1.0, 0.02, 0.09], albedo: C.woodDark });                    // the hatch's counter, a shelf on the wall's inside
   shelf(20.0, 22.4, 0.5, 2.2, 0, 4, 2.0); shelf(21.8, 22.4, 0.5, 2.2, 0, 4, 2.0);
   pallet(23.3, 23.2, 0.9, 1.0);
 

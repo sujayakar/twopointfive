@@ -75,7 +75,7 @@ each row in a child process, so a panic costs only its own rows. Exit 0 pass, 1 
 
 **Checks.** `bun run tools/qa/checks.ts [group | name …] [--list]`, groups `picture`, `shaders`, `page`, `menus`, `sound`, `levels`, `words`, `build`. Each is a file run in its
 own process, stopped at `CHECK_CAP` minutes. `BY_HAND` names the files no row runs: the backend's, the
-game server's, `zfight-check.ts`, and those of `tools/draw/` that want the module.
+game server's, and those of `tools/draw/` that want the module.
 
 **Page scripts.** `bun run tools/qa/pages.ts [group | name …] [--list]`, groups `boot`, `play`, `menus`, `coop`, `saves`, `cloud`, `replay`, `all`, and `tools`, whose scripts run
 only by name. It starts one dev server with no backend and runs a script at a time, because a page takes the whole box.

@@ -185,8 +185,8 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   grp('walls.yard');
   const gate = [{ ...DOORWAY, y0: 0, y1: 2.2 }];
   // (the north wall stops at the building: the bunk room and the fuel room stand against the halt's edge, and their own wall is the wall there)
-  G.yardWallX(YARD.z0, YARD.x0 - 0.12, FRONT_X); G.yardWallX(YARD.z1, YARD.x0 - 0.12, YARD.x1 + 0.12);
-  G.yardWallZ(YARD.x0, YARD.z0, YARD.z1, 'mud', gate); G.yardWallZ(YARD.x1, ROOM_Z1, YARD.z1, 'mud', [{ a: YARD_DOOR_Z - 0.6, b: YARD_DOOR_Z + 0.6, y0: 0, y1: 2.2 }]);
+  G.yardWallX(YARD.z0, YARD.x0 - 0.12, FRONT_X - t); G.yardWallX(YARD.z1, YARD.x0 - 0.12, YARD.x1 + 0.12);
+  G.yardWallZ(YARD.x0, YARD.z0, YARD.z1, 'mud', gate); G.yardWallZ(YARD.x1, ROOM_Z1 + t, YARD.z1, 'mud', [{ a: YARD_DOOR_Z - 0.6, b: YARD_DOOR_Z + 0.6, y0: 0, y1: 2.2 }]);
   for (const [x, z] of [[9, 5], [9, 23], [36, 23], [16, 5], [16, 23], [25, 23]] as const) G.pier(x, z);
   // the wash yard's back door, onto the plain behind the halt: steel, shut and locked until the two who end the mission come in by it
   doors.push({ name: 'wash', hinge: [YARD.x1, YARD_DOOR_Z - 0.58], closedDir: HALF, width: 1.16, locked: true, keySide: 1, swing: 1, steel: true, exterior: true, closer: false });
@@ -204,7 +204,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   G.gate(ARCH_X + 0.06, AXIS, 'z', 3.2, 1, 'paintBlue', 84);
   grp('walls.front');
   // (the wash yard's gateway: three metres of the front wall left out, a pier each side, no leaf)
-  G.yardWallZ(FRONT_X, ROOM_Z1, YARD_GATE.a, 'mud'); G.yardWallZ(FRONT_X, YARD_GATE.b, YARD.z1, 'mud'); G.pier(FRONT_X, YARD_GATE.a); G.pier(FRONT_X, YARD_GATE.b);
+  G.yardWallZ(FRONT_X, ROOM_Z1 + t, YARD_GATE.a, 'mud'); G.yardWallZ(FRONT_X, YARD_GATE.b, YARD.z1, 'mud'); G.pier(FRONT_X, YARD_GATE.a); G.pier(FRONT_X, YARD_GATE.b);
 
   // ---- the forecourt on the road: two pumps under a tin canopy, the van that was at them ----
   grp('forecourt');
@@ -258,7 +258,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---- the gun court: the nest in the far corner, the sandbags inside the arch, the gap, the barrier before the shop ----
   grp('court.gun');
-  G.sandbags(22.6, 8.2, 3.0, 0, 4); G.sandbags(21.0, 7.2, 2.0, HALF, 4);            // the nest: two low walls, the gun between them
+  G.sandbags(22.69, 8.2, 3.0, 0, 4); G.sandbags(21.0, 7.2, 2.0, HALF, 4);            // the nest: two low walls, the gun between them
   G.crates(24.0, 6.2, 0.1, 2); G.patch(22.6, 7.0, 2.6, 2.0, 'damp');
   G.sandbags(18.675, 12.2, 4.75, 0, 6);                                            // inside the arch, chest high: a crouched man behind them is out of the gun's sight (a hand north of the gate's open leaf, which stands along them)
   G.hesco(23.4, 12.6, 2, 0);                                                       // the barrier before the shop's door

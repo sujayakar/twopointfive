@@ -101,7 +101,7 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
   grp('walls.shops');
   G.wallX(8, 4, 16, 'mud', [{ a: 6.8, b: 8.0 }, { a: 12.3, b: 13.5 }]);                                                          // tea_back, phone_back
   G.wallX(8, 18, 32.38, 'render', [{ a: 20.3, b: 21.5 }, { a: 28.2, b: 29.2, y0: 1.35, y1: 2.0 }]);                              // pharm_back; the office's high barred window
-  G.wallX(8, 32.38, 36, 'render', [{ a: 32.8, b: 34.0 }]);                                                                       // garage_back (into the generator room)
+  G.wallX(8, 32.38, 35.88, 'render', [{ a: 32.8, b: 34.0 }]);                                                                       // garage_back (into the generator room)
   G.wallX(16, 4, 16, 'mud', [{ a: 6.3, b: 7.5 }, { a: 8.2, b: 9.6, y0: 0.9, y1: 2.2 }, { a: 12.3, b: 13.5 }, { a: 14.0, b: 15.6, y0: 0.9, y1: 2.2, glass: 'whole' }]);   // tea_front + its open window, phone_front + its glass
   G.wallX(16, 18, 36, 'render', [{ a: 18.5, b: 19.9, y0: 0.9, y1: 2.2, glass: 'whole' }, { a: 20.3, b: 21.5 }, { a: 26.3, b: 27.5 }, { a: 28.0, b: 29.6, y0: 1.0, y1: 2.0, mullions: 4, glass: 'whole' }, { a: 31.3, b: 32.5 }]);   // pharmacy glass + pharm_front, hawala_front + its barred glass, garage_front (the wicket in the roller door)
   G.wallZ(4, 7.88, 16.12, 'mud');                                                                    // the tea house's blind gable
