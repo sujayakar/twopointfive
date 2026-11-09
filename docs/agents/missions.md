@@ -66,7 +66,8 @@ held again. **Taken:** nobody holds and `response_up` is false. **Wiped:** every
 learns of the assault. F is the entry on the hostage room (`rescue_order_door`). The room held is only "secured". **Won** (`rescue_end_won`): nobody of theirs left for `clear_secs`, or every
 living hostage within `out_m` of the team's start, having been led (`rescue_end_word`). **Lost** (`rescue_outcome`): all hostages dead, one hit by your own fire, or Sam down.
 
-**Quiet** (`QuietData`): `starts`, `spots`, `exits`, `patrols`, `thing`. `quiet_mission_deal` writes the deal into `g.level.mission` before the men are made; `quiet_mission_off_shift` benches the routes not manned. The stages run
+**Quiet** (`QuietData`): `starts`, `spots`, `exits`, `patrols`, `thing`. `quiet_mission_deal` writes the deal into `g.level.mission` before the men are made;
+`quiet_mission_off_shift` benches the routes not manned. The stages run
 in `update_mission`: Infiltrate, Drive (hold on the holder for `DRIVE_SECS`; walking off, sprinting or hauling a body lets go), Exfil, Done past any exit (`out_now`). Every player down is
 Failed. `take_told` is true where the spot is `wired`, and then a calm man is sent to look. `squad=1` adds a partner: pair rules and silence held on (`Held`, put back by
 `quiet_mission_release`), staff hostile to him. The **solo night** is those stages on the office's own mission with no scenario up.
