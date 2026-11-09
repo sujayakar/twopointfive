@@ -3,7 +3,7 @@
 import { type V3, mul, rotX } from '../math';
 import { M } from '../scene/materials';
 import type { Made, ObjectKind, Put } from './object';
-const ENAMEL: V3 = [0.53, 0.585, 0.50], BLACK: V3 = [0.15, 0.145, 0.145], ONE: V3 = [1, 1, 1];
+const ENAMEL: V3 = [0.51, 0.565, 0.48], BLACK: V3 = [0.15, 0.145, 0.145], ONE: V3 = [1, 1, 1];
 const N = 10, STEP = 0.058, HALF = 0.0238, DEEP = 0.064, LOW = 0.118, TOP = 0.742, xOf = (i: number) => (i - (N - 1) / 2) * STEP - 0.012, X0 = xOf(0) - HALF, X1 = xOf(N - 1) + HALF, HUB = 0.165, HIGH = 0.690;
 /** the head of a section, where its columns meet: an egg on its side, flat where the next one is joined to it */
 const head = (p: Put, x: number, y: number, h: number, half = HALF) => p.add({ at: [x, y, 0], half: [half, h, 0.0985], mat: M.paint!, tint: ENAMEL, quad: [1 / (half * 1.27) ** 2, 1 / h ** 2, 1 / 0.0985 ** 2, 0] });
@@ -12,13 +12,13 @@ const along = (p: Put, a: number, b: number, y: number, r: number, mat: number, 
 /** a six-sided nut round the x axis */
 const nut = (p: Put, x: number, y: number, r: number, half: number, mat: number, tint: V3) => p.add({ at: [x, y, 0], half: [half, r * 1.16, r * 1.16], mat, tint, planes: [0, 1, 2, 3, 4, 5].map(k => [[0, Math.sin(k * Math.PI / 3 + 0.2), Math.cos(k * Math.PI / 3 + 0.2)], r] as [V3, number]), curves: [{ at: [0, 0, 0], r: [half * 1.9, r * 1.26, r * 1.26] }] });
 /** a section as one slab, round above and below by planes that touch its heads; the dark between its columns is in its tint */
-const slab = (p: Put, x: number, half: number, tint: V3, mat: number) => { const mid = (LOW + TOP) / 2, touch = (a: number, h: number, y: number): [V3, number][] => [1, -1].map(s => { const ny = Math.sin(a) / h, nz = Math.cos(a) / 0.0985, l = Math.hypot(ny, nz); return [[0, ny / l, s * nz / l], (1 + ny * (y - mid)) / l] as [V3, number]; }); p.add({ at: [x, mid, 0], half: [half, (TOP - LOW) / 2 - 0.001, 0.0865], mat, tint, planes: [...touch(0.62, 0.048, TOP - 0.048), ...touch(1.12, 0.048, TOP - 0.048), ...touch(-0.85, 0.042, LOW + 0.042)] }); };
+const slab = (p: Put, x: number, half: number, tint: V3, mat: number, less = 0) => { const mid = (LOW + TOP) / 2, touch = (a: number, h: number, y: number): [V3, number][] => [1, -1].map(s => { const ny = Math.sin(a) / h, nz = Math.cos(a) / 0.0985, l = Math.hypot(ny, nz); return [[0, ny / l, s * nz / l], (1 + ny * (y - mid)) / l] as [V3, number]; }); p.add({ at: [x, mid, 0], half: [half, (TOP - LOW) / 2 - 0.001 - less, 0.0865], mat, tint, planes: [...touch(0.62, 0.048, TOP - 0.048 - less), ...touch(1.12, 0.048, TOP - 0.048 - less), ...touch(-0.85, 0.042, LOW + 0.042 + less)] }); };
 const feet = (p: Put, fat = 1) => { for (const i of [0, N - 1]) for (const s of [-1, 1]) p.bar([xOf(i), LOW + 0.03, s * 0.062], [xOf(i), 0.022, s * 0.074], 0.0225 * fat, 0.0135 * fat, M.paint!, ENAMEL); };
 const pads = (p: Put) => { for (const i of [0, N - 1]) for (const s of [-1, 1]) p.ball([xOf(i), 0.0165, s * 0.0775], [0.0205, 0.0165, 0.0250], M.paint!, ENAMEL); };
 /** what hides the hole in the floor */
 const plate = (p: Put, x: number) => p.add({ at: [x, 0.006, 0], half: [0.032, 0.006, 0.032], mat: M.chrome!, tint: [0.9, 0.9, 0.9], curves: [{ at: [0, -0.006, 0], r: [0.032, 0.0125, 0.032] }] });
 /** a slab is flat where columns were round: duller, and of the mean of its face and the dark between */
-const SPREAD = 1.078;
+const SPREAD = 1.022;
 const PIPE = X1 + 0.072, BACK = X0 - 0.060;
 /** the valve's wheel, domed */
 const knob = (p: Put, r: number) => p.add({ at: [PIPE, HUB + 0.084, 0], half: [r, 0.0135, r], mat: M.film!, tint: BLACK, quad: [1 / r ** 2, 0, 1 / r ** 2, 0], curves: [{ at: [0, -0.004, 0], r: [r + 0.0025, 0.0195, r + 0.0025] }] });
@@ -51,6 +51,9 @@ export const radiator: ObjectKind = { name: 'radiator', title: 'Cast iron radiat
     { shape: 'pieces', error: 0.018, less: 'columns and heads: a section is one slab', put(p) {
       for (let i = 0; i < N; i++) slab(p, xOf(i), HALF - 0.0034, mul(ENAMEL, SPREAD), M.plaster!); along(p, X0 + 0.004, X1 + 0.004, HUB, 0.0285, M.paint!, ENAMEL); feet(p, 1.08); pads(p); plate(p, PIPE); plate(p, BACK);
       p.drum([PIPE, HUB / 2 + 0.002, 0], 0.0150, HUB / 2, M.paint!, ENAMEL); p.drum([BACK, HUB / 2 + 0.002, 0], 0.0145, HUB / 2, M.paint!, ENAMEL); along(p, X1 - 0.01, PIPE + 0.016, HUB, 0.021, M.brass!, ONE); along(p, BACK - 0.012, X0 + 0.01, HUB, 0.021, M.brass!, ONE); p.drum([BACK, HUB + 0.032, 0], 0.0150, 0.024, M.brass!, ONE); p.drum([PIPE, HUB + 0.045, 0], 0.013, 0.026, M.brass!, ONE); knob(p, 0.038);
+    } },
+    { shape: 'pieces', error: 0.045, less: 'sections: one block, the valve one post', put(p) {
+      slab(p, (X0 + X1) / 2, (X1 - X0) / 2 - 0.002, mul(ENAMEL, 0.91), M.plaster!, 0.006); feet(p, 1.15); p.drum([PIPE, 0.125, 0], 0.021, 0.125, M.paint!, [0.52, 0.46, 0.33]); p.drum([BACK, 0.105, 0], 0.017, 0.105, M.paint!, [0.64, 0.58, 0.38]); along(p, BACK, PIPE, HUB, 0.019, M.brass!, ONE);
     } },
   ],
 }) };

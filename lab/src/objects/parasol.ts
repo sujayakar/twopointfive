@@ -24,7 +24,7 @@ function scallops(p: Put, n: number) { const w = R * Math.sin(A) / n, rho = (w *
 const band = (p: Put, thick = 0.0026) => { const tall = TALL - SCALLOP * 0.36; for (let i = 0; i < N; i++) p.add({ at: side(i, 0, tall / 2), half: [R * Math.sin(A) + 0.004, tall / 2, thick], rot: hung(i), mat: M.canvas!, tint: colorOf(i) }); };
 /** the little roof over the vent: eight panels of its own, a hand over the others, with a hem */
 function cap(p: Put, fine: boolean) {
-  const r = 0.315, y = 2.428, t = r * Math.sin(A); for (let i = 0; i < N; i++) { panel(p, i, [0, y + 0.108], [r, y], 0.0026, 0.05, [0, 0], CREAM); if (fine) { const a = i * 2 * A, e = out(a); p.add({ at: add(mul(e, r * C + 0.001), [0, y - 0.0165, 0]), half: [t + 0.0012, 0.0150, 0.0024], rot: rotY(a), mat: M.canvas!, tint: CREAM }); } }
+  const r = 0.315, y = 2.428, t = r * Math.sin(A); for (let i = 0; i < N; i++) { panel(p, i, [0, y + 0.108], [r, y], 0.0026, 0.05, [0, 0], CREAM); if (fine) { const a = i * 2 * A, e = out(a); p.add({ at: add(mul(e, r * C + 0.001), [0, y - 0.0165, 0]), half: [t + 0.0018, 0.0142 + (i % 2) * 0.0016, 0.0024], rot: rotY(a), mat: M.canvas!, tint: CREAM }); } }
 }
 /** the same in one piece: a pyramid */
 const hat = (p: Put) => { const r = 0.315 * C, h = 0.054, n = norm([1, r / (2 * h), 0]); p.add({ at: [0, 2.428 + h, 0], half: [0.315, h, 0.315], mat: M.canvas!, tint: CREAM, planes: Array.from({ length: N }, (_, i) => { const e = out(i * 2 * A); return [[e[0] * n[0], n[1], e[2] * n[0]], n[1] * h] as [V3, number]; }) }); };
@@ -44,7 +44,7 @@ export const parasol: ObjectKind = { name: 'parasol', title: 'Café table with a
       for (let i = 0; i < N; i++) for (let j = 0; j < 2; j++) panel(p, i, RIB[j]!, RIB[j + 1]!, 0.0026, j ? 0.12 : 0.07, j ? [0.06, 0] : [0, -0.07]);
       scallops(p, 4); cap(p, true);
       // its frame: ribs under the seams, stretchers to the runner, the crown's hub, ends that hold the cloth
-      for (let k = 0; k < N; k++) { const a = (2 * k + 1) * A; lath(p, at(a, 0.045, RIB[0]![1] - 0.031), ribAt(k, 1), 0.0085, 0.0125, WOOD); lath(p, ribAt(k, 1), at(a, R - 0.02, RIM - 0.006), 0.0085, 0.0118, WOOD); const g = at(a, 0.60, 2.283); lath(p, at(a, 0.040, 1.815), g, 0.0075, 0.0105, PALE); p.ball(g, [0.011, 0.011, 0.011], M.brass!, ONE); p.ball(at(a, R + 0.006, RIM - 0.006), [0.013, 0.013, 0.013], M.print!, WOOD); }
+      for (let k = 0; k < N; k++) { const a = (2 * k + 1) * A; lath(p, at(a, 0.045, RIB[0]![1] - 0.031), ribAt(k, 1), 0.0094, 0.0125, WOOD); lath(p, ribAt(k, 1), at(a, R - 0.02, RIM - 0.006), 0.0076, 0.0118, WOOD); const g = at(a, 0.60, 2.283); lath(p, at(a, 0.040, 1.815), g, 0.0059, 0.0105, PALE); p.ball(g, [0.011, 0.011, 0.011], M.brass!, ONE); p.ball(at(a, R + 0.006, RIM - 0.006), [0.013, 0.013, 0.013], M.print!, WOOD); }
       p.drum([0, 2.428, 0], 0.052, 0.027, M.print!, WOOD); p.drum([0, 1.806, 0], 0.050, 0.030, M.print!, WOOD); p.drum([0, 1.764, 0], 0.037, 0.016, M.print!, PALE); p.drum([0, 1.812, 0], 0.0512, 0.0045, M.brass!, ONE);
       p.drum([0, 2.556, 0], 0.016, 0.026, M.print!, WOOD); p.ball([0, 2.610, 0], [0.030, 0.034, 0.030], M.print!, WOOD); p.drum([0, 2.546, 0], 0.028, 0.0075, M.print!, PALE);
       // the pole in two lengths, a ferrule between, a pin on its chain that holds the runner; the cord that lifts it
@@ -61,7 +61,7 @@ export const parasol: ObjectKind = { name: 'parasol', title: 'Café table with a
       for (let i = 0; i < N; i++) for (let j = 0; j < 2; j++) panel(p, i, RIB[j]!, RIB[j + 1]!, 0.0026, j ? 0.12 : 0.07, j ? [0.06, 0] : [0, -0.07]);
       band(p); cap(p, true);
       for (let k = 0; k < N; k++) { const a = (2 * k + 1) * A; lath(p, at(a, 0.05, 2.43), at(a, R - 0.02, RIM - 0.008), 0.0085, 0.0118, WOOD); }
-      for (let k = 0; k < N; k++) { const a = (2 * k + 1) * A; lath(p, at(a, 0.040, 1.815), at(a, 0.60, 2.268), 0.0075, 0.0105, PALE); }
+      for (let k = 0; k < N; k++) { const a = (2 * k + 1) * A; lath(p, at(a, 0.040, 1.815), at(a, 0.60, 2.268), 0.0062, 0.0105, PALE); }
       p.drum([0, 1.80, 0], 0.048, 0.042, M.print!, WOOD); p.ball([0, 2.580, 0], [0.028, 0.064, 0.028], M.print!, WOOD); p.drum([0, 1.23, 0], 0.0238, 1.19, M.print!, WOOD);
       p.drum([0, TOP + 0.0015, 0], 0.391, 0.0110, M.film!, MARBLE); p.drum([0, TOP - 0.004, 0], 0.400, 0.0140, M.brass!, ONE); for (const a of LEGS) leg(p, a, [0, 2, 4, 6, 9], () => 0.0155);
       foot(p); p.drum([0, 0.19, 0], 0.033, 0.155, M.paint!, IRON); p.ball([0, 0.055, 0], [0.205, 0.034, 0.205], M.paint!, IRON);
