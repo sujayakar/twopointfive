@@ -186,7 +186,7 @@ fn second_way_of(level: &str, entries: &[game::scene_scenarios::ScenarioEntry], 
             let mut other = None;
             for far in [0.6, 0.8, 1.0, 1.3, 1.7] { other = room_at(g, e.at[0] + e.out[0] * far, e.at[2] + e.out[1] * far).filter(|r| *r != rooms[i].id); if other.is_some() { break; } }
             let (pad, name) = (game::devices::devices_pad_of(g, e.door).is_some(), g.dr[e.door].def.name.clone());
-            let (steel, locked) = (g.dr[e.door].def.steel == Some(true), g.dr[e.door].def.locked == Some(true) || game::doors::door_locked(g, e.door));
+            let (steel, locked) = (g.dr[e.door].def.steel == Some(true), g.dr[e.door].def.locked == Some(true) || g.dr[e.door].leaf.locked);
             let plain = if steel { "steel" } else if locked { "locked in the level" } else if pad { "keypad" } else if !on_list(&name) { "on no squad's list" } else { "" };
             doors.push(Door { d: e.door, name, a: i, b: other.and_then(|r| index.get(&r).copied()), into: None, pad, locked_steel: steel && locked, plain });
             doors.len() - 1
@@ -447,9 +447,9 @@ fn stacks(ids: &[String]) -> i32 {
         let (mut marks, mut faces, mut refused, mut far): (usize, usize, usize, Vec<String>) = (0, 0, 0, vec![]);
         let list_ = g.doors.list.clone();
         for &d in &list_ {
-            let a0 = game::doors::door_angle(g, d);
+            let a0 = g.dr[d].leaf.angle;
             let stops: Vec<f64> = [game::doors::door_max_a(g, d), game::doors::door_min_a(g, d)].into_iter().filter(|a| a.abs() > 0.3).collect();
-            let set = |g: &mut Game, a: f64| { game::doors::door_set_angle(g, d, a); game::doors::door_place(g, d); };
+            let set = |g: &mut Game, a: f64| { g.dr[d].leaf.angle = a; game::doors::door_place(g, d); };
             for side in [1.0, -1.0] { for (crew, who) in &crews {
                 set(g, 0.0);
                 let Some(posts) = game::orders::squad_orders_stack_posts(g, d, side, crew, None) else { continue };

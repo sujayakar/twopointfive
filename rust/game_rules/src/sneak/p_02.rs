@@ -344,12 +344,12 @@ fn plan(g: &mut Game, s: &mut State, man: &mut Man, gd: GuardId, p: V3, i: i64, 
     if k_.door_m > 0.0 {
         for &d in list.iter() {
             if !(flat(sam, g.dr[d].frame_centre) < k_.door_m) { continue; }
-            if leaf_moved(g, d) || m::abs(crate::doors::door_angle(g, d)) <= 0.03 { sam_doors.push(d); }
+            if leaf_moved(g, d) || m::abs(g.dr[d].leaf.angle) <= 0.03 { sam_doors.push(d); }
         }
     }
     let mut open_doors: Vec<DoorId> = Vec::new();
     for &d in list.iter() {
-        if m::abs(crate::doors::door_angle(g, d)) > 0.03 { open_doors.push(d); }
+        if m::abs(g.dr[d].leaf.angle) > 0.03 { open_doors.push(d); }
     }
     open_doors.extend(sam_doors.iter().copied());
     let mut w = Way { p, i, place, eyes, others, sam_doors, open_doors, keen_f, card_f, memo: JsMap::new() };

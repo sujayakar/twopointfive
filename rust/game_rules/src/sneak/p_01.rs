@@ -18,7 +18,7 @@ pub fn save_sneak(g: &crate::game::Game) {}
 
 /// Was this leaf seen to move inside the settle time? Read at the plan's rate, for the doors Sam is at. (sneak.ts leafMoved)
 pub fn leaf_moved(g: &mut crate::game::Game, d: DoorId) -> bool {
-    let angle = crate::doors::door_angle(g, d);
+    let angle = g.dr[d].leaf.angle;
     let now = g.time;
     match g.m.sneak.leaf_t.get_mut(d) {
         None => { g.m.sneak.leaf_t.set(d, SneakModLeafTValue { a: angle, t: -1e9 }); }

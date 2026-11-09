@@ -81,13 +81,13 @@ pub fn book_of<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::rearwatch::Bo
 
 /// A door off its hinges, or unlatched and far enough open. (rearwatch.ts isOpenWay)
 pub fn is_open_way(g: &crate::game::Game, d: DoorId) -> bool {
-    if crate::doors::door_off(g, d) {
+    if g.dr[d].leaf.off {
         return true;
     }
-    if crate::doors::door_latched(g, d) {
+    if g.dr[d].leaf.latched {
         return false;
     }
-    m::abs(crate::doors::door_angle(g, d)) >= g.k.rearwatch.ajar
+    m::abs(g.dr[d].leaf.angle) >= g.k.rearwatch.ajar
 }
 
 /// The ways behind a stack on face `side` of `door`, best first. (rearwatch.ts rearWays)

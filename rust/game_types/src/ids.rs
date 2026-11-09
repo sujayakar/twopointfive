@@ -48,8 +48,6 @@ id! {
     DoorId,
     /// SlabRow: no table here
     SlabRowId,
-    /// DriveCols: no table here
-    DriveColsId,
     /// Prop: g.tab.props_prop
     PropId,
     /// Input: g.tab.input

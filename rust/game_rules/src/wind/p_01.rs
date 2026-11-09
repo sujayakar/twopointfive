@@ -488,7 +488,7 @@ pub fn wind_update(g: &mut crate::game::Game, dt: f64) {
                         continue;
                     }
                 };
-                let open = m::min(1.0, m::abs(crate::doors::door_angle(g, d)) / g.k.wind.door_open_rad);
+                let open = m::min(1.0, m::abs(g.dr[d].leaf.angle) / g.k.wind.door_open_rad);
                 if open < 0.04 {
                     let s = &mut g.tab.wind_wind_source[id];
                     s.speed = 0.0;

@@ -145,7 +145,7 @@ fn sample(g: &mut Game, floor: &[OnFloor]) {
     }
     for i in 0..g.doors.list.len() {
         let d = g.doors.list[i];
-        if crate::doors::door_off(g, d) { f.doors.extend_from_slice(&[f32::NAN, f32::NAN]); continue; }
+        if g.dr[d].leaf.off { f.doors.extend_from_slice(&[f32::NAN, f32::NAN]); continue; }
         let u = crate::doors::door_dir(g, d);
         f.doors.extend_from_slice(&[u[0] as f32, u[1] as f32]);
     }

@@ -67,7 +67,7 @@ pub fn defender(g: &crate::game::Game, gd: GuardId) -> bool {
 
 /// A leaf that is a shut door to a man: hung, home in its frame. (doorforce.ts shut)
 pub fn shut(g: &mut crate::game::Game, d: DoorId) -> bool {
-    !crate::doors::door_off(g, d) && crate::doors::door_is_closed(g, d)
+    !g.dr[d].leaf.off && crate::doors::door_is_closed(g, d)
 }
 
 /// `at` is close behind the shut leaf for a man at `from`, and it is not a leaf he is set on behind a wedge. (doorforce.ts behind)
@@ -575,7 +575,7 @@ pub fn kick_step(g: &mut crate::game::Game, gd: GuardId, dt: f64) -> Option<crat
         g.stats.doorforce.gave += 1;
         let pos = g.ch[c].pos;
         crate::marks::kick_scuff(g, d, pos);
-        crate::doors::door_set_noticed(g, d, true);   // (the keep his own side tore out is no puzzle to a colleague on a calm pass later)
+        g.dr[d].leaf.noticed = true;   // (the keep his own side tore out is no puzzle to a colleague on a calm pass later)
     }
     let line = alloc::format!("{} boots {}: {}", g.gd[gd].callsign, g.dr[d].def.name, if gave { "it goes in" } else { "it holds" });
     log(g, &line);

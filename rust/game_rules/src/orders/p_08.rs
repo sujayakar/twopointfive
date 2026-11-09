@@ -24,7 +24,7 @@ pub fn squad_orders_asked(g: &mut crate::game::Game, gd: GuardId, to: V3) -> cra
     let mut i = 0;
     while i < g.doors.list.len() {
         let d = g.doors.list[i];
-        if crate::doors::door_locked(g, d) && crate::doors::door_latched(g, d) { locks += 1.0; }
+        if g.dr[d].leaf.locked && g.dr[d].leaf.latched { locks += 1.0; }
         i += 1;
     }
     let key = format!(

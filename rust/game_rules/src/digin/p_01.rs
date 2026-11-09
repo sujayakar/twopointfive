@@ -568,8 +568,8 @@ pub fn wedge(g: &mut Game, d: RoomfightDefId, m: crate::digin::Man, r: &mut crat
     g.dr[door].key_side = side;
     let name = g.dr[door].def.name.clone();
     g.dr[door].lock_id = alloc::format!("wedge:{}", name);
-    crate::doors::door_set_locked(g, door, true);
-    crate::doors::door_set_pick(g, door, 0.0);
+    g.dr[door].leaf.locked = true;
+    g.dr[door].leaf.pick = 0.0;
     r.wedged += 1.0;
     if !crate::doors::doors_pull_face(g, door, [e.at[0] - e.out[0] * 0.8, 0.0, e.at[2] - e.out[1] * 0.8]) {
         g.stats.digin.wedged_away += 1;
@@ -582,8 +582,8 @@ pub fn wedge(g: &mut Game, d: RoomfightDefId, m: crate::digin::Man, r: &mut crat
 /// May this door be wedged. (digin.ts wedgeable)
 pub fn wedgeable(g: &Game, d: DoorId) -> bool {
     !g.dr[d].def.steel.unwrap_or(false)
-        && !crate::doors::door_locked(g, d)
-        && !crate::doors::door_lock_broken(g, d)
+        && !g.dr[d].leaf.locked
+        && !g.dr[d].leaf.lock_broken
         && !g.dr[d].def.locked.unwrap_or(false)
         && crate::devices::devices_pad_of(g, d).is_none()
 }
@@ -620,13 +620,13 @@ pub fn hand_on(g: &mut Game, d: RoomfightDefId, m: &mut crate::digin::Man, d_2: 
     m.hand_t = Some(now);
     m.pull_t = Some(now);
     m.pushes = Some(0.0);
-    m.pull_a = Some(m::abs(crate::doors::door_angle(g, d_2)));
+    m.pull_a = Some(m::abs(g.dr[d_2].leaf.angle));
     m.stalls = Some(0.0);
 }
 
 /// …and stays on it: true = still waiting for the latch. A man with furniture to wedge it with stays while the leaf is still coming home: from wide open that takes about five seconds, and it can be wedged only once it latches. His clock is for a leaf a body has stopped, and for a man who only came to shut it, whose pull finishes without him.
 pub fn hand_waits(g: &Game, d: RoomfightDefId, m: &crate::digin::Man, d_2: DoorId) -> bool {
-    !crate::doors::door_latched(g, d_2) && (g.time <= m.until || (m.brace >= 0.0 && m.prop.is_some() && crate::doors::doors_coming_home(g, d_2)))
+    !g.dr[d_2].leaf.latched && (g.time <= m.until || (m.brace >= 0.0 && m.prop.is_some() && crate::doors::doors_coming_home(g, d_2)))
 }
 
 #[cfg(test)]

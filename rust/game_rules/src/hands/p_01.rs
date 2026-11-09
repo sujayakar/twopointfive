@@ -641,10 +641,10 @@ fn find_spot(g: &mut Game, d: DoorId, a0: f64, a1: f64, p: V3, need: f64, wall: 
 
 /// A 'push' / 'pull' / 'unlock' row performed on d: start working it by hand. False = not this way, the caller does what it always did. (hands.ts doorMoveBegin)
 pub fn door_move_begin(g: &mut crate::game::Game, d: DoorId) -> bool {
-    use crate::doors::{door_angle, door_is_closed, door_max_a, door_min_a, door_off, door_swing};
+    use crate::doors::{door_is_closed, door_max_a, door_min_a, door_swing};
     let pl = g.player;
     let p = g.ch[g.pl[pl].ch].pos;
-    if g.puppet.is_some() || door_off(g, d) || hands_busy(g, &crate::seats::here(g)) { return false; }
+    if g.puppet.is_some() || g.dr[d].leaf.off || hands_busy(g, &crate::seats::here(g)) { return false; }
     let keys = g.pl[pl].keys.clone();
     if crate::doors::doors_locked_out(g, d, p, Some(&keys)) { return false; }
     let open = door_is_closed(g, d);
@@ -658,7 +658,7 @@ pub fn door_move_begin(g: &mut crate::game::Game, d: DoorId) -> bool {
         target = sgn * m::min(g.k.hands.open_to, stop - 0.02);
         if m::abs(target) < 0.3 { return false; }
     }
-    let angle = door_angle(g, d);
+    let angle = g.dr[d].leaf.angle;
     if clear_spot(g, d, angle, target).is_none() { return false; }
     // a step in to it as the hand goes out, when the leaf is to be pushed open AWAY from him from further off than a hand reaches and the step is a short one
     let mut goal: Option<V3> = None;
@@ -707,12 +707,12 @@ pub fn door_move_tick(g: &mut crate::game::Game, dt: f64) {
     g.pl[pl].door_move = Some(mv);
     let pos = door_pos(g, d);
     let far = m::min(v3::dist_xz(pos, p), v3::dist_xz(g.dr[d].frame_centre, p)) > g.dr[d].def.width + 1.4;
-    if door_off(g, d) || far || hands_busy(g, &crate::seats::here(g)) { g.pl[pl].door_move = None; return; }
+    if g.dr[d].leaf.off || far || hands_busy(g, &crate::seats::here(g)) { g.pl[pl].door_move = None; return; }
     if mv.stage == crate::hands::DoorMoveStage::Hand {
         // the hand first: on the leaf, or as long as a hand takes when the leaf is out of its reach; then it is unlatched, and his feet set off for standing room
         let hw = crate::character::anim_door_hands(g, c);
         if mv.t < g.k.hands.door_reach || (m::max(hw.l, hw.r) < 0.6 && mv.t < g.k.hands.hand_secs) { return; }
-        let angle = door_angle(g, d);
+        let angle = g.dr[d].leaf.angle;
         let Some(goal) = clear_spot(g, d, angle, mv.target) else {
             // no room after all: as it always was, unless the leaf has meanwhile got where the row wanted it
             g.pl[pl].door_move = None;
@@ -725,7 +725,7 @@ pub fn door_move_tick(g: &mut crate::game::Game, dt: f64) {
         if mv.open {
             let keys = g.pl[pl].keys.clone();
             doors_use(g, d, p, who, Some(&keys));
-            if door_latched(g, d) { g.pl[pl].door_move = None; return; }
+            if g.dr[d].leaf.latched { g.pl[pl].door_move = None; return; }
         }
         mv.stage = crate::hands::DoorMoveStage::Swing;
         mv.t = 0.0;
@@ -736,12 +736,12 @@ pub fn door_move_tick(g: &mut crate::game::Game, dt: f64) {
             mv.round = Some(mv.open && open_side(g, d, mv.target, p) < 0.05 && open_side(g, d, mv.target, goal) > 0.0);
         }
     }
-    let angle = door_angle(g, d);
+    let angle = g.dr[d].leaf.angle;
     let rem = mv.target - angle;
     let left = m::abs(rem);
     let there = if mv.open { left < 0.02 } else { m::abs(angle) < 0.14 };
     if there {   // open: left standing; shut: the sprung last bit and the latch are the door's own
-        door_set_vel(g, d, 0.0);
+        g.dr[d].leaf.vel = 0.0;
         if !mv.open { doors_pull_to(g, d, who); }
         g.pl[pl].door_move = None;
         return;
@@ -751,17 +751,17 @@ pub fn door_move_tick(g: &mut crate::game::Game, dt: f64) {
         mv.stall_t = 0.0;
     } else {
         mv.stall_t += dt;
-        if mv.stall_t > g.k.hands.stall_secs { door_set_vel(g, d, 0.0); g.pl[pl].door_move = None; return; }
+        if mv.stall_t > g.k.hands.stall_secs { g.dr[d].leaf.vel = 0.0; g.pl[pl].door_move = None; return; }
     }
     let rate = g.k.hands.door_rate * v3::clamp(left / 0.45, 0.3, 1.0) * v3::smoothstep(-0.05, 0.12, mv.t);
     let next = angle + m::sign(rem) * m::min(left, rate * m::min(dt, 0.05));
     let now = leaf_dist(g, d, angle, p);
     let then = leaf_dist(g, d, next, p);
-    door_set_latched(g, d, false);
-    door_set_closing(g, d, false);
-    door_set_vel(g, d, 0.0);
-    door_set_last_who(g, d, who);
-    if mv.open { let q = door_quiet_t(g, d); door_set_quiet_t(g, d, m::min(q, -1.0)); }
+    g.dr[d].leaf.latched = false;
+    g.dr[d].leaf.closing = false;
+    g.dr[d].leaf.vel = 0.0;
+    g.dr[d].leaf.last_who = who;
+    if mv.open { let q = g.dr[d].leaf.quiet_t; g.dr[d].leaf.quiet_t = m::min(q, -1.0); }
     let need = body_r(g, d) - 0.02;
     let free = then >= need;
     // coming out round its free end from behind where it will stand: the leaf keeps clear of the whole of the way he still has to go
@@ -776,12 +776,12 @@ pub fn door_move_tick(g: &mut crate::game::Game, dt: f64) {
     }
     if !held && (free || then >= now) {   // never into him: it waits for his step (and one already against him only ever goes away)
         let (lo, hi) = (door_min_a(g, d), door_max_a(g, d));
-        door_set_angle(g, d, v3::clamp(next, lo, hi));
+        g.dr[d].leaf.angle = v3::clamp(next, lo, hi);
     }
     // a leaf he is bringing round TOWARD himself is a pull: it comes past whoever stands with him, only while clear of HIM
     if mv.open && free && doors_pull_face(g, d, p) {
-        let t = door_pull_t(g, d);
-        door_set_pull_t(g, d, m::max(t, 0.05));
+        let t = g.dr[d].leaf.pull_t;
+        g.dr[d].leaf.pull_t = m::max(t, 0.05);
     }
     g.pl[pl].door_move = Some(mv);
 }

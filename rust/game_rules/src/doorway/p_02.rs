@@ -37,7 +37,7 @@ pub fn off_threshold(g: &mut crate::game::Game, gd: GuardId, aim_at: Option<V3>,
     let mut door: Option<DoorId> = None;
     for i in 0..g.doors.list.len() {
         let d = g.doors.list[i];
-        if crate::doors::door_latched(g, d) || m::abs(crate::doors::door_angle(g, d)) < 0.6 || flat(pos, g.dr[d].frame_centre) > g.dr[d].def.width + 1.0 { continue; }
+        if g.dr[d].leaf.latched || m::abs(g.dr[d].leaf.angle) < 0.6 || flat(pos, g.dr[d].frame_centre) > g.dr[d].def.width + 1.0 { continue; }
         if in_opening(g, d, pos, None) { door = Some(d); break; }
     }
     let door = match door {
@@ -131,7 +131,7 @@ pub fn doorway_in_way(g: &crate::game::Game, p: V3) -> bool {
 /// front of whatever comes through.
 pub fn before_another_door(g: &crate::game::Game, p: V3, but: DoorId) -> bool {
     for &d in &g.doors.list {
-        if d == but || crate::doors::door_off(g, d) { continue; }
+        if d == but || g.dr[d].leaf.off { continue; }
         let r = rel(g, d, p);
         if m::abs(r.perp) < BEFORE_DEEP && r.along > -BEFORE_WIDE && r.along < r.f.w + BEFORE_WIDE { return true; }
     }
@@ -155,10 +155,10 @@ pub fn only_brushes(g: &crate::game::Game, gd: GuardId) -> bool {
     let p = g.ch[g.gd[gd].ch].pos;
     let (mut shut, mut open) = (false, false);
     for &d in &g.doors.list {
-        if crate::doors::door_off(g, d) { continue; }
+        if g.dr[d].leaf.off { continue; }
         let fc = g.dr[d].frame_centre;
         if v3::dist_xz(p, fc) > g.dr[d].def.width + BRUSH_M { continue; }
-        if !crate::doors::door_latched(g, d) { open = true; continue; }
+        if !g.dr[d].leaf.latched { open = true; continue; }
         let r = rel(g, d, p);
         if m::abs(r.perp) > BRUSH_M || r.along < -BRUSH_M || r.along > r.f.w + BRUSH_M { continue; }
         if means_to_pass(g, gd, d) { return false; }

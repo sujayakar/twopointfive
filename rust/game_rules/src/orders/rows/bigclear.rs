@@ -26,7 +26,7 @@ fn valid(g: &mut Game, t: &OrderTarget, men: &[GuardId]) -> Result<(), Option<St
     let mut any = false;
     for &m in men { if crate::bigkit::carries_hammer(g, m) || (g.gd[m].state != crate::game::GuardState::Dead && crate::kit::kit_big(g, m) == crate::kit::BigKit::Shotgun) { any = true; break; } }
     if !any { return Err(Some(String::from("nobody here carries one."))); }
-    if crate::doors::door_locked(g, x.door) && g.dr[x.door].lock_id.starts_with("wedge:") {
+    if g.dr[x.door].leaf.locked && g.dr[x.door].lock_id.starts_with("wedge:") {
         let mut hammer = false;
         for &m in men { if crate::bigkit::carries_hammer(g, m) { hammer = true; break; } }
         if !hammer && crate::doortools::door_tools_known_shut(g, x.door, x.side) {

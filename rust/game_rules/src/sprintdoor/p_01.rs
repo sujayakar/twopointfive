@@ -37,8 +37,8 @@ pub fn sprint_door_kick(g: &mut crate::game::Game, pl: PlayerId) -> Option<DoorI
         let d = g.doors.list[i];
         i += 1;
         let pos = g.ch[c].pos;
-        if crate::doors::door_locked(g, d) || !crate::doors::doors_boot_holds(g, d, pos) { continue; }
-        let a = g.dr[d].def.closed_dir + crate::doors::door_angle(g, d);
+        if g.dr[d].leaf.locked || !crate::doors::doors_boot_holds(g, d, pos) { continue; }
+        let a = g.dr[d].def.closed_dir + g.dr[d].leaf.angle;
         let (ux, uz) = (m::cos(a), m::sin(a));
         let px = g.ch[c].pos[0] - g.dr[d].def.hinge[0];
         let pz = g.ch[c].pos[2] - g.dr[d].def.hinge[1];

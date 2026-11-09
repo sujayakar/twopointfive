@@ -163,10 +163,10 @@ pub fn breach_drill_advance(g: &mut crate::game::Game, gd: GuardId, wps: &mut Ve
 /// A door pulled to and latched.
 fn shut(g: &mut Game, d: DoorId) {
     crate::doors::door_reset(g, d);
-    crate::doors::door_set_angle(g, d, 0.0);
-    crate::doors::door_set_vel(g, d, 0.0);
-    crate::doors::door_set_latched(g, d, true);
-    crate::doors::door_set_closing(g, d, false);
+    g.dr[d].leaf.angle = 0.0;
+    g.dr[d].leaf.vel = 0.0;
+    g.dr[d].leaf.latched = true;
+    g.dr[d].leaf.closing = false;
 }
 
 /// Everybody on his mark, the leaves shut.   (breach.ts BreachDrill.start)
@@ -420,24 +420,24 @@ fn tick_kick(g: &mut Game, t: f64, d: DoorId) {
         dr!(g).t_flung = t;
         let (from, kf, fling) = (dr!(g).plan.kick_from, dr!(g).plan.kick_face, dr!(g).plan.fling);
         let on_it = flat(g.ch[c].pos, from) < 0.4 && m::abs(v3::wrap_angle(g.ch[c].body_yaw - kf)) < 0.35;
-        if m::abs(crate::doors::door_angle(g, d)) < 1.4 {
-            crate::doors::door_set_latched(g, d, false);
-            crate::doors::door_set_closing(g, d, false);
-            crate::doors::door_set_vel(g, d, if on_it { fling } else { fling * 0.32 });
-            let since = if on_it { 0.0 } else { crate::doors::door_since_bash(g, d) };
-            crate::doors::door_set_since_bash(g, d, since);
-            crate::doors::door_set_quiet_t(g, d, -0.5);
-            crate::doors::door_set_creak_armed(g, d, false);
+        if m::abs(g.dr[d].leaf.angle) < 1.4 {
+            g.dr[d].leaf.latched = false;
+            g.dr[d].leaf.closing = false;
+            g.dr[d].leaf.vel = if on_it { fling } else { fling * 0.32 };
+            let since = if on_it { 0.0 } else { g.dr[d].leaf.since_bash };
+            g.dr[d].leaf.since_bash = since;
+            g.dr[d].leaf.quiet_t = -0.5;
+            g.dr[d].leaf.creak_armed = false;
         }
         let id = g.ch[c].id;
-        crate::doors::door_set_last_who(g, d, id);
-        if on_it && !crate::doors::door_off(g, d) {
+        g.dr[d].leaf.last_who = id;
+        if on_it && !g.dr[d].leaf.off {
             let at = crate::doors::door_pos(g, d);
             crate::audio_iface::game_audio_like_play(g, "doorBash", Some(at), Some(1.0), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.9 }));
             let p = g.ch[c].pos;
             crate::particle_fx::kick_dust_fx(g, d, p);
         }
-        if live_of(g).map_or(false, |l| l.loud_boot) && !crate::doors::door_off(g, d) {
+        if live_of(g).map_or(false, |l| l.loud_boot) && !g.dr[d].leaf.off {
             let p = crate::doors::door_pos(g, d);
             let time = g.time;
             let serial = g.serial();   // (an event is an object: every heard-once set keys on its serial, and one born with none is "the first again")

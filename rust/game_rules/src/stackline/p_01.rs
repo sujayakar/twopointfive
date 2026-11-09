@@ -9,8 +9,8 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
 /// A leaf that stands open (or is off its hinges): what is beyond it sees through it now.   (stackline.ts stackLineOpen)
 pub fn stack_line_open(g: &crate::game::Game, d: DoorId) -> bool {
-    if crate::doors::door_off(g, d) { return true; }
-    !crate::doors::door_latched(g, d) && m::abs(crate::doors::door_angle(g, d)) >= g.k.stackline.ajar
+    if g.dr[d].leaf.off { return true; }
+    !g.dr[d].leaf.latched && m::abs(g.dr[d].leaf.angle) >= g.k.stackline.ajar
 }
 
 /// Has the floor point `p`, on the face `face` of `d`, a clear chest-height line to the mouth of its opening.   (stackline.ts stackLineSees)

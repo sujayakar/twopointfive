@@ -223,14 +223,14 @@ fn test_ok(g: &mut Game, t: &LessonTest, s: &mut StepSeen) -> Option<bool> {
 }
 
 fn ok_door(g: &Game, door: &str, state: &str) -> bool {
-    use crate::doors::{door_is_closed, door_lock_broken, door_locked, doors_by_name};
+    use crate::doors::{door_is_closed, doors_by_name};
     let Some(d) = doors_by_name(g, door) else { return false };
     match state {
         "open" => !door_is_closed(g, d),
         "shut" => door_is_closed(g, d),
-        "unlocked" => !door_locked(g, d) || door_lock_broken(g, d),
+        "unlocked" => !g.dr[d].leaf.locked || g.dr[d].leaf.lock_broken,
         "charged" => crate::doortools::door_tools_charge_on(g, &crate::seats::here(g), d).is_some(),
-        _ => door_lock_broken(g, d),
+        _ => g.dr[d].leaf.lock_broken,
     }
 }
 

@@ -39,7 +39,7 @@ pub fn game_on_door_event(g: &mut crate::game::Game, e: crate::doors::DoorEvent)
             };
             let from = match kicker { Some(c) => g.ch[c].pos, None => e.pos };
             crate::particle_fx::kick_dust_fx(g, e.door, from);
-            if crate::doors::door_lock_broken(g, e.door) {
+            if g.dr[e.door].leaf.lock_broken {
                 let from = match kicker { Some(c) => g.ch[c].pos, None => e.pos };
                 crate::particle_fx::lock_splinter_fx(g, e.door, from);
             }

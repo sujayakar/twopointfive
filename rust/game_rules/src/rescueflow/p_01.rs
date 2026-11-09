@@ -161,7 +161,7 @@ pub fn rescue_flow_lookable(g: &mut crate::game::Game, k: &mut crate::rescueflow
 pub fn rescue_flow_open(g: &crate::game::Game, o: &crate::scene_scenarios::RouteOpening) -> bool {
     match door_of(g, o) {
         None => true,
-        Some(d) => m::abs(crate::doors::door_angle(g, d)) > 0.5,
+        Some(d) => m::abs(g.dr[d].leaf.angle) > 0.5,
     }
 }
 

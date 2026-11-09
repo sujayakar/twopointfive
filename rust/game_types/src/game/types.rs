@@ -2085,9 +2085,6 @@ pub struct Mods {
     pub character: crate::character::CharacterMod,
     /// (where rust/sim's rows lie in this process, and counts: in no bytes)
     #[bytes(skip)]
-    pub sim_doorshome: crate::sim_doorshome::SimDoorshomeMod,
-    /// (where rust/sim's rows lie in this process, and counts: in no bytes)
-    #[bytes(skip)]
     pub sim_slabshome: crate::sim_slabshome::SimSlabshomeMod,
     pub teams: crate::teams::TeamsMod,
     pub opening: crate::opening::OpeningMod,
@@ -2232,7 +2229,6 @@ impl Mods {
             packside: crate::packside::PacksideMod::blank(),
             rig_props: crate::rig_props::RigPropsMod::blank(),
             character: crate::character::CharacterMod::blank(),
-            sim_doorshome: crate::sim_doorshome::SimDoorshomeMod::blank(),
             sim_slabshome: crate::sim_slabshome::SimSlabshomeMod::blank(),
             teams: crate::teams::TeamsMod::blank(),
             opening: crate::opening::OpeningMod::blank(),

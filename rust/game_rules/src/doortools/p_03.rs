@@ -180,7 +180,7 @@ pub fn door_tools_big_opens(g: &mut crate::game::Game, d: DoorId, men: &[GuardId
 /// the tool the big slot's row names for these men on that door: toGun's own order (doortools.ts DoorTools.bigWord)
 pub fn door_tools_big_word(g: &mut crate::game::Game, t: &crate::orders::OrderTarget, men: &[GuardId]) -> crate::doortools::DoorToolsBigWord {
     let wedged = match t {
-        crate::orders::OrderTarget::Door(x) => crate::doors::door_locked(g, x.door) && is_wedge(g, x.door) && door_tools_known_shut(g, x.door, x.side),
+        crate::orders::OrderTarget::Door(x) => g.dr[x.door].leaf.locked && is_wedge(g, x.door) && door_tools_known_shut(g, x.door, x.side),
         _ => false,
     };
     if !wedged {
@@ -228,7 +228,7 @@ pub fn door_tools_shut_why(g: &crate::game::Game, d: DoorId) -> String {
 pub fn door_tools_known_shut(g: &crate::game::Game, d: DoorId, side: f64) -> bool {
     door_tools_knows(g, &crate::seats::here(g), d, side, false) && stays_shut(g, d, side)
 }
-fn stays_shut(g: &Game, d: DoorId, side: f64) -> bool { !is_open(g, d) && !crate::doors::door_off(g, d) && door_tools_locked_out(g, d, side) }
+fn stays_shut(g: &Game, d: DoorId, side: f64) -> bool { !is_open(g, d) && !g.dr[d].leaf.off && door_tools_locked_out(g, d, side) }
 /// once a tick: a door since opened, unlocked or broken is no longer one the team knows is shut
 pub fn door_tools_forget(g: &mut Game) {
     for d in g.door_tools.tried.keys() {
@@ -245,7 +245,7 @@ pub fn door_tools_untried(g: &crate::game::Game, d: DoorId, side: f64) -> bool {
 
 /// the handle tried by a man at the jamb; true: locked against the team (doortools.ts DoorTools.test)
 pub fn door_tools_test(g: &mut crate::game::Game, d: DoorId, side: f64, gd: GuardId, say: bool) -> bool {
-    if is_open(g, d) || crate::doors::door_off(g, d) { return false; }
+    if is_open(g, d) || g.dr[d].leaf.off { return false; }
     let out = door_tools_locked_out(g, d, side);
     if door_tools_knows(g, &crate::seats::here(g), d, side, !out) { return out; }
     door_tools_learn(g, d, side, Some(!out));
@@ -387,7 +387,7 @@ pub fn door_tools_walk_tried(g: &mut crate::game::Game) {
                 if walker_on(g, m) { lead = Some(m); break; }
             }
         }
-        if is_open(g, d) || crate::doors::door_off(g, d) { crate::orders::squad_orders_walk_on(g, &men); continue; }
+        if is_open(g, d) || g.dr[d].leaf.off { crate::orders::squad_orders_walk_on(g, &men); continue; }
         let locked = door_tools_locked_out(g, d, side);
         if locked && door_tools_known_shut(g, d, side) {
             crate::orders::squad_orders_new_group(g);

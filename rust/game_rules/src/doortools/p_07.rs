@@ -75,14 +75,14 @@ pub fn door_tools_shove(g: &mut crate::game::Game, op: DoorOpId) {
     let w = g.dr[d].def.width;
     let at = door_pt(g, d, w / 2.0, 0.6, side, None);
     let s = -crate::doors::doors_side(g, d, at);
-    crate::doors::door_set_latched(g, d, false);
-    crate::doors::door_set_closing(g, d, false);
-    let vel = s * m::max(m::abs(crate::doors::door_vel(g, d)), g.k.doortools.shove);
-    crate::doors::door_set_vel(g, d, vel);
-    crate::doors::door_set_quiet_t(g, d, -1.0);
-    crate::doors::door_set_creak_armed(g, d, false);
+    g.dr[d].leaf.latched = false;
+    g.dr[d].leaf.closing = false;
+    let vel = s * m::max(m::abs(g.dr[d].leaf.vel), g.k.doortools.shove);
+    g.dr[d].leaf.vel = vel;
+    g.dr[d].leaf.quiet_t = -1.0;
+    g.dr[d].leaf.creak_armed = false;
     let id = g.ch[c].id;
-    crate::doors::door_set_last_who(g, d, id);
+    g.dr[d].leaf.last_who = id;
     let dp = crate::doors::door_pos(g, d);
     if crate::silent::silent_ease(g, lead) { crate::audio_iface::game_audio_like_play(g, "doorCreak", Some(dp), Some(0.5), None); } else { crate::audio_iface::game_audio_like_play(g, "doorBash", Some(dp), Some(0.5), Some(&crate::audio_iface::PlayOpts::Rate { rate: 1.15 })); }
     door_tools_beat(g, op, "shove");
@@ -875,7 +875,7 @@ fn leaf_cut(closed_dir: f64, a: f64, w: f64, hx: f64, hz: f64, p: V3, rx: f64, r
 
 /// How much door `o`'s own leaf, stood open, would hide the door from a man at `p`. (doortools.ts DoorTools.leafAcross)
 pub fn door_tools_leaf_across(g: &crate::game::Game, o: DoorId, p: V3, at: V3) -> f64 {
-    if crate::doors::door_off(g, o) { return 0.0; }
+    if g.dr[o].leaf.off { return 0.0; }
     let stop = if crate::doors::door_swing(g, o) > 0.0 { crate::doors::door_max_a(g, o) } else { crate::doors::door_min_a(g, o) };
     let (sg, top) = (m::sign(stop), m::abs(stop));
     let def = &g.dr[o].def;
@@ -929,7 +929,7 @@ pub fn door_tools_hold_doors(g: &mut crate::game::Game, op: DoorOpId) {
         let w: V3 = [fc[0] + e.out[0], 1.2, fc[2] + e.out[1]];
         let rs = crate::orders::side_of(g, o, [fc[0] - e.out[0], 0.0, fc[2] - e.out[1]]);
         let stop = if crate::doors::door_swing(g, o) > 0.0 { crate::doors::door_max_a(g, o) } else { crate::doors::door_min_a(g, o) };
-        let in_swing = !crate::doors::door_off(g, o) && m::sign(stop) == rs;
+        let in_swing = !g.dr[o].leaf.off && m::sign(stop) == rs;
         // a man with a line to its frame from where he stands
         let mut near: Vec<(GuardId, f64)> = Vec::new();
         for x in men.iter().copied() {

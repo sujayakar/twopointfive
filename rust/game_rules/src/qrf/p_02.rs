@@ -340,17 +340,17 @@ pub fn deploy(g: &mut crate::game::Game, quiet: bool) {
 
 /// Throw a shut (or nearly shut) leaf open away from `by` at a kick's pace, breaking nothing.   (qrf.ts flingOpen)
 pub fn fling_open(g: &mut crate::game::Game, d: DoorId, by: GuardId) {
-    use crate::doors::{door_angle, door_pos, door_set_closing, door_set_creak_armed, door_set_last_who, door_set_latched, door_set_quiet_t, door_set_since_bash, door_set_vel, doors_side};
-    if m::abs(door_angle(g, d)) > 1.0 { return; }
+    use crate::doors::{door_pos, doors_side};
+    if m::abs(g.dr[d].leaf.angle) > 1.0 { return; }
     let side = doors_side(g, d, pos_of(g, by));
-    door_set_latched(g, d, false);
-    door_set_closing(g, d, false);
-    door_set_vel(g, d, -side * 7.5);
-    door_set_since_bash(g, d, 0.0);
-    door_set_quiet_t(g, d, -0.5);
-    door_set_creak_armed(g, d, false);
+    g.dr[d].leaf.latched = false;
+    g.dr[d].leaf.closing = false;
+    g.dr[d].leaf.vel = -side * 7.5;
+    g.dr[d].leaf.since_bash = 0.0;
+    g.dr[d].leaf.quiet_t = -0.5;
+    g.dr[d].leaf.creak_armed = false;
     let who = char_id(g, by);
-    door_set_last_who(g, d, who);
+    g.dr[d].leaf.last_who = who;
     let at = door_pos(g, d);
     crate::audio_iface::game_audio_like_play(g, "doorBash", Some(at), Some(0.9), Some(&crate::audio_iface::PlayOpts::Rate { rate: 0.85 }));
 }
@@ -388,7 +388,7 @@ pub fn tick_men(g: &mut crate::game::Game, dt: f64) {
         let up = alive(g);
         let shut = match d {
             None => true,
-            Some(d) => crate::doors::door_off(g, d) || crate::doors::door_latched(g, d) || g.dr[d].def.closer == Some(false) || up.is_empty(),
+            Some(d) => g.dr[d].leaf.off || g.dr[d].leaf.latched || g.dr[d].def.closer == Some(false) || up.is_empty(),
         };
         if shut { g.qrf.door_pulled = true; }
         else {

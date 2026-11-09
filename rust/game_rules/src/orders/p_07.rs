@@ -301,7 +301,7 @@ fn side_cost(g: &mut Game, d: DoorId, men: &[GuardId], dear: &JsSet<crate::Num>,
             c += flat(a, b);
             for i in 0..g.doors.list.len() {
                 let o = g.doors.list[i];
-                if (o == d || crate::doors::door_latched(g, o)) && crate::guards::crosses_door(g, a, b, o).is_some() { c += if o == d { 60.0 } else { 25.0 }; }
+                if (o == d || g.dr[o].leaf.latched) && crate::guards::crosses_door(g, a, b, o).is_some() { c += if o == d { 60.0 } else { 25.0 }; }
             }
             a = b;
         }
@@ -314,7 +314,7 @@ pub fn squad_orders_side_for(g: &mut crate::game::Game, d: DoorId, men: &[GuardI
     let mut dear: JsSet<crate::Num> = JsSet::new();   // this doorway, and every doorway whose leaf is shut
     for i in 0..g.doors.list.len() {
         let o = g.doors.list[i];
-        if o != d && !crate::doors::door_latched(g, o) { continue; }
+        if o != d && !g.dr[o].leaf.latched { continue; }
         doorway_cells(g, o, &mut dear);
     }
     let mine = side_cost(g, d, men, &dear, sam_side);
@@ -461,7 +461,7 @@ fn shut(g: &mut Game, from: V3, ring: &JsSet<String>, path: &[V3]) -> Option<Doo
     for &b in path {
         for i in 0..g.doors.list.len() {
             let d = g.doors.list[i];
-            if crate::doors::door_locked(g, d) && crate::doors::door_latched(g, d) && crate::guards::crosses_door(g, a, b, d).is_some() && crate::doors::doors_locked_out(g, d, a, Some(ring)) { return Some(d); }
+            if g.dr[d].leaf.locked && g.dr[d].leaf.latched && crate::guards::crosses_door(g, a, b, d).is_some() && crate::doors::doors_locked_out(g, d, a, Some(ring)) { return Some(d); }
         }
         a = b;
     }
@@ -566,7 +566,7 @@ pub fn squad_orders_route(g: &mut crate::game::Game, gd: GuardId, to: V3, shy: O
     let mut dear: JsSet<crate::Num> = JsSet::new();   // every doorway locked against him (and the one he is shy of), made all but a wall
     for i in 0..g.doors.list.len() {
         let d = g.doors.list[i];
-        if !(round && Some(d) == shy) && (!crate::doors::door_locked(g, d) || !crate::doors::door_latched(g, d) || crate::squadcast::ring_has(&ring, &g.dr[d].lock_id)) { continue; }
+        if !(round && Some(d) == shy) && (!g.dr[d].leaf.locked || !g.dr[d].leaf.latched || crate::squadcast::ring_has(&ring, &g.dr[d].lock_id)) { continue; }
         doorway_cells(g, d, &mut dear);
     }
     let plain = path;
@@ -667,7 +667,7 @@ fn sw_join(g: &mut Game, ring: &JsSet<String>, b_id: OrdersAssignmentId, mine: &
     for &b in &w {
         for i in 0..g.doors.list.len() {
             let d = g.doors.list[i];
-            if crate::guards::crosses_door(g, a, b, d).is_some() && (Some(d) == b_shy || (crate::doors::door_locked(g, d) && crate::doors::door_latched(g, d) && crate::doors::doors_locked_out(g, d, a, Some(ring)))) { return None; }
+            if crate::guards::crosses_door(g, a, b, d).is_some() && (Some(d) == b_shy || (g.dr[d].leaf.locked && g.dr[d].leaf.latched && crate::doors::doors_locked_out(g, d, a, Some(ring)))) { return None; }
         }
         a = b;
     }
@@ -852,7 +852,7 @@ pub fn squad_orders_trail_way(g: &mut crate::game::Game, gd: GuardId, slot: V3, 
     for i in 1..way.len() {
         for n in 0..g.doors.list.len() {
             let d = g.doors.list[n];
-            if crate::doors::door_locked(g, d) && crate::doors::door_latched(g, d) && crate::guards::crosses_door(g, way[i - 1], way[i], d).is_some() && crate::doors::doors_locked_out(g, d, way[i - 1], Some(&ring)) { return Vec::new(); }
+            if g.dr[d].leaf.locked && g.dr[d].leaf.latched && crate::guards::crosses_door(g, way[i - 1], way[i], d).is_some() && crate::doors::doors_locked_out(g, d, way[i - 1], Some(&ring)) { return Vec::new(); }
         }
     }
     let mut mid: Vec<V3> = Vec::new();   // (the trail's corners: a crumb is kept where the next cannot be walked to straight, and every few metres)

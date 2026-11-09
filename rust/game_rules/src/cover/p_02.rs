@@ -205,7 +205,7 @@ pub fn cover_walk_only(g: &Game, gd: GuardId, a: OrdersAssignmentId) -> bool {
 pub fn cover_walk_door(g: &mut Game, o: CoverOpeningId, a: OrdersAssignmentId) -> bool {
     let d = match g.tab.cover_opening[o].door { Some(d) => d, None => return false };
     if Some(d) == g.tab.orders_assignment[a].door { return false; }
-    let open = crate::doors::door_off(g, d) || (!crate::doors::door_latched(g, d) && m::abs(crate::doors::door_angle(g, d)) >= g.k.doormanners.lane_ajar);
+    let open = g.dr[d].leaf.off || (!g.dr[d].leaf.latched && m::abs(g.dr[d].leaf.angle) >= g.k.doormanners.lane_ajar);
     if !open { return false; }
     let ra = crate::cleared::cleared_rooms_room_by(g, d, 1.0);
     let rb = crate::cleared::cleared_rooms_room_by(g, d, -1.0);
@@ -237,7 +237,7 @@ pub fn cover_sight(g: &mut Game, eye: V3, o: CoverOpeningId) -> Option<V3> {
     let s = if door.is_some() { m::max(0.0, 1.0 - 0.7 / d) } else { 1.0 };
     if crate::scene_collision::segment_blocked(g, eye, [eye[0] + (at[0] - eye[0]) * s, CHEST, eye[2] + (at[2] - eye[2]) * s], None, None, None) { return None; }
     let dd = match door { Some(dd) => dd, None => return Some(at) };
-    if !(!crate::doors::door_off(g, dd) && m::abs(crate::doors::door_angle(g, dd)) >= 0.5 && crate::scene_collision::segment_blocked(g, eye, [at[0], CHEST, at[2]], None, None, None)) { return Some(at); }
+    if !(!g.dr[dd].leaf.off && m::abs(g.dr[dd].leaf.angle) >= 0.5 && crate::scene_collision::segment_blocked(g, eye, [at[0], CHEST, at[2]], None, None, None)) { return Some(at); }
     let u = crate::doors::door_dir(g, dd);
     let r = g.dr[dd].def.width + 0.35;
     let hinge = g.dr[dd].def.hinge;
@@ -281,7 +281,7 @@ pub fn onto_unknown(g: &mut Game, o: CoverOpeningId) -> bool {
     let row = &g.tab.cover_opening[o];
     if row.kind == OpeningKind::Rear { return false; }
     let (at, n, door) = (row.at, row.n, row.door);
-    if door.map_or(false, |d| m::abs(crate::doors::door_angle(g, d)) < 0.5) { return false; }
+    if door.map_or(false, |d| m::abs(g.dr[d].leaf.angle) < 0.5) { return false; }
     for s in [1.0, -1.0] {
         let room = match door {
             Some(d) => crate::cleared::cleared_rooms_room_by(g, d, s),
@@ -522,7 +522,7 @@ pub fn cover_deal(g: &mut Game) {
             if (b[0] - oat[0]) * n[0] + (b[2] - oat[2]) * n[1] >= 0.0 { pos = true; } else { neg = true; }
         }
         if pos && neg { continue; }   // … or the file is going through it
-        let shut = match door { Some(d) => m::abs(crate::doors::door_angle(g, d)) < 0.5, None => false };
+        let shut = match door { Some(d) => m::abs(g.dr[d].leaf.angle) < 0.5, None => false };
         let l = add(g, &cx, &mut live, o, if shut { k.shut_k } else { 1.0 });
         if door.is_some() && !shut {
             let covered = match l { Some(i) => live[i].sam || live[i].held, None => sam_on(g, &cx, o) || held_by(g, &cx, o) };

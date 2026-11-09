@@ -110,8 +110,8 @@ pub fn run_gate(g: &mut crate::game::Game, gd: GuardId, g_2: &mut crate::tactics
                 if crate::doors::door_is_closed(g, d) {
                     let (pos, id, keys) = (g.ch[c].pos, g.ch[c].id, g.gd[gd].keys.clone());
                     crate::doors::doors_use(g, d, pos, id, Some(&keys));
-                    let q = m::min(crate::doors::door_quiet_t(g, d), -6.0);
-                    crate::doors::door_set_quiet_t(g, d, q);
+                    let q = m::min(g.dr[d].leaf.quiet_t, -6.0);
+                    g.dr[d].leaf.quiet_t = q;
                     g_2.t = 0.0;
                 } else { g_2.t = 1.0; }
             }

@@ -105,7 +105,7 @@ pub fn read(g: &Game) -> Vec<(String, String)> {
         }
     }
     for &d in &g.doors.list {
-        out.push((format!("door {}", g.dr[d].i), format!("{} {} {} {} {}", bits(game::doors::door_angle(g, d)), game::doors::door_latched(g, d), game::doors::door_locked(g, d), game::doors::door_lock_broken(g, d), game::doors::door_off(g, d))));
+        out.push((format!("door {}", g.dr[d].i), format!("{} {} {} {} {}", bits(g.dr[d].leaf.angle), g.dr[d].leaf.latched, g.dr[d].leaf.locked, g.dr[d].leaf.lock_broken, g.dr[d].leaf.off)));
     }
     for (bi, said) in glass(g) { out.push((format!("glass {}", bi), said)); }
     for (id, f) in g.tab.sim_lightshome_fixture.iter() { out.push((format!("lamp {}", f.i), lamp(g, id))); }

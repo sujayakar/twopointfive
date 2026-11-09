@@ -1047,7 +1047,7 @@ pub fn director_tick_kicks(g: &mut crate::game::Game, r: DirectorRunId) {
         let pos = g.ch[c].pos;
         crate::marks::kick_scuff(g, d, pos);
         let what = format!("kick {}", g.dr[d].def.name);
-        let angle = crate::doors::door_angle(g, d);
+        let angle = g.dr[d].leaf.angle;
         note(g, &k.beat, DirectorPushRowKind::Stimulus, &what, Some(obj(vec![("by", Json::Text(k.by.clone())), ("angle", Json::Num(fixed_num(angle, 2)))])));
     }
     g.tab.director_run[r].kicks = kept;
@@ -1139,11 +1139,11 @@ pub fn director_query_pos_unit(g: &crate::game::Game, r: DirectorRunId, u: &crat
 pub fn director_query_door(g: &crate::game::Game, d: &crate::director::DoorRef) -> Result<crate::director::QueryDoor, String> {
     let id = director_door_of(g, d)?;
     Ok(QueryDoor {
-        angle: crate::doors::door_angle(g, id),
+        angle: g.dr[id].leaf.angle,
         open: !crate::doors::door_is_closed(g, id),
-        latched: crate::doors::door_latched(g, id),
-        locked: crate::doors::door_locked(g, id),
-        broken: crate::doors::door_lock_broken(g, id),
+        latched: g.dr[id].leaf.latched,
+        locked: g.dr[id].leaf.locked,
+        broken: g.dr[id].leaf.lock_broken,
         swing: crate::doors::door_swing(g, id),
     })
 }

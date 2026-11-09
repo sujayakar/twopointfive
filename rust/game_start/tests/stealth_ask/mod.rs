@@ -223,8 +223,8 @@ impl StealthAsk for Play {
     fn door_stands_open(&mut self, name: &str) {
         let d = game::doors::doors_by_name(&self.g, name).unwrap_or_else(|| panic!("no door '{name}'"));
         let turn = game::doors::door_swing(&mut self.g, d) * 1.4;
-        game::doors::door_set_latched(&mut self.g, d, false);
-        game::doors::door_set_angle(&mut self.g, d, turn);
+        self.g.dr[d].leaf.latched = false;
+        self.g.dr[d].leaf.angle = turn;
     }
     fn hold_phase(&self) -> Option<game::character::HoldPhase> { self.g.pl[self.g.player].holding.as_ref().map(|h| h.phase) }
     fn in_arm(&self) -> Option<GuardId> { self.g.pl[self.g.player].holding.as_ref().map(|h| h.g) }
@@ -309,8 +309,8 @@ impl StealthAsk for Play {
     fn door_at(&self, name: &str) -> [f64; 2] { let d = game::doors::doors_by_name(&self.g, name).unwrap_or_else(|| panic!("no door '{name}'")); let c = self.g.dr[d].frame_centre; [c[0], c[2]] }
     fn door_shut(&mut self, name: &str) {
         let d = game::doors::doors_by_name(&self.g, name).unwrap_or_else(|| panic!("no door '{name}'"));
-        game::doors::door_set_angle(&mut self.g, d, 0.0);
-        game::doors::door_set_latched(&mut self.g, d, true);
+        self.g.dr[d].leaf.angle = 0.0;
+        self.g.dr[d].leaf.latched = true;
     }
     fn in_doors_line(&self, name: &str, from: [f64; 2], at: [f64; 2]) -> bool {
         let d = game::doors::doors_by_name(&self.g, name).unwrap_or_else(|| panic!("no door '{name}'"));
@@ -384,7 +384,7 @@ impl StealthAsk for Play {
     fn holds_round(&mut self, m: GuardId, h: GuardId) -> bool { game::spotted::spotted_holds_round(&mut self.g, m, h) }
     fn leaf(&self, name: &str) -> (bool, f64, f64) {
         let d = game::doors::doors_by_name(&self.g, name).unwrap_or_else(|| panic!("no door '{name}'"));
-        (game::fogofwar::fog_of_war_door_held(&self.g, d), game::doors::door_angle(&self.g, d), game::fogofwar::fog_of_war_door_shown(&self.g, d))
+        (game::fogofwar::fog_of_war_door_held(&self.g, d), self.g.dr[d].leaf.angle, game::fogofwar::fog_of_war_door_shown(&self.g, d))
     }
     fn door_names(&self) -> Vec<String> { self.g.doors.list.iter().map(|&d| self.g.dr[d].def.name.clone()).collect() }
     fn throws_the_breaker(&mut self) {

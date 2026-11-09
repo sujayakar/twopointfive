@@ -150,7 +150,7 @@ pub fn game_update_doors(g: &mut crate::game::Game, dt: f64) {
     }
     let list = g.doors.list.clone();
     let mut angles: Vec<f64> = Vec::with_capacity(list.len());
-    for &d in list.iter() { angles.push(crate::doors::door_angle(g, d)); }
+    for &d in list.iter() { angles.push(g.dr[d].leaf.angle); }
     for &s in seats.iter() { let input = g.tab.cmd_seat[s].input; crate::seats::with_seat(g, s, &mut |g| game_door_acts(g, dt, input)); }
     if g.door_was.len() < 2 * n { g.door_was.resize(2 * n, 0.0); }
     for i in 0..n { let pl = crate::cmd::seat_man(g, seats[i]); let p = g.ch[g.pl[pl].ch].pos; g.door_was[2 * i] = p[0]; g.door_was[2 * i + 1] = p[2]; }
@@ -181,7 +181,7 @@ pub fn game_update_doors(g: &mut crate::game::Game, dt: f64) {
         let list = g.doors.list.clone();
         for (k, &d) in list.iter().enumerate() {
             let slab = crate::doors::door_slab(g, d).filter(|s| !s.rest);
-            if slab.is_none() && m::abs(crate::doors::door_angle(g, d) - angles[k]) < 1e-3 { continue; }
+            if slab.is_none() && m::abs(g.dr[d].leaf.angle - angles[k]) < 1e-3 { continue; }
             let (hinge, width, height) = (g.dr[d].def.hinge, g.dr[d].def.width, g.dr[d].height);
             for &ch in bodies.iter() {
                 let h = g.ch[ch].bones.get(Bone::Hips).copied().unwrap_or(g.ch[ch].pos);
@@ -345,7 +345,7 @@ pub fn game_door_acts(g: &mut crate::game::Game, dt: f64, input: InputId) {
                     g.pl[pl].door_move = None;
                     g.pl[pl].easing = Some(d);
                     g.pl[pl].ease_stall_t = 0.0;
-                    let a = crate::doors::door_angle(g, d);
+                    let a = g.dr[d].leaf.angle;
                     g.pl[pl].ease_best = m::abs(a);
                 }
             }
@@ -384,7 +384,7 @@ pub fn game_door_acts(g: &mut crate::game::Game, dt: f64, input: InputId) {
         } else {
             let id = g.ch[pc].id;
             crate::doors::doors_crack(g, d, pos, id, m::min(dt, 0.05), Some(&keys), Some(crate::player::EASE_RATE), Some(crate::player::EASE_MAX));
-            let angle = crate::doors::door_angle(g, d);
+            let angle = g.dr[d].leaf.angle;
             let a1 = m::abs(angle);
             let stop = if angle < 0.0 { -crate::doors::door_min_a(g, d) } else { crate::doors::door_max_a(g, d) };
             if a1 >= m::min(crate::player::EASE_MAX, stop) - 1e-3 {

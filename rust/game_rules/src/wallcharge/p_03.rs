@@ -129,7 +129,7 @@ pub fn wall_charge_kept_walks(g: &mut crate::game::Game, m: u32) -> crate::wallc
     let p = g.player;
     let mut locks = String::new();
     for d in g.doors.list.clone() {
-        let shut = crate::doors::door_locked(g, d) && crate::doors::door_latched(g, d);
+        let shut = g.dr[d].leaf.locked && g.dr[d].leaf.latched;
         locks.push(if shut { '1' } else { '0' });
     }
     let mut h: i32 = 0;

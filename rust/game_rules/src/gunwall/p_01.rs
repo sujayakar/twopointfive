@@ -233,7 +233,7 @@ pub fn breach_aim(g: &mut crate::game::Game, c_2: CharId, b: crate::weapons::Pel
     if h.index < 1e6 { return None; }
     let bx = g.col.dynamic_boxes.get((h.index - 1e6) as usize).copied()?;
     let d = g.doors.list.iter().copied().find(|&x| g.dr[x].box_ == bx)?;
-    if !crate::doors::door_latched(g, d) || !crate::doors::door_locked(g, d) || g.dr[d].lock_id.starts_with("wedge:") { return None; }
+    if !g.dr[d].leaf.latched || !g.dr[d].leaf.locked || g.dr[d].lock_id.starts_with("wedge:") { return None; }
     let p = v3::mad(ml.a, dir, h.t);
     let u = crate::doors::door_dir(g, d);
     let (hinge, width) = (g.dr[d].def.hinge, g.dr[d].def.width);

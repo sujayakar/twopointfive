@@ -1,5 +1,5 @@
 //! TWO TEAMS AT NEIGHBORING DOORS (rust/game_rules/src/stackroom/, doorway/): each keeps out of the other's way, and a shut door stays shut until somebody goes through it or works it.
-use game::doors::{door_latched, doors_by_name};
+use game::doors::doors_by_name;
 use game::ids::DoorId;
 use game::orders::Who;
 use game_start::play::{Opts, Play};
@@ -49,7 +49,7 @@ fn two_charge_teams_at_neighboring_doors_both_go() {
             }
         }
         p.order("go", p.sam_at(), Who::All);
-        let shut = |p: &Play, d| door_latched(&p.g, d) && !game::doors::door_off(&p.g, d);
+        let shut = |p: &Play, d| p.g.dr[d].leaf.latched && !p.g.dr[d].leaf.off;
         let first = p.until(20.0, |p| !shut(p, frame) || !shut(p, comms)).unwrap_or_else(|| panic!("seed {s}: twenty seconds after the word and neither door is open ({})", p.roll()));
         p.until(1.0, |p| !shut(p, frame) && !shut(p, comms)).unwrap_or_else(|| panic!("seed {s}: one door went {first:.1} s after the word and the other did not ({})", p.roll()));
         for (men, own) in [(&red, comms), (&blue, frame)] {
@@ -69,7 +69,7 @@ fn a_man_brushing_a_shut_door_leaves_it_shut() {
         for x in [33.55, 33.35, 33.15] {
             p.man_stands(m, [x, 12.28]);
             p.order("move", [24.5, 13.2], Who::Red);
-            for _ in 0..90 { p.frame(); assert!(door_latched(&p.g, comms), "seed {s}: he walked by at {:?} and the door came open", p.at(m)); }
+            for _ in 0..90 { p.frame(); assert!(p.g.dr[comms].leaf.latched, "seed {s}: he walked by at {:?} and the door came open", p.at(m)); }
         }
     }
 }

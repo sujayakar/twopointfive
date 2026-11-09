@@ -71,7 +71,7 @@ pub fn start_picking(g: &mut crate::game::Game, d: DoorId) {
     crate::wand::wand_drop(g, pl);
     g.pl[pl].picking = Some(d);
     g.pl[pl].crouch = true;
-    if crate::doors::door_pick(g, d) <= 0.0 {
+    if g.dr[d].leaf.pick <= 0.0 {
         crate::game::game_msg(g, "picking the lock. take a step or press Space to stop");
     }
 }
@@ -100,7 +100,7 @@ pub fn update_picking(g: &mut crate::game::Game, dt: f64, input: InputId) {
     if g.puppet.is_some() {
         stop_picking(g, None);
     } else if !crate::doors::doors_locked_out(g, d, pos, None) {
-        let text = if crate::doors::door_locked(g, d) { Some("someone is coming through") } else { None };
+        let text = if g.dr[d].leaf.locked { Some("someone is coming through") } else { None };
         stop_picking(g, text);
     } else {
         let spot = crate::doors::doors_work_spot(g, d, pos, None, None);
@@ -440,7 +440,7 @@ fn big_spot_tool(t: crate::player::StartKickTool) -> crate::bigkit::SamBigSpotTo
 
 /// The spot a kick is thrown from BESIDE the door, for a kicker already beside its latch jamb; None = the square kick.   (player.ts sideKickSpot)
 pub fn side_kick_spot(g: &mut crate::game::Game, d: DoorId, from: V3) -> Option<crate::player::SideKickSpot> {
-    if crate::doors::door_off(g, d) {
+    if g.dr[d].leaf.off {
         return None;
     }
     let f = crate::doors::doors_frame_coords(g, d, from);
@@ -504,10 +504,10 @@ pub fn update_kick(g: &mut crate::game::Game, dt: f64) {
     let home = !run || crate::doors::doors_boot_holds(g, d, pos);
     let who = g.ch[c].id;
     let kick_k = g.k.sprintdoor.kick_k;
-    if crate::character::anim_kick_impact(g, c) && !crate::doors::door_off(g, d) && run && home && crate::doorblast::tear_off(g, d, pos, who, Some(kick_k)) {
+    if crate::character::anim_kick_impact(g, c) && !g.dr[d].leaf.off && run && home && crate::doorblast::tear_off(g, d, pos, who, Some(kick_k)) {
         g.stats.sprintdoor.kicks += 1;
         crate::chronicle::chron_door(g, crate::chronicle::ChronDoorKind::DoorKicked, d);
-    } else if crate::character::anim_kick_impact(g, c) && !crate::doors::door_off(g, d) && home {
+    } else if crate::character::anim_kick_impact(g, c) && !g.dr[d].leaf.off && home {
         let pos = g.ch[c].pos;
         let gave = crate::doors::doors_kick_in(g, d, pos, who, None);
         let pos = g.ch[c].pos;

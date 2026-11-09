@@ -267,7 +267,7 @@ pub fn door_tools_close_words(g: &mut crate::game::Game, c_2: ChargeId) -> Strin
 /// The face of this door the player could set a charge on by hand right now (None: none).   (doortools.ts samFace)
 pub fn door_tools_sam_face(g: &mut crate::game::Game, d: DoorId) -> Option<f64> {
     let pl = g.player;
-    if g.puppet.is_some() || g.touring || g.pl[pl].dragging.is_some() || g.pl[pl].holding.is_some() || crate::doors::door_off(g, d) || g.dr[d].def.steel == Some(true)
+    if g.puppet.is_some() || g.touring || g.pl[pl].dragging.is_some() || g.pl[pl].holding.is_some() || g.dr[d].leaf.off || g.dr[d].def.steel == Some(true)
         || is_open(g, d) || door_tools_charge_on(g, &crate::seats::here(g), d).is_some() || charge_order_on(g, &crate::seats::here(g), d) { return None; }
     door_tools_sync(g);
     if g.door_tools.charges <= 0.0 { return None; }
@@ -366,7 +366,7 @@ pub fn door_tools_sam_tick(g: &mut crate::game::Game) {
     let c = g.pl[pl].ch;
     let p = g.ch[c].pos;
     if g.pl[pl].down || g.pl[pl].sprinting || g.pl[pl].dragging.is_some() || g.pl[pl].holding.is_some() || g.pl[pl].takedown.is_some() || g.pl[pl].kick.is_some() || g.puppet.is_some()
-        || crate::doors::door_off(g, d) || is_open(g, d) || door_tools_charge_on(g, &crate::seats::here(g), d).is_some()
+        || g.dr[d].leaf.off || is_open(g, d) || door_tools_charge_on(g, &crate::seats::here(g), d).is_some()
         || charge_order_on(g, &crate::seats::here(g), d)
         || off_of(g, d, p, s.side) <= 0.0 || flat(p, s.at) > SAM_SHIFT || (act_some && !(mine && act_door == Some(d))) {
         door_tools_cancel_sam(g);
@@ -401,7 +401,7 @@ pub fn door_tools_sam_tick(g: &mut crate::game::Game) {
 pub fn door_tools_tick_set(g: &mut crate::game::Game) {
     for c in g.door_tools.set.clone() {
         let d = g.tab.doortools_set_charge[c].door;
-        let gone = crate::doors::door_off(g, d);
+        let gone = g.dr[d].leaf.off;
         if gone || is_open(g, d) {
             if let Some(i) = g.door_tools.set.iter().position(|x| *x == c) { g.door_tools.set.remove(i); }
             door_tools_refund(g, DoorToolsRefundWhat::Charge);
@@ -689,7 +689,7 @@ pub fn door_tools_gun_step(g: &mut crate::game::Game, op: DoorOpId) {
         crate::game::game_say(g, by, "reloading.", None, None, None);
         return;
     }
-    let lock = crate::doors::door_locked(g, d) && crate::doors::door_latched(g, d);
+    let lock = g.dr[d].leaf.locked && g.dr[d].leaf.latched;
     if !(kit && crate::bigkit::big_broken()) {
         crate::combat::fire_weapon(g, c, gun.at, false, Some(&crate::combat::FireOpts { steady: Some(true), spread: Some(0.0), ..Default::default() }));
         if !lock && gun.shut == Some(true) && !is_open(g, d) {
@@ -700,13 +700,13 @@ pub fn door_tools_gun_step(g: &mut crate::game::Game, op: DoorOpId) {
     let cd = g.m.weapons.weapons.get(g.fa[g.gd[by].weapon].def).unwrap().cd;
     with_gun(g, op, |x| { x.n += 1.0; x.next_t = t + cd; });
     g.tab.doortools_door_op[op].t0 = t;
-    if !crate::doors::door_latched(g, d) {
+    if !g.dr[d].leaf.latched {
         with_kick(g, op, |k| k.t = t);
         g.door_tools.stats.shot += 1.0;
         door_tools_beat(g, op, "shotgun");
         crate::bigkit::gun_down(g, by);
         door_tools_back_to_jamb(g, op, by);
-        if !is_open(g, d) && m::abs(crate::doors::door_vel(g, d)) < 0.5 {
+        if !is_open(g, d) && m::abs(g.dr[d].leaf.vel) < 0.5 {
             { let o = &mut g.tab.doortools_door_op[op]; o.kick = None; o.no_gun = Some(true); }
             door_tools_open(g, op);
         } else {
@@ -765,7 +765,7 @@ pub fn door_tools_hammer_step(g: &mut crate::game::Game, op: DoorOpId) {
     let next = t + crate::bigkit::big_swing(g);
     with_gun(g, op, |x| { x.n = n; x.next_t = next; });
     g.tab.doortools_door_op[op].t0 = t;
-    let held = if gun.shut == Some(true) { crate::doors::door_locked(g, d) && crate::doors::doors_boot_holds(g, d, p) } else { door_tools_frame_held(g, d, side) };
+    let held = if gun.shut == Some(true) { g.dr[d].leaf.locked && crate::doors::doors_boot_holds(g, d, p) } else { door_tools_frame_held(g, d, side) };
     if n < (if held { m::max(1.0, g.k.bigslot.swings) } else { 1.0 }) {
         crate::bigkit::hammer_blow(g, by, d, false);
         hammer_tell(g, by, t, next);
@@ -776,7 +776,7 @@ pub fn door_tools_hammer_step(g: &mut crate::game::Game, op: DoorOpId) {
     with_kick(g, op, |k| k.t = t);
     door_tools_beat(g, op, "hammered");
     door_tools_back_to_jamb(g, op, by);
-    if !is_open(g, d) && m::abs(crate::doors::door_vel(g, d)) < 0.5 {
+    if !is_open(g, d) && m::abs(g.dr[d].leaf.vel) < 0.5 {
         { let o = &mut g.tab.doortools_door_op[op]; o.kick = None; o.no_gun = Some(true); }
         door_tools_open(g, op);
     } else {

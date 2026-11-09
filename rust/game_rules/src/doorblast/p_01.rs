@@ -113,7 +113,7 @@ pub fn door_blast_reach(g: &mut crate::game::Game, at: V3, tear_m: f64) -> Vec<c
     }
     let list = g.doors.list.clone();
     for d in list {
-        if crate::doors::door_off(g, d) || g.dr[d].def.steel.unwrap_or(false) {
+        if g.dr[d].leaf.off || g.dr[d].def.steel.unwrap_or(false) {
             continue;
         }
         let [hx, hz] = g.dr[d].def.hinge;
@@ -181,40 +181,40 @@ pub fn hands_off(g: &mut crate::game::Game, d: DoorId) {
 
 /// The frame lets go of a leaf: its lock is gone, and `who` is the last to have touched it. (doorblast.ts :242-243, :287-288)
 fn frame_lets_go(g: &mut Game, d: DoorId, who: f64) {
-    if !crate::doors::door_lock_broken(g, d) {
-        crate::doors::door_set_noticed(g, d, false);
+    if !g.dr[d].leaf.lock_broken {
+        g.dr[d].leaf.noticed = false;
     }
-    crate::doors::door_set_locked(g, d, false);
-    crate::doors::door_set_lock_broken(g, d, true);
-    crate::doors::door_set_pick(g, d, 0.0);
-    crate::doors::door_set_picking(g, d, false);
-    crate::doors::door_set_rattle_t(g, d, 0.0);
-    crate::doors::door_set_last_who(g, d, who);
+    g.dr[d].leaf.locked = false;
+    g.dr[d].leaf.lock_broken = true;
+    g.dr[d].leaf.pick = 0.0;
+    g.dr[d].leaf.picking = false;
+    g.dr[d].leaf.rattle_t = 0.0;
+    g.dr[d].leaf.last_who = who;
 }
 
 /// A door's state once its leaf is off: wide open and quiet. (doorblast.ts :252, :317)
 fn leaf_is_off(g: &mut Game, d: DoorId, fly: f64) {
-    crate::doors::door_set_off(g, d, true);
-    crate::doors::door_set_angle(g, d, fly * OFF_ANGLE);
-    crate::doors::door_set_vel(g, d, 0.0);
-    crate::doors::door_set_latched(g, d, false);
-    crate::doors::door_set_closing(g, d, false);
-    crate::doors::door_set_passers(g, d, 0.0);
-    crate::doors::door_set_quiet_t(g, d, 10.0);
-    crate::doors::door_set_since_bash(g, d, 10.0);
-    crate::doors::door_set_creak_armed(g, d, false);
-    crate::doors::door_set_shot(g, d, 0.0);
+    g.dr[d].leaf.off = true;
+    g.dr[d].leaf.angle = fly * OFF_ANGLE;
+    g.dr[d].leaf.vel = 0.0;
+    g.dr[d].leaf.latched = false;
+    g.dr[d].leaf.closing = false;
+    g.dr[d].leaf.passers = 0;
+    g.dr[d].leaf.quiet_t = 10.0;
+    g.dr[d].leaf.since_bash = 10.0;
+    g.dr[d].leaf.creak_armed = false;
+    g.dr[d].leaf.shot = 0.0;
 }
 
 /// The leaf comes off, thrown out of its frame away from `from`. False, and nothing done, for steel or one already off. (doorblast.ts tearOff)
 pub fn tear_off(g: &mut crate::game::Game, d: DoorId, from: V3, who: f64, k: Option<f64>) -> bool {
     let k = k.unwrap_or(1.0);
-    if crate::doors::door_off(g, d) || g.dr[d].def.steel.unwrap_or(false) {
+    if g.dr[d].leaf.off || g.dr[d].def.steel.unwrap_or(false) {
         return false;
     }
     let [hx, hz] = g.dr[d].def.hinge;
     let w = g.dr[d].def.width;
-    let a = g.dr[d].def.closed_dir + crate::doors::door_angle(g, d);
+    let a = g.dr[d].def.closed_dir + g.dr[d].leaf.angle;
     let (ux, uz) = (m::cos(a), m::sin(a));
     let cx = hx + ux * (w * 0.5 + 0.01);
     let cz = hz + uz * (w * 0.5 + 0.01);
@@ -250,7 +250,7 @@ pub fn tear_off(g: &mut crate::game::Game, d: DoorId, from: V3, who: f64, k: Opt
     leaf_is_off(g, d, fly);
     let (up, spin, tip) = (g.k.doorblast.up, g.k.doorblast.spin, g.k.doorblast.tip);
     let p: V3 = [cx, support(g, d, 0.0), cz];
-    let ang = crate::doors::door_angle(g, d);
+    let ang = g.dr[d].leaf.angle;
     crate::doors::door_set_slab(
         g,
         d,
@@ -302,14 +302,14 @@ pub fn leaf_round(g: &mut crate::game::Game, index: f64, who: f64, hit_p: V3, di
         Some(d) => d,
         None => return,
     };
-    if crate::doors::door_off(g, d) || g.dr[d].def.steel.unwrap_or(false) {
+    if g.dr[d].leaf.off || g.dr[d].def.steel.unwrap_or(false) {
         return;
     }
-    let was = crate::doors::door_shot(g, d);
+    let was = g.dr[d].leaf.shot;
     let chaos = crate::destruction::chaos_of(g);
-    crate::doors::door_set_shot(g, d, was + w / (2.0 * m::max(1e-3, chaos)));
+    g.dr[d].leaf.shot = was + w / (2.0 * m::max(1e-3, chaos));
     g.stats.doorblast.doorshot_rounds += 1;
-    let share = crate::doors::door_shot(g, d) / leaf_tough(g);
+    let share = g.dr[d].leaf.shot / leaf_tough(g);
     if share >= 1.0 {
         splinter(g, d, dir, who, Some(hit_p));
         return;
@@ -363,13 +363,13 @@ fn cuts(seed: f64, n: f64, salt: f64, uneven: f64) -> Vec<f64> {
 
 /// The leaf goes in pieces the way a round travelling `dir` sends it; the lock rail stays as its box. (doorblast.ts splinter)
 pub fn splinter(g: &mut crate::game::Game, d: DoorId, dir: V3, who: f64, at: Option<V3>) -> bool {
-    if crate::doors::door_off(g, d) || g.dr[d].def.steel.unwrap_or(false) {
+    if g.dr[d].leaf.off || g.dr[d].def.steel.unwrap_or(false) {
         return false;
     }
     let kk = g.k.doorshot.clone();
     let [hx, hz] = g.dr[d].def.hinge;
     let (w_, h_, t_) = (g.dr[d].def.width, g.dr[d].height, g.dr[d].thick);
-    let a = g.dr[d].def.closed_dir + crate::doors::door_angle(g, d);
+    let a = g.dr[d].def.closed_dir + g.dr[d].leaf.angle;
     let (ux, uz) = (m::cos(a), m::sin(a));
     let cx = hx + ux * (w_ * 0.5 + 0.01);
     let cz = hz + uz * (w_ * 0.5 + 0.01);
@@ -555,7 +555,7 @@ pub fn splinter(g: &mut crate::game::Game, d: DoorId, dir: V3, who: f64, at: Opt
         }
     }
     leaf_is_off(g, d, fly);
-    let ang = crate::doors::door_angle(g, d);
+    let ang = g.dr[d].leaf.angle;
     crate::doors::door_set_slab(
         g,
         d,
@@ -617,7 +617,7 @@ pub fn door_slabs(g: &mut crate::game::Game, dt: f64) {
     }
     for i in ids {
         let d = g.doors.list[i as usize];
-        if !crate::doors::door_off(g, d) {
+        if !g.dr[d].leaf.off {
             continue;
         }
         fly_slab(g, d, dt);

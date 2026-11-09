@@ -18,9 +18,7 @@ pub fn men_most(g: &crate::game::Game, civilians: f64) -> f64 {
 /// Men one step can be handed: the doors' hand-over in contacts, by the contacts one man is at most, and the furniture's in men. Infinity where there is no module.   (levelfit.ts menHeld)
 pub fn men_held(g: &mut crate::game::Game) -> f64 {
     if !crate::sim_sim::sim_why_not().is_empty() { return f64::INFINITY; }
-    let doors = crate::sim_doorshome::door_io(g).max_contacts;
-    let held = m::floor(doors / (crate::game::body_door_particles().len() as f64 + 1.0));
-    m::min(held, crate::sim_propshome::prop_io(g).max_contacts)
+    crate::sim_propshome::prop_io(g).max_contacts
 }
 
 /// What one step is handed of the men, at most.   (levelfit.ts handOverMost)
@@ -34,7 +32,7 @@ pub fn hand_over_most(g: &crate::game::Game, civilians: f64) -> crate::levelfit:
 pub fn level_caps() -> crate::levelfit::LevelFit {
     let l = crate::sim_lightshome::light_caps();
     crate::levelfit::LevelFit {
-        doors: crate::sim_doorshome::DOOR_CAP,
+        doors: crate::doors::DOOR_CAP,
         things: crate::sim_propshome::PROP_CAP,
         parts: crate::sim_propshome::PROP_PARTS,
         sheets: crate::scene_box_mirror::PANE_CAP,
@@ -181,7 +179,6 @@ pub fn fit_rows(g: &mut crate::game::Game, g_2: &crate::levelfit::Stood, tables:
     );
     let most = hand_over_most(g, civs);
     let held = crate::sim_sim::sim_why_not().is_empty();
-    let dio = if held { Some(crate::sim_doorshome::door_io(g)) } else { None };
     let pio = if held { Some(crate::sim_propshome::prop_io(g)) } else { None };
     let flag = crate::scene_boxes::box_flag();
     let glass = flagged(g, &col.boxes, flag.glass);
@@ -219,7 +216,6 @@ pub fn fit_rows(g: &mut crate::game::Game, g_2: &crate::levelfit::Stood, tables:
     rows.push(row("poses", "singles of the pool the men's poses stand in, against every man a game can hold (menMost with civMost), each with every pose an animator can make", poses, if held { crate::anim_skeleton::pose_pool_room() } else { inf }, None));
     let civ_cap = civ_most(g);
     rows.push(row("civilians", "civilians: the level's own, or those in the game as it stands (a rescue's hostages join in play; civilians.ts join holds every one to this number as he joins)", civs, civ_cap, None));
-    rows.push(row("doormen", "contacts one step of the doors is handed at most (every man a game holds: himself, and his body's particles near a doorway)", most.door_men, dio.as_ref().map_or(inf, |d| d.max_contacts), None));
     rows.push(row("propmen", "men one step of the furniture is handed at most", most.prop_men, pio.as_ref().map_or(inf, |p| p.max_contacts), None));
     rows.push(row("frames", "door frames one step of the furniture is handed (a frame a door)", big.doors, pio.as_ref().map_or(inf, |p| p.max_ways), None));
     rows.push(row("sweeps", "leaves one step of the furniture is handed (a leaf a door)", big.doors, pio.as_ref().map_or(inf, |p| p.max_leaves), None));

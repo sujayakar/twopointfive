@@ -53,13 +53,13 @@ pub fn door_tools_blow_raw(g: &mut crate::game::Game, c_2: Option<ChargeId>) -> 
     if crate::doorblast::tear_off(g, d, out, who, Some(charge_k)) { /* gone */ }
     else if g.dr[d].def.steel != Some(true) {
         crate::doors::doors_kick_in(g, d, out, who, Some(true));
-        if m::abs(crate::doors::door_angle(g, d)) < 1.4 {
+        if m::abs(g.dr[d].leaf.angle) < 1.4 {
             let pt = door_pt(g, d, w / 2.0, 0.6, side, None);
             let v = -crate::doors::doors_side(g, d, pt) * g.k.doortools.blow_vel;
-            crate::doors::door_set_vel(g, d, v);
+            g.dr[d].leaf.vel = v;
         }
         let q = -g.k.doortools.hold_open;
-        crate::doors::door_set_quiet_t(g, d, q);
+        g.dr[d].leaf.quiet_t = q;
     }
     let charge_r = g.k.doorblast.charge_r;
     if charge_r > 0.0 {

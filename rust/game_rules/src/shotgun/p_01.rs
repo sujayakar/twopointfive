@@ -86,7 +86,7 @@ pub fn fire_shell(g: &mut crate::game::Game, shooter: CharId, target: V3, is_pla
         let bx = g.col.dynamic_boxes.get((e.index - 1e6) as usize).copied();
         let d = match bx { Some(bx) => g.doors.list.iter().copied().find(|&x| g.dr[x].box_ == bx), None => None };
         let d = match d { Some(d) => d, None => continue };
-        if !crate::doors::door_latched(g, d) || !crate::doors::door_locked(g, d) || g.dr[d].lock_id.starts_with("wedge:") { continue; }
+        if !g.dr[d].leaf.latched || !g.dr[d].leaf.locked || g.dr[d].lock_id.starts_with("wedge:") { continue; }
         let u = crate::doors::door_dir(g, d);
         let along = (e.at[0] - g.dr[d].def.hinge[0]) * u[0] + (e.at[2] - g.dr[d].def.hinge[1]) * u[1];
         if along < g.dr[d].def.width - b.latch_m { continue; }

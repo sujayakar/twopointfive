@@ -253,7 +253,7 @@ pub fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: f64, my
             let d = g.doors.list[di];
             di += 1;
             let dp = crate::doors::door_pos(g, d);
-            if crate::doors::door_off(g, d) || m::min(v3::dist_xz(dp, p), v3::dist_xz(g.dr[d].frame_centre, p)) > NEARBY_M { continue; }
+            if g.dr[d].leaf.off || m::min(v3::dist_xz(dp, p), v3::dist_xz(g.dr[d].frame_centre, p)) > NEARBY_M { continue; }
             let locked_out = crate::doors::doors_locked_out(g, d, p, None);
             let closed = crate::doors::door_is_closed(g, d);
             let mut it = mark(
@@ -284,12 +284,12 @@ pub fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: f64, my
         while di < g.doors.list.len() {
             let d = g.doors.list[di];
             di += 1;
-            if crate::doors::door_off(g, d) { continue; }
+            if g.dr[d].leaf.off { continue; }
             let dp = crate::doors::door_pos(g, d);
             let near = m::min(v3::dist_xz(dp, p), v3::dist_xz(g.dr[d].frame_centre, p)) < crate::doors::DOORS_USE_REACH;
             let reach = near && !sprinting;
             let shut = crate::doors::door_is_closed(g, d);
-            let pick = crate::doors::door_pick(g, d);
+            let pick = g.dr[d].leaf.pick;
             let pct_s = format!("{}%", pct(pick));
             let mut it = mark(crate::game::InteractableKind::Door, dp, String::new(), String::from(if reach { "" } else { "step closer" }), reach, false);
             it.door = Some(d);
@@ -326,7 +326,7 @@ pub fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: f64, my
                 }
             } else if crate::doors::doors_locked_out(g, d, p, Some(&keys)) {
                 let steel = g.dr[d].def.steel == Some(true);
-                it.line1 = if crate::doors::door_rattle_t(g, d) > 0.0 {
+                it.line1 = if g.dr[d].leaf.rattle_t > 0.0 {
                     String::from("door · locked — won't budge")
                 } else if steel {
                     String::from("steel fire door · bolted from the stairs")
@@ -370,9 +370,9 @@ pub fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: f64, my
                     verbs.push(row(&it, crate::game::Verb::Ease, "ease it open — silent", ""));
                 }
             } else {
-                let tail = if crate::doors::door_lock_broken(g, d) {
+                let tail = if g.dr[d].leaf.lock_broken {
                     " · lock kicked in"
-                } else if g.dr[d].def.locked == Some(true) && !crate::doors::door_locked(g, d) {
+                } else if g.dr[d].def.locked == Some(true) && !g.dr[d].leaf.locked {
                     " · picked"
                 } else {
                     ""
@@ -385,7 +385,7 @@ pub fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: f64, my
                     } else {
                         verbs.push(row(&it, crate::game::Verb::Pull, if toward { "push it shut" } else { "pull it shut" }, ""));
                     }
-                    if m::abs(crate::doors::door_angle(g, d)) < EASE_OFFER {
+                    if m::abs(g.dr[d].leaf.angle) < EASE_OFFER {
                         verbs.push(row(&it, crate::game::Verb::Ease, "ease it open — silent", ""));
                     }
                 }
@@ -617,7 +617,7 @@ pub fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: f64, my
         crate::lightswitch::switch_rows(g, pl, busy || working, row_cb!(crate::lightswitch::SwitchRowsRowOver), offer_cb!(list, things));
         // ---- the rows: the running verb alone (or a status while the feet are committed), else the top MAX_NEAR verbs of the things in reach by what matters
         if let Some(d) = g.pl[pl].picking {
-            let pick = crate::doors::door_pick(g, d);
+            let pick = g.dr[d].leaf.pick;
             let base = marker(g, &list, d);
             rows = vec![running(&base, crate::game::Verb::Pick, &format!("picking… {}%  ·  Space or a step breaks off (the lock keeps it a moment)", pct(pick)), Some(pick))];
         } else if let Some(wd) = g.pl[pl].wanding.as_ref().map(|w| (w.door, w.live)) {
@@ -638,7 +638,7 @@ pub fn build_interactables(g: &mut crate::game::Game, cam: CameraId, mx: f64, my
             rows = vec![status(&base, text)];
         } else if let Some(d) = g.pl[pl].easing {
             let base = marker(g, &list, d);
-            let progress = m::abs(crate::doors::door_angle(g, d)) / EASE_MAX;
+            let progress = m::abs(g.dr[d].leaf.angle) / EASE_MAX;
             rows = vec![running(&base, crate::game::Verb::Ease, "easing it open… — Space or a step stops it where it is", Some(progress))];
         } else if drive_t >= 0.0 {
             if let Some(it) = list.iter().find(|x| x.kind == crate::game::InteractableKind::Objective) {

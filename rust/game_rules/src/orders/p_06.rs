@@ -217,7 +217,7 @@ pub fn squad_orders_stack_file_on(g: &mut crate::game::Game, over: &Over, d: Doo
     let front: V3 = [fc[0] + n[0] * jamb_out, 0.45, fc[2] + n[1] * jamb_out];
     let sam = squad_orders_sam_place(g, &crate::seats::here(g));
     let held = squad_orders_held_on(g, &crate::seats::here(g), d, men, Some(ignore));
-    if !latch && !crate::doors::door_off(g, d) {
+    if !latch && !g.dr[d].leaf.off {
         let arc = if side > 0.0 { crate::doors::door_max_a(g, d) > 0.05 } else { crate::doors::door_min_a(g, d) < -0.05 };
         if arc { return None; }
     }
@@ -380,7 +380,7 @@ pub fn squad_orders_stack_posts_as_were(g: &mut crate::game::Game, d: DoorId, si
     let ignore: &[GuardId] = ignore.unwrap_or(&[]);
     let out = squad_orders_stack_posts_leaf_in(g, &Over::OWN, d, side, men, Some(ignore));
     g.orders.leaf_out_gave = false;
-    if out.is_some() || m::abs(crate::doors::door_angle(g, d)) < 0.3 || crate::doors::door_off(g, d) { return out; }
+    if out.is_some() || m::abs(g.dr[d].leaf.angle) < 0.3 || g.dr[d].leaf.off { return out; }
     let marks = squad_orders_stack_posts_leaf_in(g, &Over::but_door(g, d), d, side, men, Some(ignore));
     if marks.is_some() {
         g.m.doorway.stack_own.leaf += 1.0;

@@ -147,7 +147,7 @@ pub fn door_tools_short(g: &mut crate::game::Game, op: DoorOpId, why: &str) {
 pub fn door_tools_charge_gone(g: &mut crate::game::Game, op: DoorOpId, hands: bool) {
     let d = o!(g, op).door;
     let lead = o!(g, op).lead;
-    let line = if crate::doors::door_off(g, d) { "door's gone. charge went with it." } else { "door's open. charge is off." };
+    let line = if g.dr[d].leaf.off { "door's gone. charge went with it." } else { "door's open. charge is off." };
     say(g, lead, line);
     door_tools_short(g, op, "the charge is gone");
 }
@@ -206,7 +206,7 @@ pub fn door_tools_step(g: &mut crate::game::Game, op: DoorOpId) {
 
 /// the opening they are working stays open
 fn keep_open(g: &mut Game, d: DoorId) {
-    if crate::doors::door_quiet_t(g, d) > -1.0 && is_open(g, d) { crate::doors::door_set_quiet_t(g, d, -1.0); }
+    if g.dr[d].leaf.quiet_t > -1.0 && is_open(g, d) { g.dr[d].leaf.quiet_t = -1.0; }
 }
 
 /// the men walk to their marks; then the door is opened, or it waits on a word or a signal
@@ -366,7 +366,7 @@ fn step_toss(g: &mut Game, op: DoorOpId, cx: &Cx) {
     let side = o!(g, op).side;
     let kicked = o!(g, op).kick.map_or(false, |k| !k.t.is_nan());
     let (leaf_a, leaf_t) = (o!(g, op).leaf_a, o!(g, op).leaf_t);
-    let ang = crate::doors::door_angle(g, d);
+    let ang = g.dr[d].leaf.angle;
     o!(g, op).leaf_a = Some(ang);
     o!(g, op).leaf_t = Some(t);
     if t - o!(g, op).open_t < (if kicked { g.k.doortools.toss_after_kick } else { g.k.doortools.toss_after_open }) { return; }
@@ -432,9 +432,9 @@ fn step_toss(g: &mut Game, op: DoorOpId, cx: &Cx) {
     if turn > 0.0 && th != lead && !kicked && t - o!(g, op).open_t < g.k.doortools.toss_after_open + turn && m::abs(v3::wrap_angle(g.ch[thc].aim_yaw - v3::yaw_to(thp, fc))) > 1.2 { return; }
     if frag || o!(g, op).thr.is_none() {
         let away = -side;
-        let angle = crate::doors::door_angle(g, d);
+        let angle = g.dr[d].leaf.angle;
         let a = angle * away;
-        let turning = match leaf_t { Some(lt) if t > lt => (angle - leaf_a.unwrap()) / (t - lt), _ => crate::doors::door_vel(g, d) };
+        let turning = match leaf_t { Some(lt) if t > lt => (angle - leaf_a.unwrap()) / (t - lt), _ => g.dr[d].leaf.vel };
         let swing = turning * away;
         if !(m::abs(angle) >= g.k.doortools.frag_way_open || (a >= g.k.doortools.frag_way_ajar && swing > 0.0)) {
             let (what, tag, refund) = if frag { ("frag", "frag", DoorToolsRefundWhat::Frag) } else { ("bang", "can", DoorToolsRefundWhat::Bang) };
@@ -1199,10 +1199,10 @@ fn step_pocket(g: &mut Game, op: DoorOpId, cx: &Cx) {
         door_tools_to_step(g, op);
         return;
     } };
-    if !can_first && !crate::doors::door_off(g, d) && (thr!(g, op).shut_t.is_some() || !is_open(g, d)) {
+    if !can_first && !g.dr[d].leaf.off && (thr!(g, op).shut_t.is_some() || !is_open(g, d)) {
         let away = -side;
-        let angle = crate::doors::door_angle(g, d);
-        if !(m::abs(angle) >= g.k.doortools.frag_way_open || (angle * away >= g.k.doortools.frag_way_ajar && crate::doors::door_vel(g, d) * away > 0.0)) {
+        let angle = g.dr[d].leaf.angle;
+        if !(m::abs(angle) >= g.k.doortools.frag_way_open || (angle * away >= g.k.doortools.frag_way_ajar && g.dr[d].leaf.vel * away > 0.0)) {
             if thr!(g, op).shut_t.is_none() {
                 let locked = door_tools_locked_out(g, d, side);
                 thr!(g, op).shut_t = Some(if locked { -1e9 } else { t });

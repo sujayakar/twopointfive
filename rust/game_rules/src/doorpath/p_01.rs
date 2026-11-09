@@ -14,7 +14,7 @@ pub fn flat(a: &[f64], b: &[f64]) -> f64 {
 
 /// A door blown off its hinges: no leaf to walk round. (doorpath.ts gone)
 pub fn gone(g: &mut crate::game::Game, d: DoorId) -> bool {
-    crate::doors::door_off(g, d)
+    g.dr[d].leaf.off
 }
 
 fn cross(ox: f64, oz: f64, px: f64, pz: f64, qx: f64, qz: f64) -> f64 {
@@ -319,7 +319,7 @@ pub fn door_path_lay(g: &mut crate::game::Game, w: &mut crate::doorpath::Walk) {
             least = m::min(least, seg_seg(w.pts[j - 1], w.pts[j], l[0], l[1]));
         }
         if least < 2.5 {
-            let angle = crate::doors::door_angle(g, x);
+            let angle = g.dr[x].leaf.angle;
             w.near.push(crate::doorpath::WalkNearItem { d: x, angle });
         }
     }
@@ -331,7 +331,7 @@ fn leaf_swinging(g: &mut Game, from: V3, pod: V3) -> bool {
     while i < g.doors.list.len() {
         let x = g.doors.list[i];
         i += 1;
-        if !gone(g, x) && m::abs(crate::doors::door_vel(g, x)) > 0.15 {
+        if !gone(g, x) && m::abs(g.dr[x].leaf.vel) > 0.15 {
             let l = door_path_leaf(g, x);
             if seg_seg(from, pod, l[0], l[1]) < 2.5 {
                 return true;
@@ -662,7 +662,7 @@ fn path_is_arr(g: &Game, gd: GuardId, w: &crate::doorpath::Walk) -> bool {
 /// The leaves by his line have moved since it was laid. (doorpath.ts tick, line 342)
 fn near_moved(g: &mut Game, w: &crate::doorpath::Walk) -> bool {
     for x in w.near.iter() {
-        if gone(g, x.d) || m::abs(crate::doors::door_angle(g, x.d) - x.angle) > 0.05 {
+        if gone(g, x.d) || m::abs(g.dr[x.d].leaf.angle - x.angle) > 0.05 {
             return true;
         }
     }

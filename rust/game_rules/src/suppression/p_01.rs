@@ -488,7 +488,7 @@ fn through_a_shut_door(g: &mut crate::game::Game, from: V3, path: &[V3]) -> bool
     for &b in path {
         for i in 0..g.doors.list.len() {
             let d = g.doors.list[i];
-            if crate::doors::door_latched(g, d) && crate::guards::crosses_door(g, a, b, d).is_some() { return true; }
+            if g.dr[d].leaf.latched && crate::guards::crosses_door(g, a, b, d).is_some() { return true; }
         }
         a = b;
     }

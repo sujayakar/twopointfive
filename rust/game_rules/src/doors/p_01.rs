@@ -112,93 +112,6 @@ pub fn slab_row_bits(g: &mut crate::game::Game, id: SlabRowId) -> Option<[f64; 4
     Some([w, l, x, y])
 }
 
-/// A door's drive as its columns hold it: the handle's ID is the door's number.   (doors.ts DriveCols.constructor)
-pub fn drive_cols_new(g: &crate::game::Game, i: f64) -> DriveColsId {
-    DriveColsId(i as u32)
-}
-
-/// One column of this door.   (doors.ts DriveCols.g)
-pub fn drive_cols_g(g: &crate::game::Game, id: DriveColsId, k: f64) -> f64 {
-    ::sim::state::state_read(g.sim).doors.c[k as usize][id.0 as usize]
-}
-
-/// Write one column of this door.   (doors.ts DriveCols.p)
-pub fn drive_cols_p(g: &mut crate::game::Game, id: DriveColsId, k: f64, v: f64) {
-    ::sim::state::state(g.sim).doors.c[k as usize][id.0 as usize] = v;
-}
-
-/// (doors.ts DriveCols.who)
-pub fn drive_cols_set_who(g: &mut crate::game::Game, id: DriveColsId, v: f64) {
-    drive_cols_p(g, id, crate::sim_doorshome::dc().drive_who, v)
-}
-
-/// (doors.ts DriveCols.dir)
-pub fn drive_cols_set_dir(g: &mut crate::game::Game, id: DriveColsId, v: f64) {
-    drive_cols_p(g, id, crate::sim_doorshome::dc().drive_dir, v)
-}
-
-/// How it was driven.   (doors.ts DriveCols.kind)
-pub fn drive_cols_kind(g: &mut crate::game::Game, id: DriveColsId) -> crate::doors::DoorDriveKind {
-    let n = drive_cols_g(g, id, crate::sim_doorshome::dc().drive_kind);
-    kind_at(n)
-}
-
-/// Answers what it wrote: the skeleton's signature gives the setter the word back.   (doors.ts DriveCols.kind)
-pub fn drive_cols_set_kind(g: &mut crate::game::Game, id: DriveColsId, v: crate::doors::DoorDriveKind) -> crate::doors::DoorDriveKind {
-    drive_cols_p(g, id, crate::sim_doorshome::dc().drive_kind, place_of(v));
-    v
-}
-
-/// (doors.ts DriveCols.t)
-pub fn drive_cols_set_t(g: &mut crate::game::Game, id: DriveColsId, v: f64) {
-    drive_cols_p(g, id, crate::sim_doorshome::dc().drive_t, v)
-}
-
-/// (doors.ts DriveCols.from)
-pub fn drive_cols_set_from(g: &mut crate::game::Game, id: DriveColsId, v: f64) {
-    drive_cols_p(g, id, crate::sim_doorshome::dc().drive_from, v)
-}
-
-/// A crouched, silent or calm man's.   (doors.ts DriveCols.quiet)
-pub fn drive_cols_quiet(g: &mut crate::game::Game, id: DriveColsId) -> bool {
-    drive_cols_g(g, id, crate::sim_doorshome::dc().drive_quiet) != 0.0
-}
-
-/// (doors.ts DriveCols.quiet)
-pub fn drive_cols_set_quiet(g: &mut crate::game::Game, id: DriveColsId, v: bool) {
-    drive_cols_p(g, id, crate::sim_doorshome::dc().drive_quiet, if v { 1.0 } else { 0.0 })
-}
-
-/// (doors.ts DriveCols.side)
-pub fn drive_cols_set_side(g: &mut crate::game::Game, id: DriveColsId, v: f64) {
-    drive_cols_p(g, id, crate::sim_doorshome::dc().drive_side, v)
-}
-
-/// (doors.ts DriveCols.rate)
-pub fn drive_cols_set_rate(g: &mut crate::game::Game, id: DriveColsId, v: f64) {
-    drive_cols_p(g, id, crate::sim_doorshome::dc().drive_rate, v)
-}
-
-/// (doors.ts DriveCols.px)
-pub fn drive_cols_set_px(g: &mut crate::game::Game, id: DriveColsId, v: f64) {
-    drive_cols_p(g, id, crate::sim_doorshome::dc().drive_px, v)
-}
-
-/// (doors.ts DriveCols.pz)
-pub fn drive_cols_set_pz(g: &mut crate::game::Game, id: DriveColsId, v: f64) {
-    drive_cols_p(g, id, crate::sim_doorshome::dc().drive_pz, v)
-}
-
-/// The man it last struck, −1 nobody.   (doors.ts DriveCols.hit)
-pub fn drive_cols_hit(g: &mut crate::game::Game, id: DriveColsId) -> f64 {
-    drive_cols_g(g, id, crate::sim_doorshome::dc().drive_hit)
-}
-
-/// (doors.ts DriveCols.hit)
-pub fn drive_cols_set_hit(g: &mut crate::game::Game, id: DriveColsId, v: f64) {
-    drive_cols_p(g, id, crate::sim_doorshome::dc().drive_hit, v)
-}
-
 /// `T.rowOf(this.door)`, for a read of the row: a SlabRow is good only while its door has a slab (Door.slab answers null otherwise).
 fn row_now(g: &crate::game::Game, id: SlabRowId) -> usize {
     let r = crate::sim_slabshome::slab_store_row_of(g, id.0 as f64);
@@ -242,16 +155,6 @@ fn kind_at(n: f64) -> crate::doors::DoorDriveKind {
         2 => DoorDriveKind::Body,
         3 => DoorDriveKind::Hand,
         _ => unreachable!("a drive's kind is a place in DRIVE_KINDS"),
-    }
-}
-
-/// `DRIVE_KINDS.indexOf(v)`.
-fn place_of(v: crate::doors::DoorDriveKind) -> f64 {
-    match v {
-        DoorDriveKind::Boot => 0.0,
-        DoorDriveKind::Swing => 1.0,
-        DoorDriveKind::Body => 2.0,
-        DoorDriveKind::Hand => 3.0,
     }
 }
 

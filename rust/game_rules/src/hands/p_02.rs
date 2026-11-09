@@ -21,12 +21,12 @@ pub fn team_door_hand(g: &mut crate::game::Game, gd: GuardId) -> Option<DoorId> 
     while i < g.doors.list.len() {
         let d = g.doors.list[i];
         i += 1;
-        if crate::doors::door_off(g, d) || crate::doors::door_last_who(g, d) != id { continue; }
-        let dv = crate::doors::door_vel(g, d);
+        if g.dr[d].leaf.off || g.dr[d].leaf.last_who != id { continue; }
+        let dv = g.dr[d].leaf.vel;
         if m::abs(dv) < g.k.hands.team_vel { continue; }
-        let angle = crate::doors::door_angle(g, d);
+        let angle = g.dr[d].leaf.angle;
         let opening = dv * angle > 0.0 || m::abs(angle) < 0.05;
-        if !(crate::doors::door_closing(g, d) || (opening && slow)) { continue; }
+        if !(g.dr[d].leaf.closing || (opening && slow)) { continue; }
         if leaf_dist(g, d, angle, pos) < g.k.hands.team_reach_m { return Some(d); }
     }
     None
@@ -42,7 +42,7 @@ fn lead_at_handle(g: &Game, seat: &crate::seats::SeatRef, gd: GuardId, pos: V3) 
         let Some(k) = row.kick.as_ref() else { continue };
         if k.hand != Some(true) { continue; }
         let (door, kp) = (row.door, k.pos);
-        if !crate::doors::door_off(g, door) && m::hyp2(pos[0] - kp[0], pos[2] - kp[2]) < g.k.hands.team_pre_m { return Some(door); }
+        if !g.dr[door].leaf.off && m::hyp2(pos[0] - kp[0], pos[2] - kp[2]) < g.k.hands.team_pre_m { return Some(door); }
     }
     None
 }

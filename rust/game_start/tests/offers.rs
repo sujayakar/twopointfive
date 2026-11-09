@@ -26,7 +26,7 @@ fn keypad(seed: u32, charges: Option<f64>) -> (Play, game::ids::DoorId, [f64; 3]
     for gd in p.g.guards.clone() { if p.g.gd[gd].team != game::teams::Team::Operative && p.up(gd) { game::combat::kill_guard(&mut p.g, gd, [0.0, 0.0, 1.0], Some(true), None, None, None); } }
     p.run(1.0);
     let office = game::doors::doors_by_name(&p.g, "manager").unwrap();
-    game::doors::door_set_locked(&mut p.g, office, false);
+    p.g.dr[office].leaf.locked = false;
     let d = game::doors::doors_by_name(&p.g, "server_manager").unwrap();
     let c = p.g.dr[d].frame_centre;
     let at = [c[0] + 2.0, 0.0, c[2]];
@@ -56,7 +56,7 @@ fn a_keypad_door_is_tried_then_greyed_in_the_words_it_was_refused_in() {
         p.until(60.0, |p| p.said.iter().any(|l| l.text == words)).unwrap_or_else(|| panic!("a minute and the lead has not said {words:?}: {}", p.roll()));
         p.run(0.5);
         assert!(p.g.door_tools.ops.is_empty(), "he said it and the order goes on");
-        assert!(game::doors::door_locked(&mut p.g, d), "the door gave");
+        assert!(p.g.dr[d].leaf.locked, "the door gave");
         let t = squad_orders_target_at(&mut p.g, [c[0], 0.0, c[2]]);
         for id in ["openClear", "bangClear"] { assert_eq!(row(&mut p, id, &t).as_deref(), Some(words), "{id}: known shut now, and the row is not grey in his words"); }
         assert_eq!(squad_orders_give(&mut p.g, "openClear", Some(&t), None, None).as_deref(), Some(words), "the order is not refused in the row's words");
@@ -76,8 +76,8 @@ fn bunk(seed: u32) -> (Play, game::ids::RoomfightDefId, game::ids::DoorId) {
     let room = p.g.tab.roomfight_def[def].room.unwrap();
     let e = p.g.tab.roomfight_room[room].entries.iter().copied().find(|e| p.g.dr[e.door].def.name == "a_s").unwrap();
     let swing = game::doors::door_swing(&mut p.g, e.door);
-    game::doors::door_set_latched(&mut p.g, e.door, false);
-    game::doors::door_set_angle(&mut p.g, e.door, swing * (1.5 + 0.3 * nudge(seed, 0)));
+    p.g.dr[e.door].leaf.latched = false;
+    p.g.dr[e.door].leaf.angle = swing * (1.5 + 0.3 * nudge(seed, 0));
     assert!(game::digin::dig_in_order(&mut p.g, def, [e.at[0] + e.out[0] * 8.0, 0.0, e.at[2] + e.out[1] * 8.0], 0.0), "seed {seed}: he was not free to be told");
     (p, def, e.door)
 }
@@ -92,7 +92,7 @@ fn a_defender_stays_with_a_closing_door_and_wedges_it() {
     for s in SEEDS {
         let (mut p, _, door) = bunk(s);
         p.until(30.0, |p| wedged(p, door)).unwrap_or_else(|| panic!("seed {s}: 30 s and {} is not wedged: {:?}", p.g.dr[door].def.name, p.g.m.digin.digin_log.iter().map(|l| l.what.clone()).collect::<Vec<_>>()));
-        assert!(game::doors::door_locked(&mut p.g, door), "seed {s}: wedged and not locked");
+        assert!(p.g.dr[door].leaf.locked, "seed {s}: wedged and not locked");
     }
 }
 
@@ -113,7 +113,7 @@ fn a_defender_lets_go_of_a_leaf_a_body_has_stopped() {
         assert!(him.brace >= 0.0 && him.prop.is_some(), "seed {s}: the staging is wrong: he has no furniture to wedge it with");
         let on = p.time();
         while shut(&p) && p.time() < on + 8.0 { put(&mut p); p.frame(); }
-        assert!(!shut(&p), "seed {s}: 8 s on, he still has his hand on a leaf that a body has stopped (angle {:.2})", game::doors::door_angle(&mut p.g, door));
+        assert!(!shut(&p), "seed {s}: 8 s on, he still has his hand on a leaf that a body has stopped (angle {:.2})", p.g.dr[door].leaf.angle);
         assert!(!wedged(&p, door), "seed {s}: a door with a man in its doorway was wedged");
     }
 }

@@ -258,7 +258,7 @@ pub fn shut_or_cover(g: &mut crate::game::Game, d: RoomfightDefId, m: &mut crate
     let gd = g.tab.roomfight_def[d].gd;
     let e = entry_at(g, r.room, m.entry).unwrap();
     let door = e.door;
-    if !crate::doors::door_latched(g, door) && m::abs(crate::doors::door_angle(g, door)) > 0.05 && !crate::doors::door_lock_broken(g, door) && flat(heard_at(g, d, *m), e.at) > g.k.digin.close_m {
+    if !g.dr[door].leaf.latched && m::abs(g.dr[door].leaf.angle) > 0.05 && !g.dr[door].leaf.lock_broken && flat(heard_at(g, d, *m), e.at) > g.k.digin.close_m {
         let stand = crate::roomfight::room_fight_free_near(g, [e.at[0] - e.out[0] * 1.2, 0.0, e.at[2] - e.out[1] * 1.2]);
         if let Some(stand) = stand {
             if crate::roomfight::room_fight_in_room(g, Some(r.room), stand) && flat(pos_of(g, gd), stand) < 12.0 {
@@ -585,7 +585,7 @@ fn tick_man(g: &mut Game, d: RoomfightDefId, m: &mut Man) {
             if contact { caught(g, d, m, "hauling"); drop(g, m, Some(gd)); return; }
             if let Some(e) = e {
                 if flat(prop_at(g, p), m.rest) < 1.3 && wedgeable(g, e.door) && holds(g, e) {
-                    if !crate::doors::door_latched(g, e.door) { hand_on(g, d, m, e.door); return; }
+                    if !g.dr[e.door].leaf.latched { hand_on(g, d, m, e.door); return; }
                     let secs = g.k.digin.wedge_secs;
                     m.phase = Phase::Wedge; m.until = now + paced(g, crate::dice::Who::Def(d), secs); m.scrape_t = now;
                     return;
@@ -603,7 +603,7 @@ fn tick_man(g: &mut Game, d: RoomfightDefId, m: &mut Man) {
             let i = door_of(g, *m);
             let e = entry_at(g, k, i).unwrap();
             if contact { g.stats.digin.aborted += 1; settle(g, d, m); return; }
-            if flat(pos_of(g, gd), e.at) < 2.2 && !crate::doors::door_latched(g, e.door) && !crate::doors::door_lock_broken(g, e.door) {
+            if flat(pos_of(g, gd), e.at) < 2.2 && !g.dr[e.door].leaf.latched && !g.dr[e.door].leaf.lock_broken {
                 let text = format!("pulls {} to", door_name(g, e.door));
                 log(g, Some(gd), &text);
                 hand_on(g, d, m, e.door);
@@ -620,7 +620,7 @@ fn tick_man(g: &mut Game, d: RoomfightDefId, m: &mut Man) {
             let r = row_of(g, k);
             if flat(pos_of(g, gd), e.at) > 3.0 { log(g, Some(gd), "was moved off the door"); to_cover(g, d, m, &r, None); return; }
             if hand_waits(g, d, m, e.door) { return; }
-            if m.brace >= 0.0 && m.prop.is_some() && crate::doors::door_latched(g, e.door) && wedgeable(g, e.door) && holds(g, e) {
+            if m.brace >= 0.0 && m.prop.is_some() && g.dr[e.door].leaf.latched && wedgeable(g, e.door) && holds(g, e) {
                 let secs = g.k.digin.wedge_secs;
                 m.phase = Phase::Wedge; m.until = now + paced(g, crate::dice::Who::Def(d), secs); m.scrape_t = now;
                 return;
@@ -633,7 +633,7 @@ fn tick_man(g: &mut Game, d: RoomfightDefId, m: &mut Man) {
             if contact { caught(g, d, m, "wedging the door"); drop(g, m, Some(gd)); return; }
             let mut r = row_of(g, k);
             let good = match (e, m.prop) {
-                (Some(e), Some(p)) => g.props.props.contains(&p) && crate::doors::door_latched(g, e.door) && wedgeable(g, e.door) && holds(g, e),
+                (Some(e), Some(p)) => g.props.props.contains(&p) && g.dr[e.door].leaf.latched && wedgeable(g, e.door) && holds(g, e),
                 _ => false,
             };
             if !good { log(g, Some(gd), "the door came open under his hands"); to_cover(g, d, m, &r, None); return; }
@@ -717,14 +717,14 @@ fn set_tick(g: &mut Game, d: RoomfightDefId, m: &mut Man, k: RoomfightRoomId, co
 pub fn watch(g: &mut crate::game::Game) {
     let now = g.time;
     for d in state_of(g).wedges.keys() {                              // the wedge found the hard way: the door that would not open IS the cue
-        if state_of(g).wedges.get(d).unwrap().kicked || !crate::doors::door_lock_broken(g, d) { continue; }
+        if state_of(g).wedges.get(d).unwrap().kicked || !g.dr[d].leaf.lock_broken { continue; }
         state_of(g).wedges.get_mut(d).unwrap().kicked = true;
         g.stats.digin.kicked += 1;
         cue_door(g, d, Cue::Kick);
     }
     for d in state_of(g).wedges.keys() {                              // a hand on the handle from outside: the wedge found the quiet way
         let w = state_of(g).wedges.get(d).unwrap();
-        if w.tried || w.kicked || !crate::doors::door_locked(g, d) { continue; }
+        if w.tried || w.kicked || !g.dr[d].leaf.locked { continue; }
         let (c, key) = (g.dr[d].frame_centre, g.dr[d].key_side);
         let mut by: Option<ListenersItem> = None;
         for l in listeners(g) {
@@ -738,7 +738,7 @@ pub fn watch(g: &mut crate::game::Game) {
         state_of(g).wedges.get_mut(d).unwrap().tried = true;
         g.stats.digin.tried += 1;
         let dn = crate::orders::door_words(g, d);                     // the line NAMES its door
-        if m::abs(crate::doors::door_angle(g, d)) > 0.05 {            // a leaf standing open is no door to call wedged: the line is not said, his die is still drawn
+        if m::abs(g.dr[d].leaf.angle) > 0.05 {            // a leaf standing open is no door to call wedged: the line is not said, his die is still drawn
         } else if let Some(who) = by.gd {
             let lines = [format!("the {} is blocked. something heavy behind it.", dn), format!("the {} is wedged from inside. they know we're here.", dn)];
             let line = one_of(g, crate::dice::Who::Man(who), &lines);
@@ -787,7 +787,7 @@ pub fn watch(g: &mut crate::game::Game) {
         }
         if !r.ready_at.is_nan() { g.stats.digin.ready_first += 1; } else if busy > 0 { g.stats.digin.half_ready += 1; }
         for e in g.tab.roomfight_room[r.room].entries.clone() {
-            if state_of(g).wedges.has(e.door) && !crate::doors::door_lock_broken(g, e.door) && crate::doors::door_locked(g, e.door) { g.stats.digin.wedged_at_entry += 1; }
+            if state_of(g).wedges.has(e.door) && !g.dr[e.door].leaf.lock_broken && g.dr[e.door].leaf.locked { g.stats.digin.wedged_at_entry += 1; }
         }
         row_put(g, k, r.clone());
         let cues: Vec<&str> = r.cues.iter().map(|c| c.as_str()).collect();
@@ -911,9 +911,9 @@ pub fn dig_in_reset(g: &mut crate::game::Game) {
         let w = state_of(g).wedges.get(d).unwrap().clone();
         g.dr[d].key_side = w.key_side;
         g.dr[d].lock_id = w.lock_id;
-        if !crate::doors::door_lock_broken(g, d) {
+        if !g.dr[d].leaf.lock_broken {
             let locked = g.dr[d].def.locked == Some(true);
-            crate::doors::door_set_locked(g, d, locked);
+            g.dr[d].leaf.locked = locked;
         }
     }
     g.m.digin.states = None;

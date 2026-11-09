@@ -388,7 +388,7 @@ let (intensity, emissive) = (home::fixture_base_intensity(g, t), g.tab.sim_light
         crate::control::set_pinned(g, x, true, "the kit picture");
         chars.push((c, super::walk::faces(st, [p[0], p[1]])));
     }
-    let shut0 = door.map_or(0.0, |d| crate::doors::door_angle(g, d));
+    let shut0 = door.map_or(0.0, |d| g.dr[d].leaf.angle);
     let (rifle, pistol) = (g.pl[pl].rifle, g.pl[pl].pistol);
     g.fa[rifle].light_on = st.sam_on;
     g.fa[pistol].light_on = st.sam_on;
@@ -398,8 +398,8 @@ let (intensity, emissive) = (home::fixture_base_intensity(g, t), g.tab.sim_light
         g.pl[pl].holstered = true;
         g.ch[sam_ch].anim.crouch = 1.0;
         g.ch[sam_ch].anim.crouch_target = 1.0;
-        if let Some(d) = door { if !crate::doors::door_off(g, d) {
-            crate::doors::door_set_locked(g, d, false);
+        if let Some(d) = door { if !g.dr[d].leaf.off {
+            g.dr[d].leaf.locked = false;
             let id = g.ch[sam_ch].id;
             crate::doors::doors_crack(g, d, [slots[0][0], 0.0, slots[0][1]], id, 1.0, None, Some(QK.ajar_deg * R), Some(QK.ajar_deg * R));
         } }
@@ -534,7 +534,7 @@ let (intensity, emissive) = (home::fixture_base_intensity(g, t), g.tab.sim_light
         st.frag_m = m::max(0.6, m::min(K.sam_frag_m, reach_in - 0.5));
         st.frag_land = m::min(K.frag_land, m::max(0.3, st.frag_m - 0.5));
         st.door = door; st.walled = wall; st.width = a.width; st.reach_in = reach_in; st.hole = false; st.side = side; st.latch = latch;
-        st.leaf_shut = shut0; st.leaf_rest = door.map_or(0.0, |d| crate::doors::door_angle(g, d));
+        st.leaf_shut = shut0; st.leaf_rest = door.map_or(0.0, |d| g.dr[d].leaf.angle);
         st.sam_smoke = at_of(&plan, [0.0, -K.sam_smoke_m, 0.0]);
         st.sam_stun = at_of(&plan, [0.0, -K.sam_stun_m, 0.0]);
         st.sam_frag = at_of(&plan, [0.0, -st.frag_m, 0.0]);

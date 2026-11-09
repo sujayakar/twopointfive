@@ -152,11 +152,6 @@ pub fn lights_cap(table: u32) -> usize {
     lights::cap(table)
 }
 
-// ---- the doors' step (doors.rs: the leaves' state in the game's block, the men near them handed in, each leaf's row of the box world written)
-/// how many rows a table holds (5: the columns of the doors' part of a block)
-pub fn doors_cap(table: u32) -> usize {
-    doors::cap(table)
-}
 // ---- the furniture men shove (props.rs: each thing's state in the game's block, the men, the leaves and the door frames handed in)
 /// how many rows a table holds (0, 2 … 6), how wide a row of one is (9 … 12: a thing's facts, a man, a frame, a noise), how long the part is (13), and
 /// where column k of the part starts (100 + k)

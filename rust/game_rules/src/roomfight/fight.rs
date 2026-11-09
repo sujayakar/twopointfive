@@ -290,7 +290,7 @@ pub(super) fn hear_door(g: &mut Game, key: u32, e: crate::game::GameEvent) {
     let w = match guard_by_char_id(g, e.who) { Some(w) if g.gd[w].team == crate::teams::Team::Hostile && g.gd[w].unit.is_some() => w, _ => return };
     let (mut dr, mut dm): (Option<DoorId>, f64) = (None, 1.6);
     for x in g.doors.list.clone() { let q = flat(crate::doors::door_pos(g, x), e.pos); if q < dm { dm = q; dr = Some(x); } }
-    let dr = match dr { Some(x) if !crate::doors::door_off(g, x) => x, _ => return };
+    let dr = match dr { Some(x) if !g.dr[x].leaf.off => x, _ => return };
     let fc = g.dr[dr].frame_centre;
     let (mut free, mut post, mut post_at, mut post_turn): (i32, Option<RoomfightOpId>, Option<V3>, f64) = (0, None, None, f64::INFINITY);
     for i in 0..g.fight.ops.len() {

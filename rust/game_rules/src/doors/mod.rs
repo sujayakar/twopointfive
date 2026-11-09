@@ -8,5 +8,7 @@ pub mod p_03;
 pub use p_03::*;
 pub mod p_04;
 pub use p_04::*;
+pub mod step;
+pub use step::*;
 pub mod paint;
 pub(crate) use paint::paint_leaves;
