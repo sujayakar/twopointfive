@@ -8,10 +8,10 @@
 //   bun run tools/qa/seats-run.ts --replay f.json       play a recording in a fresh game on this build and stand; exit 1 where a word parts
 // For a harness: `standTwo` stands the game, `hands` gives the scripted players, `sample(i)` is tick i's two records (as they cross the wire: cmd.ts cmdText
 // and back), `tick(cmds)` is one step. A recording is { query, seed, level, stand, seats, dt, start, records[tick][seat] as text, words[second] }.
-// WHAT IT IS NOT: a mission played well. The hands are seats-check's (each man walks at the nearest enemy and fires, a key of the game's every second and a
+// WHAT IT IS NOT: a mission played well. The hands are scripted (each man walks at the nearest enemy and fires, a key of the game's every second and a
 // half); no playthrough mission stands two seats, and the scripted commander of tools/qa/playthrough.ts plays one seat. The mission kinds a game of two
 // takes are the room clear and the night breach (seats.ts SEAT_KINDS). A `levelFile=` word in the query does not change the floor here: pass `level`.
-// The die is the game's own (`seed`), and Math.random is seeded before the stand as seats-check does: the same call makes the same recording, to the byte.
+// The die is the game's own (`seed`), and Math.random is seeded before the stand: the same call makes the same recording, to the byte.
 import { readFileSync, writeFileSync } from 'node:fs';
 import { standUp, ROOT } from './headless.ts';
 const { sampleCmd, cmdText, cmdFromText } = await import(`${ROOT}/src/game/cmd.ts`);
