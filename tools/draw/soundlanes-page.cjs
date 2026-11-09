@@ -4,16 +4,12 @@
 //   PORT=<dev server> node tools/draw/soundlanes-page.cjs [outDir]     TAPE=<id in public/assets/replays> (wall-charge)   QUALITY=verylow   BARE_ONLY=1 (the last block alone: the pages WITHOUT the lanes)
 // NOT `?mute`: a muted page never starts the mixer, so no take could be loaded. `--mute-audio` keeps the machine silent instead.
 // Exit 0 = every line passed, 1 = a line failed, 2 = the script died.
-const { chromium } = require('/opt/node-tools/node_modules/playwright');
+const { page: pageRun, SOFTWARE } = require('../qa/page.cjs'), PAGE = pageRun({ name: 'soundlanes-page', detail: 'words', flags: [...SOFTWARE, '--mute-audio', '--autoplay-policy=no-user-gesture-required'] }), line = PAGE.check;
 const fs = require('fs'), path = require('path');
-const PORT = process.env.PORT || 5199, QUALITY = process.env.QUALITY || 'verylow', OUT = process.argv[2] || '', TAPE = process.env.TAPE || 'wall-charge', BARE_ONLY = !!process.env.BARE_ONLY;
-const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist',
-  '--disable-gpu-watchdog', '--mute-audio', '--autoplay-policy=no-user-gesture-required'];
+const QUALITY = process.env.QUALITY || 'verylow', OUT = process.argv[2] || '', TAPE = process.env.TAPE || 'wall-charge', BARE_ONLY = !!process.env.BARE_ONLY;
 // (the voices with BOTH new takes still on offer: magIn, rack and footHard gave one up to the game's table on 10-13)
 const TOYS = ['rifleSuppressed', 'magOut', 'doorBang', 'doorLatch', 'doorRattle', 'stairDoor', 'chokeLimp', 'lightBreak', 'wallDebris', 'murmur', 'heldProtest'];
 
-let failed = 0;
-const line = (ok, label, detail = '') => { if (!ok) failed++; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}${detail ? ` (${detail})` : ''}`); };
 
 (async () => {
   const index = JSON.parse(fs.readFileSync(path.join(__dirname, '../../public/assets/replays/index.json'), 'utf8'));
@@ -23,8 +19,7 @@ const line = (ok, label, detail = '') => { if (!ok) failed++; console.log(`- ${o
   if (!toys.length) throw new Error(`${TAPE} plays none of the voices with two takes`);
   const toy = toys[toys.length - 1], first = row.sounds[toy];   // (the one first heard latest: there are steps to walk before it)
 
-  const browser = await chromium.launch({ headless: true, channel: 'chromium', args: FLAGS });
-  const ctx = await browser.newContext({ viewport: { width: 1280, height: 720 } });
+  const ctx = await PAGE.context();
   // the replay by one name: where it stands, ticks of it run (the last of them drawn), a frame of the display's played
   await ctx.addInitScript(() => {
     const up = setInterval(() => { const d = window.__draw; if (!d || !d.played) return; clearInterval(up); const P = d.played;
@@ -36,16 +31,9 @@ const line = (ok, label, detail = '') => { if (!ok) failed++; console.log(`- ${o
     }, 20);
   });
   if (!BARE_ONLY) {
-  const page = await ctx.newPage();
-  const errors = [];
-  page.on('pageerror', e => errors.push(String(e)));
   // the dev server has no favicon: the browser's own ask for one is not the page's error; any other address that fails is named
-  page.on('console', m => {
-    if (m.type() !== 'error') return; const at = (m.location() || {}).url || '';
-    if (/\/favicon\.ico$/.test(at)) return;
-    errors.push(/Failed to load resource/.test(m.text()) ? `${m.text()} ${at}` : m.text());
-  });
-  await page.goto(`http://localhost:${PORT}/?paused&quality=${QUALITY}&playtape=assets/replays/${TAPE}.tape.gz&soundlanes`, { timeout: 240000 });   // (the lanes are a debug mode: only a page that asks for them has them)
+  const { page, errors, go } = await PAGE.open({ context: ctx, errors: { skipAt: /\/favicon\.ico$/ } });
+  await go(`paused&quality=${QUALITY}&playtape=assets/replays/${TAPE}.tape.gz&soundlanes`, { timeout: 240000 });   // (the lanes are a debug mode: only a page that asks for them has them)
   await page.waitForFunction(() => !!window.__ready && !!window.__draw && !!window.__tape && !!window.__sndlanes, null, { timeout: 900000 });
   const boot = await page.evaluate(async () => {
     await window.__ready; window.__testVisible = true;
@@ -343,7 +331,7 @@ const line = (ok, label, detail = '') => { if (!ok) failed++; console.log(`- ${o
   // the bar's keys are still the bar's: M opens its big map and Esc shuts THAT, a stretch being heard goes on under it
   await page.evaluate(() => { window.__sndlanes.relisten(); }); await page.keyboard.press('KeyM'); const m1 = await escAt(); await page.evaluate(() => window.__sndlanes.paint()); await page.keyboard.press('Escape'); const m2 = await escAt();
   line(m1.map && !m2.map && m1.on && m2.on, 'with the bar\'s map up, Esc shuts the map and the stretch plays on', `map ${m1.map} → ${m2.map}, heard ${m2.on}`);
-  // a field that lets go of the keyboard makes the next Esc its own for a moment; the game's own off-screen textarea on a framed page (game/input.ts, aria-label
+  // a field that lets go of the keyboard makes the next Esc its own for a moment; the game's own off-screen textarea on a framed page (rust/game_rules/src/input, aria-label
   // 'game input') is no field: focus leaving it must not cost the lanes their Esc. Staged with a textarea of each kind and an Esc let go at once, then put back
   const sink = await page.evaluate(async of => { const L = window.__sndlanes, wait = ms => new Promise(r => setTimeout(r, ms)), was = L.relistening().on;
     if (!document.querySelector('#sndcard')) L.show(of);
@@ -518,7 +506,7 @@ const line = (ok, label, detail = '') => { if (!ok) failed++; console.log(`- ${o
   }
   for (const [word, flag] of [['without the flag', ''], ['with soundlanes=0', '&soundlanes=0']]) {
     const plain = await ctx.newPage(); const perr = []; plain.on('pageerror', e => perr.push(String(e))); plain.on('console', m => { if (m.type() === 'error' && /sound lanes/.test(m.text())) perr.push(m.text()); });
-    await plain.goto(`http://localhost:${PORT}/?paused&quality=${QUALITY}&playtape=assets/replays/${TAPE}.tape.gz${flag}`, { timeout: 240000 });
+    await plain.goto(PAGE.url(`paused&quality=${QUALITY}&playtape=assets/replays/${TAPE}.tape.gz${flag}`), { timeout: 240000 });
     await plain.waitForFunction(() => !!window.__ready && !!window.__draw && !!window.__tape, null, { timeout: 900000 });
     const bare = await plain.evaluate(async () => { await window.__ready; window.__testVisible = true; const view = document.getElementById('view'), cib = window.createImageBitmap; let copies = 0; window.createImageBitmap = function (src, ...a) { if (src === view) copies++; return cib.call(this, src, ...a); };
       window.__tape.play(); for (let i = 0; i < 3; i++) { window.__runFrames(1, 0.1); await window.__engine.device.queue.onSubmittedWorkDone(); } window.__tape.pause(); await new Promise(r => setTimeout(r, 300)); window.createImageBitmap = cib;
@@ -528,7 +516,5 @@ const line = (ok, label, detail = '') => { if (!ok) failed++; console.log(`- ${o
     if (OUT && !flag) await plain.screenshot({ path: path.join(OUT, `soundlanes-${TAPE}-plain.png`), timeout: 20000 }).catch(() => {});
     await plain.close();
   }
-  await browser.close();
-  console.log(failed ? `=== soundlanes-page: ${failed} FAILED ===` : '=== soundlanes-page: ALL PASS ===');
-  process.exit(failed ? 1 : 0);
+  await PAGE.end();
 })().catch(e => { console.error(e); process.exit(2); });

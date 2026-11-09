@@ -3,6 +3,7 @@
 #![allow(clippy::too_many_arguments)]
 extern crate alloc;
 pub mod json;
+pub mod lessons;
 pub mod kit_plan;
 pub mod kit_set;
 pub mod kit_stage;
@@ -17,6 +18,13 @@ pub mod files;
 pub mod scene;
 #[cfg(feature = "std")]
 pub mod play;
+#[cfg(feature = "std")]
+pub mod hand;
 pub mod block;
+pub mod hands_off;
+pub mod moment;
+pub mod owes;
+pub mod parts;
+pub mod player;
 pub mod read;
 pub mod records;

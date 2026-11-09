@@ -18,5 +18,3 @@ pub mod p_07;
 pub use p_07::*;
 pub mod p_08;
 pub use p_08::*;
-pub mod b_tap;
-pub use b_tap::*;

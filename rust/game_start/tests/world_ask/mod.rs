@@ -3,6 +3,7 @@
 #![allow(dead_code)]
 use game::ids::*;
 use game_start::json::{self, Json};
+use game_start::moment::Moment;
 use game_start::play::{Opts, Play};
 use game_start::scene::Scene;
 
@@ -72,15 +73,15 @@ impl WorldAsk for Play {
     fn clack_at(&mut self, at: [f64; 2]) { game::launcher::clack(&mut self.g, [at[0], 0.0, at[1]], None); }
     fn knock_at(&mut self, at: [f64; 2]) {
         let (time, level, serial) = (self.g.time, self.g.k.ring.clack_noise, self.g.serial());
-        self.g.events.push(game::game::GameEvent { kind: game::director::EventKind::Prop, pos: [at[0], 0.0, at[1]], time, loud: false, level: Some(level), who: Some(0.0), lure: None, serial, ..game::game::GameEvent::zeroed() });
+        self.g.events.push(game::game::GameEvent { kind: game::director::EventKind::Prop, pos: [at[0], 0.0, at[1]], time, loud: false, level: Some(level), who: Some(0.0), lure: None, serial, ..game::game::GameEvent::default() });
     }
     fn footfall_at(&mut self, at: [f64; 2], level: f64) {
         let (time, serial) = (self.g.time, self.g.serial());
-        self.g.events.push(game::game::GameEvent { kind: game::director::EventKind::Step, pos: [at[0], 0.0, at[1]], time, loud: false, level: Some(level), serial, ..game::game::GameEvent::zeroed() });
+        self.g.events.push(game::game::GameEvent { kind: game::director::EventKind::Step, pos: [at[0], 0.0, at[1]], time, loud: false, level: Some(level), serial, ..game::game::GameEvent::default() });
     }
     fn slam_at(&mut self, at: [f64; 2]) {
         let (time, serial) = (self.g.time, self.g.serial());
-        self.g.events.push(game::game::GameEvent { kind: game::director::EventKind::Door, pos: [at[0], 0.0, at[1]], time, loud: true, level: Some(1.0), who: Some(1.0), serial, ..game::game::GameEvent::zeroed() });
+        self.g.events.push(game::game::GameEvent { kind: game::director::EventKind::Door, pos: [at[0], 0.0, at[1]], time, loud: true, level: Some(1.0), who: Some(1.0), serial, ..game::game::GameEvent::default() });
     }
     fn held(&self, gd: GuardId) -> Option<Held> {
         game::attention::attention_of(&self.g, gd).map(|h| Held { at: [h.at[0], h.at[2]], kind: h.kind, mode: h.mode, at_it: h.until >= 0.0, nth: h.nth })
@@ -148,7 +149,7 @@ impl GlassAsk for Play {
     }
     fn burst(&mut self, at: [f64; 2]) -> game::frag::BlastReport {
         let who = self.g.ch[self.g.pl[self.g.player].ch].id;
-        game::frag::blast(&mut self.g, [at[0], 0.05, at[1]], &game::frag::BlastSpec { who, name: Some(String::from("40 mm grenade")), ..game::frag::BlastSpec::zeroed() })
+        game::frag::blast(&mut self.g, [at[0], 0.05, at[1]], &game::frag::BlastSpec { who, name: Some(String::from("40 mm grenade")), ..game::frag::BlastSpec::default() })
     }
     fn hit_of(&self, r: &game::frag::BlastReport, gd: GuardId) -> Option<game::frag::BlastHit> { let id = self.id_of(gd); r.hits.iter().find(|h| h.id == id).cloned() }
     fn reeled_at(&self, gd: GuardId) -> f64 { self.g.gd[gd].stagger_until }
@@ -185,7 +186,7 @@ pub trait WallAsk {
 impl WallAsk for Play {
     fn burst_at(&mut self, at: [f64; 3]) -> game::frag::BlastReport {
         let (who, lift) = (self.g.ch[self.g.pl[self.g.player].ch].id, self.g.k.frag.lift);
-        game::frag::blast(&mut self.g, [at[0], at[1] - lift, at[2]], &game::frag::BlastSpec { who, name: Some(String::from("40 mm grenade")), ..game::frag::BlastSpec::zeroed() })
+        game::frag::blast(&mut self.g, [at[0], at[1] - lift, at[2]], &game::frag::BlastSpec { who, name: Some(String::from("40 mm grenade")), ..game::frag::BlastSpec::default() })
     }
     fn body_walks(&mut self, from: [f64; 2], to: [f64; 2]) -> [f64; 2] {
         let mut p = [from[0], 0.0, from[1]];
@@ -406,8 +407,6 @@ impl YardAsk for Play {
 const CROUCH_KEY: &str = "KeyC";
 
 /// Furniture, and a game kept
-#[derive(Clone)]
-pub struct Kept { g: Box<game::game::Game>, block: Vec<u8> }
 
 pub trait FurnAsk {
     /// a blast at a point, by Sam's hand, as a wall charge is told it: `power` Some(0) is one of no strength for the wall. How many walls it holed.
@@ -423,9 +422,9 @@ pub trait FurnAsk {
     /// every static's flags, every prop's pose and presence, the walk grid: one line a part, to compare
     fn level_as_it_stands(&self) -> [String; 3];
     /// the game kept whole, as a host keeps it
-    fn keep(&self) -> Kept;
+    fn keep(&self) -> Moment;
     /// and put back
-    fn put_back(&mut self, k: &Kept);
+    fn put_back(&mut self, k: &Moment);
 }
 
 impl FurnAsk for Play {
@@ -455,13 +454,8 @@ impl FurnAsk for Play {
         let nav: u64 = self.g.col.nav.blocked.iter().fold(7u64, |h, b| h.wrapping_mul(31).wrapping_add(*b as u64));
         [flags.join(","), props.join(" "), format!("{nav}")]
     }
-    fn keep(&self) -> Kept { Kept { g: self.g.clone(), block: game_start::block::bytes(self.g.sim).to_vec() } }
-    fn put_back(&mut self, k: &Kept) {
-        unsafe { std::ptr::copy_nonoverlapping(k.block.as_ptr(), sim::state::addr(self.g.sim) as *mut u8, k.block.len()); }
-        self.g = k.g.clone();
-        game::scene_collision::unstand(&mut self.g);
-        game::scene_collision::stands(&mut self.g);
-    }
+    fn keep(&self) -> Moment { Moment::of(&self.g) }
+    fn put_back(&mut self, k: &Moment) { self.g = k.stands(self.g.sim); }
 }
 
 /// The net
@@ -574,7 +568,7 @@ impl RescueAsk for Play {
     fn a_loud_round_at_the_room(&mut self) {
         let m = game::rescue::rescue_cast(&self.g).into_iter().find(|c| c.in_room).expect("a man in the room").gd;
         let (at, time, serial) = (self.at(m), self.g.time, self.g.serial());
-        self.g.events.push(game::game::GameEvent { kind: game::director::EventKind::Shot, pos: [at[0], 0.0, at[1]], time, loud: true, level: Some(1.0), who: Some(game::consts::PLAYER_ID), serial, ..game::game::GameEvent::zeroed() });
+        self.g.events.push(game::game::GameEvent { kind: game::director::EventKind::Shot, pos: [at[0], 0.0, at[1]], time, loud: true, level: Some(1.0), who: Some(game::consts::PLAYER_ID), serial, ..game::game::GameEvent::default() });
     }
     fn rescue_result(&self) -> Option<(bool, String)> { self.g.rescue.result.as_ref().map(|r| (r.state == game::rescue::RescueResultState::Rescued, r.why.clone())) }
 }
@@ -622,7 +616,7 @@ impl ReviewAsk for Play {
     fn lamp_shot_dark(&mut self, t: FixtureId) { game::game::game_light_event(&mut self.g, t, Some(game::game::GameLightEventCause::Shot), None); }
     fn lamp_disabled(&self, t: FixtureId) -> bool { game::sim_lightshome::fixture_disabled_until(&self.g, t) > self.g.time }
     fn thing(&mut self, kind: game::throwables::ItemKind, fired: Option<bool>, emit: Option<f64>) -> ItemId {
-        let o = game::throwables::ThrowablesSpawnOpts { fired, emit_t: emit, ..game::throwables::ThrowablesSpawnOpts::zeroed() };
+        let o = game::throwables::ThrowablesSpawnOpts { fired, emit_t: emit, ..game::throwables::ThrowablesSpawnOpts::default() };
         game::throwables::throwables_spawn(&mut self.g, kind, [5.0, 0.5, 5.0], [0.0; 3], Some(o))
     }
     fn things(&self) -> Vec<ItemId> { self.g.items.items.clone() }

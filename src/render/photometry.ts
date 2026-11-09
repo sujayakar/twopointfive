@@ -15,7 +15,7 @@
 // THE RULE. What an hour's picture stands for is in HOUR_SUN_LUX; from it the hour's EXPOSURE (hourExposure: 1 at night, 1/5,050 at midday). Every other source
 // is drawn at   min(as authored, its real strength × the hour's exposure):   a fixture's real strength is its authored one, a hand light's and a headlamp's are
 // TRUE_CD, a flash's FLASH_TRUE × its authored one, a glowing face's EMISSIVE_TRUE × its authored one, the light that stands for a glowing face FACE_TRUE × its authored one. The `min` is the night's hold: nothing is drawn brighter
-// than the night draws it. The weather's cloud dims the sun and the sky under an hour's one exposure (game/hours.ts), so under rain at noon the lamps count for
+// than the night draws it. The weather's cloud dims the sun and the sky under an hour's one exposure (rust/game_rules/src/hours), so under rain at noon the lamps count for
 // more by themselves.
 //
 // Applied to what the GPU is handed (render/lights.ts upload, the frame's emissive scale) and never written to a light. The rules' own light takes the same
@@ -43,7 +43,7 @@ export const EMISSIVE_TRUE = 1000;
 export const FACE_TRUE = 50;
 
 /** the hour's exposure against the night's (1): what a real illuminance is multiplied by to be the number the renderer draws at that hour.
- *  `sunAuthored` = the hour's own `sun.intensity` (game/hours.ts HOURS, before any cloud). An hour this table does not know is a night. */
+ *  `sunAuthored` = the hour's own `sun.intensity` (rust/game_rules/src/hours HOURS, before any cloud). An hour this table does not know is a night. */
 export function hourExposure(id: string, sunAuthored: number): number {
   const lux = HOUR_SUN_LUX[id]; return lux && sunAuthored > 0 ? Math.min(1, sunAuthored * LUX_PER_UNIT / lux) : 1;
 }
@@ -56,11 +56,11 @@ const VEHICLE = /^(van|gun_truck|truck|pickup|lorry|jeep|car)\w*_lamp/;
 export function lightClass(l: LightLike): LightClass {
   if (l.class !== undefined) return l.class;
   if (l.kind === 2 || l.transient || l.group === 'devices' || l.group === 'sky') return 'none';   // (sky: the look page's opening lights, scene/openings.ts: the hour's own light, come in at a window)
-  // A LIGHT THAT STANDS FOR A GLOWING FACE (kind 3, the one-sided panel: a ceiling panel's, a screen's, a lit sign's marking; game.ts makes each as the face's
+  // A LIGHT THAT STANDS FOR A GLOWING FACE (kind 3, the one-sided panel: a ceiling panel's, a screen's, a lit sign's marking; rust/game_rules/src/game makes each as the face's
   // radiance × its area) IS A CLASS OF ITS OWN: the night holds it down like a torch, about FACE_TRUE under the real thing. As a 'fixture' (authored = real) a
   // vending machine's front was drawn in full at dusk and lit nothing, 1/69 of 7 candela: no light on the ground before it and none in smoke crossing it.
   if (l.kind === 3) return 'face';
-  if (l.ttl >= 0 || l.group === 'tracer' || l.steady) return 'flash';   // (steady: a light game/fire.ts flickers, a fire's own: held down at night as a flash is)
+  if (l.ttl >= 0 || l.group === 'tracer' || l.steady) return 'flash';   // (steady: a light rust/game_rules/src/fire flickers, a fire's own: held down at night as a flash is)
   if (l.card || l.group === 'flashlights') return 'hand';
   return VEHICLE.test(l.name) ? 'vehicle' : 'fixture';
 }

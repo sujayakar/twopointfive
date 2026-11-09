@@ -3,20 +3,19 @@
 // The module is bundled by itself and put on an empty page: no game, no server, no GPU. What it holds: the line counts as SEEN only after two seconds in the
 // window with nothing over it; a line under another element, or scrolled out of the window, never does; the title's own way still wants the live title.
 // EXIT 0 all pass · 1 a failure.
-const { chromium } = require('playwright');
+const PAGE = require('./page.cjs').page({ name: 'cloudnote-page', flags: [] }), { check } = PAGE;
 const { execFileSync } = require('node:child_process');
 const path = require('node:path');
 const ROOT = path.resolve(__dirname, '../..');
-let fails = 0; const check = (ok, text) => { console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${text}`); if (!ok) fails++; };
 (async () => {
   const js = execFileSync('bun', ['build', path.join(ROOT, 'src/ui/cloudnote.ts'), '--target', 'browser'], { encoding: 'utf8', maxBuffer: 1 << 24 });
-  const browser = await chromium.launch(); const page = await browser.newPage({ viewport: { width: 900, height: 600 } });
+  const { page } = await PAGE.open({ size: [900, 600], errors: { console: false } });
   await page.setContent('<body style="margin:0"><div id="a"></div><div id="b" style="position:relative"></div><div style="height:2000px"></div><div id="c"></div><div id="d"></div></body>');
   // (the bundle is a module: its export line is dropped and the one function is put on the window)
   await page.addScriptTag({ type: 'module', content: js.replace(/export\s*\{[^}]*\};?/g, '') + '\n;window.CN = { cloudNote };' });
   await page.waitForFunction(() => !!window.CN, null, { timeout: 5000 }).catch(() => {});
   const has = await page.evaluate(() => typeof window.CN?.cloudNote === 'function');
-  if (!has) { console.log('- FAIL — the module did not load on the page'); await browser.close(); process.exit(1); }
+  if (!has) { check(false, 'the module did not load on the page'); await PAGE.end(''); }
   await page.evaluate(() => {
     window.T = { a: 0, b: 0, c: 0, d: 0 }; const t0 = performance.now(), at = k => () => { window.T[k] = performance.now() - t0; };
     CN.cloudNote(document.getElementById('a'), undefined, { told: at('a') });                               // in the window, on top
@@ -37,6 +36,5 @@ let fails = 0; const check = (ok, text) => { console.log(`- ${ok ? 'PASS' : 'FAI
     window.__cloud = { share: true, told() {} }; CN.cloudNote(plain, () => {}); window.__cloud = { share: true, local: true, told() {} }; CN.cloudNote(own, () => {});
     return { plain: !!plain.querySelector('.cloudnote'), own: !!own.querySelector('.cloudnote') }; });
   check(loc.plain && !loc.own, 'a build whose backend is on this machine shows no line; any other does');
-  await browser.close();
-  console.log(fails ? `\n${fails} FAILED` : '\nall pass'); process.exit(fails ? 1 : 0);
+  await PAGE.end(PAGE.fails ? `\n${PAGE.fails} FAILED` : '\nall pass');
 })().catch(e => { console.error(e); process.exit(1); });

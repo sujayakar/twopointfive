@@ -819,7 +819,7 @@ mod tests {
 
     #[test]
     fn rows_compare_as_their_json_does() {
-        let a = crate::knobs::page_pressure();
+        let a = crate::knobs::PressureK::page();
         let mut b = a;
         assert!(pressure_same(&a, &b));
         b.sweep_pair_m = -0.0;
@@ -834,7 +834,7 @@ mod tests {
         let mut d = a;
         d.last_man_secs[1] += 1.0;
         assert!(!pressure_same(&a, &d));
-        let e = crate::knobs::page_digin();
+        let e = crate::knobs::DiginK::page();
         let mut f = e;
         assert!(digin_same(&e, &f));
         f.on = !f.on;
@@ -855,7 +855,7 @@ mod tests {
 
     #[test]
     fn same_is_false_across_arms_and_reads_each_arm() {
-        let (p, d) = (crate::knobs::page_pressure(), crate::knobs::page_digin());
+        let (p, d) = (crate::knobs::PressureK::page(), crate::knobs::DiginK::page());
         let pa = SameOf::Pressure { table: p };
         assert!(same(&pa, &SameOf::Pressure { table: p }));
         assert!(!same(&pa, &SameOf::Digin { table: d }));
@@ -879,7 +879,7 @@ mod tests {
         for l in now.iter() {
             for r in &l.rungs {
                 assert!(is_rung(&mut g, l.key, Some(r.id.as_str())));
-                let mut s = DifficultyModSET::zeroed();
+                let mut s = DifficultyModSET::default();
                 set_put(&mut s, l.key, &r.id);
                 assert_eq!(set_word(&s, l.key), Some(r.id.as_str()));
             }

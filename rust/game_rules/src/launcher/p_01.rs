@@ -20,7 +20,7 @@ fn play_rate(g: &mut Game, name: &str, at: V3, gain: f64, rate: f64) {
 /// A 'prop' noise in the room's business, dealt its serial here at its birth.
 fn prop_event(g: &mut Game, pos: V3, level: f64, who: f64, lure: Option<bool>) {
     let (time, serial) = (g.time, g.serial());
-    g.events.push(crate::game::GameEvent { kind: crate::director::EventKind::Prop, pos, time, loud: false, level: Some(level), who: Some(who), lure, serial, ..crate::game::GameEvent::zeroed() });
+    g.events.push(crate::game::GameEvent { kind: crate::director::EventKind::Prop, pos, time, loud: false, level: Some(level), who: Some(who), lure, serial, ..crate::game::GameEvent::default() });
 }
 
 /// The launch velocity to pass through `target`: dead at it, raised by however far a simulated flight falls short, solveIters times. (launcher.ts launchVel)
@@ -265,7 +265,7 @@ pub fn spend(g: &mut crate::game::Game, r: crate::launcher::Ring, at: V3, vel: V
     let sp = v3::len(vel);
     if sp > g.k.ring.spent_speed_max { vel = v3::scale(vel, g.k.ring.spent_speed_max / sp); }
     let who = g.ch[r.shooter].id;
-    let it = crate::throwables::throwables_spawn(g, crate::throwables::ItemKind::Ring, v3::copy(at), vel, Some(crate::throwables::ThrowablesSpawnOpts { who: Some(who), heading: Some(v3::yaw_of(vel)), ..crate::throwables::ThrowablesSpawnOpts::zeroed() }));
+    let it = crate::throwables::throwables_spawn(g, crate::throwables::ItemKind::Ring, v3::copy(at), vel, Some(crate::throwables::ThrowablesSpawnOpts { who: Some(who), heading: Some(v3::yaw_of(vel)), ..crate::throwables::ThrowablesSpawnOpts::default() }));
     g.tab.item[it].on_bounce = Some(crate::throwables::ItemBounce::RingSkitter);
 }
 

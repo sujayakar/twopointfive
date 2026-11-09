@@ -97,7 +97,7 @@ pub fn on_first_bare<R>(g: &mut crate::game::Game, f: &mut dyn FnMut(&mut crate:
 /// EVERY SEAT'S SET IN ITS OWN ROW for the length of the call, that of the seat that stands on Game too (Game's fields of it are blank meanwhile): for who walks the sets.
 pub fn parked<R>(g: &mut crate::game::Game, f: &mut dyn FnMut(&mut crate::game::Game) -> R) -> R {
     let on = g.seat;
-    let mut set = SeatSet::zeroed();
+    let mut set = SeatSet::default();
     swap_set(g, &mut set);
     g.tab.cmd_seat[on].own = Some(set);
     let r = f(g);

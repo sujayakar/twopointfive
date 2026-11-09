@@ -336,10 +336,10 @@ pub fn cues_reset(g: &mut crate::game::Game) {
     g.cues.said.clear();
     g.cues.class_t.clear();
     g.cues.squad_t.clear();
-    g.cues.kind_t = CuesKindT::zeroed();
+    g.cues.kind_t = CuesKindT::default();
     g.cues.squelch_due = false;
     g.cues.stats = new_stats();
-    g.cues.kinds = CuesKinds::zeroed();
+    g.cues.kinds = CuesKinds::default();
     g.cues.log.clear();
 }
 
@@ -446,7 +446,7 @@ pub fn cues_heard(g: &mut crate::game::Game, gd: GuardId, text: &str) {
 }
 
 /// A defender's line that is telling only: the strip's row, and this file's own bubble (never Guard.bubble).   (cues.ts Cues.net)
-#[doc(hidden)] pub fn cues_net__body(g: &mut crate::game::Game, gd: GuardId, text: &str, cls: f64) {
+pub fn cues_net(g: &mut crate::game::Game, gd: GuardId, text: &str, cls: f64) {
     let t = g.time;
     g.cues.bubbles.set(gd, Bubble { text: String::from(text), t, dur: crate::guards::bubble_secs(text), radio: true });
     if !crate::roomfight::fight_live(g) { return; }
@@ -591,7 +591,7 @@ pub fn bubbles_view(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<
         let m = &g.gd[gd];
         if !up(b.t, b.dur) || m.state == crate::game::GuardState::Dead { continue; }
         if m.civ.map_or(false, |c| g.cv[c].state == crate::civilians::CivState::Gone) { continue; }
-        let hidden = crate::fogofwar::fog_of_war_hidden__body(g, gd);
+        let hidden = crate::fogofwar::fog_of_war_hidden(g, gd);
         let place = if !crate::orders::squad_orders_mine(g, seat, gd) {
             if hidden { continue; }
             BubblePlace::Over
@@ -888,15 +888,6 @@ pub fn radio_rows(g: &crate::game::Game) -> Vec<crate::view::RadioRow> {
     out
 }
 
-
-#[doc(hidden)] pub fn cues_net(g: &mut crate::game::Game, gd: GuardId, text: &str, cls: f64) {
-    use crate::io::Io;
-    if g.taps & (1u64 << 15) == 0 { return cues_net__body(g, gd, text, cls); }
-    let mut o = crate::io::W::new(); gd.w(&mut o); alloc::string::String::from(text).w(&mut o); cls.w(&mut o);
-    cues_net__body(g, gd, text, cls);
-    crate::out_events::push_tap(g, 15, &o.b, &[]);
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1093,11 +1084,11 @@ mod tests {
 
     #[test]
     fn a_kinds_clock_and_tally_are_its_own() {
-        let mut v = CuesKindT::zeroed();
+        let mut v = CuesKindT::default();
         *kind_t_of(&mut v, CueKind::StayOurs) = Some(1.0);
         assert_eq!(v.stay, None);
         assert_eq!(v.stay_ours, Some(1.0));
-        let mut k = CuesKinds::zeroed();
+        let mut k = CuesKinds::default();
         *kinds_of(&mut k, CueKind::Surprised) = Some(2.0);
         assert_eq!(k.surprised, Some(2.0));
         assert_eq!(k.squad_quiet, None);

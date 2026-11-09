@@ -1,6 +1,6 @@
-// THE ENGINE REPLAY'S MAP (engineplay.ts): the floor as the replay file drew it (format.ts ReplayMap) with the men and doors of the game THAT IS PLAYING laid on it —
+// THE ENGINE REPLAY'S MAP: the floor as the replay file drew it (format.ts ReplayMap) with the men and doors of the game THAT IS PLAYING laid on it —
 // the corner minimap and the large map it opens into are this one drawing at two sizes. Pure 2D: it is handed plain numbers and a canvas, reads nothing of the game
-// and writes nothing anywhere. Colours and the plan's sense (X = x, Y = z) are the 2D viewer's (viewer.ts drawMap), so the two maps read as one.
+// and writes nothing anywhere. The plan's sense: X = x, Y = z.
 import type { ReplayMap } from './format';
 
 export interface MapMan { x: number; z: number; /** radians, 0 = +z */ aim: number; team: string; kind: 'player' | 'man' | 'civ'; down: boolean; name: string; ring: string | null }
@@ -95,27 +95,4 @@ export function drawScene(ctx: CanvasRenderingContext2D, dpr: number, S: MapScen
       ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(10,11,13,0.85)'; ctx.strokeText(m.name, x, y); ctx.fillStyle = mapColour(m); ctx.fillText(m.name, x, y);
     }
   }
-}
-
-// ---------------------------------------------------------------------------------------------------------------------------- the timeline's marks
-export interface LineMark { /** 0‥1 along the timeline */ at: number; kind: 'shot' | 'guardShot' | 'blast' | 'other' | 'order' | 'mark' | 'error' }
-/** the strip under the playhead: what happened when, one stroke each (the 2D viewer's colours) */
-export function drawLine(ctx: CanvasRenderingContext2D, W: number, H: number, dpr: number, marks: LineMark[], kept?: [number, number] | null): void {
-  ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
-  if (kept !== undefined) {
-    // `kept` = the stretch (0‥1) the marks can speak for: solid there, hatched where nothing was kept (null = nowhere)
-    const a = kept ? Math.round(Math.min(kept[0], kept[1]) * W) : 0, b = kept ? Math.round(Math.max(kept[0], kept[1]) * W) : 0;
-    ctx.fillStyle = 'rgba(233,226,214,.1)'; ctx.fillRect(a, 0, b - a, H);
-    ctx.save(); ctx.beginPath(); ctx.rect(0, 0, a, H); ctx.rect(b, 0, W - b, H); ctx.clip();
-    ctx.strokeStyle = 'rgba(233,226,214,.13)'; ctx.lineWidth = 1; ctx.beginPath(); for (let x = -H; x < W; x += 7) { ctx.moveTo(x, H); ctx.lineTo(x + H, 0); } ctx.stroke(); ctx.restore();
-  }
-  for (const m of marks) {
-    const x = Math.round(m.at * (W - 1)) + 0.5;
-    if (m.kind === 'order') { ctx.fillStyle = '#f2cf6b'; ctx.fillRect(x - 1, 2, 2, 3); continue; }
-    const tall = m.kind === 'blast' || m.kind === 'mark' || m.kind === 'error';
-    ctx.strokeStyle = m.kind === 'error' ? '#ff6b6b' : m.kind === 'mark' ? '#ffffff' : m.kind === 'blast' ? '#ff9c3a' : m.kind === 'guardShot' ? '#ff7a6a' : m.kind === 'shot' ? '#ffeca0' : '#3f6a8f';
-    ctx.globalAlpha = tall ? 0.95 : 0.7; ctx.lineWidth = tall ? 1.5 : 1;
-    ctx.beginPath(); ctx.moveTo(x, tall ? 3 : H * 0.42); ctx.lineTo(x, H - 3); ctx.stroke();
-  }
-  ctx.globalAlpha = 1;
 }

@@ -1,7 +1,7 @@
 // THE LEDGER — the tutorial's quiet mission: one line through a money changer's shop on a snowing night, alone, and each stretch of it is ONE tool and one
 // small thrill. The level is made for this mission and for nothing else (no shared yard under it): a shop off a bazaar street, its forecourt behind a street
 // wall, a lane along its side, a back court where a man keeps a fire in a drum, and the town standing close round it — shuttered fronts and stalls on the
-// street, the neighbours' upper windows over the back wall. Snow lies on all of it (the level's own weather: src/game/weatherKinds.ts SNOW_LEVELS).
+// street, the neighbours' upper windows over the back wall. Snow lies on all of it (the level's own weather: rust/game_rules/src/weather_kinds SNOW_LEVELS).
 //
 //      x 0      8      12.5      16.5    20        25.5        30.5 32        40
 //   z 2 ┌───────┬──────────── the neighbours' backs, a lit window ────────────┬────────┐
@@ -19,7 +19,7 @@
 //       │           stalls against the wall · the alley behind (ruts, a lantern)    │
 //  z 28 └────────────────────────────────────────────────────────────────────────────┘
 //
-// THE LINE (scenarios.lesson; tools/qa/lessons/tut-quiet.ts plays it by input alone):
+// THE LINE (scenarios.lesson):
 //   the lane        light: out of the porch lamp, round the shop's corner, along the trodden path to the mark.
 //   the long wall   sound, then hands: a whistle at the mark and the player steps behind the long wall. The back court's man leaves his fire and comes the
 //                   long way round, along the walk on the wall's other side, to where the sound was, and stands looking at it with his back to the wall's
@@ -49,22 +49,22 @@
 //                   are on him: nothing on the kit strip that no line of this mission uses.
 //   WHO             the hall's man. Of the three he is the one a second pair of hands was spent on (the first man is grabbed for the code, the clerk is
 //                   taken at the box), and he is the one a wall hides the player from: the shot is let go from the store, at his back.
-//   WHY NOT HANDS   the chest beam is 0.45 m behind his heels. A man on his feet behind him stands in it (devices.ts: the player's own body breaks a
+//   WHY NOT HANDS   the chest beam is 0.45 m behind his heels. A man on his feet behind him stands in it (rust/game_rules/src/devices: the player's own body breaks a
 //                   beam, at any capsule). The frame keeps the game from walking him into it: from `nook` to the beam the trigger and the held
-//                   left click that stalks a man (`stalk`, rails.ts gate) are not his, nor the whistle, which would bring the man round to the
+//                   left click that stalks a man (`stalk`, rust/game_rules/src/rails gate) are not his, nor the whistle, which would bring the man round to the
 //                   store, nor the right button until the shot's own line. The interaction key stays his through the store. (The first build shut the held click by taking that key
 //                   from the first line inside: a tap at the open back door then did nothing and said nothing.) The grab's own row is still his
 //                   close behind the man, and the hand that takes him breaks the beam: the room says no, not a dead key.
 //   WHERE FROM      the dark corner he is sent to has no line to the man: the doorway's own wall is in the way. A round let go from there does not
-//                   reach him (on the real page one left the tube and he turned to the knock; in the harness on the page's stand none left it, on the
-//                   frozen stand one did). So the corner is where the rifle comes out and the load is swapped, and a line of its own then puts a
+//                   reach him (on the real page one left the tube and he turned to the knock).
+//                   So the corner is where the rifle comes out and the load is swapped, and a line of its own then puts a
 //                   mark on the floor where the shot can be made: on the doorway's line, 2.6 m behind his back. That floor is in the doorway's light
 //                   (the hall's bulb through it); the dark floor with a line to him is a strip under half a metre wide along the light's edge, too thin
 //                   to send a player to. Nobody is looking that way: the man has his back to it and a wall stands between it and the table.
 //   THE STEPS       inside, and at once the line that names the laser and sends him to the dark corner · rifle (2) · the card, then the swap (the frame's action `load`: the setup's load row alone, the right button still shut) · the
 //                   step out to the mark · the shot (the right button held, the arc, let go) · the rifle put away (the hands' own key: the next
 //                   man is taken by hand).
-//   NEVER STUCK     five sponge rounds, and a launcher with none left passes the shot's line (lesson.ts `ringsOut`): the lesson goes on with him
+//   NEVER STUCK     five sponge rounds, and a launcher with none left passes the shot's line (rust/game_rules/src/lesson `ringsOut`): the lesson goes on with him
 //                   on his feet, and what that costs is the mission's to say, not a line that can no longer be done.
 //
 // THREE MEN, each with one beat. A fourth (inside the front door) was taken out: seven metres from the box through an open doorway he heard the clerk go
@@ -81,11 +81,11 @@
 // every mark the lesson and its scripted player name (TQ). What is new is the place they stand in.
 import type { Vec3 } from '../../src/math/vec';
 import type { IssueData, LessonData, LevelScenarios, QuietData, Rect } from '../../src/scene/scenarios';
-import type { DeviceDef, Level, LevelDoorDef } from '../../src/scene/level';
-import type { SurfacesData } from '../../src/scene/levelData';
+import type { DeviceDef, Level, LevelDoorDef } from './lib/level';
+import type { SurfacesData } from './lib/levelData';
 import { BoxFlag } from '../../src/scene/boxes';
-import { officeKit, normalize3 as norm, type GeneratorTrace } from '../../src/scene/officeGen';
-import { gwotKit, gwotOfOffice, GWOT_MATERIALS, GW_SHELL, type GwotMat, type WallKind } from '../../src/scene/gwotKit';
+import { officeKit, normalize3 as norm, type GeneratorTrace } from './lib/officeGen';
+import { gwotKit, gwotOfOffice, GWOT_MATERIALS, GW_SHELL, type GwotMat, type WallKind } from './lib/gwotKit';
 import { SNOW_PALETTE, SNOW_FINISH, SNOW_MATERIALS, type SnowMat } from '../../src/scene/gwotPalette';
 import { WORLD } from '../../src/scene/world';
 import { livedTail } from './livedKit';
@@ -97,7 +97,7 @@ export const MATERIALS = { ...GWOT_MATERIALS, ...SNOW_MATERIALS };
 
 const HALF = Math.PI / 2;
 type P3 = [number, number, number];
-/** the places the scripted player and the lesson name (tools/qa/lessons/tut-quiet.ts imports these, so a moved wall moves the script) */
+/** the places the lesson names */
 /** well down the lane, past the first dark: being here passes the step `dark` whatever the light meter reads */
 const DEEP: [number, number, number] = [17.6, 0, 17.7];
 export const TQ = {
@@ -109,7 +109,7 @@ export const TQ = {
                                           // was: with the mark on his own line that is straight ahead, down the lane (0.3 m to one side of his line, as it
                                           // first stood, it was beside him when he stopped: he stood with his light on the shop's wall a step away)
   hide: [23.9, 0, 19.05] as P3,           // behind the long wall, on the lane's side of it: the man who comes stops on the other side of the cross wall
-  // THE MAN WHO COMES TO THE WHISTLE DOES NOT WALK TO IT (the level's script stages him: levels/tut-quiet.script.ts). He stops in the back strip a stride
+  // THE MAN WHO COMES TO THE WHISTLE DOES NOT WALK TO IT (the level's script stages him: rust/game_rules/src/script_tut_quiet). He stops in the back strip a stride
   // short of the cross wall's gap and puts his light through it, down the walk and over the place the sound came from, five metres off: far enough that
   // the prints in the snow there are nothing he could read. Then he turns round, walks back up the strip past the back door to his chair at its far end
   // and has a smoke there, his back to the way he came: against the neighbour's wall beyond him, which the court's lamp lights through the long wall's
@@ -117,7 +117,7 @@ export const TQ = {
   look: [26.4, 0, 17.75] as P3,           // where he looks from: in line with the gap and the whistle's mark, so his beam goes through the one and over the other
   smoke: [30.6, 0, 17.7] as P3,           // where he smokes, his back to the gap: by his chair, the tin for the ends at its foot. (Two and a half metres past
                                           // the back door's lock: a man put down nearer lies in reach of a hand at the lock, and a body's row comes before a door's.
-                                          // 30.6, not 30.3: a man grabbed from the creep is hauled a step back onto the arm — stalk.ts STALK.yank — toward that door)
+                                          // 30.6, not 30.3: a man grabbed from the creep is hauled a step back onto the arm — rust/game_rules/src/stalk STALK.yank — toward that door)
   backDoor: [27.9, 0, 17.2] as P3,        // the court side of the back door
   inside: [27.9, 0, 15.6] as P3,          // a stride inside the back door
   nook: [26.1, 0, 14.15] as P3,           // the store's dark corner beside the lit doorway to the hall
@@ -347,7 +347,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   G.dado('x', 8.5, 20.14, 25.36, 1, 'paintGreen');
   // THE MAINS BOX: on the hall's own wall, a stride inside the counting room's doorway. The man sent to it comes through that doorway and stands at it
   // with his back to the room. (The game's fixed spot for the man sent to a panel lies toward −x and −z of it:
-  // a box that faces −z with floor before it is stood at alike on both stands)
+  // a box that faces −z with floor before it is stood at alike)
   breakerAt(TQ.box[0], 16.34, 'n', 7); grp('house.hall');   // (seven seconds at it: an old box, his back to the room and his light on the panel)
   // TWO WALLS THE PAGE ASKED FOR. On the page the man who comes to the box carries a light, and a light finds what the dark hid: the hall's man where he
   // fell (the mission teaches no carrying), and anyone flat to a wall in the open (inside 3.5 m a man sees a shape at his elbow). So what hides here is
@@ -378,7 +378,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ================================================================ THE LANE AND THE BACK COURT: the cross wall with its gap, the long wall along the shop ====
   grp('walls.lane');
-  // (these stand LOW, a head high, piers and coping and all under 2 m: a man cannot see over them, and a whistle carries over the top — collision.ts propagate)
+  // (these stand LOW, a head high, piers and coping and all under 2 m: a man cannot see over them, and a whistle carries over the top — rust/game_rules/src/scene_collision propagate)
   const LOW = 1.8;
   G.yardWallZ(25.5, 16.62, 21.88, 'mud', [{ a: 17.3, b: 18.2, y0: 0, y1: LOW }], LOW);
   // THE LONG WALL: a head-high wall a stride and a half off the shop and along it, from the lane through the cross wall into the back court. The way
@@ -423,7 +423,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ================================================================ THE TOWN ROUND IT (nobody goes there: it is what the night is made of) ====
   /** a neighbour's building, seen as its back: a mass `top` high with snow on its flat roof. (Every one stands over 3.5 m: a slab between 2.75 and 3.45 m
-   *  is a ROOF to the weather — game/weather.ts roofsOf — and this level has one roof, the shop's) */
+   *  is a ROOF to the weather — rust/game_rules/src/weather roofs_of — and this level has one roof, the shop's) */
   const mass = (x0: number, z0: number, x1: number, z1: number, top: number, kind: WallKind) => {
     const W = G.as(kind, 'concrete');
     add({ c: [(x0 + x1) / 2, top / 2, (z0 + z1) / 2], h: [(x1 - x0) / 2, top / 2, (z1 - z0) / 2], albedo: W.albedo, rough: W.rough });
@@ -495,7 +495,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     exits: [EXIT_W],
     patrols: [['hall', 'court', 'table']],
   };
-  // WHAT HE CARRIES (game/kit.ts kitIssue: a mission's own card for him is the whole kit, on the page and on the scripted run): the rifle, one grenade
+  // WHAT HE CARRIES (rust/game_rules/src/kit kit_issue: a mission's own card for him is the whole kit, on the page and on the scripted run): the rifle, one grenade
   // and five sponge rounds for its launcher, the launcher up on the grenade. Nothing else a line of this mission does not use
   const issue: IssueData = { members: { '0': { weapon: 'rifle', shells: 1, rings: 5, loaded: 'he40', smoke: 0, bangs: 0, frags: 0 } } };
   const down = (n: number) => ({ is: 'men', down: n });
@@ -508,7 +508,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   const mark = (p: P3): P3 => [p[0], 1, p[2]];
   const lesson: LessonData = {
     title: 'Unseen',
-    // THE FRAME (game/rails.ts). From the first step: the walk, the view, the aim. Each tool is switched on by the step that teaches it and stays on.
+    // THE FRAME (rust/game_rules/src/rails). From the first step: the walk, the view, the aim. Each tool is switched on by the step that teaches it and stays on.
     // `rows` = the verbs Space offers here: nothing a step did not teach has a row (a wall charge at the box, the light plate beside the strongroom's
     // door, a body to drag), so a tap is always the thing the line means.
     // (the rows: what the steps teach, AND the plain quiet acts a player tries unasked — shutting a door behind him, easing one open, moving a body out of the
@@ -592,7 +592,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   };
   for (const d of doors) doorFrame(d);
 
-  // ---- LIVED IN (src/scene/lived.ts: all of it goes with the switch off — group 'lived.<place>'; LAST, after every kept thing) ----
+  // ---- LIVED IN (lib/lived.ts: all of it goes with the switch off — group 'lived.<place>'; LAST, after every kept thing) ----
   // THE TOWN'S EAST SIDE, which was one bare sheet of snow from the neighbour's wash line to the map's corner (level-needs `ground`: 126 m²). Both places are
   // PAST THE YARD'S WALL, which stands 2.47 m and has no gate on that side: no man of the shop has a line to them and no way leads from them into the yard.
   // (A player can walk there, out by the street gate and round the back of the town; no line of the lesson sends him.) No lamp is added. What a guard sees,
@@ -632,7 +632,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     ],
     mission: { serverRoom: { ...STRONG }, entryDoor: 'strong', rack: { index: 0, front, halfW: 0.35 }, exfilDoor: 'gate_w', exfilX: EXIT_W.x, exfilZ: EXIT_W.z, exfilOut: EXIT_W.out },
   };
-  // WHAT IS UNDERFOOT (game/floor.ts; the six it has; first match wins): the rooms are 'stone'; the court, the street, the alley and the trodden paths are
+  // WHAT IS UNDERFOOT (rust/game_rules/src/floor; the six it has; first match wins): the rooms are 'stone'; the court, the street, the alley and the trodden paths are
   // 'asphalt' (the nearest the six have to hard ground); everything else is fresh snow, 'grass' (the soft, quiet one)
   const surfaces: SurfacesData = { building: { x0: 0, x1: 40, z0: 0, z1: 28 }, grassEdge: 0, inside: 'grass', outside: 'grass', verge: 'grass', zones };
   const scenarios: LevelScenarios = { quiet, lesson, issue, places: PLACES, doorNames: [{ door: 'gate_w', name: 'street gate' }, { door: 'front', name: 'front door' }, { door: 'back', name: 'back door' }, { door: 'strong', name: 'strongroom door' }] };

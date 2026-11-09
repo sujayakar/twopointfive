@@ -5,6 +5,8 @@ One of the area files CLAUDE.md indexes. Everything below was moved here word fo
 title may now live in another file of this folder: `grep -l '<title>' docs/agents/*.md`. New bullets for this area go at the foot of this file.
 
 <!-- was CLAUDE.md lines 244–260 -->
+- **The shader text checks are one file: `bun run tools/qa/shaders-check.ts [parse trim fold inline levelset rows]`, one row of `checks.ts` a section (`shaders-fold` and so on).** Each setting of the page's boot is read once in a run (`pageboot.ts`: one boot a process, so a child for each) and its sections share it; each section keeps its own `<NAME>_BREAK` word. An older line that says "shaders-check inline" means `shaders-check.ts inline` (it was a file of its own). `passtimer-check.ts` reads src's TypeScript, not the shaders' texts, and stands apart.
+- **THE CHECKS THAT STOOD THE TYPESCRIPT COPY OF A WHOLE PLAY ARE GONE (2026-11-08). WHAT A BUILD IS HELD TO IS `gate` (`rust/game_start/README.md`, "The gate"), `cargo test` there, and `tools/qa/checks.ts` and `pages.ts`.** Gone: `tools/qa/` playthrough, ships, soak, solo-night, missions-gate, mission-table, the `*-watch` bystanders, seats-run, seats-check, lesson-run, lesson-gate, lesson-check, `lessons/`, samestart-check, death-summary-check, uncapped; `tools/blitz/` run.sh, rust.sh, mission.ts, play.ts, play.sh, seats.ts, keep.sh, hold.sh, kept/, diff.ts, start.sh, start.ts, starts.ts, start-levels.ts, start-module.ts, thrice.ts and every known-*.txt; `tools/draw/` rows-check, look-check, marks-check, weather-check. AN OLDER BULLET ANYWHERE IN THIS FOLDER THAT SAYS TO RUN ONE OF THEM IS HISTORY: it says how a thing was measured then, and it cannot be run. The commits of that date say, check by check, what holds each claim now and what nothing does.
 - **THE CHECK SUITE SINCE THE CUT (2026-11-07/08; the maintainer: "cutting checks before AI rework all sgtm"). READ THIS BEFORE WRITING OR MENDING A CHECK; older bullets
   describe the suite before it.** 1,446 names became about 1,150. What holds now:
   - **A check reads the same alone, in its family and on every run.** A game stood with no seed and no die gets die 1 (`tools/qa/die.ts`; `standdie-check.ts`,
@@ -27,6 +29,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **THE PAGE SCRIPTS HAVE ONE RUNNER (`tools/qa/pages.ts`; 2026-11-08).** `bun run tools/qa/pages.ts [group | name …] [--list]`: its table is [script, group, what it guards, minutes when read], it starts its own dev server on a free port, hands
   PORT, PLAYWRIGHT_MODULE, CHROMIUM and CHROME, runs one script at a time (a page takes the whole box), stops a script's whole process group at `QA_PAGE_CAP` minutes (10), and closes on a verdict: exit 0 green · 1 a red · 2 an unknown name. Groups:
   boot · play · menus · coop · saves · cloud · replay, `all` for those; `tools` (measuring or picture tools, rigs, the sweeps too long to ask) are listed and run by name alone. `holds-check.ts` (10) is red on a `tools/qa/*.cjs` that is no row and is required by none.
+  ONE BROWSER START: a script takes what is shared from `tools/qa/page.cjs` (2026-11-09), one small module: Playwright and Chromium found, the software adapter's flags (`SOFTWARE`, or `gpu: false` for no adapter), `page({ name, detail, flags, port })` with `check`, `note`, `fails`, `url`, `launch`, `context`, `open` (a window with its errors kept and its `go`, `ready`, `step`), `close`, `end` (the last line and the exit code). What a script does differently on purpose stays in the script.
   A script with several long arms asks the first of them with no word (`JOBS=all`, or its arm by name, for the rest). cloud, `lobby-page`, `savedoor-page` want `npm ci` in cloud/, for the stand-in backend.
 - **THE HARNESS STANDS THE GAME AS THE PAGE OPENS IT (2026-11-05; the maintainer ruled that the frozen stand may be retired).** With no word in front a
   headless tool is on what the bullet below calls the SHIPPED stand. THE RULE IS ONE FUNCTION, `standOf` in the import-free `src/host/standEnv.ts`: no
@@ -58,7 +61,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (shipped-check.ts: the two stands differ in exactly those rows, plain and with a mission staged; every pin's word is in `src/host/standEnv.ts STAND_ENV`) and
   `PORT=<dev server> node tools/qa/shipped-page.cjs [name=query …]` (the REAL page on the software adapter, `window.__knobs` against the shipped stand: 0 rows may differ; ~3 min
   a page — run it when a boot switch or a page-only module default is added). `tools/qa/stand-dump.ts [--profile shipped|frozen] [--query q] [--out f] | --diff a b` = every knob
-  table, `Game.tune` and the sandbox flags of a stand-up as JSON. `tools/qa/ships.ts` = the play-through under the shipped profile (`--base` = frozen, `--partial` = the five rows
+  table, `Game.tune` and the sandbox flags of a stand-up as JSON. (`tools/qa/ships.ts`, gone 2026-11-08, played under the shipped profile; `--base` = frozen, `--partial` = the five rows
   it raised before the profile existed — frags, `GLASSFX=on`, `TPS_MOVES=1`, `TPS_TURN=1`, `TPS_CAST=1` — which six `*-check.ts` scripts still ask for: their bounds were read on
   it). A plain night or a quiet mission alone stood on the shipped stand has the page's `?solo` Sam (one of each can, one round: `kit.ts kitSoloStand`, asked by `standGame` and `startFromQuery`; frozen = as built, nothing written) — and the PAGE's plain night is that Sam whichever way it was started: main.ts asks `kitSoloIf` for `?solo` and for a page with no mission, show or quiet run in its URL, so the card's own Start no longer hands him the eleven things (`PORT=<dev server> node tools/qa/start-kit-page.cjs`: Start and `?solo` carry the same, after a restart too). What shipped still is not: the player (a scripted commander who cannot be hurt), the GPU's light meter and smoke lines (headless = the CPU stand-in), localStorage, V8.
   STILL ON THE OLD FIVE ROWS and calling it 'shipped' / 'the page': kit-cells.ts, snap-probes.ts `PAGE` (framecost.ts's shipped arms and frame-spikes.ts `--ship` stand on `TPS_PROFILE=shipped` now; the five-row arm is kept there as `shipped5` / `pair5` / `--ship5`).
@@ -74,10 +77,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   general we should try to move fast at this point (maybe <5m for gate checks) and then have async checks that we fix forward").** A change is sent as
   single-parent commit(s) cut on the named head, and its sender runs the same reads first, from the repository's root: (1) THE SCAN: the diff against
   the named head read for anything that must not be public, every binary in the diff read with `strings` for machine paths, ids, names and hosts, no registry address in a lock file; (2) THE BAR:
-  `tsc --noEmit -p tsconfig.json`, `tsc --noEmit -p tools/qa/tsconfig.json`, `bun run tools/qa/claude-md-check.ts`, `bun run tools/qa/knobs-check.ts`,
-  `bun run build`, all exit 0; (3) DETERMINISM, SHORT: `bun run tools/blitz/thrice.ts` (three games of one process, one digest at the start and at each of
-  40 seconds); (4) ONE QUICK MISSION: `PT_DIGEST=1 bun run tools/qa/playthrough.ts --scn night-breach --seeds 1 --json out.json` ends with no error or
-  panic and its end, second and men up are the named head's, or the sender names the move. ONLY a change to what the page does at boot (the host, the
+  `tsc --noEmit -p tsconfig.json`, `tsc --noEmit -p tools/qa/tsconfig.json`, `bun run tools/qa/checks.ts`,
+  `bun run build`, all exit 0; (3) DETERMINISM AND ONE QUICK MISSION: `gate again` and `gate play` (`rust/game_start`): the same word every second in one process, and no pin moved, or the sender names the move. ONLY a change to what the page does at boot (the host, the
   loader) adds, up to a ceiling of fifteen minutes, one mission stood and played under real keys in headless Chromium (tools/qa/pages.ts). A red is placed by one run on the named head: the same red there is old, a new one goes back to its
   sender. A read with a memory kill beside it, a time cap or a lost browser is spoiled and is read again, not called. EVERYTHING ELSE IS ASYNC, after the
   name, and its reds are fixed forward by their owners and told, never hidden: the page as it opens and the other page checks, the read trap over a few missions (`tools/qa/readtrap-page.cjs`: a field the page reads that is neither on its list nor in `tools/wire/fields.json` `unsent`), its twin (`tools/qa/writetrap-page.cjs`: a word of the block or a field the page writes outside a call of the module, with no reason in `pageWrites`; `--seats2` the page in a two-player game), the 84 mission tallies
@@ -85,7 +86,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   checks, rollback, a build of the Rust module compared with the checked-in one. What the short gate does not see: a page that does not boot (unless the
   change is of the kind above), a rule that breaks on one die in ten, any mission but one, co-op, a family's red, timing, and a real GPU (no tool has
   one: "never seen on a GPU" stays in every note).
-- **The gates.** `bun run tools/qa/missions-gate.ts` (`probes.ts missions-shipped`) plays every squad mission of the Missions list × 2 seeds to its end AS SHIPPED and is red on a run
+- **The gates (the missions gate went 2026-11-08: `gate`, above, and nothing plays a mission to its end).** `missions-gate.ts` played every squad mission of the Missions list × 2 seeds to its end AS SHIPPED and is red on a run
   that throws or stalls (≈ 4 min at four jobs; not judged: who won); the QUIET rows (`QUIET_MISSIONS`) are played by `solo-night.ts`'s ghost on that tool's own stand, × 2 seeds — for
   them the gate holds 'starts and runs to the debrief', not 'as shipped'. `tools/qa/expected-red.ts` = the reds somebody has explained, by probe name; probes.ts prints its reds against it
   after the verdict (EXPECTED RED · NEW RED · GREEN AGAIN) and gate.sh carries the lines — the exit code is unchanged, red is red. THE EXPECTED REDS ARE ONE LIST, THE PAGE'S STAND'S
@@ -509,7 +510,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   kinds: 'off = the build before' (the old behaviour played, or a run that digests the same with the rule off), 'a recording from before
   the key replays with it off', 'the switch is one of the two stands' rows and the page writes it on unless ?no…', and an on-arm that was
   the off-arm's control (each such on-arm is held by a sibling: `gunroles-deal`, `gunlook-hands`, `owncharge-door`, `sticky-kit`). ONE
-  LIVE LINE WAS CARRIED OVER: 'src/game/doorpath.ts brings in no other game module but for its types' is `doorpath-file`'s now (its red
+  LIVE LINE WAS CARRIED OVER: 'rust/game_rules/src/doorpath brings in no other game module but for its types' is `doorpath-file`'s now (its red
   path's preload rests on it). With the nineteen went `tools/qa/doorpath-inert.ts` (the preload that took the door walk out of a
   process), ten helpers and the imports nothing else used.
   WHAT IS LOST WITH THEM, said plainly. (a) The on-against-off identities ('the switch on with no charge carried is the same run as the
@@ -542,7 +543,7 @@ bun run typecheck      # node vendor/typescript/bin/tsc --noEmit -p tsconfig.jso
 bun run tools/shot-server.ts   # :5174 capture sink (loopback only; CORS granted to loopback pages on any port): __shot() → docs/shots/<name>.jpg, __png() → docs/shots/ab/<name>.png
 ```
 There are no unit tests, but there IS a headless QA harness under `tools/qa/` (the whole Game over a Proxy GPU device, ~1 s
-of wall per simulated minute): `bun run tools/qa/soak.ts --seeds 1,2,3 --minutes 12 --quiet` (seeded randomized soak with
+of wall per simulated minute): `tools/qa/soak.ts` until 2026-11-08 (seeded randomized soak with
 per-frame invariants — among them: the player never crosses a static between frames and never ends a frame inside one), `bun run tools/qa/
 probes.ts <name>` (single-situation repros; `player` = the player-side PASS/FAIL set incl. the wall-clip brute force, `wall-clip` = that
 family in full with its 4-minute door sweep, `attract` = tools/qa/attract.ts, the start card's attract mode without a page). THE EXIT CODES ARE VERDICTS:
@@ -585,7 +586,7 @@ plus a clean typecheck — the harness cannot see rendering, the light meter, sm
   on the CPU, the game's own maths): the clock is round `Game.update` alone, the box list's pack (`BoxWorld.upload`) is timed apart, the first 120 ticks of a run are left
   out. Five scripted squad runs by default (`compound-four:1, warehouse-four:1, pass-four:1, hostage-rescue:1, block-squads:1`, 38 634 ticks), each in its own process;
   `--rounds n` keeps the quietest round, `--node` plays the same under V8 through `framecost-v8.mjs`, `--json` files the numbers and `--compare a.json b.json` prints the
-  before / after table. After every update the raw bits of what moves are chained (`game/digest.ts rawBits`) outside the clock: `--compare` is red (exit 1) when a run's
+  before / after table. After every update the raw bits of what moves are chained (`rust/game_rules/src/digest rawBits`) outside the clock: `--compare` is red (exit 1) when a run's
   bits, tick count or digest differ, so a speed-up is only ever quoted for THE SAME RUN TO THE BIT, and the bits are the same under bun and under node. Red path:
   `TICKCOST_BREAK=1` flips the last bit of one float once, after the warm-up, and the comparison must fail (as it does on a run that is in one file only). Take times with nothing else running on the machine and
   never with `--prof` on (bun's sampling profiler, one `.md` a run, is for reading where the time goes, not how much). Under node two cores are a quarter slower than four
@@ -648,7 +649,7 @@ Synthetic input goes through `input.keys/pressed/clicked`; during the tour real 
 but synthetic writes still work.
 
 <!-- was CLAUDE.md lines 2730–2764 -->
-- **Checkpoints + autosave** (STATUS G5, `src/game/savestate.ts` — the schema, what is NOT saved and why, the determinism statement and the autosave rules are the
+- **Checkpoints + autosave** (STATUS G5, `rust/game_rules/src/savestate` — the schema, what is NOT saved and why, the determinism statement and the autosave rules are the
   file's head comment; keep it current): `saveState(g, {label, kind, force}) → SaveState v1` (plain JSON: Sam's kit / place, every ROSTER man's state / fix / clocks /
   errand / body script / pair / weapon / witness + talk, bodies as SETTLED ragdolls at their particles (`Ragdoll.settleAt`), items on the floor (in-flight / on a fuse
   → written spent), doors, furniture, fixtures + blackout, devices, the mission and the CHRONICLE (so the debrief survives a load; a 'checkpoint' row on save and on
@@ -719,7 +720,7 @@ but synthetic writes still work.
   "The checkpoint wasn't sent." One run of each, 10-27. NOT CHECKED: the 'held' line on a page (the door's answers are driven headless only); a real
   backend; `SAVEDOOR_BREAK=1` with the export in it; a file past the backend's bound (a checkpoint is 30 to 90 KB). WHAT IT COSTS, by reading: with
   sharing off or no backend an export is kept nowhere unless the address carries `?downloads=1`. Never seen on a GPU.
-- **Saves keep a timeline** (`SAVETIMELINE`, `src/game/savestate.ts`, 10-19; the maintainer, from a play test: one quick save is awkward, "especially in the tutorial";
+- **Saves keep a timeline** (`SAVETIMELINE`, `rust/game_rules/src/savestate`, 10-19; the maintainer, from a play test: one quick save is awkward, "especially in the tutorial";
   "a rolling buffer"; "maybe we have a screenshot"; "let those have a timeline"). ON in the page (`?savetimeline=0` puts it off), OFF in the module and on the frozen
   stand; the word `TPS_SAVETIMELINE=1`; a `FROZEN_HOLDS` row; in the knob registry and the journal (a recording from before the key replays with it off). OFF = the build
   as it was: three autosaves and the one manual slot, no F5, no strip, no pictures. ON:
@@ -844,7 +845,7 @@ but synthetic writes still work.
     the first save is a take since it and to the bit a whole take of its moment, it loads and plays on, a restart gives the next run its own, the
     run and its loads are those of a run with no base, `warm` made before the first tick keeps and changes nothing, and with autosave off no base is
     taken; (5b) reads the first save's kind from what its run's first tick left on the shelf. The tutorials are NOT in it: run
-    `TPS_PROFILE=shipped bun run tools/qa/lesson-run.ts tut-road` after a change to when a take is made.
+    `bun run tools/qa/pages.ts tut-road-page` after a change to when a take is made.
     `PORT=5199 node tools/qa/savebase-page.cjs` (two boots, about five minutes each; needs no `?mute`: that flag makes the page a script's and the
     brief goes): behind the brief with the first tick not run the code has been warmed once and nothing kept, Enter, the first tick leaves the base,
     the first save a take since (one whole walk later is let by); `?savebase=0` = nothing warmed, no base, the first save WHOLE; it prints what each
@@ -965,10 +966,10 @@ but synthetic writes still work.
   address it is how the visit OPENS: a tier or Auto picked in Options afterwards is the player's, and Reset puts the defaults back under the address's
   words. With the ladder off the page has no frame rate to hold, so outside a benchmark the even pace has no target and the page draws every display frame
   (a pinned tier with the row off always did; a benchmark draws every frame anyway). The kit view's frame is opened without the word (it is pinned to a
-  tier and its pacer counts on its ladder), the viewer reads the address by the same reader, and `ladder-replay.ts` replays a take with the row as the take
+  tier and its pacer counts on its ladder), the viewer reads the address by the same reader, and `quality-check.ts` replays a take with the row as the take
   had it. Asked for by the look's join to read 'within a tenth of the GPU time with the look off'; whether a machine HOLDS 60 is still read on a run
   without the word. `bench-check` has the word on both addresses, the page's wiring (one reader of the two words, before a frame is drawn; Reset and the
-  viewer by the same reader) and the card's lines (a whole run each, the unnamed tier among them); `ladder-replay.ts --selftest` plays a 36 fps fight with
+  viewer by the same reader) and the card's lines (a whole run each, the unnamed tier among them); `quality-check.ts` plays a 36 fps fight with
   the word under hold 60 and as now, through a pinned High and through auto with sharp direct its own to shed and a size left behind, and then the page's
   own order (a ladder made from what a browser remembers, the address read, a hand's pick, Reset): nothing moves and nothing is written as the machine's
   choice; `ADAPT_BREAK=1` leaves the word off and the seven lines that play it fail. Run on a cloud NVIDIA card (two benchmark runs, every
@@ -1259,7 +1260,7 @@ but synthetic writes still work.
   distinct texts and their size; pipelines asynchronous and synchronous, before and after ready; how many texts and pipelines an EARLIER page of the walk had made character for
   character (the most a browser's shader cache can hand back); which boot pipelines a pass took after ready; the boot line. Exit 1 on a page that did not come ready or printed a
   GPU error. The counts are the page's; no time it prints is a price on a real machine (a page is three to seven minutes on the software adapter).
-- **How big each kernel is once every call is pasted into its caller: `bun run tools/qa/shaderinline-check.ts [--top N] [--kernel <module>/<entry>] [--json f]`**
+- **How big each kernel is once every call is pasted into its caller: `bun run tools/qa/shaders-check.ts inline [--top N] [--kernel <module>/<entry>] [--json f]`**
   (2026-10-26; what Chrome's Windows compiler does to a kernel, as a number: `docs/agents/render.md` has the rule, today's sizes and what it cannot see). The page's
   boot and the cut-box set over a recording stand-in device, always on the shipped stand; two seconds. Exit 1 when a kernel is over its row of the budget table at
   the head of the file, a row has no kernel left, or the stand-in's boot did not finish or came up short; `SHADERINLINE_BREAK=1` must fail. Run it after a change to a `.wgsl` file or to what a module is
@@ -1402,7 +1403,7 @@ but synthetic writes still work.
   fresh run would move them (seats.ts drives its first seat through the host's own Input and camera) and the kept run never recorded them. A grown
   run holds for as long as no rule of the tick reads the host's own rows on a host that steps by records; the day one does, it parts from a fresh
   run and is kept anew. `hold.sh` calls the grower only when the end-grown rule fails, and says so on the run's line. The snapshot's list of
-  what is the host's (`src/game/rollback.ts HOST_FIELDS`) has the two fields too: it is a second list beside the types' own (`#[bytes(skip)]`),
+  what is the host's (`rust/game_rules/src/rollback HOST_FIELDS`) has the two fields too: it is a second list beside the types' own (`#[bytes(skip)]`),
   in the TypeScript's names and with another rule (what a snapshot leaves alone, against what no state word reads), and the two are not made one here.
 - **A mission's address is read in two places, and a host that starts a game from one reads it in both** (2026-11-07; `src/host/standup.ts`
   `addressBeforeGame(q)` and `startAtAddress(game, q)` / `soloOfAddress`; in Rust `scenario_run::address_before_game` and `start_at_address`, called
@@ -1589,3 +1590,5 @@ but synthetic writes still work.
   loss 3 to 36 of 192; 1 in 3641), the bang 18 and 4 (6 to 34; 1 in 230), staged alike in all 48: a thing on the walk, with the same staging, is what
   the tool is for. (Nine other doors were crated the same way and not named: see WHAT IT MISSES.) On `room-clear-pair`, a row with no level file, it
   exits 3 with the crate refused by name (62006070).
+- **THE GATE (`rust/game_start/src/bin/gate/`): one native command for what a build is held to, with nothing of TypeScript in it (`gate`, `gate pin`, `gate breaks`). What each row holds, its break
+  and the pins' rule: `rust/game_start/README.md`, "The gate".**

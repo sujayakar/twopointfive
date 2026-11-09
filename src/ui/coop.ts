@@ -1,6 +1,6 @@
 // CO-OP ON THE PAGE: host a game or join one (the door, the words and the control plane's calls are net/lobby.ts; the page once it is in a game is
 // host/drawnet.ts). Four small things, each where a player would look:
-//   the title's CO-OP row    (ui/title.ts hands this file its column of buttons: `coopRows`) — a field for the player's name (host/names.ts: kept by
+//   the title's CO-OP row    (ui/title.ts hands this file its column of buttons: `coopRows`) — a field for the player's name (src/host/myname.ts: kept by
 //                            the browser, shown to the other player), 'Host a game', and a field for a code with 'Join'
 //   hosting                  the ONE STARTING PAGE in its co-op dress (ui/startpage.ts `coop`): the missions two can play, the setup rail as ever, no kit step
 //                            (both players play the kit as issued today), and its block makes the game instead of loading the mission (`host`)
@@ -127,7 +127,7 @@ export function coopRows(actions: HTMLElement, back: () => void, focus = true): 
   actions.innerHTML = '';
   const btn = (text: string, run: () => void, cls = ''): HTMLButtonElement => { const b = el('button', 'btn ' + cls, text) as HTMLButtonElement; b.type = 'button'; b.onclick = run; return b; };
   const hostBtn = btn('Host a game', () => coopHostList()); hostBtn.dataset.coop = 'host';
-  // YOUR NAME (host/names.ts): what the other player's page calls this one, kept by this browser as it is typed; empty = his number
+  // YOUR NAME (src/host/myname.ts): what the other player's page calls this one, kept by this browser as it is typed; empty = his number
   const who = el('div', 'xhead', 'Your name'), name = el('input', 'cocode coname') as HTMLInputElement;
   name.type = 'text'; name.placeholder = 'Player'; name.maxLength = NET.nameMax; name.autocomplete = 'off'; name.spellcheck = false; name.setAttribute('aria-label', 'Your name'); name.dataset.coop = 'name';
   name.dataset.walk = 'off';   // (not a stop of the title's W / S walk, ui/title.ts: a walk that ended here would type its next step into the name. The mouse and Tab reach it)

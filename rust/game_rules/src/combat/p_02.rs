@@ -746,7 +746,7 @@ pub fn start_canister(g: &mut crate::game::Game, it: ItemId) {
         seconds = p.canister_duration;
         let pos = v3::add(crate::throwables::item_pos(g, it), [0.0, 0.1, 0.0]);
         // `track` (the can's top, while it rolls) has no arm in effects::Track: notes, Skeleton
-        let e = crate::smoke_types::SmokeEmitter { pos, dir: [0.0, 1.0, 0.0], speed: p.canister_speed, radius: p.canister_radius, density: p.canister_density, temperature: p.canister_temp, ttl: p.canister_duration, age: 0.0, kind: crate::smoke_types::SmokeEmitterKind::Canister, ..crate::smoke_types::SmokeEmitter::zeroed() };
+        let e = crate::smoke_types::SmokeEmitter { pos, dir: [0.0, 1.0, 0.0], speed: p.canister_speed, radius: p.canister_radius, density: p.canister_density, temperature: p.canister_temp, ttl: p.canister_duration, age: 0.0, kind: crate::smoke_types::SmokeEmitterKind::Canister, ..crate::smoke_types::SmokeEmitter::default() };
         crate::smoke_types::smoke_system_like_emit(g, &e);
         crate::out_events::push_smoke_system_like_emit(g, &e);
     }

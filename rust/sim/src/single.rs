@@ -1,6 +1,6 @@
 //! THE ONE FILE OF THE SIMULATION THAT NAMES A SINGLE. The game's arithmetic is in doubles; a local pose is STORED in singles, because the TypeScript keeps it
 //! in a Float32Array (src/anim/skeleton.ts Pose). Reading one gives the double it stands for and writing one rounds the double to the nearest single, ties to
-//! even: exactly what a Float32Array does. The build's rule against the word stands everywhere else (tools/sim/build.ts RULES names this file as the
+//! even: exactly what a Float32Array does. The build's rule against the word stands everywhere else (tools/qa/rust-rules-check.ts RULES names this file as the
 //! exception).
 //!
 //! ONE THING IS WORKED OUT IN SINGLES, AND ONLY UNDER ITS SWITCH (src/anim/skeleton.ts POSEMATH.singles; the maintainer, 2026-11-03: "Singles, plain root for

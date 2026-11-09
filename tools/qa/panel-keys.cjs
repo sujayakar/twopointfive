@@ -1,23 +1,17 @@
-// PANEL KEYS: the debugger's key, pressed for real. The page is booted in headless Chromium on the software WebGPU adapter (see page-look.cjs for what that
+// PANEL KEYS: the debugger's key, pressed for real. The page is booted in headless Chromium on the software WebGPU adapter (see pages.ts for what that
 // adapter can and cannot do) and REAL key events are sent through the browser, so the whole road is under test: Input's capture listener, the panel's veto,
-// the panel's own listener for a focused field, main.ts's hotkey line.
+// the panel's own listener for a focused field, host/drawpage.ts's hotkey line.
 //   backtick  opens and shuts the tweak panel — with the pointer over the game, over the panel, with the search box / a slider / a list holding the keyboard —
 //             is never typed into the search, and steps NO debug view (the buffers are the 'debug view' row on the Frame page, by the list alone)
 //   Tab       does nothing to the panel; the game is handed the press (Input.pressed) and the browser's focus does not move
 //   node tools/qa/panel-keys.cjs      env: PORT (the dev server's, default 5199) · QUALITY (default verylow)      exit 0 = every check passed, 1 = a FAIL, 2 = the script died
-const { chromium } = require('/opt/node-tools/node_modules/playwright');
-const KEY = 'Backslash';   // the debugger's key on the page's board: backslash while empty hands are the slot on backtick (game/handslot.ts; under ?handslot=0 it is Backquote)
-const PORT = process.env.PORT || 5199, QUALITY = process.env.QUALITY || 'verylow';
-const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
-const T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a);
-let fails = 0;
-const check = (ok, what, got) => { console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}${ok || got === undefined ? '' : `   (got ${JSON.stringify(got)})`}`); if (!ok) fails++; };
+const PAGE = require('./page.cjs').page({ name: 'panel-keys', detail: 'fail' }), { check, note: log } = PAGE;
+const KEY = 'Backslash';   // the debugger's key on the page's board: backslash while empty hands are the slot on backtick (rust/game_rules/src/handslot; under ?handslot=0 it is Backquote)
+const QUALITY = process.env.QUALITY || 'verylow';
 
 (async () => {
-  const browser = await chromium.launch({ headless: true, channel: 'chromium', args: FLAGS });
-  const page = await browser.newPage({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 1 });
-  const pageErrors = []; page.on('pageerror', x => pageErrors.push(String(x && x.stack || x).slice(0, 400)));
-  log('goto'); await page.goto(`http://localhost:${PORT}/?paused&quality=${QUALITY}&mute`);
+  const { page, errors: pageErrors, go } = await PAGE.open({ errors: { console: false } });
+  log('goto'); await go(`paused&quality=${QUALITY}&mute`);
   await page.evaluate(async () => { await window.__ready; window.__draw.run(0); window.__draw.smoke.params.enabled = false; window.__engine.render = () => {}; });   // (keys, not pixels: the renderer is stubbed, a frame costs nothing)
   log('ready');
   // one frame of the page's own loop (the hotkeys run inside it), then what the checks read
@@ -86,7 +80,5 @@ const check = (ok, what, got) => { console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${
   check(h0 > 900 && h1 === h0 && s.search === 'qzq' && s.focus === 'panel' && h2 < h0 - 200, 'a tall page, a query with no rows: the panel keeps its height while the search types, and lets it go with the keyboard', { h0, h1, h2, ...s });
   await page.evaluate(() => { const b = document.querySelector('#panel input[type=search]'); b.value = ''; b.dispatchEvent(new Event('input')); }); await page.setViewportSize({ width: 1280, height: 720 });
   check(pageErrors.length === 0, 'no page error', pageErrors);
-  await browser.close();
-  console.log(fails ? `=== panel-keys: ${fails} FAILED ===` : '=== panel-keys: ALL PASS ===');
-  process.exit(fails ? 1 : 0);
+  await PAGE.end();
 })().catch(e => { console.error('SCRIPT ERROR', String(e && e.stack || e).slice(0, 800)); process.exit(2); });

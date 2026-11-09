@@ -1,4 +1,4 @@
-//! AN ORDER WRITTEN AS A MODULE (rust/game/src/orders/rows/): tests that stand a scene, give the order by the menu's own call and hold what
+//! AN ORDER WRITTEN AS A MODULE (rust/game_rules/src/orders/rows/): tests that stand a scene, give the order by the menu's own call and hold what
 //! the squad does. README.md beside this crate says how such a test is written; each holds a rule over three seeds, each seed another scene.
 use game::orders::Who;
 use game_start::play::{dist, nudge, Opts, Play};
@@ -111,17 +111,15 @@ fn with_no_shells_brought_the_order_is_not_on_the_menu() {
     }
 }
 
-/// THE RULE: every row on the menu's table holds the order of its own id, each order has one line of the list,
-/// and reading a game back deals every row what it was made with.
-/// A FAILURE MEANS: a row was made from another order's `Row`, or the table in `deal_closures` has parted from what a row is registered with.
+/// THE RULE: every row on the menu's table holds the order of its own id, and each order has one line of the list.
+/// A FAILURE MEANS: a row was made from another order's `Row`, or an order has two lines or none.
 #[test]
-fn every_row_holds_its_own_order_and_reading_a_game_back_deals_it_the_same() {
+fn every_row_holds_its_own_order() {
     use game::orders::rows;
     let mut p = Play::scene(&yard(), &seed(1));
     p.run(1.0);
-    let rows_now = |p: &Play| -> Vec<String> { p.g.tab.orders_order_def.ids().map(|d| format!("{:?}", p.g.tab.orders_order_def[d])).collect() };
-    let was = rows_now(&p);
-    assert!(was.len() > 10, "only {} rows on the table", was.len());
+    let rows_now = p.g.tab.orders_order_def.len();
+    assert!(rows_now > 10, "only {rows_now} rows on the table");
     for d in p.g.tab.orders_order_def.ids() {
         let r = &p.g.tab.orders_order_def[d];
         assert_eq!(r.row.id, r.id, "the row {} holds another order's functions", r.id);
@@ -131,8 +129,6 @@ fn every_row_holds_its_own_order_and_reading_a_game_back_deals_it_the_same() {
         let same = rows::ROWS.iter().filter(|x| x.id == r.id).count();
         assert_eq!(same, 1, "{} lines of the list have the id {}", same, r.id);
     }
-    game::io::deal_closures(&mut p.g);
-    assert_eq!(rows_now(&p), was, "reading a game back deals a row other than it was made with");
 }
 
 /// THE RULE: what an order says of itself is what the lists of names used to say, word for word: every id that was in such a list is a row

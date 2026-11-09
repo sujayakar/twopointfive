@@ -1,46 +1,22 @@
-//! The types of `host_keymap`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `host_keymap`.
 #![allow(unused_imports)]
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: KeyAct, src/host/keymap.ts:76)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct KeyAct {
     pub id: String,
     pub codes: Vec<String>,
     pub cap: String,
 }
-impl KeyAct {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KeyAct {
-            id: String::new(),
-            codes: Vec::new(),
-            cap: String::new(),
-        }
-    }
-}
-impl Default for KeyAct { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/host/keymap.ts:155 Words, src/host/keymap.ts:155)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Words2 {
     pub re: crate::Opaque,
     pub to: JsMap<String, String>,
 }
-impl Words2 {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Words2 {
-            re: crate::Opaque,
-            to: JsMap::new(),
-        }
-    }
-}
-impl Default for Words2 { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/host/keymap.ts:91 KEYMAP, src/host/keymap.ts:91)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct HostKeymapModKEYMAP {
     pub on: bool,
     pub q_free: bool,
@@ -58,29 +34,6 @@ pub struct HostKeymapModKEYMAP {
     pub hand_when: Option<crate::FnField>,
     pub rev: f64,
 }
-impl HostKeymapModKEYMAP {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HostKeymapModKEYMAP {
-            on: false,
-            q_free: false,
-            q_cmd: false,
-            q_only: false,
-            let_go: false,
-            only_when: None,
-            throw_when: None,
-            set_free: false,
-            set_when: None,
-            free_when: None,
-            cam_space: false,
-            pinch_only: false,
-            slot_when: None,
-            hand_when: None,
-            rev: 0.0,
-        }
-    }
-}
-impl Default for HostKeymapModKEYMAP { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]

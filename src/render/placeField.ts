@@ -7,13 +7,12 @@
 // WHAT LIVES HERE: the field's buffer and its solve (shaders/place_field.wgsl), and Sam's eye, eased on the GPU from the field under his feet. THE MAP it
 // is solved on (which cells are wall: the level's tall boxes and each shut door's line; an open door's cells say how far it has swung) is scene/placePlan.ts's since 11-04: plain arithmetic
 // that the game's CPU light may read too. PICTURE ONLY, this file: nothing in the simulation reads the field, it takes no die and no wall clock, and it
-// imports nothing from src/game.
+// imports no game code.
 // THE BUFFER IS READ AS A UNIFORM by the composite: the fragment stage has no sampled texture left to bind (render/passes.ts compEntries).
-// NEVER SEEN ON A GPU: judged on Chromium's software adapter, from stills (tools/qa/look-sheet.cjs) and the read-back map.
+// NEVER SEEN ON A GPU: judged on Chromium's software adapter, from stills and the read-back map.
 import { makeBuffer, makeShader, computePipelineAsync } from '../gpu/device';
-import type { Box } from '../scene/boxes';
 import { WORLD } from '../scene/world';
-import { PLACE, PLACE_W, PLACE_H, PLACE_RES, PlaceMap, type PlaceGap } from '../scene/placePlan';
+import { PLACE, PLACE_W, PLACE_H, PLACE_RES, PlaceMap } from '../scene/placePlan';
 import placeSrc from './shaders/place_field.wgsl' with { type: 'text' };
 
 /** the plan's own table and size, for whoever reads the field's buffer beside them (the plan itself, and what a wall or a doorway is: scene/placePlan.ts) */

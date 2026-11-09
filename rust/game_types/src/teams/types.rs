@@ -1,12 +1,11 @@
-//! The types of `teams`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `teams`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
 pub enum Team {
-    Guard,
+    #[default] Guard,
     Operative,
     Hostile,
     Player,
@@ -24,7 +23,6 @@ impl Team {
     }
 }
 
-/// (TypeScript: a union)
 #[derive(Clone, Copy, Debug)]
 pub enum HostileToO {
     Guard(GuardId),

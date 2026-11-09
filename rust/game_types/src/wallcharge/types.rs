@@ -1,4 +1,4 @@
-//! The types of `wallcharge`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `wallcharge`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
@@ -22,8 +22,7 @@ pub enum WallChargeFireAsk {
     Lines { wall: Option<crate::wallcharge::WallSpot>, all: Vec<V3>, memo: JsMap<[crate::Num; 3], f64>, hit: JsMap<[crate::Num; 3], bool> },
 }
 
-/// (TypeScript: WallSpot, src/game/wallcharge.ts:249)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct WallSpot {
     pub index: f64,
     pub box_: BoxId,
@@ -34,24 +33,7 @@ pub struct WallSpot {
     pub why: String,
     pub outer: Option<bool>,
 }
-impl WallSpot {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WallSpot {
-            index: 0.0,
-            box_: BoxId(0),
-            along_x: false,
-            u: 0.0,
-            side: 0.0,
-            ok: false,
-            why: String::new(),
-            outer: None,
-        }
-    }
-}
-impl Default for WallSpot { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: WallCharge, src/game/wallcharge.ts:399)
 #[derive(Clone, Debug, ToBytes)]
 pub struct WallCharge {
     pub knobs: crate::knobs::WallchargeK,
@@ -85,10 +67,10 @@ pub struct WallCharge {
     pub marker: Option<crate::game::Interactable>,
 }
 impl WallCharge {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         WallCharge {
-            knobs: crate::knobs::WallchargeK { on: true, menu: crate::knobs::WallchargeKMenu::Page, pick_m: 0.06, height: 1.05, end_m: 0.75, slide: alloc::vec![0.0, 0.5, -0.5, 1.0, -1.0, 1.5, -1.5], set_off: 0.5, set_near: 0.9, sam_reach: 1.35, sam_shift: 0.35, sam_marker_m: 3.0, standoff: alloc::vec![2.6, 2.0], post_off: 0.55, file_gap: 0.9, back_m: alloc::vec![3.0, 3.9, 4.8], clear_m: 0.45, brace: true, mate_m: 2.0, after_blow: 0.7, enter_cap: 16.0, sweep_secs: 1.5, mouth_in: 0.6, lane: 0.35, lane_watch: 3.0, pods: alloc::vec![[-1.3, 1.9], [1.3, 1.9], [-2.1, 1.0], [2.1, 1.0]], hole: false, doors: true, cost: 2.0, carried: None, hold_secs: 1.5, mate_line: 0.6, off_frame: 0.8, off_frame_pod: 0.5, off_holes: true, outer: false, outer_thick: 0.26, outer_min_len: 1.5, outer_yard: true, far_furn: false, far_slack: 0.5, far_reach: 0.375, far_mouth: true, safe: false, hung: false, hung_m: 0.35, safe_standoff: [4.0, 6.0], safe_reach: [3.0, 5.0], safe_secs: [3.0, 1.0], safe_hide_m: 9.0, safe_walk_m: 16.0, safe_back: true, safe_back_m: 9.0, out_of_fire: false, fire_known_s: 30.0, fire_m: 30.0, fire_step: 0.5, fire_grain: 0.03, men_clear: false, men_clear_in: 0.1, men_clear_s: 0.75, sam_secs: [2.0, 0.6], sam_sup: 0.5 },
+            knobs: crate::knobs::WallchargeK { menu: crate::knobs::WallchargeKMenu::Page, pick_m: 0.06, height: 1.05, end_m: 0.75, slide: alloc::vec![0.0, 0.5, -0.5, 1.0, -1.0, 1.5, -1.5], set_off: 0.5, set_near: 0.9, sam_reach: 1.35, sam_shift: 0.35, sam_marker_m: 3.0, standoff: alloc::vec![2.6, 2.0], post_off: 0.55, file_gap: 0.9, back_m: alloc::vec![3.0, 3.9, 4.8], clear_m: 0.45, mate_m: 2.0, after_blow: 0.7, enter_cap: 16.0, sweep_secs: 1.5, mouth_in: 0.6, lane: 0.35, lane_watch: 3.0, pods: alloc::vec![[-1.3, 1.9], [1.3, 1.9], [-2.1, 1.0], [2.1, 1.0]], cost: 2.0, carried: None, hold_secs: 1.5, mate_line: 0.6, off_frame: 0.8, off_frame_pod: 0.5, outer_thick: 0.26, outer_min_len: 1.5, far_slack: 0.5, far_reach: 0.375, hung_m: 0.35, safe_standoff: [4.0, 6.0], safe_reach: [3.0, 5.0], safe_secs: [3.0, 1.0], safe_hide_m: 9.0, safe_walk_m: 16.0, safe_back_m: 9.0, fire_known_s: 30.0, fire_m: 30.0, fire_step: 0.5, fire_grain: 0.03, men_clear_in: 0.1, men_clear_s: 0.75, sam_secs: [2.0, 0.6], sam_sup: 0.5 },
             ops: Vec::new(),
             done: Vec::new(),
             set: Vec::new(),
@@ -120,8 +102,7 @@ impl WallCharge {
 }
 impl Default for WallCharge { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: inline at src/game/wallcharge.ts:401 WallCharge.done, src/game/wallcharge.ts:401 WallCharge.done)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct WallChargeDoneItem {
     pub wall: crate::wallcharge::WallSpot,
     pub men: Vec<GuardId>,
@@ -151,46 +132,10 @@ pub struct WallChargeDoneItem {
     pub repick_kept: Option<JsMap<String, f64>>,
     pub ended: String,
 }
-impl WallChargeDoneItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WallChargeDoneItem {
-            wall: crate::wallcharge::WallSpot::zeroed(),
-            men: Vec::new(),
-            lead: GuardId(0),
-            phase: crate::wallcharge::Phase::Wait,
-            t0: 0.0,
-            spot: [0.0; 3],
-            set_t: 0.0,
-            stow_off_t: None,
-            owes: None,
-            mine: JsMap::new(),
-            post: JsMap::new(),
-            from: JsMap::new(),
-            hole: None,
-            queue: Vec::new(),
-            stage: JsMap::new(),
-            pod: JsMap::new(),
-            crossed: JsMap::new(),
-            last: JsMap::new(),
-            in_t: 0.0,
-            beats: Vec::new(),
-            close: None,
-            repick_t: None,
-            repick_bad: None,
-            redealt: None,
-            repick_n: None,
-            repick_kept: None,
-            ended: String::new(),
-        }
-    }
-}
-impl Default for WallChargeDoneItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
 pub enum Phase {
-    Wait,
+    #[default] Wait,
     Place,
     Standoff,
     Armed,
@@ -208,46 +153,21 @@ impl Phase {
     }
 }
 
-/// (TypeScript: inline at src/game/wallcharge.ts:269 WallChargeDoneItem.hole, src/game/wallcharge.ts:269)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct WallChargeDoneItemHole {
     pub du: f64,
     pub half: f64,
 }
-impl WallChargeDoneItemHole {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WallChargeDoneItemHole {
-            du: 0.0,
-            half: 0.0,
-        }
-    }
-}
-impl Default for WallChargeDoneItemHole { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/wallcharge.ts:271 WallChargeDoneItem.queue, src/game/wallcharge.ts:271)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct WallChargeDoneItemQueueItem {
     pub gd: GuardId,
     pub at: f64,
     pub lane: V3,
     pub pod: crate::wallcharge::Pod,
 }
-impl WallChargeDoneItemQueueItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WallChargeDoneItemQueueItem {
-            gd: GuardId(0),
-            at: 0.0,
-            lane: [0.0; 3],
-            pod: crate::wallcharge::Pod::zeroed(),
-        }
-    }
-}
-impl Default for WallChargeDoneItemQueueItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Pod, src/game/wallcharge.ts:257)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct Pod {
     pub pos: V3,
     pub face: f64,
@@ -256,41 +176,14 @@ pub struct Pod {
     pub hold: Option<crate::wallcharge::PodHold>,
     pub took: Option<bool>,
 }
-impl Pod {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Pod {
-            pos: [0.0; 3],
-            face: 0.0,
-            watch: None,
-            door: None,
-            hold: None,
-            took: None,
-        }
-    }
-}
-impl Default for Pod { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/wallcharge.ts:257 Pod.hold, src/game/wallcharge.ts:257)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct PodHold {
     pub face: f64,
     pub watch: V3,
     pub door: Option<String>,
 }
-impl PodHold {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PodHold {
-            face: 0.0,
-            watch: [0.0; 3],
-            door: None,
-        }
-    }
-}
-impl Default for PodHold { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum WallChargeDoneItemStageValue {
     Lane,
@@ -305,25 +198,13 @@ impl WallChargeDoneItemStageValue {
     }
 }
 
-/// (TypeScript: inline at src/game/wallcharge.ts:272 WallChargeDoneItem.beats, src/game/wallcharge.ts:272)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct WallChargeDoneItemBeatsItem {
     pub t: f64,
     pub what: String,
 }
-impl WallChargeDoneItemBeatsItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WallChargeDoneItemBeatsItem {
-            t: 0.0,
-            what: String::new(),
-        }
-    }
-}
-impl Default for WallChargeDoneItemBeatsItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/wallcharge.ts:402 WallCharge.stats, src/game/wallcharge.ts:402)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct WallChargeStats {
     pub orders: f64,
     pub set: f64,
@@ -338,50 +219,16 @@ pub struct WallChargeStats {
     pub back: f64,
     pub cleared: f64,
 }
-impl WallChargeStats {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WallChargeStats {
-            orders: 0.0,
-            set: 0.0,
-            by_sam: 0.0,
-            blown: 0.0,
-            holes: 0.0,
-            duds: 0.0,
-            knocked: 0.0,
-            stunned: 0.0,
-            backblast: 0.0,
-            entries: 0.0,
-            back: 0.0,
-            cleared: 0.0,
-        }
-    }
-}
-impl Default for WallChargeStats { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/wallcharge.ts:404 WallCharge.away, src/game/wallcharge.ts:404)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct WallChargeAwayValue {
     pub c: WallChargeId,
     pub at: V3,
     pub hit_t: f64,
     pub t: f64,
 }
-impl WallChargeAwayValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WallChargeAwayValue {
-            c: WallChargeId(0),
-            at: [0.0; 3],
-            hit_t: 0.0,
-            t: 0.0,
-        }
-    }
-}
-impl Default for WallChargeAwayValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/wallcharge.ts:405 WallCharge.awayMarks, src/game/wallcharge.ts:405)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct WallChargeAwayMarksValue {
     pub n: f64,
     pub marks: Vec<V3>,
@@ -390,116 +237,42 @@ pub struct WallChargeAwayMarksValue {
     pub r: crate::wallcharge::WallChargeAwayMarksValueR,
     pub pad: crate::wallcharge::WallChargeAwayMarksValueR,
 }
-impl WallChargeAwayMarksValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WallChargeAwayMarksValue {
-            n: 0.0,
-            marks: Vec::new(),
-            t: 0.0,
-            sets: 0.0,
-            r: crate::wallcharge::WallChargeAwayMarksValueR::zeroed(),
-            pad: crate::wallcharge::WallChargeAwayMarksValueR::zeroed(),
-        }
-    }
-}
-impl Default for WallChargeAwayMarksValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/wallcharge.ts:405 WallChargeAwayMarksValue.R, src/game/wallcharge.ts:343)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct WallChargeAwayMarksValueR {
     pub standoff: f64,
     pub reach: f64,
     pub indoors: bool,
 }
-impl WallChargeAwayMarksValueR {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WallChargeAwayMarksValueR {
-            standoff: 0.0,
-            reach: 0.0,
-            indoors: false,
-        }
-    }
-}
-impl Default for WallChargeAwayMarksValueR { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/wallcharge.ts:407 WallCharge.log, src/game/wallcharge.ts:407)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct WallChargeLogItem {
     pub t: f64,
     pub what: String,
 }
-impl WallChargeLogItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WallChargeLogItem {
-            t: 0.0,
-            what: String::new(),
-        }
-    }
-}
-impl Default for WallChargeLogItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/wallcharge.ts:413 WallCharge.sam, src/game/wallcharge.ts:413)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct WallChargeSam {
     pub wall: crate::wallcharge::WallSpot,
     pub t0: f64,
     pub at: V3,
 }
-impl WallChargeSam {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WallChargeSam {
-            wall: crate::wallcharge::WallSpot::zeroed(),
-            t0: 0.0,
-            at: [0.0; 3],
-        }
-    }
-}
-impl Default for WallChargeSam { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/wallcharge.ts:819 WallCharge.walks, src/game/wallcharge.ts:819)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct WallChargeWalks {
     pub menu: u32,
     pub stamp: String,
     pub map: JsMap<String, crate::wallcharge::WallChargeWalkAnswer>,
 }
-impl WallChargeWalks {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WallChargeWalks {
-            menu: 0,
-            stamp: String::new(),
-            map: JsMap::new(),
-        }
-    }
-}
-impl Default for WallChargeWalks { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/wallcharge.ts:821 WallCharge.keep, src/game/wallcharge.ts:821)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct WallChargeKeep {
     pub on: bool,
     pub asks: f64,
     pub hits: f64,
 }
-impl WallChargeKeep {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WallChargeKeep {
-            on: false,
-            asks: 0.0,
-            hits: 0.0,
-        }
-    }
-}
-impl Default for WallChargeKeep { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/wallcharge.ts:1131 WallCharge.lastBlow, src/game/wallcharge.ts:1131)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct WallChargeLastBlow {
     pub reach: f64,
     pub indoors: bool,
@@ -507,22 +280,8 @@ pub struct WallChargeLastBlow {
     pub lost: f64,
     pub sam_down: bool,
 }
-impl WallChargeLastBlow {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WallChargeLastBlow {
-            reach: 0.0,
-            indoors: false,
-            sam: 0.0,
-            lost: 0.0,
-            sam_down: false,
-        }
-    }
-}
-impl Default for WallChargeLastBlow { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: SetWallCharge, src/game/wallcharge.ts:252)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct SetWallCharge {
     pub wall: crate::wallcharge::WallSpot,
     pub t: f64,
@@ -530,22 +289,8 @@ pub struct SetWallCharge {
     pub paid: f64,
     pub free: Option<bool>,
 }
-impl SetWallCharge {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SetWallCharge {
-            wall: crate::wallcharge::WallSpot::zeroed(),
-            t: 0.0,
-            by: String::new(),
-            paid: 0.0,
-            free: None,
-        }
-    }
-}
-impl Default for SetWallCharge { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: WallOp, src/game/wallcharge.ts:258)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct WallOp {
     pub wall: crate::wallcharge::WallSpot,
     pub men: Vec<GuardId>,
@@ -574,42 +319,7 @@ pub struct WallOp {
     pub repick_n: Option<f64>,
     pub repick_kept: Option<JsMap<String, f64>>,
 }
-impl WallOp {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WallOp {
-            wall: crate::wallcharge::WallSpot::zeroed(),
-            men: Vec::new(),
-            lead: GuardId(0),
-            phase: crate::wallcharge::Phase::Wait,
-            t0: 0.0,
-            spot: [0.0; 3],
-            set_t: 0.0,
-            stow_off_t: None,
-            owes: None,
-            mine: JsMap::new(),
-            post: JsMap::new(),
-            from: JsMap::new(),
-            hole: None,
-            queue: Vec::new(),
-            stage: JsMap::new(),
-            pod: JsMap::new(),
-            crossed: JsMap::new(),
-            last: JsMap::new(),
-            in_t: 0.0,
-            beats: Vec::new(),
-            close: None,
-            repick_t: None,
-            repick_bad: None,
-            redealt: None,
-            repick_n: None,
-            repick_kept: None,
-        }
-    }
-}
-impl Default for WallOp { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum WallOpStageValue {
     Lane,
@@ -624,8 +334,7 @@ impl WallOpStageValue {
     }
 }
 
-/// (TypeScript: inline at src/game/wallcharge.ts:397 wallChargeRows(row), ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct WallChargeRowsRowOver {
     pub kind: Option<crate::wallcharge::WallChargeRowsRowOverKind>,
     pub pos: Option<V3>,
@@ -643,31 +352,7 @@ pub struct WallChargeRowsRowOver {
     pub past: Option<bool>,
     pub framed: Option<bool>,
 }
-impl WallChargeRowsRowOver {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WallChargeRowsRowOver {
-            kind: None,
-            pos: None,
-            line1: None,
-            line2: None,
-            in_reach: None,
-            off: None,
-            progress: None,
-            target: None,
-            door: None,
-            guard: None,
-            verb: None,
-            running: None,
-            close: None,
-            past: None,
-            framed: None,
-        }
-    }
-}
-impl Default for WallChargeRowsRowOver { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum WallChargeRowsRowOverKind {
     Cam,
@@ -702,78 +387,49 @@ impl WallChargeRowsRowOverKind {
     }
 }
 
-/// (TypeScript: inline at src/game/wallcharge.ts:671 underFire ->, src/game/wallcharge.ts:671)
 #[derive(Clone, Debug)]
 pub struct WallChargeUnderFire {
     pub score: crate::wallcharge::WallChargeFireAsk,
 }
-impl WallChargeUnderFire {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
+impl Default for WallChargeUnderFire {
+    fn default() -> Self {
         WallChargeUnderFire {
             score: crate::wallcharge::WallChargeFireAsk::Lines { wall: None, all: Vec::new(), memo: JsMap::new(), hit: JsMap::new() },
         }
     }
 }
-impl Default for WallChargeUnderFire { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: a union)
 #[derive(Clone, Debug)]
 pub enum WallChargePlan {
     Text(String),
     Arm1(crate::wallcharge::WallChargePlanArm1),
 }
 
-/// (TypeScript: inline at src/game/wallcharge.ts:766 plan ->, src/game/wallcharge.ts:766)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct WallChargePlanArm1 {
     pub lead: GuardId,
     pub spot: V3,
     pub deal: Vec<(GuardId, V3)>,
     pub close: bool,
 }
-impl WallChargePlanArm1 {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WallChargePlanArm1 {
-            lead: GuardId(0),
-            spot: [0.0; 3],
-            deal: Vec::new(),
-            close: false,
-        }
-    }
-}
-impl Default for WallChargePlanArm1 { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: a union)
 #[derive(Clone, Debug)]
 pub enum WallChargeCanOf {
     Text(String),
     Bool(bool),
 }
 
-/// (TypeScript: a union)
 #[derive(Clone, Debug)]
 pub enum WallChargeValid {
     Text(String),
     Bool(bool),
 }
 
-/// (TypeScript: inline at src/game/wallcharge.ts:822 keptWalks(M), src/game/wallcharge.ts:822 keptWalks(M))
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct WallChargeKeptWalksM {
 }
-impl WallChargeKeptWalksM {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WallChargeKeptWalksM {
-        }
-    }
-}
-impl Default for WallChargeKeptWalksM { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/wallcharge.ts:833 assign(a), src/game/wallcharge.ts:833 assign(a))
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct WallChargeAssignA {
     pub post: Option<V3>,
     pub going: String,
@@ -823,70 +479,13 @@ pub struct WallChargeAssignA {
     pub fit: Option<crate::roomfit::Fit>,
     pub tries: Option<crate::doortools::DoorToolsDoneItemLaneBackTries>,
 }
-impl WallChargeAssignA {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WallChargeAssignA {
-            post: None,
-            going: String::new(),
-            face: None,
-            there: String::new(),
-            order: None,
-            t0: None,
-            follow: None,
-            watch: None,
-            door: None,
-            strafe: None,
-            stance: None,
-            upper: None,
-            stack_side: None,
-            move_: None,
-            set_line: None,
-            group: None,
-            set_said: None,
-            goal: None,
-            arrived: None,
-            held_set: None,
-            held_fire: None,
-            arr_t: None,
-            moved_t: None,
-            light: None,
-            low: None,
-            yield_t: None,
-            face_now: None,
-            search: None,
-            search_t: None,
-            via: None,
-            anchor: None,
-            mark: None,
-            mark_t: None,
-            had: None,
-            back_n: None,
-            shy: None,
-            thru: None,
-            via_for: None,
-            via_t: None,
-            pace: None,
-            spare: None,
-            from: None,
-            foe: None,
-            crouch: None,
-            lean: None,
-            fit: None,
-            tries: None,
-        }
-    }
-}
-impl Default for WallChargeAssignA { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: a union)
 #[derive(Clone, Debug)]
 pub enum WallChargeIssue {
     Text(String),
     Arm1(()),
 }
 
-/// (TypeScript: a union)
 #[derive(Clone, Copy, Debug)]
 pub enum WallChargeOrderWho {
     Num(f64),
@@ -895,8 +494,7 @@ pub enum WallChargeOrderWho {
     Blue,
 }
 
-/// (TypeScript: inline at src/game/wallcharge.ts:1064 blow ->, src/game/wallcharge.ts:1064)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct WallChargeBlow {
     pub hole: bool,
     pub knocked: f64,
@@ -904,22 +502,8 @@ pub struct WallChargeBlow {
     pub backblast: f64,
     pub lost: f64,
 }
-impl WallChargeBlow {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WallChargeBlow {
-            hole: false,
-            knocked: 0.0,
-            stunned: 0.0,
-            backblast: 0.0,
-            lost: 0.0,
-        }
-    }
-}
-impl Default for WallChargeBlow { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/wallcharge.ts:1065 blowRaw ->, src/game/wallcharge.ts:1065)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct WallChargeBlowRaw {
     pub hole: bool,
     pub knocked: f64,
@@ -927,39 +511,14 @@ pub struct WallChargeBlowRaw {
     pub backblast: f64,
     pub lost: f64,
 }
-impl WallChargeBlowRaw {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WallChargeBlowRaw {
-            hole: false,
-            knocked: 0.0,
-            stunned: 0.0,
-            backblast: 0.0,
-            lost: 0.0,
-        }
-    }
-}
-impl Default for WallChargeBlowRaw { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/wallcharge.ts:1144 holeAt ->, src/game/wallcharge.ts:1144)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct WallChargeHoleAt {
     pub du: f64,
     pub half: f64,
 }
-impl WallChargeHoleAt {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WallChargeHoleAt {
-            du: 0.0,
-            half: 0.0,
-        }
-    }
-}
-impl Default for WallChargeHoleAt { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/wallcharge.ts:1192 samRows(row), ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct WallChargeSamRowsRowOver {
     pub kind: Option<crate::wallcharge::WallChargeSamRowsRowOverKind>,
     pub pos: Option<V3>,
@@ -977,31 +536,7 @@ pub struct WallChargeSamRowsRowOver {
     pub past: Option<bool>,
     pub framed: Option<bool>,
 }
-impl WallChargeSamRowsRowOver {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WallChargeSamRowsRowOver {
-            kind: None,
-            pos: None,
-            line1: None,
-            line2: None,
-            in_reach: None,
-            off: None,
-            progress: None,
-            target: None,
-            door: None,
-            guard: None,
-            verb: None,
-            running: None,
-            close: None,
-            past: None,
-            framed: None,
-        }
-    }
-}
-impl Default for WallChargeSamRowsRowOver { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum WallChargeSamRowsRowOverKind {
     Cam,
@@ -1036,24 +571,12 @@ impl WallChargeSamRowsRowOverKind {
     }
 }
 
-/// (TypeScript: inline at src/game/wallcharge.ts:1224 samJob ->, src/game/wallcharge.ts:1224)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct WallChargeSamJob {
     pub p: V3,
     pub n: V3,
     pub at: V3,
 }
-impl WallChargeSamJob {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WallChargeSamJob {
-            p: [0.0; 3],
-            n: [0.0; 3],
-            at: [0.0; 3],
-        }
-    }
-}
-impl Default for WallChargeSamJob { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
@@ -1070,7 +593,7 @@ impl WallchargeMod {
 }
 
 /// (src/game/wallcharge.ts:212 WALLCHARGE_DEFAULTS: a table nothing writes)
-pub fn wallcharge_defaults() -> crate::knobs::WallchargeK { crate::knobs::page_wallcharge() }
+pub fn wallcharge_defaults() -> crate::knobs::WallchargeK { crate::knobs::WallchargeK::page() }
 
 /// (src/game/wallcharge.ts:284 FACE)
 pub const FACE: f64 = 0.06;

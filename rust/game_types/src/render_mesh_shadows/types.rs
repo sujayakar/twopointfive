@@ -1,9 +1,8 @@
-//! The types of `render_mesh_shadows`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `render_mesh_shadows`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: MeshShadows, src/render/meshShadows.ts:109)
 #[derive(Clone, Debug, ToBytes)]
 pub struct MeshShadows {
     pub bvh: crate::render_meshbvh::MeshBvh,
@@ -18,10 +17,10 @@ pub struct MeshShadows {
     pub device: crate::Opaque,
 }
 impl MeshShadows {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         MeshShadows {
-            bvh: crate::render_meshbvh::MeshBvh::zeroed(),
+            bvh: crate::render_meshbvh::MeshBvh::default(),
             digest: String::new(),
             bytes: 0.0,
             tri_base: 0.0,

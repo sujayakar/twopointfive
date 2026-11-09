@@ -122,7 +122,7 @@ pub fn fill(g: &Game, stood: u32, desired: f64, out: &mut Vec<View>) {
 }
 
 /// is this run over, and its card due: the verdict's a beat after the end, the stealth mission's as it is done or, down, a beat after
-fn ended(g: &Game) -> u32 {
+pub fn ended(g: &Game) -> u32 {
     use game::game::MissionStage;
     let (v, m) = (&g.verdict, &g.mission);
     if v.run == Some(m.serial) && v.card_at >= 0.0 { return if g.time < v.card_at { 0 } else { v.res.as_ref().map_or(0, |r| if r.won { 2 } else { 1 }) }; }

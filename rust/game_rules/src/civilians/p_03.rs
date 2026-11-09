@@ -109,7 +109,7 @@ pub fn deliver_report(g: &mut crate::game::Game, gd: GuardId, o: GuardId, how: c
         Some(CivCause::Gunfire) | Some(CivCause::Bang) => "gunfire",
         _ => if armed { "armed" } else { "someone" },
     };
-    later(g, 1.6, &LaterP { kind: PendKind::ReportRadio, cv: gd, o: Some(o), key: Some(String::from(radio_key)), armed: Some(armed), pos: Some(pos), ..LaterP::zeroed() });
+    later(g, 1.6, &LaterP { kind: PendKind::ReportRadio, cv: gd, o: Some(o), key: Some(String::from(radio_key)), armed: Some(armed), pos: Some(pos), ..LaterP::default() });
     let rows = vec![
         ("who", Dv::T(g.cv[cid].name.clone())), ("to", Dv::T(g.gd[o].callsign.clone())),
         ("cause", Dv::T(String::from(cause.map_or("sam", |c| c.as_str())))), ("armed", Dv::B(armed)), ("how", Dv::T(String::from(how.as_str()))),
@@ -173,7 +173,7 @@ pub fn phone_call(g: &mut crate::game::Game, gd: GuardId) {
     let sent = if g.quiet_utility { None } else { crate::devices::send_to_look(g, pos, "civilian") };
     if armed && !g.quiet_utility {
         g.alarm.pos[0] = pos[0]; g.alarm.pos[1] = 0.0; g.alarm.pos[2] = pos[2]; g.alarm.placed = true;
-        later(g, 1.4, &LaterP { kind: PendKind::Escalate, cv: gd, o: sent, ..LaterP::zeroed() });
+        later(g, 1.4, &LaterP { kind: PendKind::Escalate, cv: gd, o: sent, ..LaterP::default() });
     }
     let sent_name = match sent { Some(s) => g.gd[s].callsign.clone(), None => String::new() };
     let rows = vec![
@@ -197,7 +197,7 @@ pub fn to_gone(g: &mut crate::game::Game, gd: GuardId, evac: bool) {
         g.cv[cid].reported = true; g.stats.civilians.outside_calls += 1;
         log(g, gd, "out of the building — control will ring the floor");
         let secs = g.k.civ.outside_call_secs;
-        later(g, secs, &LaterP { kind: PendKind::OutsideCall, cv: gd, o: None, ..LaterP::zeroed() });
+        later(g, secs, &LaterP { kind: PendKind::OutsideCall, cv: gd, o: None, ..LaterP::default() });
     }
     set_state(g, gd, CivState::Gone);
 }
@@ -451,7 +451,7 @@ pub fn civilian_comply(g: &mut crate::game::Game) -> bool {
     let t_id = g.gd[gd].talk;
     g.gd[gd].held = None; g.ch[c].anim.held_pose = None; g.tab.game_talk[t_id].held_since = -1.0; g.gd[gd].speed = 0.0; g.ch[c].vel = [0.0, 0.0, 0.0];
     g.pl[pl].holding = None; g.ch[pc].anim.hold_pose = None; g.pl[pl].fire_cd = m::max(g.pl[pl].fire_cd, 0.4);
-    later(g, 0.9, &LaterP { kind: PendKind::ComplyLine, cv: gd, o: None, ..LaterP::zeroed() });
+    later(g, 0.9, &LaterP { kind: PendKind::ComplyLine, cv: gd, o: None, ..LaterP::default() });
     to_cower(g, gd, true);
     let pos = g.ch[c].pos;
     let d = data_n(vec![("who", Dv::T(g.cv[cid].name.clone()))]);
@@ -662,7 +662,7 @@ fn notice_cowering(g: &mut Game, cv: GuardId, cid: CivId, c: CharId, dt: f64) {
         let pool = report_pool(g, cause.map(|c| c.as_str()));
         let t = pick(g, cv, &pool);
         civ_say(g, cv, &t, None, None);
-        later(g, 1.8, &LaterP { kind: PendKind::FoundReport, cv, o: Some(by), ..LaterP::zeroed() });
+        later(g, 1.8, &LaterP { kind: PendKind::FoundReport, cv, o: Some(by), ..LaterP::default() });
     }
 }
 
@@ -710,8 +710,8 @@ pub fn found_down(g: &mut crate::game::Game, cv: GuardId, o: GuardId) {
     if !g.quiet_utility {
         g.alarm.pos[0] = body[0]; g.alarm.pos[1] = 0.0; g.alarm.pos[2] = body[2]; g.alarm.placed = true;
         let lvl = escalation_of(g);
-        later(g, 1.4, &LaterP { kind: PendKind::BodyEsc, cv, o: Some(o), dead: Some(dead), lvl: Some(lvl), ..LaterP::zeroed() });
-        if dead { later(g, 4.5, &LaterP { kind: PendKind::Outrage, cv, o: None, ..LaterP::zeroed() }); }
+        later(g, 1.4, &LaterP { kind: PendKind::BodyEsc, cv, o: Some(o), dead: Some(dead), lvl: Some(lvl), ..LaterP::default() });
+        if dead { later(g, 4.5, &LaterP { kind: PendKind::Outrage, cv, o: None, ..LaterP::default() }); }
     }
     let text = format!("found {} by {}", if dead { "DEAD" } else { "out cold" }, g.gd[o].callsign);
     log(g, cv, &text);
@@ -776,7 +776,7 @@ pub fn greetings(g: &mut crate::game::Game) {
             let pool: Vec<String> = crate::dialogue::civ_lines().guide.greet_civ.into_iter().filter(|t| !(t.contains("wet floor") && !wipes)).collect();
             let t = pick(g, cv, &pool);
             civ_say(g, cv, &t, None, None);
-            later(g, 1.3, &LaterP { kind: PendKind::GreetReply, cv, o: Some(o), ..LaterP::zeroed() });
+            later(g, 1.3, &LaterP { kind: PendKind::GreetReply, cv, o: Some(o), ..LaterP::default() });
             let text = format!("greets {}", g.gd[o].callsign);
             log(g, cv, &text);
             return;

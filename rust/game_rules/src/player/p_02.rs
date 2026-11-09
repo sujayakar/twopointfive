@@ -939,7 +939,7 @@ mod tests {
     use super::*;
 
     fn legs(body: f64, aim: f64, vx: f64, vz: f64, backpedal: bool) -> crate::player::Legs {
-        let mut m = crate::player::Legs::zeroed();
+        let mut m = crate::player::Legs::default();
         m.char.vel = [vx, 0.0, vz]; m.char.body_yaw = body; m.char.aim_yaw = aim; m.backpedal = backpedal;
         m
     }

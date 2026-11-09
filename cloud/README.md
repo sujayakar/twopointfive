@@ -69,13 +69,14 @@ npx convex run games:list            # the games, newest first, with what a runn
 ```
 
 The clocks, in seconds, each a word of the deployment's environment: `MP_START_S` (120: a server asked for must be heard from), `MP_SILENT_S`
-(45: not heard from = gone), `MP_IDLE_S` (60: nobody connected), `MP_MAX_S` (3600: a game's whole life).
+(45: not heard from = gone), `MP_IDLE_S` (60: nobody connected), `MP_MAX_S` (3600: a game's whole life), `MP_COME_S` (15: how long whoever is given a seat
+has to connect in it before it may be another's).
 
 ## Reading it back
 
 ```bash
 CONVEX_URL=https://<name>.convex.cloud CONVEX_DEPLOY_KEY=… bun run tools/cloud/pull.ts --out cloud-pull
-bun run tools/qa/replay-dump.ts cloud-pull/*.ndjson.gz --out cloud-pull/replays     # each visit as a replay file; /replay opens them too
+bun run tools/qa/replay-dump.ts cloud-pull --out cloud-pull/replays     # each visit's tape (`?playtape=` plays it), its moments, an index; the folder's telemetry.ndjson gives the page errors
 ```
 
 `bun run tools/cloud/pull.ts --local --out cloud-pull` reads the backend `bun run dev` started. `telemetry.ndjson` and `players.json` land beside it. The dashboard shows the same tables.

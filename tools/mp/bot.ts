@@ -116,7 +116,7 @@ const loop = setInterval(() => {
   for (let i = 0; i < Math.min(due, 2); i++) { beats++; client.beat(client.seat >= 0 && client.state === 'playing' ? hands(S) : null, performance.now()); }
   if (due > 2) beats += due - 2;
   const a = performance.now();
-  const led = () => { const F = PREDICT ? fore.last : null; target = F ? F.to.pos : S.ahead(seatN(), []).at; };   // (its camera is on its man where he is drawn, as the page's is: host/loop.ts `lead`)
+  const led = () => { const F = PREDICT ? fore.last : null; target = F ? F.to.pos : S.ahead(seatN(), []).at; };   // (its camera is on its man where he is drawn, as the page's is: src/host/drawpage.ts `lead`)
   // (--break, the red path: ONE record stepped with another walk key than the server ran, after tick 90. The man here is then a hair from where the
   //  server has him, and nothing but the state word can say so)
   const n = client.walk({ step: (cmds: WireCmd[]) => { const t = client.confirmed; heldBy[t] = client.heldRun;

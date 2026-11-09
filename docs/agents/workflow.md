@@ -78,7 +78,7 @@ preferences, etc." No accounts; nothing multiplayer.
   seq -1, and its pieces, each the gzip member the browser packed, cut at 512 KB), `telemetry` (small records). WHAT A PAGE MAY CALL is
   public (`prefs:hello|get|put`, `tapes:put|have`, `telemetry:put`) — a page has no secret — and every argument is bounded
   (`limits.ts`); READING BACK OUT is internal (`tapes:list|chunks`, `telemetry:list`, `prefs:players`): a deploy key's, by
-  `bun run tools/cloud/pull.ts` (→ a hand-over file `tools/qa/replay-dump.ts` and `/replay` read, `telemetry.ndjson`, `players.json`),
+  `bun run tools/cloud/pull.ts` (→ a hand-over file `tools/qa/replay-dump.ts` reads, `telemetry.ndjson`, `players.json`),
   `npx convex run`, or the dashboard. A visit is its browser's: another id cannot write into it or ask what is kept of it.
 - **The page's side** = `src/cloud/` (no game code imported; `main.ts` boots it once after the replay key and calls `cloud.frame(rawDt, live, stage, gpuMs)`: numbers, no object a frame):
   `cloud.ts` (the address, who the browser is, whether it sends, the boot, `window.__cloud`), `tapes.ts` (`TapeSync`: a SYNC of the kept
@@ -329,7 +329,7 @@ preferences, etc." No accounts; nothing multiplayer.
   keeps a stored promise from being unhandled while its caller has the same rejection (the cut build, the particles' build, the boot's
   early promises: the red card has those); a readback that fails every frame after a lost device (`gpu/timer.ts`, the particles', the
   light meter's); a browser guard (no window, no IndexedDB commit, no CompressionStream, no Navigation API, a refused clipboard); a dev
-  server or shot server that is not there; the benchmark's card closed before its upload answered. A report in `src/game/journal.ts` is
+  server or shot server that is not there; the benchmark's card closed before its upload answered. A report in `rust/game_rules/src/journal` is
   the catch's only statement and hands over no game state: the reporter reads none, rolls no die and reads no clock. THE REPLAY PAGES are wired
   by the next bullet. Checked headless on both stands: `cloud-check` (107), `splitrays-check` (its pin turned),
   `replaybuf-probes` (121), `replaykeep-probes` (74, `REPLAYLEFT_BREAK=1` red), `gate.sh journal`, `probes.ts cardreplay`, `pipequeue`,
@@ -355,10 +355,7 @@ preferences, etc." No accounts; nothing multiplayer.
   such a page apart from the visits ("0 visits · 1 other page"), says "on a page that is not a visit: replay" under the group, and
   reads a browser's machine off a visit somebody played where it has one. TWO PLACES NOW SAY A RESULT, not only a throw: the viewer's
   `replay.viewer.send` where the sending answered 'failed', and `replay.viewer.notes.write` where a kept visit's write answered false
-  (neither call ever rejects). THE SHELF SAYS ITS OWN FAILURES (`src/tape/shelf.ts`, by its owner's word): the catches that come
-  after a good open are real failures and report as warnings, each handing on what it handed on before, `replay.shelf.put` (null),
-  `replay.shelf.notes` (false), `replay.shelf.list` (an empty list, both lists) and `replay.shelf.get` (null); a browser with no
-  IndexedDB returns before them and stays silent, as do the open's own catch, the close and the last tidy-up. STILL REPORTING TO NOBODY: the sound pages, the editor and the workbench (developer pages). Check: `cloud-check`,
+  (neither call ever rejects). STILL REPORTING TO NOBODY: the sound pages, the editor and the workbench (developer pages). Check: `cloud-check`,
   five lines headed "page reports", both stands; `CLOUD_BREAK=1` turns the first red (a browser that has not read the notice sends).
   On the real viewer page (a stand-in backend, a scratch script): no request with nothing to say, then one visit record marked
   `replay` with the build and four reports (a console.warn, a console.error, an error and a rejection nothing caught), and nothing at
@@ -368,7 +365,7 @@ preferences, etc." No accounts; nothing multiplayer.
   `run` record, while all three exfiltrations had theirs). `Telemetry.frame` writes a `run` when the stage word it is handed moves into
   `done` or `failed`, and the page handed it `game.mission.stage`: only the STEALTH mission moves that word into an end. A house taken, a
   rescue, a night breach won and a team wiped end by their own rules and leave it where it was. The page now hands in
-  `endStage(game.mission.stage, game.verdict.result)` (`src/cloud/telemetry.ts`): the verdict's end where a run has one (`game/verdict.ts`
+  `endStage(game.mission.stage, game.verdict.result)` (`src/cloud/telemetry.ts`): the verdict's end where a run has one (`rust/game_rules/src/verdict`
   knows every kind's), else the mission's word. The record gained `over`, the verdict in brief (`kind`, `won`, `word`, `why`, `secs`,
   `approach`, `void` = a cheat was on, `clean`, `lost` of `of`, `foesDown` of `foesOf`, `hostagesAlive` of `hostagesOf`), and one end is one
   record: a word that moves from an end to the other end (a mission failed whose verdict then says won) writes nothing more. On a
@@ -480,6 +477,8 @@ preferences, etc." No accounts; nothing multiplayer.
   NOT kept in this browser (its trace is in no tape) goes up whole, once, as a saved file of kind `f7`. THE SWITCH IS THE TAPES'
   (`?cloudtapes=0`, `?cloud=0`, the browser's row, the notice first), and the notes of a visit whose tape may not go stay with it, as does a window saved out of such a visit:
   a note is part of a replay, which the title's line names. BOUNDS: 256 KB a line, 16 lines a call, 1,500 keys a browser. THE VIEWER:
+  (2026-11-09: THE F7 SHELF IS OUT, `tape/shelf.ts` with it: nothing had written it since the new page. Kept visits' notes are what goes up; lines of kind `f7` already on a
+  backend are still read back. Its database in a browser is left as it stands.)
   `cloudNotes(q, store)` (`cloud.ts`) is one round for a page that has no game: the replay viewer calls it after each save of a note
   (`replay/viewer.ts` `flush`), so a note typed, changed or emptied there is on the backend within the second, with no game page
   open. Rounds run one at a time with at most one more waiting (two saves a moment apart must not both send the line). Held on the
@@ -488,7 +487,7 @@ preferences, etc." No accounts; nothing multiplayer.
   appends the lines to the hand-over file it writes, after the visits, each behind a line break (a cut tape's last bytes may not end
   a line), so `tools/qa/replay-dump.ts` reads them as it always did; `--no-notes` is not a word, a backend from before the table is
   read without them. `cloud-check` family `notes` (six lines; the red path marks a line as sent that never went). NEVER RUN against
-  the real service; nothing calls the page's shelf under a real browser in a check (the shelf's two reads are `tape/shelf.ts`'s own).
+  the real service.
 - **A local build has a local backend** (the maintainer, 10-27: "we can make the local build use a local convex deployment").
   `bun run dev` sets `TPS_LOCAL_CLOUD=1`; `tools/serve.ts` then calls `tools/cloud/local.ts` `localCloud()`, which runs
   `convex dev --tail-logs disable` in `cloud/` (Convex's own backend on this machine; it pushes `cloud/convex/` and keeps pushing as
@@ -591,7 +590,7 @@ preferences, etc." No accounts; nothing multiplayer.
   a page open across a deploy and a deploy rolled back still get servers). `cloud/`
   now has ONE run-time package (`modal`, external in `cloud/convex.json`). CHECK: `bun run tools/qa/mp-control-check.ts [cap idle join door
   reaper runner hosted]` — the stand-in backend, the REAL local runner, stand-in servers as real processes (`tools/mp/runner-standin.ts`),
-  clocks set to seconds; `MPCAP_BREAK=1` must fail `cap`, `MPREAP_BREAK=1` must fail `reaper` and `runner` (both words are dead on the
+  clocks set to seconds; `MPCAP_BREAK=1` must fail `cap`, `MPREAP_BREAK=1` must fail `reaper` and `runner`, `MPSEAT_BREAK=1` `join` (the words are dead on the
   service: they are read only where `CONVEX_CLOUD_URL` is not set). Not game code: no stand of the two applies. By hand: `bun run dev`, then `bun run tools/mp/runner-try.ts`. ONE REAL SANDBOX (11-02, the hosted
   backend on the build that first carried this): the deploy had registered the runner with the page's commit (`runners:list`: one build,
   cap 4, its first sweep through); `runner-try.ts --cloud … --build …` made a one seat game; it read `waiting` at a `wss://` tunnel address

@@ -1,4 +1,4 @@
-// AN EVEN PACE ON A FAST DISPLAY, and the frame rate as it is (the game's own frame loop, main.ts frame()).
+// AN EVEN PACE ON A FAST DISPLAY, and the frame rate as it is (the game's own frame loop, host/drawpage.ts frame()).
 //
 // THE FAULT, from two recordings off a 120 Hz laptop on High (GPU about 17 ms a frame): the display asks for a frame every 8.3 ms, nothing in the loop waits
 // for the GPU, so the page hands over two frames back to back and is then held by the browser until the GPU has room: the gaps between frames ran
@@ -26,9 +26,9 @@
 // IT NEVER STEPS A SLOW MACHINE DOWN to an even 45 or 30, which would pass frames over to see the period. In the game the ladder is what brings the work inside the frame, a pace under the ladder's cut would read to it as a slow
 // machine, and a frame passed over to look is a hitch in a fight. This one never passes over a frame that was due.
 //
-// The page's alone, as the frame loop's others are (game/knobs.ts VISIT_OWN): nothing in the simulation reads it and a run is the same run either way. The
-// step still takes the real time since the last worked frame. ON in the page, `?pace=0` = every display frame worked, as it was; OFF here and on a harness
-// stand, where no display asks for anything. Never seen on a fast display by whoever wrote it: the check (tools/qa/pace-check.ts) plays stamps through it.
+// The page's alone, as the frame loop's others are: nothing in the simulation reads it and a run is the same run either way. The
+// step still takes the real time since the last worked frame. ON in the page, `?pace=0` = every display frame worked, as it was; OFF here.
+// Never seen on a fast display by whoever wrote it: the check (tools/qa/pace-check.ts) plays stamps through it.
 //
 // A WINDOW NOBODY IS AT GIVES WAY (`giveway`, 11-03). THE FAULT: two windows of the game in one browser, for a co-op game on one laptop, and the second sat on
 // 'starting the GPU…'. A browser has ONE process that talks to the GPU for all of its windows, and nothing in this loop waits for the GPU: a window hands over
@@ -38,7 +38,7 @@
 // THE RULE: a window that does not have the system's focus (the window that takes the keys is another one, or another program) has ONE frame with the GPU at
 // a time: the next is not begun until the queue says the last one's work is done. And it takes at most `share` of the GPU's time: it begins the next no
 // sooner than that frame's work took, over `share`, after the last was begun (half and half at 0.5), though never more than `longest` after it: the loop's
-// step takes a twentieth of a second at the most (main.ts frame), so a longer wait would run the window's own clock slow and a picture nobody is at would
+// step takes a twentieth of a second at the most (host/drawpage.ts frame), so a longer wait would run the window's own clock slow and a picture nobody is at would
 // stop looking alive. A window with room to spare never notices (work that takes a third of its frame is under the share already); one whose work fills
 // its frame draws about every second frame while nobody is at it, and is back to its own pace on the frame the focus comes back. The window somebody IS at
 // is never held by this: its frames go as they always did. Not while the page measures the machine or records a take.
@@ -47,7 +47,7 @@
 // before it. The answer by itself would count the work of the OTHER windows ahead of this one in the queue, and a window beside a busy one would starve
 // itself. The wait runs from the last worked frame's own stamp, which a stall does not forget (the even pace's `at` is forgotten across a stall, so that a
 // late frame moves the beat).
-// ON in the page, `?giveway=0` = an unfocused window draws as a focused one does, as it was; OFF here and on a harness stand.
+// ON in the page, `?giveway=0` = an unfocused window draws as a focused one does, as it was; OFF here.
 //
 // THE PAGE WAITS FOR THE GPU BEFORE IT STARTS A FRAME (`flight`, 11-03). The root of both faults above is one sentence of them: nothing in this loop waits for
 // the GPU. The even pace cures frames in pairs only where the ladder's rate divides the display's and the work fits the paced frame; past that (a machine that
@@ -63,8 +63,8 @@
 // The queue is asked once for every frame that DREW (a card that hides the picture draws nothing and
 // asks nothing). A FRAME THE QUEUE NEVER ANSWERS FOR is given up after `lost` ms and the page goes on without it: a window held at its limit for good by
 // one lost answer would be a frozen picture with no card to say why. (Ten seconds: a frame on the software adapter is seconds long and is not lost.)
-// ON in the page at two (`FLIGHT_PAGE`), `?flight=0` = nothing waits, as it was; OFF here and on a harness stand.
-/** how many frames the PAGE lets be with the GPU when another is begun (the page's boot, the shipped stand and the check read this one number) */
+// ON in the page at two (`FLIGHT_PAGE`), `?flight=0` = nothing waits, as it was; OFF here.
+/** how many frames the PAGE lets be with the GPU when another is begun (the page's boot and the check read this one number) */
 export const FLIGHT_PAGE = 2;
 export const EVENPACE = {
   on: false,

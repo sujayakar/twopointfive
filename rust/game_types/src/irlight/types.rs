@@ -1,10 +1,9 @@
-//! The types of `irlight`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `irlight`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: Need, src/game/irlight.ts:113)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct Need {
     pub read_t: f64,
     pub dark_t: f64,
@@ -12,22 +11,8 @@ pub struct Need {
     pub t: f64,
     pub fresh: bool,
 }
-impl Need {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Need {
-            read_t: 0.0,
-            dark_t: 0.0,
-            k: 0.0,
-            t: 0.0,
-            fresh: false,
-        }
-    }
-}
-impl Default for Need { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Kit, src/game/irlight.ts:114)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct Kit {
     pub sam: Option<LightId>,
     pub more: JsMap<crate::Num, LightId>,
@@ -36,73 +21,25 @@ pub struct Kit {
     pub need: JsMap<crate::Num, crate::irlight::Need>,
     pub near: JsMap<crate::Num, crate::irlight::KitNearValue>,
 }
-impl Kit {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Kit {
-            sam: None,
-            more: JsMap::new(),
-            men: JsMap::new(),
-            seen: JsMap::new(),
-            need: JsMap::new(),
-            near: JsMap::new(),
-        }
-    }
-}
-impl Default for Kit { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/irlight.ts:114 Kit.seen, src/game/irlight.ts:114)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct KitSeenValue {
     pub t: f64,
     pub e: f64,
 }
-impl KitSeenValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitSeenValue {
-            t: 0.0,
-            e: 0.0,
-        }
-    }
-}
-impl Default for KitSeenValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/irlight.ts:116 Kit.near, src/game/irlight.ts:116)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct KitNearValue {
     pub t: f64,
     pub k: f64,
 }
-impl KitNearValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitNearValue {
-            t: 0.0,
-            k: 0.0,
-        }
-    }
-}
-impl Default for KitNearValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/irlight.ts:306 irLightState ->, src/game/irlight.ts:306)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct IrLightState {
     pub sam: bool,
     pub men: Vec<GuardId>,
     pub shown: bool,
 }
-impl IrLightState {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        IrLightState {
-            sam: false,
-            men: Vec::new(),
-            shown: false,
-        }
-    }
-}
-impl Default for IrLightState { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]

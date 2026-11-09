@@ -1,9 +1,8 @@
-//! The types of `gunroles`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `gunroles`.
 #![allow(unused_imports)]
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum GunRole {
     Pistol,
@@ -24,27 +23,14 @@ impl GunRole {
     }
 }
 
-/// (TypeScript: DealMan, src/game/gunroles.ts:82)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct DealMan {
     pub gd: GuardId,
     pub watch: V3,
     pub hostage: Option<bool>,
 }
-impl DealMan {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DealMan {
-            gd: GuardId(0),
-            watch: [0.0; 3],
-            hostage: None,
-        }
-    }
-}
-impl Default for DealMan { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/gunroles.ts:69 ROLE, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct ROLE {
     pub fiveseven: Option<String>,
     pub guard9mm: Option<String>,
@@ -63,32 +49,7 @@ pub struct ROLE {
     pub mk18bare: Option<String>,
     pub g19bare: Option<String>,
 }
-impl ROLE {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ROLE {
-            fiveseven: None,
-            guard9mm: None,
-            aks74u: None,
-            ak74m: None,
-            akms: None,
-            fn2000: None,
-            m870: None,
-            mk12: None,
-            mp7: None,
-            mk46: None,
-            m1014: None,
-            hk45: None,
-            g18: None,
-            pkm: None,
-            mk18bare: None,
-            g19bare: None,
-        }
-    }
-}
-impl Default for ROLE { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum UseOnKey {
     Post,
@@ -107,24 +68,12 @@ impl UseOnKey {
     }
 }
 
-/// (TypeScript: inline at src/game/gunroles.ts:100 gunDeal ->, src/game/gunroles.ts:100)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct GunDealItem {
     pub gd: GuardId,
     pub gun: crate::weapons::WeaponId,
     pub line: f64,
 }
-impl GunDealItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GunDealItem {
-            gd: GuardId(0),
-            gun: crate::weapons::WeaponId::Fiveseven,
-            line: 0.0,
-        }
-    }
-}
-impl Default for GunDealItem { fn default() -> Self { Self::zeroed() } }
 
 /// the counters this module keeps for the checks
 #[derive(Clone, Debug, Default)]

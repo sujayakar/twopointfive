@@ -1,10 +1,10 @@
 //! A MOMENT OF A GAME, whole: where a walk of a tape may come back to. It is the game as it stood and everything this module holds of it (its saves, what was said), so
-//! what is handed over again from there plays the same run. A save put back (page.rs `back`) is another thing: it goes on from now, and no serial is dealt twice.
-use crate::page::{block_of, hold, shelf_of, shelf_put, stood, Kept, Shelved};
+//! what is handed over again from there plays the same run. A save put back (saves.rs `back`) is another thing: it goes on from now, and no serial is dealt twice.
+use crate::saves::{hold, shelf_of, shelf_put, Shelved};
+use game_start::moment::Moment as Whole;
 use std::cell::RefCell;
-use std::rc::Rc;
 
-struct Moment { of: u32, game: Kept, shelf: Vec<(String, Shelved, Rc<Kept>)>, said: Vec<String> }
+struct Moment { of: u32, game: Whole, shelf: Vec<(String, Shelved)>, said: Vec<String> }
 
 thread_local! {
     /// the moments held, by number less one
@@ -14,7 +14,7 @@ thread_local! {
 /// the moment game `h` stands at, between two ticks; 0 where it cannot be held (a hands-off player has the seat: what he is about is no part of the game)
 #[no_mangle]
 pub extern "C" fn face_moment(h: u32) -> u32 {
-    let Some((game, said)) = super::with(h, |x| x.hands.is_none().then(|| (Kept::Own(x.g.clone(), block_of(x.g.sim)), x.said.clone()))) else { return 0 };
+    let Some((game, said)) = super::with(h, |x| x.hands.is_none().then(|| (Whole::of(&x.g), x.said.clone()))) else { return 0 };
     let m = Moment { of: h, game, shelf: shelf_of(h), said };
     MOMENTS.with(|v| { let mut v = v.borrow_mut(); match v.iter().position(|x| x.is_none()) { Some(i) => { v[i] = Some(m); i as u32 + 1 } None => { v.push(Some(m)); v.len() as u32 } } })
 }
@@ -23,15 +23,13 @@ pub extern "C" fn face_moment(h: u32) -> u32 {
 pub extern "C" fn face_moment_back(h: u32, k: u32) -> u32 {
     let Some((shelf, said)) = MOMENTS.with(|v| v.borrow().get((k as usize).wrapping_sub(1)).and_then(|m| m.as_ref()).filter(|m| m.of == h).map(|m| {
         // (a game lost to a panic left its number and its slot: it stands in them)
-        let Kept::Own(at, _) = &m.game else { unreachable!("a moment is a game's own value") };
-        let slot = at.sim;
-        super::stand_if_lost(h, || stood(&m.game, slot));
-        super::with(h, |x| { let g = stood(&m.game, x.g.sim); hold(x, g); x.hands = None; });
+        let slot = m.game.game.sim;
+        super::stand_if_lost(h, || m.game.laid(slot));
+        super::with(h, |x| { let g = m.game.laid(x.g.sim); hold(x, g); x.hands = None; });
         (m.shelf.clone(), m.said.clone())
     })) else { return 0 };
-    shelf_put(h, &shelf);
+    shelf_put(h, shelf);
     super::with(h, |x| x.said = said);
-    crate::memo::forget(h);
     1
 }
 #[no_mangle]

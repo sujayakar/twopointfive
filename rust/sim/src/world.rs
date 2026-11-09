@@ -15,8 +15,6 @@ pub const WORLDS: usize = 4;
 pub const ASK_HOST: u32 = 0xffff_ffff;
 /// statics a world can hold
 pub const MAX_BOXES: usize = 8192;
-/// what snow a static is (the table `snow`; snowBog.ts SNOW_KIND)
-pub const SNOW_BARE: u8 = 1;
 pub const SNOW_PACKED: u8 = 2;
 pub const SNOW_OLD: u8 = 3;
 pub const SNOW_BANK: u8 = 4;

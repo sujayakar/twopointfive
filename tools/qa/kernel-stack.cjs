@@ -3,7 +3,7 @@
 // size ("Stack size limit exceeded"). Nothing reports it: the pipeline is made, the page boots with no error, and the GPU process dies of a null routine the first
 // time the pass is dispatched ("WebGPU device lost: A valid external Instance reference no longer exists."). The final gather has stood within a hundredth of
 // that limit for a long time, so a few lines added to anything it calls is enough. This is a limit of the adapter the cloud tests on, not of a GPU, but what
-// grows the frame is the same pasted size a Windows shader compiler pays for (tools/qa/shaderinline-check.ts).
+// grows the frame is the same pasted size a Windows shader compiler pays for (tools/qa/shaders-check.ts inline).
 //
 // What it does: loads the page (the look page by default) only as far as its shader modules and compute pipeline descriptors, which takes seconds, and keeps
 // their texts AS THE PAGE MAKES THEM (tools/qa/wgsl-dump.ts's stand-in leaves page switches down and its texts are smaller). Then, a kernel at a time, in a
@@ -17,11 +17,10 @@
 // exit 0 = every kernel asked for was built and ran · 1 = one was not · 2 = no browser, no adapter or no such kernel
 // Run it alone: it finds the GPU process as the newest one on the machine. Compute kernels only (a render pipeline needs its targets; the page's boot says those).
 const { spawn, spawnSync } = require('node:child_process'); const fs = require('node:fs'); const net = require('node:net'); const path = require('node:path');
-const { chromium } = require('playwright');
+const { launch, playwright, browserFile, SOFTWARE } = require('./page.cjs');
 const ROOT = path.resolve(__dirname, '../..'); const argv = process.argv.slice(2), flag = (n, d) => { const i = argv.indexOf(n); return i >= 0 ? argv[i + 1] : d; };
 const QUERY = flag('--query', ''), LIST = argv.includes('--list'), ALT = flag('--text', ''), WANT = flag('--kernel', 'gatherSplit/trace').split(',');
 const BASE = argv.includes('--plain') ? '?roomclear&squad4&levelFile=pass.json' : '?look&roomclear&squad4&levelFile=pass.json';
-const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
 const freePort = () => new Promise((res, rej) => { const s = net.createServer(); s.unref(); s.on('error', rej); s.listen(0, '127.0.0.1', () => { const p = s.address().port; s.close(() => res(p)); }); });
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
@@ -30,7 +29,7 @@ async function capture() {
   const port = await freePort(); const srv = spawn('bun', ['run', 'tools/serve.ts'], { cwd: ROOT, env: { ...process.env, PORT: String(port) }, stdio: 'ignore' });
   try {
     let up = false; for (let i = 0; i < 240 && !up; i++) { try { up = (await fetch(`http://127.0.0.1:${port}/`)).ok; } catch { } if (!up) await sleep(250); }
-    const browser = await chromium.launch({ args: FLAGS });
+    const browser = await launch();
     try {
       const page = await browser.newPage({ viewport: { width: 640, height: 400 } });
       await page.addInitScript(() => { window.__mods = []; window.__pipes = []; const ids = new WeakMap();
@@ -47,7 +46,7 @@ async function capture() {
 /** where the adapter's compiler compares a routine's frame with its limit, read off the library's own code: { at: offset in addProlog, a, b: the two operands as gdb names them } or null */
 function findCheck() {
   if (spawnSync('gdb', ['--version']).status !== 0) return null;
-  const lib = path.join(path.dirname(chromium.executablePath()), 'libvk_swiftshader.so'); if (!fs.existsSync(lib)) return null;
+  const lib = path.join(path.dirname(browserFile() || playwright().chromium.executablePath()), 'libvk_swiftshader.so'); if (!fs.existsSync(lib)) return null;
   const d = spawnSync('gdb', ['-batch', '-ex', "disassemble 'Ice::X8664::TargetX8664::addProlog(Ice::CfgNode*)'", lib], { encoding: 'utf8', maxBuffer: 1 << 26 });
   const lines = (d.stdout || '').split('\n'); const call = lines.findIndex(l => /call.*Ice3Cfg8setError|call.*Ice::Cfg::setError/.test(l)); if (call < 0) return null;
   for (let i = call; i >= 0 && i > call - 40; i--) { const m = lines[i].match(/<\+(\d+)>:\s+cmp\s+(0x[0-9a-f]+)\((%\w+)\),(%e\w+)/); if (m && /\bj(be|a|ae|b)\b/.test(lines[i + 1] || '')) return { at: +m[1], limit: `*(int*)($${m[3].slice(1)}+${m[2]})`, frame: `$${m[4].slice(1)}` }; }
@@ -57,7 +56,7 @@ function findCheck() {
 /** one kernel alone: { made, ran, err, frame, limit, why } */
 async function runOne(k, check) {
   const tag = `--kernel-stack-run=${process.pid}-${Date.now()}`;   // (a word of this run's own on the browser's command line: its GPU process is found by its parent, never "the newest on the machine", which may be another page check's)
-  const browser = await chromium.launch({ args: [...FLAGS, '--no-sandbox', '--disable-gpu-sandbox', tag] });   // (the sandbox off: a debugger may then attach to the GPU process)
+  const browser = await launch({ flags: [...SOFTWARE, '--no-sandbox', '--disable-gpu-sandbox', tag] });   // (the sandbox off: a debugger may then attach to the GPU process)
   let dbg = null, dbgOut = '', script = null;
   try {
     const page = await browser.newPage();

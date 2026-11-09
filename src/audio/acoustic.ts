@@ -3,8 +3,8 @@
 // loss in its loop (Karplus and Strong's), a drum head / a bar / a gong is a handful of decaying partials at the ratios such a thing rings at with the noise of what hit it,
 // a cymbal is a dense cluster of partials no chord could hold. The maintainer, 10-14: "more diverse instrumentation and making them sound more acoustic rather than synth
 // (specifically the accents and percussion ...)".
-// Pure and deterministic: no audio device, no clock, and its only die is seeded per voice (a buffer is the same every time it is made), so tools/qa/music-check.ts can hold
-// what every voice IS — in tune, struck not swelled, dead by its end — without a browser. What they sound like together is a listener's ears.
+// Pure and deterministic: no audio device, no clock, and its only die is seeded per voice (a buffer is the same every time it is made).
+// What they sound like together is a listener's ears.
 import { mulberry32 } from '../math/dice';
 
 type F = Float32Array;

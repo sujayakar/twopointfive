@@ -889,7 +889,7 @@ mod tests {
         g
     }
     fn a_box() -> SBox {
-        let mut b = SBox::zeroed();
+        let mut b = SBox::default();
         b.c = [1.0, 2.0, 3.0];
         b.h = [0.5, 0.25, 0.125];
         b.yaw = 0.5;

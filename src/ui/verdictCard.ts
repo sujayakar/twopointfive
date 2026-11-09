@@ -1,4 +1,4 @@
-// The verdict's part of the end card (ui/debrief.ts hosts it; game/verdict.ts made the record): how the run went, at a glance.
+// The verdict's part of the end card (ui/debrief.ts hosts it; rust/game_rules/src/verdict made the record): how the run went, at a glance.
 //
 //   THE HEAD  one word (won or lost), the clock, the par medal where the level has one, the four ways this mission can be won with the ones won lit
 //             (ui/verdictPips.ts), and one tick per try it took — hollow for a try lost or given up, filled for the win. A run played with a cheat on
@@ -30,7 +30,7 @@ export function verdictHead(end: RunEnd, V: RunVerdict): HTMLElement {
   if (P && V.won && P.medal !== 'none') { const m = el('span', `vd-medal m-${P.medal}`); m.textContent = P.medal; m.title = P.shown; top.appendChild(m); }
   if (V.void) { const v = el('span', 'vd-void'); v.textContent = 'cheats'; v.title = 'a cheat was on during this try, so it doesn\'t count'; top.appendChild(v); }
   top.appendChild(el('span', 'vd-gap'));
-  if (kept?.lesson) box.classList.add('lesson');   // a Training lesson: the word and the clock, nothing graded (no ways, no tries: main.ts keeps none)
+  if (kept?.lesson) box.classList.add('lesson');   // a Training lesson: the word and the clock, nothing graded (no ways, no tries)
   else top.appendChild(pipsEl(kept?.ways ?? {}, V.void ? null : V.approach));
   if (kept && kept.streak > 0) {
     const n = kept.streak, shown = Math.min(n, TICKS_MAX), tries = el('span', 'vd-tries');
@@ -67,7 +67,7 @@ export function verdictSlot(end: RunEnd, V: RunVerdict): HTMLElement | null {
   return slot.children && slot.children.length ? slot : null;
 }
 
-/** THE VERDICT'S MEN AS A PAGE NAMES THEM: a player's picked name over his number (host/names.ts), in his own row and in the words of whoever he put
+/** THE VERDICT'S MEN AS A PAGE NAMES THEM: a player's picked name over his number (src/host/myname.ts), in his own row and in the words of whoever he put
  *  down. The verdict itself keeps the game's names: they are its state */
 export function namedMen(end: RunEnd, V: RunVerdict): VerdictMan[] {
   const alias = new Map<string, string>(); for (const m of V.men) if (m.human) alias.set(m.name, end.name(m.id, m.name));

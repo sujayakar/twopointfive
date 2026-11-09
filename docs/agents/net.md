@@ -126,7 +126,7 @@ back, WebSockets, CPU senses on the server. ONE WAY TO START A GAME: the Rust mo
   the control plane is `cloud/convex/games.ts`, `docs/agents/workflow.md` "Co-op's control plane"). THE SWITCH: `COOP.on`, on for a real page, `?coop=0` =
   the page as it was (no Co-op row, a `?join=` on the address not read); off wherever there is no window. No knob table, no `FROZEN_HOLDS` row, no journal
   key: no tick reads it, a game is the server's start whatever it says. A CO-OP GAME HAS ONE DOOR, `Lobby.seat(code)`: whoever comes through it is given
-  a seat by the control plane (`games:join`: the first free one, or the one this TAB already holds), waits for the game's server to answer (`starting` →
+  a seat by the control plane (`games:join`: an open one, or the one this TAB already holds), waits for the game's server to answer (`starting` →
   `waiting` with an address), and is sent on to the server's own address — `?net=…&netgame=…&netkey=…`, the page client above — with `join=<CODE>` still
   on it (`address.ts NET_JOIN`: carried by `doorFromUrl`, dropped by `netLeave`). The door's ADDRESS is `/?join=<CODE>`, the link a friend opens
   (`coop.ts coopFromUrl`, asked by `host/drawpage.ts`; a code that is not five of the code's letters is refused there, nothing is read out of it). A game's whole
@@ -138,7 +138,7 @@ back, WebSockets, CPU senses on the server. ONE WAY TO START A GAME: the Rust mo
   under it are module state (`coop.ts PAGE`): the title is drawn twice, the boot card and then the live title over it, and both show the same. The
   title's key walk stops at the field with the arrows, and a letter typed into a field is the field's (`keymap.ts typedInto`). HOSTING is the one
   starting page in its co-op dress (`ui/startpage.ts StartPageOpts.coop`): only the missions two can play (`coopCan`: a kind the game seats two in —
-  `game/seats.ts seatsKind` — not a lesson, not a row built for its own size), the setup rail as ever, no kit step, and its block ('Host game') hands the
+  `rust/game_rules/src/seats seats_kind` — not a lesson, not a row built for its own size), the setup rail as ever, no kit step, and its block ('Host game') hands the
   mission's address to `coop.ts host` instead of loading it (one game a press). WHAT THE HOST HANDS OVER (`coopScenario`): that address — level, hour,
   weather, way in, difficulty — without this visit's own words (`VISIT_FLAGS`, the sending words), with `squad=4&seats=2` on it (each player brings two
   teammates) and the difficulty levers this machine keeps written out (the server keeps nothing), a fresh die, and THE HOST'S OWN SETTINGS AS COMMANDS
@@ -160,15 +160,18 @@ back, WebSockets, CPU senses on the server. ONE WAY TO START A GAME: the Rust mo
   dress the starting page's own deploy hook writes nothing, a hosted game is not that list's to remember — and whose refusal said twice stays up; the
   title's row and the host's list, the block makes the game, the invite, the host's window sent to the LINK comes back through
   the door into its own seat, a second window TYPES the code, a third that opens the link is told the game is full, both windows match every state
-  word for 300 ticks and each walks its own man; `LOBBY_BREAK=1`, the second window opened with `coop=0`, fails the join and same-fight lines). `mpclient-page` is the two-engine line: a Chromium page against a bun server. RUN 2026-11-08 on the page that draws (the cloud box, headless Chromium on the software adapter; the control plane a stand-in of plain objects, for the backend's packages cannot be had there): every line PASS in a quarter of an hour (both windows 35 of 35 state words, every part of the game on each). `lobby-check` was not run there. NOBODY HAS SEEN OR PLAYED IT: never seen on a GPU (the windows were headless, on the software adapter, frames stepped by
+  word for 300 ticks and each walks its own man; `LOBBY_BREAK=1`, the second window opened with `coop=0`, fails the join and same-fight lines). `mpclient-page` is the two-engine line: a Chromium page against a bun server. RUN 2026-11-08 on the page that draws (the cloud box, headless Chromium on the software adapter; the control plane a stand-in of plain objects, for the backend's packages cannot be had there): every line PASS in a quarter of an hour (both windows 35 of 35 state words, every part of the game on each). `lobby-check` (every line) and `mp-control-check` (every family but `hosted`) were run 2026-11-09, the backend's library such a stand-in too. NOBODY HAS SEEN OR PLAYED IT: never seen on a GPU (the windows were headless, on the software adapter, frames stepped by
   script and none looked at beyond two stills of the title and the host's list); no two people, no two machines, no real network; the hosted backend
   and a sandbox have never been reached from this screen (the control plane's own checks cover its functions); a deployed backend's redacted refusal
   is a made-up answer in the check, never a real one; the invite card, Copy link and the 'Your friend is joining' line were read from the DOM, not
-  looked at. OPEN: a seat claimed at the door is held until the game is over (no `games:leave`: a friend who opens the link and closes the tab keeps
-  the seat, and only that tab can come back to it); a restart is still either player's record; a full game's address pasted into a third tab watches,
-  as any keyless `?net=` address does; the scenario's 400 characters need the control plane's functions deployed again.
-- **Two players, two teams to the eye** (2026-11-03; `src/game/seats.ts seatTone` / `playerName`, `src/ui/findmeviz.ts findMeOutline`, `src/game/floorplan.ts
-  PlanFor` / `PLAN.others`, `src/ui/planfloor.ts plansToDraw`, `src/game/verdict.ts roster`, `src/game/deathrecap.ts manOf`). The maintainer, from the
+  looked at. A SEAT IS HELD BY WHO IS THERE (2026-11-09; `games.ts openSeat`): its holder has `MP_COME_S` (15 s) to connect, from the moment he was given it
+  or, where he waited for the server to start, from the server's first word; past that a seat nobody is connected in is the next one's who asks by the
+  code, and its old holder's again if he comes first. No page says goodbye: the server says at once when a seat empties, so a closed tab, a Quit, a
+  crash and a browser that cannot play are one case. The key is the SEAT'S and does not change with its holder: a tab that kept it and is loaded again
+  sits down over whoever is there (the server's rule for a page loaded again). OPEN: a restart is still either player's record; a full game's address pasted into a third tab watches,
+  as any keyless `?net=` address does; the scenario's 400 characters and the seats let go need the control plane's functions deployed again.
+- **Two players, two teams to the eye** (2026-11-03; `rust/game_rules/src/seats seatTone` / `playerName`, `src/ui/findmeviz.ts findMeOutline`, `src/game/floorplan.ts
+  PlanFor` / `PLAN.others`, `src/ui/planfloor.ts plansToDraw`, `rust/game_rules/src/verdict roster`, `rust/game_rules/src/deathrecap man_of`). The maintainer, from the
   first game of two anybody played (two windows, his own GPU): "works on my m4! overall looks great. no outlines for the other player character (maybe
   we should have yellow + red team and then purple + blue team)", "seeing your teammates squad path overlays (but probably fainter than yours) would be
   great", "at least have numbers for players or maybe you can pick your name when you enter multiplayer (and we save it in a cookie)". Before this a
@@ -238,7 +241,7 @@ back, WebSockets, CPU senses on the server. ONE WAY TO START A GAME: the Rust mo
   and the page's half on a check's clock, through stalls, bunched ticks, a restart and a page asleep; `NET_BREAK=1` fails). `PORT=<dev server> node
   tools/qa/mpclient-page.cjs` (headless Chromium against a real server, a bun client beside it; `--seats 2` = the page in the second seat): its lines are in
   its head. `lobby-check` and `lobby-page` above.
-- **A player's Brightness is his picture's alone: THE GAME'S OWN NUMBERS** (2026-11-05; `src/game/env.ts`: the knob table `ENV` and `tubeGain()`;
+- **A player's Brightness is his picture's alone: THE GAME'S OWN NUMBERS** (2026-11-05; `rust/game_rules/src/env`: the knob table `ENV` and `tubeGain()`;
   `hours.ts exposureOf(g)`; read by `nvg.ts tubeVis` / `tubeSig` and `irlight.ts`). What a goggled man's tube makes of a dark floor, and how strong his
   illuminator is, were worked out at `engine.settings.exposure` and `settings.nvGain`: the PICTURE's numbers, which a player moves (Options > Display >
   Brightness, the bracket keys, the debugger's two sliders), which no recipe, recording or save ever carried, and of which two players have two and a
@@ -278,8 +281,8 @@ back, WebSockets, CPU senses on the server. ONE WAY TO START A GAME: the Rust mo
   `players.rs` (each player his own man, hands, pair and order; the team's eyes; a man's hue on both screens; a fight of two one fight on both machines, their
   views unlike; a rescue refuses two), `coop.rs` (what a machine draws, looks at and shows parts nothing; each pair through a locked door; the look ahead),
   `two_seats.rs`, `hosts_agree.rs`, `seats.rs`, and a two-seat line in many a file beside. The old faults of a game of two read as a game of one (bare asks for
-  "the player", a seat's module sweeping all the world's men, a budget counted with one player) are the Rust game's, mended there. `tools/qa/seats-run.ts` still
-  records a two-seat fight for `tools/blitz`.
+  "the player", a seat's module sweeping all the world's men, a budget counted with one player) are the Rust game's, mended there. A fight of two as its
+  records: the gate's `seats` rows.
 - **What nobody has seen or measured**: two PEOPLE in two seats; two machines; a real network; Host and Join through the hosted service; a client through a
   sandbox's tunnel; the look ahead and a correction by eye on a GPU; a mission ENDING on a server over the wire; the run's memory on a long game (its text is
   kept for joiners: about 20 KB a second with two seats sending every tick); a real socket backing up.

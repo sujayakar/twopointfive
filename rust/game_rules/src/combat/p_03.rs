@@ -61,7 +61,7 @@ pub fn detonate_stun_raw(g: &mut crate::game::Game, it: ItemId, borrowed: bool, 
         loud: true,
         charge: if borrowed { Some(true) } else { None },
         serial,
-        ..crate::game::GameEvent::zeroed()
+        ..crate::game::GameEvent::default()
     });
     let mut n: i32 = 0;
     let entry = crate::roomfight::fight_live(g);

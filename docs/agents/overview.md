@@ -17,7 +17,7 @@ Bun toolchain, **no npm dependencies** (TypeScript is vendored under `vendor/typ
 ## What the game is now (2026-10)
 
 Every line checked against the code at 527a92a. The build is THE PAGE IN THE BROWSER (`bun run dev`); the Mac app (Swift + Metal) was removed 2026-10-11 and lives in git history.
-- **A squad game.** Sam (the player) + 0‥4 AI teammates (`src/game/loadout.ts SquadSize`, `?squad=N`; `?squad4`), in pairs red / blue when four (`Guard.unit.pair`).
+- **A squad game.** Sam (the player) + 0‥4 AI teammates (`rust/game_rules/src/loadout SquadSize`, `?squad=N`; `?squad4`), in pairs red / blue when four (`Guard.unit.pair`).
 
 <!-- was CLAUDE.md lines 240–243 -->
 - **Where the families live** (`src/game/`): SQUAD = orders.ts, pairorders.ts, silent.ts, unseen.ts, sneak.ts, spotted.ts, pairup.ts, squadsmoke.ts, squadthrow.ts, squad40.ts, shutdoor.ts, cover.ts, cleared.ts, roomread.ts, roomfit.ts, stackroom.ts, rearwatch.ts, entrypoints.ts,
@@ -131,12 +131,11 @@ src/smoke/           ONE POOL OF 8³-CELL BRICKS on a level-wide lattice (the *S
                      (SmokeSystem), smoke.wgsl, smokeGrid.ts (the lattice + the consts both shader sides get), red-black SOR pressure solve, emitters; SoundSeal'd door LEAVES are obstacles (a
                      ≤ 32-leaf sealers uniform, re-baked when a leaf shuts / opens / moves and on `SmokeSystem.obstaclesChanged(c, r)`: destruction hides a static); ω clamped [1, 1.95];
                      wind_force.wgsl = the wind lane's forcing; types.ts = the face game code sees (`SmokeSystemLike`)
-src/scene/           markings.ts + markingDefaults.ts (the markings model + per-kind recipes), level.ts (runtime types Level / LightDef / PropDef / plans + buildLevel() = loadLevel(levels/office.json), imported so Bun
-                     inlines it into the bundle), levelData.ts (the FILE format LevelData v1: ids, flag names, materials, refs by id; validate /
-                     canonical serialize / digest / structuralDiff / id helpers — docs/level-format.md), levelLoad.ts (loadLevel data→Level and
-                     levelToData Level→data, order-preserving: data.boxes[i] ≡ world.statics[i]), officeGen.ts (LEGACY procedural generator,
-                     not imported by the game: tools/level-export.ts regenerates the JSON from it; probes.ts level = 0-diff identity gate),
-                     boxes.ts (Box, flags, CPU raycast), collision.ts (capsule-vs-grid, nav grid + A*, sound propagation paths), world.ts
+src/scene/           boxes.ts (Box, flags, CPU raycast), markings.ts (the markings model), shapes.ts, stuff.ts + materials.ts (what a thing is made of, what it does), the paints, the
+                     missions' list and words, world.ts: what the picture and the pages read
+tools/levels/        a generator a level (<name>.ts), export.ts; lib/: what only level making uses — level.ts (a Level's types), levelData.ts (the FILE format: ids, flag names, materials,
+                     refs by id; validate / canonical serialize / digest / structuralDiff — docs/level-format.md), levelLoad.ts (loadLevel data→Level and levelToData Level→data,
+                     order-preserving), officeGen.ts (the office's generator and kit: tools/level-export.ts writes the JSON from it), gwotKit.ts, levelKit.ts, lint.ts, markingDefaults.ts
 levels/              office.json — the level as data (782 boxes incl. 22 Glass panes and 6 vent grilles + their markings, lights, switchables, doors + locks, routes, props, mission, plans, daylight;
                      office-relief.json = the pre-markings 925-box office (?level=relief))
 src/game/            game.ts (Game: state, constructor, event plumbing, doors/props glue, update() orchestration — the split-out
@@ -204,7 +203,7 @@ carry the same values under the same names) and the `Frame` uniform's tail is la
 (`NoShadow` = invisible to every ray, `NoPrimary` = not rasterised, `Cutaway` (viewer stage only), `Dynamic`,
 `Emissive` (auto), `AreaLit`, `Rot`, `Gloss` = 128 (polished floor finish: lobby stone, corridor / break-room lino — the last bit of the
 GPU flag byte), CPU-only `SoundSeal` 1<<16, `Glass` 1<<17 (the one CPU flag past the byte that IS uploaded: `BOX_GLASS`); there is no `Broken` flag —
-a pane that cracks and comes apart is `game/glassbreak.ts`'s per-pane state, not a box flag: see *Glass that comes apart*); bits 8–15 of the GPU flag word are the owner byte (character id) used for self-shadow masking — anything emitted for a
+a pane that cracks and comes apart is `rust/game_rules/src/glassbreak`'s per-pane state, not a box flag: see *Glass that comes apart*); bits 8–15 of the GPU flag word are the owner byte (character id) used for self-shadow masking — anything emitted for a
 character must carry its owner. Storage buffers per stage at ultra on this Mac (limit 10): scene group 8 (6 + reach + mesh) in fragment / compute;
 +2 the cascade trace / light probe (= 10, the ceiling), +1 the g-buffer's and the composite's decal buffer (9), +1 the particles' pool (9).
 
@@ -271,7 +270,7 @@ Wherever this file still says 'the native host / overlay / engine', '.metal' or 
   dropped torch goes dark, weapons leave dying hands as physical items, holstered guns are drawn on the body.
 
 <!-- was CLAUDE.md lines 2974–2978 -->
-- **`src/game/` is ONE runtime import cycle** — 22 files (in August; 84 of 124 by a script over the runtime imports at 527a92a) strongly connected through `game/game.ts` (docs/internal/architecture-review.md = the measured liabilities, a target `EngineHost` /
+- **`src/game/` is ONE runtime import cycle** — 22 files (in August; 84 of 124 by a script over the runtime imports at 527a92a) strongly connected through `rust/game_rules/src/game` (docs/internal/architecture-review.md = the measured liabilities, a target `EngineHost` /
   registries structure and a 15-step migration plan whose steps the maintainer picks; docs/internal/review-ledger.md = every deep-review finding → FIXED hash / PARKED reason / needs them).
   It works only because no top-level statement USES an import: a module-level table or `new X()` built from another game module's exports captures `undefined` / TDZ-throws at boot — and
   the browser bundle orders bindings differently from bun's headless import, so it can break ONLY IN THE PAGE (journal.ts's eager `KNOB_TABLES`: every headless probe green, F10 threw on
@@ -285,7 +284,7 @@ Wherever this file still says 'the native host / overlay / engine', '.metal' or 
   `inhand-page.cjs`. With them, code only they called: the rig's "copy constants" (`rigSource`, `assignRig`, `clearAdjs`,
   `RIG_DEFAULTS`, `cloneRig`; `RIG`'s numbers are edited in `rigProps.ts`), the debugger panel's number rows (`Panel.number` /
   `numbers`), `hingeOnCell`, `GLYPH_NAMES`.
-  KEPT, moved: the level lint is `src/scene/lint.ts` (`tools/qa/level-lint.ts`; its check is `level-lint` in the `level` family, with
+  KEPT, moved: the level lint is `tools/levels/lib/lint.ts` (`tools/qa/level-lint.ts`; its check is `level-lint` in the `level` family, with
   `devices-lint` for the devices' findings); the dev server's `/levels/` answers reads only, to whoever the server answers
   (`?levelFile=` fetches through it; check `level-serve`); the page's still helper is `src/ui/domshot.ts`. The rig's node list
   (`rigProps.ts RigNodeMeta`) stays: the Team & kit figure reads it (`ui/kitFigure.ts`).

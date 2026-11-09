@@ -1,10 +1,9 @@
-//! The types of `unseen`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `unseen`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: State, src/game/unseen.ts:96)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct State {
     pub t: f64,
     pub live: bool,
@@ -14,58 +13,21 @@ pub struct State {
     pub sgn: f64,
     pub why: String,
 }
-impl State {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        State {
-            t: 0.0,
-            live: false,
-            sneak_t: 0.0,
-            cue_t: 0.0,
-            hold: None,
-            sgn: 0.0,
-            why: String::new(),
-        }
-    }
-}
-impl Default for State { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at quiet State.hold, quiet State.hold)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct StateHold {
 }
-impl StateHold {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StateHold {
-        }
-    }
-}
-impl Default for StateHold { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/unseen.ts:94 UNSEEN_LOG, src/game/unseen.ts:94)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct UnseenModUNSEENLOGItem {
     pub t: f64,
     pub what: crate::unseen::UnseenModUNSEENLOGItemWhat,
     pub why: String,
 }
-impl UnseenModUNSEENLOGItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        UnseenModUNSEENLOGItem {
-            t: 0.0,
-            what: crate::unseen::UnseenModUNSEENLOGItemWhat::Off,
-            why: String::new(),
-        }
-    }
-}
-impl Default for UnseenModUNSEENLOGItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum UnseenModUNSEENLOGItemWhat {
-    Off,
+    #[default] Off,
     On,
 }
 impl UnseenModUNSEENLOGItemWhat {
@@ -77,35 +39,15 @@ impl UnseenModUNSEENLOGItemWhat {
     }
 }
 
-/// (TypeScript: inline at src/game/unseen.ts:177 placed, src/game/unseen.ts:177 placed)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct UnseenModPlacedValue {
 }
-impl UnseenModPlacedValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        UnseenModPlacedValue {
-        }
-    }
-}
-impl Default for UnseenModPlacedValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/unseen.ts:162 unseenFollow ->, src/game/unseen.ts:162)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct UnseenFollow {
     pub speed: f64,
     pub crouch: bool,
 }
-impl UnseenFollow {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        UnseenFollow {
-            speed: 0.0,
-            crouch: false,
-        }
-    }
-}
-impl Default for UnseenFollow { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
@@ -147,7 +89,7 @@ pub struct UnseenStats {
 }
 
 /// (src/game/unseen.ts:88 UNSEEN_DEFAULTS: a table nothing writes)
-pub fn unseen_defaults() -> crate::knobs::UnseenK { crate::knobs::page_unseen() }
+pub fn unseen_defaults() -> crate::knobs::UnseenK { crate::knobs::UnseenK::page() }
 
 /// (src/game/unseen.ts:108 WALLBEAT_BREAK)
 pub const WALLBEAT_BREAK: bool = false;

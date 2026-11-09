@@ -1,5 +1,4 @@
-//! WHAT THE PICTURE IS TOLD OF THE WEATHER, THE AIR, THE FIRES AND THE SNOW (rust/game_draw): drawn on levels that have them. What each number is against the copy of the game is
-//! tools/draw/weather-check.ts's; these hold what is true on any host.
+//! WHAT THE PICTURE IS TOLD OF THE WEATHER, THE AIR, THE FIRES AND THE SNOW (rust/game_draw): drawn on levels that have them. These hold what is true on any host; that each number stays what it was is nobody's since the check against the copy went.
 use game::out_events::OutEvent;
 use game_draw::{want, Drawn};
 use game_start::play::{Opts, Play};

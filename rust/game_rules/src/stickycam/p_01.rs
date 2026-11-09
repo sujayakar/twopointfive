@@ -84,7 +84,7 @@ pub fn fire_cam(g: &mut crate::game::Game, pl: PlayerId, from: V3, target: V3) -
 fn prop_event(g: &mut Game, pl: PlayerId, level: f64) {
     let c = g.pl[pl].ch;
     let (pos, who, time, serial) = (v3::copy(g.ch[c].pos), g.ch[c].id, g.time, g.serial());
-    g.events.push(crate::game::GameEvent { kind: crate::director::EventKind::Prop, pos, time, loud: false, level: Some(level), who: Some(who), serial, ..crate::game::GameEvent::zeroed() });
+    g.events.push(crate::game::GameEvent { kind: crate::director::EventKind::Prop, pos, time, loud: false, level: Some(level), who: Some(who), serial, ..crate::game::GameEvent::default() });
 }
 
 /// It has come to rest: stuck to static `si` with normal `n`, or (si −1) lying on what is under `at`. (stickycam.ts settle)
@@ -112,7 +112,7 @@ pub fn settle(g: &mut crate::game::Game, pl: PlayerId, cam: StickyCamId, at: V3,
     let pos = g.tab.stickycam_sticky_cam[cam].pos;
     crate::audio_iface::game_audio_like_play(g, "canisterBounce", Some(pos), Some(if si < 0.0 { 0.3 } else { 0.22 }), Some(&crate::audio_iface::PlayOpts::Rate { rate: 2.1 }));
     let (time, level, serial) = (g.time, g.k.sticky.stick_noise, g.serial());
-    g.events.push(crate::game::GameEvent { kind: crate::director::EventKind::Prop, pos: [pos[0], 0.0, pos[2]], time, loud: false, level: Some(level), who: Some(0.0), serial, ..crate::game::GameEvent::zeroed() });
+    g.events.push(crate::game::GameEvent { kind: crate::director::EventKind::Prop, pos: [pos[0], 0.0, pos[2]], time, loud: false, level: Some(level), who: Some(0.0), serial, ..crate::game::GameEvent::default() });
     // the most that stay out: the oldest stuck one retires
     let mut out = 0.0;
     for i in 0..g.pl[pl].cams.len() {
@@ -269,7 +269,6 @@ pub fn sticky_eyes(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<c
     // (under the fog's cone a camera's wedge is no wider than an eye's   stickycam.ts:195)
     let wide = if g.k.fog.cone { m::min(g.k.sticky.fov_deg, crate::fogofwar::field_deg(g)) } else { g.k.sticky.fov_deg };
     let live = sticky_live(g, &crate::stickycam::StickyLivePl { cams: g.pl[pl].cams.clone() });
-    if g.k.fog.cone && !live.is_empty() { crate::game::b_tap::tap(crate::game::b_tap::STICKY_EYES_CONE); if wide < g.k.sticky.fov_deg { crate::game::b_tap::tap(crate::game::b_tap::STICKY_EYES_CONE_NARROWS); } }
     for c in live {
         let p = cam_lens(g, c);
         let all = flat(g, c);
@@ -343,7 +342,7 @@ pub fn sticky_rows(g: &mut crate::game::Game, pl: PlayerId, busy: bool, row: &mu
         line2: String::from(if reach { "" } else if near { "hands full" } else { "step closer" }),
         in_reach: reach,
         off: false,
-        ..crate::game::Interactable::zeroed()
+        ..crate::game::Interactable::default()
     };
     // (row spreads `it` into a new object and offer keeps `it` itself: the clone is the spread)
     let verbs = if reach && !busy {

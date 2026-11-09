@@ -13,7 +13,7 @@
 // bright lines exactly where the picture is darkest, and per channel, so a neighbour under another light mix lent its hue too. Rule 1 borrows NOTHING across surfaces: per emitter
 // class ONE deterministic shadow ray from the output pixel to the centre of the class's strongest live emitter decides that light exactly, and only the class's remainder rides on the
 // neighbours' LUMINANCE ratio, taken as the darker of (that ratio, lit) — the same texels and the same rule for both classes. At most sharpCfgC.z >> 8 sliver pixels per 8×8 tile
-// trace (ranked in lane order — deterministic); the rest keep the conservative remainder rule for the whole class. The fallback CODE rides out in outE0.a for the harness to count
+// trace (ranked in lane order — deterministic); the rest keep the conservative remainder rule for the whole class. The fallback CODE rides out in outE0.a for the census to count
 // (0 = the 2×2 had on-surface taps, 1 = only the outer ring had, 2 = sliver, +4 = its rays were traced, +8 = a class read 'unshadowed' for want of any tap holding its light, +16 / +32 =
 // the ray found dark / lit what the neighbours would have lent the other way by over a quarter of the pixel's live U — the census of leaks the old rule drew) — composite
 // reads .rgb only.

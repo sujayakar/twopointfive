@@ -306,7 +306,7 @@ pub fn door_new(g: &mut crate::game::Game, def: &crate::doors::DoorDef, index: O
         rough: Some(if steel { 0.3 } else { 0.55 }),
         metal: if steel { Some(true) } else { None },
         marks,
-        ..crate::scene_boxes::MakeBoxP::zeroed()
+        ..crate::scene_boxes::MakeBoxP::default()
     });
     g.dr[id].box_ = leaf;
     // push plate + lever handle (raster only)
@@ -321,7 +321,7 @@ pub fn door_new(g: &mut crate::game::Game, def: &crate::doors::DoorDef, index: O
             flags: Some(handle_flags),
             rough: Some(0.25),
             metal: Some(true),
-            ..crate::scene_boxes::MakeBoxP::zeroed()
+            ..crate::scene_boxes::MakeBoxP::default()
         }));
     }
     g.dr[id].handle_boxes = handles;
@@ -752,9 +752,9 @@ mod tests {
         std::thread::Builder::new().stack_size(1 << 30).spawn(|| {
             let mut g = alloc::boxed::Box::new(Game::blank());
             let d = DoorId(3);
-            let hit = crate::doors::DoorStrike { door: d, ..crate::doors::DoorStrike::zeroed() };
+            let hit = crate::doors::DoorStrike { door: d, ..crate::doors::DoorStrike::default() };
             let run = crate::doors::DoorContactRun { bash: 1.0, rip: 2.0, rip_level: 3.0 };
-            let full = crate::doors::DoorContact { blocked_by: Some(d), bashed: Some(d), ripped: Some(d), bashed_at: Some(0.5), struck: Some(hit), moved: Some(true), man: Some(7.0), ..crate::doors::DoorContact::zeroed() };
+            let full = crate::doors::DoorContact { blocked_by: Some(d), bashed: Some(d), ripped: Some(d), bashed_at: Some(0.5), struck: Some(hit), moved: Some(true), man: Some(7.0), ..crate::doors::DoorContact::default() };
             let mut v = vec![crate::doors::DoorContact { run: Some(run), ..full.clone() }, full];
             doors_update(&mut g, 0.016, &mut v);
             let (a, b) = (&v[0], &v[1]);

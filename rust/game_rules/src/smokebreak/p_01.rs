@@ -159,7 +159,7 @@ fn smoke_one(g: &mut Game, gd: GuardId, c: CharId, dt: f64, mn: &mut Man, t: &mu
                 pos: tip, dir: [0.0, 1.0, 0.0], speed: b.speed, radius: b.radius, min_voxels: Some(b.cells), density: b.density, temperature: b.temp, ttl: THREAD_EVERY, age: 0.0,
                 kind: crate::smoke_types::SmokeEmitterKind::Breath, push: Some(b.push), jitter: Some(b.jitter), lattice: Some(crate::smoke_types::SmokeEmitterLattice::Fine),
                 confined: Some(true), look: Some(true), track_vel: Some(true), tint: Some(k.color), track: Some(crate::effects::Track::Cigarette { by: c }),
-                ..crate::smoke_types::SmokeEmitter::zeroed()
+                ..crate::smoke_types::SmokeEmitter::default()
             });
         }
     }
@@ -181,7 +181,7 @@ fn smoke_one(g: &mut Game, gd: GuardId, c: CharId, dt: f64, mn: &mut Man, t: &mu
                 density: b.density, temperature: b.temp, ttl: k.out, age: 0.0, kind: crate::smoke_types::SmokeEmitterKind::Breath, push: Some(b.push), expand: Some(b.expand),
                 attack: Some(b.attack), jitter: Some(b.jitter), lattice: Some(crate::smoke_types::SmokeEmitterLattice::Fine), confined: Some(true), look: Some(true), track_vel: Some(true),
                 tint: Some(k.color), track: None,
-                ..crate::smoke_types::SmokeEmitter::zeroed()
+                ..crate::smoke_types::SmokeEmitter::default()
             });
         }
     }
@@ -271,7 +271,7 @@ mod tests {
     /// The hand's beats on the page's numbers, against the TypeScript's handAt: (t, up, drawn, cycle, into's bits).
     #[test]
     fn hand_beats_are_the_typescripts() {
-        let k = crate::knobs::page_smokebreak();
+        let k = crate::knobs::SmokebreakK::page();
         let rows: [(f64, f64, bool, f64, u64); 17] = [
             (0f64, 0f64, false, -1f64, 0x0000000000000000),
             (0.49f64, 0f64, false, -1f64, 0x3fdf5c28f5c28f5c),

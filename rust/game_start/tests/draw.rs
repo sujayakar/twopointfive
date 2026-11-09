@@ -19,8 +19,7 @@ fn drawing_a_game_is_no_part_of_it() {
         (0..240).map(|k| {
             if k == 60 { let at = p.sam_at(); game::game::game_drop_throwable(&mut p.g, game::game::ThrowKind::Frag, [at[0] + 3.0, 0.0, at[1]]); }
             p.g.god_mode = true;
-            p.frame();
-            if draw { let focus = p.g.aim_point; d.take(&p.g, ALL); d.frame(&p.g, 0.5, focus); d.frame(&p.g, 1.0, focus); }
+            p.frame_shown(|p| if draw { let focus = p.g.aim_point; d.take(&p.g, ALL); d.frame(&p.g, 0.5, focus); d.frame(&p.g, 1.0, focus); });
             p.words()
         }).collect::<Vec<_>>()
     };
@@ -77,9 +76,7 @@ fn a_frame_between_two_ticks_stands_between_them() {
     d.take(&p.g, ALL);
     d.frame(&p.g, 1.0, focus);
     let before = man(&d, id).expect("Sam is drawn");
-    p.frame();
-    d.take(&p.g, ALL);
-    d.frame(&p.g, 1.0, focus);
+    p.frame_shown(|p| { d.take(&p.g, ALL); d.frame(&p.g, 1.0, focus); });
     let after = man(&d, id).unwrap();
     d.frame(&p.g, 0.5, focus);
     let half = man(&d, id).unwrap();
@@ -99,10 +96,7 @@ fn nothing_is_drawn_through_a_cut() {
     let id = p.g.ch[p.g.pl[p.g.player].ch].id as u32;
     let focus = p.g.aim_point;
     d.take(&p.g, ALL);
-    p.frame();
-    d.cut();
-    d.take(&p.g, ALL);
-    d.frame(&p.g, 1.0, focus);
+    p.frame_shown(|p| { d.cut(); d.take(&p.g, ALL); d.frame(&p.g, 1.0, focus); });
     let whole = man(&d, id).unwrap();
     d.frame(&p.g, 0.5, focus);
     assert_eq!(man(&d, id).unwrap(), whole, "he is drawn between a tick before the cut and the one after it");

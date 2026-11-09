@@ -33,7 +33,7 @@ pub fn fog_of_war_lamp_known(g: &mut crate::game::Game, t: FixtureId, lit: bool)
 
 
 /// Is the floor at (x, z) in the lit part of the picture: some eye has it.   (fogofwar.ts FogOfWar.spotSeen)
-#[doc(hidden)] pub fn fog_of_war_spot_seen__body(g: &mut crate::game::Game, x: f64, z: f64) -> bool {
+pub fn fog_of_war_spot_seen(g: &mut crate::game::Game, x: f64, z: f64) -> bool {
     g.fog_of_war.thing_stats.tests += 1.0;
     fog_of_war_ground_look(g, x, z) == 2.0
 }
@@ -390,7 +390,7 @@ pub fn fog_of_war_fired_on(g: &crate::game::Game, gd: GuardId) -> bool {
 }
 
 /// Left out of the picture this frame; false for everybody while the fog is off.   (fogofwar.ts FogOfWar.hidden)
-#[doc(hidden)] pub fn fog_of_war_hidden__body(g: &crate::game::Game, gd: GuardId) -> bool { fog_of_war_hides(g, gd) }
+pub fn fog_of_war_hidden(g: &crate::game::Game, gd: GuardId) -> bool { fog_of_war_hides(g, gd) }
 /// The last sightings: each living enemy out of the picture now, and in it recently enough: where he stood, and how long ago. Nobody's AI reads it. (fogofwar.ts FogOfWar.lastSeen)
 pub fn fog_of_war_last_seen(g: &crate::game::Game) -> Vec<crate::view::SeenMark> {
     let told = match crate::told::told_now(g) { crate::told::ToldRung::Guided => m::max(0.0, g.k.told.guided), crate::told::ToldRung::Standard => m::max(0.0, g.k.told.standard), _ => 0.0 };
@@ -463,28 +463,6 @@ pub fn fog_of_war_hush(g: &mut crate::game::Game) {
 /// What a hidden man puts into the air is not filed: true = `c` is out of the picture.   (fogofwar.ts FogOfWar.airHides)
 pub fn fog_of_war_air_hides(g: &crate::game::Game, c_2: CharId) -> bool {
     g.fog_of_war.live && g.fog_of_war.hidden_chars.len() > 0 && g.fog_of_war.hidden_chars.has(c_2)
-}
-
-
-#[doc(hidden)] pub fn fog_of_war_hidden(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    use crate::io::Io;
-    if g.taps & (1u64 << 13) == 0 { return fog_of_war_hidden__body(g, gd); }
-    let mut o = crate::io::W::new(); gd.w(&mut o);
-    let r = fog_of_war_hidden__body(g, gd);
-    let mut a = crate::io::W::new(); r.w(&mut a);
-    crate::out_events::push_tap(g, 13, &o.b, &a.b);
-    r
-}
-
-
-#[doc(hidden)] pub fn fog_of_war_spot_seen(g: &mut crate::game::Game, x: f64, z: f64) -> bool {
-    use crate::io::Io;
-    if g.taps & (1u64 << 14) == 0 { return fog_of_war_spot_seen__body(g, x, z); }
-    let mut o = crate::io::W::new(); x.w(&mut o); z.w(&mut o);
-    let r = fog_of_war_spot_seen__body(g, x, z);
-    let mut a = crate::io::W::new(); r.w(&mut a);
-    crate::out_events::push_tap(g, 14, &o.b, &a.b);
-    r
 }
 
 #[cfg(test)]

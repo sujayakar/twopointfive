@@ -1,46 +1,27 @@
-//! The types of `out_events`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! What a step tells its host, and what a rule asks of the marks.
 #![allow(unused_imports)]
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// what a rule did that the host has to show or play: pushed by the boundary functions, drained by the host after each step (bridge/out-dispatch.ts)
+/// what a rule did that the host has to show or play: `Game.out`, a step's output (game_draw events.rs and resets.rs; the saves)
 #[derive(Clone, Debug)]
 pub enum OutEvent {
     CheckpointsKeep(crate::out_events::OutCheckpointsKeep),
     CheckpointsRequest(crate::out_events::OutCheckpointsRequest),
-    DecalsAdd(crate::out_events::OutDecalsAdd),
-    DecalsClear,
-    DecalsTouch,
     GameAudioLikeFootstep(crate::out_events::OutGameAudioLikeFootstep),
     GameAudioLikePlay(crate::out_events::OutGameAudioLikePlay),
     GameAudioLikeRain(crate::out_events::OutGameAudioLikeRain),
     HostApiRestartPicture(crate::out_events::OutHostApiRestartPicture),
-    MothsClear,
     ParticlesEmit(crate::out_events::OutParticlesEmit),
     ParticlesImpulse(crate::out_events::OutParticlesImpulse),
     ParticlesSetHeat(crate::out_events::OutParticlesSetHeat),
-    ReachKeepChanged(crate::out_events::OutReachKeepChanged),
     SmokeSystemLikeClearAll,
     SmokeCansShut,
     SmokeSystemLikeEmit(crate::out_events::OutSmokeSystemLikeEmit),
-    SmokeSystemLikeObstaclesChanged(crate::out_events::OutSmokeSystemLikeObstaclesChanged),
     SmokeSystemLikePush(crate::out_events::OutSmokeSystemLikePush),
-    WallWearReset,
-    WallWearRound(crate::out_events::OutWallWearRound),
-    MessBurst(crate::out_events::OutMessBurst),
-    MessOpened(crate::out_events::OutMessOpened),
-    MessWall(crate::out_events::OutMessWall),
-    MessEvicted(crate::out_events::OutMessEvicted),
-    BangScorch(crate::out_events::OutBangScorch),
-    BulletMark(crate::out_events::OutBulletMark),
-    ChipMark(crate::out_events::OutChipMark),
-    KickScuff(crate::out_events::OutKickScuff),
     ClearSnowBlast,
     ClearSnowMarks,
     ClearSnowTracks,
-    Tap(crate::out_events::OutTap),
-    WallFeel(crate::out_events::OutWallFeel),
-    EndCard,
     SnowBlast(crate::out_events::OutSnowBlast),
     SmokeSystemLikeRound(crate::out_events::OutSmokeSystemLikeRound),
 }
@@ -115,20 +96,8 @@ pub struct OutParticlesSetHeat {
 }
 
 #[derive(Clone, Debug)]
-pub struct OutReachKeepChanged {
-    pub rect: Option<[f64; 4]>,
-    pub hold: Option<f64>,
-}
-
-#[derive(Clone, Debug)]
 pub struct OutSmokeSystemLikeEmit {
     pub e: crate::smoke_types::SmokeEmitter,
-}
-
-#[derive(Clone, Debug)]
-pub struct OutSmokeSystemLikeObstaclesChanged {
-    pub c_2: V3,
-    pub r: f64,
 }
 
 #[derive(Clone, Debug)]
@@ -153,7 +122,6 @@ pub struct OutWallWearRound {
     pub hit_p: V3,
     pub dir: V3,
 }
-
 
 #[derive(Clone, Debug)]
 pub struct OutMessBurst {
@@ -210,18 +178,6 @@ pub struct OutChipMark {
 pub struct OutKickScuff {
     pub d: DoorId,
     pub from: V3,
-}
-
-#[derive(Clone, Debug)]
-pub struct OutTap {
-    pub row: u32,
-    pub args: Vec<u8>,
-    pub answer: Vec<u8>,
-}
-
-#[derive(Clone, Debug)]
-pub struct OutWallFeel {
-    pub at: V3,
 }
 
 #[derive(Clone, Debug, Default)]

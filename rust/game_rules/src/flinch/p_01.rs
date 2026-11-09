@@ -159,7 +159,7 @@ mod tests {
     }
 
     fn script(flinch: Option<bool>) -> Option<crate::game::GuardScript> {
-        Some(crate::game::GuardScript { flinch, ..crate::game::GuardScript::zeroed() })
+        Some(crate::game::GuardScript { flinch, ..crate::game::GuardScript::default() })
     }
 
     /// A game with one man in the roster, on the blank's own team.

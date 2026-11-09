@@ -336,13 +336,13 @@ pub fn wall_charge_new(g: &mut crate::game::Game) -> crate::wallcharge::WallChar
         listed: Some(Vec::new()),
         opens: Some(String::from(WALL_PAGE)),
         key: Some(5.0),
-        ..crate::orders::OrderDef::zeroed()
+        ..crate::orders::OrderDef::default()
     }));
     wc.row = crate::orders::squad_orders_row(g, crate::orders::rows::def(&crate::orders::rows::wallrow::ORDER, crate::orders::OrderDef {
         targets: vec![crate::orders::TargetKind::Floor],
         listed: Some(Vec::new()),
         ack: Some(vec![String::from("copy."), String::from("on it.")]),
-        ..crate::orders::OrderDef::zeroed()
+        ..crate::orders::OrderDef::default()
     }));
     wc
 }
@@ -352,7 +352,7 @@ mod tests {
     use super::*;
 
     fn spot(along_x: bool, index: f64, u: f64, side: f64) -> crate::wallcharge::WallSpot {
-        crate::wallcharge::WallSpot { along_x, index, u, side, ..crate::wallcharge::WallSpot::zeroed() }
+        crate::wallcharge::WallSpot { along_x, index, u, side, ..crate::wallcharge::WallSpot::default() }
     }
 
     /// bits from the TypeScript's own line under bun with EXACT.on

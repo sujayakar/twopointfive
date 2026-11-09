@@ -198,12 +198,12 @@ mod tests {
     use crate::scene_scenarios::{LessonData, LevelScenarios, LevelScenariosDoorNamesItem, StructureData, StructureDoor, StructureRoom};
 
     fn room(name: &str, doors: &[(&str, &str)]) -> StructureRoom {
-        let mut r = StructureRoom::zeroed();
+        let mut r = StructureRoom::default();
         r.name = name.to_string();
         r.doors = doors
             .iter()
             .map(|(id, from)| {
-                let mut d = StructureDoor::zeroed();
+                let mut d = StructureDoor::default();
                 d.id = id.to_string();
                 d.from = from.to_string();
                 d
@@ -217,7 +217,7 @@ mod tests {
     }
 
     fn level() -> Level {
-        let mut rc = StructureData::zeroed();
+        let mut rc = StructureData::default();
         rc.rooms = vec![
             room("The  mess", &[("w_n", "the hall"), ("b_s", "outside"), ("x_1", "east side"), ("c_d", "bunks 1"), ("m_c", "north corridor"), ("q7", "the northern wing")]),
             room("comms room", &[("m_c", "mess")]),
@@ -227,10 +227,10 @@ mod tests {
             room("vault", &[("v1", "hall"), ("v2", "yard")]),
             room("pantry", &[("p1", "northerner"), ("p2", "yard")]),
         ];
-        let mut s = LevelScenarios::zeroed();
+        let mut s = LevelScenarios::default();
         s.room_clear = Some(rc);
         s.door_names = Some(vec![row("v1", "  the strong door "), row("v1", "other"), row("nope", "x"), row("v2", " the "), row("n9", "THE\u{a0}night door")]);
-        let mut l = Level::zeroed();
+        let mut l = Level::default();
         l.scenarios = Some(s);
         l
     }
@@ -288,9 +288,9 @@ mod tests {
     #[test]
     fn no_names_for_a_lesson_or_a_level_without_structure() {
         let mut lesson = level();
-        lesson.scenarios.as_mut().unwrap().lesson = Some(LessonData::zeroed());
+        lesson.scenarios.as_mut().unwrap().lesson = Some(LessonData::default());
         assert!(names_of(&lesson, &ids(), None).is_empty());
-        assert!(names_of(&Level::zeroed(), &ids(), None).is_empty());
+        assert!(names_of(&Level::default(), &ids(), None).is_empty());
     }
 
     #[test]

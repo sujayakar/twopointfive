@@ -1,10 +1,9 @@
-//! The types of `pressure`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `pressure`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: Man, src/game/pressure.ts:234)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Man {
     pub d: RoomfightDefId,
     pub role: crate::pressure::ManRole,
@@ -30,42 +29,10 @@ pub struct Man {
     pub charged: Option<bool>,
     pub ear_t: Option<f64>,
 }
-impl Man {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Man {
-            d: RoomfightDefId(0),
-            role: crate::pressure::ManRole::Press,
-            door: DoorId(0),
-            spot: [0.0; 3],
-            from: None,
-            moving: false,
-            set: false,
-            set_at: 0.0,
-            tries: 0.0,
-            step_t: 0.0,
-            small0: 0.0,
-            cue_t: 0.0,
-            free_at: 0.0,
-            land_t: 0.0,
-            arrived: false,
-            heard: false,
-            fell: false,
-            replant_t: 0.0,
-            fought: false,
-            out: false,
-            ask_t: None,
-            charged: None,
-            ear_t: None,
-        }
-    }
-}
-impl Default for Man { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
 pub enum ManRole {
-    Press,
+    #[default] Press,
     Flank,
 }
 impl ManRole {
@@ -77,8 +44,7 @@ impl ManRole {
     }
 }
 
-/// (TypeScript: Press, src/game/pressure.ts:249)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct Press {
     pub id: f64,
     pub room: RoomfightRoomId,
@@ -97,35 +63,10 @@ pub struct Press {
     pub lone: bool,
     pub men: Vec<PressureManId>,
 }
-impl Press {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Press {
-            id: 0.0,
-            room: RoomfightRoomId(0),
-            at: [0.0; 3],
-            t0: 0.0,
-            phase: crate::pressure::PressPhase::Go,
-            team_in: false,
-            set_at: 0.0,
-            lone_at: None,
-            sprung: None,
-            listen_at: 0.0,
-            moving: false,
-            word_at: 0.0,
-            go_at: 0.0,
-            n0: 0.0,
-            lone: false,
-            men: Vec::new(),
-        }
-    }
-}
-impl Default for Press { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum PressPhase {
-    Go,
+    #[default] Go,
     Word,
     Gather,
 }
@@ -139,8 +80,7 @@ impl PressPhase {
     }
 }
 
-/// (TypeScript: Out, src/game/pressure.ts:251)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Out {
     pub door: Option<DoorId>,
     pub def: RoomfightDefId,
@@ -149,23 +89,8 @@ pub struct Out {
     pub fought: bool,
     pub step_t: f64,
 }
-impl Out {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Out {
-            door: None,
-            def: RoomfightDefId(0),
-            moving: false,
-            plant_t: 0.0,
-            fought: false,
-            step_t: 0.0,
-        }
-    }
-}
-impl Default for Out { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Warn, src/game/pressure.ts:269)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Warn {
     pub phase: crate::pressure::WarnPhase,
     pub t0: f64,
@@ -175,26 +100,10 @@ pub struct Warn {
     pub room: Option<RoomfightRoomId>,
     pub hit_t: Option<f64>,
 }
-impl Warn {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Warn {
-            phase: crate::pressure::WarnPhase::Heard,
-            t0: 0.0,
-            by: RoomfightDefId(0),
-            call_t: 0.0,
-            last_t: 0.0,
-            room: None,
-            hit_t: None,
-        }
-    }
-}
-impl Default for Warn { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum WarnPhase {
-    Heard,
+    #[default] Heard,
     Called,
     Over,
 }
@@ -208,8 +117,7 @@ impl WarnPhase {
     }
 }
 
-/// (TypeScript: State, src/game/pressure.ts:278)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct State {
     pub presses: Vec<crate::pressure::Press>,
     pub of: JsMap<RoomfightDefId, PressureManId>,
@@ -240,193 +148,62 @@ pub struct State {
     pub look_t: f64,
     pub stats: crate::pressure::StateStats,
 }
-impl State {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        State {
-            presses: Vec::new(),
-            of: JsMap::new(),
-            outs: Vec::new(),
-            serial: 0.0,
-            stale: false,
-            think: JsMap::new(),
-            stay: JsMap::new(),
-            called: JsMap::new(),
-            stood_t: 0.0,
-            sent: JsSet::new(),
-            done_at: JsMap::new(),
-            last: JsMap::new(),
-            tried: JsMap::new(),
-            ear: JsMap::new(),
-            warn: None,
-            told: JsMap::new(),
-            heard: Vec::new(),
-            ev_seen: JsSet::new(),
-            marks: JsMap::new(),
-            bangs: JsMap::new(),
-            last_held: JsSet::new(),
-            word: None,
-            swept: 0.0,
-            look: None,
-            out: None,
-            look_lost: false,
-            look_t: 0.0,
-            stats: crate::pressure::StateStats::zeroed(),
-        }
-    }
-}
-impl Default for State { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/pressure.ts:282 State.think, src/game/pressure.ts:282)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct StateThinkValue {
     pub room: RoomfightRoomId,
     pub at: f64,
     pub held: Option<f64>,
 }
-impl StateThinkValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StateThinkValue {
-            room: RoomfightRoomId(0),
-            at: 0.0,
-            held: None,
-        }
-    }
-}
-impl Default for StateThinkValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/pressure.ts:282 State.called, src/game/pressure.ts:282)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct StateCalledValue {
     pub room: RoomfightRoomId,
     pub t: f64,
 }
-impl StateCalledValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StateCalledValue {
-            room: RoomfightRoomId(0),
-            t: 0.0,
-        }
-    }
-}
-impl Default for StateCalledValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/pressure.ts:286 State.ear, src/game/pressure.ts:286)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct StateEarValue {
     pub t: f64,
     pub i: f64,
     pub at: f64,
 }
-impl StateEarValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StateEarValue {
-            t: 0.0,
-            i: 0.0,
-            at: 0.0,
-        }
-    }
-}
-impl Default for StateEarValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/pressure.ts:289 State.told, src/game/pressure.ts:289)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct StateToldValue {
     pub room: RoomfightRoomId,
     pub at: V3,
     pub t: f64,
 }
-impl StateToldValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StateToldValue {
-            room: RoomfightRoomId(0),
-            at: [0.0; 3],
-            t: 0.0,
-        }
-    }
-}
-impl Default for StateToldValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/pressure.ts:292 State.heard, src/game/pressure.ts:292)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct StateHeardItem {
     pub t: f64,
     pub p: V3,
 }
-impl StateHeardItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StateHeardItem {
-            t: 0.0,
-            p: [0.0; 3],
-        }
-    }
-}
-impl Default for StateHeardItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/pressure.ts:292 State.marks, src/game/pressure.ts:292)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct StateMarksValue {
     pub r: Option<RoomfightRoomId>,
     pub team: crate::teams::Team,
     pub own: bool,
 }
-impl StateMarksValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StateMarksValue {
-            r: None,
-            team: crate::teams::Team::Guard,
-            own: false,
-        }
-    }
-}
-impl Default for StateMarksValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/pressure.ts:294 State.word, src/game/pressure.ts:294)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct StateWord {
     pub t: f64,
     pub p: V3,
 }
-impl StateWord {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StateWord {
-            t: 0.0,
-            p: [0.0; 3],
-        }
-    }
-}
-impl Default for StateWord { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/pressure.ts:294 State.look, src/game/pressure.ts:294)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct StateLook {
     pub at: V3,
     pub go_t: f64,
     pub w: f64,
     pub men: Vec<RoomfightDefId>,
 }
-impl StateLook {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StateLook {
-            at: [0.0; 3],
-            go_t: 0.0,
-            w: 0.0,
-            men: Vec::new(),
-        }
-    }
-}
-impl Default for StateLook { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/pressure.ts:295 State.stats, src/game/pressure.ts:252)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct StateStats {
     pub press_formed: f64,
     pub press_men: f64,
@@ -475,75 +252,11 @@ pub struct StateStats {
     pub look_men: f64,
     pub look_off: f64,
 }
-impl StateStats {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StateStats {
-            press_formed: 0.0,
-            press_men: 0.0,
-            press_sieges: 0.0,
-            press_converge: 0.0,
-            press_words: 0.0,
-            press_lone: 0.0,
-            press_arrived: 0.0,
-            press_late: 0.0,
-            press_landed: 0.0,
-            press_cue_first: 0.0,
-            press_heard: 0.0,
-            press_lead: 0.0,
-            flank_sent: 0.0,
-            flank_set: 0.0,
-            flank_arrived: 0.0,
-            flank_late: 0.0,
-            flank_landed: 0.0,
-            flank_cue_first: 0.0,
-            flank_heard: 0.0,
-            flank_lead: 0.0,
-            fb_push: 0.0,
-            fb_last: 0.0,
-            fb_early: 0.0,
-            fb_planted: 0.0,
-            fb_fought: 0.0,
-            fb_told: 0.0,
-            warn_calls: 0.0,
-            warn_stood_down: 0.0,
-            warn_hits: 0.0,
-            warn_lead: 0.0,
-            second_stood: 0.0,
-            second_calls: 0.0,
-            pairs_told: 0.0,
-            pairs_waited: 0.0,
-            pairs_went: 0.0,
-            stun_marked: 0.0,
-            stun_held: 0.0,
-            stun_held_in: 0.0,
-            stun_late: 0.0,
-            stun_off: 0.0,
-            stun_bangs: 0.0,
-            stun_empty: 0.0,
-            last_held: 0.0,
-            look_called: 0.0,
-            look_men: 0.0,
-            look_off: 0.0,
-        }
-    }
-}
-impl Default for StateStats { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/pressure.ts:224 PRESSURE_HOOKS, src/game/pressure.ts:224)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct PRESSUREHOOKS {
 }
-impl PRESSUREHOOKS {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PRESSUREHOOKS {
-        }
-    }
-}
-impl Default for PRESSUREHOOKS { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum HookedWhy {
     Push,
@@ -560,158 +273,59 @@ impl HookedWhy {
     }
 }
 
-/// (TypeScript: inline at src/game/pressure.ts:225 hooked ->, src/game/pressure.ts:225)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Hooked {
     pub spot: V3,
     pub door: Option<DoorId>,
 }
-impl Hooked {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Hooked {
-            spot: [0.0; 3],
-            door: None,
-        }
-    }
-}
-impl Default for Hooked { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/pressure.ts:319 target ->, src/game/pressure.ts:319)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Target {
     pub t: RoomfightRoomId,
     pub at: V3,
 }
-impl Target {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Target {
-            t: RoomfightRoomId(0),
-            at: [0.0; 3],
-        }
-    }
-}
-impl Default for Target { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/pressure.ts:346 picketMarks(marks), src/game/pressure.ts:346)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct PicketMarksMarksItem {
     pub pos: V3,
     pub aim_at: V3,
     pub drill: Option<bool>,
 }
-impl PicketMarksMarksItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PicketMarksMarksItem {
-            pos: [0.0; 3],
-            aim_at: [0.0; 3],
-            drill: None,
-        }
-    }
-}
-impl Default for PicketMarksMarksItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at quiet picketMarks ->, quiet picketMarks ->)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct PicketMarksItem {
     pub pos: V3,
     pub aim_at: V3,
     pub drill: Option<bool>,
 }
-impl PicketMarksItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PicketMarksItem {
-            pos: [0.0; 3],
-            aim_at: [0.0; 3],
-            drill: None,
-        }
-    }
-}
-impl Default for PicketMarksItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/pressure.ts:385 postPicket(room), src/game/pressure.ts:385 postPicket(room))
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct PostPicketRoom {
 }
-impl PostPicketRoom {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PostPicketRoom {
-        }
-    }
-}
-impl Default for PostPicketRoom { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/pressure.ts:425 gatherSpot ->, src/game/pressure.ts:425)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct GatherSpot {
     pub spot: V3,
     pub l: f64,
 }
-impl GatherSpot {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GatherSpot {
-            spot: [0.0; 3],
-            l: 0.0,
-        }
-    }
-}
-impl Default for GatherSpot { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/pressure.ts:448 standOffSpot ->, src/game/pressure.ts:448)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct StandOffSpot {
     pub spot: V3,
     pub l: f64,
 }
-impl StandOffSpot {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StandOffSpot {
-            spot: [0.0; 3],
-            l: 0.0,
-        }
-    }
-}
-impl Default for StandOffSpot { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/pressure.ts:529 teamPlaced ->, src/game/pressure.ts:529)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct TeamPlaced {
     pub known: bool,
     pub moved: bool,
 }
-impl TeamPlaced {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        TeamPlaced {
-            known: false,
-            moved: false,
-        }
-    }
-}
-impl Default for TeamPlaced { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/pressure.ts:942 aim ->, src/game/pressure.ts:942)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Aim {
     pub t: RoomfightRoomId,
     pub at: V3,
 }
-impl Aim {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Aim {
-            t: RoomfightRoomId(0),
-            at: [0.0; 3],
-        }
-    }
-}
-impl Default for Aim { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
@@ -767,4 +381,4 @@ pub fn kept() -> [String; 21] { [String::from("on"), String::from("press"), Stri
 pub const LS: &str = "twopointsix.pressure";
 
 /// (src/game/pressure.ts:1108 PRESSURE_DEFAULTS: a table nothing writes)
-pub fn pressure_defaults() -> crate::knobs::PressureK { crate::knobs::page_pressure() }
+pub fn pressure_defaults() -> crate::knobs::PressureK { crate::knobs::PressureK::page() }

@@ -5,7 +5,7 @@
 //      name on both sides, and every WGSL flag known to the host.
 //   3. BoxFlag (boxes.ts) ⇄ BOX_* (common.wgsl): distinct bits; the GPU's names carry the CPU's values.
 //   4. the shadow ratio clamp's bound: direct_common.wgsl RATIO_HI = render/denoise.ts's knob ratioHi.
-//   bun run tools/qa/frame-layout.ts        (exit 1 on any FAIL; also `probes.ts frame-layout`)
+//   bun run tools/qa/frame-layout.ts        (exit 1 on any FAIL)
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 

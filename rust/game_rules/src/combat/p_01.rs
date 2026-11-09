@@ -769,7 +769,7 @@ pub fn fire_weapon_raw(g: &mut crate::game::Game, shooter: CharId, target: V3, i
             who: Some(who),
             blind: if o.blind.unwrap_or(false) { Some(true) } else { None },
             serial,
-            ..crate::game::GameEvent::zeroed()
+            ..crate::game::GameEvent::default()
         };
         g.events.push(ev);
     }
@@ -829,7 +829,7 @@ mod tests {
     /// what a call writes on the lent glass is on the shell afterwards (the pellets of one shell share it)
     #[test]
     fn a_shell_gets_its_glass_back() {
-        let mut shell = crate::shotgun::Shell::zeroed();
+        let mut shell = crate::shotgun::Shell::default();
         let mut pel = Some(&mut shell);
         with_glass(&mut pel, |sh| { sh.unwrap().glass.set(crate::Num(7.0), vec![1.0]); });
         assert_eq!(shell.glass.get(crate::Num(7.0)).map(|v| v.len()), Some(1));

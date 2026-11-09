@@ -217,13 +217,12 @@ pub fn home(g: &mut crate::game::Game, q: EnemysquadsSquadId) -> Vec<RoomfightDe
     let mut out = Vec::new();
     let men = g.tab.enemysquads_squad[q].men.clone();
     for m in men {
-        if !fit(g, m) || g.time - g.gd[m].last_seen_t < 2.0 || g.tab.enemysquads_squad[q].sent.iter().any(|s| s.gd == m)
+        if crate::owner::kept(g, m, crate::owner::by::SQUAD_LEG).is_some() || g.time - g.gd[m].last_seen_t < 2.0 || g.tab.enemysquads_squad[q].sent.iter().any(|s| s.gd == m)
             || g.tab.enemysquads_squad[q].rc.as_ref().map_or(false, |c| c.look.iter().any(|l| l.gd == m)) { continue; }
-        if crate::owner::has(g, m, crate::owner::by::LAST_MAN) { continue; }
         if g.gd[m].script.is_some() && crate::director::director_lesson_runs(g) { continue; }
         if let Some(d) = def_of(g, m) {
             let row = &g.tab.roomfight_def[d];
-            if row.mode == crate::roomfight::DefMode::Hold && row.rally_at != f64::INFINITY { out.push(d); }
+            if row.mode == crate::roomfight::DefMode::Hold { out.push(d); }
         }
     }
     out

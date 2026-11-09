@@ -1,12 +1,11 @@
 // THE RUST GAME'S MODULE FOR THE PAGE (rust/game_face → game_face.wasm, FACE.md): where the file is, whether it is older than its sources, and the build.
 // A build's file (20 to 27 MB, under target/) is never checked in. The dev server (tools/serve.ts) answers /game_face.wasm with it and the static
 // build (tools/build.ts) copies it into dist/; both build it first when a source under rust/ is newer than the file. Where it cannot be built (no cargo, no
-// wasm target) the answer is the reason in plain words WITH THE ONE COMMAND THAT MENDS IT, which the page shows under `?rust=1` (src/host/rustgame.ts);
-// without the word the page never asks.
+// wasm target) the answer is the reason in plain words WITH THE ONE COMMAND THAT MENDS IT, which the page shows.
 // A CHECKED-IN MODULE FOR A MACHINE THAT CANNOT BUILD (rust/game_face/prebuilt/game_face.wasm, with SOURCES beside it: a hash of every source file the
 // module is made from). Where no build of this machine is up to date and the checked-in module's hash IS this checkout's sources' hash, it is served and
-// cargo is never started: a pull is enough to play. Where the hashes differ it is not served (the page's half of the bridge is made by the same generator as the Rust
-// and a module of other sources would read garbage): the machine builds, or says why it cannot. `--prebuilt` makes it: the `play` profile built with the
+// cargo is never started: a pull is enough to play. Where the hashes differ it is not served (a page's half is made from the same declarations as the Rust, and a module of
+// other sources would read garbage): the machine builds, or says why it cannot. `--prebuilt` makes it: the `play` profile built with the
 // checkout's and the home folder's paths mapped away (the file must not carry a machine's paths), copied there with its hash.
 // A HOSTED BUILD MAKES ITS OWN (tools/host/build.sh sets FACE_BUILD=1): with FACE_BUILD=1 the checked-in module is never taken, the module is built from
 // the sources on that machine (paths mapped away), and the static build (tools/build.ts) FAILS if it cannot be.
@@ -26,10 +25,10 @@ import { homedir } from 'node:os';
 const ROOT = resolve(import.meta.dir, '../..'), RUST = join(ROOT, 'rust'), CRATE = join(RUST, 'game_face');
 export type FaceProfile = 'play' | 'release';
 export const faceFile = (profile: FaceProfile): string => join(CRATE, `target/wasm32-unknown-unknown/${profile}/game_face.wasm`);
-/** the release profile's file (the mission loop through wasm and the simulation's build name it) */
+/** the release profile's file */
 export const FACE_WASM = faceFile('release');
-/** the crates the module is made from (tools/sim/build.ts FILE_MODULES holds this list to the crate's own lock) */
-export const FACE_CRATES = ['prim', 'sim', 'game_derive', 'game_types', 'game_wire', 'game_rules', 'game', 'game_draw', 'game_run', 'game_start', 'game_face'] as const;
+/** the crates the module is made from (tools/qa/rust-rules-check.ts holds this list to the crate's own lock) */
+export const FACE_CRATES = ['prim', 'sim', 'game_derive', 'game_types', 'game_rules', 'game_draw', 'game_run', 'game_start', 'game_face'] as const;
 
 /** the checked-in module and the hash of the sources it was built from */
 export const PREBUILT = join(CRATE, 'prebuilt/game_face.wasm'), PREBUILT_SOURCES = join(CRATE, 'prebuilt/SOURCES');

@@ -1,5 +1,5 @@
 // THE HOSTED PAGE'S BACKEND, ON THE REAL PAGE (src/cloud/; tools/qa/cloud-check.ts holds the same headless): headless Chromium on the software WebGPU adapter
-// (tools/qa/page-look.cjs's recipe), a STAND-IN backend on this machine (cloud/test/standin.ts: the real functions in the service's test library — `npm ci` in
+// a STAND-IN backend on this machine (cloud/test/standin.ts: the real functions in the service's test library — `npm ci` in
 // cloud/ first), five page loads in three browser profiles —
 //   1. a mission page pointed at the stand-in (`?cloud=http://127.0.0.1:<port>`) is played with no key pressed: its kept tape, the visit's record and the
 //      browser's settings are on the backend afterwards, and the tape reads back out (tools/cloud/pull.ts) as a replay with as many seconds as were kept
@@ -13,27 +13,21 @@
 //   minutes each on the software adapter)
 // NOT SEEN HERE: a real deployment, a real GPU, the hosted build itself (step 4 sets the address the build would carry on the dev server's page).
 // exit 0 = all of it · 1 = otherwise / a page error
-const { chromium } = require('/opt/node-tools/node_modules/playwright');
+const { page: pageRun, NOISE } = require('./page.cjs'), PAGE = pageRun({ name: 'cloud-page' }), { check } = PAGE;
 const path = require('node:path'), cp = require('node:child_process'), os = require('node:os'), fs = require('node:fs');
-const PORT = process.env.PORT || 5199, CPORT = Number(process.env.CLOUD_PORT) || 3210, QUALITY = process.env.QUALITY || 'verylow', ROOT = path.resolve(__dirname, '../..');
-const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
-const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage textures \(5\) in the Compute stage/;
+const CPORT = Number(process.env.CLOUD_PORT) || 3210, QUALITY = process.env.QUALITY || 'verylow', ROOT = path.resolve(__dirname, '../..');
 const CLOUD = `http://127.0.0.1:${CPORT}`, KEY = 'page-check-key';
-let failed = false; const check = (ok, text) => { console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${text}`); if (!ok) failed = true; };
 const sleep = ms => new Promise(r => setTimeout(r, ms)), FR = Math.max(30, Number(process.env.FRAMES) || 240), NAV = Math.max(60000, Number(process.env.NAV_MS) || 480000);
 const admin = async (kind, fn, args) => { const r = await fetch(`${CLOUD}/api/${kind}`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Convex ${KEY}` }, body: JSON.stringify({ path: fn, format: 'convex_encoded_json', args: [args] }) }); const j = await r.json(); if (j.status !== 'success') throw new Error(`${fn}: ${j.errorMessage}`); return j.value; };
 const heard = async () => (await (await fetch(`${CLOUD}/__stats`)).json()).calls;
 (async () => {
   const standin = cp.spawn('bun', ['run', 'test/standin.ts', String(CPORT)], { cwd: path.join(ROOT, 'cloud'), env: { ...process.env, STANDIN_KEY: KEY }, stdio: 'ignore' });
   for (let i = 0; i < 50; i++) { try { await heard(); break; } catch { await sleep(200); } }
-  const browser = await chromium.launch({ headless: true, channel: 'chromium', args: FLAGS });
   const errors = [];
   const profile = async () => {
-    const ctx = await browser.newContext({ viewport: { width: 960, height: 540 }, deviceScaleFactor: 1 }), page = await ctx.newPage();
-    page.on('console', m => { if (m.type() === 'error' && !NOISE.test(m.text()) && !/Failed to load resource/.test(m.text())) errors.push(m.text().slice(0, 300)); });
-    page.on('pageerror', x => errors.push('pageerror: ' + String(x && x.stack || x).slice(0, 400)));
+    const { context: ctx, page } = await PAGE.open({ size: [960, 540], errors: { into: errors, skip: [NOISE, /Failed to load resource/] } });
     const asked = []; page.on('dialog', d => { asked.push(d.message()); d.accept().catch(() => {}); });   // (the one question a page asks: a browser handed another's link)
-    // (leaving a page: it stops drawing first — on this adapter a page with drawn frames queued does not let a navigation commit for minutes; tools/qa/replaykeep-page.cjs)
+    // (leaving a page: it stops drawing first — on this adapter a page with drawn frames queued does not let a navigation commit for minutes)
     const go = async (url) => { await page.evaluate(async () => { const e = window.__engine; if (!e) return; e.render = () => {}; try { if (window.__draw.smoke) window.__draw.smoke.params.enabled = false; await Promise.race([e.device.queue.onSubmittedWorkDone(), new Promise(r => setTimeout(r, 20000))]); } catch { /* */ } }).catch(() => {}); await page.goto(url, { timeout: NAV }); };
     const ready = () => page.evaluate(async () => { await window.__ready; return { fatal: document.getElementById('fatal')?.textContent || '', search: location.search, cloud: window.__cloud ? { url: window.__cloud.url, pid: window.__cloud.pid, sid: window.__cloud.sid, share: window.__cloud.share } : null }; });
     const play = (frames) => page.evaluate(async (n) => { window.__draw.run(0); window.__draw.smoke.params.enabled = false; const e = window.__engine, real = e.render; e.render = () => {};
@@ -44,7 +38,7 @@ const heard = async () => (await (await fetch(`${CLOUD}/__stats`)).json()).calls
     // ---- 1. a mission page pointed at the stand-in, played
     const A = await profile();
     await A.page.addInitScript(() => { try { if (!localStorage.getItem('twopointsix.options')) localStorage.setItem('twopointsix.options', JSON.stringify({ vol: { master: 0.31, sfx: 1, ambience: 1, music: 0.5 }, hints: false })); } catch { /* */ } });
-    await A.go(`http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&roomclear&squad4&cloud=${encodeURIComponent(CLOUD)}`);
+    await A.go(PAGE.url(`paused&quality=${QUALITY}&mute&roomclear&squad4&cloud=${encodeURIComponent(CLOUD)}`));
     const a = await A.ready();
     check(!a.fatal && !!a.cloud && a.cloud.url === CLOUD && a.cloud.share === true && /^[a-z0-9]{24,64}$/.test(a.cloud.pid), `a page pointed at this machine's backend booted with one (${a.cloud?.url}, this browser's id ${a.cloud?.pid.length} characters)${a.fatal ? ' · FATAL ' + a.fatal : ''}`);
     await A.play(FR); await sleep(6500); await A.play(FR); await sleep(6500);
@@ -73,7 +67,7 @@ const heard = async () => (await (await fetch(`${CLOUD}/__stats`)).json()).calls
     // (the second profile's page is closed first — it sends on its own timers — and the count starts once the first profile's old page, which says its
     // goodbye as it goes, is gone and the new one is up)
     await B.ctx.close().catch(() => {});
-    await A.go(`http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&roomclear&squad4`);
+    await A.go(PAGE.url(`paused&quality=${QUALITY}&mute&roomclear&squad4`));
     const c = await A.ready(); await sleep(1500);
     const before = await heard();
     await A.play(FR); await sleep(4000);
@@ -92,12 +86,12 @@ const heard = async () => (await (await fetch(`${CLOUD}/__stats`)).json()).calls
       catch { await route.abort().catch(() => {}); }
     });
     const state = () => C.page.evaluate(() => ({ url: window.__cloud?.url ?? null, share: window.__cloud?.share ?? null, waits: window.__cloud?.waits ?? null, told: localStorage.getItem('twopointsix.cloud.told'), note: document.querySelector('#menu .cloudnote')?.textContent ?? null, title: !!document.getElementById('menu')?.classList.contains('title') }));
-    await C.go(`http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&solo`);
+    await C.go(PAGE.url(`paused&quality=${QUALITY}&mute&solo`));
     const d = await C.ready(); await C.play(FR); await sleep(5000);
     const d1 = await state(), heard1 = built;
     check(!d.fatal && d1.url === BUILT && d1.share === true && d1.waits === true && d1.told === null && d1.note === null && heard1 === 0, `a hosted build's page in a browser that has made no choice, on a page with no title: it would send (${d1.share}), waits for the notice (${d1.waits}) and made ${heard1} requests while it played${d.fatal ? ' · FATAL ' + d.fatal : ''}`);
     // (leaving that page: its own goodbye — the tab hidden, the page going — sends nothing either; the next page cannot have shown the notice by its load)
-    await C.go(`http://localhost:${PORT}/?paused&quality=${QUALITY}&mute`); const left = built;
+    await C.go(PAGE.url(`paused&quality=${QUALITY}&mute`)); const left = built;
     const e = await C.ready(), e0 = await state(); await sleep(6000);
     const e1 = await state(); await C.page.evaluate(() => window.__cloud.sync()).catch(() => {});
     const tel4 = await admin('query', 'telemetry:list', { sid: e.cloud?.sid ?? 'none' }), visit4 = tel4.find(r => r.kind === 'visit');
@@ -110,7 +104,6 @@ const heard = async () => (await (await fetch(`${CLOUD}/__stats`)).json()).calls
       `the boot's timeline is a record: interactive at ${boot4?.interactive} ms, ${boot4?.pipelinesMs} ms on ${boot4?.pipelines?.total} shader pipelines (${boot4?.pipelines?.failed} failed), slowest ${boot4?.slowest?.[0]?.label} ${boot4?.slowest?.[0]?.ms} ms, a ${boot4?.nav}`);
     check(errors.length === 0, `no page errors${errors.length ? ': ' + errors.slice(0, 3).join(' | ') : ''}`);
   } catch (e) { check(false, `the walk threw: ${String(e && e.stack || e).slice(0, 500)}`); }
-  await browser.close().catch(() => {}); standin.kill();
-  console.log(failed ? '\nFAILED' : '\nall pass');
-  process.exit(failed ? 1 : 0);
+  await PAGE.close(); standin.kill();
+  await PAGE.end(PAGE.fails ? '\nFAILED' : '\nall pass');
 })();

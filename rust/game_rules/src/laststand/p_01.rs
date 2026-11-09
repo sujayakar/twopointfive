@@ -509,7 +509,7 @@ mod tests {
 
     #[test]
     fn lone_is_said_once() {
-        let mut st = State::zeroed();
+        let mut st = State::default();
         assert!(lone(&mut st));
         assert!(!lone(&mut st));
         assert_eq!(st.stats.last_man, 1.0);

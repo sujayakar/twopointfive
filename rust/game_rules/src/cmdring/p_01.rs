@@ -292,7 +292,7 @@ mod tests {
     use super::*;
 
     /// The page's own row of knobs: these tests reach no game.
-    fn page() -> crate::knobs::CmdringK { crate::knobs::page_cmdring() }
+    fn page() -> crate::knobs::CmdringK { crate::knobs::CmdringK::page() }
 
     // Every expected value below is what src/game/cmdring.ts printed under bun, with EXACT on.
     #[test]
@@ -358,7 +358,7 @@ mod tests {
     }
 
     fn base(armed: bool) -> RingState {
-        RingState { ax: 500.0, ay: 400.0, z: 1.5, t0: 10.0, lit: 1.0, armed, ..RingState::zeroed() }
+        RingState { ax: 500.0, ay: 400.0, z: 1.5, t0: 10.0, lit: 1.0, armed, ..RingState::default() }
     }
 
     #[test]
@@ -427,7 +427,7 @@ mod tests {
         }
     }
 
-    fn fr(id: &str) -> FlatRow { FlatRow { id: String::from(id), targets: vec![String::from("floor")], ..FlatRow::zeroed() } }
+    fn fr(id: &str) -> FlatRow { FlatRow { id: String::from(id), targets: vec![String::from("floor")], ..FlatRow::default() } }
     fn fp(id: &str) -> FlatRow { FlatRow { free: Some(true), targets: vec![String::from("none")], ..fr(id) } }
     fn frs(ids: &[&str]) -> Vec<FlatRow> { ids.iter().map(|id| fr(id)).collect() }
     fn with_p(mut rows: Vec<FlatRow>, p: &str) -> Vec<FlatRow> { rows.push(fp(p)); rows }

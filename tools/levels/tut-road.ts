@@ -7,7 +7,7 @@
 // THE SENTENCE NOBODY COULD SAY OF ANOTHER LEVEL: a mountain road with one way along it, where every wreck and wall on the way up is the cover for the next key.
 // WHAT IT TEACHES, and nothing else: his body (walk, sprint, crouch, a wall and the lean round its end) and his gun (bring it up, aim, fire, full auto, a
 // door shot off its hinges, the reload, a man shot through a plank wall). No grenade, no charge, no squad, nothing to sneak past.
-// THE HAND PLACEMENT: the fights are the level's script (levels/tut-road.script.ts). Its six men are held on their marks until their beat, so the first of
+// THE HAND PLACEMENT: the fights are the level's script (rust/game_rules/src/script_tut_road). Its six men are held on their marks until their beat, so the first of
 // every list here is the only deal there is. The sentry stands in the gateway's line and nowhere near cover; the gun is in the far corner under the rock
 // and everything it can reach from there is either hosed (the open snow before it) or swept at chest height (the lane behind the sandbags); the last
 // three wait outside the upper gate, out of every line through it, and come in by it.
@@ -26,22 +26,20 @@
 //   z 21    the drop: a berm, pines below     (the tanker's cab is through the rail, burning)
 //
 //   bun run tools/levels/export.ts tut-road [--check]      → levels/tut-road.json
-//   bun run tools/qa/lesson-check.ts tut-road              the lesson block against the built floor
-//   bun run tools/qa/lesson-run.ts tut-road                the scripted player through every step to the debrief
-//   bun run tools/qa/tut-road-check.ts                     the lesson played as said, and failed the two ways its lines warn of
+//   bun run tools/qa/pages.ts tut-road-page                      the page with real keys through every step to the debrief
 //   page: ?levelFile=tut-road.json&quiet
 import type { Vec3 } from '../../src/math/vec';
-import { glowShape, pickupLens, coated } from '../../src/scene/carShapes';
-import type { Level, LevelDoorDef, PatrolRoute } from '../../src/scene/level';
+import { glowShape, pickupLens, coated } from './lib/carShapes';
+import type { Level, LevelDoorDef, PatrolRoute } from './lib/level';
 import type { LevelScenarios, LessonData, LessonStep, QuietData, Rect, IssueData } from '../../src/scene/scenarios';
-import type { SurfacesData } from '../../src/scene/levelData';
-import { officeKit, normalize3 as norm, type GeneratorTrace } from '../../src/scene/officeGen';
-import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, GW_SHELL } from '../../src/scene/gwotKit';
+import type { SurfacesData } from './lib/levelData';
+import { officeKit, normalize3 as norm, type GeneratorTrace } from './lib/officeGen';
+import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, GW_SHELL } from './lib/gwotKit';
 import { SNOW_PALETTE, SNOW_FINISH, SNOW_MATERIALS, type SnowMat } from '../../src/scene/gwotPalette';
 import { WORLD } from '../../src/scene/world';
 import { rockOf, SCREE_PAINT } from './snowRock';
 import { BoxFlag } from '../../src/scene/boxes';
-import { carLampsIn } from '../../src/scene/carLamps';
+import { carLampsIn } from './lib/carLamps';
 import { LAST_OUT, LAST_MEN, HUT_NOOK, HUT_MARK, TRUCK_FLANK, HUT_WALL, HUT_END, BAGS_TOP, WALL_FACE } from './tutRoadMarks';
 import { PANEL_GREY } from '../../src/scene/stuff';
 
@@ -96,9 +94,9 @@ export const LANE_Z = 16.7, BAGS_END: Vec3 = [26.7, 0, LANE_Z];
 /** against the roadblock's wall (step 'cover'), and the end of it he leans round */
 export const COVER: Vec3 = [28.6, 0, 16.2], CORNER_E: Vec3 = [RB_WALL.x1, 1.2, COVER_Z + 0.1];
 /** the man on the gun, in his nest under the rock: more behind the roadblock's wall than beside it, as a man leaning round its end sees him (a man
- *  who can already be seen from the wall has nobody to lean out for: game/wallsnap.ts wsSeenDeg) */
+ *  who can already be seen from the wall has nobody to lean out for: rust/game_rules/src/wallsnap ws_seen_deg) */
 export const GUNNER: Vec3 = [31.6, 0, 11.2];
-/** THE LAST THREE wait outside the upper gate and come in by it: their marks are the script's (levels/tut-road.script.ts LAST_OUT, LAST_MEN) */
+/** THE LAST THREE wait outside the upper gate and come in by it: their marks are the script's (rust/game_rules/src/script_tut_road LAST_OUT, LAST_MEN) */
 export { LAST_OUT, LAST_MEN };
 /** the way out: the upper gate, and on up the road */
 export const EXIT = { name: 'the upper gate', door: 'gate', x: POST.x1 + 0.8, z: GATE_Z, out: [1, 0] as [number, number] };
@@ -114,7 +112,7 @@ export const FRAME: Record<string, { allow?: string[]; deny?: string[]; cue?: st
   watch: { cue: 'gate', checkpoint: 'the gun' }, radio: { cue: 'open' },
 };
 
-/** HIS KIT (game/kit.ts kitIssue): the rifle and its magazines. Nothing to throw, nothing to set, nothing under the barrel: every one of those is a later
+/** HIS KIT (rust/game_rules/src/kit kit_issue): the rifle and its magazines. Nothing to throw, nothing to set, nothing under the barrel: every one of those is a later
  *  mission's first line */
 export const ISSUE: IssueData = { members: { '0': { weapon: 'rifle', smoke: 0, bangs: 0, frags: 0, shells: 0, charges: 0 } } };
 
@@ -243,7 +241,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   G.yardWallX(11.4, POST.x1 + 0.12, 40, 'block'); G.yardWallX(17.3, POST.x1 + 0.12, 40, 'block');
   grp('walls.hut');
   // THE HUT. Its door on the road is wooden and locked, and it opens TOWARD the road: a sprint into a locked door is a kick, and a frame holds a boot from
-  // the face its door opens toward (doors.ts DOORWAY.frameHolds), so the run a new player tries first stops on it and the trigger is the way through. A
+  // the face its door opens toward (rust/game_rules/src/doors DOORWAY.frameHolds), so the run a new player tries first stops on it and the trigger is the way through. A
   // window beside it, lit: plain glass on a sill, which a burst takes with the door
   G.wallX(HUT.z0, HUT.x0 - t, HUT.x1 + t, 'render');
   G.wallX(HUT.z1, HUT.x0 - t, HUT.x1 + t, 'render', [{ a: SIDE_DOOR_X - 0.6, b: SIDE_DOOR_X + 0.6 }]);          // its side door: a doorway, no leaf (the light of the room falls out of it onto the snow)
@@ -263,7 +261,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   grp('convoy.truck');
   // its last truck, across the road with its nose to the rock: his first cover, and what the sentry's rounds chew. Everything on it is on, as its driver
   // left it: two head lamps (on the rock), the tail lamps, the lamp in the load bay over its open back doors, which is the light he starts in. Each lens is
-  // a glowing sliver a hair off the truck's own, so a round at a lamp meets the sliver first and puts it out (carlamps.ts finds the lenses here)
+  // a glowing sliver a hair off the truck's own, so a round at a lamp meets the sliver first and puts it out (rust/game_rules/src/carlamps finds the lenses here)
   const van0 = K.boxes.length, VS = G.van(VAN_AT.x, VAN_AT.z, VAN_AT.yaw);
   { const lenses = carLampsIn(K.boxes.slice(van0)).map(l => ({ what: l.what, b: K.boxes[van0 + l.box] })), heads = lenses.filter(l => l.what === 'head lamp').map(l => l.b), tails = lenses.filter(l => l.what === 'tail lamp').map(l => l.b);
     if (heads.length !== 2 || tails.length !== 2) throw new Error(`tut-road: the truck's lamps were not found (${heads.length} head, ${tails.length} tail): the kit's lenses have moved`);
@@ -283,7 +281,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   G.lay(VAN_AT.x, VAN_AT.z, VAN_AT.yaw, VS.tops.load, -0.5, 0, 1.95, 1.95 + 0.03, 1.1, 0.75, S.snow);   // a dusting on its box: it has not stood long
   G.crates(6.4, 17.9, 0.5, 2); G.jerryCan(3.4, 17.4, 0.7, 'jerryYellow'); G.jerryCan(5.9, 18.6, -0.4); add({ c: [3.0, 0.07, 16.2], h: [0.3, 0.07, 0.22], yaw: 0.6, ...M.olive });   // what came off it when it stopped
   grp('convoy.escort');
-  // its escort, off the road's line and burning: the fire lights the wall he runs to. (A light named 'brazier…' is an open fire: game/fire.ts gives it a
+  // its escort, off the road's line and burning: the fire lights the wall he runs to. (A light named 'brazier…' is an open fire: rust/game_rules/src/fire gives it a
   // flame, embers, smoke and a flicker. The glowing plate is its mouth)
   const ESCORT = { x: 8.5, z: 17.5, yaw: 0.5 };
   G.pickup(ESCORT.x, ESCORT.z, ESCORT.yaw, 'truckTan', { load: 'none' });
@@ -296,7 +294,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   grp('convoy.tanker');
   // THE TANKER: it took the post's corner and the rail, and stands across the whole road from the hut's wall to over the edge, its cab burning out past the
   // rail. Nobody passes it on the road: the way on is through the hut. A skirt to the ground along its length (nothing is seen or shot under it)
-  { const b = G.piece(TANKER.x, TANKER.z, TANKER.yaw), tank = coated(M.paintCream);   // (a tanker's tank is a vehicle's painted body, not the wall its cream is elsewhere: scene/carShapes.ts)
+  { const b = G.piece(TANKER.x, TANKER.z, TANKER.yaw), tank = coated(M.paintCream);   // (a tanker's tank is a vehicle's painted body, not the wall its cream is elsewhere: lib/carShapes.ts)
     for (const lx of [-3.0, -2.1, 0.7]) for (const s of [-1, 1]) b(lx, s * 0.98, 0, 0.92, 0.44, 0.15, M.rubber);
     b(-1.1, 0, 0.3, 1.0, 2.5, 1.02, { ...M.iron, rough: 0.85 });                                                    // the frame and its lockers
     b(-1.1, 0, 1.0, 2.45, 2.5, 1.15, tank); b(-1.1, 0, 2.45, 2.7, 2.4, 0.7, tank);              // the tank, its crown
@@ -318,7 +316,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // ---- THE HUT, inside: where the post's two men sit out a watch ----
   grp('hut.room');
   // THE PLANK WALL: the back room, where the watch sleeps, is boarded off from the front one: boards on a rail, a way through at its end with no door.
-  // Wood this thin does not stop a rifle round (game/wallpen.ts), and the man behind it is the lesson of that
+  // Wood this thin does not stop a rifle round (rust/game_rules/src/wallpen), and the man behind it is the lesson of that
   add({ c: [PLANKS.x, 1.15, (PLANKS.z0 + PLANKS.z1) / 2], h: [0.03, 1.15, (PLANKS.z1 - PLANKS.z0) / 2], ...M.ply });
   for (const y of [0.5, 1.6]) add({ c: [PLANKS.x - 0.036, y, (PLANKS.z0 + PLANKS.z1) / 2], h: [0.006, 0.05, (PLANKS.z1 - PLANKS.z0) / 2], ...M.woodGrey, flags: DECAL });   // its two rails, on the front room's face
   G.table(19.1, 10.25, 1.4, 0.66, 0, 'ply'); add({ c: [18.8, 0.87, 10.2], h: [0.2, 0.12, 0.13], ...M.olive }); add({ c: [19.4, 0.79, 10.3], h: [0.08, 0.04, 0.06], ...M.plasticBlack });   // the table, the set's charger, a handset
@@ -417,7 +415,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   const dome = add({ c: [HUT.x0 - 0.2, 2.72, 13.0], h: [0.055, 0.07, 0.055], albedo: [0.35, 0.08, 0.05], flags: DECAL });
   switchables.push({ name: 'beacon0', boxes: [dome], group: 'emergency', on: false, baseEmissive: [9, 1.2, 0.35], mains: false });
 
-  // ---- six men, each on his mark until the script calls his beat (levels/tut-road.script.ts names them by roster order) ----
+  // ---- six men, each on his mark until the script calls his beat (rust/game_rules/src/script_tut_road names them by roster order) ----
   const post = (name: string, p: Vec3, weapon?: PatrolRoute['weapon'], dx = 0.3): PatrolRoute => ({ name, points: [p, [p[0] + dx, 0, p[2] + 0.2]], wait: [600, 600], ...(weapon ? { weapon } : {}) });
   const routes: PatrolRoute[] = [post('sentry', SENTRY), post('hut', HUT_NOOK, undefined, 0), post('gunner', GUNNER, 'pkm'), post('bend', LAST_OUT[0]), post('trucks', LAST_OUT[1]), post('tunnel', LAST_OUT[2])];
 
@@ -460,9 +458,9 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
       // the wall and INTO it: a hand that only knows 'walk' pushes at the corner and stays where it is (found on the real page, with real keys)
       { id: 'off', line: 'Move away from the wall to step off it', done: { is: 'flag', flag: 'wall', value: false } },
       // THE HUT'S DOOR: full auto has a use at once, and the reload comes after a magazine has really been fired. The leaf goes on the twelfth rifle round
-      // (game/doorblast.ts DOORSHOT); where that rule is off, or his rounds find the jambs, the twentieth round he fires on this line ends it and the
+      // (rust/game_rules/src/doorblast DOORSHOT); where that rule is off, or his rounds find the jambs, the twentieth round he fires on this line ends it and the
       // level's script throws the door open as the next line comes up (cue 'way'), so the way on never hangs on a switch. The reload's line waits for the
-      // gun to be FULL again, and a gun he ran dry has already started its own reload (game/autoreload.ts): the line is then being done, and goes by when it is
+      // gun to be FULL again, and a gun he ran dry has already started its own reload (rust/game_rules/src/autoreload): the line is then being done, and goes by when it is
       { id: 'inner', line: 'Go through the gate to the hut\'s wooden door', done: { is: 'near', at: [HUT.x0 - 0.9, 0, HUT_DOOR_Z], r: 1.5 }, at: [HUT.x0, 1.1, HUT_DOOR_Z] },
       { id: 'door', line: 'Hold the left mouse button to shoot the wooden door until it breaks', done: { is: 'any', of: [{ is: 'door', door: 'hut', state: 'open' }, { is: 'did', what: 'event:shot', n: 20 }] }, settle: 1, at: [HUT.x0, 1.1, HUT_DOOR_Z] },
       { id: 'reload', line: 'Press [R] to reload', done: { is: 'loaded' }, settle: 0.8 },
@@ -510,7 +508,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     ],
     mission: { serverRoom: { ...NEST }, entryDoor: 'hut', rack: { index: 0, front, halfW: 0.3 }, exfilDoor: 'gate', exfilX: EXIT.x, exfilZ: EXIT.z, exfilOut: EXIT.out },
   };
-  // what is underfoot (game/floor.ts): fresh snow is 'grass' (the soft, quiet one); the road, the trodden paths and cleared earth are 'asphalt'; the hut's slab is 'stone'
+  // what is underfoot (rust/game_rules/src/floor): fresh snow is 'grass' (the soft, quiet one); the road, the trodden paths and cleared earth are 'asphalt'; the hut's slab is 'stone'
   const surfaces: SurfacesData = { building: { x0: 0, x1: 40, z0: 0, z1: 28 }, grassEdge: 0, inside: 'grass', outside: 'grass', verge: 'grass',
     zones: [{ id: 'hut_felt', mat: 'carpet', x0: 17.7, z0: 11.55, x1: 19.7, z1: 12.85 }, ...zones, { id: 'road', mat: 'asphalt', x0: 0, z0: ROAD.z0 + 1.0, x1: 40, z1: ROAD.z1 - 0.9 }] };
   // THE SCRIPT'S FIRE POINTS, held to this floor: its rounds are real, and a wall moved here with the points left where they were is a round into a place a

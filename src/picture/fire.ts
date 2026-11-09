@@ -10,9 +10,6 @@ import type { Engine } from '../engine';
 import type { Drawn } from '../draw/drawn';
 import { Fire, FireTable, Section, View } from '../draw/sections';
 
-/** integer hash to [0, 1) (rules: fire h01) */
-function h01(x: number): number { x = Math.imul((x ^ 0x2545F491) >>> 0, 0x9E3779B1) >>> 0; x ^= x >>> 15; x = Math.imul(x, 0x85EBCA77) >>> 0; x ^= x >>> 13; return (x >>> 8) / 16777216; }
-
 const enum Smoke { on, up, radius, cells, density, temp, speed, push, jitter, every, viewR, lean }
 const enum Column { up, radius, density, sootEase, puffEvery, puffSecs, puffUp, puffRadius, puffOff, puffDensity, puffTemp, puffSpeed, puffPush, puffExpand }
 

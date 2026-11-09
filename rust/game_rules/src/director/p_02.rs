@@ -1201,7 +1201,7 @@ mod tests {
     /// the TypeScript's own answers, from bun
     #[test]
     fn volume() {
-        let v = crate::scene_level::VolumeDef { c: [1.0, 0.5, 2.0], h: [3.0, 0.5, 1.0], yaw: Some(0.7), ..crate::scene_level::VolumeDef::zeroed() };
+        let v = crate::scene_level::VolumeDef { c: [1.0, 0.5, 2.0], h: [3.0, 0.5, 1.0], yaw: Some(0.7), ..crate::scene_level::VolumeDef::default() };
         for (p, want) in VOLUME_CASES {
             assert_eq!(in_volume(&v, *p), *want, "{:?}", p);
         }

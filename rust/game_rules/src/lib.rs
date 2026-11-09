@@ -1,8 +1,8 @@
-//! The rules of the game. May name the data and the wire.
+//! The rules of the game, over its data: every module by one path, its types and its rules.
 #![no_std]
 #![allow(dead_code, unused_variables, unused_imports, non_snake_case, non_camel_case_types, non_upper_case_globals, unused_mut)]
 extern crate alloc;
-pub use game_wire::*;
+pub use game_types::*;
 pub mod aim;
 pub mod aimcost;
 pub mod aimweight;
@@ -191,7 +191,6 @@ pub mod render_particles;
 pub mod render_passes;
 pub mod render_place_field;
 pub mod render_reach;
-pub mod render_reach_keep;
 pub mod render_sdfrig;
 pub mod render_snow_field;
 pub mod render_steps;
@@ -263,8 +262,6 @@ pub mod sim_fallshome;
 pub mod sim_itemshome;
 pub mod sim_lightshome;
 pub mod sim_load;
-pub mod sim_men_cols;
-pub mod sim_men_schema;
 pub mod sim_men_store;
 pub mod sim_propshome;
 pub mod sim_sim;

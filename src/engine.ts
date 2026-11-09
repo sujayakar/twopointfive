@@ -1,8 +1,8 @@
 // Renderer orchestration: owns GPU resources and encodes the frame.
 import { Gpu, makeBuffer, PIPE_QUEUE, laterProgress } from './gpu/device';
 import { GpuTimer } from './gpu/timer';
-import { BoxWorld, BoxFlag, planBoxes, type Box, type DrawWait } from './scene/boxes';
-import { FRAME_BYTES, FRAME_HEAD_BYTES, MAX_CARDS, FrameFlags, FrameParams, wallSidesConfig, createSceneBindGroup, createSceneLayout, writeFrame, writeFrameOut, reachBinding, meshBinding, WeatherFrame, noWeather, glassBreakConfig, lookConfig } from './render/frame';
+import { BoxWorld, planBoxes, type Box, type DrawWait } from './scene/boxes';
+import { FRAME_BYTES, FRAME_HEAD_BYTES, MAX_CARDS, FrameFlags, FrameParams, wallSidesConfig, createSceneBindGroup, createSceneLayout, writeFrame, writeFrameOut, reachBinding, meshBinding, WeatherFrame, noWeather, lookConfig } from './render/frame';
 import { GBuffer, SkinnedDrawable, lookAmounts, lookWordOf, lookCoreOf } from './render/gbuffer';
 import { RadianceCascades, RcConfig, defaultRcConfig } from './render/rc';
 import { DiceRing, ringPoints, ringSlot } from './render/diceRing';
@@ -83,15 +83,15 @@ export class Engine {
   /** SHARP DIRECT this frame (settings.sharpDirect ∧ TAAU ∧ no debug view ∧ internal ≠ output — resize decides), the OUTPUT frame block (the same bytes with screen = the output size: frame.ts writeFrameOut)
    *  and its scene group, group 0 of every pass that runs at the output size then */
   sharpOn = false; frameBufOut: GPUBuffer; frameDataOut = new ArrayBuffer(FRAME_BYTES); sceneBGOut: GPUBindGroup | null = null;
-  /** FOG OF WAR (game/fogofwar.ts fills it every frame; main.ts hands the game's object over once): null / `on` false = no pass, the frame as it was */
+  /** FOG OF WAR (rust/game_rules/src/fogofwar fills it every frame; host/drawpage.ts hands the frame's object over once): null / `on` false = no pass, the frame as it was */
   fogFrame: FogFrame | null = null;
-  /** THE OPEN FIRES to draw this frame (game/fire.ts writes the list every update; empty = none): the composite adds each one's flame, coals and the smoke off its tips (passes.setFires; its embers are particles) */
+  /** THE OPEN FIRES to draw this frame (rust/game_rules/src/fire writes the list every update; empty = none): the composite adds each one's flame, coals and the smoke off its tips (passes.setFires; its embers are particles) */
   fires: FireRecord[] = [];
-  /** the look's numbers every fire is drawn with (game/fire.ts fireDraws; fire.wgsl FireLook's twelve, in order); null = none said yet */
+  /** the look's numbers every fire is drawn with (rust/game_rules/src/fire fireDraws; fire.wgsl FireLook's twelve, in order); null = none said yet */
   fireLook: number[] | null = null;
   /** which of the frame's boxes are thin lines (a laser's beam, a tracer's streak) and which of those the air shows, with its bead; null = none said (the host's word) */
   beams: { is(b: Box): boolean; airOf(b: Box): Box | null | undefined; /** the boxes to look among (absent = the frame's own) */ list?: Box[] } | null = null;
-  /** the outline in the dark (render/outline.ts): the host's frame for it, null = never asked. Written by the host once a frame (ui/findmeviz.ts findMeOutline);
+  /** the outline in the dark (render/outline.ts): the host's frame for it, null = never asked. Written by the host once a frame;
    *  render() adds the box on the picture its own camera gives and the exposure */
   outline: OutlineFrame | null = null;
   /** … its SIGHT TABLE (render/fogofwar.ts FogSight — the scene group's binding 11; dispatched at the head of a frame only while the game asks for the full
@@ -100,7 +100,7 @@ export class Engine {
   dummyStorage: GPUBuffer;
   smoke: SmokeBinding;
   settings: RenderSettings = defaultSettings();
-  /** what the weather wants drawn in the outdoor air this frame (game/weather.ts writes it before render; all zero = nothing, the default) */
+  /** what the weather wants drawn in the outdoor air this frame (rust/game_rules/src/weather writes it before render; all zero = nothing, the default) */
   weather: WeatherFrame = noWeather();
   /** the view's look-at point as of the last render() (the smoke solver spends its pool by distance from it — smoke.ts sparse.viewBias / farCells) */
   viewFocus: Vec3 = [0, 0, 0];
@@ -128,7 +128,7 @@ export class Engine {
   taaResets = 0; lastTaaReset = '';
   /** THE LOOK PROTOTYPE's loose snow in the air (render/powderField.ts: the powder the wind picks up and a boot kicks, carried by `air` below, drawn by the
    *  composite). Built the first frame the look page has lying snow, an air field and either row up; dropped when any of those goes (the rows at 0, the air
-   *  field replaced). Picture only. game/snowFx.ts files the kicks into it. */
+   *  field replaced). Picture only. rust/game_rules/src/snow_fx files the kicks into it. */
   powder: PowderField | null = null; private powderAir: unknown = null;
   /** THE LOOK PROTOTYPE's place field (render/placeField.ts: one level of light a room, which the One exposure row shows every place by): built with the
    *  engine and kept; null on a device that cannot make it */
@@ -147,9 +147,9 @@ export class Engine {
   /** … and the one map of the level both read (placeField.ts PlaceMap); which tables each frame block was last sent (WallSides.made; −1 = never) */
   readonly placeMap = new PlaceMap(); private sidesSent = -1; private sidesSentOut = -1;
   place: PlaceField | null = null; private placeWas: PlaceField | null = null; private placeDead = false;
-  /** THE LOOK PROTOTYPE's eye (render/placeField.ts: the place field's own, eased on the GPU): `snap` = it takes its next reading outright and the field is solved to rest first (the first frame, a restart: game/airSim.ts says; a still sets it by hand). Picture only. */
+  /** THE LOOK PROTOTYPE's eye (render/placeField.ts: the place field's own, eased on the GPU): `snap` = it takes its next reading outright and the field is solved to rest first (the first frame, a restart: rust/game_rules/src/air_sim says; a still sets it by hand). Picture only. */
   lookEye = { snap: true };
-  /** this frame's shadeCfg and eyeCfg as the frame was handed them (a tool's and the debugger's: tools/qa/look-sheet.cjs prints them beside each still) */
+  /** this frame's shadeCfg and eyeCfg as the frame was handed them (a tool's and the debugger's) */
   lookShadeCfg: [number, number, number, number] | undefined = undefined; lookEyeCfg: [number, number, number, number] | undefined = undefined;
   private lookGradeCfg: [number, number, number, number] | null = null;   // (this frame's gradeCfg, render/lookgrade.ts: the day's contrast, which the one exposure model tones a place by)
   /** THE LOOK PROTOTYPE's daylight at openings (scene/openings.ts; the panel's "Daylight at openings" row): one area light just inside each place the level
@@ -178,7 +178,7 @@ export class Engine {
     this.drawWait.calm = PLAN_PACE.calm;
     return { plan: on ? { left: Infinity, ms: PLAN_PACE.ms } : WHOLE, wait: on ? this.drawWait : null };
   }
-  /** THE LEVEL IS ANOTHER STATE OF ITSELF (a restart, a save put back: host/api.ts): what the planners have in hand was of the state before, so it is
+  /** THE LEVEL IS ANOTHER STATE OF ITSELF (a restart, a save put back: rust/game_rules/src/host_api): what the planners have in hand was of the state before, so it is
    *  given up, and for a few drawn frames every plan is made at once, as on a page's first frames. Not for a change of light or weather: the level
    *  stands, and a job in hand is still of it. */
   startPlansOver(): void { this.planFresh = LOOK_OPENINGS.settle + 2; this.wallSides.drop(); this.openJob.drop(); }
@@ -347,12 +347,12 @@ export class Engine {
   /** radical-inverse (Halton) of i in base b */
   private static halton(i: number, b: number) { let f = 1, r = 0; while (i > 0) { f /= b; r += f * (i % b); i = Math.floor(i / b); } return r; }
   skin: SkinnedDrawable | null = null;
-  /** mesh-shadow trees for the skinned characters (attached by whoever owns the CharacterRenderer: game.ts / the viewer); bound at scene binding 13 */
+  /** mesh-shadow trees for the skinned characters (attached by whoever owns the CharacterRenderer: the page); bound at scene binding 13 */
   meshShadows: MeshShadows | null = null;
   /** the decal list (experiment E1, render/decals.ts — owned by the Game, which feeds it; null in the viewer): synced + uploaded each frame before the g-buffer, which
    *  reads it at its group 1 binding 3 under FrameFlags.Decals */
   decals: Decals | null = null;
-  /** the GPU particle system (render/particles.ts; attached by game.ts — the viewer has none): stepped after the cascades, drawn into the HDR target after the composite while settings.gpuParticles is on */
+  /** the GPU particle system (render/particles.ts; attached by the page): stepped after the cascades, drawn into the HDR target after the composite while settings.gpuParticles is on */
   particles: Particles | null = null;
   /** measurement only: timestamp the particles' render pass as 'pdraw' (render-pass timings are unreliable on Metal and feed every GPU total — leave off) */
   particlesTimeDraw = false;
@@ -366,7 +366,7 @@ export class Engine {
   constructor(public gpu: Gpu, rcCfg: RcConfig = defaultRcConfig, world?: (device: GPUDevice) => BoxWorld) {
     const device = this.device = gpu.device;
     const maxStorage = device.limits.maxStorageBuffersPerShaderStage;
-    if (maxStorage < 9) reachBinding.storage = false;   // the per-light reach rows: storage by default (measured cheaper), the uniform binding when this adapter cannot afford a 9th storage buffer in the compute stage — decided HERE so the viewer and every other Engine user get the same fallback (main.ts only adds ?reachUniform for A/B)
+    if (maxStorage < 9) reachBinding.storage = false;   // the per-light reach rows: storage by default (measured cheaper), the uniform binding when this adapter cannot afford a 9th storage buffer in the compute stage — decided HERE so every Engine user gets the same fallback
     if (maxStorage < 8) throw new Error(`This GPU / browser exposes ${maxStorage} storage buffers per shader stage; the renderer needs 8 (scene group 6 + the cascade trace's / light probe's 2) — the WebGPU default, which every core (non-compatibility-mode) adapter provides.`);   // (readable on the #fatal card instead of a pipeline-creation failure deep in the pass graph; the per-light reach masks ride in a uniform to keep this at 8 — frame.ts binding 12)
     // the mesh-shadow trees want one more read-only storage slot in the scene group: 6 + reach (1 if storage) + mesh 1, plus the cascade trace's / probe's 2 in
     // their own group, must fit the per-stage limit — 10 with the reach rows in storage, which is exactly what Chrome offers on Metal. Where it does not fit the
@@ -400,7 +400,7 @@ export class Engine {
   /** THE LOOK PROTOTYPE's place field, made once (render/placeField.ts); a device that cannot make it is asked once and no more */
   /** NOTHING IS COMPILED AT ITS FIRST USE. The fog of war's sight table and its pass made their programs the first frame a mission drew the fog: the title
    *  never built them, so the first squad mission of a visit compiled three programs under play. The page asks for them
-   *  here, once its boot's own are in (main.ts, after the boot's freeze): they compile behind the start, counted with the later set while they do (a brief's
+   *  here, once its boot's own are in (host/drawpage.ts, after the boot's freeze): they compile behind the start, counted with the later set while they do (a brief's
    *  Start waits for them), and on the kept page (gpu/keep.ts) a mission finds them made. A pass that gains a program of its own asks for it here too. */
   warmFirstUse(): void { this.fogSight.warm(); this.passes.warmFog(); powderWarm(this.device); }   // (the look's loose snow steps only on a snow level: asked for on every level, so that none compiles it in play)
   private buildPlace(): void { if (this.place || this.placeDead) return; try { this.place = new PlaceField(this.device, this.rc.diceView); } catch (err) { console.warn('place field: not built on this device', err); this.placeDead = true; } }
@@ -431,7 +431,7 @@ export class Engine {
   setSmoke(s: SmokeBinding) { this.smoke = s; this.sceneBG = null; this.sceneBGOut = null; }
   /** Attach the mesh-shadow trees for the characters `skin` draws (or null to detach); the scene group rebinds on the next frame. */
   setMeshShadows(m: MeshShadows | null) { this.meshShadows = m; this.sceneBG = null; this.sceneBGOut = null; }
-  /** the SDF character rig's radius fit for the mannequin `skin` draws (render/sdfrig.ts fitRig — game.ts / the viewer attach it beside the mesh shadows). BoxWorld.upload packs it into every frame's proxy
+  /** the SDF character rig's radius fit for the mannequin `skin` draws (render/sdfrig.ts fitRig — the page attach it beside the mesh shadows). BoxWorld.upload packs it into every frame's proxy
    *  list (fitted r0 / r1 per slot, the cull sphere fitted); null = the list as the game wrote it: hand radii, no taper byte (each record traced as an untapered cone), 1.5 m spheres */
   rigFit: RigFit | null = null;
   setRigFit(f: RigFit | null) { this.rigFit = f; }
@@ -441,10 +441,10 @@ export class Engine {
   get decalsOn(): boolean { return this.settings.decals && !!this.decals && this.decals.count > 0; }
   /** Attach the GPU particle system (or null): its passes join the frame from the next render() while settings.gpuParticles is on. */
   setParticles(p: Particles | null) { this.particles = p; }
-  /** THE AIR OVER THE FLOOR (render/airField.ts; game/airSim.ts feeds it): the wind as a small fluid simulation over the level's floor plan — walls, furniture
+  /** THE AIR OVER THE FLOOR (render/airField.ts; rust/game_rules/src/air_sim feeds it): the wind as a small fluid simulation over the level's floor plan — walls, furniture
    *  and door leaves stand in it, the storm and the vents drive it. Read by the particle step (the blown snow's grains and wisps) and by nothing else: a picture
-   *  only. main.ts attaches one on every level (`?air=0`: none — null = the engine as it was); the game hands over, once a frame, the ambient wind (`airWind`,
-   *  m/s along x and z, the gust on it) and whether to run at all (`airOn`: game/airSim.ts AIR_SIM.on, live — a perf sweep can flip it mid-take). STEPPED ON
+   *  only. host/drawpage.ts attaches one on every level (`?air=0`: none — null = the engine as it was); the game hands over, once a frame, the ambient wind (`airWind`,
+   *  m/s along x and z, the gust on it) and whether to run at all (`airOn`: rust/game_rules/src/air_sim AIR_SIM.on, live — a perf sweep can flip it mid-take). STEPPED ON
    *  ITS OWN CLOCK, not once a drawn frame (settings.airSim, live; settings.airEvery): when at least 0.8 of `airEvery` sixtieths of a second have gone by since the last step (a 120 Hz page steps every
    *  other frame, a 30 Hz one once a frame by the solver's own 1/30 s bound), in ONE compute pass timed as 'air' (per-cell work: it does not shrink with the
    *  render scale). */
@@ -452,7 +452,7 @@ export class Engine {
   airWind: [number, number] = [0, 0];
   airOn = false;
   private airAcc = 0;
-  /** Is the GPU particle path live this frame? (the setting ∧ a Particles attached) — what game/particleFx.ts routes the effect sites by */
+  /** Is the GPU particle path live this frame? (the setting ∧ a Particles attached) — what rust/game_rules/src/particle_fx routes the effect sites by */
   get particlesOn(): boolean { return this.settings.gpuParticles && !!this.particles; }
 
   /** A new cascade grid (a preset with another probe density, the Tab panel's 'rebuild cache'). WORLD-SPACE cache: what a (re)started instance does about its empty / stale contents
@@ -488,12 +488,12 @@ export class Engine {
       const inst = new RadianceCascades(this.device, this.sceneLayout, { ...cfg }); inst.invalidateWorld(); this.rcPark.set(key, inst);
     }
   }
-  /** Something changed the WORLD wholesale (level geometry reloaded, the light rig swapped — lighting.ts setDaylight): re-prime the radiance cache in place (rc.invalidateWorld —
+  /** Something changed the WORLD wholesale (level geometry reloaded, the light rig swapped — rust/game_rules/src/lighting set_daylight): re-prime the radiance cache in place (rc.invalidateWorld —
    *  P0-A) AND every parked grid, which would otherwise come back on a later hop holding the field from before the change (a night grid parked through the daytime show, a
    *  day grid swapped in at night: seven frames of the wrong bounce and the wrong light-meter reading — review R10.1). Not for screen events — resize / scale / checkerboard /
    *  divisor flips leave the world cache valid and must not call this. */
   invalidateWorldCache() { this.rc.invalidateWorld(); for (const parked of this.rcPark.values()) parked.invalidateWorld(); }
-  /** The LEVEL was put back to its start under the picture (game/cleanrestart.ts: a restart — lamps that were out burn, holed walls stand, the eye is somewhere else): the
+  /** The LEVEL was put back to its start under the picture (rust/game_rules/src/cleanrestart: a restart — lamps that were out burn, holed walls stand, the eye is somewhere else): the
    *  screen histories, the reservoirs, the haze volume's history and the radiance cache all still hold the level as it stood, 'wrong wholesale'. Each starts from
    *  nothing, as on a boot's first frame, so the fresh level is not blended in over the frames after. */
   restartPicture(why = 'level restarted') { this.passes.restartHistories(why); this.invalidateWorldCache(); this.startPlansOver(); }   // (restartHistories clears the resolve's history and the reservoirs with the rest)
@@ -536,7 +536,7 @@ export class Engine {
     const capH = Math.min(this.settings.maxInternalHeight, ch);                            // the rows this window gets at the current cap (render scale 1.0)
     const h = Math.max(16, Math.floor(capH * Math.max(0.05, Math.min(1, this.settings.renderScale || 1)) + 1e-6));
     const scale = h / ch, w = Math.max(16, Math.floor(cw * scale + 1e-6));
-    this.capScale = capH / ch; this.effectiveScale = scale;   // effectiveScale keeps its meaning — internal / (CSS × dpr), what was actually rendered — the cost model's pixel term and game.ts's metres-per-pixel are in those units
+    this.capScale = capH / ch; this.effectiveScale = scale;   // effectiveScale keeps its meaning — internal / (CSS × dpr), what was actually rendered — the cost model's pixel term and rust/game_rules/src/game's metres-per-pixel are in those units
     // OUTPUT size: with TAAU the cap's rows whatever the scale (exactly what scale 1.0 renders — so the resolve's cost is bounded by the preset, and 'TAAU at 0.77' presents the same canvas as 'no TAAU at
     // 1.0'); without it the internal size (the canvas the browser upscales, as before)
     const oh = this.settings.taau ? Math.max(16, Math.floor(capH + 1e-6)) : h, ow = this.settings.taau ? Math.max(16, Math.floor(cw * (oh / ch) + 1e-6)) : w;
@@ -550,7 +550,7 @@ export class Engine {
     this.passes.setSharp(sharp);
     this.passes.setGbaa(!!this.settings.gbaa && this.settings.taau && this.settings.debugView === 0 && (sharp || this.settings.taauPhases <= 0));   // GBAA: on the TAAU path only (its blend sits between the composite and the resolve; the debug views and the FXAA chain bypass it), and only on a 1 : 1 raster it can own — sharp direct live, or the jitter off — never under the jittered upscale (that is C4: measured softer than main)
     this.passes.setOutlineCopy(!!this.outline?.on && this.settings.debugView === 0);   // THE OUTLINE BY THE PICTURE (render/outline.ts): a copy of the composite for it to read, kept only while its rows ask
-    this.passes.fogFrame = this.fogFrame; this.passes.setFog(!!this.fogFrame?.on && this.settings.debugView === 0);   // FOG OF WAR (game/fogofwar.ts): its pass exists only while the game's switch is on (hdr takes the storage + copy usages then), and never under a debug view
+    this.passes.fogFrame = this.fogFrame; this.passes.setFog(!!this.fogFrame?.on && this.settings.debugView === 0);   // FOG OF WAR (rust/game_rules/src/fogofwar): its pass exists only while the game's switch is on (hdr takes the storage + copy usages then), and never under a debug view
     this.passes.setSceneCopy(!!this.settings.particleRain && !!this.particles);   // PARTICLE RAIN v2: keep a copy of the composite for the rain streaks to refract (GBAA's own when GBAA is on; else one the particles fill before their splat) — off = nothing kept
     if (w !== this.width || h !== this.height || ow !== this.outWidth || oh !== this.outHeight || this.passes.stale || sharp !== this.sharpOn) {   // (stale: TAAU / GBAA switched — the output- or composite-size set is rebuilt even at an unchanged size)
       this.width = w; this.height = h; this.outWidth = ow; this.outHeight = oh; this.sharpOn = sharp;
@@ -565,7 +565,7 @@ export class Engine {
   /** GLASS: per light, the bits of the listed panes (world.glassList order = SceneInfo.glass order; the first 24) that light can possibly shine THROUGH onto
    *  anything: the pane's bounds inside the light's range box (a directional light: every pane), and — for a light with a reach mask (reach.ts: the level's
    *  static fixtures) — some 1 m cell just off either face of the pane inside that mask (a light that reaches neither side of a pane lights nothing through
-   *  it). Errs toward 'set' like the reach masks themselves. → RtLight.glassMask, which upload() packs above the owner byte; direct.wgsl glassPairMask narrows
+   *  it). Errs toward 'set' like the reach masks themselves. → RtLight.glassMask, which upload() packs above the owner byte; direct_common.wgsl glassPairMask narrows
    *  it per 8×8 tile. lights × panes cheap tests a frame; nothing with the experiment off or no pane listed. */
   private glassLightMasks() {   // (GLASS_STATIONS / GLASS_SIDES below the class: the sample lattice as module consts, not two array literals per light per pane per frame — review R1.4)
     const w = this.world, list = this.settings.glass ? w.glassList : [];
@@ -654,7 +654,7 @@ export class Engine {
       this.world.hidePrimary = this.passes.setBeams((refl || air) && this.beams ? this.beams.list ?? this.world.dynamics : null, this.beams?.is ?? NO_BEAM, this.viewFocus, { reflect: refl, air: air ? this.beams?.airOf ?? null : null, A, rain: this.weather.rain, wet: S.wetMirror && S.rtReflect ? 2 : 0, coats: Math.max(0, Math.min(1, lookConfig.pressed)) });
     }   // (lasers / tracers in the reflections: ≤ 8 segments in a small uniform; none = a zero count, the pass as it was)
     this.passes.setFireLook(this.fireLook);
-    this.passes.setFires(this.settings.debugView === 0 ? this.fires : null);   // the open fires' flames (game/fire.ts), behind the beams in the same uniform
+    this.passes.setFires(this.settings.debugView === 0 ? this.fires : null);   // the open fires' flames (rust/game_rules/src/fire), behind the beams in the same uniform
     this.passes.setRt(this.settings.rtReflect, this.settings.rtReflectDiv);   // (likewise before resize: the reflection targets' divisor — pooled + re-made on change like the gather's — and the switch that first allocates them at all)
     this.resize();
     cam.aspect = this.width / this.height;
@@ -680,7 +680,7 @@ export class Engine {
       const jump = v3.dist(cam.pos, this.prevCamPos), turn = v3.dot(cam.forward, this.prevCamFwd);
       if (jump > 2.5 || turn < 0.866) { cutNow = true; if (taauOn) this.resetTaa(jump > 2.5 ? `cut (${jump.toFixed(1)} m)` : 'cut (turn)'); else this.passes.dropRestirBeliefs(); }   // (resetTaa drops the ReSTIR tiles' light beliefs too; without TAAU that is all a cut needs from here)
     }
-    { // INFRARED LIGHTS (lights.ts LightSet.ir, game/irlight.ts): in the list only while this frame's picture is the tube's — post.wgsl's own swap. The frame the
+    { // INFRARED LIGHTS (lights.ts LightSet.ir, rust/game_rules/src/irlight): in the list only while this frame's picture is the tube's — post.wgsl's own swap. The frame the
       // tube comes off, every screen history still holds rooms lit by them (the resolve's, the direct light's, the bounce's, the reflections', the reservoirs' —
       // in a tube frame they are steady lights like any torch): 'wrong wholesale', the case passes.restartHistories names — so no bare-eyed frame shows what only a tube saw.
       const tube = this.settings.nvAmount > 0.5;
@@ -907,7 +907,7 @@ function lookShade(zen: ArrayLike<number>, hor: ArrayLike<number>, skyK: number,
 function lookSkyLum(zen: ArrayLike<number>, hor: ArrayLike<number>, a: number): number { const b = 1 - a; return 0.2126 * (a * zen[0] + b * hor[0]) + 0.7152 * (a * zen[1] + b * hor[1]) + 0.0722 * (a * zen[2] + b * hor[2]); }
 
 /** THE LOOK PROTOTYPE's real light values (render/photometry.ts; lights.ts LightSet.dayExp): the exposure of the hour that is up, against the night's.
- *  `said` = the page's word (main.ts: the game's hour through photometry.ts hourExposure; null = a night, or nobody says). Where nobody says, a level lit as a
+ *  `said` = the page's word (host/drawpage.ts: the game's hour through photometry.ts hourExposure; null = a night, or nobody says). Where nobody says, a level lit as a
  *  day by its OWN sky (the breach's daylight variant) is taken for a clear midday by how bright that sky is, read WITHOUT the Sky light row: its mean
  *  radiance from 0.08 to 0.35 runs the exposure from the night's 1 to midday's 1/5,000. A night is 1 exactly: nothing of it is touched. Never a guess from a
  *  light's strength, since most levels' own moons are 0.9 and one is 2.6. */

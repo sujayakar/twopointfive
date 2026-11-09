@@ -1,5 +1,5 @@
 // WHERE THE CHECKOUT IS, AND A PLATFORM WITH NO GPU: the enums a render module names as it loads, and a stand-in for the device. Nothing of the game is loaded:
-// a check of the picture's own code imports this; a check that stands a game imports headless.ts.
+// a check of the picture's own code imports this.
 import { resolve } from 'node:path';
 
 export const ROOT = resolve(import.meta.dir, '../..');
@@ -28,7 +28,7 @@ export function fake(name = 'gpu'): any {
   });
 }
 
-/** the character as the page loads it: the mannequin's skeleton and clips, with the cast's meshes of the look that is on (or the one said) */
+/** the character as the page loads it: the mannequin's skeleton and clips, with the cast's meshes of the place's dress (or the one said) */
 export async function characterSet(look?: boolean): Promise<any> {
   const { loadGltfCharacter, loadGltfCast, castFile } = await import(`${ROOT}/src/anim/gltf.ts`);
   return loadGltfCast(`file://${ROOT}/public/assets/chars/${castFile(look)}`, await loadGltfCharacter(`file://${ROOT}/public/assets/ual/AnimationLibrary_Godot_Standard.gltf`));

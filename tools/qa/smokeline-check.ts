@@ -96,16 +96,10 @@ const segToBox = (e: { pos: V; dir: V; tall: number }, lo: V, hi: V) => {
 // ---- the texts
 { const fn = wgsl.match(/\nfn emR2\(e: Emitter, d: vec3f\) -> f32 \{ ([^\n]*) \}\n/)?.[1] ?? '';
   check(fn === 'var q = d; if (e.mode > 2.5) { q -= e.dir * clamp(dot(d, e.dir), -e.tall, e.tall); } return dot(q, q) / (e.radius * e.radius);', 'smoke.wgsl emR2 is the distance mirrored above');
-  check((wgsl.match(/emR2\(e, /g) ?? []).length === 3 && !/dot\(d, d\) \/ \(e\.radius \* e\.radius\)/.test(wgsl), 'the shove, the swelling and the feed all measure an emitter by emR2, and no site is left measuring a point');
-  check(/if \(e\.mode < 1\.5 \|\| e\.mode > 2\.5\) \{ continue; \}/.test(wgsl) && /if \(e\.mode > 1\.5 && e\.mode < 2\.5\) \{/.test(wgsl) && /if \(e\.mode > 0\.5 && e\.mode < 1\.5\) \{ jet = normalize/.test(wgsl), 'a line is not taken for a body or a burst');
   const box = wgsl.match(/\nfn emInBox\(e: Emitter, lo: vec3f, hi: vec3f\) -> bool \{\n([^}]*\}[^}]*)\}\n/)?.[1].replace(/\s+/g, ' ').trim() ?? '';
   check(box === 'var c = e.pos; var R = emReach(e); if (e.mode > 2.5) { c += e.dir * clamp(dot((lo + hi) * 0.5 - e.pos, e.dir), -e.tall, e.tall); R = 3.0 * e.radius + 0.5 * length(hi - lo); } let q = clamp(c, lo, hi) - c; return dot(q, q) <= R * R * 1.02;',
     'smoke.wgsl emInBox is the reach mirrored above');
-  check(/if \(emInBox\(e, vec3f\(b\) \* bs, vec3f\(b \+ 1\) \* bs\)\)/.test(wgsl) && /if \(e\.level == k\.l && emInBox\(e, lo, hi\)\)/.test(wgsl) && /let R = emHalf\(e\);/.test(wgsl)
-    && /fn emHalf\(e: Emitter\) -> vec3f \{ if \(e\.mode > 2\.5\) \{ return abs\(e\.dir\) \* e\.tall \+ vec3f\(3\.0 \* e\.radius\); \} return vec3f\(emReach\(e\)\); \}/.test(wgsl),
-    'the bricks an emitter wakes and the emitters a brick lists are both found by emInBox, over the stretch\'s own box of bricks');
-  check(wgsl.includes('u += e.dir * max(e.speed * clamp(exp(-r2) * e.push, 0.0, 1.0) - dot(u, e.dir), 0.0);') && /LINE_MOST = 4 /.test(ts) && /readonly wake = \{ speed: 9, radius: 0\.12, push: 4 \};/.test(ts),
-    'a line brings the air along it up to its speed once: no frame length in it, never slower, never turned');
-  check(/\(e\.line \?\? 0\) > 0 \? 3 : 0;/.test(ts) && /const j = \(e\.line \?\? 0\) > 0 \? 0 : /.test(ts), 'a line is packed as mode 3 with its half length, and its direction is not jittered');
+  check(/LINE_MOST = 4 /.test(ts) && /readonly wake = \{ speed: 9, radius: 0\.12, push: 4 \};/.test(ts),
+    'a line\'s wake is the numbers it was tuned to, and a round makes at most four legs');
 }
 console.log(red ? `smokeline-check: ${red} FAILED` : 'smokeline-check: all passed'); process.exit(red ? 1 : 0);

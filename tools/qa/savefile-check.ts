@@ -2,7 +2,7 @@
 // whoever listens and to nobody else: no download is asked for, with a listener or without, and the door answers what became of the file ('sent', 'held',
 // false) so its saver can say so; `?downloads=1` (SAVE_UP.on = false) is the door as it was. No kind is downloaded for its own sake any more (the level editor's document was the last, and went with the editor); with downloads put back a file is asked for once under its name and the listener told after it; a download that cannot be asked for THROWS (a
 // caller must not mark the file handed over) and nobody is told. A listener that throws, or whose promise is refused, loses nothing. A saver hears
-// once, later, how a file that was taken ended. The door over the backend's real file intake, mapped as main.ts maps it. The words a saver says; every kind on the door's own list is saved through it by some file; and no file under src/ makes a download of its own (by `.download =` or createObjectURL; an address whose every use in its module is a worker's is a script's and no file). A replay is no kind of this door's: its pages send one themselves, and nothing of them saves through here.
+// once, later, how a file that was taken ended. The door over the backend's real file intake, mapped as host/drawpage.ts maps it. The words a saver says; every kind on the door's own list is saved through it by some file; and no file under src/ makes a download of its own (by `.download =` or createObjectURL; an address whose every use in its module is a worker's is a script's and no file). A replay is no kind of this door's: its pages send one themselves, and nothing of them saves through here.
 //   bun run tools/qa/savefile-check.ts   (exit 0 = all pass; SAVEFILE_BREAK=1 = nobody listens: must fail)
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -11,7 +11,6 @@ import { FileSync, FILESYNC } from '../../src/cloud/files';
 import { wire } from '../../src/cloud/wire';
 const is = (w: Went, went: Saved, local: boolean) => w.went === went && w.local === local;
 import { PerfRecorder } from '../../src/ui/perfrec';
-import { replayBlob } from '../../src/tape/format';
 const BREAK = process.env.SAVEFILE_BREAK === '1';
 let red = 0; const check = (ok: boolean, w: string) => { console.log(`${ok ? '- PASS' : '- FAIL'} — ${w}`); if (!ok) red++; };
 const G = globalThis as any;
@@ -78,7 +77,7 @@ page();
   SAVED.sink = (_f, done) => { end = done; return 'sent'; }; tellSaved('bench', 'h4.json', new Blob(['x']), undefined, () => { throw new Error('the card is gone'); }); let threw = false; try { end?.(true); } catch { threw = true; }
   check(heard.length === 0 && !threw, 'a file that was not taken has no end to hear of, and a saver that throws on hearing troubles nobody');
 }
-{ // the door over the backend's own file intake, mapped as main.ts maps it (the line is read below)
+{ // the door over the backend's own file intake, mapped as host/drawpage.ts maps it (the line is read below)
   let on = true, may = false; const dead = wire('http://127.0.0.1:9', { fetch: (() => Promise.reject(new Error('no backend in this check'))) as any });
   const F = new FileSync(dead, { pid: 'p', sid: 'savefile-check', on: () => on, may: () => may });
   const save = (n: string, b: Blob, k: string, m?: Record<string, string>, d?: SavedDone): 'sent' | 'held' | 'off' | 'no' => { if (!on) return 'off'; const t = F.add(n, b, k, m, d); return t === 'now' ? 'sent' : t ?? 'no'; };   // (cloud.ts `save`)
@@ -163,9 +162,6 @@ page();
   const replays = [...texts].filter(([f, text]) => /replay/i.test(f) && DOOR.test(text)).map(([f]) => f);
   check(DOOR.test("import { saveFile } from '../host/savefile';") && replays.length === 0 && !SAVED_KINDS.some(k => /replay/.test(k)),
     `a replay does not leave the page by this door: no replay file imports it, and it has no such kind (${SAVED_KINDS.join(', ')})${replays.length ? ` (${replays.join(', ')})` : ''}`);
-  // … and the file F7 sends is still the replay with its blank notes left out, named by the notes it keeps (tape/format.ts `replayBlob`)
-  { const { name, blob } = replayBlob({ savedAt: '2026-01-02T03:04:05.000Z', seconds: 12, notes: [{ t: 1, text: ' ' }, { t: 2, text: 'here' }] } as any), back = JSON.parse(await blob.text());
-    check(/^twopointsix-replay-.*-12s-1notes\.json$/.test(name) && back.notes.length === 1 && back.notes[0].text === 'here' && back.seconds === 12, `a replay's file leaves out a note with no words and is named by the notes it keeps (${name})`); }
   // EVERY KIND OF THE DOOR'S IS SAVED THROUGH IT, BY THE DOOR'S OWN LIST (host/savefile.ts SAVED_KINDS; this was five file names written by hand while
   // the door grew to eight kinds): each kind has a file that hands it to the door (saveFile or tellSaved), and no save's kind is one the lint cannot
   // read. A kind is read where it is said outright, or by a const the file declares once as a SavedKind and writes no other thing under; a save by

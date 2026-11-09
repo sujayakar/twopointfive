@@ -844,8 +844,8 @@ mod tests {
         use crate::tactics::{Plan, PlanPhase, RoleKind};
         let mut g = Game::blank();
         let (a, b): (GuardId, GuardId) = (GuardId(0), GuardId(1));
-        let old = g.tab.tactics_plan.push(Plan::zeroed());
-        let new = g.tab.tactics_plan.push(Plan::zeroed());
+        let old = g.tab.tactics_plan.push(Plan::default());
+        let new = g.tab.tactics_plan.push(Plan::default());
         g.tab.tactics_plan[old].phase = PlanPhase::Approach;
         g.tab.tactics_plan[new].phase = PlanPhase::Approach;
         let ra = mk(&mut g, old, RoleKind::Presser, None, Vec::new(), 0.0, 0.0, None);

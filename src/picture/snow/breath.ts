@@ -7,7 +7,7 @@ import type { SmokeSystemLike } from '../../smoke/types';
 import type { Man } from './tracks';
 import { SNOW_LOOK } from './look';
 
-/** how a man's hard breathing shows (character.ts HARDBREATH, as the page opens) */
+/** how a man's hard breathing shows (rust/game_rules/src/character HARDBREATH, as the page opens) */
 const HB = { every: 0.95, puffs: 4, count: 9, jet: 3.2, size: 2.0, carry: 0.85, up: 2.5, down: 14 };
 
 /** The numbers (judged on software-rendered stills only, never seen moving — the maintainer's to move; `__snow.breath` on the console, live with the next breath).
@@ -28,7 +28,7 @@ export const SNOWBREATH = {
   lifeJit: 0.25,
   size: 0.085,         // m: a puff's radius at birth (× 1 ± sizeJit; the kind grows it by three fifths over its life)
   sizeJit: 0.3,
-  opacity: 0.66,       // × the dust puff's own peak opacity (particleFx.ts DUST_LOOK.opacity, 0.3)
+  opacity: 0.66,       // × the dust puff's own peak opacity (rust/game_rules/src/particle_fx DUST_LOOK.opacity, 0.3)
   hardK: 1.5,          // × size and opacity when blown
   color: [0.9, 0.93, 1.0] as Vec3,   // what it scatters: near white, a touch cold
   mouthAhead: 0.1,     // m from the head bone (eye level) forward to the lips
@@ -44,7 +44,7 @@ export const SNOWBREATH = {
  *  GPU and never timed — the maintainer's to move (`__snow.steam` on the console, live with the next breath). Authored data, not player switches. The rhythm, the
  *  mouth, the pitch and how much of his walk it leaves with are SNOWBREATH's (and the hard breath rule's) as for the puffs: only what the gas is made of is here.
  *  HOW THICK: a guard's sight line starts at his eye, a hand above his own mouth, and nothing in the game reads smoke until a line has lost a fifth of its light
- *  (guards.ts: (T − 0.3) / 0.5, held to 0‥1), so `density` is kept where a line through the thick of a breath loses less than that. */
+ *  (rust/game_rules/src/guards: (T − 0.3) / 0.5, held to 0‥1), so `density` is kept where a line through the thick of a breath loses less than that. */
 export const BREATHSTEAM = {
   radius: 0.034,       // m: the gaussian the mouth lets it out through (× √size when blown): a wisp like the barrel's. TRIED AND PUT BACK: 0.09 with `density` 1.4
                        // and `temp` 2.5, a wide thin cloud the puffs' own size and no thicker along a sight line — it held the pool three to five times

@@ -1,5 +1,5 @@
 //! The keyed draws of a game (the data's `dice` says what they are): they step the game's die, so they stand above the data.
-pub use game_wire::dice::*;
+pub use game_types::dice::*;
 use crate::game::Game;
 use crate::ids::*;
 #[cfg(test)] use sim::dice::Dice;
@@ -132,7 +132,7 @@ mod tests {
         let c2 = g.ch.push(again);
         assert_eq!(Who::Body(c2).word(&g), Who::Body(c).word(&g));
         // a squad's number is never a body's, and is its name's
-        let mut q = crate::enemysquads::Squad::zeroed();
+        let mut q = crate::enemysquads::Squad::default();
         q.name = alloc::string::String::from("the yard");
         let (q1, q2) = (g.tab.enemysquads_squad.push(q.clone()), g.tab.enemysquads_squad.push(q));
         assert_eq!(Who::Squad(q1).word(&g), Who::Squad(q2).word(&g));

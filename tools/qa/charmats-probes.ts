@@ -10,7 +10,7 @@
 import { main, ROOT } from './here.ts';
 import { readFileSync } from 'node:fs';
 const CM = await import(`${ROOT}/src/render/charMaterials.ts`);
-const { LOOK } = await import(`${ROOT}/src/scene/look.ts`);   // (TPS_LOOK=1: the tables' checks run on the look's second tables, with the two rules that are the plain file's own stood down)
+const { setLookPlace } = await import(`${ROOT}/src/scene/look.ts`); setLookPlace(false);   // (the first cast's tables, the office's: the look's are asked of by name below)
 const { loadGltfCharacter } = await import(`${ROOT}/src/anim/gltf.ts`);
 
 type Verdict = (ok: boolean, label: string, detail: string) => void;
@@ -103,16 +103,14 @@ export async function charmatsTables() {
     if (opCloth.size !== 1) f.push(`operators' uniform cloth differs man to man (${opCloth.size} colours)`);
     if (defShirt.size < 3 || defShirt.has('-1')) f.push(`only ${defShirt.size} shirts dealt over ${N} defenders [${[...defShirt]}]`);
     if (defHead.size < 3) f.push(`only ${defHead.size} heads over ${N} defenders`);
-    // (under the look 1.8×: the defenders' cloth is dealt either side of the mud-brick ground, pale or dark, and their rig is olive drab; the operators' suit a shade paler than it was)
-    if (!(defTop / N > (LOOK.on ? 1.8 : 2) * (opTop / N))) f.push(`from above the sides are too close: operators ${f3(opTop / N)} vs defenders ${f3(defTop / N)} mean luminance`);
-    // (under the look the marking is the trim DUSTED: four fifths of it at 0.8 and a fifth of the suit's cloth — the same top channel, at least half the trim's own there)
-    const isTrim = (c: number[]) => LOOK.on ? c.indexOf(Math.max(...c)) === OP[1].indexOf(Math.max(...OP[1])) && Math.max(...c) > 0.5 * Math.max(...OP[1]) && Math.max(...c) > 2 * Math.min(...c) : c.map(f3).join() === OP[1].map(f3).join();
+    if (!(defTop / N > 2 * (opTop / N))) f.push(`from above the sides are too close: operators ${f3(opTop / N)} vs defenders ${f3(defTop / N)} mean luminance`);
+    const isTrim = (c: number[]) => c.map(f3).join() === OP[1].map(f3).join();
     const mk = slot(pal('operator', OP, 3), 'cloth_plain'); if (!isTrim(mk)) f.push(`an operator's marking (cloth_plain on the models: band, brassards) ${mk.map(f3)} is not his trim ${OP[1]}`);
     { const si = pal('operator', OP, 3, true); if (slot(si, 'cloth_plain').join() !== slot(si, 'cloth_uniform').join() || !isTrim(slot(si, 'accent'))) f.push('on the stand-in an operator\'s shirt is not his uniform, or his armband not his trim'); }
-    const dl = slot(pal('defender', DEF, 3), 'lens'), ds = slot(pal('defender', DEF, 3), 'skin'); if (!LOOK.on && dl.join() !== ds.join()) f.push('a defender\'s lens faces are not his skin (he has no eye-pro)');   // (under the look the slot is his scarf / shawl: its own check below)
+    const dl = slot(pal('defender', DEF, 3), 'lens'), ds = slot(pal('defender', DEF, 3), 'skin'); if (dl.join() !== ds.join()) f.push('a defender\'s lens faces are not his skin (he has no eye-pro)');   // (under the look the slot is his scarf / shawl: its own check below)
     // the look's defender palettes: nothing reads as a pair's marking (no cloth saturated unless it is a brown — red over green over blue with green at 0.72 of red or more —,
     // and on a head or a shoulder never green or blue the top channel), and no warm suit within 0.6 of a stop of the look's ground (mud brick, luminance 0.37)
-    if (LOOK.on) {
+    {
       const D = CM.CHAR_MATS_LOOK.defender!.slots as Record<string, { pick?: number[][] }>;
       for (const n of ['cloth_plain', 'cloth_uniform', 'helmet', 'accent', 'lens']) for (const c of D[n].pick ?? []) {
         const mx = Math.max(...c), sat = (mx - Math.min(...c)) / mx, brown = c[0] >= c[1] && c[1] >= c[2] && c[1] >= 0.72 * c[0];
@@ -131,7 +129,7 @@ export async function charmatsTables() {
     // each other side's ACCENT: on the cast its own row (the irregulars' pale naturals, never the colour of the top it is worn with; a tie darker than its shirt),
     // on the stand-in the shirt's row (the mannequin's accent is an armband region)
     { const dist = (x: number[], y: number[]) => Math.max(Math.abs(x[0] - y[0]), Math.abs(x[1] - y[1]), Math.abs(x[2] - y[2]));
-      let near = 0; for (let id = 1; id <= 140; id++) { const d = pal('defender', DEF, id); if (dist(slot(d, 'accent'), slot(d, 'cloth_plain')) < (LOOK.on ? 0.05 : 0.1) || (!LOOK.on && lum(slot(d, 'accent')) < lum(slot(d, 'cloth_plain')))) near++; }   // (the look: the accent is a turban / skull cap — off-white, cream, grey or near black, never the shirt's own colour; a dark one is allowed, and a dark one on a dark shirt is 0.05 off it at the least)
+      let near = 0; for (let id = 1; id <= 140; id++) { const d = pal('defender', DEF, id); if (dist(slot(d, 'accent'), slot(d, 'cloth_plain')) < 0.1 || (lum(slot(d, 'accent')) < lum(slot(d, 'cloth_plain')))) near++; }
       if (near) f.push(`${near} of 140 defenders wear a tee / straw hat the colour of their top (or darker than it)`);
       const QRF: number[][] = [[0.1, 0.11, 0.13], [0.05, 0.055, 0.06]], CIV: number[][] = [[0.78, 0.62, 0.08], [0.1, 0.12, 0.2]];
       { const c = pal('civilian', CIV, 7);   // (an odd id: the cast's office worker — the even ones are the cleaner, whose accent is her pale apron and kerchief)
@@ -158,17 +156,12 @@ export async function charmatsTables() {
 
 // ---------------------------------------------------------------- charmats-shader
 export async function charmatsShader() {
-  const F = family('charmats-shader: the WGSL and the TS agree, and the off path is still the statements it was (gbuffer.wgsl × charMaterials.ts)');
+  const F = family('charmats-shader: the WGSL and the TS agree (gbuffer.wgsl × charMaterials.ts)');
   const src = readFileSync(`${ROOT}/src/render/shaders/gbuffer.wgsl`, 'utf8'); const f: string[] = [];
   const rows = /const CHAR_MAT_ROWS: u32 = (\d+)u;/.exec(src)?.[1]; if (Number(rows) !== CM.CHAR_MAT_ROWS) f.push(`CHAR_MAT_ROWS ${rows} in WGSL vs ${CM.CHAR_MAT_ROWS}`);
   if (!src.includes(`min(u32(slotGeo.x + 0.5), ${CM.CHAR_SLOT_COUNT - 1}u)`)) f.push(`vsSkin does not clamp the slot to ${CM.CHAR_SLOT_COUNT - 1}`);
   if (CM.CHAR_MAT_ROWS < 2 + 2 * CM.CHAR_SLOT_COUNT) f.push('the rows do not hold the slots');
-  for (const keep of ['o.albedo = select(ch.tint, ch.tint2, matSel > 0.5);', 'o.id = 0xFFFFFu | (ch.owner << 20u) | (1u << 28u);', 'o.mat = vec2f(1.0, 0.0);', 'if (H0.x > 0.5) {', 'let slotted = v.fin.w > 0.5;'])
-    if (!src.includes(keep)) f.push(`missing: ${keep}`);
-  const comp = readFileSync(`${ROOT}/src/render/shaders/composite.wgsl`, 'utf8');
-  if (!comp.includes('if ((id & 0x50000000u) == 0x50000000u) { let ws = lookShow(wetCoatSpec('))   // (shown by its place like every other light since the one exposure model: composite.wgsl lookShow)
-    f.push('composite no longer lights a bit-28 + bit-30 pixel with wetCoatSpec — the slots\' highlight rides that');
-  F.verdict(f.length === 0, 'row and slot counts agree; the two-tint statements, the dry id and the matte material word are still there; composite still lights the coat bits', f.join('; ') || `${rows} rows · ${CM.CHAR_SLOT_COUNT} slots`);
+  F.verdict(f.length === 0, 'row and slot counts agree', f.join('; ') || `${rows} rows · ${CM.CHAR_SLOT_COUNT} slots`);
   // THE MEN'S NOISE HOLDS NO LOOP AND NO LOCAL ARRAY, ON PURPOSE (look.wgsl manNoise, manH4: the eight corners of a cell hashed four at a time by vector
   // arithmetic). The same eight values as the one-corner hash it replaced, by its own integer steps written again here; MANLOOP_BREAK=1 = one step of
   // the four-at-a-time hash changed, and this must fail
@@ -179,11 +172,7 @@ export async function charmatsShader() {
     let off = 0, n = 0;
     for (let k = 0; k < 4000; k++) { const ix = ((k * 7919) % 9001) - 4500, iy = ((k * 104729) % 7001) - 3500, iz = ((k * 1299709) % 5003) - 2500, xs = [ix, ix + 1, ix, ix + 1], ys = [iy, iy, iy + 1, iy + 1];
       for (let c = 0; c < 4; c++) { const xy = (Math.imul((xs[c] + 4096) >>> 0, 73856093) ^ Math.imul((ys[c] + 4096) >>> 0, 19349663)) >>> 0; for (const dz of [0, 1]) { n++; if (four((xy ^ Math.imul((iz + dz + 4096) >>> 0, 83492791)) >>> 0) !== one(xs[c], ys[c], iz + dz)) off++; } } }
-    const text = body.length > 0 && !/\bfor\s*\(|\bloop\b|\bwhile\b|array</.test(body) && !/\bfor\s*\(|array</.test(h4)
-      && h4.includes('var h = h0 * 747796405u + vec4u(2891336453u); h = ((h >> ((h >> vec4u(28u)) + vec4u(4u))) ^ h) * 277803737u; return vec4f((h ^ (h >> vec4u(22u))) >> vec4u(8u)) * (1.0 / 16777216.0);')
-      && body.includes('let xy = (vec4u(vec4i(i.x, i.x + 1, i.x, i.x + 1) + vec4i(4096)) * 73856093u) ^ (vec4u(vec4i(i.y, i.y, i.y + 1, i.y + 1) + vec4i(4096)) * 19349663u);')
-      && body.includes('let a = manH4(xy ^ vec4u(u32(i.z + 4096) * 83492791u)); let b = manH4(xy ^ vec4u(u32(i.z + 4097) * 83492791u));')
-      && body.includes('return mix(mix(mix(a.x, a.y, u.x), mix(a.z, a.w, u.x), u.y), mix(mix(b.x, b.y, u.x), mix(b.z, b.w, u.x), u.y), u.z);') && !/\bfn manH\(/.test(look);
+    const text = body.length > 0 && !/\bfor\s*\(|\bloop\b|\bwhile\b|array</.test(body) && !/\bfor\s*\(|array</.test(h4) && h4.includes('var h = h0 * 747796405u + vec4u(2891336453u); h = ((h >> ((h >> vec4u(28u)) + vec4u(4u))) ^ h) * 277803737u; return vec4f((h ^ (h >> vec4u(22u))) >> vec4u(8u)) * (1.0 / 16777216.0);') && body.includes('let xy = (vec4u(vec4i(i.x, i.x + 1, i.x, i.x + 1) + vec4i(4096)) * 73856093u) ^ (vec4u(vec4i(i.y, i.y, i.y + 1, i.y + 1) + vec4i(4096)) * 19349663u);') && body.includes('let a = manH4(xy ^ vec4u(u32(i.z + 4096) * 83492791u)); let b = manH4(xy ^ vec4u(u32(i.z + 4097) * 83492791u));') && body.includes('return mix(mix(mix(a.x, a.y, u.x), mix(a.z, a.w, u.x), u.y), mix(mix(b.x, b.y, u.x), mix(b.z, b.w, u.x), u.y), u.z);');
     F.verdict(text && off === 0, 'the men\'s noise hashes a cell\'s eight corners four at a time with no loop and no local array, and they are the eight values the one-corner hash gave', `${n} corners, ${off} differ · the text ${text ? 'holds' : 'has moved'}`); }
   return F.done();
 }

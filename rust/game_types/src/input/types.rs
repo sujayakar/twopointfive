@@ -1,9 +1,8 @@
-//! The types of `input`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `input`.
 #![allow(unused_imports)]
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: Input, src/game/input.ts:4)
 #[derive(Clone, Debug)]
 pub struct Input {
     pub keys: JsSet<String>,
@@ -20,7 +19,7 @@ pub struct Input {
     pub lock_except: Option<JsSet<String>>,
 }
 impl Input {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         Input {
             keys: JsSet::new(),

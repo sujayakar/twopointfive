@@ -45,6 +45,18 @@ pub fn release(g: &mut Game, gd: GuardId, by: By, t: f64) {
 /// has any of these a hand on him
 pub fn has(g: &Game, gd: GuardId, by: By) -> bool { By(men::man_owner(g, g.gd[gd].ch)).any(by) }
 
+/// MAY `by` TAKE HIM? Who keeps him from it, in words, or None. His body first: dead, in somebody's arm, blind, reeling, a hostage in his own. Then whoever above `by` in the list has
+/// him. (`By::NOBODY` asks for the weakest of all: is he anybody's)
+pub fn kept(g: &Game, gd: GuardId, by: By) -> Option<&'static str> {
+    use crate::control::man;
+    if man::dead(g, gd) { return Some("dead"); }
+    if man::held(g, gd) { return Some("in somebody's arm"); }
+    if man::blind(g, gd) { return Some("blind"); }
+    if man::staggered(g, gd) { return Some("reeling"); }
+    if man::in_a_standoff(g, gd) { return Some("a hostage in his arms"); }
+    TASKERS.iter().find(|t| t.by.rank() > by.rank() && has(g, gd, t.by)).map(|t| t.name)
+}
+
 /// who has him, for what reason and since when; None: nobody
 pub fn who(g: &Game, gd: GuardId) -> Option<(&'static str, &'static str, f64)> {
     let c = g.gd[gd].ch;
@@ -63,62 +75,76 @@ pub fn release_man(g: &mut Game, gd: GuardId, rule: f64, t: f64) { release(g, gd
 mod tests {
     use super::*;
 
-    /// the bits the page's table has for them, and the rank each comes to
     #[test]
     fn the_taskers_bits_are_their_places_in_the_list() {
+        let n = TASKERS.len() as u32;
         for (i, t) in TASKERS.iter().enumerate() {
-            assert_eq!((t.by.0, t.by.rank()), (1 << (12 - i), 13 - i as u32), "{}", t.name);
+            assert_eq!((t.by.0, t.by.rank()), (1 << (n - 1 - i as u32), n - i as u32), "{}", t.name);
             assert!(!t.why.is_empty() && TASKERS[..i].iter().all(|o| o.name != t.name), "{}", t.name);
         }
-        assert_eq!((By(0).rank(), By(3).rank(), By(8191).rank()), (0, 2, 13));
+        assert_eq!((By::NOBODY.rank(), By(3).rank()), (0, 2));
     }
 
-    /// (owner, rank, reason, since) after each step, as the TypeScript's claimMan and releaseMan left them
-    #[test]
-    fn claims_and_releases_as_the_typescript_leaves_them() {
-        let mut game = Game::blank();
-        let g = &mut game;
+    fn stand() -> (alloc::boxed::Box<Game>, GuardId) {
+        let mut g = alloc::boxed::Box::new(Game::blank());
         // a man with no row on the block keeps his numbers on his Character, so this needs no block
         let c = g.ch.push(crate::character::Character::blank());
         g.ch[c].man_kept = Some([0.0; 4]);
         let mut man = crate::game::Guard::blank();
         man.ch = c;
         let m = g.gd.push(man);
-        let row = |g: &Game| (crate::sim_men_store::man_owner(g, c), crate::sim_men_store::man_rank(g, c), crate::sim_men_store::man_reason(g, c), crate::sim_men_store::man_since(g, c));
+        (g, m)
+    }
 
+    /// who has him, for which reason, since when, after each step
+    #[test]
+    fn claims_and_releases() {
+        let (mut g, m) = stand();
+        let g = &mut *g;
+        let c = g.gd[m].ch;
+        let row = |g: &Game| (men::man_owner(g, c), men::man_rank(g, c), men::man_reason(g, c), men::man_since(g, c));
+        let is = |word: By, reason: u32, since: f64| (word.0, word.rank(), reason, since);
+        let (at_rest, lane) = (by::SQUAD, by::SQUAD | by::LANE);
         claim(g, m, by::SQUAD, 1.0, None);
-        assert_eq!(row(g), (1, 1, 0, 1.0));
+        assert_eq!(row(g), is(at_rest, 0, 1.0));
         claim(g, m, by::LANE, 2.0, None);
-        assert_eq!(row(g), (33, 6, 0, 2.0));
+        assert_eq!(row(g), is(lane, 0, 2.0));
         claim(g, m, by::SQUAD, 3.0, None);
-        assert_eq!(row(g), (33, 6, 0, 2.0), "a lower rule it already has: nothing");
+        assert_eq!(row(g), is(lane, 0, 2.0), "a lower rule it already has: nothing");
         claim(g, m, by::RUNNER, 4.0, Some(1.0));
-        assert_eq!(row(g), (2081, 12, 1, 4.0));
+        assert_eq!(row(g), is(lane | by::RUNNER, 1, 4.0));
         claim(g, m, by::RUNNER, 5.0, None);
-        assert_eq!(row(g), (2081, 12, 0, 4.0), "the top rule again: its reason, not its time");
+        assert_eq!(row(g), is(lane | by::RUNNER, 0, 4.0), "the top rule again: its reason, not its time");
         claim(g, m, by::RUNNER, 6.0, Some(1.0));
-        assert_eq!(row(g), (2081, 12, 1, 4.0));
         claim(g, m, by::PRESS, 7.0, Some(0.0));
-        assert_eq!(row(g), (2097, 12, 1, 4.0), "a new rule below the top: the top's reason stands");
+        assert_eq!(row(g), is(lane | by::RUNNER | by::PRESS, 1, 4.0), "a new rule below the top: the top's reason stands");
         release(g, m, by::RUNNER, 8.0);
-        assert_eq!(row(g), (49, 6, 0, 8.0), "the rule below has him from now, at its first reason");
-        claim(g, m, by::PRESS | by::FRAG, 9.0, Some(0.0));
-        assert_eq!(row(g), (4145, 13, 0, 9.0));
-        release(g, m, by::FRAG, 10.0);
-        assert_eq!(row(g), (49, 6, 0, 10.0));
-        claim(g, m, by::SQUAD_LEG, 11.0, Some(0.0));
-        assert_eq!(row(g), (305, 9, 0, 11.0));
+        assert_eq!(row(g), is(lane | by::PRESS, 0, 8.0), "the rule below has him from now, at its first reason");
         claim(g, m, by::WALK, 12.0, Some(1.0));
-        assert_eq!(row(g), (313, 9, 0, 11.0), "a reason given below the top is not written");
-        release(g, m, by::SQUAD_LEG | by::LANE | by::PRESS | by::WALK, 13.0);
-        assert_eq!(row(g), (1, 1, 0, 13.0));
-        assert!(has(g, m, by::SQUAD));
-        assert!(!has(g, m, by::FRAG));
-        assert!(has(g, m, By(!0)));
+        assert_eq!(row(g), is(lane | by::PRESS | by::WALK, 0, 8.0), "a reason given below the top is not written");
+        release(g, m, by::LANE | by::PRESS | by::WALK, 13.0);
+        assert_eq!(row(g), is(at_rest, 0, 13.0));
+        assert!(has(g, m, by::SQUAD) && !has(g, m, by::FRAG) && has(g, m, By(!0)));
         release(g, m, by::SQUAD, 14.0);
-        assert_eq!(row(g), (0, 0, 0, 14.0));
+        assert_eq!(row(g), is(By::NOBODY, 0, 14.0));
         release(g, m, by::SQUAD, 15.0);
-        assert_eq!(row(g), (0, 0, 0, 14.0), "a rule with no hand on him: nothing");
-        assert!(!has(g, m, By(!0)));
+        assert_eq!(row(g), is(By::NOBODY, 0, 14.0), "a rule with no hand on him: nothing");
+    }
+
+    /// every pair of the list: the one above keeps him from the one below, never the other way round
+    #[test]
+    fn a_tasker_is_kept_off_by_those_above_it_and_no_others() {
+        let (mut g, m) = stand();
+        let g = &mut *g;
+        for t in TASKERS {
+            assert_eq!(kept(g, m, t.by), None, "nobody has him and {} may not take him", t.name);
+            claim(g, m, t.by, 1.0, None);
+            assert_eq!(kept(g, m, By::NOBODY), Some(t.name));
+            for o in TASKERS { assert_eq!(kept(g, m, o.by).is_some(), t.by.rank() > o.by.rank(), "{} has him and {} asks", t.name, o.name); }
+            release(g, m, t.by, 2.0);
+        }
+        g.time = 5.0;
+        g.gd[m].dazzled_until = 6.0;
+        assert!(TASKERS.iter().all(|t| kept(g, m, t.by) == Some("blind")), "nobody takes a man who cannot see");
     }
 }

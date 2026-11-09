@@ -21,6 +21,8 @@ export interface BarDeps {
   played: Played; sees: Sees; map: TapeMap; cam: FreeCam; canvas: HTMLCanvasElement;
   /** what is being played, in a word */
   title: string;
+  /** it was played on another version of the game */
+  other: boolean;
   notes: ReplayNote[];
   /** keep the notes; null: a replay nothing is kept of. False = this browser would not */
   keep: ((notes: ReplayNote[]) => Promise<boolean>) | null;
@@ -159,7 +161,7 @@ export class TapeBar {
   /** every frame: what it says of the run as it stands */
   paint(): void {
     if (!this.d.played.seeking && this.d.played.lost === null) this.d.map.frame();
-    const { played: P, cam, sees: S } = this.d, says = P.seeking ? '…' : this.unkept ? 'This browser wouldn’t keep that note.' : P.lost !== null ? 'The game stopped here.' : P.parted !== null ? `After ${clock(P.parted / HZ)}, this isn’t what really happened.` : '';
+    const { played: P, cam, sees: S } = this.d, says = P.seeking ? '…' : this.unkept ? 'This browser wouldn’t keep that note.' : P.lost !== null ? 'The game stopped here.' : P.parted !== null ? `After ${clock(P.parted / HZ)}, this isn’t what really happened.` : this.d.other ? 'You played this on an older version of the game, so it may go differently.' : '';
     const ended = this.over, sig = `${P.paused}|${ended}|${Math.round(P.at / 6)}|${P.pace}|${says}|${!!cam.set}|${S.fog}|${S.fogged}|${S.lit}`; if (sig === this.painted) return; this.painted = sig;
     this.play.textContent = ended ? '↺' : P.paused ? '▶' : '❚❚'; this.time.textContent = `${clock(P.at / HZ)} / ${clock(P.total / HZ)}`; this.fill.style.width = `${100 * P.at / Math.max(1, P.total)}%`;
     this.speed.textContent = speedName(P.pace); this.speed.classList.toggle('on', P.pace !== 1); this.slow.classList.toggle('end', P.pace === TAPE_SPEEDS[0]); this.fast.classList.toggle('end', P.pace === TAPE_SPEEDS[TAPE_SPEEDS.length - 1]);

@@ -1,4 +1,4 @@
-//! A LEVEL FILE INTO THE GAME: `src/scene/levelLoad.ts` `loadLevel`, record by record, reading the file as the TypeScript reads its parsed object.
+//! A LEVEL FILE INTO THE GAME: `tools/levels/lib/levelLoad.ts` `loadLevel`, record by record, reading the file as the TypeScript reads its parsed object.
 //! The level's boxes become rows of `g.tab.boxes` (listed in the answer, in the file's order: index i of the file IS static box i), its routes rows
 //! of `g.tab.route`, and `g.level` is the `Level` the game's constructor reads.
 //!
@@ -254,7 +254,7 @@ fn read(g: &mut Game, data: &Json, dressing: bool, lived: bool) -> (Loaded, Vec<
     let (reach, drive, exfil) = (ob("reach"), ob("drive"), ob("exfil"));
     let area = rect(reach.get("area"), "the reach objective's area");
     let records = typed(data);
-    let mut level = Level::zeroed();
+    let mut level = Level::default();
     level.props = props; level.lights = lights; level.switchables = switchables; level.doors = doors;
     level.devices = Some(records.devices); level.vents = records.vents; level.civilians = records.civilians; level.breach = records.breach;
     if data.has("daylight") {

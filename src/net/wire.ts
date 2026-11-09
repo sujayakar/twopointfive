@@ -21,7 +21,7 @@ import type { NetStart } from './start';
  *  most connections with no seat. `maxText`: the longest message a server reads from a client (a record is a few hundred characters). `retryMs`: how long a
  *  server waits on a backed-up connection that never says it has drained before it tries the run so far again. */
 export const NET = { proto: 1, hz: 60, wordEvery: 30, lead: 2, leadMax: 6, marginMax: 60, paceEvery: 10, burst: 2, clockMs: 1000, horizon: 180, catchUp: 4, slipAt: 30, tapeChunk: 600, watchers: 4, maxText: 4096, retryMs: 250, nameMax: 12 };
-/** A PLAYER'S NAME AS IT MAY TRAVEL AND BE SHOWN (Hello.name, State.names; host/names.ts): text with something to read in it — a letter, a digit or a
+/** A PLAYER'S NAME AS IT MAY TRAVEL AND BE SHOWN (Hello.name, State.names; src/host/myname.ts): text with something to read in it — a letter, a digit or a
  *  picture — no control characters, no format characters but the two joiners a script or an emoji is written with (no direction overrides, no zero
  *  width space), none of the letters that draw as nothing, its spaces single, at most NET.nameMax characters as a reader counts them. Anything else — no
  *  name, a record, a blank — is no name: ''. Asked at BOTH trust boundaries: a server of a client's hello, a client of a server's state; and a page

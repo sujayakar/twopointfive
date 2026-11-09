@@ -212,13 +212,6 @@ pub fn pie_doorway(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, 
     }
     let mut held = g.gd[gd].pieing;
     if let Some(q) = held {
-        {   // (the loop's counters: how often a run asks the path's identity here, b_tap.rs)
-            use crate::game::b_tap as tp;
-            if g.time - q.t0 <= PIE_CAP_SECS && q.phase != PieingPhase::Cross {
-                tp::tap(tp::PIE_REF_ASKED);
-                if g.gd[gd].path_serial != q.path_ref { tp::tap(tp::PIE_REF_NEW_PATH); if g.gd[gd].path.is_empty() { tp::tap(tp::PIE_REF_NEW_EMPTY_PATH); } if !path_crosses(g, gd, q.door) { tp::tap(tp::PIE_DROPPED_BY_REF); } }
-            }
-        }
         let stale = g.time - q.t0 > PIE_CAP_SECS
             || (q.phase != PieingPhase::Cross && g.gd[gd].path_serial != q.path_ref && !path_crosses(g, gd, q.door));   // stale, or re-planned some other way
         if stale { held = None; g.gd[gd].pieing = None; }

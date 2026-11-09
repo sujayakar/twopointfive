@@ -5,7 +5,7 @@
 //   · each material ROW says what its NAME is made of (the table of names as it is now: stuff.ts rowWord, what the exporter writes too);
 //   · each box, prop's part and gear screen's box says its own word ONLY where it was drawn as another thing than its row now says: the 2,200 stand-ins and
 //     the 2,100 darkened paints written as numbers, the boxes under a name that is two things, and nothing else.
-// The diff of a file is `"stuff"` words and nothing more; what each box is drawn as is the same before and after (tools/qa/stuff-audit.ts counts it).
+// The diff of a file is `"stuff"` words and nothing more; what each box is drawn as is the same before and after.
 // A FILE THAT ALREADY SAYS (a row with `stuff`) IS LEFT ALONE: its words are somebody's, and the old rule knows nothing of them.
 //   bun run tools/levels/stuff-bake.ts levels/barracks.json …   write each file in place
 //   bun run tools/levels/stuff-bake.ts --all                    every levels/*.json
@@ -21,7 +21,7 @@ import { fromBefore, paintUsers, rowOf, type Data, type Paints } from './paintUs
 export { fromBefore, paintUsers, rowOf };
 const ROOT = resolve(import.meta.dir, '../..');
 const { rowWord } = await import(`${ROOT}/src/scene/stuff.ts`);
-const { parseLevelData, serializeLevelData, validateLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
+const { parseLevelData, serializeLevelData, validateLevelData } = await import(`${ROOT}/tools/levels/lib/levelData.ts`);
 
 /** what each paint user of a file from before WAS drawn as, in paintUsers' order */
 export function wasAll(d: Data): Was[] { const was = wasOf(d.materials); return [...paintUsers(d)].map(({ o }) => { const m = rowOf(d, o); return was(m !== undefined && m !== o.material ? { ...o, material: m } : o); }); }

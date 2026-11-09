@@ -642,11 +642,7 @@ pub fn free(g: &mut crate::game::Game, gd: GuardId) -> bool {
     g.ai_enabled
         && !g.touring
         && !g.quiet_utility
-        && g.gd[gd].held.is_none()
-        && !crate::control::man::blind(g, gd)
-        && !crate::control::man::staggered(g, gd)
-        && !crate::owner::has(g, gd, crate::owner::by::MORALE)
-        && !crate::owner::has(g, gd, crate::owner::by::RUNNER)
+        && crate::owner::kept(g, gd, crate::owner::by::LAST_MAN).is_none()
 }
 
 /// is he the last: 2 = he had mates and none of his side is up anywhere · 1 = his squad is down and he knows it, nobody at his side · 0 = neither (netquiet.ts lastKind)
@@ -1096,7 +1092,7 @@ mod tests {
 
     #[test]
     fn owed_lines_index_the_files_own_list_not_the_enums_order() {
-        let mut n = Mind::zeroed();
+        let mut n = Mind::default();
         owe(&mut n, LineKind::Name, "x", 1.0);
         assert_eq!(n.say, 0.0);
         owe(&mut n, LineKind::Why, "", 1.0);
@@ -1115,7 +1111,7 @@ mod tests {
         assert!(!mine(&mut g, gd));
         assert!(!whipping(&mut g, gd));
         assert!(!g.m.netquiet.state_of.has(gd));
-        g.m.netquiet.state_of.set(gd, Mind::zeroed());
+        g.m.netquiet.state_of.set(gd, Mind::default());
         owe(mind(&mut g, gd), LineKind::Why, "x", 1.4);
         assert_eq!(g.m.netquiet.state_of.get(gd).unwrap().say, 1.0);
         mind(&mut g, gd).last = SAID;

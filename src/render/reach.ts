@@ -29,7 +29,6 @@
 // ring-only 'maybe' cells, a far light pickable in one cell and known-dark in the next, which drew the server racks' green halo as arcs on
 // the break-room wall (commit 1170839); so the ring is OFF by default: a deliberate trade of a few dim far-panel slivers for no cell-edge
 // arcs. Turning it back on wants the consumer side changed first (level 1 = tail-only, never a leader, in direct.wgsl).
-import { SideMap } from '../math/side';
 import { whole } from './steps';
 import { WORLD } from '../scene/world';
 import { BoxFlag, type Box, type PlanBox } from '../scene/boxes';
@@ -46,7 +45,7 @@ const SUBS: [number, number][] = [[8, 8], [1, 1], [14, 1], [1, 14], [14, 14]];  
 /** All-threes row: the mask of a light that may reach anywhere, at full weight (dynamic lights, the moon). */
 export const REACH_ALL = (() => { const a = new Uint32Array(REACH_ROW_WORDS); a.fill(0xffffffff); return a; })();
 
-/** A doorway for the raster: the gap runs from `hinge` for `width` metres along `closedDir` (the yaw of the shut leaf, as doors.ts has it). */
+/** A doorway for the raster: the gap runs from `hinge` for `width` metres along `closedDir` (the yaw of the shut leaf, as rust/game_rules/src/doors has it). */
 export interface ReachDoor { hinge: [number, number]; closedDir: number; width: number }
 
 /** Full-height wall raster over the fine grid: 1 = a wall covers (any part of) this sub-cell, 2 = a doorway's gap (open ground, but light
@@ -54,7 +53,7 @@ export interface ReachDoor { hinge: [number, number]; closedDir: number; width: 
 export function buildWallRaster(statics: readonly PlanBox[], doors: ReachDoor[] = []): Uint8Array {
   const solid = new Uint8Array(FW * FH);
   for (const d of doors) {   // gaps first, walls after (a jamb post inside the gap's end sub-cell stays a wall)
-    const ux = Math.cos(d.closedDir), uz = Math.sin(d.closedDir);   // the shut leaf runs from the hinge along [cos, sin] (doors.ts / level.ts convention)
+    const ux = Math.cos(d.closedDir), uz = Math.sin(d.closedDir);   // the shut leaf runs from the hinge along [cos, sin] (rust/game_rules/src/doors / level.ts convention)
     for (let s = 0.03; s < d.width; s += FINE / 2) for (let across = -0.16; across <= 0.16; across += FINE / 2) {   // ± the wall's thickness across the gap
       const x = Math.floor((d.hinge[0] + ux * s - uz * across - WORLD.min[0]) / FINE), z = Math.floor((d.hinge[1] + uz * s + ux * across - WORLD.min[2]) / FINE);
       if (x >= 0 && z >= 0 && x < FW && z < FH) solid[z * FW + x] = 2;
@@ -77,7 +76,7 @@ export function buildWallRaster(statics: readonly PlanBox[], doors: ReachDoor[] 
 /** How many samples a sight line may step from a sub-cell without missing anything: 1 on and beside a wall or a doorway's gap, more the farther the nearest one is
  *  (the Chebyshev distance d to it in sub-cells, two chamfer passes — exact for that metric; a line advances at most 0.8 sub-cell a sample on either axis, so the
  *  next ceil(1.25 (d - 1)) - 1 samples land within d - 1 sub-cells of this one: all open ground, which a sight line reads and forgets). Kept per raster. */
-const JUMPS = new SideMap<Uint8Array, Uint8Array>('reach.JUMPS');
+const JUMPS = new WeakMap<Uint8Array, Uint8Array>();
 function jumpsOf(solid: Uint8Array): Uint8Array {
   let j = JUMPS.get(solid); if (j) return j;
   j = jumpsFor(solid); JUMPS.set(solid, j); return j;
@@ -213,10 +212,10 @@ export function segNearRect(ax: number, az: number, bx: number, bz: number, r: r
 export const REACH_WORK = { cells: 0, steps: 0, fields: 0 };   // fields: jump fields worked out (one a raster, none for a raster whose walls only opened)
 /** How reachKeep.ts tick paces the masks decided again after a wall changes. `steps` = sight-line steps a frame, a mask too big for one frame's share carried on the
  *  next (60000: over 31 staged blasts on five levels no blast's masks land later than they did a mask at a time; at 40000 five did, by up to ten frames).
- *  `whole` (the page's ?reachpace=old) = the pace before the shares: every mask in one go, one light a frame at least and more until `wholeCells` cells are
- *  decided — fewer, longer ticks. The masks end as the same bits either way; only the frame each lands on differs. A REGISTERED SWITCH (host/profile.ts
- *  pageSwitches reads the word, game/knobs.ts lists the table, a recording carries it). Since the masks left the tick (render/reachKeep.ts, 11-05) NOTHING IN
- *  THE GAME'S UPDATE READS IT: it paces the picture's keeper on drawn frames, and a stand with no picture never reads it. `steps` IS THE STEP OF A FRAME
+ *  `whole` = the pace before the shares: every mask in one go, one light a frame at least and more until `wholeCells` cells are
+ *  decided — fewer, longer ticks. The masks end as the same bits either way; only the frame each lands on differs.
+ *  Since the masks left the tick (render/reachKeep.ts, 11-05) NOTHING IN
+ *  THE GAME'S UPDATE READS IT: it paces the picture's keeper on drawn frames. `steps` IS THE STEP OF A FRAME
  *  WITH NO PACE (a tool's stand, which keeps no clock; the page with `?planpace=old`; a page's first frames): where the frame has the planners' pace the
  *  keeper's step is an allowance of TIME (reachKeep.ts KEEP_MS), since a count of steps is 2 ms warm and five times that cold in a browser. */
 export const REACH_PACE = { steps: 60000, whole: false, wholeCells: 60 };
@@ -225,7 +224,7 @@ export interface ReachOnly { prev: Uint32Array; rects: readonly (readonly [numbe
    *  masks as with `rects` alone (a line that reads no changed sub-cell answers as it did), from far fewer cells when the light stands near the hole */
   boxes?: readonly (readonly [number, number, number, number])[] }
 /** the source points every cell of a mask was decided from (reachMaskFor), where that is one set */
-const SOURCES = new SideMap<Uint32Array, string>('reach.SOURCES');
+const SOURCES = new WeakMap<Uint32Array, string>();
 /** A mask decided over several calls (reachMaskSome): cells until `budget` sight-line steps are spent each call, where it stood kept in `st` — its source points too, so a light that turns
  *  between calls is still one mask from one set. The caller drops `st` if the raster or the ReachOnly changes under it. */
 export interface ReachJob { budget: number;

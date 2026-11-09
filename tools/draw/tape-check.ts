@@ -17,11 +17,10 @@ import { Section, View } from '../../src/draw/sections';
 
 const ROOT = resolve(import.meta.dir, '../..'), BREAK = process.env.TAPE_BREAK === '1', args = process.argv.slice(2), at = args.indexOf('--secs'), SECS = at >= 0 ? Number(args[at + 1]) : 30;
 const only = args.filter((a, i) => !a.startsWith('--') && (at < 0 || i !== at + 1));
-const { ALL_MISSIONS, pickSearch } = await import(`${ROOT}/src/scene/scenarioList.ts`), { LOOK } = await import(`${ROOT}/src/scene/look.ts`);
-LOOK.on = true;
+const { ALL_MISSIONS, pickSearch } = await import(`${ROOT}/src/scene/scenarioList.ts`);
 const wasm = faceHere(); if (!wasm) { console.error('tape-check: no module of these sources (tools/blitz/face-build.ts)'); process.exit(1); }
 const module = new WebAssembly.Module(new Uint8Array(readFileSync(wasm)));
-const stand = (): DrawGame => new DrawGame({ exports: new WebAssembly.Instance(module, { env: { face_roll: () => { throw new Error('the game asked a die'); } } }).exports, bytes: 0, fetchMs: 0, compileMs: 0 });
+const stand = (): DrawGame => new DrawGame({ exports: new WebAssembly.Instance(module).exports, bytes: 0, fetchMs: 0, compileMs: 0 });
 const [mannequin, mannequinBin, cast, castLook] = characterFiles(ROOT);
 const bytes = (f: string): Uint8Array => new Uint8Array(readFileSync(resolve(ROOT, 'levels', f)));
 
@@ -65,7 +64,7 @@ for (const m of ALL_MISSIONS as { id: string }[]) { if (only.length && !only.inc
       const b = T.whole(), w = stand(), P = new DrawPlay(w, b), feed = w.feed.bind(w); if (BREAK) w.feed = (row, seen) => { if (row.kind !== 'step' || row.tick !== 600) feed(row, seen); else w.ticks++; };
       P.start({ mannequin, mannequinBin, cast, castLook }); const t0 = performance.now();
       while (P.tick(false) && !P.parted) at = `the walk's tick ${P.at}`;
-      const ms = performance.now() - t0, last = w.mark(true), bad = P.parted ? [`at tick ${P.parted.tick}: ${JSON.stringify(P.parted.mine)}, on the tape ${JSON.stringify(P.parted.said)}`] : (['die', 'parts', 'state'] as const).filter(k => last[k] !== end[k]).map(k => `the ${k} at the end`);
+      const ms = performance.now() - t0, last = w.mark(true), bad = P.parted ? [`at tick ${P.parted.tick}: ${P.parted.why}`] : (['die', 'parts', 'state'] as const).filter(k => last[k] !== end[k]).map(k => `the ${k} at the end`);
       const gz = gzipSync(b).length - gzipSync(S.level).length, wrong = bad.length || g.lost || w.lost || P.at !== SECS * 60 || (how === 'anything' && SECS > 25 && !P.tries.includes(1500) && !P.tries.includes(1499));
       if (wrong) fails++;
       console.log(`- ${wrong ? 'FAIL' : 'PASS'} — ${m.id}, ${how}: ${P.at} ticks walked in ${(ms / 1000).toFixed(1)} s, ${(gz / 1024 / SECS * 60).toFixed(0)} KB a minute packed, ${done.manual} saved by hand, ${done.autosaves} by itself, ${done.loads} loaded, ${P.tries.length} begun again${bad.length ? `\n    ${bad.slice(0, 3).join(' · ')}` : ''}`);

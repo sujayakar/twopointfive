@@ -61,7 +61,7 @@ mod tests {
     /// The TypeScript's own bits under EXACT, with the page's rows (slow and pressRun on), then the rows flipped.
     #[test]
     fn take_secs_bits() {
-        let mut w = crate::knobs::page_wallsnap();
+        let mut w = crate::knobs::WallsnapK::page();
         let on: [(f64, f64, u64); 5] = [
             (0.7, 0.9, 0x3fdd560e7241d318),
             (0.0, 0.0, 0x3fceb851eb851eb8),
@@ -76,7 +76,7 @@ mod tests {
 
     #[test]
     fn press_near_bits() {
-        let w = crate::knobs::page_wallsnap();
+        let w = crate::knobs::WallsnapK::page();
         for (i, bits) in [(0.0, 0x3fe3333333333333u64), (1.55, 0x3fe3333333333333), (4.7, 0x3ff0bc6a7ef9db23), (-2.0, 0x3fe3333333333333)] {
             assert_eq!(press_near(&w, i).to_bits(), bits);
         }
@@ -97,7 +97,7 @@ mod tests {
 
     #[test]
     fn hit_bits() {
-        let a = crate::knobs::page_wallsnap().hit_peak;
+        let a = crate::knobs::WallsnapK::page().hit_peak;
         for (t, bits) in [
             (0.0, 0x0000000000000000u64),
             (0.05, 0x3ff0000000000000),

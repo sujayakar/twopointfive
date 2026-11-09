@@ -2,7 +2,7 @@
 // calls (cloud/convex/games.ts make · join · get) and the addresses. The screen is ui/coop.ts.
 //   A CO-OP GAME HAS ONE DOOR: `Lobby.seat(code)`. Its address is  /?join=<CODE>  (the link a friend opens; a game's address pasted into a tab that holds no
 //   seat comes through it too); the title's Host and Join go through the same call with no page load of their own. Whoever comes through it is given a seat
-//   by the control plane (`games:join`: the first free one, or the one this tab already holds), waits for the game's server to answer, and is sent on to the server's own
+//   by the control plane (`games:join`: an open one, or the one this tab already holds), waits for the game's server to answer, and is sent on to the server's own
 //   address — `?net=…&netgame=…&netkey=…`, door.ts — with `join=<CODE>` still on it, so the page in the game can show the code and a reload finds the game.
 //   WHO A SEAT'S HOLDER IS: the TAB (an id kept in sessionStorage). Two windows of one browser on one machine are two players, a tab loaded again is the same
 //   one. (The browser's own id — cloud/cloud.ts cloudPid — is one for every window of it: the second window would be handed the first one's seat.)
@@ -24,7 +24,7 @@ export const COOP = {
    *  for a start is two minutes: cloud/convex/games.ts policy) */
   pollMs: 500, startMs: 150_000,
 };
-try { if (/^(0|off|false|no)$/i.test(new URLSearchParams(location.search).get('coop') ?? '')) COOP.on = false; } catch { /* no page (the harness) */ }
+try { if (/^(0|off|false|no)$/i.test(new URLSearchParams(location.search).get('coop') ?? '')) COOP.on = false; } catch { /* no page */ }
 
 /** a code's letters and length, as the control plane deals them (cloud/convex/games.ts MP: no vowels, no digits) */
 export const CODE = { letters: 'BCDFGHJKLMNPQRSTVWXZ', len: 5 };

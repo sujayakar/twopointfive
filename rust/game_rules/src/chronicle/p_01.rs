@@ -838,12 +838,12 @@ mod tests {
     #[test]
     fn heard_words() {
         use crate::director::EventKind;
-        let mut e = crate::game::GameEvent::zeroed();
+        let mut e = crate::game::GameEvent::default();
         e.kind = EventKind::Shot;
         assert_eq!(heard_what(e), "a canister");
         e.level = Some(1.0);
         assert_eq!(heard_what(e), "gunfire");
-        e = crate::game::GameEvent::zeroed();
+        e = crate::game::GameEvent::default();
         e.kind = EventKind::Prop;
         e.who = Some(0.0);
         e.level = Some(0.9);
@@ -898,7 +898,7 @@ mod tests {
     #[test]
     fn the_score_only_goes_down() {
         // A FAILURE MEANS: something a player can do makes the run score better for doing more of it, or a band's edge moved.
-        let s = crate::knobs::page_score();
+        let s = crate::knobs::ScoreK::page();
         let bump: [fn(&mut RunCounts) -> &mut f64; 17] = [|c| &mut c.devices, |c| &mut c.seen, |c| &mut c.seen_up, |c| &mut c.alarms, |c| &mut c.esc1, |c| &mut c.esc2, |c| &mut c.bodies, |c| &mut c.kills, |c| &mut c.kos, |c| &mut c.shots_near_men, |c| &mut c.lights_shot, |c| &mut c.hits, |c| &mut c.loads, |c| &mut c.civ_seen, |c| &mut c.civ_reported, |c| &mut c.civ_ko, |c| &mut c.civ_killed];
         let mut die = 77u32;
         let mut roll = move || { die = die.wrapping_mul(1664525).wrapping_add(1013904223); (die >> 16) as f64 / 65536.0 };
@@ -923,7 +923,7 @@ mod tests {
         assert!(clean.score == 100.0 && clean.lines.is_empty());
         for (n, word) in [(90.0, "GHOST"), (89.0, "SHADOW"), (70.0, "SHADOW"), (69.0, "OPERATIVE"), (40.0, "OPERATIVE"), (39.0, "ASSAULT"), (0.0, "ASSAULT")] { assert_eq!(rating_of(n).word, word, "{}", n); }
         let mut done = blank_counts(); done.done = true; done.stage = String::from("done"); done.elapsed = 200.0;
-        let mut lit: Vec<String> = badges_for(&crate::knobs::page_badge(), &done).into_iter().filter(|b| b.on).map(|b| b.id).collect();
+        let mut lit: Vec<String> = badges_for(&crate::knobs::BadgeK::page(), &done).into_iter().filter(|b| b.on).map(|b| b.id).collect();
         lit.sort();
         assert_eq!(lit.join(","), "nokills,pacifist,quiet,speedrun,unseen,unseenStaff");
     }
@@ -931,8 +931,8 @@ mod tests {
     #[test]
     fn the_scores_of_the_typescript() {
         // (the expected strings are what the TypeScript's own stealthScore, summaryLine and badgesOf printed under bun)
-        let s = crate::knobs::page_score();
-        let b = crate::knobs::page_badge();
+        let s = crate::knobs::ScoreK::page();
+        let b = crate::knobs::BadgeK::page();
         let mut c = blank_counts();
         c.seen = 2.0; c.seen_up = 1.0; c.alarms = 1.0; c.esc1 = 1.0; c.esc2 = 1.0; c.bodies = 1.0; c.kills = 1.0; c.kos = 3.0; c.shots_near_men = 9.0; c.lights_shot = 1.0; c.devices = 5.0;
         c.hits = 1.0; c.down = true; c.loads = 2.0; c.elapsed = 1500.0; c.civ_ko = 1.0;

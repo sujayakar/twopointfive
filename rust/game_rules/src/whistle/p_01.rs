@@ -80,7 +80,7 @@ pub fn try_whistle(g: &mut crate::game::Game) -> bool {
         level: Some(level),
         who: Some(who),
         serial,
-        ..crate::game::GameEvent::zeroed()
+        ..crate::game::GameEvent::default()
     });
     g.pl[pl].noise = m::max(g.pl[pl].noise, level);
     let at = match g.ch[c].bones.get(crate::character::Bone::Head) {

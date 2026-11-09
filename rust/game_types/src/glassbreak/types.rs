@@ -1,4 +1,4 @@
-//! The types of `glassbreak`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `glassbreak`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
@@ -11,7 +11,6 @@ pub enum GlassBreakAlso {
     Counted { from: V3, size: crate::glassbreak::GlassBlastOpts },
 }
 
-/// (TypeScript: GlassBreak, src/game/glassbreak.ts:221)
 #[derive(Clone, Debug, ToBytes)]
 pub struct GlassBreak {
     pub log: Vec<String>,
@@ -21,7 +20,7 @@ pub struct GlassBreak {
     pub gusts: JsMap<crate::Num, WindWindSourceId>,
 }
 impl GlassBreak {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         GlassBreak {
             log: Vec::new(),
@@ -34,29 +33,16 @@ impl GlassBreak {
 }
 impl Default for GlassBreak { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: inline at src/game/glassbreak.ts:390 GlassBreak.viewOf, src/game/glassbreak.ts:390)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct GlassBreakViewOf {
     pub kind: crate::glassbreak::GlassBreakViewOfKind,
     pub from: V3,
     pub size: crate::glassbreak::GlassBlastOpts,
 }
-impl GlassBreakViewOf {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GlassBreakViewOf {
-            kind: crate::glassbreak::GlassBreakViewOfKind::Blown,
-            from: [0.0; 3],
-            size: crate::glassbreak::GlassBlastOpts::zeroed(),
-        }
-    }
-}
-impl Default for GlassBreakViewOf { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum GlassBreakViewOfKind {
-    Blown,
+    #[default] Blown,
     Wary,
     Counted,
 }
@@ -70,42 +56,19 @@ impl GlassBreakViewOfKind {
     }
 }
 
-/// (TypeScript: GlassBlastOpts, src/game/glassbreak.ts:178)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct GlassBlastOpts {
     pub radius: Option<f64>,
     pub power: Option<f64>,
     pub who: Option<f64>,
 }
-impl GlassBlastOpts {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GlassBlastOpts {
-            radius: None,
-            power: None,
-            who: None,
-        }
-    }
-}
-impl Default for GlassBlastOpts { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: GbTune, src/game/glassbreak.ts:125)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct GbTune {
     pub glass_break: Option<bool>,
 }
-impl GbTune {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GbTune {
-            glass_break: None,
-        }
-    }
-}
-impl Default for GbTune { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: GlassImpact, src/game/glassbreak.ts:147)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct GlassImpact {
     pub pane: bool,
     pub live: bool,
@@ -117,26 +80,8 @@ pub struct GlassImpact {
     pub released: f64,
     pub cracked: bool,
 }
-impl GlassImpact {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GlassImpact {
-            pane: false,
-            live: false,
-            type_: crate::glasspen::PaneType::Annealed,
-            thickness: 0.0,
-            was_open: false,
-            punched: false,
-            diced: false,
-            released: 0.0,
-            cracked: false,
-        }
-    }
-}
-impl Default for GlassImpact { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: GlassFragment, src/game/glassbreak.ts:159)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct GlassFragment {
     pub pane: f64,
     pub type_: crate::glasspen::PaneType,
@@ -156,36 +101,10 @@ pub struct GlassFragment {
     pub fall: Option<crate::glassbreak::GlassFragmentFall>,
     pub landed: Option<bool>,
 }
-impl GlassFragment {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GlassFragment {
-            pane: 0.0,
-            type_: crate::glasspen::PaneType::Annealed,
-            kind: crate::glassbreak::GlassFragmentKind::Piece,
-            outline: Vec::new(),
-            centre: [0.0; 3],
-            normal: [0.0; 3],
-            thickness: 0.0,
-            area: 0.0,
-            velocity: [0.0; 3],
-            spin: [0.0; 3],
-            tint: [0.0; 3],
-            grain: 0.0,
-            cause: crate::glassbreak::GlassFragmentCause::Blast,
-            who: 0.0,
-            seed: 0.0,
-            fall: None,
-            landed: None,
-        }
-    }
-}
-impl Default for GlassFragment { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum GlassFragmentKind {
-    Piece,
+    #[default] Piece,
     Sheet,
     Dagger,
     Clump,
@@ -201,10 +120,9 @@ impl GlassFragmentKind {
     }
 }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum GlassFragmentCause {
-    Blast,
+    #[default] Blast,
     Hit,
     Dice,
     Support,
@@ -222,46 +140,21 @@ impl GlassFragmentCause {
     }
 }
 
-/// (TypeScript: inline at src/game/glassbreak.ts:176 GlassFragment.fall, src/game/glassbreak.ts:176)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct GlassFragmentFall {
     pub t: f64,
     pub pos: V3,
 }
-impl GlassFragmentFall {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GlassFragmentFall {
-            t: 0.0,
-            pos: [0.0; 3],
-        }
-    }
-}
-impl Default for GlassFragmentFall { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Clump, src/game/glassbreak.ts:180)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Clump {
     pub k: f64,
     pub c: f64,
     pub r: f64,
     pub key: f64,
 }
-impl Clump {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Clump {
-            k: 0.0,
-            c: 0.0,
-            r: 0.0,
-            key: 0.0,
-        }
-    }
-}
-impl Default for Clump { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Dice, src/game/glassbreak.ts:181)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Dice {
     pub t0: f64,
     pub clumps: Vec<crate::glassbreak::Clump>,
@@ -275,28 +168,8 @@ pub struct Dice {
     pub hu: f64,
     pub hv: f64,
 }
-impl Dice {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Dice {
-            t0: 0.0,
-            clumps: Vec::new(),
-            next: 0.0,
-            out: Vec::new(),
-            u: 0.0,
-            v: 0.0,
-            cols: 0.0,
-            rows: 0.0,
-            seed: 0.0,
-            hu: 0.0,
-            hv: 0.0,
-        }
-    }
-}
-impl Default for Dice { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Pending, src/game/glassbreak.ts:182)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Pending {
     pub fid: f64,
     pub at: f64,
@@ -304,24 +177,10 @@ pub struct Pending {
     pub from: Option<V3>,
     pub k: f64,
 }
-impl Pending {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Pending {
-            fid: 0.0,
-            at: 0.0,
-            cause: crate::glassbreak::PendingCause::Blast,
-            from: None,
-            k: 0.0,
-        }
-    }
-}
-impl Default for Pending { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum PendingCause {
-    Blast,
+    #[default] Blast,
     Hit,
     Dice,
     Support,
@@ -339,8 +198,7 @@ impl PendingCause {
     }
 }
 
-/// (TypeScript: PaneState, src/game/glassbreak.ts:183)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct PaneState {
     pub bi: f64,
     pub box_: BoxId,
@@ -370,44 +228,8 @@ pub struct PaneState {
     pub walkable: bool,
     pub log: Vec<String>,
 }
-impl PaneState {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PaneState {
-            bi: 0.0,
-            box_: BoxId(0),
-            key: 0.0,
-            type_: crate::glasspen::PaneType::Annealed,
-            u_axis: 0.0,
-            hu: 0.0,
-            hv: 0.0,
-            ht: 0.0,
-            exterior: false,
-            sites: Vec::new(),
-            run: false,
-            open: Vec::new(),
-            n_open: 0.0,
-            hits: 0.0,
-            energy: 0.0,
-            damage: 0.0,
-            frags: None,
-            pending: Vec::new(),
-            next_think: 0.0,
-            dice: None,
-            gone: false,
-            last_dir: [0.0; 3],
-            last_who: 0.0,
-            last_uv: [0.0; 2],
-            sound_at: 0.0,
-            walkable: false,
-            log: Vec::new(),
-        }
-    }
-}
-impl Default for PaneState { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: PaneFrame, src/game/glassbreak.ts:583)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct PaneFrame {
     pub key: f64,
     pub u_axis: f64,
@@ -416,23 +238,8 @@ pub struct PaneFrame {
     pub ht: f64,
     pub box_: BoxId,
 }
-impl PaneFrame {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PaneFrame {
-            key: 0.0,
-            u_axis: 0.0,
-            hu: 0.0,
-            hv: 0.0,
-            ht: 0.0,
-            box_: BoxId(0),
-        }
-    }
-}
-impl Default for PaneFrame { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/glassbreak.ts:121 GLASSBREAK_DEFAULTS, src/game/glassbreak.ts:121)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct GLASSBREAKDEFAULTS {
     pub break_e: crate::glassbreak::GLASSBREAKDEFAULTSBreakE,
     pub hang_area: f64,
@@ -442,41 +249,14 @@ pub struct GLASSBREAKDEFAULTS {
     pub blast_sheet_k: f64,
     pub rake_open: f64,
 }
-impl GLASSBREAKDEFAULTS {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GLASSBREAKDEFAULTS {
-            break_e: crate::glassbreak::GLASSBREAKDEFAULTSBreakE::zeroed(),
-            hang_area: 0.0,
-            blast_m: 0.0,
-            blast_run_k: 0.0,
-            blast_dice_k: 0.0,
-            blast_sheet_k: 0.0,
-            rake_open: 0.0,
-        }
-    }
-}
-impl Default for GLASSBREAKDEFAULTS { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/glassbreak.ts:121 GLASSBREAKDEFAULTS.breakE, src/game/glassbreak.ts:121)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct GLASSBREAKDEFAULTSBreakE {
     pub annealed: f64,
     pub tempered: f64,
 }
-impl GLASSBREAKDEFAULTSBreakE {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GLASSBREAKDEFAULTSBreakE {
-            annealed: 0.0,
-            tempered: 0.0,
-        }
-    }
-}
-impl Default for GLASSBREAKDEFAULTSBreakE { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/glassbreak.ts:193 GB_HOST, src/game/glassbreak.ts:193)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct GlassbreakModGBHOST {
     pub panes: f64,
     pub impacts: f64,
@@ -494,32 +274,8 @@ pub struct GlassbreakModGBHOST {
     pub hooked: f64,
     pub raked: f64,
 }
-impl GlassbreakModGBHOST {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GlassbreakModGBHOST {
-            panes: 0.0,
-            impacts: 0.0,
-            sites: 0.0,
-            runs: 0.0,
-            dropped: 0.0,
-            shards: 0.0,
-            chips: 0.0,
-            refused: 0.0,
-            diced: 0.0,
-            clumps: 0.0,
-            sheets: 0.0,
-            blasts: 0.0,
-            thinks: 0.0,
-            hooked: 0.0,
-            raked: 0.0,
-        }
-    }
-}
-impl Default for GlassbreakModGBHOST { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/glassbreak.ts:195 TALLY_AT, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct TALLYAT {
     pub panes: Option<f64>,
     pub dropped: Option<f64>,
@@ -537,32 +293,8 @@ pub struct TALLYAT {
     pub hooked: Option<f64>,
     pub raked: Option<f64>,
 }
-impl TALLYAT {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        TALLYAT {
-            panes: None,
-            dropped: None,
-            impacts: None,
-            sites: None,
-            runs: None,
-            shards: None,
-            chips: None,
-            refused: None,
-            diced: None,
-            clumps: None,
-            sheets: None,
-            blasts: None,
-            thinks: None,
-            hooked: None,
-            raked: None,
-        }
-    }
-}
-impl Default for TALLYAT { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/glassbreak.ts:293 letGo(f), src/game/glassbreak.ts:293 letGo(f))
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct GlassBreakLetGoF {
     pub pane: f64,
     pub type_: crate::glasspen::PaneType,
@@ -585,39 +317,10 @@ pub struct GlassBreakLetGoF {
     pub heard: bool,
     pub bi: f64,
 }
-impl GlassBreakLetGoF {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GlassBreakLetGoF {
-            pane: 0.0,
-            type_: crate::glasspen::PaneType::Annealed,
-            kind: crate::glassbreak::GlassBreakLetGoFKind::Piece,
-            outline: Vec::new(),
-            centre: [0.0; 3],
-            normal: [0.0; 3],
-            thickness: 0.0,
-            area: 0.0,
-            velocity: [0.0; 3],
-            spin: [0.0; 3],
-            tint: [0.0; 3],
-            grain: 0.0,
-            cause: crate::glassbreak::GlassBreakLetGoFCause::Blast,
-            who: 0.0,
-            seed: 0.0,
-            fall: None,
-            landed: None,
-            key: 0.0,
-            heard: false,
-            bi: 0.0,
-        }
-    }
-}
-impl Default for GlassBreakLetGoF { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum GlassBreakLetGoFKind {
-    Piece,
+    #[default] Piece,
     Sheet,
     Dagger,
     Clump,
@@ -633,10 +336,9 @@ impl GlassBreakLetGoFKind {
     }
 }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum GlassBreakLetGoFCause {
-    Blast,
+    #[default] Blast,
     Hit,
     Dice,
     Support,
@@ -654,7 +356,6 @@ impl GlassBreakLetGoFCause {
     }
 }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum GlassBreakSeeThroughView {
     Blown,
@@ -671,8 +372,7 @@ impl GlassBreakSeeThroughView {
     }
 }
 
-/// (TypeScript: inline at src/game/glassbreak.ts:465 paneInfo ->, src/game/glassbreak.ts:465)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct GlassBreakPaneInfo {
     pub type_: crate::glasspen::PaneType,
     pub thickness: f64,
@@ -684,23 +384,6 @@ pub struct GlassBreakPaneInfo {
     pub sites: f64,
     pub energy: f64,
 }
-impl GlassBreakPaneInfo {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GlassBreakPaneInfo {
-            type_: crate::glasspen::PaneType::Annealed,
-            thickness: 0.0,
-            exterior: false,
-            open_fraction: 0.0,
-            walkable: false,
-            gone: false,
-            run: false,
-            sites: 0.0,
-            energy: 0.0,
-        }
-    }
-}
-impl Default for GlassBreakPaneInfo { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]

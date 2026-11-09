@@ -1,10 +1,9 @@
-//! The types of `workthings`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `workthings`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: WorkThing, src/game/workthings.ts:89)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct WorkThing {
     pub kind: crate::workthings::WorkThingKind,
     pub face: V3,
@@ -12,24 +11,10 @@ pub struct WorkThing {
     pub stand: Option<V3>,
     pub name: String,
 }
-impl WorkThing {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WorkThing {
-            kind: crate::workthings::WorkThingKind::Breaker,
-            face: [0.0; 3],
-            n: [0.0; 3],
-            stand: None,
-            name: String::new(),
-        }
-    }
-}
-impl Default for WorkThing { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum WorkThingKind {
-    Breaker,
+    #[default] Breaker,
     Objective,
 }
 impl WorkThingKind {
@@ -41,7 +26,6 @@ impl WorkThingKind {
     }
 }
 
-/// (TypeScript: WorkThings, src/game/workthings.ts:154)
 #[derive(Clone, Debug, ToBytes)]
 pub struct WorkThings {
     pub row: OrdersOrderDefId,
@@ -51,7 +35,7 @@ pub struct WorkThings {
     pub log: Vec<crate::workthings::WorkThingsLogItem>,
 }
 impl WorkThings {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         WorkThings {
             row: OrdersOrderDefId(0),
@@ -64,8 +48,7 @@ impl WorkThings {
 }
 impl Default for WorkThings { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: Job, src/game/workthings.ts:94)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct Job {
     pub thing: crate::workthings::WorkThing,
     pub verb: crate::workthings::WorkVerb,
@@ -73,24 +56,10 @@ pub struct Job {
     pub t0: f64,
     pub last_t: f64,
 }
-impl Job {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Job {
-            thing: crate::workthings::WorkThing::zeroed(),
-            verb: crate::workthings::WorkVerb::Drive,
-            a: OrdersAssignmentId(0),
-            t0: 0.0,
-            last_t: 0.0,
-        }
-    }
-}
-impl Default for Job { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum WorkVerb {
-    Drive,
+    #[default] Drive,
     BreakerOff,
     BreakerOn,
 }
@@ -104,8 +73,7 @@ impl WorkVerb {
     }
 }
 
-/// (TypeScript: inline at src/game/workthings.ts:160 WorkThings.hands, src/game/workthings.ts:160)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct WorkThingsHandsValue {
     pub push: crate::character::DoorPush,
     pub until: f64,
@@ -114,172 +82,70 @@ pub struct WorkThingsHandsValue {
     pub t0: f64,
     pub need: f64,
 }
-impl WorkThingsHandsValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WorkThingsHandsValue {
-            push: crate::character::DoorPush::zeroed(),
-            until: 0.0,
-            seen: 0.0,
-            verb: crate::workthings::WorkVerb::Drive,
-            t0: 0.0,
-            need: 0.0,
-        }
-    }
-}
-impl Default for WorkThingsHandsValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/workthings.ts:161 WorkThings.cache, src/game/workthings.ts:161)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct WorkThingsCache {
     pub key: String,
     pub t: f64,
     pub list: Vec<crate::workthings::WorkThing>,
 }
-impl WorkThingsCache {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WorkThingsCache {
-            key: String::new(),
-            t: 0.0,
-            list: Vec::new(),
-        }
-    }
-}
-impl Default for WorkThingsCache { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/workthings.ts:169 WorkThings.log, src/game/workthings.ts:169)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct WorkThingsLogItem {
     pub t: f64,
     pub who: String,
     pub what: String,
 }
-impl WorkThingsLogItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WorkThingsLogItem {
-            t: 0.0,
-            who: String::new(),
-            what: String::new(),
-        }
-    }
-}
-impl Default for WorkThingsLogItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: WorkJob, src/game/workthings.ts:93)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct WorkJob {
     pub verb: crate::workthings::WorkVerb,
     pub secs: f64,
     pub need: f64,
 }
-impl WorkJob {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WorkJob {
-            verb: crate::workthings::WorkVerb::Drive,
-            secs: 0.0,
-            need: 0.0,
-        }
-    }
-}
-impl Default for WorkJob { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Area, src/game/workthings.ts:100)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Area {
     pub x0: f64,
     pub x1: f64,
     pub z0: f64,
     pub z1: f64,
 }
-impl Area {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Area {
-            x0: 0.0,
-            x1: 0.0,
-            z0: 0.0,
-            z1: 0.0,
-        }
-    }
-}
-impl Default for Area { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: BreakerErrand, src/game/workthings.ts:135)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct BreakerErrand {
     pub goal: V3,
     pub mid: V3,
     pub at: V3,
 }
-impl BreakerErrand {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BreakerErrand {
-            goal: [0.0; 3],
-            mid: [0.0; 3],
-            at: [0.0; 3],
-        }
-    }
-}
-impl Default for BreakerErrand { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/workthings.ts:136 errands, src/game/workthings.ts:136)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct WorkthingsModErrandsValue {
     pub t: f64,
     pub key: String,
     pub e: Option<crate::workthings::BreakerErrand>,
 }
-impl WorkthingsModErrandsValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WorkthingsModErrandsValue {
-            t: 0.0,
-            key: String::new(),
-            e: None,
-        }
-    }
-}
-impl Default for WorkthingsModErrandsValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/workthings.ts:115 panelFace ->, src/game/workthings.ts:115)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct PanelFace {
     pub face: V3,
     pub n: V3,
 }
-impl PanelFace {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PanelFace {
-            face: [0.0; 3],
-            n: [0.0; 3],
-        }
-    }
-}
-impl Default for PanelFace { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/workthings.ts:227 near ->, src/game/workthings.ts:227)
 #[derive(Clone, Debug)]
 pub struct WorkThingsNear {
     pub d: f64,
     pub target: crate::orders::OrderTarget,
 }
-impl WorkThingsNear {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
+impl Default for WorkThingsNear {
+    fn default() -> Self {
         WorkThingsNear {
             d: 0.0,
-            target: crate::orders::OrderTarget::Floor(crate::orders::OrderTargetFloor::zeroed()),
+            target: crate::orders::OrderTarget::Floor(crate::orders::OrderTargetFloor::default()),
         }
     }
 }
-impl Default for WorkThingsNear { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: a union)
 #[derive(Clone, Debug)]
 pub enum WorkThingsOn {
     Floor(crate::orders::OrderTargetFloor),
@@ -288,31 +154,26 @@ pub enum WorkThingsOn {
     Foe(crate::orders::OrderTargetFoe),
 }
 
-/// (TypeScript: a union)
 #[derive(Clone, Debug)]
 pub enum WorkThingsIssue {
     Text(String),
     Arm1(()),
 }
 
-/// (TypeScript: inline at src/game/workthings.ts:357 workNear ->, src/game/workthings.ts:357)
 #[derive(Clone, Debug)]
 pub struct WorkNear {
     pub d: f64,
     pub target: crate::orders::OrderTarget,
 }
-impl WorkNear {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
+impl Default for WorkNear {
+    fn default() -> Self {
         WorkNear {
             d: 0.0,
-            target: crate::orders::OrderTarget::Floor(crate::orders::OrderTargetFloor::zeroed()),
+            target: crate::orders::OrderTarget::Floor(crate::orders::OrderTargetFloor::default()),
         }
     }
 }
-impl Default for WorkNear { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: a union)
 #[derive(Clone, Debug)]
 pub enum WorkOn {
     Floor(crate::orders::OrderTargetFloor),

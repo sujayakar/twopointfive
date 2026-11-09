@@ -164,7 +164,7 @@ fn a_game_put_back_has_the_light_of_one_that_never_was() {
     let slot = p.g.sim;
     sim::state::put(slot, &block);
     p.g = kept.clone();
-    game::io::set_slot(&mut p.g, slot);
+    game::game::stand_in(&mut p.g, slot);
     p.g.col.mirror.put_backs = -1.0;
     p.run(4.0);
     let got = field(&p);
@@ -260,7 +260,7 @@ fn a_game_put_back_has_no_smoke_of_the_try_before() {
             let slot = p.g.sim;
             sim::state::put(slot, &block);
             p.g = kept.clone();
-            game::io::set_slot(&mut p.g, slot);
+            game::game::stand_in(&mut p.g, slot);
             p.g.col.mirror.put_backs = -1.0;
             p.run(0.3);
             assert!(through(&mut p, a, b) == 1.0, "try {n}: {:.3} of the light comes through a room with nothing let out in it", through(&mut p, a, b));
@@ -296,13 +296,6 @@ fn a_fire_fights_wisps_leave_room_for_dust() {
     assert_eq!(game::smoke_types::smoke_system_like_budget(&p.g), room, "a source that is spent gives its room back");
 }
 
-/// every word of the game's state, a word a part: the game's own parts, then rust/sim's block
-fn words(p: &mut Play) -> Vec<u32> {
-    let (mut w, mut words) = (game::bytes::W::new(), Vec::new());
-    game::state_words::state_words(&mut p.g, &mut w, &mut words);
-    words.extend(game_start::block::part_hashes(0));
-    words
-}
 
 /// A FAILURE MEANS: asking what light stands on a point changes the game. A page's throw preview asks it for a block of floor at a time, whenever a menu is up, and the host
 /// takes no state back after it (src/view/worldask.ts `light`): a question that writes would part two machines of one game, and a replay from its run.
@@ -324,7 +317,7 @@ fn asking_the_light_writes_nothing() {
                         assert!(game::sense::light_asked(&mut p.g, q, if i % 3 == 0 { &owner } else { &[] }, i % 2 == 0, if i == 3 { 1.0 } else { 0.0 }).is_finite());
                     }
                 }
-                out.push(words(&mut p));
+                out.push(p.words());
             }
             out
         };
@@ -368,7 +361,7 @@ fn the_light_is_the_same_when_the_copy_had_to_be_stood() {
                     assert!(WorldAsk::try_of(&p.g).is_ok(), "seed {seed}, {how}: the question left no copy for the next");
                 }
                 let mut after = Vec::new();
-                for _ in 0..2 { p.run(1.0); after.push(words(&mut p)); }
+                for _ in 0..2 { p.run(1.0); after.push(p.words()); }
                 (answers, after)
             };
             let (control, lost) = (run(false), run(true));

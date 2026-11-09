@@ -21,7 +21,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   follower keeps stepping aside for 1.5 s after Sam's measured pace last asked. Rows: Tab ▸ Sandbox ▸ Team feel (next bullet). QA: `probes.ts flashweight` (pace / flash / night / fog / lights /
   corners / entry — each in every start-card scenario; entry = `tools/qa/bang-tally.ts`, every door of every held room under open / bang / Sam's own can, `--json`
   `--md`, `trace <scn>:<door>:<arm>:<seed>`). The rescue-flow probes walk Sam at his WALK (1.55) since the team no longer jogs.
-- **Polish pass, 10-05 → (while the maintainer was away;** record rebuild/polish/log.md): the Team feel rows and their store, `src/game/teamfeel.ts`, went with the debugger's pages (2026-11-07). The panel's slider labels are cut at ~19 characters and its switch labels at ~37: keep new
+- **Polish pass, 10-05 → (while the maintainer was away;** record rebuild/polish/log.md): the Team feel rows and their store, `rust/game_rules/src/teamfeel`, went with the debugger's pages (2026-11-07). The panel's slider labels are cut at ~19 characters and its switch labels at ~37: keep new
   rows inside that and put the sentence in the `title`. New rules, each a row there, each scoped by `teamPaced` / `fightLive` (a scenario, never the night game):
   `PACE.turn` 8 rad/s (guards.ts `teamTurn`, used by squad.ts's runner: a scripted teammate's gun TRAVELS to a point an order or the cover gives it, round his
   front; a point his own eyes gave him — `GuardScript.over`, the room fight's — is NOT slowed; 0 = the snap) · `ORDERS.offDoor` 0.8 m (Sam stopped: no follower's
@@ -77,13 +77,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   was (all four off = a0a2d50 digest for digest): `cornerOwed` (the seconds the room fight has an entry man's muzzle on a man do not run his corner's `cornerCap` — it used to run
   from the frame whatever his gun did, and a man who shot on the way in gave corners up unlooked) · `collapse` (his man DOWN with a corner owed and a mate through the frame behind him: roomfight.ts restores him at once
   instead of resting half a second on the spot — `DoorTools.owesCorner`) · `cornerTurn` (on his point with the owed corner > 1.3 rad round from his chest he turns his body to it:
-  the runner's twist clamp is 1.5 rad) · `leadSeen` (+ `leadSeenMin` 12 cells, `leadSeenSecs` 30, `leadSeenM` 11: `src/game/floorseen.ts FloorSeen` records per teammate when each
+  the runner's twist clamp is 1.5 rad) · `leadSeen` (+ `leadSeenMin` 12 cells, `leadSeenSecs` 30, `leadSeenM` 11: `rust/game_rules/src/floorseen FloorSeen` records per teammate when each
   nav cell was last in his eye's wedge with a line; of the front men of the two files — at a threshold, the jamb men — the one who has seen `leadSeenMin` more cells of the room
   than the lead goes first (`firstIn` / `seenMost`; beat `first:<callsign>`), never the man who threw the can; a shut door nobody has looked through stays the lead's). QA
   `probes.ts cornerlead` (corners / lead: before and after on a fixed handful of doors) and `bun run tools/qa/cornerlead-probes.ts [--seeds 1-3] [--jobs 3] [--tools open,bang,thr]
   [--json f] [--md] | trace <scn>:<door>:<tool>:<seed>:<before|after>` = the count over every held room's doors. `threshold-identity` pins the four off beside the goggles.
   **ENTRY POINTS AND REAR GUNS (10-06,** records rebuild/away-build/polish-items/entry-points.md and rear-guns.md; the four pieces measured together:
-  rebuild/away-build/polish-items.md): `src/game/entrypoints.ts` (`Game.entry`, table `ENTRY`: `offOpenings` ON, `watch` ON, `nearM` 3, `gaps` off) remembers per opening
+  rebuild/away-build/polish-items.md): `rust/game_rules/src/entrypoints` (`Game.entry`, table `ENTRY`: `offOpenings` ON, `watch` ON, `nearM` 3, `gaps` off) remembers per opening
   which side one of the squad has stood on with a line to it; a point of domination (doortools.ts `pods()` → `entry.clearOf`; `podsAsWere` = unmoved) or a search
   point (`moveOn`) within `nearM` of, and in the line of, a door nobody has been beyond moves to the nearest clear floor of the same room, and its man then holds with
   his gun on that door (`Pod.watch` → `onSector`). cover.ts `REAR` (`settle` ON, `secs` 0.75, `file` off): a gun the cover's deal has just let go of stays on its
@@ -94,7 +94,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   switch joins that list (since joined by `ORDERS.workOut`: on a door face with no floor at either jamb and no authored marks the men work their own stack and
   stand-off marks out — orders.ts `workedMarks` / `workedPick`, Team feel row 'orders ▸ a door with no room at its jambs', `probes.ts sidedoor`; off = such a face is refused as before — and by `DOORTOOLS.buddy`: a walk that takes a man away from everybody is taken by his pair or not at all,
   doortools.ts `away()`, knobs `buddyM / buddyPairM / buddyLeftM`, Team feel row 'stay together', counted by playthrough.ts's off-alone watcher (`RunOut.alone`); off = the old one-man deals. A threshold entry's FAR DOORS stay one man's each either way: by pairs is `DOORTOOLS.buddyDoors`, shipped OFF (measured worse: the block (OLD floor) 303 → 269 men up of 576), so it needs no pin. The laser digest, irlaser-probes.ts `digestLines`, pins both too). Pinned off there as well: `ORDERS.hallFile` (ON: a door that fills the end of a passage, where every older answer was 'no room on that door' — the men the jambs have no room for file back down the passage against its wall, orders.ts `hallPlaces`, also a charge's last stand-off; Team feel row 'orders ▸ stack down a passage'; off = refused as before; `bun run tools/qa/barracks-check.ts --fault B1 --static`). `ENTRY.offMouth` (a point dealt past the mouth of the door the entry came by is never moved back into it; row 'entry ▸ points off the way in') SHIPS OFF: on the barracks it frees the first doorway and the scripted commander, no longer stuck there, walks his file out into a counterattack seconds sooner — count it with a commander who waits before turning it on.
-  **THE WAY AN ORDER WALKS A MAN (`src/game/cleared.ts`, `Game.cleared`, 10-08; the maintainer playing the warehouse: "they'll route to the room through a different
+  **THE WAY AN ORDER WALKS A MAN (`rust/game_rules/src/cleared`, `Game.cleared`, 10-08; the maintainer playing the warehouse: "they'll route to the room through a different
   door … even worse they'll go through uncleared rooms to get there").** `ClearedRooms` floods the level's ROOMS once on its own books (the room fight's rule: nav
   cells joined without crossing a doorway cell, a flood past 2400 cells = open floor = never a room) and marks a room KNOWN when a teammate or Sam has STOOD in it
   (4 Hz, ticked before the door tools; forgotten by `resetGuards`; NOT in checkpoints — after a load the rooms the team stands in are known, the rest relearnt).
@@ -194,7 +194,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   why a teammate does not see him, `PT_NOTES=1` the room fight's notes.
 
 <!-- was CLAUDE.md lines 1308–1391 -->
-- **Night vision for the team** (`src/game/nvg.ts`, 10-06; the maintainer: "the squad members should have night vision and use it accordingly. this could
+- **Night vision for the team** (`rust/game_rules/src/nvg`, 10-06; the maintainer: "the squad members should have night vision and use it accordingly. this could
   either be following your lead or knowing when they haven't been compromised and flashlight would ruin that" — "but the lights make sense too, especially when
   things are loud"; `NVG.on` default ON, a Team feel switch — **OFF = the build before it frame for frame**: `bun run tools/qa/nvg-probes.ts digest` (the file has no main since 11-07: the switch is settled and its off side is not stood) here and
   the same file in a checkout of af55d89 print the same seven hashes). Per frame (`nvgTick`, game.ts right after `fight.tick`), for operative units while
@@ -218,7 +218,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   'cleared' exactly while no defender is up inside it) and nightbreach-stop (a lightning stroke is not a steady light). KNOWN: a teammate who SEES a man he has no line of fire to (through
   glass) leaves his order and stares (roomfight `heldForLine`) — better eyes make it commoner (the hostage rescue's first roamer). Not modelled: bloom-out under
   white light, the tube's field of view, the lens glow as something enemies see (the IR laser is the next bullet; the IR light on the goggles the one after).
-- **IR lasers** (`src/game/irlaser.ts`, 10-06; the maintainer: "and then we could also model IR lasers (assuming enemies don't have night vision)"; `IR.on` default
+- **IR lasers** (`rust/game_rules/src/irlaser`, 10-06; the maintainer: "and then we could also model IR lasers (assuming enemies don't have night vision)"; `IR.on` default
   ON, a Team feel switch — **OFF = the merged base (de5e1c4 + a66eb1e) box for box**: `bun run tools/qa/irlaser-probes.ts digest` here and the same file in a
   checkout of 28d9f7e print the same seven hashes, every dynamic box of every frame in them). The squad's laser is ONE device whose BAND follows its carrier's
   goggles — no key: `laserBand(g, gd)` = 'ir' while `nvgDown`, 'visible' (the red line, as the base drew it) with goggles up and for every man who wears no
@@ -237,7 +237,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   camera and the light list identically, then Sam LIT in front of an enemy with his laser on / off: awareness rises the same — and in front of a camera: with a
   team on the floor its integrator stays 0 either way (devices.ts `sensing` is off under every team scenario), alone in the office it fills and no laser exists ·
   ir-off; `IR_BREAK=1 … ir-draw` must fail). NOT built: enemies with night vision, a laser's dot as something heard of (the IR ILLUMINATOR is the next bullet).
-- **The team's guns show no laser line** (`IR.teamOff`, `src/game/irlaser.ts laserOn`; 10-22, the maintainer after the first tutorial mission, played
+- **The team's guns show no laser line** (`IR.teamOff`, `rust/game_rules/src/irlaser laserOn`; 10-22, the maintainer after the first tutorial mission, played
   with the goggles down: "why do we have the lasers for the guys? i think we can disable"). ON in the page (`?teamlasers` puts the lines back; Tab ▸
   Sandbox ▸ Team feel ▸ 'IR lasers ▸ none on the team's guns'), OFF in the module and on the frozen stand (`TPS_NOTEAMLASER=1` raises it;
   `FROZEN_HOLDS` row; the journal replays a recording from before the key with the lines drawn). With it on no man on the player's side hands the
@@ -295,7 +295,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   handed out once in 267 asks (175 s; the copy room's door) on the page's stand and never on the frozen. `registry-walk` on the page's
   stand: the red ("spaces a man never entered: copy") is green. One level, one seed, the script's Sam at a walk; no tally; no locked door on the trail was staged (the walk unlocks them all). Never seen
   on a GPU, nobody has played it.
-- **A teammate's light is dark into the wall at his muzzle** (`LIGHTS.wallOff`, `src/game/guards.ts wallDark`; 10-22, the maintainer off the first
+- **A teammate's light is dark into the wall at his muzzle** (`LIGHTS.wallOff`, `rust/game_rules/src/guards wall_dark`; 10-22, the maintainer off the first
   tutorial mission: "weird that they are shining the flashlight on the wall immediately in front of them"). The other light rules decide whether a
   teammate WANTS a light (walking to a mark, searching, a shot just heard); the light points where the gun points, so a man walking up to a stack along
   a wall, or on a knee behind a truck, burned it into something a step away: a small blown-out patch, the brightest thing in the picture. Now a
@@ -319,7 +319,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   to 1.55 m from the lens, between `wallM` and `wallBackM`, so a man who brushed one wall stayed dark for the rest of his walk in the open:
   compound-four at night, the four told to stack on the front door, 1.1 of 4 weapon lights on (`probes.ts hours-team`), and `flashweight-lights`
   red on 19 of its 25 lines on the page's stand. Now each ray ends on one of four things inside the distance: something that stands, met above the
-  ground's band (`scene/collision.ts BAKE_Y`, what the walk grid calls floor) · the foot of such a thing, met inside the band (the ray is followed
+  ground's band (`rust/game_rules/src/scene_collision BAKE_Y`, what the walk grid calls floor) · the foot of such a thing, met inside the band (the ray is followed
   as it flies while it is above the band, and from there to the ground along the band's top: a wall, a leaf or a crate is in the way down to its
   foot; the slab, a kerb and a blast's rubble are not) · the ground (it is down in the band with nothing standing in the rest of its way) ·
   nothing. A BEAM IS INTO A WALL WHEN ITS MIDDLE ENDS ON SOMETHING THAT STANDS AND NO RAY OF IT RUNS CLEAR; a ray on the ground is neither. So a
@@ -351,7 +351,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   with the mended rule and drifts from its first relit light. The hand torch hangs more (`docs/agents/enemies.md`, its bullet: 420 → 636 man-frames of 27000 in `torch-wall`'s night). The real page boots on the software
   adapter with the rule on, takes the stack order and steps three seconds with no page error; it could not be stepped further in reasonable time.
   NEVER SEEN ON A GPU; nobody has played it.
-- **An IR light on the goggles** (`src/game/irlight.ts`, 10-15; the maintainer, of a depot whose rooms were flat black noise through the tube: "maybe we should
+- **An IR light on the goggles** (`rust/game_rules/src/irlight`, 10-15; the maintainer, of a depot whose rooms were flat black noise through the tube: "maybe we should
   model IR lights on the nvg so even totally dark rooms are visible. and we can assume enemies never have nvg"). SWITCH `IRLIGHT.on`: ON in the page
   (`?noirlight` puts it off), OFF in the module and on the frozen stand (`TPS_IRLIGHT=1` raises it; `FROZEN_HOLDS`, standup pin, standEnv); registered in
   knobs.ts and carried by the journal (a recording from before the key replays with it off). **Off = the build before it**: `nvg-probes.ts digest` (gone 11-07 with the off side) and
@@ -493,7 +493,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   1.2 m off took 16 times what a point 5 m off takes → 0.96 times (0.5 m off on the frozen stand: 107 → 0.99); first frame of a light that comes on
   at the wall 1.01; brought to the wall from the open, down in 15 frames. The other irlight probes hold it off. NEVER SEEN ON A GPU: 5 m is
   arithmetic, not a look — whether "about half" is "just enough to see", and whether a small room is now too dim, are the maintainer's eye.
-- **Silent or loud, on Sam's word** (`src/game/silent.ts`, 10-07; the maintainer: "some way of telling the squad to be silent or not. silent implies walking
+- **Silent or loud, on Sam's word** (`rust/game_rules/src/silent`, 10-07; the maintainer: "some way of telling the squad to be silent or not. silent implies walking
   quietly, no flashlight, etc."; scope page rebuild/silent-order/scope.md): the squad's POSTURE, one order — `go silent` on **X, 5** of the
   floor's menu and of a man's (under the header 'the whole squad'; a door's menu keeps 5 for the door tools; the order fits any target through `give`), the row
   reading `go loud` in its place while they are silent (`standsIn`). Squad-wide whoever was addressed, it stays until he says otherwise, and it moves nobody:
@@ -533,7 +533,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `silent` family; green on both stands; `SILENTSET_BREAK=1` fails the rule's lines on each): set at 18 s frozen / 17 s shipped with 'set.' once and no round;
   the key off = 'stacking' for 38 s; a locked door under `DOORTOOLS.testDoor` is not tried while held on a man, is tried only with the gun back on the door once
   the men are gone, and is tried with the room empty (control). One seed, one room, headless: never seen on a GPU, never played. No Tab row.
-- **Lit to whom: a lit step is seen only where the eye that has the line would gain on a man there** (`src/game/sneak.ts`, switch
+- **Lit to whom: a lit step is seen only where the eye that has the line would gain on a man there** (`rust/game_rules/src/sneak`, switch
   `SNEAK.byEye`, `litSeen` / `eyeGains`, 10-22; the maintainer, playing the pair lesson: "not following me here"). The sneak called a
   step SEEN, no place to stand and no stretch to cross past `crossM`, when its light was at or over the flat `litAt` 0.1 and ANY
   defender had a line, out to the eye's 16 m. On the software renderer an open night shadow reads near 0 and the number rarely bit;
@@ -592,7 +592,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   sneak (`tools/qa/pair-sneak.ts`, shipped stand, records-pair and room-clear-pair, seeds 433-480, arm pair), key on against off: all 96 pairs identical
   by run digest — on those two levels the scripted sneak never meets the case, so the tally says the key costs nothing there and nothing about what it
   gains. One stage, in the dark, one seed; the lit case has no check. Never seen on a GPU; nobody has played it.
-- **A squad nobody has found sneaks when Sam sneaks** (`src/game/unseen.ts`, 10-10; the maintainer: "if we're not compromised and i'm sneaking around to get into a better
+- **A squad nobody has found sneaks when Sam sneaks** (`rust/game_rules/src/unseen`, 10-10; the maintainer: "if we're not compromised and i'm sneaking around to get into a better
   position, my teammates should do the same"; page rebuild/teammates-sneak/read-first.md). NO ORDER: a LOUD squad reads the player. Sam sneaks = not
   sprinting and (crouched, or on a wall hold, or pace ≤ `paceAt`), `linger` 1.5 s after he stops; the squad is FOUND = `g.fight.hotFor` any living squad man (a shot, a bang or
   a kick in his ears) or any guard hostile to it in 'alert' / 'search'. `unseenLive(g)` (cached per frame, per-Game state in a WeakMap) is both; `underUnseen(g, gd)` = that for a
@@ -606,7 +606,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   min(`SILENT.step`, `UNSEEN.lowStep`) — the ordered squad is never the louder one in the same crouch. `UNSEEN.lights` (teammates' lights follow Sam's) ships OFF. Switches `UNSEEN.*` in the
   knob registry; `?nosneakwith` = all of it off, `?sneakfire` = no fire hold. The FROZEN stand holds `UNSEEN.on` off (`TPS_UNSEEN=1`); the shipped stand has it on. QA:
   `bun run tools/qa/unseen-probes.ts [follow|wall|hold|entry|idle|all] [arm]` (pair and four, office and records; each check in its own process, raising the switch itself; passes on both stands — under `TPS_PROFILE=shipped` the doors' manners hand a wall place in an open doorway's lane back, `UNSEEN_STATS.wallLost`, and the man is off the face on a knee: the office's corridor by the lobby arch; on a short run of face — a furnished room's — the place is on the side with room and a file on the other side of Sam is not walked past him to it, `UNSEEN_STATS.wallPast`, a knee where they are; the probe's wall search tries 3 m, then 2 m, then 1.5 m of clear face either side).
-- **A wall hold counts as sneaking once his back has been on it a beat** (`src/game/unseen.ts`, switch `UNSEEN.wallBeat`, `wallSecs`
+- **A wall hold counts as sneaking once his back has been on it a beat** (`rust/game_rules/src/unseen`, switch `UNSEEN.wallBeat`, `wallSecs`
   0.8 s, `onWall`, 10-24; a red the build's own run of `unseen-probes all` kept on the page's stand: "Sam walking upright at full
   pace: nobody sneaks, nobody crouches"). Since a move key held into a wall takes the hold with no key of its own (`wallsnap.ts`
   `press`), an upright walk that brushes a wall is on one for a moment; a wall hold was sneaking from its first step, so the squad
@@ -619,7 +619,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   0.25 s after his back lands (0.37 s on the wall), off the squad sneaks 121 steps, on none. `unseen-probes.ts`'s own stand now holds
   the hold-without-a-key off, as it holds `HOLDFIRE`: its walks run along walls. One wall, one walk; whether 0.8 s is the beat for a
   hand on the keys is a thing to play. Never seen on a GPU, nobody has played it.
-- **An unfound squad never fires first** (`src/game/holdfire.ts`; the maintainer: "while nobody has found the squad, nobody fires until you do or you order it, whatever your
+- **An unfound squad never fires first** (`rust/game_rules/src/holdfire`; the maintainer: "while nobody has found the squad, nobody fires until you do or you order it, whatever your
   posture"). While nobody has FOUND a LOUD squad, a teammate's round at a man who has not noticed anybody is held — gun on him, 'eyes on. holding.' — walking or sneaking; a man
   who is himself alert / searching or past `SILENT.noticed` may be shot by the teammate on him, and a captor's last warning holds nothing. `HOLDFIRE {on, liftSecs 45, glass,
   quiet}`: ON in the page (`?noholdfire`), OFF in the module and on the frozen stand (`TPS_HOLDFIRE=1`; `FROZEN_HOLDS['HOLDFIRE.on']`, in the knob registry and a journal's
@@ -634,7 +634,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (`BLOW_ORDERS`). With it on `?sneakfire` alone no longer makes a sneaking squad shoot on sight (add `?noholdfire`), and a quiet gun is held too. QA: `bun run
   tools/qa/holdfire-check.ts` (`probes.ts holdfire`; passes on both stands, counts every team round and measures 'unfound' itself; `HOLDFIRE_BREAK=1` must fail);
   playthrough.ts `out.holdfire` = the stats, `--set '{"HOLDFIRE":{"on":false}}'`. Not saved (snapshot / restore exported). Never played by anybody. A plain `stack` set beside a man the rule holds: orders.ts counts a man on his mark as arrived while `silentHoldsTarget` or `holdFireHoldsTarget` says the man the room fight has him on is one THIS rule will not let him shoot (the rule's own conditions asked afresh, no stamp: it stands through a change of man, Sam in his line and Sam low with the sneak's hold answering; never a silent man), so 'set.' is said once and the row reads 'stacked' with the guns still on the man, and doortools.ts `testStacks` keeps the lead's hand off the handle while it is true (no rattle for the held man to hear) — holdfire-check's two C lines (the second on a locked door with `DOORTOOLS.testDoor` raised), `probes.ts orders-stack` breakroom_n #4 sets at 13.6 s headless under shipped with its muzzle line reading '2 held on a man'; a moment with no man in his sight and his gun not yet back on the door still reads 'stacking'; never seen on a GPU. `HOLDFIRE.loud` (10-13, the maintainer: "loud" itself means weapons free "only for a squad that was silent and is told loud"; on with the table, no URL flag or env word of its own, as `glass` / `quiet`; a recording without the key replays with it off — journal.ts `applyKnobs`): the menu's 'go loud' given to a squad that IS silent lifts the hold as a fire order does (orders.ts `give` asks `holdFireSilent` before the row is issued; never a squad that was loud, a loud tool's row, a new cast or `setSilent` by any other road) — and while that lift stands (`liftSecs` from the order: its own stamp `loudT` in the rule's state, carried by `holdFireSnapshot` / `holdFireRestore` and cleared with the lift's) `holdFireLoud` keeps the sneak's hold (unseen.ts) from answering first at silent.ts `silentHoldsRound` / `silentHoldsGlass`, so Sam low when he says it frees them too; no other lift touches the sneak's hold — holdfire-check's seven L lines, the first and the crouched one red under `HOLDFIRE_BREAK=1`, and `probes.ts holdglass-release` 'told loud' green under shipped; headless only, never played, never seen on a GPU. The stack's handle test reads a STAMP, and any man's (10-14; two claims from the silent stack's review, both reproduced headless under shipped: the frame the held men went down the lead tried the locked handle at step 0 with his gun 2.50 rad off the door, and with only the second man held the lead, his gun on the door, tried it): orders.ts stamps `A.heldFire` every tick (on his stack mark with `silentHoldsTarget` or `holdFireHoldsTarget` true, his gun on the door or not; `arrived` is still that fresh answer) and doortools.ts `testStacks` waits while the lead's fresh answer OR `stackHeld` — any man of that door's stack so stamped, not one down, yielded to the fight or no longer arrived — says held; the silent stamp (`heldSet`) is still the lead's alone; holdfire-check's two further C lines (the men gone: tried only with the gun back on the door; only the second man held, the lead dazzled: not tried), never seen on a GPU. Both mends have a sub-key of their own, on with the table like `glass` / `quiet` / `loud` (no flag, env word or frozen-stand row), so that a recording from before each replays as made: `HOLDFIRE.stackSet` off = nothing asks `silentHoldsTarget` or `holdFireHoldsTarget` for arrival or the handle (a held man is 'stacking' until his gun is the door's and the lead tries the handle, the build before the set), `HOLDFIRE.stackWait` off = the handle waits on the lead's own fresh answer only (the build before the stamp; it means nothing without `stackSet`), and journal.ts `applyKnobs` gives a recording with no HOLDFIRE row both off, one whose row lacks `stackSet` that key on only when the row has `loud` (the set joined the played build in the same step as `loud`), and one that lacks `stackWait` that key off — holdfire-check's three further C lines (stackSet off: not set, set once raised; stackWait off: the handle tried once with the second man still held; the journal control), headless only, never played, never seen on a GPU.
-- **The partner's quiet orders, four mends** (`src/game/pairorders.ts`, 10-13; three claims from the quiet levels): `PAIR.sweep` (+ `ringM`: floor a
+- **The partner's quiet orders, four mends** (`rust/game_rules/src/pairorders`, 10-13; three claims from the quiet levels): `PAIR.sweep` (+ `ringM`: floor a
   standing man's swinging look reaches is a PRICE on the way to a back, never an exposure verdict), `PAIR.keepWay` (the way is kept up to 6 s; a new one
   only when over 20 % shorter), `PAIR.habitStood` (a man who has just stopped is read as he stands: the way he mostly faces follows in the seconds stood,
   0.5 to 6), `PAIR.lookBack` (a watched hold stays held while the watcher has only turned his head: "he'll look back. your call.", F still sends him; it
@@ -642,7 +642,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   keys replays with them off (`journal.ts applyKnobs`); not frozen-stand holds (`PAIR.on` is). Check: `probes.ts pair-watched` (the look-back scenes, each
   red with its fix out; green on both stands). Measured headless, scripted: relay station ways flips 3 to 5 a run down to 0 to 2 over 12 starts; the
   border hold 0.6 to 3.9 s up to tens of seconds on one F; relay quiet runs 5 of 18 done before and after. Never played, never seen on a GPU.
-- **A man told to cover keeps his angle** (`src/game/roomfight.ts`, switch `ROOMFIGHT.coverKeep`, `coverPasses`, 10-22; the maintainer's
+- **A man told to cover keeps his angle** (`rust/game_rules/src/roomfight`, switch `ROOMFIGHT.coverKeep`, `coverPasses`, 10-22; the maintainer's
   note in his own recording of the plan lesson: "blue one doesn't watch his angle even though red team has it covered"). The recording,
   read frame by frame: Blue One, told to cover up the lane through the back gate, swung a quarter turn to the road gate three times in
   five seconds for men Red One and Red Two already had, with the lane's own men still coming. Nothing in the room fight knew of the way
@@ -666,7 +666,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   in the staging), a mate reloading or with a friend in his line (read, not run). One staging, one seed; no fight was run with it and no
   tally: a covering man now leaves a far flank to his mates, which a fight's numbers would show. Never seen on a GPU, nobody has
   played it.
-- **Rounds through a doorway keep his gun on it** (`src/game/roomfight.ts`, switch `ROOMFIGHT.doorShots`, `doorShot`, reach
+- **Rounds through a doorway keep his gun on it** (`rust/game_rules/src/roomfight`, switch `ROOMFIGHT.doorShots`, `doorShot`, reach
   `doorShotM` 8 m, 10-24; the maintainer, on his recording of four stacked on a door an enemy had opened: "enemy was immediately in
   front of them and shooting, nothing happened"). The recording, rerun step for step: the man firing stood inside the room behind the
   far jamb. One teammate had a line to him, was hit, and on that rails level took a knee for five seconds, blind, with the rounds
@@ -690,7 +690,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   five seconds). A stack's rear men leave their rear watch for the doorway while the rounds come, and a man looking at it is `busy`
   to the pace and rescue rules for that long, as he is for a door that opens. Not covered: an opening with no door in it, a blown
   hole. Never seen on a GPU, nobody has played it.
-- **The partner does not turn about on his way** (`src/game/pairorders.ts`, switch `PAIR.steady`, 10-22; the maintainer, of the pair
+- **The partner does not turn about on his way** (`rust/game_rules/src/pairorders`, switch `PAIR.steady`, 10-22; the maintainer, of the pair
   mission: "partner seems to be very paranoid about always turning around to check the other guy"). Two causes, both in the walk to a
   man's back, both found in the scripted run of `tut-pair` on hard. (1) The kept way (`PAIR.keepWay`) took up at its NEAREST corner, and
   with that corner a pace behind him he was sent back to it and round again on the next reading 0.3 s on: two full turns in three
@@ -706,7 +706,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   lasts should, and turns 121 degrees back onto his way when it ends; the check does not count that turn (a swing from a held
   `face` is the wait ending, not a corner he has passed). One level,
   one seed, the script's player; no tally. Never seen on a GPU, nobody has played it.
-- **Each man's own picture** (`src/game/picture.ts`, table `PICTURE`, 10-14; the maintainer, of two teammates who stood off a wall charge in a known
+- **Each man's own picture** (`rust/game_rules/src/picture`, table `PICTURE`, 10-14; the maintainer, of two teammates who stood off a wall charge in a known
   enemy's line: "each actor has ideas of where other enemies are (which may be out of date), where is safe, what good cover points are"). Every fighter of
   both sides keeps an IDEA per enemy: the place he last saw him, heard him fire or was told of him, and when. It is never refreshed from the truth (a man
   who walks off unseen leaves his idea where it was); a place he has looked at, could make out and found empty marks it LOST; a man down out of his sight
@@ -867,7 +867,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   were); `rust/game_start/tests/radio.rs` `a_line_sounds_as_the_man_is` says so. Check `rust/game_start/tests/hud_marks.rs` `the_mark_over_a_man_says_what_he_is` (the same on both
   stands; the record's `men`) reads what would be drawn over each man of a staged
   room clear; `tools/qa/headmark-page.cjs` reads the marks off the real page on the software adapter. Never seen on a GPU, never played.
-- **A man's condition: a blast that leaves a man standing leaves him HURT** (`src/game/condition.ts`, table `CONDITION {on, hurtPace 1.5, hurtSup
+- **A man's condition: a blast that leaves a man standing leaves him HURT** (`rust/game_rules/src/condition`, table `CONDITION {on, hurtPace 1.5, hurtSup
   0.35, hurtSecs 0, ownCalm, looks}`; ON in the page, `?nocondition`; OFF in the module and on the frozen stand, `TPS_CONDITION=1`; in the knob registry
   and the journal's tables, so a recording from before it replays with it off). The maintainer, 10-16: telegraph a man's state through his
   animation, "effectively just a health system ... but with very high lethality", "apply that system across the board". ONE MODEL for the
@@ -900,7 +900,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   figure's head and muzzle are where the simulation reads them, and a man under fire now tucks 10 cm. Six of those replayed with `looks` false
   equal the switch-off digest run for run; with `ownCalm` false, the switch-on one. NOT SEEN, NOT PLAYED: nothing
   of this on a GPU; nobody has played a mission with a hurt man in it; `hurtPace` and `hurtSup` are first numbers.
-- **Off the line of his fire** (`src/game/fireline.ts FIRELINE {on, fireS 1, reloadS 0.7, paceS 2.5, paceK 1.5, lapseS 2.5, spread 0.06, clearM 0.25, shortM 1.4,
+- **Off the line of his fire** (`rust/game_rules/src/fireline FIRELINE {on, fireS 1, reloadS 0.7, paceS 2.5, paceK 1.5, lapseS 2.5, spread 0.06, clearM 0.25, shortM 1.4,
   keepM 0.4, gapM 1, lookM 6, cue, cueS 0.35, maxS 4, againS 2, wayMoreM 10, berthM 0.4, edgeM 0.15, reachM 40}`: on in the page, `?nofireline`; frozen
   stand off, `TPS_FIRELINE=1` — and nothing without friendly fire, so a frozen run wants `TPS_FRIENDLYFIRE=1` beside it; a `FROZEN_HOLDS` row, in the knob
   registry and a journal's tables; Tab ▸ Player, doors & props ▸ "teammates wait off your line of fire"). The maintainer's card: "a teammate about to cross
@@ -932,7 +932,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 
 - **A fourth reason to run, 'told' (2026-10-23)**: a tutorial step that tells its men to run a leg (`teamTold`, asked by orders.ts beside `teamDash`;
   `rails.ts runs`, a step's `onWay.run`; `TEAMPACE_STATS.told`). Nothing off a tutorial's frame gives it. `docs/agents/missions.md`, *Mission 1, three play notes*.
-- **Teammates are slower than the player, and run only for a reason** (`src/game/teampace.ts`, table `TEAMPACE {on, k 0.8, followK 1.3, follow, behindM 1,
+- **Teammates are slower than the player, and run only for a reason** (`rust/game_rules/src/teampace`, table `TEAMPACE {on, k 0.8, followK 1.3, follow, behindM 1,
   fightSecs 2, backSecs 6, own, dashM 2.5, dashSeen 0.5, dashEvery 0.25, dashHot 6, runAt 2.7, accel 6, step 1, gap 1}`). REPLACES "teammates never sprint".
   The play note: the player at 1×, a teammate at 0.8×, so a man sent somewhere can always be caught up; followers sprint when the player sprints; a sprint
   of their own is rare and has a reason, because sprinting is risky. BEFORE: every teammate's legs were capped at `PACE.max` 2.2 m/s and orders asked 2.0,
@@ -1083,7 +1083,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   goggles down — the default boot holds 0 and the left edge of the picture reads 152 of 255 where the oval left 7 (centre 187 both ways); `?nvoval=1`
   boots with 1; no page error. NOT SEEN: never on a GPU; and with no dark rim behind them the HUD's grey labels at the screen's edge (CONDITION,
   LIGHT, SOUND) sit on a bright picture and read worse in the still — the HUD's own to answer if the try is kept.
-- **A teammate shows why he is not acting** (2026-10-23; `src/game/showwhy.ts`, table `SHOWWHY {on, line, stack, door, hurt, keep, say, …}`; the head
+- **A teammate shows why he is not acting** (2026-10-23; `rust/game_rules/src/showwhy`, table `SHOWWHY {on, line, stack, door, hurt, keep, say, …}`; the head
   comment has every number). A man who was not doing the plain thing looked like one who was idle, and the only read of it was a row in the corner panel.
   On, he shows it on himself, a hand first and a short line second, and NOTHING when he is doing what he was asked. LINE: the fire gate held his round
   this frame for the PLAYER (roomfight.ts now stamps its own answer on the man's Op, `lineBy` / `lineAt`: the lane or the round's cone; not under a fire

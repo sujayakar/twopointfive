@@ -26,8 +26,8 @@ export interface Gpu {
 // report of it can be read — for a second loss inside a minute, or for a third in this tab however far apart (a machine that loses the device every load must reach
 // the card, not load for ever). `?gpuretry=0` = the card at once for either, as it was.
 export const GPU_LOST = { on: true, /** a second loss this soon after a retry is the card's */ windowMs: 60_000, /** retries a tab gets before every loss is the card's */ tries: 2, key: 'twopointsix.gpuLost' };
-try { if (new URLSearchParams(location.search).get('gpuretry') === '0') GPU_LOST.on = false; } catch { /* no page (the harness) */ }
-/** what the card says beside the browser's message: the adapter (initGpu), and where the boot stood (main.ts keeps `stage` up to date; '' once the game is up) */
+try { if (new URLSearchParams(location.search).get('gpuretry') === '0') GPU_LOST.on = false; } catch { /* no page */ }
+/** what the card says beside the browser's message: the adapter (initGpu), and where the boot stood (host/drawpage.ts keeps `stage` up to date; '' once the game is up) */
 export const gpuStory = { adapter: '', stage: '' };
 let leaving = false;
 try { addEventListener('pagehide', () => { leaving = true; }); addEventListener('beforeunload', () => { leaving = true; }); addEventListener('pageshow', () => { leaving = false; }); } catch { /* no page */ }   // (pageshow: a page handed back as it was, or a leave that was called off, is not leaving)
@@ -131,7 +131,7 @@ export async function initGpu(canvas: HTMLCanvasElement, opts: { retry?: boolean
   };
 }
 
-/** WHO IS TOLD OF EVERY RED CARD (the backend's side sets `tell` in main.ts where the build has one; nobody else): what went up, and the card, so a line can be
+/** WHO IS TOLD OF EVERY RED CARD (src/cloud/redcards.ts sets `tell` where the build has one; nobody else): what went up, and the card, so a line can be
  *  put on it. `stage`: 'adapter' = a start with no GPU, 'device' = a lost device; none = any other throw. `data` is plain JSON. A listener that throws is dropped */
 export interface FatalReport { message: string; stack?: string; stage?: string; where?: string; adapter?: string; data?: unknown }
 export const FATAL: { tell: ((r: FatalReport, card: HTMLElement) => void) | null } = { tell: null };
@@ -203,7 +203,7 @@ export const pipelineProgress = {
   /** per pipeline, ms from the browser being asked for it to the pipeline being ready (with THE COMPILE QUEUE below that is when its turn came, not when the game asked: the wait in
    *  the queue is not a compile; several are still in flight at once, so a time includes the workers it shared) — the boot line's and the benchmark's 'slowest' */
   times: [] as { label: string; ms: number }[],
-  /** called after every resolution (main.ts repaints the boot card's status line off it) */
+  /** called after every resolution (host/drawpage.ts repaints the boot card's status line off it) */
   onChange: null as null | ((done: number, total: number, label: string) => void),
   reset() { this.total = 0; this.done = 0; this.failed = 0; this.times.length = 0; },
 };
@@ -220,19 +220,19 @@ function track<T>(label: string, p: Promise<T>, desc: object): Promise<T> {
 // pipelines, asked for while the burst runs, wait behind it. The page then cannot be drawn at all: the trace of a played floor showed the raster's flush blocked 3–7 s at a
 // time while a second set of the ray programs (the cut-box set, gone since 2026-11-07) compiled after the boot, the picture frozen with it (15 s in one take). Metal compiles in a fraction of that, so the burst never
 // starved anything on a Mac. So every …Async creation goes through this queue: at most `boot` in flight while the start card counts the boot's pipelines in (biggest module
-// first, so the slowest compiles are not the last to start), and after the boot (`pipeQueue.settle()`, main.ts) at most `after` in flight, of which at most `low` are the
+// first, so the slowest compiles are not the last to start), and after the boot (`pipeQueue.settle()`, host/drawpage.ts) at most `after` in flight, of which at most `low` are the
 // background's (the LATER pipelines: laterPipelineAsync below) — first come first served among the rest, so a pass's first-use pipeline
-// is not stuck behind the background twins. A switch of the page, not a rule of the game (no knob, no FROZEN_HOLDS row: every stand compiles the same programs, only
+// is not stuck behind the background twins. A switch of the page, not a rule of the game (the same programs compile, only
 // in a different order); `?pipequeue=0` = every creation straight to the browser, as it was.
 // ON ONLY WHERE IT WAS MEASURED: a browser on Windows (`pipeQueueFor`). Anywhere else the compiles are quick and nothing was ever starved, while the queue has a price:
 // the background set is ready later (on the software adapter the page tools run on it was not in 21 minutes after the page was), and the first use of a pass waits its
 // turn. So a Mac and the tools get every creation straight to the browser, as they always did, until the queue is measured there. `?pipequeue=1` = on wherever the page
 // is (how a Mac or a tool tries it); a number over 1 = on, with that many in flight at the boot.
 export const PIPE_QUEUE = { on: false, /** in flight while the boot's count is open (0 = the machine's threads less two, at least 4) */ boot: 0, /** in flight after the boot */ after: 4, /** …of which background (LATER) compiles */ low: 2,
-  /** LATER (2026-10-26): the twins no first frame draws with the default settings (laterPipelineAsync below) are left out of the boot and compiled after it in the background lane; false = the boot waits for them too, as it always did. The first-frame start (ui/shaderrows.ts, `?firstframe`: on where a person sits, off in the harness and on a page a script drives), read once at import; the Team & kit picture and the workbench lower it before they build (main.ts, workbench/main.ts) */ later: useShaderRow('firstFrame') };
+  /** LATER (2026-10-26): the twins no first frame draws with the default settings (laterPipelineAsync below) are left out of the boot and compiled after it in the background lane; false = the boot waits for them too, as it always did. The first-frame start (ui/shaderrows.ts, `?firstframe`: on where a person sits, off on a page a script drives), read once at import; the Team & kit picture lowers it before it builds (host/drawpage.ts) */ later: useShaderRow('firstFrame') };
 /** whether the queue is on for a browser that calls itself `userAgent`, given the page's `?pipequeue` word (null = none) */
 export function pipeQueueFor(userAgent: string, word: string | null): boolean { return word === '0' ? false : word !== null && /^\d+$/.test(word) ? true : /\bWindows\b/.test(userAgent); }
-try { const v = new URLSearchParams(location.search).get('pipequeue'); PIPE_QUEUE.on = pipeQueueFor(navigator.userAgent, v); if (v && /^\d+$/.test(v) && +v > 1) PIPE_QUEUE.boot = +v; } catch { /* no page (the harness) */ }
+try { const v = new URLSearchParams(location.search).get('pipequeue'); PIPE_QUEUE.on = pipeQueueFor(navigator.userAgent, v); if (v && /^\d+$/.test(v) && +v > 1) PIPE_QUEUE.boot = +v; } catch { /* no page */ }
 /** the pipelines the browser has been handed and has not answered, by label */
 const flying: string[] = [];
 function fly(label: string): () => void { flying.push(label); let out = false; return () => { if (out) return; out = true; const i = flying.indexOf(label); if (i >= 0) flying.splice(i, 1); }; }
@@ -328,8 +328,8 @@ export function installPipeQueue(device: GPUDevice) {
   try { (window as unknown as Record<string, unknown>).__pipeQueue = pipeQueue; } catch { /* no page */ }
 }
 
-/** createComputePipelineAsync with progress accounting; on rejection logs and returns the synchronous (invalid-but-usable-as-before) pipeline. (Promise.resolve round the call: the QA
- *  harness's Proxy device answers with a non-thenable stand-in, which then simply resolves.) */
+/** createComputePipelineAsync with progress accounting; on rejection logs and returns the synchronous (invalid-but-usable-as-before) pipeline. (Promise.resolve round the call: a tool's
+ *  Proxy device answers with a non-thenable stand-in, which then simply resolves.) */
 export function computePipelineAsync(device: GPUDevice, desc: GPUComputePipelineDescriptor): Promise<GPUComputePipeline> {
   return track(desc.label ?? 'compute', Promise.resolve(device.createComputePipelineAsync(desc)).catch(e => { pipelineProgress.failed++; reportError('gpu.pipeline', `[pipeline] ${desc.label ?? '?'}: ${e?.message ?? e}`, { label: desc.label ?? '?' }); return device.createComputePipeline(desc); }), desc);
 }
@@ -349,7 +349,7 @@ export function laterRenderPipelineAsync(device: GPUDevice, desc: GPURenderPipel
  *  (ui/quality.ts calibrateTick waits for 0 before it measures the machine). Always 0 with PIPE_QUEUE.later off: nothing is ever asked for through this lane. */
 export const laterProgress = { pending: 0 };
 const laterWaits: (() => void)[] = [];
-/** resolves once no LATER pipeline is still compiling (at once when none is): what a script's `__ready` waits on (main.ts; the game itself never does). Asked a tick after the
+/** resolves once no LATER pipeline is still compiling (at once when none is): what a script's `__ready` waits on (host/drawpage.ts; the game itself never does). Asked a tick after the
  *  count reaches 0, so one later pipeline that is asked for as another lands does not let the waiters go between the two. */
 export function laterIdle(): Promise<void> { return laterProgress.pending === 0 ? Promise.resolve() : new Promise(r => laterWaits.push(r)); }
 function laterDone<T>(label: string | undefined, p: Promise<T>): Promise<T | null> {

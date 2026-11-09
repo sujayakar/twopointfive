@@ -1,12 +1,11 @@
-//! The types of `sim_fallshome`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `sim_fallshome`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum FallSound {
-    Empty,
+    #[default] Empty,
     GlassTinkle,
     GlassShatter,
 }
@@ -20,8 +19,7 @@ impl FallSound {
     }
 }
 
-/// (TypeScript: FallDue, src/sim/fallshome.ts:37)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct FallDue {
     pub name: crate::sim_fallshome::FallSound,
     pub pos: [f64; 3],
@@ -32,24 +30,7 @@ pub struct FallDue {
     pub who: f64,
     pub dust: f64,
 }
-impl FallDue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FallDue {
-            name: crate::sim_fallshome::FallSound::Empty,
-            pos: [0.0; 3],
-            gain: 0.0,
-            rate: 0.0,
-            heard: false,
-            level: 0.0,
-            who: 0.0,
-            dust: 0.0,
-        }
-    }
-}
-impl Default for FallDue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: FallStore, src/sim/fallshome.ts:48)
 #[derive(Clone, Copy, Debug, ToBytes)]
 pub struct FallStore {
     pub base: f64,
@@ -58,7 +39,7 @@ pub struct FallStore {
     pub home: crate::Opaque,
 }
 impl FallStore {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         FallStore {
             base: 0.0,
@@ -68,8 +49,7 @@ impl FallStore {
 }
 impl Default for FallStore { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: inline at src/sim/fallshome.ts:25 FP, src/sim/fallshome.ts:25)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct FP {
     pub t: f64,
     pub x: f64,
@@ -84,29 +64,8 @@ pub struct FP {
     pub level: f64,
     pub dust: f64,
 }
-impl FP {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FP {
-            t: 0.0,
-            x: 0.0,
-            y: 0.0,
-            z: 0.0,
-            name: 0.0,
-            gain: 0.0,
-            rate: 0.0,
-            amount: 0.0,
-            who: 0.0,
-            event: 0.0,
-            level: 0.0,
-            dust: 0.0,
-        }
-    }
-}
-impl Default for FP { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/sim/fallshome.ts:43 FALLS, src/sim/fallshome.ts:43)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct SimFallshomeModFALLS {
     pub both: bool,
     pub there: f64,
@@ -118,25 +77,7 @@ pub struct SimFallshomeModFALLS {
     pub steps: f64,
     pub crunches: f64,
 }
-impl SimFallshomeModFALLS {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SimFallshomeModFALLS {
-            both: false,
-            there: 0.0,
-            here: 0.0,
-            asked: 0.0,
-            differ: 0.0,
-            first: String::new(),
-            dues: 0.0,
-            steps: 0.0,
-            crunches: 0.0,
-        }
-    }
-}
-impl Default for SimFallshomeModFALLS { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub enum FallStoreLandingKey {
     Dust,
@@ -171,39 +112,17 @@ impl FallStoreLandingKey {
     }
 }
 
-/// (TypeScript: inline at src/sim/fallshome.ts:86 step ->, src/sim/fallshome.ts:86)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct FallStoreStep {
     pub level: f64,
     pub k: f64,
 }
-impl FallStoreStep {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FallStoreStep {
-            level: 0.0,
-            k: 0.0,
-        }
-    }
-}
-impl Default for FallStoreStep { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/sim/fallshome.ts:148 stepHere ->, src/sim/fallshome.ts:148)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct StepHere {
     pub level: f64,
     pub k: f64,
 }
-impl StepHere {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StepHere {
-            level: 0.0,
-            k: 0.0,
-        }
-    }
-}
-impl Default for StepHere { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]

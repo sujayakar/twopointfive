@@ -20,7 +20,6 @@ fn lay_path(g: &mut Game, gd: GuardId, path: Vec<V3>) {
 /// that fact no longer that object. Every whole write of `path_goal` outside the standoff goes through here, so the flag cannot be left standing.
 pub fn guard_set_path_goal(g: &mut crate::game::Game, gd: GuardId, goal: Option<V3>) {
     let o = &mut g.gd[gd];
-    if o.path_goal_orbit { crate::game::b_tap::tap(crate::game::b_tap::PATH_GOAL_SET_WITH_ORBIT_UP); }
     o.path_goal = goal;
     o.path_goal_orbit = false;
 }
@@ -126,11 +125,6 @@ pub fn standoff_alert(g: &mut crate::game::Game, gd: GuardId, dt: f64, p: crate:
         if backing {
             // (pathGoal !== S.orbitGoal, of two objects: path_goal_orbit says they are the one object)
             // (…and the flag is believed only while the goal still holds that point's numbers: a write that slipped past the setter cannot leave it up)
-            {   // (the loop's counters, b_tap.rs)
-                use crate::game::b_tap as tp;
-                tp::tap(tp::STANDOFF_ORBIT_ASKED);
-                if !(g.gd[gd].path_goal_orbit && g.gd[gd].path_goal == Some(goal)) { tp::tap(tp::STANDOFF_ORBIT_RELAID); if g.gd[gd].path_goal_orbit { tp::tap(tp::STANDOFF_ORBIT_FLAG_UP_GOAL_MOVED); } }
-            }
             if !(g.gd[gd].path_goal_orbit && g.gd[gd].path_goal == Some(goal)) {
                 lay_path(g, gd, vec![goal]);
                 g.gd[gd].path_i = 0;
@@ -688,7 +682,7 @@ mod tests {
     // the TypeScript's own bits, under bun with EXACT on and the page's GUARD_EYE
     #[test]
     fn dist_term_is_the_typescripts_bits() {
-        let k = crate::knobs::page_guard_eye();
+        let k = crate::knobs::GuardEyeK::page();
         for (d, bits) in [
             (0f64, 0x3ff0000000000000u64),
             (3f64, 0x3ff0000000000000u64),
@@ -708,7 +702,7 @@ mod tests {
 
     #[test]
     fn eye_reach_is_the_typescripts_bits() {
-        let k = crate::knobs::page_guard_eye();
+        let k = crate::knobs::GuardEyeK::page();
         for (l, bits) in [
             (0f64, 0x4030000000000000u64),
             (0.39f64, 0x4030000000000000u64),
@@ -726,7 +720,7 @@ mod tests {
 
     #[test]
     fn a_far_glimpse_writes_a_fix_by_his_state() {
-        let k = crate::knobs::page_guard_eye();
+        let k = crate::knobs::GuardEyeK::page();
         // inside `range`: never faint
         assert!(!faint_of(&k, GuardState::Patrol, 0.0, 16.0, 0.0));
         // calm, past `range`: only the frame the sight itself tips him over 0.3

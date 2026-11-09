@@ -72,7 +72,7 @@ pub fn game_on_door_event(g: &mut crate::game::Game, e: crate::doors::DoorEvent)
         level: Some(e.level),
         who: Some(e.who),
         serial,
-        ..crate::game::GameEvent::zeroed()
+        ..crate::game::GameEvent::default()
     });
 }
 
@@ -134,7 +134,7 @@ pub fn game_on_prop_event(g: &mut crate::game::Game, e: crate::props::PropEvent)
         level: Some(e.level),
         who: Some(e.who),
         serial,
-        ..crate::game::GameEvent::zeroed()
+        ..crate::game::GameEvent::default()
     });
 }
 
@@ -575,7 +575,7 @@ pub fn game_host_seat(g: &crate::game::Game) -> SeatId { g.local_seat.unwrap_or(
 /// The world asked aside: `fn_` leaves nothing on the game's scratch.   (game.ts aside)
 pub fn game_aside<T: Clone + core::fmt::Debug>(g: &mut crate::game::Game, fn_: &mut dyn FnMut(&mut crate::game::Game) -> T) -> T {
     // (a fresh table each ask: game::AsideOwn kept only the lens. An empty table is a clean one, collision.ts aside)
-    let mut col_own = crate::scene_collision::AsideOwn::zeroed();
+    let mut col_own = crate::scene_collision::AsideOwn::default();
     crate::scene_collision::aside(g, &mut col_own, fn_)
 }
 

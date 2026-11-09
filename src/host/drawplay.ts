@@ -1,10 +1,13 @@
 // A TAPE WALKED (tape/handtape.ts): the game it is of, started as it was and handed what it was handed. Who steps it asks for the next tick or for another place on it; the picture is whoever draws it.
 import { HAND } from '../draw/hand';
-import { ANOTHER, HandWalk, TapeRefused, type TapeMark, type TapePlace, type TapeRow } from '../tape/handtape';
+import { ANOTHER, HandWalk, TapeRefused, figuresPart, type TapeFigures, type TapeMark, type TapePlace, type TapeRow } from '../tape/handtape';
 import { GameLost, partsOf, type DrawGame, type Start } from './drawgame';
 
 /** moments held for a seek back: one this many ticks apart, so many of them, each a copy of the whole game */
 const MOMENT = { every: 600, most: 14 };
+
+/** where a walk is no longer the run, and in what */
+export interface Parted { tick: number; why: string }
 
 type Step = Extract<TapeRow, { kind: 'step' }>;
 export class DrawPlay {
@@ -16,12 +19,17 @@ export class DrawPlay {
   /** the tick the game stands after */
   get at(): number { return this.game.ticks; }
   /** where what the game came to is first not what the tape says it came to: from there it is another run */
-  parted: { tick: number; said: TapeMark; mine: TapeMark } | null = null;
+  get parted(): Parted | null { return this.same && this.words && (!this.play || this.words.tick <= this.play.tick) ? this.words : this.play; }
+  /** where its die, or who stands where, is first not the tape's: another play of it, on any module */
+  play: Parted | null = null;
+  /** where a hash of its state is first not the tape's. Of the module that played it, that is another run; another module may keep the same play in other words */
+  words: Parted | null = null;
   /** the walk was lost to a panic, as the run may have been (`ends`) */
   lost: GameLost | null = null;
   private rows: HandWalk; private moments = new Map<number, { k: number; place: TapePlace }>();
 
-  constructor(private game: DrawGame, bytes: Uint8Array) {
+  /** `same`: it was played on this very module */
+  constructor(readonly game: DrawGame, bytes: Uint8Array, private same = true) {
     this.walk = new HandWalk(bytes, HAND.count); this.rows = new HandWalk(bytes, HAND.count);
     let total = 0, ends = ''; for (let r = this.rows.next(); r; r = this.rows.next()) { if (r.kind === 'step') total++; else if (r.kind === 'try') this.tries.push(r.tick); else if (r.kind === 'end') ends = r.why; }
     this.total = total; this.ends = ends; this.rows = new HandWalk(bytes, HAND.count);
@@ -49,11 +57,14 @@ export class DrawPlay {
     return true;
   }
   /** what is due before the next tick (the marks are of the ticks before it) */
-  private rest(seen: boolean): void { for (const r of this.due) { if (r.kind === 'mark') this.held(r.mark); else if (r.kind !== 'end') this.game.feed(r, seen); } this.due.length = 0; }
+  private rest(seen: boolean): void { for (const r of this.due) { if (r.kind === 'mark') this.held(r.mark); else if (r.kind === 'figures') this.stood(r.figures); else if (r.kind !== 'end') this.game.feed(r, seen); } this.due.length = 0; }
   private held(said: TapeMark): void {
-    if (this.parted || said.tick !== this.at) return;
-    const mine = this.game.mark(said.state !== null); if (mine.die !== said.die || mine.parts !== said.parts || (said.state !== null && mine.state !== null && mine.state !== said.state)) this.parted = { tick: said.tick, said, mine };
+    if (this.play || said.tick !== this.at) return;
+    const tick = said.tick, mine = this.game.mark(said.state !== null && !this.words);
+    if (mine.die !== said.die) this.play = { tick, why: `${mine.die} rolls of the die, ${said.die} on the tape` };
+    if (!this.words && (mine.parts !== said.parts || (said.state !== null && mine.state !== null && mine.state !== said.state))) this.words = { tick, why: mine.parts !== said.parts ? 'the hash of its parts' : 'the hash of its whole state' };
   }
+  private stood(said: TapeFigures): void { if (this.play || said.tick !== this.at) return; const why = figuresPart(said, this.game.figures()); if (why) this.play = { tick: said.tick, why }; }
   /** the moment the game stands at is held for a seek back, the crowded ones let go first */
   private hold(): void {
     if (this.moments.has(this.at)) return;
@@ -67,7 +78,7 @@ export class DrawPlay {
     if (to < this.at) {
       const from = Math.max(...[...this.moments.keys()].filter(t => t <= to)), M = this.moments.get(from)!; if (!this.game.momentBack(M.k, from)) throw new Error(`the moment at tick ${from} is gone`);
       this.lost = null; this.rows.back(M.place); this.read = null; this.due.length = 0;
-      if (this.parted && this.parted.tick > from) this.parted = null;
+      if (this.play && this.play.tick > from) this.play = null; if (this.words && this.words.tick > from) this.words = null;
     }
     while (this.at < to) { if (!this.tick(false)) break; if (performance.now() - t0 > ms) return this.at >= to; }
     if (!this.game.lost) this.game.show();

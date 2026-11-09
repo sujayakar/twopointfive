@@ -1,29 +1,17 @@
-//! The types of `wind`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `wind`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: WindTune, src/game/wind.ts:55)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct WindTune {
     pub wind: Option<f64>,
     pub moths: Option<bool>,
 }
-impl WindTune {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WindTune {
-            wind: None,
-            moths: None,
-        }
-    }
-}
-impl Default for WindTune { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum WindWhy {
-    Door,
+    #[default] Door,
     Glass,
     Storm,
     Vent,
@@ -39,8 +27,7 @@ impl WindWhy {
     }
 }
 
-/// (TypeScript: WindSource, src/game/wind.ts:108)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct WindSource {
     pub why: crate::wind::WindWhy,
     pub base: f64,
@@ -67,43 +54,10 @@ pub struct WindSource {
     pub kinds: Option<f64>,
     pub heat: Option<bool>,
 }
-impl WindSource {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WindSource {
-            why: crate::wind::WindWhy::Door,
-            base: 0.0,
-            on: 0.0,
-            gust: 0.0,
-            seed: 0.0,
-            vent: None,
-            door: None,
-            kind: crate::wind::WindSourceKind::Jet,
-            name: String::new(),
-            pos: [0.0; 3],
-            dir: [0.0; 3],
-            speed: 0.0,
-            reach: 0.0,
-            tan_spread: 0.0,
-            r0: 0.0,
-            d_max: 0.0,
-            floor_y: None,
-            interior: None,
-            annex: None,
-            roofs: None,
-            field: None,
-            bound: crate::smoke_types::WindGpuSourceBound::zeroed(),
-            kinds: None,
-            heat: None,
-        }
-    }
-}
-impl Default for WindSource { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum WindSourceKind {
-    Jet,
+    #[default] Jet,
     Storm,
 }
 impl WindSourceKind {
@@ -115,7 +69,6 @@ impl WindSourceKind {
     }
 }
 
-/// (TypeScript: Wind, src/game/wind.ts:118)
 #[derive(Clone, Debug, ToBytes)]
 pub struct Wind {
     pub all: Vec<WindWindSourceId>,
@@ -126,7 +79,7 @@ pub struct Wind {
     pub extra: Vec<WindWindSourceId>,
 }
 impl Wind {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         Wind {
             all: Vec::new(),
@@ -140,18 +93,9 @@ impl Wind {
 }
 impl Default for Wind { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: inline at src/game/wind.ts:37 WIND_FIELD, src/game/wind.ts:37)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct WINDFIELD {
 }
-impl WINDFIELD {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WINDFIELD {
-        }
-    }
-}
-impl Default for WINDFIELD { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
@@ -181,7 +125,7 @@ pub struct WindStats {
 pub fn wind_field() -> crate::wind::WINDFIELD { crate::wind::WINDFIELD {  } }
 
 /// (src/game/wind.ts:53 WIND_DEFAULTS: a table nothing writes)
-pub fn wind_defaults() -> crate::knobs::WindK { crate::knobs::page_wind() }
+pub fn wind_defaults() -> crate::knobs::WindK { crate::knobs::WindK::page() }
 
 /// (src/game/wind.ts:54 LS_KEY)
 pub const LS_KEY: &str = "twopointsix.wind";

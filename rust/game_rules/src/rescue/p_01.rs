@@ -426,7 +426,7 @@ fn stage_tried(g: &mut Game) -> Result<(), String> {
     for (k, c) in cast.iter().enumerate() {
         let gd = crate::guards::spawn_unit(g, &crate::guards::UnitOpts {
             team: crate::teams::Team::Hostile, pos: c.mark.pos, yaw: Some(v3::yaw_to(c.mark.pos, c.mark.aim_at)),
-            name: Some(c.name.clone()), light: Some(false), budget: Some(budget), ..crate::guards::UnitOpts::zeroed()
+            name: Some(c.name.clone()), light: Some(false), budget: Some(budget), ..crate::guards::UnitOpts::default()
         })?;
         crate::control::set_hold(g, gd, true, "rescue");
         crate::control::set_pinned(g, gd, true, "rescue");
@@ -474,13 +474,13 @@ fn stage_tried(g: &mut Game) -> Result<(), String> {
                 crate::guards::UnitOpts {
                     team: crate::teams::Team::Operative, pos: at[i], yaw: Some(yaw), name: Some(r.name), light: Some(false),
                     pair: Some(r.pair), tint: Some(r.tint), tint2: Some(r.tint2),
-                    budget: Some(m::max(crate::nightbreach::p_01::squad4_budget(g), n)), ..crate::guards::UnitOpts::zeroed()
+                    budget: Some(m::max(crate::nightbreach::p_01::squad4_budget(g), n)), ..crate::guards::UnitOpts::default()
                 }
             }
             None => crate::guards::UnitOpts {
                 team: crate::teams::Team::Operative, pos: at[i], yaw: Some(yaw),
                 name: Some(String::from(if i == 0 { "Blue One" } else { "Blue Two" })), light: Some(false),
-                budget: Some(crate::seats::seat_count(g) + 1.0 + g.guards.len() as f64), ..crate::guards::UnitOpts::zeroed()
+                budget: Some(crate::seats::seat_count(g) + 1.0 + g.guards.len() as f64), ..crate::guards::UnitOpts::default()
             },
         };
         let gd = crate::guards::spawn_unit(g, &opts)?;

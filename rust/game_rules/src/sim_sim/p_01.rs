@@ -11,7 +11,7 @@ use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 fn why_not_linked() -> String {
     let abi = ::sim::sim_abi();
     if abi as f64 != SIM_ABI {
-        return format!("the Rust simulation is version {} and src/sim/sim.ts was written against {}: bun run tools/sim/build.ts", abi, SIM_ABI);
+        return format!("rust/sim is version {} and the rules were written against {}", abi, SIM_ABI);
     }
     String::new()
 }

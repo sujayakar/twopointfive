@@ -1,11 +1,11 @@
 // What a SCENARIO needs from the level it is played on, as data (Level.scenarios — the level file's own `scenarios` block, docs/level-format.md 'Scenarios'; for the
-// office included: its block is written into levels/office.json from levels/office.scenarios.ts by its generator). The three playtest scenarios — the night breach (game/nightbreach.ts), the room clear (game/roomclear.ts,
-// with the pair or the four) and the hostage rescue (game/rescue.ts + rescueflow.ts) — read their rooms, doors, marks and team start from here and from nowhere
+// office included: its block is written into levels/office.json from tools/levels/lib/officeScenarios.ts by its generator). The three playtest scenarios — the night breach (rust/game_rules/src/nightbreach), the room clear (rust/game_rules/src/roomclear,
+// with the pair or the four) and the hostage rescue (rust/game_rules/src/rescue + rust/game_rules/src/rescueflow) — read their rooms, doors, marks and team start from here and from nowhere
 // else, so a level that carries a block is a level they run on. Types, and one pure function (scenarioQuery): nothing here imports the game.
 //
 // Door names are the level's own door ids (Doors.byName); light groups are its switchable groups (Game.setGroup); every point is world metres on the floor (y 0)
-// unless it is something a gun rests on (y ≈ 1.1). What the data must satisfy against the floor is checked in the game, headless: roomclear.ts checkStructure,
-// rescue.ts checkRescue, rescueflow.ts RescueFlow.check — levels stands runs all three on a level file.
+// unless it is something a gun rests on (y ≈ 1.1). What the data must satisfy against the floor is checked in the game, headless: rust/game_rules/src/roomclear check_structure,
+// rust/game_rules/src/rescue check_rescue, rescueflow RescueFlow.check — levels stands runs all three on a level file.
 import type { Vec3 } from '../math/vec';
 import type { BoxData, DoorData, LightData } from './levelRows';   // (types only, erased: a kit view SET is written in the level format's own records)
 import type { HourId, WeatherKind } from './words';
@@ -15,13 +15,6 @@ export interface Rect { x0: number; x1: number; z0: number; z1: number }
 /** Where the team stands when a scenario is staged: Sam and the way he faces; the teammates' marks (the pair's two; for the four, two more — absent, the second
  *  pair is stood on the free floor a stride behind the first) and the way THEY face (absent: east, +x, as the office has them). */
 export interface TeamStart { sam: Vec3; samYaw: number; ops?: Vec3[]; opsYaw?: number }
-/** are two team starts the same start: every field, by value (a level's block is read from its file, so two readings of one row are two objects). What a
- *  scenario asks before it writes its start knobs again from the level's row: the same row leaves a knob moved by hand where it was moved to. */
-export function sameTeamStart(a: TeamStart | null | undefined, b: TeamStart | null | undefined): boolean {
-  if (!a || !b) return a === b;
-  const v = (p: readonly number[], q: readonly number[]) => p.length === q.length && p.every((x, i) => x === q[i]);
-  return v(a.sam, b.sam) && a.samYaw === b.samYaw && a.opsYaw === b.opsYaw && (a.ops?.length ?? -1) === (b.ops?.length ?? -1) && (a.ops ?? []).every((p, i) => v(p, b.ops![i]));
-}
 /** a place a man of theirs is put, and the point his gun rests on from it */
 export interface ScenarioMark { pos: Vec3; aimAt: Vec3 }
 
@@ -47,31 +40,31 @@ export interface StructureRoom {
  *  NO breach plan must give it, with the teammates' marks — there the room clear has no F drill: every teammate is the order menu's from the first frame. */
 export interface StructureData { name: string; team?: TeamStart; rooms: StructureRoom[];
   /** OTHER WAYS IN: more places the team may start, each a whole start with the teammates' marks (`team` is way in 1, these are 2, 3, …). Nothing stands on one
-   *  unless the run asks: `ROOMCLEAR.way` pins one (the mission sheet's Way in row, `?way=N`) or asks for a dealt one (`?way=any`: game/roomclear.ts). Only beside a `team`; each is held
+   *  unless the run asks: `ROOMCLEAR.way` pins one (the mission sheet's Way in row, `?way=N`) or asks for a dealt one (`?way=any`: rust/game_rules/src/roomclear). Only beside a `team`; each is held
    *  to the rules `team` is (checkStructure: free floor, a way on foot to every teammate's mark and into every room). */
   starts?: TeamStart[];
   /** a bigger floor for the four-man squad: the most defenders this structure may hold ALIVE AT ONCE (absent = five; at most eleven — Sam, the four and eleven
-   *  fill the skinning's sixteen: roomclear.ts checkStructure, nightbreach.ts) */
+   *  fill the skinning's sixteen: rust/game_rules/src/roomclear check_structure, nightbreach) */
   maxMen?: number;
-  /** HARD defenders here do not come in after the team one at a time: the men a lost room draws hold one door of it from back off it (game/pressure.ts
+  /** HARD defenders here do not come in after the team one at a time: the men a lost room draws hold one door of it from back off it (rust/game_rules/src/pressure
    *  PRESSURE.wayOut — nothing at standard, nothing on a level without the row; whichever scenario stands this structure's defenders) */
   wayOut?: boolean;
-  /** false = this floor's men NEVER DIG IN (game/digin.ts — roomfight.ts tickDef: no man of it braces a door, takes cover behind furniture or sets his gun on
+  /** false = this floor's men NEVER DIG IN (rust/game_rules/src/digin — rust/game_rules/src/roomfight: no man of it braces a door, takes cover behind furniture or sets his gun on
    *  the door he expects, at any difficulty and whatever its squads decide) — for a level whose words lean on men standing where they were dealt (Training
    *  5 and 6: a lesson is read at six seconds a line, so its men always had the minute to set a gun on the door the order is taught at). Absent = the game's
    *  own rule, as on every level */
   digIn?: boolean;
   /** THE SQUAD IS ISSUED WALL CHARGES HERE: on this structure the team carries at least this many wall charges for the run, whatever its kit cards carry and
-   *  with no visit to the loadout (game/issue.ts, told at every staging; the cards and their store are not touched). Absent = the kit's own count, as it was */
+   *  with no visit to the loadout (rust/game_rules/src/issue, told at every staging; the cards and their store are not touched). Absent = the kit's own count, as it was */
   wallCharges?: number;
-  /** the defenders as SQUADS (game/enemysquads.ts; absent or empty = one pool, the game as it was run for run). The data says who and where — never what a squad does
+  /** the defenders as SQUADS (rust/game_rules/src/enemysquads; absent or empty = one pool, the game as it was run for run). The data says who and where — never what a squad does
    *  when: holding, wedging a door, going round, going to help are the AI's calls. */
   squads?: SquadData[] }
 
 /** A late squad's way in: not on the floor at the start; it comes by `door` (an outside door) once the floor is loud and the living defenders + `men` fit maxMen. */
 export interface SquadArrive { door: string; spawn: Vec3[]; men: number }
 /** ONE DEFENDER SQUAD of a structure. Its members are the men dealt into its `rooms` (placeDefenders) — or, with `arrive`, the men who come in later.
- *  The rules (levelData.ts validateLevelData for what the file alone can say, roomclear.ts checkStructure against the floor): with a squads block every room is in
+ *  The rules (levelData.ts validateLevelData for what the file alone can say, rust/game_rules/src/roomclear check_structure against the floor): with a squads block every room is in
  *  exactly one squad; an `arrive` squad has no rooms and every other at least one; Σ garrison ≤ maxMen ≤ SQUAD_MAX_MEN; `rally` is standable floor inside one of its
  *  rooms (anywhere standable for a late squad); `barricade` doors are doors of its rooms; `arrive.spawn` points are standable, outside every room, joined on foot
  *  to `arrive.door`, and at least `arrive.men` of them. */
@@ -86,22 +79,16 @@ export interface SquadData {
   /** doors it may shut and wedge; absent = every door of its rooms but one two of its own rooms share; [] = never */
   barricade?: string[];
   /** false = its men stay in its rooms: no press, no flank, no going to help (absent = true). On a floor where EVERY squad stays, one man still walks to a squad
-   *  that has gone silent on the net (game/stayask.ts) */
+   *  that has gone silent on the net (rust/game_rules/src/stayask) */
   mayLeave?: boolean;
-  /** how its men take a fright (game/morale.ts trainingOf): every man green · its first man a steady leader and the rest green · every man steady; absent = the difficulty's mix */
+  /** how its men take a fright (rust/game_rules/src/morale training_of): every man green · its first man a steady leader and the rest green · every man steady; absent = the difficulty's mix */
   training?: 'green' | 'mixed' | 'trained';
   arrive?: SquadArrive;
 }
 /** the most defenders alive at once on a structure with `maxMen` (16 skinned characters less Sam and the four) */
 export const SQUAD_MAX_MEN = 11;
-/** a squad's barricade doors where the file names none: every door of its rooms except one shared by two of its own rooms */
-export function squadBarricade(q: SquadData, rooms: StructureRoom[]): string[] {
-  if (q.barricade) return q.barricade;
-  const mine = rooms.filter(r => q.rooms?.includes(r.id)), ids = mine.flatMap(r => r.doors.map(d => d.id));
-  return [...new Set(ids)].filter(id => ids.filter(x => x === id).length < 2);
-}
 
-/** THE HOSTAGE RESCUE's flow (rescueflow.ts): the corridor the team runs and the openings off it. AS BUILT the flow reads a corridor that runs along +x and is
+/** THE HOSTAGE RESCUE's flow (rust/game_rules/src/rescueflow): the corridor the team runs and the openings off it. AS BUILT the flow reads a corridor that runs along +x and is
  *  walked west to east (an opening is 'passed' when Sam's x goes by it; `north` says which side of the corridor it is on). A level whose route is not that shape
  *  leaves `flow` out: the rescue then runs without the unasked covers and the strips, as with RESCUE.flow and RESCUE.marks off. */
 export interface RouteOpening {
@@ -150,7 +137,7 @@ export interface RescueData {
     /** a floor laid out for four: with the four-man squad staged, the man F sends to this door takes his pair mate standing in the same room with him (a pair on
      *  each door) while that leaves somebody for the main door. Absent = one man, as on every level before it */
     pair?: boolean;
-    /** authored marks for the face of the side door the team comes at (orders.ts doorMarks: where its jambs have no floor to stack on) */
+    /** authored marks for the face of the side door the team comes at (rust/game_rules/src/orders door_marks: where its jambs have no floor to stack on) */
     stack?: Vec3[]; standoff?: Vec3[];
   };
   hostages: { pos: Vec3; face: number }[];
@@ -170,15 +157,15 @@ export interface RescueData {
 /** THE LEVEL'S OWN NAMES FOR ITS FLOOR (`scenarios.places`): the spaces no scenario holds — halls, corridors, yards, side rooms — so a line that says WHERE
  *  ('still up — in the front hall', the debrief's 'pantry') names a real place of THIS level and never one of the office's. `name` is as the lines say it,
  *  without the article ('front hall'; "registrar's office"); `bounds` the floor inside its walls (outdoors: the ground the name means). Areas may not overlap a
- *  structure room's meaning: where a point is in both, the structure's room wins (game/dialogue.ts placeName). Nothing in the simulation reads this: words,
+ *  structure room's meaning: where a point is in both, the structure's room wins (rust/game_rules/src/dialogue place_name). Nothing in the simulation reads this: words,
  *  and where the HUD's marker sits for a place their net has named. A level without it names only its structure's rooms ('outside the sala'). */
 export interface PlaceArea { name: string; bounds: Rect }
 export interface PlacesData { areas: PlaceArea[] }
 
-/** THE QUIET MISSION (game/quiet.ts — `?quiet`): the level's own night, live — its routes walked, its devices and civilians as on the plain night, nobody posted
- *  and nobody benched — with a thing to take from a place and ways out, alone or with ONE partner (the pair rules, game/pairup.ts, silent from the first
+/** THE QUIET MISSION (rust/game_rules/src/quiet — `?quiet`): the level's own night, live — its routes walked, its devices and civilians as on the plain night, nobody posted
+ *  and nobody benched — with a thing to take from a place and ways out, alone or with ONE partner (the pair rules, rust/game_rules/src/pairup, silent from the first
  *  frame). REPLAY: the run's seed deals one of `starts`, one of `spots` and one of `patrols`; every exit is open on every run. Every point is floor (y 0)
- *  but a spot's `front` (the holder's face, y ≈ 1). Checked against the built floor by game/quiet.ts checkQuiet (levels stands). */
+ *  but a spot's `front` (the holder's face, y ≈ 1). Checked against the built floor by rust/game_rules/src/quiet check_quiet (levels stands). */
 export interface QuietStart {
   sam: Vec3; samYaw: number;
   /** where the one partner stands (absent: the nearest free floor a stride behind Sam) */
@@ -193,17 +180,17 @@ export interface QuietSpot {
   door: string;
   /** what the thing is taken from, as the row says it ('the grey cabinet', 'rack 3') */
   holder: string;
-  /** names the lights that go dark once it is out: switchables `rack<N>_leds` / `rack<N>_glow` (scene/levelKit.ts rack) — none by that name, nothing goes dark */
+  /** names the lights that go dark once it is out: switchables `rack<N>_leds` / `rack<N>_glow` (tools/levels/lib/levelKit.ts rack) — none by that name, nothing goes dark */
   rackIndex: number;
   /** the point on the holder's face (the marker; reach is measured from it) and half its width along that face */
   front: Vec3; halfW: number;
-  /** true = this holder is on a network or an alarm: emptying it shows on somebody's board and a man is sent to look (game/takecheck.ts; Training 1's trunk also says so: the man who comes is its last lesson). Absent = nobody is
+  /** true = this holder is on a network or an alarm: emptying it shows on somebody's board and a man is sent to look (rust/game_rules/src/takecheck; Training 1's trunk also says so: the man who comes is its last lesson). Absent = nobody is
    *  told — a file out of a safe is missed by no one; only a man who hears it come out comes to look */
   wired?: boolean;
 }
 /** a way out: past (x, z) going `out` (a unit vector on the floor), within `halfW` (default 1.8) of it sideways — so it may face any way */
 export interface QuietExit { name: string; door: string; x: number; z: number; out: [number, number]; halfW?: number }
-/** a place a man stands for something: the shift's errands (game/needs.ts NeedSpot — `loop` is the stretch's lap) and the civilians' phones / ways off the floor (game/civilians.ts CivSpot) */
+/** a place a man stands for something: the shift's errands (rust/game_rules/src/needs need_spot — `loop` is the stretch's lap) and the civilians' phones / ways off the floor (rust/game_rules/src/civilians CivSpot) */
 export interface QuietStand { name: string; pos: Vec3; face: number; loop?: Vec3[] }
 export interface QuietData {
   /** what is taken, with its article (absent: 'the drive') */
@@ -218,37 +205,37 @@ export interface QuietData {
   needs?: { coffee?: QuietStand; smoke?: QuietStand; water?: QuietStand; stretch?: QuietStand };
   phones?: QuietStand[];
   wayouts?: QuietStand[];
-  /** false = this shift keeps NO radio check (guards.ts updateRollcall: nobody sounds off, so nobody is sent round a silent man's route) — for a level whose men
+  /** false = this shift keeps NO radio check (rust/game_rules/src/guards update_rollcall: nobody sounds off, so nobody is sent round a silent man's route) — for a level whose men
    *  stand posts its words lean on (the Training lessons: a reader slower than the check found the posts empty). Absent = the game's check, as on every level */
   radioCheck?: boolean;
 }
-/** how many routes a patrol set may man: Sam, one partner and six fill the eight characters that cast shadows (guards.ts spawnUnit's budget) */
+/** how many routes a patrol set may man: Sam, one partner and six fill the eight characters that cast shadows (rust/game_rules/src/guards spawn_unit's budget) */
 export const QUIET_MAX_ROUTES = 6;
 
-/** A LESSON (game/lesson.ts — the Training group of the mission list): STEPS laid over whichever scenario the level's row starts (a quiet mission, a room clear).
+/** A LESSON (rust/game_rules/src/lesson — the Training group of the mission list): STEPS laid over whichever scenario the level's row starts (a quiet mission, a room clear).
  *  Each step is a LINE on the HUD's objective row naming the key, and a DONE-TEST the game reads off its own state: the line moves on when the player has done
  *  the thing, never on a clock. The lesson only READS the game (it moves nobody, ends nothing): past its last step the scenario's own objective stands and ends
- *  the run as it always does. Tests are plain records `{ is: '<kind>', … }` (the kinds and their fields: game/lesson.ts LESSON_CHECKS, which checks them
- *  against the built floor — tools/qa/lesson-check.ts). */
+ *  the run as it always does. Tests are plain records `{ is: '<kind>', … }` (the kinds and their fields: rust/game_rules/src/lesson LESSON_CHECKS, which checks them
+ *  against the built floor). */
 export interface LessonTest { is: string; [k: string]: unknown }
 export interface LessonStep {
   /** a short handle for the logs and the scripted run ('crouch') — unique in its lesson */
   id: string;
   /** what the objective row says while the step is up: what to do and the key that does it ('Crouch: press C') */
   line: string;
-  /** the line while a gun's key again opens its setup (game/slotsetup.ts SLOTSETUP.on), where the step's keys are others then (absent: `line`) */
+  /** the line while a gun's key again opens its setup (rust/game_rules/src/slotsetup SLOTSETUP.on), where the step's keys are others then (absent: `line`) */
   setupLine?: string;
-  /** the line while his own actions are a ring (game/handring.ts HANDRING.on), where the step's keys are others then: the whistle has no key of its own
+  /** the line while his own actions are a ring (rust/game_rules/src/handring HANDRING.on), where the step's keys are others then: the whistle has no key of its own
    *  there, it is the ring's last wedge (absent: `line`) */
   ringLine?: string;
-  /** the line while a charge his own hands set goes off from his own actions (game/ownblow.ts OWNBLOW.on), where the step names the squad's key for
+  /** the line while a charge his own hands set goes off from his own actions (rust/game_rules/src/ownblow OWNBLOW.on), where the step names the squad's key for
    *  it (absent: `line`) */
   blowLine?: string;
-  /** the line while the SQUAD's ring or menu is up (game/orders.ts): the hold is one line, what to press in the ring the next (absent: `line`) */
+  /** the line while the SQUAD's ring or menu is up (rust/game_rules/src/orders): the hold is one line, what to press in the ring the next (absent: `line`) */
   menuLine?: string;
   /** the line while a page UNDER the ring's first is showing (the first page's key pressed: what is left to press — absent: `menuLine`) */
   pageLine?: string;
-  /** the line while the squad's ring is up as ONE ring of every order of the thing (a mission whose `rails.flatRing` is set, game/rails.ts RAILS.flatRing:
+  /** the line while the squad's ring is up as ONE ring of every order of the thing (a mission whose `rails.flatRing` is set, rust/game_rules/src/rails RAILS.flatRing:
    *  what to press in it — absent: `menuLine`). The digit it names is the wedge the row is on with this level's `rails.orders` */
   flatLine?: string;
   done: LessonTest;
@@ -262,7 +249,7 @@ export interface LessonStep {
   /** the marker rides on a MAN instead: the one on the patrol route of this name, while he is on his feet (then `at`, if the step has one) — 'come up
    *  behind him': which him */
   atMan?: string;
-  // ---- on a rails level only (game/rails.ts; a lesson without `rails` carries none of these) ----
+  // ---- on a rails level only (rust/game_rules/src/rails; a lesson without `rails` carries none of these) ----
   /** actions this step turns on, for the rest of the mission · actions it turns off again */
   allow?: string[]; deny?: string[];
   /** sent to the level's script the tick the step comes up, as the signal 'lesson:<cue>' */
@@ -274,11 +261,11 @@ export interface LessonStep {
   /** the step teaches the command key HELD: a tap of it gives no order while the step is up, and these words come up under the line ('Keep [B] held') */
   noTap?: string;
   /** a lookout for the fog of war while this step is up (as `rails.sky.eye`): a place the PLAYER is shown without a man's eyes on it, its own charge on a wall.
-   *  The picture's alone: the squad knows nothing through it (rails.ts RAILS.eyeView) */
+   *  The picture's alone: the squad knows nothing through it (rust/game_rules/src/rails RAILS.eyeView) */
   eye?: { at: Vec3; yaw: number; fov?: number };
   /** A CARD that pauses the page when the step comes up (ui/railcard.ts): a heading and a few sentences on a rule of the game no key press shows — a new
    *  line in `text` is a new paragraph, a key in brackets is drawn as a key. Closed with Enter or a click; then the step's line is what to try. Once a run.
-   *  A card lands a beat after the deed before it (rails.ts RAILS.cardBeat: the step before it settles, and this step's cue, checkpoint and keys come with
+   *  A card lands a beat after the deed before it (rust/game_rules/src/rails RAILS.cardBeat: the step before it settles, and this step's cue, checkpoint and keys come with
    *  the card). `quiet`: the deed before this card sets off a fight the player is there to watch (his squad sent at a gate, into a room) — the card also
    *  waits until that fight has gone quiet, to a cap. `now`: no beat at all, for a card whose news is the fight itself ('They're behind you') */
   explain?: { title?: string; text: string; quiet?: boolean; now?: boolean };
@@ -286,38 +273,38 @@ export interface LessonStep {
   toward?: Vec3;
   /** once a man of the squad is under an order to the step's mark: the sky seat's view goes back to the squad (the hand's shift eased out, the mark no
    *  longer kept in the picture), `nv: false` puts the night vision up for the walk out, and `run: true` has the men run the leg (the job is done: they
-   *  go back at a sprint — teampace.ts teamTold, RAILS.wayRun) */
+   *  go back at a sprint — rust/game_rules/src/teampace team_told, RAILS.wayRun) */
   onWay?: { nv?: boolean; run?: boolean };
   /** (rails) THE LINE ONCE THE ORDER IS GIVEN: while the men carry out what the step asks for, the line says what they are doing and never asks again
    *  (`line`, for RAILS.afterSecs after an order — one of `on`, or any but the word — went out on this step; `word`: the line once the word has been given) */
   after?: { line?: string; on?: string[]; word?: string };
 }
-/** A TUTORIAL MISSION'S FRAME over a lesson (game/rails.ts): what the player can do at all, and what nobody can lose */
+/** A TUTORIAL MISSION'S FRAME over a lesson (rust/game_rules/src/rails): what the player can do at all, and what nobody can lose */
 export interface RailsData {
-  /** the actions that work from the first step (rails.ts ACTS); every other key, button and wheel is dropped from the tick's input */
+  /** the actions that work from the first step (rust/game_rules/src/rails ACTS); every other key, button and wheel is dropped from the tick's input */
   allow: string[];
   /** seconds a teammate who would have gone down spends on a knee before he is up again (absent: he goes down) */
   respawn?: number;
   /** the fog of war at the first step (absent: as the scenario's start has it) */
   fog?: boolean;
   /** THE SQUAD WAITS WHERE THE MISSION STOOD IT until a step hands him the command key (the first step that allows `order`): a man on 'fall in' holds his
-   *  place, on a knee with `low`, so a mission can send him in alone first with his four on the floor (rails.ts). Absent: they fall in on him from the
+   *  place, on a knee with `low`, so a mission can send him in alone first with his four on the floor (rust/game_rules/src/rails). Absent: they fall in on him from the
    *  first tick. Not with `sky`, whose seat holds them its own way */
   waits?: { low?: boolean };
   /** nobody on the floor is the player: he is parked at `park`, out of the picture and every sense, and the view rides the squad (`reach`: metres the
    *  walk keys may shift it off them). `eye`: a lookout the mission stands for the fog of war (the man left with the trucks): a place and the way it looks
    *  (`yaw`, radians, a man's own: 0 = +Z; `fov` degrees, 120 unless said), one more eye of the PICTURE's for as long as the seat is the sky's (drawn, not seen: the squad
-   *  knows nothing through it — rails.ts RAILS.eyeView) */
+   *  knows nothing through it — rust/game_rules/src/rails RAILS.eyeView) */
   sky?: { park: Vec3; reach?: number; eye?: { at: Vec3; yaw: number; fov?: number };
     /** the squad holds ON A KNEE where the mission stood it until its first order (men behind their trucks under fire), not at the low ready on its feet */
     low?: boolean };
-  /** false: no teammate shows an aiming laser on this level, red or infrared (game/irlaser.ts laserOn) */
+  /** false: no teammate shows an aiming laser on this level, red or infrared (rust/game_rules/src/irlaser laserOn) */
   lasers?: boolean;
-  /** the orders the squad's menu lists on this level, by id (orders.ts rowsFor: 'move', 'stack', 'go', 'walltools', 'wallCharge', 'work' …): a row not named is
+  /** the orders the squad's menu lists on this level, by id (rust/game_rules/src/orders: 'move', 'stack', 'go', 'walltools', 'wallCharge', 'work' …): a row not named is
    *  not there, on the ring or under the quick key. Absent: every row the game has */
   orders?: string[];
-  /** the squad's ring on this mission is the game's flat tree (game/cmdring.ts CMDRING.flat: every order of the thing on one ring, no pages), as it
-   *  is off the tutorial — and a step that names a digit of it says so in `flatLine` (game/rails.ts RAILS.flatRing; absent: the menu's pages, whose
+  /** the squad's ring on this mission is the game's flat tree (rust/game_rules/src/cmdring CMDRING.flat: every order of the thing on one ring, no pages), as it
+   *  is off the tutorial — and a step that names a digit of it says so in `flatLine` (rust/game_rules/src/rails RAILS.flatRing; absent: the menu's pages, whose
    *  digits `menuLine` and `pageLine` name) */
   flatRing?: boolean;
   /** the verbs Space offers on this level (an Interactable row's `verb`: 'grab', 'pick', 'code'…): a thing in reach whose verb is not here has
@@ -332,17 +319,17 @@ export interface LessonData {
   rails?: RailsData;
 }
 
-/** A PAR (game/par.ts): the level's room clear run AGAINST A CLOCK. The clock runs from the squad's first order (or Sam's first stride off his start) to the
+/** A PAR (rust/game_rules/src/par): the level's room clear run AGAINST A CLOCK. The clock runs from the squad's first order (or Sam's first stride off his start) to the
  *  room clear's 'taken'; every teammate lost adds `lossSecs`; the total is held against three times, best first (gold < silver < bronze, seconds). The par only
  *  READS the game: a level with the block plays the same run as one without it. Only beside a `roomClear`. */
 export interface ParData { gold: number; silver: number; bronze: number; lossSecs: number }
-/** A MISSION'S OWN ISSUE (game/kit.ts kitIssue): kit this level hands the squad whatever the machine keeps, with no visit to the loadout screen. `members` is
- *  keyed by the man's place on the roster ('0' = you, '1'‥'4' = the teammates in order); each record is the FIELDS THAT DIFFER from his issue card (kit.ts
+/** A MISSION'S OWN ISSUE (rust/game_rules/src/kit kit_issue): kit this level hands the squad whatever the machine keeps, with no visit to the loadout screen. `members` is
+ *  keyed by the man's place on the roster ('0' = you, '1'‥'4' = the teammates in order); each record is the FIELDS THAT DIFFER from his issue card (rust/game_rules/src/kit
  *  MemberKit: the rest of the card is as issued) — `{ '1': { weapon: 'shotgun', bangs: 2, charges: 0 } }` = Red One carries the breaching shotgun, two stun canisters and no charge; `{}` = every man as issued. A card the
  *  pouches rule does not allow is trimmed as any card is. A level without the block is staged with the cards the machine keeps, as ever. */
 export interface IssueCard { weapon?: 'rifle' | 'pistol' | 'shotgun'; suppressed?: boolean; light?: boolean; nvg?: boolean; bangs?: number; charges?: number; smoke?: number; frags?: number; walls?: number; shells?: number;
-  /** yours alone, on a card with the rifle: the launcher's sponge rounds, 0‥5 (game/kit.ts RINGS_MAX). A mission that names your card hands none over it
-   *  (kit.ts ISSUE.whole), so one that wants them on the tube says how many: with any, the launcher comes up on them, the grenades its next load */
+  /** yours alone, on a card with the rifle: the launcher's sponge rounds, 0‥5 (rust/game_rules/src/kit RINGS_MAX). A mission that names your card hands none over it
+   *  (rust/game_rules/src/kit ISSUE.whole), so one that wants them on the tube says how many: with any, the launcher comes up on them, the grenades its next load */
   rings?: number;
   /** yours alone, on a card with the rifle: the load the launcher COMES UP ON, where he carries any of it (absent: the sponge rounds where he has any,
    *  as above). The stealth tutorial names the grenade, so that its lesson is the swap to the sponge round before the right button is his */
@@ -350,7 +337,7 @@ export interface IssueCard { weapon?: 'rifle' | 'pistol' | 'shotgun'; suppressed
 export interface IssueData { members: { [place: string]: IssueCard } }
 /** THE KIT VIEW (rust/game_rules/src/kitstage — the Team & kit step shows the team as picked, stood at the mission's own way-in door, drawn by the page that draws
  *  a game it does not hold, opened `?…&kitview`): where the men stand and how the camera looks, per WAY IN. `ways` is indexed as the team starts are — [0] the
- *  structure's own `team`, [k] its `starts[k − 1]` (roomclear.ts RoomClearScenario.way). A way needs only its `door` (a door id): the slots, the camera and the
+ *  structure's own `team`, [k] its `starts[k − 1]` (rust/game_rules/src/roomclear RoomClearScenario.way). A way needs only its `door` (a door id): the slots, the camera and the
  *  lamps are worked out from the door's frame and the side the team starts on; every other key lays an authored value over that. Picture only: no rule of the
  *  game reads this block, and a level without it shows an empty column there. */
 export interface KitViewLamp {
@@ -370,7 +357,7 @@ export interface KitViewLight {
     /** a small glowing box that gives the lamp a source in the picture: its centre the same way as `offset`, its half extents [along the wall, up, out] and
      *  the radiance of its faces as a multiple of `color` (absent = none) */
     fixture?: { at: Vec3; half: Vec3; glow: number };
-    /** ITS INTENSITY BY DAY — at an hour whose outside lamps are out (game/hours.ts HourDef.lamps false: midday, the grey day; the level's own
+    /** ITS INTENSITY BY DAY — at an hour whose outside lamps are out (rust/game_rules/src/hours HourDef.lamps false: midday, the grey day; the level's own
      *  `exterior` fixtures are opened by the same photocell). Absent: 0 — the lamp and its glowing box are not hung in full sun. A way under a roof
      *  (the plan's `indoors`) is on no photocell: `intensity` at every hour */
     day?: number };
@@ -423,7 +410,7 @@ export interface KitViewWay {
   pane?: { box: string; stand?: [number, number, number] } | false;
   show?: string[]; indoors?: boolean; keepLights?: string[];
   /** THE WAY'S OWN LAMPS THAT BURN BY DAY. The way's own lamps — its set's `lights`, its `add.lamps` — are on the level's photocell as the porch lamp is
-   *  (rust/game_start/src/kit_plan.rs day_out): at an hour whose outside lamps are out (game/hours.ts HourDef.lamps false: midday, the grey day) a way under
+   *  (rust/game_start/src/kit_plan.rs day_out): at an hour whose outside lamps are out (rust/game_rules/src/hours HourDef.lamps false: midday, the grey day) a way under
    *  the open sky has them OUT, each with its fixture's glow, as the game's own photocell takes the level's `exterior` fixtures (a set's gate lamp burned at
    *  noon with its box glowing) — all but a lamp that stands UNDER A COVER (a ceiling or a roof over it: a room's lamp, lit at every hour as the game
    *  leaves rooms). Lamp ids or light groups written here burn at every hour. Absent: none. A way under a roof (the plan's `indoors`) is on
@@ -451,10 +438,10 @@ export interface KitViewWay {
  *  the team's side of its anchor (no team start of the level means anything on a set). */
 export interface KitViewSet { boxes: BoxData[]; doors?: DoorData[]; lights?: LightData[]; ref: [number, number] }
 export interface KitViewData { ways: KitViewWay[]; /** the bespoke sets a way may name (`set`) */ sets?: { [name: string]: KitViewSet } }
-/** THE RESPONSE TEAM (game/qrf.ts, behind its switch RESPONSE.on): the men who come from OUTSIDE the level once its own net has called for them. It is part
+/** THE RESPONSE TEAM (rust/game_rules/src/qrf, behind its switch RESPONSE.on): the men who come from OUTSIDE the level once its own net has called for them. It is part
  *  of a level's design, not a rule of the game: a level carries this block only where somebody would plausibly come (`why` says who, in the level's own
  *  terms), and a level without it has no team — nothing is promised on its radio and nobody is stood up. Every point is floor (y 0). Checked against the
- *  built floor by game/qrf.ts checkResponse (rust/game_start/tests/response_team.rs): free cells, a walk from every muster to its fan and on into the level, the door a
+ *  built floor by rust/game_rules/src/qrf checkResponse (rust/game_start/tests/response_team.rs): free cells, a walk from every muster to its fan and on into the level, the door a
  *  way names. A way's `name` is spoken on the net and drawn on the HUD's radio strip: no compass word in a new one. */
 export interface ResponseWay {
   /** the way in as their net says it, with its article ('the main gate', 'the west stairwell') */
@@ -493,33 +480,32 @@ export interface ResponseData {
   /** WHERE THEY LOOK WITH NO WORD TO GO ON, on a floor with no room plans: the places a team sent here would walk to and look at, by name (free floor each).
    *  Absent: the quiet block's spots and scenarios.places' areas, by their middles */
   sweep?: { name: string; pos: Vec3 }[];
-  /** A SQUAD'S RAID ON THIS PLACE BRINGS THEM (game/qrf.ts RESPONSE.raid): the team stands with the defenders against the squad and is counted inside the
+  /** A SQUAD'S RAID ON THIS PLACE BRINGS THEM (rust/game_rules/src/qrf RESPONSE.raid): the team stands with the defenders against the squad and is counted inside the
    *  eleven; it is asked for by a defender who heard gunfire and has lived a few seconds since to say so — a man of `room` (a scenarios.roomClear room id:
    *  where this place's set, or its telephone, is) or, with no room named, any of them. Those men down first, nobody calls. A block with `raid` answers
    *  raids only; one without answers a quiet night gone loud, never a raid */
   raid?: { room?: string };
 }
 export interface LevelScenarios { nightBreach?: NightBreachData; roomClear?: StructureData; rescue?: RescueData; places?: PlacesData; quiet?: QuietData; lesson?: LessonData; par?: ParData; issue?: IssueData; kitView?: KitViewData; response?: ResponseData;
-  /** WHAT A DOOR IS CALLED where its id cannot say it (game/doornames.ts, words.ts WORDS.doors): a row a door — its id and the name on the squad's rows
+  /** WHAT A DOOR IS CALLED where its id cannot say it (rust/game_rules/src/doornames, words.ts WORDS.doors): a row a door — its id and the name on the squad's rows
    *  and in a defender's call, written as it is read there ('yard gate', 'records side door': no 'the'). For a door whose id carries a bearing or a letter
    *  and that the room clear structure does not list (or a level with no structure): the HUD has no compass. No bearing in a name, no two doors of a level
-   *  called the same (probes.ts words-doornames holds both, and the list of doors still owed a name); a door the level has, once (the validator). A door
+   *  called the same; a door the level has, once (the validator). A door
    *  with no row keeps the name it had. Words only: not in the level's fingerprint. */
   doorNames?: { door: string; name: string }[];
-  /** WAYS THE LEVEL IS WALKED THAT NOTHING ELSE IN IT SAYS (scene/ways.ts levelWays' hints): from a named thing to a named thing — a door, a mark, a route,
+  /** WAYS THE LEVEL IS WALKED THAT NOTHING ELSE IN IT SAYS (the traffic map's hints): from a named thing to a named thing — a door, a mark, a route,
    *  a room, a place, or `spawn` — and how many ways it counts as (absent: one). The stair to the plant a fitter walks every week, the gate to the
-   *  kitchen door. Its routes, its starts and its doors are counted already. A picture's only (render/wear.ts: where a floor shows feet): not in the
+   *  kitchen door. Its routes, its starts and its doors are counted already. A picture's only (rust/game_draw/src/traffic.rs: where a floor shows feet): not in the
    *  level's fingerprint, and no rule of the game reads it. */
-  walked?: import('./ways').WayHint[] }
+  walked?: WayHint[] }
+/** a way the author adds: from a named thing to a named thing; `weight` = how many ways it counts as (absent: one) */
+export interface WayHint { from: string; to: string; weight?: number }
 
 /** THE MISSION LIST'S GROUPS (ui/missions.ts draws a heading per group — the maintainer, 10-10: 'we can build out a few levels in groups. a tutorial group
  *  for all the gameplay systems could be good too'; 10-11: 'can we also reorganize the missions into nicer groups?'), in the order the list shows them. A
- *  group is a KIND OF PLAY, every mission is under exactly one, and none DRAWS more than eight (tools/qa/listed.ts: a row cut from the list, `offList`, is in the table and not counted). SHOW, NOT TELL: a heading is a
+ *  group is a KIND OF PLAY, every mission is under exactly one, and none DRAWS more than eight (a row cut from the list, `offList`, is in the table and not counted). SHOW, NOT TELL: a heading is a
  *  word or two; `line` is its tooltip, never drawn. A group with no row draws nothing. */
 export type MissionGroup = 'tutorial' | 'raids' | 'strongholds' | 'clock' | 'quiet-alone' | 'quiet-two';
-
-/** a row of the LESSON group (the tutorial's missions; the older Training group was taken out 2026-10-23): its own team size and no other, the kit as issued, no levers, no verdict kept */
-export const lessonGroup = (g: string | undefined): boolean => g === 'tutorial';
 
 /** One row of a scenario list (what a picker shows and a URL starts): which kind, how many teammates, on which level file. THE SMALLEST SHAPE — nothing reads it
  *  in the game yet; `scenarioQuery` is how a row becomes the page's query string. */
@@ -530,16 +516,16 @@ export interface ScenarioEntry {
   squad: 0 | 1 | 2 | 4;
   /** which heading of the mission list it sits under (MISSION_GROUPS; absent = by what it is — ui/missions.ts groupOf: quiet by its team, a rescue 'clock', else 'raids') */
   group?: MissionGroup;
-  /** this row deploys at ITS OWN SIZE and no other, as a Training row does: the line every other size shows greyed on the loadout screen (game/loadout.ts
-   *  squadChoices). A design call, not an inability: the level still stages any size from a URL or a harness tool (loadout-probes.ts knows the difference) */
+  /** this row deploys at ITS OWN SIZE and no other, as a Training row does: the line every other size shows greyed on the loadout screen (rust/game_rules/src/loadout
+   *  squadChoices). A design call, not an inability: the level still stages any size from a URL */
   only?: string;
-  /** a lesson THE PLAYER PACKS FOR (kit.ts ISSUE.picked): its Team & kit step shows the cards and its page stages what this machine keeps, not the plain issue
+  /** a lesson THE PLAYER PACKS FOR (rust/game_rules/src/kit ISSUE.picked): its Team & kit step shows the cards and its page stages what this machine keeps, not the plain issue
    *  every other lesson is played with. `frags` = the least of them he carries there whatever
-   *  he packs (kit.ts kitLessonPage: a step of that mission asks for one of his own) */
+   *  he packs (rust/game_rules/src/kit kit_lesson_page: a step of that mission asks for one of his own) */
   packs?: { frags?: number };
   /** a file under levels/ (absent = the bundled office) */
   level?: string;
-  /** THE ROW'S OWN HOUR AND WEATHER (game/rowset.ts, ROWSET.on): what a visit to this row is always started in — a tutorial mission's level is built for one
+  /** THE ROW'S OWN HOUR AND WEATHER (rust/game_rules/src/rowset, ROWSET.on): what a visit to this row is always started in — a tutorial mission's level is built for one
    *  hour and one sky (a fuel halt at dusk in dust, a plan laid by day). They win over the link's `hour=` / `weather=`, and the mission sheet draws no Hour
    *  or Weather row for such a row. Absent (every row but those): the visitor's pick, else the level's own night and weather, as ever. A weather a level can
    *  be STARTED in: never 'snow' (a level built for snow keeps its own and names none). Types only: nothing here imports the game */
@@ -565,10 +551,10 @@ export interface ScenarioEntry {
   /** how many men hold the floor against the team as the row stages it (tools/qa missions probe boots each row and counts) */
   defenders?: number;
   /** DISPLAY ONLY — THE WAYS IN, named for the mission sheet's 'Way in' row (ui/missions.ts): the level's own team start first, then each of its
-   *  `scenarios.roomClear.starts` in the file's order (tools/qa/fresh-start-check.ts holds the count against the level file). Absent = one way in, no choice. */
+   *  `scenarios.roomClear.starts` in the file's order. Absent = one way in, no choice. */
   ways?: readonly string[];
   /** DISPLAY ONLY — the level's file names defender SQUADS (`scenarios.roomClear.squads`): the mission sheet and the short list then word Hard as the squads' own
-   *  there, never the one pool's (game/difficulty.ts `squadsOf`; tools/qa/levers-probes.ts holds every row against its level file). Absent = one pool. */
+   *  there, never the one pool's (rust/game_rules/src/difficulty `squadsOf`). Absent = one pool. */
   squads?: boolean;
 }
 /** the query string that boots an entry: `?levelFile=<file>&roomclear=<seed>&squad4` */

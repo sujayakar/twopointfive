@@ -500,7 +500,7 @@ mod tests {
 
     #[test]
     fn what_has_a_wedge() {
-        let mut r = Interactable::zeroed();
+        let mut r = Interactable::default();
         assert!(!wedged(&r));   // a status line
         r.verb = Some(crate::game::Verb::Push);
         assert!(wedged(&r) && choosable(core::slice::from_ref(&r)));

@@ -1,4 +1,4 @@
-//! The types of `laststand`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `laststand`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
@@ -20,10 +20,9 @@ pub enum LaterRedo {
     Tell { d: RoomfightDefId, n: i32, free: bool },
 }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
 pub enum LineKind {
-    Set,
+    #[default] Set,
     Go,
     Order,
     Short,
@@ -79,8 +78,7 @@ impl LineKind {
     }
 }
 
-/// (TypeScript: Check, src/game/laststand.ts:144)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct Check {
     pub caller: RoomfightDefId,
     pub t: f64,
@@ -88,39 +86,14 @@ pub struct Check {
     pub due: Vec<crate::laststand::CheckDueItem>,
     pub got: Vec<RoomfightDefId>,
 }
-impl Check {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Check {
-            caller: RoomfightDefId(0),
-            t: 0.0,
-            close_at: 0.0,
-            due: Vec::new(),
-            got: Vec::new(),
-        }
-    }
-}
-impl Default for Check { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/laststand.ts:144 Check.due, src/game/laststand.ts:144)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct CheckDueItem {
     pub d: RoomfightDefId,
     pub at: f64,
 }
-impl CheckDueItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CheckDueItem {
-            d: RoomfightDefId(0),
-            at: 0.0,
-        }
-    }
-}
-impl Default for CheckDueItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: LastStandSaid, src/game/laststand.ts:145)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct LastStandSaid {
     pub t: f64,
     pub who: String,
@@ -128,22 +101,8 @@ pub struct LastStandSaid {
     pub text: String,
     pub at: [f64; 2],
 }
-impl LastStandSaid {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LastStandSaid {
-            t: 0.0,
-            who: String::new(),
-            kind: String::new(),
-            text: String::new(),
-            at: [0.0; 2],
-        }
-    }
-}
-impl Default for LastStandSaid { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Later, src/game/laststand.ts:154)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct Later {
     pub at: f64,
     pub t0: f64,
@@ -155,26 +114,8 @@ pub struct Later {
     pub tpl: String,
     pub redo: Option<crate::laststand::LaterRedo>,
 }
-impl Later {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Later {
-            at: 0.0,
-            t0: 0.0,
-            gd: GuardId(0),
-            kind: crate::laststand::LineKind::Set,
-            text: String::new(),
-            cls: 0.0,
-            then: None,
-            tpl: String::new(),
-            redo: None,
-        }
-    }
-}
-impl Default for Later { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: State, src/game/laststand.ts:155)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct State {
     pub die: crate::math_dice::Die,
     pub next_at: f64,
@@ -195,52 +136,14 @@ pub struct State {
     pub cls_at: Vec<f64>,
     pub later: Vec<crate::laststand::Later>,
 }
-impl State {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        State {
-            die: crate::math_dice::Die::zeroed(),
-            next_at: 0.0,
-            check: None,
-            known: JsSet::new(),
-            named: JsMap::new(),
-            spots: JsMap::new(),
-            at: JsMap::new(),
-            lone_said: false,
-            few_n: 0.0,
-            told: JsSet::new(),
-            said: Vec::new(),
-            stats: crate::laststand::StateStats::zeroed(),
-            stale: false,
-            post: JsMap::new(),
-            key: String::new(),
-            rot: JsMap::new(),
-            cls_at: Vec::new(),
-            later: Vec::new(),
-        }
-    }
-}
-impl Default for State { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Spot, src/game/laststand.ts:165)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct Spot {
     pub name: String,
     pub pos: V3,
 }
-impl Spot {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Spot {
-            name: String::new(),
-            pos: [0.0; 3],
-        }
-    }
-}
-impl Default for Spot { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Said, src/game/laststand.ts:168)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct Said {
     pub key: String,
     pub the: String,
@@ -249,40 +152,15 @@ pub struct Said {
     pub still_t: f64,
     pub said_t: f64,
 }
-impl Said {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Said {
-            key: String::new(),
-            the: String::new(),
-            off_t: 0.0,
-            still_at: [0.0; 3],
-            still_t: 0.0,
-            said_t: 0.0,
-        }
-    }
-}
-impl Default for Said { fn default() -> Self { Self::zeroed() } }
 
 /// what their net has named that still stands: the rooms by id, and the named places that are no room
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Hint {
     pub rooms: JsSet<String>,
     pub spots: Vec<crate::laststand::Spot>,
 }
-impl Hint {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Hint {
-            rooms: JsSet::new(),
-            spots: Vec::new(),
-        }
-    }
-}
-impl Default for Hint { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/laststand.ts:159 State.stats, src/game/laststand.ts:146)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct StateStats {
     pub t0: f64,
     pub up0: f64,
@@ -308,40 +186,8 @@ pub struct StateStats {
     pub thumps: f64,
     pub lines: f64,
 }
-impl StateStats {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StateStats {
-            t0: 0.0,
-            up0: 0.0,
-            checks: 0.0,
-            answers: 0.0,
-            silent: 0.0,
-            last_man: 0.0,
-            stands: 0.0,
-            gathered: 0.0,
-            sent: 0.0,
-            arrived: 0.0,
-            short: 0.0,
-            met: 0.0,
-            died_on_way: 0.0,
-            dropped: 0.0,
-            quiet: 0.0,
-            no_way: 0.0,
-            moved: 0.0,
-            dig_orders: 0.0,
-            stand_t: 0.0,
-            set_t: 0.0,
-            set_men: 0.0,
-            thumps: 0.0,
-            lines: 0.0,
-        }
-    }
-}
-impl Default for StateStats { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Plan, src/game/laststand.ts:328)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Plan {
     pub room: RoomfightRoomId,
     pub id: String,
@@ -349,189 +195,69 @@ pub struct Plan {
     pub inside: Vec<RoomfightDefId>,
     pub come: Vec<crate::laststand::PlanComeItem>,
 }
-impl Plan {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Plan {
-            room: RoomfightRoomId(0),
-            id: String::new(),
-            anchor: [0.0; 3],
-            inside: Vec::new(),
-            come: Vec::new(),
-        }
-    }
-}
-impl Default for Plan { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/laststand.ts:328 Plan.come, src/game/laststand.ts:328)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct PlanComeItem {
     pub d: RoomfightDefId,
     pub spot: V3,
     pub l: f64,
 }
-impl PlanComeItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PlanComeItem {
-            d: RoomfightDefId(0),
-            spot: [0.0; 3],
-            l: 0.0,
-        }
-    }
-}
-impl Default for PlanComeItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/laststand.ts:108 LINES, src/game/laststand.ts:108)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct LINESValue {
     pub cls: f64,
     pub say: Vec<String>,
     pub now: Option<Vec<String>>,
     pub guide: Option<Vec<String>>,
 }
-impl LINESValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LINESValue {
-            cls: 0.0,
-            say: Vec::new(),
-            now: None,
-            guide: None,
-        }
-    }
-}
-impl Default for LINESValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/laststand.ts:189 where ->, src/game/laststand.ts:189)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Where {
     pub id: Option<String>,
     pub the: String,
     pub at: String,
 }
-impl Where {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Where {
-            id: None,
-            the: String::new(),
-            at: String::new(),
-        }
-    }
-}
-impl Default for Where { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/laststand.ts:202 spoken ->, src/game/laststand.ts:202)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct Spoken {
     pub id: Option<String>,
     pub the: String,
     pub at: String,
     pub spot: Option<crate::laststand::Spot>,
 }
-impl Spoken {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Spoken {
-            id: None,
-            the: String::new(),
-            at: String::new(),
-            spot: None,
-        }
-    }
-}
-impl Default for Spoken { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/laststand.ts:220 net(redo), src/game/laststand.ts:154)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct NetRedoRet {
     pub vars: JsMap<String, String>,
     pub then: Option<crate::laststand::LaterThen>,
 }
-impl NetRedoRet {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        NetRedoRet {
-            vars: JsMap::new(),
-            then: None,
-        }
-    }
-}
-impl Default for NetRedoRet { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/laststand.ts:228 netAt(f), src/game/laststand.ts:228)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct NetAtFRet {
     pub vars: JsMap<String, String>,
     pub then: Option<crate::laststand::LaterThen>,
 }
-impl NetAtFRet {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        NetAtFRet {
-            vars: JsMap::new(),
-            then: None,
-        }
-    }
-}
-impl Default for NetAtFRet { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/laststand.ts:272 teamKnown ->, src/game/laststand.ts:272)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct TeamKnown {
     pub pts: Vec<V3>,
     pub last: V3,
 }
-impl TeamKnown {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        TeamKnown {
-            pts: Vec::new(),
-            last: [0.0; 3],
-        }
-    }
-}
-impl Default for TeamKnown { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/laststand.ts:313 standRoom ->, src/game/laststand.ts:313)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct StandRoom {
     pub room: RoomfightRoomId,
     pub id: String,
 }
-impl StandRoom {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StandRoom {
-            room: RoomfightRoomId(0),
-            id: String::new(),
-        }
-    }
-}
-impl Default for StandRoom { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/laststand.ts:320 homeRoom ->, src/game/laststand.ts:320)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct HomeRoom {
     pub room: RoomfightRoomId,
     pub id: String,
     pub anchor: V3,
 }
-impl HomeRoom {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HomeRoom {
-            room: RoomfightRoomId(0),
-            id: String::new(),
-            anchor: [0.0; 3],
-        }
-    }
-}
-impl Default for HomeRoom { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/laststand.ts:608 lastStandReport ->, src/game/laststand.ts:608)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct LastStandReport {
     pub on: String,
     pub stats: JsMap<String, f64>,
@@ -543,23 +269,6 @@ pub struct LastStandReport {
     pub named: Vec<String>,
     pub said: Vec<crate::laststand::LastStandSaid>,
 }
-impl LastStandReport {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LastStandReport {
-            on: String::new(),
-            stats: JsMap::new(),
-            room: None,
-            in_: Vec::new(),
-            out: Vec::new(),
-            moving: Vec::new(),
-            known: Vec::new(),
-            named: Vec::new(),
-            said: Vec::new(),
-        }
-    }
-}
-impl Default for LastStandReport { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
@@ -576,7 +285,7 @@ impl LaststandMod {
 }
 
 /// (src/game/laststand.ts:91 LASTSTAND_DEFAULTS: a table nothing writes)
-pub fn laststand_defaults() -> crate::knobs::LaststandK { crate::knobs::page_laststand() }
+pub fn laststand_defaults() -> crate::knobs::LaststandK { crate::knobs::LaststandK::page() }
 
 /// (src/game/laststand.ts:92 LS)
 pub const LS: &str = "twopointsix.laststand";

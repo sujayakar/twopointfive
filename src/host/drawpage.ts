@@ -12,12 +12,12 @@ import { hourExposure } from '../render/photometry';
 import { charSlots, meshAuthored } from '../render/charMaterials';
 import { MeshShadows } from '../render/meshShadows';
 import { fitRig, fitRigCast } from '../render/sdfrig';
-import { cutConfig, initCutSwitch } from '../scene/cut';
+import { initCutSwitch } from '../scene/cut';
 import { CAST_FILE, CAST_FILE_LOOK, castUrlFor, loadCharacterSet } from '../anim/gltf';
 import { CharacterRenderer } from '../anim/characters';
 import { COATFINISH, SOLIDGLASS } from '../scene/stuff';
 import { MARKING_TEXEL } from '../scene/markings';
-import { LOOK, lookKeptOf, placeOfQuery, setLookPlace } from '../scene/look';
+import { lookKeptOf, placeOfQuery, setLookPlace } from '../scene/look';
 import { Input } from './input';
 import { FollowCamera } from './camera';
 import { FIXEDSTEP, planTicks } from './fixedstep';
@@ -44,7 +44,7 @@ import { HOSTED, coopFromUrl, coopInvite, coopRows } from '../ui/coop';
 import { commandText } from '../net/start';
 import { netKeyed, netLeave } from '../net/door';
 import { NETPLAY, NET_JOIN } from '../net/address';
-import { keptName, keptNotes, tapeAddress, tapeAsked } from './tapepage';
+import { keptBeside, keptName, tapeAddress, tapeAsked } from './tapepage';
 import { sessionId } from './session';
 import { TapeBar, type Played, type Sees } from '../tape/bar';
 import { TapeMap } from '../tape/map';
@@ -56,7 +56,9 @@ import { backToGame, gameUp } from '../tape/format';
 import { keptStore } from '../tape/keptui';
 import { cloudNotes } from '../cloud/cloud';
 import { buildName } from './buildname';
-import { HandTape } from '../tape/handtape';
+import { HandTape, TapeRefused } from '../tape/handtape';
+import { MODULE } from '../tape/module';
+import { refusedCard } from '../tape/refused';
 import { drawCloud } from './drawcloud';
 import { cloudAdopt } from '../cloud/cloud';
 import { tellRedCards } from '../cloud/redcards';
@@ -146,7 +148,7 @@ async function main(): Promise<void> {
   let refused: string | null = null; if (q.has('bench') && !q.has(BENCH_RUN_KEY)) { refused = benchBegin(false); if (refused === null) return; console.info(`benchmark: ${refused}`); }
   if (priceLevelsPage(q)) return;
   gameKeysBoot(q, walkInNow); bootTextSize(q, kitPicture);
-  LOOK.on = true; setLookPlace(placeOfQuery(q));
+  setLookPlace(placeOfQuery(q));
   const name = coop?.start.file ?? (/^[\w.-]+\.json$/.test(q.get('levelFile') ?? '') ? q.get('levelFile')! : 'office.json'), at = (p: string) => new URL(p, document.baseURI).href;
 
   SFX_TABLE.was = q.has('oldsounds'); SFX_TABLE.redone = q.has('newsounds'); if (q.has('bench') || q.has(BENCH_RUN_KEY)) SFX_WARM.on = false; else if (!q.has('mute')) warmSfx();   // (the sounds, a voice at a time in idle moments)
@@ -156,7 +158,7 @@ async function main(): Promise<void> {
   const chP = loadCharacterSet(at('assets/ual/AnimationLibrary_Godot_Standard.gltf'), castUrlFor(location.search, document.baseURI)); chP.then(() => boot.span('gltf', tBoot), () => { /* awaited below */ });
   const tFiles = performance.now(), filesP = Promise.all([tape ? new Uint8Array(0) : coop ? bytesOf(`levels/${name}`) : levelBytes(name).then(b => { boot.span('level', tFiles); return b; }), bytesOf(at('assets/ual/AnimationLibrary_Godot_Standard.gltf')), bytesOf(at('assets/ual/AnimationLibrary_Godot_Standard.bin')), bytesOf(at(`assets/chars/${CAST_FILE}`)), bytesOf(at(`assets/chars/${CAST_FILE_LOOK}`))]); filesP.catch(() => { /* awaited below */ });
   boot.expose();
-  const face = await fetchFace(say, () => { throw new Error('the game asked a die the page never hands in'); });
+  const face = await fetchFace(say); MODULE.name = face.name ?? '';
   // THE DESK: the cards before a game ask the module, and what a press keeps goes in this machine's store, where the next page's start reads it
   { const C = new Commands(); setDesk(new Desk(face.exports as unknown as DeskFace, face.exports.memory as WebAssembly.Memory, (key, text) => { try { if (text) localStorage.setItem(key, text); else localStorage.removeItem(key); } catch { /* no store: nothing is kept */ } }));
     C.words(location.search); machineBefore(q, name, C); desk().do(C); }
@@ -171,7 +173,8 @@ async function main(): Promise<void> {
   boot.mark('module'); const tGame = performance.now();
   const game = new DrawGame(face), asked0 = Number(q.get('seed') ?? NaN), seed = Number.isFinite(asked0) ? asked0 >>> 0 : crypto.getRandomValues(new Uint32Array(1))[0], sid = sessionId(); let built = '';
   const unkept = kitPicture || !!tape || !!coop || ownPage(q);   // (what this machine keeps of the runs played: a page that plays a run of its own is nobody's)
-  const play = tape ? new DrawPlay(game, tape) : null;
+  const named = q.get(PLAYTAPE) ?? '', beside = tape && keptName(named) ? await keptBeside(named) : null;   // (a file says of no module that it was played on it)
+  const play = tape ? new DrawPlay(game, tape, !!beside && !beside.other) : null;
   const net = coop ? new DrawNet(coop.door, coop.start, game, () => deaf()) : null; let deaf = (): void => { /* nothing sounds yet */ };
   if (play) play.start({ mannequin, mannequinBin, cast, castLook });
   else if (net) net.start({ level, mannequin, mannequinBin, cast, castLook });
@@ -453,10 +456,10 @@ async function main(): Promise<void> {
     turned: up => { paused = up; if (up) { game.commands.letGo(); hud?.tabShow(false); } else { thaw = true; asked = false; } input.keys.clear(); input.buttons = 0; input.endFrame(); input.lockExcept = up ? new Set() : null; afresh(); } });
   onEnded = () => { if (!kit && !play && !ownPage(q)) pause.end(); };   // (a run's page has no end card: the next is its own)
   const cloud = kitPicture || play ? null : drawCloud(q, { sid, store: !unkept && keeps(q) ? keptStore() : null, gpu, engine, quality, game, measure, mission: desk().brief(location.search).title || (q.get('levelFile') ?? ''), offBooks: ownPage(q) || !!net, live: () => !title && !stopped() && !document.hidden && game.view().live, still: () => stopped() || measure.sweep.active });
-  if (play && freeCam) { const named = q.get(PLAYTAPE) ?? '', mine = keptName(named), notes = mine ? await keptNotes(named) : [];
+  if (play && freeCam) { const mine = !!beside, { notes, other } = beside ?? { notes: [], other: false };
     const map = new TapeMap({ floor: () => game.floor(), now: () => game.map(), view: () => freeCam.view(), notes, to: (x, z) => freeCam.to([x, freeCam.view().look[1], z]), at: () => played.at });
     const sees: Sees = { get fog() { return watched.fog; }, get tube() { return watched.tube; }, get fogged() { return D.u[D.at[Section.fog] + Fog.on] !== 0; }, get runs() { return D.f[view() + View.night] > 0.5; }, get lit() { return watched.tube ?? this.runs; }, set: seesAs };
-    bar = new TapeBar({ played, sees, map, cam: freeCam, canvas, title: desk().brief(location.search).title || name.replace(/\.json$/, ''), notes, keep: mine ? async all => { const ok = await keptStore().patch(named, { notes: all }); if (ok) void cloudNotes(q, keptStore()).catch(() => { /* on the next round */ }); return ok; } : null,
+    bar = new TapeBar({ played, sees, map, other, cam: freeCam, canvas, title: desk().brief(location.search).title || name.replace(/\.json$/, ''), notes, keep: mine ? async all => { const ok = await keptStore().patch(named, { notes: all }); if (ok) void cloudNotes(q, keptStore()).catch(() => { /* on the next round */ }); return ok; } : null,
       back: () => backToGame(named, location.pathname), begun: () => { audio.start(); input.focusGame(); } });
     laneTape = { ticks: played.total, key: named, label: named.split('/').pop() ?? named, get f() { return played.at; }, get speed() { return played.pace; }, get seeking() { return played.seeking; }, get playing() { return !played.paused; }, play: () => { if (played.paused) bar!.toggle(); }, pause: () => { played.paused = true; }, seek: f => played.seek(f), drawn: null };
     soundLanes(laneTape, audio); }
@@ -485,7 +488,7 @@ tapConsole();   // (before the page boots: its own complaints are held until the
 tellRedCards(() => kitPicture);
 const uncaught = (head: string, e: unknown): void => { if (document.getElementById('fatal')?.style.display !== 'flex') showFatal(`${head}\n\n${(e as Error)?.stack ?? e}`); };
 window.addEventListener('error', ev => { if (!/ResizeObserver loop/.test(ev.message) && !(ev.error instanceof GameLost)) uncaught('Uncaught error:', ev.error ?? ev.message); });
-window.addEventListener('unhandledrejection', ev => { if (!(ev.reason instanceof GameLost)) uncaught('Unhandled promise rejection:', ev.reason); });
+window.addEventListener('unhandledrejection', ev => { if (!(ev.reason instanceof GameLost) && !(ev.reason instanceof TapeRefused)) uncaught('Unhandled promise rejection:', ev.reason); });
 // (a tool waits for the programs made behind the start too: until then a pass draws its stand-in, and the fog of war is the lit one)
 const ready = main(); (window as unknown as { __ready: Promise<void> }).__ready = ready.then(() => laterIdle());
-ready.catch(e => { console.error(e); if (kitPicture) kitNone(); if ((e as Error)?.name === 'RustGameError') showFatal((e as Error).message, { report: { message: (e as Error).message.slice(0, 400), stack: (e as Error).stack, stage: 'rust game' } }); else showFatalError(e); });
+ready.catch(e => { if (e instanceof TapeRefused) { refusedCard(e.message); return; } console.error(e); if (kitPicture) kitNone(); if ((e as Error)?.name === 'RustGameError') showFatal((e as Error).message, { report: { message: (e as Error).message.slice(0, 400), stack: (e as Error).stack, stage: 'rust game' } }); else showFatalError(e); });

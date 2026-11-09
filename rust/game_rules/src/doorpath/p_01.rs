@@ -656,8 +656,6 @@ fn hold_clocks(g: &mut Game, gd: GuardId, t: f64, p: V3) {
 
 /// `gd.path === W.arr`: W.arr holds the man's path_serial as this walk laid it. (doorpath.ts:336, 337)
 fn path_is_arr(g: &Game, gd: GuardId, w: &crate::doorpath::Walk) -> bool {
-    crate::game::b_tap::tap(crate::game::b_tap::DOORPATH_ARR_ASKED);
-    if w.arr != Some(g.gd[gd].path_serial) { crate::game::b_tap::tap(crate::game::b_tap::DOORPATH_ARR_NEW); }
     w.arr == Some(g.gd[gd].path_serial)
 }
 
@@ -835,7 +833,7 @@ fn tick_walk(g: &mut Game, gd: GuardId, w: &mut crate::doorpath::Walk, t: f64, d
 }
 
 /// Once a frame, after the orders have posed their men and before anybody moves. (doorpath.ts DoorPath.tick)
-#[doc(hidden)] pub fn door_path_tick__body(g: &mut crate::game::Game, dt: f64) {
+pub fn door_path_tick(g: &mut crate::game::Game, dt: f64) {
     let t = g.time;
     // (a copy of the list, as there; a walk's frame removes only its own row, and writes the row back when it stays: set keeps the Map's order)
     for gd in g.door_path.walks.keys() {
@@ -846,15 +844,6 @@ fn tick_walk(g: &mut Game, gd: GuardId, w: &mut crate::doorpath::Walk, t: f64, d
             g.door_path.walks.set(gd, w);
         }
     }
-}
-
-
-#[doc(hidden)] pub fn door_path_tick(g: &mut crate::game::Game, dt: f64) {
-    use crate::io::Io;
-    if g.taps & (1u64 << 19) == 0 { return door_path_tick__body(g, dt); }
-    let mut o = crate::io::W::new(); dt.w(&mut o);
-    door_path_tick__body(g, dt);
-    crate::out_events::push_tap(g, 19, &o.b, &[]);
 }
 
 #[cfg(test)]

@@ -57,7 +57,7 @@ Every run you play is kept as a replay. `F7` saves it right away, `Shift+F7` wat
 | `/?bench`, or Extras ▸ Benchmark on the title | hands off, about seven minutes: three floors played by the game itself (night snow, a block with the lights out, a storm), then every quality level and heavy feature timed on your machine. It ends on a short text to copy (your GPU, load times, frames a second) with no file saved. A build with a backend also sends the numbers to the developer, which you can turn off in Options; a build with none sends nothing |
 | `cargo test -p game_start` (in `rust/`) | the game's rules, asked of the game itself |
 | `bun run tools/qa/checks.ts` | the picture's code, the page, the menus, the sounds and the level files, without a GPU |
-| `bun run qa` | typecheck, every mission played to its end, a tour and a soak |
+| `bun run qa` | typecheck, the checks above, and `gate`: every mission stood and eight played, each held to its pins (`rust/game_start/README.md`, "The gate") |
 
 `bun run typecheck` and `bun run qa` expect a TypeScript compiler unpacked at `vendor/typescript`, which is not in the repo.
 Any recent `tsc` does the typecheck: `tsc --noEmit -p tsconfig.json`.
@@ -65,10 +65,11 @@ Any recent `tsc` does the typecheck: `tsc --noEmit -p tsconfig.json`.
 ## Layout
 
 ```
-src/render   passes, WGSL shaders, lights      src/game    the simulation: player, squad, enemies, doors, kit
-src/smoke    the smoke solver                  src/scene   level format, loader, collision, sound paths
+rust/        the game: its rules, its world, what a page is told to draw
+src/render   passes, WGSL shaders, lights      src/draw    the page's half of what the game hands it
+src/smoke    the smoke solver                  src/scene   level format, mission lists, the box world as it is drawn
 src/anim     glTF loader, skinning             src/audio   mixer, score, synthesized effects
-src/ui       menus, HUD, the debugger          src/host    one stand-up and frame order for page and harness
+src/ui       menus, HUD, the debugger          src/host    the page: its boot, frame and cards
 src/tape     replays: the tape, its bar, the map
 levels/      every level as JSON               tools/      dev server, build, level generators, qa/
 public/      models and animations             docs/       level format, notes, captures

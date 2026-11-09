@@ -1,10 +1,9 @@
-//! The types of `cmdring`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `cmdring`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: RingState, src/game/cmdring.ts:201)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct RingState {
     pub ax: f64,
     pub ay: f64,
@@ -22,32 +21,8 @@ pub struct RingState {
     pub clear: Option<bool>,
     pub pt: Option<f64>,
 }
-impl RingState {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RingState {
-            ax: 0.0,
-            ay: 0.0,
-            z: 0.0,
-            t0: 0.0,
-            lit: 0.0,
-            armed: false,
-            free: None,
-            more: None,
-            at: None,
-            ox: None,
-            oy: None,
-            mx: None,
-            my: None,
-            clear: None,
-            pt: None,
-        }
-    }
-}
-impl Default for RingState { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: RingView, src/game/cmdring.ts:210)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct RingView {
     pub x: f64,
     pub y: f64,
@@ -57,45 +32,16 @@ pub struct RingView {
     pub caption: String,
     pub wedges: Vec<crate::cmdring::RingViewWedgesItem>,
 }
-impl RingView {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RingView {
-            x: 0.0,
-            y: 0.0,
-            zoom: 0.0,
-            lit: 0.0,
-            tone: None,
-            caption: String::new(),
-            wedges: Vec::new(),
-        }
-    }
-}
-impl Default for RingView { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/cmdring.ts:210 RingView.wedges, src/game/cmdring.ts:210)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct RingViewWedgesItem {
     pub key: f64,
     pub text: String,
     pub off: bool,
     pub opens: bool,
 }
-impl RingViewWedgesItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RingViewWedgesItem {
-            key: 0.0,
-            text: String::new(),
-            off: false,
-            opens: false,
-        }
-    }
-}
-impl Default for RingViewWedgesItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: SeatRow, src/game/cmdring.ts:248)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct SeatRow {
     pub key: Option<f64>,
     pub hot_key: Option<String>,
@@ -104,23 +50,8 @@ pub struct SeatRow {
     pub targets: Vec<String>,
     pub listed: Option<Vec<String>>,
 }
-impl SeatRow {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SeatRow {
-            key: None,
-            hot_key: None,
-            opens: None,
-            free: None,
-            targets: Vec::new(),
-            listed: None,
-        }
-    }
-}
-impl Default for SeatRow { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: FlatRow, src/game/cmdring.ts:272)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct FlatRow {
     pub id: String,
     pub key: Option<f64>,
@@ -130,23 +61,7 @@ pub struct FlatRow {
     pub targets: Vec<String>,
     pub listed: Option<Vec<String>>,
 }
-impl FlatRow {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FlatRow {
-            id: String::new(),
-            key: None,
-            hot_key: None,
-            opens: None,
-            free: None,
-            targets: Vec::new(),
-            listed: None,
-        }
-    }
-}
-impl Default for FlatRow { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum RingHint {
     Door,
@@ -171,45 +86,20 @@ impl RingHint {
     }
 }
 
-/// (TypeScript: inline at src/game/cmdring.ts:255 ringSeats ->, src/game/cmdring.ts:255)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct RingSeats {
     pub row: Vec<f64>,
     pub more: f64,
     pub over: Vec<f64>,
 }
-impl RingSeats {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RingSeats {
-            row: Vec::new(),
-            more: 0.0,
-            over: Vec::new(),
-        }
-    }
-}
-impl Default for RingSeats { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/cmdring.ts:287 flatSeats ->, src/game/cmdring.ts:287)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct FlatSeats {
     pub row: Vec<f64>,
     pub more: f64,
     pub over: Vec<f64>,
 }
-impl FlatSeats {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FlatSeats {
-            row: Vec::new(),
-            more: 0.0,
-            over: Vec::new(),
-        }
-    }
-}
-impl Default for FlatSeats { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum RingLatch {
     Stay,

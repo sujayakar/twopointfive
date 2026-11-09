@@ -2,23 +2,23 @@
 // mgsv did'): the rows and the sheet the one starting page is built on (ui/startpage.ts, which lays them out and hands a pick on to the kit step, ui/loadout.ts):
 // EVERY run the build has — the desk's rows (view/desk.ts `start`) in their groups, the highlighted mission's sheet beside them: a floor plan, title, place, its
 // line, the team, whether it leans quiet or loud, 'untuned', and THE SETTINGS' ROWS, each drawn from the desk's `sheet` and pressed by its `set`. Every row is a link
-// to its own URL (StartRow.link: what main.ts boots), so a pasted URL starts the same run.
+// to its own URL (StartRow.link: what host/drawpage.ts boots), so a pasted URL starts the same run.
 //
 // ITS OWN LAYER (#missions, over #menu): the boot card can open it while the shaders compile (it needs nothing of the engine), and Menu re-rendering the
 // card under it does not touch it. KEYS (no held keys, nothing past 5): W S / ↑ ↓ move · A D / ← → Standard | Hard · H the next hour (Shift+H the one before) · J the next weather (Shift+J) · K the next way in (Shift+K), on a level with more than one ·
 // Enter / Space on · Esc back — taken
-// by ONE capture listener registered when this module loads, i.e. before main.ts's own Esc handler, so Esc here goes back instead of closing the card.
+// by ONE capture listener registered when this module loads, i.e. before host/drawpage.ts's own Esc handler, so Esc here goes back instead of closing the card.
 // Plain DOM, styled in index.html (#missions …). What is the page's here is the plan sheet, the pictures, the DOM, the keys, and the row last started on this machine.
 import { desk } from '../view/desk';
 import type { Setting, SheetView, StartRow, StartView } from '../view/read';
 import { menuTheme } from './theme';
-import officeData from '../../levels/office.json' with { type: 'json' };   // (the bundled office — scene/level.ts imports the same module: its plan needs no server)
+import officeData from '../../levels/office.json' with { type: 'json' };   // (the bundled office — tools/levels/lib/level.ts imports the same module: its plan needs no server)
 import { artFrom, drawSheet, type ArtData, type PlanArt } from './planArt';   // (the map sheet's picture: the place as a model)
 import { stillOf, drawStill } from './menuStills';   // (a card's picture: the mission's key art, where one was made)
 
 /** one row of the list, as the desk says it */
 export type Mission = StartRow;
-/** the seams other screens set: `startSolo` is the start card's Start (set by ui/menu.ts only while the real start card is up) */
+/** the seams other screens set: `startSolo` is the start card's Start (set only while the real start card is up) */
 export const MISSIONS: { startSolo: ((card?: boolean) => void) | null;
   /** THE KEYS ARE ELSEWHERE ON THE LIST'S OWN PAGE (ui/startpage.ts: the loadout mounted in the sheet has them): while it says so the list takes no key */
   keysAway: (() => boolean) | null } = { startSolo: null, keysAway: null };
@@ -218,7 +218,7 @@ export function missionsKey(e: { code: string; repeat?: boolean; ctrlKey?: boole
   return false;
 }
 if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
-  // registered at module load = ahead of every listener main.ts adds at boot (its Esc handler, the Input class): a key the list takes stops here. Enter / Space
+  // registered at module load = ahead of every listener host/drawpage.ts adds at boot (its Esc handler, the Input class): a key the list takes stops here. Enter / Space
   // on one of the list's own BUTTONS (Tab put the focus there) is that button's, not a pick.
   const onButton = (e: KeyboardEvent) => (e.code === 'Space' || e.code === 'Enter' || e.code === 'NumpadEnter') && !!open && e.target instanceof HTMLElement && e.target.tagName === 'BUTTON' && open.root.contains(e.target);
   // Tab stays on the list while it is up: Back → Standard → Hard → the five hours → the seven weathers → the ways in (where the mission has them) → round and round (the card underneath is inert, and a Tab that reached
@@ -235,11 +235,11 @@ if (typeof window !== 'undefined' && typeof window.addEventListener === 'functio
   window.addEventListener('keyup', e => { if (open && !MISSIONS.keysAway?.() && !onButton(e) && (e.code === 'Space' || e.code === 'Enter' || e.code === 'NumpadEnter')) e.preventDefault(); }, { capture: true });   // (a link still focused under the list is not followed by the key's release)
 }
 
-/** 'Quit to scenarios' across a page load (a scenario on a level file of its own quits by loading the bare URL — main.ts): ask BEFORE the load, and the start
+/** 'Quit to scenarios' across a page load (a scenario on a level file of its own quits by loading the bare URL — host/drawpage.ts): ask BEFORE the load, and the start
  *  card that boots opens the page. One shot, this tab only. */
 const REOPEN = 'twopointsix.missions.reopen';
 export function reopenMissionsAfterLoad() { try { globalThis.sessionStorage?.setItem(REOPEN, '1'); } catch { /* no store */ } }
-/** the same question asked by the boot card (ui/menu.ts) and the boot (main.ts), who put the page up: read once, nothing opened here */
+/** the same question asked by the boot card and the boot (host/drawpage.ts), who put the page up: read once, nothing opened here */
 export function missionsReopenAsked(): boolean { let asked = false; try { asked = globalThis.sessionStorage?.getItem(REOPEN) === '1'; globalThis.sessionStorage?.removeItem(REOPEN); } catch { /* no store */ } return asked; }
 
 // ---- THE MAP SHEET: the level file's own boxes as a MODEL of the place — tilted, the walls cut, lit like a thing on a table (ui/planArt.ts) —, fitted to the canvas by the
@@ -248,11 +248,11 @@ export function missionsReopenAsked(): boolean { let asked = false; try { asked 
 interface Plan { min: [number, number]; max: [number, number];
   /** the same file as the map sheet's model (ui/planArt.ts): its ground, what stands on it back to front, its lamps */ art: PlanArt;
   /** where the team starts, [x, z], by the mission's kind (a room clear: one per way in, the level's own first; 'solo' = the level's own spawn) */ starts: Record<string, number[][]>;
-  /** wall charges the level's own room clear ISSUES the squad (the file's scenarios.roomClear.wallCharges — game/issue.ts raises the bag to it at staging); 0 = none */ issued: number;
+  /** wall charges the level's own room clear ISSUES the squad (the file's scenarios.roomClear.wallCharges — rust/game_rules/src/issue raises the bag to it at staging); 0 = none */ issued: number;
   /** the block in which the level's file ISSUES the squad its own kit (scenarios.issue: every staging wears the issue cards with its fields written over them, whatever this machine keeps), as its text; '' = none */ kit: string;
   /** per way in (the level's own first), whether the file says where the team stands for the Team & kit picture (scenarios.kitView.ways — ui/kitView.ts) */ kv: boolean[];
   /** what the place asks of a kit, counted off the file (the Team & kit step's brief — ui/kitBrief.ts): doors found locked · those of them that are steel · the rescue's hostages */ needs: PlaceNeeds;
-  /** the rescue's side door (scenarios.rescue.side.door) is one of the locked ones: its staging unlocks it (game/rescue.ts), so a rescue finds one fewer */ sideLocked: boolean; sideSteel: boolean }
+  /** the rescue's side door (scenarios.rescue.side.door) is one of the locked ones: its staging unlocks it (rust/game_rules/src/rescue), so a rescue finds one fewer */ sideLocked: boolean; sideSteel: boolean }
 export interface PlaceNeeds { locked: number; steel: number; hostages: number; /** the map marks where the team goes in (a quiet mission's has no mark) */ marked: boolean }
 interface PlanData extends ArtData { scenarios?: { roomClear?: { wallCharges?: unknown; team?: { sam?: number[] }; starts?: { sam?: number[] }[] }; nightBreach?: { team?: { sam?: number[] } }; rescue?: { team?: { sam?: number[] }; hostages?: unknown; side?: { door?: unknown } }; issue?: { members?: unknown }; kitView?: { ways?: { door?: unknown; span?: unknown }[] } }; mission?: { playerSpawn?: number[] } }
 const OFFICE = 'office.json';
@@ -302,7 +302,7 @@ export function issuedWalls(file: string): Promise<number> { return planOf(file)
  *  carries what — the same fetch, once per file */
 export function issuedKit(file: string): Promise<string> { return planOf(file).then(P => P?.kit ?? ''); }
 /** what this mission's place asks of a kit, AS THE MISSION IS STAGED (null: the file did not come) — the same fetch, once per file. The hostages are a rescue's, and
- *  a rescue finds its side door unlocked (game/rescue.ts); the mark is the one the map sheet draws for this kind of mission */
+ *  a rescue finds its side door unlocked (rust/game_rules/src/rescue); the mark is the one the map sheet draws for this kind of mission */
 export function placeNeeds(m: Mission): Promise<PlaceNeeds | null> { const kind = m.kind, rescue = kind === 'rescue';
   return planOf(m.level).then(P => (P ? { locked: P.needs.locked - (rescue && P.sideLocked ? 1 : 0), steel: P.needs.steel - (rescue && P.sideSteel ? 1 : 0), hostages: rescue ? P.needs.hostages : 0, marked: (P.starts[kind] ?? []).length > 0 } : null)); }
 /** which of this level file's ways in have a Team & kit picture staged for them (none: the file has no scenarios.kitView block, or did not come) — the same fetch,

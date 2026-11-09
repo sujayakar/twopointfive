@@ -55,7 +55,7 @@ fn state_key(g: &mut Game) -> PlayerId {
 /// This view's state, the row itself, made if it is not there. (squadthrow.ts state)
 pub fn state<'g>(g: &'g mut crate::game::Game) -> &'g mut crate::squadthrow::State {
     let k = crate::seats::view_key(g, &crate::seats::here(g));
-    g.m.squadthrow.states.get_or_insert_with(k, || State::zeroed())
+    g.m.squadthrow.states.get_or_insert_with(k, || State::default())
 }
 
 /// The thing leaves his hand; the count is taken already. (squadthrow.ts throwIt)
@@ -199,7 +199,7 @@ pub fn squad_lend(g: &crate::game::Game, seat: &crate::seats::SeatRef, gd: Guard
                 fit: w.fit,
                 tries: w.tries,
                 set_line: None,
-                ..LentBack::zeroed()
+                ..LentBack::default()
             })
         }
         _ => None,
@@ -478,7 +478,7 @@ pub fn rows(g: &mut crate::game::Game) -> Vec<OrdersOrderDefId> {
         hot_key: Some(g.k.frag.order_key.clone()),
         targets: vec![crate::orders::TargetKind::Floor],
         free: Some(true),
-        ..crate::orders::OrderDef::zeroed()
+        ..crate::orders::OrderDef::default()
     });
     let open = crate::orders::squad_orders_row(g, open);
     let mut out = vec![open];
@@ -487,7 +487,7 @@ pub fn rows(g: &mut crate::game::Game) -> Vec<OrdersOrderDefId> {
             page: Some(String::from(THROW_PAGE)),
             targets: vec![crate::orders::TargetKind::Floor],
             free: Some(true),
-            ..crate::orders::OrderDef::zeroed()
+            ..crate::orders::OrderDef::default()
         });
         out.push(crate::orders::squad_orders_row(g, one));
     }

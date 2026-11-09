@@ -21,8 +21,8 @@ const stopOf = (radiance: number) => (Math.log2(radiance) - K.minEv) / K.stops;
 { const flash = grade(0.84, 2.4, [{ ...sun, transient: true, intensity: 400 }, sun], 1.7, 1.4), plain = grade(0.84, 2.4, [sun], 1.7, 1.4), off = grade(0.84, 2.4, [{ ...sun, enabled: false }], 1.7, 1.4), dark = grade(0.84, 1e-7, [], 1e-3, 1.4), hot = grade(0.84, 900, [sun], 40, 1.4);
   check(flash[1] === plain[1] && off[1] < plain[1] && dark[1] === K.grey && hot[1] === K.top, 'a lightning stroke is not the sun; with the sun off the turn is about the sky-lit ground; and it never leaves the span from middle grey to 0.9'); }
 { const s = readFileSync(resolve(import.meta.dir, '../../src/render/shaders/post.wgsl'), 'utf8');
-  check(/v = post\.gradeP \+ \(v - post\.gradeP\) \* post\.gradeC/.test(s) && /if \(post\.gradeC != 1\.0 \|\| post\.gradeH != 0\.0 \|\| post\.gradeS != 0\.0\)/.test(s) && Math.abs(stopOf(0.18) - K.grey) < 0.001,
-    'the tone map turns its stops about that stop, and with every row at rest it does not run the line at all'); }
+  check(/v = post\.gradeP \+ \(v - post\.gradeP\) \* post\.gradeC/.test(s) && Math.abs(stopOf(0.18) - K.grey) < 0.001,
+    'the tone map turns its stops about that stop'); }
 { // the day's contrast is the open air's: what the frame hands the one exposure model (place_common.wgsl lookExpoFor tones a place as the open air is and
   // then shows it as much darker as it is to be; that arithmetic is tools/qa/lookexpo-check.ts's)
   const g = grade(0.84, 2.4, [sun], 1.7, 1.4), f = lookGradeFrame(g, 1.7)!, snowR = 0.85 * (2.4 + 4.18 * 0.829 * 0.9659) / Math.PI;

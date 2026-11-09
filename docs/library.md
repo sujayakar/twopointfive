@@ -19,8 +19,8 @@ A piece is something a level asks a kit for by name. Each row is one call laid a
 
 | Kit | File | Pieces | Its sections |
 |---|---|---|---|
-| gwotKit | `src/scene/gwotKit.ts` | 80 | walls · what is done to a wall's face · ground · cloth · furniture · stores & cover · machines & vehicles · lights |
-| officeKit | `src/scene/officeGen.ts` | 23 | glass · walls · props · loose props · set dressing helpers · lights · doors · what is fixed to a wall's face |
+| gwotKit | `tools/levels/lib/gwotKit.ts` | 80 | walls · what is done to a wall's face · ground · cloth · furniture · stores & cover · machines & vehicles · lights |
+| officeKit | `tools/levels/lib/officeGen.ts` | 23 | glass · walls · props · loose props · set dressing helpers · lights · doors · what is fixed to a wall's face |
 | livedKit | `tools/levels/livedKit.ts` | 18 | the floor · furniture · clutter · loose things |
 | livedPieces | `tools/levels/livedPieces.ts` | 37 | carcasses · paper, plans, books · instruments and tools · safes · on a wall · on a desk · on the floor · loose |
 | livedQuiet | `tools/levels/lived-quiet.ts` | 11 |  |
@@ -66,7 +66,7 @@ It is no second way of building the name.
 
 ## gwotKit
 
-`src/scene/gwotKit.ts`
+`tools/levels/lib/gwotKit.ts`
 
 ### gwotKit: walls
 
@@ -169,7 +169,7 @@ It is no second way of building the name.
 | **pump**(x, z, yaw = 0) | COVER: a hand PUMP on its concrete pad (the pad a walk-over) with a bucket | solid to 1.08 | 2.82 × 2.4 × 1.08 | 6 solid, 2 drawn | paintGreen, damp, block, GWOT_PALETTE.iron, plasticBlue | gwot-yard |
 | **pickup**(x, z, yaw = 0, body = 'truckWhite', opts = {}) | COVER (full height at the cab): a PICKUP, 5.0 × 1.8, nose toward local +X: cab, open bed, tailgate. `load`: what rides in the bed; `mount`: a pedestal gun in the bed (the "technical") | solid to 1.71 | 5.04 × 1.82 × 1.71 | 23 solid, 3 round, 2 markings | truckWhite, GWOT_PALETTE.rubber, plasticBlack, drumBlue, plasticWhite, truckRed, glassDark, rust | gwot-yard |
 | **van**(x, z, yaw = 0, body = 'truckWhite') | COVER (head high): a PANEL VAN 4.9 × 1.8 × 1.95, nose toward local +X, its two back doors standing open on the load bay (the spot a stride behind them is local (−3.2, 0): where a man is put in) | solid to 1.95 | 5.63 × 2.65 × 1.95 | 23 solid | truckWhite, GWOT_PALETTE.rubber, plasticBlack, plasticWhite, truckRed, glassDark | library-hall |
-| **lorry**(x, z, yaw = 0) | COVER (full height): a TWO-AXLE LORRY with a canvas tilt, 7 m, nose toward local +X (the pass's, where it stopped when the road shut). Like every vehicle here it hands back the shapes its boxes say (scene/carShapes.ts), `tops` among them: what a level lays on its roof goes by `lay` | solid to 1.95 | 6.68 × 2.34 × 2.2 | 20 solid | GWOT_PALETTE.rubber, poplar, truckRed, GWOT_PALETTE.iron, plasticWhite, glassDark, GWOT_PALETTE.canvas, woodGrey | gwot-yard |
+| **lorry**(x, z, yaw = 0) | COVER (full height): a TWO-AXLE LORRY with a canvas tilt, 7 m, nose toward local +X (the pass's, where it stopped when the road shut). Like every vehicle here it hands back the shapes its boxes say (tools/levels/lib/carShapes.ts), `tops` among them: what a level lays on its roof goes by `lay` | solid to 1.95 | 6.68 × 2.34 × 2.2 | 20 solid | GWOT_PALETTE.rubber, poplar, truckRed, GWOT_PALETTE.iron, plasticWhite, glassDark, GWOT_PALETTE.canvas, woodGrey | gwot-yard |
 | **motorbike**(x, z, yaw = 0, tank = 'truckRed') | COVER (waist, thin): a small MOTORBIKE on its stand, nose toward local +X | solid to 1.04 | 1.96 × 0.64 × 1.04 | 10 solid | GWOT_PALETTE.iron, GWOT_PALETTE.rubber, galv, plasticBlack, truckRed | gwot-yard |
 | **handcart**(x, z, yaw = 0, load = 'none') | COVER (waist): a flat HANDCART (karachi) 1.7 × 0.95 on two wheels, shafts toward local +X; `load`: sacks, produce crates or nothing | solid to 0.97 | 2.52 × 1.11 × 0.97 | 9 solid, 2 markings | sack, woodGrey, GWOT_PALETTE.rubber, poplar | gwot-yard |
 | **stall**(x, z, yaw = 0, w = 2.2, awning = 'tarpBlue') | COVER (waist at the counter): a MARKET STALL `w` wide: a skirted counter of produce trays on local −Z, the keeper's striped awning on four poles behind it | solid to 2.15 | 2.5 × 2.13 × 2.18 | 15 solid, 10 markings | ply, woodGrey, GWOT_PALETTE.canvas, poplar, tarpBlue | gwot-yard |
@@ -190,7 +190,7 @@ It is no second way of building the name.
 
 ## officeKit
 
-`src/scene/officeGen.ts`
+`tools/levels/lib/officeGen.ts`
 
 ### officeKit: glass
 
@@ -520,7 +520,7 @@ Pieces counts the catalogue's pieces that wear the row, darkened or not, as laid
 
 ### OFFICE_PALETTE
 
-`src/scene/officeGen.ts`: the office's paints.
+`tools/levels/lib/officeGen.ts`: the office's paints.
 
 | Paint | Colour (linear) | Finish | Does | Underfoot | Pieces |
 |---|---|---|---|---|---|
@@ -554,7 +554,7 @@ Pieces counts the catalogue's pieces that wear the row, darkened or not, as laid
 
 ### KIT_PALETTE
 
-`src/scene/levelKit.ts`: the map kit's copy of the office's paints.
+`tools/levels/lib/levelKit.ts`: the map kit's copy of the office's paints.
 
 | Paint | Colour (linear) | Finish | Does | Underfoot | Pieces |
 |---|---|---|---|---|---|

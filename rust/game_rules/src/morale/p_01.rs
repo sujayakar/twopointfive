@@ -85,7 +85,7 @@ pub fn mind<'g>(g: &'g mut crate::game::Game, gd: GuardId) -> &'g mut crate::mor
         let id = g.ch[g.gd[gd].ch].id;
         let s = Mind { shock: 0.0, alone: false, dark: false, lit: 0.0, ask: js::rem(id, 4.0) / 4.0 * g.k.morale.ask_secs, rung: 0.0, green: false, leader_down: false, fall: -1.0, lost: false, by: None, heard: -1.0, said: false, broke_t: 0.0,
             act: MoraleAct::None, t: 0.0, hole: None, goal: None, rounds: 0.0, next: 0.0, calls: 0.0, call_t: 0.0, baits: 0.0, at_hole: false, bark: g.k.morale.bark_secs, shout: false,
-            drive: false, drive_t: -1.0, script: crate::game::GuardScript::zeroed() };
+            drive: false, drive_t: -1.0, script: crate::game::GuardScript::default() };
         g.m.morale.state_of.set(gd, s);
         stand(g, gd, Some(true));   // (the row is set first: stand writes it)
     }
@@ -534,7 +534,7 @@ pub fn round(g: &mut crate::game::Game, gd: GuardId, dt: f64, every: f64, of: cr
     let w = g.gd[gd].weapon;
     if !crate::weapons::firearm_fire(g, w) { return false; }
     let spread = g.k.morale.spread;
-    crate::combat::fire_weapon(g, c, at, false, Some(&crate::combat::FireOpts { steady: Some(true), spread: Some(spread), blind: Some(true), ..crate::combat::FireOpts::zeroed() }));
+    crate::combat::fire_weapon(g, c, at, false, Some(&crate::combat::FireOpts { steady: Some(true), spread: Some(spread), blind: Some(true), ..crate::combat::FireOpts::default() }));
     let r = g.m.morale.state_of.get_mut(gd).unwrap();
     r.rounds -= 1.0;
     r.next = every;
@@ -665,7 +665,7 @@ mod tests {
     /// the TypeScript's own truth: a steady man breaks alone AND dark; a green man alone, or lost with his leader down
     #[test]
     fn who_may_break() {
-        let m_ = |green, alone, dark, leader_down, lost| Mind { green, alone, dark, leader_down, lost, ..Mind::zeroed() };
+        let m_ = |green, alone, dark, leader_down, lost| Mind { green, alone, dark, leader_down, lost, ..Mind::default() };
         assert!(may_break(m_(false, true, true, false, false)));
         assert!(!may_break(m_(false, true, false, false, false)));
         assert!(!may_break(m_(false, false, true, true, true)));

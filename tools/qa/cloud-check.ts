@@ -15,7 +15,7 @@
 //   prefs      one browser's settings open in another that is handed its id; a key removed is removed there; machine keys and saves never leave
 //   local      a page served from this machine asks its own server for its backend (cloudFind) and takes it as the browser's own choice; the dev
 //              server's side (tools/cloud/local.ts) starts `convex dev` with no deploy key from the shell, or uses the backend it is handed
-//   notes      what a player wrote on a replay (a kept visit's notes, the F7 shelf's saved windows) goes up as the hand-over format's own lines, only
+//   notes      what a player wrote on a replay (a kept visit's notes) goes up as the hand-over format's own lines, only
 //              where a line changed; a saved window whose visit is not kept goes up whole, once; pull.ts writes the lines into its file and the
 //              reader takes them; the viewer's own way in sends under the same rules
 //   files      a file the page saved goes into the backend's file storage and reads back (pull.ts) byte for byte; held while the browser waits for the
@@ -273,7 +273,7 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
       check(went2 && none.every(x => x === null) && many.filter(Boolean).length === CL.FATAL.max && went3 && there.length === 1 && there[0].data.message === 'routed' && !!Cr,
         `off: a told browser's dead page sends at once; ?cloudstats=0, ?cloud=0 and a browser that said no send none; a visit says it ${CL.FATAL.max} times at most; once a visit is up the word goes on its records`);
       CL.cloudForget(); }
-    // A PAGE THAT IS NOT A VISIT REPORTS TOO (cloud.ts cloudReports: the replay viewer, the game's page playing a tape): under the records' own words, only
+    // A PAGE THAT IS NOT A VISIT REPORTS TOO (cloud.ts cloudReports: the game's page playing a tape): under the records' own words, only
     // in a browser that has read the notice, with no request at all until there is something to say
     { const RP5 = await import(`${ROOT}/src/cloud/report.ts`), ER5 = await import(`${ROOT}/tools/cloud/errors.ts`), realStore = (globalThis as any).localStorage, wait = (ms: number) => new Promise(r => setTimeout(r, ms));
       const quietConsole = { error: () => { /* the check's own lines */ }, warn: () => { /* */ } }, realE = console.error, realW = console.warn, secs = CL.PAGE_REPORTS.secs;
@@ -411,7 +411,7 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
     const S4 = new TapeSync(W, R3.store, { pid: PID, notes: memoryNotes(), gz: null }); await S4.round(); TAPESYNC.chunk = was;
     const D3 = await pullDump(ADMIN, { pid: PID }), A3 = D3 ? handsOf(handLines(linesOf(D3.bytes).lines, 'visit-c')) : null, L3 = await keptHands(R3.store, 'visit-c');
     check(S4.stats.parts > S4.stats.pieces * 2 && sameBytes(A3, L3) && sameBytes(A3, R3.tape.whole()) && D3!.visits.length === 3, `tapes: pieces cut into parts (${S4.stats.parts} parts for ${S4.stats.pieces} pieces) and sent unpacked read back whole, beside the other visits (${D3?.visits.length} in the file)`); }
-  // A ROUND ASKED FOR WHILE ONE RUNS is one more round after it: the running one read the store before a run's end was filed (ui/replaykey.ts onEndKept)
+  // A ROUND ASKED FOR WHILE ONE RUNS is one more round after it: the running one read the store before a run's end was filed
   { const M = KS.memoryStore(), rowOf = (pieces: number, lastAt: string) => ({ sid: 'ends', startedAt: '2026-10-26T13:00:00.000Z', lastAt, scenario: 'x', url: '?x', seconds: 5 * pieces, pieces, bytes: 10 * pieces });
     await M.put(rowOf(1, '2026-10-26T13:00:05.000Z'), 0, 'zero', 'head'); await M.put(rowOf(2, '2026-10-26T13:00:10.000Z'), 1, 'the end');
     let n = 0, open!: () => void; const gate = new Promise<void>(r => { open = r; });
@@ -848,23 +848,20 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
 // ---- notes
 { const note = (id: string, text: string) => ({ id, r: 12.5, t: 12.5, n: 750, pos: [3.25, -1.5], text, at: '2026-10-27T05:30:00.000Z' });
   const rows: any[] = [{ sid: 'visit-n1', lastAt: '2026-10-27T05:20:00.000Z', pieces: 3, notes: [note('n1', 'he stops short of the door here')] }, { sid: 'visit-n2', lastAt: '2026-10-27T05:25:00.000Z', pieces: 2 }, { sid: 'visit-private', lastAt: '2026-10-27T05:26:00.000Z', pieces: 2, notes: [note('np', 'not to go')] }];
-  const shelf: any[] = [{ id: 1, savedAt: '2026-10-27T05:19:50.000Z', seconds: 30, why: 'F7', scenario: 'Room clear', session: 'visit-n1', n1: 1800, notes: [note('s1', 'the stack breaks up')] }, { id: 2, savedAt: '2026-10-27T04:00:00.000Z', seconds: 30, why: 'F7', scenario: 'The depot', session: 'visit-gone', notes: [] }, { id: 3, savedAt: '2026-10-27T05:27:00.000Z', seconds: 30, why: 'F7', scenario: 'The depot', session: 'visit-private', notes: [note('sp', 'not to go either')] }];
-  const window2 = { v: 1, seconds: 30, scenario: 'The depot', notes: [] }, fileAsked: number[] = [];
-  let marks: Record<string, string> = {}, may = true; const wn = wire(S.url), FSn = new FileSync(W, { pid: PIDB, sid: 'visit-notes-files' });
-  const NS = new NoteSync(wn, { rows: async () => rows, shelf: async () => shelf, shelfFile: async (id: number) => { fileAsked.push(id); return id === 2 ? window2 : null; } },
-    { pid: PIDB, marks: { get: () => marks, set: (m: Record<string, string>) => { marks = m; } }, may: () => may, only: (sid: string) => sid !== 'visit-private', file: (n: string, b: Blob, k: string, m?: Record<string, string>) => FSn.add(n, b, k, m) === 'now', now: () => Date.UTC(2026, 9, 27, 5, 31) });
+  let marks: Record<string, string> = {}, may = true; const wn = wire(S.url);
+  const NS = new NoteSync(wn, { rows: async () => rows },
+    { pid: PIDB, marks: { get: () => marks, set: (m: Record<string, string>) => { marks = m; } }, may: () => may, only: (sid: string) => sid !== 'visit-private', now: () => Date.UTC(2026, 9, 27, 5, 31) });
   const listed = async () => (await ADMIN.query('notes:list', { pid: PIDB })).map((r: any) => ({ key: r.key, line: JSON.parse(r.text) })).sort((a: any, b: any) => a.key < b.key ? -1 : 1);
   may = false; await NS.round(); const quiet = wn.stats.calls; may = true;
-  await NS.round(); await FSn.round(); const L1 = await listed(), calls1 = wn.stats.calls, up = (await ADMIN.query('files:list', { pid: PIDB })).filter((r: any) => r.sid === 'visit-notes-files');
-  check(quiet === 0 && same(L1.map((x: any) => x.key), ['f7:visit-gone:2026-10-27T04-00-00.000Z', 'f7:visit-n1:2026-10-27T05-19-50.000Z', 'visit:visit-n1']) && L1[2].line.k === 'notes' && L1[2].line.notes[0].text === 'he stops short of the door here' && L1[1].line.k === 'f7' && L1[1].line.n === 1800 && L1[1].line.notes[0].id === 's1' && L1[0].line.notes.length === 0,
-    `notes: a kept visit's notes and the shelf's saved windows go up as the hand-over format's own lines (${L1.map((x: any) => x.line.k).join(' · ')}); a visit with none, and one whose tape may not go with the window saved out of it, send none`);
-  check(same(fileAsked, [2]) && up.length === 1 && up[0].kind === 'f7' && JSON.parse(up[0].meta).session === 'visit-gone' && up[0].size === JSON.stringify(window2).length, `notes: a saved window whose visit is not kept goes up whole through the saved files (${up[0]?.name}, ${up[0]?.size} bytes); one whose visit is kept is not read`);
+  await NS.round(); const L1 = await listed(), calls1 = wn.stats.calls;
+  check(quiet === 0 && same(L1.map((x: any) => x.key), ['visit:visit-n1']) && L1[0].line.k === 'notes' && L1[0].line.notes[0].text === 'he stops short of the door here',
+    `notes: a kept visit's notes go up as the hand-over format's own line (${L1.map((x: any) => x.line.k).join(' · ')}); a visit with none, and one whose tape may not go, send none`);
   await NS.round(); const calls2 = wn.stats.calls;
   rows[0].notes = [note('n1', 'he stops short of the door here, twice')]; await NS.round(); const calls3 = wn.stats.calls, L3 = await listed();
   rows[0].notes = []; await NS.round(); const L4 = await listed(), D = await pullDump(ADMIN, { pid: PIDB }), got = D ? linesOf(D.bytes).lines : [];
-  check(calls2 === calls1 && same(fileAsked, [2]) && calls3 === calls2 + 1 && L3[2].line.notes[0].text.endsWith('twice') && L4[2].line.notes.length === 0, `notes: a round with nothing changed asks nothing; a note that changed is one call; notes taken off again empty the backend's line`);
+  check(calls2 === calls1 && calls3 === calls2 + 1 && L3[0].line.notes[0].text.endsWith('twice') && L4[0].line.notes.length === 0, `notes: a round with nothing changed asks nothing; a note that changed is one call; notes taken off again empty the backend's line`);
   rows[0].notes = [note('n1', 'back again')]; await NS.round(); const D2 = await pullDump(ADMIN, { pid: PIDB }), got2 = D2 ? linesOf(D2.bytes).lines : [], V = KP.visitsOf(got2).get('visit-n1');
-  check(!!D && got.filter((l: any) => l.k === 'notes').length === 0 && got.filter((l: any) => l.k === 'f7').length === 2 && !!D2 && D2.notes === 3 && got2[0].k === 'dump' && got2[0].shelf === 2 && !!V && V.notes.length === 1 && V.notes[0].text === 'back again' && got2.some((l: any) => l.k === 'f7' && l.session === 'visit-n1' && l.notes[0].text === 'the stack breaks up'),
+  check(got.filter((l: any) => l.k === 'notes').length === 0 && !!D2 && D2.notes === 1 && got2[0].k === 'dump' && !!V && V.notes.length === 1 && V.notes[0].text === 'back again',
     `notes: the pull writes them into its hand-over file as the browser's own file had them (${got2.map((l: any) => l.k).join(' · ')}) and the reader puts the note on its visit`);
   const b = { pid: PIDB, items: [{ key: 'visit:x', at: 1, text: '{"k":"notes","sid":"x","notes":[]}' }] };
   const r1 = await refused(W.mutation('notes:put', { ...b, items: [{ ...b.items[0], key: 'tape:x' }] })), r2 = await refused(W.mutation('notes:put', { ...b, items: [{ ...b.items[0], text: 'not json' }] })), r3 = await refused(W.mutation('notes:put', { ...b, items: [{ ...b.items[0], text: '{"k":"piece"}' }] })), r4 = await refused(W.query('notes:list', {}));

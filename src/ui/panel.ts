@@ -1,4 +1,4 @@
-// Tweak panel = the debugger (backtick; Tab is the game's): sliders / toggles / buttons / read-outs bound to live settings. The game builds ONE of these on #panel (bindings.ts) as a TWO-LEVEL panel —
+// Tweak panel = the debugger (backtick; Tab is the game's): sliders / toggles / buttons / read-outs bound to live settings. The game builds ONE of these on #panel (host/debugger.ts) as a TWO-LEVEL panel —
 // SYSTEMS down a left rail (Frame · Direct · Indirect · …), and inside the selected system collapsible SECTIONS with a live one-line summary and, where a
 // shipped-defaults table exists, a '↺' reset — with a status strip (preset · fps · gpu ∪) and a search box that searches EVERY system at once (hits listed under
 // their 'System ▸ Section' path; Enter jumps to the first).
@@ -48,7 +48,7 @@ const isField = (t: EventTarget | null) => t instanceof HTMLInputElement || t in
 
 export class Panel {
   root: HTMLElement;
-  /** rows built while this is true are ADVANCED (A/B knobs): hidden unless 'all knobs' is on or a search hits them. bindings.ts flips it round its knob runs. */
+  /** rows built while this is true are ADVANCED (A/B knobs): hidden unless 'all knobs' is on or a search hits them. Flipped round a run of knobs. */
   advanced = false;
   visible = false;
   private refreshers: Rf[] = [];
@@ -95,7 +95,7 @@ export class Panel {
       this.root.addEventListener('mouseenter', () => { this.hovered = true; }); this.root.addEventListener('mouseleave', () => { this.hovered = false; this.hideTip(); if (this.search && document.activeElement === this.search) this.search.blur(); });   // (the pointer back over the game: the SEARCH gives the keyboard up, or the next W is typed into it. Only the search: an open list's options and a number half typed are not the pointer's to shut)
       // While the search types, the panel keeps the height it had: a query with few rows would shrink it from under a pointer resting low on it, and the browser reads that as the pointer leaving.
       this.search?.addEventListener('focus', () => { this.root.style.minHeight = getComputedStyle(this.root).height; }); this.search?.addEventListener('blur', () => { this.root.style.minHeight = ''; });
-      // backtick opens and shuts the panel (main.ts's hotkey). A FIELD of the panel holding the keyboard (the search box, a slider just dragged, a list, a number) keeps its keys from
+      // backtick opens and shuts the panel (host/debugger.ts's hotkey). A FIELD of the panel holding the keyboard (the search box, a slider just dragged, a list, a number) keeps its keys from
       // Input, so the hotkey never sees the press: shut it from here, before the field types the character. Anywhere else the press reaches Input once and the hotkey toggles.
       this.root.addEventListener('keydown', e => { if (gameCode(e.code) !== 'Backquote' || (e.code !== 'Backquote' && e.code !== 'Backslash') || e.metaKey || e.ctrlKey || e.altKey || !isField(e.target)) return; e.preventDefault(); e.stopPropagation(); if (!e.repeat && this.visible) this.toggle(); }, { capture: true });
       this.installTips();
@@ -165,9 +165,9 @@ export class Panel {
   prune() { this.refreshers = this.refreshers.filter(r => !r.el || document.contains(r.el)); }
   /** Empty the panel: every section, row and refresher (the viewer's property sheet is rebuilt from nothing on each scene / variant / selection change). */
   clear() { this.body.innerHTML = ''; if (this.rail) this.rail.innerHTML = ''; this.sections.clear(); this.secOfBody.clear(); this.systems.length = 0; this.curSys = this.activeSys = null; this.refreshers.length = 0; if (!this.game) this.open.clear(); }
-  /** True while the search box has focus (main.ts: let Esc / keys go to it, not the game). */
+  /** True while the search box has focus (let Esc / keys go to it, not the game). */
   get typing() { return !!this.search && document.activeElement === this.search; }
-  /** the status strip's text (bindings.ts: preset · scale · fps · gpu ∪), refreshed with the rows */
+  /** the status strip's text (preset · scale · fps · gpu ∪), refreshed with the rows */
   setStatus(get: () => string) { this.statusGet = get; }
   private get searching() { return !!this.search && this.search.value.trim().length > 0; }
 
@@ -202,8 +202,8 @@ export class Panel {
   private step(dir: number) { if (!this.systems.length) return; const i = Math.max(0, this.systems.indexOf(this.activeSys!)); this.go(this.systems[(i + dir + this.systems.length) % this.systems.length]); }
   /** 'System ▸ Section' of a section body handed out by section() (the inventory probe and the search results word rows by it) */
   pathOf(sec: HTMLElement): string { const s = this.secOfBody.get(sec); return !s ? '' : s.sys ? `${s.sys.name} ▸ ${s.name}` : s.name; }
-  /** The keyboard, offered by main.ts through Input's veto BEFORE the game reads a key: with the panel up and the pointer over it (or a control in it focused) ← / → and [ / ]
-   *  walk the rail; returns true when the key was the panel's (the game then never sees it). Backtick / Esc stay main.ts's.
+  /** The keyboard, offered by host/debugger.ts through Input's veto BEFORE the game reads a key: with the panel up and the pointer over it (or a control in it focused) ← / → and [ / ]
+   *  walk the rail; returns true when the key was the panel's (the game then never sees it). Backtick / Esc stay host/debugger.ts's.
    *  A TYPED CHARACTER IS THE GAME'S unless a field was clicked: it used to open the search whenever the pointer was over the panel, and the panel is a third of the
    *  window with the game still running beside it (the maintainer, 11-01: "the search box in the debug view grabs input really aggressively ... make it so it only
    *  takes input when explicitly clicked on"). The search holds the keyboard from a click on it until Enter, Esc, a click elsewhere or the pointer leaving the panel. */
@@ -214,7 +214,7 @@ export class Panel {
     const t = e.target; const typingIn = (t instanceof HTMLInputElement && (t.type === 'text' || t.type === 'search')) || t instanceof HTMLSelectElement;   // (a field being typed in / a list being picked keeps its own keys)
     const nav = NAV_KEYS[e.code];
     if (nav && !typingIn && !(t instanceof HTMLInputElement && t.type === 'range')) { this.step(nav); e.preventDefault(); return true; }   // (← / → on a focused slider still nudge it)
-    if (gameCode(e.code) === 'Backquote') return false;   // (the panel's own key: main.ts's hotkey shuts it — never a character for the search)
+    if (gameCode(e.code) === 'Backquote') return false;   // (the panel's own key: host/debugger.ts's hotkey shuts it — never a character for the search)
     return false;
   }
   private saveSoon() { if (!this.game) return; clearTimeout(this.saveT); this.saveT = setTimeout(() => lsSet('twopointsix.panel', JSON.stringify(this.state)), 250) as unknown as number; }

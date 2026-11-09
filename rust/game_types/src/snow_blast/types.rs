@@ -1,10 +1,9 @@
-//! The types of `snow_blast`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `snow_blast`.
 #![allow(unused_imports)]
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: SnowBlastShown, src/game/snowBlast.ts:93)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct SnowBlastShown {
     pub owed: Vec<crate::snow_blast::Owed>,
     pub seen: f64,
@@ -13,42 +12,15 @@ pub struct SnowBlastShown {
     pub thrown: f64,
     pub throw_frames: f64,
 }
-impl SnowBlastShown {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SnowBlastShown {
-            owed: Vec::new(),
-            seen: 0.0,
-            turn: 0.0,
-            puffs: 0.0,
-            thrown: 0.0,
-            throw_frames: 0.0,
-        }
-    }
-}
-impl Default for SnowBlastShown { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Owed, src/game/snowBlast.ts:92)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Owed {
     pub serial: f64,
     pub puff_left: f64,
     pub flake_left: f64,
 }
-impl Owed {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Owed {
-            serial: 0.0,
-            puff_left: 0.0,
-            flake_left: 0.0,
-        }
-    }
-}
-impl Default for Owed { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Live, src/game/snowBlast.ts:76)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Live {
     pub x: f64,
     pub z: f64,
@@ -57,23 +29,8 @@ pub struct Live {
     pub t: f64,
     pub serial: f64,
 }
-impl Live {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Live {
-            x: 0.0,
-            z: 0.0,
-            size: 0.0,
-            hk: 0.0,
-            t: 0.0,
-            serial: 0.0,
-        }
-    }
-}
-impl Default for Live { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Tally, src/game/snowBlast.ts:80)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Tally {
     pub blasts: f64,
     pub marked: f64,
@@ -82,44 +39,16 @@ pub struct Tally {
     pub last: Option<crate::snow_blast::TallyLast>,
     pub dug: f64,
 }
-impl Tally {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Tally {
-            blasts: 0.0,
-            marked: 0.0,
-            craters: 0.0,
-            why: String::new(),
-            last: None,
-            dug: 0.0,
-        }
-    }
-}
-impl Default for Tally { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/snowBlast.ts:80 Tally.last, src/game/snowBlast.ts:80)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct TallyLast {
     pub x: f64,
     pub z: f64,
     pub size: f64,
     pub hk: f64,
 }
-impl TallyLast {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        TallyLast {
-            x: 0.0,
-            z: 0.0,
-            size: 0.0,
-            hk: 0.0,
-        }
-    }
-}
-impl Default for TallyLast { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Dig, src/game/snowBlast.ts:81)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Dig {
     pub x: f64,
     pub z: f64,
@@ -127,22 +56,8 @@ pub struct Dig {
     pub serial: f64,
     pub t: f64,
 }
-impl Dig {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Dig {
-            x: 0.0,
-            z: 0.0,
-            r: 0.0,
-            serial: 0.0,
-            t: 0.0,
-        }
-    }
-}
-impl Default for Dig { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: State, src/game/snowBlast.ts:82)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct State {
     pub live: Vec<crate::snow_blast::Live>,
     pub digs: Vec<crate::snow_blast::Dig>,
@@ -150,22 +65,8 @@ pub struct State {
     pub serial: f64,
     pub stats: crate::snow_blast::Tally,
 }
-impl State {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        State {
-            live: Vec::new(),
-            digs: Vec::new(),
-            restore: false,
-            serial: 0.0,
-            stats: crate::snow_blast::Tally::zeroed(),
-        }
-    }
-}
-impl Default for State { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/snowBlast.ts:32 SNOWBLAST, src/game/snowBlast.ts:32)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SNOWBLAST {
     pub size_k: f64,
     pub size_min: f64,
@@ -200,61 +101,11 @@ pub struct SNOWBLAST {
     pub flake_up: f64,
     pub flake_life: f64,
 }
-impl SNOWBLAST {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SNOWBLAST {
-            size_k: 0.0,
-            size_min: 0.0,
-            size_max: 0.0,
-            high: 0.0,
-            lobe: 0.0,
-            rag: 0.0,
-            floor: 0.0,
-            rim: 0.0,
-            rays: 0.0,
-            ray_len: 0.0,
-            ray_wide: 0.0,
-            clods: 0.0,
-            clod_far: 0.0,
-            clod_r: 0.0,
-            dig: 0.0,
-            dig_s: 0.0,
-            throw_s: 0.0,
-            throw_share: 0.0,
-            throw_r: 0.0,
-            out: 0.0,
-            up: 0.0,
-            puff: 0.0,
-            puff_r: 0.0,
-            puff_life: 0.0,
-            puff_size: 0.0,
-            puff_out: 0.0,
-            air: 0.0,
-            air_r: 0.0,
-            air_s: 0.0,
-            flakes: 0.0,
-            flake_up: 0.0,
-            flake_life: 0.0,
-        }
-    }
-}
-impl Default for SNOWBLAST { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/snowBlast.ts:107 owing ->, src/game/snowBlast.ts:107)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Owing {
     pub live: Vec<crate::snow_blast::Live>,
 }
-impl Owing {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Owing {
-            live: Vec::new(),
-        }
-    }
-}
-impl Default for Owing { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]

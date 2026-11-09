@@ -116,7 +116,7 @@ the head and the tops of the shoulders), and on the colour tables. Union 41,020 
 - Colours (src/render/charMaterials.ts): the irregulars' shirts are eleven earth and wash colours with no saturated red, blue or
   green (the squad's pair colours), hats and denim likewise; hair is a list of four by the man (`HAIR`) and matte; the cleaner's apron
   and kerchief are pale (the civilians' `accent` row is a list of two dealt by the id parity the two civilian variants are dealt by);
-  the response team's `accent` is its white mark. The Red pair's suit tint is a step lighter (game/nightbreach.ts SQUAD4).
+  the response team's `accent` is its white mark. The Red pair's suit tint is a step lighter (rust/game_rules/src/nightbreach SQUAD4).
 
 ## Stage 2: the set (2026-10-08)
 
@@ -275,14 +275,14 @@ Each was seen in a render before and after (Workbench close-ups with back-face c
 
 ## Stage 6: the look — a second file, `cast-gwot.gltf` (2026-10-10)
 
-The game's default look (src/scene/look.ts `LOOK.on`; the page: on; headless: off unless `TPS_LOOK=1`) draws the men out of a
+The game's default look (src/scene/look.ts `lookDress`: every place but the office; `TPS_LOOK=0` on a look sheet is the office) draws the men out of a
 SECOND file built by the same builder. `cast.gltf` is untouched: `python3 tools/chars/build_cast.py` still writes it byte for byte.
 
     python3 tools/chars/build_cast.py --look gwot          # → public/assets/chars/cast-gwot.gltf
     python3 tools/chars/check_cast.py public/assets/chars/cast-gwot.gltf
     bun run tools/qa/probes.ts cast                        # cast-file and cast-fit run on BOTH files; cast-look holds the switch
 
-Same contract (32 parts, eleven slots, 14 variants with the SAME names on the same sides in the same order, so `src/game/cast.ts` deals a man the same
+Same contract (32 parts, eleven slots, 14 variants with the SAME names on the same sides in the same order, so `rust/game_rules/src/cast` deals a man the same
 variant name under either look). What differs:
 
 - **Operators** keep their part lists. `helmet` is `part_helmet_gwot()`: the same high-cut shell plus two side rails, a counterweight pouch on the back
@@ -308,7 +308,7 @@ variant name under either look). What differs:
 - **Budgets**: union 41,818 triangles / 32,194 vertices (45,000 / 65,536); variants 8.5–11.9 k (14,000).
 - Responders and civilians: the same parts, the same colours.
 
-Look sheets of this file: `CAST_GLTF=<repo>/public/assets/chars/cast-gwot.gltf TPS_LOOK=1` in front of tools/chars/look's two steps (dump_look.ts reads
+Look sheets of this file: `CAST_GLTF=<repo>/public/assets/chars/cast-gwot.gltf` in front of tools/chars/look's two steps (dump_look.ts reads
 the tables the switch selects; render_look.py refuses a look.json of another cast).
 
 Still rough: the shawl lies as close as a yoke (no hanging fold, and where a man's pick of wrap is near his shirt's colour it is hard to see at all); the turban is a smooth dome with shallow ridges; the shirt's hem does

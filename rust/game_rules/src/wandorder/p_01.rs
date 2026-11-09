@@ -466,11 +466,11 @@ mod tests {
         let mut man = crate::game::Guard::blank();
         man.ch = c;
         let gd = g.gd.push(man);
-        let a = g.tab.orders_assignment.push(crate::orders::Assignment::zeroed());
+        let a = g.tab.orders_assignment.push(crate::orders::Assignment::default());
         g.tab.orders_assignment[a].crouch = Some(true);
         g.ch[c].anim.lockpick = true;
 
-        let mut j = Job { a, t0: 3.0, live: true, knelt: false, ..Job::zeroed() };
+        let mut j = Job { a, t0: 3.0, live: true, knelt: false, ..Job::default() };
         lens_out(&mut g, gd, &mut j);
         assert!(!j.again && !j.live && j.t0 == -1.0);
         assert_eq!(g.tab.orders_assignment[a].crouch, Some(false));

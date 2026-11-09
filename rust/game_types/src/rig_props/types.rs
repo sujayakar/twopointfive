@@ -1,10 +1,9 @@
-//! The types of `rig_props`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `rig_props`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: Seg, src/game/rigProps.ts:21)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Seg {
     pub l0: f64,
     pub l1: f64,
@@ -12,39 +11,14 @@ pub struct Seg {
     pub tall: f64,
     pub adj: Option<crate::rig_props::Adj>,
 }
-impl Seg {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Seg {
-            l0: 0.0,
-            l1: 0.0,
-            thick: 0.0,
-            tall: 0.0,
-            adj: None,
-        }
-    }
-}
-impl Default for Seg { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Adj, src/game/rigProps.ts:26)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Adj {
     pub off: V3,
     pub rot: V3,
 }
-impl Adj {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Adj {
-            off: [0.0; 3],
-            rot: [0.0; 3],
-        }
-    }
-}
-impl Default for Adj { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Rig, src/game/rigProps.ts:28)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Rig {
     pub goggles: crate::rig_props::RigGoggles,
     pub pistol: crate::rig_props::RigPistol,
@@ -58,28 +32,8 @@ pub struct Rig {
     pub sc20k: crate::rig_props::RigSc20k,
     pub m4: crate::rig_props::RigM4,
 }
-impl Rig {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Rig {
-            goggles: crate::rig_props::RigGoggles::zeroed(),
-            pistol: crate::rig_props::RigPistol::zeroed(),
-            torch: crate::rig_props::RigTorch::zeroed(),
-            guard_pistol: crate::rig_props::RigGuardPistol::zeroed(),
-            knife: crate::rig_props::RigKnife::zeroed(),
-            sheath: crate::rig_props::RigSheath::zeroed(),
-            can: crate::rig_props::RigCan::zeroed(),
-            holster: crate::rig_props::RigHolster::zeroed(),
-            carbine: crate::rig_props::RigCarbine::zeroed(),
-            sc20k: crate::rig_props::RigSc20k::zeroed(),
-            m4: crate::rig_props::RigM4::zeroed(),
-        }
-    }
-}
-impl Default for Rig { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rigProps.ts:29 Rig.goggles, src/game/rigProps.ts:29)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RigGoggles {
     pub on: crate::rig_props::RigGogglesOn,
     pub off: crate::rig_props::RigGogglesOff,
@@ -98,84 +52,26 @@ pub struct RigGoggles {
     pub lens_adj: Option<crate::rig_props::Adj>,
     pub follow_pitch: f64,
 }
-impl RigGoggles {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RigGoggles {
-            on: crate::rig_props::RigGogglesOn::zeroed(),
-            off: crate::rig_props::RigGogglesOff::zeroed(),
-            lens_side: 0.0,
-            lens_down: 0.0,
-            lens_up: 0.0,
-            lens_half: 0.0,
-            lens_thick: 0.0,
-            housing: crate::rig_props::RigGogglesHousing::zeroed(),
-            glow_on: [0.0; 3],
-            glow_off: [0.0; 3],
-            tubes: crate::rig_props::RigGogglesTubes::zeroed(),
-            on_adj: None,
-            off_adj: None,
-            housing_adj: None,
-            lens_adj: None,
-            follow_pitch: 0.0,
-        }
-    }
-}
-impl Default for RigGoggles { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rigProps.ts:32 RigGoggles.on, src/game/rigProps.ts:32)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RigGogglesOn {
     pub fwd: f64,
     pub up: f64,
 }
-impl RigGogglesOn {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RigGogglesOn {
-            fwd: 0.0,
-            up: 0.0,
-        }
-    }
-}
-impl Default for RigGogglesOn { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rigProps.ts:34 RigGoggles.off, src/game/rigProps.ts:34)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RigGogglesOff {
     pub fwd: f64,
     pub up: f64,
 }
-impl RigGogglesOff {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RigGogglesOff {
-            fwd: 0.0,
-            up: 0.0,
-        }
-    }
-}
-impl Default for RigGogglesOff { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rigProps.ts:40 RigGoggles.housing, src/game/rigProps.ts:40)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RigGogglesHousing {
     pub back: f64,
     pub half: V3,
 }
-impl RigGogglesHousing {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RigGogglesHousing {
-            back: 0.0,
-            half: [0.0; 3],
-        }
-    }
-}
-impl Default for RigGogglesHousing { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rigProps.ts:47 RigGoggles.tubes, src/game/rigProps.ts:47)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RigGogglesTubes {
     pub side: f64,
     pub down: f64,
@@ -186,59 +82,20 @@ pub struct RigGogglesTubes {
     pub bridge: crate::rig_props::RigGogglesTubesBridge,
     pub arm: crate::rig_props::RigGogglesTubesArm,
 }
-impl RigGogglesTubes {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RigGogglesTubes {
-            side: 0.0,
-            down: 0.0,
-            half: 0.0,
-            back: 0.0,
-            front: 0.0,
-            glass: 0.0,
-            bridge: crate::rig_props::RigGogglesTubesBridge::zeroed(),
-            arm: crate::rig_props::RigGogglesTubesArm::zeroed(),
-        }
-    }
-}
-impl Default for RigGogglesTubes { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rigProps.ts:47 RigGogglesTubes.bridge, src/game/rigProps.ts:47)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RigGogglesTubesBridge {
     pub at: V3,
     pub half: V3,
 }
-impl RigGogglesTubesBridge {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RigGogglesTubesBridge {
-            at: [0.0; 3],
-            half: [0.0; 3],
-        }
-    }
-}
-impl Default for RigGogglesTubesBridge { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rigProps.ts:47 RigGogglesTubes.arm, src/game/rigProps.ts:47)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RigGogglesTubesArm {
     pub at: V3,
     pub half: V3,
 }
-impl RigGogglesTubesArm {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RigGogglesTubesArm {
-            at: [0.0; 3],
-            half: [0.0; 3],
-        }
-    }
-}
-impl Default for RigGogglesTubesArm { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rigProps.ts:56 Rig.pistol, src/game/rigProps.ts:56)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RigPistol {
     pub slide: crate::rig_props::Seg,
     pub suppressor: crate::rig_props::Seg,
@@ -249,25 +106,8 @@ pub struct RigPistol {
     pub light_ahead: f64,
     pub adj: Option<crate::rig_props::Adj>,
 }
-impl RigPistol {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RigPistol {
-            slide: crate::rig_props::Seg::zeroed(),
-            suppressor: crate::rig_props::Seg::zeroed(),
-            grip: crate::rig_props::Seg::zeroed(),
-            rail: crate::rig_props::RigPistolRail::zeroed(),
-            lens: crate::rig_props::RigPistolLens::zeroed(),
-            light_under: 0.0,
-            light_ahead: 0.0,
-            adj: None,
-        }
-    }
-}
-impl Default for RigPistol { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rigProps.ts:61 RigPistol.rail, src/game/rigProps.ts:61 RigPistol.rail)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RigPistolRail {
     pub l0: f64,
     pub l1: f64,
@@ -276,23 +116,8 @@ pub struct RigPistolRail {
     pub adj: Option<crate::rig_props::Adj>,
     pub under: f64,
 }
-impl RigPistolRail {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RigPistolRail {
-            l0: 0.0,
-            l1: 0.0,
-            thick: 0.0,
-            tall: 0.0,
-            adj: None,
-            under: 0.0,
-        }
-    }
-}
-impl Default for RigPistolRail { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rigProps.ts:63 RigPistol.lens, src/game/rigProps.ts:63 RigPistol.lens)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RigPistolLens {
     pub l0: f64,
     pub l1: f64,
@@ -301,23 +126,8 @@ pub struct RigPistolLens {
     pub adj: Option<crate::rig_props::Adj>,
     pub glow: V3,
 }
-impl RigPistolLens {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RigPistolLens {
-            l0: 0.0,
-            l1: 0.0,
-            thick: 0.0,
-            tall: 0.0,
-            adj: None,
-            glow: [0.0; 3],
-        }
-    }
-}
-impl Default for RigPistolLens { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rigProps.ts:69 Rig.torch, src/game/rigProps.ts:69)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RigTorch {
     pub body: crate::rig_props::Seg,
     pub lens: crate::rig_props::Seg,
@@ -325,22 +135,8 @@ pub struct RigTorch {
     pub light_ahead: f64,
     pub adj: Option<crate::rig_props::Adj>,
 }
-impl RigTorch {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RigTorch {
-            body: crate::rig_props::Seg::zeroed(),
-            lens: crate::rig_props::Seg::zeroed(),
-            lens_glow: 0.0,
-            light_ahead: 0.0,
-            adj: None,
-        }
-    }
-}
-impl Default for RigTorch { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rigProps.ts:71 Rig.guardPistol, src/game/rigProps.ts:71)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RigGuardPistol {
     pub slide: crate::rig_props::Seg,
     pub grip: crate::rig_props::Seg,
@@ -348,22 +144,8 @@ pub struct RigGuardPistol {
     pub light_ahead: f64,
     pub adj: Option<crate::rig_props::Adj>,
 }
-impl RigGuardPistol {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RigGuardPistol {
-            slide: crate::rig_props::Seg::zeroed(),
-            grip: crate::rig_props::Seg::zeroed(),
-            lens: crate::rig_props::Seg::zeroed(),
-            light_ahead: 0.0,
-            adj: None,
-        }
-    }
-}
-impl Default for RigGuardPistol { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rigProps.ts:76 Rig.knife, src/game/rigProps.ts:76)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RigKnife {
     pub blade: crate::rig_props::Seg,
     pub edge: crate::rig_props::Seg,
@@ -372,63 +154,23 @@ pub struct RigKnife {
     pub grip: crate::rig_props::RigKnifeGrip,
     pub adj: Option<crate::rig_props::Adj>,
 }
-impl RigKnife {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RigKnife {
-            blade: crate::rig_props::Seg::zeroed(),
-            edge: crate::rig_props::Seg::zeroed(),
-            guard: crate::rig_props::Seg::zeroed(),
-            handle: crate::rig_props::Seg::zeroed(),
-            grip: crate::rig_props::RigKnifeGrip::zeroed(),
-            adj: None,
-        }
-    }
-}
-impl Default for RigKnife { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rigProps.ts:76 RigKnife.grip, src/game/rigProps.ts:76)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RigKnifeGrip {
     pub fwd: f64,
     pub palm: f64,
     pub side: f64,
 }
-impl RigKnifeGrip {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RigKnifeGrip {
-            fwd: 0.0,
-            palm: 0.0,
-            side: 0.0,
-        }
-    }
-}
-impl Default for RigKnifeGrip { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rigProps.ts:82 Rig.sheath, src/game/rigProps.ts:82)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RigSheath {
     pub at: V3,
     pub along: V3,
     pub out: V3,
     pub body: crate::rig_props::Seg,
 }
-impl RigSheath {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RigSheath {
-            at: [0.0; 3],
-            along: [0.0; 3],
-            out: [0.0; 3],
-            body: crate::rig_props::Seg::zeroed(),
-        }
-    }
-}
-impl Default for RigSheath { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rigProps.ts:85 Rig.can, src/game/rigProps.ts:85)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RigCan {
     pub sink: f64,
     pub tilt: f64,
@@ -436,43 +178,16 @@ pub struct RigCan {
     pub band: crate::rig_props::Seg,
     pub adj: Option<crate::rig_props::Adj>,
 }
-impl RigCan {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RigCan {
-            sink: 0.0,
-            tilt: 0.0,
-            body: crate::rig_props::Seg::zeroed(),
-            band: crate::rig_props::Seg::zeroed(),
-            adj: None,
-        }
-    }
-}
-impl Default for RigCan { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rigProps.ts:87 Rig.holster, src/game/rigProps.ts:87)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RigHolster {
     pub down: f64,
     pub out: f64,
     pub fwd: f64,
     pub adj: Option<crate::rig_props::Adj>,
 }
-impl RigHolster {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RigHolster {
-            down: 0.0,
-            out: 0.0,
-            fwd: 0.0,
-            adj: None,
-        }
-    }
-}
-impl Default for RigHolster { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rigProps.ts:99 Rig.carbine, src/game/rigProps.ts:99)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RigCarbine {
     pub receiver: crate::rig_props::Seg,
     pub handguard: crate::rig_props::Seg,
@@ -490,51 +205,15 @@ pub struct RigCarbine {
     pub grip_l: crate::rig_props::RigCarbineGripL,
     pub adj: Option<crate::rig_props::Adj>,
 }
-impl RigCarbine {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RigCarbine {
-            receiver: crate::rig_props::Seg::zeroed(),
-            handguard: crate::rig_props::Seg::zeroed(),
-            barrel: crate::rig_props::Seg::zeroed(),
-            muzzle: crate::rig_props::Seg::zeroed(),
-            mag: crate::rig_props::Seg::zeroed(),
-            mag2: crate::rig_props::Seg::zeroed(),
-            grip: crate::rig_props::Seg::zeroed(),
-            stock_top: crate::rig_props::Seg::zeroed(),
-            stock_low: crate::rig_props::Seg::zeroed(),
-            light: crate::rig_props::Seg::zeroed(),
-            lens: crate::rig_props::Seg::zeroed(),
-            lens_glow: 0.0,
-            light_ahead: 0.0,
-            grip_l: crate::rig_props::RigCarbineGripL::zeroed(),
-            adj: None,
-        }
-    }
-}
-impl Default for RigCarbine { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rigProps.ts:103 RigCarbine.gripL, src/game/rigProps.ts:103)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RigCarbineGripL {
     pub off: V3,
     pub fingers: V3,
     pub back: V3,
 }
-impl RigCarbineGripL {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RigCarbineGripL {
-            off: [0.0; 3],
-            fingers: [0.0; 3],
-            back: [0.0; 3],
-        }
-    }
-}
-impl Default for RigCarbineGripL { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rigProps.ts:120 Rig.sc20k, src/game/rigProps.ts:120)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RigSc20k {
     pub hull: crate::rig_props::Seg,
     pub butt: crate::rig_props::Seg,
@@ -553,52 +232,15 @@ pub struct RigSc20k {
     pub slung: crate::rig_props::RigSc20kSlung,
     pub adj: Option<crate::rig_props::Adj>,
 }
-impl RigSc20k {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RigSc20k {
-            hull: crate::rig_props::Seg::zeroed(),
-            butt: crate::rig_props::Seg::zeroed(),
-            mag: crate::rig_props::Seg::zeroed(),
-            grip: crate::rig_props::Seg::zeroed(),
-            fore: crate::rig_props::Seg::zeroed(),
-            suppressor: crate::rig_props::Seg::zeroed(),
-            rail: crate::rig_props::Seg::zeroed(),
-            optic: crate::rig_props::Seg::zeroed(),
-            foregrip: crate::rig_props::Seg::zeroed(),
-            light: crate::rig_props::Seg::zeroed(),
-            lens: crate::rig_props::Seg::zeroed(),
-            lens_glow: 0.0,
-            light_ahead: 0.0,
-            grip_l: crate::rig_props::RigSc20kGripL::zeroed(),
-            slung: crate::rig_props::RigSc20kSlung::zeroed(),
-            adj: None,
-        }
-    }
-}
-impl Default for RigSc20k { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rigProps.ts:123 RigSc20k.gripL, src/game/rigProps.ts:123)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RigSc20kGripL {
     pub off: V3,
     pub fingers: V3,
     pub back: V3,
 }
-impl RigSc20kGripL {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RigSc20kGripL {
-            off: [0.0; 3],
-            fingers: [0.0; 3],
-            back: [0.0; 3],
-        }
-    }
-}
-impl Default for RigSc20kGripL { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rigProps.ts:124 RigSc20k.slung, src/game/rigProps.ts:124)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RigSc20kSlung {
     pub off: V3,
     pub bore: V3,
@@ -606,22 +248,8 @@ pub struct RigSc20kSlung {
     pub follow: f64,
     pub adj: Option<crate::rig_props::Adj>,
 }
-impl RigSc20kSlung {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RigSc20kSlung {
-            off: [0.0; 3],
-            bore: [0.0; 3],
-            roll: 0.0,
-            follow: 0.0,
-            adj: None,
-        }
-    }
-}
-impl Default for RigSc20kSlung { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rigProps.ts:132 Rig.m4, src/game/rigProps.ts:132)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RigM4 {
     pub hull: crate::rig_props::Seg,
     pub butt: crate::rig_props::Seg,
@@ -633,25 +261,7 @@ pub struct RigM4 {
     pub peq: crate::rig_props::Seg,
     pub gl: crate::rig_props::Seg,
 }
-impl RigM4 {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RigM4 {
-            hull: crate::rig_props::Seg::zeroed(),
-            butt: crate::rig_props::Seg::zeroed(),
-            mag: crate::rig_props::Seg::zeroed(),
-            fore: crate::rig_props::Seg::zeroed(),
-            rail: crate::rig_props::Seg::zeroed(),
-            optic: crate::rig_props::Seg::zeroed(),
-            tube: crate::rig_props::Seg::zeroed(),
-            peq: crate::rig_props::Seg::zeroed(),
-            gl: crate::rig_props::Seg::zeroed(),
-        }
-    }
-}
-impl Default for RigM4 { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: a union)
 #[derive(Clone, Debug)]
 pub enum TreeValue {
     Num(f64),
@@ -659,29 +269,15 @@ pub enum TreeValue {
     Arm2(JsMap<String, crate::rig_props::TreeValue>),
 }
 
-/// (TypeScript: Frame, src/game/rigProps.ts:303)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Frame {
     pub o: V3,
     pub x: V3,
     pub y: V3,
     pub z: V3,
 }
-impl Frame {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Frame {
-            o: [0.0; 3],
-            x: [0.0; 3],
-            y: [0.0; 3],
-            z: [0.0; 3],
-        }
-    }
-}
-impl Default for Frame { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: RigNodeMeta, src/game/rigProps.ts:326)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct RigNodeMeta {
     pub path: String,
     pub label: String,
@@ -691,24 +287,8 @@ pub struct RigNodeMeta {
     pub box_start: f64,
     pub box_count: f64,
 }
-impl RigNodeMeta {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RigNodeMeta {
-            path: String::new(),
-            label: String::new(),
-            depth: 0.0,
-            parent: crate::rig_props::Frame::zeroed(),
-            frame: crate::rig_props::Frame::zeroed(),
-            box_start: 0.0,
-            box_count: 0.0,
-        }
-    }
-}
-impl Default for RigNodeMeta { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: RigOpts, src/game/rigProps.ts:453)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RigOpts {
     pub goggles: bool,
     pub nv: bool,
@@ -738,43 +318,7 @@ pub struct RigOpts {
     pub big_clear: Option<bool>,
     pub hang: Option<bool>,
 }
-impl RigOpts {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RigOpts {
-            goggles: false,
-            nv: false,
-            nv_k: None,
-            slot: 0.0,
-            light_on: false,
-            is_guard: false,
-            torch: None,
-            weapon: None,
-            beam_dir: None,
-            lens_color: None,
-            holster: None,
-            held: None,
-            knife: None,
-            sheath: None,
-            rifle: None,
-            sling_front: None,
-            sling_rest: None,
-            rifle_light: None,
-            fit: None,
-            in_hand: None,
-            holster_out: None,
-            kit: None,
-            rifle_black: None,
-            big: None,
-            big_k: None,
-            big_clear: None,
-            hang: None,
-        }
-    }
-}
-impl Default for RigOpts { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum RigOptsWeapon {
     Pistol,
@@ -791,7 +335,6 @@ impl RigOptsWeapon {
     }
 }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum RigOptsRifle {
     Hand,
@@ -806,8 +349,7 @@ impl RigOptsRifle {
     }
 }
 
-/// (TypeScript: KitDraw, src/game/rigProps.ts:520)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct KitDraw {
     pub pistol: Option<f64>,
     pub rifle: Option<f64>,
@@ -817,23 +359,7 @@ pub struct KitDraw {
     pub no_mag: Option<bool>,
     pub mag_l: Option<crate::slotsetup::SetupGun>,
 }
-impl KitDraw {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitDraw {
-            pistol: None,
-            rifle: None,
-            roll: None,
-            front: None,
-            rest: None,
-            no_mag: None,
-            mag_l: None,
-        }
-    }
-}
-impl Default for KitDraw { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum RigOptsBig {
     Shotgun,
@@ -848,8 +374,7 @@ impl RigOptsBig {
     }
 }
 
-/// (TypeScript: inline at src/game/rigProps.ts:245 COL, src/game/rigProps.ts:245)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct COL {
     pub gun: V3,
     pub can: V3,
@@ -873,38 +398,8 @@ pub struct COL {
     pub polymer: V3,
     pub dark_metal: V3,
 }
-impl COL {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        COL {
-            gun: [0.0; 3],
-            can: [0.0; 3],
-            torch: [0.0; 3],
-            lens_body: [0.0; 3],
-            goggles_lens: [0.0; 3],
-            goggles_housing: [0.0; 3],
-            blade: [0.0; 3],
-            edge: [0.0; 3],
-            knife_grip: [0.0; 3],
-            sheath: [0.0; 3],
-            furniture: [0.0; 3],
-            anodised: [0.0; 3],
-            fde: [0.0; 3],
-            dark_glass: [0.0; 3],
-            haft: [0.0; 3],
-            sledge: [0.0; 3],
-            brass: [0.0; 3],
-            shell: [0.0; 3],
-            cloth: [0.0; 3],
-            polymer: [0.0; 3],
-            dark_metal: [0.0; 3],
-        }
-    }
-}
-impl Default for COL { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rigProps.ts:429 GRIPFIT, src/game/rigProps.ts:429)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct GRIPFIT {
     pub can: crate::rig_props::GRIPFITCan,
     pub pistol: V3,
@@ -914,98 +409,35 @@ pub struct GRIPFIT {
     pub guard_pistol: V3,
     pub torch: crate::rig_props::GRIPFITTorch,
 }
-impl GRIPFIT {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GRIPFIT {
-            can: crate::rig_props::GRIPFITCan::zeroed(),
-            pistol: [0.0; 3],
-            long: [0.0; 3],
-            fore: crate::rig_props::GRIPFITFore::zeroed(),
-            mag: crate::rig_props::GRIPFITMag::zeroed(),
-            guard_pistol: [0.0; 3],
-            torch: crate::rig_props::GRIPFITTorch::zeroed(),
-        }
-    }
-}
-impl Default for GRIPFIT { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rigProps.ts:430 GRIPFIT.can, src/game/rigProps.ts:430)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct GRIPFITCan {
     pub fwd: f64,
     pub palm: f64,
     pub side: f64,
 }
-impl GRIPFITCan {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GRIPFITCan {
-            fwd: 0.0,
-            palm: 0.0,
-            side: 0.0,
-        }
-    }
-}
-impl Default for GRIPFITCan { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rigProps.ts:433 GRIPFIT.fore, src/game/rigProps.ts:433)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct GRIPFITFore {
     pub back: f64,
     pub lift: f64,
     pub down: f64,
 }
-impl GRIPFITFore {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GRIPFITFore {
-            back: 0.0,
-            lift: 0.0,
-            down: 0.0,
-        }
-    }
-}
-impl Default for GRIPFITFore { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rigProps.ts:434 GRIPFIT.mag, src/game/rigProps.ts:434)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct GRIPFITMag {
     pub fwd: f64,
     pub palm: f64,
     pub side: f64,
 }
-impl GRIPFITMag {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GRIPFITMag {
-            fwd: 0.0,
-            palm: 0.0,
-            side: 0.0,
-        }
-    }
-}
-impl Default for GRIPFITMag { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rigProps.ts:439 GRIPFIT.torch, src/game/rigProps.ts:439)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct GRIPFITTorch {
     pub fwd: f64,
     pub palm: f64,
 }
-impl GRIPFITTorch {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GRIPFITTorch {
-            fwd: 0.0,
-            palm: 0.0,
-        }
-    }
-}
-impl Default for GRIPFITTorch { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rigProps.ts:817 SLING_REST, src/game/rigProps.ts:817)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SLINGREST {
     pub pivot: f64,
     pub len: f64,
@@ -1014,42 +446,15 @@ pub struct SLINGREST {
     pub soft: f64,
     pub n: f64,
 }
-impl SLINGREST {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SLINGREST {
-            pivot: 0.0,
-            len: 0.0,
-            clear: 0.0,
-            max: 0.0,
-            soft: 0.0,
-            n: 0.0,
-        }
-    }
-}
-impl Default for SLINGREST { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rigProps.ts:1020 BIGRIG, src/game/rigProps.ts:1020)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct BIGRIG {
     pub hammer: crate::rig_props::BIGRIGHammer,
     pub shotgun: crate::rig_props::BIGRIGShotgun,
     pub clear: crate::rig_props::BIGRIGClear,
 }
-impl BIGRIG {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BIGRIG {
-            hammer: crate::rig_props::BIGRIGHammer::zeroed(),
-            shotgun: crate::rig_props::BIGRIGShotgun::zeroed(),
-            clear: crate::rig_props::BIGRIGClear::zeroed(),
-        }
-    }
-}
-impl Default for BIGRIG { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rigProps.ts:1021 BIGRIG.hammer, src/game/rigProps.ts:1021)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct BIGRIGHammer {
     pub handle: crate::rig_props::Seg,
     pub head: crate::rig_props::Seg,
@@ -1058,73 +463,25 @@ pub struct BIGRIGHammer {
     pub head_at: f64,
     pub back: crate::rig_props::RigSc20kSlung,
 }
-impl BIGRIGHammer {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BIGRIGHammer {
-            handle: crate::rig_props::Seg::zeroed(),
-            head: crate::rig_props::Seg::zeroed(),
-            grip: crate::rig_props::BIGRIGHammerGrip::zeroed(),
-            hands: 0.0,
-            head_at: 0.0,
-            back: crate::rig_props::RigSc20kSlung::zeroed(),
-        }
-    }
-}
-impl Default for BIGRIGHammer { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rigProps.ts:1024 BIGRIGHammer.grip, src/game/rigProps.ts:1024)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct BIGRIGHammerGrip {
     pub fwd: f64,
     pub palm: f64,
     pub side: f64,
 }
-impl BIGRIGHammerGrip {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BIGRIGHammerGrip {
-            fwd: 0.0,
-            palm: 0.0,
-            side: 0.0,
-        }
-    }
-}
-impl Default for BIGRIGHammerGrip { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rigProps.ts:1027 BIGRIG.shotgun, src/game/rigProps.ts:1027)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct BIGRIGShotgun {
     pub back: crate::rig_props::RigSc20kSlung,
 }
-impl BIGRIGShotgun {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BIGRIGShotgun {
-            back: crate::rig_props::RigSc20kSlung::zeroed(),
-        }
-    }
-}
-impl Default for BIGRIGShotgun { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rigProps.ts:1028 BIGRIG.clear, src/game/rigProps.ts:1028)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct BIGRIGClear {
     pub hammer: f64,
     pub shotgun: f64,
 }
-impl BIGRIGClear {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BIGRIGClear {
-            hammer: 0.0,
-            shotgun: 0.0,
-        }
-    }
-}
-impl Default for BIGRIGClear { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: a union)
 #[derive(Clone, Debug)]
 pub enum AssignTreeDstValue {
     Num(f64),
@@ -1132,7 +489,6 @@ pub enum AssignTreeDstValue {
     Arm2(JsMap<String, crate::rig_props::AssignTreeDstValue>),
 }
 
-/// (TypeScript: a union)
 #[derive(Clone, Debug)]
 pub enum AssignTreeSrcValue {
     Num(f64),
@@ -1140,223 +496,84 @@ pub enum AssignTreeSrcValue {
     Arm2(JsMap<String, crate::rig_props::AssignTreeSrcValue>),
 }
 
-/// (TypeScript: inline at src/game/rigProps.ts:445 pistolFrame(P), src/game/rigProps.ts:445)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct PistolFrameP {
     pub adj: Option<crate::rig_props::Adj>,
 }
-impl PistolFrameP {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PistolFrameP {
-            adj: None,
-        }
-    }
-}
-impl Default for PistolFrameP { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rigProps.ts:445 pistolFrame ->, src/game/rigProps.ts:445)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct PistolFrame {
     pub hand_f: crate::rig_props::Frame,
     pub g: crate::rig_props::Frame,
 }
-impl PistolFrame {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PistolFrame {
-            hand_f: crate::rig_props::Frame::zeroed(),
-            g: crate::rig_props::Frame::zeroed(),
-        }
-    }
-}
-impl Default for PistolFrame { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rigProps.ts:543 kitGunFrame(P), src/game/rigProps.ts:543)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct KitGunFrameP {
     pub adj: Option<crate::rig_props::Adj>,
 }
-impl KitGunFrameP {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitGunFrameP {
-            adj: None,
-        }
-    }
-}
-impl Default for KitGunFrameP { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rigProps.ts:658 longLookOf ->, src/game/rigProps.ts:658)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct LongLookOf {
     pub id: crate::weapons::GunModelId,
     pub l: crate::gunlook::LongModel,
 }
-impl LongLookOf {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LongLookOf {
-            id: crate::weapons::GunModelId::M870,
-            l: crate::gunlook::LongModel::zeroed(),
-        }
-    }
-}
-impl Default for LongLookOf { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at quiet modelGrip ->, src/game/rigProps.ts:673)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct ModelGrip {
     pub wrist: V3,
     pub fingers: V3,
     pub back: V3,
 }
-impl ModelGrip {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ModelGrip {
-            wrist: [0.0; 3],
-            fingers: [0.0; 3],
-            back: [0.0; 3],
-        }
-    }
-}
-impl Default for ModelGrip { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rigProps.ts:684 holsterBoxes(parts), src/game/rigProps.ts:684)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct HolsterBoxesParts {
     pub slide: crate::rig_props::Seg,
     pub grip: crate::rig_props::Seg,
     pub suppressor: Option<crate::rig_props::Seg>,
 }
-impl HolsterBoxesParts {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HolsterBoxesParts {
-            slide: crate::rig_props::Seg::zeroed(),
-            grip: crate::rig_props::Seg::zeroed(),
-            suppressor: None,
-        }
-    }
-}
-impl Default for HolsterBoxesParts { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rigProps.ts:763 carbineFrame ->, src/game/rigProps.ts:763)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct CarbineFrame {
     pub hand_f: crate::rig_props::Frame,
     pub g: crate::rig_props::Frame,
 }
-impl CarbineFrame {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CarbineFrame {
-            hand_f: crate::rig_props::Frame::zeroed(),
-            g: crate::rig_props::Frame::zeroed(),
-        }
-    }
-}
-impl Default for CarbineFrame { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at quiet carbineGrip ->, src/game/rigProps.ts:791)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct CarbineGrip {
     pub wrist: V3,
     pub fingers: V3,
     pub back: V3,
 }
-impl CarbineGrip {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CarbineGrip {
-            wrist: [0.0; 3],
-            fingers: [0.0; 3],
-            back: [0.0; 3],
-        }
-    }
-}
-impl Default for CarbineGrip { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rigProps.ts:795 longGripOf(G), src/game/rigProps.ts:795)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct LongGripOfG {
     pub off: V3,
     pub fingers: V3,
     pub back: V3,
 }
-impl LongGripOfG {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LongGripOfG {
-            off: [0.0; 3],
-            fingers: [0.0; 3],
-            back: [0.0; 3],
-        }
-    }
-}
-impl Default for LongGripOfG { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at quiet longGripOf ->, src/game/rigProps.ts:795)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct LongGripOf {
     pub wrist: V3,
     pub fingers: V3,
     pub back: V3,
 }
-impl LongGripOf {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LongGripOf {
-            wrist: [0.0; 3],
-            fingers: [0.0; 3],
-            back: [0.0; 3],
-        }
-    }
-}
-impl Default for LongGripOf { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rigProps.ts:820 slingFrontHand ->, src/game/rigProps.ts:820)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SlingFrontHand {
     pub at: V3,
     pub fing: V3,
     pub back: V3,
 }
-impl SlingFrontHand {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SlingFrontHand {
-            at: [0.0; 3],
-            fing: [0.0; 3],
-            back: [0.0; 3],
-        }
-    }
-}
-impl Default for SlingFrontHand { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rigProps.ts:840 slungBase ->, src/game/rigProps.ts:840)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SlungBase {
     pub o: V3,
     pub z: V3,
     pub cf: crate::rig_props::Frame,
     pub want: f64,
 }
-impl SlungBase {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SlungBase {
-            o: [0.0; 3],
-            z: [0.0; 3],
-            cf: crate::rig_props::Frame::zeroed(),
-            want: 0.0,
-        }
-    }
-}
-impl Default for SlungBase { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum Sc20kFrameWhere {
     Hand,
@@ -1371,24 +588,12 @@ impl Sc20kFrameWhere {
     }
 }
 
-/// (TypeScript: inline at src/game/rigProps.ts:874 sc20kFrame ->, src/game/rigProps.ts:874)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Sc20kFrame {
     pub parent: crate::rig_props::Frame,
     pub g: crate::rig_props::Frame,
 }
-impl Sc20kFrame {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Sc20kFrame {
-            parent: crate::rig_props::Frame::zeroed(),
-            g: crate::rig_props::Frame::zeroed(),
-        }
-    }
-}
-impl Default for Sc20kFrame { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum Sc20kBoxesWhere {
     Hand,
@@ -1403,26 +608,13 @@ impl Sc20kBoxesWhere {
     }
 }
 
-/// (TypeScript: inline at quiet sc20kGrip ->, src/game/rigProps.ts:925)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Sc20kGrip {
     pub wrist: V3,
     pub fingers: V3,
     pub back: V3,
 }
-impl Sc20kGrip {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Sc20kGrip {
-            wrist: [0.0; 3],
-            fingers: [0.0; 3],
-            back: [0.0; 3],
-        }
-    }
-}
-impl Default for Sc20kGrip { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum LongHoldWeapon {
     Carbine,
@@ -1437,58 +629,24 @@ impl LongHoldWeapon {
     }
 }
 
-/// (TypeScript: inline at src/game/rigProps.ts:945 sc20kLightPose ->, src/game/rigProps.ts:945)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Sc20kLightPose {
     pub pos: V3,
     pub dir: V3,
 }
-impl Sc20kLightPose {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Sc20kLightPose {
-            pos: [0.0; 3],
-            dir: [0.0; 3],
-        }
-    }
-}
-impl Default for Sc20kLightPose { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rigProps.ts:956 carbineLightPose ->, src/game/rigProps.ts:956)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct CarbineLightPose {
     pub pos: V3,
     pub dir: V3,
 }
-impl CarbineLightPose {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CarbineLightPose {
-            pos: [0.0; 3],
-            dir: [0.0; 3],
-        }
-    }
-}
-impl Default for CarbineLightPose { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/rigProps.ts:964 rigLightPose ->, src/game/rigProps.ts:964)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RigLightPose {
     pub pos: V3,
     pub dir: V3,
 }
-impl RigLightPose {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RigLightPose {
-            pos: [0.0; 3],
-            dir: [0.0; 3],
-        }
-    }
-}
-impl Default for RigLightPose { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum RigTorchPosWeapon {
     Pistol,
@@ -1505,24 +663,12 @@ impl RigTorchPosWeapon {
     }
 }
 
-/// (TypeScript: inline at src/game/rigProps.ts:992 torchCarryDir(low), src/game/rigProps.ts:992)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct TorchCarryDirLow {
     pub tan: f64,
     pub rate: f64,
 }
-impl TorchCarryDirLow {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        TorchCarryDirLow {
-            tan: 0.0,
-            rate: 0.0,
-        }
-    }
-}
-impl Default for TorchCarryDirLow { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum BigClearOfKind {
     Shotgun,
@@ -1537,7 +683,6 @@ impl BigClearOfKind {
     }
 }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum PackSideDimsWhat {
     Rifle,
@@ -1554,8 +699,7 @@ impl PackSideDimsWhat {
     }
 }
 
-/// (TypeScript: inline at src/game/rigProps.ts:1041 packSideDims ->, src/game/rigProps.ts:1041)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct PackSideDims {
     pub grip: Option<f64>,
     pub thick: f64,
@@ -1564,22 +708,7 @@ pub struct PackSideDims {
     pub top: Option<f64>,
     pub len: f64,
 }
-impl PackSideDims {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PackSideDims {
-            grip: None,
-            thick: 0.0,
-            head: None,
-            rear: None,
-            top: None,
-            len: 0.0,
-        }
-    }
-}
-impl Default for PackSideDims { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum PackSideBindWhat {
     Rifle,
@@ -1596,7 +725,6 @@ impl PackSideBindWhat {
     }
 }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum PackSideWhat {
     Rifle,
@@ -1613,26 +741,13 @@ impl PackSideWhat {
     }
 }
 
-/// (TypeScript: inline at src/game/rigProps.ts:1063 bigBackOf ->, src/game/rigProps.ts:1063)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct BigBackOf {
     pub o: V3,
     pub z: V3,
     pub cf: crate::rig_props::Frame,
 }
-impl BigBackOf {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BigBackOf {
-            o: [0.0; 3],
-            z: [0.0; 3],
-            cf: crate::rig_props::Frame::zeroed(),
-        }
-    }
-}
-impl Default for BigBackOf { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum BigBoxesKind {
     Shotgun,
@@ -1647,7 +762,6 @@ impl BigBoxesKind {
     }
 }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum HungBoxesWeapon {
     Carbine,

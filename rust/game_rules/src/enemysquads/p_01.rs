@@ -43,8 +43,8 @@ mod tests {
     /// A row writes what it names and leaves the rest of the table standing (the map's set, enemysquads.ts:292-302).
     #[test]
     fn a_maps_row_writes_only_what_it_names() {
-        let table = crate::knobs::page_squads();
-        let rows = crate::knobs::page_drill_at().rows;
+        let table = crate::knobs::SquadsK::page();
+        let rows = crate::knobs::DrillAtK::page().rows;
         let compound = drill_over(table, rows.get(String::from("the compound")).unwrap());
         assert!(compound.drill_net && compound.drill_own && !compound.drill_back);
         assert_eq!((compound.net_k, compound.reinforce_k, compound.own_up), (1.0, 0.75, 1.0));

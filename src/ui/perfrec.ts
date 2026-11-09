@@ -1,5 +1,5 @@
 // Perf recorder (F9): a field stress-test dump the maintainer can hand back. Every frame while recording it stores the GPU timer's per-pass totals of the
-// last readback that resolved (compute passes — render-pass timestamps are meaningless on Metal), CPU sections timed in main.ts's step() (game update,
+// last readback that resolved (compute passes — render-pass timestamps are meaningless on Metal), CPU sections timed in host/measure.ts (game update,
 // render encode, the rest), wall dt, the presented fps, internal res / effective scale / preset, the camera, counts (lights, dynamic boxes, particles,
 // smoke, decals), an AI summary, the weather, and discrete EVENTS (quality ladder steps, settings changes, escalation changes, invalidations it can see).
 // Stop → the dump as JSON to whoever listens at the one door (host/savefile.ts: no download since 2026-10-27, `?downloads=1` = as it was) and, if the shot server is up (:5174), POST /perf?name=… → docs/perf/<name>.json. tools/qa/perf-report.ts turns a dump into the
@@ -29,7 +29,7 @@ export interface PerfFrame {
    *  around an embedded one). Absent where no timer ran: a headless take, a dump from before 10-25, a take with `watch` off */
   beat?: number;
 }
-/** WHAT A TAKE READS OF THE GAME, whoever holds it (the game's page: the Game itself) */
+/** WHAT A TAKE READS OF THE GAME, whoever holds it */
 export interface MeasuredGame {
   readonly guards: readonly { state: string; flashlight?: { enabled: boolean } }[];
   readonly weather?: { rainRate?: number; strokeT?: number } | null; readonly smoke?: unknown; readonly decals?: { count?: number; list?: unknown[] } | null;
@@ -121,7 +121,7 @@ export class PerfRecorder {
   private t0 = 0; private startedAt = ''; private settings0: Record<string, unknown> = {}; private shed0 = false;
   commit: string | undefined;
   private lastPreset = ''; private lastEff = 0; private lastEsc = -1; private lastQualityNote = ''; private lastSettingsKey = ''; private lastReallocs = 0; private lastSaves = -1; private lastLoads = -1;
-  /** CPU section marks written by main.ts's step() each frame (ms) */
+  /** CPU section marks written by host/measure.ts each frame (ms) */
   cpuUpdate = 0; cpuRender = 0; private frameStart = 0;
   /** written by the page as a frame's step begins: also where the gap since the frame before ends, for the beat */
   get cpuFrameStart(): number { return this.frameStart; }
@@ -198,7 +198,7 @@ export class PerfRecorder {
     this.longN = {}; this.dtUsual = 0; this.heldN = 0;
     if (!this.watch || typeof document === 'undefined') return;
     this.beatAt = performance.now(); this.beatTimer = setInterval(() => this.beatTick(), 4);
-    (this.beatTimer as unknown as { unref?: () => void }).unref?.();   // (a harness with a stand-in document: the timer must not hold its process open)
+    (this.beatTimer as unknown as { unref?: () => void }).unref?.();   // (a tool with a stand-in document: the timer must not hold its process open)
     // how long the page's own handlers take for an input: a listener that hears each one first and one that hears it last (both passive, neither touches it)
     if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
       this.onIn = [e => { this.inOpen = { type: e.type, at: performance.now() }; }, e => { const o = this.inOpen; if (!o || o.type !== e.type) return; const ms = performance.now() - o.at; if (ms > this.inMax) { this.inMax = ms; this.inMaxType = o.type; } this.inOpen = null; }];
@@ -257,7 +257,7 @@ export class PerfRecorder {
     if (this.quality.label !== this.lastPreset) { this.event('preset', `${this.lastPreset} → ${this.quality.label}`); this.lastPreset = this.quality.label; }
     if (Math.abs(E.effectiveScale - this.lastEff) > 0.004) { this.event('scale', `effective ×${this.lastEff.toFixed(2)} → ×${E.effectiveScale.toFixed(2)} = ${E.width}×${E.height} (render scale ×${E.settings.renderScale.toFixed(2)} of the cap; ${E.settings.keepHistories ? 'histories resampled, targets from the pool' : 'keepHistories OFF: histories restarted, targets reallocated → expect one slow frame'})`); this.lastEff = E.effectiveScale; }
     const qn = this.quality.lastChange ?? ''; if (qn && qn !== this.lastQualityNote) { this.event('ladder', qn); this.lastQualityNote = qn; }
-    // a checkpoint written or put back in this step (game/savestate.ts Checkpoints.stats): a save walks the whole game and, on the page, takes its picture off the canvas
+    // a checkpoint written or put back in this step (rust/game_rules/src/savestate Checkpoints.stats): a save walks the whole game and, on the page, takes its picture off the canvas
     const sv = g.saves?.stats, nSave = (sv?.autosaves ?? 0) + (sv?.manual ?? 0), nLoad = sv?.loads ?? 0;
     if (nSave !== this.lastSaves) { if (this.lastSaves >= 0 && nSave > this.lastSaves) this.event('save', `a checkpoint was written (${sv?.autosaves ?? 0} by the game, ${sv?.manual ?? 0} by hand in this run)`); this.lastSaves = nSave; }
     if (nLoad !== this.lastLoads) { if (this.lastLoads >= 0 && nLoad > this.lastLoads) this.event('load', 'a checkpoint was put back'); this.lastLoads = nLoad; }

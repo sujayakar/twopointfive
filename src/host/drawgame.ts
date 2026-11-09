@@ -6,7 +6,7 @@ import { Drawn, drawRefused, type DrawFace } from '../draw/drawn';
 import { Heard, Man, Section, View, Want } from '../draw/sections';
 import { Commands } from '../draw/commands';
 import { HAND } from '../draw/hand';
-import { HandTape, MARKS, hashOf, type PartOf, type TapeMark, type TapeRow } from '../tape/handtape';
+import { HandTape, MARKS, hashOf, type PartOf, type TapeFigures, type TapeMark, type TapeRow } from '../tape/handtape';
 import type { SaveRow } from '../ui/runcard';
 import type { RunMark, RunVerdict } from '../view/runend';
 import { CURSOR_DOUBLES, sampleCursor, type CursorAt, type CursorCanvas, type CursorLens } from '../view/cursor';
@@ -117,7 +117,7 @@ export class DrawGame {
     this.order();
     const T = this.tape; T?.step(dt, this.numbersOf(), keys);
     this.tick(dt, keys);
-    if (T) { if (this.ticks % MARKS.every === 0) T.mark(this.mark()); if (T.length > TAPE_MOST) { T.end('it was longer than a tape is kept'); this.ended = T; this.tape = null; } }
+    if (T) { if (this.ticks % MARKS.every === 0) { T.mark(this.mark()); T.figures(this.figures()); } if (T.length > TAPE_MOST) { T.end('it was longer than a tape is kept'); this.ended = T; this.tape = null; } }
     const t1 = performance.now();
     this.draw();
     this.X.face_out_clear(this.h);   // (what the tick told its host is in its sections now)
@@ -139,6 +139,8 @@ export class DrawGame {
     let state: number | null = null; if (whole) { this.X.face_state_words(this.h); state = hashOf(this.bytes()); }
     return { tick: this.ticks, die, parts, state };
   }
+  /** who stands where, and the rounds the player has fired */
+  figures(): TapeFigures { return { tick: this.ticks, shots: Number(this.tally().stats.shots ?? 0), men: this.map().men }; }
   /** A ROW OF A TAPE, handed over as it was: `seen` false, a tick nobody is shown (what it left to be drawn is not made, nor kept) */
   feed(row: TapeRow, seen = true): void {
     if (row.kind === 'step') { const t0 = performance.now(); this.numbersOf().set(row.hand); this.tick(row.dt, row.keys); const t1 = performance.now(); if (seen) this.draw(); this.X.face_out_clear(this.h); this.ms.step = t1 - t0; this.ms.draw = performance.now() - t1; }
@@ -230,7 +232,7 @@ export class DrawGame {
     const [word, why, secs, way, men, foes, kept, voided, clean] = this.answer().split('\n'), two = (s: string): number[] => s.split(' ').map(Number), [lost, of] = two(men), [foesDown, foesOf] = two(foes), [alive, held] = two(kept);
     return { won: r === 2, word, why, secs: Number(secs), approach: way === '-' ? null : way, lost, of, foesDown, foesOf, hostages: kept === '-' ? null : { alive, of: held }, void: voided === 'true', clean: clean === 'true' };
   }
-  /** nobody's hands are on the seat: a hands-off player takes it (rust/game_run hands_off.rs), or with no plan it is the host's again */
+  /** nobody's hands are on the seat: a hands-off player takes it (rust/game_start hands_off.rs), or with no plan it is the host's again */
   handsOff(plan: HandsOffPlan | null): void { this.handsTo(this.enc.encode(plan ? [plan.seed, plan.cap ?? 240, plan.breaker ? 1 : 0, ...plan.route ?? []].join('\n') : '')); }
   private handsTo(b: Uint8Array): void { this.tape?.hands(b); this.handed(b, (p, n) => this.X.face_hands_off(this.h, 0, p, n)); this.handsKept.done = -1; }
   /** how he stands, null where nobody is hands off */

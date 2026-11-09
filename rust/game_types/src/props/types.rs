@@ -1,10 +1,9 @@
-//! The types of `props`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `props`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: PropContact, src/game/props.ts:24)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct PropContact {
     pub pos: V3,
     pub vel: V3,
@@ -13,23 +12,8 @@ pub struct PropContact {
     pub mass: f64,
     pub quiet: bool,
 }
-impl PropContact {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PropContact {
-            pos: [0.0; 3],
-            vel: [0.0; 3],
-            radius: 0.0,
-            who: 0.0,
-            mass: 0.0,
-            quiet: false,
-        }
-    }
-}
-impl Default for PropContact { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: PropEvent, src/game/props.ts:25)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct PropEvent {
     pub prop: PropId,
     pub sound: crate::props::PropEventSound,
@@ -40,27 +24,10 @@ pub struct PropEvent {
     pub rolling: bool,
     pub roll: Option<crate::props::PropEventRoll>,
 }
-impl PropEvent {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PropEvent {
-            prop: PropId(0),
-            sound: crate::props::PropEventSound::Thud,
-            pos: [0.0; 3],
-            who: 0.0,
-            level: 0.0,
-            speed: 0.0,
-            rolling: false,
-            roll: None,
-        }
-    }
-}
-impl Default for PropEvent { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum PropEventSound {
-    Thud,
+    #[default] Thud,
     Scrape,
     Roll,
 }
@@ -74,7 +41,6 @@ impl PropEventSound {
     }
 }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum PropEventRoll {
     Start,
@@ -89,8 +55,7 @@ impl PropEventRoll {
     }
 }
 
-/// (TypeScript: KindTune, src/game/props.ts:31)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct KindTune {
     pub decel: f64,
     pub visc: f64,
@@ -98,21 +63,7 @@ pub struct KindTune {
     pub scrape_rate: f64,
     pub thud_rate: f64,
 }
-impl KindTune {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KindTune {
-            decel: 0.0,
-            visc: 0.0,
-            rest: 0.0,
-            scrape_rate: 0.0,
-            thud_rate: 0.0,
-        }
-    }
-}
-impl Default for KindTune { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Prop, src/game/props.ts:73)
 #[derive(Clone, Debug, ToBytes)]
 pub struct Prop {
     pub hx: f64,
@@ -129,7 +80,7 @@ pub struct Prop {
     pub id: f64,
 }
 impl Prop {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         Prop {
             hx: 0.0,
@@ -139,17 +90,16 @@ impl Prop {
             mass: 0.0,
             inv_mass: 0.0,
             inv_i: 0.0,
-            tune: crate::props::KindTune::zeroed(),
+            tune: crate::props::KindTune::default(),
             home: [0.0; 3],
             boxes: Vec::new(),
-            def: crate::scene_level::PropDef::zeroed(),
+            def: crate::scene_level::PropDef::default(),
             id: 0.0,
         }
     }
 }
 impl Default for Prop { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: PropSystem, src/game/props.ts:165)
 #[derive(Clone, Debug, ToBytes)]
 pub struct PropSystem {
     pub props: Vec<PropId>,
@@ -165,7 +115,7 @@ pub struct PropSystem {
     pub doorways: Vec<crate::props::PropSystemDoorwaysItem>,
 }
 impl PropSystem {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         PropSystem {
             props: Vec::new(),
@@ -184,27 +134,15 @@ impl PropSystem {
 }
 impl Default for PropSystem { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: inline at src/game/props.ts:176 PropSystem.stats, src/game/props.ts:176)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct PropSystemStats {
     pub awake: f64,
     /// (scratch, read by nobody who did not just write it: in no bytes)
     #[bytes(skip)]
     pub ms: f64,
 }
-impl PropSystemStats {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PropSystemStats {
-            awake: 0.0,
-            ms: 0.0,
-        }
-    }
-}
-impl Default for PropSystemStats { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/props.ts:192 PropSystem.doorways, src/game/props.ts:192)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct PropSystemDoorwaysItem {
     pub cx: f64,
     pub cz: f64,
@@ -212,63 +150,23 @@ pub struct PropSystemDoorwaysItem {
     pub uz: f64,
     pub half: f64,
 }
-impl PropSystemDoorwaysItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PropSystemDoorwaysItem {
-            cx: 0.0,
-            cz: 0.0,
-            ux: 0.0,
-            uz: 0.0,
-            half: 0.0,
-        }
-    }
-}
-impl Default for PropSystemDoorwaysItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/props.ts:263 raycast ->, src/game/props.ts:263)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct PropSystemRaycast {
     pub t: f64,
     pub n: V3,
     pub prop: PropId,
     pub box_: BoxId,
 }
-impl PropSystemRaycast {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PropSystemRaycast {
-            t: 0.0,
-            n: [0.0; 3],
-            prop: PropId(0),
-            box_: BoxId(0),
-        }
-    }
-}
-impl Default for PropSystemRaycast { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/props.ts:271 raycastHere ->, src/game/props.ts:271)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct PropSystemRaycastHere {
     pub t: f64,
     pub n: V3,
     pub prop: PropId,
     pub box_: BoxId,
 }
-impl PropSystemRaycastHere {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PropSystemRaycastHere {
-            t: 0.0,
-            n: [0.0; 3],
-            prop: PropId(0),
-            box_: BoxId(0),
-        }
-    }
-}
-impl Default for PropSystemRaycastHere { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum PropSystemNoiseSound {
     Thud,
@@ -283,39 +181,17 @@ impl PropSystemNoiseSound {
     }
 }
 
-/// (TypeScript: inline at src/game/props.ts:337 there ->, src/game/props.ts:337)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct PropSystemThere {
     pub leaves: Option<Vec<f64>>,
     pub n: f64,
 }
-impl PropSystemThere {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PropSystemThere {
-            leaves: None,
-            n: 0.0,
-        }
-    }
-}
-impl Default for PropSystemThere { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/props.ts:359 handOver(T), src/game/props.ts:359)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct PropSystemHandOverT {
     pub leaves: Option<Vec<f64>>,
     pub n: f64,
 }
-impl PropSystemHandOverT {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PropSystemHandOverT {
-            leaves: None,
-            n: 0.0,
-        }
-    }
-}
-impl Default for PropSystemHandOverT { fn default() -> Self { Self::zeroed() } }
 
 /// (src/game/props.ts:41 KIND: a table nothing writes)
 pub fn kind() -> JsMap<String, crate::props::KindTune> { { let mut t = JsMap::new(); t.set(String::from("chair"), crate::props::KindTune { decel: 1.6, visc: 0.5, rest: 0.25, scrape_rate: 1.35, thud_rate: 1.15 }); t.set(String::from("cardboard"), crate::props::KindTune { decel: 3.2, visc: 0.8, rest: 0.12, scrape_rate: 1.0, thud_rate: 0.8 }); t.set(String::from("bin"), crate::props::KindTune { decel: 3.0, visc: 0.8, rest: 0.3, scrape_rate: 1.2, thud_rate: 1.5 }); t.set(String::from("plant"), crate::props::KindTune { decel: 4.5, visc: 1.0, rest: 0.1, scrape_rate: 0.8, thud_rate: 0.95 }); t } }

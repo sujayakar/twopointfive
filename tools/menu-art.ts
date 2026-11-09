@@ -1,8 +1,7 @@
 // bun run tools/menu-art.ts [id …] [--size 760x475] [--spp 40] [--out public/assets/menu] [--jobs 4] [--set '{"<id>":{…}}']
 //
-// THE FIRST SET of the Play page's mission pictures, and still the picture of any mission tools/menu-shots has no recipe for (that tool takes the pictures
-// from PLAY: the maintainer, 10-12, of this file's — "they look somewhat staged and repetitive"; running this over a mission it has a recipe for puts the
-// composed picture back). One picture a mission, COMPOSED here and not captured from play. The maintainer, 10-11: "our art
+// The Play page's mission pictures that were not taken from play (the rest of the folder was, once, by a tool that drove a page now gone: running this over such a
+// mission puts a composed picture in its place). One picture a mission, COMPOSED here and not captured from play. The maintainer, 10-11: "our art
 // style is also AWESOME so if we could highlight it" · "use your artistic judgment though. and it can be synthetic, doesn't have to literally be a rendering of
 // the level. make it awesome!"
 //
@@ -12,11 +11,11 @@
 // who stands where are CHOICES of this file (MOOD by group, PIN by mission), not facts of a run: the menu marks nothing on a picture. It runs on the CPU alone
 // (no GPU, no browser: two to three minutes a picture a core at the shipped size and samples, so about half an hour for all of them on four; every picture is a
 // child process that imports this file afresh, so do not edit it under a running set) and writes <out>/<id>.jpg +
-// stills.json, the list ui/menuStills.ts reads. Naming missions renders only those and keeps the rest of the folder. Needs ImageMagick's `convert` for the
+// stills.json, the list ui/menuStills.ts reads. Naming missions renders only those and keeps the rest of the folder; naming none draws only the missions with no picture in the folder, and says how many it left. Needs ImageMagick's `convert` for the
 // JPEG. A mission added since gets a picture by running this again; without one its card shows the menu's own drawn model (ui/planArt.ts).
 // KNOWN, each a choice of the picture and not the level's truth: with `lamps: 'all'` (the default) every lamp the file carries burns, emergency beacons and
 // lamps the level keeps dark included; a door the file gives no angle stands ajar one time in five, by a hash, whichever way it swings and steel or not.
-import { readFileSync, writeFileSync, mkdirSync, unlinkSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync, mkdirSync, unlinkSync, readdirSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { ALL_MISSIONS } from '../src/scene/scenarioList';
 import type { ScenarioEntry } from '../src/scene/scenarios';
@@ -442,11 +441,10 @@ if (import.meta.main) {
   const unknown = argv.filter(a => !all.some(m => m.id === a)); if (unknown.length) { console.error(`no mission '${unknown.join("', '")}'. Known: ${all.map(m => m.id).join(' ')}`); process.exit(2); }
   if (process.env.MENU_ART_LIST) { for (const m of all) console.log(m.id.padEnd(22), (m.group ?? '-').padEnd(12), m.scenario?.kind ?? '-', m.scenario?.level ?? 'office.json', 'squad', m.squad ?? 0); process.exit(0); }
   const prev = (() => { try { return JSON.parse(readFileSync(join(out, 'stills.json'), 'utf8')) as { w?: number; h?: number; stills: Record<string, unknown> }; } catch { return null; } })(), was = prev ? Object.keys(prev.stills) : [];
-  // a mission tools/menu-shots has a recipe for is pictured from PLAY: a run that names no mission leaves it alone
-  const played = new Set(Object.keys((await import('./menu-shots/recipes.cjs')).default as Record<string, unknown>));
-  const queue = all.filter(m => argv.length ? argv.includes(m.id) : !played.has(m.id)).map(m => m.id); let bad = 0;
-  if (!argv.length && played.size) console.log(`${played.size} left to tools/menu-shots: ${[...played].join(' ')}`);
-  // the list names ONE size for the folder: a run that leaves pictures standing (missions not named, missions pictured from play) may not relabel them
+  // with no mission named a picture already in the folder stands (some were taken from play and cannot be taken again): only what is missing is drawn
+  const queue = all.filter(m => argv.length ? argv.includes(m.id) : !existsSync(join(out, `${m.id}.jpg`))).map(m => m.id); let bad = 0;
+  if (!argv.length) console.log(`${all.length - queue.length} missions have a picture and are left alone (name one to draw it again) · ${queue.length} to draw${queue.length ? `: ${queue.join(' ')}` : ''}`);
+  // the list names ONE size for the folder: a run that leaves pictures standing (missions not named, pictures already there) may not relabel them
   const kept = was.filter(id => !queue.includes(id) && all.some(m => m.id === id));
   if (kept.length && prev?.w && prev.h && (prev.w !== O.W || prev.h !== O.H)) { console.error(`--size ${O.W}x${O.H}: ${kept.length} pictures this run leaves alone are ${prev.w}x${prev.h}, and stills.json names one size. Use --size ${prev.w}x${prev.h}, or another --out.`); process.exit(2); }
   await Promise.all(Array.from({ length: Math.max(1, jobs) }, async () => { for (;;) { const id = queue.shift(); if (!id) return;

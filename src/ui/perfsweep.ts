@@ -1,6 +1,6 @@
 // Perf SWEEP (F8): a measurement take that prices each heavy feature on the machine it runs on. GPU pass timings overlap (Metal runs independent passes side by side:
 // the per-pass sum over-states the frame by a third or more), so a pass's own number is not what switching it off gives back — only an A/B on that machine says.
-// One key: the world is frozen where it stands (the scene holds still — Shift+F8 leaves it running), auto quality is held (main.ts stops sampling the ladder while
+// One key: the world is frozen where it stands (the scene holds still — Shift+F8 leaves it running), auto quality is held (host/drawpage.ts stops sampling the ladder while
 // `active`; preset and scale stay where they were), the F9 recorder starts, and then ONE row of SWEEP_ROWS at a time is flipped for a second and a half and put back:
 // base · flip 1 · base · flip 2 · … · base, a few rounds, the first in the list's order and every later one in a shuffle of its own (sweepOrder). Each segment is a recorder EVENT (kind 'sweep', JSON text) naming
 // the row and how much of its start to drop (histories settle, GPU readbacks lag a few frames). At the end every setting is put back, the world goes on and the
@@ -44,7 +44,7 @@ export interface SweepFlip { from: Record<string, unknown>; to: Record<string, u
  *  is a flip that is not one. The benchmark's sweep (SweepOpts.inside) takes the build's rows alone: two machines' benchmarks are the same rows */
 export interface SweepExtra { id: string; label: string; flip: (take: { live: boolean }) => SweepFlip | string; liveOnly?: string; warm?: boolean }
 /** how long the blown snow takes to stand at new numbers, with room to spare: a grain's slot lives (top + 0.3) × 1.1 + 0.4 s — 8.4 s under the usual 7 m top — and a first set holds its
- *  slots half a second longer (game/snowFx.ts updateGrains). Twelve seconds covers a snow top of nine and a half metres */
+ *  slots half a second longer (rust/game_rules/src/snow_fx updateGrains). Twelve seconds covers a snow top of nine and a half metres */
 const SLOW_SNOW_MS = 12000;
 /** a steady light that leaves the picture or comes into it is in every accumulated signal (the reservoirs, the bounce, the reflections), and what a pixel's history
  *  holds steers how many rays it asks for (penumbras, young history, the audit): a second for those to stand at the new set, where a setting's flip gets half of one. Inferred, not measured */
@@ -55,7 +55,7 @@ const SLOW_WORLD_MAX = 3;
 export const SWEEP_ROWS: SweepRow[] = [
   { id: 'fog', label: 'fog of war off', custom: 'fog' },
   { id: 'fogOld', label: 'fog of war: the old pass', custom: 'fogOld', warm: true },   // (the fog pass part's two programs, one picture: old minus new = what the new one saves; skipped on a build with one program)
-  { id: 'fogEdge', label: 'fog of war: the hard edge of before', custom: 'fogEdge' },   // (the soft band across each sight edge — game/fogofwar.ts FOG.edge; shaders/fogofwar.wgsl fowEdge: every pixel of the fog pass searches the sight table for the line, for each live eye, both ways — against the hard line it was. All inside the compute pass 'fogofwar': its own column and the union show it, on a page held at the display's rate too. More eyes on the floor, more of it. Skipped on a build from before the soft edge)
+  { id: 'fogEdge', label: 'fog of war: the hard edge of before', custom: 'fogEdge' },   // (the soft band across each sight edge — rust/game_rules/src/fogofwar FOG.edge; shaders/fogofwar.wgsl fowEdge: every pixel of the fog pass searches the sight table for the line, for each live eye, both ways — against the hard line it was. All inside the compute pass 'fogofwar': its own column and the union show it, on a page held at the display's rate too. More eyes on the floor, more of it. Skipped on a build from before the soft edge)
   { id: 'rcPeriods', label: 'light cache refreshed over 1,1,2,4 frames (Medium\'s)', set: { rcPeriods: [1, 1, 2, 4] } },
   { id: 'rcHalfRate', label: 'light cache at half rate', set: { rcHalfRate: true } },
   { id: 'secMinE', label: 'light cache: no shadow ray under 0.02 W/m²', set: { secMinE: 0.02 } },
@@ -77,7 +77,7 @@ export const SWEEP_ROWS: SweepRow[] = [
   { id: 'penRays', label: 'direct light: no second ray in penumbras', set: { restirPenRays: false } },
   { id: 'spatialAll', label: 'direct light: spatial taps on young history only', set: { restirSpatialAll: false } },
   { id: 'audit', label: 'direct light: no audit rays', set: { restirAudit: 0 } },
-  { id: 'irLight', label: 'goggles: infrared lights off', custom: 'irLight', settleMs: IR_SETTLE_MS },   // (the illuminators on the goggles — game/irlight.ts, render/lights.ts LightSet.ir: up to five wide spots for as long as the goggles are down, steady lights in the tube's picture like so many carried torches: the direct pass's reservoirs, the bounce, the reflections. LightSet.irCap, the picture's alone: frozen and live takes. Skipped with the goggles up)
+  { id: 'irLight', label: 'goggles: infrared lights off', custom: 'irLight', settleMs: IR_SETTLE_MS },   // (the illuminators on the goggles — rust/game_rules/src/irlight, render/lights.ts LightSet.ir: up to five wide spots for as long as the goggles are down, steady lights in the tube's picture like so many carried torches: the direct pass's reservoirs, the bounce, the reflections. LightSet.irCap, the picture's alone: frozen and live takes. Skipped with the goggles up)
   { id: 'irLightOne', label: 'goggles: one infrared light alone', custom: 'irLightOne', settleMs: IR_SETTLE_MS },   // (the first of them — the player's — with the teammates' out: against the row above and the baseline, how the price grows with the count)
   { id: 'heldAdaptive', label: 'TRADE: held lights stop at 2 rays where they agree', set: { heldAdaptive: true }, warm: true },   // (the lighting part's trade rows: skipped by name on a build without them)
   { id: 'stableRetrace', label: 'TRADE: settled lit samples re-traced every other frame', set: { restirStableRetrace: true }, warm: true },
@@ -143,7 +143,7 @@ export class PerfSweep {
   extra: SweepExtra[] = [];
   /** a row's way back threw during this take: the closing line does not say everything is back */
   private stuck = false;
-  /** the world holds still for the take (host/loop.ts frozen: no game step, the picture stays live) */
+  /** the world holds still for the take (src/host/drawpage.ts frozen: no game step, the picture stays live) */
   get freezing(): boolean { return this.active && !this.opts.live; }
   get progress(): string { return this.active ? `${this.at + 1}/${this.plan.length}` : this.last; }
   /** the segment under way is past its settle: its frames from here are the ones that count (a caller pricing the rows as they go: ui/bench.ts) */

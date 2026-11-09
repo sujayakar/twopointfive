@@ -1,81 +1,34 @@
-//! The types of `opening`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `opening`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: inline at src/game/opening.ts:42 spots, src/game/opening.ts:42)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct OpeningModSpotsValue {
     pub key: String,
     pub at: Option<crate::opening::OpeningModSpotsValueAt>,
 }
-impl OpeningModSpotsValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        OpeningModSpotsValue {
-            key: String::new(),
-            at: None,
-        }
-    }
-}
-impl Default for OpeningModSpotsValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/opening.ts:42 OpeningModSpotsValue.at, src/game/opening.ts:42)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct OpeningModSpotsValueAt {
     pub pos: V3,
     pub yaw: f64,
     pub wp: f64,
 }
-impl OpeningModSpotsValueAt {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        OpeningModSpotsValueAt {
-            pos: [0.0; 3],
-            yaw: 0.0,
-            wp: 0.0,
-        }
-    }
-}
-impl Default for OpeningModSpotsValueAt { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/opening.ts:52 openingSpot ->, src/game/opening.ts:52)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct OpeningSpot {
     pub pos: V3,
     pub yaw: f64,
     pub wp: f64,
 }
-impl OpeningSpot {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        OpeningSpot {
-            pos: [0.0; 3],
-            yaw: 0.0,
-            wp: 0.0,
-        }
-    }
-}
-impl Default for OpeningSpot { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/opening.ts:57 findSpot ->, src/game/opening.ts:57)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct FindSpot {
     pub pos: V3,
     pub yaw: f64,
     pub wp: f64,
 }
-impl FindSpot {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FindSpot {
-            pos: [0.0; 3],
-            yaw: 0.0,
-            wp: 0.0,
-        }
-    }
-}
-impl Default for FindSpot { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]

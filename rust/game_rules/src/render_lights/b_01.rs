@@ -46,7 +46,7 @@ pub fn light_set_remove(g: &mut crate::game::Game, l: LightId) {
 }
 /// Spawn a short-lived point light (a muzzle flash).   (lights.ts LightSet.flash)
 pub fn light_set_flash(g: &mut crate::game::Game, pos: V3, color: V3, intensity: f64, range: f64, ttl: f64, owner: f64) -> LightId {
-    let mut l = RtLight::zeroed();
+    let mut l = RtLight::default();
     l.name = String::from("flash"); l.group = String::from("transient"); l.kind = 0.0; l.pos = pos; l.dir = [0.0, -1.0, 0.0]; l.color = color; l.intensity = intensity; l.range = range;
     l.inner_deg = 0.0; l.outer_deg = 180.0; l.radius = 0.08; l.volumetric = 1.0; l.owner = owner; l.enabled = true; l.fixture_box = -1.0; l.flicker = 0.0; l.ttl = ttl; l.age = 0.0;
     l.peak_intensity = intensity;
@@ -86,7 +86,7 @@ pub fn light_set_update(g: &mut crate::game::Game, dt: f64, time: f64) {
 /// A level's light as the list holds it: the row is made here and NOT added to the list (the caller's `light_set_add`). Fields the TypeScript's literal leaves out are absent.   (render/lights.ts:96 lightFromDef)
 pub fn light_from_def(g: &mut crate::game::Game, d: &crate::scene_level::LightDef) -> LightId {
     use crate::scene_level::LightDefKind;
-    let mut l = RtLight::zeroed();
+    let mut l = RtLight::default();
     l.name = d.name.clone();
     l.group = d.group.clone();
     l.kind = match d.kind { LightDefKind::Point => 0.0, LightDefKind::Spot => 1.0, LightDefKind::Dir => 2.0 };

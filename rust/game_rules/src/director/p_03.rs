@@ -359,7 +359,7 @@ mod tests {
     /// the run's die against the TypeScript's own bits: math/dice.ts rollOn on { dice: -5 }, then the word it leaves
     #[test]
     fn the_run_die_is_roll_on() {
-        let mut r = Run::zeroed();
+        let mut r = Run::default();
         r.dice = crate::dice::Die::new(js::to_u32(-5.0));
         let want: [(u64, f64); 3] = DIE_BITS;
         for (bits, word) in want {
