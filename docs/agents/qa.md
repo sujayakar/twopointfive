@@ -1589,3 +1589,5 @@ but synthetic writes still work.
   loss 3 to 36 of 192; 1 in 3641), the bang 18 and 4 (6 to 34; 1 in 230), staged alike in all 48: a thing on the walk, with the same staging, is what
   the tool is for. (Nine other doors were crated the same way and not named: see WHAT IT MISSES.) On `room-clear-pair`, a row with no level file, it
   exits 3 with the crate refused by name (62006070).
+- **THE GATE (`rust/game_start/src/bin/gate/`): one native command for what a build is held to, with nothing of TypeScript in it (`gate`, `gate pin`, `gate breaks`). What each row holds, its break
+  and the pins' rule: `rust/game_start/README.md`, "The gate".**
