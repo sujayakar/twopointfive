@@ -77,7 +77,7 @@ writes it over `player_name` (`shownAs`).
 
 **A seat is held by who is there** (`openSeat`): after `MP_COME_S` seconds an empty one goes to whoever asks by the code.
 Its key changes with its holder. The server hears of it in a heartbeat's answer and asks with one about a key it does not know (`rekey`); who sits on the
-old one is told, and his tab forgets it.
+old one is told.
 
 **The lobby.** One door: `Lobby.seat`. `games:join` gives an open seat or the one this tab holds (`tabId`, so two windows are two players and a reload is the
 same one). It waits for the server's address and the page goes to `?net=…&netgame=…&netkey=…`. The link is `?join=<code>`. The host hands over the mission's address with
@@ -133,9 +133,9 @@ Run by hand (`BY_HAND` in `tools/qa/checks.ts`):
 
 | command | what it holds |
 |---|---|
-| `bun run tools/qa/mpserver-check.ts` | a server and scripted clients over real sockets: lag, a late joiner, two seats, names, a seat taken, the look ahead |
+| `bun run tools/qa/mpserver-check.ts` | a server and scripted clients over real sockets: lag, a late joiner, two seats, names, the look ahead |
 | `bun run tools/qa/mp-control-check.ts` | the cap, the reaper, the seam, on a stand-in and the local runner |
-| `bun run tools/qa/lobby-check.ts` | host and join by code, a fight of two through a real server, then a seat left |
+| `bun run tools/qa/lobby-check.ts` | host and join by code, then a fight of two through a real server |
 | `bun run tools/qa/cloud-check.ts` | the backend's functions, the page's side, the reading tool |
 | `bun run tools/draw/net-check.ts` | the page's half on a check's clock: stalls, bunched ticks, a restart, a page asleep |
 
