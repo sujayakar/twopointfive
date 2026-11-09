@@ -69,7 +69,7 @@ round. Then teammates call what the player has not got (`fog_of_war_tell_calls`)
 (`?cams=`).
 
 **The light meter.** `light_at` sums lamps on six faces of a point with one shadow line each, then sun, sky and lightning. `light_on` takes the
-brighter of chest and head. `game_meter_read` maps it by `game_visibility_of` and eases it into `visibility`, which guards' sight, `lens_gain` and
+brighter of chest and head. `light_meter` maps it by `game_visibility_of` and eases it into `visibility`, which guards' sight, `lens_gain` and
 `close_near_k` read.
 
 **The sound meter** is the player's `noise`: the loudest level he has just made, falling away. A noisy rule raises it where it files its event. Only a

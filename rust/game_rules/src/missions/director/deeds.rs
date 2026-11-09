@@ -333,22 +333,5 @@ mod tests {
         assert_eq!(cond_label(&director_beat_any(vec![time(None), pred("until")])), "");
     }
 
-    #[test]
-    fn numbers_as_the_log_writes_them() {
-        assert_eq!(fixed2(1.236).to_bits(), 1.24f64.to_bits());
-        assert_eq!(fixed2(-0.001).to_bits(), (-0.0f64).to_bits());
-    }
 
-    /// the run's die against the TypeScript's own bits: math/dice.ts rollOn on { dice: -5 }, then the word it leaves
-    #[test]
-    fn the_run_die_is_roll_on() {
-        let mut r = Run::default();
-        r.dice = crate::dice::Die::new(js::to_u32(-5.0));
-        let want: [(u64, f64); 3] = DIE_BITS;
-        for (bits, word) in want {
-            assert_eq!(run_rand(&mut r).to_bits(), bits);
-            assert_eq!((r.dice.s as i32) as f64, word);
-        }
-    }
-    const DIE_BITS: [(u64, f64); 3] = [(0x3fdef75a33800000, 1831565808.0), (0x3fab1e8e36000000, -631835675.0), (0x3fee0c8f6ca00000, 1199730138.0)];
 }

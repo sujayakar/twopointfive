@@ -72,10 +72,6 @@ pub struct StepSeen {
     pub done_i: Option<f64>,
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct TestKind {
-}
-
 #[derive(Clone, Debug, Default)]
 pub struct LessonObjective {
     pub text: String,
@@ -125,8 +121,6 @@ impl LessonPairWhat {
 /// a flag a `flag` test can read off the player and the team's posture
 #[derive(Clone, Copy, Debug, PartialEq, Eq, ToBytes)]
 pub enum LessonFlag { Crouch, Sprint, Wall, Peek, Lean, Nv, Light, Holstered, Gun, RingsOut, ShellsOut, Auto, Setup, SetupShut, Dragging, Dark, ChargeSet, ChargeClear, WallBlown, Holding, Picking, Coding, Menu, OwnRing, Silent }
-
-pub fn lesson_tests() -> JsMap<String, crate::lesson::TestKind> { { let mut t = JsMap::new(); t.set(String::from("in"), crate::lesson::TestKind {  }); t.set(String::from("near"), crate::lesson::TestKind {  }); t.set(String::from("flag"), crate::lesson::TestKind {  }); t.set(String::from("slot"), crate::lesson::TestKind {  }); t.set(String::from("pace"), crate::lesson::TestKind {  }); t.set(String::from("meter"), crate::lesson::TestKind {  }); t.set(String::from("stage"), crate::lesson::TestKind {  }); t.set(String::from("door"), crate::lesson::TestKind {  }); t.set(String::from("target"), crate::lesson::TestKind {  }); t.set(String::from("men"), crate::lesson::TestKind {  }); t.set(String::from("did"), crate::lesson::TestKind {  }); t.set(String::from("downed"), crate::lesson::TestKind {  }); t.set(String::from("body"), crate::lesson::TestKind {  }); t.set(String::from("calm"), crate::lesson::TestKind {  }); t.set(String::from("loaded"), crate::lesson::TestKind {  }); t.set(String::from("reload"), crate::lesson::TestKind {  }); t.set(String::from("launcher"), crate::lesson::TestKind {  }); t.set(String::from("burst"), crate::lesson::TestKind {  }); t.set(String::from("threw"), crate::lesson::TestKind {  }); t.set(String::from("orderTo"), crate::lesson::TestKind {  }); t.set(String::from("stackOn"), crate::lesson::TestKind {  }); t.set(String::from("pairsOn"), crate::lesson::TestKind {  }); t.set(String::from("word"), crate::lesson::TestKind {  }); t.set(String::from("taken"), crate::lesson::TestKind {  }); t.set(String::from("following"), crate::lesson::TestKind {  }); t.set(String::from("mate"), crate::lesson::TestKind {  }); t.set(String::from("pair"), crate::lesson::TestKind {  }); t.set(String::from("cue"), crate::lesson::TestKind {  }); t.set(String::from("view"), crate::lesson::TestKind {  }); t.set(String::from("squad"), crate::lesson::TestKind {  }); t.set(String::from("stacks"), crate::lesson::TestKind {  }); t.set(String::from("watching"), crate::lesson::TestKind {  }); t.set(String::from("all"), crate::lesson::TestKind {  }); t.set(String::from("any"), crate::lesson::TestKind {  }); t } }
 
 pub fn stages() -> Vec<String> { alloc::vec![String::from("infiltrate"), String::from("drive"), String::from("exfil"), String::from("done")] }
 

@@ -904,28 +904,6 @@ pub(super) fn rescue_flow_line(g: &crate::game::Game) -> String {
     parts.join(" · ")
 }
 
-fn rescue_flow_summary(g: &crate::game::Game) -> String {
-    if g.rescue.flow.known.is_empty() {
-        return String::from("flow: not staged");
-    }
-    let mut jobs: Vec<String> = Vec::new();
-    for (gd, j) in g.rescue.flow.jobs.iter() {
-        let what = if j.kind == JobKind::Corridor { "corridor" } else { j.o.short.as_str() };
-        let more = if !j.chain.is_empty() { alloc::format!(" +{}", j.chain.len()) } else { String::new() };
-        jobs.push(alloc::format!("{} {}{}", g.gd[gd].callsign, what, more));
-    }
-    let jobs = jobs.join(", ");
-    let mut rows: Vec<String> = Vec::new();
-    for at in 0..g.rescue.flow.known.len() {
-        let k = g.rescue.flow.known[at].clone();
-        let word = rescue_flow_word(g, &k);
-        let tail = if g.rescue.flow.passed.has(k.o.id.clone()) { "" } else { " (ahead)" };
-        rows.push(alloc::format!("{} {}{}", k.o.short, word, tail));
-    }
-    let on_it = if !jobs.is_empty() { alloc::format!(" · on it: {}", jobs) } else { String::new() };
-    let s = g.rescue.flow.stats;
-    alloc::format!("openings {}{} · {} covers, {} corridor holds, {} overridden", rows.join(" · "), on_it, s.takes, s.corridor, s.overridden)
-}
 
 /// The marks against the floor: returns what is wrong.
 pub(super) fn rescue_flow_check(g: &mut crate::game::Game) -> Vec<String> {
@@ -974,7 +952,7 @@ mod tests {
         Known { o, region, state: OpenState::Unknown, ..Default::default() }
     }
 
-    /// A write through a Known's region reaches the row the table holds: the two are one Region, as in the TypeScript.
+    /// A write through a Known's region reaches the row the table holds: the two are one Region.
     #[test]
     fn a_known_row_and_the_table_share_one_region() {
         let mut g = Game::blank();
@@ -1040,11 +1018,10 @@ mod tests {
         assert!(row.state == OpenState::Unknown);
     }
 
-    /// The objective line and the summary, against the TypeScript's templates.
+    /// The objective line tells what is known of the openings behind him, and of any hot one ahead of him; nothing yet known says nothing.
     #[test]
-    fn the_line_and_the_summary_say_what_is_known() {
+    fn the_line_says_what_is_known_behind_him_and_what_is_hot_ahead() {
         let mut g = Game::blank();
-        assert_eq!(rescue_flow_summary(&mut g), "flow: not staged");
         assert_eq!(rescue_flow_line(&mut g), "");
         let r = g.tab.rescueflow_region.push(Region::default());
         let mut a = opening("a", "glass", r);
@@ -1056,8 +1033,5 @@ mod tests {
         g.rescue.flow.known = vec![a, b, c];
         g.rescue.flow.passed.add(String::from("a"));
         assert_eq!(rescue_flow_line(&mut g), "behind you ▸ glass clear · ahead ▸ west HOT, held");
-        g.rescue.flow.stats.takes = 3.0;
-        g.rescue.flow.stats.overridden = 1.0;
-        assert_eq!(rescue_flow_summary(&mut g), "openings glass clear · west HOT, held (ahead) · server unknown (ahead) · 3 covers, 0 corridor holds, 1 overridden");
     }
 }
