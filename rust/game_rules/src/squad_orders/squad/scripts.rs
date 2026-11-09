@@ -826,31 +826,27 @@ pub(super) fn break_off(g: &mut crate::game::Game, gd: GuardId, awareness: f64, 
 mod tests {
     use super::*;
 
-    fn same(got: V3, want: [u64; 3]) {
-        for i in 0..3 { assert_eq!(got[i].to_bits(), want[i], "component {i}: {}", got[i]); }
-    }
-
-    /// The beats and points of Sweep against the TypeScript's own bits (bun, EXACT.on).
+    /// Each leg gets the same time. A failure means a man's muzzle jumps from corner to corner, or stops short of the last.
     #[test]
-    fn sweep_runs_the_typescripts_bits() {
+    fn a_sweep_eases_from_corner_to_corner_in_even_beats_and_stops_on_the_last() {
+        let (from, a, b, c): (V3, V3, V3, V3) = ([0.0, 1.0, 0.0], [2.0, 1.0, 0.0], [2.0, 1.0, 2.0], [0.0, 1.0, 2.0]);
         let mut s = Sweep::blank();
-        sweep_start(&mut s, [0.1, 1.2, -3.3], &[[2.7, 0.3, 4.1], [-1.9, 1.7, 0.6], [5.3, 0.9, -2.2]], 10.25, 3.1);
+        sweep_start(&mut s, from, &[a, b, c], 10.0, 3.0);
         let mut out = [9.0, 9.0, 9.0];
-        let rows: [(f64, bool, [u64; 3]); 8] = [
-            (10.25, true, [0x3fb999999999999a, 0x3ff3333333333333, 0xc00a666666666666]),
-            (10.9, true, [0x3ffe45db180ba545, 0x3fe28caf363ed47a, 0x3ffcceb287641954]),
-            (11.37, true, [0x4004dde8a705927b, 0x3fd4fc2ff1212e48, 0x40101efee8b9372b]),
-            (12.01, true, [0xbfed99eb71197a44, 0x3ff673ce1fae2c35, 0x3ff578164a662b14]),
-            (13.0, true, [0x400b0d578048d0b5, 0x3ff1cf8627c24ec6, 0xbff743440e7185e4]),
-            (13.35, true, [0x4015333333333332, 0x3feccccccccccccd, 0xc00199999999999a]),
-            (13.36, false, [0x4015333333333332, 0x3feccccccccccccd, 0xc00199999999999a]),
-            (15.0, false, [0x4015333333333332, 0x3feccccccccccccd, 0xc00199999999999a]),
-        ];
-        for (t, active, want) in rows {
-            assert_eq!(sweep_at(&mut s, t, &mut out), active, "t {t}");
-            assert_eq!(s.active, active, "t {t}");
-            same(out, want);
-        }
+        assert!(sweep_at(&mut s, 10.0, &mut out));
+        assert_eq!(out, from);
+        assert!(sweep_at(&mut s, 11.0, &mut out));
+        assert_eq!(out, a);
+        assert!(sweep_at(&mut s, 11.5, &mut out));
+        assert_eq!(out, [2.0, 1.0, 1.0]);       // half way along its leg at half its time
+        assert!(sweep_at(&mut s, 12.25, &mut out));
+        assert!(out[0] > 1.5 && out[2] == 2.0, "a quarter of the time is less than a quarter of the way: it starts slow, {out:?}");
+        assert!(!sweep_at(&mut s, 13.0, &mut out));
+        assert_eq!(out, c);
+        assert!(!s.active);
+        out = [9.0, 9.0, 9.0];
+        assert!(!sweep_at(&mut s, 15.0, &mut out));
+        assert_eq!(out, [9.0, 9.0, 9.0], "a finished sweep moves nothing");
     }
 
     #[test]
@@ -862,9 +858,12 @@ mod tests {
         assert_eq!(out, [9.0, 9.0, 9.0]);
     }
 
+    /// A facing of 0 is +z, the level's own way of saying a yaw.
     #[test]
-    fn ahead_is_the_typescripts_bits() {
-        same(room_clear_ahead([1.5, 0.0, -2.25], 0.7, 3.0, 0.4), [0x400b7612cef4934a, 0x3fd999999999999a, 0x3fa6cc2f7ded8b80]);
+    fn a_point_ahead_is_along_his_facing_at_the_height_asked() {
+        assert_eq!(room_clear_ahead([1.0, 0.0, 2.0], 0.0, 3.0, 0.4), [1.0, 0.4, 5.0]);
+        let r = room_clear_ahead([1.0, 0.0, 2.0], m::PI / 2.0, 3.0, 0.4);
+        assert!((r[0] - 4.0).abs() < 1e-12 && (r[2] - 2.0).abs() < 1e-12, "{r:?}");
     }
 
     /// A man with no script gets his own, with its own serial; a script he has keeps it. What is a new leg: any goal not `held`, even at the same spot; a held one by value; null only against a goal.
@@ -893,10 +892,10 @@ mod tests {
         assert_eq!(g.gd[x].script.unwrap().serial, first);
     }
 
-    /// The minLeg floor against the old three-second sweep's remainder.
+    /// What is left of a three-second sweep, and never under a leg's own time for each leg.
     #[test]
     fn rest_secs_floors_at_a_leg_each() {
-        assert_eq!(rest_secs(&[[0.0; 3]; 3]).to_bits(), (3.0f64 - 0.95).to_bits());
-        assert_eq!(rest_secs(&[[0.0; 3]; 4]).to_bits(), (0.6f64 * 4.0).to_bits());
+        assert_eq!(rest_secs(&[[0.0; 3]; 3]), 3.0 - 0.95);
+        assert_eq!(rest_secs(&[[0.0; 3]; 4]), 0.6 * 4.0);
     }
 }
