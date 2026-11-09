@@ -142,7 +142,7 @@ fn surfaceAt(ro: vec3f, rd: vec3f, h: Hit, fp: f32) -> Surf {
 fn poolNormal(p: vec2f, t: f32) -> vec3f { var s = waveSlope(p, t) * (1.0 - 0.45 * frame.weather.y); if (frame.weather.y > 0.0) { s += rainRings(p, t, frame.weather.y) + rainRings(p * 1.7 + 5.0, t * 1.1, frame.weather.y) * 0.6; } return normalize(vec3f(-s.x, 1.0, -s.y)); }
 /** THE WET FILM, laid over any material the rain reaches. What soaks goes dark and stays dull; what sheds water shines; low ground fills, and is a mirror with rings in it */
 fn wetFilm(s0: Surf, fp: f32) -> Surf {
-  var s = snowCover(s0, fp); var w = frame.weather.x; if (w <= 0.0) { return s; } w *= exposed(s.x + s.ng * 0.2 + vec3f(0.0, 0.02, 0.0)); if (w <= 0.01 || frame.more.x > 0.3) { return s; }
+  var s = snowCover(s0, fp); var w = frame.weather.x; if (w <= 0.0) { return s; } w *= select(exposed(s.x + s.ng * 0.2 + vec3f(0.0, 0.02, 0.0)), select(0.0, 1.0, openAir(s.x)), (s.flags & BEND) != 0u); if (w <= 0.01 || frame.more.x > 0.3) { return s; }
   if (s.kind == 14u || s.kind == 20u) { s.albedo *= mix(1.0, 0.82, w); s.rough = mix(s.rough, 0.24, w); return s; }
   let up = sat(s.ng.y); let soaks = select(select(0.55, 0.15, s.metal > 0.5 || s.rough < 0.35), 1.0, s.kind == 1u || s.kind == 22u || s.kind == 5u || s.kind == 6u || s.kind == 13u || s.kind == 15u || s.kind == 16u || s.kind == 10u || s.kind == 21u);
   // how low the ground is here: broad dips and the fine unevenness of what was laid
