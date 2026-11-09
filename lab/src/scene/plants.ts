@@ -2,7 +2,6 @@
 import { type V3, rng, rotY, rotX, rotZ, compose, apply, norm, add, mul, sub } from '../math';
 import { World, F, type Piece, type Cluster, type Leaf, taper, type Instance } from './world';
 import { M } from './materials';
-import { type Air, BREEZE } from './air';
 
 export function leafBall(seed: number, n: number, size: number): Cluster {
   const r = rng(seed), leaves: Leaf[] = [];
@@ -69,10 +68,4 @@ export function domeTree(w: World, kit: Kit, at: V3, height: number, seed: numbe
 export function bush(w: World, kit: Kit, at: V3, s: number, seed: number, tint: V3) { const r = rng(seed); w.instances.push({ cluster: kit.balls[Math.floor(r() * kit.balls.length)]!, at, rot: rotY(r() * 6.28), scale: s, base: [at[0], at[1] - s, at[2]], sway: 0.025, phase: r() * 6.28, tint: [tint[0] * (0.85 + 0.3 * r()), tint[1] * (0.9 + 0.2 * r()), tint[2] * (0.8 + 0.4 * r())] }); }
 export function tuft(w: World, kit: Kit, at: V3, h: number, seed: number, tint: V3 = [0.46, 0.55, 0.28]) {
   const r = rng(seed); w.instances.push({ cluster: kit.tufts[Math.floor(r() * kit.tufts.length)]!, at, rot: rotY(r() * 6.28), scale: h, base: at, sway: 0.09, phase: r() * 6.28, tint: [tint[0] * (0.8 + 0.4 * r()), tint[1] * (0.85 + 0.3 * r()), tint[2] * (0.7 + 0.5 * r())] });
-}
-/** the wind on one instance at a time: how it leans, and where that puts it. A pure function of the tick */
-export function swayed(i: Instance, t: number, air: Air): { at: V3; rot: typeof i.rot } {
-  const w = air.at(i.at), k = 1.35 / BREEZE, x = w[0] * k, z = w[2] * k, force = Math.hypot(x, z), flick = Math.min(1.5, force) * (Math.sin(t * 2.3 + i.phase) * 0.35 + Math.sin(t * 3.7 + i.phase * 1.7) * 0.2), q = 1 + 0.2 * Math.sin(t * 1.9 + i.phase) + flick * 0.4;
-  const ax = x * q * i.sway, az = z * q * i.sway, h = i.at[1] - i.base[1], rot = compose(compose(rotZ(-ax * 1.6 + flick * 0.03), rotX(az * 1.6 + flick * 0.03)), i.rot);
-  return { at: add(i.at, [ax * h * 0.55, -Math.abs(ax) * h * 0.05, az * h * 0.55]), rot };
 }

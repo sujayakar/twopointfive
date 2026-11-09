@@ -47,18 +47,7 @@ export function buildBvh(items: Bounds[], leaf = 2, octants = 8): Bvh {
   return { order, nodes, perOctant: per };
 }
 
-/** new bounds in an old tree (one order): the same shape, refitted from the leaves up */
-export function refitBvh(b: Bvh, bound: (item: number) => Bounds) {
-  const f = new Float32Array(b.nodes), u = new Uint32Array(b.nodes);
-  for (let i = b.perOctant - 1; i >= 0; i--) {
-    const o = i * 8, leaf = u[o + 7]!, n = leaf & 15; let x0 = 1e9, y0 = 1e9, z0 = 1e9, x1 = -1e9, y1 = -1e9, z1 = -1e9;
-    if (n) { for (let k = 0; k < n; k++) { const q = bound(b.order[(leaf >>> 4) + k]!); x0 = Math.min(x0, q.mn[0]); y0 = Math.min(y0, q.mn[1]); z0 = Math.min(z0, q.mn[2]); x1 = Math.max(x1, q.mx[0]); y1 = Math.max(y1, q.mx[1]); z1 = Math.max(z1, q.mx[2]); } }
-    else { const a = (i + 1) * 8, c = u[a + 3]! * 8; for (const q of [a, c]) { x0 = Math.min(x0, f[q]!); y0 = Math.min(y0, f[q + 1]!); z0 = Math.min(z0, f[q + 2]!); x1 = Math.max(x1, f[q + 4]!); y1 = Math.max(y1, f[q + 5]!); z1 = Math.max(z1, f[q + 6]!); } }
-    f[o] = x0; f[o + 1] = y0; f[o + 2] = z0; f[o + 4] = x1; f[o + 5] = y1; f[o + 6] = z1;
-  }
-}
-
-/** the same from a flat list (mn, mx a box); returns the sum of its nodes' areas: how good it still is */
+/** new bounds in an old tree (one order), from a flat list (mn, mx a box): the same shape, refitted from the leaves up; returns the sum of its nodes' areas: how good it still is */
 export function refitFlat(b: Bvh, box: Float32Array): number {
   const f = new Float32Array(b.nodes), u = new Uint32Array(b.nodes), ord = b.order; let sum = 0;
   for (let i = b.perOctant - 1; i >= 0; i--) {

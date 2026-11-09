@@ -10,6 +10,7 @@ import type { Piece } from './scene/world';
 import { makeStreet } from './scene/street';
 import { strain, type Strain } from './scene/strain';
 import { placeCode } from './scene/place';
+import { Sway } from './sway';
 import { foliageCode } from './scene/foliage';
 import { Air, airCode, airRows, BREEZE } from './scene/air';
 import { type V3, clamp, norm } from './math';
@@ -37,7 +38,7 @@ export class Lab {
     this.gpu = await openGpu(canvas); this.building = (SCENES[scene] ?? SCENES.rooftop!)(); if (load) strain(this.building, load); for (let i = 0; i < 3; i++) this.building.world.lamps.push({ kind: 'sphere', at: [0, -60, 0], u: [0.2, 0, 0], v: [0, 0, 0], radiance: [330, 125, 27], name: 'fire', on: 0 }); this.building.world.lamps.push({ kind: 'sphere', at: [0, -60, 0], u: [0.05, 0, 0], v: [0, 0, 0], radiance: [16000, 11000, 5600], name: 'flash', on: 0 }); this.air = new Air(this.building.place, this.building.world, this.building.doors); this.near = new Near(this.building.world.pieces); this.leaves = this.building.doors.flatMap(d => d.leaf); this.sky = new Sky(this.gpu); await this.sky.init();
     this.water = new Water(this.gpu); await this.water.init(); this.scene = new SceneGpu(this.gpu, this.building.world, this.sky.tex, this.water.tex, airRows(this.air.cells));
     this.graph = new Graph(this.gpu, () => math + '\n' + placeCode(this.building.place) + airCode(this.air) + sceneCode + foliageCode(this.scene.foliage, this.scene.folRow, this.scene.folSlots) + '\n' + wavesCode + '\n' + lampMapCode + joinCode + '\n' + surfaceCode + '\n', { layout: this.scene.layout, group: this.scene.group });
-    this.scene.openFloor = this.building.place.openFloor; this.pose(); for (const p of this.building.world.moving) this.prevAt.set(p, { at: p.at, rot: p.rot });
+    this.graph.buffers.set('pastLeaves', this.scene.pastLeaves); this.scene.openFloor = this.building.place.openFloor; this.pose(); for (const p of this.building.world.moving) this.prevAt.set(p, { at: p.at, rot: p.rot });
   }
   /** in the page: what moves is drawn between its last two ticks (alpha), and the camera goes by the clock, so that motion is even at any frame rate. A run leaves this off */
   smooth = false; alpha = 1; private wasPose = new Float64Array(0); private nowPose = new Float64Array(0);
@@ -55,7 +56,7 @@ export class Lab {
   eyeAt(): V3 | null { return typeof this.eye === 'number' ? ((p: V3): V3 => [p[0], p[1] + 1.4, p[2]])(this.building.people[this.eye]!.pos) : this.eye; }
   project(x: V3): [number, number] | null { const c = this.camera.frame(this.graph.output[0] / this.graph.output[1]), v: V3 = [x[0] - c.pos[0], x[1] - c.pos[1], x[2] - c.pos[2]], d = (a: ArrayLike<number>) => v[0] * a[0]! + v[1] * a[1]! + v[2] * a[2]!, q = (a: ArrayLike<number>) => a[0]! ** 2 + a[1]! ** 2 + a[2]! ** 2, z = d(c.fwd); if (z < 0.1) return null; return [d(c.right) / q(c.right) / z * 0.5 + 0.5, 0.5 - d(c.up) / q(c.up) / z * 0.5]; }
   async use(m: Method) {
-    if (!this.mapped) { this.mapped = true; this.send(); this.prev = null; await mapLamps(this); await mapJoins(this); }
+    if (!this.mapped) { this.mapped = true; this.send(); this.prev = null; await mapLamps(this); await mapJoins(this); await this.sway.init(this, this.scene.instRest, this.scene.instData, this.scene.pastLeaves); }
     if (!this.methods.has(m.name)) { m.signals(this.graph, this); await m.prepare?.(this); const stages = m.stages(this); await this.graph.build(stages); this.methods.set(m.name, { m, stages }); }
     this.current = m.name; m.reset?.(this); return m;
   }
@@ -78,7 +79,7 @@ export class Lab {
     for (const p of b.people) if (p !== b.player.body) p.step(TICK); if (this.playing) { b.player.step(TICK, this.camera.yaw); this.notice(); this.shots(); } this.swing(this.tick); if (!this.smooth) this.camera.step(TICK); this.pose(); if (this.smooth) this.keepPose();
   }
   /** the world at a tick, from the start (only what has a memory is stepped) */
-  airMs = 0;
+  airMs = 0; private readonly sway = new Sway();
   private swing(tick: number) { const t0 = performance.now(); this.stir(); this.air.blow(this.wind, TICK); this.airMs = this.airMs * 0.95 + 0.05 * (performance.now() - t0); for (const h of this.building.hung) h.step(TICK, tick * TICK, this.air); }
   seek(tick: number) { while (this.walked < tick) { this.walked++; for (const p of this.building.people) if (p !== this.building.player.body) p.step(TICK); this.swing(this.walked); } this.tick = tick; }
   /** what moves the air itself: bodies, leaves of doors, vents, fires */
@@ -100,7 +101,7 @@ export class Lab {
     const f = new Float32Array(128), u = new Uint32Array(f.buffer); let o = 0; const v = (a: ArrayLike<number>, w = 0) => { f.set([a[0]!, a[1]!, a[2]!, w], o); o += 4; };
     v(c.pos); v(c.right); v(c.up); v(c.fwd); v(p.pos); v(p.right); v(p.up); v(p.fwd); v(h.sun, h.radius); v(h.sunE, 1);
     f.set([rw, rh, ow, oh], o); o += 4; f.set([this.jitter[0], this.jitter[1], this.prevJitter[0], this.prevJitter[1]], o); o += 4; f.set([this.time, this.cut, this.exposure, h.haze * this.haze], o); o += 4; f.set([this.knobs[0]!, this.knobs[1]!, this.scene.joinRow, h.night * 2.2 * (this.mains ? 1 : 0)], o); o += 4;
-    this.slots = (this.scene.sendAir(this.air), this.scene.moved(this.time, this.air)); this.scene.cull(c, this.cut); this.scene.sendLamps();
+    this.slots = (this.scene.sendAir(this.air), this.scene.moved()); this.scene.cull(c, this.cut); this.scene.sendLamps();
     u.set([Math.min(64, b.world.lamps.length), Math.min(32, b.world.openings.length), this.frameNo, this.seed], o); o += 4; u.set(this.scene.per, o); o += 4; u.set(this.scene.node0, o); o += 4; u.set(this.scene.stepOf, o); o += 4; u.set(this.scene.piece0, o); o += 4; f.set(b.pool, o); o += 4; f.set([b.poolTop, b.poolDeep, this.gone, this.scene.airRow], o); o += 4; f.set([this.wet, this.rainNow, this.mains ? 1 : 0, Math.atan2(this.air.way[2], this.air.way[0])], o); o += 4; f.set([this.smoke.on ? 1 : 0, this.scene.noiseAt, this.dense, this.air.strength], o); o += 4; f.set(this.tune, o);
     this.gpu.device.queue.writeBuffer(this.scene.frame, 0, f); this.prev = c; this.prevJitter = this.jitter;
   }
@@ -108,7 +109,7 @@ export class Lab {
   /** draw one frame with the current method; `then` may add its own passes (the canvas) */
   draw(then?: (e: GPUCommandEncoder, result: GPUTexture) => void) {
     const { m, stages } = this.methods.get(this.current)!; if (this.jittered) { const n = (this.frameNo % 16) + 1, hal = (i: number, b: number) => { let r = 0, k = 1 / b; while (i > 0) { r += (i % b) * k; i = Math.floor(i / b); k /= b; } return r; }; this.jitter = [hal(n, 2) - 0.5, hal(n, 3) - 0.5]; } else this.jitter = [0, 0];
-    const t0 = performance.now(); this.between(); this.smoke.flames(this.time); if (this.playing) { const me = this.building.player.body, low = me.drive!.low, f = me.facing; this.uniform('sightK', new Float32Array([me.pos[0], me.pos[1] + 1.62 - 0.45 * low, me.pos[2], 1, f[0], 0, f[2], 0])); } else if (this.graph.buffers.has('sightK')) this.uniform('sightK', new Float32Array(8)); this.send(); m.frame?.(this); this.sendMs = performance.now() - t0; const e = this.gpu.device.createCommandEncoder(); this.graph.timer.begin(); this.water.run(e, this.time, this.hourNow.sun, this.building.poolDeep); this.graph.run(e, stages); then?.(e, this.graph.texture(m.result)); const done = this.graph.timer.end(e);
+    const t0 = performance.now(); this.between(); this.smoke.flames(this.time); if (this.playing) { const me = this.building.player.body, low = me.drive!.low, f = me.facing; this.uniform('sightK', new Float32Array([me.pos[0], me.pos[1] + 1.62 - 0.45 * low, me.pos[2], 1, f[0], 0, f[2], 0])); } else if (this.graph.buffers.has('sightK')) this.uniform('sightK', new Float32Array(8)); this.send(); m.frame?.(this); this.sendMs = performance.now() - t0; const e = this.gpu.device.createCommandEncoder(); this.graph.timer.begin(); this.sway.run(e, this); this.water.run(e, this.time, this.hourNow.sun, this.building.poolDeep); this.graph.run(e, stages); then?.(e, this.graph.texture(m.result)); const done = this.graph.timer.end(e);
     this.gpu.device.queue.submit([e.finish()]); done?.(); this.graph.flip(); this.frameNo++; for (const p of this.building.world.moving) this.prevAt.set(p, { at: p.at, rot: p.rot });
   }
   buffer(name: string, bytes: number, usage = GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC) { let b = this.graph.buffers.get(name); if (!b || b.size < bytes) { b = buffer(this.gpu, name, bytes, usage); this.graph.buffers.set(name, b); } return b; }

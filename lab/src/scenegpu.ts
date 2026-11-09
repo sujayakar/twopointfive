@@ -1,11 +1,10 @@
 // The world on the GPU: buffers every ray walks, and the shared bind group. What stands is sent once; what moves is sent each frame.
 import type { Gpu } from './gpu';
 import { buffer } from './gpu';
-import { buildBvh, refitBvh, refitFlat, type Bvh } from './bvh';
+import { buildBvh, refitFlat, type Bvh } from './bvh';
 import { type World, type Piece, PIECE_FLOATS, boundsOf, packPiece, packBend, packCluster, F } from './scene/world';
 import { MATERIALS } from './scene/materials';
 import { artRect, drawArt, layArt, ART_SIZE } from './scene/art';
-import { swayed } from './scene/plants';
 import type { Air } from './scene/air';
 import type { V3 } from './math';
 import { cross, len, norm } from './math';
@@ -50,6 +49,12 @@ export class SceneGpu {
     this.planeAt = planeAt; this.markAt = markAt; this.per = [bs[0]!.perOctant, bs[1]!.perOctant, this.maxMoving ? perMoving : 0, this.maxInst ? perInst : 0]; /* (an empty tree is no nodes: a walk of one that was never filled would not end) */ this.stepOf = [bs[0]!.perOctant, bs[1]!.perOctant, 0, 0]; this.node0 = [0, rest, movingAt, instAt]; this.piece0 = [0, sets[0]!.length, order.length, 0];
     this.looseLeaf = leaf - 1; this.moveBox = new Float32Array(this.maxMoving * 6); this.moveF = new Float32Array(this.maxMoving * PIECE_FLOATS); this.moveU = new Uint32Array(this.moveF.buffer);
     this.counts = { pieces: order.length, moving: this.maxMoving, leaves: leaf, instances: this.maxInst };
+    if (world.instances.length) {
+      const bd = world.instances.map(i => { const tuft = world.clusters[i.cluster]!.kind === 1, e = i.scale * (tuft ? 2.1 : 1.22) + 0.34; return { mn: [i.at[0] - e, i.at[1] - (tuft ? 0.1 : e), i.at[2] - e], mx: [i.at[0] + e, i.at[1] + e, i.at[2] + e] } as never; }), b = this.instTree = buildBvh(bd, 1, 1), f = this.instData, u = new Uint32Array(f.buffer), r = this.instRest = new Float32Array(this.maxInst * 24), ru = new Uint32Array(r.buffer), q = (x: number) => Math.max(0, Math.min(255, Math.round(x * 255)));
+      b.order.forEach((src, i) => { const n = world.instances[src]!, o = i * 16, k = 1 / n.scale, c = this.clusterAt[n.cluster]!; for (let a = 0; a < 3; a++) { const x = n.rot[a]!; f[o + a * 4] = x[0] * k; f[o + a * 4 + 1] = x[1] * k; f[o + a * 4 + 2] = x[2] * k; f[o + a * 4 + 3] = -(x[0] * n.at[0] + x[1] * n.at[1] + x[2] * n.at[2]) * k; r.set(x, i * 24 + a * 4); } r[i * 24 + 3] = n.phase; u[o + 12] = c.node; u[o + 13] = c.per; u[o + 14] = c.leaf; u[o + 15] = (q(n.tint[0]) | (q(n.tint[1]) << 8) | (q(n.tint[2]) << 16) | (n.open ? 1 << 24 : 0) | (world.clusters[n.cluster]!.kind === 1 ? 1 << 25 : 0) | (this.sigma[n.cluster]! << 26)) >>> 0; ru.set(u.subarray(o + 12, o + 16), i * 24 + 12); r.set([...n.at, n.scale, ...n.base, n.sway], i * 24 + 16); });
+      d.queue.writeBuffer(this.insts, 0, f); this.per[3] = b.perOctant; d.queue.writeBuffer(this.nodes, this.node0[3] * 32, b.nodes);
+    }
+    this.pastLeaves = buffer(g, 'pastLeaves', (Math.max(1, this.maxInst) + LOOSE) * 48, S | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST);
     // ---- the rest
     this.frame = buffer(g, 'frame', 512, U); this.lamps = buffer(g, 'lamps', 64 * 80, U); this.lampOn = new Float32Array(64).fill(1);
     const op = new Float32Array(32 * 16); world.openings.slice(0, 32).forEach((o, i) => { op.set([...o.at, 4 * len(o.u) * len(o.v), ...o.u, 0, ...o.v, 0, ...norm(o.n), 0], i * 16); }); this.openings = buffer(g, 'openings', op, U);
@@ -64,9 +69,8 @@ export class SceneGpu {
     this.bg = d.createBindGroup({ layout: this.layout, entries: [bf(0, this.frame), bf(1, this.nodes), bf(2, this.pieces), bf(3, this.extra), bf(4, this.insts), bf(5, this.lamps), bf(6, this.openings), bf(7, this.mats), { binding: 8, resource: d.createSampler({ magFilter: 'linear', minFilter: 'linear', mipmapFilter: 'linear' }) }, { binding: 9, resource: sky.createView() }, { binding: 10, resource: artTex.createView() }, { binding: 12, resource: caustic.createView() }, { binding: 13, resource: d.createSampler({ magFilter: 'linear', minFilter: 'linear', addressModeU: 'repeat', addressModeV: 'repeat' }) }, { binding: 14, resource: this.lampTex.createView() }, { binding: 15, resource: this.smokeTex.createView() }, { binding: 16, resource: this.smokePage.createView() }] });
   }
   private planeAt: Map<Piece, number>; private markAt: Map<Piece, number>;
-  private instData!: Float32Array<ArrayBuffer>;
-  /** the leaf clusters' frames at the last frame drawn: three rows each */
-  instWas = new Float32Array(0); private keepInst() { for (let i = 0; i < this.maxInst; i++) this.instWas.set(this.instData.subarray(i * 16, i * 16 + 12), i * 12); }
+  /** leaf clusters: their rows at rest, and what the wind needs of each (sway.ts) */
+  instData!: Float32Array<ArrayBuffer>; instRest!: Float32Array<ArrayBuffer>; readonly pastLeaves!: GPUBuffer;
   /** each cluster's density as a medium, in sixteenths */
   private sigma: number[] = [];
   private listData!: Uint32Array<ArrayBuffer>; private box!: Float32Array;
@@ -81,14 +85,13 @@ export class SceneGpu {
     const m = this.world.moving; if (this.moveTree) this.moveTree.order.forEach((src, i) => { const p = m[src]!; if (p.at[1] < -50) return; const hy = Math.abs(p.rot[0][1]) * p.half[0] + Math.abs(p.rot[1][1]) * p.half[1] + Math.abs(p.rot[2][1]) * p.half[2]; put(p, this.piece0[2] + i, p.at[0], p.at[1], p.at[2], Math.hypot(...p.half), hy); });
     const D = this.listData; let o = 0; for (const k of ['plain', 'fancy', 'clear', 'clearFancy'] as const) { this.draws[k] = [o, L[k]!.length]; D.set(L[k]!, o); o += L[k]!.length; }
     this.leafDraws.length = this.sunDraws.length = 0; const wld = this.world, order = this.instTree?.order ?? [];
-    for (const leaves of new Set(wld.clusters.map(c => c.leaves.length))) { if (leaves === 1) { for (let i = 0; i < LOOSE; i++) D[o + i] = this.maxInst + i; this.leafDraws.push({ first: o, count: LOOSE, leaves }); this.sunDraws.push({ first: o, count: LOOSE, leaves }); o += LOOSE; continue; } const all: number[] = [], near: number[] = []; order.forEach((src, i) => { const n = wld.instances[src]!, c = wld.clusters[n.cluster]!; if (c.leaves.length !== leaves) return; all.push(i); const a = this.posed[src]!.at, e = n.scale * (c.kind ? 2.1 : 1.22); if (((n.open && cut > this.openFloor) || a[1] - e < cut) && seen(a[0], a[1], a[2], e)) near.push(i); });
+    for (const leaves of new Set(wld.clusters.map(c => c.leaves.length))) { if (leaves === 1) { for (let i = 0; i < LOOSE; i++) D[o + i] = this.maxInst + i; this.leafDraws.push({ first: o, count: LOOSE, leaves }); this.sunDraws.push({ first: o, count: LOOSE, leaves }); o += LOOSE; continue; } const all: number[] = [], near: number[] = []; order.forEach((src, i) => { const n = wld.instances[src]!, c = wld.clusters[n.cluster]!; if (c.leaves.length !== leaves) return; all.push(i); const a = n.at, e = n.scale * (c.kind ? 2.1 : 1.22) + 0.34; if (((n.open && cut > this.openFloor) || a[1] - e < cut) && seen(a[0], a[1], a[2], e)) near.push(i); });
       this.leafDraws.push({ first: o, count: near.length, leaves }); D.set(near, o); o += near.length; this.sunDraws.push({ first: o, count: all.length, leaves }); D.set(all, o); o += all.length; }
     this.g.device.queue.writeBuffer(this.lists, 0, D, 0, o);
   }
-  private posed: { at: V3; rot: Piece['rot'] }[] = [];
   group = () => this.bg;
   /** what moves this frame: pieces and leaf clusters, with trees over them. `slots` maps each piece to where it lies, for motion */
-  moved(t: number, air: Air): Map<Piece, number> {
+  moved(): Map<Piece, number> {
     const d = this.g.device, w = this.world;
     if (w.moving.length) {
       const n = w.moving.length, mb = this.moveBox; for (let i = 0, o = 0; i < n; i++, o += 6) { const p = w.moving[i]!, h = p.half, r = p.rot, x = r[0], y = r[1], z = r[2]; for (let k = 0; k < 3; k++) { const e = Math.abs(x[k]!) * h[0] + Math.abs(y[k]!) * h[1] + Math.abs(z[k]!) * h[2] + 1e-4; mb[o + k] = p.at[k]! - e; mb[o + 3 + k] = p.at[k]! + e; } }
@@ -97,13 +100,6 @@ export class SceneGpu {
       if (fresh) { this.moveTree = buildBvh(Array.from({ length: n }, (_, i) => ({ mn: [mb[i * 6]!, mb[i * 6 + 1]!, mb[i * 6 + 2]!], mx: [mb[i * 6 + 3]!, mb[i * 6 + 4]!, mb[i * 6 + 5]!] })), 2, 1); this.moveAge = 0; this.moveArea = refitFlat(this.moveTree, mb); this.moveSlots = new Map(); this.moveTree.order.forEach((src, i) => { const p = w.moving[src]!; packPiece(p, this.moveF, this.moveU, i * PIECE_FLOATS, this.planeAt.get(p) ?? 0, this.markAt.get(p) ?? 0); this.moveSlots.set(p, this.piece0[2] + i); }); }
       const t = this.moveTree!, f = this.moveF; for (let i = 0; i < n; i++) { const p = w.moving[t.order[i]!]!, o = i * PIECE_FLOATS, c = p.at, r = p.rot; for (let k = 0; k < 3; k++) { const q = r[k]!, m = o + k * 4; f[m] = q[0]; f[m + 1] = q[1]; f[m + 2] = q[2]; f[m + 3] = -(q[0] * c[0] + q[1] * c[1] + q[2] * c[2]); } if (p.bend) packBend(p.bend, this.moveU, o); }
       d.queue.writeBuffer(this.pieces, this.piece0[2] * PIECE_FLOATS * 4, f); this.per[2] = t.perOctant; d.queue.writeBuffer(this.nodes, this.node0[2] * 32, t.nodes);
-    }
-    if (w.instances.length) {
-      const posed = this.posed = w.instances.map(i => swayed(i, t, air)), bd = (k: number) => { const i = w.instances[k]!, tuft = w.clusters[i.cluster]!.kind === 1, e = i.scale * (tuft ? 2.1 : 1.22), a = posed[k]!.at; return { mn: [a[0] - e, a[1] - (tuft ? 0.1 : e), a[2] - e], mx: [a[0] + e, a[1] + e, a[2] + e] } as never; };
-      if (!this.instTree) this.instTree = buildBvh(w.instances.map((_, k) => bd(k)), 1, 1); else refitBvh(this.instTree, bd); const b = this.instTree;
-      const f = this.instData, u = new Uint32Array(f.buffer), first = this.instWas.length === 0; if (!first) this.keepInst(); const q = (x: number) => Math.max(0, Math.min(255, Math.round(x * 255)));
-      b.order.forEach((src, i) => { const n = w.instances[src]!, p = posed[src]!, o = i * 16, k = 1 / n.scale, c = this.clusterAt[n.cluster]!; for (let a = 0; a < 3; a++) { const r = p.rot[a]!; f[o + a * 4] = r[0] * k; f[o + a * 4 + 1] = r[1] * k; f[o + a * 4 + 2] = r[2] * k; f[o + a * 4 + 3] = -(r[0] * p.at[0] + r[1] * p.at[1] + r[2] * p.at[2]) * k; } u[o + 12] = c.node; u[o + 13] = c.per; u[o + 14] = c.leaf; u[o + 15] = (q(n.tint[0]) | (q(n.tint[1]) << 8) | (q(n.tint[2]) << 16) | (n.open ? 1 << 24 : 0) | (w.clusters[n.cluster]!.kind === 1 ? 1 << 25 : 0) | (this.sigma[n.cluster]! << 26)) >>> 0; });
-      if (first) { this.instWas = new Float32Array(this.maxInst * 12); this.keepInst(); } d.queue.writeBuffer(this.insts, 0, f); this.per[3] = b.perOctant; d.queue.writeBuffer(this.nodes, this.node0[3] * 32, b.nodes);
     }
     return this.moveSlots;
   }
