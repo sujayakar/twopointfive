@@ -17,7 +17,7 @@ import { CAST_FILE, CAST_FILE_LOOK, castUrlFor, loadCharacterSet } from '../anim
 import { CharacterRenderer } from '../anim/characters';
 import { COATFINISH, SOLIDGLASS } from '../scene/stuff';
 import { MARKING_TEXEL } from '../scene/markings';
-import { LOOK, lookKeptOf, placeOfQuery, setLookPlace } from '../scene/look';
+import { lookKeptOf, placeOfQuery, setLookPlace } from '../scene/look';
 import { Input } from './input';
 import { FollowCamera } from './camera';
 import { FIXEDSTEP, planTicks } from './fixedstep';
@@ -148,7 +148,7 @@ async function main(): Promise<void> {
   let refused: string | null = null; if (q.has('bench') && !q.has(BENCH_RUN_KEY)) { refused = benchBegin(false); if (refused === null) return; console.info(`benchmark: ${refused}`); }
   if (priceLevelsPage(q)) return;
   gameKeysBoot(q, walkInNow); bootTextSize(q, kitPicture);
-  LOOK.on = true; setLookPlace(placeOfQuery(q));
+  setLookPlace(placeOfQuery(q));
   const name = coop?.start.file ?? (/^[\w.-]+\.json$/.test(q.get('levelFile') ?? '') ? q.get('levelFile')! : 'office.json'), at = (p: string) => new URL(p, document.baseURI).href;
 
   SFX_TABLE.was = q.has('oldsounds'); SFX_TABLE.redone = q.has('newsounds'); if (q.has('bench') || q.has(BENCH_RUN_KEY)) SFX_WARM.on = false; else if (!q.has('mute')) warmSfx();   // (the sounds, a voice at a time in idle moments)
