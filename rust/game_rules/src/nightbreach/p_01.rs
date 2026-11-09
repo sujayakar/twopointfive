@@ -568,21 +568,6 @@ pub fn night_breach_call_off(g: &mut crate::game::Game) -> Option<String> {
 /// Once a frame from Game.update, after the Director and before the guards move. (nightbreach.ts NightBreach.tick)
 pub fn night_breach_tick(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Option<CameraId>) {
     if !g.night_breach.active { return; }
-    let mut gone = g.night_breach.drill.is_none() && !g.night_breach.no_drill;
-    if !gone {
-        let mut cast = g.night_breach.ops.clone();
-        cast.extend_from_slice(&g.night_breach.hostiles);
-        for x in cast {
-            if !g.guards.contains(&x) && !g.gd[x].fled {
-                gone = true;
-                break;
-            }
-        }
-    }
-    if gone {
-        crate::game::game_restart_encounter(g);
-        if !g.night_breach.active || (g.night_breach.drill.is_none() && !g.night_breach.no_drill) { return; }
-    }
     if g.night_breach.cut && cam.is_some() {
         g.night_breach.cut = false;
         crate::seats::cut_to_men(g);
