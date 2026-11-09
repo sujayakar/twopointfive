@@ -522,17 +522,7 @@ pub(super) fn room_clear_scenario_start(g: &mut crate::game::Game, seed: Option<
         Some(x) if x.is_finite() => Some(m::floor(x)),
         _ => None,
     };
-    if room_clear_scenario_active(g) {
-        if let Some(want) = want {
-            g.k.roomclear.seed = want;
-            g.room_clear.fresh = 0.0;
-            // (against the seed ON THE FLOOR, not the knob)
-            if want != g.room_clear.seed || room_clear_scenario_way_now(g) != g.room_clear.way {
-                room_clear_scenario_restage(g);
-            }
-        }
-        return None;
-    }
+    if room_clear_scenario_active(g) { return None; }
     let seed0 = g.k.roomclear.seed;
     let fresh0 = g.room_clear.fresh;
     if let Some(want) = want {
@@ -557,13 +547,6 @@ pub(super) fn room_clear_scenario_start(g: &mut crate::game::Game, seed: Option<
         return Some(r.unwrap_or_else(|| String::from("the staging failed")));
     }
     None
-}
-
-/// Stage it afresh   (roomclear.ts RoomClearScenario.restage)
-pub fn room_clear_scenario_restage(g: &mut crate::game::Game) {
-    if room_clear_scenario_active(g) {
-        crate::nightbreach::night_breach_restage(g);
-    }
 }
 
 /// the score wiped   (roomclear.ts RoomClearScenario.clear)

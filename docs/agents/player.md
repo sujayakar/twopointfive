@@ -76,8 +76,8 @@ puts a man out at the head, folds him in the body, and off a wall is a noise the
 **A throw.** `do_throw` takes one off the count and `pending_throw` holds it until the arm lets go (`THROW_RELEASE`). The preview shows where it comes
 to rest (`throw_rest`, `rest_of_throw`, which moves nothing) and the burst's rings (`throw_reach`).
 
-**The card.** `MemberKit` is one card, priced by `SlotTable`. `kit_player` writes it on the Player at staging, and `kit_fresh` after a restart on a
-solo card. `big_used` counts the big slot. `kit_alone` makes the charges Sam's own count when nobody came. A mission's `issue` block is `kit_issue`.
+**The card.** `MemberKit` is one card, priced by `SlotTable`. `kit_player` writes it on the Player at staging.
+`big_used` counts the big slot. `kit_alone` makes the charges Sam's own count when nobody came. A mission's `issue` block is `kit_issue`.
 `load_worn` makes the two scores, read against his issue.
 
 **The rows.** `build_interactables` lists what he can do, `update_interact` makes E a tap or the ring (`whistle_wedge` the last wedge), and a tap with
@@ -130,7 +130,7 @@ killed is the same, wounded calls `condition_hurt`, wounded or stunned sets `sta
   done". `sam_up` passes before a round.
 - **A can not yet thrown goes back** when a fold or a job takes his hands (`throw_off`). Unlimited ammo covers cans, launcher rounds and wall charges.
 - **A restart is clean.** "after resetting a level … the lights kind of flicker on in engine. Like, we should reset the level to a clean state".
-  `game_restart_encounter` makes a fresh Player and floor. A load is not a restart. Enter when down goes to the run's newest checkpoint, else
+  `control::restart` stands the level's image again. A load is not a restart. Enter when down goes to the run's newest checkpoint, else
   restarts; Shift and Enter always restarts.
 - **A recap tells nobody still playing** (`recap_over`).
 - **The sandbox row is no clean run.** God, no AI or unlimited ammo sets `verdict.cheat`. They are commands (`God`, `Ai`, `Ammo`), kept per machine by
@@ -147,8 +147,7 @@ killed is the same, wounded calls `condition_hurt`, wounded or stunned sets `sta
 - **A row for Sam:** `build_interactables`, its `Verb`, the rule that reads `g.act`. A job that plants him is an arm of `sam_work`. A key: its code in
   `update_player`, its row in `KEY_ACTS`.
 - **A new reason his gun cannot fire:** a term of `walled` in `update_player` with its line on a click, and `gun_shut` so that the ring shows the bar.
-- **New state:** on the Player it dies with the fresh Player in `game_restart_encounter`. Elsewhere it needs a reset there, and `restarts.rs` shows if
-  it was forgotten.
+- **New state:** nothing to do: a restart throws the whole game away. What must outlive a try goes in `Survivors`.
 
 ## What holds it
 

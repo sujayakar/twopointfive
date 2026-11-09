@@ -489,7 +489,7 @@ impl DoorsAsk for Play {
     fn leaf_angle(&self, d: DoorId) -> f64 { game::doors::door_angle(&self.g, d) }
     fn leaf_vel(&self, d: DoorId) -> f64 { game::doors::door_vel(&self.g, d) }
     fn leaf_stays(&mut self, d: DoorId) { game::doors::door_set_quiet_t(&mut self.g, d, -3600.0); }
-    fn restarted(&mut self) { game::game::game_restart_encounter(&mut self.g); }
+    fn restarted(&mut self) { game::savestate::control::restart(&mut self.g, None); }
     fn any_op(&self) -> bool { !self.g.door_tools.ops.is_empty() }
     fn fire_lasts(&self) -> f64 { self.g.k.fireline.fire_s }
     fn doors(&self) -> Vec<DoorId> { self.g.doors.list.clone() }
@@ -616,7 +616,7 @@ impl DoorsAsk for Play {
     fn rescue_on(&mut self, first: f64, second: f64, set: f64) {
         let k = &mut self.g.k.rescue;
         (k.resolve_secs, k.second_hostage_secs, k.set_secs) = (first, second, set);
-        game::rescue::rescue_restage(&mut self.g);
+        game::savestate::control::restart(&mut self.g, None);
     }
     fn fight_notes(&self, name: &str) -> Vec<String> { self.g.fight.log.iter().filter(|n| n.who == name).map(|n| n.what.clone()).collect() }
     fn rescue_aim(&self) -> f64 { self.g.k.rescue.aim_secs }

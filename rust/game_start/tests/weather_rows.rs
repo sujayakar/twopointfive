@@ -50,22 +50,15 @@ fn the_pool_is_handed_the_storm() {
     assert_eq!(d.winds.gusts.last().unwrap().kind, 1, "the storm goes last");
 }
 
-/// THE RULE: a fire's hot air is told on the ticks the rule files it, and what a restart clears is said in one row of that tick.
+/// THE RULE: a fire's hot air is told on the ticks the rule files it.
 #[test]
-fn heat_and_what_goes_are_told() {
+fn a_fires_heat_is_told() {
     let mut p = pass(5);
     p.g.m.dress.dress.wind = true;
     let (mut d, mut hot) = (Drawn::default(), false);
     assert!((0..p.g.targets.len()).any(|i| game::fire::is_fire(&p.g, p.g.targets[i])), "the pass has a brazier");
     for _ in 0..60 { p.g.out = game_start::stand::frame(&mut p.g, &p.host, 1.0 / 60.0); d.take(&p.g, ALL); hot |= !d.winds.heat.is_empty(); p.g.out.clear(); }
     assert!(hot, "beside a burning fire its hot air is told");
-    p.g.out = game_start::stand::frame(&mut p.g, &p.host, 1.0 / 60.0);
-    p.g.out.clear();
-    game::game::game_restart_encounter(&mut p.g);
-    d.take(&p.g, ALL);
-    assert_eq!(d.resets.len(), 1, "one row a tick");
-    let w = d.resets[0].what;
-    assert!(w & 4 != 0 && w & 8 != 0 && w & 16 != 0, "the blasts, the marks and the prints go: {w}");
 }
 
 /// THE RULE: a level in the snow says what snow its statics are, on another says nothing; its men are told; and the sky says it is a snow level.
