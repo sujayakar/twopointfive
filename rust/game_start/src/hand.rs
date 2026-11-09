@@ -5,7 +5,7 @@ use std::string::{String, ToString};
 use std::vec::Vec;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
-pub enum Place { Nearest, Door, Sam, At(f64, f64) }
+pub enum Place { Nearest, Door, OpenDoor, Sam, At(f64, f64) }
 #[derive(Clone, Debug)]
 pub enum What { Order(String, Place, game::orders::Who), Fire(Place), Can(game::game::ThrowKind, Place), KeyDown(&'static str), KeyUp(&'static str), Point(Place), Press, Release }
 /// `at`: (the frame, what is done, which line of the file it is of); `lines`: the file's lines that do something, as written
@@ -17,7 +17,7 @@ pub fn hands_dir() -> std::path::PathBuf { std::path::PathBuf::from(env!("CARGO_
 pub fn read_hand(text: &str, frames: usize) -> Hand {
     let mut h = Hand { unhurt: false, at: Vec::new(), lines: Vec::new() };
     let place = |w: &str| -> Place {
-        match w { "nearest" => Place::Nearest, "door" => Place::Door, "sam" => Place::Sam, xz => { let mut p = xz.split(',').map(|v| v.parse::<f64>().unwrap_or_else(|_| panic!("a place is nearest, door, sam or X,Z: '{}'", xz))); Place::At(p.next().unwrap(), p.next().expect("X,Z")) } }
+        match w { "nearest" => Place::Nearest, "door" => Place::Door, "opendoor" => Place::OpenDoor, "sam" => Place::Sam, xz => { let mut p = xz.split(',').map(|v| v.parse::<f64>().unwrap_or_else(|_| panic!("a place is nearest, door, sam or X,Z: '{}'", xz))); Place::At(p.next().unwrap(), p.next().expect("X,Z")) } }
     };
     for (n, line) in text.lines().enumerate() {
         let line = line.split('#').next().unwrap().trim();
@@ -67,9 +67,10 @@ pub fn place_of(p: &Play, at: Place) -> Option<[f64; 2]> {
         Place::Sam => Some(p.sam_at()),
         Place::At(x, z) => Some([x, z]),
         Place::Nearest => others(p).first().map(|&m| p.at(m)),
-        Place::Door => {
-            let him = others(p).first().map(|&m| p.at(m))?;
-            let mut doors: Vec<[f64; 2]> = p.g.doors.list.iter().map(|&d| { let c = p.g.dr[d].frame_centre; [c[0], c[2]] }).collect();
+        Place::Door | Place::OpenDoor => {
+            // (the way to the nearest man; with nobody left, the door nearest Sam: a door is still worked)
+            let him = others(p).first().map(|&m| p.at(m)).unwrap_or_else(|| p.sam_at());
+            let mut doors: Vec<[f64; 2]> = p.g.doors.list.iter().filter(|&&d| at != Place::OpenDoor || game::doortools::is_open(&p.g, d)).map(|&d| { let c = p.g.dr[d].frame_centre; [c[0], c[2]] }).collect();
             doors.sort_by(|a, b| dist(*a, him).partial_cmp(&dist(*b, him)).unwrap());
             doors.first().copied()
         }
