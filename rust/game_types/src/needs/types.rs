@@ -1,24 +1,14 @@
 //! The types of `needs`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default, Words)]
 pub enum NeedKind {
     #[default] Smoke,
     Coffee,
     Water,
     Stretch,
-}
-impl NeedKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            NeedKind::Smoke => "smoke",
-            NeedKind::Coffee => "coffee",
-            NeedKind::Water => "water",
-            NeedKind::Stretch => "stretch",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -38,22 +28,12 @@ pub struct Need {
     pub trip_m: f64,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum TripPhase {
     #[default] Going,
     Telegraph,
     Dwell,
     Returning,
-}
-impl TripPhase {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            TripPhase::Going => "going",
-            TripPhase::Telegraph => "telegraph",
-            TripPhase::Dwell => "dwell",
-            TripPhase::Returning => "returning",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -112,20 +92,12 @@ pub struct DeparturePoint {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct NeedsMod {
     /// (src/game/needs.ts:111 memOf)
     pub mem_of: JsMap<GuardId, crate::needs::NeedMem>,
     /// (src/game/needs.ts:121 floorOf)
     pub floor_of: Option<crate::needs::NeedsModFloorOfValue>,
-}
-impl NeedsMod {
-    pub fn blank() -> Self {
-        NeedsMod {
-            mem_of: JsMap::new(),
-            floor_of: None,
-        }
-    }
 }
 
 /// the counters this module keeps for the checks

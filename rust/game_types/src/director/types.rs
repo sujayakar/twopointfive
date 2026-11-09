@@ -1,6 +1,6 @@
 //! The types of `director`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// which events a c.on takes: every distinct filter closure of levels/*.script.ts, with what it captured (director.ts EventFilter)
@@ -86,7 +86,7 @@ pub enum ScriptVars {
     TutTeam(crate::script_tut_team::TutTeamVars),
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum EventKind {
     #[default] Shot,
     Bang,
@@ -99,24 +99,8 @@ pub enum EventKind {
     Whistle,
     Glass,
 }
-impl EventKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            EventKind::Shot => "shot",
-            EventKind::Bang => "bang",
-            EventKind::Kick => "kick",
-            EventKind::Door => "door",
-            EventKind::LightOut => "lightOut",
-            EventKind::GuardShot => "guardShot",
-            EventKind::Step => "step",
-            EventKind::Prop => "prop",
-            EventKind::Whistle => "whistle",
-            EventKind::Glass => "glass",
-        }
-    }
-}
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Director {
     pub manifest: Option<crate::director::Manifest>,
     pub problems: Vec<crate::director::LintProblem>,
@@ -132,27 +116,6 @@ pub struct Director {
     pub due_clicks: f64,
     pub shown: JsSet<GuardId>,
 }
-impl Director {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        Director {
-            manifest: None,
-            problems: Vec::new(),
-            armed: false,
-            log: Vec::new(),
-            run: None,
-            last_run: None,
-            frame: None,
-            serial: 0.0,
-            seen: JsSet::new(),
-            exiting: false,
-            due_keys: JsSet::new(),
-            due_clicks: 0.0,
-            shown: JsSet::new(),
-        }
-    }
-}
-impl Default for Director { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Debug, ToBytes, Default)]
 pub struct Manifest {
@@ -229,7 +192,7 @@ pub struct TriggerDef {
     pub label: Option<String>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum TriggerDefKind {
     #[default] Start,
     Enter,
@@ -237,18 +200,6 @@ pub enum TriggerDefKind {
     Event,
     Signal,
     When,
-}
-impl TriggerDefKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            TriggerDefKind::Start => "start",
-            TriggerDefKind::Enter => "enter",
-            TriggerDefKind::After => "after",
-            TriggerDefKind::Event => "event",
-            TriggerDefKind::Signal => "signal",
-            TriggerDefKind::When => "when",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes)]
@@ -326,16 +277,9 @@ pub struct VolumeRef {
     pub id: String,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Words)]
 pub enum VariantRefId {
     #[default] Daylight,
-}
-impl VariantRefId {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            VariantRefId::Daylight => "daylight",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -375,7 +319,7 @@ pub struct EventView {
     pub name: Option<String>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum EventViewKind {
     #[default] Shot,
     Bang,
@@ -388,23 +332,6 @@ pub enum EventViewKind {
     Whistle,
     Glass,
     Signal,
-}
-impl EventViewKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            EventViewKind::Shot => "shot",
-            EventViewKind::Bang => "bang",
-            EventViewKind::Kick => "kick",
-            EventViewKind::Door => "door",
-            EventViewKind::LightOut => "lightOut",
-            EventViewKind::GuardShot => "guardShot",
-            EventViewKind::Step => "step",
-            EventViewKind::Prop => "prop",
-            EventViewKind::Whistle => "whistle",
-            EventViewKind::Glass => "glass",
-            EventViewKind::Signal => "signal",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes)]
@@ -451,7 +378,7 @@ pub struct CondArm3 {
     pub tick0: f64,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum CondArm3Kind {
     #[default] Shot,
     Bang,
@@ -464,23 +391,6 @@ pub enum CondArm3Kind {
     Whistle,
     Glass,
     Signal,
-}
-impl CondArm3Kind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            CondArm3Kind::Shot => "shot",
-            CondArm3Kind::Bang => "bang",
-            CondArm3Kind::Kick => "kick",
-            CondArm3Kind::Door => "door",
-            CondArm3Kind::LightOut => "lightOut",
-            CondArm3Kind::GuardShot => "guardShot",
-            CondArm3Kind::Step => "step",
-            CondArm3Kind::Prop => "prop",
-            CondArm3Kind::Whistle => "whistle",
-            CondArm3Kind::Glass => "glass",
-            CondArm3Kind::Signal => "signal",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -501,18 +411,10 @@ pub struct CondArm5 {
     pub of: Vec<crate::director::Cond>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum CondArm5K {
     #[default] All,
     Any,
-}
-impl CondArm5K {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            CondArm5K::All => "all",
-            CondArm5K::Any => "any",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]

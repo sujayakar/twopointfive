@@ -1,6 +1,6 @@
 //! The types of `rescuecheck`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
@@ -24,7 +24,7 @@ pub struct Out {
     pub calm: crate::powerout::Calm,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum RescueCheckEventWhat {
     #[default] Lost,
     Home,
@@ -38,24 +38,6 @@ pub enum RescueCheckEventWhat {
     Nobody,
     Abort,
     Goes,
-}
-impl RescueCheckEventWhat {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            RescueCheckEventWhat::Lost => "lost",
-            RescueCheckEventWhat::Home => "home",
-            RescueCheckEventWhat::There => "there",
-            RescueCheckEventWhat::Word => "word",
-            RescueCheckEventWhat::Found => "found",
-            RescueCheckEventWhat::Kept => "kept",
-            RescueCheckEventWhat::Empty => "empty",
-            RescueCheckEventWhat::Check => "check",
-            RescueCheckEventWhat::Asks => "asks",
-            RescueCheckEventWhat::Nobody => "nobody",
-            RescueCheckEventWhat::Abort => "abort",
-            RescueCheckEventWhat::Goes => "goes",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -104,15 +86,8 @@ pub struct Goer {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct RescuecheckMod {
     /// (src/game/rescuecheck.ts:80 STATES)
     pub states: Option<crate::rescuecheck::State>,
-}
-impl RescuecheckMod {
-    pub fn blank() -> Self {
-        RescuecheckMod {
-            states: None,
-        }
-    }
 }

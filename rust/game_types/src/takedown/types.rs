@@ -1,6 +1,6 @@
 //! The types of `takedown`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -24,17 +24,10 @@ pub enum TakeFallHow {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct TakedownMod {
     /// (src/game/takedown.ts:162 BREATHING)
     pub breathing: bool,
-}
-impl TakedownMod {
-    pub fn blank() -> Self {
-        TakedownMod {
-            breathing: false,
-        }
-    }
 }
 
 /// the counters this module keeps for the checks

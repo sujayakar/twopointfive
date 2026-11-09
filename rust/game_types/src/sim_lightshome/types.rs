@@ -1,6 +1,6 @@
 //! The types of `sim_lightshome`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
@@ -46,11 +46,11 @@ pub struct FixtureDefAreaLightsItem {
     pub base: f64,
 }
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Fixture {
     pub name: String,
     pub group: String,
-    pub kind: crate::sim_lightshome::FixtureKind,
+    #[is(crate::sim_lightshome::FixtureKind::Analytic)] pub kind: crate::sim_lightshome::FixtureKind,
     pub pos: V3,
     pub light: Option<LightId>,
     pub boxes: Vec<f64>,
@@ -61,43 +61,13 @@ pub struct Fixture {
     pub lens: Option<V3>,
     pub i: f64,
 }
-impl Fixture {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        Fixture {
-            name: String::new(),
-            group: String::new(),
-            kind: crate::sim_lightshome::FixtureKind::Analytic,
-            pos: [0.0; 3],
-            light: None,
-            boxes: Vec::new(),
-            base_emissive: [0.0; 3],
-            mains: false,
-            interactive: false,
-            area_lights: None,
-            lens: None,
-            i: 0.0,
-        }
-    }
-}
-impl Default for Fixture { fn default() -> Self { Self::blank() } }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words)]
 pub enum FixtureKind {
     Analytic,
     Emissive,
     Breaker,
     Device,
-}
-impl FixtureKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            FixtureKind::Analytic => "analytic",
-            FixtureKind::Emissive => "emissive",
-            FixtureKind::Breaker => "breaker",
-            FixtureKind::Device => "device",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
@@ -113,23 +83,13 @@ pub struct BeaconFact {
     pub target: FixtureId,
 }
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct LightHome {
     pub lamps: Vec<LightId>,
     /// (holds nothing: in no bytes)
     #[bytes(skip)]
-    pub st: crate::Opaque,
+    #[is(crate::Opaque)] pub st: crate::Opaque,
 }
-impl LightHome {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        LightHome {
-            lamps: Vec::new(),
-            st: crate::Opaque,
-        }
-    }
-}
-impl Default for LightHome { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct LIGHTCAPS {

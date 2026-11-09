@@ -1,6 +1,6 @@
 //! The types of `scene_level`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 /// which level's script this is, by the level file's name (scene/levelScripts.ts LEVEL_SCRIPTS); the body is levels/<name>.script.ts, its define pass called by a match
@@ -397,21 +397,13 @@ pub struct CivilianDef {
     pub face: Option<Vec<f64>>,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum CivilianDefKind {
     #[default] Cleaner,
     Worker,
 }
-impl CivilianDefKind {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            CivilianDefKind::Cleaner => "cleaner",
-            CivilianDefKind::Worker => "worker",
-        }
-    }
-}
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Words)]
 pub enum CivilianTask {
     Bin,
     Stand,
@@ -420,19 +412,6 @@ pub enum CivilianTask {
     Cooler,
     Printer,
     Shelf,
-}
-impl CivilianTask {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            CivilianTask::Bin => "bin",
-            CivilianTask::Stand => "stand",
-            CivilianTask::Wipe => "wipe",
-            CivilianTask::Sit => "sit",
-            CivilianTask::Cooler => "cooler",
-            CivilianTask::Printer => "printer",
-            CivilianTask::Shelf => "shelf",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]

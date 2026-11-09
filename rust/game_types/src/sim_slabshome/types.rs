@@ -1,6 +1,6 @@
 //! The types of `sim_slabshome`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -47,21 +47,11 @@ pub struct SlabCols {
     pub bx: f64,
 }
 
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Blank)]
 pub struct SlabStore {
     pub doors: f64,
     pub o: crate::sim_slabshome::SlabStoreO,
 }
-impl SlabStore {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        SlabStore {
-            doors: 0.0,
-            o: crate::sim_slabshome::SlabStoreO::default(),
-        }
-    }
-}
-impl Default for SlabStore { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct SlabStoreO {
@@ -110,17 +100,10 @@ pub struct SimSlabshomeModSLABSSTEPPED {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Blank)]
 pub struct SimSlabshomeMod {
     /// (src/sim/slabshome.ts:135 SLABS_STEPPED)
-    pub slabs_stepped: crate::sim_slabshome::SimSlabshomeModSLABSSTEPPED,
-}
-impl SimSlabshomeMod {
-    pub fn blank() -> Self {
-        SimSlabshomeMod {
-            slabs_stepped: crate::sim_slabshome::SimSlabshomeModSLABSSTEPPED { there: 0.0, here: 0.0, host: 0.0, rays: 0.0, gathers: 0.0, substeps: 0.0, landed: 0.0, rested: 0.0 },
-        }
-    }
+    #[is(crate::sim_slabshome::SimSlabshomeModSLABSSTEPPED { there: 0.0, here: 0.0, host: 0.0, rays: 0.0, gathers: 0.0, substeps: 0.0, landed: 0.0, rested: 0.0 })] pub slabs_stepped: crate::sim_slabshome::SimSlabshomeModSLABSSTEPPED,
 }
 
 /// (src/sim/slabshome.ts:22 SLAB_CAP)

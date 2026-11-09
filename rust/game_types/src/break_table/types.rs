@@ -1,29 +1,16 @@
 //! The types of `break_table`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Breaks {
-    pub counter: f64,
+    #[is(1.0)] pub counter: f64,
     pub queue: Vec<DebrisChunkId>,
-    pub pcounter: f64,
+    #[is(1.0)] pub pcounter: f64,
     pub look: Option<crate::break_table::BreaksLook>,
-    pub kink_t: f64,
+    #[is(-1000000000.0)] pub kink_t: f64,
 }
-impl Breaks {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        Breaks {
-            counter: 1.0,
-            queue: Vec::new(),
-            pcounter: 1.0,
-            look: None,
-            kink_t: -1000000000.0,
-        }
-    }
-}
-impl Default for Breaks { fn default() -> Self { Self::blank() } }
 
 /// WHAT A THING IS INSIDE, where it is broken: asked of the thing (`inside_of`), never of the row that gives its pieces their shape.
 #[derive(Clone, Copy, Debug, PartialEq)]

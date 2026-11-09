@@ -1,6 +1,6 @@
 //! The types of `handleside`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -82,7 +82,7 @@ pub enum NearStand {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct HandlesideMod {
     /// (src/game/handleside.ts:69 states)
     pub states: JsMap<GuardId, crate::handleside::St>,
@@ -96,18 +96,6 @@ pub struct HandlesideMod {
     pub faces: JsMap<DoorId, crate::handleside::HandlesideModFacesValue>,
     /// (src/game/handleside.ts:355 stepped)
     pub stepped: JsMap<GuardId, f64>,
-}
-impl HandlesideMod {
-    pub fn blank() -> Self {
-        HandlesideMod {
-            states: JsMap::new(),
-            hands: JsMap::new(),
-            rested: JsMap::new(),
-            lined: JsMap::new(),
-            faces: JsMap::new(),
-            stepped: JsMap::new(),
-        }
-    }
 }
 
 /// the counters this module keeps for the checks

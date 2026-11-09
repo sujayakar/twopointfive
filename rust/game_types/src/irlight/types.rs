@@ -1,6 +1,6 @@
 //! The types of `irlight`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -35,17 +35,10 @@ pub struct KitNearValue {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct IrlightMod {
     /// (src/game/irlight.ts:117 kits)
     pub kits: Option<crate::irlight::Kit>,
-}
-impl IrlightMod {
-    pub fn blank() -> Self {
-        IrlightMod {
-            kits: None,
-        }
-    }
 }
 
 /// (src/game/irlight.ts:107 WAND_KEY0)

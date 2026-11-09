@@ -1,6 +1,6 @@
 //! The types of `sim_propshome`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -23,21 +23,11 @@ pub struct PropCols {
     pub row: f64,
 }
 
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Blank)]
 pub struct PropStore {
     pub total: f64,
     pub o: crate::sim_propshome::PropStoreO,
 }
-impl PropStore {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        PropStore {
-            total: 0.0,
-            o: crate::sim_propshome::PropStoreO::default(),
-        }
-    }
-}
-impl Default for PropStore { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct PropStoreO {
@@ -101,20 +91,12 @@ pub struct SimPropshomeModPROPSSTEPPED {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Blank)]
 pub struct SimPropshomeMod {
     /// (src/sim/propshome.ts:103 IO)
     pub io: Option<crate::sim_propshome::PropIo>,
     /// (src/sim/propshome.ts:120 PROPS_STEPPED)
-    pub props_stepped: crate::sim_propshome::SimPropshomeModPROPSSTEPPED,
-}
-impl SimPropshomeMod {
-    pub fn blank() -> Self {
-        SimPropshomeMod {
-            io: None,
-            props_stepped: crate::sim_propshome::SimPropshomeModPROPSSTEPPED { there: 0.0, noises: 0.0, swept: 0.0, guided: 0.0, pairs: 0.0, walls: 0.0, held: 0.0, substeps: 0.0, settled: 0.0, settle_walls: 0.0 },
-        }
-    }
+    #[is(crate::sim_propshome::SimPropshomeModPROPSSTEPPED { there: 0.0, noises: 0.0, swept: 0.0, guided: 0.0, pairs: 0.0, walls: 0.0, held: 0.0, substeps: 0.0, settled: 0.0, settle_walls: 0.0 })] pub props_stepped: crate::sim_propshome::SimPropshomeModPROPSSTEPPED,
 }
 
 /// (src/sim/propshome.ts:23 PROP_CAP)

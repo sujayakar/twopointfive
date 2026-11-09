@@ -1,22 +1,13 @@
 //! The types of `sim_fallshome`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Words)]
 pub enum FallSound {
-    #[default] Empty,
+    #[word("")] #[default] Empty,
     GlassTinkle,
     GlassShatter,
-}
-impl FallSound {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            FallSound::Empty => "",
-            FallSound::GlassTinkle => "glassTinkle",
-            FallSound::GlassShatter => "glassShatter",
-        }
-    }
 }
 
 #[derive(Clone, Copy, Debug, Default)]
@@ -74,17 +65,10 @@ pub struct FallStoreStep {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Blank)]
 pub struct SimFallshomeMod {
     /// (src/sim/fallshome.ts:43 FALLS)
-    pub falls: crate::sim_fallshome::SimFallshomeModFALLS,
-}
-impl SimFallshomeMod {
-    pub fn blank() -> Self {
-        SimFallshomeMod {
-            falls: crate::sim_fallshome::SimFallshomeModFALLS { there: 0.0, dues: 0.0, steps: 0.0, crunches: 0.0 },
-        }
-    }
+    #[is(crate::sim_fallshome::SimFallshomeModFALLS { there: 0.0, dues: 0.0, steps: 0.0, crunches: 0.0 })] pub falls: crate::sim_fallshome::SimFallshomeModFALLS,
 }
 
 /// (src/sim/fallshome.ts:20 FALL_CELL)

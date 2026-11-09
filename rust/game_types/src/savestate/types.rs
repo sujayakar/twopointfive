@@ -1,6 +1,6 @@
 //! The types of `savestate`.
 #![allow(unused_imports)]
-use crate::{ids::*, js::*, Quat, V3};
+use crate::{Blank, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, Default)]
@@ -25,35 +25,26 @@ pub struct MemSave {
     pub info: crate::savestate::SlotInfo,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Blank)]
 pub struct MemShelf {
     pub m: JsMap<String, crate::savestate::MemSave>,
 }
-impl MemShelf {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        MemShelf {
-            m: JsMap::new(),
-        }
-    }
-}
-impl Default for MemShelf { fn default() -> Self { Self::blank() } }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Blank)]
 pub struct Checkpoints {
-    pub enabled: bool,
-    pub run_id: String,
+    #[is(true)] pub enabled: bool,
+    #[is(String::from(""))] pub run_id: String,
     pub visited: JsSet<String>,
     pub quiet_t: f64,
     pub body_from: Option<V3>,
-    pub last_save_t: f64,
+    #[is(-1000000000.0)] pub last_save_t: f64,
     pub pending: Option<crate::savestate::CheckpointsPending>,
     pub flash: Option<crate::savestate::CheckpointsFlash>,
     pub log: Vec<crate::savestate::CheckpointsLogItem>,
-    pub stats: crate::savestate::CheckpointsStats,
+    #[is(crate::savestate::CheckpointsStats { requests: 0.0, autosaves: 0.0, manual: 0.0, loads: 0.0, dropped: 0.0, refused: 0.0, deferred_frames: 0.0, regretted: 0.0 })] pub stats: crate::savestate::CheckpointsStats,
     pub mission_ref: Option<u32>,
-    pub stage_ref: crate::game::MissionStage,
-    pub room_ref: String,
+    #[is(crate::game::MissionStage::Infiltrate)] pub stage_ref: crate::game::MissionStage,
+    #[is(String::from(""))] pub room_ref: String,
     pub drag_ref: Option<GuardId>,
     pub last_auto: Option<crate::savestate::CheckpointsLastAuto>,
     pub shelf: crate::savestate::MemShelf,
@@ -61,33 +52,6 @@ pub struct Checkpoints {
     pub due: Option<String>,
     pub authored: Option<String>,
 }
-impl Checkpoints {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        Checkpoints {
-            enabled: true,
-            run_id: String::from(""),
-            visited: JsSet::new(),
-            quiet_t: 0.0,
-            body_from: None,
-            last_save_t: -1000000000.0,
-            pending: None,
-            flash: None,
-            log: Vec::new(),
-            stats: crate::savestate::CheckpointsStats { requests: 0.0, autosaves: 0.0, manual: 0.0, loads: 0.0, dropped: 0.0, refused: 0.0, deferred_frames: 0.0, regretted: 0.0 },
-            mission_ref: None,
-            stage_ref: crate::game::MissionStage::Infiltrate,
-            room_ref: String::from(""),
-            drag_ref: None,
-            last_auto: None,
-            shelf: crate::savestate::MemShelf::blank(),
-            hand: false,
-            due: None,
-            authored: None,
-        }
-    }
-}
-impl Default for Checkpoints { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Debug, Default)]
 pub struct CheckpointsPending {

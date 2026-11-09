@@ -1,6 +1,6 @@
 //! The types of `lighting`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -20,22 +20,12 @@ pub struct DayStateBlackout {
     pub since: f64,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Words)]
 pub enum SetBlackoutCause {
     Shot,
     Ocp,
     Debug,
     Hand,
-}
-impl SetBlackoutCause {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            SetBlackoutCause::Shot => "shot",
-            SetBlackoutCause::Ocp => "ocp",
-            SetBlackoutCause::Debug => "debug",
-            SetBlackoutCause::Hand => "hand",
-        }
-    }
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -45,20 +35,12 @@ pub enum LightEventCause {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct LightingMod {
     /// (src/game/lighting.ts:33 LENS_FROM)
     pub lens_from: JsMap<LightId, V3>,
     /// (src/game/lighting.ts:178 dayStates)
     pub day_states: Option<crate::lighting::DayState>,
-}
-impl LightingMod {
-    pub fn blank() -> Self {
-        LightingMod {
-            lens_from: JsMap::new(),
-            day_states: None,
-        }
-    }
 }
 
 /// the counters this module keeps for the checks

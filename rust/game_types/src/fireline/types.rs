@@ -1,6 +1,6 @@
 //! The types of `fireline`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Debug, ToBytes, Default)]
@@ -42,20 +42,12 @@ pub struct FireLineFeet {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct FirelineMod {
     /// (src/game/fireline.ts:79 states)
     pub states: JsMap<GuardId, crate::fireline::St>,
     /// (src/game/fireline.ts:83 fired)
     pub fired: JsMap<PlayerId, crate::fireline::Fired>,
-}
-impl FirelineMod {
-    pub fn blank() -> Self {
-        FirelineMod {
-            states: JsMap::new(),
-            fired: JsMap::new(),
-        }
-    }
 }
 
 /// the counters this module keeps for the checks

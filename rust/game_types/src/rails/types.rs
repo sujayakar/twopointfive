@@ -1,49 +1,26 @@
 //! The types of `rails`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct Rails {
     pub run: Option<u32>,
-    pub answered: f64,
+    #[is(-1.0)] pub answered: f64,
     pub orders_seen: f64,
     pub spared: JsMap<crate::Num, f64>,
-    pub tap_t: f64,
-    pub way_nv: f64,
-    pub gave_step: f64,
+    #[is(-1000000000.0)] pub tap_t: f64,
+    #[is(-1.0)] pub way_nv: f64,
+    #[is(-1.0)] pub gave_step: f64,
     pub gave: f64,
-    pub gave_t: f64,
-    pub gave0: f64,
-    pub act_t: f64,
+    #[is(-1000000000.0)] pub gave_t: f64,
+    #[is(-1000000000.0)] pub gave0: f64,
+    #[is(-1000000000.0)] pub act_t: f64,
     pub log: Vec<String>,
     pub running: bool,
     pub step_look: Option<crate::rails::RailsStepLook>,
     pub fresh: f64,
 }
-impl Rails {
-    /// what a new one holds
-    pub fn blank() -> Self {
-        Rails {
-            run: None,
-            answered: -1.0,
-            orders_seen: 0.0,
-            spared: JsMap::new(),
-            tap_t: -1000000000.0,
-            way_nv: -1.0,
-            gave_step: -1.0,
-            gave: 0.0,
-            gave_t: -1000000000.0,
-            gave0: -1000000000.0,
-            act_t: -1000000000.0,
-            log: Vec::new(),
-            running: false,
-            step_look: None,
-            fresh: 0.0,
-        }
-    }
-}
-impl Default for Rails { fn default() -> Self { Self::blank() } }
 
 #[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct RailsStepLook {

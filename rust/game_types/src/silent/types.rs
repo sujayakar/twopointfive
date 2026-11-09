@@ -1,6 +1,6 @@
 //! The types of `silent`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Blank, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
@@ -34,20 +34,12 @@ pub enum SilentBoot {
 }
 
 /// the state this module keeps at its top level
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Blank)]
 pub struct SilentMod {
     /// (src/game/silent.ts:110 states)
     pub states: JsMap<PlayerId, crate::silent::State>,
     /// (src/game/silent.ts:233 seats)
     pub seats: JsMap<PlayerId, crate::silent::SilentModSeatsValue>,
-}
-impl SilentMod {
-    pub fn blank() -> Self {
-        SilentMod {
-            states: JsMap::new(),
-            seats: JsMap::new(),
-        }
-    }
 }
 
 /// the counters this module keeps for the checks

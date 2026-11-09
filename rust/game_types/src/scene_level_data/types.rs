@@ -1,24 +1,14 @@
 //! The types of `scene_level_data`.
 #![allow(unused_imports)]
-use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
+use crate::{Words, bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default, Words)]
 pub enum PropKindName {
     #[default] Cardboard,
     Plant,
     Chair,
     Bin,
-}
-impl PropKindName {
-    pub const fn as_str(self) -> &'static str {
-        match self {
-            PropKindName::Cardboard => "cardboard",
-            PropKindName::Plant => "plant",
-            PropKindName::Chair => "chair",
-            PropKindName::Bin => "bin",
-        }
-    }
 }
 
 #[derive(Clone, Debug, ToBytes, Default)]
