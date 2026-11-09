@@ -436,7 +436,7 @@ pub fn destruction_update(g: &mut crate::game::Game, dt: f64) {
         crate::debris::debris_feet(g, &men, knobs, None, None);
     }
     crate::edge_look::edge_look_feet(g, &men, knobs, dt);
-    if js::truthy(crate::sim_fallshome::fall_store_waiting_in(g, crate::sim_fallshome::FALL_PIECES)) {
+    if !g.falls.pieces.waiting.is_empty() {
         crate::debris::debris_landings(g);
     }
     if !g.destr.debris.list.is_empty() {

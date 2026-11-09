@@ -12,7 +12,7 @@
 //!
 //! WHAT IS NOT HERE. What a fragment becomes (plates, spray, chips) is dressing: the rule lists each fragment it lets go (`Ctx.out`), and the caller hands them on when
 //! the pane's call is back, a pane at a time. Nothing a fragment's handling does is read by the rest of that pane's rule. Its one question of the world, where it
-//! comes down, is asked here at the moment it lets go, and its landing is scheduled here (falls.rs) under SHARDS.byFall.
+//! comes down, is asked here at the moment it lets go, and its landing is listed for the caller (`Ctx.landings`), who keeps it (falls.rs).
 //!
 //! BOUNDS. Sheets and rows: a level of more sheets is refused as it loads, by name. Clumps of a sheet: the same (pattern.rs MAX_CLUMPS).
 //! THE QUEUE: MAX_Q pieces waiting in a game; a piece past that stays in its frame for the next support pass. No run has come within a tenth of it.
@@ -20,7 +20,7 @@ use game_types::glassbreak::{Fragment, FragmentCause, FragmentFall, FragmentKind
 use game_types::glasspen::PaneType;
 use game_types::knobs::Knobs;
 use alloc::vec::Vec;
-use crate::falls;
+use crate::falls::{self, FallSound, FallTold};
 use crate::glass::{classify_row, dice_out, site_of, GW_COLS, GW_CRATER, GW_DSEED, GW_FLAGS, GW_GOING, GW_N, GW_OPEN, GW_ROWS, GW_SEED, G_DICE, G_DICE_AT, G_GONE, G_RUN, G_SITE};
 use crate::roles::*;
 use crate::lines::{self, ASK_GLASS};
@@ -603,6 +603,8 @@ pub struct Ctx {
     pub gravity: f64,
     /// what was let go, in the order it went
     pub out: Vec<LetGo>,
+    /// what comes down, and when, in the order it was let go
+    pub landings: Vec<falls::Landing>,
     /// a static's kind moved (a pane a walker now goes through): the caller says so to the copy
     pub wrote: bool,
 }
@@ -933,31 +935,25 @@ fn emit(c: &mut Ctx, ri: usize, f: Fr, pts: &[Pt], rev: bool, tune: &Knobs) {
     };
     c.out.push(LetGo { f, pts: outline });
 }
-/// (fallshome.ts FALL_SOUNDS, by their place; FALL_UNHEARD, FALL_IF_SOUNDED, FALL_HEARD)
-const SOUND_TINKLE: f64 = 0.0;
-const SOUND_SHATTER: f64 = 1.0;
-const EV_UNHEARD: f64 = 0.0;
-const EV_IF_SOUNDED: f64 = 1.0;
-const EV_HEARD: f64 = 2.0;
 /// shards.ts release, what of it is the simulation's under SHARDS.byFall: a fragment's one landing — a sound for the ear if it has one of its own, the glass it leaves, the floor told
-fn landing(c: &Ctx, f: &Fr, ty: u32, who: f64, t: f64, p: [f64; 3], tune: &Knobs) {
+fn landing(c: &mut Ctx, f: &Fr, ty: u32, who: f64, t: f64, p: [f64; 3], tune: &Knobs) {
     let a = js_max(1e-4, f.area);
     let dice = f.kind == K_CLUMP || ty == TEMPERED;
     let powder = !dice && f.kind != K_SHEET && f.grain > 0.0;
     let plateable = !dice && !powder && a >= tune.shards.plate_min_area;
-    let cap = tune.shards.pending_max;
     let at = c.now + t;
-    let put = |t: f64, name: f64, gain: f64, rate: f64, amount: f64, ev: f64| {
-        falls::schedule(c.g, falls::L_GLASS, t, p[0], p[1], p[2], name, gain, rate, amount, who, ev, 0.0, 0.0, cap);
+    let soon = c.now + (t + 0.05);
+    let mut put = |t: f64, sound: FallSound, gain: f64, rate: f64, amount: f64, told: FallTold| {
+        c.landings.push(falls::Landing { t, pos: p, sound, gain, rate, amount, who, told, level: 0.0, dust: 0.0 });
     };
     if powder {
-        put(c.now + (t + 0.05), SOUND_TINKLE, 0.0, 1.0, a, EV_UNHEARD);
+        put(soon, FallSound::GlassTinkle, 0.0, 1.0, a, FallTold::Never);
     } else if dice {
-        put(at, SOUND_SHATTER, js_min(1.0, 0.35 + a * 4.0), 1.15 + 0.3 * hash01(f.seed as f64), a * 0.8, EV_IF_SOUNDED);
+        put(at, FallSound::GlassShatter, js_min(1.0, 0.35 + a * 4.0), 1.15 + 0.3 * hash01(f.seed as f64), a * 0.8, FallTold::IfItSounds);
     } else if f.kind == K_SHEET {
-        put(at, SOUND_TINKLE, if plateable { 0.0 } else { 0.5 }, 0.8, a * 0.3, EV_HEARD);
+        put(at, FallSound::GlassTinkle, if plateable { 0.0 } else { 0.5 }, 0.8, a * 0.3, FallTold::Always);
     } else {
-        put(at, SOUND_TINKLE, if plateable { 0.0 } else { js_min(0.9, 0.3 + a * 8.0) }, 0.9 + 0.5 * hash01(f.seed as f64), a, EV_HEARD);
+        put(at, FallSound::GlassTinkle, if plateable { 0.0 } else { js_min(0.9, 0.3 + a * 8.0) }, 0.9 + 0.5 * hash01(f.seed as f64), a, FallTold::Always);
     }
 }
 
@@ -2091,10 +2087,10 @@ pub fn row_index(g: usize, bi: u32) -> i32 {
     }
 }
 /// shards.ts crossed under SHARDS.byFall: where the jet off a sheet's far face comes down (the air has most of a fine's speed inside a stride)
-pub fn jet(c: &Ctx, at: [f64; 3], d: [f64; 3], speed: f64, amount: f64, who: f64, tune: &Knobs) {
+pub fn jet(c: &mut Ctx, at: [f64; 3], d: [f64; 3], speed: f64, amount: f64, who: f64, tune: &Knobs) {
     let v = [d[0] * (speed * 0.35), d[1] * (speed * 0.35), d[2] * (speed * 0.35)];
     let (t, p) = fall_of(c, at, v, c.gravity, 0.8, tune);
-    falls::schedule(c.g, falls::L_GLASS, c.now + t, p[0], p[1], p[2], SOUND_TINKLE, 0.0, 1.0, amount, who, EV_UNHEARD, 0.0, 0.0, tune.shards.pending_max);
+    c.landings.push(falls::Landing { t: c.now + t, pos: p, sound: FallSound::GlassTinkle, gain: 0.0, rate: 1.0, amount, who, told: FallTold::Never, level: 0.0, dust: 0.0 });
 }
 pub fn clear_holes(g: usize) {
     let p = pn(g);
