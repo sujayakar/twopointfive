@@ -8,7 +8,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { ROOT } from './here.ts';
 
 const { lintLevel, formatLint } = await import(`${ROOT}/tools/levels/lib/lint.ts`);
-const { validateLevelData } = await import(`${ROOT}/tools/levels/lib/levelData.ts`);
+const { levelFaults } = await import(`${ROOT}/tools/levels/lib/levelData.ts`);
 
 const args = process.argv.slice(2); const flags = new Set(args.filter(a => a.startsWith('--'))); const files = args.filter(a => !a.startsWith('--'));
 if (!files.length) files.push('levels/office.json');
@@ -19,7 +19,7 @@ for (const f of files) {
   let data: any; try { data = JSON.parse(readFileSync(path, 'utf8')); } catch (e) { console.log(`${f}: not JSON — ${(e as Error).message}`); anyErrors = true; continue; }
   const side = path.replace(/\.json$/, '.lint.json'); let allow: any = undefined;
   if (existsSync(side)) { try { allow = JSON.parse(readFileSync(side, 'utf8')).allow; } catch (e) { console.log(`${f}: sidecar ${side} unreadable — ${(e as Error).message}`); } }
-  const v = validateLevelData(data); if (v.length && !flags.has('--quiet')) console.log(`${f}: ${v.length} schema error(s) — lint reports them and stops there`);
+  const v = levelFaults(data); if (v.length && !flags.has('--quiet')) console.log(`${f}: ${v.length} schema error(s) — lint reports them and stops there`);
   const r = lintLevel(data, { allow });
   if (flags.has('--json')) console.log(JSON.stringify({ file: f, ...r }, null, 1));
   else { const lines = formatLint(r); console.log(`${f} — ${lines[0]}`); if (!flags.has('--quiet') || r.errors) for (const l of lines.slice(1)) console.log(l); }

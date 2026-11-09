@@ -2,7 +2,7 @@
 //! reads a parsed object: by key, in the file's order. Numbers are read by the core library's decimal reader, which rounds as the language's own
 //! `JSON.parse` does (to the nearest double), so a number here is the number there to the bit.
 //!
-//! AN OBJECT REMEMBERS WHICH OF ITS MEMBERS WERE ASKED FOR (`get`, `has`, `members`; `skip` for a member passed by on purpose). So whoever has
+//! AN OBJECT REMEMBERS WHICH OF ITS MEMBERS WERE ASKED FOR (`get`, `has`, `members`; `skip_all` for what is passed by on purpose). So whoever has
 //! read a file can ask what it did NOT read (`unread`): a member the reader has no line for is found by the reading itself, with no second
 //! list of a record's members to keep beside each reader.
 use alloc::string::String;
@@ -38,6 +38,8 @@ impl Json {
     pub fn get(&self, k: &str) -> &Json {
         match self { Json::Obj(m, asked) => match m.iter().position(|(n, _)| n == k) { Some(i) => { asked.mark(i); &m[i].1 } None => &NULL }, _ => &NULL }
     }
+    /// the member `k` as a look at it: not asked for, as far as `unread` goes
+    pub fn peek(&self, k: &str) -> Option<&Json> { match self { Json::Obj(m, _) => m.iter().find(|(n, _)| n == k).map(|e| &e.1), _ => None } }
     /// the item `i` of an array; `Null` past its end or where this is no array
     pub fn at(&self, i: usize) -> &Json {
         match self { Json::Arr(a) => a.get(i).unwrap_or(&NULL), _ => &NULL }
@@ -52,9 +54,7 @@ impl Json {
     pub fn items(&self) -> &[Json] { match self { Json::Arr(a) => a.as_slice(), _ => &[] } }
     /// an object's members in the file's order; none where this is no object
     pub fn members(&self) -> &[(String, Json)] { match self { Json::Obj(m, asked) => { for i in 0..m.len() { asked.mark(i); } m.as_slice() } _ => &[] } }
-    /// THESE MEMBERS ARE PASSED BY ON PURPOSE (an author's notes, an id beside a name), with all beneath them: asked for, as far as `unread` goes
-    pub fn skip(&self, keys: &[&str]) { for k in keys { self.get(k).skip_all(); } }
-    /// …and everything under this value is (a table of which only the rows in use are read, a record a switch leaves out)
+    /// EVERYTHING UNDER THIS VALUE IS PASSED BY ON PURPOSE (a table of which only the rows in use are read): asked for, as far as `unread` goes
     pub fn skip_all(&self) {
         match self { Json::Obj(..) => for (_, v) in self.members() { v.skip_all(); }, Json::Arr(a) => for v in a { v.skip_all(); }, _ => {} }
     }
@@ -96,7 +96,7 @@ impl Json {
 
 /// The text as a value. A text that is not JSON is refused with where it stopped.
 pub fn parse(text: &str) -> Result<Json, String> {
-    let mut p = P { b: text.as_bytes(), i: 0 };
+    let mut p = P { b: text.as_bytes(), i: 0, deep: 0 };
     p.ws();
     let v = p.value()?;
     p.ws();
@@ -104,13 +104,22 @@ pub fn parse(text: &str) -> Result<Json, String> {
     Ok(v)
 }
 
-struct P<'a> { b: &'a [u8], i: usize }
+/// how deep a value may stand in others: no file of the game's comes near, and a text of brackets is told so
+const DEEPEST: usize = 256;
+struct P<'a> { b: &'a [u8], i: usize, deep: usize }
 
 impl<'a> P<'a> {
     fn err(&self, what: &str) -> String { alloc::format!("json: {} at byte {}", what, self.i) }
     fn ws(&mut self) { while self.i < self.b.len() && matches!(self.b[self.i], b' ' | b'\t' | b'\n' | b'\r') { self.i += 1; } }
     fn eat(&mut self, w: &[u8]) -> bool { if self.b[self.i..].starts_with(w) { self.i += w.len(); true } else { false } }
     fn value(&mut self) -> Result<Json, String> {
+        if self.deep == DEEPEST { return Err(self.err("too deep")); }
+        self.deep += 1;
+        let v = self.one_value();
+        self.deep -= 1;
+        v
+    }
+    fn one_value(&mut self) -> Result<Json, String> {
         match self.b.get(self.i).copied() {
             None => Err(self.err("the text ends where a value should stand")),
             Some(b'{') => {
@@ -212,7 +221,7 @@ mod tests {
     #[test]
     fn says_what_nobody_asked_for() {
         let v = parse(r#"{ "name": "x", "boxes": [{ "c": 1, "tint": 2 }, { "c": 3 }], "later": { "deep": 1 }, "notes": "n" }"#).unwrap();
-        v.get("name"); v.skip(&["notes"]);
+        v.get("name"); v.get("notes");
         for b in v.get("boxes").items() { b.get("c"); }
         let mut left = Vec::new(); v.unread("", &mut left);
         assert_eq!(left, ["boxes[0].tint", "later"]);
