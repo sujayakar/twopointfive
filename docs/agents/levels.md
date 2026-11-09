@@ -1765,3 +1765,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   before). The lint keeps what reads the file alone (its findings on every level are what they were). `level-needs --run` asks them; its `kit` need is out with the old game's kit tables. NOTHING HOLDS,
   from today: a level's response block against its built floor (response_team.rs has the team's rules), a level's own cards and wall charges as staged (issue, wallissue), the promise that a place
   furniture stands behind is holed (wallfurn), the kit listing, lived things off being the level as it was (the switch has no off in the new game), a storm's wind and wetness by the level's roofs.
+- **What the old level checks held alone is held again** (2026-11-09; `rust/game_start/tests/level_rules.rs`, `levels`). A level's own wall charges (staged, restarted with none and some spent, never lowered) and its
+  own cards (on the man named and nobody else, at four sizes, over a kept kit, again after a restart); a charge taken where furniture stands behind opens a way through (three places each on the
+  barracks and the depot, blown); a storm cut by the level's own roofs (a man on the records office's car park soaked, dry under its roof; the warehouse's fire exit blows; the office, the block and a
+  quiet night keep theirs); the traffic map worn along every way and threshold of the pass and the compound and bare where nobody walks. `levels stands` asks a response block against its built floor,
+  `levels rain` every level's outer walls (240: 236 outer faces in the rain, 240 inner dry). NOT HELD, and not to be: lived things off (the game has no off); the kit listing (the starting page shows
+  it); a wall's sides and their shader copy (the twins of the shader's lines have left the source: a still shows them).
