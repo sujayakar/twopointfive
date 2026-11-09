@@ -6,8 +6,7 @@
 "samples": 300,
 "methods": [
 "denlin",
-"onelin",
-"one25"
+"onelin"
 ],
 "paths": 700,
 "name": "garden",
@@ -18,7 +17,8 @@
 4,
 1.5
 ],
-"pitch": 0.7
+"pitch": 0.7,
+"maps": true
 },
 {
 "w": 960,
@@ -27,8 +27,7 @@
 "samples": 300,
 "methods": [
 "denlin",
-"onelin",
-"one25"
+"onelin"
 ],
 "paths": 700,
 "name": "tree",
@@ -40,7 +39,8 @@
 3.6
 ],
 "yaw": 0.62,
-"pitch": 0.35
+"pitch": 0.35,
+"maps": true
 },
 {
 "w": 960,
@@ -49,8 +49,7 @@
 "samples": 300,
 "methods": [
 "denlin",
-"onelin",
-"one25"
+"onelin"
 ],
 "paths": 700,
 "name": "ground day",
@@ -62,6 +61,7 @@
 0.6,
 0
 ],
-"doors": 0.8
+"doors": 0.8,
+"maps": true
 }
 ]

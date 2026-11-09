@@ -6,8 +6,7 @@
 "samples": 300,
 "methods": [
 "denlin",
-"onelin",
-"one25"
+"onelin"
 ],
 "paths": 700,
 "name": "k2-store",
@@ -20,7 +19,8 @@
 "yaw": 0.4,
 "pitch": 0.75,
 "hour": 22.2,
-"cut": 2.5
+"cut": 2.5,
+"maps": true
 },
 {
 "w": 960,
@@ -29,8 +29,7 @@
 "samples": 300,
 "methods": [
 "denlin",
-"onelin",
-"one25"
+"onelin"
 ],
 "paths": 700,
 "name": "k1-street-day",
@@ -43,7 +42,8 @@
 "yaw": 0.5,
 "pitch": 0.72,
 "hour": 13.0,
-"cut": 2.5
+"cut": 2.5,
+"maps": true
 },
 {
 "w": 960,
@@ -52,8 +52,7 @@
 "samples": 300,
 "methods": [
 "denlin",
-"onelin",
-"one25"
+"onelin"
 ],
 "paths": 700,
 "name": "shelf",
@@ -66,6 +65,7 @@
 "yaw": 0.4,
 "pitch": 0.75,
 "hour": 22.2,
-"cut": 2.5
+"cut": 2.5,
+"maps": true
 }
 ]

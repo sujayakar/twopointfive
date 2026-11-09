@@ -12,8 +12,8 @@ import { PEOPLE, LIMBS } from './carry';
 const SENT = 'fn sentBack(q: Surf, leaf: bool, j: vec2f, rd: vec3f) -> vec3f {';
 const swap = (code: string, a: string, b: string) => { if (!code.includes(a)) throw new Error('a stage has no ' + a); return code.replace(a, () => b); };
 /** `leafNear`: how far bounce rays meet leaves one by one, as a share of how far other things as small */
-export function oneRule(o: { name?: string; leafNear?: number; /** the coarsest level met */ top?: number; upscale?: UpscalePart; /** shadows of lamps at what is seen by the cells too */ softLamps?: boolean; edit?: (s: Stage) => Stage } = {}): Method {
-  let lab0: Lab | null = null; const core = (p: string) => secondCore(p, false, o.leafNear ?? 0, o.top ?? 3);
+export function oneRule(o: { name?: string; leafNear?: number; upscale?: UpscalePart; /** shadows of lamps at what is seen by the cells too */ softLamps?: boolean; edit?: (s: Stage) => Stage } = {}): Method {
+  let lab0: Lab | null = null; const core = (p: string) => secondCore(p, false, o.leafNear ?? 0);
   const edit = (s: Stage): Stage => {
     if (s.name === 'foliage') {
       const lab = lab0!, many = lab.litCells.many;
@@ -39,6 +39,5 @@ export const oneRuleMethods: Record<string, () => Method> = {
   exactgather: also('exactgather', s => s.name === 'gather' ? code(s, 'footSolid(wide, @tune.wide);', 'footSolid(0.0, 0.004);') : s),
   exactcache: also('exactcache', s => s.name === 'cache' && s.code.includes('footSolid(CELL, 1.0);') ? code(s, 'footSolid(CELL, 1.0);', 'footSolid(0.0, 0.004);') : s),
   exactboth: also('exactboth', s => s.name === 'gather' ? code(s, 'footSolid(wide, @tune.wide);', 'footSolid(0.0, 0.004);') : s.name === 'cache' && s.code.includes('footSolid(CELL, 1.0);') ? code(s, 'footSolid(CELL, 1.0);', 'footSolid(0.0, 0.004);') : s),
-  ...Object.fromEntries([0, 1, 2].map(k => ['onetop' + k, () => oneRule({ name: 'onetop' + k, upscale: bilinear, top: k })])),
-  one25: also('one25', s => s.name === 'gather' ? code(s, 'footSolid(wide, @tune.wide);', 'footSolid(wide, 0.5 * @tune.wide);') : s),
+   one25: also('one25', s => s.name === 'gather' ? code(s, 'footSolid(wide, @tune.wide);', 'footSolid(wide, 0.5 * @tune.wide);') : s),
   onerule: () => oneRule(), oneleaf: () => oneRule({ name: 'oneleaf', leafNear: 1 }), onelin: () => oneRule({ name: 'onelin', upscale: bilinear }), oneleaflin: () => oneRule({ name: 'oneleaflin', leafNear: 1, upscale: bilinear }) };

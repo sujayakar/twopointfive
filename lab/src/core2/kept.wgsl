@@ -7,7 +7,7 @@ fn keptSix(q0: vec4u, q1: vec4u, q2: vec4u, axis: u32, plus: bool) -> vec3f {
   if (axis == 1u) { if (plus) { return vec3f(unpack2x16float(q1.y), unpack2x16float(q1.z).x); } return vec3f(unpack2x16float(q1.z).y, unpack2x16float(q1.w)); }
   if (plus) { return vec3f(unpack2x16float(q2.x), unpack2x16float(q2.y).x); } return vec3f(unpack2x16float(q2.y).y, unpack2x16float(q2.z));
 }
-fn cellColor(r: vec4u, r2: vec4u, axis: u32, plus: bool) -> vec3f { let w = (select(select(r2.x, r.w, axis == 1u), r.z, axis == 0u) >> select(0u, 16u, plus)) & 0xffffu; let v = vec3f(f32(w & 31u) / 31.0, f32((w >> 5u) & 63u) / 63.0, f32(w >> 11u) / 31.0); return v * v; }
+fn cellColor(r: vec4u, r2: vec4u, axis: u32, plus: bool) -> vec3f { let w = (select(select(r2.y, r2.x, axis == 1u), r.w, axis == 0u) >> select(0u, 16u, plus)) & 0xffffu; let v = vec3f(f32(w & 31u) / 31.0, f32((w >> 5u) & 63u) / 63.0, f32(w >> 11u) / 31.0); return v * v; }
 fn cellMean(r: vec4u, r2: vec4u) -> vec3f { var c = vec3f(0.0); for (var a = 0u; a < 3u; a++) { c += cellColor(r, r2, a, true) + cellColor(r, r2, a, false); } return c / 6.0; }
 /** what leaves of this cell send back off one side, and through */
 fn cellLeaf(r: vec4u, r2: vec4u) -> array<vec3f, 2> { let a = cellMean(r, r2); let h = leafThrough(a, ((r.y >> 24u) & 1u) != 0u); let k = leafKeeps(a + h); return array<vec3f, 2>(a * k, h * k); }
@@ -32,13 +32,20 @@ fn leafCell(x: vec3f) -> u32 { let c = cellAt(vec3i(floor(x / 0.32))); if (c == 
 fn folBack(x: vec3f, rd: vec3f) -> vec3f { if (lastLimb > 0u) { return limbSent(rd); } let c = leafCell(x); if (c == 0u) { return vec3f(0.0); } return cellSent(c, bitcast<vec4u>(extra[BLK_CELLS + (c - 1u) * 2u]), rd, rd); }
 /** the same, the sun's own apart */
 fn folJ(x: vec3f, rd: vec3f) -> vec3f { if (lastLimb > 0u) { return limbSent(rd); } let c = leafCell(x); if (c == 0u) { return vec3f(0.0); } let slot = bitcast<vec4u>(extra[BLK_CELLS + (c - 1u) * 2u + 1u]).z; if (slot == 0u) { return vec3f(0.0); } let q = keptRow(slot, 0u); return vec3f(unpack2x16float(q.x), unpack2x16float(q.y).x); }
+// (the eight cells round the last place asked about: where their light is, how much each counts, their leaves' color)
+var<private> roundAt = vec3f(1e9); var<private> roundSlot: array<u32, 8>; var<private> roundW: array<f32, 8>; var<private> roundG = vec3f(0.0); var<private> roundSum = 0.0;
+fn look(x: vec3f) {
+  if (all(x == roundAt)) { return; } roundAt = x; let g = x / 0.32 - 0.5; let b = vec3i(floor(g)); let f = g - floor(g); roundSum = 0.0; roundG = vec3f(0.0); var lastB = vec3i(2147483647); var p = 0u;
+  for (var k = 0; k < 8; k++) {
+    roundSlot[k] = 0u; let d = vec3i(k & 1, (k >> 1) & 1, k >> 2); let c = b + d; let br = vec3i(floor(vec3f(c) * 0.125)) - vec3i(floor(BLK_LO / BRICK + 0.5)); if (any(br < vec3i(0)) || any(br >= BLK_N)) { continue; } if (any(br != lastB)) { lastB = br; p = blkWord(BLK_PAGE, u32(br.x + BLK_N.x * (br.y + BLK_N.y * br.z))); } if ((p >> 31u) == 0u) { continue; }
+    let q = vec3u(c & vec3i(7)); let cell = blkWord(BLK_BRICKS, ((p & 0x7fffffffu) - 1u) * 588u + q.x + 8u * (q.y + 8u * q.z)); if (cell == 0u) { continue; } let r = bitcast<vec4u>(extra[BLK_CELLS + (cell - 1u) * 2u]); if ((r.x >> 24u) < 128u) { continue; } let r2 = bitcast<vec4u>(extra[BLK_CELLS + (cell - 1u) * 2u + 1u]); if (r2.z == 0u) { continue; }
+    let q0 = keptRow(r2.z, 0u); let w3 = select(1.0 - f, f, d == vec3i(1)); let w = w3.x * w3.y * w3.z + 1e-3; roundSlot[k] = r2.z; roundW[k] = w; roundSum += w; let J = vec3f(unpack2x16float(q0.x), unpack2x16float(q0.y).x); let sv = unpack2x16float(q0.y).y; let cc = cellLeaf(r, r2); roundG += (J * PI + (cc[0] + cc[1]) * frame.sunE.xyz * (0.25 * sv)) * w;
+  }
+}
 /** the light (all but the sun and the lamps) that lands on a leaf at x from the side n looks to; w = is there any kept. open: how much of that side its own twig leaves open; the rest sees that twig's leaves */
 fn folLight(x: vec3f, n: vec3f, open: f32) -> vec4f {
-  let g = x / 0.32 - 0.5; let b = vec3i(floor(g)); let f = g - floor(g); var E = vec3f(0.0); var G = vec3f(0.0); var ws = 0.0; let n2 = n * n;
-  for (var k = 0; k < 8; k++) { let d = vec3i(k & 1, (k >> 1) & 1, k >> 2); let cell = cellAt(b + d); if (cell == 0u) { continue; } let r = bitcast<vec4u>(extra[BLK_CELLS + (cell - 1u) * 2u]); if ((r.x >> 24u) < 128u) { continue; } let r2 = bitcast<vec4u>(extra[BLK_CELLS + (cell - 1u) * 2u + 1u]); if (r2.z == 0u) { continue; }
-    let q0 = keptRow(r2.z, 0u); let q1 = keptRow(r2.z, 1u); let q2 = keptRow(r2.z, 2u); if (q2.w == 0u) { continue; } let w3 = select(1.0 - f, f, d == vec3i(1)); let w = w3.x * w3.y * w3.z + 1e-3;
-    let J = vec3f(unpack2x16float(q0.x), unpack2x16float(q0.y).x); let sv = unpack2x16float(q0.y).y; let cc = cellLeaf(r, r2); G += (J * PI + (cc[0] + cc[1]) * frame.sunE.xyz * (0.25 * sv)) * w;
-    E += (keptSix(q0, q1, q2, 0u, n.x > 0.0) * n2.x + keptSix(q0, q1, q2, 1u, n.y > 0.0) * n2.y + keptSix(q0, q1, q2, 2u, n.z > 0.0) * n2.z) * w; ws += w; }
-  if (ws <= 0.0) { return vec4f(0.0); } return vec4f(E / ws * open + G / ws * (1.0 - open), 1.0);
+  look(x); if (roundSum <= 0.0) { return vec4f(0.0); } var E = vec3f(0.0); let n2 = n * n;
+  for (var k = 0; k < 8; k++) { let slot = roundSlot[k]; if (slot == 0u) { continue; } let q0 = keptRow(slot, 0u); let q1 = keptRow(slot, 1u); let q2 = keptRow(slot, 2u); E += (keptSix(q0, q1, q2, 0u, n.x > 0.0) * n2.x + keptSix(q0, q1, q2, 1u, n.y > 0.0) * n2.y + keptSix(q0, q1, q2, 2u, n.z > 0.0) * n2.z) * roundW[k]; }
+  return vec4f(E / roundSum * open + roundG / roundSum * (1.0 - open), 1.0);
 }
 fn folHas(x: vec3f) -> bool { let b = vec3i(floor(x / 0.32 - 0.5)); for (var k = 0; k < 8; k++) { let c = cellAt(b + vec3i(k & 1, (k >> 1) & 1, k >> 2)); if (c != 0u && (bitcast<vec4u>(extra[BLK_CELLS + (c - 1u) * 2u]).x >> 24u) > 127u) { return true; } } return false; }

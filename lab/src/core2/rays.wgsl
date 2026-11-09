@@ -1,9 +1,9 @@
 // THE SECOND CORE'S RAYS: one rule. A ray is f(t) = w + s t wide; what is smaller than that is met as part of the world's block, the rest as it is. Things leave in three steps (classes), and
-// the block's level follows, so each stretch of a ray has one level: exact · cells of 0.32 m, with class 0 and the leaves gone · 0.64, class 1 gone · 1.28 · 2.56.
+// the block's level follows, so each stretch of a ray has one level: exact · cells of 0.32 m, with class 0 and the leaves gone · 0.64, class 1 gone.
 const CELL_CODE = 0xfffffffeu; const FINEST = 0.32; const BRICK = 2.56;
 var<private> footW = 0.0; var<private> footS = 0.0; var<private> leafTo = 1e9; var<private> smallTo = 1e9;       /* (the last two: for stages written for the first core) */
 var<private> lim = vec4f(1e9);               // how far classes 0, 1, 2, 3 are met as they are
-var<private> blk = vec4f(1e9);               // where levels 0, 1, 2, 3 of the block begin
+var<private> blk = vec4f(1e9);               // where levels 0 and 1 of the block begin
 var<private> leafOnly: bool = false; var<private> blkOn: bool = true; var<private> fromCell: u32 = 0xffffffffu;
 /** what the block sent back along the last ray that `nearest` was asked for, and how much came through it (where it is summed, not drawn) */
 var<private> blkL = vec3f(0.0); var<private> blkT = 1.0;
@@ -120,7 +120,7 @@ fn blkWord(at: u32, i: u32) -> u32 { return bitcast<vec4u>(extra[at + (i >> 2u)]
 /** how thick a cell's contents stand, a metre, along x y z (within its tight box), and that box */
 struct CellBox { sigma: vec3f, lo: vec3f, hi: vec3f };
 fn cellBox(r: vec4u, lo: vec3f, h: f32) -> CellBox {
-  var b: CellBox; let e = h / 16.0; let a = vec3f(vec3u(r.y, r.y >> 4u, r.y >> 8u) & vec3u(15u)); let z = vec3f((vec3u(r.y >> 12u, r.y >> 16u, r.y >> 20u) & vec3u(15u)) + vec3u(1u));
+  var b: CellBox; let e = h / 256.0; let a = vec3f(vec3u(r.y, r.y >> 8u, r.y >> 16u) & vec3u(255u)); let z = vec3f((vec3u(r.z, r.z >> 8u, r.z >> 16u) & vec3u(255u)) + vec3u(1u));
   b.lo = lo + a * e; b.hi = lo + z * e; b.sigma = vec3f(vec3u(r.x, r.x >> 8u, r.x >> 16u) & vec3u(255u)) * (6.4 / 255.0) / ((z - a) * e); return b;
 }
 /** along a ray from t0 to t1 until it has met `want` of thickness; `lit`: what it is sent is summed. (Before blk.x only leaves are met: the rest is there as it is) */
@@ -129,13 +129,13 @@ fn blockWalk(ro: vec3f, rd: vec3f, t0: f32, t1: f32, want: f32, lit: bool) -> Bl
   let inv = safeInv(rd); let top = BLK_LO + vec3f(BLK_N) * BRICK; let a = (BLK_LO - ro) * inv; let b = (top - ro) * inv; var t = max(max3(min(a, b)), t0) + 1e-4; let te = min(min3(max(a, b)), t1) - 1e-4; let ahead = select(vec3f(0.0), vec3f(1.0), rd > vec3f(0.0));
   for (var i = 0u; i < 192u; i++) {
     if (t >= te || o.tau > 4.6) { break; }
-    let level = min(TOP, select(select(select(0u, 1u, t >= blk.y), 2u, t >= blk.z), 3u, t >= blk.w)); let g = (ro + rd * t - BLK_LO) / BRICK; let c = clamp(vec3i(floor(g)), vec3i(0), BLK_N - 1);
+    let level = select(0u, 1u, t >= blk.y); let g = (ro + rd * t - BLK_LO) / BRICK; let c = clamp(vec3i(floor(g)), vec3i(0), BLK_N - 1);
     let w = blkWord(BLK_PAGE, u32(c.x + BLK_N.x * (c.y + BLK_N.y * c.z))); let p = w & 0x7fffffffu;       /* (the top bit: there are leaves in it) */
     if (p == 0u || ((leafOnly || t < blk.x) && (w >> 31u) == 0u)) { let e = (BLK_LO + (vec3f(c) + ahead) * BRICK - ro) * inv; t = max(min3(e), t) + 1e-3; continue; }
     let per = 8u >> level; let h = FINEST * f32(1u << level); let q = clamp(vec3i(floor((g - vec3f(c)) * f32(per))), vec3i(0), vec3i(i32(per) - 1)); let lo = BLK_LO + vec3f(c) * BRICK + vec3f(q) * h;
-    let e = (lo + ahead * h - ro) * inv; var out = max(min3(e), t); if (level < 3u && blk[level + 1u] > t) { out = min(out, blk[level + 1u]); } if (blk.x > t) { out = min(out, blk.x); }
-    if (level < 2u) { let u = vec3u(clamp(vec3i(floor((g - vec3f(c)) * 2.0)), vec3i(0), vec3i(1))); if (blkWord(BLK_BRICKS, (p - 1u) * 588u + 576u + u.x + 2u * (u.y + 2u * u.z)) == 0u) { let e2 = (BLK_LO + (vec3f(c) + 0.5 * (vec3f(u) + ahead)) * BRICK - ro) * inv; t = max(min3(e2), t) + 1e-3; continue; } }      /* (nothing in the 1.28 m round here) */
-    let cell = blkWord(BLK_BRICKS, (p - 1u) * 588u + array<u32, 4>(0u, 512u, 576u, 584u)[level] + u32(q.x) + per * (u32(q.y) + per * u32(q.z)));
+    let e = (lo + ahead * h - ro) * inv; var out = max(min3(e), t); if (level == 0u) { out = min(out, max(blk.y, t)); } if (blk.x > t) { out = min(out, blk.x); }
+    { let u = vec3u(clamp(vec3i(floor((g - vec3f(c)) * 2.0)), vec3i(0), vec3i(1))); if (blkWord(BLK_BRICKS, (p - 1u) * 588u + 576u + u.x + 2u * (u.y + 2u * u.z)) == 0u) { let e2 = (BLK_LO + (vec3f(c) + 0.5 * (vec3f(u) + ahead)) * BRICK - ro) * inv; t = max(min3(e2), t) + 1e-3; continue; } }      /* (nothing in the 1.28 m round here) */
+    let cell = blkWord(BLK_BRICKS, (p - 1u) * 588u + level * 512u + u32(q.x) + per * (u32(q.y) + per * u32(q.z)));
     if (cell != 0u && cell != fromCell) {
       let r = bitcast<vec4u>(extra[BLK_CELLS + (cell - 1u) * 2u]); let B = cellBox(r, lo, h); let u = (B.lo - ro) * inv; let v = (B.hi - ro) * inv; let ta = max(t - 1e-3, max3(min(u, v))); let tb = min(min(out, te), min3(max(u, v)));
       if (tb > ta && (r.x & 0xffffffu) != 0u) { let part = f32(r.x >> 24u) / 255.0; let sg = length(B.sigma * rd); let sigma = sg * select(select(1.0, 1.0 - part, noLeaves), part, t < blk.x || leafOnly); let d = sigma * (tb - ta); if (lit && d > 0.0) { o.L += exp(-o.tau) * (1.0 - exp(-d)) * cellSent(cell, r, B.sigma * rd / sg, rd); } if (o.tau + d >= want) { o.t = ta + (want - o.tau) / sigma; o.cell = cell; o.tau = want; return o; } o.tau += d; }

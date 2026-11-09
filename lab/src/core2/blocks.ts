@@ -1,10 +1,10 @@
-// THE WORLD'S BLOCK: what a ray meets of things smaller than it is wide. Sparse cells of 0.32, 0.64, 1.28 and 2.56 m; a cell holds how thick its contents stand along x, y and z, a tight box
+// THE WORLD'S BLOCK: what a ray meets of things smaller than it is wide. Sparse cells of 0.32 and 0.64 m (wider ones held two sides of a wall, and leaked); a cell holds how thick its contents stand along x, y and z, a tight box
 // round them, and their color from six sides. Level h holds what is smaller than h (and every leaf). Found once, by rays through the cells' own contents (measure.ts).
 import { type V3, add, apply, mul } from '../math';
 import { type World, type Piece, boundsOf, F } from '../scene/world';
 import { PEOPLE, LIMBS, CARRY_ROWS } from './carry';
 
-export const FINEST = 0.32, LEVELS = 4, BRICK = FINEST * 8, BRICK_WORDS = 588, OFFSET = [0, 512, 576, 584], CELL_ROWS = 2, LIGHT_ROWS = 3, /** a brick of smoke each */ SMOKE_ROWS = 3072;
+export const FINEST = 0.32, LEVELS = 2, BRICK = FINEST * 8, BRICK_WORDS = 588, OFFSET = [0, 512, 576, 584], CELL_ROWS = 2, LIGHT_ROWS = 3, /** a brick of smoke each */ SMOKE_ROWS = 3072;
 /** how big a thing is to a ray: its middle extent (a wire is thin, a wall is not). 0, 1: gone once a ray is 0.32, 0.64 m wide; 3: always there, for it may part one room from another */
 export function classOf(p: Piece): number {
   if (p.cls !== undefined) return p.cls;

@@ -3,7 +3,7 @@
 fn six(i: u32) -> vec3f { var d = vec3f(0.0); d[i >> 1u] = select(1.0, -1.0, (i & 1u) == 1u); return d; }
 var<workgroup> found: array<vec3f, 64>; var<workgroup> wayTo: array<vec3f, 8>;
 /** a point on the side of a box that faces d */
-fn onSide(at: vec3f, ext: vec3f, d: vec3f) -> vec3f { let m = abs(d * ext); var f = vec3f(0.0); if (m.x >= m.y && m.x >= m.z) { f.x = sign(d.x); } else if (m.y >= m.z) { f.y = sign(d.y); } else { f.z = sign(d.z); } return at + select(vec3f(rnd(), rnd(), rnd()) - 0.5, f * 0.5, abs(f) > vec3f(0.5)) * ext + f * 0.004; }
+fn onSide(at: vec3f, ext: vec3f, d: vec3f) -> vec3f { let m = abs(d * ext); var f = vec3f(0.0); if (m.x >= m.y && m.x >= m.z) { f.x = sign(d.x); } else if (m.y >= m.z) { f.y = sign(d.y); } else { f.z = sign(d.z); } return at + select(vec3f(rnd(), rnd(), rnd()) - 0.5, f * 0.5, abs(f) > vec3f(0.5)) * ext * 0.97 - f * 0.004; }       /* (a hair inside: not under the floor it stands on) */
 @compute @workgroup_size(64) fn main(@builtin(workgroup_id) wg: vec3u, @builtin(local_invocation_index) li: u32) {
   let c8 = li >> 3u; let task = li & 7u; let s = wg.x * 8u + c8; var go = s < many.x + many.y; let limb = go && s >= many.x; let base = min(s, many.x + many.y - 1u) * 12u; var n = f32(field[base + 11u]); if (changes.all.y > 0.5) { n = 0.0; }
   var at = vec4f(0.0); var ext = vec4f(0.0); var tint = vec3f(0.0); var cell = NOTHING; var r = vec4u(0u); var r2 = vec4u(0u);
