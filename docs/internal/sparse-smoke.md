@@ -28,7 +28,7 @@ carry over to a GPU; milliseconds do not.
 | --- | --- |
 | `src/smoke/smokeGrid.ts` | the geometry: levels (0 = 0.055 m, 91 × 19 × 64 bricks · 1 = 0.022 m, 228 × 24 × 160), pool cap, atlas / page texture sizes, the WGSL consts; `smokeGridConfig {cap}` (`?smokepool=N`) |
 | `src/smoke/smoke.wgsl` | the solver: pool (free list, page table by CAS + LOCK, stamps), mark / alloc / free / link, the step's kernels over the live list, publish / compose / boxes (= the readers' bounds) |
-| `src/smoke/smoke.ts` | `SmokeSystem` (emit, push, spawnCanister, clearAll, setWind, obstaclesChanged, stats, binding), packing, the read-back, `measure()` / `profileStep()` for tools; knobs `__smoke.sparse` |
+| `src/smoke/smoke.ts` | `SmokeSystem` (emit, push, spawnCanister, anew, setWind, obstaclesChanged, stats, binding), packing, the read-back, `measure()` / `profileStep()` for tools; knobs `__smoke.sparse` |
 | `src/render/shaders/smoke_read.wgsl` | how every reader reads the smoke, appended to the scene prelude by `frame.ts` (page texture at scene binding 14 + the atlas at 8): `smokeSample`, `smokeOpticalDepth` (a DDA over coarse bricks), `smokeSegment` |
 | `src/render/shaders/dust_look.wgsl` | the dust twin's look (§9.4) |
 | `tools/qa/sparse-lab.js` | the bench (`__spl.run()`); round two's levers and dry pool (`__spl.round2()`) |

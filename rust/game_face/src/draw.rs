@@ -1,7 +1,7 @@
-//! WHAT A HOST DRAWS AND SHOWS OF THE GAME (the crate game_draw): made from the game as a tick left it, which is not written.
+//! WHAT A HOST DRAWS AND SHOWS OF THE GAME (the crate game_draw): made from the game as a tick left it, which is as it was.
 //!
 //!   face_draw(h, want) -> p            WHAT THE LAST TICK LEFT TO BE DRAWN (the crate game_draw): the sections of `want` made again from the game as it
-//!                                      stands, which is not written. `p` is a table of two words a section, its address and its rows; they lie here
+//!                                      stands, which is as it was. `p` is a table of two words a section, its address and its rows; they lie here
 //!                                      until the next call. Once a tick.
 //!   face_draw_over(h, want) -> p       …the same, of a tick that is not the first a host steps before it draws a frame: what moves is blended over them all
 //!   face_frame(h, a, x, y, z) -> p     A FRAME IS DRAWN, `a` of the way from the tick before to the last (1 = where the last left everything), looking at
@@ -16,18 +16,20 @@
 
 #[no_mangle]
 pub extern "C" fn face_draw(h: u32, want: u32) -> *const u32 {
-    super::with(h, |x| { watch(x); x.drawn.take(&x.g, want); x.drawn.table().as_ptr() })
+    super::with(h, |x| { watch(x, want); x.drawn.take(&x.g, want); x.drawn.table().as_ptr() })
 }
 #[no_mangle]
 pub extern "C" fn face_draw_over(h: u32, want: u32) -> *const u32 {
-    super::with(h, |x| { watch(x); x.drawn.over(&x.g, want); x.drawn.table().as_ptr() })
+    super::with(h, |x| { watch(x, want); x.drawn.over(&x.g, want); x.drawn.table().as_ptr() })
 }
 #[no_mangle]
 pub extern "C" fn face_frame(h: u32, a: f64, x: f64, y: f64, z: f64) -> *const u32 {
     super::with(h, |k| { k.drawn.frame(&k.g, a, [x, y, z]); k.drawn.table().as_ptr() })
 }
-/// what a viewer's picture shows that the game lists nowhere is made of it, and the world's copy, which was asked, is proven again by whoever asks next
-fn watch(x: &mut super::Held) {
+/// before a take: the ways of a game just put back's smoke are asked; and what a viewer's picture shows that the game lists nowhere is made of it, and the world's copy,
+/// which was asked, is proven again by whoever asks next
+fn watch(x: &mut super::Held, want: u32) {
+    if want & game_draw::want::smoke != 0 && x.drawn.smoke.unsaid() { game::sense::smoke_ways(&mut x.g); }
     let watches = x.drawn.watches();
     if watches { game::scene_collision::stands(&mut x.g); }
     x.drawn.watch(&x.g);

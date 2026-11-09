@@ -32,6 +32,7 @@ export const PAGES: readonly PageRow[] = [
   ['cloud-page.cjs', 'cloud', "the hosted page's backend: tape, visit, settings, the link", 0],
   ['cloudfatal-page.cjs', 'cloud', "a red card tells the backend", 0],
   ['cloudnote-page.cjs', 'cloud', "the notice line on a card that is not the title", 0.1],
+  ['../draw/smokejump-page.cjs', 'replay', "after a load, a restart or a seek the first frame's smoke is the game's, read back cell by cell", 7],
   ['../draw/tape-page.cjs', 'replay', "a run is kept as it is played, and its page walks it to the same state, sought both ways", 11],
   ['perf-sweep-page.cjs', 'tools', "the F8 sweep run and its dump", 0],
   ['framecap-page.cjs', 'tools', "an F6 frame capture taken and read back", 0],

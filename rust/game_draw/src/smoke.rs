@@ -1,6 +1,7 @@
 //! THE GAME'S OWN SMOKE AS THE PICTURE IS TOLD IT: what the picture's solver is bent toward, a little at a time (src/smoke/smoke.wgsl, THE GAME'S SMOKE). The grid is
 //! the block's (sim::bricks): half-metre cells in bricks, stepped ten times a second, the same on every machine and in every snapshot. The rows are made again
-//! when a step was taken, and lie as the GPU reads them. A block put back says nothing until its next step (no way from cell to cell is known of it).
+//! when a step was taken, and lie as the GPU reads them. Of a game put back no way from cell to cell is known till its next step: they are asked before the first
+//! of it is drawn (`unsaid`), so a picture has the whole of it at once.
 use crate::boxes::Word;
 use alloc::vec::Vec;
 use game::game::Game;
@@ -35,11 +36,15 @@ pub struct Smoke {
     pub bricks: Vec<SmokeBrick>,
     of: Option<(f64, f64)>,
     made: u32,
+    said: bool,
 }
 
 impl Smoke {
-    pub fn cut(&mut self) { self.of = None; }
+    pub fn cut(&mut self) { (self.of, self.said) = (None, false); }
+    /// nothing was said yet of the game as it was put back: its ways are to be asked before a take (game::sense::smoke_ways)
+    pub fn unsaid(&self) -> bool { !self.said }
     pub fn take(&mut self, g: &Game) {
+        self.said = true;
         let stamp = sim::state::stamp(g.sim);
         let stands = sim::bricks::stands(g.sim, stamp);
         let of = stands.as_ref().map(|s| (stamp, s.steps));

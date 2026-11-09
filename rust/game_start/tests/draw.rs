@@ -125,8 +125,8 @@ fn the_boxes_say_what_they_hold() {
     assert!(!one.lights.rows.is_empty() && one.boxes.geo.is_empty() && one.men.men.is_empty());
 }
 
-/// THE RULE: the smoke the picture is bent toward is the smoke eyes see through: read through its rows, a line lets through what the game says it does; a game put back says nothing of it until its ways are known again, and then the smoke that stands there.
-/// A FAILURE MEANS: the drawn smoke follows something no eye looks through.
+/// THE RULE: the smoke the picture is bent toward is the smoke eyes see through: read through its rows, a line lets through what the game says it does; of a game put back its ways are asked before it is first drawn, so the picture is told the whole of the smoke that stands there at once; and the asking is no part of the game.
+/// A FAILURE MEANS: the drawn smoke follows something no eye looks through; a load is drawn with no smoke, or another's; or a game that was drawn goes on otherwise than one nobody drew.
 #[test]
 fn the_smoke_drawn_is_bent_toward_the_smoke_eyes_see_through() {
     use game::smoke_types::SmokeEmitter;
@@ -164,8 +164,7 @@ fn the_smoke_drawn_is_bent_toward_the_smoke_eyes_see_through() {
         hidden
     };
     p.run(2.0);
-    let then = p.g.clone();
-    let kept = game_start::block::bytes(p.g.sim).to_vec();
+    let then = game_start::moment::Moment::of(&p.g);
     d.take(&p.g, want::smoke);
     let early = agree(&d, &p, "two seconds in");
     let ways = |d: &Drawn| { let n = |bit: u32| d.smoke.bricks.iter().map(|b| b.open.iter().map(|w| (w & (bit * 0x0101_0101)).count_ones()).sum::<u32>()).sum::<u32>(); [n(1), n(2), n(4), n(8)] };
@@ -176,16 +175,64 @@ fn the_smoke_drawn_is_bent_toward_the_smoke_eyes_see_through() {
     d.take(&p.g, want::smoke);
     let late = agree(&d, &p, "eight seconds in");
     assert!(late > early, "the scene: the cloud was to grow ({early} of 60 lines hidden, then {late})");
-    p.g = then;
-    sim::state::put(p.g.sim, &kept);
+    let mut again = |p: &mut Play, asked: bool| {
+        p.g = then.stands(p.g.sim);
+        d.cut();
+        if asked {
+            assert!(d.smoke.unsaid());
+            game::sense::smoke_ways(&mut p.g);
+            d.take(&p.g, want::smoke);
+            assert!(!d.smoke.unsaid() && !d.smoke.head.is_empty(), "put back, and nothing is told of the smoke that stands there");
+            assert_eq!(agree(&d, p, "put back"), early, "the cloud put back is not the one of two seconds in");
+            assert_eq!(ways(&d), told, "the ways put back are not the ones of two seconds in");
+        }
+        (0..60).map(|_| { p.frame(); p.words() }).collect::<Vec<_>>()
+    };
+    let (plain, asked) = (again(&mut p, false), again(&mut p, true));
+    assert_eq!(plain.iter().zip(&asked).position(|(a, b)| a != b), None, "the game whose ways were asked parts from the one nobody asked");
+}
+
+/// THE RULE: a picture of a game put back is told what lets smoke out there, where and as old as it is, once for every source: at its first tick however often that is told, with the ids it had, and
+/// never again; one that this very tick began is told by its own event alone.
+/// A FAILURE MEANS: a can thrown before a save stands without its plume after the load, or pours twice.
+#[test]
+fn a_game_put_back_tells_what_lets_smoke_out() {
+    let mut p = office(5);
+    p.sam_unhurt();
+    p.run(0.2);
+    let mut d = Drawn::default();
+    let [x, z] = p.sam_at();
+    game::game::game_drop_throwable(&mut p.g, game::game::ThrowKind::Smoke, [x + 1.0, 0.0, z]);
+    let told = |d: &Drawn| d.events.sources.iter().filter(|s| s.says & 8 != 0).map(|s| (s.tick, s.serial, s.pos.map(f32::to_bits), s.radius, s.density, s.ttl, s.age)).collect::<Vec<_>>();
+    let lets = |p: &Play| sim::bricks::letting(p.g.sim).map(|e| e.at.map(|v| (v as f32).to_bits())).collect::<Vec<_>>();
+    let mut first = Vec::new();
+    for _ in 0..300 { p.frame_shown(|p| { d.take(&p.g, want::events); first = told(&d); }); if !first.is_empty() { break; } }
+    assert_eq!(first.len(), 1, "the can's own event");
+    let began = game_start::moment::Moment::of(&p.g);
+    // (the tick that began it, put back: as its host keeps it, with nothing left to say)
+    p.g = began.stands(p.g.sim);
+    p.g.out.clear();
     d.cut();
-    d.take(&p.g, want::smoke);
-    assert!(d.smoke.head.is_empty(), "put back, and its ways are told before they were asked");
-    p.run(0.1);
-    d.take(&p.g, want::smoke);
-    assert!(agree(&d, &p, "put back").abs_diff(early) < late - early, "the cloud put back is not the one of two seconds in");
-    let of = 128 * d.smoke.bricks.len() as u32;
-    assert!(ways(&d)[3] == of && ways(&d)[0] > of / 4, "put back, and the ways are not told");
+    d.take(&p.g, want::events);
+    let at_once = told(&d);
+    assert!(at_once.len() == 1 && at_once[0].2 == first[0].2, "put back at the tick it began: {at_once:?}");
+    p.run(4.0);
+    let then = game_start::moment::Moment::of(&p.g);
+    let of = lets(&p);
+    p.run(3.0);
+    p.g = then.stands(p.g.sim);
+    p.g.out.clear();
+    d.cut();
+    d.take(&p.g, want::events);
+    let again = told(&d);
+    assert_eq!(again.iter().map(|s| s.2).collect::<Vec<_>>(), of, "the sources told are not the game's");
+    let can = again.iter().find(|s| s.2 == first[0].2).expect("the can pours on");
+    assert!((can.4 - first[0].4).abs() < 1e-3 * first[0].4 && can.3 == first[0].3 && can.5 == first[0].5, "what it lets out: {can:?}, and as it began {:?}", first[0]);
+    assert!((can.6 - 4.0).abs() < 0.15, "four seconds old: {}", can.6);
+    d.take(&p.g, want::events);
+    assert_eq!(told(&d), again, "the same tick told again");
+    p.frame_shown(|p| d.take(&p.g, want::events));
+    assert!(told(&d).is_empty(), "the tick after: {:?}", told(&d));
 }
 
 /// THE RULE: a source says whether the game holds its smoke, and the game holds what it says.
