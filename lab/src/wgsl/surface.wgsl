@@ -26,6 +26,7 @@ fn relief(kind: u32, p: vec2f, s: f32, fp: f32) -> f32 {
     case 13u: { a = vec4f(12.0, 12.0, 0.02, 60.0); b = 0.004; }
     case 15u: { a = vec4f(26.0, 5.0, 0.012, 60.0); b = 0.002; }
     case 16u: { a = vec4f(38.0, 38.0, 0.006, 90.0); b = 0.003; }
+    case 24u: { a = vec4f(70.0, 70.0, 0.00006, 260.0); b = 0.00001; }
     default: {}
   }
   let f = max(a.x, a.y); return h + a.z * (0.65 * shows(f, fp) * vnoise(p * a.xy) + 0.35 * shows(f * 2.7, fp) * vnoise(p * a.xy * 2.7 + 5.0)) + b * shows(a.w, fp) * vnoise(p * a.w);
@@ -95,6 +96,7 @@ fn surfaceAt(ro: vec3f, rd: vec3f, h: Hit, fp: f32) -> Surf {
     case 21u: { base *= 0.95 + 0.1 * nB; }
     case 11u: { base *= (0.95 + 0.07 * nA) * (1.0 - 0.08 * foot * nC); }
     case 12u: { if ((((*p).mat >> 8u) & 15u) == 0u) { let g = gridLine(uv, vec2f(0.12)); s.glow *= mix(1.0, 0.86, band(g, 0.004, fp)); } }
+    case 24u: { base *= 0.985 + 0.03 * nA; }
     case 23u: { let c = vnoise(uv * 260.0) * 0.6 + vnoise(uv * 620.0) * 0.4; base *= 1.0 - 0.22 * shows(260.0, fp) * smoothstep(0.35, 0.7, c); }
     case 22u: { base *= 0.82 + 0.25 * nA + 0.45 * (nC - 0.5) * shows(26.0, fp); let mend = smoothstep(0.52, 0.54, vnoise(floor(uv * vec2f(0.22, 0.45)) + 3.0)); base *= 1.0 - 0.22 * mend; let crack = abs(fbm(uv * 1.7 + 4.0) - 0.5) + 0.06 * smoothstep(0.4, 0.6, nB); base *= 1.0 - 0.35 * (1.0 - smoothstep(0.0, 0.004 + 0.6 * fp, crack)); s.rough = mix(s.rough, 0.62, smoothstep(0.45, 0.6, nB)); }
     case 13u, 15u, 16u: { base *= 0.6 + 0.7 * nB; }
@@ -256,7 +258,7 @@ fn ggxD(a: f32, nh: f32) -> f32 { let a2 = a * a; let d = nh * nh * (a2 - 1.0) +
 fn smithV(a: f32, nv: f32, nl: f32) -> f32 { let a2 = a * a; return 0.5 / (nl * sqrt(nv * nv * (1.0 - a2) + a2) + nv * sqrt(nl * nl * (1.0 - a2) + a2) + 1e-5); }
 fn fresnel(f0: vec3f, c: f32) -> vec3f { let u = 1.0 - sat(c); let u2 = u * u; return f0 + (1.0 - f0) * (u2 * u2 * u); }
 fn coatF0(s: Surf) -> vec3f { return mix(vec3f(s.f0), s.albedo, s.metal); }
-fn matteOf(s: Surf) -> vec3f { return s.albedo * (1.0 - s.metal); }
+fn matteOf(s: Surf) -> vec3f { if (isPaint(s.kind)) { return paintMatte(s.albedo) * 0.91 + flakeF0(s.albedo) * (FLAKES * 0.75); } return s.albedo * (1.0 - s.metal); }
 /** how rough a matte is, in the small: what keeps plaster from going dark toward its edge. Facets in the Oren and Nayar way with nothing lost between them (the form of
  *  Portsmouth, Kutz and Hill), next to an even matte = 1 */
 fn matteRough(kind: u32) -> f32 { switch (kind) { case 1u, 22u: { return 0.55; } case 11u, 5u: { return 0.4; } case 10u, 21u: { return 0.65; } case 13u, 15u, 16u: { return 0.7; } default: { return 0.0; } } }
@@ -268,6 +270,25 @@ fn roughMatte(kind: u32, alb: vec3f, n: vec3f, V: vec3f, L: vec3f) -> vec3f {
 /** the same under light from all round, as seen from V; and on the mean of that too */
 fn matteSeen(kind: u32, alb: vec3f, nv: f32) -> vec3f { let g = matteRough(kind); if (g <= 0.0) { return vec3f(1.0); } let e = facetE(clamp(nv, 1e-3, 1.0), g); let avg = (1.0 + 0.072488213 * g) / (1.0 + 0.287793409 * g); return vec3f(e) + alb * avg / (vec3f(1.0) - alb * (1.0 - avg)) * (1.0 - e); }
 fn matteMean(kind: u32, alb: vec3f) -> vec3f { let g = matteRough(kind); if (g <= 0.0) { return vec3f(1.0); } let avg = (1.0 + 0.072488213 * g) / (1.0 + 0.287793409 * g); return vec3f(avg) + alb * avg / (vec3f(1.0) - alb * (1.0 - avg)) * (1.0 - avg); }
+// CAR PAINT: a clear coat (n 1.5) over a base of pigment and metal flakes. What is below is seen through the coat both ways: bent, dimmed by what the coat turns back,
+// and what it turns back from inside goes round again (kind 24)
+const FLAKES = 0.5; const FLAKE_ROUGH = 0.34; const COAT_N = 1.5; const COAT_BACK = 0.596;
+fn isPaint(kind: u32) -> bool { return kind == 24u; }
+fn coatT(c: f32) -> f32 { let u = 1.0 - sat(c); let u2 = u * u; return 0.96 * (1.0 - u2 * u2 * u); }
+fn flakeF0(alb: vec3f) -> vec3f { return min(alb * 1.5 + 0.05, vec3f(0.95)); }
+/** the pigment's share, all its goings round inside counted: times 1 / π and the coat's two crossings */
+fn paintMatte(alb: vec3f) -> vec3f { return alb * ((1.0 - FLAKES) / (COAT_N * COAT_N)) / (vec3f(1.0) - alb * COAT_BACK); }
+/** inside the coat, the way to or from v */
+fn within(v: vec3f, n: vec3f) -> vec3f { let c = dot(v, n); let t = (v - n * c) / COAT_N; return t + n * sqrt(max(1.0 - dot(t, t), 0.0)); }
+/** near, the flakes are seen one by one: each place shines more or less than its mean, by which way they chance to lie (mean 1) */
+fn glint(x: vec3f, H: vec3f) -> f32 { let fp = distance(x, frame.camPos.xyz) * 2.0 * length(frame.camUp.xyz) / frame.size.w; let c = max(0.0011, fp); let few = 1.0 - smoothstep(0.0012, 0.006, fp); if (few <= 0.0) { return 1.0; } let h = hash33(floor(x / c) + floor(H * 14.0) * 17.0); return mix(1.0, -log(max(1.0 - h.x, 1e-3)), few * 0.85); }
+/** the base under the coat for light from L (the cosine taken) */
+fn paintBase(s: Surf, V: vec3f, L: vec3f) -> vec3f {
+  let nl = dot(s.n, L); let nv = max(dot(s.n, V), 1e-3); if (nl <= 0.0) { return vec3f(0.0); } let vi = within(V, s.n); let li = within(L, s.n); let h = normalize(vi + li); let a = FLAKE_ROUGH * FLAKE_ROUGH; let f = fresnel(flakeF0(s.albedo), dot(vi, h)) * (FLAKES * ggxD(a, sat(dot(s.n, h))) * smithV(a, max(dot(s.n, vi), 1e-3), max(dot(s.n, li), 1e-3)) / (COAT_N * COAT_N) * glint(s.x, h));
+  return (paintMatte(s.albedo) / PI + f) * (coatT(nl) * coatT(nv) * nl);
+}
+/** for a lamp's image: the flakes as they look from outside, the bending having made their lobe wider */
+fn paintFlakes(s: Surf) -> Surf { var q = s; q.rough = 0.42; q.metal = 1.0; q.albedo = flakeF0(s.albedo) * FLAKES; return q; }
 /** a facet the eye can see (Heitz), in the normal's frame */
 fn visibleNormal(v: vec3f, a: f32, u: vec2f) -> vec3f {
   let vh = normalize(vec3f(a * v.x, a * v.y, v.z)); let l2 = vh.x * vh.x + vh.y * vh.y; var t1 = vec3f(1.0, 0.0, 0.0); if (l2 > 1e-7) { t1 = vec3f(-vh.y, vh.x, 0.0) * inverseSqrt(l2); }

@@ -12,7 +12,7 @@ fn lampsAt(s: Surf, V: vec3f, glossy: bool) -> vec3f {
       let a = aimLamp(u32(k.x), s.x, rnd2()); d = a.dir; E = a.E * k.y; far = a.dist - 0.02; widen = 0.0;
     }
     let c = dot(s.n, d); let g = dot(s.ng, d); var f = vec3f(0.0);
-    if (g > 0.0 && c > 0.0) { if (!coatOnly) { f = m * c * roughMatte(s.kind, s.albedo, s.n, V, d); } if (q == 0u || !glossy) { f += coatOf(s, V, d, widen); } } else if (g < 0.0 && leaf) { f = s.through * (-min(c, 0.0) / PI); }
+    if (g > 0.0 && c > 0.0) { if (isPaint(s.kind)) { f = paintBase(s, V, d); } else if (!coatOnly) { f = m * c * roughMatte(s.kind, s.albedo, s.n, V, d); } if (q == 0u || !glossy) { f += coatOf(s, V, d, widen); } } else if (g < 0.0 && leaf) { f = s.through * (-min(c, 0.0) / PI); }
     f *= E; if (max3(f) <= 0.0) { continue; }
     if (q == 0u) { f *= poolLight(s.x); }
     L += f * visible(s.x + s.ng * select(-0.002, 0.002, g > 0.0), d, 1e-3, far);
@@ -65,11 +65,16 @@ fn walk(ro0: vec3f, rd0: vec3f, depth0: u32, clear0: bool, cut0: f32, spread0: f
     // on: through the coat, or off the matte
     let F = fresnel(coatF0(s), dot(s.n, V)); let m = matteOf(s); let wf = lum(F); let wm = lum(m) * (1.0 - wf) + lum(s.through); let pc = select(clamp(wf / max(wf + wm, 1e-4), 0.08, 0.92), 1.0, wm < 1e-4);
     if (rnd() < pc) { let l = coatDir(s, V, rnd2()); thr *= l.w / pc; rd = l.dir; if (dot(rd, s.ng) <= 0.0) { break; } ro = s.x + s.ng * 0.002; clear = glossy; if (!glossy) { fp += 0.05; } }
+    else if (isPaint(s.kind) && rnd() < 0.5) {                        // through the coat to a flake, and out again
+      let b = basis(s.n); let vi = within(V, s.n); let v = vec3f(dot(vi, b[0]), dot(vi, b[1]), max(dot(vi, b[2]), 1e-3)); let a = FLAKE_ROUGH * FLAKE_ROUGH; let h = visibleNormal(v, a, rnd2()); let l = reflect(-v, h); if (l.z <= 1e-3) { break; } let k = (1.0 - l.z * l.z) * COAT_N * COAT_N; if (k >= 0.999) { break; }
+      let a2 = a * a; let lv = (-1.0 + sqrt(1.0 + a2 * (1.0 / (v.z * v.z) - 1.0))) * 0.5; let ll = (-1.0 + sqrt(1.0 + a2 * (1.0 / (l.z * l.z) - 1.0))) * 0.5; rd = normalize(b * vec3f(l.xy * COAT_N, sqrt(1.0 - k))); if (dot(rd, s.ng) <= 0.0) { break; }
+      thr *= fresnel(flakeF0(s.albedo), dot(v, h)) * ((1.0 + lv) / (1.0 + lv + ll) * FLAKES * coatT(dot(s.n, V)) * coatT(dot(s.n, rd)) * glint(s.x, normalize(b * h)) / (0.5 * (1.0 - pc))); ro = s.x + s.ng * 0.002; clear = false; fp += 0.05;
+    }
     else {
       var n = s.n; var side = 1.0; var alb = m * (1.0 - wf);
       if (any(s.through > vec3f(0.0))) { let pt = lum(s.through) / (lum(s.through) + lum(m)); if (rnd() < pt) { n = -s.n; side = -1.0; alb = s.through / pt; } else { alb = alb / (1.0 - pt); } }
       let u = rnd2(); let from0 = s.x + s.ng * side * 0.002; let d = guidedDir(from0, n, u, rnd()); if (d.w <= 0.0) { break; }
-      thr *= alb * d.w / PI / (1.0 - pc); if (side > 0.0) { thr *= roughMatte(s.kind, s.albedo, s.n, V, d.xyz); } rd = d.xyz; if (dot(rd, s.ng) * side <= 0.0) { break; } ro = from0; gMark(from0, n, rd, thr, L); clear = false; fp = 1.0;
+      thr *= alb * d.w / PI / (1.0 - pc); if (side > 0.0) { if (isPaint(s.kind)) { thr *= paintMatte(s.albedo) * (coatT(dot(s.n, V)) * coatT(dot(s.n, d.xyz)) * 2.0) / max(alb, vec3f(1e-5)); } else { thr *= roughMatte(s.kind, s.albedo, s.n, V, d.xyz); } } rd = d.xyz; if (dot(rd, s.ng) * side <= 0.0) { break; } ro = from0; gMark(from0, n, rd, thr, L); clear = false; fp = 1.0;
     }
     depth += 1u; cut = 1e9; if (!clear) { spread = 0.02; }
     if (depth > 2u) { let q = clamp(max3(thr), 0.05, 0.95); if (rnd() > q) { break; } thr /= q; }

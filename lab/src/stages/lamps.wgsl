@@ -10,7 +10,7 @@ fn leafSun(x: vec3f, n: vec3f, r: vec2f) -> f32 {
   let rd = pxRay(id.xy); let p = underWater(unpackPx(textureLoad(surf, id.xy, 0), rd), textureLoad(frontT, id.xy, 0), rd);
   if (p.sky || p.kind == 63u) { textureStore(outVis, id.xy, vec4f(0.0)); textureStore(outU, id.xy, vec4f(0.0)); textureStore(outC, id.xy, vec4f(0.0)); return; }
   rngInit(id.xy, 3u); let bn = blue2(id.xy, 0u); let b2 = blue2(id.xy, 7u); let b3 = blue2(id.xy, 11u); let n = select(p.n, vec3f(0.0), p.leaf);
-  var W = vec2f(0.0); var U = vec3f(0.0); var pick = vec3i(-1); var u = vec2f(b2.x, b3.x); let s = pxSurf(p); let shines = byFormula(p.rough) > 0.0; var C = vec4f(0.0); var WC = 0.0; var uc = rnd();
+  var W = vec2f(0.0); var U = vec3f(0.0); var pick = vec3i(-1); var u = vec2f(b2.x, b3.x); var s = pxSurf(p); let shines = byFormula(p.rough) > 0.0 || isPaint(p.kind); if (isPaint(p.kind)) { s = paintFlakes(s); } var C = vec4f(0.0); var WC = 0.0; var uc = rnd();
   for (var g = 0u; g * 4u < frame.counts.x; g++) { let reach = lampReach(p.x, g); if (max4(reach) <= 0.0) { continue; }
    for (var j = 0u; j < 4u; j++) { let i = g * 4u + j; if (reach[j] <= 0.0 || i >= frame.counts.x) { continue; }
     let e = lampE(i, p.x, n) * reach[j]; let w = lum(e); if (w <= 1e-5) { continue; } let c = select(0u, 1u, lamps[i].kind == 2u); if (c == 0u) { U += e; } W[c] += w; let q = w / W[c]; if (u[c] < q) { pick[c] = i32(i); u[c] = u[c] / q; } else { u[c] = (u[c] - q) / (1.0 - q); }

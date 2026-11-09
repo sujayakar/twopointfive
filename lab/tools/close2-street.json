@@ -1,0 +1,424 @@
+[
+ {
+  "w": 1280,
+  "h": 720,
+  "hour": 22.2,
+  "cut": 2.5,
+  "tick": 300,
+  "name": "e1-sando",
+  "look": [
+   -5.45,
+   1.0,
+   -6.4
+  ],
+  "dist": 1.6,
+  "yaw": 1.45,
+  "pitch": 0.42,
+  "samples": 220,
+  "method": "realtime",
+  "scale": 1
+ },
+ {
+  "w": 1280,
+  "h": 720,
+  "hour": 22.2,
+  "cut": 2.5,
+  "tick": 300,
+  "name": "e1-sando-ref",
+  "look": [
+   -5.45,
+   1.0,
+   -6.4
+  ],
+  "dist": 1.6,
+  "yaw": 1.45,
+  "pitch": 0.42,
+  "samples": 240,
+  "method": "reference",
+  "scale": 1
+ },
+ {
+  "w": 1280,
+  "h": 720,
+  "hour": 22.2,
+  "cut": 2.5,
+  "tick": 300,
+  "name": "e2-fruit",
+  "look": [
+   -3.8,
+   0.75,
+   -1.0
+  ],
+  "dist": 3.0,
+  "yaw": 0.2,
+  "pitch": 0.5,
+  "samples": 220,
+  "method": "realtime",
+  "scale": 1
+ },
+ {
+  "w": 1280,
+  "h": 720,
+  "hour": 22.2,
+  "cut": 2.5,
+  "tick": 300,
+  "name": "e2-fruit-ref",
+  "look": [
+   -3.8,
+   0.75,
+   -1.0
+  ],
+  "dist": 3.0,
+  "yaw": 0.2,
+  "pitch": 0.5,
+  "samples": 240,
+  "method": "reference",
+  "scale": 1
+ },
+ {
+  "w": 1280,
+  "h": 720,
+  "hour": 22.2,
+  "cut": 2.5,
+  "tick": 300,
+  "name": "e3-car",
+  "look": [
+   -2.6,
+   0.8,
+   7.1
+  ],
+  "dist": 6.0,
+  "yaw": 2.7,
+  "pitch": 0.35,
+  "samples": 220,
+  "method": "realtime",
+  "scale": 1
+ },
+ {
+  "w": 1280,
+  "h": 720,
+  "hour": 22.2,
+  "cut": 2.5,
+  "tick": 300,
+  "name": "e3-car-ref",
+  "look": [
+   -2.6,
+   0.8,
+   7.1
+  ],
+  "dist": 6.0,
+  "yaw": 2.7,
+  "pitch": 0.35,
+  "samples": 240,
+  "method": "reference",
+  "scale": 1
+ },
+ {
+  "w": 1280,
+  "h": 720,
+  "hour": 22.2,
+  "cut": 2.5,
+  "tick": 300,
+  "name": "e4-hatch",
+  "look": [
+   4.4,
+   0.7,
+   7.2
+  ],
+  "dist": 4.6,
+  "yaw": 3.5,
+  "pitch": 0.3,
+  "samples": 220,
+  "method": "realtime",
+  "scale": 1
+ },
+ {
+  "w": 1280,
+  "h": 720,
+  "hour": 22.2,
+  "cut": 2.5,
+  "tick": 300,
+  "name": "e4-hatch-ref",
+  "look": [
+   4.4,
+   0.7,
+   7.2
+  ],
+  "dist": 4.6,
+  "yaw": 3.5,
+  "pitch": 0.3,
+  "samples": 240,
+  "method": "reference",
+  "scale": 1
+ },
+ {
+  "w": 1280,
+  "h": 720,
+  "hour": 22.2,
+  "cut": 2.5,
+  "tick": 300,
+  "name": "e5-burger",
+  "look": [
+   9.4,
+   1.2,
+   -2.4
+  ],
+  "dist": 4.2,
+  "yaw": 0.15,
+  "pitch": 0.4,
+  "samples": 220,
+  "method": "realtime",
+  "scale": 1
+ },
+ {
+  "w": 1280,
+  "h": 720,
+  "hour": 22.2,
+  "cut": 2.5,
+  "tick": 300,
+  "name": "e5-burger-ref",
+  "look": [
+   9.4,
+   1.2,
+   -2.4
+  ],
+  "dist": 4.2,
+  "yaw": 0.15,
+  "pitch": 0.4,
+  "samples": 240,
+  "method": "reference",
+  "scale": 1
+ },
+ {
+  "w": 1280,
+  "h": 720,
+  "hour": 22.2,
+  "cut": 2.5,
+  "tick": 300,
+  "name": "e6-tray",
+  "look": [
+   8.0,
+   1.2,
+   -2.6
+  ],
+  "dist": 1.3,
+  "yaw": 0.3,
+  "pitch": 0.5,
+  "samples": 220,
+  "method": "realtime",
+  "scale": 1
+ },
+ {
+  "w": 1280,
+  "h": 720,
+  "hour": 22.2,
+  "cut": 2.5,
+  "tick": 300,
+  "name": "e6-tray-ref",
+  "look": [
+   8.0,
+   1.2,
+   -2.6
+  ],
+  "dist": 1.3,
+  "yaw": 0.3,
+  "pitch": 0.5,
+  "samples": 240,
+  "method": "reference",
+  "scale": 1
+ },
+ {
+  "w": 1280,
+  "h": 720,
+  "hour": 22.2,
+  "cut": 2.5,
+  "tick": 300,
+  "name": "e7-scooter",
+  "look": [
+   4.6,
+   0.5,
+   0.75
+  ],
+  "dist": 3.0,
+  "yaw": 0.7,
+  "pitch": 0.4,
+  "samples": 220,
+  "method": "realtime",
+  "scale": 1
+ },
+ {
+  "w": 1280,
+  "h": 720,
+  "hour": 22.2,
+  "cut": 2.5,
+  "tick": 300,
+  "name": "e7-scooter-ref",
+  "look": [
+   4.6,
+   0.5,
+   0.75
+  ],
+  "dist": 3.0,
+  "yaw": 0.7,
+  "pitch": 0.4,
+  "samples": 240,
+  "method": "reference",
+  "scale": 1
+ },
+ {
+  "w": 1280,
+  "h": 720,
+  "hour": 22.2,
+  "cut": 2.5,
+  "tick": 300,
+  "name": "e8-shelf",
+  "look": [
+   -2.4,
+   0.9,
+   -5.0
+  ],
+  "dist": 2.6,
+  "yaw": 0.1,
+  "pitch": 0.35,
+  "samples": 220,
+  "method": "realtime",
+  "scale": 1
+ },
+ {
+  "w": 1280,
+  "h": 720,
+  "hour": 22.2,
+  "cut": 2.5,
+  "tick": 300,
+  "name": "e8-shelf-ref",
+  "look": [
+   -2.4,
+   0.9,
+   -5.0
+  ],
+  "dist": 2.6,
+  "yaw": 0.1,
+  "pitch": 0.35,
+  "samples": 240,
+  "method": "reference",
+  "scale": 1
+ },
+ {
+  "w": 1280,
+  "h": 720,
+  "hour": 22.2,
+  "cut": 1000000000.0,
+  "tick": 300,
+  "name": "e9-duck",
+  "look": [
+   10.3,
+   5.6,
+   -5
+  ],
+  "dist": 14,
+  "yaw": 0.2,
+  "pitch": 0.35,
+  "samples": 220,
+  "method": "realtime",
+  "scale": 1
+ },
+ {
+  "w": 1280,
+  "h": 720,
+  "hour": 22.2,
+  "cut": 1000000000.0,
+  "tick": 300,
+  "name": "e9-duck-ref",
+  "look": [
+   10.3,
+   5.6,
+   -5
+  ],
+  "dist": 14,
+  "yaw": 0.2,
+  "pitch": 0.35,
+  "samples": 240,
+  "method": "reference",
+  "scale": 1
+ },
+ {
+  "w": 1280,
+  "h": 720,
+  "hour": 15.5,
+  "cut": 1000000000.0,
+  "tick": 300,
+  "name": "e10-day",
+  "look": [
+   0,
+   2,
+   -1
+  ],
+  "dist": 30,
+  "yaw": 0.5,
+  "pitch": 0.55,
+  "wet": 0,
+  "samples": 220,
+  "method": "realtime",
+  "scale": 1
+ },
+ {
+  "w": 1280,
+  "h": 720,
+  "hour": 15.5,
+  "cut": 1000000000.0,
+  "tick": 300,
+  "name": "e10-day-ref",
+  "look": [
+   0,
+   2,
+   -1
+  ],
+  "dist": 30,
+  "yaw": 0.5,
+  "pitch": 0.55,
+  "wet": 0,
+  "samples": 240,
+  "method": "reference",
+  "scale": 1
+ },
+ {
+  "w": 1280,
+  "h": 720,
+  "hour": 15.5,
+  "cut": 2.5,
+  "tick": 300,
+  "name": "e11-carday",
+  "look": [
+   -2.6,
+   0.8,
+   7.1
+  ],
+  "dist": 6.0,
+  "yaw": 2.7,
+  "pitch": 0.35,
+  "wet": 0,
+  "samples": 220,
+  "method": "realtime",
+  "scale": 1
+ },
+ {
+  "w": 1280,
+  "h": 720,
+  "hour": 15.5,
+  "cut": 2.5,
+  "tick": 300,
+  "name": "e11-carday-ref",
+  "look": [
+   -2.6,
+   0.8,
+   7.1
+  ],
+  "dist": 6.0,
+  "yaw": 2.7,
+  "pitch": 0.35,
+  "wet": 0,
+  "samples": 240,
+  "method": "reference",
+  "scale": 1
+ }
+]
