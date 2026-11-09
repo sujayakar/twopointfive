@@ -462,8 +462,11 @@ pub fn doorway_gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64)
                 if (waiting && !(at_jamb && c_id < o.id)) || th.dist < x.dist - 0.01 || (m::abs(th.dist - x.dist) <= 0.01 && o.id < c_id) { s = short; h = true; }
             } else if far && in_span && m::abs(r.perp) <= half + 0.9 {   // standing just beyond it: a beat short of the frame for him to move
                 if away { s = gap_k(g, d_o); } else if v_o < 0.4 { s = short; patience = m::min(patience, beyond); }
-            } else if let (true, Some(th)) = (!far && !waiting, thr.filter(|th| th.side == x.side)) {   // for the same frame, the same way: the nearer goes first
-                if th.dist < x.dist - 0.01 || (m::abs(th.dist - x.dist) <= 0.01 && o.id < c_id) { s = gap_k(g, d_o); } else { mine = true; }
+            } else if let (true, Some(th)) = (!far && !waiting, thr.filter(|th| th.side == x.side)) {   // for the same frame, the same way: the man an entry names goes first, else the nearer
+                let named = o.gd.and_then(|od| crate::doortools::named_before(g, x.d, gd, od));
+                if named == Some(true) { mine = true; }
+                else if named == Some(false) { s = short; }
+                else if th.dist < x.dist - 0.01 || (m::abs(th.dist - x.dist) <= 0.01 && o.id < c_id) { s = gap_k(g, d_o); } else { mine = true; }
             }
         }
         if s == 1.0 && !h && !mine && !waiting && d_o < gap && (js::truthy(hx) || js::truthy(hz)) {   // a man ahead of him on his line by a door: followed at the gap, never walked into
