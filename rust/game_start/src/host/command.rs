@@ -2,7 +2,7 @@
 //! same bytes. A command is declared here once (`commands!`); the page's writer of it is made from the declaration by `bun run tools/draw/gen.ts`.
 //!
 //! The bytes: a command's number (u32), then its fields in order, little end first: u32, i32, f64, or text as its length (u32) and its bytes.
-use alloc::{format, string::String, vec::Vec};
+use alloc::{format, string::String};
 use game::game::Game;
 use game::savestate::control as saves;
 
@@ -32,38 +32,7 @@ macro_rules! commands {
             Ok(())
         }
 
-        /// the bytes of the commands in `b`, by their numbers, done to nothing
-        fn each(b: &[u8], mut f: impl FnMut(u32, &[u8])) {
-            let mut r = Bytes::of(b);
-            while r.at < b.len() {
-                let n = u32::read(&mut r);
-                let from = r.at;
-                match n {
-                    $($i => { $(let _ = <$t as Field>::read(&mut r);)* })*
-                    _ => return,
-                }
-                f(n, &b[from..r.at]);
-            }
-        }
     };
-}
-
-/// the lever words in a list of commands, in its order: (key, rung)
-pub fn levers_said(b: &[u8]) -> Vec<(String, String)> {
-    let mut out = Vec::new();
-    each(b, |n, args| if n == LEVER {
-        let mut r = Bytes::of(args);
-        let key = <&str as Field>::read(&mut r);
-        let rung = <&str as Field>::read(&mut r);
-        out.push((String::from(key), String::from(rung)));
-    });
-    out
-}
-const LEVER: u32 = 13;
-
-fn lever(key: &str) -> Option<game::difficulty::LeverKey> {
-    use game::difficulty::LeverKey as K;
-    [K::Fog, K::Told, K::Ai, K::Kit].into_iter().find(|k| k.as_str() == key)
 }
 
 commands! {
@@ -92,23 +61,9 @@ commands! {
     10 LetGo {} = |g| { let pl = g.player; g.pl[pl].launch_held = None; };
     /// whatever is up is backed out of
     11 Escape {} = |g| { let _ = game::game::game_escape(g); };
-    /// how hard the defenders are, every lever back on it (before a game is made: what it is staged by)
-    12 Difficulty { hard: u32 } = |g, hard| game::difficulty::set_difficulty(g, if hard != 0 { game::difficulty::Difficulty::Hard } else { game::difficulty::Difficulty::Standard }, Some(false));
-    /// one lever over that, by its key and its rung (an empty rung: back to the level's own)
-    13 Lever { key: &str, rung: &str } = |g, key, rung| if let Some(k) = lever(key) { game::difficulty::set_lever(g, k, if rung.is_empty() { None } else { Some(rung) }, Some(false), None); };
-    /// one of the two tables under the difficulty, by itself
-    14 Pressure { on: u32 } = |g, on| g.k.pressure.on = on != 0;
-    15 DigIn { on: u32 } = |g, on| g.k.digin.on = on != 0;
-    /// the fog of war's cone, whatever the level says, for a visit
-    16 FogCone { on: u32 } = |g, on| game::difficulty::set_cone_visit(g, Some(on != 0));
+    // (12 to 16, 18 to 20 and 36 said what a host sets before a game is made: that is one record now, `kept::Kept`, and no number is used again for another)
     /// one knob, by its name (knobs.rs); a name no knob has is nothing
     17 Knob { name: &str, value: f64 } = |g, name, value| { let _ = super::knobs::set(g, name, value); };
-    /// the cards as the player's machine keeps them (before a game is made: what its men are staged in)
-    18 Kit { kept: &str } = |g, kept| super::kept::read(g, kept);
-    /// the rung a quiet mission is played under, as this machine keeps it (a word that is no rung is nothing)
-    19 QuietFog { rung: &str } = |g, rung| game::quietfog::quiet_fog_kept(g, rung);
-    /// the cameras a quiet mission hands out, as this machine keeps them
-    20 QuietCams { on: u32 } = |g, on| game::quietfog::quiet_cams_kept(g, on != 0);
     /// nobody plays, and the floor is looked at: the player stands aside, out of everybody's senses, and nothing is the mission's, the log's or the alarm's (`aside`); 0 puts a fresh
     /// encounter back
     21 Aside { on: u32, x: f64, z: f64 } = |g, on, x, z| {
@@ -140,6 +95,4 @@ commands! {
     34 KitStageShown {} = |g| game::kitstage::shown(g);
     /// one of the panel's actions, by its name (actions.rs), with what its row picked
     35 Act { name: &str, value: f64, word: &str } = |g, name, value, word| super::actions::act(g, name, value, word);
-    /// an address's words, on what stands no game yet: the desk, whose kit rules read the numbers they turn
-    36 Words { text: &str } = |g, text| super::words::apply(g, text);
 }

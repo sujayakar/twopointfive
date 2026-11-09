@@ -102,7 +102,7 @@ killed is the same, wounded calls `condition_hurt`, wounded or stunned sets `sta
 ## Rules that hold
 
 - **One round.** No gun's row has a damage of its own. Nothing is harder by hit points.
-- **Two gears, no dial.** "let's start by just removing the pace wheel entirely with the faster crouch sneak": `wheel_pace` does nothing.
+- **Two gears, no dial.** "let's start by just removing the pace wheel entirely with the faster crouch sneak": the wheel is nobody's pace.
 - **The sprint is the standing man's.** "we can make sprint when crouching a really fast crouch walk, but you have to stand up to sprint properly". A
   hurt man does neither.
 - **The aim has weight.** "we should have limited turning rate + the aiming circle can lag behind the cursor (like helldivers 2)". A round
