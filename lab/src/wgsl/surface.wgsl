@@ -142,7 +142,7 @@ fn surfaceAt(ro: vec3f, rd: vec3f, h: Hit, fp: f32) -> Surf {
 fn poolNormal(p: vec2f, t: f32) -> vec3f { var s = waveSlope(p, t) * (1.0 - 0.45 * frame.weather.y); if (frame.weather.y > 0.0) { s += rainRings(p, t, frame.weather.y) + rainRings(p * 1.7 + 5.0, t * 1.1, frame.weather.y) * 0.6; } return normalize(vec3f(-s.x, 1.0, -s.y)); }
 /** THE WET FILM, laid over any material the rain reaches. What soaks goes dark and stays dull; what sheds water shines; low ground fills, and is a mirror with rings in it */
 fn wetFilm(s0: Surf, fp: f32) -> Surf {
-  var s = s0; let w = frame.weather.x; if (w <= 0.0 || !openAir(s.x + s.ng * 0.02)) { return s; }
+  var s = snowCover(s0, fp); var w = frame.weather.x; if (w <= 0.0) { return s; } w *= exposed(s.x + s.ng * 0.2 + vec3f(0.0, 0.02, 0.0)); if (w <= 0.01 || frame.more.x > 0.3) { return s; }
   if (s.kind == 14u || s.kind == 20u) { s.albedo *= mix(1.0, 0.82, w); s.rough = mix(s.rough, 0.24, w); return s; }
   let up = sat(s.ng.y); let soaks = select(select(0.55, 0.15, s.metal > 0.5 || s.rough < 0.35), 1.0, s.kind == 1u || s.kind == 22u || s.kind == 5u || s.kind == 6u || s.kind == 13u || s.kind == 15u || s.kind == 16u || s.kind == 10u || s.kind == 21u);
   // how low the ground is here: broad dips and the fine unevenness of what was laid
@@ -157,7 +157,7 @@ fn wetFilm(s0: Surf, fp: f32) -> Surf {
   return s;
 }
 /** the same for a ray that only wants the mean: no patterns, no paint */
-fn surfaceMean(ro: vec3f, rd: vec3f, h: Hit) -> Surf { var s = surfaceAt(ro, rd, h, 1.0); if (frame.weather.x > 0.0 && s.metal < 0.5 && openAir(s.x + s.ng * 0.02)) { let soaks = select(0.35, 1.0, matteRough(s.kind) > 0.0 || s.kind == 6u); s.albedo = mix(s.albedo, mix(s.albedo * 0.85, 0.98 * s.albedo * 0.52 / (1.0 - 0.48 * s.albedo), soaks), frame.weather.x * (0.35 + 0.5 * sat(s.ng.y))); } return s; }
+fn surfaceMean(ro: vec3f, rd: vec3f, h: Hit) -> Surf { var s = surfaceAt(ro, rd, h, 1.0); if (frame.more.x > 0.0) { let k = frame.more.x * smoothstep(0.35, 0.65, s.ng.y) * exposed(s.x + s.ng * 0.2); s.albedo = mix(s.albedo, vec3f(0.86, 0.895, 0.94), k); s.metal *= 1.0 - k; return s; } if (frame.weather.x > 0.0 && s.metal < 0.5 && exposed(s.x + s.ng * 0.2) > 0.5) { let soaks = select(0.35, 1.0, matteRough(s.kind) > 0.0 || s.kind == 6u); s.albedo = mix(s.albedo, mix(s.albedo * 0.85, 0.98 * s.albedo * 0.52 / (1.0 - 0.48 * s.albedo), soaks), frame.weather.x * (0.35 + 0.5 * sat(s.ng.y))); } return s; }
 
 // ================================================================ lamps
 struct Aim { dir: vec3f, dist: f32, E: vec3f };       // toward a point of a lamp: what it would send a surface facing it, per unit of 1 / pdf

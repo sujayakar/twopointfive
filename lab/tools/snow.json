@@ -1,0 +1,98 @@
+[
+ {
+  "w": 1280,
+  "h": 720,
+  "method": "realtime",
+  "scale": 0.8,
+  "name": "w-roof",
+  "dist": 40,
+  "hour": 15.5,
+  "look": [
+   2,
+   4,
+   0
+  ],
+  "yaw": 0.62,
+  "pitch": 0.8,
+  "samples": 120,
+  "tick": 200,
+  "run": true,
+  "snow": 1,
+  "snowfall": 0.6
+ },
+ {
+  "w": 1280,
+  "h": 720,
+  "method": "realtime",
+  "scale": 0.8,
+  "name": "w-prints",
+  "dist": 12,
+  "hour": 15.5,
+  "look": [
+   -13.0,
+   0.4,
+   11.0
+  ],
+  "yaw": 0.5,
+  "pitch": 0.7,
+  "samples": 200,
+  "tick": 200,
+  "run": true,
+  "snow": 1,
+  "play": {
+   "at": [
+    -15.5,
+    0.02,
+    11.2
+   ],
+   "x": 0.95,
+   "z": 0.1,
+   "aim": [
+    0,
+    1.2,
+    11
+   ]
+  }
+ },
+ {
+  "w": 1280,
+  "h": 720,
+  "method": "realtime",
+  "scale": 0.8,
+  "name": "w-garden",
+  "dist": 14,
+  "hour": 15.5,
+  "look": [
+   8,
+   4.6,
+   2.5
+  ],
+  "yaw": 0.62,
+  "pitch": 0.55,
+  "samples": 120,
+  "tick": 200,
+  "run": true,
+  "snow": 1
+ },
+ {
+  "w": 1280,
+  "h": 720,
+  "method": "realtime",
+  "scale": 0.8,
+  "name": "w-night",
+  "dist": 30,
+  "hour": 21.5,
+  "look": [
+   2,
+   4,
+   0
+  ],
+  "yaw": 0.62,
+  "pitch": 0.75,
+  "samples": 160,
+  "tick": 200,
+  "run": true,
+  "snow": 1,
+  "snowfall": 1
+ }
+]

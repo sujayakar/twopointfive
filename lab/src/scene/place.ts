@@ -6,7 +6,7 @@ export interface Place {
   /** indoors: boxes (x0 y0 z0 x1 y1 z1) that rain and wind do not reach; what the section hides goes with the rooms it cuts */ rooms: Room[];
   /** the floor of what grows out of doors above a room (a section under it hides it) */ openFloor: number;
   /** the middle of what the sun's map of leaves covers, and how wide */ sunAt: V3; sunSize: number;
-  start: { hour: number; look: V3; yaw: number; pitch: number; dist: number; level: number; wet: number; rain: number; steam: number };
+  start: { hour: number; look: V3; yaw: number; pitch: number; dist: number; level: number; wet: number; rain: number; steam: number; snow?: number; snowfall?: number };
   /** each level's floor, for what is put where the pointer is */ floors: number[]; pan: [number, number];
   /** the tour's legs */ legs: { name: string; look: V3; dist: number; level: number }[];
   /** lamp groups with a switch of their own; and the scene in the dark */ groups: string[]; quiet: { hour: number; groups: Record<string, number> };

@@ -23,7 +23,7 @@ fn clipOf(x: vec3f) -> vec4f { let v = x - frame.camPos.xyz; let z = dot(v, fram
 }`;
 export function rainStages(lab: Lab, g: Graph): Stage[] {
   g.signal('rain', 'rgba16float', 'output'); lab.buffer('drops', RAIN_SIDE * RAIN_SIDE * 48); lab.uniform('rainK', new Float32Array(4)); lab.uniform('rainAt', new Float32Array(4));
-  const on = () => lab.rainNow > 0.004;
+  const on = () => lab.rainNow > 0.004 || lab.snowNow > 0.004;
   return [
     { name: 'rain', over: { groups: () => [Math.ceil(RAIN_SIDE * RAIN_SIDE / 64), 1, 1] }, when: on, buffers: { drops: ['drops', 'array<Drop>', 'read_write'], rainK: ['rainK', 'vec4f', 'uniform'], rainAt: ['rainAt', 'vec4f', 'uniform'] }, code },
     { name: 'rain draw', over: 'output', code: '', async make() {

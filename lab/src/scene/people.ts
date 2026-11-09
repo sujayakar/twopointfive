@@ -16,7 +16,7 @@ export interface Stop { at: V3; wait?: number; face?: number }
 
 export class Person {
   body: Piece[] = []; private ix = new Map<string, Piece>(); torch = -1; torchAt: V3 = [0, 0, 0]; torchDir: V3 = [0, 0, 1];
-  pos: V3; vel: V3 = [0, 0, 0]; yaw = 0; private yawV = 0; private goal = 0; private wait = 0; private feet: Foot[]; private t = 0; private hipY = new Spring(HIP); private sway = new Spring(); private surge = new Spring(); private lean = new Spring(); private side = new Spring(); private chestYaw = new Spring(); private headYaw = new Spring(); private gun = new Spring3(); private gunSet = false; private lastStep = 0; private dip = new Spring(); private lowS = new Spring(); private readyS = new Spring(0.15); private kick = new Spring();
+  pos: V3; vel: V3 = [0, 0, 0]; yaw = 0; private yawV = 0; private goal = 0; private wait = 0; readonly feet: Foot[]; private t = 0; private hipY = new Spring(HIP); private sway = new Spring(); private surge = new Spring(); private lean = new Spring(); private side = new Spring(); private chestYaw = new Spring(); private headYaw = new Spring(); private gun = new Spring3(); private gunSet = false; private lastStep = 0; private dip = new Spring(); private lowS = new Spring(); private readyS = new Spring(0.15); private kick = new Spring();
   drive: Drive | null = null; /** how high the floor is under a place (else it is flat) */ floorAt: ((x: V3) => number) | null = null;
   constructor(private w: World, private stops: Stop[], private pace: number, private color: V3, private id: number, opts: { torch?: boolean } = {}) {
     this.pos = [...stops[0]!.at] as V3; const d = sub(stops[1 % stops.length]!.at, stops[0]!.at); this.yaw = Math.atan2(d[0], d[2]); this.goal = 1 % stops.length;
