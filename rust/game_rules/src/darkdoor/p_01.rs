@@ -96,7 +96,7 @@ pub fn own(g: &mut crate::game::Game, gd: GuardId) -> bool {
 
 /// may the rule have him at all this frame.   (darkdoor.ts able)
 pub fn able(g: &mut crate::game::Game, gd: GuardId) -> bool {
-    if !g.ai_enabled || g.touring || g.quiet_utility || !ours(g, gd) || !alarmed(g, gd) { return false; }
+    if !g.ai_enabled || !ours(g, gd) || !alarmed(g, gd) { return false; }
     !g.gd[gd].trained && own(g, gd)
 }
 

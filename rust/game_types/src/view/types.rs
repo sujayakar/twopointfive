@@ -450,8 +450,7 @@ impl Default for WornView { fn default() -> Self { WornView { man: -1.0, goggles
 /// WHAT A SEAT'S HUD IS TOLD OF THE GAME AS A TICK LEFT IT: a section for each kind of thing a HUD words. Nothing in it is kept by the game.
 #[derive(Clone, Debug, Default, ToBytes)]
 pub struct TickView {
-    /// (None: a show runs)
-    pub mission: Option<crate::view::MissionView>,
+    pub mission: crate::view::MissionView,
     /// the lesson that is live. (None: none is)
     pub lesson: Option<crate::view::LessonView>,
     /// the radio strip, oldest first
@@ -1338,7 +1337,7 @@ pub struct InteractView {
     pub more: f64,
     /// the selector is open: he holds the key and the list is its rows
     pub open: bool,
-    /// the panel is the corner's three things (a tour's puppet keeps the list as it was)
+    /// the panel is the corner's three things (a puppet keeps the list as it was)
     pub corner: bool,
     /// (None: no thing, or a row about none)
     pub ring: Option<crate::view::ThingRing>,

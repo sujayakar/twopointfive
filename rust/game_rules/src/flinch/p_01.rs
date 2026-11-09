@@ -19,7 +19,7 @@ pub fn fight_man(g: &crate::game::Game, gd: GuardId) -> bool {
 
 /// Is the run asked of anybody on this floor now. (flinch.ts runOn)
 pub fn run_on(g: &crate::game::Game) -> bool {
-    g.tune.suppression && g.ai_enabled && !g.touring && !g.quiet_utility
+    g.tune.suppression && g.ai_enabled
 }
 
 /// Does a hostile round that came only `s` m from its muzzle still count here. (flinch.ts flinchInside)
@@ -30,10 +30,10 @@ pub fn flinch_inside(g: &crate::game::Game, s: f64) -> bool {
 /// One round went close to `c`: duck him off it, and count a green man's fire. `gd` = the man, None for the player. (flinch.ts flinchRound)
 pub fn flinch_round(g: &mut crate::game::Game, c_2: CharId, gd: Option<GuardId>, near: f64, from: V3, hostile: bool) {
     let c = c_2;
-    if near < g.k.flinch.least || !hostile || g.quiet_utility { return; }
+    if near < g.k.flinch.least || !hostile { return; }
     match gd {
         Some(man) => { if crate::owner::has(g, man, crate::owner::by::RUNNER) || !free(g, man) { return; } }
-        None => { if g.touring || g.pl[g.player].down { return; } }
+        None => { if g.pl[g.player].down { return; } }
     }
     let share = duck_share(g.k.flinch.far, g.k.flinch.least, g.k.flinch.full, near);
     let k = share * flinch_scale(g, gd);
@@ -59,7 +59,6 @@ fn duck_share(far: f64, least: f64, full: f64, near: f64) -> f64 {
 /// Is his body his own to duck with. (flinch.ts free)
 pub fn free(g: &mut crate::game::Game, gd: GuardId) -> bool {
     let sc = g.gd[gd].script.as_ref().map(|s| s.flinch);
-    if g.touring { return sc == Some(Some(true)); }
     let flinch = match sc {
         None | Some(Some(true)) => return true,
         Some(f) => f,
@@ -170,26 +169,21 @@ mod tests {
         (g, gd)
     }
 
-    /// flinch.ts free: every row of its table, on a show and off one.
+    /// every row of `free`'s table.
     #[test]
     fn free_follows_the_script() {
         let (mut g, gd) = one_man();
         g.gd[gd].team = crate::teams::Team::Hostile;
-        for (touring, flinch, has_script, operative, want) in [
-            (true, None, false, false, false),
-            (true, Some(true), true, false, true),
-            (true, Some(false), true, false, false),
-            (true, None, true, true, false),
-            (false, None, false, false, true),
-            (false, Some(true), true, false, true),
-            (false, Some(false), true, true, false),
-            (false, None, true, false, false),
-            (false, None, true, true, true),
+        for (flinch, has_script, operative, want) in [
+            (None, false, false, true),
+            (Some(true), true, false, true),
+            (Some(false), true, true, false),
+            (None, true, false, false),
+            (None, true, true, true),
         ] {
-            g.touring = touring;
             g.gd[gd].script = if has_script { script(flinch) } else { None };
             g.gd[gd].team = if operative { crate::teams::Team::Operative } else { crate::teams::Team::Hostile };
-            assert_eq!(free(&mut g, gd), want, "{touring} {flinch:?} {has_script} {operative}");
+            assert_eq!(free(&mut g, gd), want, "{flinch:?} {has_script} {operative}");
         }
     }
 
@@ -199,7 +193,7 @@ mod tests {
         let (mut g, gd) = one_man();
         let other = g.gd.push(crate::game::Guard::blank());
         g.guards.push(other);
-        g.tune.suppression = true; g.ai_enabled = true; g.quiet_utility = true;
+        g.tune.suppression = true; g.ai_enabled = false;
         g.m.flinch.state_of.set(gd, FlinchModStateOfValue { under: 1.5, at: 0.0 });
         assert_eq!(flinch_under(&mut g, gd), 1.5);
         flinch_tick(&mut g, 0.016);

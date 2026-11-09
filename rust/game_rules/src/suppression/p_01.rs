@@ -499,7 +499,6 @@ fn through_a_shut_door(g: &crate::game::Game, from: V3, path: &[V3]) -> bool {
 pub fn cover_from(g: &mut crate::game::Game, gd: GuardId, threat: V3) -> Option<V3> {
     let all = crate::picture::ideas_of(g, gd).len() > 1;
     let mut as_was: Option<V3> = None;
-    let hard = crate::wallpen::wall_men_live(g);
     let mut soft = false;
     let mut was_open = false;
     let mut kept_thin: Option<V3> = None;
@@ -520,7 +519,7 @@ pub fn cover_from(g: &mut crate::game::Game, gd: GuardId, threat: V3) -> Option<
             if v3::dist_xz(p, threat) < m::max(d0 - 1.5, min_travel + 0.5) { continue; }
             let chest: V3 = [p[0], 0.9, p[2]];
             if !crate::scene_collision::segment_blocked(g, t, chest, None, None, None) { continue; }
-            let thin = hard && {
+            let thin = {
                 let energy = crate::wallpen::top_energy(g);
                 crate::wallpen::thin_line(g, t, chest, energy, Some(0.0), None).is_some()
             };

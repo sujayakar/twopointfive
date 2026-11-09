@@ -53,11 +53,6 @@ fn line_up(g: &mut Game, gd: GuardId, d: DoorId, side: f64, f: crate::handleside
 
 // ---- the file's functions ----
 
-/// Not under a showcase: its men are choreographed. (handleside.ts live)
-pub fn live(g: &mut crate::game::Game) -> bool {
-    !g.touring
-}
-
 /// A man's place at a door is his only while he keeps coming for it. (handleside.ts fresh)
 pub fn fresh(g: &mut crate::game::Game, st: Option<&crate::handleside::St>) -> bool {
     match st { Some(st) => g.time >= st.seen && g.time - st.seen < 0.5, None => false }
@@ -321,7 +316,6 @@ pub fn handle_gate_stopped(g: &crate::game::Game, gd: GuardId) -> bool {
 /// The gate's body: finds him a place at a leaf, or walks and works the one he has. (handleside.ts gate)
 pub fn gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64, strafe: bool) -> bool {
     use crate::handleside::StPhase;
-    if !live(g) { return false; }
     let k = g.k.handle;
     let c = g.gd[gd].ch;
     let mut has = false;
@@ -608,7 +602,7 @@ pub fn step_to(g: &mut crate::game::Game, gd: GuardId, to: V3, dt: f64, speed: f
 
 /// The seconds a man's body must lean on a leaf from the face it opens into before it is pulled round; None = doors.ts's own beat. (handleside.ts handPress)
 pub fn hand_press(g: &mut crate::game::Game, gd: GuardId) -> Option<f64> {
-    if !live(g) || g.gd[gd].team == crate::teams::Team::Civilian || g.gd[gd].held.is_some() { return None; }
+    if g.gd[gd].team == crate::teams::Team::Civilian || g.gd[gd].held.is_some() { return None; }
     if let Some(r) = g.m.handleside.rested.get(gd).copied() { if g.time < r.until { return None; } }
     let st = g.m.handleside.states.get(gd).cloned();
     if fresh(g, st.as_ref()) || g.gd[gd].speed < 0.3 { Some(f64::INFINITY) } else { Some(g.k.handle.press) }
@@ -619,7 +613,7 @@ pub fn tool_spot(g: &mut crate::game::Game, d: DoorId, side: f64, at: V3, peek: 
     let peek = peek.unwrap_or(false);
     let order = order.unwrap_or(false);
     let k = g.k.handle;
-    if !live(g) || at_handle(g, d, at, Some(k.reach - 0.07)) { return None; }
+    if at_handle(g, d, at, Some(k.reach - 0.07)) { return None; }
     if order && !crate::doors::doors_pull_face(g, d, at) {   // a door order's lead, whichever cast of doortools.ts gives it
         match near_stand(g, d, side, at) {
             Some(crate::handleside::NearStand::Post) => {
@@ -693,7 +687,7 @@ pub fn tool_step(g: &mut crate::game::Game, gd: GuardId, pos: V3) -> bool {
 
 /// Is a shut leaf to be stacked on from its latch jamb, whichever jamb a man is nearer. (handleside.ts latchFirst)
 pub fn latch_first(g: &mut crate::game::Game, d: DoorId, stack: V3) -> bool {
-    if !live(g) || !crate::doors::door_is_closed(g, d) || crate::doors::door_off(g, d) || !stands(g, stack, Some(true)) { return false; }
+    if !crate::doors::door_is_closed(g, d) || crate::doors::door_off(g, d) || !stands(g, stack, Some(true)) { return false; }
     let hd = handle_at(g, d);
     !walled(g, hd, stack)
 }

@@ -612,7 +612,7 @@ pub fn destruction_dust_puff(g: &mut crate::game::Game, p: V3, n: V3, scale: f64
 /// May one more pall go now? Counts it when it may. `always`: the wall charge's, never refused, still counted.   (destruction.ts pallTake)
 pub fn destruction_pall_take(g: &mut crate::game::Game, always: Option<bool>) -> bool {
     let always = always.unwrap_or(false);
-    if g.destr.show_chaos.is_some() || chaos_of(g) <= 0.0 { return false; }
+    if chaos_of(g) <= 0.0 { return false; }
     let k = g.k.chaos.pall;
     let now = g.time;
     g.destr.pall_at.retain(|&t| now - t < k.window_secs && t <= now);

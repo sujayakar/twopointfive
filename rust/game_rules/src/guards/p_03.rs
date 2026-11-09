@@ -160,7 +160,7 @@ pub fn held_visibility(g: &mut crate::game::Game, p: &crate::guards::Pair) -> f6
 /// Perception's share: is a held colleague in his view this frame? If so he is in the standoff and all his eyes-on-Sam is refreshed off the pair. (guards.ts standoffPerceive)
 pub fn standoff_perceive(g: &mut crate::game::Game, gd: GuardId, dt: Option<f64>) -> bool {
     let dt = dt.unwrap_or(1.0 / 60.0);
-    if g.quiet_utility || g.gd[gd].hold || g.gd[gd].pinned {
+    if g.gd[gd].hold || g.gd[gd].pinned {
         return false;
     }
     let p = match pair_of(g, &crate::seats::here(g)) {

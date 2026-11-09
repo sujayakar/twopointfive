@@ -47,7 +47,7 @@ pub fn rifle_spread(g: &crate::game::Game, seat: &crate::seats::SeatRef, speed: 
     let gun = g.pl[pl].rifle;
     let def = g.fa[gun].def;
     let h = g.m.weapons.weapons.get(def).and_then(|d| d.hands);
-    let feet = if !g.touring { m::max(speed, g.pl[pl].aim.move_sm) } else { speed };
+    let feet = m::max(speed, g.pl[pl].aim.move_sm);
     let braced = crate::game::player_braced(g, pl);
     let (still, moving, move_at, crouch_k, brace_k) = (g.k.rifle_spread.still, g.k.rifle_spread.moving, g.k.rifle_spread.move_at, g.k.rifle_spread.crouch_k, g.k.rifle_spread.brace_k);
     let h_moving = match h { Some(r) => r.moving, None => 1.0 };
@@ -509,7 +509,7 @@ pub fn wall_press(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Camer
         if p.n.is_some() && !p.held { p.held = true; p.dx = mx; p.dz = mz; p.until = now + press_again; }
         if p.n.is_some() && (ml <= 0.0 || mx * p.dx + mz * p.dz < m::cos(press_turn * v3::DEG)) { p.n = None; }
     }
-    let face = if ml > 0.0 && g.puppet.is_none() && !g.touring { press_face(g, mx, mz) } else { None };
+    let face = if ml > 0.0 && g.puppet.is_none() { press_face(g, mx, mz) } else { None };
     let (latch_n, until) = { let p = g.m.player.ws_press.get(pl).unwrap(); (p.n, p.until) };
     let face = match face {
         Some(f) if !latch_n.map_or(false, |n| f.n[0] * n[0] + f.n[2] * n[2] > 0.9 || now < until) => f,

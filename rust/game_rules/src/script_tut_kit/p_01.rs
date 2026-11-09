@@ -176,7 +176,7 @@ pub fn tut_kit_define(m: &mut crate::director::Manifest) -> Result<crate::script
             crate::director::program_beat(p, beat, &script, None)?;
         }
         Ok(())
-    }, None)?;
+    })?;
 
     Ok(crate::script_tut_kit::TutKitVars {
         back_door: Some(back_door),

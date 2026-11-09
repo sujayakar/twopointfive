@@ -14,8 +14,8 @@ const PATH_CAP: usize = 1500;
 const PATH_SECS: f64 = 0.5;
 const HOLE_M: f64 = 0.9;
 
-/// A run a verdict can be given on: never a show's, the tour's or a puppet's.   (verdict.ts Verdict.live)
-fn live(g: &Game) -> bool { !g.touring && !g.quiet_utility && g.puppet.is_none() && !g.mission_in_tour }
+/// A run a verdict can be given on: somebody plays it, and no puppet.
+fn live(g: &Game) -> bool { !g.aside && g.puppet.is_none() }
 /// The try has started: the first order, stride or round has been (or the run was loaded from a checkpoint).   (verdict.ts Verdict.started)
 fn started(g: &Game) -> bool { g.verdict.t0.is_finite() }
 /// Seconds since the try started.   (verdict.ts Verdict.secs)

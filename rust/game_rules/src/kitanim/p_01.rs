@@ -11,11 +11,6 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 pub fn note(g: &crate::game::Game, row: crate::kitanim::NoteRow) {
 }
 
-/// The kit's part runs: nothing of it under the tour.   (kitanim.ts live)
-pub fn live(g: &mut crate::game::Game) -> bool {
-    !g.touring
-}
-
 /// Is Sam's left hand free to go up to his goggles? Else it is a nod.   (kitanim.ts nvHandFree)
 pub fn nv_hand_free(g: &mut crate::game::Game) -> bool {
     let p = g.player;
@@ -57,9 +52,6 @@ pub fn nv_hand_free(g: &mut crate::game::Game) -> bool {
 
 /// N was pressed and the switch has changed: the goggles go by the left hand, or by a nod.   (kitanim.ts kitNv)
 pub fn kit_nv(g: &mut crate::game::Game) {
-    if !live(g) {
-        return;
-    }
     let p = g.player;
     let hand = nv_hand_free(g);
     let (c, nv) = (g.pl[p].ch, g.pl[p].nv);
@@ -75,10 +67,6 @@ pub fn kit_nv_eye(g: &mut crate::game::Game) -> bool {
         Some(k) => k,
         None => return g.pl[p].nv,
     };
-    if !live(g) {
-        crate::character::anim_nv_cancel(g, c);
-        return g.pl[p].nv;
-    }
     if g.pl[p].nv { k > 0.0 } else { k >= 1.0 }
 }
 
@@ -130,9 +118,6 @@ pub fn kit_in_hand(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Optio
 
 /// The rifle hangs in front of him on its sling when not in his hands; a fact of the mission.   (kitanim.ts kitSlingFront)
 pub fn kit_sling_front(g: &mut crate::game::Game) -> bool {
-    if !live(g) {
-        return false;
-    }
     if js::truthy(g.k.kitanim.sling) {
         return g.k.kitanim.sling == 1.0;
     }
@@ -183,10 +168,9 @@ pub fn kit_tick(g: &mut crate::game::Game, late: Option<bool>) {
     let late = late.unwrap_or(false);
     let p = g.player;
     let c = g.pl[p].ch;
-    let on = live(g);
     // closer than ever, by distance (the frame's second look, `late`, is the equip half alone)
     if late {
-    } else if on {
+    } else {
         if let (true, Some(at)) = (g.ch[c].anim.creep, g.ch[c].anim.creep_at) {
             let pos = g.ch[c].pos;
             let d = m::hyp2(at[0] - pos[0], at[2] - pos[2]);
@@ -196,17 +180,8 @@ pub fn kit_tick(g: &mut crate::game::Game, late: Option<bool>) {
         } else if g.ch[c].anim.close_k < 0.0 {
             g.ch[c].anim.close_k = 0.0;
         }
-    } else {
-        g.ch[c].anim.close_k = -1.0;
     }
     // equip / put away
-    if !on {
-        if crate::character::anim_kit_busy(g, c) {
-            crate::character::anim_kit_cancel(g, c);
-        }
-        g.pl[p].kit_was = None;
-        return;
-    }
     let rest = kit_sling_rest(g).unwrap_or(0.0);
     g.ch[c].anim.kit_rest = rest;
     if !crate::character::anim_kit_busy(g, c) && g.ch[c].anim.big_tool.is_none() && g.pl[p].equip_t > g.k.kitanim.plain_lock {
@@ -302,7 +277,7 @@ pub fn kit_click(g: &mut crate::game::Game, input: InputId) {
     } else {
         None
     };
-    if !live(g) || g.pl[p].down || want.is_none() || g.orders.menu.is_some() || g.pl[p].holding.is_some() || g.pl[p].dragging.is_some() {
+    if g.pl[p].down || want.is_none() || g.orders.menu.is_some() || g.pl[p].holding.is_some() || g.pl[p].dragging.is_some() {
         g.pl[p].kit_owed = -1.0;
         return;
     }
@@ -358,9 +333,6 @@ fn owed_word(want: crate::character::KitItem, sel: Option<crate::game::ThrowKind
 
 /// What the drawer shows in his hands this frame: while a swap runs the hand's word replaces the slot's.   (kitanim.ts kitShow)
 pub fn kit_show(g: &mut crate::game::Game, v: &mut crate::kitanim::KitShowV) -> Option<crate::rig_props::KitDraw> {
-    if !live(g) {
-        return None;
-    }
     let p = g.player;
     let c = g.pl[p].ch;
     let h = g.ch[c].anim.kit_hold;
@@ -436,7 +408,7 @@ pub fn kit_gun_up(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool {
 /// The magazine change for the gun in his hands, off its state; None = a shell-fed gun or no hands layer: the row's own reload.   (kitanim.ts kitReload)
 pub fn kit_reload(g: &mut crate::game::Game, gun: FirearmId, long: bool) -> Option<crate::kitanim::KitReload> {
     let c = g.pl[g.player].ch;
-    if !live(g) || g.m.weapons.weapons.get(g.fa[gun].def).unwrap().pellets.is_some() || !crate::character::anim_kit_hands_on(g, c) {
+    if g.m.weapons.weapons.get(g.fa[gun].def).unwrap().pellets.is_some() || !crate::character::anim_kit_hands_on(g, c) {
         return None;
     }
     // by what the weapon will do: a magazine with rounds in it is kept, an empty one dropped; the slide / handle is run iff nothing is chambered

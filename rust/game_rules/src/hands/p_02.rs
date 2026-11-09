@@ -9,7 +9,6 @@ use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
 /// Another man's hand on a door he works: the door tools' lead at his handle, a leaf he just shoved, a leaf he pulls to. Moves nothing. (hands.ts teamDoorHand)
 pub fn team_door_hand(g: &mut crate::game::Game, gd: GuardId) -> Option<DoorId> {
-    if g.touring { return None; }
     let c = g.gd[gd].ch;
     if crate::character::anim_kicking(g, c) { return None; }
     let (pos, vel, id) = (g.ch[c].pos, g.ch[c].vel, g.ch[c].id);

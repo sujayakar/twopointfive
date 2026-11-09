@@ -51,7 +51,6 @@ pub fn sam_big(g: &crate::game::Game, seat: &crate::seats::SeatRef, d: DoorId, p
     if !g.k.bigslot.on
         || kit == crate::kit::BigKit::None
         || g.puppet.is_some()
-        || g.touring
         || crate::doors::door_off(g, d)
         || g.dr[d].def.steel.unwrap_or(false)
         || !crate::doors::door_is_closed(g, d)
@@ -261,9 +260,6 @@ pub fn big_out_by(g: &crate::game::Game, kind: crate::bigkit::BigOutByKind) -> f
 
 /// How long your own gun takes to be put away by hand before the hand goes for the tool.   (bigkit.ts samBigLeadOf)
 pub fn sam_big_lead_of(g: &mut crate::game::Game) -> f64 {
-    if g.touring {
-        return 0.0;
-    }
     let pid = g.player;
     let Some(Some(it)) = g.pl[pid].kit_was else { return 0.0 };
     if crate::kitanim::kit_in_hand(g, &crate::seats::here(g)).is_none() {

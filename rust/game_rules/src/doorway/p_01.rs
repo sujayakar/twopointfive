@@ -373,7 +373,7 @@ fn on_own(g: &crate::game::Game, seat: &crate::seats::SeatRef, o: Option<GuardId
 
 /// PASS: the pace `gd` walks his path at this frame; `None`: this file has his feet.   (doorway.ts doorwayGate)
 pub fn doorway_gate(g: &mut crate::game::Game, gd: GuardId, dt: f64, speed: f64) -> Option<f64> {
-    if !ours(g, gd) || g.gd[gd].state == crate::game::GuardState::Dead || g.touring || !(speed > 0.0) { return Some(speed); }
+    if !ours(g, gd) || g.gd[gd].state == crate::game::GuardState::Dead || !(speed > 0.0) { return Some(speed); }
     state_of(g, gd);
     let c = g.gd[gd].ch;
     let c_id = g.ch[c].id;

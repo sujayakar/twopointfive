@@ -626,8 +626,6 @@ pub fn low_spot(g: &mut crate::game::Game, gd: GuardId, r: RoomfightRoomId) -> O
 /// may this file act on him this frame (netquiet.ts free)
 pub fn free(g: &mut crate::game::Game, gd: GuardId) -> bool {
     g.ai_enabled
-        && !g.touring
-        && !g.quiet_utility
         && crate::owner::kept(g, gd, crate::owner::by::LAST_MAN).is_none()
 }
 

@@ -36,9 +36,6 @@ pub fn dark_foe_ruled(g: &crate::game::Game, gd: GuardId) -> bool {
     if !g.ch[c].alive { return false; }
     let team = g.gd[gd].team;
     crate::teams::is_hostile(g, team, crate::teams::Team::Player)
-        && !g.touring
-        && !crate::director::director_showing(g)
-        && !g.quiet_utility
         && !crate::rescue::rescue_crew_hides(g, gd)
 }
 

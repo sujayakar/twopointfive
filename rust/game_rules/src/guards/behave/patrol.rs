@@ -55,7 +55,7 @@ pub fn patrol(g: &mut Game, gd: GuardId, dt: f64, s: &Sensed) -> Acts {
     g.ch[c].aim_yaw = g.ch[c].body_yaw + g.gd[gd].sweep;
     let low = if g.gd[gd].drawn { -0.26 } else { -0.35 };
     g.ch[c].aim_pitch = v3::damp(g.ch[c].aim_pitch, low, 3.0, dt);
-    if (lvl >= 2.0 || crate::doors::doors_stay(g)) && !g.gd[gd].hold && staff { lockdown_doors(g, gd, Some(lvl < 2.0)); }
+    if !g.gd[gd].hold && staff { lockdown_doors(g, gd, Some(lvl < 2.0)); }
     crate::whistle::whistle_patrol_tick(g, gd);
     Acts { move_speed, upper, ..Acts::still() }
 }

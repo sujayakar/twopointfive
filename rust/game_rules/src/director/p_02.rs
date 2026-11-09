@@ -69,23 +69,6 @@ fn seed_of(asked: Option<f64>, serial: f64) -> f64 {
     js::to_u32(s) as f64
 }
 
-// ---------------------------------------------------------------- what the host and other files ask
-/// A showcase beat's queued keys become this frame's. (director.ts Director.injectInput)
-pub fn director_inject_input(g: &mut crate::game::Game, input: InputId) {
-    if g.director.due_keys.is_empty() && !js::truthy(g.director.due_clicks) {
-        return;
-    }
-    let keys = g.director.due_keys.keys();
-    let clicks = g.director.due_clicks;
-    let i = &mut g.tab.input[input];
-    for k in keys {
-        i.pressed.add(k);
-    }
-    i.clicked = (js::to_i32(i.clicked) | js::to_i32(clicks)) as f64;
-    g.director.due_keys.clear();
-    g.director.due_clicks = 0.0;
-}
-
 /// A level's director: its script defined and linted, armed if the lint found no error. (director.ts Director.constructor)
 pub fn director_new(g: &crate::game::Game, script: Option<crate::scene_level::LevelScriptFn>) -> crate::director::Director {
     let mut d = Director::blank();
@@ -126,38 +109,18 @@ pub fn director_programs(g: &crate::game::Game) -> Vec<String> {
     }
 }
 
-/// Is a showcase holding the frame. (director.ts Director.showing)
-pub fn director_showing(g: &crate::game::Game) -> bool {
-    match g.director.run {
-        Some(r) => g.tab.director_run[r].show.is_some() && !g.tab.director_run[r].ended,
-        None => false,
-    }
-}
-
-/// Has the running showcase handed the encounter to the player. (director.ts Director.handedOver)
-pub fn director_handed_over(g: &crate::game::Game) -> bool {
-    director_showing(g) && g.tab.director_run[g.director.run.unwrap()].show.as_ref().unwrap().handed_over
-}
-
 /// Why `name` cannot start now; None = it can. (director.ts Director.canStart)
 pub fn director_can_start(g: &crate::game::Game, name: &str) -> Option<String> {
     let Some(manifest) = &g.director.manifest else { return Some(String::from("this level has no script")) };
-    let Some(p) = manifest.programs.get(String::from(name)) else {
+    if manifest.programs.get(String::from(name)).is_none() {
         let list = manifest.programs.keys().join(", ");
         return Some(format!("no program '{}' (programs: {})", name, if list.is_empty() { "none" } else { list.as_str() }));
-    };
-    let showcase = p.opts.showcase.unwrap_or(false);
+    }
     if !g.director.armed {
         return Some(String::from("the script is not armed (lint errors — see the console)"));
     }
     if let Some(r) = running(g) {
         return Some(format!("program '{}' is running", g.tab.director_run[r].name));
-    }
-    if showcase && g.touring {
-        return Some(String::from("the tour or attract mode has the floor"));
-    }
-    if showcase && (g.qrf.state != crate::qrf::QrfState::Idle || g.guards.iter().any(|&x| g.gd[x].unit.is_some())) {
-        return Some(String::from("a response unit is on the floor (the cast would not fit the character budget)"));
     }
     None
 }
@@ -230,7 +193,6 @@ pub fn director_start(g: &mut crate::game::Game, name: &str, opts: Option<crate:
     let def = g.director.manifest.as_ref().unwrap().programs.get(String::from(name)).unwrap().clone();
     let seed = seed_of(opts.and_then(|o| o.seed), g.director.serial);
     g.director.serial += 1.0;
-    let showcase = def.opts.showcase.unwrap_or(false);
     let triggers = def.triggers.clone();
     let vars = g.director.manifest.as_ref().unwrap().vars.clone();
     let r = g.tab.director_run.push(Run {
@@ -249,18 +211,15 @@ pub fn director_start(g: &mut crate::game::Game, name: &str, opts: Option<crate:
         units: JsMap::new(),
         bursts: Vec::new(),
         kicks: Vec::new(),
-        show: None,
         objective: None,
         systems_saved: None,
         ended: false,
         finishing: false,
-        failed_show: false,
         vars,
     });
     g.director.run = Some(r);
-    g.director.frame = None;
     note(g, "", DirectorPushRowKind::Program, "start", Some(obj(vec![("seed", Json::Num(seed))])));
-    if showcase { director_enter_show(g, r) } else { director_apply_systems(g, r) }
+    director_apply_systems(g, r);
     for i in 0..g.events.len() {
         let k = g.events[i].serial;
         g.director.seen.add(k);
@@ -273,7 +232,6 @@ pub fn director_start(g: &mut crate::game::Game, name: &str, opts: Option<crate:
         }
     }
     director_resume_all(g, r, None);
-    director_tail(g, r, 0.0);
     None
 }
 
@@ -285,9 +243,6 @@ pub fn director_stop(g: &mut crate::game::Game, finished: Option<bool>) {
         return;
     }
     g.director.exiting = true;
-    for gd in g.director.shown.keys() {
-        director_show_man(g, gd, false);
-    }
     let mut i = 0;
     while i < g.tab.director_run[r].beats.len() {
         let b = g.tab.director_run[r].beats[i];
@@ -296,43 +251,31 @@ pub fn director_stop(g: &mut crate::game::Game, finished: Option<bool>) {
         }
         i += 1;
     }
-    if g.tab.director_run[r].show.is_some() {
-        let gds: Vec<GuardId> = g.tab.director_run[r].units.values().map(|u| u.gd).collect();
-        for gd in gds {
-            crate::guards::despawn_unit(g, gd);
+    let gds: Vec<GuardId> = g.tab.director_run[r].units.values().map(|u| u.gd).collect();
+    for gd in gds {
+        if g.gd[gd].script.is_some() && g.gd[gd].state != crate::game::GuardState::Dead {
+            let st = hand_back_state(g, gd);
+            crate::squad::end_guard_script(g, gd, Some(st));
         }
-        g.tab.director_run[r].units.clear();
-        director_exit_show(g, r);
-    } else {
-        let gds: Vec<GuardId> = g.tab.director_run[r].units.values().map(|u| u.gd).collect();
-        for gd in gds {
+    }
+    let touched: Vec<crate::Num> = g.tab.director_run[r].beats.iter().flat_map(|&b| g.tab.director_live_beat[b].touched.keys()).collect();
+    for id in touched {
+        if g.tab.director_run[r].units.has(id) {
+            continue;
+        }
+        if let Some(gd) = guard_by_char_id(g, id.0) {
             if g.gd[gd].script.is_some() && g.gd[gd].state != crate::game::GuardState::Dead {
                 let st = hand_back_state(g, gd);
                 crate::squad::end_guard_script(g, gd, Some(st));
             }
         }
-        let touched: Vec<crate::Num> = g.tab.director_run[r].beats.iter().flat_map(|&b| g.tab.director_live_beat[b].touched.keys()).collect();
-        for id in touched {
-            if g.tab.director_run[r].units.has(id) {
-                continue;
-            }
-            if let Some(gd) = guard_by_char_id(g, id.0) {
-                if g.gd[gd].script.is_some() && g.gd[gd].state != crate::game::GuardState::Dead {
-                    let st = hand_back_state(g, gd);
-                    crate::squad::end_guard_script(g, gd, Some(st));
-                }
-            }
-        }
-        director_restore_systems(g, r);
     }
+    director_restore_systems(g, r);
     g.tab.director_run[r].ended = true;
     note(g, "", DirectorPushRowKind::Program, if finished { "finished" } else { "stopped" }, None);
     let (serial, name, t) = { let rr = &g.tab.director_run[r]; (rr.serial, rr.name.clone(), rr.t) };
     g.director.last_run = Some(DirectorLastRun {  });
     g.director.run = None;
-    g.director.frame = None;
-    g.director.due_keys.clear();
-    g.director.due_clicks = 0.0;
     g.director.exiting = false;
 }
 
@@ -351,7 +294,7 @@ fn cancel_beat(g: &mut Game, b: DirectorLiveBeatId, why: Option<&str>) {
 /// The encounter restarted under a play program: its men are gone, the program ends where it stood. (director.ts Director.onEncounterRestart)
 pub fn director_on_encounter_restart(g: &mut crate::game::Game) {
     let Some(r) = running(g) else { return };
-    if !g.director.exiting && g.tab.director_run[r].show.is_none() {
+    if !g.director.exiting {
         note(g, "", DirectorPushRowKind::Program, "reset", None);
         g.tab.director_run[r].units.clear();
         director_stop(g, Some(false));
@@ -368,12 +311,8 @@ pub fn director_tick(g: &mut crate::game::Game, dt: f64, _input: Option<InputId>
     rr.t += dt;
     rr.dt = dt;
     rr.tick_n += 1.0;
-    if let Some(shot) = rr.show.as_mut().and_then(|s| s.shot.as_mut()) {
-        shot.t += dt;
-    }
     director_tick_bursts(g, r);
     director_tick_kicks(g, r);
-    director_tick_shown(g);
     // this frame's news: hearing events not seen before, signals raised since
     let mut fresh: Vec<EventView> = Vec::new();
     let mut i = 0;
@@ -395,9 +334,6 @@ pub fn director_tick(g: &mut crate::game::Game, dt: f64, _input: Option<InputId>
     }
     director_fire_triggers(g, r, &fresh);
     director_resume_all(g, r, Some(&fresh));
-    if live(g, r) {
-        director_tail(g, r, dt);
-    }
 }
 
 /// `fresh.find(e => e.kind === t.event)`
@@ -476,7 +412,6 @@ pub fn director_start_beat(g: &mut crate::game::Game, r: DirectorRunId, name: &s
         step: 0.0,
         state: BeatState::Running,
         touched: JsSet::new(),
-        pinned_camera: false,
         flow: LiveBeatFlow { finish: false },
     });
     if let Some(c) = cur {
@@ -666,19 +601,6 @@ pub fn director_fail_beat(g: &mut crate::game::Game, r: DirectorRunId, b: Direct
             }
         }
     }
-    if g.tab.director_live_beat[b].pinned_camera {
-        if let Some(cam) = g.host_cam {
-            g.tab.camera[cam].pin = None;
-            if let Some(s) = g.tab.director_run[r].show.as_mut() {
-                s.shot = None;
-            }
-        }
-    }
-    let rr = &mut g.tab.director_run[r];
-    if rr.show.is_some() && !rr.finishing {
-        rr.failed_show = true; // a broken show does not hold the screen: cut, restore, and report it stopped
-        director_begin_finish(g, r);
-    }
 }
 /// (director.ts Director.beginFinish)
 pub fn director_begin_finish(g: &mut crate::game::Game, r: DirectorRunId) {
@@ -688,231 +610,7 @@ pub fn director_begin_finish(g: &mut crate::game::Game, r: DirectorRunId) {
     }
     rr.finishing = true;
     note(g, "", DirectorPushRowKind::Program, "finish", None);
-    if let Some(s) = g.tab.director_run[r].show.as_mut() {
-        s.ending = Some(ShowStateEnding { t: 0.0 });
-        let mut i = 0;
-        while i < g.tab.director_run[r].beats.len() {
-            let b = g.tab.director_run[r].beats[i];
-            if g.tab.director_live_beat[b].state == BeatState::Running {
-                cancel_beat(g, b, None);
-            }
-            i += 1;
-        }
-    } else {
-        director_stop(g, Some(true));
-    }
-}
-
-/// The end of every tick and of start(): the showcase's camera shot, veil and cut, and the frame main.ts reads. (director.ts Director.tail)
-pub fn director_tail(g: &mut crate::game::Game, r: DirectorRunId, dt: f64) {
-    let rr = &mut g.tab.director_run[r];
-    let (end_veil, end_hold, failed) = (rr.def.opts.end_veil.unwrap_or(0.35), rr.def.opts.end_hold.unwrap_or(0.5), rr.failed_show);
-    let Some(s) = rr.show.as_mut() else {
-        g.director.frame = None;
-        return;
-    };
-    if s.ending.is_some() && s.handed_over {
-        director_stop(g, Some(!failed)); // handed over already: the end is quiet
-        return;
-    }
-    if let Some(e) = s.ending.as_mut() {
-        e.t += dt;
-        let t = e.t;
-        s.fade = m::min(1.0, s.fade + dt / end_veil);
-        if t > end_hold && s.fade >= 1.0 {
-            director_stop(g, Some(!failed));
-            return;
-        }
-    } else {
-        if s.shot.is_some() && g.host_cam.is_some() && !s.handed_over {
-            let shot = s.shot.clone().unwrap();
-            director_frame_shot(g, r, &shot, dt);
-        }
-        let s = g.tab.director_run[r].show.as_mut().unwrap();
-        if s.fade_rate > 0.0 && s.fade != s.fade_to {
-            let step = dt * s.fade_rate;
-            s.fade = if s.fade < s.fade_to { m::min(s.fade_to, s.fade + step) } else { m::max(s.fade_to, s.fade - step) };
-        }
-    }
-    let frame = DirectorFrame {
-    };
-    g.director.frame = Some(frame);
-}
-
-/// One camera set-up for this frame: the look-at locked or tracked, yaw and distance eased across the shot, pinned. (director.ts Director.frameShot)
-pub fn director_frame_shot(g: &mut crate::game::Game, s_key: DirectorRunId, shot: &crate::director::Shot, dt: f64) {
-    let spec = &shot.spec;
-    let want = director_look_of(g, spec);
-    let s = g.tab.director_run[s_key].show.as_mut().unwrap();
-    match spec.track {
-        Some(k) if js::truthy(k) && shot.t > 1e-3 => {
-            s.look = [v3::damp(s.look[0], want[0], k, dt), v3::damp(s.look[1], want[1], k, dt), v3::damp(s.look[2], want[2], k, dt)];
-        }
-        _ => s.look = want,
-    }
-    let look = v3::copy(s.look);
-    let u = v3::smoothstep(0.1, 0.9, shot.t / spec.dur);
-    let yaw = (match spec.yaw_to {
-        Some(to) => spec.yaw + v3::wrap_angle((to - spec.yaw) * v3::DEG) / v3::DEG * u,
-        None => spec.yaw,
-    }) * v3::DEG;
-    let dist = match spec.dist_to {
-        Some(to) => spec.dist + (to - spec.dist) * u,
-        None => spec.dist,
-    };
-    let cam = g.host_cam.unwrap();
-    g.tab.camera[cam].pin = Some(crate::camera::FollowCameraPin { look, yaw, pitch: spec.pitch * v3::DEG, dist });
-}
-
-/// (director.ts Director.lookOf)
-pub fn director_look_of(g: &crate::game::Game, s: &crate::director::CameraShotSpec) -> V3 {
-    let p = uncaught(director_place_of(g, &s.look));
-    [p[0], s.look_y.unwrap_or(0.8), p[2]]
-}
-
-// ---------------------------------------------------------------- showcase plumbing
-/// (director.ts Director.enterShow)
-pub fn director_enter_show(g: &mut crate::game::Game, r: DirectorRunId) {
-    let cam = g.host_cam.map(|c| { let c = &g.tab.camera[c]; ShowStateSavedCam { yaw: c.yaw, pitch: c.pitch, dist: c.desired_distance } });
-    let saved = ShowStateSaved { ai: g.ai_enabled, god: g.god_mode, invisible: g.player_invisible, quiet: g.quiet_utility, touring: g.touring, cam };
-    let look = v3::copy(crate::game::game_follow_pos(g, None));
-    g.tab.director_run[r].show = Some(ShowState {
-        saved, look, shot: None, fade: 0.0, fade_to: 0.0, fade_rate: 0.0,
-        ending: None, benched: None, variant_on: false, puppet: false, weather_saved: None, handed_over: false, chaos_set: false,
-    });
-    g.quiet_utility = true;
-    g.touring = true;
-    crate::game::game_clear_aftermath(g);
-    crate::smoke_types::smoke_system_like_clear_all(g);
-    crate::out_events::push_smoke_system_like_clear_all(g);
-    crate::player::cancel_actions(g);
-    for d in g.doors.list.clone() {
-        crate::doors::door_reset(g, d);
-    }
-    let p = g.player;
-    if g.pl[p].down || g.tab.director_run[r].def.opts.fresh_encounter.unwrap_or(false) {
-        crate::game::game_restart_encounter(g);
-    }
-    g.ai_enabled = true;
-    g.god_mode = true;
-    g.player_invisible = true;
-    let p = g.player;
-    g.pl[p].holstered = true;
-    g.pl[p].crouch = false;
-    g.pl[p].nv = false;
-    g.pl[p].nv_amount = 0.0;
-    if let Some(input) = g.host_input {
-        let mut only = JsSet::new();
-        only.add(String::from("KeyP"));
-        let i = &mut g.tab.input[input];
-        i.lock_except = Some(only);
-        i.keys.clear();
-        i.buttons = 0.0;
-    }
-    g.director.due_keys.clear();
-    g.director.due_clicks = 0.0;
-    let line = format!("{} — P to stop", g.tab.director_run[r].name);
-    crate::game::game_msg(g, &line);
-}
-
-/// the show's own flashlights back in the light list, the shift back on the list ahead of anything left
-fn unbench(g: &mut Game, r: DirectorRunId) {
-    let Some(benched) = g.tab.director_run[r].show.as_mut().unwrap().benched.take() else { return };
-    for &gd in &benched {
-        let l = g.gd[gd].flashlight;
-        if !g.engine.lights.lights.contains(&l) {
-            crate::render_lights::light_set_add(g, l);
-        }
-    }
-    let mut guards = benched;
-    guards.extend_from_slice(&g.guards);
-    g.guards = guards;
-}
-fn blackout_off_unless_permanent(g: &mut Game) {
-    if crate::sim_lightshome::mains_active(g) && !crate::sim_lightshome::mains_permanent(g) {
-        crate::game::game_end_blackout(g);
-    }
-}
-fn keys_back(g: &mut Game) {
-    if let Some(input) = g.host_input {
-        let i = &mut g.tab.input[input];
-        i.lock_except = None;
-        i.keys.clear();
-        i.buttons = 0.0;
-    }
-}
-/// the follow camera at the framing he had, onto where the player now is
-fn camera_back(g: &mut Game, sv: &ShowStateSaved) {
-    let Some(cam) = g.host_cam else { return };
-    if let Some(c) = sv.cam {
-        let k = &mut g.tab.camera[cam];
-        k.yaw = c.yaw;
-        k.pitch = c.pitch;
-        k.distance = c.dist;
-        k.desired_distance = c.dist;
-    }
-    let p = crate::game::game_follow_pos(g, None);
-    let k = &mut g.tab.camera[cam];
-    k.target = v3::copy(p);
-    k.desired = v3::copy(p);
-}
-
-/// (director.ts Director.exitShow)
-pub fn director_exit_show(g: &mut crate::game::Game, r: DirectorRunId) {
-    let sv = g.tab.director_run[r].show.as_ref().unwrap().saved;
-    director_restore_weather(g, r);
-    director_restore_chaos(g, r);
-    if g.tab.director_run[r].show.as_ref().unwrap().handed_over {
-        g.touring = sv.touring;
-        g.mission_in_tour = false;
-        note(g, "", DirectorPushRowKind::Note, "restore", Some(obj(vec![("handedOver", Json::Bool(true))])));
-        return;
-    }
-    unbench(g, r);
-    if g.tab.director_run[r].show.as_ref().unwrap().variant_on {
-        crate::lighting::set_daylight(g, false);
-        g.tab.director_run[r].show.as_mut().unwrap().variant_on = false;
-    }
-    g.mission_in_tour = false;
-    crate::game::game_clear_aftermath(g);
-    crate::smoke_types::smoke_system_like_clear_all(g);
-    crate::out_events::push_smoke_system_like_clear_all(g);
-    crate::game::game_restart_encounter(g);
-    if let Some(cam) = g.host_cam {
-        g.tab.camera[cam].pin = None;
-    }
-    g.ai_enabled = sv.ai;
-    g.god_mode = sv.god;
-    g.player_invisible = sv.invisible;
-    g.quiet_utility = sv.quiet;
-    g.touring = sv.touring;
-    crate::opening::opening_start(g);
-    camera_back(g, &sv);
-    if g.tab.director_run[r].show.as_ref().unwrap().puppet {
-        g.puppet = None;
-    }
-    blackout_off_unless_permanent(g);
-    keys_back(g);
-    note(g, "", DirectorPushRowKind::Note, "restore", None);
-}
-
-/// The storm's knobs back as c.weather found them. (director.ts Director.restoreWeather)
-pub fn director_restore_weather(g: &mut crate::game::Game, s_key: DirectorRunId) {
-    let s = g.tab.director_run[s_key].show.as_mut().unwrap();
-    let Some(w) = s.weather_saved else { return };
-    s.weather_saved = None;
-    crate::weather::weather_set_storm(g, w.storm);
-    crate::weather::weather_set_rain_rate(g, w.rain);
-}
-
-/// The program's own destruction knob dropped. (director.ts Director.restoreChaos)
-pub fn director_restore_chaos(g: &mut crate::game::Game, s_key: DirectorRunId) {
-    let s = g.tab.director_run[s_key].show.as_mut().unwrap();
-    if !s.chaos_set {
-        return;
-    }
-    s.chaos_set = false;
-    g.destr.show_chaos = None;
+    director_stop(g, Some(true));
 }
 
 /// Only what the script set is kept, so only that is put back: a setting the player changed under the program stays his. (director.ts Director.applySystems)
@@ -944,25 +642,6 @@ pub fn director_restore_systems(g: &mut crate::game::Game, r: DirectorRunId) {
 }
 
 // ---------------------------------------------------------------- men in the picture through the fog; bursts; tracks; kicks
-/// (director.ts Director.showMan)
-pub fn director_show_man(g: &mut crate::game::Game, gd: GuardId, on: bool) {
-    if on {
-        g.director.shown.add(gd);
-    } else if !g.director.shown.delete(gd) {
-        return;
-    }
-    crate::fogofwar::fog_of_war_show(g, gd, on);
-}
-
-/// A man is shown only while a script holds him. (director.ts Director.tickShown)
-pub fn director_tick_shown(g: &mut crate::game::Game) {
-    for gd in g.director.shown.keys() {
-        if g.gd[gd].script.is_none() || g.gd[gd].state == crate::game::GuardState::Dead {
-            director_show_man(g, gd, false);
-        }
-    }
-}
-
 /// a man the program spawned, or one of the level's own it took in hand
 fn unit_guard(g: &Game, r: DirectorRunId, id: f64) -> Option<GuardId> {
     match g.tab.director_run[r].units.get(crate::Num(id)) {
@@ -1080,14 +759,7 @@ pub fn director_guard_of(g: &crate::game::Game, r: DirectorRunId, u: &crate::dir
     if let Some(rec) = rr.units.get(crate::Num(u.id)) {
         return Ok(rec.gd);
     }
-    let s = rr.show.as_ref();
-    if s.map_or(false, |s| s.handed_over) {
-        return Err(format!("unit {} (#{}) belongs to the live floor after the hand-over", u.callsign, u.id));
-    }
     if let Some(gd) = guard_by_char_id(g, u.id) {
-        return Ok(gd);
-    }
-    if let Some(gd) = s.and_then(|s| s.benched.as_ref()).and_then(|b| b.iter().copied().find(|&x| g.ch[g.gd[x].ch].id == u.id)) {
         return Ok(gd);
     }
     Err(format!("unit {} (#{}) is not in the world", u.callsign, u.id))

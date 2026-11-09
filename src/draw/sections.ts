@@ -91,7 +91,7 @@ export const enum View {
   cuts = 19,
   /** f32 × 3 */
   cut = 20,
-  /** u32: a show or a level's script holds the view here: where it looks, and from how far and which way (0: nobody does) */
+  /** u32: the kit picture holds the view here: where it looks, and from how far and which way (0: nobody does) */
   pinned = 23,
   /** f32 × 3 */
   pin = 24,
@@ -113,7 +113,7 @@ export const enum View {
   target = 34,
   /** u32: what a lesson does not let the hand do to the view: 1 turn it · 2 zoom it */
   locks = 37,
-  /** u32: the back key is the game's now: 1 it would put something away (a list, an open order menu, a running verb, a held throw, a gun's setup) · 2 a level's script has the view */
+  /** u32: the back key is the game's now: it would put something away (a list, an open order menu, a running verb, a held throw, a gun's setup) */
   backs = 38,
   /** u32: saves made of this game so far: moves when there is another */
   saves = 39,

@@ -128,7 +128,7 @@ pub fn clearing_tick(g: &mut crate::game::Game, dt: f64) -> bool {
     let (a, b) = { let c = cl!(g); (c.a, c.b) };
     if cl!(g).stage == ClearStage::Done { return false; }
     if !g.guards.contains(&a) || b.map_or(false, |b| !g.guards.contains(&b)) { cl!(g).stage = ClearStage::Done; return false; }
-    if g.quiet_utility || !g.ai_enabled || crate::guards::escalation_of(g) < 2.0 || crate::seats::all_down(g) { clearing_cancel(g); return false; }
+    if !g.ai_enabled || crate::guards::escalation_of(g) < 2.0 || crate::seats::all_down(g) { clearing_cancel(g); return false; }
     { let c = cl!(g); c.t += dt; c.total += dt; }
     if g.gd[a].state == crate::game::GuardState::Dead || b.map_or(false, |b| g.gd[b].state == crate::game::GuardState::Dead) {
         if cl!(g).stage != ClearStage::Muster {

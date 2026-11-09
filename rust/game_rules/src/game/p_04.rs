@@ -420,9 +420,9 @@ pub fn game_say(g: &mut crate::game::Game, g_2: GuardId, text: &str, radio: Opti
     crate::guards::say(g, g_2, text, radio, force, row);
 }
 
-/// A utility or sandbox confirmation: the showcase's own plumbing stays out of the log. (game.ts Game.note)
+/// A utility or sandbox confirmation, where somebody plays.
 pub fn game_note(g: &mut crate::game::Game, text: &str) {
-    if !g.quiet_utility { game_msg(g, text); }
+    if !g.aside { game_msg(g, text); }
 }
 
 #[cfg(test)]

@@ -212,7 +212,7 @@ pub fn standoff_upkeep(g: &mut crate::game::Game, gd: GuardId) -> Option<crate::
     let s = g.gd[gd].standoff?;
     let p = pair_of(g, &crate::seats::here(g));
     let pair = g.tab.guards_standoff[s].pair;
-    let why = if g.quiet_utility || g.gd[gd].hold || g.gd[gd].pinned || !g.ai_enabled {
+    let why = if g.gd[gd].hold || g.gd[gd].pinned || !g.ai_enabled {
         Some("off")
     } else if g.gd[gd].state != crate::game::GuardState::Alert {
         Some("state")
@@ -331,18 +331,16 @@ pub fn can_see_char(g: &mut crate::game::Game, gd: GuardId, pc: CharId, is_playe
 /// How far a man's eye reaches for a man with `lit` on him.   (guards.ts eyeReach)
 pub fn eye_reach(g: &crate::game::Game, lit: f64) -> f64 {
     let k = g.k.guard_eye;
-    if g.touring { return k.range; }
     reach_of(&k, lit)
 }
 
-/// eyeReach's sum, for a game not under a show
+/// `eye_reach`'s sum
 fn reach_of(k: &crate::knobs::GuardEyeK, lit: f64) -> f64 {
     k.range + m::max(0.0, k.far_range - k.range) * v3::smoothstep(k.far_lo, k.far_hi, lit)
 }
 
 /// …for the man `pc` in this man's view.   (guards.ts reachFor)
 pub fn reach_for(g: &mut crate::game::Game, sam: PlayerId, gd: GuardId, pc: CharId, is_player: bool, eye: V3) -> f64 {
-    if g.touring { return g.k.guard_eye.range; }
     if is_player {
         let vis = g.pl[sam].visibility;
         return eye_reach(g, vis);

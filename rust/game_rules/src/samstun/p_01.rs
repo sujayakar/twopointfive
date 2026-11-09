@@ -7,11 +7,11 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, format, string::String, vec, vec::Vec};
 
-/// Can a stun show on the player at all: up, no puppet's strings, no tour.   (samstun.ts live)
+/// Can a stun show on the player at all: up, no puppet's strings.   (samstun.ts live)
 pub fn live(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> bool { live_of(g, seat.player) }
 /// …of one man
 pub fn live_of(g: &crate::game::Game, p: PlayerId) -> bool {
-    !g.pl[p].down && g.puppet.is_none() && !g.touring
+    !g.pl[p].down && g.puppet.is_none()
 }
 
 /// Fold the player for `secs`; `dir` = the way the blow came from → him.   (samstun.ts staggerPlayer)
@@ -142,10 +142,6 @@ mod tests {
         assert_eq!(sam_blind(&g, &crate::seats::here(&g), None), 1.0);
         assert!(!sam_staggered(&g, &crate::seats::here(&g), Some(12.0)));   // the clock asked of, not the game's
         g.pl[p].down = true;
-        assert!(!sam_staggered(&g, &crate::seats::here(&g), None));
-        assert_eq!(sam_blind(&g, &crate::seats::here(&g), None), 0.0);
-        g.pl[p].down = false;
-        g.touring = true;
         assert!(!sam_staggered(&g, &crate::seats::here(&g), None));
         assert_eq!(sam_blind(&g, &crate::seats::here(&g), None), 0.0);
     }

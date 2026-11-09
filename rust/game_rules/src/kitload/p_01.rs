@@ -173,11 +173,8 @@ pub fn load_man(g: &mut crate::game::Game, gd: GuardId, i: f64, m: Option<&crate
     }
 }
 
-/// What the floor reads for this man; None = nothing of his is touched (a show, nothing weighed on him).   (kitload.ts loadOn)
+/// What the floor reads for this man; None = nothing weighs on him.   (kitload.ts loadOn)
 pub fn load_on(g: &crate::game::Game, seat: &crate::seats::SeatRef, who: crate::kitload::LoadOnWho) -> Option<crate::kitload::KitWorn> {
-    if g.touring {
-        return None;
-    }
     match who {
         crate::kitload::LoadOnWho::Player => {
             let p = seat.player;

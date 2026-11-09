@@ -335,9 +335,9 @@ pub fn game_restart(g: &mut crate::game::Game, said: Option<&str>) {
     crate::savestate::control::restart(g, said);
 }
 
-/// Every view is cut to its fresh man, unless a show or a spectator has the camera.
+/// Every view is cut to its fresh man, unless a spectator has the camera.
 pub fn game_cut_to_men(g: &mut crate::game::Game) {
-    if g.touring || crate::director::director_showing(g) || g.spectate >= 0.0 { return; }
+    if g.spectate >= 0.0 { return; }
     let seats = g.seats.clone();
     for s in seats {
         let lens = g.tab.cmd_seat[s].cam;
@@ -462,7 +462,6 @@ pub fn game_update(g: &mut crate::game::Game, dt: f64, input: InputId, cam: Came
             }
         }
     }
-    crate::director::director_inject_input(g, input);
     let into = g.cmd_buf.take();
     let c = crate::seats::with_seat(g, me, &mut |g| crate::cmd::sample_cmd(g, input, cam, canvas, into.as_ref()));
     g.cmd_buf = Some(c.clone());

@@ -161,8 +161,12 @@ export interface Level {
   breaker: { pos: Vec3; boxes: number[]; fumble?: number };
   beacons: { pos: Vec3; box: number }[];
   sky: { zenith: Vec3; horizon: Vec3 };
+<<<<<<< HEAD
   /** the daytime variant (optional: the viewer's stage has none) and the breach drill's plan (rust/game_rules/src/breach BreachDrill) */
   daylight?: DaylightDef;
+=======
+  /** the breach drill's plan (optional; rust/game_rules/src/breach BreachDrill) */
+>>>>>>> 54ba3b739 (squash! The show nothing starts leaves the rules, the level scripts and the page)
   breach?: BreachPlan;
   /** the base texel (m) the level's marking bitmaps were generated for (scene/markings.ts; absent = MARKING_TEXEL 0.025) — host/drawpage.ts hands it to the engine */
   markTexel?: number;

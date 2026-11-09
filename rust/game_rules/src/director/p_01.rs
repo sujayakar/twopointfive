@@ -49,9 +49,9 @@ pub fn manifest_loadout(m: &mut crate::director::Manifest, id: &str, spec: crate
     LoadoutRef { id: id.into() }
 }
 /// D.program: Err = declared twice, or the body's Err; the row goes in the manifest after the body.   (director.ts:304-318)
-pub fn manifest_program(m: &mut crate::director::Manifest, name: &str, body: &mut dyn FnMut(&mut crate::director::ProgramDef) -> Result<(), String>, opts: Option<crate::director::ProgramOpts>) -> Result<(), String> {
+pub fn manifest_program(m: &mut crate::director::Manifest, name: &str, body: &mut dyn FnMut(&mut crate::director::ProgramDef) -> Result<(), String>) -> Result<(), String> {
     if m.programs.has(name.into()) { return Err(format!("script: program '{}' declared twice", name)); }
-    let mut program = ProgramDef { name: name.into(), opts: opts.unwrap_or_else(ProgramOpts::default), beats: JsMap::new(), triggers: Vec::new() };
+    let mut program = ProgramDef { name: name.into(), beats: JsMap::new(), triggers: Vec::new() };
     body(&mut program)?;
     m.programs.set(name.into(), program);
     Ok(())
@@ -189,11 +189,6 @@ fn lint_with_routes(m: &Manifest, level: &LintManifestLevel, route_names: &[Stri
                 if !t.iter().all(|x| x.is_finite() && *x >= 0.0 && *x <= 1.0) { err(&mut out, format!("loadout '{}': tint out of range", id)); }
             }
         }
-        if l.god == Some(true) {
-            if let Some(play) = m.programs.values().find(|p| p.opts.showcase != Some(true)) {
-                err(&mut out, format!("loadout '{}': god is a showcase cast's net — not in a script that has a play program ('{}')", id, play.name));
-            }
-        }
     }
     let mut groups: JsSet<String> = JsSet::new();
     for l in level.lights.iter() { groups.add(l.group.clone()); }
@@ -234,9 +229,6 @@ fn lint_with_routes(m: &Manifest, level: &LintManifestLevel, route_names: &[Stri
         }
         if p.triggers.iter().filter(|t| t.kind == TriggerDefKind::When).count() as f64 > MAX_WHEN {
             err(&mut out, format!("program '{}': more than {} when() predicates", pn, MAX_WHEN));
-        }
-        if p.opts.end_veil.map_or(false, |v| !(v > 0.0)) || p.opts.end_hold.map_or(false, |v| !(v >= 0.0)) {
-            err(&mut out, format!("program '{}': endVeil / endHold must be positive", pn));
         }
     }
     for e in m.expects.iter() {
@@ -316,7 +308,7 @@ mod tests {
     fn a_program_is_recorded() {
         let mut manifest = Manifest::default();
         let script = crate::scene_level::LevelScriptFn::TutTeam;
-        manifest_program(&mut manifest, "tutorial", &mut |p| { program_on_start(p, "go"); program_on_signal(p, "lesson:a", "go"); program_beat(p, "go", &script, None) }, None).unwrap();
+        manifest_program(&mut manifest, "tutorial", &mut |p| { program_on_start(p, "go"); program_on_signal(p, "lesson:a", "go"); program_beat(p, "go", &script, None) }).unwrap();
         let row = manifest.programs.get("tutorial".into()).unwrap();
         assert_eq!(row.name, "tutorial");
         assert_eq!(row.triggers.len(), 2);
@@ -329,11 +321,11 @@ mod tests {
     fn a_name_declared_twice_is_the_err() {
         let mut manifest = Manifest::default();
         let script = crate::scene_level::LevelScriptFn::TutTeam;
-        let got = manifest_program(&mut manifest, "p", &mut |p| { program_beat(p, "b", &script, None)?; program_beat(p, "b", &script, None) }, None);
+        let got = manifest_program(&mut manifest, "p", &mut |p| { program_beat(p, "b", &script, None)?; program_beat(p, "b", &script, None) });
         assert_eq!(got, Err(String::from("script: beat 'b' declared twice in program 'p'")));
         assert!(!manifest.programs.has("p".into()));
-        manifest_program(&mut manifest, "p", &mut |_| Ok(()), None).unwrap();
-        let got = manifest_program(&mut manifest, "p", &mut |_| Ok(()), None);
+        manifest_program(&mut manifest, "p", &mut |_| Ok(())).unwrap();
+        let got = manifest_program(&mut manifest, "p", &mut |_| Ok(()));
         assert_eq!(got, Err(String::from("script: program 'p' declared twice")));
     }
 
@@ -350,12 +342,12 @@ mod tests {
         manifest_mark(&mut manifest, "m1", None, None);
         manifest_mark(&mut manifest, "m2", None, None);
         manifest_mark(&mut manifest, "m3", Some([f64::NAN, 0.0, 0.0]), None);
-        manifest_loadout(&mut manifest, "l1", LoadoutSpec { team: crate::teams::Team::Player, tint: Some([2.0, 0.0, 0.0]), tint2: Some([0.0, 0.0, 0.0]), god: Some(true), ..LoadoutSpec::default() });
+        manifest_loadout(&mut manifest, "l1", LoadoutSpec { team: crate::teams::Team::Player, tint: Some([2.0, 0.0, 0.0]), tint2: Some([0.0, 0.0, 0.0]), ..LoadoutSpec::default() });
         manifest_loadout(&mut manifest, "l2", LoadoutSpec { team: crate::teams::Team::Guard, ..LoadoutSpec::default() });
         for id in ["ceil", "security", "gone"] { d_light_group(&mut manifest, id); }
         d_variant(&mut manifest, VariantRefId::Daylight);
         manifest.programs.set("empty".into(), ProgramDef { name: "empty".into(), ..ProgramDef::default() });
-        let mut p = ProgramDef { name: "p".into(), opts: ProgramOpts { end_veil: Some(0.0), end_hold: Some(-1.0), ..ProgramOpts::default() }, ..ProgramDef::default() };
+        let mut p = ProgramDef { name: "p".into(), ..ProgramDef::default() };
         program_on_start(&mut p, "x");
         p_after(&mut p, -1.0, "x");
         p_after(&mut p, 1.5, "nobeat");
@@ -398,7 +390,6 @@ mod tests {
             (LintProblemLevel::Error, "mark 'm3' position is not finite"),
             (LintProblemLevel::Error, "loadout 'l1': team 'player' cannot be spawned (guard / operative / hostile)"),
             (LintProblemLevel::Error, "loadout 'l1': tint out of range"),
-            (LintProblemLevel::Error, "loadout 'l1': god is a showcase cast's net — not in a script that has a play program ('empty')"),
             (LintProblemLevel::Error, "light group 'gone' is not in the level (groups: ceil, desk, security, yard)"),
             (LintProblemLevel::Error, "variant 'daylight': the level has no daylight block"),
             (LintProblemLevel::Warn, "program 'empty' declares no beats"),
@@ -411,7 +402,6 @@ mod tests {
             (LintProblemLevel::Error, "program 'p': onEnter names volume 'vv' the script never declared with D.volume"),
             (LintProblemLevel::Error, "program 'p': trigger when → beat 'nobeat5', which is not declared"),
             (LintProblemLevel::Error, "program 'p': more than 32 when() predicates"),
-            (LintProblemLevel::Error, "program 'p': endVeil / endHold must be positive"),
             (LintProblemLevel::Error, "expect: program 'ghost' is not declared"),
             (LintProblemLevel::Error, "expect.within: 0 s"),
         ];

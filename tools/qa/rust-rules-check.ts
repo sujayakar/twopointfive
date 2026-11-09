@@ -54,7 +54,7 @@ const STATICS: Readonly<Record<string, string>> = {
   'sim/src/pattern.rs CACHE': 'SCRATCH · a pane\'s pieces, derived from its row and held against the numbers they were made from: compared on every ask, so no write has to say, and no state', 'sim/src/pattern.rs CLOCK': 'SCRATCH · which of those were asked for last',
   'sim/src/pattern.rs NBS': 'SCRATCH · one support pass\'s neighbours across the cracks', 'sim/src/pattern.rs NB_HEAD': 'SCRATCH · where each piece\'s list of them starts', 'sim/src/pattern.rs NB_TAIL': 'SCRATCH · and ends',
   'sim/src/pattern.rs ORDER': 'SCRATCH · the order a toughened pane\'s clumps let go in, derived from its dice and held against the numbers they were made from',
-  'sim/src/lib.rs PANE_CTX': 'SCRATCH · the game, world, leaves and time of the glass rule\'s calls that follow, written as the host opens them', 'sim/src/lib.rs PEN_HEAD': 'SCRATCH · what a round\'s flight came to, read back after the call',
+  'sim/src/lib.rs PANE_CTX': 'SCRATCH · the game, world, leaves and time of the glass rule\'s calls that follow, written as the host opens them',
   'sim/src/light.rs SUM': 'SCRATCH · the six faces of one question about the light while its lamps come in parts: begun by the first part, summed on by each later one, read by the host after the last, before any other question about the light is begun',
   'sim/src/light.rs AT': 'SCRATCH · how many of the level\'s rows one question about the light has read so far, while its own lamps come in parts: begun by the first part, gone on from by each later one, like SUM',
   'sim/src/lights.rs IDS': 'SCRATCH · the fixtures of one wall switch\'s circuit, written by the host before it asks',

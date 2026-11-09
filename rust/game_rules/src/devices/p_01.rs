@@ -133,7 +133,7 @@ pub fn alive(g: &crate::game::Game, t: FixtureId) -> bool {
 }
 /// Live play: devices sense.   (devices.ts sensing)
 pub fn sensing(g: &crate::game::Game) -> bool {
-    g.ai_enabled && !g.quiet_utility && !g.touring && g.tune.devices && !g.night_breach.active && !g.rescue.active
+    g.ai_enabled && g.tune.devices && !g.night_breach.active && !g.rescue.active
 }
 /// Lit-seconds per second a camera's integrator fills at.   (devices.ts lensGain)
 pub fn lens_gain(g: &crate::game::Game, seat: &crate::seats::SeatRef, dist: f64, range: f64, smoke_trans: f64) -> f64 {

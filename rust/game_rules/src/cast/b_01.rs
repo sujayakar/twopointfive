@@ -47,7 +47,7 @@ pub fn cast_variant_of(g: &mut Game, c_2: CharId) -> Option<AnimGltfCastVariantI
     let Some(rec) = rec else { let d = defenders(g, cast); return pick(&d, id, 0); };
     let (team, has_unit, is_trained) = (g.gd[rec].team, g.gd[rec].unit.is_some(), g.gd[rec].trained);
     let trained = is_trained && (team == Team::Guard || (team == Team::Hostile && crate::qrf::qrf_owns(g, rec)));
-    let place: Option<usize> = if team == Team::Operative && has_unit && !g.touring {
+    let place: Option<usize> = if team == Team::Operative && has_unit {
         g.guards.iter().copied().filter(|x| g.gd[*x].unit.is_some() && g.gd[*x].team == Team::Operative).position(|x| x == rec)
     } else { None };
     let v = if let Some(place) = place { operator_at(g, cast, place as f64) }

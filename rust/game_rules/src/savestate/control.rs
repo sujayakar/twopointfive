@@ -33,7 +33,7 @@ fn rank(s: MissionStage) -> u32 { match s { MissionStage::Infiltrate => 0, Missi
 
 /// Why the game cannot be kept right now; `authored` = a tutorial's own checkpoint, taken whatever is on the floor.   (savestate.ts runNo, for a save in memory)
 pub fn run_no(g: &Game, seat: &crate::seats::SeatRef, authored: bool) -> Option<String> {
-    if g.touring || g.quiet_utility || g.puppet.is_some() { return Some(String::from("a show is running")); }
+    if g.aside || g.puppet.is_some() { return Some(String::from("nobody is playing")); }
     if g.seats.len() > 1 { return Some(String::from("two players (a checkpoint holds one player today)")); }
     if g.pl[seat.player].down { return Some(String::from("the player is down")); }
     if matches!(g.mission.stage, MissionStage::Failed | MissionStage::Done) { return Some(format!("the run is over ({}) \u{2014} nothing to come back to", g.mission.stage.as_str())); }
@@ -380,7 +380,7 @@ pub fn kept_of(stood: u32) -> Vec<(String, Kept)> {
 
 /// WHAT AN EVENING KEEPS OVER A RESTART, and nothing else goes over: the switches the player and this machine set, the tune, the men's kit, the die, whatever hands out a number, the tallies, the settings, the tables as they are now and how far each lens is out. Row numbers go back with the game
 pub struct Survivors {
-    god: bool, ai: bool, ammo: bool, unseen: bool, clear_rooms: f64, spectate: f64, show_debug: bool, touring: bool, quiet_utility: bool, mission_in_tour: bool,
+    god: bool, ai: bool, ammo: bool, unseen: bool, clear_rooms: f64, spectate: f64, show_debug: bool, aside: bool,
     tune: crate::game::GameTune, props_on: bool, friction: f64, fog_on: bool, fog_viewer: bool,
     kit: crate::kit::KitMod, difficulty: crate::difficulty::DifficultyMod, pending: Option<crate::quiet::QuietDeal>,
     dice: Option<crate::math_dice::SimDice>, sim_dice: ::sim::dice::Dice, fx_seed: f64, roll_seq: f64, event_seq: f64,
@@ -390,7 +390,7 @@ pub struct Survivors {
 impl Survivors {
     pub fn of(g: &Game) -> Survivors {
         Survivors {
-            god: g.god_mode, ai: g.ai_enabled, ammo: g.infinite_ammo, unseen: g.player_invisible, clear_rooms: g.clear_rooms, spectate: g.spectate, show_debug: g.show_debug, touring: g.touring, quiet_utility: g.quiet_utility, mission_in_tour: g.mission_in_tour,
+            god: g.god_mode, ai: g.ai_enabled, ammo: g.infinite_ammo, unseen: g.player_invisible, clear_rooms: g.clear_rooms, spectate: g.spectate, show_debug: g.show_debug, aside: g.aside,
             tune: g.tune.clone(), props_on: g.props.enabled, friction: g.props.friction_scale, fog_on: g.fog_of_war.on, fog_viewer: g.fog_picture.viewer,
             kit: g.m.kit.clone(), difficulty: g.m.difficulty.clone(), pending: g.quiet.pending.clone(),
             dice: g.dice.clone(), sim_dice: unsafe { core::ptr::read(&::sim::state::state_read(g.sim).dice) }, fx_seed: g.fx_seed, roll_seq: g.roll_seq, event_seq: g.event_seq,
@@ -414,7 +414,7 @@ impl Survivors {
     }
     /// what the men's lines answered to as they did the first time (a switch set since could make a mission refuse), and what a mission's start wrote of its own is taken back: the switches, the lenses
     fn write_over(&self, g: &mut Game) {
-        (g.god_mode, g.ai_enabled, g.infinite_ammo, g.player_invisible, g.clear_rooms, g.spectate, g.show_debug, g.touring, g.quiet_utility, g.mission_in_tour) = (self.god, self.ai, self.ammo, self.unseen, self.clear_rooms, self.spectate, self.show_debug, self.touring, self.quiet_utility, self.mission_in_tour);
+        (g.god_mode, g.ai_enabled, g.infinite_ammo, g.player_invisible, g.clear_rooms, g.spectate, g.show_debug, g.aside) = (self.god, self.ai, self.ammo, self.unseen, self.clear_rooms, self.spectate, self.show_debug, self.aside);
         (g.tune, g.props.enabled, g.props.friction_scale, g.fog_of_war.on, g.fog_picture.viewer) = (self.tune.clone(), self.props_on, self.friction, self.fog_on, self.fog_viewer);
         g.saves.enabled = self.saves_on;
         let cams: Vec<_> = g.tab.camera.ids().collect();

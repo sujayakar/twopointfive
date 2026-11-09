@@ -14,14 +14,14 @@ pub fn is_hurt(g: &crate::game::Game, m: crate::condition::Man, now: Option<f64>
         Man::Guard(id) => g.gd[id].hurt_at,
         Man::Player(id) => g.pl[id].hurt_at,
     };
-    if hurt_at < 0.0 || g.touring || g.puppet.is_some() { return false; }
+    if hurt_at < 0.0 || g.puppet.is_some() { return false; }
     g.k.condition.hurt_secs <= 0.0 || now - hurt_at < g.k.condition.hurt_secs
 }
 
 /// A blast reached this man and left him up: he is hurt from now. False = not given.   (condition.ts conditionHurt)
 pub fn condition_hurt(g: &mut crate::game::Game, m: &crate::condition::Man) -> bool {
     let man = *m;
-    if g.touring || g.puppet.is_some() { return false; }
+    if g.puppet.is_some() { return false; }
     let refused = match man {
         Man::Guard(id) => g.gd[id].civ.is_some() || g.gd[id].god || g.gd[id].state == crate::game::GuardState::Dead,
         Man::Player(id) => g.god_mode || g.pl[id].down,
@@ -110,29 +110,19 @@ fn word(c: Condition) -> String {
 
 /// Every frame, after the stun poses are dealt: each man's condition to his figure, by one rule.   (condition.ts conditionPose)
 pub fn condition_pose(g: &mut crate::game::Game) {
-    let on = !g.touring && !crate::director::director_showing(g);
-    for pl in crate::seats::men(g) { deal(g, on, Man::Player(pl)); }
+    for pl in crate::seats::men(g) { deal(g, Man::Player(pl)); }
     // deal changes no list: a copy walks the same men.
     for gd in g.guards.clone() {
-        if g.gd[gd].civ.is_none() { deal(g, on, Man::Guard(gd)); }
+        if g.gd[gd].civ.is_none() { deal(g, Man::Guard(gd)); }
     }
 }
 
 /// One man's condition to his figure; off, whatever it put there comes off.   (condition.ts conditionPose's deal)
-fn deal(g: &mut Game, on: bool, m: Man) {
+fn deal(g: &mut Game, m: Man) {
     let c = match m {
         Man::Guard(id) => g.gd[id].ch,
         Man::Player(id) => g.pl[id].ch,
     };
-    if !on {
-        let an = &mut g.ch[c].anim;
-        if an.hurt != 0.0 || an.shaken != 0.0 || an.fold_too {
-            an.hurt = 0.0;
-            an.shaken = 0.0;
-            an.fold_too = false;
-        }
-        return;
-    }
     let (down, sup, _, _) = man_marks(g, m);
     let hurt = if !down && is_hurt(g, m, None) { 1.0 } else { 0.0 };
     let (flinch, pinned) = (g.k.suppression.flinch, g.k.suppression.pinned);
@@ -192,8 +182,6 @@ mod tests {
         g.god_mode = true;
         assert!(!condition_hurt(&mut g, &mut Man::Player(pl)));
         g.god_mode = false;
-        g.touring = true;
-        assert!(!condition_hurt(&mut g, &mut Man::Player(pl)));
         assert_eq!(g.pl[pl].hurt_at, -1.0);
         assert_eq!(g.gd[gd].hurt_at, -1.0);
     }
@@ -228,17 +216,14 @@ mod tests {
     }
 
     #[test]
-    fn the_figure_is_dealt_and_taken_off() {
+    fn the_figure_is_dealt() {
         let (mut g, gd, _) = game();
         let c = g.ch.push(crate::character::Character::blank());
         g.gd[gd].ch = c;
         g.gd[gd].hurt_at = 9.0;
         g.gd[gd].sup.v = g.k.suppression.pinned;
-        deal(&mut g, true, Man::Guard(gd));
+        deal(&mut g, Man::Guard(gd));
         assert!(g.ch[c].anim.fold_too);
         assert_eq!((g.ch[c].anim.hurt, g.ch[c].anim.hurt_side, g.ch[c].anim.shaken), (1.0, -1.0, 1.0));
-        deal(&mut g, false, Man::Guard(gd));
-        assert!(!g.ch[c].anim.fold_too);
-        assert_eq!((g.ch[c].anim.hurt, g.ch[c].anim.shaken), (0.0, 0.0));
     }
 }

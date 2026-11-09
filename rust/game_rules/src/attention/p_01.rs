@@ -192,9 +192,7 @@ pub fn able(g: &crate::game::Game, gd: GuardId) -> bool {
         && man.body_duty.is_none()
         && man.task.is_none()
         && man.awareness < g.k.attention.calm_aw
-        && g.time >= man.dazzled_until
-        && !g.touring
-        && !g.quiet_utility;
+        && g.time >= man.dazzled_until;
     if !calm { return false; }
     if crate::roomfight::fight_live(g) && !g.quiet.active { return false; }
     let team = g.gd[gd].team;
@@ -610,7 +608,7 @@ mod tests {
     #[test]
     fn a_tick_when_he_cannot_be_held_rouses_him_and_clears_what_was_heard() {
         let (mut g, gd) = game();
-        g.touring = true;   // able() answers before it reaches the fight
+        g.gd[gd].awareness = 1.0;   // able() answers before it reaches the fight
         g.gd[gd].state = crate::game::GuardState::Patrol;
         hold(&mut g, gd, HoldMode::Go, -1.0);
         let row = g.m.attention.mem_of.get_mut(gd).unwrap();
@@ -667,7 +665,7 @@ mod tests {
 /// to get unstuck is not his way); else the floor is asked by whoever draws. (attention.ts attentionMarks, attentionWay)
 pub fn attention_view(g: &crate::game::Game) -> Vec<crate::view::AttentionLine> {
     let k = &g.k.attention;
-    if !k.on || !k.marks || g.touring { return Vec::new(); }
+    if !k.on || !k.marks { return Vec::new(); }
     let mut out = Vec::new();
     for &gd in &g.guards {
         let m = &g.gd[gd];

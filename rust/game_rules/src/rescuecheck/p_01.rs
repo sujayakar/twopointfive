@@ -78,7 +78,7 @@ pub fn event(g: &mut Game, what: RescueCheckEventWhat, gd: Option<GuardId>, why:
 
 /// The rule's floor: a rescue staged or running, in live play.   (rescuecheck.ts ruled)
 pub fn ruled(g: &Game) -> bool {
-    if !g.rescue.active || g.touring || crate::director::director_showing(g) { return false; }
+    if !g.rescue.active { return false; }
     let s = crate::rescue::rescue_state(g);
     s == crate::rescue::RescueState::Staged || s == crate::rescue::RescueState::Running
 }

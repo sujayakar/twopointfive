@@ -324,27 +324,17 @@ pub fn player_props(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
         }
         _ => None,
     };
-    let bare = crate::close::close_bare(g);
-    g.ch[c].anim.no_knife = bare;
-    let holding = g.pl[p].holding.clone();
-    let knife_now = !bare && {
-        let hold_arm = match &holding {
-            Some(h) if h.variant == crate::character::HoldVariant::Arm && !down && !g.ch[c].anim.hold_gun_side => !crate::disarm::disarm_hand(g, h),
-            _ => false,
-        };
-        hold_arm || (g.ch[c].anim.knife_shown && !down && holding.is_none() && !pistol_up_now)
-    };
+    g.ch[c].anim.no_knife = true;
     let rifle_up = crate::game::player_rifle_up(g, p);
     let rifle_now: Option<Rf> = if !g.pl[p].has_rifle { None }
         else if down { if g.pl[p].rifle_gone { None } else { Some(Rf::Slung) } }
         else if rifle_up && !busy { Some(Rf::Hand) } else { Some(Rf::Slung) };
     let pistol_now = pistol_up && !down && !busy;
-    let mut show = crate::kitanim::KitShowV { pistol_in_hand: pistol_now, rifle: rifle_now, held: held_now, knife: knife_now };
+    let mut show = crate::kitanim::KitShowV { pistol_in_hand: pistol_now, rifle: rifle_now, held: held_now, knife: false };
     let kit = crate::kitanim::kit_show(g, &mut show);
     let crate::kitanim::KitShowV { pistol_in_hand, rifle, held, knife } = show;
     let lens_up = crate::kitanim::kit_gun_up(g, &crate::seats::here(g));
-    let fit = !g.touring;
-    g.ch[c].anim.grip_can = fit && held.is_some();
+    g.ch[c].anim.grip_can = held.is_some();
     let big_s = crate::bigkit::big_carried(g, crate::bigkit::BigCarriedC { id: g.ch[c].id });
     let big_over = rifle == Some(Rf::Slung) && !crate::kitanim::kit_sling_front(g);
     let is_hammer = big_s == Some(crate::bigkit::BigCarried::Hammer);
@@ -355,7 +345,6 @@ pub fn player_props(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
     let in_hand = !down;
     g.ch[c].in_hand = if !in_hand { None }
         else if pistol_in_hand { Some(crate::inhand::in_pistol()) }
-        else if rifle == Some(Rf::Hand) && !fit { Some(crate::rig_props::long_hold(crate::rig_props::LongHoldWeapon::Sc20k, None)) }
         else { None };
     g.ch[c].anim.grip[1] = held.is_some();
 
@@ -379,7 +368,7 @@ pub fn player_props(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
         rifle_black: Some(rifle_black),
         rifle_light: Some(rifle_light),
         kit,
-        fit: if fit { Some(true) } else { None },
+        fit: Some(true),
         in_hand: if in_hand { Some(true) } else { None },
         sling_front: if sling { Some(true) } else { None },
         sling_rest,

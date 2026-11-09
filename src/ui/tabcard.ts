@@ -37,7 +37,7 @@ export function tabCard(objective: string, men: TabMan[], carry: string[], who =
  *  and its count is the note under the men, so a man's own count is what his card gave him, not what he has left */
 export const staged = (kit: string): string => kit.split(' · ').map(p => (/^\d+ stun\b/.test(p) ? `started with ${p}` : p)).join(' · ');
 /** the mission's line in the player's keys */
-export const objectiveWords = (view: TickView): string => { const m = view.mission; return m?.of === 'lesson' ? capsPlain(m.text) : keyText(m?.text ?? ''); };
+export const objectiveWords = (view: TickView): string => { const m = view.mission; return m.of === 'lesson' ? capsPlain(m.text) : keyText(m.text); };
 /** the card of a view as it stands: the squad in its order, each man's line as the view words it (what he is doing and what he covers) and the card he was staged with in a line
  *  (a mission that issues its own kit stages its own cards); the block's title and its plain notes (view.squad; no notes where a lesson's frame keeps
  *  them back). Every key named is named as the page has it (keymap.ts keyText). */

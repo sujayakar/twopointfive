@@ -75,7 +75,7 @@ pub fn rescued(g: &crate::game::Game, gd: GuardId) -> bool { g.rescue.active && 
 
 /// may a sequence have him this frame (morale.ts reacts)
 pub fn reacts(g: &crate::game::Game, gd: GuardId) -> bool {
-    if !g.ai_enabled || g.touring || g.quiet_utility || g.gd[gd].held.is_some() { return false; }
+    if !g.ai_enabled || g.gd[gd].held.is_some() { return false; }
     g.gd[gd].script.is_none() || g.fight.defs.iter().any(|d| g.tab.roomfight_def[*d].gd == gd)
 }
 

@@ -69,8 +69,8 @@ fn recap_man(g: &Game, man: OnFloor) -> RecapMan {
 /// Whose deaths are explained: the players', their teammates', the people they came for.
 fn ours(side: &str) -> bool { side == "player" || side == "operative" || side == "civilian" }
 
-/// a show runs, nobody plays
-fn live(g: &Game) -> bool { !g.touring && !g.quiet_utility && g.puppet.is_none() }
+/// somebody plays: no puppet
+fn live(g: &Game) -> bool { g.puppet.is_none() }
 
 /// A GAME IS BEING KEPT (a checkpoint, by value or as bytes: the same either way): the copy has no record, and the next tick starts one from the floor as it is.
 pub fn recap_left_behind(g: &mut Game) { g.recap = Recap::blank(); }

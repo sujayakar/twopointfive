@@ -14,7 +14,6 @@ pub struct Input {
     pub buttons: f64,
     pub clicked: f64,
     pub wheel: f64,
-    pub lock_except: Option<JsSet<String>>,
 }
 impl Input {
     /// what a new one holds
@@ -29,7 +28,6 @@ impl Input {
             buttons: 0.0,
             clicked: 0.0,
             wheel: 0.0,
-            lock_except: None,
         }
     }
 }

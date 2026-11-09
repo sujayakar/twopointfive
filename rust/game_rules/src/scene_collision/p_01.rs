@@ -760,17 +760,16 @@ pub fn shot_blocked(g: &mut crate::game::Game, a: V3, b: V3, shrink: Option<f64>
 pub fn shot_blocked_over(g: &mut crate::game::Game, over: &Over, a: V3, b: V3, shrink: Option<f64>, energy: Option<f64>) -> bool {
     let shrink = shrink.unwrap_or(0.02);
     let pass = match g.col.fire_pass {
-        Some(FirePass::Bars) => if crate::winbars::bars_live(g) { crate::scene_boxes::box_flag().bar } else { 0.0 },
+        Some(FirePass::Bars) => crate::scene_boxes::box_flag().bar,
         None => 0.0,
     };
     let mut panes: Vec<SegmentBlockedPanesItem> = Vec::new();
-    let pen = crate::glasspen::glass_pen_live(g);
     let blocked = if over.plain() {
-        segment_blocked(g, a, b, Some(shrink), Some(pass), if pen { Some(&mut panes) } else { None })
+        segment_blocked(g, a, b, Some(shrink), Some(pass), Some(&mut panes))
     } else {
-        proven(g, |g| line(g, over, a, b, shrink, pass, if pen { Some(&mut panes) } else { None }))
+        proven(g, |g| line(g, over, a, b, shrink, pass, Some(&mut panes)))
     };
-    if blocked || !pen { return blocked; }
+    if blocked { return blocked; }
     if panes.is_empty() { return false; }
     js::sort_by(&mut panes, |x, y| x.t - y.t);
     let d = v3::sub(b, a);

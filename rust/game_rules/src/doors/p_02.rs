@@ -478,15 +478,13 @@ pub fn doors_pull_face(g: &crate::game::Game, d: DoorId, from: V3) -> bool {
     let (c, hinge) = (g.dr[d].def.closed_dir, g.dr[d].def.hinge);
     ((from[0] - hinge[0]) * -m::sin(c) + (from[2] - hinge[1]) * m::cos(c)) * door_swing(g, d) >= 0.0
 }
-/// DOORWAY.frameHolds as it applies right now: no showcase on the stage   (doors.ts Doors.frameRule)
-pub fn doors_frame_rule(g: &crate::game::Game) -> bool { !doors_staged(g) }
 /// WOULD THE FRAME HOLD A BOOT thrown at d from `from`   (doors.ts Doors.bootHolds)
 pub fn doors_boot_holds(g: &crate::game::Game, d: DoorId, from: V3) -> bool {
-    doors_frame_rule(g) && !door_off(g, d) && g.dr[d].def.steel != Some(true) && m::abs(door_angle(g, d)) < SHUT_HOME && doors_pull_face(g, d, from)
+    !door_off(g, d) && g.dr[d].def.steel != Some(true) && m::abs(door_angle(g, d)) < SHUT_HOME && doors_pull_face(g, d, from)
 }
 /// THE HOLD TEST for a wedge or dragged furniture put against `d` by a man at `from`   (doors.ts Doors.wedgeHolds)
 pub fn doors_wedge_holds(g: &crate::game::Game, d: DoorId, from: V3) -> bool {
-    !doors_frame_rule(g) || doors_pull_face(g, d, from)
+    doors_pull_face(g, d, from)
 }
 /// THE DOOR AS A HINGED THING: its jambs, the side it opens into, the floor its leaf sweeps   (doors.ts Doors.swingOf)
 pub fn doors_swing_of(g: &crate::game::Game, d: DoorId) -> crate::doors::DoorSwing {
@@ -514,12 +512,6 @@ pub fn door_swing_sweeps(s: &crate::doors::DoorSwing, x: f64, z: f64, pad: Optio
     if th < 0.0 && open > m::PI && th + 2.0 * m::PI <= open { th += 2.0 * m::PI; }   // the point's bearing from the closed leaf, the way it opens
     (th >= 0.0 && th <= open) || swing_seg(s, x, z, c) <= pad || swing_seg(s, x, z, c + sw * open) <= pad
 }
-/// a showcase / the tour / the attract reel has the stage (game.ts:1200)   (doors.ts Doors.staged)
-pub fn doors_staged(g: &crate::game::Game) -> bool { g.touring }
-/// DOORSTAY as it applies right now: leaves stay where they are left   (doors.ts Doors.stay)
-pub fn doors_stay(g: &crate::game::Game) -> bool { !doors_staged(g) }
-/// does this leaf's hydraulic closer work   (doors.ts Doors.hasCloser)
-pub fn doors_has_closer(g: &crate::game::Game, d: DoorId) -> bool { !doors_stay(g) && g.dr[d].def.closer != Some(false) }
 /// Which face of d the point is on: +1 the CCW side of the leaf, -1 the other   (doors.ts Doors.side)
 pub fn doors_side(g: &crate::game::Game, d: DoorId, from: V3) -> f64 {
     let u = door_dir(g, d);
@@ -537,8 +529,6 @@ pub fn doors_locked_out(g: &crate::game::Game, d: DoorId, from: V3, keys: Option
 pub fn doors_key_opens(g: &crate::game::Game, d: DoorId, from: V3, keys: Option<&JsSet<String>>) -> bool {
     (match keys { Some(k) => crate::squadcast::ring_has(k, &g.dr[d].lock_id), None => false }) && doors_locked_out(g, d, from, None)
 }
-/// DOORTHROW as it applies right now: no showcase on the stage   (doors.ts Doors.throws)
-pub fn doors_throws(g: &crate::game::Game) -> bool { !doors_staged(g) }
 /// would a turn of sign `dir` take d further OPEN (one-way: the way it opens)   (doors.ts Doors.opening)
 pub fn doors_opening(g: &crate::game::Game, d: DoorId, dir: f64) -> bool { dir == door_swing(g, d) }
 /// DOORTHROW: somebody drove d open   (doors.ts Doors.driven)
@@ -601,7 +591,6 @@ fn step_io_read() -> &'static ::sim::doors::Io {
 pub fn doors_hand_over(g: &mut crate::game::Game, dt: f64, contacts: &[crate::doors::DoorContact], slot: f64) -> f64 {
     let io = step_io();
     let (n, nc) = (g.doors.list.len(), contacts.len());
-    let thr = doors_throws(g);
     for i in 0..n {
         let d = g.doors.list[i];
         let slab = door_slab(g, d);
@@ -624,9 +613,7 @@ pub fn doors_hand_over(g: &mut crate::game::Game, dt: f64, contacts: &[crate::do
             io.def[::sim::doors::D_FCZ][i] = dd.frame_centre[2];
         }
         // (Doors.man of the hand last on it: asked of the game only where a rule of this step can want it: something was written onto the leaf since the last one)
-        let man_last = if !thr {
-            0.0
-        } else if door_vel(g, d) != door_seen_vel(g, d) || door_angle(g, d) != col(g, d, ::sim::doors::ANGLE_SEEN) || door_angle(g, d) * door_swing(g, d) < 0.0 {
+        let man_last = if door_vel(g, d) != door_seen_vel(g, d) || door_angle(g, d) != col(g, d, ::sim::doors::ANGLE_SEEN) || door_angle(g, d) * door_swing(g, d) < 0.0 {
             let who = door_last_who(g, d);
             crate::doorthrow::door_man(g, who)
         } else {
@@ -659,7 +646,7 @@ pub fn doors_hand_over(g: &mut crate::game::Game, dt: f64, contacts: &[crate::do
         io.con[::sim::doors::K_RUN_LEVEL][c] = run_level;
         io.con[::sim::doors::K_VX][c] = match &k.vel { Some(v) => v[0], None => 0.0 };
         io.con[::sim::doors::K_VZ][c] = match &k.vel { Some(v) => v[2], None => 0.0 };
-        io.con[::sim::doors::K_MAN][c] = if thr && !weak { crate::doorthrow::door_man(g, k.who) } else { 0.0 };
+        io.con[::sim::doors::K_MAN][c] = if !weak { crate::doorthrow::door_man(g, k.who) } else { 0.0 };
         let (mut lo, mut hi) = (0u32, 0u32);
         if let Some(keys) = &k.keys {
             if keys.len() > 0 {
@@ -685,8 +672,8 @@ pub fn doors_hand_over(g: &mut crate::game::Game, dt: f64, contacts: &[crate::do
     io.par[::sim::doors::P_CONTACTS] = nc as f64;
     // (the page's DOORWAY: one-way, exits as dealt, leafWay on; DOORTHROW.soft on. A stepping game always has its floor questions: they are the module's own)
     let flags = ::sim::doors::F_ONE_WAY | ::sim::doors::F_LEAF_WAY
-        | (if doors_stay(g) { ::sim::doors::F_STAY } else { 0 })
-        | (if thr { ::sim::doors::F_THROWS } else { 0 })
+        | (::sim::doors::F_STAY)
+        | (::sim::doors::F_THROWS)
         | ::sim::doors::F_SOFT | ::sim::doors::F_STANDABLE | ::sim::doors::F_SETTLE;
     io.par[::sim::doors::P_FLAGS] = flags as f64;
     io.par[::sim::doors::P_HAND_RATE] = g.k.doorthrow.hand_rate;

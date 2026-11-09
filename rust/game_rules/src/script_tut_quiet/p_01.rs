@@ -46,7 +46,7 @@ pub fn tut_quiet_define(m: &mut crate::director::Manifest) -> Result<crate::scri
         crate::director::program_on_signal(p, "lesson:store", "store");
         crate::director::program_beat(p, "store", &crate::scene_level::LevelScriptFn::TutQuiet, None)?;
         Ok(())
-    }, None)?;
+    })?;
     Ok(TutQuietVars { walk: Some(walk), beam: Some(beam), past: Some(past) })
 }
 

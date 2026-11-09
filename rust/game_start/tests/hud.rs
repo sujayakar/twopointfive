@@ -55,14 +55,14 @@ fn the_list_is_the_rows_the_tick_built_and_lights_what_the_key_does() {
         at_door(&mut p, door);
         let I = p.view().interact;
         let hv = p.g.hover.clone().expect("a door a stride away is the highlight");
-        assert!(I.corner, "seed {seed}: no tour's puppet");
+        assert!(I.corner, "seed {seed}: no puppet");
         assert_eq!(I.rows[0].label, hv.line1, "seed {seed}");
         assert_eq!(I.lit, 0.0, "seed {seed}: what the key would do is the line that is lit: {I:?}");
         assert_eq!(I.rows[0].kind, ThingKind::Door, "seed {seed}");
         assert!(I.rows[0].in_reach && I.rows[0].dist.is_none() && !I.rows[0].opts.is_empty() && !I.rows[0].opts[0].key.is_empty(), "seed {seed}: {:?}", I.rows[0]);
         let R = I.ring.expect("the ring is on the door");
         assert_eq!((R.kind, R.at), (ThingKind::Door, hv.pos), "seed {seed}");
-        // the whole list, as a tour's puppet keeps it: every row in the tick's order, and the highlight moves with him
+        // the whole list, as a puppet keeps it: every row in the tick's order, and the highlight moves with him
         p.g.puppet = Some(Default::default());
         let n = p.g.nearby.len();
         let I = p.view().interact;
@@ -166,7 +166,7 @@ fn a_thing_on_a_man_names_him_and_a_body_stays_at_its_place() {
     }
 }
 
-/// A FAILURE MEANS: the HUD reads another alarm than the one the guards are under. The control is calm, and a show, where the alarm is nothing.
+/// A FAILURE MEANS: the HUD reads another alarm than the one the guards are under. The control is calm.
 #[test]
 fn the_alarm_is_the_floors_with_its_clock() {
     for seed in SEEDS {
@@ -180,9 +180,6 @@ fn the_alarm_is_the_floors_with_its_clock() {
         p.run(0.5);
         let b = p.view().alarm.expect("still up");
         if a.level == b.level && !b.live { assert!(b.left < a.left, "seed {seed}: its clock runs: {a:?} {b:?}"); }
-        p.g.quiet_utility = true;
-        assert!(p.view().alarm.is_none(), "seed {seed}: a show moves no alarm");
-        p.g.quiet_utility = false;
     }
 }
 
@@ -339,9 +336,7 @@ fn a_held_attention_is_told_with_its_way_and_its_fog() {
         assert!(!p.view().attention[0].hidden, "seed {seed}");
         let c = p.g.gd[gd].ch; p.g.fog_of_war.hidden_chars.add(c);
         assert!(p.view().attention[0].hidden, "seed {seed}: the fog hides him");
-        // the marks off, and under a show: nothing is drawn of it
+        // the marks off: nothing is drawn of it
         p.g.k.attention.marks = false; assert!(p.view().attention.is_empty(), "seed {seed}");
-        p.g.k.attention.marks = true; p.g.touring = true; assert!(p.view().attention.is_empty(), "seed {seed}");
-        p.g.touring = false;
     }
 }

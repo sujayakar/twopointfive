@@ -343,7 +343,6 @@ pub struct DoorPush {
     pub n: V3,
     pub w: f64,
     pub hand: f64,
-    pub hold_only: Option<bool>,
     pub reach: Option<bool>,
 }
 

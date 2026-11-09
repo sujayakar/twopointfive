@@ -22,30 +22,20 @@ pub fn aim_state_clear(this: &mut crate::aim::AimState) {
     this.left_track = 0.0;
 }
 
-/// Is the moving-feet rule of aimcost.ts in force? Never under a show. (aim.ts moveCost)
-pub fn move_cost(g: &crate::game::Game) -> bool {
-    !g.touring
-}
-
-/// Is the lamp rule of aimcost.ts in force? Never under a show. (aim.ts lampCost)
-pub fn lamp_cost(g: &crate::game::Game) -> bool {
-    !g.touring
-}
-
 /// Remember the feet: `speed_sm` eased toward the ground speed over tau; `hold` feeds the remembered feet. (aim.ts feedFeet)
-pub fn feed_feet(g: &mut crate::game::Game, a: &mut crate::aim::AimState, speed: f64, dt: f64, tau: f64, on: bool, hold: Option<f64>) {
+pub fn feed_feet(g: &mut crate::game::Game, a: &mut crate::aim::AimState, speed: f64, dt: f64, tau: f64, hold: Option<f64>) {
     let hold = hold.unwrap_or(speed);
     a.speed_sm += (speed - a.speed_sm) * (1.0 - m::exp(-dt / m::max(tau, 1e-3)));
     if !a.speed_sm.is_finite() || a.speed_sm < 1e-4 {
         a.speed_sm = 0.0;
     }
-    a.move_sm = if on { crate::aimcost::feet_hold(g, a.move_sm, hold, dt) } else { 0.0 };
+    a.move_sm = crate::aimcost::feet_hold(g, a.move_sm, hold, dt);
 }
 
 /// What the feet term reads for this shooter right now, m/s. (aim.ts feetOf)
-pub fn feet_of(g: &crate::game::Game, a: &crate::aim::AimState, vel: &[f64], steady_pace: f64, on: bool) -> f64 {
+pub fn feet_of(g: &crate::game::Game, a: &crate::aim::AimState, vel: &[f64], steady_pace: f64) -> f64 {
     let f = m::max(m::hyp2(vel[0], vel[2]), a.speed_sm - steady_pace);
-    if on { m::max(f, a.move_sm) * g.k.aimcost.move_k } else { f }
+    m::max(f, a.move_sm) * g.k.aimcost.move_k
 }
 
 /// Feed one frame of the target into the bookkeeping; true if the bearing jumped. (aim.ts feedTarget)
@@ -85,9 +75,8 @@ pub fn track_guard(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     };
     let c_vel = g.ch[c].vel;
     let speed = m::hyp2(c_vel[0], c_vel[2]);
-    let on_cost = move_cost(g);
     let mut a = core::mem::take(&mut g.gd[gd].aim);
-    feed_feet(g, &mut a, speed, dt, p.feet_tau, on_cost, None);
+    feed_feet(g, &mut a, speed, dt, p.feet_tau, None);
     g.gd[gd].aim = a;
     let at_player = matches!(g.gd[gd].foe, Some(crate::game::Foe::Player));
     let key = if at_player { String::from("sam") } else { alloc::format!("u{}", js::num_str(g.ch[pc].id)) };
@@ -129,7 +118,7 @@ pub fn track_guard(g: &mut crate::game::Game, gd: GuardId, dt: f64) {
     let dist = v3::dist_xz(g.ch[c].pos, g.ch[pc].pos);
     let on_tol = p.on_deg * v3::DEG + m::atan2(0.35, m::max(dist, 0.3));
     let on = g.gd[gd].state == crate::game::GuardState::Alert && g.gd[gd].react_t <= 0.0 && !crate::control::man::blind(g, gd) && facing_err < on_tol;
-    let cap = if if move_cost(g) { m::max(speed, g.gd[gd].aim.move_sm) > m::min(p.stop_to_shoot, g.k.aimcost.plant_at) } else { speed > p.stop_to_shoot } { p.moving_track_cap } else { 1.0 };
+    let cap = if m::max(speed, g.gd[gd].aim.move_sm) > m::min(p.stop_to_shoot, g.k.aimcost.plant_at) { p.moving_track_cap } else { 1.0 };
     if on {
         let k = match &g.gd[gd].skill {
             Some(s) => s.settle_k,
@@ -156,7 +145,7 @@ pub fn aim_ready(g: &crate::game::Game, gd: GuardId) -> bool {
 
 /// The standoff's flank round: are the feet he remembers still enough? (aim.ts feetSettled)
 pub fn feet_settled(g: &crate::game::Game, gd: GuardId) -> bool {
-    !move_cost(g) || g.gd[gd].aim.move_sm <= g.k.aimcost.flank_at
+    g.gd[gd].aim.move_sm <= g.k.aimcost.flank_at
 }
 
 /// `gd.weapon.def.aiSpread`: the row of the gun in his hands.
@@ -187,9 +176,8 @@ pub fn guard_terms(g: &mut crate::game::Game, gd: GuardId, extra: f64) -> crate:
     let settle = v3::lerp(p.unsettled_k, 1.0, v3::clamp(g.gd[gd].aim.track, 0.0, 1.0));
     let tgt = m::min(p.target_move_cap, g.gd[gd].aim.bearing_rate * p.target_move_k);
     let c_vel = g.ch[c].vel;
-    let on_cost = move_cost(g);
     let a = core::mem::take(&mut g.gd[gd].aim);
-    let own = feet_of(g, &a, &c_vel, p.steady_pace, on_cost) * p.shooter_move_k;
+    let own = feet_of(g, &a, &c_vel, p.steady_pace) * p.shooter_move_k;
     g.gd[gd].aim = a;
     crate::aim::GuardTerms { spread: hands * settle + tgt + own + extra }
 }
@@ -275,17 +263,16 @@ pub fn track_player(g: &mut crate::game::Game, dt: f64) {
     }
     let gv = crate::guards::player_ground_vel(g);
     let speed = m::hyp2(gv[0], gv[2]);
-    let on_cost = move_cost(g);
     let c_vel = g.ch[c].vel;
     let hold = m::min(speed, m::hyp2(c_vel[0], c_vel[2]));
     let mut a = core::mem::take(&mut g.pl[pl].aim);
-    feed_feet(g, &mut a, speed, dt, p.feet_tau, on_cost, Some(hold));
+    feed_feet(g, &mut a, speed, dt, p.feet_tau, Some(hold));
     g.pl[pl].aim = a;
     let tg = match g.aim_guard {
         Some(x) if g.gd[x].state != crate::game::GuardState::Dead => Some(x),
         _ => None,
     };
-    let lt = if tg.is_none() && lamp_cost(g) { g.aim_target } else { None };
+    let lt = if tg.is_none() { g.aim_target } else { None };
     let key = if let Some(t) = tg {
         alloc::format!("g{}", js::num_str(g.ch[g.gd[t].ch].id))
     } else if let Some(l) = lt {
@@ -304,7 +291,7 @@ pub fn track_player(g: &mut crate::game::Game, dt: f64) {
         if tg.is_some() && !back {
             g.pl[pl].aim.track = 0.0;
         }
-        if back && was.starts_with('l') && lamp_cost(g) {
+        if back && was.starts_with('l') {
             let a = &mut g.pl[pl].aim;
             a.track = m::max(a.track, a.left_track);
         }
@@ -365,15 +352,11 @@ pub fn player_aim(g: &crate::game::Game, pl: PlayerId) -> crate::aim::PlayerAim 
     let settle = v3::lerp(p.unsettled_k, 1.0, v3::clamp(track, 0.0, 1.0));
     let tgt = m::min(p.target_move_cap, g.pl[pl].aim.bearing_rate * p.target_move_k);
     let c_vel = g.ch[c].vel;
-    let on_cost = move_cost(g);
-    let own = feet_of(g, &g.pl[pl].aim, &c_vel, p.steady_pace, on_cost) * p.shooter_move_k;
+    let own = feet_of(g, &g.pl[pl].aim, &c_vel, p.steady_pace) * p.shooter_move_k;
     // AIM_HOOKS.playerExternalK as player.ts:258 sets it at load, the only value it ever holds.
     let k = if crate::game::player_braced(g, pl) { g.k.rifle_spread.brace_k } else { 1.0 };
     let kk = if k.is_finite() { m::max(0.0, k) } else { 1.0 };
-    if move_cost(g) {
-        return crate::aim::PlayerAim { spread: (base * settle + tgt) * kk + own * v3::lerp(kk, 1.0, v3::clamp(1.0 - g.k.aimcost.brace_feet, 0.0, 1.0)), track, base, settle, tgt, own };
-    }
-    crate::aim::PlayerAim { spread: (base * settle + tgt + own) * kk, track, base, settle, tgt, own }
+    crate::aim::PlayerAim { spread: (base * settle + tgt) * kk + own * v3::lerp(kk, 1.0, v3::clamp(1.0 - g.k.aimcost.brace_feet, 0.0, 1.0)), track, base, settle, tgt, own }
 }
 
 /// The one term Sam's fire sites add to their spread; stamps `last_shot`. (aim.ts samAim)

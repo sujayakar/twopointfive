@@ -101,9 +101,8 @@ pub fn sam_panel_point(g: &crate::game::Game, from: V3) -> Option<V3> {
     Some([face[0] + n[0] * 0.05, face[1], face[2] + n[2] * 0.05])
 }
 
-/// lighting.ts's 'check the breaker' errand, read off the panel, asked again every second. None: the fixed offsets, as under a show. (workthings.ts breakerErrand)
+/// lighting.ts's 'check the breaker' errand, read off the panel, asked again every second. None: the fixed offsets. (workthings.ts breakerErrand)
 pub fn breaker_errand(g: &mut crate::game::Game) -> Option<crate::workthings::BreakerErrand> {
-    if g.touring || g.quiet_utility { return None; }
     let bp = g.level.breaker.pos;
     let key = join_v3(bp);
     if let Some(c) = &g.m.workthings.errands {
@@ -145,7 +144,7 @@ pub fn work_things_things(g: &crate::game::Game, seat: &crate::seats::SeatRef) -
 /// THE TICK'S LIST OF THEM, for the seat standing: read afresh when what places them changes and once a second besides
 pub fn work_things_keep(g: &mut crate::game::Game) {
     let (active, permanent) = mains(g);
-    let drive = g.mission.stage == crate::game::MissionStage::Drive && !g.quiet_utility && g.puppet.is_none();
+    let drive = g.mission.stage == crate::game::MissionStage::Drive && g.puppet.is_none();
     let w = if drive { crate::quiet::quiet_words(g) } else { None };
     let live = !(active && permanent);
     let bp = g.level.breaker.pos;
@@ -451,7 +450,7 @@ pub fn work_things_tick(g: &mut crate::game::Game, gd: GuardId, a: OrdersAssignm
         put_job(g, gd, &j);
         if d_f < g.k.work.hand_m {
             let need = work_things_need_of(g, verb);
-            let push = crate::character::DoorPush { p: th.face, n: th.n, w: 1.0, hand: 0.0, hold_only: None, reach: None };
+            let push = crate::character::DoorPush { p: th.face, n: th.n, w: 1.0, hand: 0.0, reach: None };
             g.work.hands.set(c, WorkThingsHandsValue { push, until: m::INF, seen: now, verb, t0: now, need });
         }
         if verb == WorkVerb::Drive {
@@ -642,5 +641,5 @@ pub fn work_not_his(g: &crate::game::Game, gd: GuardId) -> bool {
 
 /// lighting.ts setBlackout: a man who cannot leave where he stands is not handed the errand. (workthings.ts workStaysPut)
 pub fn work_stays_put(g: &crate::game::Game, gd: GuardId) -> bool {
-    !g.touring && !g.quiet_utility && (g.gd[gd].hold || g.gd[gd].pinned || g.gd[gd].script.is_some())
+    (g.gd[gd].hold || g.gd[gd].pinned || g.gd[gd].script.is_some())
 }

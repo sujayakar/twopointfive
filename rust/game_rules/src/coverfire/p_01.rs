@@ -121,8 +121,7 @@ pub fn chew_live(g: &crate::game::Game) -> bool {
 
 /// is the rule running this frame (coverfire.ts live)
 pub fn live(g: &mut crate::game::Game) -> bool {
-    if !g.ai_enabled || g.touring { return false; }
-    chew_live(g) || crate::wallpen::wall_men_live(g)
+    g.ai_enabled
 }
 
 /// the state: a clock gone back forgets every man; none yet makes one (coverfire.ts stateOf)
@@ -283,26 +282,24 @@ pub fn ask(g: &mut crate::game::Game, gd: GuardId, to: V3) -> Option<crate::cove
         Some(st) => st,
         None => { no(g, "clear"); return Some(Ask2::Clear); }
     };
-    if crate::wallpen::wall_men_live(g) {
-        let def = def_of(g, gd);
-        let energy = crate::glasspen::round_energy(g, def);
-        let first = crate::wallpen::ThinLineFirst { t: st.t, index: st.index, n: st.n };
-        let tl = crate::wallpen::thin_line(g, from, to, energy, Some(0.3), Some(first));
-        if let Some(crate::wallpen::ThinLine2::ThinLine(tl)) = tl {
-            if let Some(x) = tl.walls.first() {
-                if x.t >= g.k.coverfire.near_m
-                    && l - x.t <= g.k.wallpen.behind_m
-                    && !(js::truthy(tl.panes) && crate::glasspen::shot_energy(g, c, Some(def)) == Some(0.0))
-                    && crate::props::prop_system_raycast(g, from, dir, reach).is_none()
-                {
-                    return Some(Ask2::Ask(Ask {
-                        id: -2.0 - x.index,
-                        kind: String::from("thru"),
-                        hit: x.at,
-                        rounds: g.k.wallpen.thru_rounds,
-                        layers: tl.walls.len() as f64,
-                    }));
-                }
+    let def = def_of(g, gd);
+    let energy = crate::glasspen::round_energy(g, def);
+    let first = crate::wallpen::ThinLineFirst { t: st.t, index: st.index, n: st.n };
+    let tl = crate::wallpen::thin_line(g, from, to, energy, Some(0.3), Some(first));
+    if let Some(crate::wallpen::ThinLine2::ThinLine(tl)) = tl {
+        if let Some(x) = tl.walls.first() {
+            if x.t >= g.k.coverfire.near_m
+                && l - x.t <= g.k.wallpen.behind_m
+                && !(js::truthy(tl.panes) && crate::glasspen::shot_energy(g, c, Some(def)) == Some(0.0))
+                && crate::props::prop_system_raycast(g, from, dir, reach).is_none()
+            {
+                return Some(Ask2::Ask(Ask {
+                    id: -2.0 - x.index,
+                    kind: String::from("thru"),
+                    hit: x.at,
+                    rounds: g.k.wallpen.thru_rounds,
+                    layers: tl.walls.len() as f64,
+                }));
             }
         }
     }
@@ -365,14 +362,9 @@ pub fn cover_lane(g: &mut crate::game::Game, gd: GuardId, from: V3, to: V3) -> b
     let l = m::sqrt(l2);
     let dir = v3::normalize(v3::sub(to, from));
     let past_m = g.k.coverfire.past_m;
-    let on = if crate::wallpen::wall_men_live(g) { None } else { crate::scene_collision::raycast(g, to, dir, past_m) };
-    let flight = if crate::wallpen::wall_men_live(g) {
-        let def = def_of(g, gd);
+    let flight = { let def = def_of(g, gd);
         let energy = crate::glasspen::round_energy(g, def);
-        crate::wallpen::flight_len(g, to, dir, past_m, energy)
-    } else {
-        match on { Some(on) => on.t, None => past_m }
-    };
+        crate::wallpen::flight_len(g, to, dir, past_m, energy) };
     let t_max = 1.0 + flight / l;
     let team = g.gd[gd].team;
     if !crate::teams::is_hostile(g, team, crate::teams::Team::Player) {

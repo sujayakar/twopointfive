@@ -238,9 +238,9 @@ pub fn bodies_found(g: &crate::game::Game) -> f64 {
 /// The run is Sam's to answer for.   (qrf.ts live)
 pub fn live(g: &mut crate::game::Game) -> bool {
     if raid(g) {
-        return g.ai_enabled && !g.quiet_utility && !g.touring && !crate::seats::all_down(g) && has_response(g);
+        return g.ai_enabled && !crate::seats::all_down(g) && has_response(g);
     }
-    g.ai_enabled && !g.quiet_utility && !g.touring && !crate::lighting::is_daylight(g) && !crate::seats::all_down(g) && !g.night_breach.active && !g.rescue.active && has_response(g)
+    g.ai_enabled && !crate::lighting::is_daylight(g) && !crate::seats::all_down(g) && !g.night_breach.active && !g.rescue.active && has_response(g)
 }
 
 /// This level has a response team.   (qrf.ts hasResponse)
@@ -266,35 +266,11 @@ pub fn alive(g: &crate::game::Game) -> Vec<GuardId> {
     g.qrf.men.iter().copied().filter(|&m| g.gd[m].state != crate::game::GuardState::Dead && g.guards.contains(&m)).collect()
 }
 
-/// The floor's freshest fix on Sam.   (qrf.ts bestFix)
-pub fn best_fix(g: &crate::game::Game) -> Option<crate::qrf::BestFix> {
-    let side = team_of(side_of_team(g));
-    let mut best: Option<GuardId> = None;
-    for &x in &g.guards {
-        let m = &g.gd[x];
-        if m.state != crate::game::GuardState::Dead && m.team == side && m.last_known.is_some() && m.last_seen_t > best.map_or(-1e9, |b| g.gd[b].last_seen_t) {
-            best = Some(x);
-        }
-    }
-    if let Some(b) = best {
-        if g.gd[b].last_seen_t > -50.0 {
-            return Some(crate::qrf::BestFix { pos: g.gd[b].last_known.unwrap(), t: g.gd[b].last_seen_t });
-        }
-    }
-    if g.alarm.placed { return Some(crate::qrf::BestFix { pos: g.alarm.pos, t: g.alarm.raised_at }); }
-    best.and_then(|b| g.gd[b].last_known).map(|pos| crate::qrf::BestFix { pos, t: -100.0 })
-}
-
 /// Is this man on the defenders' net?   (qrf.ts onTheirNet)
 pub fn on_their_net(g: &crate::game::Game, x: GuardId) -> bool {
     let side = team_of(side_of_team(g));
     if g.gd[x].team != side || g.gd[x].civ.is_some() || g.gd[x].state == crate::game::GuardState::Dead || g.gd[x].held.is_some() || crate::owner::has(g, x, crate::owner::by::RUNNER) { return false; }
     !raid(g) || g.qrf.men.contains(&x) || callers(g).contains(&x)
-}
-
-/// The team goes on what was said on the net.   (qrf.ts netRule)
-pub fn net_rule(g: &crate::game::Game) -> bool {
-    !g.touring
 }
 
 /// Control keeps what is said on the net, per enemy, the freshest.   (qrf.ts readNet)
@@ -332,7 +308,6 @@ pub fn net_word(g: &crate::game::Game) -> Option<crate::qrf::NetWord> {
 
 /// Where the team believes he is.   (qrf.ts fixOf)
 pub fn fix_of(g: &crate::game::Game) -> Option<crate::qrf::FixOf> {
-    if !net_rule(g) { return best_fix(g).map(|f| crate::qrf::FixOf { pos: f.pos, t: f.t }); }
     let w = net_word(g).map(|f| crate::qrf::FixOf { pos: f.pos, t: f.t });
     let a = if g.alarm.placed { Some(crate::qrf::FixOf { pos: g.alarm.pos, t: g.alarm.raised_at }) } else { None };
     match (w, a) {

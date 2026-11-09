@@ -316,11 +316,10 @@ fn tension(g: &Game) -> f64 {
     use game::game::GuardState as S;
     let level = game::guards::escalation_of(g);
     let mut x = game::m::max(if game::sim_lightshome::mains_active(g) { 0.18 } else { 0.0 }, if level >= 2.0 { 0.22 } else if level >= 1.0 { 0.12 } else { 0.0 });
-    let shown = g.touring || game::director::director_showing(g);
     for &gd in &g.guards {
         let d = &g.gd[gd];
         let own = d.team == game::teams::Team::Operative;
-        if d.state == S::Dead || (!shown && own && d.state != S::Alert) { continue; }
+        if d.state == S::Dead || (own && d.state != S::Alert) { continue; }
         let s = match d.state {
             _ if d.script.is_some() && g.clearing.is_some() => 0.3,
             S::Alert => 1.0,
