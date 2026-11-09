@@ -18,6 +18,8 @@ fn footSharp(w: f32, s: f32) { foot(w, s); lim = vec4f(lim.x, 1e9, 1e9, 1e9); le
 fn footAt(t: f32) -> f32 { return footW + footS * t; }
 var<private> walked: u32 = 0u;
 fn classOf(fl: u32) -> u32 { return fl >> 30u; }
+/** how far a class is met as it is */
+fn reach(c: u32) -> f32 { return select(select(lim.w, lim.y, c == 1u), lim.x, c == 0u); }
 
 fn nearest(ro: vec3f, rd: vec3f, tmin: f32, tmaxIn: f32, skip: u32, cut: f32) -> Hit {
   var best = tmaxIn; var id = NOTHING; var code = 0u; let inv = safeInv(rd); let oc = octant(rd);
@@ -28,11 +30,11 @@ fn nearest(ro: vec3f, rd: vec3f, tmin: f32, tmaxIn: f32, skip: u32, cut: f32) ->
     var i = 0u;
     while (i < per) {
       walked += 1u; let n = &nodes[b0 + i]; let lf = (*n).leaf; let cnt = lf & 15u;
-      let far = select(best, min(best, lim[(lf >> 4u) & 3u]), cnt == 0u);      /* (a node knows the biggest class under it) */
+      let far = select(best, min(best, reach((lf >> 4u) & 3u)), cnt == 0u);      /* (a node knows the biggest class under it) */
       if (!boxHit(n, ro, inv, tm, far)) { i = (*n).skip; continue; }
       let first = pb + (lf >> 4u);
       for (var j = 0u; j < cnt; j++) {
-        let k = first + j; let fl = pieces[k].flags; let to = min(best, lim[classOf(fl)]);
+        let k = first + j; let fl = pieces[k].flags; let to = min(best, reach(classOf(fl)));
         if ((fl & skip) != 0u || to <= tmin) { continue; }
         if (meet(k, ro, rd, tmin, to, cut)) {
           if ((fl & GLASS) != 0u) { let g = vec2f(hT, bitcast<f32>(pieces[k].tint | 0x3f000000u)); if (hT < g0.x) { g1 = g0; g0 = g; gp = k; gc = hCode; } else if (hT < g1.x) { g1 = g; } continue; }
@@ -75,11 +77,11 @@ fn visible(ro: vec3f, rd: vec3f, tmin: f32, tmax: f32) -> vec3f {
     let sm = s == 3u; let per = select(frame.per[s], frame.fine.x, sm); let b0 = select(frame.node0[s] + oc * frame.step[s], frame.fine.y + oc * frame.fine.z, sm); let pb = select(frame.piece0[s], frame.fine.w, sm);
     var i = 0u;
     while (i < per) {
-      let n = &nodes[b0 + i]; let lf = (*n).leaf; let cnt = lf & 15u; let far = select(tmax, min(tmax, lim[(lf >> 4u) & 3u]), cnt == 0u);
+      let n = &nodes[b0 + i]; let lf = (*n).leaf; let cnt = lf & 15u; let far = select(tmax, min(tmax, reach((lf >> 4u) & 3u)), cnt == 0u);
       if (!boxHit(n, ro, inv, tmin, far)) { i = (*n).skip; continue; }
       let first = pb + (lf >> 4u);
       for (var j = 0u; j < cnt; j++) {
-        let k = first + j; let fl = pieces[k].flags; let to = min(tmax, lim[classOf(fl)]);
+        let k = first + j; let fl = pieces[k].flags; let to = min(tmax, reach(classOf(fl)));
         if ((fl & NOSHADOW) != 0u || to <= tmin) { continue; }
         if (meet(k, ro, rd, tmin, to, 1e9)) {
           if ((fl & (GLASS | WATER)) != 0u) { T *= select(vec3f(0.62, 0.86, 0.9), unpackTint(pieces[k].tint), (fl & GLASS) != 0u); continue; }
@@ -116,6 +118,9 @@ fn visible(ro: vec3f, rd: vec3f, tmin: f32, tmax: f32) -> vec3f {
 }
 
 // ================================================================ the block
+/** a cell's first row: thickness, and share of leaves (6 bits) · tight box · where its light is kept (17 bits, in what the others leave over) */
+fn cellShare(r: vec4u) -> f32 { return f32(r.x >> 26u) / 63.0; }
+fn cellSlot(r: vec4u) -> u32 { return (((r.x >> 24u) & 3u) << 15u) | ((r.y >> 25u) << 8u) | (r.z >> 24u); }
 struct Blk { t: f32, cell: u32, tau: f32, L: vec3f };
 fn blkWord(at: u32, i: u32) -> u32 { return bitcast<vec4u>(extra[at + (i >> 2u)])[i & 3u]; }
 /** how thick a cell's contents stand, a metre, along x y z (within its tight box), and that box */
@@ -139,7 +144,7 @@ fn blockWalk(ro: vec3f, rd: vec3f, t0: f32, t1: f32, want: f32, lit: bool) -> Bl
     if (cell >= 0x80000000u) { let d = i32(cell & 255u); let e2 = (BLK_LO + vec3f(c) * BRICK + select(vec3f(max(q - d + 1, vec3i(0))), vec3f(min(q + d, vec3i(i32(per)))), rd > vec3f(0.0)) * h - ro) * inv; t = max(t, min(min3(e2), select(1e9, max(blk.y, t), level == 0u))) + 1e-3; continue; }      /* (nothing so many cells round) */
     if (cell != fromCell) {
       let r = bitcast<vec4u>(extra[BLK_CELLS + (cell - 1u) * 2u]); let B = cellBox(r, lo, h); let u = (B.lo - ro) * inv; let v = (B.hi - ro) * inv; let ta = max(t - 1e-3, max3(min(u, v))); let tb = min(min(out, te), min3(max(u, v)));
-      if (tb > ta && (r.x & 0xffffffu) != 0u) { let part = f32(r.x >> 24u) / 255.0; let sg = length(B.sigma * rd); let sigma = sg * select(select(1.0, 1.0 - part, noLeaves), part, t < blk.x || leafOnly); let d = sigma * (tb - ta); if (lit && d > 0.0) { o.L += exp(-o.tau) * (1.0 - exp(-d)) * cellSent(cell, r, B.sigma * rd / sg, rd); } if (o.tau + d >= want) { o.t = ta + (want - o.tau) / sigma; o.cell = cell; o.tau = want; return o; } o.tau += d; }
+      if (tb > ta && (r.x & 0xffffffu) != 0u) { let part = cellShare(r); let sg = length(B.sigma * rd); let sigma = sg * select(select(1.0, 1.0 - part, noLeaves), part, t < blk.x || leafOnly); let d = sigma * (tb - ta); if (lit && d > 0.0) { o.L += exp(-o.tau) * (1.0 - exp(-d)) * cellSent(cell, r, B.sigma * rd / sg, rd); } if (o.tau + d >= want) { o.t = ta + (want - o.tau) / sigma; o.cell = cell; o.tau = want; return o; } o.tau += d; }
     }
     t = out + 1e-3;
   }

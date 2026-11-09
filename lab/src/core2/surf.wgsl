@@ -9,6 +9,6 @@ fn cellSurf(h: Hit, x: vec3f, rd: vec3f) -> Surf {
   let n2 = s.n * s.n; var c = vec3f(0.0); let words = array<u32, 3>(r.w, r2.x, r2.y);
   for (var i = 0u; i < 3u; i++) { let w = (words[i] >> select(0u, 16u, s.n[i] > 0.0)) & 0xffffu; let v = vec3f(f32(w & 31u) / 31.0, f32((w >> 5u) & 63u) / 63.0, f32(w >> 11u) / 31.0); c += v * v * n2[i]; }
   s.albedo = c; s.through = vec3f(0.0); s.rough = 1.0; s.f0 = 0.0; s.metal = 0.0; s.glow = vec3f(0.0); s.kind = 0u; s.piece = h.piece; s.flags = 0u; s.ao = vec2f(1.0); fromCell = cell;
-  if (rnd() * 255.0 < f32(r.x >> 24u)) { s.through = leafThrough(c, ((r.y >> 24u) & 1u) != 0u); let keep = leafKeeps(c + s.through); s.albedo *= keep; s.through *= keep; s.kind = 14u; fromCell = NOTHING; }
+  if (rnd() < cellShare(r)) { s.through = leafThrough(c, ((r.y >> 24u) & 1u) != 0u); let keep = leafKeeps(c + s.through); s.albedo *= keep; s.through *= keep; s.kind = 14u; fromCell = NOTHING; }
   return s;
 }
