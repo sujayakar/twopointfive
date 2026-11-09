@@ -8,7 +8,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **Three tutorial missions, the yard and the kit plan are deleted** (2026-11-07, his keep or cut list). `tut-sky`, `tut-solo`, `tut-squad`, `quiet-yard-alone`, `quiet-yard-two`: rows, level files, scripts, stills, checks and fixtures on the page's side; their script modules, list rows, beat frames, `LevelScriptFn` arms and hold's list on the Rust side, in one commit. `tools/levels/tunnel-station.ts` is what was `tut-sky.ts`: it stays as the floor `tut-team` builds on. `ui/kitPlan.ts` and the plan's pins on the large map went with the squad mission; `ui/kitGuide.ts` now plays only under `?kitguide=1`, and `ISSUE.picked` and the row's `packs` have no row, so they and `rails.sky` (the seat over the floor) wait to go with their Rust side. Everything in this file that names those missions or `rails-check` is the record of its day. `room-clear-four` stays as a test stand with no list row. Never seen on a GPU.
 - **Scenario kinds** (`src/scene/scenarioList.ts SCENARIOS`, type in `src/scene/scenarios.ts`): `nightbreach` · `roomclear` · `rescue` · `quiet` (below) — 14 squad rows: the office's four (night breach,
   room clear pair / four, hostage rescue) + a level each for records, depot, block, block-squads, warehouse, compound, barracks (room clears) and registry (rescue).
-  `src/game/scenarioRun.ts startFromQuery` is the one path from the URL to a staged scenario; the staging is `nightbreach.ts` (also the room clear's: `roomclear.ts`) and `rescue.ts` (+ `rescueflow.ts`).
+  `rust/game_rules/src/scenario_run start_from_query` is the one path from the URL to a staged scenario; the staging is `nightbreach.ts` (also the room clear's: `roomclear.ts`) and `rescue.ts` (+ `rescueflow.ts`).
 - **A room clear deals a fresh placement every visit** (`roomclear.ts ROOMCLEAR.fresh`; ON in the page — `?freshstart=0`, Tab ▸ Room clear ▸ 'fresh deal every visit' —
   off in the module and on the frozen stand, a `FROZEN_HOLDS` row): a start that names no seed, with `ROOMCLEAR.seed` at 0, on a Game that owns a die deals the
   placement of `freshSeedOf(g.dice.seed)` instead of the authored one (seed 0, attempt 1) — a pick or a Missions row carries no seed, so every page load used to
@@ -36,7 +36,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   door · records = the dark west side, on the records room's own outside door.
 - **Training lessons — TAKEN OUT 2026-10-23** (the bullet 'The seven Training lessons are out' at the end of this file says what went and what stayed;
   what follows is the group as it was, kept for the lesson engine it describes, which the tutorial's missions run on)
-  (`src/game/lesson.ts`, `Game.lesson`, `__lesson`; rows in `scenarioList.ts TRAINING_MISSIONS` — a third table beside `SCENARIOS` / `QUIET_MISSIONS`, `group: 'training'`; block
+  (`rust/game_rules/src/lesson`, `Game.lesson`, `__lesson`; rows in `scenarioList.ts TRAINING_MISSIONS` — a third table beside `SCENARIOS` / `QUIET_MISSIONS`, `group: 'training'`; block
   `scenarios.lesson`, docs/level-format.md *Scenarios*): a level file's STEPS — a line for the objective row naming the key, a DONE-TEST record read off the game (`LESSON_TESTS`: in / near / flag / slot /
   pace / meter / stage / door / target / men / all / any, deeds counted since the step came up: `did act:|event:|chron:|order:` (+ `on: '<door>'` for an order), and rows by family — hands `downed` `body`,
   kit `reload` `launcher` `burst` `threw`, squad `orderTo` `stackOn` `pairsOn` `word` `taken` `following`, the quiet partner `mate` `pair`) — run over a REAL mission of the level's kind (quiet alone, quiet as two, a
@@ -78,7 +78,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   on the word with no can (train-pairs' white house), no defender sees OUT of a door: a man in a far corner with his gun down the room shot the first of each
   pair as he crossed his opening (1 to 3 men on most paced dice). Each stands in the pocket behind the open leaf of the door he watches.
   (6) a held man: 'Right button chokes him out' (close.ts `CLOSE.heldClicks`, on in the page); the step counts the deed (`downed how: 'choke'`), not the row.
-- **The tutorial's solo loud mission, `tut-solo` 'The fuel stop, alone' (its title until the writing guide: 'The fuel halt, alone')** (2026-10-22; row `tut-solo` in `TUTORIAL_MISSIONS`, played on the tutorial's frame, `game/rails.ts`: the bullet below; `tools/levels/tut-solo.ts` → `levels/tut-solo.json`, a quiet-kind mission alone with a
+- **The tutorial's solo loud mission, `tut-solo` 'The fuel stop, alone' (its title until the writing guide: 'The fuel halt, alone')** (2026-10-22; row `tut-solo` in `TUTORIAL_MISSIONS`, played on the tutorial's frame, `rust/game_rules/src/rails`: the bullet below; `tools/levels/tut-solo.ts` → `levels/tut-solo.json`, a quiet-kind mission alone with a
   `scenarios.lesson` of 25 steps on rails (32 since the evening's reworks) and its own `scenarios.issue` card; the fights are `levels/tut-solo.script.ts`, one PLAY program `tutorial` whose beats start on the cue each step sends,
   `lesson:<cue>`; the scripted player is `tools/qa/lessons/tut-solo.ts`). ONE LINE through a walled halt on a road, every doorway centred on it (`AXIS` 14.25: a door's middle sits on a
   walk-grid cell): the road and a shot-up van (move, sprint), the yard wall beside the gate (rifle up, take the wall, shoot the sentry, reload), the arch (crouch), the sandbags in the gun's
@@ -290,7 +290,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   missions' scripted runs unchanged on the shipped stand. On the page (software adapter) the door, the reload and the checkpoint were played. Nobody has played it by hand; the splintering
   leaf has never been seen on a GPU.
 - **The tutorial's first mission, `tut-road` 'The pass road, alone'** (2026-10-26; row `tut-road`, FIRST in `scenarioList.ts TUTORIAL_MISSIONS`; `tools/levels/tut-road.ts` →
-  `levels/tut-road.json`, a quiet-kind mission alone with a `scenarios.lesson` of 23 steps on the tutorial's frame (`game/rails.ts`: the bullet below) and its own
+  `levels/tut-road.json`, a quiet-kind mission alone with a `scenarios.lesson` of 23 steps on the tutorial's frame (`rust/game_rules/src/rails`: the bullet below) and its own
   `scenarios.issue` card; the fights are `levels/tut-road.script.ts`, one PLAY program `tutorial`; the scripted player is `tools/qa/lessons/tut-road.ts`). The maintainer, of the
   tutorial's order: "let's start with individual movement just shooting/reloading -- this should feel awesome and be on a very impressive looking level (something like pass? but
   more linear so it makes sense to do solo)", and then "we should still show camera movement in this tutorial". So this mission teaches ONE MAN'S BODY AND HIS RIFLE and nothing
@@ -348,7 +348,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     nothing stands over 8 m (the rock is 7.85). The word "grab" in a lesson's line is the takedown's (`lesson-check`): the radio is "taken".
   - **No new switch.** It is level data, a script and a lesson on switches that exist: the frame (`RAILS.on`, `?rails=0`, `TPS_RAILS=1` on the frozen stand), DOORSHOT with
     walls that break (`TPS_DOORSHOT=1`, `PT_DESTR=1`), WALLPEN (`TPS_WALLPEN=1`). The scripted player's file raises the three for a run off the page's stand. One line each in
-    `scenarioList.ts`, `scene/levelScripts.ts`, `audio/setlist.ts`, `game/weatherKinds.ts`; rows in `carlamps-check`, `glassreal-check`, `round-check` and `lived-check`'s `LEVEL_BASE`.
+    `scenarioList.ts`, `scene/levelScripts.ts`, `audio/setlist.ts`, `rust/game_rules/src/weather_kinds`; rows in `carlamps-check`, `glassreal-check`, `round-check` and `lived-check`'s `LEVEL_BASE`.
   - **Checks, and what was measured** (2026-10-26, on the join with the build of that evening, both stands unless said): `tut-road-check` green on seeds 1 and 2 (all eight ways; the said way 82 s of play on the page's stand
     and 89 s on the frozen one) and its break red; `lesson-gate.ts tut-road` six lines green (the page's arm at a reader's pace of 6 s a line: 23 of 23 steps in 219 s);
     `lesson-check tut-road` 12 lines; `level-needs.ts tut-road --run` no FAIL and no NOTE; `map-check`, `level-lint` (one warning: the mission's own entry door is far from the
@@ -377,7 +377,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   rock round each cap of snow; the rock, a pine and the snow pieces (drift, bank, cap, cleared, melted, ruts) are still copied in `pass.ts` and
   `tut-quiet.ts`. NOT SEEN ON A GPU and played by nobody: the pictures are the software adapter's.
 - **WHAT THE HUD IS TOLD OF A LESSON IS THE RUST GAME'S (2026-11-07).** `game.view.lesson` (`rust/game_rules/src/lesson` `lesson_view`, `src/rails` `rails_view`; `src/view/seatview.ts`). The bullets below name TypeScript functions (`Rails.prompt`, `rails.locks`, `Lesson.step`) that are gone: their rules are the Rust functions of the same names, and the page reads the section. Left on the page, with reasons: `Rails.hostView` (it sets the page's own camera as a tutorial opens) and `Rails.resume` (the save controller's word). A lesson's row and Tab's card carry each key by its code in brackets, as the big line does, and the page words them (`objectiveWords`, `capsPlain`). THE SKY SEAT'S LOOK (no level has a sky seat since tut-sky went) IS EASED BY THE TICK, as its last step (`rails_ease_mid`), and read pure. It used to be eased as it was asked: only while a step had a mark in the game, and on the page by a copy the bridge overwrote each tick. The last step is where the headless host's camera first asked, so `hold` is the same in every part; eased earlier in the tick a man moved after it put the point 4 micrometres off, enough to move a projected cursor and every run after it. `?rails=0` and `?nolesson` set knobs the Rust game does not read, so since the Rust swap they turned off the HUD's half alone; they now change nothing. Check: `rust/game_start/tests/lesson_view.rs` (three seeds, controls, a game of two), native; `tools/qa/tut-page.cjs` played by real keys on the software adapter; never seen on a GPU.
-- **A tutorial mission is a lesson on rails** (`src/game/rails.ts`, `Game.rails`; rows in `scenarioList.ts TUTORIAL_MISSIONS`, `group: 'tutorial'`, first in
+- **A tutorial mission is a lesson on rails** (`rust/game_rules/src/rails`, `Game.rails`; rows in `scenarioList.ts TUTORIAL_MISSIONS`, `group: 'tutorial'`, first in
   the list; `lessonGroup(group)` in `scene/scenarios.ts` is what the kit-as-issued, no-Loadout and verdict rules ask now, so both groups get them). SWITCH:
   `RAILS.on`, on in the page (`?rails=0` = the level is its mission alone: a level whose lesson carries a `rails` record has NO lesson with the switch off), off in the module and on the frozen stand (`TPS_RAILS=1` raises it; a `FROZEN_HOLDS`
   row, in the knob registry and the journal). The seven Training levels carry no `rails` record and are untouched. WHAT IT ADDS to a level's `scenarios.lesson`:
@@ -391,8 +391,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `scene/levelScripts.ts` and attached by `levelLoad.ts`; one play program `tutorial`, started with the mission; a step's `cue` reaches it as the signal
   `lesson:<cue>`, each order the player gives as `order:<id>`, and it answers `done:<name>` for the `cue` test. A running play program does not switch the
   room fight off on a rails level, and the Director's spawn budget is 16 there (`liftedBudget`). THE SKY SEAT'S SQUAD holds where the mission stood it until its first order (an unordered man would fall in on the parked player), and the squad panel shows no key no step has taught (`Rails.locks` in `orders.ts`). THE MISSION AGAIN opens on the view the first run opened on (`Rails.hostView`, between ticks on the host's camera; `Rails.fresh` keeps that from counting as the hand's turn). CHECKPOINTS ARE AUTHORED: on a rails level the
-  every-step save and the floor's own triggers are off; a step's `checkpoint` writes an in-memory save the tick it comes up (the program is stopped for the
-  snapshot and started again next tick with the step's cue; a load does the same), so a beat must start fresh from its cue. A room clear on rails ends with the
+  every-step save and the floor's own triggers are off; a step's `checkpoint` writes an in-memory save the tick it comes up. The picture touches nothing: the program runs on through it, and a load puts it back in the middle of its beats, whose places are plain data in the save (`rust/game_run/tests/program_moment.rs`, on the road and the kit; never seen on a GPU). A room clear on rails ends with the
   last step, not with the rooms. CHECK: `bun run tools/qa/rails-check.ts` (probe `rails`, family `missions`; thirteen lines: the block whole, switch off = the mission alone with
   no lesson, the first step parked and locked, one action a step, done by the deed, nobody lost, the room fight beside the program and no early end, a checkpoint
   put back, the journal, the mission again, the ring is the place and the lookout sees the road and no room, the mark stays in the picture, the menu lists only the mission's orders) passes on both stands and `RAILS_BREAK=1` (the gate passes everything, the ring is no place, nothing keeps it in the picture, the menu lists every order) fails seven lines on both. THE FIRST MISSION `tut-sky` ('The tunnel, from
@@ -592,7 +591,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   two gates (one shows in the road gate while two walk round to the back gate, down the alley and out into the street in front of the rifles the cover order turned; the last line is
   'Finish the last of them' (it was 'Finish the picket': "what's a picket", the maintainer; no line, card, squad name or blurb of the mission says the word now, and the squad is 'Roadblock'), and the picket's last man drops his rifle and runs: the sub-bullet on the two harsh places below). What is SCRIPTED is only what must be seen at a known moment (the bursts out of the doorway, the gun's first burst on the wall, the
   picket's walk) and what keeps a line from putting the player down (the store's two, the nest, the hall's two: the sub-bullets below); every man is the room clear's own and is released to the game's AI the moment his show is over.
-  - **It is played on the tutorial's frame** (`game/rails.ts`, the bullet above: `RAILS.on`, `TPS_RAILS=1` on the frozen stand; with the switch off the level is its mission alone). Its
+  - **It is played on the tutorial's frame** (`rust/game_rules/src/rails`, the bullet above: `RAILS.on`, `TPS_RAILS=1` on the frozen stand; with the switch off the level is its mission alone). Its
     `rails.allow` is what the three missions before it taught (his feet, hands and rifle, the view, the squad's key and the word); the orders menu comes on with the step that asks for it
     ('follow', `allow: ['menu', 'ring']`, `noTap`: a tap of the squad's key gives nothing while it or 'back' is up; its two menu lines name `[X]`, which the frame draws as "Hold" and the squad's key while that key kept down is the only way to the menu, and
     without `ring` the frame cuts a held command key to a tap; the scripted player opens the menu that way when the ring is on and stays, by X when not) and the frag with its step (`allow: ['slot:frag']`); `respawn: 5`. Its cues are `shop`, `gun`, `ducks` (on the step after 'gun': he has shot back), `atblocks` (on the frag's step: he is at the blocks, and the gun stays down from then), `fragged` (on 'nest', the step after the frag's), `picket` and `covered` (on the last step: the cover order is given); a beat that was busy when a cue came asks `q.signalled('lesson:<cue>')`; its checkpoints 'the street', 'the wall', 'the hall'
@@ -702,7 +701,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
       seconds stood at the blocks first).
     - *"we can showcase glass fracturing here".* The hall's street window is a pane (`glass: 'whole'` on the hut's window; its foot is a metre up, so it is FLOAT glass by where it
       stands: a round holes it and a few run it to daggers, which is what 'Shoot through the window' asks for). `glassreal-check.ts CENSUS` has the level's row (0/1/0). The frozen stand
-      stands the glass's parts at off (a pane is a wall to a round), so the scripted player `raises` `GLASSPARTS=on` for its frozen run (not `GLASSFX`: `game/glass.ts` reads that
+      stands the glass's parts at off (a pane is a wall to a round), so the scripted player `raises` `GLASSPARTS=on` for its frozen run (not `GLASSFX`: `rust/game_rules/src/glass` reads that
       word as the module loads, before a runner can raise it). A box more: the level's fingerprint moved, so a checkpoint or a tape of the row from before is refused.
     - *"what's a picket".* No line, card, squad name or blurb of the mission says it: 'Finish off the rest of them', the squad 'Roadblock', the row's blurb "more enemies coming in
       through two gates". (The pair mission's blurb in `scenarioList.ts` still says "a picket": its owner's.)
@@ -894,7 +893,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   - *The two gates* (two men up the road, two in the lane behind the back gate, each pair behind a blast wall, the script's and unseen until the cue `gates`): a right click DRAGGED puts
     a pair behind chest-high bags facing the road gate and a pair behind the barrier facing the back gate; then both gates open at once, each pair of theirs walks in with rifles up and stands
     `GATE_SECS` (4 s) in its gate before it is the game's own, and the last man of the four drops it and runs. A last right click on himself brings the squad back.
-  - **The frame's `plan` action** (`game/rails.ts gate`): on a level whose steps allow `plan`, Shift held over the command key reaches the game though neither sprint nor an order is
+  - **The frame's `plan` action** (`rust/game_rules/src/rails gate`): on a level whose steps allow `plan`, Shift held over the command key reaches the game though neither sprint nor an order is
     allowed (the command key alone stays locked: a tap of it would undo a plan), and with the mode up its own Shift, the walk keys (they move the view, his feet stay locked) and both
     mouse buttons. Only where the page HAS the mode: the gate reads `CMDRING.plan` (and `planRts` for the walk keys), so with `?qplan=0` or on the frozen stand the key with Shift is the
     key's own order and stays locked — THE MISSION CANNOT BE PLAYED WITH PLAN MODE SWITCHED OFF, and no line says so on the page. A walk key held down is a sprint's only where his feet
@@ -1182,7 +1181,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   group, `untuned`): while that level's room clear is up the run is timed from the first thing ANYBODY does (a seat's first order, a player's first stride off
   his start mark, `PAR_START_M` 1 m, or the first round or throw) to roomclear's 'taken'; every teammate down at the end adds `lossSecs`; the total in WHOLE
   SECONDS AS SHOWN earns gold / silver / bronze / none (`medal_of`, `par_result`: pure). `par_tick` runs once a tick right after the mission's update, arms on a
-  new mission, files the result and says the line once on the log; the wire carries `live`, `t0` and `res` every tick. `src/game/par.ts` is the page's READ of that
+  new mission, files the result and says the line once on the log; the wire carries `live`, `t0` and `res` every tick. `rust/game_rules/src/par` is the page's READ of that
   record (no tick, no snapshot: a kept game carries the record with the rest), and the row with
   the clock on it is the game's own (`par_objective`, in the mission's line of the view: `docs/agents/rust.md`, THE VIEW). There is no switch: a level without the block returns on the tick's first line. THE BEST TIME IS THE PAGE'S: the books (`ui/runBooks.ts`) file it the frame the run
   ends (`ui/parBest.ts`, localStorage, key = the game's own `RunView.course`: level file + way in + squad size + difficulty; never on a run with a cheat on, as the verdict has it) and hands
@@ -1196,7 +1195,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (orders.ts `doorIdWords`: 'holding · store door'), and the HUD has no compass. The rule for every level: a door is named for its room, no compass word in a name.
 - **The snatch is out** (2026-11-08, marked on the keep or cut page): the man to take alive, his run for the gate and the van left both sides with `snatch.ts`, `snatchout.ts`, `SNATCH`, `SNATCHOUT` and `?nosnatch`. `levels/snatch.json` stands as a plain room clear with no row on the list, no man and no `response` block (`rust/game_start/tests/cut_missions.rs`). What the notes below say of the snatch is history.
 - **The two charges are out** (2026-11-08, marked on the keep or cut page): the two charges on one clock left both sides with `defuse.ts`, `DEFUSE`, the work order's `'device'` thing and Sam's make it safe row. `levels/defuse.json` and its look file stand as a plain room clear with no row on the list (`rust/game_start/tests/cut_missions.rs`). What the notes below say of the charges is history.
-- **A room clear issues its own wall charges** (`src/game/issue.ts issueStage`, one line in nightbreach.ts after the kit's staging; field `scenarios.roomClear.wallCharges: N`
+- **A room clear issues its own wall charges** (`rust/game_rules/src/issue issue_stage`, one line in nightbreach.ts after the kit's staging; field `scenarios.roomClear.wallCharges: N`
   (1‥9), docs/level-format.md *Scenarios*): the squad carries AT LEAST N wall charges for the run whatever the kit cards say (`WallCharge.raiseCarried`: raises, never lowers;
   the kit's store is neither read nor written; a level without the field returns on the first line). No switch. Today `levels/mousehole.json` alone (+ its look file ←
   `tools/levels/mousehole.ts` / `mousehole-gwot.ts`): row `mousehole-four` 'Mousehole', group `strongholds`, `?levelFile=mousehole.json&roomclear&squad4` — a clinic of three rooms
@@ -1255,7 +1254,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   0.1 → 0.21, 0.04 → 0.07‥0.13). So outside the wall there was the sky's even fill and nothing else: no pool, no shadow, wall, ground and men one grey.
   THE MEND keeps the moon and adds light that DIES WITH THE MAINS: a bulkhead lamp on the outer face of each gate post (`lived.yard.gate_lamp_w` / `_e`,
   a spot at 17 thrown out and along the wall away from the gate) and one over the shed's door (`lived.shed.door_lamp`, 30), group 'exterior' like the
-  floodlights, each with a lived fixture box that can be shot out. The first lived LIGHTS in any level (`scene/lived.ts` has always taken them): no new
+  floodlights, each with a lived fixture box that can be shot out. The first lived LIGHTS in any level (`tools/levels/lib/lived.ts` has always taken them): no new
   base in `lived-check` (ALL PASS as it stands), the frozen stand's level is the file it was. THE GATE LAMPS ARE HELD UNDER THE GOGGLES' LINE: at 50 the
   five start marks read 0.29‥0.62 across `NVG.darkAt` 0.5 and the team stood up half goggled; at 17 they read 0.07‥0.40 (0.17‥0.42 with the moon), Sam's
   0.25, and all four stand up goggled as before. Lit by them too, not only the start: the outside of both gate jambs, the walk along the wall, and (the shed's
@@ -1270,7 +1269,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   before it lifts Sam's reading). NOT DONE: the back strip and the east strip are as dark and as flat as they were (a lamp over the store's back door
   would light the men stacked on the second way in); the moon itself (the debugger's 'moonlight' row moves it live). The level's recordings made before
   this do not re-run on the page (the fingerprint moved), as with either trial above.
-- **A kit issued by the level** (`src/game/kit.ts kitIssue`, table `ISSUE {on}` in the knob registry; block `scenarios.issue { members: { '<place>': {…card
+- **A kit issued by the level** (`rust/game_rules/src/kit kit_issue`, table `ISSUE {on}` in the knob registry; block `scenarios.issue { members: { '<place>': {…card
   fields} } }`, scene/scenarios.ts `IssueData`, docs/level-format.md *Scenarios*; today `levels/hall.json` alone, row `hall-four` 'The long hall' in the
   list's 'Raids' group, `untuned`): on a level that carries the block every staging (`kitPlayer`, `kitStage`) runs under the ISSUE cards with the block's
   fields written over them — `asIssued`, the Training pages' own road, so the table and its store stay the machine's: nothing kept is worn or written — and
@@ -1297,7 +1296,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     one. This bullet's first numbers are the hall as staged with one (history); the ones under WITHOUT THE SHIELD are the game as it is. `PT_HALL=bare` still walks
     the first teammate down the hall; `PT_HALL=file` and `low`, the same walk led by the plate, are refused in words. The frozen stand staged the shield here until the cut, so its hall-four digests moved to the shipped stand's of the day before;
     no other mission's did (playthrough.ts, the 21 loud missions × seeds 1-3 on each stand, digests against the build before the cut).
-- **A mission's own card for you is the whole kit** (`src/game/kit.ts ISSUE.whole`, 10-22; from the maintainer's play of the tutorial's solo mission:
+- **A mission's own card for you is the whole kit** (`rust/game_rules/src/kit ISSUE.whole`, 10-22; from the maintainer's play of the tutorial's solo mission:
   "i first accidentally sponged the guys"). `tut-solo` is a LOUD mission of the QUIET kind (a lone man, the quiet scenario's frame) whose
   `scenarios.issue` names his card, and `kitPlayer` asks only `stealthRun` (a quiet scenario up, or the night alone), so the mission's five sponge rounds
   were handed over that card and the launcher came up on them, ahead of the grenades its lines teach. THE RULE: where the level's block names YOUR card
@@ -1323,9 +1322,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   FOR THE SOLO MISSION'S OWNER: its step `load` ("[2] again: load the grenade") is already true when it comes up under this rule and goes by unread, and
   its scripted walk never wears the page's kit (`lesson-run.ts` stages no card on a man alone), so `tut-solo-check` plays the sponge rounds either way.
   NOBODY HAS played the mission with it, on a GPU or off; no page was opened for it.
-- **A lesson the player packs for** (`src/game/kit.ts ISSUE.picked`, `kitPacks`, `kitLessonPage`, 2026-10-23; the maintainer, of the kit step's
+- **A lesson the player packs for** (`rust/game_rules/src/kit ISSUE.picked`, `kitPacks`, `kitLessonPage`, 2026-10-23; the maintainer, of the kit step's
   walkthrough: "we should attach it to a tutorial mission (and make it bespoke and explain how to plan)"). A tutorial row that carries `packs`
-  (`scene/scenarios.ts ScenarioEntry`; today the squad mission, `tut-squad`, alone) is NOT played with the kit as issued: `game/loadout.ts kitAsIssued`
+  (`scene/scenarios.ts ScenarioEntry`; today the squad mission, `tut-squad`, alone) is NOT played with the kit as issued: `rust/game_rules/src/loadout kit_as_issued`
   is false of it, so its Team & kit step shows the cards (where `ui/kitPlan.ts` teaches planning its kit, `docs/agents/menus.md`) and its page stages
   what this machine keeps, as any mission's does. `packs.frags` is THE LEAST HE CARRIES THERE: the street's 'frag over the bags' step holds the two men
   behind the sandbags down until his frag lands, so a card packed with none would leave a line asking for what he cannot do — on that mission's page
@@ -1354,7 +1353,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   picks. Four deals. `TPS_PROFILE=shipped bun run tools/qa/vault-run.ts [--plan round|code|pan|short|mains|shoot|all|each] [--seeds 1-24] [--moon]` = a scripted
   player (an unknown flag exits 2). 24 seeds, moon counted, clean = out, no device, nobody roused, no wait given up: devices answered 24 · the clerk's code 19 (24
   out) · waiting on the lenses' pan 13 (24 out) · the same walk with the devices ignored 0 (13 out, 11 down) · the breaker first 0 (down 24; thrown 7, mains back in
-  2 s). THE SAFE IS NOT WIRED (game/takecheck.ts: nobody is sent to it after the take; those are the numbers as shipped, re-played 10-12. With the old rule,
+  2 s). THE SAFE IS NOT WIRED (rust/game_rules/src/takecheck: nobody is sent to it after the take; those are the numbers as shipped, re-played 10-12. With the old rule,
   `TPS_TAKECHECK=0` in front, the man sent to the safe left his beat: pan 20, devices ignored 9 out and 15 down, the other three the same). `probes.ts vault` (family `missions`; `VAULT_BREAK=1` must fail). Page rebuild/missions/new/vault.md. Never seen on a GPU.
 - **The counting house's ground is dressed** (dress every level, 11-03; `tools/levels/vault.ts furnish`, level data only, no game code; under the lived switch `LIVED`:
   ON in the page, `?lived=0` puts it off; the frozen stand has it off, `TPS_LIVED=1` raises it). The house's rooms and the yard's cover were laid when it was
@@ -1373,13 +1372,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   drawn as 477, 0.6 % of the picture with no material (door paint and the palette's own `oil`). LEFT: door frames and leaves (shared code: they wait for a
   box that says its stuff by name); a trodden path between doors (the kit has no piece for a line of wear; a `stain` is one rectangle). Stills (software
   adapter, Chromium 141): rebuild/dress-levels/levels/vault/. NEVER SEEN ON A GPU and nobody has played it.
-- **Quiet missions on any level** (rows in `scenarioList.ts QUIET_MISSIONS` — NOT in `SCENARIOS`, which stays the squad's table for every tool that walks it; the list reads `ALL_MISSIONS`) (`src/game/quiet.ts`, `Game.quiet`, `__quiet`; author's page rebuild/play-style-levels/quiet-missions/contract.md; block
+- **Quiet missions on any level** (rows in `scenarioList.ts QUIET_MISSIONS` — NOT in `SCENARIOS`, which stays the squad's table for every tool that walks it; the list reads `ALL_MISSIONS`) (`rust/game_rules/src/quiet`, `Game.quiet`, `__quiet`; author's page rebuild/play-style-levels/quiet-missions/contract.md; block
   `scenarios.quiet`, docs/level-format.md *Scenarios*): kind `quiet`, squad 0 (alone) or 1 (one partner: pair rules + silent held on for the run, staff hostile to
   him — `teams.ts staffVsOperatives`, put back by `release()` — each switch only while it still stands as the run wrote it, so a row moved by hand mid-run stays; the switches FOLLOW THE GAME THAT IS RUNNING: `quiet.current()` in the constructor, `update`, `step` and `restartEncounter` hands another Game's run's back and takes this one's, so a dropped Game leaks nothing and two Games in a process each get their own frames; the three pair parts go on through `pairUpApply`, so `SNEAK=off` / `?sneak=0` still holds one off). `?levelFile=<f>&quiet[=pin][&squad=1]`:
   the seed deals a start, a spot and a patrol set (benched routes leave `g.guards`; `beforeRestart` writes `level.mission` / `playerSpawn` for the encounter,
   `stop()` puts the authored ones back); mission.ts reads the dealt spot, every exit (`outThrough`), and the level's own words. `quiet.ts holderStand(g, front, area)` is THE floor at a holder's face (free, in the room, nothing solid between it and the face): `checkQuiet` validates that cell and the guard sent to look walks to it. A staff man who drops the partner is back on Sam, his hunt standing (guards.ts `acquireFoe`). The cards offer a checkpoint through `saves.offer(g)` (an earlier run's slot only if `canLoad` takes it); autosave labels and room triggers are the level's own words while a quiet mission is up. `quiet` beside a stale `squad4` is the quiet mission; the night breach and the rescue refuse to start over one. EVERY new branch keys on
   `g.quiet.active`, on the level carrying the block, or on `HOSTILE.guard.operative` — a level without the block is base by digest. Checkpoints alone carry the deal
-  (`SaveState.quiet`). WHO IS TOLD WHEN THE THING IS TAKEN (`src/game/takecheck.ts TAKE.wired`: ON in the page — `?takecheck` = a man sent after every take, as it was — OFF in the module and on the
+  (`SaveState.quiet`). WHO IS TOLD WHEN THE THING IS TAKEN (`rust/game_rules/src/takecheck TAKE.wired`: ON in the page — `?takecheck` = a man sent after every take, as it was — OFF in the module and on the
   frozen stand, `TPS_TAKECHECK=1`; a `FROZEN_HOLDS` row, in the knob registry and a journal's tables, a recording from before the key replays with it off; no Tab row; the maintainer, 10-12:
   "predictably getting a guard to come by when you pull the objective is a bit contrived. makes sense for the server rack in the office but not the officer files"): mission.ts `drivePulled`
   arms the seven-second errand (`sweepAt` → `sendRackCheck`) only where `takeTold(g)`: always on the plain night (the office's rack drops off the network), and on a quiet mission only at a
@@ -1466,7 +1465,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   refused ("'move' does not fit a none target": the tool's, not looked into). Page rebuild/missions/new/glasshouse.md. Never seen on a GPU.
 
 <!-- was CLAUDE.md lines 1724–1734 -->
-- **The solo night's opening, the silent net, the P key** (the missions goal's solo-night faults; record rebuild/missions/fixes/solo-night.md): (1) `src/game/opening.ts`
+- **The solo night's opening, the silent net, the P key** (the missions goal's solo-night faults; record rebuild/missions/fixes/solo-night.md): (1) `rust/game_rules/src/opening`
   `OPENING {on, clearM 10, stepM}` — on a fresh encounter that is the PLAYER's (never a show's: `quietUtility`, or `touring` not `director.handedOver`) a staff man whose first waypoint is
   within `clearM` by walking of the spawn starts down his own beat, facing the way he walks (the office: only Kowalski, (6, 11.1) at the lobby arch → (14, 11.1) walking east, wp 1); called
   from the Game constructor, `resetGuards`, director.ts `exitShow`, attract.ts `stop`, and once a frame from `Game.update` (a man is fresh for 0.25 s after his Guard object is first met);
@@ -1576,7 +1575,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `mousehole-gwot.ts`; no switch of its own: the lived things ride the lived switch, `?lived=0` on the page and off on the frozen stand, and the
   paint is the look twin's). The level had no lived tier. It has one now and it is the clinic's OUTSIDE (`lived.yard`, `lived.side`,
   `lived.lot`): the burn drums, their wood and the washing in the back yard, the generator's fuel and what a clinic throws out on the
-  side, the pump, a rope bed, a bike and a cart on the lot. Every piece is a piece of `src/scene/gwotKit.ts` laid by name through
+  side, the pump, a rope bed, a bike and a cart on the lot. Every piece is a piece of `tools/levels/lib/gwotKit.ts` laid by name through
   `gwotOfKit`; nine of them are round things the round rule finds (with the lived switch on; none with it off). THE RULE IT KEEPS, WHICH NO
   CHECK HOLDS: every outer wall of the clinic takes a wall charge wherever it is asked, and the setter's spot and the stand-off posts
   are the ground at the wall's foot, so no lived solid stands within 2 m of an outer wall's face (stones a foot steps over may). The
@@ -1916,7 +1915,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   Played as shipped, before against after: straight in, 12 seeds, the same 12 runs (lost at about 25 s, by design); the back gate covered first (`PT_SNATCH=cover`),
   24 seeds, won 24 and 66 of 96 men up both ways, two seeds a different length (0.1 s and 13 s). The level's own part moved, so `lived-check`'s base list names
   this step. Headless only: nobody has heard it.
-- **A rescue is won out, or cleared** (2026-10-18; `src/game/rescueend.ts`, `RESCUEEND.on` — ON in the page, `?norescueend`; OFF in the module and on the frozen
+- **A rescue is won out, or cleared** (2026-10-18; `rust/game_rules/src/rescueend`, `RESCUEEND.on` — ON in the page, `?norescueend`; OFF in the module and on the frozen
   stand, `TPS_RESCUEEND=1`; the Hostage rescue rows' toggle in the debugger). The maintainer: "the hostage rescue missions should have you safely extract the
   hostage or fully clear the map." WHAT WAS THERE: the hostage room taken and held `RESCUE.holdSecs` (15 s) ended the run a win, with men of theirs alive
   elsewhere and nowhere to go. THE RULE, on all three rescues (office, registry, consulate; no level data changed): the run is WON two ways and by nothing else.
@@ -2146,7 +2145,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   MEASURED: how lit a man reads beside a new thing on the page's meter (it has bounce; the headless one has none), and what a man who has gone looking
   does among them: the scripted player never leaves the yard. Never seen on a GPU, never played by a person: at the mission's own hour the new things
   lie in the moon's dark and show as shapes.
-- **A man told to have a smoke lights one** (2026-10-22; `src/game/smokebreak.ts SMOKEBREAK` / `updateSmokeBreak`, called from `game.ts` beside the
+- **A man told to have a smoke lights one** (2026-10-22; `rust/game_rules/src/smokebreak SMOKEBREAK` / `updateSmokeBreak`, called from `game.ts` beside the
   breath in the cold; the order is `director.ts OrderPatch.smoke` → `GuardScript.smoke`; the arm is `character.ts smokeLayer`, its numbers `SMOKEARM`
   in that file). The maintainer: "cigarette break animation (with real smoke!) would be sick". THE SWITCH: `SMOKEBREAK.on`, ON in the page
   (`?smokebreak=0` puts it off), OFF in the module and on the frozen stand (`FROZEN_HOLDS`; `TPS_SMOKEBREAK=1` raises it there); registered in
@@ -2170,7 +2169,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `python3 -I tools/qa/pose-mesh-raster.py <the PLYs> --out sheet.png`: the hand is at his mouth with the elbow down, the torch low in the other.
   ON THE REAL PAGE (the software adapter, the ledger played with real keys): he lit up and took a draw before he was grabbed, with no page error from the game; at
   640 by 360 the orange light on him at a draw is what shows, and neither the arm nor the smoke can be judged from those pictures. NEVER SEEN ON A GPU.
-- **A mission row can name its own hour and weather** (2026-10-22; `src/game/rowset.ts`, `ROWSET.on` — ON in the page, `?rowset=0` = the link's hour and
+- **A mission row can name its own hour and weather** (2026-10-22; `rust/game_rules/src/rowset`, `ROWSET.on` — ON in the page, `?rowset=0` = the link's hour and
   weather as ever; OFF in the module and on the frozen stand, `TPS_ROWSET=1`; a `FROZEN_HOLDS` row, in the knob registry and a journal's tables. NO ROW
   NAMES ONE YET, so on or off is the build as it was). A tutorial mission's level is built for one hour and one sky, and its row used to open at the
   level's own night, or at whatever hour and weather the visitor's last pick had left on the link. `hour: 'dusk', weather: 'dust'` on the row
@@ -2219,7 +2218,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   each roadblock man the script sent, with the word and without: never a price with it; without it, on a stand with covered lanes, the lanes' price
   (670 man-frames on the page's stand; the frozen stand has no covered lanes and only shows the word reached 3 men).
 - **A step's own eye always has a place among the fog's** (2026-10-22; `RAILS.eyeFirst`, a knob of the frame's table, on with it, off on a recording
-  from before the key; `src/game/fogofwar.ts update`). The fog of war took five eyes (`FOG.eyes`: seven in the page since 10-24, where the lookout and the step's eye both fit; five on the frozen stand). In the sky seat with four men up and the seat's lookout in, the
+  from before the key; `rust/game_rules/src/fogofwar update`). The fog of war took five eyes (`FOG.eyes`: seven in the page since 10-24, where the lookout and the step's eye both fit; five on the frozen stand). In the sky seat with four men up and the seat's lookout in, the
   list was full and the step's own eye (`eye { at, yaw, fov? }`, pushed last) was the one dropped: on mission 1 the squad's own wall charge went off in
   the fog, twice, in the maintainer's play. Now the step's eye goes in ahead of the lookout and, with the places full, takes the last one (the lookout
   gives way for that step; on a floor mission with the player and four men, the last man's eye does). Mission 1 itself has its fog off since (the
@@ -2936,7 +2935,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   can of each a smoke thrown wide leaves him the gunner to shoot; no step teaches the launcher's swap or the sponge round; the bunk room's and the
   fuel room's men are held by the script until the squad's way in, so a player who walks into those rooms alone in his half meets them early and
   the men-down counts of his later lines run ahead.
-- **A tutorial's squad can wait where the mission stood it (`rails.waits`, 2026-10-26; `src/game/rails.ts` `waiting` / `holdWaiting`, `scene/scenarios.ts
+- **A tutorial's squad can wait where the mission stood it (`rails.waits`, 2026-10-26; `rust/game_rules/src/rails` `waiting` / `holdWaiting`, `scene/scenarios.ts
   RailsData.waits`, level data: no switch).** `lesson.rails.waits: { low?: true }`: until a step hands the player the command key (no step up to the
   one that is up, and not the record's own `allow`, names `order`), a teammate on 'fall in' is put on a hold where he stands, on a knee with `low`,
   instead of walking after the player. Read from the steps alone and nothing is kept, so a checkpoint put back before that step holds them again.
@@ -2958,7 +2957,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **Where these notes say the simulation reads a paint** (`paletteName`, `surfOf`, `breakClassOf`, `steelGrey`, `gwotSimOf`, a stand-in `gwotAs`
   a hair off its row): since 2026-11-05 it reads the box's word (`src/scene/materials.ts`, `Box.does`), which every level file carries, and a paint
   is any colour. `docs/agents/levels.md`, "What a box does is said in a word".
-- **The floodlit yard's night is overcast, and cutting the mains is the better plan again** (2026-11-09; `levels/floodlit.json` ← `tools/levels/floodlit-floor.ts`: level data, no rule). The light meter counts the sky and what comes round, as the picture
+- **The floodlit yard's night is overcast, and cutting the mains is the better plan again** (2026-11-09; `levels/floodlit.json` ← `tools/levels/floodlit.ts`: level data, no rule). The light meter counts the sky and what comes round, as the picture
   draws them; the yard was made on one that counted neither. So with the mains out any open ground there read 0.19 to a bare eye (the sky alone 0.064 W, the moon 0.014), and the red lamp on the mast, sized to give a tube something when the meter had no sky,
   took the gate to 0.21 and the middle of the yard to 0.25, over the dark line of 0.2. The level's moon was an overcast 0.04 under a clear night's sky. THE MEND: the sky at six tenths, the mast's lamp 6 → 2 (its glass glows as it did), the four lanterns
   6 → 4.5 (what 6 read as when only its direct light was counted). Reads now, mains out: the gate 0.12, mid yard 0.14, the west 0.11, the foot gate 0.02, the start 0.11; tubes 0.61 to 0.69; the radio room 0.75 to an eye and 0.93 to a tube (0.81 / 0.94).

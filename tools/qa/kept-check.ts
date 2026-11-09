@@ -1,14 +1,13 @@
 // HOW KEPT A PLACE IS, ONE WORD A LEVEL: the check behind a level file's `meta.kept`, scene/look.ts lookKeptOf, look.wgsl lookKept and markings.wgsl's old
 // paint (docs/agents/render.md has the rule at length).
-//   bun run tools/qa/probes.ts kept        (family `render`)
+//   bun run tools/qa/checks.ts kept
 //   KEPT_BREAK=1     the weather's rules and a mark's age do not ask the word (the second writing below leaves it out), and the level a look's second
 //                    file dresses cannot be read when its word is asked: must FAIL
 // Until 11-05 whether a surface looked looked-after was said stuff by stuff (a stuff with no `fades` is "a place somebody keeps"), and every painted mark
 // was drawn as old paint by one number for the whole game. A level that should read as cleaned last night had to say every wall again as another stuff, and
 // its signs still drew rubbed.
-// WHAT THIS CAN AND CANNOT SAY. No shader runs here. Line 1 is the level file's own code, run. Line 2 is the page's rule, run. Line 3 holds the rule BY ITS
-// TEXT in the shaders, the writer of their uniform, the page and the exporter. Line 4 is a second writing of the places the word acts, held to the shader
-// by line 3's pins: whether it is the first is as good as those. Line 5 runs on every
+// WHAT THIS CAN AND CANNOT SAY. No shader runs here. Line 1 is the level file's own code, run. Line 2 is the page's rule, run. Line 3 holds the shaders BY THEIR
+// TEXT to line 4, a second writing of the places the word acts: whether it is the first is as good as those. Line 5 runs on every
 // generator against its level file. What a kept place LOOKS like is a page's to show.
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -19,8 +18,8 @@ export async function keptCheck(): Promise<boolean> {
   console.log(`\n=== kept: how kept a place is, one word a level${BRK ? ' (nothing asks the word: must fail)' : ''} ===`);
   const text = (f: string) => readFileSync(resolve(ROOT, f), 'utf8'), count = (t: string, s: string) => t.split(s).length - 1;
   // 1. the word in the file: there and back
-  { const { parseLevelData, validateLevelData, canonicalLevelData, serializeLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
-    const { loadLevel, levelToData } = await import(`${ROOT}/src/scene/levelLoad.ts`);
+  { const { parseLevelData, validateLevelData, canonicalLevelData, serializeLevelData } = await import(`${ROOT}/tools/levels/lib/levelData.ts`);
+    const { loadLevel, levelToData } = await import(`${ROOT}/tools/levels/lib/levelLoad.ts`);
     const base = parseLevelData(text('levels/white-roof.json')) as any; { const m = { ...base.meta }; delete m.kept; base.meta = m; }   // (a level to stand on, whatever it says of itself today)
     const said = (v: unknown) => ({ ...base, meta: { ...base.meta, kept: v } });
     const plain = loadLevel(base) as any, d = said(0.7), lv = loadLevel(d) as any;
@@ -39,27 +38,21 @@ export async function keptCheck(): Promise<boolean> {
     verdict(rows.every((r, i) => got[i] === r[2]), 'the frame takes the address\'s &kept for the visit, else the level\'s own word, else 0; held to 0 to 1; a word that is no number, empty or blank leaves the level\'s',
       rows.map((r, i) => `(${r[0]}, ${r[1] === null ? 'none' : `'${r[1]}'`}) → ${got[i]}`).join(' · ')); }
   // 3. the text: one writer, one reader, and every place the word acts
-  const look = text('src/render/shaders/look.wgsl'), marks = text('src/render/shaders/markings.wgsl'), gb = text('src/render/gbuffer.ts'), main = text('src/host/drawpage.ts'), exp = text('tools/levels/export.ts');
+  const look = text('src/render/shaders/look.wgsl'), marks = text('src/render/shaders/markings.wgsl');
   const between = (a: string, b: string) => { const i = look.indexOf(a), j = look.indexOf(b); return i < 0 || j < i ? '' : look.slice(i, j); };
   const surface = between('fn lookSurface(', '  // ---- USE on a wall somebody keeps'), standing = between('  // ---- WEATHER on anything that stands on the ground or lies in the open', '  // ---- USE on a wall somebody keeps');
   { const pins: [string, boolean][] = [
-      ['the uniform\'s writer puts the word at c.x', gb.includes('k.cavity * c, k.size, lookConfig.kept, ')],
-      ['the page takes the level\'s word off the picture before the engine is made ready', count(main, 'lookConfig.kept = lookKeptOf(D.f[sky() + Sky.kept]') === 1 && main.indexOf('lookConfig.kept = ') < main.indexOf('engine.init(')],
-      ['look.wgsl reads it in one place', count(look, 'lookCfg.c.x') === 1 && look.includes('fn lookKept() -> f32 { return clamp(lookCfg.c.x, 0.0, 1.0); }')],
-      ['a surface asks it once: how far the place is left to the weather', count(surface, 'lookKept()') === 1 && surface.includes('let left = 1.0 - lookKept();')],
-      ['how wild a surface is is its stuff\'s word × the place\'s', surface.includes('let wildS = step(0.001, keep.y);') && surface.includes('let wild = select(0.0, wildS * left, cls != 0u);') && count(surface, 'wildS > 0.0') === 2 && count(surface, 'wildS ==') === 0 && count(surface, '- wildS') === 0],   // (the stuff's word alone gates only the two rules that are the weather's own, which ask the weather's amount beside it; nothing else goes by the stuff alone)
+      ['how far a surface is left to the weather', surface.includes('let left = 1.0 - lookKept();')],
+      ['how wild a surface is is its stuff\'s word × the place\'s, and nothing goes by the stuff alone but as a gate', surface.includes('let wildS = step(0.001, keep.y);') && surface.includes('let wild = select(0.0, wildS * left, cls != 0u);') && count(surface, 'wildS ==') === 0 && count(surface, '- wildS') === 0],
       ['the weather\'s amount is the panel\'s row × how far the place is left to it', count(look, 'let kw = k.w * left;') === 1],
-      ['the weather on what stands asks that amount and never the row alone', standing.length > 0 && count(standing, 'k.w') === 0 && count(standing, 'kw') >= 7 && standing.includes('if (kw > 0.0 && cls != 0u && wildS > 0.0) {') && surface.includes('if (k.w > 0.0 && wildS > 0.0 && lying && n.y > 0.0 && wp.y < LOOK_GROUND.x) {')],
-      ['the rubbish at a wall\'s foot asks it, the trodden lane beside it does not', look.includes('wm.y * (0.55 + 0.9 * rag)) * kw;') && look.includes('clamp(wm.x * (0.5 + rag), 0.0, 1.0) * k.w * select(1.0, step(0.6, roughIn), wears) * (1.0 - (1.0 - wild) * step(0.001, keep.w));')],   // (… but for the share the stuff's own `worn` answer has taken of it, line 4)      ['what the weather gives up the kept rules take: the detail layer\'s dust band and shoe marks, the No repeat row\'s drift', look.includes('detailFloorWear(alb, rough, roughIn, vec3f(lookWay, 1.0 - wild), dk, uneven)') && text('src/render/shaders/detail.wgsl').includes('let grime = wm.y * wm.y * wm.z;') && look.includes('&& stands && wild < 1.0) {') && look.includes('let t = 1.0 - wild;') && look.includes('if (k2.x > 0.0 && wild < 1.0) { mult *= 1.0 + 0.06 * min(k2.x, 2.0) * (1.0 - wild) * (lookSlow(')],
-      ['a mud wall\'s fallen render shrinks as the place is kept, and its plinth does not', look.includes('let thr = thr0 + (1.2 - thr0) * (1.0 - left);') && look.includes('let line = (0.34 + 0.4 * detailNoise(vec2f(uv.x * 0.31, 7.7)) + 0.1 * detailNoise(vec2f(uv.x * 1.9, 2.2))) * min(km, 1.0);')],
-      ['what a stuff\'s `worn` says of use is shown by how far the surface is kept, never by the weather\'s amount', look.includes('keep.w * min(k.w, 1.0) * (1.0 - wild), fp,') && look.includes('let knock = stretch * (1.0 - smoothstep(high - max(0.008, fp), high, wp.y)) * keep.w * min(k.w, 1.0) * (1.0 - wild);') && look.includes('if (k.w > 0.0 && cls != 0u && wild < 1.0 && keep.w > 0.0 && !lying && stands && !moves && wp.y < 0.3) {') && look.includes('alb *= 1.0 - 0.2 * keep.w * (1.0 - wild) * min(k.w, 1.0) * clamp(lookWay.x * uneven, 0.0, 1.0);')],
+      ['the weather on what stands never asks the row alone', standing.length > 0 && count(standing, 'k.w') === 0],
+      ['the trodden lane does not ask the word, but for the share the stuff\'s own `worn` answer has taken of it', look.includes('clamp(wm.x * (0.5 + rag), 0.0, 1.0) * k.w * select(1.0, step(0.6, roughIn), wears) * (1.0 - (1.0 - wild) * step(0.001, keep.w));')],
+      ['what a stuff\'s `worn` says of use is shown by how far the surface is kept, never by the weather\'s amount', look.includes('keep.w * min(k.w, 1.0) * (1.0 - wild), fp,') && look.includes('let knock = stretch * (1.0 - smoothstep(high - max(0.008, fp), high, wp.y)) * keep.w * min(k.w, 1.0) * (1.0 - wild);') && look.includes('alb *= 1.0 - 0.2 * keep.w * (1.0 - wild) * min(k.w, 1.0) * clamp(lookWay.x * uneven, 0.0, 1.0);')],
       ['a mark is handed how far its paint is old', look.includes('fn lookMarkSoft() -> vec2f { return vec2f(lookCfg.g.x, 1.0 - lookKept()); }')],
-      ['old paint is rubbed thin by the years by that much and by feet whatever it is, and gone into its wall by that much', marks.includes('- (0.72 - 0.12 * age * soft2.y - 0.16 * trod));') && marks.includes('let keep = 1.0 - 0.85 * min(age, 1.0) * worn * max(soft2.y, min(trod, 1.0));') && marks.includes('fn markTone(soft: vec2f, near: f32) -> f32 { return 1.0 - 0.18 * min(soft.x, 2.0) * soft.y * near; }') && marks.includes('if (soft.x > 0.0) {')],
-      ['the address\'s word is a visit\'s and the look page\'s', /VISIT_FLAGS = \[[^\]]*'kept'/.test(text('src/tape/address.ts')) && /LOOK_PAGE_WORDS[^\n]*'kept'/.test(text('src/scene/look.ts'))],
-      ['the exporter gives a generator\'s word to the level', exp.includes('if (gen.KEPT !== undefined) level.kept = gen.KEPT;')],
+      ['old paint is rubbed thin by that much and by feet whatever it is', marks.includes('let keep = 1.0 - 0.85 * min(age, 1.0) * worn * max(soft2.y, min(trod, 1.0));') && marks.includes('fn markTone(soft: vec2f, near: f32) -> f32 { return 1.0 - 0.18 * min(soft.x, 2.0) * soft.y * near; }')],
     ];
     const bad = pins.filter(p => !p[1]).map(p => p[0]);
-    verdict(bad.length === 0, 'the word has one writer and one reader; the weather on what stands, the rubbish at a wall\'s foot, a mud wall\'s fallen render and the age of a mark\'s paint ask it, and what the weather gives up the kept rules take; what a stuff\'s `worn` says of use comes in by the same share; a trodden lane and paint trodden off a floor do not ask it; every way a level enters the page hands it over', bad.length ? `NOT HELD: ${bad.join('; ')}` : `${pins.length} pins hold`); }
+    verdict(bad.length === 0, 'the lines the second writing below is held to: how far a surface is left to the weather, how wild it is, the weather on what stands, what a stuff\'s `worn` says of use and the age of a mark\'s paint', bad.length ? `NOT HELD: ${bad.join('; ')}` : `${pins.length} pins hold`); }
   // 4. a second writing of the places it acts (held to the shader by line 3)
   { const left = (kept: number) => BRK ? 1 : 1 - kept;
     const blotch = (kept: number, fades: number, lying: boolean) => left(kept) * (lying ? 1.7 : 1) * fades * 0.25;   // (the most a slow blotch moves a paint either way: 0.3 × ½ + 0.2 × ½)

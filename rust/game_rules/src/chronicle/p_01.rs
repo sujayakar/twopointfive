@@ -838,12 +838,12 @@ mod tests {
     #[test]
     fn heard_words() {
         use crate::director::EventKind;
-        let mut e = crate::game::GameEvent::zeroed();
+        let mut e = crate::game::GameEvent::default();
         e.kind = EventKind::Shot;
         assert_eq!(heard_what(e), "a canister");
         e.level = Some(1.0);
         assert_eq!(heard_what(e), "gunfire");
-        e = crate::game::GameEvent::zeroed();
+        e = crate::game::GameEvent::default();
         e.kind = EventKind::Prop;
         e.who = Some(0.0);
         e.level = Some(0.9);

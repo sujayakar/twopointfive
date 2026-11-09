@@ -13,17 +13,10 @@ fn act(p: &mut Play, k: usize) {
     if k == 20 { p.order("fallIn", [20.0, 14.0], game::orders::Who::All); }
     if k % 90 == 60 { p.sam_fires_at([16.0 + (k % 7) as f64, 12.0], 0.0); }
 }
-/// every word of the game's state, a word a part: the game's own parts, then rust/sim's block
-fn words(p: &mut Play) -> Vec<u32> {
-    let mut w = p.words();
-    w.extend(game_start::block::part_hashes(p.g.sim));
-    w
-}
 /// which parts two lines of words differ in
 fn differ(a: &[u32], b: &[u32]) -> Vec<String> {
-    let names = game::state_words::state_names().into_iter().chain(game_start::block::PART_NAMES.iter().map(|s| format!("block.{s}")));
     assert_eq!(a.len(), b.len());
-    names.zip(a.iter().zip(b.iter())).filter(|(_, (x, y))| x != y).map(|(s, _)| s).collect()
+    game_start::parts::differ(&game_start::parts::names(), a, b).into_iter().map(String::from).collect()
 }
 /// what a host asks between ticks: rays round Sam, the view of its HUD. Answers how many boxes the rays met, and their indices, each a box of the world
 fn ask(p: &mut Play) -> Vec<(f64, f64)> {
@@ -50,7 +43,7 @@ fn a_host_that_asks_and_one_that_does_not_play_one_game() {
             act(&mut p, k);
             if asks { met += ask(&mut p).len(); }
             p.frame();
-            out.push(words(&mut p));
+            out.push(p.words());
         }
         (out, met)
     };
@@ -79,7 +72,7 @@ fn what_is_made_from_the_record_may_be_forgotten() {
             }
             act(&mut p, k);
             p.frame();
-            if k >= 240 { out.push(words(&mut p)); }
+            if k >= 240 { out.push(p.words()); }
         }
         out
     };

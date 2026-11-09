@@ -1,5 +1,5 @@
 // THE PAGE'S BOOT OVER A RECORDING STAND-IN DEVICE: every shader text the page hands the browser, and every pipeline it asks for, with no browser. One boot for
-// every tool that reads the page's shader texts (shaderinline-check sizes them, shaderfold-check reads the fold off them, wgsl-dump writes them out for a
+// every tool that reads the page's shader texts (shaders-check inline sizes them, shaders-check fold reads the fold off them, wgsl-dump writes them out for a
 // browser's compiler), so the three cannot come to boot different pages.
 // The boot is drawpage.ts's own order: the Engine's pipelines, the smoke solver's, the particles, the men's mesh and its tree, the programs asked for ahead of
 // their first use (engine.ts warmFirstUse). No game is stood. In front of it, what the page writes before it builds the Engine: cut boxes on, the glass fracture, the dust's own look.
@@ -65,7 +65,7 @@ export async function pageBoot(setting: string): Promise<Booted> {
       const ch = await characterSet(), chars = new CharacterRenderer(engine.device, ch), shadows = new MeshShadows(engine.device, ch, chars.jointMats, chars.charInsts);
       engine.skin = chars; engine.setMeshShadows(shadows);
       await Promise.all([engineInit, smokeInit, engine.particles.init(), engine.gbuffer.needLook(), shadows.init(), engine.gbuffer.prepareSkin(chars.jointsFormat)]);
-      engine.warmFirstUse(); await new Promise(r => setTimeout(r, 0));   // (main.ts, after the boot's freeze: the programs a pass used to make at its first use — the fog of war's — are asked for behind the start)
+      engine.warmFirstUse(); await new Promise(r => setTimeout(r, 0));   // (host/drawpage.ts, after the boot's freeze: the programs a pass used to make at its first use — the fog of war's — are asked for behind the start)
       return true;
     })());
   } finally { console.log = log; console.warn = warn; }

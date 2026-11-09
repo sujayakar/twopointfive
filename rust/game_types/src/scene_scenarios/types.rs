@@ -1,4 +1,4 @@
-//! The types of `scene_scenarios`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `scene_scenarios`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
@@ -43,122 +43,49 @@ pub enum LessonTestKind {
     Any { of: Vec<crate::scene_scenarios::LessonTestKind> },
 }
 
-/// (TypeScript: Rect, src/scene/scenarios.ts:12)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Rect {
     pub x0: f64,
     pub x1: f64,
     pub z0: f64,
     pub z1: f64,
 }
-impl Rect {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Rect {
-            x0: 0.0,
-            x1: 0.0,
-            z0: 0.0,
-            z1: 0.0,
-        }
-    }
-}
-impl Default for Rect { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: TeamStart, src/scene/scenarios.ts:16)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct TeamStart {
     pub sam: V3,
     pub sam_yaw: f64,
     pub ops: Option<Vec<V3>>,
     pub ops_yaw: Option<f64>,
 }
-impl TeamStart {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        TeamStart {
-            sam: [0.0; 3],
-            sam_yaw: 0.0,
-            ops: None,
-            ops_yaw: None,
-        }
-    }
-}
-impl Default for TeamStart { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: ScenarioMark, src/scene/scenarios.ts:18)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct ScenarioMark {
     pub pos: V3,
     pub aim_at: V3,
 }
-impl ScenarioMark {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ScenarioMark {
-            pos: [0.0; 3],
-            aim_at: [0.0; 3],
-        }
-    }
-}
-impl Default for ScenarioMark { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: NightBreachData, src/scene/scenarios.ts:23)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct NightBreachData {
     pub team: crate::scene_scenarios::TeamStart,
     pub room: Option<String>,
     pub lights: Option<String>,
 }
-impl NightBreachData {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        NightBreachData {
-            team: crate::scene_scenarios::TeamStart::zeroed(),
-            room: None,
-            lights: None,
-        }
-    }
-}
-impl Default for NightBreachData { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: StructureDoor, src/scene/scenarios.ts:27)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct StructureDoor {
     pub id: String,
     pub from: String,
 }
-impl StructureDoor {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StructureDoor {
-            id: String::new(),
-            from: String::new(),
-        }
-    }
-}
-impl Default for StructureDoor { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: StructureMark, src/scene/scenarios.ts:29)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct StructureMark {
     pub pos: V3,
     pub watch: String,
     pub aim_at: V3,
 }
-impl StructureMark {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StructureMark {
-            pos: [0.0; 3],
-            watch: String::new(),
-            aim_at: [0.0; 3],
-        }
-    }
-}
-impl Default for StructureMark { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: StructureRoom, src/scene/scenarios.ts:30)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct StructureRoom {
     pub id: String,
     pub name: String,
@@ -167,23 +94,8 @@ pub struct StructureRoom {
     pub garrison: f64,
     pub marks: Vec<crate::scene_scenarios::StructureMark>,
 }
-impl StructureRoom {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StructureRoom {
-            id: String::new(),
-            name: String::new(),
-            bounds: crate::scene_scenarios::Rect::zeroed(),
-            doors: Vec::new(),
-            garrison: 0.0,
-            marks: Vec::new(),
-        }
-    }
-}
-impl Default for StructureRoom { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: StructureData, src/scene/scenarios.ts:40)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct StructureData {
     pub name: String,
     pub team: Option<crate::scene_scenarios::TeamStart>,
@@ -195,26 +107,8 @@ pub struct StructureData {
     pub wall_charges: Option<f64>,
     pub squads: Option<Vec<crate::scene_scenarios::SquadData>>,
 }
-impl StructureData {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StructureData {
-            name: String::new(),
-            team: None,
-            rooms: Vec::new(),
-            starts: None,
-            max_men: None,
-            way_out: None,
-            dig_in: None,
-            wall_charges: None,
-            squads: None,
-        }
-    }
-}
-impl Default for StructureData { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: SquadData, src/scene/scenarios.ts:70)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct SquadData {
     pub id: String,
     pub name: Option<String>,
@@ -225,24 +119,7 @@ pub struct SquadData {
     pub training: Option<crate::scene_scenarios::SquadDataTraining>,
     pub arrive: Option<crate::scene_scenarios::SquadArrive>,
 }
-impl SquadData {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SquadData {
-            id: String::new(),
-            name: None,
-            rooms: None,
-            rally: None,
-            barricade: None,
-            may_leave: None,
-            training: None,
-            arrive: None,
-        }
-    }
-}
-impl Default for SquadData { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum SquadDataTraining {
     Trained,
@@ -259,27 +136,14 @@ impl SquadDataTraining {
     }
 }
 
-/// (TypeScript: SquadArrive, src/scene/scenarios.ts:64)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct SquadArrive {
     pub door: String,
     pub spawn: Vec<V3>,
     pub men: f64,
 }
-impl SquadArrive {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SquadArrive {
-            door: String::new(),
-            spawn: Vec::new(),
-            men: 0.0,
-        }
-    }
-}
-impl Default for SquadArrive { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: RouteOpening, src/scene/scenarios.ts:99)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct RouteOpening {
     pub id: String,
     pub name: String,
@@ -296,33 +160,10 @@ pub struct RouteOpening {
     pub side: crate::scene_scenarios::RouteOpeningSide,
     pub look: f64,
 }
-impl RouteOpening {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RouteOpening {
-            id: String::new(),
-            name: String::new(),
-            short: String::new(),
-            region: String::new(),
-            kind: crate::scene_scenarios::RouteOpeningKind::Door,
-            door: None,
-            at: [0.0; 3],
-            mark: [0.0; 3],
-            watch: [0.0; 3],
-            half: 0.0,
-            north: false,
-            call: String::new(),
-            side: crate::scene_scenarios::RouteOpeningSide::Left,
-            look: 0.0,
-        }
-    }
-}
-impl Default for RouteOpening { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum RouteOpeningKind {
-    Door,
+    #[default] Door,
     Glass,
     Doorway,
 }
@@ -336,10 +177,9 @@ impl RouteOpeningKind {
     }
 }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum RouteOpeningSide {
-    Left,
+    #[default] Left,
     Right,
 }
 impl RouteOpeningSide {
@@ -351,67 +191,29 @@ impl RouteOpeningSide {
     }
 }
 
-/// (TypeScript: RescueFlowData, src/scene/scenarios.ts:109)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct RescueFlowData {
     pub corridor: crate::scene_scenarios::Rect,
     pub regions: Vec<crate::scene_scenarios::RescueFlowDataRegionsItem>,
     pub route: Vec<crate::scene_scenarios::RouteOpening>,
     pub hold: crate::scene_scenarios::RescueFlowDataHold,
 }
-impl RescueFlowData {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RescueFlowData {
-            corridor: crate::scene_scenarios::Rect::zeroed(),
-            regions: Vec::new(),
-            route: Vec::new(),
-            hold: crate::scene_scenarios::RescueFlowDataHold::zeroed(),
-        }
-    }
-}
-impl Default for RescueFlowData { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/scenarios.ts:112 RescueFlowData.regions, src/scene/scenarios.ts:112)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct RescueFlowDataRegionsItem {
     pub id: String,
     pub door: Option<String>,
     pub rect: crate::scene_scenarios::Rect,
 }
-impl RescueFlowDataRegionsItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RescueFlowDataRegionsItem {
-            id: String::new(),
-            door: None,
-            rect: crate::scene_scenarios::Rect::zeroed(),
-        }
-    }
-}
-impl Default for RescueFlowDataRegionsItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/scenarios.ts:115 RescueFlowData.hold, src/scene/scenarios.ts:115)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct RescueFlowDataHold {
     pub ahead: f64,
     pub x_max: f64,
     pub z: f64,
 }
-impl RescueFlowDataHold {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RescueFlowDataHold {
-            ahead: 0.0,
-            x_max: 0.0,
-            z: 0.0,
-        }
-    }
-}
-impl Default for RescueFlowDataHold { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: RescueData, src/scene/scenarios.ts:117)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct RescueData {
     pub team: crate::scene_scenarios::TeamStart,
     pub room: crate::scene_scenarios::RescueDataRoom,
@@ -424,27 +226,8 @@ pub struct RescueData {
     pub cast: Option<crate::scene_scenarios::RescueDataCast>,
     pub flow: Option<crate::scene_scenarios::RescueFlowData>,
 }
-impl RescueData {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RescueData {
-            team: crate::scene_scenarios::TeamStart::zeroed(),
-            room: crate::scene_scenarios::RescueDataRoom::zeroed(),
-            side: None,
-            hostages: Vec::new(),
-            captor: crate::scene_scenarios::ScenarioMark::zeroed(),
-            door_man: crate::scene_scenarios::RescueDataDoorMan::zeroed(),
-            roamers: Vec::new(),
-            guards: None,
-            cast: None,
-            flow: None,
-        }
-    }
-}
-impl Default for RescueData { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/scenarios.ts:120 RescueData.room, src/scene/scenarios.ts:120)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct RescueDataRoom {
     pub name: String,
     pub where_: Option<String>,
@@ -455,25 +238,8 @@ pub struct RescueDataRoom {
     pub outside: Option<V3>,
     pub hold: Option<V3>,
 }
-impl RescueDataRoom {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RescueDataRoom {
-            name: String::new(),
-            where_: None,
-            door: String::new(),
-            bounds: None,
-            lights: None,
-            door_aim: [0.0; 3],
-            outside: None,
-            hold: None,
-        }
-    }
-}
-impl Default for RescueDataRoom { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/scenarios.ts:136 RescueData.side, src/scene/scenarios.ts:136)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct RescueDataSide {
     pub door: String,
     pub hold: V3,
@@ -482,142 +248,50 @@ pub struct RescueDataSide {
     pub stack: Option<Vec<V3>>,
     pub standoff: Option<Vec<V3>>,
 }
-impl RescueDataSide {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RescueDataSide {
-            door: String::new(),
-            hold: [0.0; 3],
-            from: None,
-            pair: None,
-            stack: None,
-            standoff: None,
-        }
-    }
-}
-impl Default for RescueDataSide { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/scenarios.ts:141 RescueDataSide.from, src/scene/scenarios.ts:141)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct RescueDataSideFrom {
     pub door: String,
     pub bounds: Option<crate::scene_scenarios::Rect>,
 }
-impl RescueDataSideFrom {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RescueDataSideFrom {
-            door: String::new(),
-            bounds: None,
-        }
-    }
-}
-impl Default for RescueDataSideFrom { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/scenarios.ts:148 RescueData.hostages, src/scene/scenarios.ts:148)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct RescueDataHostagesItem {
     pub pos: V3,
     pub face: f64,
 }
-impl RescueDataHostagesItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RescueDataHostagesItem {
-            pos: [0.0; 3],
-            face: 0.0,
-        }
-    }
-}
-impl Default for RescueDataHostagesItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/scenarios.ts:151 RescueData.doorMan, src/scene/scenarios.ts:151)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct RescueDataDoorMan {
     pub inside: crate::scene_scenarios::ScenarioMark,
     pub outside: crate::scene_scenarios::ScenarioMark,
 }
-impl RescueDataDoorMan {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RescueDataDoorMan {
-            inside: crate::scene_scenarios::ScenarioMark::zeroed(),
-            outside: crate::scene_scenarios::ScenarioMark::zeroed(),
-        }
-    }
-}
-impl Default for RescueDataDoorMan { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/scenarios.ts:158 RescueData.cast, src/scene/scenarios.ts:158)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct RescueDataCast {
     pub roamers: f64,
 }
-impl RescueDataCast {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RescueDataCast {
-            roamers: 0.0,
-        }
-    }
-}
-impl Default for RescueDataCast { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: PlaceArea, src/scene/scenarios.ts:167)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct PlaceArea {
     pub name: String,
     pub bounds: crate::scene_scenarios::Rect,
 }
-impl PlaceArea {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PlaceArea {
-            name: String::new(),
-            bounds: crate::scene_scenarios::Rect::zeroed(),
-        }
-    }
-}
-impl Default for PlaceArea { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: PlacesData, src/scene/scenarios.ts:168)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct PlacesData {
     pub areas: Vec<crate::scene_scenarios::PlaceArea>,
 }
-impl PlacesData {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PlacesData {
-            areas: Vec::new(),
-        }
-    }
-}
-impl Default for PlacesData { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: QuietStart, src/scene/scenarios.ts:174)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct QuietStart {
     pub sam: V3,
     pub sam_yaw: f64,
     pub mate: Option<V3>,
     pub name: Option<String>,
 }
-impl QuietStart {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        QuietStart {
-            sam: [0.0; 3],
-            sam_yaw: 0.0,
-            mate: None,
-            name: None,
-        }
-    }
-}
-impl Default for QuietStart { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: QuietSpot, src/scene/scenarios.ts:181)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct QuietSpot {
     pub place: String,
     pub area: crate::scene_scenarios::Rect,
@@ -628,25 +302,8 @@ pub struct QuietSpot {
     pub half_w: f64,
     pub wired: Option<bool>,
 }
-impl QuietSpot {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        QuietSpot {
-            place: String::new(),
-            area: crate::scene_scenarios::Rect::zeroed(),
-            door: String::new(),
-            holder: String::new(),
-            rack_index: 0.0,
-            front: [0.0; 3],
-            half_w: 0.0,
-            wired: None,
-        }
-    }
-}
-impl Default for QuietSpot { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: QuietExit, src/scene/scenarios.ts:197)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct QuietExit {
     pub name: String,
     pub door: String,
@@ -655,44 +312,16 @@ pub struct QuietExit {
     pub out: [f64; 2],
     pub half_w: Option<f64>,
 }
-impl QuietExit {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        QuietExit {
-            name: String::new(),
-            door: String::new(),
-            x: 0.0,
-            z: 0.0,
-            out: [0.0; 2],
-            half_w: None,
-        }
-    }
-}
-impl Default for QuietExit { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: QuietStand, src/scene/scenarios.ts:199)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct QuietStand {
     pub name: String,
     pub pos: V3,
     pub face: f64,
     pub loop_: Option<Vec<V3>>,
 }
-impl QuietStand {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        QuietStand {
-            name: String::new(),
-            pos: [0.0; 3],
-            face: 0.0,
-            loop_: None,
-        }
-    }
-}
-impl Default for QuietStand { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: QuietData, src/scene/scenarios.ts:200)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct QuietData {
     pub thing: Option<String>,
     pub starts: Vec<crate::scene_scenarios::QuietStart>,
@@ -704,46 +333,15 @@ pub struct QuietData {
     pub wayouts: Option<Vec<crate::scene_scenarios::QuietStand>>,
     pub radio_check: Option<bool>,
 }
-impl QuietData {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        QuietData {
-            thing: None,
-            starts: Vec::new(),
-            spots: Vec::new(),
-            exits: Vec::new(),
-            patrols: None,
-            needs: None,
-            phones: None,
-            wayouts: None,
-            radio_check: None,
-        }
-    }
-}
-impl Default for QuietData { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/scenarios.ts:210 QuietData.needs, src/scene/scenarios.ts:210)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct QuietDataNeeds {
     pub coffee: Option<crate::scene_scenarios::QuietStand>,
     pub smoke: Option<crate::scene_scenarios::QuietStand>,
     pub water: Option<crate::scene_scenarios::QuietStand>,
     pub stretch: Option<crate::scene_scenarios::QuietStand>,
 }
-impl QuietDataNeeds {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        QuietDataNeeds {
-            coffee: None,
-            smoke: None,
-            water: None,
-            stretch: None,
-        }
-    }
-}
-impl Default for QuietDataNeeds { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: LessonStep, src/scene/scenarios.ts:226)
 #[derive(Clone, Debug, ToBytes)]
 pub struct LessonStep {
     pub id: String,
@@ -771,9 +369,8 @@ pub struct LessonStep {
     pub on_way: Option<crate::scene_scenarios::LessonStepOnWay>,
     pub after: Option<crate::scene_scenarios::LessonStepAfter>,
 }
-impl LessonStep {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
+impl Default for LessonStep {
+    fn default() -> Self {
         LessonStep {
             id: String::new(),
             line: String::new(),
@@ -802,86 +399,36 @@ impl LessonStep {
         }
     }
 }
-impl Default for LessonStep { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/scenarios.ts:270 LessonStep.eye, src/scene/scenarios.ts:270)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct LessonStepEye {
     pub at: V3,
     pub yaw: f64,
     pub fov: Option<f64>,
 }
-impl LessonStepEye {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LessonStepEye {
-            at: [0.0; 3],
-            yaw: 0.0,
-            fov: None,
-        }
-    }
-}
-impl Default for LessonStepEye { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/scenarios.ts:276 LessonStep.explain, src/scene/scenarios.ts:276)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct LessonStepExplain {
     pub title: Option<String>,
     pub text: String,
     pub quiet: Option<bool>,
     pub now: Option<bool>,
 }
-impl LessonStepExplain {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LessonStepExplain {
-            title: None,
-            text: String::new(),
-            quiet: None,
-            now: None,
-        }
-    }
-}
-impl Default for LessonStepExplain { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/scenarios.ts:282 LessonStep.onWay, src/scene/scenarios.ts:282)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct LessonStepOnWay {
     pub nv: Option<bool>,
     pub run: Option<bool>,
 }
-impl LessonStepOnWay {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LessonStepOnWay {
-            nv: None,
-            run: None,
-        }
-    }
-}
-impl Default for LessonStepOnWay { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/scenarios.ts:285 LessonStep.after, src/scene/scenarios.ts:285)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct LessonStepAfter {
     pub line: Option<String>,
     pub on: Option<Vec<String>>,
     pub word: Option<String>,
 }
-impl LessonStepAfter {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LessonStepAfter {
-            line: None,
-            on: None,
-            word: None,
-        }
-    }
-}
-impl Default for LessonStepAfter { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: RailsData, src/scene/scenarios.ts:288)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct RailsData {
     pub allow: Vec<String>,
     pub respawn: Option<f64>,
@@ -893,121 +440,43 @@ pub struct RailsData {
     pub flat_ring: Option<bool>,
     pub rows: Option<Vec<String>>,
 }
-impl RailsData {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RailsData {
-            allow: Vec::new(),
-            respawn: None,
-            fog: None,
-            waits: None,
-            sky: None,
-            lasers: None,
-            orders: None,
-            flat_ring: None,
-            rows: None,
-        }
-    }
-}
-impl Default for RailsData { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/scenarios.ts:298 RailsData.waits, src/scene/scenarios.ts:298)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct RailsDataWaits {
     pub low: Option<bool>,
 }
-impl RailsDataWaits {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RailsDataWaits {
-            low: None,
-        }
-    }
-}
-impl Default for RailsDataWaits { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/scenarios.ts:303 RailsData.sky, src/scene/scenarios.ts:303)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct RailsDataSky {
     pub park: V3,
     pub reach: Option<f64>,
     pub eye: Option<crate::scene_scenarios::RailsDataSkyEye>,
     pub low: Option<bool>,
 }
-impl RailsDataSky {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RailsDataSky {
-            park: [0.0; 3],
-            reach: None,
-            eye: None,
-            low: None,
-        }
-    }
-}
-impl Default for RailsDataSky { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/scenarios.ts:303 RailsDataSky.eye, src/scene/scenarios.ts:303)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct RailsDataSkyEye {
     pub at: V3,
     pub yaw: f64,
     pub fov: Option<f64>,
 }
-impl RailsDataSkyEye {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RailsDataSkyEye {
-            at: [0.0; 3],
-            yaw: 0.0,
-            fov: None,
-        }
-    }
-}
-impl Default for RailsDataSkyEye { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: LessonData, src/scene/scenarios.ts:319)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct LessonData {
     pub title: String,
     pub steps: Vec<crate::scene_scenarios::LessonStep>,
     pub rails: Option<crate::scene_scenarios::RailsData>,
 }
-impl LessonData {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LessonData {
-            title: String::new(),
-            steps: Vec::new(),
-            rails: None,
-        }
-    }
-}
-impl Default for LessonData { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: ParData, src/scene/scenarios.ts:330)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct ParData {
     pub gold: f64,
     pub silver: f64,
     pub bronze: f64,
     pub loss_secs: f64,
 }
-impl ParData {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ParData {
-            gold: 0.0,
-            silver: 0.0,
-            bronze: 0.0,
-            loss_secs: 0.0,
-        }
-    }
-}
-impl Default for ParData { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: IssueCard, src/scene/scenarios.ts:335)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct IssueCard {
     pub weapon: Option<crate::kit::KitWeapon>,
     pub suppressed: Option<bool>,
@@ -1022,28 +491,7 @@ pub struct IssueCard {
     pub rings: Option<f64>,
     pub loaded: Option<crate::scene_scenarios::IssueCardLoaded>,
 }
-impl IssueCard {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        IssueCard {
-            weapon: None,
-            suppressed: None,
-            light: None,
-            nvg: None,
-            bangs: None,
-            charges: None,
-            smoke: None,
-            frags: None,
-            walls: None,
-            shells: None,
-            rings: None,
-            loaded: None,
-        }
-    }
-}
-impl Default for IssueCard { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum IssueCardLoaded {
     Ring,
@@ -1058,23 +506,12 @@ impl IssueCardLoaded {
     }
 }
 
-/// (TypeScript: IssueData, src/scene/scenarios.ts:342)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct IssueData {
     pub members: JsMap<String, crate::scene_scenarios::IssueCard>,
 }
-impl IssueData {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        IssueData {
-            members: JsMap::new(),
-        }
-    }
-}
-impl Default for IssueData { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: ResponseWay, src/scene/scenarios.ts:486)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct ResponseWay {
     pub name: String,
     pub door: Option<String>,
@@ -1085,46 +522,16 @@ pub struct ResponseWay {
     pub clear: Option<String>,
     pub stairs: Option<bool>,
 }
-impl ResponseWay {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ResponseWay {
-            name: String::new(),
-            door: None,
-            muster: Vec::new(),
-            entry: Vec::new(),
-            entry_face: Vec::new(),
-            coming: None,
-            clear: None,
-            stairs: None,
-        }
-    }
-}
-impl Default for ResponseWay { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: ResponsePost, src/scene/scenarios.ts:503)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct ResponsePost {
     pub name: String,
     pub pos: V3,
     pub yaw: f64,
     pub sweep: [V3; 2],
 }
-impl ResponsePost {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ResponsePost {
-            name: String::new(),
-            pos: [0.0; 3],
-            yaw: 0.0,
-            sweep: [[0.0; 3]; 2],
-        }
-    }
-}
-impl Default for ResponsePost { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: ResponseData, src/scene/scenarios.ts:504)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct ResponseData {
     pub why: String,
     pub site: String,
@@ -1139,61 +546,19 @@ pub struct ResponseData {
     pub sweep: Option<Vec<crate::scene_scenarios::ResponseDataSweepItem>>,
     pub raid: Option<crate::scene_scenarios::ResponseDataRaid>,
 }
-impl ResponseData {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ResponseData {
-            why: String::new(),
-            site: String::new(),
-            at: String::new(),
-            team: String::new(),
-            tag: None,
-            ways: Vec::new(),
-            men: None,
-            eta: None,
-            posts: None,
-            outside: None,
-            sweep: None,
-            raid: None,
-        }
-    }
-}
-impl Default for ResponseData { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/scenarios.ts:522 ResponseData.sweep, src/scene/scenarios.ts:522)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct ResponseDataSweepItem {
     pub name: String,
     pub pos: V3,
 }
-impl ResponseDataSweepItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ResponseDataSweepItem {
-            name: String::new(),
-            pos: [0.0; 3],
-        }
-    }
-}
-impl Default for ResponseDataSweepItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/scenarios.ts:527 ResponseData.raid, src/scene/scenarios.ts:527)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct ResponseDataRaid {
     pub room: Option<String>,
 }
-impl ResponseDataRaid {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ResponseDataRaid {
-            room: None,
-        }
-    }
-}
-impl Default for ResponseDataRaid { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: LevelScenarios, src/scene/scenarios.ts:529)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct LevelScenarios {
     pub night_breach: Option<crate::scene_scenarios::NightBreachData>,
     pub room_clear: Option<crate::scene_scenarios::StructureData>,
@@ -1208,46 +573,14 @@ pub struct LevelScenarios {
     pub door_names: Option<Vec<crate::scene_scenarios::LevelScenariosDoorNamesItem>>,
     pub walked: Option<Vec<crate::scene_ways::WayHint>>,
 }
-impl LevelScenarios {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LevelScenarios {
-            night_breach: None,
-            room_clear: None,
-            rescue: None,
-            places: None,
-            quiet: None,
-            lesson: None,
-            par: None,
-            issue: None,
-            kit_view: None,
-            response: None,
-            door_names: None,
-            walked: None,
-        }
-    }
-}
-impl Default for LevelScenarios { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: KitViewData, src/scene/scenarios.ts:480)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct KitViewData {
     pub ways: Vec<crate::scene_scenarios::KitViewWay>,
     pub sets: Option<JsMap<String, crate::scene_scenarios::KitViewSet>>,
 }
-impl KitViewData {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitViewData {
-            ways: Vec::new(),
-            sets: None,
-        }
-    }
-}
-impl Default for KitViewData { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: KitViewWay, src/scene/scenarios.ts:414)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct KitViewWay {
     pub door: Option<String>,
     pub side: Option<f64>,
@@ -1276,62 +609,15 @@ pub struct KitViewWay {
     pub lit_inside: Option<bool>,
     pub add: Option<crate::scene_scenarios::KitViewWayAdd>,
 }
-impl KitViewWay {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitViewWay {
-            door: None,
-            side: None,
-            pin: None,
-            slots: None,
-            light: None,
-            hide: None,
-            hide_paint: None,
-            hide_more: None,
-            room_lights: None,
-            span: None,
-            kind: None,
-            set: None,
-            ref_: None,
-            hand: None,
-            slot_gap: None,
-            wall: None,
-            lane: None,
-            out: None,
-            inside: None,
-            pane: None,
-            show: None,
-            indoors: None,
-            keep_lights: None,
-            day_lights: None,
-            lit_inside: None,
-            add: None,
-        }
-    }
-}
-impl Default for KitViewWay { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/scenarios.ts:420 KitViewWay.pin, src/scene/scenarios.ts:420)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct KitViewWayPin {
     pub yaw: f64,
     pub pitch: f64,
     pub dist: Option<f64>,
 }
-impl KitViewWayPin {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitViewWayPin {
-            yaw: 0.0,
-            pitch: 0.0,
-            dist: None,
-        }
-    }
-}
-impl Default for KitViewWayPin { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: KitViewLightOver, src/scene/scenarios.ts:413)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct KitViewLightOver {
     pub porch: Option<crate::scene_scenarios::KitViewLightOverPorch>,
     pub fill: Option<crate::scene_scenarios::KitViewLightOverFill>,
@@ -1340,23 +626,8 @@ pub struct KitViewLightOver {
     pub sky_scale: Option<f64>,
     pub sam: Option<crate::scene_scenarios::KitViewLightOverSam>,
 }
-impl KitViewLightOver {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitViewLightOver {
-            porch: None,
-            fill: None,
-            room_lights: None,
-            moon_scale: None,
-            sky_scale: None,
-            sam: None,
-        }
-    }
-}
-impl Default for KitViewLightOver { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/scenarios.ts:413 KitViewLightOver.porch, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct KitViewLightOverPorch {
     pub kind: Option<f64>,
     pub offset: Option<V3>,
@@ -1372,49 +643,15 @@ pub struct KitViewLightOverPorch {
     pub fixture: Option<crate::scene_scenarios::KitViewLightOverPorchFixture>,
     pub day: Option<f64>,
 }
-impl KitViewLightOverPorch {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitViewLightOverPorch {
-            kind: None,
-            offset: None,
-            aim: None,
-            color: None,
-            intensity: None,
-            range: None,
-            inner_deg: None,
-            outer_deg: None,
-            radius: None,
-            volumetric: None,
-            broad: None,
-            fixture: None,
-            day: None,
-        }
-    }
-}
-impl Default for KitViewLightOverPorch { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/scenarios.ts:399 KitViewLightOverPorch.fixture, src/scene/scenarios.ts:399)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct KitViewLightOverPorchFixture {
     pub at: V3,
     pub half: V3,
     pub glow: f64,
 }
-impl KitViewLightOverPorchFixture {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitViewLightOverPorchFixture {
-            at: [0.0; 3],
-            half: [0.0; 3],
-            glow: 0.0,
-        }
-    }
-}
-impl Default for KitViewLightOverPorchFixture { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/scenarios.ts:413 KitViewLightOver.fill, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct KitViewLightOverFill {
     pub kind: Option<f64>,
     pub offset: Option<V3>,
@@ -1428,28 +665,8 @@ pub struct KitViewLightOverFill {
     pub volumetric: Option<f64>,
     pub broad: Option<bool>,
 }
-impl KitViewLightOverFill {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitViewLightOverFill {
-            kind: None,
-            offset: None,
-            aim: None,
-            color: None,
-            intensity: None,
-            range: None,
-            inner_deg: None,
-            outer_deg: None,
-            radius: None,
-            volumetric: None,
-            broad: None,
-        }
-    }
-}
-impl Default for KitViewLightOverFill { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/scenarios.ts:413 KitViewLightOver.sam, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct KitViewLightOverSam {
     pub on: Option<bool>,
     pub intensity: Option<f64>,
@@ -1458,22 +675,7 @@ pub struct KitViewLightOverSam {
     pub volumetric: Option<f64>,
     pub aim: Option<V3>,
 }
-impl KitViewLightOverSam {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitViewLightOverSam {
-            on: None,
-            intensity: None,
-            inner_deg: None,
-            outer_deg: None,
-            volumetric: None,
-            aim: None,
-        }
-    }
-}
-impl Default for KitViewLightOverSam { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum KitViewWayKind {
     Door,
@@ -1490,7 +692,6 @@ impl KitViewWayKind {
     }
 }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum KitViewWayHand {
     Left,
@@ -1505,108 +706,47 @@ impl KitViewWayHand {
     }
 }
 
-/// (TypeScript: inline at src/scene/scenarios.ts:448 KitViewWay.wall, src/scene/scenarios.ts:448)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct KitViewWayWall {
     pub face: Option<f64>,
     pub thickness: Option<f64>,
     pub top: Option<f64>,
 }
-impl KitViewWayWall {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitViewWayWall {
-            face: None,
-            thickness: None,
-            top: None,
-        }
-    }
-}
-impl Default for KitViewWayWall { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: a union)
 #[derive(Clone, Debug, ToBytes)]
 pub enum KitViewWayPane {
     Bool(bool),
     Arm1(crate::scene_scenarios::KitViewWayPaneArm1),
 }
 
-/// (TypeScript: inline at src/scene/scenarios.ts:450 KitViewWay.pane, src/scene/scenarios.ts:450)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct KitViewWayPaneArm1 {
     pub box_: String,
     pub stand: Option<[f64; 3]>,
 }
-impl KitViewWayPaneArm1 {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitViewWayPaneArm1 {
-            box_: String::new(),
-            stand: None,
-        }
-    }
-}
-impl Default for KitViewWayPaneArm1 { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/scenarios.ts:472 KitViewWay.add, src/scene/scenarios.ts:472)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct KitViewWayAdd {
     pub boxes: Option<Vec<crate::scene_level_data::BoxData>>,
     pub lamps: Option<Vec<crate::scene_level_data::LightData>>,
     pub laid: Option<bool>,
 }
-impl KitViewWayAdd {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitViewWayAdd {
-            boxes: None,
-            lamps: None,
-            laid: None,
-        }
-    }
-}
-impl Default for KitViewWayAdd { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: KitViewSet, src/scene/scenarios.ts:479)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct KitViewSet {
     pub boxes: Vec<crate::scene_level_data::BoxData>,
     pub doors: Option<Vec<crate::scene_level_data::DoorData>>,
     pub lights: Option<Vec<crate::scene_level_data::LightData>>,
     pub ref_: [f64; 2],
 }
-impl KitViewSet {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KitViewSet {
-            boxes: Vec::new(),
-            doors: None,
-            lights: None,
-            ref_: [0.0; 2],
-        }
-    }
-}
-impl Default for KitViewSet { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/scenarios.ts:535 LevelScenarios.doorNames, src/scene/scenarios.ts:535)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct LevelScenariosDoorNamesItem {
     pub door: String,
     pub name: String,
 }
-impl LevelScenariosDoorNamesItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LevelScenariosDoorNamesItem {
-            door: String::new(),
-            name: String::new(),
-        }
-    }
-}
-impl Default for LevelScenariosDoorNamesItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: ScenarioEntry, src/scene/scenarios.ts:561)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct ScenarioEntry {
     pub id: String,
     pub title: String,
@@ -1630,40 +770,10 @@ pub struct ScenarioEntry {
     pub ways: Option<Vec<String>>,
     pub squads: Option<bool>,
 }
-impl ScenarioEntry {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ScenarioEntry {
-            id: String::new(),
-            title: String::new(),
-            kind: crate::scene_scenarios::ScenarioEntryKind::Nightbreach,
-            squad: 0.0,
-            group: None,
-            only: None,
-            packs: None,
-            level: None,
-            hour: None,
-            weather: None,
-            seed: None,
-            blurb: None,
-            scene: None,
-            teaches: None,
-            untuned: None,
-            off_list: None,
-            place: None,
-            lean: None,
-            defenders: None,
-            ways: None,
-            squads: None,
-        }
-    }
-}
-impl Default for ScenarioEntry { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum ScenarioEntryKind {
-    Nightbreach,
+    #[default] Nightbreach,
     Roomclear,
     Rescue,
     Quiet,
@@ -1679,7 +789,6 @@ impl ScenarioEntryKind {
     }
 }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum MissionGroup {
     Clock,
@@ -1702,22 +811,11 @@ impl MissionGroup {
     }
 }
 
-/// (TypeScript: inline at src/scene/scenarios.ts:574 ScenarioEntry.packs, src/scene/scenarios.ts:574)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct ScenarioEntryPacks {
     pub frags: Option<f64>,
 }
-impl ScenarioEntryPacks {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ScenarioEntryPacks {
-            frags: None,
-        }
-    }
-}
-impl Default for ScenarioEntryPacks { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum ScenarioEntryWeather {
     Clear,

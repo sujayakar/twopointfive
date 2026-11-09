@@ -1,5 +1,5 @@
 // THE HOSTED PAGE'S BACKEND, ON THE REAL PAGE (src/cloud/; tools/qa/cloud-check.ts holds the same headless): headless Chromium on the software WebGPU adapter
-// (tools/qa/page-look.cjs's recipe), a STAND-IN backend on this machine (cloud/test/standin.ts: the real functions in the service's test library — `npm ci` in
+// a STAND-IN backend on this machine (cloud/test/standin.ts: the real functions in the service's test library — `npm ci` in
 // cloud/ first), five page loads in three browser profiles —
 //   1. a mission page pointed at the stand-in (`?cloud=http://127.0.0.1:<port>`) is played with no key pressed: its kept tape, the visit's record and the
 //      browser's settings are on the backend afterwards, and the tape reads back out (tools/cloud/pull.ts) as a replay with as many seconds as were kept
@@ -33,7 +33,7 @@ const heard = async () => (await (await fetch(`${CLOUD}/__stats`)).json()).calls
     page.on('console', m => { if (m.type() === 'error' && !NOISE.test(m.text()) && !/Failed to load resource/.test(m.text())) errors.push(m.text().slice(0, 300)); });
     page.on('pageerror', x => errors.push('pageerror: ' + String(x && x.stack || x).slice(0, 400)));
     const asked = []; page.on('dialog', d => { asked.push(d.message()); d.accept().catch(() => {}); });   // (the one question a page asks: a browser handed another's link)
-    // (leaving a page: it stops drawing first — on this adapter a page with drawn frames queued does not let a navigation commit for minutes; tools/qa/replaykeep-page.cjs)
+    // (leaving a page: it stops drawing first — on this adapter a page with drawn frames queued does not let a navigation commit for minutes)
     const go = async (url) => { await page.evaluate(async () => { const e = window.__engine; if (!e) return; e.render = () => {}; try { if (window.__draw.smoke) window.__draw.smoke.params.enabled = false; await Promise.race([e.device.queue.onSubmittedWorkDone(), new Promise(r => setTimeout(r, 20000))]); } catch { /* */ } }).catch(() => {}); await page.goto(url, { timeout: NAV }); };
     const ready = () => page.evaluate(async () => { await window.__ready; return { fatal: document.getElementById('fatal')?.textContent || '', search: location.search, cloud: window.__cloud ? { url: window.__cloud.url, pid: window.__cloud.pid, sid: window.__cloud.sid, share: window.__cloud.share } : null }; });
     const play = (frames) => page.evaluate(async (n) => { window.__draw.run(0); window.__draw.smoke.params.enabled = false; const e = window.__engine, real = e.render; e.render = () => {};

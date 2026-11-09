@@ -44,7 +44,7 @@ mod tests {
     use crate::scene_scenarios::{SquadData, StructureDoor, StructureRoom};
 
     fn room(id: &str, doors: &[&str]) -> StructureRoom {
-        let mut r = StructureRoom::zeroed();
+        let mut r = StructureRoom::default();
         r.id = String::from(id);
         r.doors = doors
             .iter()
@@ -55,7 +55,7 @@ mod tests {
 
     fn squad(rooms: Option<&[&str]>, barricade: Option<&[&str]>) -> SquadData {
         let strings = |list: &[&str]| list.iter().map(|s| String::from(*s)).collect::<Vec<String>>();
-        let mut q = SquadData::zeroed();
+        let mut q = SquadData::default();
         q.rooms = rooms.map(|l| strings(l));
         q.barricade = barricade.map(|l| strings(l));
         q

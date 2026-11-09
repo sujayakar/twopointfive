@@ -494,7 +494,7 @@ mod tests {
     #[test]
     fn fit_groups_pairs_as_the_typescript_does() {
         let fits = |l: &[[f64; 2]]| -> Vec<crate::roomfit::Fit> {
-            l.iter().map(|p| { let mut f = crate::roomfit::Fit::zeroed(); f.pos = [p[0], 0.0, p[1]]; f }).collect()
+            l.iter().map(|p| { let mut f = crate::roomfit::Fit::default(); f.pos = [p[0], 0.0, p[1]]; f }).collect()
         };
         assert_eq!(fit_groups(&fits(&[[0.0, 0.0], [1.0, 1.0]])), [0.0, 0.0]);
         assert_eq!(fit_groups(&fits(&[[0.0, 0.0], [5.0, 0.0], [1.0, 0.0]])), [0.0, 1.0, 0.0]);

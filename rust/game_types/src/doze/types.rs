@@ -1,9 +1,8 @@
-//! The types of `doze`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `doze`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum DozeWhy {
     Light,
@@ -28,10 +27,9 @@ impl DozeWhy {
     }
 }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
 pub enum Phase {
-    Down,
+    #[default] Down,
     Work,
     Up,
     Spent,
@@ -55,8 +53,7 @@ impl Phase {
     }
 }
 
-/// (TypeScript: Doze, src/game/doze.ts:81)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Doze {
     pub phase: crate::doze::Phase,
     pub wp: f64,
@@ -79,37 +76,8 @@ pub struct Doze {
     pub why: Option<crate::doze::DozeWhy>,
     pub woke_at: f64,
 }
-impl Doze {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Doze {
-            phase: crate::doze::Phase::Down,
-            wp: 0.0,
-            chair: None,
-            mon: None,
-            mon_was: false,
-            say: 0.0,
-            to: [0.0; 3],
-            at: [0.0; 3],
-            face: 0.0,
-            cx: 0.0,
-            cz: 0.0,
-            cyaw: 0.0,
-            t: 0.0,
-            seen: 0.0,
-            until: 0.0,
-            lit: 0.0,
-            ask: 0.0,
-            push: 0.0,
-            why: None,
-            woke_at: 0.0,
-        }
-    }
-}
-impl Default for Doze { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Seat, src/game/doze.ts:124)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Seat {
     pub chair: PropId,
     pub at: V3,
@@ -117,41 +85,15 @@ pub struct Seat {
     pub mon: Option<FixtureId>,
     pub to: V3,
 }
-impl Seat {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Seat {
-            chair: PropId(0),
-            at: [0.0; 3],
-            face: 0.0,
-            mon: None,
-            to: [0.0; 3],
-        }
-    }
-}
-impl Default for Seat { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: DozeSnap, src/game/doze.ts:352)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct DozeSnap {
     pub men: Vec<crate::doze::DozeSnapMenItem>,
     pub said: Option<Vec<f64>>,
     pub left: Option<Vec<Vec<f64>>>,
 }
-impl DozeSnap {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DozeSnap {
-            men: Vec::new(),
-            said: None,
-            left: None,
-        }
-    }
-}
-impl Default for DozeSnap { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/doze.ts:352 DozeSnap.men, src/game/doze.ts:352)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct DozeSnapMenItem {
     pub i: f64,
     pub phase: crate::doze::Phase,
@@ -173,35 +115,7 @@ pub struct DozeSnapMenItem {
     pub why: Option<crate::doze::DozeWhy>,
     pub woke_at: f64,
 }
-impl DozeSnapMenItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DozeSnapMenItem {
-            i: 0.0,
-            phase: crate::doze::Phase::Down,
-            wp: 0.0,
-            chair: 0.0,
-            mon: None,
-            mon_was: None,
-            say: None,
-            to: None,
-            at: Vec::new(),
-            face: 0.0,
-            cx: 0.0,
-            cz: 0.0,
-            cyaw: 0.0,
-            t: 0.0,
-            until: 0.0,
-            lit: 0.0,
-            ask: None,
-            why: None,
-            woke_at: 0.0,
-        }
-    }
-}
-impl Default for DozeSnapMenItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum WakeWhy {
     Light,
@@ -224,7 +138,6 @@ impl WakeWhy {
     }
 }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum DozeAt {
     Screen,
@@ -239,26 +152,13 @@ impl DozeAt {
     }
 }
 
-/// (TypeScript: inline at src/game/doze.ts:341 dozeOf ->, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1597)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct DozeOf {
     pub phase: crate::doze::Phase,
     pub why: Option<crate::doze::DozeWhy>,
     pub secs: f64,
     pub wp: f64,
 }
-impl DozeOf {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DozeOf {
-            phase: crate::doze::Phase::Down,
-            why: None,
-            secs: 0.0,
-            wp: 0.0,
-        }
-    }
-}
-impl Default for DozeOf { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]

@@ -1,4 +1,4 @@
-// FOG OF WAR — the renderer's half (game/fogofwar.ts has the rule and fills the FogFrame; shaders/fogofwar.wgsl is the kernel): one compute pass over the
+// FOG OF WAR — the renderer's half (rust/game_rules/src/fogofwar has the rule and fills the FogFrame; shaders/fogofwar.wgsl is the kernel): one compute pass over the
 // composite, in place, that pushes down every pixel whose surface none of the team's eyes can see in plan. Everything of it lives here: the pipeline (compiled
 // the first frame the switch is on, asynchronously — the pass simply does not run until it is ready), its 288-B uniform (+ the lit fog's 3 KB of lamps), its copy of hdr (made at the
 // composite's size on first use, re-made when that changes, let go when the switch goes off). passes.ts gives hdr the two usages the pass needs while the
@@ -14,7 +14,7 @@ import fogSrc from './shaders/fogofwar.wgsl' with { type: 'text' };
 import sightSrc from './shaders/fogsight.wgsl' with { type: 'text' };
 
 /** eyes the pass has ROOM for (the team: Sam + four — the four-man squad — and two more: a sticky camera's feed, a tutorial's lookout; the pair fills three
- *  and the kernel walks only the live ones). How many the game USES is game/fogofwar.ts FOG.eyes (5 until 10-24). The arrays in shaders/fogofwar.wgsl,
+ *  and the kernel walks only the live ones). How many the game USES is rust/game_rules/src/fogofwar FOG.eyes (5 until 10-24). The arrays in shaders/fogofwar.wgsl,
  *  fogsight.wgsl and common.wgsl FogSightT carry this number as a literal (and FogSightT.dist FOG_BINS × this / 4): change them together. 7 is the most
  *  the sight table holds: FOG_BINS × 8 × 4 B is the whole 64 KB a uniform block may be. */
 export const FOG_EYES = 7;
@@ -24,9 +24,9 @@ export const FOG_BINS = 2048;
 export const FOG_LIGHTS = 48;
 /** which program draws the fog: 'hint' = the table first, a grid walk only where the table has no answer · 'old' = a grid walk per eye per pixel, as it always was. Same picture. */
 export type FogPassMode = 'hint' | 'old';
-/** `?fogpass=old` (or =hint) for a visit; no page — the harness — 'hint' */
+/** `?fogpass=old` (or =hint) for a visit; no page: 'hint' */
 function fogPassFlag(): FogPassMode { try { const v = new URLSearchParams(location.search).get('fogpass'); if (v === 'old') return 'old'; } catch { /* no page */ } return 'hint'; }
-/** What the game hands the pass each frame (one object, written in place by game/fogofwar.ts update): `on` false = no pass. */
+/** What the game hands the pass each frame (one object, written in place by rust/game_rules/src/fogofwar update): `on` false = no pass. */
 export interface FogFrame {
   on: boolean;
   /** live eyes, ≤ FOG_EYES */
@@ -36,37 +36,37 @@ export interface FogFrame {
   /** per eye: where it looks in plan (x, z; unit), the cosine of its half field (≤ −1.5 = all round), its all-round near field (m) */
   looks: Float32Array;
   dim: number; desat: number; topPad: number;
-  /** THE SOFT EDGE (game/fogofwar.ts FOG.edge): the band, in metres, the fog comes in over across a sight edge, half on each side — 0 = the hard line as it
+  /** THE SOFT EDGE (rust/game_rules/src/fogofwar FOG.edge): the band, in metres, the fog comes in over across a sight edge, half on each side — 0 = the hard line as it
    *  was. Read from the sight table's head by the fog pass alone (shaders/fogofwar.wgsl fowEdge), so it softens only the full picture's fog */
   edge: number;
   /** the wedge's soft edge in the picture: the cosines of the half field less / plus half the soft band (softIn > softOut; both 0 = a hard line at the looks'
-   *  own cosine), and the metres over which the near field's rim comes in (0 = a hard rim) — game/fogofwar.ts FOG.coneSoftDeg / coneNearSoftM */
+   *  own cosine), and the metres over which the near field's rim comes in (0 = a hard rim) — rust/game_rules/src/fogofwar FOG.coneSoftDeg / coneNearSoftM */
   softIn: number; softOut: number; nearSoft: number;
-  /** THE FOG'S OWN LIGHT (game/fogofwar.ts FOG.flat): > 0 = a pixel nobody sees is the surface's paint under one fixed light at this displayed level — nothing
+  /** THE FOG'S OWN LIGHT (rust/game_rules/src/fogofwar FOG.flat): > 0 = a pixel nobody sees is the surface's paint under one fixed light at this displayed level — nothing
    *  of the live frame; 0 = the live frame dimmed, as it was */
   flat: number;
-  /** THE FOG LIT AS THE TEAM LAST KNEW IT (game/fogofwar.ts FOG.lit; read only while `flat` > 0): `lit` > 0 = a pixel nobody sees is its paint under
+  /** THE FOG LIT AS THE TEAM LAST KNEW IT (rust/game_rules/src/fogofwar FOG.lit; read only while `flat` > 0): `lit` > 0 = a pixel nobody sees is its paint under
    *  `lightCount` lamps of `lights` (the level's own, each in the state the team last saw it in, + the sun or moon — the scene's Light record, 16 words a
    *  lamp: lights.ts packLight; `lightsU` = the same words as integers), each × `lit` × `dim` and traced against the boxes as handed to the picture, + a fill
    *  at `litFill` as displayed that `litAo` of is shut out within `litAoM` metres of a box; a lamp under `litCut` as displayed at a pixel is not traced.
    *  0 = the one fixed light at `flat`, as it was */
   lit: number; litFill: number; litCut: number; litAo: number; litAoM: number; lightCount: number; lights: Float32Array; lightsU: Uint32Array;
-  /** THE FULL PICTURE UNDER THE FOG (game/fogofwar.ts FOG.full, rule 4g): true = a pixel nobody sees is the live frame dimmed again — and what must not show
+  /** THE FULL PICTURE UNDER THE FOG (rust/game_rules/src/fogofwar FOG.full, rule 4g): true = a pixel nobody sees is the live frame dimmed again — and what must not show
    *  there is taken out where it is made (the lights' fog classes, lights.ts RtLight.fog, asked of the sight table FogSight writes at the head of the frame).
    *  `fullFlat` is then a fill ADDED to the dimmed frame (0 = none), shaped by `litAo` / `litAoM`; `lit`'s lamps are not read. false = `flat` / `lit` as they
    *  were — which the game fills all the same, and which the pass draws for as long as `sight` is false */
   full: boolean; fullFlat: number;
-  /** THE AIR IS THE PLACE (game/fogofwar.ts FOG.air; under the full picture alone — it rides the sight table's head): true = the picture's march draws smoke and
+  /** THE AIR IS THE PLACE (rust/game_rules/src/fogofwar FOG.air; under the full picture alone — it rides the sight table's head): true = the picture's march draws smoke and
    *  dust over floor the team does not see too (the fog pass then dims it with the ground under it); false = no plume there, as it was */
   air: boolean;
-  /** THIN THINGS THAT STAND FREE DO NOT CUT THE SIGHT (game/fogofwar.ts FOG.thin; under the full picture alone — it rides the sight table): the picture's
+  /** THIN THINGS THAT STAND FREE DO NOT CUT THE SIGHT (rust/game_rules/src/fogofwar FOG.thin; under the full picture alone — it rides the sight table): the picture's
    *  fog eye passes the statics whose bit is set in `thinBits` (bit i = box i; 4096 boxes), and what a man carries. false = every box stops it, as it was */
   thin: boolean;
-  /** WHAT LIES STILL STAYS AS LAST SEEN (game/fogofwar.ts FOG.kept; under the full picture alone — it rides the sight table's head): a particle at rest
+  /** WHAT LIES STILL STAYS AS LAST SEEN (rust/game_rules/src/fogofwar FOG.kept; under the full picture alone — it rides the sight table's head): a particle at rest
    *  on floor the team sees is marked (shaders/particles.wgsl) and is then drawn over that floor when nobody looks too, until something wakes it. false = a
    *  case, a chip or a leaf of paper at rest is cut the moment the team looks away, as it was */
   kept: boolean;
-  /** which statics are thin and free, a bit a box index (game/fogofwar.ts thinBlock, off scene/thin.ts's marks), and the box list they were read off: its
+  /** which statics are thin and free, a bit a box index (rust/game_rules/src/fogofwar thinBlock), and the box list they were read off: its
    *  geometry serial and its count of statics. A frame drawn after the list changed and before the next fill (a wall rebuilt, a restart: an index is another
    *  box's by then — a leaf's, should the statics have shrunk) is drawn with the row off (FogSight.encode) */
   thinBits: Uint32Array; thinSerial: number; thinCount: number;
@@ -215,7 +215,7 @@ export class FogPass {
     return this.device.createBindGroup({ layout: this.layout!, entries: [{ binding: 0, resource: src }, { binding: 1, resource: out }, { binding: 2, resource: depthView }, { binding: 3, resource: normalView }, { binding: 5, resource: albedoView }, { binding: 4, resource: { buffer: this.ubuf! } }, { binding: 6, resource: hintView }, { binding: 8, resource: { buffer: this.lbuf! } }] });
   }
 
-  // ---- QA (tools/qa/fog-pass-check.cjs): the LAST dispatched frame's inputs — its copy of hdr, its g-buffer, its uniform block, the scene as uploaded — through one
+  // ---- QA: the LAST dispatched frame's inputs — its copy of hdr, its g-buffer, its uniform block, the scene as uploaded — through one
   //      program again into a scratch texture, read back. Nothing of the frame is touched. `count` false = the picture that program stores (rgba16float halves: two
   //      programs compared on the very same inputs); true = its counting twin (per pixel: walks, hint box tests, the walks' box tests, the walks' cells — and for the
   //      hinted one `pre`: per (bin, eye) the table ray's box tests | cells << 16). Compiled on first use, never part of a frame.
@@ -244,7 +244,7 @@ export class FogPass {
   }
 }
 
-// ---- THE SIGHT TABLE (game/fogofwar.ts rule 4g, shaders/fogsight.wgsl): where the team sees, as a table every pass of the picture can ask (common.wgsl
+// ---- THE SIGHT TABLE (rust/game_rules/src/fogofwar rule 4g, shaders/fogsight.wgsl): where the team sees, as a table every pass of the picture can ask (common.wgsl
 //      fogSeenAt, the scene group's binding 11 — a 58 KB UNIFORM: FOG_BINS × FOG_EYES distances, then the eyes, their looks, the count and the soft edges). One
 //      32 × live-eyes-group dispatch at the head of the frame while the full-picture fog is on writes the distances (the same buffer, as storage); the CPU writes the
 //      head. Nothing while it is off: the head's 'written' word is put back to 0 the frame the rule goes off, so a stale table is never asked.

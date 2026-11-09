@@ -73,7 +73,7 @@ fn a_man_who_goes_out_of_sight_leaves_a_mark_where_he_was_last_seen() {
         assert!(p.view().marks.seen.is_empty(), "seed {}: the mark has outlived its seconds", seed);
         drop(p);
         let (mut q, gd) = two_rooms(seed);
-        q.g.k.fog.last_seen = 0.0; q.g.k.told.rung = game::told::ToldRung::Bare; q.g.k.wand.on = false;
+        q.g.k.fog.last_seen = 0.0; q.g.k.told.rung = game::told::ToldRung::Bare;
         fog_up(&mut q);
         q.man_stands(gd, [12.0, 13.0]);
         q.run(0.3);
@@ -332,7 +332,7 @@ fn the_stalk_and_the_wait_are_the_seats_own() {
         let mut row = game::stalk::fresh();
         row.wait = Some(true); row.t = t; row.on = Some(man);
         p.g.m.stalk.state.set(second, row);
-        p.g.pl[second].wall = p.g.pl[second].wall.or(Some(game::player::WallHold::zeroed()));
+        p.g.pl[second].wall = p.g.pl[second].wall.or(Some(game::player::WallHold::default()));
         let (a, b) = (p.view_of(0).marks, p.view_of(1).marks);
         assert!(a.stalk.is_none() && !a.stalk_waits, "seed {}: the first man is told of the second man's stalk", seed);
         assert!(b.stalk == Some(p.id_of(man)) && b.stalk_waits, "seed {}: {:?} {}", seed, b.stalk, b.stalk_waits);

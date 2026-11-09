@@ -1,4 +1,4 @@
-// HudLike — what the frame loop (src/host/loop.ts) asks of a HUD, host-neutral: src/ui/overlay.ts's Overlay + bubbles.ts's Bubbles are one
+// HudLike — what the frame loop (src/host/drawpage.ts) asks of a HUD, host-neutral: src/ui/overlay.ts's Overlay + bubbles.ts's Bubbles are one
 // implementation (the DOM), a native host's display-list overlay / bubbles another. Types only.
 import type { HudCam, HudSource } from '../view/hud';
 
@@ -6,7 +6,7 @@ import type { HudCam, HudSource } from '../view/hud';
  *  points, width / height the backing store in device px) */
 export interface View { clientWidth: number; clientHeight: number; width: number; height: number; }
 
-/** a showcase's chapter list for the timeline (game/director.ts chapters()) */
+/** a showcase's chapter list for the timeline (rust/game_rules/src/director chapters()) */
 export interface Chapters { list: { title: string; dur: number }[]; i: number; frac: number; }
 
 export interface HudLike {

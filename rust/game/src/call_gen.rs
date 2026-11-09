@@ -420,8 +420,6 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let kno
 670 => {  crate::silent::silent_tick(g);  }
 674 => { let a1: InputId = Io::r(&mut i); let a2: CameraId = Io::r(&mut i); let a3: f64 = Io::r(&mut i); crate::rails::rails_gate(g, a1, a2, a3);  }
 677 => { let a1: f64 = Io::r(&mut i); crate::rails::rails_tick(g, a1);  }
-678 => {  crate::rails::rails_put_back(g);  }
-679 => {  crate::rails::rails_resume(g);  }
 682 => { let a1: CharId = Io::r(&mut i); let r = crate::cast::cast_parts(g, a1); r.w(&mut o);  }
 683 => { let a1: Vec<CharId> = Io::r(&mut i); let mut a2: Vec<AnyBoxId> = Io::r(&mut i); let a3: f64 = Io::r(&mut i); crate::stature::drawn_boxes(g, &a1, &mut a2, a3); a2.w(&mut o); }
 684 => { let a1: CharId = Io::r(&mut i); let a2: bool = Io::r(&mut i); let r = crate::combat::firearm_of(g, a1, a2); r.w(&mut o);  }
@@ -495,7 +493,6 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let kno
 782 => { let a1: crate::weather::WeatherSnap = Io::r(&mut i); crate::weather::weather_restore(g, &a1);  }
 783 => { let a1: bool = Io::r(&mut i); crate::weather::weather_set_enabled_2(g, a1);  }
 784 => { let a1: Option<crate::weather::WeatherStrikeOpts> = Io::r(&mut i); let r = crate::weather::weather_strike(g, a1); r.w(&mut o);  }
-785 => { let a1: f64 = Io::r(&mut i); let a2: Option<f64> = Io::r(&mut i); crate::weather::weather_update(g, a1, a2);  }
 786 => { let a1: V3 = Io::r(&mut i); let a2: V3 = Io::r(&mut i); let a3: Option<bool> = Io::r(&mut i); let r = crate::weather::hear_path(g, a1, a2, a3); r.w(&mut o);  }
 787 => { let a1: V3 = Io::r(&mut i); let a2: V3 = Io::r(&mut i); let r = crate::weather::air_trans(g, a1, a2); r.w(&mut o);  }
 788 => { let a1: f64 = Io::r(&mut i); let a2: Option<bool> = Io::r(&mut i); crate::hours::set_sun_strength(g, a1, a2);  }
@@ -656,7 +653,6 @@ pub fn call(g: &mut crate::game::Game, f: u32, args: &[u8]) -> Vec<u8> { let kno
 1029 => { let a1: DoorId = Io::r(&mut i); let a2: f64 = Io::r(&mut i); let r = crate::doorswing::leaf_swings(g, a1, a2); r.w(&mut o);  }
 1030 => {  let r = crate::doorswing::deal_swings(g); r.w(&mut o);  }
 1031 => { let a1: Option<FirearmId> = Io::r(&mut i); let a2: crate::weapons::WeaponDef = Io::r(&mut i); let a3: V3 = Io::r(&mut i); let a4: V3 = Io::r(&mut i); let a5: f64 = Io::r(&mut i); let a6: crate::tracers::TracerImpact = Io::r(&mut i); let a7: f64 = Io::r(&mut i); let a8: Option<bool> = Io::r(&mut i); let r = crate::tracers::tracers_round(g, a1, &a2, a3, a4, a5, a6, a7, a8); r.w(&mut o);  }
-1032 => { let a1: f64 = Io::r(&mut i); let mut a2: Vec<AnyBoxId> = Io::r(&mut i); let a3: Option<f64> = Io::r(&mut i); crate::tracers::tracers_update(g, a1, &mut a2, a3); a2.w(&mut o); }
 1033 => {  crate::tracers::tracers_clear(g);  }
 1036 => { let a1: V3 = Io::r(&mut i); let r = crate::cleared::cleared_rooms_room_at(g, a1); r.w(&mut o);  }
 1037 => { let a1: V3 = Io::r(&mut i); let r = crate::cleared::cleared_rooms_known_at(g, a1); r.w(&mut o);  }

@@ -1,10 +1,9 @@
-//! The types of `sim_weatherhome`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `sim_weatherhome`.
 #![allow(unused_imports)]
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: inline at src/sim/weatherhome.ts:8 WX, src/sim/weatherhome.ts:8)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct WX {
     pub live: f64,
     pub storm: f64,
@@ -32,86 +31,22 @@ pub struct WX {
     pub air_s: f64,
     pub air_stat: f64,
 }
-impl WX {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WX {
-            live: 0.0,
-            storm: 0.0,
-            rain_rate: 0.0,
-            rain_now: 0.0,
-            wet: 0.0,
-            thunder_until: 0.0,
-            next_flash_at: 0.0,
-            last_bark_t: 0.0,
-            fog_on: 0.0,
-            fog_sigma: 0.0,
-            fog_h: 0.0,
-            fog_leak: 0.0,
-            roofs_n: 0.0,
-            roofs: 0.0,
-            thunders_n: 0.0,
-            thunders: 0.0,
-            dice: 0.0,
-            air_on: 0.0,
-            air_leak: 0.0,
-            air_acc: 0.0,
-            air_cur: 0.0,
-            air_cells: 0.0,
-            air_edges: 0.0,
-            air_s: 0.0,
-            air_stat: 0.0,
-        }
-    }
-}
-impl Default for WX { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/sim/weatherhome.ts:29 WX_KNOBS, src/sim/weatherhome.ts:29)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct WXKNOBS {
     pub here: crate::FnField,
 }
-impl WXKNOBS {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WXKNOBS {
-            here: crate::FnField,
-        }
-    }
-}
-impl Default for WXKNOBS { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/sim/weatherhome.ts:33 WX_WATCH, src/sim/weatherhome.ts:33)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct WXWATCH {
     pub on: bool,
 }
-impl WXWATCH {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WXWATCH {
-            on: false,
-        }
-    }
-}
-impl Default for WXWATCH { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/sim/weatherhome.ts:24 roofsCounted(boxes), src/sim/weatherhome.ts:24)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct RoofsCountedBoxesItem {
     pub c: Vec<f64>,
     pub h: Vec<f64>,
 }
-impl RoofsCountedBoxesItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RoofsCountedBoxesItem {
-            c: Vec::new(),
-            h: Vec::new(),
-        }
-    }
-}
-impl Default for RoofsCountedBoxesItem { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]

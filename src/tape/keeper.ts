@@ -3,9 +3,8 @@
 // nothing is sent anywhere. A visit is filed only once it has been PLAYED (`played()`: the game has stepped in the player's hands — a title page left running its
 // attract reel keeps nothing); from then on every piece is, the reel included.
 // The keeper only reads its source. No game code is imported: the source is an interface, the head a callback.
-import type { KeptHead } from './kept';
 import { reportWarning } from '../cloud/report';
-import { headLine } from './kept';
+import { headLine, type KeptHead } from './kept';
 import type { KeptStore, KeptRow, Body } from './keepstore';
 import { KEEP, gzip, pruneKept, keepBudget } from './keepstore';
 
@@ -13,13 +12,11 @@ import { KEEP, gzip, pruneKept, keepBudget } from './keepstore';
 export interface KeepSource { since(): { line(sid: string, seq: number, at: string): string; seconds: number } | null; again(): void;
   /** piece `seq` could not be kept (a source that can give it again does) */
   missed?(seq: number): void; }
-/** what a visit's row says of it, and whatever else its head line has */
-export interface KeepHead extends Pick<KeptHead, 'url' | 'commit'> { level: { file?: string; scenario?: string }; hands?: number }
 export interface KeeperOpts {
   sid: string; store: KeptStore;
   /** the game has been stepped in the player's hands (not a show's) */
   played: () => boolean;
-  head: () => KeepHead;
+  head: () => KeptHead;
   now?: () => string; gz?: ((text: string) => Promise<Blob>) | null;
   /** bytes of kept tapes allowed (default: keepstore.ts keepBudget) */
   budget?: () => Promise<number>;
@@ -30,7 +27,7 @@ export interface KeeperOpts {
 /** the head is made again (the floor's drawing, the switches) once in this many pieces */
 const HEAD_EVERY = 6;
 
-/** (the check's red path: REPLAYEND_BREAK=1 in front of tools/qa/replaykeep-probes.ts — a run that becomes over is never due; a page has no process) */
+/** (the check's red path: REPLAYEND_BREAK=1 — a run that becomes over is never due; a page has no process) */
 const END_BREAK = (() => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.REPLAYEND_BREAK ?? '') === '1'; } catch { return false; } })();
 
 export class ReplayKeeper {
@@ -65,7 +62,7 @@ export class ReplayKeeper {
       if (!this.headKey || sync || seq % HEAD_EVERY === 0) {
         const H = this.o.head(), key = JSON.stringify(H);
         if (key !== this.headKey) { this.headKey = key; head = headLine(this.sid, at, H); }
-        this.row.scenario = H.level.scenario ?? H.level.file ?? ''; this.row.url = H.url ?? ''; if (H.commit) this.row.commit = H.commit; if (H.hands) this.row.hands = true;
+        this.row.scenario = H.level.scenario ?? H.level.file ?? ''; this.row.url = H.url ?? ''; if (H.commit) this.row.commit = H.commit; if (H.hands) this.row.hands = true; if (H.module) this.row.module = H.module;
       }
       text = P.line(this.sid, seq, at);
       this.row.lastAt = at; this.row.seconds = P.seconds;
@@ -96,7 +93,7 @@ export class ReplayKeeper {
   flush(): Promise<void> { this.beat(true); return this.q; }
   /** A RUN'S END IS FILED AT ONCE (2026-10-30: a kept visit on a build's backend stopped twelve seconds short of its win — the tab was shut four seconds
    *  after the mission ended, and the ending was still waiting for a beat and for the tape sync's round). The page tells the keeper a few times a second
-   *  whether the run is over (ui/replaykey.ts runOver: what the page's own end is, never a word of the game's in here); `KEEP.endMs` after it BECOMES over
+   *  whether the run is over (what the page's own end is, never a word of the game's in here); `KEEP.endMs` after it BECOMES over
    *  `watch` answers true, once, and the page asks `endBeat` in an idle moment: the last shots, the verdict and a moment of what followed are in the store
    *  about a second after they happened, and the promise settles when they are (the page then sends its tapes, where it sends any). One beat an end; a page
    *  whose first answer is 'over' has no ending of its own to file. `nowMs` is the caller's clock (the page's: performance.now()). Nothing of the game is

@@ -1,10 +1,9 @@
-//! The types of `snow_marks`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `snow_marks`.
 #![allow(unused_imports)]
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: Seen, src/game/snowMarks.ts:61)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Seen {
     pub x: f64,
     pub z: f64,
@@ -16,26 +15,8 @@ pub struct Seen {
     pub mz: f64,
     pub marked: bool,
 }
-impl Seen {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Seen {
-            x: 0.0,
-            z: 0.0,
-            vy: 0.0,
-            sp: 0.0,
-            n: 0.0,
-            rest: false,
-            mx: 0.0,
-            mz: 0.0,
-            marked: false,
-        }
-    }
-}
-impl Default for Seen { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/snowMarks.ts:28 SNOWMARKS, src/game/snowMarks.ts:28)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SNOWMARKS {
     pub min_v: f64,
     pub step: f64,
@@ -66,42 +47,6 @@ pub struct SNOWMARKS {
     pub item_mess: f64,
     pub dent_clods: f64,
 }
-impl SNOWMARKS {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SNOWMARKS {
-            min_v: 0.0,
-            step: 0.0,
-            jump: 0.0,
-            reach: 0.0,
-            leg: 0.0,
-            leg_min: 0.0,
-            wide: 0.0,
-            deep_kg: 0.0,
-            mess: 0.0,
-            clods: 0.0,
-            force0: 0.0,
-            force_kg: 0.0,
-            force_v: 0.0,
-            quick: 0.0,
-            kick_every: 0.0,
-            land_v: 0.0,
-            roll: 0.0,
-            roll_deep: 0.0,
-            dent: 0.0,
-            least: 0.0,
-            most: 0.0,
-            skid: 0.0,
-            rest: 0.0,
-            land_force: 0.0,
-            land_force_v: 0.0,
-            land_force_r: 0.0,
-            item_mess: 0.0,
-            dent_clods: 0.0,
-        }
-    }
-}
-impl Default for SNOWMARKS { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]

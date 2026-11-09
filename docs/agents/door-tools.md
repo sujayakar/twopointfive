@@ -5,7 +5,7 @@ One of the area files CLAUDE.md indexes. Everything below was moved here word fo
 title may now live in another file of this folder: `grep -l '<title>' docs/agents/*.md`. New bullets for this area go at the foot of this file.
 
 <!-- was CLAUDE.md lines 820–989 -->
-- **Door tools** (`src/game/doortools.ts`, `Game.doorTools`, `__doortools`; record rebuild/room-clear/door-tools.md): a page of door rows on the order
+- **Door tools** (`rust/game_rules/src/doortools`, `Game.doorTools`, `__doortools`; record rebuild/room-clear/door-tools.md): a page of door rows on the order
   menu when it is opened on a door, registered through `orders.register` on a PAGE of their own (the door's first page has row 5 'door tools ▸' = the `TOOLS_PAGE` opener; on the page: ids
   `openClear` 1 · `bangClear` 2 · `charge` 3 · `thr` 4 = 'work it from the threshold ▸', the opener of a page BEHIND the page (`THR_PAGE`: `thresholdHold` 1 'hold the door until I say' · `threshold` 2 'step in once it goes quiet' · `outside` 3 — Esc / right click step back ONE page) — an order for a door = 5, then its digit; the threshold's = 5, 4, its digit. While men the menu's orders go to hold a threshold on that door (`thresholdHeld`: phase 'thr', either form) the first page's row 5 is 'threshold held ▸' instead (`HELD_PAGE`, a STAND-IN row: orders.ts `OrderDef.standsIn { for, when }` — listed in another row's place on its digit while `when` says so, re-read on `refreshSecs`): `thrBang` 1 · `thrStep` 2 ('step in · no bang'; `DOORTOOLS.thrBangFirst` — the *Calls taken* bullet) · `thrLeave` 3 · `thrWord` F (= `thresholdThen` step / bang / leave, and the word); F is the pair's word with a menu up too. QA was `probes.ts thresholdmenu` (rows / held), DELETED 2026-11-06 with the two pages it walked, which the page has not had since `DOORTOOLS.outsidePlain` (`docs/agents/qa.md`, THE EIGHTH: what no check holds of them now). The menu re-reads its list the frame a stand-in comes or goes and a page opened by one every frame (`SquadOrders.due`); an opener whose page has a row on a key of its own names it ('threshold held ▸ · F: go') and that key works from the first page too): open and clear (stack, the keyed shove or the lead's boot on a door locked against the team, in to the level's clear-plan points or geometric
   ones), bang and clear (only the opener at the frame, the rest filed behind him; the can goes off IN THE AIR `airIn` inside — `detonateStun` with the entry's men
@@ -387,7 +387,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   meets the rule only at doors his own walk left standing open. Never played by anybody.
 
 <!-- was CLAUDE.md lines 1294–1307 -->
-- **Two doors on one signal open on one frame** (`DOORTOOLS.gateHand`, src/game/doortools.ts `toHandle` / `bootBeside` / `handStep`; 10-13). Several doors on one
+- **Two doors on one signal open on one frame** (`DOORTOOLS.gateHand`, rust/game_rules/src/doortools `toHandle` / `bootBeside` / `handStep`; 10-13). Several doors on one
   gate (the rescue's F through both doors of the hostage room, the pairs' word), one of them booted and another only wanting a hand: the hand door's lead waited on
   his jamb for the boot beside him to land and only THEN walked to its handle (handleside.ts `toolSpot`, live where doors open one way), so that leaf, its can and its
   men came a walk behind the booted door's — 1.8 s on the office's hostage room (leaves 23.8 / 25.6 s, entries 2 s apart). On, he steps to the handle as the signal
@@ -409,7 +409,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   back to the old spot he stands in the opening for the boot's walk-up (`kickCap` at most) — known, not mended. The consulate's split entry on the shipped stand
   (`PT_RESCUE=split ships.ts --scn rescue-consulate --seeds 1-6`): the two doors' first men cross 38.17 / 38.17 s on five seeds and 26.77 / 26.77 on the sixth
   (rule off, before the join: 38.13 / 39.23 and 26.77 / 27.85); rescued 6 of 6, hostages the same either way (2 of 3 on five seeds).
-- **No boot from beside a latch jamb in front of glass** (`DOORWAY.kickGlass`, src/game/doortools.ts `bootSpot`; the maintainer, 10-13, of a lead lit
+- **No boot from beside a latch jamb in front of glass** (`DOORWAY.kickGlass`, rust/game_rules/src/doortools `bootSpot`; the maintainer, 10-13, of a lead lit
   and shot through a sidelight as he booted: "yeah maybe this should force kicking from the front?"). The lead's side spot (`DOORWAY.sideKick`) is asked
   the stack's own question, `orders.glassEyes` (the floor lattice's points beyond the door with a line of fire onto him through a pane, counted afresh for
   the very spot): at `GLASSPEN.stackEyes` (3) or more he boots square in front of the leaf, as every kick was before sideKick — where there is floor
@@ -429,7 +429,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   no boot of the tally lands on a face the rule moves. The one played difference seen: doortools' staged locked door (the pair, 'bang and clear'): the
   kick at 12.62 s against 13.18 s, and the lead sees a man inside (and is in the opening) at 13.08 s, before 'go', where from beside the jamb the first
   sighting was at 15.22 s after the cross; both runs end 'in'. tour 3/3. Never played by a person, never seen on a GPU.
-- **No point of an entry in another door's frame** (`DOORTOOLS.podFrames`, `podFrameM` 0.55, src/game/doortools.ts `inFrame`; 10-13, off the barracks'
+- **No point of an entry in another door's frame** (`DOORTOOLS.podFrames`, `podFrameM` 0.55, rust/game_rules/src/doortools `inFrame`; 10-13, off the barracks'
   fault B2: the gallery entry by n_end dealt a man onto n4b's threshold). A doorway's floor is floor to the walk grid, so `pods2` / `podsAsWere` / `shallowPods`
   gave the hand of a door with no room the threshold of the next door along the wall. On: a candidate between another door's jambs within 0.55 m of its line,
   or beyond one from this door's mouth, is refused; that hand is then dealt down the middle (a threshold gets one more depth, 2.5 m) and entrypoints.ts moves
@@ -466,7 +466,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   software adapter (`shipped-page.cjs plain`) stands on the shipped stand's switches, and `?notoolnear` reads `HANDLE.toolNear` false there. No play-through,
   tour or soak was run on it and no tally re-measured; nobody has played it. Never seen on a GPU: the arm working a handle from up to 0.88 m (the pose
   is whatever 'on the handle' drew before, now further from the leaf), and whether the shorter step reads as a man opening a door.
-- **Entry paths through the door (10-08;** `src/game/doorpath.ts`, `DOORPATH`; record rebuild/cast-close-and-hurt/entry/paths/notes.md): in a door
+- **Entry paths through the door (10-08;** `rust/game_rules/src/doorpath`, `DOORPATH`; record rebuild/cast-close-and-hurt/entry/paths/notes.md): in a door
   order's 'enter' stage each man walks a LAID path instead of the nav grid's — a lane square through the half of the opening the leaf is not in (`at / outM / inM`), round the
   free tip of any leaf standing in his way (`leafClear / tipM`; a point in the pocket behind a leaf is moved to floor he can reach, `moveM` — SET `moveM` 0 ONCE THE DOORS
   GOAL'S RULE FOR WHERE A BODY STANDS BY A LEAF IS IN THE SAME TREE, theirs wins), in one file in the order the door order dealt (`gapM` 0 / `shortM` 0.6: the second gun 0.3 s
@@ -518,7 +518,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   walk to the stack): the warning is acted on ('both'), held 0 s, across at 22.9 / 23.3 s before the round could come at 25.6 s, against 26.3 / 26.7 s
   with the rule off. Frozen is untouched. STILL OPEN, not a door rule and not mended: a pair's last man carrying a door order on with his mate's killer
   alive behind him (seen only with destruction off; passed to the squad rules' owner as a claim).
-- **No can from a hand that is not at the door** (`DOORTOOLS.thrHand`, `thrHandWait` 6 s, `thrHandEvery` 0.25 s; src/game/doortools.ts the 'pocket' step's
+- **No can from a hand that is not at the door** (`DOORTOOLS.thrHand`, `thrHandWait` 6 s, `thrHandEvery` 0.25 s; rust/game_rules/src/doortools the 'pocket' step's
   gate, `thrPick` / `thrAt`; 10-14, off the red above). THE FAULT: a threshold's can leaves the hand in the doorway (`handAt`) whoever throws it, and the
   stage's pick asks no reach of the far-jamb man or the lead — with the stack run off the door by a defender's frag the lead was made the thrower from
   6.6 m down the wall and was then first man in (the depot's a_s, seed 2, as the page ships). THE RULE: the picked man throws while he is not the lead
@@ -688,3 +688,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   touched; other door orders' short ends are as they were ('the frag is gone', 'the door held the boot' end with no line of their own); the
   fight at the door (the dry run's other finding: a pair shot at the lock) is the room fight's. One seed, two levels. Headless only: never
   played, never heard, never seen on a GPU.
+- **A door belongs to who is at it** (2026-11-08; `stackroom/`, `doortools/p_04.rs`, `doorway/p_02.rs`). Two pairs were told to breach two doors three metres apart on one wall with charges: each was stood off in front of the OTHER's door, one man crowded another against his own, it came open, and that charge was off. THREE RULES, no switch. (1) No mark is dealt before another
+  door's leaf (a step off either face), nor in the blast a charge set or ordered on another door throws back: it is dealt again by the ladder that already mends a mark off its floor (the other jamb, round the corner, back from the door, the nearest floor), and where there is nowhere better it stays. (2) When a charge is ordered, the men standing off from another whom that leaves at its
+  door or in its blast are dealt their marks again, and stand off again if they had. (3) A door on its latch is opened by somebody who goes through it (what is left of his way crosses its frame) or works it; a man of either side who only brushes the leaf is put off it and it stays shut. A word given while a charge is still being set was kept already, up to twenty seconds, and both go on it.
+  CHECK: native, `rust/game_start/tests/two_doors.rs`, staged from that case on the block, three seeds; both tests red with the rules out. MEASURED (`missions`), thirteen room clears, 24 seeds: standard, squad up 552 and 545 of 1248, enemies left 417 and 433 of 2328, cleared 169 and 169; hard, 533 and 527, 496 and 497, 165 and 165. `hold`: 98 of 105 the same; the seven part where a man brushed
+  a door, or a mark was dealt again. NOT SEEN: never on a GPU, never played.

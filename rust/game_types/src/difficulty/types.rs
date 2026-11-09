@@ -1,4 +1,4 @@
-//! The types of `difficulty`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `difficulty`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
@@ -22,10 +22,9 @@ pub struct DifficultyAsked {
     pub cone: Option<bool>,
 }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum Difficulty {
-    Hard,
+    #[default] Hard,
     Standard,
 }
 impl Difficulty {
@@ -37,7 +36,6 @@ impl Difficulty {
     }
 }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum FogRung {
     Team,
@@ -54,10 +52,9 @@ impl FogRung {
     }
 }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum KitRung {
-    None,
+    #[default] None,
     Stuns,
 }
 impl KitRung {
@@ -69,31 +66,17 @@ impl KitRung {
     }
 }
 
-/// (TypeScript: Levers, src/game/difficulty.ts:106)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Levers {
     pub fog: crate::quietfog::QuietRung,
     pub ai: crate::difficulty::Difficulty,
     pub kit: crate::difficulty::KitRung,
     pub told: Option<crate::told::ToldRung>,
 }
-impl Levers {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Levers {
-            fog: crate::quietfog::QuietRung::Team,
-            ai: crate::difficulty::Difficulty::Hard,
-            kit: crate::difficulty::KitRung::None,
-            told: None,
-        }
-    }
-}
-impl Default for Levers { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum LeverKey {
-    Fog,
+    #[default] Fog,
     Told,
     Ai,
     Kit,
@@ -109,165 +92,65 @@ impl LeverKey {
     }
 }
 
-/// (TypeScript: LeverDef, src/game/difficulty.ts:109)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct LeverDef {
     pub key: crate::difficulty::LeverKey,
     pub param: String,
     pub label: String,
     pub rungs: Vec<crate::difficulty::LeverDefRungsItem>,
 }
-impl LeverDef {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LeverDef {
-            key: crate::difficulty::LeverKey::Fog,
-            param: String::new(),
-            label: String::new(),
-            rungs: Vec::new(),
-        }
-    }
-}
-impl Default for LeverDef { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/difficulty.ts:109 LeverDef.rungs, src/game/difficulty.ts:109)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct LeverDefRungsItem {
     pub id: String,
     pub label: String,
     pub words: String,
 }
-impl LeverDefRungsItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LeverDefRungsItem {
-            id: String::new(),
-            label: String::new(),
-            words: String::new(),
-        }
-    }
-}
-impl Default for LeverDefRungsItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/difficulty.ts:131 FOG_OFF_RUNG, src/game/difficulty.ts:131)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct FOGOFFRUNG {
     pub id: String,
     pub label: String,
     pub words: String,
 }
-impl FOGOFFRUNG {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FOGOFFRUNG {
-            id: String::new(),
-            label: String::new(),
-            words: String::new(),
-        }
-    }
-}
-impl Default for FOGOFFRUNG { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/difficulty.ts:145 SET, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct DifficultyModSET {
     pub fog: Option<crate::quietfog::QuietRung>,
     pub ai: Option<crate::difficulty::Difficulty>,
     pub kit: Option<crate::difficulty::KitRung>,
     pub told: Option<crate::told::ToldRung>,
 }
-impl DifficultyModSET {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DifficultyModSET {
-            fog: None,
-            ai: None,
-            kit: None,
-            told: None,
-        }
-    }
-}
-impl Default for DifficultyModSET { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/difficulty.ts:244 HELD, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct DifficultyModHELD {
     pub fog: Option<crate::quietfog::QuietRung>,
     pub ai: Option<crate::difficulty::Difficulty>,
     pub kit: Option<crate::difficulty::KitRung>,
     pub told: Option<crate::told::ToldRung>,
 }
-impl DifficultyModHELD {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DifficultyModHELD {
-            fog: None,
-            ai: None,
-            kit: None,
-            told: None,
-        }
-    }
-}
-impl Default for DifficultyModHELD { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/difficulty.ts:337 SQUAD_HARD, src/game/difficulty.ts:337)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct SQUADHARDItem {
     pub file: String,
     pub structure: String,
     pub words: String,
 }
-impl SQUADHARDItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SQUADHARDItem {
-            file: String::new(),
-            structure: String::new(),
-            words: String::new(),
-        }
-    }
-}
-impl Default for SQUADHARDItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/difficulty.ts:164 tablesOf(set), ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct TablesOfSet {
     pub fog: Option<crate::quietfog::QuietRung>,
     pub ai: Option<crate::difficulty::Difficulty>,
     pub kit: Option<crate::difficulty::KitRung>,
     pub told: Option<crate::told::ToldRung>,
 }
-impl TablesOfSet {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        TablesOfSet {
-            fog: None,
-            ai: None,
-            kit: None,
-            told: None,
-        }
-    }
-}
-impl Default for TablesOfSet { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/difficulty.ts:164 tablesOf ->, src/game/difficulty.ts:164)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct TablesOf {
     pub p: crate::knobs::PressureK,
     pub d: crate::knobs::DiginK,
 }
-impl TablesOf {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        TablesOf {
-            p: crate::knobs::PressureK::zeroed(),
-            d: crate::knobs::DiginK::zeroed(),
-        }
-    }
-}
-impl Default for TablesOf { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum DifficultyNow {
     Hard,
@@ -284,141 +167,63 @@ impl DifficultyNow {
     }
 }
 
-/// (TypeScript: inline at src/game/difficulty.ts:178 leversShown ->, src/game/difficulty.ts:178)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct LeversShown {
     pub fog: Option<crate::quietfog::QuietRung>,
     pub ai: Option<crate::difficulty::Difficulty>,
     pub kit: Option<crate::difficulty::KitRung>,
     pub told: Option<crate::told::ToldRung>,
 }
-impl LeversShown {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LeversShown {
-            fog: None,
-            ai: None,
-            kit: None,
-            told: None,
-        }
-    }
-}
-impl Default for LeversShown { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/difficulty.ts:199 leversSet ->, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct LeversSet {
     pub fog: Option<crate::quietfog::QuietRung>,
     pub ai: Option<crate::difficulty::Difficulty>,
     pub kit: Option<crate::difficulty::KitRung>,
     pub told: Option<crate::told::ToldRung>,
 }
-impl LeversSet {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LeversSet {
-            fog: None,
-            ai: None,
-            kit: None,
-            told: None,
-        }
-    }
-}
-impl Default for LeversSet { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/difficulty.ts:216 keptHidden ->, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct KeptHidden {
     pub fog: Option<crate::quietfog::QuietRung>,
     pub ai: Option<crate::difficulty::Difficulty>,
     pub kit: Option<crate::difficulty::KitRung>,
     pub told: Option<crate::told::ToldRung>,
 }
-impl KeptHidden {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KeptHidden {
-            fog: None,
-            ai: None,
-            kit: None,
-            told: None,
-        }
-    }
-}
-impl Default for KeptHidden { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/difficulty.ts:299 keptLevers ->, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct KeptLevers {
     pub fog: Option<crate::quietfog::QuietRung>,
     pub ai: Option<crate::difficulty::Difficulty>,
     pub kit: Option<crate::difficulty::KitRung>,
     pub told: Option<crate::told::ToldRung>,
 }
-impl KeptLevers {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        KeptLevers {
-            fog: None,
-            ai: None,
-            kit: None,
-            told: None,
-        }
-    }
-}
-impl Default for KeptLevers { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/difficulty.ts:331 squadsOf(e), src/game/difficulty.ts:331)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct SquadsOfE {
     pub level: Option<String>,
     pub squads: Option<bool>,
 }
-impl SquadsOfE {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SquadsOfE {
-            level: None,
-            squads: None,
-        }
-    }
-}
-impl Default for SquadsOfE { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: a union)
 #[derive(Clone, Debug)]
 pub enum SquadsOf {
     Text(String),
     Bool(bool),
 }
 
-/// (TypeScript: inline at src/game/difficulty.ts:334 squadsHeld(e), src/game/difficulty.ts:334)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct SquadsHeldE {
     pub level: Option<String>,
     pub squads: Option<bool>,
     pub kind: Option<String>,
 }
-impl SquadsHeldE {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SquadsHeldE {
-            level: None,
-            squads: None,
-            kind: None,
-        }
-    }
-}
-impl Default for SquadsHeldE { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: a union)
 #[derive(Clone, Debug)]
 pub enum SquadsHeld {
     Text(String),
     Bool(bool),
 }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum DifficultyWordsLevel {
     Hard,
@@ -435,7 +240,6 @@ impl DifficultyWordsLevel {
     }
 }
 
-/// (TypeScript: a union)
 #[derive(Clone, Debug)]
 pub enum DifficultyWordsSquads {
     Text(String),

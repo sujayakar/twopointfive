@@ -1,4 +1,4 @@
-//! The types of `weapons`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `weapons`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
@@ -22,10 +22,9 @@ pub struct FeedPlan { pub cues: Option<Vec<FeedCue>>, pub times: Vec<f64>, pub d
 #[derive(Clone, Debug, ToBytes)]
 pub struct FeedCue { pub t: f64, pub sfx: String, pub gain: f64, pub rate: f64 }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum GunModelId {
-    M870,
+    #[default] M870,
     Mk12,
     Mp7,
     Mk46,
@@ -47,10 +46,9 @@ impl GunModelId {
     }
 }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
 pub enum WeaponId {
-    Fiveseven,
+    #[default] Fiveseven,
     Guard9mm,
     Aks74u,
     Ak74m,
@@ -90,10 +88,9 @@ impl WeaponId {
     }
 }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum FireMode {
-    Semi,
+    #[default] Semi,
     Auto,
     Burst,
 }
@@ -107,8 +104,7 @@ impl FireMode {
     }
 }
 
-/// (TypeScript: WeaponDef, src/game/weapons.ts:55)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct WeaponDef {
     pub id: crate::weapons::WeaponId,
     pub enabled: bool,
@@ -144,52 +140,10 @@ pub struct WeaponDef {
     pub bulk: f64,
     pub own: Option<crate::weapons::WeaponDefOwn>,
 }
-impl WeaponDef {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WeaponDef {
-            id: crate::weapons::WeaponId::Fiveseven,
-            enabled: false,
-            name: String::new(),
-            short: String::new(),
-            calibre: String::new(),
-            cls: crate::weapons::WeaponClass::Pistol,
-            mag_capacity: 0.0,
-            spare_mags: 0.0,
-            top_up: false,
-            reload: crate::weapons::WeaponDefReload::zeroed(),
-            modes: Vec::new(),
-            cd: 0.0,
-            cd_jitter: 0.0,
-            burst: None,
-            auto: None,
-            report: crate::weapons::WeaponDefReport::zeroed(),
-            suppressed: false,
-            muzzle_fx: crate::effects::MuzzleFxKey::Mk12,
-            prop_impulse: 0.0,
-            ai_spread: crate::weapons::AiSpread::zeroed(),
-            damage: crate::weapons::WeaponDefDamage::OneShot,
-            muzzle_ahead: 0.0,
-            rig: crate::weapons::WeaponDefRig::Pistol,
-            handling: None,
-            light: crate::weapons::WeaponDefLight::None,
-            drop: crate::slotsetup::SetupGun::Pistol,
-            tracer: None,
-            pellets: None,
-            hands: None,
-            launcher: None,
-            weight_kg: 0.0,
-            bulk: 0.0,
-            own: None,
-        }
-    }
-}
-impl Default for WeaponDef { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum WeaponClass {
-    Pistol,
+    #[default] Pistol,
     Carbine,
     Rifle,
     Shotgun,
@@ -205,8 +159,7 @@ impl WeaponClass {
     }
 }
 
-/// (TypeScript: inline at src/game/weapons.ts:70 WeaponDef.reload, src/game/weapons.ts:70)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct WeaponDefReload {
     pub dur: f64,
     pub out: Option<f64>,
@@ -216,23 +169,8 @@ pub struct WeaponDefReload {
     /// INVENTED by a review: see the proposals
     pub exact: Option<bool>,
 }
-impl WeaponDefReload {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WeaponDefReload {
-            dur: 0.0,
-            out: None,
-            in_: None,
-            rack: None,
-            shell: None,
-            exact: None,
-        }
-    }
-}
-impl Default for WeaponDefReload { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: BurstSpec, src/game/weapons.ts:32)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct BurstSpec {
     pub min: f64,
     pub max: f64,
@@ -242,64 +180,23 @@ pub struct BurstSpec {
     pub spread_per_round: f64,
     pub spread_cap: f64,
 }
-impl BurstSpec {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BurstSpec {
-            min: 0.0,
-            max: 0.0,
-            interval: 0.0,
-            gap_min: 0.0,
-            gap_max: 0.0,
-            spread_per_round: 0.0,
-            spread_cap: 0.0,
-        }
-    }
-}
-impl Default for BurstSpec { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: AutoSpec, src/game/weapons.ts:43)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct AutoSpec {
     pub interval: f64,
     pub spread_per_round: f64,
     pub spread_cap: f64,
     pub reset_after: f64,
 }
-impl AutoSpec {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        AutoSpec {
-            interval: 0.0,
-            spread_per_round: 0.0,
-            spread_cap: 0.0,
-            reset_after: 0.0,
-        }
-    }
-}
-impl Default for AutoSpec { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/weapons.ts:84 WeaponDef.report, src/game/weapons.ts:84)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct WeaponDefReport {
     pub level: f64,
     pub loud: bool,
     pub voice: String,
 }
-impl WeaponDefReport {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WeaponDefReport {
-            level: 0.0,
-            loud: false,
-            voice: String::new(),
-        }
-    }
-}
-impl Default for WeaponDefReport { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: AiSpread, src/game/weapons.ts:27)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct AiSpread {
     pub base: f64,
     pub move_k: f64,
@@ -307,24 +204,10 @@ pub struct AiSpread {
     pub range_from: f64,
     pub range_k: f64,
 }
-impl AiSpread {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        AiSpread {
-            base: 0.0,
-            move_k: 0.0,
-            move_cap: 0.0,
-            range_from: 0.0,
-            range_k: 0.0,
-        }
-    }
-}
-impl Default for AiSpread { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum WeaponDefDamage {
-    OneShot,
+    #[default] OneShot,
 }
 impl WeaponDefDamage {
     pub const fn as_str(self) -> &'static str {
@@ -334,10 +217,9 @@ impl WeaponDefDamage {
     }
 }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum WeaponDefRig {
-    Pistol,
+    #[default] Pistol,
     Carbine,
     GuardPistol,
     Sc20k,
@@ -353,10 +235,9 @@ impl WeaponDefRig {
     }
 }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum WeaponDefLight {
-    None,
+    #[default] None,
     Rail,
     Handguard,
 }
@@ -370,27 +251,14 @@ impl WeaponDefLight {
     }
 }
 
-/// (TypeScript: TracerSpec, src/game/weapons.ts:45)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct TracerSpec {
     pub every: f64,
     pub last_n: f64,
     pub color: V3,
 }
-impl TracerSpec {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        TracerSpec {
-            every: 0.0,
-            last_n: 0.0,
-            color: [0.0; 3],
-        }
-    }
-}
-impl Default for TracerSpec { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: PelletSpec, src/game/weapons.ts:53)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct PelletSpec {
     pub n: f64,
     pub cone: f64,
@@ -398,78 +266,28 @@ pub struct PelletSpec {
     pub need: f64,
     pub breach: Option<crate::weapons::PelletSpecBreach>,
 }
-impl PelletSpec {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PelletSpec {
-            n: 0.0,
-            cone: 0.0,
-            drop_m: 0.0,
-            need: 0.0,
-            breach: None,
-        }
-    }
-}
-impl Default for PelletSpec { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/weapons.ts:53 PelletSpec.breach, src/game/weapons.ts:53)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct PelletSpecBreach {
     pub reach_m: f64,
     pub latch_m: f64,
     pub need: f64,
 }
-impl PelletSpecBreach {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PelletSpecBreach {
-            reach_m: 0.0,
-            latch_m: 0.0,
-            need: 0.0,
-        }
-    }
-}
-impl Default for PelletSpecBreach { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/weapons.ts:111 WeaponDef.hands, src/game/weapons.ts:111)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct WeaponDefHands {
     pub still: f64,
     pub moving: f64,
     pub crouch: Option<f64>,
 }
-impl WeaponDefHands {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WeaponDefHands {
-            still: 0.0,
-            moving: 0.0,
-            crouch: None,
-        }
-    }
-}
-impl Default for WeaponDefHands { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/weapons.ts:120 WeaponDef.own, src/game/weapons.ts:120)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct WeaponDefOwn {
     pub model: crate::weapons::GunModelId,
     pub voice: Option<String>,
     pub flame: Option<crate::effects::MuzzleFxKey>,
 }
-impl WeaponDefOwn {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WeaponDefOwn {
-            model: crate::weapons::GunModelId::M870,
-            voice: None,
-            flame: None,
-        }
-    }
-}
-impl Default for WeaponDefOwn { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Ocp, src/game/weapons.ts:542)
 #[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Ocp {
     pub charge: f64,
@@ -477,7 +295,7 @@ pub struct Ocp {
     pub cost: f64,
 }
 impl Ocp {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         Ocp {
             charge: 1.0,
@@ -488,7 +306,6 @@ impl Ocp {
 }
 impl Default for Ocp { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum RifleAttachment {
     Ring,
@@ -505,8 +322,7 @@ impl RifleAttachment {
     }
 }
 
-/// (TypeScript: BurstState, src/game/weapons.ts:37)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct BurstState {
     pub left: f64,
     pub n: f64,
@@ -515,22 +331,7 @@ pub struct BurstState {
     pub t: f64,
     pub off: Option<V3>,
 }
-impl BurstState {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BurstState {
-            left: 0.0,
-            n: 0.0,
-            next_t: 0.0,
-            idx: 0.0,
-            t: 0.0,
-            off: None,
-        }
-    }
-}
-impl Default for BurstState { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Firearm, src/game/weapons.ts:353)
 #[derive(Clone, Debug, ToBytes)]
 pub struct Firearm {
     pub chamber: f64,
@@ -575,7 +376,7 @@ pub struct Firearm {
     pub cams: f64,
 }
 impl Firearm {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         Firearm {
             chamber: 1.0,
@@ -615,22 +416,11 @@ impl Firearm {
 }
 impl Default for Firearm { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: inline at src/game/weapons.ts:427 startReload(shells), src/game/weapons.ts:427)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct FirearmStartReloadShells {
     pub times: Vec<f64>,
     pub port: bool,
 }
-impl FirearmStartReloadShells {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FirearmStartReloadShells {
-            times: Vec::new(),
-            port: false,
-        }
-    }
-}
-impl Default for FirearmStartReloadShells { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]

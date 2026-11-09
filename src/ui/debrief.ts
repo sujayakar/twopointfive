@@ -1,8 +1,8 @@
-// The debrief card's contents (menu.ts hosts it: the end card on mission complete, the down card a beat after Sam drops, and the pause card's 'Run so far' tab):
+// The debrief card's contents (the end card on mission complete, the down card a beat after Sam drops, and the pause card's 'Run so far' tab):
 // the rating word big with the score beside it, what the score was docked for, a compact stats grid, the badges as chips (lit / dim), the floor map — the nav
 // grid's walkable cells drawn light on dark, Sam's path over it coloured by the clock, a pin per notable event with its timeline row on hover, spawn / rack / exit
 // marked — and the timeline itself as a scrollable list. Everything read comes from the Rust game, asked once as the card is built (src/view/debriefview.ts: counts, score,
-// badges, summary; the rows in words; the path; the recap), so the QA probes see the same numbers the card shows. Plain DOM, styled in index.html (#menu .db-…); builds headlessly too (no canvas context: the map's
+// badges, summary; the rows in words; the path; the recap). Plain DOM, styled in index.html (#menu .db-…); builds headlessly too (no canvas context: the map's
 // pins and marks still land, the cells and the path are simply not painted).
 import { mountRecap } from './recap';
 import type { Debrief, DeathRecap } from '../view/debriefview';
@@ -51,12 +51,12 @@ function fmtMMSS(sec: number): string { const s = Math.max(0, Math.floor(sec)); 
 export function renderDebrief(into: HTMLElement, end: RunEnd, actions: HTMLElement[] = []): DebriefUi {
   const W = end.view, D = W.debrief, c = D.counts; recapNow = W.recap;
   const root = el('div', 'db'); into.appendChild(root);
-  // ---- the verdict (game/verdict.ts), once the run is over: its head leads the card. A squad's mission then shows the men (their rows, their paths) where the
+  // ---- the verdict (rust/game_rules/src/verdict), once the run is over: its head leads the card. A squad's mission then shows the men (their rows, their paths) where the
   // stealth game's rating, numbers and timeline stand — those are built all the same and hidden by the card's class (index.html .vd-squad): one builder, and
   // the stealth game's card keeps every part it had under the verdict's head. No verdict (the run still going, the switch off) = the card as it was.
   const V = end.verdict, squad = !!V && squadVerdict(V);
   if (V) { root.classList.add('vd-on', squad ? 'vd-squad' : 'vd-solo'); root.appendChild(verdictHead(end, V)); }
-  // a row that leans LOUD is not graded as a sneak (game/verdict.ts loudRow, VERDICT.loudCard): no rating word, no score, no line of what was docked, no
+  // a row that leans LOUD is not graded as a sneak (rust/game_rules/src/verdict loud_row, VERDICT.loudCard): no rating word, no score, no line of what was docked, no
   // badges, and the sneak's numbers stand untoned — five men shot on a mission that is a gunfight is a count, not a fault (a hit taken, a civilian hurt
   // keep their red). `db-loud` marks the card for a reader of the page; nothing styles it.
   const plain = !D.scored, tone = (t: string) => plain ? '' : t; if (plain) root.classList.add('db-loud');
@@ -65,7 +65,7 @@ export function renderDebrief(into: HTMLElement, end: RunEnd, actions: HTMLEleme
   if (!plain) { const rate = el('div', `db-rating r-${D.rating.toLowerCase()}`); const w = el('b'); w.textContent = D.rating; const sc = el('span', 'db-score'); sc.textContent = String(D.score); rate.append(w, sc);
     rate.title = D.lines.length ? D.lines.map(l => `−${l.pts}  ${l.label}`).join('\n') : 'nothing docked'; head.appendChild(rate); }
   const what = el('div', 'db-what');
-  const t1 = el('div', 'db-t1'); t1.textContent = D.state === 'done' ? 'mission complete' : D.state === 'down' ? (c.down ? "you're down" : c.civKilled ? 'mission failed — a civilian is dead' : 'mission failed') : 'run so far';   // (failed on his feet: a civilian dead by his hand with the fail rule on — civilians.ts)
+  const t1 = el('div', 'db-t1'); t1.textContent = D.state === 'done' ? 'mission complete' : D.state === 'down' ? (c.down ? "you're down" : c.civKilled ? 'mission failed — a civilian is dead' : 'mission failed') : 'run so far';   // (failed on his feet: a civilian dead by his hand with the fail rule on — rust/game_rules/src/civilians)
   const t2 = el('div', 'db-t2'); t2.textContent = `${fmtMMSS(c.elapsed)} on the clock${plain ? '' : ` · ${D.blurb}`}${c.sandbox ? ' · sandbox flags were on' : ''}`;
   what.append(t1, t2);
   if (!plain) { const t3 = el('div', 'db-t3'); t3.textContent = D.lines.length ? D.lines.slice(0, 5).map(l => `−${l.pts} ${l.label}`).join('  ·  ') + (D.lines.length > 5 ? '  ·  …' : '') : 'a perfect hundred with nothing taken off'; what.appendChild(t3); }
@@ -86,14 +86,14 @@ export function renderDebrief(into: HTMLElement, end: RunEnd, actions: HTMLEleme
   // stats grid
   const stats = el('div', 'db-stats'); left.appendChild(stats);
   const st = (k: string, v: string | number, cls = '', title = '') => { const s = el('div', `st${cls ? ' ' + cls : ''}`); const i = el('i'); i.textContent = k; const b = el('b'); b.textContent = String(v); s.append(i, b); if (title) s.title = title; stats.appendChild(s); };
-  { const P = end.par; if (P) st('par', P.medal === 'none' ? 'no medal' : P.medal, P.medal === 'none' ? 'warn' : 'good', P.shown); }   // (a level with a par block, its room clear taken: game/par.ts — one cell; the best time on its line is the page's, main.ts)
+  { const P = end.par; if (P) st('par', P.medal === 'none' ? 'no medal' : P.medal, P.medal === 'none' ? 'warn' : 'good', P.shown); }   // (a level with a par block, its room clear taken: rust/game_rules/src/par — one cell; the best time on its line is the page's, host/drawpage.ts)
   st('time', fmtMMSS(c.elapsed)); st('seen', c.seen ? `×${c.seen}` : '0', tone(c.seen ? 'bad' : 'good'), 'times an alert guard had eyes on you');
   st('alarms', c.alarms, tone(c.alarms ? 'bad' : 'good'), 'times someone went on alert when nobody else was'); st('floor up', c.esc1 + c.esc2 ? `×${c.esc1 + c.esc2}` : '0', tone(c.esc2 ? 'bad' : c.esc1 ? 'warn' : 'good'), 'times the floor went to heightened / lockdown');
   st('bodies found', c.bodies, tone(c.bodies ? 'warn' : '')); st('KOs', c.kos, '', end.kit('enemies you knocked out with a takedown, a choke, a pistol-whip or a ring to the head')); st('kills', c.kills, tone(c.kills ? 'bad' : 'good'));
   st('shots', c.shots, '', `${c.shotsNearMen} of them into or near an enemy`); st('OCP', c.ocps); st('lights shot', c.lightsShot);
   st('doors kicked', c.kicked, tone(c.kicked ? 'warn' : '')); st('locks picked', c.picked); st('keys', c.keys); st('intel', c.intel, '', `${c.questioned} ${c.questioned === 1 ? 'enemy' : 'enemies'} questioned`); /* (the roster is the floor's head count) */ st('called in', c.devices, tone(c.devices ? 'warn' : ''), 'a camera or a tripwire radioed you in');
   if (c.thrown) st('thrown', c.thrown, '', 'smoke and stun canisters, frag grenades, and 40 mm grenades off the launcher'); if (c.hits) st('hits taken', c.hits, 'bad'); if (c.loads) st('checkpoint loads', c.loads, tone('warn')); if (c.blackout) st('blackout', 'used');
-  if (c.civSeen || c.civReported || c.civKo || c.civKilled || c.civComplied) { st('civilians saw you', c.civSeen, tone(c.civSeen ? 'warn' : 'good'), 'times the cleaner or the late worker saw you (or you grabbed them)'); st('…and told them', c.civReported, tone(c.civReported ? 'bad' : 'good'), 'a civilian\'s reports that reached the guards, whether she told a guard, called it in, or control called the floor after she got out'); if (c.civComplied) st('told to stay down', c.civComplied); if (c.civKo) st('civilian KOs', c.civKo, 'bad', 'civilians you knocked out, which costs you a lot'); if (c.civKilled) st('CIVILIANS KILLED', c.civKilled, 'bad'); }   // (the civilians' block only on a run that met one — civilians.ts)
+  if (c.civSeen || c.civReported || c.civKo || c.civKilled || c.civComplied) { st('civilians saw you', c.civSeen, tone(c.civSeen ? 'warn' : 'good'), 'times the cleaner or the late worker saw you (or you grabbed them)'); st('…and told them', c.civReported, tone(c.civReported ? 'bad' : 'good'), 'a civilian\'s reports that reached the guards, whether she told a guard, called it in, or control called the floor after she got out'); if (c.civComplied) st('told to stay down', c.civComplied); if (c.civKo) st('civilian KOs', c.civKo, 'bad', 'civilians you knocked out, which costs you a lot'); if (c.civKilled) st('CIVILIANS KILLED', c.civKilled, 'bad'); }   // (the civilians' block only on a run that met one — rust/game_rules/src/civilians)
   // badges
   if (!plain) { const badges = el('div', 'db-badges'); left.appendChild(badges);
   for (const b of D.badges) { const chip = el('span', `chip${b.on ? ' on' : ''}`); chip.textContent = b.name; chip.title = b.hint; badges.appendChild(chip); } }

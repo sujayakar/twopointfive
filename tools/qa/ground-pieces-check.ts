@@ -1,4 +1,4 @@
-// THE LOOK KIT'S GROUND PIECES (src/scene/gwotKit.ts rubble, stain, hearth, ruts, patch, ground, groundAt, lie) and the lived tail's closing
+// THE LOOK KIT'S GROUND PIECES (tools/levels/lib/gwotKit.ts rubble, stain, hearth, ruts, patch, ground, groundAt, lie) and the lived tail's closing
 // (tools/levels/livedKit.ts livedTail): is what lies on the ground the ground's own, and does each flat thing lie where the table says?
 //   bun run tools/qa/ground-pieces-check.ts                         exit 0 = all pass, 1 = a line failed (named)
 //   GROUNDPIECES_BREAK=1 bun run tools/qa/ground-pieces-check.ts    the red path: each line asks the KIT for the thing as it was laid before (a scatter judged
@@ -22,7 +22,7 @@ import { GWOT_PALETTE, GWOT_FINISH, GWOT_DARKER, type GwotMat } from '../../src/
 import { doesOfName } from '../../src/scene/stuff';
 import { DOES_DEFAULT } from '../../src/scene/materials';
 import { standKit as stand, laid, lines, ROWS, type Kit } from './kit-stand';
-import { isLived } from '../../src/scene/lived';
+import { isLived } from '../levels/lib/lived';
 import { livedTail } from '../levels/livedKit';
 
 const BREAK = process.env.GROUNDPIECES_BREAK === '1';

@@ -7,6 +7,12 @@ use crate::m;
 use crate::v3::{self, Quat, V3};
 use alloc::{boxed::Box, string::String, vec, vec::Vec};
 
+/// before a door: this far off its leaf, this far past its frame
+const BEFORE_DEEP: f64 = 1.1;
+const BEFORE_WIDE: f64 = 0.25;
+/// against a leaf: a man's own radius and a little
+const BRUSH_M: f64 = 0.6;
+
 /// FIGHT: a man planted in an open doorway `funnel` seconds steps off the opening. True = this file moved his feet this frame. (doorway.ts offThreshold)
 pub fn off_threshold(g: &mut crate::game::Game, gd: GuardId, aim_at: Option<V3>, dt: f64, need_shot: bool) -> bool {
     if !ours(g, gd) || g.gd[gd].script.is_some() || g.touring { return false; }
@@ -121,6 +127,46 @@ pub fn doorway_in_way(g: &crate::game::Game, p: V3) -> bool {
     false
 }
 
+/// `p` is before a door that is not `but`: in front of its leaf, a step off either face. Nobody is posted there by an order of another door: he is in the way of whoever works it, and in
+/// front of whatever comes through.
+pub fn before_another_door(g: &crate::game::Game, p: V3, but: DoorId) -> bool {
+    for &d in &g.doors.list {
+        if d == but || crate::doors::door_off(g, d) { continue; }
+        let r = rel(g, d, p);
+        if m::abs(r.perp) < BEFORE_DEEP && r.along > -BEFORE_WIDE && r.along < r.f.w + BEFORE_WIDE { return true; }
+    }
+    false
+}
+
+/// HE MEANS TO GO THROUGH IT: what is left of his way, or his step to where he is sent, crosses the door's frame.
+pub fn means_to_pass(g: &crate::game::Game, gd: GuardId, d: DoorId) -> bool {
+    let man = &g.gd[gd];
+    let mut a = g.ch[man.ch].pos;
+    for &q in man.path.iter().skip(man.path_i) {
+        if crate::guards::crosses_door(g, a, q, d).is_some() { return true; }
+        a = q;
+    }
+    man.script.as_ref().and_then(|s| s.goal).map_or(false, |q| crate::guards::crosses_door(g, a, q, d).is_some())
+}
+
+/// HE ONLY BRUSHES IT: a leaf on its latch he is against and does not mean to go through. He is put off it, and it stays shut: a door is opened by somebody going through it, or by what
+/// works it (a hand, a boot, a charge).
+pub fn only_brushes(g: &crate::game::Game, gd: GuardId) -> bool {
+    let p = g.ch[g.gd[gd].ch].pos;
+    let (mut shut, mut open) = (false, false);
+    for &d in &g.doors.list {
+        if crate::doors::door_off(g, d) { continue; }
+        let fc = g.dr[d].frame_centre;
+        if v3::dist_xz(p, fc) > g.dr[d].def.width + BRUSH_M { continue; }
+        if !crate::doors::door_latched(g, d) { open = true; continue; }
+        let r = rel(g, d, p);
+        if m::abs(r.perp) > BRUSH_M || r.along < -BRUSH_M || r.along > r.f.w + BRUSH_M { continue; }
+        if means_to_pass(g, gd, d) { return false; }
+        shut = true;
+    }
+    shut && !open   // (an open leaf beside it he moves as ever)
+}
+
 /// Who the PASS gate has `gd` held for this frame: 'Player', a man's callsign, or None when he is not held short of a man. (doorway.ts doorwayHeldBy)
 pub fn doorway_held_by(g: &crate::game::Game, gd: GuardId) -> Option<String> {
     let time = g.time;
@@ -191,7 +237,7 @@ mod tests {
         let gd = GuardId(0);
         assert!(!door_gate_stopped(&mut g, gd));
         assert_eq!(doorway_held_by(&mut g, gd), None);
-        let mut st = St::zeroed();
+        let mut st = St::default();
         st.t = 10.0;
         st.held_t = 1.0;
         st.by = Some(String::from("Player"));

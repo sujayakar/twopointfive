@@ -1,12 +1,11 @@
-//! The types of `gunslots`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `gunslots`.
 #![allow(unused_imports)]
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum GunSlot {
-    Primary,
+    #[default] Primary,
     Secondary,
 }
 impl GunSlot {
@@ -18,8 +17,7 @@ impl GunSlot {
     }
 }
 
-/// (TypeScript: GunPick, src/game/gunslots.ts:44)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct GunPick {
     pub id: String,
     pub slot: crate::gunslots::GunSlot,
@@ -27,21 +25,7 @@ pub struct GunPick {
     pub bare: Option<crate::weapons::WeaponId>,
     pub bare_was: Option<crate::weapons::WeaponId>,
 }
-impl GunPick {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GunPick {
-            id: String::new(),
-            slot: crate::gunslots::GunSlot::Primary,
-            can: None,
-            bare: None,
-            bare_was: None,
-        }
-    }
-}
-impl Default for GunPick { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum SideHung {
     Carbine,

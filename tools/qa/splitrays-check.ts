@@ -1,9 +1,9 @@
 // THE GATHER IS TWO PROGRAMS (src/render/gatherSplit.ts, shaders/gather_split.wgsl; until 2026-11-07 the Shaders row 'Separate shadow rays'). `trace` writes the points
 // it needs lit, `light` lights them round ONE directAtPoint — where the one-kernel gather that went was a program DXC pasted to 780 KB. What is checked here is what a
-// harness can see of that: the two programs' texts (who reaches the light loop, through how many call sites), that the buffer's layout is one number in the shader and in
+// tool can see of that: the two programs' texts (who reaches the light loop, through how many call sites), that the buffer's layout is one number in the shader and in
 // the engine, that a refused buffer is heard outside the machine, and what a load compiles (the gather's two pipelines, once each, each with a budget row of its own,
 // the size tool green, and no one-kernel gather).
-// NOT here (no GPU, and a harness compiles nothing): that the WGSL compiles (tools/qa/wgsl-compile.cjs), and the picture.
+// NOT here (no GPU, and a tool compiles nothing): that the WGSL compiles (tools/qa/wgsl-compile.cjs), and the picture.
 //   bun run tools/qa/splitrays-check.ts                        exit 0 = every line passed, 1 = one failed
 //   SPLITRAYS_BREAK=1 bun run tools/qa/splitrays-check.ts      `light` is read with a second call site of the light loop written into it: must FAIL
 import { readFileSync, readdirSync, mkdtempSync, rmSync } from 'node:fs';
@@ -44,25 +44,24 @@ export async function splitraysCheck(): Promise<boolean> {
     const lay = /label: 'gatherSplit', entries: \[[^\]]*?\{ binding: (\d+), visibility: CS, buffer: \{ type: 'storage' \} \},\n\s*\] \}\);/.exec(passes);
     line(v4 * 16 === SPLIT_TEXEL_BYTES && rec + 2 * slots === v4 && bind === Number(lay?.[1]) && rays + 2 === slots && !/constants: \{[^}]*RAYS/.test(passes),
       'the points\' buffer is one layout in the shader and in the engine: a texel\'s words, its header and two words a point, a slot for each ray and the two mirror rays, the binding', `RAYS ${rays} + 2 = ${slots} slots · GX_V4 ${v4} × 16 B = ${v4 * 16} (engine ${SPLIT_TEXEL_BYTES}) · ${rec} + 2 × ${slots} = ${rec + 2 * slots} · binding ${bind} (passes.ts ${lay?.[1] ?? 'not found'})`); }
-  // ---- ONE WRITING of the light loop (render/gatherSplit.ts): the gather is made from gather_common.wgsl, the file the reflection pass is made from, and no second copy stands beside it
-  { const gs = readFileSync(`${ROOT}/src/render/gatherSplit.ts`, 'utf8'), ps = readFileSync(`${ROOT}/src/render/passes.ts`, 'utf8'), files = readdirSync(dir).filter(f => /^gather.*common.*\.wgsl$/.test(f));
-    line(/import gatherCommonSrc from '\.\/shaders\/gather_common\.wgsl'/.test(gs) && /import gatherCommonSrc from '\.\/shaders\/gather_common\.wgsl'/.test(ps) && files.length === 1 && files[0] === 'gather_common.wgsl',
-      'the gather and the reflection pass are made from one gather_common.wgsl, and no other gather common file is in the shaders folder', files.join(', ')); }
+  // ---- ONE WRITING of the light loop (render/gatherSplit.ts): no second copy of gather_common.wgsl stands beside it
+  { const files = readdirSync(dir).filter(f => /^gather.*common.*\.wgsl$/.test(f));
+    line(files.length === 1 && files[0] === 'gather_common.wgsl',
+      'the gather\'s common text is one file: no other gather common file is in the shaders folder', files.join(', ')); }
   // ---- a refused buffer is heard outside the machine (a GPU too small for the buffer draws no bounce light, and did not choose that)
   { const RP = await import(`${ROOT}/src/cloud/report.ts`), heard: any[] = [], was = console.error, said: string[] = []; console.error = (...a: unknown[]) => { said.push(a.map(String).join(' ')); };
     let threw = false;
     try { RP.reportForget(); RP.reportSink((r: any) => { heard.push(r); }); splitRefused('one'); splitRefused('the grid 640×360 needs a 12 MB buffer', { grid: '640×360', MB: 12 }); splitRefused('the grid 1280×720 needs a 48 MB buffer', { grid: '1280×720', MB: 48 });
       RP.reportSink(() => { throw new Error('the listener broke'); }); splitRefused('three'); }
     catch { threw = true; } finally { console.error = was; RP.reportForget(); }
-    const own = readFileSync(`${ROOT}/src/render/gatherSplit.ts`, 'utf8'), refuse = /refuse = \(why: string\) => \{[^\n]*\n\s*splitRefused\(`The gather's points buffer: the gather grid [^\n]*the bounce light is not drawn[^\n]*,\n\s*\{ grid: [^\n]*MB[^\n]*why \}\);/.test(passes);
-    line(!threw && said.join() === 'one,the grid 640×360 needs a 12 MB buffer,the grid 1280×720 needs a 48 MB buffer,three' && heard.length === 3 && heard[1] === heard[2] && heard[1].where === 'gpu.splitrays.buffer' && heard[1].data?.grid === '640×360' && refuse && !/console\.error\(`The gather's points buffer/.test(passes) && /reportError\('gpu\.splitrays\.buffer', line, data\)/.test(own),
-      'a refused points\' buffer is said on the console word for word and to the one reporter (src/cloud/report.ts) under its own place, the grid and the size beside it; the same refusal at another window size is the report it already was (one error for a machine), a listener that throws loses nothing, and passes.ts refuses through it',
-      `console: ${said.join(' · ')} · reports: ${heard.length} (${new Set(heard).size} made) · passes.ts ${refuse ? 'refuses through it' : 'does NOT'}`); }
+    line(!threw && said.join() === 'one,the grid 640×360 needs a 12 MB buffer,the grid 1280×720 needs a 48 MB buffer,three' && heard.length === 3 && heard[1] === heard[2] && heard[1].where === 'gpu.splitrays.buffer' && heard[1].data?.grid === '640×360' && !/console\.error\(`The gather's points buffer/.test(passes),
+      'a refused points\' buffer is said on the console word for word and to the one reporter (src/cloud/report.ts) under its own place, the grid and the size beside it; the same refusal at another window size is the report it already was (one error for a machine), a listener that throws loses nothing, and passes.ts never says it by console.error',
+      `console: ${said.join(' · ')} · reports: ${heard.length} (${new Set(heard).size} made)`); }
 
   // ---- what a load compiles (the size tool, a run of its own)
   const tmp = mkdtempSync(join(tmpdir(), 'splitrays-'));
   try {
-    const f = join(tmp, 'page.json'), r = Bun.spawn(['bun', 'run', `${ROOT}/tools/qa/shaderinline-check.ts`, '--json', f], { env: { ...process.env, SHADERINLINE_BREAK: undefined }, stdout: 'pipe', stderr: 'ignore' }), text = await new Response(r.stdout).text(), green = await r.exited === 0;
+    const f = join(tmp, 'page.json'), r = Bun.spawn(['bun', 'run', `${ROOT}/tools/qa/shaders-check.ts`, 'inline', '--json', f], { env: { ...process.env, SHADERINLINE_BREAK: undefined }, stdout: 'pipe', stderr: 'ignore' }), text = await new Response(r.stdout).text(), green = await r.exited === 0;
     let j: Sizes | null = null; try { j = JSON.parse(readFileSync(f, 'utf8')) as Sizes; } catch { /* no file: the line says so */ }
     const KB = (n: number) => `${Math.round(n / 1024)} KB`, gathers = (re: RegExp) => (j?.kernels ?? []).filter(k => re.test(k.module) && k.setting !== 'title');   // (the size tool's file carries the title's kernels after the page's own: one page is counted here)
     const old = gathers(/^fgatherS?$/), own = gathers(/^gatherSplit/), pipes = own.flatMap(k => k.pipelines).sort().join(' ');

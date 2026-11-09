@@ -5,7 +5,7 @@ One of the area files CLAUDE.md indexes. Everything below was moved here word fo
 title may now live in another file of this folder: `grep -l '<title>' docs/agents/*.md`. New bullets for this area go at the foot of this file.
 
 <!-- was CLAUDE.md lines 2228–2302 -->
-- **The hour** (`src/game/hours.ts`; `?hour=dawn|midday|overcast|dusk` (+ `?sun=0‥1`), the mission sheet's Hour row / H key (ui/missions.ts — this visit's pick only, on the link it loads),
+- **The hour** (`rust/game_rules/src/hours`; `?hour=dawn|midday|overcast|dusk` (+ `?sun=0‥1`), the mission sheet's Hour row / H key (ui/missions.ts — this visit's pick only, on the link it loads),
   Tab ▸ Frame ▸ Hour, `__hour` {set(id), sun(k), at(p), summary(), changed()}, harness `PT_HOUR` / `PT_SUN` on playthrough.ts, or `hour=` / `sun=` on the query handed to `scenarioRun.ts startFromQuery` — `hourFromQuery`, the same run as a boot at that hour by digest; ids stay dawn / midday / overcast / dusk, the sheet words `overcast` 'Grey day' so it is not taken for a weather): a level started at another time of day than the night it was
   authored for, with NO level-file change. `night` is no record at all — the game byte for byte (`probes.ts hours-night`; default-equals-base by run digest). `applyHour(g, id)` (standGame
   calls it for the game's `stood.hour`; live both ways, reversible bit for bit): the level's moon disabled and a kind-2 SUN spliced in AT THE MOON'S INDEX (never last: 64 lights a frame),
@@ -17,7 +17,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   THE ONE NUMBER a weather dims under cloud (picture and stand-in read the same RtLight); the stand-in reads the LIVE `settings.skyZenith / skyHorizon`. `hourWorldChanged(g)` when statics
   change under a running game (a wall gone). Checkpoints carry `hour {id, sun}` only when not night (so the F10 journal does); `setDaylight` (the breach showcase) takes an hour out first and
   puts it back. `isDaylight(g)` stays FALSE under an hour (QRF, needs, civilians, weather gates unchanged). QA: `probes.ts hours` (night / light / restart / team / sheet).
-- **Weather** (E10, `game/weather.ts`, docs/internal/exp-weather.md — merged WITHOUT the fire-exit mist; the storm never touches the smoke solver, probe
+- **Weather** (E10, `rust/game_rules/src/weather`, docs/internal/exp-weather.md — merged WITHOUT the fire-exit mist; the storm never touches the smoke solver, probe
   `weather-smoke` holds it): RAIN is drawn, not simulated — volumetrics.wgsl (c) walks a lattice of falling drop columns along every view ray that ENDS
   outdoors (outside `INTERIOR` [4,4,36,24] = frame.weatherC AND outside the stair tower `ANNEX` = weatherD), lit unshadowed by every light whose reach mask
   includes the point, + splash rings on outdoor ground + the lit-sky term of a stroke; LIGHTNING = `strike()`: ONE kind-2 `RtLight` with `transient: true`
@@ -25,7 +25,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   glimpse Sam in a flash), intensity = a two-return-stroke envelope integrated over each frame, gone at `FLASH_SECS`; THUNDER queued for distKm × 1000/343 s
   (`sfx thunderNear/thunderFar`, `audio.play` opts lowpass / pan / wet) — ambience, no GameEvent; the WET LOT darkens the asphalt slab (found by shape) and
   flags it Gloss, switching `settings.gloss` on for the duration (`wetGloss`); its own `mulberry32` dice (`seed(n)`), never Math.random; day (the breach)
-  suspends it. `engine.weather: WeatherFrame` written by `Weather.update(dt, camYaw)` from game.ts after updateDevices. Tab ▸ Weather (storm, intensity,
+  suspends it. `engine.weather: WeatherFrame` written by the tick (`weather_update`) after the devices. Tab ▸ Weather (storm, intensity,
   rain rate, wind, wet-gloss, strike buttons), `?noweather`, `__weather` (.strike({bearing, elevDeg, distKm, peak}), .storm, .rainRate, .wind, .setEnabled,
   .summary()). QA: `probes.ts weather` (scheduler / flash / thunder / smoke / off / daylight). **RAIN IS NOT LIT THROUGH A
   SHUT DOOR OR A WALL** (the maintainer, 10-11, the glasshouse: "looks like some light leakage for the low res rain"): the reach masks count every door as open and carried
@@ -88,7 +88,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   Seen only on the software adapter.
 
 <!-- was CLAUDE.md lines 2307–2402 -->
-- **Weather kinds** (`src/game/weatherKinds.ts` + `weather.ts`; `?weather=clear|overcast|rain|downpour|fog|dust`, the mission list's Weather row; `Weather.kind` null = the
+- **Weather kinds** (`rust/game_rules/src/weather_kinds` + `weather.ts`; `?weather=clear|overcast|rain|downpour|fog|dust`, the mission list's Weather row; `Weather.kind` null = the
   bullet above exactly, the simulation untouched — 18 scripted run digests and the software-rendered default frame equal the base): a kind is one row of `WEATHER_PRESETS`
   (storm, rain, wind, `cloud` 0‥1, fog σ0 / H / leak / tint / gain). With a kind: the no-rain footprints are the LEVEL's ceiling slabs (`roofsOf`, ≤ 4; roofs 0 / 1 in
   weatherC / D, roofs 2 / 3 packed 8 bits × 0.2 m outward in `frame.cardCfg.y/.z` — `.y` is never 0 under a kind, 1 = none — and the fog in `cardCfg.w`: the Frame keeps its
@@ -103,7 +103,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   checkpoint made in another with the reason); headless a checkpoint / a journal's frame 0 carries its kind in (`WeatherSnap.kind`). Limits: wind.ts's storm record holds
   two rectangles (3–4 roofs = their bounding box: no storm wind in a yard — until `WX_OWN.wind`, the 'One wind field outdoors' bullet below), the native engine is not ported, audio.ts's reverb / destruction.ts / glassbreak.ts still test
   the office's rectangle. QA: `probes.ts wxkinds`, `playthrough.ts --set '{"WEATHER":{"kind":"fog"}}'` (or `weather=fog` in a query handed to scenarioRun.ts `startFromQuery`, which reads it headless too), `tools/qa/weather-look.cjs` (stills per level × weather × view).
-- **A weather's dust / fog is a VOLUME in the air** (`src/game/airDust.ts` + `common.wgsl wxAir` + `volumetrics.wgsl wxAirMarch`; the maintainer: 'could we just model this with
+- **A weather's dust / fog is a VOLUME in the air** (`rust/game_rules/src/air_dust` + `common.wgsl wxAir` + `volumetrics.wgsl wxAirMarch`; the maintainer: 'could we just model this with
   volumetrics properly?'; **`?flatfog` = the flat veil composite laid before it, picture and simulation, exactly**). ONE field for the picture and the men's eyes:
   `wxAir(X)` = σ0·e^(−y/H) × (in the open: 1, easing to nothing over `WX_TOP` 3 m above the ceiling line; under a roof: the AIR GRID's share below `CEIL_Y`, nothing in
   the slab). THE AIR GRID (`scene/airGrid.ts`: 0.5 m cells over the world's plan, 80 × 56 floats) lives in the tail of `boxMat` after the markings and the
@@ -124,7 +124,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   breach / eyes / save / off); stills only on a software renderer (`tools/qa/weather-look.cjs`), never timed on a GPU from the cloud — page
   rebuild/dust-volume/read-first.md. Limits: the grid is a PLAN (one share per column: an upstairs has none here), the indoor dust has no wind drift,
   the native engine is not ported.
-- **Wet characters** (`src/game/wet.ts`, the weather's other half; `settings.wetChars` default ON — off, or nobody wet, = every character shades bit for bit as
+- **Wet characters** (`rust/game_rules/src/wet`, the weather's other half; `settings.wetChars` default ON — off, or nobody wet, = every character shades bit for bit as
   before: proven `__png`-identical to main with the weather off). Every `Character` carries `wet` (the coat 0‥1), `beads` (0‥1) and `wetRain`; `updateWetness(g, dt)`
   (game.ts, right after `weather.update`) soaks whoever is OUTDOORS = outside weather.ts `INTERIOR`/`ANNEX` AND `openSky` (five upward `col.solidBlocked` rays, head →
   9 m, roofed only if ≥ 3 blocked — a canopy yes, a lamp head no; cached 0.25 s per man in a WeakMap) while `rainNow(g)` = `engine.weather.rain` > 0 (so day / off /
@@ -148,7 +148,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (never × albedo; also in debug view 10). Cost (M4 Max, high 1777×1000, 4 men on screen): g-buffer +0.05–0.07 ms, whole frame within noise (< 0.2 ms) even at 30 %
   coverage. Knobs `WET` (persisted `twopointsix.wet`, clamped to `WET_RANGE`; Tab ▸ Weather ▸ wet rows + soak Sam / soak everyone / dry all), `__wet` {on, get(i|'sam'),
   set(i, wet, beads, rain), soakAll, dry, knobs, save, reset, stats, prints(), summary()}; `clearWetPrints` runs in resetLevelState. QA: `probes.ts wet` (soak / roof / off / reset / cast / prints / shading).
-- **Wind** (`src/game/wind.ts`, `Game.wind`, docs/internal/wind.md; the maintainer: "for hvac vents, that should model wind which then also influences the smoke solver";
+- **Wind** (`rust/game_rules/src/wind`, `Game.wind`, docs/internal/wind.md; the maintainer: "for hvac vents, that should model wind which then also influences the smoke solver";
   `tune.wind` 0‥1 default 1 — **0 = still air: both consumers handed empty lists, nothing evaluated; `probes.ts wind-identity` holds the CPU game byte for byte against a
   digest frozen on main**). ONE analytic field, three kinds of source summed: the level's HVAC VENTS (LevelData `vents[]` → `Level.vents: VentDef {name, pos (face
   centre), dir, speed (m/s at the face), spread (cone half-angle °), reach (where it has halved), size?, period?/duty?/phase? cycling, mains?}`; the office authors six
@@ -177,7 +177,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   blinds him in two — nothing added on the AI side). **Wind never makes / keeps / gives back a brick and allocates nothing.** Cost: idle Δ 0, the forcing +0.02‥0.05 ms
   on the smoke pass, no memory but the block. **The dust MOTES are GONE (08-11, the maintainer: 'they look weird … it's obvious that they spawn when your flashlight shows up somewhere'):
   the `P_MOTE` particle kind, `game/motes.ts`'s recycler, `settings.moteCap` / `Caps.motes`, `WIND.motePx / moteMeander` and their rows all deleted — the particle kinds are 5 again
-  (`P_KINDS`; particles.ts derives `BLOCK_HDR_BYTES` 48 + 48·kinds and `KI_FLOAT` from it), do not bring them back as a torch-cone spawner.** MOTHS (`game/moths.ts Moths`, `Game.moths`, `tune.moths`): ≤ 12 `Dynamic|NoShadow` 3 cm boxes (`MKEY.test + 0x4000 + i`) on analytic noisy orbits under
+  (`P_KINDS`; particles.ts derives `BLOCK_HDR_BYTES` 48 + 48·kinds and `KI_FLOAT` from it), do not bring them back as a torch-cone spawner.** MOTHS (`rust/game_rules/src/moths Moths`, `Game.moths`, `tune.moths`): ≤ 12 `Dynamic|NoShadow` 3 cm boxes (`MKEY.test + 0x4000 + i`) on analytic noisy orbits under
   the exterior spot heads over 3.5 m (the sodium lamps) — pull = lit × night × calm (`windAt` at the head under 3‥6 m/s) × not a downpour, eased; each lamp's quota = its share of
   the 12 by pull (≤ 7), the surplus scattering / migrating unseen (a lamp lit later gathers its own); no gust source for a door onto the roofed ANNEX; a 9 Hz roll = the flutter; `moths.boxes(dynBoxes)`. FIXTURE DEATHS (particleFx.ts, counts in `PFX`): `fixtureShatterFx` ←
   combat.ts's fixture-shot rule (glass + phosphor shower, sinking powder, ballast sparks), `breakerSparkFx` ← the breaker shot (arc-over + soot), `lockSplinterFx`
@@ -231,7 +231,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     0.85 m/s, 0.83 m at clear's 0.38), because `windForce` pulls the whole velocity toward a level wind — the old rule, as in the office's lot, now reaching yards. If yard
     plumes read squat, the mend is to pull only the level part for a storm record: its own switch (it changes the office's lot too). Not built. Cost, inferred: moving
     air is never calm, so yard smoke in strong wind steps every frame.
-- **The air is one simulated field** (10-14; `src/game/airSim.ts AIR_SIM` / `updateAirSim` / `airMask`, `src/render/airField.ts` + `shaders/air_field.wgsl`,
+- **The air is one simulated field** (10-14; `rust/game_rules/src/air_sim AIR_SIM` / `updateAirSim` / `airMask`, `src/render/airField.ts` + `shaders/air_field.wgsl`,
   `engine.ts` the `air` pass; the maintainer: "can we make the wind sim be a general system we always run? we already have wind hooked up to the other systems, this
   would just be an improvement on it", and before it "integrating with the fluid system … the wind hits a wall", "vortices past the edge of the door").
   A 2D fluid simulation of the air over the WHOLE level floor (WORLD's 40 × 28 m at 5 cells a metre: 200 × 140), on every level. THE MAP is drawn by the game
@@ -270,7 +270,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   shell: with no weather picked, `Weather.ownStorm` is true there and the storm is cut by the depot's own three roofs (measured headless: 0 of 673 open points kept dry, 0 of 237 roofed
   points rained on). `tools/qa/ownroofs-check.ts` moved `depot.json` from its 'same' list (now the office and the block) to its own-shape list (records, compound, barracks, depot: open /
   frame / wind lines each); 19 checks. No game code moved: the rule reads the level's roofs, only the check's list and two comments named the depot.
-- **Snow is a LEVEL's weather, not a kind to pick** (10-14; `weatherKinds.ts SNOW / SNOW_LEVELS / snowLevel`, `weather.ts levelKind`, `game/snowFx.ts`; the maintainer: "can we also have
+- **Snow is a LEVEL's weather, not a kind to pick** (10-14; `weatherKinds.ts SNOW / SNOW_LEVELS / snowLevel`, `weather.ts levelKind`, `rust/game_rules/src/snow_fx`; the maintainer: "can we also have
   snow levels? the rain already looks incredible", then "i think we should probably curate snow levels and have the art be custom. seems like a lot to have it just be slapped on"). So
   there is NO `?weather=snow` and no seventh word on the Weather row: `'snow'` is a `WeatherKind` outside `WEATHER_KINDS`, and a level is in it because its NAME is on `SNOW_LEVELS` (today
   `pass`: `levels/pass.json`, `tools/levels/pass.ts` — `docs/agents/missions.md`, its last bullet). The snow that LIES is that level's own boxes and paint (`gwotPalette.ts SNOW_PALETTE`): no shader lays snow
@@ -354,7 +354,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     MEASURED on the office's storm, seed 7, 300 frames, the particle rain's switch on in two games and a stand-in pool under one: seven values of the table
     apart (`seed`, `serial` 560 against 1, `birthAcc`, `dripAcc`, `pop` 1394 against 0, `popLog`, `wasActive`) AND 649 of the collision world's query stamps
     (`game.col.stamp` 235, `cellStamp` 414): the drip walk's rays and gathers ran whole on the host with a pool and in shares on the one without. The walk
-    asks the collision world aside now (`scene/collision.ts aside`, its own stamps kept in the book), so a host that looks for drip lines and one that does
+    asks the collision world aside now (`rust/game_rules/src/scene_collision aside`, its own stamps kept in the book), so a host that looks for drip lines and one that does
     not hold one state too. After: 0 values apart, one state word. What a blast in the snow owes the pool (`puffLeft`, `flakeLeft`), whose turn the grains'
     throw is and the three records' counts (`puffs`, `thrown`, `throwFrames`) are `engine.hostBooks.snowBlast` (`snowBlast.ts SnowBlastShown`); MEASURED on
     the pass, shipped stand, one blast: `puffs` 28 over a pool, 0 over none, and the game's state of the blast the same in both. What changed in the GAME's
@@ -393,7 +393,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     sees: a still of the whole yard from the start is black without `&nofow`, and that is the fog, not the snow. `SNOWFX.skyK` (the sky's light on a flake) is 1.5: 1 read well in
     the yard's stills under the old 0.15 moon, 3 was not looked at. **Never seen on a GPU, never seen moving**: the flutter, the wrap as the camera walks, the fill at a cut, the
     flakes' size and brightness in play are numbers judged on a handful of stills (`SNOWFX`).
-- **Boots press the snow** (`src/game/snowTracks.ts`; `snow.wgsl snowPrint` and the `SNOW_TRACKS` block of `snowShade`; g-buffer group 1 binding 10; the
+- **Boots press the snow** (`rust/game_rules/src/snow_tracks`; `snow.wgsl snowPrint` and the `SNOW_TRACKS` block of `snowShade`; g-buffer group 1 binding 10; the
   maintainer, 10-14: "ideally it looks natural, deforms with character movement", and his reference the same day, a Red Dead Redemption 2 clip: deep prints with
   crumbly raised rims, a dragged load's trench with a bank either side). PICTURE ONLY: nothing in the simulation reads a print, no guard follows a trail (his call,
   not built), no step is slower or louder.
@@ -470,7 +470,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     is put down). Cost on a GPU unmeasured (five more taps of one r8 texture and three of the detail noise per lying-snow pixel; with mess above 0 one
     texel load more a pixel, and ten more noise taps on a pixel that lies on a print). The map's size changed with the mess rows (899 rows, not 896): a
     scratch tool that carries a map's bytes by index is unharmed, one that checks the size is not.
-- **Wisps of blowing snow** (`src/game/snowFx.ts SNOWWISPS` / `updateWisps`; `particles.wgsl wispStep` / `wispAir` / `wispGust`, `particles_draw.wgsl wispVertex`
+- **Wisps of blowing snow** (`rust/game_rules/src/snow_fx SNOWWISPS` / `updateWisps`; `particles.wgsl wispStep` / `wispAir` / `wispGust`, `particles_draw.wgsl wispVertex`
   and the `mode > 2.2` branch of `fs`; the maintainer, 10-14: "it does need to feel more organic … maybe we can even use the smoke sim for wisps of blowing snow?").
   NOT the smoke (one fluid for the picture and every eye): spindrift rides the FLAKES' ring of GPU particles as one more record a frame, picture only.
   - **Switch**: `SNOW_LOOK.wisps` (weatherKinds.ts) — ON in the page (`?snowwisps=0` off), OFF in the module and on the frozen stand (`TPS_SNOWWISPS=1` raises it; shows only
@@ -585,7 +585,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   see it). Check: `snow` probe, line `walls` (the pass's 19 outer walls: outer face and top open, inner face and each roof's middle hidden, the bare rectangle
   hid all 19; the shader carries the twin's number), both stands, `SNOW_BREAK=1` fails it. NOT handled: where a flake itself may live is unchanged (none is
   born or lives over a roof's rectangle, so the air over a cut-away room is empty and a sight line down onto a wall's top crosses little snow).
-- **A blast craters the snow and throws it** (10-15; `src/game/snowBlast.ts SNOWBLAST` / `snowBlastAt`, `snowTracks.ts pressCrater`, `airSim.ts airPuff`,
+- **A blast craters the snow and throws it** (10-15; `rust/game_rules/src/snow_blast SNOWBLAST` / `snowBlastAt`, `snowTracks.ts pressCrater`, `airSim.ts airPuff`,
   `particles.wgsl grainStep`'s blast branch and `puffRec`; the maintainer playing the pass: "grenades/he don't seem to really affect snow"; his standing notes: "the
   control approach", "should really feel explosive and bang things around. both the explosion and shock wave"). One blast over lying snow, low enough
   (`high` 1.6 m; a pan's radius = the blast's destruction radius × 0.26, 0.3‥1.4 m: a frag's 0.65 m), does four things, each in a layer the level had:
@@ -624,7 +624,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   over 0.19 m a ghost box so that no lying snow stops feet — the baked field stayed byte for byte, but both played seeds of the pass's room clear went
   from the level taken in about 125 s to the team wiped inside 40 s (the banks shape the routes); banks still stop feet, as authored. NEVER SEEN ON A
   GPU: the dug hill's edge.
-- **Breath steams in the cold** (`src/game/snowBreath.ts SNOWBREATH` / `updateSnowBreath`, called from `game.ts` after the fog of war's update, beside the prints' step; the maintainer,
+- **Breath steams in the cold** (`rust/game_rules/src/snow_breath SNOWBREATH` / `updateSnowBreath`, called from `game.ts` after the fog of war's update, beside the prints' step; the maintainer,
   10-14: "we should have steam from breaths in the cold levels too"). PICTURE ONLY.
   - **Switch**: `SNOW_LOOK.breath` (weatherKinds.ts) — ON in the page (`?snowbreath=0` off), OFF in the module and on the frozen stand (`TPS_SNOWBREATH=1` raises it;
     shows only with `TPS_SNOW=1` on a snow level — it does NOT need `TPS_SNOWLOOK`: no surface is read). A `FROZEN_HOLDS` row, a `pinned` line in `standup.ts`, the
@@ -796,9 +796,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     PLAY: the strip at those two walls' feet is walkable now. Not played through on a GPU; a charge from outside those walls not blown in a run here.
   - **THINGS MARK THE SNOW, A MARK FORMS AND KICKS SNOW UP, BY FORCE** (`SNOW_LOOK.marks`; `?snowmarks=0`, frozen `TPS_SNOWMARKS=1`; picture only). His "pushed
     objects (like the chair) should impact the snow", "all physics objects", "it does look like a decal just getting splatted on ... animated a bit? or some GPU
-    particles", "dependent on force". `game/snowMarks.ts`: a pushed prop's floor parts plough furrows (a chair's legs four grooves to the floor, a broad foot a
+    particles", "dependent on force". `rust/game_rules/src/snow_marks`: a pushed prop's floor parts plough furrows (a chair's legs four grooves to the floor, a broad foot a
     trough only a heavy thing presses deep), a thrown thing dents where it lands and lies in a pit where it stops, a debris chunk dents where it comes down.
-    `game/snowTracks.ts stampMark(T, force, fn, kick)`: EVERY mark (a boot's, a fallen man's, a crater, a thing's) is pressed into blank sheets and comes into the
+    `rust/game_rules/src/snow_tracks stampMark(T, force, fn, kick)`: EVERY mark (a boot's, a fallen man's, a crater, a thing's) is pressed into blank sheets and comes into the
     map over a moment (`formSnowTracks`: the floor sinks from the snow's level, the bank widens with it, what it threw lands `throwLag` later and swells) and
     queues a kick the flakes' recycler files as flake records at the mark (`snowFx.ts markKicks`). `force`: a walker's boot 0.45, a sprinter's 1.2, a fallen man
     1.3, a blast 2; a prop's by weight and speed; a landing's by how fast it came down. With the switch off `stampMark` writes the map at once: byte for byte the
@@ -812,7 +812,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     book, see "Whose the recycler's table is" above). Check `snowmarks` (14 lines with `kickbook`; `SNOWMARKS_BREAK=1` fails 9) on both stands; the game's digest is
     one with it on and off over 242 frames with a chair shoved across the yard. **Never seen on a GPU, never seen moving**: the forming's timing, the kick's size
     and whether three or four flakes off a walker's boot read at all, a furrow under a real push (the pass's chairs stand indoors: he pushed one out).
-  - **THROWN THINGS BOG DOWN IN LYING SNOW — PLAY, NOT PICTURE** (`SNOWBOG.on`, `game/snowBog.ts`; `?snowbog=0`, frozen `TPS_SNOWBOG=1`; in the knob registry and
+  - **THROWN THINGS BOG DOWN IN LYING SNOW — PLAY, NOT PICTURE** (`SNOWBOG.on`, `rust/game_rules/src/snow_bog`; `?snowbog=0`, frozen `TPS_SNOWBOG=1`; in the knob registry and
     a recording's names; a file with no SNOWBOG table replays off). His "grenades shouldn't roll around as much in the snow". Where an item touches down on lying
     snow (a snow level, under the open sky by `weather.underRoof`, at the ground, not on a thin lay of other paint) it keeps `1 − dead` of its bounce and
     `1 − grip` of its slide and stops dead under 0.35 + `stick` m/s; trodden snow (the road, the yard's paths) × `packed`. Off the GROUND (`top` 6 cm up: the ground's collision is flat at 0 under the drawn hills, so a kerb, a
@@ -1043,8 +1043,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   NOT SEEN: on a GPU; a save put back or a restart
   in the page with men breathing (the roads are the game's own, run headless over a recording stand-in for the solver); a file's load (by reading:
   it builds the men anew like a restart).
-- **What lies flat under open sky is wet while the ground is** (the library, 11-04; DRESSING, so no switch: `src/game/dress.ts` row `wetGround`,
-  `src/game/wetGround.ts`). The fault it mends: under a picked rain a yard built on the newer kit stayed DRY. `weather.ts openGround` wets a ground slab
+- **What lies flat under open sky is wet while the ground is** (the library, 11-04; DRESSING, so no switch: `rust/game_rules/src/dress` row `wetGround`,
+  `rust/game_rules/src/wet_ground`). The fault it mends: under a picked rain a yard built on the newer kit stayed DRY. `weather.ts openGround` wets a ground slab
   whose top is within 3 mm of the lot's, and that kit lays a yard, a road and a pad as FINISHES 4 to 12 mm thick over the lot (`gwotKit.ts ground`): the
   slab under them was wetted where nobody sees it, and the finish and every mark on it stayed dry. Measured headless before: a downpour on the crossing
   wetted 1 static of 1001 (with the page's tidy step 24 of 41 flat things in the open), and left its four finishes (879 m²) and the 14 sheets on them
@@ -1249,7 +1249,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the bog, the wind's snow test, the blast's mouth and the field's bake); `wetGround.ts soaks` reads the word's surface. The snow SHADER still knows
   the three snow paints by their numbers. The whole of it: `docs/agents/levels.md`, "What a box does is said in a word".
 
-- **The weather that play reads is the Rust module's** (`rust/sim/src/wind.rs`, `weather.rs`, `air.rs`, `snow.rs`; the host's half `src/sim/weatherhome.ts`; 2026-11-05, the whole tick's port). NO RULE MOVED: the same answers, by both languages in one run and by the 42. No switch: a ported family is no row anyone can put down. The hour is still TypeScript (`hours.ts`: it adds onto the lamps' sum, so it follows the lamps' table in a change of its own).
+- **The weather that play reads is the Rust module's** (`rust/sim/src/wind.rs`, `weather.rs`, `air.rs`, `snow.rs`; the host's half `rust/game_rules/src/sim_weatherhome`; 2026-11-05, the whole tick's port). NO RULE MOVED: the same answers, by both languages in one run and by the 42. No switch: a ported family is no row anyone can put down. The hour is still TypeScript (`hours.ts`: it adds onto the lamps' sum, so it follows the lamps' table in a change of its own).
   - **THE TABLE** (`Weather` in `weather.rs`, a part `weather` of a game's block, so a rollback, a save in memory and a fresh game carry it with no line of their own): kind picked or not (`live`), storm, rain rate, the rain falling on the game this tick (`rain_now`: what a rule read off the renderer's frame until now), how wet the lot is, the thunder's clock, the next stroke, the last remark, the fog's three numbers an eye reads, the roofs, the thunder on its way, the storm's own die, and the dust's field (`air.rs`: share a cell, which edges no static stands across, the clocks). `Weather`'s fields of those names and `AirDust.s` are accessors over it. `Weather` keeps its bit in the block for the game's life (`state.ts keep`), so a block is never shut under it, and a game is bound as its first tick or question opens. WHAT IS NOT STATE stays out of the block (`air.rs Plan`, a set a slot, by the block's stamp, as `bricks.rs`'s tables): which cells are roofed and the lists over them are made again from the roofs, and which edges a leaf stands across from the leaves.
   - **WHAT A QUESTION PAYS OUTSIDE A TICK.** `WX_KNOBS.here` hands over the 16 knobs the rules read (`weather.rs READS`; the check is red on a `k(..)` not named there), not the whole list. `snowBogAt` walks the world's byte table of the snow, about a thousand bytes on the fullest level, for each landing. A window for a rule's question is `col.rule`: `window`, and shut behind it on the path that has no windows (`ruleOpen` stands the copy itself).
   - **A LEVEL WITH MORE ROOFS THAN THE TABLE HOLDS (four)** loads as it did: the biggest four are its roofs, and the game says so on the console as it stands up (`weather.ts` constructor). Content is never an error. No level has more.

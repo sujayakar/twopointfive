@@ -1,12 +1,11 @@
-//! The types of `rescuecheck`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `rescuecheck`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
 pub enum Phase {
-    Out,
+    #[default] Out,
     Back,
     There,
 }
@@ -20,8 +19,7 @@ impl Phase {
     }
 }
 
-/// (TypeScript: Out, src/game/rescuecheck.ts:74)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct Out {
     pub gd: GuardId,
     pub about: GuardId,
@@ -34,50 +32,18 @@ pub struct Out {
     pub heard0: f64,
     pub calm: crate::powerout::Calm,
 }
-impl Out {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Out {
-            gd: GuardId(0),
-            about: GuardId(0),
-            goal: [0.0; 3],
-            from: [0.0; 3],
-            phase: crate::rescuecheck::Phase::Out,
-            there_t: 0.0,
-            tries: 0.0,
-            step_t: 0.0,
-            heard0: 0.0,
-            calm: crate::powerout::Calm::zeroed(),
-        }
-    }
-}
-impl Default for Out { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: RescueCheckEvent, src/game/rescuecheck.ts:75)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct RescueCheckEvent {
     pub t: f64,
     pub what: crate::rescuecheck::RescueCheckEventWhat,
     pub who: String,
     pub why: String,
 }
-impl RescueCheckEvent {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RescueCheckEvent {
-            t: 0.0,
-            what: crate::rescuecheck::RescueCheckEventWhat::Lost,
-            who: String::new(),
-            why: String::new(),
-        }
-    }
-}
-impl Default for RescueCheckEvent { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum RescueCheckEventWhat {
-    Lost,
+    #[default] Lost,
     Home,
     There,
     Word,
@@ -109,8 +75,7 @@ impl RescueCheckEventWhat {
     }
 }
 
-/// (TypeScript: inline at src/game/rescuecheck.ts:76 Cast, src/game/rescue.ts:866)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct CastItem {
     pub gd: GuardId,
     pub role: crate::rescue::Role,
@@ -120,24 +85,8 @@ pub struct CastItem {
     pub released: bool,
     pub crewed: bool,
 }
-impl CastItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CastItem {
-            gd: GuardId(0),
-            role: crate::rescue::Role::Guard,
-            in_room: false,
-            post: [0.0; 3],
-            learned_at: 0.0,
-            released: false,
-            crewed: false,
-        }
-    }
-}
-impl Default for CastItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: State, src/game/rescuecheck.ts:77)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct State {
     pub next_at: f64,
     pub n: f64,
@@ -152,31 +101,10 @@ pub struct State {
     pub out: Option<crate::rescuecheck::Out>,
     pub events: Vec<crate::rescuecheck::RescueCheckEvent>,
 }
-impl State {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        State {
-            next_at: 0.0,
-            n: 0.0,
-            stage: crate::rescuecheck::StateStage::Idle,
-            t0: 0.0,
-            caller: None,
-            about: None,
-            known: JsSet::new(),
-            where_: JsMap::new(),
-            worded: JsMap::new(),
-            kept: JsSet::new(),
-            out: None,
-            events: Vec::new(),
-        }
-    }
-}
-impl Default for State { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum StateStage {
-    Idle,
+    #[default] Idle,
     Called,
     Asked,
 }
@@ -190,7 +118,6 @@ impl StateStage {
     }
 }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum StateWordedValue {
     Door,
@@ -205,8 +132,7 @@ impl StateWordedValue {
     }
 }
 
-/// (TypeScript: RescueCheckSnap, src/game/rescuecheck.ts:235)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct RescueCheckSnap {
     pub next_at: f64,
     pub n: f64,
@@ -220,30 +146,10 @@ pub struct RescueCheckSnap {
     pub kept: Vec<f64>,
     pub out: Option<crate::rescuecheck::RescueCheckSnapOut>,
 }
-impl RescueCheckSnap {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RescueCheckSnap {
-            next_at: 0.0,
-            n: 0.0,
-            stage: crate::rescuecheck::RescueCheckSnapStage::Idle,
-            t0: 0.0,
-            caller: 0.0,
-            about: 0.0,
-            known: Vec::new(),
-            where_: Vec::new(),
-            worded: Vec::new(),
-            kept: Vec::new(),
-            out: None,
-        }
-    }
-}
-impl Default for RescueCheckSnap { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum RescueCheckSnapStage {
-    Idle,
+    #[default] Idle,
     Called,
     Asked,
 }
@@ -257,7 +163,6 @@ impl RescueCheckSnapStage {
     }
 }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum RescueCheckSnapWordedItem1 {
     Door,
@@ -272,8 +177,7 @@ impl RescueCheckSnapWordedItem1 {
     }
 }
 
-/// (TypeScript: inline at src/game/rescuecheck.ts:236 RescueCheckSnap.out, src/game/rescuecheck.ts:236)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct RescueCheckSnapOut {
     pub i: f64,
     pub about: f64,
@@ -286,26 +190,7 @@ pub struct RescueCheckSnapOut {
     pub heard0: f64,
     pub calm: crate::powerout::CalmSnap,
 }
-impl RescueCheckSnapOut {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RescueCheckSnapOut {
-            i: 0.0,
-            about: 0.0,
-            goal: [0.0; 3],
-            from: [0.0; 3],
-            phase: crate::rescuecheck::Phase::Out,
-            there_t: 0.0,
-            tries: 0.0,
-            step_t: 0.0,
-            heard0: 0.0,
-            calm: crate::powerout::CalmSnap::zeroed(),
-        }
-    }
-}
-impl Default for RescueCheckSnapOut { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum EventWhat {
     Lost,
@@ -340,22 +225,11 @@ impl EventWhat {
     }
 }
 
-/// (TypeScript: inline at src/game/rescuecheck.ts:118 goer ->, src/game/rescuecheck.ts:118)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Goer {
     pub d: RoomfightDefId,
     pub gd: GuardId,
 }
-impl Goer {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Goer {
-            d: RoomfightDefId(0),
-            gd: GuardId(0),
-        }
-    }
-}
-impl Default for Goer { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]

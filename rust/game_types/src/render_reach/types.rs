@@ -1,63 +1,28 @@
-//! The types of `render_reach`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `render_reach`.
 #![allow(unused_imports)]
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: ReachDoor, src/render/reach.ts:50)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct ReachDoor {
     pub hinge: [f64; 2],
     pub closed_dir: f64,
     pub width: f64,
 }
-impl ReachDoor {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ReachDoor {
-            hinge: [0.0; 2],
-            closed_dir: 0.0,
-            width: 0.0,
-        }
-    }
-}
-impl Default for ReachDoor { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: ReachJob, src/render/reach.ts:234)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct ReachJob {
     pub budget: f64,
     pub own: Option<crate::render_reach::ReachJobOwn>,
     pub st: Option<crate::render_reach::ReachJobSt>,
 }
-impl ReachJob {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ReachJob {
-            budget: 0.0,
-            own: None,
-            st: None,
-        }
-    }
-}
-impl Default for ReachJob { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/render/reach.ts:237 ReachJob.own, src/render/reach.ts:237)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct ReachJobOwn {
     pub jumps: Option<Vec<u8>>,
 }
-impl ReachJobOwn {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ReachJobOwn {
-            jumps: None,
-        }
-    }
-}
-impl Default for ReachJobOwn { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/render/reach.ts:238 ReachJob.st, src/render/reach.ts:238)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct ReachJobSt {
     pub ci: f64,
     pub src: Vec<[f64; 2]>,
@@ -67,78 +32,27 @@ pub struct ReachJobSt {
     pub centre: Vec<u8>,
     pub keep: Option<Vec<u8>>,
 }
-impl ReachJobSt {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ReachJobSt {
-            ci: 0.0,
-            src: Vec::new(),
-            seen: Vec::new(),
-            door: Vec::new(),
-            tried: Vec::new(),
-            centre: Vec::new(),
-            keep: None,
-        }
-    }
-}
-impl Default for ReachJobSt { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: ReachOnly, src/render/reach.ts:223)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct ReachOnly {
     pub prev: Vec<u32>,
     pub rects: Vec<[f64; 4]>,
     pub max_dist: Option<f64>,
     pub boxes: Option<Vec<[f64; 4]>>,
 }
-impl ReachOnly {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ReachOnly {
-            prev: Vec::new(),
-            rects: Vec::new(),
-            max_dist: None,
-            boxes: None,
-        }
-    }
-}
-impl Default for ReachOnly { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/render/reach.ts:196 REACH_OPTS, src/render/reach.ts:196)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RenderReachModREACHOPTS {
     pub ring: bool,
     pub solid_looks: bool,
 }
-impl RenderReachModREACHOPTS {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RenderReachModREACHOPTS {
-            ring: false,
-            solid_looks: false,
-        }
-    }
-}
-impl Default for RenderReachModREACHOPTS { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/render/reach.ts:213 REACH_WORK, src/render/reach.ts:213)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RenderReachModREACHWORK {
     pub cells: f64,
     pub steps: f64,
     pub fields: f64,
 }
-impl RenderReachModREACHWORK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RenderReachModREACHWORK {
-            cells: 0.0,
-            steps: 0.0,
-            fields: 0.0,
-        }
-    }
-}
-impl Default for RenderReachModREACHWORK { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]

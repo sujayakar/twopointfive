@@ -58,7 +58,7 @@ fn ember_emit(g: &mut Game, f: &EmberFrom, n: f64, hard: f64, k: f64) {
         pos_jit: Some(f.mouth.r * jit),
         ember: Some(m::min(0.99, ember_gain * (0.5 + 0.5 * f.heat))),
         seed: Some(seed),
-        ..crate::render_particles::EmitOpts::zeroed()
+        ..crate::render_particles::EmitOpts::default()
     });
 }
 
@@ -210,7 +210,7 @@ pub fn update_fire(g: &mut Game, dt: f64) {
                 d_max: w.top,
                 bound: crate::smoke_types::WindGpuSourceBound { c: mouth.pos, r: w.top },
                 heat: Some(true),
-                ..crate::smoke_types::WindGpuSource::zeroed()
+                ..crate::smoke_types::WindGpuSource::default()
             });
         }
         let e_up = flame_h * fl_smoke.ember_up;
@@ -280,7 +280,7 @@ pub fn update_fire(g: &mut Game, dt: f64) {
                     lattice: Some(crate::smoke_types::SmokeEmitterLattice::Coarse),
                     look: Some(true), fire: Some(true),
                     tint: Some(l.soot),
-                    ..crate::smoke_types::SmokeEmitter::zeroed()
+                    ..crate::smoke_types::SmokeEmitter::default()
                 });
             }
             // the look prototype: the fire puffs, a short burst of thicker, hotter gas, a few a second
@@ -309,7 +309,7 @@ pub fn update_fire(g: &mut Game, dt: f64) {
                     lattice: Some(crate::smoke_types::SmokeEmitterLattice::Coarse),
                     look: Some(true), fire: Some(true),
                     tint: Some(l.soot),
-                    ..crate::smoke_types::SmokeEmitter::zeroed()
+                    ..crate::smoke_types::SmokeEmitter::default()
                 });
             }
         }

@@ -869,7 +869,7 @@ mod tests {
     #[test]
     fn the_post_moved_takes_what_is_on_it() {
         let (mut g, gd, _) = man_with_overlay();
-        let d = g.tab.roomfight_def.push(Def::zeroed());
+        let d = g.tab.roomfight_def.push(Def::default());
         g.tab.roomfight_def[d].gd = gd;
         g.tab.roomfight_def[d].pt = [1.0, 0.0, 1.0];
         g.gd[gd].covers = Some([1.0, 0.0, 1.0]);

@@ -32,7 +32,7 @@ export const PLAN_BUDGET_MS = 15;
  *  terms), and these are the rows of those two that measurably calm it: ReSTIR's spatial reuse everywhere + the extra penumbra ray, the resolve's motion α and RCAS motion sharpen halved.
  *  Measured at high (docs/internal/gi-motion.md §5): −14 … −51 % of the S1 pan flow per tile, the STILL tiles −28 … −55 % (spatial reuse halves ReSTIR's static crawl there too), the daylight
  *  breach wall +7 %, ≈ +0.6 ms union; the trades (softer contact shadows with spatial reuse — image-quality.md's D2 — and softer motion with α 0.25 — tjank.md raised it to 0.4 for that)
- *  were the maintainer's to weigh BY EYE — and they did (08-12: 'seems to fix a lot of the direct lighting noise issues … looks great'): main.ts switches the bundle ON at boot
+ *  were the maintainer's to weigh BY EYE — and they did (08-12: 'seems to fix a lot of the direct lighting noise issues … looks great'): host/drawpage.ts switches the bundle ON at boot
  *  (?nomotioncalm, Tab ▸ Frame, __gimo.calm(false) put it off); OFF = every row exactly as the preset / the engine defaults have it. `Quality.motionCalm` re-applies it after every preset change while it is on. */
 export const MOTION_CALM = { restirSpatialAll: true, restirPenRays: true, taauMotionAlpha: 0.25, taauSharpenMotion: 0.15 };   // (the reservoir memory stays at the tier's own 20: cutting it to 10 / 6 bought 3–6 % more under the pan and cost the STILL tiles half of what spatial reuse wins there and the daylight breach wall +23 / +32 % swim)
 /** … and what 'off' puts back for the rows no preset places (engine.ts defaultSettings' values — kept here as literals: importing the engine module at runtime would drag WebGPU globals into the headless tools that import this file) */
@@ -150,7 +150,7 @@ export function ladderAimOf(word: string | null | undefined): number | null {
   const w = (word ?? '').trim().toLowerCase();
   return w === 'asnow' || w === '0' ? 0 : w === '60' ? 60 : w === '90' ? 90 : w === '120' ? 120 : w === 'display' ? AIM_DISPLAY : null;   // (the five the card and the Tab row offer, no others: a row that cannot show the value it holds would lie)
 }
-/** the refresh rates displays come in (host/loop.ts snaps the fixed step onto the same list): a rate SEEN within 3 % of one is taken as it, anything else rounds DOWN */
+/** the refresh rates displays come in (src/host/drawpage.ts snaps the fixed step onto the same list): a rate SEEN within 3 % of one is taken as it, anything else rounds DOWN */
 const DISPLAY_RATES = [50, 60, 72, 75, 90, 100, 120, 144, 165, 240];
 export const snapRate = (hz: number, tol = 0.03) => DISPLAY_RATES.find(r => Math.abs(hz - r) <= tol * r) ?? Math.floor(hz);
 /** the rate a run of frame intervals (ms) shows the display to reach: the fastest EIGHT CONSECUTIVE intervals, their shortest left out, averaged (the short catch-up frame after a long
@@ -253,7 +253,7 @@ export const PRESETS: Record<QualityName, Preset> = {
  *  at medium. Price: one pair more (two dispatches over the live bricks) a solver step on medium, low and verylow, one fewer on ultra — the cost model does not price the solver
  *  (it lands in the measured fixed part) and nobody has timed it. How far a plume's shape moved between 3, 4 and 5 pairs was never measured either. */
 export function rbItersOf(p: Preset, one: boolean): number { return one ? PRESETS.high.rbIters : p.rbIters; }
-/** FIRE SMOKE SHED (settings.fireSmokeShed, default on, `?fireshed=0`; off = every preset keeps an open fire's smoke, as it was). An open fire (game/fire.ts) files a hot
+/** FIRE SMOKE SHED (settings.fireSmokeShed, default on, `?fireshed=0`; off = every preset keeps an open fire's smoke, as it was). An open fire (rust/game_rules/src/fire) files a hot
  *  smoke source on the solver every second while it is near the view, so near a fire the solver is awake and steps the plume's bricks: by the solver's figures on the
  *  maintainer's Mac (0.43 ms awake + 0.39 µs a stepping brick, 10-10) and the fire's own brick count (about 1,300, software adapter) 0.5 ms where other smoke already runs
  *  and 0.95 ms where the fire is the only smoke — the same at every preset, and fixed: the render scale does not shrink it. Against the model's rungs that is 3.5 to 6.5 %
@@ -282,19 +282,19 @@ export function fireSmokeFor(name: QualityName, shed: boolean, auto: boolean, no
  *  NOT make the read right: the meter still blends the cells around the man, some of them inside the wall beside him (docs/agents/render.md, BOUNCE WALLS 'not mended').
  *  Price: low and verylow trace 2.1 × the probes at their own refresh periods — in the cost model their fixed part 1.9 → 2.4 and 1.4 → 1.9 model-ms. */
 export const rcGridOf = (p: Preset, one: boolean) => one || !p.rcCoarse ? p.rc : p.rcCoarse;
-/** ?nortreflect (main.ts): the RT reflections held OFF for this visit whatever preset auto or a menu applies — the by-hand Tab row still works. Module state, so every Quality instance
+/** ?nortreflect (host/engineflags.ts): the RT reflections held OFF for this visit whatever preset auto or a menu applies — the by-hand Tab row still works. Module state, so every Quality instance
  *  and every apply() honours it. */
 export const rtVeto = { on: false };
-/** ?sharp / ?nosharp: sharp direct forced on / off for the visit whatever the presets place (null = the preset's own `sharp`) — main.ts sets it, apply() honours it */
+/** ?sharp / ?nosharp: sharp direct forced on / off for the visit whatever the presets place (null = the preset's own `sharp`) — host/engineflags.ts sets it, apply() honours it */
 export const sharpForce: { v: boolean | null } = { v: null };
 /** ?noiq: the whole IqTier forced OFF for the visit (= the resolve exactly as it was: the identity A/B against main) */
 export const iqForce = { off: false };
-/** ?gbaa: GBAA + the TAA's jitter off forced for the visit whatever the presets place (main.ts sets it, apply() honours it after the tier's own taau rows) */
+/** ?gbaa: GBAA + the TAA's jitter off forced for the visit whatever the presets place (host/engineflags.ts sets it, apply() honours it after the tier's own taau rows) */
 export const gbaaForce = { on: false };
 /** the render scale a preset starts at on THIS engine: its TAAU scale with the resolve on, 1.0 without it (the old behaviour, ?notaau) */
 export const startScale = (p: Preset, taauOn: boolean) => taauOn ? p.scale : 1.0;
 
-// ---- cost model for auto's calibration (plan() below; tools/qa/quality-plan.ts prints it and exercises plan() with synthetic machines) ----
+// ---- cost model for auto's calibration (plan() below; tools/qa/quality-check.ts --plan prints it, and the check holds plan()'s picks on synthetic machines) ----
 // Only RATIOS between presets are used: calibration measures the real ms at the current preset and asks "what would preset X at scale s cost on THIS machine".
 // Reference: the M4 Max, cubicles view, 1777×1000 internal, compute passes with frames serialized (08-07, bccea3d), at what 'high' was before the fold = ultra's
 // per-pixel settings with 20 beam steps: 24.9 ms = direct 9.8 + softblur 3.3 + gather 6.6 + indirect temporal/à-trous ≈1.0 + volumetrics 0.8 + bloom ≈0.2
@@ -347,7 +347,7 @@ export function costTable(oneGrid = true): CostTable {
 export const COST = costTable();
 
 export interface Plan { preset: QualityName; scale: number; predicted: number; note: string }
-/** The pure part of auto's boot decision (Quality.decide), exercised with synthetic numbers by tools/qa/quality-plan.ts: given the measured compute ms (total and its
+/** The pure part of auto's boot decision (Quality.decide), exercised with synthetic numbers by tools/qa/quality-check.ts: given the measured compute ms (total and its
  *  fixed part) at preset `cur` and effective scale `effNow` (internal / CSS×dpr, engine.effectiveScale) on a canvas `cssH` CSS px tall at `dpr`, return the highest ladder
  *  preset — and the render scale RELATIVE TO THAT PRESET'S CAP on this window (engine.ts resize; snapped down onto SCALE_STEP) — predicted to fit `budgetMs` of compute
  *  (PLAN_BUDGET_MS: 15 ms ≈ a presented 50–55 fps once the render passes, the CPU and vsync slop are added). Order of preference: high → medium → low at full scale; low
@@ -381,7 +381,7 @@ export function plan(gpuMs: number, fixedMs: number, cur: QualityName, effNow: n
 const clamp01 = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 /** document.hidden, unless an automation run says the pane is being pumped anyway (`window.__testVisible`): the headless Browser pane reports hidden
  *  even while it renders, which would keep calibration from ever running under test */
-const pageHidden = () => document.hidden && !window.__testVisible;
+const pageHidden = () => document.hidden && !(window as { __testVisible?: boolean }).__testVisible;
 
 /** `?adapt=0` (or off / false) ON THE ADDRESS: THE VISIT OPENS WITH NOTHING ADAPTING. The row 'Hold frame rate' is off, and where the address names no tier,
  *  the tier the page stands on is held as `?quality=` would hold it (Quality.visit below): the ladder makes no move at all (sample() returns on its second
@@ -393,7 +393,7 @@ const pageHidden = () => document.hidden && !window.__testVisible;
  *  size, NOT MEASURED for this machine since no calibration runs; a benchmark's card says so (ui/bench.ts SIZE_UNNAMED). LIKE EVERY WORD OF THE ADDRESS it is
  *  how the visit opens, not a lock: a tier or 'Auto' picked in Options afterwards is the player's own, and Reset puts the defaults back under the address's
  *  words (ui/options.ts). Nothing is written as the machine's choice. WITH THE LADDER OFF THE PAGE HAS NO FRAME RATE TO HOLD, so outside a benchmark the even
- *  pace has no target either and the page draws every frame the display offers (main.ts hands the pacer the ladder's target only while the ladder is on): a
+ *  pace has no target either and the page draws every frame the display offers (host/drawpage.ts hands the pacer the ladder's target only while the ladder is on): a
  *  pinned tier with the row off always did. A benchmark carries the word from scene to scene (ui/benchrun.ts CARRIED) and its card says, from its own
  *  lines, whether the size was held (ui/bench.ts sizeNote). THE KIT PICTURE'S FRAME does not take the word (ui/kitView.ts leaves it off the frame's address):
  *  that page is always pinned to a tier and has no row to put the ladder back. */
@@ -438,7 +438,7 @@ export class Quality {
   }
   /** preset `cur` (the current one) as it is being rendered: the live lossy divisors, cap and scale over its rows (scale + iq.sharp as they are: presetCost prices sharp direct by `iq.sharp && scale < 1`) */
   private livePreset(cur: QualityName): Preset { const S = this.engine.settings; const pc = PRESETS[cur]; return { ...pc, lossy: { ...pc.lossy, gatherThird: !!S.gatherThird, volQuarter: !!S.volQuarter, rcHalfRate: !!S.rcHalfRate }, maxH: S.maxInternalHeight || pc.maxH, scale: S.renderScale, iq: { ...pc.iq, sharp: !!S.sharpDirect && S.taau !== false } }; }
-  /** the climb is allowed at all this visit: false where the address holds a tier (`?quality=`, or `?adapt=0` alone: visit below) — 'pins a preset' means the rows the harnesses and A/B pages measure stay put; a preset pinned from a MENU
+  /** the climb is allowed at all this visit: false where the address holds a tier (`?quality=`, or `?adapt=0` alone: visit below) — 'pins a preset' means the rows the tools and A/B pages measure stay put; a preset pinned from a MENU
    *  keeps the climb (spending a roomy machine's headroom is what it is for), and settings.ladderClimb is the by-hand switch either way */
   climbAllowed = true;
   /** the motion-calm bundle (MOTION_CALM) is on for this visit: re-applied after every preset change */
@@ -458,7 +458,7 @@ export class Quality {
   private bandsOf: { aim: number; hz: number; b: Bands } = { aim: 0, hz: 0, b: AS_NOW };
   /** what the aim sees, for the Tab panel / QA */
   get aimState() { const b = this.bands; return { aim: this.aim, hold: b.hold, target: +b.target.toFixed(1), displayHz: this.displayHzPin || this.displayHz, unionBudget: +b.planBudget.toFixed(2), cutFps: +b.cutFps.toFixed(1), hot: this.hot }; }
-  /** the display's rate, watched on a rAF of the page's own while an aim is set (main.ts starts it at boot whenever an aim is set — the default's or ?aim='s —, the first `bands` read otherwise; it stops itself back under 'as now': nothing
+  /** the display's rate, watched on a rAF of the page's own while an aim is set (host/drawpage.ts starts it at boot whenever an aim is set — the default's or ?aim='s —, the first `bands` read otherwise; it stops itself back under 'as now': nothing
    *  new runs there): every 60 intervals, displayRateOf says what the page has just reached; RAISED here whenever the frames show more, LOWERED only by sample() on HOLD.pacedWindows of
    *  frames that are slow with the GPU inside its budget (a window moved to a slower display, a browser that throttles) */
   watchDisplay() {
@@ -484,11 +484,11 @@ export class Quality {
    *  is under `maxSecs`; with none out the clock is back at 0 */
   private standsIn(dt: number): boolean { if (laterProgress.pending === 0) { this.standsInFor = 0; return false; } return (this.standsInFor += dt) < STANDS_IN.maxSecs; }
   /** THE BOOT'S MEASURE WAS TAKEN ON STAND-INS (the wait ran out with programs still compiling): the pick stands for now and the page measures once more when
-   *  they are in (main.ts asks every frame: `remeasure`). False on every load whose later set lands inside the wait. */
+   *  they are in (host/drawpage.ts asks every frame: `remeasure`). False on every load whose later set lands inside the wait. */
   early = false;
   /** the later set is in after an early measure: calibrate again, once, on the settings' own picture (auto only; a preset pinned meanwhile keeps its pin) */
   remeasure() { if (!this.early || laterProgress.pending > 0) return; this.early = false; if (this.auto) this.calib = { frames: 0, t: 0, gpu: [], fixed: [], dts: [], done: false }; }
-  /** fired when a calibration settles (decide) — main.ts refreshes the pause card's note, which otherwise goes stale while the card is up */
+  /** fired when a calibration settles (decide) — host/drawpage.ts refreshes the pause card's note, which otherwise goes stale while the card is up */
   onCalibrated: (() => void) | null = null;
   /** STANDS IN: seconds sample() has been waiting on a program that is still compiling (0 = it is not waiting) */
   standsInFor = 0;
@@ -553,7 +553,7 @@ export class Quality {
   setAuto() { try { localStorage.setItem(LS_MODE, 'auto'); } catch { /* */ } this.startAuto(); }
 
   apply(name: QualityName) {
-    if (!(name in PRESETS)) throw new Error(`Quality.apply: no preset is called '${name}' (the presets: ${QUALITY_NAMES.join(', ')})`);   // (an untyped caller: the console, a harness script written when there was an ultra)
+    if (!(name in PRESETS)) throw new Error(`Quality.apply: no preset is called '${name}' (the presets: ${QUALITY_NAMES.join(', ')})`);   // (an untyped caller: the console, a script written when there was an ultra)
     const p = PRESETS[name]; const S = this.engine.settings; this.current = name; this.lastCut = null; this.upTrial = null;   // (a preset put on is nobody's cut to judge)
     const sc = startScale(p, S.taau !== false);   // (a stub engine without the setting counts as TAAU on — the default)
     S.renderScale = sc; S.maxInternalHeight = p.maxH; this.maxScale = sc;
@@ -572,11 +572,11 @@ export class Quality {
     const K = p.caps; this.putSmoke(p);   // the smoke's rows — the march's size, lights a step, shadow refresh, step length, the beam steps (putSmoke)
     // the worst-case caps (Caps above): the volumetric march / beams …
     S.particleBirths = K.births;                                                                           // … GPU particle births a frame (engine.render hands it to Particles.prepare; the queue carries the rest) …
-    S.particleRainCount = K.rain;                                                                          // … the particle rain's drop cap (rainFx.ts; nothing runs while settings.particleRain is off) …
+    S.particleRainCount = K.rain;                                                                          // … the particle rain's drop cap (rust/game_rules/src/rain_fx; nothing runs while settings.particleRain is off) …
     const cur = this.engine.rc.cfg, grid = rcGridOf(p, this.oneGrid());   // (ONE CACHE GRID: the same lattice under every preset, so the light meter's reading is not the setting's)
     if (cur.nx !== grid.nx || cur.ny !== grid.ny || cur.nz !== grid.nz || cur.cascades !== p.cascades) this.engine.rebuildRc({ ...defaultRcConfig, ...grid, cascades: p.cascades, interval0: cur.interval0 });
     this.smoke.params.rbIters = rbItersOf(p, this.oneSolve());   // (ONE SMOKE SOLVE: the same pressure pairs under every preset, so what smoke hides is not the setting's)
-    S.fireSmoke = fireSmokeFor(name, this.fireShed(), this.auto, S.fireSmoke);   // (FIRE SMOKE SHED: the floor rung draws an open fire without its smoke, and auto's first rung up from it keeps that — game/fire.ts reads it)
+    S.fireSmoke = fireSmokeFor(name, this.fireShed(), this.auto, S.fireSmoke);   // (FIRE SMOKE SHED: the floor rung draws an open fire without its smoke, and auto's first rung up from it keeps that — rust/game_rules/src/fire reads it)
     this.shedRoomy = 0; this.climbed = []; this.roomy = 0; this.sinceClimb = 0; this.failed.clear(); this.failCount.clear(); this.dipping = 0;   // (the climb's rungs and failures were the previous preset's: this one starts from its own rows)
     if (this.motionCalm) this.applyMotionCalm(true);   // (the opt-in motion-calm rows ride over the preset's own while the switch is on)
     this.lastChange = `preset ${name}`; this.cooldown = 3; this.slow = this.fast = 0;
@@ -624,7 +624,7 @@ export class Quality {
     this.onCalibrated?.();
   }
 
-  /** Feed real frame times (only for frames actually presented at display rate). `gpuUnionMs` = the union of the last resolved frame's compute-pass GPU intervals (main.ts hands
+  /** Feed real frame times (only for frames actually presented at display rate). `gpuUnionMs` = the union of the last resolved frame's compute-pass GPU intervals (host/drawpage.ts hands
    *  engine.timer.unionMs; omitted / 0 without timestamp queries — the climb then never sees headroom and never acts). */
   sample(dt: number, gpuUnionMs = 0) {
     if (!this.adaptive && this.climbed.length) this.unclimbAll('adaptive off');   // (nothing below runs to undo them otherwise: the settings would keep the climbed values)
@@ -1001,7 +1001,7 @@ export class Quality {
     S.restirHistory = p.restir.history;   // (either way the tier's own reservoir memory)
     this.lastChange = `motion-calm rows ${on ? 'ON (restir spatialAll + penRays · resolve motion α 0.25, sharpen 0.15)' : 'off (the preset\'s own)'}`;
   }
-  /** QA / the Tab panel: feed the ladder synthetic 1-s windows without presenting anything — `secs` seconds of frames at `fps` with the GPU union at `unionMs` (tools/qa/quality-plan.ts drives the climb's
-   *  checks through this; the calibration must be done or off) */
+  /** QA / the Tab panel: feed the ladder synthetic 1-s windows without presenting anything — `secs` seconds of frames at `fps` with the GPU union at `unionMs`
+   *  (the calibration must be done or off) */
   simulate(secs: number, fps: number, unionMs: number) { const dt = 1 / fps; const n = Math.round(secs * fps); for (let i = 0; i < n; i++) this.sample(dt, unionMs); return { scale: this.engine.settings.renderScale, sharp: this.engine.settings.sharpDirect, gatherThird: this.engine.settings.gatherThird, volQuarter: this.engine.settings.volQuarter, maxH: this.engine.settings.maxInternalHeight, preset: this.current, last: this.lastChange, climb: this.climbState }; }
 }

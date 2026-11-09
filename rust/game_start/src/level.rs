@@ -254,7 +254,7 @@ fn read(g: &mut Game, data: &Json, dressing: bool, lived: bool) -> (Loaded, Vec<
     let (reach, drive, exfil) = (ob("reach"), ob("drive"), ob("exfil"));
     let area = rect(reach.get("area"), "the reach objective's area");
     let records = typed(data);
-    let mut level = Level::zeroed();
+    let mut level = Level::default();
     level.props = props; level.lights = lights; level.switchables = switchables; level.doors = doors;
     level.devices = Some(records.devices); level.vents = records.vents; level.civilians = records.civilians; level.breach = records.breach;
     if data.has("daylight") {

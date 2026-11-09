@@ -1,5 +1,5 @@
 // THE KEPT TAPES' STORE: where the pieces of every page visit's tape live in this browser (kept.ts has the format and why), what is let go when the room runs
-// out, and how a visit is read back out of it. IndexedDB, a database of its own (the F7 shelf's is not touched), three stores:
+// out, and how a visit is read back out of it. IndexedDB, a database of its own, three stores:
 //   `visits`  one small row a page visit: when, what, how many pieces, how many bytes, notes put on it
 //   `heads`   the visit's head line as it stands (rewritten only when the switches or the floor changed)
 //   `pieces`  [visit, number] → the piece's line, gzipped where the browser can (a Blob), the plain text where it was written as the page was going away
@@ -11,7 +11,7 @@
 import type { ReplayNote } from './format';
 
 /** `secs` between pieces · `maxMB` of kept tapes at most, and never more than `share` of what the browser says this site may use · `openMs` an open of the
- *  database is waited on (shelf.ts SHELF.openMs: a browser can leave the request with no event at all) · `endMs` after a mission ends its piece is filed,
+ *  database is waited on (a browser can leave the request with no event at all) · `endMs` after a mission ends its piece is filed,
  *  without waiting for the next beat (keeper.ts watch) */
 export const KEEP = { secs: 5, maxMB: 600, share: 0.5, openMs: 5000, endMs: 1000 };
 
@@ -22,6 +22,8 @@ export interface KeptRow {
   notes?: ReplayNote[];
   /** its tape is one of hands (tape/keep.ts): the page that draws plays it, and it has no trace to draw a map of */
   hands?: boolean;
+  /** the module it was played on (module.ts) */
+  module?: string;
   /** its page said it was going (pagehide): nobody is playing it. NEVER STORED ON THE ROW — `rows()` reads it off the store's own mark (`left` below), which a
    *  going page can write without reading the row back, and so without laying an old row over a note another tab wrote since */
   left?: boolean;
@@ -143,7 +145,7 @@ export async function keepBudget(): Promise<number> {
 /** a visit some page wrote to this recently is taken to be still being played (a page files every KEEP.secs) — unless its page said it was going (`left`):
  *  a game just left for the list of replays is not being played, and its row must not say so for a minute */
 export const WRITING_MS = 60000;
-/** (the check's red path: REPLAYLEFT_BREAK=1 in front of tools/qa/replaykeep-probes.ts — a page has no process) */
+/** (the check's red path: REPLAYLEFT_BREAK=1 — a page has no process) */
 const LEFT_BREAK = (() => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.REPLAYLEFT_BREAK ?? '') === '1'; } catch { return false; } })();
 export const beingWritten = (r: KeptRow, nowMs = Date.now()): boolean => { if (r.left && !LEFT_BREAK) return false; const t = Date.parse(r.lastAt); return Number.isFinite(t) && Math.abs(nowMs - t) < WRITING_MS; };
 /** LET GO OF THE OLDEST until the kept tapes fit `max` bytes, oldest first — never `live`

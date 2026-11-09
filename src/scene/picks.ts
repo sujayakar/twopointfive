@@ -1,6 +1,6 @@
 // THE SHORT LIST (the maintainer, 10-08: 'keep polishing, optimizing, curating missions'): the few missions worth playing first, IN PLAY ORDER, each with the
 // settings that show it at its best — and nothing else. THIS TABLE IS THE ONE PLACE: the start page's first missions (ui/startpage.ts), the 'next' button on the pause and
-// debrief cards (ui/menu.ts), `?pick=<id>` typed by hand (main.ts) and the probes (tools/qa/picks-probes.ts) all read PICKS; to reorder, retune or swap a
+// debrief cards and `?pick=<id>` typed by hand (host/drawpage.ts) all read PICKS; to reorder, retune or swap a
 // mission, edit a row here. Every mission the build has stays on the mission list (ui/missions.ts), with its own team, hour and
 // weather rows: a pick is only a shortcut to one row of that list with its settings already on the URL.
 //
@@ -8,10 +8,10 @@
 // pick's settings written OUT on it — `squad=N` where it is not the mission's own size, `difficulty=` always on a scenario (so a machine that keeps Hard does
 // not turn a Standard pick hard, and the other way round; nothing is stored) — and
 // `pick=<id>` last, which names the pick to the page it loads (the pause card's 'next'). The visitor's other flags (?quality=, ?mute …) ride along;
-// an older run's settings do not, and neither does a mission's own switch (a visitor's `?pair` is not carried into a pick). What a machine keeps in the Tab panel beyond the difficulty (the team feel rows, a stored pair switch) is the player's and is not pinned. `?pick=<id>` (or its place on the list, `?pick=3`) alone is a link that stays right when a row's settings change: main.ts
+// an older run's settings do not, and neither does a mission's own switch (a visitor's `?pair` is not carried into a pick). What a machine keeps in the Tab panel beyond the difficulty (the team feel rows, a stored pair switch) is the player's and is not pinned. `?pick=<id>` (or its place on the list, `?pick=3`) alone is a link that stays right when a row's settings change: host/drawpage.ts
 // answers it with one redirect to pickHref.
 //
-// THE ONE CHOICE A ROW OFFERS IS STANDARD OR HARD (the maintainer, 10-08: no switches 'other than easy/hard'; the names are the build's own, game/difficulty.ts):
+// THE ONE CHOICE A ROW OFFERS IS STANDARD OR HARD (the maintainer, 10-08: no switches 'other than easy/hard'; the names are the build's own, rust/game_rules/src/difficulty):
 // every other setting is this table's. A row opens on its own difficulty (pickDifficulty); the other one is the same
 // URL with the other `difficulty=` on it (pickHref's last argument). Both read back as the same pick (pickOfQuery), so 'next' and the quit work on either,
 // and 'next' carries a difficulty the player chose over the row's own on to the row after.
@@ -35,12 +35,12 @@ export interface Pick {
   squad?: SquadSize;
   /** the defenders the row opens on (absent = standard; the solo night has no switch). The other one is a click away on the same row */
   difficulty?: Difficulty;
-  /** RESERVED, NOT READ YET: a kit for this entry, by the name the loadout will give it. Kit is kept per machine today (game/loadout.ts) and is on no URL,
-   *  so no row sets this and nothing reads it (tools/qa/picks-probes.ts holds that no row does until pickHref carries it) */
+  /** RESERVED, NOT READ YET: a kit for this entry, by the name the loadout will give it. Kit is kept per machine today (rust/game_rules/src/loadout) and is on no URL,
+   *  so no row sets this and nothing reads it */
   loadout?: string;
 }
 
-export const SOLO_ID = 'solo-night';   // (ui/missions.ts SOLO_NIGHT.id / SOLO_KEY — tools/qa/picks-probes.ts holds the three together)
+export const SOLO_ID = 'solo-night';   // (ui/missions.ts SOLO_NIGHT.id / SOLO_KEY)
 const SOLO_KEY = 'solo';
 
 // ─────────────────────────────────────────────────────────────── THE LIST, in play order ───────────────────────────────────────────────────────────────
@@ -88,11 +88,9 @@ export function pickNamed(name: string | null, list: Pick[] = PICKS): Pick | nul
   if (!name) return null;
   return list.find(p => p.id === name) ?? (/^\d+$/.test(name) ? list[Number(name) - 1] ?? null : null);
 }
-/** `?pick=<id | place>` with NO mission on the URL: the query string to go to instead (main.ts, one replace before anything boots) — null for every other URL,
+/** `?pick=<id | place>` with NO mission on the URL: the query string to go to instead (host/drawpage.ts, one replace before anything boots) — null for every other URL,
  *  the pick's own included, so the answer to its own answer is always null */
 export function pickRedirect(search: string, list: Pick[] = PICKS, scenarios: ScenarioEntry[] = ALL_MISSIONS): string | null {
   const q = new URLSearchParams(search); if (!q.has(PICK_KEY) || specOfQuery(q) || SCENARIO_KEYS.some(k => q.has(k))) return null;
   const p = pickNamed(q.get(PICK_KEY), list); return p ? pickHref(p, search, list, scenarios, difficultyOf(search)) : null;   // (`?pick=1&difficulty=hard` typed by hand: the row at that difficulty)
 }
-/** the URL names something to play (a scenario, the solo night): its page boots that, and the cards on it carry no rows */
-export function namesMission(search: string): boolean { const q = new URLSearchParams(search); return !!specOfQuery(q) || q.has(SOLO_KEY); }

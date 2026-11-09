@@ -1,48 +1,23 @@
-//! The types of `dialogue`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `dialogue`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: DialogueSnap, src/game/dialogue.ts:2064)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct DialogueSnap {
     pub recent: Vec<(String, f64)>,
     pub sam: crate::dialogue::DialogueSnapSam,
     pub radio: Option<crate::dialogue::DialogueSnapRadio>,
     pub ambient: crate::dialogue::DialogueSnapAmbient,
 }
-impl DialogueSnap {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DialogueSnap {
-            recent: Vec::new(),
-            sam: crate::dialogue::DialogueSnapSam::zeroed(),
-            radio: None,
-            ambient: crate::dialogue::DialogueSnapAmbient::zeroed(),
-        }
-    }
-}
-impl Default for DialogueSnap { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:2065 DialogueSnap.sam, src/game/dialogue.ts:2065)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct DialogueSnapSam {
     pub said: Vec<(String, f64)>,
     pub last: Option<String>,
 }
-impl DialogueSnapSam {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DialogueSnapSam {
-            said: Vec::new(),
-            last: None,
-        }
-    }
-}
-impl Default for DialogueSnapSam { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:2066 DialogueSnap.radio, src/game/dialogue.ts:2066)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct DialogueSnapRadio {
     pub done: Vec<String>,
     pub queue: Vec<crate::dialogue::DialogueSnapRadioQueueItem>,
@@ -52,79 +27,29 @@ pub struct DialogueSnapRadio {
     pub blackout: bool,
     pub found: f64,
 }
-impl DialogueSnapRadio {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DialogueSnapRadio {
-            done: Vec::new(),
-            queue: Vec::new(),
-            reply: None,
-            last_at: 0.0,
-            esc: 0.0,
-            blackout: false,
-            found: 0.0,
-        }
-    }
-}
-impl Default for DialogueSnapRadio { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:2066 DialogueSnapRadio.queue, src/game/dialogue.ts:2066)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct DialogueSnapRadioQueueItem {
     pub at: f64,
     pub beat: String,
 }
-impl DialogueSnapRadioQueueItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DialogueSnapRadioQueueItem {
-            at: 0.0,
-            beat: String::new(),
-        }
-    }
-}
-impl Default for DialogueSnapRadioQueueItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:2066 DialogueSnapRadio.reply, src/game/dialogue.ts:2066)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct DialogueSnapRadioReply {
     pub at: f64,
     pub text: String,
 }
-impl DialogueSnapRadioReply {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DialogueSnapRadioReply {
-            at: 0.0,
-            text: String::new(),
-        }
-    }
-}
-impl Default for DialogueSnapRadioReply { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:2067 DialogueSnap.ambient, src/game/dialogue.ts:2067)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct DialogueSnapAmbient {
     pub next: f64,
     pub played: Vec<(String, f64)>,
     pub count: f64,
 }
-impl DialogueSnapAmbient {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DialogueSnapAmbient {
-            next: 0.0,
-            played: Vec::new(),
-            count: 0.0,
-        }
-    }
-}
-impl Default for DialogueSnapAmbient { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum Knowledge {
-    None,
+    #[default] None,
     Heard,
     Glimpsed,
     Saw,
@@ -142,10 +67,9 @@ impl Knowledge {
     }
 }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum Band {
-    Low,
+    #[default] Low,
     Mid,
     High,
 }
@@ -159,14 +83,12 @@ impl Band {
     }
 }
 
-/// (TypeScript: a union)
 #[derive(Clone, Copy, Debug)]
 pub enum StageKey {
     Num(f64),
     X,
 }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum Need {
     Shift,
@@ -219,7 +141,6 @@ impl Need {
     }
 }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum Token {
     Door,
@@ -276,7 +197,6 @@ impl Token {
     }
 }
 
-/// (TypeScript: Line, src/game/dialogue.ts:195)
 #[derive(Clone, Debug)]
 pub struct Line {
     pub id: String,
@@ -293,9 +213,8 @@ pub struct Line {
     pub guide: Option<String>,
     pub bare: Option<String>,
 }
-impl Line {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
+impl Default for Line {
+    fn default() -> Self {
         Line {
             id: String::new(),
             k: crate::dialogue::LineK::None,
@@ -313,9 +232,7 @@ impl Line {
         }
     }
 }
-impl Default for Line { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum LineK {
     None,
@@ -338,7 +255,6 @@ impl LineK {
     }
 }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum LineA {
     Low,
@@ -357,7 +273,6 @@ impl LineA {
     }
 }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum LineOnly {
     Shift,
@@ -372,10 +287,9 @@ impl LineOnly {
     }
 }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum IntelKind {
-    CheckOn,
+    #[default] CheckOn,
     Clearing,
     RollcallLive,
     Blackout,
@@ -405,31 +319,17 @@ impl IntelKind {
     }
 }
 
-/// (TypeScript: IntelItem, src/game/dialogue.ts:311)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct IntelItem {
     pub kind: crate::dialogue::IntelKind,
     pub text: String,
     pub known: bool,
     pub live: bool,
 }
-impl IntelItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        IntelItem {
-            kind: crate::dialogue::IntelKind::CheckOn,
-            text: String::new(),
-            known: false,
-            live: false,
-        }
-    }
-}
-impl Default for IntelItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum ShapeKey {
-    Pedant,
+    #[default] Pedant,
     Selfown,
     Folder,
     Ramble,
@@ -455,7 +355,6 @@ impl ShapeKey {
     }
 }
 
-/// (TypeScript: a union)
 #[derive(Clone, Debug)]
 pub enum IntelKey {
     Steady,
@@ -521,8 +420,7 @@ pub enum IntelKey {
     Text(String),
 }
 
-/// (TypeScript: Rect, src/game/dialogue.ts:373)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct Rect {
     pub name: String,
     pub x0: f64,
@@ -530,22 +428,8 @@ pub struct Rect {
     pub z0: f64,
     pub z1: f64,
 }
-impl Rect {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Rect {
-            name: String::new(),
-            x0: 0.0,
-            x1: 0.0,
-            z0: 0.0,
-            z1: 0.0,
-        }
-    }
-}
-impl Default for Rect { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: PlaceRect, src/game/dialogue.ts:383)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct PlaceRect {
     pub id: Option<String>,
     pub name: String,
@@ -554,23 +438,8 @@ pub struct PlaceRect {
     pub z0: f64,
     pub z1: f64,
 }
-impl PlaceRect {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PlaceRect {
-            id: None,
-            name: String::new(),
-            x0: 0.0,
-            x1: 0.0,
-            z0: 0.0,
-            z1: 0.0,
-        }
-    }
-}
-impl Default for PlaceRect { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: DialogueCtx, src/game/dialogue.ts:520)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct DialogueCtx {
     pub who: String,
     pub k: crate::dialogue::Knowledge,
@@ -586,30 +455,8 @@ pub struct DialogueCtx {
     pub time: f64,
     pub recent: Option<JsMap<String, f64>>,
 }
-impl DialogueCtx {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DialogueCtx {
-            who: String::new(),
-            k: crate::dialogue::Knowledge::None,
-            a: 0.0,
-            band: crate::dialogue::Band::Low,
-            t: crate::game::Temperament::Steady,
-            why: Vec::new(),
-            facts: crate::dialogue::DialogueCtxFacts::zeroed(),
-            tokens: crate::dialogue::DialogueCtxTokens::zeroed(),
-            own_rooms: None,
-            nameless: None,
-            intel: Vec::new(),
-            time: 0.0,
-            recent: None,
-        }
-    }
-}
-impl Default for DialogueCtx { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:523 DialogueCtx.facts, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct DialogueCtxFacts {
     pub shift: Option<bool>,
     pub rollcall_live: Option<bool>,
@@ -633,38 +480,8 @@ pub struct DialogueCtxFacts {
     pub partner_known: Option<bool>,
     pub office: Option<bool>,
 }
-impl DialogueCtxFacts {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DialogueCtxFacts {
-            shift: None,
-            rollcall_live: None,
-            blackout: None,
-            body_found: None,
-            floor_up: None,
-            lockdown: None,
-            episode: None,
-            heard_small: None,
-            heard_shots: None,
-            heard_bang: None,
-            body_called: None,
-            body_known: None,
-            missing_known: None,
-            held_long: None,
-            dazzled: None,
-            saw_shot: None,
-            saw_drop: None,
-            alert_now: None,
-            drew_on_you: None,
-            partner_known: None,
-            office: None,
-        }
-    }
-}
-impl Default for DialogueCtxFacts { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:524 DialogueCtx.tokens, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct DialogueCtxTokens {
     pub door: Option<String>,
     pub code: Option<String>,
@@ -690,39 +507,7 @@ pub struct DialogueCtxTokens {
     pub badge: Option<String>,
     pub pad_door: Option<String>,
 }
-impl DialogueCtxTokens {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DialogueCtxTokens {
-            door: None,
-            code: None,
-            missing: None,
-            body: None,
-            n: None,
-            up: None,
-            post: None,
-            room: None,
-            route: None,
-            partner: None,
-            victim: None,
-            saw_where: None,
-            heard_where: None,
-            partner_route: None,
-            caller: None,
-            checker: None,
-            checked: None,
-            clear_room: None,
-            breaker_room: None,
-            check_eta: None,
-            minutes: None,
-            badge: None,
-            pad_door: None,
-        }
-    }
-}
-impl Default for DialogueCtxTokens { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: DialoguePick, src/game/dialogue.ts:638)
 #[derive(Clone, Debug)]
 pub struct DialoguePick {
     pub text: String,
@@ -740,9 +525,8 @@ pub struct DialoguePick {
     pub script: Option<String>,
     pub shape: Option<crate::dialogue::ShapeKey>,
 }
-impl DialoguePick {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
+impl Default for DialoguePick {
+    fn default() -> Self {
         DialoguePick {
             text: String::new(),
             id: String::new(),
@@ -761,9 +545,7 @@ impl DialoguePick {
         }
     }
 }
-impl Default for DialoguePick { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum DialoguePickLineK {
     None,
@@ -786,7 +568,6 @@ impl DialoguePickLineK {
     }
 }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum DialoguePickWidened {
     Empty,
@@ -805,10 +586,9 @@ impl DialoguePickWidened {
     }
 }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum SamStage {
-    Press,
+    #[default] Press,
     Open,
     Ask,
     Dry,
@@ -824,7 +604,6 @@ impl SamStage {
     }
 }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum SamNeed {
     Knife,
@@ -851,8 +630,7 @@ impl SamNeed {
     }
 }
 
-/// (TypeScript: SamLine, src/game/dialogue.ts:805)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct SamLine {
     pub id: String,
     pub s: crate::dialogue::SamLineS,
@@ -866,30 +644,10 @@ pub struct SamLine {
     pub away: Option<String>,
     pub guide: Option<String>,
 }
-impl SamLine {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SamLine {
-            id: String::new(),
-            s: crate::dialogue::SamLineS::Press,
-            q: None,
-            t: None,
-            k: None,
-            needs: None,
-            text: String::new(),
-            w: None,
-            now: None,
-            away: None,
-            guide: None,
-        }
-    }
-}
-impl Default for SamLine { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum SamLineS {
-    Press,
+    #[default] Press,
     Key,
     Open,
     Q,
@@ -911,24 +669,12 @@ impl SamLineS {
     }
 }
 
-/// (TypeScript: SamMemory, src/game/dialogue.ts:928)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct SamMemory {
     pub said: JsMap<String, f64>,
     pub last: Option<String>,
 }
-impl SamMemory {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SamMemory {
-            said: JsMap::new(),
-            last: None,
-        }
-    }
-}
-impl Default for SamMemory { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: SamPick, src/game/dialogue.ts:932)
 #[derive(Clone, Debug)]
 pub struct SamPick {
     pub text: String,
@@ -939,9 +685,8 @@ pub struct SamPick {
     pub fresh: bool,
     pub script: Option<String>,
 }
-impl SamPick {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
+impl Default for SamPick {
+    fn default() -> Self {
         SamPick {
             text: String::new(),
             id: String::new(),
@@ -953,16 +698,13 @@ impl SamPick {
         }
     }
 }
-impl Default for SamPick { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: a union)
 #[derive(Clone, Debug, ToBytes)]
 pub enum Him {
     Text(String),
     Arm1(JsMap<String, String>),
 }
 
-/// (TypeScript: Beat, src/game/dialogue.ts:1267)
 #[derive(Clone, Debug, ToBytes)]
 pub struct Beat {
     pub sam: String,
@@ -974,9 +716,8 @@ pub struct Beat {
     pub mild: Option<String>,
     pub sam_now: Option<String>,
 }
-impl Beat {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
+impl Default for Beat {
+    fn default() -> Self {
         Beat {
             sam: String::new(),
             him: crate::dialogue::Him::Text(String::new()),
@@ -989,10 +730,8 @@ impl Beat {
         }
     }
 }
-impl Default for Beat { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Script, src/game/dialogue.ts:1268)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct Script {
     pub id: String,
     pub shape: crate::dialogue::ShapeKey,
@@ -1004,55 +743,23 @@ pub struct Script {
     pub pin: Option<crate::dialogue::IntelKind>,
     pub beats: crate::dialogue::ScriptBeats,
 }
-impl Script {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Script {
-            id: String::new(),
-            shape: crate::dialogue::ShapeKey::Pedant,
-            t: crate::game::Temperament::Steady,
-            k: Vec::new(),
-            band: None,
-            needs: None,
-            not: None,
-            pin: None,
-            beats: crate::dialogue::ScriptBeats::zeroed(),
-        }
-    }
-}
-impl Default for Script { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:1274 Script.beats, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1611)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct ScriptBeats {
     pub _3: crate::dialogue::Beat,
     pub _1: crate::dialogue::Beat,
     pub _2: crate::dialogue::Beat,
     pub x: crate::dialogue::Beat,
 }
-impl ScriptBeats {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ScriptBeats {
-            _3: crate::dialogue::Beat::zeroed(),
-            _1: crate::dialogue::Beat::zeroed(),
-            _2: crate::dialogue::Beat::zeroed(),
-            x: crate::dialogue::Beat::zeroed(),
-        }
-    }
-}
-impl Default for ScriptBeats { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: RoomLine, src/game/dialogue.ts:1337)
 #[derive(Clone, Debug)]
 pub struct RoomLine {
     pub sam: String,
     pub him: crate::dialogue::Him,
     pub after: Option<String>,
 }
-impl RoomLine {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
+impl Default for RoomLine {
+    fn default() -> Self {
         RoomLine {
             sam: String::new(),
             him: crate::dialogue::Him::Text(String::new()),
@@ -1060,12 +767,10 @@ impl RoomLine {
         }
     }
 }
-impl Default for RoomLine { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
 pub enum HandlerBeat {
-    Blackout,
+    #[default] Blackout,
     Drive,
     Alarm,
     Rack,
@@ -1089,8 +794,7 @@ impl HandlerBeat {
     }
 }
 
-/// (TypeScript: RadioState, src/game/dialogue.ts:1713)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct RadioState {
     pub run: Option<u32>,
     pub done: JsSet<crate::dialogue::HandlerBeat>,
@@ -1101,112 +805,39 @@ pub struct RadioState {
     pub blackout: bool,
     pub found: f64,
 }
-impl RadioState {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RadioState {
-            run: None,
-            done: JsSet::new(),
-            queue: Vec::new(),
-            reply: None,
-            last_at: 0.0,
-            esc: 0.0,
-            blackout: false,
-            found: 0.0,
-        }
-    }
-}
-impl Default for RadioState { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at quiet RadioState.run, quiet RadioState.run)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RadioStateRun {
 }
-impl RadioStateRun {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RadioStateRun {
-        }
-    }
-}
-impl Default for RadioStateRun { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:1713 RadioState.queue, src/game/dialogue.ts:1713)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct RadioStateQueueItem {
     pub at: f64,
     pub beat: crate::dialogue::HandlerBeat,
 }
-impl RadioStateQueueItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RadioStateQueueItem {
-            at: 0.0,
-            beat: crate::dialogue::HandlerBeat::Blackout,
-        }
-    }
-}
-impl Default for RadioStateQueueItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:1713 RadioState.reply, src/game/dialogue.ts:1713)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct RadioStateReply {
     pub at: f64,
     pub text: String,
 }
-impl RadioStateReply {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RadioStateReply {
-            at: 0.0,
-            text: String::new(),
-        }
-    }
-}
-impl Default for RadioStateReply { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: PairTalk, src/game/dialogue.ts:1767)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct PairTalk {
     pub id: String,
     pub lines: Vec<crate::dialogue::PairTalkLinesItem>,
     pub note: Option<String>,
     pub office: Option<bool>,
 }
-impl PairTalk {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PairTalk {
-            id: String::new(),
-            lines: Vec::new(),
-            note: None,
-            office: None,
-        }
-    }
-}
-impl Default for PairTalk { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:1767 PairTalk.lines, src/game/dialogue.ts:1767)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct PairTalkLinesItem {
     pub who: usize,
     pub text: String,
     pub own: Option<String>,
 }
-impl PairTalkLinesItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PairTalkLinesItem {
-            who: 0,
-            text: String::new(),
-            own: None,
-        }
-    }
-}
-impl Default for PairTalkLinesItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: AmbientRun, src/game/dialogue.ts:1780)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct AmbientRun {
     pub a: GuardId,
     pub b: GuardId,
@@ -1217,43 +848,14 @@ pub struct AmbientRun {
     pub pad: Option<crate::dialogue::AmbientRunPad>,
     pub held: [bool; 2],
 }
-impl AmbientRun {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        AmbientRun {
-            a: GuardId(0),
-            b: GuardId(0),
-            talk: crate::dialogue::PairTalk::zeroed(),
-            i: 0,
-            at: 0.0,
-            other: None,
-            pad: None,
-            held: [false; 2],
-        }
-    }
-}
-impl Default for AmbientRun { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:1780 AmbientRun.pad, src/game/dialogue.ts:1780)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct AmbientRunPad {
     pub code: String,
     pub door: String,
     pub lock_id: String,
 }
-impl AmbientRunPad {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        AmbientRunPad {
-            code: String::new(),
-            door: String::new(),
-            lock_id: String::new(),
-        }
-    }
-}
-impl Default for AmbientRunPad { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum HostageMoment {
     Shot,
@@ -1278,29 +880,15 @@ impl HostageMoment {
     }
 }
 
-/// (TypeScript: AmbientState, src/game/dialogue.ts:2000)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct AmbientState {
     pub next: f64,
     pub run: Option<crate::dialogue::AmbientRun>,
     pub played: JsMap<String, f64>,
     pub count: f64,
 }
-impl AmbientState {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        AmbientState {
-            next: 0.0,
-            run: None,
-            played: JsMap::new(),
-            count: 0.0,
-        }
-    }
-}
-impl Default for AmbientState { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:187 TOKEN_WORST_NOW, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct TOKENWORSTNOW {
     pub door: Option<String>,
     pub code: Option<String>,
@@ -1326,40 +914,8 @@ pub struct TOKENWORSTNOW {
     pub badge: Option<String>,
     pub pad_door: Option<String>,
 }
-impl TOKENWORSTNOW {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        TOKENWORSTNOW {
-            door: None,
-            code: None,
-            missing: None,
-            body: None,
-            n: None,
-            up: None,
-            post: None,
-            room: None,
-            route: None,
-            partner: None,
-            victim: None,
-            saw_where: None,
-            heard_where: None,
-            partner_route: None,
-            caller: None,
-            checker: None,
-            checked: None,
-            clear_room: None,
-            breaker_room: None,
-            check_eta: None,
-            minutes: None,
-            badge: None,
-            pad_door: None,
-        }
-    }
-}
-impl Default for TOKENWORSTNOW { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:319 INTEL_TEXT, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct INTELTEXTValue {
     pub steady: Option<String>,
     pub nervy: Option<String>,
@@ -1424,78 +980,8 @@ pub struct INTELTEXTValue {
     /// INVENTED by a review: see the proposals
     pub sc: JsMap<String, String>,
 }
-impl INTELTEXTValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        INTELTEXTValue {
-            steady: None,
-            nervy: None,
-            hard: None,
-            under: None,
-            pedant: None,
-            selfown: None,
-            folder: None,
-            ramble: None,
-            fan: None,
-            stoic: None,
-            con: None,
-            game: None,
-            menace: None,
-            steady_none: None,
-            steady_heard: None,
-            steady_glimpsed: None,
-            steady_saw: None,
-            steady_saw_hurt: None,
-            nervy_none: None,
-            nervy_heard: None,
-            nervy_glimpsed: None,
-            nervy_saw: None,
-            nervy_saw_hurt: None,
-            hard_none: None,
-            hard_heard: None,
-            hard_glimpsed: None,
-            hard_saw: None,
-            hard_saw_hurt: None,
-            __none: None,
-            __heard: None,
-            __glimpsed: None,
-            __saw: None,
-            __saw_hurt: None,
-            pedant_steady: None,
-            pedant_nervy: None,
-            pedant_hard: None,
-            selfown_steady: None,
-            selfown_nervy: None,
-            selfown_hard: None,
-            folder_steady: None,
-            folder_nervy: None,
-            folder_hard: None,
-            ramble_steady: None,
-            ramble_nervy: None,
-            ramble_hard: None,
-            fan_steady: None,
-            fan_nervy: None,
-            fan_hard: None,
-            stoic_steady: None,
-            stoic_nervy: None,
-            stoic_hard: None,
-            con_steady: None,
-            con_nervy: None,
-            con_hard: None,
-            game_steady: None,
-            game_nervy: None,
-            game_hard: None,
-            menace_steady: None,
-            menace_nervy: None,
-            menace_hard: None,
-            sc: JsMap::new(),
-        }
-    }
-}
-impl Default for INTELTEXTValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:340 INTEL_NOW, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct INTELNOW {
     pub check_on: Option<crate::dialogue::INTELNOWCheckOn>,
     pub clearing: Option<crate::dialogue::INTELNOWClearing>,
@@ -1509,28 +995,8 @@ pub struct INTELNOW {
     pub missing: Option<crate::dialogue::INTELNOWMissing>,
     pub drive: Option<crate::dialogue::INTELNOWDrive>,
 }
-impl INTELNOW {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        INTELNOW {
-            check_on: None,
-            clearing: None,
-            rollcall_live: None,
-            blackout: None,
-            door: None,
-            code: None,
-            rollcall: None,
-            lockdown_posts: None,
-            routes: None,
-            missing: None,
-            drive: None,
-        }
-    }
-}
-impl Default for INTELNOW { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at INTELNOW.checkOn, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct INTELNOWCheckOn {
     pub steady: Option<String>,
     pub nervy: Option<String>,
@@ -1593,77 +1059,8 @@ pub struct INTELNOWCheckOn {
     pub menace_nervy: Option<String>,
     pub menace_hard: Option<String>,
 }
-impl INTELNOWCheckOn {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        INTELNOWCheckOn {
-            steady: None,
-            nervy: None,
-            hard: None,
-            under: None,
-            pedant: None,
-            selfown: None,
-            folder: None,
-            ramble: None,
-            fan: None,
-            stoic: None,
-            con: None,
-            game: None,
-            menace: None,
-            steady_none: None,
-            steady_heard: None,
-            steady_glimpsed: None,
-            steady_saw: None,
-            steady_saw_hurt: None,
-            nervy_none: None,
-            nervy_heard: None,
-            nervy_glimpsed: None,
-            nervy_saw: None,
-            nervy_saw_hurt: None,
-            hard_none: None,
-            hard_heard: None,
-            hard_glimpsed: None,
-            hard_saw: None,
-            hard_saw_hurt: None,
-            __none: None,
-            __heard: None,
-            __glimpsed: None,
-            __saw: None,
-            __saw_hurt: None,
-            pedant_steady: None,
-            pedant_nervy: None,
-            pedant_hard: None,
-            selfown_steady: None,
-            selfown_nervy: None,
-            selfown_hard: None,
-            folder_steady: None,
-            folder_nervy: None,
-            folder_hard: None,
-            ramble_steady: None,
-            ramble_nervy: None,
-            ramble_hard: None,
-            fan_steady: None,
-            fan_nervy: None,
-            fan_hard: None,
-            stoic_steady: None,
-            stoic_nervy: None,
-            stoic_hard: None,
-            con_steady: None,
-            con_nervy: None,
-            con_hard: None,
-            game_steady: None,
-            game_nervy: None,
-            game_hard: None,
-            menace_steady: None,
-            menace_nervy: None,
-            menace_hard: None,
-        }
-    }
-}
-impl Default for INTELNOWCheckOn { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at INTELNOW.clearing, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct INTELNOWClearing {
     pub steady: Option<String>,
     pub nervy: Option<String>,
@@ -1726,77 +1123,8 @@ pub struct INTELNOWClearing {
     pub menace_nervy: Option<String>,
     pub menace_hard: Option<String>,
 }
-impl INTELNOWClearing {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        INTELNOWClearing {
-            steady: None,
-            nervy: None,
-            hard: None,
-            under: None,
-            pedant: None,
-            selfown: None,
-            folder: None,
-            ramble: None,
-            fan: None,
-            stoic: None,
-            con: None,
-            game: None,
-            menace: None,
-            steady_none: None,
-            steady_heard: None,
-            steady_glimpsed: None,
-            steady_saw: None,
-            steady_saw_hurt: None,
-            nervy_none: None,
-            nervy_heard: None,
-            nervy_glimpsed: None,
-            nervy_saw: None,
-            nervy_saw_hurt: None,
-            hard_none: None,
-            hard_heard: None,
-            hard_glimpsed: None,
-            hard_saw: None,
-            hard_saw_hurt: None,
-            __none: None,
-            __heard: None,
-            __glimpsed: None,
-            __saw: None,
-            __saw_hurt: None,
-            pedant_steady: None,
-            pedant_nervy: None,
-            pedant_hard: None,
-            selfown_steady: None,
-            selfown_nervy: None,
-            selfown_hard: None,
-            folder_steady: None,
-            folder_nervy: None,
-            folder_hard: None,
-            ramble_steady: None,
-            ramble_nervy: None,
-            ramble_hard: None,
-            fan_steady: None,
-            fan_nervy: None,
-            fan_hard: None,
-            stoic_steady: None,
-            stoic_nervy: None,
-            stoic_hard: None,
-            con_steady: None,
-            con_nervy: None,
-            con_hard: None,
-            game_steady: None,
-            game_nervy: None,
-            game_hard: None,
-            menace_steady: None,
-            menace_nervy: None,
-            menace_hard: None,
-        }
-    }
-}
-impl Default for INTELNOWClearing { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at INTELNOW.rollcallLive, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct INTELNOWRollcallLive {
     pub steady: Option<String>,
     pub nervy: Option<String>,
@@ -1859,77 +1187,8 @@ pub struct INTELNOWRollcallLive {
     pub menace_nervy: Option<String>,
     pub menace_hard: Option<String>,
 }
-impl INTELNOWRollcallLive {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        INTELNOWRollcallLive {
-            steady: None,
-            nervy: None,
-            hard: None,
-            under: None,
-            pedant: None,
-            selfown: None,
-            folder: None,
-            ramble: None,
-            fan: None,
-            stoic: None,
-            con: None,
-            game: None,
-            menace: None,
-            steady_none: None,
-            steady_heard: None,
-            steady_glimpsed: None,
-            steady_saw: None,
-            steady_saw_hurt: None,
-            nervy_none: None,
-            nervy_heard: None,
-            nervy_glimpsed: None,
-            nervy_saw: None,
-            nervy_saw_hurt: None,
-            hard_none: None,
-            hard_heard: None,
-            hard_glimpsed: None,
-            hard_saw: None,
-            hard_saw_hurt: None,
-            __none: None,
-            __heard: None,
-            __glimpsed: None,
-            __saw: None,
-            __saw_hurt: None,
-            pedant_steady: None,
-            pedant_nervy: None,
-            pedant_hard: None,
-            selfown_steady: None,
-            selfown_nervy: None,
-            selfown_hard: None,
-            folder_steady: None,
-            folder_nervy: None,
-            folder_hard: None,
-            ramble_steady: None,
-            ramble_nervy: None,
-            ramble_hard: None,
-            fan_steady: None,
-            fan_nervy: None,
-            fan_hard: None,
-            stoic_steady: None,
-            stoic_nervy: None,
-            stoic_hard: None,
-            con_steady: None,
-            con_nervy: None,
-            con_hard: None,
-            game_steady: None,
-            game_nervy: None,
-            game_hard: None,
-            menace_steady: None,
-            menace_nervy: None,
-            menace_hard: None,
-        }
-    }
-}
-impl Default for INTELNOWRollcallLive { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at INTELNOW.blackout, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct INTELNOWBlackout {
     pub steady: Option<String>,
     pub nervy: Option<String>,
@@ -1992,77 +1251,8 @@ pub struct INTELNOWBlackout {
     pub menace_nervy: Option<String>,
     pub menace_hard: Option<String>,
 }
-impl INTELNOWBlackout {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        INTELNOWBlackout {
-            steady: None,
-            nervy: None,
-            hard: None,
-            under: None,
-            pedant: None,
-            selfown: None,
-            folder: None,
-            ramble: None,
-            fan: None,
-            stoic: None,
-            con: None,
-            game: None,
-            menace: None,
-            steady_none: None,
-            steady_heard: None,
-            steady_glimpsed: None,
-            steady_saw: None,
-            steady_saw_hurt: None,
-            nervy_none: None,
-            nervy_heard: None,
-            nervy_glimpsed: None,
-            nervy_saw: None,
-            nervy_saw_hurt: None,
-            hard_none: None,
-            hard_heard: None,
-            hard_glimpsed: None,
-            hard_saw: None,
-            hard_saw_hurt: None,
-            __none: None,
-            __heard: None,
-            __glimpsed: None,
-            __saw: None,
-            __saw_hurt: None,
-            pedant_steady: None,
-            pedant_nervy: None,
-            pedant_hard: None,
-            selfown_steady: None,
-            selfown_nervy: None,
-            selfown_hard: None,
-            folder_steady: None,
-            folder_nervy: None,
-            folder_hard: None,
-            ramble_steady: None,
-            ramble_nervy: None,
-            ramble_hard: None,
-            fan_steady: None,
-            fan_nervy: None,
-            fan_hard: None,
-            stoic_steady: None,
-            stoic_nervy: None,
-            stoic_hard: None,
-            con_steady: None,
-            con_nervy: None,
-            con_hard: None,
-            game_steady: None,
-            game_nervy: None,
-            game_hard: None,
-            menace_steady: None,
-            menace_nervy: None,
-            menace_hard: None,
-        }
-    }
-}
-impl Default for INTELNOWBlackout { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at INTELNOW.door, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct INTELNOWDoor {
     pub steady: Option<String>,
     pub nervy: Option<String>,
@@ -2125,77 +1315,8 @@ pub struct INTELNOWDoor {
     pub menace_nervy: Option<String>,
     pub menace_hard: Option<String>,
 }
-impl INTELNOWDoor {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        INTELNOWDoor {
-            steady: None,
-            nervy: None,
-            hard: None,
-            under: None,
-            pedant: None,
-            selfown: None,
-            folder: None,
-            ramble: None,
-            fan: None,
-            stoic: None,
-            con: None,
-            game: None,
-            menace: None,
-            steady_none: None,
-            steady_heard: None,
-            steady_glimpsed: None,
-            steady_saw: None,
-            steady_saw_hurt: None,
-            nervy_none: None,
-            nervy_heard: None,
-            nervy_glimpsed: None,
-            nervy_saw: None,
-            nervy_saw_hurt: None,
-            hard_none: None,
-            hard_heard: None,
-            hard_glimpsed: None,
-            hard_saw: None,
-            hard_saw_hurt: None,
-            __none: None,
-            __heard: None,
-            __glimpsed: None,
-            __saw: None,
-            __saw_hurt: None,
-            pedant_steady: None,
-            pedant_nervy: None,
-            pedant_hard: None,
-            selfown_steady: None,
-            selfown_nervy: None,
-            selfown_hard: None,
-            folder_steady: None,
-            folder_nervy: None,
-            folder_hard: None,
-            ramble_steady: None,
-            ramble_nervy: None,
-            ramble_hard: None,
-            fan_steady: None,
-            fan_nervy: None,
-            fan_hard: None,
-            stoic_steady: None,
-            stoic_nervy: None,
-            stoic_hard: None,
-            con_steady: None,
-            con_nervy: None,
-            con_hard: None,
-            game_steady: None,
-            game_nervy: None,
-            game_hard: None,
-            menace_steady: None,
-            menace_nervy: None,
-            menace_hard: None,
-        }
-    }
-}
-impl Default for INTELNOWDoor { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at INTELNOW.code, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct INTELNOWCode {
     pub steady: Option<String>,
     pub nervy: Option<String>,
@@ -2258,77 +1379,8 @@ pub struct INTELNOWCode {
     pub menace_nervy: Option<String>,
     pub menace_hard: Option<String>,
 }
-impl INTELNOWCode {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        INTELNOWCode {
-            steady: None,
-            nervy: None,
-            hard: None,
-            under: None,
-            pedant: None,
-            selfown: None,
-            folder: None,
-            ramble: None,
-            fan: None,
-            stoic: None,
-            con: None,
-            game: None,
-            menace: None,
-            steady_none: None,
-            steady_heard: None,
-            steady_glimpsed: None,
-            steady_saw: None,
-            steady_saw_hurt: None,
-            nervy_none: None,
-            nervy_heard: None,
-            nervy_glimpsed: None,
-            nervy_saw: None,
-            nervy_saw_hurt: None,
-            hard_none: None,
-            hard_heard: None,
-            hard_glimpsed: None,
-            hard_saw: None,
-            hard_saw_hurt: None,
-            __none: None,
-            __heard: None,
-            __glimpsed: None,
-            __saw: None,
-            __saw_hurt: None,
-            pedant_steady: None,
-            pedant_nervy: None,
-            pedant_hard: None,
-            selfown_steady: None,
-            selfown_nervy: None,
-            selfown_hard: None,
-            folder_steady: None,
-            folder_nervy: None,
-            folder_hard: None,
-            ramble_steady: None,
-            ramble_nervy: None,
-            ramble_hard: None,
-            fan_steady: None,
-            fan_nervy: None,
-            fan_hard: None,
-            stoic_steady: None,
-            stoic_nervy: None,
-            stoic_hard: None,
-            con_steady: None,
-            con_nervy: None,
-            con_hard: None,
-            game_steady: None,
-            game_nervy: None,
-            game_hard: None,
-            menace_steady: None,
-            menace_nervy: None,
-            menace_hard: None,
-        }
-    }
-}
-impl Default for INTELNOWCode { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at INTELNOW.rollcall, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct INTELNOWRollcall {
     pub steady: Option<String>,
     pub nervy: Option<String>,
@@ -2391,77 +1443,8 @@ pub struct INTELNOWRollcall {
     pub menace_nervy: Option<String>,
     pub menace_hard: Option<String>,
 }
-impl INTELNOWRollcall {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        INTELNOWRollcall {
-            steady: None,
-            nervy: None,
-            hard: None,
-            under: None,
-            pedant: None,
-            selfown: None,
-            folder: None,
-            ramble: None,
-            fan: None,
-            stoic: None,
-            con: None,
-            game: None,
-            menace: None,
-            steady_none: None,
-            steady_heard: None,
-            steady_glimpsed: None,
-            steady_saw: None,
-            steady_saw_hurt: None,
-            nervy_none: None,
-            nervy_heard: None,
-            nervy_glimpsed: None,
-            nervy_saw: None,
-            nervy_saw_hurt: None,
-            hard_none: None,
-            hard_heard: None,
-            hard_glimpsed: None,
-            hard_saw: None,
-            hard_saw_hurt: None,
-            __none: None,
-            __heard: None,
-            __glimpsed: None,
-            __saw: None,
-            __saw_hurt: None,
-            pedant_steady: None,
-            pedant_nervy: None,
-            pedant_hard: None,
-            selfown_steady: None,
-            selfown_nervy: None,
-            selfown_hard: None,
-            folder_steady: None,
-            folder_nervy: None,
-            folder_hard: None,
-            ramble_steady: None,
-            ramble_nervy: None,
-            ramble_hard: None,
-            fan_steady: None,
-            fan_nervy: None,
-            fan_hard: None,
-            stoic_steady: None,
-            stoic_nervy: None,
-            stoic_hard: None,
-            con_steady: None,
-            con_nervy: None,
-            con_hard: None,
-            game_steady: None,
-            game_nervy: None,
-            game_hard: None,
-            menace_steady: None,
-            menace_nervy: None,
-            menace_hard: None,
-        }
-    }
-}
-impl Default for INTELNOWRollcall { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at INTELNOW.lockdownPosts, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct INTELNOWLockdownPosts {
     pub steady: Option<String>,
     pub nervy: Option<String>,
@@ -2524,77 +1507,8 @@ pub struct INTELNOWLockdownPosts {
     pub menace_nervy: Option<String>,
     pub menace_hard: Option<String>,
 }
-impl INTELNOWLockdownPosts {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        INTELNOWLockdownPosts {
-            steady: None,
-            nervy: None,
-            hard: None,
-            under: None,
-            pedant: None,
-            selfown: None,
-            folder: None,
-            ramble: None,
-            fan: None,
-            stoic: None,
-            con: None,
-            game: None,
-            menace: None,
-            steady_none: None,
-            steady_heard: None,
-            steady_glimpsed: None,
-            steady_saw: None,
-            steady_saw_hurt: None,
-            nervy_none: None,
-            nervy_heard: None,
-            nervy_glimpsed: None,
-            nervy_saw: None,
-            nervy_saw_hurt: None,
-            hard_none: None,
-            hard_heard: None,
-            hard_glimpsed: None,
-            hard_saw: None,
-            hard_saw_hurt: None,
-            __none: None,
-            __heard: None,
-            __glimpsed: None,
-            __saw: None,
-            __saw_hurt: None,
-            pedant_steady: None,
-            pedant_nervy: None,
-            pedant_hard: None,
-            selfown_steady: None,
-            selfown_nervy: None,
-            selfown_hard: None,
-            folder_steady: None,
-            folder_nervy: None,
-            folder_hard: None,
-            ramble_steady: None,
-            ramble_nervy: None,
-            ramble_hard: None,
-            fan_steady: None,
-            fan_nervy: None,
-            fan_hard: None,
-            stoic_steady: None,
-            stoic_nervy: None,
-            stoic_hard: None,
-            con_steady: None,
-            con_nervy: None,
-            con_hard: None,
-            game_steady: None,
-            game_nervy: None,
-            game_hard: None,
-            menace_steady: None,
-            menace_nervy: None,
-            menace_hard: None,
-        }
-    }
-}
-impl Default for INTELNOWLockdownPosts { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at INTELNOW.routes, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct INTELNOWRoutes {
     pub steady: Option<String>,
     pub nervy: Option<String>,
@@ -2657,77 +1571,8 @@ pub struct INTELNOWRoutes {
     pub menace_nervy: Option<String>,
     pub menace_hard: Option<String>,
 }
-impl INTELNOWRoutes {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        INTELNOWRoutes {
-            steady: None,
-            nervy: None,
-            hard: None,
-            under: None,
-            pedant: None,
-            selfown: None,
-            folder: None,
-            ramble: None,
-            fan: None,
-            stoic: None,
-            con: None,
-            game: None,
-            menace: None,
-            steady_none: None,
-            steady_heard: None,
-            steady_glimpsed: None,
-            steady_saw: None,
-            steady_saw_hurt: None,
-            nervy_none: None,
-            nervy_heard: None,
-            nervy_glimpsed: None,
-            nervy_saw: None,
-            nervy_saw_hurt: None,
-            hard_none: None,
-            hard_heard: None,
-            hard_glimpsed: None,
-            hard_saw: None,
-            hard_saw_hurt: None,
-            __none: None,
-            __heard: None,
-            __glimpsed: None,
-            __saw: None,
-            __saw_hurt: None,
-            pedant_steady: None,
-            pedant_nervy: None,
-            pedant_hard: None,
-            selfown_steady: None,
-            selfown_nervy: None,
-            selfown_hard: None,
-            folder_steady: None,
-            folder_nervy: None,
-            folder_hard: None,
-            ramble_steady: None,
-            ramble_nervy: None,
-            ramble_hard: None,
-            fan_steady: None,
-            fan_nervy: None,
-            fan_hard: None,
-            stoic_steady: None,
-            stoic_nervy: None,
-            stoic_hard: None,
-            con_steady: None,
-            con_nervy: None,
-            con_hard: None,
-            game_steady: None,
-            game_nervy: None,
-            game_hard: None,
-            menace_steady: None,
-            menace_nervy: None,
-            menace_hard: None,
-        }
-    }
-}
-impl Default for INTELNOWRoutes { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at INTELNOW.missing, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct INTELNOWMissing {
     pub steady: Option<String>,
     pub nervy: Option<String>,
@@ -2790,77 +1635,8 @@ pub struct INTELNOWMissing {
     pub menace_nervy: Option<String>,
     pub menace_hard: Option<String>,
 }
-impl INTELNOWMissing {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        INTELNOWMissing {
-            steady: None,
-            nervy: None,
-            hard: None,
-            under: None,
-            pedant: None,
-            selfown: None,
-            folder: None,
-            ramble: None,
-            fan: None,
-            stoic: None,
-            con: None,
-            game: None,
-            menace: None,
-            steady_none: None,
-            steady_heard: None,
-            steady_glimpsed: None,
-            steady_saw: None,
-            steady_saw_hurt: None,
-            nervy_none: None,
-            nervy_heard: None,
-            nervy_glimpsed: None,
-            nervy_saw: None,
-            nervy_saw_hurt: None,
-            hard_none: None,
-            hard_heard: None,
-            hard_glimpsed: None,
-            hard_saw: None,
-            hard_saw_hurt: None,
-            __none: None,
-            __heard: None,
-            __glimpsed: None,
-            __saw: None,
-            __saw_hurt: None,
-            pedant_steady: None,
-            pedant_nervy: None,
-            pedant_hard: None,
-            selfown_steady: None,
-            selfown_nervy: None,
-            selfown_hard: None,
-            folder_steady: None,
-            folder_nervy: None,
-            folder_hard: None,
-            ramble_steady: None,
-            ramble_nervy: None,
-            ramble_hard: None,
-            fan_steady: None,
-            fan_nervy: None,
-            fan_hard: None,
-            stoic_steady: None,
-            stoic_nervy: None,
-            stoic_hard: None,
-            con_steady: None,
-            con_nervy: None,
-            con_hard: None,
-            game_steady: None,
-            game_nervy: None,
-            game_hard: None,
-            menace_steady: None,
-            menace_nervy: None,
-            menace_hard: None,
-        }
-    }
-}
-impl Default for INTELNOWMissing { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at INTELNOW.drive, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct INTELNOWDrive {
     pub steady: Option<String>,
     pub nervy: Option<String>,
@@ -2923,77 +1699,8 @@ pub struct INTELNOWDrive {
     pub menace_nervy: Option<String>,
     pub menace_hard: Option<String>,
 }
-impl INTELNOWDrive {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        INTELNOWDrive {
-            steady: None,
-            nervy: None,
-            hard: None,
-            under: None,
-            pedant: None,
-            selfown: None,
-            folder: None,
-            ramble: None,
-            fan: None,
-            stoic: None,
-            con: None,
-            game: None,
-            menace: None,
-            steady_none: None,
-            steady_heard: None,
-            steady_glimpsed: None,
-            steady_saw: None,
-            steady_saw_hurt: None,
-            nervy_none: None,
-            nervy_heard: None,
-            nervy_glimpsed: None,
-            nervy_saw: None,
-            nervy_saw_hurt: None,
-            hard_none: None,
-            hard_heard: None,
-            hard_glimpsed: None,
-            hard_saw: None,
-            hard_saw_hurt: None,
-            __none: None,
-            __heard: None,
-            __glimpsed: None,
-            __saw: None,
-            __saw_hurt: None,
-            pedant_steady: None,
-            pedant_nervy: None,
-            pedant_hard: None,
-            selfown_steady: None,
-            selfown_nervy: None,
-            selfown_hard: None,
-            folder_steady: None,
-            folder_nervy: None,
-            folder_hard: None,
-            ramble_steady: None,
-            ramble_nervy: None,
-            ramble_hard: None,
-            fan_steady: None,
-            fan_nervy: None,
-            fan_hard: None,
-            stoic_steady: None,
-            stoic_nervy: None,
-            stoic_hard: None,
-            con_steady: None,
-            con_nervy: None,
-            con_hard: None,
-            game_steady: None,
-            game_nervy: None,
-            game_hard: None,
-            menace_steady: None,
-            menace_nervy: None,
-            menace_hard: None,
-        }
-    }
-}
-impl Default for INTELNOWDrive { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:342 INTEL_GUIDE, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct INTELGUIDE {
     pub check_on: Option<crate::dialogue::INTELGUIDECheckOn>,
     pub clearing: Option<crate::dialogue::INTELGUIDEClearing>,
@@ -3007,28 +1714,8 @@ pub struct INTELGUIDE {
     pub missing: Option<crate::dialogue::INTELGUIDEMissing>,
     pub drive: Option<crate::dialogue::INTELGUIDEDrive>,
 }
-impl INTELGUIDE {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        INTELGUIDE {
-            check_on: None,
-            clearing: None,
-            rollcall_live: None,
-            blackout: None,
-            door: None,
-            code: None,
-            rollcall: None,
-            lockdown_posts: None,
-            routes: None,
-            missing: None,
-            drive: None,
-        }
-    }
-}
-impl Default for INTELGUIDE { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at INTELGUIDE.checkOn, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct INTELGUIDECheckOn {
     pub steady: Option<String>,
     pub nervy: Option<String>,
@@ -3091,77 +1778,8 @@ pub struct INTELGUIDECheckOn {
     pub menace_nervy: Option<String>,
     pub menace_hard: Option<String>,
 }
-impl INTELGUIDECheckOn {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        INTELGUIDECheckOn {
-            steady: None,
-            nervy: None,
-            hard: None,
-            under: None,
-            pedant: None,
-            selfown: None,
-            folder: None,
-            ramble: None,
-            fan: None,
-            stoic: None,
-            con: None,
-            game: None,
-            menace: None,
-            steady_none: None,
-            steady_heard: None,
-            steady_glimpsed: None,
-            steady_saw: None,
-            steady_saw_hurt: None,
-            nervy_none: None,
-            nervy_heard: None,
-            nervy_glimpsed: None,
-            nervy_saw: None,
-            nervy_saw_hurt: None,
-            hard_none: None,
-            hard_heard: None,
-            hard_glimpsed: None,
-            hard_saw: None,
-            hard_saw_hurt: None,
-            __none: None,
-            __heard: None,
-            __glimpsed: None,
-            __saw: None,
-            __saw_hurt: None,
-            pedant_steady: None,
-            pedant_nervy: None,
-            pedant_hard: None,
-            selfown_steady: None,
-            selfown_nervy: None,
-            selfown_hard: None,
-            folder_steady: None,
-            folder_nervy: None,
-            folder_hard: None,
-            ramble_steady: None,
-            ramble_nervy: None,
-            ramble_hard: None,
-            fan_steady: None,
-            fan_nervy: None,
-            fan_hard: None,
-            stoic_steady: None,
-            stoic_nervy: None,
-            stoic_hard: None,
-            con_steady: None,
-            con_nervy: None,
-            con_hard: None,
-            game_steady: None,
-            game_nervy: None,
-            game_hard: None,
-            menace_steady: None,
-            menace_nervy: None,
-            menace_hard: None,
-        }
-    }
-}
-impl Default for INTELGUIDECheckOn { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at INTELGUIDE.clearing, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct INTELGUIDEClearing {
     pub steady: Option<String>,
     pub nervy: Option<String>,
@@ -3224,77 +1842,8 @@ pub struct INTELGUIDEClearing {
     pub menace_nervy: Option<String>,
     pub menace_hard: Option<String>,
 }
-impl INTELGUIDEClearing {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        INTELGUIDEClearing {
-            steady: None,
-            nervy: None,
-            hard: None,
-            under: None,
-            pedant: None,
-            selfown: None,
-            folder: None,
-            ramble: None,
-            fan: None,
-            stoic: None,
-            con: None,
-            game: None,
-            menace: None,
-            steady_none: None,
-            steady_heard: None,
-            steady_glimpsed: None,
-            steady_saw: None,
-            steady_saw_hurt: None,
-            nervy_none: None,
-            nervy_heard: None,
-            nervy_glimpsed: None,
-            nervy_saw: None,
-            nervy_saw_hurt: None,
-            hard_none: None,
-            hard_heard: None,
-            hard_glimpsed: None,
-            hard_saw: None,
-            hard_saw_hurt: None,
-            __none: None,
-            __heard: None,
-            __glimpsed: None,
-            __saw: None,
-            __saw_hurt: None,
-            pedant_steady: None,
-            pedant_nervy: None,
-            pedant_hard: None,
-            selfown_steady: None,
-            selfown_nervy: None,
-            selfown_hard: None,
-            folder_steady: None,
-            folder_nervy: None,
-            folder_hard: None,
-            ramble_steady: None,
-            ramble_nervy: None,
-            ramble_hard: None,
-            fan_steady: None,
-            fan_nervy: None,
-            fan_hard: None,
-            stoic_steady: None,
-            stoic_nervy: None,
-            stoic_hard: None,
-            con_steady: None,
-            con_nervy: None,
-            con_hard: None,
-            game_steady: None,
-            game_nervy: None,
-            game_hard: None,
-            menace_steady: None,
-            menace_nervy: None,
-            menace_hard: None,
-        }
-    }
-}
-impl Default for INTELGUIDEClearing { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at INTELGUIDE.rollcallLive, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct INTELGUIDERollcallLive {
     pub steady: Option<String>,
     pub nervy: Option<String>,
@@ -3357,77 +1906,8 @@ pub struct INTELGUIDERollcallLive {
     pub menace_nervy: Option<String>,
     pub menace_hard: Option<String>,
 }
-impl INTELGUIDERollcallLive {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        INTELGUIDERollcallLive {
-            steady: None,
-            nervy: None,
-            hard: None,
-            under: None,
-            pedant: None,
-            selfown: None,
-            folder: None,
-            ramble: None,
-            fan: None,
-            stoic: None,
-            con: None,
-            game: None,
-            menace: None,
-            steady_none: None,
-            steady_heard: None,
-            steady_glimpsed: None,
-            steady_saw: None,
-            steady_saw_hurt: None,
-            nervy_none: None,
-            nervy_heard: None,
-            nervy_glimpsed: None,
-            nervy_saw: None,
-            nervy_saw_hurt: None,
-            hard_none: None,
-            hard_heard: None,
-            hard_glimpsed: None,
-            hard_saw: None,
-            hard_saw_hurt: None,
-            __none: None,
-            __heard: None,
-            __glimpsed: None,
-            __saw: None,
-            __saw_hurt: None,
-            pedant_steady: None,
-            pedant_nervy: None,
-            pedant_hard: None,
-            selfown_steady: None,
-            selfown_nervy: None,
-            selfown_hard: None,
-            folder_steady: None,
-            folder_nervy: None,
-            folder_hard: None,
-            ramble_steady: None,
-            ramble_nervy: None,
-            ramble_hard: None,
-            fan_steady: None,
-            fan_nervy: None,
-            fan_hard: None,
-            stoic_steady: None,
-            stoic_nervy: None,
-            stoic_hard: None,
-            con_steady: None,
-            con_nervy: None,
-            con_hard: None,
-            game_steady: None,
-            game_nervy: None,
-            game_hard: None,
-            menace_steady: None,
-            menace_nervy: None,
-            menace_hard: None,
-        }
-    }
-}
-impl Default for INTELGUIDERollcallLive { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at INTELGUIDE.blackout, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct INTELGUIDEBlackout {
     pub steady: Option<String>,
     pub nervy: Option<String>,
@@ -3490,77 +1970,8 @@ pub struct INTELGUIDEBlackout {
     pub menace_nervy: Option<String>,
     pub menace_hard: Option<String>,
 }
-impl INTELGUIDEBlackout {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        INTELGUIDEBlackout {
-            steady: None,
-            nervy: None,
-            hard: None,
-            under: None,
-            pedant: None,
-            selfown: None,
-            folder: None,
-            ramble: None,
-            fan: None,
-            stoic: None,
-            con: None,
-            game: None,
-            menace: None,
-            steady_none: None,
-            steady_heard: None,
-            steady_glimpsed: None,
-            steady_saw: None,
-            steady_saw_hurt: None,
-            nervy_none: None,
-            nervy_heard: None,
-            nervy_glimpsed: None,
-            nervy_saw: None,
-            nervy_saw_hurt: None,
-            hard_none: None,
-            hard_heard: None,
-            hard_glimpsed: None,
-            hard_saw: None,
-            hard_saw_hurt: None,
-            __none: None,
-            __heard: None,
-            __glimpsed: None,
-            __saw: None,
-            __saw_hurt: None,
-            pedant_steady: None,
-            pedant_nervy: None,
-            pedant_hard: None,
-            selfown_steady: None,
-            selfown_nervy: None,
-            selfown_hard: None,
-            folder_steady: None,
-            folder_nervy: None,
-            folder_hard: None,
-            ramble_steady: None,
-            ramble_nervy: None,
-            ramble_hard: None,
-            fan_steady: None,
-            fan_nervy: None,
-            fan_hard: None,
-            stoic_steady: None,
-            stoic_nervy: None,
-            stoic_hard: None,
-            con_steady: None,
-            con_nervy: None,
-            con_hard: None,
-            game_steady: None,
-            game_nervy: None,
-            game_hard: None,
-            menace_steady: None,
-            menace_nervy: None,
-            menace_hard: None,
-        }
-    }
-}
-impl Default for INTELGUIDEBlackout { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at INTELGUIDE.door, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct INTELGUIDEDoor {
     pub steady: Option<String>,
     pub nervy: Option<String>,
@@ -3623,77 +2034,8 @@ pub struct INTELGUIDEDoor {
     pub menace_nervy: Option<String>,
     pub menace_hard: Option<String>,
 }
-impl INTELGUIDEDoor {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        INTELGUIDEDoor {
-            steady: None,
-            nervy: None,
-            hard: None,
-            under: None,
-            pedant: None,
-            selfown: None,
-            folder: None,
-            ramble: None,
-            fan: None,
-            stoic: None,
-            con: None,
-            game: None,
-            menace: None,
-            steady_none: None,
-            steady_heard: None,
-            steady_glimpsed: None,
-            steady_saw: None,
-            steady_saw_hurt: None,
-            nervy_none: None,
-            nervy_heard: None,
-            nervy_glimpsed: None,
-            nervy_saw: None,
-            nervy_saw_hurt: None,
-            hard_none: None,
-            hard_heard: None,
-            hard_glimpsed: None,
-            hard_saw: None,
-            hard_saw_hurt: None,
-            __none: None,
-            __heard: None,
-            __glimpsed: None,
-            __saw: None,
-            __saw_hurt: None,
-            pedant_steady: None,
-            pedant_nervy: None,
-            pedant_hard: None,
-            selfown_steady: None,
-            selfown_nervy: None,
-            selfown_hard: None,
-            folder_steady: None,
-            folder_nervy: None,
-            folder_hard: None,
-            ramble_steady: None,
-            ramble_nervy: None,
-            ramble_hard: None,
-            fan_steady: None,
-            fan_nervy: None,
-            fan_hard: None,
-            stoic_steady: None,
-            stoic_nervy: None,
-            stoic_hard: None,
-            con_steady: None,
-            con_nervy: None,
-            con_hard: None,
-            game_steady: None,
-            game_nervy: None,
-            game_hard: None,
-            menace_steady: None,
-            menace_nervy: None,
-            menace_hard: None,
-        }
-    }
-}
-impl Default for INTELGUIDEDoor { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at INTELGUIDE.code, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct INTELGUIDECode {
     pub steady: Option<String>,
     pub nervy: Option<String>,
@@ -3756,77 +2098,8 @@ pub struct INTELGUIDECode {
     pub menace_nervy: Option<String>,
     pub menace_hard: Option<String>,
 }
-impl INTELGUIDECode {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        INTELGUIDECode {
-            steady: None,
-            nervy: None,
-            hard: None,
-            under: None,
-            pedant: None,
-            selfown: None,
-            folder: None,
-            ramble: None,
-            fan: None,
-            stoic: None,
-            con: None,
-            game: None,
-            menace: None,
-            steady_none: None,
-            steady_heard: None,
-            steady_glimpsed: None,
-            steady_saw: None,
-            steady_saw_hurt: None,
-            nervy_none: None,
-            nervy_heard: None,
-            nervy_glimpsed: None,
-            nervy_saw: None,
-            nervy_saw_hurt: None,
-            hard_none: None,
-            hard_heard: None,
-            hard_glimpsed: None,
-            hard_saw: None,
-            hard_saw_hurt: None,
-            __none: None,
-            __heard: None,
-            __glimpsed: None,
-            __saw: None,
-            __saw_hurt: None,
-            pedant_steady: None,
-            pedant_nervy: None,
-            pedant_hard: None,
-            selfown_steady: None,
-            selfown_nervy: None,
-            selfown_hard: None,
-            folder_steady: None,
-            folder_nervy: None,
-            folder_hard: None,
-            ramble_steady: None,
-            ramble_nervy: None,
-            ramble_hard: None,
-            fan_steady: None,
-            fan_nervy: None,
-            fan_hard: None,
-            stoic_steady: None,
-            stoic_nervy: None,
-            stoic_hard: None,
-            con_steady: None,
-            con_nervy: None,
-            con_hard: None,
-            game_steady: None,
-            game_nervy: None,
-            game_hard: None,
-            menace_steady: None,
-            menace_nervy: None,
-            menace_hard: None,
-        }
-    }
-}
-impl Default for INTELGUIDECode { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at INTELGUIDE.rollcall, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct INTELGUIDERollcall {
     pub steady: Option<String>,
     pub nervy: Option<String>,
@@ -3889,77 +2162,8 @@ pub struct INTELGUIDERollcall {
     pub menace_nervy: Option<String>,
     pub menace_hard: Option<String>,
 }
-impl INTELGUIDERollcall {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        INTELGUIDERollcall {
-            steady: None,
-            nervy: None,
-            hard: None,
-            under: None,
-            pedant: None,
-            selfown: None,
-            folder: None,
-            ramble: None,
-            fan: None,
-            stoic: None,
-            con: None,
-            game: None,
-            menace: None,
-            steady_none: None,
-            steady_heard: None,
-            steady_glimpsed: None,
-            steady_saw: None,
-            steady_saw_hurt: None,
-            nervy_none: None,
-            nervy_heard: None,
-            nervy_glimpsed: None,
-            nervy_saw: None,
-            nervy_saw_hurt: None,
-            hard_none: None,
-            hard_heard: None,
-            hard_glimpsed: None,
-            hard_saw: None,
-            hard_saw_hurt: None,
-            __none: None,
-            __heard: None,
-            __glimpsed: None,
-            __saw: None,
-            __saw_hurt: None,
-            pedant_steady: None,
-            pedant_nervy: None,
-            pedant_hard: None,
-            selfown_steady: None,
-            selfown_nervy: None,
-            selfown_hard: None,
-            folder_steady: None,
-            folder_nervy: None,
-            folder_hard: None,
-            ramble_steady: None,
-            ramble_nervy: None,
-            ramble_hard: None,
-            fan_steady: None,
-            fan_nervy: None,
-            fan_hard: None,
-            stoic_steady: None,
-            stoic_nervy: None,
-            stoic_hard: None,
-            con_steady: None,
-            con_nervy: None,
-            con_hard: None,
-            game_steady: None,
-            game_nervy: None,
-            game_hard: None,
-            menace_steady: None,
-            menace_nervy: None,
-            menace_hard: None,
-        }
-    }
-}
-impl Default for INTELGUIDERollcall { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at INTELGUIDE.lockdownPosts, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct INTELGUIDELockdownPosts {
     pub steady: Option<String>,
     pub nervy: Option<String>,
@@ -4022,77 +2226,8 @@ pub struct INTELGUIDELockdownPosts {
     pub menace_nervy: Option<String>,
     pub menace_hard: Option<String>,
 }
-impl INTELGUIDELockdownPosts {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        INTELGUIDELockdownPosts {
-            steady: None,
-            nervy: None,
-            hard: None,
-            under: None,
-            pedant: None,
-            selfown: None,
-            folder: None,
-            ramble: None,
-            fan: None,
-            stoic: None,
-            con: None,
-            game: None,
-            menace: None,
-            steady_none: None,
-            steady_heard: None,
-            steady_glimpsed: None,
-            steady_saw: None,
-            steady_saw_hurt: None,
-            nervy_none: None,
-            nervy_heard: None,
-            nervy_glimpsed: None,
-            nervy_saw: None,
-            nervy_saw_hurt: None,
-            hard_none: None,
-            hard_heard: None,
-            hard_glimpsed: None,
-            hard_saw: None,
-            hard_saw_hurt: None,
-            __none: None,
-            __heard: None,
-            __glimpsed: None,
-            __saw: None,
-            __saw_hurt: None,
-            pedant_steady: None,
-            pedant_nervy: None,
-            pedant_hard: None,
-            selfown_steady: None,
-            selfown_nervy: None,
-            selfown_hard: None,
-            folder_steady: None,
-            folder_nervy: None,
-            folder_hard: None,
-            ramble_steady: None,
-            ramble_nervy: None,
-            ramble_hard: None,
-            fan_steady: None,
-            fan_nervy: None,
-            fan_hard: None,
-            stoic_steady: None,
-            stoic_nervy: None,
-            stoic_hard: None,
-            con_steady: None,
-            con_nervy: None,
-            con_hard: None,
-            game_steady: None,
-            game_nervy: None,
-            game_hard: None,
-            menace_steady: None,
-            menace_nervy: None,
-            menace_hard: None,
-        }
-    }
-}
-impl Default for INTELGUIDELockdownPosts { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at INTELGUIDE.routes, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct INTELGUIDERoutes {
     pub steady: Option<String>,
     pub nervy: Option<String>,
@@ -4155,77 +2290,8 @@ pub struct INTELGUIDERoutes {
     pub menace_nervy: Option<String>,
     pub menace_hard: Option<String>,
 }
-impl INTELGUIDERoutes {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        INTELGUIDERoutes {
-            steady: None,
-            nervy: None,
-            hard: None,
-            under: None,
-            pedant: None,
-            selfown: None,
-            folder: None,
-            ramble: None,
-            fan: None,
-            stoic: None,
-            con: None,
-            game: None,
-            menace: None,
-            steady_none: None,
-            steady_heard: None,
-            steady_glimpsed: None,
-            steady_saw: None,
-            steady_saw_hurt: None,
-            nervy_none: None,
-            nervy_heard: None,
-            nervy_glimpsed: None,
-            nervy_saw: None,
-            nervy_saw_hurt: None,
-            hard_none: None,
-            hard_heard: None,
-            hard_glimpsed: None,
-            hard_saw: None,
-            hard_saw_hurt: None,
-            __none: None,
-            __heard: None,
-            __glimpsed: None,
-            __saw: None,
-            __saw_hurt: None,
-            pedant_steady: None,
-            pedant_nervy: None,
-            pedant_hard: None,
-            selfown_steady: None,
-            selfown_nervy: None,
-            selfown_hard: None,
-            folder_steady: None,
-            folder_nervy: None,
-            folder_hard: None,
-            ramble_steady: None,
-            ramble_nervy: None,
-            ramble_hard: None,
-            fan_steady: None,
-            fan_nervy: None,
-            fan_hard: None,
-            stoic_steady: None,
-            stoic_nervy: None,
-            stoic_hard: None,
-            con_steady: None,
-            con_nervy: None,
-            con_hard: None,
-            game_steady: None,
-            game_nervy: None,
-            game_hard: None,
-            menace_steady: None,
-            menace_nervy: None,
-            menace_hard: None,
-        }
-    }
-}
-impl Default for INTELGUIDERoutes { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at INTELGUIDE.missing, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct INTELGUIDEMissing {
     pub steady: Option<String>,
     pub nervy: Option<String>,
@@ -4288,77 +2354,8 @@ pub struct INTELGUIDEMissing {
     pub menace_nervy: Option<String>,
     pub menace_hard: Option<String>,
 }
-impl INTELGUIDEMissing {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        INTELGUIDEMissing {
-            steady: None,
-            nervy: None,
-            hard: None,
-            under: None,
-            pedant: None,
-            selfown: None,
-            folder: None,
-            ramble: None,
-            fan: None,
-            stoic: None,
-            con: None,
-            game: None,
-            menace: None,
-            steady_none: None,
-            steady_heard: None,
-            steady_glimpsed: None,
-            steady_saw: None,
-            steady_saw_hurt: None,
-            nervy_none: None,
-            nervy_heard: None,
-            nervy_glimpsed: None,
-            nervy_saw: None,
-            nervy_saw_hurt: None,
-            hard_none: None,
-            hard_heard: None,
-            hard_glimpsed: None,
-            hard_saw: None,
-            hard_saw_hurt: None,
-            __none: None,
-            __heard: None,
-            __glimpsed: None,
-            __saw: None,
-            __saw_hurt: None,
-            pedant_steady: None,
-            pedant_nervy: None,
-            pedant_hard: None,
-            selfown_steady: None,
-            selfown_nervy: None,
-            selfown_hard: None,
-            folder_steady: None,
-            folder_nervy: None,
-            folder_hard: None,
-            ramble_steady: None,
-            ramble_nervy: None,
-            ramble_hard: None,
-            fan_steady: None,
-            fan_nervy: None,
-            fan_hard: None,
-            stoic_steady: None,
-            stoic_nervy: None,
-            stoic_hard: None,
-            con_steady: None,
-            con_nervy: None,
-            con_hard: None,
-            game_steady: None,
-            game_nervy: None,
-            game_hard: None,
-            menace_steady: None,
-            menace_nervy: None,
-            menace_hard: None,
-        }
-    }
-}
-impl Default for INTELGUIDEMissing { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at INTELGUIDE.drive, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct INTELGUIDEDrive {
     pub steady: Option<String>,
     pub nervy: Option<String>,
@@ -4421,119 +2418,24 @@ pub struct INTELGUIDEDrive {
     pub menace_nervy: Option<String>,
     pub menace_hard: Option<String>,
 }
-impl INTELGUIDEDrive {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        INTELGUIDEDrive {
-            steady: None,
-            nervy: None,
-            hard: None,
-            under: None,
-            pedant: None,
-            selfown: None,
-            folder: None,
-            ramble: None,
-            fan: None,
-            stoic: None,
-            con: None,
-            game: None,
-            menace: None,
-            steady_none: None,
-            steady_heard: None,
-            steady_glimpsed: None,
-            steady_saw: None,
-            steady_saw_hurt: None,
-            nervy_none: None,
-            nervy_heard: None,
-            nervy_glimpsed: None,
-            nervy_saw: None,
-            nervy_saw_hurt: None,
-            hard_none: None,
-            hard_heard: None,
-            hard_glimpsed: None,
-            hard_saw: None,
-            hard_saw_hurt: None,
-            __none: None,
-            __heard: None,
-            __glimpsed: None,
-            __saw: None,
-            __saw_hurt: None,
-            pedant_steady: None,
-            pedant_nervy: None,
-            pedant_hard: None,
-            selfown_steady: None,
-            selfown_nervy: None,
-            selfown_hard: None,
-            folder_steady: None,
-            folder_nervy: None,
-            folder_hard: None,
-            ramble_steady: None,
-            ramble_nervy: None,
-            ramble_hard: None,
-            fan_steady: None,
-            fan_nervy: None,
-            fan_hard: None,
-            stoic_steady: None,
-            stoic_nervy: None,
-            stoic_hard: None,
-            con_steady: None,
-            con_nervy: None,
-            con_hard: None,
-            game_steady: None,
-            game_nervy: None,
-            game_hard: None,
-            menace_steady: None,
-            menace_nervy: None,
-            menace_hard: None,
-        }
-    }
-}
-impl Default for INTELGUIDEDrive { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:349 DRIVE_AWAY, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct DRIVEAWAY {
     pub steady: Option<String>,
     pub nervy: Option<String>,
     pub hard: Option<String>,
     pub under: Option<String>,
 }
-impl DRIVEAWAY {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DRIVEAWAY {
-            steady: None,
-            nervy: None,
-            hard: None,
-            under: None,
-        }
-    }
-}
-impl Default for DRIVEAWAY { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:351 DRIVE_AWAY_GUIDE, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct DRIVEAWAYGUIDE {
     pub steady: Option<String>,
     pub nervy: Option<String>,
     pub hard: Option<String>,
     pub under: Option<String>,
 }
-impl DRIVEAWAYGUIDE {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DRIVEAWAYGUIDE {
-            steady: None,
-            nervy: None,
-            hard: None,
-            under: None,
-        }
-    }
-}
-impl Default for DRIVEAWAYGUIDE { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:364 SHAPE_LEAD, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct SHAPELEAD {
     pub pedant: Option<String>,
     pub selfown: Option<String>,
@@ -4545,26 +2447,8 @@ pub struct SHAPELEAD {
     pub game: Option<String>,
     pub menace: Option<String>,
 }
-impl SHAPELEAD {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SHAPELEAD {
-            pedant: None,
-            selfown: None,
-            folder: None,
-            ramble: None,
-            fan: None,
-            stoic: None,
-            con: None,
-            game: None,
-            menace: None,
-        }
-    }
-}
-impl Default for SHAPELEAD { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:1676 HANDLER_LINES, src/game/dialogue.ts:1676)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct HANDLERLINESValueItem {
     pub h: String,
     pub s: String,
@@ -4572,22 +2456,8 @@ pub struct HANDLERLINESValueItem {
     pub s_own: Option<String>,
     pub h_now: Option<String>,
 }
-impl HANDLERLINESValueItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HANDLERLINESValueItem {
-            h: String::new(),
-            s: String::new(),
-            h_own: None,
-            s_own: None,
-            h_now: None,
-        }
-    }
-}
-impl Default for HANDLERLINESValueItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:1764 AMBIENT, src/game/dialogue.ts:1764)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct AMBIENT {
     pub pair_m: f64,
     pub cooldown: f64,
@@ -4595,22 +2465,8 @@ pub struct AMBIENT {
     pub gap: f64,
     pub face_rate: f64,
 }
-impl AMBIENT {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        AMBIENT {
-            pair_m: 0.0,
-            cooldown: 0.0,
-            first_after: 0.0,
-            gap: 0.0,
-            face_rate: 0.0,
-        }
-    }
-}
-impl Default for AMBIENT { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:1784 NEEDS_LINES, src/game/dialogue.ts:1784)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct NEEDSLINES {
     pub announce: JsMap<String, Vec<String>>,
     pub announce_own: JsMap<String, Vec<String>>,
@@ -4622,26 +2478,8 @@ pub struct NEEDSLINES {
     pub short_own: JsMap<String, String>,
     pub back: Vec<String>,
 }
-impl NEEDSLINES {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        NEEDSLINES {
-            announce: JsMap::new(),
-            announce_own: JsMap::new(),
-            now: JsMap::new(),
-            reply: Vec::new(),
-            reply_other: Vec::new(),
-            radio: String::new(),
-            short: JsMap::new(),
-            short_own: JsMap::new(),
-            back: Vec::new(),
-        }
-    }
-}
-impl Default for NEEDSLINES { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:1820 CIV_LINES, src/game/dialogue.ts:1820)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct CIVLINES {
     pub glimpse: Vec<String>,
     pub shrug: Vec<String>,
@@ -4671,112 +2509,32 @@ pub struct CIVLINES {
     pub now: crate::dialogue::CIVLINESNow,
     pub guide: crate::dialogue::CIVLINESGuide,
 }
-impl CIVLINES {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CIVLINES {
-            glimpse: Vec::new(),
-            shrug: Vec::new(),
-            gasp: JsMap::new(),
-            flee: Vec::new(),
-            report: JsMap::new(),
-            guard_ack: crate::dialogue::CIVLINESGuardAck::zeroed(),
-            guard_radio: JsMap::new(),
-            phone: Vec::new(),
-            phone_armed: Vec::new(),
-            control: JsMap::new(),
-            cower: Vec::new(),
-            held_fear: Vec::new(),
-            held_fear_worker: Vec::new(),
-            intel: JsMap::new(),
-            dry: Vec::new(),
-            comply: crate::dialogue::CIVLINESComply::zeroed(),
-            sam_ask: Vec::new(),
-            found: Vec::new(),
-            found_down: crate::dialogue::CIVLINESFoundDown::zeroed(),
-            outrage: String::new(),
-            greet: crate::dialogue::CIVLINESGreet::zeroed(),
-            settle: Vec::new(),
-            qrf: String::new(),
-            evac: Vec::new(),
-            own: crate::dialogue::CIVLINESOwn::zeroed(),
-            now: crate::dialogue::CIVLINESNow::zeroed(),
-            guide: crate::dialogue::CIVLINESGuide::zeroed(),
-        }
-    }
-}
-impl Default for CIVLINES { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:1854 CIVLINES.guardAck, src/game/dialogue.ts:1854)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct CIVLINESGuardAck {
     pub someone: Vec<String>,
     pub armed: Vec<String>,
 }
-impl CIVLINESGuardAck {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CIVLINESGuardAck {
-            someone: Vec::new(),
-            armed: Vec::new(),
-        }
-    }
-}
-impl Default for CIVLINESGuardAck { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:1885 CIVLINES.comply, src/game/dialogue.ts:1885)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct CIVLINESComply {
     pub sam: Vec<String>,
     pub civ: Vec<String>,
 }
-impl CIVLINESComply {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CIVLINESComply {
-            sam: Vec::new(),
-            civ: Vec::new(),
-        }
-    }
-}
-impl Default for CIVLINESComply { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:1891 CIVLINES.foundDown, src/game/dialogue.ts:1891)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct CIVLINESFoundDown {
     pub cold: String,
     pub dead: String,
 }
-impl CIVLINESFoundDown {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CIVLINESFoundDown {
-            cold: String::new(),
-            dead: String::new(),
-        }
-    }
-}
-impl Default for CIVLINESFoundDown { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:1897 CIVLINES.greet, src/game/dialogue.ts:1897)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct CIVLINESGreet {
     pub civ: Vec<String>,
     pub guard: Vec<String>,
 }
-impl CIVLINESGreet {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CIVLINESGreet {
-            civ: Vec::new(),
-            guard: Vec::new(),
-        }
-    }
-}
-impl Default for CIVLINESGreet { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:1906 CIVLINES.own, src/game/dialogue.ts:1906)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct CIVLINESOwn {
     pub phone: String,
     pub phone_armed: String,
@@ -4787,42 +2545,14 @@ pub struct CIVLINESOwn {
     pub sam_ask: String,
     pub found_cold: String,
 }
-impl CIVLINESOwn {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CIVLINESOwn {
-            phone: String::new(),
-            phone_armed: String::new(),
-            control: JsMap::new(),
-            held_fear: String::new(),
-            intel_pad: String::new(),
-            intel: Vec::new(),
-            sam_ask: String::new(),
-            found_cold: String::new(),
-        }
-    }
-}
-impl Default for CIVLINESOwn { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:1920 CIVLINES.now, src/game/dialogue.ts:1920)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct CIVLINESNow {
     pub guard_ack: String,
     pub qrf: String,
 }
-impl CIVLINESNow {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CIVLINESNow {
-            guard_ack: String::new(),
-            qrf: String::new(),
-        }
-    }
-}
-impl Default for CIVLINESNow { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:1922 CIVLINES.guide, src/game/dialogue.ts:1922)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct CIVLINESGuide {
     pub report: JsMap<String, Vec<String>>,
     pub control: JsMap<String, String>,
@@ -4830,41 +2560,15 @@ pub struct CIVLINESGuide {
     pub greet_guard: Vec<String>,
     pub own: crate::dialogue::CIVLINESGuideOwn,
 }
-impl CIVLINESGuide {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CIVLINESGuide {
-            report: JsMap::new(),
-            control: JsMap::new(),
-            greet_civ: Vec::new(),
-            greet_guard: Vec::new(),
-            own: crate::dialogue::CIVLINESGuideOwn::zeroed(),
-        }
-    }
-}
-impl Default for CIVLINESGuide { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:1934 CIVLINESGuide.own, src/game/dialogue.ts:1934)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct CIVLINESGuideOwn {
     pub control: JsMap<String, String>,
     pub intel: Vec<String>,
     pub found_cold: String,
 }
-impl CIVLINESGuideOwn {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CIVLINESGuideOwn {
-            control: JsMap::new(),
-            intel: Vec::new(),
-            found_cold: String::new(),
-        }
-    }
-}
-impl Default for CIVLINESGuideOwn { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:1958 HOSTAGE_LINES, src/game/dialogue.ts:1958)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct HOSTAGELINES {
     pub wait: Vec<String>,
     pub threat: Vec<String>,
@@ -4875,43 +2579,14 @@ pub struct HOSTAGELINES {
     pub secured: Vec<String>,
     pub team: Vec<String>,
 }
-impl HOSTAGELINES {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HOSTAGELINES {
-            wait: Vec::new(),
-            threat: Vec::new(),
-            aimed: Vec::new(),
-            shot: Vec::new(),
-            entry: Vec::new(),
-            alone: Vec::new(),
-            secured: Vec::new(),
-            team: Vec::new(),
-        }
-    }
-}
-impl Default for HOSTAGELINES { fn default() -> Self { Self::zeroed() } }
 
-
-/// (TypeScript: inline at src/game/dialogue.ts:121 agitationTerms ->, src/game/dialogue.ts:121)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct AgitationTerms {
     pub a: f64,
     pub why: Vec<String>,
 }
-impl AgitationTerms {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        AgitationTerms {
-            a: 0.0,
-            why: Vec::new(),
-        }
-    }
-}
-impl Default for AgitationTerms { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:208 saidText(l), src/game/dialogue.ts:208)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct SaidTextL {
     pub text: String,
     pub now: Option<String>,
@@ -4919,22 +2594,8 @@ pub struct SaidTextL {
     pub bare: Option<String>,
     pub guide: Option<String>,
 }
-impl SaidTextL {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SaidTextL {
-            text: String::new(),
-            now: None,
-            away: None,
-            bare: None,
-            guide: None,
-        }
-    }
-}
-impl Default for SaidTextL { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:347 intelTable ->, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct IntelTable {
     pub steady: Option<String>,
     pub nervy: Option<String>,
@@ -4999,133 +2660,28 @@ pub struct IntelTable {
     /// INVENTED by a review: see the proposals
     pub sc: JsMap<String, String>,
 }
-impl IntelTable {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        IntelTable {
-            steady: None,
-            nervy: None,
-            hard: None,
-            under: None,
-            pedant: None,
-            selfown: None,
-            folder: None,
-            ramble: None,
-            fan: None,
-            stoic: None,
-            con: None,
-            game: None,
-            menace: None,
-            steady_none: None,
-            steady_heard: None,
-            steady_glimpsed: None,
-            steady_saw: None,
-            steady_saw_hurt: None,
-            nervy_none: None,
-            nervy_heard: None,
-            nervy_glimpsed: None,
-            nervy_saw: None,
-            nervy_saw_hurt: None,
-            hard_none: None,
-            hard_heard: None,
-            hard_glimpsed: None,
-            hard_saw: None,
-            hard_saw_hurt: None,
-            __none: None,
-            __heard: None,
-            __glimpsed: None,
-            __saw: None,
-            __saw_hurt: None,
-            pedant_steady: None,
-            pedant_nervy: None,
-            pedant_hard: None,
-            selfown_steady: None,
-            selfown_nervy: None,
-            selfown_hard: None,
-            folder_steady: None,
-            folder_nervy: None,
-            folder_hard: None,
-            ramble_steady: None,
-            ramble_nervy: None,
-            ramble_hard: None,
-            fan_steady: None,
-            fan_nervy: None,
-            fan_hard: None,
-            stoic_steady: None,
-            stoic_nervy: None,
-            stoic_hard: None,
-            con_steady: None,
-            con_nervy: None,
-            con_hard: None,
-            game_steady: None,
-            game_nervy: None,
-            game_hard: None,
-            menace_steady: None,
-            menace_nervy: None,
-            menace_hard: None,
-            sc: JsMap::new(),
-        }
-    }
-}
-impl Default for IntelTable { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:352 driveAway ->, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct DriveAway {
     pub steady: Option<String>,
     pub nervy: Option<String>,
     pub hard: Option<String>,
     pub under: Option<String>,
 }
-impl DriveAway {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DriveAway {
-            steady: None,
-            nervy: None,
-            hard: None,
-            under: None,
-        }
-    }
-}
-impl Default for DriveAway { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:356 shapedIntelText(sc), src/game/dialogue.ts:356)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct ShapedIntelTextSc {
     pub id: String,
     pub shape: crate::dialogue::ShapeKey,
 }
-impl ShapedIntelTextSc {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ShapedIntelTextSc {
-            id: String::new(),
-            shape: crate::dialogue::ShapeKey::Pedant,
-        }
-    }
-}
-impl Default for ShapedIntelTextSc { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:412 ownPlace ->, src/game/dialogue.ts:412)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct OwnPlace {
     pub rect: crate::dialogue::PlaceRect,
     pub d: f64,
 }
-impl OwnPlace {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        OwnPlace {
-            rect: crate::dialogue::PlaceRect::zeroed(),
-            d: 0.0,
-        }
-    }
-}
-impl Default for OwnPlace { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:671 needsHold(facts), ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct NeedsHoldFacts {
     pub shift: Option<bool>,
     pub rollcall_live: Option<bool>,
@@ -5149,163 +2705,53 @@ pub struct NeedsHoldFacts {
     pub partner_known: Option<bool>,
     pub office: Option<bool>,
 }
-impl NeedsHoldFacts {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        NeedsHoldFacts {
-            shift: None,
-            rollcall_live: None,
-            blackout: None,
-            body_found: None,
-            floor_up: None,
-            lockdown: None,
-            episode: None,
-            heard_small: None,
-            heard_shots: None,
-            heard_bang: None,
-            body_called: None,
-            body_known: None,
-            missing_known: None,
-            held_long: None,
-            dazzled: None,
-            saw_shot: None,
-            saw_drop: None,
-            alert_now: None,
-            drew_on_you: None,
-            partner_known: None,
-            office: None,
-        }
-    }
-}
-impl Default for NeedsHoldFacts { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:675 pendingIntel ->, src/game/dialogue.ts:675)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct PendingIntelItem {
     pub kind: crate::dialogue::IntelKind,
     pub text: String,
 }
-impl PendingIntelItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PendingIntelItem {
-            kind: crate::dialogue::IntelKind::CheckOn,
-            text: String::new(),
-        }
-    }
-}
-impl Default for PendingIntelItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:689 intelFor ->, src/game/dialogue.ts:689)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct IntelFor {
     pub kind: crate::dialogue::IntelKind,
     pub text: String,
 }
-impl IntelFor {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        IntelFor {
-            kind: crate::dialogue::IntelKind::CheckOn,
-            text: String::new(),
-        }
-    }
-}
-impl Default for IntelFor { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:778 promptFor ->, src/game/dialogue.ts:778)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct PromptFor {
     pub text: String,
     pub spent: bool,
 }
-impl PromptFor {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PromptFor {
-            text: String::new(),
-            spent: false,
-        }
-    }
-}
-impl Default for PromptFor { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:965 chooseSamLine ->, src/game/dialogue.ts:965)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct ChooseSamLine {
     pub l: crate::dialogue::SamLine,
     pub text: String,
     pub fresh: bool,
 }
-impl ChooseSamLine {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ChooseSamLine {
-            l: crate::dialogue::SamLine::zeroed(),
-            text: String::new(),
-            fresh: false,
-        }
-    }
-}
-impl Default for ChooseSamLine { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:1007 samKeyLineFor ->, src/game/dialogue.ts:1007)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct SamKeyLineFor {
     pub text: String,
     pub id: String,
 }
-impl SamKeyLineFor {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SamKeyLineFor {
-            text: String::new(),
-            id: String::new(),
-        }
-    }
-}
-impl Default for SamKeyLineFor { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:1016 samRemarkFor ->, src/game/dialogue.ts:1016)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct SamRemarkFor {
     pub text: String,
     pub id: String,
 }
-impl SamRemarkFor {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SamRemarkFor {
-            text: String::new(),
-            id: String::new(),
-        }
-    }
-}
-impl Default for SamRemarkFor { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:1025 synthCtx(over), src/game/dialogue.ts:1025)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct SynthCtxOver {
     pub facts: Option<crate::dialogue::SynthCtxOverFacts>,
     pub tokens: Option<crate::dialogue::SynthCtxOverTokens>,
     pub intel_live: Option<Vec<crate::dialogue::IntelKind>>,
     pub who: Option<String>,
 }
-impl SynthCtxOver {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SynthCtxOver {
-            facts: None,
-            tokens: None,
-            intel_live: None,
-            who: None,
-        }
-    }
-}
-impl Default for SynthCtxOver { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:1025 SynthCtxOver.facts, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SynthCtxOverFacts {
     pub shift: Option<bool>,
     pub rollcall_live: Option<bool>,
@@ -5329,38 +2775,8 @@ pub struct SynthCtxOverFacts {
     pub partner_known: Option<bool>,
     pub office: Option<bool>,
 }
-impl SynthCtxOverFacts {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SynthCtxOverFacts {
-            shift: None,
-            rollcall_live: None,
-            blackout: None,
-            body_found: None,
-            floor_up: None,
-            lockdown: None,
-            episode: None,
-            heard_small: None,
-            heard_shots: None,
-            heard_bang: None,
-            body_called: None,
-            body_known: None,
-            missing_known: None,
-            held_long: None,
-            dazzled: None,
-            saw_shot: None,
-            saw_drop: None,
-            alert_now: None,
-            drew_on_you: None,
-            partner_known: None,
-            office: None,
-        }
-    }
-}
-impl Default for SynthCtxOverFacts { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:1025 SynthCtxOver.tokens, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct SynthCtxOverTokens {
     pub door: Option<String>,
     pub code: Option<String>,
@@ -5386,99 +2802,30 @@ pub struct SynthCtxOverTokens {
     pub badge: Option<String>,
     pub pad_door: Option<String>,
 }
-impl SynthCtxOverTokens {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SynthCtxOverTokens {
-            door: None,
-            code: None,
-            missing: None,
-            body: None,
-            n: None,
-            up: None,
-            post: None,
-            room: None,
-            route: None,
-            partner: None,
-            victim: None,
-            saw_where: None,
-            heard_where: None,
-            partner_route: None,
-            caller: None,
-            checker: None,
-            checked: None,
-            clear_room: None,
-            breaker_room: None,
-            check_eta: None,
-            minutes: None,
-            badge: None,
-            pad_door: None,
-        }
-    }
-}
-impl Default for SynthCtxOverTokens { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:1214 coverageMatrix ->, src/game/dialogue.ts:1214)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct CoverageMatrix {
     pub rows: Vec<crate::dialogue::CoverageMatrixRowsItem>,
     pub total: f64,
     pub intel: f64,
 }
-impl CoverageMatrix {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CoverageMatrix {
-            rows: Vec::new(),
-            total: 0.0,
-            intel: 0.0,
-        }
-    }
-}
-impl Default for CoverageMatrix { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:1214 CoverageMatrix.rows, src/game/dialogue.ts:1214)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct CoverageMatrixRowsItem {
     pub k: String,
     pub counts: JsMap<String, f64>,
     pub total: f64,
 }
-impl CoverageMatrixRowsItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CoverageMatrixRowsItem {
-            k: String::new(),
-            counts: JsMap::new(),
-            total: 0.0,
-        }
-    }
-}
-impl Default for CoverageMatrixRowsItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:1220 samCoverage ->, src/game/dialogue.ts:1220)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct SamCoverage {
     pub rows: Vec<crate::dialogue::SamCoverageRowsItem>,
     pub q: crate::dialogue::SamCoverageQ,
     pub key: f64,
     pub total: f64,
 }
-impl SamCoverage {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SamCoverage {
-            rows: Vec::new(),
-            q: crate::dialogue::SamCoverageQ::zeroed(),
-            key: 0.0,
-            total: 0.0,
-        }
-    }
-}
-impl Default for SamCoverage { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:1220 SamCoverage.rows, src/game/dialogue.ts:1220)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SamCoverageRowsItem {
     pub s: crate::dialogue::SamStage,
     pub plain: f64,
@@ -5489,25 +2836,8 @@ pub struct SamCoverageRowsItem {
     pub floor: f64,
     pub total: f64,
 }
-impl SamCoverageRowsItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SamCoverageRowsItem {
-            s: crate::dialogue::SamStage::Press,
-            plain: 0.0,
-            gun: 0.0,
-            arm: 0.0,
-            t: 0.0,
-            k: 0.0,
-            floor: 0.0,
-            total: 0.0,
-        }
-    }
-}
-impl Default for SamCoverageRowsItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:1220 SamCoverage.q, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct SamCoverageQ {
     pub check_on: Option<f64>,
     pub clearing: Option<f64>,
@@ -5521,28 +2851,8 @@ pub struct SamCoverageQ {
     pub missing: Option<f64>,
     pub drive: Option<f64>,
 }
-impl SamCoverageQ {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SamCoverageQ {
-            check_on: None,
-            clearing: None,
-            rollcall_live: None,
-            blackout: None,
-            door: None,
-            code: None,
-            rollcall: None,
-            lockdown_posts: None,
-            routes: None,
-            missing: None,
-            drive: None,
-        }
-    }
-}
-impl Default for SamCoverageQ { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:1226 scriptCoverage ->, src/game/dialogue.ts:1226)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct ScriptCoverageItem {
     pub shape: crate::dialogue::ShapeKey,
     pub by_t: crate::dialogue::ScriptCoverageItemByT,
@@ -5551,112 +2861,41 @@ pub struct ScriptCoverageItem {
     pub pin: String,
     pub total: f64,
 }
-impl ScriptCoverageItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ScriptCoverageItem {
-            shape: crate::dialogue::ShapeKey::Pedant,
-            by_t: crate::dialogue::ScriptCoverageItemByT::zeroed(),
-            k: String::new(),
-            band: String::new(),
-            pin: String::new(),
-            total: 0.0,
-        }
-    }
-}
-impl Default for ScriptCoverageItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:1226 ScriptCoverageItem.byT, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct ScriptCoverageItemByT {
     pub steady: Option<f64>,
     pub nervy: Option<f64>,
     pub hard: Option<f64>,
 }
-impl ScriptCoverageItemByT {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ScriptCoverageItemByT {
-            steady: None,
-            nervy: None,
-            hard: None,
-        }
-    }
-}
-impl Default for ScriptCoverageItemByT { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:1233 lineLengthReport ->, src/game/dialogue.ts:1233)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct LineLengthReport {
     pub men: Vec<crate::dialogue::LineLengthReportMenItem>,
     pub sam: Vec<crate::dialogue::LineLengthReportSamItem>,
 }
-impl LineLengthReport {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LineLengthReport {
-            men: Vec::new(),
-            sam: Vec::new(),
-        }
-    }
-}
-impl Default for LineLengthReport { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:1233 LineLengthReport.men, src/game/dialogue.ts:1233)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct LineLengthReportMenItem {
     pub where_: String,
     pub text: String,
 }
-impl LineLengthReportMenItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LineLengthReportMenItem {
-            where_: String::new(),
-            text: String::new(),
-        }
-    }
-}
-impl Default for LineLengthReportMenItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:1233 LineLengthReport.sam, src/game/dialogue.ts:1233)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct LineLengthReportSamItem {
     pub where_: String,
     pub text: String,
 }
-impl LineLengthReportSamItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LineLengthReportSamItem {
-            where_: String::new(),
-            text: String::new(),
-        }
-    }
-}
-impl Default for LineLengthReportSamItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/dialogue.ts:1324 himOf ->, src/game/dialogue.ts:1324)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct HimOf {
     pub text: String,
     pub k: crate::dialogue::HimOfK,
 }
-impl HimOf {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HimOf {
-            text: String::new(),
-            k: crate::dialogue::HimOfK::None,
-        }
-    }
-}
-impl Default for HimOf { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum HimOfK {
-    None,
+    #[default] None,
     Heard,
     Glimpsed,
     Saw,
@@ -5980,460 +3219,460 @@ pub fn scripts() -> Vec<crate::dialogue::Script> { {
         id: s("pedant-s1"), shape: ShapeKey::Pedant, t: Temperament::Steady, k: alloc::vec![Knowledge::None, Knowledge::Heard, Knowledge::Glimpsed],
         band: Some(alloc::vec![Band::Low, Band::Mid]), needs: Some(alloc::vec![Need::Office]), not: None, pin: None,
         beats: ScriptBeats {
-            _1: Beat { sam: s("How many of you on tonight? Whisper it."), him: text("On tonight, or on this floor? Those are different lists."), ..Beat::zeroed() },
-            _2: Beat { sam: s("The list that gets shorter if you stall."), him: text("…Floor. You mean floor. {Up}, counting me. Sorry— nerves."), ..Beat::zeroed() },
-            _3: Beat { sam: s("Good. Now something I cannot count myself."), him: text("That's the lot. I count things. It's most of the job."), ..Beat::zeroed() },
-            x: Beat { sam: s("Still {up}?"), him: text("Unless you've been busy. …Please don't answer that."), ..Beat::zeroed() },
+            _1: Beat { sam: s("How many of you on tonight? Whisper it."), him: text("On tonight, or on this floor? Those are different lists."), ..Beat::default() },
+            _2: Beat { sam: s("The list that gets shorter if you stall."), him: text("…Floor. You mean floor. {Up}, counting me. Sorry— nerves."), ..Beat::default() },
+            _3: Beat { sam: s("Good. Now something I cannot count myself."), him: text("That's the lot. I count things. It's most of the job."), ..Beat::default() },
+            x: Beat { sam: s("Still {up}?"), him: text("Unless you've been busy. …Please don't answer that."), ..Beat::default() },
         },
     },
     Script {
         id: s("pedant-s2"), shape: ShapeKey::Pedant, t: Temperament::Steady, k: alloc::vec![Knowledge::None, Knowledge::Heard, Knowledge::Glimpsed],
         band: Some(alloc::vec![Band::Low, Band::Mid]), needs: Some(alloc::vec![Need::Office]), not: None, pin: None,
         beats: ScriptBeats {
-            _1: Beat { sam: s("Head count. This floor. Now."), him: text("Counting how — bodies present, or badged in? They drift."), ..Beat::zeroed() },
-            _2: Beat { sam: s("Count the ones who'd miss you."), him: text("…That's a smaller number. {Up} present. Me included."), ..Beat::zeroed() },
-            _3: Beat { sam: s("See, you round beautifully. Next fact."), him: text("There isn't a next fact. I peaked at counting."), ..Beat::zeroed() },
-            x: Beat { sam: s("Any advance on {up}?"), him: text("It's not an auction. …{Up}. Final answer. Please stop bidding."), ..Beat::zeroed() },
+            _1: Beat { sam: s("Head count. This floor. Now."), him: text("Counting how — bodies present, or badged in? They drift."), ..Beat::default() },
+            _2: Beat { sam: s("Count the ones who'd miss you."), him: text("…That's a smaller number. {Up} present. Me included."), ..Beat::default() },
+            _3: Beat { sam: s("See, you round beautifully. Next fact."), him: text("There isn't a next fact. I peaked at counting."), ..Beat::default() },
+            x: Beat { sam: s("Any advance on {up}?"), him: text("It's not an auction. …{Up}. Final answer. Please stop bidding."), ..Beat::default() },
         },
     },
     Script {
         id: s("pedant-s3"), shape: ShapeKey::Pedant, t: Temperament::Steady, k: alloc::vec![Knowledge::None, Knowledge::Heard, Knowledge::Glimpsed],
         band: Some(alloc::vec![Band::Low, Band::Mid]), needs: Some(alloc::vec![Need::Office]), not: None, pin: None,
         beats: ScriptBeats {
-            _1: Beat { sam: s("Numbers. How many walking this floor?"), him: text("Walking right now, or rostered? Two of them sit down a lot."), ..Beat::zeroed() },
-            _2: Beat { sam: s("The arm doesn't take footnotes."), him: text("{Up}. Call it {up}. Including the one you're wearing."), ..Beat::zeroed() },
-            _3: Beat { sam: s("Now where the other feet go."), him: text("I only do my stretch— {route}. The rest is rumour and biscuits."), ..Beat::zeroed() },
-            x: Beat { sam: s("You've gone quiet. Recounting?"), him: text("Checking my working. Still {up}. Still including me, ideally."), ..Beat::zeroed() },
+            _1: Beat { sam: s("Numbers. How many walking this floor?"), him: text("Walking right now, or rostered? Two of them sit down a lot."), ..Beat::default() },
+            _2: Beat { sam: s("The arm doesn't take footnotes."), him: text("{Up}. Call it {up}. Including the one you're wearing."), ..Beat::default() },
+            _3: Beat { sam: s("Now where the other feet go."), him: text("I only do my stretch— {route}. The rest is rumour and biscuits."), ..Beat::default() },
+            x: Beat { sam: s("You've gone quiet. Recounting?"), him: text("Checking my working. Still {up}. Still including me, ideally."), ..Beat::default() },
         },
     },
     Script {
         id: s("selfown-s1"), shape: ShapeKey::Selfown, t: Temperament::Steady, k: alloc::vec![Knowledge::None, Knowledge::Heard, Knowledge::Glimpsed, Knowledge::Saw],
         band: None, needs: Some(alloc::vec![Need::Office]), not: None, pin: Some(IntelKind::Door),
         beats: ScriptBeats {
-            _1: Beat { sam: s("You're not staff. Staff would have heard me."), him: keyed(&[("*", "I am staff. Eleven years. There's a photo on the lanyard. Look."), ("saw", "Staff enough to chase you round {sawWhere}. Eleven years.")]), ..Beat::zeroed() },
-            _2: Beat { sam: s("Anyone can print a lanyard. Staff know the doors."), him: text("I know the doors. {Door}'s keyed and mine's on my— …no."), ..Beat::zeroed() },
-            _3: Beat { sam: s("Finish the sentence. Then I finish with the arm."), him: text("There is no end to that sentence. It just stops there. Forever."), ..Beat::zeroed() },
-            x: Beat { sam: s("Anything else you'd like to prove?"), him: text("No. I'm done proving things. Clearly not my strength."), ..Beat::zeroed() },
+            _1: Beat { sam: s("You're not staff. Staff would have heard me."), him: keyed(&[("*", "I am staff. Eleven years. There's a photo on the lanyard. Look."), ("saw", "Staff enough to chase you round {sawWhere}. Eleven years.")]), ..Beat::default() },
+            _2: Beat { sam: s("Anyone can print a lanyard. Staff know the doors."), him: text("I know the doors. {Door}'s keyed and mine's on my— …no."), ..Beat::default() },
+            _3: Beat { sam: s("Finish the sentence. Then I finish with the arm."), him: text("There is no end to that sentence. It just stops there. Forever."), ..Beat::default() },
+            x: Beat { sam: s("Anything else you'd like to prove?"), him: text("No. I'm done proving things. Clearly not my strength."), ..Beat::default() },
         },
     },
     Script {
         id: s("selfown-s2"), shape: ShapeKey::Selfown, t: Temperament::Steady, k: alloc::vec![Knowledge::None, Knowledge::Heard, Knowledge::Glimpsed, Knowledge::Saw],
         band: None, needs: Some(alloc::vec![Need::Office]), not: None, pin: Some(IntelKind::Door),
         beats: ScriptBeats {
-            _1: Beat { sam: s("Contract badge. You don't know this floor."), him: keyed(&[("*", "Better than the day lot. Try me. …On reflection, do not try me."), ("saw", "I knew it well enough to spot you in it. Briefly.")]), ..Beat::zeroed() },
-            _2: Beat { sam: s("Bet you can't even open {door}."), him: text("Course I can, it's only the key off my— I see what you did there."), ..Beat::zeroed() },
-            _3: Beat { sam: s("So finish it. Slowly. Hands still."), him: text("Nothing to finish. I trail off professionally. Years of practice."), ..Beat::zeroed() },
-            x: Beat { sam: s("You've gone shy."), him: text("I'm reviewing everything I've ever said out loud. It's a long list."), ..Beat::zeroed() },
+            _1: Beat { sam: s("Contract badge. You don't know this floor."), him: keyed(&[("*", "Better than the day lot. Try me. …On reflection, do not try me."), ("saw", "I knew it well enough to spot you in it. Briefly.")]), ..Beat::default() },
+            _2: Beat { sam: s("Bet you can't even open {door}."), him: text("Course I can, it's only the key off my— I see what you did there."), ..Beat::default() },
+            _3: Beat { sam: s("So finish it. Slowly. Hands still."), him: text("Nothing to finish. I trail off professionally. Years of practice."), ..Beat::default() },
+            x: Beat { sam: s("You've gone shy."), him: text("I'm reviewing everything I've ever said out loud. It's a long list."), ..Beat::default() },
         },
     },
     Script {
         id: s("selfown-s3"), shape: ShapeKey::Selfown, t: Temperament::Steady, k: alloc::vec![Knowledge::None, Knowledge::Heard, Knowledge::Glimpsed, Knowledge::Saw],
         band: None, needs: Some(alloc::vec![Need::Office]), not: None, pin: Some(IntelKind::Door),
         beats: ScriptBeats {
-            _1: Beat { sam: s("You're the temp. Temps know nothing."), him: keyed(&[("*", "Permanent nights, thank you. I've a drawer with my name on it."), ("saw", "The temp nearly had you in {sawWhere}. Permanent, actually.")]), ..Beat::zeroed() },
-            _2: Beat { sam: s("A drawer. Not a key, though."), him: text("Keys, plural. One for {door}, on my— …that was the whole trick, was it."), ..Beat::zeroed() },
-            _3: Beat { sam: s("It was. Where."), him: text("Nowhere. I own a drawer and no keys. Write that down."), ..Beat::zeroed() },
-            x: Beat { sam: s("Tell me about the drawer."), him: text("No. The drawer stays between me and the drawer."), ..Beat::zeroed() },
+            _1: Beat { sam: s("You're the temp. Temps know nothing."), him: keyed(&[("*", "Permanent nights, thank you. I've a drawer with my name on it."), ("saw", "The temp nearly had you in {sawWhere}. Permanent, actually.")]), ..Beat::default() },
+            _2: Beat { sam: s("A drawer. Not a key, though."), him: text("Keys, plural. One for {door}, on my— …that was the whole trick, was it."), ..Beat::default() },
+            _3: Beat { sam: s("It was. Where."), him: text("Nowhere. I own a drawer and no keys. Write that down."), ..Beat::default() },
+            x: Beat { sam: s("Tell me about the drawer."), him: text("No. The drawer stays between me and the drawer."), ..Beat::default() },
         },
     },
     Script {
         id: s("fan-s1"), shape: ShapeKey::Fan, t: Temperament::Steady, k: alloc::vec![Knowledge::None, Knowledge::Heard, Knowledge::Glimpsed],
         band: Some(alloc::vec![Band::Low]), needs: None, not: None, pin: None,
         beats: ScriptBeats {
-            _1: Beat { sam: s("Not a word."), him: text("…You're an actual professional. Aren't you. Sorry— whispering. Wow."), ..Beat::zeroed() },
-            _2: Beat { sam: s("This is the part where you're frightened."), him: text("I am! Bit of both. Is the arm thing hard to learn? Roughly?"), ..Beat::zeroed() },
-            _3: Beat { sam: s("One useful thing. Then you can gush."), him: text("I don't know anything useful. I know YOU now. That's huge for me."), take: Some(s("There it is. Thank you. Stop smiling.")), ..Beat::zeroed() },
-            x: Beat { sam: s("We never met."), him: text("Course not. …Can I say I met 'someone'? No details. A vibe."), ..Beat::zeroed() },
+            _1: Beat { sam: s("Not a word."), him: text("…You're an actual professional. Aren't you. Sorry— whispering. Wow."), ..Beat::default() },
+            _2: Beat { sam: s("This is the part where you're frightened."), him: text("I am! Bit of both. Is the arm thing hard to learn? Roughly?"), ..Beat::default() },
+            _3: Beat { sam: s("One useful thing. Then you can gush."), him: text("I don't know anything useful. I know YOU now. That's huge for me."), take: Some(s("There it is. Thank you. Stop smiling.")), ..Beat::default() },
+            x: Beat { sam: s("We never met."), him: text("Course not. …Can I say I met 'someone'? No details. A vibe."), ..Beat::default() },
         },
     },
     Script {
         id: s("fan-s2"), shape: ShapeKey::Fan, t: Temperament::Steady, k: alloc::vec![Knowledge::None, Knowledge::Heard, Knowledge::Glimpsed],
         band: Some(alloc::vec![Band::Low]), needs: None, not: None, pin: None,
         beats: ScriptBeats {
-            _1: Beat { sam: s("Easy. Hands where they are."), him: text("They're staying. Are those the goggles that— they are. Brilliant."), ..Beat::zeroed() },
-            _2: Beat { sam: s("You should be more worried."), him: text("Oh, I'm terrified. Do you lot get dental? Genuine question."), ..Beat::zeroed() },
-            _3: Beat { sam: s("Question for question. Mine first."), him: text("I've nothing worth trading. Nights, mate. They give us a torch."), take: Some(s("Good. And no. No dental.")), ..Beat::zeroed() },
-            x: Beat { sam: s("Forget my face."), him: text("Never saw it. Felt the forearm, though. Textbook. Shutting up."), ..Beat::zeroed() },
+            _1: Beat { sam: s("Easy. Hands where they are."), him: text("They're staying. Are those the goggles that— they are. Brilliant."), ..Beat::default() },
+            _2: Beat { sam: s("You should be more worried."), him: text("Oh, I'm terrified. Do you lot get dental? Genuine question."), ..Beat::default() },
+            _3: Beat { sam: s("Question for question. Mine first."), him: text("I've nothing worth trading. Nights, mate. They give us a torch."), take: Some(s("Good. And no. No dental.")), ..Beat::default() },
+            x: Beat { sam: s("Forget my face."), him: text("Never saw it. Felt the forearm, though. Textbook. Shutting up."), ..Beat::default() },
         },
     },
     Script {
         id: s("fan-s3"), shape: ShapeKey::Fan, t: Temperament::Steady, k: alloc::vec![Knowledge::None, Knowledge::Heard, Knowledge::Glimpsed],
         band: Some(alloc::vec![Band::Low]), needs: Some(alloc::vec![Need::Office]), not: None, pin: None,
         beats: ScriptBeats {
-            _1: Beat { sam: s("Shh."), him: text("Twenty years reading about this stuff and it happens on MY floor."), ..Beat::zeroed() },
-            _2: Beat { sam: s("Focus. You're being held."), him: text("I know! Properly, too. Is there a course? Evening classes?"), ..Beat::zeroed() },
-            _3: Beat { sam: s("Tell me something and I'll say there's a course."), him: text("I've got nothing. Ask me anything, though. Love a quiz."), take: Some(s("There's no course.")), ..Beat::zeroed() },
-            x: Beat { sam: s("Not a word to anyone."), him: text("Who'd believe me? …I'll know, though. Quietly. For years."), ..Beat::zeroed() },
+            _1: Beat { sam: s("Shh."), him: text("Twenty years reading about this stuff and it happens on MY floor."), ..Beat::default() },
+            _2: Beat { sam: s("Focus. You're being held."), him: text("I know! Properly, too. Is there a course? Evening classes?"), ..Beat::default() },
+            _3: Beat { sam: s("Tell me something and I'll say there's a course."), him: text("I've got nothing. Ask me anything, though. Love a quiz."), take: Some(s("There's no course.")), ..Beat::default() },
+            x: Beat { sam: s("Not a word to anyone."), him: text("Who'd believe me? …I'll know, though. Quietly. For years."), ..Beat::default() },
         },
     },
     Script {
         id: s("con-s1"), shape: ShapeKey::Con, t: Temperament::Steady, k: alloc::vec![Knowledge::None, Knowledge::Heard],
         band: Some(alloc::vec![Band::Low, Band::Mid]), needs: Some(alloc::vec![Need::Office]), not: Some(alloc::vec![Need::HeardShots, Need::BodyKnown, Need::FloorUp, Need::HeardBang]), pin: None,
         beats: ScriptBeats {
-            _1: Beat { sam: s("Security audit. Unannounced. Badge number."), him: text("Oh— {badge}. Is this the fire-door thing? I flagged that. Twice."), ..Beat::zeroed() },
-            _2: Beat { sam: s("I ask, you answer. That's the audit."), him: text("Sorry. Yes. It's just— nobody audits nights. Ever. Carry on."), ..Beat::zeroed() },
-            _3: Beat { sam: s("Item three. Staffing and access. Go."), him: text("Staffing's thin and access is a joke. Quote me. Please quote me."), take: Some(s("Very thorough. Head office will be thrilled.")), ..Beat::zeroed() },
-            x: Beat { sam: s("That concludes the audit."), him: text("…Auditors don't usually do the arm, do they. Thinking about it."), ..Beat::zeroed() },
+            _1: Beat { sam: s("Security audit. Unannounced. Badge number."), him: text("Oh— {badge}. Is this the fire-door thing? I flagged that. Twice."), ..Beat::default() },
+            _2: Beat { sam: s("I ask, you answer. That's the audit."), him: text("Sorry. Yes. It's just— nobody audits nights. Ever. Carry on."), ..Beat::default() },
+            _3: Beat { sam: s("Item three. Staffing and access. Go."), him: text("Staffing's thin and access is a joke. Quote me. Please quote me."), take: Some(s("Very thorough. Head office will be thrilled.")), ..Beat::default() },
+            x: Beat { sam: s("That concludes the audit."), him: text("…Auditors don't usually do the arm, do they. Thinking about it."), ..Beat::default() },
         },
     },
     Script {
         id: s("con-s2"), shape: ShapeKey::Con, t: Temperament::Steady, k: alloc::vec![Knowledge::None, Knowledge::Heard],
         band: Some(alloc::vec![Band::Low, Band::Mid]), needs: Some(alloc::vec![Need::Office]), not: Some(alloc::vec![Need::HeardShots, Need::BodyKnown, Need::FloorUp, Need::HeardBang]), pin: None,
         beats: ScriptBeats {
-            _1: Beat { sam: s("Penetration test. You're doing well so far."), him: text("Am I? Brilliant. Do I get a— is there a certificate at the end?"), ..Beat::zeroed() },
-            _2: Beat { sam: s("Depends on the next answers."), him: text("Right. Focused. This is my certificate face."), ..Beat::zeroed() },
-            _3: Beat { sam: s("Walk me through tonight's cover."), him: text("Cover's me, a torch and optimism. Put 'optimism'. It sounds funded."), take: Some(s("Textbook. I'll mention you by badge.")), ..Beat::zeroed() },
-            x: Beat { sam: s("Test complete."), him: text("You're not writing any of this dow— oh. Oh, I see. Oh no."), ..Beat::zeroed() },
+            _1: Beat { sam: s("Penetration test. You're doing well so far."), him: text("Am I? Brilliant. Do I get a— is there a certificate at the end?"), ..Beat::default() },
+            _2: Beat { sam: s("Depends on the next answers."), him: text("Right. Focused. This is my certificate face."), ..Beat::default() },
+            _3: Beat { sam: s("Walk me through tonight's cover."), him: text("Cover's me, a torch and optimism. Put 'optimism'. It sounds funded."), take: Some(s("Textbook. I'll mention you by badge.")), ..Beat::default() },
+            x: Beat { sam: s("Test complete."), him: text("You're not writing any of this dow— oh. Oh, I see. Oh no."), ..Beat::default() },
         },
     },
     Script {
         id: s("con-s3"), shape: ShapeKey::Con, t: Temperament::Steady, k: alloc::vec![Knowledge::None, Knowledge::Heard],
         band: Some(alloc::vec![Band::Low, Band::Mid]), needs: Some(alloc::vec![Need::Office]), not: Some(alloc::vec![Need::HeardShots, Need::BodyKnown, Need::FloorUp, Need::HeardBang]), pin: None,
         beats: ScriptBeats {
-            _1: Beat { sam: s("Fire drill assessment. Don't turn round."), him: text("Finally. I've said for years the night drill is a work of fiction."), sam_now: Some(s("Fire drill assessment. Don't turn around.")), ..Beat::zeroed() },
-            _2: Beat { sam: s("Assessors don't chat. Badge."), him: text("{Badge}. Sorry. It's just nice to be assessed for once."), ..Beat::zeroed() },
-            _3: Beat { sam: s("Muster procedure. Who's where."), him: text("Muster's the car park. It's always the car park. Rain or rain."), take: Some(s("Exemplary. Gold star.")), ..Beat::zeroed() },
-            x: Beat { sam: s("Drill over. As you were."), him: text("Hang on. Assessors come in through the FRONT."), ..Beat::zeroed() },
+            _1: Beat { sam: s("Fire drill assessment. Don't turn round."), him: text("Finally. I've said for years the night drill is a work of fiction."), sam_now: Some(s("Fire drill assessment. Don't turn around.")), ..Beat::default() },
+            _2: Beat { sam: s("Assessors don't chat. Badge."), him: text("{Badge}. Sorry. It's just nice to be assessed for once."), ..Beat::default() },
+            _3: Beat { sam: s("Muster procedure. Who's where."), him: text("Muster's the car park. It's always the car park. Rain or rain."), take: Some(s("Exemplary. Gold star.")), ..Beat::default() },
+            x: Beat { sam: s("Drill over. As you were."), him: text("Hang on. Assessors come in through the FRONT."), ..Beat::default() },
         },
     },
     Script {
         id: s("game-s1"), shape: ShapeKey::Game, t: Temperament::Steady, k: alloc::vec![Knowledge::None, Knowledge::Heard, Knowledge::Glimpsed, Knowledge::Saw],
         band: None, needs: None, not: None, pin: None,
         beats: ScriptBeats {
-            _1: Beat { sam: s("New rule. You don't say 'basically'."), him: keyed(&[("*", "I— fine. I wasn't going to. …Was I? Now I can feel it queuing."), ("saw", "You had a gun on you an hour ago and THIS is the rule. Fine.")]), ..Beat::zeroed() },
-            _2: Beat { sam: s("Rule two. Count down from seven. Slowly."), him: text("Seven. Six. Why seven— five. Four."), ..Beat::zeroed() },
-            _3: Beat { sam: s("Hold at four. Now something useful."), him: text("Useful. Er. Three? No— that's counting again. Sorry. Four."), take: Some(s("Good. Stay at four.")), ..Beat::zeroed() },
-            x: Beat { sam: s("You may finish."), him: text("Three, two, one. So basic— NO. Nearly. So nearly."), ..Beat::zeroed() },
+            _1: Beat { sam: s("New rule. You don't say 'basically'."), him: keyed(&[("*", "I— fine. I wasn't going to. …Was I? Now I can feel it queuing."), ("saw", "You had a gun on you an hour ago and THIS is the rule. Fine.")]), ..Beat::default() },
+            _2: Beat { sam: s("Rule two. Count down from seven. Slowly."), him: text("Seven. Six. Why seven— five. Four."), ..Beat::default() },
+            _3: Beat { sam: s("Hold at four. Now something useful."), him: text("Useful. Er. Three? No— that's counting again. Sorry. Four."), take: Some(s("Good. Stay at four.")), ..Beat::default() },
+            x: Beat { sam: s("You may finish."), him: text("Three, two, one. So basic— NO. Nearly. So nearly."), ..Beat::default() },
         },
     },
     Script {
         id: s("game-s2"), shape: ShapeKey::Game, t: Temperament::Steady, k: alloc::vec![Knowledge::None, Knowledge::Heard, Knowledge::Glimpsed, Knowledge::Saw],
         band: None, needs: Some(alloc::vec![Need::Office]), not: None, pin: None,
         beats: ScriptBeats {
-            _1: Beat { sam: s("Blink twice if you've ever validated parking."), him: keyed(&[("*", "That's— twice. There. What have I just admitted to?"), ("saw", "Hunted you all night and you open with PARKING. …Twice. There.")]), ..Beat::zeroed() },
-            _2: Beat { sam: s("Everything. Now hum. One note. Low."), him: text("Mmmm— this is the strangest thing that has ever— mmmm."), ..Beat::zeroed() },
-            _3: Beat { sam: s("Stop humming. Talk."), him: text("About what? You've had blinking AND humming. I'm out of face."), take: Some(s("Better than the humming.")), ..Beat::zeroed() },
-            x: Beat { sam: s("Resume humming."), him: text("Mmmm. …I've lost the note. Was it this one? Mmmm? Lower?"), ..Beat::zeroed() },
+            _1: Beat { sam: s("Blink twice if you've ever validated parking."), him: keyed(&[("*", "That's— twice. There. What have I just admitted to?"), ("saw", "Hunted you all night and you open with PARKING. …Twice. There.")]), ..Beat::default() },
+            _2: Beat { sam: s("Everything. Now hum. One note. Low."), him: text("Mmmm— this is the strangest thing that has ever— mmmm."), ..Beat::default() },
+            _3: Beat { sam: s("Stop humming. Talk."), him: text("About what? You've had blinking AND humming. I'm out of face."), take: Some(s("Better than the humming.")), ..Beat::default() },
+            x: Beat { sam: s("Resume humming."), him: text("Mmmm. …I've lost the note. Was it this one? Mmmm? Lower?"), ..Beat::default() },
         },
     },
     Script {
         id: s("game-s3"), shape: ShapeKey::Game, t: Temperament::Steady, k: alloc::vec![Knowledge::None, Knowledge::Heard, Knowledge::Glimpsed, Knowledge::Saw],
         band: None, needs: None, not: None, pin: None,
         beats: ScriptBeats {
-            _1: Beat { sam: s("Every answer starts with 'respectfully'. Go."), him: keyed(&[("*", "Respectfully— what? Respectfully, what was the question?"), ("saw", "Respectfully, I nearly had you earlier. Respectfully.")]), ..Beat::zeroed() },
-            _2: Beat { sam: s("There wasn't one. Well done."), him: text("Respectfully, this is a very odd night for a Tuesday sort of man."), ..Beat::zeroed() },
-            _3: Beat { sam: s("Respectfully, tell me something."), him: text("Respectfully, I've got nothing. With the greatest respect. Nothing."), take: Some(s("You dropped the 'respectfully'. I'll allow it.")), ..Beat::zeroed() },
-            x: Beat { sam: s("Dismissed."), him: text("Respectfully— can I stop now? It's stuck in my mouth. Respectfully."), ..Beat::zeroed() },
+            _1: Beat { sam: s("Every answer starts with 'respectfully'. Go."), him: keyed(&[("*", "Respectfully— what? Respectfully, what was the question?"), ("saw", "Respectfully, I nearly had you earlier. Respectfully.")]), ..Beat::default() },
+            _2: Beat { sam: s("There wasn't one. Well done."), him: text("Respectfully, this is a very odd night for a Tuesday sort of man."), ..Beat::default() },
+            _3: Beat { sam: s("Respectfully, tell me something."), him: text("Respectfully, I've got nothing. With the greatest respect. Nothing."), take: Some(s("You dropped the 'respectfully'. I'll allow it.")), ..Beat::default() },
+            x: Beat { sam: s("Dismissed."), him: text("Respectfully— can I stop now? It's stuck in my mouth. Respectfully."), ..Beat::default() },
         },
     },
     Script {
         id: s("menace-s1"), shape: ShapeKey::Menace, t: Temperament::Steady, k: alloc::vec![Knowledge::None, Knowledge::Heard, Knowledge::Glimpsed, Knowledge::Saw],
         band: None, needs: Some(alloc::vec![Need::Office]), not: None, pin: None,
         beats: ScriptBeats {
-            _1: Beat { sam: s("Look around. Tell me where we are."), him: keyed(&[("*", "{Room}. …Why, where did you think you were?"), ("saw", "{Room}. Same floor I chased you round. Smaller, now.")]), ..Beat::zeroed() },
-            _2: Beat { sam: s("Quiet corner. Nobody walks past for hours."), him: text("I walk past. That's the job. …I see the flaw in that now."), room: Some(true), ..Beat::zeroed() },
-            _3: Beat { sam: s("So. Something useful, or the tour continues."), him: text("Nothing useful. Continue the tour. I've had worse shifts. Just."), ..Beat::zeroed() },
-            x: Beat { sam: s("Enjoy {room}."), him: text("I used to."), ..Beat::zeroed() },
+            _1: Beat { sam: s("Look around. Tell me where we are."), him: keyed(&[("*", "{Room}. …Why, where did you think you were?"), ("saw", "{Room}. Same floor I chased you round. Smaller, now.")]), ..Beat::default() },
+            _2: Beat { sam: s("Quiet corner. Nobody walks past for hours."), him: text("I walk past. That's the job. …I see the flaw in that now."), room: Some(true), ..Beat::default() },
+            _3: Beat { sam: s("So. Something useful, or the tour continues."), him: text("Nothing useful. Continue the tour. I've had worse shifts. Just."), ..Beat::default() },
+            x: Beat { sam: s("Enjoy {room}."), him: text("I used to."), ..Beat::default() },
         },
     },
     Script {
         id: s("menace-s2"), shape: ShapeKey::Menace, t: Temperament::Steady, k: alloc::vec![Knowledge::None, Knowledge::Heard, Knowledge::Glimpsed, Knowledge::Saw],
         band: None, needs: Some(alloc::vec![Need::Office]), not: None, pin: None,
         beats: ScriptBeats {
-            _1: Beat { sam: s("You know this floor. Every room."), him: keyed(&[("*", "Every bin, every squeaky tile. Small life, but it's indexed."), ("saw", "Well enough to nearly corner you in it. Nearly is the word.")]), ..Beat::zeroed() },
-            _2: Beat { sam: s("Then you know what in here would hurt."), him: text("The chairs, long term. Short term— you, I assume."), room: Some(true), ..Beat::zeroed() },
-            _3: Beat { sam: s("Or you tell me what I need."), him: text("You need a different hostage. Said with respect. And urgency."), ..Beat::zeroed() },
-            x: Beat { sam: s("We'll stay here a while."), him: text("Fine. It's warmer than {route}."), ..Beat::zeroed() },
+            _1: Beat { sam: s("You know this floor. Every room."), him: keyed(&[("*", "Every bin, every squeaky tile. Small life, but it's indexed."), ("saw", "Well enough to nearly corner you in it. Nearly is the word.")]), ..Beat::default() },
+            _2: Beat { sam: s("Then you know what in here would hurt."), him: text("The chairs, long term. Short term— you, I assume."), room: Some(true), ..Beat::default() },
+            _3: Beat { sam: s("Or you tell me what I need."), him: text("You need a different hostage. Said with respect. And urgency."), ..Beat::default() },
+            x: Beat { sam: s("We'll stay here a while."), him: text("Fine. It's warmer than {route}."), ..Beat::default() },
         },
     },
     Script {
         id: s("menace-s3"), shape: ShapeKey::Menace, t: Temperament::Steady, k: alloc::vec![Knowledge::None, Knowledge::Heard, Knowledge::Glimpsed, Knowledge::Saw],
         band: None, needs: Some(alloc::vec![Need::Office]), not: None, pin: None,
         beats: ScriptBeats {
-            _1: Beat { sam: s("Nice spot you picked to stand in."), him: keyed(&[("*", "I didn't pick it. There's a rota. The rota picked it."), ("saw", "I was standing in it looking for YOU. The rota will hear of this.")]), ..Beat::zeroed() },
-            _2: Beat { sam: s("Rota didn't mention the sharp edges in here."), him: text("Health and safety did. Laminated sign. Nobody reads laminate."), room: Some(true), ..Beat::zeroed() },
-            _3: Beat { sam: s("Talk, and we both leave {room}."), him: text("I've nothing. We live here now. I'll show you where the kettle is."), ..Beat::zeroed() },
-            x: Beat { sam: s("Comfortable?"), him: text("In {room}? Nobody ever has been. There was a survey."), ..Beat::zeroed() },
+            _1: Beat { sam: s("Nice spot you picked to stand in."), him: keyed(&[("*", "I didn't pick it. There's a rota. The rota picked it."), ("saw", "I was standing in it looking for YOU. The rota will hear of this.")]), ..Beat::default() },
+            _2: Beat { sam: s("Rota didn't mention the sharp edges in here."), him: text("Health and safety did. Laminated sign. Nobody reads laminate."), room: Some(true), ..Beat::default() },
+            _3: Beat { sam: s("Talk, and we both leave {room}."), him: text("I've nothing. We live here now. I'll show you where the kettle is."), ..Beat::default() },
+            x: Beat { sam: s("Comfortable?"), him: text("In {room}? Nobody ever has been. There was a survey."), ..Beat::default() },
         },
     },
     Script {
         id: s("pedant-n1"), shape: ShapeKey::Pedant, t: Temperament::Nervy, k: alloc::vec![Knowledge::None, Knowledge::Heard, Knowledge::Glimpsed],
         band: Some(alloc::vec![Band::Low, Band::Mid]), needs: None, not: None, pin: None,
         beats: ScriptBeats {
-            _1: Beat { sam: s("How many of you tonight? Quietly."), him: text("Including me? Including YOU? Sorry— is that a trick one—"), ..Beat::zeroed() },
-            _2: Beat { sam: s("Including anyone with a radio. Go."), him: text("{Up}! {Up}. Including me. Not you. Unless— no. {Up}."), take: Some(s("And breathe. In through the number.")), ..Beat::zeroed() },
-            _3: Beat { sam: s("You never actually said the number."), him: text("{Up}! Sorry! {Up}. I panicked about the rounding."), ask: Some(s("Keep going. You're on a roll.")), ..Beat::zeroed() },
-            x: Beat { sam: s("Final count?"), him: text("{Up}. Wait— still {up}? You'd tell me. You wouldn't tell me."), ..Beat::zeroed() },
+            _1: Beat { sam: s("How many of you tonight? Quietly."), him: text("Including me? Including YOU? Sorry— is that a trick one—"), ..Beat::default() },
+            _2: Beat { sam: s("Including anyone with a radio. Go."), him: text("{Up}! {Up}. Including me. Not you. Unless— no. {Up}."), take: Some(s("And breathe. In through the number.")), ..Beat::default() },
+            _3: Beat { sam: s("You never actually said the number."), him: text("{Up}! Sorry! {Up}. I panicked about the rounding."), ask: Some(s("Keep going. You're on a roll.")), ..Beat::default() },
+            x: Beat { sam: s("Final count?"), him: text("{Up}. Wait— still {up}? You'd tell me. You wouldn't tell me."), ..Beat::default() },
         },
     },
     Script {
         id: s("pedant-n2"), shape: ShapeKey::Pedant, t: Temperament::Nervy, k: alloc::vec![Knowledge::None, Knowledge::Heard, Knowledge::Glimpsed],
         band: Some(alloc::vec![Band::Low, Band::Mid]), needs: Some(alloc::vec![Need::Office]), not: None, pin: None,
         beats: ScriptBeats {
-            _1: Beat { sam: s("Staff on this floor. A number."), him: text("A number or THE number? They come apart after midnight—"), ..Beat::zeroed() },
-            _2: Beat { sam: s("The one that's true right now."), him: text("{Up}. True right now. Ask again in a minute and I— sorry. {Up}."), take: Some(s("See. True things. More of those.")), ..Beat::zeroed() },
-            _3: Beat { sam: s("What else is true right now?"), him: text("My arm's asleep and there's {up} of us. That's everything true."), ask: Some(s("What else is true right now?")), ..Beat::zeroed() },
-            x: Beat { sam: s("Recount."), him: text("{Up}. …You're not writing any of this down, are you. Nobody does."), ..Beat::zeroed() },
+            _1: Beat { sam: s("Staff on this floor. A number."), him: text("A number or THE number? They come apart after midnight—"), ..Beat::default() },
+            _2: Beat { sam: s("The one that's true right now."), him: text("{Up}. True right now. Ask again in a minute and I— sorry. {Up}."), take: Some(s("See. True things. More of those.")), ..Beat::default() },
+            _3: Beat { sam: s("What else is true right now?"), him: text("My arm's asleep and there's {up} of us. That's everything true."), ask: Some(s("What else is true right now?")), ..Beat::default() },
+            x: Beat { sam: s("Recount."), him: text("{Up}. …You're not writing any of this down, are you. Nobody does."), ..Beat::default() },
         },
     },
     Script {
         id: s("pedant-n3"), shape: ShapeKey::Pedant, t: Temperament::Nervy, k: alloc::vec![Knowledge::None, Knowledge::Heard, Knowledge::Glimpsed],
         band: Some(alloc::vec![Band::Low, Band::Mid]), needs: Some(alloc::vec![Need::Office]), not: None, pin: None,
         beats: ScriptBeats {
-            _1: Beat { sam: s("How many on shift?"), him: text("Shift or floor? Payroll says one thing, the floor says—"), ..Beat::zeroed() },
-            _2: Beat { sam: s("Say the floor thing."), him: text("{Up}. Floor says {up}. Payroll's a liar anyway."), take: Some(s("The floor thing. Good. Stay on the floor.")), ..Beat::zeroed() },
-            _3: Beat { sam: s("More floor things."), him: text("That's all the floor says. The floor's not chatty. I am. Sorry."), ask: Some(s("More floor things.")), ..Beat::zeroed() },
-            x: Beat { sam: s("Last count."), him: text("{Up}, and I'd like to stay in it. The count. Keep me in the count."), ..Beat::zeroed() },
+            _1: Beat { sam: s("How many on shift?"), him: text("Shift or floor? Payroll says one thing, the floor says—"), ..Beat::default() },
+            _2: Beat { sam: s("Say the floor thing."), him: text("{Up}. Floor says {up}. Payroll's a liar anyway."), take: Some(s("The floor thing. Good. Stay on the floor.")), ..Beat::default() },
+            _3: Beat { sam: s("More floor things."), him: text("That's all the floor says. The floor's not chatty. I am. Sorry."), ask: Some(s("More floor things.")), ..Beat::default() },
+            x: Beat { sam: s("Last count."), him: text("{Up}, and I'd like to stay in it. The count. Keep me in the count."), ..Beat::default() },
         },
     },
     Script {
         id: s("selfown-n1"), shape: ShapeKey::Selfown, t: Temperament::Nervy, k: alloc::vec![Knowledge::None, Knowledge::Heard, Knowledge::Glimpsed, Knowledge::Saw],
         band: None, needs: Some(alloc::vec![Need::Office]), not: None, pin: Some(IntelKind::Door),
         beats: ScriptBeats {
-            _1: Beat { sam: s("You don't work here. Where's your badge?"), him: keyed(&[("*", "I DO— badge, radio, key to {door}, all here on my— oh no."), ("saw", "I DO— I CHASED you— key to {door} right here on my— oh no.")]), ..Beat::zeroed() },
-            _2: Beat { sam: s("You've gone pale. Finish the thought."), him: text("There's no thought. Thought's gone. I'm mostly lanyard now."), ask: Some(s("Go on. You were doing so well.")), ..Beat::zeroed() },
-            _3: Beat { sam: s("Anything else on that belt?"), him: text("I walked straight into that. My sister says I do that. At weddings."), ask: Some(s("What else is on you? Keep declaring.")), ..Beat::zeroed() },
-            x: Beat { sam: s("Anything else to declare?"), him: text("A packed lunch and poor judgement. That's the lot. That's me."), ..Beat::zeroed() },
+            _1: Beat { sam: s("You don't work here. Where's your badge?"), him: keyed(&[("*", "I DO— badge, radio, key to {door}, all here on my— oh no."), ("saw", "I DO— I CHASED you— key to {door} right here on my— oh no.")]), ..Beat::default() },
+            _2: Beat { sam: s("You've gone pale. Finish the thought."), him: text("There's no thought. Thought's gone. I'm mostly lanyard now."), ask: Some(s("Go on. You were doing so well.")), ..Beat::default() },
+            _3: Beat { sam: s("Anything else on that belt?"), him: text("I walked straight into that. My sister says I do that. At weddings."), ask: Some(s("What else is on you? Keep declaring.")), ..Beat::default() },
+            x: Beat { sam: s("Anything else to declare?"), him: text("A packed lunch and poor judgement. That's the lot. That's me."), ..Beat::default() },
         },
     },
     Script {
         id: s("selfown-n2"), shape: ShapeKey::Selfown, t: Temperament::Nervy, k: alloc::vec![Knowledge::None, Knowledge::Heard, Knowledge::Glimpsed, Knowledge::Saw],
         band: None, needs: Some(alloc::vec![Need::Office]), not: None, pin: Some(IntelKind::Door),
         beats: ScriptBeats {
-            _1: Beat { sam: s("Agency cover? You've never seen this floor."), him: keyed(&[("*", "Three years! I know every door— {door} sticks, you jiggle it—"), ("saw", "Three years! I nearly HAD you— and {door} sticks, you jiggle—")]), after: Some(s("Do you.")), ..Beat::zeroed() },
-            _2: Beat { sam: s("Which key."), him: text("No key. Figure of speech. We jiggle… morale. Nothing else."), ask: Some(s("Which key would that be.")), ..Beat::zeroed() },
-            _3: Beat { sam: s("Noted. Anything further?"), him: text("I'd like it noted I was helpful BEFORE I was stupid. In that order."), ask: Some(s("Noted. Keep being helpful.")), ..Beat::zeroed() },
-            x: Beat { sam: s("Noted."), him: text("Is it? Is there a form? There is always, always a form."), ..Beat::zeroed() },
+            _1: Beat { sam: s("Agency cover? You've never seen this floor."), him: keyed(&[("*", "Three years! I know every door— {door} sticks, you jiggle it—"), ("saw", "Three years! I nearly HAD you— and {door} sticks, you jiggle—")]), after: Some(s("Do you.")), ..Beat::default() },
+            _2: Beat { sam: s("Which key."), him: text("No key. Figure of speech. We jiggle… morale. Nothing else."), ask: Some(s("Which key would that be.")), ..Beat::default() },
+            _3: Beat { sam: s("Noted. Anything further?"), him: text("I'd like it noted I was helpful BEFORE I was stupid. In that order."), ask: Some(s("Noted. Keep being helpful.")), ..Beat::default() },
+            x: Beat { sam: s("Noted."), him: text("Is it? Is there a form? There is always, always a form."), ..Beat::default() },
         },
     },
     Script {
         id: s("selfown-n3"), shape: ShapeKey::Selfown, t: Temperament::Nervy, k: alloc::vec![Knowledge::None, Knowledge::Heard, Knowledge::Glimpsed, Knowledge::Saw],
         band: None, needs: Some(alloc::vec![Need::Office]), not: None, pin: Some(IntelKind::Door),
         beats: ScriptBeats {
-            _1: Beat { sam: s("You're lost. Visitors sign in downstairs."), him: keyed(&[("*", "VISITOR? I lock up! {Door}, nightly, with my own—"), ("saw", "VISITOR? I nearly CAUGHT you! I lock {door} with my own—")]), after: Some(s("Own what.")), ..Beat::zeroed() },
-            _2: Beat { sam: s("Say it. You'll feel better."), him: text("…breath. My own breath. I lock up by breathing on it. Firmly."), ask: Some(s("Say 'key'. You'll feel better.")), ..Beat::zeroed() },
-            _3: Beat { sam: s("Anything else you lock up?"), him: text("My bike. Badly, it turns out. It's been a year of this."), ask: Some(s("Anything else you lock up?")), ..Beat::zeroed() },
-            x: Beat { sam: s("Deep breaths."), him: text("That's what the wellness app says. The app has never met you."), ..Beat::zeroed() },
+            _1: Beat { sam: s("You're lost. Visitors sign in downstairs."), him: keyed(&[("*", "VISITOR? I lock up! {Door}, nightly, with my own—"), ("saw", "VISITOR? I nearly CAUGHT you! I lock {door} with my own—")]), after: Some(s("Own what.")), ..Beat::default() },
+            _2: Beat { sam: s("Say it. You'll feel better."), him: text("…breath. My own breath. I lock up by breathing on it. Firmly."), ask: Some(s("Say 'key'. You'll feel better.")), ..Beat::default() },
+            _3: Beat { sam: s("Anything else you lock up?"), him: text("My bike. Badly, it turns out. It's been a year of this."), ask: Some(s("Anything else you lock up?")), ..Beat::default() },
+            x: Beat { sam: s("Deep breaths."), him: text("That's what the wellness app says. The app has never met you."), ..Beat::default() },
         },
     },
     Script {
         id: s("folder-n1"), shape: ShapeKey::Folder, t: Temperament::Nervy, k: alloc::vec![Knowledge::None, Knowledge::Heard, Knowledge::Glimpsed, Knowledge::Saw],
         band: Some(alloc::vec![Band::Low, Band::Mid]), needs: Some(alloc::vec![Need::Office]), not: None, pin: None,
         beats: ScriptBeats {
-            _1: Beat { sam: s("Right. Here's how this goes—"), him: keyed(&[("*", "Yes. Anything. Everything. You choose where I start. I trust you."), ("saw", "Yes! It's you— fine— anything. Everything. You pick where I start.")]), after: Some(s("…I hadn't finished the threat.")), ..Beat::zeroed() },
-            _2: Beat { sam: s("One useful thing. Just one."), him: text("I don't HAVE a useful thing— I've a locker code— it's four ones—"), after: Some(s("Keep it.")), take: Some(s("Huh. I had a whole second half planned.")), ..Beat::zeroed() },
-            _3: Beat { sam: s("Since you're in the mood. What else."), him: text("Wifi's Synergy-something, capital S. Unchanged since the merger."), after: Some(s("…Thank you?")), ask: Some(s("Since you're in the mood. What else.")), ..Beat::zeroed() },
-            x: Beat { sam: s("We're done."), him: text("Good biscuits are behind the decaf. Nobody looks behind the decaf."), after: Some(s("I'll treasure that.")), ..Beat::zeroed() },
+            _1: Beat { sam: s("Right. Here's how this goes—"), him: keyed(&[("*", "Yes. Anything. Everything. You choose where I start. I trust you."), ("saw", "Yes! It's you— fine— anything. Everything. You pick where I start.")]), after: Some(s("…I hadn't finished the threat.")), ..Beat::default() },
+            _2: Beat { sam: s("One useful thing. Just one."), him: text("I don't HAVE a useful thing— I've a locker code— it's four ones—"), after: Some(s("Keep it.")), take: Some(s("Huh. I had a whole second half planned.")), ..Beat::default() },
+            _3: Beat { sam: s("Since you're in the mood. What else."), him: text("Wifi's Synergy-something, capital S. Unchanged since the merger."), after: Some(s("…Thank you?")), ask: Some(s("Since you're in the mood. What else.")), ..Beat::default() },
+            x: Beat { sam: s("We're done."), him: text("Good biscuits are behind the decaf. Nobody looks behind the decaf."), after: Some(s("I'll treasure that.")), ..Beat::default() },
         },
     },
     Script {
         id: s("folder-n2"), shape: ShapeKey::Folder, t: Temperament::Nervy, k: alloc::vec![Knowledge::None, Knowledge::Heard, Knowledge::Glimpsed, Knowledge::Saw],
         band: Some(alloc::vec![Band::Low, Band::Mid]), needs: Some(alloc::vec![Need::Office]), not: None, pin: None,
         beats: ScriptBeats {
-            _1: Beat { sam: s("Listen carefully—"), him: keyed(&[("*", "Listening. Agreeing. Whatever it is, I've agreed. Backdate it."), ("saw", "Listening! I saw what you— agreed. Whatever it is. Backdate it.")]), after: Some(s("That's… efficient.")), ..Beat::zeroed() },
-            _2: Beat { sam: s("Then tell me the thing I want."), him: text("I want to! I've got nothing! I've got a parking code! It's expired!"), after: Some(s("Tempting.")), take: Some(s("You didn't even haggle.")), ..Beat::zeroed() },
-            _3: Beat { sam: s("More."), him: text("Locker forty. Code's my birthday. It's on the group chat. With cake."), ask: Some(s("More.")), ..Beat::zeroed() },
-            x: Beat { sam: s("Stop helping."), him: text("The printer on three jams if you look at it. That's my last one."), ..Beat::zeroed() },
+            _1: Beat { sam: s("Listen carefully—"), him: keyed(&[("*", "Listening. Agreeing. Whatever it is, I've agreed. Backdate it."), ("saw", "Listening! I saw what you— agreed. Whatever it is. Backdate it.")]), after: Some(s("That's… efficient.")), ..Beat::default() },
+            _2: Beat { sam: s("Then tell me the thing I want."), him: text("I want to! I've got nothing! I've got a parking code! It's expired!"), after: Some(s("Tempting.")), take: Some(s("You didn't even haggle.")), ..Beat::default() },
+            _3: Beat { sam: s("More."), him: text("Locker forty. Code's my birthday. It's on the group chat. With cake."), ask: Some(s("More.")), ..Beat::default() },
+            x: Beat { sam: s("Stop helping."), him: text("The printer on three jams if you look at it. That's my last one."), ..Beat::default() },
         },
     },
     Script {
         id: s("folder-n3"), shape: ShapeKey::Folder, t: Temperament::Nervy, k: alloc::vec![Knowledge::None, Knowledge::Heard, Knowledge::Glimpsed, Knowledge::Saw],
         band: Some(alloc::vec![Band::Low, Band::Mid]), needs: Some(alloc::vec![Need::Office]), not: None, pin: None,
         beats: ScriptBeats {
-            _1: Beat { sam: s("You're going to answer some—"), him: keyed(&[("*", "Yes. Yes to the questions. Yes to the tone. All of it. Pre-yes."), ("saw", "Yes— I know who you— yes to all of it. The tone. Pre-yes.")]), after: Some(s("I usually get to finish.")), ..Beat::zeroed() },
-            _2: Beat { sam: s("Fine. What should I know?"), him: text("That I'm cooperating? Very hard? Can that go somewhere? On a file?"), after: Some(s("There's no file.")), take: Some(s("…People normally make me work for that.")), ..Beat::zeroed() },
-            _3: Beat { sam: s("And?"), him: text("And the coffee machine takes exact change and holds grudges."), ask: Some(s("And?")), ..Beat::zeroed() },
-            x: Beat { sam: s("Enough."), him: text("Fridge cake marked 'Dave' isn't Dave's. There is no Dave. Never was."), after: Some(s("Noted. No Dave.")), ..Beat::zeroed() },
+            _1: Beat { sam: s("You're going to answer some—"), him: keyed(&[("*", "Yes. Yes to the questions. Yes to the tone. All of it. Pre-yes."), ("saw", "Yes— I know who you— yes to all of it. The tone. Pre-yes.")]), after: Some(s("I usually get to finish.")), ..Beat::default() },
+            _2: Beat { sam: s("Fine. What should I know?"), him: text("That I'm cooperating? Very hard? Can that go somewhere? On a file?"), after: Some(s("There's no file.")), take: Some(s("…People normally make me work for that.")), ..Beat::default() },
+            _3: Beat { sam: s("And?"), him: text("And the coffee machine takes exact change and holds grudges."), ask: Some(s("And?")), ..Beat::default() },
+            x: Beat { sam: s("Enough."), him: text("Fridge cake marked 'Dave' isn't Dave's. There is no Dave. Never was."), after: Some(s("Noted. No Dave.")), ..Beat::default() },
         },
     },
     Script {
         id: s("ramble-n1"), shape: ShapeKey::Ramble, t: Temperament::Nervy, k: alloc::vec![Knowledge::None, Knowledge::Heard, Knowledge::Glimpsed, Knowledge::Saw],
         band: Some(alloc::vec![Band::Mid, Band::High]), needs: Some(alloc::vec![Need::Office]), not: None, pin: None,
         beats: ScriptBeats {
-            _1: Beat { sam: s("Not a sound. Nod if—"), him: keyed(&[("*", "—sorry, I talk when I'm scared, my podcast's actually ABOUT that—"), ("saw", "—it's you— sorry— I talk when I'm scared, my podcast's ABOUT that—")]), after: Some(s("Your what.")), ..Beat::zeroed() },
-            _2: Beat { sam: s("One fact. Small. Go."), him: text("—forty listeners, it's on focus, ironically, and breathing, and—"), after: Some(s("That's not intel. That's a trailer.")), take: Some(s("…Was that in there the whole time?")), ..Beat::zeroed() },
-            _3: Beat { sam: s("Another. Smaller."), him: text("—and HR said the chair thing was MY posture— MINE— in writing—"), after: Some(s("I'm putting you down as 'no'.")), ask: Some(s("Another. Smaller.")), ..Beat::zeroed() },
-            x: Beat { sam: s("Are you done?"), him: text("—day ninety of the streak and THIS is what my heart rate gets—"), ..Beat::zeroed() },
+            _1: Beat { sam: s("Not a sound. Nod if—"), him: keyed(&[("*", "—sorry, I talk when I'm scared, my podcast's actually ABOUT that—"), ("saw", "—it's you— sorry— I talk when I'm scared, my podcast's ABOUT that—")]), after: Some(s("Your what.")), ..Beat::default() },
+            _2: Beat { sam: s("One fact. Small. Go."), him: text("—forty listeners, it's on focus, ironically, and breathing, and—"), after: Some(s("That's not intel. That's a trailer.")), take: Some(s("…Was that in there the whole time?")), ..Beat::default() },
+            _3: Beat { sam: s("Another. Smaller."), him: text("—and HR said the chair thing was MY posture— MINE— in writing—"), after: Some(s("I'm putting you down as 'no'.")), ask: Some(s("Another. Smaller.")), ..Beat::default() },
+            x: Beat { sam: s("Are you done?"), him: text("—day ninety of the streak and THIS is what my heart rate gets—"), ..Beat::default() },
         },
     },
     Script {
         id: s("ramble-n2"), shape: ShapeKey::Ramble, t: Temperament::Nervy, k: alloc::vec![Knowledge::None, Knowledge::Heard, Knowledge::Glimpsed, Knowledge::Saw],
         band: Some(alloc::vec![Band::Mid, Band::High]), needs: Some(alloc::vec![Need::Office]), not: None, pin: None,
         beats: ScriptBeats {
-            _1: Beat { sam: s("Quiet. I'll ask, you'll—"), him: keyed(&[("*", "—is this the parking? Because I appealed the parking, formally—"), ("saw", "—you're the— is this the parking? I APPEALED the parking, formally—")]), after: Some(s("It's not about the parking.")), ..Beat::zeroed() },
-            _2: Beat { sam: s("Focus. What's on this floor?"), him: text("—forty a month to park at my own JOB, and the ramp floods, and—"), after: Some(s("Still not the parking.")), take: Some(s("A fact. In among the parking. Fine.")), ..Beat::zeroed() },
-            _3: Beat { sam: s("Last try. Something useful."), him: text("—I've photos of the ramp. Timestamped. I'll forward you the—"), after: Some(s("He'll forward me the ramp.")), ask: Some(s("Last try. Something useful.")), ..Beat::zeroed() },
-            x: Beat { sam: s("Breathe."), him: text("—and they validate for VISITORS. Visitors! YOU would get validated!"), ..Beat::zeroed() },
+            _1: Beat { sam: s("Quiet. I'll ask, you'll—"), him: keyed(&[("*", "—is this the parking? Because I appealed the parking, formally—"), ("saw", "—you're the— is this the parking? I APPEALED the parking, formally—")]), after: Some(s("It's not about the parking.")), ..Beat::default() },
+            _2: Beat { sam: s("Focus. What's on this floor?"), him: text("—forty a month to park at my own JOB, and the ramp floods, and—"), after: Some(s("Still not the parking.")), take: Some(s("A fact. In among the parking. Fine.")), ..Beat::default() },
+            _3: Beat { sam: s("Last try. Something useful."), him: text("—I've photos of the ramp. Timestamped. I'll forward you the—"), after: Some(s("He'll forward me the ramp.")), ask: Some(s("Last try. Something useful.")), ..Beat::default() },
+            x: Beat { sam: s("Breathe."), him: text("—and they validate for VISITORS. Visitors! YOU would get validated!"), ..Beat::default() },
         },
     },
     Script {
         id: s("ramble-n3"), shape: ShapeKey::Ramble, t: Temperament::Nervy, k: alloc::vec![Knowledge::None, Knowledge::Heard, Knowledge::Glimpsed, Knowledge::Saw],
         band: Some(alloc::vec![Band::Mid, Band::High]), needs: None, not: None, pin: None,
         beats: ScriptBeats {
-            _1: Beat { sam: s("Whisper. Only when I—"), him: keyed(&[("*", "—okay, okay, context: eleven weeks of nights, body clock in a bin—"), ("saw", "—okay— YOU— context: eleven weeks of nights, body clock in a bin—")]), after: Some(s("I said when.")), ..Beat::zeroed() },
-            _2: Beat { sam: s("One thing I can use."), him: text("—the app says I slept four hours in PIECES, it draws you a graph—"), after: Some(s("I can't use the graph.")), take: Some(s("Usable. Barely. Go on hyperventilating.")), ..Beat::zeroed() },
-            _3: Beat { sam: s("Something about tonight."), him: text("—tonight's three coffees and a sort of oat bar with opinions—"), after: Some(s("We're done here.")), ask: Some(s("Something about tonight.")), ..Beat::zeroed() },
-            x: Beat { sam: s("Finished?"), him: text("—it had RAISINS in it, unannounced, which I think legally—"), ..Beat::zeroed() },
+            _1: Beat { sam: s("Whisper. Only when I—"), him: keyed(&[("*", "—okay, okay, context: eleven weeks of nights, body clock in a bin—"), ("saw", "—okay— YOU— context: eleven weeks of nights, body clock in a bin—")]), after: Some(s("I said when.")), ..Beat::default() },
+            _2: Beat { sam: s("One thing I can use."), him: text("—the app says I slept four hours in PIECES, it draws you a graph—"), after: Some(s("I can't use the graph.")), take: Some(s("Usable. Barely. Go on hyperventilating.")), ..Beat::default() },
+            _3: Beat { sam: s("Something about tonight."), him: text("—tonight's three coffees and a sort of oat bar with opinions—"), after: Some(s("We're done here.")), ask: Some(s("Something about tonight.")), ..Beat::default() },
+            x: Beat { sam: s("Finished?"), him: text("—it had RAISINS in it, unannounced, which I think legally—"), ..Beat::default() },
         },
     },
     Script {
         id: s("game-n1"), shape: ShapeKey::Game, t: Temperament::Nervy, k: alloc::vec![Knowledge::None, Knowledge::Heard, Knowledge::Glimpsed, Knowledge::Saw],
         band: None, needs: None, not: None, pin: None,
         beats: ScriptBeats {
-            _1: Beat { sam: s("Rule one: no vowels louder than this."), him: keyed(&[("*", "wht— sorry— what? okay. okay. tiny vowels. tiny."), ("saw", "it's y— sorry— tiny vowels. okay. i can do tiny.")]), ..Beat::zeroed() },
-            _2: Beat { sam: s("Good. Now a fact. Tiny vowels."), him: text("a fct— no fact. i've gt nothing. this is very hard."), take: Some(s("Vowels crept up at the end. Watch it.")), ..Beat::zeroed() },
-            _3: Beat { sam: s("Another."), him: text("cn i— can I have one loud vowel. Just an 'oh'. On account."), ask: Some(s("Another.")), ..Beat::zeroed() },
-            x: Beat { sam: s("One."), him: text("OH. …thank you. that's been building since the arm."), ..Beat::zeroed() },
+            _1: Beat { sam: s("Rule one: no vowels louder than this."), him: keyed(&[("*", "wht— sorry— what? okay. okay. tiny vowels. tiny."), ("saw", "it's y— sorry— tiny vowels. okay. i can do tiny.")]), ..Beat::default() },
+            _2: Beat { sam: s("Good. Now a fact. Tiny vowels."), him: text("a fct— no fact. i've gt nothing. this is very hard."), take: Some(s("Vowels crept up at the end. Watch it.")), ..Beat::default() },
+            _3: Beat { sam: s("Another."), him: text("cn i— can I have one loud vowel. Just an 'oh'. On account."), ask: Some(s("Another.")), ..Beat::default() },
+            x: Beat { sam: s("One."), him: text("OH. …thank you. that's been building since the arm."), ..Beat::default() },
         },
     },
     Script {
         id: s("game-n2"), shape: ShapeKey::Game, t: Temperament::Nervy, k: alloc::vec![Knowledge::None, Knowledge::Heard, Knowledge::Glimpsed, Knowledge::Saw],
         band: None, needs: None, not: None, pin: None,
         beats: ScriptBeats {
-            _1: Beat { sam: s("From now on you're Unit Two. Say it."), him: keyed(&[("*", "Unit Two. Why Two— who's One— am I not One material?"), ("saw", "Unit Two— I nearly caught— fine. Unit Two. Who's ONE?")]), ..Beat::zeroed() },
-            _2: Beat { sam: s("Unit Two, report."), him: text("Unit Two has nothing to report and would like that minuted!"), take: Some(s("Adequate, Unit Two.")), ..Beat::zeroed() },
-            _3: Beat { sam: s("Further, Unit Two?"), him: text("Unit Two requests to be One. Once. Before whatever this is ends."), ask: Some(s("Further, Unit Two?")), ..Beat::zeroed() },
-            x: Beat { sam: s("Denied."), him: text("Unit Two saw that coming and is still, somehow, hurt."), ..Beat::zeroed() },
+            _1: Beat { sam: s("From now on you're Unit Two. Say it."), him: keyed(&[("*", "Unit Two. Why Two— who's One— am I not One material?"), ("saw", "Unit Two— I nearly caught— fine. Unit Two. Who's ONE?")]), ..Beat::default() },
+            _2: Beat { sam: s("Unit Two, report."), him: text("Unit Two has nothing to report and would like that minuted!"), take: Some(s("Adequate, Unit Two.")), ..Beat::default() },
+            _3: Beat { sam: s("Further, Unit Two?"), him: text("Unit Two requests to be One. Once. Before whatever this is ends."), ask: Some(s("Further, Unit Two?")), ..Beat::default() },
+            x: Beat { sam: s("Denied."), him: text("Unit Two saw that coming and is still, somehow, hurt."), ..Beat::default() },
         },
     },
     Script {
         id: s("game-n3"), shape: ShapeKey::Game, t: Temperament::Nervy, k: alloc::vec![Knowledge::None, Knowledge::Heard, Knowledge::Glimpsed, Knowledge::Saw],
         band: None, needs: None, not: None, pin: None,
         beats: ScriptBeats {
-            _1: Beat { sam: s("You get five words. Total. Budget them."), him: keyed(&[("*", "Five?! That's— wait, do these— oh no."), ("saw", "Five?! But you're the— do these count— oh no.")]), after: Some(s("Seven. I'll restart the meter. Once.")), ..Beat::zeroed() },
-            _2: Beat { sam: s("Meter's running. Spend wisely."), him: text("Nothing. Know nothing. Two left. …Help."), take: Some(s("Way over budget. Worth it.")), ..Beat::zeroed() },
-            _3: Beat { sam: s("I'll extend your credit. Talk."), him: text("Can unused words roll over? Asking for a— no. Wasted four."), ask: Some(s("I'll extend your credit. Talk.")), ..Beat::zeroed() },
-            x: Beat { sam: s("Budget's closed."), him: text("Mm. Mm-mm. …That's humming, not words. Loophole. —Six. Damn."), ..Beat::zeroed() },
+            _1: Beat { sam: s("You get five words. Total. Budget them."), him: keyed(&[("*", "Five?! That's— wait, do these— oh no."), ("saw", "Five?! But you're the— do these count— oh no.")]), after: Some(s("Seven. I'll restart the meter. Once.")), ..Beat::default() },
+            _2: Beat { sam: s("Meter's running. Spend wisely."), him: text("Nothing. Know nothing. Two left. …Help."), take: Some(s("Way over budget. Worth it.")), ..Beat::default() },
+            _3: Beat { sam: s("I'll extend your credit. Talk."), him: text("Can unused words roll over? Asking for a— no. Wasted four."), ask: Some(s("I'll extend your credit. Talk.")), ..Beat::default() },
+            x: Beat { sam: s("Budget's closed."), him: text("Mm. Mm-mm. …That's humming, not words. Loophole. —Six. Damn."), ..Beat::default() },
         },
     },
     Script {
         id: s("menace-n1"), shape: ShapeKey::Menace, t: Temperament::Nervy, k: alloc::vec![Knowledge::None, Knowledge::Heard, Knowledge::Glimpsed, Knowledge::Saw],
         band: None, needs: Some(alloc::vec![Need::Office]), not: None, pin: None,
         beats: ScriptBeats {
-            _1: Beat { sam: s("Bad room to be caught in. Look at it."), him: keyed(&[("*", "It's a bad room to be EMPLOYED in! I've said! There's a survey!"), ("saw", "YOU'RE the bad thing in it! Sorry. Sorry. Also the room, yes.")]), room: Some(true), ..Beat::zeroed() },
-            _2: Beat { sam: s("Or you talk. Talking's warmer."), him: text("I'd talk! I've nothing to talk WITH! Threaten me near a plant!"), take: Some(s("See. Warmer already.")), ..Beat::zeroed() },
-            _3: Beat { sam: s("Keep talking."), him: text("Can we do this in the lobby? There's a ficus. It calms me."), ask: Some(s("Keep talking.")), ..Beat::zeroed() },
-            x: Beat { sam: s("We're staying."), him: text("Then I'm naming things. That vent's Gary. Hi Gary. Help me, Gary."), ..Beat::zeroed() },
+            _1: Beat { sam: s("Bad room to be caught in. Look at it."), him: keyed(&[("*", "It's a bad room to be EMPLOYED in! I've said! There's a survey!"), ("saw", "YOU'RE the bad thing in it! Sorry. Sorry. Also the room, yes.")]), room: Some(true), ..Beat::default() },
+            _2: Beat { sam: s("Or you talk. Talking's warmer."), him: text("I'd talk! I've nothing to talk WITH! Threaten me near a plant!"), take: Some(s("See. Warmer already.")), ..Beat::default() },
+            _3: Beat { sam: s("Keep talking."), him: text("Can we do this in the lobby? There's a ficus. It calms me."), ask: Some(s("Keep talking.")), ..Beat::default() },
+            x: Beat { sam: s("We're staying."), him: text("Then I'm naming things. That vent's Gary. Hi Gary. Help me, Gary."), ..Beat::default() },
         },
     },
     Script {
         id: s("menace-n2"), shape: ShapeKey::Menace, t: Temperament::Nervy, k: alloc::vec![Knowledge::None, Knowledge::Heard, Knowledge::Glimpsed, Knowledge::Saw],
         band: None, needs: Some(alloc::vec![Need::Office]), not: None, pin: None,
         beats: ScriptBeats {
-            _1: Beat { sam: s("You know what happens in rooms like this."), him: keyed(&[("*", "Meetings? Oh— you mean— oh, worse than meetings. Right."), ("saw", "You do! You happen! I've SEEN you happen! …Sorry. Go on.")]), room: Some(true), ..Beat::zeroed() },
-            _2: Beat { sam: s("Unless you've something better to offer."), him: text("Better than THAT? I've got a bus pass and regrets! Take both!"), take: Some(s("Better. Marginally.")), sam_now: Some(s("Unless you've got something better to offer.")), ..Beat::zeroed() },
-            _3: Beat { sam: s("Go on."), him: text("Never liked {room}. Now it is mutual. I feel that."), ask: Some(s("Go on.")), ..Beat::zeroed() },
-            x: Beat { sam: s("Settle in."), him: text("I'm telling facilities about you. Anonymously. SO anonymously."), ..Beat::zeroed() },
+            _1: Beat { sam: s("You know what happens in rooms like this."), him: keyed(&[("*", "Meetings? Oh— you mean— oh, worse than meetings. Right."), ("saw", "You do! You happen! I've SEEN you happen! …Sorry. Go on.")]), room: Some(true), ..Beat::default() },
+            _2: Beat { sam: s("Unless you've something better to offer."), him: text("Better than THAT? I've got a bus pass and regrets! Take both!"), take: Some(s("Better. Marginally.")), sam_now: Some(s("Unless you've got something better to offer.")), ..Beat::default() },
+            _3: Beat { sam: s("Go on."), him: text("Never liked {room}. Now it is mutual. I feel that."), ask: Some(s("Go on.")), ..Beat::default() },
+            x: Beat { sam: s("Settle in."), him: text("I'm telling facilities about you. Anonymously. SO anonymously."), ..Beat::default() },
         },
     },
     Script {
         id: s("menace-n3"), shape: ShapeKey::Menace, t: Temperament::Nervy, k: alloc::vec![Knowledge::None, Knowledge::Heard, Knowledge::Glimpsed, Knowledge::Saw],
         band: None, needs: Some(alloc::vec![Need::Office]), not: None, pin: None,
         beats: ScriptBeats {
-            _1: Beat { sam: s("Look where we are. Take your time."), him: keyed(&[("*", "{Room}. I know. I KNOW. I've had the induction. Twice."), ("saw", "{Room}— with YOU— which is the worst version of {room} so far.")]), room: Some(true), ..Beat::zeroed() },
-            _2: Beat { sam: s("Talk and I lose interest in the furniture."), him: text("Lose it anyway! Please! It's dreadful furniture! Nobody'd blame you!"), take: Some(s("Interest lost.")), ..Beat::zeroed() },
-            _3: Beat { sam: s("And?"), him: text("I'm going to have such SPECIFIC nightmares. With an inventory."), ask: Some(s("What else.")), ..Beat::zeroed() },
-            x: Beat { sam: s("Still with me?"), him: text("Physically. The rest of me is in the car park. Running. Badly."), ..Beat::zeroed() },
+            _1: Beat { sam: s("Look where we are. Take your time."), him: keyed(&[("*", "{Room}. I know. I KNOW. I've had the induction. Twice."), ("saw", "{Room}— with YOU— which is the worst version of {room} so far.")]), room: Some(true), ..Beat::default() },
+            _2: Beat { sam: s("Talk and I lose interest in the furniture."), him: text("Lose it anyway! Please! It's dreadful furniture! Nobody'd blame you!"), take: Some(s("Interest lost.")), ..Beat::default() },
+            _3: Beat { sam: s("And?"), him: text("I'm going to have such SPECIFIC nightmares. With an inventory."), ask: Some(s("What else.")), ..Beat::default() },
+            x: Beat { sam: s("Still with me?"), him: text("Physically. The rest of me is in the car park. Running. Badly."), ..Beat::default() },
         },
     },
     Script {
         id: s("stoic-h1"), shape: ShapeKey::Stoic, t: Temperament::Hard, k: alloc::vec![Knowledge::None, Knowledge::Heard, Knowledge::Glimpsed, Knowledge::Saw],
         band: None, needs: None, not: None, pin: None,
         beats: ScriptBeats {
-            _1: Beat { sam: s("Quiet."), him: keyed(&[("*", "I was."), ("saw", "You weren't. Earlier.")]), ..Beat::zeroed() },
-            _2: Beat { sam: s("It gets tighter from here."), him: text("Arms do."), ..Beat::zeroed() },
-            _3: Beat { sam: s("Last time I ask nicely."), him: text("That was nicely?"), ..Beat::zeroed() },
-            x: Beat { sam: s("Anything to add?"), him: text("A mint. For you. Urgently."), mild: Some(s("No. And I'd have said.")), ..Beat::zeroed() },
+            _1: Beat { sam: s("Quiet."), him: keyed(&[("*", "I was."), ("saw", "You weren't. Earlier.")]), ..Beat::default() },
+            _2: Beat { sam: s("It gets tighter from here."), him: text("Arms do."), ..Beat::default() },
+            _3: Beat { sam: s("Last time I ask nicely."), him: text("That was nicely?"), ..Beat::default() },
+            x: Beat { sam: s("Anything to add?"), him: text("A mint. For you. Urgently."), mild: Some(s("No. And I'd have said.")), ..Beat::default() },
         },
     },
     Script {
         id: s("stoic-h2"), shape: ShapeKey::Stoic, t: Temperament::Hard, k: alloc::vec![Knowledge::None, Knowledge::Heard, Knowledge::Glimpsed, Knowledge::Saw],
         band: None, needs: None, not: None, pin: None,
         beats: ScriptBeats {
-            _1: Beat { sam: s("Don't."), him: keyed(&[("*", "Wasn't."), ("saw", "Already did. Missed.")]), ..Beat::zeroed() },
-            _2: Beat { sam: s("You're calm, for a man in an arm."), him: text("Not my first arm."), ..Beat::zeroed() },
-            _3: Beat { sam: s("One thing, and you keep your evening."), him: text("This was my evening. You've had it."), ..Beat::zeroed() },
-            x: Beat { sam: s("Nothing else?"), him: text("You grunt when you crouch. Get that looked at."), mild: Some(s("Nothing. Same as before, only later.")), ..Beat::zeroed() },
+            _1: Beat { sam: s("Don't."), him: keyed(&[("*", "Wasn't."), ("saw", "Already did. Missed.")]), ..Beat::default() },
+            _2: Beat { sam: s("You're calm, for a man in an arm."), him: text("Not my first arm."), ..Beat::default() },
+            _3: Beat { sam: s("One thing, and you keep your evening."), him: text("This was my evening. You've had it."), ..Beat::default() },
+            x: Beat { sam: s("Nothing else?"), him: text("You grunt when you crouch. Get that looked at."), mild: Some(s("Nothing. Same as before, only later.")), ..Beat::default() },
         },
     },
     Script {
         id: s("stoic-h3"), shape: ShapeKey::Stoic, t: Temperament::Hard, k: alloc::vec![Knowledge::None, Knowledge::Heard, Knowledge::Glimpsed, Knowledge::Saw],
         band: None, needs: Some(alloc::vec![Need::Shift]), not: None, pin: None,
         beats: ScriptBeats {
-            _1: Beat { sam: s("Easy."), him: keyed(&[("*", "For you, apparently."), ("saw", "It was, nearly. For me.")]), ..Beat::zeroed() },
-            _2: Beat { sam: s("I can wait."), him: text("So can I. I'm paid to. Badly, but hourly."), ..Beat::zeroed() },
-            _3: Beat { sam: s("One fact. Then I'm a rumour."), him: text("You're already a rumour. Short one."), ..Beat::zeroed() },
-            x: Beat { sam: s("Last word?"), him: text("You breathe loud. For a rumour."), mild: Some(s("Same answer. Shorter.")), ..Beat::zeroed() },
+            _1: Beat { sam: s("Easy."), him: keyed(&[("*", "For you, apparently."), ("saw", "It was, nearly. For me.")]), ..Beat::default() },
+            _2: Beat { sam: s("I can wait."), him: text("So can I. I'm paid to. Badly, but hourly."), ..Beat::default() },
+            _3: Beat { sam: s("One fact. Then I'm a rumour."), him: text("You're already a rumour. Short one."), ..Beat::default() },
+            x: Beat { sam: s("Last word?"), him: text("You breathe loud. For a rumour."), mild: Some(s("Same answer. Shorter.")), ..Beat::default() },
         },
     },
     Script {
         id: s("stoic-h4"), shape: ShapeKey::Stoic, t: Temperament::Hard, k: alloc::vec![Knowledge::None, Knowledge::Heard, Knowledge::Glimpsed, Knowledge::Saw],
         band: None, needs: None, not: None, pin: None,
         beats: ScriptBeats {
-            _1: Beat { sam: s("Not a sound."), him: keyed(&[("*", "Deal."), ("saw", "Bit late for quiet. But deal.")]), ..Beat::zeroed() },
-            _2: Beat { sam: s("You've done this before."), him: text("Been done to. Twice. Better both times."), ..Beat::zeroed() },
-            _3: Beat { sam: s("Then you know the part where you talk."), him: text("I know the part where you get bored."), ..Beat::zeroed() },
-            x: Beat { sam: s("We're finished."), him: text("You were finished at the knees. Years back."), mild: Some(s("We were finished at hello.")), ..Beat::zeroed() },
+            _1: Beat { sam: s("Not a sound."), him: keyed(&[("*", "Deal."), ("saw", "Bit late for quiet. But deal.")]), ..Beat::default() },
+            _2: Beat { sam: s("You've done this before."), him: text("Been done to. Twice. Better both times."), ..Beat::default() },
+            _3: Beat { sam: s("Then you know the part where you talk."), him: text("I know the part where you get bored."), ..Beat::default() },
+            x: Beat { sam: s("We're finished."), him: text("You were finished at the knees. Years back."), mild: Some(s("We were finished at hello.")), ..Beat::default() },
         },
     },
     Script {
         id: s("game-h1"), shape: ShapeKey::Game, t: Temperament::Hard, k: alloc::vec![Knowledge::None, Knowledge::Heard, Knowledge::Glimpsed, Knowledge::Saw],
         band: None, needs: None, not: None, pin: None,
         beats: ScriptBeats {
-            _1: Beat { sam: s("Rule: you answer in under three words."), him: keyed(&[("*", "Suits me."), ("saw", "Missed you. Twice.")]), ..Beat::zeroed() },
-            _2: Beat { sam: s("What's your job?"), him: text("Standing. Mostly."), ..Beat::zeroed() },
-            _3: Beat { sam: s("What ruins my night in here?"), him: text("Me. Shortly."), take: Some(s("More than three. I'll let it go.")), ..Beat::zeroed() },
-            x: Beat { sam: s("Closing remarks?"), him: text("Two words."), mild: Some(s("None. Obviously.")), ..Beat::zeroed() },
+            _1: Beat { sam: s("Rule: you answer in under three words."), him: keyed(&[("*", "Suits me."), ("saw", "Missed you. Twice.")]), ..Beat::default() },
+            _2: Beat { sam: s("What's your job?"), him: text("Standing. Mostly."), ..Beat::default() },
+            _3: Beat { sam: s("What ruins my night in here?"), him: text("Me. Shortly."), take: Some(s("More than three. I'll let it go.")), ..Beat::default() },
+            x: Beat { sam: s("Closing remarks?"), him: text("Two words."), mild: Some(s("None. Obviously.")), ..Beat::default() },
         },
     },
     Script {
         id: s("game-h2"), shape: ShapeKey::Game, t: Temperament::Hard, k: alloc::vec![Knowledge::None, Knowledge::Heard, Knowledge::Glimpsed, Knowledge::Saw],
         band: None, needs: None, not: None, pin: None,
         beats: ScriptBeats {
-            _1: Beat { sam: s("Nod for yes. Shrug for no."), him: keyed(&[("*", "I'll narrate. This is a shrug."), ("saw", "This is a shrug. That, earlier, was a warning shot.")]), ..Beat::zeroed() },
-            _2: Beat { sam: s("Are you going to be difficult?"), him: text("Nod. Big one."), ..Beat::zeroed() },
-            _3: Beat { sam: s("Something useful. Use words."), him: text("Shrug. Slow, meaningful shrug."), take: Some(s("See. Words.")), ..Beat::zeroed() },
-            x: Beat { sam: s("Anything else?"), him: text("Picture a gesture."), mild: Some(s("Shrug.")), ..Beat::zeroed() },
+            _1: Beat { sam: s("Nod for yes. Shrug for no."), him: keyed(&[("*", "I'll narrate. This is a shrug."), ("saw", "This is a shrug. That, earlier, was a warning shot.")]), ..Beat::default() },
+            _2: Beat { sam: s("Are you going to be difficult?"), him: text("Nod. Big one."), ..Beat::default() },
+            _3: Beat { sam: s("Something useful. Use words."), him: text("Shrug. Slow, meaningful shrug."), take: Some(s("See. Words.")), ..Beat::default() },
+            x: Beat { sam: s("Anything else?"), him: text("Picture a gesture."), mild: Some(s("Shrug.")), ..Beat::default() },
         },
     },
     Script {
         id: s("game-h3"), shape: ShapeKey::Game, t: Temperament::Hard, k: alloc::vec![Knowledge::None, Knowledge::Heard, Knowledge::Glimpsed, Knowledge::Saw],
         band: None, needs: None, not: None, pin: None,
         beats: ScriptBeats {
-            _1: Beat { sam: s("We'll play a game."), him: keyed(&[("*", "You'll play. I'm equipment."), ("saw", "We played earlier. You hid.")]), ..Beat::zeroed() },
-            _2: Beat { sam: s("Count the exits you can't reach."), him: text("All of them. Good game. Next."), ..Beat::zeroed() },
-            _3: Beat { sam: s("Now one thing I don't know."), him: text("How this ends for you. Nor do I. Fun."), take: Some(s("You lose gracefully.")), ..Beat::zeroed() },
-            x: Beat { sam: s("Rematch?"), him: text("Bring a longer arm."), mild: Some(s("Not tonight.")), ..Beat::zeroed() },
+            _1: Beat { sam: s("We'll play a game."), him: keyed(&[("*", "You'll play. I'm equipment."), ("saw", "We played earlier. You hid.")]), ..Beat::default() },
+            _2: Beat { sam: s("Count the exits you can't reach."), him: text("All of them. Good game. Next."), ..Beat::default() },
+            _3: Beat { sam: s("Now one thing I don't know."), him: text("How this ends for you. Nor do I. Fun."), take: Some(s("You lose gracefully.")), ..Beat::default() },
+            x: Beat { sam: s("Rematch?"), him: text("Bring a longer arm."), mild: Some(s("Not tonight.")), ..Beat::default() },
         },
     },
     Script {
         id: s("menace-h1"), shape: ShapeKey::Menace, t: Temperament::Hard, k: alloc::vec![Knowledge::None, Knowledge::Heard, Knowledge::Glimpsed, Knowledge::Saw],
         band: None, needs: Some(alloc::vec![Need::Office]), not: None, pin: None,
         beats: ScriptBeats {
-            _1: Beat { sam: s("Know where you are?"), him: keyed(&[("*", "Work."), ("saw", "Behind on my paperwork. About you.")]), ..Beat::zeroed() },
-            _2: Beat { sam: s("Rooms like this keep secrets."), him: text("This one keeps a draught."), room: Some(true), ..Beat::zeroed() },
-            _3: Beat { sam: s("Or one useful sentence."), him: text("Do the room thing. I'm curious now."), ..Beat::zeroed() },
-            x: Beat { sam: s("Thoughts?"), him: text("You rehearse these. It shows."), mild: Some(s("None for you.")), ..Beat::zeroed() },
+            _1: Beat { sam: s("Know where you are?"), him: keyed(&[("*", "Work."), ("saw", "Behind on my paperwork. About you.")]), ..Beat::default() },
+            _2: Beat { sam: s("Rooms like this keep secrets."), him: text("This one keeps a draught."), room: Some(true), ..Beat::default() },
+            _3: Beat { sam: s("Or one useful sentence."), him: text("Do the room thing. I'm curious now."), ..Beat::default() },
+            x: Beat { sam: s("Thoughts?"), him: text("You rehearse these. It shows."), mild: Some(s("None for you.")), ..Beat::default() },
         },
     },
     Script {
         id: s("menace-h2"), shape: ShapeKey::Menace, t: Temperament::Hard, k: alloc::vec![Knowledge::None, Knowledge::Heard, Knowledge::Glimpsed, Knowledge::Saw],
         band: None, needs: Some(alloc::vec![Need::Office]), not: None, pin: None,
         beats: ScriptBeats {
-            _1: Beat { sam: s("Look around you."), him: keyed(&[("*", "Seen it. Nightly."), ("saw", "Saw it. Saw you in it. Preferred it empty.")]), ..Beat::zeroed() },
-            _2: Beat { sam: s("Plenty in here to regret."), him: text("The carpet, mainly."), room: Some(true), ..Beat::zeroed() },
-            _3: Beat { sam: s("Talk instead."), him: text("No. Go on. Redecorate."), ..Beat::zeroed() },
-            x: Beat { sam: s("Anything?"), him: text("You'd never get the deposit back."), mild: Some(s("Nothing.")), ..Beat::zeroed() },
+            _1: Beat { sam: s("Look around you."), him: keyed(&[("*", "Seen it. Nightly."), ("saw", "Saw it. Saw you in it. Preferred it empty.")]), ..Beat::default() },
+            _2: Beat { sam: s("Plenty in here to regret."), him: text("The carpet, mainly."), room: Some(true), ..Beat::default() },
+            _3: Beat { sam: s("Talk instead."), him: text("No. Go on. Redecorate."), ..Beat::default() },
+            x: Beat { sam: s("Anything?"), him: text("You'd never get the deposit back."), mild: Some(s("Nothing.")), ..Beat::default() },
         },
     },
     Script {
         id: s("menace-h3"), shape: ShapeKey::Menace, t: Temperament::Hard, k: alloc::vec![Knowledge::None, Knowledge::Heard, Knowledge::Glimpsed, Knowledge::Saw],
         band: None, needs: Some(alloc::vec![Need::Office]), not: None, pin: None,
         beats: ScriptBeats {
-            _1: Beat { sam: s("Cosy in here."), him: keyed(&[("*", "Isn't."), ("saw", "Was. Then you.")]), sam_now: Some(s("Cozy in here.")), ..Beat::zeroed() },
-            _2: Beat { sam: s("Lot of hard surfaces."), him: text("I mop them. I'd know."), room: Some(true), ..Beat::zeroed() },
-            _3: Beat { sam: s("Or you give me something."), him: text("I'll take the surfaces."), ..Beat::zeroed() },
-            x: Beat { sam: s("Last chance."), him: text("For you to lift properly. Bend the knees."), mild: Some(s("Pass.")), ..Beat::zeroed() },
+            _1: Beat { sam: s("Cosy in here."), him: keyed(&[("*", "Isn't."), ("saw", "Was. Then you.")]), sam_now: Some(s("Cozy in here.")), ..Beat::default() },
+            _2: Beat { sam: s("Lot of hard surfaces."), him: text("I mop them. I'd know."), room: Some(true), ..Beat::default() },
+            _3: Beat { sam: s("Or you give me something."), him: text("I'll take the surfaces."), ..Beat::default() },
+            x: Beat { sam: s("Last chance."), him: text("For you to lift properly. Bend the knees."), mild: Some(s("Pass.")), ..Beat::default() },
         },
     },
     ]

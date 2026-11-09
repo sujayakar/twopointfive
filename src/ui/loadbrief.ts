@@ -9,18 +9,18 @@
 // the place, the job in one line, the team as deployed, the approach) beside THE MAP of its ground (the mission list's own map sheet — ui/missions.ts
 // drawMissionMap: the place as a model, a 10 m scale, the way in marked; the maintainer on the first cut, which had the mission's picture there: "let's show
 // the map vs. the (kinda low res) level art"), and ONE block, START, which fills as the boot goes and is live when the level can start. Nothing here is a new sentence: every word is the list's.
-//   · IT STAYS UNTIL IT IS STARTED: a click on the block, Enter or Space. The world is stood up and held still behind it (main.ts: one term of the loop's
+//   · IT STAYS UNTIL IT IS STARTED: a click on the block, Enter or Space. The world is stood up and held still behind it (host/drawpage.ts: one term of the loop's
 //     `frozen`, as under the pause card), so the run's first tick is the player's.
 //   · A PRESS IS NEVER LOST: one made while the page still boots is kept (the block sits pressed in) and the level starts the moment the block is live.
 //     Live is when the level stands AND its picture is ready behind the brief (ui/settle.ts, 10-28: every shader in, the first frames drawn, auto quality's
 //     pick made; `hold` below is the stretch between the two, the world still and the block filling). `?settle=0` = live the moment the level stands.
 //   · THE CONTROLS are where they are from every other screen, Options ▸ Controls (ui/options.ts), one quiet word away; BACK (Esc) is the mission list.
-//   · NOT FOR A PAGE NOBODY SITS AT: main.ts makes none under ?paused, a replay's tape or a benchmark's scene, and drops it unstarted once
-//     any script drives the page; the headless harness never comes through main.ts at all.
-// THE SWITCH: LOADBRIEF.on — ON in the page (main.ts; `?loadbrief=0` = the boot card and the straight start, as the build was), OFF in the module, so every
-// tool that stands a Menu on a fake DOM measures the cards as they were. A page-only screen: no game rule reads it and no knob table carries it.
+//   · NOT FOR A PAGE NOBODY SITS AT: host/drawpage.ts makes none under ?paused, a replay's tape or a benchmark's scene, and drops it unstarted once
+//     any script drives the page.
+// THE SWITCH: LOADBRIEF.on — ON in the page (host/drawpage.ts; `?loadbrief=0` = the boot card and the straight start, as the build was), OFF in the module.
+// A page-only screen: no game rule reads it and no knob table carries it.
 // Plain DOM in a layer of its own (#brief, made here), styled with ui/theme.ts's tokens; its rules are injected once. Nothing at module level uses another
-// module's exports. tools/qa/loadbrief-check.ts holds the words and the hand-over on a fake DOM; tools/qa/loadbrief-page.cjs looks at the real page.
+// module's exports. tools/qa/loadbrief-page.cjs looks at the real page.
 import { drawMissionMap, reopenMissionsAfterLoad } from './missions';
 import { desk } from '../view/desk';
 import type { BriefView } from '../view/read';
@@ -37,7 +37,7 @@ export interface LoadBrief {
   /** the level can start: the block is live — and if it was pressed meanwhile (and the player is not reading Options over it), the run starts now.
    *  `onStart` runs once, as the brief goes; a throw from it is logged, never the caller's */
   live(onStart?: () => void): void;
-  /** the level stands and its picture is still being made ready behind the brief (main.ts, ui/settle.ts): the world is held still as under a live brief, the
+  /** the level stands and its picture is still being made ready behind the brief (host/drawpage.ts, ui/settle.ts): the world is held still as under a live brief, the
    *  block is NOT live and takes the boot's status line still; a press is kept, as while the page boots. `live` ends it */
   hold(): void;
   /** gone, unstarted (a page a script drives; a mission whose start was refused): no `onStart` */
@@ -168,12 +168,12 @@ export function loadBrief(search: string = typeof location !== 'undefined' ? loc
     try { run?.(); } catch (e) { console.error('load brief: the start threw', e); }   // (the armed start runs inside the page's boot: a throw here must not be the boot's)
   };
   const arm = (on: boolean) => { armed = on; root.classList.toggle('armed', on); go.setAttribute('aria-pressed', String(on)); };
-  const leave = () => {   // BACK: the mission list, by a page load (this one is still booting) — the address a quit of this mission leaves (main.ts's own quit)
+  const leave = () => {   // BACK: the mission list, by a page load (this one is still booting) — the address a quit of this mission leaves (host/drawpage.ts's own quit)
     const s = location.search ?? '';
     reopenMissionsAfterLoad();
     location.assign(location.pathname + desk().leave(s) + location.hash);
   };
-  // THE KEYS are the brief's while it is up (first in line at the window: main.ts makes it before the game's Input exists, so no key of the game's, and no Esc
+  // THE KEYS are the brief's while it is up (first in line at the window: host/drawpage.ts makes it before the game's Input exists, so no key of the game's, and no Esc
   // of the pause card's, is read under it): Enter / Space start, Esc is Back, Tab walks its three buttons. Left alone: a chord and the F-keys (the browser's,
   // the recorders' — but never an Esc on to the pause card), and every key while the options layer is up over it (ui/options.ts has its own).
   const onKey = (e: KeyboardEvent) => {

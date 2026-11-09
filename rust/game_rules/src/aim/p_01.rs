@@ -434,7 +434,7 @@ mod tests {
         a.braking = true;
         a.left_t = 3.0;
         a.fouled = Some(crate::aim::AimStateFouled { n: 2.0, pos: [1.0, 0.0, 1.0] });
-        a.last_shot = Some(crate::aim::AimStateLastShot::zeroed());
+        a.last_shot = Some(crate::aim::AimStateLastShot::default());
         aim_state_clear(&mut a);
         assert_eq!(a.track, 0.0);
         assert!(a.tgt_key.is_empty() && a.last_bearing.is_nan() && !a.braking && a.fouled.is_none());

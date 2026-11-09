@@ -2,7 +2,7 @@
 // STAND-IN backend on this machine (cloud/test/standin.ts: `npm ci` in cloud/ first). Three pages of the dev server, booted side by side:
 //   A  ?cloud=<the stand-in>: an F9 take makes NO download, the stand-in has the file, the recorder knows it is being sent and then that it arrived, and the
 //      notes say so; the benchmark card's line for each way a run can go, its move to "were sent", and Close waiting for a file that is on its way
-//      (the card is put up by hand: a whole ?bench run is tools/qa/bench-page.cjs);
+//      (the card is put up by hand);
 //   B  ?downloads=1&cloud=0: the door as it was, one download and the old note;
 //   C  ?cloud=0: nobody listens. No download, the notes say the take stopped and then that it was saved nowhere (no shot server here), and the card
 //      says the results weren't sent, with no notice line.

@@ -1,12 +1,11 @@
-//! The types of `teampace`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `teampace`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum RunWhy {
-    Blast,
+    #[default] Blast,
     Cover,
     Follow,
     Told,
@@ -22,29 +21,16 @@ impl RunWhy {
     }
 }
 
-/// (TypeScript: Leave, src/game/teampace.ts:111)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Leave {
     pub why: crate::teampace::LeaveWhy,
     pub top: f64,
     pub until: f64,
 }
-impl Leave {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Leave {
-            why: crate::teampace::LeaveWhy::Blast,
-            top: 0.0,
-            until: 0.0,
-        }
-    }
-}
-impl Default for Leave { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum LeaveWhy {
-    Blast,
+    #[default] Blast,
     Cover,
     Follow,
     Told,
@@ -64,46 +50,21 @@ impl LeaveWhy {
     }
 }
 
-/// (TypeScript: inline at src/game/teampace.ts:114 ran, src/game/teampace.ts:114)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct TeampaceModRanValue {
     pub t: f64,
     pub why: crate::teampace::RunWhy,
 }
-impl TeampaceModRanValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        TeampaceModRanValue {
-            t: 0.0,
-            why: crate::teampace::RunWhy::Blast,
-        }
-    }
-}
-impl Default for TeampaceModRanValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/teampace.ts:116 dash, src/game/teampace.ts:116)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct TeampaceModDashValue {
     pub t: f64,
     pub x: f64,
     pub z: f64,
     pub yes: bool,
 }
-impl TeampaceModDashValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        TeampaceModDashValue {
-            t: 0.0,
-            x: 0.0,
-            z: 0.0,
-            yes: false,
-        }
-    }
-}
-impl Default for TeampaceModDashValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/teampace.ts:128 aimSeen, src/game/teampace.ts:128)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct TeampaceModAimSeenValue {
     pub t: f64,
     pub x: f64,
@@ -111,21 +72,7 @@ pub struct TeampaceModAimSeenValue {
     pub blind: bool,
     pub since: f64,
 }
-impl TeampaceModAimSeenValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        TeampaceModAimSeenValue {
-            t: 0.0,
-            x: 0.0,
-            z: 0.0,
-            blind: false,
-            since: 0.0,
-        }
-    }
-}
-impl Default for TeampaceModAimSeenValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum IsRunWhy {
     Blast,
@@ -148,7 +95,6 @@ impl IsRunWhy {
     }
 }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum TeamLeaveWhy {
     Blast,

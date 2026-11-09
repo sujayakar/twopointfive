@@ -792,7 +792,7 @@ mod tests {
 
     fn beat(dur: f64) -> ReloadBeat { ReloadBeat { dur, out: None, in_: None, rack: None, keep: None, hand: None, exact: None } }
     fn keys(b: ReloadBeat, rack: Option<Option<f64>>) -> ([u64; 6], bool, bool) {
-        let mut k = AnimRlB::zeroed();
+        let mut k = AnimRlB::default();
         rl_beat_keys(&mut k, &ReloadBeat { rack, ..b });
         ([k.out.to_bits(), k.in_.to_bits(), k.rack.to_bits(), k.dur.to_bits(), k.keep.to_bits(), k.fresh.to_bits()], k.pull, k.hand)
     }
@@ -855,9 +855,9 @@ mod tests {
     /// each end and its ancestors, in the rig's order and no other
     #[test]
     fn fk_list_is_ancestors_in_order() {
-        let mut rig = crate::anim_gltf::GltfCharacter::zeroed();
+        let mut rig = crate::anim_gltf::GltfCharacter::default();
         for parent in [-1.0, 0.0, 1.0, 1.0, 3.0, 0.0] {
-            rig.nodes.push(crate::anim_gltf::GltfNode { parent, ..crate::anim_gltf::GltfNode::zeroed() });
+            rig.nodes.push(crate::anim_gltf::GltfNode { parent, ..crate::anim_gltf::GltfNode::default() });
         }
         rig.order = vec![0.0, 5.0, 1.0, 3.0, 2.0, 4.0];
         assert_eq!(fk_list(&rig, &[4.0]), vec![0, 1, 3, 4]);

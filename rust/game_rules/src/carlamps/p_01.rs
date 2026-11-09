@@ -182,7 +182,7 @@ mod tests_need_box_rows {
     use crate::scene_boxes::Box as WorldBox;
 
     fn tail(g: &mut Game, x: f64, z: f64) -> BoxId {
-        g.col.boxes.push(WorldBox { c: [x, 0.7, z], h: [0.02, 0.06, 0.16], emissive: [0.5, 0.03, 0.02], ..WorldBox::zeroed() })
+        g.col.boxes.push(WorldBox { c: [x, 0.7, z], h: [0.02, 0.06, 0.16], emissive: [0.5, 0.03, 0.02], ..WorldBox::default() })
     }
 
     #[test]
@@ -202,7 +202,7 @@ mod tests_need_box_rows {
         let (a, b) = (tail(&g, 0.0, 0.0), tail(&g, 0.0, 1.24));
         g.col.boxes[a].rot = Some([0.0, 0.0, 0.0, 1.0]);
         assert!(find_car_lamps(&g, &[a, b]).is_empty());
-        let lens = g.col.boxes.push(WorldBox { h: [0.02, 0.07, 0.14], albedo: [0.8, 0.8, 0.75], ..WorldBox::zeroed() });
+        let lens = g.col.boxes.push(WorldBox { h: [0.02, 0.07, 0.14], albedo: [0.8, 0.8, 0.75], ..WorldBox::default() });
         let s = sigs()[1];
         assert!(fits(&g, lens, s));
         g.col.boxes[lens].emissive = [0.0, 0.1, 0.0];

@@ -205,6 +205,5 @@ writes at all (they live only in the tables and the wire); the functions nothing
 
 ## How a run of it is proved
 
-The fold is meant to change no behaviour: the rows hold their page value on every run. So the proof is the mission loop's kept runs
-(`tools/blitz/keep.sh` on the tree before, `tools/blitz/hold.sh` on the tree after): the same die and the same block after every
-tick. `cargo check` for the native runner and the wasm face, with no new kind of warning.
+The fold is meant to change no behaviour: the rows hold their page value on every run. So the proof is `hold` (`rust/game_start`, `hold keep` on the tree before, `hold check` on the tree after): every part the same after every
+frame, and the gate, whose pins must not move. `cargo check` for the native runner and the wasm face, with no new kind of warning.

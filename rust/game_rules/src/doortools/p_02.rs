@@ -313,7 +313,7 @@ pub fn door_tools_reset(g: &mut crate::game::Game) {
     let n = g.k.frag.squad;
     g.door_tools.frags = crate::seats::seat_share(g, n);
     g.door_tools.log.clear();
-    g.door_tools.stats = crate::doortools::DoorToolsStats::zeroed();
+    g.door_tools.stats = crate::doortools::DoorToolsStats::default();
     g.door_tools.seen = None;
     g.door_tools.led = crate::doortools::DoorToolsLed { entries: 0.0, by_seen: 0.0 };
 }

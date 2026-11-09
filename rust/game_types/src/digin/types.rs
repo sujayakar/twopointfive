@@ -1,12 +1,11 @@
-//! The types of `digin`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `digin`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes, Default)]
 pub enum Phase {
-    Set,
+    #[default] Set,
     Idle,
     Shut,
     Haul,
@@ -34,8 +33,7 @@ impl Phase {
     }
 }
 
-/// (TypeScript: Man, src/game/digin.ts:216)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Man {
     pub far: bool,
     pub owe: f64,
@@ -60,7 +58,6 @@ pub struct Man {
     pub scrape_t: f64,
     pub set_at: f64,
     pub spot: Option<V3>,
-    pub kept: bool,
     pub eyes_t: Option<f64>,
     pub lane_t: Option<f64>,
     pub also: Option<f64>,
@@ -74,52 +71,7 @@ pub struct Man {
     pub pull_a: Option<f64>,
     pub stalls: Option<f64>,
 }
-impl Man {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Man {
-            far: false,
-            owe: 0.0,
-            haul_by: 0.0,
-            deep: false,
-            look: None,
-            tried_deep: false,
-            gathered: false,
-            gather_to: None,
-            dug_once: false,
-            ordered: false,
-            phase: crate::digin::Phase::Set,
-            until: 0.0,
-            know: [0.0; 3],
-            know_t: 0.0,
-            room: None,
-            entry: 0.0,
-            brace: 0.0,
-            prop: None,
-            stand: [0.0; 3],
-            rest: [0.0; 3],
-            scrape_t: 0.0,
-            set_at: 0.0,
-            spot: None,
-            kept: false,
-            eyes_t: None,
-            lane_t: None,
-            also: None,
-            also_n: None,
-            home_t: None,
-            home_d: None,
-            home_at: None,
-            hand_t: None,
-            pull_t: None,
-            pushes: None,
-            pull_a: None,
-            stalls: None,
-        }
-    }
-}
-impl Default for Man { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash, ToBytes)]
 pub enum Cue {
     Kick,
@@ -140,8 +92,7 @@ impl Cue {
     }
 }
 
-/// (TypeScript: RoomSt, src/game/digin.ts:218)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct RoomSt {
     pub room: RoomfightRoomId,
     pub expected: f64,
@@ -157,30 +108,8 @@ pub struct RoomSt {
     pub ready_at: f64,
     pub callout: bool,
 }
-impl RoomSt {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RoomSt {
-            room: RoomfightRoomId(0),
-            expected: 0.0,
-            second: 0.0,
-            at: 0.0,
-            t0: 0.0,
-            men: Vec::new(),
-            bracer: None,
-            wedged: 0.0,
-            cue_at: 0.0,
-            cues: JsSet::new(),
-            entered_at: 0.0,
-            ready_at: 0.0,
-            callout: false,
-        }
-    }
-}
-impl Default for RoomSt { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: St, src/game/digin.ts:219)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct St {
     pub men: JsMap<GuardId, crate::digin::Man>,
     pub rooms: JsMap<RoomfightRoomId, crate::digin::RoomSt>,
@@ -192,26 +121,8 @@ pub struct St {
     pub frame_t: f64,
     pub bang_call: f64,
 }
-impl St {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        St {
-            men: JsMap::new(),
-            rooms: JsMap::new(),
-            wedges: JsMap::new(),
-            fix: None,
-            called: JsSet::new(),
-            used: JsSet::new(),
-            away: JsSet::new(),
-            frame_t: 0.0,
-            bang_call: 0.0,
-        }
-    }
-}
-impl Default for St { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/digin.ts:219 St.wedges, src/game/digin.ts:219)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct StWedgesValue {
     pub key_side: f64,
     pub lock_id: String,
@@ -219,62 +130,23 @@ pub struct StWedgesValue {
     pub tried: bool,
     pub by_t: f64,
 }
-impl StWedgesValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StWedgesValue {
-            key_side: 0.0,
-            lock_id: String::new(),
-            kicked: false,
-            tried: false,
-            by_t: 0.0,
-        }
-    }
-}
-impl Default for StWedgesValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/digin.ts:219 St.fix, src/game/digin.ts:219)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct StFix {
     pub at: V3,
     pub t: f64,
     pub room: Option<RoomfightRoomId>,
     pub heard: bool,
 }
-impl StFix {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StFix {
-            at: [0.0; 3],
-            t: 0.0,
-            room: None,
-            heard: false,
-        }
-    }
-}
-impl Default for StFix { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/digin.ts:189 DIGIN_LOG, src/game/digin.ts:189)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct DiginModDIGINLOGItem {
     pub t: f64,
     pub who: String,
     pub what: String,
 }
-impl DiginModDIGINLOGItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DiginModDIGINLOGItem {
-            t: 0.0,
-            who: String::new(),
-            what: String::new(),
-        }
-    }
-}
-impl Default for DiginModDIGINLOGItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/digin.ts:192 DIGIN_SHUT, src/game/digin.ts:192)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct DiginModDIGINSHUT {
     pub home: f64,
     pub held: f64,
@@ -282,157 +154,55 @@ pub struct DiginModDIGINSHUT {
     pub more: f64,
     pub left: f64,
 }
-impl DiginModDIGINSHUT {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DiginModDIGINSHUT {
-            home: 0.0,
-            held: 0.0,
-            again: 0.0,
-            more: 0.0,
-            left: 0.0,
-        }
-    }
-}
-impl Default for DiginModDIGINSHUT { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/digin.ts:197 NUM_MAX, src/game/digin.ts:197)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct NUMMAX {
     pub wedges: f64,
     pub pace: f64,
     pub reach_m: f64,
 }
-impl NUMMAX {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        NUMMAX {
-            wedges: 0.0,
-            pace: 0.0,
-            reach_m: 0.0,
-        }
-    }
-}
-impl Default for NUMMAX { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/digin.ts:231 listeners ->, src/game/digin.ts:231)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct ListenersItem {
     pub gd: Option<GuardId>,
     pub head: V3,
     pub vel: V3,
 }
-impl ListenersItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ListenersItem {
-            gd: None,
-            head: [0.0; 3],
-            vel: [0.0; 3],
-        }
-    }
-}
-impl Default for ListenersItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/digin.ts:238 heardBy ->, src/game/digin.ts:238)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct HeardBy {
     pub gd: Option<GuardId>,
 }
-impl HeardBy {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HeardBy {
-            gd: None,
-        }
-    }
-}
-impl Default for HeardBy { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/digin.ts:244 heardNoise ->, src/game/digin.ts:244)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct HeardNoise {
     pub gd: Option<GuardId>,
 }
-impl HeardNoise {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        HeardNoise {
-            gd: None,
-        }
-    }
-}
-impl Default for HeardNoise { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/digin.ts:277 coverSpot ->, src/game/digin.ts:277)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct CoverSpot {
     pub spot: Option<V3>,
     pub here: bool,
     pub look: Option<V3>,
 }
-impl CoverSpot {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CoverSpot {
-            spot: None,
-            here: false,
-            look: None,
-        }
-    }
-}
-impl Default for CoverSpot { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/digin.ts:520 gatherTo ->, src/game/digin.ts:520)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct GatherTo {
     pub room: RoomfightRoomId,
     pub spot: V3,
 }
-impl GatherTo {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        GatherTo {
-            room: RoomfightRoomId(0),
-            spot: [0.0; 3],
-        }
-    }
-}
-impl Default for GatherTo { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/digin.ts:859 digInWedged ->, src/game/digin.ts:859)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct DigInWedgedItem {
     pub door: DoorId,
     pub at: V3,
 }
-impl DigInWedgedItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DigInWedgedItem {
-            door: DoorId(0),
-            at: [0.0; 3],
-        }
-    }
-}
-impl Default for DigInWedgedItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/digin.ts:881 digInRefuge ->, src/game/digin.ts:881)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct DigInRefuge {
     pub spot: V3,
     pub door: Option<DoorId>,
 }
-impl DigInRefuge {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DigInRefuge {
-            spot: [0.0; 3],
-            door: None,
-        }
-    }
-}
-impl Default for DigInRefuge { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
@@ -472,7 +242,6 @@ pub struct DiginStats {
     pub shouts: i32,
     pub scrapes: i32,
     pub callouts: i32,
-    pub no_rally: i32,
     pub aborted: i32,
     pub caught: i32,
     pub steady: i32,

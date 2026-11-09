@@ -1,12 +1,11 @@
-//! The types of `scene_markings`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `scene_markings`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum MarkFace {
-    X,
+    #[default] X,
     X2,
     Y,
     Y2,
@@ -26,7 +25,6 @@ impl MarkFace {
     }
 }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum MarkRes {
     Base,
@@ -43,29 +41,15 @@ impl MarkRes {
     }
 }
 
-/// (TypeScript: MarkPal, src/scene/markings.ts:37)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct MarkPal {
     pub albedo: Option<V3>,
     pub mul: Option<f64>,
     pub rough: Option<f64>,
     pub emit: Option<V3>,
 }
-impl MarkPal {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        MarkPal {
-            albedo: None,
-            mul: None,
-            rough: None,
-            emit: None,
-        }
-    }
-}
-impl Default for MarkPal { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: MarkingDef, src/scene/markings.ts:38)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct MarkingDef {
     pub face: crate::scene_markings::MarkFace,
     pub res: Option<crate::scene_markings::MarkRes>,
@@ -74,22 +58,7 @@ pub struct MarkingDef {
     pub pal: Vec<crate::scene_markings::MarkPal>,
     pub cells: Vec<String>,
 }
-impl MarkingDef {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        MarkingDef {
-            face: crate::scene_markings::MarkFace::X,
-            res: None,
-            at: [0.0; 2],
-            size: [0.0; 2],
-            pal: Vec::new(),
-            cells: Vec::new(),
-        }
-    }
-}
-impl Default for MarkingDef { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: CellCanvas, src/scene/markings.ts:119)
 #[derive(Clone, Debug)]
 pub struct CellCanvas {
     pub cells: Vec<u8>,
@@ -97,7 +66,7 @@ pub struct CellCanvas {
     pub h: f64,
 }
 impl CellCanvas {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         CellCanvas {
             cells: Vec::new(),
@@ -108,8 +77,7 @@ impl CellCanvas {
 }
 impl Default for CellCanvas { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: MarkStats, src/scene/markings.ts:316)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct MarkStats {
     pub texel: f64,
     pub w: f64,
@@ -121,114 +89,39 @@ pub struct MarkStats {
     pub d_albedo: V3,
     pub emask: f64,
 }
-impl MarkStats {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        MarkStats {
-            texel: 0.0,
-            w: 0.0,
-            h: 0.0,
-            f: [0.0; 3],
-            alb: [[0.0; 3]; 3],
-            mean_l: [0.0; 3],
-            area: 0.0,
-            d_albedo: [0.0; 3],
-            emask: 0.0,
-        }
-    }
-}
-impl Default for MarkStats { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/markings.ts:53 FACE_AXES, src/scene/markings.ts:53)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct FACEAXESItem {
     pub u: V3,
     pub v: V3,
     pub n: V3,
 }
-impl FACEAXESItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FACEAXESItem {
-            u: [0.0; 3],
-            v: [0.0; 3],
-            n: [0.0; 3],
-        }
-    }
-}
-impl Default for FACEAXESItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/markings.ts:58 faceHalf ->, src/scene/markings.ts:58)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct FaceHalf {
     pub hu: f64,
     pub hv: f64,
     pub hn: f64,
 }
-impl FaceHalf {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FaceHalf {
-            hu: 0.0,
-            hv: 0.0,
-            hn: 0.0,
-        }
-    }
-}
-impl Default for FaceHalf { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/markings.ts:63 texelOf(m), src/scene/markings.ts:63)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct TexelOfM {
     pub res: Option<crate::scene_markings::MarkRes>,
 }
-impl TexelOfM {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        TexelOfM {
-            res: None,
-        }
-    }
-}
-impl Default for TexelOfM { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/markings.ts:370 faceAreas ->, src/scene/markings.ts:370)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct FaceAreas {
     pub areas: Vec<f64>,
     pub total: f64,
 }
-impl FaceAreas {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FaceAreas {
-            areas: Vec::new(),
-            total: 0.0,
-        }
-    }
-}
-impl Default for FaceAreas { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/scene/markings.ts:383 markWorldRect ->, src/scene/markings.ts:383)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct MarkWorldRect {
     pub centre: V3,
     pub n: V3,
     pub hu: f64,
     pub hv: f64,
 }
-impl MarkWorldRect {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        MarkWorldRect {
-            centre: [0.0; 3],
-            n: [0.0; 3],
-            hu: 0.0,
-            hv: 0.0,
-        }
-    }
-}
-impl Default for MarkWorldRect { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]

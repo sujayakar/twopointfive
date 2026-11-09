@@ -58,7 +58,7 @@ const CARRIED = new RegExp(`^(mute|nomusic|quality|adapt|pipequeue|shadertrim|sh
  *  its shader text and its level, so a run is with the look or without it from its first scene to its last: a run that dropped them timed the plain build on
  *  every scene and said nothing. A trial this machine's look panel keeps off goes on the address as its own word, so the run times the look the page it was
  *  asked on shows and the report's address says which. These words DO change the fight (the look's geometry is part of the level it plays): the first scene's
- *  page says so in the report's notes (main.ts), and what that page gives a visitor (its kit, its fog put down, its panel) stands down on a scene's address.
+ *  page says so in the report's notes (host/drawpage.ts), and what that page gives a visitor (its kit, its fog put down, its panel) stands down on a scene's address.
  *  A word is judged decoded, as the page reads it, and carried as it was written */
 /** a word of the look page's own, as an address wrote it (scene/look.ts lookPageWord): the benchmark's scenes and a pricing run's pages (ui/pricerun.ts) carry the same */
 export const lookWord = (p: string): boolean => { const kv = [...new URLSearchParams(p)][0]; return !!kv && lookPageWord(kv[0], kv[1]); };
@@ -87,7 +87,7 @@ export function benchBegin(warm: boolean, loc: Location = location, opts?: Parti
 }
 
 /** is this page a scene's page of a run under way, not yet begun? The question benchLegOfPage answers, asked WITHOUT taking the scene (nothing is marked or
- *  dropped): for what the page must decide before its mission is staged, long before the benchmark's own wiring (main.ts: the machine's sandbox row) */
+ *  dropped): for what the page must decide before its mission is staged, long before the benchmark's own wiring (host/drawpage.ts: the machine's sandbox row) */
 export function benchSceneWaits(loc: Location = location): boolean {
   const at = new URLSearchParams(loc.search).get(BENCH_RUN_KEY); if (at === null) return false;
   const c = read(), i = Number(at); return !!c && !!BENCH_SCENES[i] && c.i === i && c.live !== i; }

@@ -1,9 +1,8 @@
-//! The types of `anim_characters`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `anim_characters`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: CharacterRenderer, src/anim/characters.ts:20)
 #[derive(Clone, Debug, ToBytes)]
 pub struct CharacterRenderer {
     pub index_count: f64,
@@ -30,7 +29,7 @@ pub struct CharacterRenderer {
     pub joint_floats: f64,
 }
 impl CharacterRenderer {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         CharacterRenderer {
             index_count: 0.0,
@@ -56,7 +55,6 @@ impl CharacterRenderer {
 }
 impl Default for CharacterRenderer { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum CharacterRendererIndexFormat {
     Uint16,
@@ -71,7 +69,6 @@ impl CharacterRendererIndexFormat {
     }
 }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum CharacterRendererJointsFormat {
     Float16,

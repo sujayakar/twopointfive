@@ -108,7 +108,7 @@ export function buildSfxWas(ctx: SfxContext): Record<SfxNameWas, SfxBuffer> {
     for (let k = 0; k < 60; k++) { const t = 0.07 + 2.25 * Math.pow(u(), 1.8); bits.push([t, 130 + 1100 * u() * u(), 0.006 + 0.04 * u(), (0.3 + 0.7 * u()) * (1 - 0.55 * t / 2.3), 0.25 + 0.75 * u()]); } }
   return {
     ...gunfireWas(ctx),
-    // the ring-airfoil launcher (launcher.ts): a hand-cycled tube under the fore-end letting a rubber ring go — the 'throw' body's whoosh, short, over a low hollow
+    // the ring-airfoil launcher (rust/game_rules/src/launcher): a hand-cycled tube under the fore-end letting a rubber ring go — the 'throw' body's whoosh, short, over a low hollow
     // thunk (magOut's first click slowed) and a puff of propellant: near silent, the doc's "CT's near-silent launcher" (a 'prop' event at 0.45, not gunfire)
     launcher: render(ctx, 0.32, (t, _i, sr, rnd, st) => {
       const whoosh = lp(rnd(), st, 0, 0.05 + 0.3 * Math.sin(Math.PI * Math.min(1, t / 0.18))) * Math.sin(Math.PI * Math.min(1, t / 0.2)) * 0.45;
@@ -153,7 +153,7 @@ export function buildSfxWas(ctx: SfxContext): Record<SfxNameWas, SfxBuffer> {
     nvOff: render(ctx, 0.5, (t) => { const f0 = 3000, f1 = 200; const k = Math.log(f1 / f0) / 0.45; const ph = TAU * f0 * (Math.exp(k * Math.min(t, 0.45)) - 1) / k; return Math.sin(ph) * env(t, 0.005, 0.2) * 0.2; }, 41),
     click: render(ctx, 0.05, (t, _i, _sr, rnd, st) => (rnd() - lp(rnd(), st, 0, 0.3)) * env(t, 0.0003, 0.004) * 0.5 + Math.sin(TAU * 3200 * t) * env(t, 0.0003, 0.003) * 0.2, 43),
     throw: render(ctx, 0.35, (t, _i, _sr, rnd, st) => lp(rnd(), st, 0, 0.03 + 0.25 * Math.sin(Math.PI * Math.min(1, t / 0.3))) * Math.sin(Math.PI * Math.min(1, t / 0.32)) * 0.5, 47),
-    // a spent case landing on lino (GPU particles, game/particleFx.ts casingFx): brass rings high and inharmonic — three partials well above the canister's, gone in
+    // a spent case landing on lino (GPU particles, rust/game_rules/src/particle_fx casing_fx): brass rings high and inharmonic — three partials well above the canister's, gone in
     // 30 ms — and hops once, smaller, 55 ms later. Played quiet: it is the detail under the report, not an event (and not one the guards hear: the shot was)
     casingTink: render(ctx, 0.16, (t) => { let out = 0; for (let k = 0; k < 2; k++) { const th = t - k * 0.055; if (th < 0) continue; out += (Math.sin(TAU * 4210 * th) * 0.5 + Math.sin(TAU * 6370 * th) * 0.35 + Math.sin(TAU * 9120 * th) * 0.2) * env(th, 0.0003, 0.012) * (k === 0 ? 1 : 0.45); } return out * 0.55; }, 71),
     canisterBounce: render(ctx, 0.4, (t) => (Math.sin(TAU * 1310 * t) * 0.5 + Math.sin(TAU * 2140 * t) * 0.35 + Math.sin(TAU * 3370 * t) * 0.25 + Math.sin(TAU * 5210 * t) * 0.12) * env(t, 0.0005, 0.09) * 0.6, 53),
@@ -165,14 +165,14 @@ export function buildSfxWas(ctx: SfxContext): Record<SfxNameWas, SfxBuffer> {
       for (let k = 0; k < 9; k++) { const th = t - (0.01 + ((k * 0.6180339) % 1) * 0.35); if (th < 0) continue; out += Math.sin(TAU * (3200 + ((k * 977) % 2600)) * th) * env(th, 0.0004, 0.03 + (k % 3) * 0.02) * 0.18; }
       return out + lp(rnd(), st, 0, 0.5) * env(t, 0.02, 0.25) * 0.08;
     }, 71),
-    // a round into laminated glazing (game/glass.ts glassHit): the smack of the impact — a hard broadband tick with a low knock under it — then a short bright
+    // a round into laminated glazing (rust/game_rules/src/glass glass_hit): the smack of the impact — a hard broadband tick with a low knock under it — then a short bright
     // crackle as the star runs out from the hole (a dozen tiny high partials over 0.2 s, thinning) and a whisper of falling grit. No crash: the pane holds.
     glassCrack: render(ctx, 0.45, (t, _i, _sr, rnd, st) => {
       let out = rnd() * env(t, 0.0002, 0.012) * 1.0 + lp(rnd(), st, 0, 0.3) * env(t, 0.0006, 0.03) * 0.6 + Math.sin(TAU * (210 * t - 40 * t * t)) * env(t, 0.001, 0.04) * 0.45;
       for (let k = 0; k < 12; k++) { const th = t - (0.004 + ((k * 0.6180339) % 1) ** 1.4 * 0.2); if (th < 0) continue; out += Math.sin(TAU * (3100 + ((k * 1237) % 5200)) * th) * env(th, 0.0003, 0.012 + (k % 3) * 0.01) * (0.13 - 0.007 * k); }
       return Math.tanh((out + lp(rnd(), st, 1, 0.5) * env(t, 0.02, 0.16) * 0.06) * 1.4) * 0.85;
     }, 151),
-    // BROKEN GLASS after it lets go (game/shards.ts). glassTinkle: a fragment or a handful of them landing on a hard floor — three to five tiny bright pings (each a pair
+    // BROKEN GLASS after it lets go (rust/game_rules/src/shards). glassTinkle: a fragment or a handful of them landing on a hard floor — three to five tiny bright pings (each a pair
     // of inharmonic partials: glass rings sharp, never a chord), the first the loudest, the rest the skitter, over a breath of grit. Played at rate 0.55‥1.4 by size.
     glassTinkle: render(ctx, 0.5, (t, _i, _sr, rnd, st) => {
       let out = 0;
@@ -265,10 +265,10 @@ export function buildSfxWas(ctx: SfxContext): Record<SfxNameWas, SfxBuffer> {
       return (grain * chatter * 0.9 + judder) * env(t, 0.012, 0.15) * Math.min(1, t / 0.02) * 0.8;
     }, 139),
     propThud: render(ctx, 0.4, (t, _i, _sr, rnd, st) => lp(rnd(), st, 0, 0.04) * env(t, 0.002, 0.07) * 1.7 + Math.sin(TAU * 96 * t) * env(t, 0.002, 0.08) * 0.7 + Math.sin(TAU * 232 * t) * env(t, 0.001, 0.03) * 0.3 + (rnd() - lp(rnd(), st, 1, 0.4)) * env(t, 0.0006, 0.008) * 0.3, 149),
-    // ---- the response team's way in (game/qrf.ts): the west stair door — a steel fire door on a crash bar — thrown open against its stop in a bare concrete stairwell,
+    // ---- the response team's way in (rust/game_rules/src/qrf): the west stair door — a steel fire door on a crash bar — thrown open against its stop in a bare concrete stairwell,
     //      and the boots coming up that stairwell heard through it just before. The door: the bar's clack, the leaf booming off the stop (doorBang's low body, harder),
     //      the steel skin ringing (a cluster of inharmonic partials, 180–900 Hz, a third of a second), and the stairwell throwing it back for most of a second (a dense
-    //      dark tail). Also played, pitched up and quieter, under a boot that rings off it (doors.ts 'clang').
+    //      dark tail). Also played, pitched up and quieter, under a boot that rings off it (rust/game_rules/src/doors 'clang').
     stairDoor: render(ctx, 1.3, (t, _i, _sr, rnd, st) => {
       const bar = (rnd() - lp(rnd(), st, 0, 0.3)) * env(t, 0.0005, 0.008) * 0.5 + Math.sin(TAU * 1400 * t) * env(t, 0.0005, 0.01) * 0.15;
       const tb = t - 0.02; const boom = tb > 0 ? lp(rnd(), st, 1, 0.025) * env(tb, 0.002, 0.14) * 2.4 + Math.sin(TAU * 58 * tb) * env(tb, 0.002, 0.18) * 1.0 + Math.sin(TAU * 116 * tb) * env(tb, 0.002, 0.1) * 0.45 : 0;
@@ -283,10 +283,10 @@ export function buildSfxWas(ctx: SfxContext): Record<SfxNameWas, SfxBuffer> {
       for (let k = 0; k < steps.length; k++) { const th = t - steps[k]; if (th < 0 || th > 0.25) continue; const near = 0.45 + 0.55 * (k / (steps.length - 1)); out += (lp(rnd(), st, k % 4, 0.03 + 0.05 * near) * env(th, 0.003, 0.05) * 1.6 + Math.sin(TAU * (70 + 8 * (k % 3)) * th) * env(th, 0.002, 0.06) * 0.6 + (rnd() - lp(rnd(), st, 4 + (k % 3), 0.4)) * env(th, 0.001, 0.012) * 0.25 * near) * near; }
       return out * 0.8;
     }, 227),
-    // ---- the hold (player.ts startGrab → the questions → chokeOut / whipOut; freeHeld when a round takes Sam down under him): close, quiet body sounds a metre from
+    // ---- the hold (rust/game_rules/src/player start_grab → the questions → chokeOut / whipOut; freeHeld when a round takes Sam down under him): close, quiet body sounds a metre from
     //      the listener — cloth, breath, a throat, one hard knock. The voiced bits are a glottal pulse train (phase-accumulated in st[3], jittered) rounded off by the
-    //      low-pass and gating a band of breath noise: no words, a stand-in for voices, kept well under the thuds. Levels sit against bodyHit at the takedown's 0.55
-    //      (tools/qa/audio-render.ts prints the table); the game plays them at grabScuffle 0.4, chokeStrain 0.25, chokeLimp 0.35, whipThud 0.7, shove 0.3 (freeHeld: he
+    //      low-pass and gating a band of breath noise: no words, a stand-in for voices, kept well under the thuds. Levels sit against bodyHit at the takedown's 0.55;
+    //      the game plays them at grabScuffle 0.4, chokeStrain 0.25, chokeLimp 0.35, whipThud 0.7, shove 0.3 (freeHeld: he
     //      wrenches loose — the E shove it was made for is gone), murmur 0.2, heldProtest 0.18 (0.16 under an answer).
     // the grab: Sam's sleeve over the man's shoulder and the forearm dragging across his collar (two rustles of mid-band cloth), his chest into the man's back (a soft
     // low bump), and the breath the man snatches as the arm arrives — voiceless intake, a flutter of voice in it, choked OFF at 100 ms rather than let fade
@@ -303,7 +303,7 @@ export function buildSfxWas(ctx: SfxContext): Record<SfxNameWas, SfxBuffer> {
       return cloth + bump + gasp;
     }, 173),
     // the choke, while the arm is closed: ONE GRAIN of strain, 0.62 s — pressed, creaky voice at ~75 Hz (short open phase, the rate wandering) with air forced past the
-    // forearm chopped by the same pulses, under a slow tremor; an 80 ms rise and a 220 ms fall so grains retriggered every 0.4 s (player.ts CHOKE_GRAIN) run into one
+    // forearm chopped by the same pulses, under a slow tremor; an 80 ms rise and a 220 ms fall so grains retriggered every 0.4 s (rust/game_rules/src/player CHOKE_GRAIN) run into one
     // strained sound, and letting go of Space just lets the last one die — nothing to stop
     chokeStrain: render(ctx, 0.62, (t, _i, sr, rnd, st) => {
       const n = rnd();
@@ -381,7 +381,7 @@ export function buildSfxWas(ctx: SfxContext): Record<SfxNameWas, SfxBuffer> {
       const n = rnd(); const air = (lp(n, st, 4, 0.12) - lp(n, st, 5, 0.03)) * glot * 0.3;
       return (voice * 2.4 + air) * a * 0.42;
     }, 199),
-    // Sam's low whistle (V, game/whistle.ts): two short lip-whistled notes, the second a shade over a minor third down (1.1 kHz for 140 ms, a 40 ms breath, 0.9 kHz
+    // Sam's low whistle (V, rust/game_rules/src/whistle): two short lip-whistled notes, the second a shade over a minor third down (1.1 kHz for 140 ms, a 40 ms breath, 0.9 kHz
     // for 170 ms), each scooped into from a touch flat the way a mouth finds a pitch and rounded off rather than cut, a whisper of second harmonic, and the breath
     // that makes it round the note (band noise about the pitch, loudest on the attacks) — phase-accumulated so the glide is exact at any rate. Quiet by design
     // (peak ~0.3, played at WHISTLE.gain): a sound for the man six metres off, not the floor.
@@ -394,13 +394,13 @@ export function buildSfxWas(ctx: SfxContext): Record<SfxNameWas, SfxBuffer> {
       const n = rnd(); const breath = (lp(n, st, 0, 0.3) - lp(n, st, 1, 0.07));
       return (tone * 0.26 + breath * (0.05 + 0.12 * atk)) * a;
     }, 223),
-    // devices (game/devices.ts). A keypad key: a soft square-ish 1.76 kHz blip, 60 ms, the membrane's click under it. The pad taking the code: two quick rising
+    // devices (rust/game_rules/src/devices). A keypad key: a soft square-ish 1.76 kHz blip, 60 ms, the membrane's click under it. The pad taking the code: two quick rising
     // tones (1.32 → 1.98 kHz) and the strike's clack. A tripwire reporting: the emitter's piezo — two-tone chirp (2.4 / 3.1 kHz alternating at 18 Hz) for a third
     // of a second, thin and directional; it is a tell for the player standing at it, the floor hears the radio, not this.
     padBeep: render(ctx, 0.08, (t, _i, _sr, rnd, st) => (Math.sign(Math.sin(TAU * 1760 * t)) * 0.5 + Math.sin(TAU * 1760 * t) * 0.5) * env(t, 0.002, 0.03) * 0.16 + (rnd() - lp(rnd(), st, 0, 0.3)) * env(t, 0.0003, 0.003) * 0.12, 227),
     padOpen: render(ctx, 0.32, (t, _i, sr, rnd, st) => { const f = t < 0.11 ? 1320 : 1980; st[3] += f / sr; const g2 = t < 0.11 ? env(t, 0.003, 0.06) : env(t - 0.11, 0.003, 0.09); const tc = t - 0.2; const clack = tc > 0 ? (rnd() - lp(rnd(), st, 0, 0.25)) * env(tc, 0.0005, 0.012) * 0.4 + Math.sin(TAU * 2100 * tc) * env(tc, 0.0005, 0.008) * 0.12 : 0; return Math.sin(TAU * st[3]) * g2 * 0.2 + clack; }, 229),
     alarmChirp: render(ctx, 0.36, (t, _i, sr, _rnd, st) => { const f = (Math.floor(t * 18) & 1) ? 3100 : 2400; st[3] += f / sr; return (Math.sin(TAU * st[3]) + 0.3 * Math.sign(Math.sin(TAU * st[3]))) * env(t, 0.004, 0.25) * (t < 0.33 ? 1 : env(t - 0.33, 0.001, 0.01)) * 0.14; }, 233),
-    // thunder (game/weather.ts plays it distance / 343 s after the stroke, low-passed and slowed further with every kilometre). A channel kilometres long and
+    // thunder (rust/game_rules/src/weather plays it distance / 343 s after the stroke, low-passed and slowed further with every kilometre). A channel kilometres long and
     // crooked arrives over seconds: NEAR — the tearing-cloth crackle of the nearest few hundred metres of it (sparse impulses over a bright hiss, gone in a
     // third of a second), the clap (broadband, fast, a second smaller one behind it), then the roll: brown noise through two poles near 190 Hz, kneaded by
     // three slow beats against each other so it surges and sags the way thunder does, four seconds of it. FAR — no crackle, the clap dulled to a thump, the
@@ -415,7 +415,7 @@ export function buildSfxWas(ctx: SfxContext): Record<SfxNameWas, SfxBuffer> {
       const rumble = rum * roll * (env(t, 0.3, 2.3) + 0.2 * env(t, 1.6, 1.6));
       return Math.tanh((tear * 0.45 + clap * 1.7 + rumble * 1.4) * 1.25) * 0.95;
     }, 401),
-    // ---- a WALL CHARGE going off (game/blastFeel.ts plays the three together in place of the stun can's report it used to borrow, each a little later and the crack thinner
+    // ---- a WALL CHARGE going off (rust/game_rules/src/blast_feel plays the three together in place of the stun can's report it used to borrow, each a little later and the crack thinner
     //      the further off the listener is). CRACK: the detonation front — a few milliseconds of everything, a hard mid body, three slaps off the room's walls inside a
     //      tenth of a second and half a second of the room ringing down; no steel in it (the can's ring is the can's). THUMP: what is felt — a sine that dives from 105 Hz to
     //      27, the floor answering a beat behind it, the pressure wave's whump, and a rumble (brown noise through two poles near 100 Hz, kneaded so it rolls) that takes

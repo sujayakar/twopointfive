@@ -541,7 +541,7 @@ pub fn scrape(g: &mut Game, gd: GuardId, m: crate::digin::Man, r: Option<&mut cr
         level: Some(level),
         who: Some(who),
         serial,
-        ..crate::game::GameEvent::zeroed()
+        ..crate::game::GameEvent::default()
     });
     g.stats.digin.scrapes += 1;
     let l = match heard_noise(g, pos, level) {
@@ -646,8 +646,8 @@ mod tests {
     #[test]
     fn heard_at_takes_his_ears_only_for_a_newer_noise_outside() {
         let mut g = Game::blank();
-        let d = g.tab.roomfight_def.push(crate::roomfight::Def::zeroed());
-        let mut man = crate::digin::Man::zeroed();
+        let d = g.tab.roomfight_def.push(crate::roomfight::Def::default());
+        let mut man = crate::digin::Man::default();
         man.know = [1.0, 0.0, 1.0];
         man.know_t = 5.0;
         assert_eq!(heard_at(&mut g, d, man), man.know);
@@ -671,9 +671,9 @@ mod tests {
     #[test]
     fn fear_lands_on_his_door_of_the_room_fights_row() {
         let mut g = Game::blank();
-        let d = g.tab.roomfight_def.push(crate::roomfight::Def::zeroed());
+        let d = g.tab.roomfight_def.push(crate::roomfight::Def::default());
         g.tab.roomfight_def[d].ev = vec![0.5, 2.9];
-        let mut man = crate::digin::Man::zeroed();
+        let mut man = crate::digin::Man::default();
         man.entry = 0.0;
         fear(&mut g, d, man);
         man.entry = 1.0;

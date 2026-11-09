@@ -536,7 +536,7 @@ pub fn character_ragdollize(g: &mut crate::game::Game, id: CharId, world: bool, 
         } else { None }
     };
     // (ragdoll_new asks only whether he falls in a world; which one is read off g)
-    let in_world = crate::ragdoll::RagdollWorld::zeroed();
+    let in_world = crate::ragdoll::RagdollWorld::default();
     let rag = crate::ragdoll::ragdoll_new(g, &pts, vel.as_deref(), if world { Some(&in_world) } else { None });
     // the shove: carried along `dir` and pitched top-first the same way, then the knees kicked out
     let f = character_forward(g, id);

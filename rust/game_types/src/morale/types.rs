@@ -1,12 +1,11 @@
-//! The types of `morale`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `morale`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum Training {
-    None,
+    #[default] None,
     Trained,
     Green,
     Difficulty,
@@ -24,10 +23,9 @@ impl Training {
     }
 }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum Nerve {
-    Steady,
+    #[default] Steady,
     Normal,
     Brittle,
 }
@@ -41,29 +39,16 @@ impl Nerve {
     }
 }
 
-/// (TypeScript: MoraleSnap, src/game/morale.ts:586)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct MoraleSnap {
     pub men: Vec<Option<Vec<f64>>>,
     pub holes: Vec<Option<Vec<f64>>>,
     pub blasts: Vec<Vec<f64>>,
 }
-impl MoraleSnap {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        MoraleSnap {
-            men: Vec::new(),
-            holes: Vec::new(),
-            blasts: Vec::new(),
-        }
-    }
-}
-impl Default for MoraleSnap { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum MoraleAct {
-    Down,
+    #[default] Down,
     Reload,
     Burst,
     None,
@@ -91,8 +76,7 @@ impl MoraleAct {
     }
 }
 
-/// (TypeScript: Mind, src/game/morale.ts:125)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Mind {
     pub shock: f64,
     pub alone: bool,
@@ -124,64 +108,14 @@ pub struct Mind {
     pub drive_t: f64,
     pub script: crate::game::GuardScript,
 }
-impl Mind {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Mind {
-            shock: 0.0,
-            alone: false,
-            dark: false,
-            lit: 0.0,
-            ask: 0.0,
-            rung: 0.0,
-            green: false,
-            leader_down: false,
-            fall: 0.0,
-            lost: false,
-            by: None,
-            heard: 0.0,
-            said: false,
-            broke_t: 0.0,
-            act: crate::morale::MoraleAct::Down,
-            t: 0.0,
-            hole: None,
-            goal: None,
-            rounds: 0.0,
-            next: 0.0,
-            calls: 0.0,
-            call_t: 0.0,
-            baits: 0.0,
-            at_hole: false,
-            bark: 0.0,
-            shout: false,
-            drive: false,
-            drive_t: 0.0,
-            script: crate::game::GuardScript::zeroed(),
-        }
-    }
-}
-impl Default for Mind { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Blast, src/game/morale.ts:131)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Blast {
     pub at: V3,
     pub t: f64,
     pub who: f64,
 }
-impl Blast {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Blast {
-            at: [0.0; 3],
-            t: 0.0,
-            who: 0.0,
-        }
-    }
-}
-impl Default for Blast { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub enum LineKind {
     Clear,
@@ -210,27 +144,14 @@ impl LineKind {
     }
 }
 
-/// (TypeScript: Kept, src/game/morale.ts:568)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Kept {
     pub on: Option<bool>,
     pub training: Option<crate::morale::Training>,
     pub nerve: Option<crate::morale::Nerve>,
 }
-impl Kept {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Kept {
-            on: None,
-            training: None,
-            nerve: None,
-        }
-    }
-}
-impl Default for Kept { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/morale.ts:111 MORALE_LOG, src/game/morale.ts:111)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct MoraleModMORALELOGItem {
     pub id: f64,
     pub t: f64,
@@ -238,24 +159,10 @@ pub struct MoraleModMORALELOGItem {
     pub at: V3,
     pub of: crate::morale::MoraleModMORALELOGItemOf,
 }
-impl MoraleModMORALELOGItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        MoraleModMORALELOGItem {
-            id: 0.0,
-            t: 0.0,
-            from: [0.0; 3],
-            at: [0.0; 3],
-            of: crate::morale::MoraleModMORALELOGItemOf::Dust,
-        }
-    }
-}
-impl Default for MoraleModMORALELOGItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum MoraleModMORALELOGItemOf {
-    Dust,
+    #[default] Dust,
     Bait,
 }
 impl MoraleModMORALELOGItemOf {
@@ -267,8 +174,7 @@ impl MoraleModMORALELOGItemOf {
     }
 }
 
-/// (TypeScript: inline at src/game/morale.ts:142 LINES, src/game/morale.ts:142)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct LINESValue {
     pub say: Vec<String>,
     pub he: Option<Vec<String>>,
@@ -277,42 +183,16 @@ pub struct LINESValue {
     pub lit: Option<Vec<String>>,
     pub now: Option<Vec<String>>,
 }
-impl LINESValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LINESValue {
-            say: Vec::new(),
-            he: None,
-            they: None,
-            dark: None,
-            lit: None,
-            now: None,
-        }
-    }
-}
-impl Default for LINESValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/morale.ts:219 mixAt, src/game/morale.ts:219)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct MoraleModMixAtValue {
     pub key: String,
     pub mix: crate::morale::MoraleModMixAtValueMix,
 }
-impl MoraleModMixAtValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        MoraleModMixAtValue {
-            key: String::new(),
-            mix: crate::morale::MoraleModMixAtValueMix::Hard,
-        }
-    }
-}
-impl Default for MoraleModMixAtValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum MoraleModMixAtValueMix {
-    Hard,
+    #[default] Hard,
     Mixed,
 }
 impl MoraleModMixAtValueMix {
@@ -324,7 +204,6 @@ impl MoraleModMixAtValueMix {
     }
 }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum MixNow {
     Hard,
@@ -339,7 +218,6 @@ impl MixNow {
     }
 }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum TrainingOf {
     Steady,
@@ -354,7 +232,6 @@ impl TrainingOf {
     }
 }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum RoundOf {
     Dust,
@@ -369,8 +246,7 @@ impl RoundOf {
     }
 }
 
-/// (TypeScript: inline at src/game/morale.ts:548 moraleOf ->, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1597)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct MoraleOf {
     pub drive: bool,
     pub heard: f64,
@@ -401,44 +277,7 @@ pub struct MoraleOf {
     pub at_hole: bool,
     pub bark: f64,
 }
-impl MoraleOf {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        MoraleOf {
-            drive: false,
-            heard: 0.0,
-            t: 0.0,
-            lost: false,
-            next: 0.0,
-            hole: None,
-            act: crate::morale::MoraleAct::Down,
-            goal: None,
-            lit: 0.0,
-            alone: false,
-            said: false,
-            ask: 0.0,
-            by: None,
-            green: false,
-            dark: false,
-            fall: 0.0,
-            drive_t: 0.0,
-            calls: 0.0,
-            rounds: 0.0,
-            shout: false,
-            shock: 0.0,
-            rung: 0.0,
-            leader_down: false,
-            broke_t: 0.0,
-            call_t: 0.0,
-            baits: 0.0,
-            at_hole: false,
-            bark: 0.0,
-        }
-    }
-}
-impl Default for MoraleOf { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum MoraleKeepRow {
     On,

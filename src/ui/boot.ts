@@ -1,7 +1,7 @@
 // Boot instrumentation: named marks on the way from 'script start' to 'start card interactive' (performance.mark / measure under the 'boot:' prefix, so they show
 // in a DevTools performance recording too), the pipeline count gpu/device.ts keeps, the main thread's long tasks and the longest gap between animation frames while
 // booting (what a person feels as 'the tab froze'), and the GPU's first-frame latency — summarised on window.__boot and in ONE console line when the card goes live.
-// main.ts calls mark() at each phase boundary; nothing here touches the renderer.
+// host/drawpage.ts calls mark() at each phase boundary; nothing here touches the renderer.
 import { pipelineProgress } from '../gpu/device';
 import { trimForget, trimTotals } from '../gpu/wgslTrim';
 
@@ -34,7 +34,7 @@ try {   // long tasks (≥ 50 ms of uninterrupted main-thread work), buffered fr
   po = new PerformanceObserver(list => takeLong(list.getEntries()));
   po.observe({ type: 'longtask', buffered: true });
 } catch { /* no longtask entries in this browser: maxLongTask stays 0 and says so */ }
-{ // the animation-frame cadence during boot: a probe loop that does nothing but time itself, stopped when main.ts starts the real one (stopRafProbe)
+{ // the animation-frame cadence during boot: a probe loop that does nothing but time itself, stopped when host/drawpage.ts starts the real one (stopRafProbe)
   const tick = (now: number) => { if (rafLast > 0) { const gap = now - rafLast; if (gap > maxRafGap) { maxRafGap = gap; rafGapAt = rafLast; } } rafLast = now; if (rafOn) requestAnimationFrame(tick); };
   if (typeof requestAnimationFrame === 'function') requestAnimationFrame(tick);
 }
@@ -56,7 +56,7 @@ export function span(name: string, start: number, end = performance.now()): numb
 mark('script');
 spans.beforeScript = +t0.toFixed(1);   // navigation start → this module evaluating (HTML, the bundle's fetch + parse)
 
-/** the boot's pipeline count, frozen by main.ts when the last boot pipeline resolved (hot swaps / lazy variants made later through the same helpers do not count as boot) */
+/** the boot's pipeline count, frozen by host/drawpage.ts when the last boot pipeline resolved (hot swaps / lazy variants made later through the same helpers do not count as boot) */
 let frozenPl: { total: number; done: number; failed: number } | null = null;
 let frozenText: BootSummary['shaderText'] | null = null, frozenSlow: BootSummary['slowest'] | null = null;
 const slowestNow = () => [...pipelineProgress.times].sort((a, b) => b.ms - a.ms).slice(0, 6).map(t => ({ label: t.label, ms: Math.round(t.ms) }));

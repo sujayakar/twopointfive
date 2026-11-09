@@ -275,7 +275,7 @@ mod tests {
     fn T(s: &str) -> ChronEventDataValue { ChronEventDataValue::Text(String::from(s)) }
 
     fn row(kind: ChronKind, room: &str, fields: Vec<(&str, ChronEventDataValue)>) -> ChronEvent {
-        let mut e = ChronEvent::zeroed();
+        let mut e = ChronEvent::default();
         e.kind = kind;
         e.room = String::from(room);
         for (k, v) in fields { e.data.set(String::from(k), Some(v)); }

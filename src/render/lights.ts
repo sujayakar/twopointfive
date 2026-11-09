@@ -4,7 +4,7 @@ import { makeBuffer } from '../gpu/device';
 import { REACH_ROW_WORDS, REACH_ALL } from './reach';
 import { lightDayK } from './photometry';
 
-/** a light as a level's own list holds it (scene/level.ts takes it from here) */
+/** a light as a level's own list holds it (tools/levels/lib/level.ts takes it from here) */
 export interface LightDef {
   kind: 'point' | 'spot' | 'dir';
   pos: Vec3; dir: Vec3;
@@ -36,20 +36,20 @@ export interface RtLight {
   enabled: boolean;
   fixtureBox: number;         // emissive glow-card box index or -1
   flicker: number;            // 0 = steady; >0 = flicker amount (runtime modulation)
-  /** a lamp a fixture feeds: its row in the module's lights (sim/lightshome.ts stand), which the question about the light on a point reads where it lives. undefined = a lamp of nobody's fixture */
+  /** a lamp a fixture feeds: its row in the module's lights (rust/game_rules/src/sim_lightshome stand), which the question about the light on a point reads where it lives. undefined = a lamp of nobody's fixture */
   row?: number;
   /** transient lights (muzzle flashes) expire when ttl hits 0 */
   ttl: number; age: number; peakIntensity: number;
-  /** set by whoever FLICKERS a fixture's `intensity` frame by frame (game/fire.ts): the strength a reader of the place's steady light takes it for (guards.ts
+  /** set by whoever FLICKERS a fixture's `intensity` frame by frame (rust/game_rules/src/fire): the strength a reader of the place's steady light takes it for (rust/game_rules/src/guards
    *  lightEstimateAt, `steadyOnly`), where it hangs when its `pos` is made to wander and how big it is. Absent = `intensity` and `pos` are that. Nothing in the renderer reads it. */
   steady?: { intensity: number; pos: Vec3; /** … and its authored size: whoever flickers it may make the emitter as big as what burns (fire.ts FIRE.size) */ radius: number; /** … and its authored colour, when whoever flickers it also tints it (fire.ts FIRE.warm) */ color?: Vec3; /** … and its authored reach, when it also carries further (FIRE.reach) */ range?: number; /** … and that it has been out for a frame (fire.ts held) */ out?: boolean };
-  /** a light its owner drives frame by frame (the weather's lightning stroke: game/weather.ts) that must still be treated as TRANSIENT by the renderer — the
+  /** a light its owner drives frame by frame (the weather's lightning stroke: rust/game_rules/src/weather) that must still be treated as TRANSIENT by the renderer — the
    *  kind word's 256 bit: kept out of every accumulated signal (cascades, gather history), lit through the history-free direct pass only — without the ttl
    *  envelope above touching its intensity or retiring it. Counts toward numTransient like a ttl light. */
   transient?: boolean;
   /** wide, soft emitter (ceiling panels, screens, street lamps): its own denoise class in the direct pass. Explicit, not radius-derived. */
   broad?: boolean;
-  /** an AREA light registered for an emissive MARKING (game.ts: the vending windows): the marked box's index << 2 | the marking's ordinal in its list. Rides in the
+  /** an AREA light registered for an emissive MARKING (rust/game_rules/src/game: the vending windows): the marked box's index << 2 | the marking's ordinal in its list. Rides in the
    *  kind word's bits 11‥24 with bit 10 set (common.wgsl lightMarkRef) so the reflection pass can texture this light's ANALYTIC highlight with the marking's own
    *  pattern at the mirror point (markings.wgsl markPatternAtMirror) — a uniform rectangle otherwise. undefined = not a marking's light. */
   markRef?: number;
@@ -61,14 +61,14 @@ export interface RtLight {
   /** GLASS experiment: bits of the panes listed to the GPU this frame (world.glassList order) this light can possibly shine through — set by engine.ts
    *  glassLightMasks before upload(), packed above the owner byte (24 panes); undefined / 0 = none */
   glassMask?: number;
-  /** THE FOG OF WAR'S LIGHT CLASS, SAID FOR THIS LIGHT (game/fogofwar.ts rule 4g: a lamp lit that the team last saw out; the kind word's bits 25 / 26,
+  /** THE FOG OF WAR'S LIGHT CLASS, SAID FOR THIS LIGHT (rust/game_rules/src/fogofwar rule 4g: a lamp lit that the team last saw out; the kind word's bits 25 / 26,
    *  common.wgsl lightFogK): 1 = lights only what the team sees · 2 = lights only what it does not · undefined / 0 = whatever LightSet.fogClass makes of it
    *  (a carried light or a flash that is not the team's: 1 while the full picture is on; else a light like any other) */
   fog?: number;
   /** … a lamp that is OUT but that the team last saw lit: > 0 = uploaded at this intensity as a class-2 light (lit in the picture of the room nobody has looked
    *  into since), whatever `enabled` / `intensity` say. The game's own readers of the list never see it (they read enabled / intensity; probe.wgsl skips class 2) */
   fogGhost?: number;
-  /** WHOSE DOING THIS LIGHT IS, FOR THE FOG'S CLASS ALONE (game/fogofwar.ts FOG.ours, lightBy): the character who set or threw what made it — a blast's
+  /** WHOSE DOING THIS LIGHT IS, FOR THE FOG'S CLASS ALONE (rust/game_rules/src/fogofwar FOG.ours, lightBy): the character who set or threw what made it — a blast's
    *  flash, a round's ember. Not `owner`: the shadow rays still take every body, his too. Absent / 0 = the class goes by `owner` as ever */
   fogBy?: number;
   /** AN OPENING TO THE SKY (LIGHT_PORTAL; engine.ts lookOpeningLights, the look page's "Daylight at openings" row): a kind 3 light that is no lamp but the
@@ -81,7 +81,7 @@ export interface RtLight {
 
 /** the kind word's fog-of-war class bits (common.wgsl LIGHT_FOG_SEEN / LIGHT_FOG_UNSEEN; RtLight.fog) */
 export const LIGHT_FOG_SEEN = 1 << 25, LIGHT_FOG_UNSEEN = 1 << 26;
-/** the kind word's INFRARED bit (common.wgsl LIGHT_IR): a light only an image intensifier sees by — the goggles' illuminators (game/irlight.ts), kept in
+/** the kind word's INFRARED bit (common.wgsl LIGHT_IR): a light only an image intensifier sees by — the goggles' illuminators (rust/game_rules/src/irlight), kept in
  *  LightSet.ir and never in `lights`. The picture's passes take it like any light (it is uploaded only while the picture IS the tube's: LightSet.tube); the game's
  *  own readings — probe.wgsl's light meter through evalLightTrue, the cascades the meter reads its bounce from — never do. */
 export const LIGHT_IR = 1 << 27;
@@ -112,17 +112,8 @@ export function cardSlotsFor(lights: RtLight[], target: Vec3, max: number): numb
   return cands.slice(0, max).map(c => c.slot);
 }
 
-export function lightFromDef(d: LightDef): RtLight {
-  return {
-    name: d.name, group: d.group, kind: d.kind === 'point' ? 0 : d.kind === 'spot' ? 1 : 2,
-    pos: v3.copy(d.pos), dir: v3.normalize(d.dir), color: v3.copy(d.color), intensity: d.intensity,
-    range: d.range, innerDeg: d.innerDeg, outerDeg: d.outerDeg, radius: d.kind === 'dir' ? (d.radius ?? 0) : (d.radius ?? 0.05),
-    volumetric: d.volumetric, owner: 0, enabled: d.enabled, fixtureBox: d.fixtureBox ?? -1, flicker: 0, ttl: -1, age: 0, peakIntensity: d.intensity, broad: !!d.broad,
-  };
-}
-
 /** ONE LIGHT'S GPU RECORD (common.wgsl struct Light, 16 words) into f / u — two views of one buffer — at word `o`: the one packing, for the scene's list
- *  (upload below) and for the lit fog's own list of lamps (game/fogofwar.ts litBlock → shaders/fogofwar.wgsl fowLights). `inten` scales the colour; `kindWord` is
+ *  (upload below) and for the lit fog's own list of lamps (rust/game_rules/src/fogofwar litBlock → shaders/fogofwar.wgsl fowLights). `inten` scales the colour; `kindWord` is
  *  the kind with whatever flag bits the caller sets above its low byte, `ownerWord` the owner byte with the glass mask above it. */
 export function packLight(f: Float32Array, u: Uint32Array, o: number, l: RtLight, inten: number, kindWord: number, volumetric: number, ownerWord: number) {
   f[o] = l.pos[0]; f[o + 1] = l.pos[1]; f[o + 2] = l.pos[2]; u[o + 3] = kindWord;
@@ -142,7 +133,7 @@ export class LightSet {
   private reachData = new Uint32Array(MAX_LIGHTS * REACH_ROW_WORDS);
   /** the reach buffer's rows as last written, word for word (upload writes the live rows only when they differ from this) */
   private reachSent = new Uint32Array(MAX_LIGHTS * REACH_ROW_WORDS).fill(0xffffffff);
-  /** the reach rows are written whole next frame (a rollback snapshot put back: this book went back with the lights, the buffer did not — scene/boxes.ts forgetSent) */
+  /** the reach rows are written whole next frame */
   forgetSent() { this.reachSent.fill(0xffffffff); }
   private reachDataI = new Int32Array(this.reachData.buffer); private reachSentI = new Int32Array(this.reachSent.buffer);   // the same words read signed, for the compare alone (sameWords)
   private data = new ArrayBuffer(MAX_LIGHTS * 64);
@@ -157,7 +148,7 @@ export class LightSet {
    *  was in slot p last frame (255 = not uploaded now), `slotInv[s]` = last frame's slot of the light now in slot s (255 = new this frame). */
   prevData = new Uint8Array(MAX_LIGHTS * 64); prevCount = 0; private prev32 = new Uint32Array(this.prevData.buffer);
   slotFwd = new Uint8Array(MAX_LIGHTS).fill(255); slotInv = new Uint8Array(MAX_LIGHTS).fill(255);
-  /** THE INFRARED LIGHTS (LIGHT_IR; game/irlight.ts poses them every frame): a list of their own, so that no reader of `lights` — the CPU's light estimates, the
+  /** THE INFRARED LIGHTS (LIGHT_IR; rust/game_rules/src/irlight poses them every frame): a list of their own, so that no reader of `lights` — the CPU's light estimates, the
    *  fog of war's classes, the reach masks, a digest — can ever count one. Uploaded after `lights`, flagged infrared, and only while `tube` is up; enabled / intensity are read
    *  as for any light. In a tube frame it is a STEADY light like a carried torch (reservoirs, bounce, reflections: NOT a transient — a flood that burns for
    *  minutes on the flash's history-free path cost the gather a shadow ray per flood per hit, every frame); what a bare-eyed frame must not inherit is dropped
@@ -204,7 +195,7 @@ export class LightSet {
     void time;
   }
 
-  /** THE FOG OF WAR'S FULL PICTURE (game/fogofwar.ts rule 4g keeps this; `on` false = no light gets a class of its own accord): the team's own lights and the
+  /** THE FOG OF WAR'S FULL PICTURE (rust/game_rules/src/fogofwar rule 4g keeps this; `on` false = no light gets a class of its own accord): the team's own lights and the
    *  ids of its men. Asked at the UPLOAD — not written on the lights by the game's update — so that a flash born later in the same frame (a tracer's ember, a
    *  blast's afterglow: made after the fog's turn) is classed on its first and brightest frame. */
   fogTeam = { on: false, owners: new Set<number>(), lights: new Set<RtLight>() };
@@ -229,8 +220,8 @@ export class LightSet {
    *  is the game's and goes into every checkpoint; a light that is only in the picture must be in neither, and no reader of `lights` (the CPU's light
    *  estimates, the fog's lamp list, the count a new man's torch is held to) can then count one. Uploaded last, steady, each with
    *  its own reach row; when the 64 slots are full they are the ones left out.
-   *  `masks` = WHO KEEPS THE LIGHTS' REACH MASKS (render/reachKeep.ts, the engine's: handed in, never kept here, so no snapshot of this set holds it or a
-   *  mask): `row(l)` is the mask a light's row is sent as, or none. null = nobody: every light may reach anywhere. */
+   *  `masks` = WHO KEEPS THE LIGHTS' REACH MASKS (render/reachKeep.ts, the engine's: handed in, never kept here):
+   *  `row(l)` is the mask a light's row is sent as, or none. null = nobody: every light may reach anywhere. */
   upload(time: number, own: readonly RtLight[] = NO_LIGHTS, masks: { row(l: RtLight): Uint32Array | undefined } | null = null) {
     const f = this.f32, u = this.u32; let n = 0; this.activeIdx.length = 0; let firstT = -1;
     { const words = Math.max(1, this.activeCount) * 16, p32 = this.prev32; for (let i = 0; i < words; i++) p32[i] = u[i]; } this.prevCount = this.activeCount;   // last frame's records (prevCount × 64 B, word for word), before they are overwritten in place — no per-frame view (review R1.4)

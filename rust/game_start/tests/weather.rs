@@ -67,7 +67,7 @@ fn rain_masks_a_sound() {
     let (roof_clear, _) = heard("&weather=clear", IN, step(IN, 5.0));
     let (roof_pour, roof_mask) = heard("&weather=downpour", IN, step(IN, 5.0));
     assert!(roof_pour > 0.0 && roof_pour < roof_clear && roof_mask > 1.0 && roof_mask < 1.5, "under a roof: clear {roof_clear}, downpour {roof_pour}, mask {roof_mask}");
-    let (shot, _) = heard("&weather=downpour", OUT, |p: &mut Play| { let (time, serial) = (p.g.time, p.g.serial()); p.g.events.push(game::game::GameEvent { kind: game::director::EventKind::Shot, pos: [OUT[0] + 25.0, 0.0, OUT[1]], time, loud: true, level: Some(1.0), who: Some(1.0), serial, ..game::game::GameEvent::zeroed() }); });
+    let (shot, _) = heard("&weather=downpour", OUT, |p: &mut Play| { let (time, serial) = (p.g.time, p.g.serial()); p.g.events.push(game::game::GameEvent { kind: game::director::EventKind::Shot, pos: [OUT[0] + 25.0, 0.0, OUT[1]], time, loud: true, level: Some(1.0), who: Some(1.0), serial, ..game::game::GameEvent::default() }); });
     assert!(shot >= 0.9, "a gunshot in a downpour: {shot}");
 }
 

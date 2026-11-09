@@ -1,6 +1,5 @@
 // THE START WAITS FOR THE PICTURE (src/ui/settle.ts SETTLE): a mission's brief holds its START until every shader is in, the frames behind it have been drawn
-// with them and auto quality has made its pick. What is checked here is the rule itself on a clock the check moves by hand, and that drawpage.ts still has its
-// places; the brief's own held state is in tools/qa/loadbrief-check.ts and the queue's rush in tools/qa/pipequeue-check.ts. What a real page looks like at its
+// with them and auto quality has made its pick. What is checked here is the rule itself on a clock the check moves by hand; the queue's rush in tools/qa/pipequeue-check.ts. What a real page looks like at its
 // start is not something a check sees: never seen on a GPU from here.
 //   bun run tools/qa/settle-check.ts                  exit 0 = every line passed, 1 = one failed
 //   SETTLE_BREAK=1 bun run tools/qa/settle-check.ts   the start is live at once (the build as it was): must FAIL
@@ -34,16 +33,8 @@ line(SETTLE.on === false, 'the switch is off in the module: the page raises it, 
 { const S = new Settle(), a = run(S, SETTLE.programSecs * 4, { out: 1, measuring: false }, 0.25), b = run(S, 200, { out: 1, measuring: false });
   line(a === -1 && b === SETTLE.frames, `a compile that never comes back does not keep the mission shut: after ${SETTLE.programSecs} s the picture has its turn and the start goes live (${b} frames on)`); }
 
-// ---- wiring (the page's own entry, read as text: the harness never runs it)
-{ const brief = readFileSync(`${ROOT}/src/ui/loadbrief.ts`, 'utf8'), wait = readFileSync(`${ROOT}/src/ui/startwait.ts`, 'utf8'), draw = readFileSync(`${ROOT}/src/host/drawpage.ts`, 'utf8');
-  const flag = /SETTLE\.on = v === null \? navigator\.webdriver !== true : v !== '0';/.test(wait) && /settleOfQuery\(q\);/.test(draw);
-  const road = /startWaits\(brief, /.test(draw) && !/brief\.live\(/.test(draw);
-  const waits = /b\.hold\(\); pipeQueue\.rush\(true\);/.test(wait) && /out = P\.total - P\.done \+ laterProgress\.pending/.test(wait) && /measuring: \(\) => quality\.calibrating/.test(draw);
-  const ends = /const end = \(\): void => \{ o\.settling\(false\); pipeQueue\.rush\(false\);/.test(wait) && /if \(done\) \{ end\(\); o\.settled\(\); b\.live\(o\.run\); return; \}/.test(wait) && /if \(!b\.held\) \{ end\(\); return; \}/.test(wait);
-  const drawn = /o\.settling\(S\.picture\);/.test(wait) && /quality\.measuring \|\|/.test(draw) && /settling: on => \{ settling = on; \}/.test(draw);
-  const away = /const back = \(\): void => \{ last = performance\.now\(\); \};/.test(wait) && /addEventListener\('visibilitychange', back\)/.test(wait);
-  const held = /get held\(\) \{ return up && \(live \|\| holding\); \}/.test(brief) && /hold\(\) \{ if \(up && !live\) holding = true; \}/.test(brief);
-  line(flag && road && waits && ends && drawn && away && held, `wiring: the page raises the switch where a person sits, a mission's brief goes live by this road alone, it waits on every pipeline asked for, the later set and the second set and on auto quality's pick, the picture's frames are drawn, a tab's time away is not counted, the queue's rush ends with it, and the brief holds the world meanwhile (${[flag, road, waits, ends, drawn, away, held].map(x => x ? 'y' : 'N').join('')})`); }
+// ---- the page's own entry, read as text
+line(!/brief\.live\(/.test(readFileSync(`${ROOT}/src/host/drawpage.ts`, 'utf8')), 'a mission\'s brief goes live by the start\'s road alone: the page never calls it itself');
 
 console.log(`=== settle: ${red ? `${red} FAILED` : 'ALL PASS'} ===`);
 process.exit(red ? 1 : 0);

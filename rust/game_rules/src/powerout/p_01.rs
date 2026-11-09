@@ -207,38 +207,13 @@ pub fn floor_watched(g: &mut crate::game::Game, gd: GuardId) -> f64 {
 /// why a defender is not free to go (None = he is): calm, on a post the room fight gave him, and nobody else's. (powerout.ts powerOutKept)
 pub fn power_out_kept(g: &mut crate::game::Game, d: RoomfightDefId) -> Option<String> {
     let gd = g.tab.roomfight_def[d].gd;
-    if !fit(g, gd) {
-        return Some("not his own man".into());
-    }
-    if g.tab.roomfight_def[d].mode != crate::roomfight::DefMode::Hold {
-        return Some("on the move".into());
-    }
-    if g.tab.roomfight_def[d].rally_at == m::INF {
-        return Some("the mission's man".into());
-    }
-    if g.gd[gd].script.is_some() {
-        return Some("on a script".into());
-    }
-    if roused(g, gd) {
-        return Some("in a fight".into());
-    }
-    if crate::rescue::rescue_crew_hides(g, gd) || crate::rescue::rescue_captor(g) == Some(gd) {
-        return Some("the captor / lying in wait".into());
-    }
-    if crate::digin::dig_in_phase(g, gd) != "idle" {
-        return Some("dug in".into());
-    }
-    if crate::owner::has(g, gd, crate::owner::by::SQUAD_WORD) {
-        return Some("his squad's".into());
-    }
-    let holds = crate::owner::by::LANE | crate::owner::by::LAST_MAN;
-    if crate::gunroles::gun_keeps_post(g, gd) || crate::owner::has(g, gd, holds) {
-        return Some("holds a lane / the last man".into());
-    }
-    let hands = crate::owner::by::PRESS;
-    if crate::owner::has(g, gd, hands) || crate::pressure::press_keeps_home(g, d, Some(false)) {
-        return Some("the press's".into());
-    }
+    if let Some(who) = crate::owner::kept(g, gd, crate::owner::by::BREAKER) { return Some(who.into()); }
+    if g.tab.roomfight_def[d].mode != crate::roomfight::DefMode::Hold { return Some("on the move".into()); }
+    if g.gd[gd].script.is_some() { return Some("on a script".into()); }
+    if roused(g, gd) { return Some("in a fight".into()); }
+    if crate::rescue::rescue_crew_hides(g, gd) || crate::rescue::rescue_captor(g) == Some(gd) { return Some("the captor / lying in wait".into()); }
+    if crate::gunroles::gun_keeps_post(g, gd) { return Some("his gun keeps its post".into()); }
+    if crate::pressure::press_keeps_home(g, d, Some(false)) { return Some("kept home by the press".into()); }
     None
 }
 

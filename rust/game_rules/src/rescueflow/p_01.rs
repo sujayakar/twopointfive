@@ -62,7 +62,7 @@ pub fn rescue_flow_reset(g: &mut crate::game::Game) {
     f.regions.clear();
     f.corr = None;
     f.came_in = None;
-    f.stats = RescueFlowStats::zeroed();
+    f.stats = RescueFlowStats::default();
 }
 
 /// Is this assignment one the flow gave. (rescueflow.ts RescueFlow.gave)

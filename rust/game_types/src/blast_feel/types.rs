@@ -1,46 +1,22 @@
-//! The types of `blast_feel`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `blast_feel`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: Face, src/game/blastFeel.ts:89)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Face {
     pub o: V3,
     pub d: V3,
     pub mask: f64,
 }
-impl Face {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Face {
-            o: [0.0; 3],
-            d: [0.0; 3],
-            mask: 0.0,
-        }
-    }
-}
-impl Default for Face { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Kick, src/game/blastFeel.ts:90)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Kick {
     pub t0: f64,
     pub at: V3,
 }
-impl Kick {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Kick {
-            t0: 0.0,
-            at: [0.0; 3],
-        }
-    }
-}
-impl Default for Kick { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: State, src/game/blastFeel.ts:91)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct State {
     pub seen: Vec<WallChargeId>,
     pub queue: Vec<crate::blast_feel::StateQueueItem>,
@@ -49,40 +25,14 @@ pub struct State {
     pub last: f64,
     pub list: Option<u32>,
 }
-impl State {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        State {
-            seen: Vec::new(),
-            queue: Vec::new(),
-            kicks: Vec::new(),
-            serial: 0.0,
-            last: 0.0,
-            list: None,
-        }
-    }
-}
-impl Default for State { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/blastFeel.ts:91 State.queue, src/game/blastFeel.ts:91)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct StateQueueItem {
     pub at: f64,
     pub run: crate::FnField,
 }
-impl StateQueueItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StateQueueItem {
-            at: 0.0,
-            run: crate::FnField,
-        }
-    }
-}
-impl Default for StateQueueItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/blastFeel.ts:47 FEEL, src/game/blastFeel.ts:47)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct BlastFeelModFEEL {
     pub on: bool,
     pub kick: f64,
@@ -98,30 +48,8 @@ pub struct BlastFeelModFEEL {
     pub ceil: crate::blast_feel::BlastFeelModFEELCeil,
     pub fire: crate::blast_feel::BlastFeelModFEELFire,
 }
-impl BlastFeelModFEEL {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BlastFeelModFEEL {
-            on: false,
-            kick: 0.0,
-            kick_m: 0.0,
-            kick_secs: 0.0,
-            kick_tau: 0.0,
-            kick_hz: 0.0,
-            kick_reach: 0.0,
-            sound: crate::blast_feel::BlastFeelModFEELSound::zeroed(),
-            ring: crate::blast_feel::BlastFeelModFEELRing::zeroed(),
-            push: Vec::new(),
-            push_up: 0.0,
-            ceil: crate::blast_feel::BlastFeelModFEELCeil::zeroed(),
-            fire: crate::blast_feel::BlastFeelModFEELFire::zeroed(),
-        }
-    }
-}
-impl Default for BlastFeelModFEEL { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/blastFeel.ts:53 BlastFeelModFEEL.sound, src/game/blastFeel.ts:53)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct BlastFeelModFEELSound {
     pub crack: f64,
     pub thump: f64,
@@ -137,30 +65,8 @@ pub struct BlastFeelModFEELSound {
     pub ring: f64,
     pub ring_m: f64,
 }
-impl BlastFeelModFEELSound {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BlastFeelModFEELSound {
-            crack: 0.0,
-            thump: 0.0,
-            debris: 0.0,
-            debris_after: 0.0,
-            thump_after: 0.0,
-            carry: 0.0,
-            carry_from: 0.0,
-            carry_over: 0.0,
-            c: 0.0,
-            late_max: 0.0,
-            dull_m: 0.0,
-            ring: 0.0,
-            ring_m: 0.0,
-        }
-    }
-}
-impl Default for BlastFeelModFEELSound { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/blastFeel.ts:66 BlastFeelModFEEL.ring, src/game/blastFeel.ts:66)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct BlastFeelModFEELRing {
     pub stages: f64,
     pub sectors: f64,
@@ -174,28 +80,8 @@ pub struct BlastFeelModFEELRing {
     pub size: f64,
     pub color: V3,
 }
-impl BlastFeelModFEELRing {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BlastFeelModFEELRing {
-            stages: 0.0,
-            sectors: 0.0,
-            arc: 0.0,
-            r0: 0.0,
-            step: 0.0,
-            every: 0.0,
-            y: 0.0,
-            speed: 0.0,
-            life: 0.0,
-            size: 0.0,
-            color: [0.0; 3],
-        }
-    }
-}
-impl Default for BlastFeelModFEELRing { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/blastFeel.ts:70 BlastFeelModFEEL.ceil, src/game/blastFeel.ts:70)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct BlastFeelModFEELCeil {
     pub spots: f64,
     pub reach: f64,
@@ -205,24 +91,8 @@ pub struct BlastFeelModFEELCeil {
     pub crumbs: f64,
     pub color: V3,
 }
-impl BlastFeelModFEELCeil {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BlastFeelModFEELCeil {
-            spots: 0.0,
-            reach: 0.0,
-            after: 0.0,
-            speed: 0.0,
-            puffs: 0.0,
-            crumbs: 0.0,
-            color: [0.0; 3],
-        }
-    }
-}
-impl Default for BlastFeelModFEELCeil { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/blastFeel.ts:72 BlastFeelModFEEL.fire, src/game/blastFeel.ts:72)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct BlastFeelModFEELFire {
     pub core: crate::blast_feel::BlastFeelModFEELFireCore,
     pub roll: crate::blast_feel::BlastFeelModFEELFireRoll,
@@ -230,43 +100,16 @@ pub struct BlastFeelModFEELFire {
     pub soot_color: V3,
     pub chunks: crate::blast_feel::BlastFeelModFEELFireChunks,
 }
-impl BlastFeelModFEELFire {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BlastFeelModFEELFire {
-            core: crate::blast_feel::BlastFeelModFEELFireCore::zeroed(),
-            roll: crate::blast_feel::BlastFeelModFEELFireRoll::zeroed(),
-            soot: Vec::new(),
-            soot_color: [0.0; 3],
-            chunks: crate::blast_feel::BlastFeelModFEELFireChunks::zeroed(),
-        }
-    }
-}
-impl Default for BlastFeelModFEELFire { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/blastFeel.ts:73 BlastFeelModFEELFire.core, src/game/blastFeel.ts:73)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct BlastFeelModFEELFireCore {
     pub count: Vec<f64>,
     pub speed: Vec<f64>,
     pub life: f64,
     pub size: f64,
 }
-impl BlastFeelModFEELFireCore {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BlastFeelModFEELFireCore {
-            count: Vec::new(),
-            speed: Vec::new(),
-            life: 0.0,
-            size: 0.0,
-        }
-    }
-}
-impl Default for BlastFeelModFEELFireCore { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/blastFeel.ts:74 BlastFeelModFEELFire.roll, src/game/blastFeel.ts:74)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct BlastFeelModFEELFireRoll {
     pub count: Vec<f64>,
     pub speed: Vec<f64>,
@@ -274,22 +117,8 @@ pub struct BlastFeelModFEELFireRoll {
     pub size: f64,
     pub after: f64,
 }
-impl BlastFeelModFEELFireRoll {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BlastFeelModFEELFireRoll {
-            count: Vec::new(),
-            speed: Vec::new(),
-            life: 0.0,
-            size: 0.0,
-            after: 0.0,
-        }
-    }
-}
-impl Default for BlastFeelModFEELFireRoll { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/blastFeel.ts:75 BlastFeelModFEELFire.soot, src/game/blastFeel.ts:75)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct BlastFeelModFEELFireSootItem {
     pub after: f64,
     pub count: Vec<f64>,
@@ -297,22 +126,8 @@ pub struct BlastFeelModFEELFireSootItem {
     pub size: f64,
     pub life: f64,
 }
-impl BlastFeelModFEELFireSootItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BlastFeelModFEELFireSootItem {
-            after: 0.0,
-            count: Vec::new(),
-            speed: 0.0,
-            size: 0.0,
-            life: 0.0,
-        }
-    }
-}
-impl Default for BlastFeelModFEELFireSootItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/blastFeel.ts:78 BlastFeelModFEELFire.chunks, src/game/blastFeel.ts:78)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct BlastFeelModFEELFireChunks {
     pub count: Vec<f64>,
     pub speed: Vec<f64>,
@@ -320,19 +135,6 @@ pub struct BlastFeelModFEELFireChunks {
     pub size: f64,
     pub color: V3,
 }
-impl BlastFeelModFEELFireChunks {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BlastFeelModFEELFireChunks {
-            count: Vec::new(),
-            speed: Vec::new(),
-            life: 0.0,
-            size: 0.0,
-            color: [0.0; 3],
-        }
-    }
-}
-impl Default for BlastFeelModFEELFireChunks { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]

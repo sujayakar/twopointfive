@@ -255,7 +255,7 @@ pub fn call(g: &mut game::game::Game, k: usize, rule: &str) -> String {
             let n: Vec<f64> = all[1..].iter().filter_map(|x| x.parse::<f64>().ok()).collect();
             if n.len() != 3 { return format!("  NOTE tick {}: noise_shot takes three numbers: {:?}", k, all); }
             let (time, serial) = (g.time, g.serial());
-            g.events.push(game::game::GameEvent { kind: game::director::EventKind::Shot, pos: [n[0], n[1], n[2]], time, loud: true, level: Some(1.0), who: Some(game::consts::PLAYER_ID), serial, ..game::game::GameEvent::zeroed() });
+            g.events.push(game::game::GameEvent { kind: game::director::EventKind::Shot, pos: [n[0], n[1], n[2]], time, loud: true, level: Some(1.0), who: Some(game::consts::PLAYER_ID), serial, ..game::game::GameEvent::default() });
             format!("  the driver's write before tick {}: a loud round's report at {:?} ({} events)", k, n, g.events.len())
         }
         // (PT_NV=1 with the mains cut: the scripted player puts Sam's goggles down, `g.player.nv = true`)
@@ -304,20 +304,13 @@ pub fn write_after(g: &mut game::game::Game, k: usize, l: &str) -> Option<String
     // writes `<k> save_breath` where the row appeared with that tick's save; the capture is the host's and is not made here, its one write is.
     if what == "save_breath" { let _ = game::whistle::blower(g); return Some(format!("  the host's capture after tick {}: the player's breath asked (its row made)", k)); }
     if what != "chron_save" { return None; }
-    let mut said = String::new();
-    if checkpoint(g, rest.trim_matches('"')) { said = format!("  the host's authored checkpoint after tick {}: the level's program stopped for the take\n", k); }
-    Some(format!("{}  the host's checkpoint after tick {}: {}", said, k, rest))
+    checkpoint(g, rest.trim_matches('"'));
+    Some(format!("  the host's checkpoint after tick {}: {}", k, rest))
 }
 
 /// HOST STEP: the host saved, and says so. The autosave controller is the host's, and its one write into the game is the chronicle's row, the tick's last
-/// thing. On a tutorial mission the checkpoint is an authored one: the save controller stops the level's program for the take and has the frame start it
-/// again on the next tick (savestate.ts:991); the answer is whether it did.
-pub fn checkpoint(g: &mut game::game::Game, label: &str) -> bool {
-    let mut stopped = false;
-    if game::rails::rails_live(g) { if let Some(r) = g.director.run { if !g.tab.director_run[r].ended { game::director::director_stop(g, Some(false)); game::rails::rails_resume(g); stopped = true; } } }
-    let _ = game::chronicle::chron_checkpoint(g, game::chronicle::ChronCheckpointWhat::Save, Some(label));
-    stopped
-}
+/// thing. A picture of a game touches nothing else of it: a level's program goes on through a take, as a beat's place is plain data the picture holds.
+pub fn checkpoint(g: &mut game::game::Game, label: &str) { let _ = game::chronicle::chron_checkpoint(g, game::chronicle::ChronCheckpointWhat::Save, Some(label)); }
 
 /// HOST STEP AFTER THE TICK (game.ts hostAfter): a tutorial mission staged again opens on its first view, set with the host's camera; a return on its
 /// first line off a rails level. The host's camera is the row the game was handed at its stand (`host_cam`).

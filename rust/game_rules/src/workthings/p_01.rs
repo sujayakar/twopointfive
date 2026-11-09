@@ -132,7 +132,7 @@ pub fn work_things_new(g: &mut crate::game::Game) -> crate::workthings::WorkThin
         targets: vec![crate::orders::TargetKind::Floor],
         listed: Some(Vec::new()),
         ack: Some(vec![String::from("on it."), String::from("moving.")]),
-        ..crate::orders::OrderDef::zeroed()
+        ..crate::orders::OrderDef::default()
     });
     let row = crate::orders::squad_orders_row(g, def);
     crate::orders::squad_orders_register(g, row, None);

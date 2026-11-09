@@ -1,10 +1,9 @@
-//! The types of `fogofwar`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `fogofwar`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: FogSnap, src/game/fogofwar.ts:377)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct FogSnap {
     pub doors: Option<Vec<(String, f64)>>,
     pub lamps: Option<Vec<(String, f64, Option<Vec<Vec<f64>>>)>>,
@@ -12,22 +11,8 @@ pub struct FogSnap {
     pub out: Option<Vec<f64>>,
     pub bodies: Option<Vec<f64>>,
 }
-impl FogSnap {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FogSnap {
-            doors: None,
-            lamps: None,
-            things: None,
-            out: None,
-            bodies: None,
-        }
-    }
-}
-impl Default for FogSnap { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: FogEye, src/game/fogofwar.ts:392)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct FogEye {
     pub id: f64,
     pub pos: V3,
@@ -37,23 +22,7 @@ pub struct FogEye {
     pub near: Option<f64>,
     pub wand: Option<bool>,
 }
-impl FogEye {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FogEye {
-            id: 0.0,
-            pos: [0.0; 3],
-            look: [0.0; 3],
-            at: [0.0; 3],
-            fov: None,
-            near: None,
-            wand: None,
-        }
-    }
-}
-impl Default for FogEye { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: FogOfWar, src/game/fogofwar.ts:424)
 #[derive(Clone, Debug, ToBytes)]
 pub struct FogOfWar {
     pub on: bool,
@@ -99,7 +68,7 @@ pub struct FogOfWar {
     pub our_landed: JsSet<crate::Num>,
 }
 impl FogOfWar {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         FogOfWar {
             on: false,
@@ -169,8 +138,7 @@ impl FogPicture {
 }
 impl Default for FogPicture { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: inline at src/game/fogofwar.ts:436 FogOfWar.stats, src/game/fogofwar.ts:436)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct FogOfWarStats {
     pub frames: f64,
     pub eyes: f64,
@@ -181,25 +149,8 @@ pub struct FogOfWarStats {
     pub smoke_hid: f64,
     pub by_fire: f64,
 }
-impl FogOfWarStats {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FogOfWarStats {
-            frames: 0.0,
-            eyes: 0.0,
-            tested: 0.0,
-            seen: 0.0,
-            hidden: 0.0,
-            smoke_asks: 0.0,
-            smoke_hid: 0.0,
-            by_fire: 0.0,
-        }
-    }
-}
-impl Default for FogOfWarStats { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Rec, src/game/fogofwar.ts:407)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Rec {
     pub seen: bool,
     pub framed: Option<bool>,
@@ -208,40 +159,14 @@ pub struct Rec {
     pub wand_t: Option<f64>,
     pub body: bool,
 }
-impl Rec {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Rec {
-            seen: false,
-            framed: None,
-            t: 0.0,
-            at: None,
-            wand_t: None,
-            body: false,
-        }
-    }
-}
-impl Default for Rec { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/fogofwar.ts:446 FogOfWar.doorRecs, src/game/fogofwar.ts:446)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct FogOfWarDoorRecsValue {
     pub shown: f64,
     pub ghost: Option<Vec<BoxId>>,
 }
-impl FogOfWarDoorRecsValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FogOfWarDoorRecsValue {
-            shown: 0.0,
-            ghost: None,
-        }
-    }
-}
-impl Default for FogOfWarDoorRecsValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: ThingRec, src/game/fogofwar.ts:378)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct ThingRec {
     pub ghost: Vec<FrameBoxId>,
     pub x: f64,
@@ -252,63 +177,22 @@ pub struct ThingRec {
     pub moving: bool,
     pub held: bool,
 }
-impl ThingRec {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ThingRec {
-            ghost: Vec::new(),
-            x: 0.0,
-            z: 0.0,
-            ox: 0.0,
-            oz: 0.0,
-            f: 0.0,
-            moving: false,
-            held: false,
-        }
-    }
-}
-impl Default for ThingRec { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/fogofwar.ts:457 FogOfWar.thingStats, src/game/fogofwar.ts:457)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct FogOfWarThingStats {
     pub held: f64,
     pub out: f64,
     pub tests: f64,
 }
-impl FogOfWarThingStats {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FogOfWarThingStats {
-            held: 0.0,
-            out: 0.0,
-            tests: 0.0,
-        }
-    }
-}
-impl Default for FogOfWarThingStats { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/fogofwar.ts:463 FogOfWar.pending, src/game/fogofwar.ts:463)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct FogOfWarPendingItem {
     pub key: String,
     pub a: V3,
     pub b: V3,
 }
-impl FogOfWarPendingItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FogOfWarPendingItem {
-            key: String::new(),
-            a: [0.0; 3],
-            b: [0.0; 3],
-        }
-    }
-}
-impl Default for FogOfWarPendingItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/fogofwar.ts:622 FogOfWar.callLog, src/game/fogofwar.ts:622)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct FogOfWarCallLogItem {
     pub t: f64,
     pub who: String,
@@ -316,24 +200,10 @@ pub struct FogOfWarCallLogItem {
     pub kind: crate::fogofwar::FogOfWarCallLogItemKind,
     pub text: String,
 }
-impl FogOfWarCallLogItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FogOfWarCallLogItem {
-            t: 0.0,
-            who: String::new(),
-            of: String::new(),
-            kind: crate::fogofwar::FogOfWarCallLogItemKind::Heard,
-            text: String::new(),
-        }
-    }
-}
-impl Default for FogOfWarCallLogItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum FogOfWarCallLogItemKind {
-    Heard,
+    #[default] Heard,
     Contact,
 }
 impl FogOfWarCallLogItemKind {
@@ -345,64 +215,27 @@ impl FogOfWarCallLogItemKind {
     }
 }
 
-/// (TypeScript: inline at src/game/fogofwar.ts:623 FogOfWar.callStats, src/game/fogofwar.ts:623)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct FogOfWarCallStats {
     pub contact: f64,
     pub heard: f64,
 }
-impl FogOfWarCallStats {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FogOfWarCallStats {
-            contact: 0.0,
-            heard: 0.0,
-        }
-    }
-}
-impl Default for FogOfWarCallStats { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/fogofwar.ts:805 FogOfWar.fullStats, src/game/fogofwar.ts:805)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct FogOfWarFullStats {
     pub hidden: f64,
     pub ghosts: f64,
     pub held: f64,
 }
-impl FogOfWarFullStats {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FogOfWarFullStats {
-            hidden: 0.0,
-            ghosts: 0.0,
-            held: 0.0,
-        }
-    }
-}
-impl Default for FogOfWarFullStats { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/fogofwar.ts:348 FOG_PAGE, src/game/fogofwar.ts:348)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct FogofwarModFOGPAGE {
     pub desat: f64,
     pub edge: f64,
     pub air: bool,
     pub kept: bool,
 }
-impl FogofwarModFOGPAGE {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FogofwarModFOGPAGE {
-            desat: 0.0,
-            edge: 0.0,
-            air: false,
-            kept: false,
-        }
-    }
-}
-impl Default for FogofwarModFOGPAGE { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum FogOfWarCallWordsKind {
     Heard,
@@ -417,43 +250,19 @@ impl FogOfWarCallWordsKind {
     }
 }
 
-/// (TypeScript: inline at src/game/fogofwar.ts:1087 sighting ->, src/game/fogofwar.ts:1087)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct FogOfWarSighting {
     pub at: V3,
     pub age: f64,
 }
-impl FogOfWarSighting {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FogOfWarSighting {
-            at: [0.0; 3],
-            age: 0.0,
-        }
-    }
-}
-impl Default for FogOfWarSighting { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/fogofwar.ts:1103 lastSeen ->, src/game/fogofwar.ts:1103)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct FogOfWarLastSeenItem {
     pub gd: GuardId,
     pub at: V3,
     pub age: f64,
     pub life: f64,
 }
-impl FogOfWarLastSeenItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FogOfWarLastSeenItem {
-            gd: GuardId(0),
-            at: [0.0; 3],
-            age: 0.0,
-            life: 0.0,
-        }
-    }
-}
-impl Default for FogOfWarLastSeenItem { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]

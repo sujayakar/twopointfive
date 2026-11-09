@@ -161,7 +161,7 @@ pub struct Stood {
     pub rho: &'static [f64],
     pub open: [u32; WORDS],
 }
-/// …none before its first step, or where no step has asked the faces of the state that stands there (a game put back: up to a tenth of a second)
+/// …none before its first step, or where nobody has asked the faces of the state that stands there (a game put back, till its next step or `ways`)
 pub fn stands(g: usize, stamp: f64) -> Option<Stands> {
     let st = &state_read(g).smoke.st;
     let (wide, deep) = dims(st);
@@ -506,6 +506,22 @@ pub fn shut(g: usize) {
 fn emitters(st: &[f64; LEN]) -> usize {
     js_min(st[H_EMIT], MAX_EMIT as f64) as usize
 }
+/// an emitter as it lets out: where it stands, what it lets out a second, how long it runs, how long it has, how wide it is
+pub struct Lets {
+    pub at: [f64; 3],
+    pub rate: f64,
+    pub ttl: f64,
+    pub age: f64,
+    pub radius: f64,
+}
+/// the emitters letting out in the game in slot `g`
+pub fn letting(g: usize) -> impl Iterator<Item = Lets> {
+    let st = &state_read(g).smoke.st;
+    (0..emitters(st)).map(|i| {
+        let e = &st[O_EMIT + i * EMIT..O_EMIT + (i + 1) * EMIT];
+        Lets { at: [e[0], e[1], e[2]], rate: e[3], ttl: e[4], age: e[5], radius: e[6] }
+    }).filter(|e| e.age < e.ttl)
+}
 /// how many emitters are letting out in the game in slot `g`
 pub fn emitting(g: usize) -> usize {
     emitters(&state_read(g).smoke.st)
@@ -576,39 +592,84 @@ pub fn step(g: usize, stamp: f64, w: usize, copy: f64, set: i32, n: u32, k: &K, 
     0
 }
 
-/// how much of its rise a plume in the whole of the wind loses (the drawn one, in a storm's yard, tops out at about 1.1 m)
-const LAID: f64 = 0.4;
-fn substep(w: usize, set: i32, g: &mut Grid, k: &K) {
-    // 0. the faces round every leaf that is not as the last step found it (a door swings; one is new, one is gone) are asked again: where it stood and
-    //    where it stands. A leaf that has not moved keeps the answers it had.
-    {
-        let s = g.g;
-        let (kept, kept_n) = unsafe { (&mut (*core::ptr::addr_of_mut!(LEAF_AT))[s], &mut (*core::ptr::addr_of_mut!(LEAF_N))[s]) };
-        let o = world(w);
-        let n = if set < 0 { 0 } else { js_min(o.leaves[set as usize] as f64, MAX_LEAVES as f64) as usize };
-        // (its reach in plan whichever way it is turned: the two half sides, and the third where it is tilted off the upright)
-        let reach = |r: &[f64]| r[R_H] + r[R_H + 2] + if r[R_KIND] as u32 & K_ROT != 0 { r[R_H + 1] } else { 0.0 };
-        for i in 0..if n > *kept_n { n } else { *kept_n } {
-            let at = if set < 0 { 0 } else { (set as usize * MAX_LEAVES + i) * REC };
-            let (was, now) = (&mut kept[i * REC..(i + 1) * REC], &o.leaf[at..at + REC]);
-            let (had, has) = (i < *kept_n, i < n);
-            if had && has && (0..REC).all(|j| was[j].to_bits() == now[j].to_bits()) {
-                continue;
+/// THE WAYS OF THE STATE THAT STANDS are asked, over the copy `copy` of box world `w` as it stands and the leaves of list `set`: what the next step would
+/// ask first, for whoever draws a game put back before it steps. No state is written. Nothing, where the state's plan is not the level's (no step yet).
+pub fn ways(g: usize, stamp: f64, w: usize, copy: f64, set: i32) {
+    let (on, plan) = (dims(&state_read(g).smoke.st), plan_of(w));
+    if set >= LEAF_SETS as i32 || on.0 == 0 || on != (plan.0 as usize, plan.1 as usize) {
+        return;
+    }
+    tables(g, stamp);
+    over(g, w, copy);
+    let mut g = grid(g);
+    leaves(w, set, &mut g);
+    ask(w, set, &mut g);
+}
+/// the faces round every leaf that is not as it was last found (a door swings; one is new, one is gone) are to be asked again: where it stood and where
+/// it stands. A leaf that has not moved keeps the answers it had.
+fn leaves(w: usize, set: i32, g: &mut Grid) {
+    let s = g.g;
+    let (kept, kept_n) = unsafe { (&mut (*core::ptr::addr_of_mut!(LEAF_AT))[s], &mut (*core::ptr::addr_of_mut!(LEAF_N))[s]) };
+    let o = world(w);
+    let n = if set < 0 { 0 } else { js_min(o.leaves[set as usize] as f64, MAX_LEAVES as f64) as usize };
+    // (its reach in plan whichever way it is turned: the two half sides, and the third where it is tilted off the upright)
+    let reach = |r: &[f64]| r[R_H] + r[R_H + 2] + if r[R_KIND] as u32 & K_ROT != 0 { r[R_H + 1] } else { 0.0 };
+    for i in 0..if n > *kept_n { n } else { *kept_n } {
+        let at = if set < 0 { 0 } else { (set as usize * MAX_LEAVES + i) * REC };
+        let (was, now) = (&mut kept[i * REC..(i + 1) * REC], &o.leaf[at..at + REC]);
+        let (had, has) = (i < *kept_n, i < n);
+        if had && has && (0..REC).all(|j| was[j].to_bits() == now[j].to_bits()) {
+            continue;
+        }
+        if had {
+            let e = reach(was);
+            g.dirty(was[R_C] - e, was[R_C + 2] - e, was[R_C] + e, was[R_C + 2] + e);
+        }
+        if has {
+            let e = reach(now);
+            g.dirty(now[R_C] - e, now[R_C + 2] - e, now[R_C] + e, now[R_C + 2] + e);
+            for j in 0..REC {
+                was[j] = now[j];
             }
-            if had {
-                let e = reach(was);
-                g.dirty(was[R_C] - e, was[R_C + 2] - e, was[R_C] + e, was[R_C + 2] + e);
-            }
-            if has {
-                let e = reach(now);
-                g.dirty(now[R_C] - e, now[R_C + 2] - e, now[R_C] + e, now[R_C + 2] + e);
-                for j in 0..REC {
-                    was[j] = now[j];
+        }
+    }
+    *kept_n = n;
+}
+/// the faces nobody has asked (a new brick's, those round a leaf, those round a static that was written)
+fn ask(w: usize, set: i32, g: &mut Grid) {
+    for b in 0..MAX_BRICKS {
+        let Some((bx, bz)) = g.key(b) else { continue };
+        let (ox, oz) = (bx as f64 * SIDE, bz as f64 * SIDE);
+        for y in 0..BY {
+            for z in 0..BX {
+                for x in 0..BX {
+                    let c = b * CELLS + cell_at(x, y, z);
+                    if g.faces[c] & F_ASKED != 0 {
+                        continue;
+                    }
+                    let p = [ox + (x as f64 + 0.5) * CELL, (y as f64 + 0.5) * CELL, oz + (z as f64 + 0.5) * CELL];
+                    let mut f = F_ASKED;
+                    if open(w, set, p, [p[0] + CELL, p[1], p[2]]) {
+                        f |= F_X;
+                    }
+                    if y + 1 < BY && open(w, set, p, [p[0], p[1] + CELL, p[2]]) {
+                        f |= F_Y;
+                    }
+                    if open(w, set, p, [p[0], p[1], p[2] + CELL]) {
+                        f |= F_Z;
+                    }
+                    g.faces[c] = f;
                 }
             }
         }
-        *kept_n = n;
     }
+}
+
+/// how much of its rise a plume in the whole of the wind loses (the drawn one, in a storm's yard, tops out at about 1.1 m)
+const LAID: f64 = 0.4;
+fn substep(w: usize, set: i32, g: &mut Grid, k: &K) {
+    // 0. the leaves as they stand now
+    leaves(w, set, g);
 
     // 1. the emitters let out, each up the column it stands under (from its own foot to the top of its plume: its width, and the rise the blobs had),
     //    and the spent ones leave the list
@@ -712,33 +773,8 @@ fn substep(w: usize, set: i32, g: &mut Grid, k: &K) {
         }
     }
 
-    // 3. the faces nobody has asked (a new brick's, those round a leaf, those round a static that was written)
-    for b in 0..MAX_BRICKS {
-        let Some((bx, bz)) = g.key(b) else { continue };
-        let (ox, oz) = (bx as f64 * SIDE, bz as f64 * SIDE);
-        for y in 0..BY {
-            for z in 0..BX {
-                for x in 0..BX {
-                    let c = b * CELLS + cell_at(x, y, z);
-                    if g.faces[c] & F_ASKED != 0 {
-                        continue;
-                    }
-                    let p = [ox + (x as f64 + 0.5) * CELL, (y as f64 + 0.5) * CELL, oz + (z as f64 + 0.5) * CELL];
-                    let mut f = F_ASKED;
-                    if open(w, set, p, [p[0] + CELL, p[1], p[2]]) {
-                        f |= F_X;
-                    }
-                    if y + 1 < BY && open(w, set, p, [p[0], p[1] + CELL, p[2]]) {
-                        f |= F_Y;
-                    }
-                    if open(w, set, p, [p[0], p[1], p[2] + CELL]) {
-                        f |= F_Z;
-                    }
-                    g.faces[c] = f;
-                }
-            }
-        }
-    }
+    // 3. the faces nobody has asked
+    ask(w, set, g);
 
     let delta = unsafe { &mut *core::ptr::addr_of_mut!(DELTA) };
     // 3b. THE WIND (K.wind): under the open sky the air moves and the smoke goes with it — across the open faces in plan, out of the cell UPWIND (a

@@ -50,6 +50,16 @@ pub fn smoke_emit(g: &mut crate::game::Game, e: &crate::smoke_types::SmokeEmitte
     sim::bricks::emit(g.sim, e.pos[0], e.pos[1], e.pos[2], r, rate, e.ttl);
 }
 
+/// WHAT LETS SMOKE OUT NOW, each source as old as it is, for a picture of a game put back, which heard none of them begin. The game holds where one stands, how wide it
+/// is, how much it lets out and for how long; how it comes out of it is a can's for all of them, as the game's own smoke rises alike from them all.
+pub fn smoke_sources(g: &crate::game::Game) -> Vec<crate::smoke_types::SmokeEmitter> {
+    let p = crate::combat::can_params(g);
+    sim::bricks::letting(g.sim).map(|e| crate::smoke_types::SmokeEmitter {
+        pos: e.at, dir: [0.0, 1.0, 0.0], speed: p.canister_speed, radius: e.radius, density: e.rate / (PI15 * e.radius * e.radius * e.radius), temperature: p.canister_temp, ttl: e.ttl, age: e.age,
+        kind: crate::smoke_types::SmokeEmitterKind::Canister, held: Some(true), ..crate::smoke_types::SmokeEmitter::default()
+    }).collect()
+}
+
 /// Every source lets out no more; what is in the air stays.
 pub fn smoke_shut(g: &mut crate::game::Game) {
     if sim::state::state_read(g.sim).smoke.live != 0 { sim::bricks::shut(g.sim); }
@@ -72,6 +82,11 @@ pub fn smoke_step(g: &mut crate::game::Game, dt: f64) {
     let wind = if smoky(g) { crate::wind::wind_storm_drift(g) } else { None };
     let sweep = g.k.sense.glow.sweep;
     crate::scene_collision::grid_step(g, n as f64, k, sweep, wind.as_ref());
+}
+
+/// The smoke's ways are asked, of a game that was put back and is drawn before its next step. The game is as it was.
+pub fn smoke_ways(g: &mut crate::game::Game) {
+    if sim::state::state_read(g.sim).smoke.live != 0 { crate::scene_collision::grid_ways(g); }
 }
 
 /// No smoke anywhere; the beat, the plan and the light that comes round stay: they are the level's.
@@ -116,8 +131,8 @@ pub fn sense_tool(g: &mut crate::game::Game, what: f64, xs: &[f64]) -> Vec<f64> 
         }
         1 => xs.chunks_exact(6).map(|l| smoke_between(g, at(l), at(&l[3..]))).collect(),
         2 if xs.len() == 3 => {
-            let p = crate::combat::smoke_params(g).unwrap_or(crate::smoke_types::CanisterParams { canister_duration: 32.0, canister_density: 95.0, canister_radius: 0.2, canister_temp: 1.6, canister_speed: 1.9 });
-            let e = crate::smoke_types::SmokeEmitter { pos: at(xs), dir: [0.0, 1.0, 0.0], speed: p.canister_speed, radius: p.canister_radius, density: p.canister_density, temperature: p.canister_temp, ttl: p.canister_duration, age: 0.0, kind: crate::smoke_types::SmokeEmitterKind::Canister, ..crate::smoke_types::SmokeEmitter::zeroed() };
+            let p = crate::combat::can_params(g);
+            let e = crate::smoke_types::SmokeEmitter { pos: at(xs), dir: [0.0, 1.0, 0.0], speed: p.canister_speed, radius: p.canister_radius, density: p.canister_density, temperature: p.canister_temp, ttl: p.canister_duration, age: 0.0, kind: crate::smoke_types::SmokeEmitterKind::Canister, ..crate::smoke_types::SmokeEmitter::default() };
             crate::smoke_types::smoke_system_like_emit(g, &e);
             crate::out_events::push_smoke_system_like_emit(g, &e);
             Vec::new()

@@ -1,5 +1,5 @@
 // The renderer's SETTINGS — the knob table every surface reads and writes (the Tab panel, the presets, the URL flags, the game's few reads: emissiveScale,
-// decals, markings …) — kept in a module of their own so a host that is not the WebGPU Engine (the QA harness's stand-in) can build a settings object without importing src/engine.ts and the whole render pass graph behind it. src/engine.ts re-exports both names, so every existing import
+// decals, markings …) — kept in a module of their own so a host that is not the WebGPU Engine can build a settings object without importing src/engine.ts and the whole render pass graph behind it. src/engine.ts re-exports both names, so every existing import
 // (`import { RenderSettings, defaultSettings } from '../engine'`) still resolves; the values are the same object, byte for byte.
 import type { Vec3 } from './math/vec';
 import { FrameFlags } from './render/frame';
@@ -95,7 +95,7 @@ export interface RenderSettings {
    *  smoke on the solver, which then need not stay awake for it (and under auto the first rung up from the floor keeps that). false = every preset keeps the fire's
    *  smoke, as it was. Read when a preset is applied. */
   fireSmokeShed: boolean;
-  /** what the preset on says of an open fire's smoke (written by ui/quality.ts when a preset is applied; game/fire.ts reads it beside the solver's `drawing`): false = this
+  /** what the preset on says of an open fire's smoke (written by ui/quality.ts when a preset is applied; rust/game_rules/src/fire reads it beside the solver's `drawing`): false = this
    *  preset draws the fire without its smoke. Picture only, and never the game's own table. */
   fireSmoke: boolean;
   dnSpecIters: number; dnSpecCap: number; dnSpecClampK: number; dnSpecSigmaL: number; dnSpecRough: number;
@@ -195,12 +195,12 @@ export interface RenderSettings {
   motionIds: boolean;          // MOTION IDENTITY (image-quality program E1; scene/boxes.ts Box.mkey / BoxWorld.motionIds): keyed dynamic boxes — leaves, furniture, items, hand props, devices — reproject through the
                                // transform the SAME part had last frame wherever it sat in the dynamic list (a spawn / despawn no longer hands everything after it a wrong or zero motion vector for a
                                // frame); off = the g-buffer index-matches by size + owner exactly as before. Default on
-  charMats: boolean;           // CHARACTER MATERIALS (render/charMaterials.ts + game/charLook.ts + gbuffer.wgsl vsSkin / fsSkin): a man shaded per material SLOT — skin, two cloths, webbing, boot, helmet, dark
+  charMats: boolean;           // CHARACTER MATERIALS (render/charMaterials.ts + rust/game_rules/src/char_look + gbuffer.wgsl vsSkin / fsSkin): a man shaded per material SLOT — skin, two cloths, webbing, boot, helmet, dark
                                // metal, rubber, lens, a marking — each with its own colour and highlight out of a table per side (operators / defenders / civilians), creases and ridges from the mesh's own
                                // curvature, the ground's dust up from the sole, and one colour per shadow proxy for bounce rays and reflections. Off (the default with the shipped mannequin, which carries
-                               // no slots: `?charmats` dresses it by joint as a stand-in) = his two tints, the frame as it was. main.ts raises it when the loaded mesh has slot-named materials
-  wetChars: boolean;           // wet characters (game/wet.ts + gbuffer.wgsl fsSkin + composite.wgsl): whoever stands in the rain soaks — darker saturated fabric under a glossy clear coat (a GGX lobe per light in composite, dimmed by the direct pass's own shadowing) and drops beading and running down him in his bind-pose space — and dries indoors. The renderer's half only: the CPU model runs regardless (probes read it); off = the g-buffer is handed zeros and every character shades bit for bit as before. Default on
-  // ---- PARTICLE RAIN (game/rainFx.ts + the 'rain' particle kind; docs/internal/prain.md, docs/review/prain.html): a NEAR-FIELD layer of real GPU rain drops over the lattice rain
+                               // no slots: `?charmats` dresses it by joint as a stand-in) = his two tints, the frame as it was. host/drawpage.ts raises it when the loaded mesh has slot-named materials
+  wetChars: boolean;           // wet characters (rust/game_rules/src/wet + gbuffer.wgsl fsSkin + composite.wgsl): whoever stands in the rain soaks — darker saturated fabric under a glossy clear coat (a GGX lobe per light in composite, dimmed by the direct pass's own shadowing) and drops beading and running down him in his bind-pose space — and dries indoors. The renderer's half only: the CPU model runs regardless (probes read it); off = the g-buffer is handed zeros and every character shades bit for bit as before. Default on
+  // ---- PARTICLE RAIN (rust/game_rules/src/rain_fx + the 'rain' particle kind; docs/internal/prain.md, docs/review/prain.html): a NEAR-FIELD layer of real GPU rain drops over the lattice rain
   // volumetrics.wgsl draws — recycled over the outdoor ground within a disc round the view, falling at terminal speed with the wind field's air, killed where they hit (roof, bonnet,
   // pallet, a shoulder) and turned into a splash crown there, lit as WATER (a phase function + the strand glint off the strongest shadow-tested lights) and refracting what is behind
   // them through refract_common.wgsl; drips off roof / bonnet edges; the lattice's own near share faded out under the disc. ON by default (v2); off (?norain2 at boot, Tab ▸ Weather &
@@ -214,7 +214,7 @@ export interface RenderSettings {
   particleRainLattice: number; // 0‥1 = the share of the lattice KEPT inside the disc by hand; −1 = auto: 1 − the particle layer's density share (0 while the layer matches the lattice, so nothing doubles up)
   particleRainReact: number;   // × a streak's luminance (display-referred) into the TAAU reactive mask (0 = the streaks write no reactivity: the resolve smears them — the A/B)
   gpuParticles: boolean;       // GPU particles (the E4 experiment, render/particles.ts — ON by default in this branch): sparks, debris chips, dust puffs and spent casings born / stepped / collided / lit in one compute pass ('particles' in the HUD) and splatted into the HDR target after the composite. The Rust game's effect sites send their records whatever this says; off, the picture draws none of them. FrameFlags.Particles; ?noparticles at boot
-  airSim: boolean;             // THE AIR AS A SIMULATED FIELD (render/airField.ts, game/airSim.ts): step it — live, so a perf sweep can price it mid-take (the game's own switch, AIR_SIM.on / ?air=0, is whether a field is built and fed at all); off = the field stands as it was last stepped
+  airSim: boolean;             // THE AIR AS A SIMULATED FIELD (render/airField.ts, rust/game_rules/src/air_sim): step it — live, so a perf sweep can price it mid-take (the game's own switch, AIR_SIM.on / ?air=0, is whether a field is built and fed at all); off = the field stands as it was last stepped
   airEvery: number;            // … and sixtieths of a second between its steps (1 = 60 Hz whatever the page draws at; 2 halves its cost and its turbulence's time resolution)
   // ---- MATERIALS + RAY-TRACED REFLECTIONS (renderer v3 phase 4; render/shaders/reflect.wgsl, docs/internal/p4-materials.md). One BRDF everywhere it is affordable: base colour (the box albedo),
   // GGX roughness and metalness per material (Box.rough / metal, levels/*.json materials) written per pixel by the g-buffer (+ its detail layer below); reflect.wgsl spends GGX-VNDF-sampled
@@ -246,7 +246,7 @@ export interface RenderSettings {
   markings: boolean;           // the switch (frame.markCfg.x carries the texel while on, 0 while off: nothing evaluated anywhere, the box lists upload slot 0 and the plain albedo — the frame as it was; ?nomarkings)
   markingTexel: number;        // the base world-space texel (m): 0.025; `fine` markings use half, `coarse` double (repacked on change)
   markingContrast: number;     // 0‥1: palette colours lerped from the box's own albedo toward their authored value (1 = as authored)
-  markingEmissive: number;     // × the emission of emissive markings (the vending window, UI bars, LEDs); their registered lights follow it too (game/lighting.ts)
+  markingEmissive: number;     // × the emission of emissive markings (the vending window, UI bars, LEDs); their registered lights follow it too (rust/game_rules/src/lighting)
   markingReflect: boolean;     // markings are evaluated at REFLECTION hits (reflect.wgsl shadeReflHit: the vending window in the lino) — off = the hit's plain secondary albedo / no emission
   markingReflPattern: boolean; // the analytic highlight of a marking's light is textured with the marking's pattern at the mirror point (reflect.wgsl rtGlints → markings.wgsl markPatternAtMirror); off = the uniform rectangle (A/B only: the sign of frame.markCfg.w)
   markingReflCone: number;     // × the lobe's α added to the ray-cone growth that band-limits a marking at a TRACED reflection hit (0 = the pixel's own cone only — the ray distribution + the specular denoiser realise the lobe; 2 = the whole lobe again = the double blur that erased the vending cans in the lino; default 0.25 trades a little bias for 1-ray noise)
@@ -294,7 +294,7 @@ export const defaultSettings = (): RenderSettings => ({
   meshShadows: false,          // mesh-traced character shadows: the ULTRA preset switches it on (every ray) and HIGH in its near-only form, every other preset off (quality.ts apply); ?meshShadows / the Tab row flip it by hand until the preset next changes; Tab ▸ Direct light, the pause menu's trade-offs, or ?meshShadows
   gbaa: false,                 // GBAA off (Tab ▸ Frame; the image-quality program's per-tier configs place it with taauPhases 0)
   motionIds: true,             // motion identity for keyed dynamic boxes (Tab ▸ Frame; off = the index rule as it was)
-  charMats: false,             // character materials: off = the two tints (main.ts turns it on for a mesh that carries slot materials; ?charmats / ?nocharmats; Tab ▸ Materials ▸ Characters)
+  charMats: false,             // character materials: off = the two tints (host/drawpage.ts turns it on for a mesh that carries slot materials; ?charmats / ?nocharmats; Tab ▸ Materials ▸ Characters)
   wetChars: true,              // wet characters: on (Tab ▸ Weather ▸ wet characters; nothing shows unless somebody is actually wet — weather off = everybody dry = the untouched path)
   gpuParticles: true,          // the experiment this branch is for: on unless ?noparticles / the Tab ▸ 'Renderer — particles (EXP)' row says otherwise; not part of any preset
   airSim: true, airEvery: 1,   // the air field's step: on, at 60 Hz; not part of any preset

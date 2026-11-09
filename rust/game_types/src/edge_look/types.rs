@@ -1,10 +1,9 @@
-//! The types of `edge_look`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `edge_look`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: BreakLike, src/game/edgeLook.ts:75)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct BreakLike {
     pub id: f64,
     pub kind: crate::wallbreak::BKind,
@@ -16,26 +15,8 @@ pub struct BreakLike {
     pub yb: Vec<f64>,
     pub open: Vec<u8>,
 }
-impl BreakLike {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BreakLike {
-            id: 0.0,
-            kind: crate::wallbreak::BKind::Wall,
-            surf: String::new(),
-            box_: BoxId(0),
-            nx: 0.0,
-            ny: 0.0,
-            nz: 0.0,
-            yb: Vec::new(),
-            open: Vec::new(),
-        }
-    }
-}
-impl Default for BreakLike { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Rubble, src/game/edgeLook.ts:90)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Rubble {
     pub box_: FrameBoxId,
     pub t: f64,
@@ -47,26 +28,8 @@ pub struct Rubble {
     pub q1: Quat,
     pub foot: Option<DebrisChunkId>,
 }
-impl Rubble {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Rubble {
-            box_: FrameBoxId(0),
-            t: 0.0,
-            t_2: 0.0,
-            p0: [0.0; 3],
-            p1: [0.0; 3],
-            vy: 0.0,
-            q0: [0.0; 4],
-            q1: [0.0; 4],
-            foot: None,
-        }
-    }
-}
-impl Default for Rubble { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Frame, src/game/edgeLook.ts:92)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Frame {
     pub b: BoxId,
     pub along_x: bool,
@@ -82,29 +45,7 @@ pub struct Frame {
     pub along: V3,
     pub nrm: V3,
 }
-impl Frame {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Frame {
-            b: BoxId(0),
-            along_x: false,
-            cs: 0.0,
-            sn: 0.0,
-            t: 0.0,
-            l: 0.0,
-            n: 0.0,
-            w: 0.0,
-            y0: 0.0,
-            y_top: 0.0,
-            y_sill: 0.0,
-            along: [0.0; 3],
-            nrm: [0.0; 3],
-        }
-    }
-}
-impl Default for Frame { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: EdgeLook, src/game/edgeLook.ts:94)
 #[derive(Clone, Debug, ToBytes)]
 pub struct EdgeLook {
     pub decor: JsMap<crate::Num, Vec<FrameBoxId>>,
@@ -119,7 +60,7 @@ pub struct EdgeLook {
     pub foot_book: crate::debris::FootBook,
 }
 impl EdgeLook {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         EdgeLook {
             decor: JsMap::new(),
@@ -137,8 +78,7 @@ impl EdgeLook {
 }
 impl Default for EdgeLook { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: inline at src/game/edgeLook.ts:122 EdgeLook.todo, src/game/edgeLook.ts:122)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct EdgeLookTodoItem {
     pub b: crate::edge_look::BreakLike,
     pub f: Option<crate::edge_look::Frame>,
@@ -146,22 +86,8 @@ pub struct EdgeLookTodoItem {
     pub dir: Option<V3>,
     pub blast: bool,
 }
-impl EdgeLookTodoItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        EdgeLookTodoItem {
-            b: crate::edge_look::BreakLike::zeroed(),
-            f: None,
-            c: 0.0,
-            dir: None,
-            blast: false,
-        }
-    }
-}
-impl Default for EdgeLookTodoItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/edgeLook.ts:40 EDGE, src/game/edgeLook.ts:40)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct EdgeLookModEDGE {
     pub on: bool,
     pub max_decor: f64,
@@ -189,42 +115,8 @@ pub struct EdgeLookModEDGE {
     pub scorch: crate::edge_look::EdgeLookModEDGEScorch,
     pub scorch_decals: bool,
 }
-impl EdgeLookModEDGE {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        EdgeLookModEDGE {
-            on: false,
-            max_decor: 0.0,
-            per_wall: 0.0,
-            max_rubble: 0.0,
-            box_slack: 0.0,
-            port_out: 0.0,
-            hole_out: 0.0,
-            hole_top: 0.0,
-            sill_hole: 0.0,
-            sill_port: 0.0,
-            run_k: 0.0,
-            lintel_port: 0.0,
-            lintel_hole: 0.0,
-            lintel_odds: 0.0,
-            lintel_cut: 0.0,
-            per_upper: 0.0,
-            per_sill: 0.0,
-            per_cover: 0.0,
-            spread: 0.0,
-            throw_fire: 0.0,
-            throw_blast: 0.0,
-            blast: crate::edge_look::EdgeLookModEDGEBlast::zeroed(),
-            cut_heap: crate::edge_look::EdgeLookModEDGECutHeap::zeroed(),
-            scorch: crate::edge_look::EdgeLookModEDGEScorch::zeroed(),
-            scorch_decals: false,
-        }
-    }
-}
-impl Default for EdgeLookModEDGE { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/edgeLook.ts:57 EdgeLookModEDGE.blast, src/game/edgeLook.ts:57)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct EdgeLookModEDGEBlast {
     pub more: f64,
     pub lumps: f64,
@@ -234,24 +126,8 @@ pub struct EdgeLookModEDGEBlast {
     pub near_k: f64,
     pub flake_k: f64,
 }
-impl EdgeLookModEDGEBlast {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        EdgeLookModEDGEBlast {
-            more: 0.0,
-            lumps: 0.0,
-            slabs: 0.0,
-            slab_k: 0.0,
-            flung: 0.0,
-            near_k: 0.0,
-            flake_k: 0.0,
-        }
-    }
-}
-impl Default for EdgeLookModEDGEBlast { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/edgeLook.ts:61 EdgeLookModEDGE.cutHeap, src/game/edgeLook.ts:61)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct EdgeLookModEDGECutHeap {
     pub slabs: f64,
     pub slab: [f64; 2],
@@ -262,25 +138,8 @@ pub struct EdgeLookModEDGECutHeap {
     pub core_paper: f64,
     pub core_tone: f64,
 }
-impl EdgeLookModEDGECutHeap {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        EdgeLookModEDGECutHeap {
-            slabs: 0.0,
-            slab: [0.0; 2],
-            slab_t: 0.0,
-            smalls: 0.0,
-            small: [0.0; 2],
-            tone: 0.0,
-            core_paper: 0.0,
-            core_tone: 0.0,
-        }
-    }
-}
-impl Default for EdgeLookModEDGECutHeap { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/edgeLook.ts:64 EdgeLookModEDGE.scorch, src/game/edgeLook.ts:64)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct EdgeLookModEDGEScorch {
     pub near: f64,
     pub far: f64,
@@ -291,22 +150,6 @@ pub struct EdgeLookModEDGEScorch {
     pub rim: f64,
     pub soot_rim: f64,
 }
-impl EdgeLookModEDGEScorch {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        EdgeLookModEDGEScorch {
-            near: 0.0,
-            far: 0.0,
-            floor: 0.0,
-            soot_near: 0.0,
-            soot_far: 0.0,
-            soot_floor: 0.0,
-            rim: 0.0,
-            soot_rim: 0.0,
-        }
-    }
-}
-impl Default for EdgeLookModEDGEScorch { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]

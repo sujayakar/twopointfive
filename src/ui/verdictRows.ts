@@ -36,7 +36,7 @@ export function dressMissionRows(root: ParentNode | null = typeof document !== '
 }
 
 let watching = false;
-/** Keep the page's mission rows dressed for as long as the page lives (main.ts, once, before the boot card paints). */
+/** Keep the page's mission rows dressed for as long as the page lives (host/drawpage.ts, once, before the boot card paints). */
 export function watchMissionRows() {
   if (watching || typeof document === 'undefined' || typeof MutationObserver === 'undefined') return;
   const root = document.getElementById('missions'); if (!root) return;

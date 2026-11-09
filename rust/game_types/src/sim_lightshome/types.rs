@@ -1,9 +1,8 @@
-//! The types of `sim_lightshome`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `sim_lightshome`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub enum Col {
     Kind,
@@ -148,10 +147,9 @@ impl Col {
     }
 }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum CameraState {
-    Alarm,
+    #[default] Alarm,
     Idle,
     Suspect,
 }
@@ -165,8 +163,7 @@ impl CameraState {
     }
 }
 
-/// (TypeScript: FixtureDef, src/sim/lightshome.ts:53)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct FixtureDef {
     pub name: String,
     pub group: String,
@@ -187,37 +184,10 @@ pub struct FixtureDef {
     pub area_lights: Option<Vec<crate::sim_lightshome::FixtureDefAreaLightsItem>>,
     pub lens: Option<V3>,
 }
-impl FixtureDef {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FixtureDef {
-            name: String::new(),
-            group: String::new(),
-            kind: crate::sim_lightshome::FixtureDefKind::Analytic,
-            pos: [0.0; 3],
-            light: None,
-            boxes: Vec::new(),
-            base_emissive: [0.0; 3],
-            base_intensity: 0.0,
-            on: false,
-            broken: false,
-            disabled_until: 0.0,
-            fluorescent_flicker: false,
-            factor: 0.0,
-            mains: false,
-            interactive: false,
-            stagger: 0.0,
-            area_lights: None,
-            lens: None,
-        }
-    }
-}
-impl Default for FixtureDef { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum FixtureDefKind {
-    Analytic,
+    #[default] Analytic,
     Emissive,
     Breaker,
     Device,
@@ -233,24 +203,12 @@ impl FixtureDefKind {
     }
 }
 
-/// (TypeScript: inline at src/sim/lightshome.ts:62 FixtureDef.areaLights, src/sim/lightshome.ts:62)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct FixtureDefAreaLightsItem {
     pub light: LightId,
     pub base: f64,
 }
-impl FixtureDefAreaLightsItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FixtureDefAreaLightsItem {
-            light: LightId(0),
-            base: 0.0,
-        }
-    }
-}
-impl Default for FixtureDefAreaLightsItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Fixture, src/sim/lightshome.ts:67)
 #[derive(Clone, Debug, ToBytes)]
 pub struct Fixture {
     pub name: String,
@@ -271,7 +229,7 @@ pub struct Fixture {
     pub st: crate::Opaque,
 }
 impl Fixture {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         Fixture {
             name: String::new(),
@@ -293,7 +251,6 @@ impl Fixture {
 }
 impl Default for Fixture { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
 pub enum FixtureKind {
     Analytic,
@@ -312,24 +269,12 @@ impl FixtureKind {
     }
 }
 
-/// (TypeScript: inline at src/sim/lightshome.ts:68 Fixture.areaLights, src/sim/lightshome.ts:68)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct FixtureAreaLightsItem {
     pub light: LightId,
     pub base: f64,
 }
-impl FixtureAreaLightsItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FixtureAreaLightsItem {
-            light: LightId(0),
-            base: 0.0,
-        }
-    }
-}
-impl Default for FixtureAreaLightsItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Mains, src/sim/lightshome.ts:90)
 #[derive(Clone, Copy, Debug, ToBytes)]
 pub struct Mains {
     /// (holds nothing: in no bytes)
@@ -337,7 +282,7 @@ pub struct Mains {
     pub st: crate::Opaque,
 }
 impl Mains {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         Mains {
             st: crate::Opaque,
@@ -346,14 +291,13 @@ impl Mains {
 }
 impl Default for Mains { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: CameraMachine, src/sim/lightshome.ts:103)
 #[derive(Clone, Copy, Debug)]
 pub struct CameraMachine {
     pub slot: f64,
     pub st: crate::Opaque,
 }
 impl CameraMachine {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         CameraMachine {
             slot: 0.0,
@@ -363,14 +307,13 @@ impl CameraMachine {
 }
 impl Default for CameraMachine { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: LaserMachine, src/sim/lightshome.ts:127)
 #[derive(Clone, Copy, Debug)]
 pub struct LaserMachine {
     pub slot: f64,
     pub st: crate::Opaque,
 }
 impl LaserMachine {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         LaserMachine {
             slot: 0.0,
@@ -380,26 +323,13 @@ impl LaserMachine {
 }
 impl Default for LaserMachine { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: BeaconFact, src/sim/lightshome.ts:144)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct BeaconFact {
     pub light: LightId,
     pub phase: f64,
     pub target: FixtureId,
 }
-impl BeaconFact {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        BeaconFact {
-            light: LightId(0),
-            phase: 0.0,
-            target: FixtureId(0),
-        }
-    }
-}
-impl Default for BeaconFact { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: LightHome, src/sim/lightshome.ts:147)
 #[derive(Clone, Debug, ToBytes)]
 pub struct LightHome {
     pub mains: crate::sim_lightshome::Mains,
@@ -409,7 +339,7 @@ pub struct LightHome {
     pub st: crate::Opaque,
 }
 impl LightHome {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         LightHome {
             mains: crate::sim_lightshome::Mains::blank(),
@@ -420,8 +350,7 @@ impl LightHome {
 }
 impl Default for LightHome { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: inline at src/sim/lightshome.ts:26 LIGHT_CAPS, src/sim/lightshome.ts:26)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct LIGHTCAPS {
     pub targets: f64,
     pub rows: f64,
@@ -429,22 +358,8 @@ pub struct LIGHTCAPS {
     pub cameras: f64,
     pub lasers: f64,
 }
-impl LIGHTCAPS {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LIGHTCAPS {
-            targets: 0.0,
-            rows: 0.0,
-            beacons: 0.0,
-            cameras: 0.0,
-            lasers: 0.0,
-        }
-    }
-}
-impl Default for LIGHTCAPS { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/sim/lightshome.ts:36 T, src/sim/lightshome.ts:36)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct T {
     pub on: f64,
     pub broken: f64,
@@ -454,24 +369,8 @@ pub struct T {
     pub authored: f64,
     pub emissive: f64,
 }
-impl T {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        T {
-            on: 0.0,
-            broken: 0.0,
-            flicker: 0.0,
-            mains: 0.0,
-            hand: 0.0,
-            authored: 0.0,
-            emissive: 0.0,
-        }
-    }
-}
-impl Default for T { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/sim/lightshome.ts:37 ROW_BIT, src/sim/lightshome.ts:37)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct ROWBIT {
     pub on: f64,
     pub passing: f64,
@@ -483,81 +382,28 @@ pub struct ROWBIT {
     pub cone: f64,
     pub steady: f64,
 }
-impl ROWBIT {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        ROWBIT {
-            on: 0.0,
-            passing: 0.0,
-            screen: 0.0,
-            role: 0.0,
-            own: 0.0,
-            area: 0.0,
-            beacon: 0.0,
-            cone: 0.0,
-            steady: 0.0,
-        }
-    }
-}
-impl Default for ROWBIT { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/sim/lightshome.ts:38 CB, src/sim/lightshome.ts:38)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct CB {
     pub sweep: f64,
     pub last: f64,
     pub saw: f64,
     pub dead: f64,
 }
-impl CB {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CB {
-            sweep: 0.0,
-            last: 0.0,
-            saw: 0.0,
-            dead: 0.0,
-        }
-    }
-}
-impl Default for CB { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/sim/lightshome.ts:39 LB, src/sim/lightshome.ts:39)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct LB {
     pub dead: f64,
     pub held: f64,
 }
-impl LB {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LB {
-            dead: 0.0,
-            held: 0.0,
-        }
-    }
-}
-impl Default for LB { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/sim/lightshome.ts:40 MAINS, src/sim/lightshome.ts:40)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct MAINS {
     pub active: f64,
     pub permanent: f64,
 }
-impl MAINS {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        MAINS {
-            active: 0.0,
-            permanent: 0.0,
-        }
-    }
-}
-impl Default for MAINS { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/sim/lightshome.ts:42 LIGHT_IN, src/sim/lightshome.ts:42)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct LIGHTIN {
     pub on: f64,
     pub break_: f64,
@@ -575,107 +421,35 @@ pub struct LIGHTIN {
     pub fresh: f64,
     pub stagger: f64,
 }
-impl LIGHTIN {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LIGHTIN {
-            on: 0.0,
-            break_: 0.0,
-            mend: 0.0,
-            toggle: 0.0,
-            blind: 0.0,
-            hand: 0.0,
-            authored: 0.0,
-            base: 0.0,
-            put: 0.0,
-            trip: 0.0,
-            back: 0.0,
-            mains: 0.0,
-            fix: 0.0,
-            fresh: 0.0,
-            stagger: 0.0,
-        }
-    }
-}
-impl Default for LIGHTIN { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/sim/lightshome.ts:44 LIGHT_EV, src/sim/lightshome.ts:44)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct LIGHTEV {
     pub ran_out: f64,
     pub hand: f64,
     pub fixed: f64,
 }
-impl LIGHTEV {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LIGHTEV {
-            ran_out: 0.0,
-            hand: 0.0,
-            fixed: 0.0,
-        }
-    }
-}
-impl Default for LIGHTEV { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/sim/lightshome.ts:46 CAM, src/sim/lightshome.ts:46)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct CAM {
     pub ok: f64,
     pub down: f64,
     pub suspect: f64,
     pub alarm: f64,
 }
-impl CAM {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        CAM {
-            ok: 0.0,
-            down: 0.0,
-            suspect: 0.0,
-            alarm: 0.0,
-        }
-    }
-}
-impl Default for CAM { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/sim/lightshome.ts:47 LASER, src/sim/lightshome.ts:47)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct LASER {
     pub ok: f64,
     pub down: f64,
     pub trip: f64,
 }
-impl LASER {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LASER {
-            ok: 0.0,
-            down: 0.0,
-            trip: 0.0,
-        }
-    }
-}
-impl Default for LASER { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/sim/lightshome.ts:180 stand(cones), src/sim/lightshome.ts:180)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct LightHomeStandConesItem {
     pub light: LightId,
     pub target: FixtureId,
     pub slot: f64,
 }
-impl LightHomeStandConesItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LightHomeStandConesItem {
-            light: LightId(0),
-            target: FixtureId(0),
-            slot: 0.0,
-        }
-    }
-}
-impl Default for LightHomeStandConesItem { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]
@@ -691,7 +465,7 @@ impl SimLightshomeMod {
     pub fn blank() -> Self {
         SimLightshomeMod {
             c: JsMap::new(),
-            x: crate::sim_sim::SimExports::zeroed(),
+            x: crate::sim_sim::SimExports::default(),
             word_cols: JsSet::new(),
         }
     }

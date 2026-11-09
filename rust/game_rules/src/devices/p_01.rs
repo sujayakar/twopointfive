@@ -71,7 +71,7 @@ pub fn devices_new(g: &mut crate::game::Game) -> crate::devices::Devices {
                 let half = d.fov_deg.unwrap_or(dd.fov_deg) / 2.0;
                 let k = cone();
                 let lamp = g.tab.light.push(crate::render_lights::RtLight { name: format!("{}_cone", d.name), group: String::from("devices"), kind: 1.0, pos: v3::copy(d.pos), dir: [0.0, -1.0, 0.0], color: v3::copy(k.color), intensity: k.intensity, range: d.range.unwrap_or(dd.range) * k.range_k,
-                    inner_deg: m::max(1.0, m::min(half, k.outer_max_deg) - 6.0), outer_deg: m::min(half, k.outer_max_deg), radius: k.radius, volumetric: k.volumetric, owner: 0.0, enabled: false, fixture_box: -1.0, flicker: 0.0, ttl: -1.0, age: 0.0, peak_intensity: k.intensity, ..crate::render_lights::RtLight::zeroed() });
+                    inner_deg: m::max(1.0, m::min(half, k.outer_max_deg) - 6.0), outer_deg: m::min(half, k.outer_max_deg), radius: k.radius, volumetric: k.volumetric, owner: 0.0, enabled: false, fixture_box: -1.0, flicker: 0.0, ttl: -1.0, age: 0.0, peak_intensity: k.intensity, ..crate::render_lights::RtLight::default() });
                 crate::render_lights::light_set_add(g, lamp);
                 let cone = lamp;
                 let slot = crate::sim_lightshome::light_home_camera(g, target, d.yaw, d.sweep, d.sweep_period.unwrap_or(dd.sweep_period), d.pitch.unwrap_or(dd.pitch), d.pos);
@@ -546,7 +546,7 @@ pub fn deny_pad(g: &mut crate::game::Game, d: DoorId) {
     let pl = g.player;
     let c = g.pl[pl].ch;
     let (time, who, serial) = (g.time, g.ch[c].id, g.serial());
-    g.events.push(crate::game::GameEvent { kind: crate::director::EventKind::Door, pos: [k.def.pos[0], 0.0, k.def.pos[2]], time, loud: false, level: Some(DENY_LEVEL), who: Some(who), serial, ..crate::game::GameEvent::zeroed() });
+    g.events.push(crate::game::GameEvent { kind: crate::director::EventKind::Door, pos: [k.def.pos[0], 0.0, k.def.pos[2]], time, loud: false, level: Some(DENY_LEVEL), who: Some(who), serial, ..crate::game::GameEvent::default() });
     g.pl[pl].noise = m::max(g.pl[pl].noise, DENY_LEVEL);
     let door_says = pad_door_name(g, &k);
     crate::game::game_msg(g, &format!("the {} pad needs a code you don't have, but somebody on this floor knows it", door_says));
@@ -620,40 +620,40 @@ pub fn device_boxes_raw(g: &mut crate::game::Game, out: &mut Vec<AnyBoxId>) {
         let yaw = crate::sim_lightshome::camera_machine_yaw(g, c);
         let look = lens_dir(yaw, pitch);
         let back: V3 = [-m::sin(d.yaw), 0.0, -m::cos(d.yaw)];
-        out.push(make_box(g, &MakeBoxP { c: v3::mad(d.pos, back, 0.16), h: [0.025, 0.025, 0.09], yaw: Some(d.yaw), albedo: Some(cam_dark()), flags: Some(dyn_), ..MakeBoxP::zeroed() }).into());
+        out.push(make_box(g, &MakeBoxP { c: v3::mad(d.pos, back, 0.16), h: [0.025, 0.025, 0.09], yaw: Some(d.yaw), albedo: Some(cam_dark()), flags: Some(dyn_), ..MakeBoxP::default() }).into());
         let x = v3::normalize(v3::cross([0.0, 1.0, 0.0], look));
         let y = v3::cross(look, x);
-        out.push(make_box(g, &MakeBoxP { c: v3::mad(d.pos, look, -0.04), h: [0.055, 0.05, 0.1], yaw: Some(yaw), rot: Some(v3::quat::from_basis(x, y, look)), albedo: Some(cam_col()), flags: Some(dyn_), ..MakeBoxP::zeroed() }).into());
-        out.push(make_box(g, &MakeBoxP { c: v3::mad(d.pos, look, 0.075), h: [0.03, 0.03, 0.02], yaw: Some(yaw), rot: Some(v3::quat::from_basis(x, y, look)), albedo: Some([0.02, 0.02, 0.025]), flags: Some(deco), ..MakeBoxP::zeroed() }).into());
+        out.push(make_box(g, &MakeBoxP { c: v3::mad(d.pos, look, -0.04), h: [0.055, 0.05, 0.1], yaw: Some(yaw), rot: Some(v3::quat::from_basis(x, y, look)), albedo: Some(cam_col()), flags: Some(dyn_), ..MakeBoxP::default() }).into());
+        out.push(make_box(g, &MakeBoxP { c: v3::mad(d.pos, look, 0.075), h: [0.03, 0.03, 0.02], yaw: Some(yaw), rot: Some(v3::quat::from_basis(x, y, look)), albedo: Some([0.02, 0.02, 0.025]), flags: Some(deco), ..MakeBoxP::default() }).into());
         let seen = crate::sim_lightshome::camera_machine_seen(g, c);
         let hot = seen > 0.02;
         let blink = if crate::sim_lightshome::camera_machine_state(g, c) != crate::sim_lightshome::CameraState::Idle { if m::sin(g.time * 18.0) > 0.0 { 1.0 } else { 0.15 } } else { 1.0 };
         let led: V3 = if !ok { [0.0, 0.0, 0.0] } else {
             v3::scale(if hot { led_hot() } else { led_idle() }, blink * (if hot { v3::clamp(0.4 + seen / m::max(0.1, g.tune.camera_suspicion_secs), 0.4, 1.6) } else { 1.0 }))
         };
-        out.push(make_box(g, &MakeBoxP { c: v3::add(v3::mad(d.pos, look, 0.02), v3::scale(y, 0.062)), h: [0.012, 0.008, 0.012], yaw: Some(yaw), rot: Some(v3::quat::from_basis(x, y, look)), albedo: Some([0.05, 0.0, 0.0]), emissive: Some(led), flags: Some(deco), ..MakeBoxP::zeroed() }).into());
+        out.push(make_box(g, &MakeBoxP { c: v3::add(v3::mad(d.pos, look, 0.02), v3::scale(y, 0.062)), h: [0.012, 0.008, 0.012], yaw: Some(yaw), rot: Some(v3::quat::from_basis(x, y, look)), albedo: Some([0.05, 0.0, 0.0]), emissive: Some(led), flags: Some(deco), ..MakeBoxP::default() }).into());
     }
     for k in g.devices.keypads.clone() {
         let d = &k.def;
         let n = k.n;
         let yaw = d.yaw;
-        out.push(make_box(g, &MakeBoxP { c: v3::mad(d.pos, n, 0.012), h: [0.045, 0.065, 0.012], yaw: Some(yaw), albedo: Some(pad_col()), flags: Some(deco), ..MakeBoxP::zeroed() }).into());
-        out.push(make_box(g, &MakeBoxP { c: v3::add(v3::mad(d.pos, n, 0.026), [0.0, -0.015, 0.0]), h: [0.03, 0.035, 0.003], yaw: Some(yaw), albedo: Some([0.06, 0.06, 0.07]), stuff: Some(crate::scene_stuff::BoxStuff::Metal), flags: Some(deco), ..MakeBoxP::zeroed() }).into());
+        out.push(make_box(g, &MakeBoxP { c: v3::mad(d.pos, n, 0.012), h: [0.045, 0.065, 0.012], yaw: Some(yaw), albedo: Some(pad_col()), flags: Some(deco), ..MakeBoxP::default() }).into());
+        out.push(make_box(g, &MakeBoxP { c: v3::add(v3::mad(d.pos, n, 0.026), [0.0, -0.015, 0.0]), h: [0.03, 0.035, 0.003], yaw: Some(yaw), albedo: Some([0.06, 0.06, 0.07]), stuff: Some(crate::scene_stuff::BoxStuff::Metal), flags: Some(deco), ..MakeBoxP::default() }).into());
         let locked = crate::doors::door_locked(g, k.door) && crate::doors::door_latched(g, k.door);
         let busy = crate::seats::men(g).iter().any(|&pl| g.pl[pl].coding == Some(k.door));
         let led: V3 = if busy { v3::scale(amber(), if m::sin(g.time * 30.0) > 0.0 { 1.0 } else { 0.2 }) } else if locked { red() } else { green() };
-        out.push(make_box(g, &MakeBoxP { c: v3::add(v3::mad(d.pos, n, 0.026), [0.0, 0.045, 0.0]), h: [0.012, 0.006, 0.003], yaw: Some(yaw), albedo: Some([0.04, 0.04, 0.04]), emissive: Some(v3::scale(led, 0.5)), flags: Some(deco), ..MakeBoxP::zeroed() }).into());
+        out.push(make_box(g, &MakeBoxP { c: v3::add(v3::mad(d.pos, n, 0.026), [0.0, 0.045, 0.0]), h: [0.012, 0.006, 0.003], yaw: Some(yaw), albedo: Some([0.04, 0.04, 0.04]), emissive: Some(v3::scale(led, 0.5)), flags: Some(deco), ..MakeBoxP::default() }).into());
     }
     for l in g.devices.lasers.clone() {
         let d = g.tab.devices_laser_rt[l].def.clone();
         let (target, dir, len) = (g.tab.devices_laser_rt[l].target, g.tab.devices_laser_rt[l].dir, g.tab.devices_laser_rt[l].len);
         let ok = alive(g, target);
         let yaw = v3::yaw_of(dir);
-        out.push(make_box(g, &MakeBoxP { c: v3::mad(d.from, dir, -0.03), h: [0.03, 0.035, 0.03], yaw: Some(yaw), albedo: Some(emit_col()), flags: Some(deco), ..MakeBoxP::zeroed() }).into());
-        out.push(make_box(g, &MakeBoxP { c: v3::mad(d.to, dir, 0.03), h: [0.03, 0.035, 0.03], yaw: Some(yaw), albedo: Some(emit_col()), flags: Some(deco), ..MakeBoxP::zeroed() }).into());
+        out.push(make_box(g, &MakeBoxP { c: v3::mad(d.from, dir, -0.03), h: [0.03, 0.035, 0.03], yaw: Some(yaw), albedo: Some(emit_col()), flags: Some(deco), ..MakeBoxP::default() }).into());
+        out.push(make_box(g, &MakeBoxP { c: v3::mad(d.to, dir, 0.03), h: [0.03, 0.035, 0.03], yaw: Some(yaw), albedo: Some(emit_col()), flags: Some(deco), ..MakeBoxP::default() }).into());
         let (last, cut) = (crate::sim_lightshome::laser_machine_last_trip_at(g, l), crate::sim_lightshome::laser_machine_cut(g, l));
         let glow: V3 = if ok { if g.time - last < 1.5 { v3::scale(red(), if m::sin(g.time * 40.0) > 0.0 { 2.0 } else { 0.2 }) } else { [1.5, 0.1, 0.05] } } else { [0.0, 0.0, 0.0] };
-        out.push(make_box(g, &MakeBoxP { c: v3::add(v3::mad(d.from, dir, -0.03), [0.0, 0.043, 0.0]), h: [0.008, 0.005, 0.008], yaw: Some(yaw), albedo: Some([0.05, 0.0, 0.0]), emissive: Some(glow), flags: Some(deco), ..MakeBoxP::zeroed() }).into());
+        out.push(make_box(g, &MakeBoxP { c: v3::add(v3::mad(d.from, dir, -0.03), [0.0, 0.043, 0.0]), h: [0.008, 0.005, 0.008], yaw: Some(yaw), albedo: Some([0.05, 0.0, 0.0]), emissive: Some(glow), flags: Some(deco), ..MakeBoxP::default() }).into());
         if ok && cut > 0.05 { crate::combat::beam_boxes(g, d.from, dir, cut, out, cut < len - 0.05, None, None); }
     }
 }

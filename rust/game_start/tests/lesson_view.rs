@@ -37,14 +37,6 @@ fn sky_mission(seed: u32) -> Play {
 }
 fn char_id(p: &Play, seat: usize) -> f64 { let s = p.g.seats[seat]; p.g.ch[p.g.pl[game::seats::seat(&p.g, s).player].ch].id }
 
-/// every word of the game's state, a word a part: the game's own parts, then rust/sim's block
-fn words(p: &mut Play) -> Vec<u32> {
-    let (mut w, mut words) = (game::bytes::W::new(), Vec::new());
-    game::state_words::state_words(&mut p.g, &mut w, &mut words);
-    words.extend(game_start::block::part_hashes(0));
-    words
-}
-
 /// A FAILURE MEANS: the player reads a step that is not up, or a key that does nothing. Told as the tick moves the lesson: the view asked of the first step, then
 /// a step that waits on the level's script (no key to press, so no mark), then one that opens the squad's key, then what the men are doing once it is pressed.
 #[test]
@@ -211,7 +203,7 @@ fn asking_about_a_lesson_writes_nothing() {
                 for s in 0..10 {
                     if s == 2 { p.order("move", [11.4, 16.4], Who::All); }
                     for _ in 0..60 { p.frame(); if ask { assert!(p.view().lesson.is_some()); } }
-                    out.push(words(&mut p));
+                    out.push(p.words());
                 }
                 out
             };

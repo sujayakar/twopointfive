@@ -1,12 +1,11 @@
-//! The types of `render_sdfrig`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `render_sdfrig`.
 #![allow(unused_imports)]
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Default)]
 pub enum RigSlotName {
-    Chest,
+    #[default] Chest,
     UpperArmR,
     UpperArmL,
     LowerTorso,
@@ -44,8 +43,7 @@ impl RigSlotName {
     }
 }
 
-/// (TypeScript: RigSlotFit, src/render/sdfrig.ts:38)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RigSlotFit {
     pub name: crate::render_sdfrig::RigSlotName,
     pub r0: f64,
@@ -59,28 +57,8 @@ pub struct RigSlotFit {
     pub hand: f64,
     pub overridden: bool,
 }
-impl RigSlotFit {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RigSlotFit {
-            name: crate::render_sdfrig::RigSlotName::Chest,
-            r0: 0.0,
-            r1: 0.0,
-            solved: [0.0; 2],
-            n: 0.0,
-            rms: 0.0,
-            max_abs: 0.0,
-            cover: 0.0,
-            len: 0.0,
-            hand: 0.0,
-            overridden: false,
-        }
-    }
-}
-impl Default for RigSlotFit { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: RigFit, src/render/sdfrig.ts:48)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct RigFit {
     pub r0: Vec<f32>,
     pub r1: Vec<f32>,
@@ -90,85 +68,31 @@ pub struct RigFit {
     pub by_owner: Option<JsMap<crate::Num, crate::render_sdfrig::RigFitByOwnerValue>>,
     pub pad: Option<f64>,
 }
-impl RigFit {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RigFit {
-            r0: Vec::new(),
-            r1: Vec::new(),
-            slots: Vec::new(),
-            verts: 0.0,
-            ms: 0.0,
-            by_owner: None,
-            pad: None,
-        }
-    }
-}
-impl Default for RigFit { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/render/sdfrig.ts:51 RigFit.byOwner, src/render/sdfrig.ts:51)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct RigFitByOwnerValue {
     pub r0: Vec<f32>,
     pub r1: Vec<f32>,
     pub pad: Option<f64>,
 }
-impl RigFitByOwnerValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RigFitByOwnerValue {
-            r0: Vec::new(),
-            r1: Vec::new(),
-            pad: None,
-        }
-    }
-}
-impl Default for RigFitByOwnerValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: MeshRows, src/render/sdfrig.ts:189)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct MeshRows {
     pub segs: Vec<[V3; 2]>,
     pub cand: Vec<crate::render_sdfrig::MeshRowsCandItem>,
     pub ends: Vec<u8>,
     pub home: Vec<i8>,
 }
-impl MeshRows {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        MeshRows {
-            segs: Vec::new(),
-            cand: Vec::new(),
-            ends: Vec::new(),
-            home: Vec::new(),
-        }
-    }
-}
-impl Default for MeshRows { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/render/sdfrig.ts:189 MeshRows.cand, src/render/sdfrig.ts:189)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct MeshRowsCandItem {
     pub v: Vec<i32>,
     pub a: Vec<f64>,
     pub b: Vec<f64>,
     pub rho: Vec<f64>,
 }
-impl MeshRowsCandItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        MeshRowsCandItem {
-            v: Vec::new(),
-            a: Vec::new(),
-            b: Vec::new(),
-            rho: Vec::new(),
-        }
-    }
-}
-impl Default for MeshRowsCandItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/render/sdfrig.ts:31 RIG_OVERRIDES, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1583)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RIGOVERRIDES {
     pub chest: Option<crate::render_sdfrig::RIGOVERRIDESChest>,
     pub upper_arm_r: Option<crate::render_sdfrig::RIGOVERRIDESChest>,
@@ -186,49 +110,14 @@ pub struct RIGOVERRIDES {
     pub shin_r: Option<crate::render_sdfrig::RIGOVERRIDESChest>,
     pub sole_r: Option<crate::render_sdfrig::RIGOVERRIDESChest>,
 }
-impl RIGOVERRIDES {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RIGOVERRIDES {
-            chest: None,
-            upper_arm_r: None,
-            upper_arm_l: None,
-            lower_torso: None,
-            shoulders: None,
-            pelvis: None,
-            neck_head: None,
-            forearm_l: None,
-            forearm_r: None,
-            thigh_l: None,
-            shin_l: None,
-            sole_l: None,
-            thigh_r: None,
-            shin_r: None,
-            sole_r: None,
-        }
-    }
-}
-impl Default for RIGOVERRIDES { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at RIGOVERRIDES.chest, src/render/sdfrig.ts:31)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct RIGOVERRIDESChest {
     pub r0: Option<f64>,
     pub r1: Option<f64>,
 }
-impl RIGOVERRIDESChest {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        RIGOVERRIDESChest {
-            r0: None,
-            r1: None,
-        }
-    }
-}
-impl Default for RIGOVERRIDESChest { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/render/sdfrig.ts:71 SLOTS, src/render/sdfrig.ts:71)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct SLOTSItem {
     pub name: String,
     pub seg: crate::FnField,
@@ -237,20 +126,6 @@ pub struct SLOTSItem {
     pub after: Option<Vec<String>>,
     pub rho_max: Option<f64>,
 }
-impl SLOTSItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SLOTSItem {
-            name: String::new(),
-            seg: crate::FnField,
-            joints: Vec::new(),
-            u_range: [0.0; 2],
-            after: None,
-            rho_max: None,
-        }
-    }
-}
-impl Default for SLOTSItem { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]

@@ -1,47 +1,22 @@
-//! The types of `render_wear`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `render_wear`.
 #![allow(unused_imports)]
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: WearMap, src/render/wear.ts:37)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct WearMap {
     pub data: Vec<u8>,
     pub w: f64,
     pub h: f64,
 }
-impl WearMap {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WearMap {
-            data: Vec::new(),
-            w: 0.0,
-            h: 0.0,
-        }
-    }
-}
-impl Default for WearMap { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/render/wear.ts:31 WAY, src/render/wear.ts:31)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct WAY {
     pub patrol: f64,
     pub team: f64,
     pub doors: f64,
     pub hint: f64,
 }
-impl WAY {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        WAY {
-            patrol: 0.0,
-            team: 0.0,
-            doors: 0.0,
-            hint: 0.0,
-        }
-    }
-}
-impl Default for WAY { fn default() -> Self { Self::zeroed() } }
 
 /// (src/render/wear.ts:24 WEAR_RES)
 pub const WEAR_RES: f64 = 8.0;

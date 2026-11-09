@@ -3,9 +3,9 @@
 // 'the nice thing of integrating with the fluid system is that you'll naturally get neat interactions where the wind hits a wall', 'like vortices past the edge of
 // the door'. So: an incompressible-ish solve on a grid of AIR_RES cells a metre, walls / boxes / door leaves as solid cells, the ambient wind forced in wherever the
 // sky is open, and what comes out is a texture of the air's velocity (and an upward LIFT) a cell that the grain particles sample.
-// PICTURE ONLY: nothing in the simulation reads it, it takes no die and no wall clock (the caller hands it the game's clock), and it imports nothing from src/game.
+// PICTURE ONLY: nothing in the simulation reads it, it takes no die and no wall clock (the caller hands it the game's clock), and it imports no game code.
 // What lives here: the buffers, the one bind group every kernel shares, the numbers (AIR), the step's encoding (one compute pass, 4 + 2 × AIR.iterations small
-// dispatches, ONE uniform write), the cell map's upload, the read-back for the test page (tools/qa/air-field-page.cjs) and a debug view.
+// dispatches, ONE uniform write), the cell map's upload, a read-back and a debug view.
 //
 // Three things about the model that are not in a textbook solver (the shader's head has the kernels):
 //   THE RELAX   every open cell is pulled toward wind × its share over AIR.relaxTime. That is the wind coming over the wall tops; it is also what makes the field

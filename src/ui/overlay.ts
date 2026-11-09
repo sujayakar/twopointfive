@@ -1,7 +1,7 @@
 // DOM overlay: guard state markers, the F reticle + interaction panel, light / sound meters, kit column, message log, mission line, tour caption / timeline.
 import { railClear, type Box } from './railclear';
 import { railCard, type RailCard } from './railcard';
-import type { HudLike } from '../host/hud';   // the loop's view of a HUD (src/host/loop.ts stepFrame): this class is the DOM one; a native host's display-list overlay is another
+import type { HudLike } from '../host/hud';   // the loop's view of a HUD (src/host/drawpage.ts stepFrame): this class is the DOM one; a native host's display-list overlay is another
 import { clamp, lerp, v3, type Vec3 } from '../math/vec';
 import type { HudCam, HudSource } from '../view/hud';
 import type { ListRow, ThingDot, ThingRing, ThrowReachView } from '../view/read';
@@ -79,7 +79,7 @@ export class Overlay implements HudLike {
     this.captionEl.className = text ? 'on' : '';
     if (text) this.captionEl.innerHTML = `<div class="cap">${keyText(text)}</div>${sub ? `<div class="sub">${keyText(sub)}</div>` : ''}`;
   }
-  private wish: HTMLElement; private wishKey = '';   // aimweight.ts: the dot on what the reticle snapped to while the circle (where the gun points) is still swinging onto it
+  private wish: HTMLElement; private wishKey = '';   // rust/game_rules/src/aimweight: the dot on what the reticle snapped to while the circle (where the gun points) is still swinging onto it
   private reticle: HTMLElement; private ring: HTMLElement; private ringKey = -1;   // the ring on the marker F acts on; ring: progress round it (Interactable.progress — a lock being picked, the drive coming out)
   private hint: HTMLElement; private hintKey = '';                                  // the one word beside the ring: the 40 mm's too-close warning (HE40_SHORT)
   private aimPx = 16; private aimStyled = false;                                     // the aim ring's eased diameter under the aim model (px), and whether its inline size / tint are on it (taken off again for the interaction ring / the model off)
@@ -93,15 +93,15 @@ export class Overlay implements HudLike {
   private blindEl = document.getElementById('blind'); private blindK = 0;             // the white of a stun canister in his eyes (game.view.marks.blind) — absent on a page without the element
   private ckEl = document.getElementById('checkpoint'); private ckKey = '';           // the CHECKPOINT tag (HudPage.saved: the page's save controller, written / loaded) — absent on a page without the element
   private skyWas = false;
-  private railEl: HTMLElement; private railKey = '\0'; private railNote = ''; private objTurn = ''; private railsWas = false; private railRest: Box | null = null; private railRestOf: [string, string, number, number] = ['\0', '', 0, 0]; private railMan = 0; private railLog = ''; private railBoxes: Box[] = [];                           // a tutorial mission's one big line, low in the middle (game/rails.ts prompt)
+  private railEl: HTMLElement; private railKey = '\0'; private railNote = ''; private objTurn = ''; private railsWas = false; private railRest: Box | null = null; private railRestOf: [string, string, number, number] = ['\0', '', 0, 0]; private railMan = 0; private railLog = ''; private railBoxes: Box[] = [];                           // a tutorial mission's one big line, low in the middle (rust/game_rules/src/rails prompt)
   private card: RailCard;                                                          // a tutorial step's card, up in the middle with the world held (ui/railcard.ts)
-  /** a tutorial mission's card is up (main.ts holds the world still under it) */
+  /** a tutorial mission's card is up (host/drawpage.ts holds the world still under it) */
   get cardUp(): boolean { return this.card.up; }
-  /** a key went down while it may be the card's (main.ts, ahead of the game's own read of it): true = it was */
+  /** a key went down while it may be the card's (host/drawpage.ts, ahead of the game's own read of it): true = it was */
   cardKey(e: KeyboardEvent): boolean { return this.card.key(e); }
-  /** main.ts: what a card does as it goes (the keyboard's focus back to the game) */
+  /** host/drawpage.ts: what a card does as it goes (the keyboard's focus back to the game) */
   set cardClosed(fn: (() => void) | null) { this.card.onClose = fn; }
-  /** main.ts: this page shows no card (a replay's tape) */
+  /** host/drawpage.ts: this page shows no card (a replay's tape) */
   cards = true;
   private objMark: HTMLElement;                                                    // diamond + distance on / toward the current objective
   constructor() {
@@ -235,7 +235,7 @@ export class Overlay implements HudLike {
       if (key !== this.logKey) { this.logKey = key; this.log.innerHTML = rx.map(m => `<span class="rx${m.kind === 'heard' ? ' heard old' : m.age > 5 ? ' old' : ''}"><b>${m.kind === 'heard' ? 'HEARD' : '·)) RADIO'}</b>${clean(m.text)}</span>`).join('') + said.map(t => `<span class="rx said">${clean(t)}</span>`).join(''); } }
     // mission: the objective line, and a diamond + distance on the objective — clamped to the screen edge in its direction when it is off screen (the
     // usual case from this camera), faded out within a couple of metres so it never fights the F reticle / door marker that takes over there
-    // A TUTORIAL MISSION (game/rails.ts): its step is the one instruction on screen — big, low in the middle, each key it names drawn as a key ('[B]' in the
+    // A TUTORIAL MISSION (rust/game_rules/src/rails): its step is the one instruction on screen — big, low in the middle, each key it names drawn as a key ('[B]' in the
     // line), a pip for every step. The small row at the top stands down while it is up, and the seat with nobody on the floor hides the rows of a man's own kit.
     const frame = V.lesson?.rails ?? null, rail = frame?.prompt ?? null;
     // (each cap in brackets is one key, asked of the key map by itself: a line of several — '[W] [A] [S] [D]' — follows a rebind of any of them)
@@ -410,7 +410,7 @@ export class Overlay implements HudLike {
 
 function esc(t: string): string { return t.replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
 /** The aim ring's diameter (CSS px) for a cone of `spread` rad (± half per axis: the cone is spread wide) at `dist` metres: that width over the metres one CSS pixel
- *  covers at the camera's look-at depth, clamped 10‥`cap` (60; aimcost.ts hands `ringPx` while moving costs the shot). Pure — the QA probes read it (aim-probes.ts). */
+ *  covers at the camera's look-at depth, clamped 10‥`cap` (60; rust/game_rules/src/aimcost hands `ringPx` while moving costs the shot). Pure. */
 export function aimRingPx(spread: number, dist: number, cam: { distance: number; fov: number }, viewH: number, cap = 60): number {
   const mPerCssPx = 2 * cam.distance * Math.tan(cam.fov / 2) / Math.max(200, viewH);
   return clamp(spread * dist / Math.max(mPerCssPx, 1e-4), 10, Math.max(10, cap));

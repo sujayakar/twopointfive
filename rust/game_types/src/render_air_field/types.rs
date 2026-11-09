@@ -1,9 +1,8 @@
-//! The types of `render_air_field`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `render_air_field`.
 #![allow(unused_imports)]
 use crate::{ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: AirField, src/render/airField.ts:63)
 #[derive(Clone, Debug)]
 pub struct AirField {
     pub w: f64,
@@ -28,7 +27,7 @@ pub struct AirField {
     pub t0: f64,
 }
 impl AirField {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         AirField {
             w: 0.0,
@@ -56,7 +55,6 @@ impl AirField {
 }
 impl Default for AirField { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub enum AirFieldPipesKey {
     Curl,

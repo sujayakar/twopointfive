@@ -1,10 +1,9 @@
-//! The types of `fireline`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `fireline`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: St, src/game/fireline.ts:77)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct St {
     pub since: f64,
     pub t: f64,
@@ -13,23 +12,8 @@ pub struct St {
     pub go_t: f64,
     pub said: bool,
 }
-impl St {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        St {
-            since: 0.0,
-            t: 0.0,
-            way: None,
-            look_t: 0.0,
-            go_t: 0.0,
-            said: false,
-        }
-    }
-}
-impl Default for St { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Fired, src/game/fireline.ts:82)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct Fired {
     pub gun: String,
     pub shots: f64,
@@ -38,23 +22,8 @@ pub struct Fired {
     pub live_t: f64,
     pub rel_t: f64,
 }
-impl Fired {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Fired {
-            gun: String::new(),
-            shots: 0.0,
-            round_t: 0.0,
-            gap: 0.0,
-            live_t: 0.0,
-            rel_t: 0.0,
-        }
-    }
-}
-impl Default for Fired { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Lane, src/game/fireline.ts:103)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Lane {
     pub m: V3,
     pub dx: f64,
@@ -65,57 +34,19 @@ pub struct Lane {
     pub energy: Option<f64>,
     pub thin: f64,
 }
-impl Lane {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Lane {
-            m: [0.0; 3],
-            dx: 0.0,
-            dz: 0.0,
-            back: 0.0,
-            k: 0.0,
-            half: 0.0,
-            energy: None,
-            thin: 0.0,
-        }
-    }
-}
-impl Default for Lane { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at quiet hold ->, src/game/fireline.ts:166)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct Hold {
     pub speed: f64,
     /// INVENTED: dealt when a hold starts; a new hold of the same man counts as new
     pub serial: u32,
 }
-impl Hold {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Hold {
-            speed: 0.0,
-            serial: 0,
-        }
-    }
-}
-impl Default for Hold { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/fireline.ts:171 fireLineFeet ->, src/game/fireline.ts:171)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct FireLineFeet {
     pub goal: Option<V3>,
     pub speed: f64,
 }
-impl FireLineFeet {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FireLineFeet {
-            goal: None,
-            speed: 0.0,
-        }
-    }
-}
-impl Default for FireLineFeet { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]

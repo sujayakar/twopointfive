@@ -1,10 +1,9 @@
-//! The types of `sim_propshome`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `sim_propshome`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: PropCols, src/sim/propshome.ts:40)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct PropCols {
     pub x: f64,
     pub z: f64,
@@ -23,32 +22,7 @@ pub struct PropCols {
     pub noise_t: f64,
     pub row: f64,
 }
-impl PropCols {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PropCols {
-            x: 0.0,
-            z: 0.0,
-            yaw: 0.0,
-            flags: 0.0,
-            idle: 0.0,
-            bytes: 0.0,
-            who: 0.0,
-            w: 0.0,
-            id: 0.0,
-            vx: 0.0,
-            vz: 0.0,
-            cs: 0.0,
-            sn: 0.0,
-            push_t: 0.0,
-            noise_t: 0.0,
-            row: 0.0,
-        }
-    }
-}
-impl Default for PropCols { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: PropStore, src/sim/propshome.ts:48)
 #[derive(Clone, Copy, Debug, ToBytes)]
 pub struct PropStore {
     pub epoch: f64,
@@ -62,12 +36,12 @@ pub struct PropStore {
     pub cap: f64,
 }
 impl PropStore {
-    /// what a new one holds: the TypeScript's field initialisers, before its constructor
+    /// what a new one holds
     pub fn blank() -> Self {
         PropStore {
             epoch: -1.0,
             total: 0.0,
-            o: crate::sim_propshome::PropStoreO::zeroed(),
+            o: crate::sim_propshome::PropStoreO::default(),
             home: crate::Opaque,
             b8: 0.0,
             b4: 0.0,
@@ -77,8 +51,7 @@ impl PropStore {
 }
 impl Default for PropStore { fn default() -> Self { Self::blank() } }
 
-/// (TypeScript: inline at src/sim/colstore.ts:28 PropStore.O, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1611)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct PropStoreO {
     pub x: f64,
     pub z: f64,
@@ -97,33 +70,8 @@ pub struct PropStoreO {
     pub noise_t: f64,
     pub row: f64,
 }
-impl PropStoreO {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PropStoreO {
-            x: 0.0,
-            z: 0.0,
-            yaw: 0.0,
-            flags: 0.0,
-            idle: 0.0,
-            bytes: 0.0,
-            who: 0.0,
-            w: 0.0,
-            id: 0.0,
-            vx: 0.0,
-            vz: 0.0,
-            cs: 0.0,
-            sn: 0.0,
-            push_t: 0.0,
-            noise_t: 0.0,
-            row: 0.0,
-        }
-    }
-}
-impl Default for PropStoreO { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: PropIo, src/sim/propshome.ts:102)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct PropIo {
     pub x: crate::sim_sim::SimExports,
     pub def: f64,
@@ -137,47 +85,15 @@ pub struct PropIo {
     pub max_ways: f64,
     pub max_events: f64,
 }
-impl PropIo {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PropIo {
-            x: crate::sim_sim::SimExports::zeroed(),
-            def: 0.0,
-            con: 0.0,
-            leaf: 0.0,
-            way: 0.0,
-            ev: 0.0,
-            par: 0.0,
-            max_contacts: 0.0,
-            max_leaves: 0.0,
-            max_ways: 0.0,
-            max_events: 0.0,
-        }
-    }
-}
-impl Default for PropIo { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/sim/propshome.ts:35 PT, src/sim/propshome.ts:35)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct PT {
     pub asleep: f64,
     pub dirty: f64,
     pub rolling: f64,
 }
-impl PT {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PT {
-            asleep: 0.0,
-            dirty: 0.0,
-            rolling: 0.0,
-        }
-    }
-}
-impl Default for PT { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/sim/propshome.ts:87 PD, src/sim/propshome.ts:87)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct PD {
     pub hx: f64,
     pub hz: f64,
@@ -191,28 +107,8 @@ pub struct PD {
     pub rest: f64,
     pub chair: f64,
 }
-impl PD {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PD {
-            hx: 0.0,
-            hz: 0.0,
-            radius: 0.0,
-            height: 0.0,
-            mass: 0.0,
-            inv_mass: 0.0,
-            inv_i: 0.0,
-            decel: 0.0,
-            visc: 0.0,
-            rest: 0.0,
-            chair: 0.0,
-        }
-    }
-}
-impl Default for PD { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/sim/propshome.ts:89 PK, src/sim/propshome.ts:89)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct PK {
     pub x: f64,
     pub z: f64,
@@ -223,25 +119,8 @@ pub struct PK {
     pub mass: f64,
     pub quiet: f64,
 }
-impl PK {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PK {
-            x: 0.0,
-            z: 0.0,
-            vx: 0.0,
-            vz: 0.0,
-            radius: 0.0,
-            who: 0.0,
-            mass: 0.0,
-            quiet: 0.0,
-        }
-    }
-}
-impl Default for PK { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/sim/propshome.ts:91 PY, src/sim/propshome.ts:91)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct PY {
     pub cx: f64,
     pub cz: f64,
@@ -249,22 +128,8 @@ pub struct PY {
     pub uz: f64,
     pub half: f64,
 }
-impl PY {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PY {
-            cx: 0.0,
-            cz: 0.0,
-            ux: 0.0,
-            uz: 0.0,
-            half: 0.0,
-        }
-    }
-}
-impl Default for PY { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/sim/propshome.ts:93 PE, src/sim/propshome.ts:93)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct PE {
     pub prop: f64,
     pub sound: f64,
@@ -277,27 +142,8 @@ pub struct PE {
     pub speed: f64,
     pub rolling: f64,
 }
-impl PE {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PE {
-            prop: 0.0,
-            sound: 0.0,
-            roll: 0.0,
-            x: 0.0,
-            y: 0.0,
-            z: 0.0,
-            who: 0.0,
-            level: 0.0,
-            speed: 0.0,
-            rolling: 0.0,
-        }
-    }
-}
-impl Default for PE { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/sim/propshome.ts:96 PP, src/sim/propshome.ts:96)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct PP {
     pub dt: f64,
     pub props: f64,
@@ -320,54 +166,14 @@ pub struct PP {
     pub held: f64,
     pub substeps: f64,
 }
-impl PP {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PP {
-            dt: 0.0,
-            props: 0.0,
-            contacts: 0.0,
-            leaves: 0.0,
-            ways: 0.0,
-            flags: 0.0,
-            friction: 0.0,
-            cas_decel: 0.0,
-            cas_visc: 0.0,
-            cas_spin: 0.0,
-            cas_start: 0.0,
-            cas_stop: 0.0,
-            events: 0.0,
-            wrong: 0.0,
-            swept: 0.0,
-            guided: 0.0,
-            pairs: 0.0,
-            walls: 0.0,
-            held: 0.0,
-            substeps: 0.0,
-        }
-    }
-}
-impl Default for PP { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/sim/propshome.ts:98 PF, src/sim/propshome.ts:98)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct PF {
     pub enabled: f64,
     pub castor: f64,
 }
-impl PF {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        PF {
-            enabled: 0.0,
-            castor: 0.0,
-        }
-    }
-}
-impl Default for PF { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/sim/propshome.ts:120 PROPS_STEPPED, src/sim/propshome.ts:120)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct SimPropshomeModPROPSSTEPPED {
     pub there: f64,
     pub here: f64,
@@ -386,30 +192,6 @@ pub struct SimPropshomeModPROPSSTEPPED {
     pub settle_walls: f64,
     pub settle_moved: f64,
 }
-impl SimPropshomeModPROPSSTEPPED {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        SimPropshomeModPROPSSTEPPED {
-            there: 0.0,
-            here: 0.0,
-            noises: 0.0,
-            asked: 0.0,
-            differ: 0.0,
-            first: String::new(),
-            swept: 0.0,
-            guided: 0.0,
-            pairs: 0.0,
-            walls: 0.0,
-            held: 0.0,
-            substeps: 0.0,
-            settled: 0.0,
-            settled_here: 0.0,
-            settle_walls: 0.0,
-            settle_moved: 0.0,
-        }
-    }
-}
-impl Default for SimPropshomeModPROPSSTEPPED { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug)]

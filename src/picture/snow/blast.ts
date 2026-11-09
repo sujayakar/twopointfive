@@ -15,7 +15,7 @@ export const SNOWBLAST = {
   sizeMin: 0.3,       // m
   sizeMax: 1.4,       // m
   high: 1.6,          // m over the snow at which a blast no longer marks it (0.3 m and under: the whole of it)
-  // ---- the crater in the prints' map (snowTracks.ts pressCrater)
+  // ---- the crater in the prints' map (rust/game_rules/src/snow_tracks)
   lobe: 0.22,         // how far the pan's outline wanders off a circle (three slow lobes)
   rag: 0.07,          // … and its fine ragged edge
   floor: 1,           // how deep the pan is pressed (1 = to the prints' own floor)

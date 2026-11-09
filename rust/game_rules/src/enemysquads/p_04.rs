@@ -802,7 +802,7 @@ fn tick_due(g: &mut Game, q: EnemysquadsSquadId, men: &[GuardId]) {
         }
         let t = g.time;
         let from = v3::copy(g.tab.roomfight_def[d].station);
-        g.tab.enemysquads_squad[q].sent.push(Sent { gd: due.gd, from, role: SentRole::Reinforce, phase: SentPhase::Loose, spot: None, door: None, fix_at: due.at, tries: 0.0, step_t: -100.0, t0: t, ..Sent::zeroed() });
+        g.tab.enemysquads_squad[q].sent.push(Sent { gd: due.gd, from, role: SentRole::Reinforce, phase: SentPhase::Loose, spot: None, door: None, fix_at: due.at, tries: 0.0, step_t: -100.0, t0: t, ..Sent::default() });
         crate::pressure::loose(g, d, due.at);
         let (a, b) = (pos_of(g, due.gd), g.gd[due.gd].last_known.unwrap_or(due.at));
         let way = crate::dialogue::way_name(g, a, b, lost.as_ref().map(|l| l.name.as_str()));

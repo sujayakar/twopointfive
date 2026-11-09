@@ -1,6 +1,6 @@
-// THE ENGINE REPLAY'S MAP (engineplay.ts): the floor as the replay file drew it (format.ts ReplayMap) with the men and doors of the game THAT IS PLAYING laid on it —
+// THE ENGINE REPLAY'S MAP: the floor as the replay file drew it (format.ts ReplayMap) with the men and doors of the game THAT IS PLAYING laid on it —
 // the corner minimap and the large map it opens into are this one drawing at two sizes. Pure 2D: it is handed plain numbers and a canvas, reads nothing of the game
-// and writes nothing anywhere. Colours and the plan's sense (X = x, Y = z) are the 2D viewer's (viewer.ts drawMap), so the two maps read as one.
+// and writes nothing anywhere. The plan's sense: X = x, Y = z.
 import type { ReplayMap } from './format';
 
 export interface MapMan { x: number; z: number; /** radians, 0 = +z */ aim: number; team: string; kind: 'player' | 'man' | 'civ'; down: boolean; name: string; ring: string | null }

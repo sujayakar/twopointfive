@@ -1,7 +1,7 @@
 // THE RUST GAME'S MODULE FOR THE PAGE (rust/game_face → game_face.wasm, FACE.md): where the file is, whether it is older than its sources, and the build.
 // A build's file (20 to 27 MB, under target/) is never checked in. The dev server (tools/serve.ts) answers /game_face.wasm with it and the static
 // build (tools/build.ts) copies it into dist/; both build it first when a source under rust/ is newer than the file. Where it cannot be built (no cargo, no
-// wasm target) the answer is the reason in plain words WITH THE ONE COMMAND THAT MENDS IT, which the page shows under `?rust=1` (src/host/rustgame.ts);
+// wasm target) the answer is the reason in plain words WITH THE ONE COMMAND THAT MENDS IT, which the page shows under `?rust=1` (src/host/drawgame.ts);
 // without the word the page never asks.
 // A CHECKED-IN MODULE FOR A MACHINE THAT CANNOT BUILD (rust/game_face/prebuilt/game_face.wasm, with SOURCES beside it: a hash of every source file the
 // module is made from). Where no build of this machine is up to date and the checked-in module's hash IS this checkout's sources' hash, it is served and

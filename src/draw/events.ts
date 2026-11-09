@@ -39,6 +39,8 @@ export class DrawEvents {
   private v3(o: number): Vec3 { const f = this.D.f; return [f[o], f[o + 1], f[o + 2]]; }
   private v3said(o: number): Vec3 | undefined { return this.D.f[o] === this.D.f[o] ? this.v3(o) : undefined; }
 
+  /** the game stands anew: what lets smoke out where it stands, whoever heard it begin */
+  stands(): void { this.ride(); this.sources(); }
   /** the tick that has just run */
   from(): void {
     this.ride(); this.sounds();
@@ -51,7 +53,7 @@ export class DrawEvents {
         const k = u[o + Kick.kinds], w: ImpulseOpts = { up: said(f[o + Kick.up]), bias: this.v3said(o + Kick.bias), eye: this.v3said(o + Kick.eye), occlude: u[o + Kick.occlude] !== 0, kinds: k ? PKINDS.filter((_, n) => k >>> n & 1) as PKind[] : undefined, seed: u[o + Kick.seed] === 0xffffffff ? undefined : u[o + Kick.seed] };
         P.impulse(this.v3(o + Kick.pos), f[o + Kick.radius], f[o + Kick.strength], w); }
     }
-    for (let i = 0, o = D.at[Section.sources]; i < D.n[Section.sources]; i++, o += SmokeSource.row) if (this.played.once(Section.sources, u[o + SmokeSource.tick], u[o + SmokeSource.serial])) this.source(o);
+    this.sources();
     const stir = Math.max(0, lookConfig.stir); this.smoke.setStir(stir);   // (how hard a moving man curls the smoke about him)
     for (let i = 0, o = D.at[Section.pushes]; i < D.n[Section.pushes]; i++, o += AirPush.row) if ((u[o + AirPush.shape] <= SHAPE_BODY || u[o + AirPush.shape] >= SHAPE_ROUND) && this.played.once(Section.pushes, u[o + AirPush.tick], u[o + AirPush.serial])) {
       const shape = u[o + AirPush.shape], len = f[o + AirPush.len], vel = this.v3(o + AirPush.vel);
@@ -73,6 +75,7 @@ export class DrawEvents {
       A.play(this.names[n] ??= this.nameOf(n), pos, gain, opts); }
     for (let i = 0, o = D.at[Section.footfalls]; i < D.n[Section.footfalls]; i++, o += Footfall.row, D.fresh()) if (this.played.once(Section.footfalls, D.u[o + Footfall.tick], D.u[o + Footfall.serial])) { const m = D.u[o + Footfall.floor]; A.footstep(this.v3(o + Footfall.pos), D.f[o + Footfall.loud], D.u[o + Footfall.own] !== 0, m ? FLOORS[m - 1] as FloorMat : undefined); }
   }
+  private sources(): void { const D = this.D; for (let i = 0, o = D.at[Section.sources]; i < D.n[Section.sources]; i++, o += SmokeSource.row) if (this.played.once(Section.sources, D.u[o + SmokeSource.tick], D.u[o + SmokeSource.serial])) this.source(o); }
   /** a source of smoke, with the push of the air that goes with it, as today's solver takes them: one emitter */
   private source(o: number): void {
     const D = this.D, f = D.f, u = D.u, n = u[o + SmokeSource.push], a = n ? D.at[Section.pushes] + (n - 1) * AirPush.row : -1, says = u[o + SmokeSource.says], key = u[o + SmokeSource.anchor];

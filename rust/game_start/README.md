@@ -9,7 +9,7 @@ Two things stand on it:
 - **A test of a behaviour in ten lines.** A scene (rooms, doors, lamps, men) is said in Rust, stood, run for a few seconds and asked what a man
   did. `cargo test` in this folder runs them all in about half a minute.
 - **The road to starting every level in Rust.** The scene builder is not a second way to make a game: it WRITES A LEVEL FILE, and one start stands
-  any level file. What the start does not carry yet it refuses by name (below), and a compare holds it to the TypeScript start path by path.
+  any level file. What the start does not carry yet it refuses by name (below), and the gate's `start` rows hold what it makes to a pin, part by part.
 
 Nothing here has been seen on a GPU: the host these games stand on draws nothing.
 
@@ -52,7 +52,7 @@ drawn, so each test moves a mark, a range, a door or a landing point by the seed
 
 ### The scene (`src/scene.rs`)
 
-Metres, in the world a level must fit (40 by 28; x east, z south). The pieces are the level kit's own sizes (`src/scene/levelKit.ts`): a wall
+Metres, in the world a level must fit (40 by 28; x east, z south). The pieces are the level kit's own sizes (`tools/levels/lib/levelKit.ts`): a wall
 12 cm thick and 3 m high, a real door in a 1.2 m slot with its frame, a bare bulb on its flex.
 
 | call | what it says |
@@ -72,7 +72,7 @@ refuses a scene that says both. A scene has at least one door (a level's mission
 stops with the staging's own words, `roomclear/p_01.rs`) unless some room has more than one way in and every room has a defender: two rooms
 side by side with a door between them and a door each to the yard, a defender in each, is the smallest that stands (`tests/orders.rs yard()`).
 
-`scene.level_text()` is the level file. It can be saved under `levels/`, opened in the editor, and stood by the TypeScript start.
+`scene.level_text()` is the level file. It can be saved under `levels/`, and opened in the editor.
 
 ### The game in a test's hands (`src/play.rs`)
 
@@ -116,7 +116,7 @@ and `cargo test`'s threads take turns. A test that stands a second game drops th
 | the block of `rust/sim` the game stands in, zeroed under the layout's word | `stand.rs` |
 | the character: skeleton, skin, clips, the cast's meshes and variants | `gltf.rs`: `src/anim/gltf.ts` in Rust, from the `.gltf` files' bytes |
 | the host: an empty box world and light set, the picture's settings | the game's `box_world_new`; `settings.rs` (a copy of `defaultSettings()`) |
-| the level file read into the `Level`, its boxes and routes as rows | `level.rs`: `src/scene/levelLoad.ts loadLevel` in Rust; the records the game keeps as its own types (a mission's `scenarios`, the footsteps' map, devices, civilians, vents, the drill plans) and the file's own records the game crate has a type for (a box with its shape and markings, a light, a door) through `read.rs` and `records.rs`, a line a type |
+| the level file read into the `Level`, its boxes and routes as rows | `level.rs`: `tools/levels/lib/levelLoad.ts loadLevel` in Rust; the records the game keeps as its own types (a mission's `scenarios`, the footsteps' map, devices, civilians, vents, the drill plans) and the file's own records the game crate has a type for (a box with its shape and markings, a light, a door) through `read.rs` and `records.rs`, a line a type |
 | thin things and window bars marked; each box that says a shape given its record and its trim; statics into the world, lights into the set | `passes.rs` (`thin.ts`, `bars.ts`, `shapes.ts`); the game's `cut_record`, `box_world_add_static`, `light_from_def` |
 | the die, seeded before the men are made | the game's `sim_dice_new` |
 | collision, the walk grid, sound paths, fixtures, doors, guards, civilians, orders, the fog, the room fight, every module | **the game's own constructor, `game_new`** (`rust/game/src/game/p_04.rs`), which had never run before this crate |
@@ -147,7 +147,7 @@ it, and today it names nothing. `stand` REFUSES a file with anything on that lis
 - NOT CHECKED: the file's own rules (`validateLevelData`). A file is taken as one the TypeScript validator has passed; a wrong value stops the
   reader with its place in the file, a wrong level does not.
 
-Which missions start in Rust equal to the TypeScript start, row by row: [`LEVELS.md`](LEVELS.md), written by `tools/blitz/start-levels.ts`.
+Every row of the mission list is stood, twice over, by the gate's `start` rows ("The gate", below).
 
 ## What stands between this and the page starting a level in Rust
 
@@ -160,15 +160,14 @@ that the picture, the sound, the HUD and the menus read (`src/host/rustgame.ts`,
    `get`, `set`, `delete`, held to the browser's own reader case by case), every reader of them takes it (`start_from_query`,
    `spec_of_query`, `hour_from_query`, `weather_of_search`, `fog_of_query`, `quiet_rung_of_query`, `row_settings`, the loadout's, the
    gear's, the words'), and the one stand-in each module kept for `has` and `get` is gone, with three private copies of the text reader.
-   `StartOpts.link` is the address's text and `stand` starts the mission by `start_from_query` on it; the compare starts every mission from
-   its row's link on both sides (`LEVELS.md`).
-   The address's difficulty is read too, by one reader on each side (`difficulty_asked`, `difficultyAsked`): `start-levels.ts --words '&hard'` holds
-   every mission's hard start to the TypeScript's, the knob tables and the difficulty module's own record with it. `tests/hard.rs` holds the rule itself.
+   `StartOpts.link` is the address's text and `stand` starts the mission by `start_from_query` on it; the gate's `start` rows start every mission from
+   its row's link.
+   The address's difficulty is read too, by one reader on each side (`difficulty_asked`, `difficultyAsked`). `tests/hard.rs` holds the rule.
    What is left: the page hands `location.search` across once and the Rust game starts from it. Two things to know when that is written.
    An address's words are NOT on the wire (the table declares that arm of a `string | URLSearchParams` argument as holding nothing, and a
    `Query` writes nothing and reads back empty): a host hands the TEXT. And the page reads more off the address before the stand-up. THE
    WEATHER AND THE HOUR ARE DONE (2026-11-07): `address_before_game` reads them onto the blank game before `game_new`, as the page's
-   `addressBeforeGame` does, and the TypeScript start this one is held to (`start.ts`) takes the address at its stand the same way; a game
+   `addressBeforeGame` does, and a game
    stood from an address no longer has the harness's solo card put on at the stand (`stood.solo_stand` stays down, as on a page), and the
    address's own question is asked once the mission is staged. STILL THE PAGE'S ALONE: the kit this machine keeps and the words. The game
    crate's readers of those were called by nothing and went with the dead code; they come back, taking a `&Query`, with the page's start.
@@ -178,7 +177,7 @@ that the picture, the sound, the HUD and the menus read (`src/host/rustgame.ts`,
    fixtures, the wall skin. A game started in Rust has none of them on the page's side. (The same gap shows for a man made while a game runs.
    This item is from reading `rustgame.ts` and from the host's own notes, not from a page run: nothing here has opened a page.)
 3. **What this start leaves unmade because no rule of the tick reads it:** the character renderer, the mesh shadows' tree, the proxy fits of
-   the rig (`rig_fits`), a snow level's field and prints, the trig memos. `tools/blitz/known-start.txt` is the whole list, each row with its reason.
+   the rig (`rig_fits`), a snow level's field and prints, the trig memos.
    The page needs every one that is the picture's.
 4. **The dress step** (`src/host/rustdress.ts`, `src/game/dress.ts`): what the TypeScript tick did for the picture only still runs in
    TypeScript on the puppet. This start stands with those rows down.
@@ -192,16 +191,14 @@ that the picture, the sound, the HUD and the menus read (`src/host/rustgame.ts`,
 8. **The file's checks.** `validateLevelData` is TypeScript. A page that starts in Rust still validates in TypeScript, or the rules move.
 9. **What stands a game again from outside a tick.** A mission staged from a menu, a show, a kit view that sinks boxes: each is a TypeScript
    call on the puppet today, after which the Rust game is started again from the puppet. With a Rust start each becomes a call into the module.
-10. **Two players.** `StartOpts.seats` reaches `game_new`, and the compare runs every mission as a game of two (`LEVELS.md`, the second
-    table): the 23 missions the game stages for two start equal and stay in step with the second seat idle (the other 15 the game
-    itself refuses for two). Nobody at the second seat's controls, no server, no rollback here.
+10. **Two players.** `StartOpts.seats` reaches `game_new`, and the gate's `start` rows stand every mission as a game of two: those the game stages for two
+    are pinned part by part, and those it refuses for two are pinned with its words. Nobody at the second seat's controls, no server, no rollback here.
 11. **The module.** DONE AS FAR AS THE START ITSELF. The page's module carries this crate (`rust/game_face` links it without its `std`
     feature), and `face_start` stands a game inside the module from one run of handed bytes (`src/handed.rs`: the level file's text, the
-    address's words, the character's files, the host's commands). `tools/blitz/start-module.ts` holds the game the module starts to the
-    game the native start makes, mission by mission ("The module's start", below). Nothing plays a game started that way yet: item 13.
+    address's words, the character's files, the host's commands). Nothing plays a game started that way yet: item 13.
 12. **A MISSION'S TEAM NUMBERS BELONG ON THE GAME, AND THE RUST START IS WHERE THAT LANDS.** Today they are written into the process's knob
     tables, so a game whose start does not write a table finds it as the last mission left it: the one thing a second start in one process
-    still differs in ("A second start in one process", below, where the table forgives it by name). **The team's start is the office's until a
+    still differs in. **The team's start is the office's until a
     start says otherwise.** The rescue's and the night breach's knob tables are made holding the
     office's team start (`samAt`, `samYaw`, `opsAt`): the TypeScript reads them off `levels/office.json` as the module loads, the Rust holds
     them as the table's values (`knobs.rs`), and each keeps `applied`, the start the knobs were last written from, so that a start on a level
@@ -214,7 +211,7 @@ that the picture, the sound, the HUD and the menus read (`src/host/rustgame.ts`,
     the module needs that the old road never did. The bridge's book (`tools/blitz/export.ts Book`) gives a TypeScript object its number when
     the export's walk first meets it; on the old road the Rust game is MADE FROM those numbers, so every later apply finds its object. The
     Rust start numbers a row when it makes it, and keeps rows that were made and dropped (a gun the kit replaced, the men a staging took off
-    the floor). The two starts are the same game BY REACH, which is how `LEVELS.md` compares them; by raw row number they differ in tens of
+    the floor). The two starts were the same game BY REACH; by raw row number they differ in tens of
     thousands of paths (clips, characters, lights, guns, guards, the players). A tally played on a module-started game with the puppet's book
     as it stood stopped in half a second on the wrong object. Two ways out. The book rekeyed to the Rust game's rows at the start (the
     pairs by reach, which `diff.ts index` numbers for a tool; the host's own Input and camera paired by role, since neither walk reaches
@@ -223,90 +220,6 @@ that the picture, the sound, the HUD and the menus read (`src/host/rustgame.ts`,
     the picture reads MADE from the Rust game's rows, as a man the tick makes at run time already is (items 2 to 6). THE SECOND IS THE WAY:
     a start, a restart and a man made in play then become one act. Until then a module-started game is whole for a host with NO puppet (a
     game server stands N seats from a level's text today), and the page keeps its road.
-
-## The compare (`tools/blitz/start.sh`)
-
-```sh
-tools/blitz/start.sh kit-yard.json                                   # a level of levels/, as its file has it
-tools/blitz/start.sh kit-yard.json --scenario roomclear --frames 1800
-tools/blitz/start.sh depot.json --link '?levelFile=depot.json&roomclear&squad4' --frames 300   # started as the page starts it
-tools/blitz/start.sh --mission depot-four --frames 300               # a row of the mission list: its file, started from its link
-tools/blitz/start.sh rust/game_start/target/scenes/two-rooms.json --scenario roomclear --frames 900
-bun run tools/blitz/start-levels.ts --write                          # every mission, and LEVELS.md written from the result (--seats 2: as games of two)
-bun run tools/blitz/start-levels.ts --again                          # every mission stood a SECOND time in one process, held to its first start (below)
-bun run tools/blitz/start-levels.ts --words '&hard'                  # every mission with those words on its link, both sides, in a folder of its own (never --write)
-```
-
-1. `tools/blitz/start.ts` stands the file with the TypeScript start on the page's stand and exports the state over the bridge.
-2. `rust/game_start`'s bin `start` stands the same file here and exports its own.
-3. `tools/blitz/diff.ts` lists the paths that differ, minus `known.txt` and `known-start.txt`: what a Rust start may differ in, each with its
-   reason (the picture's tables, memos, addresses). Anything a rule reads is mended in the start, never named there. The diff is BY REACH FROM
-   THE LIVE GAME (`--live`): the TypeScript keeps some tables weakly, by the object, and lists a man a mission took off the floor for as long
-   as its collector leaves him, so compared by key a start was equal or not by when the collector ran. What that rule hides is at the head of
-   `diff.ts` (a strong table keyed by a row nothing else holds).
-4. With `--frames N`, the TypeScript's start is IMPORTED and both games are stepped in Rust by the same host frame with an idle hand: the die's
-   count and every part of the block compared after every frame (the bytes themselves), then the two end states by path. This holds what a path diff of two starts
-   cannot see (state the bridge does not carry, what the import mends as it reads).
-
-The tests' scenes are written to `target/scenes/` by
-`cargo test the_scenes_are_level_files`.
-
-`rust/game_start/target/debug/start --lacks levels/*.json` lists, a file a line, what the reader does not carry of it.
-
-Where things stand is [`LEVELS.md`](LEVELS.md). The tests' scenes are held the same way: the three of `tests/behaviour.rs`, each 0 paths not known
-and the block equal to the byte, 900 frames in step.
-
-## A second start in one process (`tools/blitz/start-levels.ts --again`)
-
-A game's state lives on the Game, and a start writes all of it. The Rust start does by its make: every `stand` begins from `Game::blank()`, and
-nothing of a game is kept outside it (`tests/start.rs` stands seed 1, 2, 1 in one slot and holds the third to the first; `tests/slots.rs` stands a
-game again in a slot four other games have used; `start-module.ts` holds the module's second and third start of every mission to the native one).
-
-The TypeScript start did not: what a module of `src/` keeps at its own top (a counter of the men's unit numbers, the tallies and logs the Rust game
-is handed as state, what a mission of another kind had staged) was the process's, and a second game found it as the first left it. `tools/qa/fresh.ts`
-is the mend, run by the harness's stand-up before every game: it puts back only what is known to be a game's (its header says how each is known:
-for a count, that the bridge's schema reads it into one of this game's own `…Stats` structs) and leaves a setting alone. This table is what keeps it. Each mission is stood, stepped with an idle hand, then THE MISSION BEFORE IT ON THE LIST (the
-nearest the game stands for that many players) is stood and stepped in the same process, then the mission is stood again; the second start is held
-to the first, rust/sim's block byte for byte and the state path for path, but for what `tools/blitz/known-again.txt` names with its reason (the Rust
-module's own memory and memos; no game's state) and, in the block's poses, a row the first start had not made (a clip's first pose, a memo).
-
-```bash
-bun run tools/blitz/start-levels.ts --again                 # 38 of 38 (300 frames each; the module must be built)
-bun run tools/blitz/start-levels.ts --again --seats 2       # 23 of 23, 15 the game refuses for two
-bun run tools/blitz/start-levels.ts --again --frames 0      # no game stepped (needs no module): only what a START leaves behind
-STANDFRESH_BREAK=1 bun run tools/blitz/start-levels.ts --again   # nothing put back: every row red
-```
-
-ONE THING IS OPEN, and the table forgives it by name, row by row: a mission's start writes its team's numbers (where Sam and the men stand, how
-many come) into the process's knob tables, and a game whose start does not write a table finds it as the last mission left it. No start here can
-tell a game's write to a knob table from a tool's, so a tool that runs missions of several kinds puts the tables back itself (`knobsCopy` /
-`knobsBack`, which carry each table's note of where its numbers came from). It ends when a mission's numbers live on the Game: item 12 of the list
-above.
-
-## The module's start (`tools/blitz/start-module.ts`)
-
-The page's module can start a game itself. `face_start(p, n, slot, seed, seats, flags)` (`rust/game_face/src/page.rs`) runs `stand` inside the
-module on what the host hands in one run of bytes (`src/handed.rs` reads it, `tools/blitz/start-pack.ts` writes it): the level file's text,
-the address's words, the mannequin's gltf and buffer, the two casts' gltf, and the host's commands (what it does to the blank game
-before the start reads its first knob: `stand_with`). `slot` below 0 = a free slot of rust/sim; `flags`: 1 = the rows that dress the picture are up, 2 = the game works
-its senses out itself.
-
-```sh
-bun run tools/blitz/start-module.ts                     # every mission: the module's start against the native start, three starts each
-bun run tools/blitz/start-module.ts --only depot-four --wasm rust/game_face/target/wasm32-unknown-unknown/debug/game_face.wasm
-```
-
-For each mission the native start (`start <file> --link <link>`) writes its state and block, the module is handed the same bytes and starts
-the mission three times (in a fresh slot, in the slot the first gave up, in a second slot beside a standing game), and each is compared:
-rust/sim's block byte for byte, the state path for path with ONE thing forgiven by name (`tools/blitz/known-module.txt`: where the box mirror's
-tables stand in memory, 29 addresses, which a module and a native process cannot share). Read: 38 of 38, three starts each, on a module built
-at opt-level 0 (the machine it was run on cannot hold the optimised build's compile).
-
-`tests/slots.rs` holds the same natively: a game is the same game in slot 1 as in slot 0, and two games stepped turn about in two slots are
-each the game they are alone.
-
-What this does NOT hold: that a game started this way can be PLAYED through a puppet. It cannot yet: item 13 of the list above. A host with
-no puppet (a game server) needs nothing more than this.
 
 ## Levels: what a level owes whoever plays it (`src/bin/levels.rs`)
 
@@ -329,8 +242,6 @@ Each stands the level (or every mission of it) by this crate's start and asks th
 
 For a change that is meant to change nothing of play. It needs no page, no TypeScript, no module build and no file of the wire, so a
 change of the wire does not strand it.
-(`tools/blitz/hold.sh` is another thing: it holds the Rust game to a run that was kept beside the TypeScript
-game, whose start is the TypeScript's. This one's start is this crate's.)
 
 ```
 cd rust/game_start
@@ -389,3 +300,43 @@ man fell, when the floor was clear, the rounds and reloads of each side and how 
 what it does not see: stealth, Sam's gun, the rescues, a commander who waits. `hold` says whether a build is the same game; this says what the
 other game came to.
 
+## The gate: what a build is held to (`src/bin/gate/`)
+
+One native command, with nothing of TypeScript in it: no page, no module and no bridge. It stands every mission on the game's own list and plays a few of them, each as the page and the server
+stand a game (`dress`, seed 9, the mission's own link).
+
+```
+cd rust/game_start && cargo build --release --bin gate
+target/release/gate                 # every row, four at a time. Exit 0 = all pass · 1 = a row failed · 64 = a wrong word
+target/release/gate save            # only rows whose name starts with a word: `gate start`, `gate "start depot-four"`
+target/release/gate pin [ROW…]      # record the pins again and say which moved; nothing moved = the file is as it was, byte for byte
+target/release/gate breaks          # each row of the breaks' table plays unbroken and must PASS, then each break must FAIL in its check's own words. Exit 0 = all did
+target/release/gate list            # the rows
+```
+
+Each row prints one line in the rows' order, and the last line is the count and the wall time, with what each kind cost. A row is a child process, so a game that panics costs its own rows, which then
+FAIL with the first lines of what it wrote; the four rows of one run share a child, because the run is played once for all of them. About a minute and a half on four cores, release build.
+
+| row | what it holds | its break |
+|---|---|---|
+| `start <id>, one player` · `, two players`: every row of `all_missions`, twice | The start is the pinned start, part by part, or the same refusal in the same words. A second start in one process is the first: 5 s idle, every part each half second, then the mission before it on the list stood and run 2 s, then the mission again, the same | `pin` a word of the pin made wrong · `second` the second start's seed is one more |
+| `play <run>` | 40 s under a hand: one word a second (every part folded as `hold` folds them) against the pin. Says which of the hand's lines were never done on that floor | `pin` a word of the series made wrong |
+| `again <run>` | The run stood and played twice more in one process, 10 s of the next run on the list between the two: the same word every second | `second` the second run's die is drawn once before its first frame |
+| `save <run>` | THE GAME PUT BACK IS THE GAME THAT WENT ON: a `Moment` at 3, 9, 15, 21 and 27 s, each stood again (the odd ones in slot 1) and played 3 s under the same hand: every part of every frame the same. What a host keeps beside a game (where the hand's next line is, `Play.cursor`) goes back with it. | `block` a moment whose block bytes are the run's end's |
+| `load <run>` | A LOAD: the moments of 9 and 21 s, the value a save keeps, the run's game gone and another mission played 2 s in the process, then stood as a page stands a kept game in a slot nobody was in and played 3 s under the same hand: every part of every frame the run's | `block` one byte of the block's die is another |
+| `draw <run>` | Everything drawn after every tick, at 0.5 and at 1.0. (a) the word every second is the undrawn run's. (b) a mirror of the page's buffers, filled ONLY as the page fills them (`src/bin/gate/draw.rs` lists them), is the module's own tables after every frame. (c) the boxes' head says what their lists hold. (d) once a second, what the mirror holds is what a host that has just opened is told, but for what is a table's history (`draw.rs` says which). Played as hosts play: some frames come after two or three ticks, the look is said twice, and a moment of 18 s is put back at 20 s and the run goes on, its word still the run's | `told` a die drawn once between the undrawn run and this one · `mark` the mirror skips `from..to` on the frames that carry one after the first · `head` the head made wrong before it is read · `opened` a word of the fresh host's made wrong |
+| `seats <id>` | A fight of two is its records: scripted hands, each tick's two commands through `cmd_text` and back. Fresh games play the records with nobody sampling, showing seat 0 and then seat 1, and a moment at 12 s is put back and played to 18 s: every part the same each half second. The series is pinned. The two players' hands differ on one tick in five at least, each man walks and the fight fires at least so much (a small fight: its hands walk a man 4 to 8 metres and fire 2 to 8 rounds), and more than half the seconds have different words | `pin` · `fresh` a fresh game's replay hands each seat the other's records · `moment` the moment's does · `idle` nobody's hands do anything |
+| `par <id>`: every mission whose level has `scenarios.par` | The clock moves nobody: 30 s under `push`, with the file's par block and with it taken out of the tree before the stand. The parts differ in nothing but the table `CLOCK_ONLY` in `rows.rs` names, each with its reason; the clock's own part does differ, and the level's own record stands on each side as it stood | `moves` a die drawn once on the clocked side only · `noclock` the block is out on both sides |
+
+The runs (`RUNS` in `rows.rs`) reach the office's night breach under `doors`, a room clear in the rain (`depot-four`) under `bangs`, `compound-four` under `doors`, `glasshouse-four` under `kit`,
+`killhouse-four` and `bazaar-quiet` and a rescue under `push`, and the snow (`pass-four`) under `bangs`.
+
+**What it does not hold.** A row holds a game to itself, to its pins or to the same game by another road, never that it is any good, and a mistake made at a pin passes: `start` a game at rest, `play` and `again` what the eight hands reach, `save` the three seconds after each moment, `seats` a fight nobody plays well, `par` thirty seconds of a clock that has not yet finished.
+`draw` holds the rows a page is handed, not what a GPU makes of them; and no row has a page, a module build or a teammate's conduct in it, and the par clock's arithmetic and its row are `tests/par.rs`'s.
+
+**The pins (`pins.txt`).** Text, made by `gate pin`, read by the rows, never written by hand. ROWS: every row's name, in order: a whole `gate` fails where the rows are not that list (`rows gone: …`, `new rows: … (`gate pin`)`), and only a whole `gate pin` writes it. STARTS: the refused columns with their words, a line of the columns' names, then a line a part: its name
+and a word a column, or one word where every column has the same, so a part that joins or leaves the state is one line of the file. SERIES: a line a run, a word a second. A pin depends on nothing but
+the game: a debug build records the same bytes. `gate pin start` touches only the columns named.
+
+- **A commit that moves a pin says why.** A move nobody meant is a fault, and the row's line says where to look: `hold keep` on the build before and `hold check` on this one name the part and the frame.
+- **A join that conflicts in `pins.txt` records them again** on the joined tree, and says so in its message. The two sides' moves are not merged by hand.

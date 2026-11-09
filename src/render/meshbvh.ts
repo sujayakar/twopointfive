@@ -1,6 +1,5 @@
 // Triangle BVH over the character mesh — the CPU half of mesh-traced character shadows (render/meshShadows.ts is the GPU half; the WGSL
-// traversal lives in common.wgsl under FLAG_MESH_SHADOWS). Pure TypeScript, no GPU: the game builds the topology with it once, and
-// tools/qa/mesh-shadow-ref.ts uses the reference skinning / refit / traversal below to prove the scheme before anyone looks at a GPU.
+// traversal lives in common.wgsl under FLAG_MESH_SHADOWS). Pure TypeScript, no GPU: the game builds the topology with it once.
 //
 // The scheme. Every mannequin is the same glTF mesh, so ONE tree topology serves all of them: it is built once over the rest-pose triangles
 // (binned SAH on centroids, leaves of ≤ LEAF_MAX triangles, triangles reordered so every leaf — and every subtree — owns a contiguous run),
@@ -8,7 +7,7 @@
 // node i or is done with it; a stackless walk). Per frame and per character the GPU re-skins the triangle corners and REFITS the boxes
 // bottom-up (deepest depth level first — nodes are also listed by level for that), never rebuilding: a posed limb only ever moves boxes,
 // the topology of a body does not change. A refit tree is looser than a rebuilt one for extreme poses (an arm stretched out overlaps the
-// torso's box); the harness measures the cost of that in node visits.
+// torso's box).
 
 /** triangles per leaf at most (the GPU leaf loop and the packed count byte assume ≤ 255; 4 is the usual any-hit sweet spot) */
 export const LEAF_MAX = 4;
@@ -137,7 +136,7 @@ export function buildMeshBvh(positions: Float32Array, indices: Uint32Array): Mes
 
 
 
-/** FNV-1a over the topology arrays: the offline harness and the running page (MeshShadows.digest) must print the same for the fixture to apply. */
+/** FNV-1a over the topology arrays (MeshShadows.digest). */
 export function topologyDigest(b: MeshBvh): string {
   let h = 0x811c9dc5 >>> 0;
   const feed = (arr: ArrayLike<number>) => { for (let i = 0; i < arr.length; i++) { let v = arr[i] >>> 0; for (let k = 0; k < 4; k++) { h ^= v & 255; h = Math.imul(h, 0x01000193) >>> 0; v >>>= 8; } } };

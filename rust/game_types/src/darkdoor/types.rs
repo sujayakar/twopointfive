@@ -1,12 +1,11 @@
-//! The types of `darkdoor`, written by the skeleton's program from the TypeScript. Never edited by hand: hand.cjs, and run it again.
+//! The types of `darkdoor`.
 #![allow(unused_imports)]
 use crate::{bytes::ToBytes, ids::*, js::*, Quat, V3};
 use alloc::{string::String, vec::Vec};
 
-/// (TypeScript: words)
-#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes)]
+#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, ToBytes, Default)]
 pub enum DarkDoorAct {
-    None,
+    #[default] None,
     With,
     Balk,
     Solo,
@@ -24,8 +23,7 @@ impl DarkDoorAct {
     }
 }
 
-/// (TypeScript: Fear, src/game/darkdoor.ts:73)
-#[derive(Clone, Debug, ToBytes)]
+#[derive(Clone, Debug, ToBytes, Default)]
 pub struct Fear {
     pub act: crate::darkdoor::DarkDoorAct,
     pub t: f64,
@@ -48,91 +46,27 @@ pub struct Fear {
     pub idle: f64,
     pub ask: f64,
 }
-impl Fear {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Fear {
-            act: crate::darkdoor::DarkDoorAct::None,
-            t: 0.0,
-            door: 0.0,
-            side: 0.0,
-            spot: None,
-            at: false,
-            other: None,
-            called: false,
-            call_t: 0.0,
-            tried: Vec::new(),
-            left: 0.0,
-            told: false,
-            lag: 0.0,
-            armed: 0.0,
-            arm_t: 0.0,
-            quits: Vec::new(),
-            pass: Vec::new(),
-            said: 0.0,
-            idle: 0.0,
-            ask: 0.0,
-        }
-    }
-}
-impl Default for Fear { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/darkdoor.ts:75 Fear.quits, src/game/darkdoor.ts:75)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct FearQuitsItem {
     pub room: f64,
     pub t: f64,
 }
-impl FearQuitsItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FearQuitsItem {
-            room: 0.0,
-            t: 0.0,
-        }
-    }
-}
-impl Default for FearQuitsItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/darkdoor.ts:75 Fear.pass, src/game/darkdoor.ts:75)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct FearPassItem {
     pub door: f64,
     pub until: f64,
 }
-impl FearPassItem {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        FearPassItem {
-            door: 0.0,
-            until: 0.0,
-        }
-    }
-}
-impl Default for FearPassItem { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: Read, src/game/darkdoor.ts:77)
-#[derive(Clone, Copy, Debug, ToBytes)]
+#[derive(Clone, Copy, Debug, ToBytes, Default)]
 pub struct Read {
     pub t: f64,
     pub dark: bool,
     pub share: f64,
     pub mean: f64,
 }
-impl Read {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        Read {
-            t: 0.0,
-            dark: false,
-            share: 0.0,
-            mean: 0.0,
-        }
-    }
-}
-impl Default for Read { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug, Hash)]
 pub enum LineKind {
     With,
@@ -155,8 +89,7 @@ impl LineKind {
     }
 }
 
-/// (TypeScript: DarkDoorSnap, src/game/darkdoor.ts:361)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct DarkDoorSnap {
     pub men: Vec<Option<Vec<f64>>>,
     pub quits: Vec<Option<Vec<f64>>>,
@@ -165,41 +98,14 @@ pub struct DarkDoorSnap {
     pub reads: Vec<Vec<f64>>,
     pub dealt: Option<f64>,
 }
-impl DarkDoorSnap {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DarkDoorSnap {
-            men: Vec::new(),
-            quits: Vec::new(),
-            pass: Vec::new(),
-            tried: Vec::new(),
-            reads: Vec::new(),
-            dealt: None,
-        }
-    }
-}
-impl Default for DarkDoorSnap { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/darkdoor.ts:88 LINES, src/game/darkdoor.ts:88)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct LINESValue {
     pub say: Vec<String>,
     pub he: Option<Vec<String>>,
     pub they: Option<Vec<String>>,
 }
-impl LINESValue {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        LINESValue {
-            say: Vec::new(),
-            he: None,
-            they: None,
-        }
-    }
-}
-impl Default for LINESValue { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: words)
 #[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub enum FightWalk {
     Other,
@@ -216,71 +122,31 @@ impl FightWalk {
     }
 }
 
-/// (TypeScript: inline at src/game/darkdoor.ts:173 darkRoom ->, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1597)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct DarkRoom {
     pub t: f64,
     pub dark: bool,
     pub share: f64,
     pub mean: f64,
 }
-impl DarkRoom {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DarkRoom {
-            t: 0.0,
-            dark: false,
-            share: 0.0,
-            mean: 0.0,
-        }
-    }
-}
-impl Default for DarkRoom { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/darkdoor.ts:185 standsLit(R), ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1597)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct StandsLitR {
     pub t: f64,
     pub dark: bool,
     pub share: f64,
     pub mean: f64,
 }
-impl StandsLitR {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        StandsLitR {
-            t: 0.0,
-            dark: false,
-            share: 0.0,
-            mean: 0.0,
-        }
-    }
-}
-impl Default for StandsLitR { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/darkdoor.ts:192 doorAhead ->, src/game/darkdoor.ts:192)
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, Default)]
 pub struct DoorAhead {
     pub d: DoorId,
     pub side: f64,
     pub at: V3,
     pub dist: f64,
 }
-impl DoorAhead {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DoorAhead {
-            d: DoorId(0),
-            side: 0.0,
-            at: [0.0; 3],
-            dist: 0.0,
-        }
-    }
-}
-impl Default for DoorAhead { fn default() -> Self { Self::zeroed() } }
 
-/// (TypeScript: inline at src/game/darkdoor.ts:348 darkDoorOf ->, ../.npm-global/lib/node_modules/typescript/lib/lib.es5.d.ts:1597)
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 pub struct DarkDoorOf {
     pub act: crate::darkdoor::DarkDoorAct,
     pub t: f64,
@@ -303,34 +169,6 @@ pub struct DarkDoorOf {
     pub idle: f64,
     pub ask: f64,
 }
-impl DarkDoorOf {
-    /// every field at zero. NOT what a new one holds: the TypeScript gives this type no initial values of its own
-    pub fn zeroed() -> Self {
-        DarkDoorOf {
-            act: crate::darkdoor::DarkDoorAct::None,
-            t: 0.0,
-            door: 0.0,
-            side: 0.0,
-            spot: None,
-            at: false,
-            other: None,
-            called: false,
-            call_t: 0.0,
-            tried: Vec::new(),
-            left: 0.0,
-            told: false,
-            lag: 0.0,
-            armed: 0.0,
-            arm_t: 0.0,
-            quits: Vec::new(),
-            pass: Vec::new(),
-            said: 0.0,
-            idle: 0.0,
-            ask: 0.0,
-        }
-    }
-}
-impl Default for DarkDoorOf { fn default() -> Self { Self::zeroed() } }
 
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]

@@ -46,7 +46,7 @@ fn swap_cols(s: &mut ::sim::slabs::Slabs, a: usize, b: usize) {
 
 /// Where each column starts for columns `cap` rows long: doubles index doubles, words index words, from the part's start. (slabshome.ts slabCols, colstore.ts colsOf)
 pub fn slab_cols(cap: f64) -> crate::sim_slabshome::SlabCols {
-    let mut o = SlabCols::zeroed();
+    let mut o = SlabCols::default();
     let mut at = SLAB_HEAD;
     for k in [&mut o.px, &mut o.py, &mut o.pz, &mut o.vx, &mut o.vy, &mut o.vz, &mut o.a, &mut o.spin, &mut o.tip, &mut o.tip_v, &mut o.t, &mut o.ang, &mut o.wedged, &mut o.bw, &mut o.bl, &mut o.bx, &mut o.by] {
         *k = at / 8.0;

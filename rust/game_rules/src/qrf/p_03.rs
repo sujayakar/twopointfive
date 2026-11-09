@@ -815,7 +815,7 @@ mod tests {
     /// Which leg each man of the flow is given is this file's own decision: one and two the plan's entries, three the deep point, four the door side.
     #[test]
     fn flow_legs_gives_each_man_his_own_way_in() {
-        let mut p = crate::scene_level::RoomClearPlan::zeroed();
+        let mut p = crate::scene_level::RoomClearPlan::default();
         p.entry = [vec![[1.0, 0.0, 0.0], [2.0, 0.0, 0.0]], vec![[3.0, 0.0, 0.0], [4.0, 0.0, 0.0]]];
         p.entry_aim = [vec![[5.0, 0.0, 0.0], [6.0, 0.0, 0.0]], vec![[7.0, 0.0, 0.0], [8.0, 0.0, 0.0]]];
         p.pod_face = [0.25, 0.5];
