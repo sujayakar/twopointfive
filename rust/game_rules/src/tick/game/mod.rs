@@ -1,13 +1,7 @@
 pub use ::game_types::game::types;
 pub use types::*;
-pub mod base;
-pub use base::*;
-pub mod p_01;
-pub use p_01::*;
 pub mod records;
 pub use records::*;
-pub mod p_03;
-pub use p_03::*;
 pub mod stand;
 pub use stand::*;
 pub mod restart;

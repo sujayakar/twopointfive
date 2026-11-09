@@ -1,7 +1,5 @@
 pub use ::game_types::dialogue::types;
 pub use types::*;
-pub mod base;
-pub use base::*;
 pub mod lines;
 pub use lines::*;
 pub mod gather;

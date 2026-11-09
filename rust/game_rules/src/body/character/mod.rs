@@ -1,13 +1,9 @@
 pub use ::game_types::character::types;
 pub use types::*;
-pub mod p_01;
-pub use p_01::*;
 pub mod curves;
 pub use curves::*;
 pub mod moves;
 pub use moves::*;
-pub mod p_04;
-pub use p_04::*;
 pub mod tables;
 pub use tables::*;
 pub mod begin;

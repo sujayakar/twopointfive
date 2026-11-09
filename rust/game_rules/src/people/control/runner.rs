@@ -9,7 +9,7 @@ impl Reaction for Rule {
     /// kept in the rule's own module for now
     type Row = ();
     type Ask = GuardScript;
-    fn propose(g: &Game, gd: GuardId) -> Option<GuardScript> { crate::runner::p_01::runner_propose(g, gd) }
+    fn propose(g: &Game, gd: GuardId) -> Option<GuardScript> { crate::runner::runner_propose(g, gd) }
     fn commit(g: &mut Game, gd: GuardId, o: Outcome) {
         if let Outcome::Script(ran) = o { crate::runner::runner_script_ran(g, gd, ran); }
     }
