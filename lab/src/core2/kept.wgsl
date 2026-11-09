@@ -18,7 +18,7 @@ fn cellSent(cell: u32, r: vec4u, k: vec3f, rd: vec3f) -> vec3f {
   let q1 = keptRow(slot, 1u); let q2 = keptRow(slot, 2u); let w = k * k; return keptSix(q0, q1, q2, 0u, rd.x < 0.0) * w.x + keptSix(q0, q1, q2, 1u, rd.y < 0.0) * w.y + keptSix(q0, q1, q2, 2u, rd.z < 0.0) * w.z;
 }
 /** the cell of 0.32 m at a place in steps of it, or 0 */
-fn cellAt(c: vec3i) -> u32 { let b = vec3i(floor(vec3f(c) * 0.25)) - vec3i(floor(BLK_LO / BRICK + 0.5)); if (any(b < vec3i(0)) || any(b >= BLK_N)) { return 0u; } let p = blkWord(BLK_PAGE, u32(b.x + BLK_N.x * (b.y + BLK_N.y * b.z))); if (p == 0u) { return 0u; } let q = vec3u(c & vec3i(3)); return blkWord(BLK_BRICKS, (p - 1u) * 588u + 512u + q.x + 4u * (q.y + 4u * q.z)); }
+fn cellAt(c: vec3i) -> u32 { let b = vec3i(floor(vec3f(c) * 0.25)) - vec3i(floor(BLK_LO / BRICK + 0.5)); if (any(b < vec3i(0)) || any(b >= BLK_N)) { return 0u; } let p = blkWord(BLK_PAGE, u32(b.x + BLK_N.x * (b.y + BLK_N.y * b.z))) & 0x7fffffffu; if (p == 0u) { return 0u; } let q = vec3u(c & vec3i(3)); return blkWord(BLK_BRICKS, (p - 1u) * 588u + 512u + q.x + 4u * (q.y + 4u * q.z)); }
 fn folWalk(ro: vec3f, rd: vec3f, t1: f32, lit: bool) -> Fol {
   var o: Fol; if (lit) { o.L = blkL; o.T = vec3f(blkT); return o; }            /* (what nearest has found on its way) */
   let was = blk; blk = vec4f(0.0, 0.0, 1e9, 1e9); let hid = noLeaves; noLeaves = false; o.T = exp(-vec3f(1.0, 0.86, 1.1) * blockWalk(ro, rd, 0.0, t1, 1e9, false).tau); blk = was; noLeaves = hid; return o;

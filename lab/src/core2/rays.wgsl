@@ -4,14 +4,16 @@ const CELL_CODE = 0xfffffffeu; const FINEST = 0.16; const BRICK = 1.28;
 var<private> footW = 0.0; var<private> footS = 0.0; var<private> leafTo = 1e9; var<private> smallTo = 1e9;       /* (the last two: for stages written for the first core) */
 var<private> lim = vec4f(1e9);               // how far classes 0, 1, 2, 3 are met as they are
 var<private> blk = vec4f(1e9);               // where levels 0, 1, 2, 3 of the block begin
-var<private> blkOn: bool = true; var<private> fromCell: u32 = 0xffffffffu;
+var<private> leafOnly: bool = false; var<private> blkOn: bool = true; var<private> fromCell: u32 = 0xffffffffu;
 /** what the block sent back along the last ray that `nearest` was asked for, and how much came through it (where it is summed, not drawn) */
 var<private> blkL = vec3f(0.0); var<private> blkT = 1.0;
 fn foot(w: f32, s: f32) {
-  footW = w; footS = s; if (s <= 0.0) { lim = vec4f(1e9); blk = vec4f(1e9); leafTo = 1e9; return; }
+  footW = w; footS = s; leafOnly = false; if (s <= 0.0) { lim = vec4f(1e9); blk = vec4f(1e9); leafTo = 1e9; return; }
   let g = FINEST * 0.70710678 * exp2(rnd() - 0.5); let t = max((vec4f(1.0, 2.0, 4.0, 8.0) * g - w) / s, vec4f(0.0)); blk = t; lim = vec4f(t.xyz, 1e9); leafTo = t.x * LEAF_NEAR; smallTo = 1e9;
 }
 fn footSolid(w: f32, s: f32) { foot(w, s); }
+/** for a ray whose edges are looked at (a lamp's own shadow): solids as they are all the way, and only leaves by the cells */
+fn footSharp(w: f32, s: f32) { foot(w, s); lim = vec4f(1e9); leafTo = 0.0; leafOnly = true; }
 fn footAt(t: f32) -> f32 { return footW + footS * t; }
 var<private> walked: u32 = 0u;
 fn classOf(fl: u32) -> u32 { return fl >> 30u; }
@@ -106,7 +108,8 @@ fn visible(ro: vec3f, rd: vec3f, tmin: f32, tmax: f32) -> vec3f {
       }
       i++;
     } }
-  if (blkOn && footS > 0.0) { T *= exp(-carryTau(ro, rd, tmin, tmax)); let b0 = select(min(blk.x, leafTo), blk.x, noLeaves); if (b0 < tmax) { T *= exp(-blockWalk(ro, rd, max(tmin, b0), tmax, 1e9, false).tau); } }
+  if (blkOn && footS > 0.0 && !leafOnly) { T *= exp(-carryTau(ro, rd, tmin, tmax)); }
+  if (blkOn && footS > 0.0) { let b0 = select(min(blk.x, leafTo), blk.x, noLeaves); if (b0 < tmax && !(leafOnly && noLeaves)) { T *= exp(-blockWalk(ro, rd, max(tmin, b0), tmax, 1e9, false).tau); } }
   if (frame.misc2.x > 0.5) { T *= smokeThrough(ro + rd * tmin, rd, tmax); }
   return T;
 }
@@ -127,15 +130,15 @@ fn blockWalk(ro: vec3f, rd: vec3f, t0: f32, t1: f32, want: f32, lit: bool) -> Bl
   for (var i = 0u; i < 192u; i++) {
     if (t >= te || o.tau > 4.6) { break; }
     let level = select(select(select(0u, 1u, t >= blk.y), 2u, t >= blk.z), 3u, t >= blk.w); let g = (ro + rd * t - BLK_LO) / BRICK; let c = clamp(vec3i(floor(g)), vec3i(0), BLK_N - 1);
-    let p = blkWord(BLK_PAGE, u32(c.x + BLK_N.x * (c.y + BLK_N.y * c.z)));
-    if (p == 0u) { let e = (BLK_LO + (vec3f(c) + ahead) * BRICK - ro) * inv; t = max(min3(e), t) + 1e-3; continue; }
+    let w = blkWord(BLK_PAGE, u32(c.x + BLK_N.x * (c.y + BLK_N.y * c.z))); let p = w & 0x7fffffffu;       /* (the top bit: there are leaves in it) */
+    if (p == 0u || ((leafOnly || t < blk.x) && (w >> 31u) == 0u)) { let e = (BLK_LO + (vec3f(c) + ahead) * BRICK - ro) * inv; t = max(min3(e), t) + 1e-3; continue; }
     let per = 8u >> level; let h = FINEST * f32(1u << level); let q = clamp(vec3i(floor((g - vec3f(c)) * f32(per))), vec3i(0), vec3i(i32(per) - 1)); let lo = BLK_LO + vec3f(c) * BRICK + vec3f(q) * h;
     let e = (lo + ahead * h - ro) * inv; var out = max(min3(e), t); if (level < 3u && blk[level + 1u] > t) { out = min(out, blk[level + 1u]); } if (blk.x > t) { out = min(out, blk.x); }
     if (level < 2u) { let u = vec3u(clamp(vec3i(floor((g - vec3f(c)) * 2.0)), vec3i(0), vec3i(1))); if (blkWord(BLK_BRICKS, (p - 1u) * 588u + 576u + u.x + 2u * (u.y + 2u * u.z)) == 0u) { let e2 = (BLK_LO + (vec3f(c) + 0.5 * (vec3f(u) + ahead)) * BRICK - ro) * inv; t = max(min3(e2), t) + 1e-3; continue; } }      /* (nothing in the 0.64 m round here) */
     let cell = blkWord(BLK_BRICKS, (p - 1u) * 588u + array<u32, 4>(0u, 512u, 576u, 584u)[level] + u32(q.x) + per * (u32(q.y) + per * u32(q.z)));
     if (cell != 0u && cell != fromCell) {
       let r = bitcast<vec4u>(extra[BLK_CELLS + (cell - 1u) * 2u]); let B = cellBox(r, lo, h); let u = (B.lo - ro) * inv; let v = (B.hi - ro) * inv; let ta = max(t - 1e-3, max3(min(u, v))); let tb = min(min(out, te), min3(max(u, v)));
-      if (tb > ta && (r.x & 0xffffffu) != 0u) { let part = f32(r.x >> 24u) / 255.0; let sg = length(B.sigma * rd); let sigma = sg * select(select(1.0, 1.0 - part, noLeaves), part, t < blk.x); let d = sigma * (tb - ta); if (lit && d > 0.0) { o.L += exp(-o.tau) * (1.0 - exp(-d)) * cellSent(cell, r, B.sigma * rd / sg, rd); } if (o.tau + d >= want) { o.t = ta + (want - o.tau) / sigma; o.cell = cell; o.tau = want; return o; } o.tau += d; }
+      if (tb > ta && (r.x & 0xffffffu) != 0u) { let part = f32(r.x >> 24u) / 255.0; let sg = length(B.sigma * rd); let sigma = sg * select(select(1.0, 1.0 - part, noLeaves), part, t < blk.x || leafOnly); let d = sigma * (tb - ta); if (lit && d > 0.0) { o.L += exp(-o.tau) * (1.0 - exp(-d)) * cellSent(cell, r, B.sigma * rd / sg, rd); } if (o.tau + d >= want) { o.t = ta + (want - o.tau) / sigma; o.cell = cell; o.tau = want; return o; } o.tau += d; }
     }
     t = out + 1e-3;
   }

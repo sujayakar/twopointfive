@@ -12,7 +12,7 @@ import { PEOPLE, LIMBS } from './carry';
 const SENT = 'fn sentBack(q: Surf, leaf: bool, j: vec2f, rd: vec3f) -> vec3f {';
 const swap = (code: string, a: string, b: string) => { if (!code.includes(a)) throw new Error('a stage has no ' + a); return code.replace(a, () => b); };
 /** `leafNear`: how far bounce rays meet leaves one by one, as a share of how far other things as small */
-export function oneRule(o: { name?: string; leafNear?: number; upscale?: UpscalePart; edit?: (s: Stage) => Stage } = {}): Method {
+export function oneRule(o: { name?: string; leafNear?: number; upscale?: UpscalePart; /** shadows of lamps at what is seen by the cells too */ softLamps?: boolean; edit?: (s: Stage) => Stage } = {}): Method {
   let lab0: Lab | null = null; const core = (p: string) => secondCore(p, false, o.leafNear ?? 0);
   const edit = (s: Stage): Stage => {
     if (s.name === 'foliage') {
@@ -21,7 +21,7 @@ export function oneRule(o: { name?: string; leafNear?: number; upscale?: Upscale
       const { field: _f, folAt: _a, ...bind } = s.buffers!, lib = s.code.slice(signals.length, s.code.indexOf(bounceLib));
       s = { name: 'cells', over: { groups: () => [Math.ceil((many + PEOPLE * LIMBS) / 8), 1, 1] }, code: signals + lib + bounceLib + cells, buffers: { ...bind, ...CHANGES, field: ['cellLight', 'array<u32>', 'read_write'], places: ['cellsAt', 'array<vec4f>', 'read'], many: ['cellsMany', 'vec4u', 'uniform'] } };
     } else if (s.name === 'mirror' || s.name === 'shine') s = { ...s, code: swap(s.code, 'select(m, q.albedo + q.through, leaf) / PI * c.E * select(0.0, 1.0, c.n > 0.0)', 'select(m / PI * c.E * select(0.0, 1.0, c.n > 0.0), folJ(q.x, d), leaf)') };
-    else if (s.name === 'lamps') s = { ...s, code: swap(s.code, 'leafTo = select(0.0, 1e9, exact);', 'leafTo = select(lim.x, 1e9, exact);') };
+    else if (s.name === 'lamps') s = { ...s, code: swap(s.code, 'leafTo = select(0.0, 1e9, exact);', o.softLamps ? 'leafTo = select(0.0, 1e9, exact);' : 'footSharp(footW, footS); if (exact) { leafTo = 1e9; }') };
     else if (s.name === 'air light') s = { ...s, code: swap(s.code, 'L += min(B * h.thru, vec3f(12.0));', 'L += min(B * h.thru * blkT + blkL, vec3f(12.0));') };
     if (s.code.includes(SENT)) s = { ...s, code: swap(s.code, SENT, SENT + ' if (leaf && lastLimb > 0u) { return limbSent(rd); }') };
     if (!s.make && !s.alone && s.code) s = { ...s, core }; return o.edit ? o.edit(s) : s;
@@ -32,4 +32,11 @@ export function oneRule(o: { name?: string; leafNear?: number; upscale?: Upscale
   m.signals = (g, lab) => { lab0 = lab; was.call(m, g, lab); const n = lab.litCells.many + PEOPLE * LIMBS; if (!lab.graph.buffers.has('cellLight')) { lab.buffer('cellLight', n * 48, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC | GPUBufferUsage.COPY_DST); lab.buffer('cellsAt', Math.max(32, lab.litCells.at.byteLength), GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST); lab.gpu.device.queue.writeBuffer(lab.graph.buffers.get('cellsAt')!, 0, lab.litCells.at); lab.uniform('cellsMany', new Uint32Array([lab.litCells.many, PEOPLE * LIMBS, 0, 0])); } };
   return m;
 }
-export const oneRuleMethods: Record<string, () => Method> = { onerule: () => oneRule(), oneleaf: () => oneRule({ name: 'oneleaf', leafNear: 1 }), onelin: () => oneRule({ name: 'onelin', upscale: bilinear }), oneleaflin: () => oneRule({ name: 'oneleaflin', leafNear: 1, upscale: bilinear }) };
+const also = (name: string, put: (s: Stage) => Stage) => () => oneRule({ name, upscale: bilinear, edit: put }), code = (s: Stage, a: string, b: string): Stage => ({ ...s, code: swap(s.code, a, b) });
+export const oneRuleMethods: Record<string, () => Method> = {
+  softlamps: () => oneRule({ name: 'softlamps', upscale: bilinear, softLamps: true }),
+  // what one stage's rays cost in truth: that stage's rays as good as exact
+  exactgather: also('exactgather', s => s.name === 'gather' ? code(s, 'footSolid(wide, @tune.wide);', 'footSolid(0.0, 0.004);') : s),
+  exactcache: also('exactcache', s => s.name === 'cache' && s.code.includes('footSolid(CELL, 1.0);') ? code(s, 'footSolid(CELL, 1.0);', 'footSolid(0.0, 0.004);') : s),
+  exactboth: also('exactboth', s => s.name === 'gather' ? code(s, 'footSolid(wide, @tune.wide);', 'footSolid(0.0, 0.004);') : s.name === 'cache' && s.code.includes('footSolid(CELL, 1.0);') ? code(s, 'footSolid(CELL, 1.0);', 'footSolid(0.0, 0.004);') : s),
+  onerule: () => oneRule(), oneleaf: () => oneRule({ name: 'oneleaf', leafNear: 1 }), onelin: () => oneRule({ name: 'onelin', upscale: bilinear }), oneleaflin: () => oneRule({ name: 'oneleaflin', leafNear: 1, upscale: bilinear }) };
