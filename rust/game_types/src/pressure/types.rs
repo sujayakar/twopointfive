@@ -381,4 +381,4 @@ pub fn kept() -> [String; 21] { [String::from("on"), String::from("press"), Stri
 pub const LS: &str = "twopointsix.pressure";
 
 /// (src/game/pressure.ts:1108 PRESSURE_DEFAULTS: a table nothing writes)
-pub fn pressure_defaults() -> crate::knobs::PressureK { crate::knobs::page_pressure() }
+pub fn pressure_defaults() -> crate::knobs::PressureK { crate::knobs::PressureK::page() }

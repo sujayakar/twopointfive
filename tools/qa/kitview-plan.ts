@@ -40,10 +40,10 @@ const f2 = (v: number) => (Math.round(v * 100) / 100).toString();
 const pt = (p: readonly number[]) => `(${p.map(f2).join(', ')})`;
 const dist = (a: readonly number[], b: readonly number[]) => Math.hypot(a[0] - b[0], a[1] - b[1]);
 
-// ---- the module: a read of no game, so the die it imports is never rolled
+// ---- the module: a read of no game
 const WASM = faceHere() ?? FACE_WASM;
 if (!existsSync(WASM)) { console.log(`kitview-plan: no module at ${WASM} (bun run tools/blitz/face-build.ts)`); process.exit(2); }
-const X: Data = new WebAssembly.Instance(new WebAssembly.Module(new Uint8Array(readFileSync(WASM))), { env: { face_roll: () => 0 } }).exports;
+const X: Data = new WebAssembly.Instance(new WebAssembly.Module(new Uint8Array(readFileSync(WASM)))).exports;
 if (typeof X.face_kit_plan !== 'function') { console.log(`kitview-plan: the module at ${WASM} has no face_kit_plan: it is older than this tool (bun run tools/blitz/face-build.ts)`); process.exit(2); }
 const encode = new TextEncoder(), decode = new TextDecoder();
 function ask(text: string, way: number): Data {

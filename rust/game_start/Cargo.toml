@@ -10,7 +10,7 @@ edition = "2021"
 publish = false
 
 [dependencies]
-game = { path = "../game" }
+game = { path = "../game_rules", package = "game_rules" }
 sim = { path = "../sim" }
 # (hold draws what it plays)
 game_draw = { path = "../game_draw", optional = true }

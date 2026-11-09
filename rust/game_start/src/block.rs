@@ -1,5 +1,5 @@
-//! A GAME'S BLOCK OF rust/sim, AS A HOST COMPARES IT: the bytes of a slot, and a hash of each part (the fold tools/blitz's runner prints, over a
-//! part's words up to the last that is not zero).
+//! A GAME'S BLOCK OF rust/sim, AS A HOST COMPARES IT: the bytes of a slot, and a hash of each part (over a part's words up to the
+//! last that is not zero).
 use alloc::vec::Vec;
 
 /// the parts' names, in the parts' order (rust/sim/src/state.rs PARTS)

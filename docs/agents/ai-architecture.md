@@ -3,7 +3,7 @@
 Written 2026-11-07 on the tree where the Rust game first stood alone, after two reviews (section 13). Built on it so far: the list and its
 arbiter, the four old body rules in the list's vocabulary, `update_guard` cut into parts, the fight cut into aim, legs and hands, one door each
 for a man's post flags, his mind and his dice, one worked example of a new rule and one of an order, each with a whole-fight test (sections 7 and 12).
-Counts are greps over `rust/game/src` body files unless said. Where each per-man table goes: `docs/internal/ai-rows.md`.
+Counts are greps over `rust/game_rules/src` body files unless said. Where each per-man table goes: `docs/internal/ai-rows.md`.
 
 ## 1. What is wrong today, measured
 

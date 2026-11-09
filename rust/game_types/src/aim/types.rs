@@ -103,7 +103,7 @@ pub struct PlayerAim {
 pub const SNAP_PX: f64 = 60.0;
 
 /// (src/game/aim.ts:91 AIM_DEFAULTS: a table nothing writes)
-pub fn aim_defaults() -> crate::knobs::AimK { crate::knobs::page_aim() }
+pub fn aim_defaults() -> crate::knobs::AimK { crate::knobs::AimK::page() }
 
 /// (src/game/aim.ts:98 LOS_NOW)
 pub const LOS_NOW: f64 = 0.05;

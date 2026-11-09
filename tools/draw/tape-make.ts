@@ -31,7 +31,7 @@ const SCRIPTS: Record<string, Script> = {
 };
 const ROOT = resolve(import.meta.dir, '../..'), [name, to] = process.argv.slice(2), S = SCRIPTS[name]; if (!S || !to) { console.error(`tape-make: <${Object.keys(SCRIPTS).join(' | ')}> <out>`); process.exit(1); }
 const wasm = faceHere(); if (!wasm) { console.error('tape-make: no module of these sources (tools/blitz/face-build.ts)'); process.exit(1); }
-const g = new DrawGame({ exports: new WebAssembly.Instance(new WebAssembly.Module(new Uint8Array(readFileSync(wasm))), { env: { face_roll: () => { throw new Error('the game asked a die'); } } }).exports, bytes: 0, fetchMs: 0, compileMs: 0 }), D = g.drawn;
+const g = new DrawGame({ exports: new WebAssembly.Instance(new WebAssembly.Module(new Uint8Array(readFileSync(wasm)))).exports, bytes: 0, fetchMs: 0, compileMs: 0 }), D = g.drawn;
 const [mannequin, mannequinBin, cast, castLook] = characterFiles(ROOT), T = g.tape = new HandTape(HAND.count), seed = Number(new URLSearchParams(S.words).get('seed'));
 g.start({ level: new Uint8Array(readFileSync(resolve(ROOT, 'levels', S.level))), words: S.words, mannequin, mannequinBin, cast, castLook, seed, named: { level: S.level, build: '' } });
 const cam = new FollowCamera(), I = { keys: new Set<string>(), pressed: new Set<string>(), buttons: 0, clicked: 0, wheel: 0, mouseX: 640, mouseY: 360 }, canvas = { clientWidth: 1280, clientHeight: 720, width: 1280, height: 720 }, ask = askOf(g), v3 = (o: number): Vec3 => [D.f[o], D.f[o + 1], D.f[o + 2]], view = (): number => D.at[Section.view];

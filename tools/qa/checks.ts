@@ -1,9 +1,9 @@
 // THE CHECKS THAT STAND NO GAME OF THEIR OWN MAKING: the picture's code, the shaders' texts, the page and its cards, the sounds, the level files, the player's words.
-// Each is a file run in a process of its own. The game's rules are asked in Rust (`cargo test` in rust/), whole plays by the native `gate`, missions and `hold`, the page by pages.ts.
+// Each is a file run in a process of its own. The game's rules are asked in Rust (`gate tests`), whole plays by the native `gate`, missions and `hold`, the page by pages.ts.
 //   bun run tools/qa/checks.ts [group | name …] [--list]     no word: every group    groups: picture · shaders · page · menus · sound · levels · words · build
 //   env: CHECK_JOBS (four) at a time · CHECK_CAP (ten) minutes each, its process group stopped there
-// Exit 0 every one green · 1 one red (its exit, a FAIL line, or the cap), or a *-check.ts here that no row names · 2 an unknown name
-import { readdirSync } from 'node:fs';
+// Exit 0 every one green · 1 one red (its exit, a FAIL line, or the cap), or a *-check.ts here or in tools/draw that no row names · 2 an unknown name
+import { existsSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 
 type Group = 'picture' | 'shaders' | 'page' | 'menus' | 'sound' | 'levels' | 'words' | 'build';
@@ -23,12 +23,13 @@ const ROWS: readonly Row[] = [
   ['gunfire-table-check.ts', 'sound'], ['sfxwarm-check.ts', 'sound'], ['sound-takes-check.ts', 'sound'],
   ['ground-pieces-check.ts', 'levels'], ['kit-stores-check.ts', 'levels'], ['palette-check.ts', 'levels'], ['stuff-check.ts', 'levels'],
   ['mystery-check.ts', 'words'], ['writing-check.ts', 'words'],
-  ['claude-md-check.ts', 'build'], ['rust-rules-check.ts', 'build'],
+  ['docs-check.ts', 'build'], ['rust-rules-check.ts', 'build'], ['../draw/gen.ts', 'build', '--check'],
 ];
 /** check files no row runs, each with who runs it */
 const BY_HAND: Readonly<Record<string, string>> = {
   'cloud-check.ts': 'the backend\'s packages', 'lobby-check.ts': 'the backend\'s packages', 'mp-control-check.ts': 'the backend\'s packages', 'mpserver-check.ts': 'three processes, minutes',
-    'zfight-check.ts': 'the level skill',
+  'zfight-check.ts': 'the level skill',
+  '../draw/hands-check.ts': 'the module', '../draw/keep-check.ts': 'the module', '../draw/net-check.ts': 'the module', '../draw/play-check.ts': 'the module, minutes', '../draw/tape-check.ts': 'the module, minutes', '../draw/walk-check.ts': 'the module',
 };
 
 const HERE = import.meta.dir, argv = process.argv.slice(2), words = argv.filter(a => !a.startsWith('--')), name = (r: Row): string => r[0].replace(/(-check|-probes)?\.ts$/, '') + (r[2] && !r[2].startsWith('--') ? `-${r[2]}` : '');   // (a file of sections has a row for each: shaders-fold)
@@ -36,7 +37,7 @@ const picked = words.length ? ROWS.filter(r => words.includes(r[1]) || words.inc
 { const strange = words.filter(w => !ROWS.some(r => r[1] === w || name(r) === w || r[0] === w)); if (strange.length) { console.error(`checks: no check or group ${strange.join(', ')}`); process.exit(2); } }
 if (argv.includes('--list')) { for (const r of picked) console.log(`${r[1].padEnd(8)} ${name(r)}`); process.exit(0); }
 
-const here = readdirSync(HERE).filter(f => f.endsWith('-check.ts')), lost = here.filter(f => !ROWS.some(r => r[0] === f) && !(f in BY_HAND)), dead = [...ROWS.map(r => r[0]), ...Object.keys(BY_HAND)].filter(f => !readdirSync(HERE).includes(f));
+const here = ['', '../draw/'].flatMap(d => readdirSync(resolve(HERE, d)).filter(f => f.endsWith('-check.ts')).map(f => d + f)), lost = here.filter(f => !ROWS.some(r => r[0] === f) && !(f in BY_HAND)), dead = [...ROWS.map(r => r[0]), ...Object.keys(BY_HAND)].filter(f => !existsSync(resolve(HERE, f)));
 const red: string[] = []; if (lost.length || dead.length) { red.push('the table'); console.log(`- FAIL — the table: run by nothing ${lost.join(' ') || 'none'} · named and gone ${dead.join(' ') || 'none'}`); }
 const JOBS = Number(process.env.CHECK_JOBS ?? 4), CAP = Number(process.env.CHECK_CAP ?? 10) * 60000, queue = [...picked], t0 = performance.now();
 async function worker(): Promise<void> {

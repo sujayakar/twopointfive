@@ -47,12 +47,11 @@ pub fn moths_new(g: &mut crate::game::Game) -> crate::moths::Moths {
     out
 }
 
-/// The deal back as constructed (an encounter restart: a restarted encounter repeats). The host is told too, as before (the out event). (src/game/moths.ts:48 Moths.clear)
+/// The deal back as constructed (an encounter restart: a restarted encounter repeats). (src/game/moths.ts:48 Moths.clear)
 pub fn moths_clear(g: &mut crate::game::Game) {
     let n = g.moths.lamps.len() as f64;
     for (i, mo) in g.moths.moths.iter_mut().enumerate() { mo.shown = 0.0; mo.lamp = if n > 0.0 { js::rem(i as f64, n) } else { 0.0 }; }
     for l in g.moths.lamps.iter_mut() { l.act = 0.0; }
-    g.out.push(crate::out_events::OutEvent::MothsClear);
 }
 
 /// Once a frame (game.ts, after the wind): move the moths. (src/game/moths.ts:51 Moths.update)

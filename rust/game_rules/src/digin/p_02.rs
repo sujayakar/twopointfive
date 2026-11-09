@@ -529,8 +529,7 @@ fn tick_man(g: &mut Game, d: RoomfightDefId, m: &mut Man) {
             if crate::gunroles::gun_keeps_post(g, gd) { m.know_t = t; return; }   // the belt-fed gun stays on its line: heard, and let lie
             // (DIGIN.keeper off, the difficulty's hard: the press's keeper does not start on his room: heard, and let lie   digin.ts:705)
             if !g.k.digin.keeper && reach <= 0.0 {
-                crate::game::b_tap::tap(crate::game::b_tap::DIGIN_KEEPER_OFF_HEARD);
-                if crate::pressure::press_keeps(g, d) { crate::game::b_tap::tap(crate::game::b_tap::DIGIN_KEEPER_LETS_LIE); m.know_t = t; return; }
+                if crate::pressure::press_keeps(g, d) { m.know_t = t; return; }
             }
             let think = g.k.digin.think;
             m.know = know; m.know_t = t; m.phase = Phase::Think; m.until = now + paced(g, crate::dice::Who::Def(d), think);
@@ -548,7 +547,7 @@ fn tick_man(g: &mut Game, d: RoomfightDefId, m: &mut Man) {
             if crate::owner::has(g, gd, crate::owner::by::SQUAD_WORD) { return; }    // his squad has heard and not yet said what it does
             let far = m.far && reach > 0.0;
             // (DIGIN.keeper off: made the keeper while he thought: he does not dig in   digin.ts:716)
-            if !g.k.digin.keeper && !far && crate::pressure::press_keeps(g, d) { crate::game::b_tap::tap(crate::game::b_tap::DIGIN_KEEPER_WHILE_THINKING); m.phase = Phase::Idle; return; }
+            if !g.k.digin.keeper && !far && crate::pressure::press_keeps(g, d) { m.phase = Phase::Idle; return; }
             if !far && !g.tab.roomfight_def[d].rally_at.is_nan() && g.tab.roomfight_def[d].rally_go && now < g.tab.roomfight_def[d].rally_at + 0.5 { return; }   // he means to go to the fight next door: the rally has him first
             begin(g, d, m);
         }

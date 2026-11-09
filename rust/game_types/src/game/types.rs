@@ -636,16 +636,12 @@ pub struct Game {
     pub box_frame_free: Vec<FrameBoxId>,
     /// INVENTED: what the bridge carries of poses that have no place in the pool: Pose.at is Pose::LOOSE + the row
     pub loose_poses: Vec<crate::anim_skeleton::LoosePose>,
-    /// what this step did that the host shows: out-events.json. The host drains it (the face clears it before a step)
+    /// what this step did that the host shows. The host drains it (the face clears it before a step)
     /// (a step's output, and no state: in no bytes)
     #[bytes(skip)]
     pub out: Vec<crate::out_events::OutEvent>,
     /// INVENTED: how many with_seat calls stand open: seats.ts tells a seat's view from the bare Game by identity (`rawGame(g) !== g`). Zero between ticks, so the bridge does not carry it
     pub view_depth: u32,
-    /// a bit for each function of tools/blitz/taps.json a tool has replaced on the puppet: where set, the function reports its call as an out event. The host sets them (face_tap); nothing in the game reads them but the function itself
-    /// (a machine's own: in no bytes)
-    #[bytes(skip)]
-    pub taps: u64,
     /// state.ts:136 SimState.stamp, for what is made from the block (the fog's grid, the air): a native game has one block, and whatever writes it wholesale raises this
     /// the table of these things: never shrinks
     pub ch: Tab<CharId, crate::character::Character>,
@@ -832,7 +828,6 @@ impl Game {
             loose_poses: Vec::new(),
             out: Vec::new(),
             view_depth: 0,
-            taps: 0,
             ch: Tab::new(),
             dr: Tab::new(),
             gd: Tab::new(),

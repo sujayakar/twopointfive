@@ -3,8 +3,7 @@
 //! skeleton.rs `ask_sample`), and so that a layer of the animator written here samples with no crossing.
 //!
 //! AUTHORED DATA, NOT STATE: nothing writes a track after its file is loaded, a clip is the same for every game, and no snapshot carries it. So this is
-//! outside the games' blocks (state.rs) and has no part: a COPY (tools/sim/build.ts STATICS), held by tools/qa/pose-ident.ts, which reads every single of
-//! every clip back and samples each both ways. A clip is known by the number `end` gave it; the host keeps which clip that is.
+//! outside the games' blocks (state.rs) and has no part: a COPY (tools/qa/rust-rules-check.ts STATICS). A clip is known by the number `end` gave it; the host keeps which clip that is.
 //!
 //! A CLIP WRITTEN TWICE IS ONE CLIP. The host knows a clip by its object and a character file may be loaded more than once in a process (a game stood up
 //! again), so `end` looks for a clip already held with the same length, the same tracks and the same singles (found by a word folded from them, then compared

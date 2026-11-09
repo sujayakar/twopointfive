@@ -269,7 +269,6 @@ pub fn sticky_eyes(g: &crate::game::Game, seat: &crate::seats::SeatRef) -> Vec<c
     // (under the fog's cone a camera's wedge is no wider than an eye's   stickycam.ts:195)
     let wide = if g.k.fog.cone { m::min(g.k.sticky.fov_deg, crate::fogofwar::field_deg(g)) } else { g.k.sticky.fov_deg };
     let live = sticky_live(g, &crate::stickycam::StickyLivePl { cams: g.pl[pl].cams.clone() });
-    if g.k.fog.cone && !live.is_empty() { crate::game::b_tap::tap(crate::game::b_tap::STICKY_EYES_CONE); if wide < g.k.sticky.fov_deg { crate::game::b_tap::tap(crate::game::b_tap::STICKY_EYES_CONE_NARROWS); } }
     for c in live {
         let p = cam_lens(g, c);
         let all = flat(g, c);

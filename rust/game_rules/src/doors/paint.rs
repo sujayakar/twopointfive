@@ -1,4 +1,4 @@
-//! A LEVEL'S LEAVES ARE PAINTED AS THE GAME IS STOOD (src/scene/leafPaint.ts paintLeaves, called at the same place). A leaf is made in the office's colours whatever
+//! A LEVEL'S LEAVES ARE PAINTED AS THE GAME IS STOOD. A leaf is made in the office's colours whatever
 //! the level, and on a mud compound those read as office doors. On a level that WEARS the look an outside door is in the level's own accent paint (its row below, else
 //! the one its boxes are painted in, army green where they have none), an inside one in weathered grey wood (one in four with that paint faded on it), each a shade of
 //! its own by its name. Steel doors are left alone, and so is a level that carries none of the look's paints. It is the box's own colour and word, so what a breach

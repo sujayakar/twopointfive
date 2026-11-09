@@ -271,7 +271,7 @@ mod tests {
     /// The hand's beats on the page's numbers, against the TypeScript's handAt: (t, up, drawn, cycle, into's bits).
     #[test]
     fn hand_beats_are_the_typescripts() {
-        let k = crate::knobs::page_smokebreak();
+        let k = crate::knobs::SmokebreakK::page();
         let rows: [(f64, f64, bool, f64, u64); 17] = [
             (0f64, 0f64, false, -1f64, 0x0000000000000000),
             (0.49f64, 0f64, false, -1f64, 0x3fdf5c28f5c28f5c),

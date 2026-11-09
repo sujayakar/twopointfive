@@ -369,9 +369,8 @@ fn fixed_in(g: &mut Game, at: V3, k: f64, who: f64, origins: &[V3], budget: &mut
         let c: V3 = [(grp.a.x0 + grp.a.x1) / 2.0, (grp.a.y0 + grp.a.y1) / 2.0, (grp.a.z0 + grp.a.z1) / 2.0];
         crate::destruction::destruction_cell_dust(g, c, [0.0, 1.0, 0.0], 1.2, grp.surf);
         if solid == 0 { continue; }
-        // one model: sound's routes, the smoke's obstacles, the nav cells, and the AI's feed
+        // one model: sound's routes, the nav cells, and the AI's feed
         crate::scene_collision::sound_paths_invalidate(g);
-        crate::smoke_types::smoke_system_like_obstacles_changed(g, c, m::hyp2(rx1 - rx0, rz1 - rz0) / 2.0 + 1.5);
         let ch = crate::scene_collision::nav_grid_rebake(g, rx0, rz0, rx1, rz1);
         let mut opened: Vec<f64> = Vec::new(); let mut x = 0; while x < ch.len() { if ch[x + 1] == 0.0 { opened.push(ch[x]); } x += 2; }
         g.stats.furnblast.nav_opened += opened.len() as i32; furniture_bump(g);
@@ -770,7 +769,6 @@ fn mouth_in(g: &mut Game, at: V3, who: f64, r: [f64; 4], budget: &mut f64) {
     for &i in &hid { let b = bx(i); let a = aabb_of(g, b); qx0 = m::min(qx0, a.x0); qx1 = m::max(qx1, a.x1); qz0 = m::min(qz0, a.z0); qz1 = m::max(qz1, a.z1); }
     let c: V3 = [(qx0 + qx1) / 2.0, 0.6, (qz0 + qz1) / 2.0];
     crate::scene_collision::sound_paths_invalidate(g);
-    crate::smoke_types::smoke_system_like_obstacles_changed(g, c, m::hyp2(qx1 - qx0, qz1 - qz0) / 2.0 + 1.5);
     let ch = crate::scene_collision::nav_grid_rebake(g, qx0, qz0, qx1, qz1);
     let mut opened: Vec<f64> = Vec::new(); let mut k = 0; while k < ch.len() { if ch[k + 1] == 0.0 { opened.push(ch[k]); } k += 2; }
     g.stats.furnblast.nav_opened += opened.len() as i32; furniture_bump(g);
@@ -811,7 +809,6 @@ pub fn furniture_reset(g: &mut crate::game::Game) {
     g.destr.furn.hidden.clear(); furniture_bump(g);
     let w = crate::scene_world::world();
     crate::scene_collision::nav_grid_rebake(g, w.min[0], w.min[2], w.max[0], w.max[2]); crate::scene_collision::sound_paths_invalidate(g);
-    crate::smoke_types::smoke_system_like_obstacles_changed(g, [(w.min[0] + w.max[0]) / 2.0, 1.0, (w.min[2] + w.max[2]) / 2.0], 60.0);
     // the AI was told of every piece that went: it is told the level is back too, unless the walls' own reset has just said so
     furniture_note_reset(g, FurnitureNoteResetCause::Reset);
 }

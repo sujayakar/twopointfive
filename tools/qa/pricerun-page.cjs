@@ -17,7 +17,7 @@
 //       (Ten until the running read came: that walk tired after about a quarter of an hour, which is ten levels of held pictures and five with the world run.)
 // No dev server on the port: one is started from this checkout and stopped again by its pid. One software page at a time on a machine.
 // Exit 0 = the last page came up with a row for every level, each with its two states and its running read, no program made by the switch, the file handed over, no page error.
-const { chromium } = require('/opt/node-tools/node_modules/playwright');
+const { page: pageRun, SOFTWARE } = require('./page.cjs');
 const fs = require('fs'), path = require('path'), http = require('http');
 const { spawn, execFileSync } = require('child_process');
 const ROOT = path.resolve(__dirname, '../..');
@@ -28,10 +28,8 @@ const PORT = Number(opt('port', process.env.PORT || 5199)), OUT = path.resolve(o
 const [VW, VH] = opt('size', REAL ? '1920x1080' : '320x180').split('x').map(Number), LEVELS = argv.length ? argv : REAL ? [] : ['vault'];   // (none named on a real run = every level on the list)
 { const stray = argv.filter(a => a.startsWith('--')); if (stray.length) { console.error(`pricerun-page: no such flag: ${stray.join(' ')}`); process.exit(2); } }   // (all flags are off argv by here: what is left is a mistake, never a level's name)
 // (…and the page is not told a script drives it: navigator.webdriver false, so it boots as it does for a person — the load brief, the attract reel, the device's retry)
-const FLAGS = ['--disable-blink-features=AutomationControlled', '--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
-const T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a);
+const PAGE = pageRun({ name: 'pricerun-page', port: PORT, flags: ['--disable-blink-features=AutomationControlled', ...SOFTWARE] }), { check, note: log } = PAGE;
 const up = () => new Promise(res => { const r = http.get({ host: 'localhost', port: PORT, path: '/', timeout: 2000 }, x => { x.resume(); res(x.statusCode === 200); }); r.on('error', () => res(false)); r.on('timeout', () => { r.destroy(); res(false); }); });
-let red = false; const check = (ok, what, detail = '') => { red = red || !ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}${detail ? `\n    ${detail}` : ''}`); };
 
 let server = null, browser = null, part = null;   // (let go however the run ends: a throw below must not leave a dev server on the port for the next run to find)
 for (const sig of ['SIGINT', 'SIGTERM']) process.on(sig, () => { try { part?.kill(sig); } catch { /* gone */ } try { server?.kill(); } catch { /* gone */ } Promise.resolve(browser?.close()).catch(() => { }).finally(() => process.exit(130)); });   // (… nor a signal from outside, which reaches the part that is walking too)
@@ -65,13 +63,11 @@ async function inParts(list) {
     if (list.length > EACH) return inParts(list); }
   fs.mkdirSync(OUT, { recursive: true });
   await serve();
-  browser = await chromium.launch({ headless: true, channel: 'chromium', args: FLAGS });
-  const ctx = await browser.newContext({ viewport: { width: VW, height: VH }, deviceScaleFactor: 1, acceptDownloads: true });
+  browser = await PAGE.launch();
   // a frame is seconds long here: a turn is a frame dropped and two kept, and a long frame is not the tab having been away
-  await ctx.addInitScript(([real, play]) => { if (!real) window.__priceOpts = { playS: 0.5, runS: +((play > 0 ? play : 0.5) + 0.2).toFixed(4) /* (twelve more steps before the running read) */, catchS: 0, settleS: 0, settleFrames: 1, measureFrames: 2, capS: 240, awayS: 600, lateMs: 0 /* (the late answer's rule is not asked here: a frame is seconds long and the timer drops a pass over a second, so there is nothing for it to read) */ }; if (play > 0) window.__priceOpts = { ...(window.__priceOpts || {}), playS: play }; }, [REAL, PLAY]);   // (half a second of the game's clock: thirty steps of the page's own scripted step, each drawn, after the page's own warm-up; no wait for the GPU to catch up before the turns, whose frame is seconds long here)
-  const page = await ctx.newPage(), errors = [], pages = []; let saved = null, gaveUp = '';
-  page.on('pageerror', x => errors.push('pageerror: ' + String(x && x.stack || x).slice(0, 400)));
-  page.on('console', m => { const x = m.text(); if (/price every level/.test(x)) { log('page:', x.slice(0, 300)); gaveUp = gaveUp || x.slice(0, 300); } if (m.type() === 'error' && !/Failed to load resource/.test(x)) errors.push(x.slice(0, 300)); });   // (the run's own word on the console is always its end without a file: stopped, refused, or no session store — not waited on for the cap)
+  const INIT = ([real, play]) => { if (!real) window.__priceOpts = { playS: 0.5, runS: +((play > 0 ? play : 0.5) + 0.2).toFixed(4) /* (twelve more steps before the running read) */, catchS: 0, settleS: 0, settleFrames: 1, measureFrames: 2, capS: 240, awayS: 600, lateMs: 0 /* (the late answer's rule is not asked here: a frame is seconds long and the timer drops a pass over a second, so there is nothing for it to read) */ }; if (play > 0) window.__priceOpts = { ...(window.__priceOpts || {}), playS: play }; };   // (half a second of the game's clock: thirty steps of the page's own scripted step, each drawn, after the page's own warm-up; no wait for the GPU to catch up before the turns, whose frame is seconds long here)
+  const { page, errors } = await PAGE.open({ browser, size: [VW, VH], options: { acceptDownloads: true }, init: [[INIT, [REAL, PLAY]]], errors: { skip: /Failed to load resource/ } }), pages = []; let saved = null, gaveUp = '';
+  page.on('console', m => { const x = m.text(); if (/price every level/.test(x)) { log('page:', x.slice(0, 300)); gaveUp = gaveUp || x.slice(0, 300); } });   // (the run's own word on the console is always its end without a file: stopped, refused, or no session store — not waited on for the cap)
   page.on('framenavigated', f => { if (f === page.mainFrame()) { pages.push(f.url()); log('page', pages.length, f.url().replace(`http://localhost:${PORT}`, '')); } });
   page.on('download', async d => { saved = path.join(OUT, d.suggestedFilename()); await d.saveAs(saved).catch(e => { errors.push('the download was not kept: ' + e.message); saved = null; }); });
   const asked = `/?${LOOK}&${'pricelevels'}${LEVELS.length ? '=' + LEVELS.join(',') : ''}${QUALITY ? '&quality=' + QUALITY : ''}${REAL ? '' : '&pricesecs=1'}${LIVE !== '' ? '&pricelive=' + LIVE : ''}&downloads=1`;   // (downloads=1: the page's save door as it was, host/savefile.ts, so the one file comes down here to be read; the run carries the flag to its last page)
@@ -122,6 +118,5 @@ async function inParts(list) {
   check(driven === false, 'the page was not told a script drives it (navigator.webdriver false): what ran is what a person\'s page runs', `navigator.webdriver ${driven}`);
   check(errors.length === 0, 'no page error and no error on the console through the whole run', errors.slice(0, 6).join('\n    '));
   if (report) { fs.writeFileSync(path.join(OUT, 'report.txt'), report + '\n'); console.log('\n' + report); }
-  console.log(red ? '\n=== pricerun-page: FAILED ===' : '\n=== pricerun-page: ALL PASS ===');
-  process.exit(red ? 1 : 0);
+  await PAGE.end(PAGE.fails ? '\n=== pricerun-page: FAILED ===' : '\n=== pricerun-page: ALL PASS ===');
 })().catch(async e => { console.error(e); try { await browser?.close(); } catch { /* gone */ } try { server?.kill(); } catch { /* gone */ } process.exit(1); });

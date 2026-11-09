@@ -6,7 +6,7 @@ use alloc::{string::String, vec::Vec};
 /// the state this module keeps at its top level
 #[derive(Clone, Debug, ToBytes)]
 pub struct SceneLevelLoadMod {
-    /// (src/scene/levelLoad.ts:47 levelNames)
+    /// (tools/levels/lib/levelLoad.ts:47 levelNames)
     pub level_names: Option<String>,
 }
 impl SceneLevelLoadMod {

@@ -271,7 +271,7 @@ pub struct DiginStats {
 }
 
 /// (src/game/digin.ts:163 DIGIN_DEFAULTS: a table nothing writes)
-pub fn digin_defaults() -> crate::knobs::DiginK { crate::knobs::page_digin() }
+pub fn digin_defaults() -> crate::knobs::DiginK { crate::knobs::DiginK::page() }
 
 /// (src/game/digin.ts:194 LS_KEY)
 pub const LS_KEY: &str = "twopointsix.digin";

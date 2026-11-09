@@ -300,7 +300,7 @@ impl LanesMod {
 }
 
 /// (src/game/lanes.ts:156 LANES_DEFAULTS: a table nothing writes)
-pub fn lanes_defaults() -> crate::knobs::LanesK { crate::knobs::page_lanes() }
+pub fn lanes_defaults() -> crate::knobs::LanesK { crate::knobs::LanesK::page() }
 
 /// (src/game/lanes.ts:220 SIDE)
 pub const SIDE: &str = "hostile";

@@ -7,7 +7,7 @@ import { machineBefore } from '../../src/host/machine';
 
 const q = new URLSearchParams(location.search);
 keysBoot(q);
-{ const { instance } = await WebAssembly.instantiate(await (await fetch('/game_face.wasm')).arrayBuffer(), { env: { face_roll: () => 0 } });
+{ const { instance } = await WebAssembly.instantiate(await (await fetch('/game_face.wasm')).arrayBuffer());
   const X = instance.exports as unknown as DeskFace & { memory: WebAssembly.Memory }, C = new Commands();
   setDesk(new Desk(X, X.memory, (key, text) => { if (text) localStorage.setItem(key, text); else localStorage.removeItem(key); }));
   machineBefore(q, '', C); desk().do(C); }

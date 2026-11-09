@@ -14,14 +14,11 @@
 //        step 2: none while the first row is flipped, one under the second, and on a frozen take as many as the take began with on every frame between.
 // The software adapter takes seconds to draw a frame at High (the whole list × 2 rounds is about 230 frames) and its pass timers time the CPU: this proves the sweep's mechanics (segments, events, restore, the dump's shape), no price.
 // Exit 0 = every check passed, 1 = one failed (printed) or the page did not boot.
-const { chromium } = require('/opt/node-tools/node_modules/playwright');
+const { page: pageRun, NOT_THE_PAGE } = require('./page.cjs'), PAGE = pageRun({ name: 'perf-sweep-page' }), { check, note: log } = PAGE;
 const fs = require('fs'), os = require('os'), path = require('path');
-const PORT = process.env.PORT || 5199, QUERY = process.env.QUERY ?? 'roomclear&squad4&quality=high', OUT = process.env.OUT || fs.mkdtempSync(path.join(os.tmpdir(), 'perf-sweep-'));
+const QUERY = process.env.QUERY ?? 'roomclear&squad4&quality=high', OUT = process.env.OUT || fs.mkdtempSync(path.join(os.tmpdir(), 'perf-sweep-'));
 const ROUNDS = Number(process.env.ROUNDS || 2), ONLY = process.env.ONLY ? process.env.ONLY.split(',') : null, LIVE = !!process.env.LIVE && process.env.LIVE !== '0', MUST = process.env.FLIP ? process.env.FLIP.split(',') : LIVE && ONLY ? ONLY : null, GOGGLES = !!process.env.GOGGLES && process.env.GOGGLES !== '0';
 const DEADLINE = Number(process.env.DEADLINE || 150), STALL = Number(process.env.STALL || 10), SETTLE = Number(process.env.SETTLE || 1), MEASURE = Number(process.env.MEASURE || 2), [VW, VH] = (process.env.SIZE || '320x180').split('x').map(Number);
-const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
-const T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a);
-let red = 0; const check = (ok, what) => { console.log(`${ok ? '- PASS' : '- FAIL'} — ${what}`); if (!ok) red++; };
 fs.mkdirSync(OUT, { recursive: true });
 
 // in the page: everything the sweep may move, as one string
@@ -37,17 +34,16 @@ const printDiff = (x, y, name = '') => { if (x === y) return; const a = JSON.par
   for (const k of Object.keys(a)) if (k !== 'settings' && JSON.stringify(a[k]) !== JSON.stringify(b[k])) console.log(`    ${p}${k}: ${JSON.stringify(a[k])} → ${JSON.stringify(b[k])}`); };
 
 (async () => {
-  const browser = await chromium.launch({ headless: true, channel: 'chromium', args: FLAGS });
-  const page = await (await browser.newContext({ viewport: { width: VW, height: VH }, deviceScaleFactor: 1 })).newPage();
+  const { page, errors: errs } = await PAGE.open({ size: [VW, VH], errors: { console: false } });
   // (two console lines every boot of this page prints, the base build's too, are passed over by their address: no /favicon.ico on the dev server, and no capture sink on :5174 for the recorder's POST of each dump)
-  const errs = []; let passed = 0; page.on('pageerror', e => errs.push(String(e).slice(0, 400)));
-  page.on('console', m => { if (m.type() !== 'error') return; const at = m.location().url || ''; if (/\/favicon\.ico$/.test(at) || /^http:\/\/localhost:5174\//.test(at)) passed++; else errs.push(`${m.text().slice(0, 400)}${at ? ` (${at})` : ''}`); });
-  const url = `http://localhost:${PORT}/?${QUERY ? QUERY + '&' : ''}mute`;
+  let passed = 0;
+  page.on('console', m => { if (m.type() !== 'error') return; const at = m.location().url || ''; if (NOT_THE_PAGE.test(at)) passed++; else errs.push(`${m.text().slice(0, 400)}${at ? ` (${at})` : ''}`); });
+  const url = PAGE.url(`${QUERY ? QUERY + '&' : ''}mute`);
   log(url);
   try {
     await page.goto(url);
     await page.evaluate(async () => { await window.__ready; if (window.__draw.pause.up) window.__draw.run(0); });
-  } catch (e) { console.log(`- FAIL — the page did not come ready — ${String(e).slice(0, 300)}${errs.length ? ` · ${errs[0]}` : ''}`); await browser.close(); process.exit(1); }
+  } catch (e) { console.log(`- FAIL — the page did not come ready — ${String(e).slice(0, 300)}${errs.length ? ` · ${errs[0]}` : ''}`); await PAGE.end('', 1); }
   const frames = async n => page.evaluate(n => new Promise(res => { let k = 0; const f = () => (++k >= n ? res(k) : requestAnimationFrame(f)); requestAnimationFrame(f); }), n);
   await frames(3);
   log('ready; the loop is running');
@@ -55,7 +51,7 @@ const printDiff = (x, y, name = '') => { if (x === y) return; const a = JSON.par
     await page.keyboard.press('KeyN');
     const up = await page.evaluate(ms => new Promise(res => { const t0 = performance.now(); let k = 0; const f = () => { const L = window.__engine.lights; k++; if ((L.tube && L.irCount > 0) || performance.now() - t0 > ms) return res({ tube: !!L.tube, n: L.irCount ?? null, frames: k }); requestAnimationFrame(f); }; requestAnimationFrame(f); }), Number(process.env.GOGGLES_WAIT || 6) * 60000);
     check(up.tube && up.n > 0, `goggles down: the picture is the tube's and the renderer takes infrared light (${JSON.stringify(up)})`);
-    if (!(up.tube && up.n > 0)) { console.log('  (no infrared light to sweep on this stand: a kit without goggles, ?noirlight, or goggles that were already down — nothing further is run)'); await browser.close(); process.exit(1); } }
+    if (!(up.tube && up.n > 0)) { console.log('  (no infrared light to sweep on this stand: a kit without goggles, ?noirlight, or goggles that were already down — nothing further is run)'); await PAGE.end('', 1); } }
   const before = await page.evaluate(STATE), t0 = await page.evaluate(() => window.__game.time);
   check(await page.evaluate(() => !window.__perfsweep.active && !window.__perfrec.recording), 'nothing sweeps or records until asked');
 
@@ -143,8 +139,8 @@ const printDiff = (x, y, name = '') => { if (x === y) return; const a = JSON.par
     check(handState === refState, `the page after that hand change is the page a plain change to ${other} gives`);
     if (pinned) printDiff(before, backState, 'back'); printDiff(refState, handState, 'hand');
   }
-  if (errs.length) { console.log(`- FAIL — ${errs.length} page / console errors:`); errs.slice(0, 8).forEach(e => console.log(`    ${e}`)); red++; } else console.log(`- PASS — no page or console error (${passed} lines for the missing favicon / capture sink passed over)`);
-  await browser.close();
+  if (errs.length) { console.log(`- FAIL — ${errs.length} page / console errors:`); errs.slice(0, 8).forEach(e => console.log(`    ${e}`)); PAGE.fails++; } else console.log(`- PASS — no page or console error (${passed} lines for the missing favicon / capture sink passed over)`);
+  await PAGE.close();
   log(`dump: ${file}`);
-  process.exit(red ? 1 : 0);
+  await PAGE.end('');
 })();

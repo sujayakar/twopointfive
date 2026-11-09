@@ -253,6 +253,12 @@ impl Panes {
         let at = self.holes_at() + h * HOLE_W;
         unsafe { &mut *(self.body.as_mut_ptr().add(at) as *mut Hole) }
     }
+    /// …to read
+    #[inline]
+    pub fn hole_read(&self, h: usize) -> &Hole {
+        let at = self.holes_at() + h * HOLE_W;
+        unsafe { &*(self.body.as_ptr().add(at) as *const Hole) }
+    }
     #[inline]
     fn q(&mut self, i: usize) -> &mut Q {
         let at = self.q_at() + i * Q_W;
@@ -601,7 +607,6 @@ pub struct Ctx {
 fn solid(c: &Ctx, a: [f64; 3], b: [f64; 3]) -> bool {
     lines::solid_line(c.w, c.set, ASK_GLASS, a[0], a[1], a[2], b[0], b[1], b[2]).unwrap_or(true)
 }
-
 
 // ---- which glass a pane is
 /// glassbreak.ts skySide: which face of the pane has the open sky (+1 the side its normal points to, −1 the other, 0 neither or both). Asked of the level's own
@@ -1916,17 +1921,6 @@ fn held_set(r: &Row, without: i32) -> &'static [u32; 21] {
     }
     unsafe { &*core::ptr::addr_of!(HELD_BITS) }
 }
-/// …for a tool
-pub fn held_bits(g: usize, bi: u32, without: i32) -> &'static [u32; 21] {
-    let p = pn(g);
-    match p.row_of(bi) {
-        Some(ri) if p.row(ri).ty == ANNEALED => held_set(p.row(ri), without),
-        _ => unsafe {
-            *core::ptr::addr_of_mut!(HELD_BITS) = [0; 21];
-            &*core::ptr::addr_of!(HELD_BITS)
-        },
-    }
-}
 /// glassbreak.ts supportPass: what a change left unheld falls, a beat later and staggered
 fn support_pass(c: &Ctx, ri: usize) {
     let (frags, key, lu, lv) = {
@@ -2294,12 +2288,6 @@ pub fn field(i: u32) -> usize {
         _ => 0,
     }
 }
-/// a row's place from the block's start, in bytes; the queue's; how many rows there are
-pub fn row_addr(g: usize, ri: usize) -> usize {
-    let p = pn(g);
-    let at = p.rows_at() + ri * ROW_W;
-    offset_of!(crate::state::State, panes) + HEAD + at * 8
-}
 pub fn q_addr(g: usize) -> usize {
     let p = pn(g);
     offset_of!(crate::state::State, panes) + HEAD + p.q_at() * 8
@@ -2318,18 +2306,6 @@ pub fn jet(c: &Ctx, at: [f64; 3], d: [f64; 3], speed: f64, amount: f64, who: f64
     let v = [d[0] * (speed * 0.35), d[1] * (speed * 0.35), d[2] * (speed * 0.35)];
     let (t, p) = fall_of(c, at, v, c.gravity, 0.8);
     falls::schedule(c.g, falls::L_GLASS, c.now + t, p[0], p[1], p[2], SOUND_TINKLE, 0.0, 1.0, amount, who, EV_UNHEARD, 0.0, 0.0, k(SH_PENDING_MAX));
-}
-pub fn hole_rows(g: usize) -> u32 {
-    pn(g).nh
-}
-pub fn hole_bi(g: usize, r: usize) -> u32 {
-    pn(g).hole(r).bi
-}
-pub fn hole_n(g: usize, r: usize) -> u32 {
-    pn(g).hole(r).n
-}
-pub fn hole_pt(g: usize, r: usize, i: usize) -> f64 {
-    pn(g).hole(r).p[i]
 }
 pub fn clear_holes(g: usize) {
     let p = pn(g);

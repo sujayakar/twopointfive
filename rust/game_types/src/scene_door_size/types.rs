@@ -12,8 +12,8 @@ pub struct DOORSIZE {
     pub reach: f64,
 }
 
-/// (src/scene/doorSize.ts:17 DOOR_SIZE: a table nothing writes)
+/// (tools/levels/lib/doorSize.ts:17 DOOR_SIZE: a table nothing writes)
 pub fn door_size() -> crate::scene_door_size::DOORSIZE { crate::scene_door_size::DOORSIZE { gap: 0.9, head: 2.05, slot_max: 1.3, cell: 0.5, reach: 0.1 } }
 
-/// (src/scene/doorSize.ts:31 LEAF_H)
+/// (tools/levels/lib/doorSize.ts:31 LEAF_H)
 pub const LEAF_H: f64 = 2.01;

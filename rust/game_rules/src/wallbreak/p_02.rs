@@ -332,7 +332,6 @@ pub fn wall_break_fall(g: &mut crate::game::Game, j: f64, a: crate::wallbreak::A
     seam_box(g, b).flags = with_bits(flags, HIDE);
     wall_break_bump(g);
     let c = seam_box(g, b).c;
-    crate::smoke_types::smoke_system_like_obstacles_changed(g, c, m::hyp3(h[0], h[1], h[2]) + 0.6);
     rects.push([a.x0, a.z0, a.x1, a.z1]);
     let hung = if quiet { None } else { g.destr.walls.hung_now.as_ref().filter(|n| n.set.contains(&j)).map(|n| (n.at, n.n)) };
     if let Some((at, n)) = hung {
@@ -699,8 +698,6 @@ pub fn wall_break_reset(g: &mut crate::game::Game, silent: Option<bool>) {
     let world = crate::scene_world::world();
     crate::scene_collision::nav_grid_rebake(g, world.min[0], world.min[2], world.max[0], world.max[2]);
     crate::scene_collision::sound_paths_invalidate(g);
-    crate::smoke_types::smoke_system_like_obstacles_changed(g, [(world.min[0] + world.max[0]) / 2.0, 1.0, (world.min[2] + world.max[2]) / 2.0], 60.0);
-    crate::render_reach_keep::reach_keep_changed(g, None, None);
     if !silent {
         wall_break_note(g, &WallBreakNoteC {
             dead: false,

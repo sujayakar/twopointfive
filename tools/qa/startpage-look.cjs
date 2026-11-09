@@ -3,29 +3,21 @@
 // The page's two steps: MISSION (the list, the briefing, the Setup rail of value rows) and TEAM & KIT (the loadout's rows); the rail's rows stand in for the list's own setting rows, which stay in the page unseen.
 //   node tools/qa/startpage-look.cjs [outDir]      env: PORT (the dev server's, default 5199) · SIZE (default 1440x900) · QUALITY (default verylow) · ALL=1 (deploy EVERY mission) · STILLS=0 (no stills) · GPU=1 (see below)
 // PASS / FAIL lines, stills beside a report.json, exit 1 on a FAIL or a page error.
-const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const fs = require('fs');
 const path = require('path');
 const outDir = process.argv[2] || require('fs').mkdtempSync(require('path').join(require('os').tmpdir(), 'startpage-look-'));
-const PORT = process.env.PORT || 5199;
 const [W, H] = (process.env.SIZE || '1440x900').split('x').map(Number);
 const QUALITY = process.env.QUALITY || 'verylow';
 // GPU=1: the software WebGPU adapter under the page (SwiftShader) — the renderer really boots, and every page load then waits minutes for its shaders. The
 // default is NO adapter at all: the boot stops at 'No WebGPU adapter', its error panel is hidden, and what is left is exactly what these checks are about —
 // the start card, the list and the loadout are plain DOM that is live from the first tick, and a deploy is a page load.
 const GPU = process.env.GPU === '1';
-const FLAGS = GPU ? ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'] : ['--disable-gpu'];
-const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage textures \(5\) in the Compute stage/;
-const T0 = Date.now();
-const log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a);
+const { page: pageRun, NOISE } = require('./page.cjs'), PAGE = pageRun({ name: 'startpage-look', gpu: GPU }), { check, note: log } = PAGE;
 fs.mkdirSync(outDir, { recursive: true });
-const BASE = `http://localhost:${PORT}/`, Q = `paused&quality=${QUALITY}&mute`;
-const report = { checks: [], errors: [] };
-const check = (ok, label, detail) => { report.checks.push({ ok: !!ok, label, detail }); console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
-function watch(page) {
-  page.on('pageerror', e => { if (!GPU && /WebGPU|adapter/i.test(String(e))) return; report.errors.push(String(e).slice(0, 300)); log('PAGE ERROR', String(e).slice(0, 300)); });
-  page.on('console', m => { if (m.type() !== 'error') return; const t = m.text(); if (NOISE.test(t) || /Failed to load resource|Failed to fetch|Response body loading was aborted/.test(t) || (!GPU && /WebGPU|adapter/i.test(t))) return; /* (a fetch cut off by the next page load is not a fault) */ report.errors.push(t.slice(0, 300)); log('console error', t.slice(0, 300)); });
-}
+const BASE = PAGE.url().slice(0, -1), Q = `paused&quality=${QUALITY}&mute`;
+const report = { checks: PAGE.lines, errors: [] };
+// (a fetch cut off by the next page load is not a fault)
+const WATCH = { into: report.errors, say: true, thrown: GPU ? undefined : /WebGPU|adapter/i, skip: [NOISE, /Failed to load resource|Failed to fetch|Response body loading was aborted/, ...(GPU ? [] : [/WebGPU|adapter/i])] };
 const shot = (page, name, ms = 30000) => page.screenshot({ path: path.join(outDir, name), timeout: ms }).then(() => true, e => { log('no still', name, String(e).split('\n')[0].slice(0, 120)); return false; });
 const query = u => [...new URLSearchParams(String(u).replace(/^[^?]*\?/, ''))].map(([k, v]) => v ? `${k}=${v}` : k);
 // what the page shows right now
@@ -49,10 +41,7 @@ const cardOf = page => page.evaluate(() => ({ buttons: [...document.querySelecto
   focus: document.activeElement?.textContent?.slice(0, 20) ?? '' }));
 
 (async () => {
-  const browser = await chromium.launch({ headless: true, args: FLAGS });
-  const ctx = await browser.newContext({ viewport: { width: W, height: H } });
-  if (!GPU) await ctx.addInitScript(() => { addEventListener('DOMContentLoaded', () => { const s = document.createElement('style'); s.textContent = '#fatal { display: none !important; }'; document.head.appendChild(s); }); });
-  const page = await ctx.newPage(); watch(page);
+  const { context: ctx, page } = await PAGE.open({ size: [W, H], fatalOff: !GPU, errors: WATCH });
   // a DEPLOY is a page load of another URL. Here the load is answered with an empty page,
   // so the software adapter is not left compiling a mission's shaders under the next check (minutes each)
   let stub = false;
@@ -268,7 +257,5 @@ const cardOf = page => page.evaluate(() => ({ buttons: [...document.querySelecto
   }
   check(report.errors.length === 0, 'no page error and no console error on any of the pages', report.errors.join(' | ') || 'none');
   fs.writeFileSync(path.join(outDir, 'report.json'), JSON.stringify(report, null, 1));
-  await browser.close();
-  const bad = report.checks.filter(c => !c.ok).length; console.log(bad ? `=== startpage-look: ${bad} FAIL ===` : '=== startpage-look: ALL PASS ===');
-  process.exit(bad ? 1 : 0);
+  await PAGE.end(PAGE.fails ? `=== startpage-look: ${PAGE.fails} FAIL ===` : '=== startpage-look: ALL PASS ===');
 })().catch(e => { console.error(e); process.exit(1); });

@@ -768,7 +768,7 @@ fn line(g: &mut Game, over: &Over, a: V3, b: V3, shrink: f64, through: f64, pane
 }
 
 /// is a→b blocked by a static or a leaf; `through` = the flags it passes (glass by default: the line of sight). (collision.ts StaticCollision.segmentBlocked)
-#[doc(hidden)] pub fn segment_blocked__body(g: &mut crate::game::Game, a: V3, b: V3, shrink: Option<f64>, through: Option<f64>, panes: Option<&mut Vec<crate::scene_collision::SegmentBlockedPanesItem>>) -> bool {
+pub fn segment_blocked(g: &mut crate::game::Game, a: V3, b: V3, shrink: Option<f64>, through: Option<f64>, panes: Option<&mut Vec<crate::scene_collision::SegmentBlockedPanesItem>>) -> bool {
     if alone(g) {
         let r = segment_blocked_ask(g, a, b, shrink, through, panes);
         crate::scene_box_mirror::box_mirror_shut(g);
@@ -1020,21 +1020,34 @@ pub fn sense_for(g: &mut crate::game::Game, row: crate::scene_collision::SenseFo
     SenseFor { set, ask: sense_panes(g, row.as_str()) }
 }
 
-/// `n` steps of the coarse grid's smoke over the boxes and leaves as they stand. False = nothing was done. (collision.ts StaticCollision.gridStep)
-pub fn grid_step(g: &mut crate::game::Game, n: f64, k: crate::scene_collision::GridStepK, sweep: f64, wind: Option<&crate::scene_collision::GridWind>) -> bool {
+/// the boxes and leaves a grid is asked over: is the copy of them stood for this alone (it is shut again after), and the leaves' list. None = there is no asking
+fn grid_over(g: &mut crate::game::Game) -> Option<(bool, i32)> {
     ready(g);
     let mine = !standing(g);
     if mine {
-        open_copy(g, false);   // (the copy for the step alone, with no question of the game's sent to it)
-        if !standing(g) { return false; }
+        open_copy(g, false);   // (with no question of the game's sent to it)
+        if !standing(g) { return None; }
     }
     let d = g.col.dynamic_boxes.clone();
     let set = crate::scene_box_mirror::box_mirror_leaves(g, &d);
     if set == -2.0 {
         if mine { crate::scene_box_mirror::box_mirror_shut(g); }
-        return false;
+        return None;
     }
-    let set = set as i32;
+    Some((mine, set as i32))
+}
+
+/// the ways between the coarse grid's cells are asked of the boxes and leaves as they stand: a game put back knows none till its next step
+pub fn grid_ways(g: &mut crate::game::Game) {
+    let Some((mine, set)) = grid_over(g) else { return };
+    let copy = crate::scene_box_mirror::box_mirror_grid_copy(g);
+    sim::bricks::ways(g.sim, sim::state::stamp(g.sim), slot(g), copy, set);
+    if mine { crate::scene_box_mirror::box_mirror_shut(g); }
+}
+
+/// `n` steps of the coarse grid's smoke over the boxes and leaves as they stand. False = nothing was done. (collision.ts StaticCollision.gridStep)
+pub fn grid_step(g: &mut crate::game::Game, n: f64, k: crate::scene_collision::GridStepK, sweep: f64, wind: Option<&crate::scene_collision::GridWind>) -> bool {
+    let Some((mine, set)) = grid_over(g) else { return false };
     // the light that comes round: the only `lamps` hung is guards.ts steadyLamps (sense.ts step, called from game.ts), which writes the lamps of nobody's fixture and answers with the rows' word
     let mut lamps = -1i32;
     let mut said_rows: Option<LampRows> = None;
@@ -1465,17 +1478,6 @@ pub fn nav_grid_walkable(g: &crate::game::Game, a: V3, b: V3) -> bool {
 /// (collision.ts clampi)
 pub fn clampi(x: f64, a: f64, b: f64) -> f64 {
     if x < a { a } else if x > b { b } else { x }
-}
-
-
-#[doc(hidden)] pub fn segment_blocked(g: &mut crate::game::Game, a: V3, b: V3, shrink: Option<f64>, through: Option<f64>, panes: Option<&mut Vec<crate::scene_collision::SegmentBlockedPanesItem>>) -> bool {
-    use crate::io::Io;
-    if g.taps & (1u64 << 17) == 0 { return segment_blocked__body(g, a, b, shrink, through, panes); }
-    let mut o = crate::io::W::new(); a.w(&mut o); b.w(&mut o); shrink.w(&mut o); through.w(&mut o);
-    let r = segment_blocked__body(g, a, b, shrink, through, panes);
-    let mut a = crate::io::W::new(); r.w(&mut a);
-    crate::out_events::push_tap(g, 17, &o.b, &a.b);
-    r
 }
 
 #[cfg(test)]

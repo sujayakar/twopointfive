@@ -193,8 +193,8 @@ pub struct VENTDEFAULTS {
     pub mains: bool,
 }
 
-/// (src/scene/levelData.ts:186 DEVICE_DEFAULTS: a table nothing writes)
+/// (tools/levels/lib/levelData.ts:186 DEVICE_DEFAULTS: a table nothing writes)
 pub fn device_defaults() -> crate::scene_level_data::DEVICEDEFAULTS { crate::scene_level_data::DEVICEDEFAULTS { pitch: -0.35, fov_deg: 70.0, range: 14.0, sweep_period: 9.0, group: String::from("security"), alarm: String::from("suspicion") } }
 
-/// (src/scene/levelData.ts:194 VENT_DEFAULTS: a table nothing writes)
+/// (tools/levels/lib/levelData.ts:194 VENT_DEFAULTS: a table nothing writes)
 pub fn vent_defaults() -> crate::scene_level_data::VENTDEFAULTS { crate::scene_level_data::VENTDEFAULTS { size: 0.6, duty: 1.0, phase: 0.0, mains: true } }

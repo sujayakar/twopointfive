@@ -3,17 +3,6 @@
 version = 4
 
 [[package]]
-name = "game"
-version = "0.1.0"
-dependencies = [
- "game_rules",
- "game_types",
- "game_wire",
- "prim",
- "sim",
-]
-
-[[package]]
 name = "game_derive"
 version = "0.1.0"
 
@@ -21,7 +10,7 @@ version = "0.1.0"
 name = "game_draw"
 version = "0.1.0"
 dependencies = [
- "game",
+ "game_rules",
  "sim",
 ]
 
@@ -30,7 +19,6 @@ name = "game_rules"
 version = "0.1.0"
 dependencies = [
  "game_types",
- "game_wire",
  "prim",
  "sim",
 ]
@@ -39,17 +27,16 @@ dependencies = [
 name = "game_run"
 version = "0.1.0"
 dependencies = [
- "game",
+ "game_rules",
  "game_start",
- "sim",
 ]
 
 [[package]]
 name = "game_start"
 version = "0.1.0"
 dependencies = [
- "game",
  "game_draw",
+ "game_rules",
  "sim",
 ]
 
@@ -58,15 +45,6 @@ name = "game_types"
 version = "0.1.0"
 dependencies = [
  "game_derive",
- "prim",
- "sim",
-]
-
-[[package]]
-name = "game_wire"
-version = "0.1.0"
-dependencies = [
- "game_types",
  "prim",
  "sim",
 ]
