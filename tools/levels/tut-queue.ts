@@ -1,6 +1,6 @@
 // TUT-QUEUE — the tutorial's fourth mission, "The relay post, in pairs": ONE WALLED POST THAT ONE ORDER TO EVERYBODY CANNOT TAKE, AND HE IS ON ITS FLOOR
 // WITH HIS FOUR. Every stop is a thing the squad as one group loses and the squad as two pairs wins, and the only new thing in his hands is Shift held
-// with the command key: a part of the squad takes the new order and the rest go on as they were (game/planmode.ts planGoal). The word's key then sends
+// with the command key: a part of the squad takes the new order and the rest go on as they were (rust/game_rules/src/planmode plan_goal). The word's key then sends
 // everything that waits. Nobody could say that of another level: here every room has two doors and every fight comes from two sides at once.
 // (The maintainer, 10-26: "then we have a level that teaches queueing commands" — after the missions that taught him his own body, the squad's key and
 // the word, and his kit and theirs. The floor is the plan mode mission's, tools/levels/tut-plan.ts, copied here and not imported: that mission was led

@@ -423,7 +423,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ================================================================ THE TOWN ROUND IT (nobody goes there: it is what the night is made of) ====
   /** a neighbour's building, seen as its back: a mass `top` high with snow on its flat roof. (Every one stands over 3.5 m: a slab between 2.75 and 3.45 m
-   *  is a ROOF to the weather — game/weather.ts roofsOf — and this level has one roof, the shop's) */
+   *  is a ROOF to the weather — rust/game_rules/src/weather roofs_of — and this level has one roof, the shop's) */
   const mass = (x0: number, z0: number, x1: number, z1: number, top: number, kind: WallKind) => {
     const W = G.as(kind, 'concrete');
     add({ c: [(x0 + x1) / 2, top / 2, (z0 + z1) / 2], h: [(x1 - x0) / 2, top / 2, (z1 - z0) / 2], albedo: W.albedo, rough: W.rough });
@@ -495,7 +495,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     exits: [EXIT_W],
     patrols: [['hall', 'court', 'table']],
   };
-  // WHAT HE CARRIES (game/kit.ts kitIssue: a mission's own card for him is the whole kit, on the page and on the scripted run): the rifle, one grenade
+  // WHAT HE CARRIES (rust/game_rules/src/kit kit_issue: a mission's own card for him is the whole kit, on the page and on the scripted run): the rifle, one grenade
   // and five sponge rounds for its launcher, the launcher up on the grenade. Nothing else a line of this mission does not use
   const issue: IssueData = { members: { '0': { weapon: 'rifle', shells: 1, rings: 5, loaded: 'he40', smoke: 0, bangs: 0, frags: 0 } } };
   const down = (n: number) => ({ is: 'men', down: n });
@@ -508,7 +508,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   const mark = (p: P3): P3 => [p[0], 1, p[2]];
   const lesson: LessonData = {
     title: 'Unseen',
-    // THE FRAME (game/rails.ts). From the first step: the walk, the view, the aim. Each tool is switched on by the step that teaches it and stays on.
+    // THE FRAME (rust/game_rules/src/rails). From the first step: the walk, the view, the aim. Each tool is switched on by the step that teaches it and stays on.
     // `rows` = the verbs Space offers here: nothing a step did not teach has a row (a wall charge at the box, the light plate beside the strongroom's
     // door, a body to drag), so a tap is always the thing the line means.
     // (the rows: what the steps teach, AND the plain quiet acts a player tries unasked — shutting a door behind him, easing one open, moving a body out of the
@@ -632,7 +632,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     ],
     mission: { serverRoom: { ...STRONG }, entryDoor: 'strong', rack: { index: 0, front, halfW: 0.35 }, exfilDoor: 'gate_w', exfilX: EXIT_W.x, exfilZ: EXIT_W.z, exfilOut: EXIT_W.out },
   };
-  // WHAT IS UNDERFOOT (game/floor.ts; the six it has; first match wins): the rooms are 'stone'; the court, the street, the alley and the trodden paths are
+  // WHAT IS UNDERFOOT (rust/game_rules/src/floor; the six it has; first match wins): the rooms are 'stone'; the court, the street, the alley and the trodden paths are
   // 'asphalt' (the nearest the six have to hard ground); everything else is fresh snow, 'grass' (the soft, quiet one)
   const surfaces: SurfacesData = { building: { x0: 0, x1: 40, z0: 0, z1: 28 }, grassEdge: 0, inside: 'grass', outside: 'grass', verge: 'grass', zones };
   const scenarios: LevelScenarios = { quiet, lesson, issue, places: PLACES, doorNames: [{ door: 'gate_w', name: 'street gate' }, { door: 'front', name: 'front door' }, { door: 'back', name: 'back door' }, { door: 'strong', name: 'strongroom door' }] };

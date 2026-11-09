@@ -33,13 +33,13 @@
 //
 // Built from the 2010s kit (src/scene/gwotKit.ts) on the office kit's walls and panes, plus the snow paints (src/scene/gwotPalette.ts SNOW_PALETTE): flat
 // colours, boxes only; no second look file.
-// WHAT A SNOW PIECE IS TO A MAN (scene/collision.ts: a static blocks feet and the nav grid only where it stands over 0.2 m):
+// WHAT A SNOW PIECE IS TO A MAN (rust/game_rules/src/scene_collision: a static blocks feet and the nav grid only where it stands over 0.2 m):
 //   · ground, road, cleared earth  = thin solid slabs at the floor (feet, rounds and light land on them);
 //   · paths, ruts, tracked-in slush = decals (NoShadow: drawn and lit, no ray and no collision query sees them);
 //   · a DRIFT                       = solid boxes whose top is under 0.2 m (the check holds 0.19; the tallest is 0.18): men wade through it, a round knocks snow out of it;
 //   · a BANK                        = a drift with tiers over 0.2 m: it stops feet. Only against a wall or the lorry, never within 1.4 m of a door;
 //   · a CAP                         = a decal on the top of a thing: a round goes through it to the thing; where the thing is cover that breaks (the
-//                                     wood, a wooden crate) the cap is to the wall engine what every decal on a broken piece is (game/wallbreak.ts `ghosts`).
+//                                     wood, a wooden crate) the cap is to the wall engine what every decal on a broken piece is (rust/game_rules/src/wallbreak `ghosts`).
 import type { Vec3 } from '../../src/math/vec';
 import type { Level, LevelDoorDef } from '../../src/scene/level';
 import type { KitViewData, LevelScenarios, Rect, StructureData } from '../../src/scene/scenarios';
@@ -262,7 +262,7 @@ export function build(extra: PassExtra = {}): { level: Level; scenarios: LevelSc
   G.ground(28, 11, 34, 18, 'mudFloor', 0.006);                                                // the bunk room
   G.ground(5.9, 13.4, 12.1, 20.6, 'dirt', 0.006);                                             // the bay: dry earth under its roof, to the eaves
   G.ground(5.9, 4.9, 9.6, 9.1, 'slab', 0.006);                                                // the lean-to
-  // THE ROOFS: four slabs, no more (the weather takes a level's four biggest ceiling slabs as its roofs — game/weather.ts roofsOf — and snow falls everywhere
+  // THE ROOFS: four slabs, no more (the weather takes a level's four biggest ceiling slabs as its roofs — rust/game_rules/src/weather roofs_of — and snow falls everywhere
   // else): the range, the bunk room, the bay, the lean-to
   grp('ceiling');
   slab(11.9, H, 4.9, 34.1, H + 0.2, 11.1, P.mudLight, { flags: BoxFlag.NoPrimary, rough: 0.95 });
@@ -581,7 +581,7 @@ export function build(extra: PassExtra = {}): { level: Level; scenarios: LevelSc
     // the stealth mission's three places, because the level format wants them (the room clear stands the mission still): the store, a point on its back wall, the tea room's door
     mission: { serverRoom: { ...STORE }, entryDoor: 'store', rack: { index: 0, front: [32.4, 1.0, 5.6], halfW: 0.3 }, exfilDoor: 'tea', exfilX: 17.25, exfilZ: 11.6, exfilOut: [0, 1] },
   };
-  // ---- what is underfoot (game/floor.ts; the six it has): fresh snow is 'grass' (the soft, quiet one); the road, the trodden paths, cleared earth and the
+  // ---- what is underfoot (rust/game_rules/src/floor; the six it has): fresh snow is 'grass' (the soft, quiet one); the road, the trodden paths, cleared earth and the
   // dry earth under the bay's roof are 'asphalt' (the nearest the six have to hard ground); the rooms' beaten earth and slab are 'stone', the rugs 'carpet'.
   // First match wins: rugs, rooms, then the yard's hard patches (pushed as they were laid above)
   const surfaces: SurfacesData = {

@@ -4,7 +4,7 @@
 //   const L = livedKit(K);  L.room('crew');  L.table(...);  L.stool(...);      ← call AFTER everything else the generator adds: lived things are the TAIL of
 //                                                                                the boxes and of the props (tools/levels/export.ts throws otherwise)
 // `room(id)` names the editor group of the boxes that follow ('lived.<id>') and the props' ids ('lived.<id>.<what><n>'): the loader leaves both out with the
-// switch off. PAINT IS READ BY THE SIMULATION (game/furnblast.ts breakClassOf, particleFx.ts): wood / woodDark break as wood, cardboard as board, metal / red as
+// switch off. PAINT IS READ BY THE SIMULATION (rust/game_rules/src/furnblast break_class_of, particleFx.ts): wood / woodDark break as wood, cardboard as board, metal / red as
 // steel, chair / plant as soft things, an unnamed colour as a steel machine — so a piece wears the palette paint of what it is made of where there is one.
 import type { Vec3 } from '../../src/math/vec';
 import { BoxFlag } from '../../src/scene/boxes';

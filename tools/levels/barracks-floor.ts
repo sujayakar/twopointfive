@@ -80,7 +80,7 @@ export const BARRACKS_ROOMS: Record<'galley' | 'hall' | 'duty' | 'bunks1' | 'bun
 // and carton (group `exterior`) were cut by the frame's edges, so they step out.
 const BARRACKS_KITVIEW: KitViewData = { ways: [{ door: 's_end', hide: ['exterior'], roomLights: 1, light: { porch: { intensity: 12, color: [0.82, 0.9, 1] }, fill: { intensity: 3, aim: [1.6, 0.8, 0.9] } } }, { door: 'k_out', roomLights: 1, light: { porch: { intensity: 12, color: [0.82, 0.9, 1] }, fill: { intensity: 3, aim: [1.6, 0.8, 0.9] } } }] };
 
-/** what a row calls the doors no room of the structure names (scenarios.doorNames — game/doornames.ts; no bearing in a name): the yard's and the galleries' own doors,
+/** what a row calls the doors no room of the structure names (scenarios.doorNames — rust/game_rules/src/doornames; no bearing in a name): the yard's and the galleries' own doors,
  *  each by the bunk room it is beside */
 const DOOR_NAMES = [{ door: 'n1', name: 'bunks 1 door' }, { door: 'n2', name: 'bunks 2 door' }, { door: 'n12', name: 'bunks 1 to 2 door' }, { door: 'n3', name: 'armoury door' }, { door: 's2', name: 'bunks 4 door' }, { door: 's4', name: 'wash room door' }, { door: 'n_yard', name: 'yard door by bunks 2' }, { door: 's_yard', name: 'yard door by bunks 4' }, { door: 'ng_w', name: 'fire door by bunks 1' }, { door: 'sg_w', name: 'fire door by bunks 3' }, { door: 'sg_e', name: 'fire door by bunks 5' }, { door: 's_end', name: 'outer door by the wash room' }];
 export function build(): { level: Level; scenarios: LevelScenarios; groups: string[]; surfaces: SurfacesData } {
@@ -721,7 +721,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     ],
   };
 
-  // ---------------- what is underfoot (game/floor.ts: which footstep sounds, and how far it carries to their ears). First zone that holds a point wins ----------------
+  // ---------------- what is underfoot (rust/game_rules/src/floor: which footstep sounds, and how far it carries to their ears). First zone that holds a point wins ----------------
   const zone = (id: string, mat: 'carpet' | 'lino' | 'stone' | 'tile' | 'asphalt' | 'grass', r: Rect) => ({ id, mat, x0: r.x0, z0: r.z0, x1: r.x1, z1: r.z1 });
   const surfaces: SurfacesData = {
     building: { x0: X0, x1: X1, z0: Z0, z1: Z1 }, grassEdge: 3.2, inside: 'lino', outside: 'asphalt', verge: 'grass',

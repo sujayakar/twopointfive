@@ -183,7 +183,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   shared metres preferred, tritone handovers removed). NOBODY HAS HEARD IT: whether a piece suits its level is the maintainer's ear; he changes a pairing on the score page's
   LEVELS rows (two pickers a level) and pastes the line back, and a row here is edited to match. Glass Rain opens only two levels on purpose: it is the piece he liked least
   before its rewrite and he has not heard it since.
-- **Whose nerves the score follows (10-17)** (`src/game/guards.ts tension(g, theirs)`, switch `MUSIC.theirs` in `audio/pieces.ts`). The score's `intensity` is
+- **Whose nerves the score follows (10-17)** (`rust/game_rules/src/guards tension(g, theirs)`, switch `MUSIC.theirs` in `audio/pieces.ts`). The score's `intensity` is
   `game.tension()`: the highest state of any man on the floor. It counted teammates too, and a man under a script never drains his awareness (`updateGuard` returns
   into the script before the decay), so whatever a blast, a noise or a tripped breaker left on a teammate held the score up until his order ended: 0.32 after a frag
   that left him standing (0.92 x 0.35), 0.21 after a flashbang at his feet, 0.68 if his order took him back in 'search', with every defender down. With the switch
@@ -199,7 +199,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   up headless on the stand's own level file, a teammate under his script at 0.92, every defender down, ten seconds on: 0.32 as it was, 0.00 now; left searching
   0.68 / 0.00; a defender alert or a teammate alert still 1.00; searching while a show runs 0.68; `main.ts` hands the switch over, by text) and a third 'stand'
   line, on BOTH stands; `MUSIC_BREAK=1` must fail it. MEASURED 10-17 on one seed a level (records office, depot): the hold reproduced with one of the player's own
-  cans (flash 0.21, frag at 5 m 0.32, unchanged 80 s after the last defender fell). A SECOND RULE ON THE SAME READING (`CONDITION.ownCalm`, game/condition.ts, in a tree
+  cans (flash 0.21, frag at 5 m 0.32, unchanged 80 s after the last defender fell). A SECOND RULE ON THE SAME READING (`CONDITION.ownCalm`, rust/game_rules/src/condition, in a tree
   that has it): a teammate at rest in 'patrol' does not count, whoever asks and show or not; it leaves one left in 'search' or 'suspicious' counting. The two stack:
   with both on this one holds the reading in live play, being the wider. The check holds that rule off for its as-it-was readings and prints it alone. NOT DONE: defenders under a script hold their wariness the same way and still
   count (that is the opposition's state, left alone); the cause itself (nothing takes a scripted man's wariness down) is not touched here; nobody has heard the
@@ -262,10 +262,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   and held by `probes.ts wallfelt`'s table line. Played at `WALLSNAP.voiceOn` 0.35 and `voiceOff` 0.5. Written blind: nobody has heard them.
 - **The grab's three voices (2026-10-23; the maintainer's picks 10-24)** (`src/audio/sfx.ts` rows `grabCatch`, `gunStrip`, `gunDown`; other takes in `sfxAlt.ts`; rows on the
   listening page under 'hands', where `grabCatch` also plays the whole grab in order, pistol and carbine). The maintainer: "we should also make the grab super
-  satisfying. cool animation where sam disarms him and satisfying sounds". They ride the disarm move's switch (`HOLD.disarm` under `HOLD.dropGun`, both in `src/game/character.ts`; the rule is `game/disarm.ts`): ON in the page
+  satisfying. cool animation where sam disarms him and satisfying sounds". They ride the disarm move's switch (`HOLD.disarm` under `HOLD.dropGun`, both in `rust/game_rules/src/character`; the rule is `rust/game_rules/src/disarm`): ON in the page
   (`?disarm=0`), off in the module and on the frozen stand (`TPS_DISARM=1` with `TPS_HOLDDROP=1`); off, the grab says what it said (`grabScuffle`, the knocked-out
   gun's borrowed `magDrop`). WHO PLAYS WHAT: `player.ts startGrab` (through `disarm.ts disarmCatch`, one condition for all three) plays `grabCatch` at his throat on the grab's frame (gain 0.5, rate pinned to 1 so the beat does
-  not wander); `game/disarm.ts take()` plays `gunStrip` at the gun on the frame it leaves his hand (0.45; 0.25 s after the catch); the item's
+  not wander); `rust/game_rules/src/disarm take()` plays `gunStrip` at the gun on the frame it leaves his hand (0.45; 0.25 s after the catch); the item's
   first landing plays `gunDown` ONCE at the floor (0.4, less for a slow landing; 0.70 s after the catch, pistol or carbine, on open floor and beside a wall alike (he throws it short of a wall in its way), 0.62 s when
   Sam's own pistol raps it out; measured on one staging each, seed 4471, the same on both stands). It knocks for a face that looks up (a floor, a step, a slab's top), never for a wall.
   All of these are counted as the page plays them, on a man taken by the row's key inside a step (`grabvoice` does so; `startGrab` called from outside a step is a frame ahead of its own voices).
@@ -290,7 +290,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   at its start) and `sound-takes-check.ts` (the four takes still offered, and his two picks' places). `tools/qa/grab-sounds-render.ts <dir>` writes every take and the whole
   grab, old and new, as WAVs with their numbers. He heard the takes on a page that plays the game's buffers at the game's gains with no room on them;
   nothing was heard through the real mixer's room or in the game, and the rate 0.8 was never judged as a carbine.
-- **A fire's two voices (2026-10-23)** (`src/audio/sfx.ts` rows `fireBed`, `fireCrack`; played by `game/fire.ts`, the whole rule in `docs/agents/render.md`, "An
+- **A fire's two voices (2026-10-23)** (`src/audio/sfx.ts` rows `fireBed`, `fireCrack`; played by `rust/game_rules/src/fire`, the whole rule in `docs/agents/render.md`, "An
   open fire burns"). `fireBed` is 7.6 s of low, slowly swelling noise with sparse ticks, looped between `FIRE_LOOP`'s marks 0.12 and 7.12 s (`rollLoop` takes a
   span now; `audio.ts FOLLOW_LOOPS` has the row) and held as a follow voice at the drum: the fire asks for one on its first frame, again when it is lit again after a restart or a load (the book of what was asked is the host's, `engine.hostBooks.fire`,
   dropped by who abandons the moment: the old voice lets go; a still frame keeps it; a page frozen past the mixer's own hold has no bed until the next mark), and

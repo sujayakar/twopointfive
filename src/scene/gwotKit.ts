@@ -7,7 +7,7 @@
 // THE GUIDE (palette, every piece with its footprint and what it is to a man — cover, walk-over or decal —, a worked example) is
 // rebuild/play-style-levels/look/read-first.md; tools/levels/gwot-yard.ts is the showroom that lays every piece out once.
 //
-// WHAT A PIECE IS TO THE SIMULATION (scene/collision.ts): a static box blocks feet and the nav grid only where it stands between y 0.2 and 1.5, so
+// WHAT A PIECE IS TO THE SIMULATION (rust/game_rules/src/scene_collision): a static box blocks feet and the nav grid only where it stands between y 0.2 and 1.5, so
 //   · COVER / OBSTACLE = a plain static (drums, sandbags, crates, cots, the pickup): feet, sight, rounds and sound all meet it;
 //   · WALK-OVER        = a plain static whose top is ≤ 0.19 m (floor cushions, a concrete pad, rubble): lit, shadowed, seen by every ray, never in the way;
 //   · DECAL            = a NoShadow box (rugs, ground patches, the damp foot of a wall, a painted dado, washing on a line, overhead wires): drawn and lit,
@@ -157,7 +157,7 @@ export function gwotKit(host: GwotHost) {
   /** a row's finish as a wall is handed it: its roughness, and bare metal where the row is (no row a wall is built in is, in the kit's own palette) */
   const finishOf = (m: GwotMat): Partial<Box> => ({ rough: M[m].rough, ...(M[m].metal ? { metal: true } : {}) });
   /** A LAMP IS A LAMP IN ANY CLOTHES: a head lamp's lens is white and a tail lamp's red whatever the vehicle wears, and the game finds a vehicle's lamps by
-   *  those two paints of the kit's own palette (game/carlamps.ts). So lenses are laid in them and never in a paint the host hands over */
+   *  those two paints of the kit's own palette (rust/game_rules/src/carlamps). So lenses are laid in them and never in a paint the host hands over */
   const LENS = { head: matIn(GWOT_PAINTS, 'plasticWhite'), tail: matIn(GWOT_PAINTS, 'truckRed') };
   const coat = (m: Mat): Mat => coated(m);   // (a vehicle's body says it is a car's coat itself: scene/carShapes.ts carCoat)
   /** the paint `m` on a thing that does something else to rounds and blasts (gwotPalette.ts gwotAs; a word of scene/materials.ts): `b(…, G.as('mud', 'plasterboard'))` */

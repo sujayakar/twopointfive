@@ -333,7 +333,7 @@ export function palletDeckMarks(h: Vec3, t = T): MarkingDef[] {
 export function firstAidMarks(face: MarkFace, t = T): MarkingDef[] {
   return some([markFromRect(face, 'fine', [-0.05, -0.05, 0.05, 0.05], [{ albedo: [0.1, 0.45, 0.2] }], c => GEN.glyph(c, 3, Math.floor((c.W - 5) / 2), Math.floor((c.H - 7) / 2), 1, 1), t)]);
 }
-/** an HVAC diffuser's face (block h, its −y face; game/wind.ts vents): the egg-crate louvre as one coarse bitmap — a 4 × 4 field of dark openings (entry 1) parted
+/** an HVAC diffuser's face (block h, its −y face; rust/game_rules/src/wind vents): the egg-crate louvre as one coarse bitmap — a 4 × 4 field of dark openings (entry 1) parted
  *  by one-cell blades of the frame's own pale metal (entry 2), inside the 3 cm rim the rect leaves of the box's face */
 export function ventGrilleMarks(h: Vec3, t = T): MarkingDef[] {
   return some([markFromRect('-y', 'coarse', [-(h[0] - 0.03), -(h[2] - 0.03), h[0] - 0.03, h[2] - 0.03], [{ albedo: [0.04, 0.04, 0.045] }, { albedo: [0.66, 0.67, 0.66], rough: 0.4 }], c => { c.fill(1); GEN.seams(c, 4, 4, 0, 0, 2, 2); }, t)]);

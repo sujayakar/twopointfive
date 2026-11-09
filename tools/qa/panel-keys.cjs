@@ -6,7 +6,7 @@
 //   Tab       does nothing to the panel; the game is handed the press (Input.pressed) and the browser's focus does not move
 //   node tools/qa/panel-keys.cjs      env: PORT (the dev server's, default 5199) · QUALITY (default verylow)      exit 0 = every check passed, 1 = a FAIL, 2 = the script died
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
-const KEY = 'Backslash';   // the debugger's key on the page's board: backslash while empty hands are the slot on backtick (game/handslot.ts; under ?handslot=0 it is Backquote)
+const KEY = 'Backslash';   // the debugger's key on the page's board: backslash while empty hands are the slot on backtick (rust/game_rules/src/handslot; under ?handslot=0 it is Backquote)
 const PORT = process.env.PORT || 5199, QUALITY = process.env.QUALITY || 'verylow';
 const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
 const T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a);

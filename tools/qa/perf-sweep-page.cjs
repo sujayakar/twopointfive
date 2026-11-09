@@ -9,7 +9,7 @@
 //        level, QUERY='levelFile=pass.json&roomclear&squad4&quality=high'); with ONLY, each row named there must then really be flipped, not skipped.
 //        FLIP (row ids, comma-separated): the rows that must really be flipped in step 2, on either kind of take (default: under LIVE with ONLY, all of ONLY).
 //        GOGGLES=1: night vision is put on (N) before anything is swept and the check waits (GOGGLES_WAIT minutes at most, default 6; no infrared light by then ends
-//        the run) for the infrared lights to be in the picture (game/irlight.ts): the stand the rows 'irLight' / 'irLightOne' flip on
+//        the run) for the infrared lights to be in the picture (rust/game_rules/src/irlight): the stand the rows 'irLight' / 'irLightOne' flip on
 //        (QUERY='levelFile=depot.json&roomclear=1&squad4&quality=high', FLIP=irLight,irLightOne). The lights the renderer took are then counted on every frame of
 //        step 2: none while the first row is flipped, one under the second, and on a frozen take as many as the take began with on every frame between.
 // The software adapter takes seconds to draw a frame at High (the whole list × 2 rounds is about 230 frames) and its pass timers time the CPU: this proves the sweep's mechanics (segments, events, restore, the dump's shape), no price.
@@ -51,7 +51,7 @@ const printDiff = (x, y, name = '') => { if (x === y) return; const a = JSON.par
   const frames = async n => page.evaluate(n => new Promise(res => { let k = 0; const f = () => (++k >= n ? res(k) : requestAnimationFrame(f)); requestAnimationFrame(f); }), n);
   await frames(3);
   log('ready; the loop is running');
-  if (GOGGLES) { await page.evaluate(() => { const K = window.__knobs?.registry?.().IRLIGHT; if (K && 'auto' in K) K.auto = false; });   // (the stand prices the lights: they burn whenever the goggles are down here, not only where the place is too dark — game/irlight.ts IRLIGHT.auto)
+  if (GOGGLES) { await page.evaluate(() => { const K = window.__knobs?.registry?.().IRLIGHT; if (K && 'auto' in K) K.auto = false; });   // (the stand prices the lights: they burn whenever the goggles are down here, not only where the place is too dark — rust/game_rules/src/irlight IRLIGHT.auto)
     await page.keyboard.press('KeyN');
     const up = await page.evaluate(ms => new Promise(res => { const t0 = performance.now(); let k = 0; const f = () => { const L = window.__engine.lights; k++; if ((L.tube && L.irCount > 0) || performance.now() - t0 > ms) return res({ tube: !!L.tube, n: L.irCount ?? null, frames: k }); requestAnimationFrame(f); }; requestAnimationFrame(f); }), Number(process.env.GOGGLES_WAIT || 6) * 60000);
     check(up.tube && up.n > 0, `goggles down: the picture is the tube's and the renderer takes infrared light (${JSON.stringify(up)})`);

@@ -1,7 +1,7 @@
 // The issue kit: 2010s GWOT in place of the first Splinter Cell clone (the maintainer, 10-10: "and maybe start reworking to gwot 2010s? we can move away from the
 // first SC clone for equipment. bifocal nvg, more standard rifles and handguns, etc." · "we can keep OCP tho" · "and i don't think we need the NVG to glow in
 // the dark"). ONE switch, `GEAR.on` — ON in the page (`?oldgear` = the Splinter Cell kit as it was), OFF in the module and on the frozen harness stand
-// (`TPS_GEAR=1`; src/host/profile.ts pageSwitches + FROZEN_HOLDS, src/host/standup.ts). What it changes is WHAT THE KIT IS CALLED AND HOW IT IS DRAWN, nothing a
+// (`TPS_GEAR=1`; src/host/profile.ts pageSwitches + FROZEN_HOLDS, src/host/drawpage.ts). What it changes is WHAT THE KIT IS CALLED AND HOW IT IS DRAWN, nothing a
 // round, an eye, an ear or a hand reads — with ONE exception, the maintainer's own balance call (10-10: "yeah switch to 15 rounds for the glock, 40mm sponge
 // round sgtm (and redo the assets), and just call it the mk18"): the Glock's magazines hold fifteen (GEAR_MAG):
 //   · the rifle row reads Mk 18 (weapons.ts fn2000: name / short), drawn as a carbine with a stock, a box magazine AHEAD of the grip, a railed handguard and a

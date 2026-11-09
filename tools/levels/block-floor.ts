@@ -178,7 +178,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // then took the floor 3 times in 24 seeds, against 7 in 24 before the shutters and 7 in 24 with them folded back. A shut leaf costs the team too (not
   // traced further: a look, a shot and the window's daylight all stop at it). So a window is shut only where its mission's tally is read with it shut.
   { const G = gwotKit(gwotOfOffice(K)); G.shutters('z', 4, 16.5, 19.5, -1, 'open', 'paintGreen', 0.9, 2.4); G.splitWood('z', 4, 16.7, 19.3, -1, 3); }
-  // the west stairwell's landing outside that door (officeGen.ts's, box for box: game/qrf.ts QRF_MARKS stands a team in it)
+  // the west stairwell's landing outside that door (officeGen.ts's, box for box: rust/game_rules/src/qrf QRF_MARKS stands a team in it)
   slab(1.34, 0, 9.57, 3.88, 0.02, 12.63, C.concrete);
   wallX(9.45, 1.1, 3.88, 0.24, ext); wallX(12.75, 1.1, 3.88, 0.24, ext); wallZ(1.22, 9.57, 12.63, 0.24, ext);
   slab(1.1, H, 9.33, 3.88, H + 0.2, 12.87, C.ceiling, { flags: BoxFlag.NoPrimary });
@@ -325,7 +325,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // near leg is black down its length but not at the turn (the head comment has the readings)
   beacon(18.4, 5.0); beacon(28.4, 5.0); beacon(19.4, 20.2); beacon(33.2, 21.4);
 
-  // THE IDS: a held room's two doors keep their shorthand (the structure lists them, so game/doornames.ts says them as the rooms they join: 'hall-side mess
+  // THE IDS: a held room's two doors keep their shorthand (the structure lists them, so rust/game_rules/src/doornames says them as the rooms they join: 'hall-side mess
   // door'). Every other door's id is SAID as it stands (orders.ts doorIdWords: 'kitchen to hall door'), so it is the two places it joins and carries no compass
   // letter. (doornames.ts shorthandId counts the 'to' as shorthand; the structure lists none of these doors, so nothing renames them.)
   const doorDefs: LevelDoorDef[] = [

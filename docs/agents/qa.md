@@ -508,7 +508,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   kinds: 'off = the build before' (the old behaviour played, or a run that digests the same with the rule off), 'a recording from before
   the key replays with it off', 'the switch is one of the two stands' rows and the page writes it on unless ?no…', and an on-arm that was
   the off-arm's control (each such on-arm is held by a sibling: `gunroles-deal`, `gunlook-hands`, `owncharge-door`, `sticky-kit`). ONE
-  LIVE LINE WAS CARRIED OVER: 'src/game/doorpath.ts brings in no other game module but for its types' is `doorpath-file`'s now (its red
+  LIVE LINE WAS CARRIED OVER: 'rust/game_rules/src/doorpath brings in no other game module but for its types' is `doorpath-file`'s now (its red
   path's preload rests on it). With the nineteen went `tools/qa/doorpath-inert.ts` (the preload that took the door walk out of a
   process), ten helpers and the imports nothing else used.
   WHAT IS LOST WITH THEM, said plainly. (a) The on-against-off identities ('the switch on with no charge carried is the same run as the
@@ -584,7 +584,7 @@ plus a clean typecheck — the harness cannot see rendering, the light meter, sm
   on the CPU, the game's own maths): the clock is round `Game.update` alone, the box list's pack (`BoxWorld.upload`) is timed apart, the first 120 ticks of a run are left
   out. Five scripted squad runs by default (`compound-four:1, warehouse-four:1, pass-four:1, hostage-rescue:1, block-squads:1`, 38 634 ticks), each in its own process;
   `--rounds n` keeps the quietest round, `--node` plays the same under V8 through `framecost-v8.mjs`, `--json` files the numbers and `--compare a.json b.json` prints the
-  before / after table. After every update the raw bits of what moves are chained (`game/digest.ts rawBits`) outside the clock: `--compare` is red (exit 1) when a run's
+  before / after table. After every update the raw bits of what moves are chained (`rust/game_rules/src/digest rawBits`) outside the clock: `--compare` is red (exit 1) when a run's
   bits, tick count or digest differ, so a speed-up is only ever quoted for THE SAME RUN TO THE BIT, and the bits are the same under bun and under node. Red path:
   `TICKCOST_BREAK=1` flips the last bit of one float once, after the warm-up, and the comparison must fail (as it does on a run that is in one file only). Take times with nothing else running on the machine and
   never with `--prof` on (bun's sampling profiler, one `.md` a run, is for reading where the time goes, not how much). Under node two cores are a quarter slower than four
@@ -647,7 +647,7 @@ Synthetic input goes through `input.keys/pressed/clicked`; during the tour real 
 but synthetic writes still work.
 
 <!-- was CLAUDE.md lines 2730–2764 -->
-- **Checkpoints + autosave** (STATUS G5, `src/game/savestate.ts` — the schema, what is NOT saved and why, the determinism statement and the autosave rules are the
+- **Checkpoints + autosave** (STATUS G5, `rust/game_rules/src/savestate` — the schema, what is NOT saved and why, the determinism statement and the autosave rules are the
   file's head comment; keep it current): `saveState(g, {label, kind, force}) → SaveState v1` (plain JSON: Sam's kit / place, every ROSTER man's state / fix / clocks /
   errand / body script / pair / weapon / witness + talk, bodies as SETTLED ragdolls at their particles (`Ragdoll.settleAt`), items on the floor (in-flight / on a fuse
   → written spent), doors, furniture, fixtures + blackout, devices, the mission and the CHRONICLE (so the debrief survives a load; a 'checkpoint' row on save and on
@@ -718,7 +718,7 @@ but synthetic writes still work.
   "The checkpoint wasn't sent." One run of each, 10-27. NOT CHECKED: the 'held' line on a page (the door's answers are driven headless only); a real
   backend; `SAVEDOOR_BREAK=1` with the export in it; a file past the backend's bound (a checkpoint is 30 to 90 KB). WHAT IT COSTS, by reading: with
   sharing off or no backend an export is kept nowhere unless the address carries `?downloads=1`. Never seen on a GPU.
-- **Saves keep a timeline** (`SAVETIMELINE`, `src/game/savestate.ts`, 10-19; the maintainer, from a play test: one quick save is awkward, "especially in the tutorial";
+- **Saves keep a timeline** (`SAVETIMELINE`, `rust/game_rules/src/savestate`, 10-19; the maintainer, from a play test: one quick save is awkward, "especially in the tutorial";
   "a rolling buffer"; "maybe we have a screenshot"; "let those have a timeline"). ON in the page (`?savetimeline=0` puts it off), OFF in the module and on the frozen
   stand; the word `TPS_SAVETIMELINE=1`; a `FROZEN_HOLDS` row; in the knob registry and the journal (a recording from before the key replays with it off). OFF = the build
   as it was: three autosaves and the one manual slot, no F5, no strip, no pictures. ON:
@@ -1401,7 +1401,7 @@ but synthetic writes still work.
   fresh run would move them (seats.ts drives its first seat through the host's own Input and camera) and the kept run never recorded them. A grown
   run holds for as long as no rule of the tick reads the host's own rows on a host that steps by records; the day one does, it parts from a fresh
   run and is kept anew. `hold.sh` calls the grower only when the end-grown rule fails, and says so on the run's line. The snapshot's list of
-  what is the host's (`src/game/rollback.ts HOST_FIELDS`) has the two fields too: it is a second list beside the types' own (`#[bytes(skip)]`),
+  what is the host's (`rust/game_rules/src/rollback HOST_FIELDS`) has the two fields too: it is a second list beside the types' own (`#[bytes(skip)]`),
   in the TypeScript's names and with another rule (what a snapshot leaves alone, against what no state word reads), and the two are not made one here.
 - **A mission's address is read in two places, and a host that starts a game from one reads it in both** (2026-11-07; `src/host/standup.ts`
   `addressBeforeGame(q)` and `startAtAddress(game, q)` / `soloOfAddress`; in Rust `scenario_run::address_before_game` and `start_at_address`, called

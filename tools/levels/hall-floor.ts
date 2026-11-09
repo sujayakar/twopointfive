@@ -3,7 +3,7 @@
 // the wing opens onto its near end, and every room but one has the hall for its only way in: the entry, and every stack after it, is made in those men's
 // view. The hall is itself a ROOM of the structure (its door: 'front') — a room clear shuts every door a structure room lists, so a gun put behind an open
 // door at the hall's end would be staged behind a shut one. The kit is AS ISSUED for every man — the file's `scenarios.issue`
-// block (game/kit.ts kitIssue), no visit to the loadout screen. (It was built round a ballistic shield on the first teammate; the shield is gone from the
+// block (rust/game_rules/src/kit kit_issue), no visit to the loadout screen. (It was built round a ballistic shield on the first teammate; the shield is gone from the
 // game — the maintainer, 10-18 — and nobody has re-tuned the hall without it.)
 //
 //        x 9              20          22              32        37
@@ -33,7 +33,7 @@ import { PANEL_GREY } from '../../src/scene/stuff';
 
 export const NOTES = 'The long hall: four rooms off one bare hall that two men hold from its dim far end; a room clear for the four, every man in the plain issue (scenarios.issue). Regenerate: bun run tools/levels/export.ts hall';
 
-/** THE ISSUE (game/kit.ts kitIssue): every man as issued, whatever the machine keeps (an empty block: the plain issue cards). It handed the first
+/** THE ISSUE (rust/game_rules/src/kit kit_issue): every man as issued, whatever the machine keeps (an empty block: the plain issue cards). It handed the first
  *  teammate the ballistic shield until the shield left the game (10-18); since 10-15 the page has staged this level with the plain issue. */
 export const ISSUE: IssueData = { members: {} };
 

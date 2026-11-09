@@ -1,4 +1,4 @@
-// DRESSING: the things a loud level carries only so that a firefight has something to wreck (game/destruction.ts finds them BY SHAPE, as it finds the office's) —
+// DRESSING: the things a loud level carries only so that a firefight has something to wreck (rust/game_rules/src/destruction finds them BY SHAPE, as it finds the office's) —
 // paper stacks, mugs, phones, box files and dark monitors on the tables and counters a generator already stood up, binder runs on its shelf boards, files on its
 // cabinets. No new look: every piece is one the office already has (scene/levelKit.ts papers / monitor, officeGen's desk clutter), no light, no switchable, nothing
 // at floor level, nothing outdoors, nothing where the generator already put a thing. tools/levels/export.ts calls dressLevel() after build() and files the boxes

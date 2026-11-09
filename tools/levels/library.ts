@@ -221,7 +221,7 @@ function measure(kitName: string, name: string, said: Said | undefined, stand: (
   const parts = props.flatMap(partBoxes), all: DrawBox[] = [...statics.map(b => ({ c: b.c, h: b.h, yaw: b.yaw, albedo: b.albedo, flags: b.flags, emissive: b.emissive, marks: b.marks })), ...parts];
   if (!all.length) return piece;
   const top = (b: DrawBox) => b.c[1] + b.h[1], bottom = (b: DrawBox) => b.c[1] - b.h[1];
-  // what stops a body: a solid from 0.2 m up whose underside is under 1.5 m (the game's own two numbers: scene/collision.ts)
+  // what stops a body: a solid from 0.2 m up whose underside is under 1.5 m (the game's own two numbers: rust/game_rules/src/scene_collision)
   const solid = statics.filter(b => !(b.flags & NS)), inWay = solid.filter(b => top(b) >= 0.2 - 1e-9 && bottom(b) < 1.5);
   const foot = Math.min(...all.map(bottom)), [len, wid] = footprint(all);
   piece.boxes = all;

@@ -172,7 +172,7 @@ export function fitRig(ch: GltfCharacter, parts = 0): RigFit {
   return fit;
 }
 /** THE CAST'S FITS AHEAD OF PLAY: every mask a man of this cast can be drawn with — each variant with its mesh goggles up, and with the rig's box goggles in
- *  their place; a variant without goggles as it is listed; an operator's also in the sneaking suit (anim/gltf.ts castGoggles / castSuit; game/cast.ts castParts picks among exactly these) — solved now, so the frame a kit is first seen in finds its fit in the cache
+ *  their place; a variant without goggles as it is listed; an operator's also in the sneaking suit (anim/gltf.ts castGoggles / castSuit; rust/game_rules/src/cast cast_parts picks among exactly these) — solved now, so the frame a kit is first seen in finds its fit in the cache
  *  instead of solving it mid-play. Nothing with the mannequin loaded. A fit that throws is left for its first use to report, as before. */
 export function fitRigCast(ch: GltfCharacter) {
   const cast = ch.cast; if (!cast) return;

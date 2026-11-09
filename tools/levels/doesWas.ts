@@ -22,7 +22,7 @@ const STEP = 0.0008;
 const shifted = (a: V, code: number): number[] => [0, 1, 2].map(c => Math.round((a[c] + ((code >> (2 * c)) & 3) * STEP) * 1e4) / 1e4);
 const WET = (a: V): number[] => [a[0] * 0.5, a[1] * 0.5, a[2] * 0.5 * 1.04];
 
-/** an exact colour → the office paint's name (the first row of those numbers), as game/particleFx.ts paletteName built it */
+/** an exact colour → the office paint's name (the first row of those numbers), as rust/game_rules/src/particle_fx paletteName built it */
 const officeBy = new Map<string, string>(); for (const [k, a] of Object.entries(OFFICE)) { const key = a.join(','); if (!officeBy.has(key)) officeBy.set(key, k); }
 /** an exact colour of the look's → what it stood for, as scene/gwotPalette.ts gwotSimOf built it, in its order */
 const lookBy = new Map<string, string>();
@@ -89,7 +89,7 @@ export function wasOf(albedo: V): Was {
 }
 /** is this colour, to the number, a row of the look's palette or a snow paint AS THEY STOOD (not a stand-in a hair off one)? */
 export const lookRowWas = (albedo: V): boolean => { const k = albedo.join(','); return Object.values(LOOK).some(a => a.join(',') === k) || Object.values(SNOW).some(a => a.join(',') === k); };
-/** … and of the lot's slab while the weather had soaked it (game/weather.ts setWet halved its colour in place, and the rules read that) */
+/** … and of the lot's slab while the weather had soaked it (rust/game_rules/src/weather setWet halved its colour in place, and the rules read that) */
 export const wasWetOf = (albedo: V): Was => wasOf(WET(albedo));
 
 /** the row each office paint's name is (scene/materials.ts) */

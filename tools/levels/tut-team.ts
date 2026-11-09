@@ -7,7 +7,7 @@
 //     already down in the yard.
 // THE SENTENCE NOBODY COULD SAY OF ANOTHER LEVEL is the station's own (the road ends in a hole in the mountain with a gun truck's lamps in front of it, and the
 // only way off the road is the station's gate). What this mission adds to it: the player is behind the truck with them when the first rounds come in.
-// FIVE BEATS, one new thing at a time (game/rails.ts locks the rest; levels/tut-team.script.ts stages the road):
+// FIVE BEATS, one new thing at a time (rust/game_rules/src/rails locks the rest; levels/tut-team.script.ts stages the road):
 //   the road      pinned behind the two pickups. Zoom out until all four are in the picture; the squad throws its smoke; the squad's key on the yard moves
 //                 them through the gate, and he goes with them.
 //   the gate      the roadblock comes down the road for the gate, and five rifles hold it.

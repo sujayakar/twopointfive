@@ -130,7 +130,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   With it went everything only it switched on: `reflect_p5.wgsl` (the reflection twin: mesh hits, hit-lighting reuse, the hit records `reflHit`), `settings.rtHitReuse`,
   `?nop5`, `P5Tier`, the smooth-union closest hit (`sdfRigSmooth`'s program lived in that twin: `rigClosest`, `?sdfsmooth`, `sdfRigSteps`), `traceClosestMesh` and the mesh
   closest-hit helpers in common.wgsl, the `p5Pack*` helpers and `directOnScreen` in both gather commons, `tools/qa/p5-harness.js` and the rig study harness that stood on it.
-  `settings.rtMeshHits` and `settings.sdfRigSmooth` are still FIELDS, always false, because `game/game.ts` reads them: they go with that read. Frame words `p5Cfg.x‥z` and
+  `settings.rtMeshHits` and `settings.sdfRigSmooth` are still FIELDS, always false, because `rust/game_rules/src/game` reads them: they go with that read. Frame words `p5Cfg.x‥z` and
   `rigCfgB.y, .z` are FREE. **Measured:** every module text the boot hands the browser has the hash it had on the title, a snow level and the look's page; only `reflectP5`
   is no longer asked for (one pipeline less in each set). The options screen has four rows. NOT DONE HERE: mesh shadows on every ray (`meshShadows` without
   `meshShadowsNear`) was ultra's form and is still a debugger toggle; laminate and varnished wood (0.5, 0.55) now take a ray on no tier (high's cut is 0.45).
@@ -161,7 +161,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   the sliver rule's alone and its const is `SLIVER_RAYS`; `frame.sharpCfgB` holds the same-plane k in `.w` and nothing else. **Five A/B bits of the estimator**
   (`restirCoherent` and its tile-shared random stream, `restirPermute`, `restirRatioRaw`, `restirSampleHue`, `restirMotionDither`): `RestirU.cfg.w` bits 4, 8,
   32, 64 and `mot.w` are free. **KEPT ON PURPOSE**: every row of the performance sweep (`src/ui/perfsweep.ts`: it is how a slow machine sheds work), the glossy
-  floors (a storm turns them on where the tier has no traced reflections: `game/weather.ts`). **THESE CHANGE SHADER TEXT** (denoise,
+  floors (a storm turns them on where the tier has no traced reflections: `rust/game_rules/src/weather`). **THESE CHANGE SHADER TEXT** (denoise,
   the four composites, restir and its twin, the gather, both sharp kernels): all 115 boot texts and the four made on first use compile in Chromium's compiler with
   no warning; the other 31 modules are the same text by hash. The Rust crate's mirror of the settings (`rust/game/src/root_settings`) still lists the removed
   fields: the port's to regenerate. **Never seen on a GPU.**
@@ -564,8 +564,8 @@ row on his machine is the answer, and the word puts the count back on any machin
   grid says are open; a brick whose middle is solid takes its neighbours' word. A source the game does not hold (`SmokeEmitter.held`, said in Rust as it goes out: gun gas, breath, a fire's plume) is measured and bent by nobody. What the grid
   holds with no brick gets one (`markBent`, over 0.03, four times that as the pool runs out), so a game put back grows its cloud again: nothing is told until the grid's next step (its ways are asked there), then it is taken whole for four steps. `smoke.stats.off` = how far apart they are. LIMITS: a ceiling diffuser blows on the drawn smoke alone (the grid
   has no vents), so under one the drawn cloud is held to the game's against its own air; over 4 m, and off the grid's plan, nothing is bent; the grid is coarse, so where a can stands by a wall the cloud's edge is half a metre's; a put-back's dust comes up untinted.
-- **Prototype branches — NOT merged** (as of August, except the particle rain: `game/rainFx.ts`, `?prain`, `settings.particleRain` default off and the Frame's 832 B ARE in the build now; fire and water are still not in `src/`; each in its worktree with its own dev server; flag absent = main hash for hash, proven in its notebook; review page published as an Artifact):
-  `exp/fire` (.worktrees/fire, :5216 `?pfire`; `game/fire.ts` nodes → a `'fire'` emitter kind through the solver's OWN temperature + buoyancy + an up-jet in the wind field, flames = blackbody
+- **Prototype branches — NOT merged** (as of August, except the particle rain: `rust/game_rules/src/rain_fx`, `?prain`, `settings.particleRain` default off and the Frame's 832 B ARE in the build now; fire and water are still not in `src/`; each in its worktree with its own dev server; flag absent = main hash for hash, proven in its notebook; review page published as an Artifact):
+  `exp/fire` (.worktrees/fire, :5216 `?pfire`; `rust/game_rules/src/fire` nodes → a `'fire'` emitter kind through the solver's OWN temperature + buoyancy + an up-jet in the wind field, flames = blackbody
   emission inside `smokeMarchJ` behind prelude const `FIRE_ON`, two flickering 0.25 m sphere lights per fire, capped 3 live / 4 spreads, `hash01(serial)`; `FIRE` knobs Tab ▸ Sandbox ▸ fire,
   `__fire`, `tools/qa/fire-scenes.js` `__fs`, docs/internal/pfire.md, docs/review/pfire.html ← pfire-page.py; the maintainer: 'looks good', plume density 6 (c03b6f8); +3.8 ms union per fire at
   high is its LIGHTS + soot on shadow rays, not the flames; men do not fear fire; flammables keyed off cardboard albedo — wants a level flag) · `exp/water` (.worktrees/water, :5218 `?pwater` =
@@ -573,7 +573,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   `BoxFlag.Water`, shared-shader hunks inside `if (WATER)` blocks — identity rests on const-folding, re-hash after edits inside them; v2 @ baa2a84 per the maintainer's review: REST IS A STILL
   MIRROR, ONE dispersive (η, φ) field drives normal / displaced waterline / caustic (∇²η only), wind stress off `wind.at()` the only ambient source, characters lit in the reflection, a `drop`
   particle kind re-poking the field + spray + foam channel, throwables and the stun blast disturb it, wet particles damp and sleep, rounds die in water; `WATER` knobs Tab ▸ Sandbox ▸ water,
-  `__water`, `__hotWater`, `tools/qa/water2-harness.js` `__w2`, docs/internal/pwater.md §v2, docs/review/pwater.html) · `exp/particle-rain` (.worktrees/prain, :5208 `?prain`; `game/rainFx.ts`,
+  `__water`, `__hotWater`, `tools/qa/water2-harness.js` `__w2`, docs/internal/pwater.md §v2, docs/review/pwater.html) · `exp/particle-rain` (.worktrees/prain, :5208 `?prain`; `rust/game_rules/src/rain_fx`,
   rain = particle kind 6 there in a THIRD ring over the kept lattice; v2 = drops lit as water (phase function + strand glint) refracting through the SAME refract_common.wgsl, wind-driven
   slant / gust sheets; `PRAIN` rows Tab ▸ Weather ▸ p-rain (+ 'v1 look'), `__rain`, `__hotRain`, prain-harness.js, docs/internal/prain.md, docs/review/prain.html; its Frame grows to 832 B
   there; verdict pending) · `exp/gunsmoke-particles` (.worktrees/gunsmoke, :5206 `?gunsmokep`) SHELVED — 'gun smoke as particles looks lame' · `exp/trace-perf` (.worktrees/trace, :5212) =
@@ -592,7 +592,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   in step). The sender's claim, not re-checked here: seen only on the software adapter.
 - **Lasers and tracers show in the ray-traced reflections** (`settings.beamReflect`, default on, acts only with `rtReflect`; `?nobeamreflect` = no segment handed over, the pass's frame as it
   was; Tab ▸ Materials ▸ '· lasers & tracers in reflections'; the small flaws goal, commit 29dd44b8; PICTURE ONLY): a beam is a NoShadow box no ray can meet, so the reflection pass never saw
-  one. `engine.ts` hands `passes.setBeams(world.dynamics, thinIs, viewFocus)` the frame's thin lines (the boxes `game/thinline.ts thinNote` noted: combat.ts `beamBoxes`, tracers.ts) as line
+  one. `engine.ts` hands `passes.setBeams(world.dynamics, thinIs, viewFocus)` the frame's thin lines (the boxes `rust/game_rules/src/thinline thin_note` noted: combat.ts `beamBoxes`, tracers.ts) as line
   segments — up to eight, nearest the view — in a small UNIFORM at the reflection pass's binding 11 (not a storage buffer: the scene group's budget is untouched), and reflect.wgsl /
   reflect_p5.wgsl add each one's image where the mirror ray passes it, behind one occlusion ray. No beam on the frame = a zero count = nothing added. A beam is still never a light and still
   in nobody's eye or meter (the one-model rule of the IR lasers bullet stands).
@@ -892,7 +892,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   the firefight and the squad view EQUAL at both checkpoints, the squad view once the fog's compile is out of the comparison (the next bullet's trap).
   The cast's four numbers are the last four words of the mesh shadows' level list (read-only there: the refit's barrier needs a uniform loop bound, and
   the mesh buffer is written by the same kernel). The snow's hills pipeline (`gbufSnow`) is made on every level and drawn where a level has drifts.
-  Nothing in the update reads any of it; `game/snowFx.ts` still asks the three tables what the page's level raised. No switch: one path.
+  Nothing in the update reads any of it; `rust/game_rules/src/snow_fx` still asks the three tables what the page's level raised. No switch: one path.
   **What it costs:** the title's first compile reads the weather's and the snow's code it used to leave out: 6.8 MB pasted for the boot's set where the
   title had 6.2 and a snow level 6.8 (`shaderinline-check`, the page's rows on), about a tenth more text for the office and nothing more for a snow
   level (with the fog of war's three: 6.9 MB). A visit that goes on to any mission compiles less in all.
@@ -1356,7 +1356,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   timing) puts the flame over its bar at the closest zoom at High. On a real GPU, compare the page as it opens with `&firesteps=18` and `&firesteps=24`
   for the price and for bands in the flame. Checked: the shader compiles and draws at 40 and at 12 on the software adapter, shader alone (the same flame, a
   faint stipple at 12); `fire-check`'s look line carries the count. NEVER SEEN OR TIMED ON A GPU; the whole page was not booted.
-- **An open fire burns (`src/game/fire.ts FIRE`, `render/shaders/fire.wgsl`; 2026-10-23, the maintainer: "we gotta improve our fire! we have barrels with fire on them …
+- **An open fire burns (`rust/game_rules/src/fire FIRE`, `render/shaders/fire.wgsl`; 2026-10-23, the maintainer: "we gotta improve our fire! we have barrels with fire on them …
   great fire with smoke and crackles and dynamic lighting would look sick").** Until now such a drum was a glowing lid and a steady lamp. A level light whose id starts
   with `brazier` is a fire (`pass.json` and `tut-sky.json` have one each; `docs/level-format.md`, the lights row). SWITCH: `FIRE.on`, ON in the page (`?fire=0` = the
   lid and the steady lamp), OFF in the module and on the frozen stand (`TPS_FIRE=1`); its table rides the journal and a recording from before the key replays with it off.
@@ -1542,7 +1542,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   tube, sticky cameras, the wand, wall charges. CHECKED: the look page booted on the software adapter with the kit lines (ammunition up, two of each
   can, no error); the fog line was added after that boot and is typechecked only. Never played.
 - **THE LOOK PANEL'S "FIRE SMOKE" ROW** (10-28; `lookConfig.fireSmoke`, 1 on the look page, 0 = the fire's smoke as the build files it;
-  `game/fire.ts FIRE_LOOK_SMOKE`; the maintainer, of a drum fire on the look page by day, on a GPU: "smoke plume from fire looks a bit weird,
+  `rust/game_rules/src/fire FIRE_LOOK_SMOKE`; the maintainer, of a drum fire on the look page by day, on a GPU: "smoke plume from fire looks a bit weird,
   disconnected from fire. should be billowing more"). TWO CAUSES, both in `FIRE.smoke`. DISCONNECTED: the build files the gas with its middle 1.9 flame
   heights over the coals (2.2 m over them: its foot is above a standing man's head so that no sight line near a fire is cut, the bullet above), and a
   camera that looks down on the yard shows that height as a gap beside the flame. With the row up the steady source's middle is `up` 0.8 of the flame's
@@ -1556,7 +1556,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   close one): with the row up a pale column leaves the flame's own tips, warm at its foot, and widens as it climbs; with it at 0 the gas shows first well
   over the flame. Whether it BILLOWS cannot be judged from a still at that size. NEVER SEEN ON A GPU; the numbers are a first setting.
 - **A FIRE AS ONE COLUMN, ON THE LOOK PAGE** (10-29; on with the Fire smoke row up;
-  `game/fire.ts FIRE_LOOK_SMOKE` and `axisAt`). The maintainer on a GPU, with a simulated fire beside his shot of the pass's drum: "interaction of smoke
+  `rust/game_rules/src/fire FIRE_LOOK_SMOKE` and `axisAt`). The maintainer on a GPU, with a simulated fire beside his shot of the pass's drum: "interaction of smoke
   with embers, heat distortion, hot part of the plume doesn't seem to look right. they should fit together more naturally?" READ OFF HIS SHOT: the gas over
   the flame is a pale glowing haze (white solver smoke a hand from the fire's own lamp); the soot the flame draws is dark and stands on the flame's
   leaning line while the gas was filed straight over the mouth; the embers leave the coals in a wide cone. WITH IT ON: (1) the steady source and the
@@ -1580,7 +1580,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   fire's own light in it (whether the lamp warms it on a GPU, where it made the white haze, is not known, nor whether 0.34 is too dark). NEVER SEEN ON A
   GPU, never in motion; the numbers are a first setting.
 - **THE FIRE ON THE LOOK PAGE, AFTER HIS GPU LOOK OF 10-30** ("embers not visible in fog of war", "overall fire looks better but i can't really see the
-  smoke now", "would it be possible to have the fire fluid sim influence the snow particles?"). Three things, all look page only, in `game/fire.ts
+  smoke now", "would it be possible to have the fire fluid sim influence the snow particles?"). Three things, all look page only, in `rust/game_rules/src/fire
   FIRE_LOOK_SMOKE`:
   (1) EMBERS UNDER THE FOG (`emberFog`): `FIRE.fog` keeps a known fire's flame in the fog's picture and the particle draw cut its embers there like
   anything the team did not make, so the drum behind Sam's back burned without sparks. An ember of a fire whose flame the fog keeps (`K.fog` and the lamp's
@@ -1590,7 +1590,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   column is 0.2 m wide, so every sample of it was an edge and it was drawn at about a tenth. The software stills of 10-29 did not show it because they
   were taken in still air after the gas had pooled round the drum. Now a cell whose tint's blue is over its red (`DUST_FIRE_AT`) is SMOKE OF A FIRE: it
   keeps the tint, the billows and the lit side and is neither thinned at its edge nor frayed (and skips the four edge taps). Every dust in the game is
-  warm or neutral (`game/dustLook.ts`, the burst's `smoke`), so none is read as that. `soot` is now a cool grey [0.46, 0.48, 0.53] (was 0.34);
+  warm or neutral (`rust/game_rules/src/dust_look`, the burst's `smoke`), so none is read as that. `soot` is now a cool grey [0.46, 0.48, 0.53] (was 0.34);
   `?firesoot=0` = the warm soot, so the column thinned away as it was. THE RULE RESTS ON A COLOUR: the first cool dust filed on the coarse lattice
   would lose its edge too, and a `soot` retuned to neutral loses the column again. A bit of its own in the cell's word is the mend, and there is no spare.
   (3) THE FALLING SNOW (`lookConfig.fireSnow`, `?firesnow=0`; table `snow`). The flakes are GPU particles carried by the wind's records and the air
@@ -1606,7 +1606,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   with the fire put off; `FIRE_BREAK=1` fails it), on both stands. SEEN on the software adapter only (480 × 300, the pass, the page booted
   with the fog on and Sam in a room away from the yard): at dusk the embers are drawn over the flame in the picture taken with the fog on, and with the
   fog put off the smoke stands as a pale column from the flame's tip to about two metres over it, as wide as the flame, faint against the wall; whether
-  the drum stood on floor the fog hid in that picture was not proved (the check line holds the rule). AT MIDDAY THE DRUM IS OUT: `game/hours.ts` puts the
+  the drum stood on floor the fog hid in that picture was not proved (the check line holds the rule). AT MIDDAY THE DRUM IS OUT: `rust/game_rules/src/hours` puts the
   level's lamps out by day and a fire is a lamp, so there is no flame, smoke or hot air to see then. The flakes round the fire were never seen moving,
   on any adapter. NEVER SEEN ON A GPU.
 - **The floor rung draws an open fire without its smoke (FIRE SMOKE SHED: `settings.fireSmokeShed`, `ui/quality.ts fireSmokeOf`; 2026-10-23).** Asked when the fire
@@ -1718,7 +1718,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   flicker under the look (the maintainer saw it on a GPU on 10-25, on the look's page before the mend); `tools/qa/zfight-check.ts` lists the
   pairs in a level file.
   `hills` WAS ON EVERY PAGE FOR ONE STEP OF THE BUILD AND PARTED CO-OP (step 1906, the same day; mended the step after). The first cut kept it with
-  the picture as "the picture's alone". It is not: `groundRayConfig.on` was read by the game's own box world (`scene/boxes.ts groundOn`; both are gone since 11-08, the table and the read: the rays a sight line and the cursor's point use then meet the ground field) and `game/game.ts` builds the snow
+  the picture as "the picture's alone". It is not: `groundRayConfig.on` was read by the game's own box world (`scene/boxes.ts groundOn`; both are gone since 11-08, the table and the read: the rays a sight line and the cursor's point use then meet the ground field) and `rust/game_rules/src/game` builds the snow
   field with its roll. A game server stands with no look, so a page had `on: true` beside its server's `false`: co-op's word of every part
   (part `m.scene_ground_field`) held on 0 of 282 word ticks with one seat
   where the step before held 257 of 257. The alarm's narrow word did not part, the office being flat; on a snow level the two would have played
@@ -1812,7 +1812,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   whole sheet (a boot of six minutes, then some 25 s a frame); `--first` draws the rows that matter first and the sheet is rewritten after each row.
 - **THE LOOK PANEL'S SUN AND MOON ROWS** (`src/ui/lookpanel.ts`; the maintainer, 10-23: "do we model a sun at all for dawn/midday? i think that's a big
   reason why it looks flat. and perhaps we should also model a moon on night levels (and can configure it)"). Both were there: every hour but night
-  puts in a sun (`game/hours.ts`, a kind-2 light with traced shadows where the level's moon stood), and every level is authored with a moon. What made
+  puts in a sun (`rust/game_rules/src/hours`, a kind-2 light with traced shadows where the level's moon stood), and every level is authored with a moon. What made
   his picture flat: the pass is a snow level, and the snow's cloud (0.9) leaves the sun 9 % of the hour's own (`cloudLight`); the pass's moon is 0.06,
   where the level kit's own is 0.9, so his night shadows were the gate lamp's. The rows set both for the VISIT: Sun = `__hour.sun(k)` (the share of the
   hour's own sun; it then stands against the cloud, the sky still follows it), Moon / Moon height / Moon bearing = `window.__moon.set({ k, elev,
@@ -1887,7 +1887,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   picture is the shade row's exactly. By day only, as the shade row is. THE PICTURE ONLY, like the shade row: the same break of "what the AI senses is
   what the picture shows", by the amount of the gain. Check: `tools/qa/lookeye-check.ts` (12 lines, the shader's gain mirrored on the CPU;
   `LOOKEYE_BREAK=1` fails 9). The meter's 0 before its first answer is no reading (the eye would open wide on a level's first frames), and a restart
-  takes the first reading outright again (`game/airSim.ts`). SEEN on the software adapter only (the pass under overcast, 320 × 200): with the row at 0
+  takes the first reading outright again (`rust/game_rules/src/air_sim`). SEEN on the software adapter only (the pass under overcast, 320 × 200): with the row at 0
   the tea room and the kitchen are brought up in the middle of the floor and stay dark along their walls; with it up both rooms read evenly and clearly
   and the snow outside the wall goes to white. NOT SETTLED: what the eye should do at night; a camera that looks at a place Sam is not in.
 - **THE LOOK PANEL'S GRADING ROWS** (10-29; Exposure, Contrast, Highlights, Shadows, Colour: `lookAmounts.gexp / contrast / highs / lows / colour`,
@@ -2030,7 +2030,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   UNIFORM BUFFER (`@group(1) @binding(17)`, 28 KB): its fragment stage has no sampled texture left. `lookPlaceField` never weighs in a cell across a
   wall; in a wall's own cell with a different place each side (a wall's top, the floor at its foot) the side is picked by what the cache holds at the
   pixel (`lookPlaceHere`, the kernel's one box walk, also the answer before the field's two programs are compiled and off the map). The composite's
-  budget row went 1024 → 1032 KB on purpose. NOT DONE HERE: `placeMask`'s stamp is a second writing of `game/airSim.ts`'s; a level whose walls are
+  budget row went 1024 → 1032 KB on purpose. NOT DONE HERE: `placeMask`'s stamp is a second writing of `rust/game_rules/src/air_sim`'s; a level whose walls are
   under 1.9 m has no places.
   THE CHECKS: `bun run tools/qa/lookexpo-check.ts` mirrors the gain as numbers on the kernel's own constants (the open air with Sam in it
   is × 1 exactly; his room 700 times under the open has its pale floor shown 1.44 times as bright as the yard's with him out in it; order kept and no step over every pair of places, rows, day and dusk,
@@ -2672,7 +2672,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   AND ITS LIT ROOMS ARE THE NIGHT'S OWN, wherever the eyes are. BY DAY the dim level in the hour's units is at the field's read floor
   (`EXPO_READ`, three stops over the solver's 1e-6): at midday the row moves no place and no light, and a black room is not shown by its noise
   any further than it was. UNDER THE GOGGLES nothing is brought up (`lookExpoBound`'s `nv`, all gone by halfway down, where `post.wgsl` takes
-  the tube's picture): the tube is the eye, and `game/nvg.ts` models it on the light as it is. Before the field is live the bound takes no
+  the tube's picture): the tube is the eye, and `rust/game_rules/src/nvg` models it on the light as it is. Before the field is live the bound takes no
   number from a place. THE SHOULDER (`lookRoll`) is never about less than THE NIGHT'S WHITE with the row up (`EXPO_LAMP` 1.23: a pale floor
   under a room's own 15 lux bulb as a night shows it), so a room brought to the night's own picture at dusk or on a grey day is rolled off where
   the night rolls it off and not at that hour's dimmer sunlit ground; at midday sunlit ground is over it and nothing moves. A lamp-lit room at
@@ -3016,7 +3016,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   this side of the wall. A DEVICE THAT CANNOT BUILD THE FIELD keeps the model on the cache's own read at the pixel, the eyes taken to stand in
   the open: what every page shows for the frames before its field is live, and what a device whose field pipelines came back invalid already
   showed (`engine.ts placeDead`: the constructor is asked once and no more; before, the row was put down and the older rows ran). The engine's
-  `lookEye` is `{ snap }` alone (the stills tools and `game/airSim.ts` set it). STILL TWO, and not this step's (BOTH GONE the same day: A PIXEL'S PLACE IS READ OFF THE FLOOR PLAN, below): `lookPlaceHere`'s five reads
+  `lookEye` is `{ snap }` alone (the stills tools and `rust/game_rules/src/air_sim` set it). STILL TWO, and not this step's (BOTH GONE the same day: A PIXEL'S PLACE IS READ OFF THE FLOOR PLAN, below): `lookPlaceHere`'s five reads
   behind `?footing=0`; the wall cell's side by what the cache holds where the plan does not say (the floor plan's silent cells, 5.8 % of 48,877
   wall cells over 60 levels with doors shut, most of them on four levels); the corrections on the model named under ONE EXPOSURE AT EVERY HOUR.
   CHECKS: `lookexpo-check` (the kernel's text in both writings, that nothing of the rows is left in either, that the model has no row),
@@ -3148,7 +3148,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   were specks at a pixel of a centimetre and a half). Enamel stays a clean coat: a chip in its map would come round every two metres along a
   painted line. `lookmaps-check` line 11 holds the row (use on kept stuffs only, none on the sixteen older ones, so every
   other level's picture is as it was). Shader texts compile (`wgsl-compile`); NEVER SEEN ON A GPU, and the amounts are a first guess.
-- **HOW A LEVEL IS WALKED SHOWS IN ITS SURFACES, AND ONE LAYER WEARS A PIXEL** (11-04; `src/scene/ways.ts levelWays`; `render/wear.ts buildWearMap`'s
+- **HOW A LEVEL IS WALKED SHOWS IN ITS SURFACES, AND ONE LAYER WEARS A PIXEL** (11-04; `rust/game_rules/src/scene_ways levelWays`; `render/wear.ts buildWearMap`'s
   `walked`; `shaders/look.wgsl` USE AND DIRT, `lookWears`, `lookWay`; `detail.wgsl detailSurface`'s `byLook`; the look's page only, `?walked=0` at
   boot = the traffic map as every other page has it). The maintainer: "i think there's a lot of room to add personality to textures. wear, paths in
   the ground, different materials can all tell a story for how people walk through the level, its logic, leading the player for game play". THE MAP
@@ -3236,7 +3236,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   the page goes through `main.ts hostLevel`, so the bundled office that stands in for an editor level that cannot stand takes its own
   word, and its own marks' texel (2.5 cm said outright, where the failed level's stayed). The page logs the word in force when
   a level or the address says one. ONE WORD A LEVEL: a room's own (a kept office over a derelict cellar) would ride the place field and is
-  not built. Picture only: nothing in the game reads it, and a level's fingerprint (`game/savestate.ts levelFingerprint`: names, counts
+  not built. Picture only: nothing in the game reads it, and a level's fingerprint (`rust/game_rules/src/savestate levelFingerprint`: names, counts
   and the boxes' geometry) does not take it in, so saying the word refuses no checkpoint or recording. With no word the frame is the frame
   as it was: every new term is × 1 or + 0 at kept 0, written so that holds to the bit. SEEN ON A CLOUD NVIDIA CARD, TWICE. First, the
   weather's amount and a mark's wear only, the same build with `&kept=0` and `&kept=1`: on the white roof's block wall the red FIRE
@@ -3649,7 +3649,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   of 5.5 cm with this advection would smooth a walker's wake into two still eddies, and the kick is what sheds them. (3) CONFINEMENT IS RAISED ROUND A
   BODY: × (1 + `stirConf` 2.0) at his capsule, back to the plain strength by three radii (the debugger's "curl round a moving body ×"). Smoke nobody walks
   through is not touched: the wind's relax and a can's own plume are as they were. REMOVED: the solver's own uniform draught (`windX`, `windZ` and their
-  two sliders, which nothing set since `game/wind.ts`); its two parameter words carry the row. SIGHT: the guards' probe reads the same solver density, so
+  two sliders, which nothing set since `rust/game_rules/src/wind`); its two parameter words carry the row. SIGHT: the guards' probe reads the same solver density, so
   on the look page a wake changes sight lines a little; the maintainer the same day: "i'm actually fine with vision being a bit different than the
   visuals, can be just the brick level stuff", so finer picture-only detail is allowed next. The headless stand-in drops a push: no digest moves.
   Check: `bun run tools/qa/smokestir-check.ts` (what a moving man HANDS the solver, over one stride: with the row up one upright body a frame moving as
@@ -3794,7 +3794,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   lamps burning); from it the hour's exposure against the night's (`hourExposure`: midday 1/5,051, overcast 1/1,152, dawn 1/70, dusk 1/69, night 1);
   every source that is not the hour's own is uploaded at min(as authored, its real strength × that exposure), by what it is (`lightClass`): a FIXTURE's real
   strength is its authored one; a HAND light's (group `flashlights`, or `card`: the torches, the rail light) is 10,000 candela and a VEHICLE's lamp's
-  15,000 (`TRUE_CD`); a FLASH's (ttl, a tracer, a light `game/fire.ts` flickers) is 6 × its authored one (`FLASH_TRUE`); a glowing FACE (the frame's
+  15,000 (`TRUE_CD`); a FLASH's (ttl, a tracer, a light `rust/game_rules/src/fire` flickers) is 6 × its authored one (`FLASH_TRUE`); a glowing FACE (the frame's
   `emissiveScale`, so boxes and emissive markings alike) 1,000 × (`EMISSIVE_TRUE`); the LIGHT THAT STANDS FOR A GLOWING FACE (kind 3: a ceiling panel's, a
   screen's, a lit sign's; class `face`, 11-02, the bullet below) 50 × (`FACE_TRUE`). So at midday a bulb is 1/5,051, the rail light 1/100 (1.1 % of the sun
   on a wall 3 m off; a real one about 1 %), lamp glass 0.20 of its night glow; at dusk a bulb is 1/69, the torch 0.63 of its night strength and glass in
@@ -3979,7 +3979,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   turn and take no map); two unkeyed movers of one size share a number.
   CHECK: `bun run tools/qa/lookmaps-check.ts`, 14 lines, the same on both stands (it stands no rule up); `LOOKMAPS_BREAK=1` = the row at 0 and four lines
   fail (the value, paint × hollows, the masonry's hollows, and the rain's line, which under the word asks a wet thing's stuff of the colour it is handed).
-  THE RAIN'S LINE AND WHAT IS WET (11-04): since everything flat under open sky is wet in rain (`game/wetGround.ts`), a wet thing may be plain paint laid on the
+  THE RAIN'S LINE AND WHAT IS WET (11-04): since everything flat under open sky is wet in rain (`rust/game_rules/src/wet_ground`), a wet thing may be plain paint laid on the
   ground (a weed, a rug, a mat, a stain: 36 of the compound's 177 wet things, 41 of 186 on the page's stand), of no stuff dry or wet. The level is
   packed dry and each thing's word kept, then the rain is picked and it is packed again: every wet thing carries the word it carried dry, its paint's;
   some of them are of a stuff, and the ground's own slabs always; a wet metal thing is handed its own colour. The lines: the value by one number with the hue kept; paint × hollows at three Cavities settings;
@@ -4091,7 +4091,7 @@ row on his machine is the answer, and the word puts the count back on any machin
   A paint handed over by lineage (toned, stood in for) keeps its word: 209 pieces of ground dressing and cut rock kept theirs only once the
   kit's `toned` handed its numbers through `tonedAs`. No box's colour, size or place moved (`lived-check` holds every level's own part to
   its base with the words set aside).
-  A ROUND'S HIT WILL READ THE WORD, AND IS NOT THE LOOK: the hit picture's rule (HITSTUFF, `game/particleFx.ts saidSurf`; it joins after
+  A ROUND'S HIT WILL READ THE WORD, AND IS NOT THE LOOK: the hit picture's rule (HITSTUFF, `rust/game_rules/src/particle_fx said_surf`; it joins after
   this series, with its check) reads `Box.stuff`. Measured where both stood together, on the look's preview: with every box saying its
   row's word that rule heard 18,701 of 37,425 standing boxes (389 before), and on 4,295 of them another surface than the paint's colour
   gave: sandbags, tarps, rugs and carpets the soft thing where they threw concrete chips, mud walls concrete where drywall, wood furniture

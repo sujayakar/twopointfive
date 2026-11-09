@@ -19,9 +19,9 @@ struct Frame {
   rcJitter: vec4f,                          // xy = this frame's sub-texel offset for the cascades' octahedral direction set (0.5,0.5 = texel centres); z free (the old estimator's adaptive minimum until 2026-11-07); w = number of transient lights alive this frame
   directCfg: vec4f,                         // x, y, w free (the old estimator's ray budgets and history weight until 2026-11-07), z = penumbra filter cap (px)
   lossyCfg: vec4f,                          // the lossy options' numbers (defaults = the untouched path): x = final-gather resolution divisor (2; 3 with gatherThird), y = volumetrics divisor (2; 4 with volQuarter), z free (the old estimator's dim-ray threshold until 2026-11-07), w spare  · w = the final gather's relative firefly bound K (each ray ≤ K × the cache's irradiance at the shading point ÷ π; 0 = off)
-  cardCfg: vec4u,                           // x = torch bounce cards this frame (FLAG_BOUNCE_CARDS; 0 = none: cards.wgsl not dispatched, fgather samples / excludes nothing); y, z = WEATHER KINDS' third / fourth roof footprint (wxRect; 0 = none), w = the fog in the outdoor air (wxFog; 0 = none) — game/weatherKinds.ts
+  cardCfg: vec4u,                           // x = torch bounce cards this frame (FLAG_BOUNCE_CARDS; 0 = none: cards.wgsl not dispatched, fgather samples / excludes nothing); y, z = WEATHER KINDS' third / fourth roof footprint (wxRect; 0 = none), w = the fog in the outdoor air (wxFog; 0 = none) — rust/game_rules/src/weather_kinds
   cardSlots: array<vec4u, 2>,               // the light slot each card k = 0..7 is built from ([k >> 2][k & 3]); cards.wgsl reads it, and writes the slot back into the card rows the gather stages
-  weatherA: vec4f,                          // the weather (game/weather.ts → volumetrics.wgsl (c)): x = rain rate 0..1 (0: nothing drawn), y / z = wind shear of the streaks (m sideways per m of height), w = ground wetness 0..1 (splash rings)
+  weatherA: vec4f,                          // the weather (rust/game_rules/src/weather → volumetrics.wgsl (c)): x = rain rate 0..1 (0: nothing drawn), y / z = wind shear of the streaks (m sideways per m of height), w = ground wetness 0..1 (splash rings)
   weatherB: vec4f,                          // rgb = radiance a lightning stroke's lit sky adds to outdoor air + rain this frame, w = rain top (m; streaks fade in over the metre below it)
   weatherC: vec4f,                          // the interior footprint x0, z0, x1, z1: no rain on rays that end inside it, none drawn inside its column
   glassCfg: vec4f,                          // glass panes (FLAG_GLASS): x = reflection strength (× the physical Fresnel term; 1 = as computed), y = tint depth (exponent on the pane's albedo per crossing, ÷ cos of the crossing angle), z = dust glow gain (× GLASS_DUST), w = REFRACTION: the index of refraction (≥ 1) while settings.glassRefract, 0 = off — composite bends the view ray through every glass box it meets (composite.wgsl glassRefractPath)
@@ -39,7 +39,7 @@ struct Frame {
   rigCfg: vec4f,                            // SDF CHARACTER RIG (render/sdfrig.ts, shaders/sdfrig.wgsl): x = bits (64 = character self-shadow in the direct estimators' shadow rays (selfShadowT), 128 = mesh shadows for near receivers only (meshShadowT); the bits under 64 are free — the round-cone proxy test is unconditional); yzw free
   rigCfgB: vec4f,                           // free
   giCfg: vec4f,                             // four free words (the young-history gather rays read them until 2026-11-07)
-  weatherE: vec4f,                          // PARTICLE RAIN (experiment, game/rainFx.ts + shaders/particles*.wgsl): xy = centre xz of the near-field particle layer's disc, z = its radius (m), w = the share 0‥1 of the LATTICE rain volumetrics.wgsl drops inside it (rainNearKeep) — 0 = no particle layer: the lattice exactly as it was (NEGATIVE on a snow level: the metres past the level's rim the snow goes on falling, particles_common.wgsl snowPast — every lattice reader asks `> 0.0`)
+  weatherE: vec4f,                          // PARTICLE RAIN (experiment, rust/game_rules/src/rain_fx + shaders/particles*.wgsl): xy = centre xz of the near-field particle layer's disc, z = its radius (m), w = the share 0‥1 of the LATTICE rain volumetrics.wgsl drops inside it (rainNearKeep) — 0 = no particle layer: the lattice exactly as it was (NEGATIVE on a snow level: the metres past the level's rim the snow goes on falling, particles_common.wgsl snowPast — every lattice reader asks `> 0.0`)
   weatherF: vec4f,                          // PARTICLE RAIN v2: the drop's PHASE the lattice's streaks share with the particles' (volumetrics.wgsl rainLight): x = isotropic floor, y = forward-lobe weight, z = its Henyey-Greenstein g, w = × gain — w 0 = the lattice's isotropic sum exactly as it was
   shadeCfg: vec4f,                          // THE LOOK PROTOTYPE, eyes adjust to shade (engine.ts lookShade writes it, zeros = the picture as it was; the one exposure model's, place_common.wgsl lookExpoFor): x = the share of its dark a place darker than the open air is brought up by (0 = off), y = the mean radiance open air holds from the sky alone (luminance), z = spare, w = the irradiance open ground gets from the sky alone (luminance)
   veilA: vec4f,                             // THE LOOK PROTOTYPE, loose snow in the air (composite.wgsl lookPowder; render/lookveil.ts lookVeilFrame, zeros = none): xy = 1 ∕ the floor plan the powder's field covers (width, depth), z = how much of it is drawn 0‥1, w = what the sun (or the moon) puts on level ground, as luminance
@@ -128,7 +128,7 @@ struct FogSightT {            // THE FOG OF WAR'S SIGHT TABLE (render/fogofwar.t
   looks: array<vec4f, 7>,     // … where he looks, his cone and near field
   cfg: vec4f,                 // x = eyes, y = 1 while this frame's table is written (0: no table — every spot answers 'seen'), z = topPad (m), w = the fog's soft edge: its band (m; 0 = the hard line — shaders/fogofwar.wgsl fowEdge, the fog pass alone reads it)
   soft: vec4f,                // xyz = the cone's soft edges, as FowU.soft · w = one whole number, three bits (4 = FOG.kept, fogKeptOn below): 1 = smoke and dust are drawn under the fog too (fogSmokeOn below; 0 = cut there, as it was), 2 = thin things that stand free do not stop a fog eye (fogThinOn)
-  thin: array<vec4u, 32>,     // WHICH statics are thin and free (game/fogofwar.ts FOG.thin; scene/thin.ts): a bit a box index, 4096 boxes (fogThinBox below). In the buffer the sight table's own pass reads here too (the stand-in: render/fogofwar.ts FogSight.stand)
+  thin: array<vec4u, 32>,     // WHICH statics are thin and free (rust/game_rules/src/fogofwar FOG.thin; scene/thin.ts): a bit a box index, 4096 boxes (fogThinBox below). In the buffer the sight table's own pass reads here too (the stand-in: render/fogofwar.ts FogSight.stand)
 };
 @group(0) @binding(11) var<uniform> fogSight: FogSightT;   // (a UNIFORM, 58 KB: the fragment stage's sampled textures are all spoken for — passes.ts lComp)
 // binding 12 — the per-light reach rows (render/reach.ts, lights.ts reachBuf) — is declared by the scene prelude (frame.ts scenePrelude) as either a read-only
@@ -187,7 +187,7 @@ fn sideIsDoor(c: vec2i) -> bool { if (c.x < 0 || c.y < 0 || c.x >= SIDE_W || c.y
 fn standOff(N: vec3f, d: f32) -> vec2f { return select(N.xz * d, vec2f(0.0), N.y > 0.5); }
 /** the albedo SECONDARY rays see (gather / cascade / probe / card hits): the box's albedo with its markings' area average folded in on the CPU (boxes.ts upload) — the very same three floats as boxAlbedo for a box without markings, or with markings off */
 fn boxAlbedoSec(i: u32) -> vec3f { return boxMat[i * 4u + 3u].xyz; }
-/** × the emission of the box's emissive markings (a switchable's supply factor: game/lighting.ts) */
+/** × the emission of the box's emissive markings (a switchable's supply factor: rust/game_rules/src/lighting) */
 fn boxMarkGain(i: u32) -> f32 { return boxMat[i * 4u + 3u].w; }
 /** vec4 row where the MARKING table starts in boxMat (its tail: boxes.ts MAT_STRIDE × maxBoxes ÷ 4) — record r's k-th row is boxMat[MARK_BASE + r * 6 + k] (markings.wgsl) */
 const MARK_BASE: u32 = MAX_BOXES * 4u;
@@ -230,7 +230,7 @@ fn skyRadiance(rd: vec3f) -> vec3f {
   return mix(mix(frame.skyHorizon, frame.skyZenith, t), frame.skyHorizon * 0.15, below);
 }
 
-// ---- WEATHER KINDS (game/weatherKinds.ts, game/weather.ts): the level's third / fourth roof footprint and the FOG in the outdoor air, packed in the three spare words
+// ---- WEATHER KINDS (rust/game_rules/src/weather_kinds, rust/game_rules/src/weather): the level's third / fourth roof footprint and the FOG in the outdoor air, packed in the three spare words
 // of frame.cardCfg (.y .z .w; all 0 = no kind picked; .y is never 0 under a kind — 1 = an empty footprint). Every caller sits behind the scene prelude's
 // `const WX_KINDS` (render/frame.ts weatherKindConfig: true only in a page opened with ?weather=<kind>), so without it these are dead code and the modules are as they were. The fog is ONE field for the picture and for the
 // men's eyes: extinction σ0·e^(−y∕H) per metre in the open (H 0 = uniform), × leak under a roof — weatherKinds.ts unpackFog / fogTau are these functions on the CPU.
@@ -342,9 +342,9 @@ fn wxFogApplySurf(color: vec3f, rd: vec3f, dist: f32, nxz: vec2f) -> vec3f {
 // moon light it through shadow rays, the sky and the bounce light it through the radiance cache, the lamps' cones stand in it (wxHazeK above takes the same field).
 //   in the open     σ0·e^(−y∕H), eased to nothing between the ceiling plane and WX_TOP above it — the picture is a building with its roof lifted off, and the
 //                   air over the roof went with it; the open air's layer ends a little higher so the yard's lamps still stand in it
-//   under a roof    below the ceiling plane: σ0·e^(−y∕H) × the room's SHARE at that spot of the plan — the air grid (scene/airGrid.ts; game/airDust.ts carries
+//   under a roof    below the ceiling plane: σ0·e^(−y∕H) × the room's SHARE at that spot of the plan — the air grid (scene/airGrid.ts; rust/game_rules/src/air_dust carries
 //                   the dust in at open doors and blown walls, a shut room keeps the weather's `leak`); nothing at or above the ceiling plane
-// The men's eyes are cut by the same grid (game/weather.ts airTrans). The roofs are the four footprints wxRoofed asks.
+// The men's eyes are cut by the same grid (rust/game_rules/src/weather air_trans). The roofs are the four footprints wxRoofed asks.
 const WX_TOP: f32 = 3.0;   // how far above the ceiling plane the open air's layer runs out (m)
 /** the roof footprint ground point p (xz) stands under — wxRoofed's own four, the first that holds it — or an empty one (z < x) in the open */
 fn wxRoofAt(p: vec2f) -> vec4f {
@@ -356,7 +356,7 @@ fn wxRoofAt(p: vec2f) -> vec4f {
 }
 fn wxGrid(c: vec2i) -> f32 { let k = u32(clamp(c.y, 0, WXD_H - 1) * WXD_W + clamp(c.x, 0, WXD_W - 1)); return boxMat[WXD_BASE + (k >> 2u)][k & 3u]; }
 /** the room's share of the weather's air at p (xz) under footprint R: the air grid, bilinear between the cells whose CENTRES the footprint holds (a cell is the
- *  room's when its centre is under the roof — game/airDust.ts sorts them the same way), so the open air's 1 never bleeds in through a wall */
+ *  room's when its centre is under the roof — rust/game_rules/src/air_dust sorts them the same way), so the open air's 1 never bleeds in through a wall */
 fn wxIndoor(p: vec2f, R: vec4f) -> f32 {
   let lo = ceil((R.xy - WORLD_MIN.xz) / WXD_CELL - 0.5); let hi = max(lo, floor((R.zw - WORLD_MIN.xz) / WXD_CELL - 0.5));
   let g = clamp((p - WORLD_MIN.xz) / WXD_CELL - 0.5, lo, hi);
@@ -512,7 +512,7 @@ const CAPSULE_HIT: i32 = 0x7ffffff0;   // Hit.idx of a character-proxy hit (a ro
 fn capsuleOwner(c: Capsule) -> u32 { return c.misc & 0xffu; }
 /** `skip` packs up to two character ids (bits 0-7: usually the receiving pixel's owner; bits 8-15: the light's owner) whose boxes / proxies a ray ignores. */
 fn skipsOwner(owner: u32, skip: u32) -> bool { return owner != 0u && (owner == (skip & 0xffu) || owner == ((skip >> 8u) & 0xffu)); }
-// THIN THINGS THAT STAND FREE DO NOT CUT THE FOG'S SIGHT (game/fogofwar.ts FOG.thin). While a FOG EYE's ray is walked (fogEyeThin raised by the fog's own
+// THIN THINGS THAT STAND FREE DO NOT CUT THE FOG'S SIGHT (rust/game_rules/src/fogofwar FOG.thin). While a FOG EYE's ray is walked (fogEyeThin raised by the fog's own
 // callers and put back: fogSeenAt below, shaders/fogofwar.wgsl main / pre, shaders/fogsight.wgsl) a box the ray MEETS is passed when somebody carries it (any
 // owner: another man's gun, a tracer's streak — the squad's own lines never met those) or when the level marked it thin and free (its bit in fogSight.thin:
 // a stovepipe, a window's bar, a lone post — never a door's jamb). Asked only of a box already hit, so a shadow ray pays one false bool per hit.
@@ -956,7 +956,7 @@ const LIGHT_TRANSIENT: u32 = 256u;
 const LIGHT_BROAD: u32 = 512u;
 const MAX_BLUR_PX: f32 = 32.0;   // encoding scale of the direct-light blur hint (|S.a| = px / MAX_BLUR_PX, clamped to 1); the live cap is frame.directCfg.z
 fn lightKind(li: Light) -> u32 { return li.kind & 255u; }
-// THE FOG OF WAR'S LIGHT CLASSES (game/fogofwar.ts rule 4g, lights.ts RtLight.fog — no bit on any light while the rule is off): a light with LIGHT_FOG_SEEN lights
+// THE FOG OF WAR'S LIGHT CLASSES (rust/game_rules/src/fogofwar rule 4g, lights.ts RtLight.fog — no bit on any light while the rule is off): a light with LIGHT_FOG_SEEN lights
 // only what the team sees (a torch, a weapon light, a flash in a room nobody watches is not in the picture of that room, and still falls on floor the team does
 // see); one with LIGHT_FOG_UNSEEN lights only what it does not (a lamp put out where nobody looked, still lit in the picture of that room until somebody looks).
 const LIGHT_FOG_SEEN: u32 = 0x2000000u;
@@ -971,7 +971,7 @@ const RT_HI_FADE = vec2f(0.5, 0.75);
 /// … as the page has it (the scene prelude's RT_HI_REACH, render/frame.ts highlightConfig: 1; the address's `&hireach=0` = 0, the highlights fading where the
 /// mirror does, `maxR` = frame.rtCfg.x: the reach they had before 11-05, to hold the two pictures side by side on one card)
 fn rtHiFade(maxR: f32) -> vec2f { return mix(vec2f(maxR - 0.12, maxR + 0.001), RT_HI_FADE, RT_HI_REACH); }
-// AN INFRARED LIGHT (lights.ts LIGHT_IR; game/irlight.ts: the illuminators on the goggles): a light only the intensifier tube sees by. It is in the list only on a
+// AN INFRARED LIGHT (lights.ts LIGHT_IR; rust/game_rules/src/irlight: the illuminators on the goggles): a light only the intensifier tube sees by. It is in the list only on a
 // frame whose picture is the tube's, and every pass of the picture takes it as a steady light like any other (evalLight; the engine restarts the screen
 // histories the frame the tube comes off). The game's own readings never do: evalLightTrue gives nothing for it, and directIrradiance (the cascades the light meter reads its bounce from) skips it.
 const LIGHT_IR: u32 = 0x8000000u;
@@ -1313,7 +1313,7 @@ fn fogSeenBins(P: vec3f) -> f32 {
 }
 /// what is left of light `li` at the spot P under the fog's light classes: 1 for a light with no fog bit (every light while the rule is off)
 // (the picture's own march of the smoke — volumetrics.wgsl — takes a plume's density through this. fogSmokeOn(), as the page has it: the air is the place
-// — game/fogofwar.ts FOG.air — and a plume is drawn wherever it stands; the fog pass then dims each pixel by the SURFACE behind it, so a plume over unseen
+// — rust/game_rules/src/fogofwar FOG.air — and a plume is drawn wherever it stands; the fog pass then dims each pixel by the SURFACE behind it, so a plume over unseen
 // floor is dimmed where the ground behind it on the screen is unseen and not where that ground is seen. Off: smoke over floor nobody on the team
 // sees is not in the picture, as it was. Shadow rays and the game's readings take the smoke as it is either way.)
 fn fogSmoke(dens: f32, X: vec3f) -> f32 { if (dens <= 0.002 || fogSmokeOn()) { return dens; } return dens * fogSeenAt(X, vec3f(0.0)); }
@@ -1439,7 +1439,7 @@ fn onCard(x: vec3f, nx: vec3f, c0: vec4f, c1: vec4f) -> bool {
 // ---- glass panes (FLAG_GLASS): analytic tests against SceneInfo.glass — the panes live in no traced structure, so every traced ray in the frame passes
 // them for free; the three places that care (composite: what the eye sees through / in a pane; fgather: the mirror ray off it; direct: light that crossed
 // one) ask here. A pane is a thin yawed box: (centre, cos yaw), (half, sin yaw), (tint, box index). ≤ MAX_GLASS slab tests on uniform data per call.
-// ---- GLASS BREAKING (game/glassbreak.ts + game/glassPattern.ts; only ever CALLED inside `if (GLASS_BREAK)` blocks — the prelude const, false = the module as it was): per
+// ---- GLASS BREAKING (rust/game_rules/src/glassbreak + rust/game_rules/src/glass_pattern; only ever CALLED inside `if (GLASS_BREAK)` blocks — the prelude const, false = the module as it was): per
 // SceneInfo.glass slot k a record of GB_STRIDE vec4 rows in boxMat's tail after the marking table (GB_BASE, generated into the prelude by render/frame.ts; boxes.ts packGlass ←
 // glassbreak.ts fill(), the layout's one writer): row 0 = (site count n ≤ 8, flags: 1 something is open · 2 the pane has RUN · 4 dicing · 8 gone · 16 web, u axis: 0 = the
 // pane's local x spans it / 1 = local z, damage 0‥1), row 1 = (hu, hv, type, 0), row 2 = the dice wave (the blow's u, v, the open threshold on a clump's key, grain), row 3 = (dice cols, rows, seed, 0),

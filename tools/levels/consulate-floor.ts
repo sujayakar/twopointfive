@@ -34,7 +34,7 @@
 // 'Manageable with four' as the depot held it: the corridor and the hall are ≥ 3 m and bare; every door a stack forms on has ≥ 1.9 m of clear floor past a jamb
 // on the side it is taken from; the hostage room's two doors are 11 m apart on one wall (one screen), their stacks out of each other's line.
 // The shell is the office's (exterior walls on x 4 / 36, z 4 / 24) so what the game still keys to that footprint — the weather's INTERIOR rectangle, the world
-// bounds typed into the shaders — holds without a change. The footstep surface map is still game/floor.ts's, the OFFICE's rectangles in code.
+// bounds typed into the shaders — holds without a change. The footstep surface map is still rust/game_rules/src/floor's, the OFFICE's rectangles in code.
 // LIGHT is the cue and the balance: the lobby, most of the corridor, the records room and the back office are dark (a team in them is hard to see), the rooms that
 // hold a man show him under a panel (visa, kitchen, a dim waiting room, the suite), and the hall's north end — where a stack on the main door stands — is lit.
 // All lit, the scripted four lost more than half their men on the way in; this way round the approach is the team's and the doors are the fight.

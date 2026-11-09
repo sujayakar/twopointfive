@@ -1,6 +1,6 @@
 // KILLHOUSE — 'The kill house': a small shoot house on a range, run AGAINST A CLOCK. Five small rooms off one short corridor that a ply partition and a
 // door cut in two; a front door on the corridor's west end and a back door into the mess; six defenders dealt afresh every
-// visit (roomclear.ts ROOMCLEAR.fresh). The idea is the PAR: the file's `scenarios.par` block (game/par.ts) times the run from the first thing anybody does
+// visit (roomclear.ts ROOMCLEAR.fresh). The idea is the PAR: the file's `scenarios.par` block (rust/game_rules/src/par) times the run from the first thing anybody does
 // to 'structure taken', adds seconds for every teammate lost, and names a medal.
 //
 //        x 12        17.5        23         28
@@ -31,7 +31,7 @@ import { PANEL_GREY } from '../../src/scene/stuff';
 
 export const NOTES = 'The kill house: a five-room shoot house on a range, a room clear for the four run against a par clock (scenarios.par). Regenerate: bun run tools/levels/export.ts killhouse';
 
-/** THE PAR (game/par.ts): seconds for each medal, and what a teammate lost adds. Set from 24 seeds a way of the scripted commander as shipped
+/** THE PAR (rust/game_rules/src/par): seconds for each medal, and what a teammate lost adds. Set from 24 seeds a way of the scripted commander as shipped
  *  (rebuild/missions/new/killhouse.md has the spread: clocks 39‥141 s, median 85 careful and 66 straight at the doors): gold is a fast
  *  run with nobody lost, silver a clean run at the careful median, bronze a clean slow one or a quick one that lost a man; a man lost costs the gold-to-silver gap (25 s),
  *  so one man lost is one medal */

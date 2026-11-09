@@ -1,4 +1,4 @@
-// What this machine keeps of the runs played (game/verdict.ts names how one run went; keeping a record is the PAGE's, never a rule's: nothing in src/game reads
+// What this machine keeps of the runs played (rust/game_rules/src/verdict names how one run went; keeping a record is the PAGE's, never a rule's: nothing in src/game reads
 // this, and with no localStorage — headless, a private window — it keeps nothing and every answer is the empty one). One key, a small map: run key → a record.
 // The key is the caller's (main.ts): mission id + difficulty, so a way won on standard is not a way won on hard.
 //

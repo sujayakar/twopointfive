@@ -66,7 +66,7 @@ export class Input {
       this.modsUp(e);
       const inMenu = e.target instanceof HTMLElement && !!e.target.closest('#menu, #missions');   // (#missions: the mission list — ui/missions.ts — is a card like the menu's)
       const modifier = ['Meta', 'Control', 'Shift', 'Alt'].includes(e.key);
-      const ours = e.code !== 'Escape' && !e.metaKey && !(e.ctrlKey && !modifier) && !inMenu && !/^F\d+$/.test(e.code);   // (the Control key itself is ours: held, it is the camera's orbit / zoom modifier — host/loop.ts; no game key reads it, crouch is C; F-keys stay the browser's)
+      const ours = e.code !== 'Escape' && !e.metaKey && !(e.ctrlKey && !modifier) && !inMenu && !/^F\d+$/.test(e.code);   // (the Control key itself is ours: held, it is the camera's orbit / zoom modifier — src/host/drawpage.ts; no game key reads it, crouch is C; F-keys stay the browser's)
       const code = gameCode(e.code);   // (the key as the game knows it — host/keymap.ts: itself unless the player moved a key in Options ▸ Controls; '' = a key whose row he moved away)
       if (ours) { e.stopPropagation(); const typing = e.key.length === 1 || ['Backspace', 'Enter', 'Delete'].includes(e.key); if ((e.target === this.sink && typing) || ['Space', 'Tab', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code) || (code && code !== e.code)) e.preventDefault(); }   // (a key he gave a row is the game's whole: Backspace goes back a page nowhere, ' and / open no find bar)
       if (ours && !e.repeat && e.code === camKey()) this.camHeld = e.code;   // (held, it is the camera's: the mouse turns the view, the wheel zooms — below)
@@ -104,6 +104,6 @@ export class Input {
   hit(code: string) { return this.pressed.has(code); }
   rmb() { return (this.buttons & 4) !== 0; }
   endFrame() { this.pressed.clear(); this.clicked = 0; this.wheel = 0; this.wheelCtrl = 0; this.orbitDX = 0; }
-  /** between two game ticks of one drawn frame (host/loop.ts, the fixed step): the one-frame edges were the first tick's — what is held stays held */
+  /** between two game ticks of one drawn frame (src/host/drawpage.ts, the fixed step): the one-frame edges were the first tick's — what is held stays held */
   endTick() { this.pressed.clear(); this.clicked = 0; this.wheel = 0; }
 }
