@@ -294,7 +294,7 @@ export const gbaaForce = { on: false };
 /** the render scale a preset starts at on THIS engine: its TAAU scale with the resolve on, 1.0 without it (the old behaviour, ?notaau) */
 export const startScale = (p: Preset, taauOn: boolean) => taauOn ? p.scale : 1.0;
 
-// ---- cost model for auto's calibration (plan() below; tools/qa/quality-plan.ts prints it and exercises plan() with synthetic machines) ----
+// ---- cost model for auto's calibration (plan() below; tools/qa/quality-check.ts --plan prints it, and the check holds plan()'s picks on synthetic machines) ----
 // Only RATIOS between presets are used: calibration measures the real ms at the current preset and asks "what would preset X at scale s cost on THIS machine".
 // Reference: the M4 Max, cubicles view, 1777×1000 internal, compute passes with frames serialized (08-07, bccea3d), at what 'high' was before the fold = ultra's
 // per-pixel settings with 20 beam steps: 24.9 ms = direct 9.8 + softblur 3.3 + gather 6.6 + indirect temporal/à-trous ≈1.0 + volumetrics 0.8 + bloom ≈0.2
@@ -347,7 +347,7 @@ export function costTable(oneGrid = true): CostTable {
 export const COST = costTable();
 
 export interface Plan { preset: QualityName; scale: number; predicted: number; note: string }
-/** The pure part of auto's boot decision (Quality.decide), exercised with synthetic numbers by tools/qa/quality-plan.ts: given the measured compute ms (total and its
+/** The pure part of auto's boot decision (Quality.decide), exercised with synthetic numbers by tools/qa/quality-check.ts: given the measured compute ms (total and its
  *  fixed part) at preset `cur` and effective scale `effNow` (internal / CSS×dpr, engine.effectiveScale) on a canvas `cssH` CSS px tall at `dpr`, return the highest ladder
  *  preset — and the render scale RELATIVE TO THAT PRESET'S CAP on this window (engine.ts resize; snapped down onto SCALE_STEP) — predicted to fit `budgetMs` of compute
  *  (PLAN_BUDGET_MS: 15 ms ≈ a presented 50–55 fps once the render passes, the CPU and vsync slop are added). Order of preference: high → medium → low at full scale; low
@@ -1001,7 +1001,7 @@ export class Quality {
     S.restirHistory = p.restir.history;   // (either way the tier's own reservoir memory)
     this.lastChange = `motion-calm rows ${on ? 'ON (restir spatialAll + penRays · resolve motion α 0.25, sharpen 0.15)' : 'off (the preset\'s own)'}`;
   }
-  /** QA / the Tab panel: feed the ladder synthetic 1-s windows without presenting anything — `secs` seconds of frames at `fps` with the GPU union at `unionMs` (tools/qa/quality-plan.ts drives the climb's
-   *  checks through this; the calibration must be done or off) */
+  /** QA / the Tab panel: feed the ladder synthetic 1-s windows without presenting anything — `secs` seconds of frames at `fps` with the GPU union at `unionMs`
+   *  (the calibration must be done or off) */
   simulate(secs: number, fps: number, unionMs: number) { const dt = 1 / fps; const n = Math.round(secs * fps); for (let i = 0; i < n; i++) this.sample(dt, unionMs); return { scale: this.engine.settings.renderScale, sharp: this.engine.settings.sharpDirect, gatherThird: this.engine.settings.gatherThird, volQuarter: this.engine.settings.volQuarter, maxH: this.engine.settings.maxInternalHeight, preset: this.current, last: this.lastChange, climb: this.climbState }; }
 }
